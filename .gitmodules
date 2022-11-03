@@ -4,7 +4,7 @@
 	branch = main
 [submodule "Dependencies/Helpers"]
 	path = Dependencies/Helpers
-	url = git@github.com:UE4SS-RE/helpers.git
+	url = git@github.com:UE4SS-RE/Helpers.git
 	branch = main
 [submodule "Dependencies/File"]
 	path = Dependencies/File
@@ -12,11 +12,11 @@
 	branch = main
 [submodule "Dependencies/Function"]
 	path = Dependencies/Function
-	url = git@github.com:UE4SS-RE/function.git
+	url = git@github.com:UE4SS-RE/Function.git
 	branch = main
 [submodule "Dependencies/Constructs"]
 	path = Dependencies/Constructs
-	url = git@github.com:UE4SS-RE/constructs.git
+	url = git@github.com:UE4SS-RE/Constructs.git
 	branch = main
 [submodule "Dependencies/SinglePassSigScanner"]
 	path = Dependencies/SinglePassSigScanner
@@ -24,19 +24,19 @@
 	branch = main
 [submodule "Dependencies/ScopedTimer"]
 	path = Dependencies/ScopedTimer
-	url = git@github.com:UE4SS-RE/scopedtimer.git
+	url = git@github.com:UE4SS-RE/ScopedTimer.git
 	branch = main
 [submodule "Dependencies/DynamicOutput"]
 	path = Dependencies/DynamicOutput
-	url = git@github.com:UE4SS-RE/dynamicoutput.git
+	url = git@github.com:UE4SS-RE/DynamicOutput.git
 	branch = main
 [submodule "Dependencies/MProgram"]
 	path = Dependencies/MProgram
-	url = git@github.com:UE4SS-RE/mprogram.git
+	url = git@github.com:UE4SS-RE/MProgram.git
 	branch = main
 [submodule "Dependencies/LuaMadeSimple"]
 	path = Dependencies/LuaMadeSimple
-	url = git@github.com:UE4SS-RE/luamadesimple.git
+	url = git@github.com:UE4SS-RE/LuaMadeSimple.git
 	branch = main
 [submodule "Dependencies/Input"]
 	path = Dependencies/Input
@@ -48,15 +48,15 @@
 	branch = main
 [submodule "Dependencies/IniParser"]
 	path = Dependencies/IniParser
-	url = git@github.com:UE4SS-RE/iniparser.git
+	url = git@github.com:UE4SS-RE/IniParser.git
 	branch = main
 [submodule "Dependencies/FunctionTimer"]
 	path = Dependencies/FunctionTimer
-	url = git@github.com:UE4SS-RE/functiontimer.git
+	url = git@github.com:UE4SS-RE/FunctionTimer.git
 	branch = main
 [submodule "Dependencies/LuaRaw"]
 	path = Dependencies/LuaRaw
-	url = git@github.com:UE4SS-RE/luaraw.git
+	url = git@github.com:UE4SS-RE/LuaRaw.git
 	branch = main
 [submodule "Dependencies/PolyHook_2_0"]
 	path = Dependencies/PolyHook_2_0
@@ -68,5 +68,5 @@
 	branch = master
 [submodule "Dependencies/ParserBase"]
 	path = Dependencies/ParserBase
-	url = git@github.com:UE4SS-RE/parserbase.git
+	url = git@github.com:UE4SS-RE/ParserBase.git
 	branch = main
