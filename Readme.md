@@ -1,6 +1,21 @@
-# Re-Host of Unreal Engine 4 Scripting System
+# Re-Host of Unreal Engine 4/5 Scripting System
 
-## The original creator no longer wishes to be involved in or connected to this project.  Please respect their wishes, and avoid using their past usernames in connection with this project.
+## The original creator no longer wishes to be involved in or connected to this project.  Please respect their wishes, and avoid using their past usernames in connection with this project.  Support for/updates to this project will now be very limited.
+
+
+## Targeting UE Versions: From 4.12 To 5.0
+
+The goal of UE4SS is not to be a plug-n-play solution that always works with every game.  
+The goal is to have an underlying system that works for most games.  
+You may need to update AOBs on your own, and there's a guide for that below.  
+
+## Links
+
+[Full installation guide](FullInstallationGuide.md)  
+[Updating AOBs](FixingBrokenAOBs.md)  
+[Generating UHT compatible headers](Generating-UHT-compatible-headers)
+
+
 
 ## Build requirements
 
