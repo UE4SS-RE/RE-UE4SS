@@ -36,6 +36,7 @@ You may need to update AOBs on your own, and there's a guide for that below.
 1. Clone the repo.
 2. Execute this command: `git submodule update --init --recursive`  
     Do not use the `--remote` option because that will force third-party dependencies to update to the latest commit, and that can break things.
+    You will need your github account to be linked to an Epic games account to pull the Unreal pseudo code submodule.
 3. There are three different ways you can build UE4SS.  
     1. Execute this command: `build_auto.bat <BuildMode> <Target>`, example: `build_auto.bat Release ue4ss`  
         Valid build modes are `Release` and `Debug`, and valid targets are `ue4ss` and `xinput1_3`.  
