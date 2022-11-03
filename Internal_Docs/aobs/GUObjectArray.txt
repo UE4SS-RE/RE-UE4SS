@@ -1,0 +1,47 @@
+4.12 (indirect scan, follow mov) (scans for FWeakObjectPtr::Get)
+8B 51 04 85 D2 74 5A 48 63 01 85 C0 78 53 44 8B ?? ?? ?? ?? ?? 41 3B C0 7D 47 4C 8B
+not found in:
+DRG (4.25)
+Satisfactory (4.26, modular)
+SX4 (4.25)
+Demo game (4.26)
+Demo game (4.22)
+found in
+Demo game (4.12)
+
+4.18 (indirect scan, follow lea) (scans for FUObjectArray::FUObjectArray)
+48 89 5C 24 08 48 89 74 24 10 57 48 83 EC 20 33 F6 C7 41 04 FF FF FF FF 89
+Called from "Unknown function -> _onexit -> atexit -> initterm"
+not found in:
+Jedi Fallen Order (4.21)
+{
+    Games doesn't seem to have any references to GUObjectArray from any lea instructions, only from mov instructions
+}
+found in:
+DRG (4.25) - right { lea at 0x94 }
+Satisfactory (4.25, modular) - right
+SX4 (4.25) - right
+Demo game (4.26) - right { lea at 0x94 }
+Demo game (4.22) - right { lea at 0x94 }
+Demo game (4.12) - wrong {
+    goes to a function but the lea does not resolve directly to GUObjectArray
+    the lea is at 0x89 in the function and inside is another lea at 0x0 that resolves to GUObjectArray
+}
+GH demo game (4.24) - right { lea at 0x94 }
+Demo game (4.25, BP) - right { lea at 0x94 }
+Shooter game (4.17, BP) - right { lea at 0x8C }
+Demo game (5.0 EA #1) - right { lea at 0x8C } "48 8D 05 5DC39E03"
+DBD (4.25, no aslr) - right { lea at 0x94 } "48 8D 05 F5376805"
+Crash Bandicoot 4 (4.24) - right { lea at 0x94 } "48 8D 05 0D3A1E03"
+Hello Neighbor 1 (4.21) - right { lea at 0x94 } "48 8D 05 55E28002"
+Hello Neighbor 2 (4.25) - right { lea at 0x94 } "48 8D 05 E5C52E03"
+
+4.19+ (direct scan)
+?? ?? 0? 00 ?? ?? ?? ?? ?? ?? 0? 00 00 00 00 00 ?? ?? ?? ?? ?? ?? 00 00 00 00 00 00 00 00 00 00 00 ?0 2? 00 ?? ?? ?? 00 2? 00 00 00 0? 00 00 00 FF FF FF FF FF FF FF FF FF
+59 DC 00 00 58 DC 00 00 59 DC 00 00 00 00 00 00 A0 12 ?? ?? ?? ?? 00 00 00 00 00 00 00 00 00 00 00 00 21 00 ?? ?? ?? 00 21 00 00 00 ?? 00 00 00
+found in:
+DRG (4.25) - right
+Satisfactory (4.25, modular) - right
+SX4 (4.25) - right
+Demo game (4.26) - right
+Demo game (4.22) - right

@@ -1,0 +1,10 @@
+Added support for StrProperty (both C++ and Lua).
+The 'Offset_Internal' value for RegisterCustomProperty can now be either an integer or a table that contains another property in
+the same class as 'BelongsToClass' and a relative offset to add to the Offset_Internal of that property.
+Added functions UObject.GetPropertyValue & UObject.SetPropertyValue.
+Added UObjectReflection, Property, & PropertyClass. See API.txt for more information.
+The 'ConsoleEnablerMod' will now only attempt to create a console if a console is not already attached to the GameViewportClient.
+Some internal changes to 'FString' in the C++ api. It's now a TArray of wchar_t and the clear() function works properly.
+Fixed memory leak in the FString implementation.
+Fixed object dumper not dumping detailed information about the inner property (example: PropertyClass of ObjectProperty).
+Fixed a bug where the game would crash if you used the global Lua function 'NotifyOnNewObject' and then used the hot-reload feature.

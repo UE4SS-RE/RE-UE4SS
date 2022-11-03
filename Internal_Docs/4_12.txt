@@ -1,0 +1,109 @@
+enum EObjectFlags
+{
+    RF_NoFlags					        =0x00000000,
+
+    RF_Public					        =0x00000001,
+    RF_Standalone				        =0x00000002,
+    RF_MarkAsNative				        =0x00000004,
+    RF_Transactional			        =0x00000008,
+    RF_ClassDefaultObject		        =0x00000010,
+    RF_ArchetypeObject			        =0x00000020,
+    RF_Transient				        =0x00000040,
+
+    RF_MarkAsRootSet			        =0x00000080,
+    //RF_Unused				            =0x00000100,
+    RF_TagGarbageTemp			        =0x00000200,
+
+    RF_NeedLoad					        =0x00000400,
+    //RF_Unused                         =0x00000800,
+    RF_NeedPostLoad				        =0x00001000,
+    RF_NeedPostLoadSubobjects	        =0x00002000,
+    //RF_Unused                         =0x00004000,
+    RF_BeginDestroyed			        =0x00008000,
+    RF_FinishDestroyed			        =0x00010000,
+
+    RF_BeingRegenerated			        =0x00020000,
+    RF_DefaultSubObject			        =0x00040000,
+    RF_WasLoaded				        =0x00080000,
+    RF_TextExportTransient		        =0x00100000,
+    RF_LoadCompleted			        =0x00200000,
+    RF_InheritableComponentTemplate     =0x00400000,
+    //RF_Unused                         =0x00800000,
+    RF_StrongRefOnFrame		            =0x01000000,
+    //RF_Unused		                    =0x02000000,
+    RF_Dynamic                          =0x04000000,
+};
+
+#define CPF_Edit							DECLARE_UINT64(0x0000000000000001)		// Property is user-settable in the editor.
+#define CPF_ConstParm						DECLARE_UINT64(0x0000000000000002)		// This is a constant function parameter
+#define CPF_BlueprintVisible				DECLARE_UINT64(0x0000000000000004)		// This property can be read by blueprint code
+#define CPF_ExportObject					DECLARE_UINT64(0x0000000000000008)		// Object can be exported with actor.
+#define CPF_BlueprintReadOnly				DECLARE_UINT64(0x0000000000000010)		// This property cannot be modified by blueprint code
+#define CPF_Net								DECLARE_UINT64(0x0000000000000020)		// Property is relevant to network replication.
+#define CPF_EditFixedSize					DECLARE_UINT64(0x0000000000000040)		// Indicates that elements of an array can be modified, but its size cannot be changed.
+#define CPF_Parm							DECLARE_UINT64(0x0000000000000080)		// Function/When call parameter.
+#define CPF_OutParm							DECLARE_UINT64(0x0000000000000100)		// Value is copied out after function call.
+#define CPF_ZeroConstructor					DECLARE_UINT64(0x0000000000000200)		// memset is fine for construction
+#define CPF_ReturnParm						DECLARE_UINT64(0x0000000000000400)		// Return value.
+#define CPF_DisableEditOnTemplate			DECLARE_UINT64(0x0000000000000800)		// Disable editing of this property on an archetype/sub-blueprint
+//#define CPF_      						DECLARE_UINT64(0x0000000000001000)		// 
+#define CPF_Transient   					DECLARE_UINT64(0x0000000000002000)		// Property is transient: shouldn't be saved, zero-filled at load time.
+#define CPF_Config      					DECLARE_UINT64(0x0000000000004000)		// Property should be loaded/saved as permanent profile.
+//#define CPF_								DECLARE_UINT64(0x0000000000008000)		// 
+#define CPF_DisableEditOnInstance			DECLARE_UINT64(0x0000000000010000)		// Disable editing on an instance of this class
+#define CPF_EditConst   					DECLARE_UINT64(0x0000000000020000)		// Property is uneditable in the editor.
+#define CPF_GlobalConfig					DECLARE_UINT64(0x0000000000040000)		// Load config from base class, not subclass.
+#define CPF_InstancedReference				DECLARE_UINT64(0x0000000000080000)		// Property is a component references.
+//#define CPF_								DECLARE_UINT64(0x0000000000100000)
+#define CPF_DuplicateTransient				DECLARE_UINT64(0x0000000000200000)		// Property should always be reset to the default value during any type of duplication (copy/paste, binary duplication, etc.)
+#define CPF_SubobjectReference				DECLARE_UINT64(0x0000000000400000)		// Property contains subobject references (TSubobjectPtr)
+//#define CPF_    							DECLARE_UINT64(0x0000000000800000)		// 
+#define CPF_SaveGame						DECLARE_UINT64(0x0000000001000000)		// Property should be serialized for save games
+#define CPF_NoClear							DECLARE_UINT64(0x0000000002000000)		// Hide clear (and browse) button.
+//#define CPF_  							DECLARE_UINT64(0x0000000004000000)		//
+#define CPF_ReferenceParm					DECLARE_UINT64(0x0000000008000000)		// Value is passed by reference; CPF_OutParam and CPF_Param should also be set.
+#define CPF_BlueprintAssignable				DECLARE_UINT64(0x0000000010000000)		// MC Delegates only.  Property should be exposed for assigning in blueprint code
+#define CPF_Deprecated  					DECLARE_UINT64(0x0000000020000000)		// Property is deprecated.  Read it from an archive, but don't save it.
+#define CPF_IsPlainOldData					DECLARE_UINT64(0x0000000040000000)		// If this is set, then the property can be memcopied instead of CopyCompleteValue / CopySingleValue
+#define CPF_RepSkip							DECLARE_UINT64(0x0000000080000000)		// Not replicated. For non replicated properties in replicated structs 
+#define CPF_RepNotify						DECLARE_UINT64(0x0000000100000000)		// Notify actors when a property is replicated
+#define CPF_Interp							DECLARE_UINT64(0x0000000200000000)		// interpolatable property for use with matinee
+#define CPF_NonTransactional				DECLARE_UINT64(0x0000000400000000)		// Property isn't transacted
+#define CPF_EditorOnly						DECLARE_UINT64(0x0000000800000000)		// Property should only be loaded in the editor
+#define CPF_NoDestructor					DECLARE_UINT64(0x0000001000000000)		// No destructor
+//#define CPF_								DECLARE_UINT64(0x0000002000000000)		//
+#define CPF_AutoWeak						DECLARE_UINT64(0x0000004000000000)		// Only used for weak pointers, means the export type is autoweak
+#define CPF_ContainsInstancedReference		DECLARE_UINT64(0x0000008000000000)		// Property contains component references.
+#define CPF_AssetRegistrySearchable			DECLARE_UINT64(0x0000010000000000)		// asset instances will add properties with this flag to the asset registry automatically
+#define CPF_SimpleDisplay					DECLARE_UINT64(0x0000020000000000)		// The property is visible by default in the editor details view
+#define CPF_AdvancedDisplay					DECLARE_UINT64(0x0000040000000000)		// The property is advanced and not visible by default in the editor details view
+#define CPF_Protected						DECLARE_UINT64(0x0000080000000000)		// property is protected from the perspective of script
+#define CPF_BlueprintCallable				DECLARE_UINT64(0x0000100000000000)		// MC Delegates only.  Property should be exposed for calling in blueprint code
+#define CPF_BlueprintAuthorityOnly			DECLARE_UINT64(0x0000200000000000)		// MC Delegates only.  This delegate accepts (only in blueprint) only events with BlueprintAuthorityOnly.
+#define CPF_TextExportTransient				DECLARE_UINT64(0x0000400000000000)		// Property shouldn't be exported to text format (e.g. copy/paste)
+#define CPF_NonPIEDuplicateTransient		DECLARE_UINT64(0x0000800000000000)		// Property should only be copied in PIE
+#define CPF_ExposeOnSpawn					DECLARE_UINT64(0x0001000000000000)		// Property is exposed on spawn
+#define CPF_PersistentInstance				DECLARE_UINT64(0x0002000000000000)		// A object referenced by the property is duplicated like a component. (Each actor should have an own instance.)
+#define CPF_UObjectWrapper					DECLARE_UINT64(0x0004000000000000)		// Property was parsed as a wrapper class like TSubobjectOf<T>, FScriptInterface etc., rather than a USomething*
+#define CPF_HasGetValueTypeHash				DECLARE_UINT64(0x0008000000000000)		// This property can generate a meaningful hash value.
+#define CPF_NativeAccessSpecifierPublic		DECLARE_UINT64(0x0010000000000000)		// Public native access specifier
+#define CPF_NativeAccessSpecifierProtected	DECLARE_UINT64(0x0020000000000000)		// Protected native access specifier
+#define CPF_NativeAccessSpecifierPrivate	DECLARE_UINT64(0x0040000000000000)		// Private native access specifier
+
+#define CPF_NativeAccessSpecifiers	(CPF_NativeAccessSpecifierPublic | CPF_NativeAccessSpecifierProtected | CPF_NativeAccessSpecifierPrivate)
+
+#define CPF_ParmFlags				(CPF_Parm | CPF_OutParm | CPF_ReturnParm | CPF_ReferenceParm | CPF_ConstParm)
+#define CPF_PropagateToArrayInner	(CPF_ExportObject | CPF_PersistentInstance | CPF_InstancedReference | CPF_ContainsInstancedReference | CPF_Config | CPF_EditConst | CPF_Deprecated | CPF_EditorOnly | CPF_AutoWeak | CPF_UObjectWrapper )
+#define CPF_PropagateToMapValue		(CPF_ExportObject | CPF_PersistentInstance | CPF_InstancedReference | CPF_ContainsInstancedReference | CPF_Config | CPF_EditConst | CPF_Deprecated | CPF_EditorOnly | CPF_AutoWeak | CPF_UObjectWrapper | CPF_Edit )
+#define CPF_PropagateToMapKey		(CPF_ExportObject | CPF_PersistentInstance | CPF_InstancedReference | CPF_ContainsInstancedReference | CPF_Config | CPF_EditConst | CPF_Deprecated | CPF_EditorOnly | CPF_AutoWeak | CPF_UObjectWrapper | CPF_Edit )
+
+/** the flags that should never be set on interface properties */
+#define CPF_InterfaceClearMask		(CPF_ExportObject|CPF_InstancedReference|CPF_ContainsInstancedReference)
+
+/** all the properties that can be stripped for final release console builds */
+#define CPF_DevelopmentAssets		(CPF_EditorOnly)
+
+/** all the properties that should never be loaded or saved */
+#define CPF_ComputedFlags			(CPF_IsPlainOldData | CPF_NoDestructor | CPF_ZeroConstructor)
+
+#define CPF_AllFlags				DECLARE_UINT64(0xFFFFFFFFFFFFFFFF)

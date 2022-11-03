@@ -1,0 +1,14 @@
+LIBRARY xinput1_3.dll
+EXPORTS
+	DllMain=DllMain_wrapper @1
+	XInputEnable=XInputEnable_wrapper @5
+	XInputGetBatteryInformation=XInputGetBatteryInformation_wrapper @7
+	XInputGetCapabilities=XInputGetCapabilities_wrapper @4
+	XInputGetDSoundAudioDeviceGuids=XInputGetDSoundAudioDeviceGuids_wrapper @6
+	XInputGetKeystroke=XInputGetKeystroke_wrapper @8
+	XInputGetState=XInputGetState_wrapper @2
+	XInputSetState=XInputSetState_wrapper @3
+	ExportByOrdinal100 @100 NONAME
+	ExportByOrdinal101 @101 NONAME
+	ExportByOrdinal102 @102 NONAME
+	ExportByOrdinal103 @103 NONAME

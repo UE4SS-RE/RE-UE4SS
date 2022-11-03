@@ -1,0 +1,66 @@
+.git/
+
+.idea/
+
+# Visual Studio
+.vs/
+*.vcxproj*
+VS_Solution/*.sln
+VS_Solution/CMakeCache.txt
+VS_Solution/cmake_install.cmake
+VS_Solution/*.proj*
+
+
+# Build results
+[Dd]ebug/
+[Dd]ebugPublic/
+[Rr]elease/
+[Rr]eleases/
+x64/
+x86/
+
+# CLion
+# Not ignoring CLion files as I want the project targets & settings, inspections etc to be able to be shared
+
+_ReSharper.Caches/
+cmake-build-debug/
+CMakeFiles/
+
+# Binaries & Intermediates
+Output/
+ue4ss_rewrite_maybe_main.dir/
+VS_Solution/vendor/
+VS_Solution/Dependencies/
+Releases/
+
+
+# Others
+*.tlog
+*.log
+*.obj
+*.idb
+*.pdb
+*.lastbuildstate
+*.recipe
+
+
+
+
+# ReSharper is a .NET coding add-in
+_ReSharper*/
+*.[Rr]e[Ss]harper
+*.DotSettings.user
+
+# JetBrains Rider
+*.sln.iml
+
+# VS Code files for those working on multiple tools
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+*.code-workspace
+
+# Local History for Visual Studio Code
+.history/

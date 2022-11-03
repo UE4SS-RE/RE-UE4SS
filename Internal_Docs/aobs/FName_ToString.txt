@@ -1,0 +1,144 @@
+FName::ToString, indirect scan
+
+4.12
+{
+    GetFeatureLevelName / GetMaterialQualityLevelName
+    Instruction: JMP
+    48 63 C1 48 8D ?? ?? ?? ?? ?? 48 8D 0C C1 E9
+    Not found in: 4.26
+    
+    FSoundSource::DrawDebugInfo
+    Instruction: CALL
+    E8 ?? ?? ?? ?? 48 8B 43 18 83 78 0C 02 75 72 48 8B 43 10
+    Not found in: 4.26
+    
+    FMaterialShaderMapId::AppendKeyString
+    Instruction: CALL
+    E8 ?? ?? ?? ?? 8B 5D 08 41 8B C5 85 DB 4C 89 6C 24 20
+    Not found in: 4.26
+    
+    FMaterialShaderMapId::GetMaterialHash
+    Instruction: CALL
+    E8 ?? ?? ?? ?? 44 8B 44 24 28 45 85 C0 74 0A
+    Not found in: 4.26
+    
+    UParticleModule::GenerateLODModule
+    Instruction: CALL
+    Precursor bytes #1: 48 89 44 24 70
+    Precursor bytes #2: 48 89 6C 24 40
+    Precursor bytes #3: 48 89 6C 24 48
+    E8 ?? ?? ?? ?? 48 8B 4C 24 40 8B FD 48 85 C9
+    Confirmed found in: 4.22, 4.26, 5.0 EA #1
+    Also found in: Various versions, C++ and BP-only, between 4.12 and 4.26
+    Not found in: Demo game (4.25.3, case preserving), Dead Rock Galactic (4.25), DBD (4.25.3, case preserving)
+    Improved variant #1 {
+        Out of the 'Not found in' section, this improved version is found in: Demo game (4.25.3 case preserving)
+        What was changed: A 0x40 was changed to 0x??, and it was 0x50 in "Demo game (4.25.3 case preserving)"
+
+        Still not found in: Dead Rock Galactic (4.25), DBD (4.25.3, case preserving)
+        Precursor bytes #1: 48 89 6C 24 50
+        Precursor bytes #2: 48 89 6C 24 58
+        Precursor bytes #3: 89 44 24 48
+        E8 ?? ?? ?? ?? 48 8B 4C 24 ?? 8B FD 48 85 C9
+    }
+    Improved variant #2 {
+        Out of the 'Still not found' from variant #1, this improved version is found in: DBD (4.25.3, case preserving)
+        Regression, not found in: Demo game (4.25, case preserving)
+        Still not found in: Dead Rock Galactic (4.25)
+        48 89 6C 24 48 E8 ?? ?? ?? ?? 48 8B ?? ?? ?? ?? ?? 48 85
+    }
+    String refs far above: "ServicesBPLibrary"
+    String refs nearby below: "ServicesBPLibrary", "alid bitset<N> position"
+    None of the string refs are valid for all games, so ignore them
+    Usage: Follow the call at 0x0, and you're at FName::ToString.
+}
+
+DBD, 4.25
+{
+    UParticleModule::GenerateLODModule
+    Instruction: CALL
+    Precursor bytes #1: 48 89 5C 24 40
+    Precursor bytes #2: 48 8B CE     
+    Precursor bytes #3: 48 89 6C 24 48
+    48 89 6C 24 48 E8 ?? ?? ?? ?? 48 8B ?? ?? ?? ?? ?? 48 85
+
+    UEnum::GenerateEnumPrefix
+    Instruction: CALL
+    E8 ?? ?? ?? ?? BD 01 00 00 00 41 39 6E 50 0F 8E
+    Found in: DRG (4.25)
+    Not found in: DBD
+}
+
+4.26
+{
+    GetFeatureLevelName / GetMaterialQualityLevelName
+    Instruction: JMP
+    40 53 48 83 EC 20 48 8B DA 83 F9 04 73 18 48 63 C1 48 8D ?? ?? ?? ?? ?? 48 8D 0C C1 48 83 C4 20 5B E9
+    Not found in: 
+    
+    UEnum::GenerateEnumPrefix
+    Instruction: CALL
+    E8 ?? ?? ?? ?? BD 01 00 00 00 41 39 6E 48 0F 8E
+    Found in: DRG (4.25)
+    Not found in: DBD
+    Improved variant #1 {
+        Also works for DBD
+        E8 ?? ?? ?? ?? BD 01 00 00 00 41 39 6E ?? 0F 8E
+        
+        Usage: Follow the call at 0x0, and you're at FName::ToString.
+    }
+    Modular variant {
+        To be used for modular games (example: Satisfactory)
+        This AOB needs work, it's made from a sample size of 1 (Satisfactory)
+        FF 15 ?? ?? ?? ?? 41 BE 01 00 00 00 45 39 75 48
+    }
+    
+    GetPackageLinker
+    Instruction: CALL
+    E8 ?? ?? ?? ?? 48 8B 5D 88 48 8B C7 4C 8B 7D 80
+    
+    FScene::UpdateSceneCaptureContents
+    Instruction: CALL
+    E8 ?? ?? ?? ?? 8B 5D F0 33 D2 44 0F B6 B6 FC 00 00 00
+    
+    RHIInit
+    Instruction: CALL
+    E8 ?? ?? ?? ?? EB 51 BA 14 00 00 00 48 8D 4C 24 20
+    
+    FAudioDevice::AddNewActiveSoundInternal
+    Instruction: CALL
+    E8 ?? ?? ?? ?? 48 8B 53 28 4C 8B C6 48 8B CF
+    
+    UMaterialInstance::Serialize
+    Instruction: CALL
+    E8 ?? ?? ?? ?? 45 8D 74 24 40 45 8D 7C 24 05 0F 1F 80 00 00 00 00
+    
+    UParticleModule::GenerateLODModule
+    Instruction: CALL
+    E8 ?? ?? ?? ?? 48 8B 4C 24 40 8B FD 48 85 C9
+    Modular variant {
+        To be used for modular games (example: Satisfactory)
+        This AOB needs work, it's made from a sample size of 1 (Satisfactory)
+        FF 15 ?? ?? ?? ?? 80 3D ?? ?? ?? ?? ?? 72 3A 44 39 74 24 48
+    }
+}
+
+Idea so far
+{
+    Four AOBs, one:
+    Module: Engine
+    "E8 ?? ?? ?? ?? 48 8B 4C 24 ?? 8B FD 48 85 C9"
+    for 4.12 - 5.0 EA #1
+    two:
+    Module: Engine
+    "FF 15 ?? ?? ?? ?? 80 3D ?? ?? ?? ?? ?? 72 3A 44 39 74 24 48"
+    same as "one" except for modular games like Satisfactory
+    three:
+    Module: CoreUObject
+    "E8 ?? ?? ?? ?? BD 01 00 00 00 41 39 6E ?? 0F 8E"
+    for 4.25+ if the first one fails
+    four:
+    Module: CoreUObject
+    "FF 15 ?? ?? ?? ?? 41 BE 01 00 00 00 45 39 75 48"
+    same as "three" except for modular games like Satisfactory
+}

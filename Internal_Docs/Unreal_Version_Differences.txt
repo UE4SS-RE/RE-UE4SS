@@ -1,0 +1,132 @@
+EObjectFlags
+{
+    FROM 4.12 TO 4.14
+    DEFINED IN: Engine/Source/Runtime/CoreUObject/Public/UObject/ObjectMacros.h
+    ADDED
+    {
+        RF_KeepForCooker
+        RF_DuplicateTransient
+        RF_NonPIEDuplicateTransient
+    }
+    BREAKING
+    {
+        No breaking changes
+    }
+    
+    FROM 4.12 TO 4.13
+    DEFINED IN: Engine/Source/Runtime/CoreUObject/Public/UObject/ObjectMacros.h
+    NO CHANGES
+    
+    FROM 4.13 TO 4.14
+    ADDED
+    {
+        RF_DuplicateTransient
+        RF_NonPIEDuplicateTransient
+    }
+    BREAKING
+    {
+        No breaking changes
+    }
+    
+    FROM 4.14 TO 4.15
+    DEFINED IN: Engine/Source/Runtime/CoreUObject/Public/UObject/ObjectMacros.h
+    ADDED
+    {
+        RF_NeedInitialization
+        RF_NewerVersionExists
+    }
+    BREAKING
+    {
+        RF_TagGarbageTemp was moved from '0x00000200' to '0x00000100'
+        RF_NeedInitialization replaces 'RF_TagGarbageTemp' at '0x00000200'
+    }
+    
+    FROM 4.15 TO 4.22
+    DEFINED IN: Engine/Source/Runtime/CoreUObject/Public/UObject/ObjectMacros.h
+    ADDED
+    {
+        RF_WillBeLoaded
+    }
+    BREAKING
+    {
+        No breaking changes
+    }
+    
+    FROM 4.22 TO 4.25
+    DEFINED IN: Engine/Source/Runtime/CoreUObject/Public/UObject/ObjectMacros.h
+    ADDED
+    {
+        RF_HasExternalPackage
+    }
+    BREAKING
+    {
+        No breaking changes
+    }
+    
+    FROM 4.25 TO 5.0
+    DEFINED IN: Engine/Source/Runtime/CoreUObject/Public/UObject/ObjectMacros.h
+    NO CHANGES
+}
+
+EPropertyFlags
+{
+    FROM x.xx TO 4.12
+    DEFINED IN: Engine/Source/Runtime/CoreUObject/Public/UObject/ObjectBase.h
+    NOTES
+    {
+        Is not an enum, but a bunch of defines
+    }
+    
+    FROM 4.12 TO 4.13
+    DEFINED IN: Engine/Source/Runtime/CoreUObject/Public/UObject/ObjectBase.h
+    ADDED
+    {
+        CPF_SkipSerialization
+        CPF_PropagateToSetElement <- Combination of flags
+    }
+    
+    FROM 4.13 TO 4.14
+    DEFINED IN: Engine/Source/Runtime/CoreUObject/Public/UObject/ObjectMacros.h
+    NO CHANGES
+    
+    FROM 4.14 TO 4.15
+    DEFINED IN: Engine/Source/Runtime/CoreUObject/Public/UObject/ObjectMacros.h
+    CHANGES
+    {
+        Combination flag CPF_ComputedFlags had CPF_HasGetValueTypeHash added
+    }
+    BREAKING
+    {
+        No breaking changes
+    }
+    
+    FROM 4.15 TO 4.20
+    DEFINED IN: Engine/Source/Runtime/CoreUObject/Public/UObject/ObjectMacros.h
+    CHANGES
+    {
+        Changed from a bunch of defines to an enum
+    }
+    BREAKING CHANGES
+    {
+        No breaking changes
+    }
+    
+    FROM 4.20 TO 4.22
+    DEFINED IN: Engine/Source/Runtime/CoreUObject/Public/UObject/ObjectMacros.h
+    NO CHANGES
+    
+    FROM 4.22 TO 4.25
+    DEFINED IN: Engine/Source/Runtime/CoreUObject/Public/UObject/ObjectMacros.h
+    NO CHANGES
+    
+    FROM 4.25 TO 5.0_ea_branch_ue5-main
+    DEFINED IN: Engine/Source/Runtime/CoreUObject/Public/UObject/ObjectMacros.h
+    REMOVED
+    {
+        CPF_SubobjectReference
+    }
+    BREAKING
+    {
+        Anything that relis on anything listed in the REMOVED section
+    }
+}

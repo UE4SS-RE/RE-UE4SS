@@ -1,0 +1,13 @@
+function Register()
+    return "C 3/3 3/C 0/4 8/8 D/5 4/2 4/2 0/4 8/8 B/C F/4 8/8 9/4 4/2 4/2 0/4 8/8 9/4 4/2 4/2 8/E 8"
+end
+
+function OnMatchFound(MatchAddress)
+    local AOBSize = 22
+    local CallInstr = MatchAddress + AOBSize - 1
+    local InstrSize = 5
+    local NextInstr = CallInstr + InstrSize
+    local Offset = DerefToInt32(CallInstr + 1)
+    local ToStringAddress = NextInstr + Offset
+    return ToStringAddress
+end

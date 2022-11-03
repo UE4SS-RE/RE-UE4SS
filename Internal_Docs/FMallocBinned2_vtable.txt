@@ -1,0 +1,106 @@
+This file contains the contents of the FMallocBinned2 vtable for multiple engine versions from 0x0 to 0x130 (or until there is no more data).
+
+The mov instruction for GMalloc should be able to be used as the instance when calling the functions inside the vtable.
+
+4.12
+{
+The second mov instruction is for GMalloc.
+Follow the mov, then follow 0x0, then follow 0x0, now you're inside the vtable.
+
+00007FF65528C0F8  00007FF653920210  ue4ss_main412-win64-shipping.public: virtual void * __ptr64 __cdecl FMallocBinned::`scalar deleting destructor'(unsigned int) __ptr64
+00007FF65528C100  00007FF655146C10  ue4ss_main412-win64-shipping.public: virtual bool __cdecl UScriptStruct::TCppStructOps<struct FDestructibleSpecialHierarchyDepths>::HasIdentical(void) __ptr64
+00007FF65528C108  00007FF653937C00  ue4ss_main412-win64-shipping.public: virtual void * __ptr64 __cdecl FMallocBinned::Malloc(unsigned __int64,unsigned int) __ptr64
+00007FF65528C110  00007FF65393CE60  ue4ss_main412-win64-shipping.public: virtual void * __ptr64 __cdecl FMallocBinned::Realloc(void * __ptr64,unsigned __int64,unsigned int) __ptr64
+00007FF65528C118  00007FF65392F4F0  ue4ss_main412-win64-shipping.public: virtual void __cdecl FMallocBinned::Free(void * __ptr64) __ptr64
+00007FF65528C120  00007FF6542FE5A0  ue4ss_main412-win64-shipping.public: virtual unsigned __int64 __cdecl FMalloc::QuantizeSize(unsigned __int64,unsigned int) __ptr64
+00007FF65528C128  00007FF6539301D0  ue4ss_main412-win64-shipping.public: virtual bool __cdecl FMallocBinned::GetAllocationSize(void * __ptr64,unsigned __int64 & __ptr64) __ptr64
+00007FF65528C130  00007FF653A6CD90  ue4ss_main412-win64-shipping.void __cdecl AddStructReferencedObjectsOrNot<struct FAnimationTransitionRule>(void const * __ptr64,class FReferenceCollector & __ptr64)
+00007FF65528C138  00007FF653A6CD90  ue4ss_main412-win64-shipping.void __cdecl AddStructReferencedObjectsOrNot<struct FAnimationTransitionRule>(void const * __ptr64,class FReferenceCollector & __ptr64)
+00007FF65528C140  00007FF653A6CD90  ue4ss_main412-win64-shipping.void __cdecl AddStructReferencedObjectsOrNot<struct FAnimationTransitionRule>(void const * __ptr64,class FReferenceCollector & __ptr64)
+00007FF65528C148  00007FF653A6CD90  ue4ss_main412-win64-shipping.void __cdecl AddStructReferencedObjectsOrNot<struct FAnimationTransitionRule>(void const * __ptr64,class FReferenceCollector & __ptr64)
+00007FF65528C150  00007FF653A6CD90  ue4ss_main412-win64-shipping.void __cdecl AddStructReferencedObjectsOrNot<struct FAnimationTransitionRule>(void const * __ptr64,class FReferenceCollector & __ptr64)
+00007FF65528C158  00007FF653A6CD90  ue4ss_main412-win64-shipping.void __cdecl AddStructReferencedObjectsOrNot<struct FAnimationTransitionRule>(void const * __ptr64,class FReferenceCollector & __ptr64)
+00007FF65528C160  00007FF653929060  ue4ss_main412-win64-shipping.public: virtual void __cdecl FMallocBinned::DumpAllocatorStats(class FOutputDevice & __ptr64) __ptr64
+00007FF65528C168  00007FF654078F40  ue4ss_main412-win64-shipping.public: virtual bool __cdecl UScriptStruct::TCppStructOps<struct FTickPrerequisite>::HasCopy(void) __ptr64
+00007FF65528C170  00007FF653943CE0  ue4ss_main412-win64-shipping.public: virtual bool __cdecl FMallocBinned::ValidateHeap(void) __ptr64
+00007FF65528C178  00007FF653932480  ue4ss_main412-win64-shipping.public: virtual wchar_t const * __ptr64 __cdecl FMallocBinned::GetDescriptiveName(void) __ptr64
+}
+
+4.22
+{
+The second mov instruction is for GMalloc.
+Follow the mov, then follow 0x0, then follow 0x0, now you're inside the vtable.
+
+00007FF6FA19D790  00007FF6F8520630  ue4ss_main422-win64-shipping.public: virtual void * __ptr64 __cdecl FMallocBinned2::`scalar deleting destructor'(unsigned int) __ptr64
+00007FF6FA19D798  00007FF6F82C6C10  ue4ss_main422-win64-shipping.public: virtual bool __cdecl UScriptStruct::TCppStructOps<struct FCollectionParameterBase>::HasGetTypeHash(void) __ptr64
+00007FF6FA19D7A0  00007FF6F8530DC0  ue4ss_main422-win64-shipping.public: virtual void * __ptr64 __cdecl FMallocBinned2::Malloc(unsigned __int64,unsigned int) __ptr64
+00007FF6FA19D7A8  00007FF6F8532BB0  ue4ss_main422-win64-shipping.public: virtual void * __ptr64 __cdecl FMallocBinned2::Realloc(void * __ptr64,unsigned __int64,unsigned int) __ptr64
+00007FF6FA19D7B0  00007FF6F85265D0  ue4ss_main422-win64-shipping.public: virtual void __cdecl FMallocBinned2::Free(void * __ptr64) __ptr64
+00007FF6FA19D7B8  00007FF6F8532880  ue4ss_main422-win64-shipping.public: virtual unsigned __int64 __cdecl FMallocBinned2::QuantizeSize(unsigned __int64,unsigned int) __ptr64
+00007FF6FA19D7C0  00007FF6F8527AC0  ue4ss_main422-win64-shipping.public: virtual bool __cdecl FMallocBinned2::GetAllocationSize(void * __ptr64,unsigned __int64 & __ptr64) __ptr64
+00007FF6FA19D7C8  00007FF6F85375E0  ue4ss_main422-win64-shipping.public: virtual void __cdecl FMallocBinned2::Trim(bool) __ptr64
+00007FF6FA19D7D0  00007FF6F8536610  ue4ss_main422-win64-shipping.public: virtual void __cdecl FMallocBinned2::SetupTLSCachesOnCurrentThread(void) __ptr64
+00007FF6FA19D7D8  00007FF6F8521E70  ue4ss_main422-win64-shipping.public: virtual void __cdecl FMallocBinned2::ClearAndDisableTLSCachesOnCurrentThread(void) __ptr64
+00007FF6FA19D7E0  00007FF6F82C5260  ue4ss_main422-win64-shipping.public: virtual void __cdecl IMediaPlayer::TickAudio(void) __ptr64
+00007FF6FA19D7E8  00007FF6F82C5260  ue4ss_main422-win64-shipping.public: virtual void __cdecl IMediaPlayer::TickAudio(void) __ptr64
+00007FF6FA19D7F0  00007FF6F82C5260  ue4ss_main422-win64-shipping.public: virtual void __cdecl IMediaPlayer::TickAudio(void) __ptr64
+00007FF6FA19D7F8  00007FF6F8524510  ue4ss_main422-win64-shipping.public: virtual void __cdecl FMallocBinned2::DumpAllocatorStats(class FOutputDevice & __ptr64) __ptr64
+00007FF6FA19D800  00007FF6F82C6A00  ue4ss_main422-win64-shipping.private: virtual bool __cdecl MenuStackInternal::SMenuContentWrapper::SupportsKeyboardFocus(void)const __ptr64
+00007FF6FA19D808  00007FF6F8537A10  ue4ss_main422-win64-shipping.public: virtual bool __cdecl FMallocBinned2::ValidateHeap(void) __ptr64
+00007FF6FA19D810  00007FF6F852AF80  ue4ss_main422-win64-shipping.public: virtual wchar_t const * __ptr64 __cdecl FMallocBinned2::GetDescriptiveName(void) __ptr64
+
+}
+
+4.26
+{
+The second mov instruction is for GMalloc.
+Follow the mov, then follow 0x0, then follow 0x0, now you're inside the vtable.
+
+00007FF6B32FFA00  00007FF6B0CA9A90  ue4ss_main426-win64-shipping.public: virtual void * __ptr64 __cdecl FMallocBinned2::`vector deleting destructor'(unsigned int) __ptr64
+00007FF6B32FFA08  00007FF6B06D6050  ue4ss_main426-win64-shipping.public: virtual bool __cdecl UScriptStruct::TCppStructOps<struct FMovieSceneIntegerPropertySectionTemplate>::HasStructuredSerializer(void) __ptr64
+00007FF6B32FFA10  00007FF6B0CAC700  ue4ss_main426-win64-shipping.public: virtual void * __ptr64 __cdecl FMallocBinned2::Malloc(unsigned __int64,unsigned int) __ptr64
+00007FF6B32FFA18  00007FF6B06E69B0  ue4ss_main426-win64-shipping.public: virtual void __cdecl FOutputDevice::Serialize(wchar_t const * __ptr64,enum ELogVerbosity::Type,class FName const & __ptr64,double) __ptr64
+00007FF6B32FFA20  00007FF6B0CAD370  ue4ss_main426-win64-shipping.public: virtual void * __ptr64 __cdecl FMallocBinned2::Realloc(void * __ptr64,unsigned __int64,unsigned int) __ptr64
+00007FF6B32FFA28  00007FF6B0CD73D0  ue4ss_main426-win64-shipping.public: virtual int __cdecl BuildPatchServices::IBuildStatistics::GetInstallMemoryChunkStoreSize(void)const __ptr64
+00007FF6B32FFA30  00007FF6B0CAAC80  ue4ss_main426-win64-shipping.public: virtual void __cdecl FMallocBinned2::Free(void * __ptr64) __ptr64
+00007FF6B32FFA38  00007FF6B0CAD1A0  ue4ss_main426-win64-shipping.public: virtual unsigned __int64 __cdecl FMallocBinned2::QuantizeSize(unsigned __int64,unsigned int) __ptr64
+00007FF6B32FFA40  00007FF6B0CAB740  ue4ss_main426-win64-shipping.public: virtual bool __cdecl FMallocBinned2::GetAllocationSize(void * __ptr64,unsigned __int64 & __ptr64) __ptr64
+00007FF6B32FFA48  00007FF6B0CAE820  ue4ss_main426-win64-shipping.public: virtual void __cdecl FMallocBinned2::Trim(bool) __ptr64
+00007FF6B32FFA50  00007FF6B0CADD60  ue4ss_main426-win64-shipping.public: virtual void __cdecl FMallocBinned2::SetupTLSCachesOnCurrentThread(void) __ptr64
+00007FF6B32FFA58  00007FF6B0CA9E00  ue4ss_main426-win64-shipping.public: virtual void __cdecl FMallocBinned2::ClearAndDisableTLSCachesOnCurrentThread(void) __ptr64
+00007FF6B32FFA60  00007FF6B06D5E80  ue4ss_main426-win64-shipping.private: static void __cdecl UClothPhysicalMeshDataNv_Legacy::StaticRegisterNativesUClothPhysicalMeshDataNv_Legacy(void)
+00007FF6B32FFA68  00007FF6B0CAEAA0  ue4ss_main426-win64-shipping.public: virtual void __cdecl FMallocBinned2::UpdateStats(void) __ptr64
+00007FF6B32FFA70  00007FF6B090C7B0  ue4ss_main426-win64-shipping.public: virtual void __cdecl AAmbientSound::PostRegisterAllComponents(void) __ptr64
+00007FF6B32FFA78  00007FF6B0CA9F60  ue4ss_main426-win64-shipping.public: virtual void __cdecl FMallocBinned2::DumpAllocatorStats(class FOutputDevice & __ptr64) __ptr64
+00007FF6B32FFA80  00007FF6B06D5F90  ue4ss_main426-win64-shipping.public: virtual bool __cdecl TBaseRawMethodDelegateInstance<0,class FOnlineSessionNull,void __cdecl(unsigned char * __ptr64,int),struct FDefaultDelegateUserPolicy>::IsSafeToExecute(void)const __ptr64
+00007FF6B32FFA88  00007FF6B0CAEC60  ue4ss_main426-win64-shipping.public: virtual bool __cdecl FMallocBinned2::ValidateHeap(void) __ptr64
+00007FF6B32FFA90  00007FF6B0CABF90  ue4ss_main426-win64-shipping.public: virtual wchar_t const * __ptr64 __cdecl FMallocBinned2::GetDescriptiveName(void) __ptr64
+
+}
+
+5.0 EA #1 (or #2, or #3, can't remember)
+{
+The second mov instruction is for GMalloc.
+Follow the mov, then follow 0x0, then follow 0x0, now you're inside the vtable.
+
+00007FF6A412AA28  00007FF6A158FAC0  ue4ss_main500-win64-shipping.public: virtual void * __ptr64 __cdecl FMallocBinned2::`scalar deleting destructor'(unsigned int) __ptr64
+00007FF6A412AA30  00007FF6A0C5FEA0  ue4ss_main500-win64-shipping.public: virtual bool __cdecl TBaseStaticDelegateInstance<void __cdecl(class TArray<class FString,class TSizedDefaultAllocator<32> > const & __ptr64,class UWorld * __ptr64,class FOutputDevice & __ptr64),struct FDefaultDelegateUserPolicy>::HasSameObject(voi
+00007FF6A412AA38  00007FF6A1594050  ue4ss_main500-win64-shipping.public: virtual void * __ptr64 __cdecl FMallocBinned2::Malloc(unsigned __int64,unsigned int) __ptr64
+00007FF6A412AA40  00007FF6A0C70F90  ue4ss_main500-win64-shipping.public: virtual void __cdecl FOutputDevice::Serialize(wchar_t const * __ptr64,enum ELogVerbosity::Type,class FName const & __ptr64,double) __ptr64
+00007FF6A412AA48  00007FF6A1594AF0  ue4ss_main500-win64-shipping.public: virtual void * __ptr64 __cdecl FMallocBinned2::Realloc(void * __ptr64,unsigned __int64,unsigned int) __ptr64
+00007FF6A412AA50  00007FF6A0F031E0  ue4ss_main500-win64-shipping.public: virtual void __cdecl USpaceCurveDeformationMechanic::OnBeginHover(struct FInputDeviceRay const & __ptr64) __ptr64
+00007FF6A412AA58  00007FF6A15927C0  ue4ss_main500-win64-shipping.public: virtual void __cdecl FMallocBinned2::Free(void * __ptr64) __ptr64
+00007FF6A412AA60  00007FF6A15948F0  ue4ss_main500-win64-shipping.public: virtual unsigned __int64 __cdecl FMallocBinned2::QuantizeSize(unsigned __int64,unsigned int) __ptr64
+00007FF6A412AA68  00007FF6A1593380  ue4ss_main500-win64-shipping.public: virtual bool __cdecl FMallocBinned2::GetAllocationSize(void * __ptr64,unsigned __int64 & __ptr64) __ptr64
+00007FF6A412AA70  00007FF6A15958E0  ue4ss_main500-win64-shipping.public: virtual void __cdecl FMallocBinned2::Trim(bool) __ptr64
+00007FF6A412AA78  00007FF6A1595700  ue4ss_main500-win64-shipping.public: virtual void __cdecl FMallocBinned2::SetupTLSCachesOnCurrentThread(void) __ptr64
+00007FF6A412AA80  00007FF6A158FBD0  ue4ss_main500-win64-shipping.public: virtual void __cdecl FMallocBinned2::ClearAndDisableTLSCachesOnCurrentThread(void) __ptr64
+00007FF6A412AA88  00007FF6A0C5E280  ue4ss_main500-win64-shipping.public: virtual void __cdecl DeltaStats::FNoMemoryChunkStoreStat::OnChunkReleased(struct FGuid const & __ptr64) __ptr64
+00007FF6A412AA90  00007FF6A1595B60  ue4ss_main500-win64-shipping.public: virtual void __cdecl FMallocBinned2::UpdateStats(void) __ptr64
+00007FF6A412AA98  00007FF6A106E570  ue4ss_main500-win64-shipping.public: static void __cdecl UKismetSystemLibrary::UnregisterForRemoteNotifications(void)
+00007FF6A412AAA0  00007FF6A1590E30  ue4ss_main500-win64-shipping.public: virtual void __cdecl FMallocBinned2::DumpAllocatorStats(class FOutputDevice & __ptr64) __ptr64
+00007FF6A412AAA8  00007FF6A0C5FDE0  ue4ss_main500-win64-shipping.public: virtual bool __cdecl TBaseRawMethodDelegateInstance<0,class FStaticallyLinkedModuleRegistrant<class FAudioMixerModuleNonRealtime>,class IModuleInterface * __ptr64 __cdecl(void),struct FDefaultDelegateUserPolicy>::IsSafeToExecute(void)const __ptr64
+00007FF6A412AAB0  00007FF6A1595BA0  ue4ss_main500-win64-shipping.public: virtual bool __cdecl FMallocBinned2::ValidateHeap(void) __ptr64
+00007FF6A412AAB8  00007FF6A1593580  ue4ss_main500-win64-shipping.public: virtual wchar_t const * __ptr64 __cdecl FMallocBinned2::GetDescriptiveName(void) __ptr64
+
+}

@@ -1,0 +1,3 @@
+Added global Lua function, 'NotifyOnNewObject'. See API.txt for more information.
+Added overload for Lua function, 'FName'. It takes the ComparisonIndex instead of a string.
+Updated & fixed 'ConsoleEnablerMod'. It now auto-enables the console whenever a PlayerController is created.

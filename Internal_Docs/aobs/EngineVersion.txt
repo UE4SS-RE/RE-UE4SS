@@ -1,0 +1,29 @@
+UNUSED IN RC::UNREAL AT THE MOMENT
+static class GetLazy & __ptr64 __cdecl TLazySingleton<struct FGlobalEngineVersions>::GetLazy(void (__cdecl*)(void * __ptr64))'::`2'::`dynamic atexit destructor for 'Singleton''(void)>
+40 53 48 83 EC 20 48 8B ?? ?? ?? ?? ?? 48 85 DB 74 27 48 8B 4B 30 48 85 C9 74 05 E8
+Find the first MOV and resolve it, follow the pointer at 0x0, and then you have major version at 0x0, minor version at 0x2, and the patch version at 0x4
+
+THIS IS WHAT'S CURRENTLY USED IN RC::UNREAL
+FEngineVersion struct
+Module: Core
+4.27.2
+04 00 1B 00 02 00 00 00 ?? ?? ?? ?? 00 00 00 00 ?? ?? ?? ?? ?? ?? 00 00
+4.26.1
+04 00 1A 00 01 00 00 00 ?? ?? ?? ?? 00 00 00 00 ?? ?? ?? ?? ?? ?? 00 00
+4.25.x
+04 00 19 00 ?? 00 00 00 ?? ?? ?? ?? 00 00 00 00 ?? ?? ?? ?? ?? ?? 00 00
+4.13.x
+04 00 0D 00 ?? 00 00 00 ?? ?? ?? ?? 00 00 00 00 ?? ?? ?? ?? ?? ?? 00 00
+4.x.x (almost unique enough, the last '??' makes it not unique enough)
+04 00 ?? 00 ?? 00 00 00 ?? ?? ?? ?? 00 00 00 00 ?? ?? ?? ?? ?? ?? 00 00 ?? 00 00 00 ?? 00 00 00 04 00 ?? 00 ?? 00 00 00
+
+
+The first two bytes is the major version, the next two bytes are the minor version, the third two bytes are the patch version
+Then there's some padding and then there's a pointer to the "BranchName" member variable which is an FString
+Usage: Replace the version bytes with what you're looking for, probably have to scan for every version and just see which version it finds
+Usage (4.x.x): For each result, check for valid pointer at 0x10, if valid pointer is found, check first two bytes to see if they match the wide ascii for "++"
+               If "++" exists then this may be the correct result, checking the string further is not possible as it could be anything
+               Also, confirm that offset 0x0 doesn't contain anything less than 3 or greater than 5 (update to 6 if they make UE6)
+               Offset 0x2 and 0x4 can be sanity checked by making sure the number isn't super high
+               For offset 0x2, a good number is 40 as that's very far in the future if it ever happens
+               For offset 0x4, a good number is 10 as it's highly unlikely that any version will ever receive 10 patches

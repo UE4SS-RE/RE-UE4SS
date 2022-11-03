@@ -1,0 +1,4 @@
+Added a config option, 'EnableHotReloadSystem', in the 'General' section.
+Rewrote the input handler. This fixes a bug where you could only have one modifier key or strange things would happen.
+Fixed a bug where the "FName" global Lua function was being overridden by the "FName" global metatable.
+Fixed a compiler warning (unreferenced parameter).
