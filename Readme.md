@@ -11,11 +11,15 @@ You may need to update AOBs on your own, and there's a guide for that below.
 
 ## Links
 
-[Full installation guide](https://github.com/UE4SS-RE/RE-UE4SS/wiki/FullInstallationGuide)  
-[Fixing compatibility problems](https://github.com/UE4SS-RE/RE-UE4SS/wiki/FixingBrokenAOBs)
-[Lua API - Overview](https://github.com/UE4SS-RE/RE-UE4SS/wiki/Lua-API)
-[Generating UHT compatible headers](https://github.com/UE4SS-RE/RE-UE4SS/wiki/Generating-UHT-compatible-headers)
-[Custom Game Configs](https://github.com/UE4SS-RE/RE-UE4SS/wiki/CustomGameConfigs)
+  [Full installation guide](https://github.com/UE4SS-RE/RE-UE4SS/wiki/FullInstallationGuide)
+  
+  [Fixing compatibility problems](https://github.com/UE4SS-RE/RE-UE4SS/wiki/FixingBrokenAOBs) 
+  
+  [Lua API - Overview](https://github.com/UE4SS-RE/RE-UE4SS/wiki/Lua-API)
+  
+  [Generating UHT compatible headers](https://github.com/UE4SS-RE/RE-UE4SS/wiki/Generating-UHT-compatible-headers)
+  
+  [Custom Game Configs](https://github.com/UE4SS-RE/RE-UE4SS/wiki/CustomGameConfigs)
 
 
 ## Build requirements
