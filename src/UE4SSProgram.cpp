@@ -344,6 +344,7 @@ namespace RC
         config.bEnableCache = true;
         config.NumScanAttemptsNormal = settings_manager.General.MaxScanAttemptsNormal;
         config.NumScanAttemptsModular = settings_manager.General.MaxScanAttemptsModular;
+        config.bUseUObjectArrayCache = settings_manager.General.UseUObjectArrayCache;
 
         // Retrieve from the config file the number of threads to be used for aob scanning
         {
@@ -853,7 +854,6 @@ namespace RC
 
         // Remove any actions, or we'll get an internal error as the lua ref won't be valid
         Mod::clear_delayed_actions();
-        Mod::clear_async_loop_threads();
 
         uninstall_mods();
 
