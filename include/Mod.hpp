@@ -30,6 +30,7 @@ namespace RC
 
     public:
         LuaMadeSimple::Lua* m_hook_lua{};
+        LuaMadeSimple::Lua* m_main_lua{};
 
     private:
         // Whether the mod can be installed
@@ -40,6 +41,8 @@ namespace RC
 
     public:
         enum class IsTrueMod { Yes, No };
+ 
+        enum class ActionType { Immediate, Delayed, Loop };
 
         struct AsyncAction
         {
@@ -47,12 +50,16 @@ namespace RC
             // Not doing it now because the copy constructor gets implicitly deleted which is needed for erase & remove_if
             lua_State* lua_state;
             int32_t lua_action_function_ref;
+            ActionType type;
+            std::chrono::time_point<std::chrono::steady_clock> created_at;
+            int64_t delay;
         };
         struct DelayedAction : public AsyncAction
         {
             std::chrono::time_point<std::chrono::steady_clock> created_at;
             int64_t delay;
         };
+        static inline std::vector<AsyncAction> m_pending_actions{};
         static inline std::vector<AsyncAction> m_async_actions{};
         static inline std::vector<DelayedAction> m_delayed_actions{};
         static inline std::vector<std::jthread> m_async_loop_threads{};
@@ -89,12 +96,13 @@ namespace RC
         auto is_installable() const -> bool;
         auto set_installed(bool) -> void;
         auto is_installed() const -> bool;
-        auto prepare_mod(LuaMadeSimple::Lua& lua) -> void;
+        auto prepare_mod(const LuaMadeSimple::Lua& lua) -> void;
         auto start_mod() -> void;
         auto is_started() const -> bool;
         auto uninstall() const -> void;
 
         auto lua() const -> const LuaMadeSimple::Lua&;
+        auto main_lua() const -> const LuaMadeSimple::Lua*;
 
     public:
         // Called once when the program is starting, after mods are setup but before any mods have been started

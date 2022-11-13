@@ -45,7 +45,7 @@ namespace RC::LuaType
 
     private:
         template<LuaMadeSimple::Type::IsFinal is_final>
-        auto static setup_member_functions(const LuaMadeSimple::Lua::Table&) -> void;
+        auto static setup_member_functions(const LuaMadeSimple::Lua::Table&, std::string_view) -> void;
         auto static handle_unreal_property_value(const LuaMadeSimple::Type::Operation operation, const LuaMadeSimple::Lua&, ScriptStructWrapper& , Unreal::FName property_name) -> void;
         auto static prepare_to_handle(const LuaMadeSimple::Type::Operation, const LuaMadeSimple::Lua&) -> void;
     };

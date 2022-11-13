@@ -338,8 +338,19 @@ namespace RC::LuaType
                 break;
             case Operation::Set:
             {
-                const auto& lua_object = params.lua.get_userdata<LuaType::UObject>(params.stored_at_index);
-                *property_value = lua_object.get_remote_cpp_object();
+                if (params.lua.is_userdata())
+                {
+                    const auto& lua_object = params.lua.get_userdata<LuaType::UObject>(params.stored_at_index);
+                    *property_value = lua_object.get_remote_cpp_object();
+                }
+                else if (params.lua.is_nil())
+                {
+                    params.lua.discard_value();
+                }
+                else
+                {
+                    params.lua.throw_error("[push_classproperty] Value must be UClass or nil");
+                }
                 break;
             }
             case Operation::GetParam:
@@ -363,8 +374,19 @@ namespace RC::LuaType
                 break;
             case Operation::Set:
             {
-                const auto& lua_object = params.lua.get_userdata<LuaType::UClass>(params.stored_at_index);
-                *property_value = lua_object.get_remote_cpp_object();
+                if (params.lua.is_userdata())
+                {
+                    const auto& lua_object = params.lua.get_userdata<LuaType::UClass>(params.stored_at_index);
+                    *property_value = lua_object.get_remote_cpp_object();
+                }
+                else if (params.lua.is_nil())
+                {
+                    params.lua.discard_value();
+                }
+                else
+                {
+                    params.lua.throw_error("[push_classproperty] Value must be UClass or nil");
+                }
                 break;
             }
             case Operation::GetParam:
@@ -569,6 +591,10 @@ namespace RC::LuaType
                 // StructData as table
                 lua_table_to_memory();
             }
+            else if (params.lua.is_nil())
+            {
+                params.lua.discard_value();
+            }
             else
             {
                 params.lua.throw_error("[push_structproperty::lua_to_memory] Parameter must be of type 'StructProperty' or table");
@@ -613,8 +639,23 @@ namespace RC::LuaType
                 uint8_t* array_data = static_cast<uint8_t*>(array_container->GetData());
                 int32_t array_size = array_container->Num();
 
+                // Get the table from the stack or create a new one
+                LuaMadeSimple::Lua::Table lua_table = [&]() {
+                    if (params.create_new_if_get_non_trivial_local)
+                    {
+                        return lua.prepare_new_table();
+                    }
+                    else
+                    {
+                        return lua.get_table();
+                    }
+                }();
+
                 for (int32_t i = 0; i < array_size; ++i)
                 {
+                    //Array index
+                    lua_table.add_key(i + 1);
+
                     const PusherParams pusher_params{
                             .operation = LuaMadeSimple::Type::Operation::GetParam,
                             .lua = lua,
@@ -623,7 +664,11 @@ namespace RC::LuaType
                             .property = array_inner
                     };
                     StaticState::m_property_value_pushers[name_comparison_index](pusher_params);
+
+                    lua_table.fuse_pair();
                 }
+
+                lua_table.make_local();
             }
             else
             {
@@ -660,6 +705,7 @@ namespace RC::LuaType
                     // Skip this table entry if the key wasn't numerical, who knows what the user put in their script
                     if (!table.key.is_integer()) { return false; }
 
+                    params.lua.insert_value(-2);
                     const PusherParams pusher_params{
                             .operation = Operation::Set,
                             .lua = params.lua,
@@ -697,9 +743,14 @@ namespace RC::LuaType
                 to_array->max = 0;
             }
 
+            // If table had no elements
             // Remove the table from the stack to remain consistent to the pusher system
+            // Otherwise table is removed during for_each_in_table
             // Other systems might rely on this behavior
-            params.lua.discard_value();
+            if (!has_elements)
+            {
+                params.lua.discard_value();
+            }
         };
 
         auto lua_to_memory = [&]() {
@@ -712,6 +763,10 @@ namespace RC::LuaType
             {
                 // TArray as table
                 lua_table_to_memory();
+            }
+            else if (params.lua.is_nil())
+            {
+                params.lua.discard_value();
             }
             else
             {
@@ -886,26 +941,14 @@ namespace RC::LuaType
 
     auto push_weakobjectproperty(const PusherParams& params) -> void
     {
-        if (!params.data) { params.lua.throw_error("[push_weakobjectproperty] data pointer is nullptr"); }
+        auto soft_ptr = static_cast<Unreal::FWeakObjectPtr*>(params.data);
+        if (!soft_ptr) { params.lua.throw_error("[push_weakobjectproperty] data pointer is nullptr"); }
 
         switch (params.operation)
         {
             case Operation::GetNonTrivialLocal:
-            {
-                if (!params.data)
-                {
-                    LuaType::FWeakObjectPtr::construct(params.lua, Unreal::FWeakObjectPtr{});
-                }
-                else
-                {
-                    LuaType::FWeakObjectPtr::construct(params.lua, *static_cast<Unreal::FWeakObjectPtr*>(params.data));
-                }
-                return;
-            }
             case Operation::Get:
-                // For now, pushing nil just to get past the error
-                params.lua.set_nil();
-                Output::send(STR("[push_weakobjectproperty] Operation::Get is not supported\n"));
+                LuaType::FWeakObjectPtr::construct(params.lua, *soft_ptr);
                 return;
             case Operation::Set:
                 // For now, doing nothing just to get past the error
@@ -1206,14 +1249,20 @@ Overloads:
         const Unreal::FName property_type = property->GetClass().GetFName();
         LuaType::RemoteUnrealParam lua_object{param_ptr, base, property, property_type};
 
-        LuaMadeSimple::Lua::Table table = lua.prepare_new_table();
+        auto metatable_name = "RemoteUnrealParam";
 
-        setup_member_functions(table);
+        LuaMadeSimple::Lua::Table table = lua.get_metatable(metatable_name);
+        if (lua.is_nil(-1))
+        {
+            lua.discard_value(-1);
+            lua.prepare_new_table();
+            setup_metamethods(lua_object);
+            setup_member_functions(table, metatable_name);
+            lua.new_metatable<LuaType::RemoteUnrealParam>(metatable_name, lua_object.get_metamethods());
+        }
 
-        setup_metamethods(lua_object);
-
-        // Transfer the object & its ownership fully to Lua
-        lua.transfer_stack_object(std::move(lua_object), "RemoteUnrealParam", lua_object.get_metamethods());
+        // Create object & surrender ownership to Lua
+        lua.transfer_stack_object(std::move(lua_object), metatable_name, lua_object.get_metamethods());
 
         return table;
     }
@@ -1222,14 +1271,20 @@ Overloads:
     {
         LuaType::RemoteUnrealParam lua_object{data_ptr, type};
 
-        LuaMadeSimple::Lua::Table table = lua.prepare_new_table();
+        auto metatable_name = "RemoteUnrealParam";
 
-        setup_member_functions(table);
+        LuaMadeSimple::Lua::Table table = lua.get_metatable(metatable_name);
+        if (lua.is_nil(-1))
+        {
+            lua.discard_value(-1);
+            lua.prepare_new_table();
+            setup_metamethods(lua_object);
+            setup_member_functions(table, metatable_name);
+            lua.new_metatable<LuaType::RemoteUnrealParam>(metatable_name, lua_object.get_metamethods());
+        }
 
-        setup_metamethods(lua_object);
-
-        // Transfer the object & its ownership fully to Lua
-        lua.transfer_stack_object(std::move(lua_object), "RemoteUnrealParam", lua_object.get_metamethods());
+        // Create object & surrender ownership to Lua
+        lua.transfer_stack_object(std::move(lua_object), metatable_name, lua_object.get_metamethods());
 
         return table;
     }
@@ -1247,12 +1302,12 @@ Overloads:
         });
     }
 
-    auto RemoteUnrealParam::setup_member_functions(LuaMadeSimple::Lua::Table& table) -> void
+    auto RemoteUnrealParam::setup_member_functions(LuaMadeSimple::Lua::Table& table, std::string_view metatable_name) -> void
     {
         table.add_pair("get", [](const LuaMadeSimple::Lua& lua) -> int {
             prepare_to_handle(Operation::Get, lua);
             return 1;
-        });
+            });
 
         table.add_pair("set", [](const LuaMadeSimple::Lua& lua) -> int {
             prepare_to_handle(Operation::Set, lua);
@@ -1267,7 +1322,7 @@ Overloads:
 
         // If this is the final object then we also want to finalize creating the table
         // If not then it's the responsibility of the overriding object to call 'make_global()'
-        table.make_global("RemoteUnrealParam");
+        //table.make_global(metatable_name);
     }
 
     auto RemoteUnrealParam::prepare_to_handle(const Operation operation, const LuaMadeSimple::Lua& lua) -> void
