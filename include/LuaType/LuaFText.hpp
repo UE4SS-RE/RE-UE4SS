@@ -27,7 +27,7 @@ namespace RC::LuaType
 
     private:
         template<LuaMadeSimple::Type::IsFinal is_final>
-        auto static setup_member_functions(const LuaMadeSimple::Lua::Table&) -> void;
+        auto static setup_member_functions(const LuaMadeSimple::Lua::Table&, std::string_view) -> void;
     };
 }
 

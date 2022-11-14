@@ -57,15 +57,20 @@ namespace RC::LuaType
     {
         LuaType::XProperty lua_object{unreal_object};
 
-        LuaMadeSimple::Lua::Table table = LuaMadeSimple::Type::RemoteObject<Unreal::FProperty>::construct(lua, lua_object);
+        auto metatable_name = ClassName::ToString();
 
-        // Setup functions that can be called on this object
-        setup_member_functions<LuaMadeSimple::Type::IsFinal::Yes>(table);
+        LuaMadeSimple::Lua::Table table = lua.get_metatable(metatable_name);
+        if (lua.is_nil(-1))
+        {
+            lua.discard_value(-1);
+            LuaMadeSimple::Type::RemoteObject<Unreal::FProperty>::construct(lua, lua_object);
+            setup_metamethods(lua_object);
+            setup_member_functions<LuaMadeSimple::Type::IsFinal::Yes>(table, metatable_name);
+            lua.new_metatable<LuaType::XProperty>(metatable_name, lua_object.get_metamethods());
+        }
 
-        setup_metamethods(lua_object);
-
-        // Transfer the object & its ownership fully to Lua
-        lua.transfer_stack_object(std::move(lua_object), ClassName::ToString(), lua_object.get_metamethods());
+        // Create object & surrender ownership to Lua
+        lua.transfer_stack_object(std::move(lua_object), metatable_name, lua_object.get_metamethods());
 
         return table;
     }
@@ -74,9 +79,10 @@ namespace RC::LuaType
     {
         LuaMadeSimple::Lua::Table table = LuaMadeSimple::Type::RemoteObject<Unreal::FProperty>::construct(lua, construct_to);
 
-        setup_member_functions<LuaMadeSimple::Type::IsFinal::No>(table);
+        auto metatable_name = ClassName::ToString();
 
         setup_metamethods(construct_to);
+        setup_member_functions<LuaMadeSimple::Type::IsFinal::No>(table, metatable_name);
 
         return table;
     }
@@ -87,9 +93,9 @@ namespace RC::LuaType
     }
 
     template<LuaMadeSimple::Type::IsFinal is_final>
-    auto XProperty::setup_member_functions(const LuaMadeSimple::Lua::Table& table) -> void
+    auto XProperty::setup_member_functions(const LuaMadeSimple::Lua::Table& table, std::string_view metatable_name) -> void
     {
-        Super::setup_member_functions<LuaMadeSimple::Type::IsFinal::No>(table);
+        Super::setup_member_functions<LuaMadeSimple::Type::IsFinal::No>(table, metatable_name);
 
         table.add_pair("GetClass", [](const LuaMadeSimple::Lua& lua) -> int {
             const auto& lua_object = lua.get_userdata<XProperty>();
@@ -97,8 +103,6 @@ namespace RC::LuaType
             LuaType::XFieldClass::construct(lua, lua_object.get_remote_cpp_object()->GetClass());
             return 1;
         });
-
-        Super::setup_member_functions<LuaMadeSimple::Type::IsFinal::No>(table);
 
         table.add_pair("GetFullName", [](const LuaMadeSimple::Lua& lua) -> int {
             // Get the userdata from the Lua stack
@@ -145,10 +149,7 @@ Overloads:
                 lua.for_each_in_table([&](const LuaMadeSimple::LuaTableReference& table) {
                     if (table.key.is_string() && table.key.get_string() == "FFieldClassPointer")
                     {
-                        if (!table.value.is_integer())
-                        {
-                            lua.throw_error("Table value for key 'FFieldClassPointer' must be integer");
-                        }
+                        if (!table.value.is_integer()) { lua.throw_error("Table value for key 'FFieldClassPointer' must be integer"); }
                         ffield_class_pointer = table.value.get_integer();
                         return true;
                     }
@@ -156,10 +157,7 @@ Overloads:
                     return false;
                 });
 
-                if (!ffield_class_pointer)
-                {
-                    lua.throw_error("Could not find FFieldClassPointer");
-                }
+                if (!ffield_class_pointer) { lua.throw_error("Could not find FFieldClassPointer"); }
 
                 if (Unreal::Version::IsAtLeast(4, 25))
                 {
@@ -173,10 +171,7 @@ Overloads:
                 }
                 return 1;
             }
-            else
-            {
-                lua.throw_error(error_overload_not_found);
-            }
+            else { lua.throw_error(error_overload_not_found); }
 
             lua.set_bool(false);
             return 1;
@@ -190,21 +185,12 @@ Overloads:
 
             const auto& lua_object = lua.get_userdata<XProperty>();
 
-            if (!lua.is_userdata())
-            {
-                throw std::runtime_error{error_overload_not_found};
-            }
+            if (!lua.is_userdata()) { throw std::runtime_error{error_overload_not_found}; }
             const auto& container = lua.get_userdata<UObject>();
 
             int32_t array_index{};
-            if (lua.is_integer())
-            {
-                array_index = static_cast<int32_t>(lua.get_integer());
-            }
-            else if (lua.is_nil())
-            {
-                lua.discard_value();
-            }
+            if (lua.is_integer()) { array_index = static_cast<int32_t>(lua.get_integer()); }
+            else if (lua.is_nil()) { lua.discard_value(); }
 
             void* data = lua_object.get_remote_cpp_object()->ContainerPtrToValuePtr<uint8_t>(container.get_remote_cpp_object(), array_index);
             lua_pushlightuserdata(lua.get_lua_state(), data);
@@ -220,14 +206,8 @@ Overloads:
             const auto& lua_object = lua.get_userdata<XProperty>();
 
             File::StringType buffer;
-            if (lua.is_string())
-            {
-                buffer = to_wstring(lua.get_string());
-            }
-            else
-            {
-                throw std::runtime_error{error_overload_not_found};
-            }
+            if (lua.is_string()) { buffer = to_wstring(lua.get_string()); }
+            else { throw std::runtime_error{error_overload_not_found}; }
 
             void* data{};
             if (lua_islightuserdata(lua.get_lua_state(), 1))
@@ -235,27 +215,15 @@ Overloads:
                 data = lua_touserdata(lua.get_lua_state(), 1);
                 lua_remove(lua.get_lua_state(), 1);
             }
-            else
-            {
-                throw std::runtime_error{error_overload_not_found};
-            }
+            else { throw std::runtime_error{error_overload_not_found}; }
 
             int32_t port_flags{};
-            if (lua.is_integer())
-            {
-                port_flags = static_cast<int32_t>(lua.get_integer());
-            }
-            else
-            {
-                throw std::runtime_error{error_overload_not_found};
-            }
+            if (lua.is_integer()) { port_flags = static_cast<int32_t>(lua.get_integer()); }
+            else { throw std::runtime_error{error_overload_not_found}; }
 
-            if (!lua.is_userdata())
-            {
-                throw std::runtime_error{error_overload_not_found};
-            }
+            if (!lua.is_userdata()) { throw std::runtime_error{error_overload_not_found}; }
             auto* owner_object = lua.get_userdata<UObject>().get_remote_cpp_object();
-            
+
             lua_object.get_remote_cpp_object()->ImportText(buffer.c_str(), data, port_flags, owner_object, nullptr);
             return 0;
         });
@@ -269,7 +237,7 @@ Overloads:
 
             // If this is the final object then we also want to finalize creating the table
             // If not then it's the responsibility of the overriding object to call 'make_global()'
-            table.make_global(ClassName::ToString());
+            //table.make_global(metatable_name);// , is_final == LuaMadeSimple::Type::IsFinal::No);
         }
     }
 }

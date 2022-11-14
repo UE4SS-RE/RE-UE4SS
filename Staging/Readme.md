@@ -34,6 +34,7 @@ You may need to update AOBs on your own, and there's a guide for that below.
     - Original Creator: Nibblet support
 - **boop** / **usize**
   - New UFunction hook method
+- **Deadmoroz**
 
 ## Thanks to everyone who helped with testing
 

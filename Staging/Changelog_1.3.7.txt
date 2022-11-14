@@ -1,17 +1,10 @@
-New
-* Mods that have 'enabled.txt' present in their mod directory are now always loaded regardless of their state in mods.txt.
-
-Lua
-* Added better support for StrProperty/FString.
-  They can now be set like any other variable (Lua literal strings get auto-converted to FStrings).
-  Parameters for "RegisterHook" that are of type FString are now also supported.
-* Added support for SoftClassProperty/TSoftClassPtr.
-* Added support for FSoftObjectPath and TSoftClassPtr, see API.txt for more information.
 * The global function "RegisterHook" now returns two integers that represent pre & post callback ids.
   These ids can be passed to the "UnregisterHook" global function to unhook a function.
 * Note that the callbacks for "RegisterHook" and "NotifyOnNewObject" execute in the game thread so the code in these callbacks needs to be careful when accessing Lua variables outside the callbacks.
 * Added the global function "UnregisterHook", see API.txt for more information.
+* Added better support for TArray. Now it can be used as out parameter in functions correctly.
 
 Fixes
 * Fixed a rare crash that could occur when interacting with parameters in callbacks passed to "RegisterHook".
-* Fixed a bug that caused an occasional crash on startup.
+* Fixed a bug which prohibited using variables, containing unreal objects created in other thread (in main from game and vise versa)
+* Fixed most issues with GC of cirtain Lau functions.
