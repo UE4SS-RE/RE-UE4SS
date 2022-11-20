@@ -3,6 +3,7 @@
 #include <cstdio>
 #include <iostream>
 #include <future>
+#include <memory>
 
 #include <DynamicOutput/DynamicOutput.hpp>
 #include <Helpers/String.hpp>
@@ -28,15 +29,15 @@ auto thread_dll_start([[maybe_unused]]LPVOID thread_param) -> unsigned long
     wchar_t moduleFilenameBuffer[1024] {'\0'};
     GetModuleFileNameW(moduleHandle, moduleFilenameBuffer, sizeof(moduleFilenameBuffer) / sizeof(wchar_t));
 
-    UE4SSProgram program = UE4SSProgram(moduleFilenameBuffer, {});
+    auto program = new UE4SSProgram(moduleFilenameBuffer, {});
 
-    if (auto e = program.get_error_object(); e->has_error())
+    if (auto e = program->get_error_object(); e->has_error())
     {
         // If the output system errored out then use printf_s as a fallback
         // Logging will only happen to the debug console but it's something at least
         if (!Output::has_internal_error())
         {
-            Output::send(STR("Error: {}\n"), to_wstring(e->get_message()));
+            Output::send<LogLevel::Error>(STR("Fatal Error: {}\n"), to_wstring(e->get_message()));
         }
         else
         {

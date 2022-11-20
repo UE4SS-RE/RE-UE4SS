@@ -143,14 +143,14 @@ namespace RC::LuaLibrary
 
         try
         {
-            if (int status = luaL_loadstring(mod->main_lua()->get_lua_state(), script); status != LUA_OK)
+            if (int status = luaL_loadstring(mod->lua().get_lua_state(), script); status != LUA_OK)
             {
-                mod->main_lua()->throw_error(std::format("luaL_loadstring returned {}", mod->main_lua()->resolve_status_message(status, true)));
+                mod->lua().throw_error(std::format("luaL_loadstring returned {}", mod->lua().resolve_status_message(status, true)));
             }
 
-            if (int status = lua_pcall(mod->main_lua()->get_lua_state(), 0, LUA_MULTRET, 0); status != LUA_OK)
+            if (int status = lua_pcall(mod->lua().get_lua_state(), 0, LUA_MULTRET, 0); status != LUA_OK)
             {
-                mod->main_lua()->throw_error(std::format("lua_pcall returned {}", mod->main_lua()->resolve_status_message(status, true)));
+                mod->lua().throw_error(std::format("lua_pcall returned {}", mod->lua().resolve_status_message(status, true)));
             }
         }
         catch (std::runtime_error& e)

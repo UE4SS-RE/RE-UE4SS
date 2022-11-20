@@ -18,7 +18,6 @@ namespace RC::LuaType
 
     private:
         explicit UEnum(Unreal::UEnum* object);
-        static inline std::optional<int32_t> metamethods_ref { std::nullopt };
 
     public:
         UEnum() = delete;
@@ -30,7 +29,7 @@ namespace RC::LuaType
 
     private:
         template<LuaMadeSimple::Type::IsFinal is_final>
-        auto static setup_member_functions(const LuaMadeSimple::Lua::Table&, std::string_view) -> void;
+        auto static setup_member_functions(const LuaMadeSimple::Lua::Table&) -> void;
     };
 }
 

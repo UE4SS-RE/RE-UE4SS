@@ -11,21 +11,21 @@ namespace RC
 namespace RC::LuaType
 {
     struct ModName { constexpr static const char* ToString() { return "ModRef"; }};
-    class Mod : public RemoteObjectBase<RC::Mod, ModName>
+    class Mod : public RemoteObjectBase<const RC::Mod, ModName>
     {
     private:
-        explicit Mod(RC::Mod* object);
+        explicit Mod(const RC::Mod* object);
 
     public:
         Mod() = delete;
-        auto static construct(const LuaMadeSimple::Lua&, RC::Mod*) -> const LuaMadeSimple::Lua::Table;
+        auto static construct(const LuaMadeSimple::Lua&, const RC::Mod*) -> const LuaMadeSimple::Lua::Table;
 
     private:
         auto static setup_metamethods(BaseObject&) -> void;
 
     private:
         template<LuaMadeSimple::Type::IsFinal is_final>
-        auto static setup_member_functions(const LuaMadeSimple::Lua::Table&, std::string_view) -> void;
+        auto static setup_member_functions(const LuaMadeSimple::Lua::Table&) -> void;
     };
 }
 

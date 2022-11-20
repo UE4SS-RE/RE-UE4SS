@@ -1,0 +1,164 @@
+#ifndef UE4SS_GUI_HPP
+#define UE4SS_GUI_HPP
+
+#include <thread>
+#include <memory>
+#include <functional>
+
+#include <GUI/Console.hpp>
+#include <GUI/LiveView.hpp>
+#include <Helpers/String.hpp>
+#include <imgui.h>
+
+namespace RC::GUI
+{
+    enum class GfxBackend
+    {
+        DX11,
+    };
+
+    enum class OSBackend
+    {
+        Windows,
+    };
+
+    struct WindowRect
+    {
+        long left;
+        long top;
+        long right;
+        long bottom;
+    };
+
+    class GfxBackendBase
+    {
+    protected:
+        class OSBackendBase* m_os_backend{};
+
+    public:
+        GfxBackendBase() = default;
+
+    public:
+        auto set_os_backend(OSBackendBase* backend) { m_os_backend = backend; }
+
+    public:
+        virtual auto init() -> void = 0;
+        virtual auto imgui_backend_newframe() -> void = 0;
+        virtual auto render(const float clear_color_with_alpha[4]) -> void = 0;
+        virtual auto shutdown() -> void = 0;
+        virtual auto cleanup() -> void = 0;
+        virtual auto create_device() -> bool = 0;
+        virtual auto cleanup_device() -> void = 0;
+        virtual auto handle_window_resize(int64_t param_1, int64_t param_2) -> void = 0;
+        virtual auto on_os_backend_set() -> void = 0;
+    };
+
+    class OSBackendBase
+    {
+    protected:
+        class GfxBackendBase* m_gfx_backend{};
+
+    public:
+        OSBackendBase() = default;
+
+    public:
+        auto set_gfx_backend(GfxBackendBase* backend) { m_gfx_backend = backend; }
+
+    public:
+        virtual auto init() -> void = 0;
+        virtual auto imgui_backend_newframe() -> void = 0;
+        virtual auto create_window() -> void = 0;
+        virtual auto exec_message_loop(bool* exit_requested) -> void = 0;
+        virtual auto shutdown() -> void = 0;
+        virtual auto cleanup() -> void = 0;
+        virtual auto get_window_handle() -> void* = 0;
+        virtual auto get_window_rect() -> WindowRect = 0;
+        virtual auto on_gfx_backend_set() -> void = 0;
+    };
+
+    extern ImColor g_imgui_bg_color;
+    extern ImColor g_imgui_bg_hover_color;
+    extern ImColor g_imgui_bg_active_color;
+    extern ImColor g_imgui_bg_header_color;
+    extern ImColor g_imgui_bg_header_hover_color;
+    extern ImColor g_imgui_bg_header_active_color;
+    extern ImColor g_imgui_text_color;
+    extern ImColor g_imgui_text_inactive_color;
+    extern ImColor g_imgui_text_editor_default_bg_color;
+    extern ImColor g_imgui_text_editor_default_text_color;
+    extern ImColor g_imgui_text_editor_normal_bg_color;
+    extern ImColor g_imgui_text_editor_normal_text_color;
+    extern ImColor g_imgui_text_editor_verbose_bg_color;
+    extern ImColor g_imgui_text_editor_verbose_text_color;
+    extern ImColor g_imgui_text_editor_warning_bg_color;
+    extern ImColor g_imgui_text_editor_warning_text_color;
+    extern ImColor g_imgui_text_editor_error_bg_color;
+    extern ImColor g_imgui_text_editor_error_text_color;
+    extern ImColor g_imgui_text_live_view_unreflected_data_color;
+
+    class DebuggingGUIBase
+    {
+    private:
+        Console m_console{};
+
+    public:
+        auto get_console() -> Console& { return m_console; };
+
+    public:
+        virtual auto setup(std::stop_token&& token) -> void = 0;
+    };
+
+    //template<Backend SelectedBackend>
+    class DebuggingGUI/* : public DebuggingGUIBase*/
+    {
+    public:
+        using EndOfFrameCallback = std::function<void()>;
+
+    private:
+        std::unique_ptr<GfxBackendBase> m_gfx_backend{};
+        std::unique_ptr<OSBackendBase> m_os_backend{};
+        Console m_console{};
+        LiveView m_live_view{};
+        std::stop_token m_thread_stop_token{};
+        bool m_is_open{};
+        bool m_exit_requested{};
+
+    public:
+        bool m_event_thread_busy{};
+
+    private:
+        static std::vector<EndOfFrameCallback> s_end_of_frame_callbacks;
+
+    public:
+        DebuggingGUI() = delete;
+        DebuggingGUI(GfxBackend selected_gfx_backend, OSBackend selected_os_backend);
+        ~DebuggingGUI();
+
+    public:
+        auto is_open() -> bool { return m_is_open; };
+        auto setup(std::stop_token&& token) -> void/* override*/;
+        auto get_console() -> Console& { return m_console; };
+        auto get_live_view() -> LiveView& { return m_live_view; };
+
+    private:
+        auto on_update() -> void;
+        auto main_loop_internal() -> void;
+
+    public:
+        static auto execute_at_end_of_frame(EndOfFrameCallback callback) -> void;
+    };
+
+    auto gui_thread(std::stop_token stop_token, DebuggingGUI* debugging_ui) -> void;
+
+    // Helper function for executing code that can throw exceptions in the middle of a frame.
+    // Moves the exception to the end of the frame so that we can ImGUI errors.
+    template<typename CodeToTry>
+    auto TRY(CodeToTry code_to_try)
+    {
+        DebuggingGUI::execute_at_end_of_frame([&] {
+            code_to_try();
+        });
+    }
+}
+
+#endif //UE4SS_GUI_HPP

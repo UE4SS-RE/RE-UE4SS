@@ -23,20 +23,19 @@ namespace RC::LuaType
     {
         LuaType::TArray lua_object{params};
 
-        auto metatable_name = ClassName::ToString();
-
-        LuaMadeSimple::Lua::Table table = params.lua.get_metatable(metatable_name);
-        if (params.lua.is_nil(-1))
+        if (!lua_object.m_inner_property)
         {
-            params.lua.discard_value(-1);
-            LuaMadeSimple::Type::RemoteObject<Unreal::FScriptArray>::construct(params.lua, lua_object);
-            setup_metamethods(lua_object);
-            setup_member_functions<LuaMadeSimple::Type::IsFinal::Yes>(table, metatable_name);
-            params.lua.new_metatable<LuaType::TArray>(metatable_name, lua_object.get_metamethods());
+            Output::send<LogLevel::Error>(STR("TArray::construct: m_inner_property is nullptr for {}"), lua_object.m_property->GetFullName());
         }
 
+        LuaMadeSimple::Lua::Table table = LuaMadeSimple::Type::RemoteObject<Unreal::FScriptArray>::construct(params.lua, lua_object);
+
+        setup_member_functions<LuaMadeSimple::Type::IsFinal::Yes>(table);
+
+        setup_metamethods(lua_object);
+
         // Create object & surrender ownership to Lua
-        params.lua.transfer_stack_object(std::move(lua_object), metatable_name, lua_object.get_metamethods());
+        params.lua.transfer_stack_object(std::move(lua_object), ClassName::ToString(), lua_object.get_metamethods());
 
         return table;
     }
@@ -45,10 +44,9 @@ namespace RC::LuaType
     {
         LuaMadeSimple::Lua::Table table = LuaMadeSimple::Type::RemoteObject<Unreal::FScriptArray>::construct(lua, construct_to);
 
-        auto metatable_name = ClassName::ToString();
+        setup_member_functions<LuaMadeSimple::Type::IsFinal::No>(table);
 
         setup_metamethods(construct_to);
-        setup_member_functions<LuaMadeSimple::Type::IsFinal::No>(table, metatable_name);
 
         return table;
     }
@@ -64,16 +62,10 @@ namespace RC::LuaType
             prepare_to_handle(LuaMadeSimple::Type::Operation::Set, lua);
             return 1;
         });
-
-        base_object.get_metamethods().create(LuaMadeSimple::Lua::MetaMethod::Length, [](const LuaMadeSimple::Lua& lua) -> int {
-            auto& lua_object = lua.get_userdata<TArray>();
-            lua.set_integer(lua_object.get_remote_cpp_object()->Num());
-            return 1;
-         });
     }
 
     template<LuaMadeSimple::Type::IsFinal is_final>
-    auto TArray::setup_member_functions(const LuaMadeSimple::Lua::Table& table, std::string_view metatable_name) -> void
+    auto TArray::setup_member_functions(const LuaMadeSimple::Lua::Table& table) -> void
     {
         table.add_pair("GetArrayAddress", [](const LuaMadeSimple::Lua& lua) -> int {
             auto& lua_object = lua.get_userdata<TArray>();
@@ -133,11 +125,13 @@ namespace RC::LuaType
                     //       It appears that the Lua stack is getting corrupted somehow, or lua_object is getting GC'd by Lua.
                     //       It seems to only affect large arrays, and I don't know how to fix it.
                     void* property_value = array_data + (i * lua_object.m_inner_property->GetElementSize());
-                    const PusherParams pusher_params{.operation = LuaMadeSimple::Type::Operation::GetParam,
-                                                        .lua = lua,
-                                                        .base = lua_object.m_base,
-                                                        .data = property_value,
-                                                        .property = lua_object.m_inner_property};
+                    const PusherParams pusher_params{
+                            .operation = LuaMadeSimple::Type::Operation::GetParam,
+                            .lua = lua,
+                            .base = lua_object.m_base,
+                            .data = property_value,
+                            .property = lua_object.m_inner_property
+                    };
                     StaticState::m_property_value_pushers[name_comparison_index](pusher_params);
 
                     // Call function passing index & the element
@@ -148,8 +142,7 @@ namespace RC::LuaType
             }
             else
             {
-                lua.throw_error(std::format("[TArray:ForEach] Tried iterating an array but the unreal property has no registered handler (via ArrayProperty). Property type '{}' not supported.",
-                                            to_string(property_type_name.ToString())));
+                lua.throw_error(std::format("[TArray:ForEach] Tried iterating an array but the unreal property has no registered handler (via ArrayProperty). Property type '{}' not supported.", to_string(property_type_name.ToString())));
             }
 
             return 0;
@@ -164,7 +157,7 @@ namespace RC::LuaType
 
             // If this is the final object then we also want to finalize creating the table
             // If not then it's the responsibility of the overriding object to call 'make_global()'
-            //table.make_global(metatable_name);// , is_final == LuaMadeSimple::Type::IsFinal::No);
+            table.make_global(ClassName::ToString());
         }
     }
 

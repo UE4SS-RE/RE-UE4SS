@@ -3,6 +3,7 @@
 
 #include <stdexcept>
 
+#include <Helpers/String.hpp>
 #include <DynamicOutput/DynamicOutput.hpp>
 
 namespace RC
@@ -20,7 +21,7 @@ namespace RC
         {
             if (!Output::has_internal_error())
             {
-                Output::send(STR("Error: {}\n"), to_wstring(e.what()));
+                Output::send<LogLevel::Error>(STR("Error: {}\n"), to_wstring(e.what()));
             }
             else
             {

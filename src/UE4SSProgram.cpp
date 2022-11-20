@@ -1,5 +1,7 @@
 #define NOMINMAX
+
 #include <Windows.h>
+
 #ifdef TEXT
 #undef TEXT
 #endif
@@ -9,6 +11,7 @@
 #include <unordered_set>
 #include <algorithm>
 #include <fstream>
+#include <format>
 
 #include <UE4SSProgram.hpp>
 #include <build_number.hpp>
@@ -20,6 +23,9 @@
 #include <Helpers/Integer.hpp>
 #include <UnrealDef.hpp>
 #include <DynamicOutput/DynamicOutput.hpp>
+#include <GUI/GUI.hpp>
+#include <GUI/LiveView.hpp>
+#include <GUI/ConsoleOutputDevice.hpp>
 #include <Timer/ScopedTimer.hpp>
 #include <Timer/FunctionTimer.hpp>
 #include <SigScanner/SinglePassSigScanner.hpp>
@@ -40,8 +46,218 @@
 #include <Unreal/UScriptStruct.hpp>
 #include <Unreal/UObjectArray.hpp>
 
+//#include <LuaBindings/States/MainState/Main.hpp>
+//#include <LuaBindings/LuaSetup.hpp>
+
+// LuaLate params: LuaState, ClassOrFreeFunction, FullyQualifiedClassOrFunctionName, ImportIntoFullyQualifiedScope (optional)
+/** CUSTOM_ATTRIBUTE[LuaLate(Class, ::GlobalClassTest, ::), LuaStateTypes(MainState, AsyncState, AOBState)] */
+/** CUSTOM_ATTRIBUTE[LuaLate(Class, ::RC::MyFirstClass, ::), LuaStateTypes(MainState, AsyncState, AOBState)] */
+/** CUSTOM_ATTRIBUTE[LuaLate(Class, ::RC2::MyFirstClass, ::), LuaStateTypes(MainState, AsyncState, AOBState)] */
+/** CUSTOM_ATTRIBUTE[LuaLate(Class, ::RC2::RC3::RC4::MyFirstClass, ::), LuaStateTypes(MainState, AsyncState, AOBState)] */
+/** CUSTOM_ATTRIBUTE[LuaLate(Class, ::RC::Unreal::FOutputDevice, ::), LuaStateTypes(MainState, AsyncState, AOBState)] */
+/** CUSTOM_ATTRIBUTE[LuaLate(Class, ::RC::Unreal::FFrame, ::), LuaStateTypes(MainState, AsyncState, AOBState)] */
+/** CUSTOM_ATTRIBUTE[LuaLate(Class, ::RC::Unreal::FString, ::), LuaStateTypes(MainState, AsyncState, AOBState)] */
+/** CUSTOM_ATTRIBUTE[LuaLate(Class, ::RC::Unreal::FName, ::), LuaStateTypes(MainState, AsyncState, AOBState)] */
+/** CUSTOM_ATTRIBUTE[LuaLate(Class, ::RC::Unreal::UObjectBase, ::), LuaStateTypes(MainState, AsyncState, AOBState)] */
+/** CUSTOM_ATTRIBUTE[LuaLate(Class, ::RC::Unreal::UObjectBaseUtility, ::), LuaStateTypes(MainState, AsyncState, AOBState)] */
+/** CUSTOM_ATTRIBUTE[LuaLate(Class, ::RC::Unreal::UObject, ::), LuaStateTypes(MainState, AsyncState, AOBState)] */
+/** CUSTOM_ATTRIBUTE[LuaLate(Class, ::RC::Unreal::UStruct, ::), LuaStateTypes(MainState, AsyncState, AOBState)] */
+/** CUSTOM_ATTRIBUTE[LuaLate(Class, ::RC::Unreal::UClass, ::), LuaStateTypes(MainState, AsyncState, AOBState)] */
+/** CUSTOM_ATTRIBUTE[LuaLate(Class, ::RC::Unreal::UField, ::), LuaStateTypes(MainState, AsyncState, AOBState)] */
+/** CUSTOM_ATTRIBUTE[LuaLate(Class, ::RC::Unreal::UWorld, ::), LuaStateTypes(MainState, AsyncState, AOBState)] */
+/** CUSTOM_ATTRIBUTE[LuaLate(Class, ::RC::Unreal::UScriptStruct, ::), LuaStateTypes(MainState, AsyncState, AOBState)] */
+/** CUSTOM_ATTRIBUTE[LuaLate(Class, ::RC::Unreal::FVector, ::), LuaStateTypes(MainState, AsyncState, AOBState)] */
+/** CUSTOM_ATTRIBUTE[LuaLate(Class, ::RC::Unreal::FRotator, ::), LuaStateTypes(MainState, AsyncState, AOBState)] */
+/** CUSTOM_ATTRIBUTE[LuaLate(Class, ::RC::Unreal::FQuat, ::), LuaStateTypes(MainState, AsyncState, AOBState)] */
+/** CUSTOM_ATTRIBUTE[LuaLate(Class, ::RC::Unreal::FObjectInstancingGraph, ::), LuaStateTypes(MainState, AsyncState, AOBState)] */
+/** CUSTOM_ATTRIBUTE[LuaLate(Class, ::RC::Unreal::TMulticastScriptDelegate, ::), LuaStateTypes(MainState, AsyncState, AOBState)] */
+/** CUSTOM_ATTRIBUTE[LuaLate(Class, ::RC::Unreal::FFeedbackContext, ::), LuaStateTypes(MainState, AsyncState, AOBState)] */
+/** CUSTOM_ATTRIBUTE[LuaLate(Class, ::RC::Unreal::TScriptDelegate, ::), LuaStateTypes(MainState, AsyncState, AOBState)] */
+/** CUSTOM_ATTRIBUTE[LuaLate(Class, ::RC::Unreal::ITargetPlatform, ::), LuaStateTypes(MainState, AsyncState, AOBState)] */
+/** CUSTOM_ATTRIBUTE[LuaLate(Class, ::RC::Unreal::FOutParmRec, ::), LuaStateTypes(MainState, AsyncState, AOBState)] */
+/** CUSTOM_ATTRIBUTE[LuaLate(Class, ::RC::Unreal::UFunction, ::), LuaStateTypes(MainState, AsyncState, AOBState)] */
+/** CUSTOM_ATTRIBUTE[LuaLate(Class, ::RC::Unreal::FGuid, ::), LuaStateTypes(MainState, AsyncState, AOBState)] */
+/** CUSTOM_ATTRIBUTE[LuaLate(Class, ::RC::Unreal::FScriptArray, ::), LuaStateTypes(MainState, AsyncState, AOBState)] */
+/** CUSTOM_ATTRIBUTE[LuaLate(Class, ::RC::Unreal::FTransform, ::), LuaStateTypes(MainState, AsyncState, AOBState)] */
+/** CUSTOM_ATTRIBUTE[LuaLate(Class, ::RC::Unreal::FUObjectItem, ::), LuaStateTypes(MainState, AsyncState, AOBState)] */
+/** CUSTOM_ATTRIBUTE[LuaLate(Class, ::RC::Unreal::FWeakObjectPtr, ::), LuaStateTypes(MainState, AsyncState, AOBState)] */
+/** CUSTOM_ATTRIBUTE[LuaLate(Class, ::RC::Unreal::FText, ::), LuaStateTypes(MainState, AsyncState, AOBState)] */
+/** CUSTOM_ATTRIBUTE[LuaLate(Class, ::RC::Unreal::UEnum, ::), LuaStateTypes(MainState, AsyncState, AOBState)] */
+/** CUSTOM_ATTRIBUTE[LuaLate(Class, ::RC::Unreal::ObjectSearcher, ::), LuaStateTypes(MainState, AsyncState, AOBState)] */
+/** CUSTOM_ATTRIBUTE[LuaLate(Class, ::RC::Unreal::FField, ::), LuaStateTypes(MainState, AsyncState, AOBState)] */
+/** CUSTOM_ATTRIBUTE[LuaLate(Class, ::RC::Unreal::FFieldVariant, ::), LuaStateTypes(MainState, AsyncState, AOBState)] */
+/** CUSTOM_ATTRIBUTE[LuaLate(Class, ::RC::Unreal::FFieldClass, ::), LuaStateTypes(MainState, AsyncState, AOBState)] */
+/** CUSTOM_ATTRIBUTE[LuaLate(Class, ::RC::Unreal::FFieldClassVariant, ::), LuaStateTypes(MainState, AsyncState, AOBState)] */
+/** CUSTOM_ATTRIBUTE[LuaLate(Class, ::RC::Unreal::FProperty, ::), LuaStateTypes(MainState, AsyncState, AOBState)] */
+/** CUSTOM_ATTRIBUTE[LuaLate(Class, ::RC::Unreal::FObjectPropertyBase, ::), LuaStateTypes(MainState, AsyncState, AOBState)] */
+/** CUSTOM_ATTRIBUTE[LuaLate(Class, ::RC::Unreal::FObjectProperty, ::), LuaStateTypes(MainState, AsyncState, AOBState)] */
+/** CUSTOM_ATTRIBUTE[LuaAddBaseToClass(::RC::Unreal::TFObjectPropertyBase, ::RC::Unreal::FObjectPropertyBase)] */
+/** CUSTOM_ATTRIBUTE[LuaLate(Class, ::RC::Unreal::FLazyObjectProperty, ::), LuaStateTypes(MainState, AsyncState, AOBState)] */
+/** CUSTOM_ATTRIBUTE[LuaLate(Class, ::RC::Unreal::FSoftObjectProperty, ::), LuaStateTypes(MainState, AsyncState, AOBState)] */
+/** CUSTOM_ATTRIBUTE[LuaLate(Class, ::RC::Unreal::FWeakObjectProperty, ::), LuaStateTypes(MainState, AsyncState, AOBState)] */
+/** CUSTOM_ATTRIBUTE[LuaLate(Class, ::RC::Unreal::FClassProperty, ::), LuaStateTypes(MainState, AsyncState, AOBState)] */
+/** CUSTOM_ATTRIBUTE[LuaLate(Class, ::RC::Unreal::FSoftClassProperty, ::), LuaStateTypes(MainState, AsyncState, AOBState)] */
+/** CUSTOM_ATTRIBUTE[LuaLate(Class, ::RC::Unreal::FByteProperty, ::), LuaStateTypes(MainState, AsyncState, AOBState)] */
+/** CUSTOM_ATTRIBUTE[LuaLate(Class, ::RC::Unreal::FInt8Property, ::), LuaStateTypes(MainState, AsyncState, AOBState)] */
+/** CUSTOM_ATTRIBUTE[LuaLate(Class, ::RC::Unreal::FInt16Property, ::), LuaStateTypes(MainState, AsyncState, AOBState)] */
+/** CUSTOM_ATTRIBUTE[LuaLate(Class, ::RC::Unreal::FIntProperty, ::), LuaStateTypes(MainState, AsyncState, AOBState)] */
+/** CUSTOM_ATTRIBUTE[LuaLate(Class, ::RC::Unreal::FUInt16Property, ::), LuaStateTypes(MainState, AsyncState, AOBState)] */
+/** CUSTOM_ATTRIBUTE[LuaLate(Class, ::RC::Unreal::FUInt32Property, ::), LuaStateTypes(MainState, AsyncState, AOBState)] */
+/** CUSTOM_ATTRIBUTE[LuaLate(Class, ::RC::Unreal::FUInt64Property, ::), LuaStateTypes(MainState, AsyncState, AOBState)] */
+/** CUSTOM_ATTRIBUTE[LuaLate(Class, ::RC::Unreal::FFloatProperty, ::), LuaStateTypes(MainState, AsyncState, AOBState)] */
+/** CUSTOM_ATTRIBUTE[LuaLate(Class, ::RC::Unreal::FDoubleProperty, ::), LuaStateTypes(MainState, AsyncState, AOBState)] */
+/** CUSTOM_ATTRIBUTE[LuaAddBaseToClass(::RC::Unreal::TProperty_Numeric, ::RC::Unreal::FNumericProperty)] */
+/** CUSTOM_ATTRIBUTE[LuaLate(Class, ::RC::Unreal::FArrayProperty, ::), LuaStateTypes(MainState, AsyncState, AOBState)] */
+/** CUSTOM_ATTRIBUTE[LuaLate(Class, ::RC::Unreal::FBoolProperty, ::), LuaStateTypes(MainState, AsyncState, AOBState)] */
+/** CUSTOM_ATTRIBUTE[LuaLate(Class, ::RC::Unreal::FDelegateProperty, ::), LuaStateTypes(MainState, AsyncState, AOBState)] */
+/** CUSTOM_ATTRIBUTE[LuaLate(Class, ::RC::Unreal::FEnumProperty, ::), LuaStateTypes(MainState, AsyncState, AOBState)] */
+/** CUSTOM_ATTRIBUTE[LuaLate(Class, ::RC::Unreal::FFieldPathProperty, ::), LuaStateTypes(MainState, AsyncState, AOBState)] */
+/** CUSTOM_ATTRIBUTE[LuaLate(Class, ::RC::Unreal::FInterfaceProperty, ::), LuaStateTypes(MainState, AsyncState, AOBState)] */
+/** CUSTOM_ATTRIBUTE[LuaLate(Class, ::RC::Unreal::FMapProperty, ::), LuaStateTypes(MainState, AsyncState, AOBState)] */
+/** CUSTOM_ATTRIBUTE[LuaLate(Class, ::RC::Unreal::FMulticastDelegateProperty, ::), LuaStateTypes(MainState, AsyncState, AOBState)] */
+/** CUSTOM_ATTRIBUTE[LuaLate(Class, ::RC::Unreal::FMulticastInlineDelegateProperty, ::), LuaStateTypes(MainState, AsyncState, AOBState)] */
+/** CUSTOM_ATTRIBUTE[LuaLate(Class, ::RC::Unreal::FMulticastSparseDelegateProperty, ::), LuaStateTypes(MainState, AsyncState, AOBState)] */
+/** CUSTOM_ATTRIBUTE[LuaLate(Class, ::RC::Unreal::FNameProperty, ::), LuaStateTypes(MainState, AsyncState, AOBState)] */
+/** CUSTOM_ATTRIBUTE[LuaLate(Class, ::RC::Unreal::FNumericProperty, ::), LuaStateTypes(MainState, AsyncState, AOBState)] */
+/** CUSTOM_ATTRIBUTE[LuaLate(Class, ::RC::Unreal::FSetProperty, ::), LuaStateTypes(MainState, AsyncState, AOBState)] */
+/** CUSTOM_ATTRIBUTE[LuaLate(Class, ::RC::Unreal::FStrProperty, ::), LuaStateTypes(MainState, AsyncState, AOBState)] */
+/** CUSTOM_ATTRIBUTE[LuaLate(Class, ::RC::Unreal::FStructProperty, ::), LuaStateTypes(MainState, AsyncState, AOBState)] */
+/** CUSTOM_ATTRIBUTE[LuaLate(Class, ::RC::Unreal::FTextProperty, ::), LuaStateTypes(MainState, AsyncState, AOBState)] */
+/** CUSTOM_ATTRIBUTE[LuaLate(Class, ::RC::UnrealRuntimeTypes::ArrayTest, ::), LuaStateTypes(MainState, AsyncState, AOBState)] */
+/** CUSTOM_ATTRIBUTE[LuaLate(Class, ::RC::UnrealRuntimeTypes::LuaUScriptStruct, ::), LuaStateTypes(MainState, AsyncState, AOBState)] */
+/** CUSTOM_ATTRIBUTE[LuaLate(Class, ::RC::Unreal::Version, ::), LuaStateTypes(MainState, AsyncState, AOBState)] */
+/** CUSTOM_ATTRIBUTE[LuaLate(FreeFunction, ::GlobalFunctionTest, ::), LuaStateTypes(MainState, AsyncState, AOBState)] */
+/** CUSTOM_ATTRIBUTE[LuaLate(FreeFunction, ::RC::GetWorldTest, ::), LuaStateTypes(MainState, AsyncState, AOBState)] */
+/** CUSTOM_ATTRIBUTE[LuaLate(FreeFunction, ::RC::GetMyFirstClass, ::), LuaStateTypes(MainState, AsyncState, AOBState)] */
+/** CUSTOM_ATTRIBUTE[LuaLate(FreeFunction, ::RC::GetMyFirstClass2, ::), LuaStateTypes(MainState, AsyncState, AOBState)] */
+/** CUSTOM_ATTRIBUTE[LuaLate(FreeFunction, ::RC::GetMyFirstClass3, ::), LuaStateTypes(MainState, AsyncState, AOBState)] */
+/** CUSTOM_ATTRIBUTE[LuaLate(FreeFunction, ::RC::Unreal::UObjectGlobals::FindFirstOf, ::), LuaStateTypes(MainState, AsyncState, AOBState)] */
+/** CUSTOM_ATTRIBUTE[LuaLate(FreeFunction, ::RC::Unreal::UObjectGlobals::ForEachUObject, ::), LuaStateTypes(MainState, AsyncState, AOBState)] */
+/** CUSTOM_ATTRIBUTE[LuaLate(CustomFreeFunction, ::RC::Unreal::UObjectGlobals::FindAllOf, ::RC::lua_FindAllOf_wrapper, ::), LuaStateTypes(MainState, AsyncState, AOBState)] */
+/** CUSTOM_ATTRIBUTE[LuaLate(CustomFreeFunction, ::RC::RegisterKeyBind, ::RC::lua_RegisterKeyBind_wrapper, ::), LuaStateTypes(MainState, AsyncState, AOBState)] */
+/** CUSTOM_ATTRIBUTE[LuaLate(CustomFreeFunction, ::warn, ::RC::lua_warn_wrapper, ::), LuaStateTypes(MainState, AsyncState, AOBState)] */
+/** CUSTOM_ATTRIBUTE[LuaLate(CustomFreeFunction, ::print, ::RC::lua_print_wrapper, ::), LuaStateTypes(MainState, AsyncState, AOBState)] */
+
+// There is no non-templated 'StaticFindObject' function and that should change at some point.
+// For now we're using 'FindObject' instead which is what the templated 'StaticFindObject' variants wrap.
+/** CUSTOM_ATTRIBUTE[LuaLate(FreeFunction, ::RC::Unreal::UObjectGlobals::FindObject, ::), LuaStateTypes(MainState, AsyncState, AOBState)] */
+
+// LuaMemberFunctionRedirector params: Class, FunctionName, FullyQualifiedLuaWrapper
+// Injecting a completely new member function into a struct.
+/** CUSTOM_ATTRIBUTE[LuaMemberFunctionRedirector(::RC::Unreal::UObjectBase, MyTestFunc, ::RC::UObjectBase_memberr_function_wrapper_MyTestFunc)] */
+
+// Redirecting an existing member function in a struct to your own wrapper.
+// Primarily used for injecting custom code before or after the original function.
+// The code for the original function won't be generated so you'll have to rewrite it or copy before you override the original.
+/** CUSTOM_ATTRIBUTE[LuaMemberFunctionRedirector(::RC::Unreal::UObjectBase, GetNamePrivate, ::RC::UObjectBase_member_function_wrapper_GetNamePrivate)] */
+/** CUSTOM_ATTRIBUTE[LuaMemberFunctionRedirector(::RC::Unreal::UObjectBase, Cast, ::RC::UObjectBase_member_function_wrapper_Cast)] */
+/** CUSTOM_ATTRIBUTE[LuaMemberFunctionRedirector(::RC::Unreal::FField, CastField, ::RC::FField_member_function_wrapper_CastField)] */
+/** CUSTOM_ATTRIBUTE[LuaMemberFunctionRedirector(::RC::Unreal::UEnum, ForEachName, ::RC::UEnum_member_function_wrapper_ForEachName)] */
+/** CUSTOM_ATTRIBUTE[LuaMemberFunctionRedirector(::RC::UnrealRuntimeTypes::ArrayTest, GetElementAtIndex, ::RC::ArrayTest_member_function_wrapper_GetElementAtIndex)] */
+/** CUSTOM_ATTRIBUTE[LuaMemberFunctionRedirector(::RC::UnrealRuntimeTypes::ArrayTest, ForEach, ::RC::ArrayTest_member_function_wrapper_ForEach)] */
+/** CUSTOM_ATTRIBUTE[LuaStaticMemberFunctionRedirector(::RC::Unreal::UClass, StaticClass, ::RC::UClass_member_function_wrapper_StaticClass)] */
+
+// LuaAddMetamethod params: FullyQualifiedClass, MetamethodName, FullyQualifiedLuaWrapper
+// Adding metamethods to a struct.
+// It doesn't account for future inheritance, meaning that if you add a metamethod to 'Derived', it won't get triggered from 'Base'.
+// It accounts for past inheritance, meaning that if you add a metamethod to 'Base', it will get triggered from 'Derived' if 'Derived' doesn't have its own.
+/** CUSTOM_ATTRIBUTE[LuaAddMetamethod(::RC::Unreal::UObjectBase, __index, ::RC::UObjectBase_metamethod_wrapper_Index)] */
+/** CUSTOM_ATTRIBUTE[LuaAddMetamethod(::RC::Unreal::UObjectBase, __newindex, ::RC::UObjectBase_metamethod_wrapper_NewIndex)] */
+/** CUSTOM_ATTRIBUTE[LuaAddMetamethod(::RC::Unreal::UFunction, __call, ::RC::UFunction_metamethod_wrapper_Call)] */
+/** CUSTOM_ATTRIBUTE[LuaAddMetamethod(::RC::UnrealRuntimeTypes::ArrayTest, __gc, ::RC::ArrayTest_metamethod_wrapper_GC)] */
+/** CUSTOM_ATTRIBUTE[LuaAddMetamethod(::RC::UnrealRuntimeTypes::LuaUScriptStruct, __index, ::RC::LuaUScriptStruct_metamethod_wrapper_Index)] */
+/** CUSTOM_ATTRIBUTE[LuaAddMetamethod(::RC::UnrealRuntimeTypes::LuaUScriptStruct, __newindex, ::RC::LuaUScriptStruct_metamethod_wrapper_NewIndex)] */
+/** CUSTOM_ATTRIBUTE[LuaAddMetamethod(::RC::UnrealRuntimeTypes::LuaUScriptStruct, __gc, ::RC::LuaUScriptStruct_metamethod_wrapper_GC)] */
+
+/** CUSTOM_ATTRIBUTE[LuaMapTemplateClass(::RC::Unreal::TArray, ::RC::UnrealRuntimeTypes::Array)] */
+/** CUSTOM_ATTRIBUTE[LuaLate(FreeFunction, ::RC::GetArrayTest, ::), LuaStateTypes(MainState, AsyncState, AOBState)] */
+/** CUSTOM_ATTRIBUTE[LuaLate(FreeFunction, ::RC::GetArrayTest2, ::), LuaStateTypes(MainState, AsyncState, AOBState)] */
+/** CUSTOM_ATTRIBUTE[LuaLate(FreeFunction, ::RC::GetArrayTest3, ::), LuaStateTypes(MainState, AsyncState, AOBState)] */
+
+// Low-level memory
+/** CUSTOM_ATTRIBUTE[LuaLate(Class, ::RC::Unreal::FMemory, ::), LuaStateTypes(MainState, AsyncState, AOBState)] */
+/** CUSTOM_ATTRIBUTE[LuaLate(Class, ::RC::MemoryItem, ::), LuaStateTypes(MainState, AsyncState, AOBState)] */
+/** CUSTOM_ATTRIBUTE[LuaLate(FreeFunction, ::RC::AllocateMemory, ::), LuaStateTypes(MainState, AsyncState, AOBState)] */
+/** CUSTOM_ATTRIBUTE[LuaLate(FreeFunction, ::RC::FreeMemory, ::), LuaStateTypes(MainState, AsyncState, AOBState)] */
+
+/** CUSTOM_ATTRIBUTE[LuaLate(CustomFreeFunction, ::RC::ReadBytes, ::RC::lua_Test_ReadBytes_wrapper, ::), LuaStateTypes(MainState, AsyncState, AOBState)] */
+/** CUSTOM_ATTRIBUTE[LuaLate(CustomFreeFunction, ::RC::ReadUInt8, ::RC::lua_Test_ReadUInt8_wrapper, ::), LuaStateTypes(MainState, AsyncState, AOBState)] */
+/** CUSTOM_ATTRIBUTE[LuaLate(CustomFreeFunction, ::RC::ReadUInt16, ::RC::lua_Test_ReadUInt16_wrapper, ::), LuaStateTypes(MainState, AsyncState, AOBState)] */
+/** CUSTOM_ATTRIBUTE[LuaLate(CustomFreeFunction, ::RC::ReadUInt32, ::RC::lua_Test_ReadUInt32_wrapper, ::), LuaStateTypes(MainState, AsyncState, AOBState)] */
+/** CUSTOM_ATTRIBUTE[LuaLate(CustomFreeFunction, ::RC::ReadUInt64, ::RC::lua_Test_ReadUInt64_wrapper, ::), LuaStateTypes(MainState, AsyncState, AOBState)] */
+/** CUSTOM_ATTRIBUTE[LuaLate(CustomFreeFunction, ::RC::ReadInt8, ::RC::lua_Test_ReadInt8_wrapper, ::), LuaStateTypes(MainState, AsyncState, AOBState)] */
+/** CUSTOM_ATTRIBUTE[LuaLate(CustomFreeFunction, ::RC::ReadInt16, ::RC::lua_Test_ReadInt16_wrapper, ::), LuaStateTypes(MainState, AsyncState, AOBState)] */
+/** CUSTOM_ATTRIBUTE[LuaLate(CustomFreeFunction, ::RC::ReadInt32, ::RC::lua_Test_ReadInt32_wrapper, ::), LuaStateTypes(MainState, AsyncState, AOBState)] */
+/** CUSTOM_ATTRIBUTE[LuaLate(CustomFreeFunction, ::RC::ReadInt64, ::RC::lua_Test_ReadInt64_wrapper, ::), LuaStateTypes(MainState, AsyncState, AOBState)] */
+/** CUSTOM_ATTRIBUTE[LuaLate(CustomFreeFunction, ::RC::WriteBytes, ::RC::lua_Test_WriteBytes_wrapper, ::), LuaStateTypes(MainState, AsyncState, AOBState)] */
+/** CUSTOM_ATTRIBUTE[LuaLate(CustomFreeFunction, ::RC::WriteUInt8, ::RC::lua_Test_WriteUInt8_wrapper, ::), LuaStateTypes(MainState, AsyncState, AOBState)] */
+/** CUSTOM_ATTRIBUTE[LuaLate(CustomFreeFunction, ::RC::WriteUInt16, ::RC::lua_Test_WriteUInt16_wrapper, ::), LuaStateTypes(MainState, AsyncState, AOBState)] */
+/** CUSTOM_ATTRIBUTE[LuaLate(CustomFreeFunction, ::RC::WriteUInt32, ::RC::lua_Test_WriteUInt32_wrapper, ::), LuaStateTypes(MainState, AsyncState, AOBState)] */
+/** CUSTOM_ATTRIBUTE[LuaLate(CustomFreeFunction, ::RC::WriteUInt64, ::RC::lua_Test_WriteUInt64_wrapper, ::), LuaStateTypes(MainState, AsyncState, AOBState)] */
+/** CUSTOM_ATTRIBUTE[LuaLate(CustomFreeFunction, ::RC::WriteInt8, ::RC::lua_Test_WriteInt8_wrapper, ::), LuaStateTypes(MainState, AsyncState, AOBState)] */
+/** CUSTOM_ATTRIBUTE[LuaLate(CustomFreeFunction, ::RC::WriteInt16, ::RC::lua_Test_WriteInt16_wrapper, ::), LuaStateTypes(MainState, AsyncState, AOBState)] */
+/** CUSTOM_ATTRIBUTE[LuaLate(CustomFreeFunction, ::RC::WriteInt32, ::RC::lua_Test_WriteInt32_wrapper, ::), LuaStateTypes(MainState, AsyncState, AOBState)] */
+/** CUSTOM_ATTRIBUTE[LuaLate(CustomFreeFunction, ::RC::WriteInt64, ::RC::lua_Test_WriteInt64_wrapper, ::), LuaStateTypes(MainState, AsyncState, AOBState)] */
+
+// CE aliases
+/** CUSTOM_ATTRIBUTE[LuaLate(CustomFreeFunction, ::RC::readBytes, ::RC::lua_Test_ReadBytes_wrapper, ::), LuaStateTypes(MainState, AsyncState, AOBState)] */
+/** CUSTOM_ATTRIBUTE[LuaLate(CustomFreeFunction, ::RC::readByte, ::RC::lua_Test_ReadUInt8_wrapper, ::), LuaStateTypes(MainState, AsyncState, AOBState)] */
+/** CUSTOM_ATTRIBUTE[LuaLate(CustomFreeFunction, ::RC::readSmallInteger, ::RC::lua_Test_ReadUInt16_wrapper, ::), LuaStateTypes(MainState, AsyncState, AOBState)] */
+/** CUSTOM_ATTRIBUTE[LuaLate(CustomFreeFunction, ::RC::readInteger, ::RC::lua_Test_ReadUInt32_wrapper, ::), LuaStateTypes(MainState, AsyncState, AOBState)] */
+/** CUSTOM_ATTRIBUTE[LuaLate(CustomFreeFunction, ::RC::readQword, ::RC::lua_Test_ReadUInt64_wrapper, ::), LuaStateTypes(MainState, AsyncState, AOBState)] */
+/** CUSTOM_ATTRIBUTE[LuaLate(CustomFreeFunction, ::RC::readPointer, ::RC::lua_Test_ReadUInt64_wrapper, ::), LuaStateTypes(MainState, AsyncState, AOBState)] */
+/** CUSTOM_ATTRIBUTE[LuaLate(CustomFreeFunction, ::RC::writeBytes, ::RC::lua_Test_WriteBytes_wrapper, ::), LuaStateTypes(MainState, AsyncState, AOBState)] */
+/** CUSTOM_ATTRIBUTE[LuaLate(CustomFreeFunction, ::RC::writeByte, ::RC::lua_Test_WriteUInt8_wrapper, ::), LuaStateTypes(MainState, AsyncState, AOBState)] */
+/** CUSTOM_ATTRIBUTE[LuaLate(CustomFreeFunction, ::RC::writeSmallInteger, ::RC::lua_Test_WriteUInt16_wrapper, ::), LuaStateTypes(MainState, AsyncState, AOBState)] */
+/** CUSTOM_ATTRIBUTE[LuaLate(CustomFreeFunction, ::RC::writeInteger, ::RC::lua_Test_WriteUInt32_wrapper, ::), LuaStateTypes(MainState, AsyncState, AOBState)] */
+/** CUSTOM_ATTRIBUTE[LuaLate(CustomFreeFunction, ::RC::writeQword, ::RC::lua_Test_WriteUInt64_wrapper, ::), LuaStateTypes(MainState, AsyncState, AOBState)] */
+/** CUSTOM_ATTRIBUTE[LuaLate(CustomFreeFunction, ::RC::writePointer, ::RC::lua_Test_WriteUInt64_wrapper, ::), LuaStateTypes(MainState, AsyncState, AOBState)] */
+
+/** CUSTOM_ATTRIBUTE[LuaLate(FreeFunction, ::RC::Test_GetUnsignedMemorySetup, ::), LuaStateTypes(MainState, AsyncState, AOBState)] */
+/** CUSTOM_ATTRIBUTE[LuaLate(FreeFunction, ::RC::Test_GetSignedMemorySetup, ::), LuaStateTypes(MainState, AsyncState, AOBState)] */
+/** CUSTOM_ATTRIBUTE[LuaLate(FreeFunction, ::RC::Test_GetPlayerControllerVTablePointer, ::), LuaStateTypes(MainState, AsyncState, AOBState)] */
+/** CUSTOM_ATTRIBUTE[LuaLate(FreeFunction, ::RC::Test_Get_UObject_Nullptr, ::), LuaStateTypes(MainState, AsyncState, AOBState)] */
+
+/** CUSTOM_ATTRIBUTE[LuaLate(Enum, ::RC::LoopAction, ::), LuaStateTypes(MainState, AsyncState, AOBState)] */
+/** CUSTOM_ATTRIBUTE[LuaLate(Enum, ::RC::Unreal::EObjectFlags, ::), LuaStateTypes(MainState, AsyncState, AOBState)] */
+/** CUSTOM_ATTRIBUTE[LuaLate(Enum, ::RC::Input::Key, ::), LuaStateTypes(MainState, AsyncState, AOBState)] */
+/** CUSTOM_ATTRIBUTE[LuaLate(Enum, ::RC::Input::ModifierKey, ::), LuaStateTypes(MainState, AsyncState, AOBState)] */
+
+// UE4SS 1.3 compatibility
+/** CUSTOM_ATTRIBUTE[LuaLate(FreeFunction, ::RC::LuaBackCompat::StaticFindObject, ::), LuaStateTypes(MainState, AsyncState, AOBState)] */
+/** CUSTOM_ATTRIBUTE[LuaLate(CustomFreeFunction, ::RC::LuaBackCompat::RegisterHook, ::RC::LuaBackCompat::lua_RegisterHook_wrapper, ::), LuaStateTypes(MainState, AsyncState, AOBState)] */
+/** CUSTOM_ATTRIBUTE[LuaLate(FreeFunction, ::RC::LuaBackCompat::NotifyOnNewObject, ::), LuaStateTypes(MainState, AsyncState, AOBState)] */
+/** CUSTOM_ATTRIBUTE[LuaMemberFunctionRedirector(::RC::Unreal::UObjectBase, IsA, ::RC::LuaBackCompat::lua_UObjectBase_IsA_wrapper)] */
+
+auto GlobalFunctionTest() -> GlobalClassTest
+{
+    printf_s("GlobalFunctionTest\n");
+    return GlobalClassTest{};
+}
+
 namespace RC
 {
+    auto GetPlayerControllerTest2() -> Unreal::UObjectBase*
+    {
+        return UObjectGlobals::FindFirstOf(STR("PlayerController"));
+    }
+    auto GetPlayerControllerTest3() -> Unreal::UObjectBaseUtility*
+    {
+        return UObjectGlobals::FindFirstOf(STR("PlayerController"));
+    }
+    auto GetMyFirstClass() -> MyFirstClass
+    {
+        return MyFirstClass{};
+    }
+    auto GetMyFirstClass2() -> ::RC2::MyFirstClass
+    {
+        return ::RC2::MyFirstClass{};
+    }
+    auto GetMyFirstClass3() -> ::RC2::RC3::RC4::MyFirstClass
+    {
+        return ::RC2::RC3::RC4::MyFirstClass{};
+    }
+
     // Commented out because this system (turn off hotkeys when in-game console is open) it doesn't work properly.
     /*
     struct RC_UE_API FUEDeathListener : public Unreal::FUObjectCreateListener
@@ -116,6 +332,8 @@ namespace RC
     {
         TIME_FUNCTION()
 
+        s_program = this;
+
         try
         {
             setup_paths(moduleFilePath);
@@ -131,8 +349,8 @@ namespace RC
             }
 
             // Setup the log file
-            Output::set_default_devices<Output::NewFileDevice>();
-            auto& file_device = Output::get_device<Output::NewFileDevice>();
+            auto& file_device = Output::set_default_devices<Output::NewFileDevice>();
+            //auto& file_device = Output::get_device<Output::NewFileDevice>();
             file_device.set_file_name_and_path(m_log_directory / m_log_file_name);
 
             m_debug_console_enabled = settings_manager.Debug.ConsoleEnabled;
@@ -184,6 +402,7 @@ namespace RC
 
             setup_unreal();
             setup_unreal_properties();
+            UAssetRegistry::SetMaxMemoryUsageDuringAssetLoading(settings_manager.Memory.MaxMemoryUsageDuringAssetLoading);
 
             output_all_member_offsets();
 
@@ -297,18 +516,17 @@ namespace RC
     {
         if (m_debug_console_enabled)
         {
-            if (!AllocConsole())
+            if (AllocConsole())
             {
-                set_error("Could not create console. Error: %d\n", GetLastError());
-                return;
+                FILE* stdin_filename;
+                FILE* stdout_filename;
+                FILE* stderr_filename;
+                freopen_s(&stdin_filename, "CONIN$", "r", stdin);
+                freopen_s(&stdout_filename, "CONOUT$", "w", stdout);
+                freopen_s(&stderr_filename, "CONOUT$", "w", stderr);
             }
 
-            FILE* stdin_filename;
-            FILE* stdout_filename;
-            FILE* stderr_filename;
-            freopen_s(&stdin_filename, "CONIN$", "r", stdin);
-            freopen_s(&stdout_filename, "CONOUT$", "w", stdout);
-            freopen_s(&stderr_filename, "CONOUT$", "w", stderr);
+            m_render_thread = std::jthread{&GUI::gui_thread, &m_debugging_gui};
         }
     }
 
@@ -561,21 +779,91 @@ namespace RC
         UObjectArray::AddUObjectCreateListener(&FUEDeathListener::UEDeathListener);
         //*/
 
-#ifdef TIME_FUNCTION_MACRO_ENABLED
-        m_input_handler.register_keydown_event(Input::Key::Y, {Input::ModifierKey::CONTROL}, [&]() {
-            if (FunctionTimerFrame::s_timer_enabled)
-            {
-                FunctionTimerFrame::stop_profiling();
-                FunctionTimerFrame::dump_profile();
-                Output::send(STR("Profiler stopped & dumped\n"));
-            }
-            else
-            {
-                FunctionTimerFrame::start_profiling();
-                Output::send(STR("Profiler started\n"));
-            }
+        m_debugging_gui.get_live_view().set_listeners();
+
+        m_input_handler.register_keydown_event(Input::Key::O, {Input::ModifierKey::CONTROL}, [&]() {
+            TRY([&] {
+                if (!get_debugging_ui().is_open())
+                {
+                    m_render_thread.request_stop();
+                    m_render_thread.join();
+                    m_render_thread = std::jthread{&GUI::gui_thread, &m_debugging_gui};
+                }
+            });
         });
-#endif
+
+        m_input_handler.register_keydown_event(Input::Key::Q, {Input::ModifierKey::CONTROL}, [&]() {
+            TRY([&] {
+                Output::send(STR("\n\nFinding all actor classes (FindObjectSearcher<AActor>)\n"));
+                auto ActorClassSearcher = FindObjectSearcher<UClass, AActor>();
+                Output::send(STR("PoolSize: {}\n"), ActorClassSearcher.PoolSize());
+                ActorClassSearcher.ForEach([&](UObject* FoundClass) {
+                    Output::send(STR("Found Actor Class: {}\n"), FoundClass->GetFullName());
+                    return LoopAction::Continue;
+                });
+
+                Output::send(STR("\n\nFinding all BP classes (FindObjectSearcher<UBlueprintGeneratedClass>)\n"));
+                auto BPClassSearcher = FindObjectSearcher<UBlueprintGeneratedClass, AnySuperStruct>();
+                Output::send(STR("PoolSize: {}\n"), BPClassSearcher.PoolSize());
+                BPClassSearcher.ForEach([&](UObject* FoundClass) {
+                    Output::send(STR("Found BP Class: {}\n"), FoundClass->GetFullName());
+                    return LoopAction::Continue;
+                });
+
+                // Finds all classes.
+                Output::send(STR("\n\nFinding all classes (FindObjectSearcher<UClass, AnySuperStruct>)\n"));
+                auto ClassSearcher2 = FindObjectSearcher<UClass, AnySuperStruct>();
+                Output::send(STR("PoolSize: {}\n"), ClassSearcher2.PoolSize());
+                ClassSearcher2.ForEach([&](UObject* FoundClass) {
+                    auto* AsClass = static_cast<UClass*>(FoundClass);
+                    Output::send(STR("Found Class: {}\n"), AsClass->GetFullName());
+                    return LoopAction::Continue;
+                });
+
+                Output::send(STR("\n\nFinding all actor instances (FindObjectSearcher<AnyClass, AActor>)\n"));
+                auto ActorSearcher = FindObjectSearcher<AActor, AnySuperStruct>();
+                Output::send(STR("ActorSearcher Num: {}\n"), ActorSearcher.PoolSize());
+                ActorSearcher.ForEach([](UObject* Object) {
+                    Output::send(STR("{}\n"), Object->GetFullName());
+                    return LoopAction::Continue;
+                });
+
+                /*
+                Output::send(STR("\n\nFinding all objects (FindObjectSearcher<Class, AActor>)\n"));
+                auto AllSearcher = FindObjectSearcher<AnyClass, AnySuperStruct>();
+                Output::send(STR("AllSearcher Num: {}\n"), AllSearcher.PoolSize());
+                AllSearcher.ForEach([](UObject* Object) {
+                    Output::send(STR("{}\n"), Object->GetFullName());
+                    return LoopAction::Continue;
+                });
+                //*/
+            });
+        });
+
+        /*
+        m_input_handler.register_keydown_event(Input::Key::I, {Input::ModifierKey::CONTROL}, [&]() {
+            TRY([&] {
+                auto AssetRegistry = Cast<UAssetRegistry>(UAssetRegistryHelpers::GetAssetRegistry().ObjectPointer);
+                if (!AssetRegistry)
+                {
+                    Output::send(STR("AssetRegistry was nullptr\n"));
+                }
+                else
+                {
+                    auto& interfaces = AssetRegistry->GetClassPrivate()->GetInterfaces();
+                    interfaces.ForEach([&](const RC::Unreal::FImplementedInterface* the_interface) {
+                        Output::send(STR("Interface: {}\n"), the_interface->Class->GetFullName());
+                        return LoopAction::Continue;
+                    });
+                    auto f = AssetRegistry->GetFunctionByNameInChain(STR("GetAllAssets"));
+                    Output::send(STR("Function: {}\n"), f ? f->GetFullName() : STR("None"));
+
+                    ::RC::Unreal::TArray<FAssetData> AllAssets{nullptr, 0, 0};
+                    AssetRegistry->GetAllAssets2(AllAssets, false);
+                }
+            });
+        });
+        //*/
 
         TRY([&] {
             ObjectDumper::init();
@@ -592,9 +880,80 @@ namespace RC
                 Output::send<LogLevel::Warning>(STR("FAssetData not available in <4.17, ignoring 'LoadAllAssetsBeforeDumpingObjects' & 'LoadAllAssetsBeforeGeneratingCXXHeaders'."));
             }
 
+            m_input_handler.register_keydown_event(Input::Key::Y, {Input::ModifierKey::CONTROL}, [&]() {
+                TRY([&] {
+                    AActor* character = Unreal::Cast<AActor>(UObjectGlobals::FindFirstOf(STR("Character")));
+                    Output::send(STR("Name from auto-generated getter: {}\n"), character->GetNamePrivate().ToString());
+                    // UObjectGlobals::StaticFindObject<UGameplayStatics*>(nullptr, nullptr, STR("/Script/Engine.Default__GameplayStatics"));
+                    UClass* to_spawn{};
+                    if (Unreal::Version::IsBelow(5, 0))
+                    {
+                        to_spawn = Unreal::Cast<UClass>(UObjectGlobals::FindObject(nullptr, nullptr, STR("/Game/FirstPersonCPP/Blueprints/FirstPersonProjectile.FirstPersonProjectile_C")));
+                    }
+                    else
+                    {
+                        to_spawn = Unreal::Cast<UClass>(UObjectGlobals::FindObject(nullptr, nullptr, STR("/Game/FirstPerson/Blueprints/BP_FirstPersonProjectile.BP_FirstPersonProjectile_C")));
+                    }
+
+                    Output::send(STR("500+{:X}, Pre500{:X}\n"), sizeof(Unreal::FTransform_As500Plus), sizeof(Unreal::FTransform_AsPre500));
+
+                    Output::send(STR("to_spawn: {}\n"), to_spawn->GetFullName());
+                    Unreal::FTransform transform = character->GetTransform();
+                    //AActor* actor = Unreal::UGameplayStatics::BeginDeferredActorSpawnFromClass(character->GetWorld(), to_spawn, transform);
+                    //Loc: -351.000366 -99.000000 268.373718
+                    //RotatorAsVector.X: 0.996715
+                    //RotatorAsVector.Y: -0.079046
+                    //RotatorAsVector.Z: 0.017607
+                    //Final X: -278.083986
+                    //Final Y: 2.134236
+                    //Final Z: 5111.598653
+                    float X = -351.000366f;
+                    X += (72.f * 0.996715 + 0.f) * 15.f;
+                    float Y = -99.000000f;
+                    Y += (72.f * -0.079046 + 0.f) * 15.f;
+                    float Z = 268.373718f;
+                    Z += 72.f * 0.017607 + 1.f * 15.f;
+                    Output::send(STR("X test: {}\n"), X);
+                    Output::send(STR("Y test: {}\n"), Y);
+                    Output::send(STR("Z test: {}\n"), Z);
+                    AActor* actor = character->GetWorld()->SpawnActor(to_spawn, &transform);
+                    if (actor)
+                    {
+                        Output::send(STR("actor: {} {}\n"), (void*)actor, actor->GetFullName());
+                        Unreal::FTransform t = actor->GetTransform();
+                        Output::send(STR("actor loc: {} {} {}\n"), t.Translation().X(), t.Translation().Y(), t.Translation().Z());
+                    }
+                    else
+                    {
+                        Output::send(STR("actor was nullptr\n"));
+                    }
+
+                    /*
+                    actor = Unreal::UGameplayStatics::FinishSpawningActor(actor, transform);
+                    if (actor)
+                    {
+                        Output::send(STR("actor: {} {}\n"), (void*)actor, actor->GetFullName());
+                    }
+                    else
+                    {
+                        Output::send(STR("actor was nullptr\n"));
+                    }
+                    //*/
+                });
+            });
+
             setup_mods();
             Mod::on_program_start();
             start_mods();
+
+            FName fname{STR("Controller")};
+            FStringOut fstring{};
+            FName::ToStringInternal(&fname, fstring);
+            const Unreal::TArray<TCHAR>& tarray = fstring.GetCharTArray();
+            Unreal::FScriptArray* fscriptarray = std::bit_cast<Unreal::FScriptArray*>(&tarray);
+            printf_s("Data: %p\n", fscriptarray->GetData());
+            printf_s("Num: %i\n", fscriptarray->Num());
+            printf_s("Max: %i\n", fscriptarray->Max());
         });
 
         if (settings_manager.General.EnableDebugKeyBindings)
@@ -613,6 +972,19 @@ namespace RC
         for (m_processing_events = true; m_processing_events;)
         {
             if (m_pause_events_processing || UE4SSProgram::unreal_is_shutting_down) { continue; }
+
+            if (!is_queue_empty())
+            {
+                static constexpr size_t max_events_executed_per_frame = 5;
+                size_t num_events_executed{};
+                std::lock_guard<std::mutex> guard(m_event_queue_mutex);
+                m_queued_events.erase(std::remove_if(m_queued_events.begin(), m_queued_events.end(), [&](Event& event) -> bool {
+                    if (num_events_executed >= max_events_executed_per_frame) { return false; }
+                    ++num_events_executed;
+                    event.callable(event.data);
+                    return true;
+                }), m_queued_events.end());
+            }
 
             // Commented out because this system (turn off hotkeys when in-game console is open) it doesn't work properly.
             /*
@@ -666,7 +1038,6 @@ namespace RC
         LuaType::StaticState::m_property_value_pushers.emplace(FName(L"NameProperty").GetComparisonIndex(), &LuaType::push_nameproperty);
         LuaType::StaticState::m_property_value_pushers.emplace(FName(L"TextProperty").GetComparisonIndex(), &LuaType::push_textproperty);
         LuaType::StaticState::m_property_value_pushers.emplace(FName(L"StrProperty").GetComparisonIndex(), &LuaType::push_strproperty);
-        LuaType::StaticState::m_property_value_pushers.emplace(FName(L"SoftClassProperty").GetComparisonIndex(), &LuaType::push_softclassproperty);
     }
 
     auto UE4SSProgram::setup_mods() -> void
@@ -708,10 +1079,14 @@ namespace RC
         // Setup DynamicOutput
         if (m_debug_console_enabled)
         {
-            Output::set_default_devices<Output::DebugConsoleDevice>();
+            m_debug_console_device = &Output::set_default_devices<Output::DebugConsoleDevice>();
             Output::set_default_log_level<LogLevel::Normal>();
-            auto& debug_console_device = Output::get_device<Output::DebugConsoleDevice>();
-            debug_console_device.set_formatter([](File::StringViewType string) -> File::StringType {
+            m_debug_console_device->set_formatter([](File::StringViewType string) -> File::StringType {
+                return std::format(STR("[{}] {}"), std::format(STR("{:%X}"), std::chrono::system_clock::now()), string);
+            });
+
+            m_console_device = &Output::set_default_devices<Output::ConsoleDevice>();
+            m_console_device->set_formatter([](File::StringViewType string) -> File::StringType {
                 return std::format(STR("[{}] {}"), std::format(STR("{:%X}"), std::chrono::system_clock::now()), string);
             });
         }
@@ -785,7 +1160,7 @@ namespace RC
                 std::wstring mod_name = explode_by_occurrence(current_line, L':', 1);
                 std::wstring mod_enabled = explode_by_occurrence(current_line, L':', ExplodeType::FromEnd);
 
-                Mod* mod = find_mod_by_name(mod_name, IsInstalled::Yes);
+                auto mod = find_mod_by_name(mod_name, IsInstalled::Yes);
 
                 if (mod_enabled == L"1")
                 {
@@ -818,7 +1193,7 @@ namespace RC
             if (!std::filesystem::exists(mod_directory.path() / "enabled.txt", ec)) { continue; }
             if (ec.value() != 0) { set_error("exists ran into error %d", ec.value()); }
 
-            auto mod = find_mod_by_name(mod_directory.path().stem().c_str(), IsInstalled::Yes);
+            const auto mod = find_mod_by_name(mod_directory.path().stem().c_str(), IsInstalled::Yes);
             if (!mod)
             {
                 Output::send<LogLevel::Warning>(STR("Found a mod with enabled.txt but mod has not been installed properly.\n"));
@@ -854,13 +1229,14 @@ namespace RC
 
         // Remove any actions, or we'll get an internal error as the lua ref won't be valid
         Mod::clear_delayed_actions();
+        Mod::clear_async_loop_threads();
 
         uninstall_mods();
 
         // Remove key binds that were set from Lua scripts
         for (auto& input_event : m_input_handler.get_events())
         {
-            for (auto& [key, vector_of_key_data] : input_event.key_data)
+            for (auto&[key, vector_of_key_data] : input_event.key_data)
             {
                 std::erase_if(vector_of_key_data, [](Input::KeyData& key_data) -> bool {
                     return key_data.custom_data == 1;
@@ -936,6 +1312,25 @@ namespace RC
 
         UAssetRegistry::FreeAllForcefullyLoadedAssets();
         Output::send(STR("SDK generated in {} seconds.\n"), generator_duration);
+    }
+
+    auto UE4SSProgram::stop_render_thread() -> void
+    {
+        m_render_thread.request_stop();
+        m_render_thread.join();
+    }
+
+    auto UE4SSProgram::queue_event(EventCallable callable, void* data) -> void
+    {
+        if (!can_process_events()) { return; }
+        std::lock_guard<std::mutex> guard(m_event_queue_mutex);
+        m_queued_events.emplace_back(Event{callable, data});
+    }
+
+    auto UE4SSProgram::is_queue_empty() -> bool
+    {
+        // Not locking here because if the worst that could happen as far as I know is that the event loop processes the event slightly late.
+        return m_queued_events.empty();
     }
 
     auto UE4SSProgram::register_keydown_event(Input::Key key, const Input::EventCallbackCallable& callback, uint8_t custom_data) -> void
@@ -1138,6 +1533,8 @@ namespace RC
 
     auto UE4SSProgram::static_cleanup() -> void
     {
+        delete &get_program();
+
         // Do cleanup of static objects here
         // This function is called right before the DLL detaches from the game
         // Including when the player hits the 'X' button to exit the game

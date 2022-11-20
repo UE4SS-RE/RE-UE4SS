@@ -10,14 +10,7 @@ namespace RC::Unreal
 
 namespace RC::LuaType
 {
-    struct FArrayPropertyName
-    {
-        constexpr static const char* ToString()
-        {
-            return "ArrayProperty";
-        }
-    };
-
+    struct FArrayPropertyName { constexpr static const char* ToString() { return "ArrayProperty"; }};
     class XArrayProperty : public RemoteObjectBase<Unreal::FArrayProperty, FArrayPropertyName>
     {
     public:
@@ -36,7 +29,7 @@ namespace RC::LuaType
 
     private:
         template<LuaMadeSimple::Type::IsFinal is_final>
-        auto static setup_member_functions(const LuaMadeSimple::Lua::Table&, std::string_view) -> void;
+        auto static setup_member_functions(const LuaMadeSimple::Lua::Table&) -> void;
     };
 }
 

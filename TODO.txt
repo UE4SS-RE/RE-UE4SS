@@ -1,0 +1,17 @@
+The 'Unreal' module
+{
+    The function 'Internal::UnrealScriptFunctionHook' should have an error handler mechanism.
+    That way we can execute 'luaL_traceback' (or handle_lua_error) without involving Lua in the 'Unreal' module.
+}
+
+UE4SS
+{
+    Lua 2.0 must be integrated properly with the 'Mod' class.
+    After that we can put all the static variables in there and clean them up upon reinstall/uninstall and unregister hooks etc.
+
+    Change the 'FindAllOf' custom implementation to return a Lua table instead of Array.
+    As good and fun as it is to be able to return an Array, it breaks compatibility with UE4SS 1.3.
+
+    Make "RegisterHook" and "NotifyOnNewObject" callbacks and probably any other possibly-async code execution use a different lua state.
+    Prefer to use luaL_newstate over lua_newthread if possible. May need to setup some complicated system for safe cross-state variable or environment access.
+}

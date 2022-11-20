@@ -70,3 +70,15 @@
 	path = Dependencies/ParserBase
 	url = git@github.com:UE4SS-RE/ParserBase.git
 	branch = main
+[submodule "Dependencies/ImGuiColorTextEdit"]
+	path = Dependencies/ImGuiColorTextEdit
+	url = https://github.com/UE4SS-RE/ImGuiColorTextEdit.git
+[submodule "Dependencies/LuaBindingsGenerator"]
+	path = Dependencies/LuaBindingsGenerator
+	url = https://github.com/UE4SS-RE/LuaBindingsGenerator.git
+[submodule "Dependencies/ArgsParser"]
+	path = Dependencies/ArgsParser
+	url = https://github.com/UE4SS-RE/ArgsParser.git
+[submodule "Dependencies/imgui"]
+	path = Dependencies/imgui
+	url = https://github.com/narknon/imgui.git

@@ -40,6 +40,7 @@ namespace RC
         REGISTER_BOOL_SETTING(General.EnableDebugKeyBindings, section_general, EnableDebugKeyBindings)
         REGISTER_INT64_SETTING(General.MaxScanAttemptsNormal, section_general, MaxScanAttemptsNormal)
         REGISTER_INT64_SETTING(General.MaxScanAttemptsModular, section_general, MaxScanAttemptsModular)
+        REGISTER_BOOL_SETTING(General.UseUObjectArrayCache, section_general, UseUObjectArrayCache)
 
         constexpr static File::CharType section_engine_version_override[] = STR("EngineVersionOverride");
         REGISTER_INT64_SETTING(EngineVersionOverride.MajorVersion, section_engine_version_override, MajorVersion)
@@ -66,5 +67,8 @@ namespace RC
         constexpr static File::CharType section_threads[] = STR("Threads");
         REGISTER_INT64_SETTING(Threads.SigScannerNumThreads, section_threads, SigScannerNumThreads)
         REGISTER_INT64_SETTING(Threads.SigScannerMultithreadingModuleSizeThreshold, section_threads, SigScannerMultithreadingModuleSizeThreshold)
+
+        constexpr static File::CharType section_memory[] = STR("Memory");
+        REGISTER_INT64_SETTING(Memory.MaxMemoryUsageDuringAssetLoading, section_memory, MaxMemoryUsageDuringAssetLoading)
     }
 }

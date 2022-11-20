@@ -23,6 +23,7 @@ namespace RC
             bool EnableDebugKeyBindings{false};
             int64_t MaxScanAttemptsNormal{20};
             int64_t MaxScanAttemptsModular{2000};
+            bool UseUObjectArrayCache{true};
         } General;
 
         struct SectionEngineVersionOverride
@@ -62,6 +63,11 @@ namespace RC
             int64_t SigScannerNumThreads{8};
             int64_t SigScannerMultithreadingModuleSizeThreshold{16777216};
         } Threads;
+
+        struct SectionMemory
+        {
+            int64_t MaxMemoryUsageDuringAssetLoading{85};
+        } Memory;
 
     public:
         SettingsManager() = default;
