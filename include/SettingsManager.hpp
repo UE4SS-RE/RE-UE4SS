@@ -55,7 +55,9 @@ namespace RC
 
         struct SectionDebug
         {
-            bool ConsoleEnabled{true};
+            bool SimpleConsoleEnabled{true};
+            bool DebugConsoleEnabled{ true };
+            bool DebugConsoleVisible{ true };
         } Debug;
 
         struct SectionThreads

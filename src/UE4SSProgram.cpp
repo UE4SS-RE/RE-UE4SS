@@ -353,7 +353,9 @@ namespace RC
             //auto& file_device = Output::get_device<Output::NewFileDevice>();
             file_device.set_file_name_and_path(m_log_directory / m_log_file_name);
 
-            m_debug_console_enabled = settings_manager.Debug.ConsoleEnabled;
+            m_simple_console_enabled = settings_manager.Debug.SimpleConsoleEnabled;
+            m_debug_console_enabled = settings_manager.Debug.DebugConsoleEnabled;
+            m_debug_console_visible = settings_manager.Debug.DebugConsoleVisible;
 
             create_debug_console();
             setup_output_devices();
@@ -493,7 +495,7 @@ namespace RC
 
     auto UE4SSProgram::create_emergency_console_for_early_error(File::StringViewType error_message) -> void
     {
-        m_debug_console_enabled = true;
+        m_simple_console_enabled = true;
         create_debug_console();
         printf_s("%S\n", error_message.data());
     }
@@ -514,7 +516,7 @@ namespace RC
 
     auto UE4SSProgram::create_debug_console() -> void
     {
-        if (m_debug_console_enabled)
+        if (m_simple_console_enabled)
         {
             if (AllocConsole())
             {
@@ -526,7 +528,10 @@ namespace RC
                 freopen_s(&stderr_filename, "CONOUT$", "w", stderr);
             }
 
-            m_render_thread = std::jthread{&GUI::gui_thread, &m_debugging_gui};
+            if (m_debug_console_enabled && m_debug_console_visible)
+            {
+                m_render_thread = std::jthread{&GUI::gui_thread, &m_debugging_gui};
+            }
         }
     }
 
@@ -778,19 +783,24 @@ namespace RC
         /*
         UObjectArray::AddUObjectCreateListener(&FUEDeathListener::UEDeathListener);
         //*/
+        if (m_debug_console_enabled)
+        {
+            m_debugging_gui.get_live_view().set_listeners();
 
-        m_debugging_gui.get_live_view().set_listeners();
-
-        m_input_handler.register_keydown_event(Input::Key::O, {Input::ModifierKey::CONTROL}, [&]() {
-            TRY([&] {
-                if (!get_debugging_ui().is_open())
-                {
-                    m_render_thread.request_stop();
-                    m_render_thread.join();
-                    m_render_thread = std::jthread{&GUI::gui_thread, &m_debugging_gui};
-                }
+            m_input_handler.register_keydown_event(Input::Key::O, {Input::ModifierKey::CONTROL}, [&]() {
+                TRY([&] {
+                    if (!get_debugging_ui().is_open())
+                    {
+                        if (m_render_thread.joinable())
+                        {
+                            m_render_thread.request_stop();
+                            m_render_thread.join();
+                        }
+                        m_render_thread = std::jthread{&GUI::gui_thread, &m_debugging_gui};
+                    }
+                });
             });
-        });
+        }
 
         m_input_handler.register_keydown_event(Input::Key::Q, {Input::ModifierKey::CONTROL}, [&]() {
             TRY([&] {
@@ -1077,14 +1087,17 @@ namespace RC
     auto UE4SSProgram::setup_output_devices() -> void
     {
         // Setup DynamicOutput
-        if (m_debug_console_enabled)
+        if (m_simple_console_enabled)
         {
             m_debug_console_device = &Output::set_default_devices<Output::DebugConsoleDevice>();
             Output::set_default_log_level<LogLevel::Normal>();
             m_debug_console_device->set_formatter([](File::StringViewType string) -> File::StringType {
                 return std::format(STR("[{}] {}"), std::format(STR("{:%X}"), std::chrono::system_clock::now()), string);
             });
-
+        }
+        
+        if (m_debug_console_enabled)
+        {
             m_console_device = &Output::set_default_devices<Output::ConsoleDevice>();
             m_console_device->set_formatter([](File::StringViewType string) -> File::StringType {
                 return std::format(STR("[{}] {}"), std::format(STR("{:%X}"), std::chrono::system_clock::now()), string);
@@ -1316,8 +1329,12 @@ namespace RC
 
     auto UE4SSProgram::stop_render_thread() -> void
     {
-        m_render_thread.request_stop();
-        m_render_thread.join();
+        if (m_render_thread.joinable())
+        {
+            m_render_thread.request_stop();
+            m_render_thread.join();
+        }
+        
     }
 
     auto UE4SSProgram::queue_event(EventCallable callable, void* data) -> void

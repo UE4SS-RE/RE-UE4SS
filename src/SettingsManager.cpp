@@ -62,8 +62,10 @@ namespace RC
         REGISTER_BOOL_SETTING(UHTHeaderGenerator.MakeEnumClassesBlueprintType, section_uht_header_generator, MakeEnumClassesBlueprintType)
 
         constexpr static File::CharType section_debug[] = STR("Debug");
-        REGISTER_BOOL_SETTING(Debug.ConsoleEnabled, section_debug, ConsoleEnabled)
-
+        REGISTER_BOOL_SETTING(Debug.SimpleConsoleEnabled, section_debug, ConsoleEnabled)
+        REGISTER_BOOL_SETTING(Debug.DebugConsoleEnabled , section_debug, GuiConsoleEnabled)
+        REGISTER_BOOL_SETTING(Debug.DebugConsoleVisible, section_debug, GuiConsoleVisible)
+        
         constexpr static File::CharType section_threads[] = STR("Threads");
         REGISTER_INT64_SETTING(Threads.SigScannerNumThreads, section_threads, SigScannerNumThreads)
         REGISTER_INT64_SETTING(Threads.SigScannerMultithreadingModuleSizeThreshold, section_threads, SigScannerMultithreadingModuleSizeThreshold)

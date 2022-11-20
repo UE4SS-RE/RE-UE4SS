@@ -135,7 +135,9 @@ namespace RC
         bool m_has_game_specific_config{};
         bool m_processing_events{};
         bool m_pause_events_processing{};
+        bool m_simple_console_enabled{};
         bool m_debug_console_enabled{};
+        bool m_debug_console_visible{};
 
     public:
         enum class IsInstalled
