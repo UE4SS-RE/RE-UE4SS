@@ -76,6 +76,8 @@ Note that you should also commit & push the submodules that you've updated if th
   - New UFunction hook method
 - **Narknon**
   - Certain features and maintenance/rehosting of the project
+- **DeadMor0z**
+  - Certain features and Lua updates/maintenance
 
 ## Thanks to everyone who helped with testing
 
