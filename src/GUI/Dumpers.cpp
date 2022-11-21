@@ -54,7 +54,7 @@ namespace RC::GUI::Dumpers
         FName MaterialSlotName;
 
         /*This name should be use when we re-import a skeletal mesh so we can order the Materials array like it should be*/
-        /*FName ImportedMaterialSlotName;*/
+        FName ImportedMaterialSlotName;
 
         /** Data used for texture streaming relative to each UV channels. */
         FMeshUVChannelInfo UVChannelData;
@@ -240,29 +240,29 @@ namespace RC::GUI::Dumpers
         {
             static auto dump_actor_class = UObjectGlobals::StaticFindObject<UClass*>(nullptr, nullptr, STR("/Script/Engine.StaticMeshActor"));
 
-            //auto file = File::open(StringType{UE4SSProgram::get_program().get_working_directory()} + STR("\\ue4ss_static_mesh_data.csv"), File::OpenFor::Writing, File::OverwriteExistingFile::Yes, File::CreateIfNonExistent::Yes);
-            //std::wstring file_buffer{};
-            //file_buffer.append(generate_actors_csv_file(dump_actor_class));
-            //file.write_string_to_file(file_buffer);
+            auto file = File::open(StringType{UE4SSProgram::get_program().get_working_directory()} + STR("\\ue4ss_static_mesh_data.csv"), File::OpenFor::Writing, File::OverwriteExistingFile::Yes, File::CreateIfNonExistent::Yes);
+            std::wstring file_buffer{};
+            file_buffer.append(generate_actors_csv_file(dump_actor_class));
+            file.write_string_to_file(file_buffer);
 
-            auto file = File::open(StringType{UE4SSProgram::get_program().get_working_directory()} + STR("\\ue4ss_static_mesh_data.json"), File::OpenFor::Writing, File::OverwriteExistingFile::Yes, File::CreateIfNonExistent::Yes);
-            file.write_string_to_file(generate_actors_json_file(dump_actor_class));
+            /*auto file = File::open(StringType{UE4SSProgram::get_program().get_working_directory()} + STR("\\ue4ss_static_mesh_data.json"), File::OpenFor::Writing, File::OverwriteExistingFile::Yes, File::CreateIfNonExistent::Yes);
+            file.write_string_to_file(generate_actors_json_file(dump_actor_class));*/
         }
         
         if (ImGui::Button("Dump all actors to file"))
         {
-            //auto file = File::open(StringType{UE4SSProgram::get_program().get_working_directory()} + STR("\\ue4ss_actor_data.csv"), File::OpenFor::Writing, File::OverwriteExistingFile::Yes, File::CreateIfNonExistent::Yes);
-            //std::wstring file_buffer{};
-            //file_buffer.append(generate_actors_csv_file(AActor::StaticClass()));
-            //file.write_string_to_file(file_buffer);
+            auto file = File::open(StringType{UE4SSProgram::get_program().get_working_directory()} + STR("\\ue4ss_actor_data.csv"), File::OpenFor::Writing, File::OverwriteExistingFile::Yes, File::CreateIfNonExistent::Yes);
+            std::wstring file_buffer{};
+            file_buffer.append(generate_actors_csv_file(AActor::StaticClass()));
+            file.write_string_to_file(file_buffer);
 
-            auto file = File::open(StringType{UE4SSProgram::get_program().get_working_directory()} + STR("\\ue4ss_actor_data.json"), File::OpenFor::Writing, File::OverwriteExistingFile::Yes, File::CreateIfNonExistent::Yes);
-            file.write_string_to_file(generate_actors_json_file(AActor::StaticClass()));
+            /*auto file = File::open(StringType{UE4SSProgram::get_program().get_working_directory()} + STR("\\ue4ss_actor_data.json"), File::OpenFor::Writing, File::OverwriteExistingFile::Yes, File::CreateIfNonExistent::Yes);
+            file.write_string_to_file(generate_actors_json_file(AActor::StaticClass()));*/
         }
 
-        ImGui::SameLine();
+        /*ImGui::SameLine();*/
 
-        if (ImGui::Button("Test #1"))
+        /*if (ImGui::Button("Test #1"))
         {
             auto func = UObjectGlobals::StaticFindObject<UFunction*>(nullptr, nullptr, STR("/Script/Engine.KismetSystemLibrary:LoadAsset"));
             func->ForEachProperty([](FProperty* param) {
@@ -277,6 +277,6 @@ namespace RC::GUI::Dumpers
                 }
                 return LoopAction::Continue;
             });
-        }
+        }*/
     }
 }
