@@ -78,6 +78,9 @@ Note that you should also commit & push the submodules that you've updated if th
   - Certain features and maintenance/rehosting of the project
 - **DeadMor0z**
   - Certain features and Lua updates/maintenance
+- **DmgVol**
+  - Inspiration for map dumper
+
 
 ## Thanks to everyone who helped with testing
 
