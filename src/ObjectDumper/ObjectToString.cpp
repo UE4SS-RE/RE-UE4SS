@@ -260,9 +260,8 @@ namespace RC::ObjectDumper
 
         auto* typed_this = static_cast<UEnum*>(p_this);
 
-        auto& enum_names = typed_this->GetEnumNames();
-        enum_names.ForEach([&](FEnumNamePair* elem) {
-            out_line.append(std::format(L"\n[{:016X}] {} [n: {:X}] [v: {}]", reinterpret_cast<uintptr_t>(elem), elem->Key.ToString(), elem->Key.GetComparisonIndex(), static_cast<uint8_t>(elem->Value)));
+        typed_this->ForEachName([&](Unreal::FName name, int64_t value) {
+            out_line.append(std::format(L"\n[{:016X}] {} [n: {:X}] [v: {}]", 0, name.ToString(), name.GetComparisonIndex(), static_cast<uint8_t>(value)));
             return LoopAction::Continue;
         });
     }
