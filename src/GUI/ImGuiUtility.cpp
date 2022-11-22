@@ -185,25 +185,4 @@ namespace RC::GUI
     {
         Output::send<LogLevel::Verbose>(STR("{}Integer: {}\n"), indent(), element.get<int64_t>());
     }
-
-    auto json_deserializer_test() -> std::unique_ptr<JSON::Object>
-    {
-        JSON::Object my_obj{};
-
-        auto file_name = StringType{UE4SSProgram::get_program().get_working_directory()} + std::format(STR("\\test.json"));
-        auto file = File::open(file_name, File::OpenFor::Reading, File::OverwriteExistingFile::No, File::CreateIfNonExistent::Yes);
-        auto file_contents = file.read_all();
-        if (file_contents.empty())
-        {
-            return nullptr;
-        }
-
-        auto json_global_object = JSON::Parser::parse(file_contents);
-        for (const auto& [_, json_element] : json_global_object->get())
-        {
-            dump_element(*json_element.get());
-        }
-
-        return nullptr;
-    }
 }

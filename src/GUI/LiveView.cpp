@@ -1170,15 +1170,6 @@ namespace RC::GUI
         if (!UnrealInitializer::StaticStorage::bIsInitialized) { return; }
         if (!m_is_initialized) { return; }
 
-        static bool a{};
-        if (!a)
-        {
-            TRY([] {
-                json_deserializer_test();
-            });
-            a = true;
-        }
-
         if (!s_watches_loaded_from_disk)
         {
             load_watches_from_disk();
