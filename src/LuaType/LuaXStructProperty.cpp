@@ -13,15 +13,22 @@ namespace RC::LuaType
     {
         LuaType::XStructProperty lua_object{unreal_object};
 
-        LuaMadeSimple::Lua::Table table = LuaMadeSimple::Type::RemoteObject<Unreal::FStructProperty>::construct(lua, lua_object);
+        auto metatable_name = ClassName::ToString();
 
-        // Setup functions that can be called on this object
-        setup_member_functions<LuaMadeSimple::Type::IsFinal::Yes>(table);
+        LuaMadeSimple::Lua::Table table = lua.get_metatable(metatable_name);
+        if (lua.is_nil(-1))
+        {
+            lua.discard_value(-1);
+            LuaMadeSimple::Type::RemoteObject<Unreal::FStructProperty>::construct(lua, lua_object);
+            setup_metamethods(lua_object);
+            setup_member_functions<LuaMadeSimple::Type::IsFinal::Yes>(table);
+            lua.new_metatable<LuaType::XStructProperty>(metatable_name, lua_object.get_metamethods());
+        }
 
-        setup_metamethods(lua_object);
+        // Create object & surrender ownership to Lua
+        lua.transfer_stack_object(std::move(lua_object), metatable_name, lua_object.get_metamethods());
 
-        // Transfer the object & its ownership fully to Lua
-        lua.transfer_stack_object(std::move(lua_object), ClassName::ToString(), lua_object.get_metamethods());
+        return table;
 
         return table;
     }
@@ -63,7 +70,7 @@ namespace RC::LuaType
 
             // If this is the final object then we also want to finalize creating the table
             // If not then it's the responsibility of the overriding object to call 'make_global()'
-            table.make_global(ClassName::ToString());
+            //table.make_global(ClassName::ToString());
         }
     }
 }

@@ -52,13 +52,17 @@
 
 #include <Timer/FunctionTimer.hpp>
 
+#if NEW_LUA
+#include <LuaBindings/States/MainState/Main.hpp>
+#include <LuaBindings/LuaSetup.hpp>
+#endif
 
 namespace RC
 {
     LuaMadeSimple::Lua* LuaStatics::console_executor{};
     bool LuaStatics::console_executor_enabled{};
 
-    static auto get_mod_ref(const LuaMadeSimple::Lua& lua) -> const Mod*
+    static auto get_mod_ref(const LuaMadeSimple::Lua& lua) -> Mod*
     {
         if (lua_getglobal(lua.get_lua_state(), "ModRef") == LUA_TNIL)
         {
@@ -133,7 +137,7 @@ namespace RC
         bool has_properties_to_process = lua_data.has_return_value || num_unreal_params > 0;
         if (has_properties_to_process && context.TheStack.Locals)
         {
-            int32_t current_param_offset{};
+            //int32_t current_param_offset{};
 
             context.TheStack.CurrentNativeFunction->ForEachProperty([&](Unreal::FProperty* func_prop) {
                 // Skip this property if it's not a parameter
@@ -155,10 +159,11 @@ namespace RC
                 if (LuaType::StaticState::m_property_value_pushers.contains(name_comparison_index))
                 {
                     // Non-typed pointer to the current parameter value
-                    void* data = &context.TheStack.Locals[current_param_offset];
+                    //void* data = &context.TheStack.Locals[current_param_offset];
+                    void* data = func_prop->ContainerPtrToValuePtr<void>(context.TheStack.Locals);
 
                     // Keeping track of where in the 'Locals' array the next property is
-                    current_param_offset += func_prop->GetSize();
+                    //current_param_offset += func_prop->GetSize();
 
                     // Set up a call to a handler for this type of Unreal property (the param)
                     // The FName is being used as a key for an unordered_map which has the types & corresponding handlers filled right after the dll is injected
@@ -515,7 +520,85 @@ namespace RC
         property_type_table.make_local();
     }
 
-    auto static register_all_property_types(const LuaMadeSimple::Lua lua) -> void
+    //auto static make_hook_state(Mod* mod, const LuaMadeSimple::Lua& lua)->std::shared_ptr<LuaMadeSimple::Lua>
+    auto static make_hook_state(Mod* mod) -> std::shared_ptr<LuaMadeSimple::Lua>
+    {
+        //if (!mod->m_hook_lua)
+        //{
+            return mod->m_hook_lua.emplace_back(&mod->lua().new_thread());
+
+            // Make the hook thread (which is just a separate Lua stack) be a global in its parent.
+            // This is needed because otherwise it will be GCd when we don't want it to.
+            //lua_setglobal(lua.get_lua_state(), "HookThread");
+
+            // Commenting out until we switch to lua_newstate instead of lua_newthread.
+            // For the switch to happen, we need to be able to move or copy Lua types across lua_states which we can't do yet.
+            /*
+            mod->m_hook_lua->register_function("RegisterHook", [](const LuaMadeSimple::Lua& lua) -> int {
+                lua.throw_error("'RegisterHook' is not allowed from the game thread");
+                return 0;
+            });
+
+            mod->m_hook_lua->register_function("NotifyOnNewObject", [](const LuaMadeSimple::Lua& lua) -> int {
+                lua.throw_error("'NotifyOnNewObject' is not allowed in the game thread");
+                return 0;
+            });
+            //*/
+        //}
+    }
+
+    auto static make_async_state(Mod* mod, const LuaMadeSimple::Lua& lua) -> void
+    {
+        if (!mod->m_async_lua)
+        {
+            mod->m_async_lua = &lua.new_thread();
+
+            // Make the hook thread (which is just a separate Lua stack) be a global in its parent.
+            // This is needed because otherwise it will be GCd when we don't want it to.
+            lua_setglobal(lua.get_lua_state(), "AsyncThread");
+
+            // Commenting out until we switch to lua_newstate instead of lua_newthread.
+            // For the switch to happen, we need to be able to move or copy Lua types across lua_states which we can't do yet.
+            /*
+            mod->m_hook_lua->register_function("RegisterHook", [](const LuaMadeSimple::Lua& lua) -> int {
+                lua.throw_error("'RegisterHook' is not allowed from the game thread");
+                return 0;
+            });
+
+            mod->m_hook_lua->register_function("NotifyOnNewObject", [](const LuaMadeSimple::Lua& lua) -> int {
+                lua.throw_error("'NotifyOnNewObject' is not allowed in the game thread");
+                return 0;
+            });
+            //*/
+        }
+    }
+
+    auto static make_main_state(Mod* mod, const LuaMadeSimple::Lua& lua) -> void
+    {
+        if (!mod->m_main_lua)
+        {
+            mod->m_main_lua = &lua.new_thread();
+
+            // Make the hook thread (which is just a separate Lua stack) be a global in its parent.
+            // This is needed because otherwise it will be GCd when we don't want it to.
+            lua_setglobal(lua.get_lua_state(), "MainThread");
+
+            // Commenting out until we switch to lua_newstate instead of lua_newthread.
+            // For the switch to happen, we need to be able to move or copy Lua types across lua_states which we can't do yet.
+            /*
+            mod->m_hook_lua->register_function("RegisterHook", [](const LuaMadeSimple::Lua& lua) -> int {
+                lua.throw_error("'RegisterHook' is not allowed from the game thread");
+                return 0;
+            });
+
+            mod->m_hook_lua->register_function("NotifyOnNewObject", [](const LuaMadeSimple::Lua& lua) -> int {
+                lua.throw_error("'NotifyOnNewObject' is not allowed in the game thread");
+                return 0;
+            });
+            //*/
+        }
+    }
+    auto static register_all_property_types(const LuaMadeSimple::Lua& lua) -> void
     {
         auto property_types_table = lua.prepare_new_table();
 
@@ -548,7 +631,7 @@ namespace RC
         property_types_table.make_global("PropertyTypes");
     }
 
-    auto Mod::setup_lua_require_paths() const -> void
+    auto Mod::setup_lua_require_paths(const LuaMadeSimple::Lua& lua) const -> void
     {
         auto* lua_state = m_lua.get_lua_state();
         lua_getglobal(lua_state, "package");
@@ -873,11 +956,11 @@ Overloads:
                 return 0;
             });
 
-            lua.register_function("RegisterHook", [](const LuaMadeSimple::Lua& lua) -> int {
+            lua.register_function("UnregisterHook", [](const LuaMadeSimple::Lua& lua) -> int {
                 std::string error_overload_not_found{R"(
-No overload found for function 'RegisterHook'.
+No overload found for function 'UnregisterHook'.
 Overloads:
-#1: RegisterHook(string UFunction_Name, LuaFunction callback))"};
+#1: UnregisterHook(string UFunction_Name, integer PreCallbackId, integer PostCallbackId))" };
 
                 if (!lua.is_string()) { lua.throw_error(error_overload_not_found); }
 
@@ -895,24 +978,17 @@ Overloads:
                 Unreal::UFunction* unreal_function = Unreal::UObjectGlobals::StaticFindObject<Unreal::UFunction*>(nullptr, nullptr, function_name_no_prefix);
                 if (!unreal_function)
                 {
-                    lua.throw_error("Tried to register a hook with Lua function 'RegisterHook' but no UFunction with the specified name was found.");
+                    lua.throw_error("Tried to unregister a hook with Lua function 'UnregisterHook' but no UFunction with the specified name was found.");
                 }
 
-                auto& custom_data = g_hooked_script_function_data.emplace_back(
-                        std::make_unique<LuaUnrealScriptFunctionData>(LuaUnrealScriptFunctionData{
-                                0,
-                                0,
-                                unreal_function,
-                                get_mod_ref(lua),
-                                lua,
-                                lua_callback_registry_index
-                        })
-                );
-                //unreal_function->register_hook(&lua_unreal_script_function_hook_pre, &lua_unreal_script_function_hook_post, custom_data.get());
-                auto pre_id = unreal_function->RegisterPreHook(&lua_unreal_script_function_hook_pre, custom_data.get());
-                auto post_id = unreal_function->RegisterPostHook(&lua_unreal_script_function_hook_post, custom_data.get());
-                custom_data->pre_callback_id = pre_id;
-                custom_data->post_callback_id = post_id;
+                if (!lua.is_integer()) { lua.throw_error(error_overload_not_found); }
+                const auto pre_id = lua.get_integer();
+
+                if (!lua.is_integer()) { lua.throw_error(error_overload_not_found); }
+                const auto post_id = lua.get_integer();
+
+                unreal_function->UnregisterHook(pre_id);
+                unreal_function->UnregisterHook(post_id);
 
                 return 0;
             });
@@ -1289,12 +1365,17 @@ Overloads:
                 lua.throw_error(error_overload_not_found);
             }
 
+            auto mod = get_mod_ref(lua);
+            auto hook_lua = make_hook_state(mod);
+
+            lua_xmove(lua.get_lua_state(), hook_lua->get_lua_state(), 1);
+
             // Take a reference to the Lua function (it also pops it of the stack)
-            const int32_t lua_callback_registry_index = lua.registry().make_ref();
+            const int32_t lua_callback_registry_index = hook_lua->registry().make_ref();
 
             Unreal::UClass* instance_of_class = Unreal::UObjectGlobals::StaticFindObject<Unreal::UClass*>(nullptr, nullptr, class_name);
 
-            Mod::m_static_construct_object_lua_callbacks.emplace_back(Mod::LuaCallbackData{lua, instance_of_class, {lua_callback_registry_index}});
+            Mod::m_static_construct_object_lua_callbacks.emplace_back(Mod::LuaCallbackData{ *hook_lua, instance_of_class, {lua_callback_registry_index} });
 
             return 0;
         });
@@ -1305,13 +1386,17 @@ No overload found for function 'ExecuteAsync'.
 Overloads:
 #1: ExecuteAsync(LuaFunction Callback))"};
 
+            auto mod = get_mod_ref(lua);
+
             if (!lua.is_function()) { throw std::runtime_error{error_overload_not_found}; }
             const int32_t lua_function_ref = lua.registry().make_ref();
 
-            Mod::m_async_actions.emplace_back(Mod::AsyncAction{
-                    lua.get_lua_state(),
-                    lua_function_ref
-            });
+            mod->actions_lock();
+            mod->m_pending_actions.emplace_back(Mod::AsyncAction{
+                lua_function_ref,
+                Mod::ActionType::Immediate
+             });
+            mod->actions_unlock();
 
             return 0;
         });
@@ -1328,12 +1413,41 @@ Overloads:
             if (!lua.is_function()) { throw std::runtime_error{error_overload_not_found}; }
             const int32_t lua_function_ref = lua.registry().make_ref();
 
-            Mod::m_delayed_actions.emplace_back(Mod::DelayedAction{
-                    lua.get_lua_state(),
-                    lua_function_ref,
-                    std::chrono::steady_clock::now(),
-                    delay,
+            auto mod = get_mod_ref(lua);
+
+            mod->actions_lock();
+            mod->m_pending_actions.emplace_back(Mod::AsyncAction{
+                lua_function_ref,
+                Mod::ActionType::Delayed,
+                std::chrono::steady_clock::now(),
+                delay,
             });
+            mod->actions_unlock();
+            return 0;
+        });
+
+        lua.register_function("LoopAsync", [](const LuaMadeSimple::Lua& lua) -> int {
+            std::string error_overload_not_found{ R"(
+No overload found for function 'LoopAsync'.
+Overloads:
+#1: LoopAsync(integer DelayInMilliseconds, LuaFunction Callback))" };
+
+            if (!lua.is_integer()) { throw std::runtime_error{ error_overload_not_found }; }
+            int64_t delay = lua.get_integer();
+
+            if (!lua.is_function()) { throw std::runtime_error{ error_overload_not_found }; }
+            const int32_t lua_function_ref = lua.registry().make_ref();
+
+            auto mod = get_mod_ref(lua);
+
+            mod->actions_lock();
+            mod->m_pending_actions.emplace_back(Mod::AsyncAction{
+                lua_function_ref,
+                Mod::ActionType::Loop,
+                std::chrono::steady_clock::now(),
+                delay,
+            });
+            mod->actions_unlock();
 
             return 0;
         });
@@ -1348,17 +1462,22 @@ Overloads:
             auto command_name = to_wstring(lua.get_string());
 
             if (!lua.is_function()) { throw std::runtime_error{error_overload_not_found}; }
-            const int32_t lua_function_ref = lua.registry().make_ref();
 
-            auto callbacks = Mod::m_global_command_lua_callbacks.find(command_name);
-            if (callbacks == Mod::m_global_command_lua_callbacks.end())
+            Mod::LuaCallbackData* callback = nullptr;
+            auto iter = Mod::m_global_command_lua_callbacks.find(command_name);
+            if (iter == Mod::m_global_command_lua_callbacks.end())
             {
-                Mod::m_global_command_lua_callbacks.emplace(command_name, Mod::LuaCallbackData{lua, nullptr, {lua_function_ref}});
+                auto mod = get_mod_ref(lua);
+                auto hook_lua = make_hook_state(mod);
+                callback = &Mod::m_global_command_lua_callbacks.emplace(command_name, Mod::LuaCallbackData{ *hook_lua, nullptr, {} }).first->second;
             }
             else
             {
-                callbacks->second.registry_indexes.emplace_back(lua_function_ref);
+                callback = &iter->second;
             }
+            lua_xmove(lua.get_lua_state(), callback->lua.get_lua_state(), 1);
+            const int32_t lua_function_ref = callback->lua.registry().make_ref();
+            callback->registry_indexes.emplace_back(lua_function_ref);
             return 0;
         });
 
@@ -1372,17 +1491,22 @@ Overloads:
             auto command_name = to_wstring(lua.get_string());
 
             if (!lua.is_function()) { throw std::runtime_error{error_overload_not_found}; }
-            const int32_t lua_function_ref = lua.registry().make_ref();
 
-            auto callbacks = Mod::m_custom_command_lua_pre_callbacks.find(command_name);
-            if (callbacks == Mod::m_custom_command_lua_pre_callbacks.end())
+            Mod::LuaCallbackData* callback = nullptr;
+            auto iter = Mod::m_custom_command_lua_pre_callbacks.find(command_name);
+            if (iter == Mod::m_custom_command_lua_pre_callbacks.end())
             {
-                Mod::m_custom_command_lua_pre_callbacks.emplace(command_name, Mod::LuaCallbackData{lua, nullptr, {lua_function_ref}});
+                auto mod = get_mod_ref(lua);
+                auto hook_lua = make_hook_state(mod);
+                callback = &Mod::m_custom_command_lua_pre_callbacks.emplace(command_name, Mod::LuaCallbackData{ *hook_lua, nullptr, {} }).first->second;
             }
             else
             {
-                callbacks->second.registry_indexes.emplace_back(lua_function_ref);
+                callback = &iter->second;
             }
+            lua_xmove(lua.get_lua_state(), callback->lua.get_lua_state(), 1);
+            const int32_t lua_function_ref = callback->lua.registry().make_ref();
+            callback->registry_indexes.emplace_back(lua_function_ref);
             return 0;
         });
 
@@ -1736,29 +1860,67 @@ Overloads:
 
             return 1;
         });
+    }
 
-        lua.register_function("LoopAsync", [](const LuaMadeSimple::Lua& lua) -> int {
-            std::string error_overload_not_found{R"(
-No overload found for function 'LoopAsync'.
+    auto Mod::setup_lua_global_functions(const LuaMadeSimple::Lua& lua) const -> void
+    {
+        setup_lua_global_functions_internal(lua, IsTrueMod::Yes);
+    }
+
+    auto Mod::setup_lua_global_functions_main_state_only() const -> void
+    {
+        m_lua.register_function("RegisterHook", [](const LuaMadeSimple::Lua& lua) -> int {
+            std::string error_overload_not_found{ R"(
+No overload found for function 'RegisterHook'.
 Overloads:
-#1: LoopAsync(integer DelayInMilliseconds, LuaFunction Callback))"};
+#1: RegisterHook(string UFunction_Name, LuaFunction callback))" };
 
-            if (!lua.is_integer()) { throw std::runtime_error{error_overload_not_found}; }
-            int64_t delay = lua.get_integer();
+            if (!lua.is_string()) { lua.throw_error(error_overload_not_found); }
 
-            if (!lua.is_function()) { throw std::runtime_error{error_overload_not_found}; }
-            const int32_t lua_function_ref = lua.registry().make_ref();
+            std::wstring function_name = to_wstring(lua.get_string());
+            std::wstring function_name_no_prefix = function_name.substr(function_name.find_first_of(L" ") + 1, function_name.size());
 
-            Mod::m_async_loop_threads.emplace_back(std::jthread{&Mod::process_async_loops, lua, lua_function_ref, std::chrono::steady_clock::now(), delay});
+            if (!lua.is_function()) { lua.throw_error(error_overload_not_found); }
 
-            return 0;
+            auto mod = get_mod_ref(lua);
+            auto hook_lua = make_hook_state(mod);
+
+            // Duplicate the Lua function to the top of the stack for lua_xmove and luaL_ref
+            lua_pushvalue(lua.get_lua_state(), 1);
+
+            lua_xmove(lua.get_lua_state(), hook_lua->get_lua_state(), 1);
+
+            // Take a reference to the Lua function (it also pops it of the stack)
+            const auto lua_callback_registry_index = luaL_ref(hook_lua->get_lua_state(), LUA_REGISTRYINDEX);
+
+            Unreal::UFunction* unreal_function = Unreal::UObjectGlobals::StaticFindObject<Unreal::UFunction*>(nullptr, nullptr, function_name_no_prefix);
+            if (!unreal_function)
+            {
+                lua.throw_error("Tried to register a hook with Lua function 'RegisterHook' but no UFunction with the specified name was found.");
+            }
+
+            auto& custom_data = g_hooked_script_function_data.emplace_back(
+                std::make_unique<LuaUnrealScriptFunctionData>(LuaUnrealScriptFunctionData{
+                    0,
+                    0,
+                    unreal_function,
+                    mod,
+                    *hook_lua,
+                    lua_callback_registry_index
+                    })
+            );
+            auto pre_id = unreal_function->RegisterPreHook(&lua_unreal_script_function_hook_pre, custom_data.get());
+            auto post_id = unreal_function->RegisterPostHook(&lua_unreal_script_function_hook_post, custom_data.get());
+            custom_data->pre_callback_id = pre_id;
+            custom_data->post_callback_id = post_id;
+
+            lua.set_integer(pre_id);
+            lua.set_integer(post_id);
+
+            return 2;
         });
     }
 
-    auto Mod::setup_lua_global_functions() const -> void
-    {
-        setup_lua_global_functions_internal(m_lua, IsTrueMod::Yes);
-    }
 
     auto static is_unreal_version_out_of_bounds_from_64bit(int64_t major_version, int64_t minor_version) -> bool
     {
@@ -1933,9 +2095,9 @@ Overloads:
         // FPackageName -> END
     }
 
-    auto Mod::setup_lua_classes() const -> void
+    auto Mod::setup_lua_classes(const LuaMadeSimple::Lua& lua) const -> void
     {
-        setup_lua_classes_internal(m_lua);
+        setup_lua_classes_internal(lua);
     }
 
     auto Mod::get_name() const -> std::wstring_view
@@ -1963,30 +2125,39 @@ Overloads:
         return m_installed;
     }
 
-    auto Mod::start_mod() -> void
+    auto Mod::prepare_mod(const LuaMadeSimple::Lua& lua) -> void
     {
+        lua.open_all_libs();
 
-        m_lua.open_all_libs();
+        setup_lua_require_paths(lua);
 
-        setup_lua_require_paths();
+        setup_lua_global_functions(lua);
+        setup_lua_classes(lua);
 
-        setup_lua_global_functions();
-        setup_lua_classes();
 
         // Setup a global reference for this mod
         // It can be accessed later when you otherwise don't have access to the 'Mod' instance
-        LuaType::Mod::construct(m_lua, this);
-        lua_setglobal(m_lua.get_lua_state(), "ModRef");
+        LuaType::Mod::construct(lua, this);
+        lua_setglobal(lua.get_lua_state(), "ModRef");
 
         // Setup all the input related globals (keys & modifier keys)
-        register_input_globals(m_lua);
+        register_input_globals(lua);
 
-        register_all_property_types(m_lua);
-        register_object_flags(m_lua);
+        register_all_property_types(lua);
+        register_object_flags(lua);
+    }
+
+    auto Mod::start_mod() -> void
+    {
+        prepare_mod(lua());
+        make_main_state(this, lua());
+        setup_lua_global_functions_main_state_only();
+
+        make_async_state(this, lua());
+        start_async_thread();
 
         m_is_started = true;
-        m_lua.execute_file(m_scripts_path + L"\\main.lua");
-
+        main_lua()->execute_file(m_scripts_path + L"\\main.lua");
     }
 
     auto Mod::is_started() const -> bool
@@ -1997,9 +2168,25 @@ Overloads:
     auto Mod::uninstall() const -> void
     {
         Output::send(STR("Stopping mod '{}' for uninstall\n"), m_mod_name);
+        if (m_hook_lua.size() > 0)
+        {
+            for (auto lua : m_hook_lua)
+            {
+                lua_resetthread(lua->get_lua_state());
+            }
+        }
+
+        if (m_async_lua && m_async_lua->get_lua_state())
+        {
+            lua_resetthread(m_async_lua->get_lua_state());
+        }
+
+        if (m_main_lua && m_main_lua->get_lua_state())
+        {
+            lua_resetthread(m_main_lua->get_lua_state());
+        }
 
         lua_close(lua().get_lua_state());
-
 
         // Unhook all UFunctions for this mod & remove from the map that keeps track of which UFunctions have been hooked
         std::erase_if(g_hooked_script_function_data, [&](std::unique_ptr<LuaUnrealScriptFunctionData>& item) -> bool {
@@ -2021,11 +2208,19 @@ Overloads:
         return m_lua;
     }
 
+    auto Mod::main_lua() const -> const LuaMadeSimple::Lua*
+    {
+        return m_main_lua;
+    }
+
+    auto Mod::async_lua() const -> const LuaMadeSimple::Lua*
+    {
+        return m_async_lua;
+    }
+
     auto Mod::get_lua_state() const -> lua_State*
     {
-
-    return lua().get_lua_state();
-
+        return lua().get_lua_state();
     }
 
     auto static start_console_lua_executor() -> void
@@ -2276,8 +2471,6 @@ Overloads:
                 return false;
             });
         });
-
-        m_async_thread = std::jthread{&Mod::update_async};
     }
 
     auto Mod::update() -> void
@@ -2290,105 +2483,64 @@ Overloads:
         {
             if (m_pause_events_processing) { continue; }
 
-            // START
-            // Can these two functions cause problems ?
-            // They don't sync so isn't it possible that an action is created right as an action is being removed ?
-            // If so, the vector might be reallocated and that will surely break things ?
-            // Use locks ? This may be an expensive operation for delayed actions when using remove_if since it has to iterate everything before it decides if it needs to be removed
-            process_async_actions();
             process_delayed_actions();
-            // END
 
             std::this_thread::sleep_for(std::chrono::milliseconds(5));
         }
-    }
-
-    auto Mod::process_async_actions() -> void
-    {
-        m_async_actions.erase(std::remove_if(m_async_actions.begin(), m_async_actions.end(), [](AsyncAction& action) {
-            try
-            {
-                auto lua = LuaMadeSimple::Lua{action.lua_state};
-                lua.registry().get_function_ref(action.lua_action_function_ref);
-                lua.call_function(0, 0);
-            }
-            catch (std::runtime_error& e)
-            {
-                Output::send(STR("[AsyncAction] {}\n"), to_wstring(e.what()));
-            }
-
-            return true;
-        }), m_async_actions.end());
     }
 
     auto Mod::process_delayed_actions() -> void
     {
         auto now = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now().time_since_epoch()).count();
 
-        m_delayed_actions.erase(std::remove_if(m_delayed_actions.begin(), m_delayed_actions.end(), [&](DelayedAction& action) -> bool {
-            auto duration_since_creation = now - std::chrono::duration_cast<std::chrono::milliseconds>(action.created_at.time_since_epoch()).count();
-            if (duration_since_creation >= action.delay)
-            {
-                try
-                {
-                    auto lua = LuaMadeSimple::Lua{action.lua_state};
-                    lua.registry().get_function_ref(action.lua_action_function_ref);
-                    lua.call_function(0, 0);
-                }
-                catch (std::runtime_error& e)
-                {
-                    Output::send(STR("[DelayedAction] {}\n"), to_wstring(e.what()));
-                }
+        actions_lock();
 
-                return true;
-            }
-            else
-            {
-                return false;
-            }
-        }), m_delayed_actions.end());
-    }
+        m_delayed_actions.insert(m_delayed_actions.end(), std::make_move_iterator(m_pending_actions.begin()), std::make_move_iterator(m_pending_actions.end()));
+        m_pending_actions.clear();
 
-    auto Mod::process_async_loops(std::stop_token stop_token, const LuaMadeSimple::Lua& lua, int32_t lua_function_ref, std::chrono::time_point<std::chrono::steady_clock> created_at, int64_t delay) -> void
-    {
-        bool should_end_loop{};
-        while (!stop_token.stop_requested() && !should_end_loop)
-        {
-            try
-            {
-                lua.registry().get_function_ref(lua_function_ref);
-                lua.call_function(0, 1);
+        actions_unlock();
 
-                if (lua.is_bool() && lua.get_bool())
+        
+        m_delayed_actions.erase(std::remove_if(m_delayed_actions.begin(), m_delayed_actions.end(),
+            [&](AsyncAction& action) -> bool {
+                auto passed = now - std::chrono::duration_cast<std::chrono::milliseconds>(action.created_at.time_since_epoch()).count();
+                auto duration_since_creation = (action.type == Mod::ActionType::Immediate || passed >= action.delay);
+                if (duration_since_creation)
                 {
-                    should_end_loop = true;
+                    bool result = true;
+                    try
+                    {
+                        async_lua()->registry().get_function_ref(action.lua_action_function_ref);
+                        if (action.type == Mod::ActionType::Loop)
+                        {
+                            async_lua()->call_function(0, 1);
+                            result = async_lua()->is_bool() && async_lua()->get_bool();
+                            action.created_at = std::chrono::steady_clock::now();
+                        }
+                        else
+                        {
+                            async_lua()->call_function(0, 0);
+                        }
+                    }
+                    catch (std::runtime_error& e)
+                    {
+                        Output::send(STR("[{}] {}\n"), to_wstring(action.type == Mod::ActionType::Loop ? "LoopAsync" : "DelayedAction"), to_wstring(e.what()));
+                    }
+
+                    return result;
                 }
                 else
                 {
-                    lua.discard_value();
+                    return false;
                 }
-            }
-            catch (std::runtime_error& e)
-            {
-                Output::send(STR("[AsyncLoop] {}\n"), to_wstring(e.what()));
-            }
-
-            std::this_thread::sleep_for(std::chrono::milliseconds(delay));
-        }
+            }), m_delayed_actions.end());
     }
 
     auto Mod::clear_delayed_actions() -> void
     {
+        actions_lock();
+        m_pending_actions.clear();
         m_delayed_actions.clear();
-    }
-
-    auto Mod::clear_async_loop_threads() -> void
-    {
-        for (auto& thread : m_async_loop_threads)
-        {
-            thread.request_stop();
-            thread.join();
-        }
-        m_async_loop_threads.clear();
+        actions_unlock();
     }
 }

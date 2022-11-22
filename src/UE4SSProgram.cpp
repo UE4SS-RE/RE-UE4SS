@@ -528,10 +528,10 @@ namespace RC
                 freopen_s(&stderr_filename, "CONOUT$", "w", stderr);
             }
 
-            if (m_debug_console_enabled && m_debug_console_visible)
-            {
-                m_render_thread = std::jthread{&GUI::gui_thread, &m_debugging_gui};
-            }
+        }
+        if (m_debug_console_enabled && m_debug_console_visible)
+        {
+            m_render_thread = std::jthread{ &GUI::gui_thread, &m_debugging_gui };
         }
     }
 
@@ -783,11 +783,12 @@ namespace RC
         /*
         UObjectArray::AddUObjectCreateListener(&FUEDeathListener::UEDeathListener);
         //*/
+
         if (m_debug_console_enabled)
         {
             m_debugging_gui.get_live_view().set_listeners();
 
-            m_input_handler.register_keydown_event(Input::Key::O, {Input::ModifierKey::CONTROL}, [&]() {
+            m_input_handler.register_keydown_event(Input::Key::O, { Input::ModifierKey::CONTROL }, [&]() {
                 TRY([&] {
                     if (!get_debugging_ui().is_open())
                     {
@@ -796,59 +797,27 @@ namespace RC
                             m_render_thread.request_stop();
                             m_render_thread.join();
                         }
-                        m_render_thread = std::jthread{&GUI::gui_thread, &m_debugging_gui};
+                        m_render_thread = std::jthread{ &GUI::gui_thread, &m_debugging_gui };
                     }
+                    });
                 });
-            });
         }
 
-        m_input_handler.register_keydown_event(Input::Key::Q, {Input::ModifierKey::CONTROL}, [&]() {
-            TRY([&] {
-                Output::send(STR("\n\nFinding all actor classes (FindObjectSearcher<AActor>)\n"));
-                auto ActorClassSearcher = FindObjectSearcher<UClass, AActor>();
-                Output::send(STR("PoolSize: {}\n"), ActorClassSearcher.PoolSize());
-                ActorClassSearcher.ForEach([&](UObject* FoundClass) {
-                    Output::send(STR("Found Actor Class: {}\n"), FoundClass->GetFullName());
-                    return LoopAction::Continue;
-                });
-
-                Output::send(STR("\n\nFinding all BP classes (FindObjectSearcher<UBlueprintGeneratedClass>)\n"));
-                auto BPClassSearcher = FindObjectSearcher<UBlueprintGeneratedClass, AnySuperStruct>();
-                Output::send(STR("PoolSize: {}\n"), BPClassSearcher.PoolSize());
-                BPClassSearcher.ForEach([&](UObject* FoundClass) {
-                    Output::send(STR("Found BP Class: {}\n"), FoundClass->GetFullName());
-                    return LoopAction::Continue;
-                });
-
-                // Finds all classes.
-                Output::send(STR("\n\nFinding all classes (FindObjectSearcher<UClass, AnySuperStruct>)\n"));
-                auto ClassSearcher2 = FindObjectSearcher<UClass, AnySuperStruct>();
-                Output::send(STR("PoolSize: {}\n"), ClassSearcher2.PoolSize());
-                ClassSearcher2.ForEach([&](UObject* FoundClass) {
-                    auto* AsClass = static_cast<UClass*>(FoundClass);
-                    Output::send(STR("Found Class: {}\n"), AsClass->GetFullName());
-                    return LoopAction::Continue;
-                });
-
-                Output::send(STR("\n\nFinding all actor instances (FindObjectSearcher<AnyClass, AActor>)\n"));
-                auto ActorSearcher = FindObjectSearcher<AActor, AnySuperStruct>();
-                Output::send(STR("ActorSearcher Num: {}\n"), ActorSearcher.PoolSize());
-                ActorSearcher.ForEach([](UObject* Object) {
-                    Output::send(STR("{}\n"), Object->GetFullName());
-                    return LoopAction::Continue;
-                });
-
-                /*
-                Output::send(STR("\n\nFinding all objects (FindObjectSearcher<Class, AActor>)\n"));
-                auto AllSearcher = FindObjectSearcher<AnyClass, AnySuperStruct>();
-                Output::send(STR("AllSearcher Num: {}\n"), AllSearcher.PoolSize());
-                AllSearcher.ForEach([](UObject* Object) {
-                    Output::send(STR("{}\n"), Object->GetFullName());
-                    return LoopAction::Continue;
-                });
-                //*/
-            });
+#ifdef TIME_FUNCTION_MACRO_ENABLED
+        m_input_handler.register_keydown_event(Input::Key::Y, { Input::ModifierKey::CONTROL }, [&]() {
+            if (FunctionTimerFrame::s_timer_enabled)
+            {
+                FunctionTimerFrame::stop_profiling();
+                FunctionTimerFrame::dump_profile();
+                Output::send(STR("Profiler stopped & dumped\n"));
+            }
+            else
+            {
+                FunctionTimerFrame::start_profiling();
+                Output::send(STR("Profiler started\n"));
+            }
         });
+#endif
 
         /*
         m_input_handler.register_keydown_event(Input::Key::I, {Input::ModifierKey::CONTROL}, [&]() {
@@ -1048,6 +1017,7 @@ namespace RC
         LuaType::StaticState::m_property_value_pushers.emplace(FName(L"NameProperty").GetComparisonIndex(), &LuaType::push_nameproperty);
         LuaType::StaticState::m_property_value_pushers.emplace(FName(L"TextProperty").GetComparisonIndex(), &LuaType::push_textproperty);
         LuaType::StaticState::m_property_value_pushers.emplace(FName(L"StrProperty").GetComparisonIndex(), &LuaType::push_strproperty);
+        LuaType::StaticState::m_property_value_pushers.emplace(FName(L"SoftClassProperty").GetComparisonIndex(), &LuaType::push_softclassproperty);
     }
 
     auto UE4SSProgram::setup_mods() -> void
@@ -1095,7 +1065,7 @@ namespace RC
                 return std::format(STR("[{}] {}"), std::format(STR("{:%X}"), std::chrono::system_clock::now()), string);
             });
         }
-        
+
         if (m_debug_console_enabled)
         {
             m_console_device = &Output::set_default_devices<Output::ConsoleDevice>();
@@ -1173,7 +1143,7 @@ namespace RC
                 std::wstring mod_name = explode_by_occurrence(current_line, L':', 1);
                 std::wstring mod_enabled = explode_by_occurrence(current_line, L':', ExplodeType::FromEnd);
 
-                auto mod = find_mod_by_name(mod_name, IsInstalled::Yes);
+                Mod* mod = find_mod_by_name(mod_name, IsInstalled::Yes);
 
                 if (mod_enabled == L"1")
                 {
@@ -1206,7 +1176,7 @@ namespace RC
             if (!std::filesystem::exists(mod_directory.path() / "enabled.txt", ec)) { continue; }
             if (ec.value() != 0) { set_error("exists ran into error %d", ec.value()); }
 
-            const auto mod = find_mod_by_name(mod_directory.path().stem().c_str(), IsInstalled::Yes);
+            auto mod = find_mod_by_name(mod_directory.path().stem().c_str(), IsInstalled::Yes);
             if (!mod)
             {
                 Output::send<LogLevel::Warning>(STR("Found a mod with enabled.txt but mod has not been installed properly.\n"));
@@ -1224,6 +1194,8 @@ namespace RC
     {
         for (const auto& mod : m_mods)
         {
+            // Remove any actions, or we'll get an internal error as the lua ref won't be valid
+            mod->clear_delayed_actions();
             mod->uninstall();
         }
 
@@ -1239,10 +1211,6 @@ namespace RC
 
         // Stop processing events while stuff isn't properly setup
         m_pause_events_processing = true;
-
-        // Remove any actions, or we'll get an internal error as the lua ref won't be valid
-        Mod::clear_delayed_actions();
-        Mod::clear_async_loop_threads();
 
         uninstall_mods();
 
@@ -1334,7 +1302,6 @@ namespace RC
             m_render_thread.request_stop();
             m_render_thread.join();
         }
-        
     }
 
     auto UE4SSProgram::queue_event(EventCallable callable, void* data) -> void

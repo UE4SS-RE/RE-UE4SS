@@ -28,14 +28,20 @@ namespace RC::LuaType
             Output::send<LogLevel::Error>(STR("TArray::construct: m_inner_property is nullptr for {}"), lua_object.m_property->GetFullName());
         }
 
-        LuaMadeSimple::Lua::Table table = LuaMadeSimple::Type::RemoteObject<Unreal::FScriptArray>::construct(params.lua, lua_object);
+        auto metatable_name = ClassName::ToString();
 
-        setup_member_functions<LuaMadeSimple::Type::IsFinal::Yes>(table);
-
-        setup_metamethods(lua_object);
+        LuaMadeSimple::Lua::Table table = params.lua.get_metatable(metatable_name);
+        if (params.lua.is_nil(-1))
+        {
+            params.lua.discard_value(-1);
+            LuaMadeSimple::Type::RemoteObject<Unreal::FScriptArray>::construct(params.lua, lua_object);
+            setup_metamethods(lua_object);
+            setup_member_functions<LuaMadeSimple::Type::IsFinal::Yes>(table);
+            params.lua.new_metatable<LuaType::TArray>(metatable_name, lua_object.get_metamethods());
+        }
 
         // Create object & surrender ownership to Lua
-        params.lua.transfer_stack_object(std::move(lua_object), ClassName::ToString(), lua_object.get_metamethods());
+        params.lua.transfer_stack_object(std::move(lua_object), metatable_name, lua_object.get_metamethods());
 
         return table;
     }
@@ -60,6 +66,12 @@ namespace RC::LuaType
 
         base_object.get_metamethods().create(LuaMadeSimple::Lua::MetaMethod::NewIndex, [](const LuaMadeSimple::Lua& lua) -> int {
             prepare_to_handle(LuaMadeSimple::Type::Operation::Set, lua);
+            return 1;
+        });
+
+        base_object.get_metamethods().create(LuaMadeSimple::Lua::MetaMethod::Length, [](const LuaMadeSimple::Lua& lua) -> int {
+            auto& lua_object = lua.get_userdata<TArray>();
+            lua.set_integer(lua_object.get_remote_cpp_object()->Num());
             return 1;
         });
     }
@@ -157,7 +169,7 @@ namespace RC::LuaType
 
             // If this is the final object then we also want to finalize creating the table
             // If not then it's the responsibility of the overriding object to call 'make_global()'
-            table.make_global(ClassName::ToString());
+            //table.make_global(ClassName::ToString());
         }
     }
 

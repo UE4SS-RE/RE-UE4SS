@@ -68,13 +68,19 @@ namespace RC::LuaType
         {
             SelfType lua_object{unreal_object};
 
-            const LuaMadeSimple::Lua::Table table = LuaMadeSimple::Type::RemoteObject<ObjectType>::construct(lua, lua_object);
+            auto metatable_name = lua_object.get_object_name();
 
-            // Setup functions that can be called on this object
-            setup_member_functions<LuaMadeSimple::Type::IsFinal::Yes>(table);
+            LuaMadeSimple::Lua::Table table = lua.get_metatable(metatable_name);
+            if (lua.is_nil(-1))
+            {
+                lua.discard_value(-1);
+                LuaMadeSimple::Type::RemoteObject<ObjectType>::construct(lua, lua_object);
+                setup_member_functions<LuaMadeSimple::Type::IsFinal::Yes>(table);
+                lua.new_metatable<SelfType>(metatable_name, lua_object.get_metamethods());
+            }
 
-            // Transfer the object & its ownership fully to Lua
-            lua.transfer_stack_object(std::move(lua_object), lua_object.get_object_name(), lua_object.get_metamethods());
+            // Create object & surrender ownership to Lua
+            lua.transfer_stack_object(std::move(lua_object), metatable_name, lua_object.get_metamethods());
 
             return table;
         }
@@ -126,7 +132,7 @@ namespace RC::LuaType
 
                 // If this is the final object then we also want to finalize creating the table
                 // If not then it's the responsibility of the overriding object to call 'make_global()
-                table.make_global("RemoteObjectBase");
+                //table.make_global("RemoteObjectBase");
             }
         }
     };
@@ -199,6 +205,7 @@ namespace RC::LuaType
     auto push_nameproperty(const PusherParams&) -> void;
     auto push_textproperty(const PusherParams&) -> void;
     auto push_strproperty(const PusherParams&) -> void;
+    auto push_softclassproperty(const PusherParams&) -> void;
 
     auto push_functionproperty(const FunctionPusherParams&) -> void;
     // Push to Lua -> END
@@ -207,6 +214,12 @@ namespace RC::LuaType
 
     auto is_a_implementation(const LuaMadeSimple::Lua& lua) -> int;
 
+    template<typename DerivedType, typename ObjectName>
+    class UObjectBase;
+
+    struct UObjectName { constexpr static const char* ToString() { return "UObject"; } };
+    using UObject = UObjectBase<Unreal::UObject, UObjectName>;
+    
     template<typename DerivedType, typename ObjectName>
     class UObjectBase : public RemoteObjectBase<DerivedType, ObjectName>
     {
@@ -229,15 +242,20 @@ namespace RC::LuaType
         {
             SelfType lua_object{unreal_object};
 
-            LuaMadeSimple::Lua::Table table = Super::construct(lua, lua_object);
+            auto metatable_name = ObjectName::ToString();
 
-            // Setup functions that can be called on this object
-            setup_member_functions<LuaMadeSimple::Type::IsFinal::Yes>(table);
+            LuaMadeSimple::Lua::Table table = lua.get_metatable(metatable_name);
+            if (lua.is_nil(-1))
+            {
+                lua.discard_value(-1);
+                Super::construct(lua, lua_object);
+                setup_metamethods(lua_object);
+                setup_member_functions<LuaMadeSimple::Type::IsFinal::Yes>(table);
+                lua.new_metatable<SelfType>(metatable_name, lua_object.get_metamethods());
+            }
 
-            setup_metamethods(lua_object);
-
-            // Transfer the object & its ownership fully to Lua
-            lua.transfer_stack_object(std::move(lua_object), ObjectName::ToString(), lua_object.get_metamethods());
+            // Create object & surrender ownership to Lua
+            lua.transfer_stack_object(std::move(lua_object), metatable_name, lua_object.get_metamethods());
 
             return table;
         }
@@ -322,7 +340,7 @@ namespace RC::LuaType
             table.add_pair("GetOuter", [](const LuaMadeSimple::Lua& lua) -> int {
                 const auto& lua_object = lua.get_userdata<SelfType>();
 
-                SelfType::construct(lua, lua_object.get_remote_cpp_object()->GetOuterPrivate());
+                UObject::construct(lua, lua_object.get_remote_cpp_object()->GetOuterPrivate());
 
                 return 1;
             });
@@ -455,7 +473,7 @@ Overloads:
 
                 // If this is the final object then we also want to finalize creating the table
                 // If not then it's the responsibility of the overriding object to call 'make_global()
-                table.make_global("UObject");
+                //table.make_global("UObject");
             }
         }
 
@@ -504,9 +522,6 @@ Overloads:
         }
     };
 
-    struct UObjectName { constexpr static const char* ToString() { return "UObject"; } };
-    using UObject = UObjectBase<Unreal::UObject, UObjectName>;
-
     template<typename ParamType>
     class LocalUnrealParam : public LuaMadeSimple::Type::LocalObject<ParamType>
     {
@@ -527,14 +542,20 @@ Overloads:
         {
             LuaType::LocalUnrealParam lua_object{object, base, property};
 
-            LuaMadeSimple::Lua::Table table = lua.prepare_new_table();
+            auto metatable_name = "LocalUnrealParam";
 
-            setup_member_functions(table);
+            LuaMadeSimple::Lua::Table table = lua.get_metatable(metatable_name);
+            if (lua.is_nil(-1))
+            {
+                lua.discard_value(-1);
+                lua.prepare_new_table();
+                setup_metamethods(lua_object);
+                setup_member_functions(table);
+                lua.new_metatable<LuaType::LocalUnrealParam<ParamType>>(metatable_name, lua_object.get_metamethods());
+            }
 
-            setup_metamethods(lua_object);
-
-            // Transfer the object & its ownership fully to Lua
-            lua.transfer_stack_object(std::move(lua_object), "LocalUnrealParam", lua_object.get_metamethods());
+            // Create object & surrender ownership to Lua
+            lua.transfer_stack_object(std::move(lua_object), metatable_name, lua_object.get_metamethods());
 
             return table;
         }
@@ -573,7 +594,7 @@ Overloads:
 
             // If this is the final object then we also want to finalize creating the table
             // If not then it's the responsibility of the overriding object to call 'make_global()'
-            table.make_global("LocalUnrealParam");
+            //table.make_global("LocalUnrealParam");
         }
 
         auto static prepare_to_handle(const Operation operation, const LuaMadeSimple::Lua& lua) -> void

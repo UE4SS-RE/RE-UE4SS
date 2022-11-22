@@ -10,14 +10,20 @@ namespace RC::LuaType
     {
         LuaType::FName lua_object{unreal_object};
 
-        LuaMadeSimple::Lua::Table table = lua.prepare_new_table();
+        auto metatable_name = "FNameUserdata";
 
-        setup_member_functions<LuaMadeSimple::Type::IsFinal::Yes>(table);
-
-        setup_metamethods(lua_object);
+        LuaMadeSimple::Lua::Table table = lua.get_metatable(metatable_name);
+        if (lua.is_nil(-1))
+        {
+            lua.discard_value(-1);
+            lua.prepare_new_table();
+            setup_metamethods(lua_object);
+            setup_member_functions<LuaMadeSimple::Type::IsFinal::Yes>(table);
+            lua.new_metatable<LuaType::FName>(metatable_name, lua_object.get_metamethods());
+        }
 
         // Create object & surrender ownership to Lua
-        lua.transfer_stack_object(std::move(lua_object), "FNameUserdata", lua_object.get_metamethods());
+        lua.transfer_stack_object(std::move(lua_object), metatable_name, lua_object.get_metamethods());
 
         return table;
     }
@@ -125,7 +131,7 @@ Overloads:
 
             // If this is the final object then we also want to finalize creating the table
             // If not then it's the responsibility of the overriding object to call 'make_global()'
-            table.make_global("FNameUserdata");
+            //table.make_global("FNameUserdata");
         }
     }
 }
