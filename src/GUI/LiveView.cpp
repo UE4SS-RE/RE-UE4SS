@@ -1400,7 +1400,7 @@ namespace RC::GUI
                 if (ImGui::IsItemHovered())
                 {
                     ImGui::BeginTooltip();
-                    ImGui::Text("Auto-create on startup");
+                    ImGui::Text("Auto-create on startup.\nRight-click for options.");
                     ImGui::EndTooltip();
                 }
             }
