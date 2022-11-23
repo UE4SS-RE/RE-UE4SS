@@ -2,6 +2,7 @@
 #include <string>
 #include <format>
 #include <unordered_map>
+#include <variant>
 
 #include <GUI/LiveView.hpp>
 #include <GUI/GUI.hpp>
@@ -16,6 +17,7 @@
 #include <Unreal/UObjectArray.hpp>
 #include <Unreal/UObject.hpp>
 #include <Unreal/UClass.hpp>
+#include <Unreal/UScriptStruct.hpp>
 #include <Unreal/Property/FObjectProperty.hpp>
 #include <Unreal/Property/FBoolProperty.hpp>
 #include <imgui.h>
@@ -683,6 +685,158 @@ namespace RC::GUI
         return selected_object_or_property.property;
     }
 
+    static auto render_property_value(FProperty* property, void* container, FProperty** last_property_in, bool* tried_to_open_nullptr_object, bool is_watchable = true, int32 first_offset = -1) -> std::variant<std::monostate, UObject*, FProperty*>
+    {
+        std::variant<std::monostate, UObject*, FProperty*> next_item_to_render{};
+        auto property_offset = property->GetOffset_Internal();
+
+        if (*last_property_in)
+        {
+            auto property_alignment = property->GetMinAlignment();
+            auto last_property_offset = (*last_property_in)->GetOffset_Internal();
+            auto last_property_size = (*last_property_in)->GetSize();
+            auto last_property_offset_with_alignment = ((last_property_offset + last_property_size + (property_alignment - 1)) & ~(property_alignment - 1));
+            if (last_property_offset_with_alignment != property_offset && (!property->IsA<FBoolProperty>() && !(*last_property_in)->IsA<FBoolProperty>()))
+            {
+                auto unreflected_size = property_offset - last_property_offset_with_alignment;
+                auto unreflected_offset = property_offset - unreflected_size;
+                ImGui::PushStyleColor(ImGuiCol_Text, g_imgui_text_live_view_unreflected_data_color.Value);
+                ImGui::Text("0x%X: Unknown unreflected data", unreflected_offset);
+                ImGui::PopStyleColor();
+                if (ImGui::IsItemHovered())
+                {
+                    ImGui::BeginTooltip();
+                    ImGui::Text("Offset: 0x%X", unreflected_offset);
+                    ImGui::Text("Size: 0x%X", unreflected_size);
+                    ImGui::EndTooltip();
+                }
+            }
+        }
+
+        FString property_text{};
+        auto container_ptr = property->ContainerPtrToValuePtr<void*>(container);
+        property->ExportTextItem(property_text, container_ptr, container_ptr, static_cast<UObject*>(container), NULL);
+        auto property_name = to_string(property->GetName());
+
+        if (first_offset == -1)
+        {
+            ImGui::Text("0x%X %s:", property_offset, property_name.c_str());
+        }
+        else
+        {
+            ImGui::Text("0x%X (0x%X) %s:", first_offset, property_offset, property_name.c_str());
+        }
+        if (auto struct_property = CastField<FStructProperty>(property); struct_property && struct_property->GetStruct()->GetFirstProperty())
+        {
+            is_watchable = false;
+            ImGui::SameLine();
+            if (ImGui_TreeNodeEx(std::format("{}", to_string(property_text.GetCharArray())).c_str(), container_ptr, ImGuiTreeNodeFlags_NoTreePushOnOpen | ImGuiTreeNodeFlags_NoAutoOpenOnLog))
+            {
+                struct_property->GetStruct()->ForEachProperty([&](FProperty* inner_property) {
+                    FString struct_prop_text_item{};
+                    auto struct_prop_container_ptr = inner_property->ContainerPtrToValuePtr<void*>(container_ptr);
+                    inner_property->ExportTextItem(struct_prop_text_item, struct_prop_container_ptr, struct_prop_container_ptr, static_cast<UObject*>(*container_ptr), NULL);
+                    
+                    ImGui::Indent();
+                    FProperty* last_struct_prop{};
+                    next_item_to_render = render_property_value(inner_property, container_ptr, &last_struct_prop, tried_to_open_nullptr_object, false, property_offset + inner_property->GetOffset_Internal());
+                    ImGui::Unindent();
+                    
+                    if (std::holds_alternative<std::monostate>(next_item_to_render))
+                    {
+                        return LoopAction::Continue;
+                    }
+                    else
+                    {
+                        return LoopAction::Break;
+                    }
+                });
+            }
+        }
+        else
+        {
+            ImGui::SameLine();
+            ImGui::Text("%S", property_text.GetCharArray());
+        }
+
+        *last_property_in = property;
+
+        if (ImGui::IsItemHovered())
+        {
+            ImGui::BeginTooltip();
+            ImGui::Text("%S", property->GetFullName().c_str());
+            ImGui::Separator();
+            ImGui::Text("Offset: 0x%X", property->GetOffset_Internal());
+            ImGui::Text("Size: 0x%X", property->GetSize());
+            ImGui::EndTooltip();
+        }
+
+        if (ImGui::BeginPopupContextItem(property_name.c_str()))
+        {
+            if (ImGui::MenuItem("Copy name"))
+            {
+                ImGui::SetClipboardText(property_name.c_str());
+            }
+            if (ImGui::MenuItem("Copy full name"))
+            {
+                ImGui::SetClipboardText(to_string(property->GetFullName()).c_str());
+            }
+            if (ImGui::MenuItem("Copy value"))
+            {
+                ImGui::SetClipboardText(to_string(property_text.GetCharArray()).c_str());
+            }
+
+            if (is_watchable)
+            {
+                auto watch_id = LiveView::WatchIdentifier{container, property};
+                auto property_watcher_it = LiveView::s_watch_map.find(watch_id);
+                if (property_watcher_it == LiveView::s_watch_map.end())
+                {
+                    ImGui::Separator();
+                    if (ImGui::MenuItem("Watch value"))
+                    {
+                        add_watch(watch_id, static_cast<UObject*>(container), property);
+                    }
+                }
+                else
+                {
+                    ImGui::Checkbox("Watch value", &property_watcher_it->second->enabled);
+                }
+            }
+
+            ImGui::Separator();
+
+            if (ImGui::MenuItem("Go to property"))
+            {
+                next_item_to_render = property;
+            }
+
+            if (property->IsA<FObjectProperty>())
+            {
+                if (ImGui::MenuItem("Go to object"))
+                {
+                    auto hovered_object = *property->ContainerPtrToValuePtr<UObject*>(container);
+
+                    if (!hovered_object)
+                    {
+                        *tried_to_open_nullptr_object = true;
+                    }
+                    else
+                    {
+                        // Cannot go to another object in the middle of rendering properties.
+                        // Doing so would cause the properties to be looked up on an instance with a property-list from another class.
+                        // To fix this, we save which instance we want to go to and then we go to it at the end when we're done accessing all properties.
+                        next_item_to_render = hovered_object;
+                    }
+                }
+            }
+
+            ImGui::EndPopup();
+        }
+
+        return next_item_to_render;
+    }
+
     auto LiveView::render_properties() -> void
     {
         const auto currently_selected_object = get_selected_object();
@@ -708,106 +862,16 @@ namespace RC::GUI
         FProperty* last_property{};
 
         auto render_property_text = [&](UClass* uclass, FProperty* property) {
-            auto property_offset = property->GetOffset_Internal();
-            if (last_property)
+            // New
+            auto next_item_variant = render_property_value(property, currently_selected_object.second, &last_property, &tried_to_open_nullptr_object);
+            if (auto object_item = std::get_if<UObject*>(&next_item_variant); object_item && *object_item)
             {
-                auto property_alignment = property->GetMinAlignment();
-                auto last_property_alignment = last_property->GetMinAlignment();
-                auto last_property_offset = last_property->GetOffset_Internal();
-                auto last_property_size = last_property->GetSize();
-                auto last_property_offset_with_alignment = ((last_property_offset + last_property_size + (property_alignment - 1)) & ~(property_alignment - 1));
-                if (last_property_offset_with_alignment != property_offset && (!property->IsA<FBoolProperty>() && !last_property->IsA<FBoolProperty>()))
-                {
-                    auto unreflected_size = property_offset - last_property_offset_with_alignment;
-                    auto unreflected_offset = property_offset - unreflected_size;
-                    ImGui::PushStyleColor(ImGuiCol_Text, g_imgui_text_live_view_unreflected_data_color.Value);
-                    ImGui::Text("0x%X: Unknown unreflected data", unreflected_offset);
-                    ImGui::PopStyleColor();
-                    if (ImGui::IsItemHovered())
-                    {
-                        ImGui::BeginTooltip();
-                        ImGui::Text("Offset: 0x%X", unreflected_offset);
-                        ImGui::Text("Size: 0x%X", unreflected_size);
-                        ImGui::EndTooltip();
-                    }
-                }
+                next_object_to_render = *object_item;
+                next_object_item_to_render = next_object_to_render->GetObjectItem();
             }
-
-            FString TextItem{};
-            auto container_ptr = property->ContainerPtrToValuePtr<void*>(currently_selected_object.second);
-            auto property_name = to_string(property->GetName());
-            property->ExportTextItem(TextItem, container_ptr, container_ptr, const_cast<UObject*>(currently_selected_object.second), NULL);
-            ImGui::Text("0x%X %s: %S", property_offset, property_name.c_str(), TextItem.GetCharArray());
-
-            if (ImGui::IsItemHovered())
+            else if (auto property_item = std::get_if<FProperty*>(&next_item_variant); property_item && *property_item)
             {
-                ImGui::BeginTooltip();
-                ImGui::Text("%S", property->GetFullName().c_str());
-                ImGui::Separator();
-                ImGui::Text("Offset: 0x%X", property->GetOffset_Internal());
-                ImGui::Text("Size: 0x%X", property->GetSize());
-                ImGui::EndTooltip();
-            }
-
-            if (ImGui::BeginPopupContextItem(property_name.c_str()))
-            {
-                if (ImGui::MenuItem("Copy name"))
-                {
-                    ImGui::SetClipboardText(property_name.c_str());
-                }
-                if (ImGui::MenuItem("Copy full name"))
-                {
-                    ImGui::SetClipboardText(to_string(property->GetFullName()).c_str());
-                }
-                if (ImGui::MenuItem("Copy value"))
-                {
-                    ImGui::SetClipboardText(to_string(TextItem.GetCharArray()).c_str());
-                }
-
-                auto watch_id = WatchIdentifier{currently_selected_object.second, property};
-                auto property_watcher_it = s_watch_map.find(watch_id);
-                if (property_watcher_it == s_watch_map.end())
-                {
-                    ImGui::Separator();
-                    if (ImGui::MenuItem("Watch value"))
-                    {
-                        add_watch(watch_id, currently_selected_object.second, property);
-                    }
-                }
-                else
-                {
-                    ImGui::Checkbox("Watch value", &property_watcher_it->second->enabled);
-                }
-
-                ImGui::Separator();
-
-                if (ImGui::MenuItem("Go to property"))
-                {
-                    next_property_to_render = property;
-                }
-
-                if (property->IsA<FObjectProperty>())
-                {
-                    if (ImGui::MenuItem("Go to object"))
-                    {
-                        auto hovered_object = *property->ContainerPtrToValuePtr<UObject*>(currently_selected_object.second);
-
-                        if (!hovered_object)
-                        {
-                            tried_to_open_nullptr_object = true;
-                        }
-                        else
-                        {
-                            // Cannot go to another object in the middle of rendering properties.
-                            // Doing so would cause the properties to be looked up on an instance with a property-list from another class.
-                            // To fix this, we save which instance we want to go to and then we go to it at the end when we're done accessing all properties.
-                            next_object_to_render = hovered_object;
-                            next_object_item_to_render = next_object_to_render->GetObjectItem();
-                        }
-                    }
-                }
-
-                ImGui::EndPopup();
+                next_property_to_render = *property_item;
             }
 
             last_property = property;
@@ -1411,3 +1475,4 @@ namespace RC::GUI
         ImGui::EndChild();
     }
 }
+
