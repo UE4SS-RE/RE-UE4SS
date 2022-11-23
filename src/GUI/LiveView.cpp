@@ -727,6 +727,71 @@ namespace RC::GUI
         property->ExportTextItem(property_text, container_ptr, container_ptr, static_cast<UObject*>(container), NULL);
         auto property_name = to_string(property->GetName());
 
+        auto render_property_value_context_menu = [&]() {
+            if (ImGui::BeginPopupContextItem(property_name.c_str()))
+            {
+                if (ImGui::MenuItem("Copy name"))
+                {
+                    ImGui::SetClipboardText(property_name.c_str());
+                }
+                if (ImGui::MenuItem("Copy full name"))
+                {
+                    ImGui::SetClipboardText(to_string(property->GetFullName()).c_str());
+                }
+                if (ImGui::MenuItem("Copy value"))
+                {
+                    ImGui::SetClipboardText(to_string(property_text.GetCharArray()).c_str());
+                }
+
+                if (is_watchable)
+                {
+                    auto watch_id = LiveView::WatchIdentifier{container, property};
+                    auto property_watcher_it = LiveView::s_watch_map.find(watch_id);
+                    if (property_watcher_it == LiveView::s_watch_map.end())
+                    {
+                        ImGui::Separator();
+                        if (ImGui::MenuItem("Watch value"))
+                        {
+                            add_watch(watch_id, static_cast<UObject*>(container), property);
+                        }
+                    }
+                    else
+                    {
+                        ImGui::Checkbox("Watch value", &property_watcher_it->second->enabled);
+                    }
+                }
+
+                ImGui::Separator();
+
+                if (ImGui::MenuItem("Go to property"))
+                {
+                    next_item_to_render = property;
+                }
+
+                if (property->IsA<FObjectProperty>())
+                {
+                    if (ImGui::MenuItem("Go to object"))
+                    {
+                        auto hovered_object = *property->ContainerPtrToValuePtr<UObject*>(container);
+
+                        if (!hovered_object)
+                        {
+                            *tried_to_open_nullptr_object = true;
+                        }
+                        else
+                        {
+                            // Cannot go to another object in the middle of rendering properties.
+                            // Doing so would cause the properties to be looked up on an instance with a property-list from another class.
+                            // To fix this, we save which instance we want to go to and then we go to it at the end when we're done accessing all properties.
+                            next_item_to_render = hovered_object;
+                        }
+                    }
+                }
+
+                ImGui::EndPopup();
+            }
+        };
+
         if (first_offset == -1)
         {
             ImGui::Text("0x%X %s:", property_offset, property_name.c_str());
@@ -740,8 +805,10 @@ namespace RC::GUI
             is_watchable = false;
             ImGui::SameLine();
             auto tree_node_id = std::format("{}{}", static_cast<void*>(container_ptr), property_name);
-            if (ImGui_TreeNodeEx(std::format("{}", to_string(property_text.GetCharArray())).c_str(), tree_node_id.c_str(), ImGuiTreeNodeFlags_NoTreePushOnOpen | ImGuiTreeNodeFlags_NoAutoOpenOnLog))
+            if (ImGui_TreeNodeEx(std::format("{}", to_string(property_text.GetCharArray())).c_str(), tree_node_id.c_str(), ImGuiTreeNodeFlags_NoAutoOpenOnLog))
             {
+                render_property_value_context_menu();
+                
                 struct_property->GetStruct()->ForEachProperty([&](FProperty* inner_property) {
                     FString struct_prop_text_item{};
                     auto struct_prop_container_ptr = inner_property->ContainerPtrToValuePtr<void*>(container_ptr);
@@ -761,6 +828,7 @@ namespace RC::GUI
                         return LoopAction::Break;
                     }
                 });
+                ImGui::TreePop();
             }
         }
         else
@@ -781,68 +849,7 @@ namespace RC::GUI
             ImGui::EndTooltip();
         }
 
-        if (ImGui::BeginPopupContextItem(property_name.c_str()))
-        {
-            if (ImGui::MenuItem("Copy name"))
-            {
-                ImGui::SetClipboardText(property_name.c_str());
-            }
-            if (ImGui::MenuItem("Copy full name"))
-            {
-                ImGui::SetClipboardText(to_string(property->GetFullName()).c_str());
-            }
-            if (ImGui::MenuItem("Copy value"))
-            {
-                ImGui::SetClipboardText(to_string(property_text.GetCharArray()).c_str());
-            }
-
-            if (is_watchable)
-            {
-                auto watch_id = LiveView::WatchIdentifier{container, property};
-                auto property_watcher_it = LiveView::s_watch_map.find(watch_id);
-                if (property_watcher_it == LiveView::s_watch_map.end())
-                {
-                    ImGui::Separator();
-                    if (ImGui::MenuItem("Watch value"))
-                    {
-                        add_watch(watch_id, static_cast<UObject*>(container), property);
-                    }
-                }
-                else
-                {
-                    ImGui::Checkbox("Watch value", &property_watcher_it->second->enabled);
-                }
-            }
-
-            ImGui::Separator();
-
-            if (ImGui::MenuItem("Go to property"))
-            {
-                next_item_to_render = property;
-            }
-
-            if (property->IsA<FObjectProperty>())
-            {
-                if (ImGui::MenuItem("Go to object"))
-                {
-                    auto hovered_object = *property->ContainerPtrToValuePtr<UObject*>(container);
-
-                    if (!hovered_object)
-                    {
-                        *tried_to_open_nullptr_object = true;
-                    }
-                    else
-                    {
-                        // Cannot go to another object in the middle of rendering properties.
-                        // Doing so would cause the properties to be looked up on an instance with a property-list from another class.
-                        // To fix this, we save which instance we want to go to and then we go to it at the end when we're done accessing all properties.
-                        next_item_to_render = hovered_object;
-                    }
-                }
-            }
-
-            ImGui::EndPopup();
-        }
+        render_property_value_context_menu();
 
         return next_item_to_render;
     }
