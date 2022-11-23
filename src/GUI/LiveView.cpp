@@ -512,6 +512,15 @@ namespace RC::GUI
         return ImGui::TreeNodeBehavior(window->GetID(ptr_id), flags, label, NULL);
     }
 
+    static auto ImGui_TreeNodeEx(const char* label, const char* str_id, ImGuiTreeNodeFlags flags) -> bool
+    {
+        ImGuiWindow* window = ImGui::GetCurrentWindow();
+        if (window->SkipItems)
+            return false;
+
+        return ImGui::TreeNodeBehavior(window->GetID(str_id), flags, label, NULL);
+    }
+
     static auto collapse_all_except(int except_id) -> void
     {
         for (int i = 0; i < UObjectArray::GetNumChunks(); ++i)
@@ -730,7 +739,8 @@ namespace RC::GUI
         {
             is_watchable = false;
             ImGui::SameLine();
-            if (ImGui_TreeNodeEx(std::format("{}", to_string(property_text.GetCharArray())).c_str(), container_ptr, ImGuiTreeNodeFlags_NoTreePushOnOpen | ImGuiTreeNodeFlags_NoAutoOpenOnLog))
+            auto tree_node_id = std::format("{}{}", static_cast<void*>(container_ptr), property_name);
+            if (ImGui_TreeNodeEx(std::format("{}", to_string(property_text.GetCharArray())).c_str(), tree_node_id.c_str(), ImGuiTreeNodeFlags_NoTreePushOnOpen | ImGuiTreeNodeFlags_NoAutoOpenOnLog))
             {
                 struct_property->GetStruct()->ForEachProperty([&](FProperty* inner_property) {
                     FString struct_prop_text_item{};
