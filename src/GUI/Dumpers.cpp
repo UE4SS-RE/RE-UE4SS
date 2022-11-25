@@ -24,6 +24,10 @@ namespace RC::GUI::Dumpers
 {
     using namespace ::RC::Unreal;
 
+    // TODO: Move these structs (and the enum) to a proper place in the Unreal module.
+    //       They need to be controlled by the engine version select or before 2.0 releases.
+
+    // In KH3, there's an extra float either at the end of FMeshUVChannelInfo or at the end of FStaticMaterial, I can't tell which one.
     enum { MAX_TEXCOORDS = 4, MAX_STATIC_TEXCOORDS = 8 };
     struct FMeshUVChannelInfo
     {
