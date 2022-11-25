@@ -96,7 +96,6 @@ namespace RC::GUI
                 if (ImGui::BeginTabItem("Live View"))
                 {
                     listeners_are_required = true;
-                    m_live_view.set_listeners_are_required(true);
                     m_live_view.set_listeners();
                     m_live_view.render();
                     ImGui::EndTabItem();
@@ -109,7 +108,6 @@ namespace RC::GUI
                 if (ImGui::BeginTabItem("Watches"))
                 {
                     listeners_are_required = true;
-                    m_live_view.set_listeners_are_required(true);
                     m_live_view.render_watches();
                     ImGui::EndTabItem();
                 }
@@ -298,3 +296,4 @@ namespace RC::GUI
         debugging_ui->setup(std::move(stop_token));
     }
 }
+
