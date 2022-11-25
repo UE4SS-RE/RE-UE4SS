@@ -79,7 +79,7 @@ namespace RC::GUI
         bool m_search_field_cleared{};
         bool m_modal_tried_to_open_nullptr_object_is_open{};
         bool m_listeners_set{};
-        bool m_listeners_are_required{};
+        bool m_listeners_allowed{};
         bool m_is_initialized{};
 
     public:
@@ -155,8 +155,8 @@ namespace RC::GUI
         auto render() -> void;
         auto render_watches() -> void;
         auto process_watches() -> void;
-        auto set_listeners_are_required(bool new_value) -> void { m_listeners_are_required = new_value; }
-        auto are_listeners_requried() -> bool { return m_listeners_are_required; }
+        auto set_listeners_allowed(bool new_value) -> void { m_listeners_allowed = new_value; }
+        auto are_listeners_allowed() -> bool { return m_listeners_allowed; }
     };
 }
 

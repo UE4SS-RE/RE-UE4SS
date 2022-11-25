@@ -282,7 +282,7 @@ namespace RC::GUI
 
     auto LiveView::set_listeners() -> void
     {
-        if (m_listeners_set) { return; }
+        if (m_listeners_set || !are_listeners_allowed()) { return; }
         m_listeners_set = true;
         UObjectArray::AddUObjectCreateListener(&FLiveViewCreateListener::LiveViewCreateListener);
         UObjectArray::AddUObjectDeleteListener(&FLiveViewDeleteListener::LiveViewDeleteListener);
@@ -290,7 +290,7 @@ namespace RC::GUI
 
     auto LiveView::unset_listeners() -> void
     {
-        if (!m_listeners_set) { return; }
+        if (!m_listeners_set || !are_listeners_allowed()) { return; }
         m_listeners_set = false;
         UObjectArray::RemoveUObjectCreateListener(&FLiveViewCreateListener::LiveViewCreateListener);
         UObjectArray::RemoveUObjectDeleteListener(&FLiveViewDeleteListener::LiveViewDeleteListener);
@@ -389,12 +389,12 @@ namespace RC::GUI
     LiveView::~LiveView()
     {
         s_live_view_destructed = true;
-        if (!s_create_listener_removed)
+        if (!s_create_listener_removed && m_listeners_set)
         {
             UObjectArray::RemoveUObjectCreateListener(&FLiveViewCreateListener::LiveViewCreateListener);
         }
 
-        if (!s_delete_listener_removed)
+        if (!s_delete_listener_removed && m_listeners_set)
         {
             UObjectArray::RemoveUObjectDeleteListener(&FLiveViewDeleteListener::LiveViewDeleteListener);
         }
@@ -1257,30 +1257,45 @@ namespace RC::GUI
             s_watches_loaded_from_disk = true;
         }
 
+        bool listeners_allowed = are_listeners_allowed();
+        if (!listeners_allowed) { ImGui::BeginDisabled(); }
         ImGui::PushItemWidth(-14.0f);
         bool push_inactive_text_color = !m_search_field_cleared;
         if (push_inactive_text_color) { ImGui::PushStyleColor(ImGuiCol_Text, g_imgui_text_inactive_color.Value); }
         if (ImGui::InputText("##Search by name", m_search_by_name_buffer, m_search_buffer_capacity, ImGuiInputTextFlags_EnterReturnsTrue | ImGuiInputTextFlags_CallbackAlways, &search_field_always_callback, this))
         {
-            std::string search_buffer{m_search_by_name_buffer};
-            if (search_buffer.empty())
+            if (listeners_allowed)
             {
-                Output::send(STR("Search all chunks\n"));
-                s_name_to_search_by.clear();
-                m_object_iterator = &LiveView::guobjectarray_iterator;
-                m_is_searching_by_name = false;
-            }
-            else
-            {
-                Output::send(STR("Search for: {}\n"), search_buffer.empty() ? STR("") : to_wstring(search_buffer));
-                s_name_to_search_by = search_buffer;
-                m_object_iterator = &LiveView::guobjectarray_by_name_iterator;
-                m_is_searching_by_name = true;
-                search_by_name();
+                std::string search_buffer{m_search_by_name_buffer};
+                if (search_buffer.empty())
+                {
+                    Output::send(STR("Search all chunks\n"));
+                    s_name_to_search_by.clear();
+                    m_object_iterator = &LiveView::guobjectarray_iterator;
+                    m_is_searching_by_name = false;
+                }
+                else
+                {
+                    Output::send(STR("Search for: {}\n"), search_buffer.empty() ? STR("") : to_wstring(search_buffer));
+                    s_name_to_search_by = search_buffer;
+                    m_object_iterator = &LiveView::guobjectarray_by_name_iterator;
+                    m_is_searching_by_name = true;
+                    search_by_name();
+                }
             }
         }
         if (push_inactive_text_color) { ImGui::PopStyleColor(); }
         ImGui::PopItemWidth();
+        if (!listeners_allowed)
+        {
+            ImGui::EndDisabled();
+            if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled))
+            {
+                ImGui::BeginTooltip();
+                ImGui::Text("Feature disabled due to 'General.UseUObjectArrayCache' being set to 0 in UE4SS-settings.ini.");
+                ImGui::EndTooltip();
+            }
+        }
 
         if (!m_is_searching_by_name && m_search_field_clear_requested && !ImGui::IsItemActive())
         {

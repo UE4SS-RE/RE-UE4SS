@@ -786,7 +786,15 @@ namespace RC
 
         if (m_debug_console_enabled)
         {
-            m_debugging_gui.get_live_view().set_listeners();
+            if (settings_manager.General.UseUObjectArrayCache)
+            {
+                m_debugging_gui.get_live_view().set_listeners_allowed(true);
+                m_debugging_gui.get_live_view().set_listeners();
+            }
+            else
+            {
+                m_debugging_gui.get_live_view().set_listeners_allowed(false);
+            }
 
             m_input_handler.register_keydown_event(Input::Key::O, { Input::ModifierKey::CONTROL }, [&]() {
                 TRY([&] {
