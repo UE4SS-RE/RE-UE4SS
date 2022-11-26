@@ -13,6 +13,7 @@
 #include <UE4SSProgram.hpp>
 #include <Unreal/UnrealInitializer.hpp>
 #include <Unreal/Searcher/ObjectSearcher.hpp>
+#include <Unreal/NameTypes.hpp>
 #include <Unreal/UClass.hpp>
 #include <Unreal/AActor.hpp>
 #include <Unreal/UFunction.hpp>
@@ -42,10 +43,19 @@ namespace RC::GUI::Dumpers
         float LocalUVDensities[MAX_TEXCOORDS];
     };
 
-    // This struct changed in 4.20, so we must better support this.
-    // The struct below is based on <4.20, change the uncomment 'ImportedMaterialSlowName' and recompile to make it work for 4.20+.
-    // Probably gonna avoid fixing this until we do engine version selection at compile-time.
-    struct FStaticMaterial
+    struct FStaticMaterial_419AndBelow
+    {
+        using UMaterialInterface = ::RC::Unreal::UObject;
+        UMaterialInterface* MaterialInterface;
+
+        /*This name should be use by the gameplay to avoid error if the skeletal mesh Materials array topology change*/
+        FName MaterialSlotName;
+
+        /** Data used for texture streaming relative to each UV channels. */
+        FMeshUVChannelInfo UVChannelData;
+    };
+    
+    struct FStaticMaterial_420AndAbove
     {
         using UMaterialInterface = ::RC::Unreal::UObject;
         UMaterialInterface* MaterialInterface;
@@ -134,32 +144,50 @@ namespace RC::GUI::Dumpers
                 mesh_property->ExportTextItem(mesh_string, &mesh, nullptr, nullptr, 0);
                 actor_buffer.append(std::format(STR("\"{}\","), mesh_string.GetCharArray()));
 
-                auto materials = mesh->GetValuePtrByPropertyName<TArray<FStaticMaterial>>(STR("StaticMaterials"));
-                actor_buffer.append(STR("\"("));
-                materials->ForEach([&](FStaticMaterial* material, size_t material_index) {
-                    if (material->MaterialInterface)
+                auto materials_for_each_body = [&](UObject* material_interface, size_t material_index, int32 num_materials) {
+                    if (material_interface)
                     {
-                        auto material_full_name = material->MaterialInterface->GetOuterPrivate()->GetFullName();
+                        auto material_full_name = material_interface->GetOuterPrivate()->GetFullName();
                         auto material_type_space_location = material_full_name.find(STR(" "));
                         if (material_type_space_location == material_full_name.npos)
                         {
                             Output::send<LogLevel::Warning>(STR("SKIPPING MATERIAL! Was unable to find space in full material name in component: '{}'."), material_full_name);
                             return LoopAction::Continue;
                         }
-                        auto material_typeless_name = StringViewType{material_full_name.begin() + material_type_space_location + 1,
+
+                        if (material_type_space_location > static_cast<unsigned long long>(std::numeric_limits<long long>::max()))
+                        {
+                            throw std::runtime_error{"integer overflow when converting material_type_space_location signed"};
+                        }
+                        auto material_typeless_name = StringViewType{material_full_name.begin() + static_cast<long long>(material_type_space_location) + 1,
                                 material_full_name.end()};
 
-                        actor_buffer.append(std::format(STR("{}'"), material->MaterialInterface->GetClassPrivate()->GetName()));
+                        actor_buffer.append(std::format(STR("{}'"), material_interface->GetClassPrivate()->GetName()));
                         actor_buffer.append(std::format(STR("\"\"{}"), material_typeless_name));
                         actor_buffer.append(STR("\"\"'"));
-                        if (material_index + 1 < materials->Num())
+                        if (material_index + 1 < num_materials)
                         {
                             actor_buffer.append(STR(","));
                         }
-
                     }
                     return LoopAction::Continue;
-                });
+                };
+
+                actor_buffer.append(STR("\"("));
+                if (Version::IsAtMost(4, 19))
+                {
+                    auto materials = mesh->GetValuePtrByPropertyName<TArray<FStaticMaterial_419AndBelow>>(STR("StaticMaterials"));
+                    materials->ForEach([&](FStaticMaterial_419AndBelow* material, size_t material_index) {
+                        return materials_for_each_body(material->MaterialInterface, material_index, materials->Num());
+                    });
+                }
+                else
+                {
+                    auto materials = mesh->GetValuePtrByPropertyName<TArray<FStaticMaterial_420AndAbove>>(STR("StaticMaterials"));
+                    materials->ForEach([&](FStaticMaterial_420AndAbove* material, size_t material_index) {
+                        return materials_for_each_body(material->MaterialInterface, material_index, materials->Num());
+                    });
+                }
                 actor_buffer.append(STR(")\""));
 
                 return LoopAction::Continue;
@@ -280,3 +308,4 @@ namespace RC::GUI::Dumpers
         }*/
     }
 }
+
