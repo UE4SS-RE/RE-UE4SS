@@ -96,6 +96,9 @@ namespace RC::GUI
             };
             UObject* object{};
             bool is_object{};
+
+            auto IsUnreachable() const -> bool;
+            auto GetFullName() const -> std::string;
         };
 
     public:
@@ -175,3 +178,4 @@ namespace std
 }
 
 #endif //UE4SS_GUI_LIVE_VIEW_HPP
+
