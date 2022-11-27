@@ -1161,24 +1161,93 @@ namespace RC::GUI
         }
     }
 
+    auto LiveView::ObjectOrProperty::IsUnreachable() const -> bool
+    {
+        if (is_object)
+        {
+            return !object || object->IsUnreachable();
+        }
+        else
+        {
+            return !property;
+        }
+    }
+
+    auto LiveView::ObjectOrProperty::GetFullName() const -> std::string
+    {
+        if (is_object)
+        {
+            return to_string(object->GetFullName());
+        }
+        else
+        {
+            return to_string(property->GetFullName());
+        }
+    }
+
+    static auto render_history_menu(const char* str_id) -> std::pair<size_t, bool>
+    {
+        size_t next_item_index{};
+        bool selected_an_item{};
+        if (ImGui::BeginPopupContextItem(str_id))
+        {
+            for (size_t item_index = 0; item_index < LiveView::s_object_view_history.size(); ++item_index)
+            {
+                const auto& item = LiveView::s_object_view_history[item_index];
+
+                if (item.IsUnreachable())
+                {
+                    ImGui::BeginDisabled();
+                    ImGui::MenuItem("--- Beginning of time ---");
+                    ImGui::EndDisabled();
+                }
+                else
+                {
+                    if (ImGui::MenuItem(std::format("{}. {}", item_index, item.GetFullName()).c_str()))
+                    {
+                        next_item_index = item_index;
+                        selected_an_item = true;
+                    }
+                }
+            }
+
+            ImGui::BeginDisabled();
+            ImGui::MenuItem("--- End of time ---");
+            ImGui::EndDisabled();
+
+            ImGui::EndPopup();
+        }
+        
+        return {next_item_index, selected_an_item};
+    }
+
     auto LiveView::render_info_panel() -> void
     {
         ImGui::BeginChild("LiveView_InfoPanel", {-14.0f, m_bottom_size}, true, ImGuiWindowFlags_HorizontalScrollbar);
 
-        bool should_select_object{};
-        bool select_previous_object{};
+        size_t next_object_index_to_select{};
 
         if (ImGui::Button("<<<"))
         {
-            should_select_object = true;
-            select_previous_object = true;
+            next_object_index_to_select = s_currently_selected_object_index;
+            if (s_currently_selected_object_index > 0 && static_cast<int64_t>(s_currently_selected_object_index) - 1 > 0)
+            {
+                next_object_index_to_select = s_currently_selected_object_index - 1;
+            }
         }
+        auto selected_next_object = render_history_menu("InfoPanelHistory_Prev");
+        if (selected_next_object.second) { next_object_index_to_select = selected_next_object.first; }
         ImGui::SameLine();
         if (ImGui::Button(">>>"))
         {
-            should_select_object = true;
-            select_previous_object = false;
+            next_object_index_to_select = s_currently_selected_object_index;
+            if (s_currently_selected_object_index + 1 < s_object_view_history.size())
+            {
+                next_object_index_to_select = s_currently_selected_object_index + 1;
+            }
         }
+        auto selected_prev_object = render_history_menu("InfoPanelHistory_Next");
+        if (selected_prev_object.second) { next_object_index_to_select = selected_prev_object.first; }
 
         ImGui::Separator();
 
@@ -1194,18 +1263,9 @@ namespace RC::GUI
 
         ImGui::EndChild();
 
-        if (should_select_object)
+        if (next_object_index_to_select > 0)
         {
-            if (select_previous_object)
-            {
-                if (s_currently_selected_object_index <= 0 || s_currently_selected_object_index - 1 <= 0) { return; }
-                select_object(s_currently_selected_object_index - 1, nullptr, nullptr, AffectsHistory::No);
-            }
-            else
-            {
-                if (s_currently_selected_object_index + 1 >= s_object_view_history.size()) { return; }
-                select_object(s_currently_selected_object_index + 1, nullptr, nullptr, AffectsHistory::No);
-            }
+            select_object(next_object_index_to_select, nullptr, nullptr, AffectsHistory::No);
         }
     }
 
