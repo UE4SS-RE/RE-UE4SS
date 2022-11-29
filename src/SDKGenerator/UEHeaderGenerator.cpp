@@ -81,7 +81,7 @@ namespace RC::UEGenerator
 
     auto static is_subtype_valid(FProperty* subtype) -> bool
     {
-        if ((subtype->IsA<FNumericProperty>() && !subtype->IsA<FIntProperty>() && !subtype->IsA<FFloatProperty>()) ||
+        if ((subtype->IsA<FNumericProperty>() && !subtype->IsA<FIntProperty>() && !subtype->IsA<FFloatProperty>() && !subtype->IsA<FByteProperty>()) ||
             subtype->IsA<FWeakObjectProperty>())
         {
             return false;
