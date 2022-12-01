@@ -10,11 +10,14 @@ assignees: ''
 **Branch or Release**
 The Tag for the Release you are using, or the commit you used if you built from source yourself.
 
-**Describe the bug**
-A clear and concise description of what the bug is.
 
 **Game and Engine Version**
 Game where the bug occurred, and the UE engine version of the game.
+
+
+**Describe the bug**
+A clear and concise description of what the bug is.
+
 
 **To Reproduce**
 Steps to reproduce the behavior:
@@ -22,11 +25,14 @@ Steps to reproduce the behavior:
 2. Attempt UHT Dump
 3. See error in log
 
+
 **Expected behavior**
 A clear and concise description of what you expected to happen.
 
+
 **Screenshots and UE4SS Log**
 If applicable, add screenshots to help explain your problem, and upload the log.
+
 
 **Desktop (please complete the following information):**
  - OS: [e.g. Win10, Win11]
