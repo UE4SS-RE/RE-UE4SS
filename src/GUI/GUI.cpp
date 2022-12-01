@@ -13,6 +13,7 @@
 #endif
 
 #include <imgui.h>
+#include "Roboto.hpp"
 
 namespace RC::GUI
 {
@@ -244,8 +245,14 @@ namespace RC::GUI
         ImGuiIO& io = ImGui::GetIO();
         (void)io;
 
+        
         gui_setup_style();
-
+        
+        io.Fonts->Clear();
+        ImFontConfig font_cfg;
+        font_cfg.FontDataOwnedByAtlas = false; // if true it will try to free memory and fail
+        io.Fonts->AddFontFromMemoryTTF(Roboto, sizeof(Roboto), 14, &font_cfg);
+        
         m_os_backend->init();
         m_gfx_backend->init();
 
