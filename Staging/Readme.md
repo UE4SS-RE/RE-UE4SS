@@ -1,6 +1,6 @@
 # Unreal Engine 4/5 Scripting System
 
-## The original creator no longer wishes to be involved in or connected to this project.  Please respect their wishes, and avoid using their past usernames in connection with this project.
+### The original creator no longer wishes to be involved in or connected to this project.  Please respect their wishes, and avoid using their past usernames in connection with this project.
 
 ### This tool has entered "Maintenance" mode. No more features will be added for the foreseeable future, but it will hopefully still be updated whenever new UE versions are released.
 
@@ -35,6 +35,9 @@ You may need to update AOBs on your own, and there's a guide for that below.
 - **boop** / **usize**
   - New UFunction hook method
 - **Deadmoroz**
+  - Certain features and Lua updates/maintenance
+- **DmgVol**
+  - Inspiration for map dumper
 
 ## Thanks to everyone who helped with testing
 
@@ -44,3 +47,4 @@ You may need to update AOBs on your own, and there's a guide for that below.
 - Motoson
 - hooter
 - Synopis
+- Buckinsterfullerene
