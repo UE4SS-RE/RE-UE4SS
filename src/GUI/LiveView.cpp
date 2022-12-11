@@ -1352,7 +1352,7 @@ namespace RC::GUI
             if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled))
             {
                 ImGui::BeginTooltip();
-                ImGui::Text("Feature disabled due to 'General.UseUObjectArrayCache' being set to 0 in UE4SS-settings.ini.");
+                ImGui::Text("Feature disabled due to 'General.bUseUObjectArrayCache' being set to 0 in UE4SS-settings.ini.");
                 ImGui::EndTooltip();
             }
         }

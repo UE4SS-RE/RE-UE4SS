@@ -23,7 +23,7 @@ namespace RC
             bool EnableDebugKeyBindings{false};
             int64_t MaxScanAttemptsNormal{20};
             int64_t MaxScanAttemptsModular{2000};
-            bool UseUObjectArrayCache{true};
+            bool bUseUObjectArrayCache{true};
         } General;
 
         struct SectionEngineVersionOverride
