@@ -567,7 +567,7 @@ namespace RC
         config.bEnableCache = true;
         config.NumScanAttemptsNormal = settings_manager.General.MaxScanAttemptsNormal;
         config.NumScanAttemptsModular = settings_manager.General.MaxScanAttemptsModular;
-        config.bUseUObjectArrayCache = settings_manager.General.bUseUObjectArrayCache;
+        config.bUseUObjectArrayCache = settings_manager.General.UseUObjectArrayCache;
 
         // Retrieve from the config file the number of threads to be used for aob scanning
         {
@@ -786,7 +786,7 @@ namespace RC
 
         if (m_debug_console_enabled)
         {
-            if (settings_manager.General.bUseUObjectArrayCache)
+            if (settings_manager.General.UseUObjectArrayCache)
             {
                 m_debugging_gui.get_live_view().set_listeners_allowed(true);
                 m_debugging_gui.get_live_view().set_listeners();
