@@ -521,7 +521,7 @@ namespace RC
     }
 
     //auto static make_hook_state(Mod* mod, const LuaMadeSimple::Lua& lua)->std::shared_ptr<LuaMadeSimple::Lua>
-    auto static make_hook_state(Mod* mod) -> std::shared_ptr<LuaMadeSimple::Lua>
+    auto static make_hook_state(Mod* mod) -> LuaMadeSimple::Lua*
     {
         //if (!mod->m_hook_lua)
         //{
