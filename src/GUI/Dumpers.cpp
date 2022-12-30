@@ -7,6 +7,7 @@
 #include <File/Macros.hpp>
 #include <File/File.hpp>
 #include <JSON/JSON.hpp>
+#include <USMapGenerator/Generator.hpp>
 #ifdef TEXT
 #undef TEXT
 #endif
@@ -306,6 +307,11 @@ namespace RC::GUI::Dumpers
                 return LoopAction::Continue;
             });
         }*/
+
+        if (ImGui::Button("Generator .usmap file"))
+        {
+            OutTheShade::generate_usmap();
+        }
     }
 }
 
