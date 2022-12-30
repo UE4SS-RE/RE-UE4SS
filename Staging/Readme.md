@@ -36,6 +36,8 @@ You may need to update AOBs on your own, and there's a guide for that below.
   - New UFunction hook method
 - **Deadmoroz**
   - Certain features and Lua updates/maintenance
+- **OutTheShade**
+  - Unreal Mappings (USMAP) Generator
 - **DmgVol**
   - Inspiration for map dumper
 
