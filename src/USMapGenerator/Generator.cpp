@@ -201,6 +201,8 @@ namespace RC::OutTheShade
 
     auto generate_usmap() -> void
     {
+        Output::send(STR("Mappings Generator by OutTheShade\nAttempting to dump mappings...\nPort of https://github.com/OutTheShade/UnrealMappingsDumper Commit SHA 4da8c66"));
+        
         StreamWriter Buffer;
         std::unordered_map<FName, int> NameMap;
 
@@ -398,5 +400,7 @@ namespace RC::OutTheShade
         FileOutput.Write<uint32_t>(Buffer.Size()); //decompressed size
 
         FileOutput.Write(UsmapData.data(), UsmapData.size());
+
+        Output::send(STR("Mappings Generation Completed Successfully!"));
     }
 }

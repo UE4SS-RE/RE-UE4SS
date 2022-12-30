@@ -308,7 +308,7 @@ namespace RC::GUI::Dumpers
             });
         }*/
 
-        if (ImGui::Button("Generator .usmap file"))
+        if (ImGui::Button("Generate .usmap file\nUnrealMappingsDumper by OutTheShade"))
         {
             OutTheShade::generate_usmap();
         }
