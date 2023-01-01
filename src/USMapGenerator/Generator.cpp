@@ -293,7 +293,7 @@ namespace RC::OutTheShade
 
 				Enum->ForEachName([&](FName Key, ...)
 				{
-					NameMap.insert_or_assign(FName(Key.GetComparisonIndex(), 0), 0);
+					NameMap.insert_or_assign(Key, 0);
                     return LoopAction::Continue;
 				});
 			}
