@@ -786,7 +786,15 @@ namespace RC
 
         if (m_debug_console_enabled)
         {
-            m_debugging_gui.get_live_view().set_listeners();
+            if (settings_manager.General.UseUObjectArrayCache)
+            {
+                m_debugging_gui.get_live_view().set_listeners_allowed(true);
+                m_debugging_gui.get_live_view().set_listeners();
+            }
+            else
+            {
+                m_debugging_gui.get_live_view().set_listeners_allowed(false);
+            }
 
             m_input_handler.register_keydown_event(Input::Key::O, { Input::ModifierKey::CONTROL }, [&]() {
                 TRY([&] {
@@ -819,31 +827,6 @@ namespace RC
         });
 #endif
 
-        /*
-        m_input_handler.register_keydown_event(Input::Key::I, {Input::ModifierKey::CONTROL}, [&]() {
-            TRY([&] {
-                auto AssetRegistry = Cast<UAssetRegistry>(UAssetRegistryHelpers::GetAssetRegistry().ObjectPointer);
-                if (!AssetRegistry)
-                {
-                    Output::send(STR("AssetRegistry was nullptr\n"));
-                }
-                else
-                {
-                    auto& interfaces = AssetRegistry->GetClassPrivate()->GetInterfaces();
-                    interfaces.ForEach([&](const RC::Unreal::FImplementedInterface* the_interface) {
-                        Output::send(STR("Interface: {}\n"), the_interface->Class->GetFullName());
-                        return LoopAction::Continue;
-                    });
-                    auto f = AssetRegistry->GetFunctionByNameInChain(STR("GetAllAssets"));
-                    Output::send(STR("Function: {}\n"), f ? f->GetFullName() : STR("None"));
-
-                    ::RC::Unreal::TArray<FAssetData> AllAssets{nullptr, 0, 0};
-                    AssetRegistry->GetAllAssets2(AllAssets, false);
-                }
-            });
-        });
-        //*/
-
         TRY([&] {
             ObjectDumper::init();
 
@@ -859,80 +842,9 @@ namespace RC
                 Output::send<LogLevel::Warning>(STR("FAssetData not available in <4.17, ignoring 'LoadAllAssetsBeforeDumpingObjects' & 'LoadAllAssetsBeforeGeneratingCXXHeaders'."));
             }
 
-            m_input_handler.register_keydown_event(Input::Key::Y, {Input::ModifierKey::CONTROL}, [&]() {
-                TRY([&] {
-                    AActor* character = Unreal::Cast<AActor>(UObjectGlobals::FindFirstOf(STR("Character")));
-                    Output::send(STR("Name from auto-generated getter: {}\n"), character->GetNamePrivate().ToString());
-                    // UObjectGlobals::StaticFindObject<UGameplayStatics*>(nullptr, nullptr, STR("/Script/Engine.Default__GameplayStatics"));
-                    UClass* to_spawn{};
-                    if (Unreal::Version::IsBelow(5, 0))
-                    {
-                        to_spawn = Unreal::Cast<UClass>(UObjectGlobals::FindObject(nullptr, nullptr, STR("/Game/FirstPersonCPP/Blueprints/FirstPersonProjectile.FirstPersonProjectile_C")));
-                    }
-                    else
-                    {
-                        to_spawn = Unreal::Cast<UClass>(UObjectGlobals::FindObject(nullptr, nullptr, STR("/Game/FirstPerson/Blueprints/BP_FirstPersonProjectile.BP_FirstPersonProjectile_C")));
-                    }
-
-                    Output::send(STR("500+{:X}, Pre500{:X}\n"), sizeof(Unreal::FTransform_As500Plus), sizeof(Unreal::FTransform_AsPre500));
-
-                    Output::send(STR("to_spawn: {}\n"), to_spawn->GetFullName());
-                    Unreal::FTransform transform = character->GetTransform();
-                    //AActor* actor = Unreal::UGameplayStatics::BeginDeferredActorSpawnFromClass(character->GetWorld(), to_spawn, transform);
-                    //Loc: -351.000366 -99.000000 268.373718
-                    //RotatorAsVector.X: 0.996715
-                    //RotatorAsVector.Y: -0.079046
-                    //RotatorAsVector.Z: 0.017607
-                    //Final X: -278.083986
-                    //Final Y: 2.134236
-                    //Final Z: 5111.598653
-                    float X = -351.000366f;
-                    X += (72.f * 0.996715 + 0.f) * 15.f;
-                    float Y = -99.000000f;
-                    Y += (72.f * -0.079046 + 0.f) * 15.f;
-                    float Z = 268.373718f;
-                    Z += 72.f * 0.017607 + 1.f * 15.f;
-                    Output::send(STR("X test: {}\n"), X);
-                    Output::send(STR("Y test: {}\n"), Y);
-                    Output::send(STR("Z test: {}\n"), Z);
-                    AActor* actor = character->GetWorld()->SpawnActor(to_spawn, &transform);
-                    if (actor)
-                    {
-                        Output::send(STR("actor: {} {}\n"), (void*)actor, actor->GetFullName());
-                        Unreal::FTransform t = actor->GetTransform();
-                        Output::send(STR("actor loc: {} {} {}\n"), t.Translation().X(), t.Translation().Y(), t.Translation().Z());
-                    }
-                    else
-                    {
-                        Output::send(STR("actor was nullptr\n"));
-                    }
-
-                    /*
-                    actor = Unreal::UGameplayStatics::FinishSpawningActor(actor, transform);
-                    if (actor)
-                    {
-                        Output::send(STR("actor: {} {}\n"), (void*)actor, actor->GetFullName());
-                    }
-                    else
-                    {
-                        Output::send(STR("actor was nullptr\n"));
-                    }
-                    //*/
-                });
-            });
-
             setup_mods();
             Mod::on_program_start();
             start_mods();
-
-            FName fname{STR("Controller")};
-            FStringOut fstring{};
-            FName::ToStringInternal(&fname, fstring);
-            const Unreal::TArray<TCHAR>& tarray = fstring.GetCharTArray();
-            Unreal::FScriptArray* fscriptarray = std::bit_cast<Unreal::FScriptArray*>(&tarray);
-            printf_s("Data: %p\n", fscriptarray->GetData());
-            printf_s("Num: %i\n", fscriptarray->Num());
-            printf_s("Max: %i\n", fscriptarray->Max());
         });
 
         if (settings_manager.General.EnableDebugKeyBindings)

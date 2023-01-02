@@ -121,12 +121,12 @@ namespace RC
         LuaType::RemoteUnrealParam::construct(lua_data.lua, &context.Context, s_object_property_name);
 
         // Attempt at dynamically fetching the params
-        uint16_t return_value_offset = context.TheStack.CurrentNativeFunction->GetReturnValueOffset();
+        uint16_t return_value_offset = context.TheStack.CurrentNativeFunction()->GetReturnValueOffset();
 
         // 'ReturnValueOffset' is 0xFFFF if the UFunction return type is void
         lua_data.has_return_value = return_value_offset != 0xFFFF;
 
-        uint8_t num_unreal_params = context.TheStack.CurrentNativeFunction->GetNumParms();
+        uint8_t num_unreal_params = context.TheStack.CurrentNativeFunction()->GetNumParms();
         if (lua_data.has_return_value)
         {
             // Subtract one from the number of params if there's a return value
@@ -135,11 +135,11 @@ namespace RC
         }
 
         bool has_properties_to_process = lua_data.has_return_value || num_unreal_params > 0;
-        if (has_properties_to_process && context.TheStack.Locals)
+        if (has_properties_to_process && context.TheStack.Locals())
         {
             //int32_t current_param_offset{};
 
-            context.TheStack.CurrentNativeFunction->ForEachProperty([&](Unreal::FProperty* func_prop) {
+            context.TheStack.CurrentNativeFunction()->ForEachProperty([&](Unreal::FProperty* func_prop) {
                 // Skip this property if it's not a parameter
                 if (!func_prop->HasAnyPropertyFlags(Unreal::EPropertyFlags::CPF_Parm))
                 {
@@ -160,7 +160,7 @@ namespace RC
                 {
                     // Non-typed pointer to the current parameter value
                     //void* data = &context.TheStack.Locals[current_param_offset];
-                    void* data = func_prop->ContainerPtrToValuePtr<void>(context.TheStack.Locals);
+                    void* data = func_prop->ContainerPtrToValuePtr<void>(context.TheStack.Locals());
 
                     // Keeping track of where in the 'Locals' array the next property is
                     //current_param_offset += func_prop->GetSize();
@@ -521,7 +521,7 @@ namespace RC
     }
 
     //auto static make_hook_state(Mod* mod, const LuaMadeSimple::Lua& lua)->std::shared_ptr<LuaMadeSimple::Lua>
-    auto static make_hook_state(Mod* mod) -> std::shared_ptr<LuaMadeSimple::Lua>
+    auto static make_hook_state(Mod* mod) -> LuaMadeSimple::Lua*
     {
         //if (!mod->m_hook_lua)
         //{

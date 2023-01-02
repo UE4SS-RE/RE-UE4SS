@@ -51,8 +51,8 @@ namespace RC::UEGenerator
 {
     using namespace RC::Unreal;
 
-    std::unordered_map<File::StringType, UniqueName> UEHeaderGenerator::m_used_file_names{};
-    std::unordered_map<UObject*, int32_t> UEHeaderGenerator::m_dependency_object_to_unique_id{};
+    std::map<File::StringType, UniqueName> UEHeaderGenerator::m_used_file_names{};
+    std::map<UObject*, int32_t> UEHeaderGenerator::m_dependency_object_to_unique_id{};
 
     auto static is_subtype_struct_valid(UScriptStruct* subtype) -> bool
     {
@@ -81,7 +81,7 @@ namespace RC::UEGenerator
 
     auto static is_subtype_valid(FProperty* subtype) -> bool
     {
-        if ((subtype->IsA<FNumericProperty>() && !subtype->IsA<FIntProperty>() && !subtype->IsA<FFloatProperty>()) ||
+        if ((subtype->IsA<FNumericProperty>() && !subtype->IsA<FIntProperty>() && !subtype->IsA<FFloatProperty>() && !subtype->IsA<FByteProperty>()) ||
             subtype->IsA<FWeakObjectProperty>())
         {
             return false;

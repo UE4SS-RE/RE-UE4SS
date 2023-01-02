@@ -3,6 +3,7 @@
 
 #include <filesystem>
 #include <unordered_map>
+#include <map>
 #include <set>
 
 #include <File/File.hpp>
@@ -124,7 +125,7 @@ namespace RC::UEGenerator
     {
     private:
         std::wstring m_file_module_name;
-        std::unordered_map<UObject*, DependencyLevel> m_dependencies;
+        std::map<UObject*, DependencyLevel> m_dependencies;
         std::set<std::wstring> m_extra_includes;
         mutable std::set<std::wstring> m_dependency_module_names;
         GeneratedSourceFile* m_header_file;
@@ -181,11 +182,11 @@ namespace RC::UEGenerator
         std::unordered_map<std::wstring, std::wstring> m_underlying_enum_types;
         std::set<std::wstring> m_blueprint_visible_enums;
         std::set<std::wstring> m_blueprint_visible_structs;
-        std::unordered_map<std::wstring, std::shared_ptr<std::set<std::wstring>>> m_module_dependencies;
+        std::map<std::wstring, std::shared_ptr<std::set<std::wstring>>> m_module_dependencies;
 
         // Storage to ensure that we don't have duplicate file names
-        static std::unordered_map<File::StringType, UniqueName> m_used_file_names;
-        static std::unordered_map<UObject*, int32_t> m_dependency_object_to_unique_id;
+        static std::map<File::StringType, UniqueName> m_used_file_names;
+        static std::map<UObject*, int32_t> m_dependency_object_to_unique_id;
 
     public:
         UEHeaderGenerator(const FFilePath& root_directory);

@@ -2,6 +2,7 @@
 #include <string>
 #include <format>
 #include <unordered_map>
+#include <variant>
 
 #include <GUI/LiveView.hpp>
 #include <GUI/GUI.hpp>
@@ -16,6 +17,7 @@
 #include <Unreal/UObjectArray.hpp>
 #include <Unreal/UObject.hpp>
 #include <Unreal/UClass.hpp>
+#include <Unreal/UScriptStruct.hpp>
 #include <Unreal/Property/FObjectProperty.hpp>
 #include <Unreal/Property/FBoolProperty.hpp>
 #include <imgui.h>
@@ -280,7 +282,7 @@ namespace RC::GUI
 
     auto LiveView::set_listeners() -> void
     {
-        if (m_listeners_set) { return; }
+        if (m_listeners_set || !are_listeners_allowed()) { return; }
         m_listeners_set = true;
         UObjectArray::AddUObjectCreateListener(&FLiveViewCreateListener::LiveViewCreateListener);
         UObjectArray::AddUObjectDeleteListener(&FLiveViewDeleteListener::LiveViewDeleteListener);
@@ -288,7 +290,7 @@ namespace RC::GUI
 
     auto LiveView::unset_listeners() -> void
     {
-        if (!m_listeners_set) { return; }
+        if (!m_listeners_set || !are_listeners_allowed()) { return; }
         m_listeners_set = false;
         UObjectArray::RemoveUObjectCreateListener(&FLiveViewCreateListener::LiveViewCreateListener);
         UObjectArray::RemoveUObjectDeleteListener(&FLiveViewDeleteListener::LiveViewDeleteListener);
@@ -387,12 +389,12 @@ namespace RC::GUI
     LiveView::~LiveView()
     {
         s_live_view_destructed = true;
-        if (!s_create_listener_removed)
+        if (!s_create_listener_removed && m_listeners_set)
         {
             UObjectArray::RemoveUObjectCreateListener(&FLiveViewCreateListener::LiveViewCreateListener);
         }
 
-        if (!s_delete_listener_removed)
+        if (!s_delete_listener_removed && m_listeners_set)
         {
             UObjectArray::RemoveUObjectDeleteListener(&FLiveViewDeleteListener::LiveViewDeleteListener);
         }
@@ -508,6 +510,15 @@ namespace RC::GUI
             return false;
 
         return ImGui::TreeNodeBehavior(window->GetID(ptr_id), flags, label, NULL);
+    }
+
+    static auto ImGui_TreeNodeEx(const char* label, const char* str_id, ImGuiTreeNodeFlags flags) -> bool
+    {
+        ImGuiWindow* window = ImGui::GetCurrentWindow();
+        if (window->SkipItems)
+            return false;
+
+        return ImGui::TreeNodeBehavior(window->GetID(str_id), flags, label, NULL);
     }
 
     static auto collapse_all_except(int except_id) -> void
@@ -683,6 +694,166 @@ namespace RC::GUI
         return selected_object_or_property.property;
     }
 
+    static auto render_property_value(FProperty* property, void* container, FProperty** last_property_in, bool* tried_to_open_nullptr_object, bool is_watchable = true, int32 first_offset = -1) -> std::variant<std::monostate, UObject*, FProperty*>
+    {
+        std::variant<std::monostate, UObject*, FProperty*> next_item_to_render{};
+        auto property_offset = property->GetOffset_Internal();
+
+        if (*last_property_in)
+        {
+            auto property_alignment = property->GetMinAlignment();
+            auto last_property_offset = (*last_property_in)->GetOffset_Internal();
+            auto last_property_size = (*last_property_in)->GetSize();
+            auto last_property_offset_with_alignment = ((last_property_offset + last_property_size + (property_alignment - 1)) & ~(property_alignment - 1));
+            if (last_property_offset_with_alignment != property_offset && (!property->IsA<FBoolProperty>() && !(*last_property_in)->IsA<FBoolProperty>()))
+            {
+                auto unreflected_size = property_offset - last_property_offset_with_alignment;
+                auto unreflected_offset = property_offset - unreflected_size;
+                ImGui::PushStyleColor(ImGuiCol_Text, g_imgui_text_live_view_unreflected_data_color.Value);
+                ImGui::Text("0x%X: Unknown unreflected data", unreflected_offset);
+                ImGui::PopStyleColor();
+                if (ImGui::IsItemHovered())
+                {
+                    ImGui::BeginTooltip();
+                    ImGui::Text("Offset: 0x%X", unreflected_offset);
+                    ImGui::Text("Size: 0x%X", unreflected_size);
+                    ImGui::EndTooltip();
+                }
+            }
+        }
+
+        FString property_text{};
+        auto container_ptr = property->ContainerPtrToValuePtr<void*>(container);
+        property->ExportTextItem(property_text, container_ptr, container_ptr, static_cast<UObject*>(container), NULL);
+        auto property_name = to_string(property->GetName());
+
+        auto render_property_value_context_menu = [&]() {
+            if (ImGui::BeginPopupContextItem(property_name.c_str()))
+            {
+                if (ImGui::MenuItem("Copy name"))
+                {
+                    ImGui::SetClipboardText(property_name.c_str());
+                }
+                if (ImGui::MenuItem("Copy full name"))
+                {
+                    ImGui::SetClipboardText(to_string(property->GetFullName()).c_str());
+                }
+                if (ImGui::MenuItem("Copy value"))
+                {
+                    ImGui::SetClipboardText(to_string(property_text.GetCharArray()).c_str());
+                }
+
+                if (is_watchable)
+                {
+                    auto watch_id = LiveView::WatchIdentifier{container, property};
+                    auto property_watcher_it = LiveView::s_watch_map.find(watch_id);
+                    if (property_watcher_it == LiveView::s_watch_map.end())
+                    {
+                        ImGui::Separator();
+                        if (ImGui::MenuItem("Watch value"))
+                        {
+                            add_watch(watch_id, static_cast<UObject*>(container), property);
+                        }
+                    }
+                    else
+                    {
+                        ImGui::Checkbox("Watch value", &property_watcher_it->second->enabled);
+                    }
+                }
+
+                ImGui::Separator();
+
+                if (ImGui::MenuItem("Go to property"))
+                {
+                    next_item_to_render = property;
+                }
+
+                if (property->IsA<FObjectProperty>())
+                {
+                    if (ImGui::MenuItem("Go to object"))
+                    {
+                        auto hovered_object = *property->ContainerPtrToValuePtr<UObject*>(container);
+
+                        if (!hovered_object)
+                        {
+                            *tried_to_open_nullptr_object = true;
+                        }
+                        else
+                        {
+                            // Cannot go to another object in the middle of rendering properties.
+                            // Doing so would cause the properties to be looked up on an instance with a property-list from another class.
+                            // To fix this, we save which instance we want to go to and then we go to it at the end when we're done accessing all properties.
+                            next_item_to_render = hovered_object;
+                        }
+                    }
+                }
+
+                ImGui::EndPopup();
+            }
+        };
+
+        if (first_offset == -1)
+        {
+            ImGui::Text("0x%X %s:", property_offset, property_name.c_str());
+        }
+        else
+        {
+            ImGui::Text("0x%X (0x%X) %s:", first_offset, property_offset, property_name.c_str());
+        }
+        if (auto struct_property = CastField<FStructProperty>(property); struct_property && struct_property->GetStruct()->GetFirstProperty())
+        {
+            is_watchable = false;
+            ImGui::SameLine();
+            auto tree_node_id = std::format("{}{}", static_cast<void*>(container_ptr), property_name);
+            if (ImGui_TreeNodeEx(std::format("{}", to_string(property_text.GetCharArray())).c_str(), tree_node_id.c_str(), ImGuiTreeNodeFlags_NoAutoOpenOnLog))
+            {
+                render_property_value_context_menu();
+                
+                struct_property->GetStruct()->ForEachProperty([&](FProperty* inner_property) {
+                    FString struct_prop_text_item{};
+                    auto struct_prop_container_ptr = inner_property->ContainerPtrToValuePtr<void*>(container_ptr);
+                    inner_property->ExportTextItem(struct_prop_text_item, struct_prop_container_ptr, struct_prop_container_ptr, static_cast<UObject*>(*container_ptr), NULL);
+                    
+                    ImGui::Indent();
+                    FProperty* last_struct_prop{};
+                    next_item_to_render = render_property_value(inner_property, container_ptr, &last_struct_prop, tried_to_open_nullptr_object, false, property_offset + inner_property->GetOffset_Internal());
+                    ImGui::Unindent();
+                    
+                    if (std::holds_alternative<std::monostate>(next_item_to_render))
+                    {
+                        return LoopAction::Continue;
+                    }
+                    else
+                    {
+                        return LoopAction::Break;
+                    }
+                });
+                ImGui::TreePop();
+            }
+        }
+        else
+        {
+            ImGui::SameLine();
+            ImGui::Text("%S", property_text.GetCharArray());
+        }
+
+        *last_property_in = property;
+
+        if (ImGui::IsItemHovered())
+        {
+            ImGui::BeginTooltip();
+            ImGui::Text("%S", property->GetFullName().c_str());
+            ImGui::Separator();
+            ImGui::Text("Offset: 0x%X", property->GetOffset_Internal());
+            ImGui::Text("Size: 0x%X", property->GetSize());
+            ImGui::EndTooltip();
+        }
+
+        render_property_value_context_menu();
+
+        return next_item_to_render;
+    }
+
     auto LiveView::render_properties() -> void
     {
         const auto currently_selected_object = get_selected_object();
@@ -708,106 +879,16 @@ namespace RC::GUI
         FProperty* last_property{};
 
         auto render_property_text = [&](UClass* uclass, FProperty* property) {
-            auto property_offset = property->GetOffset_Internal();
-            if (last_property)
+            // New
+            auto next_item_variant = render_property_value(property, currently_selected_object.second, &last_property, &tried_to_open_nullptr_object);
+            if (auto object_item = std::get_if<UObject*>(&next_item_variant); object_item && *object_item)
             {
-                auto property_alignment = property->GetMinAlignment();
-                auto last_property_alignment = last_property->GetMinAlignment();
-                auto last_property_offset = last_property->GetOffset_Internal();
-                auto last_property_size = last_property->GetSize();
-                auto last_property_offset_with_alignment = ((last_property_offset + last_property_size + (property_alignment - 1)) & ~(property_alignment - 1));
-                if (last_property_offset_with_alignment != property_offset && (!property->IsA<FBoolProperty>() && !last_property->IsA<FBoolProperty>()))
-                {
-                    auto unreflected_size = property_offset - last_property_offset_with_alignment;
-                    auto unreflected_offset = property_offset - unreflected_size;
-                    ImGui::PushStyleColor(ImGuiCol_Text, g_imgui_text_live_view_unreflected_data_color.Value);
-                    ImGui::Text("0x%X: Unknown unreflected data", unreflected_offset);
-                    ImGui::PopStyleColor();
-                    if (ImGui::IsItemHovered())
-                    {
-                        ImGui::BeginTooltip();
-                        ImGui::Text("Offset: 0x%X", unreflected_offset);
-                        ImGui::Text("Size: 0x%X", unreflected_size);
-                        ImGui::EndTooltip();
-                    }
-                }
+                next_object_to_render = *object_item;
+                next_object_item_to_render = next_object_to_render->GetObjectItem();
             }
-
-            FString TextItem{};
-            auto container_ptr = property->ContainerPtrToValuePtr<void*>(currently_selected_object.second);
-            auto property_name = to_string(property->GetName());
-            property->ExportTextItem(TextItem, container_ptr, container_ptr, const_cast<UObject*>(currently_selected_object.second), NULL);
-            ImGui::Text("0x%X %s: %S", property_offset, property_name.c_str(), TextItem.GetCharArray());
-
-            if (ImGui::IsItemHovered())
+            else if (auto property_item = std::get_if<FProperty*>(&next_item_variant); property_item && *property_item)
             {
-                ImGui::BeginTooltip();
-                ImGui::Text("%S", property->GetFullName().c_str());
-                ImGui::Separator();
-                ImGui::Text("Offset: 0x%X", property->GetOffset_Internal());
-                ImGui::Text("Size: 0x%X", property->GetSize());
-                ImGui::EndTooltip();
-            }
-
-            if (ImGui::BeginPopupContextItem(property_name.c_str()))
-            {
-                if (ImGui::MenuItem("Copy name"))
-                {
-                    ImGui::SetClipboardText(property_name.c_str());
-                }
-                if (ImGui::MenuItem("Copy full name"))
-                {
-                    ImGui::SetClipboardText(to_string(property->GetFullName()).c_str());
-                }
-                if (ImGui::MenuItem("Copy value"))
-                {
-                    ImGui::SetClipboardText(to_string(TextItem.GetCharArray()).c_str());
-                }
-
-                auto watch_id = WatchIdentifier{currently_selected_object.second, property};
-                auto property_watcher_it = s_watch_map.find(watch_id);
-                if (property_watcher_it == s_watch_map.end())
-                {
-                    ImGui::Separator();
-                    if (ImGui::MenuItem("Watch value"))
-                    {
-                        add_watch(watch_id, currently_selected_object.second, property);
-                    }
-                }
-                else
-                {
-                    ImGui::Checkbox("Watch value", &property_watcher_it->second->enabled);
-                }
-
-                ImGui::Separator();
-
-                if (ImGui::MenuItem("Go to property"))
-                {
-                    next_property_to_render = property;
-                }
-
-                if (property->IsA<FObjectProperty>())
-                {
-                    if (ImGui::MenuItem("Go to object"))
-                    {
-                        auto hovered_object = *property->ContainerPtrToValuePtr<UObject*>(currently_selected_object.second);
-
-                        if (!hovered_object)
-                        {
-                            tried_to_open_nullptr_object = true;
-                        }
-                        else
-                        {
-                            // Cannot go to another object in the middle of rendering properties.
-                            // Doing so would cause the properties to be looked up on an instance with a property-list from another class.
-                            // To fix this, we save which instance we want to go to and then we go to it at the end when we're done accessing all properties.
-                            next_object_to_render = hovered_object;
-                            next_object_item_to_render = next_object_to_render->GetObjectItem();
-                        }
-                    }
-                }
-
-                ImGui::EndPopup();
+                next_property_to_render = *property_item;
             }
 
             last_property = property;
@@ -1080,24 +1161,93 @@ namespace RC::GUI
         }
     }
 
+    auto LiveView::ObjectOrProperty::IsUnreachable() const -> bool
+    {
+        if (is_object)
+        {
+            return !object || object->IsUnreachable();
+        }
+        else
+        {
+            return !property;
+        }
+    }
+
+    auto LiveView::ObjectOrProperty::GetFullName() const -> std::string
+    {
+        if (is_object)
+        {
+            return to_string(object->GetFullName());
+        }
+        else
+        {
+            return to_string(property->GetFullName());
+        }
+    }
+
+    static auto render_history_menu(const char* str_id) -> std::pair<size_t, bool>
+    {
+        size_t next_item_index{};
+        bool selected_an_item{};
+        if (ImGui::BeginPopupContextItem(str_id))
+        {
+            for (size_t item_index = 0; item_index < LiveView::s_object_view_history.size(); ++item_index)
+            {
+                const auto& item = LiveView::s_object_view_history[item_index];
+
+                if (item.IsUnreachable())
+                {
+                    ImGui::BeginDisabled();
+                    ImGui::MenuItem("--- Beginning of time ---");
+                    ImGui::EndDisabled();
+                }
+                else
+                {
+                    if (ImGui::MenuItem(std::format("{}. {}", item_index, item.GetFullName()).c_str()))
+                    {
+                        next_item_index = item_index;
+                        selected_an_item = true;
+                    }
+                }
+            }
+
+            ImGui::BeginDisabled();
+            ImGui::MenuItem("--- End of time ---");
+            ImGui::EndDisabled();
+
+            ImGui::EndPopup();
+        }
+        
+        return {next_item_index, selected_an_item};
+    }
+
     auto LiveView::render_info_panel() -> void
     {
         ImGui::BeginChild("LiveView_InfoPanel", {-14.0f, m_bottom_size}, true, ImGuiWindowFlags_HorizontalScrollbar);
 
-        bool should_select_object{};
-        bool select_previous_object{};
+        size_t next_object_index_to_select{};
 
         if (ImGui::Button("<<<"))
         {
-            should_select_object = true;
-            select_previous_object = true;
+            next_object_index_to_select = s_currently_selected_object_index;
+            if (s_currently_selected_object_index > 0 && static_cast<int64_t>(s_currently_selected_object_index) - 1 > 0)
+            {
+                next_object_index_to_select = s_currently_selected_object_index - 1;
+            }
         }
+        auto selected_next_object = render_history_menu("InfoPanelHistory_Prev");
+        if (selected_next_object.second) { next_object_index_to_select = selected_next_object.first; }
         ImGui::SameLine();
         if (ImGui::Button(">>>"))
         {
-            should_select_object = true;
-            select_previous_object = false;
+            next_object_index_to_select = s_currently_selected_object_index;
+            if (s_currently_selected_object_index + 1 < s_object_view_history.size())
+            {
+                next_object_index_to_select = s_currently_selected_object_index + 1;
+            }
         }
+        auto selected_prev_object = render_history_menu("InfoPanelHistory_Next");
+        if (selected_prev_object.second) { next_object_index_to_select = selected_prev_object.first; }
 
         ImGui::Separator();
 
@@ -1113,18 +1263,9 @@ namespace RC::GUI
 
         ImGui::EndChild();
 
-        if (should_select_object)
+        if (next_object_index_to_select > 0)
         {
-            if (select_previous_object)
-            {
-                if (s_currently_selected_object_index <= 0 || s_currently_selected_object_index - 1 <= 0) { return; }
-                select_object(s_currently_selected_object_index - 1, nullptr, nullptr, AffectsHistory::No);
-            }
-            else
-            {
-                if (s_currently_selected_object_index + 1 >= s_object_view_history.size()) { return; }
-                select_object(s_currently_selected_object_index + 1, nullptr, nullptr, AffectsHistory::No);
-            }
+            select_object(next_object_index_to_select, nullptr, nullptr, AffectsHistory::No);
         }
     }
 
@@ -1176,30 +1317,45 @@ namespace RC::GUI
             s_watches_loaded_from_disk = true;
         }
 
+        bool listeners_allowed = are_listeners_allowed();
+        if (!listeners_allowed) { ImGui::BeginDisabled(); }
         ImGui::PushItemWidth(-14.0f);
         bool push_inactive_text_color = !m_search_field_cleared;
         if (push_inactive_text_color) { ImGui::PushStyleColor(ImGuiCol_Text, g_imgui_text_inactive_color.Value); }
         if (ImGui::InputText("##Search by name", m_search_by_name_buffer, m_search_buffer_capacity, ImGuiInputTextFlags_EnterReturnsTrue | ImGuiInputTextFlags_CallbackAlways, &search_field_always_callback, this))
         {
-            std::string search_buffer{m_search_by_name_buffer};
-            if (search_buffer.empty())
+            if (listeners_allowed)
             {
-                Output::send(STR("Search all chunks\n"));
-                s_name_to_search_by.clear();
-                m_object_iterator = &LiveView::guobjectarray_iterator;
-                m_is_searching_by_name = false;
-            }
-            else
-            {
-                Output::send(STR("Search for: {}\n"), search_buffer.empty() ? STR("") : to_wstring(search_buffer));
-                s_name_to_search_by = search_buffer;
-                m_object_iterator = &LiveView::guobjectarray_by_name_iterator;
-                m_is_searching_by_name = true;
-                search_by_name();
+                std::string search_buffer{m_search_by_name_buffer};
+                if (search_buffer.empty())
+                {
+                    Output::send(STR("Search all chunks\n"));
+                    s_name_to_search_by.clear();
+                    m_object_iterator = &LiveView::guobjectarray_iterator;
+                    m_is_searching_by_name = false;
+                }
+                else
+                {
+                    Output::send(STR("Search for: {}\n"), search_buffer.empty() ? STR("") : to_wstring(search_buffer));
+                    s_name_to_search_by = search_buffer;
+                    m_object_iterator = &LiveView::guobjectarray_by_name_iterator;
+                    m_is_searching_by_name = true;
+                    search_by_name();
+                }
             }
         }
         if (push_inactive_text_color) { ImGui::PopStyleColor(); }
         ImGui::PopItemWidth();
+        if (!listeners_allowed)
+        {
+            ImGui::EndDisabled();
+            if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled))
+            {
+                ImGui::BeginTooltip();
+                ImGui::Text("Feature disabled due to 'General.bUseUObjectArrayCache' being set to 0 in UE4SS-settings.ini.");
+                ImGui::EndTooltip();
+            }
+        }
 
         if (!m_is_searching_by_name && m_search_field_clear_requested && !ImGui::IsItemActive())
         {
@@ -1411,3 +1567,4 @@ namespace RC::GUI
         ImGui::EndChild();
     }
 }
+
