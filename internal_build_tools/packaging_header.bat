@@ -33,7 +33,7 @@ if not defined IS_BETA_RELEASE (
 )
 
 Rem Required external tools
-set zip_exe="D:\Program Files\7-Zip\7z.exe"
+set zip_exe="C:\Program Files\7-Zip\7z.exe"
 
 set enable_with_case_preserving_file=enable_with_case_preserving.build_option
 set disable_with_case_preserving_file=disable_with_case_preserving.build_option
