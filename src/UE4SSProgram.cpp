@@ -1104,7 +1104,7 @@ namespace RC
 
     auto UE4SSProgram::uninstall_mods() -> void
     {
-        for (const auto& mod : m_mods)
+        for (auto& mod : m_mods)
         {
             // Remove any actions, or we'll get an internal error as the lua ref won't be valid
             mod->clear_delayed_actions();

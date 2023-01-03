@@ -2165,9 +2165,16 @@ Overloads:
         return m_is_started;
     }
 
-    auto Mod::uninstall() const -> void
+    auto Mod::uninstall() -> void
     {
         Output::send(STR("Stopping mod '{}' for uninstall\n"), m_mod_name);
+        
+        if (m_async_thread.joinable())
+        {
+            m_async_thread.request_stop();
+            m_async_thread.join();
+        }
+        
         if (m_hook_lua.size() > 0)
         {
             for (auto lua : m_hook_lua)
@@ -2479,7 +2486,7 @@ Overloads:
 
     auto Mod::update_async() -> void
     {
-        for (m_processing_events = true; m_processing_events;)
+        for (m_processing_events = true; m_processing_events && !m_async_thread.get_stop_token().stop_requested();)
         {
             if (m_pause_events_processing) { continue; }
 
