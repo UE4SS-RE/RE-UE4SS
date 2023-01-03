@@ -101,7 +101,7 @@ namespace RC
         auto prepare_mod(const LuaMadeSimple::Lua& lua) -> void;
         auto start_mod() -> void;
         auto is_started() const -> bool;
-        auto uninstall() const -> void;
+        auto uninstall() -> void;
 
         auto lua() const -> const LuaMadeSimple::Lua&;
         auto main_lua() const -> const LuaMadeSimple::Lua*;
