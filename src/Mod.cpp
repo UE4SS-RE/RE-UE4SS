@@ -859,6 +859,66 @@ Overloads:
 
         if (is_true_mod == Mod::IsTrueMod::Yes)
         {
+            lua.register_function("IsKeyBindRegistered", [](const LuaMadeSimple::Lua& lua) -> int {
+                std::string error_overload_not_found{R"(
+No overload found for function 'IsKeyBindRegistered'.
+Overloads:
+#1: IsKeyBindRegistered(integer key)
+#2: IsKeyBindRegistered(integer key, table modifier_key_integers))"};
+
+                if (!lua.is_integer())
+                {
+                    lua.throw_error(error_overload_not_found);
+                }
+
+                auto key_from_lua = lua.get_integer();
+                if (key_from_lua < std::numeric_limits<uint8_t>::min() || key_from_lua > std::numeric_limits<uint8_t>::max())
+                {
+                    lua.throw_error("Parameter #1 for function 'IsKeyBindRegistered' must be an integer between 0 and 255");
+                }
+                auto key_to_check = static_cast<Input::Key>(key_from_lua);
+
+                const auto mod = get_mod_ref(lua);
+
+                if (lua.is_table())
+                {
+                    Input::Handler::ModifierKeyArray modifier_keys{};
+
+                    uint8_t table_counter{};
+                    lua.for_each_in_table([&](LuaMadeSimple::LuaTableReference table) -> bool {
+                        if (!table.value.is_integer())
+                        {
+                            lua.throw_error("Lua function 'IsKeyBindRegistered', overload #2, requires a table of 1-byte large integers as the second parameter");
+                        }
+
+                        int64_t full_integer = table.value.get_integer();
+                        if (full_integer < std::numeric_limits<uint8_t>::min() || full_integer > std::numeric_limits<uint8_t>::max())
+                        {
+                            lua.throw_error("Lua function 'IsKeyBindRegistered', overload #2, requires a table of 1-byte large integers as the second parameter");
+                        }
+
+                        modifier_keys[table_counter++] = static_cast<Input::ModifierKey>(table.value.get_integer());
+
+                        return false;
+                    });
+
+                    if (table_counter > 0)
+                    {
+                        lua.set_bool(mod->m_program.is_keydown_event_registered(key_to_check, modifier_keys));
+                    }
+                    else
+                    {
+                        lua.set_bool(mod->m_program.is_keydown_event_registered(key_to_check));
+                    }
+                }
+                else
+                {
+                    lua.set_bool(mod->m_program.is_keydown_event_registered(key_to_check));
+                }
+                
+                return 1;
+            });
+            
             lua.register_function("RegisterKeyBind", [](const LuaMadeSimple::Lua& lua) -> int {
                 std::string error_overload_not_found{R"(
 No overload found for function 'RegisterKeyBind'.
@@ -944,9 +1004,18 @@ Overloads:
                     // Take a reference to the Lua function (it also pops it of the stack)
                     const auto lua_callback_registry_index = lua.registry().make_ref();
 
-                    mod->m_program.register_keydown_event(key_to_register, modifier_keys, [&lua, lua_callback_registry_index, &lua_keybind_callback_lambda]() {
-                        lua_keybind_callback_lambda(lua, lua_callback_registry_index);
-                    }, 1);
+                    if (table_counter > 0)
+                    {
+                        mod->m_program.register_keydown_event(key_to_register, modifier_keys, [&lua, lua_callback_registry_index, &lua_keybind_callback_lambda]() {
+                            lua_keybind_callback_lambda(lua, lua_callback_registry_index);
+                        }, 1);
+                    }
+                    else
+                    {
+                        mod->m_program.register_keydown_event(key_to_register, [&lua, lua_callback_registry_index, &lua_keybind_callback_lambda]() {
+                            lua_keybind_callback_lambda(lua, lua_callback_registry_index);
+                        }, 1);
+                    }
                 }
                 else
                 {

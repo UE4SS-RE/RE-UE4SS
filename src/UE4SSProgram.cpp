@@ -1127,15 +1127,26 @@ namespace RC
         uninstall_mods();
 
         // Remove key binds that were set from Lua scripts
-        for (auto& input_event : m_input_handler.get_events())
-        {
+        auto& key_events = m_input_handler.get_events();
+        std::erase_if(key_events, [](Input::KeySet& input_event) -> bool {
+            bool were_all_events_registered_from_lua = true;
             for (auto&[key, vector_of_key_data] : input_event.key_data)
             {
-                std::erase_if(vector_of_key_data, [](Input::KeyData& key_data) -> bool {
-                    return key_data.custom_data == 1;
+                std::erase_if(vector_of_key_data, [&](Input::KeyData& key_data) -> bool {
+                    if (key_data.custom_data == 1)
+                    {
+                        return true;
+                    }
+                    else
+                    {
+                        were_all_events_registered_from_lua = false;
+                        return false;
+                    }
                 });
             }
-        }
+
+            return were_all_events_registered_from_lua;
+        });
 
         // Remove all custom properties
         // Uncomment when custom properties are working
@@ -1237,6 +1248,16 @@ namespace RC
     auto UE4SSProgram::register_keydown_event(Input::Key key, const Input::Handler::ModifierKeyArray& modifier_keys, const Input::EventCallbackCallable& callback, uint8_t custom_data) -> void
     {
         m_input_handler.register_keydown_event(key, modifier_keys, callback, custom_data);
+    }
+    
+    auto UE4SSProgram::is_keydown_event_registered(Input::Key key) -> bool
+    {
+        return m_input_handler.is_keydown_event_registered(key);
+    }
+
+    auto UE4SSProgram::is_keydown_event_registered(Input::Key key, const Input::Handler::ModifierKeyArray& modifier_keys) -> bool
+    {
+        return m_input_handler.is_keydown_event_registered(key, modifier_keys);
     }
 
     auto UE4SSProgram::find_mod_by_name(std::wstring_view mod_name, IsInstalled is_installed, IsStarted is_started) -> Mod*
