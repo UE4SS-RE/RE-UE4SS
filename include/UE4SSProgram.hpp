@@ -198,6 +198,8 @@ namespace RC
         // API pass-through for use outside the private scope of UE4SSProgram
         auto register_keydown_event(Input::Key, const Input::EventCallbackCallable&, uint8_t custom_data = 0) -> void;
         auto register_keydown_event(Input::Key, const Input::Handler::ModifierKeyArray&, const Input::EventCallbackCallable&, uint8_t custom_data = 0) -> void;
+        auto is_keydown_event_registered(Input::Key) -> bool;
+        auto is_keydown_event_registered(Input::Key, const Input::Handler::ModifierKeyArray&) -> bool;
 
     private:
         static auto install_mods() -> void;
