@@ -81,7 +81,7 @@ namespace RC::UEGenerator
 
     auto static is_subtype_valid(FProperty* subtype) -> bool
     {
-        if ((subtype->IsA<FNumericProperty>() && !subtype->IsA<FIntProperty>() && !subtype->IsA<FFloatProperty>() && !subtype->IsA<FByteProperty>()) ||
+        if ((subtype->IsA<FNumericProperty>() && !subtype->IsA<FIntProperty>() && !subtype->IsA<FFloatProperty>()) ||
             subtype->IsA<FWeakObjectProperty>())
         {
             return false;
@@ -422,6 +422,16 @@ namespace RC::UEGenerator
             encountered_replicated_properties |= (property->GetPropertyFlags() & CPF_Net) != 0;
             append_access_modifier(header_data, get_property_access_modifier(property), current_access_modifier);
             generate_property(uclass, property, header_data);
+            
+            if (auto as_map_property = CastField<FMapProperty>(property))
+            {
+                if (auto as_struct_property = CastField<FStructProperty>(as_map_property->GetKeyProp()))
+                {
+                    // Add GetKeyProp() to vector for second pass.
+                    m_structs_that_need_get_type_hash.emplace(as_struct_property->GetStruct());
+                }
+            }
+
             return RC::LoopAction::Continue;
         });
 
@@ -2100,7 +2110,7 @@ namespace RC::UEGenerator
         {
             if (property->GetArrayDim() == 1 && is_subtype_valid(property))
             {
-                flag_format_helper.add_switch(STR("BlueprintReadWrite"));                
+                flag_format_helper.add_switch(STR("BlueprintReadWrite"));
             }
             flag_format_helper.get_meta()->add_parameter(STR("AllowPrivateAccess"), STR("true"));
         }
@@ -3052,6 +3062,17 @@ namespace RC::UEGenerator
             generate_module_build_file(module_pair.first);
         }
 
+        // Pass #2
+        for (auto& header_file : m_header_files)
+        {
+            auto object = header_file.get_corresponding_object();
+            if (object->IsA<UStruct>() && m_structs_that_need_get_type_hash.find(std::bit_cast<UStruct*>(object)) != m_structs_that_need_get_type_hash.end())
+            {
+                header_file.append_line(std::format(STR("FORCEINLINE uint32 GetTypeHash(const {}) {{ return 0; }}"), object->GetName()));
+            }
+            header_file.serialize_file_content_to_disk();
+        }
+
         Output::send(STR("Done!\n"));
     }
 
@@ -3069,8 +3090,8 @@ namespace RC::UEGenerator
             return false;
         }
 
-        GeneratedSourceFile header_file = GeneratedSourceFile::create_source_file(m_root_directory, module_name, file_base_name, false);
-        GeneratedSourceFile implementation_file = GeneratedSourceFile::create_source_file(m_root_directory, module_name, file_base_name, true);
+        GeneratedSourceFile& header_file = m_header_files.emplace_back(GeneratedSourceFile::create_source_file(m_root_directory, module_name, file_base_name, false, object));
+        GeneratedSourceFile implementation_file = GeneratedSourceFile::create_source_file(m_root_directory, module_name, file_base_name, true, object);
         implementation_file.set_header_file(&header_file);
 
         if (UClass* uclass = Cast<UClass>(object))
@@ -3117,7 +3138,7 @@ namespace RC::UEGenerator
             iterator = this->m_module_dependencies.insert({module_name, std::make_shared<std::set<std::wstring>>()}).first;
         }
 
-        if (!header_file.serialize_file_content_to_disk())
+        if (!header_file.has_content_to_save())
         {
             return false;
         }
@@ -3332,7 +3353,7 @@ namespace RC::UEGenerator
         return !m_file_contents_buffer.empty();
     }
 
-    auto GeneratedSourceFile::create_source_file(const FFilePath& root_dir, const std::wstring& module_name, const std::wstring& base_name, bool is_implementation_file) -> GeneratedSourceFile
+    auto GeneratedSourceFile::create_source_file(const FFilePath& root_dir, const std::wstring& module_name, const std::wstring& base_name, bool is_implementation_file, UObject* object) -> GeneratedSourceFile
     {
         FFilePath full_file_path;
         if (is_implementation_file)
@@ -3343,13 +3364,14 @@ namespace RC::UEGenerator
         {
             full_file_path = root_dir / module_name / STR("Public") / (base_name + STR(".h"));
         }
-        return GeneratedSourceFile(full_file_path, module_name, is_implementation_file);
+        return GeneratedSourceFile(full_file_path, module_name, is_implementation_file, object);
     }
 
-    GeneratedSourceFile::GeneratedSourceFile(const FFilePath& file_path, const std::wstring& file_module_name, bool is_implementation_file) : GeneratedFile(file_path)
+    GeneratedSourceFile::GeneratedSourceFile(const FFilePath& file_path, const std::wstring& file_module_name, bool is_implementation_file, UObject* object) : GeneratedFile(file_path)
     {
         this->m_file_module_name = file_module_name;
         this->m_is_implementation_file = is_implementation_file;
+        this->m_object = object;
     }
 
     auto GeneratedSourceFile::set_header_file(GeneratedSourceFile* header_file) -> void
