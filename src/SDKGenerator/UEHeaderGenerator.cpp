@@ -2100,9 +2100,9 @@ namespace RC::UEGenerator
         {
             if (property->GetArrayDim() == 1 && is_subtype_valid(property))
             {
-                flag_format_helper.add_switch(STR("BlueprintReadWrite"));
-                flag_format_helper.get_meta()->add_parameter(STR("AllowPrivateAccess"), STR("true"));
+                flag_format_helper.add_switch(STR("BlueprintReadWrite"));                
             }
+            flag_format_helper.get_meta()->add_parameter(STR("AllowPrivateAccess"), STR("true"));
         }
         else if ((property_flags & CPF_BlueprintVisible) != 0)
         {
@@ -2207,7 +2207,7 @@ namespace RC::UEGenerator
         uint64_t instanced_array_flags = CPF_ExportObject | CPF_ContainsInstancedReference;
 
         if (((property_flags & instanced_flags) == instanced_flags || (property_flags & instanced_array_flags) == instanced_array_flags) &&
-            (property->IsA<FObjectProperty>() || (property->IsA<FArrayProperty>() && static_cast<FArrayProperty*>(property)->GetInner()->IsA<FObjectProperty>())))
+            (property->IsA<FObjectProperty>() || (property->IsA<FArrayProperty>() && static_cast<FArrayProperty*>(property)->GetInner()->IsA<FObjectProperty>()) || (property->IsA<FMapProperty>() && static_cast<FMapProperty*>(property)->GetValueProp()->IsA<FObjectProperty>())))
         {
             flag_format_helper.add_switch(STR("Instanced"));
         }
@@ -2650,7 +2650,7 @@ namespace RC::UEGenerator
             return fmt::format(STR("TMap<{}, {}>()"), key_type, value_type);
         }
 
-        //Various string, name and textp roperties
+        //Various string, name and text properties
         if (field_class_name == STR("NameProperty"))
         {
             return STR("NAME_None");

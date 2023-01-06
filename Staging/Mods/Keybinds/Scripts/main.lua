@@ -14,6 +14,9 @@ Keybinds = {
     ["ObjectDumper"]                 = {["Key"] = Key.J,             ["ModifierKeys"] = {}},
     ["CXXHeaderGenerator"]           = {["Key"] = Key.D,             ["ModifierKeys"] = {ModifierKey.CONTROL}},
     ["UHTCompatibleHeaderGenerator"] = {["Key"] = Key.NUM_NINE,      ["ModifierKeys"] = {ModifierKey.CONTROL}},
+	["DumpStaticMeshes"] 			 = {["Key"] = Key.NUM_EIGHT,     ["ModifierKeys"] = {ModifierKey.CONTROL}},
+	["DumpAllActors"] 				 = {["Key"] = Key.NUM_SEVEN,     ["ModifierKeys"] = {ModifierKey.CONTROL}},
+	["DumpUSMAP"] 					 = {["Key"] = Key.NUM_SIX,       ["ModifierKeys"] = {ModifierKey.CONTROL}},
 }
 
 -- Logic, DO NOT CHANGE!
@@ -26,6 +29,9 @@ end
 RegisterKey("ObjectDumper", function() DumpAllObjects() end)
 RegisterKey("CXXHeaderGenerator", function() GenerateSDK() end)
 RegisterKey("UHTCompatibleHeaderGenerator", function() GenerateUHTCompatibleHeaders() end)
+RegisterKey("DumpStaticMeshes", function() DumpStaticMeshes() end)
+RegisterKey("DumpAllActors", function() DumpAllActors() end)
+RegisterKey("DumpUSMAP", function() DumpUSMAP() end)
 
 --[[
     Valid keys:

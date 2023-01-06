@@ -21,6 +21,8 @@
 #include <Input/Handler.hpp>
 #pragma warning(disable: 4005)
 #include <UE4SSProgram.hpp>
+#include <GUI/Dumpers.hpp>
+#include <USMapGenerator/Generator.hpp>
 #include <Unreal/UnrealVersion.hpp>
 #include <Unreal/Hooks.hpp>
 #include <Unreal/UnrealVersion.hpp>
@@ -1081,6 +1083,22 @@ Overloads:
                 mod->m_program.generate_uht_compatible_headers();
                 return 0;
             });
+
+            lua.register_function("DumpStaticMeshes", []([[maybe_unused]]const LuaMadeSimple::Lua& lua) -> int {
+                GUI::Dumpers::call_generate_static_mesh_file();
+                return 0;
+            });
+
+            lua.register_function("DumpAllActors", []([[maybe_unused]]const LuaMadeSimple::Lua& lua) -> int {
+                GUI::Dumpers::call_generate_all_actor_file();
+                return 0;
+            });
+
+            lua.register_function("DumpUSMAP", []([[maybe_unused]]const LuaMadeSimple::Lua& lua) -> int {
+                OutTheShade::generate_usmap();
+                return 0;
+            });
+            
         }
 
         lua.register_function("StaticConstructObject", [](const LuaMadeSimple::Lua& lua) -> int {
