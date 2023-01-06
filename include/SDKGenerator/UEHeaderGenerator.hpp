@@ -189,7 +189,7 @@ namespace RC::UEGenerator
         std::set<std::wstring> m_ignored_module_names;
         std::set<std::wstring> m_classes_with_object_initializer;
 
-        std::map<std::wstring, std::wstring> m_underlying_enum_types;
+        std::unordered_map<std::wstring, std::wstring> m_underlying_enum_types;
         std::set<std::wstring> m_blueprint_visible_enums;
         std::set<std::wstring> m_blueprint_visible_structs;
         std::map<std::wstring, std::shared_ptr<std::set<std::wstring>>> m_module_dependencies;
