@@ -517,6 +517,16 @@ namespace RC::UEGenerator
         script_struct->ForEachProperty([&](FProperty* property) {
             append_access_modifier(header_data, get_property_access_modifier(property), current_access_modifier);
             generate_property(script_struct, property, header_data);
+            
+            if (auto as_map_property = CastField<FMapProperty>(property))
+            {
+                if (auto as_struct_property = CastField<FStructProperty>(as_map_property->GetKeyProp()))
+                {
+                    // Add GetKeyProp() to vector for second pass.
+                    m_structs_that_need_get_type_hash.emplace(as_struct_property->GetStruct());
+                }
+            }
+            
             return RC::LoopAction::Continue;
         });
 
@@ -3066,9 +3076,20 @@ namespace RC::UEGenerator
         for (auto& header_file : m_header_files)
         {
             auto object = header_file.get_corresponding_object();
-            if (object->IsA<UStruct>() && m_structs_that_need_get_type_hash.find(std::bit_cast<UStruct*>(object)) != m_structs_that_need_get_type_hash.end())
+            bool is_struct = object->IsA<UStruct>();
+            bool is_class = object->IsA<UClass>();
+            if ((is_struct || is_class) && m_structs_that_need_get_type_hash.find(std::bit_cast<UStruct*>(object)) != m_structs_that_need_get_type_hash.end())
             {
-                header_file.append_line(std::format(STR("FORCEINLINE uint32 GetTypeHash(const {}) {{ return 0; }}"), object->GetName()));
+                File::StringType name{};
+                if (is_class)
+                {
+                    name = get_native_class_name(std::bit_cast<UClass*>(object));
+                }
+                else if (is_struct)
+                {
+                    name = get_native_struct_name(std::bit_cast<UScriptStruct*>(object));
+                }
+                header_file.append_line(std::format(STR("FORCEINLINE uint32 GetTypeHash(const {}) {{ return 0; }}"), name));
             }
             header_file.serialize_file_content_to_disk();
         }
