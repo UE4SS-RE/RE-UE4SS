@@ -695,7 +695,7 @@ namespace RC::GUI
         return selected_object_or_property.property;
     }
 
-    auto LiveView::render_property_value(FProperty* property, void* container, FProperty** last_property_in, bool* tried_to_open_nullptr_object, bool is_watchable, int32 first_offset) -> std::variant<std::monostate, UObject*, FProperty*>
+    auto LiveView::render_property_value(FProperty* property, ContainerType container_type, void* container, FProperty** last_property_in, bool* tried_to_open_nullptr_object, bool is_watchable, int32 first_offset) -> std::variant<std::monostate, UObject*, FProperty*>
     {
         std::variant<std::monostate, UObject*, FProperty*> next_item_to_render{};
         auto property_offset = property->GetOffset_Internal();
@@ -745,12 +745,14 @@ namespace RC::GUI
                 {
                     ImGui::SetClipboardText(to_string(property_text.GetCharArray()).c_str());
                 }
-                if (ImGui::MenuItem("Edit value"))
+                if (container_type == ContainerType::Object)
                 {
-                    open_edit_value_popup = true;
-                    m_modal_edit_property_value_is_open = true;
+                    if (ImGui::MenuItem("Edit value"))
+                    {
+                        open_edit_value_popup = true;
+                        m_modal_edit_property_value_is_open = true;
+                    }
                 }
-
 
                 if (is_watchable)
                 {
@@ -825,7 +827,7 @@ namespace RC::GUI
                     
                     ImGui::Indent();
                     FProperty* last_struct_prop{};
-                    next_item_to_render = render_property_value(inner_property, container_ptr, &last_struct_prop, tried_to_open_nullptr_object, false, property_offset + inner_property->GetOffset_Internal());
+                    next_item_to_render = render_property_value(inner_property, inner_property->IsA<FObjectProperty>() ? ContainerType::Object : ContainerType::NonObject, container_ptr, &last_struct_prop, tried_to_open_nullptr_object, false, property_offset + inner_property->GetOffset_Internal());
                     ImGui::Unindent();
                     
                     if (std::holds_alternative<std::monostate>(next_item_to_render))
@@ -861,56 +863,59 @@ namespace RC::GUI
         render_property_value_context_menu();
 
         // TODO: The 'container' variable should be a variant or something because it could be a struct or array, it's not guaranteed to be a UObject.
-        auto obj = static_cast<UObject*>(container);
-        auto edit_property_value_modal_name = to_string(std::format(STR("Edit value of property: {}->{}"), obj->GetName(), property->GetName()));
+        if (container_type == ContainerType::Object)
+        {
+            auto obj = static_cast<UObject*>(container);
+            auto edit_property_value_modal_name = to_string(std::format(STR("Edit value of property: {}->{}"), obj->GetName(), property->GetName()));
 
-        if (open_edit_value_popup)
-        {
-            ImGui::OpenPopup(edit_property_value_modal_name.c_str());
-            if (!m_modal_edit_property_value_opened_this_frame)
+            if (open_edit_value_popup)
             {
-                m_modal_edit_property_value_opened_this_frame = true;
-                m_current_property_value_buffer = to_string(property_text.GetCharArray());
+                ImGui::OpenPopup(edit_property_value_modal_name.c_str());
+                if (!m_modal_edit_property_value_opened_this_frame)
+                {
+                    m_modal_edit_property_value_opened_this_frame = true;
+                    m_current_property_value_buffer = to_string(property_text.GetCharArray());
+                }
             }
-        }
-        
-        if (ImGui::BeginPopupModal(edit_property_value_modal_name.c_str(), &m_modal_edit_property_value_is_open))
-        {
-            ImGui::Text("Uses the same format as the 'set' UE4 console command.");
-            ImGui::Text("The game could crash if the new value is invalid.");
-            ImGui::Text("The game can override the new value immediately.");
             
-            ImGui::PushItemWidth(-1.0f);
-            ImGui::InputText("##CurrentPropertyValue", &m_current_property_value_buffer);
-            if (ImGui::Button("Apply"))
+            if (ImGui::BeginPopupModal(edit_property_value_modal_name.c_str(), &m_modal_edit_property_value_is_open))
             {
-                FOutputDevice placeholder_device{};
-                if (!property->ImportText(to_wstring(m_current_property_value_buffer).c_str(), property->ContainerPtrToValuePtr<void>(container), NULL, obj, &placeholder_device))
+                ImGui::Text("Uses the same format as the 'set' UE4 console command.");
+                ImGui::Text("The game could crash if the new value is invalid.");
+                ImGui::Text("The game can override the new value immediately.");
+                
+                ImGui::PushItemWidth(-1.0f);
+                ImGui::InputText("##CurrentPropertyValue", &m_current_property_value_buffer);
+                if (ImGui::Button("Apply"))
                 {
-                    m_modal_edit_property_value_error_unable_to_edit = true;
-                    ImGui::OpenPopup("UnableToSetNewPropertyValueError");
+                    FOutputDevice placeholder_device{};
+                    if (!property->ImportText(to_wstring(m_current_property_value_buffer).c_str(), property->ContainerPtrToValuePtr<void>(container), NULL, obj, &placeholder_device))
+                    {
+                        m_modal_edit_property_value_error_unable_to_edit = true;
+                        ImGui::OpenPopup("UnableToSetNewPropertyValueError");
+                    }
+                    else
+                    {
+                        ImGui::CloseCurrentPopup();
+                    }
                 }
-                else
-                {
-                    ImGui::CloseCurrentPopup();
-                }
-            }
 
-            if (ImGui::BeginPopupModal("UnableToSetNewPropertyValueError", &m_modal_edit_property_value_error_unable_to_edit, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_AlwaysAutoResize))
-            {
-                ImGui::Text("Was unable to set new value, please make sure you're using the correct format.");
-                ImGui::NewLine();
-                ImGui::Text("Technical details:");
-                ImGui::Text("FProperty::ImportText returned NULL.");
+                if (ImGui::BeginPopupModal("UnableToSetNewPropertyValueError", &m_modal_edit_property_value_error_unable_to_edit, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_AlwaysAutoResize))
+                {
+                    ImGui::Text("Was unable to set new value, please make sure you're using the correct format.");
+                    ImGui::NewLine();
+                    ImGui::Text("Technical details:");
+                    ImGui::Text("FProperty::ImportText returned NULL.");
+                    ImGui::EndPopup();
+                }
+
                 ImGui::EndPopup();
             }
 
-            ImGui::EndPopup();
-        }
-
-        if (m_modal_edit_property_value_opened_this_frame)
-        {
-            m_modal_edit_property_value_opened_this_frame = false;
+            if (m_modal_edit_property_value_opened_this_frame)
+            {
+                m_modal_edit_property_value_opened_this_frame = false;
+            }
         }
         
         return next_item_to_render;
@@ -942,7 +947,7 @@ namespace RC::GUI
 
         auto render_property_text = [&](UClass* uclass, FProperty* property) {
             // New
-            auto next_item_variant = render_property_value(property, currently_selected_object.second, &last_property, &tried_to_open_nullptr_object);
+            auto next_item_variant = render_property_value(property, ContainerType::Object, currently_selected_object.second, &last_property, &tried_to_open_nullptr_object);
             if (auto object_item = std::get_if<UObject*>(&next_item_variant); object_item && *object_item)
             {
                 next_object_to_render = *object_item;
