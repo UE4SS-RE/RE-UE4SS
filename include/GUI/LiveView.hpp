@@ -5,6 +5,7 @@
 #include <unordered_set>
 #include <unordered_map>
 #include <functional>
+#include <variant>
 
 #include <DynamicOutput/DynamicOutput.hpp>
 
@@ -72,12 +73,16 @@ namespace RC::GUI
         ObjectIteratorCallable m_object_iterator{&LiveView::guobjectarray_iterator};
         std::unordered_set<UObject*> m_opened_tree_nodes{};
         UObject* m_currently_opened_tree_node{};
+        std::string m_current_property_value_buffer{};
         float m_top_size{300.0f};
         float m_bottom_size{0.0f};
         bool m_is_searching_by_name{};
         bool m_search_field_clear_requested{};
         bool m_search_field_cleared{};
         bool m_modal_tried_to_open_nullptr_object_is_open{};
+        bool m_modal_edit_property_value_is_open{};
+        bool m_modal_edit_property_value_opened_this_frame{};
+        bool m_modal_edit_property_value_error_unable_to_edit{};
         bool m_listeners_set{};
         bool m_listeners_allowed{};
         bool m_is_initialized{};
@@ -132,6 +137,7 @@ namespace RC::GUI
         auto render_struct_sub_tree_hierarchy(UStruct* ustruct) -> void;
         auto render_class(UClass*) -> void;
         auto render_super_struct(UStruct*) -> void;
+        auto render_property_value(FProperty* property, void* container, FProperty** last_property_in, bool* tried_to_open_nullptr_object, bool is_watchable = true, int32_t first_offset = -1) -> std::variant<std::monostate, UObject*, FProperty*>;
 
     private:
         auto collapse_all_except(void* except_id) -> void;
@@ -141,6 +147,7 @@ namespace RC::GUI
         auto get_selected_object_or_property() -> const ObjectOrProperty&;
         auto get_selected_object(size_t index = 0, UseIndex = UseIndex::No) -> std::pair<const FUObjectItem*, UObject*>;
         auto get_selected_property(size_t index = 0, UseIndex = UseIndex::No) -> FProperty*;
+
 
     private:
         auto guobjectarray_iterator(int32_t int_data_1, int32_t int_data_2, const std::function<void(UObject*)>& callable) -> void;
