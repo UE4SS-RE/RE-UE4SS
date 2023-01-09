@@ -35,7 +35,7 @@ namespace RC::GUI
 
     auto Backend_Windows::create_window() -> void
     {
-        //ImGui_ImplWin32_EnableDpiAwareness()
+        ImGui_ImplWin32_EnableDpiAwareness();
         s_wc.cbSize = sizeof(WNDCLASSEX);
         //wc.style = CS_CLASSDC;
         s_wc.style = CS_HREDRAW | CS_VREDRAW;
