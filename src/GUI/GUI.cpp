@@ -244,7 +244,7 @@ namespace RC::GUI
         ImGui::CreateContext();
         ImGuiIO& io = ImGui::GetIO();
         (void)io;
-
+        io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
         
         gui_setup_style();
         
