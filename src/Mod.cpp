@@ -50,6 +50,7 @@
 #include <Unreal/Property/FStrProperty.hpp>
 #include <UnrealCustom/CustomProperty.hpp>
 #include <Unreal/PrimitiveTypes.hpp>
+#include <Unreal/Hooks.hpp>
 #pragma warning(default: 4005)
 
 #include <Timer/FunctionTimer.hpp>
@@ -1954,6 +1955,31 @@ Overloads:
         setup_lua_global_functions_internal(lua, IsTrueMod::Yes);
     }
 
+    auto static process_event_hook([[maybe_unused]]Unreal::UObject* Context, [[maybe_unused]]Unreal::UFunction* Function, [[maybe_unused]]void* Parms) -> void
+    {
+        // NOTE: This will break horribly if UFunctions ever execute asynchronously.
+        Mod::m_game_thread_actions.erase(std::remove_if(Mod::m_game_thread_actions.begin(), Mod::m_game_thread_actions.end(), [&](Mod::SimpleLuaAction& lua_data) -> bool {
+            if (Mod::m_is_currently_executing_game_action)
+            {
+                // We can only execute one action per frame so we'll have to wait until the next frame.
+                return false;
+            }
+
+            // This is a promise that we're in the game thread, used by other functions to ensure that we don't execute when unsafe
+            set_is_in_game_thread(*lua_data.lua, true);
+            Mod::m_is_currently_executing_game_action = true;
+
+            lua_data.lua->registry().get_function_ref(lua_data.lua_action_function_ref);
+
+            lua_data.lua->call_function(0, 0);
+
+            // No longer promising to be in the game thread
+            set_is_in_game_thread(*lua_data.lua, false);
+            Mod::m_is_currently_executing_game_action = false;
+            return true;
+        }), Mod::m_game_thread_actions.end());
+    }
+
     auto Mod::setup_lua_global_functions_main_state_only() const -> void
     {
         m_lua.register_function("RegisterHook", [](const LuaMadeSimple::Lua& lua) -> int {
@@ -2005,6 +2031,31 @@ Overloads:
             lua.set_integer(post_id);
 
             return 2;
+        });
+        
+        m_lua.register_function("ExecuteInGameThread", [](const LuaMadeSimple::Lua& lua) -> int {
+            std::string error_overload_not_found{ R"(
+No overload found for function 'ExecuteInGameThread'.
+Overloads:
+#1: ExecuteInGameThread(LuaFunction callback))" };
+
+            if (!lua.is_function()) { lua.throw_error(error_overload_not_found); }
+
+            auto mod = get_mod_ref(lua);
+            auto hook_lua = make_hook_state(mod);
+
+            // Duplicate the Lua function to the top of the stack for lua_xmove and luaL_ref
+            lua_pushvalue(lua.get_lua_state(), 1);
+
+            lua_xmove(lua.get_lua_state(), hook_lua->get_lua_state(), 1);
+
+            mod->m_game_thread_actions.emplace_back(SimpleLuaAction{hook_lua, luaL_ref(hook_lua->get_lua_state(), LUA_REGISTRYINDEX)});
+            if (!mod->m_is_process_event_hooked)
+            {
+                Unreal::Hook::RegisterProcessEventPreCallback(&process_event_hook);
+            }
+
+            return 0;
         });
     }
 

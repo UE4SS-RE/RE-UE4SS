@@ -47,6 +47,12 @@ namespace RC
         enum class IsTrueMod { Yes, No };
         enum class ActionType { Immediate, Delayed, Loop };
 
+        struct SimpleLuaAction
+        {
+            const LuaMadeSimple::Lua* lua;
+            int32_t lua_action_function_ref{};
+        };
+
         struct AsyncAction
         {
             // TODO: Use LuaMadeSimple instead of lua_State*
@@ -69,11 +75,14 @@ namespace RC
         static inline std::vector<LuaCallbackData> m_static_construct_object_lua_callbacks;
         static inline std::unordered_map<File::StringType, LuaCallbackData> m_global_command_lua_callbacks;
         static inline std::unordered_map<File::StringType, LuaCallbackData> m_custom_command_lua_pre_callbacks;
+        static inline std::vector<SimpleLuaAction> m_game_thread_actions{};
+        static inline bool m_is_currently_executing_game_action{};
 
     protected:
         std::jthread m_async_thread;
         bool m_processing_events{};
         bool m_pause_events_processing{};
+        bool m_is_process_event_hooked{};
         std::mutex m_actions_lock{};
 
     public:
