@@ -748,10 +748,17 @@ namespace RC::UEGenerator
         //Generate properties
         UObject* class_default_object = uclass->GetClassDefaultObject();
 
-        uclass->ForEachProperty([&](FProperty* property) {
-            generate_property_value(property, class_default_object, implementation_file, STR("this->"));
-            return RC::LoopAction::Continue;
-        });
+        if (class_default_object != nullptr) 
+        {
+            uclass->ForEachProperty([&](FProperty* property) {
+                generate_property_value(property, class_default_object, implementation_file, STR("this->"));
+                return RC::LoopAction::Continue;
+            });
+        }
+        else 
+        {
+            implementation_file.append_line(STR("// Null default object."));
+        }
 
         implementation_file.end_ident_level();
         implementation_file.append_line(STR("}"));
@@ -1393,6 +1400,9 @@ namespace RC::UEGenerator
 
     auto UEHeaderGenerator::add_module_and_sub_module_dependencies(std::set<std::wstring>& out_module_dependencies, const std::wstring& module_name, bool add_self_module) -> void
     {
+        // Prevent infinite recursion
+        if (out_module_dependencies.contains(module_name)) { return; }
+
         if (add_self_module)
         {
             out_module_dependencies.insert(module_name);
