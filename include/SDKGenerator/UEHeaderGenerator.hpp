@@ -4,6 +4,7 @@
 #include <filesystem>
 #include <unordered_map>
 #include <map>
+#include <unordered_set>
 #include <set>
 
 #include <File/File.hpp>
@@ -28,6 +29,7 @@ namespace RC::UEGenerator
 {
     using FFilePath = std::filesystem::path;
     using UObject = RC::Unreal::UObject;
+    using UStruct = RC::Unreal::UStruct;
     using UClass = RC::Unreal::UClass;
     using FProperty = RC::Unreal::FProperty;
     using FField = RC::Unreal::FField;
@@ -107,7 +109,7 @@ namespace RC::UEGenerator
 
         //Delete copy and move constructors and assignment operator
         GeneratedFile(const GeneratedFile&) = delete;
-        GeneratedFile(GeneratedFile&&) = delete;
+        GeneratedFile(GeneratedFile&&) = default;
         auto operator=(const GeneratedFile&) -> void = delete;
 
         auto append_line(const std::wstring& line) -> void;
@@ -116,8 +118,9 @@ namespace RC::UEGenerator
         auto begin_indent_level() -> void;
         auto end_ident_level() -> void;
         auto serialize_file_content_to_disk() -> bool;
-    protected:
+        
         virtual auto has_content_to_save() const -> bool;
+    protected:
         virtual auto generate_file_contents() -> std::wstring;
     };
 
@@ -128,14 +131,16 @@ namespace RC::UEGenerator
         std::map<UObject*, DependencyLevel> m_dependencies;
         std::set<std::wstring> m_extra_includes;
         mutable std::set<std::wstring> m_dependency_module_names;
+        UObject* m_object;
         GeneratedSourceFile* m_header_file;
         bool m_is_implementation_file;
+        bool m_needs_get_type_hash;
     public:
-        GeneratedSourceFile(const FFilePath& file_path, const std::wstring& file_module_name, bool is_implementation_file);
+        GeneratedSourceFile(const FFilePath& file_path, const std::wstring& file_module_name, bool is_implementation_file, UObject* object);
 
         //Delete copy and move constructors and assignment operator
         GeneratedSourceFile(const GeneratedSourceFile&) = delete;
-        GeneratedSourceFile(GeneratedSourceFile&&) = delete;
+        GeneratedSourceFile(GeneratedSourceFile&&) = default;
         auto operator=(const GeneratedSourceFile&) -> void = delete;
 
         auto set_header_file(GeneratedSourceFile* header_file) -> void;
@@ -145,16 +150,21 @@ namespace RC::UEGenerator
         auto get_header_module_name() const -> const std::wstring& { return m_file_module_name; }
         auto is_implementation_file() const -> bool { return m_is_implementation_file; }
 
+        auto get_current_string_position() -> size_t { return m_file_contents_buffer.size(); }
+        auto set_need_get_type_hash(bool new_value) -> void { m_needs_get_type_hash = new_value; }
+        auto get_corresponding_object() -> UObject* { return m_object; }
+
+        virtual auto has_content_to_save() const -> bool override;
+        
         auto copy_dependency_module_names(std::set<std::wstring>& out_dependency_module_names) const -> void
         {
             out_dependency_module_names.insert(m_dependency_module_names.begin(), m_dependency_module_names.end());
         }
 
-        auto static create_source_file(const FFilePath& root_dir, const std::wstring& module_name, const std::wstring& base_name, bool is_implementation_file) -> GeneratedSourceFile;
+        auto static create_source_file(const FFilePath& root_dir, const std::wstring& module_name, const std::wstring& base_name, bool is_implementation_file, UObject* object) -> GeneratedSourceFile;
     protected:
         auto has_dependency(UObject* object, DependencyLevel dependency_level) -> bool;
 
-        virtual auto has_content_to_save() const -> bool override;
         virtual auto generate_file_contents() -> std::wstring override;
 
         auto generate_pre_declarations_string() const -> std::wstring;
@@ -183,6 +193,9 @@ namespace RC::UEGenerator
         std::set<std::wstring> m_blueprint_visible_enums;
         std::set<std::wstring> m_blueprint_visible_structs;
         std::map<std::wstring, std::shared_ptr<std::set<std::wstring>>> m_module_dependencies;
+
+        std::vector<GeneratedSourceFile> m_header_files;
+        std::unordered_set<UStruct*> m_structs_that_need_get_type_hash;
 
         // Storage to ensure that we don't have duplicate file names
         static std::map<File::StringType, UniqueName> m_used_file_names;

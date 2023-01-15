@@ -1,7 +1,13 @@
-ObjectDumperMod : 1
-CXXHeaderGeneratorMod : 1
-UHTCompatibleHeaderGeneratorMod : 1
 CheatManagerEnablerMod : 1
 ActorDumperMod : 0
 ConsoleCommandsMod : 1
 ConsoleEnablerMod : 1
+SplitScreenMod : 0
+LineTraceMod : 0
+
+
+
+
+
+; Built-in keybinds, do not move up!
+Keybinds : 1

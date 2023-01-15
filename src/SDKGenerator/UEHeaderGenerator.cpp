@@ -422,6 +422,16 @@ namespace RC::UEGenerator
             encountered_replicated_properties |= (property->GetPropertyFlags() & CPF_Net) != 0;
             append_access_modifier(header_data, get_property_access_modifier(property), current_access_modifier);
             generate_property(uclass, property, header_data);
+            
+            if (auto as_map_property = CastField<FMapProperty>(property))
+            {
+                if (auto as_struct_property = CastField<FStructProperty>(as_map_property->GetKeyProp()))
+                {
+                    // Add GetKeyProp() to vector for second pass.
+                    m_structs_that_need_get_type_hash.emplace(as_struct_property->GetStruct());
+                }
+            }
+
             return RC::LoopAction::Continue;
         });
 
@@ -507,6 +517,16 @@ namespace RC::UEGenerator
         script_struct->ForEachProperty([&](FProperty* property) {
             append_access_modifier(header_data, get_property_access_modifier(property), current_access_modifier);
             generate_property(script_struct, property, header_data);
+            
+            if (auto as_map_property = CastField<FMapProperty>(property))
+            {
+                if (auto as_struct_property = CastField<FStructProperty>(as_map_property->GetKeyProp()))
+                {
+                    // Add GetKeyProp() to vector for second pass.
+                    m_structs_that_need_get_type_hash.emplace(as_struct_property->GetStruct());
+                }
+            }
+            
             return RC::LoopAction::Continue;
         });
 
@@ -728,10 +748,17 @@ namespace RC::UEGenerator
         //Generate properties
         UObject* class_default_object = uclass->GetClassDefaultObject();
 
-        uclass->ForEachProperty([&](FProperty* property) {
-            generate_property_value(property, class_default_object, implementation_file, STR("this->"));
-            return RC::LoopAction::Continue;
-        });
+        if (class_default_object != nullptr) 
+        {
+            uclass->ForEachProperty([&](FProperty* property) {
+                generate_property_value(property, class_default_object, implementation_file, STR("this->"));
+                return RC::LoopAction::Continue;
+            });
+        }
+        else 
+        {
+            implementation_file.append_line(STR("// Null default object."));
+        }
 
         implementation_file.end_ident_level();
         implementation_file.append_line(STR("}"));
@@ -1373,6 +1400,9 @@ namespace RC::UEGenerator
 
     auto UEHeaderGenerator::add_module_and_sub_module_dependencies(std::set<std::wstring>& out_module_dependencies, const std::wstring& module_name, bool add_self_module) -> void
     {
+        // Prevent infinite recursion
+        if (out_module_dependencies.contains(module_name)) { return; }
+
         if (add_self_module)
         {
             out_module_dependencies.insert(module_name);
@@ -2101,8 +2131,8 @@ namespace RC::UEGenerator
             if (property->GetArrayDim() == 1 && is_subtype_valid(property))
             {
                 flag_format_helper.add_switch(STR("BlueprintReadWrite"));
-                flag_format_helper.get_meta()->add_parameter(STR("AllowPrivateAccess"), STR("true"));
             }
+            flag_format_helper.get_meta()->add_parameter(STR("AllowPrivateAccess"), STR("true"));
         }
         else if ((property_flags & CPF_BlueprintVisible) != 0)
         {
@@ -2207,7 +2237,7 @@ namespace RC::UEGenerator
         uint64_t instanced_array_flags = CPF_ExportObject | CPF_ContainsInstancedReference;
 
         if (((property_flags & instanced_flags) == instanced_flags || (property_flags & instanced_array_flags) == instanced_array_flags) &&
-            (property->IsA<FObjectProperty>() || (property->IsA<FArrayProperty>() && static_cast<FArrayProperty*>(property)->GetInner()->IsA<FObjectProperty>())))
+            (property->IsA<FObjectProperty>() || (property->IsA<FArrayProperty>() && static_cast<FArrayProperty*>(property)->GetInner()->IsA<FObjectProperty>()) || (property->IsA<FMapProperty>() && static_cast<FMapProperty*>(property)->GetValueProp()->IsA<FObjectProperty>())))
         {
             flag_format_helper.add_switch(STR("Instanced"));
         }
@@ -2650,7 +2680,7 @@ namespace RC::UEGenerator
             return fmt::format(STR("TMap<{}, {}>()"), key_type, value_type);
         }
 
-        //Various string, name and textp roperties
+        //Various string, name and text properties
         if (field_class_name == STR("NameProperty"))
         {
             return STR("NAME_None");
@@ -3052,6 +3082,28 @@ namespace RC::UEGenerator
             generate_module_build_file(module_pair.first);
         }
 
+        // Pass #2
+        for (auto& header_file : m_header_files)
+        {
+            auto object = header_file.get_corresponding_object();
+            bool is_struct = object->IsA<UStruct>();
+            bool is_class = object->IsA<UClass>();
+            if ((is_struct || is_class) && m_structs_that_need_get_type_hash.find(std::bit_cast<UStruct*>(object)) != m_structs_that_need_get_type_hash.end())
+            {
+                File::StringType name{};
+                if (is_class)
+                {
+                    name = get_native_class_name(std::bit_cast<UClass*>(object));
+                }
+                else if (is_struct)
+                {
+                    name = get_native_struct_name(std::bit_cast<UScriptStruct*>(object));
+                }
+                header_file.append_line(std::format(STR("FORCEINLINE uint32 GetTypeHash(const {}) {{ return 0; }}"), name));
+            }
+            header_file.serialize_file_content_to_disk();
+        }
+
         Output::send(STR("Done!\n"));
     }
 
@@ -3069,8 +3121,8 @@ namespace RC::UEGenerator
             return false;
         }
 
-        GeneratedSourceFile header_file = GeneratedSourceFile::create_source_file(m_root_directory, module_name, file_base_name, false);
-        GeneratedSourceFile implementation_file = GeneratedSourceFile::create_source_file(m_root_directory, module_name, file_base_name, true);
+        GeneratedSourceFile& header_file = m_header_files.emplace_back(GeneratedSourceFile::create_source_file(m_root_directory, module_name, file_base_name, false, object));
+        GeneratedSourceFile implementation_file = GeneratedSourceFile::create_source_file(m_root_directory, module_name, file_base_name, true, object);
         implementation_file.set_header_file(&header_file);
 
         if (UClass* uclass = Cast<UClass>(object))
@@ -3117,7 +3169,7 @@ namespace RC::UEGenerator
             iterator = this->m_module_dependencies.insert({module_name, std::make_shared<std::set<std::wstring>>()}).first;
         }
 
-        if (!header_file.serialize_file_content_to_disk())
+        if (!header_file.has_content_to_save())
         {
             return false;
         }
@@ -3332,7 +3384,7 @@ namespace RC::UEGenerator
         return !m_file_contents_buffer.empty();
     }
 
-    auto GeneratedSourceFile::create_source_file(const FFilePath& root_dir, const std::wstring& module_name, const std::wstring& base_name, bool is_implementation_file) -> GeneratedSourceFile
+    auto GeneratedSourceFile::create_source_file(const FFilePath& root_dir, const std::wstring& module_name, const std::wstring& base_name, bool is_implementation_file, UObject* object) -> GeneratedSourceFile
     {
         FFilePath full_file_path;
         if (is_implementation_file)
@@ -3343,13 +3395,14 @@ namespace RC::UEGenerator
         {
             full_file_path = root_dir / module_name / STR("Public") / (base_name + STR(".h"));
         }
-        return GeneratedSourceFile(full_file_path, module_name, is_implementation_file);
+        return GeneratedSourceFile(full_file_path, module_name, is_implementation_file, object);
     }
 
-    GeneratedSourceFile::GeneratedSourceFile(const FFilePath& file_path, const std::wstring& file_module_name, bool is_implementation_file) : GeneratedFile(file_path)
+    GeneratedSourceFile::GeneratedSourceFile(const FFilePath& file_path, const std::wstring& file_module_name, bool is_implementation_file, UObject* object) : GeneratedFile(file_path)
     {
         this->m_file_module_name = file_module_name;
         this->m_is_implementation_file = is_implementation_file;
+        this->m_object = object;
     }
 
     auto GeneratedSourceFile::set_header_file(GeneratedSourceFile* header_file) -> void

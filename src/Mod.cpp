@@ -21,6 +21,8 @@
 #include <Input/Handler.hpp>
 #pragma warning(disable: 4005)
 #include <UE4SSProgram.hpp>
+#include <GUI/Dumpers.hpp>
+#include <USMapGenerator/Generator.hpp>
 #include <Unreal/UnrealVersion.hpp>
 #include <Unreal/Hooks.hpp>
 #include <Unreal/UnrealVersion.hpp>
@@ -48,6 +50,7 @@
 #include <Unreal/Property/FStrProperty.hpp>
 #include <UnrealCustom/CustomProperty.hpp>
 #include <Unreal/PrimitiveTypes.hpp>
+#include <Unreal/Hooks.hpp>
 #pragma warning(default: 4005)
 
 #include <Timer/FunctionTimer.hpp>
@@ -859,6 +862,66 @@ Overloads:
 
         if (is_true_mod == Mod::IsTrueMod::Yes)
         {
+            lua.register_function("IsKeyBindRegistered", [](const LuaMadeSimple::Lua& lua) -> int {
+                std::string error_overload_not_found{R"(
+No overload found for function 'IsKeyBindRegistered'.
+Overloads:
+#1: IsKeyBindRegistered(integer key)
+#2: IsKeyBindRegistered(integer key, table modifier_key_integers))"};
+
+                if (!lua.is_integer())
+                {
+                    lua.throw_error(error_overload_not_found);
+                }
+
+                auto key_from_lua = lua.get_integer();
+                if (key_from_lua < std::numeric_limits<uint8_t>::min() || key_from_lua > std::numeric_limits<uint8_t>::max())
+                {
+                    lua.throw_error("Parameter #1 for function 'IsKeyBindRegistered' must be an integer between 0 and 255");
+                }
+                auto key_to_check = static_cast<Input::Key>(key_from_lua);
+
+                const auto mod = get_mod_ref(lua);
+
+                if (lua.is_table())
+                {
+                    Input::Handler::ModifierKeyArray modifier_keys{};
+
+                    uint8_t table_counter{};
+                    lua.for_each_in_table([&](LuaMadeSimple::LuaTableReference table) -> bool {
+                        if (!table.value.is_integer())
+                        {
+                            lua.throw_error("Lua function 'IsKeyBindRegistered', overload #2, requires a table of 1-byte large integers as the second parameter");
+                        }
+
+                        int64_t full_integer = table.value.get_integer();
+                        if (full_integer < std::numeric_limits<uint8_t>::min() || full_integer > std::numeric_limits<uint8_t>::max())
+                        {
+                            lua.throw_error("Lua function 'IsKeyBindRegistered', overload #2, requires a table of 1-byte large integers as the second parameter");
+                        }
+
+                        modifier_keys[table_counter++] = static_cast<Input::ModifierKey>(table.value.get_integer());
+
+                        return false;
+                    });
+
+                    if (table_counter > 0)
+                    {
+                        lua.set_bool(mod->m_program.is_keydown_event_registered(key_to_check, modifier_keys));
+                    }
+                    else
+                    {
+                        lua.set_bool(mod->m_program.is_keydown_event_registered(key_to_check));
+                    }
+                }
+                else
+                {
+                    lua.set_bool(mod->m_program.is_keydown_event_registered(key_to_check));
+                }
+                
+                return 1;
+            });
+            
             lua.register_function("RegisterKeyBind", [](const LuaMadeSimple::Lua& lua) -> int {
                 std::string error_overload_not_found{R"(
 No overload found for function 'RegisterKeyBind'.
@@ -944,9 +1007,18 @@ Overloads:
                     // Take a reference to the Lua function (it also pops it of the stack)
                     const auto lua_callback_registry_index = lua.registry().make_ref();
 
-                    mod->m_program.register_keydown_event(key_to_register, modifier_keys, [&lua, lua_callback_registry_index, &lua_keybind_callback_lambda]() {
-                        lua_keybind_callback_lambda(lua, lua_callback_registry_index);
-                    }, 1);
+                    if (table_counter > 0)
+                    {
+                        mod->m_program.register_keydown_event(key_to_register, modifier_keys, [&lua, lua_callback_registry_index, &lua_keybind_callback_lambda]() {
+                            lua_keybind_callback_lambda(lua, lua_callback_registry_index);
+                        }, 1);
+                    }
+                    else
+                    {
+                        mod->m_program.register_keydown_event(key_to_register, [&lua, lua_callback_registry_index, &lua_keybind_callback_lambda]() {
+                            lua_keybind_callback_lambda(lua, lua_callback_registry_index);
+                        }, 1);
+                    }
                 }
                 else
                 {
@@ -1012,6 +1084,22 @@ Overloads:
                 mod->m_program.generate_uht_compatible_headers();
                 return 0;
             });
+
+            lua.register_function("DumpStaticMeshes", []([[maybe_unused]]const LuaMadeSimple::Lua& lua) -> int {
+                GUI::Dumpers::call_generate_static_mesh_file();
+                return 0;
+            });
+
+            lua.register_function("DumpAllActors", []([[maybe_unused]]const LuaMadeSimple::Lua& lua) -> int {
+                GUI::Dumpers::call_generate_all_actor_file();
+                return 0;
+            });
+
+            lua.register_function("DumpUSMAP", []([[maybe_unused]]const LuaMadeSimple::Lua& lua) -> int {
+                OutTheShade::generate_usmap();
+                return 0;
+            });
+            
         }
 
         lua.register_function("StaticConstructObject", [](const LuaMadeSimple::Lua& lua) -> int {
@@ -1867,6 +1955,31 @@ Overloads:
         setup_lua_global_functions_internal(lua, IsTrueMod::Yes);
     }
 
+    auto static process_event_hook([[maybe_unused]]Unreal::UObject* Context, [[maybe_unused]]Unreal::UFunction* Function, [[maybe_unused]]void* Parms) -> void
+    {
+        // NOTE: This will break horribly if UFunctions ever execute asynchronously.
+        Mod::m_game_thread_actions.erase(std::remove_if(Mod::m_game_thread_actions.begin(), Mod::m_game_thread_actions.end(), [&](Mod::SimpleLuaAction& lua_data) -> bool {
+            if (Mod::m_is_currently_executing_game_action)
+            {
+                // We can only execute one action per frame so we'll have to wait until the next frame.
+                return false;
+            }
+
+            // This is a promise that we're in the game thread, used by other functions to ensure that we don't execute when unsafe
+            set_is_in_game_thread(*lua_data.lua, true);
+            Mod::m_is_currently_executing_game_action = true;
+
+            lua_data.lua->registry().get_function_ref(lua_data.lua_action_function_ref);
+
+            TRY([&]() { lua_data.lua->call_function(0, 0); });
+
+            // No longer promising to be in the game thread
+            set_is_in_game_thread(*lua_data.lua, false);
+            Mod::m_is_currently_executing_game_action = false;
+            return true;
+        }), Mod::m_game_thread_actions.end());
+    }
+
     auto Mod::setup_lua_global_functions_main_state_only() const -> void
     {
         m_lua.register_function("RegisterHook", [](const LuaMadeSimple::Lua& lua) -> int {
@@ -1918,6 +2031,31 @@ Overloads:
             lua.set_integer(post_id);
 
             return 2;
+        });
+        
+        m_lua.register_function("ExecuteInGameThread", [](const LuaMadeSimple::Lua& lua) -> int {
+            std::string error_overload_not_found{ R"(
+No overload found for function 'ExecuteInGameThread'.
+Overloads:
+#1: ExecuteInGameThread(LuaFunction callback))" };
+
+            if (!lua.is_function()) { lua.throw_error(error_overload_not_found); }
+
+            auto mod = get_mod_ref(lua);
+            auto hook_lua = make_hook_state(mod);
+
+            // Duplicate the Lua function to the top of the stack for lua_xmove and luaL_ref
+            lua_pushvalue(lua.get_lua_state(), 1);
+
+            lua_xmove(lua.get_lua_state(), hook_lua->get_lua_state(), 1);
+
+            mod->m_game_thread_actions.emplace_back(SimpleLuaAction{hook_lua, luaL_ref(hook_lua->get_lua_state(), LUA_REGISTRYINDEX)});
+            if (!mod->m_is_process_event_hooked)
+            {
+                Unreal::Hook::RegisterProcessEventPreCallback(&process_event_hook);
+            }
+
+            return 0;
         });
     }
 
