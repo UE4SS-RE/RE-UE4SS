@@ -286,6 +286,7 @@ namespace RC::GUI::Dumpers
 
         if (ImGui::Button("Dump all static actor meshes to file"))
         {
+            Output::send(STR("Dumping CSV of all loaded static mesh actors, positions and mesh properties\n"));
             call_generate_static_mesh_file();
 
             /*auto file = File::open(StringType{UE4SSProgram::get_program().get_working_directory()} + STR("\\ue4ss_static_mesh_data.json"), File::OpenFor::Writing, File::OverwriteExistingFile::Yes, File::CreateIfNonExistent::Yes);
@@ -294,6 +295,7 @@ namespace RC::GUI::Dumpers
         
         if (ImGui::Button("Dump all actors to file"))
         {
+            Output::send(STR("Dumping CSV of all loaded actor types, positions and mesh properties\n"));
             call_generate_all_actor_file();
 
             /*auto file = File::open(StringType{UE4SSProgram::get_program().get_working_directory()} + STR("\\ue4ss_actor_data.json"), File::OpenFor::Writing, File::OverwriteExistingFile::Yes, File::CreateIfNonExistent::Yes);
