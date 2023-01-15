@@ -4,10 +4,18 @@
 * Add live editing of properties.  May be unstable with certain structs.  Please report crashes with an Issue.
 
 
+# Keybinds
+* The old lua mods that only registered a key bind (ObjectDumperMod, UHTCompatibleHeaderGeneratorMod, & CXXHeaderGeneratorMod) have been removed.
+* If you have an old mod installed, it takes precedence over the new mod.
+* The new mod will have all keybinds listed at the top of the file to make it easy to see which key binds are already in use. 
+
+
+
 # Lua
 * Add default mod - LineTrace for object name
 * Add default mod - SplitScreen
 * New ExecuteInGameThread function for improved compatibility with certain internal UE functions
+
 
 
 ## Fixes
@@ -20,3 +28,9 @@
 
 # General
 * Praydog - StaticConstructObject: Fix crash when Params.Class is nullptr
+
+
+
+## Known Issues
+* Certain structs will cause crashes when live editing
+* You must edit certain structs from the highest level rather than from the tree view to avoid crashes
