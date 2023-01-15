@@ -1971,7 +1971,7 @@ Overloads:
 
             lua_data.lua->registry().get_function_ref(lua_data.lua_action_function_ref);
 
-            lua_data.lua->call_function(0, 0);
+            TRY([&]() { lua_data.lua->call_function(0, 0); });
 
             // No longer promising to be in the game thread
             set_is_in_game_thread(*lua_data.lua, false);

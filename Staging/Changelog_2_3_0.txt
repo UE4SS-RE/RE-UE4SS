@@ -1,0 +1,22 @@
+## New
+
+# Live View Debugger
+* Add live editing of properties.  May be unstable with certain structs.  Please report crashes with an Issue.
+
+
+# Lua
+* Add default mod - LineTrace for object name
+* Add default mod - SplitScreen
+* New ExecuteInGameThread function for improved compatibility with certain internal UE functions
+
+
+## Fixes
+
+# UHT Generation
+* Praydog - Fixed certain possible crashes with UHT Generation
+* Praydog - Fixed UHT Generation crashing on building stubs when Engine module dumping is enabled
+* Allow Instanced specifier on Map properties where the value is a UObject base
+* Add GetTypeHash inline function generation for structs used in Map properties
+
+# General
+* Praydog - StaticConstructObject: Fix crash when Params.Class is nullptr
