@@ -1603,7 +1603,7 @@ namespace RC::UEGenerator
 
         if ((class_own_flags & CLASS_DefaultConfig) != 0)
         {
-            flag_format_helper.add_switch(STR("DefaultConfig"));
+            flag_format_helper.add_switch(STR("DefaultConfig, config = Engine"));
         }
         if ((class_own_flags & CLASS_GlobalUserConfig) != 0)
         {
@@ -1611,7 +1611,7 @@ namespace RC::UEGenerator
         }
         if ((class_own_flags & CLASS_ProjectUserConfig) != 0)
         {
-            flag_format_helper.add_switch(STR("ProjectUserConfig"));
+            flag_format_helper.add_switch(STR("ProjectUserConfig, config = Engine"));
         }
 
         if ((class_own_flags & CLASS_PerObjectConfig) != 0)
