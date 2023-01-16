@@ -82,3 +82,4 @@
 [submodule "Dependencies/imgui"]
 	path = Dependencies/imgui
 	url = https://github.com/narknon/imgui.git
+	branch = docking
