@@ -244,22 +244,14 @@ namespace RC::GUI
         ImGui::CreateContext();
         ImGuiIO& io = ImGui::GetIO();
         (void)io;
-        io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
-        io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
+
         
         gui_setup_style();
-        ImGuiStyle& style = ImGui::GetStyle();
-        if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
-        {
-            style.WindowRounding = 0.0f;
-            style.Colors[ImGuiCol_WindowBg].w = 1.0f;
-        }
         
         io.Fonts->Clear();
         ImFontConfig font_cfg;
         font_cfg.FontDataOwnedByAtlas = false; // if true it will try to free memory and fail
         io.Fonts->AddFontFromMemoryTTF(Roboto, sizeof(Roboto), 14, &font_cfg);
-        io.Fonts->Build();
         
         m_os_backend->init();
         m_gfx_backend->init();

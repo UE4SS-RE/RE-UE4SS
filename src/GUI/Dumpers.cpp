@@ -263,6 +263,7 @@ namespace RC::GUI::Dumpers
 
     void call_generate_static_mesh_file()
 	{
+	    Output::send(STR("Dumping CSV of all loaded static mesh actors, positions and mesh properties\n"));
 	    static auto dump_actor_class = UObjectGlobals::StaticFindObject<UClass*>(nullptr, nullptr, STR("/Script/Engine.StaticMeshActor"));
 
 	    auto file = File::open(StringType{UE4SSProgram::get_program().get_working_directory()} + STR("\\ue4ss_static_mesh_data.csv"), File::OpenFor::Writing, File::OverwriteExistingFile::Yes, File::CreateIfNonExistent::Yes);
@@ -273,6 +274,7 @@ namespace RC::GUI::Dumpers
 
     void call_generate_all_actor_file()
 	{
+	    Output::send(STR("Dumping CSV of all loaded actor types, positions and mesh properties\n"));
 	    auto file = File::open(StringType{UE4SSProgram::get_program().get_working_directory()} + STR("\\ue4ss_actor_data.csv"), File::OpenFor::Writing, File::OverwriteExistingFile::Yes, File::CreateIfNonExistent::Yes);
 	    std::wstring file_buffer{};
 	    file_buffer.append(generate_actors_csv_file(AActor::StaticClass()));
@@ -286,6 +288,7 @@ namespace RC::GUI::Dumpers
 
         if (ImGui::Button("Dump all static actor meshes to file"))
         {
+            
             call_generate_static_mesh_file();
 
             /*auto file = File::open(StringType{UE4SSProgram::get_program().get_working_directory()} + STR("\\ue4ss_static_mesh_data.json"), File::OpenFor::Writing, File::OverwriteExistingFile::Yes, File::CreateIfNonExistent::Yes);
@@ -294,6 +297,7 @@ namespace RC::GUI::Dumpers
         
         if (ImGui::Button("Dump all actors to file"))
         {
+            
             call_generate_all_actor_file();
 
             /*auto file = File::open(StringType{UE4SSProgram::get_program().get_working_directory()} + STR("\\ue4ss_actor_data.json"), File::OpenFor::Writing, File::OverwriteExistingFile::Yes, File::CreateIfNonExistent::Yes);

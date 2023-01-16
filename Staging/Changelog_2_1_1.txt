@@ -1,3 +1,0 @@
-## Fixes
-* Fixed Hot Reload for Lua Scripting
-* Fixed UE 5.1 compatibility
