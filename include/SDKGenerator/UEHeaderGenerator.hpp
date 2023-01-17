@@ -120,7 +120,6 @@ namespace RC::UEGenerator
         auto serialize_file_content_to_disk() -> bool;
         
         virtual auto has_content_to_save() const -> bool;
-    protected:
         virtual auto generate_file_contents() -> std::wstring;
     };
 
@@ -162,10 +161,10 @@ namespace RC::UEGenerator
         }
 
         auto static create_source_file(const FFilePath& root_dir, const std::wstring& module_name, const std::wstring& base_name, bool is_implementation_file, UObject* object) -> GeneratedSourceFile;
+        virtual auto generate_file_contents() -> std::wstring override;
+
     protected:
         auto has_dependency(UObject* object, DependencyLevel dependency_level) -> bool;
-
-        virtual auto generate_file_contents() -> std::wstring override;
 
         auto generate_pre_declarations_string() const -> std::wstring;
         auto generate_includes_string() const -> std::wstring;
