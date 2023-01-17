@@ -1607,14 +1607,26 @@ namespace RC::UEGenerator
         if ((class_own_flags & CLASS_DefaultConfig) != 0)
         {
             flag_format_helper.add_switch(STR("DefaultConfig"));
+            if (UE4SSProgram::settings_manager.UHTHeaderGenerator.MakeAllConfigsEngineConfig)
+            {
+                flag_format_helper.add_switch(STR("Config=Engine"));
+            }
         }
         if ((class_own_flags & CLASS_GlobalUserConfig) != 0)
         {
             flag_format_helper.add_switch(STR("GlobalUserConfig"));
+            if (UE4SSProgram::settings_manager.UHTHeaderGenerator.MakeAllConfigsEngineConfig)
+            {
+                flag_format_helper.add_switch(STR("Config=Engine"));
+            }
         }
         if ((class_own_flags & CLASS_ProjectUserConfig) != 0)
         {
             flag_format_helper.add_switch(STR("ProjectUserConfig"));
+            if (UE4SSProgram::settings_manager.UHTHeaderGenerator.MakeAllConfigsEngineConfig)
+            {
+                flag_format_helper.add_switch(STR("Config=Engine"));
+            }
         }
 
         if ((class_own_flags & CLASS_PerObjectConfig) != 0)
