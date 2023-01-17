@@ -251,7 +251,7 @@ namespace RC::UEGenerator
         auto add_module_and_sub_module_dependencies(std::set<std::wstring>& out_module_dependencies, const std::wstring& module_name, bool add_self_module = true) -> void;
         auto static collect_blacklisted_property_names(UObject* property) -> CaseInsensitiveSet;
 
-        auto static generate_object_pre_declaration(UObject* object, std::wstring& out_extra_declaration) -> std::wstring;
+        auto static generate_object_pre_declaration(UObject* object) -> std::vector<std::vector<std::wstring>>;
 
         auto static convert_module_name_to_api_name(const std::wstring& module_name) -> std::wstring;
         auto static get_module_name_for_package(UObject* package) -> std::wstring;
