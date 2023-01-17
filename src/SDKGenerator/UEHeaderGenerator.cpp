@@ -248,7 +248,10 @@ namespace RC::UEGenerator
         module_build_file.begin_indent_level();
 
         std::set<std::wstring> all_module_dependencies = this->m_forced_module_dependencies;
-        add_module_and_sub_module_dependencies(all_module_dependencies, module_name, false);
+        std::set<std::wstring> clean_module_dependencies{};
+        add_module_and_sub_module_dependencies(clean_module_dependencies, module_name, false);
+
+        all_module_dependencies.insert(clean_module_dependencies.begin(), clean_module_dependencies.end());
 
         for (const std::wstring& other_module_name : all_module_dependencies)
         {
