@@ -51,6 +51,7 @@ namespace RC
             bool MakeAllFunctionsBlueprintCallable{};
             bool MakeAllPropertyBlueprintsReadWrite{};
             bool MakeEnumClassesBlueprintType{};
+            bool MakeAllConfigsEngineConfig{};
         } UHTHeaderGenerator;
 
         struct SectionDebug
