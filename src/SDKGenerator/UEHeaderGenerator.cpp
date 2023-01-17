@@ -3479,7 +3479,7 @@ namespace RC::UEGenerator
             if (m_header_file != NULL)
             {
                 //Generate it if we have the correct header file set
-                include_lines.push_back({ STR("#include "), m_header_file->m_file_module_name, STR(".h\n") });
+                include_lines.push_back({ STR("#include \""), m_header_file->m_file_module_name, STR("\".h\n") });
             }
             else
             {
@@ -3491,7 +3491,7 @@ namespace RC::UEGenerator
         //Generate extra includes we might need that do not represent objects
         for (const std::wstring& extra_included_file : m_extra_includes)
         {
-            include_lines.push_back({ STR("#include "), extra_included_file, STR("\n") });
+            include_lines.push_back({ STR("#include \""), extra_included_file, STR("\"\n") });
         }
 
         //Generate includes for the relevant object files
@@ -3530,7 +3530,7 @@ namespace RC::UEGenerator
                 //since generated headers are always located in the module root and follow one file per object convention
                 if (m_file_module_name == native_module_name)
                 {
-                    include_lines.push_back({ STR("#include "), object_header_name, STR(".h\n") });
+                    include_lines.push_back({ STR("#include \""), object_header_name, STR("\".h\n") });
                 }
                 else
                 {
