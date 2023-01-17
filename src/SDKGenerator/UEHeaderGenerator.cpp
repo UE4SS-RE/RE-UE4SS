@@ -3465,6 +3465,7 @@ namespace RC::UEGenerator
     auto GeneratedSourceFile::generate_includes_string() const -> std::wstring
     {
         std::wstring result_include_string;
+        std::vector<std::vector<std::wstring>> include_lines;
 
         //For the header file, we generate the pragma and minimal core includes
         if (!m_is_implementation_file)
@@ -3478,7 +3479,7 @@ namespace RC::UEGenerator
             if (m_header_file != NULL)
             {
                 //Generate it if we have the correct header file set
-                result_include_string.append(fmt::format(STR("#include \"{}.h\"\n"), m_header_file->m_file_base_name));
+                include_lines.push_back({ STR("#include "), m_header_file->m_file_module_name, STR(".h\n") });
             }
             else
             {
@@ -3490,7 +3491,7 @@ namespace RC::UEGenerator
         //Generate extra includes we might need that do not represent objects
         for (const std::wstring& extra_included_file : m_extra_includes)
         {
-            result_include_string.append(fmt::format(STR("#include \"{}\"\n"), extra_included_file));
+            include_lines.push_back({ STR("#include "), extra_included_file, STR("\n") });
         }
 
         //Generate includes for the relevant object files
@@ -3529,7 +3530,7 @@ namespace RC::UEGenerator
                 //since generated headers are always located in the module root and follow one file per object convention
                 if (m_file_module_name == native_module_name)
                 {
-                    result_include_string.append(fmt::format(STR("#include \"{}.h\"\n"), object_header_name));
+                    include_lines.push_back({ STR("#include "), object_header_name, STR(".h\n") });
                 }
                 else
                 {
@@ -3537,6 +3538,20 @@ namespace RC::UEGenerator
                     m_dependency_module_names.insert(native_module_name);
                     result_include_string.append(UEHeaderGenerator::generate_cross_module_include(dependency_object, native_module_name, object_header_name));
                 }
+            }
+        }
+
+        //Sort the includes by module name, since we want to make sure that they are always in the same order
+        std::sort(include_lines.begin(), include_lines.end(), [](const std::vector<std::wstring>& a, const std::vector<std::wstring>& b) {
+            return a[1] < b[1];
+        });
+
+        //Add include_lines to result_include_string
+        for (const auto& line : include_lines)
+        {
+            for (const auto& part : line)
+            {
+                result_include_string.append(part);
             }
         }
 
