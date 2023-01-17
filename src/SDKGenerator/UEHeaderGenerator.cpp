@@ -3482,7 +3482,7 @@ namespace RC::UEGenerator
             if (m_header_file != NULL)
             {
                 //Generate it if we have the correct header file set
-                include_lines.push_back({ STR("#include \""), m_header_file->m_file_base_name, STR(".h\"\n") });
+                result_include_string.append(fmt::format(STR("#include \"{}.h\"\n"), m_header_file->m_file_base_name));
             }
             else
             {
