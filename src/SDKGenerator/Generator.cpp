@@ -324,8 +324,7 @@ namespace RC::UEGenerator
                 generate_class(inherited_object_info, *package_file_for_inherited_class, new_class_content);
                 if (!package_file_for_inherited_class->primary_file_has_no_contents)
                 {
-                    //package_file_for_inherited_class->primary_file_contents.append(new_class_content);
-                    package_file_for_inherited_class->ordered_secondary_file_contents.push_back(new_class_content);
+                    package_file_for_inherited_class->ordered_primary_file_contents.push_back(new_class_content);
                 }
             }
 
