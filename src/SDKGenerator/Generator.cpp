@@ -110,16 +110,48 @@ namespace RC::UEGenerator
 
     auto CXXGenerator::sort_files(std::vector<File::StringType>& content) -> void
     {
+        std::vector<File::StringType> struct_content;
+        std::vector<File::StringType> class_content;
+        std::vector<File::StringType> other_content;
+        for (auto& line : content)
+        {
+            if (line.starts_with(STR("struct")))
+            {
+                struct_content.push_back(line);
+            }
+            else if (line.starts_with(STR("class")))
+            {
+                class_content.push_back(line);
+            }
+            else
+            {
+                other_content.push_back(line);
+            }
+        }
+        
+        sort_types(struct_content);
+        sort_types(class_content);
+        sort_types(other_content);
+
+        content.clear();
+        content.reserve(struct_content.size() + class_content.size() + other_content.size());
+        content.insert(content.end(), struct_content.begin(), struct_content.end());
+        content.insert(content.end(), class_content.begin(), class_content.end());
+        content.insert(content.end(), other_content.begin(), other_content.end());
+    }
+
+    auto CXXGenerator::sort_types(std::vector<File::StringType>& content) -> void
+    {
         std::sort(content.begin(), content.end(), [&](const auto& a, const auto& b) {
-            auto a_class_name = check_structure_type(a);
-            auto b_class_name = check_structure_type(b);
+            auto a_class_name = get_class_name(a);
+            auto b_class_name = get_class_name(b);
             return a_class_name < b_class_name;
         });
     }
 
-    auto CXXGenerator::check_structure_type(const auto& x) -> std::wstring
+    auto CXXGenerator::get_class_name(const auto& x) -> std::wstring
     {
-        // Using this method instead of regex being it is extremely slow
+        // Using this method instead of regex because it is extremely slow
         auto class_name = x.substr(x.find(STR(' ')) + 1);
         class_name = class_name.substr(0, class_name.find(STR(' ')));
         if (class_name == STR("class"))
