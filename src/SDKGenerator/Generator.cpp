@@ -61,13 +61,7 @@ namespace RC::UEGenerator
                 generated_file.primary_file = File::open(generated_file.primary_file_name, File::OpenFor::Appending, File::OverwriteExistingFile::Yes, File::CreateIfNonExistent::Yes);
                 generate_header_start(generated_file, generated_file.package_name);
 
-                std::sort(generated_file.ordered_primary_file_contents.begin(), generated_file.ordered_primary_file_contents.end(), [&](const auto& a, const auto& b) {
-                    auto a_class_name = a.substr(a.find(STR(' ')) + 1);
-                    a_class_name = a_class_name.substr(0, a_class_name.find(STR(' ')));
-                    auto b_class_name = b.substr(b.find(STR(' ')) + 1);
-                    b_class_name = b_class_name.substr(0, b_class_name.find(STR(' ')));
-                    return a_class_name < b_class_name;
-                });
+                sort_files(generated_file.ordered_primary_file_contents);
 
                 File::StringType combined_file_contents;
                 for (auto& line : generated_file.ordered_primary_file_contents)
@@ -92,13 +86,7 @@ namespace RC::UEGenerator
             {
                 generated_file.secondary_file = File::open(generated_file.secondary_file_name, File::OpenFor::Appending, File::OverwriteExistingFile::Yes, File::CreateIfNonExistent::Yes);
 
-                std::sort(generated_file.ordered_secondary_file_contents.begin(), generated_file.ordered_secondary_file_contents.end(), [&](const auto& a, const auto& b) {
-                    auto a_class_name = a.substr(a.find(STR(' ')) + 1);
-                    a_class_name = a_class_name.substr(0, a_class_name.find(STR(' ')));
-                    auto b_class_name = b.substr(b.find(STR(' ')) + 1);
-                    b_class_name = b_class_name.substr(0, b_class_name.find(STR(' ')));
-                    return a_class_name < b_class_name;
-                });
+                sort_files(generated_file.ordered_secondary_file_contents);
 
                 File::StringType combined_file_contents;
                 for (auto& line : generated_file.ordered_secondary_file_contents)
@@ -118,6 +106,29 @@ namespace RC::UEGenerator
                 generated_file.secondary_file.close();
             }
         }
+    }
+
+    auto CXXGenerator::sort_files(std::vector<File::StringType>& content) -> void
+    {
+        std::sort(content.begin(), content.end(), [&](const auto& a, const auto& b) {
+            auto a_class_name = check_structure_type(a);
+            auto b_class_name = check_structure_type(b);
+            return a_class_name < b_class_name;
+        });
+    }
+
+    auto CXXGenerator::check_structure_type(const auto& x) -> std::wstring
+    {
+        // Using this method instead of regex being it is extremely slow
+        auto class_name = x.substr(x.find(STR(' ')) + 1);
+        class_name = class_name.substr(0, class_name.find(STR(' ')));
+        if (class_name == STR("class"))
+        {
+            // Case for enum class
+            class_name = x.substr(x.find(STR(' ')) + 7);
+            class_name = class_name.substr(0, class_name.find(STR(' ')));
+        }
+        return class_name;
     }
 
     auto CXXGenerator::object_is_package(UObject* object) -> bool
@@ -750,7 +761,6 @@ namespace RC::UEGenerator
                 generate_class(object_info, *package_file, class_content);
                 if (!package_file->primary_file_has_no_contents)
                 {
-                    //package_file->primary_file_contents.append(class_content);
                     package_file->ordered_primary_file_contents.push_back(class_content);
                 }
                 ++num_objects_generated;

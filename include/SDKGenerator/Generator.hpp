@@ -96,6 +96,8 @@ namespace RC::UEGenerator
         auto generate_package(Unreal::UObject* package, File::StringType& out) -> void;
         auto generate_package_if_non_existent(Unreal::UObject* object) -> GeneratedFile*;
         auto cleanup_old_sdk() -> void;
+        auto sort_files(std::vector<File::StringType>& content) -> void;
+        auto check_structure_type(const auto& x) -> std::wstring;
 
     public:
         auto generate() -> void;
