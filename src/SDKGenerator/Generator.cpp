@@ -573,24 +573,22 @@ namespace RC::UEGenerator
     {
         generated_file.secondary_file_has_no_contents = false;
 
+        File::StringType content_buffer;
         UEnum* uenum = static_cast<UEnum*>(native_object);
         auto& enum_names = uenum->GetEnumNames();
 
         const auto cpp_form = uenum->GetCppForm();
         if (cpp_form == UEnum::ECppForm::Regular)
         {
-            //generated_file.secondary_file_contents.append(std::format(STR("enum {} {{\n"), get_native_enum_name(uenum, false)));
-            generated_file.ordered_secondary_file_contents.push_back(std::format(STR("enum {} {{\n"), get_native_enum_name(uenum, false)));
+            content_buffer.append(std::format(STR("enum {} {{\n"), get_native_enum_name(uenum, false)));
         }
         else if (cpp_form == UEnum::ECppForm::Namespaced)
         {
-            //generated_file.secondary_file_contents.append(std::format(STR("namespace {} {{\n{}enum Type {{\n"), get_native_enum_name(uenum, false), generate_tab()));
-            generated_file.ordered_secondary_file_contents.push_back(std::format(STR("namespace {} {{\n{}enum Type {{\n"), get_native_enum_name(uenum, false), generate_tab()));
+            content_buffer.append(std::format(STR("namespace {} {{\n{}enum Type {{\n"), get_native_enum_name(uenum, false), generate_tab()));
         }
         else if (cpp_form == UEnum::ECppForm::EnumClass)
         {
-            //generated_file.secondary_file_contents.append(std::format(STR("enum class {} {{\n"), get_native_enum_name(uenum, false)));
-            generated_file.ordered_secondary_file_contents.push_back(std::format(STR("enum class {} {{\n"), get_native_enum_name(uenum, false)));
+            content_buffer.append(std::format(STR("enum class {} {{\n"), get_native_enum_name(uenum, false)));
         }
 
         enum_names.ForEach([&](Unreal::FEnumNamePair* elem, size_t index) {
@@ -598,23 +596,21 @@ namespace RC::UEGenerator
             size_t colon_pos = enum_value_full_name.rfind(STR(":"));
             auto enum_value_name = colon_pos == enum_value_full_name.npos ? enum_value_full_name : enum_value_full_name.substr(colon_pos + 1);
 
-            //generated_file.secondary_file_contents.append(std::format(STR("{}{}{} = {},\n"), generate_tab(), cpp_form == UEnum::ECppForm::Namespaced ? generate_tab() : STR(""), enum_value_name, elem->Value));
-            generated_file.ordered_secondary_file_contents.push_back(std::format(STR("{}{}{} = {},\n"), generate_tab(), cpp_form == UEnum::ECppForm::Namespaced ? generate_tab() : STR(""), enum_value_name, elem->Value));
+            content_buffer.append(std::format(STR("{}{}{} = {},\n"), generate_tab(), cpp_form == UEnum::ECppForm::Namespaced ? generate_tab() : STR(""), enum_value_name, elem->Value));
 
             return LoopAction::Continue;
         });
 
-        //generated_file.secondary_file_contents.append(std::format(STR("{}}};"), cpp_form == UEnum::ECppForm::Namespaced ? generate_tab() : STR("")));
-        generated_file.ordered_secondary_file_contents.push_back(std::format(STR("{}}};"), cpp_form == UEnum::ECppForm::Namespaced ? generate_tab() : STR("")));
+        content_buffer.append(std::format(STR("{}}};"), cpp_form == UEnum::ECppForm::Namespaced ? generate_tab() : STR("")));
 
         if (cpp_form == UEnum::ECppForm::Namespaced)
         {
-            //generated_file.secondary_file_contents.append(STR("\n}"));
-            generated_file.ordered_secondary_file_contents.emplace_back(STR("\n}"));
+            content_buffer.append(STR("\n}"));
         }
 
-        //generated_file.secondary_file_contents.append(STR("\n\n"));
-        generated_file.ordered_secondary_file_contents.emplace_back(STR("\n\n"));
+        content_buffer.append(STR("\n\n"));
+
+        generated_file.ordered_secondary_file_contents.push_back(content_buffer);
     }
 
     auto CXXGenerator::generate_package(UObject* package, File::StringType& out) -> void
