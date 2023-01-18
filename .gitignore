@@ -24,6 +24,7 @@ x86/
 
 _ReSharper.Caches/
 cmake-build-debug/
+cmake-build-release/
 CMakeFiles/
 
 # Binaries & Intermediates

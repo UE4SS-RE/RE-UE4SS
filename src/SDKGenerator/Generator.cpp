@@ -60,6 +60,23 @@ namespace RC::UEGenerator
             {
                 generated_file.primary_file = File::open(generated_file.primary_file_name, File::OpenFor::Appending, File::OverwriteExistingFile::Yes, File::CreateIfNonExistent::Yes);
                 generate_header_start(generated_file, generated_file.package_name);
+
+                std::sort(generated_file.ordered_primary_file_contents.begin(), generated_file.ordered_primary_file_contents.end(), [&](const auto& a, const auto& b) {
+                    std::wregex class_regex(reinterpret_cast<const wchar_t*>(R"((class|struct)\s+([A-Za-z0-9_]+)\s*:\s*public\s+([A-Za-z0-9_]+))"));
+                    std::wsmatch class_match_a;
+                    std::regex_search(a, class_match_a, class_regex);
+                    std::wsmatch class_match_b;
+                    std::regex_search(b, class_match_b, class_regex);
+
+                    return class_match_a[1] < class_match_b[1];
+                });
+
+                // Move ordered primary file contents into primary file contents
+                for (auto& line : generated_file.ordered_primary_file_contents)
+                {
+                    generated_file.primary_file_contents.append(line);
+                }
+
                 generated_file.primary_file.write_string_to_file(generated_file.primary_file_contents);
                 generate_header_end(generated_file);
                 generated_file.primary_file.close();
@@ -267,7 +284,8 @@ namespace RC::UEGenerator
                 generate_class(inherited_object_info, *package_file_for_inherited_class, new_class_content);
                 if (!package_file_for_inherited_class->primary_file_has_no_contents)
                 {
-                    package_file_for_inherited_class->primary_file_contents.append(new_class_content);
+                    //package_file_for_inherited_class->primary_file_contents.append(new_class_content);
+                    package_file_for_inherited_class->ordered_secondary_file_contents.push_back(new_class_content);
                 }
             }
 
@@ -635,6 +653,8 @@ namespace RC::UEGenerator
                 .secondary_file_name = secondary_file_path_and_name,
                 .primary_file_contents = {},
                 .secondary_file_content = {},
+                .ordered_primary_file_contents = {},
+                .ordered_secondary_file_contents = {},
                 .package_name = package_name,
                 .primary_file = {},
                 .secondary_file = {},
@@ -699,7 +719,8 @@ namespace RC::UEGenerator
                 generate_class(object_info, *package_file, class_content);
                 if (!package_file->primary_file_has_no_contents)
                 {
-                    package_file->primary_file_contents.append(class_content);
+                    //package_file->primary_file_contents.append(class_content);
+                    package_file->ordered_primary_file_contents.push_back(class_content);
                 }
                 ++num_objects_generated;
 
