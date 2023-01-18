@@ -69,18 +69,19 @@ namespace RC::UEGenerator
                     return a_class_name < b_class_name;
                 });
 
+                File::StringType combined_file_contents;
                 for (auto& line : generated_file.ordered_primary_file_contents)
                 {
-                    generated_file.primary_file_contents.append(line);
+                    combined_file_contents.append(line);
                 }
 
-                if (generated_file.primary_file_contents.empty())
+                if (combined_file_contents.empty())
                 {
                     Output::send(STR("Empty primary file contents in '{}'\n"), generated_file.package_name);
                 }
                 else
                 {
-                    generated_file.primary_file.write_string_to_file(generated_file.primary_file_contents);
+                    generated_file.primary_file.write_string_to_file(combined_file_contents);
                 }
 
                 generate_header_end(generated_file);
@@ -99,21 +100,21 @@ namespace RC::UEGenerator
                     return a_class_name < b_class_name;
                 });
 
+                File::StringType combined_file_contents;
                 for (auto& line : generated_file.ordered_secondary_file_contents)
                 {
-                    generated_file.secondary_file_contents.append(line);
+                    combined_file_contents.append(line);
                 }
 
-                if (generated_file.secondary_file_contents.empty())
+                if (combined_file_contents.empty())
                 {
                     Output::send(STR("Empty secondary file contents in '{}'\n"), generated_file.package_name);
                 }
                 else
                 {
-                    generated_file.secondary_file.write_string_to_file(generated_file.secondary_file_contents);
+                    generated_file.secondary_file.write_string_to_file(combined_file_contents);
                 }
 
-                generated_file.secondary_file.write_string_to_file(generated_file.secondary_file_contents);
                 generated_file.secondary_file.close();
             }
         }
@@ -687,8 +688,6 @@ namespace RC::UEGenerator
             GeneratedFile generated_file{
                 .primary_file_name = primary_file_path_and_name,
                 .secondary_file_name = secondary_file_path_and_name,
-                .primary_file_contents = {},
-                .secondary_file_contents = {},
                 .ordered_primary_file_contents = {},
                 .ordered_secondary_file_contents = {},
                 .package_name = package_name,

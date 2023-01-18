@@ -55,8 +55,6 @@ namespace RC::UEGenerator
         {
             std::filesystem::path primary_file_name;
             std::filesystem::path secondary_file_name;
-            File::StringType primary_file_contents;
-            File::StringType secondary_file_contents;
             std::vector<File::StringType> ordered_primary_file_contents;
             std::vector<File::StringType> ordered_secondary_file_contents;
             File::StringType package_name;
