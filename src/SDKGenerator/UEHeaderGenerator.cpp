@@ -3190,6 +3190,11 @@ namespace RC::UEGenerator
         }
         implementation_file.serialize_file_content_to_disk();
 
+        // This is necessary because header_file.serialize_file_content_to_disk() is not called anymore
+        // so we need to call all the necessary internal code to generate the dependency list
+        // otherwise the below code for copy_dependency_module_names will not work.
+        header_file.generate_file_contents();
+
         //Record module names used in the headers
         std::shared_ptr<std::set<std::wstring>> out_dependency_module_names = iterator->second;
         header_file.copy_dependency_module_names(*out_dependency_module_names);
