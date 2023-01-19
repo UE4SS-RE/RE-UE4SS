@@ -55,8 +55,8 @@ namespace RC::UEGenerator
         {
             std::filesystem::path primary_file_name;
             std::filesystem::path secondary_file_name;
-            File::StringType primary_file_contents;
-            File::StringType secondary_file_content;
+            std::vector<File::StringType> ordered_primary_file_contents;
+            std::vector<File::StringType> ordered_secondary_file_contents;
             File::StringType package_name;
             File::Handle primary_file;
             File::Handle secondary_file;
@@ -96,6 +96,9 @@ namespace RC::UEGenerator
         auto generate_package(Unreal::UObject* package, File::StringType& out) -> void;
         auto generate_package_if_non_existent(Unreal::UObject* object) -> GeneratedFile*;
         auto cleanup_old_sdk() -> void;
+        auto sort_files(std::vector<File::StringType>& content) -> void;
+        auto sort_types(std::vector<File::StringType>& content) -> void;
+        auto get_class_name(const auto& x) -> std::wstring;
 
     public:
         auto generate() -> void;
