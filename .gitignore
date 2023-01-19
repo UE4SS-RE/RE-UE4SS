@@ -10,7 +10,6 @@ VS_Solution/CMakeCache.txt
 VS_Solution/cmake_install.cmake
 VS_Solution/*.proj*
 
-
 # Build results
 [Dd]ebug/
 [Dd]ebugPublic/
@@ -21,9 +20,9 @@ x86/
 
 # CLion
 # Not ignoring CLion files as I want the project targets & settings, inspections etc to be able to be shared
-
 _ReSharper.Caches/
 cmake-build-debug/
+cmake-build-release/
 CMakeFiles/
 
 # Binaries & Intermediates
@@ -33,7 +32,6 @@ VS_Solution/vendor/
 VS_Solution/Dependencies/
 Releases/
 
-
 # Others
 *.tlog
 *.log
@@ -42,9 +40,6 @@ Releases/
 *.pdb
 *.lastbuildstate
 *.recipe
-
-
-
 
 # ReSharper is a .NET coding add-in
 _ReSharper*/

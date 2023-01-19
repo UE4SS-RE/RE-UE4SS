@@ -3198,8 +3198,10 @@ namespace RC::UEGenerator
         return true;
     }
 
-    auto UEHeaderGenerator::generate_object_pre_declaration(UObject* object, std::wstring& out_extra_declaration) -> std::wstring
+    auto UEHeaderGenerator::generate_object_pre_declaration(UObject* object) -> std::vector<std::vector<std::wstring>>
     {
+        std::vector<std::vector<std::wstring>> pre_declarations;
+
         UClass* object_class = object->GetClassPrivate();
 
         if (object_class->IsChildOf(UClass::StaticClass()))
@@ -3208,17 +3210,16 @@ namespace RC::UEGenerator
 
             if (uclass->IsChildOf(UInterface::StaticClass()))
             {
-                out_extra_declaration = fmt::format(STR("class {};"), get_native_class_name(uclass, true));
+                pre_declarations.push_back({ STR("class "), get_native_class_name(uclass, true), STR(";\n") });
             }
-            return fmt::format(STR("class {};"), get_native_class_name(uclass, false));
+            pre_declarations.push_back({ STR("class "), get_native_class_name(uclass, false), STR(";\n") });
 
         }
         else if (object_class->IsChildOf(UScriptStruct::StaticClass()))
         {
             UScriptStruct* script_struct = static_cast<UScriptStruct*>(object);
 
-            return fmt::format(STR("struct {};"), get_native_struct_name(script_struct));
-
+            pre_declarations.push_back({ STR("struct "), get_native_struct_name(script_struct), STR(";\n") });
         }
         else if (object_class->IsChildOf(UEnum::StaticClass()))
         {
@@ -3231,6 +3232,8 @@ namespace RC::UEGenerator
         {
             throw std::invalid_argument("Provided object is not of a supported type, should be UClass/UScriptStruct/UEnum");
         }
+
+        return pre_declarations;
     }
 
     auto UEHeaderGenerator::get_header_name_for_object(UObject* object, bool get_existing_header) -> std::wstring {
@@ -3465,6 +3468,7 @@ namespace RC::UEGenerator
     auto GeneratedSourceFile::generate_includes_string() const -> std::wstring
     {
         std::wstring result_include_string;
+        std::vector<std::vector<std::wstring>> include_lines;
 
         //For the header file, we generate the pragma and minimal core includes
         if (!m_is_implementation_file)
@@ -3490,7 +3494,7 @@ namespace RC::UEGenerator
         //Generate extra includes we might need that do not represent objects
         for (const std::wstring& extra_included_file : m_extra_includes)
         {
-            result_include_string.append(fmt::format(STR("#include \"{}\"\n"), extra_included_file));
+            include_lines.push_back({ STR("#include \""), extra_included_file, STR("\"\n") });
         }
 
         //Generate includes for the relevant object files
@@ -3529,7 +3533,7 @@ namespace RC::UEGenerator
                 //since generated headers are always located in the module root and follow one file per object convention
                 if (m_file_module_name == native_module_name)
                 {
-                    result_include_string.append(fmt::format(STR("#include \"{}.h\"\n"), object_header_name));
+                    include_lines.push_back({ STR("#include \""), object_header_name, STR(".h\"\n") });
                 }
                 else
                 {
@@ -3537,6 +3541,20 @@ namespace RC::UEGenerator
                     m_dependency_module_names.insert(native_module_name);
                     result_include_string.append(UEHeaderGenerator::generate_cross_module_include(dependency_object, native_module_name, object_header_name));
                 }
+            }
+        }
+
+        //Sort the includes by module name, since we want to make sure that they are always in the same order
+        std::sort(include_lines.begin(), include_lines.end(), [](const std::vector<std::wstring>& a, const std::vector<std::wstring>& b) {
+            return a[1] < b[1];
+        });
+
+        //Add include_lines to result_include_string
+        for (const auto& line : include_lines)
+        {
+            for (const auto& part : line)
+            {
+                result_include_string.append(part);
             }
         }
 
@@ -3551,6 +3569,7 @@ namespace RC::UEGenerator
     auto GeneratedSourceFile::generate_pre_declarations_string() const -> std::wstring
     {
         std::wstring result_declarations;
+        std::vector<std::vector<std::vector<std::wstring>>> pre_declarations;
 
         //Generate pre-declarations for the relevant object files
         for (const auto& dependency_pair : m_dependencies)
@@ -3572,20 +3591,26 @@ namespace RC::UEGenerator
                 m_dependency_module_names.insert(native_module_name);
             }
 
-            std::wstring extra_declaration_string;
-            std::wstring declaration_string = UEHeaderGenerator::generate_object_pre_declaration(dependency_object, extra_declaration_string);
+            pre_declarations.push_back(UEHeaderGenerator::generate_object_pre_declaration(dependency_object));
+        }
 
-            if (!declaration_string.empty())
+        //Sort the entries alphabetically by the class name
+        std::sort(pre_declarations.begin(), pre_declarations.end(), [](const std::vector<std::vector<std::wstring>>& a, const std::vector<std::vector<std::wstring>>& b) {
+            return a[0][1] < b[0][1];
+        });
+
+        //Add pre_declarations to result_declarations
+        for (const auto& declaration : pre_declarations)
+        {
+            for (const auto& line : declaration)
             {
-                result_declarations.append(declaration_string);
-                result_declarations.append(STR("\n"));
-            }
-            if (!extra_declaration_string.empty())
-            {
-                result_declarations.append(extra_declaration_string);
-                result_declarations.append(STR("\n"));
+                for (const auto& part : line)
+                {
+                    result_declarations.append(part);
+                }
             }
         }
+
         return result_declarations;
     }
 
