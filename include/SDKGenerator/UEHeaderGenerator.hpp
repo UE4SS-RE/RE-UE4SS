@@ -120,7 +120,6 @@ namespace RC::UEGenerator
         auto serialize_file_content_to_disk() -> bool;
         
         virtual auto has_content_to_save() const -> bool;
-    protected:
         virtual auto generate_file_contents() -> std::wstring;
     };
 
@@ -162,10 +161,10 @@ namespace RC::UEGenerator
         }
 
         auto static create_source_file(const FFilePath& root_dir, const std::wstring& module_name, const std::wstring& base_name, bool is_implementation_file, UObject* object) -> GeneratedSourceFile;
+        virtual auto generate_file_contents() -> std::wstring override;
+
     protected:
         auto has_dependency(UObject* object, DependencyLevel dependency_level) -> bool;
-
-        virtual auto generate_file_contents() -> std::wstring override;
 
         auto generate_pre_declarations_string() const -> std::wstring;
         auto generate_includes_string() const -> std::wstring;
@@ -251,7 +250,7 @@ namespace RC::UEGenerator
         auto add_module_and_sub_module_dependencies(std::set<std::wstring>& out_module_dependencies, const std::wstring& module_name, bool add_self_module = true) -> void;
         auto static collect_blacklisted_property_names(UObject* property) -> CaseInsensitiveSet;
 
-        auto static generate_object_pre_declaration(UObject* object, std::wstring& out_extra_declaration) -> std::wstring;
+        auto static generate_object_pre_declaration(UObject* object) -> std::vector<std::vector<std::wstring>>;
 
         auto static convert_module_name_to_api_name(const std::wstring& module_name) -> std::wstring;
         auto static get_module_name_for_package(UObject* package) -> std::wstring;
