@@ -3474,6 +3474,7 @@ namespace RC::UEGenerator
     {
         std::wstring result_include_string;
         std::vector<std::vector<std::wstring>> include_lines;
+        std::vector<std::wstring> cross_module_includes;
 
         //For the header file, we generate the pragma and minimal core includes
         if (!m_is_implementation_file)
@@ -3544,9 +3545,17 @@ namespace RC::UEGenerator
                 {
                     //Otherwise, we generate an include stub which will be handled by the unreal engine commandlet later
                     m_dependency_module_names.insert(native_module_name);
-                    result_include_string.append(UEHeaderGenerator::generate_cross_module_include(dependency_object, native_module_name, object_header_name));
+                    cross_module_includes.push_back(UEHeaderGenerator::generate_cross_module_include(dependency_object, native_module_name, object_header_name));
                 }
             }
+        }
+
+        //Sort the cross module includes and add them to the result so that they are always above the rest of the includes
+        std::sort(cross_module_includes.begin(), cross_module_includes.end());
+
+        for (const std::wstring& cross_module_include : cross_module_includes)
+        {
+            result_include_string.append(cross_module_include);
         }
 
         //Sort the includes by module name, since we want to make sure that they are always in the same order
@@ -3554,7 +3563,6 @@ namespace RC::UEGenerator
             return a[1] < b[1];
         });
 
-        //Add include_lines to result_include_string
         for (const auto& line : include_lines)
         {
             for (const auto& part : line)
