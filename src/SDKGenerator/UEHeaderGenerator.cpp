@@ -614,7 +614,7 @@ namespace RC::UEGenerator
                     return RC::LoopAction::Continue;
                 }
                 //Otherwise, just make sure it's hidden and not visible to the end user
-                result_enumeration_line.append(STR(" = 0xFF UMETA(Hidden)"));
+                result_enumeration_line.append(STR(" UMETA(Hidden)"));
             }
 
             result_enumeration_line.append(STR(","));
