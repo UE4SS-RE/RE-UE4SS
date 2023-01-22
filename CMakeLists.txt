@@ -289,9 +289,8 @@ target_include_directories(${XINPUT_TARGET} PUBLIC ${IMGUI_INCLUDES})
 # imgui -> END
 
 # GLFW -> START
-add_library(glfw3dll SHARED IMPORTED)
-set_property(TARGET glfw3dll PROPERTY IMPORTED_LOCATION "${CMAKE_CURRENT_SOURCE_DIR}/Dependencies/GLFW/lib-vc2022/glfw3.dll")
-set_property(TARGET glfw3dll PROPERTY IMPORTED_IMPLIB "${CMAKE_CURRENT_SOURCE_DIR}/Dependencies/GLFW/lib-vc2022/glfw3dll.lib")
+add_library(glfw3dll STATIC IMPORTED)
+set_property(TARGET glfw3dll PROPERTY IMPORTED_LOCATION "${CMAKE_CURRENT_SOURCE_DIR}/Dependencies/GLFW/lib-vc2022/glfw3.lib")
 target_include_directories(${TARGET} PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/Dependencies/GLFW/include")
 target_include_directories(${XINPUT_TARGET} PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/Dependencies/GLFW/include")
 # GLFW -> END
