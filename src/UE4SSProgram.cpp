@@ -348,6 +348,8 @@ namespace RC
                 return;
             }
 
+            m_debugging_gui.set_gfx_backend(settings_manager.Debug.GraphicsAPI);
+
             // Setup the log file
             auto& file_device = Output::set_default_devices<Output::NewFileDevice>();
             //auto& file_device = Output::get_device<Output::NewFileDevice>();

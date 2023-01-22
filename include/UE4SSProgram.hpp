@@ -114,7 +114,7 @@ namespace RC
         std::filesystem::path m_settings_path_and_file;
         Output::DebugConsoleDevice* m_debug_console_device{};
         Output::ConsoleDevice* m_console_device{};
-        GUI::DebuggingGUI m_debugging_gui{GUI::GfxBackend::DX11, GUI::OSBackend::Windows};
+        GUI::DebuggingGUI m_debugging_gui{};
 
         using EventCallable = void(*)(void* data);
         struct Event

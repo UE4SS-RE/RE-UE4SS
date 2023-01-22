@@ -1,5 +1,6 @@
 #include <SettingsManager.hpp>
 #include <IniParser/Ini.hpp>
+#include <Helpers/String.hpp>
 
 #define REGISTER_STRING_SETTING(member_var, section_name, key)          \
 try                                                                     \
@@ -66,6 +67,17 @@ namespace RC
         REGISTER_BOOL_SETTING(Debug.SimpleConsoleEnabled, section_debug, ConsoleEnabled)
         REGISTER_BOOL_SETTING(Debug.DebugConsoleEnabled , section_debug, GuiConsoleEnabled)
         REGISTER_BOOL_SETTING(Debug.DebugConsoleVisible, section_debug, GuiConsoleVisible)
+        StringType graphics_api_string{};
+        REGISTER_STRING_SETTING(graphics_api_string, section_debug, GraphicsAPI)
+        if (String::iequal(graphics_api_string, STR("DX11")) ||
+            String::iequal(graphics_api_string, STR("D3D11")))
+        {
+            Debug.GraphicsAPI = GUI::GfxBackend::DX11;
+        }
+        else if (String::iequal(graphics_api_string, STR("OpenGL")))
+        {
+            Debug.GraphicsAPI = GUI::GfxBackend::GLFW3_OpenGL3;
+        }
 
         constexpr static File::CharType section_threads[] = STR("Threads");
         REGISTER_INT64_SETTING(Threads.SigScannerNumThreads, section_threads, SigScannerNumThreads)

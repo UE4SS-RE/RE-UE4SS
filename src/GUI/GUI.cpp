@@ -1,8 +1,11 @@
 #include <GUI/GUI.hpp>
 
+#include <memory>
+
 #include <ExceptionHandling.hpp>
 #include <DynamicOutput/DynamicOutput.hpp>
 #include <GUI/DX11.hpp>
+#include <GUI/GLFW3_OpenGL3.hpp>
 #include <GUI/Windows.hpp>
 #include <GUI/Dumpers.hpp>
 
@@ -39,16 +42,23 @@ namespace RC::GUI
 
     std::vector<DebuggingGUI::EndOfFrameCallback> DebuggingGUI::s_end_of_frame_callbacks{};
 
+    auto DebuggingGUI::is_valid() -> bool
+    {
+        return m_os_backend && m_gfx_backend;
+    }
+
     auto DebuggingGUI::on_update() -> void
     {
         static bool show_window = true;
         static bool is_console_open = true;
 
+        if (!is_valid()) { return; }
+
         if (show_window)
         {
             ImGui::SetNextWindowPos({0, 0});
-            auto current_window_rect = m_os_backend->get_window_rect();
-            ImGui::SetNextWindowSize({static_cast<float>(current_window_rect.right - current_window_rect.left), static_cast<float>(current_window_rect.bottom - current_window_rect.top)});
+            auto current_window_size = m_os_backend->is_valid() ? m_os_backend->get_window_size() : m_gfx_backend->get_window_size();
+            ImGui::SetNextWindowSize({static_cast<float>(current_window_size.x), static_cast<float>(current_window_size.y)});
             ImGui::Begin("MainWindow", &show_window, ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
 
             if (ImGui::BeginTabBar("##MainTabBar", ImGuiTabBarFlags_None))
@@ -150,6 +160,8 @@ namespace RC::GUI
 
     auto DebuggingGUI::main_loop_internal() -> void
     {
+        if (!is_valid()) { return; }
+
         m_is_open = true;
 
         auto& style = ImGui::GetStyle();
@@ -169,7 +181,7 @@ namespace RC::GUI
 
         ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
 
-        while (!m_exit_requested)
+        while (!m_exit_requested && !m_gfx_backend->exit_requested())
         {
             m_os_backend->exec_message_loop(&m_exit_requested);
 
@@ -234,6 +246,7 @@ namespace RC::GUI
 
     auto DebuggingGUI::setup(std::stop_token&& stop_token) -> void
     {
+        if (!is_valid()) { return; }
         m_thread_stop_token = stop_token;
 
         m_live_view.initialize();
@@ -266,19 +279,17 @@ namespace RC::GUI
         m_os_backend->cleanup();
     }
 
-    DebuggingGUI::DebuggingGUI(GfxBackend selected_gfx_backend, OSBackend selected_os_backend)
+    auto DebuggingGUI::set_gfx_backend(GfxBackend backend) -> void
     {
-        switch (selected_gfx_backend)
+        switch (backend)
         {
             case GfxBackend::DX11:
                 m_gfx_backend = std::make_unique<Backend_DX11>();
-                break;
-        }
-
-        switch (selected_os_backend)
-        {
-            case OSBackend::Windows:
                 m_os_backend = std::make_unique<Backend_Windows>();
+                break;
+            case GfxBackend::GLFW3_OpenGL3:
+                m_gfx_backend = std::make_unique<Backend_GLFW3_OpenGL3>();
+                m_os_backend = std::make_unique<Backend_NoOS>();
                 break;
         }
 
