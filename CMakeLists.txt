@@ -159,8 +159,6 @@ else()
 endif ()
 # Settings override -> END
 
-add_compile_definitions(WITH_CASE_PRESERVING_NAME)
-
 # Version override -> START
 file(READ ${UE4SS_GENERATED_SOURCE_DIR}/version.cache UE4SS_LIB_VERSION)
 string(REGEX MATCHALL "([0-9]+).([0-9]+).([0-9]+).([0-9]+).([0-9]+)" TEST_OUTPUT_ABC "${UE4SS_LIB_VERSION}")
