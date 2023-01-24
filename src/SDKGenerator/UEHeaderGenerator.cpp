@@ -3116,6 +3116,30 @@ namespace RC::UEGenerator
                 }
                 header_file.append_line(std::format(STR("FORCEINLINE uint32 GetTypeHash(const {}) {{ return 0; }}"), name));
             }
+
+            // Case for FTickFunction struct
+            if (is_struct)
+            {
+                auto struct_object = std::bit_cast<UScriptStruct*>(object);
+                auto super_struct = struct_object->GetSuperScriptStruct();
+                if (super_struct)
+                {
+                    if (get_native_struct_name(super_struct) == STR("FTickFunction"))
+                    {
+                        File::StringType name{};
+                        name = get_native_struct_name(struct_object);
+                        header_file.append_line(STR(""));
+                        header_file.append_line(STR("template<>"));
+                        header_file.append_line(std::format(STR("struct TStructOpsTypeTraits<{}> : public TStructOpsTypeTraitsBase2<{}>"), name, name));
+                        header_file.append_line(STR("{"));
+                        header_file.append_line(STR("    enum"));
+                        header_file.append_line(STR("    {"));
+                        header_file.append_line(STR("        WithCopy = false"));
+                        header_file.append_line(STR("    };"));
+                        header_file.append_line(STR("};"));
+                    }
+                }
+            }
             header_file.serialize_file_content_to_disk();
         }
 
