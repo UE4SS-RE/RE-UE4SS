@@ -56,22 +56,111 @@ namespace RC::UEGenerator
         Output::send(STR("Creating all files...\n"));
         for (auto&[comparison_index, generated_file] : m_files)
         {
-            if (!generated_file.primary_file_has_no_contents)
+            if (!generated_file.ordered_primary_file_contents.empty())
             {
                 generated_file.primary_file = File::open(generated_file.primary_file_name, File::OpenFor::Appending, File::OverwriteExistingFile::Yes, File::CreateIfNonExistent::Yes);
                 generate_header_start(generated_file, generated_file.package_name);
-                generated_file.primary_file.write_string_to_file(generated_file.primary_file_contents);
+
+                sort_files(generated_file.ordered_primary_file_contents);
+
+                File::StringType combined_file_contents;
+                for (auto& line : generated_file.ordered_primary_file_contents)
+                {
+                    combined_file_contents.append(line);
+                }
+
+                if (combined_file_contents.empty())
+                {
+                    Output::send(STR("Empty primary file contents in '{}'\n"), generated_file.package_name);
+                }
+                else
+                {
+                    generated_file.primary_file.write_string_to_file(combined_file_contents);
+                }
+
                 generate_header_end(generated_file);
                 generated_file.primary_file.close();
             }
 
-            if (!generated_file.secondary_file_has_no_contents)
+            if (!generated_file.ordered_secondary_file_contents.empty())
             {
                 generated_file.secondary_file = File::open(generated_file.secondary_file_name, File::OpenFor::Appending, File::OverwriteExistingFile::Yes, File::CreateIfNonExistent::Yes);
-                generated_file.secondary_file.write_string_to_file(generated_file.secondary_file_content);
+
+                sort_files(generated_file.ordered_secondary_file_contents);
+
+                File::StringType combined_file_contents;
+                for (auto& line : generated_file.ordered_secondary_file_contents)
+                {
+                    combined_file_contents.append(line);
+                }
+
+                if (combined_file_contents.empty())
+                {
+                    Output::send(STR("Empty secondary file contents in '{}'\n"), generated_file.package_name);
+                }
+                else
+                {
+                    generated_file.secondary_file.write_string_to_file(combined_file_contents);
+                }
+
                 generated_file.secondary_file.close();
             }
         }
+    }
+
+    auto CXXGenerator::sort_files(std::vector<File::StringType>& content) -> void
+    {
+        std::vector<File::StringType> struct_content;
+        std::vector<File::StringType> class_content;
+        std::vector<File::StringType> other_content;
+        for (auto& line : content)
+        {
+            if (line.starts_with(STR("struct")))
+            {
+                struct_content.push_back(line);
+            }
+            else if (line.starts_with(STR("class")))
+            {
+                class_content.push_back(line);
+            }
+            else
+            {
+                other_content.push_back(line);
+            }
+        }
+        
+        sort_types(struct_content);
+        sort_types(class_content);
+        sort_types(other_content);
+
+        content.clear();
+        content.reserve(struct_content.size() + class_content.size() + other_content.size());
+        content.insert(content.end(), struct_content.begin(), struct_content.end());
+        content.insert(content.end(), class_content.begin(), class_content.end());
+        content.insert(content.end(), other_content.begin(), other_content.end());
+    }
+
+    auto CXXGenerator::sort_types(std::vector<File::StringType>& content) -> void
+    {
+        std::sort(content.begin(), content.end(), [&](const auto& a, const auto& b) {
+            auto a_class_name = get_class_name(a);
+            auto b_class_name = get_class_name(b);
+            return a_class_name < b_class_name;
+        });
+    }
+
+    auto CXXGenerator::get_class_name(const auto& x) -> std::wstring
+    {
+        // Using this method instead of regex because it is extremely slow
+        auto class_name = x.substr(x.find(STR(' ')) + 1);
+        class_name = class_name.substr(0, class_name.find(STR(' ')));
+        if (class_name == STR("class"))
+        {
+            // Case for enum class
+            class_name = x.substr(x.find(STR(' ')) + 7);
+            class_name = class_name.substr(0, class_name.find(STR(' ')));
+        }
+        return class_name;
     }
 
     auto CXXGenerator::object_is_package(UObject* object) -> bool
@@ -267,7 +356,7 @@ namespace RC::UEGenerator
                 generate_class(inherited_object_info, *package_file_for_inherited_class, new_class_content);
                 if (!package_file_for_inherited_class->primary_file_has_no_contents)
                 {
-                    package_file_for_inherited_class->primary_file_contents.append(new_class_content);
+                    package_file_for_inherited_class->ordered_primary_file_contents.push_back(new_class_content);
                 }
             }
 
@@ -526,40 +615,44 @@ namespace RC::UEGenerator
     {
         generated_file.secondary_file_has_no_contents = false;
 
+        File::StringType content_buffer;
         UEnum* uenum = static_cast<UEnum*>(native_object);
         auto& enum_names = uenum->GetEnumNames();
 
         const auto cpp_form = uenum->GetCppForm();
         if (cpp_form == UEnum::ECppForm::Regular)
         {
-            generated_file.secondary_file_content.append(std::format(STR("enum {} {{\n"), get_native_enum_name(uenum, false)));
+            content_buffer.append(std::format(STR("enum {} {{\n"), get_native_enum_name(uenum, false)));
         }
         else if (cpp_form == UEnum::ECppForm::Namespaced)
         {
-            generated_file.secondary_file_content.append(std::format(STR("namespace {} {{\n{}enum Type {{\n"), get_native_enum_name(uenum, false), generate_tab()));
+            content_buffer.append(std::format(STR("namespace {} {{\n{}enum Type {{\n"), get_native_enum_name(uenum, false), generate_tab()));
         }
         else if (cpp_form == UEnum::ECppForm::EnumClass)
         {
-            generated_file.secondary_file_content.append(std::format(STR("enum class {} {{\n"), get_native_enum_name(uenum, false)));
+            content_buffer.append(std::format(STR("enum class {} {{\n"), get_native_enum_name(uenum, false)));
         }
 
         enum_names.ForEach([&](Unreal::FEnumNamePair* elem, size_t index) {
             auto enum_value_full_name = elem->Key.ToString();
             size_t colon_pos = enum_value_full_name.rfind(STR(":"));
             auto enum_value_name = colon_pos == enum_value_full_name.npos ? enum_value_full_name : enum_value_full_name.substr(colon_pos + 1);
-            generated_file.secondary_file_content.append(std::format(STR("{}{}{} = {},\n"), generate_tab(), cpp_form == UEnum::ECppForm::Namespaced ? generate_tab() : STR(""), enum_value_name, elem->Value));
+
+            content_buffer.append(std::format(STR("{}{}{} = {},\n"), generate_tab(), cpp_form == UEnum::ECppForm::Namespaced ? generate_tab() : STR(""), enum_value_name, elem->Value));
 
             return LoopAction::Continue;
         });
 
-        generated_file.secondary_file_content.append(std::format(STR("{}}};"), cpp_form == UEnum::ECppForm::Namespaced ? generate_tab() : STR("")));
+        content_buffer.append(std::format(STR("{}}};"), cpp_form == UEnum::ECppForm::Namespaced ? generate_tab() : STR("")));
 
         if (cpp_form == UEnum::ECppForm::Namespaced)
         {
-            generated_file.secondary_file_content.append(STR("\n}"));
+            content_buffer.append(STR("\n}"));
         }
 
-        generated_file.secondary_file_content.append(STR("\n\n"));
+        content_buffer.append(STR("\n\n"));
+
+        generated_file.ordered_secondary_file_contents.push_back(content_buffer);
     }
 
     auto CXXGenerator::generate_package(UObject* package, File::StringType& out) -> void
@@ -633,8 +726,8 @@ namespace RC::UEGenerator
             GeneratedFile generated_file{
                 .primary_file_name = primary_file_path_and_name,
                 .secondary_file_name = secondary_file_path_and_name,
-                .primary_file_contents = {},
-                .secondary_file_content = {},
+                .ordered_primary_file_contents = {},
+                .ordered_secondary_file_contents = {},
                 .package_name = package_name,
                 .primary_file = {},
                 .secondary_file = {},
@@ -699,7 +792,7 @@ namespace RC::UEGenerator
                 generate_class(object_info, *package_file, class_content);
                 if (!package_file->primary_file_has_no_contents)
                 {
-                    package_file->primary_file_contents.append(class_content);
+                    package_file->ordered_primary_file_contents.push_back(class_content);
                 }
                 ++num_objects_generated;
 

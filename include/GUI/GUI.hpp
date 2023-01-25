@@ -15,6 +15,7 @@ namespace RC::GUI
     enum class GfxBackend
     {
         DX11,
+        GLFW3_OpenGL3,
     };
 
     enum class OSBackend
@@ -22,12 +23,10 @@ namespace RC::GUI
         Windows,
     };
 
-    struct WindowRect
+    struct WindowSize
     {
-        long left;
-        long top;
-        long right;
-        long bottom;
+        long x;
+        long y;
     };
 
     class GfxBackendBase
@@ -51,18 +50,22 @@ namespace RC::GUI
         virtual auto cleanup_device() -> void = 0;
         virtual auto handle_window_resize(int64_t param_1, int64_t param_2) -> void = 0;
         virtual auto on_os_backend_set() -> void = 0;
+        virtual auto get_window_size() -> WindowSize { return {}; };
+        virtual inline auto exit_requested() -> bool { return false; };
     };
 
     class OSBackendBase
     {
     protected:
         class GfxBackendBase* m_gfx_backend{};
+        bool m_is_valid{true};
 
     public:
         OSBackendBase() = default;
 
     public:
         auto set_gfx_backend(GfxBackendBase* backend) { m_gfx_backend = backend; }
+        auto is_valid() -> bool { return m_is_valid; }
 
     public:
         virtual auto init() -> void = 0;
@@ -72,8 +75,26 @@ namespace RC::GUI
         virtual auto shutdown() -> void = 0;
         virtual auto cleanup() -> void = 0;
         virtual auto get_window_handle() -> void* = 0;
-        virtual auto get_window_rect() -> WindowRect = 0;
+        virtual auto get_window_size() -> WindowSize = 0;
         virtual auto on_gfx_backend_set() -> void = 0;
+    };
+
+    class Backend_NoOS : public OSBackendBase
+    {
+    public:
+        inline Backend_NoOS() : OSBackendBase() { m_is_valid = false; }
+        ~Backend_NoOS() = default;
+
+    public:
+        inline auto init() -> void override {}
+        inline auto imgui_backend_newframe() -> void override {}
+        inline auto create_window() -> void override {}
+        inline auto exec_message_loop([[maybe_unused]]bool* exit_requested) -> void override {}
+        inline auto shutdown() -> void override {}
+        inline auto cleanup() -> void override {}
+        inline auto get_window_handle() -> void* override { return nullptr; }
+        inline auto get_window_size() -> WindowSize override {return {}; }
+        inline auto on_gfx_backend_set() -> void override {}
     };
 
     extern ImColor g_imgui_bg_color;
@@ -130,15 +151,16 @@ namespace RC::GUI
         static std::vector<EndOfFrameCallback> s_end_of_frame_callbacks;
 
     public:
-        DebuggingGUI() = delete;
-        DebuggingGUI(GfxBackend selected_gfx_backend, OSBackend selected_os_backend);
+        DebuggingGUI() = default;
         ~DebuggingGUI();
 
     public:
+        auto is_valid() -> bool;
         auto is_open() -> bool { return m_is_open; };
         auto setup(std::stop_token&& token) -> void/* override*/;
         auto get_console() -> Console& { return m_console; };
         auto get_live_view() -> LiveView& { return m_live_view; };
+        auto set_gfx_backend(GfxBackend) -> void;
 
     private:
         auto on_update() -> void;

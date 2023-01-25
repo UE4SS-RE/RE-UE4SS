@@ -3,6 +3,7 @@
 #include <imgui.h>
 #include <backends/imgui_impl_win32.h>
 #include <tchar.h>
+#include <GUI/DX11.hpp>
 
 #ifndef WIN32_LEAN_AND_MEAN
 #define WIN32_LEAN_AND_MEAN
@@ -35,6 +36,12 @@ namespace RC::GUI
 
     auto Backend_Windows::create_window() -> void
     {
+        StringType title_bar_text{STR("UE4SS Debugging Tools")};
+        if (dynamic_cast<Backend_DX11*>(m_gfx_backend))
+        {
+            title_bar_text.append(STR(" (DX11)"));
+        }
+
         //ImGui_ImplWin32_EnableDpiAwareness()
         s_wc.cbSize = sizeof(WNDCLASSEX);
         //wc.style = CS_CLASSDC;
@@ -48,10 +55,10 @@ namespace RC::GUI
         //wc.hbrBackground = NULL;
         s_wc.hbrBackground = CreateSolidBrush(RGB(0, 0, 0));
         s_wc.lpszMenuName = NULL;
-        s_wc.lpszClassName = _T("UE4SS Debugging Tools");
+        s_wc.lpszClassName = title_bar_text.c_str();
         s_wc.hIconSm = NULL;
         ::RegisterClassEx(&s_wc);
-        s_hwnd = ::CreateWindow(s_wc.lpszClassName, _T("UE4SS Debugging Tools"), WS_OVERLAPPEDWINDOW, 100, 100, 1280, 800, NULL, NULL, s_wc.hInstance, NULL);
+        s_hwnd = ::CreateWindow(s_wc.lpszClassName, title_bar_text.c_str(), WS_OVERLAPPEDWINDOW, 100, 100, 1280, 800, NULL, NULL, s_wc.hInstance, NULL);
 
         if (!m_gfx_backend->create_device())
         {
@@ -94,11 +101,11 @@ namespace RC::GUI
         return s_hwnd;
     }
 
-    auto Backend_Windows::get_window_rect() -> WindowRect
+    auto Backend_Windows::get_window_size() -> WindowSize
     {
         RECT current_window_rect{};
         GetWindowRect(s_hwnd, &current_window_rect);
-        return {current_window_rect.left, current_window_rect.top, current_window_rect.right, current_window_rect.bottom};
+        return {current_window_rect.right - current_window_rect.left, current_window_rect.bottom - current_window_rect.top};
     }
 
     auto Backend_Windows::on_gfx_backend_set() -> void

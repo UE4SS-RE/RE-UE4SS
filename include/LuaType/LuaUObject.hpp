@@ -462,6 +462,37 @@ Overloads:
                 return 1;
             });
 
+            table.add_pair("HasAnyInternalFlags", [](const LuaMadeSimple::Lua& lua) -> int {
+                std::string error_overload_not_found{R"(
+No overload found for function 'UObject.HasAnyInternalFlags'.
+Overloads:
+#1: HasAnyInternalFlags(EInternalObjectFlags InternalObjectFlags))"};
+
+                const auto& lua_object = lua.get_userdata<SelfType>();
+
+                if (!lua.is_integer())
+                {
+                    lua.throw_error(error_overload_not_found);
+                }
+
+                Unreal::EInternalObjectFlags object_internal_flags = static_cast<Unreal::EInternalObjectFlags>(lua.get_integer());
+                lua.set_bool(lua_object.get_remote_cpp_object()->HasAnyInternalFlags(object_internal_flags));
+                return 1;
+            });
+
+            table.add_pair("IsValid", [](const LuaMadeSimple::Lua& lua) -> int {
+                const auto& lua_object = lua.get_userdata<SelfType>();
+                if (lua_object.get_remote_cpp_object() && !lua_object.get_remote_cpp_object()->IsUnreachable())
+                {
+                    lua.set_bool(true);
+                }
+                else
+                {
+                    lua.set_bool(false);
+                }
+                return 1;
+            });
+
             // Add things that are intended to be overridden later here
             // These will then be set only if this is the final object (nothing overrides it later)
             if constexpr (is_final == LuaMadeSimple::Type::IsFinal::Yes)
