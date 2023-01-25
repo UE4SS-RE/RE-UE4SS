@@ -65,7 +65,7 @@ namespace RC
     LuaMadeSimple::Lua* LuaStatics::console_executor{};
     bool LuaStatics::console_executor_enabled{};
 
-    static auto get_mod_ref(const LuaMadeSimple::Lua& lua) -> Mod*
+    auto get_mod_ref(const LuaMadeSimple::Lua& lua) -> Mod*
     {
         if (lua_getglobal(lua.get_lua_state(), "ModRef") == LUA_TNIL)
         {
@@ -474,6 +474,19 @@ namespace RC
         object_flags_table.add_pair("RF_HasExternalPackage", static_cast<std::underlying_type_t<Unreal::EObjectFlags>>(Unreal::EObjectFlags::RF_HasExternalPackage));
         object_flags_table.add_pair("RF_AllFlags", static_cast<std::underlying_type_t<Unreal::EObjectFlags>>(Unreal::EObjectFlags::RF_AllFlags));
         object_flags_table.make_global("EObjectFlags");
+
+        LuaMadeSimple::Lua::Table object_internal_flags_table = lua.prepare_new_table();
+        object_internal_flags_table.add_pair("ReachableInCluster", static_cast<std::underlying_type_t<Unreal::EInternalObjectFlags>>(Unreal::EInternalObjectFlags::ReachableInCluster));
+        object_internal_flags_table.add_pair("ClusterRoot", static_cast<std::underlying_type_t<Unreal::EInternalObjectFlags>>(Unreal::EInternalObjectFlags::ClusterRoot));
+        object_internal_flags_table.add_pair("Native", static_cast<std::underlying_type_t<Unreal::EInternalObjectFlags>>(Unreal::EInternalObjectFlags::Native));
+        object_internal_flags_table.add_pair("Async", static_cast<std::underlying_type_t<Unreal::EInternalObjectFlags>>(Unreal::EInternalObjectFlags::Async));
+        object_internal_flags_table.add_pair("AsyncLoading", static_cast<std::underlying_type_t<Unreal::EInternalObjectFlags>>(Unreal::EInternalObjectFlags::AsyncLoading));
+        object_internal_flags_table.add_pair("Unreachable", static_cast<std::underlying_type_t<Unreal::EInternalObjectFlags>>(Unreal::EInternalObjectFlags::Unreachable));
+        object_internal_flags_table.add_pair("PendingKill", static_cast<std::underlying_type_t<Unreal::EInternalObjectFlags>>(Unreal::EInternalObjectFlags::PendingKill));
+        object_internal_flags_table.add_pair("RootSet", static_cast<std::underlying_type_t<Unreal::EInternalObjectFlags>>(Unreal::EInternalObjectFlags::RootSet));
+        object_internal_flags_table.add_pair("GarbageCollectionKeepFlags", static_cast<std::underlying_type_t<Unreal::EInternalObjectFlags>>(Unreal::EInternalObjectFlags::GarbageCollectionKeepFlags));
+        object_internal_flags_table.add_pair("AllFlags", static_cast<std::underlying_type_t<Unreal::EInternalObjectFlags>>(Unreal::EInternalObjectFlags::AllFlags));
+        object_internal_flags_table.make_global("EInternalObjectFlags");
     }
 
     Mod::Mod(UE4SSProgram& program, std::wstring&& mod_name, std::wstring&& mod_path) : m_program(program), m_mod_name(mod_name), m_mod_path(mod_path), m_lua(LuaMadeSimple::new_state())

@@ -1,132 +1,97 @@
--- /Script/Engine.GameplayStatics:CreatePlayer
+local UEHelpers = require("UEHelpers")
+
+-- Importing functions to the global namespace of this mod just so that we don't have to retype 'UEHelpers.' over and over again.
+local GetGameplayStatics = UEHelpers.GetGameplayStatics
+local GetGameMapsSettings = UEHelpers.GetGameMapsSettings
 
 -- Set this value to true if you wish for the first controller to control player 1, or false if you want the first controller to control player 2
-bOffsetGamepad = true
+local bOffsetGamepad = true
 
---
-IsInitialized = false
-GameplayStatics = nil
-LastIndex = 0
-PlayerController = nil
-Player2 = nil
-Player3 = nil
-Player4 = nil
-PlayerControllerTable = {
-}
-
-function GetPlayerController()
-    local PlayerControllers = FindAllOf("PlayerController")
-
-    for Index,Controller in pairs(PlayerControllers) do
-        if Controller.Pawn:IsValid() and Controller.Pawn:IsPlayerControlled() then
-            PlayerController = Controller
-        else
-            print("Not valid or not player controlled\n")
-        end
-    end
-    if PlayerController and PlayerController:IsValid() then
-        if PlayerControllerTable == nil or #PlayerControllerTable == 0 then
-            PlayerControllerTable = {
-                PlayerController
-            }
-        else
-            PlayerControllerTable[1] = PlayerController
-        end
-        print(string.format("PlayerController: %s\n", PlayerController:GetFullName()))
-        return PlayerController
-    else
-        error("No PlayerController found\n")
-    end
-end
+local IsInitialized = false
+local PlayerControllerTable = {}
 
 function Init()
-    GameplayStatics = StaticFindObject("/Script/Engine.Default__GameplayStatics")
-
-    if not GameplayStatics:IsValid() then error("GameplayStatics not valid\n") end
-    
-    GameMapsSettings = StaticFindObject("/Script/EngineSettings.Default__GameMapsSettings")
-    
-    if not GameMapsSettings:IsValid() then error("GameMapsSettings not valid\n") end
-    
-    GameMapsSettings.bUseSplitscreen = true
-    GameMapsSettings.bOffsetPlayerGamepadIds = bOffsetGamepad
-    print(string.format("UseSplitScreen: %s\n", GameMapsSettings.bUseSplitscreen))
-    print(string.format("OffsetPlayerGamepadIds: %s\n", GameMapsSettings.bOffsetPlayerGamepadIds))
+    GetGameMapsSettings().bUseSplitscreen = true
+    GetGameMapsSettings().bOffsetPlayerGamepadIds = bOffsetGamepad
+    print(string.format("UseSplitScreen: %s\n", GetGameMapsSettings().bUseSplitscreen))
+    print(string.format("OffsetPlayerGamepadIds: %s\n", GetGameMapsSettings().bOffsetPlayerGamepadIds))
 
     IsInitialized = true
 end
 
+function CachePlayerControllers()
+    PlayerControllerTable = {}
+    local AllPlayerControllers = FindAllOf("PlayerController")
+    for Index, PlayerController in pairs(AllPlayerControllers) do
+        if PlayerController:IsValid() and PlayerController.Player:IsValid() and not PlayerController:HasAnyInternalFlags(EInternalObjectFlags.PendingKill) then
+            PlayerControllerTable[PlayerController.Player.ControllerId + 1] = PlayerController
+        end
+    end
+end
 
 Init()
 
-
 function CreatePlayer()
-    if not IsInitialized then
-        Init() 
-    end
-    
-    print(string.format("GameplayStatics: %s\n", GameplayStatics:GetFullName()))
-    NewController = GameplayStatics:CreatePlayer(GetPlayerController(), -1, true)
+    if not IsInitialized then Init() end
+    CachePlayerControllers()
+
+    print(string.format("GameplayStatics: %s\n", GetGameplayStatics():GetFullName()))
+    NewController = GetGameplayStatics():CreatePlayer(PlayerControllerTable[1], #PlayerControllerTable, true)
     if NewController:IsValid() then
-        print(string.format("NewController: %s\n", NewController:GetFullName()))
         table.insert(PlayerControllerTable, NewController)
         print(string.format("Player %s created.\n", #PlayerControllerTable))
     else
         print("Player could not be created.\n")
     end
-    
-        
 end
 
 function DestroyPlayer()
-    if not IsInitialized then
-        Init() 
-    end
+    if not IsInitialized then Init() end
+    -- The caller is caching the player controllers so that it can output that the correct player is being destroyed.
 
     if #PlayerControllerTable == 1 then
-        print("Player could not be destroyed, only 1 player in Lua array.\n")
+        print("Player could not be destroyed, only 1 player exists.\n")
         return
     end
-    print(string.format("GameplayStatics: %s\n", GameplayStatics:GetFullName()))
-    local PlayerToRemove = PlayerControllerTable[#PlayerControllerTable]
-    if PlayerToRemove:IsValid() then
-        GameplayStatics:RemovePlayer(PlayerToRemove, true)
-        table.remove(PlayerControllerTable, #PlayerControllerTable)
-    else
-        print("Player to be removed is not valid.\nPlayer could not be destroyed.\n")
-    end
-  
+    print(string.format("GameplayStatics: %s\n", GetGameplayStatics():GetFullName()))
+
+    local ControllerToRemove = PlayerControllerTable[#PlayerControllerTable]
+    print(string.format("Removing %s\n", ControllerToRemove:GetFullName()))
+    if not ControllerToRemove:IsValid() then print("PlayerController to be removed is not valid.\nPlayerController could not be destroyed.\n") return end
+
+    GetGameplayStatics():RemovePlayer(ControllerToRemove, true)
 end
 
 function TeleportPlayers()
-    if not IsInitialized then
-        Init() 
-    end
-    
+    if not IsInitialized then Init() end
+    CachePlayerControllers()
+
     if #PlayerControllerTable == 1 then
-        print("Players could not be teleported, only 1 player in Lua array\n")
+        print("Players could not be teleported, only 1 player exists.\n")
         return
     end
-    
+
+    local DidTeleport = false
+
     PlayerPawn = PlayerControllerTable[1].Pawn
     PlayerPawnLocationVec = PlayerPawn.RootComponent:K2_GetComponentLocation()
     PlayerPawnLocationRot = PlayerPawn.RootComponent:K2_GetComponentRotation()
     local HitResult = {}
     for i, EachPlayerController in ipairs(PlayerControllerTable) do
-        if i > 1 then
+        if i > 1 and EachPlayerController.Pawn:IsValid() then
             EachPlayerController.Pawn:K2_SetActorLocationAndRotation(PlayerPawnLocationVec, PlayerPawnLocationRot, false, HitResult, false)
+            DidTeleport = true
         end
     end
-    
-    print("Players teleport to Player 1.\n")
-    
-    
+
+    if DidTeleport then
+        print("Players teleport to Player 1.\n")
+    else
+        print("No players could be teleported\n")
+    end
 end
 
 RegisterKeyBind(Key.Y, {ModifierKey.CONTROL}, function()
-
-    -- Execute code inside the game thread.
-    -- Will execute as soon as the game has time to execute.
     ExecuteInGameThread(function()
         print("Creating player..\n")
         CreatePlayer()
@@ -135,6 +100,7 @@ end)
 
 RegisterKeyBind(Key.U, {ModifierKey.CONTROL}, function()
     ExecuteInGameThread(function()
+        CachePlayerControllers()
         print(string.format("Destroying player %s..\n", #PlayerControllerTable))
         DestroyPlayer()
     end)
