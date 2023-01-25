@@ -10,7 +10,7 @@
 
 * When calling 'IsValid()' on UObjects, whether the UObject is reachable is now taken into account.
 
-* The splitscreen mod now operates idenpendently of the Lua state which means that hot-reloading shouldn't cause it to break
+* The splitscreen mod now operates independently of the Lua state which means that hot-reloading shouldn't cause it to break
 
 * Added shared module "UEHelpers" to provide shortcut functions to the Lua module for commonly used UE functions or classes
 
