@@ -20,6 +20,8 @@ namespace RC
         class UClass;
     }
 
+    auto get_mod_ref(const LuaMadeSimple::Lua& lua) -> class Mod*;
+
     class Mod
     {
     public:
@@ -66,6 +68,13 @@ namespace RC
         std::vector<AsyncAction> m_pending_actions{};
         std::vector<AsyncAction> m_delayed_actions{};
 
+        struct SharedLuaVariable
+        {
+            struct UserdataContainer { void* userdata; };
+            int lua_type{LUA_TNIL};
+            void* value{};
+            bool is_integer{}; // Is true if lua_isinteger returned true when this variable was shared.
+        };
         struct LuaCallbackData
         {
             const LuaMadeSimple::Lua& lua;
@@ -76,6 +85,8 @@ namespace RC
         static inline std::unordered_map<File::StringType, LuaCallbackData> m_global_command_lua_callbacks;
         static inline std::unordered_map<File::StringType, LuaCallbackData> m_custom_command_lua_pre_callbacks;
         static inline std::vector<SimpleLuaAction> m_game_thread_actions{};
+        // This is storage that persists through hot-reloads.
+        static inline std::unordered_map<std::string, SharedLuaVariable> m_shared_lua_variables{};
         static inline bool m_is_currently_executing_game_action{};
 
     protected:

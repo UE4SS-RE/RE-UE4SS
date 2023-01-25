@@ -342,7 +342,7 @@ namespace RC::LuaType
                 }
                 else if (params.lua.is_nil())
                 {
-                    params.lua.discard_value();
+                    *property_value = nullptr;
                 }
                 else
                 {
