@@ -297,17 +297,17 @@ target_include_directories(${XINPUT_TARGET} PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}
 
 # Auto incrementing build number -> START
 # Fetch the auto incrementing build number
-file(READ ${UE4SS_GENERATED_SOURCE_DIR}/build_number.cache UE4SS_LIB_BUILD_NUMBER)
-message("Build #${UE4SS_LIB_BUILD_NUMBER} (Target: ${TARGET})")
-add_custom_target(IncrementBuildNumber
-        COMMAND ${CMAKE_COMMAND}
-        -DRC_SOURCE_DIR:PATH="${PROJECT_SOURCE_DIR}"
-        -DUE4SS_GENERATED_SOURCE_DIR:PATH="${UE4SS_GENERATED_SOURCE_DIR}"
-        -DUE4SS_GENERATED_INCLUDE_DIR:PATH="${UE4SS_GENERATED_INCLUDE_DIR}"
-        -P "${UE4SS_GENERATED_SOURCE_DIR}/build_number.cmake"
-        )
-add_dependencies(${TARGET} IncrementBuildNumber)
-add_dependencies(${XINPUT_TARGET} IncrementBuildNumber)
+# file(READ ${UE4SS_GENERATED_SOURCE_DIR}/build_number.cache UE4SS_LIB_BUILD_NUMBER)
+# message("Build #${UE4SS_LIB_BUILD_NUMBER} (Target: ${TARGET})")
+# add_custom_target(IncrementBuildNumber
+#        COMMAND ${CMAKE_COMMAND}
+#        -DRC_SOURCE_DIR:PATH="${PROJECT_SOURCE_DIR}"
+#        -DUE4SS_GENERATED_SOURCE_DIR:PATH="${UE4SS_GENERATED_SOURCE_DIR}"
+#        -DUE4SS_GENERATED_INCLUDE_DIR:PATH="${UE4SS_GENERATED_INCLUDE_DIR}"
+#        -P "${UE4SS_GENERATED_SOURCE_DIR}/build_number.cmake"
+#        )
+# add_dependencies(${TARGET} IncrementBuildNumber)
+# add_dependencies(${XINPUT_TARGET} IncrementBuildNumber)
 # Auto incrementing build number -> END
 
 # LuaBindingsGenerator -> START
