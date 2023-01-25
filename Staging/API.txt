@@ -76,6 +76,19 @@ Table Definitions
         RF_HasExternalPackage            | 0x08000000
         RF_AllFlags                      | 0x0FFFFFFF
 
+    EInternalObjectFlags
+        - A table of internal object flags that can be or'd together by using |.
+        ReachableInCluster               | 0x00800000
+        ClusterRoot                      | 0x01000000
+        Native                           | 0x02000000
+        Async                            | 0x04000000
+        AsyncLoading                     | 0x08000000
+        Unreachable                      | 0x10000000
+        PendingKill                      | 0x20000000
+        RootSet                          | 0x40000000
+        GarbageCollectionKeepFlags       | 0x0E000000
+        AllFlags                         | 0x7F800000
+
 
 
 Global Functions
@@ -214,6 +227,15 @@ Classes
         Inheritance: RemoteObject
         - Class for interacting with the local mod object
         Methods
+            SetSharedVariable(string VariableName, any Value)
+                - Sets a variable that can be accessed by any mod.
+                - The second parameter (Value) can only be one of the following types: nil, string, number, bool, UObject(+derivatives), lightuserdata.
+                - These variables do not get reset when hot-reloading.
+
+            GetSharedVariable(string VariableName) -> any
+                - Gets a variable that could've been set from another mod.
+                - The return value can only be one of the following types: nil, string, number, bool, UObject(+derivatives), lightuserdata.
+        
             type() -> string
                 - Returns "ModRef"
 
@@ -274,6 +296,9 @@ Classes
 
             HasAnyFlags(EObjectFlags FlagsToCheck)
                 - Returns whether the object has any of the specified flags.
+            
+            HasAnyInternalFlags(EInternalObjectFlags InternalFlagsToCheck)
+                - Return whether the object has any of the specified internal flags.
 
             type() -> string
                 - Returns the type of this object as known by UE4SS
