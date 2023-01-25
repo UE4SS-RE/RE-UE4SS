@@ -5,6 +5,7 @@
 #include <filesystem>
 
 #include <File/File.hpp>
+#include <GUI/GUI.hpp>
 
 namespace RC
 {
@@ -59,6 +60,7 @@ namespace RC
             bool SimpleConsoleEnabled{true};
             bool DebugConsoleEnabled{ true };
             bool DebugConsoleVisible{ true };
+            GUI::GfxBackend GraphicsAPI{GUI::GfxBackend::GLFW3_OpenGL3};
         } Debug;
 
         struct SectionThreads

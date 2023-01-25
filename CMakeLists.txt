@@ -232,6 +232,7 @@ set(${TARGET}_Sources
         #"${CMAKE_CURRENT_SOURCE_DIR}/src/LuaTests.cpp"
         "${CMAKE_CURRENT_SOURCE_DIR}/src/GUI/GUI.cpp"
         "${CMAKE_CURRENT_SOURCE_DIR}/src/GUI/DX11.cpp"
+        "${CMAKE_CURRENT_SOURCE_DIR}/src/GUI/GLFW3_OpenGL3.cpp"
         "${CMAKE_CURRENT_SOURCE_DIR}/src/GUI/Windows.cpp"
         "${CMAKE_CURRENT_SOURCE_DIR}/src/GUI/Console.cpp"
         "${CMAKE_CURRENT_SOURCE_DIR}/src/GUI/ConsoleOutputDevice.cpp"
@@ -247,6 +248,8 @@ set(${TARGET}_Sources
         "${CMAKE_CURRENT_SOURCE_DIR}/Dependencies/imgui/misc/cpp/imgui_stdlib.cpp"
         "${CMAKE_CURRENT_SOURCE_DIR}/Dependencies/imgui/backends/imgui_impl_win32.cpp"
         "${CMAKE_CURRENT_SOURCE_DIR}/Dependencies/imgui/backends/imgui_impl_dx11.cpp"
+        "${CMAKE_CURRENT_SOURCE_DIR}/Dependencies/imgui/backends/imgui_impl_opengl3.cpp"
+        "${CMAKE_CURRENT_SOURCE_DIR}/Dependencies/imgui/backends/imgui_impl_glfw.cpp"
         "${CMAKE_CURRENT_SOURCE_DIR}/Dependencies/ImGuiColorTextEdit/TextEditor.cpp"
         #"${CMAKE_CURRENT_SOURCE_DIR}/Dependencies/imgui/imgui_demo.cpp"
         )
@@ -256,7 +259,7 @@ target_compile_options(${TARGET} PRIVATE ${PRIVATE_COMPILE_OPTIONS})
 target_link_options(${TARGET} PRIVATE ${PRIVATE_LINK_OPTIONS})
 target_compile_features(${TARGET} PUBLIC ${PUBLIC_COMPILE_FEATURES})
 target_compile_definitions(${TARGET} PUBLIC $<${MAKE_DEPENDENCIES_SHARED}:LUA_BUILD_AS_DLL>)
-set(UE4SS_LINK_WITH_LIBRARIES File DynamicOutput Unreal SinglePassSigScanner LuaMadeSimple FunctionTimer Function IniParser JSON Input PolyHook_2 d3d11)
+set(UE4SS_LINK_WITH_LIBRARIES File DynamicOutput Unreal SinglePassSigScanner LuaMadeSimple FunctionTimer Function IniParser JSON Input PolyHook_2 d3d11 GLFW opengl32)
 set(UE4SS_LINK_WITH_INTERFACE_LIBRARIES fmt::fmt-header-only Function Constructs Helpers MProgram ScopedTimer)
 target_link_libraries(${TARGET} PRIVATE ${UE4SS_LINK_WITH_LIBRARIES} ${UE4SS_LINK_WITH_INTERFACE_LIBRARIES})
 
@@ -284,6 +287,13 @@ set(IMGUI_INCLUDES Dependencies/imgui Dependencies/ImGuiColorTextEdit)
 target_include_directories(${TARGET} PUBLIC ${IMGUI_INCLUDES})
 target_include_directories(${XINPUT_TARGET} PUBLIC ${IMGUI_INCLUDES})
 # imgui -> END
+
+# GLFW -> START
+add_library(GLFW STATIC IMPORTED)
+set_property(TARGET GLFW PROPERTY IMPORTED_LOCATION "${CMAKE_CURRENT_SOURCE_DIR}/Dependencies/GLFW/lib-vc2022/glfw3.lib")
+target_include_directories(${TARGET} PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/Dependencies/GLFW/include")
+target_include_directories(${XINPUT_TARGET} PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/Dependencies/GLFW/include")
+# GLFW -> END
 
 # Auto incrementing build number -> START
 # Fetch the auto incrementing build number
