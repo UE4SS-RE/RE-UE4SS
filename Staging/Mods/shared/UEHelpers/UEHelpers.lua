@@ -10,6 +10,7 @@ local CacheDefaultObject = nil
 ---@return APlayerController
 function UEHelpers.GetPlayerController()
     local PlayerControllers = FindAllOf("Controller")
+    if not PlayerControllers then error("No PlayerController found\n") end
     local PlayerController = nil
     for Index,Controller in pairs(PlayerControllers) do
         if Controller.Pawn:IsValid() and Controller.Pawn:IsPlayerControlled() then
