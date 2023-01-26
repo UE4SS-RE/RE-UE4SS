@@ -21,6 +21,7 @@
 #include <Unreal/FOutputDevice.hpp>
 #include <Unreal/Property/FObjectProperty.hpp>
 #include <Unreal/Property/FBoolProperty.hpp>
+#include <Unreal/Property/FArrayProperty.hpp>
 #include <imgui.h>
 #include <misc/cpp/imgui_stdlib.h>
 #include <imgui_internal.h>
@@ -695,12 +696,12 @@ namespace RC::GUI
         return selected_object_or_property.property;
     }
 
-    auto LiveView::render_property_value(FProperty* property, ContainerType container_type, void* container, FProperty** last_property_in, bool* tried_to_open_nullptr_object, bool is_watchable, int32 first_offset) -> std::variant<std::monostate, UObject*, FProperty*>
+    auto LiveView::render_property_value(FProperty* property, ContainerType container_type, void* container, FProperty** last_property_in, bool* tried_to_open_nullptr_object, bool is_watchable, int32 first_offset, bool container_is_array) -> std::variant<std::monostate, UObject*, FProperty*>
     {
         std::variant<std::monostate, UObject*, FProperty*> next_item_to_render{};
         auto property_offset = property->GetOffset_Internal();
 
-        if (*last_property_in)
+        if (last_property_in && *last_property_in)
         {
             auto property_alignment = property->GetMinAlignment();
             auto last_property_offset = (*last_property_in)->GetOffset_Internal();
@@ -730,8 +731,8 @@ namespace RC::GUI
 
         bool open_edit_value_popup{};
 
-        auto render_property_value_context_menu = [&]() {
-            if (ImGui::BeginPopupContextItem(property_name.c_str()))
+        auto render_property_value_context_menu = [&](std::string_view id_override = "") {
+            if (ImGui::BeginPopupContextItem(id_override.empty() ? property_name.c_str() : std::format("context-menu-{}", id_override).c_str()))
             {
                 if (ImGui::MenuItem("Copy name"))
                 {
@@ -809,7 +810,7 @@ namespace RC::GUI
         }
         else
         {
-            ImGui::Text("0x%X (0x%X) %s:", first_offset, property_offset, property_name.c_str());
+            ImGui::Text("0x%X%s %s:", first_offset, container_is_array ? std::format("").c_str() : std::format(" (0x{:X})", property_offset).c_str(), property_name.c_str());
         }
         if (auto struct_property = CastField<FStructProperty>(property); struct_property && struct_property->GetStruct()->GetFirstProperty())
         {
@@ -818,7 +819,7 @@ namespace RC::GUI
             auto tree_node_id = std::format("{}{}", static_cast<void*>(container_ptr), property_name);
             if (ImGui_TreeNodeEx(std::format("{}", to_string(property_text.GetCharArray())).c_str(), tree_node_id.c_str(), ImGuiTreeNodeFlags_NoAutoOpenOnLog))
             {
-                render_property_value_context_menu();
+                render_property_value_context_menu(tree_node_id);
                 
                 struct_property->GetStruct()->ForEachProperty([&](FProperty* inner_property) {
                     FString struct_prop_text_item{};
@@ -841,14 +842,50 @@ namespace RC::GUI
                 });
                 ImGui::TreePop();
             }
+            render_property_value_context_menu(tree_node_id);
+        }
+        else if (auto array_property = CastField<FArrayProperty>(property); array_property)
+        {
+            is_watchable = false;
+            ImGui::SameLine();
+            auto tree_node_id = std::format("{}{}", static_cast<void*>(container_ptr), property_name);
+            if (ImGui_TreeNodeEx(std::format("{}", to_string(property_text.GetCharArray())).c_str(), tree_node_id.c_str(), ImGuiTreeNodeFlags_NoAutoOpenOnLog))
+            {
+                render_property_value_context_menu(tree_node_id);
+
+                auto script_array = std::bit_cast<FScriptArray*>(container_ptr);
+                auto inner_property = array_property->GetInner();
+                for (int32_t i = 0; i < script_array->Num(); ++i)
+                {
+                    auto element_offset = inner_property->GetElementSize() * i;
+                    auto element_container_ptr = static_cast<uint8_t*>(*container_ptr) + element_offset;
+                    ImGui::Text("[%i]:", i);
+                    ImGui::Indent();
+                    ImGui::SameLine();
+                    next_item_to_render = render_property_value(inner_property, inner_property->IsA<FObjectProperty>() ? ContainerType::Object : ContainerType::NonObject, element_container_ptr, nullptr, tried_to_open_nullptr_object, false, element_offset, true);
+                    ImGui::Unindent();
+
+                    if (!std::holds_alternative<std::monostate>(next_item_to_render))
+                    {
+                        break;
+                    }
+                }
+                if (script_array->Num() < 1)
+                {
+                    ImGui::Text("-- Empty --");
+                }
+                ImGui::TreePop();
+            }
+            render_property_value_context_menu(tree_node_id);
         }
         else
         {
             ImGui::SameLine();
             ImGui::Text("%S", property_text.GetCharArray());
+            render_property_value_context_menu();
         }
 
-        *last_property_in = property;
+        if (last_property_in) { *last_property_in = property; }
 
         if (ImGui::IsItemHovered())
         {
@@ -859,8 +896,6 @@ namespace RC::GUI
             ImGui::Text("Size: 0x%X", property->GetSize());
             ImGui::EndTooltip();
         }
-
-        render_property_value_context_menu();
 
         // TODO: The 'container' variable should be a variant or something because it could be a struct or array, it's not guaranteed to be a UObject.
         if (container_type == ContainerType::Object)
