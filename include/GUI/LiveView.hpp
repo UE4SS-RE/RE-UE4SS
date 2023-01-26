@@ -139,7 +139,7 @@ namespace RC::GUI
         auto render_super_struct(UStruct*) -> void;
         
         enum class ContainerType { Object, NonObject, };
-        auto render_property_value(FProperty* property, ContainerType container_type, void* container, FProperty** last_property_in, bool* tried_to_open_nullptr_object, bool is_watchable = true, int32_t first_offset = -1) -> std::variant<std::monostate, UObject*, FProperty*>;
+        auto render_property_value(FProperty* property, ContainerType container_type, void* container, FProperty** last_property_in, bool* tried_to_open_nullptr_object, bool is_watchable = true, int32_t first_offset = -1, bool container_is_array = false) -> std::variant<std::monostate, UObject*, FProperty*>;
 
     private:
         auto collapse_all_except(void* except_id) -> void;
