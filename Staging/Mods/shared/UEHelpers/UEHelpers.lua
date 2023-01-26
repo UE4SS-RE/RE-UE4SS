@@ -1,10 +1,17 @@
 local UEHelpers = {}
 
+-- Version 1 does not exist, we start at version 2 because the original version didn't have a version at all.
+local Version = 2
+
 -- Functions local to this module, do not attempt to use!
 local CacheDefaultObject = nil
 
 -- Everything in this section can be used in any mod that requires this module.
 -- Exported functions -> START
+
+function UEHelpers.GetUEHelpersVersion()
+    return Version
+end
 
 --- Returns the first valid PlayerController that is currently controlled by a player.
 ---@return APlayerController
