@@ -58,9 +58,10 @@ namespace RC
         struct SectionDebug
         {
             bool SimpleConsoleEnabled{true};
-            bool DebugConsoleEnabled{ true };
-            bool DebugConsoleVisible{ true };
+            bool DebugConsoleEnabled{true};
+            bool DebugConsoleVisible{true};
             GUI::GfxBackend GraphicsAPI{GUI::GfxBackend::GLFW3_OpenGL3};
+            int64_t LiveViewObjectsPerGroup{64 * 1024 / 2};
         } Debug;
 
         struct SectionThreads

@@ -1,4 +1,5 @@
 #include <algorithm>
+#include <limits>
 #include <string>
 #include <format>
 #include <unordered_map>
@@ -29,10 +30,8 @@ namespace RC::GUI
 {
     using namespace Unreal;
 
-    static constexpr int s_max_elements_per_chunk = 64 * 1024;
-    static constexpr int s_max_chunk_size_doubled = s_max_elements_per_chunk * 2;
-    static constexpr int s_num_items_per_chunk = 1;
-    static constexpr int s_chunk_id_start = -s_max_elements_per_chunk;
+    static int s_max_elements_per_chunk{};
+    static int s_chunk_id_start{};
 
     static bool s_live_view_destructed = false;
     static std::unordered_map<const UObject*, std::string> s_object_ptr_to_full_name{};
@@ -310,6 +309,14 @@ namespace RC::GUI
     auto LiveView::initialize() -> void
     {
         s_need_to_filter_out_properties = Version::IsBelow(4, 25);
+        if (UE4SSProgram::settings_manager.Debug.LiveViewObjectsPerGroup > std::numeric_limits<int>::max())
+        {
+            Output::send<LogLevel::Warning>(STR("Debug.LiveViewObjectsPerGroup is too large, must be no larger than 4294967295.\n"));
+            Output::send<LogLevel::Warning>(STR("Using default value for Debug.LiveViewObjectsPerGroup.\n"));
+            UE4SSProgram::settings_manager.Debug.LiveViewObjectsPerGroup = 64 * 1024 / 2;
+        }
+        s_max_elements_per_chunk = static_cast<int>(UE4SSProgram::settings_manager.Debug.LiveViewObjectsPerGroup);
+        s_chunk_id_start = -s_max_elements_per_chunk;
         m_is_initialized = true;
     }
 
@@ -1504,7 +1511,7 @@ namespace RC::GUI
             int num_total_chunks = (num_elements / s_max_elements_per_chunk) + (num_elements % s_max_elements_per_chunk == 0 ? 0 : 1);
             for (int i = 0; i < num_total_chunks; ++i)
             {
-                if (ImGui_TreeNodeEx(std::format("Chunk #{}", i).c_str(), i + s_chunk_id_start, ImGuiTreeNodeFlags_CollapsingHeader))
+                if (ImGui_TreeNodeEx(std::format("Group #{}", i).c_str(), i + s_chunk_id_start, ImGuiTreeNodeFlags_CollapsingHeader))
                 {
                     ::RC::GUI::collapse_all_except(i + s_chunk_id_start);
                     auto start = s_max_elements_per_chunk * i;
