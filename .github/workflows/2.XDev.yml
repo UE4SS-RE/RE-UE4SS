@@ -3,8 +3,6 @@ name: Build
 on:
   push:
     branches: [ "2.XDev" ]
-  pull_request:
-    branches: [ "2.XDev" ]
   workflow_dispatch:
 
 permissions:
