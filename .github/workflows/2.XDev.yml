@@ -3,6 +3,12 @@ name: Build
 on:
   push:
     branches: [ "2.XDev" ]
+    paths:
+      - "src/**"
+      - "include/**"
+      - "generated_src/**"
+      - "generated_include/**"
+      - "internal_build_tools/**"
   workflow_dispatch:
 
 permissions:
