@@ -1,2 +1,0 @@
-Implemented "GetFullName" in UE4SS. This replaces the scan for the internal engine function.
-Improved the speed of the object & property dumper.
