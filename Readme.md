@@ -31,6 +31,13 @@ You may need to update AOBs on your own, and there's a guide for that below.
   [Custom Game Configs](https://github.com/UE4SS-RE/RE-UE4SS/wiki/CustomGameConfigs)
 
 
+## Branches
+- Release
+  - The latest release of UE4SS.  
+- 2.XDev
+  - Bleeding edge development of UE4SS.  
+  [![Build](https://github.com/UE4SS-RE/RE-UE4SS/actions/workflows/2.XDev.yml/badge.svg)](https://github.com/UE4SS-RE/RE-UE4SS/actions/workflows/2.XDev.yml)
+
 ## Build requirements
 
 - A computer running Windows.
