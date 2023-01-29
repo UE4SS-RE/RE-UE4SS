@@ -55,11 +55,6 @@
 
 #include <Timer/FunctionTimer.hpp>
 
-#if NEW_LUA
-#include <LuaBindings/States/MainState/Main.hpp>
-#include <LuaBindings/LuaSetup.hpp>
-#endif
-
 namespace RC
 {
     LuaMadeSimple::Lua* LuaStatics::console_executor{};

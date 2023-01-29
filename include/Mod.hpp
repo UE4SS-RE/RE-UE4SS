@@ -9,8 +9,6 @@
 #include <File/File.hpp>
 #include <LuaMadeSimple/LuaMadeSimple.hpp>
 
-#define NEW_LUA 0
-
 namespace RC
 {
     class UE4SSProgram;

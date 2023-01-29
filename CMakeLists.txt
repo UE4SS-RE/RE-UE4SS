@@ -34,7 +34,6 @@ set(FORCE_WITH_CASE_PRESERVING_NAME 0)
 set(UE4SS_GENERATED_INCLUDE_DIR "${PROJECT_SOURCE_DIR}/generated_include")
 set(UE4SS_GENERATED_SOURCE_DIR "${PROJECT_SOURCE_DIR}/generated_src")
 set(LLVM_PATH "D:\\LLVM\\14.0.6\\llvm+clang-14.0.6-x86_64-windows-msvc-release-mt")
-set(UE4SS_GENERATE_LUA_BINDINGS 0)
 set(BUILD_SCRIPT_DIR ${CMAKE_HOME_DIRECTORY})
 # Settings -> END
 
@@ -227,9 +226,6 @@ set(${TARGET}_Sources
         "${CMAKE_CURRENT_SOURCE_DIR}/src/SDKGenerator/UEHeaderGenerator.cpp"
         "${CMAKE_CURRENT_SOURCE_DIR}/src/SDKGenerator/JSONDumper.cpp"
         "${CMAKE_CURRENT_SOURCE_DIR}/src/USMapGenerator/Generator.cpp"
-        #"${CMAKE_CURRENT_SOURCE_DIR}/src/LuaCustomMemberFunctions.cpp"
-        #"${CMAKE_CURRENT_SOURCE_DIR}/src/LuaScriptMemoryAccess.cpp"
-        #"${CMAKE_CURRENT_SOURCE_DIR}/src/LuaTests.cpp"
         "${CMAKE_CURRENT_SOURCE_DIR}/src/GUI/GUI.cpp"
         "${CMAKE_CURRENT_SOURCE_DIR}/src/GUI/DX11.cpp"
         "${CMAKE_CURRENT_SOURCE_DIR}/src/GUI/GLFW3_OpenGL3.cpp"
@@ -309,75 +305,3 @@ target_include_directories(${XINPUT_TARGET} PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}
 # add_dependencies(${TARGET} IncrementBuildNumber)
 # add_dependencies(${XINPUT_TARGET} IncrementBuildNumber)
 # Auto incrementing build number -> END
-
-# LuaBindingsGenerator -> START
-# Create a list of all source files for this project so that LuaBindingsGenerator can know which files to parse.
-get_directory_property(Unreal_Sources DIRECTORY Dependencies/Unreal DEFINITION Unreal_Sources)
-set(UE4SS_LUA_BINDINGS_GENERATOR_FILES_TO_PARSE "${${TARGET}_Sources};${Unreal_Sources}")
-
-foreach (FILE_TO_PARSE ${UE4SS_LUA_BINDINGS_GENERATOR_FILES_TO_PARSE})
-    set(UE4SS_LUA_BINDINGS_GENERATOR_COMMAND_LINE_SOURCES_ARGS "${UE4SS_LUA_BINDINGS_GENERATOR_COMMAND_LINE_SOURCES_ARGS} -sources=\"${FILE_TO_PARSE}\"")
-endforeach ()
-
-# https://discourse.cmake.org/t/cmake-list-of-all-project-targets/1077/17
-function(_get_all_cmake_targets out_var current_dir)
-    get_property(targets DIRECTORY ${current_dir} PROPERTY BUILDSYSTEM_TARGETS)
-    get_property(subdirs DIRECTORY ${current_dir} PROPERTY SUBDIRECTORIES)
-
-    foreach (subdir ${subdirs})
-        _get_all_cmake_targets(subdir_targets ${subdir})
-        list(APPEND targets ${subdir_targets})
-    endforeach ()
-
-    set(${out_var} ${targets} PARENT_SCOPE)
-endfunction()
-_get_all_cmake_targets(ALL_TARGETS ${CMAKE_CURRENT_LIST_DIR})
-
-# Create a list of all include directories so that LuaBindingsGenerator can parse #include statements properly.
-set(UE4SS_LUA_BINDINGS_GENERATOR_COMMAND_LINE_COMPILER_FLAGS_ARGS "")
-foreach (THE_TARGET ${ALL_TARGETS})
-    get_target_property(TARGET_INCLUDES ${THE_TARGET} INTERFACE_INCLUDE_DIRECTORIES)
-
-    foreach (THE_INCLUDE ${TARGET_INCLUDES})
-        if ((NOT "${THE_INCLUDE}" STREQUAL "TARGET_INCLUDES-NOTFOUND") AND (NOT ${THE_INCLUDE} MATCHES "<INSTALL_INTERFACE:"))
-            if (${THE_INCLUDE} MATCHES <BUILD_INTERFACE:)
-                string(REPLACE "$<BUILD_INTERFACE:" "" THE_INCLUDE ${THE_INCLUDE})
-                string(REGEX REPLACE ">$" "" THE_INCLUDE ${THE_INCLUDE})
-            endif ()
-            set(THE_INCLUDE "-compiler_flags=\"-I${THE_INCLUDE}\"")
-            #string(REPLACE "-I" "-compiler_flags=" THE_INCLUDE ${THE_INCLUDE})
-            message("THE_INCLUDE: ${THE_INCLUDE}")
-            list(APPEND UE4SS_LUA_BINDINGS_GENERATOR_COMMAND_LINE_COMPILER_FLAGS_ARGS ${THE_INCLUDE})
-        endif ()
-    endforeach ()
-
-    list(REMOVE_DUPLICATES UE4SS_LUA_BINDINGS_GENERATOR_COMMAND_LINE_COMPILER_FLAGS_ARGS)
-endforeach ()
-string(REPLACE ";" " " UE4SS_LUA_BINDINGS_GENERATOR_COMMAND_LINE_COMPILER_FLAGS_ARGS "${UE4SS_LUA_BINDINGS_GENERATOR_COMMAND_LINE_COMPILER_FLAGS_ARGS}")
-
-get_target_property(ALL_COMPILE_DEFINITIONS ${XINPUT_TARGET} COMPILE_DEFINITIONS)
-foreach (COMPILE_DEFINITION ${ALL_COMPILE_DEFINITIONS})
-    if (NOT ${COMPILE_DEFINITION} MATCHES "(\\$).*")
-        message("COMPILE_DEFINITION: ${COMPILE_DEFINITION}")
-        set(UE4SS_LUA_BINDINGS_GENERATOR_COMMAND_LINE_COMPILER_FLAGS_ARGS "${UE4SS_LUA_BINDINGS_GENERATOR_COMMAND_LINE_COMPILER_FLAGS_ARGS} -compiler_flags=\"-D${COMPILE_DEFINITION}\"")
-    endif ()
-endforeach()
-
-# Create command line arguments for LuaBindingsGenerator.
-set(UE4SS_LUA_BINDINGS_GENERATOR_COMMAND_LINE_ARGUMENTS "-output=\"${CMAKE_SOURCE_DIR}/LuaBindings\" ${UE4SS_LUA_BINDINGS_GENERATOR_COMMAND_LINE_SOURCES_ARGS} -compiler_flags=\"-std=c++20\" ${UE4SS_LUA_BINDINGS_GENERATOR_COMMAND_LINE_COMPILER_FLAGS_ARGS}")
-
-message("UE4SS_LUA_BINDINGS_GENERATOR_COMMAND_LINE_ARGUMENTS: ${UE4SS_LUA_BINDINGS_GENERATOR_COMMAND_LINE_ARGUMENTS}")
-
-if (UE4SS_GENERATE_LUA_BINDINGS EQUAL 1)
-    # Create a custom target that executes before UE4SS compiles which will use LuaBindingGenerator to generate the Lua bindings.
-    set(LuaBindingsGeneratorBin ${LIBRARY_OUTPUT_PATH})
-    message("LuaBindingsGeneratorBin: ${LuaBindingsGeneratorBin}")
-    add_custom_target(LuaBindingsGeneratorExec
-            COMMAND ${LuaBindingsGeneratorBin}/LuaWrapperGenerator.exe "${UE4SS_LUA_BINDINGS_GENERATOR_COMMAND_LINE_ARGUMENTS}"
-            WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
-            DEPENDS LuaWrapperGenerator
-            )
-    add_dependencies(${TARGET} LuaBindingsGeneratorExec)
-    add_dependencies(${XINPUT_TARGET} LuaBindingsGeneratorExec)
-    # LuaBindingsGenerator -> END
-endif ()
