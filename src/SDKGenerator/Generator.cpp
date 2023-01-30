@@ -209,7 +209,7 @@ namespace RC::UEGenerator
         return tab_storage;
     }
 
-    auto CXXGenerator::generate_function_declaration(ObjectInfo& owner, const FunctionInfo& function_info, GeneratedFile& generated_file, File::StringType& current_class_content, IsDelegateFunction is_delegate_function) -> void
+    auto CXXGenerator::generate_function_declaration(ObjectInfo& owner, const FunctionInfo& function_info, GeneratedFile& generated_file, File::StringType& out_current_class_content, IsDelegateFunction is_delegate_function) -> void
     {
         std::optional<PropertyInfo> return_property_info = [&]() -> std::optional<PropertyInfo> {
             for (const auto& property_info : function_info.params)
@@ -237,7 +237,16 @@ namespace RC::UEGenerator
         File::StringType function_type_name{};
         if (return_property)
         {
-            function_type_name = generate_property_cxx_name(return_property, true, function_info.function, EnableForwardDeclarations::Yes);
+            try
+            {
+                function_type_name = generate_property_cxx_name(return_property, true, function_info.function, EnableForwardDeclarations::Yes);
+            }
+            catch (std::exception& e)
+            {
+                Output::send<LogLevel::Warning>(STR("Could not generate function '{}' because: {}\n"), function_info.function->GetFullName(), to_wstring(e.what()));
+                return;
+            }
+
             if (return_property_info.value().should_forward_declare)
             {
                 bool ignore_forward_declare{};
@@ -291,20 +300,29 @@ namespace RC::UEGenerator
             function_type_name = STR("void");
         }
 
+        StringType current_class_content{};
+
         current_class_content.append(std::format(STR("{}{} {}("), generate_tab(), function_type_name, function_name));
 
         for (size_t i = 0; i < function_info.params.size(); ++i)
-        //for (const auto& param_info : function_info.params)
         {
             const auto& param_info = function_info.params[i];
             if (!param_info.property->HasAnyPropertyFlags(Unreal::CPF_ReturnParm))
             {
-                current_class_content.append(std::format(STR("{}{}{}{} {}"),
-                                                                        param_info.property->HasAnyPropertyFlags(Unreal::CPF_ConstParm) ? STR("const ") : STR(""),
-                                                                        param_info.should_forward_declare ? STR("class ") : STR(""),
-                                                                        generate_property_cxx_name(param_info.property, true, function_info.function, EnableForwardDeclarations::Yes),
-                                                                        param_info.property->HasAnyPropertyFlags(Unreal::CPF_ReferenceParm | Unreal::CPF_OutParm) ? STR("&") : STR(""),
-                                                                        param_info.property->GetName()));
+                try
+                {
+                    current_class_content.append(std::format(STR("{}{}{}{} {}"),
+                                                                            param_info.property->HasAnyPropertyFlags(Unreal::CPF_ConstParm) ? STR("const ") : STR(""),
+                                                                            param_info.should_forward_declare ? STR("class ") : STR(""),
+                                                                            generate_property_cxx_name(param_info.property, true, function_info.function, EnableForwardDeclarations::Yes),
+                                                                            param_info.property->HasAnyPropertyFlags(Unreal::CPF_ReferenceParm | Unreal::CPF_OutParm) ? STR("&") : STR(""),
+                                                                            param_info.property->GetName()));
+                }
+                catch (std::exception& e)
+                {
+                    Output::send<LogLevel::Warning>(STR("Could not generate function '{}' because: {}\n"), function_info.function->GetFullName(), to_wstring(e.what()));
+                    return;
+                }
 
                 if (i + 1 < function_info.params.size())
                 {
@@ -327,6 +345,7 @@ namespace RC::UEGenerator
         }
         //*/
         current_class_content.append(STR("\n"));
+        out_current_class_content.append(current_class_content);
     }
 
     auto CXXGenerator::generate_prefix(UStruct* obj) -> File::StringType
@@ -501,11 +520,21 @@ namespace RC::UEGenerator
             int32_t current_property_offset = property->GetOffset_Internal();
             int32_t current_property_size = property->GetSize();
 
-            auto part_one = std::format(STR("{}{}{} {};"),
-                                        generate_tab(),
-                                        property_info.should_forward_declare ? STR("class ") : STR(""),
-                                        generate_property_cxx_name(property, true, native_class, EnableForwardDeclarations::Yes),
-                                        property->GetName());
+            StringType part_one{};
+            try
+            {
+                part_one = std::format(STR("{}{}{} {};"),
+                                            generate_tab(),
+                                            property_info.should_forward_declare ? STR("class ") : STR(""),
+                                            generate_property_cxx_name(property, true, native_class, EnableForwardDeclarations::Yes),
+                                            property->GetName());
+            }
+            catch (std::exception& e)
+            {
+                Output::send<LogLevel::Warning>(STR("Could not generate property '{}' because: {}\n"), property->GetFullName(), to_wstring(e.what()));
+                continue;
+            }
+
             content_buffer.append(std::format(STR("{}\n"), generate_offset_comment(property, part_one)));
 
             FName property_type_name = property->GetClass().GetFName();
