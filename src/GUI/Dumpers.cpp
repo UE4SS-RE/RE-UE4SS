@@ -328,11 +328,11 @@ namespace RC::GUI::Dumpers
         {
             OutTheShade::generate_usmap();
         }
-	    
-	    if (ImGui::Button("Generate TMapOverride file\n"))
-	    {
+        
+        if (ImGui::Button("Generate TMapOverride file\n"))
+        {
             UEGenerator::TMapOverrideGenerator::generate_tmapoverride();
-	    }
+        }
 	    
     }
 }
