@@ -17,7 +17,7 @@
 #pragma warning(default: 4005)
 
 
-namespace RC::TMapOverrideGen
+namespace RC::UEGenerator
 {
     using namespace ::RC::Unreal;
     
@@ -37,10 +37,13 @@ namespace RC::TMapOverrideGen
         TMapBuffer.append(STR("{\n"));
         UObjectGlobals::ForEachUObject([&](void* untyped_object, [[maybe_unused]]int32_t chunk_index, [[maybe_unused]]int32_t object_index) {
             UObject* object = static_cast<UObject*>(untyped_object);
-
+                        
             if (UStruct* casted_object = Cast<UStruct>(object))
             {
-                if ((Cast<UClass>(casted_object)->GetClassFlags() & CLASS_Native) != 0 || (Cast<UScriptStruct>(casted_object)->GetStructFlags() & STRUCT_Native) != 0)
+                auto as_class = Cast<UClass>(object);
+                auto as_script_struct = as_class ? static_cast<UScriptStruct*>(nullptr) : Cast<UScriptStruct>(object);
+                if (!as_class && !as_script_struct) { return LoopAction::Continue; }
+                if (as_class && as_class->HasAnyClassFlags(CLASS_Native) || as_script_struct && as_script_struct->HasAnyStructFlags(STRUCT_Native))
                 {
                     casted_object->ForEachProperty([&](FProperty* property) {
                         if (property->IsA<FMapProperty>() && !MapProperties.contains(property->GetFName()))
@@ -84,7 +87,6 @@ namespace RC::TMapOverrideGen
                         }
                         return LoopAction::Continue;
                     });
-                    
                 }
             }
             else

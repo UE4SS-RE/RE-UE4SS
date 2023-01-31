@@ -331,7 +331,7 @@ namespace RC::GUI::Dumpers
 	    
 	    if (ImGui::Button("Generate TMapOverride file\n"))
 	    {
-            TMapOverrideGen::TMapOverrideGenerator::generate_tmapoverride();
+            UEGenerator::TMapOverrideGenerator::generate_tmapoverride();
 	    }
 	    
     }

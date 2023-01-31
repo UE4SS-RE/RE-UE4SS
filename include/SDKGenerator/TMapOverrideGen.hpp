@@ -6,7 +6,7 @@
 #include <File/File.hpp>
 #include <Unreal/NameTypes.hpp>
 
-namespace RC::TMapOverrideGen
+namespace RC::UEGenerator
 {
     using RC::Unreal::FName;
     
