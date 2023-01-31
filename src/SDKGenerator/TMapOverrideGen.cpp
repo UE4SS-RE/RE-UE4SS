@@ -20,7 +20,8 @@
 namespace RC::TMapOverrideGen
 {
     using namespace ::RC::Unreal;
-
+    
+    std::unordered_map<FName, int> TMapOverrideGenerator::MapProperties{};
 
     auto TMapOverrideGenerator::generate_tmapoverride() -> void
     {

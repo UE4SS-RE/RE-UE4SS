@@ -3,8 +3,6 @@
 
 #include <filesystem>
 #include <unordered_map>
-#include <unordered_set>
-#include <unordered_set>
 #include <File/File.hpp>
 #include <Unreal/NameTypes.hpp>
 
@@ -15,7 +13,7 @@ namespace RC::TMapOverrideGen
     class TMapOverrideGenerator
     {
     public:
-        std::unordered_map<FName, int> MapProperties {};
+        static std::unordered_map<FName, int> MapProperties;
         static auto generate_tmapoverride() -> void;
     };
 }
