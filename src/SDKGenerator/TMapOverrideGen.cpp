@@ -20,57 +20,16 @@
 namespace RC::TMapOverrideGen
 {
     using namespace ::RC::Unreal;
+    using UObject = RC::Unreal::UObject;
+    using XProperty = RC::Unreal::FProperty;
+    using FField = RC::Unreal::FField;
+    
 
     
 
-    auto TMapOverrideGenerator::generate_tmapoverride() -> void
-    {
-        Output::send(STR("Dumping TMap Property Overrides\n"));
+    std::unordered_map<FName, int> MapProperties;
 
-        auto uaapifile = open(StringType{UE4SSProgram::get_program().get_working_directory()} + STR("\\UAssetAPITMapOverrides.json"), File::OpenFor::Writing, File::OverwriteExistingFile::Yes, File::CreateIfNonExistent::Yes);
-        /*auto fmodelfile = File::open(StringType{UE4SSProgram::get_program().get_working_directory()} + STR("\\FModelTMapOverrides.json"), File::OpenFor::Writing, File::OverwriteExistingFile::Yes, File::CreateIfNonExistent::Yes);*/
-        
-        
-        StringType TMapJSONBuffer;
-        size_t num_objects_generated{};
-        
-        TMapJSONBuffer.append(STR("{\n"));
-        UObjectGlobals::ForEachUObject([&](void* untyped_object, [[maybe_unused]]int32_t chunk_index, [[maybe_unused]]int32_t object_index) {
-            UObject* object = static_cast<UObject*>(untyped_object);
-
-            if (UClass* casted_object = Cast<UClass>(object))
-            {
-                if ((casted_object->GetClassFlags() & CLASS_Native) != 0)
-                {
-                    casted_object->ForEachProperty([&](FProperty* property) {
-                        auto [TMapBuffer, objects_generated] = dump_tmaps(object, property, num_objects_generated);
-                        num_objects_generated = objects_generated;
-                        return LoopAction::Continue;
-                    });
-                    
-                }
-            }
-            else if (UScriptStruct* casted_struct = Cast<UScriptStruct>(object))
-            {
-                if ((casted_struct->GetStructFlags() & STRUCT_Native) != 0)
-                {
-                    casted_struct->ForEachProperty([&](FProperty* property) {
-                        auto [TMapBuffer, objects_generated] = dump_tmaps(object, property, num_objects_generated);
-                        num_objects_generated = objects_generated;
-                        return LoopAction::Continue;
-                    });
-                }
-            }
-            return LoopAction::Continue;
-        });
-
-        TMapJSONBuffer.append(STR("\n}"));
-        uaapifile.write_string_to_file(TMapJSONBuffer);
-        Output::send(STR("Finished Dumping {} TMap Properties\n"), num_objects_generated);
-        
-    }
-
-    auto TMapOverrideGenerator::dump_tmaps(UObject* object, FProperty* property, size_t NumProps) -> std::pair<StringType, size_t>
+    auto dump_tmaps(UObject* object, XProperty* property, size_t NumProps) -> std::pair<StringType, size_t>
     {
         StringType TMapBuffer;
         
@@ -80,8 +39,8 @@ namespace RC::TMapOverrideGen
             std::wstring propertyname = property->GetFName().ToString();
             Output::send(STR("Found TMap Property: {} in Class: {}\n"), propertyname, object->GetName());
             // Get TMap property Key and Value types and dump them
-            FProperty* key_property = static_cast<FMapProperty*>(property)->GetKeyProp();
-            FProperty* value_property = static_cast<FMapProperty*>(property)->GetValueProp();
+            XProperty* key_property = static_cast<FMapProperty*>(property)->GetKeyProp();
+            XProperty* value_property = static_cast<FMapProperty*>(property)->GetValueProp();
 
                 
             if (key_property->IsA<FStructProperty>() || value_property->IsA<FStructProperty>())
@@ -116,5 +75,54 @@ namespace RC::TMapOverrideGen
         }
 
         return std::pair{TMapBuffer, NumProps};
+    }
+
+    auto TMapOverrideGenerator::generate_tmapoverride() -> void
+    {
+        Output::send(STR("Dumping TMap Property Overrides\n"));
+
+        auto uaapifile = open(StringType{UE4SSProgram::get_program().get_working_directory()} + STR("\\UAssetAPITMapOverrides.json"), File::OpenFor::Writing, File::OverwriteExistingFile::Yes, File::CreateIfNonExistent::Yes);
+        /*auto fmodelfile = File::open(StringType{UE4SSProgram::get_program().get_working_directory()} + STR("\\FModelTMapOverrides.json"), File::OpenFor::Writing, File::OverwriteExistingFile::Yes, File::CreateIfNonExistent::Yes);*/
+        
+        
+        StringType TMapJSONBuffer;
+        size_t num_objects_generated{};
+        
+        TMapJSONBuffer.append(STR("{\n"));
+        UObjectGlobals::ForEachUObject([&](void* untyped_object, [[maybe_unused]]int32_t chunk_index, [[maybe_unused]]int32_t object_index) {
+            UObject* object = static_cast<UObject*>(untyped_object);
+
+            if (UClass* casted_object = Cast<UClass>(object))
+            {
+                if ((casted_object->GetClassFlags() & CLASS_Native) != 0)
+                {
+                    casted_object->ForEachProperty([&](XProperty* property) {
+                        auto [TMapBuffer, objects_generated] = dump_tmaps(object, property, num_objects_generated);
+                        TMapJSONBuffer.append(TMapBuffer);
+                        num_objects_generated = objects_generated;
+                        return LoopAction::Continue;
+                    });
+                    
+                }
+            }
+            else if (UScriptStruct* casted_struct = Cast<UScriptStruct>(object))
+            {
+                if ((casted_struct->GetStructFlags() & STRUCT_Native) != 0)
+                {
+                    casted_struct->ForEachProperty([&](XProperty* property) {
+                        auto [TMapBuffer, objects_generated] = dump_tmaps(object, property, num_objects_generated);
+                        TMapJSONBuffer.append(TMapBuffer);
+                        num_objects_generated = objects_generated;
+                        return LoopAction::Continue;
+                    });
+                }
+            }
+            return LoopAction::Continue;
+        });
+
+        TMapJSONBuffer.append(STR("\n}"));
+        uaapifile.write_string_to_file(TMapJSONBuffer);
+        Output::send(STR("Finished Dumping {} TMap Properties\n"), num_objects_generated);
+        
     }
 }
