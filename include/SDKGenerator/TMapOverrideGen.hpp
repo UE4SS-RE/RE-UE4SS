@@ -10,19 +10,13 @@
 
 namespace RC::TMapOverrideGen
 {
-
+    using RC::Unreal::FName;
+    
     class TMapOverrideGenerator
     {
     public:
-
-        
-        
-        
-        
+        std::unordered_map<FName, int> MapProperties {};
         static auto generate_tmapoverride() -> void;
-        /*static auto dump_tmaps(UObject* object, XProperty* property, size_t NumProps) -> std::pair<StringType, size_t>;*/
-
-        
     };
 }
 
