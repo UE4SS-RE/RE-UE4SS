@@ -31,10 +31,10 @@ namespace RC::UEGenerator
         /*auto fmodelfile = File::open(StringType{UE4SSProgram::get_program().get_working_directory()} + STR("\\FModelTMapOverrides.json"), File::OpenFor::Writing, File::OverwriteExistingFile::Yes, File::CreateIfNonExistent::Yes);*/
         
         
-        StringType TMapBuffer;
+        StringType tmap_buffer;
         size_t num_objects_generated{};
         
-        TMapBuffer.append(STR("{\n"));
+        tmap_buffer.append(STR("{\n"));
         UObjectGlobals::ForEachUObject([&](void* untyped_object, [[maybe_unused]]int32_t chunk_index, [[maybe_unused]]int32_t object_index) {
             UObject* object = static_cast<UObject*>(untyped_object);
                         
@@ -59,28 +59,28 @@ namespace RC::UEGenerator
                             {
                                 if (num_objects_generated > 0)
                                 {
-                                    TMapBuffer.append(STR(",\n"));
+                                    tmap_buffer.append(STR(",\n"));
                                 }
-                                TMapBuffer.append(std::format(STR("  \"{}\": [\n"), propertyname));
+                                tmap_buffer.append(std::format(STR("  \"{}\": [\n"), propertyname));
                     
                                 if (key_property->IsA<FStructProperty>())
                                 {
-                                    TMapBuffer.append(std::format(STR("    \"{}\"\n"), static_cast<FStructProperty*>(key_property)->GetStruct()->GetName()));
+                                    tmap_buffer.append(std::format(STR("    \"{}\"\n"), static_cast<FStructProperty*>(key_property)->GetStruct()->GetName()));
                                 }
                                 else
                                 {
-                                    TMapBuffer.append(STR("    null,\n"));
+                                    tmap_buffer.append(STR("    null,\n"));
                                 }
                     
                                 if (value_property->IsA<FStructProperty>())
                                 {
-                                    TMapBuffer.append(std::format(STR("    \"{}\"\n"), static_cast<FStructProperty*>(value_property)->GetStruct()->GetName()));
+                                    tmap_buffer.append(std::format(STR("    \"{}\"\n"), static_cast<FStructProperty*>(value_property)->GetStruct()->GetName()));
                                 }
                                 else
                                 {
-                                    TMapBuffer.append(STR("    null,\n"));
+                                    tmap_buffer.append(STR("    null,\n"));
                                 }
-                                TMapBuffer.append(STR("  ]"));
+                                tmap_buffer.append(STR("  ]"));
                 
                                 ++num_objects_generated;
                             }
@@ -96,8 +96,8 @@ namespace RC::UEGenerator
             return LoopAction::Continue;
         });
 
-        TMapBuffer.append(STR("\n}"));
-        uaapifile.write_string_to_file(TMapBuffer);
+        tmap_buffer.append(STR("\n}"));
+        uaapifile.write_string_to_file(tmap_buffer);
         Output::send(STR("Finished Dumping {} TMap Properties\n"), num_objects_generated);
         
     }
