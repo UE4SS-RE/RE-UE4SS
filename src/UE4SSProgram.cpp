@@ -849,7 +849,7 @@ namespace RC
 
                 Mod* mod = find_mod_by_name(mod_name, IsInstalled::Yes);
 
-                if (mod_enabled == L"1")
+                if (!mod_enabled.empty() && mod_enabled[0] == L'1')
                 {
                     if (!mod)
                     {
