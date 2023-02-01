@@ -2,7 +2,7 @@
 #define UE4SS_REWRITTEN_TMAPOVERRIDE_GENERATOR_HPP
 
 #include <filesystem>
-#include <unordered_map>
+#include <unordered_set>
 #include <File/File.hpp>
 #include <Unreal/NameTypes.hpp>
 
@@ -13,7 +13,7 @@ namespace RC::UEGenerator
     class TMapOverrideGenerator
     {
     public:
-        static std::unordered_map<FName, int> MapProperties;
+        static std::unordered_set<FName> MapProperties;
         static auto generate_tmapoverride() -> void;
     };
 }

@@ -21,7 +21,7 @@ namespace RC::UEGenerator
 {
     using namespace ::RC::Unreal;
     
-    std::unordered_map<FName, int> TMapOverrideGenerator::MapProperties{};
+    std::unordered_set<FName> TMapOverrideGenerator::MapProperties{};
 
     auto TMapOverrideGenerator::generate_tmapoverride() -> void
     {
@@ -48,14 +48,20 @@ namespace RC::UEGenerator
                     casted_object->ForEachProperty([&](FProperty* property) {
                         if (property->IsA<FMapProperty>() && !MapProperties.contains(property->GetFName()))
                         {
-                            MapProperties.insert_or_assign(property->GetFName(), 0);
+                            MapProperties.insert(property->GetFName());
                             std::wstring propertyname = property->GetFName().ToString();
                             Output::send(STR("Found TMap Property: {} in Class: {}\n"), propertyname, object->GetName());
                             // Get TMap property Key and Value types and dump them
                             FProperty* key_property = static_cast<FMapProperty*>(property)->GetKeyProp();
                             FProperty* value_property = static_cast<FMapProperty*>(property)->GetValueProp();
                             
-                            if (key_property->IsA<FStructProperty>() || value_property->IsA<FStructProperty>())
+                            auto key_as_struct_property = static_cast<FStructProperty*>(key_property);
+                            auto is_key_valid = key_as_struct_property && key_as_struct_property->GetStruct()->HasAnyStructFlags(STRUCT_SerializeNative);
+                            
+                            auto value_as_struct_property = static_cast<FStructProperty*>(value_property);
+                            auto is_value_valid = value_as_struct_property && value_as_struct_property->GetStruct()->HasAnyStructFlags(STRUCT_SerializeNative);
+                            
+                            if (is_key_valid || is_value_valid)
                             {
                                 if (num_objects_generated > 0)
                                 {
@@ -63,7 +69,7 @@ namespace RC::UEGenerator
                                 }
                                 tmap_buffer.append(std::format(STR("  \"{}\": [\n"), propertyname));
                     
-                                if (key_property->IsA<FStructProperty>())
+                                if (is_key_valid)
                                 {
                                     tmap_buffer.append(std::format(STR("    \"{}\"\n"), static_cast<FStructProperty*>(key_property)->GetStruct()->GetName()));
                                 }
@@ -72,7 +78,7 @@ namespace RC::UEGenerator
                                     tmap_buffer.append(STR("    null,\n"));
                                 }
                     
-                                if (value_property->IsA<FStructProperty>())
+                                if (is_value_valid)
                                 {
                                     tmap_buffer.append(std::format(STR("    \"{}\"\n"), static_cast<FStructProperty*>(value_property)->GetStruct()->GetName()));
                                 }
