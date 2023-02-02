@@ -75,6 +75,24 @@ namespace RC::GUI
                 return std::tolower(c);
             });
 
+            bool expanded_search = name_to_search_by.ends_with('+');
+            if (expanded_search)
+            {
+                if (!name_to_search_by.empty()) { name_to_search_by.pop_back(); }
+                object->GetClassPrivate()->ForEachSuperStruct([&](UStruct* super) {
+                    auto super_full_name = get_object_full_name_cxx_string(super);
+                    std::transform(super_full_name.begin(), super_full_name.end(), super_full_name.begin(), [](char c) {
+                        return std::tolower(c);
+                    });
+                    if (super_full_name.find(name_to_search_by) != super_full_name.npos)
+                    {
+                        LiveView::s_name_search_results.emplace_back(object);
+                        LiveView::s_name_search_results_set.emplace(object);
+                    }
+                    return LoopAction::Continue;
+                });
+            }
+
             if (object_full_name.find(name_to_search_by) != object_full_name.npos)
             {
                 LiveView::s_name_search_results.emplace_back(object);
