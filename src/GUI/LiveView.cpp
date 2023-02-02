@@ -4,6 +4,7 @@
 #include <format>
 #include <unordered_map>
 #include <variant>
+#include <mutex>
 
 #include <GUI/LiveView.hpp>
 #include <GUI/GUI.hpp>
@@ -37,6 +38,8 @@ namespace RC::GUI
 
     static bool s_live_view_destructed = false;
     static std::unordered_map<const UObject*, std::string> s_object_ptr_to_full_name{};
+
+    static std::mutex s_object_ptr_to_full_name_mutex{};
 
     std::vector<LiveView::ObjectOrProperty> LiveView::s_object_view_history{{nullptr, nullptr, false}};
     size_t LiveView::s_currently_selected_object_index{};
@@ -165,24 +168,31 @@ namespace RC::GUI
         void NotifyUObjectDeleted(const UObjectBase* object, int32 index) override
         {
             if (s_live_view_destructed) { return; }
-            if (LiveView::s_history_object_to_index.size() <= 1) { return; }
 
             auto as_uobject = std::bit_cast<UObject*>(object);
-            if (auto it = LiveView::s_history_object_to_index.find(as_uobject); it != LiveView::s_history_object_to_index.end())
+            if (LiveView::s_history_object_to_index.size() > 1)
             {
-                for (const auto& history_index : it->second)
+                if (auto it = LiveView::s_history_object_to_index.find(as_uobject); it != LiveView::s_history_object_to_index.end())
                 {
-                    auto& selected_object_or_property = LiveView::s_object_view_history[history_index];
-                    if (selected_object_or_property.is_object)
+                    for (const auto& history_index : it->second)
                     {
-                        selected_object_or_property.object_item = nullptr;
-                        selected_object_or_property.object = nullptr;
-                        LiveView::s_history_object_to_index.erase(it);
+                        auto& selected_object_or_property = LiveView::s_object_view_history[history_index];
+                        if (selected_object_or_property.is_object)
+                        {
+                            selected_object_or_property.object_item = nullptr;
+                            selected_object_or_property.object = nullptr;
+                            LiveView::s_history_object_to_index.erase(it);
+                        }
                     }
                 }
             }
 
             remove_search_result(as_uobject);
+
+            {
+                std::lock_guard lock{s_object_ptr_to_full_name_mutex};
+                s_object_ptr_to_full_name.erase(as_uobject);
+            }
         }
 
         void OnUObjectArrayShutdown() override
@@ -535,6 +545,7 @@ namespace RC::GUI
     static auto get_object_full_name(const UObject* object) -> const char*
     {
         if (!UnrealInitializer::StaticStorage::bIsInitialized) { return ""; }
+        std::lock_guard lock{s_object_ptr_to_full_name_mutex};
         if (auto it = s_object_ptr_to_full_name.find(object); it != s_object_ptr_to_full_name.end())
         {
             return it->second.c_str();
@@ -548,6 +559,7 @@ namespace RC::GUI
     static auto get_object_full_name_cxx_string(UObject* object) -> std::string
     {
         if (!UnrealInitializer::StaticStorage::bIsInitialized) { return ""; }
+        std::lock_guard lock{s_object_ptr_to_full_name_mutex};
         if (auto it = s_object_ptr_to_full_name.find(object); it != s_object_ptr_to_full_name.end())
         {
             return it->second;
