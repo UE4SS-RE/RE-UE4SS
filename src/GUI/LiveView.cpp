@@ -15,6 +15,7 @@
 #include <JSON/Parser/Parser.hpp>
 #include <UE4SSProgram.hpp>
 #include <Unreal/UnrealInitializer.hpp>
+#include <Unreal/UPackage.hpp>
 #include <Unreal/UObjectArray.hpp>
 #include <Unreal/UObject.hpp>
 #include <Unreal/UClass.hpp>
@@ -46,6 +47,7 @@ namespace RC::GUI
     std::vector<LiveView::Watch> LiveView::s_watches{};
     std::unordered_map<LiveView::WatchIdentifier, LiveView::Watch*> LiveView::s_watch_map;
     std::unordered_map<void*, std::vector<LiveView::Watch*>> LiveView::s_watch_containers{};
+    SearchOptions LiveView::s_search_options{};
     bool LiveView::s_create_listener_removed{};
     bool LiveView::s_delete_listener_removed{};
     bool LiveView::s_selected_item_deleted{};
@@ -63,48 +65,53 @@ namespace RC::GUI
             return;
         }
 
-        if (!LiveView::s_name_search_results_set.contains(object))
+        auto is_instance = [&] {
+            return !object->HasAnyFlags(static_cast<EObjectFlags>(RF_ClassDefaultObject | RF_ArchetypeObject)) &&
+                    !object->IsA<UStruct>() &&
+                    !object->IsA<UField>() &&
+                    !object->IsA<UPackage>();
+        };
+        if (LiveView::s_search_options.instances_only && !is_instance()) { return; }
+        if (LiveView::s_name_search_results_set.contains(object)) { return; }
+
+        auto object_full_name = get_object_full_name_cxx_string(object);
+        std::transform(object_full_name.begin(), object_full_name.end(), object_full_name.begin(), [](char c) {
+            return std::tolower(c);
+        });
+
+        auto name_to_search_by = LiveView::s_name_to_search_by;
+        std::transform(name_to_search_by.begin(), name_to_search_by.end(), name_to_search_by.begin(), [](char c) {
+            return std::tolower(c);
+        });
+
+        if (LiveView::s_search_options.include_inheritance)
         {
-            auto object_full_name = get_object_full_name_cxx_string(object);
-            std::transform(object_full_name.begin(), object_full_name.end(), object_full_name.begin(), [](char c) {
-                return std::tolower(c);
-            });
-
-            auto name_to_search_by = LiveView::s_name_to_search_by;
-            std::transform(name_to_search_by.begin(), name_to_search_by.end(), name_to_search_by.begin(), [](char c) {
-                return std::tolower(c);
-            });
-
-            bool expanded_search = name_to_search_by.ends_with('+');
-            if (expanded_search)
-            {
-                if (!name_to_search_by.empty()) { name_to_search_by.pop_back(); }
-                object->GetClassPrivate()->ForEachSuperStruct([&](UStruct* super) {
-                    auto super_full_name = get_object_full_name_cxx_string(super);
-                    std::transform(super_full_name.begin(), super_full_name.end(), super_full_name.begin(), [](char c) {
-                        return std::tolower(c);
-                    });
-                    if (super_full_name.find(name_to_search_by) != super_full_name.npos)
-                    {
-                        LiveView::s_name_search_results.emplace_back(object);
-                        LiveView::s_name_search_results_set.emplace(object);
-                        return LoopAction::Break;
-                    }
-                    else
-                    {
-                        return LoopAction::Continue;
-                    }
+            object->GetClassPrivate()->ForEachSuperStruct([&](UStruct* super) {
+                auto super_full_name = get_object_full_name_cxx_string(super);
+                std::transform(super_full_name.begin(), super_full_name.end(), super_full_name.begin(), [](char c) {
+                    return std::tolower(c);
                 });
-            }
-
-            if (expanded_search && LiveView::s_name_search_results_set.contains(object)) { return; }
-
-            if (object_full_name.find(name_to_search_by) != object_full_name.npos)
-            {
-                LiveView::s_name_search_results.emplace_back(object);
-                LiveView::s_name_search_results_set.emplace(object);
-            }
+                if (super_full_name.find(name_to_search_by) != super_full_name.npos)
+                {
+                    LiveView::s_name_search_results.emplace_back(object);
+                    LiveView::s_name_search_results_set.emplace(object);
+                    return LoopAction::Break;
+                }
+                else
+                {
+                    return LoopAction::Continue;
+                }
+            });
         }
+
+        if (LiveView::s_search_options.include_inheritance && LiveView::s_name_search_results_set.contains(object)) { return; }
+
+        if (object_full_name.find(name_to_search_by) != object_full_name.npos)
+        {
+            LiveView::s_name_search_results.emplace_back(object);
+            LiveView::s_name_search_results_set.emplace(object);
+        }
+        
     }
 
     static auto remove_search_result(UObject* object) -> void
@@ -344,6 +351,55 @@ namespace RC::GUI
         s_chunk_id_start = -s_max_elements_per_chunk;
         m_is_initialized = true;
     }
+
+    struct ObjectFlagsStringifier
+    {
+        std::string flags_string{};
+        std::vector<std::string> flag_parts{};
+
+        ObjectFlagsStringifier(UObject* object)
+        {
+            if (object->HasAnyFlags(RF_NoFlags)) { flag_parts.emplace_back("RF_NoFlags"); }
+            if (object->HasAnyFlags(RF_Public)) { flag_parts.emplace_back("RF_Public"); }
+            if (object->HasAnyFlags(RF_Standalone)) { flag_parts.emplace_back("RF_Standalone"); }
+            if (object->HasAnyFlags(RF_MarkAsNative)) { flag_parts.emplace_back("RF_MarkAsNative"); }
+            if (object->HasAnyFlags(RF_Transactional)) { flag_parts.emplace_back("RF_Transactional"); }
+            if (object->HasAnyFlags(RF_ClassDefaultObject)) { flag_parts.emplace_back("RF_ClassDefaultObject"); }
+            if (object->HasAnyFlags(RF_ArchetypeObject)) { flag_parts.emplace_back("RF_ArchetypeObject"); }
+            if (object->HasAnyFlags(RF_Transient)) { flag_parts.emplace_back("RF_Transient"); }
+            if (object->HasAnyFlags(RF_MarkAsRootSet)) { flag_parts.emplace_back("RF_MarkAsRootSet"); }
+            if (object->HasAnyFlags(RF_TagGarbageTemp)) { flag_parts.emplace_back("RF_TagGarbageTemp"); }
+            if (object->HasAnyFlags(RF_NeedInitialization)) { flag_parts.emplace_back("RF_NeedInitialization"); }
+            if (object->HasAnyFlags(RF_NeedLoad)) { flag_parts.emplace_back("RF_NeedLoad"); }
+            if (object->HasAnyFlags(RF_KeepForCooker)) { flag_parts.emplace_back("RF_KeepForCooker"); }
+            if (object->HasAnyFlags(RF_NeedPostLoad)) { flag_parts.emplace_back("RF_NeedPostLoad"); }
+            if (object->HasAnyFlags(RF_NeedPostLoadSubobjects)) { flag_parts.emplace_back("RF_NeedPostLoadSubobjects"); }
+            if (object->HasAnyFlags(RF_NewerVersionExists)) { flag_parts.emplace_back("RF_NewerVersionExists"); }
+            if (object->HasAnyFlags(RF_BeginDestroyed)) { flag_parts.emplace_back("RF_BeginDestroyed"); }
+            if (object->HasAnyFlags(RF_FinishDestroyed)) { flag_parts.emplace_back("RF_FinishDestroyed"); }
+            if (object->HasAnyFlags(RF_BeingRegenerated)) { flag_parts.emplace_back("RF_BeingRegenerated"); }
+            if (object->HasAnyFlags(RF_DefaultSubObject)) { flag_parts.emplace_back("RF_DefaultSubObject"); }
+            if (object->HasAnyFlags(RF_WasLoaded)) { flag_parts.emplace_back("RF_WasLoaded"); }
+            if (object->HasAnyFlags(RF_TextExportTransient)) { flag_parts.emplace_back("RF_TextExportTransient"); }
+            if (object->HasAnyFlags(RF_LoadCompleted)) { flag_parts.emplace_back("RF_LoadCompleted"); }
+            if (object->HasAnyFlags(RF_InheritableComponentTemplate)) { flag_parts.emplace_back("RF_InheritableComponentTemplate"); }
+            if (object->HasAnyFlags(RF_DuplicateTransient)) { flag_parts.emplace_back("RF_DuplicateTransient"); }
+            if (object->HasAnyFlags(RF_StrongRefOnFrame)) { flag_parts.emplace_back("RF_StrongRefOnFrame"); }
+            if (object->HasAnyFlags(RF_NonPIEDuplicateTransient)) { flag_parts.emplace_back("RF_NonPIEDuplicateTransient"); }
+            if (object->HasAnyFlags(RF_Dynamic)) { flag_parts.emplace_back("RF_Dynamic"); }
+            if (object->HasAnyFlags(RF_WillBeLoaded)) { flag_parts.emplace_back("RF_WillBeLoaded"); }
+            if (object->HasAnyFlags(RF_HasExternalPackage)) { flag_parts.emplace_back("RF_HasExternalPackage"); }
+            if (object->HasAnyFlags(RF_AllFlags)) { flag_parts.emplace_back("RF_AllFlags"); }
+
+            std::for_each(flag_parts.begin(), flag_parts.end(), [&](const std::string& flag_part) {
+                if (!flags_string.empty())
+                {
+                    flags_string.append(", ");
+                }
+                flags_string.append(std::move(flag_part));
+            });
+        }
+    };
 
     struct PropertyFlagsStringifier
     {
@@ -1103,6 +1159,62 @@ namespace RC::GUI
         }
         ImGui::Text("ClassPrivate: %s", to_string(object->GetClassPrivate()->GetName()).c_str());
         ImGui::Text("Path: %S", object->GetPathName().c_str());
+        auto raw_unsafe_object_flags = object->GetObjectFlags();
+        ImGui::Text("ObjectFlags (Raw): 0x%X", raw_unsafe_object_flags);
+        if (ImGui::BeginPopupContextItem("object_raw_flags_menu"))
+        {
+            if (ImGui::MenuItem("Copy raw flags"))
+            {
+                ImGui::SetClipboardText(std::format("0x{:X}", static_cast<uint32_t>(raw_unsafe_object_flags)).c_str());
+            }
+            ImGui::EndPopup();
+        }
+        ObjectFlagsStringifier object_flags_stringifier{object};
+        size_t current_flag_line_count{};
+        std::string current_flag_line{};
+        std::string all_flags{};
+        auto create_menu_for_copy_flags = [&](size_t menu_index) {
+            if (ImGui::BeginPopupContextItem(std::format("property_flags_menu_{}", menu_index).c_str()))
+            {
+                if (ImGui::MenuItem("Copy flags"))
+                {
+                    std::string flags_string_for_copy{};
+                    std::for_each(object_flags_stringifier.flag_parts.begin(), object_flags_stringifier.flag_parts.end(), [&](const std::string& flag_part) {
+                        if (!flags_string_for_copy.empty())
+                        {
+                            flags_string_for_copy.append(" | ");
+                        }
+                        flags_string_for_copy.append(std::move(flag_part));
+                    });
+                    ImGui::SetClipboardText(flags_string_for_copy.c_str());
+                }
+                ImGui::EndPopup();
+            }
+        };
+        ImGui::Text("ObjectFlags:");
+        create_menu_for_copy_flags(99); // 'menu_index' of '99' because we'll never reach 99 lines of flags and we can't use '0' as that'll be used in the loop below.
+        ImGui::Indent();
+        for (size_t i = 0; i < object_flags_stringifier.flag_parts.size(); ++i)
+        {
+            const auto& property_flag_part_string = object_flags_stringifier.flag_parts[i];
+            const auto last_element_in_vector = i + 1 >= object_flags_stringifier.flag_parts.size();
+
+            if (current_flag_line_count < 3)
+            {
+                current_flag_line.append(std::move(property_flag_part_string) + (last_element_in_vector ? "" : " | "));
+                ++current_flag_line_count;
+            }
+
+            if (current_flag_line_count >= 3 || last_element_in_vector)
+            {
+                ImGui::Text("%s", current_flag_line.c_str());
+                create_menu_for_copy_flags(i);
+                all_flags.append(current_flag_line);
+                current_flag_line.clear();
+                current_flag_line_count = 0;
+            }
+        }
+        ImGui::Unindent();
         ImGui::Separator();
         // Potential sizes: 385, -180 (open) | // 385, -286 (closed)
         if (ImGui::CollapsingHeader("Size (total size of class + parents in parentheses)"))
@@ -1477,8 +1589,24 @@ namespace RC::GUI
                 }
             }
         }
+        if (ImGui::IsItemHovered())
+        {
+            ImGui::BeginTooltip();
+            ImGui::Text("Right-click to open search options.");
+            ImGui::EndTooltip();
+        }
         if (push_inactive_text_color) { ImGui::PopStyleColor(); }
         ImGui::PopItemWidth();
+
+        if (ImGui::BeginPopupContextItem("##search-options"))
+        {
+            ImGui::Text("Search options");
+            ImGui::Checkbox("Include inheritance", &s_search_options.include_inheritance);
+            ImGui::SameLine();
+            ImGui::Checkbox("Instances only", &s_search_options.instances_only);
+            ImGui::EndPopup();
+        }
+
         if (!listeners_allowed)
         {
             ImGui::EndDisabled();

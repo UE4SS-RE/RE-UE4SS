@@ -22,6 +22,12 @@ namespace RC::GUI
 {
     using namespace RC::Unreal;
 
+    struct SearchOptions
+    {
+        bool include_inheritance{};
+        bool instances_only{};
+    };
+
     class LiveView
     {
     public:
@@ -116,6 +122,7 @@ namespace RC::GUI
         static std::vector<Watch> s_watches;
         static std::unordered_map<WatchIdentifier, Watch*> s_watch_map;
         static std::unordered_map<void*, std::vector<Watch*>> s_watch_containers;
+        static SearchOptions s_search_options;
         static bool s_create_listener_removed;
         static bool s_delete_listener_removed;
         static bool s_selected_item_deleted;
