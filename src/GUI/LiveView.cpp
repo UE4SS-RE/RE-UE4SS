@@ -88,10 +88,16 @@ namespace RC::GUI
                     {
                         LiveView::s_name_search_results.emplace_back(object);
                         LiveView::s_name_search_results_set.emplace(object);
+                        return LoopAction::Break;
                     }
-                    return LoopAction::Continue;
+                    else
+                    {
+                        return LoopAction::Continue;
+                    }
                 });
             }
+
+            if (expanded_search && LiveView::s_name_search_results_set.contains(object)) { return; }
 
             if (object_full_name.find(name_to_search_by) != object_full_name.npos)
             {
