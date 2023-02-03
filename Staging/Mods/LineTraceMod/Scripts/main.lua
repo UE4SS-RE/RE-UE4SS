@@ -1,39 +1,22 @@
 -- LineTrace
 
-IsInitialized = false
-KismetSystemLibrary = nil
-KismetMathLibrary = nil
-GameplayStatics = nil
+local UEHelpers = require("UEHelpers")
 
-function GetPlayerController()
-    local PlayerControllers = FindAllOf("PlayerController")
-    local PlayerController = nil
-    for Index,Controller in pairs(PlayerControllers) do
-        if Controller.Pawn:IsValid() and Controller.Pawn:IsPlayerControlled() then
-            PlayerController = Controller
-        else
-            print("Not valid or not player controlled\n")
-        end
-    end
-    if PlayerController and PlayerController:IsValid() then
-        return PlayerController
-    else
-        error("No PlayerController found\n")
-    end
-end
+-- Importing functions to the global namespace of this mod just so that we don't have to retype 'UEHelpers.' over and over again.
+local GetKismetSystemLibrary = UEHelpers.GetKismetSystemLibrary
+local GetKismetMathLibrary = UEHelpers.GetKismetMathLibrary
+local GetPlayerController = UEHelpers.GetPlayerController
+
+IsInitialized = false
 
 function Init()
-    KismetSystemLibrary = StaticFindObject("/Script/Engine.Default__KismetSystemLibrary")
-
-    if not KismetSystemLibrary:IsValid() then error("KismetSystemLibrary not valid\n") end
+    if not GetKismetSystemLibrary():IsValid() then error("KismetSystemLibrary not valid\n") end
     
-    print(string.format("KismetSystemLibrary: %s\n", KismetSystemLibrary:GetFullName()))
+    print(string.format("KismetSystemLibrary: %s\n", GetKismetSystemLibrary():GetFullName()))
     
-    KismetMathLibrary = StaticFindObject("/Script/Engine.Default__KismetMathLibrary")
-
-    if not KismetMathLibrary:IsValid() then error("KismetMathLibrary not valid\n") end
+    if not GetKismetMathLibrary():IsValid() then error("KismetMathLibrary not valid\n") end
     
-    print(string.format("KismetMathLibrary: %s\n", KismetMathLibrary:GetFullName()))
+    print(string.format("KismetMathLibrary: %s\n", GetKismetMathLibrary():GetFullName()))
 
     IsInitialized = true
 end
@@ -55,8 +38,8 @@ function GetObjectName()
     local PlayerPawn = PlayerController.Pawn
     local CameraManager = PlayerController.PlayerCameraManager
     local StartVector = CameraManager:GetCameraLocation()
-    local AddValue = KismetMathLibrary:Multiply_VectorInt(KismetMathLibrary:GetForwardVector(CameraManager:GetCameraRotation()), 50000.0)
-    local EndVector = KismetMathLibrary:Add_VectorVector(StartVector, AddValue)
+    local AddValue = GetKismetMathLibrary():Multiply_VectorInt(GetKismetMathLibrary():GetForwardVector(CameraManager:GetCameraRotation()), 50000.0)
+    local EndVector = GetKismetMathLibrary():Add_VectorVector(StartVector, AddValue)
     local TraceColor = {
         ["R"] = 0,
         ["G"] = 0,
@@ -70,7 +53,7 @@ function GetObjectName()
     }
     print("Doing line trace\n")
     local HitResult = {}
-    local WasHit = KismetSystemLibrary:LineTraceSingle(
+    local WasHit = GetKismetSystemLibrary():LineTraceSingle(
         PlayerPawn,
         StartVector,
         EndVector,
