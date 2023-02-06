@@ -28,13 +28,15 @@ namespace RC::UEGenerator
         Output::send(STR("Dumping TMap Property Overrides\n"));
 
         auto uaapifile = open(StringType{UE4SSProgram::get_program().get_working_directory()} + STR("\\UAssetAPITMapOverrides.json"), File::OpenFor::Writing, File::OverwriteExistingFile::Yes, File::CreateIfNonExistent::Yes);
-        /*auto fmodelfile = File::open(StringType{UE4SSProgram::get_program().get_working_directory()} + STR("\\FModelTMapOverrides.json"), File::OpenFor::Writing, File::OverwriteExistingFile::Yes, File::CreateIfNonExistent::Yes);*/
+        auto fmodelfile = open(StringType{UE4SSProgram::get_program().get_working_directory()} + STR("\\FModelTMapOverrides.json"), File::OpenFor::Writing, File::OverwriteExistingFile::Yes, File::CreateIfNonExistent::Yes);
         
         
-        StringType tmap_buffer;
+        StringType uaapi_tmap_buffer;
+        StringType fmodel_tmap_buffer;
+        auto uaapi_object =  JSON::Object{};
+        auto fmodel_object =  JSON::Object{};
         size_t num_objects_generated{};
         
-        tmap_buffer.append(STR("{\n"));
         UObjectGlobals::ForEachUObject([&](void* untyped_object, [[maybe_unused]]int32_t chunk_index, [[maybe_unused]]int32_t object_index) {
             UObject* object = static_cast<UObject*>(untyped_object);
                         
@@ -49,7 +51,7 @@ namespace RC::UEGenerator
                         if (property->IsA<FMapProperty>() && !MapProperties.contains(property->GetFName()))
                         {
                             MapProperties.insert(property->GetFName());
-                            std::wstring propertyname = property->GetFName().ToString();
+                            auto propertyname = property->GetFName().ToString();
                             Output::send(STR("Found TMap Property: {} in Class: {}\n"), propertyname, object->GetName());
                             // Get TMap property Key and Value types and dump them
                             FProperty* key_property = static_cast<FMapProperty*>(property)->GetKeyProp();
@@ -63,30 +65,35 @@ namespace RC::UEGenerator
                             
                             if (is_key_valid || is_value_valid)
                             {
-                                if (num_objects_generated > 0)
-                                {
-                                    tmap_buffer.append(STR(",\n"));
-                                }
-                                tmap_buffer.append(std::format(STR("  \"{}\": [\n"), propertyname));
-                    
+                                // Generation.
+                                
+                                auto& uaapi_json_object = uaapi_object.new_object(static_cast<StringType>(std::format(STR("{}", propertyname))));
+                                auto& fm_array = fmodel_object.new_array(static_cast<StringType>(std::format(STR("{}", propertyname))));
+                                                                
                                 if (is_key_valid)
                                 {
-                                    tmap_buffer.append(std::format(STR("    \"{}\"\n"), static_cast<FStructProperty*>(key_property)->GetStruct()->GetName()));
+                                    auto keyname = static_cast<FStructProperty*>(key_property)->GetStruct()->GetName();
+                                    uaapi_json_object.new_string(STR("Key"), (STR("{}"), keyname));
+                                    fm_array.new_string((STR("{}"), keyname));
                                 }
                                 else
                                 {
-                                    tmap_buffer.append(STR("    null,\n"));
+                                    uaapi_json_object.new_string(STR("Key"), STR(""));
+                                    fm_array.new_null();
                                 }
-                    
+
                                 if (is_value_valid)
                                 {
-                                    tmap_buffer.append(std::format(STR("    \"{}\"\n"), static_cast<FStructProperty*>(value_property)->GetStruct()->GetName()));
+                                    auto valuename = static_cast<FStructProperty*>(value_property)->GetStruct()->GetName();
+                                    uaapi_json_object.new_string(STR("Value"), (STR("{}"), valuename));
+                                    fm_array.new_string((STR("{}"), valuename));
                                 }
                                 else
                                 {
-                                    tmap_buffer.append(STR("    null,\n"));
+                                    uaapi_json_object.new_string(STR("Value"), STR(""));
+                                    fm_array.new_null();
                                 }
-                                tmap_buffer.append(STR("  ]"));
+                                
                 
                                 ++num_objects_generated;
                             }
@@ -102,8 +109,15 @@ namespace RC::UEGenerator
             return LoopAction::Continue;
         });
 
-        tmap_buffer.append(STR("\n}"));
-        uaapifile.write_string_to_file(tmap_buffer);
+        // Retrieve JSON as a string.
+        int32_t indent_level{};
+        auto uaapi_string = uaapi_object.serialize(JSON::ShouldFormat::Yes, &indent_level);
+        uaapi_tmap_buffer.append(uaapi_string);
+        auto fm_string = fmodel_object.serialize(JSON::ShouldFormat::Yes, &indent_level);
+        fmodel_tmap_buffer.append(fm_string);
+        
+        uaapifile.write_string_to_file(uaapi_tmap_buffer);
+        fmodelfile.write_string_to_file(fmodel_tmap_buffer);
         Output::send(STR("Finished Dumping {} TMap Properties\n"), num_objects_generated);
         
     }
