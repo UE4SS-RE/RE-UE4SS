@@ -33,8 +33,8 @@ namespace RC::UEGenerator
         
         StringType uaapi_tmap_buffer;
         StringType fmodel_tmap_buffer;
+        auto fm_object =  JSON::Object{};
         auto uaapi_object =  JSON::Object{};
-        auto fmodel_object =  JSON::Object{};
         size_t num_objects_generated{};
         
         UObjectGlobals::ForEachUObject([&](void* untyped_object, [[maybe_unused]]int32_t chunk_index, [[maybe_unused]]int32_t object_index) {
@@ -58,40 +58,39 @@ namespace RC::UEGenerator
                             FProperty* value_property = static_cast<FMapProperty*>(property)->GetValueProp();
                             
                             auto key_as_struct_property = static_cast<FStructProperty*>(key_property);
-                            auto is_key_valid = key_as_struct_property && key_as_struct_property->GetStruct()->HasAnyStructFlags(STRUCT_SerializeNative);
+                            auto is_key_valid = key_property->IsA<FStructProperty>() && key_as_struct_property->GetStruct()->HasAnyStructFlags(STRUCT_SerializeNative);
                             
                             auto value_as_struct_property = static_cast<FStructProperty*>(value_property);
-                            auto is_value_valid = value_as_struct_property && value_as_struct_property->GetStruct()->HasAnyStructFlags(STRUCT_SerializeNative);
+                            auto is_value_valid = value_property->IsA<FStructProperty>() && value_as_struct_property->GetStruct()->HasAnyStructFlags(STRUCT_SerializeNative);
                             
                             if (is_key_valid || is_value_valid)
                             {
                                 // Generation.
-                                
-                                auto& uaapi_json_object = uaapi_object.new_object(propertyname);
-                                auto& fm_array = fmodel_object.new_array(propertyname);
+                                auto& fm_json_object = fm_object.new_object(propertyname);
+                                auto& uaapi_array = uaapi_object.new_array(propertyname);
                                                                 
                                 if (is_key_valid)
                                 {
-                                    auto keyname = static_cast<FStructProperty*>(key_property)->GetStruct()->GetName();
-                                    uaapi_json_object.new_string(STR("Key"), keyname);
-                                    fm_array.new_string(keyname);
+                                    auto keyname = key_as_struct_property->GetStruct()->GetName();
+                                    fm_json_object.new_string(STR("Key"), keyname);
+                                    uaapi_array.new_string(keyname);
                                 }
                                 else
                                 {
-                                    uaapi_json_object.new_string(STR("Key"), STR(""));
-                                    fm_array.new_null();
+                                    fm_json_object.new_string(STR("Key"), STR(""));
+                                    uaapi_array.new_null();
                                 }
 
                                 if (is_value_valid)
                                 {
-                                    auto valuename = static_cast<FStructProperty*>(value_property)->GetStruct()->GetName();
-                                    uaapi_json_object.new_string(STR("Value"), valuename);
-                                    fm_array.new_string(valuename);
+                                    auto valuename = value_as_struct_property->GetStruct()->GetName();
+                                    fm_json_object.new_string(STR("Value"), valuename);
+                                    uaapi_array.new_string(valuename);
                                 }
                                 else
                                 {
-                                    uaapi_json_object.new_string(STR("Value"), STR(""));
-                                    fm_array.new_null();
+                                    fm_json_object.new_string(STR("Value"), STR(""));
+                                    uaapi_array.new_null();
                                 }
                                 
                 
@@ -113,7 +112,7 @@ namespace RC::UEGenerator
         int32_t indent_level{};
         auto uaapi_string = uaapi_object.serialize(JSON::ShouldFormat::Yes, &indent_level);
         uaapi_tmap_buffer.append(uaapi_string);
-        auto fm_string = fmodel_object.serialize(JSON::ShouldFormat::Yes, &indent_level);
+        auto fm_string = fm_object.serialize(JSON::ShouldFormat::Yes, &indent_level);
         fmodel_tmap_buffer.append(fm_string);
         
         uaapifile.write_string_to_file(uaapi_tmap_buffer);
