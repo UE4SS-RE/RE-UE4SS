@@ -20,6 +20,7 @@
 #include <Unreal/UFunction.hpp>
 #include <Unreal/UScriptStruct.hpp>
 #include <imgui.h>
+#include <SDKGenerator/TMapOverrideGen.hpp>
 
 namespace RC::GUI::Dumpers
 {
@@ -327,6 +328,12 @@ namespace RC::GUI::Dumpers
         {
             OutTheShade::generate_usmap();
         }
+        
+        if (ImGui::Button("Generate TMapOverride file\n"))
+        {
+            UEGenerator::TMapOverrideGenerator::generate_tmapoverride();
+        }
+	    
     }
 }
 
