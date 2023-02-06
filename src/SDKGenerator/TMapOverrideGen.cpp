@@ -10,6 +10,7 @@
 
 #pragma warning(disable: 4005)
 #include <UE4SSProgram.hpp>
+#include <SDKGenerator/UEHeaderGenerator.hpp>
 #include <Unreal/UClass.hpp>
 #include <Unreal/UScriptStruct.hpp>
 #include <Unreal/Property/FMapProperty.hpp>
@@ -23,16 +24,28 @@ namespace RC::UEGenerator
     
     std::unordered_set<FName> TMapOverrideGenerator::MapProperties{};
 
+    auto is_valid_map_prop(FProperty* property) -> bool
+    {
+        if (property->IsA<FStructProperty>())
+        {
+            auto struct_prop = static_cast<FStructProperty*>(property);
+            auto struct_type = struct_prop->GetStruct();
+
+            if (struct_type->HasAnyStructFlags(STRUCT_SerializeNative))
+            {
+                return UEHeaderGenerator::is_struct_blueprint_type(struct_type);
+            }
+            return false;
+        }
+        return false;
+    }
+
     auto TMapOverrideGenerator::generate_tmapoverride() -> void
     {
         Output::send(STR("Dumping TMap Property Overrides\n"));
 
-        auto uaapifile = open(StringType{UE4SSProgram::get_program().get_working_directory()} + STR("\\UAssetAPITMapOverrides.json"), File::OpenFor::Writing, File::OverwriteExistingFile::Yes, File::CreateIfNonExistent::Yes);
-        auto fmodelfile = open(StringType{UE4SSProgram::get_program().get_working_directory()} + STR("\\FModelTMapOverrides.json"), File::OpenFor::Writing, File::OverwriteExistingFile::Yes, File::CreateIfNonExistent::Yes);
         
         
-        StringType uaapi_tmap_buffer;
-        StringType fmodel_tmap_buffer;
         auto fm_object =  JSON::Object{};
         auto uaapi_object =  JSON::Object{};
         size_t num_objects_generated{};
@@ -58,10 +71,12 @@ namespace RC::UEGenerator
                             FProperty* value_property = static_cast<FMapProperty*>(property)->GetValueProp();
                             
                             auto key_as_struct_property = static_cast<FStructProperty*>(key_property);
-                            auto is_key_valid = key_property->IsA<FStructProperty>() && key_as_struct_property->GetStruct()->HasAnyStructFlags(STRUCT_SerializeNative);
+                            auto is_key_valid = is_valid_map_prop(key_property);
+                                
                             
                             auto value_as_struct_property = static_cast<FStructProperty*>(value_property);
-                            auto is_value_valid = value_property->IsA<FStructProperty>() && value_as_struct_property->GetStruct()->HasAnyStructFlags(STRUCT_SerializeNative);
+                            auto is_value_valid = is_valid_map_prop(value_property);
+                                value_property->IsA<FStructProperty>() && value_as_struct_property->GetStruct()->HasAnyStructFlags(STRUCT_SerializeNative);
                             
                             if (is_key_valid || is_value_valid)
                             {
@@ -110,13 +125,11 @@ namespace RC::UEGenerator
 
         // Retrieve JSON as a string.
         int32_t indent_level{};
-        auto uaapi_string = uaapi_object.serialize(JSON::ShouldFormat::Yes, &indent_level);
-        uaapi_tmap_buffer.append(uaapi_string);
-        auto fm_string = fm_object.serialize(JSON::ShouldFormat::Yes, &indent_level);
-        fmodel_tmap_buffer.append(fm_string);
-        
-        uaapifile.write_string_to_file(uaapi_tmap_buffer);
-        fmodelfile.write_string_to_file(fmodel_tmap_buffer);
+
+        auto uaapifile = open(StringType{UE4SSProgram::get_program().get_working_directory()} + STR("\\UAssetAPITMapOverrides.json"), File::OpenFor::Writing, File::OverwriteExistingFile::Yes, File::CreateIfNonExistent::Yes);
+        auto fmodelfile = open(StringType{UE4SSProgram::get_program().get_working_directory()} + STR("\\FModelTMapOverrides.json"), File::OpenFor::Writing, File::OverwriteExistingFile::Yes, File::CreateIfNonExistent::Yes);
+        uaapifile.write_string_to_file(uaapi_object.serialize(JSON::ShouldFormat::Yes, &indent_level));
+        fmodelfile.write_string_to_file(fm_object.serialize(JSON::ShouldFormat::Yes, &indent_level));
         Output::send(STR("Finished Dumping {} TMap Properties\n"), num_objects_generated);
         
     }
