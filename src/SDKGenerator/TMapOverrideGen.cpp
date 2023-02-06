@@ -67,14 +67,14 @@ namespace RC::UEGenerator
                             {
                                 // Generation.
                                 
-                                auto& uaapi_json_object = uaapi_object.new_object(static_cast<StringType>(std::format(STR("{}", propertyname))));
-                                auto& fm_array = fmodel_object.new_array(static_cast<StringType>(std::format(STR("{}", propertyname))));
+                                auto& uaapi_json_object = uaapi_object.new_object(propertyname);
+                                auto& fm_array = fmodel_object.new_array(propertyname);
                                                                 
                                 if (is_key_valid)
                                 {
                                     auto keyname = static_cast<FStructProperty*>(key_property)->GetStruct()->GetName();
-                                    uaapi_json_object.new_string(STR("Key"), (STR("{}"), keyname));
-                                    fm_array.new_string((STR("{}"), keyname));
+                                    uaapi_json_object.new_string(STR("Key"), keyname);
+                                    fm_array.new_string(keyname);
                                 }
                                 else
                                 {
@@ -85,8 +85,8 @@ namespace RC::UEGenerator
                                 if (is_value_valid)
                                 {
                                     auto valuename = static_cast<FStructProperty*>(value_property)->GetStruct()->GetName();
-                                    uaapi_json_object.new_string(STR("Value"), (STR("{}"), valuename));
-                                    fm_array.new_string((STR("{}"), valuename));
+                                    uaapi_json_object.new_string(STR("Value"), valuename);
+                                    fm_array.new_string(valuename);
                                 }
                                 else
                                 {
