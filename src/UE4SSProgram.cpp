@@ -722,6 +722,7 @@ namespace RC
         LuaType::StaticState::m_property_value_pushers.emplace(FName(L"TextProperty").GetComparisonIndex(), &LuaType::push_textproperty);
         LuaType::StaticState::m_property_value_pushers.emplace(FName(L"StrProperty").GetComparisonIndex(), &LuaType::push_strproperty);
         LuaType::StaticState::m_property_value_pushers.emplace(FName(L"SoftClassProperty").GetComparisonIndex(), &LuaType::push_softclassproperty);
+        LuaType::StaticState::m_property_value_pushers.emplace(FName(L"InterfaceProperty").GetComparisonIndex(), &LuaType::push_interfaceproperty);
     }
 
     auto UE4SSProgram::setup_mods() -> void

@@ -206,6 +206,7 @@ namespace RC::LuaType
     auto push_textproperty(const PusherParams&) -> void;
     auto push_strproperty(const PusherParams&) -> void;
     auto push_softclassproperty(const PusherParams&) -> void;
+    auto push_interfaceproperty(const PusherParams&) -> void;
 
     auto push_functionproperty(const FunctionPusherParams&) -> void;
     // Push to Lua -> END
