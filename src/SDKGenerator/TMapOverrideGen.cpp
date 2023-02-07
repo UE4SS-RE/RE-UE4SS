@@ -52,11 +52,11 @@ namespace RC::UEGenerator
 
                         auto key_as_struct_property = CastField<FStructProperty>(static_cast<FMapProperty*>(property)->GetKeyProp());
                         auto key_struct_type = key_as_struct_property ? key_as_struct_property->GetStruct() : nullptr;
-                        auto is_key_valid = key_struct_type && key_as_struct_property && key_struct_type->HasAnyStructFlags(STRUCT_SerializeNative) && UEHeaderGenerator::is_struct_blueprint_type(key_struct_type);
+                        auto is_key_valid = key_struct_type && key_as_struct_property && key_struct_type->HasAnyStructFlags(STRUCT_SerializeNative)/* && UEHeaderGenerator::is_struct_blueprint_type(key_struct_type)*/;
 
                         auto value_as_struct_property = CastField<FStructProperty>(static_cast<FMapProperty*>(property)->GetValueProp());
                         auto value_struct_type = value_as_struct_property ? value_as_struct_property->GetStruct() : nullptr;
-                        auto is_value_valid = value_struct_type && value_struct_type->HasAnyStructFlags(STRUCT_SerializeNative) && UEHeaderGenerator::is_struct_blueprint_type(value_struct_type);
+                        auto is_value_valid = value_struct_type && value_struct_type->HasAnyStructFlags(STRUCT_SerializeNative)/* && UEHeaderGenerator::is_struct_blueprint_type(value_struct_type)*/;
 
                         if (!is_key_valid && !is_value_valid) { return LoopAction::Continue; }
 
