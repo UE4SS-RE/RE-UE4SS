@@ -23,16 +23,7 @@ namespace RC::UEGenerator
     using namespace ::RC::Unreal;
     
     std::unordered_set<FName> TMapOverrideGenerator::MapProperties{};
-
-    auto is_struct_property_natively_serializable(FProperty* property) -> bool
-    {
-        if (!property->IsA<FStructProperty>()) { return false; }
-        auto struct_prop = static_cast<FStructProperty*>(property);
-        auto struct_type = struct_prop->GetStruct();
-        if (!struct_type->HasAnyStructFlags(STRUCT_SerializeNative)) { return false; }
-        return UEHeaderGenerator::is_struct_blueprint_type(struct_type);
-    }
-
+    
     auto TMapOverrideGenerator::generate_tmapoverride() -> void
     {
         Output::send(STR("Dumping TMap Property Overrides\n"));
@@ -52,53 +43,51 @@ namespace RC::UEGenerator
                 if (as_class && as_class->HasAnyClassFlags(CLASS_Native) || as_script_struct && as_script_struct->HasAnyStructFlags(STRUCT_Native))
                 {
                     casted_object->ForEachProperty([&](FProperty* property) {
-                        if (property->IsA<FMapProperty>() && !MapProperties.contains(property->GetFName()))
-                        {
-                            MapProperties.insert(property->GetFName());
-                            auto propertyname = property->GetFName().ToString();
-                            Output::send(STR("Found TMap Property: {} in Class: {}\n"), propertyname, object->GetName());
-                            // Get TMap property Key and Value types and dump them
-                            FProperty* key_property = static_cast<FMapProperty*>(property)->GetKeyProp();
-                            FProperty* value_property = static_cast<FMapProperty*>(property)->GetValueProp();
-                                                        
-                            auto is_key_valid = is_struct_property_natively_serializable(key_property);
-                            
-                            auto is_value_valid = is_struct_property_natively_serializable(value_property);
-                            
-                            if (is_key_valid || is_value_valid)
-                            {
-                                // Generation.
-                                auto& fm_json_object = fm_object.new_object(propertyname);
-                                auto& uaapi_array = uaapi_object.new_array(propertyname);
-                                                                
-                                if (is_key_valid)
-                                {
-                                    auto keyname = static_cast<FStructProperty*>(key_property)->GetStruct()->GetName();
-                                    fm_json_object.new_string(STR("Key"), keyname);
-                                    uaapi_array.new_string(keyname);
-                                }
-                                else
-                                {
-                                    fm_json_object.new_string(STR("Key"), STR(""));
-                                    uaapi_array.new_null();
-                                }
+                        if (!property->IsA<FMapProperty>() || MapProperties.contains(property->GetFName())) { return LoopAction::Continue; }
 
-                                if (is_value_valid)
-                                {
-                                    auto valuename = static_cast<FStructProperty*>(value_property)->GetStruct()->GetName();
-                                    fm_json_object.new_string(STR("Value"), valuename);
-                                    uaapi_array.new_string(valuename);
-                                }
-                                else
-                                {
-                                    fm_json_object.new_string(STR("Value"), STR(""));
-                                    uaapi_array.new_null();
-                                }
-                                
-                
-                                ++num_objects_generated;
-                            }
+                        MapProperties.insert(property->GetFName());
+
+                        auto property_name = property->GetFName().ToString();
+                        Output::send(STR("Found TMap Property: {} in Class: {}\n"), property_name, object->GetName());
+
+                        auto key_as_struct_property = CastField<FStructProperty>(static_cast<FMapProperty*>(property)->GetKeyProp());
+                        auto key_struct_type = key_as_struct_property ? key_as_struct_property->GetStruct() : nullptr;
+                        auto is_key_valid = key_struct_type && key_as_struct_property && key_struct_type->HasAnyStructFlags(STRUCT_SerializeNative) && UEHeaderGenerator::is_struct_blueprint_type(key_struct_type);
+
+                        auto value_as_struct_property = CastField<FStructProperty>(static_cast<FMapProperty*>(property)->GetValueProp());
+                        auto value_struct_type = value_as_struct_property ? value_as_struct_property->GetStruct() : nullptr;
+                        auto is_value_valid = value_struct_type && value_struct_type->HasAnyStructFlags(STRUCT_SerializeNative) && UEHeaderGenerator::is_struct_blueprint_type(value_struct_type);
+
+                        if (!is_key_valid && !is_value_valid) { return LoopAction::Continue; }
+
+                        auto& fm_json_object = fm_object.new_object(property_name);
+                        auto& uaapi_array = uaapi_object.new_array(property_name);
+
+                        if (is_key_valid)
+                        {
+                            auto key_name = key_as_struct_property->GetStruct()->GetName();
+                            fm_json_object.new_string(STR("Key"), key_name);
+                            uaapi_array.new_string(key_name);
                         }
+                        else
+                        {
+                            fm_json_object.new_string(STR("Key"), STR(""));
+                            uaapi_array.new_null();
+                        }
+
+                        if (is_value_valid)
+                        {
+                            auto value_name = value_as_struct_property->GetStruct()->GetName();
+                            fm_json_object.new_string(STR("Value"), value_name);
+                            uaapi_array.new_string(value_name);
+                        }
+                        else
+                        {
+                            fm_json_object.new_string(STR("Value"), STR(""));
+                            uaapi_array.new_null();
+                        }
+
+                        ++num_objects_generated;
                         return LoopAction::Continue;
                     });
                 }
