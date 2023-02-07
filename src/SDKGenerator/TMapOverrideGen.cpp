@@ -48,17 +48,18 @@ namespace RC::UEGenerator
                         MapProperties.insert(property->GetFName());
 
                         auto property_name = property->GetFName().ToString();
-                        Output::send(STR("Found TMap Property: {} in Class: {}\n"), property_name, object->GetName());
+                        
 
                         auto key_as_struct_property = CastField<FStructProperty>(static_cast<FMapProperty*>(property)->GetKeyProp());
                         auto key_struct_type = key_as_struct_property ? key_as_struct_property->GetStruct() : nullptr;
-                        auto is_key_valid = key_struct_type && key_as_struct_property && key_struct_type->HasAnyStructFlags(STRUCT_SerializeNative)/* && UEHeaderGenerator::is_struct_blueprint_type(key_struct_type)*/;
+                        auto is_key_valid = key_struct_type && key_as_struct_property && key_struct_type->HasAnyStructFlags(STRUCT_SerializeNative);
 
                         auto value_as_struct_property = CastField<FStructProperty>(static_cast<FMapProperty*>(property)->GetValueProp());
                         auto value_struct_type = value_as_struct_property ? value_as_struct_property->GetStruct() : nullptr;
-                        auto is_value_valid = value_struct_type && value_struct_type->HasAnyStructFlags(STRUCT_SerializeNative)/* && UEHeaderGenerator::is_struct_blueprint_type(value_struct_type)*/;
+                        auto is_value_valid = value_struct_type && value_struct_type->HasAnyStructFlags(STRUCT_SerializeNative);
 
                         if (!is_key_valid && !is_value_valid) { return LoopAction::Continue; }
+                        Output::send(STR("Found Relevant TMap Property: {} in Class: {}\n"), property_name, object->GetName());
 
                         auto& fm_json_object = fm_object.new_object(property_name);
                         auto& uaapi_array = uaapi_object.new_array(property_name);
