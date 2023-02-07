@@ -483,6 +483,15 @@ namespace RC
         object_internal_flags_table.add_pair("AllFlags", static_cast<std::underlying_type_t<Unreal::EInternalObjectFlags>>(Unreal::EInternalObjectFlags::AllFlags));
         object_internal_flags_table.make_global("EInternalObjectFlags");
     }
+    
+    static auto regrister_efindname(const LuaMadeSimple::Lua& lua) -> void
+    {
+        LuaMadeSimple::Lua::Table efindname_table = lua.prepare_new_table();
+        efindname_table.add_pair("FNAME_Find", static_cast<std::underlying_type_t<Unreal::EFindName>>(Unreal::EFindName::FNAME_Find));
+        efindname_table.add_pair("FNAME_Add", static_cast<std::underlying_type_t<Unreal::EFindName>>(Unreal::EFindName::FNAME_Add));
+        efindname_table.add_pair("FNAME_Replace_Not_Safe_For_Threading", static_cast<std::underlying_type_t<Unreal::EFindName>>(Unreal::EFindName::FNAME_Replace_Not_Safe_For_Threading));
+        efindname_table.make_global("EFindName");
+    }
 
     Mod::Mod(UE4SSProgram& program, std::wstring&& mod_name, std::wstring&& mod_path) : m_program(program), m_mod_name(mod_name), m_mod_path(mod_path), m_lua(LuaMadeSimple::new_state())
     {
@@ -2291,6 +2300,7 @@ Overloads:
 
         register_all_property_types(lua);
         register_object_flags(lua);
+        regrister_efindname(lua);
     }
 
     auto Mod::start_mod() -> void
