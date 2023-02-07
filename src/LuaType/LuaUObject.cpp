@@ -16,12 +16,14 @@
 #include <LuaType/LuaUWorld.hpp>
 #include <LuaType/LuaUEnum.hpp>
 #include <LuaType/LuaTSoftClassPtr.hpp>
+#include <LuaType/LuaUInterface.hpp>
 #pragma warning(disable: 4005)
 #include <Unreal/UScriptStruct.hpp>
 #include <Unreal/AActor.hpp>
 #include <Unreal/UEnum.hpp>
 #include <Unreal/UFunction.hpp>
 #include <Unreal/UClass.hpp>
+#include <Unreal/UInterface.hpp>
 #include <Unreal/FText.hpp>
 #include <Unreal/FString.hpp>
 #include <Unreal/FScriptArray.hpp>
@@ -1088,6 +1090,44 @@ namespace RC::LuaType
         }
 
         params.lua.throw_error(std::format("[push_softclassproperty] Unknown Operation ({}) not supported", static_cast<int32_t>(params.operation)));
+    }
+
+    auto push_interfaceproperty(const PusherParams& params) -> void
+    {
+        auto property_value = static_cast<Unreal::UInterface**>(params.data);
+        if (!property_value) { params.lua.throw_error("[push_interfaceproperty] data pointer is nullptr"); }
+
+        // Finally construct the Lua object
+        switch (params.operation)
+        {
+            case Operation::GetNonTrivialLocal:
+            case Operation::Get:
+                auto_construct_object(params.lua, *property_value);
+                break;
+            case Operation::Set:
+            {
+                if (params.lua.is_userdata())
+                {
+                    const auto& lua_object = params.lua.get_userdata<LuaType::UInterface>(params.stored_at_index);
+                    *property_value = lua_object.get_remote_cpp_object();
+                }
+                else if (params.lua.is_nil())
+                {
+                    *property_value = nullptr;
+                }
+                else
+                {
+                    params.lua.throw_error("[push_interfaceproperty] Value must be UInterface or nil");
+                }
+                break;
+            }
+            case Operation::GetParam:
+                RemoteUnrealParam::construct(params.lua, params.data, params.base, params.property);
+                break;
+            default:
+                params.lua.throw_error("[push_interfaceproperty] Unhandled Operation");
+                break;
+        }
     }
 
     auto static is_a_internal(const LuaMadeSimple::Lua& lua, Unreal::UObject* object, Unreal::UClass* object_class) -> bool
