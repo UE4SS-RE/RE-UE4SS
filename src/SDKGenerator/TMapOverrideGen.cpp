@@ -24,27 +24,20 @@ namespace RC::UEGenerator
     
     std::unordered_set<FName> TMapOverrideGenerator::MapProperties{};
 
-    auto is_valid_map_prop(FProperty* property) -> bool
+    auto is_struct_property_natively_serializable(FProperty* property) -> bool
     {
-        if (property->IsA<FStructProperty>())
-        {
-            auto struct_prop = static_cast<FStructProperty*>(property);
-            auto struct_type = struct_prop->GetStruct();
+        if (!property->IsA<FStructProperty>()) { return false; }
+        
+        auto struct_prop = static_cast<FStructProperty*>(property);
+        auto struct_type = struct_prop->GetStruct();
+        if (!struct_type->HasAnyStructFlags(STRUCT_SerializeNative)) { return false; }
+        return UEHeaderGenerator::is_struct_blueprint_type(struct_type);
 
-            if (struct_type->HasAnyStructFlags(STRUCT_SerializeNative))
-            {
-                return UEHeaderGenerator::is_struct_blueprint_type(struct_type);
-            }
-            return false;
-        }
-        return false;
     }
 
     auto TMapOverrideGenerator::generate_tmapoverride() -> void
     {
         Output::send(STR("Dumping TMap Property Overrides\n"));
-
-        
         
         auto fm_object =  JSON::Object{};
         auto uaapi_object =  JSON::Object{};
@@ -69,14 +62,10 @@ namespace RC::UEGenerator
                             // Get TMap property Key and Value types and dump them
                             FProperty* key_property = static_cast<FMapProperty*>(property)->GetKeyProp();
                             FProperty* value_property = static_cast<FMapProperty*>(property)->GetValueProp();
+                                                        
+                            auto is_key_valid = is_struct_property_natively_serializable(key_property);
                             
-                            auto key_as_struct_property = static_cast<FStructProperty*>(key_property);
-                            auto is_key_valid = is_valid_map_prop(key_property);
-                                
-                            
-                            auto value_as_struct_property = static_cast<FStructProperty*>(value_property);
-                            auto is_value_valid = is_valid_map_prop(value_property);
-                                value_property->IsA<FStructProperty>() && value_as_struct_property->GetStruct()->HasAnyStructFlags(STRUCT_SerializeNative);
+                            auto is_value_valid = is_struct_property_natively_serializable(value_property);
                             
                             if (is_key_valid || is_value_valid)
                             {
@@ -86,7 +75,7 @@ namespace RC::UEGenerator
                                                                 
                                 if (is_key_valid)
                                 {
-                                    auto keyname = key_as_struct_property->GetStruct()->GetName();
+                                    auto keyname = static_cast<FStructProperty*>(key_property)->GetStruct()->GetName();
                                     fm_json_object.new_string(STR("Key"), keyname);
                                     uaapi_array.new_string(keyname);
                                 }
@@ -98,7 +87,7 @@ namespace RC::UEGenerator
 
                                 if (is_value_valid)
                                 {
-                                    auto valuename = value_as_struct_property->GetStruct()->GetName();
+                                    auto valuename = static_cast<FStructProperty*>(value_property)->GetStruct()->GetName();
                                     fm_json_object.new_string(STR("Value"), valuename);
                                     uaapi_array.new_string(valuename);
                                 }
