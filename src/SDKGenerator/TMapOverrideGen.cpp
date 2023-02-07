@@ -27,20 +27,18 @@ namespace RC::UEGenerator
     auto is_struct_property_natively_serializable(FProperty* property) -> bool
     {
         if (!property->IsA<FStructProperty>()) { return false; }
-        
         auto struct_prop = static_cast<FStructProperty*>(property);
         auto struct_type = struct_prop->GetStruct();
         if (!struct_type->HasAnyStructFlags(STRUCT_SerializeNative)) { return false; }
         return UEHeaderGenerator::is_struct_blueprint_type(struct_type);
-
     }
 
     auto TMapOverrideGenerator::generate_tmapoverride() -> void
     {
         Output::send(STR("Dumping TMap Property Overrides\n"));
         
-        auto fm_object =  JSON::Object{};
-        auto uaapi_object =  JSON::Object{};
+        auto fm_object = JSON::Object{};
+        auto uaapi_object = JSON::Object{};
         size_t num_objects_generated{};
         
         UObjectGlobals::ForEachUObject([&](void* untyped_object, [[maybe_unused]]int32_t chunk_index, [[maybe_unused]]int32_t object_index) {
@@ -120,6 +118,6 @@ namespace RC::UEGenerator
         uaapifile.write_string_to_file(uaapi_object.serialize(JSON::ShouldFormat::Yes, &indent_level));
         fmodelfile.write_string_to_file(fm_object.serialize(JSON::ShouldFormat::Yes, &indent_level));
         Output::send(STR("Finished Dumping {} TMap Properties\n"), num_objects_generated);
-        
+        MapProperties.clear();
     }
 }
