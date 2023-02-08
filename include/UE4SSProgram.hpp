@@ -146,6 +146,7 @@ namespace RC
     public:
         auto reinstall_mods() -> void;
         auto get_object_dumper_output_directory() -> const File::StringType;
+        auto get_module_directory() -> File::StringViewType;
         auto get_working_directory() -> File::StringViewType;
         auto get_mods_directory() -> File::StringViewType;
         auto generate_uht_compatible_headers() -> void;
