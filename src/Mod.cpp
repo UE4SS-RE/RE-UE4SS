@@ -3,6 +3,8 @@
 #include <memory>
 #include <string>
 #include <format>
+#include <filesystem>
+#include <stdexcept>
 
 #include <Mod.hpp>
 #include <Helpers/Format.hpp>
@@ -50,6 +52,7 @@
 #include <Unreal/Property/FStrProperty.hpp>
 #include <UnrealCustom/CustomProperty.hpp>
 #include <Unreal/PrimitiveTypes.hpp>
+#include <Unreal/UKismetSystemLibrary.hpp>
 #include <Unreal/Hooks.hpp>
 #pragma warning(default: 4005)
 
@@ -1483,6 +1486,103 @@ Overloads:
             Mod::m_static_construct_object_lua_callbacks.emplace_back(Mod::LuaCallbackData{ *hook_lua, instance_of_class, {lua_callback_registry_index} });
 
             return 0;
+        });
+
+        lua.register_function("IterateGameDirectories", [](const LuaMadeSimple::Lua& lua) -> int {
+            std::string error_overload_not_found{R"(
+No overload found for function 'IterateGameDirectories'.
+Overloads:
+#1: IterateGameDirectories()"};
+
+            std::filesystem::path module_directory = UE4SSProgram::get_program().get_module_directory();
+            auto game_name = StringType{Unreal::UKismetSystemLibrary::GetGameName().GetCharArray()};
+            if (module_directory.parent_path().parent_path().parent_path().stem() != game_name)
+            {
+                Output::send<LogLevel::Warning>(STR("IterateGameDirectories: Could not locate the root directory because the directory structure is unknown (not <RootGamePath>/Game/Binaries/Win64)"));
+                lua.set_nil();
+                return 1;
+            }
+            
+            auto game_root_directory = module_directory.parent_path().parent_path().parent_path().parent_path();
+            auto directories_table = lua.prepare_new_table();
+
+            std::function<void(const std::filesystem::path&, LuaMadeSimple::Lua::Table&)> iterate_directory = [&](const std::filesystem::path& directory, LuaMadeSimple::Lua::Table& current_directory_table) {
+                for (const auto& item : std::filesystem::directory_iterator(directory))
+                {
+                    if (!item.is_directory()) { continue; }
+                    auto path = item.path().stem();
+                    current_directory_table.add_key(path == game_name ? "Game" : path.string().c_str());
+                    auto next_directory_table = lua.prepare_new_table();
+                    iterate_directory(item.path(), next_directory_table);
+                    current_directory_table.fuse_pair();
+                }
+                
+                auto meta_table = lua.prepare_new_table();
+                meta_table.add_pair("__index", [](lua_State* lua_state) -> int {
+                    return TRY([&] {
+                        const auto& lua = LuaMadeSimple::Lua(lua_state);
+                        std::string name{};
+                        if (!lua.is_string(2)) { return 0; }
+                        name = lua.get_string(2);
+
+                        if (name == "__name")
+                        {
+                            lua_getmetatable(lua_state, 1);
+                            lua_pushliteral(lua_state, "__name");
+                            lua_rawget(lua_state, 2);
+                            lua.discard_value();
+                            lua.discard_value();
+                            if (!lua.is_string()) { throw std::runtime_error{"Couldn't find '__name' for directory entry."}; }
+                            return 1;
+                        }
+                        else if (name == "__absolute_path")
+                        {
+                            lua_getmetatable(lua_state, 1);
+                            lua_pushliteral(lua_state, "__absolute_path");
+                            lua_rawget(lua_state, 2);
+                            lua.discard_value();
+                            lua.discard_value();
+                            if (!lua.is_string()) { throw std::runtime_error{"Couldn't find '__absolute_path' for directory entry."}; }
+                            return 1;
+                        }
+                        else if (name == "__files")
+                        {
+                            lua_getmetatable(lua_state, 1);
+                            lua_pushliteral(lua_state, "__absolute_path");
+                            lua_rawget(lua_state, 2);
+                            lua.discard_value();
+                            lua.discard_value();
+                            if (!lua.is_string()) { throw std::runtime_error{"Couldn't find '__absolute_path' for directory entry."}; }
+                            const auto current_path = std::string{lua.get_string()};
+                            auto files_table = lua.prepare_new_table();
+                            for (int i = 1; const auto& item : std::filesystem::directory_iterator(current_path))
+                            {
+                                if (!item.is_directory())
+                                {
+                                    files_table.add_key(i);
+                                    auto file_table = lua.prepare_new_table();
+                                    file_table.add_pair("__name", item.path().filename().string().c_str());
+                                    file_table.add_pair("__absolute_path", item.path().string().c_str());
+                                    files_table.fuse_pair();
+                                }
+                                ++i;
+                            }
+                            return 1;
+                        }
+                        else
+                        {
+                            lua.set_nil();
+                            return 1;
+                        }
+                    });
+                });
+                meta_table.add_pair("__name", directory.stem().string().c_str());
+                meta_table.add_pair("__absolute_path", directory.string().c_str());
+                lua_setmetatable(lua.get_lua_state(), -2);
+            };
+            
+            iterate_directory(game_root_directory, directories_table);
+            return 1;
         });
 
         lua.register_function("ExecuteAsync", [](const LuaMadeSimple::Lua& lua) -> int {

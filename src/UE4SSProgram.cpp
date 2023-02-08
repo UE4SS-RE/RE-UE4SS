@@ -957,6 +957,11 @@ namespace RC
         Output::send(STR("All mods re-installed\n"));
     }
 
+    auto UE4SSProgram::get_module_directory() -> File::StringViewType
+    {
+        return m_module_file_path.c_str();
+    }
+
     auto UE4SSProgram::get_working_directory() -> File::StringViewType
     {
         return m_working_directory.c_str();
