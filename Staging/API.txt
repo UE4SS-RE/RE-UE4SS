@@ -188,6 +188,15 @@ Global Functions
 
     LoopAsync(integer DelayInMilliseconds, function Callback)
         - Starts a loop that sleeps for the supplied number of milliseconds and stops when the callback returns true.
+    
+    IterateGameDirectories() -> table
+        - Returns a table of all game directories.
+        - An example of an absolute path to Win64: Q:\SteamLibrary\steamapps\common\Deep Rock Galactic\FSD\Binaries\Win64
+        - To get to the same directory, do: IterateGameDirectories().Game.Binaries.Win64
+        - Note that the game name is replaced by 'Game' to keep things generic.
+        - You can use '.__name' and '.__absolute_path' to retrieve values.
+        - You can use '.__files' to retrieve a table containing all files in this directory.
+        - You also use '.__name' and '.__absolute_path' for files.
 
 Classes
     RemoteObject
