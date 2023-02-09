@@ -9,6 +9,7 @@ on:
       - "generated_src/**"
       - "generated_include/**"
       - "internal_build_tools/**"
+      - "Dependencies/**"
   workflow_dispatch:
 
 permissions:
