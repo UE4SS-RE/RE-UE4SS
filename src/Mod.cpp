@@ -658,16 +658,24 @@ namespace RC
     {
         auto* lua_state = m_lua.get_lua_state();
         lua_getglobal(lua_state, "package");
+        
         lua_getfield(lua_state, -1, "path");
         std::string current_paths = lua_tostring(lua_state, -1);
-
         current_paths.append(std::format(";{}\\{}\\Scripts\\?.lua", to_string(m_program.get_mods_directory()).c_str(), to_string(get_name())));
         current_paths.append(std::format(";{}\\shared\\?.lua", to_string(m_program.get_mods_directory()).c_str()));
         current_paths.append(std::format(";{}\\shared\\?\\?.lua", to_string(m_program.get_mods_directory()).c_str()));
-
         lua_pop(lua_state, 1);
         lua_pushstring(lua_state, current_paths.c_str());
         lua_setfield(lua_state, -2, "path");
+
+        lua_getfield(lua_state, -1, "cpath");
+        std::string current_cpaths = lua_tostring(lua_state, -1);
+        current_cpaths.append(std::format(";{}\\{}\\Scripts\\?.dll", to_string(m_program.get_mods_directory()).c_str(), to_string(get_name())));
+        current_cpaths.append(std::format(";{}\\{}\\?.dll", to_string(m_program.get_mods_directory()).c_str(), to_string(get_name())));
+        lua_pop(lua_state, 1);
+        lua_pushstring(lua_state, current_paths.c_str());
+        lua_setfield(lua_state, -2, "cpath");
+
         lua_pop(lua_state, 1);
     }
 
