@@ -2116,7 +2116,7 @@ Overloads:
             if (!lua.is_string()) { lua.throw_error(error_overload_not_found); }
 
             std::wstring function_name = to_wstring(lua.get_string());
-            std::wstring function_name_no_prefix = function_name.substr(function_name.find_first_of(L" ") + 1, function_name.size());
+            std::wstring function_name_no_prefix = function_name.substr(function_name.find_first_of(L"/"), function_name.size());
 
             if (!lua.is_function()) { lua.throw_error(error_overload_not_found); }
 
