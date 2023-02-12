@@ -1,6 +1,7 @@
 #include <GUI/UFunctionCallerWidget.hpp>
 #include <DynamicOutput/DynamicOutput.hpp>
 #include <Helpers/String.hpp>
+#include <Unreal/Hooks.hpp>
 #include <Unreal/UObjectGlobals.hpp>
 #include <Unreal/FOutputDevice.hpp>
 #include <Unreal/UObject.hpp>
@@ -121,6 +122,23 @@ namespace RC::GUI
         });
     }
 
+    static bool s_do_call{};
+    static UObject* s_instance{};
+    static StringType s_cmd{};
+    static FOutputDevice s_ar{};
+    static UFunction* s_function{};
+    auto call_process_console_exec(UObject*, UFunction*, void*) -> void
+    {
+        if (s_do_call)
+        {
+            s_do_call = false;
+            auto& function_flags = s_function->GetFunctionFlags();
+            function_flags |= FUNC_Exec;
+            bool call_succeeded = s_instance->ProcessConsoleExec(s_cmd.c_str(), s_ar, s_instance);
+            Output::send(STR("call_succeeded: {}\n"), call_succeeded);
+            function_flags &= ~FUNC_Exec;
+        }
+    }
     auto UFunctionCallerWidget::call_selected_function(UObject* instance) -> void
     {
         if (!m_currently_selected_function || !m_currently_selected_function->function) { return; }
@@ -132,12 +150,16 @@ namespace RC::GUI
             cmd.append(std::format(STR(" {}"), to_wstring(param.value_from_ui)));
         }
 
-        auto& function_flags = function->GetFunctionFlags();
-        function_flags |= FUNC_Exec;
-        auto ar = new FOutputDevice{};
-        bool call_succeeded = instance->ProcessConsoleExec(cmd.c_str(), *ar, instance);
-        Output::send(STR("call_succeeded: {}\n"), call_succeeded);
-        function_flags &= ~FUNC_Exec;
+        s_cmd = cmd;
+        s_instance = instance;
+        s_function = function;
+        static bool s_is_hooked{};
+        if (!s_is_hooked)
+        {
+            s_is_hooked = true;
+            Hook::RegisterProcessEventPostCallback(call_process_console_exec);
+        }
+        s_do_call = true;
     }
 
     static auto value_from_ui_callback(ImGuiInputTextCallbackData* data) -> int
