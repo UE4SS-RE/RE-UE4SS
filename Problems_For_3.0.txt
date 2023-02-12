@@ -1,0 +1,23 @@
+This file contains problems that are considered unsuitable for a feature release and must wait for a major release like 3.0.
+
+The following hooks exposed to Lua allow all parameters to be modified:
+InitGameState
+BeginPlay
+
+However, the following hooks exposed to Lua do NOT allow all parameters to be modified:
+CallFunctionByNameWithArguments
+	Modifiable = 'this' ptr, executor
+	Umodifiable = str, ar, bForceCallWithNonExec
+ProcessConsoleExec
+	Modifiable = 'this' ptr, executor
+	Unmodifiable = cmd, ar
+RegisterConsoleCommandGlobalHandler
+	Modifiable = None
+	Unmodifiable = 'this' ptr, cmd, ar, executor
+RegisterConsoleCommandHandler
+	Modifiable = None
+	Unmodifiable = 'this' ptr, cmd, ar, executor
+
+This inconsistency should be fixed in the next major release.
+It should be in the next major release because scripts that currently use these hooks will break if we change how the parameters are brought across from C++ to Lua.
+We also don't currently have a way to transport a non-UE value containerized from C++ to Lua which is the only way to make parameters modifiable.
