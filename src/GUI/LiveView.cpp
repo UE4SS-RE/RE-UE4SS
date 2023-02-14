@@ -999,8 +999,9 @@ namespace RC::GUI
         // TODO: The 'container' variable should be a variant or something because it could be a struct or array, it's not guaranteed to be a UObject.
         if (container_type == ContainerType::Object)
         {
-            auto obj = static_cast<UObject*>(container);
-            auto edit_property_value_modal_name = to_string(std::format(STR("Edit value of property: {}->{}"), obj->GetName(), property->GetName()));
+            auto obj = container_is_array ? *static_cast<UObject**>(container) : static_cast<UObject*>(container);
+            auto obj_name = obj ? obj->GetName() : STR("None");
+            auto edit_property_value_modal_name = to_string(std::format(STR("Edit value of property: {}->{}"), obj_name, property->GetName()));
 
             if (open_edit_value_popup)
             {
