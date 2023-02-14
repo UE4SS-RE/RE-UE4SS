@@ -86,6 +86,7 @@ namespace RC
         // This is storage that persists through hot-reloads.
         static inline std::unordered_map<std::string, SharedLuaVariable> m_shared_lua_variables{};
         static inline bool m_is_currently_executing_game_action{};
+        static inline std::mutex m_thread_actions_mutex{};
 
     protected:
         std::jthread m_async_thread;
