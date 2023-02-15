@@ -673,7 +673,7 @@ namespace RC
         current_cpaths.append(std::format(";{}\\{}\\Scripts\\?.dll", to_string(m_program.get_mods_directory()).c_str(), to_string(get_name())));
         current_cpaths.append(std::format(";{}\\{}\\?.dll", to_string(m_program.get_mods_directory()).c_str(), to_string(get_name())));
         lua_pop(lua_state, 1);
-        lua_pushstring(lua_state, current_paths.c_str());
+        lua_pushstring(lua_state, current_cpaths.c_str());
         lua_setfield(lua_state, -2, "cpath");
 
         lua_pop(lua_state, 1);
