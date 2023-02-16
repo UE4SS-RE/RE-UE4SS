@@ -2082,7 +2082,7 @@ Overloads:
 
     auto static process_event_hook([[maybe_unused]]Unreal::UObject* Context, [[maybe_unused]]Unreal::UFunction* Function, [[maybe_unused]]void* Parms) -> void
     {
-        std::lock_guard<std::mutex> guard{Mod::m_thread_actions_mutex};
+        std::lock_guard<std::recursive_mutex> guard{Mod::m_thread_actions_mutex};
         // NOTE: This will break horribly if UFunctions ever execute asynchronously.
         Mod::m_game_thread_actions.erase(std::remove_if(Mod::m_game_thread_actions.begin(), Mod::m_game_thread_actions.end(), [&](Mod::SimpleLuaAction& lua_data) -> bool {
             if (Mod::m_is_currently_executing_game_action)
@@ -2176,7 +2176,7 @@ Overloads:
             lua_xmove(lua.get_lua_state(), hook_lua->get_lua_state(), 1);
             
             {
-                std::lock_guard<std::mutex> guard{Mod::m_thread_actions_mutex};
+                std::lock_guard<std::recursive_mutex> guard{Mod::m_thread_actions_mutex};
                 mod->m_game_thread_actions.emplace_back(SimpleLuaAction{hook_lua, luaL_ref(hook_lua->get_lua_state(), LUA_REGISTRYINDEX)});
             }
             
