@@ -553,7 +553,31 @@ namespace RC
             }
         });
 
+        config.bHookProcessInternal = settings_manager.Hooks.HookProcessInternal;
+        config.bHookProcessLocalScriptFunction = settings_manager.Hooks.HookProcessLocalScriptFunction;
+        config.bHookInitGameState = settings_manager.Hooks.HookInitGameState;
+        config.bHookCallFunctionByNameWithArguments = settings_manager.Hooks.HookCallFunctionByNameWithArguments;
+        config.bHookBeginPlay = settings_manager.Hooks.HookBeginPlay;
+        config.bHookLocalPlayerExec = settings_manager.Hooks.HookLocalPlayerExec;
+        config.FExecVTableOffsetInLocalPlayer = settings_manager.Hooks.FExecVTableOffsetInLocalPlayer;
+
         Unreal::UnrealInitializer::Initialize(config);
+
+        bool can_create_custom_events{true};
+        if (!UObject::ProcessLocalScriptFunctionInternal.is_ready() && Unreal::Version::IsAtLeast(4, 22))
+        {
+            can_create_custom_events = false;
+            Output::send<LogLevel::Warning>(STR("ProcessLocalScriptFunction is not available, the following features will be unavailable:\n"));
+        }
+        else if (!UObject::ProcessInternalInternal.is_ready() && Unreal::Version::IsBelow(4, 22))
+        {
+            can_create_custom_events = false;
+            Output::send<LogLevel::Warning>(STR("ProcessInternal is not available, the following features will be unavailable:\n"));
+        }
+        if (!can_create_custom_events)
+        {
+            Output::send<LogLevel::Warning>(STR("<Put function here responsible for creating custom UFunctions or events for BPs>\n"));
+        }
     }
 
     auto UE4SSProgram::share_lua_functions() -> void
@@ -906,8 +930,19 @@ namespace RC
 
         m_mods.clear();
         Mod::m_static_construct_object_lua_callbacks.clear();
+        Mod::m_process_console_exec_pre_callbacks.clear();
+        Mod::m_process_console_exec_post_callbacks.clear();
         Mod::m_global_command_lua_callbacks.clear();
         Mod::m_custom_command_lua_pre_callbacks.clear();
+        Mod::m_custom_event_callbacks.clear();
+        Mod::m_init_game_state_pre_callbacks.clear();
+        Mod::m_init_game_state_post_callbacks.clear();
+        Mod::m_begin_play_pre_callbacks.clear();
+        Mod::m_begin_play_post_callbacks.clear();
+        Mod::m_call_function_by_name_with_arguments_pre_callbacks.clear();
+        Mod::m_call_function_by_name_with_arguments_post_callbacks.clear();
+        Mod::m_local_player_exec_pre_callbacks.clear();
+        Mod::m_local_player_exec_post_callbacks.clear();
     }
 
     auto UE4SSProgram::reinstall_mods() -> void
@@ -1047,7 +1082,7 @@ namespace RC
     {
         m_input_handler.register_keydown_event(key, modifier_keys, callback, custom_data);
     }
-    
+
     auto UE4SSProgram::is_keydown_event_registered(Input::Key key) -> bool
     {
         return m_input_handler.is_keydown_event_registered(key);

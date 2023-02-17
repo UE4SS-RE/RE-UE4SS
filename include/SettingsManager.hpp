@@ -75,6 +75,17 @@ namespace RC
             int64_t MaxMemoryUsageDuringAssetLoading{85};
         } Memory;
 
+        struct SectionHooks
+        {
+            bool HookProcessInternal{true};
+            bool HookProcessLocalScriptFunction{true};
+            bool HookInitGameState{true};
+            bool HookCallFunctionByNameWithArguments{true};
+            bool HookBeginPlay{true};
+            bool HookLocalPlayerExec{true};
+            int64_t FExecVTableOffsetInLocalPlayer{0x28};
+        } Hooks;
+
     public:
         SettingsManager() = default;
 
