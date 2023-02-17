@@ -15,6 +15,7 @@
 #include <Unreal/UClass.hpp>
 #include <Unreal/UStruct.hpp>
 #include <Unreal/World.hpp>
+#include <Unreal/FOutputDevice.hpp>
 #include <Unreal/FProperty.hpp>
 #include <Unreal/NameTypes.hpp>
 #include <Unreal/VersionedContainer/Container.hpp>
@@ -481,6 +482,39 @@ Overloads:
                 return 1;
             });
 
+            table.add_pair("ProcessConsoleExec", [](const LuaMadeSimple::Lua& lua) -> int {
+                std::string error_overload_not_found{R"(
+No overload found for function 'UObject.ProcessConsoleExec'.
+Overloads:
+#1: ProcessConsoleExec(string Cmd, nil Reserved, UObject Executor))"};
+
+                const auto& lua_object = lua.get_userdata<SelfType>();
+
+                if (!lua.is_string())
+                {
+                    lua.throw_error(error_overload_not_found);
+                }
+                auto cmd = to_wstring(lua.get_string());
+
+                if (lua.get_stack_size() < 2)
+                {
+                    lua.throw_error(error_overload_not_found);
+                }
+                lua.discard_value();
+
+                if (!lua.is_userdata())
+                {
+                    lua.throw_error(error_overload_not_found);
+                }
+                auto executor = lua.get_userdata<LuaType::UObject>();
+
+                auto ar = Unreal::FOutputDevice{};
+                auto return_value = lua_object.get_remote_cpp_object()->ProcessConsoleExec(cmd.c_str(), ar, executor.get_remote_cpp_object());
+
+                lua.set_bool(return_value);
+                return 1;
+            });
+
             table.add_pair("IsValid", [](const LuaMadeSimple::Lua& lua) -> int {
                 const auto& lua_object = lua.get_userdata<SelfType>();
                 if (lua_object.get_remote_cpp_object() && !lua_object.get_remote_cpp_object()->IsUnreachable())
@@ -652,7 +686,7 @@ Overloads:
                 // We can either throw an error and kill the execution
                 /**/
                 std::wstring property_type_name = property_type.ToString();
-                lua.throw_error(std::format("Tried accessing unreal property without a registered handler. Property type '{}' not supported.", to_string(property_type_name)));
+                lua.throw_error(std::format("[LocalUnrealParam::prepare_to_handle] Tried accessing unreal property without a registered handler. Property type '{}' not supported.", to_string(property_type_name)));
                 //*/
 
                 // Or we can treat unhandled property types as some sort of generic type

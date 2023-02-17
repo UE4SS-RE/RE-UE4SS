@@ -6,12 +6,13 @@
 #include <unordered_map>
 #include <functional>
 #include <variant>
+#include <memory>
 
 #include <DynamicOutput/DynamicOutput.hpp>
 
 namespace RC::Unreal
 {
-    class FUObjectItem;
+    struct FUObjectItem;
     class UObject;
     class UStruct;
     class UClass;
@@ -144,7 +145,7 @@ namespace RC::GUI
         auto render_struct_sub_tree_hierarchy(UStruct* ustruct) -> void;
         auto render_class(UClass*) -> void;
         auto render_super_struct(UStruct*) -> void;
-        
+
         enum class ContainerType { Object, NonObject, };
         auto render_property_value(FProperty* property, ContainerType container_type, void* container, FProperty** last_property_in, bool* tried_to_open_nullptr_object, bool is_watchable = true, int32_t first_offset = -1, bool container_is_array = false) -> std::variant<std::monostate, UObject*, FProperty*>;
 
@@ -156,7 +157,6 @@ namespace RC::GUI
         auto get_selected_object_or_property() -> const ObjectOrProperty&;
         auto get_selected_object(size_t index = 0, UseIndex = UseIndex::No) -> std::pair<const FUObjectItem*, UObject*>;
         auto get_selected_property(size_t index = 0, UseIndex = UseIndex::No) -> FProperty*;
-
 
     private:
         auto guobjectarray_iterator(int32_t int_data_1, int32_t int_data_2, const std::function<void(UObject*)>& callable) -> void;
@@ -194,4 +194,3 @@ namespace std
 }
 
 #endif //UE4SS_GUI_LIVE_VIEW_HPP
-

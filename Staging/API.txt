@@ -116,10 +116,14 @@ Global Functions
     IsKeyBindRegistered(integer Key, table ModifierKeys)
         - Checks if, at the time of the invocation, the supplied keys have been registered
     
-    RegisterHook(string UFunctionName, function Callback)
+    RegisterHook(string UFunctionName, function Callback) -> integer, integer
         - Registers a callback for a UFunction
         - Callbacks are triggered when a UFunction is executed
         - The callback params are: UObject self, UFunctionParams...
+        - Returns two ids, both of which must be passed to 'UnregisterHook' if you want to unregister the hook.
+
+    UnregisterHook(string UFunctionName, integer PreId, integer PostId)
+        - Unregisters a hook.
 		
     ExecuteInGameThread(function Callback)
         - Execute code inside the game thread using ProcessEvent.
@@ -155,6 +159,95 @@ Global Functions
         - Executes the provided Lua function whenever an instance of the provided class is constructed.
         - Inheritance is taken into account, so if you provide "/Script/Engine.Actor" as the class then it will execute your
         - Lua function when any object is constructed that's either an AActor or is derived from AActor.
+
+    RegisterCustomEvent(string EventName, function Callback)
+        - Registers a callback that will get called when a BP function/event is called with the name 'EventName'.
+
+    RegisterInitGameStatePreHook(function Callback)
+        - Registers a callback that will get called before AGameModeBase::InitGameState is called.
+        - The callback params are: AGameModeBase Context
+        - Params (except strings & bools & FOutputDevice) must be retrieved via 'Param:Get()' and set via 'Param:Set()'.
+
+    RegisterInitGameStatePostHook(function Callback)
+        - Registers a callback that will get called after AGameModeBase::InitGameState is called.
+        - The callback params are: AGameModeBase Context
+        - Params (except strings & bools & FOutputDevice) must be retrieved via 'Param:Get()' and set via 'Param:Set()'.
+
+    RegisterBeginPlayPreHook(function Callback)
+        - Registers a callback that will get called before AActor::BeginPlay is called.
+        - The callback params are: AActor Context
+        - Params (except strings & bools & FOutputDevice) must be retrieved via 'Param:Get()' and set via 'Param:Set()'.
+
+    RegisterBeginPlayPostHook(function Callback)
+        - Registers a callback that will get called after AActor::BeginPlay is called.
+        - The callback params are: AActor Context
+        - Params (except strings & bools & FOutputDevice) must be retrieved via 'Param:Get()' and set via 'Param:Set()'.
+
+    RegisterProcessConsoleExecPreHook(function Callback)
+        - Registers a callback that will get called before UObject::ProcessConsoleExec is called.
+        - The callback params are: UObject Context, string Cmd, table CommandParts, FOutputDevice Ar, UObject Executor
+        - Params (except strings & bools & FOutputDevice) must be retrieved via 'Param:Get()' and set via 'Param:Set()'.
+        - If the callback returns nothing (or nil), the original return value of ProcessConsoleExec will be used.
+        - If the callback returns true or false, the supplied value will override the original return value of ProcessConsoleExec.
+
+    RegisterProcessConsoleExecPostHook(function Callback)
+        - Registers a callback that will get called after UObject::ProcessConsoleExec is called.
+        - The callback params are: UObject Context, string Cmd, table CommandParts, FOutputDevice Ar, UObject Executor
+        - Params (except strings & bools & FOutputDevice) must be retrieved via 'Param:Get()' and set via 'Param:Set()'.
+        - If the callback returns nothing (or nil), the original return value of ProcessConsoleExec will be used.
+        - If the callback returns true or false, the supplied value will override the original return value of ProcessConsoleExec.
+
+    RegisterCallFunctionByNameWithArgumentsPreHook(function Callback)
+        - Registers a callback that will be called before UObject::CallFunctionByNameWithArguments is called.
+        - The callback params are: UObject Context, string Str, FOutputDevice Ar, UObject Executor, bool bForceCallWithNonExec
+        - Params (except strings & bools & FOutputDevice) must be retrieved via 'Param:Get()' and set via 'Param:Set()'.
+        - If the callback returns nothing (or nil), the original return value of CallFunctionByNameWithArguments will be used.
+        - If the callback returns true or false, the supplied value will override the original return value of CallFunctionByNameWithArguments.
+
+    RegisterCallFunctionByNameWithArgumentsPostHook(function Callback)
+        - Registers a callback that will be called after UObject::CallFunctionByNameWithArguments is called.
+        - The callback params are: UObject Context, string Str, FOutputDevice Ar, UObject Executor, bool bForceCallWithNonExec
+        - Params (except strings & bools & FOutputDevice) must be retrieved via 'Param:Get()' and set via 'Param:Set()'.
+        - If the callback returns nothing (or nil), the original return value of CallFunctionByNameWithArguments will be used.
+        - If the callback returns true or false, the supplied value will override the original return value of CallFunctionByNameWithArguments.
+
+    RegisterULocalPlayerExecPreHook(function Callback)
+        - Registers a callback that will be called before ULocalPlayer::Exec is called.
+        - The callback params are: ULocalPlayer Context, UWorld InWorld, string Cmd, FOutputDevice Ar
+        - Params (except strings & bools & FOutputDevice) must be retrieved via 'Param:Get()' and set via 'Param:Set()'.
+        - The callback can have two return values.
+        - If the first return value is nothing (or nil), the original return value of Exec will be used.
+        - If the first return value is true or false, the supplied value will override the original return value of Exec.
+        - The second return value controls whether the original Exec will execute.
+        - If the second return value is nil or true, the orginal Exec will execute.
+        - If the second return value is false, the original Exec will not execute.
+
+    RegisterULocalPlayerExecPostHook(function Callback)
+        - Registers a callback that will be called after ULocalPlayer::Exec is called.
+        - The callback params are: ULocalPlayer Context, UWorld InWorld, string Cmd, FOutputDevice Ar
+        - Params (except strings & bools & FOutputDevice) must be retrieved via 'Param:Get()' and set via 'Param:Set()'.
+        - The callback can have two return values.
+        - If the first return value is nothing (or nil), the original return value of Exec will be used.
+        - If the first return value is true or false, the supplied value will override the original return value of Exec.
+        - The second return value controls whether the original Exec will execute.
+        - If the second return value is nil or true, the orginal Exec will execute.
+        - If the second return value is false, the original Exec will not execute.
+
+    RegisterConsoleCommandHandler(string CommandName, function Callback)
+        - Registers a callback for a custom console commands.
+        - The callback only runs in the context of UGameViewportClient.
+        - The callback params are: string Cmd, table CommandParts, FOutputDevice Ar
+        - Params (except strings & bools & FOutputDevice) must be retrieved via 'Param:Get()' and set via 'Param:Set()'.
+        - The callback must return either true or false.
+        - If the callback returns true, no further handlers will be called for this command.
+
+    RegisterConsoleCommandGlobalHandler(string CommandName, function Callback)
+        - Registers a callback for a custom console command.
+        - Unlike 'RegisterConsoleCommandHandler', this global variant runs the callback for all contexts.
+        - The callback params are: string Cmd, table CommandParts, FOutputDevice Ar
+        - Params (except strings & bools & FOutputDevice) must be retrieved via 'Param:Get()' and set via 'Param:Set()'.
+        - The callback must return either true or false.
+        - If the callback returns true, no further handlers will be called for this command.
 
     ExecuteAsync(function Callback)
         - Asynchronously executes the specified function
@@ -309,6 +402,9 @@ Classes
             HasAnyInternalFlags(EInternalObjectFlags InternalFlagsToCheck)
                 - Return whether the object has any of the specified internal flags.
 
+            ProcessConsoleExec(string Cmd, nil Reserved, UObject Executor)
+                - Calls UObject::ProcessConsoleExec with the supplied params.
+
             type() -> string
                 - Returns the type of this object as known by UE4SS
                 - This does not return the type as known by Unreal
@@ -334,6 +430,9 @@ Classes
         Methods
             GetCDO() -> UClass
                 - Returns the ClassDefaultObject of a UClass.
+
+            IsChildOf(UClass Class) -> bool
+                - Returns whether or not the class is a child of another class.
 
     AActor
         Inheritance: UObject
@@ -440,6 +539,12 @@ Classes
         Methods
             __call(UFunctionParams...)
                 - Attempts to call the UFunction
+
+            GetFunctionFlags() -> integer
+                - Returns the flags for the UFunction.
+
+            SetFunctionFlags(integer Flags)
+                Sets the flags for the UFuction.
 
     FString
         Inheritance: RemoteObject
