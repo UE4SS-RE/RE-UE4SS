@@ -37,9 +37,9 @@ RegisterConsoleCommandHandler("set", function(FullCommand, Parameters, Ar)
             Log(string.format("Unrecognized property %s on class %s", PropertyName, ClassOrObjectName))
         end
     else
-        local Property = Object:Reflection():GetProperty(PropertyName)
+        local Property = ObjectOrClass:Reflection():GetProperty(PropertyName)
         if Property:IsValid() then
-            Property:ImportText(NewPropertyValue, Property:ContainerPtrToValuePtr(Object), 0, Object)
+            Property:ImportText(NewPropertyValue, Property:ContainerPtrToValuePtr(ObjectOrClass), 0, ObjectOrClass)
         else
             Log(string.format("Unrecognized property %s on class %s", PropertyName, ClassOrObjectName))
         end
