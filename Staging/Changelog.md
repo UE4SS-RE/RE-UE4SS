@@ -1,13 +1,5 @@
-v2.3.1
-
-Add missed commit related to UHT gen ordering
-
-
-v2.3.0
-
-# New
-
-# Lua 
+## New
+### Lua 
 
 * Added 'ModRef.SetSharedVariable' and 'ModRef.GetSharedVariable'
 * Added UObject.HasAnyInternalFlags
@@ -21,27 +13,23 @@ v2.3.0
 
 * Added shared module "UEHelpers" to provide shortcut functions to the Lua module for commonly used UE functions or classes
 
-# Live View GUI
+### Live View GUI
 
 * Default renderer of the GUI has been changed to OpenGL for compatibility reasons.  This can be changed back to dx11
 
-# Changes
+## Changes
 
-## UHT Generation
+### UHT Generation
 
 * Buckminsterfullerene - Includes and forward declarations are now ordered to allow for easier diffing.
 * Buckminsterfullerene - Added setting to force "Config = Engine" on UCLASS specifiers for classes with "DefaultConfig", "GlobalUserConfig" or "ProjectUserConfig"
-
-## CXX Dump
-
-* Buckminsterfullerene - Structs and classes are now ordered to allow for easier diffing
-
-# Fixes
-
-## UHT Generation
-
 * Praydog - Fixes to build.cs generation
 * Buckminsterfullerene - Tick functions now include the required template
+* Add missed commit related to UHT gen ordering  
+  
+### CXX Dump
+
+* Buckminsterfullerene - Structs and classes are now ordered to allow for easier diffing
 
 
 
