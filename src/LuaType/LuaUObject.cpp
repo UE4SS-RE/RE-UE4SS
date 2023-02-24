@@ -163,6 +163,11 @@ namespace RC::LuaType
                                                                            .property = param_next,
                                                                            .lua_ref = lua.registry().make_ref()
                                                                    });
+
+                        if (!param_next->IsA<Unreal::FStructProperty>())
+                        {
+                            return LoopAction::Continue;
+                        }
                     }
 
                     int32_t name_comparison_index = property_type_fname.GetComparisonIndex();
@@ -211,6 +216,11 @@ namespace RC::LuaType
                 lua.registry().get_table_ref(lua_table_ref);
                 auto lua_table = lua.get_table();
 
+                if (!param->IsA<Unreal::FStructProperty>())
+                {
+                    lua_table.add_key(to_string(param->GetName()).c_str());
+                }
+
                 Unreal::FName param_type_fname = param->GetClass().GetFName();
                 int32_t name_comparison_index = param_type_fname.GetComparisonIndex();
 
@@ -232,6 +242,11 @@ namespace RC::LuaType
                 {
                     std::string param_type_name = to_string(param_type_fname.ToString());
                     lua.throw_error(std::format("Tried calling UFunction without a registered handler 'Out' param. Type '{}' not supported.", param_type_name));
+                }
+
+                if (!param->IsA<Unreal::FStructProperty>())
+                {
+                    lua_table.fuse_pair();
                 }
             }
         }
