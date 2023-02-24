@@ -800,7 +800,28 @@ namespace RC::UEGenerator
         bool is_bitmask_bool = false;
         PropertyTypeDeclarationContext Context(uclass->GetName(), &header_data, true, &is_bitmask_bool);
 
-        const std::wstring property_type_string = generate_property_type_declaration(property, Context);
+        std::wstring property_type_string{};
+        bool type_is_valid = true;
+        std::wstring error_string{};
+        try
+        {
+            property_type_string = generate_property_type_declaration(property, Context);
+        }
+        catch (std::exception& e)
+        {
+            type_is_valid = false;
+            error_string = to_wstring(e.what());
+        }
+
+        if (!type_is_valid)
+        {
+            Output::send<LogLevel::Warning>(STR("Warning: {}\n"), error_string);
+            header_data.append_line(fmt::format(STR("// UPROPERTY({})"), property_flags_string));
+            header_data.append_line(fmt::format(STR("// Missed Property: {}"), property->GetName()));
+            header_data.append_line(fmt::format(STR("// {}"), error_string));
+            header_data.append_line(STR(""));
+            return;
+        }
 
         std::wstring property_extra_declaration;
         if (property->GetArrayDim() != 1)
@@ -1965,6 +1986,10 @@ namespace RC::UEGenerator
         {
             FDelegateProperty* delegate_property = static_cast<FDelegateProperty*>(property);
             UFunction* delegate_signature_function = delegate_property->GetFunctionSignature();
+            if (!delegate_signature_function)
+            {
+                throw std::runtime_error{std::format("FunctionSignature is nullptr, cannot deduce function for '{}'\n", to_string(delegate_property->GetFullName()))};
+            }
 
             if (context.source_file != NULL)
             {
@@ -1979,6 +2004,10 @@ namespace RC::UEGenerator
         {
             FMulticastInlineDelegateProperty* delegate_property = static_cast<FMulticastInlineDelegateProperty*>(property);
             UFunction* delegate_signature_function = delegate_property->GetFunctionSignature();
+            if (!delegate_signature_function)
+            {
+                throw std::runtime_error{std::format("FunctionSignature is nullptr, cannot deduce function for '{}'\n", to_string(delegate_property->GetFullName()))};
+            }
 
             if (context.source_file != NULL)
             {
@@ -1991,6 +2020,10 @@ namespace RC::UEGenerator
         {
             FMulticastSparseDelegateProperty* delegate_property = static_cast<FMulticastSparseDelegateProperty*>(property);
             UFunction* delegate_signature_function = delegate_property->GetFunctionSignature();
+            if (!delegate_signature_function)
+            {
+                throw std::runtime_error{std::format("FunctionSignature is nullptr, cannot deduce function for '{}'\n", to_string(delegate_property->GetFullName()))};
+            }
 
             if (context.source_file != NULL)
             {
