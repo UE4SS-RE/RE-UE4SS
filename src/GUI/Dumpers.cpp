@@ -109,8 +109,7 @@ namespace RC::GUI::Dumpers
             if (object->HasAnyFlags(RF_ClassDefaultObject)) { return LoopAction::Continue; }
 
             auto actor = static_cast<AActor*>(object);
-
-            // TODO: figure out if this catches all root components (it doesn't appear to do so)
+            
             auto root_component = actor->GetValuePtrByPropertyNameInChain<UObject*>(STR("RootComponent"));
             if (!root_component || !*root_component) { return LoopAction::Continue; }
 
@@ -215,8 +214,7 @@ namespace RC::GUI::Dumpers
             if (object->HasAnyFlags(RF_ClassDefaultObject)) { return LoopAction::Continue; }
 
             auto actor = static_cast<AActor*>(object);
-
-            // TODO: figure out if this catches all root components (it doesn't appear to do so)
+            
             auto root_component = actor->GetValuePtrByPropertyNameInChain<UObject*>(STR("RootComponent"));
             if (!root_component || !*root_component) { return LoopAction::Continue; }
 
@@ -262,24 +260,27 @@ namespace RC::GUI::Dumpers
         return global_json_array.serialize(JSON::ShouldFormat::Yes, &indent_level);
     }
 
+    auto CurrentDumpNums = MapDumpFileName{};
+    
     void call_generate_static_mesh_file()
 	{
 	    Output::send(STR("Dumping CSV of all loaded static mesh actors, positions and mesh properties\n"));
 	    static auto dump_actor_class = UObjectGlobals::StaticFindObject<UClass*>(nullptr, nullptr, STR("/Script/Engine.StaticMeshActor"));
-
-	    auto file = File::open(StringType{UE4SSProgram::get_program().get_working_directory()} + STR("\\ue4ss_static_mesh_data.csv"), File::OpenFor::Writing, File::OverwriteExistingFile::Yes, File::CreateIfNonExistent::Yes);
+	    auto file = File::open(StringType{UE4SSProgram::get_program().get_working_directory()} + STR("\\") + std::to_wstring(CurrentDumpNums.currentSMdumpnum) + STR("-ue4ss_static_mesh_data.csv"), File::OpenFor::Writing, File::OverwriteExistingFile::Yes, File::CreateIfNonExistent::Yes);
 	    std::wstring file_buffer{};
 	    file_buffer.append(generate_actors_csv_file(dump_actor_class));
 	    file.write_string_to_file(file_buffer);
+	    CurrentDumpNums.currentSMdumpnum++;
 	}
 
     void call_generate_all_actor_file()
 	{
 	    Output::send(STR("Dumping CSV of all loaded actor types, positions and mesh properties\n"));
-	    auto file = File::open(StringType{UE4SSProgram::get_program().get_working_directory()} + STR("\\ue4ss_actor_data.csv"), File::OpenFor::Writing, File::OverwriteExistingFile::Yes, File::CreateIfNonExistent::Yes);
+	    auto file = File::open(StringType{UE4SSProgram::get_program().get_working_directory()} + STR("\\") + std::to_wstring(CurrentDumpNums.currentAAdumpnum)  + STR("-ue4ss_actor_data.csv"), File::OpenFor::Writing, File::OverwriteExistingFile::Yes, File::CreateIfNonExistent::Yes);
 	    std::wstring file_buffer{};
 	    file_buffer.append(generate_actors_csv_file(AActor::StaticClass()));
 	    file.write_string_to_file(file_buffer);
+	    CurrentDumpNums.currentAAdumpnum++;
 	}
     
 
