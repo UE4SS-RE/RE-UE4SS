@@ -82,3 +82,9 @@
 [submodule "Dependencies/imgui"]
 	path = Dependencies/imgui
 	url = https://github.com/narknon/imgui.git
+[submodule "Dependencies/zydis"]
+	path = Dependencies/zydis
+	url = git@github.com:zyantific/zydis.git
+[submodule "Dependencies/ASMHelper"]
+	path = Dependencies/ASMHelper
+	url = git@github.com:UE4SS-RE/ASMHelper.git

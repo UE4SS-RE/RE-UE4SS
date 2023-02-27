@@ -65,6 +65,7 @@ set(PRIVATE_LINK_OPTIONS /DEBUG:FULL)
 set(PUBLIC_COMPILE_FEATURES cxx_std_20)
 
 set(UE4SS_COMPILE_DEFINITIONS
+        RC_ASM_HELPER_BUILD_STATIC
         RC_FILE_BUILD_STATIC
         RC_DYNAMIC_OUTPUT_BUILD_STATIC
         RC_SINGLE_PASS_SIG_SCANNER_BUILD_STATIC
@@ -92,6 +93,27 @@ add_subdirectory("Dependencies/Constructs")
 add_subdirectory("Dependencies/Helpers")
 add_subdirectory("Dependencies/SinglePassSigScanner")
 
+# Zydis
+if (${MAKE_DEPENDENCIES_SHARED} EQUAL 1)
+    set(ZYDIS_BUILD_SHARED_LIB ON CACHE BOOL "Build zydis as shared libary" FORCE)
+    set(ZYCORE_BUILD_SHARED_LIB ON CACHE BOOL "Build zycore as shared libary" FORCE)
+else ()
+    set(ZYDIS_BUILD_SHARED_LIB OFF CACHE BOOL "Build zydis as shared libary" FORCE)
+    set(ZYCORE_BUILD_SHARED_LIB OFF CACHE BOOL "Build zycore as shared libary" FORCE)
+endif ()
+add_subdirectory("Dependencies/zydis")
+include_directories(Dependencies/zydis/include)
+include_directories(Dependencies/zydis/dependencies/zycore/include)
+include_directories(${CMAKE_CURRENT_BINARY_DIR}/Dependencies/zydis)
+include_directories(${CMAKE_CURRENT_BINARY_DIR}/Dependencies/zydis/zycore)
+set(CMAKE_PREFIX_PATH
+    ${LIBRARY_OUTPUT_PATH}/${CMAKE_BUILD_TYPE}
+    ${CMAKE_HOME_DIRECTORY}/Dependencies/zydis/include
+    ${CMAKE_HOME_DIRECTORY}/Dependencies/zydis/dependencies/zycore/include
+    )
+
+add_subdirectory(Dependencies/ASMHelper)
+
 # PolyHook
 if (${MAKE_DEPENDENCIES_SHARED} EQUAL 1)
     set(MAKE_POLYHOOK_DEPENDENCIES_SHARED ON)
@@ -105,8 +127,7 @@ set(POLYHOOK_BUILD_SHARED_LIB ${MAKE_POLYHOOK_DEPENDENCIES_SHARED} CACHE BOOL "B
 set(POLYHOOK_BUILD_SHARED_ASMJIT ${MAKE_POLYHOOK_DEPENDENCIES_SHARED} CACHE BOOL "Build polyhook as shared libary" FORCE)
 set(POLYHOOK_BUILD_SHARED_CAPSTONE ${MAKE_POLYHOOK_DEPENDENCIES_SHARED} CACHE BOOL "Build polyhook as shared libary" FORCE)
 set(POLYHOOK_BUILD_SHARED_ZYDIS ${MAKE_POLYHOOK_DEPENDENCIES_SHARED} CACHE BOOL "Build polyhook as shared libary" FORCE)
-set(ZYDIS_BUILD_SHARED_LIB ${MAKE_POLYHOOK_DEPENDENCIES_SHARED} CACHE BOOL "Build zydis as shared libary" FORCE)
-set(ZYCORE_BUILD_SHARED_LIB ${MAKE_POLYHOOK_DEPENDENCIES_SHARED} CACHE BOOL "Build zycore as shared libary" FORCE)
+set(POLYHOOK_USE_EXTERNAL_ZYDIS ON CACHE BOOL "Use external zydis libary" FORCE)
 set(ASMJIT_STATIC ${MAKE_POLYHOOK_DEPENDENCIES_STATIC} CACHE BOOL "Build asmjit as shared libary" FORCE)
 set(POLYHOOK_BUILD_STATIC_RUNTIME OFF CACHE BOOL "Use static runtime" FORCE)
 set(POLYHOOK_DISASM_CAPSTONE OFF CACHE BOOL "Enable capstone support" FORCE)
@@ -116,9 +137,6 @@ add_subdirectory(Dependencies/PolyHook_2_0)
 # For some reason, PolyHook isn't adding the capstone or zydis include directories
 include_directories(Dependencies/PolyHook_2_0)
 include_directories(Dependencies/PolyHook_2_0/capstone/include)
-include_directories(Dependencies/PolyHook_2_0/zydis/include)
-include_directories(Dependencies/PolyHook_2_0/zydis/dependencies/zycore/include)
-include_directories(Dependencies/PolyHook_2_0/zydis/msvc)
 
 add_subdirectory("Dependencies/Unreal")
 add_subdirectory("Dependencies/MProgram")
