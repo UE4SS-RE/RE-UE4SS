@@ -41,7 +41,7 @@ function LoadModConfigs()
     local LogicModsDir = Dirs.Game.Content.Paks.LogicMods
     if not Dirs then error("[BPModLoader] IterateGameDirectories failed, cannot load BP mod configurations.") end
     if not LogicModsDir then
-        CreateLogicModDirectory();
+        CreateLogicModsDirectory();
         LogicModsDir = Dirs.Game.Content.Paks.LogicMods
         if not LogicModsDir then error("[BPModLoader] Unable to find or create Content/Paks/LogicMods directory. Try creating manually.") end
     end

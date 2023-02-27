@@ -1749,27 +1749,25 @@ No overload found for function 'CreateLogicModsDirectory'.
 Overloads:
 #1: CreateLogicModsDirectory()"};
             
-        std::filesystem::path module_directory = UE4SSProgram::get_program().get_module_directory();
+            std::filesystem::path module_directory = UE4SSProgram::get_program().get_module_directory();
             auto game_content_dir = module_directory.parent_path().parent_path().parent_path() / "Content";
-            if (!std::filesystem::exists(game_content_dir))
-            {
-                Output::send<LogLevel::Warning>(STR("CreateLogicModsDirectory: Could not locate the \"Content\" directory because the directory structure is unknown (not <RootGamePath>/Game/Content)\n"));
-                return 0;
-            }
-            auto logic_mods_dir = game_content_dir / "LogicMods";
+            if (!std::filesystem::exists(game_content_dir)) { lua.throw_error("CreateLogicModsDirectory: Could not locate the \"Content\" directory because the directory structure is unknown (not <RootGamePath>/Game/Content)\n"); }
+            auto logic_mods_dir = game_content_dir / "Paks/LogicMods";
             if (std::filesystem::exists(logic_mods_dir))
             {
                 Output::send<LogLevel::Warning>(STR("CreateLogicModsDirectory: \"LogicMods\" directory already exists. Cancelling creation of new directory.\n"));
-                return 0;
+                lua.set_bool(false);
+                return 1;
             }
             
-            Output::send<LogLevel::Warning>(STR("CreateLogicModsDirectory: LogicMods directory not found.\nCreateLogicModsDirectory: Creating LogicMods directory.\n"));
+            Output::send<LogLevel::Warning>(STR("CreateLogicModsDirectory: LogicMods directory not found. Creating LogicMods directory.\n"));
             auto new_logic_mods_dir = std::filesystem::create_directory(logic_mods_dir);
-            if (!new_logic_mods_dir) { lua.throw_error("CreateLogicModsDirectory: Unable to create \"LogicMods\" directory. Try creating manually."); }
+            if (!new_logic_mods_dir) { lua.throw_error("CreateLogicModsDirectory: Unable to create \"LogicMods\" directory. Try creating manually.\n"); }
 
             Output::send<LogLevel::Warning>(STR("CreateLogicModsDirectory: LogicMods directory created.\n"));
-            
-            return 0;
+
+            lua.set_bool(true);
+            return 1;
         });
 
         lua.register_function("ExecuteAsync", [](const LuaMadeSimple::Lua& lua) -> int {
