@@ -58,7 +58,6 @@ namespace RC::GUI::BPMods
         for (size_t i = 0; i < mod_actors.size(); ++i)
         {
             const auto& mod_actor = mod_actors[i];
-            Output::send(STR("Actor: {}\n"), mod_actor->GetFullName());
             auto mod_class = mod_actor->GetClassPrivate();
 
             auto mod_info = ModInfo{};
