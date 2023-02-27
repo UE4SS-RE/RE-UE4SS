@@ -588,39 +588,6 @@ namespace RC::GUI
         });
     }
 
-    static auto ImGui_GetID(int int_id) -> ImGuiID
-    {
-        ImGuiWindow* window = GImGui->CurrentWindow;
-        return window->GetID(int_id);
-    }
-
-    static auto ImGui_TreeNodeEx(const char* label, int int_id, ImGuiTreeNodeFlags flags = 0) -> bool
-    {
-        ImGuiWindow* window = ImGui::GetCurrentWindow();
-        if (window->SkipItems)
-            return false;
-
-        return ImGui::TreeNodeBehavior(window->GetID(int_id), flags, label, NULL);
-    }
-
-    static auto ImGui_TreeNodeEx(const char* label, void* ptr_id, ImGuiTreeNodeFlags flags = 0) -> bool
-    {
-        ImGuiWindow* window = ImGui::GetCurrentWindow();
-        if (window->SkipItems)
-            return false;
-
-        return ImGui::TreeNodeBehavior(window->GetID(ptr_id), flags, label, NULL);
-    }
-
-    static auto ImGui_TreeNodeEx(const char* label, const char* str_id, ImGuiTreeNodeFlags flags) -> bool
-    {
-        ImGuiWindow* window = ImGui::GetCurrentWindow();
-        if (window->SkipItems)
-            return false;
-
-        return ImGui::TreeNodeBehavior(window->GetID(str_id), flags, label, NULL);
-    }
-
     static auto collapse_all_except(int except_id) -> void
     {
         for (int i = 0; i < UObjectArray::GetNumChunks(); ++i)

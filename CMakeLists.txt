@@ -255,6 +255,7 @@ set(${TARGET}_Sources
         "${CMAKE_CURRENT_SOURCE_DIR}/src/GUI/ConsoleOutputDevice.cpp"
         "${CMAKE_CURRENT_SOURCE_DIR}/src/GUI/LiveView.cpp"
         "${CMAKE_CURRENT_SOURCE_DIR}/src/GUI/Dumpers.cpp"
+        "${CMAKE_CURRENT_SOURCE_DIR}/src/GUI/BPMods.cpp"
         "${CMAKE_CURRENT_SOURCE_DIR}/src/GUI/ImGuiUtility.cpp"
 
         # imgui

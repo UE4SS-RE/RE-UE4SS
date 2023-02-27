@@ -48,6 +48,39 @@ namespace RC::GUI
         return SplitterBehavior(bb, id, split_vertically ? ImGuiAxis_X : ImGuiAxis_Y, size1, size2, min_size1, min_size2, 0.0f);
     }
 
+    auto ImGui_GetID(int int_id) -> ImGuiID
+    {
+        ImGuiWindow* window = GImGui->CurrentWindow;
+        return window->GetID(int_id);
+    }
+
+    auto ImGui_TreeNodeEx(const char* label, int int_id, ImGuiTreeNodeFlags flags) -> bool
+    {
+        ImGuiWindow* window = ImGui::GetCurrentWindow();
+        if (window->SkipItems)
+            return false;
+
+        return ImGui::TreeNodeBehavior(window->GetID(int_id), flags, label, NULL);
+    }
+
+    auto ImGui_TreeNodeEx(const char* label, void* ptr_id, ImGuiTreeNodeFlags flags) -> bool
+    {
+        ImGuiWindow* window = ImGui::GetCurrentWindow();
+        if (window->SkipItems)
+            return false;
+
+        return ImGui::TreeNodeBehavior(window->GetID(ptr_id), flags, label, NULL);
+    }
+
+    auto ImGui_TreeNodeEx(const char* label, const char* str_id, ImGuiTreeNodeFlags flags) -> bool
+    {
+        ImGuiWindow* window = ImGui::GetCurrentWindow();
+        if (window->SkipItems)
+            return false;
+
+        return ImGui::TreeNodeBehavior(window->GetID(str_id), flags, label, NULL);
+    }
+
     static auto dump_json_object_pair(const JSON::TypedKeyValuePair<JSON::Object> element) -> void;
     static auto dump_json_array_pair(const JSON::TypedKeyValuePair<JSON::Array> element) -> void;
     static auto dump_json_string_pair(const JSON::TypedKeyValuePair<JSON::String> element) -> void;
