@@ -1,15 +1,14 @@
 name: Build Checker
 
 on: 
- push:
-  paths:
-      - "src/**"
-      - "include/**"
-      - "generated_src/**"
-      - "generated_include/**"
-      - "internal_build_tools/**"
-      - "Dependencies/**"
-  workflow_dispatch:
+  push:
+    paths:
+        - "src/**"
+        - "include/**"
+        - "generated_src/**"
+        - "generated_include/**"
+        - "internal_build_tools/**"
+        - "Dependencies/**"
 
 permissions:
   contents: read
