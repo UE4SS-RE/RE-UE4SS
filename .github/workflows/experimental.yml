@@ -1,0 +1,61 @@
+name: Build Experimental
+
+on:
+  push:
+    branches: [ "2.XDev" ]
+    paths:
+      - "src/**"
+      - "include/**"
+      - "generated_src/**"
+      - "generated_include/**"
+      - "internal_build_tools/**"
+      - "Dependencies/**"
+
+permissions:
+  contents: write
+
+jobs:
+  Build:
+    runs-on: windows-2022
+  
+    defaults:
+      run:
+        working-directory: ${{ github.workspace }}
+  
+    steps:
+    - uses: actions/checkout@v3
+    
+    - uses: webfactory/ssh-agent@v0.7.0
+      with:
+        ssh-private-key: ${{ secrets.UEPSEUDO_SSH_KEY }}
+    
+    - run: git submodule update --init --recursive
+    
+    - name: Add MSBuild to PATH
+      uses: microsoft/setup-msbuild@v1.1.3
+
+    - name: Build
+      run: .\build_auto.bat Release xinput1_3
+    
+    - name: Copy Build to Staging
+      shell: bash
+      run: |
+           cp Output/ue4ss/Binaries/x64/Release/xinput1_3.dll StagingDev/xinput1_3.dll
+           cp Output/ue4ss/Binaries/x64/Release/xinput1_3.pdb StagingDev/xinput1_3.pdb
+
+    - name: Archive Release
+      uses: thedoctor0/zip-release@main
+      with:
+        type: 'zip'
+        filename: UE4SS-${{github.ref_name}}-windows.zip
+        directory: StagingDev
+
+    - name: Update Experimental release
+      uses: ncipollo/release-action@v1.12.0
+      with:
+        name: "UE4SS Experimental Release"
+        tag: experimental
+        artifacts: StagingDev/UE4SS-${{github.ref_name}}-windows.zip
+        bodyFile: StagingDev/Changelog.md
+        allowUpdates: true
+        token: ${{ secrets.GITHUB_TOKEN }}

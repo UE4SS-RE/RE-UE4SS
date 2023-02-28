@@ -1,16 +1,14 @@
-name: Build
+name: Build Checker
 
-on:
+on: 
   push:
-    branches: [ "2.XDev", "Main" ]
     paths:
-      - "src/**"
-      - "include/**"
-      - "generated_src/**"
-      - "generated_include/**"
-      - "internal_build_tools/**"
-      - "Dependencies/**"
-  workflow_dispatch:
+        - "src/**"
+        - "include/**"
+        - "generated_src/**"
+        - "generated_include/**"
+        - "internal_build_tools/**"
+        - "Dependencies/**"
 
 permissions:
   contents: read
@@ -25,9 +23,9 @@ jobs:
     - uses: webfactory/ssh-agent@v0.7.0
       with:
         ssh-private-key: ${{ secrets.UEPSEUDO_SSH_KEY }}
-        
+
     - run: git submodule update --init --recursive
-    
+
     - name: Add MSBuild to PATH
       uses: microsoft/setup-msbuild@v1.1.3
 
