@@ -1,4 +1,4 @@
-name: Build Nightly
+name: Build Experimental
 
 on:
   push:
@@ -51,12 +51,11 @@ jobs:
         filename: UE4SS-${{github.ref_name}}-windows.zip
         directory: Staging
 
-    - name: Update nightly release
+    - name: Update Experimental release
       uses: ncipollo/release-action@v1.12.0
       with:
-        name: "UE4SS Nightly Release"
-        tag: nightly
-        commit: 2.XDev
+        name: "UE4SS Experimental Release"
+        tag: experimental
         artifacts: Staging/UE4SS-${{github.ref_name}}-windows.zip
         bodyFile: Staging/Changelog.md
         allowUpdates: true
