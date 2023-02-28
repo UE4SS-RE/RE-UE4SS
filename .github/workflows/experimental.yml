@@ -40,22 +40,22 @@ jobs:
     - name: Copy Build to Staging
       shell: bash
       run: |
-           cp Output/ue4ss/Binaries/x64/Release/xinput1_3.dll Staging/xinput1_3.dll
-           cp Output/ue4ss/Binaries/x64/Release/xinput1_3.pdb Staging/xinput1_3.pdb
+           cp Output/ue4ss/Binaries/x64/Release/xinput1_3.dll StagingDev/xinput1_3.dll
+           cp Output/ue4ss/Binaries/x64/Release/xinput1_3.pdb StagingDev/xinput1_3.pdb
 
     - name: Archive Release
       uses: thedoctor0/zip-release@main
       with:
         type: 'zip'
         filename: UE4SS-${{github.ref_name}}-windows.zip
-        directory: Staging
+        directory: StagingDev
 
     - name: Update Experimental release
       uses: ncipollo/release-action@v1.12.0
       with:
         name: "UE4SS Experimental Release"
         tag: experimental
-        artifacts: Staging/UE4SS-${{github.ref_name}}-windows.zip
-        bodyFile: Staging/Changelog.md
+        artifacts: StagingDev/UE4SS-${{github.ref_name}}-windows.zip
+        bodyFile: StagingDev/Changelog.md
         allowUpdates: true
         token: ${{ secrets.GITHUB_TOKEN }}
