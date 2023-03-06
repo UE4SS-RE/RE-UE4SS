@@ -42,9 +42,10 @@ If your game is in the custom config list, extract the contents from the relevan
 ## Branches
 - Release
   - The latest release of UE4SS.  
+  [![Build Checker](https://github.com/UE4SS-RE/RE-UE4SS/actions/workflows/checkbuild.yml/badge.svg?branch=Release)](https://github.com/UE4SS-RE/RE-UE4SS/actions/workflows/checkbuild.yml)
 - 2.XDev
   - Bleeding edge development of UE4SS.  
-  [![Build](https://github.com/UE4SS-RE/RE-UE4SS/actions/workflows/2.XDev.yml/badge.svg)](https://github.com/UE4SS-RE/RE-UE4SS/actions/workflows/2.XDev.yml)
+  [![Build Checker](https://github.com/UE4SS-RE/RE-UE4SS/actions/workflows/checkbuild.yml/badge.svg?branch=2.XDev)](https://github.com/UE4SS-RE/RE-UE4SS/actions/workflows/checkbuild.yml)
 
 ## Build requirements
 
