@@ -1,8 +1,10 @@
 #include <algorithm>
+#include <limits>
 #include <string>
 #include <format>
 #include <unordered_map>
 #include <variant>
+#include <mutex>
 
 #include <GUI/LiveView.hpp>
 #include <GUI/GUI.hpp>
@@ -14,6 +16,7 @@
 #include <JSON/Parser/Parser.hpp>
 #include <UE4SSProgram.hpp>
 #include <Unreal/UnrealInitializer.hpp>
+#include <Unreal/UPackage.hpp>
 #include <Unreal/UObjectArray.hpp>
 #include <Unreal/UObject.hpp>
 #include <Unreal/UClass.hpp>
@@ -21,6 +24,7 @@
 #include <Unreal/FOutputDevice.hpp>
 #include <Unreal/Property/FObjectProperty.hpp>
 #include <Unreal/Property/FBoolProperty.hpp>
+#include <Unreal/Property/FArrayProperty.hpp>
 #include <imgui.h>
 #include <misc/cpp/imgui_stdlib.h>
 #include <imgui_internal.h>
@@ -29,13 +33,13 @@ namespace RC::GUI
 {
     using namespace Unreal;
 
-    static constexpr int s_max_elements_per_chunk = 64 * 1024;
-    static constexpr int s_max_chunk_size_doubled = s_max_elements_per_chunk * 2;
-    static constexpr int s_num_items_per_chunk = 1;
-    static constexpr int s_chunk_id_start = -s_max_elements_per_chunk;
+    static int s_max_elements_per_chunk{};
+    static int s_chunk_id_start{};
 
     static bool s_live_view_destructed = false;
     static std::unordered_map<const UObject*, std::string> s_object_ptr_to_full_name{};
+
+    static std::mutex s_object_ptr_to_full_name_mutex{};
 
     std::vector<LiveView::ObjectOrProperty> LiveView::s_object_view_history{{nullptr, nullptr, false}};
     size_t LiveView::s_currently_selected_object_index{};
@@ -46,6 +50,7 @@ namespace RC::GUI
     std::vector<LiveView::Watch> LiveView::s_watches{};
     std::unordered_map<LiveView::WatchIdentifier, LiveView::Watch*> LiveView::s_watch_map;
     std::unordered_map<void*, std::vector<LiveView::Watch*>> LiveView::s_watch_containers{};
+    SearchOptions LiveView::s_search_options{};
     bool LiveView::s_create_listener_removed{};
     bool LiveView::s_delete_listener_removed{};
     bool LiveView::s_selected_item_deleted{};
@@ -63,23 +68,51 @@ namespace RC::GUI
             return;
         }
 
-        if (!LiveView::s_name_search_results_set.contains(object))
+        auto is_instance = [&] {
+            return !object->HasAnyFlags(static_cast<EObjectFlags>(RF_ClassDefaultObject | RF_ArchetypeObject)) &&
+                    !object->IsA<UStruct>() &&
+                    !object->IsA<UField>() &&
+                    !object->IsA<UPackage>();
+        };
+        if (LiveView::s_search_options.instances_only && !is_instance()) { return; }
+        if (LiveView::s_name_search_results_set.contains(object)) { return; }
+
+        auto object_full_name = get_object_full_name_cxx_string(object);
+        std::transform(object_full_name.begin(), object_full_name.end(), object_full_name.begin(), [](char c) {
+            return std::tolower(c);
+        });
+
+        auto name_to_search_by = LiveView::s_name_to_search_by;
+        std::transform(name_to_search_by.begin(), name_to_search_by.end(), name_to_search_by.begin(), [](char c) {
+            return std::tolower(c);
+        });
+
+        if (LiveView::s_search_options.include_inheritance)
         {
-            auto object_full_name = get_object_full_name_cxx_string(object);
-            std::transform(object_full_name.begin(), object_full_name.end(), object_full_name.begin(), [](char c) {
-                return std::tolower(c);
+            object->GetClassPrivate()->ForEachSuperStruct([&](UStruct* super) {
+                auto super_full_name = get_object_full_name_cxx_string(super);
+                std::transform(super_full_name.begin(), super_full_name.end(), super_full_name.begin(), [](char c) {
+                    return std::tolower(c);
+                });
+                if (super_full_name.find(name_to_search_by) != super_full_name.npos)
+                {
+                    LiveView::s_name_search_results.emplace_back(object);
+                    LiveView::s_name_search_results_set.emplace(object);
+                    return LoopAction::Break;
+                }
+                else
+                {
+                    return LoopAction::Continue;
+                }
             });
+        }
 
-            auto name_to_search_by = LiveView::s_name_to_search_by;
-            std::transform(name_to_search_by.begin(), name_to_search_by.end(), name_to_search_by.begin(), [](char c) {
-                return std::tolower(c);
-            });
+        if (LiveView::s_search_options.include_inheritance && LiveView::s_name_search_results_set.contains(object)) { return; }
 
-            if (object_full_name.find(name_to_search_by) != object_full_name.npos)
-            {
-                LiveView::s_name_search_results.emplace_back(object);
-                LiveView::s_name_search_results_set.emplace(object);
-            }
+        if (object_full_name.find(name_to_search_by) != object_full_name.npos)
+        {
+            LiveView::s_name_search_results.emplace_back(object);
+            LiveView::s_name_search_results_set.emplace(object);
         }
     }
 
@@ -134,24 +167,31 @@ namespace RC::GUI
         void NotifyUObjectDeleted(const UObjectBase* object, int32 index) override
         {
             if (s_live_view_destructed) { return; }
-            if (LiveView::s_history_object_to_index.size() <= 1) { return; }
 
             auto as_uobject = std::bit_cast<UObject*>(object);
-            if (auto it = LiveView::s_history_object_to_index.find(as_uobject); it != LiveView::s_history_object_to_index.end())
+            if (LiveView::s_history_object_to_index.size() > 1)
             {
-                for (const auto& history_index : it->second)
+                if (auto it = LiveView::s_history_object_to_index.find(as_uobject); it != LiveView::s_history_object_to_index.end())
                 {
-                    auto& selected_object_or_property = LiveView::s_object_view_history[history_index];
-                    if (selected_object_or_property.is_object)
+                    for (const auto& history_index : it->second)
                     {
-                        selected_object_or_property.object_item = nullptr;
-                        selected_object_or_property.object = nullptr;
-                        LiveView::s_history_object_to_index.erase(it);
+                        auto& selected_object_or_property = LiveView::s_object_view_history[history_index];
+                        if (selected_object_or_property.is_object)
+                        {
+                            selected_object_or_property.object_item = nullptr;
+                            selected_object_or_property.object = nullptr;
+                            LiveView::s_history_object_to_index.erase(it);
+                        }
                     }
                 }
             }
 
             remove_search_result(as_uobject);
+
+            {
+                std::lock_guard lock{s_object_ptr_to_full_name_mutex};
+                s_object_ptr_to_full_name.erase(as_uobject);
+            }
         }
 
         void OnUObjectArrayShutdown() override
@@ -310,8 +350,65 @@ namespace RC::GUI
     auto LiveView::initialize() -> void
     {
         s_need_to_filter_out_properties = Version::IsBelow(4, 25);
+        if (UE4SSProgram::settings_manager.Debug.LiveViewObjectsPerGroup > std::numeric_limits<int>::max())
+        {
+            Output::send<LogLevel::Warning>(STR("Debug.LiveViewObjectsPerGroup is too large, must be no larger than 4294967295.\n"));
+            Output::send<LogLevel::Warning>(STR("Using default value for Debug.LiveViewObjectsPerGroup.\n"));
+            UE4SSProgram::settings_manager.Debug.LiveViewObjectsPerGroup = 64 * 1024 / 2;
+        }
+        s_max_elements_per_chunk = static_cast<int>(UE4SSProgram::settings_manager.Debug.LiveViewObjectsPerGroup);
+        s_chunk_id_start = -s_max_elements_per_chunk;
         m_is_initialized = true;
     }
+
+    struct ObjectFlagsStringifier
+    {
+        std::string flags_string{};
+        std::vector<std::string> flag_parts{};
+
+        ObjectFlagsStringifier(UObject* object)
+        {
+            if (object->HasAnyFlags(RF_NoFlags)) { flag_parts.emplace_back("RF_NoFlags"); }
+            if (object->HasAnyFlags(RF_Public)) { flag_parts.emplace_back("RF_Public"); }
+            if (object->HasAnyFlags(RF_Standalone)) { flag_parts.emplace_back("RF_Standalone"); }
+            if (object->HasAnyFlags(RF_MarkAsNative)) { flag_parts.emplace_back("RF_MarkAsNative"); }
+            if (object->HasAnyFlags(RF_Transactional)) { flag_parts.emplace_back("RF_Transactional"); }
+            if (object->HasAnyFlags(RF_ClassDefaultObject)) { flag_parts.emplace_back("RF_ClassDefaultObject"); }
+            if (object->HasAnyFlags(RF_ArchetypeObject)) { flag_parts.emplace_back("RF_ArchetypeObject"); }
+            if (object->HasAnyFlags(RF_Transient)) { flag_parts.emplace_back("RF_Transient"); }
+            if (object->HasAnyFlags(RF_MarkAsRootSet)) { flag_parts.emplace_back("RF_MarkAsRootSet"); }
+            if (object->HasAnyFlags(RF_TagGarbageTemp)) { flag_parts.emplace_back("RF_TagGarbageTemp"); }
+            if (object->HasAnyFlags(RF_NeedInitialization)) { flag_parts.emplace_back("RF_NeedInitialization"); }
+            if (object->HasAnyFlags(RF_NeedLoad)) { flag_parts.emplace_back("RF_NeedLoad"); }
+            if (object->HasAnyFlags(RF_KeepForCooker)) { flag_parts.emplace_back("RF_KeepForCooker"); }
+            if (object->HasAnyFlags(RF_NeedPostLoad)) { flag_parts.emplace_back("RF_NeedPostLoad"); }
+            if (object->HasAnyFlags(RF_NeedPostLoadSubobjects)) { flag_parts.emplace_back("RF_NeedPostLoadSubobjects"); }
+            if (object->HasAnyFlags(RF_NewerVersionExists)) { flag_parts.emplace_back("RF_NewerVersionExists"); }
+            if (object->HasAnyFlags(RF_BeginDestroyed)) { flag_parts.emplace_back("RF_BeginDestroyed"); }
+            if (object->HasAnyFlags(RF_FinishDestroyed)) { flag_parts.emplace_back("RF_FinishDestroyed"); }
+            if (object->HasAnyFlags(RF_BeingRegenerated)) { flag_parts.emplace_back("RF_BeingRegenerated"); }
+            if (object->HasAnyFlags(RF_DefaultSubObject)) { flag_parts.emplace_back("RF_DefaultSubObject"); }
+            if (object->HasAnyFlags(RF_WasLoaded)) { flag_parts.emplace_back("RF_WasLoaded"); }
+            if (object->HasAnyFlags(RF_TextExportTransient)) { flag_parts.emplace_back("RF_TextExportTransient"); }
+            if (object->HasAnyFlags(RF_LoadCompleted)) { flag_parts.emplace_back("RF_LoadCompleted"); }
+            if (object->HasAnyFlags(RF_InheritableComponentTemplate)) { flag_parts.emplace_back("RF_InheritableComponentTemplate"); }
+            if (object->HasAnyFlags(RF_DuplicateTransient)) { flag_parts.emplace_back("RF_DuplicateTransient"); }
+            if (object->HasAnyFlags(RF_StrongRefOnFrame)) { flag_parts.emplace_back("RF_StrongRefOnFrame"); }
+            if (object->HasAnyFlags(RF_NonPIEDuplicateTransient)) { flag_parts.emplace_back("RF_NonPIEDuplicateTransient"); }
+            if (object->HasAnyFlags(RF_Dynamic)) { flag_parts.emplace_back("RF_Dynamic"); }
+            if (object->HasAnyFlags(RF_WillBeLoaded)) { flag_parts.emplace_back("RF_WillBeLoaded"); }
+            if (object->HasAnyFlags(RF_HasExternalPackage)) { flag_parts.emplace_back("RF_HasExternalPackage"); }
+            if (object->HasAnyFlags(RF_AllFlags)) { flag_parts.emplace_back("RF_AllFlags"); }
+
+            std::for_each(flag_parts.begin(), flag_parts.end(), [&](const std::string& flag_part) {
+                if (!flags_string.empty())
+                {
+                    flags_string.append(", ");
+                }
+                flags_string.append(std::move(flag_part));
+            });
+        }
+    };
 
     struct PropertyFlagsStringifier
     {
@@ -447,6 +544,7 @@ namespace RC::GUI
     static auto get_object_full_name(const UObject* object) -> const char*
     {
         if (!UnrealInitializer::StaticStorage::bIsInitialized) { return ""; }
+        std::lock_guard lock{s_object_ptr_to_full_name_mutex};
         if (auto it = s_object_ptr_to_full_name.find(object); it != s_object_ptr_to_full_name.end())
         {
             return it->second.c_str();
@@ -460,6 +558,7 @@ namespace RC::GUI
     static auto get_object_full_name_cxx_string(UObject* object) -> std::string
     {
         if (!UnrealInitializer::StaticStorage::bIsInitialized) { return ""; }
+        std::lock_guard lock{s_object_ptr_to_full_name_mutex};
         if (auto it = s_object_ptr_to_full_name.find(object); it != s_object_ptr_to_full_name.end())
         {
             return it->second;
@@ -487,39 +586,6 @@ namespace RC::GUI
             attempt_to_add_search_result(object);
             return LoopAction::Continue;
         });
-    }
-
-    static auto ImGui_GetID(int int_id) -> ImGuiID
-    {
-        ImGuiWindow* window = GImGui->CurrentWindow;
-        return window->GetID(int_id);
-    }
-
-    static auto ImGui_TreeNodeEx(const char* label, int int_id, ImGuiTreeNodeFlags flags = 0) -> bool
-    {
-        ImGuiWindow* window = ImGui::GetCurrentWindow();
-        if (window->SkipItems)
-            return false;
-
-        return ImGui::TreeNodeBehavior(window->GetID(int_id), flags, label, NULL);
-    }
-
-    static auto ImGui_TreeNodeEx(const char* label, void* ptr_id, ImGuiTreeNodeFlags flags = 0) -> bool
-    {
-        ImGuiWindow* window = ImGui::GetCurrentWindow();
-        if (window->SkipItems)
-            return false;
-
-        return ImGui::TreeNodeBehavior(window->GetID(ptr_id), flags, label, NULL);
-    }
-
-    static auto ImGui_TreeNodeEx(const char* label, const char* str_id, ImGuiTreeNodeFlags flags) -> bool
-    {
-        ImGuiWindow* window = ImGui::GetCurrentWindow();
-        if (window->SkipItems)
-            return false;
-
-        return ImGui::TreeNodeBehavior(window->GetID(str_id), flags, label, NULL);
     }
 
     static auto collapse_all_except(int except_id) -> void
@@ -695,12 +761,12 @@ namespace RC::GUI
         return selected_object_or_property.property;
     }
 
-    auto LiveView::render_property_value(FProperty* property, ContainerType container_type, void* container, FProperty** last_property_in, bool* tried_to_open_nullptr_object, bool is_watchable, int32 first_offset) -> std::variant<std::monostate, UObject*, FProperty*>
+    auto LiveView::render_property_value(FProperty* property, ContainerType container_type, void* container, FProperty** last_property_in, bool* tried_to_open_nullptr_object, bool is_watchable, int32 first_offset, bool container_is_array) -> std::variant<std::monostate, UObject*, FProperty*>
     {
         std::variant<std::monostate, UObject*, FProperty*> next_item_to_render{};
         auto property_offset = property->GetOffset_Internal();
 
-        if (*last_property_in)
+        if (last_property_in && *last_property_in)
         {
             auto property_alignment = property->GetMinAlignment();
             auto last_property_offset = (*last_property_in)->GetOffset_Internal();
@@ -730,8 +796,8 @@ namespace RC::GUI
 
         bool open_edit_value_popup{};
 
-        auto render_property_value_context_menu = [&]() {
-            if (ImGui::BeginPopupContextItem(property_name.c_str()))
+        auto render_property_value_context_menu = [&](std::string_view id_override = "") {
+            if (ImGui::BeginPopupContextItem(id_override.empty() ? property_name.c_str() : std::format("context-menu-{}", id_override).c_str()))
             {
                 if (ImGui::MenuItem("Copy name"))
                 {
@@ -809,7 +875,7 @@ namespace RC::GUI
         }
         else
         {
-            ImGui::Text("0x%X (0x%X) %s:", first_offset, property_offset, property_name.c_str());
+            ImGui::Text("0x%X%s %s:", first_offset, container_is_array ? std::format("").c_str() : std::format(" (0x{:X})", property_offset).c_str(), property_name.c_str());
         }
         if (auto struct_property = CastField<FStructProperty>(property); struct_property && struct_property->GetStruct()->GetFirstProperty())
         {
@@ -818,7 +884,7 @@ namespace RC::GUI
             auto tree_node_id = std::format("{}{}", static_cast<void*>(container_ptr), property_name);
             if (ImGui_TreeNodeEx(std::format("{}", to_string(property_text.GetCharArray())).c_str(), tree_node_id.c_str(), ImGuiTreeNodeFlags_NoAutoOpenOnLog))
             {
-                render_property_value_context_menu();
+                render_property_value_context_menu(tree_node_id);
                 
                 struct_property->GetStruct()->ForEachProperty([&](FProperty* inner_property) {
                     FString struct_prop_text_item{};
@@ -841,14 +907,50 @@ namespace RC::GUI
                 });
                 ImGui::TreePop();
             }
+            render_property_value_context_menu(tree_node_id);
+        }
+        else if (auto array_property = CastField<FArrayProperty>(property); array_property)
+        {
+            is_watchable = false;
+            ImGui::SameLine();
+            auto tree_node_id = std::format("{}{}", static_cast<void*>(container_ptr), property_name);
+            if (ImGui_TreeNodeEx(std::format("{}", to_string(property_text.GetCharArray())).c_str(), tree_node_id.c_str(), ImGuiTreeNodeFlags_NoAutoOpenOnLog))
+            {
+                render_property_value_context_menu(tree_node_id);
+
+                auto script_array = std::bit_cast<FScriptArray*>(container_ptr);
+                auto inner_property = array_property->GetInner();
+                for (int32_t i = 0; i < script_array->Num(); ++i)
+                {
+                    auto element_offset = inner_property->GetElementSize() * i;
+                    auto element_container_ptr = static_cast<uint8_t*>(*container_ptr) + element_offset;
+                    ImGui::Text("[%i]:", i);
+                    ImGui::Indent();
+                    ImGui::SameLine();
+                    next_item_to_render = render_property_value(inner_property, inner_property->IsA<FObjectProperty>() ? ContainerType::Object : ContainerType::NonObject, element_container_ptr, nullptr, tried_to_open_nullptr_object, false, element_offset, true);
+                    ImGui::Unindent();
+
+                    if (!std::holds_alternative<std::monostate>(next_item_to_render))
+                    {
+                        break;
+                    }
+                }
+                if (script_array->Num() < 1)
+                {
+                    ImGui::Text("-- Empty --");
+                }
+                ImGui::TreePop();
+            }
+            render_property_value_context_menu(tree_node_id);
         }
         else
         {
             ImGui::SameLine();
             ImGui::Text("%S", property_text.GetCharArray());
+            render_property_value_context_menu();
         }
 
-        *last_property_in = property;
+        if (last_property_in) { *last_property_in = property; }
 
         if (ImGui::IsItemHovered())
         {
@@ -860,13 +962,12 @@ namespace RC::GUI
             ImGui::EndTooltip();
         }
 
-        render_property_value_context_menu();
-
         // TODO: The 'container' variable should be a variant or something because it could be a struct or array, it's not guaranteed to be a UObject.
         if (container_type == ContainerType::Object)
         {
-            auto obj = static_cast<UObject*>(container);
-            auto edit_property_value_modal_name = to_string(std::format(STR("Edit value of property: {}->{}"), obj->GetName(), property->GetName()));
+            auto obj = container_is_array ? *static_cast<UObject**>(container) : static_cast<UObject*>(container);
+            auto obj_name = obj ? obj->GetName() : STR("None");
+            auto edit_property_value_modal_name = to_string(std::format(STR("Edit value of property: {}->{}"), obj_name, property->GetName()));
 
             if (open_edit_value_popup)
             {
@@ -883,7 +984,6 @@ namespace RC::GUI
                 ImGui::Text("Uses the same format as the 'set' UE4 console command.");
                 ImGui::Text("The game could crash if the new value is invalid.");
                 ImGui::Text("The game can override the new value immediately.");
-                
                 ImGui::PushItemWidth(-1.0f);
                 ImGui::InputText("##CurrentPropertyValue", &m_current_property_value_buffer);
                 if (ImGui::Button("Apply"))
@@ -917,7 +1017,7 @@ namespace RC::GUI
                 m_modal_edit_property_value_opened_this_frame = false;
             }
         }
-        
+
         return next_item_to_render;
     }
 
@@ -1037,6 +1137,62 @@ namespace RC::GUI
         }
         ImGui::Text("ClassPrivate: %s", to_string(object->GetClassPrivate()->GetName()).c_str());
         ImGui::Text("Path: %S", object->GetPathName().c_str());
+        auto raw_unsafe_object_flags = object->GetObjectFlags();
+        ImGui::Text("ObjectFlags (Raw): 0x%X", raw_unsafe_object_flags);
+        if (ImGui::BeginPopupContextItem("object_raw_flags_menu"))
+        {
+            if (ImGui::MenuItem("Copy raw flags"))
+            {
+                ImGui::SetClipboardText(std::format("0x{:X}", static_cast<uint32_t>(raw_unsafe_object_flags)).c_str());
+            }
+            ImGui::EndPopup();
+        }
+        ObjectFlagsStringifier object_flags_stringifier{object};
+        size_t current_flag_line_count{};
+        std::string current_flag_line{};
+        std::string all_flags{};
+        auto create_menu_for_copy_flags = [&](size_t menu_index) {
+            if (ImGui::BeginPopupContextItem(std::format("property_flags_menu_{}", menu_index).c_str()))
+            {
+                if (ImGui::MenuItem("Copy flags"))
+                {
+                    std::string flags_string_for_copy{};
+                    std::for_each(object_flags_stringifier.flag_parts.begin(), object_flags_stringifier.flag_parts.end(), [&](const std::string& flag_part) {
+                        if (!flags_string_for_copy.empty())
+                        {
+                            flags_string_for_copy.append(" | ");
+                        }
+                        flags_string_for_copy.append(std::move(flag_part));
+                    });
+                    ImGui::SetClipboardText(flags_string_for_copy.c_str());
+                }
+                ImGui::EndPopup();
+            }
+        };
+        ImGui::Text("ObjectFlags:");
+        create_menu_for_copy_flags(99); // 'menu_index' of '99' because we'll never reach 99 lines of flags and we can't use '0' as that'll be used in the loop below.
+        ImGui::Indent();
+        for (size_t i = 0; i < object_flags_stringifier.flag_parts.size(); ++i)
+        {
+            const auto& property_flag_part_string = object_flags_stringifier.flag_parts[i];
+            const auto last_element_in_vector = i + 1 >= object_flags_stringifier.flag_parts.size();
+
+            if (current_flag_line_count < 3)
+            {
+                current_flag_line.append(std::move(property_flag_part_string) + (last_element_in_vector ? "" : " | "));
+                ++current_flag_line_count;
+            }
+
+            if (current_flag_line_count >= 3 || last_element_in_vector)
+            {
+                ImGui::Text("%s", current_flag_line.c_str());
+                create_menu_for_copy_flags(i);
+                all_flags.append(current_flag_line);
+                current_flag_line.clear();
+                current_flag_line_count = 0;
+            }
+        }
+        ImGui::Unindent();
         ImGui::Separator();
         // Potential sizes: 385, -180 (open) | // 385, -286 (closed)
         if (ImGui::CollapsingHeader("Size (total size of class + parents in parentheses)"))
@@ -1411,8 +1567,24 @@ namespace RC::GUI
                 }
             }
         }
+        if (ImGui::IsItemHovered())
+        {
+            ImGui::BeginTooltip();
+            ImGui::Text("Right-click to open search options.");
+            ImGui::EndTooltip();
+        }
         if (push_inactive_text_color) { ImGui::PopStyleColor(); }
         ImGui::PopItemWidth();
+
+        if (ImGui::BeginPopupContextItem("##search-options"))
+        {
+            ImGui::Text("Search options");
+            ImGui::Checkbox("Include inheritance", &s_search_options.include_inheritance);
+            ImGui::SameLine();
+            ImGui::Checkbox("Instances only", &s_search_options.instances_only);
+            ImGui::EndPopup();
+        }
+
         if (!listeners_allowed)
         {
             ImGui::EndDisabled();
@@ -1504,7 +1676,7 @@ namespace RC::GUI
             int num_total_chunks = (num_elements / s_max_elements_per_chunk) + (num_elements % s_max_elements_per_chunk == 0 ? 0 : 1);
             for (int i = 0; i < num_total_chunks; ++i)
             {
-                if (ImGui_TreeNodeEx(std::format("Chunk #{}", i).c_str(), i + s_chunk_id_start, ImGuiTreeNodeFlags_CollapsingHeader))
+                if (ImGui_TreeNodeEx(std::format("Group #{}", i).c_str(), i + s_chunk_id_start, ImGuiTreeNodeFlags_CollapsingHeader))
                 {
                     ::RC::GUI::collapse_all_except(i + s_chunk_id_start);
                     auto start = s_max_elements_per_chunk * i;
@@ -1634,4 +1806,3 @@ namespace RC::GUI
         ImGui::EndChild();
     }
 }
-

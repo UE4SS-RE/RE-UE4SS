@@ -33,11 +33,8 @@ namespace RC::GUI
             m_text_editor.SetColorizerEnable(false);
             m_text_editor.SetLanguageDefinition(GetLanguageDefinitionNone());
             m_text_editor.SetPalette(GetPalette());
-            m_text_editor.GetErrorMarkers().emplace(6, "Test error");
-            m_breakpoints.emplace(5);
             m_text_editor.SetBreakpoints(m_breakpoints);
             m_text_editor.SetTextFilter(&m_filter);
-            m_text_editor.GetLineColorMarkers().emplace(4, std::pair{ImColor(148, 36, 20, 255), ImColor(255, 255, 255, 255)});
         }
 
     private:

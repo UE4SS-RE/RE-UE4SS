@@ -68,6 +68,15 @@ namespace RC::LuaType
             return 1;
         });
 
+        table.add_pair("IsChildOf", [](const LuaMadeSimple::Lua& lua) -> int {
+            const auto& lua_object = lua.get_userdata<UClass>();
+            
+            const auto& param_1 = lua.get_userdata<UClass>();
+            lua.set_bool(lua_object.get_remote_cpp_object()->IsChildOf(param_1.get_remote_cpp_object()));
+
+            return 1;
+        });
+
         if constexpr (is_final == LuaMadeSimple::Type::IsFinal::Yes)
         {
             table.add_pair("type", [](const LuaMadeSimple::Lua& lua) -> int {

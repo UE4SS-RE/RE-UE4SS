@@ -17,40 +17,8 @@
 #include <DynamicOutput/DynamicOutput.hpp>
 #include <GUI/GUI.hpp>
 
-class GlobalClassTest
-{
-public:
-    auto DoSomething() -> void { printf_s("GlobalClassTest\n"); }
-};
-
-auto GlobalFunctionTest() -> GlobalClassTest;
-
-namespace RC2
-{
-    class MyFirstClass
-    {
-    public:
-        auto DoSomething() -> void { printf_s("RC2::MyFirstClass\n"); }
-    };
-
-    namespace RC3::RC4
-    {
-        class MyFirstClass
-        {
-        public:
-            auto DoSomething() -> void { printf_s("RC2::RC3::RC4::MyFirstClass\n"); }
-        };
-    }
-}
-
 namespace RC
 {
-    class MyFirstClass
-    {
-    public:
-        auto DoSomething() -> void { printf_s("RC::MyFirstClass\n"); }
-    };
-
     namespace Unreal
     {
         class UObject;
@@ -78,12 +46,6 @@ namespace RC
         // This means that we can reliably check whether a function exists externally
         uint64_t safety_padding[8]{0};
     };
-
-    auto GetPlayerControllerTest2() -> Unreal::UObjectBase*;
-    auto GetPlayerControllerTest3() -> Unreal::UObjectBaseUtility*;
-    auto GetMyFirstClass() -> MyFirstClass;
-    auto GetMyFirstClass2() -> ::RC2::MyFirstClass;
-    auto GetMyFirstClass3() -> ::RC2::RC3::RC4::MyFirstClass;
 
     class UE4SSProgram : public MProgram
     {
@@ -184,6 +146,7 @@ namespace RC
     public:
         auto reinstall_mods() -> void;
         auto get_object_dumper_output_directory() -> const File::StringType;
+        auto get_module_directory() -> File::StringViewType;
         auto get_working_directory() -> File::StringViewType;
         auto get_mods_directory() -> File::StringViewType;
         auto generate_uht_compatible_headers() -> void;

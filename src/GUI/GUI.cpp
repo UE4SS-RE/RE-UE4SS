@@ -8,6 +8,7 @@
 #include <GUI/GLFW3_OpenGL3.hpp>
 #include <GUI/Windows.hpp>
 #include <GUI/Dumpers.hpp>
+#include <GUI/BPMods.hpp>
 
 #include <Unreal/UnrealInitializer.hpp>
 #include <UE4SSProgram.hpp>
@@ -135,6 +136,12 @@ namespace RC::GUI
                 if (ImGui::BeginTabItem("Dumpers"))
                 {
                     Dumpers::render();
+                    ImGui::EndTabItem();
+                }
+
+                if (ImGui::BeginTabItem("BP Mods"))
+                {
+                    BPMods::render();
                     ImGui::EndTabItem();
                 }
                 ImGui::EndTabBar();

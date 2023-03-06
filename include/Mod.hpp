@@ -9,8 +9,6 @@
 #include <File/File.hpp>
 #include <LuaMadeSimple/LuaMadeSimple.hpp>
 
-#define NEW_LUA 0
-
 namespace RC
 {
     class UE4SSProgram;
@@ -82,12 +80,24 @@ namespace RC
             std::vector<int32_t> registry_indexes;
         };
         static inline std::vector<LuaCallbackData> m_static_construct_object_lua_callbacks;
+        static inline std::vector<LuaCallbackData> m_process_console_exec_pre_callbacks;
+        static inline std::vector<LuaCallbackData> m_process_console_exec_post_callbacks;
+        static inline std::vector<LuaCallbackData> m_call_function_by_name_with_arguments_pre_callbacks;
+        static inline std::vector<LuaCallbackData> m_call_function_by_name_with_arguments_post_callbacks;
+        static inline std::vector<LuaCallbackData> m_local_player_exec_pre_callbacks;
+        static inline std::vector<LuaCallbackData> m_local_player_exec_post_callbacks;
         static inline std::unordered_map<File::StringType, LuaCallbackData> m_global_command_lua_callbacks;
         static inline std::unordered_map<File::StringType, LuaCallbackData> m_custom_command_lua_pre_callbacks;
         static inline std::vector<SimpleLuaAction> m_game_thread_actions{};
         // This is storage that persists through hot-reloads.
         static inline std::unordered_map<std::string, SharedLuaVariable> m_shared_lua_variables{};
+        static inline std::unordered_map<StringType, LuaCallbackData> m_custom_event_callbacks{};
+        static inline std::vector<LuaCallbackData> m_init_game_state_pre_callbacks{};
+        static inline std::vector<LuaCallbackData> m_init_game_state_post_callbacks{};
+        static inline std::vector<LuaCallbackData> m_begin_play_pre_callbacks{};
+        static inline std::vector<LuaCallbackData> m_begin_play_post_callbacks{};
         static inline bool m_is_currently_executing_game_action{};
+        static inline std::recursive_mutex m_thread_actions_mutex{};
 
     protected:
         std::jthread m_async_thread;

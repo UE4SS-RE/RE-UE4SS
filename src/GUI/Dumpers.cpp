@@ -1,5 +1,6 @@
 #include <format>
 #include <string>
+#include <ctime>
 #include <utility>
 
 #include <GUI/Dumpers.hpp>
@@ -19,7 +20,9 @@
 #include <Unreal/AActor.hpp>
 #include <Unreal/UFunction.hpp>
 #include <Unreal/UScriptStruct.hpp>
+#include <chrono>
 #include <imgui.h>
+#include <SDKGenerator/TMapOverrideGen.hpp>
 
 namespace RC::GUI::Dumpers
 {
@@ -108,8 +111,7 @@ namespace RC::GUI::Dumpers
             if (object->HasAnyFlags(RF_ClassDefaultObject)) { return LoopAction::Continue; }
 
             auto actor = static_cast<AActor*>(object);
-
-            // TODO: figure out if this catches all root components (it doesn't appear to do so)
+            
             auto root_component = actor->GetValuePtrByPropertyNameInChain<UObject*>(STR("RootComponent"));
             if (!root_component || !*root_component) { return LoopAction::Continue; }
 
@@ -214,8 +216,7 @@ namespace RC::GUI::Dumpers
             if (object->HasAnyFlags(RF_ClassDefaultObject)) { return LoopAction::Continue; }
 
             auto actor = static_cast<AActor*>(object);
-
-            // TODO: figure out if this catches all root components (it doesn't appear to do so)
+            
             auto root_component = actor->GetValuePtrByPropertyNameInChain<UObject*>(STR("RootComponent"));
             if (!root_component || !*root_component) { return LoopAction::Continue; }
 
@@ -261,23 +262,24 @@ namespace RC::GUI::Dumpers
         return global_json_array.serialize(JSON::ShouldFormat::Yes, &indent_level);
     }
 
+    auto CurrentDumpNums = MapDumpFileName{};
+    
     void call_generate_static_mesh_file()
 	{
 	    Output::send(STR("Dumping CSV of all loaded static mesh actors, positions and mesh properties\n"));
 	    static auto dump_actor_class = UObjectGlobals::StaticFindObject<UClass*>(nullptr, nullptr, STR("/Script/Engine.StaticMeshActor"));
-
-	    auto file = File::open(StringType{UE4SSProgram::get_program().get_working_directory()} + STR("\\ue4ss_static_mesh_data.csv"), File::OpenFor::Writing, File::OverwriteExistingFile::Yes, File::CreateIfNonExistent::Yes);
 	    std::wstring file_buffer{};
 	    file_buffer.append(generate_actors_csv_file(dump_actor_class));
+        auto file = File::open(std::format(STR("{}\\{}-ue4ss_static_mesh_data.csv"), UE4SSProgram::get_program().get_working_directory(), long(std::time(nullptr))), File::OpenFor::Writing, File::OverwriteExistingFile::Yes, File::CreateIfNonExistent::Yes);
 	    file.write_string_to_file(file_buffer);
 	}
 
     void call_generate_all_actor_file()
 	{
 	    Output::send(STR("Dumping CSV of all loaded actor types, positions and mesh properties\n"));
-	    auto file = File::open(StringType{UE4SSProgram::get_program().get_working_directory()} + STR("\\ue4ss_actor_data.csv"), File::OpenFor::Writing, File::OverwriteExistingFile::Yes, File::CreateIfNonExistent::Yes);
 	    std::wstring file_buffer{};
 	    file_buffer.append(generate_actors_csv_file(AActor::StaticClass()));
+        auto file = File::open(std::format(STR("{}\\{}-ue4ss_actor_data.csv"), UE4SSProgram::get_program().get_working_directory(), long(std::time(nullptr))), File::OpenFor::Writing, File::OverwriteExistingFile::Yes, File::CreateIfNonExistent::Yes);
 	    file.write_string_to_file(file_buffer);
 	}
     
@@ -327,6 +329,25 @@ namespace RC::GUI::Dumpers
         {
             OutTheShade::generate_usmap();
         }
+        
+        if (ImGui::Button("Generate TMapOverride file\n"))
+        {
+            UEGenerator::TMapOverrideGenerator::generate_tmapoverride();
+        }
+
+	    if (ImGui::Button("Generate UHT Compatible Headers\n"))
+	    {
+	        UE4SSProgram::get_program().generate_uht_compatible_headers();
+	    }
+
+	    if (ImGui::Button("Dump CXX Headers\n"))
+	    {
+	        File::StringType working_dir{UE4SSProgram::get_program().get_working_directory()};
+	        UE4SSProgram::get_program().generate_cxx_headers(working_dir + STR("\\CXXHeaderDump"));
+	    }
+
+	    
+	    
     }
 }
 

@@ -58,9 +58,10 @@ namespace RC
         struct SectionDebug
         {
             bool SimpleConsoleEnabled{true};
-            bool DebugConsoleEnabled{ true };
-            bool DebugConsoleVisible{ true };
+            bool DebugConsoleEnabled{true};
+            bool DebugConsoleVisible{true};
             GUI::GfxBackend GraphicsAPI{GUI::GfxBackend::GLFW3_OpenGL3};
+            int64_t LiveViewObjectsPerGroup{64 * 1024 / 2};
         } Debug;
 
         struct SectionThreads
@@ -73,6 +74,17 @@ namespace RC
         {
             int64_t MaxMemoryUsageDuringAssetLoading{85};
         } Memory;
+
+        struct SectionHooks
+        {
+            bool HookProcessInternal{true};
+            bool HookProcessLocalScriptFunction{true};
+            bool HookInitGameState{true};
+            bool HookCallFunctionByNameWithArguments{true};
+            bool HookBeginPlay{true};
+            bool HookLocalPlayerExec{true};
+            int64_t FExecVTableOffsetInLocalPlayer{0x28};
+        } Hooks;
 
     public:
         SettingsManager() = default;

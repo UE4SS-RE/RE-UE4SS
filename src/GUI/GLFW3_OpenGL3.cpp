@@ -11,7 +11,7 @@ namespace RC::GUI
 {
     static void glfw_error_callback(int error, const char* description)
     {
-        throw std::runtime_error{std::format("Glfw Error {}: {}\n", error, description)};
+        Output::send<LogLevel::Error>(STR("Glfw Error {}: {}\n"), error, to_wstring(description));
     }
 
     auto Backend_GLFW3_OpenGL3::init() -> void

@@ -2,6 +2,7 @@
 
 #include <LuaType/LuaUFunction.hpp>
 #include <Helpers/Integer.hpp>
+#include <stdexcept>
 #pragma warning(disable: 4005)
 #include <Unreal/UFunction.hpp>
 #include <Unreal/FProperty.hpp>
@@ -70,6 +71,23 @@ namespace RC::LuaType
     template<LuaMadeSimple::Type::IsFinal is_final>
     auto UFunction::setup_member_functions(const LuaMadeSimple::Lua::Table& table) -> void
     {
+        table.add_pair("GetFunctionFlags", [](const LuaMadeSimple::Lua& lua) -> int {
+            const auto& lua_object = lua.get_userdata<LuaType::UFunction>();
+            lua.set_integer(lua_object.get_remote_cpp_object()->GetFunctionFlags());
+            return 1;
+        });
+
+        table.add_pair("SetFunctionFlags", [](const LuaMadeSimple::Lua& lua) -> int {
+            const auto& lua_object = lua.get_userdata<LuaType::UFunction>();
+            if (!lua.is_integer())
+            {
+                throw std::runtime_error{"UFunction::SetFunctionFlags must have an integer as the first param."};
+            }
+            auto new_function_flags = static_cast<Unreal::EFunctionFlags>(lua.get_integer());
+            lua_object.get_remote_cpp_object()->GetFunctionFlags() = new_function_flags;
+            return 0;
+        });
+
         if constexpr (is_final == LuaMadeSimple::Type::IsFinal::Yes)
         {
             table.add_pair("type", [](const LuaMadeSimple::Lua& lua) -> int {

@@ -1,3 +1,5 @@
+#include <limits>
+
 #include <LuaType/LuaFName.hpp>
 #include <DynamicOutput/DynamicOutput.hpp>
 #include <Helpers/String.hpp>
@@ -46,10 +48,8 @@ namespace RC::LuaType
             std::string error_overload_not_found{R"(
 No overload found for function 'FName'.
 Overloads:
-#1: FName(string Name)
-#2: FName(integer ComparisonIndex))"};
-
-            Unreal::FName fname;
+#1: FName(string Name, EFindName = FName_Add)
+#2: FName(integer ComparisonIndex, EFindName = FName_Add))"};
 
             if (lua.is_userdata())
             {
@@ -57,23 +57,43 @@ Overloads:
                 lua.discard_value();
             }
 
+            int64_t name_comparison_index{};
+            StringType name_string{};
+            Unreal::EFindName find_type{Unreal::EFindName::FNAME_Add};
             if (lua.is_string())
             {
-                std::wstring name = to_wstring(lua.get_string());
-
-                fname = Unreal::FName(name);
+                name_string = to_wstring(lua.get_string());
             }
             else if (lua.is_integer())
             {
-                int64_t comparison_index = lua.get_integer();
-                fname = Unreal::FName(comparison_index);
+                name_comparison_index = lua.get_integer();
             }
             else
             {
                 lua.throw_error(error_overload_not_found);
             }
 
-            LuaType::FName::construct(lua, fname);
+            if (lua.is_integer())
+            {
+                find_type = static_cast<Unreal::EFindName>(lua.get_integer());
+            }
+            
+            if (name_string.empty())
+            {
+                if (name_comparison_index < 0)
+                {
+                    lua.throw_error("FName constructor cannot take an integer smaller than uint32.");
+                }
+                if (name_comparison_index > std::numeric_limits<uint32_t>::max())
+                {
+                    lua.throw_error("FName constructor cannot take an integer larger than uint32.");
+                }
+                LuaType::FName::construct(lua, Unreal::FName(static_cast<uint32_t>(name_comparison_index), find_type));
+            }
+            else
+            {
+                LuaType::FName::construct(lua, Unreal::FName(name_string, find_type));
+            }
 
             return 1;
         });
