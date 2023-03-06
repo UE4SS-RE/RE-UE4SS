@@ -5,6 +5,7 @@ Lua scripting system platform, SDK generator, live property editor and other dum
 ## Major features
 
 - Lua scripting API: Write lua mods based on the UE object system
+- Blueprint Modloading: Spawn blueprint mods automatically without editing/replacing game files.
 - Live property editor: Search, view, edit & watch the properties of every loaded object, great for debugging mods or figuring out how values are changed during runtime
 - Generate Unreal Header Tool compatible C++ headers for creating a mirror .uproject for your game
 - Generate standard C++ headers from reflected classes and blueprints, with offsets
@@ -18,6 +19,11 @@ The goal of UE4SS is not to be a plug-n-play solution that always works with eve
 The goal is to have an underlying system that works for most games.  
 You may need to update AOBs on your own, and there's a guide for that below.  
 
+## Basic Installation
+
+The easiest installation is via downloading the xinput version of the latest non-experimental build from [Releases](https://github.com/UE4SS-RE/RE-UE4SS/releases) and extracting the zip content to /{Gameroot}/GameName/Binaries/Win64/.
+If your game is in the custom config list, extract the contents from the relevant folder to Win64 as well.
+
 ## Links
 
   [Full installation guide](https://github.com/UE4SS-RE/RE-UE4SS/wiki/FullInstallationGuide)
@@ -29,6 +35,8 @@ You may need to update AOBs on your own, and there's a guide for that below.
   [Generating UHT compatible headers](https://github.com/UE4SS-RE/RE-UE4SS/wiki/Generating-UHT-compatible-headers)
   
   [Custom Game Configs](https://github.com/UE4SS-RE/RE-UE4SS/wiki/CustomGameConfigs)
+  
+  [Creating Compatible Blueprint Mods](https://www.youtube.com/watch?v=fB3yT85XhVA)
 
 
 ## Branches
@@ -50,7 +58,8 @@ You may need to update AOBs on your own, and there's a guide for that below.
 ## Build instructions
 
 1. Clone the repo.
-2. Execute this command: `git submodule update --init --recursive`  
+2. Execute this command: `git submodule update --init --recursive`
+    Make sure your Github account is linked to your Epic Games account for UE source access.
     Do not use the `--remote` option because that will force third-party dependencies to update to the latest commit, and that can break things.
     You will need your github account to be linked to an Epic games account to pull the Unreal pseudo code submodule.
 3. There are three different ways you can build UE4SS.  
@@ -90,6 +99,8 @@ Note that you should also commit & push the submodules that you've updated if th
     - Original Creator: Nibblet support
 - **boop** / **usize**
   - New UFunction hook method
+- **RussellJ**
+  - Blueprint Modloader inspiration
 - **Narknon**
   - Certain features and maintenance/rehosting of the project
 - **DeadMor0z**
