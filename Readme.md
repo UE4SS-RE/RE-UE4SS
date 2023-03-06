@@ -99,7 +99,7 @@ Note that you should also commit & push the submodules that you've updated if th
     - Original Creator: Nibblet support
 - **boop** / **usize**
   - New UFunction hook method
-- **RussellJ**
+- [**RussellJ**](https://github.com/RussellJerome)
   - Blueprint Modloader inspiration
 - **Narknon**
   - Certain features and maintenance/rehosting of the project
