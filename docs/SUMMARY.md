@@ -29,6 +29,8 @@
     - [FName](./lua-api/classes/fname.md)
     - [FieldClass](./lua-api/classes/fieldclass.md)
     - [TArray](./lua-api/classes/tarray.md)
+    - [RemoteUnrealParam](./lua-api/classes/remoteunrealparam.md)
+    - [LocalUnrealParam](./lua-api/classes/localunrealparam.md)
     - [Property](./lua-api/classes/property.md)
     - [ObjectProperty](./lua-api/classes/objectproperty.md)
     - [StructProperty](./lua-api/classes/structproperty.md)
