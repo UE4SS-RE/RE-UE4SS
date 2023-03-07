@@ -33,3 +33,16 @@ None
 ### IsAbove(number MajorVersion, number MinorVersion)
 
 - **Return type:** `bool`
+
+**Examples**
+```lua
+local Major = UnrealVersion.GetMajor()
+local Minor = UnrealVersion.GetMinor()
+print(string.format("Version: %s.%s\n", Major, Minor))
+
+if UnrealVersion.IsEqual(5, 0) then print("Version is 5.0\n") end
+if UnrealVersion.IsAtLeast(5, 0) then print("Version is >=5.0\n") end
+if UnrealVersion.IsAtMost(5, 0) then print("Version is <=5.0\n") end
+if UnrealVersion.IsBelow(5, 0) then print("Version is <5.0\n") end
+if UnrealVersion.IsAbove(5, 0) then print("Version is >5.0\n") end
+```
