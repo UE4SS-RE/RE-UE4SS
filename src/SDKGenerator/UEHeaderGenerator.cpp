@@ -3610,6 +3610,9 @@ namespace RC::UEGenerator
         //Sort the cross module includes and add them to the result so that they are always above the rest of the includes
         std::sort(cross_module_includes.begin(), cross_module_includes.end());
 
+        // Remove duplicates - there are sometimes multiple instances of the same cross module include
+        cross_module_includes.erase(std::unique(cross_module_includes.begin(), cross_module_includes.end()), cross_module_includes.end());
+
         for (const std::wstring& cross_module_include : cross_module_includes)
         {
             result_include_string.append(cross_module_include);
@@ -3661,7 +3664,7 @@ namespace RC::UEGenerator
                 m_dependency_module_names.insert(native_module_name);
             }
 
-            pre_declarations.push_back(UEHeaderGenerator::generate_object_pre_declaration(dependency_object));
+            if (!m_is_implementation_file) pre_declarations.push_back(UEHeaderGenerator::generate_object_pre_declaration(dependency_object));
         }
 
         //Sort the entries alphabetically by the class name
