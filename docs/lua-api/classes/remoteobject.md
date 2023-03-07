@@ -13,3 +13,14 @@ None
 
 - **Return type:** `bool`
 - **Returns:** whether this object is valid or not
+
+**Example**
+```lua
+-- 'StaticFindObject' returns a UObject which inherits from RemoteObject.
+local Object = StaticFindObject("/Script/CoreUObject.Object")
+if Object:IsValid() then
+    print("Object is valid\n")
+else
+    print("Object is NOT valid\n")
+end
+```
