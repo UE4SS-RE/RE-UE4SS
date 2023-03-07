@@ -9,7 +9,7 @@ None
 
 ### GetVersion()
 
-**Returns:** the current version of UE4SS that is being used.
+**Returns:** the current version of UE4SS that is being used.  
 **Return Value:**
 
 | # | Type    | Information |
