@@ -6,6 +6,7 @@ The `UnrealVersion` class contains helper functions for retrieving which version
 None
 
 ## Methods
+
 ### GetMajor()
 
 - **Return type:** `integer`
@@ -34,7 +35,7 @@ None
 
 - **Return type:** `bool`
 
-**Examples**
+## Examples
 ```lua
 local Major = UnrealVersion.GetMajor()
 local Minor = UnrealVersion.GetMinor()

@@ -1,7 +1,8 @@
 # Unreal Engine 4/5 Scripting System
 
+- [Introduction](./introduction.md)
 - [Installation Guide](./installation-guide.md)
-- [LUA API](./lua-api.md)
+- [Lua API](./lua-api.md)
   - [Full API Overview](./lua-api/full-api-overview.md)
   - [Table Definitions]()
     - [Key](./lua-api/table-definitions/key.md)

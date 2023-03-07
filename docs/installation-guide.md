@@ -25,7 +25,7 @@ You can install UE4SS in a couple of different ways.
 
 > Using method #1 will mean that the `root directory` and `working directory` are treated as one single directory that happens to also be the same directory as your `game working directory`.
 
-The preferred and most straightforward way to install UE4SS is to choose the 'ue4ss_xinput' download and then just drag & drop all the necessary files in `<game executable directory>`.
+The preferred and most straightforward way to install UE4SS is to choose the `ue4ss_xinput` download and then just drag & drop all the necessary files in `<game executable directory>`.
 
 Now all you need to do is start your game and UE4SS will automatically be injected.
 
