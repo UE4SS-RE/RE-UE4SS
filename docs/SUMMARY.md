@@ -38,6 +38,7 @@
     - [ArrayProperty](./lua-api/classes/arrayproperty.md)
     - [UObjectReflection](./lua-api/classes/uobjectreflection.md)
     - [FOutputDevice](./lua-api/classes/foutputdevice.md)
+    - [FWeakObjectPtr](./lua-api/classes/fweakobjectptr.md)
   - [Global Functions]()
     - [print](./lua-api/global-functions/print.md)
     - [StaticFindObject](./lua-api/global-functions/staticfindobject.md)
