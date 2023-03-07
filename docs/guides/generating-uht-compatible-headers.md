@@ -74,7 +74,7 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE(FCharacterSightSensorDelegate);
 - FSDProjectileMovementComponent.h top delegates
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnProjectilePenetrateDelegate);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnProjectileOutOfPropulsion);
-Add the macro DECLARE_DYNAMIC_MULTICAST_DELEGATE(<DelegateName>); above the UCLASS
+Add the macro DECLARE_DYNAMIC_MULTICAST_DELEGATE(<\DelegateName>); above the UCLASS
 
 In:
 - SubHealthComponent.h, line 56
@@ -88,7 +88,7 @@ Errors that look like this: "ActorFunctionLibrary.gen.cpp(153): [C2664] 'void UA
 Remove the const before the arguments that have the error (remember to also remove them in the definition stub too)
 OR use this regex string (const) ((\w+)\*\&) and replace with $2
 
-In "ShowroomStage.cpp" inside of the implementation of the constructor, comment out "this->SceneCapture = CreateDefaultSubobject<USceneCaptureComponent2D>(TEXT("SceneCapture"));" 
+In "ShowroomStage.cpp" inside of the implementation of the constructor, comment out "this->SceneCapture = CreateDefaultSubobject<\USceneCaptureComponent2D>(TEXT("SceneCapture"));" 
 
 Set supported platforms to windows
 ```
@@ -148,7 +148,7 @@ In:
 - EHModsListViewModel, FOnModsOptionSelected
 - EHSignalNetwork, FOnSignalChanged
 - AbilityAsync_WaitGameplayTagAdded, FAsyncWaitGameplayTagDelegate (put it inside of AbilityAsync_WaitGameplayTag)
-Add the macro DECLARE_DYNAMIC_MULTICAST_DELEGATE(<DelegateName>); above the UCLASS
+Add the macro DECLARE_DYNAMIC_MULTICAST_DELEGATE(<\DelegateName>); above the UCLASS
 
 In: 
 - AbilityAsync_WaitGameplayTagRemoved.h
@@ -178,13 +178,6 @@ In AbilitySystemComponent.h/.cpp, comment out:
 - ServerSetReplicatedEventWithPayload
 - ServerSetReplicatedEvent
 - ClientSetReplicatedEvent
-
-In:
-- VoxelMaterialIndicies.h
-- EHCellType.h
-- EHInstanceCellDefinition.h
-- InstancesContainer.h
-add FORCEINLINE uint32 GetTypeHash(const <structName>) { return 0; } to the bottom of the file, outside of the struct
 
 In EHBaseButtonWidget.h, add:
 #include "Components/HorizontalBox.h"
