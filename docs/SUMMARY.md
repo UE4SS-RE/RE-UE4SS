@@ -1,7 +1,8 @@
 # Unreal Engine 4/5 Scripting System
 
-- [Introduction](./introduction.md)
+[Home](./README.md)
 - [Installation Guide](./installation-guide.md)
+- [Custom Game Configs](./custom-game-configs.md)
 - [Lua API](./lua-api.md)
   - [Table Definitions]()
     - [Key](./lua-api/table-definitions/key.md)
@@ -59,4 +60,3 @@
 - [Guides]()
   - [Fixing missing AOBs](./guides/fixing-compatibility-problems.md)
   - [Generating UHT headers](./guides/generating-uht-compatible-headers.md)
-- [Custom Game Configs](./custom-game-configs.md)
