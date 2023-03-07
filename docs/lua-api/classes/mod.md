@@ -16,7 +16,7 @@ The `Mod` class is responsible for interacting with the local mod object.
 **Example**
 ```lua
 -- When sharing a UObject, make absolutely sure that it's a UObject that doesn't cease to exist before it's used again.
--- It's a very bad idea to share transient objects like actors as they might die and get stop existing.
+-- It's a very bad idea to share transient objects like actors as they might die and stop existing.
 local StaticObject = StaticFindObject("/Script/Engine.Default__GameplayStatics")
 
 -- The 'ModRef' variable is a global variable that's automatically created and is the instance of the current mod.
