@@ -943,6 +943,8 @@ namespace RC
         Mod::m_call_function_by_name_with_arguments_post_callbacks.clear();
         Mod::m_local_player_exec_pre_callbacks.clear();
         Mod::m_local_player_exec_post_callbacks.clear();
+        Mod::m_script_hook_callbacks.clear();
+        Mod::m_native_hook_id_to_generic_hook_id.clear();
     }
 
     auto UE4SSProgram::reinstall_mods() -> void
