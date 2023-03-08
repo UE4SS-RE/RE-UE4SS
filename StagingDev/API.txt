@@ -163,6 +163,9 @@ Global Functions
     RegisterCustomEvent(string EventName, function Callback)
         - Registers a callback that will get called when a BP function/event is called with the name 'EventName'.
 
+    UnregisterCustomEvent(string EventName)
+        - Unregisters a custom event callback globally for the specified event.
+
     RegisterInitGameStatePreHook(function Callback)
         - Registers a callback that will get called before AGameModeBase::InitGameState is called.
         - The callback params are: AGameModeBase Context
