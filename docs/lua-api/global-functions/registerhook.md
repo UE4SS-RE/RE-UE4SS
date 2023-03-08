@@ -1,6 +1,12 @@
 # RegisterHook
 
-The `RegisterHook` function is used to hook a UFunction.
+The `RegisterHook` registers a callback for a `UFunction`
+
+Callbacks are triggered when a `UFunction` is executed.
+
+The callback params are: `UObject self`, `UFunctionParams..`.
+
+Returns two ids, both of which must be passed to `UnregisterHook` if you want to unregister the hook.
 
 > Any `UFunction` that you attempt to register with `RegisterHook` must already exist in memory when you register it.  
 

@@ -16,7 +16,7 @@ The `RegisterKeyBind` function is used to bind a key on the keyboard to a Lua fu
 | # | Type     | Sub Type    | Information |
 |---|----------|-------------|-------------|
 | 1 | integer  |             | Key to bind, use the 'Key' table |
-| 2 | table    | ModifierKey | Modifier keys required alongside the 'Key' parameter |
+| 2 | table    | ModifierKeys | Modifier keys required alongside the 'Key' parameter |
 | 3 | function |             | Callback to execute when the key is hit on the keyboard |
 
 ## Example (overload #1)

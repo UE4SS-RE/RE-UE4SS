@@ -46,6 +46,7 @@
     - [FindFirstOf](./lua-api/global-functions/findfirstof.md)
     - [FindAllOf](./lua-api/global-functions/findallof.md)
     - [RegisterKeyBind](./lua-api/global-functions/registerkeybind.md)
+    - [IsKeyBindRegistered](./lua-api/global-functions/iskeybindregistered.md)
     - [RegisterHook](./lua-api/global-functions/registerhook.md)
     - [RegisterConsoleCommandHandler](./lua-api/global-functions/registerconsolecommandhandler.md)
     - [FName](./lua-api/global-functions/fname.md)
