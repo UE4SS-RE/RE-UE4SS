@@ -5,6 +5,8 @@
 #include <chrono>
 #include <thread>
 #include <mutex>
+#include <unordered_map>
+#include <unordered_set>
 
 #include <File/File.hpp>
 #include <LuaMadeSimple/LuaMadeSimple.hpp>
@@ -75,9 +77,14 @@ namespace RC
         };
         struct LuaCallbackData
         {
+            struct RegistryIndex
+            {
+                int32_t lua_index{};
+                int32_t identifier{};
+            };
             const LuaMadeSimple::Lua& lua;
             Unreal::UClass* instance_of_class;
-            std::vector<int32_t> registry_indexes;
+            std::vector<RegistryIndex> registry_indexes;
         };
         static inline std::vector<LuaCallbackData> m_static_construct_object_lua_callbacks;
         static inline std::vector<LuaCallbackData> m_process_console_exec_pre_callbacks;
@@ -96,6 +103,10 @@ namespace RC
         static inline std::vector<LuaCallbackData> m_init_game_state_post_callbacks{};
         static inline std::vector<LuaCallbackData> m_begin_play_pre_callbacks{};
         static inline std::vector<LuaCallbackData> m_begin_play_post_callbacks{};
+        static inline std::unordered_map<StringType, LuaCallbackData> m_script_hook_callbacks{};
+        static inline std::unordered_map<int32_t, int32_t> m_native_hook_id_to_generic_hook_id{};
+        // Generic hook ids are generated incrementally so the first one is 0 and the next one is always +1 from the last id.
+        static inline int32_t m_last_generic_hook_id{};
         static inline bool m_is_currently_executing_game_action{};
         static inline std::recursive_mutex m_thread_actions_mutex{};
 
