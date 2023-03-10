@@ -160,6 +160,14 @@ namespace RC::LuaType
             return 0;
         });
 
+        table.add_pair("IsValid", [](const LuaMadeSimple::Lua& lua) -> int {
+            auto& lua_object = lua.get_userdata<TArray>();
+
+            lua.set_bool(lua_object.get_remote_cpp_object());
+
+            return 1;
+        });
+
         if constexpr (is_final == LuaMadeSimple::Type::IsFinal::Yes)
         {
             table.add_pair("type", [](const LuaMadeSimple::Lua& lua) -> int {
