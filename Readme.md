@@ -26,15 +26,15 @@ If your game is in the custom config list, extract the contents from the relevan
 
 ## Links
 
-  [Full installation guide](https://github.com/UE4SS-RE/RE-UE4SS/wiki/FullInstallationGuide)
+  [Full installation guide](https://ue4ss-re.github.io/docs/installation-guide.html)
   
-  [Fixing compatibility problems](https://github.com/UE4SS-RE/RE-UE4SS/wiki/FixingBrokenAOBs) 
+  [Fixing compatibility problems](https://ue4ss-re.github.io/docs/guides/fixing-compatibility-problems.html) 
   
-  [Lua API - Overview](https://github.com/UE4SS-RE/RE-UE4SS/wiki/Lua-API)
+  [Lua API - Overview](https://ue4ss-re.github.io/docs/lua-api.html)
   
-  [Generating UHT compatible headers](https://github.com/UE4SS-RE/RE-UE4SS/wiki/Generating-UHT-compatible-headers)
+  [Generating UHT compatible headers](https://ue4ss-re.github.io/docs/guides/generating-uht-compatible-headers.html)
   
-  [Custom Game Configs](https://github.com/UE4SS-RE/RE-UE4SS/wiki/CustomGameConfigs)
+  [Custom Game Configs](https://ue4ss-re.github.io/docs/custom-game-configs.html)
   
   [Creating Compatible Blueprint Mods](https://www.youtube.com/watch?v=fB3yT85XhVA)
 
@@ -100,7 +100,7 @@ Note that you should also commit & push the submodules that you've updated if th
     - Original Creator: Nibblet support
 - **boop** / **usize**
   - New UFunction hook method
-- **RussellJ**
+- [**RussellJ**](https://github.com/RussellJerome)
   - Blueprint Modloader inspiration
 - **Narknon**
   - Certain features and maintenance/rehosting of the project
@@ -110,6 +110,8 @@ Note that you should also commit & push the submodules that you've updated if th
   - Unreal Mappings (USMAP) Generator
 - **DmgVol**
   - Inspiration for map dumper
+- **Buckminsterfullerene**
+  - Rewriting the documentation
 
 
 ## Thanks to everyone who helped with testing
