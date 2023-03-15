@@ -21,6 +21,8 @@
 #include <Unreal/UObject.hpp>
 #include <Unreal/UClass.hpp>
 #include <Unreal/UScriptStruct.hpp>
+#include <Unreal/AActor.hpp>
+#include <Unreal/UFunction.hpp>
 #include <Unreal/FOutputDevice.hpp>
 #include <Unreal/Property/FObjectProperty.hpp>
 #include <Unreal/Property/FBoolProperty.hpp>
@@ -1115,6 +1117,41 @@ namespace RC::GUI
         }
     }
 
+    auto is_player_controlled(UObject* object) -> bool
+    {
+        static auto IsPlayerControlled = [](UObject* pawn) -> bool {
+            static auto function = UObjectGlobals::StaticFindObject<UFunction*>(nullptr, nullptr, STR("/Script/Engine.Pawn:IsPlayerControlled"));
+            if (!function) { return false; }
+            struct Params
+            {
+                bool ReturnValue{};
+            };
+            Params params{};
+            pawn->ProcessEvent(function, &params);
+            return params.ReturnValue;
+        };
+
+        static auto pawn = UObjectGlobals::StaticFindObject<UClass*>(nullptr, nullptr, STR("/Script/Engine.Pawn"));
+        if (!pawn) { return false; }
+
+        if (object->IsA(pawn))
+        {
+            return IsPlayerControlled(object);
+        }
+
+        auto outer = object->GetOuterPrivate();
+        while (outer)
+        {
+            if (outer->IsA(pawn) && IsPlayerControlled(outer))
+            {
+                return true;
+            }
+            outer = outer->GetOuterPrivate();
+        }
+
+        return false;
+    }
+
     auto LiveView::render_info_panel_as_object(const FUObjectItem* object_item, UObject* object) -> void
     {
         if (!object || (!object_item || object_item->IsUnreachable()))
@@ -1193,6 +1230,7 @@ namespace RC::GUI
             }
         }
         ImGui::Unindent();
+        ImGui::Text("Player Controlled: %s", is_player_controlled(object) ? "Yes" : "No");
         ImGui::Separator();
         // Potential sizes: 385, -180 (open) | // 385, -286 (closed)
         if (ImGui::CollapsingHeader("Size (total size of class + parents in parentheses)"))
