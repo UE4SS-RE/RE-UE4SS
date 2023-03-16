@@ -358,7 +358,7 @@ namespace RC::OutTheShade
             std::wstring::size_type PathNameStart = 0; // include first bit (Script/Game) to avoid ambiguity; to drop it, replace with RawPathName.find_first_of('/', 1) + 1;
             std::wstring::size_type PathNameLength = RawPathName.find_last_of('.') - PathNameStart;
             std::wstring FinalPathName = RawPathName.substr(PathNameStart, PathNameLength);
-            if (!ModulePathsMap.contains(FinalPathName)) ModulePathsMap.insert_or_assign(FinalPathName, 0);
+            ModulePathsMap.insert_or_assign(FinalPathName, 0);
             ModulePathsRaw.push_back(FinalPathName);
 
             Buffer.Write(NameMap[Struct->GetNamePrivate()]);
