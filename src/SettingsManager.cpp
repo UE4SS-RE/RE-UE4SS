@@ -23,6 +23,13 @@ try                                                                     \
 }                                                                       \
 catch (std::exception&) {}
 
+#define REGISTER_FLOAT_SETTING(member_var, section_name, key)            \
+try                                                                     \
+{                                                                       \
+(member_var) = parser.get_float(section_name, STR(#key));            \
+}                                                                       \
+catch (std::exception&) {}
+
 namespace RC
 {
     auto SettingsManager::deserialize(std::filesystem::path& file_name) -> void
@@ -67,6 +74,7 @@ namespace RC
         REGISTER_BOOL_SETTING(Debug.SimpleConsoleEnabled, section_debug, ConsoleEnabled)
         REGISTER_BOOL_SETTING(Debug.DebugConsoleEnabled , section_debug, GuiConsoleEnabled)
         REGISTER_BOOL_SETTING(Debug.DebugConsoleVisible, section_debug, GuiConsoleVisible)
+        REGISTER_FLOAT_SETTING(Debug.DebugGUIFontScaling, section_debug, GuiConsoleFontScaling)
         StringType graphics_api_string{};
         REGISTER_STRING_SETTING(graphics_api_string, section_debug, GraphicsAPI)
         if (String::iequal(graphics_api_string, STR("DX11")) ||

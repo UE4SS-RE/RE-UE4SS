@@ -267,12 +267,12 @@ namespace RC::GUI
 
         
         gui_setup_style();
-        
+        m_font_scaling = UE4SSProgram::settings_manager.Debug.DebugGUIFontScaling;
         io.Fonts->Clear();
         ImFontConfig font_cfg;
         font_cfg.FontDataOwnedByAtlas = false; // if true it will try to free memory and fail
         io.Fonts->AddFontFromMemoryTTF(Roboto, sizeof(Roboto), 14, &font_cfg);
-        
+        io.FontGlobalScale = m_font_scaling;
         m_os_backend->init();
         m_gfx_backend->init();
 
