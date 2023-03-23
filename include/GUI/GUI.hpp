@@ -139,7 +139,6 @@ namespace RC::GUI
         std::unique_ptr<GfxBackendBase> m_gfx_backend{};
         std::unique_ptr<OSBackendBase> m_os_backend{};
         Console m_console{};
-        float m_font_scaling{1.0f};
         LiveView m_live_view{};
         std::stop_token m_thread_stop_token{};
         bool m_is_open{};
