@@ -26,7 +26,7 @@ LPCSTR mImportNames[] = {
 BOOL WINAPI DllMain(HMODULE hinstDLL, DWORD fdwReason, LPVOID lpvReserved) {
 	if (fdwReason == DLL_PROCESS_ATTACH) {
 		load_original_dll();
-		for (int i = 0; i < 12; i++) {
+		for (int i = 0; i <= 12; i++) {
 			mProcs[i] = (UINT_PTR)GetProcAddress(mHinstDLL, mImportNames[i]);
 		}
 	}
