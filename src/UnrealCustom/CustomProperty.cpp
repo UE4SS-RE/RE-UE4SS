@@ -1,5 +1,4 @@
 #include <UnrealCustom/CustomProperty.hpp>
-#include <Unreal/StaticOffsetFinder.hpp>
 #include <Unreal/UClass.hpp>
 #include <Unreal/Property/FArrayProperty.hpp>
 

@@ -1530,7 +1530,7 @@ namespace RC::GUI
         }
     }
 
-    static auto search_field_always_callback(ImGuiInputTextCallbackData* data) -> int
+    static auto object_search_field_always_callback(ImGuiInputTextCallbackData* data) -> int
     {
         auto typed_this = static_cast<LiveView*>(data->UserData);
         if (typed_this->was_search_field_clear_requested() && !typed_this->was_search_field_cleared())
@@ -1583,7 +1583,7 @@ namespace RC::GUI
         ImGui::PushItemWidth(-14.0f);
         bool push_inactive_text_color = !m_search_field_cleared;
         if (push_inactive_text_color) { ImGui::PushStyleColor(ImGuiCol_Text, g_imgui_text_inactive_color.Value); }
-        if (ImGui::InputText("##Search by name", m_search_by_name_buffer, m_search_buffer_capacity, ImGuiInputTextFlags_EnterReturnsTrue | ImGuiInputTextFlags_CallbackAlways, &search_field_always_callback, this))
+        if (ImGui::InputText("##Search by name", m_search_by_name_buffer, m_search_buffer_capacity, ImGuiInputTextFlags_EnterReturnsTrue | ImGuiInputTextFlags_CallbackAlways, &object_search_field_always_callback, this))
         {
             if (listeners_allowed)
             {
