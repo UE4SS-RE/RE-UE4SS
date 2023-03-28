@@ -45,6 +45,7 @@
 #include <Unreal/UPackage.hpp>
 #include <Unreal/UScriptStruct.hpp>
 #include <Unreal/UObjectArray.hpp>
+#include <Unreal/UnrealInitializer.hpp>
 
 namespace RC
 {
@@ -349,7 +350,6 @@ namespace RC
     {
         // Retrieve offsets from the config file
         const std::wstring offset_overrides_section{L"OffsetOverrides"};
-        using MemberOffsets = Unreal::StaticOffsetFinder::MemberOffsets;
 
         load_unreal_offsets_from_file();
 
