@@ -191,6 +191,22 @@ file(WRITE ${UE4SS_GENERATED_SOURCE_DIR}/version.cache "${UE4SS_LIB_VERSION}")
 message("UE4SS")
 message("Major: ${UE4SS_LIB_VERSION_MAJOR}, Minor: ${UE4SS_LIB_VERSION_MINOR}, Hotfix: ${UE4SS_LIB_VERSION_HOTFIX}, PreRelease: ${UE4SS_LIB_VERSION_PRERELEASE}, Beta: ${UE4SS_LIB_VERSION_BETA}")
 
+find_package(Git REQUIRED)
+
+# Build number is now git sha/hash
+  execute_process(
+    COMMAND ${GIT_EXECUTABLE} rev-parse --short HEAD
+    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+    RESULT_VARIABLE res
+    OUTPUT_VARIABLE UE4SS_LIB_BUILD_GITSHA
+    OUTPUT_STRIP_TRAILING_WHITESPACE)
+  if(NOT res EQUAL 0)
+    set(UE4SS_LIB_BUILD_GITSHA "0")
+  endif()
+
+set(RC_BUILD_NUMBER_HEADER_FILE "${UE4SS_GENERATED_INCLUDE_DIR}/build_number.hpp")
+file(WRITE ${RC_BUILD_NUMBER_HEADER_FILE} "#define UE4SS_LIB_BUILD_GITSHA \"${UE4SS_LIB_BUILD_GITSHA}\"")
+
 # Make the hard-coded build numbers available to source files
 add_compile_definitions(
         UE4SS_LIB_VERSION_MAJOR=${UE4SS_LIB_VERSION_MAJOR}
@@ -315,17 +331,3 @@ target_include_directories(${TARGET} PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/Depend
 target_include_directories(${XINPUT_TARGET} PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/Dependencies/GLFW/include")
 # GLFW -> END
 
-# Auto incrementing build number -> START
-# Fetch the auto incrementing build number
-# file(READ ${UE4SS_GENERATED_SOURCE_DIR}/build_number.cache UE4SS_LIB_BUILD_NUMBER)
-# message("Build #${UE4SS_LIB_BUILD_NUMBER} (Target: ${TARGET})")
-# add_custom_target(IncrementBuildNumber
-#        COMMAND ${CMAKE_COMMAND}
-#        -DRC_SOURCE_DIR:PATH="${PROJECT_SOURCE_DIR}"
-#        -DUE4SS_GENERATED_SOURCE_DIR:PATH="${UE4SS_GENERATED_SOURCE_DIR}"
-#        -DUE4SS_GENERATED_INCLUDE_DIR:PATH="${UE4SS_GENERATED_INCLUDE_DIR}"
-#        -P "${UE4SS_GENERATED_SOURCE_DIR}/build_number.cmake"
-#        )
-# add_dependencies(${TARGET} IncrementBuildNumber)
-# add_dependencies(${XINPUT_TARGET} IncrementBuildNumber)
-# Auto incrementing build number -> END

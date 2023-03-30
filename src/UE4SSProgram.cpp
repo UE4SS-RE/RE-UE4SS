@@ -163,13 +163,13 @@ namespace RC
             //*/
 
             Output::send(STR("Console created\n"));
-            Output::send(STR("UE4SS - v{}.{}.{}{}{} - Build #{}\n"),
+            Output::send(STR("UE4SS - v{}.{}.{}{}{} - Git SHA #{}\n"),
                          UE4SS_LIB_VERSION_MAJOR,
                          UE4SS_LIB_VERSION_MINOR,
                          UE4SS_LIB_VERSION_HOTFIX,
                          std::format(L"{}", UE4SS_LIB_VERSION_PRERELEASE == 0 ? L"" : std::format(L" PreRelease #{}", UE4SS_LIB_VERSION_PRERELEASE)),
                          std::format(L"{}", UE4SS_LIB_BETA_STARTED == 0 ? L"" : (UE4SS_LIB_IS_BETA == 0 ? L" Beta #?" : std::format(L" Beta #{}", UE4SS_LIB_VERSION_BETA))),
-                         UE4SS_LIB_BUILD_NUMBER);
+                         to_wstring(UE4SS_LIB_BUILD_GITSHA));
 #ifdef WITH_CASE_PRESERVING_NAME
             Output::send(STR("WITH_CASE_PRESERVING_NAME: Yes\n\n"));
 #else
