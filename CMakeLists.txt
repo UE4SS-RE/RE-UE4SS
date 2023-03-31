@@ -158,7 +158,6 @@ add_subdirectory("Dependencies/ParserBase")
 add_subdirectory("Dependencies/IniParser")
 add_subdirectory("Dependencies/JSON")
 add_subdirectory("Dependencies/ArgsParser")
-add_subdirectory("Dependencies/LuaBindingsGenerator")
 
 # UE4SS
 # Settings override -> START
@@ -274,7 +273,7 @@ set(${TARGET}_Sources
         #"${CMAKE_CURRENT_SOURCE_DIR}/Dependencies/imgui/imgui_demo.cpp"
         )
 add_library(${TARGET} SHARED ${${TARGET}_Sources})
-target_include_directories(${TARGET} PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include> $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/generated_include> $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/LuaBindings/include>)
+target_include_directories(${TARGET} PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include> $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/generated_include>)
 target_compile_options(${TARGET} PRIVATE ${PRIVATE_COMPILE_OPTIONS})
 target_link_options(${TARGET} PRIVATE ${PRIVATE_LINK_OPTIONS})
 target_compile_features(${TARGET} PUBLIC ${PUBLIC_COMPILE_FEATURES})
@@ -287,7 +286,7 @@ set(XINPUT_TARGET xinput1_3)
 enable_language(ASM_MASM)
 file(GLOB XINPUT_SOURCES "xinput/*")
 add_library(${XINPUT_TARGET} SHARED ${${TARGET}_Sources} ${XINPUT_SOURCES})
-target_include_directories(${XINPUT_TARGET} PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include> $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/generated_include> $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/LuaBindings/include>)
+target_include_directories(${XINPUT_TARGET} PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include> $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/generated_include>)
 target_compile_features(${XINPUT_TARGET} PUBLIC cxx_std_20)
 target_compile_definitions(${XINPUT_TARGET} PUBLIC $<${MAKE_DEPENDENCIES_SHARED}:LUA_BUILD_AS_DLL> UE4SS_LIB_BUILD_AS_XINPUT=1)
 target_compile_options(${XINPUT_TARGET} PRIVATE ${PRIVATE_MASM_COMPILE_OPTIONS})

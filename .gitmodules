@@ -2,62 +2,6 @@
 	path = Dependencies/Unreal
 	url = git@github.com:Re-UE4SS/UEPseudo.git
 	branch = main
-[submodule "Dependencies/Helpers"]
-	path = Dependencies/Helpers
-	url = git@github.com:UE4SS-RE/Helpers.git
-	branch = main
-[submodule "Dependencies/File"]
-	path = Dependencies/File
-	url = git@github.com:UE4SS-RE/File.git
-	branch = main
-[submodule "Dependencies/Function"]
-	path = Dependencies/Function
-	url = git@github.com:UE4SS-RE/Function.git
-	branch = main
-[submodule "Dependencies/Constructs"]
-	path = Dependencies/Constructs
-	url = git@github.com:UE4SS-RE/Constructs.git
-	branch = main
-[submodule "Dependencies/SinglePassSigScanner"]
-	path = Dependencies/SinglePassSigScanner
-	url = git@github.com:UE4SS-RE/SinglePassSigScanner.git
-	branch = main
-[submodule "Dependencies/ScopedTimer"]
-	path = Dependencies/ScopedTimer
-	url = git@github.com:UE4SS-RE/ScopedTimer.git
-	branch = main
-[submodule "Dependencies/DynamicOutput"]
-	path = Dependencies/DynamicOutput
-	url = git@github.com:UE4SS-RE/DynamicOutput.git
-	branch = main
-[submodule "Dependencies/MProgram"]
-	path = Dependencies/MProgram
-	url = git@github.com:UE4SS-RE/MProgram.git
-	branch = main
-[submodule "Dependencies/LuaMadeSimple"]
-	path = Dependencies/LuaMadeSimple
-	url = git@github.com:UE4SS-RE/LuaMadeSimple.git
-	branch = main
-[submodule "Dependencies/Input"]
-	path = Dependencies/Input
-	url = git@github.com:UE4SS-RE/Input.git
-	branch = main
-[submodule "Dependencies/JSON"]
-	path = Dependencies/JSON
-	url = git@github.com:UE4SS-RE/JSON.git
-	branch = main
-[submodule "Dependencies/IniParser"]
-	path = Dependencies/IniParser
-	url = git@github.com:UE4SS-RE/IniParser.git
-	branch = main
-[submodule "Dependencies/FunctionTimer"]
-	path = Dependencies/FunctionTimer
-	url = git@github.com:UE4SS-RE/FunctionTimer.git
-	branch = main
-[submodule "Dependencies/LuaRaw"]
-	path = Dependencies/LuaRaw
-	url = git@github.com:UE4SS-RE/LuaRaw.git
-	branch = main
 [submodule "Dependencies/PolyHook_2_0"]
 	path = Dependencies/PolyHook_2_0
 	url = git@github.com:UE4SS-RE/PolyHook_2_0.git
@@ -66,25 +10,6 @@
 	path = Dependencies/fmt
 	url = git@github.com:fmtlib/fmt.git
 	branch = master
-[submodule "Dependencies/ParserBase"]
-	path = Dependencies/ParserBase
-	url = git@github.com:UE4SS-RE/ParserBase.git
-	branch = main
-[submodule "Dependencies/ImGuiColorTextEdit"]
-	path = Dependencies/ImGuiColorTextEdit
-	url = https://github.com/UE4SS-RE/ImGuiColorTextEdit.git
-[submodule "Dependencies/LuaBindingsGenerator"]
-	path = Dependencies/LuaBindingsGenerator
-	url = https://github.com/UE4SS-RE/LuaBindingsGenerator.git
-[submodule "Dependencies/ArgsParser"]
-	path = Dependencies/ArgsParser
-	url = https://github.com/UE4SS-RE/ArgsParser.git
-[submodule "Dependencies/imgui"]
-	path = Dependencies/imgui
-	url = https://github.com/narknon/imgui.git
 [submodule "Dependencies/zydis"]
 	path = Dependencies/zydis
 	url = git@github.com:zyantific/zydis.git
-[submodule "Dependencies/ASMHelper"]
-	path = Dependencies/ASMHelper
-	url = git@github.com:UE4SS-RE/ASMHelper.git
