@@ -7,9 +7,6 @@
 
 namespace RC::LuaMadeSimple
 {
-    // State that controls whether actions can be performed
-    static GlobalState global_state = GlobalState::Ready;
-
     // All lua instances, lua_State* are stored in the Lua class
     static std::unordered_map<lua_State*, std::shared_ptr<Lua>> lua_instances;
 
@@ -242,7 +239,7 @@ namespace RC::LuaMadeSimple
 
     auto Lua::Table::get_float_field(std::string_view field_name, bool* has_error) -> float
     {
-        int type = push_field_name_and_value(field_name);
+        push_field_name_and_value(field_name);
         if (!get_lua_instance().is_number(-1))
         {
             if (has_error)
@@ -470,7 +467,7 @@ namespace RC::LuaMadeSimple
         return m_registry;
     }
 
-    auto Lua::rawgeti(int32_t idx, lua_Integer n) const -> const int32_t
+    auto Lua::rawgeti(int32_t idx, lua_Integer n) const -> int32_t
     {
         return lua_rawgeti(get_lua_state(), idx, n);
     }

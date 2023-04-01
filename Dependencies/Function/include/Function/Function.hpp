@@ -4,6 +4,8 @@
 #include <bit>
 #include <stdexcept>
 
+// Note: When we assign to 'm_function_address' from a function pointer, we're probably breaking some rules.
+//       Though it's likely, a function is not guaranteed to be represented as a pointer.
 namespace RC
 {
     template<typename>
@@ -39,7 +41,7 @@ namespace RC
         auto assign_address(FunctionSignature func_ptr) -> void
         {
             m_active_func = func_ptr;
-            m_function_address = func_ptr;
+            m_function_address = std::bit_cast<void*>(func_ptr);
             m_stored_original_func = m_active_func;
             m_is_ready = true;
         }
@@ -51,7 +53,7 @@ namespace RC
             if (!func_address) { throw std::runtime_error{"Tried to set the function pointer of a Function object to nullptr"}; }
             m_active_func = std::bit_cast<FunctionSignature>(func_address);
             m_stored_original_func = m_active_func;
-            m_function_address = m_active_func;
+            m_function_address = func_address;
             m_is_ready = true;
         }
 
@@ -59,7 +61,7 @@ namespace RC
         auto assign_temp_address(FunctionSignature func_ptr) -> void
         {
             m_active_func = func_ptr;
-            m_function_address = func_ptr;
+            m_function_address = std::bit_cast<void*>(func_ptr);
             m_is_ready = true;
         }
 
@@ -77,7 +79,7 @@ namespace RC
         auto reset_address() -> void
         {
             m_active_func = m_stored_original_func;
-            m_function_address = m_stored_original_func;
+            m_function_address = std::bit_cast<void*>(m_stored_original_func);
         }
 
         // Returns the currently active function pointer

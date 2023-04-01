@@ -79,7 +79,7 @@ namespace RC
                     }
                 },
                 // On Scan Completed
-                [&lua, scan_complete_func]([[maybe_unused]]const SignatureContainer& self) {
+                [scan_complete_func]([[maybe_unused]]const SignatureContainer& self) {
                     scan_complete_func(self.get_did_succeed() ? DidLuaScanSucceed::Yes : DidLuaScanSucceed::No);
                 }
         });

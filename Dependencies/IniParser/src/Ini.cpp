@@ -8,7 +8,7 @@ namespace RC::Ini
     {
         // Tokenize -> START
         ParserBase::Tokenizer tokenizer;
-        tokenizer.set_available_tokens(std::move(create_available_tokens_for_tokenizer()));
+        tokenizer.set_available_tokens(create_available_tokens_for_tokenizer());
         tokenizer.tokenize(input);
         // Tokenize -> END
 
@@ -28,7 +28,7 @@ namespace RC::Ini
         tc.add(ParserBase::Token::create(IniTokenType::NewLine, STR("NewLine"), STR("\n")));
         tc.add(ParserBase::Token::create(IniTokenType::Space, STR("Space"), STR(" ")));
         tc.add(ParserBase::Token::create(IniTokenType::Characters, STR("Characters"), STR(""), ParserBase::Token::HasData::Yes)); // Empty identifier will match everything that no other token identifier matches
-        tc.add(ParserBase::Token::create/*<IniInternal::TokenEqualsAlwaysHaveCharactersUntilEndLine>/**/(IniTokenType::Equals, STR("Equals"), STR("=")));
+        tc.add(ParserBase::Token::create/*<IniInternal::TokenEqualsAlwaysHaveCharactersUntilEndLine>*/(IniTokenType::Equals, STR("Equals"), STR("=")));
         tc.add(ParserBase::Token::create(IniTokenType::ClosingSquareBracket, STR("CloseSquareBracket"), STR("]")));
         tc.add(ParserBase::Token::create(IniTokenType::OpeningSquareBracket, STR("OpenSquareBracket"), STR("[")));
         tc.add(ParserBase::Token::create(IniTokenType::SemiColon, STR("SemiColon"), STR(";")));

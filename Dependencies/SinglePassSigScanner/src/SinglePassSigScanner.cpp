@@ -367,7 +367,7 @@ namespace RC
         auto start_address = static_cast<uint8_t*>(module.lpBaseOfDll);
         auto end_address = static_cast<uint8_t*>(module.lpBaseOfDll) + module.SizeOfImage;
 
-        MEMORY_BASIC_INFORMATION memory_info{nullptr};
+        MEMORY_BASIC_INFORMATION memory_info{};
         DWORD protect_flags = PAGE_GUARD | PAGE_NOCACHE | PAGE_NOACCESS;
 
         void* address_found{};
@@ -409,7 +409,7 @@ namespace RC
         if (!start_address) { start_address = static_cast<uint8_t*>(info.lpMinimumApplicationAddress); }
         if (!end_address) { start_address = static_cast<uint8_t*>(info.lpMaximumApplicationAddress); }
 
-        MEMORY_BASIC_INFORMATION memory_info{nullptr};
+        MEMORY_BASIC_INFORMATION memory_info{};
         DWORD protect_flags = PAGE_GUARD | PAGE_NOCACHE | PAGE_NOACCESS;
 
         // TODO: Nasty nasty nasty. Come up with a better solution... wtf
@@ -428,16 +428,16 @@ namespace RC
         for (const auto& container : signature_containers)
         {
             // Only continue if the signature is properly formatted
-            for (const auto& signature_data : container.signatures)
-            {
-                // Bring this code back when both:
-                // A. The regex has been updated to take into consideration.
-                // B. The threads have been synced before the scan to verify that all threads are scanning for valid signatures.
-                //if (!std::regex_search(signature_data.signature, signature_validity_regex))
-                //{
-                //    throw std::runtime_error{std::format("[SinglePassSigScanner::start_scan] A signature is improperly formatted. Signature: {}", signature_data.signature)};
-                //}
-            }
+            // Bring this code back when both:
+            // A. The regex has been updated to take into consideration.
+            // B. The threads have been synced before the scan to verify that all threads are scanning for valid signatures.
+            //for (const auto& signature_data : container.signatures)
+            //{
+            //    if (!std::regex_search(signature_data.signature, signature_validity_regex))
+            //    {
+            //        throw std::runtime_error{std::format("[SinglePassSigScanner::start_scan] A signature is improperly formatted. Signature: {}", signature_data.signature)};
+            //    }
+            //}
 
             // Signatures for this container
             vector_of_sigs.emplace_back(string_to_vector(container.signatures));

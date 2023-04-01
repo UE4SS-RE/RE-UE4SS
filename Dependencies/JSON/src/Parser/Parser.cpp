@@ -31,7 +31,7 @@ namespace RC::JSON::Parser
         {
             // Tokenize -> START
             ParserBase::Tokenizer tokenizer;
-            tokenizer.set_available_tokens(std::move(create_available_tokens_for_tokenizer()));
+            tokenizer.set_available_tokens(create_available_tokens_for_tokenizer());
             tokenizer.tokenize(input);
             // Tokenize -> END
 
@@ -51,12 +51,12 @@ namespace RC::JSON::Parser
 
     auto parse(File::StringType& input) -> std::unique_ptr<JSON::Object>
     {
-        return std::move(Internal::parse_internal(input));
+        return Internal::parse_internal(input);
     }
 
     auto parse(const File::Handle& file) -> std::unique_ptr<JSON::Object>
     {
         auto input = file.read_all();
-        return std::move(Internal::parse_internal(input));
+        return Internal::parse_internal(input);
     }
 }

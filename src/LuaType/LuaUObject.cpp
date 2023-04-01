@@ -116,7 +116,7 @@ namespace RC::LuaType
             }
 
             //for (uint8_t i = 0; i < num_expected_params; ++i)
-            uint8_t i = 0;
+            //uint8_t i = 0;
             func->ForEachProperty([&](Unreal::FProperty* param_next) {
                 //if (i > 0)
                 //{
@@ -717,7 +717,6 @@ namespace RC::LuaType
 
             size_t array_element_size = inner->GetElementSize();
 
-            Unreal::FScriptArray* current_array{static_cast<Unreal::FScriptArray*>(params.data)};
             unsigned char* array{};
             size_t table_length = lua_rawlen(params.lua.get_lua_state(), 1);
             bool has_elements = table_length > 0;
@@ -748,9 +747,7 @@ namespace RC::LuaType
                 });
             }
 
-            auto* new_script_array = static_cast<Unreal::FScriptArray*>(Unreal::FMemory::Malloc(sizeof(Unreal::FScriptArray)));
-
-            auto* to_array = static_cast<Unreal::FScriptArray*>(params.data);
+            //auto* to_array = static_cast<Unreal::FScriptArray*>(params.data);
             if (has_elements)
             {
                 //to_array->SetAllocatorInstance(array);

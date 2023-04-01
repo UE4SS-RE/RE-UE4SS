@@ -36,6 +36,7 @@ namespace RC::GUI
 
     public:
         GfxBackendBase() = default;
+        virtual ~GfxBackendBase() = default;
 
     public:
         auto set_os_backend(OSBackendBase* backend) { m_os_backend = backend; }
@@ -62,6 +63,7 @@ namespace RC::GUI
 
     public:
         OSBackendBase() = default;
+        virtual ~OSBackendBase() = default;
 
     public:
         auto set_gfx_backend(GfxBackendBase* backend) { m_gfx_backend = backend; }

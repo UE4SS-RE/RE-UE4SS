@@ -19,7 +19,10 @@ namespace RC::Unreal
     private:
         // Untyped data
         // The proper data will be copied inside at the proper offsets using StaticOffsetFinder
+        #pragma clang diagnostic push
+        #pragma clang diagnostic ignored "-Wunused-private-field"
         std::byte m_data[0x128]{};
+        #pragma clang diagnostic pop
 
     public:
         CustomProperty(int32_t offset_internal, int32_t element_size);

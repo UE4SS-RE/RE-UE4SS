@@ -519,7 +519,7 @@ namespace RC::LuaMadeSimple
         RC_LMS_API auto set_hook(lua_Hook, int32_t mask, int32_t count) const -> void;
 
         RC_LMS_API auto registry() const -> const Registry&;
-        RC_LMS_API auto rawgeti(int32_t idx, lua_Integer n) const -> const int32_t;
+        RC_LMS_API auto rawgeti(int32_t idx, lua_Integer n) const -> int32_t;
 
         RC_LMS_API auto register_post_function_process_callback(PostFunctionProcessCallback) -> void;
         RC_LMS_API auto register_function(const std::string& name, const LuaFunction&) const -> void;

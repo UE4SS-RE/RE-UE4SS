@@ -1,5 +1,8 @@
 #pragma once
 
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wunused-variable"
+
 class IBufferWriter
 {
 public:
@@ -116,3 +119,5 @@ public:
         Write(&Input, sizeof(T));
     }
 };
+
+#pragma clang diagnostic pop

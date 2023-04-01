@@ -91,48 +91,6 @@ namespace RC::ParserBase
             }
         };
 
-        auto try_find_token_identifier = [&](const Token& token_to_find) -> int {
-            //File::StringType b;
-            int local_cursor{};
-
-            for (const File::CharType* c = &input_array[global_cursor+1]; local_cursor < input.size() - global_cursor; ++c, ++local_cursor)
-            {
-                File::StringViewType identifier_to_find = token_to_find.get_identifier();
-                File::StringType compare_to;
-                peek(compare_to, c, identifier_to_find.size());
-
-                if (identifier_to_find == compare_to)
-                {
-                    return local_cursor;
-                }
-
-                /*
-                if (*c == identifier_to_find[0])
-                {
-                    // The first character matches the first character of the identifier
-                    if (identifier_to_find.size() == 1)
-                    {
-                        // The size of the identifier to find is 1, then we've found the identifier, exit early
-                        return local_cursor;
-                    }
-
-                    // Add it to 'b' and step forward
-                    b += *c;
-                }
-                else if (b == identifier_to_find)
-                {
-                    return local_cursor;
-                }
-                else if (b.size() > 0)
-                {
-                    b.clear();
-                }
-                //*/
-            }
-            
-            return -1;
-        };
-
         struct TokenFoundWrapper
         {
             const Token* token{nullptr};

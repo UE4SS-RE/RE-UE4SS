@@ -93,7 +93,7 @@ namespace RC::JSON::Parser
             int local_peek_counter = peek_counter;
 
             const auto& token = peek(local_peek_counter);
-            if ((token.get_type() != TokenType::CarriageReturn && token.get_type() != TokenType::NewLine && token.get_type() != TokenType::Characters) || token.has_data() && !has_only_spaces(get_data(token)))
+            if ((token.get_type() != TokenType::CarriageReturn && token.get_type() != TokenType::NewLine && token.get_type() != TokenType::Characters) || (token.has_data() && !has_only_spaces(get_data(token))))
             {
                 break;
             }

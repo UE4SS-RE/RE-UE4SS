@@ -503,7 +503,7 @@ namespace RC
     {
         // Verify that there's a 'Scripts' directory
         // Give the full path to the 'Scripts' directory to the mod container
-        m_scripts_path = std::move(m_mod_path + L"\\scripts");
+        m_scripts_path = m_mod_path + L"\\scripts";
 
         // If the 'Scripts' directory doesn't exist then mark the mod as non-installable and move on to the next mod
         if (!std::filesystem::exists(m_scripts_path))
@@ -1232,8 +1232,8 @@ Overloads:
             void* param_external_package{};
             if (lua.is_integer()) { param_external_package = reinterpret_cast<void*>(static_cast<uintptr_t>(lua.get_integer())); }
 
-            void* param_subobject_overrides{};
-            if (lua.is_integer()) { param_subobject_overrides = reinterpret_cast<void*>(static_cast<uintptr_t>(lua.get_integer())); }
+            //void* param_subobject_overrides{};
+            //if (lua.is_integer()) { param_subobject_overrides = reinterpret_cast<void*>(static_cast<uintptr_t>(lua.get_integer())); }
 
             Unreal::FStaticConstructObjectParameters params{param_class, param_outer};
             params.Name = param_name;
@@ -2114,7 +2114,6 @@ Overloads:
 
             Unreal::FName object_class_name{};
             Unreal::UClass* in_class{};
-            bool object_class_name_supplied{true};
             bool could_be_in_class{};
             if (lua.is_string())
             {
@@ -2143,7 +2142,6 @@ Overloads:
             else if (lua.is_nil())
             {
                 lua.discard_value();
-                object_class_name_supplied = false;
                 could_be_in_class = true;
             }
             else
@@ -2266,6 +2264,10 @@ Overloads:
             int32_t num_objects_to_find{};
             if (lua.is_integer())
             {
+                if (num_objects_to_find < 0)
+                {
+                    throw std::runtime_error{error_overload_not_found};
+                }
                 num_objects_to_find = static_cast<int32_t>(lua.get_integer());
             }
             else if (lua.is_nil())
@@ -2392,10 +2394,10 @@ Overloads:
             }
 
             std::vector<Unreal::UObject*> objects_found{};
-            Unreal::UObjectGlobals::FindObjects(num_objects_to_find, object_class_name, object_short_name, objects_found, required_flags, banned_flags, exact_class);
+            Unreal::UObjectGlobals::FindObjects(static_cast<size_t>(num_objects_to_find), object_class_name, object_short_name, objects_found, required_flags, banned_flags, exact_class);
 
             auto table = lua.prepare_new_table(static_cast<int32_t>(objects_found.size()));
-            for (auto i = 0; i < objects_found.size(); ++i)
+            for (size_t i = 0; i < objects_found.size(); ++i)
             {
                 table.add_key(i + 1);
                 LuaType::auto_construct_object(lua, objects_found[i]);
@@ -3411,7 +3413,7 @@ Overloads:
                         LuaType::RemoteUnrealParam::construct(callback_data.lua, &context, s_object_property_name);
                         callback_data.lua.set_string(to_string(command));
                         auto params_table = callback_data.lua.prepare_new_table();
-                        for (auto i = 1; i < command_parts.size(); ++i)
+                        for (size_t i = 1; i < command_parts.size(); ++i)
                         {
                             const auto& command_part = command_parts[i];
                             params_table.add_pair(i, to_string(command_part).c_str());
@@ -3466,7 +3468,7 @@ Overloads:
                         LuaType::RemoteUnrealParam::construct(callback_data.lua, &context, s_object_property_name);
                         callback_data.lua.set_string(to_string(command));
                         auto params_table = callback_data.lua.prepare_new_table();
-                        for (auto i = 1; i < command_parts.size(); ++i)
+                        for (size_t i = 1; i < command_parts.size(); ++i)
                         {
                             const auto& command_part = command_parts[i];
                             params_table.add_pair(i, to_string(command_part).c_str());
@@ -3535,7 +3537,7 @@ Overloads:
                         callback_data.lua.set_string(to_string(command));
 
                         auto params_table = callback_data.lua.prepare_new_table();
-                        for (auto i = 1; i < command_parts.size(); ++i)
+                        for (size_t i = 1; i < command_parts.size(); ++i)
                         {
                             const auto& command_part = command_parts[i];
                             params_table.add_pair(i, to_string(command_part).c_str());
@@ -3595,7 +3597,7 @@ Overloads:
                         callback_data.lua.set_string(to_string(command));
 
                         auto params_table = callback_data.lua.prepare_new_table();
-                        for (auto i = 1; i < command_parts.size(); ++i)
+                        for (size_t i = 1; i < command_parts.size(); ++i)
                         {
                             const auto& command_part = command_parts[i];
                             params_table.add_pair(i, to_string(command_part).c_str());

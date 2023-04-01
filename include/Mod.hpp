@@ -60,10 +60,10 @@ namespace RC
             // TODO: Use LuaMadeSimple instead of lua_State*
             // Not doing it now because the copy constructor gets implicitly deleted which is needed for erase & remove_if
             // lua_State* lua_state;
-            int32_t lua_action_function_ref;
-            ActionType type;
-            std::chrono::time_point<std::chrono::steady_clock> created_at;
-            int64_t delay;
+            int32_t lua_action_function_ref{};
+            ActionType type{};
+            std::chrono::time_point<std::chrono::steady_clock> created_at{};
+            int64_t delay{};
         };
         std::vector<AsyncAction> m_pending_actions{};
         std::vector<AsyncAction> m_delayed_actions{};

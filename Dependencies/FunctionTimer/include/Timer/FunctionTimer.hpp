@@ -5,6 +5,7 @@
 #include <unordered_map>
 #include <chrono>
 #include <numeric>
+#include <limits>
 
 #include <Timer/Common.hpp>
 #include <DynamicOutput/DynamicOutput.hpp>
@@ -83,7 +84,7 @@ FunctionTimer scoped_function_timer{__FUNCSIG__};
         std::vector<FunctionTimerInternalFrame> hit_frames{};
 
     public:
-        FunctionTimerFrame(std::string function_name) : self_frame_index(s_frame_stack.size()), end_frame_index(s_frame_stack.size()), function_name(function_name)
+        FunctionTimerFrame(std::string function_name) : function_name(function_name), self_frame_index(s_frame_stack.size()), end_frame_index(s_frame_stack.size())
         {
             hit_frames.reserve(100000);
         }
@@ -240,7 +241,7 @@ FunctionTimer scoped_function_timer{__FUNCSIG__};
     public:
         ~FunctionTimerFrameGuard()
         {
-            if (!FunctionTimerFrame::s_frame_stack.empty() && self_frame_index != -1)
+            if (!FunctionTimerFrame::s_frame_stack.empty() && self_frame_index != std::numeric_limits<size_t>::max())
             {
                 FunctionTimerFrame::s_frame_stack[self_frame_index].stop_timer();
             }
@@ -256,7 +257,7 @@ if (FunctionTimerFrame::s_timer_enabled) \
     function_timer_frame = FunctionTimerFrame::new_frame(__FUNCSIG__); \
     function_timer_frame->start_timer();  \
 } \
-FunctionTimerFrameGuard function_timer_frame_guard{function_timer_frame ? function_timer_frame->self_frame_index : -1};
+FunctionTimerFrameGuard function_timer_frame_guard{function_timer_frame ? function_timer_frame->self_frame_index : std::numeric_limits<size_t>::max()};
 #endif
 #else
 #define TIME_FUNCTION()

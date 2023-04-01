@@ -18,6 +18,12 @@ namespace RC::Helper::ASM
         MAX_INSTRUCTIONS,
     };
 
+    inline auto operator>(Instruction lhs, size_t rhs) -> bool
+    {
+        static_assert(sizeof(lhs) <= sizeof(rhs));
+        return static_cast<size_t>(lhs) > rhs;
+    }
+
     constexpr inline static int32_t rex_prefix = 0x48;
 
     struct OpCodeInfo
@@ -54,7 +60,7 @@ namespace RC::Helper::ASM
         if (!instr_ptr) { return opi; }
         if (instr > asm_instructions.size()) { return opi; }
 
-        for (int i : asm_instructions[instr])
+        for (int i : asm_instructions[static_cast<size_t>(instr)])
         {
             if (*instr_ptr == i || (*instr_ptr == rex_prefix && *(instr_ptr + 1) == i))
             {

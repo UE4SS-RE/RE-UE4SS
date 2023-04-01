@@ -198,7 +198,7 @@ namespace RC::UEGenerator
     auto CXXGenerator::generate_tab(size_t num_tabs) -> File::StringType
     {
         File::StringType tab_storage{};
-        for (int i = 0; i < num_tabs; ++i)
+        for (size_t i = 0; i < num_tabs; ++i)
         {
             for (int space = 0; space < 4; ++space)
             {
@@ -537,7 +537,6 @@ namespace RC::UEGenerator
 
             content_buffer.append(std::format(STR("{}\n"), generate_offset_comment(property, part_one)));
 
-            FName property_type_name = property->GetClass().GetFName();
             if (property->IsA<FDelegateProperty>())
             {
                 generate_function_declaration(object_info, make_function_info(object_info, static_cast<FDelegateProperty*>(property)->GetFunctionSignature(), current_class_content), generated_file, content_buffer, IsDelegateFunction::Yes);
@@ -559,7 +558,6 @@ namespace RC::UEGenerator
                 if (next_property)
                 {
                     int32_t current_property_end_location = current_property_offset + current_property_size;
-                    auto test = current_property_end_location % current_property_size;
 
                     int32_t next_property_offset = next_property->GetOffset_Internal();
 

@@ -3,9 +3,9 @@
 namespace RC::ParserBase
 {
     Token::Token(int type, File::StringViewType name, File::StringViewType identifier, Token::HasData has_data)
-            : m_type(type),
-              m_debug_name(name),
+            : m_debug_name(name),
               m_identifier(identifier),
+              m_type(type),
               m_has_data(has_data)
     {
     }
