@@ -7,6 +7,8 @@
 #include <Helpers/Casting.hpp>
 #include <Unreal/FProperty.hpp>
 
+#pragma warning(disable: 4068)
+
 namespace RC::Unreal
 {
     class UClass;
@@ -72,5 +74,7 @@ namespace RC::Unreal
         auto static construct(int32_t offset_internal, UScriptStruct* script_struct, int32_t element_size) -> std::unique_ptr<CustomProperty>;
     };
 }
+
+#pragma warning(default: 4068)
 
 #endif //UE4SS_CUSTOMPROPERTY_HPP

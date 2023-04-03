@@ -1,5 +1,7 @@
 #pragma once
 
+#pragma warning(disable: 4068)
+
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wunused-variable"
 
@@ -121,3 +123,5 @@ public:
 };
 
 #pragma clang diagnostic pop
+
+#pragma warning(default: 4068)
