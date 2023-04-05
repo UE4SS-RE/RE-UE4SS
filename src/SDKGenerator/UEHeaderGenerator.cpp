@@ -172,7 +172,7 @@ namespace RC::UEGenerator
                 resulting_string.append(STR(", "));
             }
 
-            for (const std::pair<std::wstring, std::set<std::wstring>>& parameter_pair : m_parameters)
+            for (const auto& parameter_pair : m_parameters)
             {
                 resulting_string.append(parameter_pair.first);
                 resulting_string.append(STR("="));
@@ -2514,7 +2514,6 @@ namespace RC::UEGenerator
 
     auto UEHeaderGenerator::generate_function_parameter_list(UClass* uclass, UFunction* function, GeneratedSourceFile& header_data, bool generate_comma_before_name, const std::wstring& context_name, const CaseInsensitiveSet& blacklisted_property_names, int32_t* out_num_params) -> std::wstring
     {
-        auto function_flags = function->GetFunctionFlags();
         std::wstring function_arguments_string;
 
         function->ForEachProperty([&](FProperty* property) {
@@ -2611,7 +2610,6 @@ namespace RC::UEGenerator
         if (field_class_name == STR("EnumProperty"))
         {
             FEnumProperty* enum_property = static_cast<FEnumProperty*>(property);
-            FNumericProperty* underlying_type = enum_property->GetUnderlyingProperty();
             UEnum* uenum = enum_property->GetEnum();
 
             if (uenum == NULL)
@@ -3285,8 +3283,6 @@ namespace RC::UEGenerator
         }
         else if (object_class->IsChildOf(UEnum::StaticClass()))
         {
-            UEnum* uenum = static_cast<UEnum*>(object);
-
             //TODO do we want them? They're not that easy since we do not know enum types precisely in advance
             throw std::invalid_argument("Enum pre-declarations are not supported");
         }

@@ -40,7 +40,7 @@ namespace RC::UEGenerator
                 auto as_class = Cast<UClass>(object);
                 auto as_script_struct = as_class ? static_cast<UScriptStruct*>(nullptr) : Cast<UScriptStruct>(object);
                 if (!as_class && !as_script_struct) { return LoopAction::Continue; }
-                if (as_class && as_class->HasAnyClassFlags(CLASS_Native) || as_script_struct && as_script_struct->HasAnyStructFlags(STRUCT_Native))
+                if ((as_class && as_class->HasAnyClassFlags(CLASS_Native)) || (as_script_struct && as_script_struct->HasAnyStructFlags(STRUCT_Native)))
                 {
                     casted_object->ForEachProperty([&](FProperty* property) {
                         if (!property->IsA<FMapProperty>() || MapProperties.contains(property->GetFName())) { return LoopAction::Continue; }

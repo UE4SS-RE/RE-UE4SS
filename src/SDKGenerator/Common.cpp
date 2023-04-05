@@ -177,7 +177,6 @@ namespace RC::UEGenerator
         if (field_class_name == STR("EnumProperty"))
         {
             FEnumProperty* enum_property = static_cast<FEnumProperty*>(property);
-            FNumericProperty* underlying_property = enum_property->GetUnderlyingProperty();
             UEnum* uenum = enum_property->GetEnum();
 
             if (uenum == NULL)
@@ -401,7 +400,6 @@ namespace RC::UEGenerator
         if (field_class_name == STR("DelegateProperty"))
         {
             FDelegateProperty* delegate_property = static_cast<FDelegateProperty*>(property);
-            UFunction* delegate_signature_function = delegate_property->GetFunctionSignature();
 
             const std::wstring delegate_type_name = generate_delegate_name(delegate_property, class_context->GetName());
             return delegate_type_name;
@@ -412,7 +410,6 @@ namespace RC::UEGenerator
         if (field_class_name == STR("MulticastInlineDelegateProperty") || field_class_name == STR("MulticastDelegateProperty"))
         {
             FMulticastInlineDelegateProperty* delegate_property = static_cast<FMulticastInlineDelegateProperty*>(property);
-            UFunction* delegate_signature_function = delegate_property->GetFunctionSignature();
 
             const std::wstring delegate_type_name = generate_delegate_name(delegate_property, class_context->GetName());
             return delegate_type_name;
@@ -421,7 +418,6 @@ namespace RC::UEGenerator
         if (field_class_name == STR("MulticastSparseDelegateProperty"))
         {
             FMulticastSparseDelegateProperty* delegate_property = static_cast<FMulticastSparseDelegateProperty*>(property);
-            UFunction* delegate_signature_function = delegate_property->GetFunctionSignature();
 
             const std::wstring delegate_type_name = generate_delegate_name(delegate_property, class_context->GetName());
             return delegate_type_name;

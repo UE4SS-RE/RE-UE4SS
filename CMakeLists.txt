@@ -60,11 +60,15 @@ set(PRIVATE_COMPILE_DEFINITIONS
         $<${MAKE_DEPENDENCIES_SHARED}:RC_EXPORT RC_FUNCTION_EXPORTS>
         $<${MAKE_DEPENDENCIES_STATIC}:RC_FUNCTION_BUILD_STATIC>)
 if (${CMAKE_CXX_COMPILER_ID} STREQUAL MSVC)
-    set(PRIVATE_COMPILE_OPTIONS /MP $<$<CONFIG:RELEASE>:/Zi> /W3 /wd4005 /wd4251)
-    set(PRIVATE_MASM_COMPILE_OPTIONS /MP $<$<CONFIG:RELEASE>:/Zi>)
+    set(PRIVATE_COMPILE_OPTIONS /MP $<$<CONFIG:RELEASE>:/Zi> /W3 /wd4005 /wd4251 /wd4068)
+    set(PRIVATE_MASM_COMPILE_OPTIONS /MP $<$<CONFIG:RELEASE>:/Zi> /wd4005 /wd4251 /wd4068)
+    set(PRIVATE_LINK_OPTIONS /DEBUG:FULL)
+elseif (${CMAKE_CXX_COMPILER_ID} STREQUAL Clang)
+    set(PRIVATE_COMPILE_OPTIONS "$<IF:$<COMPILE_LANGUAGE:ASM_MASM>,,-g;-gcodeview;-fcolor-diagnostics;-Wall;-Wextra;-Wno-unknown-pragmas;-Wno-unused-parameter>")
+    set(PRIVATE_LINK_OPTIONS "$<IF:$<COMPILE_LANGUAGE:ASM_MASM>,,-g>")
 endif ()
-set(PRIVATE_LINK_OPTIONS /DEBUG:FULL)
 set(PUBLIC_COMPILE_FEATURES cxx_std_20)
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 set(UE4SS_COMPILE_DEFINITIONS
         RC_ASM_HELPER_BUILD_STATIC
@@ -136,6 +140,10 @@ set(POLYHOOK_DISASM_CAPSTONE OFF CACHE BOOL "Enable capstone support" FORCE)
 set(POLYHOOK_DISASM_CAPSTONE_FULL OFF CACHE BOOL "Build all features of capstone." FORCE)
 set(POLYHOOK_DISASM_ZYDIS ON CACHE BOOL "Enable Zydis support." FORCE)
 add_subdirectory(Dependencies/PolyHook_2_0)
+if (${CMAKE_CXX_COMPILER_ID} STREQUAL Clang)
+    target_compile_options(asmjit PRIVATE -Wno-bitwise-instead-of-logical -Wno-sign-conversion -Wno-unused-command-line-argument -Wno-unused-but-set-variable)
+    target_compile_options(PolyHook_2 PRIVATE -Wno-unused-value -Wno-missing-field-initializers -Wno-missing-braces -Wno-unused-variable -Wno-bitwise-instead-of-logical -Wno-reorder-ctor -Wno-unused-private-field)
+endif ()
 # For some reason, PolyHook isn't adding the capstone or zydis include directories
 include_directories(Dependencies/PolyHook_2_0)
 include_directories(Dependencies/PolyHook_2_0/capstone/include)
@@ -158,7 +166,6 @@ add_subdirectory("Dependencies/ParserBase")
 add_subdirectory("Dependencies/IniParser")
 add_subdirectory("Dependencies/JSON")
 add_subdirectory("Dependencies/ArgsParser")
-add_subdirectory("Dependencies/LuaBindingsGenerator")
 
 # UE4SS
 # Settings override -> START
@@ -290,7 +297,7 @@ set(${TARGET}_Sources
         #"${CMAKE_CURRENT_SOURCE_DIR}/Dependencies/imgui/imgui_demo.cpp"
         )
 add_library(${TARGET} SHARED ${${TARGET}_Sources})
-target_include_directories(${TARGET} PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include> $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/generated_include> $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/LuaBindings/include>)
+target_include_directories(${TARGET} PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include> $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/generated_include>)
 target_compile_options(${TARGET} PRIVATE ${PRIVATE_COMPILE_OPTIONS})
 target_link_options(${TARGET} PRIVATE ${PRIVATE_LINK_OPTIONS})
 target_compile_features(${TARGET} PUBLIC ${PUBLIC_COMPILE_FEATURES})
@@ -303,7 +310,7 @@ set(XINPUT_TARGET xinput1_3)
 enable_language(ASM_MASM)
 file(GLOB XINPUT_SOURCES "xinput/*")
 add_library(${XINPUT_TARGET} SHARED ${${TARGET}_Sources} ${XINPUT_SOURCES})
-target_include_directories(${XINPUT_TARGET} PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include> $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/generated_include> $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/LuaBindings/include>)
+target_include_directories(${XINPUT_TARGET} PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include> $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/generated_include>)
 target_compile_features(${XINPUT_TARGET} PUBLIC cxx_std_20)
 target_compile_definitions(${XINPUT_TARGET} PUBLIC $<${MAKE_DEPENDENCIES_SHARED}:LUA_BUILD_AS_DLL> UE4SS_LIB_BUILD_AS_XINPUT=1)
 target_compile_options(${XINPUT_TARGET} PRIVATE ${PRIVATE_MASM_COMPILE_OPTIONS})
