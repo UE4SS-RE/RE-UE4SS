@@ -5,6 +5,7 @@ I am not the original author of this tool.  I am rehosting it with permission.
 ### Prerequisites:
 Visual Studio 2022
 
+
 CMake
 
 ### Build Instructions:
@@ -45,4 +46,5 @@ Add the class or struct name to the following variables and function implementat
 ### Todo
 Make types to dump be gathered from a config file rather than through editing source
 
+ 
 Other cleanup
