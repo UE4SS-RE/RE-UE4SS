@@ -48,6 +48,7 @@ namespace RC::UVTD
             {STR("AGameModeBase"), ValidForVTable::Yes, ValidForMemberVars::Yes},
             {STR("AGameMode"), ValidForVTable::Yes, ValidForMemberVars::Yes},
             {STR("AActor"), ValidForVTable::Yes, ValidForMemberVars::Yes},
+            {STR("AHUD"), ValidForVTable::Yes, ValidForMemberVars::Yes},
             {STR("UPlayer"), ValidForVTable::Yes, ValidForMemberVars::Yes},
             {STR("ULocalPlayer"), ValidForVTable::Yes, ValidForMemberVars::Yes},
             {STR("FExec"), ValidForVTable::Yes, ValidForMemberVars::No},
@@ -90,13 +91,6 @@ namespace RC::UVTD
             {STR("FFieldPathProperty"), ValidForVTable::No, ValidForMemberVars::Yes},
             {STR("FSetProperty"), ValidForVTable::No, ValidForMemberVars::Yes},
             {STR("USetProperty"), ValidForVTable::No, ValidForMemberVars::Yes},
-
-            {STR("FSceneRenderer"), ValidForVTable::Yes, ValidForMemberVars::Yes},
-            {STR("FSceneViewExtensions"), ValidForVTable::No, ValidForMemberVars::Yes},
-            {STR("FSceneViewFamily"), ValidForVTable::No, ValidForMemberVars::Yes},
-            {STR("FFakeStereoRenderingDevice"), ValidForVTable::Yes, ValidForMemberVars::Yes},
-            {STR("FSceneView"), ValidForVTable::No, ValidForMemberVars::Yes},
-            {STR("IStereoRendering"), ValidForVTable::Yes, ValidForMemberVars::Yes},
     };
 
     static std::unordered_set<File::StringType> valid_udt_names{
@@ -114,6 +108,7 @@ namespace RC::UVTD
             STR("AGameModeBase"),
             STR("AGameMode"),
             STR("AActor"),
+            STR("AHUD"),
             STR("UPlayer"),
             STR("ULocalPlayer"),
             STR("FExec"),
@@ -154,13 +149,6 @@ namespace RC::UVTD
             STR("FFieldPathProperty"),
             STR("FSetProperty"),
             STR("USetProperty"),
-
-            STR("FSceneRenderer"),
-            STR("FSceneViewExtensions"),
-            STR("FSceneViewFamily"),
-            STR("FFakeStereoRenderingDevice"),
-            STR("FSceneView"),
-            STR("IStereoRendering"),
     };
 
     static std::vector<File::StringType> UPrefixToFPrefix{
@@ -268,16 +256,11 @@ namespace RC::UVTD
             type_name.find(STR("AGameModeBase")) != type_name.npos ||
             type_name.find(STR("AGameMode")) != type_name.npos ||
             type_name.find(STR("AActor")) != type_name.npos ||
+            type_name.find(STR("AHUD")) != type_name.npos ||
             type_name.find(STR("UPlayer")) != type_name.npos ||
-            type_name.find(STR("ULocalPlayer")) != type_name.npos ||
-            type_name.find(STR("FExec")) != type_name.npos ||
-            type_name.find(STR("FSceneRenderer")) != type_name.npos ||
-            type_name.find(STR("FSceneViewExtensions")) != type_name.npos ||
-            type_name.find(STR("FSceneViewFamily")) != type_name.npos ||
-            type_name.find(STR("FFakeStereoRenderingDevice")) != type_name.npos ||
-            type_name.find(STR("FSceneView")) != type_name.npos ||
-            type_name.find(STR("IStereoRendering")) != type_name.npos)
+            type_name.find(STR("ULocalPlayer")) != type_name.npos)
         {
+            
             // These types are not currently supported in RC::Unreal, so we must prevent code from being generated.
             return false;
         }
@@ -1456,6 +1439,11 @@ namespace RC::UVTD
                     virtual_src_dumper.send(STR("#include <Unreal/UClass.hpp>\n"));
                     virtual_src_dumper.send(STR("#include <Unreal/World.hpp>\n"));
                     virtual_src_dumper.send(STR("#include <Unreal/UEnum.hpp>\n"));
+                    virtual_src_dumper.send(STR("#include <Unreal/FArchive.hpp>\n"));
+                    virtual_src_dumper.send(STR("#include <Unreal/AGameModeBase.hpp>\n"));
+                    virtual_src_dumper.send(STR("#include <Unreal/AGameMode.hpp>\n"));
+                    virtual_src_dumper.send(STR("#include <Unreal/UPlayer.hpp>\n"));
+                    virtual_src_dumper.send(STR("#include <Unreal/ULocalPlayer.hpp>\n"));
                     //virtual_src_dumper.send(STR("#include <Unreal/UConsole.hpp>\n"));
                     virtual_src_dumper.send(STR("\n"));
                     virtual_src_dumper.send(STR("namespace RC::Unreal\n"));
@@ -1683,6 +1671,13 @@ namespace RC::UVTD
 
     auto main(VTableOrMemberVars vtable_or_member_vars) -> void
     {
+        TRY([&] {
+            {
+                VTableDumper vtable_dumper{"PDBs/4_11.pdb"};
+                vtable_dumper.generate_code(vtable_or_member_vars);
+            }
+            CoUninitialize();
+        });
         TRY([&] {
             {
                 VTableDumper vtable_dumper{"PDBs/4_12.pdb"};
