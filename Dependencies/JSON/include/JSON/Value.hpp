@@ -45,7 +45,7 @@ namespace RC::JSON
         No
     };
 
-    class Value
+    class RC_JSON_API Value
     {
     public:
         virtual ~Value() = default;
