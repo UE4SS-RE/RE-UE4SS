@@ -5,6 +5,7 @@ project(${TARGET})
 
 # set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
 add_library(${TARGET} SHARED "dllmain.cpp" "${LIBRARY_OUTPUT_PATH}/cppsdk.def")
+set_target_properties(${TARGET} PROPERTIES OUTPUT_NAME "UE4SS-cppsdk")
 
 add_custom_command(
 	OUTPUT
@@ -23,6 +24,7 @@ target_link_libraries(${TARGET} PUBLIC ue4ss)
 
 
 add_library(${TARGET}_xinput SHARED "dllmain.cpp" "${LIBRARY_OUTPUT_PATH}/cppsdk_xinput.def")
+set_target_properties(${TARGET}_xinput PROPERTIES OUTPUT_NAME "UE4SS-cppsdk_xinput")
 
 add_custom_command(
 	OUTPUT

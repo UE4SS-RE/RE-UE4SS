@@ -1,7 +1,7 @@
-# Generates a proxy export file for cppsdk.dll
+# Generates a proxy export file for UE4SS-cppsdk.dll
 # This is needed to support both ue4ss.dll and xinput1_3.dll as loaders
-# cppsdk gets compiled to two variants, which are cppsdk.dll (ue4ss) and cppsdk_xinput.dll(xinput1_3)
-# The sdk should be copied into the Mods directory and renamed to cppsdk.dll
+# cppsdk gets compiled to two variants, which are UE4SS-cppsdk.dll (ue4ss) and UE4SS-cppsdk_xinput.dll(xinput1_3)
+# The sdk should be copied into the Mods directory and renamed to UE4SS-cppsdk.dll
 import os
 import sys
 import subprocess
@@ -42,7 +42,7 @@ lines = filter(lambda x: not x.isnumeric(), lines) # filtering ordinals
 
 output = open(output_def, "w")
 
-output.write("LIBRARY cppsdk.dll\n")
+output.write("LIBRARY UE4SS-cppsdk.dll\n")
 output.write("EXPORTS\n")
 
 for line in lines:

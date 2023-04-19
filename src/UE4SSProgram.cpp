@@ -758,7 +758,7 @@ namespace RC
 
         if (!std::filesystem::exists(m_mods_directory)) { set_error("Mods directory doesn't exist, please create it: <%S>", m_mods_directory.c_str()); }
 
-        auto cpp_sdk_path = m_mods_directory / "cppsdk.dll";
+        auto cpp_sdk_path = m_mods_directory / "UE4SS-cppsdk.dll";
         bool cpp_sdk_loaded = false;
         if (std::filesystem::exists(cpp_sdk_path))
         {
