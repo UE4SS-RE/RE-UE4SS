@@ -31,7 +31,7 @@
 #include <SigScanner/SinglePassSigScanner.hpp>
 #include <Mod/Mod.hpp>
 #include <Mod/LuaMod.hpp>
-#include <Mod/CppModule.hpp>
+#include <Mod/CppMod.hpp>
 #include <LuaType/LuaUObject.hpp>
 #include <LuaType/LuaCustomProperty.hpp>
 #include <LuaLibrary.hpp>
@@ -787,7 +787,7 @@ namespace RC
             {
                 // Create the mod but don't install it yet
                 if (std::filesystem::exists(sub_directory.path() / "scripts")) m_mods.emplace_back(std::make_unique<LuaMod>(*this, sub_directory.path().stem().wstring(), sub_directory.path().wstring()));
-                if (std::filesystem::exists(sub_directory.path() / "dlls")) m_mods.emplace_back(std::make_unique<CppModule>(*this, sub_directory.path().stem().wstring(), sub_directory.path().wstring()));
+                if (std::filesystem::exists(sub_directory.path() / "dlls")) m_mods.emplace_back(std::make_unique<CppMod>(*this, sub_directory.path().stem().wstring(), sub_directory.path().wstring()));
             }
         }
 

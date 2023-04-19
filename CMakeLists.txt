@@ -240,7 +240,7 @@ set(${TARGET}_Sources
         "${CMAKE_CURRENT_SOURCE_DIR}/src/Signatures.cpp"
         "${CMAKE_CURRENT_SOURCE_DIR}/src/Mod/Mod.cpp"
         "${CMAKE_CURRENT_SOURCE_DIR}/src/Mod/LuaMod.cpp"
-        "${CMAKE_CURRENT_SOURCE_DIR}/src/Mod/CppModule.cpp"
+        "${CMAKE_CURRENT_SOURCE_DIR}/src/Mod/CppMod.cpp"
         "${CMAKE_CURRENT_SOURCE_DIR}/src/UnrealCustom/CustomProperty.cpp"
         "${CMAKE_CURRENT_SOURCE_DIR}/src/LuaLibrary.cpp"
         "${CMAKE_CURRENT_SOURCE_DIR}/src/LuaType/LuaModRef.cpp"

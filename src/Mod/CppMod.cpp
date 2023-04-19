@@ -3,11 +3,11 @@
 #include <filesystem>
 
 #include <DynamicOutput/DynamicOutput.hpp>
-#include <Mod/CppModule.hpp>
+#include <Mod/CppMod.hpp>
 
 namespace RC
 {
-    CppModule::CppModule(UE4SSProgram& program, std::wstring&& mod_name, std::wstring&& mod_path) : Mod(program, std::move(mod_name), std::move(mod_path))
+    CppMod::CppMod(UE4SSProgram& program, std::wstring&& mod_name, std::wstring&& mod_path) : Mod(program, std::move(mod_name), std::move(mod_path))
     {
         m_dlls_path = m_mod_path + L"\\dlls";
 
@@ -43,23 +43,23 @@ namespace RC
         }
     }
 
-    auto CppModule::start_mod() -> void
+    auto CppMod::start_mod() -> void
     {
         m_mod = m_start_mod_func();
         m_is_started = m_mod != nullptr;
     }
 
-    auto CppModule::uninstall() -> void
+    auto CppMod::uninstall() -> void
     {
         if (m_mod && m_uninstall_mod_func) { m_uninstall_mod_func(m_mod); }
     }
 
-    auto CppModule::update() -> void
+    auto CppMod::update() -> void
     {
         if (m_mod) { m_mod->update(); }
     }
 
-    CppModule::~CppModule()
+    CppMod::~CppMod()
     {
         if (m_main_dll_module) { FreeLibrary(m_main_dll_module); }
     }
