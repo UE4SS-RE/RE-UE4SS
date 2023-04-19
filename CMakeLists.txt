@@ -338,3 +338,4 @@ target_include_directories(${TARGET} PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/Depend
 target_include_directories(${XINPUT_TARGET} PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/Dependencies/GLFW/include")
 # GLFW -> END
 
+add_subdirectory("cppsdk")
