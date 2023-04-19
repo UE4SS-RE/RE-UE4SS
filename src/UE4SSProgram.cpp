@@ -766,7 +766,7 @@ namespace RC
             if (cpp_sdk) { cpp_sdk_loaded = true; }
         }
 
-        if (!cpp_sdk_loaded) { Output::send<LogLevel::Warning>(STR("Cppsdk not present, cpp mods will not be loaded")); }
+        if (!cpp_sdk_loaded) { Output::send<LogLevel::Warning>(STR("Cppsdk not present, cpp mods will not be loaded\n")); }
 
         for (const auto& sub_directory : std::filesystem::directory_iterator(m_mods_directory))
         {
