@@ -132,7 +132,7 @@ namespace RC::LuaLibrary
 
     auto get_lua_state_by_mod_name(const char* mod_name) -> lua_State*
     {
-        auto* mod = UE4SSProgram::find_mod_by_name(mod_name);
+        auto* mod = UE4SSProgram::find_lua_mod_by_name(mod_name);
         if (!mod) { return nullptr; }
         return mod->lua().get_lua_state();
     };
@@ -141,7 +141,7 @@ namespace RC::LuaLibrary
     {
         std::string_view output_buffer_view{output_buffer};
 
-        auto* mod = UE4SSProgram::find_mod_by_name(mod_name);
+        auto* mod = UE4SSProgram::find_lua_mod_by_name(mod_name);
         if (!mod || !mod->is_installed() || !mod->is_started())
         {
             auto error_message = std::format("No mod by name '{}' found.", mod_name);
@@ -191,7 +191,7 @@ namespace RC::LuaLibrary
             Output::send(STR("Setting variable '{}' in mod '{}' to {}\n"), variable_name_wide, mod_name_wide, new_value);
             //*/
 
-            auto mod = UE4SSProgram::find_mod_by_name(mod_name, UE4SSProgram::IsInstalled::Yes, UE4SSProgram::IsStarted::Yes);
+            auto mod = UE4SSProgram::find_lua_mod_by_name(mod_name, UE4SSProgram::IsInstalled::Yes, UE4SSProgram::IsStarted::Yes);
             if (!mod)
             {
                 return_struct.status = ExportedFunctionStatus::MOD_IS_NULLPTR;
@@ -257,7 +257,7 @@ namespace RC::LuaLibrary
             }
             //*/
 
-            auto mod = UE4SSProgram::find_mod_by_name(mod_name, UE4SSProgram::IsInstalled::Yes, UE4SSProgram::IsStarted::Yes);
+            auto mod = UE4SSProgram::find_lua_mod_by_name(mod_name, UE4SSProgram::IsInstalled::Yes, UE4SSProgram::IsStarted::Yes);
             if (!mod)
             {
                 return_struct.status = ExportedFunctionStatus::MOD_IS_NULLPTR;
@@ -351,7 +351,7 @@ namespace RC::LuaLibrary
             Output::send(STR("Calling script function '{}' in mod '{}'\n"), func_name_wide, mod_name_wide);
             //*/
 
-            auto mod = UE4SSProgram::find_mod_by_name(mod_name, UE4SSProgram::IsInstalled::Yes, UE4SSProgram::IsStarted::Yes);
+            auto mod = UE4SSProgram::find_lua_mod_by_name(mod_name, UE4SSProgram::IsInstalled::Yes, UE4SSProgram::IsStarted::Yes);
             if (!mod)
             {
                 return_struct.status = ExportedFunctionStatus::MOD_IS_NULLPTR;
