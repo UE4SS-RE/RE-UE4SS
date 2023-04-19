@@ -69,25 +69,27 @@ You can also double click that file instead of using the command prompt but you 
 6. From this point, follow the C++ mod installation guide.
 ## Part #3
 In this part, we're going to learn how to output messages to the GUI console, find a UObject by name, and output that name to the GUI console.
-1. Add `#include <DynamicOutput/DynamicOutput.hpp>` under `#include <Mod/CppUserModBase.hpp>`.  
+1. Open the `CMakeLists.txt` file for your mod and add `Unreal` after `cppsdk_xinput` in `target_link_libraries`.  
+It should look like this: `target_link_libraries(${TARGET} PUBLIC cppsdk_xinput Unreal)`
+2. Add `#include <DynamicOutput/DynamicOutput.hpp>` under `#include <Mod/CppUserModBase.hpp>`.  
 You can now also remove `#include <stdio.h>` because we'll be removing the use of `printf` which was the only thing that required it.
-2. To save some time and annoyance and make the code look a bit better, add this line below all the includes:
+3. To save some time and annoyance and make the code look a bit better, add this line below all the includes:
 ```c++
 using namespace RC;
 ```
-3. Replace the call to printf in the body of the `MyAwesomeMod` constructor with:
+4. Replace the call to printf in the body of the `MyAwesomeMod` constructor with:
 ```c++
 Output::send<LogLevel::Verbose>(STR("MyAwesomeMod says hello\n"));
 ```
 It's longer than a call to `printf`, but in return the message gets propagated to both the regular console and the GUI console.  
 We also get some support for colors via the `LogLevel` enum.
-4. Add this below the DynamicOutput include:
+5. Add this below the DynamicOutput include:
 ```c++
 #include <Unreal/UObjectGlobals.hpp>
 #include <Unreal/UObject.hpp>
 ```
-5. Let's again utilize the `using namespace` shortcut by adding this below the first one: `using namespace RC::Unreal;`
-6. Add this below the call to `Output::send` in the `MyAwesomeMod` constructor:
+6. Let's again utilize the `using namespace` shortcut by adding this below the first one: `using namespace RC::Unreal;`
+7. Add this below the call to `Output::send` in the `MyAwesomeMod` constructor:
 ```c++
 auto Object = UObjectGlobals::StaticFindObject(nullptr, nullptr, STR("/Script/CoreUObject.Object"));
 Output::send(STR("Object Name: {}\n"), Object->GetFullName());
@@ -95,5 +97,5 @@ Output::send(STR("Object Name: {}\n"), Object->GetFullName());
 Note that `Output::send` doesn't require a `LogLevel` and that we're using `{}` in the format string instead of `%s`.  
 The `Output::send` function uses `std::format` in the back-end so you should do some research around std::format or libfmt if you want to know more about it.
 
-7. Right click your project and hit `Build`.  
-8. From this point, follow the C++ mod installation guide.
+8. Right click your project and hit `Build`.  
+9. From this point, follow the C++ mod installation guide.
