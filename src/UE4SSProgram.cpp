@@ -29,7 +29,9 @@
 #include <Timer/ScopedTimer.hpp>
 #include <Timer/FunctionTimer.hpp>
 #include <SigScanner/SinglePassSigScanner.hpp>
-#include <Mod.hpp>
+#include <Mod/Mod.hpp>
+#include <Mod/LuaMod.hpp>
+#include <Mod/CppMod.hpp>
 #include <LuaType/LuaUObject.hpp>
 #include <LuaType/LuaCustomProperty.hpp>
 #include <LuaLibrary.hpp>
@@ -713,7 +715,11 @@ namespace RC
             //*/
 
             m_input_handler.process_event();
-            Mod::update();
+
+            for (auto& mod : m_mods)
+            {
+                if (mod->is_started()) mod->update();
+            }
 
             std::this_thread::sleep_for(std::chrono::milliseconds(5));
         }
@@ -750,10 +756,17 @@ namespace RC
     {
         Output::send(STR("Setting up mods...\n"));
 
-        if (!std::filesystem::exists(m_mods_directory))
+        if (!std::filesystem::exists(m_mods_directory)) { set_error("Mods directory doesn't exist, please create it: <%S>", m_mods_directory.c_str()); }
+
+        auto cpp_sdk_path = m_mods_directory / "UE4SS-cppsdk.dll";
+        bool cpp_sdk_loaded = false;
+        if (std::filesystem::exists(cpp_sdk_path))
         {
-            set_error("Mods directory doesn't exist, please create it: <%S>", m_mods_directory.c_str());
+            HMODULE cpp_sdk = LoadLibraryW(cpp_sdk_path.c_str());
+            if (cpp_sdk) { cpp_sdk_loaded = true; }
         }
+
+        if (!cpp_sdk_loaded) { Output::send<LogLevel::Warning>(STR("Cppsdk not present, cpp mods will not be loaded\n")); }
 
         for (const auto& sub_directory : std::filesystem::directory_iterator(m_mods_directory))
         {
@@ -773,7 +786,8 @@ namespace RC
             else
             {
                 // Create the mod but don't install it yet
-                m_mods.emplace_back(std::make_unique<Mod>(*this, sub_directory.path().stem().wstring(), sub_directory.path().wstring()));
+                if (std::filesystem::exists(sub_directory.path() / "scripts")) m_mods.emplace_back(std::make_unique<LuaMod>(*this, sub_directory.path().stem().wstring(), sub_directory.path().wstring()));
+                if (std::filesystem::exists(sub_directory.path() / "dlls")) m_mods.emplace_back(std::make_unique<CppMod>(*this, sub_directory.path().stem().wstring(), sub_directory.path().wstring()));
             }
         }
 
@@ -916,27 +930,11 @@ namespace RC
         for (auto& mod : m_mods)
         {
             // Remove any actions, or we'll get an internal error as the lua ref won't be valid
-            mod->clear_delayed_actions();
             mod->uninstall();
         }
 
         m_mods.clear();
-        Mod::m_static_construct_object_lua_callbacks.clear();
-        Mod::m_process_console_exec_pre_callbacks.clear();
-        Mod::m_process_console_exec_post_callbacks.clear();
-        Mod::m_global_command_lua_callbacks.clear();
-        Mod::m_custom_command_lua_pre_callbacks.clear();
-        Mod::m_custom_event_callbacks.clear();
-        Mod::m_init_game_state_pre_callbacks.clear();
-        Mod::m_init_game_state_post_callbacks.clear();
-        Mod::m_begin_play_pre_callbacks.clear();
-        Mod::m_begin_play_post_callbacks.clear();
-        Mod::m_call_function_by_name_with_arguments_pre_callbacks.clear();
-        Mod::m_call_function_by_name_with_arguments_post_callbacks.clear();
-        Mod::m_local_player_exec_pre_callbacks.clear();
-        Mod::m_local_player_exec_post_callbacks.clear();
-        Mod::m_script_hook_callbacks.clear();
-        Mod::m_native_hook_id_to_generic_hook_id.clear();
+        Mod::global_uninstall();
     }
 
     auto UE4SSProgram::reinstall_mods() -> void
@@ -975,7 +973,7 @@ namespace RC
         LuaType::LuaCustomProperty::StaticStorage::property_list.clear();
 
         // Reset the Lua callbacks for the global Lua function 'NotifyOnNewObject'
-        Mod::m_static_construct_object_lua_callbacks.clear();
+        LuaMod::m_static_construct_object_lua_callbacks.clear();
 
         // Start processing events again as everything is now properly setup
         // Do this before mods are started or else you won't be able to use the hot-reload key bind if there's an error from Lua
@@ -1114,6 +1112,11 @@ namespace RC
     auto UE4SSProgram::find_mod_by_name(std::string_view mod_name, UE4SSProgram::IsInstalled installed_only, IsStarted is_started) -> Mod*
     {
         return find_mod_by_name(to_wstring(mod_name), installed_only, is_started);
+    }
+
+    auto UE4SSProgram::find_lua_mod_by_name(std::string_view mod_name, UE4SSProgram::IsInstalled installed_only, IsStarted is_started) -> LuaMod*
+    {
+        return dynamic_cast<LuaMod*>(find_mod_by_name(mod_name, installed_only, is_started));
     }
 
     auto UE4SSProgram::get_object_dumper_output_directory() -> const File::StringType

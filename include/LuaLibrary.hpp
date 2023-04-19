@@ -2,6 +2,7 @@
 #define UE4SS_REWRITTEN_LUALIBRARY_HPP
 
 #include <cstdint>
+#include <Common.hpp>
 
 #define DefaultStructMemberData(member_name) \
 union {                                      \

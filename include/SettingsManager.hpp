@@ -4,12 +4,13 @@
 #include <cstdint>
 #include <filesystem>
 
+#include <Common.hpp>
 #include <File/File.hpp>
 #include <GUI/GUI.hpp>
 
 namespace RC
 {
-    class SettingsManager
+    class RC_UE4SS_API SettingsManager
     {
     public:
         struct SectionOverrides

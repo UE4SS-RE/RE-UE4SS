@@ -22,8 +22,14 @@ else ()
 endif ()
 
 add_library(${TARGET} ${${TARGET}_Sources})
+
+if (NOT (${STATIC_EXPORTS}))
+    target_compile_definitions(${TARGET} PRIVATE ${PRIVATE_COMPILE_DEFINITIONS} $<${BUILD_SHARED}:RC_${MODULE_NAME}_EXPORTS> $<${BUILD_STATIC}:RC_${MODULE_NAME}_BUILD_STATIC>)
+else ()
+    target_compile_definitions(${TARGET} PRIVATE ${PRIVATE_COMPILE_DEFINITIONS} RC_${MODULE_NAME}_EXPORTS)
+endif ()
+
 target_include_directories(${TARGET} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
-target_compile_definitions(${TARGET} PRIVATE ${PRIVATE_COMPILE_DEFINITIONS} $<${BUILD_SHARED}:RC_${MODULE_NAME}_EXPORTS> $<${BUILD_STATIC}:RC_${MODULE_NAME}_BUILD_STATIC>)
 target_compile_options(${TARGET} PRIVATE ${PRIVATE_COMPILE_OPTIONS})
 target_compile_features(${TARGET} PUBLIC ${PUBLIC_COMPILE_FEATURES})
 target_link_options(${TARGET} PRIVATE ${PRIVATE_LINK_OPTIONS})

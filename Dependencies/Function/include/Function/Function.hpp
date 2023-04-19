@@ -3,16 +3,17 @@
 
 #include <bit>
 #include <stdexcept>
+#include <Unreal/Common.hpp>
 
 // Note: When we assign to 'm_function_address' from a function pointer, we're probably breaking some rules.
 //       Though it's likely, a function is not guaranteed to be represented as a pointer.
 namespace RC
 {
     template<typename>
-    class Function;
+    class RC_UE_API Function;
 
-    template<typename ReturnType, typename ...Params>
-    class Function<ReturnType(Params...)>
+    template<typename ReturnType, typename... Params>
+    class RC_UE_API Function<ReturnType(Params...)>
     {
     private:
         // Make non-copyable & non-movable

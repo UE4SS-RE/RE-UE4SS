@@ -6,6 +6,7 @@ message("IPO - Supported: ${supported}; ${error}")
 message("Project: UE4SS")
 
 set(MAKE_DEPENDENCIES_SHARED 0)
+set(STATIC_EXPORTS 1)
 
 if (${MAKE_DEPENDENCIES_SHARED} EQUAL 0)
     set(MAKE_DEPENDENCIES_STATIC 1)
@@ -71,6 +72,7 @@ set(PUBLIC_COMPILE_FEATURES cxx_std_20)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 set(UE4SS_COMPILE_DEFINITIONS
+        RC_UE4SS_EXPORTS
         RC_ASM_HELPER_BUILD_STATIC
         RC_FILE_BUILD_STATIC
         RC_DYNAMIC_OUTPUT_BUILD_STATIC
@@ -236,10 +238,12 @@ set(${TARGET}_Sources
         "${CMAKE_CURRENT_SOURCE_DIR}/src/SettingsManager.cpp"
         "${CMAKE_CURRENT_SOURCE_DIR}/src/ObjectDumper/ObjectToString.cpp"
         "${CMAKE_CURRENT_SOURCE_DIR}/src/Signatures.cpp"
-        "${CMAKE_CURRENT_SOURCE_DIR}/src/Mod.cpp"
+        "${CMAKE_CURRENT_SOURCE_DIR}/src/Mod/Mod.cpp"
+        "${CMAKE_CURRENT_SOURCE_DIR}/src/Mod/LuaMod.cpp"
+        "${CMAKE_CURRENT_SOURCE_DIR}/src/Mod/CppMod.cpp"
         "${CMAKE_CURRENT_SOURCE_DIR}/src/UnrealCustom/CustomProperty.cpp"
         "${CMAKE_CURRENT_SOURCE_DIR}/src/LuaLibrary.cpp"
-        "${CMAKE_CURRENT_SOURCE_DIR}/src/LuaType/LuaMod.cpp"
+        "${CMAKE_CURRENT_SOURCE_DIR}/src/LuaType/LuaModRef.cpp"
         "${CMAKE_CURRENT_SOURCE_DIR}/src/LuaType/LuaUObject.cpp"
         "${CMAKE_CURRENT_SOURCE_DIR}/src/LuaType/LuaUStruct.cpp"
         "${CMAKE_CURRENT_SOURCE_DIR}/src/LuaType/LuaUClass.cpp"
@@ -304,7 +308,7 @@ target_compile_features(${TARGET} PUBLIC ${PUBLIC_COMPILE_FEATURES})
 target_compile_definitions(${TARGET} PUBLIC $<${MAKE_DEPENDENCIES_SHARED}:LUA_BUILD_AS_DLL>)
 set(UE4SS_LINK_WITH_LIBRARIES File DynamicOutput Unreal SinglePassSigScanner LuaMadeSimple FunctionTimer Function IniParser JSON Input PolyHook_2 d3d11 GLFW opengl32)
 set(UE4SS_LINK_WITH_INTERFACE_LIBRARIES fmt::fmt-header-only Function Constructs Helpers MProgram ScopedTimer)
-target_link_libraries(${TARGET} PRIVATE ${UE4SS_LINK_WITH_LIBRARIES} ${UE4SS_LINK_WITH_INTERFACE_LIBRARIES})
+target_link_libraries(${TARGET} PUBLIC ${UE4SS_LINK_WITH_LIBRARIES} ${UE4SS_LINK_WITH_INTERFACE_LIBRARIES})
 
 set(XINPUT_TARGET xinput1_3)
 enable_language(ASM_MASM)
@@ -325,6 +329,10 @@ endif()
 set_property(TARGET ${TARGET} PROPERTY INTERPROCEDURAL_OPTIMIZATION TRUE)
 set_property(TARGET ${XINPUT_TARGET} PROPERTY INTERPROCEDURAL_OPTIMIZATION TRUE)
 
+# Making sure that the linked C runtime is a dll so that C++ mods will work correctly
+set_property(TARGET ${TARGET} PROPERTY MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>DLL")
+set_property(TARGET ${XINPUT_TARGET} PROPERTY MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>DLL")
+
 # imgui -> START
 set(IMGUI_INCLUDES Dependencies/imgui Dependencies/ImGuiColorTextEdit)
 target_include_directories(${TARGET} PUBLIC ${IMGUI_INCLUDES})
@@ -338,3 +346,4 @@ target_include_directories(${TARGET} PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/Depend
 target_include_directories(${XINPUT_TARGET} PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/Dependencies/GLFW/include")
 # GLFW -> END
 
+add_subdirectory("cppsdk")
