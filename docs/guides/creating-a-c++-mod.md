@@ -93,6 +93,6 @@ auto Object = UObjectGlobals::StaticFindObject(nullptr, nullptr, STR("/Script/Co
 Output::send(STR("Object Name: {}\n"), Object->GetFullName());
 ```
 Note that `Output::send` doesn't require a `LogLevel` and that we're using `{}` in the format string instead of `%s`.  
-The `Output::send` function uses `std::format` in the back-end so you should do some research around std::format or libfmt if you want to know more about it.
-7. Right click your project and hit `Build`.
+The `Output::send` function uses `std::format` in the back-end so you should do some research around std::format or libfmt if you want to know more about it.  
+7. Right click your project and hit `Build`.  
 8. From this point, follow the C++ mod installation guide.
