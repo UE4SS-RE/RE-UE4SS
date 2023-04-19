@@ -57,7 +57,7 @@ namespace RC
         constexpr static wchar_t m_object_dumper_file_name[] = L"UE4SS_ObjectDump.txt";
 
     public:
-        static SettingsManager settings_manager;
+        RC_UE4SS_API static SettingsManager settings_manager;
         static inline bool unreal_is_shutting_down{};
 
     protected:
