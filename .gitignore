@@ -30,6 +30,7 @@ Output/
 ue4ss_rewrite_maybe_main.dir/
 VS_Solution/vendor/
 VS_Solution/Dependencies/
+/VS_Solution/cppsdk/
 Releases/
 
 # Others
