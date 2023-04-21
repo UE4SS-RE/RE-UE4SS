@@ -503,8 +503,47 @@ void draw_pushbox(UCanvas* canvas, const asw_entity* entity)
 int p1_advantage = 0;
 int p2_advantage = 0;
 
+class UREDGameCommon : public RC::Unreal::UObject {};
+UREDGameCommon* GameCommon;
+
+typedef int(*GetGameMode_Func)(UREDGameCommon*);
+GetGameMode_Func GetGameMode;
+
+enum GAME_MODE : int32_t
+{
+    GAME_MODE_DEBUG_BATTLE = 0x0,
+    GAME_MODE_ADVERTISE = 0x1,
+    GAME_MODE_MAINTENANCEVS = 0x2,
+    GAME_MODE_ARCADE = 0x3,
+    GAME_MODE_MOM = 0x4,
+    GAME_MODE_SPARRING = 0x5,
+    GAME_MODE_VERSUS = 0x6,
+    GAME_MODE_VERSUS_PREINSTALL = 0x7,
+    GAME_MODE_TRAINING = 0x8,
+    GAME_MODE_TOURNAMENT = 0x9,
+    GAME_MODE_RANNYU_VERSUS = 0xA,
+    GAME_MODE_EVENT = 0xB,
+    GAME_MODE_SURVIVAL = 0xC,
+    GAME_MODE_STORY = 0xD,
+    GAME_MODE_MAINMENU = 0xE,
+    GAME_MODE_TUTORIAL = 0xF,
+    GAME_MODE_LOBBYTUTORIAL = 0x10,
+    GAME_MODE_CHALLENGE = 0x11,
+    GAME_MODE_KENTEI = 0x12,
+    GAME_MODE_MISSION = 0x13,
+    GAME_MODE_GALLERY = 0x14,
+    GAME_MODE_LIBRARY = 0x15,
+    GAME_MODE_NETWORK = 0x16,
+    GAME_MODE_REPLAY = 0x17,
+    GAME_MODE_LOBBYSUB = 0x18,
+    GAME_MODE_MAINMENU_QUICK_BATTLE = 0x19,
+    GAME_MODE_UNDECIDED = 0x1A,
+    GAME_MODE_INVALID = 0x1B,
+};
+
 void draw_display(UCanvas* canvas)
 {
+    if (GetGameMode(GameCommon) != GAME_MODE_TRAINING) return;
 	const auto* engine = asw_engine::get();
 	if (engine == nullptr)
 		return;
@@ -570,7 +609,6 @@ const void* vtable_hook(const void** vtable, const int index, const void* hook)
 
 void install_hooks()
 {
-    
 	// AHUD::PostRender
 	orig_AHUD_PostRender = (AHUD_PostRender_t)
 		vtable_hook(AHUD_vtable, AHUD_PostRender_index, hook_AHUD_PostRender);
@@ -584,44 +622,6 @@ void uninstall_hooks()
 
 bool ShouldUpdateBattle = true;
 bool ShouldAdvanceBattle = false;
-
-enum GAME_MODE : int32_t
-{
-	GAME_MODE_DEBUG_BATTLE = 0x0,
-	GAME_MODE_ADVERTISE = 0x1,
-	GAME_MODE_MAINTENANCEVS = 0x2,
-	GAME_MODE_ARCADE = 0x3,
-	GAME_MODE_MOM = 0x4,
-	GAME_MODE_SPARRING = 0x5,
-	GAME_MODE_VERSUS = 0x6,
-	GAME_MODE_VERSUS_PREINSTALL = 0x7,
-	GAME_MODE_TRAINING = 0x8,
-	GAME_MODE_TOURNAMENT = 0x9,
-	GAME_MODE_RANNYU_VERSUS = 0xA,
-	GAME_MODE_EVENT = 0xB,
-	GAME_MODE_SURVIVAL = 0xC,
-	GAME_MODE_STORY = 0xD,
-	GAME_MODE_MAINMENU = 0xE,
-	GAME_MODE_TUTORIAL = 0xF,
-	GAME_MODE_LOBBYTUTORIAL = 0x10,
-	GAME_MODE_CHALLENGE = 0x11,
-	GAME_MODE_KENTEI = 0x12,
-	GAME_MODE_MISSION = 0x13,
-	GAME_MODE_GALLERY = 0x14,
-	GAME_MODE_LIBRARY = 0x15,
-	GAME_MODE_NETWORK = 0x16,
-	GAME_MODE_REPLAY = 0x17,
-	GAME_MODE_LOBBYSUB = 0x18,
-	GAME_MODE_MAINMENU_QUICK_BATTLE = 0x19,
-	GAME_MODE_UNDECIDED = 0x1A,
-	GAME_MODE_INVALID = 0x1B,
-};
-
-class UREDGameCommon : public RC::Unreal::UObject {};
-UREDGameCommon* GameCommon;
-
-typedef int(*GetGameMode_Func)(UREDGameCommon*);
-GetGameMode_Func GetGameMode;
 
 typedef void(*UpdateBattle_Func)(AREDGameState_Battle*, float);
 UpdateBattle_Func UpdateBattle;
@@ -660,8 +660,14 @@ void UpdateBattle_New(AREDGameState_Battle* GameState, float DeltaTime) {
 	    {
 	        if (!engine->players[0].entity->can_act() || !engine->players[1].entity->can_act())
 	        {
-	            p1_advantage = engine->players[0].entity->calc_advantage();
-	            p2_advantage = engine->players[1].entity->calc_advantage();
+	            if (!engine->players[1].entity->is_knockdown() || engine->players[1].entity->is_down_bound() || engine->players[1].entity->is_quick_down_1())
+	            {
+	                p1_advantage = engine->players[0].entity->calc_advantage();
+	            }
+	            if (!engine->players[0].entity->is_knockdown() || engine->players[0].entity->is_down_bound() || engine->players[0].entity->is_quick_down_1())
+	            {
+	                p2_advantage = engine->players[1].entity->calc_advantage();
+	            }
 	        }
 	    }
 
