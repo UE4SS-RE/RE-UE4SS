@@ -31,6 +31,9 @@ VS_Solution/Dependencies/
 /VS_Solution/cppsdk/
 Releases/
 
+# standard cmake build directory
+/build
+
 # Others
 *.tlog
 *.log
