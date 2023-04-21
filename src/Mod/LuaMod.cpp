@@ -2838,6 +2838,8 @@ Overloads:
 
             return false;
         });
+
+        clear_delayed_actions();
     }
 
     auto LuaMod::lua() const -> const LuaMadeSimple::Lua&
