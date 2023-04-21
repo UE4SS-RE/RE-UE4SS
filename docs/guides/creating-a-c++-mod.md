@@ -12,7 +12,7 @@ Part three will show you how to interact with UE4SS and UE itself (via UE4SS).
 3. Make a new directory in the UE4SS repo directory, this is where the code for all your mods will live, and I called my directory `MyCppMods`.
 4. Make another directory inside the directory that you just created, this will be for your new mod, which I will call `MyAwesomeMod`.
 ## Part #2
-1. Create a file called `CMakeLists.txt` and put this inside it:
+1. Create a file called `CMakeLists.txt` inside your mod folder and put this inside it:
 ```cmake
 cmake_minimum_required(VERSION 3.18)
 
