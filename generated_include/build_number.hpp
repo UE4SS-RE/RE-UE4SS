@@ -1,1 +1,1 @@
-#define UE4SS_LIB_BUILD_GITSHA "f9542ad"
+#define UE4SS_LIB_BUILD_GITSHA "aac011d"
