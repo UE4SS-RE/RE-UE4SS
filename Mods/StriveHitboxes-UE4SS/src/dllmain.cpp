@@ -10,6 +10,7 @@
 #include <MinHook.h>
 
 #define WIN32_LEAN_AND_MEAN
+#include <imgui.h>
 #include <LuaType/LuaFString.hpp>
 
 #include "Windows.h"
@@ -659,9 +660,27 @@ int p2_hitstop_prev = 0;
 int p1_act = 0;
 int p2_act = 0;
 
+bool was_f3_pressed;
+
 void(*UpdateBattle_Orig)(AREDGameState_Battle*, float);
 void UpdateBattle_New(AREDGameState_Battle* GameState, float DeltaTime) {
-	if (ShouldUpdateBattle || GetGameMode(GameCommon) != static_cast<int>(GAME_MODE_TRAINING) || ShouldAdvanceBattle)
+    if (GetAsyncKeyState(VK_F2) & 0x8001)
+    {
+        ShouldUpdateBattle = !ShouldUpdateBattle;
+    }
+    if (GetAsyncKeyState(VK_F3) & 0x8001)
+    {
+        if (!was_f3_pressed)
+        {
+            was_f3_pressed = true;
+            ShouldAdvanceBattle = true;
+        }
+    }
+    else
+    {
+        was_f3_pressed = false;
+    }
+    if (ShouldUpdateBattle || GetGameMode(GameCommon) != static_cast<int>(GAME_MODE_TRAINING) || ShouldAdvanceBattle)
 	{
 		UpdateBattle_Orig(GameState, DeltaTime);
 		ShouldAdvanceBattle = false;
@@ -682,12 +701,18 @@ void UpdateBattle_New(AREDGameState_Battle* GameState, float DeltaTime) {
 	                p2_advantage = engine->players[1].entity->calc_advantage() + p2_act;
 	            }
 	        }
+	        else
+	        {
+	            p1_advantage = p1_act - p2_act;
+	            p2_advantage = p2_act - p1_act;
+	        }
 	    }
-	    else if (engine->players[0].entity->can_act() || engine->players[1].entity->can_act())
-	    {
-	        p1_advantage = p1_act - p2_act;
-	        p2_advantage = p2_act - p1_act;
-	    }
+
+	    if (engine->players[0].entity->is_stunned() && !engine->players[1].entity->is_stunned())
+	        p1_advantage = -p2_advantage;
+	    else if (engine->players[1].entity->is_stunned() && !engine->players[0].entity->is_stunned())
+	        p2_advantage = -p1_advantage;
+	    
 	    p1_hitstop_prev = engine->players[0].entity->hitstop;
 	    p2_hitstop_prev = engine->players[1].entity->hitstop;
 	    if (engine->players[0].entity->can_act() && !engine->players[1].entity->can_act())
