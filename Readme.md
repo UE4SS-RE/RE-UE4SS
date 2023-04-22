@@ -1,3 +1,11 @@
+# Guilty Gear -Strive- Hitbox + Frame Advantage Viewer
+
+A hitbox and frame advantager viewer for Guilty Gear -Strive-. 
+
+To install, extract the contents of UE4SS_StriveHitboxes into GUILTY GEAR STRIVE\RED\Binaries\Win64 so that xinput1_3.dll is inside Win64. Extract the contents of StriveHitboxes.rar into ~mods2.
+
+ORIGINAL PROJECT DESCRIPTION BELOW
+
 # Unreal Engine 4/5 Scripting System
 
 Lua scripting system platform, SDK generator, live property editor and other dumping utilities for UE4/5 games. 
