@@ -149,9 +149,9 @@ int asw_player::calc_advantage()
     if (opponent->is_roll())
     {
         if (opponent->atk_param_ex_defend.atk_soft_knockdown)
-            opponent_disadvantage = 26 + knockdown_time + opponent->atk_param_ex_defend.atk_roll_time - opponent->action_time;
+            opponent_disadvantage = 28 + knockdown_time + opponent->atk_param_ex_defend.atk_roll_time - opponent->action_time;
         else
-            opponent_disadvantage = 71 + knockdown_time + opponent->atk_param_ex_defend.atk_roll_time - opponent->action_time;
+            opponent_disadvantage = 73 + knockdown_time + opponent->atk_param_ex_defend.atk_roll_time - opponent->action_time;
     }
     else if (opponent->is_stagger())
     {
@@ -173,18 +173,18 @@ int asw_player::calc_advantage()
     else if (opponent->is_down_bound())
     {
         if (opponent->atk_param_ex_defend.atk_soft_knockdown)
-            opponent_disadvantage = 26 + knockdown_time - opponent->action_time;
+            opponent_disadvantage = 28 + knockdown_time - opponent->action_time;
         else
-            opponent_disadvantage = 37 + knockdown_time - opponent->action_time;
+            opponent_disadvantage = 39 + knockdown_time - opponent->action_time;
     }
     else if (opponent->is_quick_down_1())
-        opponent_disadvantage = 19 + knockdown_time - opponent->action_time;
+        opponent_disadvantage = 21 + knockdown_time - opponent->action_time;
     else if (opponent->is_quick_down_2())
-        opponent_disadvantage = 19 - opponent->action_time;
+        opponent_disadvantage = 21 - opponent->action_time;
     else if (opponent->is_down_loop())
-        opponent_disadvantage = 30 + knockdown_time - opponent->action_time;
+        opponent_disadvantage = 32 + knockdown_time - opponent->action_time;
     else if (opponent->is_down_2_stand())
-        opponent_disadvantage = 30 - opponent->action_time;
+        opponent_disadvantage = 32 - opponent->action_time;
     else if (opponent->is_in_hitstun())
         opponent_disadvantage = opponent->hitstun;
     else if (opponent->is_in_blockstun())
@@ -200,7 +200,7 @@ int asw_player::calc_advantage()
         opponent_disadvantage = pointer.state_remaining_time + (sprite_total_duration - sprite_duration);
     }
 
-    opponent_disadvantage += opponent->hitstop - hitstop;
+    opponent_disadvantage += opponent->hitstop - hitstop + slowdown_timer;
     
     bbscript::code_pointer pointer = bbscript::code_pointer();
     pointer.owner = reinterpret_cast<char*>(this);

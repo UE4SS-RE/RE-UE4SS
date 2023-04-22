@@ -13,3 +13,6 @@
 [submodule "Dependencies/zydis"]
 	path = Dependencies/zydis
 	url = git@github.com:zyantific/zydis.git
+[submodule "Mods/StriveHitboxes-UE4SS/minhook"]
+	path = Mods/StriveHitboxes-UE4SS/minhook
+	url = git@github.com:TsudaKageyu/minhook.git

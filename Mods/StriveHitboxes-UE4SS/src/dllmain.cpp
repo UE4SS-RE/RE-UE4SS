@@ -500,9 +500,6 @@ void draw_pushbox(UCanvas* canvas, const asw_entity* entity)
 	draw_rect(canvas, corners, color);
 }
 
-int p1_advantage = 0;
-int p2_advantage = 0;
-
 class UREDGameCommon : public RC::Unreal::UObject {};
 UREDGameCommon* GameCommon;
 
@@ -543,10 +540,10 @@ enum GAME_MODE : int32_t
 
 void draw_display(UCanvas* canvas)
 {
-    if (GetGameMode(GameCommon) != GAME_MODE_TRAINING) return;
 	const auto* engine = asw_engine::get();
 	if (engine == nullptr)
 		return;
+    if (GetGameMode(GameCommon) != GAME_MODE_TRAINING) return;
 
 	if (canvas->Canvas == nullptr)
 		return;
@@ -647,29 +644,46 @@ void MatchStart_New(AREDGameState_Battle* GameState)
     MatchStartFlag = true;
     MatchStart_Orig(GameState);
 }
-    
+
+int p1_advantage = 0;
+int p2_advantage = 0;
+int p1_hitstop_prev = 0;
+int p2_hitstop_prev = 0;
+int p1_act = 0;
+int p2_act = 0;
+
 void(*UpdateBattle_Orig)(AREDGameState_Battle*, float);
 void UpdateBattle_New(AREDGameState_Battle* GameState, float DeltaTime) {
 	if (ShouldUpdateBattle || GetGameMode(GameCommon) != static_cast<int>(GAME_MODE_TRAINING) || ShouldAdvanceBattle)
 	{
 		UpdateBattle_Orig(GameState, DeltaTime);
 		ShouldAdvanceBattle = false;
-        const auto engine = asw_engine::get();
+
+	    const auto engine = asw_engine::get();
 	    if (!engine) return;
-	    if (engine->players[0].entity->action_time == 1 || engine->players[1].entity->action_time == 1)
+	    if ((engine->players[0].entity->action_time == 1 && engine->players[0].entity->hitstop != p1_hitstop_prev - 1)
+	        || (engine->players[1].entity->action_time == 1 && engine->players[1].entity->hitstop != p2_hitstop_prev - 1))
 	    {
 	        if (!engine->players[0].entity->can_act() || !engine->players[1].entity->can_act())
 	        {
 	            if (!engine->players[1].entity->is_knockdown() || engine->players[1].entity->is_down_bound() || engine->players[1].entity->is_quick_down_1())
 	            {
-	                p1_advantage = engine->players[0].entity->calc_advantage();
+	                p1_advantage = engine->players[0].entity->calc_advantage() + p1_act;
 	            }
 	            if (!engine->players[0].entity->is_knockdown() || engine->players[0].entity->is_down_bound() || engine->players[0].entity->is_quick_down_1())
 	            {
-	                p2_advantage = engine->players[1].entity->calc_advantage();
+	                p2_advantage = engine->players[1].entity->calc_advantage() + p2_act;
 	            }
 	        }
 	    }
+	    p1_hitstop_prev = engine->players[0].entity->hitstop;
+	    p2_hitstop_prev = engine->players[1].entity->hitstop;
+	    if (engine->players[0].entity->can_act() && !engine->players[1].entity->can_act())
+	        p1_act++;
+	    else p1_act = 0;
+	    if (engine->players[1].entity->can_act() && !engine->players[0].entity->can_act())
+	        p2_act++;
+	    else p2_act = 0;
 
         if (MatchStartFlag)
         {

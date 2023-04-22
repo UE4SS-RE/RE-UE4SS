@@ -150,6 +150,7 @@ public:
 	FIELD(0x1BC, int, action_time);
 	FIELD(0x1D8, int, act_reg_0);
     FIELD(0x278, int, hitstop);
+    FIELD(0x2A4, int, ground_height);
     FIELD(0x2A8, asw_entity*, parent_ply);
     FIELD(0x2B0, asw_entity*, parent_obj);
 	FIELD(0x2B8, asw_player*, opponent);
@@ -409,6 +410,7 @@ public:
     FIELD(0x6080, int, blockstun);
     FIELD(0x9844, int, hitstun);
     FIELD(0xC248, ID_CMNACT, cur_cmn_action_id);
+    FIELD(0xCF74, int, slowdown_timer);
 
     int calc_advantage();
     bool is_in_hitstun();
