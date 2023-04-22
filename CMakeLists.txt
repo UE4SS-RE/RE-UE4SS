@@ -168,6 +168,7 @@ add_subdirectory("Dependencies/ParserBase")
 add_subdirectory("Dependencies/IniParser")
 add_subdirectory("Dependencies/JSON")
 add_subdirectory("Dependencies/ArgsParser")
+add_subdirectory("CppMods/MyAwesomeMod")
 
 # UE4SS
 # Settings override -> START
@@ -241,6 +242,7 @@ set(${TARGET}_Sources
         "${CMAKE_CURRENT_SOURCE_DIR}/src/Mod/Mod.cpp"
         "${CMAKE_CURRENT_SOURCE_DIR}/src/Mod/LuaMod.cpp"
         "${CMAKE_CURRENT_SOURCE_DIR}/src/Mod/CppMod.cpp"
+        "${CMAKE_CURRENT_SOURCE_DIR}/src/Mod/CppUserModBase.cpp"
         "${CMAKE_CURRENT_SOURCE_DIR}/src/UnrealCustom/CustomProperty.cpp"
         "${CMAKE_CURRENT_SOURCE_DIR}/src/LuaLibrary.cpp"
         "${CMAKE_CURRENT_SOURCE_DIR}/src/LuaType/LuaModRef.cpp"

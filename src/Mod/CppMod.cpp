@@ -3,6 +3,7 @@
 #include <filesystem>
 
 #include <DynamicOutput/DynamicOutput.hpp>
+#include <Helpers/String.hpp>
 #include <Mod/CppMod.hpp>
 
 namespace RC
@@ -45,12 +46,27 @@ namespace RC
 
     auto CppMod::start_mod() -> void
     {
-        m_mod = m_start_mod_func();
-        m_is_started = m_mod != nullptr;
+        try
+        {
+            m_mod = m_start_mod_func();
+            m_is_started = m_mod != nullptr;
+        }
+        catch (std::exception& e)
+        {
+            if (!Output::has_internal_error())
+            {
+                Output::send<LogLevel::Warning>(STR("Failed to load dll <{}> for mod {}, because: {}\n"), m_dlls_path + L"\\main.dll", m_mod_name, to_wstring(e.what()));
+            }
+            else
+            {
+                printf_s("Internal Error: %s\n", e.what());
+            }
+        }
     }
 
     auto CppMod::uninstall() -> void
     {
+        Output::send(STR("Stopping C++ mod '{}' for uninstall\n"), m_mod_name);
         if (m_mod && m_uninstall_mod_func) { m_uninstall_mod_func(m_mod); }
     }
 
