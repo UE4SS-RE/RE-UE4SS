@@ -4,7 +4,7 @@ A hitbox and frame advantager viewer for Guilty Gear -Strive-.
 
 To install, extract the contents of UE4SS_StriveHitboxes into GUILTY GEAR STRIVE\RED\Binaries\Win64 so that xinput1_3.dll is inside Win64. Extract the contents of StriveHitboxes.rar into ~mods2.
 
-ORIGINAL PROJECT DESCRIPTION BELOW
+*ORIGINAL PROJECT DESCRIPTION BELOW, IGNORE IF YOU DO NOT WANT TO COMPILE THE CODE.*
 
 # Unreal Engine 4/5 Scripting System
 
