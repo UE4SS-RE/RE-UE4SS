@@ -5,10 +5,8 @@
 # Visual Studio
 .vs/
 *.vcxproj*
-VS_Solution/*.sln
-VS_Solution/CMakeCache.txt
-VS_Solution/cmake_install.cmake
-VS_Solution/*.proj*
+VS_Solution/*
+!VS_Solution/generate_vs_solution.bat
 
 # Build results
 [Dd]ebug/
