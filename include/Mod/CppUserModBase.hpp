@@ -20,15 +20,14 @@ namespace RC
     class RC_UE4SS_API CppUserModBase
     {
     public:
-        const StringType ModName{};
-        const StringType ModVersion{};
-        const StringType ModDescription{};
-        const StringType ModAuthors{};
-        const StringType ModIntendedSDKVersion{};
+        StringType ModName{};
+        StringType ModVersion{};
+        StringType ModDescription{};
+        StringType ModAuthors{};
+        StringType ModIntendedSDKVersion{};
 
     public:
-        CppUserModBase() = delete;
-        CppUserModBase(const ModMetadata&);
+        CppUserModBase();
         virtual ~CppUserModBase() = default;
 
     public:

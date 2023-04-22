@@ -3,12 +3,11 @@
 
 namespace RC
 {
-    CppUserModBase::CppUserModBase(const ModMetadata& Metadata) :
-        ModName(Metadata.ModName),
-        ModVersion(Metadata.ModVersion),
-        ModDescription(Metadata.ModDescription),
-        ModAuthors(Metadata.ModAuthors),
-        ModIntendedSDKVersion(Metadata.ModIntendedSDKVersion)
+    CppUserModBase::CppUserModBase()
     {
+        if (ModIntendedSDKVersion.empty())
+        {
+            ModIntendedSDKVersion = std::format(STR("{}.{}.{}"), UE4SS_LIB_VERSION_MAJOR, UE4SS_LIB_VERSION_MINOR, UE4SS_LIB_VERSION_HOTFIX);
+        }
     }
 }
