@@ -168,7 +168,6 @@ add_subdirectory("Dependencies/ParserBase")
 add_subdirectory("Dependencies/IniParser")
 add_subdirectory("Dependencies/JSON")
 add_subdirectory("Dependencies/ArgsParser")
-add_subdirectory("CppMods/MyAwesomeMod")
 
 # UE4SS
 # Settings override -> START
