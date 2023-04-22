@@ -11,6 +11,7 @@
 
 #define WIN32_LEAN_AND_MEAN
 #include <imgui.h>
+#include <UE4SSProgram.hpp>
 #include <LuaType/LuaFString.hpp>
 
 #include "Windows.h"
@@ -50,12 +51,12 @@ public:
 
 class UTexture;
 
-class UCanvas : public RC::Unreal::UObject {
+class UCanvas : public Unreal::UObject {
 public:
 	void K2_DrawLine(FVector2D ScreenPositionA, FVector2D ScreenPositionB, float Thickness, FLinearColor RenderColor);
-	RC::Unreal::FVector K2_Project(const RC::Unreal::FVector WorldPosition);
+	Unreal::FVector K2_Project(const Unreal::FVector WorldPosition);
 
-	void K2_DrawTriangle(UTexture* RenderTexture, RC::Unreal::TArray<FCanvasUVTri>* Triangles);
+	void K2_DrawTriangle(UTexture* RenderTexture, Unreal::TArray<FCanvasUVTri>* Triangles);
 
 	FIELD(0x260, FCanvas*, Canvas);
 };
@@ -64,11 +65,11 @@ using UCanvas_K2_DrawLine_t = void(*)(UCanvas*, FVector2D, FVector2D, float, con
 const auto UCanvas_K2_DrawLine = (UCanvas_K2_DrawLine_t)(
 	sigscan::get().scan("\x0F\x2F\xC8\x0F\x86\x94", "xxxxxx") - 0x51);
 
-using UCanvas_K2_Project_t = void(*)(const UCanvas*, RC::Unreal::FVector*, const RC::Unreal::FVector&);
+using UCanvas_K2_Project_t = void(*)(const UCanvas*, Unreal::FVector*, const Unreal::FVector&);
 const auto UCanvas_K2_Project = (UCanvas_K2_Project_t)(
 	sigscan::get().scan("\x48\x8B\x89\x68\x02\x00\x00\x48\x8B\xDA", "xxxxxxxxxx") - 0x12);
 
-using UCanvas_K2_DrawTriangle_t = void(*)(UCanvas*, UTexture*, RC::Unreal::TArray<FCanvasUVTri>*);
+using UCanvas_K2_DrawTriangle_t = void(*)(UCanvas*, UTexture*, Unreal::TArray<FCanvasUVTri>*);
 const auto UCanvas_K2_DrawTriangle = (UCanvas_K2_DrawTriangle_t)(
 	sigscan::get().scan("\x48\x81\xEC\x90\x00\x00\x00\x41\x83\x78\x08\x00", "xxxxxxxxxxxx") - 6);
 
@@ -77,19 +78,19 @@ void UCanvas::K2_DrawLine(FVector2D ScreenPositionA, FVector2D ScreenPositionB, 
 	UCanvas_K2_DrawLine(this, ScreenPositionA, ScreenPositionB, Thickness, RenderColor);
 }
 
-RC::Unreal::FVector UCanvas::K2_Project(const RC::Unreal::FVector WorldPosition)
+Unreal::FVector UCanvas::K2_Project(const Unreal::FVector WorldPosition)
 {
-	RC::Unreal::FVector out;
+	Unreal::FVector out;
 	UCanvas_K2_Project(this, &out, WorldPosition);
 	return out;
 }
 
-void UCanvas::K2_DrawTriangle(UTexture* RenderTexture, RC::Unreal::TArray<FCanvasUVTri>* Triangles)
+void UCanvas::K2_DrawTriangle(UTexture* RenderTexture, Unreal::TArray<FCanvasUVTri>* Triangles)
 {
 	UCanvas_K2_DrawTriangle(this, RenderTexture, Triangles);
 }
 
-class AHUD : public RC::Unreal::UObject {
+class AHUD : public Unreal::UObject {
 public:
 	FIELD(0x278, UCanvas*, Canvas);
 };
@@ -159,7 +160,7 @@ public:
 		TriangleList.~TArray<FCanvasUVTri>();
 	}
 
-	FIELD(0x50, RC::Unreal::TArray<FCanvasUVTri>, TriangleList);
+	FIELD(0x50, Unreal::TArray<FCanvasUVTri>, TriangleList);
 
 private:
 	char pad[0x60];
@@ -307,7 +308,7 @@ void asw_coords_to_screen(UCanvas* canvas, FVector2D* pos)
 	pos->X *= asw_engine::COORD_SCALE / 1000.F;
 	pos->Y *= asw_engine::COORD_SCALE / 1000.F;
 
-	RC::Unreal::FVector pos3d(pos->X, 0.f, pos->Y);
+	Unreal::FVector pos3d(pos->X, 0.f, pos->Y);
 	asw_scene::get()->camera_transform(&pos3d, nullptr);
 
 	const auto proj = canvas->K2_Project(pos3d);
@@ -338,7 +339,7 @@ void fill_rect(
 		FVector2D(0.f, 0.f),
 		*GWhiteTexture);
 
-	RC::Unreal::TArray<FCanvasUVTri> List;
+	Unreal::TArray<FCanvasUVTri> List;
 	for (auto Triangle : triangles)
 		List.Add(Triangle);
 
@@ -501,7 +502,7 @@ void draw_pushbox(UCanvas* canvas, const asw_entity* entity)
 	draw_rect(canvas, corners, color);
 }
 
-class UREDGameCommon : public RC::Unreal::UObject {};
+class UREDGameCommon : public Unreal::UObject {};
 UREDGameCommon* GameCommon;
 
 typedef int(*GetGameMode_Func)(UREDGameCommon*);
@@ -546,7 +547,7 @@ void draw_display(UCanvas* canvas)
 		return;
     if (!GameCommon)
     {
-        GameCommon = static_cast<UREDGameCommon*>(RC::UObjectGlobals::FindFirstOf(L"REDGameCommon"));
+        GameCommon = static_cast<UREDGameCommon*>(UObjectGlobals::FindFirstOf(L"REDGameCommon"));
         return;
     }
     if (GetGameMode(GameCommon) != GAME_MODE_TRAINING) return;
@@ -585,7 +586,7 @@ struct DrawHudParams
         Scale = 1;
         bScalePosition = false;
     }
-    RC::FString* Text;
+    FString* Text;
     FLinearColor TextColor;
     float ScreenX;
     float ScreenY;
@@ -610,6 +611,9 @@ const void* vtable_hook(const void** vtable, const int index, const void* hook)
 	return orig;
 }
 
+bool ShouldUpdateBattle = true;
+bool ShouldAdvanceBattle = false;
+
 void install_hooks()
 {
 	// AHUD::PostRender
@@ -623,9 +627,6 @@ void uninstall_hooks()
     vtable_hook(AHUD_vtable, AHUD_PostRender_index, orig_AHUD_PostRender);
 }
 
-bool ShouldUpdateBattle = true;
-bool ShouldAdvanceBattle = false;
-
 typedef void(*UpdateBattle_Func)(AREDGameState_Battle*, float);
 UpdateBattle_Func UpdateBattle;
 
@@ -633,14 +634,14 @@ struct UpdateAdvantage
 {
     UpdateAdvantage()
     {
-        Text = RC::FString(L"");
+        Text = FString(L"");
     }
     
-    RC::FString Text;
+    FString Text;
 };
 
-std::vector<RC::UObject*> mod_actors{};
-RC::UFunction* Function;
+std::vector<UObject*> mod_actors{};
+UFunction* bp_function;
 
 bool MatchStartFlag = false;
 
@@ -660,27 +661,24 @@ int p2_hitstop_prev = 0;
 int p1_act = 0;
 int p2_act = 0;
 
-bool was_f3_pressed;
-
 void(*UpdateBattle_Orig)(AREDGameState_Battle*, float);
 void UpdateBattle_New(AREDGameState_Battle* GameState, float DeltaTime) {
-    if (GetAsyncKeyState(VK_F2) & 0x8001)
+
+    if (GetGameMode(GameCommon) != static_cast<int>(GAME_MODE_TRAINING))
+    {
+        UpdateBattle_Orig(GameState, DeltaTime);
+        return;
+    }
+    if (GetAsyncKeyState(VK_F2) & 1)
     {
         ShouldUpdateBattle = !ShouldUpdateBattle;
     }
-    if (GetAsyncKeyState(VK_F3) & 0x8001)
+    if (GetAsyncKeyState(VK_F3) & 1)
     {
-        if (!was_f3_pressed)
-        {
-            was_f3_pressed = true;
-            ShouldAdvanceBattle = true;
-        }
+        ShouldAdvanceBattle = true;
     }
-    else
-    {
-        was_f3_pressed = false;
-    }
-    if (ShouldUpdateBattle || GetGameMode(GameCommon) != static_cast<int>(GAME_MODE_TRAINING) || ShouldAdvanceBattle)
+
+    if (ShouldUpdateBattle || ShouldAdvanceBattle)
 	{
 		UpdateBattle_Orig(GameState, DeltaTime);
 		ShouldAdvanceBattle = false;
@@ -724,13 +722,13 @@ void UpdateBattle_New(AREDGameState_Battle* GameState, float DeltaTime) {
 
         if (MatchStartFlag)
         {
-            static auto battle_trainingdamage_name = RC::FName(STR("Battle_TrainingDamage_C"), RC::Unreal::FNAME_Add);
+            static auto battle_trainingdamage_name = FName(STR("Battle_TrainingDamage_C"), Unreal::FNAME_Add);
 
-            RC::UObjectGlobals::FindAllOf(battle_trainingdamage_name, mod_actors);
+            UObjectGlobals::FindAllOf(battle_trainingdamage_name, mod_actors);
 
             if (mod_actors.size() < 1) return;
             
-            Function = mod_actors[0]->GetFunctionByNameInChain(STR("UpdateAdvantage"));
+            bp_function = mod_actors[0]->GetFunctionByNameInChain(STR("UpdateAdvantage"));
             MatchStartFlag = false;
         }
 	    
@@ -742,10 +740,10 @@ void UpdateBattle_New(AREDGameState_Battle* GameState, float DeltaTime) {
 	    }
 	    if (p1_advantage > 9000 || p1_advantage < -9000)
 	    {
-	        p1_string = L"???";
+	        p1_string = L"????";
 	    }
-	    params.Text = RC::FString(p1_string.c_str());
-	    mod_actors[mod_actors.size() - 1]->ProcessEvent(Function, &params);
+	    params.Text = FString(p1_string.c_str());
+	    mod_actors[mod_actors.size() - 1]->ProcessEvent(bp_function, &params);
 
 	    auto p2_string = std::to_wstring(p2_advantage).append(L"0");
 	    if (p2_advantage > 0)
@@ -754,45 +752,35 @@ void UpdateBattle_New(AREDGameState_Battle* GameState, float DeltaTime) {
 	    }
 	    if (p2_advantage > 9000 || p2_advantage < -9000)
 	    {
-	        p2_string = L"???";
+	        p2_string = L"????";
 	    }
 	    UpdateAdvantage params2 = UpdateAdvantage();
-	    params2.Text = RC::FString(p2_string.c_str());
-	    mod_actors[mod_actors.size() - 2]->ProcessEvent(Function, &params2);
+	    params2.Text = FString(p2_string.c_str());
+	    mod_actors[mod_actors.size() - 2]->ProcessEvent(bp_function, &params2);
 	}
 }
 
-/*BPFUNCTION(ToggleUpdateBattle)
-{
-	ShouldUpdateBattle = !ShouldUpdateBattle;
-}
-
-BPFUNCTION(AdvanceBattle)
-{
-	ShouldAdvanceBattle = true;
-}*/
-
-class StriveHitboxes : public RC::CppUserModBase
+class StriveHitboxes : public CppUserModBase
 {
 public:
     StriveHitboxes() : CppUserModBase()
     {
-        GameCommon = static_cast<UREDGameCommon*>(RC::UObjectGlobals::FindFirstOf(L"REDGameCommon"));
+        GameCommon = static_cast<UREDGameCommon*>(UObjectGlobals::FindFirstOf(L"REDGameCommon"));
         
         if (MH_Initialize() != MH_OK)
-            RC::Output::send(L"ERROR: Failed to initialize MinHook!");
+            Output::send(L"ERROR: Failed to initialize MinHook!");
         
         uint64_t UpdateBattle_Addr = sigscan::get().scan("\x48\x8B\x97\x88\x0B\x00\x00", "xxxxxxx") - 0x2B;
         if (MH_CreateHook(reinterpret_cast<LPVOID>(UpdateBattle_Addr), &UpdateBattle_New, reinterpret_cast<LPVOID*>(&UpdateBattle_Orig))  != MH_OK)
-            RC::Output::send(L"ERROR: Failed to hook UpdateBattle!");
+            Output::send(L"ERROR: Failed to hook UpdateBattle!");
         if (MH_EnableHook((LPVOID)UpdateBattle_Addr) != MH_OK)
-            RC::Output::send(L"ERROR: Failed to enable hook on UpdateBattle!");
+            Output::send(L"ERROR: Failed to enable hook on UpdateBattle!");
         
         uint64_t MatchStart_Addr = sigscan::get().scan("\x48\x89\x85\x18\x04\x00\x00\x33\xC0", "xxxxxxxxx") - 0x31;
         if (MH_CreateHook(reinterpret_cast<LPVOID>(MatchStart_Addr), &MatchStart_New, reinterpret_cast<LPVOID*>(&MatchStart_Orig))  != MH_OK)
-            RC::Output::send(L"ERROR: Failed to hook MatchStart!");
+            Output::send(L"ERROR: Failed to hook MatchStart!");
         if (MH_EnableHook((LPVOID)MatchStart_Addr) != MH_OK)
-            RC::Output::send(L"ERROR: Failed to enable hook on MatchStart!");
+            Output::send(L"ERROR: Failed to enable hook on MatchStart!");
         
         uintptr_t GetGameMode_Addr = sigscan::get().scan("\x0F\xB6\x81\xF0\x02\x00\x00\xC3", "xxxxxxxx");
         GetGameMode = (GetGameMode_Func)GetGameMode_Addr;
@@ -812,12 +800,12 @@ public:
 
 extern "C"
 {
-    STRIVEHITBOXES_API RC::CppUserModBase* start_mod()
+    STRIVEHITBOXES_API CppUserModBase* start_mod()
     {
         return new StriveHitboxes();
     }
 
-    STRIVEHITBOXES_API void uninstall_mod(RC::CppUserModBase* mod)
+    STRIVEHITBOXES_API void uninstall_mod(CppUserModBase* mod)
     {
         delete mod;
     }
