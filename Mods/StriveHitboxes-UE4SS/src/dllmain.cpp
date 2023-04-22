@@ -543,6 +543,11 @@ void draw_display(UCanvas* canvas)
 	const auto* engine = asw_engine::get();
 	if (engine == nullptr)
 		return;
+    if (!GameCommon)
+    {
+        GameCommon = static_cast<UREDGameCommon*>(RC::UObjectGlobals::FindFirstOf(L"REDGameCommon"));
+        return;
+    }
     if (GetGameMode(GameCommon) != GAME_MODE_TRAINING) return;
 
 	if (canvas->Canvas == nullptr)
@@ -642,6 +647,8 @@ void(*MatchStart_Orig)(AREDGameState_Battle*);
 void MatchStart_New(AREDGameState_Battle* GameState)
 {
     MatchStartFlag = true;
+    ShouldAdvanceBattle = false;
+    ShouldUpdateBattle = true;
     MatchStart_Orig(GameState);
 }
 
@@ -675,6 +682,11 @@ void UpdateBattle_New(AREDGameState_Battle* GameState, float DeltaTime) {
 	                p2_advantage = engine->players[1].entity->calc_advantage() + p2_act;
 	            }
 	        }
+	    }
+	    else if (engine->players[0].entity->can_act() || engine->players[1].entity->can_act())
+	    {
+	        p1_advantage = p1_act - p2_act;
+	        p2_advantage = p2_act - p1_act;
 	    }
 	    p1_hitstop_prev = engine->players[0].entity->hitstop;
 	    p2_hitstop_prev = engine->players[1].entity->hitstop;
