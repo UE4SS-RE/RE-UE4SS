@@ -33,6 +33,14 @@ class MyAwesomeMod : public RC::CppUserModBase
 public:
     MyAwesomeMod() : CppUserModBase()
     {
+        ModName = STR("MyAwesomeMod");
+        ModVersion = STR("1.0");
+        ModDescription = STR("This is my awesome mod");
+        ModAuthors = STR("UE4SS Team");
+        // Do not change this unless you want to target a UE4SS version
+        // other than the one you're currently building with somehow.
+        //ModIntendedSDKVersion = STR("2.6");
+        
         printf("MyAwesomeMod says hello\n");
     }
 
@@ -40,7 +48,7 @@ public:
     {
     }
 
-    auto update() -> void override
+    auto on_update() -> void override
     {
     }
 };
@@ -89,7 +97,16 @@ We also get some support for colors via the `LogLevel` enum.
 #include <Unreal/UObject.hpp>
 ```
 6. Let's again utilize the `using namespace` shortcut by adding this below the first one: `using namespace RC::Unreal;`
-7. Add this below the call to `Output::send` in the `MyAwesomeMod` constructor:
+7. Add this function in your mod class:
+```c++
+auto on_unreal_init() -> void override
+{
+    // You are allowed to use the 'Unreal' namespace in this function and anywhere else after this function has fired.
+    auto Object = UObjectGlobals::StaticFindObject(nullptr, nullptr, STR("/Script/CoreUObject.Object"));
+    Output::send<LogLevel::Verbose>(STR("Object Name: {}\n"), Object->GetFullName());
+}
+```
+8. Add this below the call to `Output::send` in the `MyAwesomeMod` constructor:
 ```c++
 auto Object = UObjectGlobals::StaticFindObject(nullptr, nullptr, STR("/Script/CoreUObject.Object"));
 Output::send(STR("Object Name: {}\n"), Object->GetFullName());
@@ -97,5 +114,5 @@ Output::send(STR("Object Name: {}\n"), Object->GetFullName());
 Note that `Output::send` doesn't require a `LogLevel` and that we're using `{}` in the format string instead of `%s`.  
 The `Output::send` function uses `std::format` in the back-end so you should do some research around std::format or libfmt if you want to know more about it.
 
-8. Right click your project and hit `Build`.  
-9. From this point, follow the C++ mod installation guide.
+9. Right click your project and hit `Build`.  
+10. From this point, follow the C++ mod installation guide.
