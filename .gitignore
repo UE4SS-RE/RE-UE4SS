@@ -61,3 +61,6 @@ _ReSharper*/
 
 # Local History for Visual Studio Code
 .history/
+
+/generated_include/build_number.hpp
+/generated_src
