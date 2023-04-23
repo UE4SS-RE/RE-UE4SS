@@ -87,20 +87,8 @@ namespace RC
     {
         return m_is_started;
     }
+    
+    auto Mod::fire_update() -> void {}
 
-    auto Mod::on_program_start() -> void
-    {
-        LuaMod::on_program_start();
-    }
-
-    auto Mod::global_uninstall() -> void
-    {
-        LuaMod::global_uninstall();
-    }
-
-    auto Mod::update() -> void
-    {}
-
-    auto Mod::update_async() -> void
-    {}
+    auto Mod::update_async() -> void {}
 }

@@ -17,7 +17,7 @@ namespace RC
 
     // When making C++ mods, keep in mind that they will break if UE4SS and the mod don't use the same C Runtime library version
     // This includes them being compiled in different configurations (Debug/Release).
-    class RC_UE4SS_API CppUserModBase
+    class CppUserModBase
     {
     public:
         StringType ModName{};
@@ -27,11 +27,17 @@ namespace RC
         StringType ModIntendedSDKVersion{};
 
     public:
-        CppUserModBase();
-        virtual ~CppUserModBase() = default;
+        RC_UE4SS_API CppUserModBase();
+        RC_UE4SS_API virtual ~CppUserModBase() = default;
 
     public:
-        auto virtual update() -> void = 0;
+        RC_UE4SS_API auto virtual on_update() -> void = 0;
+
+        // The 'Unreal' module has been initialized.
+        // Before this fires, you cannot use anything in the 'Unreal' namespace.
+        RC_UE4SS_API auto virtual on_unreal_init() -> void {}
+
+        RC_UE4SS_API auto virtual on_program_start() -> void {}
     };
 }
 

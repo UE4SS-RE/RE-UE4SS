@@ -70,9 +70,19 @@ namespace RC
         if (m_mod && m_uninstall_mod_func) { m_uninstall_mod_func(m_mod); }
     }
 
-    auto CppMod::update() -> void
+    auto CppMod::fire_unreal_init() -> void
     {
-        if (m_mod) { m_mod->update(); }
+        if (m_mod) { m_mod->on_unreal_init(); }
+    }
+
+    auto CppMod::fire_program_start() -> void
+    {
+        if (m_mod) { m_mod->on_program_start(); }
+    }
+
+    auto CppMod::fire_update() -> void
+    {
+        if (m_mod) { m_mod->on_update(); }
     }
 
     CppMod::~CppMod()

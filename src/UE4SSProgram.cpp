@@ -145,15 +145,25 @@ namespace RC
 
             // Setup the log file
             auto& file_device = Output::set_default_devices<Output::NewFileDevice>();
-            //auto& file_device = Output::get_device<Output::NewFileDevice>();
             file_device.set_file_name_and_path(m_log_directory / m_log_file_name);
+            
+            create_simple_console();
 
-            m_simple_console_enabled = settings_manager.Debug.SimpleConsoleEnabled;
-            m_debug_console_enabled = settings_manager.Debug.DebugConsoleEnabled;
-            m_debug_console_visible = settings_manager.Debug.DebugConsoleVisible;
+            setup_mods();
+            install_cpp_mods();
+            start_cpp_mods();
 
-            create_debug_console();
-            setup_output_devices();
+            if (settings_manager.Debug.DebugConsoleEnabled)
+            {
+                m_console_device = &Output::set_default_devices<Output::ConsoleDevice>();
+                m_console_device->set_formatter([](File::StringViewType string) -> File::StringType {
+                    return std::format(STR("[{}] {}"), std::format(STR("{:%X}"), std::chrono::system_clock::now()), string);
+                });
+                if (settings_manager.Debug.DebugConsoleVisible)
+                {
+                    m_render_thread = std::jthread{ &GUI::gui_thread, &m_debugging_gui };
+                }
+            }
 
             // This is experimental code that's here only for future reference
             /*
@@ -198,6 +208,7 @@ namespace RC
             Output::send(STR("object dumper directory: {}\n\n\n"), m_object_dumper_output_directory.c_str());
 
             setup_unreal();
+            fire_unreal_init_for_cpp_mods();
             setup_unreal_properties();
             UAssetRegistry::SetMaxMemoryUsageDuringAssetLoading(settings_manager.Memory.MaxMemoryUsageDuringAssetLoading);
 
@@ -289,8 +300,8 @@ namespace RC
 
     auto UE4SSProgram::create_emergency_console_for_early_error(File::StringViewType error_message) -> void
     {
-        m_simple_console_enabled = true;
-        create_debug_console();
+        settings_manager.Debug.SimpleConsoleEnabled = true;
+        create_simple_console();
         printf_s("%S\n", error_message.data());
     }
 
@@ -308,10 +319,16 @@ namespace RC
         }
     }
 
-    auto UE4SSProgram::create_debug_console() -> void
+    auto UE4SSProgram::create_simple_console() -> void
     {
-        if (m_simple_console_enabled)
+        if (settings_manager.Debug.SimpleConsoleEnabled)
         {
+            m_debug_console_device = &Output::set_default_devices<Output::DebugConsoleDevice>();
+            Output::set_default_log_level<LogLevel::Normal>();
+            m_debug_console_device->set_formatter([](File::StringViewType string) -> File::StringType {
+                return std::format(STR("[{}] {}"), std::format(STR("{:%X}"), std::chrono::system_clock::now()), string);
+            });
+
             if (AllocConsole())
             {
                 FILE* stdin_filename;
@@ -322,10 +339,6 @@ namespace RC
                 freopen_s(&stderr_filename, "CONOUT$", "w", stderr);
             }
 
-        }
-        if (m_debug_console_enabled && m_debug_console_visible)
-        {
-            m_render_thread = std::jthread{ &GUI::gui_thread, &m_debugging_gui };
         }
     }
 
@@ -599,7 +612,7 @@ namespace RC
         UObjectArray::AddUObjectCreateListener(&FUEDeathListener::UEDeathListener);
         //*/
 
-        if (m_debug_console_enabled)
+        if (settings_manager.Debug.DebugConsoleEnabled)
         {
             if (settings_manager.General.UseUObjectArrayCache)
             {
@@ -657,9 +670,10 @@ namespace RC
                 Output::send<LogLevel::Warning>(STR("FAssetData not available in <4.17, ignoring 'LoadAllAssetsBeforeDumpingObjects' & 'LoadAllAssetsBeforeGeneratingCXXHeaders'."));
             }
 
-            setup_mods();
-            Mod::on_program_start();
-            start_mods();
+            install_lua_mods();
+            LuaMod::on_program_start();
+            fire_program_start_for_cpp_mods();
+            start_lua_mods();
         });
 
         if (settings_manager.General.EnableDebugKeyBindings)
@@ -718,7 +732,10 @@ namespace RC
 
             for (auto& mod : m_mods)
             {
-                if (mod->is_started()) mod->update();
+                if (mod->is_started())
+                {
+                    mod->fire_update();
+                }
             }
 
             std::this_thread::sleep_for(std::chrono::milliseconds(5));
@@ -790,38 +807,18 @@ namespace RC
                 if (std::filesystem::exists(sub_directory.path() / "dlls")) m_mods.emplace_back(std::make_unique<CppMod>(*this, sub_directory.path().stem().wstring(), sub_directory.path().wstring()));
             }
         }
-
-        install_mods();
     }
 
-    auto UE4SSProgram::setup_output_devices() -> void
+    template<typename ModType>
+    auto install_mods(std::vector<std::unique_ptr<Mod>>& mods) -> void
     {
-        // Setup DynamicOutput
-        if (m_simple_console_enabled)
+        for (auto& mod : mods)
         {
-            m_debug_console_device = &Output::set_default_devices<Output::DebugConsoleDevice>();
-            Output::set_default_log_level<LogLevel::Normal>();
-            m_debug_console_device->set_formatter([](File::StringViewType string) -> File::StringType {
-                return std::format(STR("[{}] {}"), std::format(STR("{:%X}"), std::chrono::system_clock::now()), string);
-            });
-        }
+            if (!dynamic_cast<ModType*>(mod.get())) { continue; }
 
-        if (m_debug_console_enabled)
-        {
-            m_console_device = &Output::set_default_devices<Output::ConsoleDevice>();
-            m_console_device->set_formatter([](File::StringViewType string) -> File::StringType {
-                return std::format(STR("[{}] {}"), std::format(STR("{:%X}"), std::chrono::system_clock::now()), string);
-            });
-        }
-    }
-
-    auto UE4SSProgram::install_mods() -> void
-    {
-        for (auto& mod : m_mods)
-        {
-            bool mod_name_is_taken = std::find_if(m_mods.begin(), m_mods.end(), [&](auto& elem) {
+            bool mod_name_is_taken = std::find_if(mods.begin(), mods.end(), [&](auto& elem) {
                 return elem->get_name() == mod->get_name();
-            }) == m_mods.end();
+            }) == mods.end();
 
             if (mod_name_is_taken)
             {
@@ -846,12 +843,42 @@ namespace RC
         }
     }
 
-    auto UE4SSProgram::start_mods() -> void
+    auto UE4SSProgram::install_cpp_mods() -> void
+    {
+        install_mods<CppMod>(m_mods);
+    }
+
+    auto UE4SSProgram::install_lua_mods() -> void
+    {
+        install_mods<LuaMod>(m_mods);
+    }
+    
+    auto UE4SSProgram::fire_unreal_init_for_cpp_mods() -> void
+    {
+        for (const auto& mod : m_mods)
+        {
+            if (!dynamic_cast<CppMod*>(mod.get())) { continue; }
+            mod->fire_unreal_init();
+        }
+    }
+
+    auto UE4SSProgram::fire_program_start_for_cpp_mods() -> void
+    {
+        for (const auto& mod : m_mods)
+        {
+            if (!dynamic_cast<CppMod*>(mod.get())) { continue; }
+            mod->fire_program_start();
+        }
+    }
+    
+    template<typename ModType>
+    auto start_mods() -> std::string
     {
         // Part #1: Start all mods that are enabled in mods.txt.
         Output::send(STR("Starting mods (from mods.txt load order)...\n"));
 
-        std::wstring enabled_mods_file{m_mods_directory / "mods.txt"};
+        std::filesystem::path mods_directory = UE4SSProgram::get_program().get_mods_directory();
+        std::wstring enabled_mods_file{mods_directory / "mods.txt"};
         if (!std::filesystem::exists(enabled_mods_file))
         {
             Output::send(STR("No mods.txt file found...\n"));
@@ -878,17 +905,12 @@ namespace RC
                 std::wstring mod_name = explode_by_occurrence(current_line, L':', 1);
                 std::wstring mod_enabled = explode_by_occurrence(current_line, L':', ExplodeType::FromEnd);
 
-                Mod* mod = find_mod_by_name(mod_name, IsInstalled::Yes);
+                auto mod = UE4SSProgram::find_mod_by_name(mod_name, UE4SSProgram::IsInstalled::Yes);
+                if (!mod || !dynamic_cast<ModType*>(mod)) { continue; }
 
                 if (!mod_enabled.empty() && mod_enabled[0] == L'1')
                 {
-                    if (!mod)
-                    {
-                        Output::send(STR("Tried to start non-existent mod '{}'\n"), mod_name);
-                        continue;
-                    }
-
-                    Output::send(STR("Starting mod '{}'\n"), mod->get_name().data());
+                    Output::send(STR("Starting {} mod '{}'\n"), std::is_same_v<ModType, LuaMod> ? STR("Lua") : STR("C++"), mod->get_name().data());
                     mod->start_mod();
                 }
                 else
@@ -901,17 +923,18 @@ namespace RC
         // Part #2: Start all mods that have enabled.txt present in the mod directory.
         Output::send(STR("Starting mods (from enabled.txt, no defined load order)...\n"));
 
-        for (const auto& mod_directory : std::filesystem::directory_iterator(m_mods_directory))
+        for (const auto& mod_directory : std::filesystem::directory_iterator(mods_directory))
         {
             std::error_code ec{};
 
             if (!mod_directory.is_directory(ec)) { continue; }
-            if (ec.value() != 0) { set_error("is_directory ran into error %d", ec.value()); }
+            if (ec.value() != 0) { return std::format("is_directory ran into error {}", ec.value()); }
 
             if (!std::filesystem::exists(mod_directory.path() / "enabled.txt", ec)) { continue; }
-            if (ec.value() != 0) { set_error("exists ran into error %d", ec.value()); }
+            if (ec.value() != 0) { return std::format("exists ran into error {}", ec.value()); }
 
-            auto mod = find_mod_by_name(mod_directory.path().stem().c_str(), IsInstalled::Yes);
+            auto mod = UE4SSProgram::find_mod_by_name(mod_directory.path().stem().c_str(), UE4SSProgram::IsInstalled::Yes);
+            if (!dynamic_cast<ModType*>(mod)) { continue; }
             if (!mod)
             {
                 Output::send<LogLevel::Warning>(STR("Found a mod with enabled.txt but mod has not been installed properly.\n"));
@@ -923,6 +946,20 @@ namespace RC
             Output::send(STR("Mod '{}' has enabled.txt, starting mod.\n"), mod->get_name().data());
             mod->start_mod();
         }
+
+        return {};
+    }
+
+    auto UE4SSProgram::start_lua_mods() -> void
+    {
+        auto error_message = start_mods<LuaMod>();
+        if (!error_message.empty()) { set_error(error_message.c_str()); }
+    }
+
+    auto UE4SSProgram::start_cpp_mods() -> void
+    {
+        auto error_message = start_mods<CppMod>();
+        if (!error_message.empty()) { set_error(error_message.c_str()); }
     }
 
     auto UE4SSProgram::uninstall_mods() -> void
@@ -934,7 +971,7 @@ namespace RC
         }
 
         m_mods.clear();
-        Mod::global_uninstall();
+        LuaMod::global_uninstall();
     }
 
     auto UE4SSProgram::reinstall_mods() -> void
@@ -980,7 +1017,8 @@ namespace RC
         m_pause_events_processing = false;
 
         setup_mods();
-        start_mods();
+        start_lua_mods();
+        start_cpp_mods();
         Output::send(STR("All mods re-installed\n"));
     }
 
@@ -1115,6 +1153,11 @@ namespace RC
     }
 
     auto UE4SSProgram::find_lua_mod_by_name(std::string_view mod_name, UE4SSProgram::IsInstalled installed_only, IsStarted is_started) -> LuaMod*
+    {
+        return dynamic_cast<LuaMod*>(find_mod_by_name(mod_name, installed_only, is_started));
+    }
+
+    auto UE4SSProgram::find_lua_mod_by_name(std::wstring_view mod_name, UE4SSProgram::IsInstalled installed_only, IsStarted is_started) -> LuaMod*
     {
         return dynamic_cast<LuaMod*>(find_mod_by_name(mod_name, installed_only, is_started));
     }

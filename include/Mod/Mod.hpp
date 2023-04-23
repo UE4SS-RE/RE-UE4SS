@@ -63,13 +63,13 @@ namespace RC
         auto is_started() const -> bool;
 
     public:
-        // Called once when the program is starting, after mods are setup but before any mods have been started
-        auto static on_program_start() -> void;
-
-        auto static global_uninstall() -> void;
-
         // Main update from the program
-        auto virtual update() -> void;
+        auto virtual fire_update() -> void;
+
+        auto virtual fire_unreal_init() -> void {};
+
+        // Called once when the program is starting, after mods are setup but before any mods have been started
+        auto virtual fire_program_start() -> void {};
 
         // Async update
         // Used when the main update function would block other mods from executing their scripts

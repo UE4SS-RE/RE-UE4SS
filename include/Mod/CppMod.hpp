@@ -33,7 +33,9 @@ namespace RC
         auto start_mod() -> void override;
         auto uninstall() -> void override;
 
-        auto update() -> void override;
+        auto fire_unreal_init() -> void override;
+        auto fire_program_start() -> void override;
+        auto fire_update() -> void override;
     };
 }
 
