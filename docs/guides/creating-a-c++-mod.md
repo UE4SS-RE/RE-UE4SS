@@ -106,13 +106,8 @@ auto on_unreal_init() -> void override
     Output::send<LogLevel::Verbose>(STR("Object Name: {}\n"), Object->GetFullName());
 }
 ```
-8. Add this below the call to `Output::send` in the `MyAwesomeMod` constructor:
-```c++
-auto Object = UObjectGlobals::StaticFindObject(nullptr, nullptr, STR("/Script/CoreUObject.Object"));
-Output::send(STR("Object Name: {}\n"), Object->GetFullName());
-```
 Note that `Output::send` doesn't require a `LogLevel` and that we're using `{}` in the format string instead of `%s`.  
 The `Output::send` function uses `std::format` in the back-end so you should do some research around std::format or libfmt if you want to know more about it.
 
-9. Right click your project and hit `Build`.  
-10. From this point, follow the C++ mod installation guide.
+8. Right click your project and hit `Build`.  
+9. From this point, follow the C++ mod installation guide.
