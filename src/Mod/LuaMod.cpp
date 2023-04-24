@@ -2435,7 +2435,8 @@ Overloads:
 
     auto static process_event_hook([[maybe_unused]]Unreal::UObject* Context, [[maybe_unused]]Unreal::UFunction* Function, [[maybe_unused]]void* Parms) -> void
     {
-        std::lock_guard<std::recursive_mutex> guard{LuaMod::m_thread_actions_mutex};
+        // Do not put a lock here! It can cause a freeze when game code is run from a keybind.
+        //std::lock_guard<std::recursive_mutex> guard{LuaMod::m_thread_actions_mutex};
         // NOTE: This will break horribly if UFunctions ever execute asynchronously.
         LuaMod::m_game_thread_actions.erase(std::remove_if(LuaMod::m_game_thread_actions.begin(), LuaMod::m_game_thread_actions.end(), [&](LuaMod::SimpleLuaAction& lua_data) -> bool {
             if (LuaMod::m_is_currently_executing_game_action)
@@ -2884,7 +2885,8 @@ Overloads:
 
     static auto script_hook([[maybe_unused]]Unreal::UObject* Context, Unreal::FFrame& Stack, [[maybe_unused]]void* RESULT_DECL) -> void
     {
-        std::lock_guard<std::recursive_mutex> guard{LuaMod::m_thread_actions_mutex};
+        // Do not put a lock here! It can cause a freeze when game code is run from a keybind.
+        //std::lock_guard<std::recursive_mutex> guard{LuaMod::m_thread_actions_mutex};
 
         auto execute_hook = [&](std::unordered_map<StringType, LuaMod::LuaCallbackData>& callback_container, bool precise_name_match) {
             if (callback_container.empty()) { return; }
