@@ -116,8 +116,8 @@ include_directories(${CMAKE_CURRENT_BINARY_DIR}/Dependencies/zydis)
 include_directories(${CMAKE_CURRENT_BINARY_DIR}/Dependencies/zydis/zycore)
 set(CMAKE_PREFIX_PATH
     ${LIBRARY_OUTPUT_PATH}/${CMAKE_BUILD_TYPE}
-    ${CMAKE_HOME_DIRECTORY}/Dependencies/zydis/include
-    ${CMAKE_HOME_DIRECTORY}/Dependencies/zydis/dependencies/zycore/include
+    ${CMAKE_CURRENT_SOURCE_DIRECTORY}/Dependencies/zydis/include
+    ${CMAKE_CURRENT_SOURCE_DIRECTORY}/Dependencies/zydis/dependencies/zycore/include
     )
 
 add_subdirectory(Dependencies/ASMHelper)
