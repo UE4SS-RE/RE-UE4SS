@@ -109,6 +109,7 @@ else ()
     set(ZYDIS_BUILD_SHARED_LIB OFF CACHE BOOL "Build zydis as shared libary" FORCE)
     set(ZYCORE_BUILD_SHARED_LIB OFF CACHE BOOL "Build zycore as shared libary" FORCE)
 endif ()
+set(ZYDIS_BUILD_TOOLS OFF CACHE BOOL "")
 add_subdirectory("Dependencies/zydis")
 include_directories(Dependencies/zydis/include)
 include_directories(Dependencies/zydis/dependencies/zycore/include)
@@ -119,6 +120,11 @@ set(CMAKE_PREFIX_PATH
     ${CMAKE_HOME_DIRECTORY}/Dependencies/zydis/include
     ${CMAKE_HOME_DIRECTORY}/Dependencies/zydis/dependencies/zycore/include
     )
+# needed for PolyHook
+set(ZYDIS_LIBRARY Zydis)
+set(ZYCORE_LIBRARY Zycore)
+set(ZYDIS_INCLUDE_DIR Dependencies/zydis/include)
+set(ZYCORE_INCLUDE_DIR Dependencies/zydis/dependencies/zycore/include)
 
 add_subdirectory(Dependencies/ASMHelper)
 
@@ -131,30 +137,31 @@ else ()
     set(MAKE_POLYHOOK_DEPENDENCIES_STATIC ON)
 endif ()
 set(POLYHOOK_BUILD_DLL ON CACHE BOOL "Build dll & lib instead of tests" FORCE)
-set(POLYHOOK_BUILD_SHARED_LIB ${MAKE_POLYHOOK_DEPENDENCIES_SHARED} CACHE BOOL "Build polyhook as shared libary" FORCE)
-set(POLYHOOK_BUILD_SHARED_ASMJIT ${MAKE_POLYHOOK_DEPENDENCIES_SHARED} CACHE BOOL "Build polyhook as shared libary" FORCE)
-set(POLYHOOK_BUILD_SHARED_CAPSTONE ${MAKE_POLYHOOK_DEPENDENCIES_SHARED} CACHE BOOL "Build polyhook as shared libary" FORCE)
-set(POLYHOOK_BUILD_SHARED_ZYDIS ${MAKE_POLYHOOK_DEPENDENCIES_SHARED} CACHE BOOL "Build polyhook as shared libary" FORCE)
+set(POLYHOOK_BUILD_SHARED_LIB ${MAKE_POLYHOOK_DEPENDENCIES_SHARED} CACHE BOOL "Build polyhook2 as shared libary" FORCE)
 set(POLYHOOK_USE_EXTERNAL_ZYDIS ON CACHE BOOL "Use external zydis libary" FORCE)
-set(ASMJIT_STATIC ${MAKE_POLYHOOK_DEPENDENCIES_STATIC} CACHE BOOL "Build asmjit as shared libary" FORCE)
+set(ASMJIT_STATIC ${MAKE_POLYHOOK_DEPENDENCIES_STATIC} CACHE BOOL "Build 'asmjit' library as static" FORCE)
 set(POLYHOOK_BUILD_STATIC_RUNTIME OFF CACHE BOOL "Use static runtime" FORCE)
-set(POLYHOOK_DISASM_CAPSTONE OFF CACHE BOOL "Enable capstone support" FORCE)
-set(POLYHOOK_DISASM_CAPSTONE_FULL OFF CACHE BOOL "Build all features of capstone." FORCE)
-set(POLYHOOK_DISASM_ZYDIS ON CACHE BOOL "Enable Zydis support." FORCE)
+
 # disable 'install' by replacing with no-op before calling add_subdirectory
 macro (install)
 endmacro ()
+# disable 'set_target_properties' to prevent PolyHook from setting MSVC_RUNTIME_LIBRARY to "MultiThreaded$<$<CONFIG:Debug>:Debug>DLL"
+# seriously, this can't be good, but it keeps working
+macro (set_target_properties)
+endmacro ()
 add_subdirectory(Dependencies/PolyHook_2_0)
+# clean up macros
+macro (set_target_properties)
+  _set_target_properties(${ARGV})
+endmacro ()
 macro (install)
   _install(${ARGV})
-endmacro(install)
+endmacro ()
+
 if (${CMAKE_CXX_COMPILER_ID} STREQUAL Clang)
     target_compile_options(asmjit PRIVATE -Wno-bitwise-instead-of-logical -Wno-sign-conversion -Wno-unused-command-line-argument -Wno-unused-but-set-variable)
     target_compile_options(PolyHook_2 PRIVATE -Wno-unused-value -Wno-missing-field-initializers -Wno-missing-braces -Wno-unused-variable -Wno-bitwise-instead-of-logical -Wno-reorder-ctor -Wno-unused-private-field)
 endif ()
-# For some reason, PolyHook isn't adding the capstone or zydis include directories
-include_directories(Dependencies/PolyHook_2_0)
-include_directories(Dependencies/PolyHook_2_0/capstone/include)
 
 add_subdirectory("Dependencies/Unreal")
 add_subdirectory("Dependencies/MProgram")
