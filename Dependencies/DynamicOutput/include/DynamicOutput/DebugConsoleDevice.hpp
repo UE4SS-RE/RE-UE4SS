@@ -1,10 +1,6 @@
 #ifndef UE4SS_REWRITTEN_DEBUGCONSOLEDEVICE_HPP
 #define UE4SS_REWRITTEN_DEBUGCONSOLEDEVICE_HPP
 
-#ifdef UE4SS_CONSOLE_COLORS_ENABLED
-#include <mutex>
-#endif
-
 #include <DynamicOutput/Common.hpp>
 #include <DynamicOutput/OutputDevice.hpp>
 #include <DynamicOutput/Macros.hpp>
@@ -15,9 +11,10 @@ namespace RC::Output
     class RC_DYNOUT_API DebugConsoleDevice : public OutputDevice
     {
     private:
-#ifdef UE4SS_CONSOLE_COLORS_ENABLED
-        mutable std::recursive_mutex m_receive_mutex;
-#endif
+        mutable bool m_windows_console_mode_set{};
+
+    private:
+        auto set_windows_console_out_mode_if_needed() const -> void;
 
     public:
 
@@ -40,8 +37,6 @@ namespace RC::Output
         auto has_optional_arg() const -> bool override;
         auto receive(File::StringViewType fmt) const -> void override;
         auto receive_with_optional_arg(File::StringViewType fmt, int32_t optional_arg = 0) const -> void override;
-        auto lock() const -> void override;
-        auto unlock() const -> void override;
     };
 }
 
