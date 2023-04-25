@@ -5,14 +5,26 @@ It's split up into three parts.
 Part one goes over the prerequisites.  
 Part two goes over creating the most basic C++ mod possible.  
 Part three will show you how to interact with UE4SS and UE itself (via UE4SS).
-## Part #1
+
+## Part 1
 1. Make an Epic account and link it to your GitHub account.
-2. Clone the UE4SS repo.
-3. In the command prompt or bash while in the UE4SS repo directory, execute: `git submodule update --init --recursive`
-3. Make a new directory in the UE4SS repo directory, this is where the code for all your mods will live, and I called my directory `MyCppMods`.
-4. Make another directory inside the directory that you just created, this will be for your new mod, which I will call `MyAwesomeMod`.
+2. Make a directory somewhere on your computer, the name doesn't matter but I named mine `MyMods`.
+3. Clone the RE-UE4SS repo so that you end up with `MyMods/RE-UE4SS`.
+4. Open CMD and cd into `RE-UE4SS` and execute: `git submodule update --init --recursive`
+5. Go back to the `MyMods` directory and create a new directory, this directory will contain your mod source files.
+I named mine `MyAwesomeMod`.
+6. Create a file called `CMakeLists.txt` inside `MyMods` and put this inside it:
+```cmake
+cmake_minimum_required(VERSION 3.18)
+
+project(MyMods)
+
+add_subdirectory(RE-UE4SS)
+add_subdirectory(MyAwesomeMod)
+```
+
 ## Part #2
-1. Create a file called `CMakeLists.txt` inside your mod folder and put this inside it:
+1. Create a file called `CMakeLists.txt` inside `MyMods/MyAwesomeMod` and put this inside it:
 ```cmake
 cmake_minimum_required(VERSION 3.18)
 
@@ -23,7 +35,7 @@ add_library(${TARGET} SHARED "dllmain.cpp")
 target_include_directories(${TARGET} PRIVATE .)
 target_link_libraries(${TARGET} PUBLIC cppsdk_xinput)
 ```
-2. Make a file called `dllmain.cpp` and put this inside it:
+2. Make a file called `dllmain.cpp` in `MyMods/MyAwesomeMod` and put this inside it:
 ```c++
 #include <stdio.h>
 #include <Mod/CppUserModBase.hpp>
@@ -67,37 +79,34 @@ extern "C"
     }
 }
 ```
-3. Open the `CMakeLists.txt` file that's located in the root directory of the repo.
-4. Find `add_subdirectory("Dependencies/ArgsParser")` and add `add_subdirectory("MyCppMods/MyAwesomeMod")` on the next line.
-5. In the command prompt, cd to `VS_Solution` and then execute `generate_vs_solution.bat`.  
-It's important that this bat file is executed inside the `VS_Solution` directory, the `cd` part is not optional.  
-You can also double click that file instead of using the command prompt but you won't get notified if anything went wrong.
-4. Open VS_Solution\ue4ss.sln.
-5. Find your project (in my case: MyAwesomeMod) in the solution explorer and right click it and hit `Build`.
-6. From this point, follow the C++ mod installation guide.
+3. In the command prompt, in the `MyMods` directory, execute: `cmake -S . -B Output`
+4. Open `MyMods/Output/MyMods.sln`
+5. Make sure that you're set to the `Release` configuration unless you want to debug.
+6. Find your project (in my case: MyAwesomeMod) in the solution explorer and right click it and hit `Build`.
 ## Part #3
 In this part, we're going to learn how to output messages to the GUI console, find a UObject by name, and output that name to the GUI console.
 1. Open the `CMakeLists.txt` file for your mod and add `Unreal` after `cppsdk_xinput` in `target_link_libraries`.  
 It should look like this: `target_link_libraries(${TARGET} PUBLIC cppsdk_xinput Unreal)`
-2. Add `#include <DynamicOutput/DynamicOutput.hpp>` under `#include <Mod/CppUserModBase.hpp>`.  
+2. Open CMD in the `MyMods` directory and execute `cmake -S . -B Output`
+3. Add `#include <DynamicOutput/DynamicOutput.hpp>` under `#include <Mod/CppUserModBase.hpp>`.  
 You can now also remove `#include <stdio.h>` because we'll be removing the use of `printf` which was the only thing that required it.
-3. To save some time and annoyance and make the code look a bit better, add this line below all the includes:
+4. To save some time and annoyance and make the code look a bit better, add this line below all the includes:
 ```c++
 using namespace RC;
 ```
-4. Replace the call to printf in the body of the `MyAwesomeMod` constructor with:
+5. Replace the call to printf in the body of the `MyAwesomeMod` constructor with:
 ```c++
 Output::send<LogLevel::Verbose>(STR("MyAwesomeMod says hello\n"));
 ```
 It's longer than a call to `printf`, but in return the message gets propagated to both the regular console and the GUI console.  
 We also get some support for colors via the `LogLevel` enum.
-5. Add this below the DynamicOutput include:
+6. Add this below the DynamicOutput include:
 ```c++
 #include <Unreal/UObjectGlobals.hpp>
 #include <Unreal/UObject.hpp>
 ```
-6. Let's again utilize the `using namespace` shortcut by adding this below the first one: `using namespace RC::Unreal;`
-7. Add this function in your mod class:
+7. Let's again utilize the `using namespace` shortcut by adding this below the first one: `using namespace RC::Unreal;`
+8. Add this function in your mod class:
 ```c++
 auto on_unreal_init() -> void override
 {
@@ -109,5 +118,4 @@ auto on_unreal_init() -> void override
 Note that `Output::send` doesn't require a `LogLevel` and that we're using `{}` in the format string instead of `%s`.  
 The `Output::send` function uses `std::format` in the back-end so you should do some research around std::format or libfmt if you want to know more about it.
 
-8. Right click your project and hit `Build`.  
-9. From this point, follow the C++ mod installation guide.
+9. Right click your project and hit `Build`.  
