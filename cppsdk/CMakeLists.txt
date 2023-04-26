@@ -20,7 +20,9 @@ add_custom_command(
 add_custom_target(cppsdk_ue4ss_def DEPENDS "${LIBRARY_OUTPUT_PATH}/cppsdk.def")
 add_dependencies(${TARGET} cppsdk_ue4ss_def)
 
-target_link_libraries(${TARGET} PUBLIC ue4ss)
+target_link_libraries(${TARGET} PRIVATE ue4ss)
+get_target_property(UE4SS_INCLUDES ue4ss INCLUDE_DIRECTORIES)
+target_include_directories(${TARGET} PUBLIC ${UE4SS_INCLUDES})
 
 
 add_library(${TARGET}_xinput SHARED "dllmain.cpp" "${LIBRARY_OUTPUT_PATH}/cppsdk_xinput.def")
@@ -39,4 +41,6 @@ add_custom_command(
 add_custom_target(cppsdk_xinput_def DEPENDS "${LIBRARY_OUTPUT_PATH}/cppsdk_xinput.def")
 add_dependencies(${TARGET}_xinput cppsdk_xinput_def)
 
-target_link_libraries(${TARGET}_xinput PUBLIC xinput1_3)
+target_link_libraries(${TARGET}_xinput PRIVATE xinput1_3)
+get_target_property(UE4SS_XINPUT_INCLUDES xinput1_3 INCLUDE_DIRECTORIES)
+target_include_directories(${TARGET}_xinput PUBLIC ${UE4SS_XINPUT_INCLUDES})
