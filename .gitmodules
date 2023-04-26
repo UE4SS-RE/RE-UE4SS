@@ -4,7 +4,7 @@
 	branch = main
 [submodule "Dependencies/PolyHook_2_0"]
 	path = Dependencies/PolyHook_2_0
-	url = git@github.com:UE4SS-RE/PolyHook_2_0.git
+	url = git@github.com:stevemk14ebr/PolyHook_2_0.git
 	branch = main
 [submodule "Dependencies/fmt"]
 	path = Dependencies/fmt
