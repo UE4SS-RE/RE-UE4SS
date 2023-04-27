@@ -787,6 +787,12 @@ function UObject:type() end
 ---@class TArray<T> : { [integer]: T }
 TArray = {}
 
+---@class TSet<K> : { [K]: nil }
+
+---@class TMap<K, V> : { [K]: V }
+
+---@class TScriptInterface<K>
+
 
 ---This is a dynamic wrapper for any and all types & classes
 ---Whether the Remote or Local variant is used depends on the requirements of the data but the usage is identical with either param types
