@@ -1071,8 +1071,34 @@ namespace RC
         {
             ScopedTimer generator_timer{&generator_duration};
 
-            UEGenerator::CXXGenerator cxx_generator{output_dir};
-            cxx_generator.generate();
+            UEGenerator::generate_cxx_headers(output_dir);
+
+            Output::send(STR("Unloading all forcefully loaded assets\n"));
+        }
+
+        UAssetRegistry::FreeAllForcefullyLoadedAssets();
+        Output::send(STR("SDK generated in {} seconds.\n"), generator_duration);
+    }
+
+    auto UE4SSProgram::generate_lua_types(const std::filesystem::path& output_dir) -> void
+    {
+        if (settings_manager.CXXHeaderGenerator.LoadAllAssetsBeforeGeneratingCXXHeaders)
+        {
+            Output::send(STR("Loading all assets...\n"));
+            double asset_loading_duration{};
+            {
+                ScopedTimer loading_timer{&asset_loading_duration};
+
+                UAssetRegistry::LoadAllAssets();
+            }
+            Output::send(STR("Loading all assets took {} seconds\n"), asset_loading_duration);
+        }
+
+        double generator_duration;
+        {
+            ScopedTimer generator_timer{&generator_duration};
+
+            UEGenerator::generate_lua_types(output_dir);
 
             Output::send(STR("Unloading all forcefully loaded assets\n"));
         }

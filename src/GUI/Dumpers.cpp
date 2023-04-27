@@ -335,19 +335,22 @@ namespace RC::GUI::Dumpers
             UEGenerator::TMapOverrideGenerator::generate_tmapoverride();
         }
 
-	    if (ImGui::Button("Generate UHT Compatible Headers\n"))
-	    {
-	        UE4SSProgram::get_program().generate_uht_compatible_headers();
-	    }
+        if (ImGui::Button("Generate UHT Compatible Headers\n"))
+        {
+            UE4SSProgram::get_program().generate_uht_compatible_headers();
+        }
 
-	    if (ImGui::Button("Dump CXX Headers\n"))
-	    {
-	        File::StringType working_dir{UE4SSProgram::get_program().get_working_directory()};
-	        UE4SSProgram::get_program().generate_cxx_headers(working_dir + STR("\\CXXHeaderDump"));
-	    }
+        if (ImGui::Button("Dump CXX Headers\n"))
+        {
+            File::StringType working_dir{UE4SSProgram::get_program().get_working_directory()};
+            UE4SSProgram::get_program().generate_cxx_headers(working_dir + STR("\\CXXHeaderDump"));
+        }
 
-	    
-	    
+        if (ImGui::Button("Generate Lua Types\n"))
+        {
+            File::StringType working_dir{UE4SSProgram::get_program().get_working_directory()};
+            UE4SSProgram::get_program().generate_lua_types(working_dir + STR("\\Mods\\shared\\types"));
+        }
     }
 }
 

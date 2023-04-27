@@ -502,6 +502,314 @@ namespace RC::UEGenerator
         throw std::runtime_error(RC::fmt("Unsupported property class %S", field_class_name.c_str()));
     }
 
+    auto generate_property_lua_name(FProperty* property, bool is_top_level_declaration, UObject* class_context) -> File::StringType
+    {
+        const std::wstring field_class_name = property->GetClass().GetName();
+
+        //Byte Property
+        if (field_class_name == STR("ByteProperty"))
+        {
+            FByteProperty* byte_property = static_cast<FByteProperty*>(property);
+            UEnum* enum_value = byte_property->GetEnum();
+
+            if (enum_value != NULL)
+            {
+                //Non-EnumClass enumerations should be wrapped into TEnumAsByte according to UHT
+                const std::wstring enum_type_name = get_native_enum_name(enum_value);
+                return fmt::format(STR("{}"), enum_type_name);
+            }
+            return STR("uint8");
+        }
+
+        //Enum Property
+        if (field_class_name == STR("EnumProperty"))
+        {
+            FEnumProperty* enum_property = static_cast<FEnumProperty*>(property);
+            UEnum* uenum = enum_property->GetEnum();
+
+            if (uenum == NULL)
+            {
+                throw std::runtime_error(RC::fmt("EnumProperty %S does not have a valid Enum value", property->GetName().c_str()));
+            }
+
+            const std::wstring enum_type_name = get_native_enum_name(uenum);
+            return enum_type_name;
+        }
+
+        //Bool Property
+        if (field_class_name == STR("BoolProperty"))
+        {
+            return STR("boolean");
+        }
+
+        //Standard Numeric Properties
+        if (field_class_name == STR("Int8Property"))
+        {
+            return STR("int8");
+        }
+        else if (field_class_name == STR("Int16Property"))
+        {
+            return STR("int16");
+        }
+        else if (field_class_name == STR("IntProperty"))
+        {
+            return STR("int32");
+        }
+        else if (field_class_name == STR("Int64Property"))
+        {
+            return STR("int64");
+        }
+        else if (field_class_name == STR("UInt16Property"))
+        {
+            return STR("uint16");
+        }
+        else if (field_class_name == STR("UInt32Property"))
+        {
+            return STR("uint32");
+        }
+        else if (field_class_name == STR("UInt64Property"))
+        {
+            return STR("uint64");
+        }
+        else if (field_class_name == STR("FloatProperty"))
+        {
+            return STR("float");
+        }
+        else if (field_class_name == STR("DoubleProperty"))
+        {
+            return STR("double");
+        }
+
+        //Object Properties
+        // TODO: Verify that the syntax for 'AssetObjectProperty' is the same as for 'ObjectProperty'.
+        //       If it's not, then add another branch here after you figure out what the syntax should be.
+        if (field_class_name == STR("ObjectProperty") || field_class_name == STR("AssetObjectProperty"))
+        {
+            FObjectProperty* object_property = static_cast<FObjectProperty*>(property);
+            UClass* property_class = object_property->GetPropertyClass();
+
+            if (property_class == NULL)
+            {
+                return STR("UObject");
+            }
+
+            const std::wstring property_class_name = get_native_class_name(property_class, false);
+            return fmt::format(STR("{}"), property_class_name);
+        }
+
+        if (auto* object_property = CastField<FObjectPtrProperty>(property); object_property)
+        {
+            auto* property_class = object_property->GetPropertyClass();
+
+            if (!property_class)
+            {
+                return STR("TObjectPtr<UObject>");
+            }
+            else
+            {
+                const auto property_class_name = get_native_class_name(property_class, false);
+                return std::format(STR("TObjectPtr<{}>"), property_class_name);
+            }
+        }
+
+        if (field_class_name == STR("WeakObjectProperty"))
+        {
+            FWeakObjectProperty* weak_object_property = static_cast<FWeakObjectProperty*>(property);
+            UClass* property_class = weak_object_property->GetPropertyClass();
+
+            if (property_class == NULL)
+            {
+                return STR("TWeakObjectPtr<UObject>");
+            }
+
+            File::StringType property_class_name{};
+            property_class_name.append(get_native_class_name(property_class, false));
+            return fmt::format(STR("TWeakObjectPtr<{}>"), property_class_name);
+        }
+
+        if (field_class_name == STR("LazyObjectProperty"))
+        {
+            FLazyObjectProperty* lazy_object_property = static_cast<FLazyObjectProperty*>(property);
+            UClass* property_class = lazy_object_property->GetPropertyClass();
+
+            if (property_class == NULL)
+            {
+                return STR("TLazyObjectPtr<UObject>");
+            }
+
+            File::StringType property_class_name{};
+            property_class_name.append(get_native_class_name(property_class, false));
+            return fmt::format(STR("TLazyObjectPtr<{}>"), property_class_name);
+        }
+
+        if (field_class_name == STR("SoftObjectProperty"))
+        {
+            FSoftObjectProperty* soft_object_property = static_cast<FSoftObjectProperty*>(property);
+            UClass* property_class = soft_object_property->GetPropertyClass();
+
+            if (property_class == NULL)
+            {
+                return STR("TSoftObjectPtr<UObject>");
+            }
+
+            const std::wstring property_class_name = get_native_class_name(property_class, false);
+            return fmt::format(STR("TSoftObjectPtr<{}>"), property_class_name);
+        }
+
+        //Class Properties
+        if (field_class_name == STR("ClassProperty") || field_class_name == STR("AssetClassProperty"))
+        {
+            FClassProperty* class_property = static_cast<FClassProperty*>(property);
+            UClass* meta_class = class_property->GetMetaClass();
+
+            if (meta_class == NULL || meta_class == UObject::StaticClass())
+            {
+                return STR("UClass");
+            }
+
+            File::StringType meta_class_name{};
+            meta_class_name.append(get_native_class_name(meta_class, false));
+            return fmt::format(STR("TSubclassOf<{}>"), meta_class_name);
+        }
+
+        if (auto* class_property = CastField<FClassPtrProperty>(property); class_property)
+        {
+            // TODO: Confirm that this is accurate
+            return STR("TObjectPtr<UClass>");
+        }
+
+        if (field_class_name == STR("SoftClassProperty"))
+        {
+            FSoftClassProperty* soft_class_property = static_cast<FSoftClassProperty*>(property);
+            UClass* meta_class = soft_class_property->GetMetaClass();
+
+            if (meta_class == NULL || meta_class == UObject::StaticClass())
+            {
+                return STR("TSoftClassPtr<UObject>");
+            }
+
+            const std::wstring meta_class_name = get_native_class_name(meta_class, false);
+            return fmt::format(STR("TSoftClassPtr<{}>"), meta_class_name);
+        }
+
+        //Interface Property
+        if (field_class_name == STR("InterfaceProperty"))
+        {
+            FInterfaceProperty* interface_property = static_cast<FInterfaceProperty*>(property);
+            UClass* interface_class = interface_property->GetInterfaceClass();
+
+            if (interface_class == NULL || interface_class == UInterface::StaticClass())
+            {
+                return STR("FScriptInterface");
+            }
+
+            File::StringType interface_class_name{};
+            interface_class_name.append(get_native_class_name(interface_class, true));
+            return fmt::format(STR("TScriptInterface<{}>"), interface_class_name);
+        }
+
+        //Struct Property
+        if (field_class_name == STR("StructProperty"))
+        {
+            FStructProperty* struct_property = static_cast<FStructProperty*>(property);
+            UScriptStruct* script_struct = struct_property->GetStruct();
+
+            if (script_struct == NULL)
+            {
+                throw std::runtime_error(RC::fmt("Struct is NULL for StructProperty %S", property->GetName().c_str()));
+            }
+
+            const std::wstring native_struct_name = get_native_struct_name(script_struct);
+            return native_struct_name;
+        }
+
+        //Delegate Properties
+        if (field_class_name == STR("DelegateProperty"))
+        {
+            FDelegateProperty* delegate_property = static_cast<FDelegateProperty*>(property);
+
+            const std::wstring delegate_type_name = generate_delegate_name(delegate_property, class_context->GetName());
+            return delegate_type_name;
+        }
+
+        // In 4.23, they replaced 'MulticastDelegateProperty' with 'Inline' & 'Sparse' variants
+        // It looks like the delegate macro might be the same as the 'Inline' variant in later versions, so we'll use the same branch here
+        if (field_class_name == STR("MulticastInlineDelegateProperty") || field_class_name == STR("MulticastDelegateProperty"))
+        {
+            FMulticastInlineDelegateProperty* delegate_property = static_cast<FMulticastInlineDelegateProperty*>(property);
+
+            const std::wstring delegate_type_name = generate_delegate_name(delegate_property, class_context->GetName());
+            return delegate_type_name;
+        }
+
+        if (field_class_name == STR("MulticastSparseDelegateProperty"))
+        {
+            FMulticastSparseDelegateProperty* delegate_property = static_cast<FMulticastSparseDelegateProperty*>(property);
+
+            const std::wstring delegate_type_name = generate_delegate_name(delegate_property, class_context->GetName());
+            return delegate_type_name;
+        }
+
+        //Field path property
+        if (field_class_name == STR("FieldPathProperty"))
+        {
+            FFieldPathProperty* field_path_property = static_cast<FFieldPathProperty*>(property);
+            const std::wstring property_class_name = field_path_property->GetPropertyClass()->GetName();
+            return fmt::format(STR("TFieldPath<F{}>"), property_class_name);
+        }
+
+        //Collection and Map Properties
+        // TODO: This is missing support for freeze image array properties because XArrayProperty is incomplete. (low priority)
+        if (field_class_name == STR("ArrayProperty"))
+        {
+            FArrayProperty* array_property = static_cast<FArrayProperty*>(property);
+            FProperty* inner_property = array_property->GetInner();
+
+            File::StringType inner_property_type{};
+            inner_property_type.append(generate_property_lua_name(inner_property, is_top_level_declaration, class_context));
+            return fmt::format(STR("TArray<{}>"), inner_property_type);
+        }
+
+        if (field_class_name == STR("SetProperty"))
+        {
+            FSetProperty* set_property = static_cast<FSetProperty*>(property);
+            FProperty* element_prop = set_property->GetElementProp();
+
+            const std::wstring element_property_type = generate_property_lua_name(element_prop, is_top_level_declaration, class_context);
+            return fmt::format(STR("TSet<{}>"), element_property_type);
+        }
+
+        // TODO: This is missing support for freeze image map properties because XMapProperty is incomplete. (low priority)
+        if (field_class_name == STR("MapProperty"))
+        {
+            FMapProperty* map_property = static_cast<FMapProperty*>(property);
+            FProperty* key_property = map_property->GetKeyProp();
+            FProperty* value_property = map_property->GetValueProp();
+
+            File::StringType key_type{};
+            File::StringType value_type{};
+            key_type.append(generate_property_lua_name(key_property, is_top_level_declaration, class_context));
+            value_type.append(generate_property_lua_name(value_property, is_top_level_declaration, class_context));
+
+            return fmt::format(STR("TMap<{}, {}>"), key_type, value_type);
+        }
+
+        //Standard properties that do not have any special attributes
+        if (field_class_name == STR("NameProperty"))
+        {
+            return STR("FName");
+        }
+        else if (field_class_name == STR("StrProperty"))
+        {
+            return STR("FString");
+        }
+        else if (field_class_name == STR("TextProperty"))
+        {
+            return STR("FText");
+        }
+        throw std::runtime_error(RC::fmt("Unsupported property class %S", field_class_name.c_str()));
+    }
+
     auto get_native_delegate_type_name(Unreal::UFunction* signature_function, Unreal::UClass* current_class, bool strip_outer_name) -> File::StringType {
         if (!is_delegate_signature_function(signature_function)) {
            throw std::runtime_error(RC::fmt("Function %S is not a delegate signature function", signature_function->GetName().c_str()));
