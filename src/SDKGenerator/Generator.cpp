@@ -1,5 +1,7 @@
 #include <format>
 #include <cwctype>
+#include <set>
+#include <locale>
 
 #include <SDKGenerator/Generator.hpp>
 #include <SDKGenerator/Common.hpp>
@@ -953,6 +955,65 @@ namespace RC::UEGenerator
 
     class LuaTypesGenerator
     {
+    private:
+        auto is_valid_lua_symbol(const File::StringType& str) -> bool
+        {
+            static const std::set<File::StringType> keywords = {STR("and"), STR("break"), STR("do"), STR("else"), STR("elseif"), STR("end"), STR("false"), STR("for"), STR("function"), STR("if"), STR("in"), STR("local"), STR("nil"), STR("not"), STR("or"), STR("repeat"), STR("return"), STR("then"), STR("true"), STR("until"), STR("while")};
+            if (keywords.contains(str))
+            {
+                return false;
+            }
+            auto it = str.begin();
+            if (it == str.end() || std::isdigit(*it))
+            {
+                // string empty or first char is digit
+                return false;
+            }
+            for (; it != str.end(); ++it)
+            {
+                auto c = *it;
+                if (c != '_' && !std::isalnum(c))
+                {
+                    // is not underscore or alphanumeric in current locale
+                    return false;
+                }
+            }
+            return true;
+        }
+        auto quote_lua_symbol(const File::StringType& symbol) -> File::StringType
+        {
+            File::StringType quoted;
+            quoted.reserve(symbol.size() + 2);
+            quoted.push_back('\'');
+            for (auto it = symbol.begin(); it != symbol.end(); ++it)
+            {
+                auto c = *it;
+                if (c == '\\' || c == '\'')
+                {
+                    quoted.push_back('\\');
+                }
+                quoted.push_back(c);
+            }
+            quoted.push_back('\'');
+            return quoted;
+        }
+        auto make_valid_symbol(const File::StringType& symbol) -> File::StringType
+        {
+            File::StringType valid;
+            valid.reserve(symbol.size());
+            auto it = symbol.begin();
+            if (it == symbol.end() || std::isdigit(*it))
+            {
+                valid.push_back('_');
+            }
+            for (; it != symbol.end(); ++it)
+            {
+                auto c = *it;
+                valid.push_back((c == '_' || std::isalnum(c)) ? c : '_');
+            }
+            return valid;
+        }
+
     public:
         auto get_file_extension() -> File::StringType
         {
@@ -1028,10 +1089,10 @@ namespace RC::UEGenerator
                 try
                 {
                     const auto& property_name = property->GetName();
-                    if (property_name.find(' ') == File::StringType::npos) {
+                    if (is_valid_lua_symbol(property_name)) {
                         content_buffer.append(std::format(STR("---@field {} {}\n"), property_name, generate_property_lua_name(property, true, native_class)));
                     } else {
-                        content_buffer.append(std::format(STR("---@field ['{}'] {}\n"), property_name, generate_property_lua_name(property, true, native_class)));
+                        content_buffer.append(std::format(STR("---@field [{}] {}\n"), quote_lua_symbol(property_name), generate_property_lua_name(property, true, native_class)));
                     }
                 }
                 catch (std::exception& e)
@@ -1104,8 +1165,8 @@ namespace RC::UEGenerator
                     try
                     {
                         auto param_name = param_info.property->GetName();
-                        std::replace(param_name.begin(), param_name.end(), ' ', '_'); // TODO disambiguate renames
-                        current_class_content.append(std::format(STR("---@param {} {}\n"), param_name, generate_property_lua_name(param_info.property, true, function_info.function)));
+                        // TODO disambiguate param renames
+                        current_class_content.append(std::format(STR("---@param {} {}\n"), make_valid_symbol(param_name), generate_property_lua_name(param_info.property, true, function_info.function)));
                     }
                     catch (std::exception& e)
                     {
@@ -1130,15 +1191,13 @@ namespace RC::UEGenerator
 
             auto class_name = generate_class_name(static_cast<UStruct*>(owner.object));
 
-            // check if the name contains spaces and use alternative function form
-            // TODO figure what exactly is a valid lua symbol
-            if (function_name.find(' ') == File::StringType::npos)
+            if (is_valid_lua_symbol(function_name))
             {
                 current_class_content.append(std::format(STR("function {}:{}("), class_name, function_name));
             }
             else
             {
-                current_class_content.append(std::format(STR("{}['{}'] = function("), class_name, function_name));
+                current_class_content.append(std::format(STR("{}[{}] = function("), class_name, quote_lua_symbol(function_name)));
             }
 
             for (size_t i = 0; i < function_info.params.size(); ++i)
@@ -1147,8 +1206,8 @@ namespace RC::UEGenerator
                 if (!param_info.property->HasAnyPropertyFlags(Unreal::CPF_ReturnParm))
                 {
                     auto param_name = param_info.property->GetName();
-                    std::replace(param_name.begin(), param_name.end(), ' ', '_'); // TODO disambiguate renames
-                    current_class_content.append(std::format(STR("{}"), param_name));
+                    // TODO disambiguate param renames
+                    current_class_content.append(std::format(STR("{}"), make_valid_symbol(param_name)));
 
                     if (i + 1 < function_info.params.size())
                     {
