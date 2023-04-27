@@ -775,7 +775,7 @@ namespace RC::UEGenerator
             FSetProperty* set_property = static_cast<FSetProperty*>(property);
             FProperty* element_prop = set_property->GetElementProp();
 
-            const std::wstring element_property_type = generate_property_cxx_name(element_prop, is_top_level_declaration, class_context);
+            const std::wstring element_property_type = generate_property_lua_name(element_prop, is_top_level_declaration, class_context);
             return fmt::format(STR("TSet<{}>"), element_property_type);
         }
 
@@ -788,8 +788,8 @@ namespace RC::UEGenerator
 
             File::StringType key_type{};
             File::StringType value_type{};
-            key_type.append(generate_property_cxx_name(key_property, is_top_level_declaration, class_context));
-            value_type.append(generate_property_cxx_name(value_property, is_top_level_declaration, class_context));
+            key_type.append(generate_property_lua_name(key_property, is_top_level_declaration, class_context));
+            value_type.append(generate_property_lua_name(value_property, is_top_level_declaration, class_context));
 
             return fmt::format(STR("TMap<{}, {}>"), key_type, value_type);
         }
