@@ -46,6 +46,9 @@
 #include <Unreal/Searcher/ObjectSearcher.hpp>
 #include <Unreal/UPackage.hpp>
 #include <Unreal/UScriptStruct.hpp>
+#include <Unreal/AGameMode.hpp>
+#include <Unreal/AGameModeBase.hpp>
+#include <Unreal/ULocalPlayer.hpp>
 #include <Unreal/UObjectArray.hpp>
 #include <Unreal/UnrealInitializer.hpp>
 
@@ -561,6 +564,41 @@ namespace RC
                     uint32_t offset = calculate_virtual_function_offset(index, fexec_size);
                     Output::send(STR("FMalloc::{} = 0x{:X}\n"), item, offset);
                     Unreal::FMalloc::VTableLayoutMap.emplace(item, offset);
+                });
+
+                Output::send(STR("AActor\n"));
+                uint32_t aactor_size = retrieve_vtable_layout_from_ini(STR("AActor"), [&](uint32_t index, File::StringType& item) {
+                    uint32_t offset = calculate_virtual_function_offset(index, uobjectbase_size, uobjectbaseutility_size, uobject_size);
+                    Output::send(STR("AActor::{} = 0x{:X}\n"), item, offset);
+                    Unreal::AActor::VTableLayoutMap.emplace(item, offset);
+                });
+
+                Output::send(STR("AGameModeBase\n"));
+                uint32_t agamemodebase_size = retrieve_vtable_layout_from_ini(STR("AGameModeBase"), [&](uint32_t index, File::StringType& item) {
+                    uint32_t offset = calculate_virtual_function_offset(index, uobjectbase_size, uobjectbaseutility_size, uobject_size, aactor_size);
+                    Output::send(STR("AGameModeBase::{} = 0x{:X}\n"), item, offset);
+                    Unreal::AGameModeBase::VTableLayoutMap.emplace(item, offset);
+                });
+
+                Output::send(STR("AGameMode"));
+                retrieve_vtable_layout_from_ini(STR("AGameMode"), [&](uint32_t index, File::StringType& item) {
+                    uint32_t offset = calculate_virtual_function_offset(index, Unreal::Version::IsAtLeast(4, 14) ? uobjectbase_size, uobjectbaseutility_size, uobject_size, aactor_size, agamemodebase_size : uobjectbase_size, uobjectbaseutility_size, uobject_size, aactor_size);
+                    Output::send(STR("AGameMode::{} = 0x{:X}\n"), item, offset);
+                    Unreal::AGameMode::VTableLayoutMap.emplace(item, offset);
+                });
+
+                Output::send(STR("UPlayer\n"));
+                uint32_t uplayer_size = retrieve_vtable_layout_from_ini(STR("UPlayer"), [&](uint32_t index, File::StringType& item) {
+                    uint32_t offset = calculate_virtual_function_offset(index, uobjectbase_size, uobjectbaseutility_size, uobject_size);
+                    Output::send(STR("UPlayer::{} = 0x{:X}\n"), item, offset);
+                    Unreal::UPlayer::VTableLayoutMap.emplace(item, offset);
+                });
+
+                Output::send(STR("ULocalPlayer\n"));
+                retrieve_vtable_layout_from_ini(STR("ULocalPlayer"), [&](uint32_t index, File::StringType& item) {
+                    uint32_t offset = calculate_virtual_function_offset(index, uobjectbase_size, uobjectbaseutility_size, uobject_size, uplayer_size);
+                    Output::send(STR("ULocalPlayer::{} = 0x{:X}\n"), item, offset);
+                    Unreal::ULocalPlayer::VTableLayoutMap.emplace(item, offset);
                 });
 
                 file.close();
