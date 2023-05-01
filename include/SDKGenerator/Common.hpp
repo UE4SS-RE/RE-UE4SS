@@ -1,5 +1,5 @@
-#ifndef UE4SS_REWRITTEN_COMMON_HPP
-#define UE4SS_REWRITTEN_COMMON_HPP
+#ifndef UE4SS_REWRITTEN_SDKGENERATOR_COMMON_HPP
+#define UE4SS_REWRITTEN_SDKGENERATOR_COMMON_HPP
 
 #include <File/File.hpp>
 #include <fmt/core.h>
@@ -32,6 +32,7 @@ namespace RC
         auto is_integral_type(Unreal::FProperty* property) -> bool;
         auto get_native_enum_name(Unreal::UEnum* uenum, bool include_type = true) -> File::StringType;
         auto generate_property_cxx_name(Unreal::FProperty* property, bool is_top_level_declaration, Unreal::UObject* class_context, EnableForwardDeclarations = EnableForwardDeclarations::No) -> File::StringType;
+        auto generate_property_lua_name(Unreal::FProperty* property, bool is_top_level_declaration, Unreal::UObject* class_context) -> File::StringType;
         auto sanitize_property_name(const File::StringType& property_name) -> File::StringType;
         auto generate_delegate_name(Unreal::FProperty* property, const File::StringType& context_name) -> File::StringType;
         auto get_native_class_name(Unreal::UClass* uclass, bool interface_name = false) -> File::StringType;
@@ -42,4 +43,4 @@ namespace RC
     }
 }
 
-#endif //UE4SS_REWRITTEN_COMMON_HPP
+#endif //UE4SS_REWRITTEN_SDKGENERATOR_COMMON_HPP

@@ -7,12 +7,14 @@
 #include <string_view>
 #include <mutex>
 
+#include <Common.hpp>
 #include <MProgram.hpp>
 #include <SettingsManager.hpp>
 #include <Unreal/UnrealVersion.hpp>
 #include <Unreal/TArray.hpp>
 #include <Input/Handler.hpp>
-#include <Mod.hpp>
+#include <Mod/Mod.hpp>
+#include <Mod/LuaMod.hpp>
 #include <LuaLibrary.hpp>
 #include <DynamicOutput/DynamicOutput.hpp>
 #include <GUI/GUI.hpp>
@@ -55,7 +57,7 @@ namespace RC
         constexpr static wchar_t m_object_dumper_file_name[] = L"UE4SS_ObjectDump.txt";
 
     public:
-        static SettingsManager settings_manager;
+        RC_UE4SS_API static SettingsManager settings_manager;
         static inline bool unreal_is_shutting_down{};
 
     protected:
@@ -97,9 +99,6 @@ namespace RC
         bool m_has_game_specific_config{};
         bool m_processing_events{};
         bool m_pause_events_processing{};
-        bool m_simple_console_enabled{};
-        bool m_debug_console_enabled{};
-        bool m_debug_console_visible{};
 
     public:
         enum class IsInstalled
@@ -128,9 +127,8 @@ namespace RC
             Failure,
         };
         auto create_emergency_console_for_early_error(File::StringViewType error_message) -> void;
-        auto setup_output_devices() -> void;
         auto setup_mod_directory_path() -> void;
-        auto create_debug_console() -> void;
+        auto create_simple_console() -> void;
         auto setup_unreal() -> void;
         auto load_unreal_offsets_from_file() -> void;
         auto share_lua_functions() -> void;
@@ -139,40 +137,57 @@ namespace RC
 
     protected:
         auto update() -> void;
+        auto setup_cpp_mods() -> void;
+        auto start_cpp_mods() -> void;
         auto setup_mods() -> void;
-        auto start_mods() -> void;
+        auto start_lua_mods() -> void;
         auto uninstall_mods() -> void;
+        auto fire_unreal_init_for_cpp_mods() -> void;
+        auto fire_program_start_for_cpp_mods() -> void;
 
     public:
         auto reinstall_mods() -> void;
         auto get_object_dumper_output_directory() -> const File::StringType;
-        auto get_module_directory() -> File::StringViewType;
-        auto get_working_directory() -> File::StringViewType;
-        auto get_mods_directory() -> File::StringViewType;
-        auto generate_uht_compatible_headers() -> void;
-        auto generate_cxx_headers(const std::filesystem::path& output_dir) -> void;
-        auto get_debugging_ui() -> GUI::DebuggingGUI& { return m_debugging_gui; };
+        RC_UE4SS_API auto get_module_directory() -> File::StringViewType;
+        RC_UE4SS_API auto get_working_directory() -> File::StringViewType;
+        RC_UE4SS_API auto get_mods_directory() -> File::StringViewType;
+        RC_UE4SS_API auto generate_uht_compatible_headers() -> void;
+        RC_UE4SS_API auto generate_cxx_headers(const std::filesystem::path& output_dir) -> void;
+        RC_UE4SS_API auto generate_lua_types(const std::filesystem::path& output_dir) -> void;
+        auto get_debugging_ui() -> GUI::DebuggingGUI&
+        {
+            return m_debugging_gui;
+        };
         auto stop_render_thread() -> void;
-        auto queue_event(EventCallable callable, void* data) -> void;
-        auto is_queue_empty() -> bool;
-        auto can_process_events() -> bool { return m_processing_events; }
+        RC_UE4SS_API auto queue_event(EventCallable callable, void* data) -> void;
+        RC_UE4SS_API auto is_queue_empty() -> bool;
+        RC_UE4SS_API auto can_process_events() -> bool
+        {
+            return m_processing_events;
+        }
 
     public:
         // API pass-through for use outside the private scope of UE4SSProgram
-        auto register_keydown_event(Input::Key, const Input::EventCallbackCallable&, uint8_t custom_data = 0) -> void;
-        auto register_keydown_event(Input::Key, const Input::Handler::ModifierKeyArray&, const Input::EventCallbackCallable&, uint8_t custom_data = 0) -> void;
-        auto is_keydown_event_registered(Input::Key) -> bool;
-        auto is_keydown_event_registered(Input::Key, const Input::Handler::ModifierKeyArray&) -> bool;
+        RC_UE4SS_API auto register_keydown_event(Input::Key, const Input::EventCallbackCallable&, uint8_t custom_data = 0) -> void;
+        RC_UE4SS_API auto register_keydown_event(Input::Key, const Input::Handler::ModifierKeyArray&, const Input::EventCallbackCallable&, uint8_t custom_data = 0) -> void;
+        RC_UE4SS_API auto is_keydown_event_registered(Input::Key) -> bool;
+        RC_UE4SS_API auto is_keydown_event_registered(Input::Key, const Input::Handler::ModifierKeyArray&) -> bool;
 
     private:
-        static auto install_mods() -> void;
+        static auto install_cpp_mods() -> void;
+        static auto install_lua_mods() -> void;
 
     public:
         static auto dump_all_objects_and_properties(const File::StringType& output_path_and_file_name) -> void;
-        static auto find_mod_by_name(std::wstring_view mod_name, IsInstalled = IsInstalled::No, IsStarted = IsStarted::No) -> Mod*;
-        static auto find_mod_by_name(std::string_view mod_name, IsInstalled = IsInstalled::No, IsStarted = IsStarted::No) -> Mod*;
+        RC_UE4SS_API static auto find_mod_by_name(std::wstring_view mod_name, IsInstalled = IsInstalled::No, IsStarted = IsStarted::No) -> Mod*;
+        RC_UE4SS_API static auto find_mod_by_name(std::string_view mod_name, IsInstalled = IsInstalled::No, IsStarted = IsStarted::No) -> Mod*;
+        RC_UE4SS_API static auto find_lua_mod_by_name(std::wstring_view mod_name, IsInstalled = IsInstalled::No, IsStarted = IsStarted::No) -> LuaMod*;
+        RC_UE4SS_API static auto find_lua_mod_by_name(std::string_view mod_name, IsInstalled = IsInstalled::No, IsStarted = IsStarted::No) -> LuaMod*;
         static auto static_cleanup() -> void;
-        static auto get_program() -> UE4SSProgram& { return *s_program; }
+        RC_UE4SS_API static auto get_program() -> UE4SSProgram&
+        {
+            return *s_program;
+        }
     };
 }
 

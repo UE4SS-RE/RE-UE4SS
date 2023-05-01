@@ -306,7 +306,7 @@ namespace RC::LuaType
         template<LuaMadeSimple::Type::IsFinal is_final>
         auto static setup_member_functions(const LuaMadeSimple::Lua::Table& table) -> void
         {
-            Super::setup_member_functions<LuaMadeSimple::Type::IsFinal::No>(table);
+            Super::template setup_member_functions<LuaMadeSimple::Type::IsFinal::No>(table);
 
             // Add functions that are not intended to be overridden later here
             table.add_pair("GetFullName", [](const LuaMadeSimple::Lua& lua) -> int {
@@ -350,7 +350,7 @@ namespace RC::LuaType
             table.add_pair("IsAnyClass", [](const LuaMadeSimple::Lua& lua) -> int {
                 const auto& lua_object = lua.get_userdata<SelfType>();
 
-                lua.set_bool(lua_object.get_remote_cpp_object()->IsA<Unreal::UClass>());
+                lua.set_bool(lua_object.get_remote_cpp_object()->template IsA<Unreal::UClass>());
 
                 return 1;
             });

@@ -6,6 +6,7 @@ message("IPO - Supported: ${supported}; ${error}")
 message("Project: UE4SS")
 
 set(MAKE_DEPENDENCIES_SHARED 0)
+set(STATIC_EXPORTS 1)
 
 if (${MAKE_DEPENDENCIES_SHARED} EQUAL 0)
     set(MAKE_DEPENDENCIES_STATIC 1)
@@ -59,12 +60,19 @@ set(CMAKE_LIBRARY_OUTPUT_DIRECTORY_RELEASE ${UE4SS_OUTPUT_RELEASE_DIR})
 set(PRIVATE_COMPILE_DEFINITIONS
         $<${MAKE_DEPENDENCIES_SHARED}:RC_EXPORT RC_FUNCTION_EXPORTS>
         $<${MAKE_DEPENDENCIES_STATIC}:RC_FUNCTION_BUILD_STATIC>)
-set(PRIVATE_COMPILE_OPTIONS /MP $<$<CONFIG:RELEASE>:/Zi> /W3 /wd4005 /wd4251)
-set(PRIVATE_MASM_COMPILE_OPTIONS /MP $<$<CONFIG:RELEASE>:/Zi>)
-set(PRIVATE_LINK_OPTIONS /DEBUG:FULL)
+if (${CMAKE_CXX_COMPILER_ID} STREQUAL MSVC)
+    set(PRIVATE_COMPILE_OPTIONS /MP $<$<CONFIG:RELEASE>:/Zi> /W3 /wd4005 /wd4251 /wd4068)
+    set(PRIVATE_MASM_COMPILE_OPTIONS /MP $<$<CONFIG:RELEASE>:/Zi> /wd4005 /wd4251 /wd4068)
+    set(PRIVATE_LINK_OPTIONS /DEBUG:FULL)
+elseif (${CMAKE_CXX_COMPILER_ID} STREQUAL Clang)
+    set(PRIVATE_COMPILE_OPTIONS "$<IF:$<COMPILE_LANGUAGE:ASM_MASM>,,-g;-gcodeview;-fcolor-diagnostics;-Wall;-Wextra;-Wno-unknown-pragmas;-Wno-unused-parameter>")
+    set(PRIVATE_LINK_OPTIONS "$<IF:$<COMPILE_LANGUAGE:ASM_MASM>,,-g>")
+endif ()
 set(PUBLIC_COMPILE_FEATURES cxx_std_20)
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 set(UE4SS_COMPILE_DEFINITIONS
+        RC_UE4SS_EXPORTS
         RC_ASM_HELPER_BUILD_STATIC
         RC_FILE_BUILD_STATIC
         RC_DYNAMIC_OUTPUT_BUILD_STATIC
@@ -101,6 +109,7 @@ else ()
     set(ZYDIS_BUILD_SHARED_LIB OFF CACHE BOOL "Build zydis as shared libary" FORCE)
     set(ZYCORE_BUILD_SHARED_LIB OFF CACHE BOOL "Build zycore as shared libary" FORCE)
 endif ()
+set(ZYDIS_BUILD_TOOLS OFF CACHE BOOL "")
 add_subdirectory("Dependencies/zydis")
 include_directories(Dependencies/zydis/include)
 include_directories(Dependencies/zydis/dependencies/zycore/include)
@@ -108,9 +117,14 @@ include_directories(${CMAKE_CURRENT_BINARY_DIR}/Dependencies/zydis)
 include_directories(${CMAKE_CURRENT_BINARY_DIR}/Dependencies/zydis/zycore)
 set(CMAKE_PREFIX_PATH
     ${LIBRARY_OUTPUT_PATH}/${CMAKE_BUILD_TYPE}
-    ${CMAKE_HOME_DIRECTORY}/Dependencies/zydis/include
-    ${CMAKE_HOME_DIRECTORY}/Dependencies/zydis/dependencies/zycore/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/Dependencies/zydis/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/Dependencies/zydis/dependencies/zycore/include
     )
+# needed for PolyHook
+set(ZYDIS_LIBRARY Zydis)
+set(ZYCORE_LIBRARY Zycore)
+set(ZYDIS_INCLUDE_DIR Dependencies/zydis/include)
+set(ZYCORE_INCLUDE_DIR Dependencies/zydis/dependencies/zycore/include)
 
 add_subdirectory(Dependencies/ASMHelper)
 
@@ -123,20 +137,31 @@ else ()
     set(MAKE_POLYHOOK_DEPENDENCIES_STATIC ON)
 endif ()
 set(POLYHOOK_BUILD_DLL ON CACHE BOOL "Build dll & lib instead of tests" FORCE)
-set(POLYHOOK_BUILD_SHARED_LIB ${MAKE_POLYHOOK_DEPENDENCIES_SHARED} CACHE BOOL "Build polyhook as shared libary" FORCE)
-set(POLYHOOK_BUILD_SHARED_ASMJIT ${MAKE_POLYHOOK_DEPENDENCIES_SHARED} CACHE BOOL "Build polyhook as shared libary" FORCE)
-set(POLYHOOK_BUILD_SHARED_CAPSTONE ${MAKE_POLYHOOK_DEPENDENCIES_SHARED} CACHE BOOL "Build polyhook as shared libary" FORCE)
-set(POLYHOOK_BUILD_SHARED_ZYDIS ${MAKE_POLYHOOK_DEPENDENCIES_SHARED} CACHE BOOL "Build polyhook as shared libary" FORCE)
+set(POLYHOOK_BUILD_SHARED_LIB ${MAKE_POLYHOOK_DEPENDENCIES_SHARED} CACHE BOOL "Build polyhook2 as shared libary" FORCE)
 set(POLYHOOK_USE_EXTERNAL_ZYDIS ON CACHE BOOL "Use external zydis libary" FORCE)
-set(ASMJIT_STATIC ${MAKE_POLYHOOK_DEPENDENCIES_STATIC} CACHE BOOL "Build asmjit as shared libary" FORCE)
+set(ASMJIT_STATIC ${MAKE_POLYHOOK_DEPENDENCIES_STATIC} CACHE BOOL "Build 'asmjit' library as static" FORCE)
 set(POLYHOOK_BUILD_STATIC_RUNTIME OFF CACHE BOOL "Use static runtime" FORCE)
-set(POLYHOOK_DISASM_CAPSTONE OFF CACHE BOOL "Enable capstone support" FORCE)
-set(POLYHOOK_DISASM_CAPSTONE_FULL OFF CACHE BOOL "Build all features of capstone." FORCE)
-set(POLYHOOK_DISASM_ZYDIS ON CACHE BOOL "Enable Zydis support." FORCE)
+
+# disable 'install' by replacing with no-op before calling add_subdirectory
+macro (install)
+endmacro ()
+# disable 'set_target_properties' to prevent PolyHook from setting MSVC_RUNTIME_LIBRARY to "MultiThreaded$<$<CONFIG:Debug>:Debug>DLL"
+# seriously, this can't be good, but it keeps working
+macro (set_target_properties)
+endmacro ()
 add_subdirectory(Dependencies/PolyHook_2_0)
-# For some reason, PolyHook isn't adding the capstone or zydis include directories
-include_directories(Dependencies/PolyHook_2_0)
-include_directories(Dependencies/PolyHook_2_0/capstone/include)
+# clean up macros
+macro (set_target_properties)
+  _set_target_properties(${ARGV})
+endmacro ()
+macro (install)
+  _install(${ARGV})
+endmacro ()
+
+if (${CMAKE_CXX_COMPILER_ID} STREQUAL Clang)
+    target_compile_options(asmjit PRIVATE -Wno-bitwise-instead-of-logical -Wno-sign-conversion -Wno-unused-command-line-argument -Wno-unused-but-set-variable)
+    target_compile_options(PolyHook_2 PRIVATE -Wno-unused-value -Wno-missing-field-initializers -Wno-missing-braces -Wno-unused-variable -Wno-bitwise-instead-of-logical -Wno-reorder-ctor -Wno-unused-private-field)
+endif ()
 
 add_subdirectory("Dependencies/Unreal")
 add_subdirectory("Dependencies/MProgram")
@@ -156,7 +181,6 @@ add_subdirectory("Dependencies/ParserBase")
 add_subdirectory("Dependencies/IniParser")
 add_subdirectory("Dependencies/JSON")
 add_subdirectory("Dependencies/ArgsParser")
-add_subdirectory("Dependencies/LuaBindingsGenerator")
 
 # UE4SS
 # Settings override -> START
@@ -189,6 +213,22 @@ file(WRITE ${UE4SS_GENERATED_SOURCE_DIR}/version.cache "${UE4SS_LIB_VERSION}")
 message("UE4SS")
 message("Major: ${UE4SS_LIB_VERSION_MAJOR}, Minor: ${UE4SS_LIB_VERSION_MINOR}, Hotfix: ${UE4SS_LIB_VERSION_HOTFIX}, PreRelease: ${UE4SS_LIB_VERSION_PRERELEASE}, Beta: ${UE4SS_LIB_VERSION_BETA}")
 
+find_package(Git REQUIRED)
+
+# Build number is now git sha/hash
+  execute_process(
+    COMMAND ${GIT_EXECUTABLE} rev-parse --short HEAD
+    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+    RESULT_VARIABLE res
+    OUTPUT_VARIABLE UE4SS_LIB_BUILD_GITSHA
+    OUTPUT_STRIP_TRAILING_WHITESPACE)
+  if(NOT res EQUAL 0)
+    set(UE4SS_LIB_BUILD_GITSHA "0")
+  endif()
+
+set(RC_BUILD_NUMBER_HEADER_FILE "${UE4SS_GENERATED_INCLUDE_DIR}/build_number.hpp")
+file(WRITE ${RC_BUILD_NUMBER_HEADER_FILE} "#define UE4SS_LIB_BUILD_GITSHA \"${UE4SS_LIB_BUILD_GITSHA}\"")
+
 # Make the hard-coded build numbers available to source files
 add_compile_definitions(
         UE4SS_LIB_VERSION_MAJOR=${UE4SS_LIB_VERSION_MAJOR}
@@ -211,10 +251,13 @@ set(${TARGET}_Sources
         "${CMAKE_CURRENT_SOURCE_DIR}/src/SettingsManager.cpp"
         "${CMAKE_CURRENT_SOURCE_DIR}/src/ObjectDumper/ObjectToString.cpp"
         "${CMAKE_CURRENT_SOURCE_DIR}/src/Signatures.cpp"
-        "${CMAKE_CURRENT_SOURCE_DIR}/src/Mod.cpp"
+        "${CMAKE_CURRENT_SOURCE_DIR}/src/Mod/Mod.cpp"
+        "${CMAKE_CURRENT_SOURCE_DIR}/src/Mod/LuaMod.cpp"
+        "${CMAKE_CURRENT_SOURCE_DIR}/src/Mod/CppMod.cpp"
+        "${CMAKE_CURRENT_SOURCE_DIR}/src/Mod/CppUserModBase.cpp"
         "${CMAKE_CURRENT_SOURCE_DIR}/src/UnrealCustom/CustomProperty.cpp"
         "${CMAKE_CURRENT_SOURCE_DIR}/src/LuaLibrary.cpp"
-        "${CMAKE_CURRENT_SOURCE_DIR}/src/LuaType/LuaMod.cpp"
+        "${CMAKE_CURRENT_SOURCE_DIR}/src/LuaType/LuaModRef.cpp"
         "${CMAKE_CURRENT_SOURCE_DIR}/src/LuaType/LuaUObject.cpp"
         "${CMAKE_CURRENT_SOURCE_DIR}/src/LuaType/LuaUStruct.cpp"
         "${CMAKE_CURRENT_SOURCE_DIR}/src/LuaType/LuaUClass.cpp"
@@ -272,25 +315,25 @@ set(${TARGET}_Sources
         #"${CMAKE_CURRENT_SOURCE_DIR}/Dependencies/imgui/imgui_demo.cpp"
         )
 add_library(${TARGET} SHARED ${${TARGET}_Sources})
-target_include_directories(${TARGET} PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include> $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/generated_include> $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/LuaBindings/include>)
+target_include_directories(${TARGET} PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include> $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/generated_include>)
 target_compile_options(${TARGET} PRIVATE ${PRIVATE_COMPILE_OPTIONS})
 target_link_options(${TARGET} PRIVATE ${PRIVATE_LINK_OPTIONS})
 target_compile_features(${TARGET} PUBLIC ${PUBLIC_COMPILE_FEATURES})
 target_compile_definitions(${TARGET} PUBLIC $<${MAKE_DEPENDENCIES_SHARED}:LUA_BUILD_AS_DLL>)
 set(UE4SS_LINK_WITH_LIBRARIES File DynamicOutput Unreal SinglePassSigScanner LuaMadeSimple FunctionTimer Function IniParser JSON Input PolyHook_2 d3d11 GLFW opengl32)
 set(UE4SS_LINK_WITH_INTERFACE_LIBRARIES fmt::fmt-header-only Function Constructs Helpers MProgram ScopedTimer)
-target_link_libraries(${TARGET} PRIVATE ${UE4SS_LINK_WITH_LIBRARIES} ${UE4SS_LINK_WITH_INTERFACE_LIBRARIES})
+target_link_libraries(${TARGET} PUBLIC ${UE4SS_LINK_WITH_LIBRARIES} ${UE4SS_LINK_WITH_INTERFACE_LIBRARIES})
 
 set(XINPUT_TARGET xinput1_3)
 enable_language(ASM_MASM)
 file(GLOB XINPUT_SOURCES "xinput/*")
 add_library(${XINPUT_TARGET} SHARED ${${TARGET}_Sources} ${XINPUT_SOURCES})
-target_include_directories(${XINPUT_TARGET} PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include> $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/generated_include> $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/LuaBindings/include>)
+target_include_directories(${XINPUT_TARGET} PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include> $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/generated_include>)
 target_compile_features(${XINPUT_TARGET} PUBLIC cxx_std_20)
 target_compile_definitions(${XINPUT_TARGET} PUBLIC $<${MAKE_DEPENDENCIES_SHARED}:LUA_BUILD_AS_DLL> UE4SS_LIB_BUILD_AS_XINPUT=1)
 target_compile_options(${XINPUT_TARGET} PRIVATE ${PRIVATE_MASM_COMPILE_OPTIONS})
 target_link_options(${XINPUT_TARGET} PRIVATE ${PRIVATE_LINK_OPTIONS})
-target_link_libraries(${XINPUT_TARGET} PRIVATE ${UE4SS_LINK_WITH_LIBRARIES} ${UE4SS_LINK_WITH_INTERFACE_LIBRARIES})
+target_link_libraries(${XINPUT_TARGET} PUBLIC ${UE4SS_LINK_WITH_LIBRARIES} ${UE4SS_LINK_WITH_INTERFACE_LIBRARIES})
 
 if (${MAKE_DEPENDENCIES_STATIC} EQUAL 1)
     target_compile_definitions(${TARGET} PRIVATE ${UE4SS_COMPILE_DEFINITIONS})
@@ -299,6 +342,10 @@ endif()
 
 set_property(TARGET ${TARGET} PROPERTY INTERPROCEDURAL_OPTIMIZATION TRUE)
 set_property(TARGET ${XINPUT_TARGET} PROPERTY INTERPROCEDURAL_OPTIMIZATION TRUE)
+
+# Making sure that the linked C runtime is a dll so that C++ mods will work correctly
+set_property(TARGET ${TARGET} PROPERTY MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>DLL")
+set_property(TARGET ${XINPUT_TARGET} PROPERTY MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>DLL")
 
 # imgui -> START
 set(IMGUI_INCLUDES Dependencies/imgui Dependencies/ImGuiColorTextEdit)
@@ -313,17 +360,4 @@ target_include_directories(${TARGET} PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/Depend
 target_include_directories(${XINPUT_TARGET} PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/Dependencies/GLFW/include")
 # GLFW -> END
 
-# Auto incrementing build number -> START
-# Fetch the auto incrementing build number
-# file(READ ${UE4SS_GENERATED_SOURCE_DIR}/build_number.cache UE4SS_LIB_BUILD_NUMBER)
-# message("Build #${UE4SS_LIB_BUILD_NUMBER} (Target: ${TARGET})")
-# add_custom_target(IncrementBuildNumber
-#        COMMAND ${CMAKE_COMMAND}
-#        -DRC_SOURCE_DIR:PATH="${PROJECT_SOURCE_DIR}"
-#        -DUE4SS_GENERATED_SOURCE_DIR:PATH="${UE4SS_GENERATED_SOURCE_DIR}"
-#        -DUE4SS_GENERATED_INCLUDE_DIR:PATH="${UE4SS_GENERATED_INCLUDE_DIR}"
-#        -P "${UE4SS_GENERATED_SOURCE_DIR}/build_number.cmake"
-#        )
-# add_dependencies(${TARGET} IncrementBuildNumber)
-# add_dependencies(${XINPUT_TARGET} IncrementBuildNumber)
-# Auto incrementing build number -> END
+add_subdirectory("cppsdk")

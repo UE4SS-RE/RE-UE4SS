@@ -55,8 +55,6 @@ auto dll_process_attached(HMODULE moduleHandle) -> void
     {
         CloseHandle(handle);
     }
-
-    std::cin.get();
 }
 
 auto WIN_API_FUNCTION_NAME(HMODULE hModule,

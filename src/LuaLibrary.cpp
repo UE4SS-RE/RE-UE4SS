@@ -107,9 +107,10 @@ namespace RC::LuaLibrary
     {
         switch (status)
         {
-
+            case ExportedFunctionStatus::NO_ERROR_TO_EXPORT:
+                return L"NO_ERROR_TO_EXPORT | 0";
             case ExportedFunctionStatus::UNKNOWN_ERROR:
-                return L"UNKNOWN_ERROR | 0";
+                return L"UNKNOWN_ERROR | 7";
             case ExportedFunctionStatus::SUCCESS:
                 return L"SUCCESS | 1";
             case ExportedFunctionStatus::VARIABLE_NOT_FOUND:
@@ -122,6 +123,8 @@ namespace RC::LuaLibrary
                 return L"UNABLE_TO_CALL_SCRIPT_FUNCTION | 5";
             case ExportedFunctionStatus::SCRIPT_FUNCTION_NOT_FOUND:
                 return L"SCRIPT_FUNCTION_NOT_FOUND | 6";
+            case ExportedFunctionStatus::UE4SS_NOT_INITIALIZED:
+                return L"UE4SS_NOT_INITIALIZED | 8";
         }
 
         return L"Missed switch case";
@@ -129,7 +132,7 @@ namespace RC::LuaLibrary
 
     auto get_lua_state_by_mod_name(const char* mod_name) -> lua_State*
     {
-        auto* mod = UE4SSProgram::find_mod_by_name(mod_name);
+        auto* mod = UE4SSProgram::find_lua_mod_by_name(mod_name);
         if (!mod) { return nullptr; }
         return mod->lua().get_lua_state();
     };
@@ -138,8 +141,13 @@ namespace RC::LuaLibrary
     {
         std::string_view output_buffer_view{output_buffer};
 
-        auto* mod = UE4SSProgram::find_mod_by_name(mod_name);
-        if (!mod || !mod->is_installed() || !mod->is_started()) { return std::format("No mod by name '{}' found.", mod_name).c_str(); }
+        auto* mod = UE4SSProgram::find_lua_mod_by_name(mod_name);
+        if (!mod || !mod->is_installed() || !mod->is_started())
+        {
+            auto error_message = std::format("No mod by name '{}' found.", mod_name);
+            std::memcpy(output_buffer, error_message.data(), error_message.size());
+            return output_buffer;
+        }
 
         try
         {
@@ -183,7 +191,7 @@ namespace RC::LuaLibrary
             Output::send(STR("Setting variable '{}' in mod '{}' to {}\n"), variable_name_wide, mod_name_wide, new_value);
             //*/
 
-            auto mod = UE4SSProgram::find_mod_by_name(mod_name, UE4SSProgram::IsInstalled::Yes, UE4SSProgram::IsStarted::Yes);
+            auto mod = UE4SSProgram::find_lua_mod_by_name(mod_name, UE4SSProgram::IsInstalled::Yes, UE4SSProgram::IsStarted::Yes);
             if (!mod)
             {
                 return_struct.status = ExportedFunctionStatus::MOD_IS_NULLPTR;
@@ -249,7 +257,7 @@ namespace RC::LuaLibrary
             }
             //*/
 
-            auto mod = UE4SSProgram::find_mod_by_name(mod_name, UE4SSProgram::IsInstalled::Yes, UE4SSProgram::IsStarted::Yes);
+            auto mod = UE4SSProgram::find_lua_mod_by_name(mod_name, UE4SSProgram::IsInstalled::Yes, UE4SSProgram::IsStarted::Yes);
             if (!mod)
             {
                 return_struct.status = ExportedFunctionStatus::MOD_IS_NULLPTR;
@@ -343,7 +351,7 @@ namespace RC::LuaLibrary
             Output::send(STR("Calling script function '{}' in mod '{}'\n"), func_name_wide, mod_name_wide);
             //*/
 
-            auto mod = UE4SSProgram::find_mod_by_name(mod_name, UE4SSProgram::IsInstalled::Yes, UE4SSProgram::IsStarted::Yes);
+            auto mod = UE4SSProgram::find_lua_mod_by_name(mod_name, UE4SSProgram::IsInstalled::Yes, UE4SSProgram::IsStarted::Yes);
             if (!mod)
             {
                 return_struct.status = ExportedFunctionStatus::MOD_IS_NULLPTR;

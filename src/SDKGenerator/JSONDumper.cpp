@@ -129,8 +129,6 @@ namespace RC::UEGenerator::JSONDumper
         Output::send(STR("Dumping to JSON file\n"));
         auto json = JSON::Array{};
 
-        // For now this is for 4.25+ only
-        bool is_below_425 = Unreal::Version::IsBelow(4, 25);
         UObjectGlobals::ForEachUObject([&](void* raw_object, int32_t chunk_index, int32_t object_index) {
             if (!raw_object) { return LoopAction::Continue; }
             UObject* object = static_cast<UObject*>(raw_object);

@@ -208,6 +208,8 @@ namespace RC::OutTheShade
 
         std::vector<UEnum*> Enums;
         std::vector<UStruct*> Structs; // TODO: a better way than making this completely dynamic
+        std::unordered_map<std::wstring, int> ModulePathsMap;
+        std::vector<std::wstring> ModulePathsRaw;
 
         std::function<void(class FProperty*, EPropertyType)> WriteProperty = [&](FProperty* Prop, EPropertyType Type)
         {
@@ -352,6 +354,13 @@ namespace RC::OutTheShade
 
         for (auto Struct : Structs)
         {
+            std::wstring RawPathName = Struct->GetPathName();
+            std::wstring::size_type PathNameStart = 0; // include first bit (Script/Game) to avoid ambiguity; to drop it, replace with RawPathName.find_first_of('/', 1) + 1;
+            std::wstring::size_type PathNameLength = RawPathName.find_last_of('.') - PathNameStart;
+            std::wstring FinalPathName = RawPathName.substr(PathNameStart, PathNameLength);
+            ModulePathsMap.insert_or_assign(FinalPathName, 0);
+            ModulePathsRaw.push_back(FinalPathName);
+
             Buffer.Write(NameMap[Struct->GetNamePrivate()]);
             Buffer.Write<int32_t>(Struct->GetSuperStruct() ? NameMap[Struct->GetSuperStruct()->GetNamePrivate()] : static_cast<int32_t>(0xffffffff));
 
@@ -383,6 +392,27 @@ namespace RC::OutTheShade
 
                 WriteProperty(P.Prop, P.PropertyType);
             }
+        }
+
+        // extension data
+        Buffer.Write<uint32_t>(1); // extensions bitflag; right now we only serialize the scripts extension
+
+        // scripts
+        int CurrentModulePathsIndex = 0;
+        int ModulePathsMapSize = ModulePathsMap.size();
+        Buffer.Write<uint16_t>(ModulePathsMapSize);
+        for (auto&& M : ModulePathsMap)
+        {
+            ModulePathsMap[M.first] = CurrentModulePathsIndex++;
+
+            std::string StringToSerialize = to_string(M.first);
+            Buffer.Write<uint8_t>(static_cast<uint8_t>(StringToSerialize.length()));
+            Buffer.WriteString(StringToSerialize);
+        }
+        bool isIdx16 = ModulePathsMapSize > 255;
+        for (auto& ky : ModulePathsRaw)
+        {
+            isIdx16 ? Buffer.Write<uint16_t>(static_cast<uint16_t>(ModulePathsMap[ky])) : Buffer.Write<uint8_t>(static_cast<uint8_t>(ModulePathsMap[ky]));
         }
 
         std::vector<uint8_t> UsmapData;

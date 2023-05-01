@@ -4,12 +4,13 @@
 #include <cstdint>
 #include <filesystem>
 
+#include <Common.hpp>
 #include <File/File.hpp>
 #include <GUI/GUI.hpp>
 
 namespace RC
 {
-    class SettingsManager
+    class RC_UE4SS_API SettingsManager
     {
     public:
         struct SectionOverrides
@@ -60,6 +61,7 @@ namespace RC
             bool SimpleConsoleEnabled{true};
             bool DebugConsoleEnabled{true};
             bool DebugConsoleVisible{true};
+            float DebugGUIFontScaling{1.0};
             GUI::GfxBackend GraphicsAPI{GUI::GfxBackend::GLFW3_OpenGL3};
             int64_t LiveViewObjectsPerGroup{64 * 1024 / 2};
         } Debug;

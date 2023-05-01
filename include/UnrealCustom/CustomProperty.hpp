@@ -7,6 +7,8 @@
 #include <Helpers/Casting.hpp>
 #include <Unreal/FProperty.hpp>
 
+#pragma warning(disable: 4068)
+
 namespace RC::Unreal
 {
     class UClass;
@@ -19,7 +21,10 @@ namespace RC::Unreal
     private:
         // Untyped data
         // The proper data will be copied inside at the proper offsets using StaticOffsetFinder
+        #pragma clang diagnostic push
+        #pragma clang diagnostic ignored "-Wunused-private-field"
         std::byte m_data[0x128]{};
+        #pragma clang diagnostic pop
 
     public:
         CustomProperty(int32_t offset_internal, int32_t element_size);
@@ -69,5 +74,7 @@ namespace RC::Unreal
         auto static construct(int32_t offset_internal, UScriptStruct* script_struct, int32_t element_size) -> std::unique_ptr<CustomProperty>;
     };
 }
+
+#pragma warning(default: 4068)
 
 #endif //UE4SS_CUSTOMPROPERTY_HPP

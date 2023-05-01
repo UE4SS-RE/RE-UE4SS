@@ -166,7 +166,11 @@ namespace RC::GUI
     auto Console::add_line(const std::string& line, LogLevel::LogLevel log_level) -> void
     {
         std::lock_guard<std::mutex> guard(m_lines_mutex);
-        if (m_text_editor.GetTotalLines() >= m_maximum_num_lines) { m_text_editor.ClearLines(); }
+        if (m_text_editor.GetTotalLines() < 0)
+        {
+            throw std::runtime_error{"Somehow we negative amount of lines in the console"};
+        }
+        if (static_cast<size_t>(m_text_editor.GetTotalLines()) >= m_maximum_num_lines) { m_text_editor.ClearLines(); }
         if (m_lines.size() >= m_maximum_num_lines) { m_lines.clear(); }
         if (log_level != LogLevel::Default && log_level != LogLevel::Normal)
         {
@@ -180,7 +184,11 @@ namespace RC::GUI
     {
         auto ansi_string = to_string(line);
         std::lock_guard<std::mutex> guard(m_lines_mutex);
-        if (m_text_editor.GetTotalLines() >= m_maximum_num_lines) { m_text_editor.ClearLines(); }
+        if (m_text_editor.GetTotalLines() < 0)
+        {
+            throw std::runtime_error{"Somehow we negative amount of lines in the console"};
+        }
+        if (static_cast<size_t>(m_text_editor.GetTotalLines()) >= m_maximum_num_lines) { m_text_editor.ClearLines(); }
         if (m_lines.size() >= m_maximum_num_lines) { m_lines.clear(); }
         if (log_level != LogLevel::Default && log_level != LogLevel::Normal)
         {

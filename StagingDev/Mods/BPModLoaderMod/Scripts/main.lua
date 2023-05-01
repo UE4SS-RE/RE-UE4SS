@@ -39,8 +39,13 @@ function LoadModConfigs()
         error("[BPModLoader] UE4SS does not support loading mods for this game.")
     end
     local LogicModsDir = Dirs.Game.Content.Paks.LogicMods
-    if not Dirs then error("[BPModLoader] IterateGameDirectories failed, cannot BP mod configurations.") end
-    if not LogicModsDir then error("[BPModLoader] No Content/Paks/LogicMods directory.") end
+    if not Dirs then error("[BPModLoader] IterateGameDirectories failed, cannot load BP mod configurations.") end
+    if not LogicModsDir then
+        CreateLogicModsDirectory();
+        Dirs = IterateGameDirectories();
+        LogicModsDir = Dirs.Game.Content.Paks.LogicMods
+        if not LogicModsDir then error("[BPModLoader] Unable to find or create Content/Paks/LogicMods directory. Try creating manually.") end
+    end
     for ModDirectoryName,ModDirectory in pairs(LogicModsDir) do
         Log(string.format("Mod: %s\n", ModDirectoryName))
         for _,ModFile in pairs(ModDirectory.__files) do
