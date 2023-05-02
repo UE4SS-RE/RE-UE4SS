@@ -76,7 +76,11 @@ namespace RC::GUI
                     !object->IsA<UField>() &&
                     !object->IsA<UPackage>();
         };
+
         if (LiveView::s_search_options.instances_only && !is_instance()) { return; }
+        if (LiveView::s_search_options.non_instances_only && (object->IsA<UFunction>() || is_instance())) { return; }
+        if (!LiveView::s_search_options.include_default_objects && object->HasAnyFlags(static_cast<EObjectFlags>(RF_ClassDefaultObject | RF_ArchetypeObject))) { return; }
+        if (LiveView::s_search_options.default_objects_only && !object->HasAnyFlags(static_cast<EObjectFlags>(RF_ClassDefaultObject | RF_ArchetypeObject))) { return; }
         if (LiveView::s_name_search_results_set.contains(object)) { return; }
 
         auto object_full_name = get_object_full_name_cxx_string(object);
@@ -1617,9 +1621,41 @@ namespace RC::GUI
         if (ImGui::BeginPopupContextItem("##search-options"))
         {
             ImGui::Text("Search options");
-            ImGui::Checkbox("Include inheritance", &s_search_options.include_inheritance);
-            ImGui::SameLine();
-            ImGui::Checkbox("Instances only", &s_search_options.instances_only);
+            if (ImGui::BeginTable("search_options_table", 2))
+            {
+                bool instances_only_enabled = !(s_search_options.non_instances_only || s_search_options.default_objects_only);
+                bool non_instances_only_enabled = !(s_search_options.instances_only || s_search_options.default_objects_only);
+                bool default_objects_only_enabled = !(s_search_options.non_instances_only || s_search_options.instances_only);
+
+                //  Row #1
+                ImGui::TableNextRow();
+                ImGui::TableNextColumn();
+                ImGui::Checkbox("Include inheritance", &s_search_options.include_inheritance);
+                ImGui::TableNextColumn();
+                if (!instances_only_enabled) { ImGui::BeginDisabled(); }
+                ImGui::Checkbox("Instances only", &s_search_options.instances_only);
+                if (!instances_only_enabled) { ImGui::EndDisabled(); }
+
+                // Row #2
+                ImGui::TableNextRow();
+                ImGui::TableNextColumn();
+                // Empty column
+                ImGui::TableNextColumn();
+                if (!non_instances_only_enabled) { ImGui::BeginDisabled(); }
+                ImGui::Checkbox("Non-instances only", &s_search_options.non_instances_only);
+                if (!non_instances_only_enabled) { ImGui::EndDisabled(); }
+
+                // Row #3
+                ImGui::TableNextRow();
+                ImGui::TableNextColumn();
+                ImGui::Checkbox("Include CDOs", &s_search_options.include_default_objects);
+                ImGui::TableNextColumn();
+                if (!default_objects_only_enabled) { ImGui::BeginDisabled(); }
+                ImGui::Checkbox("CDOs only", &s_search_options.default_objects_only);
+                if (!default_objects_only_enabled) { ImGui::EndDisabled(); }
+
+                ImGui::EndTable();
+            }
             ImGui::EndPopup();
         }
 

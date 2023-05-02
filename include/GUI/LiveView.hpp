@@ -27,6 +27,9 @@ namespace RC::GUI
     {
         bool include_inheritance{};
         bool instances_only{};
+        bool non_instances_only{};
+        bool include_default_objects{true};
+        bool default_objects_only{};
     };
 
     class LiveView
