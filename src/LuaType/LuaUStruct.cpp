@@ -12,6 +12,8 @@ namespace RC::LuaType
 
     auto UStruct::construct(const LuaMadeSimple::Lua& lua, Unreal::UStruct* unreal_object) -> const LuaMadeSimple::Lua::Table
     {
+        add_to_global_unreal_objects_map(unreal_object);
+
         LuaType::UStruct lua_object{unreal_object};
 
         auto metatable_name = ClassName::ToString();

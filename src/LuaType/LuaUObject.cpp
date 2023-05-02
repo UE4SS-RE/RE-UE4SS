@@ -41,6 +41,30 @@
 
 namespace RC::LuaType
 {
+    std::unordered_set<size_t> s_lua_unreal_objects{};
+
+    auto add_to_global_unreal_objects_map(Unreal::UObject* object) -> void
+    {
+        if (object)
+        {
+            s_lua_unreal_objects.emplace(object->HashObject());
+        }
+    }
+
+    auto is_object_in_global_unreal_object_map(Unreal::UObject* object) -> bool
+    {
+        return object && s_lua_unreal_objects.contains(object->HashObject());
+    }
+
+    FLuaObjectDeleteListener FLuaObjectDeleteListener::s_lua_object_delete_listener{};
+    void FLuaObjectDeleteListener::NotifyUObjectDeleted(const Unreal::UObjectBase* object, [[maybe_unused]]int32_t index)
+    {
+        if (auto it = s_lua_unreal_objects.find(static_cast<const Unreal::UObject*>(object)->HashObject()); it != s_lua_unreal_objects.end())
+        {
+            s_lua_unreal_objects.erase(it);
+        }
+    }
+
     auto call_ufunction_from_lua(const LuaMadeSimple::Lua& lua) -> int
     {
         if (!lua.is_userdata())

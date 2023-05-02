@@ -2992,6 +2992,8 @@ Overloads:
 
     auto LuaMod::on_program_start() -> void
     {
+        Unreal::UObjectArray::AddUObjectDeleteListener(&LuaType::FLuaObjectDeleteListener::s_lua_object_delete_listener);
+
         Unreal::Hook::RegisterInitGameStatePreCallback([]([[maybe_unused]]Unreal::AGameModeBase* Context) {
             TRY([&] {
                 for (const auto& callback_data : m_init_game_state_pre_callbacks)

@@ -18,6 +18,7 @@
 #include <Unreal/FOutputDevice.hpp>
 #include <Unreal/FProperty.hpp>
 #include <Unreal/NameTypes.hpp>
+#include <Unreal/UObjectArray.hpp>
 #include <Unreal/VersionedContainer/Container.hpp>
 #pragma warning(default: 4005)
 
@@ -26,6 +27,18 @@ concept IsConvertableToLuaInteger = std::is_integral_v<SupposedIntegralType>;
 
 namespace RC::LuaType
 {
+    struct FLuaObjectDeleteListener : public Unreal::FUObjectDeleteListener
+    {
+        static FLuaObjectDeleteListener s_lua_object_delete_listener;
+
+        void NotifyUObjectDeleted(const Unreal::UObjectBase* object, [[maybe_unused]]int32_t index) override;
+
+        void OnUObjectArrayShutdown() override
+        {
+            Unreal::UObjectArray::RemoveUObjectDeleteListener(this);
+        }
+    };
+
     auto call_ufunction_from_lua(const LuaMadeSimple::Lua& lua) -> int;
 
     using Operation = LuaMadeSimple::Type::Operation;
@@ -222,6 +235,9 @@ namespace RC::LuaType
     struct UObjectName { constexpr static const char* ToString() { return "UObject"; } };
     using UObject = UObjectBase<Unreal::UObject, UObjectName>;
     
+    auto add_to_global_unreal_objects_map(Unreal::UObject* object) -> void;
+    auto is_object_in_global_unreal_object_map(Unreal::UObject* object) -> bool;
+    
     template<typename DerivedType, typename ObjectName>
     class UObjectBase : public RemoteObjectBase<DerivedType, ObjectName>
     {
@@ -242,6 +258,8 @@ namespace RC::LuaType
         // Constructor for UObject
         auto static construct(const LuaMadeSimple::Lua& lua, DerivedType* unreal_object) -> const LuaMadeSimple::Lua::Table
         {
+            add_to_global_unreal_objects_map(unreal_object);
+
             SelfType lua_object{unreal_object};
 
             auto metatable_name = ObjectName::ToString();
@@ -517,7 +535,7 @@ Overloads:
 
             table.add_pair("IsValid", [](const LuaMadeSimple::Lua& lua) -> int {
                 const auto& lua_object = lua.get_userdata<SelfType>();
-                if (lua_object.get_remote_cpp_object() && !lua_object.get_remote_cpp_object()->IsUnreachable())
+                if (lua_object.get_remote_cpp_object() && !lua_object.get_remote_cpp_object()->IsUnreachable() && is_object_in_global_unreal_object_map(lua_object.get_remote_cpp_object()))
                 {
                     lua.set_bool(true);
                 }
