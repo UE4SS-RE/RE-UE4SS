@@ -1,2 +1,0 @@
-; You only have to include mods where load order matters, mods not included here will be loaded in any random order after loading the prioritized mods.
-; Add your LogicMods below by their name without .pak at the end. LogicMods will be loaded in top to bottom order.

@@ -13,7 +13,7 @@ package.path = '.\\Mods\\ModLoaderMod\\BPMods\\?.lua;' .. package.path
 Mods = {}
 OrderedMods = {}
 
--- Contains mod names from Mods/logicmods.txt and is used to determine the load order of LogicMods.
+-- Contains mod names from Mods/BPModLoaderMod/load_order.txt and is used to determine the load order of BP mods.
 ModOrderList = {}
 
 local DefualtModConfig = {}
@@ -65,9 +65,9 @@ function LinesFrom(file, ignoreLinesStartingWith)
     return lines
 end
 
--- Loads mod order data from logicmods.txt and pushes it into ModOrderList.
+-- Loads mod order data from load_order.txt and pushes it into ModOrderList.
 function LoadModOrder()
-    local file = 'Mods/logicmods.txt'
+    local file = 'Mods/BPModLoaderMod/load_order.txt'
     local lines = LinesFrom(file)
 
     local entriesAdded = 0
@@ -87,14 +87,14 @@ function LoadModOrder()
     end
 
     if entriesAdded <= 0 then
-        Log(string.format("Mods/logicmods.txt not present or no matching mods, loading all LogicMods in random order."))
+        Log(string.format("Mods/BPModLoaderMod/load_order.txt not present or no matching mods, loading all BP mods in random order."))
     end
 end
 
 function SetupModOrder()
     local Priority = 1
 
-    -- Adds priority mods first by their respective order as specified in logicmods.txt
+    -- Adds priority mods first by their respective order as specified in load_order.txt
     for _, ModOrderEntry in pairs(ModOrderList) do
         for ModName, ModInfo in pairs(Mods) do
             if type(ModInfo) == "table" then
