@@ -64,6 +64,7 @@ namespace RC::GUI
             auto& cached_function = m_callable_functions.emplace_back(CallableUFunction{function});
 
             cached_function.function->ForEachProperty([&](FProperty* param) {
+                if (param->HasAllPropertyFlags(CPF_ReturnParm)) { return LoopAction::Continue; }
                 if (param->HasAllPropertyFlags(CPF_OutParm)) { cached_function.has_out_params = true; }
                 return LoopAction::Continue;
             });
@@ -127,6 +128,7 @@ namespace RC::GUI
     static StringType s_cmd{};
     static FOutputDevice s_ar{};
     static UFunction* s_function{};
+    static UObject* s_executor{};
     auto call_process_console_exec(UObject*, UFunction*, void*) -> void
     {
         if (s_do_call)
@@ -134,7 +136,8 @@ namespace RC::GUI
             s_do_call = false;
             auto& function_flags = s_function->GetFunctionFlags();
             function_flags |= FUNC_Exec;
-            bool call_succeeded = s_instance->ProcessConsoleExec(s_cmd.c_str(), s_ar, s_instance);
+            Output::send(STR("Processing command: {}\n"), s_cmd);
+            bool call_succeeded = s_instance->ProcessConsoleExec(s_cmd.c_str(), s_ar, s_executor);
             Output::send(STR("call_succeeded: {}\n"), call_succeeded);
             function_flags &= ~FUNC_Exec;
         }
@@ -150,9 +153,12 @@ namespace RC::GUI
             cmd.append(std::format(STR(" {}"), to_wstring(param.value_from_ui)));
         }
 
+        Output::send(STR("Queueing command: {}\n"), cmd);
+
         s_cmd = cmd;
         s_instance = instance;
         s_function = function;
+        s_executor = m_currently_selected_function->context_is_implicit ? instance : nullptr;
         static bool s_is_hooked{};
         if (!s_is_hooked)
         {
@@ -214,6 +220,65 @@ namespace RC::GUI
         else
         {
             ImGui::Text("%S", param.unreal_param->GetClass().GetName().c_str());
+        }
+    }
+
+    static auto get_typeless_object_name(UObject* object) -> std::string
+    {
+        auto object_name = to_string(object->GetFullName());
+        auto object_name_type_space_location = object_name.find(" ");
+        if (object_name_type_space_location == object_name.npos)
+        {
+            Output::send<LogLevel::Warning>(STR("Could not copy name of PlayerController, was unable to find space in full PlayerController name: '{}'."), to_wstring(object_name));
+            return {};
+        }
+        else
+        {
+            if (object_name_type_space_location > static_cast<unsigned long long>(std::numeric_limits<long long>::max()))
+            {
+                Output::send<LogLevel::Warning>(STR("integer overflow when converting pc_name_type_space_location to signed"));
+                return {};
+            }
+            else
+            {
+                return std::string{object_name.begin() + static_cast<long long>(object_name_type_space_location) + 1, object_name.end()};
+            }
+        }
+    }
+
+    static auto is_player_controlled(UObject* pawn) -> bool
+    {
+        static auto function = UObjectGlobals::StaticFindObject<UFunction*>(nullptr, nullptr, STR("/Script/Engine.Pawn:IsPlayerControlled"));
+        if (!function) { return false; }
+        struct Params
+        {
+            bool ReturnValue{};
+        };
+        Params params{};
+        pawn->ProcessEvent(function, &params);
+        return params.ReturnValue;
+    }
+
+    static auto render_other_list(std::string_view menu_name, StringViewType class_name, UFunctionParam& param) -> void
+    {
+        if (ImGui::BeginMenu(menu_name.data()))
+        {
+            std::vector<UObject*> objects{};
+            UObjectGlobals::FindAllOf(class_name.data(), objects);
+            for (size_t i = 0; i < objects.size(); ++i)
+            {
+                const auto& object = objects[i];
+                if (!is_player_controlled(object)) { continue; }
+                const auto object_name_typeless = get_typeless_object_name(object);
+                if (!object_name_typeless.empty())
+                {
+                    if (ImGui::MenuItem(std::format("#{}: {}", i, object_name_typeless).c_str()))
+                    {
+                        param.value_from_ui.insert(param.current_cursor_position_in_ui, object_name_typeless);
+                    }
+                }
+            }
+            ImGui::EndMenu();
         }
     }
 
@@ -283,6 +348,30 @@ namespace RC::GUI
                     ImGui::InputText(std::format("##param-input-{}", param.cached_name).c_str(), &param.value_from_ui, ImGuiInputTextFlags_CallbackAlways, &value_from_ui_callback, &param);
                     if (ImGui::BeginPopupContextItem(param.cached_name.c_str()))
                     {
+                        if (ImGui::BeginMenu("WorldContextObject"))
+                        {
+                            // We're not using 'render_other_list' here because we may want to customize the list of possible WorldContextObjects.
+                            std::vector<UObject*> player_controllers{};
+                            UObjectGlobals::FindAllOf(STR("PlayerController"), player_controllers);
+                            for (size_t i = 0; i < player_controllers.size(); ++i)
+                            {
+                                const auto& player_controller = player_controllers[i];
+                                const auto pc_name_typeless = get_typeless_object_name(player_controller);
+                                if (!pc_name_typeless.empty())
+                                {
+                                    if (ImGui::MenuItem(std::format("#{}: {}", i, pc_name_typeless).c_str()))
+                                    {
+                                        param.value_from_ui.insert(param.current_cursor_position_in_ui, pc_name_typeless);
+                                    }
+                                }
+                            }
+                            ImGui::EndMenu();
+                        }
+                        if (ImGui::BeginMenu("Other"))
+                        {
+                            render_other_list("Player Controlled Pawns", STR("Pawn"), param);
+                            ImGui::EndMenu();
+                        }
                         if (ImGui::MenuItem("Insert Zero'd FVector"))
                         {
                             param.value_from_ui.insert(param.current_cursor_position_in_ui, "(X=0.0,Y=0.0,Z=0.0)");
@@ -296,6 +385,21 @@ namespace RC::GUI
                             param.value_from_ui.insert(param.current_cursor_position_in_ui, "(Pitch=0.0,Yaw=0.0,Roll=0.0)");
                         }
                         ImGui::EndPopup();
+                    }
+                }
+
+                if (is_function_selected())
+                {
+                    ImGui::Text("Context is:");
+                    ImGui::SameLine();
+                    if (ImGui::RadioButton("Implicit", m_currently_selected_function->context_is_implicit))
+                    {
+                        m_currently_selected_function->context_is_implicit = true;
+                    }
+                    ImGui::SameLine();
+                    if (ImGui::RadioButton("WorldContextObject", !m_currently_selected_function->context_is_implicit))
+                    {
+                        m_currently_selected_function->context_is_implicit = false;
                     }
                 }
 

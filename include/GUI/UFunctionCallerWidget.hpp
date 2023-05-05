@@ -23,6 +23,7 @@ namespace RC::GUI
         std::string cached_name{};
         bool is_selected{};
         bool has_out_params{};
+        bool context_is_implicit{true};
     };
 
     struct UFunctionParam
