@@ -530,7 +530,7 @@ namespace RC
         LuaMod::m_local_player_exec_pre_callbacks.clear();
         LuaMod::m_local_player_exec_post_callbacks.clear();
         LuaMod::m_script_hook_callbacks.clear();
-        LuaMod::m_native_hook_id_to_generic_hook_id.clear();
+        LuaMod::m_generic_hook_id_to_native_hook_id.clear();
     }
 
     template<typename PropertyType>
@@ -1117,24 +1117,25 @@ Overloads:
 
                 bool is_native{};
 
-                auto native_hook_pre_id_it = LuaMod::m_native_hook_id_to_generic_hook_id.find(static_cast<int32_t>(pre_id));
-                auto native_hook_post_id_it = LuaMod::m_native_hook_id_to_generic_hook_id.find(static_cast<int32_t>(post_id));
-                if (native_hook_pre_id_it != LuaMod::m_native_hook_id_to_generic_hook_id.end() && native_hook_post_id_it != LuaMod::m_native_hook_id_to_generic_hook_id.end())
+                auto native_hook_pre_id_it = LuaMod::m_generic_hook_id_to_native_hook_id.find(static_cast<int32_t>(pre_id));
+                auto native_hook_post_id_it = LuaMod::m_generic_hook_id_to_native_hook_id.find(static_cast<int32_t>(post_id));
+                if (native_hook_pre_id_it != LuaMod::m_generic_hook_id_to_native_hook_id.end() && native_hook_post_id_it != LuaMod::m_generic_hook_id_to_native_hook_id.end())
                 {
                     is_native = true;
                 }
 
                 if (is_native)
                 {
-                    Output::send<LogLevel::Verbose>(STR("Unregistering hook with pre-id: {}\n"), native_hook_pre_id_it->second);
+                    Output::send<LogLevel::Verbose>(STR("Unregistering native hook with pre-id: {}\n"), native_hook_pre_id_it->first);
                     unreal_function->UnregisterHook(static_cast<int32_t>(native_hook_pre_id_it->second));
-                    Output::send<LogLevel::Verbose>(STR("Unregistering hook with post-id: {}\n"), native_hook_post_id_it->second);
+                    Output::send<LogLevel::Verbose>(STR("Unregistering native hook with post-id: {}\n"), native_hook_post_id_it->first);
                     unreal_function->UnregisterHook(static_cast<int32_t>(native_hook_post_id_it->second));
                 }
                 else
                 {
                     if (auto callback_data_it = LuaMod::m_script_hook_callbacks.find(unreal_function->GetFullName()); callback_data_it != LuaMod::m_script_hook_callbacks.end())
                     {
+                        Output::send<LogLevel::Verbose>(STR("Unregistering script hook with id: {}\n"), post_id);
                         auto& registry_indexes = callback_data_it->second.registry_indexes;
                         registry_indexes.erase(std::remove_if(registry_indexes.begin(), registry_indexes.end(), [&](LuaMod::LuaCallbackData::RegistryIndex& registry_index) -> bool {
                             return post_id == registry_index.identifier;
@@ -2494,8 +2495,8 @@ Overloads:
                 lua.throw_error("Tried to register a hook with Lua function 'RegisterHook' but no UFunction with the specified name was found.");
             }
 
-            Unreal::CallbackId pre_id{};
-            Unreal::CallbackId post_id{};
+            int32_t generic_pre_id{};
+            int32_t generic_post_id{};
 
             auto func_ptr = unreal_function->GetFunc();
             if (func_ptr &&
@@ -2512,13 +2513,15 @@ Overloads:
                         lua_callback_registry_index
                         })
                 );
-                pre_id = unreal_function->RegisterPreHook(&lua_unreal_script_function_hook_pre, custom_data.get());
-                post_id = unreal_function->RegisterPostHook(&lua_unreal_script_function_hook_post, custom_data.get());
+                auto pre_id = unreal_function->RegisterPreHook(&lua_unreal_script_function_hook_pre, custom_data.get());
+                auto post_id = unreal_function->RegisterPostHook(&lua_unreal_script_function_hook_post, custom_data.get());
                 custom_data->pre_callback_id = pre_id;
                 custom_data->post_callback_id = post_id;
-                m_native_hook_id_to_generic_hook_id.emplace(++m_last_generic_hook_id, pre_id);
-                m_native_hook_id_to_generic_hook_id.emplace(++m_last_generic_hook_id, post_id);
-                Output::send<LogLevel::Verbose>(STR("[RegisterHook] Registered native hook ({}, {}) for {}\n"), pre_id, post_id, unreal_function->GetFullName());
+                m_generic_hook_id_to_native_hook_id.emplace(++m_last_generic_hook_id, pre_id);
+                generic_pre_id = m_last_generic_hook_id;
+                m_generic_hook_id_to_native_hook_id.emplace(++m_last_generic_hook_id, post_id);
+                generic_post_id = m_last_generic_hook_id;
+                Output::send<LogLevel::Verbose>(STR("[RegisterHook] Registered native hook ({}, {}) for {}\n"), generic_pre_id, generic_post_id, unreal_function->GetFullName());
             }
             else if (func_ptr &&
                      func_ptr == Unreal::UObject::ProcessInternalInternal.get_function_address() &&
@@ -2527,9 +2530,9 @@ Overloads:
                 ++m_last_generic_hook_id;
                 auto [callback_data, _] = LuaMod::m_script_hook_callbacks.emplace(unreal_function->GetFullName(), LuaCallbackData{lua, nullptr, {}});
                 callback_data->second.registry_indexes.emplace_back(LuaMod::LuaCallbackData::RegistryIndex{lua_callback_registry_index, m_last_generic_hook_id});
-                pre_id = m_last_generic_hook_id;
-                post_id = m_last_generic_hook_id;
-                Output::send<LogLevel::Verbose>(STR("[RegisterHook] Registered script hook ({}, {}) for {}\n"), pre_id, post_id, unreal_function->GetFullName());
+                generic_pre_id = m_last_generic_hook_id;
+                generic_post_id = m_last_generic_hook_id;
+                Output::send<LogLevel::Verbose>(STR("[RegisterHook] Registered script hook ({}, {}) for {}\n"), generic_pre_id, generic_post_id, unreal_function->GetFullName());
             }
             else
             {
@@ -2540,8 +2543,8 @@ Overloads:
                 lua.throw_error(error_message);
             }
 
-            lua.set_integer(pre_id);
-            lua.set_integer(post_id);
+            lua.set_integer(generic_pre_id);
+            lua.set_integer(generic_post_id);
 
             return 2;
         });
