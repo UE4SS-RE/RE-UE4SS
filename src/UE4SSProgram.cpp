@@ -152,12 +152,8 @@ namespace RC
             // Setup the log file
             auto& file_device = Output::set_default_devices<Output::NewFileDevice>();
             file_device.set_file_name_and_path(m_log_directory / m_log_file_name);
-            
-            create_simple_console();
 
-            setup_mods();
-            install_cpp_mods();
-            start_cpp_mods();
+            create_simple_console();
 
             if (settings_manager.Debug.DebugConsoleEnabled)
             {
@@ -193,6 +189,10 @@ namespace RC
 #else
             Output::send(STR("WITH_CASE_PRESERVING_NAME: No\n\n"));
 #endif
+
+            setup_mods();
+            install_cpp_mods();
+            start_cpp_mods();
 
             setup_mod_directory_path();
 
@@ -1155,6 +1155,16 @@ namespace RC
             m_render_thread.request_stop();
             m_render_thread.join();
         }
+    }
+
+    auto UE4SSProgram::add_gui_tab(std::shared_ptr<GUI::GUITab> tab) -> void
+    {
+        m_debugging_gui.add_tab(tab);
+    }
+
+    auto UE4SSProgram::remove_gui_tab(std::shared_ptr<GUI::GUITab> tab) -> void
+    {
+        m_debugging_gui.remove_tab(tab);
     }
 
     auto UE4SSProgram::queue_event(EventCallable callable, void* data) -> void

@@ -18,6 +18,7 @@
 #include <LuaLibrary.hpp>
 #include <DynamicOutput/DynamicOutput.hpp>
 #include <GUI/GUI.hpp>
+#include <GUI/GUITab.hpp>
 
 namespace RC
 {
@@ -159,6 +160,16 @@ namespace RC
             return m_debugging_gui;
         };
         auto stop_render_thread() -> void;
+        RC_UE4SS_API auto add_gui_tab(std::shared_ptr<GUI::GUITab> tab) -> void;
+        RC_UE4SS_API auto remove_gui_tab(std::shared_ptr<GUI::GUITab> tab) -> void;
+        RC_UE4SS_API static auto get_current_imgui_context() -> ImGuiContext*
+        {
+            return ImGui::GetCurrentContext();
+        }
+        RC_UE4SS_API static auto get_current_imgui_allocator_functions(ImGuiMemAllocFunc* alloc_func, ImGuiMemFreeFunc* free_func, void** user_data) -> void
+        {
+            return ImGui::GetAllocatorFunctions(alloc_func, free_func, user_data);
+        }
         RC_UE4SS_API auto queue_event(EventCallable callable, void* data) -> void;
         RC_UE4SS_API auto is_queue_empty() -> bool;
         RC_UE4SS_API auto can_process_events() -> bool
