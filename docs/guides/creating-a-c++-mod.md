@@ -33,7 +33,7 @@ project(${TARGET})
 
 add_library(${TARGET} SHARED "dllmain.cpp")
 target_include_directories(${TARGET} PRIVATE .)
-target_link_libraries(${TARGET} PUBLIC cppsdk_xinput)
+target_link_libraries(${TARGET} PUBLIC cppsdk_xinput xinput1_3)
 ```
 2. Make a file called `dllmain.cpp` in `MyMods/MyAwesomeMod` and put this inside it:
 ```c++
@@ -85,28 +85,26 @@ extern "C"
 6. Find your project (in my case: MyAwesomeMod) in the solution explorer and right click it and hit `Build`.
 ## Part #3
 In this part, we're going to learn how to output messages to the GUI console, find a UObject by name, and output that name to the GUI console.
-1. Open the `CMakeLists.txt` file for your mod and add `Unreal` after `cppsdk_xinput` in `target_link_libraries`.  
-It should look like this: `target_link_libraries(${TARGET} PUBLIC cppsdk_xinput Unreal)`
-2. Open CMD in the `MyMods` directory and execute `cmake -S . -B Output`
-3. Add `#include <DynamicOutput/DynamicOutput.hpp>` under `#include <Mod/CppUserModBase.hpp>`.  
+1. Open CMD in the `MyMods` directory and execute `cmake -S . -B Output`
+2. Add `#include <DynamicOutput/DynamicOutput.hpp>` under `#include <Mod/CppUserModBase.hpp>`.  
 You can now also remove `#include <stdio.h>` because we'll be removing the use of `printf` which was the only thing that required it.
-4. To save some time and annoyance and make the code look a bit better, add this line below all the includes:
+3. To save some time and annoyance and make the code look a bit better, add this line below all the includes:
 ```c++
 using namespace RC;
 ```
-5. Replace the call to printf in the body of the `MyAwesomeMod` constructor with:
+4. Replace the call to printf in the body of the `MyAwesomeMod` constructor with:
 ```c++
 Output::send<LogLevel::Verbose>(STR("MyAwesomeMod says hello\n"));
 ```
 It's longer than a call to `printf`, but in return the message gets propagated to both the regular console and the GUI console.  
 We also get some support for colors via the `LogLevel` enum.
-6. Add this below the DynamicOutput include:
+5. Add this below the DynamicOutput include:
 ```c++
 #include <Unreal/UObjectGlobals.hpp>
 #include <Unreal/UObject.hpp>
 ```
-7. Let's again utilize the `using namespace` shortcut by adding this below the first one: `using namespace RC::Unreal;`
-8. Add this function in your mod class:
+6. Let's again utilize the `using namespace` shortcut by adding this below the first one: `using namespace RC::Unreal;`
+7. Add this function in your mod class:
 ```c++
 auto on_unreal_init() -> void override
 {
@@ -118,4 +116,4 @@ auto on_unreal_init() -> void override
 Note that `Output::send` doesn't require a `LogLevel` and that we're using `{}` in the format string instead of `%s`.  
 The `Output::send` function uses `std::format` in the back-end so you should do some research around std::format or libfmt if you want to know more about it.
 
-9. Right click your project and hit `Build`.  
+8. Right click your project and hit `Build`.  
