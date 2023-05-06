@@ -85,26 +85,25 @@ extern "C"
 6. Find your project (in my case: MyAwesomeMod) in the solution explorer and right click it and hit `Build`.
 ## Part #3
 In this part, we're going to learn how to output messages to the GUI console, find a UObject by name, and output that name to the GUI console.
-1. Open CMD in the `MyMods` directory and execute `cmake -S . -B Output`
-2. Add `#include <DynamicOutput/DynamicOutput.hpp>` under `#include <Mod/CppUserModBase.hpp>`.  
+1. Add `#include <DynamicOutput/DynamicOutput.hpp>` under `#include <Mod/CppUserModBase.hpp>`.  
 You can now also remove `#include <stdio.h>` because we'll be removing the use of `printf` which was the only thing that required it.
-3. To save some time and annoyance and make the code look a bit better, add this line below all the includes:
+2. To save some time and annoyance and make the code look a bit better, add this line below all the includes:
 ```c++
 using namespace RC;
 ```
-4. Replace the call to printf in the body of the `MyAwesomeMod` constructor with:
+3. Replace the call to printf in the body of the `MyAwesomeMod` constructor with:
 ```c++
 Output::send<LogLevel::Verbose>(STR("MyAwesomeMod says hello\n"));
 ```
 It's longer than a call to `printf`, but in return the message gets propagated to both the regular console and the GUI console.  
 We also get some support for colors via the `LogLevel` enum.
-5. Add this below the DynamicOutput include:
+4. Add this below the DynamicOutput include:
 ```c++
 #include <Unreal/UObjectGlobals.hpp>
 #include <Unreal/UObject.hpp>
 ```
-6. Let's again utilize the `using namespace` shortcut by adding this below the first one: `using namespace RC::Unreal;`
-7. Add this function in your mod class:
+5. Let's again utilize the `using namespace` shortcut by adding this below the first one: `using namespace RC::Unreal;`
+6. Add this function in your mod class:
 ```c++
 auto on_unreal_init() -> void override
 {
@@ -116,4 +115,4 @@ auto on_unreal_init() -> void override
 Note that `Output::send` doesn't require a `LogLevel` and that we're using `{}` in the format string instead of `%s`.  
 The `Output::send` function uses `std::format` in the back-end so you should do some research around std::format or libfmt if you want to know more about it.
 
-8. Right click your project and hit `Build`.  
+7. Right click your project and hit `Build`.  
