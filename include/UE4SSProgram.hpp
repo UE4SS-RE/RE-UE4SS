@@ -20,6 +20,17 @@
 #include <GUI/GUI.hpp>
 #include <GUI/GUITab.hpp>
 
+// Used to set up ImGui context and allocator in DLL mods
+#define UE4SS_ENABLE_IMGUI() \
+{ \
+    ImGui::SetCurrentContext(UE4SSProgram::get_current_imgui_context()); \
+    ImGuiMemAllocFunc alloc_func{}; \
+    ImGuiMemFreeFunc free_func{}; \
+    void* user_data{}; \
+    UE4SSProgram::get_current_imgui_allocator_functions(&alloc_func, &free_func, &user_data); \
+    ImGui::SetAllocatorFunctions(alloc_func, free_func, user_data); \
+}
+
 namespace RC
 {
     namespace Unreal
