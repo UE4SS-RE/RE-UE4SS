@@ -145,12 +145,14 @@ namespace RC::GUI
                     ImGui::EndTabItem();
                 }
 
-                std::lock_guard<std::mutex> guard(m_tabs_mutex);
-                for (const auto& tab : m_tabs)
                 {
-                    if (ImGui::BeginTabItem(to_string(tab->TabName).c_str()))
+                    std::lock_guard<std::mutex> guard(m_tabs_mutex);
+                    for (const auto& tab : m_tabs)
                     {
-                        tab->render();
+                        if (ImGui::BeginTabItem(to_string(tab->TabName).c_str()))
+                        {
+                            tab->render();
+                        }
                     }
                 }
 
