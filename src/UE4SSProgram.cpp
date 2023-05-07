@@ -1440,15 +1440,10 @@ namespace RC
         template class RC_UE4SS_API TArray<FName*>;
         template class RC_UE4SS_API TArray<FName>;
         template class RC_UE4SS_API TArray<FUniqueObjectGuid*>;
-        template class RC_UE4SS_API TArray<FUniqueObjectGuid>;
         template class RC_UE4SS_API TArray<FQuat*>;
-        template class RC_UE4SS_API TArray<FQuat>;
         template class RC_UE4SS_API TArray<FRotator*>;
-        template class RC_UE4SS_API TArray<FRotator>;
         template class RC_UE4SS_API TArray<FVector*>;
-        template class RC_UE4SS_API TArray<FVector>;
         template class RC_UE4SS_API TArray<FTransform*>;
-        template class RC_UE4SS_API TArray<FTransform>;
         template class RC_UE4SS_API TArray<FGuid*>;
         template class RC_UE4SS_API TArray<FGuid>;
         template class RC_UE4SS_API TArray<UActorComponent*>;
