@@ -208,7 +208,6 @@ set(UE4SS_LIB_VERSION_MINOR ${CMAKE_MATCH_2})
 set(UE4SS_LIB_VERSION_HOTFIX ${CMAKE_MATCH_3})
 set(UE4SS_LIB_VERSION_PRERELEASE ${CMAKE_MATCH_4})  # Publicly available pre-release
 set(UE4SS_LIB_VERSION_BETA ${CMAKE_MATCH_5})  # Internal version to keep track of pre-pre-releases
-file(WRITE ${UE4SS_GENERATED_SOURCE_DIR}/version.cache "${UE4SS_LIB_VERSION}")
 
 message("UE4SS")
 message("Major: ${UE4SS_LIB_VERSION_MAJOR}, Minor: ${UE4SS_LIB_VERSION_MINOR}, Hotfix: ${UE4SS_LIB_VERSION_HOTFIX}, PreRelease: ${UE4SS_LIB_VERSION_PRERELEASE}, Beta: ${UE4SS_LIB_VERSION_BETA}")
