@@ -6,6 +6,17 @@ For this guide you'll need to know what a `root directory` and `working director
 A `root directory` is always the directory that contains `ue4ss.dll`.
 A `working directory` is either the directory that contains `ue4ss.dll` OR a game specific directory, for example `<root directory>/SatisfactoryEarlyAccess`.
 
+## How to find AOBs
+
+Since the process is quite complicated, here will just cover the general steps you need to take.
+
+1. Make a blank shipped game in your game's UE version, with PDBs
+2. Read game's memory using x64dbg
+3. Look for the signature you need - those can be found [below](#what-onmatchfound-must-return-for-each-aob)
+4. Grab a copy of the bytes from that function, sometimes the header is enough. If it is not, it may be better to grab a call to the function and if it's not a virtual function, you can grab the RIP address there
+5. Open your game's memory in x64dbg and search it for the same block of bytes
+6. If you find it, you can use the [swiss army knife](https://github.com/Nukem9/SwissArmyKnife) tool to extract the AOB for it which you can use in a simple script such as example [here](#example-script-simple-direct-scan)
+
 ## How to setup your own AOB and callback
 
 1. Create the directory `UE4SS_Signatures` if it doesn't already exist in your `working directory`.

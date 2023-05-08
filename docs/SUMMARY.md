@@ -1,7 +1,7 @@
 # Unreal Engine 4/5 Scripting System
 
 [Home](./README.md)
-- [Installation Guide](./installation-guide.md)
+- [Installation](./installation-guide.md)
 - [Custom Game Configs](./custom-game-configs.md)
 - [Lua API](./lua-api.md)
   - [Table Definitions]()
