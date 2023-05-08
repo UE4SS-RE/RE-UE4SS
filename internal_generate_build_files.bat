@@ -8,6 +8,6 @@ if not exist "VS_Solution\" (
 	mkdir "VS_Solution"
 )
 
-cd VS_Solution
-call generate_vs_solution.bat %BuildMode%
+cd internal_build_tools
+call generate_vs_solution_internal.bat %BuildMode%
 cd ..

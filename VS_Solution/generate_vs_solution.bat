@@ -1,9 +1,4 @@
-set BuildMode=%1
-
-IF NOT DEFINED %BuildMode (
-set BuildMode=Release
-)
-
-cmake -DCMAKE_BUILD_TYPE=%BuildMode% -DRC_FORCE_ALL_STATIC_LIBS= -G"Visual Studio 17 2022" ..
-
+@echo off
+cd ../internal_build_tools
+call generate_vs_solution_internal.bat
 pause
