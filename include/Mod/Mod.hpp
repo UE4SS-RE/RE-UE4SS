@@ -48,7 +48,7 @@ namespace RC
 
     public:
         Mod(UE4SSProgram&, std::wstring&& mod_name, std::wstring&& mod_path);
-        ~Mod() = default;
+        virtual ~Mod() = default;
 
     public:
         auto get_name() const -> std::wstring_view;

@@ -115,7 +115,7 @@ namespace RC
 
     public:
         LuaMod(UE4SSProgram&, std::wstring&& mod_name, std::wstring&& mod_path);
-        ~LuaMod() = default;
+        ~LuaMod() override = default;
 
     private:
         auto start_async_thread() -> void
