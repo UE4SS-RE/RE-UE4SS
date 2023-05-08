@@ -1,0 +1,2 @@
+; You only have to include BP mods where load order matters, mods not included here will be loaded in any random order after loading the prioritized mods.
+; Add your BP mods below by their name without .pak at the end, they will be loaded in top to bottom order.
