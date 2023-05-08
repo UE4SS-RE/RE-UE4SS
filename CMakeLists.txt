@@ -290,6 +290,7 @@ set(${TARGET}_Sources
         "${CMAKE_CURRENT_SOURCE_DIR}/src/SDKGenerator/TMapOverrideGen.cpp"
         "${CMAKE_CURRENT_SOURCE_DIR}/src/USMapGenerator/Generator.cpp"
         "${CMAKE_CURRENT_SOURCE_DIR}/src/GUI/GUI.cpp"
+        "${CMAKE_CURRENT_SOURCE_DIR}/src/GUI/GUITab.cpp"
         "${CMAKE_CURRENT_SOURCE_DIR}/src/GUI/DX11.cpp"
         "${CMAKE_CURRENT_SOURCE_DIR}/src/GUI/GLFW3_OpenGL3.cpp"
         "${CMAKE_CURRENT_SOURCE_DIR}/src/GUI/Windows.cpp"

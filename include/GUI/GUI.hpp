@@ -7,11 +7,14 @@
 
 #include <GUI/Console.hpp>
 #include <GUI/LiveView.hpp>
+#include <GUI/GUITab.hpp>
 #include <Helpers/String.hpp>
 #include <imgui.h>
 
 namespace RC::GUI
 {
+    class GUITab; // dunno why forward declaration is necessary
+
     enum class GfxBackend
     {
         DX11,
@@ -145,6 +148,8 @@ namespace RC::GUI
         std::stop_token m_thread_stop_token{};
         bool m_is_open{};
         bool m_exit_requested{};
+        std::vector<std::shared_ptr<GUITab>> m_tabs;
+        std::mutex m_tabs_mutex;
 
     public:
         bool m_event_thread_busy{};
@@ -163,6 +168,8 @@ namespace RC::GUI
         auto get_console() -> Console& { return m_console; };
         auto get_live_view() -> LiveView& { return m_live_view; };
         auto set_gfx_backend(GfxBackend) -> void;
+        auto add_tab(std::shared_ptr<GUITab> tab) -> void;
+        auto remove_tab(std::shared_ptr<GUITab> tab) -> void;
 
     private:
         auto on_update() -> void;
