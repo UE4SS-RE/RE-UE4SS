@@ -1210,6 +1210,7 @@ namespace RC::UVTD
         static std::filesystem::path virtual_gen_output_path = "GeneratedVirtualImplementations";
         static std::filesystem::path virtual_gen_output_include_path = virtual_gen_output_path / "generated_include";
         static std::filesystem::path virtual_gen_function_bodies_path = virtual_gen_output_include_path / "FunctionBodies";
+        static std::filesystem::path sol_bindings_output_path = "SolBindings";
 
         if (vtable_or_member_vars == VTableOrMemberVars::VTable)
         {
@@ -1302,7 +1303,7 @@ namespace RC::UVTD
                 }
             }
         }
-        else
+        else if (vtable_or_member_vars == VTableOrMemberVars::MemberVars)
         {
             if (std::filesystem::exists(member_variable_layouts_gen_output_include_path))
             {
@@ -1640,6 +1641,68 @@ namespace RC::UVTD
                 }
             }
         }
+        else
+        {
+            if (std::filesystem::exists(sol_bindings_output_path))
+            {
+                for (const auto& item : std::filesystem::directory_iterator(sol_bindings_output_path))
+                {
+                    if (item.is_directory()) { continue; }
+                    if (item.path().extension() != STR(".hpp") && item.path().extension() != STR(".cpp")) { continue; }
+
+                    File::delete_file(item.path());
+                }
+            }
+
+            for (const auto& [class_name, enum_entry] : g_enum_entries)
+            {
+                if (enum_entry.variables.empty()) { continue; }
+
+                auto final_class_name_clean = enum_entry.name_clean;
+                if (enum_entry.name_clean == STR("UObjectBase"))
+                {
+                    final_class_name_clean = STR("UObject");
+                }
+
+                auto final_class_name = class_name;
+                if (class_name == STR("UObjectBase"))
+                {
+                    final_class_name = STR("UObject");
+                }
+
+                auto wrapper_header_file = sol_bindings_output_path / std::format(STR("SolBindings_{}.hpp"), final_class_name_clean);
+                Output::send(STR("Generating file '{}'\n"), wrapper_header_file.wstring());
+                Output::Targets<Output::NewFileDevice> header_wrapper_dumper;
+                auto& wrapper_header_file_device = header_wrapper_dumper.get_device<Output::NewFileDevice>();
+                wrapper_header_file_device.set_file_name_and_path(wrapper_header_file);
+                wrapper_header_file_device.set_formatter([](File::StringViewType string) {
+                    return File::StringType{string};
+                });
+
+                header_wrapper_dumper.send(STR("sol().new_usertype<{}>(\"{}\""), final_class_name, final_class_name);
+                for (const auto&[variable_name, variable] : enum_entry.variables)
+                {
+                    if (variable.type.find(STR("TBaseDelegate")) != variable.type.npos) { continue; }
+                    if (variable.type.find(STR("FUniqueNetIdRepl")) != variable.type.npos) { continue; }
+                    if (variable.type.find(STR("FPlatformUserId")) != variable.type.npos) { continue; }
+                    if (variable.type.find(STR("FVector2D")) != variable.type.npos) { continue; }
+                    if (variable.type.find(STR("FReply")) != variable.type.npos) { continue; }
+
+                    File::StringType final_variable_name = variable.name;
+
+                    if (variable.name == STR("EnumFlags"))
+                    {
+                        final_variable_name = STR("EnumFlags_Internal");
+                    }
+
+                    header_wrapper_dumper.send(STR(",\n    \"Get{}\", static_cast<{}&({}::*)()>(&{}::Get{})"), final_variable_name, variable.type, final_class_name, final_class_name, final_variable_name);
+                }
+                for (const auto&[pdb_name, classes] : g_class_entries)
+                {
+                }
+                header_wrapper_dumper.send(STR("\n);\n"));
+            }
+        }
     }
 
     auto VTableDumper::generate_code(VTableOrMemberVars vtable_or_member_vars) -> void
@@ -1665,8 +1728,13 @@ namespace RC::UVTD
         {
             dump_vtable_for_symbol(vtable_names);
         }
+        else if (vtable_or_member_vars == VTableOrMemberVars::MemberVars)
+        {
+            dump_member_variable_layouts(member_vars_names);
+        }
         else
         {
+            dump_vtable_for_symbol(vtable_names);
             dump_member_variable_layouts(member_vars_names);
         }
     }

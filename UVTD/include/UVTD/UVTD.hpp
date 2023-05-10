@@ -20,7 +20,7 @@ namespace RC::UVTD
     extern bool processing_events;
     extern Input::Handler input_handler;
 
-    enum class VTableOrMemberVars { VTable, MemberVars };
+    enum class VTableOrMemberVars { VTable, MemberVars, SolBindings };
     auto main(VTableOrMemberVars) -> void;
 
     enum class ValidForVTable { Yes, No };
