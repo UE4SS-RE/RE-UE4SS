@@ -1659,16 +1659,10 @@ namespace RC::UVTD
                 if (enum_entry.variables.empty()) { continue; }
 
                 auto final_class_name_clean = enum_entry.name_clean;
-                if (enum_entry.name_clean == STR("UObjectBase"))
-                {
-                    final_class_name_clean = STR("UObject");
-                }
+                // Skipping UObject/UObjectBase because it needs to be manually implemented.
+                if (enum_entry.name_clean == STR("UObjectBase")) { continue; }
 
                 auto final_class_name = class_name;
-                if (class_name == STR("UObjectBase"))
-                {
-                    final_class_name = STR("UObject");
-                }
 
                 auto wrapper_header_file = sol_bindings_output_path / std::format(STR("SolBindings_{}.hpp"), final_class_name_clean);
                 Output::send(STR("Generating file '{}'\n"), wrapper_header_file.wstring());
@@ -1679,7 +1673,7 @@ namespace RC::UVTD
                     return File::StringType{string};
                 });
 
-                header_wrapper_dumper.send(STR("sol().new_usertype<{}>(\"{}\""), final_class_name, final_class_name);
+                header_wrapper_dumper.send(STR("auto sol_class_{} = sol().new_usertype<{}>(\"{}\""), final_class_name, final_class_name, final_class_name);
                 for (const auto&[variable_name, variable] : enum_entry.variables)
                 {
                     if (variable.type.find(STR("TBaseDelegate")) != variable.type.npos) { continue; }
@@ -1687,6 +1681,7 @@ namespace RC::UVTD
                     if (variable.type.find(STR("FPlatformUserId")) != variable.type.npos) { continue; }
                     if (variable.type.find(STR("FVector2D")) != variable.type.npos) { continue; }
                     if (variable.type.find(STR("FReply")) != variable.type.npos) { continue; }
+                    if (variable.type.find(STR("FUObjectCppClassStaticFunctions")) != variable.type.npos) { continue; }
 
                     File::StringType final_variable_name = variable.name;
 
