@@ -5,6 +5,7 @@ ConsoleEnablerMod : 1
 SplitScreenMod : 0
 LineTraceMod : 0
 BPModLoaderMod : 0
+jsbLuaProfMod : 1
 
 
 

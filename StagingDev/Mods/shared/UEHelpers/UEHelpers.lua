@@ -1,10 +1,25 @@
 local UEHelpers = {}
+-- Uncomment the below require to use the Lua VM profiler on these functions
+-- local jsb = require "jsbProfi"
 
 -- Version 1 does not exist, we start at version 2 because the original version didn't have a version at all.
 local Version = 2
 
 -- Functions local to this module, do not attempt to use!
-local CacheDefaultObject = nil
+local CacheDefaultObject = function(ObjectFullName, VariableName, ForceInvalidateCache)
+    local DefaultObject
+
+    if not ForceInvalidateCache then
+        DefaultObject = ModRef:GetSharedVariable(VariableName)
+        if DefaultObject and DefaultObject:IsValid() then return DefaultObject end
+    end
+
+    DefaultObject = StaticFindObject(ObjectFullName)
+    ModRef:SetSharedVariable(VariableName, DefaultObject)
+    if not DefaultObject:IsValid() then error(string.format("%s not found", ObjectFullName)) end
+
+    return DefaultObject
+end
 
 -- Everything in this section can be used in any mod that requires this module.
 -- Exported functions -> START
@@ -15,22 +30,25 @@ end
 
 --- Returns the first valid PlayerController that is currently controlled by a player.
 ---@return APlayerController
+local PlayerController = nil
 function UEHelpers.GetPlayerController()
-    local PlayerControllers = FindAllOf("Controller")
-    if not PlayerControllers then error("No PlayerController found\n") end
-    local PlayerController = nil
-    for Index,Controller in pairs(PlayerControllers) do
+	if PlayerController and PlayerController:IsValid() then return PlayerController end
+    -- local PlayerControllers = jsb.simpleBench("findallof", FindAllOf, "Controller")
+	-- Uncomment line above and comment line below to profile this function
+	local PlayerControllers = FindAllOf("PlayerController") or FindAllOf("Controller")
+    if not PlayerControllers then return Print("No PlayerControllers found\n") end
+    for _, Controller in pairs(PlayerControllers or {}) do
         if Controller.Pawn:IsValid() and Controller.Pawn:IsPlayerControlled() then
             PlayerController = Controller
-        else
-            print("Not valid or not player controlled\n")
+            break
+        -- else
+        --     print("Not valid or not player controlled\n")
         end
     end
     if PlayerController and PlayerController:IsValid() then
         return PlayerController
-    else
-        error("No PlayerController found\n")
     end
+    error("No PlayerController found\n")
 end
 
 --- Returns the UWorld that the player is currenlty in.
@@ -73,21 +91,5 @@ function UEHelpers.GetGameMapsSettings(ForceInvalidateCache)
 end
 
 -- Exported functions -> END
-
--- Functions local to this module, do not attempt to use!
-CacheDefaultObject = function(ObjectFullName, VariableName, ForceInvalidateCache)
-    local DefaultObject = nil
-
-    if not ForceInvalidateCache then
-        DefaultObject = ModRef:GetSharedVariable(VariableName)
-        if DefaultObject and DefaultObject:IsValid() then return DefaultObject end
-    end
-
-    DefaultObject = StaticFindObject(ObjectFullName)
-    ModRef:SetSharedVariable(VariableName, DefaultObject)
-    if not DefaultObject:IsValid() then error(string.format("%s not found", ObjectFullName)) end
-
-    return DefaultObject
-end
 
 return UEHelpers

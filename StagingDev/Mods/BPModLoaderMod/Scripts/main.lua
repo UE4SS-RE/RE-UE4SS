@@ -2,26 +2,26 @@ local UEHelpers = require("UEHelpers")
 
 local VerboseLogging = true
 
-function Log(Message, AlwaysLog)
+local function Log(Message, AlwaysLog)
     if not VerboseLogging and not AlwaysLog then return end
     print(Message)
 end
 
-package.path = '.\\Mods\\ModLoaderMod\\?.lua;' .. package.path
-package.path = '.\\Mods\\ModLoaderMod\\BPMods\\?.lua;' .. package.path
+local package.path = '.\\Mods\\ModLoaderMod\\?.lua;' .. package.path
+local package.path = '.\\Mods\\ModLoaderMod\\BPMods\\?.lua;' .. package.path
 
-Mods = {}
-OrderedMods = {}
+local Mods = {}
+local OrderedMods = {}
 
 -- Contains mod names from Mods/BPModLoaderMod/load_order.txt and is used to determine the load order of BP mods.
-ModOrderList = {}
+local ModOrderList = {}
 
-local DefualtModConfig = {}
-DefualtModConfig.AssetName = "ModActor_C"
-DefualtModConfig.AssetNameAsFName = FName("ModActor_C")
+local DefaultModConfig = {}
+local DefaultModConfig.AssetName = "ModActor_C"
+local DefaultModConfig.AssetNameAsFName = FName("ModActor_C")
 
 -- Explodes a string by a delimiter into a table
-function Explode(String, Delimiter)
+local function Explode(String, Delimiter)
     local ExplodedString = {}
     local Iterator = 1
     local DelimiterFrom, DelimiterTo = string.find(String, Delimiter, Iterator)
@@ -37,11 +37,11 @@ function Explode(String, Delimiter)
 end
 
 -- Checks if the beginning of a string contains a certain pattern.
-function StartsWith(String, StringToCompare)
+local function StartsWith(String, StringToCompare)
     return string.sub(String,1,string.len(StringToCompare))==StringToCompare
 end
 
-function FileExists(file)
+local function FileExists(file)
     local f = io.open(file, "rb")
     if f then f:close() end
     return f ~= nil
@@ -49,7 +49,7 @@ end
 
 -- Reads lines from the specified file and returns a table of lines read. 
 -- Second argument takes a string that can be used to exclude lines starting with that string. Default ;
-function LinesFrom(file, ignoreLinesStartingWith)
+local function LinesFrom(file, ignoreLinesStartingWith)
     if not FileExists(file) then return {} end
 
     if ignoreLinesStartingWith == nil then 
@@ -66,7 +66,7 @@ function LinesFrom(file, ignoreLinesStartingWith)
 end
 
 -- Loads mod order data from load_order.txt and pushes it into ModOrderList.
-function LoadModOrder()
+local function LoadModOrder()
     local file = 'Mods/BPModLoaderMod/load_order.txt'
     local lines = LinesFrom(file)
 
@@ -91,7 +91,7 @@ function LoadModOrder()
     end
 end
 
-function SetupModOrder()
+local function SetupModOrder()
     local Priority = 1
 
     -- Adds priority mods first by their respective order as specified in load_order.txt
@@ -126,7 +126,7 @@ function SetupModOrder()
     end
 end
 
-function LoadModConfigs()
+local function LoadModConfigs()
     -- Load configurations for mods.
     local Dirs = IterateGameDirectories();
     if not Dirs then
@@ -190,7 +190,7 @@ end
 local AssetRegistryHelpers = nil
 local AssetRegistry = nil
 
-function LoadMod(ModName, ModInfo, GameMode)
+local function LoadMod(ModName, ModInfo, GameMode)
     if ModInfo.Priority ~= nil then
         Log(string.format("Loading mod [Priority: #%i]: %s\n", ModInfo.Priority, ModName))
     else
@@ -237,7 +237,7 @@ function LoadMod(ModName, ModInfo, GameMode)
     end)
 end
 
-function CacheAssetRegistry()
+local function CacheAssetRegistry()
     if AssetRegistryHelpers and AssetRegistry then return end
 
     AssetRegistryHelpers = StaticFindObject("/Script/AssetRegistry.Default__AssetRegistryHelpers")
@@ -254,7 +254,7 @@ function CacheAssetRegistry()
     error("AssetRegistry is not valid\n")
 end
 
-function LoadMods(GameMode)
+local function LoadMods(GameMode)
     CacheAssetRegistry()
     for _, ModInfo in ipairs(OrderedMods) do
         if type(ModInfo) == "table" then
@@ -281,9 +281,7 @@ RegisterBeginPlayPostHook(function(ContextParam)
     end
 end)
 
-RegisterKeyBind(Key.INS, function()
-    LoadMods(UEHelpers.GetWorld())
-end)
+RegisterKeyBind(Key.INS, LoadMods(UEHelpers.GetWorld()))
 
 RegisterCustomEvent("PrintToModLoader", function(ParamContext, ParamMessage)
     -- Retrieve the param value from the param container.
