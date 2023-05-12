@@ -7,8 +7,8 @@ local function Log(Message, AlwaysLog)
     print(Message)
 end
 
-local package.path = '.\\Mods\\ModLoaderMod\\?.lua;' .. package.path
-local package.path = '.\\Mods\\ModLoaderMod\\BPMods\\?.lua;' .. package.path
+package.path = '.\\Mods\\ModLoaderMod\\?.lua;' .. package.path
+package.path = '.\\Mods\\ModLoaderMod\\BPMods\\?.lua;' .. package.path
 
 local Mods = {}
 local OrderedMods = {}
@@ -17,8 +17,8 @@ local OrderedMods = {}
 local ModOrderList = {}
 
 local DefaultModConfig = {}
-local DefaultModConfig.AssetName = "ModActor_C"
-local DefaultModConfig.AssetNameAsFName = FName("ModActor_C")
+DefaultModConfig.AssetName = "ModActor_C"
+DefaultModConfig.AssetNameAsFName = FName("ModActor_C")
 
 -- Explodes a string by a delimiter into a table
 local function Explode(String, Delimiter)
@@ -165,8 +165,8 @@ local function LoadModConfigs()
             --Log(string.format("ModNameNoExtension: '%s'\n", ModNameNoExtension))
             --Log(string.format("FileExtension: %s\n", FileExtension))
             Mods[ModNameNoExtension] = {}
-            Mods[ModNameNoExtension].AssetName = DefualtModConfig.AssetName
-            Mods[ModNameNoExtension].AssetNameAsFName = DefualtModConfig.AssetNameAsFName
+            Mods[ModNameNoExtension].AssetName = DefaultModConfig.AssetName
+            Mods[ModNameNoExtension].AssetNameAsFName = DefaultModConfig.AssetNameAsFName
             Mods[ModNameNoExtension].AssetPath = string.format("/Game/Mods/%s/ModActor", ModNameNoExtension)
         end
     end
@@ -254,6 +254,8 @@ local function CacheAssetRegistry()
     error("AssetRegistry is not valid\n")
 end
 
+
+
 local function LoadMods(GameMode)
     CacheAssetRegistry()
     for _, ModInfo in ipairs(OrderedMods) do
@@ -261,6 +263,10 @@ local function LoadMods(GameMode)
             LoadMod(ModInfo.Name, ModInfo, GameMode)
         end
     end
+end
+
+local function LoadModsManual()
+	LoadMods(UEHelpers.GetWorld())
 end
 
 RegisterInitGameStatePostHook(function(ContextParam)
@@ -281,7 +287,7 @@ RegisterBeginPlayPostHook(function(ContextParam)
     end
 end)
 
-RegisterKeyBind(Key.INS, LoadMods(UEHelpers.GetWorld()))
+RegisterKeyBind(Key.INS, LoadModsManual)
 
 RegisterCustomEvent("PrintToModLoader", function(ParamContext, ParamMessage)
     -- Retrieve the param value from the param container.

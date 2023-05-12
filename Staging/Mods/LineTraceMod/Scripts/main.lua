@@ -70,7 +70,7 @@ local function GetObjectName()
         HitActor = GetActorFromHitResult(HitResult)
         print(string.format("HitActor: %s\n", HitActor:GetFullName()))
     else
-        print("Nothing hit.\n")
+        return print("Nothing hit.\n")
     end
 end
 

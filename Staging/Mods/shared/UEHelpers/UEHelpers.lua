@@ -30,12 +30,13 @@ end
 
 --- Returns the first valid PlayerController that is currently controlled by a player.
 ---@return APlayerController
+local PlayerController = nil
 function UEHelpers.GetPlayerController()
+	if PlayerController and PlayerController:IsValid() then return PlayerController end
     -- local PlayerControllers = jsb.simpleBench("findallof", FindAllOf, "Controller")
-	-- Uncomment line 33 and comment line 35 to profile this function
-	local PlayerControllers = FindAllOf("Controller")
-    if not PlayerControllers then error("No PlayerController found\n") end
-    local PlayerController = nil
+	-- Uncomment line above and comment line below to profile this function
+	local PlayerControllers = FindAllOf("PlayerController") or FindAllOf("Controller")
+    if not PlayerControllers then return Print("No PlayerControllers found\n") end
     for _, Controller in pairs(PlayerControllers or {}) do
         if Controller.Pawn:IsValid() and Controller.Pawn:IsPlayerControlled() then
             PlayerController = Controller
