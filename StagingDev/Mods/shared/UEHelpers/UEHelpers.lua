@@ -32,10 +32,10 @@ end
 ---@return APlayerController
 local PlayerController = nil
 function UEHelpers.GetPlayerController()
-	if PlayerController and PlayerController:IsValid() then return PlayerController end
+    if PlayerController and PlayerController:IsValid() then return PlayerController end
     -- local PlayerControllers = jsb.simpleBench("findallof", FindAllOf, "Controller")
-	-- Uncomment line above and comment line below to profile this function
-	local PlayerControllers = FindAllOf("PlayerController") or FindAllOf("Controller")
+    -- Uncomment line above and comment line below to profile this function
+    local PlayerControllers = FindAllOf("PlayerController") or FindAllOf("Controller")
     if not PlayerControllers then return Print("No PlayerControllers found\n") end
     for _, Controller in pairs(PlayerControllers or {}) do
         if Controller.Pawn:IsValid() and Controller.Pawn:IsPlayerControlled() then
