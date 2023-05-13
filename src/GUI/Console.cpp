@@ -144,26 +144,32 @@ namespace RC::GUI
     }
 
 
-    static auto LogLevel_to_ImColor(LogLevel::LogLevel log_level) -> std::pair<ImColor, ImColor>
+    static auto LogLevel_to_ImColor(Color::Color color) -> std::pair<ImColor, ImColor>
     {
-        switch (log_level)
+        switch (color)
         {
-            case LogLevel::Default:
+            case Color::Default:
                 return {g_imgui_text_editor_default_bg_color, g_imgui_text_editor_default_text_color};
-            case LogLevel::Normal:
+            case Color::NoColor:
                 return {g_imgui_text_editor_normal_bg_color, g_imgui_text_editor_normal_text_color};
-            case LogLevel::Verbose:
+            case Color::Cyan:
                 return {g_imgui_text_editor_verbose_bg_color, g_imgui_text_editor_verbose_text_color};
-            case LogLevel::Warning:
+            case Color::Yellow:
                 return {g_imgui_text_editor_warning_bg_color, g_imgui_text_editor_warning_text_color};
-            case LogLevel::Error:
-                return {g_imgui_text_editor_error_bg_color, g_imgui_text_editor_error_text_color};
+            case Color::Red:
+                return {g_imgui_text_editor_error_bg_color, g_imgui_text_editor_error_text_color};                
+            case Color::Green:
+                return {g_imgui_text_editor_default_bg_color, g_imgui_text_green_color};
+            case Color::Blue:
+                return {g_imgui_text_editor_default_bg_color, g_imgui_text_blue_color};
+            case Color::Purple:
+                return {g_imgui_text_editor_default_bg_color, g_imgui_text_purple_color};
         }
 
         throw std::runtime_error{"[LogLevel_to_ImColor] Unhandled log_level"};
     }
 
-    auto Console::add_line(const std::string& line, LogLevel::LogLevel log_level) -> void
+    auto Console::add_line(const std::string& line, Color::Color color) -> void
     {
         std::lock_guard<std::mutex> guard(m_lines_mutex);
         if (m_text_editor.GetTotalLines() < 0)
@@ -172,15 +178,15 @@ namespace RC::GUI
         }
         if (static_cast<size_t>(m_text_editor.GetTotalLines()) >= m_maximum_num_lines) { m_text_editor.ClearLines(); }
         if (m_lines.size() >= m_maximum_num_lines) { m_lines.clear(); }
-        if (log_level != LogLevel::Default && log_level != LogLevel::Normal)
+        if (color != Color::Default && color != Color::NoColor)
         {
-            m_text_editor.GetLineColorMarkers().emplace(m_text_editor.GetTotalLines() + 1, LogLevel_to_ImColor(log_level));
+            m_text_editor.GetLineColorMarkers().emplace(m_text_editor.GetTotalLines() + 1, LogLevel_to_ImColor(color));
         }
         m_lines.emplace_back(line);
         m_text_editor.AddTextLine(line);
     }
 
-    auto Console::add_line(const std::wstring& line, LogLevel::LogLevel log_level) -> void
+    auto Console::add_line(const std::wstring& line, Color::Color color) -> void
     {
         auto ansi_string = to_string(line);
         std::lock_guard<std::mutex> guard(m_lines_mutex);
@@ -190,9 +196,9 @@ namespace RC::GUI
         }
         if (static_cast<size_t>(m_text_editor.GetTotalLines()) >= m_maximum_num_lines) { m_text_editor.ClearLines(); }
         if (m_lines.size() >= m_maximum_num_lines) { m_lines.clear(); }
-        if (log_level != LogLevel::Default && log_level != LogLevel::Normal)
+        if (color != Color::Default && color != Color::NoColor)
         {
-            m_text_editor.GetLineColorMarkers().emplace(m_text_editor.GetTotalLines() + 1, LogLevel_to_ImColor(log_level));
+            m_text_editor.GetLineColorMarkers().emplace(m_text_editor.GetTotalLines() + 1, LogLevel_to_ImColor(color));
         }
         m_lines.emplace_back(ansi_string);
         m_text_editor.AddTextLine(ansi_string);

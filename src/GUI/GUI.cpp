@@ -40,6 +40,9 @@ namespace RC::GUI
     ImColor g_imgui_text_editor_error_bg_color = ImColor{148, 36, 20, 255};
     ImColor g_imgui_text_editor_error_text_color = ImColor{255, 255, 255, 255};
     ImColor g_imgui_text_live_view_unreflected_data_color = ImColor{235, 128, 52, 255};
+    ImColor g_imgui_text_green_color = ImColor{115, 235, 120, 255};
+    ImColor g_imgui_text_blue_color = ImColor{135, 195, 250, 255};
+    ImColor g_imgui_text_purple_color = ImColor{170, 145, 255, 255};
 
     std::vector<DebuggingGUI::EndOfFrameCallback> DebuggingGUI::s_end_of_frame_callbacks{};
 

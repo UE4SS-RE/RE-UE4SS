@@ -121,6 +121,9 @@ namespace RC::GUI
     extern ImColor g_imgui_text_editor_error_bg_color;
     extern ImColor g_imgui_text_editor_error_text_color;
     extern ImColor g_imgui_text_live_view_unreflected_data_color;
+    extern ImColor g_imgui_text_green_color;
+    extern ImColor g_imgui_text_blue_color;
+    extern ImColor g_imgui_text_purple_color;
 
     class DebuggingGUIBase
     {

@@ -443,7 +443,7 @@ namespace RC
                 Ini::Parser parser;
                 parser.parse(file);
 
-                Output::send(STR("Getting ordered lists from ini file\n"));
+                Output::send<Color::Blue>(STR("Getting ordered lists from ini file\n"));
 
                 auto calculate_virtual_function_offset = []<typename... BaseSizes>(uint32_t current_index, BaseSizes... base_sizes) -> uint32_t {
                     return current_index == 0 ? 0 : (current_index + (base_sizes + ...)) * 8;
@@ -458,49 +458,49 @@ namespace RC
                     return vtable_size;
                 };
 
-                Output::send(STR("UObjectBase\n"));
+                Output::send<Color::Blue>(STR("UObjectBase\n"));
                 uint32_t uobjectbase_size = retrieve_vtable_layout_from_ini(STR("UObjectBase"), [&](uint32_t index, File::StringType& item) {
                     uint32_t offset = calculate_virtual_function_offset(index, 0);
                     Output::send(STR("UObjectBase::{} = 0x{:X}\n"), item, offset);
                     Unreal::UObjectBase::VTableLayoutMap.emplace(item, offset);
                 });
 
-                Output::send(STR("UObjectBaseUtility\n"));
+                Output::send<Color::Blue>(STR("UObjectBaseUtility\n"));
                 uint32_t uobjectbaseutility_size = retrieve_vtable_layout_from_ini(STR("UObjectBaseUtility"), [&](uint32_t index, File::StringType& item) {
                     uint32_t offset = calculate_virtual_function_offset(index, uobjectbase_size);
                     Output::send(STR("UObjectBaseUtility::{} = 0x{:X}\n"), item, offset);
                     Unreal::UObjectBaseUtility::VTableLayoutMap.emplace(item, offset);
                 });
 
-                Output::send(STR("UObject\n"));
+                Output::send<Color::Blue>(STR("UObject\n"));
                 uint32_t uobject_size = retrieve_vtable_layout_from_ini(STR("UObject"), [&](uint32_t index, File::StringType& item) {
                     uint32_t offset = calculate_virtual_function_offset(index, uobjectbase_size, uobjectbaseutility_size);
                     Output::send(STR("UObject::{} = 0x{:X}\n"), item, offset);
                     Unreal::UObject::VTableLayoutMap.emplace(item, offset);
                 });
 
-                Output::send(STR("UField\n"));
+                Output::send<Color::Blue>(STR("UField\n"));
                 uint32_t ufield_size = retrieve_vtable_layout_from_ini(STR("UField"), [&](uint32_t index, File::StringType& item) {
                     uint32_t offset = calculate_virtual_function_offset(index, uobjectbase_size, uobjectbaseutility_size, uobject_size);
                     Output::send(STR("UField::{} = 0x{:X}\n"), item, offset);
                     Unreal::UField::VTableLayoutMap.emplace(item, offset);
                 });
 
-                Output::send(STR("UScriptStruct::ICppStructOps\n"));
+                Output::send<Color::Blue>(STR("UScriptStruct::ICppStructOps\n"));
                 retrieve_vtable_layout_from_ini(STR("UScriptStruct::ICppStructOps"), [&](uint32_t index, File::StringType& item) {
                     uint32_t offset = calculate_virtual_function_offset(index, 0);
                     Output::send(STR("UScriptStruct::ICppStructOps::{} = 0x{:X}\n"), item, offset);
                     Unreal::UScriptStruct::ICppStructOps::VTableLayoutMap.emplace(item, offset);
                 });
 
-                Output::send(STR("FField\n"));
+                Output::send<Color::Blue>(STR("FField\n"));
                 uint32_t ffield_size = retrieve_vtable_layout_from_ini(STR("FField"), [&](uint32_t index, File::StringType& item) {
                     uint32_t offset = calculate_virtual_function_offset(index, 0);
                     Output::send(STR("FField::{} = 0x{:X}\n"), item, offset);
                     Unreal::FField::VTableLayoutMap.emplace(item, offset);
                 });
 
-                Output::send(STR("FProperty\n"));
+                Output::send<Color::Blue>(STR("FProperty\n"));
                 uint32_t fproperty_size = retrieve_vtable_layout_from_ini(STR("FProperty"), [&](uint32_t index, File::StringType& item) {
                     uint32_t offset{};
                     if (Unreal::Version::IsBelow(4, 25))
@@ -525,42 +525,42 @@ namespace RC
                     fproperty_size = ffield_size + fproperty_size;
                 }
 
-                Output::send(STR("FNumericProperty\n"));
+                Output::send<Color::Blue>(STR("FNumericProperty\n"));
                 retrieve_vtable_layout_from_ini(STR("FNumericProperty"), [&](uint32_t index, File::StringType& item) {
                     uint32_t offset = calculate_virtual_function_offset(index, fproperty_size);
                     Output::send(STR("FNumericProperty::{} = 0x{:X}\n"), item, offset);
                     Unreal::FNumericProperty::VTableLayoutMap.emplace(item, offset);
                 });
 
-                Output::send(STR("FMulticastDelegateProperty\n"));
+                Output::send<Color::Blue>(STR("FMulticastDelegateProperty\n"));
                 retrieve_vtable_layout_from_ini(STR("FMulticastDelegateProperty"), [&](uint32_t index, File::StringType& item) {
                     uint32_t offset = calculate_virtual_function_offset(index, fproperty_size);
                     Output::send(STR("FMulticastDelegateProperty::{} = 0x{:X}\n"), item, offset);
                     Unreal::FMulticastDelegateProperty::VTableLayoutMap.emplace(item, offset);
                 });
 
-                Output::send(STR("FObjectPropertyBase\n"));
+                Output::send<Color::Blue>(STR("FObjectPropertyBase\n"));
                 retrieve_vtable_layout_from_ini(STR("FObjectPropertyBase"), [&](uint32_t index, File::StringType& item) {
                     uint32_t offset = calculate_virtual_function_offset(index, fproperty_size);
                     Output::send(STR("FObjectPropertyBase::{} = 0x{:X}\n"), item, offset);
                     Unreal::FObjectPropertyBase::VTableLayoutMap.emplace(item, offset);
                 });
 
-                Output::send(STR("UStruct\n"));
+                Output::send<Color::Blue>(STR("UStruct\n"));
                 retrieve_vtable_layout_from_ini(STR("UStruct"), [&](uint32_t index, File::StringType& item) {
                     uint32_t offset = calculate_virtual_function_offset(index, uobjectbase_size, uobjectbaseutility_size, uobject_size, ufield_size);
                     Output::send(STR("UStruct::{} = 0x{:X}\n"), item, offset);
                     Unreal::UStruct::VTableLayoutMap.emplace(item, offset);                   
                 });
 
-                Output::send(STR("FOutputDevice\n"));
+                Output::send<Color::Blue>(STR("FOutputDevice\n"));
                 retrieve_vtable_layout_from_ini(STR("FOutputDevice"), [&](uint32_t index, File::StringType& item) {
                     uint32_t offset = calculate_virtual_function_offset(index, 0);
                     Output::send(STR("FOutputDevice::{} = 0x{:X}\n"), item, offset);
                     Unreal::FOutputDevice::VTableLayoutMap.emplace(item, offset);
                 });
 
-                Output::send(STR("FMalloc\n"));
+                Output::send<Color::Blue>(STR("FMalloc\n"));
                 retrieve_vtable_layout_from_ini(STR("FMalloc"), [&](uint32_t index, File::StringType& item) {
                     // We don't support FExec, so we're manually telling it the size.
                     static constexpr uint32_t fexec_size = 1;
@@ -569,35 +569,35 @@ namespace RC
                     Unreal::FMalloc::VTableLayoutMap.emplace(item, offset);
                 });
 
-                Output::send(STR("AActor\n"));
+                Output::send<Color::Blue>(STR("AActor\n"));
                 uint32_t aactor_size = retrieve_vtable_layout_from_ini(STR("AActor"), [&](uint32_t index, File::StringType& item) {
                     uint32_t offset = calculate_virtual_function_offset(index, uobjectbase_size, uobjectbaseutility_size, uobject_size);
                     Output::send(STR("AActor::{} = 0x{:X}\n"), item, offset);
                     Unreal::AActor::VTableLayoutMap.emplace(item, offset);
                 });
 
-                Output::send(STR("AGameModeBase\n"));
+                Output::send<Color::Blue>(STR("AGameModeBase\n"));
                 uint32_t agamemodebase_size = retrieve_vtable_layout_from_ini(STR("AGameModeBase"), [&](uint32_t index, File::StringType& item) {
                     uint32_t offset = calculate_virtual_function_offset(index, uobjectbase_size, uobjectbaseutility_size, uobject_size, aactor_size);
                     Output::send(STR("AGameModeBase::{} = 0x{:X}\n"), item, offset);
                     Unreal::AGameModeBase::VTableLayoutMap.emplace(item, offset);
                 });
 
-                Output::send(STR("AGameMode"));
+                Output::send<Color::Blue>(STR("AGameMode\n"));
                 retrieve_vtable_layout_from_ini(STR("AGameMode"), [&](uint32_t index, File::StringType& item) {
                     uint32_t offset = calculate_virtual_function_offset(index, Unreal::Version::IsAtLeast(4, 14) ? uobjectbase_size, uobjectbaseutility_size, uobject_size, aactor_size, agamemodebase_size : uobjectbase_size, uobjectbaseutility_size, uobject_size, aactor_size);
                     Output::send(STR("AGameMode::{} = 0x{:X}\n"), item, offset);
                     Unreal::AGameMode::VTableLayoutMap.emplace(item, offset);
                 });
 
-                Output::send(STR("UPlayer\n"));
+                Output::send<Color::Blue>(STR("UPlayer\n"));
                 uint32_t uplayer_size = retrieve_vtable_layout_from_ini(STR("UPlayer"), [&](uint32_t index, File::StringType& item) {
                     uint32_t offset = calculate_virtual_function_offset(index, uobjectbase_size, uobjectbaseutility_size, uobject_size);
                     Output::send(STR("UPlayer::{} = 0x{:X}\n"), item, offset);
                     Unreal::UPlayer::VTableLayoutMap.emplace(item, offset);
                 });
 
-                Output::send(STR("ULocalPlayer\n"));
+                Output::send<Color::Blue>(STR("ULocalPlayer\n"));
                 retrieve_vtable_layout_from_ini(STR("ULocalPlayer"), [&](uint32_t index, File::StringType& item) {
                     uint32_t offset = calculate_virtual_function_offset(index, uobjectbase_size, uobjectbaseutility_size, uobject_size, uplayer_size);
                     Output::send(STR("ULocalPlayer::{} = 0x{:X}\n"), item, offset);
