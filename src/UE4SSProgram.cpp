@@ -483,7 +483,7 @@ namespace RC
                 uint32_t ufield_size = retrieve_vtable_layout_from_ini(STR("UField"), [&](uint32_t index, File::StringType& item) {
                     uint32_t offset = calculate_virtual_function_offset(index, uobjectbase_size, uobjectbaseutility_size, uobject_size);
                     Output::send(STR("UField::{} = 0x{:X}\n"), item, offset);
-                    Unreal::UStruct::VTableLayoutMap.emplace(item, offset);
+                    Unreal::UField::VTableLayoutMap.emplace(item, offset);
                 });
 
                 Output::send(STR("UScriptStruct::ICppStructOps\n"));
@@ -550,7 +550,7 @@ namespace RC
                 retrieve_vtable_layout_from_ini(STR("UStruct"), [&](uint32_t index, File::StringType& item) {
                     uint32_t offset = calculate_virtual_function_offset(index, uobjectbase_size, uobjectbaseutility_size, uobject_size, ufield_size);
                     Output::send(STR("UStruct::{} = 0x{:X}\n"), item, offset);
-                    Unreal::UField::VTableLayoutMap.emplace(item, offset);
+                    Unreal::UStruct::VTableLayoutMap.emplace(item, offset);                   
                 });
 
                 Output::send(STR("FOutputDevice\n"));
