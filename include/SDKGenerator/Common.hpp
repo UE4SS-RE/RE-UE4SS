@@ -2,8 +2,6 @@
 #define UE4SS_REWRITTEN_SDKGENERATOR_COMMON_HPP
 
 #include <File/File.hpp>
-#include <fmt/core.h>
-#include <fmt/xchar.h>
 
 namespace RC
 {
