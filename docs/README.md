@@ -1,17 +1,19 @@
 # Unreal Engine 4/5 Scripting System
 
-Lua scripting system platform, SDK generator, live property editor and other dumping utilities for UE4/5 games. 
+Lua scripting system platform, C++ Modding API, SDK generator, live property editor and other dumping utilities for UE4/5 games. 
 
 ## Major features
 
-- Lua scripting API: Write lua mods based on the UE object system
-- Blueprint Modloading: Spawn blueprint mods automatically without editing/replacing game files.
-- Live property editor: Search, view, edit & watch the properties of every loaded object, great for debugging mods or figuring out how values are changed during runtime
-- Generate Unreal Header Tool compatible C++ headers for creating a mirror .uproject for your game
-- Generate standard C++ headers from reflected classes and blueprints, with offsets
-- Unlock the game console
-- Generate .usmap mapping files for unversioned properties
-- Dump all loaded actors to file to generate .umaps in-editor
+- [Lua Scripting API](feature-overview/lua-api-ovr.md): Write lua mods based on the UE object system
+- [Blueprint Modloading](feature-overview/blueprint-modloader.md): Spawn blueprint mods automatically without editing/replacing game files
+- [C++ Modding API](feature-overview/cpp-sdk.md): Write lua mods based on the UE object system
+- [Live Property Viewer and Editor](feature-overview/live-view.md): Search, view, edit & watch the properties of every loaded object, great for debugging mods or figuring out how values are changed during runtime
+- [UHT Dumper](feature-overview/dumpers.md): Generate Unreal Header Tool compatible C++ headers for creating a mirror .uproject for your game
+- [C++ Header Dumper](feature-overview/dumpers.md): Generate standard C++ headers from reflected classes and blueprints, with offsets
+- [Universal UE Mods](feature-overview/universal-mods.md): Unlock the game console and other universal mods
+- [Dumpers for File Parsing](feature-overview/dumpers.md): Generate .usmap mapping files for unversioned properties
+- [UMAP Recreation Dumper](feature-overview/dumpers.md): Dump all loaded actors to file to generate .umaps in-editor
+- Other Features, including [Experimental](feature-overview/experimental.md) features at times 
 
 ## Targeting UE Versions: From 4.12 To 5.1
 
@@ -38,6 +40,7 @@ If your game is in the custom config list, extract the contents from the relevan
   
   [Creating Compatible Blueprint Mods](https://www.youtube.com/watch?v=fB3yT85XhVA)
 
+  [Unreal Engine Modding Server Invite](https://discord.gg/zVvsE9mEEa) - For discussion of UE4SS
 
 ## Branches
 - Release
@@ -83,6 +86,9 @@ If you want to update dependencies, you do so one of three ways:
 Note that you should also commit & push the submodules that you've updated if the reason why you updated was not because someone else pushed an update, and you're just catching up to it.
 
 ## Credits
+
+All contributors since the project became open source: https://github.com/UE4SS-RE/RE-UE4SS/graphs/contributors
+
 
 - **Original Creator** The original creator no longer wishes to be involved in or connected to  this project.  Please respect their wishes, and avoid using their past usernames in connection with this project.
 - **Archengius**
