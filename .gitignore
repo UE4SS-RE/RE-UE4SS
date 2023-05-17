@@ -8,6 +8,9 @@
 VS_Solution/*
 !VS_Solution/generate_vs_solution.bat
 
+# Ninja
+ClangNinja/*
+
 # Build results
 [Dd]ebug/
 [Dd]ebugPublic/
