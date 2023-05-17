@@ -280,11 +280,10 @@ namespace RC::OutTheShade
 				if (Struct->GetSuperStruct() && !NameMap.contains(Struct->GetSuperStruct()->GetNamePrivate()))
 					NameMap.insert_or_assign(Struct->GetSuperStruct()->GetNamePrivate(), 0);
 
-				Struct->ForEachProperty([&](FProperty* Prop)
-				{
-					NameMap.insert_or_assign(Prop->GetFName(), 0);
-                    return LoopAction::Continue;
-				});
+                for (FProperty* Prop : Struct->ForEachProperty())
+                {
+                    NameMap.insert_or_assign(Prop->GetFName(), 0);
+                }
 			}
 			else if (Object->GetClassPrivate() == UEnum::StaticClass())
 			{
@@ -293,11 +292,10 @@ namespace RC::OutTheShade
 
 				NameMap.insert_or_assign(Enum->GetNamePrivate(), 0);
 
-				Enum->ForEachName([&](FName Key, ...)
-				{
-					NameMap.insert_or_assign(Key, 0);
-                    return LoopAction::Continue;
-				});
+                for (auto& [Key, _] : Enum->ForEachName())
+                {
+                    NameMap.insert_or_assign(Key, 0);
+                }
 			}
             return LoopAction::Continue;
 		});
@@ -335,18 +333,16 @@ namespace RC::OutTheShade
             Buffer.Write(NameMap[Enum->GetNamePrivate()]);
 
             uint8_t EnumNameCount{};
-            Enum->ForEachName([&](...)
+            for (auto _ : Enum->ForEachName())
             {
                 ++EnumNameCount;
-                return LoopAction::Continue;
-            });
+            }
             Buffer.Write<uint8_t>(EnumNameCount);
 
-            Enum->ForEachName([&](FName Key, ...)
+            for (auto& [Key, _] : Enum->ForEachName())
             {
                 Buffer.Write<int>(NameMap[Key]);
-                return LoopAction::Continue;
-            });
+            }
         }
 
         // Warning: Converting size_t (uint64) to uint32_t.
@@ -369,7 +365,7 @@ namespace RC::OutTheShade
             uint16_t PropCount = 0;
             uint16_t SerializablePropCount = 0;
 
-            Struct->ForEachProperty([&](FProperty* Props)
+            for (FProperty* Props : Struct->ForEachProperty())
             {
                 FPropertyData Data(Props, PropCount);
 
@@ -377,9 +373,7 @@ namespace RC::OutTheShade
 
                 PropCount += Data.ArrayDim;
                 SerializablePropCount++;
-
-                return LoopAction::Continue;
-            });
+            }
 
             Buffer.Write(PropCount);
             Buffer.Write(SerializablePropCount);

@@ -440,12 +440,12 @@ namespace RC::UEGenerator
                 .owner = owner,
             };
 
-            function->ForEachProperty([&](XProperty* param) {
-                if (!param->HasAnyPropertyFlags(Unreal::CPF_Parm | Unreal::CPF_ReturnParm)) { return LoopAction::Continue; }
+            for (XProperty* param : function->ForEachProperty())
+            {
+                if (!param->HasAnyPropertyFlags(Unreal::CPF_Parm | Unreal::CPF_ReturnParm)) { continue; }
 
                 function_info.params.emplace_back(PropertyInfo{param, generate_class_dependency_from_property(owner, param, current_class_content)});
-                return LoopAction::Continue;
-            });
+            }
 
             return function_info;
         }
@@ -473,15 +473,14 @@ namespace RC::UEGenerator
             specification.generate_enum_declaration(content_buffer, uenum);
             const auto cpp_form = uenum->GetCppForm();
 
-            enum_names.ForEach([&](Unreal::FEnumNamePair* elem, size_t index) {
-                auto enum_value_full_name = elem->Key.ToString();
+            for (Unreal::FEnumNamePair& elem : enum_names)
+            {
+                auto enum_value_full_name = elem.Key.ToString();
                 size_t colon_pos = enum_value_full_name.rfind(STR(":"));
                 auto enum_value_name = colon_pos == enum_value_full_name.npos ? enum_value_full_name : enum_value_full_name.substr(colon_pos + 1);
 
                 specification.generate_enum_member(content_buffer, uenum, enum_value_name, elem);
-
-                return LoopAction::Continue;
-            });
+            }
 
             specification.generate_enum_end(content_buffer, uenum);
 
@@ -682,9 +681,9 @@ namespace RC::UEGenerator
                 content_buffer.append(std::format(STR("enum class {} {{\n"), get_native_enum_name(uenum, false)));
             }
         }
-        auto generate_enum_member(File::StringType& content_buffer, UEnum* uenum, const File::StringType& enum_value_name, Unreal::FEnumNamePair* elem) -> void
+        auto generate_enum_member(File::StringType& content_buffer, UEnum* uenum, const File::StringType& enum_value_name, Unreal::FEnumNamePair& elem) -> void
         {
-            content_buffer.append(std::format(STR("{}{}{} = {},\n"), generate_tab(), uenum->GetCppForm() == UEnum::ECppForm::Namespaced ? generate_tab() : STR(""), enum_value_name, elem->Value));
+            content_buffer.append(std::format(STR("{}{}{} = {},\n"), generate_tab(), uenum->GetCppForm() == UEnum::ECppForm::Namespaced ? generate_tab() : STR(""), enum_value_name, elem.Value));
         }
         auto generate_enum_end(File::StringType& content_buffer, UEnum* uenum) -> void
         {
@@ -712,23 +711,23 @@ namespace RC::UEGenerator
             // If any properties have dependencies, make sure that they are defined
             // This makes sure that we don't have member variables with undefined types (if the types are local, otherwise we need to include the file that the struct exists in)
             std::vector<PropertyInfo> properties_to_generate{};
-            native_class->ForEachProperty([&](XProperty* property) {
+            for (XProperty* property : native_class->ForEachProperty())
+            {
                 properties_to_generate.emplace_back(PropertyInfo{property, generator->generate_class_dependency_from_property(object_info, property, current_class_content)});
-                return LoopAction::Continue;
-            });
+            }
 
             std::vector<FunctionInfo> functions_to_generate{};
-            native_class->ForEachFunction([&](UFunction* function) {
+            for (UFunction* function : native_class->ForEachFunction())
+            {
                 auto& function_info = functions_to_generate.emplace_back(FunctionInfo{function, object_info});
 
-                function->ForEachProperty([&](XProperty* param) {
-                    if (!param->HasAnyPropertyFlags(Unreal::CPF_Parm | Unreal::CPF_ReturnParm)) { return LoopAction::Continue; }
+                for (XProperty* param : function->ForEachProperty())
+                {
+                    if (!param->HasAnyPropertyFlags(Unreal::CPF_Parm | Unreal::CPF_ReturnParm)) { continue; }
 
                     function_info.params.emplace_back(PropertyInfo{param, generator->generate_class_dependency_from_property(object_info, param, current_class_content)});
-                    return LoopAction::Continue;
-                });
-                return LoopAction::Continue;
-            });
+                }
+            }
 
             auto class_name = generate_class_name(native_class);
 
@@ -1029,9 +1028,9 @@ namespace RC::UEGenerator
             auto enum_name = uenum->GetName();
             content_buffer.append(std::format(STR("---@enum {}\n{} = {{\n"), enum_name, enum_name));
         }
-        auto generate_enum_member(File::StringType& content_buffer, UEnum* uenum, const File::StringType& enum_value_name, Unreal::FEnumNamePair* elem) -> void
+        auto generate_enum_member(File::StringType& content_buffer, UEnum* uenum, const File::StringType& enum_value_name, Unreal::FEnumNamePair& elem) -> void
         {
-            content_buffer.append(std::format(STR("{}{} = {},\n"), generate_tab(), enum_value_name, elem->Value));
+            content_buffer.append(std::format(STR("{}{} = {},\n"), generate_tab(), enum_value_name, elem.Value));
         }
         auto generate_enum_end(File::StringType& content_buffer, UEnum* uenum) -> void
         {
@@ -1055,23 +1054,23 @@ namespace RC::UEGenerator
             // If any properties have dependencies, make sure that they are defined
             // This makes sure that we don't have member variables with undefined types (if the types are local, otherwise we need to include the file that the struct exists in)
             std::vector<PropertyInfo> properties_to_generate{};
-            native_class->ForEachProperty([&](XProperty* property) {
+            for (XProperty* property : native_class->ForEachProperty())
+            {
                 properties_to_generate.emplace_back(PropertyInfo{property, generator->generate_class_dependency_from_property(object_info, property, current_class_content)});
-                return LoopAction::Continue;
-            });
+            }
 
             std::vector<FunctionInfo> functions_to_generate{};
-            native_class->ForEachFunction([&](UFunction* function) {
+            for (UFunction* function : native_class->ForEachFunction())
+            {
                 auto& function_info = functions_to_generate.emplace_back(FunctionInfo{function, object_info});
 
-                function->ForEachProperty([&](XProperty* param) {
-                    if (!param->HasAnyPropertyFlags(Unreal::CPF_Parm | Unreal::CPF_ReturnParm)) { return LoopAction::Continue; }
+                for (XProperty* param : function->ForEachProperty())
+                {
+                    if (!param->HasAnyPropertyFlags(Unreal::CPF_Parm | Unreal::CPF_ReturnParm)) { continue; }
 
                     function_info.params.emplace_back(PropertyInfo{param, generator->generate_class_dependency_from_property(object_info, param, current_class_content)});
-                    return LoopAction::Continue;
-                });
-                return LoopAction::Continue;
-            });
+                }
+            }
 
             auto class_name = generate_class_name(native_class);
 

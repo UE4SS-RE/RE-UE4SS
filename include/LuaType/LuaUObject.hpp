@@ -6,6 +6,7 @@
 #include <format>
 #include <functional>
 
+#include <Constructs/Generator.hpp>
 #include <LuaMadeSimple/LuaObject.hpp>
 #include <Helpers/String.hpp>
 #include <DynamicOutput/DynamicOutput.hpp>

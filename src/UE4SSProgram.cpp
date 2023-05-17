@@ -1366,14 +1366,12 @@ namespace RC
                     {
                         if (typed_obj->IsA<UStruct>())
                         {
-                            static_cast<UClass*>(typed_obj)->ForEachProperty([&](FProperty* prop) {
-                                if (dumped_fields.contains(prop)) { return LoopAction::Continue; }
+                            for (FProperty* prop : static_cast<UClass*>(typed_obj)->ForEachProperty()) {
+                                if (dumped_fields.contains(prop)) { continue; }
 
                                 dump_xproperty(prop);
                                 dumped_fields.emplace(prop);
-
-                                return LoopAction::Continue;
-                            });
+                            }
                         }
                     }
                 }

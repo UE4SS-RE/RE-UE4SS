@@ -3,6 +3,7 @@
 #include <ctime>
 #include <utility>
 
+#include <Constructs/Views/EnumerateView.hpp>
 #include <GUI/Dumpers.hpp>
 #include <DynamicOutput/DynamicOutput.hpp>
 #include <File/Macros.hpp>
@@ -131,15 +132,16 @@ namespace RC::GUI::Dumpers
             static auto static_mesh_component_class = UObjectGlobals::StaticFindObject<UClass*>(nullptr, nullptr, STR("/Script/Engine.StaticMeshComponent"));
             auto static_mesh_components = actor->K2_GetComponentsByClass(static_mesh_component_class);
 
-            static_mesh_components.ForEach([&](UObject** static_mesh_component_ptr, size_t static_mesh_component_index) {
-                if (!static_mesh_component_ptr || !*static_mesh_component_ptr) { return LoopAction::Continue; }
-                auto static_mesh_component = *static_mesh_component_ptr;
+            for (auto [static_mesh_component_ptr, static_mesh_component_index] : static_mesh_components | views::enumerate)
+            {
+                if (!static_mesh_component_ptr) { continue; }
+                auto static_mesh_component = static_mesh_component_ptr;
 
                 auto mesh = *static_mesh_component->GetValuePtrByPropertyNameInChain<UObject*>(STR("StaticMesh"));
                 if (!mesh)
                 {
                     Output::send<LogLevel::Warning>(STR("SKIPPING COMPONENT! StaticMeshComponent '{}' has no mesh."), static_mesh_component->GetOuterPrivate()->GetName());
-                    return LoopAction::Continue;
+                    continue;
                 }
 
                 static auto mesh_property = static_mesh_component->GetPropertyByNameInChain(STR("StaticMesh"));
@@ -180,21 +182,23 @@ namespace RC::GUI::Dumpers
                 if (Version::IsAtMost(4, 19))
                 {
                     auto materials = mesh->GetValuePtrByPropertyName<TArray<FStaticMaterial_419AndBelow>>(STR("StaticMaterials"));
-                    materials->ForEach([&](FStaticMaterial_419AndBelow* material, size_t material_index) {
-                        return materials_for_each_body(material->MaterialInterface, material_index, materials->Num());
-                    });
+                    for (auto [material, material_index] : *materials | views::enumerate)
+                    {
+                        LoopAction action = materials_for_each_body(material.MaterialInterface, material_index, materials->Num());
+                        if (action == LoopAction::Break) break;
+                    }
                 }
                 else
                 {
                     auto materials = mesh->GetValuePtrByPropertyName<TArray<FStaticMaterial_420AndAbove>>(STR("StaticMaterials"));
-                    materials->ForEach([&](FStaticMaterial_420AndAbove* material, size_t material_index) {
-                        return materials_for_each_body(material->MaterialInterface, material_index, materials->Num());
-                    });
+                    for (auto [material, material_index] : *materials | views::enumerate)
+                    {
+                        LoopAction action = materials_for_each_body(material.MaterialInterface, material_index, materials->Num());
+                        if (action == LoopAction::Break) { break; }
+                    }
                 }
                 actor_buffer.append(STR(")\""));
-
-                return LoopAction::Continue;
-            });
+            }
 
             actor_buffer.append(STR("\n"));
             file_buffer.append(actor_buffer);

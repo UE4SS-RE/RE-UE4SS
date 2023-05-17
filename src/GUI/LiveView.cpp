@@ -95,7 +95,8 @@ namespace RC::GUI
 
         if (LiveView::s_search_options.include_inheritance)
         {
-            object->GetClassPrivate()->ForEachSuperStruct([&](UStruct* super) {
+            for (UStruct* super : object->GetClassPrivate()->ForEachSuperStruct()) 
+            {
                 auto super_full_name = get_object_full_name_cxx_string(super);
                 std::transform(super_full_name.begin(), super_full_name.end(), super_full_name.begin(), [](char c) {
                     return std::tolower(c);
@@ -104,13 +105,9 @@ namespace RC::GUI
                 {
                     LiveView::s_name_search_results.emplace_back(object);
                     LiveView::s_name_search_results_set.emplace(object);
-                    return LoopAction::Break;
+                    break;
                 }
-                else
-                {
-                    return LoopAction::Continue;
-                }
-            });
+            }
         }
 
         if (LiveView::s_search_options.include_inheritance && LiveView::s_name_search_results_set.contains(object)) { return; }
@@ -677,16 +674,15 @@ namespace RC::GUI
         ImGui::Text("Properties");
         if (ImGui::TreeNodeEx("Show", ImGuiTreeNodeFlags_SpanFullWidth))
         {
-            ustruct->ForEachProperty([&](FProperty* property) {
+            for (FProperty* property : ustruct->ForEachProperty()) 
+            {
                 ImGui::TreeNodeEx(to_string(property->GetFullName()).c_str(), ImGuiTreeNodeFlags_Leaf);
                 if (ImGui::IsItemClicked())
                 {
                     select_property(0, property, AffectsHistory::Yes);
                 }
                 ImGui::TreePop();
-
-                return LoopAction::Continue;
-            });
+            }
             ImGui::TreePop();
         }
         ImGui::Unindent();
@@ -717,14 +713,13 @@ namespace RC::GUI
         Output::send(STR("{}\n"), uclass->GetFullName());
 
         ImGui::Text("Properties");
-        uclass->ForEachProperty([](FProperty* property) {
+        for (FProperty* property : uclass->ForEachProperty()) 
+        {
             if (ImGui::TreeNode(to_string(property->GetFullName()).c_str()))
             {
                 Output::send(STR("Show property: {}\n"), property->GetFullName());
             }
-
-            return LoopAction::Continue;
-        });
+        }
     }
 
     auto LiveView::render_super_struct(UStruct* ustruct) -> void
@@ -892,7 +887,8 @@ namespace RC::GUI
             {
                 render_property_value_context_menu(tree_node_id);
                 
-                struct_property->GetStruct()->ForEachProperty([&](FProperty* inner_property) {
+                for (FProperty* inner_property : struct_property->GetStruct()->ForEachProperty()) 
+                {
                     FString struct_prop_text_item{};
                     auto struct_prop_container_ptr = inner_property->ContainerPtrToValuePtr<void*>(container_ptr);
                     inner_property->ExportTextItem(struct_prop_text_item, struct_prop_container_ptr, struct_prop_container_ptr, static_cast<UObject*>(*container_ptr), NULL);
@@ -902,15 +898,11 @@ namespace RC::GUI
                     next_item_to_render = render_property_value(inner_property, inner_property->IsA<FObjectProperty>() ? ContainerType::Object : ContainerType::NonObject, container_ptr, &last_struct_prop, tried_to_open_nullptr_object, false, property_offset + inner_property->GetOffset_Internal());
                     ImGui::Unindent();
                     
-                    if (std::holds_alternative<std::monostate>(next_item_to_render))
+                    if (!std::holds_alternative<std::monostate>(next_item_to_render))
                     {
-                        return LoopAction::Continue;
+                        break;
                     }
-                    else
-                    {
-                        return LoopAction::Break;
-                    }
-                });
+                }
                 ImGui::TreePop();
             }
             render_property_value_context_menu(tree_node_id);
@@ -1075,18 +1067,18 @@ namespace RC::GUI
         else
         {
             ImGui::Separator();
-            uclass->ForEachProperty([&](FProperty* property) {
+            for (FProperty* property : uclass->ForEachProperty()) 
+            {
                 all_properties.emplace_back(OrderedProperty{property->GetOffset_Internal(), uclass, property});
-                return LoopAction::Continue;
-            });
+            }
 
-            uclass->ForEachSuperStruct([&](UStruct* super_struct) {
-                super_struct->ForEachProperty([&](FProperty* property) {
+            for (UStruct* super_struct : uclass->ForEachSuperStruct()) 
+            {
+                for (FProperty* property : super_struct->ForEachProperty()) 
+                {
                     all_properties.emplace_back(OrderedProperty{property->GetOffset_Internal(), super_struct, property});
-                    return LoopAction::Continue;
-                });
-                return LoopAction::Continue;
-            });
+                }
+            }
 
             std::sort(all_properties.begin(), all_properties.end(), [](const OrderedProperty& a, const OrderedProperty& b) {
                 return a.offset < b.offset;
