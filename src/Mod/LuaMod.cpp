@@ -143,18 +143,19 @@ namespace RC
         {
             //int32_t current_param_offset{};
 
-            context.TheStack.CurrentNativeFunction()->ForEachProperty([&](Unreal::FProperty* func_prop) {
+            for (Unreal::FProperty* func_prop : context.TheStack.CurrentNativeFunction()->ForEachProperty())
+            {
                 // Skip this property if it's not a parameter
                 if (!func_prop->HasAnyPropertyFlags(Unreal::EPropertyFlags::CPF_Parm))
                 {
-                    return LoopAction::Continue;
+                    continue;
                 }
 
                 // Skip if this property corresponds to the return value
                 if (lua_data.has_return_value && func_prop->GetOffset_Internal() == return_value_offset)
                 {
                     lua_data.return_property = func_prop;
-                    return LoopAction::Continue;
+                    continue;
                 }
 
                 Unreal::FName property_type = func_prop->GetClass().GetFName();
@@ -184,9 +185,7 @@ namespace RC
                 {
                     lua_data.lua.throw_error(std::format("[unreal_script_function_hook] Tried accessing unreal property without a registered handler. Property type '{}' not supported.", to_string(property_type.ToString())));
                 }
-
-                return LoopAction::Continue;
-            });
+            }
         }
 
         // Call the Lua function with the correct number of parameters & return values
@@ -3019,9 +3018,10 @@ Overloads:
 
                     if (has_return_value || num_unreal_params > 0)
                     {
-                        node->ForEachProperty([&](Unreal::FProperty* param) {
-                            if (!param->HasAnyPropertyFlags(Unreal::EPropertyFlags::CPF_Parm)) { return LoopAction::Continue; }
-                            if (has_return_value && param->GetOffset_Internal() == return_value_offset) { return LoopAction::Continue; }
+                        for (Unreal::FProperty* param : node->ForEachProperty())
+                        {
+                            if (!param->HasAnyPropertyFlags(Unreal::EPropertyFlags::CPF_Parm)) { continue; }
+                            if (has_return_value && param->GetOffset_Internal() == return_value_offset) { continue; }
 
                             auto param_type = param->GetClass().GetFName();
                             auto param_type_comparison_index = param_type.GetComparisonIndex();
@@ -3042,9 +3042,7 @@ Overloads:
                             {
                                 lua.throw_error(std::format("[script_hook] Tried accessing unreal property without a registered handler. Property type '{}' not supported.", to_string(param_type.ToString())));
                             }
-
-                            return LoopAction::Continue;
-                        });
+                        };
                     }
                     
                     lua.call_function(num_unreal_params + 1, 1);

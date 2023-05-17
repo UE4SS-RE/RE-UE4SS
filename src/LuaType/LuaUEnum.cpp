@@ -77,7 +77,8 @@ Overloads:
 
             auto& lua_object = lua.get_userdata<UEnum>();
 
-            lua_object.get_remote_cpp_object()->ForEachName([&](Unreal::FName name, int64_t value) {
+            for (auto& [name, value] : lua_object.get_remote_cpp_object()->ForEachName())
+            {
                 // Duplicate the Lua function so that we can use it in subsequent iterations of this loop (call_function pops the function from the stack)
                 lua_pushvalue(lua.get_lua_state(), 1);
 
@@ -92,7 +93,7 @@ Overloads:
                 // We explicitly specify index 2 because we duplicated the function earlier and that's located at index 1.
                 if (lua.is_bool(2) && lua.get_bool(2))
                 {
-                    return LoopAction::Break;
+                    break;
                 }                else
                 {
                     // There's a 'nil' on the stack because we told Lua that we expect a return value.
@@ -100,9 +101,8 @@ Overloads:
                     // We discard the 'nil' here, otherwise the Lua stack is corrupted on the next iteration of the 'ForEachFunction' loop.
                     // We explicitly specify index 2 because we duplicated the function earlier and that's located at index 1.
                     lua.discard_value(2);
-                    return LoopAction::Continue;
                 }
-            });
+            }
 
             return 0;
         });

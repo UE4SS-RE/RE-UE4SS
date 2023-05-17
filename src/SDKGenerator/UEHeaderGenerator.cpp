@@ -328,27 +328,27 @@ namespace RC::UEGenerator
 
         //Generate delegate type declarations for the current class
         int32_t NumDelegatesGenerated = 0;
-        uclass->ForEachFunction([&](UFunction* function) {
+        for (UFunction* function : uclass->ForEachFunction())
+        {
             if (is_delegate_signature_function(function))
             {
                 generate_delegate_type_declaration(function, header_data);
                 NumDelegatesGenerated++;
             }
-            return RC::LoopAction::Continue;
-        });
+        }
         if (NumDelegatesGenerated) {
             header_data.append_line(STR(""));
         }
 
         //Generate interface functions
-        uclass->ForEachFunction([&](UFunction* function) {
+        for (UFunction* function : uclass->ForEachFunction())
+        {
             if (!is_delegate_signature_function(function))
             {
                 append_access_modifier(header_data, get_function_access_modifier(function), current_access_modifier);
                 generate_function(uclass, function, header_data, true, CaseInsensitiveSet{});
             }
-            return RC::LoopAction::Continue;
-        });
+        }
 
         header_data.end_ident_level();
         header_data.append_line(STR("};"));
@@ -385,14 +385,14 @@ namespace RC::UEGenerator
         std::wstring interface_list_string;
         auto implemented_interfaces = uclass->GetInterfaces();
 
-        implemented_interfaces.ForEach([&](const RC::Unreal::FImplementedInterface* uinterface) {
-            header_data.add_dependency_object(uinterface->Class, DependencyLevel::Include);
-            const std::wstring interface_name = get_native_class_name(uinterface->Class, true);
+        for (const RC::Unreal::FImplementedInterface& uinterface : implemented_interfaces)
+        {
+            header_data.add_dependency_object(uinterface.Class, DependencyLevel::Include);
+            const std::wstring interface_name = get_native_class_name(uinterface.Class, true);
 
             interface_list_string.append(STR(", public "));
             interface_list_string.append(interface_name);
-            return RC::LoopAction::Continue;
-        });
+        }
 
         header_data.append_line(std::format(STR("UCLASS({})"), class_flags_string));
         header_data.append_line(std::format(STR("class {}{} : public {}{} {{"), maybe_api_name, class_native_name, parent_class_name, interface_list_string));
@@ -408,20 +408,21 @@ namespace RC::UEGenerator
 
         //Generate delegate type declarations for the current class
         int32_t NumDelegatesGenerated = 0;
-        uclass->ForEachFunction([&](UFunction* function) {
+        for (UFunction* function : uclass->ForEachFunction()) 
+        {
             if (is_delegate_signature_function(function))
             {
                 generate_delegate_type_declaration(function, header_data);
                 NumDelegatesGenerated++;
             }
-            return RC::LoopAction::Continue;
-        });
+        }
         if (NumDelegatesGenerated) {
             header_data.append_line(STR(""));
         }
 
         //Generate properties
-        uclass->ForEachProperty([&](FProperty* property) {
+        for (FProperty* property : uclass->ForEachProperty()) 
+        {
             encountered_replicated_properties |= (property->GetPropertyFlags() & CPF_Net) != 0;
             append_access_modifier(header_data, get_property_access_modifier(property), current_access_modifier);
             generate_property(uclass, property, header_data);
@@ -434,9 +435,7 @@ namespace RC::UEGenerator
                     m_structs_that_need_get_type_hash.emplace(as_struct_property->GetStruct());
                 }
             }
-
-            return RC::LoopAction::Continue;
-        });
+        }
 
         //Make sure constructor and replicated properties methods are public
         append_access_modifier(header_data, AccessModifier::Public, current_access_modifier);
@@ -453,15 +452,15 @@ namespace RC::UEGenerator
 
         //Generate functions
         std::unordered_set<FName> implemented_functions;
-        uclass->ForEachFunction([&](UFunction* function) {
+        for (UFunction* function : uclass->ForEachFunction())
+        {
             if (!is_delegate_signature_function(function))
             {
                 append_access_modifier(header_data, get_function_access_modifier(function), current_access_modifier);
                 generate_function(uclass, function, header_data, false, blacklisted_property_names);
                 implemented_functions.emplace(function->GetNamePrivate());
             }
-            return RC::LoopAction::Continue;
-        });
+        }
 
         // Generate overrides for all inherited virtual functions
         if (implemented_interfaces.Num() > 0)
@@ -469,8 +468,10 @@ namespace RC::UEGenerator
             header_data.append_line(STR(""));
             header_data.append_line(STR("// Fix for true pure virtual functions not being implemented"));
         }
-        implemented_interfaces.ForEach([&](const RC::Unreal::FImplementedInterface* uinterface) {
-            uinterface->Class->ForEachFunction([&](UFunction* interface_function) {
+        for (const RC::Unreal::FImplementedInterface& uinterface : implemented_interfaces)
+        {
+            for (UFunction* interface_function : uinterface.Class->ForEachFunction()) 
+            {
                 bool should_skip = (interface_function->GetFunctionFlags() & FUNC_BlueprintEvent);
 
                 if (!implemented_functions.contains(interface_function->GetNamePrivate()) && !should_skip)
@@ -478,11 +479,8 @@ namespace RC::UEGenerator
                     append_access_modifier(header_data, get_function_access_modifier(interface_function), current_access_modifier);
                     generate_function(uclass, interface_function, header_data, false, blacklisted_property_names, true);
                 }
-                return LoopAction::Continue;
-            });
-
-            return LoopAction::Continue;
-        });
+            }
+        }
 
         header_data.end_ident_level();
         header_data.append_line(STR("};"));
@@ -517,7 +515,8 @@ namespace RC::UEGenerator
         append_access_modifier(header_data, AccessModifier::Public, current_access_modifier);
 
         //Generate struct properties
-        script_struct->ForEachProperty([&](FProperty* property) {
+        for (FProperty* property : script_struct->ForEachProperty()) 
+        {
             append_access_modifier(header_data, get_property_access_modifier(property), current_access_modifier);
             generate_property(script_struct, property, header_data);
             
@@ -529,9 +528,7 @@ namespace RC::UEGenerator
                     m_structs_that_need_get_type_hash.emplace(as_struct_property->GetStruct());
                 }
             }
-            
-            return RC::LoopAction::Continue;
-        });
+        }
 
         //Generate constructor and make sure it's public
         append_access_modifier(header_data, AccessModifier::Public, current_access_modifier);
@@ -592,7 +589,8 @@ namespace RC::UEGenerator
         header_data.begin_indent_level();
 
         int64_t expected_next_enum_value = 0;
-        uenum->ForEachName([&](Unreal::FName Name, int64_t Value) {
+        for (auto [Name, Value] : uenum->ForEachName()) 
+        {
             std::wstring result_enumeration_line = sanitize_enumeration_name(Name.ToString());
             bool enum_constant_has_explicit_number = false;
 
@@ -611,7 +609,7 @@ namespace RC::UEGenerator
                 //Skip enum _MAX constant if it has the following number and matching name, which means it has been autogenerated
                 if (result_enumeration_line == expected_full_constant_name && !enum_constant_has_explicit_number)
                 {
-                    return RC::LoopAction::Continue;
+                    continue;
                 }
                 //Otherwise, just make sure it's hidden and not visible to the end user
                 result_enumeration_line.append(STR(" UMETA(Hidden)"));
@@ -619,8 +617,7 @@ namespace RC::UEGenerator
 
             result_enumeration_line.append(STR(","));
             header_data.append_line(result_enumeration_line);
-            return RC::LoopAction::Continue;
-        });
+        }
 
         header_data.end_ident_level();
         header_data.append_line(STR("};"));
@@ -693,21 +690,21 @@ namespace RC::UEGenerator
         CaseInsensitiveSet blacklisted_property_names = collect_blacklisted_property_names(uclass);
 
         //Generate functions
-        uclass->ForEachFunction([&](UFunction* function) {
+        for (UFunction* function : uclass->ForEachFunction()) 
+        {
             if (!is_delegate_signature_function(function))
             {
                 generate_function_implementation(uclass, function, implementation_file, false, blacklisted_property_names);
                 implementation_file.append_line(STR(""));
             }
-            return RC::LoopAction::Continue;
-        });
+        }
 
         bool encountered_replicated_properties = false;
 
-        uclass->ForEachProperty([&](FProperty* property) {
+        for (FProperty* property : uclass->ForEachProperty()) 
+        {
             encountered_replicated_properties |= (property->GetPropertyFlags() & CPF_Net) != 0;
-            return RC::LoopAction::Continue;
-        });
+        }
 
         //Generate replicated properties implementation if we really need it
         if (encountered_replicated_properties)
@@ -720,13 +717,13 @@ namespace RC::UEGenerator
             implementation_file.append_line(STR("Super::GetLifetimeReplicatedProps(OutLifetimeProps);"));
             implementation_file.append_line(STR(""));
 
-            uclass->ForEachProperty([&](FProperty* property) {
+            for (FProperty* property : uclass->ForEachProperty()) 
+            {
                 if ((property->GetPropertyFlags() & CPF_Net) != 0)
                 {
                     implementation_file.append_line(std::format(STR("DOREPLIFETIME({}, {});"), class_native_name, property->GetName()));
                 }
-                return RC::LoopAction::Continue;
-            });
+            }
 
             implementation_file.end_ident_level();
             implementation_file.append_line(STR("}"));
@@ -753,10 +750,10 @@ namespace RC::UEGenerator
 
         if (class_default_object != nullptr) 
         {
-            uclass->ForEachProperty([&](FProperty* property) {
+            for (FProperty* property : uclass->ForEachProperty()) 
+            {
                 generate_property_value(property, class_default_object, implementation_file, STR("this->"));
-                return RC::LoopAction::Continue;
-            });
+            }
         }
         else 
         {
@@ -781,10 +778,10 @@ namespace RC::UEGenerator
         //TODO: ScriptStruct->InitializeStruct(StructDefaultObject);
         memset(struct_default_object, 0, script_struct->GetPropertiesSize());
 
-        script_struct->ForEachProperty([&](FProperty* property) {
+        for (FProperty* property : script_struct->ForEachProperty()) 
+        {
             generate_property_value(property, struct_default_object, implementation_file, STR("this->"));
-            return RC::LoopAction::Continue;
-        });
+        }
 
         //TODO: ScriptStruct->DestroyStruct(StructDefaultObject);
         free(struct_default_object);
@@ -910,13 +907,13 @@ namespace RC::UEGenerator
         const std::wstring enum_native_name = get_native_enum_name(uenum, false);
 
         std::wstring enum_constant_name;
-        uenum->ForEachName([&](FName Name, int64_t Value) {
+        for (auto [Name, Value] : uenum->ForEachName()) 
+        {
             if (Value == enum_value)
             {
                 enum_constant_name = sanitize_enumeration_name(Name.ToString());
             }
-            return RC::LoopAction::Continue;
-        });
+        }
         if (enum_constant_name.empty())
         {
             Output::send(STR("Warning: Invalid value for enum '{}', casting instead of using enum name. Value '{}' will be cast to the enum.\n"), enum_native_name, enum_value);
@@ -1449,24 +1446,24 @@ namespace RC::UEGenerator
         {
             UClass* class_object = static_cast<UClass*>(uclass);
 
-            class_object->ForEachProperty([&](FProperty* property) {
+            for (FProperty* property : class_object->ForEachProperty())
+            {
                 result_set.insert(property->GetName());
-                return RC::LoopAction::Continue;
-            });
+            }
 
-            class_object->ForEachFunction([&](UFunction* function) {
+            for (UFunction* function : class_object->ForEachFunction()) 
+            {
                 result_set.insert(function->GetName());
-                return RC::LoopAction::Continue;
-            });
+            }
         }
         else if (uclass->GetClassPrivate()->IsChildOf(UScriptStruct::StaticClass()))
         {
             UScriptStruct* script_struct = static_cast<UScriptStruct*>(uclass);
 
-            script_struct->ForEachProperty([&](FProperty* property) {
+            for (FProperty* property : script_struct->ForEachProperty()) 
+            {
                 result_set.insert(property->GetName());
-                return RC::LoopAction::Continue;
-            });
+            }
         }
         return result_set;
     }
@@ -2401,17 +2398,14 @@ namespace RC::UEGenerator
         if (!blueprint_callable_added && UE4SSProgram::settings_manager.UHTHeaderGenerator.MakeAllFunctionsBlueprintCallable && !is_function_pure_virtual)
         {
             bool has_invalid_param{};
-            function->ForEachProperty([&](FProperty* param) {
+            for (FProperty* param : function->ForEachProperty()) 
+            {
                 if (!is_subtype_valid(param))
                 {
                     has_invalid_param = true;
-                    return LoopAction::Break;
+                    break;
                 }
-                else
-                {
-                    return LoopAction::Continue;
-                }
-            });
+            }
 
             if (!has_invalid_param)
             {
@@ -2484,7 +2478,8 @@ namespace RC::UEGenerator
         static auto latent_action_info = UObjectGlobals::StaticFindObject<UClass*>(nullptr, nullptr, STR("/Script/Engine.LatentActionInfo"));
         bool bWCFound = false;
         bool bLAFound = false;
-        function->ForEachProperty([&](FProperty* param) {
+        for (FProperty* param : function->ForEachProperty()) 
+        {
             auto param_name = param->GetName();
             auto param_uc_name = string_to_uppercase(param_name);
             if (param_uc_name.find(STR("WORLDCONTEXT")) != param_uc_name.npos)
@@ -2504,10 +2499,9 @@ namespace RC::UEGenerator
             }
             if (bWCFound && bLAFound)
             {
-                return LoopAction::Break;
+                break;
             }
-            return LoopAction::Continue;
-        });
+        }
         
         return flag_format_helper.build_flag_string();
     }
@@ -2516,7 +2510,8 @@ namespace RC::UEGenerator
     {
         std::wstring function_arguments_string;
 
-        function->ForEachProperty([&](FProperty* property) {
+        for (FProperty* property : function->ForEachProperty()) 
+        {
             auto property_flags = property->GetPropertyFlags();
             if ((property_flags & CPF_Parm) != 0 && (property_flags & CPF_ReturnParm) == 0)
             {
@@ -2576,8 +2571,7 @@ namespace RC::UEGenerator
                 function_arguments_string.append(STR(", "));
                 if (out_num_params) { (*out_num_params)++; }
             }
-            return RC::LoopAction::Continue;
-        });
+        }
 
         //remove trailing comma and space from the arguments string
         if (!function_arguments_string.empty())
@@ -2759,32 +2753,32 @@ namespace RC::UEGenerator
             blueprint_info = get_class_blueprint_info(super_class);
         }
 
-        uclass->ForEachProperty([&](FProperty* property) {
+        for (FProperty* property : uclass->ForEachProperty()) 
+        {
             auto property_flags = property->GetPropertyFlags();
 
             if ((property_flags & CPF_BlueprintVisible) != 0)
             {
                 blueprint_info.is_blueprint_type = true;
-                return RC::LoopAction::Break;
+                break;
             }
-            return RC::LoopAction::Continue;
-        });
+        }
 
-        uclass->ForEachFunction([&](UFunction* function) {
+        for (UFunction* function : uclass->ForEachFunction()) 
+        {
             auto function_flags = function->GetFunctionFlags();
 
             if ((function_flags & FUNC_BlueprintEvent) != 0)
             {
                 blueprint_info.is_blueprintable = true;
                 blueprint_info.is_blueprint_type = true;
-                return RC::LoopAction::Break;
+                break;
             }
             if ((function_flags & FUNC_BlueprintCallable) != 0)
             {
                 blueprint_info.is_blueprint_type = true;
             }
-            return RC::LoopAction::Continue;
-        });
+        }
         return blueprint_info;
     }
 
@@ -2801,33 +2795,30 @@ namespace RC::UEGenerator
         }
         bool is_blueprint_type = false;
 
-        script_struct->ForEachProperty([&](FProperty* property) {
+        for (FProperty* property : script_struct->ForEachProperty()) 
+        {
             auto property_flags = property->GetPropertyFlags();
 
             if ((property_flags & CPF_BlueprintVisible) != 0)
             {
                 is_blueprint_type = true;
-                return RC::LoopAction::Break;
+                break;
             }
-            return RC::LoopAction::Continue;
-        });
+        }
         return is_blueprint_type;
     }
 
     auto UEHeaderGenerator::is_function_parameter_shadowing(UClass* uclass, FProperty* function_parameter) -> bool
     {
         bool is_shadowing = false;
-        uclass->ForEachPropertyInChain([&](FProperty* property) {
+        for (FProperty* property : uclass->ForEachPropertyInChain()) 
+        {
             if (property->GetFName().Equals(function_parameter->GetFName()))
             {
                 is_shadowing = true;
-                return LoopAction::Break;
+                break;
             }
-            else
-            {
-                return LoopAction::Continue;
-            }
-        });
+        }
 
         return is_shadowing;
     }

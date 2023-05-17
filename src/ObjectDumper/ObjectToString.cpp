@@ -260,10 +260,10 @@ namespace RC::ObjectDumper
 
         auto* typed_this = static_cast<UEnum*>(p_this);
 
-        typed_this->ForEachName([&](Unreal::FName name, int64_t value) {
-            out_line.append(std::format(L"\n[{:016X}] {} [n: {:X}] [v: {}]", 0, name.ToString(), name.GetComparisonIndex(), static_cast<uint8_t>(value)));
-            return LoopAction::Continue;
-        });
+        for (auto& Elem : typed_this->ForEachName())
+        {
+            out_line.append(std::format(L"\n[{:016X}] {} [n: {:X}] [v: {}]", 0, Elem.Key.ToString(), Elem.Key.GetComparisonIndex(), Elem.Value));
+        }
     }
 
     auto class_to_string(void* p_this, std::wstring& out_line) -> void
@@ -283,10 +283,10 @@ namespace RC::ObjectDumper
     {
         UScriptStruct* script_struct = static_cast<UScriptStruct*>(p_this);
 
-        script_struct->ForEachProperty([&](FProperty* prop) {
+        for (FProperty* prop : script_struct->ForEachProperty())
+        {
             callable(prop);
-            return LoopAction::Continue;
-        });
+        }
     }
 
     auto init() -> void

@@ -151,19 +151,21 @@ namespace RC::UEGenerator::JSONDumper
             }
 
             auto& events = bp_class.new_array(STR("events"));
-            object_as_class->ForEachFunction([&](UFunction* event_function) {
-                if (should_skip_general_function(event_function)) { return LoopAction::Continue; }
-                if (!is_event(event_function)) { return LoopAction::Continue; }
+            for (UFunction* event_function : object_as_class->ForEachFunction())
+            {
+                if (should_skip_general_function(event_function)) { continue; }
+                if (!is_event(event_function)) { continue; }
 
                 auto event_name = event_function->GetName();
-                if (should_skip_event(event_name)) { return LoopAction::Continue; }
+                if (should_skip_event(event_name)) { continue; }
 
                 auto& bp_events = events.new_object();
                 bp_events.new_string(STR("name"), event_name);
 
                 auto& bp_event_args = bp_events.new_array(STR("args"));
-                event_function->ForEachProperty([&](FProperty* param) {
-                    if (should_skip_property(param)) { return LoopAction::Continue; }
+                for (FProperty* param : event_function->ForEachProperty())
+                {
+                    if (should_skip_property(param)) { continue; }
 
                     auto& bp_event_arg = bp_event_args.new_object();
                     bp_event_arg.new_string(STR("name"), param->GetName());
@@ -171,22 +173,21 @@ namespace RC::UEGenerator::JSONDumper
                     bool is_out = param->HasAnyPropertyFlags(EPropertyFlags::CPF_OutParm) && !param->HasAnyPropertyFlags(EPropertyFlags::CPF_ConstParm);
                     bp_event_arg.new_bool(STR("is_out"), is_out);
                     bp_event_arg.new_bool(STR("is_return"), param->HasAnyPropertyFlags(Unreal::EPropertyFlags::CPF_ReturnParm));
-                    return LoopAction::Continue;
-                });
-
-                return LoopAction::Continue;
-            });
+                }
+            }
 
             auto& functions = bp_class.new_array(STR("functions"));
-            object_as_class->ForEachFunction([&](UFunction* function) {
-                if (should_skip_function(function)) { return LoopAction::Continue; }
+            for (UFunction* function : object_as_class->ForEachFunction())
+            {
+                if (should_skip_function(function)) { continue; }
 
                 auto& bp_function = functions.new_object();
                 bp_function.new_string(STR("name"), function->GetName());
 
                 auto& bp_function_args = bp_function.new_array(STR("args"));
-                function->ForEachProperty([&](FProperty* param) {
-                    if (should_skip_property(param)) { return LoopAction::Continue; }
+                for (FProperty* param : function->ForEachProperty())
+                {
+                    if (should_skip_property(param)) { continue; }
 
                     auto& bp_function_arg = bp_function_args.new_object();
                     bp_function_arg.new_string(STR("name"), param->GetName());
@@ -194,34 +195,32 @@ namespace RC::UEGenerator::JSONDumper
                     bool is_out = param->HasAnyPropertyFlags(EPropertyFlags::CPF_OutParm) && !param->HasAnyPropertyFlags(EPropertyFlags::CPF_ConstParm);
                     bp_function_arg.new_bool(STR("is_out"), is_out);
                     bp_function_arg.new_bool(STR("is_return"), param->HasAnyPropertyFlags(Unreal::EPropertyFlags::CPF_ReturnParm));
-                    return LoopAction::Continue;
-                });
-
-                return LoopAction::Continue;
-            });
+                }
+            }
 
             auto& properties = bp_class.new_array(STR("properties"));
-            object_as_class->ForEachProperty([&](FProperty* property) {
-                if (should_skip_property(property)) { return LoopAction::Continue; }
+            for (FProperty* property : object_as_class->ForEachProperty())
+            {
+                if (should_skip_property(property)) { continue; }
 
                 auto& bp_property = properties.new_object();
                 bp_property.new_string(STR("name"), property->GetName());
                 bp_property.new_string(STR("type"), generate_property_cxx_name(property, true, object_as_class));
-
-                return LoopAction::Continue;
-            });
+            }
 
             auto& delegates = bp_class.new_array(STR("delegates"));
-            object_as_class->ForEachFunction([&](UFunction* delegate_function) {
-                if (should_skip_general_function(delegate_function)) { return LoopAction::Continue; }
-                if ((delegate_function->GetFunctionFlags() & EFunctionFlags::FUNC_Delegate) == 0) { return LoopAction::Continue; }
+            for (UFunction* delegate_function : object_as_class->ForEachFunction())
+            {
+                if (should_skip_general_function(delegate_function)) { continue; }
+                if ((delegate_function->GetFunctionFlags() & EFunctionFlags::FUNC_Delegate) == 0) { continue; }
 
                 auto& bp_delegate = delegates.new_object();
                 bp_delegate.new_string(STR("name"), delegate_function->GetName());
 
                 auto& bp_delegate_args = bp_delegate.new_array(STR("args"));
-                delegate_function->ForEachProperty([&](FProperty* param) {
-                    if (should_skip_property(param)) { return LoopAction::Continue; }
+                for (FProperty* param : delegate_function->ForEachProperty())
+                {
+                    if (should_skip_property(param)) { continue; }
 
                     auto& bp_delegate_arg = bp_delegate_args.new_object();
                     bp_delegate_arg.new_string(STR("name"), param->GetName());
@@ -229,11 +228,8 @@ namespace RC::UEGenerator::JSONDumper
                     bool is_out = param->HasAnyPropertyFlags(EPropertyFlags::CPF_OutParm) && !param->HasAnyPropertyFlags(EPropertyFlags::CPF_ConstParm);
                     bp_delegate_arg.new_bool(STR("is_out"), is_out);
                     bp_delegate_arg.new_bool(STR("is_return"), param->HasAnyPropertyFlags(Unreal::EPropertyFlags::CPF_ReturnParm));
-                    return LoopAction::Continue;
-                });
-
-                return LoopAction::Continue;
-            });
+                }
+            }
 
             return LoopAction::Continue;
         });
