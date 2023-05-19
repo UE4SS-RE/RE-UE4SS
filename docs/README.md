@@ -4,15 +4,15 @@ Lua scripting system platform, C++ Modding API, SDK generator, live property edi
 
 ## Major features
 
-- [Lua Scripting API](feature-overview/lua-api-ovr.md): Write lua mods based on the UE object system
+- [Lua Scripting API](lua-api.md): Write lua mods based on the UE object system
 - [Blueprint Modloading](feature-overview/blueprint-modloader.md): Spawn blueprint mods automatically without editing/replacing game files
-- [C++ Modding API](feature-overview/cpp-sdk.md): Write lua mods based on the UE object system
+- [C++ Modding API](feature-overview/cpp-sdk.md): Write C++ mods based on the UE object system
 - [Live Property Viewer and Editor](feature-overview/live-view.md): Search, view, edit & watch the properties of every loaded object, great for debugging mods or figuring out how values are changed during runtime
-- [UHT Dumper](feature-overview/dumpers.md): Generate Unreal Header Tool compatible C++ headers for creating a mirror .uproject for your game
-- [C++ Header Dumper](feature-overview/dumpers.md): Generate standard C++ headers from reflected classes and blueprints, with offsets
+- [UHT Dumper](feature-overview/dumpers.md#unreal-header-tool-uht-dumper): Generate Unreal Header Tool compatible C++ headers for creating a mirror .uproject for your game
+- [C++ Header Dumper](feature-overview/dumpers.md#c-header-generator): Generate standard C++ headers from reflected classes and blueprints, with offsets
 - [Universal UE Mods](feature-overview/universal-mods.md): Unlock the game console and other universal mods
-- [Dumpers for File Parsing](feature-overview/dumpers.md): Generate .usmap mapping files for unversioned properties
-- [UMAP Recreation Dumper](feature-overview/dumpers.md): Dump all loaded actors to file to generate .umaps in-editor
+- [Dumpers for File Parsing](feature-overview/dumpers.md#usmap-dumper): Generate `.usmap` mapping files for unversioned properties
+- [UMAP Recreation Dumper](feature-overview/dumpers.md#umap-recreation-dumper): Dump all loaded actors to file to generate `.umaps` in-editor
 - Other Features, including [Experimental](feature-overview/experimental.md) features at times 
 
 ## Targeting UE Versions: From 4.12 To 5.1
@@ -91,7 +91,7 @@ All contributors since the project became open source: https://github.com/UE4SS-
 
 
 - **Original Creator** The original creator no longer wishes to be involved in or connected to  this project.  Please respect their wishes, and avoid using their past usernames in connection with this project.
-- **Archengius**
+- [**Archengius**](https://github.com/Archengius/)
   - UHT compatible header generator
 - **CasualGamer**
   - Injector code & aob scanner is heavily based on his work, 90% of that code is his.
@@ -107,16 +107,16 @@ All contributors since the project became open source: https://github.com/UE4SS-
   - New UFunction hook method
 - [**RussellJ**](https://github.com/RussellJerome)
   - Blueprint Modloader inspiration
-- **Narknon**
+- [**Narknon**](https://github.com/narknon)
   - Certain features and maintenance/rehosting of the project
 - **DeadMor0z**
   - Certain features and Lua updates/maintenance
-- **OutTheShade**
+- [**OutTheShade**](https://github.com/OutTheShade/UnrealMappingsDumper)
   - Unreal Mappings (USMAP) Generator
 - **DmgVol**
   - Inspiration for map dumper
-- **Buckminsterfullerene**
-  - Rewriting the documentation
+- [**Buckminsterfullerene**](https://github.com/Buckminsterfullerene02/)
+  - Rewriting the documentation, various fixes
 
 
 ## Thanks to everyone who helped with testing

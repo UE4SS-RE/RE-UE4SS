@@ -6,7 +6,7 @@ While the UHT header generator is only officially supported in `4.25+`, it has w
 
 ## How to use
 
-The key bind to generate headers is by default `CTRL` + `Numpad 9`, and it can be changed in `Mods/Keybinds/Scripts/main.lua`
+The key bind to generate headers is by default `CTRL` + `Numpad 9`, and it can be changed in `Mods/Keybinds/Scripts/main.lua`.
 
 To utilize the generated headers to their full potential, see [UE4GameProjectGenerator](https://github.com/Archengius/UE4GameProjectGenerator) by Archengius. 
 > The project generator only works in `>4.25`. If generating a project for an older engine version, generate it by compiling the project generator for `4.25+`.
