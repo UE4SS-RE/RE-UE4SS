@@ -96,8 +96,9 @@ using namespace RC;
 ```c++
 Output::send<LogLevel::Verbose>(STR("MyAwesomeMod says hello\n"));
 ```
-It's longer than a call to `printf`, but in return the message gets propagated to both the regular console and the GUI console.  
+It's longer than a call to `printf`, but in return the message gets propagated to the log file and both the regular console and the GUI console.  
 We also get some support for colors via the `LogLevel` enum.
+
 4. Add this below the DynamicOutput include:
 ```c++
 #include <Unreal/UObjectGlobals.hpp>
