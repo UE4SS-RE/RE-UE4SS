@@ -83,6 +83,7 @@ extern "C"
 4. Open `MyMods/Output/MyMods.sln`
 5. Make sure that you're set to the `Release` configuration unless you want to debug.
 6. Find your project (in my case: MyAwesomeMod) in the solution explorer and right click it and hit `Build`.
+
 ## Part #3
 In this part, we're going to learn how to output messages to the GUI console, find a UObject by name, and output that name to the GUI console.
 1. Add `#include <DynamicOutput/DynamicOutput.hpp>` under `#include <Mod/CppUserModBase.hpp>`.  

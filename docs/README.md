@@ -6,7 +6,7 @@ Lua scripting system platform, C++ Modding API, SDK generator, live property edi
 
 - [Lua Scripting API](lua-api.md): Write lua mods based on the UE object system
 - [Blueprint Modloading](feature-overview/blueprint-modloader.md): Spawn blueprint mods automatically without editing/replacing game files
-- [C++ Modding API](feature-overview/cpp-sdk.md): Write C++ mods based on the UE object system
+- [C++ Modding API](./guides/creating-a-c%2B%2B-mod.md): Write C++ mods based on the UE object system
 - [Live Property Viewer and Editor](feature-overview/live-view.md): Search, view, edit & watch the properties of every loaded object, great for debugging mods or figuring out how values are changed during runtime
 - [UHT Dumper](feature-overview/dumpers.md#unreal-header-tool-uht-dumper): Generate Unreal Header Tool compatible C++ headers for creating a mirror .uproject for your game
 - [C++ Header Dumper](feature-overview/dumpers.md#c-header-generator): Generate standard C++ headers from reflected classes and blueprints, with offsets

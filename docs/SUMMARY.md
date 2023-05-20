@@ -3,7 +3,6 @@
 [Home](./README.md)
 - [FeatureOverview]()
   - [Blueprint Modloading](./feature-overview/blueprint-modloader.md)
-  - [C++ Modding API](./feature-overview/cpp-sdk.md)
   - [Live Property Viewer and Editor](./feature-overview/live-view.md)
   - [Dumpers](./feature-overview/dumpers.md)
   - [Universal UE Mods](./feature-overview/universal-mods.md)

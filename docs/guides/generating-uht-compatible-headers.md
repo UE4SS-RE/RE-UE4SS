@@ -8,7 +8,7 @@ While the UHT header generator is only officially supported in `4.25+`, it has w
 
 The key bind to generate headers is by default `CTRL` + `Numpad 9`, and it can be changed in `Mods/Keybinds/Scripts/main.lua`.
 
-To utilize the generated headers to their full potential, see [UE4GameProjectGenerator](https://github.com/Archengius/UE4GameProjectGenerator) by Archengius. 
+To utilize the generated headers to their full potential, see [UE4GameProjectGenerator](https://github.com/Buckminsterfullerene02/UE4GameProjectGenerator) by Archengius (link to Buck's fork because of a couple fixes that Arch is too lazy to merge).
 > The project generator only works in `>4.25`. If generating a project for an older engine version, generate it by compiling the project generator for `4.25+`.
 
 Before compiling the projectgencommandlet, open `GameProjectGenerator.uproject` and your game's pluginmanifest or `.uproject` and add any default engine plugins used by the game or plugins that the game uses and you found open source or purchased (it is not recommended to include purchased plugins in a public uproject) to the commandlet's uproject file.
@@ -17,13 +17,7 @@ After compiling the commandlet and running it on your game files, simply change 
 
 ![image](https://user-images.githubusercontent.com/73571427/184372672-60d8579e-51c3-4d1e-9839-73af5d96ff21.png)
 
-This [commandlet](https://github.com/bananaturtlesandwich/UE4-Mod-Tools/releases/tag/UE4ProjectGen-GUI) will enter the CLI commands for the project gen for you, and make a batch file to regenerate with the same settings (e.g., to regenerate after a major game update). 
-
-## Recommended settings:
-
-It is recommended to use the override settings in UE4SS to make your project more powerful. If you want the property/class to be accurate to the dev's version instead, it is recommended to at least use the `MakeEnumClassesBlueprintType` override, though some enums may need to be changed afterwards.
-
-![UHTOverrides](../../images/UHTOverrides.png)
+This [commandlet](https://cdn.discordapp.com/attachments/916076851842146317/1063891086919090317/UE4ProjectGen-GUI.exe) will enter the CLI commands for the project gen for you, and make a batch file to regenerate with the same settings (e.g., to regenerate after a major game update). 
 
 ## Possible inaccurate generation issues:
 
