@@ -77,7 +77,7 @@ Within the first set of brackets is the location in memory where the object or p
 | Letters | Meaning | UE Member Variable |
 |---------|--------------------|---------|
 | n       | Name of an object/property                                    | NamePrivate              |
-| c       | Class of the object/property/enum value                       | ClassPrivate/FFieldClass |
+| c       | Class of the object/property/enum value                       | ClassPrivate             |
 | or      | Outer of the object                                           | OuterPrivate             | 
 | o       | Offset of a property value in an object                       | Offset_Internal          |
 | owr     | Owner of an FField, 4.25+ only                                | Owner                    |
