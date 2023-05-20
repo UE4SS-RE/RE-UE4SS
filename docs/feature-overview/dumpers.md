@@ -73,6 +73,7 @@ Example output:
 ```
 There are multiple sets of opening & closing square brackets and each set has a different meaning and the letters in this table explains what they mean.  
 Within the first set of brackets is the location in memory where the object or property is stored.
+
 | Letters | Meaning | UE Member Variable |
 |---------|--------------------|---------|
 | n       | Name of an object/property                                    | NamePrivate              |
