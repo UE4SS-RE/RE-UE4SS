@@ -209,6 +209,7 @@ namespace RC
             Output::send(STR("root directory: {}\n"), m_root_directory.c_str());
             Output::send(STR("working directory: {}\n"), m_working_directory.c_str());
             Output::send(STR("game executable directory: {}\n"), m_game_executable_directory.c_str());
+            Output::send(STR("game executable: {} ({} bytes)\n\n\n"), m_game_path_and_exe_name.c_str(), std::filesystem::file_size(m_game_path_and_exe_name));
             Output::send(STR("mods directory: {}\n"), m_mods_directory.c_str());
             Output::send(STR("log directory: {}\n"), m_log_directory.c_str());
             Output::send(STR("object dumper directory: {}\n\n\n"), m_object_dumper_output_directory.c_str());
