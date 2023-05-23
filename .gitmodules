@@ -6,10 +6,6 @@
 	path = Dependencies/PolyHook_2_0
 	url = git@github.com:stevemk14ebr/PolyHook_2_0.git
 	branch = main
-[submodule "Dependencies/fmt"]
-	path = Dependencies/fmt
-	url = git@github.com:fmtlib/fmt.git
-	branch = master
 [submodule "Dependencies/zydis"]
 	path = Dependencies/zydis
 	url = git@github.com:zyantific/zydis.git
