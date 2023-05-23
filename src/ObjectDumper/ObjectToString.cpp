@@ -192,7 +192,7 @@ namespace RC::ObjectDumper
         property_trivial_dump_to_string(p_this, out_line);
 
         FDelegateProperty* p_typed_this = static_cast<FDelegateProperty*>(p_this);
-        out_line.append(std::format(L" [df: {:016X}]", reinterpret_cast<uintptr_t>(p_typed_this->GetFunctionSignature())));
+        out_line.append(std::format(L" [df: {:016X}]", reinterpret_cast<uintptr_t>(p_typed_this->GetSignatureFunction())));
     }
 
     auto fieldpathproperty_to_string(void* p_this, std::wstring& out_line) -> void
@@ -216,7 +216,7 @@ namespace RC::ObjectDumper
         property_trivial_dump_to_string(p_this, out_line);
 
         FMulticastDelegateProperty* p_typed_this = static_cast<FMulticastDelegateProperty*>(p_this);
-        out_line.append(std::format(L" [df: {:016X}]", reinterpret_cast<uintptr_t>(p_typed_this->GetFunctionSignature())));
+        out_line.append(std::format(L" [df: {:016X}]", reinterpret_cast<uintptr_t>(p_typed_this->GetSignatureFunction())));
     }
 
     auto objectproperty_to_string(void* p_this, std::wstring& out_line) -> void

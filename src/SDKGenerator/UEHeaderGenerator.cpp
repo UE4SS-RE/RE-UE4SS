@@ -1982,7 +1982,7 @@ namespace RC::UEGenerator
         if (field_class_name == STR("DelegateProperty"))
         {
             FDelegateProperty* delegate_property = static_cast<FDelegateProperty*>(property);
-            UFunction* delegate_signature_function = delegate_property->GetFunctionSignature();
+            UFunction* delegate_signature_function = delegate_property->GetSignatureFunction();
             if (!delegate_signature_function)
             {
                 throw std::runtime_error{std::format("FunctionSignature is nullptr, cannot deduce function for '{}'\n", to_string(delegate_property->GetFullName()))};
@@ -2000,7 +2000,7 @@ namespace RC::UEGenerator
         if (field_class_name == STR("MulticastInlineDelegateProperty") || field_class_name == STR("MulticastDelegateProperty"))
         {
             FMulticastInlineDelegateProperty* delegate_property = static_cast<FMulticastInlineDelegateProperty*>(property);
-            UFunction* delegate_signature_function = delegate_property->GetFunctionSignature();
+            UFunction* delegate_signature_function = delegate_property->GetSignatureFunction();
             if (!delegate_signature_function)
             {
                 throw std::runtime_error{std::format("FunctionSignature is nullptr, cannot deduce function for '{}'\n", to_string(delegate_property->GetFullName()))};
@@ -2016,7 +2016,7 @@ namespace RC::UEGenerator
         if (field_class_name == STR("MulticastSparseDelegateProperty"))
         {
             FMulticastSparseDelegateProperty* delegate_property = static_cast<FMulticastSparseDelegateProperty*>(property);
-            UFunction* delegate_signature_function = delegate_property->GetFunctionSignature();
+            UFunction* delegate_signature_function = delegate_property->GetSignatureFunction();
             if (!delegate_signature_function)
             {
                 throw std::runtime_error{std::format("FunctionSignature is nullptr, cannot deduce function for '{}'\n", to_string(delegate_property->GetFullName()))};

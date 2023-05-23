@@ -761,15 +761,15 @@ namespace RC::UEGenerator
 
                 if (property->IsA<FDelegateProperty>())
                 {
-                    generator->generate_function_declaration(object_info, generator->make_function_info(object_info, static_cast<FDelegateProperty*>(property)->GetFunctionSignature(), current_class_content), generated_file, content_buffer, IsDelegateFunction::Yes);
+                    generator->generate_function_declaration(object_info, generator->make_function_info(object_info, static_cast<FDelegateProperty*>(property)->GetSignatureFunction(), current_class_content), generated_file, content_buffer, IsDelegateFunction::Yes);
                 }
                 else if (property->IsA<FMulticastInlineDelegateProperty>())
                 {
-                    generator->generate_function_declaration(object_info, generator->make_function_info(object_info, static_cast<FMulticastInlineDelegateProperty*>(property)->GetFunctionSignature(), current_class_content), generated_file, content_buffer, IsDelegateFunction::Yes);
+                    generator->generate_function_declaration(object_info, generator->make_function_info(object_info, static_cast<FMulticastInlineDelegateProperty*>(property)->GetSignatureFunction(), current_class_content), generated_file, content_buffer, IsDelegateFunction::Yes);
                 }
                 else if (property->IsA<FMulticastSparseDelegateProperty>())
                 {
-                    generator->generate_function_declaration(object_info, generator->make_function_info(object_info, static_cast<FMulticastSparseDelegateProperty*>(property)->GetFunctionSignature(), current_class_content), generated_file, content_buffer, IsDelegateFunction::Yes);
+                    generator->generate_function_declaration(object_info, generator->make_function_info(object_info, static_cast<FMulticastSparseDelegateProperty*>(property)->GetSignatureFunction(), current_class_content), generated_file, content_buffer, IsDelegateFunction::Yes);
                 }
 
                 if (UE4SSProgram::settings_manager.CXXHeaderGenerator.KeepMemoryLayout)
