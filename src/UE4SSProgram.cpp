@@ -215,6 +215,20 @@ namespace RC
             Output::send(STR("object dumper directory: {}\n\n\n"), m_object_dumper_output_directory.c_str());
 
             setup_unreal();
+
+            Output::send(STR("Unreal Engine modules ({}):\n"), SigScannerStaticData::m_is_modular ? STR("modular") : STR("non-modular"));
+            auto& main_exe_ptr = SigScannerStaticData::m_modules_info.array[static_cast<size_t>(ScanTarget::MainExe)].lpBaseOfDll;
+            for (size_t i = 0; i < static_cast<size_t>(ScanTarget::Max); ++i)
+            {
+                auto& module = SigScannerStaticData::m_modules_info.array[i];
+                // only log modules with unique addresses (non-modular builds have everything in MainExe)
+                if (i == static_cast<size_t>(ScanTarget::MainExe) || main_exe_ptr != module.lpBaseOfDll)
+                {
+                    auto module_name = to_wstring(ScanTargetToString(i));
+                    Output::send(STR("{} @ {} size={:#x}\n"), module_name.c_str(), module.lpBaseOfDll, module.SizeOfImage);
+                }
+            }
+
             fire_unreal_init_for_cpp_mods();
             setup_unreal_properties();
             UAssetRegistry::SetMaxMemoryUsageDuringAssetLoading(settings_manager.Memory.MaxMemoryUsageDuringAssetLoading);
