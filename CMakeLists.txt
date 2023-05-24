@@ -57,6 +57,15 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_RELEASE ${UE4SS_OUTPUT_RELEASE_DIR})
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY_RELEASE ${UE4SS_OUTPUT_RELEASE_DIR})
 # Output path -> END
 
+# UE4SS
+# Options -> START
+option(UE4SS_WITH_CASE_PRESERVING_NAME "Use case-preserving FNames" OFF)
+
+if (UE4SS_WITH_CASE_PRESERVING_NAME)
+    add_definitions(-DWITH_CASE_PRESERVING_NAME)
+endif()
+# Options-> END
+
 # Very temporary fix for ninja/clang thinking we should use MSVC simulation
 unset(CMAKE_CXX_SIMULATE_ID)
 
@@ -177,24 +186,6 @@ add_subdirectory("Dependencies/ParserBase")
 add_subdirectory("Dependencies/IniParser")
 add_subdirectory("Dependencies/JSON")
 add_subdirectory("Dependencies/ArgsParser")
-
-# UE4SS
-# Settings override -> START
-# Used for external manipulation until the entire cmake file has been redone
-# An external tool may create these files before running cmake to alter build options
-# The external tool must also remove these files after it's done running as to not interfere with the normal build process
-if (${FORCE_WITH_CASE_PRESERVING_NAME} MATCHES 0)
-    if (EXISTS "${UE4SS_GENERATED_SOURCE_DIR}/enable_with_case_preserving.build_option")
-        message("WITH_CASE_PRESERVING_NAME overridden to 1 by '${UE4SS_GENERATED_SOURCE_DIR}/enable_with_case_preserving.build_option'")
-        set(WITH_CASE_PRESERVING_NAME 1)
-    elseif (EXISTS "${UE4SS_GENERATED_SOURCE_DIR}/disable_with_case_preserving.build_option")
-        message("WITH_CASE_PRESERVING_NAME overridden to 0 by '${UE4SS_GENERATED_SOURCE_DIR}/disable_with_case_preserving.build_option'")
-        set(WITH_CASE_PRESERVING_NAME 0)
-    endif ()
-else()
-    set(WITH_CASE_PRESERVING_NAME 1)
-endif ()
-# Settings override -> END
 
 # Version override -> START
 file(READ ${UE4SS_GENERATED_SOURCE_DIR}/version.cache UE4SS_LIB_VERSION)
