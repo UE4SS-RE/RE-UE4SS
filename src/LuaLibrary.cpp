@@ -9,6 +9,65 @@
 #include <Unreal/UnrealInitializer.hpp>
 #include <Unreal/FOutputDevice.hpp>
 
+#ifdef UE4SS_USE_SOL
+namespace RC::LuaLibrary
+{
+    auto get_outputdevice_ref(const LuaMadeSimple::Lua& lua) -> const Unreal::FOutputDevice*
+    {
+        return nullptr;
+    }
+
+    auto set_outputdevice_ref(const LuaMadeSimple::Lua& lua, Unreal::FOutputDevice* output_device) -> void
+    {
+    }
+
+    auto global_print(const LuaMadeSimple::Lua& lua) -> int
+    {
+        return 0;
+    }
+
+    auto deref_to_int32(const LuaMadeSimple::Lua& lua) -> int
+    {
+        return 0;
+    }
+
+    static auto error_handler_for_exported_functions(std::string_view e) -> void
+    {
+    }
+
+    static auto exported_function_status_to_string(ExportedFunctionStatus status) -> std::wstring_view
+    {
+        return L"";
+    }
+
+    auto get_lua_state_by_mod_name(const char* mod_name) -> lua_State*
+    {
+        return nullptr;
+    };
+
+    auto execute_lua_in_mod(const char* mod_name, const char* script, char* output_buffer) -> const char*
+    {
+        return "";
+    };
+
+    auto set_script_variable_int32(const char* mod_name, const char* variable_name, int32_t new_value, ReturnValue& return_struct) -> void
+    {
+    }
+
+    auto set_script_variable_default_data([[maybe_unused]] const char* mod_name, [[maybe_unused]] const char* variable_name, [[maybe_unused]] DefaultDataStruct& external_data, ReturnValue& return_struct) -> void
+    {
+    }
+
+    auto call_script_function(const char* mod_name, const char* function_name, ReturnValue& return_struct, ScriptFuncReturnValue& script_return_struct) -> void
+    {
+    }
+
+    auto is_ue4ss_initialized() -> bool
+    {
+        return Unreal::UnrealInitializer::StaticStorage::bIsInitialized;
+    }
+}
+#else
 namespace RC::LuaLibrary
 {
     auto get_outputdevice_ref(const LuaMadeSimple::Lua& lua) -> const Unreal::FOutputDevice*
@@ -419,3 +478,4 @@ namespace RC::LuaLibrary
         return Unreal::UnrealInitializer::StaticStorage::bIsInitialized;
     }
 }
+#endif

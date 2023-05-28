@@ -14,7 +14,7 @@
 #include <Unreal/TArray.hpp>
 #include <Input/Handler.hpp>
 #include <Mod/Mod.hpp>
-#include <Mod/LuaMod.hpp>
+//#include <Mod/LuaMod.hpp>
 #include <LuaLibrary.hpp>
 #include <DynamicOutput/DynamicOutput.hpp>
 #include <GUI/GUI.hpp>
@@ -31,6 +31,11 @@
     ImGui::SetAllocatorFunctions(alloc_func, free_func, user_data); \
 }
 
+#define LuaModType SolMod
+#if LuaModType == SolMod
+    #define UE4SS_USE_SOL
+#endif
+
 namespace RC
 {
     namespace Unreal
@@ -46,15 +51,17 @@ namespace RC
         class ConsoleDevice;
     }
 
+    class SolMod;
+
     struct RecognizableStruct
     {
         // Sha1 hash with no salt: "RecognizableString"
         char recognizable_string[41]{"81acd41b7490f7b70ec6455657855733e21d7c0e"};
 
-        LuaLibrary::SetScriptVariableInt32Signature set_script_variable_int32_function;
-        LuaLibrary::SetScriptVariableDefaultDataSignature set_script_variable_default_data_function;
-        LuaLibrary::CallScriptFunctionSignature call_script_function_function;
-        LuaLibrary::IsUE4SSInitializedSignature is_ue4ss_initialized_function;
+        //LuaLibrary::SetScriptVariableInt32Signature set_script_variable_int32_function;
+        //LuaLibrary::SetScriptVariableDefaultDataSignature set_script_variable_default_data_function;
+        //LuaLibrary::CallScriptFunctionSignature call_script_function_function;
+        //LuaLibrary::IsUE4SSInitializedSignature is_ue4ss_initialized_function;
 
         // Ensure that we have zero-initialized memory at the end of the struct
         // This means that we can reliably check whether a function exists externally
@@ -145,7 +152,6 @@ namespace RC
         auto load_unreal_offsets_from_file() -> void;
         auto share_lua_functions() -> void;
         auto on_program_start() -> void;
-        auto setup_unreal_properties() -> void;
 
     protected:
         auto update() -> void;
@@ -190,8 +196,9 @@ namespace RC
 
     public:
         // API pass-through for use outside the private scope of UE4SSProgram
-        RC_UE4SS_API auto register_keydown_event(Input::Key, const Input::EventCallbackCallable&, uint8_t custom_data = 0) -> void;
-        RC_UE4SS_API auto register_keydown_event(Input::Key, const Input::Handler::ModifierKeyArray&, const Input::EventCallbackCallable&, uint8_t custom_data = 0) -> void;
+        RC_UE4SS_API auto get_events() -> std::vector<Input::KeySet>&;
+        RC_UE4SS_API auto register_keydown_event(Input::Key, const Input::EventCallbackCallable&, uintptr_t custom_data = 0) -> void;
+        RC_UE4SS_API auto register_keydown_event(Input::Key, const Input::Handler::ModifierKeyArray&, const Input::EventCallbackCallable&, uintptr_t custom_data = 0) -> void;
         RC_UE4SS_API auto is_keydown_event_registered(Input::Key) -> bool;
         RC_UE4SS_API auto is_keydown_event_registered(Input::Key, const Input::Handler::ModifierKeyArray&) -> bool;
 
@@ -203,8 +210,8 @@ namespace RC
         static auto dump_all_objects_and_properties(const File::StringType& output_path_and_file_name) -> void;
         RC_UE4SS_API static auto find_mod_by_name(std::wstring_view mod_name, IsInstalled = IsInstalled::No, IsStarted = IsStarted::No) -> Mod*;
         RC_UE4SS_API static auto find_mod_by_name(std::string_view mod_name, IsInstalled = IsInstalled::No, IsStarted = IsStarted::No) -> Mod*;
-        RC_UE4SS_API static auto find_lua_mod_by_name(std::wstring_view mod_name, IsInstalled = IsInstalled::No, IsStarted = IsStarted::No) -> LuaMod*;
-        RC_UE4SS_API static auto find_lua_mod_by_name(std::string_view mod_name, IsInstalled = IsInstalled::No, IsStarted = IsStarted::No) -> LuaMod*;
+        RC_UE4SS_API static auto find_lua_mod_by_name(std::wstring_view mod_name, IsInstalled = IsInstalled::No, IsStarted = IsStarted::No) -> LuaModType*;
+        RC_UE4SS_API static auto find_lua_mod_by_name(std::string_view mod_name, IsInstalled = IsInstalled::No, IsStarted = IsStarted::No) -> LuaModType*;
         static auto static_cleanup() -> void;
         RC_UE4SS_API static auto get_program() -> UE4SSProgram&
         {

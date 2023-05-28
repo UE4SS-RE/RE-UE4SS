@@ -13,9 +13,18 @@ if %Compiler% == MSVC (
     if not exist "VS_Solution" (
         mkdir "VS_Solution"
     )
-    
+
     cd internal_build_tools
     call generate_vs_solution_internal.bat %BuildMode%
+)
+
+if %Compiler% == ClangMSVC (
+    if not exist "ClangMSVC" (
+        mkdir "ClangMSVC"
+    )
+    
+    cd internal_build_tools
+    call generate_clang_msvc_internal.bat %BuildMode%
 )
 
 if %Compiler% == ClangNinja (

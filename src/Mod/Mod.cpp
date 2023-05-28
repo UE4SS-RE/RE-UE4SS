@@ -8,7 +8,7 @@
 #include <limits>
 
 #include <Mod/Mod.hpp>
-#include <Mod/LuaMod.hpp>
+//#include <Mod/LuaMod.hpp>
 #include <Helpers/Format.hpp>
 #include <Helpers/String.hpp>
 #include <ExceptionHandling.hpp>

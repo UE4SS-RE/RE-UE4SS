@@ -65,6 +65,8 @@ namespace RC::Input
     {
         if (!is_program_focused()) { return; }
 
+        std::lock_guard<std::recursive_mutex> guard{m_key_set_mutex};
+
         std::vector<EventCallbackCallable> callbacks_to_call{};
 
         bool skip_this_frame = !get_allow_input();
@@ -144,7 +146,7 @@ namespace RC::Input
         }
     }
 
-    auto Handler::register_keydown_event(Input::Key key, EventCallbackCallable callback, uint8_t custom_data) -> void
+    auto Handler::register_keydown_event(Input::Key key, EventCallbackCallable callback, uintptr_t custom_data) -> void
     {
         KeySet& key_set = [&]() -> KeySet& {
             for (auto& key_set : m_key_sets)
@@ -163,7 +165,7 @@ namespace RC::Input
         key_data.custom_data = custom_data;
     }
 
-    auto Handler::register_keydown_event(Input::Key key, const ModifierKeyArray& modifier_keys, const EventCallbackCallable& callback, uint8_t custom_data) -> void
+    auto Handler::register_keydown_event(Input::Key key, const ModifierKeyArray& modifier_keys, const EventCallbackCallable& callback, uintptr_t custom_data) -> void
     {
         KeySet& key_set = [&]() -> KeySet& {
             for (auto& key_set : m_key_sets)

@@ -30,10 +30,8 @@
 #include <Timer/FunctionTimer.hpp>
 #include <SigScanner/SinglePassSigScanner.hpp>
 #include <Mod/Mod.hpp>
-#include <Mod/LuaMod.hpp>
 #include <Mod/CppMod.hpp>
-#include <LuaType/LuaUObject.hpp>
-#include <LuaType/LuaCustomProperty.hpp>
+#include <Mod/SolMod.hpp>
 #include <LuaLibrary.hpp>
 #include <SDKGenerator/Generator.hpp>
 #include <SDKGenerator/UEHeaderGenerator.hpp>
@@ -230,7 +228,6 @@ namespace RC
             }
 
             fire_unreal_init_for_cpp_mods();
-            setup_unreal_properties();
             UAssetRegistry::SetMaxMemoryUsageDuringAssetLoading(settings_manager.Memory.MaxMemoryUsageDuringAssetLoading);
 
             output_all_member_offsets();
@@ -293,7 +290,11 @@ namespace RC
         std::filesystem::path game_exe_path = exe_path_buffer;
         std::filesystem::path game_directory_path = game_exe_path.parent_path();
         m_working_directory = m_root_directory;
+        #ifdef UE4SS_USE_SOL
+        m_mods_directory = m_working_directory / "Mods_sol";
+        #else
         m_mods_directory = m_working_directory / "Mods";
+        #endif
         m_game_executable_directory = game_directory_path/*game_exe_path.parent_path()*/;
         m_settings_path_and_file = m_root_directory;
         m_game_path_and_exe_name = game_exe_path;
@@ -307,7 +308,11 @@ namespace RC
             {
                 m_has_game_specific_config = true;
                 m_working_directory = item.path();
+                #ifdef UE4SS_USE_SOL
+                m_mods_directory = item.path().wstring() + L"\\Mods_sol";
+                #else
                 m_mods_directory = item.path().wstring() + L"\\Mods";
+                #endif
                 m_settings_path_and_file = std::move(item.path());
                 m_log_directory = m_working_directory;
                 m_object_dumper_output_directory = m_working_directory;
@@ -447,7 +452,7 @@ namespace RC
         }
 
         // If any Lua scripts are found, add overrides so that the Lua script can perform the aob scan instead of the Unreal API itself
-        setup_lua_scan_overrides(m_working_directory, config);
+        //setup_lua_scan_overrides(m_working_directory, config);
 
         // Virtual function offset overrides
         TRY([&]() {
@@ -652,10 +657,10 @@ namespace RC
 
     auto UE4SSProgram::share_lua_functions() -> void
     {
-        m_shared_functions.set_script_variable_int32_function = &LuaLibrary::set_script_variable_int32;
-        m_shared_functions.set_script_variable_default_data_function = &LuaLibrary::set_script_variable_default_data;
-        m_shared_functions.call_script_function_function = &LuaLibrary::call_script_function;
-        m_shared_functions.is_ue4ss_initialized_function = &LuaLibrary::is_ue4ss_initialized;
+        //m_shared_functions.set_script_variable_int32_function = &LuaLibrary::set_script_variable_int32;
+        //m_shared_functions.set_script_variable_default_data_function = &LuaLibrary::set_script_variable_default_data;
+        //m_shared_functions.call_script_function_function = &LuaLibrary::call_script_function;
+        //m_shared_functions.is_ue4ss_initialized_function = &LuaLibrary::is_ue4ss_initialized;
         Output::send(STR("m_shared_functions: {}\n"), static_cast<void*>(&m_shared_functions));
     }
 
@@ -727,7 +732,7 @@ namespace RC
             }
 
             install_lua_mods();
-            LuaMod::on_program_start();
+            LuaModType::on_program_start();
             fire_program_start_for_cpp_mods();
             start_lua_mods();
         });
@@ -799,32 +804,6 @@ namespace RC
         Output::send(STR("Event loop end\n"));
     }
 
-    auto UE4SSProgram::setup_unreal_properties() -> void
-    {
-        LuaType::StaticState::m_property_value_pushers.emplace(FName(L"ObjectProperty").GetComparisonIndex(), &LuaType::push_objectproperty);
-        LuaType::StaticState::m_property_value_pushers.emplace(FName(L"ClassProperty").GetComparisonIndex(), &LuaType::push_classproperty);
-        LuaType::StaticState::m_property_value_pushers.emplace(FName(L"Int8Property").GetComparisonIndex(), &LuaType::push_int8property);
-        LuaType::StaticState::m_property_value_pushers.emplace(FName(L"Int16Property").GetComparisonIndex(), &LuaType::push_int16property);
-        LuaType::StaticState::m_property_value_pushers.emplace(FName(L"IntProperty").GetComparisonIndex(), &LuaType::push_intproperty);
-        LuaType::StaticState::m_property_value_pushers.emplace(FName(L"Int64Property").GetComparisonIndex(), &LuaType::push_int64property);
-        LuaType::StaticState::m_property_value_pushers.emplace(FName(L"ByteProperty").GetComparisonIndex(), &LuaType::push_byteproperty);
-        LuaType::StaticState::m_property_value_pushers.emplace(FName(L"UInt16Property").GetComparisonIndex(), &LuaType::push_uint16property);
-        LuaType::StaticState::m_property_value_pushers.emplace(FName(L"UInt32Property").GetComparisonIndex(), &LuaType::push_uint32property);
-        LuaType::StaticState::m_property_value_pushers.emplace(FName(L"UInt64Property").GetComparisonIndex(), &LuaType::push_uint64property);
-        LuaType::StaticState::m_property_value_pushers.emplace(FName(L"StructProperty").GetComparisonIndex(), &LuaType::push_structproperty);
-        LuaType::StaticState::m_property_value_pushers.emplace(FName(L"ArrayProperty").GetComparisonIndex(), &LuaType::push_arrayproperty);
-        LuaType::StaticState::m_property_value_pushers.emplace(FName(L"FloatProperty").GetComparisonIndex(), &LuaType::push_floatproperty);
-        LuaType::StaticState::m_property_value_pushers.emplace(FName(L"DoubleProperty").GetComparisonIndex(), &LuaType::push_doubleproperty);
-        LuaType::StaticState::m_property_value_pushers.emplace(FName(L"BoolProperty").GetComparisonIndex(), &LuaType::push_boolproperty);
-        LuaType::StaticState::m_property_value_pushers.emplace(FName(L"EnumProperty").GetComparisonIndex(), &LuaType::push_enumproperty);
-        LuaType::StaticState::m_property_value_pushers.emplace(FName(L"WeakObjectProperty").GetComparisonIndex(), &LuaType::push_weakobjectproperty);
-        LuaType::StaticState::m_property_value_pushers.emplace(FName(L"NameProperty").GetComparisonIndex(), &LuaType::push_nameproperty);
-        LuaType::StaticState::m_property_value_pushers.emplace(FName(L"TextProperty").GetComparisonIndex(), &LuaType::push_textproperty);
-        LuaType::StaticState::m_property_value_pushers.emplace(FName(L"StrProperty").GetComparisonIndex(), &LuaType::push_strproperty);
-        LuaType::StaticState::m_property_value_pushers.emplace(FName(L"SoftClassProperty").GetComparisonIndex(), &LuaType::push_softclassproperty);
-        LuaType::StaticState::m_property_value_pushers.emplace(FName(L"InterfaceProperty").GetComparisonIndex(), &LuaType::push_interfaceproperty);
-    }
-
     auto UE4SSProgram::setup_mods() -> void
     {
         Output::send(STR("Setting up mods...\n"));
@@ -859,7 +838,7 @@ namespace RC
             else
             {
                 // Create the mod but don't install it yet
-                if (std::filesystem::exists(sub_directory.path() / "scripts")) m_mods.emplace_back(std::make_unique<LuaMod>(*this, sub_directory.path().stem().wstring(), sub_directory.path().wstring()));
+                if (std::filesystem::exists(sub_directory.path() / "scripts")) m_mods.emplace_back(std::make_unique<LuaModType>(*this, sub_directory.path().stem().wstring(), sub_directory.path().wstring()));
                 if (std::filesystem::exists(sub_directory.path() / "dlls")) m_mods.emplace_back(std::make_unique<CppMod>(*this, sub_directory.path().stem().wstring(), sub_directory.path().wstring()));
             }
         }
@@ -906,7 +885,7 @@ namespace RC
 
     auto UE4SSProgram::install_lua_mods() -> void
     {
-        install_mods<LuaMod>(m_mods);
+        install_mods<LuaModType>(m_mods);
     }
     
     auto UE4SSProgram::fire_unreal_init_for_cpp_mods() -> void
@@ -966,7 +945,7 @@ namespace RC
 
                 if (!mod_enabled.empty() && mod_enabled[0] == L'1')
                 {
-                    Output::send(STR("Starting {} mod '{}'\n"), std::is_same_v<ModType, LuaMod> ? STR("Lua") : STR("C++"), mod->get_name().data());
+                    Output::send(STR("Starting {} mod '{}'\n"), std::is_same_v<ModType, LuaModType> ? STR("Lua") : STR("C++"), mod->get_name().data());
                     mod->start_mod();
                 }
                 else
@@ -1008,7 +987,7 @@ namespace RC
 
     auto UE4SSProgram::start_lua_mods() -> void
     {
-        auto error_message = start_mods<LuaMod>();
+        auto error_message = start_mods<LuaModType>();
         if (!error_message.empty()) { set_error(error_message.c_str()); }
     }
 
@@ -1026,8 +1005,8 @@ namespace RC
             mod->uninstall();
         }
 
+        LuaModType::global_uninstall();
         m_mods.clear();
-        LuaMod::global_uninstall();
     }
 
     auto UE4SSProgram::reinstall_mods() -> void
@@ -1039,34 +1018,9 @@ namespace RC
 
         uninstall_mods();
 
-        // Remove key binds that were set from Lua scripts
-        auto& key_events = m_input_handler.get_events();
-        std::erase_if(key_events, [](Input::KeySet& input_event) -> bool {
-            bool were_all_events_registered_from_lua = true;
-            for (auto&[key, vector_of_key_data] : input_event.key_data)
-            {
-                std::erase_if(vector_of_key_data, [&](Input::KeyData& key_data) -> bool {
-                    if (key_data.custom_data == 1)
-                    {
-                        return true;
-                    }
-                    else
-                    {
-                        were_all_events_registered_from_lua = false;
-                        return false;
-                    }
-                });
-            }
-
-            return were_all_events_registered_from_lua;
-        });
-
         // Remove all custom properties
         // Uncomment when custom properties are working
-        LuaType::LuaCustomProperty::StaticStorage::property_list.clear();
-
-        // Reset the Lua callbacks for the global Lua function 'NotifyOnNewObject'
-        LuaMod::m_static_construct_object_lua_callbacks.clear();
+        //LuaType::LuaCustomProperty::StaticStorage::property_list.clear();
 
         // Start processing events again as everything is now properly setup
         // Do this before mods are started or else you won't be able to use the hot-reload key bind if there's an error from Lua
@@ -1195,12 +1149,17 @@ namespace RC
         return m_queued_events.empty();
     }
 
-    auto UE4SSProgram::register_keydown_event(Input::Key key, const Input::EventCallbackCallable& callback, uint8_t custom_data) -> void
+    auto UE4SSProgram::get_events() -> std::vector<Input::KeySet>&
+    {
+        return m_input_handler.get_events();
+    }
+
+    auto UE4SSProgram::register_keydown_event(Input::Key key, const Input::EventCallbackCallable& callback, uintptr_t custom_data) -> void
     {
         m_input_handler.register_keydown_event(key, callback, custom_data);
     }
 
-    auto UE4SSProgram::register_keydown_event(Input::Key key, const Input::Handler::ModifierKeyArray& modifier_keys, const Input::EventCallbackCallable& callback, uint8_t custom_data) -> void
+    auto UE4SSProgram::register_keydown_event(Input::Key key, const Input::Handler::ModifierKeyArray& modifier_keys, const Input::EventCallbackCallable& callback, uintptr_t custom_data) -> void
     {
         m_input_handler.register_keydown_event(key, modifier_keys, callback, custom_data);
     }
@@ -1244,14 +1203,14 @@ namespace RC
         return find_mod_by_name(to_wstring(mod_name), installed_only, is_started);
     }
 
-    auto UE4SSProgram::find_lua_mod_by_name(std::string_view mod_name, UE4SSProgram::IsInstalled installed_only, IsStarted is_started) -> LuaMod*
+    auto UE4SSProgram::find_lua_mod_by_name(std::string_view mod_name, UE4SSProgram::IsInstalled installed_only, IsStarted is_started) -> LuaModType*
     {
-        return dynamic_cast<LuaMod*>(find_mod_by_name(mod_name, installed_only, is_started));
+        return dynamic_cast<LuaModType*>(find_mod_by_name(mod_name, installed_only, is_started));
     }
 
-    auto UE4SSProgram::find_lua_mod_by_name(std::wstring_view mod_name, UE4SSProgram::IsInstalled installed_only, IsStarted is_started) -> LuaMod*
+    auto UE4SSProgram::find_lua_mod_by_name(std::wstring_view mod_name, UE4SSProgram::IsInstalled installed_only, IsStarted is_started) -> LuaModType*
     {
-        return dynamic_cast<LuaMod*>(find_mod_by_name(mod_name, installed_only, is_started));
+        return dynamic_cast<LuaModType*>(find_mod_by_name(mod_name, installed_only, is_started));
     }
 
     auto UE4SSProgram::get_object_dumper_output_directory() -> const File::StringType

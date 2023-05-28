@@ -8,6 +8,7 @@
 #include <vector>
 #include <functional>
 #include <unordered_map>
+#include <mutex>
 
 #include <Input/Common.hpp>
 #include <Input/KeyDef.hpp>
@@ -22,7 +23,7 @@ namespace RC::Input
     {
         std::vector<ModifierKey> required_modifier_keys{};
         std::vector<EventCallbackCallable> callbacks{};
-        uint8_t custom_data{};
+        uintptr_t custom_data{};
         bool requires_modifier_keys{};
         bool is_down{};
     };
@@ -38,6 +39,7 @@ namespace RC::Input
         std::vector<const wchar_t*> m_active_window_classes{};
         std::vector<KeySet> m_key_sets{};
         std::unordered_map<ModifierKey, bool> m_modifier_keys_down{};
+        std::recursive_mutex m_key_set_mutex{};
         bool m_any_keys_are_down{};
         bool m_allow_input{true};
 
@@ -75,10 +77,10 @@ namespace RC::Input
 
     public:
         auto process_event() -> void;
-        auto register_keydown_event(Input::Key, EventCallbackCallable, uint8_t custom_data = 0) -> void;
+        auto register_keydown_event(Input::Key, EventCallbackCallable, uintptr_t custom_data = 0) -> void;
 
         using ModifierKeyArray = std::array<Input::ModifierKey, max_modifier_keys>;
-        auto register_keydown_event(Input::Key, const ModifierKeyArray&, const EventCallbackCallable&, uint8_t custom_data = 0) -> void;
+        auto register_keydown_event(Input::Key, const ModifierKeyArray&, const EventCallbackCallable&, uintptr_t custom_data = 0) -> void;
 
         auto is_keydown_event_registered(Input::Key) -> bool;
         auto is_keydown_event_registered(Input::Key, const ModifierKeyArray&) -> bool;
