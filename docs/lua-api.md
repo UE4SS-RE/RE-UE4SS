@@ -8,7 +8,7 @@ Current status: **incomplete**.
 
 ## Full API Overview
 
-This is an overall list of API definitions available in UE4SS. For more readable information, see the individual API definition pages in the collapsible sections 3.1, 3.2 and 3.3.
+This is an overall list of API definitions available in UE4SS. For more readable information, see the individual API definition pages in the collapsible sections 4.1, 4.2 and 4.3.
 
 ### Table Definitions
 - The definitions appear as: FieldName | FieldValueType

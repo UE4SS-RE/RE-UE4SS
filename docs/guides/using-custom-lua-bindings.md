@@ -8,7 +8,7 @@ Simply open the Dumpers tab in the GUI console window and hit the "Dump Lua Bind
 
 The generator will place the files into the `Mods/shared/types` folder. 
 
-## Using Custom Lua Bindings
+## To Use Bindings
 
 I recommend using Visual Studio Code to do your Lua development. You can install the extension just called "Lua" by sumneko.
 
@@ -39,5 +39,5 @@ local numMissions = biome.NumMissions
 
 ---@type FVector
 local soundCoords = { 420.5, 69.0, 3.1 }
-biome:GetSoundCoordinate(soundCoords)
+biome:SetSoundCoordinate(soundCoords)
 ```

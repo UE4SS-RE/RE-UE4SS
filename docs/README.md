@@ -1,6 +1,6 @@
 # Unreal Engine 4/5 Scripting System
 
-Lua scripting system platform, C++ Modding API, SDK generator, live property editor and other dumping utilities for UE4/5 games. 
+Lua scripting system platform, C++ Modding API, SDK generator, blueprint mod loader, live property editor and other dumping utilities for UE4/5 games. 
 
 ## Major features
 
@@ -15,7 +15,7 @@ Lua scripting system platform, C++ Modding API, SDK generator, live property edi
 - [UMAP Recreation Dumper](feature-overview/dumpers.md#umap-recreation-dumper): Dump all loaded actors to file to generate `.umaps` in-editor
 - Other Features, including [Experimental](feature-overview/experimental.md) features at times 
 
-## Targeting UE Versions: From 4.12 To 5.1
+## Targeting UE Versions: From 4.12 To 5.2
 
 The goal of UE4SS is not to be a plug-n-play solution that always works with every game.  
 The goal is to have an underlying system that works for most games.  
@@ -23,20 +23,23 @@ You may need to update AOBs on your own, and there's a guide for that below.
 
 ## Basic Installation
 
-The easiest installation is via downloading the xinput version of the latest non-experimental build from [Releases](https://github.com/UE4SS-RE/RE-UE4SS/releases) and extracting the zip content to /{Gameroot}/GameName/Binaries/Win64/.
-If your game is in the custom config list, extract the contents from the relevant folder to Win64 as well.
+The easiest installation is via downloading the xinput version of the latest non-experimental build from [Releases](https://github.com/UE4SS-RE/RE-UE4SS/releases) and extracting the zip content to `/{Gameroot}/GameName/Binaries/Win64/`.
+
+If your game is in the custom config list, extract the contents from the relevant folder to `Win64` as well.
 
 ## Links
 
-  [Full installation guide](https://ue4ss-re.github.io/docs/installation-guide.html)
+  [Full installation guide](installation-guide.md)
   
-  [Fixing compatibility problems](https://ue4ss-re.github.io/docs/guides/fixing-compatibility-problems.html) 
+  [Fixing compatibility problems](./guides/fixing-compatibility-problems.md) 
   
-  [Lua API - Overview](https://ue4ss-re.github.io/docs/lua-api.html)
+  [Lua API - Overview](./lua-api.md)
+
+  [Using Custom Lua Bindings](./guides/using-custom-lua-bindings.md)
   
-  [Generating UHT compatible headers](https://ue4ss-re.github.io/docs/guides/generating-uht-compatible-headers.html)
+  [Generating UHT compatible headers](./guides/generating-uht-compatible-headers.md)
   
-  [Custom Game Configs](https://ue4ss-re.github.io/docs/custom-game-configs.html)
+  [Custom Game Configs](custom-game-configs.md)
   
   [Creating Compatible Blueprint Mods](https://www.youtube.com/watch?v=fB3yT85XhVA)
 
@@ -117,7 +120,10 @@ All contributors since the project became open source: https://github.com/UE4SS-
   - Inspiration for map dumper
 - [**Buckminsterfullerene**](https://github.com/Buckminsterfullerene02/)
   - Rewriting the documentation, various fixes
-
+- **trumank**
+  - Lua bindings generator, various fixes, automation & improvements
+- **localcc**
+  - C++ API
 
 ## Thanks to everyone who helped with testing
 
