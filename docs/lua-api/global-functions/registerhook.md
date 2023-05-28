@@ -12,10 +12,17 @@ Returns two ids, both of which must be passed to `UnregisterHook` if you want to
 
 ## Parameters
 
-| # | Type     | Sub Type    | Information |
-|---|----------|-------------|-------------|
-| 1 | string   |             | Full name of the UFunction to hook. Type prefix has no effect. |
-| 2 | function |             | Callback to execute when the UFunction is executed |
+| # | Type     | Information |
+|---|----------|-------------|
+| 1 | string   | Full name of the UFunction to hook. Type prefix has no effect. |
+| 2 | function | Callback to execute when the UFunction is executed |
+
+## Return Values
+
+| # | Type   | Information |
+|---|--------|-------------|
+| 1 | integer | The PreId of the hook |
+| 2 | integer | The PostId of the hook |
 
 ## Example
 ```lua

@@ -12,6 +12,14 @@ The structure of this array has changed over the years and the `ForEachUObject` 
 |---|----------|-------------|
 | 1 | function | Callback to execute for every UObject in GUObjectArray |
 
+## Callback Parameters
+
+| # | Type     | Information |
+|---|----------|-------------|
+| 1 | UObject  | The UObject |
+| 2 | integer  | The chunk index of the UObject |
+| 3 | integer  | The object index of the UObject |
+
 ## Example
 ```lua
 -- Warning: This will take quite a while to finish executing due to all of the 'print' calls

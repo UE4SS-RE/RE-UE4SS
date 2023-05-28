@@ -21,3 +21,11 @@ This overload mimics [FName::FName](https://docs.unrealengine.com/4.27/en-US/API
 | # | Type  | Information |
 |---|-------|-------------|
 | 1 | FName | FName corresponding to the string or ComparisonIndex & Number combo, if one exists, or the "None" FName if one doesn't exist |
+
+## Example
+
+```lua
+local name = FName("MyName")
+
+print(name) -- MyName
+```

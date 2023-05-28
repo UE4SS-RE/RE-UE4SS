@@ -2,7 +2,11 @@
 
 The `StaticConstructObject` function attempts to construct a UE4 object of some type.
 
-This function mimics the function [StaticConstructObject_Internal](https://docs.unrealengine.com/4.27/en-US/API/Runtime/CoreUObject/UObject/StaticConstructObject_Internal/1/).
+This function mimics the function `StaticConstructObject_Internal`.
+
+Engine versions `>=4.26` maps to [this version](https://docs.unrealengine.com/4.27/en-US/API/Runtime/CoreUObject/UObject/StaticConstructObject_Internal/1/) of the function.
+
+Engine versions `<4.25` maps to [this version](https://docs.unrealengine.com/4.27/en-US/API/Runtime/CoreUObject/UObject/StaticConstructObject_Internal/2/) of the function.
 
 ## Parameters (overload #1)
 

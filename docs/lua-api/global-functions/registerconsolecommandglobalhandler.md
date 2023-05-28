@@ -1,13 +1,15 @@
-# RegisterConsoleCommandHandler
+# RegisterConsoleCommandGlobalHandler
 
-The `RegisterConsoleCommandHandler` function executes the provided Lua function whenever the supplied custom command is entered into the UE console.
+The `RegisterConsoleCommandGlobalHandler` function executes the provided Lua function whenever the supplied custom command is entered into the UE console.
+
+Unlike 'RegisterConsoleCommandHandler', this global variant runs the callback for all contexts.
 
 ## Parameters
 
 | # | Type     | Information |
 |---|----------|-------------|
 | 1 | string   | The name of the custom command |
-| 2 | function | The callback to execute when the custom command is entered into the UE console|
+| 2 | function | The callback to execute when the custom command is entered into the UE console |
 
 ## Callback Parameters
 

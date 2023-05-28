@@ -10,7 +10,6 @@ This function is the recommended way of retrieving non-instance objects such as 
 |---|---------|-------------|
 | 1 | string  | Full name of the object to find, without the type prefix |
 
-
 ## Parameters (overload #2)
 
 The parameters for this overload mimics the `StaticFindObject` function from UE4.  
@@ -30,6 +29,7 @@ For more information see: [Unreal Engine API -> StaticFindObject](https://docs.u
 | 1 | UObject, UClass, or AActor | Object is only valid if an instance was found |
 
 ## Example (overload #1)
+
 ```lua
 local CharacterInstance = StaticFindObject("/Script/Engine.Character")
 if not CharacterInstance:IsValid() then
