@@ -8,7 +8,7 @@ It will execute as soon as the game has time to execute it.
 
 | # | Type     | Information |
 |---|----------|-------------|
-| 1 | function | Callback to execute when the UFunction is executed |
+| 1 | function | Callback to execute when the game has time |
 
 ## Example
 
