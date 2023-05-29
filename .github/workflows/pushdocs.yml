@@ -1,0 +1,44 @@
+name: Push docs to UE4SS-RE/docs
+
+on:
+  push:
+    paths:
+      - 'Release/docs/**'
+      - '3.XDev/docs/**'
+      - 'TestNewDocs/docs/**'
+
+jobs:
+  push_to_repo:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+      - name: Upload docs as artifact
+        uses: actions/upload-artifact@v2
+        with:
+          name: docs
+          path: Release/docs/
+      - name: Upload to main branch
+        if: github.ref == 'refs/heads/Release'
+        uses: ad-m/github-push-action@master
+        with:
+          branch: main
+          repository: UE4SS-RE/docs
+          directory: src
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Upload to dev/src directory
+        if: github.ref == 'refs/heads/3.XDev'
+        uses: ad-m/github-push-action@master
+        with:
+          branch: main
+          repository: UE4SS-RE/docs
+          directory: dev/src
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Upload to dev/src directory
+        if: github.ref == 'refs/heads/TestNewDocs'
+        uses: ad-m/github-push-action@master
+        with:
+            branch: main
+            repository: UE4SS-RE/docs
+            directory: dev/src
+            github_token: ${{ secrets.GITHUB_TOKEN }}
