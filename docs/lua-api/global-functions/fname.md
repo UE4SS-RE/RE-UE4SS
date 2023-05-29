@@ -9,18 +9,20 @@ This overload mimics [FName::FName](https://docs.unrealengine.com/4.27/en-US/API
 | # | Type     | Information |
 |---|----------|-------------|
 | 1 | string   | String that you'd like to get an FName representation of |
+| 2 | EFindName | Finding or adding name type. It can be either `FNAME_Find` or `FNAME_Add`. Default is `FNAME_Find` if not explicitly supplied |
 
 ## Parameters (overload #2)
 
 | # | Type     | Information |
 |---|----------|-------------|
-| 1 | integer  | 64-bit integer, covering both 'ComparisonIndex' and 'Number', that you'd like to get an FName representation of |
+| 1 | integer  | 64-bit integer representing the `ComparisonIndex` part that you'd like to get an FName representation of |
+| 2 | EFindName | Finding or adding name type. It can be either `FNAME_Find` or `FNAME_Add`. Default is `FNAME_Find` if not explicitly supplied |
 
 ## Return Value
 
 | # | Type  | Information |
 |---|-------|-------------|
-| 1 | FName | FName corresponding to the string or ComparisonIndex & Number combo, if one exists, or the "None" FName if one doesn't exist |
+| 1 | FName | FName corresponding to the string or `ComparisonIndex`, if one exists, or the "None" FName if one doesn't exist. If `FNAME_Add` is supplied then it adds the name if it doesn't exist |
 
 ## Example
 

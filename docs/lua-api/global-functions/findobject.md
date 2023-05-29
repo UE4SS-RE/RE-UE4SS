@@ -10,10 +10,10 @@ Overload #2 works the same way as `FindObject` in the [UE source](https://docs.u
 
 | # | Type | Information |
 |---|------|-------------|
-| 1 | string\|FName\|nil | The class name |
-| 2 | string\|FName\|nil | The short object name |
-| 3 | EObjectFlags | The required object flags |
-| 4 | EObjectFlags | The excluded object flags |
+| 1 | string\|FName\|nil | The short name of the class of the object |
+| 2 | string\|FName\|nil | The short name of the object itself |
+| 3 | EObjectFlags | Any flags that the object cannot have. Uses \| as a seperator |
+| 4 | EObjectFlags | Any flags that the object must have. Uses \| as a seperator |
 
 > Param 1 or Param 2 can be nil, but not both.
 
@@ -35,12 +35,13 @@ Overload #2 works the same way as `FindObject` in the [UE source](https://docs.u
 ## Example (overload #1)
 
 ```lua
-local Object = FindObject("/Script/Engine.Character", "Engine.World", EObjectFlags.RF_ClassDefaultObject, EObjectFlags.RF_ClassDefaultObject)
+-- SceneComponent instance called TransformComponent0
+local Object = FindObject("SceneComponent", "TransformComponent0") 
+```
 
-
-if not Object:IsValid() then
-    print("No instance of class 'Character' was found.")
-end
+```lua
+-- FirstPersonCharacter_C instance called FirstPersonCharacter_C_0
+local Object = FindObject("FirstPersonCharacter_C", "FirstPersonCharacter_C_0", EObjectFlags.RF_NoFlags, EObjectFlags.RF_ClassDefaultObject)
 ```
 
 ## Example (overload #2)

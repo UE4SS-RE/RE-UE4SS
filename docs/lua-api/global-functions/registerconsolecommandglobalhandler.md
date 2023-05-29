@@ -2,7 +2,7 @@
 
 The `RegisterConsoleCommandGlobalHandler` function executes the provided Lua function whenever the supplied custom command is entered into the UE console.
 
-Unlike 'RegisterConsoleCommandHandler', this global variant runs the callback for all contexts.
+Unlike `RegisterConsoleCommandHandler`, this global variant runs the callback for all contexts.
 
 ## Parameters
 
@@ -17,6 +17,7 @@ Unlike 'RegisterConsoleCommandHandler', this global variant runs the callback fo
 |---|----------|-------------|
 | 1 | string   | The name of the custom command |
 | 2 | table    | Table containing all parameters |
+| 3 | FOutputDevice | The output device to write to |
 
 ## Callback Return Value
 
@@ -26,7 +27,7 @@ Unlike 'RegisterConsoleCommandHandler', this global variant runs the callback fo
 
 ## Example
 ```lua
-RegisterConsoleCommandHandler("CommandExample", function(FullCommand, Parameters)
+RegisterConsoleCommandGlobalHandler("CommandExample", function(FullCommand, Parameters, OutputDevice)
     print("Custom command callback for 'CommandExample' command executed.\n")
     print(string.format("Full command: %s\n", FullCommand))
     print(string.format("Number of parameters: %i\n", #Parameters))

@@ -9,10 +9,10 @@ To find all objects that match your criteria, set param 1 to `0` or `nil`.
 | # | Type | Information |
 |---|------|-------------|
 | 1 | integer | The number of objects to find |
-| 2 | string\|FName\|nil | The class name to find |
-| 3 | string\|FName\|nil | The short object name to find |
-| 4 | EObjectFlags | The required object flags |
-| 5 | EObjectFlags | The excluded object flags |
+| 1 | string\|FName\|nil | The short name of the class of the object |
+| 2 | string\|FName\|nil | The short name of the object itself |
+| 3 | EObjectFlags | Any flags that the object cannot have. Uses \| as a seperator |
+| 4 | EObjectFlags | Any flags that the object must have. Uses \| as a seperator |
 | 6 | bool | Whether to require an exact match with the UClass parameter |
 
 ## Return Value
@@ -24,11 +24,9 @@ To find all objects that match your criteria, set param 1 to `0` or `nil`.
 ## Example
 
 ```lua
-local Objects = FindObjects(0, "/Script/Engine.Character", "Engine.World", EObjectFlags.RF_ClassDefaultObject, EObjectFlags.RF_ClassDefaultObject, true)
+local Object = FindObjects(4, "SceneComponent", "TransformComponent0", EObjectFlags.RF_NoFlags, EObjectFlags.RF_ClassDefaultObject, true)
 
 for _, Object in pairs(Objects) do
-    if not Object:IsValid() then
-        print("No instance of class 'Character' was found.")
-    end
+    -- Do something with Object
 end
 ```

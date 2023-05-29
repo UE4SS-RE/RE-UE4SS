@@ -10,6 +10,8 @@ Current status: **incomplete**.
 
 This is an overall list of API definitions available in UE4SS. For more readable information, see the individual API definition pages in the collapsible sections 4.1, 4.2 and 4.3.
 
+> Warning: This API list is not updated as often as the individual API definition pages. It may be out of date.
+
 ### Table Definitions
 - The definitions appear as: FieldName | FieldValueType
 - Fields that only have numeric field names have '#' as their name in this definition for clarity

@@ -15,6 +15,7 @@ The `RegisterConsoleCommandHandler` function executes the provided Lua function 
 |---|----------|-------------|
 | 1 | string   | The name of the custom command |
 | 2 | table    | Table containing all parameters |
+| 3 | FOutputDevice | The output device to write to |
 
 ## Callback Return Value
 
@@ -24,7 +25,7 @@ The `RegisterConsoleCommandHandler` function executes the provided Lua function 
 
 ## Example
 ```lua
-RegisterConsoleCommandHandler("CommandExample", function(FullCommand, Parameters)
+RegisterConsoleCommandHandler("CommandExample", function(FullCommand, Parameters, OutputDevice)
     print("Custom command callback for 'CommandExample' command executed.\n")
     print(string.format("Full command: %s\n", FullCommand))
     print(string.format("Number of parameters: %i\n", #Parameters))

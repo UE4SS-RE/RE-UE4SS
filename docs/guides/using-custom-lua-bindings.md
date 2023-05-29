@@ -8,6 +8,8 @@ Simply open the Dumpers tab in the GUI console window and hit the "Dump Lua Bind
 
 The generator will place the files into the `Mods/shared/types` folder. 
 
+> Warning: Do not include any of the generated files in your Lua scripts. If they are included, any globals set by UE4SS will be overridden and things will break.
+
 ## To Use Bindings
 
 I recommend using Visual Studio Code to do your Lua development. You can install the extension just called "Lua" by sumneko.
