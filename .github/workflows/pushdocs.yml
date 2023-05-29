@@ -3,13 +3,11 @@ name: Push docs to UE4SS-RE/docs
 on:
   push:
     branches:
-      - Release
-      - 3.XDev
-      - TestNewDocs
+      - 'Release'
+      - '3.XDev'
+      - 'TestNewDocs'
     paths:
-      - 'Release/docs/**'
-      - '3.XDev/docs/**'
-      - 'TestNewDocs/docs/**'
+      - 'docs/**'
 
 jobs:
   push_to_repo:
@@ -38,7 +36,7 @@ jobs:
           repository: UE4SS-RE/docs
           directory: dev/src
           github_token: ${{ secrets.GITHUB_TOKEN }}
-      - name: Upload to dev/src directory
+      - name: Test upload to dev/src directory
         if: github.ref == 'refs/heads/TestNewDocs'
         uses: ad-m/github-push-action@master
         with:
