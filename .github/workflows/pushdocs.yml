@@ -59,7 +59,7 @@ jobs:
 #            branch: main
 #            repository: UE4SS-RE/docs
 #            directory: dev/src
-#            github_token: ${{ secrets.GITHUB_TOKEN }}
+#            github_token: ${{ secrets.DOCS_GITHUB_TOKEN }}
       - name: Test upload to dev/src directory 2
         uses: cpina/github-action-push-to-another-repository@main
         env:
