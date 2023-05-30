@@ -29,13 +29,13 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
-        with:
-          path: docs
-      - name: Upload docs as artifact
-        uses: actions/upload-artifact@v2
-        with:
-          name: docs
-          path: Release/docs/
+#        with:
+#          path: docs
+#      - name: Upload docs as artifact
+#        uses: actions/upload-artifact@v2
+#        with:
+#          name: docs
+#          path: Release/docs/
 #      - name: Upload to main branch
 #        if: github.ref == 'refs/heads/Release'
 #        uses: ad-m/github-push-action@master
@@ -60,7 +60,7 @@ jobs:
 #            repository: UE4SS-RE/docs
 #            directory: dev/src
 #            github_token: ${{ secrets.GITHUB_TOKEN }}
-      - name: Test upload to dev/src diretory 2
+      - name: Test upload to dev/src directory 2
         uses: cpina/github-action-push-to-another-repository@main
         env:
           API_TOKEN_GITHUB: ${{ secrets.GITHUB_TOKEN }}
