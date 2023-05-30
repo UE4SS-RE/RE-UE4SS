@@ -65,7 +65,7 @@ jobs:
         env:
           API_TOKEN_GITHUB: ${{ secrets.GITHUB_TOKEN }}
         with:
-          source_directory: 'docs'
+          source-directory: 'docs'
           destination-github-username: 'UE4SS-RE'
           destination-repository-name: 'docs'
           target-branch: main
