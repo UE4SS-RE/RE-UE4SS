@@ -63,7 +63,7 @@ jobs:
       - name: Test upload to dev/src directory 2
         uses: cpina/github-action-push-to-another-repository@main
         env:
-          API_TOKEN_GITHUB: ${{ secrets.DOCS_GITHUB_TOKEN }}
+          SSH_DEPLOY_KEY: ${{ secrets.DOCS_GITHUB_TOKEN }}
         with:
           source-directory: 'docs'
           destination-github-username: 'UE4SS-RE'
