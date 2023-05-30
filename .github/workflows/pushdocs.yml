@@ -26,7 +26,7 @@ jobs:
         with:
           branch: main
           repository: UE4SS-RE/docs
-          directory: src
+          directory: ./src
           github_token: ${{ secrets.GITHUB_TOKEN }}
       - name: Upload to dev/src directory
         if: github.ref == 'refs/heads/3.XDev'
@@ -34,7 +34,7 @@ jobs:
         with:
           branch: main
           repository: UE4SS-RE/docs
-          directory: dev/src
+          directory: ./dev/src
           github_token: ${{ secrets.GITHUB_TOKEN }}
       - name: Test upload to dev/src directory
         if: github.ref == 'refs/heads/TestNewDocs'
@@ -42,5 +42,5 @@ jobs:
         with:
             branch: main
             repository: UE4SS-RE/docs
-            directory: dev/src
+            directory: ./dev/src
             github_token: ${{ secrets.GITHUB_TOKEN }}
