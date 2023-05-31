@@ -4,9 +4,12 @@ I am not the original author of this tool.  I am rehosting it with permission.
  
 ### Prerequisites:
 Visual Studio 2022
+  - Include C++ ATL for v143
+
 
 
 CMake
+
 
 ### Build Instructions:
 1. Clone the repository
