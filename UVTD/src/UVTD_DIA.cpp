@@ -625,7 +625,7 @@ namespace RC::UVTD
         auto hr = CoCreateInstance(CLSID_DiaSource, nullptr, CLSCTX_INPROC_SERVER, __uuidof(IDiaDataSource), reinterpret_cast<void**>(&dia_source));
         if (FAILED(hr))
         {
-            throw std::runtime_error{std::format("CoCreateInstance failed. Register msdia80.dll. Error: {}", HRESULTToString(hr))};
+            throw std::runtime_error{std::format("CoCreateInstance failed. Register msdia140.dll. Error: {}", HRESULTToString(hr))};
         }
 
         if (hr = dia_source->loadDataFromPdb(pdb_file.c_str()); FAILED(hr))
@@ -766,13 +766,13 @@ namespace RC::UVTD
 
         DWORD current_param{1};
         CComPtr<IDiaEnumSymbols> sub_symbols;
-        if (hr = symbol->findChildren(SymTagNull, nullptr, NULL, &sub_symbols); hr == S_OK)
+        if (hr = symbol->findChildren(SymTagNull, nullptr, NULL, &sub_symbols.p); hr == S_OK)
         {
             CComPtr<IDiaSymbol> sub_symbol;
             ULONG num_symbols_fetched{};
             LONG count;
             hr = sub_symbols->get_Count(&count);
-            while (sub_symbols->Next(1, &sub_symbol, &num_symbols_fetched) == S_OK && num_symbols_fetched == 1)
+            while (sub_symbols->Next(1, &sub_symbol.p, &num_symbols_fetched) == S_OK && num_symbols_fetched == 1)
             {
                 DWORD data_kind;
                 sub_symbol->get_dataKind(&data_kind);
@@ -932,7 +932,7 @@ namespace RC::UVTD
             Output::send(STR("UDT symbol name: {}, enum_entry name: {}, enum_entry name clean: {}\n"), symbol_name, local_enum_entry.name, local_enum_entry.name_clean);
 
             CComPtr<IDiaEnumSymbols> sub_symbols;
-            if (hr = symbol->findChildren(SymTagNull, nullptr, NULL, &sub_symbols); hr == S_OK)
+            if (hr = symbol->findChildren(SymTagNull, nullptr, NULL, &sub_symbols.p); hr == S_OK)
             {
                 CComPtr<IDiaSymbol> sub_symbol;
                 ULONG num_symbols_fetched{};
@@ -1013,13 +1013,13 @@ namespace RC::UVTD
 
             CComPtr<IDiaSymbol> symbol;
             ULONG celt_fetched;
-            if (hr = dia_global_symbols_enum->Next(1, &symbol, &celt_fetched); hr != S_OK)
+            if (hr = dia_global_symbols_enum->Next(1, &symbol.p, &celt_fetched); hr != S_OK)
             {
                 throw std::runtime_error{std::format("Ran into an error with a symbol while calling 'Next', error: {}\n", HRESULTToString(hr))};
             }
 
             CComPtr<IDiaEnumSymbols> sub_symbols;
-            hr = symbol->findChildren(SymTagNull, name.c_str(), NULL, &sub_symbols);
+            hr = symbol->findChildren(SymTagNull, name.c_str(), NULL, &sub_symbols.p);
             if (hr != S_OK)
             {
                 throw std::runtime_error{std::format("Ran into a problem while calling 'findChildren', error: {}\n", HRESULTToString(hr))};
@@ -1028,7 +1028,7 @@ namespace RC::UVTD
             CComPtr<IDiaSymbol> sub_symbol;
             ULONG num_symbols_fetched;
 
-            sub_symbols->Next(1, &sub_symbol, &num_symbols_fetched);
+            sub_symbols->Next(1, &sub_symbol.p, &num_symbols_fetched);
             if (!sub_symbol)
             {
                 //Output::send(STR("Missed symbol '{}'\n"), name);
@@ -1095,11 +1095,11 @@ namespace RC::UVTD
 
             HRESULT hr;
             CComPtr<IDiaEnumSymbols> sub_symbols;
-            if (hr = symbol->findChildren(SymTagNull, nullptr, NULL, &sub_symbols); hr == S_OK)
+            if (hr = symbol->findChildren(SymTagNull, nullptr, NULL, &sub_symbols.p); hr == S_OK)
             {
                 CComPtr<IDiaSymbol> sub_symbol;
                 ULONG num_symbols_fetched{};
-                while (sub_symbols->Next(1, &sub_symbol.p, &num_symbols_fetched) == S_OK && num_symbols_fetched == 1)
+                while (sub_symbols->Next(1, &sub_symbol, &num_symbols_fetched) == S_OK && num_symbols_fetched == 1)
                 {
                     SymbolNameInfo new_name_info = name_info;
                     dump_vtable_for_symbol(sub_symbol, new_name_info, &local_enum_entries, &local_class_entry);
@@ -1153,20 +1153,20 @@ namespace RC::UVTD
         {
             //Output::send(STR("Looking for {}\n"), name);
             HRESULT hr{};
-            if (hr = dia_session->findChildren(nullptr, SymTagNull, nullptr, nsNone, &dia_global_symbols_enum); hr != S_OK)
+            if (hr = dia_session->findChildren(nullptr, SymTagNull, nullptr, nsNone, &dia_global_symbols_enum.p); hr != S_OK)
             {
                 throw std::runtime_error{std::format("Call to 'findChildren' failed with error '{}'", HRESULTToString(hr))};
             }
 
             CComPtr<IDiaSymbol> symbol;
             ULONG celt_fetched;
-            if (hr = dia_global_symbols_enum->Next(1, &symbol, &celt_fetched); hr != S_OK)
+            if (hr = dia_global_symbols_enum->Next(1, &symbol.p, &celt_fetched); hr != S_OK)
             {
                 throw std::runtime_error{std::format("Ran into an error with a symbol while calling 'Next', error: {}\n", HRESULTToString(hr))};
             }
 
             CComPtr<IDiaEnumSymbols> sub_symbols;
-            hr = symbol->findChildren(SymTagNull, name.c_str(), NULL, &sub_symbols);
+            hr = symbol->findChildren(SymTagNull, name.c_str(), NULL, &sub_symbols.p);
             if (hr != S_OK)
             {
                 throw std::runtime_error{std::format("Ran into a problem while calling 'findChildren', error: {}\n", HRESULTToString(hr))};
@@ -1175,7 +1175,7 @@ namespace RC::UVTD
             CComPtr<IDiaSymbol> sub_symbol;
             ULONG num_symbols_fetched;
 
-            sub_symbols->Next(1, &sub_symbol, &num_symbols_fetched);
+            sub_symbols->Next(1, &sub_symbol.p, &num_symbols_fetched);
             if (name == STR("UConsole"))
             {
                 LONG count;
