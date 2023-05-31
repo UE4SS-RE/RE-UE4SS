@@ -10,8 +10,10 @@ CMake
 
 ### Build Instructions:
 1. Clone the repository
-2. Open Command Prompt in the repository folder
-3. Run the following command:
+2. Find you local DIA_SDK folder, for VS 2022 it is in "Microsoft Visual Studio\2022\Community\DIA SDK"
+3. Copy the contents of the folder to external_deps in the repository folder, "RE-UVTD\external_deps\DIA_SDK"
+4. Open Command Prompt in the repository folder
+5. Run the following command:
 
     cmake CMakeLists.txt
     
