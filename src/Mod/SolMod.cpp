@@ -13,6 +13,7 @@
 #include <Unreal/FOutputDevice.hpp>
 #include <Unreal/TMap.hpp>
 #include <Unreal/FText.hpp>
+#include <Unreal/AGameModeBase.hpp>
 #include <Unreal/UFunctionStructs.hpp>
 #include <Unreal/Property/FSoftObjectProperty.hpp>
 #include <Unreal/Property/FSoftClassProperty.hpp>
@@ -25,19 +26,11 @@ namespace RC
     std::vector<std::unique_ptr<LuaUnrealScriptFunctionData>> SolMod::m_hooked_script_function_data{};
     std::vector<LuaCallbackData> SolMod::m_static_construct_object_lua_callbacks{};
     std::unordered_map<StringType, LuaCallbackData> SolMod::m_custom_event_callbacks{};
+    std::vector<LuaCallbackData> SolMod::m_init_game_state_pre_callbacks{};
+    std::vector<LuaCallbackData> SolMod::m_init_game_state_post_callbacks{};
     std::unordered_map<StringType, LuaCallbackData> SolMod::m_script_hook_callbacks{};
     std::unordered_map<int32_t, int32_t> SolMod::m_generic_hook_id_to_native_hook_id{};
     int32_t SolMod::m_last_generic_hook_id{};
-
-    enum class PushType { FromLua, ToLua, ToLuaParam };
-    struct PropertyPusherFunctionParams
-    {
-        lua_State* lua_state{};
-        sol::protected_function_result* result{};
-        void* data{};
-        PushType push_type{};
-        std::vector<ParamPtrWrapper>* param_wrappers{};
-    };
 
     auto ParamPtrWrapper::unwrap(lua_State* lua_state) -> void
     {
@@ -65,24 +58,6 @@ namespace RC
             return nullptr;
         }
     }
-
-    REGISTER_SOL_SERIALIZER(int8, int8_t)
-    REGISTER_SOL_SERIALIZER(int16, int16_t)
-    REGISTER_SOL_SERIALIZER(int, int32_t)
-    REGISTER_SOL_SERIALIZER(int64, int64_t)
-    REGISTER_SOL_SERIALIZER(byte, uint8_t)
-    REGISTER_SOL_SERIALIZER(uint16, uint16_t)
-    REGISTER_SOL_SERIALIZER(uint32, uint32_t)
-    REGISTER_SOL_SERIALIZER(uint64, uint64_t)
-    REGISTER_SOL_SERIALIZER(float, float)
-    REGISTER_SOL_SERIALIZER(double, double)
-    REGISTER_SOL_SERIALIZER(bool, bool)
-    REGISTER_SOL_SERIALIZER(object, UObject*)
-    REGISTER_SOL_SERIALIZER(weakobject, FWeakObjectPtr*)
-    REGISTER_SOL_SERIALIZER(softclass, FSoftObjectPtr*)
-    REGISTER_SOL_SERIALIZER(class, UClass*)
-    REGISTER_SOL_SERIALIZER(name, FName)
-    REGISTER_SOL_SERIALIZER(interface, UInterface*)
 
     static bool is_mid_script_execution{};
 
@@ -157,7 +132,7 @@ namespace RC
         if (lua_data.function_processing_failed) { return; }
 
         // Call the Lua function with the correct number of parameters & return values
-        call_function_safe(lua_data.lua, lua_data.lua_callback, param_wrappers);
+        call_function_dont_wrap_params_safe(lua_data.lua, lua_data.lua_callback, param_wrappers);
         /*
         auto function_name_only = context.TheStack.CurrentNativeFunction()->GetName();
         auto class_name = context.TheStack.CurrentNativeFunction()->GetOuterPrivate()->GetName();
@@ -291,7 +266,7 @@ namespace RC
 
                     if (exit_early) { break; }
 
-                    auto lua_callback_result = call_function_safe(lua, registry_index.lua_callback);
+                    auto lua_callback_result = call_function_dont_wrap_params_safe(lua, registry_index.lua_callback);
 
                     bool return_value_handled{};
                     if (has_return_value && RESULT_DECL && lua_callback_result.valid() && lua_callback_result.return_count() > 0)
@@ -350,7 +325,7 @@ namespace RC
                     {
                         if (action.type == ActionType::Loop)
                         {
-                            auto lua_callback_result = call_function_safe(sol(State::Async), action.lua_action_function);
+                            auto lua_callback_result = call_function_dont_wrap_params_safe(sol(State::Async), action.lua_action_function);
                             if (lua_callback_result.valid() && lua_callback_result.return_count() > 0)
                             {
                                 auto maybe_result = lua_callback_result.get<std::optional<bool>>();
@@ -360,7 +335,7 @@ namespace RC
                         }
                         else
                         {
-                            call_function_safe(sol(State::Async), action.lua_action_function);
+                            call_function_dont_wrap_params_safe(sol(State::Async), action.lua_action_function);
                         }
                     }
                     catch (std::runtime_error& e)
@@ -728,7 +703,7 @@ namespace RC
                     {
                         for (const auto& registry_index : callback_data.registry_indexes)
                         {
-                            call_function_safe(callback_data.lua, registry_index.lua_callback, constructed_object);
+                            call_function_dont_wrap_params_safe(callback_data.lua, registry_index.lua_callback, constructed_object);
                         }
                     }
                 }
@@ -737,6 +712,36 @@ namespace RC
             }
 
             return constructed_object;
+        });
+
+        Unreal::Hook::RegisterInitGameStatePreCallback([](AGameModeBase* Context) {
+            for (const auto& callback_data : m_init_game_state_pre_callbacks)
+            {
+                const auto& lua = callback_data.lua;
+                //set_is_in_game_thread(lua, true);
+
+                for (const auto registry_index : callback_data.registry_indexes)
+                {
+                    call_function_wrap_params_safe(lua, registry_index.lua_callback, Context);
+                }
+
+                //set_is_in_game_thread(lua, false);
+            }
+        });
+
+        Unreal::Hook::RegisterInitGameStatePostCallback([](AGameModeBase* Context) {
+            for (const auto& callback_data : m_init_game_state_post_callbacks)
+            {
+                const auto& lua = callback_data.lua;
+                //set_is_in_game_thread(lua, true);
+
+                for (const auto registry_index : callback_data.registry_indexes)
+                {
+                    call_function_wrap_params_safe(lua, registry_index.lua_callback, Context);
+                }
+
+                //set_is_in_game_thread(lua, false);
+            }
         });
     }
 
@@ -748,8 +753,8 @@ namespace RC
         //SolMod::m_global_command_lua_callbacks.clear();
         //SolMod::m_custom_command_lua_pre_callbacks.clear();
         SolMod::m_custom_event_callbacks.clear();
-        //SolMod::m_init_game_state_pre_callbacks.clear();
-        //SolMod::m_init_game_state_post_callbacks.clear();
+        SolMod::m_init_game_state_pre_callbacks.clear();
+        SolMod::m_init_game_state_post_callbacks.clear();
         //SolMod::m_begin_play_pre_callbacks.clear();
         //SolMod::m_begin_play_post_callbacks.clear();
         //SolMod::m_call_function_by_name_with_arguments_pre_callbacks.clear();

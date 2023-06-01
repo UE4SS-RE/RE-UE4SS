@@ -142,8 +142,17 @@ inline auto dump_stack(lua_State* lua_state, const char* message) -> void
 
 namespace RC
 {
+    namespace Unreal
+    {
+        class UObject;
+        struct FWeakObjectPtr;
+        struct FSoftObjectPtr;
+        class UClass;
+        class UInterface;
+    }
+    
     using namespace Unreal;
-
+    
     class SolMod;
     inline auto get_mod_ref(sol::state_view sol) -> SolMod*
     {
@@ -209,17 +218,101 @@ namespace RC
         auto rewrap(lua_State* lua_state) -> void;
     };
 
-    template<typename Callable>
-    auto static call_function_safe(sol::state_view state, const Callable& function, const std::vector<ParamPtrWrapper>& params = {}) -> sol::protected_function_result
+    enum class PushType { FromLua, ToLua, ToLuaParam };
+    struct PropertyPusherFunctionParams
     {
-        sol::protected_function_result result{};
-        if constexpr (std::is_same_v<Callable, sol::function>)
+        lua_State* lua_state{};
+        sol::protected_function_result* result{};
+        void* data{};
+        PushType push_type{};
+        std::vector<ParamPtrWrapper>* param_wrappers{};
+    };
+    
+    REGISTER_SOL_SERIALIZER(int8, int8_t)
+    REGISTER_SOL_SERIALIZER(int16, int16_t)
+    REGISTER_SOL_SERIALIZER(int, int32_t)
+    REGISTER_SOL_SERIALIZER(int64, int64_t)
+    REGISTER_SOL_SERIALIZER(byte, uint8_t)
+    REGISTER_SOL_SERIALIZER(uint16, uint16_t)
+    REGISTER_SOL_SERIALIZER(uint32, uint32_t)
+    REGISTER_SOL_SERIALIZER(uint64, uint64_t)
+    REGISTER_SOL_SERIALIZER(float, float)
+    REGISTER_SOL_SERIALIZER(double, double)
+    REGISTER_SOL_SERIALIZER(bool, bool)
+    REGISTER_SOL_SERIALIZER(object, UObject*)
+    REGISTER_SOL_SERIALIZER(weakobject, FWeakObjectPtr*)
+    REGISTER_SOL_SERIALIZER(softclass, FSoftObjectPtr*)
+    REGISTER_SOL_SERIALIZER(class, UClass*)
+    REGISTER_SOL_SERIALIZER(name, FName)
+    REGISTER_SOL_SERIALIZER(interface, UInterface*)
+
+    template<typename T>
+    struct NoWrap
+    {
+        T value;
+        NoWrap(T new_value) { value = new_value; }
+    };
+
+    template<typename>
+    struct is_wrapped : std::true_type {};
+    template<typename T>
+    struct is_wrapped<NoWrap<T>> : std::false_type {};
+    template<typename T>
+    static constexpr bool is_wrapped_t = is_wrapped<T>::value;
+    
+    template<typename ...>
+    constexpr std::false_type generate_false{};
+    
+    template<typename Type>
+    auto static get_pusher_from_cpp_type()
+    {
+        if constexpr (std::is_same_v<std::remove_cvref_t<Type>, int8_t>) { return &push_int8property; }
+        else if constexpr (std::is_same_v<std::remove_cvref_t<Type>, int16_t>) { return &push_int16property; }
+        else if constexpr (std::is_same_v<std::remove_cvref_t<Type>, int32_t>) { return &push_intproperty; }
+        else if constexpr (std::is_same_v<std::remove_cvref_t<Type>, int64_t>) { return &push_int64property; }
+        else if constexpr (std::is_same_v<std::remove_cvref_t<Type>, uint8_t>) { return &push_byteproperty; }
+        else if constexpr (std::is_same_v<std::remove_cvref_t<Type>, uint16_t>) { return &push_uint16property; }
+        else if constexpr (std::is_same_v<std::remove_cvref_t<Type>, uint32_t>) { return &push_uint32property; }
+        else if constexpr (std::is_same_v<std::remove_cvref_t<Type>, uint64_t>) { return &push_uint64property; }
+        else if constexpr (std::is_same_v<std::remove_cvref_t<Type>, float>) { return &push_floatproperty; }
+        else if constexpr (std::is_same_v<std::remove_cvref_t<Type>, double>) { return &push_doubleproperty; }
+        else if constexpr (std::is_same_v<std::remove_cvref_t<Type>, bool>) { return &push_boolproperty; }
+        else if constexpr (std::is_same_v<std::remove_cvref_t<Type>, FWeakObjectPtr*>) { return &push_weakobjectproperty; }
+        else if constexpr (std::is_same_v<std::remove_cvref_t<Type>, FSoftObjectPtr*>) { return &push_softclassproperty; }
+        else if constexpr (std::is_same_v<std::remove_cvref_t<Type>, FName>) { return &push_nameproperty; }
+        else if constexpr (std::is_same_v<std::remove_cvref_t<Type>, UInterface>) { return &push_interfaceproperty; }
+        // This branch must be the last branch in this constexpr-if-statement.
+        // Otherwise we can't override types that inherit from UObject but that needs their pusher.
+        else if constexpr (std::is_convertible_v<std::remove_cvref_t<Type>, UObject*>)
         {
-            result = function(sol::as_args(params));
+            return &push_objectproperty;
         }
         else
         {
-            result = function(params);
+            static_assert(generate_false<Type>, "Type was unhandled and couldn't be converted to a pusher.");
+        }
+    }
+    
+    // Internal function, use 'call_function_safe' instead.
+    enum class ParamsAreWrapped { Yes, No };
+    template<ParamsAreWrapped params_are_wrapped, typename Callable, typename ...Params>
+    static auto call_function_safe_internal(sol::state_view state, const Callable& function, Params&&... params) -> sol::protected_function_result
+    {
+        sol::protected_function_result result{};
+        if constexpr (params_are_wrapped == ParamsAreWrapped::No)
+        {
+            result = function(params...);
+        }
+        else
+        {
+            if constexpr (std::is_same_v<Callable, sol::function>)
+            {
+                result = function(sol::as_args(params...));
+            }
+            else
+            {
+                result = function(params...);
+            }
         }
         if (!result.valid() && sol::stack::check<StringType>(state))
         {
@@ -229,10 +322,77 @@ namespace RC
         return result;
     }
 
-    template<typename Callable, typename... Params>
-    auto static call_function_safe(sol::state_view state, const Callable& function, Params... params)->sol::protected_function_result
+    template<typename ...Params>
+    auto call_function_wrap_params_safe_internal(sol::state_view state, auto&& function, Params&&... params)
     {
-        sol::protected_function_result result = function(params...);
+        std::vector<ParamPtrWrapper> param_wrappers{};
+        // TODO: If the param is wrapped in 'NoWrap', like 'NoWrap(object)', then we need to supply this param unwrapped.
+        //       Problem #1: How do we check using constexpr if it has NoWrap ?
+        //                   We can use 'is_wrapped_t<T>' but since we're doing an unfold expression thing, how can we apply this ?
+        //       Problem #2: The ordering of params might be a problem.
+        //                   If param #1 is NoWrap, params #2 and #3 are not NoWrap, and param #4 is NoWrap, is it even possible ?
+        //                   We would most likely need multiple vectors of ParamPtrWrapper. 
+        //                   It appears to be possible to have non-as_args params sprinkled in with as_args params. 
+        //                   But somehow we need the order correct. 
+        //                   Maybe we could use a special pusher ?
+        //                   A special pusher isn't going to work; We have to give the param to the function call, we can't push onto the stack.
+        //                   For now, we'll just use a different function for this.
+        (void(get_pusher_from_cpp_type<Params>()({state, nullptr, &params, PushType::ToLuaParam, &param_wrappers})), ...);
+        return call_function_safe_internal<ParamsAreWrapped::Yes>(state, function, param_wrappers);
+    }
+    
+    // Call a Lua function and wrap the params if they aren't already wrapped.
+    // A call to ':get()' has to be used in order to retrieve the param value.
+    // A call to ':set(new_value)' can be utilized to set the value of the param.
+    template<typename Callable, typename ...Params>
+    auto static call_function_wrap_params_safe(sol::state_view state, const Callable& function, Params&&... params) -> sol::protected_function_result
+    {
+        if constexpr (sizeof...(Params) == 1)
+        {
+            if constexpr (std::is_same_v<std::remove_cvref_t<Params...>, std::vector<ParamPtrWrapper>>)
+            {
+                return call_function_safe_internal<ParamsAreWrapped::Yes>(state, function, params...);
+            }
+            else
+            {
+                return call_function_wrap_params_safe_internal(state, function, params...);
+            }
+        }
+        else
+        {
+            return call_function_wrap_params_safe_internal(state, function, params...);
+        }
+    }
+
+    // Call a Lua function and don't wrap the params.
+    // If there's only one param and it's of type 'vector<ParamPtrWrapper>', treat as already wrapped.
+    // If there's multiple params or the only param isn't 'vector<ParamPtrWrapper', no wrapping will occur, meaning no setting of the params in Lua and no call to :get() is needed.
+    template<typename Callable, typename ...Params>
+    auto static call_function_dont_wrap_params_safe(sol::state_view state, const Callable& function, Params&&... params) -> sol::protected_function_result
+    {
+        if constexpr (sizeof...(Params) == 1)
+        {
+            if constexpr (std::is_same_v<std::remove_cvref_t<Params...>, std::vector<ParamPtrWrapper>>)
+            {
+                return call_function_safe_internal<ParamsAreWrapped::Yes>(state, function, params...);
+            }
+            else
+            {
+                return call_function_safe_internal<ParamsAreWrapped::No>(state, function, params...);
+            }
+        }
+        else
+        {
+            return call_function_safe_internal<ParamsAreWrapped::No>(state, function, params...);
+        }
+    }
+
+    template<typename Callable, typename... Params>
+    auto static call_function_with_manual_handler_safe(sol::state_view state, const Callable& function, Params&&... params)->sol::protected_function_result
+    {
+        std::vector<ParamPtrWrapper> param_wrappers{};
+        (void(param_wrappers.emplace_back(ParamPtrWrapper{&params, nullptr})), ...);
+        sol::protected_function_result result = function(param_wrappers);
         if (!result.valid() && sol::stack::check<StringType>(state))
         {
             Output::send<LogLevel::Error>(STR("Error: {}\n"), sol::stack::get<StringType>(state));

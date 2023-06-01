@@ -58,6 +58,8 @@ namespace RC
         static std::vector<std::unique_ptr<LuaUnrealScriptFunctionData>> m_hooked_script_function_data;
         static std::vector<LuaCallbackData> m_static_construct_object_lua_callbacks;
         static std::unordered_map<StringType, LuaCallbackData> m_custom_event_callbacks;
+        static std::vector<LuaCallbackData> m_init_game_state_pre_callbacks;
+        static std::vector<LuaCallbackData> m_init_game_state_post_callbacks;
         static std::unordered_map<StringType, LuaCallbackData> m_script_hook_callbacks;
         static std::unordered_map<int32_t, int32_t> m_generic_hook_id_to_native_hook_id;
         static int32_t m_last_generic_hook_id;

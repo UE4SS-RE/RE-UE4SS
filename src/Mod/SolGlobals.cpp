@@ -219,21 +219,21 @@ namespace RC
         sol.set_function("RegisterKeyBindAsync", sol::overload(
             [&](sol::this_state state, Input::Key key, sol::function callback) {
                 UE4SSProgram::get_program().register_keydown_event(key, [=] {
-                    call_function_safe(state, callback);
+                    call_function_dont_wrap_params_safe(state, callback);
                 }, std::bit_cast<uintptr_t>(this));
             },
             [&](sol::this_state state, Input::Key key, sol::nested<std::vector<Input::ModifierKey>> modifier_keys, sol::function callback) {
                 Input::Handler::ModifierKeyArray modifier_keys_array{};
                 for (size_t i = 0; i < modifier_keys.value().size(); ++i) { if (i >= Input::max_modifier_keys) break; modifier_keys_array[i] = modifier_keys.value()[i]; }
                 UE4SSProgram::get_program().register_keydown_event(key, modifier_keys_array, [=] {
-                    call_function_safe(state, callback);
+                    call_function_dont_wrap_params_safe(state, callback);
                 }, std::bit_cast<uintptr_t>(this));
             }
         ));
         sol.set_function("RegisterKeyBind", sol::overload(
             [&](sol::this_state state, Input::Key key, sol::function callback) {
                 UE4SSProgram::get_program().register_keydown_event(key, [=] {
-                    call_function_safe(state, [&](const std::vector<ParamPtrWrapper>& params) {
+                    call_function_with_manual_handler_safe(state, [&](const std::vector<ParamPtrWrapper>& params) {
                         std::lock_guard<std::recursive_mutex> guard{SolMod::m_thread_actions_mutex};
                         return callback(sol::as_args(params));
                     });
@@ -243,7 +243,7 @@ namespace RC
                 Input::Handler::ModifierKeyArray modifier_keys_array{};
                 for (size_t i = 0; i < modifier_keys.value().size(); ++i) { if (i >= Input::max_modifier_keys) break; modifier_keys_array[i] = modifier_keys.value()[i]; }
                 UE4SSProgram::get_program().register_keydown_event(key, modifier_keys_array, [=] {
-                    call_function_safe(state, [&](const std::vector<ParamPtrWrapper>& params) {
+                    call_function_with_manual_handler_safe(state, [&](const std::vector<ParamPtrWrapper>& params) {
                         std::lock_guard<std::recursive_mutex> guard{SolMod::m_thread_actions_mutex};
                         return callback(sol::as_args(params));
                     });
@@ -464,7 +464,7 @@ namespace RC
             std::lock_guard<decltype(SolMod::m_thread_actions_mutex)> guard{SolMod::m_thread_actions_mutex};
             UObjectGlobals::ForEachUObject([&](UObject* object, int32_t chunk_index, int32_t object_index) {
                 LoopAction return_value = LoopAction::Continue;
-                auto lua_callback_result = call_function_safe(state, callback, object, chunk_index, object_index);
+                auto lua_callback_result = call_function_dont_wrap_params_safe(state, callback, object, chunk_index, object_index);
                 if (lua_callback_result.valid() && lua_callback_result.return_count() > 0)
                 {
                     auto maybe_result = lua_callback_result.get<std::optional<int>>();
@@ -511,6 +511,32 @@ namespace RC
         });
         sol.set_function("UnregisterCustomEvent", [](StringType event_name) {
             SolMod::m_custom_event_callbacks.erase(event_name);
+        });
+        sol.set_function("RegisterInitGameStatePreHook", [&](sol::this_state state, sol::function callback) {
+            auto mod = get_mod_ref(state);
+            if (!mod) { return exit_script_with_error(state, STR("Could not register InitGameState pre-hook because the pointer to 'Mod' was nullptr")); }
+
+            auto gameplay_state = m_sol_gameplay_states.emplace_back(sol::thread::create(state)).lua_state();
+            sol::function callback_in_gameplay_state = sol::function(gameplay_state, callback);
+
+            SolMod::m_init_game_state_pre_callbacks.emplace_back(LuaCallbackData{
+                .lua = gameplay_state,
+                .instance_of_class = nullptr,
+                .registry_indexes = {{callback_in_gameplay_state}},
+            });
+        });
+        sol.set_function("RegisterInitGameStatePostHook", [&](sol::this_state state, sol::function callback) {
+            auto mod = get_mod_ref(state);
+            if (!mod) { return exit_script_with_error(state, STR("Could not register InitGameState post-hook because the pointer to 'Mod' was nullptr")); }
+
+            auto gameplay_state = m_sol_gameplay_states.emplace_back(sol::thread::create(state)).lua_state();
+            sol::function callback_in_gameplay_state = sol::function(gameplay_state, callback);
+
+            SolMod::m_init_game_state_post_callbacks.emplace_back(LuaCallbackData{
+                .lua = gameplay_state,
+                .instance_of_class = nullptr,
+                .registry_indexes = {{callback_in_gameplay_state}},
+            });
         });
     }
 }
