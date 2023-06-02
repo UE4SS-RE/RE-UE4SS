@@ -1,5 +1,6 @@
 #include <type_traits>
 #include <functional>
+#include <optional>
 
 #include <Mod/SolMod.hpp>
 #include <Helpers/String.hpp>
@@ -219,31 +220,12 @@ namespace RC
 
                     if (has_return_value || num_unreal_params > 0)
                     {
-                        //node->ForEachProperty([&](Unreal::FProperty* param) {
                         for (auto param : node->ForEachProperty())
                         {
                             if (!param->HasAnyPropertyFlags(Unreal::EPropertyFlags::CPF_Parm)) { continue; }
                             if (has_return_value && param->GetOffset_Internal() == return_value_offset) { continue; }
 
                             auto param_type = param->GetClass().GetFName();
-                            auto param_type_comparison_index = param_type.GetComparisonIndex();
-                            //if (auto it = LuaType::StaticState::m_property_value_pushers.find(param_type_comparison_index); it != LuaType::StaticState::m_property_value_pushers.end())
-                            //{
-                            //    auto data = param->ContainerPtrToValuePtr<void>(Stack.Locals());
-                            //    const LuaType::PusherParams pusher_param{
-                            //        .operation = LuaType::Operation::GetParam,
-                            //        .lua = lua,
-                            //        .base = nullptr,
-                            //        .data = data,
-                            //        .property = param,
-                            //    };
-                            //    auto& type_handler = it->second;
-                            //    type_handler(pusher_param);
-                            //}
-                            //else
-                            //{
-                            //    lua.throw_error(std::format("[script_hook] Tried accessing unreal property without a registered handler. Property type '{}' not supported.", to_string(param_type.ToString())));
-                            //}
                             if (auto property_pusher = lookup_property_pusher(param->GetClass().GetFName()); property_pusher)
                             {
                                 void* data = param->ContainerPtrToValuePtr<void>(Stack.Locals());
@@ -259,8 +241,6 @@ namespace RC
                                 exit_early = true;
                                 break;
                             }
-
-                            continue;
                         };
                     }
 
@@ -268,7 +248,6 @@ namespace RC
 
                     auto lua_callback_result = call_function_dont_wrap_params_safe(lua, registry_index.lua_callback);
 
-                    bool return_value_handled{};
                     if (has_return_value && RESULT_DECL && lua_callback_result.valid() && lua_callback_result.return_count() > 0)
                     {
                         auto return_property = node->GetReturnProperty();
@@ -422,10 +401,10 @@ namespace RC
         Output::send(STR("TEST\n"));
     }
 
-    auto get_class_name(sol::this_state state) -> std::string
+    auto get_class_name(sol::this_state state) -> StringType
     {
         sol::stack::get_field(state.lua_state(), "__name");
-        return sol::stack::get<std::string>(state.lua_state());
+        return sol::stack::get<StringType>(state.lua_state());
     }
 
     auto SolMod::start_async_thread() -> void
@@ -457,6 +436,83 @@ namespace RC
         return 0;
     }
 
+    static auto handle_metatable_lookups(sol::state_view state, sol::userdata& sol_object, const StringType& metatable_field_name) -> int
+    {
+        auto value = sol_object[sol::metatable_key].get<sol::table>().get<sol::object>(metatable_field_name);
+        sol::stack::push(state, value);
+        return 1;
+    }
+    
+    static auto handle_uobject_property_access(lua_State* lua_state) -> int
+    {
+        auto state = sol::state_view{lua_state};
+        auto sol_object = sol::stack::get<sol::userdata>(state, 1);
+        
+        // If 'self' is the wrong type or if it's nullptr then we assume the UObject wasn't found so lets return an invalid UObject to Lua
+        // This allows the safe chaining of "__index" as long as the Lua script checks ":IsValid()" before using the object
+        auto maybe_self = sol_object.as<std::optional<UObject*>>();
+        if (!maybe_self.has_value() || !maybe_self.value())
+        {
+            sol::stack::push(state, InvalidObject{});
+            return 1;
+        }
+        
+        auto& self = *maybe_self.value();
+        auto maybe_key = sol::stack::get<std::optional<StringType>>(state, 2);
+        if (!maybe_key.has_value())
+        {
+            sol::stack::push(state, InvalidObject{});
+            return 1;
+        }
+        auto key = maybe_key.value();
+
+        auto member_name = key;
+        auto property_name = FName(member_name);
+        // Uncomment when custom properties have been implemented.
+        //FField* field = LuaCustomProperty::StaticStorage::property_list.find_or_nullptr(self, member_name);
+        FField* field = nullptr;
+
+        if (!field)
+        {
+            auto obj_as_struct = Cast<UStruct>(&self);
+            if (!obj_as_struct) { obj_as_struct = self.GetClassPrivate(); }
+            field = obj_as_struct->FindProperty(property_name);
+        }
+
+        if (!field || field->GetClass().GetFName() == GFunctionName)
+        {
+            // Return the UFunction.
+            // Implement this later.
+            // For now, assume we might be looking for something in the metamethod like __name.
+            return handle_metatable_lookups(state, sol_object, member_name);
+        }
+        else
+        {
+            // Casting to FProperty here so that we can get access to property members.
+            // It needed to be FField above so that it could be converted to UFunction without force.
+            // This is because UFunction & FProperty both inherit from FField, but UFunction doesn't inherit from FProperty.
+            auto property = static_cast<FProperty*>(field);
+
+            if (auto property_pusher = lookup_property_pusher(property->GetClass().GetFName()); property_pusher)
+            {
+                auto data = static_cast<uint8_t*>(static_cast<void*>(&self)) + property->GetOffset_Internal();
+                if (auto error_msg = property_pusher({state, nullptr, data, PushType::ToLua, nullptr}); error_msg)
+                {
+                    Output::send<LogLevel::Error>(STR("Error setting parameter value: {}"), to_wstring(error_msg));
+                    return 0;
+                }
+            }
+            else
+            {
+                Output::send<LogLevel::Error>(STR("[handle_uobject_property_access] Tried accessing unreal property without a registered handler. Property type '{}' not supported."),
+                    property->GetClass().GetName());
+                return 0;
+            }
+        }
+        
+        return 1;
+    }
+    
     static auto setup_lua_classes(sol::state_view sol) -> void
     {
         sol.set_function("print", [](const StringType& message) {
@@ -470,7 +526,7 @@ namespace RC
                 if (!maybe_self.has_value())
                 {
                     Output::send<LogLevel::Warning>(STR("ParamPtrWrapper.get called on a non-ParamPtrWrapper instance\n"));
-                    sol::stack::push(lua_state, nullptr);
+                    sol::stack::push(lua_state, InvalidObject{});
                 }
                 else
                 {
@@ -501,6 +557,7 @@ namespace RC
         );
 
         sol.new_usertype<UObject>("UObject",
+            sol::meta_function::index, &handle_uobject_property_access,
             "type", [](sol::this_state state) { return get_class_name(state); },
             "IsValid", &UObject_IsValid,
             "GetClassPrivate", CHOOSE_MEMBER_OVERLOAD(UObject, GetClassPrivate),

@@ -13,6 +13,13 @@
 #include <DynamicOutput/DynamicOutput.hpp>
 
 #include <Unreal/UFunctionStructs.hpp>
+#include <Unreal/UObject.hpp>
+#include <Unreal/UClass.hpp>
+#include <Unreal/UFunction.hpp>
+#include <Unreal/UScriptStruct.hpp>
+#include <Unreal/UEnum.hpp>
+#include <Unreal/World.hpp>
+#include <Unreal/AActor.hpp>
 #include <map.h>
 
 #define SOL_REMOVE_CVREF(x) std::declval<x>()
@@ -176,33 +183,6 @@ namespace RC
         }
     };
 
-    inline auto pointer_policy(lua_State* lua_state, int current_stack_return_count) -> int
-    {
-        // Multiple return values are not handled!
-        if (current_stack_return_count == 1 && lua_isnil(lua_state, -1))
-        {
-            sol::stack::push(lua_state, InvalidObject{});   
-        }
-        return current_stack_return_count;
-    }
-
-    struct LuaUnrealScriptFunctionData
-    {
-        CallbackId pre_callback_id;
-        CallbackId post_callback_id;
-        UFunction* unreal_function;
-        SolMod* mod;
-        lua_State* lua;
-        //const int lua_callback_ref;
-        sol::function lua_callback;
-        sol::protected_function_result lua_callback_result;
-        bool function_processing_failed{};
-
-        bool has_return_value{};
-        // Will be non-nullptr if the UFunction has a return value
-        FProperty* return_property{};
-    };
-
     struct PropertyPusherFunctionParams;
     using PropertyPusherFunction = const char* (*)(const PropertyPusherFunctionParams&);
     class ParamPtrWrapper
@@ -245,6 +225,70 @@ namespace RC
     REGISTER_SOL_SERIALIZER(class, UClass*)
     REGISTER_SOL_SERIALIZER(name, FName)
     REGISTER_SOL_SERIALIZER(interface, UInterface*)
+    
+    inline auto auto_construct_uobject(sol::state_view state, UObject* object) -> void
+    {
+        if (object->IsA<UFunction>())
+        {
+            //UFunction::construct(lua, nullptr, static_cast<UFunction*>(object));
+        }
+        else if (object->IsA<UClass>())
+        {
+            push_classproperty({state, nullptr, &object, PushType::ToLua, nullptr});
+        }
+        else if (object->IsA<UScriptStruct>())
+        {
+            //ScriptStructWrapper script_struct_wrapper{static_cast<UScriptStruct*>(object), nullptr, nullptr};
+            //UScriptStruct::construct(lua, script_struct_wrapper);
+        }
+        else if (object->IsA<UStruct>())
+        {
+            //UStruct::construct(lua, static_cast<UStruct*>(object));
+        }
+        else if (object->IsA<UEnum>())
+        {
+            //UEnum::construct(lua, static_cast<UEnum*>(object));
+        }
+        else if (object->IsA<UWorld>())
+        {
+            //UWorld::construct(lua, static_cast<UWorld*>(object));
+        }
+        else if (object->IsA<AActor>())
+        {
+            //AActor::construct(lua, static_cast<AActor*>(object));
+        }
+    }
+    
+    inline auto pointer_policy(lua_State* lua_state, int current_stack_return_count) -> int
+    {
+        // Multiple return values are not handled!
+        if (current_stack_return_count == 1 && lua_isnil(lua_state, -1))
+        {
+            sol::stack::push(lua_state, InvalidObject{});   
+        }
+
+        auto maybe_uobject = sol::stack::get<std::optional<UObject*>>(lua_state);
+        if (!maybe_uobject) { return current_stack_return_count; }
+        auto_construct_uobject(lua_state, maybe_uobject.value());
+        return current_stack_return_count;
+    }
+
+    struct LuaUnrealScriptFunctionData
+    {
+        CallbackId pre_callback_id;
+        CallbackId post_callback_id;
+        UFunction* unreal_function;
+        SolMod* mod;
+        lua_State* lua;
+        //const int lua_callback_ref;
+        sol::function lua_callback;
+        sol::protected_function_result lua_callback_result;
+        bool function_processing_failed{};
+
+        bool has_return_value{};
+        // Will be non-nullptr if the UFunction has a return value
+        FProperty* return_property{};
+    };
 
     template<typename T>
     struct NoWrap
