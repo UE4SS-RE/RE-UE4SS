@@ -26,11 +26,11 @@ namespace RC
 
     auto SolMod::setup_lua_global_functions(sol::state_view sol) -> void
     {
-        sol.set_function("StaticFindObject", sol::overload(
+        sol.set_function("StaticFindObject", sol::policies(sol::overload(
             [](const StringType& name) { return UObjectGlobals::StaticFindObject(nullptr, nullptr, name); },
             [](UClass* uclass, UObject* in_outer, const StringType& name) { return UObjectGlobals::StaticFindObject(uclass, in_outer, name); },
             [](UClass* uclass, UObject* in_outer, const StringType& name, bool exact_class) { return UObjectGlobals::StaticFindObject(uclass, in_outer, name, exact_class); }
-        ));
+        ), &pointer_policy));
 
         sol.new_enum<Input::Key>("Key", {
             { "LEFT_MOUSE_BUTTON", Input::Key::LEFT_MOUSE_BUTTON, },
