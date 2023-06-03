@@ -2,6 +2,8 @@
 #define UE4SS_REWRITTEN_SOL_HELPERS_HPP
 
 #include <type_traits>
+#include <string>
+#include <string_view>
 
 #define SOL_ALL_SAFETIES_ON 1
 //#define SOL_SAFE_GETTER 0
@@ -9,10 +11,12 @@
 #define SOL_EXCEPTIONS 1
 #define SOL_EXCEPTIONS_SAFE_PROPAGATION 1
 #define SOL_USING_CXX_LUAJIT 1
+#define SOL_USE_INTEROP 1
 #include <sol/sol.hpp>
 #include <DynamicOutput/DynamicOutput.hpp>
 
 #include <Unreal/UFunctionStructs.hpp>
+#include <Unreal/NameTypes.hpp>
 #include <Unreal/UObject.hpp>
 #include <Unreal/UClass.hpp>
 #include <Unreal/UFunction.hpp>
@@ -145,6 +149,151 @@ inline auto dump_stack(lua_State* lua_state, const char* message) -> void
         printf_s("\n");
     }
     printf_s("\nLUA Stack dump -> END----------------------------\n\n");
+}
+
+// This was a failed attempt to get sol_lua_check/sol_lua_get to convert numbers to booleans.
+//template<typename Handler>
+//auto sol_lua_check(sol::types<bool>, lua_State* lua_state, int index, Handler&& handler, sol::stack::record& tracking) -> bool
+//{
+//    dump_stack(lua_state, "sol_lua_check, bool");
+//	int absolute_index = lua_absindex(lua_state, index);
+//    bool success = sol::stack::check<int>(lua_state, absolute_index, &sol::no_panic) || sol::stack::check<bool>(lua_state, absolute_index, &sol::no_panic);
+//	tracking.use(1);
+//	return success;
+//}
+//
+//inline auto sol_lua_get(sol::types<bool>, lua_State* lua_state, int index, sol::stack::record& tracking) -> bool
+//{
+//    // For some reason, sol isn't calling this function.
+//    // meta::meta_detail::is_adl_sol_lua_get_v<Tu> seems to fail.
+//    dump_stack(lua_state, "sol_lua_get, bool");
+//    int absolute_index = lua_absindex(lua_state, index);
+//    if (auto maybe_bool = sol::stack::get<std::optional<bool>>(lua_state, absolute_index); maybe_bool.has_value())
+//    {
+//        tracking.use(1);
+//        return maybe_bool.value();
+//    }
+//    else if (auto maybe_int = sol::stack::get<std::optional<int>>(lua_state, absolute_index); maybe_int.has_value())
+//    {
+//        tracking.use(1);
+//        return maybe_int.value() >= 1;
+//    }
+//    else
+//    {
+//        std::abort();
+//    }
+//}
+
+template<typename T, typename Handler>
+auto sol_lua_interop_check(sol::types<T>, lua_State* lua_state, int relindex, sol::type index_type, Handler&& handler, sol::stack::record& tracking) -> bool
+{
+    using namespace RC::Unreal;
+
+    if constexpr (std::is_same_v<T, bool>)
+    {
+        if (auto maybe_bool = sol::stack::check<bool>(lua_state))
+        {
+            return true;
+        }
+        else if (auto maybe_int = sol::stack::check<int>(lua_state))
+        {
+            return true;
+        }
+        else
+        {
+            return false;
+        }
+    }
+    else if constexpr (std::is_same_v<T, FName>)
+    {
+        if (auto maybe_int = sol::stack::check<int>(lua_state))
+        {
+            return true;
+        }
+        else if (auto maybe_nil = sol::stack::check<sol::nil_t>(lua_state))
+        {
+            return true;
+        }
+        else
+        {
+            return false;
+        }
+    }
+    else if constexpr (std::is_convertible_v<std::remove_cvref_t<T*>, UObject*>)
+    {
+        if (auto maybe_int = sol::stack::get<std::optional<int>>(lua_state); maybe_int.has_value())
+        {
+            return maybe_int.value() == 0;
+        }
+        else
+        {
+            return false;
+        }
+    }
+    else
+    {
+        return false;
+    }
+}
+
+template<typename InT, typename ...Args>
+auto create_sol_userdata(lua_State* lua_state, Args&&... args) -> std::conditional_t<std::is_pointer_v<std::remove_cvref_t<InT>>, InT, InT*>
+{
+    using T = std::conditional_t<std::is_pointer_v<std::remove_cvref_t<InT>>, std::remove_pointer_t<InT>, InT>;
+    auto k = sol::usertype_traits<T>::metatable();
+    sol::stack::stack_detail::undefined_metatable fx(lua_state, &k[0], &sol::stack::stack_detail::set_undefined_methods_on<T>);
+    T* obj = sol::detail::usertype_allocate<T>(lua_state);
+    fx();
+    if constexpr (std::is_pointer_v<std::remove_cvref_t<InT>>)
+    {
+        // The pointer is default constructed, which means it'll be a nullptr.
+        return obj;
+    }
+    else
+    {
+        std::allocator<T> alloc{};
+        std::allocator_traits<std::allocator<T>>::construct(alloc, obj, std::forward<Args>(args)...);
+        return obj;
+    }
+}
+
+template <typename T>
+auto sol_lua_interop_get(sol::types<T> t, lua_State* lua_state, int relindex, void* unadjusted_pointer, sol::stack::record& tracking) -> std::pair<bool, T*>
+{
+    using namespace RC::Unreal;
+
+    if constexpr (std::is_same_v<T, FName>)
+    {
+        if (auto maybe_int = sol::stack::get<std::optional<int>>(lua_state, relindex); maybe_int.has_value())
+        {
+            return {true, create_sol_userdata<FName>(lua_state, maybe_int.value())};
+        }
+        else if (auto maybe_nil = sol::stack::get<std::optional<sol::nil_t>>(lua_state, relindex); maybe_nil.has_value())
+        {
+            return {true, create_sol_userdata<FName>(lua_state, NAME_None)};
+        }
+        else
+        {
+            return {false, nullptr};
+        }
+    }
+    else if constexpr (std::is_convertible_v<std::remove_cvref_t<T*>, UObject*>)
+    {
+        if (auto maybe_int = sol::stack::get<std::optional<int>>(lua_state, relindex); maybe_int.has_value())
+        {
+            // We're converting any number to nullptr.
+            // This number realistically should only be zero because of the interop_check function.
+            return {true, nullptr};
+        }
+        else
+        {
+            return {false, nullptr};
+        }
+    }
+    else
+    {
+        return {false, nullptr};
+    }
 }
 
 namespace RC

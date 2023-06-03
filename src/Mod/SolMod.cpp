@@ -392,7 +392,6 @@ namespace RC
 
     static auto UObject_IsValid(UObject* object) -> bool
     {
-        Output::send(STR("object valid ?: {}\n"), (void*)object);
         return object && !object->IsUnreachable()/* && is_object_in_global_unreal_object_map(object)*/;
     }
 
@@ -403,6 +402,11 @@ namespace RC
 
     auto get_class_name(sol::this_state state) -> StringType
     {
+        // There's some kind of bug where the '__name' field doesn't equal the '__name' field in the metatable.
+        // To circumvet this, we're manually putting the metatable on the stack before calling 'get_field'.
+        // This should probably be further investigated to make sure this isn't an effect of a serious bug.
+        // Note that this works fine without manually getting the metatable for types other than 'InvalidObject'.
+        lua_getmetatable(state, 1);
         sol::stack::get_field(state.lua_state(), "__name");
         return sol::stack::get<StringType>(state.lua_state());
     }
@@ -443,7 +447,7 @@ namespace RC
         return 1;
     }
     
-    static auto handle_uobject_property_access(lua_State* lua_state) -> int
+    static auto handle_uobject_property_getter(lua_State* lua_state) -> int
     {
         auto state = sol::state_view{lua_state};
         auto sol_object = sol::stack::get<sol::userdata>(state, 1);
@@ -512,6 +516,12 @@ namespace RC
         
         return 1;
     }
+
+    static auto handle_uobject_property_setter(lua_State* lua_state) -> int
+    {
+        Output::send<LogLevel::Verbose>(STR("handle_uobject_property_setter\n"));
+        return 0;
+    }
     
     static auto setup_lua_classes(sol::state_view sol) -> void
     {
@@ -556,8 +566,20 @@ namespace RC
             "IsValid", [] { return false; }
         );
 
+        sol.new_usertype<FName>("FName",
+            sol::no_constructor,
+            sol::call_constructor, sol::factories(
+                [] { return FName(); },
+                [](int64_t index_and_number) { return FName(index_and_number); },
+                [](const StringType& name) { return FName(name, FNAME_Add); },
+                [](const StringType& name, EFindName find_name) { return FName(name, find_name); }
+            ),
+            "type", [](sol::this_state state) { return get_class_name(state); }
+        );
         sol.new_usertype<UObject>("UObject",
-            sol::meta_function::index, &handle_uobject_property_access,
+            sol::no_constructor,
+            sol::meta_function::index, sol::policies(&handle_uobject_property_getter, &pointer_policy),
+            sol::meta_function::new_index, sol::policies(&handle_uobject_property_setter, &pointer_policy),
             "type", [](sol::this_state state) { return get_class_name(state); },
             "IsValid", &UObject_IsValid,
             "GetClassPrivate", CHOOSE_MEMBER_OVERLOAD(UObject, GetClassPrivate),
@@ -575,6 +597,7 @@ namespace RC
 
         sol.new_usertype<UClass>("UClass",
             sol::base_classes, sol::bases<UObject>(),
+            sol::no_constructor,
             "GetClassAddReferencedObjects", CHOOSE_MEMBER_OVERLOAD(UClass, GetClassAddReferencedObjects),
             "GetClassCastFlags", CHOOSE_MEMBER_OVERLOAD(UClass, GetClassCastFlags),
             "GetClassConfigName", CHOOSE_MEMBER_OVERLOAD(UClass, GetClassConfigName),

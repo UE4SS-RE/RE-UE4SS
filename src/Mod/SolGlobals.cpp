@@ -206,6 +206,8 @@ namespace RC
             { "ALT", Input::ModifierKey::ALT }
         });
 
+        sol.set("NAME_None", NAME_None);
+
         sol.set_function("FindFirstOf", CHOOSE_FREE_OVERLOAD(UObjectGlobals::FindFirstOf, const std::wstring&));
         sol.set_function("FindAllOf", CHOOSE_FREE_OVERLOAD(UObjectGlobals::FindAllOf, const std::wstring&, std::vector<UObject*>&));
         sol.set_function("IsKeyBindRegistered", sol::overload(
@@ -381,7 +383,25 @@ namespace RC
         sol.set_function("DumpUSMAP", [] {
             OutTheShade::generate_usmap();
         });
-        sol.set_function("StaticConstructObject", sol::overload(
+        sol.set_function("Test1", [](FName test_name) {
+            Output::send<LogLevel::Verbose>(STR("test_name: {}\n"), test_name.ToString());
+        });
+        sol.set_function("Test2", [](EObjectFlags test_flags) {
+            Output::send<LogLevel::Verbose>(STR("test_flags: {}\n"), (int)test_flags);
+        });
+        sol.set_function("Test3", [](EInternalObjectFlags test_internal_flags) {
+            Output::send<LogLevel::Verbose>(STR("test_internal_flags: {}\n"), (int)test_internal_flags);
+        });
+        sol.set_function("Test4", [](bool test_bool) {
+            Output::send<LogLevel::Verbose>(STR("test_bool: {}\n"), test_bool);
+        });
+        sol.set_function("Test5", [](UObject* object) {
+            Output::send<LogLevel::Verbose>(STR("object: {}\n"), object ? STR("non-nullptr") : STR("nullptr"));
+        });
+        sol.set_function("Test6", [](UClass* uclass) {
+            Output::send<LogLevel::Verbose>(STR("class: {}\n"), uclass ? STR("non-nullptr") : STR("nullptr"));
+        });
+        sol.set_function("StaticConstructObject", sol::policies(sol::overload(
             [](UClass* uclass, UObject* outer) {
                 FStaticConstructObjectParameters params{uclass, outer};
                 return UObjectGlobals::StaticConstructObject(params);
@@ -454,7 +474,7 @@ namespace RC
                 params.ExternalPackage = external_package;
                 return UObjectGlobals::StaticConstructObject(params);
             }
-        ));
+        ), &pointer_policy));
         sol.set_function("RegisterCustomProperty", []() {
             // Re-implement to make registration simpler ?
             // If so we'd have to have a way for mods to provide a Lua callback to handle setting/getting property values.
