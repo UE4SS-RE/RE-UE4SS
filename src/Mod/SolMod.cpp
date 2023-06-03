@@ -596,8 +596,8 @@ namespace RC
         );
 
         sol.new_usertype<UClass>("UClass",
-            sol::base_classes, sol::bases<UObject>(),
             sol::no_constructor,
+            sol::base_classes, sol::bases<UObject>(),
             "GetClassAddReferencedObjects", CHOOSE_MEMBER_OVERLOAD(UClass, GetClassAddReferencedObjects),
             "GetClassCastFlags", CHOOSE_MEMBER_OVERLOAD(UClass, GetClassCastFlags),
             "GetClassConfigName", CHOOSE_MEMBER_OVERLOAD(UClass, GetClassConfigName),

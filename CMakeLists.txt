@@ -383,39 +383,13 @@ set_property(TARGET luajit PROPERTY IMPORTED_LOCATION "${CMAKE_CURRENT_SOURCE_DI
 set_property(TARGET lua51 PROPERTY IMPORTED_LOCATION "${CMAKE_CURRENT_SOURCE_DIR}/Dependencies/luajit/src/lua51.lib")
 target_include_directories(${TARGET} PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/Dependencies/luajit/src")
 target_include_directories(${XINPUT_TARGET} PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/Dependencies/luajit/src")
+# This forces a rebuild of luajit on every build of UE4SS which isn't ideal but it will have to do for now.
+# Ideally, this should be set up to only build luajit if the lib files are missing OR the build mode changed.
 # Note that this custom command is Windows specific because of hard-coded use of "cmd" and .bat files.
 add_custom_command(
-    OUTPUT "${CMAKE_CURRENT_SOURCE_DIR}/Dependencies/luajit/src/luajit.lib" "${CMAKE_CURRENT_SOURCE_DIR}/Dependencies/luajit/src/lua51.lib"
-    COMMAND "cmd" \"%VS2022INSTALLDIR%/VC/Auxiliary/Build/vcvars64.bat\" && cd \"${CMAKE_CURRENT_SOURCE_DIR}/Dependencies/luajit/src\" && msvcbuild.bat $<$<CONFIG:Debug>:debug> static
-)
-add_custom_target(build_luajit DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/Dependencies/luajit/src/luajit.lib" "${CMAKE_CURRENT_SOURCE_DIR}/Dependencies/luajit/src/lua51.lib")
-add_dependencies(${TARGET} build_luajit)
-add_dependencies(${XINPUT_TARGET} build_luajit)
-# Until we figure out how to automatically rebuild luajit when we change between debug & release, we'll just delete the luajit lib files after each build.
-# This forces a rebuild of luajit on every build of UE4SS which isn't ideal but it will have to do for now.
-add_custom_command(
-	TARGET ${TARGET}
-	POST_BUILD
-	COMMAND ${CMAKE_COMMAND} -E rm -f ${CMAKE_CURRENT_SOURCE_DIR}/Dependencies/luajit/src/lua51.lib
-	VERBATIM
-)
-add_custom_command(
-	TARGET ${TARGET}
-	POST_BUILD
-	COMMAND ${CMAKE_COMMAND} -E rm -f ${CMAKE_CURRENT_SOURCE_DIR}/Dependencies/luajit/src/luajit.lib
-	VERBATIM
-)
-add_custom_command(
 	TARGET ${XINPUT_TARGET}
-	POST_BUILD
-	COMMAND ${CMAKE_COMMAND} -E rm -f ${CMAKE_CURRENT_SOURCE_DIR}/Dependencies/luajit/src/lua51.lib
-	VERBATIM
-)
-add_custom_command(
-	TARGET ${XINPUT_TARGET}
-	POST_BUILD
-	COMMAND ${CMAKE_COMMAND} -E rm -f ${CMAKE_CURRENT_SOURCE_DIR}/Dependencies/luajit/src/luajit.lib
-	VERBATIM
+	PRE_BUILD
+	COMMAND "cmd" \"%VS2022INSTALLDIR%/VC/Auxiliary/Build/vcvars64.bat\" && cd \"${CMAKE_CURRENT_SOURCE_DIR}/Dependencies/luajit/src\" && msvcbuild.bat $<$<CONFIG:Debug>:debug> static
 )
 # luajit -> END
 
