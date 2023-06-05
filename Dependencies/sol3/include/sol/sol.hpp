@@ -12410,7 +12410,7 @@ namespace sol { namespace stack {
 		static bool check(lua_State* L_, int index, Handler&& handler, record& tracking) {
 			if constexpr (std::is_same_v<T, bool>) {
 				tracking.use(1);
-				bool success = lua_isboolean(L_, index) == 1 || lua_isnumber(L_, index) == 1;
+				bool success = lua_isboolean(L_, index) == 1 || lua_isnumber(L_, index) == 1 || lua_isnil(L_, index);
 				if (!success) {
 					// expected type, actual type
 					handler(L_, index, expected, type_of(L_, index), "");
@@ -13433,7 +13433,7 @@ namespace sol { namespace stack {
 		static decltype(auto) get(lua_State* L, int index, record& tracking) {
 			if constexpr (std::is_same_v<T, bool>) {
 				tracking.use(1);
-                return lua_isboolean(L, index) == 1 ? lua_toboolean(L, index) != 0 : lua_tonumber(L, index) >= 1;
+                return lua_isboolean(L, index) == 1 ? lua_toboolean(L, index) != 0 : (lua_isnil(L, index) ? false : lua_tonumber(L, index) >= 1);
 			}
 			else if constexpr (std::is_enum_v<T>) {
 				tracking.use(1);

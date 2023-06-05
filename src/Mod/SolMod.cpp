@@ -118,13 +118,13 @@ namespace RC
                     void* data = param->ContainerPtrToValuePtr<void>(context.TheStack.Locals());
                     if (auto error_msg = property_pusher({lua_data.lua, nullptr, data, PushType::ToLuaParam, &param_wrappers}); error_msg)
                     {
-                        EXIT_NATIVE_HOOK_WITH_ERROR(break, lua_data, std::format(STR("Error setting parameter value: {}"), to_wstring(error_msg)))
+                        EXIT_NATIVE_HOOK_WITH_ERROR(break, lua_data, std::format(STR("Error setting parameter value: {}\n"), to_wstring(error_msg)))
                     }
                 }
                 else
                 {
                     EXIT_NATIVE_HOOK_WITH_ERROR(break, lua_data,
-                        std::format(STR("[unreal_script_function_hook_pre] Tried accessing unreal property without a registered handler. Property type '{}' not supported."),
+                        std::format(STR("[unreal_script_function_hook_pre] Tried accessing unreal property without a registered handler. Property type '{}' not supported.\n"),
                         param->GetClass().GetName()))
                 }
             };
@@ -175,7 +175,7 @@ namespace RC
                 // If this was a native UFunction then changing the return value here will have the desired effect
                 if (auto error_msg = property_pusher({lua_data.lua, &lua_data.lua_callback_result, context.RESULT_DECL, PushType::FromLua, nullptr}); error_msg)
                 {
-                    EXIT_NATIVE_HOOK_WITH_ERROR(void, lua_data, std::format(STR("Error setting return value: {}"), to_wstring(error_msg)))
+                    EXIT_NATIVE_HOOK_WITH_ERROR(void, lua_data, std::format(STR("Error setting return value: {}\n"), to_wstring(error_msg)))
                 }
             }
             else
@@ -231,12 +231,12 @@ namespace RC
                                 void* data = param->ContainerPtrToValuePtr<void>(Stack.Locals());
                                 if (auto error_msg = property_pusher({lua, nullptr, data, PushType::ToLuaParam, &param_wrappers}); error_msg)
                                 {
-                                    Output::send<LogLevel::Error>(STR("Error setting parameter value: {}"), to_wstring(error_msg));
+                                    Output::send<LogLevel::Error>(STR("Error setting parameter value: {}\n"), to_wstring(error_msg));
                                 }
                             }
                             else
                             {
-                                Output::send<LogLevel::Error>(STR("[script_hook] Tried accessing unreal property without a registered handler. Property type '{}' not supported."),
+                                Output::send<LogLevel::Error>(STR("[script_hook] Tried accessing unreal property without a registered handler. Property type '{}' not supported.\n"),
                                     param_type.ToString());
                                 exit_early = true;
                                 break;
@@ -260,7 +260,7 @@ namespace RC
                                 // If this was a native UFunction then changing the return value here will have the desired effect
                                 if (auto error_msg = property_pusher({lua, &lua_callback_result, RESULT_DECL, PushType::FromLua, nullptr}); error_msg)
                                 {
-                                    Output::send<LogLevel::Error>(STR("Error setting return value: {}"), to_wstring(error_msg));
+                                    Output::send<LogLevel::Error>(STR("Error setting return value: {}\n"), to_wstring(error_msg));
                                 }
                             }
                             else
@@ -268,7 +268,7 @@ namespace RC
                                 // If the type wasn't supported then we simply output a warning and then do nothing
                                 auto return_property_type_name = return_property->GetClass().GetName();
                                 auto return_property_name = return_property->GetName();
-                                Output::send(STR("Tried altering return value of a custom BP function without a registered handler for return type Return property '{}' of type '{}' not supported."), return_property_name, return_property_type_name);
+                                Output::send(STR("Tried altering return value of a custom BP function without a registered handler for return type Return property '{}' of type '{}' not supported.\n"), return_property_name, return_property_type_name);
                             }
                         }
 
@@ -502,13 +502,13 @@ namespace RC
                 auto data = static_cast<uint8_t*>(static_cast<void*>(&self)) + property->GetOffset_Internal();
                 if (auto error_msg = property_pusher({state, nullptr, data, PushType::ToLua, nullptr}); error_msg)
                 {
-                    Output::send<LogLevel::Error>(STR("Error setting parameter value: {}"), to_wstring(error_msg));
+                    Output::send<LogLevel::Error>(STR("Error setting parameter value: {}\n"), to_wstring(error_msg));
                     return 0;
                 }
             }
             else
             {
-                Output::send<LogLevel::Error>(STR("[handle_uobject_property_access] Tried accessing unreal property without a registered handler. Property type '{}' not supported."),
+                Output::send<LogLevel::Error>(STR("[handle_uobject_property_access] Tried accessing unreal property without a registered handler. Property type '{}' not supported.\n"),
                     property->GetClass().GetName());
                 return 0;
             }

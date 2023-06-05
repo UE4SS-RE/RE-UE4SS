@@ -188,14 +188,15 @@ template<typename T, typename Handler>
 auto sol_lua_interop_check(sol::types<T>, lua_State* lua_state, int relindex, sol::type index_type, Handler&& handler, sol::stack::record& tracking) -> bool
 {
     using namespace RC::Unreal;
+    //dump_stack(lua_state, "sol_lua_interop_check");
 
     if constexpr (std::is_same_v<T, bool>)
     {
-        if (auto maybe_bool = sol::stack::check<bool>(lua_state))
+        if (auto maybe_bool = sol::stack::check<bool>(lua_state, relindex))
         {
             return true;
         }
-        else if (auto maybe_int = sol::stack::check<int>(lua_state))
+        else if (auto maybe_int = sol::stack::check<int>(lua_state, relindex))
         {
             return true;
         }
@@ -206,11 +207,11 @@ auto sol_lua_interop_check(sol::types<T>, lua_State* lua_state, int relindex, so
     }
     else if constexpr (std::is_same_v<T, FName>)
     {
-        if (auto maybe_int = sol::stack::check<int>(lua_state))
+        if (auto maybe_int = sol::stack::check<int>(lua_state, relindex))
         {
             return true;
         }
-        else if (auto maybe_nil = sol::stack::check<sol::nil_t>(lua_state))
+        else if (auto maybe_nil = sol::stack::check<sol::nil_t>(lua_state, relindex))
         {
             return true;
         }
@@ -221,9 +222,13 @@ auto sol_lua_interop_check(sol::types<T>, lua_State* lua_state, int relindex, so
     }
     else if constexpr (std::is_convertible_v<std::remove_cvref_t<T*>, UObject*>)
     {
-        if (auto maybe_int = sol::stack::get<std::optional<int>>(lua_state); maybe_int.has_value())
+        if (auto maybe_int = sol::stack::get<std::optional<int>>(lua_state, relindex); maybe_int.has_value())
         {
             return maybe_int.value() == 0;
+        }
+        else if (auto maybe_bool = sol::stack::get<std::optional<bool>>(lua_state, relindex); maybe_bool.has_value())
+        {
+            return !maybe_bool.value();
         }
         else
         {
@@ -283,6 +288,12 @@ auto sol_lua_interop_get(sol::types<T> t, lua_State* lua_state, int relindex, vo
         {
             // We're converting any number to nullptr.
             // This number realistically should only be zero because of the interop_check function.
+            return {true, nullptr};
+        }
+        else if (auto maybe_bool = sol::stack::get<std::optional<bool>>(lua_state, relindex); maybe_bool.has_value())
+        {
+            // We're converting any bool to nullptr.
+            // This bool realistically should only be false because of the interop_check function.
             return {true, nullptr};
         }
         else
