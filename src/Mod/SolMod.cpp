@@ -508,7 +508,7 @@ namespace RC
             }
             else
             {
-                Output::send<LogLevel::Error>(STR("[handle_uobject_property_access] Tried accessing unreal property without a registered handler. Property type '{}' not supported.\n"),
+                Output::send<LogLevel::Error>(STR("[handle_uobject_property_getter] Tried accessing unreal property without a registered handler. Property type '{}' not supported.\n"),
                     property->GetClass().GetName());
                 return 0;
             }
