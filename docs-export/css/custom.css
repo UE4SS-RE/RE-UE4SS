@@ -1,0 +1,16 @@
+:root {
+    --content-max-width: 80%;
+}
+
+.chapter li.part-title {
+    color: var(--sidebar-fg);
+    margin-bottom: -5px;
+    margin-top: 11px;
+    font-weight: bold;
+}
+
+.chapter li.chapter-item {
+    line-height: 1.5em;
+    margin-left: 0.5em;
+    margin-top: 0.6em;
+}
