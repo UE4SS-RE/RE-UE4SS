@@ -4,11 +4,13 @@
 
 #include <Mod/SolMod.hpp>
 #include <Helpers/String.hpp>
+#include <Helpers/Casting.hpp>
 #include <UE4SSProgram.hpp>
 #include <Unreal/UObject.hpp>
 #include <Unreal/UClass.hpp>
 #include <Unreal/UScriptStruct.hpp>
 #include <Unreal/UFunction.hpp>
+#include <Unreal/FScriptArray.hpp>
 #include <Unreal/UInterface.hpp>
 #include <Unreal/World.hpp>
 #include <Unreal/FOutputDevice.hpp>
@@ -18,6 +20,8 @@
 #include <Unreal/UFunctionStructs.hpp>
 #include <Unreal/Property/FSoftObjectProperty.hpp>
 #include <Unreal/Property/FSoftClassProperty.hpp>
+#include <Unreal/Property/FStructProperty.hpp>
+#include <Unreal/Property/FArrayProperty.hpp>
 
 using namespace RC::Unreal;
 
@@ -35,12 +39,12 @@ namespace RC
 
     auto ParamPtrWrapper::unwrap(lua_State* lua_state) -> void
     {
-        property_pusher({lua_state, nullptr, value_ptr, PushType::ToLua, nullptr});
+        property_pusher({lua_state, nullptr, property, value_ptr, PushType::ToLua, nullptr});
     }
 
     auto ParamPtrWrapper::rewrap(lua_State* lua_state) -> void
     {
-        property_pusher({lua_state, nullptr, value_ptr, PushType::FromLua, nullptr});
+        property_pusher({lua_state, nullptr, property, value_ptr, PushType::FromLua, nullptr});
     }
 
     static constexpr uint32_t g_max_property_pushers = 0xFF;
@@ -78,7 +82,7 @@ namespace RC
         std::vector<ParamPtrWrapper> param_wrappers{};
 
         // Set up the first param (context / this-ptr)
-        push_objectproperty({lua_data.lua, nullptr, &context.Context, PushType::ToLuaParam, &param_wrappers});
+        push_objectproperty({lua_data.lua, nullptr, nullptr, &context.Context, PushType::ToLuaParam, &param_wrappers});
 
         // Attempt at dynamically fetching the params
         uint16_t return_value_offset = context.TheStack.CurrentNativeFunction()->GetReturnValueOffset();
@@ -116,7 +120,7 @@ namespace RC
                 if (auto property_pusher = lookup_property_pusher(param->GetClass().GetFName()); property_pusher)
                 {
                     void* data = param->ContainerPtrToValuePtr<void>(context.TheStack.Locals());
-                    if (auto error_msg = property_pusher({lua_data.lua, nullptr, data, PushType::ToLuaParam, &param_wrappers}); error_msg)
+                    if (auto error_msg = property_pusher({lua_data.lua, nullptr, param, data, PushType::ToLuaParam, &param_wrappers}); !error_msg.empty())
                     {
                         EXIT_NATIVE_HOOK_WITH_ERROR(break, lua_data, std::format(STR("Error setting parameter value: {}\n"), to_wstring(error_msg)))
                     }
@@ -173,7 +177,7 @@ namespace RC
                 // Keep in mind that the if this was a Blueprint UFunction then the entire byte-code will already have executed
                 // That means that changing the return value here won't affect the script itself
                 // If this was a native UFunction then changing the return value here will have the desired effect
-                if (auto error_msg = property_pusher({lua_data.lua, &lua_data.lua_callback_result, context.RESULT_DECL, PushType::FromLua, nullptr}); error_msg)
+                if (auto error_msg = property_pusher({lua_data.lua, &lua_data.lua_callback_result, lua_data.return_property, context.RESULT_DECL, PushType::FromLua, nullptr}); !error_msg.empty())
                 {
                     EXIT_NATIVE_HOOK_WITH_ERROR(void, lua_data, std::format(STR("Error setting return value: {}\n"), to_wstring(error_msg)))
                 }
@@ -210,7 +214,7 @@ namespace RC
                     //set_is_in_game_thread(lua, true);
 
                     std::vector<ParamPtrWrapper> param_wrappers{};
-                    push_objectproperty({lua, nullptr, &Context, PushType::ToLuaParam, &param_wrappers});
+                    push_objectproperty({lua, nullptr, nullptr, &Context, PushType::ToLuaParam, &param_wrappers});
 
                     auto node = Stack.Node();
                     auto return_value_offset = node->GetReturnValueOffset();
@@ -229,7 +233,7 @@ namespace RC
                             if (auto property_pusher = lookup_property_pusher(param->GetClass().GetFName()); property_pusher)
                             {
                                 void* data = param->ContainerPtrToValuePtr<void>(Stack.Locals());
-                                if (auto error_msg = property_pusher({lua, nullptr, data, PushType::ToLuaParam, &param_wrappers}); error_msg)
+                                if (auto error_msg = property_pusher({lua, nullptr, param, data, PushType::ToLuaParam, &param_wrappers}); !error_msg.empty())
                                 {
                                     Output::send<LogLevel::Error>(STR("Error setting parameter value: {}\n"), to_wstring(error_msg));
                                 }
@@ -258,7 +262,7 @@ namespace RC
                                 // Keep in mind that the if this was a Blueprint UFunction then the entire byte-code will already have executed
                                 // That means that changing the return value here won't affect the script itself
                                 // If this was a native UFunction then changing the return value here will have the desired effect
-                                if (auto error_msg = property_pusher({lua, &lua_callback_result, RESULT_DECL, PushType::FromLua, nullptr}); error_msg)
+                                if (auto error_msg = property_pusher({lua, &lua_callback_result, return_property, RESULT_DECL, PushType::FromLua, nullptr}); !error_msg.empty())
                                 {
                                     Output::send<LogLevel::Error>(STR("Error setting return value: {}\n"), to_wstring(error_msg));
                                 }
@@ -446,12 +450,11 @@ namespace RC
         sol::stack::push(state, value);
         return 1;
     }
-    
-    static auto handle_uobject_property_getter(lua_State* lua_state) -> int
+
+    static auto handle_uobject_property(sol::state_view state, PushType push_type) -> int
     {
-        auto state = sol::state_view{lua_state};
         auto sol_object = sol::stack::get<sol::userdata>(state, 1);
-        
+
         // If 'self' is the wrong type or if it's nullptr then we assume the UObject wasn't found so lets return an invalid UObject to Lua
         // This allows the safe chaining of "__index" as long as the Lua script checks ":IsValid()" before using the object
         auto maybe_self = sol_object.as<std::optional<UObject*>>();
@@ -460,17 +463,15 @@ namespace RC
             sol::stack::push(state, InvalidObject{});
             return 1;
         }
-        
+
         auto& self = *maybe_self.value();
-        auto maybe_key = sol::stack::get<std::optional<StringType>>(state, 2);
-        if (!maybe_key.has_value())
+        auto maybe_member_name = sol::stack::get<std::optional<StringType>>(state, 2);
+        if (!maybe_member_name.has_value())
         {
             sol::stack::push(state, InvalidObject{});
             return 1;
         }
-        auto key = maybe_key.value();
-
-        auto member_name = key;
+        auto member_name = maybe_member_name.value();
         auto property_name = FName(member_name);
         // Uncomment when custom properties have been implemented.
         //FField* field = LuaCustomProperty::StaticStorage::property_list.find_or_nullptr(self, member_name);
@@ -500,7 +501,7 @@ namespace RC
             if (auto property_pusher = lookup_property_pusher(property->GetClass().GetFName()); property_pusher)
             {
                 auto data = static_cast<uint8_t*>(static_cast<void*>(&self)) + property->GetOffset_Internal();
-                if (auto error_msg = property_pusher({state, nullptr, data, PushType::ToLua, nullptr}); error_msg)
+                if (auto error_msg = property_pusher({state, nullptr, property, data, push_type, nullptr}); !error_msg.empty())
                 {
                     Output::send<LogLevel::Error>(STR("Error setting parameter value: {}\n"), to_wstring(error_msg));
                     return 0;
@@ -513,16 +514,66 @@ namespace RC
                 return 0;
             }
         }
-        
         return 1;
+    }
+
+    static auto handle_uobject_property_getter(lua_State* lua_state) -> int
+    {
+        return handle_uobject_property(lua_state, PushType::ToLua);
     }
 
     static auto handle_uobject_property_setter(lua_State* lua_state) -> int
     {
         Output::send<LogLevel::Verbose>(STR("handle_uobject_property_setter\n"));
+        handle_uobject_property(lua_state, PushType::FromLua);
         return 0;
     }
-    
+
+    // Simple wrapper that contains the UScriptStruct* and the FStructProperty*
+    struct ScriptStructWrapper
+    {
+        UScriptStruct* script_struct{};
+        void* start_of_struct{};
+        FStructProperty* property{};
+
+        // Accessor the LocalParam API
+        void* get_data_ptr() { return start_of_struct; }
+    };
+
+    static auto handle_uscriptstruct_property_setter(lua_State* lua_state) -> int
+    {
+        Output::send<LogLevel::Verbose>(STR("handle_uscriptstruct_property_setter\n"));
+        auto state = sol::state_view{lua_state};
+        auto script_struct = sol::stack::get<ScriptStructWrapper>(state, 1);
+        auto property_name = FName(sol::stack::get<StringType>(state, 2), FNAME_Find);
+        if (property_name.GetComparisonIndex() == 0)
+        {
+            Output::send<LogLevel::Error>(STR("Property '{}' not found in UScriptStruct '{}'\n"), property_name.ToString(), script_struct.script_struct->GetFullName());
+            return 0;
+        }
+        else
+        {
+            auto struct_property = static_cast<FStructProperty*>(script_struct.script_struct->FindProperty(property_name));
+            if (auto property_pusher = lookup_property_pusher(struct_property->GetClass().GetFName()); property_pusher)
+            {
+                void* data = Helper::Casting::ptr_cast<void*>(script_struct.start_of_struct, struct_property->GetOffset_Internal());
+                if (auto error_msg = property_pusher({lua_state, nullptr, struct_property, data, PushType::FromLua, nullptr}); !error_msg.empty())
+                {
+                    auto property_type_name = struct_property->GetClass().GetName();
+                    Output::send<LogLevel::Error>(STR("Error setting UScriptStruct property value: {}\n"), to_wstring(error_msg));
+                    return 0;
+                }
+            }
+            else
+            {
+                auto property_type_name = struct_property->GetClass().GetName();
+                Output::send<LogLevel::Error>(STR("Tried accessing unreal property without a registered handler (via StructProperty). Property type '{}' not supported.\n"), property_type_name);
+                return 0;
+            }
+            return 0;
+        }
+    }
+
     static auto setup_lua_classes(sol::state_view sol) -> void
     {
         sol.set_function("print", [](const StringType& message) {
@@ -576,6 +627,19 @@ namespace RC
             ),
             "type", [](sol::this_state state) { return get_class_name(state); }
         );
+
+        sol.new_usertype<ScriptStructWrapper>("UScriptStruct",
+            sol::no_constructor,
+            sol::meta_function::new_index, sol::policies(&handle_uscriptstruct_property_setter, &pointer_policy),
+            "type", [](sol::this_state state) { return get_class_name(state); }
+        );
+
+        sol.new_usertype<FScriptArray>("TArray",
+            sol::no_constructor,
+            // TODO: index & new_index(?) meta function.
+            "type", [](sol::this_state state) { return get_class_name(state); }
+        );
+
         sol.new_usertype<UObject>("UObject",
             sol::no_constructor,
             sol::meta_function::index, sol::policies(&handle_uobject_property_getter, &pointer_policy),
@@ -748,8 +812,8 @@ namespace RC
         add_property_pusher(FName(L"UInt16Property"), &push_uint16property);
         add_property_pusher(FName(L"UInt32Property"), &push_uint32property);
         add_property_pusher(FName(L"UInt64Property"), &push_uint64property);
-        //add_property_pusher(FName(L"StructProperty"), &push_structproperty); // Needs custom implementation for implicit Lua table conversions.
-        //add_property_pusher(FName(L"ArrayProperty"), &push_arrayproperty); // Needs custom implementation. for implicit Lua table conversions.
+        add_property_pusher(FName(L"StructProperty"), &push_structproperty); // Needs custom implementation for implicit Lua table conversions.
+        add_property_pusher(FName(L"ArrayProperty"), &push_arrayproperty); // Needs custom implementation. for implicit Lua table conversions.
         add_property_pusher(FName(L"FloatProperty"), &push_floatproperty);
         add_property_pusher(FName(L"DoubleProperty"), &push_doubleproperty);
         add_property_pusher(FName(L"BoolProperty"), &push_boolproperty);
@@ -850,5 +914,120 @@ namespace RC
         std::lock_guard<decltype(m_actions_lock)> guard{m_actions_lock};
         m_pending_actions.clear();
         m_delayed_actions.clear();
+    }
+
+    auto push_structproperty(const PropertyPusherFunctionParams& params) -> std::string
+    {
+        using Value = ScriptStructWrapper;
+        using OptionalValue = std::optional<Value>;
+        if (params.push_type == PushType::FromLua)
+        {
+            return "[push_structproperty] PushType::FromLua not yet implemented";
+        }
+        else if (params.push_type == PushType::ToLua)
+        {
+            return "[push_structproperty] PushType::ToLua not yet implemented";
+        }
+        else if (params.push_type == PushType::ToLuaParam)
+        {
+            auto struct_property = static_cast<FStructProperty*>(params.property);
+            sol::stack::push(params.lua_state, ScriptStructWrapper{struct_property->GetStruct(), params.data, struct_property});
+        }
+        else
+        {
+            return "[push_structproperty] Unhandled Operation";
+        }
+        return {};
+    }
+
+    auto push_arrayproperty(const PropertyPusherFunctionParams& params) -> std::string
+    {
+        using Value = FScriptArray*;
+        using OptionalValue = std::optional<Value>;
+        if (params.push_type == PushType::FromLua)
+        {
+            if (auto maybe_table = params.result ? params.result->get<std::optional<sol::table>>() : sol::stack::get<std::optional<sol::table>>(params.lua_state); maybe_table.has_value())
+            {
+                auto array_property = static_cast<FArrayProperty*>(params.property);
+                auto inner = array_property->GetInner();
+                auto property_pusher = lookup_property_pusher(inner->GetClass().GetFName());
+                if (!property_pusher)
+                {
+                    std::string inner_type_name = to_string(inner->GetClass().GetName());
+                    return std::format("[push_arrayproperty] Tried pushing with unsupported inner type of '{}'", inner_type_name).c_str();
+                }
+
+                auto table = maybe_table.value();
+                auto table_length = table.size();
+                auto has_elements = table_length > 0;
+
+                if (has_elements)
+                {
+                    size_t element_index{};
+                    auto array_element_size = inner->GetElementSize();
+                    auto array = new unsigned char[array_property->GetElementSize() * table_length];
+                    for (const auto& field : table)
+                    {
+                        if (!field.first.is<int>()) { continue; }
+
+                        auto data = &array[array_element_size * element_index];
+                        if (auto error_msg = property_pusher({params.lua_state, nullptr, inner, data, PushType::FromLua, nullptr}); !error_msg.empty())
+                        {
+                            return std::format("[push_arrayproperty] Error retrieving property value from Lua: {}\n", error_msg).c_str();
+                        }
+                        ++element_index;
+                    }
+                }
+            }
+            else if (auto maybe_nil = params.result ? params.result->get<std::optional<sol::nil_t>>() : sol::stack::get<std::optional<sol::nil_t>>(params.lua_state); maybe_nil.has_value())
+            {
+            }
+            else if (auto maybe_script_array = params.result ? params.result->get<OptionalValue>() : sol::stack::get<OptionalValue>(params.lua_state); maybe_script_array.has_value())
+            {
+                return "[push_arrayproperty] FScriptArray as userdata is not yet implemented";
+            }
+            else
+            {
+                return "[push_arrayproperty] FScriptArray can only be interpreted as FScriptArray, table, or nil";
+            }
+        }
+        else if (params.push_type == PushType::ToLua)
+        {
+            auto inner = static_cast<FArrayProperty*>(params.property)->GetInner();
+            auto property_pusher = lookup_property_pusher(inner->GetClass().GetFName());
+            if (!property_pusher)
+            {
+                std::string inner_type_name = to_string(inner->GetClass().GetName());
+                return std::format("[push_arrayproperty] Tried interacting with an array but the inner property has no registered handler. Property type '{}' not supported.", inner_type_name);
+            }
+
+            auto array_container = static_cast<FScriptArray*>(params.data);
+            auto array_data = static_cast<uint8_t*>(array_container->GetData());
+            auto array_size = array_container->Num();
+
+            auto maybe_table = sol::stack::get<std::optional<sol::table>>(params.lua_state);
+            auto table = maybe_table.has_value() ? maybe_table.value() : sol::state_view{params.lua_state}.create_table();
+            table.push(params.lua_state);
+            for (int32_t i = 0; i < array_size; ++i)
+            {
+                lua_pushinteger(params.lua_state, i);
+                auto data = array_data + (i * inner->GetElementSize());
+                if (auto error_msg = property_pusher({params.lua_state, nullptr, inner, data, PushType::ToLuaParam, nullptr}); !error_msg.empty())
+                {
+                    return std::format("[push_arrayproperty] Error sending property value to Lua: {}\n", error_msg);
+                }
+                lua_rawset(params.lua_state, -3);
+            }
+        }
+        else if (params.push_type == PushType::ToLuaParam)
+        {
+            if (!params.param_wrappers) { return "[push_arrayproperty] Tried setting Lua param but param wrapper pointer was nullptr"; }
+            params.param_wrappers->emplace_back(ParamPtrWrapper{params.property, params.data, &push_interfaceproperty});
+        }
+        else
+        {
+            return "[push_arrayproperty] Unhandled Operation";
+        }
+        return {};
     }
 }

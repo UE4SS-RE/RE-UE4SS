@@ -21,6 +21,7 @@
 #include <Unreal/UClass.hpp>
 #include <Unreal/UFunction.hpp>
 #include <Unreal/UScriptStruct.hpp>
+#include <Unreal/FScriptArray.hpp>
 #include <Unreal/UEnum.hpp>
 #include <Unreal/World.hpp>
 #include <Unreal/AActor.hpp>
@@ -78,7 +79,7 @@ else \
 }()
 
 #define REGISTER_SOL_SERIALIZER(TypeName, Type) \
-static auto push_##TypeName##property(const PropertyPusherFunctionParams& params) -> const char* \
+static auto push_##TypeName##property(const PropertyPusherFunctionParams& params) -> std::string \
 { \
     using Value = Type; \
     using OptionalValue = std::optional<Value>; \
@@ -105,9 +106,13 @@ static auto push_##TypeName##property(const PropertyPusherFunctionParams& params
     else if (params.push_type == PushType::ToLuaParam) \
     { \
         if (!params.param_wrappers) { return "[push_" #TypeName "property] Tried setting Lua param but param wrapper pointer was nullptr"; } \
-        params.param_wrappers->emplace_back(ParamPtrWrapper{params.data, &push_##TypeName##property}); \
+        params.param_wrappers->emplace_back(ParamPtrWrapper{params.property, params.data, &push_##TypeName##property}); \
     } \
-    return nullptr; \
+    else \
+    { \
+        return "[push_" #TypeName "property] Unhandled Operation";\
+    } \
+    return {}; \
 }
 
 #define EXIT_NATIVE_HOOK_WITH_ERROR(Action, LuaData, ErrorMessage) \
@@ -344,15 +349,16 @@ namespace RC
     };
 
     struct PropertyPusherFunctionParams;
-    using PropertyPusherFunction = const char* (*)(const PropertyPusherFunctionParams&);
+    using PropertyPusherFunction = std::string (*)(const PropertyPusherFunctionParams&);
     class ParamPtrWrapper
     {
     private:
+        FProperty* property{};
         void* value_ptr{};
         const PropertyPusherFunction property_pusher{};
 
     public:
-        ParamPtrWrapper(void* data, PropertyPusherFunction pusher) : value_ptr(data), property_pusher(pusher) {};
+        ParamPtrWrapper(FProperty* in_property, void* data, PropertyPusherFunction pusher) : property(in_property), value_ptr(data), property_pusher(pusher) {};
 
         auto unwrap(lua_State* lua_state) -> void;
         auto rewrap(lua_State* lua_state) -> void;
@@ -363,6 +369,7 @@ namespace RC
     {
         lua_State* lua_state{};
         sol::protected_function_result* result{};
+        FProperty* property{};
         void* data{};
         PushType push_type{};
         std::vector<ParamPtrWrapper>* param_wrappers{};
@@ -385,7 +392,9 @@ namespace RC
     REGISTER_SOL_SERIALIZER(class, UClass*)
     REGISTER_SOL_SERIALIZER(name, FName)
     REGISTER_SOL_SERIALIZER(interface, UInterface*)
-    
+    auto push_structproperty(const PropertyPusherFunctionParams& params) -> std::string;
+    auto push_arrayproperty(const PropertyPusherFunctionParams& params) -> std::string;
+
     inline auto auto_construct_uobject(sol::state_view state, UObject* object) -> void
     {
         if (object->IsA<UFunction>())
@@ -394,7 +403,7 @@ namespace RC
         }
         else if (object->IsA<UClass>())
         {
-            push_classproperty({state, nullptr, &object, PushType::ToLua, nullptr});
+            push_classproperty({state, nullptr, nullptr, &object, PushType::ToLua, nullptr});
         }
         else if (object->IsA<UScriptStruct>())
         {
@@ -541,7 +550,7 @@ namespace RC
         //                   Maybe we could use a special pusher ?
         //                   A special pusher isn't going to work; We have to give the param to the function call, we can't push onto the stack.
         //                   For now, we'll just use a different function for this.
-        (void(get_pusher_from_cpp_type<Params>()({state, nullptr, &params, PushType::ToLuaParam, &param_wrappers})), ...);
+        (void(get_pusher_from_cpp_type<Params>()({state, nullptr, nullptr, &params, PushType::ToLuaParam, &param_wrappers})), ...);
         return call_function_safe_internal<ParamsAreWrapped::Yes>(state, function, param_wrappers);
     }
     
