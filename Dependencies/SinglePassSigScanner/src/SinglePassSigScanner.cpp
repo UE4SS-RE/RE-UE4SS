@@ -436,6 +436,11 @@ namespace RC
     {
         PatternData pattern_data{};
 
+        if (pattern.length() < 1 || pattern[0] == '?')
+        {
+            throw std::runtime_error{std::format("[make_mask] A pattern cannot start with a wildcard.\nPattern: {}", pattern)};
+        }
+
         for (size_t i = 0; i < pattern.length(); i++)
         {
             char symbol = pattern[i];
@@ -481,7 +486,7 @@ namespace RC
                 scanner_work_thread_scalar(start_address, end_address, info, signature_containers);
             break;
             case ScanMethod::StdFind:
-                scanner_work_thread_scalar(start_address, end_address, info, signature_containers);
+                scanner_work_thread_stdfind(start_address, end_address, info, signature_containers);
             break;
         }
     }
@@ -656,6 +661,7 @@ namespace RC
             }
         }
 
+        // Loop everything
         for (size_t container_index = 0; const auto& patterns : pattern_datas)
         {
             for (size_t signature_index = 0; const auto& pattern_data : patterns)
@@ -721,15 +727,6 @@ namespace RC
                 ++signature_index;
             }
             ++container_index;
-        }
-
-        // Loop everything
-        for (size_t container_index = 0; const auto& signature_container : signature_containers)
-        {
-            for (size_t signature_index = 0; const auto& sig : signature_container.signatures)
-            {
-
-            }
         }
     }
 
