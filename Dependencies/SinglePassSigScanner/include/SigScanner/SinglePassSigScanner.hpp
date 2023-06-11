@@ -1,15 +1,6 @@
 #ifndef RC_SINGLE_PASS_SIG_SCANNER_HPP
 #define RC_SINGLE_PASS_SIG_SCANNER_HPP
 
-//#include <array>
-//#include <utility>
-//#include <vector>
-//#include <string>
-//#include <functional>
-//#include <regex>
-//#include <format>
-//#include <mutex>
-
 #include <array>
 #include <vector>
 #include <functional>
@@ -214,13 +205,16 @@ namespace RC
 
     struct RC_SPSS_API SignatureData
     {
-        const char* signature;
+        std::string signature{};
 
         // TODO: Add 'ScanTarget' in here and remove 'ScanTarget' from the 'start_scan' function
 
         // The user-code can cast the custom data to their own enum type before using
         // It will be zero-defaulted in the event of no custom data being supplied
         int32_t custom_data{};
+
+        // A mask that's used for the StdFind scanning method.
+        std::string mask{};
     };
 
     class SignatureContainer
@@ -233,7 +227,7 @@ namespace RC
         friend class SinglePassScanner;
 
     private:
-        const std::vector<SignatureData> signatures;
+        std::vector<SignatureData> signatures;
         const std::function<bool(SignatureContainer&)> on_match_found;
         const std::function<void(SignatureContainer&)> on_scan_finished;
 
@@ -298,7 +292,15 @@ namespace RC
         static std::mutex m_scanner_mutex;
 
     public:
-        RC_SPSS_API static uint32_t m_num_threads ;
+        enum class ScanMethod
+        {
+            Scalar,
+            StdFind,
+        };
+
+    public:
+        RC_SPSS_API static uint32_t m_num_threads;
+        RC_SPSS_API static ScanMethod m_scan_method;
 
         // The minimum size a module has to be for multi-threading to be enabled
         // Smaller modules might increase the cost of scanning due to the cost of creating threads
@@ -306,11 +308,14 @@ namespace RC
 
 
     private:
-        RC_SPSS_API auto static string_to_vector(const char* signature) -> std::vector<int>;
+        RC_SPSS_API auto static string_to_vector(std::string_view signature) -> std::vector<int>;
         RC_SPSS_API auto static string_to_vector(const std::vector<SignatureData>& signatures) -> std::vector<std::vector<int>>;
+        RC_SPSS_API auto static format_aob_strings(std::vector<SignatureContainer>& signature_containers) -> void;
 
     public:
         RC_SPSS_API auto static scanner_work_thread(uint8_t* start_address, uint8_t* end_address, SYSTEM_INFO& info, std::vector<SignatureContainer>& signature_containers) -> void;
+        RC_SPSS_API auto static scanner_work_thread_scalar(uint8_t* start_address, uint8_t* end_address, SYSTEM_INFO& info, std::vector<SignatureContainer>& signature_containers) -> void;
+        RC_SPSS_API auto static scanner_work_thread_stdfind(uint8_t* start_address, uint8_t* end_address, SYSTEM_INFO& info, std::vector<SignatureContainer>& signature_containers) -> void;
 
         using SignatureContainerMap = std::unordered_map<ScanTarget, std::vector<SignatureContainer>>;
         RC_SPSS_API auto static start_scan(SignatureContainerMap& signature_containers) -> void;
