@@ -373,6 +373,7 @@ namespace RC
         void* data{};
         PushType push_type{};
         std::vector<ParamPtrWrapper>* param_wrappers{};
+        void* base{};
     };
     
     REGISTER_SOL_SERIALIZER(int8, int8_t)
