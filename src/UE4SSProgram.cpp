@@ -396,7 +396,7 @@ namespace RC
         Unreal::UnrealInitializer::Config config;
         config.CachePath = m_root_directory / "cache";
         config.bInvalidateCacheIfSelfChanged = settings_manager.General.InvalidateCacheIfDLLDiffers;
-        config.bEnableCache = true;
+        config.bEnableCache = settings_manager.General.UseCache;
         config.NumScanAttemptsNormal = settings_manager.General.MaxScanAttemptsNormal;
         config.NumScanAttemptsModular = settings_manager.General.MaxScanAttemptsModular;
         config.bUseUObjectArrayCache = settings_manager.General.UseUObjectArrayCache;

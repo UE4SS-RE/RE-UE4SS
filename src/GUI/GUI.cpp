@@ -155,6 +155,7 @@ namespace RC::GUI
                         if (ImGui::BeginTabItem(to_string(tab->TabName).c_str()))
                         {
                             tab->render();
+                            ImGui::EndTabItem();
                         }
                     }
                 }

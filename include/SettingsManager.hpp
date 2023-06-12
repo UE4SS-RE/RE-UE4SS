@@ -21,6 +21,7 @@ namespace RC
         struct SectionGeneral
         {
             bool EnableHotReloadSystem{};
+            bool UseCache{true};
             bool InvalidateCacheIfDLLDiffers{true};
             bool EnableDebugKeyBindings{false};
             int64_t MaxScanAttemptsNormal{20};
