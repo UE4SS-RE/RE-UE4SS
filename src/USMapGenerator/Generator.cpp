@@ -388,10 +388,18 @@ namespace RC::OutTheShade
             }
         }
 
-        // extension data
-        Buffer.Write<uint32_t>(1); // extensions bitflag; right now we only serialize the scripts extension
+        // extensions //
 
-        // scripts
+        Buffer.Write<uint32_t>(0x54584543); // "CEXT"; magic
+        Buffer.Write<uint8_t>(0); // extensions layout version; 0 (Initial)
+
+        Buffer.Write<uint32_t>(1); // number of extensions, only 1
+
+        // extension 1: scripts
+        Buffer.Write<uint32_t>(0x4C444F4D); // "MODL"; module paths ext id
+        Buffer.Write<uint32_t>(0); // size; unknown for now
+
+        std::streampos extStartPos = Buffer.GetBuffer().tellp();
         int CurrentModulePathsIndex = 0;
         int ModulePathsMapSize = ModulePathsMap.size();
         Buffer.Write<uint16_t>(ModulePathsMapSize);
@@ -408,6 +416,14 @@ namespace RC::OutTheShade
         {
             isIdx16 ? Buffer.Write<uint16_t>(static_cast<uint16_t>(ModulePathsMap[ky])) : Buffer.Write<uint8_t>(static_cast<uint8_t>(ModulePathsMap[ky]));
         }
+        std::streampos extEndPos = Buffer.GetBuffer().tellp();
+
+        Buffer.GetBuffer().seekp(extStartPos);
+        Buffer.GetBuffer().seekp(-sizeof(uint32_t), std::ios_base::cur);
+        Buffer.Write<uint32_t>(extEndPos - extStartPos);
+        Buffer.GetBuffer().seekp(extEndPos);
+
+        // end of extensions //
 
         std::vector<uint8_t> UsmapData;
 		std::string UncompressedStream = Buffer.GetBuffer().str();
