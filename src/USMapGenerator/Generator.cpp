@@ -332,16 +332,20 @@ namespace RC::OutTheShade
         {
             Buffer.Write(NameMap[Enum->GetNamePrivate()]);
 
+            // limit to 255 entries; why is this a byte in the first place?
             uint8_t EnumNameCount{};
             for (auto _ : Enum->ForEachName())
             {
                 ++EnumNameCount;
+                if (EnumNameCount >= std::numeric_limits<uint8_t>::max()) break;
             }
             Buffer.Write<uint8_t>(EnumNameCount);
 
+            int numSoFar = 0;
             for (auto& [Key, _] : Enum->ForEachName())
             {
                 Buffer.Write<int>(NameMap[Key]);
+                if (++numSoFar >= EnumNameCount) break;
             }
         }
 
