@@ -392,8 +392,7 @@ namespace RC
         config.CachePath = m_root_directory / "cache";
         config.bInvalidateCacheIfSelfChanged = settings_manager.General.InvalidateCacheIfDLLDiffers;
         config.bEnableCache = settings_manager.General.UseCache;
-        config.NumScanAttemptsNormal = settings_manager.General.MaxScanAttemptsNormal;
-        config.NumScanAttemptsModular = settings_manager.General.MaxScanAttemptsModular;
+        config.SecondsToScanBeforeGivingUp = settings_manager.General.SecondsToScanBeforeGivingUp;
         config.bUseUObjectArrayCache = settings_manager.General.UseUObjectArrayCache;
 
         // Retrieve from the config file the number of threads to be used for aob scanning
