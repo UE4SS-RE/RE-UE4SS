@@ -9,6 +9,7 @@
 #include <memory>
 
 #include <DynamicOutput/DynamicOutput.hpp>
+#include <Unreal/UnrealFlags.hpp>
 
 namespace RC::Unreal
 {
@@ -30,6 +31,10 @@ namespace RC::GUI
         bool non_instances_only{};
         bool include_default_objects{true};
         bool default_objects_only{};
+        bool function_param_flags_required{};
+        std::array<bool, 255> function_param_checkboxes{};
+        EPropertyFlags function_param_flags{};
+        bool function_param_flags_include_return_property{};
     };
 
     class LiveView

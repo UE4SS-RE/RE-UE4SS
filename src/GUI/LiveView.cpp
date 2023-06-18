@@ -82,6 +82,23 @@ namespace RC::GUI
         if (!LiveView::s_search_options.include_default_objects && object->HasAnyFlags(static_cast<EObjectFlags>(RF_ClassDefaultObject | RF_ArchetypeObject))) { return; }
         if (LiveView::s_search_options.default_objects_only && !object->HasAnyFlags(static_cast<EObjectFlags>(RF_ClassDefaultObject | RF_ArchetypeObject))) { return; }
         if (LiveView::s_name_search_results_set.contains(object)) { return; }
+        if (object->IsA<UFunction>() && LiveView::s_search_options.function_param_flags != CPF_None)
+        {
+            auto as_function = static_cast<UFunction*>(object);
+            auto first_property = as_function->GetFirstProperty();
+            if (!first_property || (first_property->HasAnyPropertyFlags(CPF_ReturnParm) && !first_property->HasNext())) { return; }
+            bool has_all_required_flags{true};
+            for (const auto& param : as_function->ForEachProperty())
+            {
+                if (param->HasAnyPropertyFlags(CPF_ReturnParm) && !LiveView::s_search_options.function_param_flags_include_return_property) { continue; }
+                has_all_required_flags = param->HasAllPropertyFlags(LiveView::s_search_options.function_param_flags);
+            }
+            if (!has_all_required_flags) { return; }
+        }
+        else if (LiveView::s_search_options.function_param_flags != CPF_None)
+        {
+            return;
+        }
 
         auto object_full_name = get_object_full_name_cxx_string(object);
         std::transform(object_full_name.begin(), object_full_name.end(), object_full_name.begin(), [](char c) {
@@ -1631,7 +1648,14 @@ namespace RC::GUI
                 // Row #2
                 ImGui::TableNextRow();
                 ImGui::TableNextColumn();
-                // Empty column
+                ImGui::Checkbox("Function parameter flags", &s_search_options.function_param_flags_required);
+                if (ImGui::IsItemHovered())
+                {
+                    ImGui::BeginTooltip();
+                    ImGui::Text("You must manually refresh the search after selecting flags.");
+                    ImGui::Text("Manually refreshing the search can be done by clicking the search bar and hitting enter.");
+                    ImGui::EndTooltip();
+                }
                 ImGui::TableNextColumn();
                 if (!non_instances_only_enabled) { ImGui::BeginDisabled(); }
                 ImGui::Checkbox("Non-instances only", &s_search_options.non_instances_only);
@@ -1649,6 +1673,98 @@ namespace RC::GUI
                 ImGui::EndTable();
             }
             ImGui::EndPopup();
+        }
+
+        if (s_search_options.function_param_flags_required && ImGui::Begin("##search-option-function-param-flags-required", &s_search_options.function_param_flags_required, ImGuiWindowFlags_NoCollapse))
+        {
+            if (ImGui::BeginTable("search_options_function_param_flags_table", 2))
+            {
+                static std::array s_all_property_flags{
+                    CPF_Edit,
+                    CPF_ConstParm,
+                    CPF_BlueprintVisible,
+                    CPF_ExportObject,
+                    CPF_BlueprintReadOnly,
+                    CPF_Net,
+                    CPF_EditFixedSize,
+                    CPF_Parm,
+                    CPF_OutParm,
+                    CPF_ZeroConstructor,
+                    CPF_ReturnParm,
+                    CPF_DisableEditOnTemplate,
+                    CPF_Transient,
+                    CPF_Config,
+                    CPF_DisableEditOnInstance,
+                    CPF_EditConst,
+                    CPF_GlobalConfig,
+                    CPF_InstancedReference,
+                    CPF_DuplicateTransient,
+                    CPF_SubobjectReference,
+                    CPF_SaveGame,
+                    CPF_NoClear,
+                    CPF_ReferenceParm,
+                    CPF_BlueprintAssignable,
+                    CPF_Deprecated,
+                    CPF_IsPlainOldData,
+                    CPF_RepSkip,
+                    CPF_RepNotify,
+                    CPF_Interp,
+                    CPF_NonTransactional,
+                    CPF_EditorOnly,
+                    CPF_NoDestructor,
+                    CPF_AutoWeak,
+                    CPF_ContainsInstancedReference,
+                    CPF_AssetRegistrySearchable,
+                    CPF_SimpleDisplay,
+                    CPF_AdvancedDisplay,
+                    CPF_Protected,
+                    CPF_BlueprintCallable,
+                    CPF_BlueprintAuthorityOnly,
+                    CPF_TextExportTransient,
+                    CPF_NonPIEDuplicateTransient,
+                    CPF_ExposeOnSpawn,
+                    CPF_PersistentInstance,
+                    CPF_UObjectWrapper,
+                    CPF_HasGetValueTypeHash,
+                    CPF_NativeAccessSpecifierPublic,
+                    CPF_NativeAccessSpecifierProtected,
+                    CPF_NativeAccessSpecifierPrivate,
+                    CPF_SkipSerialization
+                };
+
+                static_assert(s_search_options.function_param_checkboxes.size() >= s_all_property_flags.size(), "The checkbox array is too small.");
+
+                auto render_column = [] (size_t i){
+                    auto property_flag_string = PropertyFlagsStringifier{s_all_property_flags[i]}.flags_string;
+                    if (ImGui::Checkbox(property_flag_string.c_str(), &s_search_options.function_param_checkboxes[i]))
+                    {
+                        if (s_search_options.function_param_checkboxes[i])
+                        {
+                            s_search_options.function_param_flags |= s_all_property_flags[i];
+                        }
+                        else
+                        {
+                            s_search_options.function_param_flags &= ~s_all_property_flags[i];
+                        }
+                    }
+                };
+
+                ImGui::TableNextRow();
+                ImGui::TableNextColumn();
+                ImGui::Checkbox("Also check return property flags", &s_search_options.function_param_flags_include_return_property);
+
+                for (size_t i = 0; i < s_all_property_flags.size(); ++i)
+                {
+                    ImGui::TableNextRow();
+                    ImGui::TableNextColumn();
+                    render_column(i);
+                    ImGui::TableNextColumn();
+                    render_column(++i);
+                }
+
+                ImGui::EndTable();
+            }
+            ImGui::End();
         }
 
         if (!listeners_allowed)
