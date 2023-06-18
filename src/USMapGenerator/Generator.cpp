@@ -205,7 +205,7 @@ namespace RC::OutTheShade
         
         StreamWriter Buffer;
         std::unordered_map<FName, int> NameMap;
-        std::unordered_map<FName, FName> ModulePathsMap;
+        std::unordered_map<UObject*, FName> ModulePathsMap;
 
         std::vector<UEnum*> Enums;
         std::vector<UStruct*> Structs; // TODO: a better way than making this completely dynamic
@@ -306,7 +306,7 @@ namespace RC::OutTheShade
                 FName FinalPathName = FName(FinalPathStr);
 
                 NameMap.insert_or_assign(FinalPathName, 0);
-                ModulePathsMap.insert_or_assign(Object->GetNamePrivate(), FinalPathName);
+                ModulePathsMap.insert_or_assign(Object, FinalPathName);
             }
 
             return LoopAction::Continue;
@@ -413,12 +413,12 @@ namespace RC::OutTheShade
         Buffer.Write<uint32_t>(static_cast<uint32_t>(Enums.size()));
         for (auto Enum : Enums)
         {
-            Buffer.Write(NameMap[ModulePathsMap[Enum->GetNamePrivate()]]);
+            Buffer.Write(NameMap[ModulePathsMap[Enum]]);
         }
         Buffer.Write<uint32_t>(static_cast<uint32_t>(Structs.size()));
         for (auto Struct : Structs)
         {
-            Buffer.Write(NameMap[ModulePathsMap[Struct->GetNamePrivate()]]);
+            Buffer.Write(NameMap[ModulePathsMap[Struct]]);
         }
         std::streampos extEndPos = Buffer.GetBuffer().tellp();
 
