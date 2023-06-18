@@ -453,7 +453,7 @@ namespace RC::OutTheShade
             }
             else
             {
-                Buffer.Write<uint8_t>(255); // ???
+                Buffer.Write<uint8_t>(0); // ???
                 Buffer.Write<int32_t>(0);
             }
 
