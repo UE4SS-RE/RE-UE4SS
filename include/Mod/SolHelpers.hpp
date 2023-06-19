@@ -91,8 +91,9 @@ static auto push_##TypeName##property(const PropertyPusherFunctionParams& params
             return "[push_" #TypeName "property] Tried to push non-" #Type " as " #Type; \
         } \
         *std::bit_cast<Value*>(params.data) = maybe_value.value(); \
+        sol::stack::pop_n(params.lua_state, 1); \
     } \
-    else if (params.push_type == PushType::ToLua) \
+    else if (params.push_type == PushType::ToLua || params.push_type == PushType::ToLuaNonTrivialLocal) \
     { \
         if (params.data) \
         { \
@@ -364,7 +365,7 @@ namespace RC
         auto rewrap(lua_State* lua_state) -> void;
     };
 
-    enum class PushType { FromLua, ToLua, ToLuaParam };
+    enum class PushType { None, FromLua, ToLua, ToLuaParam, ToLuaNonTrivialLocal };
     struct PropertyPusherFunctionParams
     {
         lua_State* lua_state{};
@@ -374,6 +375,7 @@ namespace RC
         PushType push_type{};
         std::vector<ParamPtrWrapper>* param_wrappers{};
         void* base{};
+        bool create_new_if_to_lua_non_trivial_local{true};
     };
     
     REGISTER_SOL_SERIALIZER(int8, int8_t)
@@ -395,6 +397,7 @@ namespace RC
     REGISTER_SOL_SERIALIZER(interface, UInterface*)
     auto push_structproperty(const PropertyPusherFunctionParams& params) -> std::string;
     auto push_arrayproperty(const PropertyPusherFunctionParams& params) -> std::string;
+    auto push_functionproperty(const PropertyPusherFunctionParams& params) -> std::string;
 
     inline auto auto_construct_uobject(sol::state_view state, UObject* object) -> void
     {

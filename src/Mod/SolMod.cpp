@@ -5,6 +5,7 @@
 #include <Mod/SolMod.hpp>
 #include <Helpers/String.hpp>
 #include <Helpers/Casting.hpp>
+#include <Helpers/Integer.hpp>
 #include <UE4SSProgram.hpp>
 #include <Unreal/UObject.hpp>
 #include <Unreal/UClass.hpp>
@@ -490,10 +491,38 @@ namespace RC
 
         if (!field || field->GetClass().GetFName() == GFunctionName)
         {
-            // Return the UFunction.
-            // Implement this later.
-            // For now, assume we might be looking for something in the metamethod like __name.
-            return handle_metatable_lookups(state, sol_object, member_name);
+            UFunction* func{};
+
+            if (!field && property_name != NAME_None)
+            {
+                // TODO: Implement an overload of 'GetFunctionByName/InChain' that takes an FName instead of a TCHAR*.
+                func = self.GetFunctionByNameInChain(member_name.c_str());
+            }
+            else
+            {
+                // We can take a shortcut if property is non-nullptr.
+                // It means that the UFunction was found and is stored in 'property', so we don't need to do anything to find it.
+                func = std::bit_cast<UFunction*>(field);
+            }
+
+            if (func)
+            {
+                auto pusher_params = PropertyPusherFunctionParams{
+                    state,
+                    nullptr,
+                    nullptr,
+                    func,
+                    PushType::None,
+                    nullptr,
+                    nullptr
+                };
+                push_functionproperty(pusher_params);
+                return 1;
+            }
+            else
+            {
+                return handle_metatable_lookups(state, sol_object, member_name);
+            }
         }
         else
         {
@@ -591,9 +620,223 @@ namespace RC
         return 1;
     }
 
-    static auto handle_array_proprety_getter(lua_State* lua_state) -> int
+    static auto handle_array_property_getter(lua_State* lua_state) -> int
     {
         return handle_array_property(lua_state, PushType::ToLua);
+    }
+
+    struct DynamicUnrealFunctionData
+    {
+        uint8_t data[0x200]{};
+    };
+
+    struct PropertyAndLuaRefPair
+    {
+        FProperty* property;
+        int32_t lua_ref;
+    };
+
+    class DynamicUnrealFunctionOutParameters
+    {
+    private:
+        size_t m_last{0};
+        using ParamsArray = std::array<PropertyAndLuaRefPair, 10>;
+        ParamsArray m_params{};
+
+    public:
+        auto add(const PropertyAndLuaRefPair param_ref_pair) -> void
+        {
+            m_params[m_last] = param_ref_pair;
+            ++m_last;
+        }
+
+        auto get(size_t index) -> const PropertyAndLuaRefPair& { return m_params[index]; }
+        auto get() -> const ParamsArray& { return m_params; }
+    };
+
+    static auto handle_ufunction_call(lua_State* lua_state) -> int
+    {
+        sol::state_view state{lua_state};
+
+        UFunction* func = sol::stack::get<UFunction*>(state, 1);
+        UObject* calling_context = sol::stack::get<UObject*>(state, 2);
+
+        if (!func || !calling_context)
+        {
+            Output::send<LogLevel::Error>(STR("[handle_ufunction_call] Tried calling function without both UFunction and calling context\n"));
+            return 0;
+        }
+
+        auto num_ufunc_params = func->GetNumParms();
+        auto return_value_offset = func->GetReturnValueOffset();
+        FProperty* return_value_property{};
+
+        DynamicUnrealFunctionData dynamic_unreal_function_data{};
+        DynamicUnrealFunctionOutParameters dynamic_unreal_function_out_parameters{};
+        bool has_out_params{};
+
+        if (func->HasChildren())
+        {
+            // Subtracting 2 to account for the UFunction and the calling context on the stack.
+            auto num_supplied_params = Helper::Integer::to<uint8_t>(sol::stack::top(state) - 2);
+
+            // When return_value_offset is 0xFFFF it means that there is no return value so num_ufunc_params is accurate
+            // Otherwise you must subtract 1 to account for the return value (stored in the same struct and counts as a param)
+            // The ternary makes sure that we never have a negative number of params
+            bool has_return_value = return_value_offset != 0xFFFF;
+            uint8_t num_expected_params = num_ufunc_params;
+            uint8_t num_expected_params_with_return_value = has_return_value ? (num_expected_params - 1 < 0 ? 0 : num_expected_params - 1) : num_expected_params;
+
+            if (num_supplied_params != num_expected_params_with_return_value)
+            {
+                Output::send<LogLevel::Error>(STR("[handle_ufunction_call] UFunction expected {} parameters, received {}\n"), num_expected_params, num_supplied_params);
+                return 0;
+            }
+
+            for (auto param_next : func->ForEachProperty())
+            {
+                auto offset_internal = param_next->GetOffset_Internal();
+
+                // BP-only functions can have non-param properties, let's skip those.
+                if (!param_next->HasAnyPropertyFlags(CPF_Parm)) { continue; }
+
+                if (offset_internal == return_value_offset)
+                {
+                    return_value_property = param_next;
+                }
+                else
+                {
+                    if (param_next->HasAnyPropertyFlags(CPF_OutParm) && !param_next->HasAnyPropertyFlags(CPF_ReturnParm) && !param_next->HasAnyPropertyFlags(CPF_ConstParm))
+                    {
+                        has_out_params = true;
+
+                        // Store pointer to params property, and a Lua ref to the corresponding table
+
+                        if (!sol::stack::check<sol::table>(state))
+                        {
+                            Output::send<LogLevel::Error>(STR("Tried storing reference to a Lua table for an 'Out' parameter when calling a UFunction but no table was on the stack\n"));
+                            return 0;
+                        }
+
+                        // Duplicate the Lua table to the top of the stack for luaL_ref
+                        lua_pushvalue(state, 3);
+
+                        // Take a reference to the Lua table (it also pops it of the stack)
+                        auto ref_pair = PropertyAndLuaRefPair{
+                            .property = param_next,
+                            .lua_ref = luaL_ref(state, LUA_REGISTRYINDEX)
+                        };
+                        dynamic_unreal_function_out_parameters.add(ref_pair);
+
+                        // Removing the original table at stack index 3.
+                        // This ensures that the table for the next out-param is at index 3 for the next iteration.
+                        sol::stack::remove(lua_state, 3, 1);
+
+                        if (!param_next->IsA<FStructProperty>())
+                        {
+                            continue;
+                        }
+                    }
+
+                    if (auto property_pusher = lookup_property_pusher(param_next->GetClass().GetFName()); property_pusher)
+                    {
+                        void* data = &dynamic_unreal_function_data.data[offset_internal];
+                        auto pusher_params = PropertyPusherFunctionParams{state, nullptr, param_next, data, PushType::FromLua, nullptr, static_cast<UObject*>(static_cast<void*>(dynamic_unreal_function_data.data))};
+                        if (auto error_msg = property_pusher(pusher_params); !error_msg.empty())
+                        {
+                            Output::send<LogLevel::Error>(STR("Error setting UFunction param value: {}\n"), to_wstring(error_msg));
+                            return 0;
+                        }
+                    }
+                    else
+                    {
+                        auto property_type_name = param_next->GetClass().GetName();
+                        Output::send<LogLevel::Error>(STR("Tried calling UFunction without a registered handler for parameter. Parameter '{}' of type '{}' not supported.\n"), param_next->GetName(), property_type_name);
+                        return 0;
+                    }
+                }
+            }
+        }
+
+        // It's assumed that everything is safe here
+        // Every part of the system is designed to throw when stuff goes wrong
+        // This code should never be executed in those cases
+        calling_context->ProcessEvent(func, dynamic_unreal_function_data.data);
+
+        // If there are any 'Out' params, update the table that they correspond to
+        if (has_out_params)
+        {
+            for (auto const [param, lua_table_ref] : dynamic_unreal_function_out_parameters.get())
+            {
+                if (!param)
+                {
+                    break;
+                }
+
+                // Use the stored registry index to put the original Lua table for the 'Out' param back on the stack
+                if (lua_rawgeti(state, LUA_REGISTRYINDEX, lua_table_ref) != LUA_TTABLE)
+                {
+                    Output::send<LogLevel::Error>(STR("[handle_ufunction_call] Ref was not a table\n"));
+                    return 0;
+                }
+
+                if (!param->IsA<FStructProperty>())
+                {
+                    lua_pushstring(state, to_string(param->GetName()).c_str());
+                }
+
+                if (auto property_pusher = lookup_property_pusher(param->GetClass().GetFName()); property_pusher)
+                {
+                    void* data = &dynamic_unreal_function_data.data[param->GetOffset_Internal()];
+                    auto pusher_params = PropertyPusherFunctionParams{state, nullptr, param, data, PushType::ToLuaNonTrivialLocal, nullptr, static_cast<UObject*>(static_cast<void*>(dynamic_unreal_function_data.data)), false};
+                    if (auto error_msg = property_pusher(pusher_params); !error_msg.empty())
+                    {
+                        Output::send<LogLevel::Error>(STR("Error setting UFunction 'Out' param value: {}\n"), to_wstring(error_msg));
+                        return 0;
+                    }
+                }
+                else
+                {
+                    auto property_type_name = param->GetClass().GetName();
+                    Output::send<LogLevel::Error>(STR("Tried calling UFunction without a registered handler 'Out' param. Type '{}' not supported.\n"), property_type_name);
+                    return 0;
+                }
+
+                if (!param->IsA<FStructProperty>())
+                {
+                    lua_rawset(state, -3);
+                }
+            }
+        }
+
+        // If there's a return value, then forward it to the Lua script
+        if (return_value_property)
+        {
+            if (auto property_pusher = lookup_property_pusher(return_value_property->GetClass().GetFName()); property_pusher)
+            {
+                void* data = &dynamic_unreal_function_data.data[return_value_property->GetOffset_Internal()];
+                auto pusher_params = PropertyPusherFunctionParams{state, nullptr, return_value_property, data, PushType::ToLuaNonTrivialLocal, nullptr, data};
+                if (auto error_msg = property_pusher(pusher_params); !error_msg.empty())
+                {
+                    Output::send<LogLevel::Error>(STR("Error setting UFunction 'Out' param value: {}\n"), to_wstring(error_msg));
+                    return 0;
+                }
+                else
+                {
+                    return 1;
+                }
+            }
+            else
+            {
+                auto property_type_name = return_value_property->GetClass().GetName();
+                Output::send<LogLevel::Error>(STR("Tried calling UFunction without a registered handler for return value. Return value of type '{}' not supported.\n"), property_type_name);
+                return 0;
+            }
+        }
+        else
+        {
+            return 0;
+        }
     }
 
     static auto handle_uscriptstruct_property(sol::state_view state, PushType push_type) -> int
@@ -741,9 +984,15 @@ namespace RC
         sol.new_usertype<sol_FScriptArray>("TArray",
             sol::no_constructor,
             // TODO: index & new_index(?) meta function.
-            sol::meta_function::index, sol::policies(&handle_array_proprety_getter, &pointer_policy),
+            sol::meta_function::index, sol::policies(&handle_array_property_getter, &pointer_policy),
             "type", [](sol::this_state state) { return get_class_name(state); },
             "ForEach", &tarray_for_each
+        );
+
+        sol.new_usertype<UFunction>("UFunction",
+            sol::no_constructor,
+            sol::meta_function::call, sol::policies(&handle_ufunction_call),
+            "type", [](sol::this_state state) { return get_class_name(state); }
         );
 
         sol.new_usertype<UObject>("UObject",
@@ -1035,6 +1284,45 @@ namespace RC
             auto struct_property = static_cast<FStructProperty*>(params.property);
             sol::stack::push(params.lua_state, ScriptStructWrapper{struct_property->GetStruct(), params.data, struct_property});
         }
+        else if (params.push_type == PushType::ToLuaNonTrivialLocal)
+        {
+            auto struct_property = CastField<FStructProperty>(params.property);
+            auto script_struct = struct_property->GetStruct();
+
+            // Get the table from the stack or create a new one
+            if (params.create_new_if_to_lua_non_trivial_local)
+            {
+                sol::state_view{params.lua_state}.create_table().push();
+            }
+            else
+            {
+                sol::stack::get<sol::table>(params.lua_state);
+            }
+
+            // Put all the script struct properties into the table
+            for (auto field : script_struct->ForEachPropertyInChain())
+            {
+                std::string field_name = to_string(field->GetName());
+
+                if (auto property_pusher = lookup_property_pusher(field->GetClass().GetFName()); property_pusher)
+                {
+                    lua_pushstring(params.lua_state, field_name.c_str());
+
+                    void* data = &static_cast<unsigned char*>(params.data)[field->GetOffset_Internal()];
+                    auto pusher_params = PropertyPusherFunctionParams{params.lua_state, nullptr, field, data, PushType::ToLuaNonTrivialLocal, nullptr, std::bit_cast<UObject*>(data)};
+                    if (auto error_msg = property_pusher(pusher_params); !error_msg.empty())
+                    {
+                        return std::format("[push_structproperty] Error getting property value: {}\n", error_msg);
+                    }
+                    lua_rawset(params.lua_state, -3);
+                }
+                else
+                {
+                    auto property_type_name = field->GetClass().GetName();
+                    return to_string(std::format(STR("[push_structproperty] Tried getting without a registered handler. 'StructProperty'.'{}' not supported. Field: '{}'.\n"), property_type_name, field->GetName()));
+                }
+            }
+        }
         else if (params.push_type == PushType::ToLuaParam)
         {
             if (!params.param_wrappers) { return "[push_structproperty] Tried setting Lua param but param wrapper pointer was nullptr"; }
@@ -1098,10 +1386,15 @@ namespace RC
             {
                 return "[push_arrayproperty] FScriptArray can only be interpreted as FScriptArray, table, or nil";
             }
+            sol::stack::pop_n(params.lua_state, 1);
         }
         else if (params.push_type == PushType::ToLua)
         {
-            /*
+            auto array = static_cast<FScriptArray*>(params.data);
+            sol::stack::push<sol_FScriptArray>(params.lua_state, {array, static_cast<UObject*>(params.base), static_cast<FArrayProperty*>(params.property)});
+        }
+        else if (params.push_type == PushType::ToLuaNonTrivialLocal)
+        {
             auto inner = static_cast<FArrayProperty*>(params.property)->GetInner();
             auto property_pusher = lookup_property_pusher(inner->GetClass().GetFName());
             if (!property_pusher)
@@ -1128,9 +1421,6 @@ namespace RC
                 }
                 lua_rawset(params.lua_state, -3);
             }
-            //*/
-            auto array = static_cast<FScriptArray*>(params.data);
-            sol::stack::push<sol_FScriptArray>(params.lua_state, {array, static_cast<UObject*>(params.base), static_cast<FArrayProperty*>(params.property)});
         }
         else if (params.push_type == PushType::ToLuaParam)
         {
@@ -1141,6 +1431,12 @@ namespace RC
         {
             return "[push_arrayproperty] Unhandled Operation";
         }
+        return {};
+    }
+
+    auto push_functionproperty(const PropertyPusherFunctionParams& params) -> std::string
+    {
+        sol::stack::push(params.lua_state, static_cast<UFunction*>(params.data));
         return {};
     }
 }
