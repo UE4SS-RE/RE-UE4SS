@@ -148,6 +148,8 @@ namespace RC::GUI
         auto render_info_panel() -> void;
         auto render_info_panel_as_object(const FUObjectItem*, UObject*) -> void;
         auto render_info_panel_as_property(FProperty*) -> void;
+        auto render_bottom_panel() -> void;
+        auto render_enum() -> void;
         auto render_properties() -> void;
         auto render_object_sub_tree_hierarchy(UObject* object) -> void;
         auto render_struct_sub_tree_hierarchy(UStruct* ustruct) -> void;

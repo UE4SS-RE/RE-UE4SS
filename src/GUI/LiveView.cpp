@@ -24,6 +24,7 @@
 #include <Unreal/AActor.hpp>
 #include <Unreal/UFunction.hpp>
 #include <Unreal/FOutputDevice.hpp>
+#include <Unreal/UEnum.hpp>
 #include <Unreal/Property/FObjectProperty.hpp>
 #include <Unreal/Property/FBoolProperty.hpp>
 #include <Unreal/Property/FArrayProperty.hpp>
@@ -1036,6 +1037,33 @@ namespace RC::GUI
         return next_item_to_render;
     }
 
+    auto LiveView::render_enum() -> void
+    {
+        const auto currently_selected_object = get_selected_object();
+        if (!currently_selected_object.first || !currently_selected_object.second) { return; }
+        
+        auto uenum = static_cast<UEnum*>(currently_selected_object.second);
+        for (const auto& name : uenum->ForEachName())
+        {
+            ImGui::Text("%S <=> %i", name.Key.ToString().c_str(), name.Value);
+        }
+    }
+
+    auto LiveView::render_bottom_panel() -> void
+    {
+        const auto currently_selected_object = get_selected_object();
+        if (!currently_selected_object.first || !currently_selected_object.second) { return; }
+
+        if (currently_selected_object.second->IsA<UEnum>())
+        {
+            render_enum();
+        }
+        else
+        {
+            render_properties();
+        }
+    }
+
     auto LiveView::render_properties() -> void
     {
         const auto currently_selected_object = get_selected_object();
@@ -1280,7 +1308,7 @@ namespace RC::GUI
             ImGui::Unindent();
         }
 
-        render_properties();
+        render_bottom_panel();
     }
 
     static auto render_fname(FName name) -> void
