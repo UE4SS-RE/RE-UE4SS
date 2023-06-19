@@ -190,11 +190,47 @@ inline auto dump_stack(lua_State* lua_state, const char* message) -> void
 //    }
 //}
 
+template<typename Handler>
+auto sol_lua_check(sol::types<RC::Unreal::FName>, lua_State* lua_state, int index, Handler&& handler, sol::stack::record& tracking) -> bool
+{
+    int absolute_index = lua_absindex(lua_state, index);
+    bool success = sol::stack::check<sol::nil_t>(lua_state, absolute_index, &sol::no_panic) ||
+                   sol::stack::check<int>(lua_state, absolute_index, &sol::no_panic) ||
+                   (sol::stack::check<bool>(lua_state, absolute_index, &sol::no_panic) && !sol::stack::get<bool>(lua_state, absolute_index));
+    tracking.use(1);
+    return success;
+}
+
+inline auto sol_lua_get(sol::types<RC::Unreal::FName>, lua_State* lua_state, int index, sol::stack::record& tracking) -> RC::Unreal::FName
+{
+    using namespace ::RC;
+    using namespace ::RC::Unreal;
+    int absolute_index = lua_absindex(lua_state, index);
+    if (auto maybe_nil = sol::stack::get<std::optional<sol::nil_t>>(lua_state, absolute_index); maybe_nil.has_value())
+    {
+        tracking.use(1);
+        return NAME_None;
+    }
+    else if (auto maybe_int = sol::stack::get<std::optional<int>>(lua_state, absolute_index); maybe_int.has_value())
+    {
+        tracking.use(1);
+        return FName(maybe_int.value());
+    }
+    else if (auto maybe_bool = sol::stack::get<std::optional<bool>>(lua_state, absolute_index); maybe_bool.has_value())
+    {
+        tracking.use(1);
+        return NAME_None;
+    }
+    else
+    {
+        std::abort();
+    }
+}
+
 template<typename T, typename Handler>
 auto sol_lua_interop_check(sol::types<T>, lua_State* lua_state, int relindex, sol::type index_type, Handler&& handler, sol::stack::record& tracking) -> bool
 {
     using namespace RC::Unreal;
-    //dump_stack(lua_state, "sol_lua_interop_check");
 
     if constexpr (std::is_same_v<T, bool>)
     {
@@ -233,6 +269,25 @@ auto sol_lua_interop_check(sol::types<T>, lua_State* lua_state, int relindex, so
             return maybe_int.value() == 0;
         }
         else if (auto maybe_bool = sol::stack::get<std::optional<bool>>(lua_state, relindex); maybe_bool.has_value())
+        {
+            return !maybe_bool.value();
+        }
+        else
+        {
+            return false;
+        }
+    }
+    else if constexpr (std::is_convertible_v<std::remove_cvref_t<T*>, FObjectInstancingGraph*>)
+    {
+        if (auto maybe_int = sol::stack::get<std::optional<int>>(lua_state, relindex); maybe_int.has_value())
+        {
+            return maybe_int.value() == 0;
+        }
+        else if (auto maybe_nil = sol::stack::get<std::optional<sol::nil_t>>(lua_state, relindex); maybe_nil.has_value())
+        {
+            return true;
+        }
+        if (auto maybe_bool = sol::stack::get<std::optional<bool>>(lua_state, relindex); maybe_bool.has_value())
         {
             return !maybe_bool.value();
         }
@@ -306,6 +361,10 @@ auto sol_lua_interop_get(sol::types<T> t, lua_State* lua_state, int relindex, vo
         {
             return {false, nullptr};
         }
+    }
+    else if constexpr (std::is_convertible_v<std::remove_cvref_t<T*>, FObjectInstancingGraph*>)
+    {
+        return {true, static_cast<T*>(unadjusted_pointer)};
     }
     else
     {
