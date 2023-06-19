@@ -81,10 +81,10 @@ namespace RC::GUI::BPMods
             auto mod_buttons = mod_buttons_property ? mod_buttons_property->ContainerPtrToValuePtr<TArray<FString>>(mod_actor) : nullptr;
             if (mod_buttons)
             {
-                mod_buttons->ForEach([&](FString* button_name) {
-                    mod_info.ModButtons.emplace_back(to_string(button_name->GetCharArray()));
-                    return LoopAction::Continue;
-                });
+                for (FString& button_name : *mod_buttons)
+                {
+                    mod_info.ModButtons.emplace_back(to_string(button_name.GetCharArray()));
+                }
             }
 
             auto mod_full_name = mod_class->GetFullName();

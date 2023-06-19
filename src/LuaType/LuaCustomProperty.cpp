@@ -50,17 +50,14 @@ namespace RC::LuaType
 
             if (!class_matches)
             {
-                ptr->ForEachSuperStruct([&](Unreal::UStruct* super_struct) {
+                for (Unreal::UStruct* super_struct : ptr->ForEachSuperStruct())
+                {
                     if (super_struct == owner_or_outer)
                     {
                         class_matches = true;
-                        return LoopAction::Break;
+                        break;
                     }
-                    else
-                    {
-                        return LoopAction::Continue;
-                    }
-                });
+                }
             }
 
             if (class_matches && property_name == property_item.m_name)

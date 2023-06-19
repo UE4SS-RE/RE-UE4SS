@@ -1,5 +1,4 @@
 -- LineTrace
-
 local UEHelpers = require("UEHelpers")
 
 -- Importing functions to the global namespace of this mod just so that we don't have to retype 'UEHelpers.' over and over again.
@@ -7,9 +6,9 @@ local GetKismetSystemLibrary = UEHelpers.GetKismetSystemLibrary
 local GetKismetMathLibrary = UEHelpers.GetKismetMathLibrary
 local GetPlayerController = UEHelpers.GetPlayerController
 
-IsInitialized = false
+local IsInitialized = false
 
-function Init()
+local function Init()
     if not GetKismetSystemLibrary():IsValid() then error("KismetSystemLibrary not valid\n") end
     
     print(string.format("KismetSystemLibrary: %s\n", GetKismetSystemLibrary():GetFullName()))
@@ -23,7 +22,7 @@ end
 
 Init()
 
-function GetActorFromHitResult(HitResult)
+local function GetActorFromHitResult(HitResult)
     if UnrealVersion:IsBelow(5, 0) then
         return HitResult.Actor:Get()
     else
@@ -31,8 +30,7 @@ function GetActorFromHitResult(HitResult)
     end
 end
 
-
-function GetObjectName()
+local function GetObjectName()
     if not IsInitialized then return end
     local PlayerController = GetPlayerController()
     local PlayerPawn = PlayerController.Pawn
@@ -72,10 +70,8 @@ function GetObjectName()
         HitActor = GetActorFromHitResult(HitResult)
         print(string.format("HitActor: %s\n", HitActor:GetFullName()))
     else
-        print("Nothing hit.\n")
+        return print("Nothing hit.\n")
     end
 end
 
-RegisterKeyBind(Key.F3, function()
-    GetObjectName()
-end)
+RegisterKeyBind(Key.F3, GetObjectName)

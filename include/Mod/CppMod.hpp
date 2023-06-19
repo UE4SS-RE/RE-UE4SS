@@ -27,7 +27,7 @@ namespace RC
         CppMod(UE4SSProgram&, std::wstring&& mod_name, std::wstring&& mod_path);
         CppMod(CppMod&) = delete;
         CppMod(CppMod&&) = delete;
-        ~CppMod();
+        ~CppMod() override;
 
     public:
         auto start_mod() -> void override;

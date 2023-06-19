@@ -40,6 +40,9 @@ namespace RC::GUI
     ImColor g_imgui_text_editor_error_bg_color = ImColor{148, 36, 20, 255};
     ImColor g_imgui_text_editor_error_text_color = ImColor{255, 255, 255, 255};
     ImColor g_imgui_text_live_view_unreflected_data_color = ImColor{235, 128, 52, 255};
+    ImColor g_imgui_text_green_color = ImColor{115, 235, 120, 255};
+    ImColor g_imgui_text_blue_color = ImColor{135, 195, 250, 255};
+    ImColor g_imgui_text_purple_color = ImColor{170, 145, 255, 255};
 
     std::vector<DebuggingGUI::EndOfFrameCallback> DebuggingGUI::s_end_of_frame_callbacks{};
 
@@ -144,6 +147,19 @@ namespace RC::GUI
                     BPMods::render();
                     ImGui::EndTabItem();
                 }
+
+                {
+                    std::lock_guard<std::mutex> guard(m_tabs_mutex);
+                    for (const auto& tab : m_tabs)
+                    {
+                        if (ImGui::BeginTabItem(to_string(tab->TabName).c_str()))
+                        {
+                            tab->render();
+                            ImGui::EndTabItem();
+                        }
+                    }
+                }
+
                 ImGui::EndTabBar();
                 if (!is_unreal_initialized) { ImGui::EndDisabled(); }
             }
@@ -302,6 +318,17 @@ namespace RC::GUI
         m_os_backend->set_gfx_backend(m_gfx_backend.get());
         m_gfx_backend->on_os_backend_set();
         m_os_backend->on_gfx_backend_set();
+    }
+
+    auto DebuggingGUI::add_tab(std::shared_ptr<GUITab> tab) -> void
+    {
+        std::lock_guard<std::mutex> guard(m_tabs_mutex);
+        m_tabs.push_back(tab);
+    }
+    auto DebuggingGUI::remove_tab(std::shared_ptr<GUITab> tab) -> void
+    {
+        std::lock_guard<std::mutex> guard(m_tabs_mutex);
+        m_tabs.erase(std::remove(m_tabs.begin(), m_tabs.end(), tab), m_tabs.end());
     }
 
     DebuggingGUI::~DebuggingGUI()

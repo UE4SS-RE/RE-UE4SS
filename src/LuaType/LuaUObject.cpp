@@ -41,6 +41,30 @@
 
 namespace RC::LuaType
 {
+    std::unordered_set<size_t> s_lua_unreal_objects{};
+
+    auto add_to_global_unreal_objects_map(Unreal::UObject* object) -> void
+    {
+        if (object)
+        {
+            s_lua_unreal_objects.emplace(object->HashObject());
+        }
+    }
+
+    auto is_object_in_global_unreal_object_map(Unreal::UObject* object) -> bool
+    {
+        return object && s_lua_unreal_objects.contains(object->HashObject());
+    }
+
+    FLuaObjectDeleteListener FLuaObjectDeleteListener::s_lua_object_delete_listener{};
+    void FLuaObjectDeleteListener::NotifyUObjectDeleted(const Unreal::UObjectBase* object, [[maybe_unused]]int32_t index)
+    {
+        if (auto it = s_lua_unreal_objects.find(static_cast<const Unreal::UObject*>(object)->HashObject()); it != s_lua_unreal_objects.end())
+        {
+            s_lua_unreal_objects.erase(it);
+        }
+    }
+
     auto call_ufunction_from_lua(const LuaMadeSimple::Lua& lua) -> int
     {
         if (!lua.is_userdata())
@@ -117,7 +141,8 @@ namespace RC::LuaType
 
             //for (uint8_t i = 0; i < num_expected_params; ++i)
             //uint8_t i = 0;
-            func->ForEachProperty([&](Unreal::FProperty* param_next) {
+            for (Unreal::FProperty* param_next : func->ForEachProperty())
+            {
                 //if (i > 0)
                 //{
                 //    // If not the first iteration then get the next param
@@ -166,7 +191,7 @@ namespace RC::LuaType
 
                         if (!param_next->IsA<Unreal::FStructProperty>())
                         {
-                            return LoopAction::Continue;
+                            continue;
                         }
                     }
 
@@ -192,9 +217,7 @@ namespace RC::LuaType
                         lua.throw_error(std::format("Tried calling UFunction without a registered handler for parameter. Parameter '{}' of type '{}' not supported.", parameter_name, parameter_type_name));
                     }
                 }
-
-                return LoopAction::Continue;
-            });
+            };
         }
 
         // It's assumed that everything is safe here
@@ -497,7 +520,8 @@ namespace RC::LuaType
             }();
 
             // Put all the script struct properties into the table
-            script_struct->ForEachPropertyInChain([&](Unreal::FProperty* field) {
+            for (Unreal::FProperty* field : script_struct->ForEachPropertyInChain())
+            {
                 // There can be non-property items in the linked list, like 'ExecuteUbergraph'
                 // We only care about actual properties, so let's ignore anything else
                 // TODO: This may have only been the case before the ForEachProperty abstraction
@@ -538,9 +562,7 @@ namespace RC::LuaType
                     std::string field_type_name = to_string(field_type.ToString());
                     lua.throw_error(std::format("Tried getting without a registered handler. 'StructProperty'.'{}' not supported. Field: '{}'", field_type_name, field_name));
                 }
-
-                return LoopAction::Continue;
-            });
+            };
 
             lua_table.make_local();
         };
@@ -551,7 +573,8 @@ namespace RC::LuaType
             // Duplicating the table and putting the duplicate at the top of the stack
             lua_pushvalue(params.lua.get_lua_state(), 1);
 
-            script_struct->ForEachPropertyInChain([&](Unreal::FProperty* field) {
+            for (Unreal::FProperty* field : script_struct->ForEachPropertyInChain())
+            {
                 Unreal::FName field_type_fname = field->GetClass().GetFName();
                 const std::string field_name = to_string(field->GetName());
 
@@ -572,7 +595,7 @@ namespace RC::LuaType
                 {
                     // Remove the 'nil' from the stack
                     params.lua.discard_value(-1);
-                    return LoopAction::Continue;
+                    continue;
                 }
 
                 int32_t name_comparison_index = field_type_fname.GetComparisonIndex();
@@ -597,9 +620,7 @@ namespace RC::LuaType
                     std::string field_type_name = to_string(field_type_fname.ToString());
                     params.lua.throw_error(std::format("Tried pushing (Operation::Set) StructProperty without a registered handler for field '{} {}'.", field_type_name, field_name));
                 }
-
-                return LoopAction::Continue;
-            });
+            };
 
             // Discard the original & the duplicated tables
             params.lua.discard_value(1); // Original
@@ -922,13 +943,11 @@ namespace RC::LuaType
                 std::string prop_name = to_string(params.property->GetName());
 
                 auto& names = enum_ptr->GetEnumNames();
-
-                names.ForEach([&](Unreal::FEnumNamePair* elem, [[maybe_unused]]size_t index) {
-                    std::string elem_name = to_string(elem->Key.ToString());
-                    table.add_pair(elem_name.c_str(), static_cast<unsigned int>(elem->Value));
-
-                    return LoopAction::Continue;
-                });
+                for (Unreal::FEnumNamePair& elem : names)
+                {
+                    std::string elem_name = to_string(elem.Key.ToString());
+                    table.add_pair(elem_name.c_str(), static_cast<unsigned int>(elem.Value));
+                }
 
                 // TODO: Optimize this... it'll probably do a dynamic allocation here in order to fit the new beginning of the string
                 prop_name.insert(0, "Enum_");

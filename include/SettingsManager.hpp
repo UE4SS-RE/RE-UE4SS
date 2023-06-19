@@ -21,10 +21,10 @@ namespace RC
         struct SectionGeneral
         {
             bool EnableHotReloadSystem{};
+            bool UseCache{true};
             bool InvalidateCacheIfDLLDiffers{true};
             bool EnableDebugKeyBindings{false};
-            int64_t MaxScanAttemptsNormal{20};
-            int64_t MaxScanAttemptsModular{2000};
+            int64_t SecondsToScanBeforeGivingUp{30};
             bool UseUObjectArrayCache{true};
         } General;
 

@@ -205,11 +205,10 @@ namespace RC::OutTheShade
         
         StreamWriter Buffer;
         std::unordered_map<FName, int> NameMap;
+        std::unordered_map<UObject*, FName> ModulePathsMap;
 
         std::vector<UEnum*> Enums;
         std::vector<UStruct*> Structs; // TODO: a better way than making this completely dynamic
-        std::unordered_map<std::wstring, int> ModulePathsMap;
-        std::vector<std::wstring> ModulePathsRaw;
 
         std::function<void(class FProperty*, EPropertyType)> WriteProperty = [&](FProperty* Prop, EPropertyType Type)
         {
@@ -280,11 +279,10 @@ namespace RC::OutTheShade
 				if (Struct->GetSuperStruct() && !NameMap.contains(Struct->GetSuperStruct()->GetNamePrivate()))
 					NameMap.insert_or_assign(Struct->GetSuperStruct()->GetNamePrivate(), 0);
 
-				Struct->ForEachProperty([&](FProperty* Prop)
-				{
-					NameMap.insert_or_assign(Prop->GetFName(), 0);
-                    return LoopAction::Continue;
-				});
+                for (FProperty* Prop : Struct->ForEachProperty())
+                {
+                    NameMap.insert_or_assign(Prop->GetFName(), 0);
+                }
 			}
 			else if (Object->GetClassPrivate() == UEnum::StaticClass())
 			{
@@ -293,12 +291,24 @@ namespace RC::OutTheShade
 
 				NameMap.insert_or_assign(Enum->GetNamePrivate(), 0);
 
-				Enum->ForEachName([&](FName Key, ...)
-				{
-					NameMap.insert_or_assign(Key, 0);
-                    return LoopAction::Continue;
-				});
+                for (auto& [Key, _] : Enum->ForEachName())
+                {
+                    NameMap.insert_or_assign(Key, 0);
+                }
 			}
+
+            if (Object->GetClassPrivate() == UClass::StaticClass() || Object->GetClassPrivate() == UScriptStruct::StaticClass() || Object->GetClassPrivate() == UEnum::StaticClass())
+            {
+                std::wstring RawPathName = Object->GetPathName();
+                std::wstring::size_type PathNameStart = 0; // include first bit (Script/Game) to avoid ambiguity; to drop it, replace with RawPathName.find_first_of('/', 1) + 1;
+                std::wstring::size_type PathNameLength = RawPathName.find_last_of('.') - PathNameStart;
+                std::wstring FinalPathStr = RawPathName.substr(PathNameStart, PathNameLength);
+                FName FinalPathName = FName(FinalPathStr);
+
+                NameMap.insert_or_assign(FinalPathName, 0);
+                ModulePathsMap.insert_or_assign(Object, FinalPathName);
+            }
+
             return LoopAction::Continue;
 		});
 
@@ -334,19 +344,21 @@ namespace RC::OutTheShade
         {
             Buffer.Write(NameMap[Enum->GetNamePrivate()]);
 
+            // limit to 255 entries; why is this a byte in the first place?
             uint8_t EnumNameCount{};
-            Enum->ForEachName([&](...)
+            for (auto _ : Enum->ForEachName())
             {
                 ++EnumNameCount;
-                return LoopAction::Continue;
-            });
+                if (EnumNameCount >= std::numeric_limits<uint8_t>::max()) break;
+            }
             Buffer.Write<uint8_t>(EnumNameCount);
 
-            Enum->ForEachName([&](FName Key, ...)
+            int numSoFar = 0;
+            for (auto& [Key, _] : Enum->ForEachName())
             {
-                Buffer.Write<int>(NameMap[Key]);
-                return LoopAction::Continue;
-            });
+                Buffer.Write<uint32_t>(NameMap[Key]);
+                if (++numSoFar >= EnumNameCount) break;
+            }
         }
 
         // Warning: Converting size_t (uint64) to uint32_t.
@@ -354,13 +366,6 @@ namespace RC::OutTheShade
 
         for (auto Struct : Structs)
         {
-            std::wstring RawPathName = Struct->GetPathName();
-            std::wstring::size_type PathNameStart = 0; // include first bit (Script/Game) to avoid ambiguity; to drop it, replace with RawPathName.find_first_of('/', 1) + 1;
-            std::wstring::size_type PathNameLength = RawPathName.find_last_of('.') - PathNameStart;
-            std::wstring FinalPathName = RawPathName.substr(PathNameStart, PathNameLength);
-            ModulePathsMap.insert_or_assign(FinalPathName, 0);
-            ModulePathsRaw.push_back(FinalPathName);
-
             Buffer.Write(NameMap[Struct->GetNamePrivate()]);
             Buffer.Write<int32_t>(Struct->GetSuperStruct() ? NameMap[Struct->GetSuperStruct()->GetNamePrivate()] : static_cast<int32_t>(0xffffffff));
 
@@ -369,7 +374,7 @@ namespace RC::OutTheShade
             uint16_t PropCount = 0;
             uint16_t SerializablePropCount = 0;
 
-            Struct->ForEachProperty([&](FProperty* Props)
+            for (FProperty* Props : Struct->ForEachProperty())
             {
                 FPropertyData Data(Props, PropCount);
 
@@ -377,9 +382,7 @@ namespace RC::OutTheShade
 
                 PropCount += Data.ArrayDim;
                 SerializablePropCount++;
-
-                return LoopAction::Continue;
-            });
+            }
 
             Buffer.Write(PropCount);
             Buffer.Write(SerializablePropCount);
@@ -394,26 +397,105 @@ namespace RC::OutTheShade
             }
         }
 
-        // extension data
-        Buffer.Write<uint32_t>(1); // extensions bitflag; right now we only serialize the scripts extension
+        // extensions //
 
-        // scripts
-        int CurrentModulePathsIndex = 0;
-        int ModulePathsMapSize = ModulePathsMap.size();
-        Buffer.Write<uint16_t>(ModulePathsMapSize);
-        for (auto&& M : ModulePathsMap)
-        {
-            ModulePathsMap[M.first] = CurrentModulePathsIndex++;
+        Buffer.Write<uint32_t>(0x54584543); // "CEXT"; magic
+        Buffer.Write<uint8_t>(0); // extensions layout version; 0 (Initial)
 
-            std::string StringToSerialize = to_string(M.first);
-            Buffer.Write<uint8_t>(static_cast<uint8_t>(StringToSerialize.length()));
-            Buffer.WriteString(StringToSerialize);
-        }
-        bool isIdx16 = ModulePathsMapSize > 255;
-        for (auto& ky : ModulePathsRaw)
+        Buffer.Write<uint32_t>(3); // number of extensions, 3 right now
+
+        // extension 1: PPTH (object paths)
+        Buffer.Write<uint32_t>(0x48545050); // ext id
+        Buffer.Write<uint32_t>(0); // size; unknown for now
+
+        std::streampos extStartPos = Buffer.GetBuffer().tellp();
+        Buffer.Write<uint8_t>(0); // PPTH version; 0
+        Buffer.Write<uint32_t>(static_cast<uint32_t>(Enums.size()));
+        for (auto Enum : Enums)
         {
-            isIdx16 ? Buffer.Write<uint16_t>(static_cast<uint16_t>(ModulePathsMap[ky])) : Buffer.Write<uint8_t>(static_cast<uint8_t>(ModulePathsMap[ky]));
+            Buffer.Write(NameMap[ModulePathsMap[Enum]]);
         }
+        Buffer.Write<uint32_t>(static_cast<uint32_t>(Structs.size()));
+        for (auto Struct : Structs)
+        {
+            Buffer.Write(NameMap[ModulePathsMap[Struct]]);
+        }
+        std::streampos extEndPos = Buffer.GetBuffer().tellp();
+
+        Buffer.GetBuffer().seekp(extStartPos);
+        Buffer.GetBuffer().seekp(-sizeof(uint32_t), std::ios_base::cur);
+        Buffer.Write<uint32_t>(extEndPos - extStartPos);
+        Buffer.GetBuffer().seekp(extEndPos);
+
+        // extension 2: EATR (extended attributes)
+        Buffer.Write<uint32_t>(0x52544145); // ext id
+        Buffer.Write<uint32_t>(0); // size; unknown for now
+
+        extStartPos = Buffer.GetBuffer().tellp();
+        Buffer.Write<uint8_t>(0); // EATR version; 0
+        Buffer.Write<uint32_t>(static_cast<uint32_t>(Enums.size()));
+        for (auto Enum : Enums)
+        {
+            Buffer.Write(static_cast<int32_t>(Enum->GetEnumFlags()));
+        }
+        Buffer.Write<uint32_t>(static_cast<uint32_t>(Structs.size()));
+        for (auto Struct : Structs)
+        {
+            if (Struct->GetClassPrivate() == UScriptStruct::StaticClass())
+            { 
+                Buffer.Write<uint8_t>(1);
+                Buffer.Write<int32_t>(((UScriptStruct*)Struct)->GetStructFlags());
+            }
+            else if (Struct->GetClassPrivate() == UClass::StaticClass())
+            {
+                Buffer.Write<uint8_t>(2);
+                Buffer.Write<int32_t>(((UClass*)Struct)->GetClassFlags());
+            }
+            else
+            {
+                Buffer.Write<uint8_t>(0); // ???
+                Buffer.Write<int32_t>(0);
+            }
+
+            std::vector<uint64_t> propFlags;
+            for (FProperty* Props : Struct->ForEachProperty()) propFlags.push_back(static_cast<uint64_t>(Props->GetPropertyFlags()));
+            Buffer.Write<uint32_t>(static_cast<uint32_t>(propFlags.size()));
+            for (uint64_t propFlag : propFlags) Buffer.Write<uint64_t>(propFlag);
+        }
+        extEndPos = Buffer.GetBuffer().tellp();
+
+        Buffer.GetBuffer().seekp(extStartPos);
+        Buffer.GetBuffer().seekp(-sizeof(uint32_t), std::ios_base::cur);
+        Buffer.Write<uint32_t>(extEndPos - extStartPos);
+        Buffer.GetBuffer().seekp(extEndPos);
+
+        // extension 3: ENVP (enum name/value pairs)
+        Buffer.Write<uint32_t>(0x50564E45); // ext id
+        Buffer.Write<uint32_t>(0); // size; unknown for now
+
+        extStartPos = Buffer.GetBuffer().tellp();
+        Buffer.Write<uint8_t>(0); // ENVP version; 0
+        Buffer.Write<uint32_t>(static_cast<uint32_t>(Enums.size()));
+        for (auto Enum : Enums)
+        {
+            uint32_t EnumNameCount = 0;
+            for (auto _ : Enum->ForEachName()) ++EnumNameCount;
+            Buffer.Write<uint32_t>(EnumNameCount);
+
+            for (auto& [Key, val] : Enum->ForEachName())
+            {
+                Buffer.Write<uint32_t>(NameMap[Key]);
+                Buffer.Write<int64_t>(val);
+            }
+        }
+        extEndPos = Buffer.GetBuffer().tellp();
+
+        Buffer.GetBuffer().seekp(extStartPos);
+        Buffer.GetBuffer().seekp(-sizeof(uint32_t), std::ios_base::cur);
+        Buffer.Write<uint32_t>(extEndPos - extStartPos);
+        Buffer.GetBuffer().seekp(extEndPos);
+
+        // end of extensions //
 
         std::vector<uint8_t> UsmapData;
 		std::string UncompressedStream = Buffer.GetBuffer().str();

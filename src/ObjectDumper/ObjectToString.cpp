@@ -192,7 +192,7 @@ namespace RC::ObjectDumper
         property_trivial_dump_to_string(p_this, out_line);
 
         FDelegateProperty* p_typed_this = static_cast<FDelegateProperty*>(p_this);
-        out_line.append(std::format(L" [df: {:016X}]", reinterpret_cast<uintptr_t>(p_typed_this->GetFunctionSignature())));
+        out_line.append(std::format(L" [df: {:016X}]", reinterpret_cast<uintptr_t>(p_typed_this->GetSignatureFunction())));
     }
 
     auto fieldpathproperty_to_string(void* p_this, std::wstring& out_line) -> void
@@ -216,7 +216,7 @@ namespace RC::ObjectDumper
         property_trivial_dump_to_string(p_this, out_line);
 
         FMulticastDelegateProperty* p_typed_this = static_cast<FMulticastDelegateProperty*>(p_this);
-        out_line.append(std::format(L" [df: {:016X}]", reinterpret_cast<uintptr_t>(p_typed_this->GetFunctionSignature())));
+        out_line.append(std::format(L" [df: {:016X}]", reinterpret_cast<uintptr_t>(p_typed_this->GetSignatureFunction())));
     }
 
     auto objectproperty_to_string(void* p_this, std::wstring& out_line) -> void
@@ -260,10 +260,10 @@ namespace RC::ObjectDumper
 
         auto* typed_this = static_cast<UEnum*>(p_this);
 
-        typed_this->ForEachName([&](Unreal::FName name, int64_t value) {
-            out_line.append(std::format(L"\n[{:016X}] {} [n: {:X}] [v: {}]", 0, name.ToString(), name.GetComparisonIndex(), static_cast<uint8_t>(value)));
-            return LoopAction::Continue;
-        });
+        for (auto& Elem : typed_this->ForEachName())
+        {
+            out_line.append(std::format(L"\n[{:016X}] {} [n: {:X}] [v: {}]", 0, Elem.Key.ToString(), Elem.Key.GetComparisonIndex(), Elem.Value));
+        }
     }
 
     auto class_to_string(void* p_this, std::wstring& out_line) -> void
@@ -283,10 +283,10 @@ namespace RC::ObjectDumper
     {
         UScriptStruct* script_struct = static_cast<UScriptStruct*>(p_this);
 
-        script_struct->ForEachProperty([&](FProperty* prop) {
+        for (FProperty* prop : script_struct->ForEachProperty())
+        {
             callable(prop);
-            return LoopAction::Continue;
-        });
+        }
     }
 
     auto init() -> void

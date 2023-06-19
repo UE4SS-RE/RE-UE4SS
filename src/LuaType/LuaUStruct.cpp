@@ -12,6 +12,8 @@ namespace RC::LuaType
 
     auto UStruct::construct(const LuaMadeSimple::Lua& lua, Unreal::UStruct* unreal_object) -> const LuaMadeSimple::Lua::Table
     {
+        add_to_global_unreal_objects_map(unreal_object);
+
         LuaType::UStruct lua_object{unreal_object};
 
         auto metatable_name = ClassName::ToString();
@@ -64,7 +66,8 @@ namespace RC::LuaType
         table.add_pair("ForEachFunction", [](const LuaMadeSimple::Lua& lua) -> int {
             const auto& lua_object = lua.get_userdata<UStruct>();
 
-            lua_object.get_remote_cpp_object()->ForEachFunction([&](Unreal::UFunction* function) {
+            for (Unreal::UFunction* function : lua_object.get_remote_cpp_object()->ForEachFunction())
+            {
                 // Duplicate the Lua function so that we can use it in subsequent iterations of this loop (call_function pops the function from the stack)
                 lua_pushvalue(lua.get_lua_state(), 1);
 
@@ -74,10 +77,7 @@ namespace RC::LuaType
                 lua.call_function(1, 1);
 
                 // We explicitly specify index 2 because we duplicated the function earlier and that's located at index 1.
-                if (lua.is_bool(2) && lua.get_bool(2))
-                {
-                    return LoopAction::Break;
-                }
+                if (lua.is_bool(2) && lua.get_bool(2)) { break; }
                 else
                 {
                     // There's a 'nil' on the stack because we told Lua that we expect a return value.
@@ -85,9 +85,8 @@ namespace RC::LuaType
                     // We discard the 'nil' here, otherwise the Lua stack is corrupted on the next iteration of the 'ForEachFunction' loop.
                     // We explicitly specify index 2 because we duplicated the function earlier and that's located at index 1.
                     lua.discard_value(2);
-                    return LoopAction::Continue;
                 }
-            });
+            };
 
             return 1;
         });
@@ -95,7 +94,8 @@ namespace RC::LuaType
         table.add_pair("ForEachProperty", [](const LuaMadeSimple::Lua& lua) -> int {
             const auto& lua_object = lua.get_userdata<UStruct>();
 
-            lua_object.get_remote_cpp_object()->ForEachProperty([&](Unreal::FProperty* property) {
+            for (Unreal::FProperty* property : lua_object.get_remote_cpp_object()->ForEachProperty())
+            {
                 // Duplicate the Lua function so that we can use it in subsequent iterations of this loop (call_function pops the function from the stack)
                 lua_pushvalue(lua.get_lua_state(), 1);
 
@@ -105,10 +105,7 @@ namespace RC::LuaType
                 lua.call_function(1, 1);
 
                 // We explicitly specify index 2 because we duplicated the function earlier and that's located at index 1.
-                if (lua.is_bool(2) && lua.get_bool(2))
-                {
-                    return LoopAction::Break;
-                }
+                if (lua.is_bool(2) && lua.get_bool(2)) { break; }
                 else
                 {
                     // There's a 'nil' on the stack because we told Lua that we expect a return value.
@@ -116,9 +113,8 @@ namespace RC::LuaType
                     // We discard the 'nil' here, otherwise the Lua stack is corrupted on the next iteration of the 'ForEachFunction' loop.
                     // We explicitly specify index 2 because we duplicated the function earlier and that's located at index 1.
                     lua.discard_value(2);
-                    return LoopAction::Continue;
                 }
-            });
+            };
 
             return 1;
         });

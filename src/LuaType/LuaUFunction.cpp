@@ -30,6 +30,8 @@ namespace RC::LuaType
 
     auto UFunction::construct(const LuaMadeSimple::Lua& lua, Unreal::UObject* owning_object, Unreal::UFunction* function) -> const LuaMadeSimple::Lua::Table
     {
+        add_to_global_unreal_objects_map(function);
+
         LuaType::UFunction lua_object{owning_object, function};
 
         auto metatable_name = ClassName::ToString();

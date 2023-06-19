@@ -76,8 +76,29 @@ namespace RC::GUI
                     !object->IsA<UField>() &&
                     !object->IsA<UPackage>();
         };
+
         if (LiveView::s_search_options.instances_only && !is_instance()) { return; }
+        if (LiveView::s_search_options.non_instances_only && (object->IsA<UFunction>() || is_instance())) { return; }
+        if (!LiveView::s_search_options.include_default_objects && object->HasAnyFlags(static_cast<EObjectFlags>(RF_ClassDefaultObject | RF_ArchetypeObject))) { return; }
+        if (LiveView::s_search_options.default_objects_only && !object->HasAnyFlags(static_cast<EObjectFlags>(RF_ClassDefaultObject | RF_ArchetypeObject))) { return; }
         if (LiveView::s_name_search_results_set.contains(object)) { return; }
+        if (object->IsA<UFunction>() && LiveView::s_search_options.function_param_flags != CPF_None)
+        {
+            auto as_function = static_cast<UFunction*>(object);
+            auto first_property = as_function->GetFirstProperty();
+            if (!first_property || (first_property->HasAnyPropertyFlags(CPF_ReturnParm) && !first_property->HasNext())) { return; }
+            bool has_all_required_flags{true};
+            for (const auto& param : as_function->ForEachProperty())
+            {
+                if (param->HasAnyPropertyFlags(CPF_ReturnParm) && !LiveView::s_search_options.function_param_flags_include_return_property) { continue; }
+                has_all_required_flags = param->HasAllPropertyFlags(LiveView::s_search_options.function_param_flags);
+            }
+            if (!has_all_required_flags) { return; }
+        }
+        else if (LiveView::s_search_options.function_param_flags != CPF_None)
+        {
+            return;
+        }
 
         auto object_full_name = get_object_full_name_cxx_string(object);
         std::transform(object_full_name.begin(), object_full_name.end(), object_full_name.begin(), [](char c) {
@@ -91,7 +112,8 @@ namespace RC::GUI
 
         if (LiveView::s_search_options.include_inheritance)
         {
-            object->GetClassPrivate()->ForEachSuperStruct([&](UStruct* super) {
+            for (UStruct* super : object->GetClassPrivate()->ForEachSuperStruct()) 
+            {
                 auto super_full_name = get_object_full_name_cxx_string(super);
                 std::transform(super_full_name.begin(), super_full_name.end(), super_full_name.begin(), [](char c) {
                     return std::tolower(c);
@@ -100,13 +122,9 @@ namespace RC::GUI
                 {
                     LiveView::s_name_search_results.emplace_back(object);
                     LiveView::s_name_search_results_set.emplace(object);
-                    return LoopAction::Break;
+                    break;
                 }
-                else
-                {
-                    return LoopAction::Continue;
-                }
-            });
+            }
         }
 
         if (LiveView::s_search_options.include_inheritance && LiveView::s_name_search_results_set.contains(object)) { return; }
@@ -673,16 +691,15 @@ namespace RC::GUI
         ImGui::Text("Properties");
         if (ImGui::TreeNodeEx("Show", ImGuiTreeNodeFlags_SpanFullWidth))
         {
-            ustruct->ForEachProperty([&](FProperty* property) {
+            for (FProperty* property : ustruct->ForEachProperty()) 
+            {
                 ImGui::TreeNodeEx(to_string(property->GetFullName()).c_str(), ImGuiTreeNodeFlags_Leaf);
                 if (ImGui::IsItemClicked())
                 {
                     select_property(0, property, AffectsHistory::Yes);
                 }
                 ImGui::TreePop();
-
-                return LoopAction::Continue;
-            });
+            }
             ImGui::TreePop();
         }
         ImGui::Unindent();
@@ -713,14 +730,13 @@ namespace RC::GUI
         Output::send(STR("{}\n"), uclass->GetFullName());
 
         ImGui::Text("Properties");
-        uclass->ForEachProperty([](FProperty* property) {
+        for (FProperty* property : uclass->ForEachProperty()) 
+        {
             if (ImGui::TreeNode(to_string(property->GetFullName()).c_str()))
             {
                 Output::send(STR("Show property: {}\n"), property->GetFullName());
             }
-
-            return LoopAction::Continue;
-        });
+        }
     }
 
     auto LiveView::render_super_struct(UStruct* ustruct) -> void
@@ -888,7 +904,8 @@ namespace RC::GUI
             {
                 render_property_value_context_menu(tree_node_id);
                 
-                struct_property->GetStruct()->ForEachProperty([&](FProperty* inner_property) {
+                for (FProperty* inner_property : struct_property->GetStruct()->ForEachProperty()) 
+                {
                     FString struct_prop_text_item{};
                     auto struct_prop_container_ptr = inner_property->ContainerPtrToValuePtr<void*>(container_ptr);
                     inner_property->ExportTextItem(struct_prop_text_item, struct_prop_container_ptr, struct_prop_container_ptr, static_cast<UObject*>(*container_ptr), NULL);
@@ -898,15 +915,11 @@ namespace RC::GUI
                     next_item_to_render = render_property_value(inner_property, inner_property->IsA<FObjectProperty>() ? ContainerType::Object : ContainerType::NonObject, container_ptr, &last_struct_prop, tried_to_open_nullptr_object, false, property_offset + inner_property->GetOffset_Internal());
                     ImGui::Unindent();
                     
-                    if (std::holds_alternative<std::monostate>(next_item_to_render))
+                    if (!std::holds_alternative<std::monostate>(next_item_to_render))
                     {
-                        return LoopAction::Continue;
+                        break;
                     }
-                    else
-                    {
-                        return LoopAction::Break;
-                    }
-                });
+                }
                 ImGui::TreePop();
             }
             render_property_value_context_menu(tree_node_id);
@@ -1071,18 +1084,18 @@ namespace RC::GUI
         else
         {
             ImGui::Separator();
-            uclass->ForEachProperty([&](FProperty* property) {
+            for (FProperty* property : uclass->ForEachProperty()) 
+            {
                 all_properties.emplace_back(OrderedProperty{property->GetOffset_Internal(), uclass, property});
-                return LoopAction::Continue;
-            });
+            }
 
-            uclass->ForEachSuperStruct([&](UStruct* super_struct) {
-                super_struct->ForEachProperty([&](FProperty* property) {
+            for (UStruct* super_struct : uclass->ForEachSuperStruct()) 
+            {
+                for (FProperty* property : super_struct->ForEachProperty()) 
+                {
                     all_properties.emplace_back(OrderedProperty{property->GetOffset_Internal(), super_struct, property});
-                    return LoopAction::Continue;
-                });
-                return LoopAction::Continue;
-            });
+                }
+            }
 
             std::sort(all_properties.begin(), all_properties.end(), [](const OrderedProperty& a, const OrderedProperty& b) {
                 return a.offset < b.offset;
@@ -1580,7 +1593,7 @@ namespace RC::GUI
 
         bool listeners_allowed = are_listeners_allowed();
         if (!listeners_allowed) { ImGui::BeginDisabled(); }
-        ImGui::PushItemWidth(-14.0f);
+        ImGui::PushItemWidth(-130.0f);
         bool push_inactive_text_color = !m_search_field_cleared;
         if (push_inactive_text_color) { ImGui::PushStyleColor(ImGuiCol_Text, g_imgui_text_inactive_color.Value); }
         if (ImGui::InputText("##Search by name", m_search_by_name_buffer, m_search_buffer_capacity, ImGuiInputTextFlags_EnterReturnsTrue | ImGuiInputTextFlags_CallbackAlways, &object_search_field_always_callback, this))
@@ -1617,10 +1630,141 @@ namespace RC::GUI
         if (ImGui::BeginPopupContextItem("##search-options"))
         {
             ImGui::Text("Search options");
-            ImGui::Checkbox("Include inheritance", &s_search_options.include_inheritance);
-            ImGui::SameLine();
-            ImGui::Checkbox("Instances only", &s_search_options.instances_only);
+            if (ImGui::BeginTable("search_options_table", 2))
+            {
+                bool instances_only_enabled = !(s_search_options.non_instances_only || s_search_options.default_objects_only);
+                bool non_instances_only_enabled = !(s_search_options.instances_only || s_search_options.default_objects_only);
+                bool default_objects_only_enabled = !(s_search_options.non_instances_only || s_search_options.instances_only);
+
+                //  Row #1
+                ImGui::TableNextRow();
+                ImGui::TableNextColumn();
+                ImGui::Checkbox("Include inheritance", &s_search_options.include_inheritance);
+                ImGui::TableNextColumn();
+                if (!instances_only_enabled) { ImGui::BeginDisabled(); }
+                ImGui::Checkbox("Instances only", &s_search_options.instances_only);
+                if (!instances_only_enabled) { ImGui::EndDisabled(); }
+
+                // Row #2
+                ImGui::TableNextRow();
+                ImGui::TableNextColumn();
+                ImGui::Checkbox("Function parameter flags", &s_search_options.function_param_flags_required);
+                if (ImGui::IsItemHovered())
+                {
+                    ImGui::BeginTooltip();
+                    ImGui::Text("You must manually refresh the search after selecting flags.");
+                    ImGui::Text("Manually refreshing the search can be done by clicking the search bar and hitting enter.");
+                    ImGui::EndTooltip();
+                }
+                ImGui::TableNextColumn();
+                if (!non_instances_only_enabled) { ImGui::BeginDisabled(); }
+                ImGui::Checkbox("Non-instances only", &s_search_options.non_instances_only);
+                if (!non_instances_only_enabled) { ImGui::EndDisabled(); }
+
+                // Row #3
+                ImGui::TableNextRow();
+                ImGui::TableNextColumn();
+                ImGui::Checkbox("Include CDOs", &s_search_options.include_default_objects);
+                ImGui::TableNextColumn();
+                if (!default_objects_only_enabled) { ImGui::BeginDisabled(); }
+                ImGui::Checkbox("CDOs only", &s_search_options.default_objects_only);
+                if (!default_objects_only_enabled) { ImGui::EndDisabled(); }
+
+                ImGui::EndTable();
+            }
             ImGui::EndPopup();
+        }
+
+        if (s_search_options.function_param_flags_required && ImGui::Begin("##search-option-function-param-flags-required", &s_search_options.function_param_flags_required, ImGuiWindowFlags_NoCollapse))
+        {
+            if (ImGui::BeginTable("search_options_function_param_flags_table", 2))
+            {
+                static std::array s_all_property_flags{
+                    CPF_Edit,
+                    CPF_ConstParm,
+                    CPF_BlueprintVisible,
+                    CPF_ExportObject,
+                    CPF_BlueprintReadOnly,
+                    CPF_Net,
+                    CPF_EditFixedSize,
+                    CPF_Parm,
+                    CPF_OutParm,
+                    CPF_ZeroConstructor,
+                    CPF_ReturnParm,
+                    CPF_DisableEditOnTemplate,
+                    CPF_Transient,
+                    CPF_Config,
+                    CPF_DisableEditOnInstance,
+                    CPF_EditConst,
+                    CPF_GlobalConfig,
+                    CPF_InstancedReference,
+                    CPF_DuplicateTransient,
+                    CPF_SubobjectReference,
+                    CPF_SaveGame,
+                    CPF_NoClear,
+                    CPF_ReferenceParm,
+                    CPF_BlueprintAssignable,
+                    CPF_Deprecated,
+                    CPF_IsPlainOldData,
+                    CPF_RepSkip,
+                    CPF_RepNotify,
+                    CPF_Interp,
+                    CPF_NonTransactional,
+                    CPF_EditorOnly,
+                    CPF_NoDestructor,
+                    CPF_AutoWeak,
+                    CPF_ContainsInstancedReference,
+                    CPF_AssetRegistrySearchable,
+                    CPF_SimpleDisplay,
+                    CPF_AdvancedDisplay,
+                    CPF_Protected,
+                    CPF_BlueprintCallable,
+                    CPF_BlueprintAuthorityOnly,
+                    CPF_TextExportTransient,
+                    CPF_NonPIEDuplicateTransient,
+                    CPF_ExposeOnSpawn,
+                    CPF_PersistentInstance,
+                    CPF_UObjectWrapper,
+                    CPF_HasGetValueTypeHash,
+                    CPF_NativeAccessSpecifierPublic,
+                    CPF_NativeAccessSpecifierProtected,
+                    CPF_NativeAccessSpecifierPrivate,
+                    CPF_SkipSerialization
+                };
+
+                static_assert(s_search_options.function_param_checkboxes.size() >= s_all_property_flags.size(), "The checkbox array is too small.");
+
+                auto render_column = [] (size_t i){
+                    auto property_flag_string = PropertyFlagsStringifier{s_all_property_flags[i]}.flags_string;
+                    if (ImGui::Checkbox(property_flag_string.c_str(), &s_search_options.function_param_checkboxes[i]))
+                    {
+                        if (s_search_options.function_param_checkboxes[i])
+                        {
+                            s_search_options.function_param_flags |= s_all_property_flags[i];
+                        }
+                        else
+                        {
+                            s_search_options.function_param_flags &= ~s_all_property_flags[i];
+                        }
+                    }
+                };
+
+                ImGui::TableNextRow();
+                ImGui::TableNextColumn();
+                ImGui::Checkbox("Also check return property flags", &s_search_options.function_param_flags_include_return_property);
+
+                for (size_t i = 0; i < s_all_property_flags.size(); ++i)
+                {
+                    ImGui::TableNextRow();
+                    ImGui::TableNextColumn();
+                    render_column(i);
+                    ImGui::TableNextColumn();
+                    render_column(++i);
+                }
+
+                ImGui::EndTable();
+            }
+            ImGui::End();
         }
 
         if (!listeners_allowed)
@@ -1647,6 +1791,18 @@ namespace RC::GUI
             {
                 m_search_field_clear_requested = true;
             }
+        }
+
+        ImGui::SameLine();
+        if (ImGui::Button("Copy search result"))
+        {
+            StringType result{};
+            auto is_below_425 = Version::IsBelow(4, 25);
+            for (const auto& search_result : s_name_search_results)
+            {
+                UE4SSProgram::dump_uobject(search_result, nullptr, result, is_below_425);
+            }
+            ImGui::SetClipboardText(to_string(result).c_str());
         }
 
         m_bottom_size = (ImGui::GetContentRegionMaxAbs().y - m_top_size) - 94.0f;

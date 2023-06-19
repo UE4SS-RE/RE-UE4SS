@@ -26,8 +26,8 @@ namespace RC::Output
         {
             fmt_copy.pop_back();
         }
-        auto log_level = static_cast<LogLevel::LogLevel>(optional_arg);
-        UE4SSProgram::get_program().get_debugging_ui().get_console().add_line(m_formatter(fmt_copy), log_level);
+        auto color = static_cast<Color::Color>(optional_arg);
+        UE4SSProgram::get_program().get_debugging_ui().get_console().add_line(m_formatter(fmt_copy), color);
 #endif
     }
 }

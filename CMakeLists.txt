@@ -1,4 +1,4 @@
-﻿cmake_minimum_required(VERSION 3.18)
+cmake_minimum_required(VERSION 3.18)
 enable_language(CXX)
 include(CheckIPOSupported)
 check_ipo_supported(RESULT supported OUTPUT error)
@@ -19,7 +19,7 @@ else ()
 endif ()
 
 # We're only using C++20 features but we need to use C++23 so that we get std::format which only exists in the "latest" flag in MSVC
-set(CMAKE_CXX_STANDARD 23)
+set(CMAKE_CXX_STANDARD 20)
 
 set(TARGET ue4ss)
 project(${TARGET})
@@ -57,15 +57,26 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_RELEASE ${UE4SS_OUTPUT_RELEASE_DIR})
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY_RELEASE ${UE4SS_OUTPUT_RELEASE_DIR})
 # Output path -> END
 
+# UE4SS
+# Options -> START
+option(UE4SS_WITH_CASE_PRESERVING_NAME "Use case-preserving FNames" OFF)
+
+if (UE4SS_WITH_CASE_PRESERVING_NAME)
+    add_definitions(-DWITH_CASE_PRESERVING_NAME)
+endif()
+# Options-> END
+
+# Very temporary fix for ninja/clang thinking we should use MSVC simulation
+unset(CMAKE_CXX_SIMULATE_ID)
+
 set(PRIVATE_COMPILE_DEFINITIONS
         $<${MAKE_DEPENDENCIES_SHARED}:RC_EXPORT RC_FUNCTION_EXPORTS>
         $<${MAKE_DEPENDENCIES_STATIC}:RC_FUNCTION_BUILD_STATIC>)
 if (${CMAKE_CXX_COMPILER_ID} STREQUAL MSVC)
-    set(PRIVATE_COMPILE_OPTIONS /MP $<$<CONFIG:RELEASE>:/Zi> /W3 /wd4005 /wd4251 /wd4068)
-    set(PRIVATE_MASM_COMPILE_OPTIONS /MP $<$<CONFIG:RELEASE>:/Zi> /wd4005 /wd4251 /wd4068)
+    set(PRIVATE_COMPILE_OPTIONS "$<IF:$<COMPILE_LANGUAGE:ASM_MASM>,$<$<CONFIG:RELEASE>:/Zi>,/MP;$<$<CONFIG:RELEASE>:/Zi>;/W3;/wd4005;/wd4251;/wd4068>")
     set(PRIVATE_LINK_OPTIONS /DEBUG:FULL)
 elseif (${CMAKE_CXX_COMPILER_ID} STREQUAL Clang)
-    set(PRIVATE_COMPILE_OPTIONS "$<IF:$<COMPILE_LANGUAGE:ASM_MASM>,,-g;-gcodeview;-fcolor-diagnostics;-Wall;-Wextra;-Wno-unknown-pragmas;-Wno-unused-parameter>")
+    set(PRIVATE_COMPILE_OPTIONS "$<IF:$<COMPILE_LANGUAGE:ASM_MASM>,,-g;-gcodeview;-fcolor-diagnostics;-Wno-unknown-pragmas;-Wno-unused-parameter>")
     set(PRIVATE_LINK_OPTIONS "$<IF:$<COMPILE_LANGUAGE:ASM_MASM>,,-g>")
 endif ()
 set(PUBLIC_COMPILE_FEATURES cxx_std_20)
@@ -110,6 +121,7 @@ else ()
     set(ZYCORE_BUILD_SHARED_LIB OFF CACHE BOOL "Build zycore as shared libary" FORCE)
 endif ()
 set(ZYDIS_BUILD_TOOLS OFF CACHE BOOL "")
+set(ZYDIS_BUILD_EXAMPLES OFF CACHE BOOL "")
 add_subdirectory("Dependencies/zydis")
 include_directories(Dependencies/zydis/include)
 include_directories(Dependencies/zydis/dependencies/zycore/include)
@@ -159,8 +171,8 @@ macro (install)
 endmacro ()
 
 if (${CMAKE_CXX_COMPILER_ID} STREQUAL Clang)
-    target_compile_options(asmjit PRIVATE -Wno-bitwise-instead-of-logical -Wno-sign-conversion -Wno-unused-command-line-argument -Wno-unused-but-set-variable)
-    target_compile_options(PolyHook_2 PRIVATE -Wno-unused-value -Wno-missing-field-initializers -Wno-missing-braces -Wno-unused-variable -Wno-bitwise-instead-of-logical -Wno-reorder-ctor -Wno-unused-private-field)
+    target_compile_options(asmjit PRIVATE -Wno-everything -Wno-all -Wno-extra -Wno-pedantic -Wno-c++98-compat -Wno-c++98-compat-pedantic -Wno-bitwise-instead-of-logical -Wno-sign-conversion -Wno-unused-command-line-argument -Wno-unused-but-set-variable)
+    target_compile_options(PolyHook_2 PRIVATE -Wno-everything -Wno-all -Wno-extra -Wno-pedantic -Wno-c++98-compat -Wno-c++98-compat-pedantic -Wno-unused-value -Wno-missing-field-initializers -Wno-missing-braces -Wno-unused-variable -Wno-bitwise-instead-of-logical -Wno-reorder-ctor -Wno-unused-private-field)
 endif ()
 
 add_subdirectory("Dependencies/Unreal")
@@ -170,35 +182,10 @@ add_subdirectory("Dependencies/LuaRaw")
 add_subdirectory("Dependencies/LuaMadeSimple")
 add_subdirectory("Dependencies/FunctionTimer")
 add_subdirectory("Dependencies/ScopedTimer")
-
-# fmtlib::fmt
-# This is to be removed when std::format is fully available in the MSVC C++20 toolchain
-# I'm using the header-only variant because I can't seem to figure out why it won't link
-set(CMAKE_POSITION_INDEPENDENT_CODE ON)
-add_subdirectory(Dependencies/fmt)
-
 add_subdirectory("Dependencies/ParserBase")
 add_subdirectory("Dependencies/IniParser")
 add_subdirectory("Dependencies/JSON")
 add_subdirectory("Dependencies/ArgsParser")
-
-# UE4SS
-# Settings override -> START
-# Used for external manipulation until the entire cmake file has been redone
-# An external tool may create these files before running cmake to alter build options
-# The external tool must also remove these files after it's done running as to not interfere with the normal build process
-if (${FORCE_WITH_CASE_PRESERVING_NAME} MATCHES 0)
-    if (EXISTS "${UE4SS_GENERATED_SOURCE_DIR}/enable_with_case_preserving.build_option")
-        message("WITH_CASE_PRESERVING_NAME overridden to 1 by '${UE4SS_GENERATED_SOURCE_DIR}/enable_with_case_preserving.build_option'")
-        set(WITH_CASE_PRESERVING_NAME 1)
-    elseif (EXISTS "${UE4SS_GENERATED_SOURCE_DIR}/disable_with_case_preserving.build_option")
-        message("WITH_CASE_PRESERVING_NAME overridden to 0 by '${UE4SS_GENERATED_SOURCE_DIR}/disable_with_case_preserving.build_option'")
-        set(WITH_CASE_PRESERVING_NAME 0)
-    endif ()
-else()
-    set(WITH_CASE_PRESERVING_NAME 1)
-endif ()
-# Settings override -> END
 
 # Version override -> START
 file(READ ${UE4SS_GENERATED_SOURCE_DIR}/version.cache UE4SS_LIB_VERSION)
@@ -208,7 +195,6 @@ set(UE4SS_LIB_VERSION_MINOR ${CMAKE_MATCH_2})
 set(UE4SS_LIB_VERSION_HOTFIX ${CMAKE_MATCH_3})
 set(UE4SS_LIB_VERSION_PRERELEASE ${CMAKE_MATCH_4})  # Publicly available pre-release
 set(UE4SS_LIB_VERSION_BETA ${CMAKE_MATCH_5})  # Internal version to keep track of pre-pre-releases
-file(WRITE ${UE4SS_GENERATED_SOURCE_DIR}/version.cache "${UE4SS_LIB_VERSION}")
 
 message("UE4SS")
 message("Major: ${UE4SS_LIB_VERSION_MAJOR}, Minor: ${UE4SS_LIB_VERSION_MINOR}, Hotfix: ${UE4SS_LIB_VERSION_HOTFIX}, PreRelease: ${UE4SS_LIB_VERSION_PRERELEASE}, Beta: ${UE4SS_LIB_VERSION_BETA}")
@@ -291,6 +277,7 @@ set(${TARGET}_Sources
         "${CMAKE_CURRENT_SOURCE_DIR}/src/SDKGenerator/TMapOverrideGen.cpp"
         "${CMAKE_CURRENT_SOURCE_DIR}/src/USMapGenerator/Generator.cpp"
         "${CMAKE_CURRENT_SOURCE_DIR}/src/GUI/GUI.cpp"
+        "${CMAKE_CURRENT_SOURCE_DIR}/src/GUI/GUITab.cpp"
         "${CMAKE_CURRENT_SOURCE_DIR}/src/GUI/DX11.cpp"
         "${CMAKE_CURRENT_SOURCE_DIR}/src/GUI/GLFW3_OpenGL3.cpp"
         "${CMAKE_CURRENT_SOURCE_DIR}/src/GUI/Windows.cpp"
@@ -321,7 +308,7 @@ target_link_options(${TARGET} PRIVATE ${PRIVATE_LINK_OPTIONS})
 target_compile_features(${TARGET} PUBLIC ${PUBLIC_COMPILE_FEATURES})
 target_compile_definitions(${TARGET} PUBLIC $<${MAKE_DEPENDENCIES_SHARED}:LUA_BUILD_AS_DLL>)
 set(UE4SS_LINK_WITH_LIBRARIES File DynamicOutput Unreal SinglePassSigScanner LuaMadeSimple FunctionTimer Function IniParser JSON Input PolyHook_2 d3d11 GLFW opengl32)
-set(UE4SS_LINK_WITH_INTERFACE_LIBRARIES fmt::fmt-header-only Function Constructs Helpers MProgram ScopedTimer)
+set(UE4SS_LINK_WITH_INTERFACE_LIBRARIES Function Constructs Helpers MProgram ScopedTimer)
 target_link_libraries(${TARGET} PUBLIC ${UE4SS_LINK_WITH_LIBRARIES} ${UE4SS_LINK_WITH_INTERFACE_LIBRARIES})
 
 set(XINPUT_TARGET xinput1_3)
@@ -331,7 +318,7 @@ add_library(${XINPUT_TARGET} SHARED ${${TARGET}_Sources} ${XINPUT_SOURCES})
 target_include_directories(${XINPUT_TARGET} PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include> $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/generated_include>)
 target_compile_features(${XINPUT_TARGET} PUBLIC cxx_std_20)
 target_compile_definitions(${XINPUT_TARGET} PUBLIC $<${MAKE_DEPENDENCIES_SHARED}:LUA_BUILD_AS_DLL> UE4SS_LIB_BUILD_AS_XINPUT=1)
-target_compile_options(${XINPUT_TARGET} PRIVATE ${PRIVATE_MASM_COMPILE_OPTIONS})
+target_compile_options(${XINPUT_TARGET} PRIVATE ${PRIVATE_COMPILE_OPTIONS})
 target_link_options(${XINPUT_TARGET} PRIVATE ${PRIVATE_LINK_OPTIONS})
 target_link_libraries(${XINPUT_TARGET} PUBLIC ${UE4SS_LINK_WITH_LIBRARIES} ${UE4SS_LINK_WITH_INTERFACE_LIBRARIES})
 

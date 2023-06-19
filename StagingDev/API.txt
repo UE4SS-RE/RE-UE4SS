@@ -111,6 +111,11 @@ Global Functions
     RegisterKeyBind(integer Key, table ModifierKeys, function callback)
         - Registers a callback for a key-bind
         - Callbacks can only be triggered while the game or debug console is on focus
+    
+    RegisterKeyBindAsync(integer Key, function Callback)
+    RegisterKeyBindAsync(integer Key, table ModifierKeys, function callback)
+        - Identical to 'RegisterKeyBind' except it doesn't lock any threads
+        - Beware of threading issues, use carefully!
 
     IsKeyBindRegistered(integer Key)
     IsKeyBindRegistered(integer Key, table ModifierKeys)

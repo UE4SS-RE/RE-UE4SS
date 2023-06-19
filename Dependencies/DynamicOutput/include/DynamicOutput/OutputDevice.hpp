@@ -11,8 +11,6 @@ namespace RC
     // enum class is not used here because it gets rid of an implicit conversion that I want
     namespace Color
     {
-        // Currently, this is limited by 'SetConsoleTextAttribute'
-        // Ideally, terminal sequences should be used instead but this doesn't work on earlier versions of Windows 10
         enum Color
         {
             Default,
@@ -22,7 +20,7 @@ namespace RC
             Red,
             Green,
             Blue,
-            Magenta,
+            Purple,
         };
     }
     namespace LogLevel

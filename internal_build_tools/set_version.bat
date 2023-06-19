@@ -49,7 +49,4 @@ echo Setting version to: %set_version_param_major%.%set_version_param_minor%.%se
 
 Rem Caching the incremented version
 set full_version_string=%set_version_param_major%.%set_version_param_minor%.%set_version_param_hotfix%.%set_version_param_prerelease%.%set_version_param_beta%
-cd generated_src
-del %version_cache_file%
-echo %full_version_string% >> %version_cache_file%
-cd ..
+echo %full_version_string%> generated_src\version.cache

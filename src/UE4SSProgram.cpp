@@ -45,6 +45,9 @@
 #include <Unreal/UObjectArray.hpp>
 #include <Unreal/Searcher/ObjectSearcher.hpp>
 #include <Unreal/UPackage.hpp>
+#include <Unreal/UActorComponent.hpp>
+#include <Unreal/UInterface.hpp>
+#include <Unreal/UKismetSystemLibrary.hpp>
 #include <Unreal/UScriptStruct.hpp>
 #include <Unreal/AGameMode.hpp>
 #include <Unreal/AGameModeBase.hpp>
@@ -149,12 +152,8 @@ namespace RC
             // Setup the log file
             auto& file_device = Output::set_default_devices<Output::NewFileDevice>();
             file_device.set_file_name_and_path(m_log_directory / m_log_file_name);
-            
-            create_simple_console();
 
-            setup_mods();
-            install_cpp_mods();
-            start_cpp_mods();
+            create_simple_console();
 
             if (settings_manager.Debug.DebugConsoleEnabled)
             {
@@ -191,6 +190,10 @@ namespace RC
             Output::send(STR("WITH_CASE_PRESERVING_NAME: No\n\n"));
 #endif
 
+            setup_mods();
+            install_cpp_mods();
+            start_cpp_mods();
+
             setup_mod_directory_path();
 
             if (m_has_game_specific_config)
@@ -206,11 +209,26 @@ namespace RC
             Output::send(STR("root directory: {}\n"), m_root_directory.c_str());
             Output::send(STR("working directory: {}\n"), m_working_directory.c_str());
             Output::send(STR("game executable directory: {}\n"), m_game_executable_directory.c_str());
+            Output::send(STR("game executable: {} ({} bytes)\n\n\n"), m_game_path_and_exe_name.c_str(), std::filesystem::file_size(m_game_path_and_exe_name));
             Output::send(STR("mods directory: {}\n"), m_mods_directory.c_str());
             Output::send(STR("log directory: {}\n"), m_log_directory.c_str());
             Output::send(STR("object dumper directory: {}\n\n\n"), m_object_dumper_output_directory.c_str());
 
             setup_unreal();
+
+            Output::send(STR("Unreal Engine modules ({}):\n"), SigScannerStaticData::m_is_modular ? STR("modular") : STR("non-modular"));
+            auto& main_exe_ptr = SigScannerStaticData::m_modules_info.array[static_cast<size_t>(ScanTarget::MainExe)].lpBaseOfDll;
+            for (size_t i = 0; i < static_cast<size_t>(ScanTarget::Max); ++i)
+            {
+                auto& module = SigScannerStaticData::m_modules_info.array[i];
+                // only log modules with unique addresses (non-modular builds have everything in MainExe)
+                if (i == static_cast<size_t>(ScanTarget::MainExe) || main_exe_ptr != module.lpBaseOfDll)
+                {
+                    auto module_name = to_wstring(ScanTargetToString(i));
+                    Output::send(STR("{} @ {} size={:#x}\n"), module_name.c_str(), module.lpBaseOfDll, module.SizeOfImage);
+                }
+            }
+
             fire_unreal_init_for_cpp_mods();
             setup_unreal_properties();
             UAssetRegistry::SetMaxMemoryUsageDuringAssetLoading(settings_manager.Memory.MaxMemoryUsageDuringAssetLoading);
@@ -373,9 +391,8 @@ namespace RC
         Unreal::UnrealInitializer::Config config;
         config.CachePath = m_root_directory / "cache";
         config.bInvalidateCacheIfSelfChanged = settings_manager.General.InvalidateCacheIfDLLDiffers;
-        config.bEnableCache = true;
-        config.NumScanAttemptsNormal = settings_manager.General.MaxScanAttemptsNormal;
-        config.NumScanAttemptsModular = settings_manager.General.MaxScanAttemptsModular;
+        config.bEnableCache = settings_manager.General.UseCache;
+        config.SecondsToScanBeforeGivingUp = settings_manager.General.SecondsToScanBeforeGivingUp;
         config.bUseUObjectArrayCache = settings_manager.General.UseUObjectArrayCache;
 
         // Retrieve from the config file the number of threads to be used for aob scanning
@@ -440,7 +457,7 @@ namespace RC
                 Ini::Parser parser;
                 parser.parse(file);
 
-                Output::send(STR("Getting ordered lists from ini file\n"));
+                Output::send<Color::Blue>(STR("Getting ordered lists from ini file\n"));
 
                 auto calculate_virtual_function_offset = []<typename... BaseSizes>(uint32_t current_index, BaseSizes... base_sizes) -> uint32_t {
                     return current_index == 0 ? 0 : (current_index + (base_sizes + ...)) * 8;
@@ -455,49 +472,49 @@ namespace RC
                     return vtable_size;
                 };
 
-                Output::send(STR("UObjectBase\n"));
+                Output::send<Color::Blue>(STR("UObjectBase\n"));
                 uint32_t uobjectbase_size = retrieve_vtable_layout_from_ini(STR("UObjectBase"), [&](uint32_t index, File::StringType& item) {
                     uint32_t offset = calculate_virtual_function_offset(index, 0);
                     Output::send(STR("UObjectBase::{} = 0x{:X}\n"), item, offset);
                     Unreal::UObjectBase::VTableLayoutMap.emplace(item, offset);
                 });
 
-                Output::send(STR("UObjectBaseUtility\n"));
+                Output::send<Color::Blue>(STR("UObjectBaseUtility\n"));
                 uint32_t uobjectbaseutility_size = retrieve_vtable_layout_from_ini(STR("UObjectBaseUtility"), [&](uint32_t index, File::StringType& item) {
                     uint32_t offset = calculate_virtual_function_offset(index, uobjectbase_size);
                     Output::send(STR("UObjectBaseUtility::{} = 0x{:X}\n"), item, offset);
                     Unreal::UObjectBaseUtility::VTableLayoutMap.emplace(item, offset);
                 });
 
-                Output::send(STR("UObject\n"));
+                Output::send<Color::Blue>(STR("UObject\n"));
                 uint32_t uobject_size = retrieve_vtable_layout_from_ini(STR("UObject"), [&](uint32_t index, File::StringType& item) {
                     uint32_t offset = calculate_virtual_function_offset(index, uobjectbase_size, uobjectbaseutility_size);
                     Output::send(STR("UObject::{} = 0x{:X}\n"), item, offset);
                     Unreal::UObject::VTableLayoutMap.emplace(item, offset);
                 });
 
-                Output::send(STR("UField\n"));
+                Output::send<Color::Blue>(STR("UField\n"));
                 uint32_t ufield_size = retrieve_vtable_layout_from_ini(STR("UField"), [&](uint32_t index, File::StringType& item) {
                     uint32_t offset = calculate_virtual_function_offset(index, uobjectbase_size, uobjectbaseutility_size, uobject_size);
                     Output::send(STR("UField::{} = 0x{:X}\n"), item, offset);
-                    Unreal::UStruct::VTableLayoutMap.emplace(item, offset);
+                    Unreal::UField::VTableLayoutMap.emplace(item, offset);
                 });
 
-                Output::send(STR("UScriptStruct::ICppStructOps\n"));
+                Output::send<Color::Blue>(STR("UScriptStruct::ICppStructOps\n"));
                 retrieve_vtable_layout_from_ini(STR("UScriptStruct::ICppStructOps"), [&](uint32_t index, File::StringType& item) {
                     uint32_t offset = calculate_virtual_function_offset(index, 0);
                     Output::send(STR("UScriptStruct::ICppStructOps::{} = 0x{:X}\n"), item, offset);
                     Unreal::UScriptStruct::ICppStructOps::VTableLayoutMap.emplace(item, offset);
                 });
 
-                Output::send(STR("FField\n"));
+                Output::send<Color::Blue>(STR("FField\n"));
                 uint32_t ffield_size = retrieve_vtable_layout_from_ini(STR("FField"), [&](uint32_t index, File::StringType& item) {
                     uint32_t offset = calculate_virtual_function_offset(index, 0);
                     Output::send(STR("FField::{} = 0x{:X}\n"), item, offset);
                     Unreal::FField::VTableLayoutMap.emplace(item, offset);
                 });
 
-                Output::send(STR("FProperty\n"));
+                Output::send<Color::Blue>(STR("FProperty\n"));
                 uint32_t fproperty_size = retrieve_vtable_layout_from_ini(STR("FProperty"), [&](uint32_t index, File::StringType& item) {
                     uint32_t offset{};
                     if (Unreal::Version::IsBelow(4, 25))
@@ -522,42 +539,42 @@ namespace RC
                     fproperty_size = ffield_size + fproperty_size;
                 }
 
-                Output::send(STR("FNumericProperty\n"));
+                Output::send<Color::Blue>(STR("FNumericProperty\n"));
                 retrieve_vtable_layout_from_ini(STR("FNumericProperty"), [&](uint32_t index, File::StringType& item) {
                     uint32_t offset = calculate_virtual_function_offset(index, fproperty_size);
                     Output::send(STR("FNumericProperty::{} = 0x{:X}\n"), item, offset);
                     Unreal::FNumericProperty::VTableLayoutMap.emplace(item, offset);
                 });
 
-                Output::send(STR("FMulticastDelegateProperty\n"));
+                Output::send<Color::Blue>(STR("FMulticastDelegateProperty\n"));
                 retrieve_vtable_layout_from_ini(STR("FMulticastDelegateProperty"), [&](uint32_t index, File::StringType& item) {
                     uint32_t offset = calculate_virtual_function_offset(index, fproperty_size);
                     Output::send(STR("FMulticastDelegateProperty::{} = 0x{:X}\n"), item, offset);
                     Unreal::FMulticastDelegateProperty::VTableLayoutMap.emplace(item, offset);
                 });
 
-                Output::send(STR("FObjectPropertyBase\n"));
+                Output::send<Color::Blue>(STR("FObjectPropertyBase\n"));
                 retrieve_vtable_layout_from_ini(STR("FObjectPropertyBase"), [&](uint32_t index, File::StringType& item) {
                     uint32_t offset = calculate_virtual_function_offset(index, fproperty_size);
                     Output::send(STR("FObjectPropertyBase::{} = 0x{:X}\n"), item, offset);
                     Unreal::FObjectPropertyBase::VTableLayoutMap.emplace(item, offset);
                 });
 
-                Output::send(STR("UStruct\n"));
+                Output::send<Color::Blue>(STR("UStruct\n"));
                 retrieve_vtable_layout_from_ini(STR("UStruct"), [&](uint32_t index, File::StringType& item) {
                     uint32_t offset = calculate_virtual_function_offset(index, uobjectbase_size, uobjectbaseutility_size, uobject_size, ufield_size);
                     Output::send(STR("UStruct::{} = 0x{:X}\n"), item, offset);
-                    Unreal::UField::VTableLayoutMap.emplace(item, offset);
+                    Unreal::UStruct::VTableLayoutMap.emplace(item, offset);                   
                 });
 
-                Output::send(STR("FOutputDevice\n"));
+                Output::send<Color::Blue>(STR("FOutputDevice\n"));
                 retrieve_vtable_layout_from_ini(STR("FOutputDevice"), [&](uint32_t index, File::StringType& item) {
                     uint32_t offset = calculate_virtual_function_offset(index, 0);
                     Output::send(STR("FOutputDevice::{} = 0x{:X}\n"), item, offset);
                     Unreal::FOutputDevice::VTableLayoutMap.emplace(item, offset);
                 });
 
-                Output::send(STR("FMalloc\n"));
+                Output::send<Color::Blue>(STR("FMalloc\n"));
                 retrieve_vtable_layout_from_ini(STR("FMalloc"), [&](uint32_t index, File::StringType& item) {
                     // We don't support FExec, so we're manually telling it the size.
                     static constexpr uint32_t fexec_size = 1;
@@ -566,35 +583,35 @@ namespace RC
                     Unreal::FMalloc::VTableLayoutMap.emplace(item, offset);
                 });
 
-                Output::send(STR("AActor\n"));
+                Output::send<Color::Blue>(STR("AActor\n"));
                 uint32_t aactor_size = retrieve_vtable_layout_from_ini(STR("AActor"), [&](uint32_t index, File::StringType& item) {
                     uint32_t offset = calculate_virtual_function_offset(index, uobjectbase_size, uobjectbaseutility_size, uobject_size);
                     Output::send(STR("AActor::{} = 0x{:X}\n"), item, offset);
                     Unreal::AActor::VTableLayoutMap.emplace(item, offset);
                 });
 
-                Output::send(STR("AGameModeBase\n"));
+                Output::send<Color::Blue>(STR("AGameModeBase\n"));
                 uint32_t agamemodebase_size = retrieve_vtable_layout_from_ini(STR("AGameModeBase"), [&](uint32_t index, File::StringType& item) {
                     uint32_t offset = calculate_virtual_function_offset(index, uobjectbase_size, uobjectbaseutility_size, uobject_size, aactor_size);
                     Output::send(STR("AGameModeBase::{} = 0x{:X}\n"), item, offset);
                     Unreal::AGameModeBase::VTableLayoutMap.emplace(item, offset);
                 });
 
-                Output::send(STR("AGameMode"));
+                Output::send<Color::Blue>(STR("AGameMode\n"));
                 retrieve_vtable_layout_from_ini(STR("AGameMode"), [&](uint32_t index, File::StringType& item) {
                     uint32_t offset = calculate_virtual_function_offset(index, Unreal::Version::IsAtLeast(4, 14) ? uobjectbase_size, uobjectbaseutility_size, uobject_size, aactor_size, agamemodebase_size : uobjectbase_size, uobjectbaseutility_size, uobject_size, aactor_size);
                     Output::send(STR("AGameMode::{} = 0x{:X}\n"), item, offset);
                     Unreal::AGameMode::VTableLayoutMap.emplace(item, offset);
                 });
 
-                Output::send(STR("UPlayer\n"));
+                Output::send<Color::Blue>(STR("UPlayer\n"));
                 uint32_t uplayer_size = retrieve_vtable_layout_from_ini(STR("UPlayer"), [&](uint32_t index, File::StringType& item) {
                     uint32_t offset = calculate_virtual_function_offset(index, uobjectbase_size, uobjectbaseutility_size, uobject_size);
                     Output::send(STR("UPlayer::{} = 0x{:X}\n"), item, offset);
                     Unreal::UPlayer::VTableLayoutMap.emplace(item, offset);
                 });
 
-                Output::send(STR("ULocalPlayer\n"));
+                Output::send<Color::Blue>(STR("ULocalPlayer\n"));
                 retrieve_vtable_layout_from_ini(STR("ULocalPlayer"), [&](uint32_t index, File::StringType& item) {
                     uint32_t offset = calculate_virtual_function_offset(index, uobjectbase_size, uobjectbaseutility_size, uobject_size, uplayer_size);
                     Output::send(STR("ULocalPlayer::{} = 0x{:X}\n"), item, offset);
@@ -1154,6 +1171,16 @@ namespace RC
         }
     }
 
+    auto UE4SSProgram::add_gui_tab(std::shared_ptr<GUI::GUITab> tab) -> void
+    {
+        m_debugging_gui.add_tab(tab);
+    }
+
+    auto UE4SSProgram::remove_gui_tab(std::shared_ptr<GUI::GUITab> tab) -> void
+    {
+        m_debugging_gui.remove_tab(tab);
+    }
+
     auto UE4SSProgram::queue_event(EventCallable callable, void* data) -> void
     {
         if (!can_process_events()) { return; }
@@ -1231,6 +1258,105 @@ namespace RC
         return m_object_dumper_output_directory.c_str();
     }
 
+    auto UE4SSProgram::dump_uobject(UObject* object, std::unordered_set<FField*>* in_dumped_fields, StringType& out_line, bool is_below_425) -> void
+    {
+        bool owns_dumped_fields{};
+        auto dumped_fields_ptr = [&] {
+            if (in_dumped_fields)
+            {
+                return in_dumped_fields;
+            }
+            else
+            {
+                owns_dumped_fields = true;
+                return new std::unordered_set<FField*>{};
+            }
+        }();
+        auto& dumped_fields = *dumped_fields_ptr;
+
+        UObject* typed_obj = static_cast<UObject*>(object);
+
+        if (is_below_425 && Unreal::TypeChecker::is_property(typed_obj) && !typed_obj->HasAnyFlags(static_cast<EObjectFlags>(EObjectFlags::RF_DefaultSubObject | EObjectFlags::RF_ArchetypeObject)))
+        {
+            // We've verified that we're in <4.25 so this cast is safe but should be abstracted at some point
+            dump_xproperty(std::bit_cast<FProperty*>(typed_obj), out_line);
+        }
+        else
+        {
+            auto typed_class = typed_obj->GetClassPrivate()->HashObject();
+            if (ObjectDumper::to_string_exists(typed_class))
+            {
+                // Call type-specific implementation to dump UObject
+                // The type is determined at runtime
+
+                // Dump UObject
+                ObjectDumper::get_to_string(typed_class)(object, out_line);
+                out_line.append(L"\n");
+
+                if (!is_below_425 && ObjectDumper::to_string_complex_exists(typed_class))
+                {
+                    // Dump all properties that are directly owned by this UObject (not its UClass)
+                    // UE 4.25+ (properties are part of GUObjectArray in earlier versions)
+                    ObjectDumper::get_to_string_complex(typed_class)(object, out_line, [&](void* prop) {
+                        if (dumped_fields.contains(static_cast<FField*>(prop))) { return; }
+
+                        dump_xproperty(static_cast<FProperty*>(prop), out_line);
+                        dumped_fields.emplace(static_cast<FField*>(prop));
+                    });
+                }
+            }
+            else
+            {
+                // A type-specific implementation does not exist so lets call the default implementation for UObjects instead
+                ObjectDumper::object_to_string(object, out_line);
+                out_line.append(L"\n");
+            }
+
+            // If the UClass of the UObject has any properties then dump them
+            // UE 4.25+ (properties are part of GUObjectArray in earlier versions)
+            if (!is_below_425)
+            {
+                if (typed_obj->IsA<UStruct>())
+                {
+                    for (FProperty* prop : static_cast<UClass*>(typed_obj)->ForEachProperty()) {
+                        if (dumped_fields.contains(prop)) { continue; }
+
+                        dump_xproperty(prop, out_line);
+                        dumped_fields.emplace(prop);
+                    }
+                }
+            }
+        }
+
+        if (owns_dumped_fields)
+        {
+            delete dumped_fields_ptr;
+        }
+    }
+
+    auto UE4SSProgram::dump_xproperty(FProperty* property, StringType& out_line) -> void
+    {
+        auto typed_prop_class = property->GetClass().HashObject();
+
+        if (ObjectDumper::to_string_exists(typed_prop_class))
+        {
+            ObjectDumper::get_to_string(typed_prop_class)(property, out_line);
+            out_line.append(L"\n");
+
+            if (ObjectDumper::to_string_complex_exists(typed_prop_class))
+            {
+                ObjectDumper::get_to_string_complex(typed_prop_class)(property, out_line, [&]([[maybe_unused]]void* prop) {
+                    out_line.append(L"\n");
+                });
+            }
+        }
+        else
+        {
+            ObjectDumper::property_to_string(property, out_line);
+            out_line.append(L"\n");
+        }
+    }
+
     auto UE4SSProgram::dump_all_objects_and_properties(const File::StringType& output_path_and_file_name) -> void
     {
         /*
@@ -1286,89 +1412,9 @@ namespace RC
             std::wstring out_line;
             out_line.reserve(200000000);
 
-            auto dump_xproperty = [&](FProperty* property) -> void {
-                auto typed_prop_class = property->GetClass().HashObject();
-
-                if (ObjectDumper::to_string_exists(typed_prop_class))
-                {
-                    ObjectDumper::get_to_string(typed_prop_class)(property, out_line);
-                    out_line.append(L"\n");
-
-                    if (ObjectDumper::to_string_complex_exists(typed_prop_class))
-                    {
-                        ObjectDumper::get_to_string_complex(typed_prop_class)(property, out_line, [&]([[maybe_unused]]void* prop) {
-                            out_line.append(L"\n");
-                        });
-                    }
-                }
-                else
-                {
-                    ObjectDumper::property_to_string(property, out_line);
-                    out_line.append(L"\n");
-                }
-            };
-
-            auto dump_uobject = [&](void* object) -> void {
-                UObject* typed_obj = static_cast<UObject*>(object);
-
-                if (is_below_425 && Unreal::TypeChecker::is_property(typed_obj) && !typed_obj->HasAnyFlags(static_cast<EObjectFlags>(EObjectFlags::RF_DefaultSubObject | EObjectFlags::RF_ArchetypeObject)))
-                {
-                    // We've verified that we're in <4.25 so this cast is safe but should be abstracted at some point
-                    dump_xproperty(std::bit_cast<FProperty*>(typed_obj));
-                }
-                else
-                {
-                    auto typed_class = typed_obj->GetClassPrivate()->HashObject();
-                    if (ObjectDumper::to_string_exists(typed_class))
-                    {
-                        // Call type-specific implementation to dump UObject
-                        // The type is determined at runtime
-
-                        // Dump UObject
-                        ObjectDumper::get_to_string(typed_class)(object, out_line);
-                        out_line.append(L"\n");
-
-                        if (!is_below_425 && ObjectDumper::to_string_complex_exists(typed_class))
-                        {
-                            // Dump all properties that are directly owned by this UObject (not its UClass)
-                            // UE 4.25+ (properties are part of GUObjectArray in earlier versions)
-                            ObjectDumper::get_to_string_complex(typed_class)(object, out_line, [&](void* prop) {
-                                if (dumped_fields.contains(static_cast<FField*>(prop))) { return; }
-
-                                dump_xproperty(static_cast<FProperty*>(prop));
-                                dumped_fields.emplace(static_cast<FField*>(prop));
-                            });
-                        }
-                    }
-                    else
-                    {
-                        // A type-specific implementation does not exist so lets call the default implementation for UObjects instead
-                        ObjectDumper::object_to_string(object, out_line);
-                        out_line.append(L"\n");
-                    }
-
-                    // If the UClass of the UObject has any properties then dump them
-                    // UE 4.25+ (properties are part of GUObjectArray in earlier versions)
-                    if (!is_below_425)
-                    {
-                        if (typed_obj->IsA<UStruct>())
-                        {
-                            static_cast<UClass*>(typed_obj)->ForEachProperty([&](FProperty* prop) {
-                                if (dumped_fields.contains(prop)) { return LoopAction::Continue; }
-
-                                dump_xproperty(prop);
-                                dumped_fields.emplace(prop);
-
-                                return LoopAction::Continue;
-                            });
-                        }
-                    }
-                }
-            };
-
             Output::send(STR("Dumping all objects & properties in GUObjectArray\n"));
             UObjectGlobals::ForEachUObject([&](void* object, [[maybe_unused]]int32_t chunk_index, [[maybe_unused]]int32_t object_index) {
-                dump_uobject(object);
+                dump_uobject(static_cast<UObject*>(object), &dumped_fields, out_line, is_below_425);
                 return LoopAction::Continue;
             });
 
@@ -1395,6 +1441,73 @@ namespace RC
 #if TIME_FUNCTION_MACRO_V2 == 0
         FunctionTimerCollection::dump();
 #endif
+    }
+
+    namespace Unreal
+    {
+        template class RC_UE4SS_API TArray<char>;
+        template class RC_UE4SS_API TArray<signed char>;
+        template class RC_UE4SS_API TArray<unsigned char>;
+
+        template class RC_UE4SS_API TArray<unsigned int>;
+        template class RC_UE4SS_API TArray<int>;
+        template class RC_UE4SS_API TArray<float>;
+        template class RC_UE4SS_API TArray<double>;
+
+        template class RC_UE4SS_API TArray<int8_t>;
+        template class RC_UE4SS_API TArray<int16_t>;
+        template class RC_UE4SS_API TArray<int32_t>;
+        template class RC_UE4SS_API TArray<int64_t>;
+        template class RC_UE4SS_API TArray<uint8_t>;
+        template class RC_UE4SS_API TArray<uint16_t>;
+        template class RC_UE4SS_API TArray<uint32_t>;
+        template class RC_UE4SS_API TArray<uint64_t>;
+
+        template class RC_UE4SS_API TArray<AActor*>;
+        template class RC_UE4SS_API TArray<AGameMode*>;
+        template class RC_UE4SS_API TArray<AGameModeBase*>;
+        template class RC_UE4SS_API TArray<FArchiveState*>;
+        template class RC_UE4SS_API TArray<FArchive*>;
+        template class RC_UE4SS_API TArray<FAssetData*>;
+        template class RC_UE4SS_API TArray<FField*>;
+        template class RC_UE4SS_API TArray<FFieldClass*>;
+        template class RC_UE4SS_API TArray<FFieldPath*>;
+        template class RC_UE4SS_API TArray<FOutputDevice*>;
+        template class RC_UE4SS_API TArray<FProperty*>;
+        template class RC_UE4SS_API TArray<FScriptArray*>;
+        template class RC_UE4SS_API TArray<FString*>;
+        template class RC_UE4SS_API TArray<FString>;
+        template class RC_UE4SS_API TArray<FText*>;
+        template class RC_UE4SS_API TArray<FWeakObjectPtr*>;
+        template class RC_UE4SS_API TArray<UGameplayStatics*>;
+        template class RC_UE4SS_API TArray<FName*>;
+        template class RC_UE4SS_API TArray<FName>;
+        template class RC_UE4SS_API TArray<FUniqueObjectGuid*>;
+        template class RC_UE4SS_API TArray<FQuat*>;
+        template class RC_UE4SS_API TArray<FRotator*>;
+        template class RC_UE4SS_API TArray<FVector*>;
+        template class RC_UE4SS_API TArray<FTransform*>;
+        template class RC_UE4SS_API TArray<FGuid*>;
+        template class RC_UE4SS_API TArray<FGuid>;
+        template class RC_UE4SS_API TArray<UActorComponent*>;
+        template class RC_UE4SS_API TArray<USceneComponent*>;
+        template class RC_UE4SS_API TArray<UAssetRegistry*>;
+        template class RC_UE4SS_API TArray<UAssetRegistryHelpers*>;
+        template class RC_UE4SS_API TArray<UClass*>;
+        template class RC_UE4SS_API TArray<UEnum*>;
+        template class RC_UE4SS_API TArray<UField*>;
+        template class RC_UE4SS_API TArray<UFunction*>;
+        template class RC_UE4SS_API TArray<UGameViewportClient*>;
+        template class RC_UE4SS_API TArray<UInterface*>;
+        template class RC_UE4SS_API TArray<UKismetSystemLibrary*>;
+        template class RC_UE4SS_API TArray<ULocalPlayer*>;
+        template class RC_UE4SS_API TArray<UObjectBase*>;
+        template class RC_UE4SS_API TArray<UObject*>;
+        template class RC_UE4SS_API TArray<UPackage*>;
+        template class RC_UE4SS_API TArray<UPlayer*>;
+        template class RC_UE4SS_API TArray<UScriptStruct*>;
+        template class RC_UE4SS_API TArray<UStruct*>;
+        template class RC_UE4SS_API TArray<UWorld*>;
     }
 }
 

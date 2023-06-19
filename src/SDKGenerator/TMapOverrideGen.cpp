@@ -42,8 +42,9 @@ namespace RC::UEGenerator
                 if (!as_class && !as_script_struct) { return LoopAction::Continue; }
                 if ((as_class && as_class->HasAnyClassFlags(CLASS_Native)) || (as_script_struct && as_script_struct->HasAnyStructFlags(STRUCT_Native)))
                 {
-                    casted_object->ForEachProperty([&](FProperty* property) {
-                        if (!property->IsA<FMapProperty>() || MapProperties.contains(property->GetFName())) { return LoopAction::Continue; }
+                    for (FProperty* property : casted_object->ForEachProperty())
+                    {
+                        if (!property->IsA<FMapProperty>() || MapProperties.contains(property->GetFName())) { continue; }
 
                         MapProperties.insert(property->GetFName());
 
@@ -58,7 +59,7 @@ namespace RC::UEGenerator
                         auto value_struct_type = value_as_struct_property ? value_as_struct_property->GetStruct() : nullptr;
                         auto is_value_valid = value_struct_type && value_struct_type->HasAnyStructFlags(STRUCT_SerializeNative);
 
-                        if (!is_key_valid && !is_value_valid) { return LoopAction::Continue; }
+                        if (!is_key_valid && !is_value_valid) { continue; }
                         Output::send(STR("Found Relevant TMap Property: {} in Class: {}\n"), property_name, object->GetName());
 
                         auto& fm_json_object = fm_object.new_object(property_name);
@@ -89,8 +90,7 @@ namespace RC::UEGenerator
                         }
 
                         ++num_objects_generated;
-                        return LoopAction::Continue;
-                    });
+                    }
                 }
             }
             else

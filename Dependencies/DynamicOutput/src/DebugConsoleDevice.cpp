@@ -12,19 +12,25 @@
 
 namespace RC::Output
 {
-    static auto log_level_to_color(LogLevel::LogLevel log_level) -> std::string
+    static auto log_level_to_color(Color::Color color) -> std::string
     {
-        switch (log_level)
+        switch (color)
         {
-        case LogLevel::Default:
-        case LogLevel::Normal:
+        case Color::Default:
+        case Color::NoColor:
             return "\033[0;0m";
-        case LogLevel::Verbose:
+        case Color::Cyan:
             return "\033[1;36m";
-        case LogLevel::Warning:
+        case Color::Yellow:
             return "\033[1;33m";
-        case LogLevel::Error:
+        case Color::Red:
             return "\033[1;31m";
+        case Color::Green:
+            return "\033[1;32m";
+        case Color::Blue:
+            return "\033[1;94m";
+        case Color::Purple:
+            return "\033[1;35m";
         }
         
         return "\033[0;0m";
@@ -60,7 +66,7 @@ namespace RC::Output
 #if ENABLE_OUTPUT_DEVICE_DEBUG_MODE
         printf_s("DebugConsoleDevice received: %S", m_formatter(fmt).c_str());
 #else
-        printf_s("%s%S\033[0m", log_level_to_color(static_cast<LogLevel::LogLevel>(optional_arg)).c_str(), m_formatter(fmt).c_str());
+        printf_s("%s%S\033[0m", log_level_to_color(static_cast<Color::Color>(optional_arg)).c_str(), m_formatter(fmt).c_str());
 #endif
     }
 }
