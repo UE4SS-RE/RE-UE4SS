@@ -1593,7 +1593,7 @@ namespace RC::GUI
 
         bool listeners_allowed = are_listeners_allowed();
         if (!listeners_allowed) { ImGui::BeginDisabled(); }
-        ImGui::PushItemWidth(-14.0f);
+        ImGui::PushItemWidth(-130.0f);
         bool push_inactive_text_color = !m_search_field_cleared;
         if (push_inactive_text_color) { ImGui::PushStyleColor(ImGuiCol_Text, g_imgui_text_inactive_color.Value); }
         if (ImGui::InputText("##Search by name", m_search_by_name_buffer, m_search_buffer_capacity, ImGuiInputTextFlags_EnterReturnsTrue | ImGuiInputTextFlags_CallbackAlways, &object_search_field_always_callback, this))
@@ -1791,6 +1791,18 @@ namespace RC::GUI
             {
                 m_search_field_clear_requested = true;
             }
+        }
+
+        ImGui::SameLine();
+        if (ImGui::Button("Copy search result"))
+        {
+            StringType result{};
+            auto is_below_425 = Version::IsBelow(4, 25);
+            for (const auto& search_result : s_name_search_results)
+            {
+                UE4SSProgram::dump_uobject(search_result, nullptr, result, is_below_425);
+            }
+            ImGui::SetClipboardText(to_string(result).c_str());
         }
 
         m_bottom_size = (ImGui::GetContentRegionMaxAbs().y - m_top_size) - 94.0f;

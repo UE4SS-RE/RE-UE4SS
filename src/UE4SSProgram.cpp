@@ -397,8 +397,7 @@ namespace RC
         config.CachePath = m_root_directory / "cache";
         config.bInvalidateCacheIfSelfChanged = settings_manager.General.InvalidateCacheIfDLLDiffers;
         config.bEnableCache = settings_manager.General.UseCache;
-        config.NumScanAttemptsNormal = settings_manager.General.MaxScanAttemptsNormal;
-        config.NumScanAttemptsModular = settings_manager.General.MaxScanAttemptsModular;
+        config.SecondsToScanBeforeGivingUp = settings_manager.General.SecondsToScanBeforeGivingUp;
         config.bUseUObjectArrayCache = settings_manager.General.UseUObjectArrayCache;
 
         // Retrieve from the config file the number of threads to be used for aob scanning
@@ -1218,6 +1217,105 @@ namespace RC
         return m_object_dumper_output_directory.c_str();
     }
 
+    auto UE4SSProgram::dump_uobject(UObject* object, std::unordered_set<FField*>* in_dumped_fields, StringType& out_line, bool is_below_425) -> void
+    {
+        bool owns_dumped_fields{};
+        auto dumped_fields_ptr = [&] {
+            if (in_dumped_fields)
+            {
+                return in_dumped_fields;
+            }
+            else
+            {
+                owns_dumped_fields = true;
+                return new std::unordered_set<FField*>{};
+            }
+        }();
+        auto& dumped_fields = *dumped_fields_ptr;
+
+        UObject* typed_obj = static_cast<UObject*>(object);
+
+        if (is_below_425 && Unreal::TypeChecker::is_property(typed_obj) && !typed_obj->HasAnyFlags(static_cast<EObjectFlags>(EObjectFlags::RF_DefaultSubObject | EObjectFlags::RF_ArchetypeObject)))
+        {
+            // We've verified that we're in <4.25 so this cast is safe but should be abstracted at some point
+            dump_xproperty(std::bit_cast<FProperty*>(typed_obj), out_line);
+        }
+        else
+        {
+            auto typed_class = typed_obj->GetClassPrivate()->HashObject();
+            if (ObjectDumper::to_string_exists(typed_class))
+            {
+                // Call type-specific implementation to dump UObject
+                // The type is determined at runtime
+
+                // Dump UObject
+                ObjectDumper::get_to_string(typed_class)(object, out_line);
+                out_line.append(L"\n");
+
+                if (!is_below_425 && ObjectDumper::to_string_complex_exists(typed_class))
+                {
+                    // Dump all properties that are directly owned by this UObject (not its UClass)
+                    // UE 4.25+ (properties are part of GUObjectArray in earlier versions)
+                    ObjectDumper::get_to_string_complex(typed_class)(object, out_line, [&](void* prop) {
+                        if (dumped_fields.contains(static_cast<FField*>(prop))) { return; }
+
+                        dump_xproperty(static_cast<FProperty*>(prop), out_line);
+                        dumped_fields.emplace(static_cast<FField*>(prop));
+                    });
+                }
+            }
+            else
+            {
+                // A type-specific implementation does not exist so lets call the default implementation for UObjects instead
+                ObjectDumper::object_to_string(object, out_line);
+                out_line.append(L"\n");
+            }
+
+            // If the UClass of the UObject has any properties then dump them
+            // UE 4.25+ (properties are part of GUObjectArray in earlier versions)
+            if (!is_below_425)
+            {
+                if (typed_obj->IsA<UStruct>())
+                {
+                    for (FProperty* prop : static_cast<UClass*>(typed_obj)->ForEachProperty()) {
+                        if (dumped_fields.contains(prop)) { continue; }
+
+                        dump_xproperty(prop, out_line);
+                        dumped_fields.emplace(prop);
+                    }
+                }
+            }
+        }
+
+        if (owns_dumped_fields)
+        {
+            delete dumped_fields_ptr;
+        }
+    }
+
+    auto UE4SSProgram::dump_xproperty(FProperty* property, StringType& out_line) -> void
+    {
+        auto typed_prop_class = property->GetClass().HashObject();
+
+        if (ObjectDumper::to_string_exists(typed_prop_class))
+        {
+            ObjectDumper::get_to_string(typed_prop_class)(property, out_line);
+            out_line.append(L"\n");
+
+            if (ObjectDumper::to_string_complex_exists(typed_prop_class))
+            {
+                ObjectDumper::get_to_string_complex(typed_prop_class)(property, out_line, [&]([[maybe_unused]]void* prop) {
+                    out_line.append(L"\n");
+                });
+            }
+        }
+        else
+        {
+            ObjectDumper::property_to_string(property, out_line);
+            out_line.append(L"\n");
+        }
+    }
+
     auto UE4SSProgram::dump_all_objects_and_properties(const File::StringType& output_path_and_file_name) -> void
     {
         /*
@@ -1273,87 +1371,9 @@ namespace RC
             std::wstring out_line;
             out_line.reserve(200000000);
 
-            auto dump_xproperty = [&](FProperty* property) -> void {
-                auto typed_prop_class = property->GetClass().HashObject();
-
-                if (ObjectDumper::to_string_exists(typed_prop_class))
-                {
-                    ObjectDumper::get_to_string(typed_prop_class)(property, out_line);
-                    out_line.append(L"\n");
-
-                    if (ObjectDumper::to_string_complex_exists(typed_prop_class))
-                    {
-                        ObjectDumper::get_to_string_complex(typed_prop_class)(property, out_line, [&]([[maybe_unused]]void* prop) {
-                            out_line.append(L"\n");
-                        });
-                    }
-                }
-                else
-                {
-                    ObjectDumper::property_to_string(property, out_line);
-                    out_line.append(L"\n");
-                }
-            };
-
-            auto dump_uobject = [&](void* object) -> void {
-                UObject* typed_obj = static_cast<UObject*>(object);
-
-                if (is_below_425 && Unreal::TypeChecker::is_property(typed_obj) && !typed_obj->HasAnyFlags(static_cast<EObjectFlags>(EObjectFlags::RF_DefaultSubObject | EObjectFlags::RF_ArchetypeObject)))
-                {
-                    // We've verified that we're in <4.25 so this cast is safe but should be abstracted at some point
-                    dump_xproperty(std::bit_cast<FProperty*>(typed_obj));
-                }
-                else
-                {
-                    auto typed_class = typed_obj->GetClassPrivate()->HashObject();
-                    if (ObjectDumper::to_string_exists(typed_class))
-                    {
-                        // Call type-specific implementation to dump UObject
-                        // The type is determined at runtime
-
-                        // Dump UObject
-                        ObjectDumper::get_to_string(typed_class)(object, out_line);
-                        out_line.append(L"\n");
-
-                        if (!is_below_425 && ObjectDumper::to_string_complex_exists(typed_class))
-                        {
-                            // Dump all properties that are directly owned by this UObject (not its UClass)
-                            // UE 4.25+ (properties are part of GUObjectArray in earlier versions)
-                            ObjectDumper::get_to_string_complex(typed_class)(object, out_line, [&](void* prop) {
-                                if (dumped_fields.contains(static_cast<FField*>(prop))) { return; }
-
-                                dump_xproperty(static_cast<FProperty*>(prop));
-                                dumped_fields.emplace(static_cast<FField*>(prop));
-                            });
-                        }
-                    }
-                    else
-                    {
-                        // A type-specific implementation does not exist so lets call the default implementation for UObjects instead
-                        ObjectDumper::object_to_string(object, out_line);
-                        out_line.append(L"\n");
-                    }
-
-                    // If the UClass of the UObject has any properties then dump them
-                    // UE 4.25+ (properties are part of GUObjectArray in earlier versions)
-                    if (!is_below_425)
-                    {
-                        if (typed_obj->IsA<UStruct>())
-                        {
-                            for (FProperty* prop : static_cast<UClass*>(typed_obj)->ForEachProperty()) {
-                                if (dumped_fields.contains(prop)) { continue; }
-
-                                dump_xproperty(prop);
-                                dumped_fields.emplace(prop);
-                            }
-                        }
-                    }
-                }
-            };
-
             Output::send(STR("Dumping all objects & properties in GUObjectArray\n"));
             UObjectGlobals::ForEachUObject([&](void* object, [[maybe_unused]]int32_t chunk_index, [[maybe_unused]]int32_t object_index) {
-                dump_uobject(object);
+                dump_uobject(static_cast<UObject*>(object), &dumped_fields, out_line, is_below_425);
                 return LoopAction::Continue;
             });
 
