@@ -21,15 +21,23 @@ jobs:
         with:
           python-version: '3.x'
 
-      - name: Setup MSBuild
-        uses: microsoft/setup-msbuild@v1.1.3
+      - name: Setup MSVC
+        uses: ilammy/msvc-dev-cmd@v1
+
+      - name: Setup Ninja
+        uses: seanmiddleditch/gha-setup-ninja@v3
 
       - name: Release Commit
         id: release_commit
         run: python build.py release_commit ${{ github.actor }}
 
       - name: Build
-        run: python build.py build
+        run: |
+          cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
+          cmake --build build
+
+      - name: Package
+        run: python build.py package
 
       - name: Push changes
         uses: ad-m/github-push-action@master

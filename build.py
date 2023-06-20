@@ -54,7 +54,7 @@ def release_commit(args):
 
     github_output('release_tag', version)
 
-def build(args):
+def package(args):
     release_output = 'release'
     shutil.rmtree(release_output, ignore_errors=True)
     os.mkdir(release_output)
@@ -123,15 +123,6 @@ def build(args):
         with open(mods_path, mode='w', encoding='utf-8-sig') as file:
             file.write(content)
 
-    def build_release(target_xinput: bool):
-        cmd = 'build_auto.bat Release {}'
-        if target_xinput:
-            p = Popen(cmd.format('xinput1_3'))
-            p.communicate()
-        else:
-            p = Popen(cmd.format(''))
-            p.communicate()
-
     def package_release(target_xinput: bool, is_dev_release: bool):
         version = subprocess.check_output(['git', 'describe', '--tags']).decode('utf-8').strip()
         if is_dev_release:
@@ -169,13 +160,11 @@ def build(args):
 
     make_staging_dirs();
 
-    # Build UE4SS Standard
-    build_release(target_xinput = False)
+    # Package UE4SS Standard
     package_release(target_xinput = False, is_dev_release = False)
     package_release(target_xinput = False, is_dev_release = True)
 
-    # Build UE4SS Xinput
-    build_release(target_xinput = True)
+    # Package UE4SS Xinput
     package_release(target_xinput = True, is_dev_release = False)
     package_release(target_xinput = True, is_dev_release = True)
 
@@ -193,13 +182,13 @@ def build(args):
 
 commands = {f.__name__: f for f in [
     get_release_notes,
-    build,
+    package,
     release_commit,
 ]}
 
 parser = argparse.ArgumentParser()
 subparsers = parser.add_subparsers(dest='command', required=True)
-build_parser = subparsers.add_parser('build')
+package_parser = subparsers.add_parser('package')
 release_commit_parser = subparsers.add_parser('release_commit')
 release_commit_parser.add_argument('username', nargs='?')
 args = parser.parse_args()
