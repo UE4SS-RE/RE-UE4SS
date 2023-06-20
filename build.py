@@ -55,16 +55,16 @@ def release_commit(args):
     github_output('release_tag', version)
 
 def build(args):
-    # builds a release version of StagingDev by copying the directory and then
-    # removing and disabling dev-only settings and files
-
     release_output = 'release'
     shutil.rmtree(release_output, ignore_errors=True)
     os.mkdir(release_output)
 
-    out_dir = 'StagingRelease'
+    staging_dev = os.path.join(release_output, 'StagingDev')
+    staging_release = os.path.join(release_output, 'StagingRelease')
 
-    def make_staging_release():
+    def make_staging_dirs():
+        # builds a release version of StagingDev by copying the directory and then
+        # removing and disabling dev-only settings and files
         exclude_files = [
             'API.txt',
             'Mods/shared/Types.lua',
@@ -86,19 +86,19 @@ def build(args):
         }
 
         # copy whole directory
-        shutil.rmtree(out_dir, ignore_errors=True)
-        shutil.copytree('StagingDev/', out_dir)
+        shutil.copytree('StagingDev', staging_dev)
+        shutil.copytree('StagingDev', staging_release)
 
         # remove files
         for file in exclude_files:
-            path = os.path.join(out_dir, file)
+            path = os.path.join(staging_release, file)
             try:
                 os.remove(path)
             except:
                 shutil.rmtree(path)
 
         # change UE4SS-settings.ini
-        config_path = os.path.join(out_dir, 'UE4SS-settings.ini')
+        config_path = os.path.join(staging_release, 'UE4SS-settings.ini')
 
         with open(config_path, mode='r', encoding='utf-8-sig') as file:
             content = file.read()
@@ -111,7 +111,7 @@ def build(args):
             file.write(content)
 
         # change Mods/mods.txt
-        mods_path = os.path.join(out_dir, 'Mods/mods.txt')
+        mods_path = os.path.join(staging_release, 'Mods/mods.txt')
 
         with open(mods_path, mode='r', encoding='utf-8-sig') as file:
             content = file.read()
@@ -134,38 +134,40 @@ def build(args):
 
     def package_release(target_xinput: bool, is_dev_release: bool):
         version = subprocess.check_output(['git', 'describe', '--tags']).decode('utf-8').strip()
-        main_zip_name = ''
-        staging_dir = ''
         if is_dev_release:
-            main_zip_name = 'zDEV-UE4SS_{}_{}'.format('Xinput' if target_xinput else 'Standard', version)
-            staging_dir = 'StagingDev'
+            main_zip_name = f'zDEV-UE4SS_{"Xinput" if target_xinput else "Standard"}_{version}'
+            staging_dir = staging_dev
         else:
-            main_zip_name = 'UE4SS_{}_{}'.format('Xinput' if target_xinput else 'Standard', version)
-            staging_dir = 'StagingRelease'
+            main_zip_name = f'UE4SS_{"Xinput" if target_xinput else "Standard"}_{version}'
+            staging_dir = staging_release
 
-        bin_name = 'xinput1_3' if target_xinput else 'ue4ss'
         bin_dir = 'Output/ue4ss/Binaries/x64/Release'
+        bin_name = 'xinput1_3' if target_xinput else 'ue4ss'
+        cppsdk_name = 'cppsdk_xinput' if target_xinput else 'cppsdk'
 
-
-        shutil.copyfile('{}/{}.dll'.format(bin_dir, bin_name), '{}/{}.dll'.format(staging_dir, bin_name))
+        shutil.copyfile(os.path.join(bin_dir, f'{bin_name}.dll'), os.path.join(staging_dir, f'{bin_name}.dll'))
+        shutil.copyfile(os.path.join(bin_dir, f'{cppsdk_name}.dll'), os.path.join(staging_dir, 'Mods', 'UE4SS-cppsdk.dll'))
 
         if is_dev_release:
-            shutil.copyfile('{}/{}.pdb'.format(bin_dir, bin_name), '{}/{}.pdb'.format(staging_dir, bin_name))
-            if os.path.exists('{}/docs'.format(staging_dir)):
-                shutil.copytree('docs/', '{}/docs'.format(staging_dir))
+            shutil.copyfile(os.path.join(bin_dir, f'{bin_name}.pdb'), os.path.join(staging_dir, f'{bin_name}.pdb'))
+            if os.path.exists(os.path.join(staging_dir, 'docs')):
+                shutil.copytree('docs', os.path.join(staging_dir, 'docs'))
 
         shutil.make_archive(os.path.join(release_output, main_zip_name), 'zip', staging_dir)
 
-        if os.path.exists('{}/{}.dll'.format(staging_dir, bin_name)):
-            os.remove('{}/{}.dll'.format(staging_dir, bin_name))
-        if os.path.exists('{}/{}.pdb'.format(staging_dir, bin_name)):
-            os.remove('{}/{}.pdb'.format(staging_dir, bin_name))
+        if os.path.exists(os.path.join(staging_dir, f'{bin_name}.dll')):
+            os.remove(os.path.join(staging_dir, f'{bin_name}.dll'))
+        if os.path.exists(os.path.join(staging_dir, f'{bin_name}.pdb')):
+            os.remove(os.path.join(staging_dir, f'{bin_name}.pdb'))
 
-        if is_dev_release and os.path.exists('{}/docs'.format(staging_dir)):
-            shutil.rmtree('{}/docs'.format(staging_dir), ignore_errors=False)
+        if os.path.exists(os.path.join(staging_dir, 'Mods', 'UE4SS-cppsdk.dll')):
+            os.remove(os.path.join(staging_dir, 'Mods', 'UE4SS-cppsdk.dll'))
+
+        if is_dev_release and os.path.exists(os.path.join(staging_dir, 'docs')):
+            shutil.rmtree(os.path.join(staging_dir, 'docs'), ignore_errors=False)
 
 
-    make_staging_release();
+    make_staging_dirs();
 
     # Build UE4SS Standard
     build_release(target_xinput = False)
