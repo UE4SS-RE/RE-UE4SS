@@ -155,6 +155,8 @@ namespace RC::LuaType
                 //    break;
                 //}
 
+                if (!param_next->HasAnyPropertyFlags(Unreal::CPF_Parm)) { continue; }
+
                 int32_t offset_internal = param_next->GetOffset_Internal();
                 Unreal::FName property_type_fname = param_next->GetClass().GetFName();
 
