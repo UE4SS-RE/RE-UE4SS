@@ -63,6 +63,10 @@ namespace RC::UVTD
             {STR("UMulticastDelegateProperty"), ValidForVTable::Yes, ValidForMemberVars::Yes},
             {STR("FObjectPropertyBase"), ValidForVTable::Yes, ValidForMemberVars::Yes},
             {STR("UObjectPropertyBase"), ValidForVTable::Yes, ValidForMemberVars::Yes},
+            /*{STR("FConsoleManager"), ValidForVTable::Yes, ValidForMemberVars::Yes},
+            {STR("UDataTable"), ValidForVTable::Yes, ValidForMemberVars::Yes},
+            {STR("FConsoleVariableBase"), ValidForVTable::Yes, ValidForMemberVars::Yes},
+            {STR("FConsoleCommandBase"), ValidForVTable::Yes, ValidForMemberVars::Yes},*/
 
             {STR("UScriptStruct"), ValidForVTable::No, ValidForMemberVars::Yes},
             {STR("UWorld"), ValidForVTable::No, ValidForMemberVars::Yes},
@@ -100,20 +104,12 @@ namespace RC::UVTD
             STR("UObjectBaseUtility"),
             STR("UObject"),
             STR("UStruct"),
-            STR("UGameViewportClient"),
             STR("UScriptStruct"),
             STR("FOutputDevice"),
             //STR("UConsole"),
             STR("FMalloc"),
             STR("FArchive"),
             STR("FArchiveState"),
-            STR("AGameModeBase"),
-            STR("AGameMode"),
-            STR("AActor"),
-            STR("AHUD"),
-            STR("UPlayer"),
-            STR("ULocalPlayer"),
-            STR("FExec"),
             STR("UField"),
             STR("FField"),
             STR("FProperty"),
@@ -180,7 +176,6 @@ namespace RC::UVTD
             type_name.find(STR("FThreadSafeCounter")) != type_name.npos ||
             type_name.find(STR("FWorldAsyncTraceState")) != type_name.npos ||
             type_name.find(STR("FDelegateHandle")) != type_name.npos ||
-            type_name.find(STR("AGameMode")) != type_name.npos ||
             type_name.find(STR("UAvoidanceManager")) != type_name.npos ||
             type_name.find(STR("FOnBeginTearingDownEvent")) != type_name.npos ||
             type_name.find(STR("UBlueprint")) != type_name.npos ||
@@ -252,15 +247,8 @@ namespace RC::UVTD
             type_name.find(STR("EClassCastFlags")) != type_name.npos ||
             type_name.find(STR("FAudioDeviceHandle")) != type_name.npos ||
             type_name.find(STR("TVector")) != type_name.npos ||
-            type_name.find(STR("FScriptSetLayout")) != type_name.npos ||
-            type_name.find(STR("FArchive")) != type_name.npos ||
-            type_name.find(STR("FArchiveState")) != type_name.npos ||
-            type_name.find(STR("AGameModeBase")) != type_name.npos ||
-            type_name.find(STR("AGameMode")) != type_name.npos ||
-            type_name.find(STR("AActor")) != type_name.npos ||
-            type_name.find(STR("AHUD")) != type_name.npos ||
-            type_name.find(STR("UPlayer")) != type_name.npos ||
-            type_name.find(STR("ULocalPlayer")) != type_name.npos)
+            type_name.find(STR("FScriptSetLayout")) != type_name.npos
+            )        
         {
             
             // These types are not currently supported in RC::Unreal, so we must prevent code from being generated.
@@ -925,7 +913,7 @@ namespace RC::UVTD
         HRESULT hr;
         if (sym_tag == SymTagUDT)
         {
-            if (valid_udt_names.find(symbol_name) == valid_udt_names.end()) { return; }
+            /*if (valid_udt_names.find(symbol_name) == valid_udt_names.end()) { return; }*/
             auto& local_class_entry = get_existing_or_create_new_class_entry(pdb_file, symbol_name, symbol_name_clean, name_info);
             auto& local_enum_entry = get_existing_or_create_new_enum_entry(symbol_name, symbol_name_clean);
 
@@ -1086,7 +1074,7 @@ namespace RC::UVTD
 
         auto process_struct_or_class = [&]()
         {
-            if (valid_udt_names.find(symbol_name) == valid_udt_names.end()) { return; }
+            /*if (valid_udt_names.find(symbol_name) == valid_udt_names.end()) { return; }*/
             functions_already_dumped.clear();
             //Output::send(STR("Dumping vtable for symbol '{}', tag: '{}'\n"), symbol_name, sym_tag_to_string(sym_tag));
 
@@ -1099,7 +1087,7 @@ namespace RC::UVTD
             {
                 CComPtr<IDiaSymbol> sub_symbol;
                 ULONG num_symbols_fetched{};
-                while (sub_symbols->Next(1, &sub_symbol, &num_symbols_fetched) == S_OK && num_symbols_fetched == 1)
+                while (sub_symbols->Next(1, &sub_symbol.p, &num_symbols_fetched) == S_OK && num_symbols_fetched == 1)
                 {
                     SymbolNameInfo new_name_info = name_info;
                     dump_vtable_for_symbol(sub_symbol, new_name_info, &local_enum_entries, &local_class_entry);
@@ -1872,7 +1860,14 @@ namespace RC::UVTD
         });
         TRY([&] {
             {
-                VTableDumper vtable_dumper{"PDBs/5_1.pdb"};
+                VTableDumper vtable_dumper{"PDBs/5_01.pdb"};
+                vtable_dumper.generate_code(vtable_or_member_vars);
+            }
+            CoUninitialize();
+        });
+        TRY([&] {
+            {
+                VTableDumper vtable_dumper{"PDBs/5_02.pdb"};
                 vtable_dumper.generate_code(vtable_or_member_vars);
             }
             CoUninitialize();
