@@ -89,6 +89,10 @@ def package(args):
         shutil.copytree('StagingDev', staging_dev)
         shutil.copytree('StagingDev', staging_release)
 
+        # include repo README
+        shutil.copy('README.md', os.path.join(staging_dev, 'README.md'))
+        shutil.copy('README.md', os.path.join(staging_release, 'README.md'))
+
         # remove files
         for file in exclude_files:
             path = os.path.join(staging_release, file)

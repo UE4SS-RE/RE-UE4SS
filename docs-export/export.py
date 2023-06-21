@@ -3,6 +3,7 @@
 import subprocess
 import os
 import shutil
+import re
 
 # change dir to repo root
 os.chdir(os.path.dirname(os.path.dirname(__file__)))
@@ -19,6 +20,13 @@ shutil.rmtree(out_dir, ignore_errors=True)
 shutil.copytree(template_repo, out_dir)
 os.mkdir(versions_out_dir)
 
+def copy_transform(src, dst, transformer):
+    with open(src, 'r') as file:
+        content = file.read()
+    content = transformer(content)
+    with open(dst, 'w') as file:
+        file.write(content)
+
 def export_version(ref, name):
     docs_spec = f'{ref}:docs'
 
@@ -31,12 +39,16 @@ def export_version(ref, name):
     version_out_dir = os.path.join(versions_out_dir, name)
     os.mkdir(version_out_dir)
 
-    # export docs/ via 'git archive' to version src/
+    # export docs/ via 'git archive' to <version>/src/
     src_dir = os.path.join(version_out_dir, 'src')
     os.mkdir(src_dir)
     ps = subprocess.Popen(('git', 'archive', docs_spec), stdout=subprocess.PIPE)
     subprocess.check_output(('tar', 'xvf', '-', '-C', src_dir), stdin=ps.stdout)
     ps.wait()
+
+    # copy README.md to <version>/src/
+    # rewrite absolute URLs to relative mdBook URLs
+    copy_transform('README.md', os.path.join(src_dir, 'README.md'), lambda content: re.sub(r'\(https://uess.dev/dev/([^)#]+)\.html(#[^)]*)?\)', r'(\1.md\2)', content))
 
     # insert banner
     readme_path = os.path.join(src_dir, 'README.md')
