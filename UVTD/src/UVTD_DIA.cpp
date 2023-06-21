@@ -104,12 +104,20 @@ namespace RC::UVTD
             STR("UObjectBaseUtility"),
             STR("UObject"),
             STR("UStruct"),
+            STR("UGameViewportClient"),
             STR("UScriptStruct"),
             STR("FOutputDevice"),
             //STR("UConsole"),
             STR("FMalloc"),
             STR("FArchive"),
             STR("FArchiveState"),
+            STR("AGameModeBase"),
+            STR("AGameMode"),
+            STR("AActor"),
+            STR("AHUD"),
+            STR("UPlayer"),
+            STR("ULocalPlayer"),
+            STR("FExec"),
             STR("UField"),
             STR("FField"),
             STR("FProperty"),
@@ -913,7 +921,7 @@ namespace RC::UVTD
         HRESULT hr;
         if (sym_tag == SymTagUDT)
         {
-            /*if (valid_udt_names.find(symbol_name) == valid_udt_names.end()) { return; }*/
+            if (valid_udt_names.find(symbol_name) == valid_udt_names.end()) { return; }
             auto& local_class_entry = get_existing_or_create_new_class_entry(pdb_file, symbol_name, symbol_name_clean, name_info);
             auto& local_enum_entry = get_existing_or_create_new_enum_entry(symbol_name, symbol_name_clean);
 
@@ -1074,7 +1082,7 @@ namespace RC::UVTD
 
         auto process_struct_or_class = [&]()
         {
-            /*if (valid_udt_names.find(symbol_name) == valid_udt_names.end()) { return; }*/
+            if (valid_udt_names.find(symbol_name) == valid_udt_names.end()) { return; }
             functions_already_dumped.clear();
             //Output::send(STR("Dumping vtable for symbol '{}', tag: '{}'\n"), symbol_name, sym_tag_to_string(sym_tag));
 
