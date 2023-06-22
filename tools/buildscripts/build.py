@@ -4,9 +4,11 @@ import re
 import os
 import shutil
 import subprocess
-from subprocess import Popen
 import argparse
 from datetime import datetime
+
+# change dir to repo root
+os.chdir(os.path.join(os.path.dirname(__file__), '..', '..'))
 
 # outputs to github env if present
 def github_output(name, value):
@@ -55,9 +57,6 @@ def release_commit(args):
     github_output('release_tag', version)
 
 def package(args):
-    # builds a release version of ./assets by copying the directory and then
-    # removing and disabling dev-only settings and files
-
     release_output = 'release'
     shutil.rmtree(release_output, ignore_errors=True)
     os.mkdir(release_output)
@@ -66,7 +65,7 @@ def package(args):
     staging_release = os.path.join(release_output, 'StagingRelease')
 
     def make_staging_dirs():
-        # builds a release version of StagingDev by copying the directory and then
+        # builds a release version of /assets by copying the directory and then
         # removing and disabling dev-only settings and files
         exclude_files = [
             'API.txt',

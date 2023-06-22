@@ -32,6 +32,7 @@ IF %IsBuildConfigValid% == 1 (
     echo Build Mode: %BuildMode%
 
     call internal_generate_build_files.bat %BuildMode%
+    cd ....
     MSBuild.exe /m "VS_Solution\%TargetName%.vcxproj" /property:Configuration=%BuildMode%
 ) else (
     echo Could not build, the build configuration is invalid.

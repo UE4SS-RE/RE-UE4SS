@@ -10,8 +10,8 @@ set Compiler=MSVC
 )
 
 if %Compiler% == MSVC (
-    if not exist "VS_Solution" (
-        mkdir "VS_Solution"
+    if not exist "../../VS_Solution" (
+        mkdir "../../VS_Solution"
     )
     
     cd internal_build_tools
@@ -19,8 +19,8 @@ if %Compiler% == MSVC (
 )
 
 if %Compiler% == ClangNinja (
-    if not exist "ClangNinja" (
-        mkdir "ClangNinja"
+    if not exist "../../ClangNinja" (
+        mkdir "../../ClangNinja"
     )
     
     cd internal_build_tools
