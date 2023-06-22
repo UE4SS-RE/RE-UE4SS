@@ -1,5 +1,6 @@
 v2.6.0
 ==============
+TBD
 ## New
 
 ### General
@@ -10,7 +11,7 @@ Finalize C++ API and add required dll to builds - LocalCC; UE4SS; Truman
 Expose IMGui to C++ mods - Truman
 
 ### Live View
-Can now view enum values in the Live View debugger
+Can now view enum values in the Live View debugger - UE4SS
 
 ## Fixes
 
