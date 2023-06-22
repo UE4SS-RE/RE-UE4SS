@@ -177,10 +177,10 @@ def package(args):
     package_release(target_xinput = True, is_dev_release = True)
 
     # CustomGameConfigs
-    shutil.make_archive(os.path.join(release_output, 'assets/zCustomGameConfigs'), 'zip', 'CustomGameConfigs')
+    shutil.make_archive(os.path.join(release_output, 'zCustomGameConfigs'), 'zip', 'CustomGameConfigs')
 
     # MapGenBP
-    shutil.make_archive(os.path.join(release_output, 'assets/zMapGenBP'), 'zip', 'MapGenBP')
+    shutil.make_archive(os.path.join(release_output, 'zMapGenBP'), 'zip', 'MapGenBP')
 
     changelog = parse_changelog()
     with open(os.path.join(release_output, 'release_notes.md'), 'w') as file:
