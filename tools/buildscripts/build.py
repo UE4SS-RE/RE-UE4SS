@@ -14,7 +14,7 @@ def github_output(name, value):
         with open(os.environ['GITHUB_OUTPUT'], 'a') as env:
             env.write(f'{name}={value}')
 
-changelog_path = 'StagingDev/Changelog.md'
+changelog_path = 'assets/Changelog.md'
 
 def parse_changelog():
     with open(changelog_path, 'r') as file:
@@ -55,6 +55,9 @@ def release_commit(args):
     github_output('release_tag', version)
 
 def package(args):
+    # builds a release version of ./assets by copying the directory and then
+    # removing and disabling dev-only settings and files
+
     release_output = 'release'
     shutil.rmtree(release_output, ignore_errors=True)
     os.mkdir(release_output)
@@ -71,6 +74,8 @@ def package(args):
             'UE4SS_Signatures',
             'VTableLayoutTemplates',
             'MemberVarLayoutTemplates',
+            'CustomGameConfigs',
+            'MapGenBP',
         ]
 
         settings_to_modify_in_release = {
@@ -86,8 +91,8 @@ def package(args):
         }
 
         # copy whole directory
-        shutil.copytree('StagingDev', staging_dev)
-        shutil.copytree('StagingDev', staging_release)
+        shutil.copytree('assets', staging_dev)
+        shutil.copytree('assets', staging_release)
 
         # include repo README
         shutil.copy('README.md', os.path.join(staging_dev, 'README.md'))
@@ -173,10 +178,10 @@ def package(args):
     package_release(target_xinput = True, is_dev_release = True)
 
     # CustomGameConfigs
-    shutil.make_archive(os.path.join(release_output, 'zCustomGameConfigs'), 'zip', 'CustomGameConfigs')
+    shutil.make_archive(os.path.join(release_output, 'assets/zCustomGameConfigs'), 'zip', 'CustomGameConfigs')
 
     # MapGenBP
-    shutil.make_archive(os.path.join(release_output, 'zMapGenBP'), 'zip', 'MapGenBP')
+    shutil.make_archive(os.path.join(release_output, 'assets/zMapGenBP'), 'zip', 'MapGenBP')
 
     changelog = parse_changelog()
     with open(os.path.join(release_output, 'release_notes.md'), 'w') as file:

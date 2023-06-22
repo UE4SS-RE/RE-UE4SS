@@ -30,6 +30,7 @@ jobs:
       - name: Release Commit
         id: release_commit
         run: python build.py release_commit ${{ github.actor }}
+        working-directory: ./tools/buildscripts
 
       - name: Build
         run: |
@@ -37,7 +38,7 @@ jobs:
           cmake --build build
 
       - name: Package
-        run: python build.py package
+        run: python tools/buildscripts/build.py package
 
       - name: Push changes
         uses: ad-m/github-push-action@master
