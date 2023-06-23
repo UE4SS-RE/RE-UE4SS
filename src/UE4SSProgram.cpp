@@ -859,7 +859,7 @@ namespace RC
             {
                 // Create the mod but don't install it yet
                 if (std::filesystem::exists(sub_directory.path() / "scripts")) m_mods.emplace_back(std::make_unique<LuaMod>(*this, sub_directory.path().stem().wstring(), sub_directory.path().wstring()));
-                if (std::filesystem::exists(sub_directory.path() / "dlls")) m_mods.emplace_back(std::make_unique<CppMod>(*this, sub_directory.path().stem().wstring(), sub_directory.path().wstring()));
+                if (cpp_sdk_loaded && std::filesystem::exists(sub_directory.path() / "dlls")) m_mods.emplace_back(std::make_unique<CppMod>(*this, sub_directory.path().stem().wstring(), sub_directory.path().wstring()));
             }
         }
     }
@@ -1029,6 +1029,11 @@ namespace RC
         LuaMod::global_uninstall();
     }
 
+    auto UE4SSProgram::is_program_started() -> bool
+    {
+        return m_is_program_started;
+    }
+
     auto UE4SSProgram::reinstall_mods() -> void
     {
         Output::send(STR("Re-installing all mods\n"));
@@ -1074,6 +1079,17 @@ namespace RC
         setup_mods();
         start_lua_mods();
         start_cpp_mods();
+        
+        if (Unreal::UnrealInitializer::StaticStorage::bIsInitialized)
+        {
+            fire_unreal_init_for_cpp_mods();
+        }
+
+        if (is_program_started())
+        {
+            fire_program_start_for_cpp_mods();
+        }
+        
         Output::send(STR("All mods re-installed\n"));
     }
 
