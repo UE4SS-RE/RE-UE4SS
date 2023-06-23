@@ -7,23 +7,23 @@ TBD
 Added support for UE Version 5.2 games
 
 ### C++ API
-Finalize C++ API and add required dll to builds - LocalCC; UE4SS; Truman
+Finalize C++ API and add required dll to builds - LocalCC; Truman
 Expose IMGui to C++ mods - Truman
 Fixed initialization functions not being correctly called when a mod is restarted - LocalCC
 Fixed attempted mod loading when cppsdk doesn't exist - LocalCC
 
 ### Live View
-Can now view enum values in the Live View debugger - UE4SS
+Can now view enum values in the Live View debugger
 
 ## Fixes
 
 ### General
 Finish adding version 4.11 support
 Fix case preserving names switch - LocalCC
-Add common TArray instantiations - UE4SS
+Add common TArray instantiations
 
 ### Lua API
-Fixed unregisterhook - UE4SS
+Fixed unregisterhook
 
 ## Changes
 
@@ -32,7 +32,7 @@ Add additional extensions - Atenfyr; Archengius
 Fix bug with enums with 256 entries - Atenfyr
 
 ### Sig Scanner
-Change AOB Sig Scanner backend to use std::find for major performance increase - UE4SS (inspired by Truman)
+Change AOB Sig Scanner backend to use std::find for major performance increase - inspired by Truman
 Scan for specified time rather than number of attempts due to speed increase
 
 ### Performance
@@ -43,17 +43,17 @@ Add ability to specify load order - Okaetsu
 
 ## Misc.
 
-Changes to IsValid for increased reliability - UE4SS
-Add destroy listener - UE4SS
+Changes to IsValid for increased reliability
+Add destroy listener
 
 
 ### Repo
-Add automated release script - Truman; UE4SS
+Add automated release script - Truman
 Change documentation build process - Truman; Buckminsterfullerene
 Removed FMT dependency
 
 ### Build Process
-Fix compiling for Clang - LocalCC; UE4SS; Narknon
+Fix compiling for Clang - LocalCC; Narknon
 
 
 
