@@ -9,6 +9,8 @@ Added support for UE Version 5.2 games
 ### C++ API
 Finalize C++ API and add required dll to builds - LocalCC; UE4SS; Truman
 Expose IMGui to C++ mods - Truman
+Fixed initialization functions not being correctly called when a mod is restarted - LocalCC
+Fixed attempted mod loading when cppsdk doesn't exist - LocalCC
 
 ### Live View
 Can now view enum values in the Live View debugger - UE4SS
