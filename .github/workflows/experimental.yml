@@ -2,13 +2,12 @@ name: Build Experimental
 
 on:
   push:
-    branches: [ "2.XDev" ]
+    branches: [ "main" ]
     paths:
       - "src/**"
       - "include/**"
       - "generated_src/**"
       - "generated_include/**"
-      - "internal_build_tools/**"
       - "Dependencies/**"
 
 permissions:
@@ -48,7 +47,7 @@ jobs:
       with:
         type: 'zip'
         filename: UE4SS-${{github.ref_name}}-windows.zip
-        directory: StagingDev
+        directory: assets
 
     - name: Update Experimental release
       uses: ncipollo/release-action@v1.12.0
