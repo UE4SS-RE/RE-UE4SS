@@ -40,4 +40,4 @@ jobs:
           folder: docs-repo
           repository-name: ue4ss-re/docs
           single-commit: true
-          ssh-key: ${{ secrets.DOCS_DEPLOY_KEY }}
+          ssh-key: ${{ secrets.DOCS_GITHUB_TOKEN }}
