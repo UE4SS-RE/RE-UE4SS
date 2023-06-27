@@ -38,6 +38,6 @@ jobs:
         uses: JamesIves/github-pages-deploy-action@v4
         with:
           folder: docs-repo
-          repository-name: ue4ss-re/ue4ss-docs
+          repository-name: ue4ss-re/docs
           single-commit: true
           ssh-key: ${{ secrets.DOCS_DEPLOY_KEY }}
