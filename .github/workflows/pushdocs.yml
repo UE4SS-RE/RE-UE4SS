@@ -7,6 +7,8 @@ on:
       - main
     paths:
       - "docs/**"
+      - "docs-export/**"
+      - "docs-repo-template/**"
     tags:
       - '*'
 
