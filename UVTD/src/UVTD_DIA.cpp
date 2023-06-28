@@ -1191,7 +1191,7 @@ namespace RC::UVTD
         }
     }
 
-    auto static generate_files(VTableOrMemberVars vtable_or_member_vars) -> void
+    auto static generate_files(DumpMode dump_mode) -> void
     {
         static std::filesystem::path vtable_gen_output_path = "GeneratedVTables";
         static std::filesystem::path vtable_gen_output_include_path = vtable_gen_output_path / "generated_include";
@@ -1208,7 +1208,7 @@ namespace RC::UVTD
         static std::filesystem::path virtual_gen_function_bodies_path = virtual_gen_output_include_path / "FunctionBodies";
         static std::filesystem::path sol_bindings_output_path = "SolBindings";
 
-        if (vtable_or_member_vars == VTableOrMemberVars::VTable)
+        if (dump_mode == DumpMode::VTable)
         {
             if (std::filesystem::exists(vtable_gen_output_include_path))
             {
@@ -1299,7 +1299,7 @@ namespace RC::UVTD
                 }
             }
         }
-        else if (vtable_or_member_vars == VTableOrMemberVars::MemberVars)
+        else if (dump_mode == DumpMode::MemberVars)
         {
             if (std::filesystem::exists(member_variable_layouts_gen_output_include_path))
             {
@@ -1696,7 +1696,7 @@ namespace RC::UVTD
         }
     }
 
-    auto VTableDumper::generate_code(VTableOrMemberVars vtable_or_member_vars) -> void
+    auto VTableDumper::generate_code(DumpMode dump_mode) -> void
     {
         setup_symbol_loader();
 
@@ -1715,11 +1715,11 @@ namespace RC::UVTD
             }
         }
 
-        if (vtable_or_member_vars == VTableOrMemberVars::VTable)
+        if (dump_mode == DumpMode::VTable)
         {
             dump_vtable_for_symbol(vtable_names);
         }
-        else if (vtable_or_member_vars == VTableOrMemberVars::MemberVars)
+        else if (dump_mode == DumpMode::MemberVars)
         {
             dump_member_variable_layouts(member_vars_names);
         }
@@ -1730,7 +1730,7 @@ namespace RC::UVTD
         }
     }
 
-    auto main(VTableOrMemberVars vtable_or_member_vars) -> void
+    auto main(DumpMode dump_mode) -> void
     {
         static std::vector<std::filesystem::path> pdbs_to_dump{
 			"PDBs/4_11.pdb",
@@ -1761,14 +1761,14 @@ namespace RC::UVTD
             TRY([&] {
                 {
                     VTableDumper dumper{pdb};
-                    dumper.generate_code(vtable_or_member_vars);
+                    dumper.generate_code(dump_mode);
                 }
                 CoUninitialize();
             });
         }
 
         TRY([&] {
-            generate_files(vtable_or_member_vars);
+            generate_files(dump_mode);
             Output::send(STR("Code generated.\n"));
         });
     }

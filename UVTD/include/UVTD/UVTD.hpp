@@ -20,8 +20,8 @@ namespace RC::UVTD
     extern bool processing_events;
     extern Input::Handler input_handler;
 
-    enum class VTableOrMemberVars { VTable, MemberVars, SolBindings };
-    auto main(VTableOrMemberVars) -> void;
+    enum class DumpMode { VTable, MemberVars, SolBindings };
+    auto main(DumpMode) -> void;
 
     enum class ValidForVTable { Yes, No };
     enum class ValidForMemberVars { Yes, No };
@@ -67,7 +67,7 @@ namespace RC::UVTD
         auto dump_vtable_for_symbol(std::unordered_map<File::StringType, SymbolNameInfo>& names) -> void;
         auto dump_member_variable_layouts(CComPtr<IDiaSymbol>& symbol, const SymbolNameInfo&, EnumEntriesTypeAlias = nullptr, struct Class* class_entry = nullptr) -> void;
         auto dump_member_variable_layouts(std::unordered_map<File::StringType, SymbolNameInfo>& names) -> void;
-        auto generate_code(VTableOrMemberVars) -> void;
+        auto generate_code(DumpMode) -> void;
         auto experimental_generate_members() -> void;
     };
 
