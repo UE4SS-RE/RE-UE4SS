@@ -36,7 +36,7 @@ namespace RC::GUI
     {
         m_current_instance = instance;
         if (!m_current_instance) { return; }
-        instance->GetClassPrivate()->ForEachFunctionInChain([&](UFunction* function) {
+        for (UFunction* function : instance->GetClassPrivate()->ForEachFunctionInChain()) {
             bool should_cache_function{};
             if (m_searcher.was_search_requested())
             {
@@ -60,19 +60,17 @@ namespace RC::GUI
                 should_cache_function = true;
             }
 
-            if (!should_cache_function) { return LoopAction::Continue; }
+            if (!should_cache_function) { continue; }
             auto& cached_function = m_callable_functions.emplace_back(CallableUFunction{function});
 
-            cached_function.function->ForEachProperty([&](FProperty* param) {
-                if (param->HasAllPropertyFlags(CPF_ReturnParm)) { return LoopAction::Continue; }
+            for (FProperty* param : cached_function.function->ForEachProperty()) {
+                if (param->HasAllPropertyFlags(CPF_ReturnParm)) { continue; }
                 if (param->HasAllPropertyFlags(CPF_OutParm)) { cached_function.has_out_params = true; }
-                return LoopAction::Continue;
-            });
+            }
 
             cached_function.cached_name = std::format("{}{}", to_string(function->GetName()), cached_function.has_out_params ? " | CPF_OutParm" : "");
-
-            return LoopAction::Continue;
-        });
+            
+        }
         m_is_cache_valid = true;
     }
 
@@ -116,11 +114,10 @@ namespace RC::GUI
     {
         selectable_function.is_selected = true;
         m_currently_selected_function = &selectable_function;
-        m_currently_selected_function->function->ForEachProperty([&](FProperty* param) {
-            if (param->HasAllPropertyFlags(CPF_ReturnParm)) { return LoopAction::Continue; }
+        for (FProperty* param : m_currently_selected_function->function->ForEachProperty()) {
+            if (param->HasAllPropertyFlags(CPF_ReturnParm)) continue;
             m_params_for_selected_function.emplace_back(UFunctionParam{{}, to_string(param->GetName()).c_str(), param});
-            return LoopAction::Continue;
-        });
+        }
     }
 
     static bool s_do_call{};

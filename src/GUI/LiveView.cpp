@@ -1556,15 +1556,18 @@ namespace RC::GUI
 
         auto currently_selected_object = get_selected_object_or_property();
 
-        ImGui::SameLine();
-        if (!currently_selected_object.is_object) { ImGui::BeginDisabled(); }
-        if (ImGui::Button("Find functions"))
+        if (UE4SSProgram::settings_manager.Experimental.GUIUFunctionCaller)
         {
-            m_function_caller_widget->open_widget_deferred();
+            ImGui::SameLine();
+            if (!currently_selected_object.is_object) { ImGui::BeginDisabled(); }
+            if (ImGui::Button("Find functions"))
+            {
+                m_function_caller_widget->open_widget_deferred();
+            }
+            if (!currently_selected_object.is_object) { ImGui::EndDisabled(); }
+            ImGui::Separator();
         }
-        if (!currently_selected_object.is_object) { ImGui::EndDisabled(); }
-        ImGui::Separator();
-
+        
         if (currently_selected_object.is_object)
         {
             render_info_panel_as_object(currently_selected_object.object_item, currently_selected_object.object);
@@ -1924,11 +1927,13 @@ namespace RC::GUI
         ImGui::PopStyleColor();
 
         render_info_panel();
-
-        const auto& selected_item = get_selected_object_or_property();
-        if (selected_item.is_object)
+        if (UE4SSProgram::settings_manager.Experimental.GUIUFunctionCaller)
         {
-            m_function_caller_widget->render(selected_item.object);
+            const auto& selected_item = get_selected_object_or_property();
+            if (selected_item.is_object)
+            {
+                m_function_caller_widget->render(selected_item.object);
+            }
         }
     }
 

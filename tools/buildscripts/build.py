@@ -83,6 +83,7 @@ def package(args):
             'EnableHotReloadSystem': 0,
             'IgnoreEngineAndCoreUObject': 1,
             'MaxMemoryUsageDuringAssetLoading': 80,
+            'GUIUFunctionCaller': 0,
         }
 
         change_modstxt = {

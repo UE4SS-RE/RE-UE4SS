@@ -88,6 +88,11 @@ namespace RC
             int64_t FExecVTableOffsetInLocalPlayer{0x28};
         } Hooks;
 
+        struct ExperimentalFeatures
+        {
+            bool GUIUFunctionCaller{false};
+        } Experimental;
+
     public:
         SettingsManager() = default;
 

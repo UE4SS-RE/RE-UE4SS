@@ -15,6 +15,11 @@ Fixed attempted mod loading when cppsdk doesn't exist - LocalCC
 ### Live View
 Can now view enum values in the Live View debugger
 
+### Experimental
+Added ExperimentalFeatures section to UE4SS-settings.ini.  All experimental features will default to being turned off.  To use referenced features, change the relevant config setting to = 1
+Added ability to call UFunctions from Live View GUI
+
+
 ## Fixes
 
 ### General
@@ -41,11 +46,10 @@ Change to generators for certain major iterators - LocalCC
 ### BP Mod Loader
 Add ability to specify load order - Okaetsu
 
-## Misc.
 
+## Misc.
 Changes to IsValid for increased reliability
 Add destroy listener
-
 
 ### Repo
 Add automated release script - Truman
@@ -55,7 +59,30 @@ Removed FMT dependency
 ### Build Process
 Fix compiling for Clang - LocalCC; Narknon
 
+## Settings
 
+### Added:
+[General]
+; Whether the cache system for AOBs will be used.
+; Default: 1
+UseCache = 1
+
+; The number of seconds the scanner will scan for before giving up
+; Default: 30
+SecondsToScanBeforeGivingUp = 30
+
+[ExperimentalFeatures]
+GUIUFunctionCaller = 1
+
+### Removed:
+[General]
+; The maximum number attempts the scanner will try before erroring out if an aob isn't found
+; Default: 60
+MaxScanAttemptsNormal = 60
+
+; The maximum number attempts the scanner will try for modular games before erroring out if an aob isn't found
+; Default: 2000
+MaxScanAttemptsModular = 2500
 
 
 v2.5.2
