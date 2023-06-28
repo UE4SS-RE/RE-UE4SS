@@ -59,9 +59,9 @@ def export_version(ref, name):
         with open(readme_path, 'w') as file:
             file.writelines(lines)
 
-        # copy template files
-        shutil.copy(os.path.join('docs-export', 'book.toml'), version_out_dir)
-        shutil.copytree(os.path.join('docs-export', 'css'), os.path.join(version_out_dir, 'css'))
+    # copy template files
+    shutil.copy(os.path.join('docs-export', 'book.toml'), version_out_dir)
+    shutil.copytree(os.path.join('docs-export', 'css'), os.path.join(version_out_dir, 'css'))
 
     return True
 
