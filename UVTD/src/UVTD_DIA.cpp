@@ -1732,154 +1732,40 @@ namespace RC::UVTD
 
     auto main(VTableOrMemberVars vtable_or_member_vars) -> void
     {
-        TRY([&] {
-            {
-                VTableDumper vtable_dumper{"PDBs/4_11.pdb"};
-                vtable_dumper.generate_code(vtable_or_member_vars);
-            }
-            CoUninitialize();
-        });
-        TRY([&] {
-            {
-                VTableDumper vtable_dumper{"PDBs/4_12.pdb"};
-                vtable_dumper.generate_code(vtable_or_member_vars);
-            }
-            CoUninitialize();
-        });
-        TRY([&] {
-            {
-                VTableDumper vtable_dumper{"PDBs/4_13.pdb"};
-                vtable_dumper.generate_code(vtable_or_member_vars);
-            }
-            CoUninitialize();
-        });
-        TRY([&] {
-            {
-                VTableDumper vtable_dumper{"PDBs/4_14.pdb"};
-                vtable_dumper.generate_code(vtable_or_member_vars);
-            }
-            CoUninitialize();
-        });
-        TRY([&] {
-            {
-                VTableDumper vtable_dumper{"PDBs/4_15.pdb"};
-                vtable_dumper.generate_code(vtable_or_member_vars);
-            }
-            CoUninitialize();
-        });
-        TRY([&] {
-            {
-                VTableDumper vtable_dumper{"PDBs/4_16.pdb"};
-                vtable_dumper.generate_code(vtable_or_member_vars);
-            }
-            CoUninitialize();
-        });
-        TRY([&] {
-            {
-                VTableDumper vtable_dumper{"PDBs/4_17.pdb"};
-                vtable_dumper.generate_code(vtable_or_member_vars);
-            }
-            CoUninitialize();
-        });
-        TRY([&] {
-            {
-                VTableDumper vtable_dumper{"PDBs/4_18.pdb"};
-                vtable_dumper.generate_code(vtable_or_member_vars);
-            }
-            CoUninitialize();
-        });
-        TRY([&] {
-            {
-                VTableDumper vtable_dumper{"PDBs/4_19.pdb"};
-                vtable_dumper.generate_code(vtable_or_member_vars);
-            }
-            CoUninitialize();
-        });
-        TRY([&] {
-            {
-                VTableDumper vtable_dumper{"PDBs/4_20.pdb"};
-                vtable_dumper.generate_code(vtable_or_member_vars);
-            }
-            CoUninitialize();
-        });
-        TRY([&] {
-            {
-                VTableDumper vtable_dumper{"PDBs/4_21.pdb"};
-                vtable_dumper.generate_code(vtable_or_member_vars);
-            }
-            CoUninitialize();
-        });
-        TRY([&] {
-            {
-                VTableDumper vtable_dumper{"PDBs/4_22.pdb"};
-                vtable_dumper.generate_code(vtable_or_member_vars);
-            }
-            CoUninitialize();
-        });
-        TRY([&] {
-            {
-                VTableDumper vtable_dumper{"PDBs/4_23.pdb"};
-                vtable_dumper.generate_code(vtable_or_member_vars);
-            }
-            CoUninitialize();
-        });
-        TRY([&] {
-            {
-                VTableDumper vtable_dumper{"PDBs/4_24.pdb"};
-                vtable_dumper.generate_code(vtable_or_member_vars);
-            }
-            CoUninitialize();
-        });
-        TRY([&] {
-            {
-                VTableDumper vtable_dumper{"PDBs/4_25.pdb"};
-                vtable_dumper.generate_code(vtable_or_member_vars);
-            }
-            CoUninitialize();
-        });
-        TRY([&] {
-            {
-                VTableDumper vtable_dumper{"PDBs/4_26.pdb"};
-                vtable_dumper.generate_code(vtable_or_member_vars);
-            }
-            CoUninitialize();
-        });
-        TRY([&] {
-            {
-                VTableDumper vtable_dumper{"PDBs/4_27.pdb"};
-                vtable_dumper.generate_code(vtable_or_member_vars);
-            }
-            CoUninitialize();
-        });
-        TRY([&] {
-            {
-                // WITH_CASE_PRESERVING_NAMES
-                VTableDumper vtable_dumper{"PDBs/4_27_CasePreserving.pdb"};
-                vtable_dumper.generate_code(vtable_or_member_vars);
-            }
-            CoUninitialize();
-        });
-        TRY([&] {
-            {
-                VTableDumper vtable_dumper{"PDBs/5_00.pdb"};
-                vtable_dumper.generate_code(vtable_or_member_vars);
-            }
-            CoUninitialize();
-        });
-        TRY([&] {
-            {
-                VTableDumper vtable_dumper{"PDBs/5_01.pdb"};
-                vtable_dumper.generate_code(vtable_or_member_vars);
-            }
-            CoUninitialize();
-        });
-        TRY([&] {
-            {
-                VTableDumper vtable_dumper{"PDBs/5_02.pdb"};
-                vtable_dumper.generate_code(vtable_or_member_vars);
-            }
-            CoUninitialize();
-        });
+        static std::vector<std::filesystem::path> pdbs_to_dump{
+			"PDBs/4_11.pdb",
+			"PDBs/4_12.pdb",
+			"PDBs/4_13.pdb",
+			"PDBs/4_14.pdb",
+			"PDBs/4_15.pdb",
+			"PDBs/4_16.pdb",
+			"PDBs/4_17.pdb",
+			"PDBs/4_18.pdb",
+			"PDBs/4_19.pdb",
+			"PDBs/4_20.pdb",
+			"PDBs/4_21.pdb",
+			"PDBs/4_22.pdb",
+			"PDBs/4_23.pdb",
+			"PDBs/4_24.pdb",
+			"PDBs/4_25.pdb",
+			"PDBs/4_26.pdb",
+			"PDBs/4_27.pdb",
+			// WITH_CASE_PRESERVING_NAMES
+			"PDBs/4_27_CasePreserving.pdb",
+			"PDBs/5_00.pdb",
+            "PDBs/5_01.pdb",
+            "PDBs/5_02.pdb",
+        };
+
+        for (const std::filesystem::path& pdb : pdbs_to_dump) {
+            TRY([&] {
+                {
+                    VTableDumper dumper{pdb};
+                    dumper.generate_code(vtable_or_member_vars);
+                }
+                CoUninitialize();
+            });
+        }
 
         TRY([&] {
             generate_files(vtable_or_member_vars);
