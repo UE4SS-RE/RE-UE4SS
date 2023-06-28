@@ -51,16 +51,17 @@ def export_version(ref, name):
     copy_transform('README.md', os.path.join(src_dir, 'README.md'), lambda content: re.sub(r'\(https://uess.dev/dev/([^)#]+)\.html(#[^)]*)?\)', r'(\1.md\2)', content))
 
     # insert banner
-    readme_path = os.path.join(src_dir, 'README.md')
-    with open(readme_path, 'r') as file:
-        lines = file.readlines()
-    lines.insert(2, '\n> WARNING: This is the version of the site that contains changes from the 3.XDev branch. The API and features are subject to change at any time. If you are developing mods for UE4SS, you should use the [stable version](https://ue4ss-re.github.io/docs) of the site instead.\n')
-    with open(readme_path, 'w') as file:
-        file.writelines(lines)
+    if name != 'release':
+        readme_path = os.path.join(src_dir, 'README.md')
+        with open(readme_path, 'r') as file:
+            lines = file.readlines()
+        lines.insert(2, '\n> WARNING: This is the dev version of the UE4SS docs. The API and features are subject to change at any time. If you are developing mods for UE4SS, you should reference the [latest release](../release) instead.\n')
+        with open(readme_path, 'w') as file:
+            file.writelines(lines)
 
-    # copy template files
-    shutil.copy(os.path.join('docs-export', 'book.toml'), version_out_dir)
-    shutil.copytree(os.path.join('docs-export', 'css'), os.path.join(version_out_dir, 'css'))
+        # copy template files
+        shutil.copy(os.path.join('docs-export', 'book.toml'), version_out_dir)
+        shutil.copytree(os.path.join('docs-export', 'css'), os.path.join(version_out_dir, 'css'))
 
     return True
 
