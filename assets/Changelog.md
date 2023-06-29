@@ -62,7 +62,7 @@ Fix compiling for Clang - LocalCC; Narknon
 ## Settings
 
 ### Added:
-[General]
+```[General]
 ; Whether the cache system for AOBs will be used.
 ; Default: 1
 UseCache = 1
@@ -73,9 +73,10 @@ SecondsToScanBeforeGivingUp = 30
 
 [ExperimentalFeatures]
 GUIUFunctionCaller = 1
+```
 
 ### Removed:
-[General]
+```[General]
 ; The maximum number attempts the scanner will try before erroring out if an aob isn't found
 ; Default: 60
 MaxScanAttemptsNormal = 60
@@ -83,6 +84,7 @@ MaxScanAttemptsNormal = 60
 ; The maximum number attempts the scanner will try for modular games before erroring out if an aob isn't found
 ; Default: 2000
 MaxScanAttemptsModular = 2500
+```
 
 
 v2.5.2
