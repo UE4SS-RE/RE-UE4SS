@@ -153,6 +153,17 @@ namespace RC
         return to_wstring(temp_input);
     }
 
+    auto inline to_wstring(std::u16string& input) -> std::wstring
+    {
+        return {input.begin(), input.end()};
+    }
+
+    auto inline to_wstring(std::u16string_view input) -> std::wstring
+    {
+        auto temp_input = std::u16string{input};
+        return to_wstring(temp_input);
+    }
+
     auto inline to_string(std::wstring& input) -> std::string
     {
 #pragma warning(disable: 4996)
