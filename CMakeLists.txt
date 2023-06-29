@@ -287,6 +287,8 @@ set(${TARGET}_Sources
         "${CMAKE_CURRENT_SOURCE_DIR}/src/GUI/Dumpers.cpp"
         "${CMAKE_CURRENT_SOURCE_DIR}/src/GUI/BPMods.cpp"
         "${CMAKE_CURRENT_SOURCE_DIR}/src/GUI/ImGuiUtility.cpp"
+        "${CMAKE_CURRENT_SOURCE_DIR}/src/GUI/UFunctionCallerWidget.cpp"
+        "${CMAKE_CURRENT_SOURCE_DIR}/src/GUI/SearcherWidget.cpp"
 
         # imgui
         "${CMAKE_CURRENT_SOURCE_DIR}/Dependencies/imgui/imgui.cpp"
