@@ -167,6 +167,28 @@ namespace RC
         return to_string(temp_input);
     }
 
+    auto inline to_u16string(std::wstring& input) -> std::u16string
+    {
+        return {input.begin(), input.end()};
+    }
+
+    auto inline to_u16string(std::wstring_view input) -> std::u16string
+    {
+        auto temp_input = std::wstring{input};
+        return to_u16string(temp_input);
+    }
+
+    auto inline to_u16string(std::string& input) -> std::u16string
+    {
+        return {input.begin(), input.end()};
+    }
+
+    auto inline to_u16string(std::string_view input) -> std::u16string
+    {
+        auto temp_input = std::string{input};
+        return to_u16string(temp_input);
+    }
+
     namespace String
     {
         auto inline iequal(std::wstring_view a, std::wstring_view b)
