@@ -57,6 +57,8 @@ def release_commit(args):
     github_output('release_tag', version)
 
 def package(args):
+    is_experimental = args.e
+
     release_output = 'release'
     shutil.rmtree(release_output, ignore_errors=True)
     os.mkdir(release_output)
@@ -198,6 +200,7 @@ commands = {f.__name__: f for f in [
 parser = argparse.ArgumentParser()
 subparsers = parser.add_subparsers(dest='command', required=True)
 package_parser = subparsers.add_parser('package')
+package_parser.add_argument('-e', action='store_true')
 release_commit_parser = subparsers.add_parser('release_commit')
 release_commit_parser.add_argument('username', nargs='?')
 args = parser.parse_args()
