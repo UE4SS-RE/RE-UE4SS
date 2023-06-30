@@ -10,21 +10,21 @@
 - **Return type:** `auto`
 - **Returns:** the value for the supplied variable
 - Can return any type, you can use the `type()` function on the returned value to figure out what Lua class it's using (if non-trivial type)
-> Note: `__index` is a Lua [metamethod](https://gist.github.com/oatmealine/655c9e64599d0f0dd47687c1186de99f#indexing) and allows the access operation `table[key]`
+> Note: `__index` is a Lua [metamethod](https://gist.github.com/oatmealine/655c9e64599d0f0dd47687c1186de99f#indexing) and allows the access operation `userdata[key]`
 
 - **Example:**
 ```lua
 local scriptStruct = FindFirstOf('_UI_Items_C')
 
 -- Either of the following can be used:
-local tableItem = scriptStruct['Item']
-local tableItem = scriptStruct.Item
+local item = scriptStruct['Item']
+local item = scriptStruct.Item
 ```
 
 ### __newindex(string StructMemberVarName, auto NewValue)
 
 - Attempts to set the value for the supplied variable
-> Note: `__newindex` is a Lua [metamethod](https://gist.github.com/oatmealine/655c9e64599d0f0dd47687c1186de99f#indexing) and is an indexing assignment of `table[key] = value`
+> Note: `__newindex` is a Lua [metamethod](https://gist.github.com/oatmealine/655c9e64599d0f0dd47687c1186de99f#indexing) and is an indexing assignment of `userdata[key] = value`
 
 - **Example:**
 ```lua
