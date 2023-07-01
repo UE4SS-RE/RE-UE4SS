@@ -2,6 +2,7 @@
 #define RC_FILE_FILEBASE_HPP
 
 #include <type_traits>
+#include <span>
 
 #include <File/InternalFile.hpp>
 #include <File/Enums.hpp>
@@ -83,6 +84,8 @@ namespace RC::File
         // Returns the entire contents of the currently opened file as a string
         // Throws std::runtime_error if an error occurred
         virtual auto read_all() const -> StringType = 0;
+
+        virtual auto memory_map() -> std::span<uint8_t> = 0;
 
         /*
         // Opens a file

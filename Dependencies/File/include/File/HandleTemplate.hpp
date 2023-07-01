@@ -4,6 +4,7 @@
 #include <string>
 #include <memory>
 #include <filesystem>
+#include <span>
 
 #include <File/Common.hpp>
 #include <File/FileType/FileBase.hpp>
@@ -165,6 +166,11 @@ namespace RC::File
         [[nodiscard]] auto read_all() const -> StringType
         {
             return m_internal_handle.read_all();
+        }
+
+        [[nodiscard]] auto memory_map() -> std::span<uint8_t>
+        {
+            return m_internal_handle.memory_map();
         }
 
         auto close() -> void
