@@ -17,7 +17,6 @@
 
 namespace RC::UVTD
 {
-
 	struct ObjectItem
 	{
 		File::StringType name{};
