@@ -80,7 +80,7 @@ set(PRIVATE_COMPILE_DEFINITIONS
         $<${MAKE_DEPENDENCIES_STATIC}:RC_FUNCTION_BUILD_STATIC>)
 
 # Sets the variables COMPILER_NAME, COMPILER_FRONTEND_NAME, and COMPILER_SIMULATION_NAME.
-include(DetermineCompiler)
+include(tools/buildscripts/internal_build_tools/DetermineCompiler.cmake)
 
 if ((${COMPILER_NAME} STREQUAL Clang) AND (${COMPILER_FRONTEND_NAME} STREQUAL GNU))
     # Hopefully temporary fix for ninja/clang thinking we should use MSVC simulation
@@ -306,6 +306,8 @@ set(${TARGET}_Sources
         "${CMAKE_CURRENT_SOURCE_DIR}/src/GUI/Dumpers.cpp"
         "${CMAKE_CURRENT_SOURCE_DIR}/src/GUI/BPMods.cpp"
         "${CMAKE_CURRENT_SOURCE_DIR}/src/GUI/ImGuiUtility.cpp"
+        "${CMAKE_CURRENT_SOURCE_DIR}/src/GUI/UFunctionCallerWidget.cpp"
+        "${CMAKE_CURRENT_SOURCE_DIR}/src/GUI/SearcherWidget.cpp"
 
         # imgui
         "${CMAKE_CURRENT_SOURCE_DIR}/Dependencies/imgui/imgui.cpp"

@@ -24,6 +24,8 @@ namespace RC::GUI
 {
     using namespace RC::Unreal;
 
+    class UFunctionCallerWidget;
+    
     struct SearchOptions
     {
         bool include_inheritance{};
@@ -91,6 +93,7 @@ namespace RC::GUI
         std::string m_current_property_value_buffer{};
         float m_top_size{300.0f};
         float m_bottom_size{0.0f};
+        UFunctionCallerWidget* m_function_caller_widget{};
         bool m_is_searching_by_name{};
         bool m_search_field_clear_requested{};
         bool m_search_field_cleared{};
@@ -148,6 +151,8 @@ namespace RC::GUI
         auto render_info_panel() -> void;
         auto render_info_panel_as_object(const FUObjectItem*, UObject*) -> void;
         auto render_info_panel_as_property(FProperty*) -> void;
+        auto render_bottom_panel() -> void;
+        auto render_enum() -> void;
         auto render_properties() -> void;
         auto render_object_sub_tree_hierarchy(UObject* object) -> void;
         auto render_struct_sub_tree_hierarchy(UStruct* ustruct) -> void;

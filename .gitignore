@@ -67,6 +67,7 @@ _ReSharper*/
 .history/
 
 /generated_include/build_number.hpp
+/docs-repo
 
 Dependencies/luajit/.git
 Dependencies/luajit/src/*.lib

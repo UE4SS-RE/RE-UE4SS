@@ -10,11 +10,11 @@ set_target_properties(${TARGET} PROPERTIES OUTPUT_NAME "UE4SS-cppsdk")
 add_custom_command(
 	OUTPUT
 		"${LIBRARY_OUTPUT_PATH}/cppsdk.def"
-	COMMAND python ${CMAKE_CURRENT_SOURCE_DIR}/../internal_build_tools/cppsdk_gen.py ${LIBRARY_OUTPUT_PATH}/ue4ss.lib ${LIBRARY_OUTPUT_PATH}/cppsdk.def
+	COMMAND python ${CMAKE_CURRENT_SOURCE_DIR}/../tools/buildscripts/internal_build_tools/cppsdk_gen.py ${LIBRARY_OUTPUT_PATH}/ue4ss.lib ${LIBRARY_OUTPUT_PATH}/cppsdk.def
 	DEPENDS
-		${CMAKE_CURRENT_SOURCE_DIR}/../internal_build_tools/cppsdk_gen.py
+		${CMAKE_CURRENT_SOURCE_DIR}/../tools/buildscripts/internal_build_tools/cppsdk_gen.py
 		${LIBRARY_OUTPUT_PATH}/ue4ss.lib
-	WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/../internal_build_tools/"
+	WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/../tools/buildscripts/internal_build_tools/"
 )
 
 add_custom_target(cppsdk_ue4ss_def DEPENDS "${LIBRARY_OUTPUT_PATH}/cppsdk.def")
@@ -31,11 +31,11 @@ set_target_properties(${TARGET}_xinput PROPERTIES OUTPUT_NAME "UE4SS-cppsdk_xinp
 add_custom_command(
 	OUTPUT
 		"${LIBRARY_OUTPUT_PATH}/cppsdk_xinput.def"
-	COMMAND python ${CMAKE_CURRENT_SOURCE_DIR}/../internal_build_tools/cppsdk_gen.py ${LIBRARY_OUTPUT_PATH}/xinput1_3.lib ${LIBRARY_OUTPUT_PATH}/cppsdk_xinput.def
+	COMMAND python ${CMAKE_CURRENT_SOURCE_DIR}/../tools/buildscripts/internal_build_tools/cppsdk_gen.py ${LIBRARY_OUTPUT_PATH}/xinput1_3.lib ${LIBRARY_OUTPUT_PATH}/cppsdk_xinput.def
 	DEPENDS
-		${CMAKE_CURRENT_SOURCE_DIR}/../internal_build_tools/cppsdk_gen.py
+		${CMAKE_CURRENT_SOURCE_DIR}/../tools/buildscripts/internal_build_tools/cppsdk_gen.py
 		${LIBRARY_OUTPUT_PATH}/xinput1_3.lib
-	WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/../internal_build_tools/"
+	WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/../tools/buildscripts/internal_build_tools/"
 )
 
 add_custom_target(cppsdk_xinput_def DEPENDS "${LIBRARY_OUTPUT_PATH}/cppsdk_xinput.def")

@@ -81,18 +81,28 @@ namespace RC::UEGenerator
 
     auto static is_subtype_valid(FProperty* subtype) -> bool
     {
-        if ((subtype->IsA<FNumericProperty>() && !subtype->IsA<FIntProperty>() && !subtype->IsA<FFloatProperty>() && !subtype->IsA<FByteProperty>()) ||
-            subtype->IsA<FWeakObjectProperty>())
+        if ((subtype->IsA<FNumericProperty>() && !subtype->IsA<FIntProperty>() && !subtype->IsA<FFloatProperty>() && !subtype->IsA<FByteProperty>()))
         {
             return false;
         }
         else if (auto* as_array = CastField<FArrayProperty>(subtype); as_array)
         {
-            return is_subtype_valid(as_array->GetInner());
+            auto array_inner = as_array->GetInner();
+            if (array_inner->IsA<FWeakObjectProperty>())
+            {
+                return false;
+            }
+            return is_subtype_valid(array_inner);
         }
         else if (auto* as_map = CastField<FMapProperty>(subtype); as_map)
         {
-            return is_subtype_valid(as_map->GetKeyProp()) && is_subtype_valid(as_map->GetValueProp());
+            auto map_key_prop = as_map->GetKeyProp();
+            auto map_value_prop = as_map->GetValueProp();
+            if (map_key_prop->IsA<FWeakObjectProperty>() || map_value_prop->IsA<FWeakObjectProperty>())
+            {
+                return false;
+            }
+            return is_subtype_valid(map_key_prop) && is_subtype_valid(map_value_prop);
         }
         else if (auto* as_struct = CastField<FStructProperty>(subtype); as_struct)
         {

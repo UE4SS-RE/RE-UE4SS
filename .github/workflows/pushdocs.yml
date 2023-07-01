@@ -1,41 +1,46 @@
-name: Push docs to UE4SS-RE/docs
+name: Deploy docs
 
 on:
+  workflow_dispatch:
   push:
     branches:
-      - Release
-      - 3.XDev
-      - TestNewDocs
+      - main
     paths:
       - "docs/**"
+      - "docs-export/**"
+      - "docs-repo-template/**"
+    tags:
+      - '*'
 
 jobs:
-  push_to_repo:
+  deploy-docs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
 
-      - name: Upload to main branch
-        if: github.ref == 'refs/heads/Release'
-        uses: cpina/github-action-push-to-another-repository@main
-        env:
-          SSH_DEPLOY_KEY: ${{ secrets.DOCS_GITHUB_TOKEN }}
+      - name: Setup Python
+        uses: actions/setup-python@v4
         with:
-          source-directory: 'docs'
-          destination-github-username: 'UE4SS-RE'
-          destination-repository-name: 'docs'
-          target-branch: main
-          target-directory: 'src'
-          
-      - name: Upload to dev/src directory
-        if: github.ref == 'refs/heads/3.XDev'
-        uses: cpina/github-action-push-to-another-repository@main
-        env:
-          SSH_DEPLOY_KEY: ${{ secrets.DOCS_GITHUB_TOKEN }}
+          python-version: '3.x'
+
+      - name: Setup mdBook
+        run: |
+          mkdir mdbook
+          curl -sSL https://github.com/rust-lang/mdBook/releases/download/v0.4.14/mdbook-v0.4.14-x86_64-unknown-linux-gnu.tar.gz | tar -xz --directory=./mdbook
+          echo `pwd`/mdbook >> $GITHUB_PATH
+
+      - name: Build
+        run: |
+          python docs-export/export.py
+          python docs-repo/build.py
+
+      - name: Deploy
+        uses: JamesIves/github-pages-deploy-action@v4
         with:
-          source-directory: 'docs'
-          destination-github-username: 'UE4SS-RE'
-          destination-repository-name: 'docs'
-          target-branch: main
-          target-directory: 'dev/src'
+          folder: docs-repo
+          repository-name: ${{ vars.DOCS_REPO }}
+          single-commit: true
+          ssh-key: ${{ secrets.DOCS_GITHUB_TOKEN }}

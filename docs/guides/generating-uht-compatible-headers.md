@@ -17,7 +17,7 @@ After compiling the commandlet and running it on your game files, simply change 
 
 ![image](https://user-images.githubusercontent.com/73571427/184372672-60d8579e-51c3-4d1e-9839-73af5d96ff21.png)
 
-This [commandlet](https://cdn.discordapp.com/attachments/916076851842146317/1063891086919090317/UE4ProjectGen-GUI.exe) will enter the CLI commands for the project gen for you, and make a batch file to regenerate with the same settings (e.g., to regenerate after a major game update). 
+This [commandlet (by Spuds)](https://cdn.discordapp.com/attachments/1005879578419531947/1075109443445985462/UE4ProjectGen-GUI.exe) will enter the CLI commands for the project gen for you, and make a batch file to regenerate with the same settings (e.g., to regenerate after a major game update). 
 
 ## Possible inaccurate generation issues:
 

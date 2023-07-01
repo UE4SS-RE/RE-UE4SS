@@ -7,6 +7,8 @@
 #include <cwctype>
 #include <vector>
 
+#include <File/Macros.hpp>
+
 namespace RC
 {
     /* explode_by_occurrence -> START
@@ -153,6 +155,17 @@ namespace RC
         return to_wstring(temp_input);
     }
 
+    auto inline to_wstring(std::u16string& input) -> std::wstring
+    {
+        return {input.begin(), input.end()};
+    }
+
+    auto inline to_wstring(std::u16string_view input) -> std::wstring
+    {
+        auto temp_input = std::u16string{input};
+        return to_wstring(temp_input);
+    }
+
     auto inline to_string(std::wstring& input) -> std::string
     {
 #pragma warning(disable: 4996)
@@ -165,6 +178,40 @@ namespace RC
     {
         auto temp_input = std::wstring{input};
         return to_string(temp_input);
+    }
+
+    auto inline to_u16string(std::wstring& input) -> std::u16string
+    {
+        return {input.begin(), input.end()};
+    }
+
+    auto inline to_u16string(std::wstring_view input) -> std::u16string
+    {
+        auto temp_input = std::wstring{input};
+        return to_u16string(temp_input);
+    }
+
+    auto inline to_u16string(std::string& input) -> std::u16string
+    {
+        return {input.begin(), input.end()};
+    }
+
+    auto inline to_u16string(std::string_view input) -> std::u16string
+    {
+        auto temp_input = std::string{input};
+        return to_u16string(temp_input);
+    }
+
+    auto inline to_ue4ss_string(const auto&& input) -> StringType
+    {
+        if constexpr (std::is_same_v<std::remove_pointer_t<std::remove_cvref_t<decltype(input)>>, StringType> || std::is_same_v<std::remove_pointer_t<std::remove_cvref_t<decltype(input)>>, CharType>)
+        {
+            return input;
+        }
+        else
+        {
+            return to_wstring(input);
+        }
     }
 
     namespace String

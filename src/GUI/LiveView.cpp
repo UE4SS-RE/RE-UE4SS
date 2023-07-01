@@ -1,5 +1,6 @@
 #include <algorithm>
 #include <limits>
+#include <memory>
 #include <string>
 #include <format>
 #include <unordered_map>
@@ -9,6 +10,7 @@
 #include <GUI/LiveView.hpp>
 #include <GUI/GUI.hpp>
 #include <GUI/ImGuiUtility.hpp>
+#include <GUI/UFunctionCallerWidget.hpp>
 #include <ExceptionHandling.hpp>
 #include <DynamicOutput/DynamicOutput.hpp>
 #include <Helpers/String.hpp>
@@ -24,6 +26,7 @@
 #include <Unreal/AActor.hpp>
 #include <Unreal/UFunction.hpp>
 #include <Unreal/FOutputDevice.hpp>
+#include <Unreal/UEnum.hpp>
 #include <Unreal/Property/FObjectProperty.hpp>
 #include <Unreal/Property/FBoolProperty.hpp>
 #include <Unreal/Property/FArrayProperty.hpp>
@@ -498,7 +501,7 @@ namespace RC::GUI
         }
     };
 
-    LiveView::LiveView()
+    LiveView::LiveView() : m_function_caller_widget(new UFunctionCallerWidget{})
     {
         m_search_by_name_buffer = new char[m_search_buffer_capacity];
         strncpy_s(m_search_by_name_buffer, m_default_search_buffer.size() + sizeof(char), m_default_search_buffer.data(), m_default_search_buffer.size() + sizeof(char));
@@ -518,6 +521,7 @@ namespace RC::GUI
         }
 
         delete[] m_search_by_name_buffer;
+        delete m_function_caller_widget;
     }
 
     auto LiveView::guobjectarray_iterator(int32_t int_data_1, int32_t int_data_2, const std::function<void(UObject*)>& callable) -> void
@@ -1036,6 +1040,33 @@ namespace RC::GUI
         return next_item_to_render;
     }
 
+    auto LiveView::render_enum() -> void
+    {
+        const auto currently_selected_object = get_selected_object();
+        if (!currently_selected_object.first || !currently_selected_object.second) { return; }
+        
+        auto uenum = static_cast<UEnum*>(currently_selected_object.second);
+        for (const auto& name : uenum->ForEachName())
+        {
+            ImGui::Text("%S <=> %i", name.Key.ToString().c_str(), name.Value);
+        }
+    }
+
+    auto LiveView::render_bottom_panel() -> void
+    {
+        const auto currently_selected_object = get_selected_object();
+        if (!currently_selected_object.first || !currently_selected_object.second) { return; }
+
+        if (currently_selected_object.second->IsA<UEnum>())
+        {
+            render_enum();
+        }
+        else
+        {
+            render_properties();
+        }
+    }
+
     auto LiveView::render_properties() -> void
     {
         const auto currently_selected_object = get_selected_object();
@@ -1280,7 +1311,7 @@ namespace RC::GUI
             ImGui::Unindent();
         }
 
-        render_properties();
+        render_bottom_panel();
     }
 
     static auto render_fname(FName name) -> void
@@ -1523,9 +1554,20 @@ namespace RC::GUI
         auto selected_prev_object = render_history_menu("InfoPanelHistory_Next");
         if (selected_prev_object.second) { next_object_index_to_select = selected_prev_object.first; }
 
-        ImGui::Separator();
-
         auto currently_selected_object = get_selected_object_or_property();
+
+        if (UE4SSProgram::settings_manager.Experimental.GUIUFunctionCaller)
+        {
+            ImGui::SameLine();
+            if (!currently_selected_object.is_object) { ImGui::BeginDisabled(); }
+            if (ImGui::Button("Find functions"))
+            {
+                m_function_caller_widget->open_widget_deferred();
+            }
+            if (!currently_selected_object.is_object) { ImGui::EndDisabled(); }
+            ImGui::Separator();
+        }
+        
         if (currently_selected_object.is_object)
         {
             render_info_panel_as_object(currently_selected_object.object_item, currently_selected_object.object);
@@ -1885,6 +1927,14 @@ namespace RC::GUI
         ImGui::PopStyleColor();
 
         render_info_panel();
+        if (UE4SSProgram::settings_manager.Experimental.GUIUFunctionCaller)
+        {
+            const auto& selected_item = get_selected_object_or_property();
+            if (selected_item.is_object)
+            {
+                m_function_caller_widget->render(selected_item.object);
+            }
+        }
     }
 
     static auto toggle_all_watches(bool check) -> void
