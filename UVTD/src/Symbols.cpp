@@ -38,6 +38,28 @@ namespace RC::UVTD
 		dbi_stream = PDB::CreateDBIStream(pdb_file);
 	}
 
+	Symbols::Symbols(const Symbols& other) :
+		pdb_file_path(other.pdb_file_path),
+		pdb_file_handle(std::move(File::open(pdb_file_path))),
+		pdb_file_map(std::move(pdb_file_handle.memory_map())),
+		pdb_file(pdb_file_map.data()),
+		is_425_plus(other.is_425_plus)
+	{
+        dbi_stream = PDB::CreateDBIStream(pdb_file);
+	}
+
+    Symbols& Symbols::operator=(const Symbols& other)
+    {
+        pdb_file_path = other.pdb_file_path;
+        pdb_file_handle = std::move(File::open(pdb_file_path));
+        pdb_file_map = std::move(pdb_file_handle.memory_map());
+        pdb_file = PDB::RawFile(pdb_file_map.data());
+        is_425_plus = other.is_425_plus;
+        dbi_stream = PDB::CreateDBIStream(pdb_file);
+
+		return *this;
+    }
+
 	auto Symbols::generate_method_signature(const PDB::TPIStream& tpi_stream, const PDB::CodeView::TPI::FieldList* method_record) -> MethodSignature
 	{
 		MethodSignature signature{};

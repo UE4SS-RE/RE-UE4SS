@@ -148,43 +148,51 @@ namespace RC::UVTD
         }
 
         auto default_template_file = std::filesystem::path{ STR("MemberVariableLayout.ini") };
+
         Output::send(STR("Generating file '{}'\n"), default_template_file.wstring());
+        
         Output::Targets<Output::NewFileDevice> default_ini_dumper;
         auto& default_ini_file_device = default_ini_dumper.get_device<Output::NewFileDevice>();
         default_ini_file_device.set_file_name_and_path(member_variable_layouts_templates_output_path / default_template_file);
         default_ini_file_device.set_formatter([](File::StringViewType string) {
             return File::StringType{ string };
-            });
+        });
 
         auto template_file = std::format(STR("MemberVariableLayout_{}_Template.ini"), pdb_name);
+
         Output::send(STR("Generating file '{}'\n"), template_file);
+        
         Output::Targets<Output::NewFileDevice> ini_dumper;
         auto& ini_file_device = ini_dumper.get_device<Output::NewFileDevice>();
         ini_file_device.set_file_name_and_path(member_variable_layouts_templates_output_path / template_file);
         ini_file_device.set_formatter([](File::StringViewType string) {
             return File::StringType{ string };
-            });
+        });
 
         auto pdb_name_no_underscore = pdb_name;
         pdb_name_no_underscore.replace(pdb_name_no_underscore.find(STR('_')), 1, STR(""));
 
         auto virtual_header_file = virtual_gen_output_include_path / std::format(STR("UnrealVirtual{}.hpp"), pdb_name_no_underscore);
+
         Output::send(STR("Generating file '{}'\n"), virtual_header_file.wstring());
+        
         Output::Targets<Output::NewFileDevice> virtual_header_dumper;
         auto& virtual_header_file_device = virtual_header_dumper.get_device<Output::NewFileDevice>();
         virtual_header_file_device.set_file_name_and_path(virtual_header_file);
         virtual_header_file_device.set_formatter([](File::StringViewType string) {
             return File::StringType{ string };
-            });
+        });
 
         auto virtual_src_file = virtual_gen_function_bodies_path / std::format(STR("UnrealVirtual{}.cpp"), pdb_name_no_underscore);
+
         Output::send(STR("Generating file '{}'\n"), virtual_src_file.wstring());
+        
         Output::Targets<Output::NewFileDevice> virtual_src_dumper;
         auto& virtual_src_file_device = virtual_src_dumper.get_device<Output::NewFileDevice>();
         virtual_src_file_device.set_file_name_and_path(virtual_src_file);
         virtual_src_file_device.set_formatter([](File::StringViewType string) {
             return File::StringType{ string };
-            });
+        });
 
         bool is_case_preserving_pdb = !(CasePreservingVariants.find(pdb_name) == CasePreservingVariants.end());
         bool is_non_case_preserving_pdb = !(NonCasePreservingVariants.find(pdb_name) == NonCasePreservingVariants.end());
@@ -250,13 +258,15 @@ namespace RC::UVTD
             if (class_entry.variables.empty()) { continue; }
 
             auto default_setter_src_file = member_variable_layouts_gen_function_bodies_path / std::format(STR("{}_MemberVariableLayout_DefaultSetter_{}.cpp"), pdb_name, class_entry.class_name_clean);
+            
             Output::send(STR("Generating file '{}'\n"), default_setter_src_file.wstring());
+            
             Output::Targets<Output::NewFileDevice> default_setter_src_dumper;
             auto& default_setter_src_file_device = default_setter_src_dumper.get_device<Output::NewFileDevice>();
             default_setter_src_file_device.set_file_name_and_path(default_setter_src_file);
             default_setter_src_file_device.set_formatter([](File::StringViewType string) {
                 return File::StringType{ string };
-                });
+            });
 
             ini_dumper.send(STR("[{}]\n"), class_entry.class_name);
             default_ini_dumper.send(STR("[{}]\n"), class_entry.class_name);
@@ -323,42 +333,48 @@ namespace RC::UVTD
         }
 
         auto macro_setter_file = std::filesystem::path{ STR("MacroSetter.hpp") };
+        
         Output::send(STR("Generating file '{}'\n"), macro_setter_file.wstring());
+        
         Output::Targets<Output::NewFileDevice> macro_setter_dumper;
         auto& macro_setter_file_device = macro_setter_dumper.get_device<Output::NewFileDevice>();
         macro_setter_file_device.set_file_name_and_path(macro_setter_file);
         macro_setter_file_device.set_formatter([](File::StringViewType string) {
             return File::StringType{ string };
-            });
+        });
 
-        for (const auto& [class_name, enum_entry] : type_container.get_enum_entries())
+        for (const auto& [class_name, class_entry] : type_container.get_class_entries())
         {
-            if (enum_entry.variables.empty()) { continue; }
+            if (class_entry.variables.empty()) { continue; }
 
-            auto wrapper_header_file = member_variable_layouts_gen_output_include_path / std::format(STR("MemberVariableLayout_HeaderWrapper_{}.hpp"), enum_entry.name_clean);
+            auto wrapper_header_file = member_variable_layouts_gen_output_include_path / std::format(STR("MemberVariableLayout_HeaderWrapper_{}.hpp"), class_entry.class_name_clean);
+            
             Output::send(STR("Generating file '{}'\n"), wrapper_header_file.wstring());
+            
             Output::Targets<Output::NewFileDevice> header_wrapper_dumper;
             auto& wrapper_header_file_device = header_wrapper_dumper.get_device<Output::NewFileDevice>();
             wrapper_header_file_device.set_file_name_and_path(wrapper_header_file);
             wrapper_header_file_device.set_formatter([](File::StringViewType string) {
                 return File::StringType{ string };
-                });
+            });
 
-            auto wrapper_src_file = member_variable_layouts_gen_output_include_path / std::format(STR("MemberVariableLayout_SrcWrapper_{}.hpp"), enum_entry.name_clean);
+            auto wrapper_src_file = member_variable_layouts_gen_output_include_path / std::format(STR("MemberVariableLayout_SrcWrapper_{}.hpp"), class_entry.class_name_clean);
+            
             Output::send(STR("Generating file '{}'\n"), wrapper_src_file.wstring());
+            
             Output::Targets<Output::NewFileDevice> wrapper_src_dumper;
             auto& wrapper_src_file_device = wrapper_src_dumper.get_device<Output::NewFileDevice>();
             wrapper_src_file_device.set_file_name_and_path(wrapper_src_file);
             wrapper_src_file_device.set_formatter([](File::StringViewType string) {
                 return File::StringType{ string };
-                });
+            });
 
             header_wrapper_dumper.send(STR("static std::unordered_map<File::StringType, int32_t> MemberOffsets;\n\n"));
-            wrapper_src_dumper.send(STR("std::unordered_map<File::StringType, int32_t> {}::MemberOffsets{{}};\n\n"), enum_entry.name);
+            wrapper_src_dumper.send(STR("std::unordered_map<File::StringType, int32_t> {}::MemberOffsets{{}};\n\n"), class_entry.class_name);
 
-            auto private_variables_for_class = s_private_variables.find(enum_entry.name);
+            auto private_variables_for_class = s_private_variables.find(class_entry.class_name);
 
-            for (const auto& [variable_name, variable] : enum_entry.variables)
+            for (const auto& [variable_name, variable] : class_entry.variables)
             {
                 if (variable.type.find(STR("TBaseDelegate")) != variable.type.npos) { continue; }
                 if (variable.type.find(STR("FUniqueNetIdRepl")) != variable.type.npos) { continue; }
@@ -388,20 +404,20 @@ namespace RC::UVTD
 
                 header_wrapper_dumper.send(STR("    {}& Get{}();\n"), variable.type, final_variable_name);
                 header_wrapper_dumper.send(STR("    const {}& Get{}() const;\n\n"), variable.type, final_variable_name);
-                wrapper_src_dumper.send(STR("{}& {}::Get{}()\n"), variable.type, enum_entry.name, final_variable_name);
-                if (enum_entry.name == STR("FArchive") || enum_entry.name == STR("FArchiveState"))
+                wrapper_src_dumper.send(STR("{}& {}::Get{}()\n"), variable.type, class_entry.class_name, final_variable_name);
+                if (class_entry.class_name == STR("FArchive") || class_entry.class_name == STR("FArchiveState"))
                 {
                     wrapper_src_dumper.send(STR("{\n"));
                     wrapper_src_dumper.send(STR("    static auto& offsets = Version::IsBelow(4, 25) ? FArchive::MemberOffsets : FArchiveState::MemberOffsets;\n"));
                     wrapper_src_dumper.send(STR("    static auto offset = offsets.find(STR(\"{}\"));\n"), final_variable_name);
-                    wrapper_src_dumper.send(STR("    if (offset == offsets.end()) {{ throw std::runtime_error{{\"Tried getting member variable '{}::{}' that doesn't exist in this engine version.\"}}; }}\n"), enum_entry.name, final_variable_name);
+                    wrapper_src_dumper.send(STR("    if (offset == offsets.end()) {{ throw std::runtime_error{{\"Tried getting member variable '{}::{}' that doesn't exist in this engine version.\"}}; }}\n"), class_entry.class_name, final_variable_name);
                     wrapper_src_dumper.send(STR("    return *Helper::Casting::ptr_cast<{}*>(this, offset->second);\n"), variable.type);
                     wrapper_src_dumper.send(STR("}\n"));
-                    wrapper_src_dumper.send(STR("const {}& {}::Get{}() const\n"), variable.type, enum_entry.name, final_variable_name);
+                    wrapper_src_dumper.send(STR("const {}& {}::Get{}() const\n"), variable.type, class_entry.class_name, final_variable_name);
                     wrapper_src_dumper.send(STR("{\n"));
                     wrapper_src_dumper.send(STR("    static auto& offsets = Version::IsBelow(4, 25) ? FArchive::MemberOffsets : FArchiveState::MemberOffsets;\n"));
                     wrapper_src_dumper.send(STR("    static auto offset = offsets.find(STR(\"{}\"));\n"), final_variable_name);
-                    wrapper_src_dumper.send(STR("    if (offset == offsets.end()) {{ throw std::runtime_error{{\"Tried getting member variable '{}::{}' that doesn't exist in this engine version.\"}}; }}\n"), enum_entry.name, final_variable_name);
+                    wrapper_src_dumper.send(STR("    if (offset == offsets.end()) {{ throw std::runtime_error{{\"Tried getting member variable '{}::{}' that doesn't exist in this engine version.\"}}; }}\n"), class_entry.class_name, final_variable_name);
                     wrapper_src_dumper.send(STR("    return *Helper::Casting::ptr_cast<const {}*>(this, offset->second);\n"), variable.type);
                     wrapper_src_dumper.send(STR("}\n\n"));
                 }
@@ -409,19 +425,19 @@ namespace RC::UVTD
                 {
                     wrapper_src_dumper.send(STR("{\n"));
                     wrapper_src_dumper.send(STR("    static auto offset = MemberOffsets.find(STR(\"{}\"));\n"), final_variable_name);
-                    wrapper_src_dumper.send(STR("    if (offset == MemberOffsets.end()) {{ throw std::runtime_error{{\"Tried getting member variable '{}::{}' that doesn't exist in this engine version.\"}}; }}\n"), enum_entry.name, final_variable_name);
+                    wrapper_src_dumper.send(STR("    if (offset == MemberOffsets.end()) {{ throw std::runtime_error{{\"Tried getting member variable '{}::{}' that doesn't exist in this engine version.\"}}; }}\n"), class_entry.class_name, final_variable_name);
                     wrapper_src_dumper.send(STR("    return *Helper::Casting::ptr_cast<{}*>(this, offset->second);\n"), variable.type);
                     wrapper_src_dumper.send(STR("}\n"));
-                    wrapper_src_dumper.send(STR("const {}& {}::Get{}() const\n"), variable.type, enum_entry.name, final_variable_name);
+                    wrapper_src_dumper.send(STR("const {}& {}::Get{}() const\n"), variable.type, class_entry.class_name, final_variable_name);
                     wrapper_src_dumper.send(STR("{\n"));
                     wrapper_src_dumper.send(STR("    static auto offset = MemberOffsets.find(STR(\"{}\"));\n"), final_variable_name);
-                    wrapper_src_dumper.send(STR("    if (offset == MemberOffsets.end()) {{ throw std::runtime_error{{\"Tried getting member variable '{}::{}' that doesn't exist in this engine version.\"}}; }}\n"), enum_entry.name, final_variable_name);
+                    wrapper_src_dumper.send(STR("    if (offset == MemberOffsets.end()) {{ throw std::runtime_error{{\"Tried getting member variable '{}::{}' that doesn't exist in this engine version.\"}}; }}\n"), class_entry.class_name, final_variable_name);
                     wrapper_src_dumper.send(STR("    return *Helper::Casting::ptr_cast<const {}*>(this, offset->second);\n"), variable.type);
                     wrapper_src_dumper.send(STR("}\n\n"));
                 }
 
-                macro_setter_dumper.send(STR("if (auto val = parser.get_int64(STR(\"{}\"), STR(\"{}\"), -1); val != -1)\n"), enum_entry.name, final_variable_name);
-                macro_setter_dumper.send(STR("    Unreal::{}::MemberOffsets.emplace(STR(\"{}\"), static_cast<int32_t>(val));\n"), enum_entry.name, final_variable_name);
+                macro_setter_dumper.send(STR("if (auto val = parser.get_int64(STR(\"{}\"), STR(\"{}\"), -1); val != -1)\n"), class_entry.class_name, final_variable_name);
+                macro_setter_dumper.send(STR("    Unreal::{}::MemberOffsets.emplace(STR(\"{}\"), static_cast<int32_t>(val));\n"), class_entry.class_name, final_variable_name);
             }
         }
     }

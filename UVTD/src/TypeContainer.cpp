@@ -4,24 +4,7 @@ namespace RC::UVTD
 {
 	auto TypeContainer::join(const TypeContainer& other) -> void
 	{
-		enum_entries.insert(other.enum_entries.begin(), other.enum_entries.end());
 		class_entries.insert(other.class_entries.begin(), other.class_entries.end());
-	}
-
-	auto TypeContainer::get_or_create_enum_entry(const File::StringType& symbol_name, const File::StringType& symbol_name_clean) -> EnumEntry&
-	{
-		if (auto it = enum_entries.find(symbol_name); it != enum_entries.end())
-		{
-			return it->second;
-		}
-		else
-		{
-			return enum_entries.emplace(symbol_name, EnumEntry{
-					.name = symbol_name,
-					.name_clean = symbol_name_clean,
-					.variables = {}
-				}).first->second;
-		}
 	}
 
 	auto TypeContainer::get_or_create_class_entry(const File::StringType& symbol_name, const File::StringType& symbol_name_clean, const SymbolNameInfo& name_info) -> Class&

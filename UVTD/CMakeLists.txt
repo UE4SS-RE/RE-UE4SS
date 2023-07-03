@@ -54,7 +54,7 @@ add_compile_definitions(UNICODE)
 set(${TARGET}_Sources
         "${CMAKE_CURRENT_SOURCE_DIR}/src/main.cpp"
         "${CMAKE_CURRENT_SOURCE_DIR}/src/Helpers.cpp"
-        "${CMAKE_CURRENT_SOURCE_DIR}/src/UVTD_DIA.cpp"
+        "${CMAKE_CURRENT_SOURCE_DIR}/src/UVTD.cpp"
         "${CMAKE_CURRENT_SOURCE_DIR}/src/Symbols.cpp"
         "${CMAKE_CURRENT_SOURCE_DIR}/src/TypeContainer.cpp"
         "${CMAKE_CURRENT_SOURCE_DIR}/src/VTableDumper.cpp"

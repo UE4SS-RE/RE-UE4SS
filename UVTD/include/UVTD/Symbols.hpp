@@ -38,13 +38,6 @@ namespace RC::UVTD
 		int32_t offset;
 	};
 
-	struct EnumEntry
-	{
-		File::StringType name;
-		File::StringType name_clean;
-		std::map<File::StringType, MemberVariable> variables;
-	};
-
 	struct FunctionParam
 	{
 		File::StringType type;
@@ -91,7 +84,7 @@ namespace RC::UVTD
 		std::map<uint32_t, MethodBody> functions;
 		// Key: Variable name
 		std::map<File::StringType, MemberVariable> variables;
-		uint32_t last_virtual_offset;
+		uint32_t last_virtual_offset{};
 		ValidForVTable valid_for_vtable{ ValidForVTable::No };
 		ValidForMemberVars valid_for_member_vars{ ValidForMemberVars::No };
 	};
@@ -130,7 +123,6 @@ namespace RC::UVTD
 
 		PDB::RawFile pdb_file;
 		PDB::DBIStream dbi_stream;
-		PDB::TPIStream tpi_stream;
 		bool is_425_plus;
 
 		std::unordered_map<File::StringType, EnumEntry> enum_entries;
@@ -140,6 +132,10 @@ namespace RC::UVTD
 		Symbols() = delete;
 
 		explicit Symbols(std::filesystem::path pdb_file_path);
+
+		Symbols(const Symbols& other);
+
+		Symbols& operator=(const Symbols& other);
 
 	public:
 		auto get_or_create_enum_entry(const File::StringType& symbol_name, const File::StringType& symbol_name_clean) -> EnumEntry&;

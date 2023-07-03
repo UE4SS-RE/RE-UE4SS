@@ -20,17 +20,16 @@ auto static get_user_selection() -> int32_t
     Output::send(STR("0. Exit\n"));
 
     int32_t selection{};
-//     std::cin >> selection;
-//     if (!std::cin.good())
-//     {
-//         selection = 9;
-//         std::cin.clear();
-//         std::cin.ignore();
-//     }
-// 
-//     std::cin.get();
-//     return selection;
-    return 2;
+    std::cin >> selection;
+    if (!std::cin.good())
+    {
+        selection = 9;
+        std::cin.clear();
+        std::cin.ignore();
+    }
+
+    std::cin.get();
+    return selection;
 }
 
 // We're outside DllMain here
