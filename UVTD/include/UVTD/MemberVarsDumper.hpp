@@ -7,9 +7,6 @@
 #include <UVTD/TypeContainer.hpp>
 #include <File/File.hpp>
 
-#include <atlbase.h>
-#include <dia2.h>
-
 namespace RC::UVTD
 {
 	class MemberVarsDumper
@@ -26,17 +23,19 @@ namespace RC::UVTD
 
 		}
 
+    private:
+        auto process_class(const PDB::TPIStream& tpi_stream, const PDB::CodeView::TPI::Record* class_record, const File::StringType& class_name, const SymbolNameInfo& name_info) -> void;
+        auto process_member(const PDB::TPIStream& tpi_stream, const PDB::CodeView::TPI::FieldList* field_record, Class& class_entry) -> void;
+
+    private:
+        auto dump_member_variable_layouts(std::unordered_map<File::StringType, SymbolNameInfo>& names) -> void;
+
 	public:
 		auto generate_code() -> void;
 		auto generate_files() -> void;
 
 	public:
 		auto get_type_container() const -> const TypeContainer& { return type_container; }
-
-	private:
-		using EnumEntriesTypeAlias = struct EnumEntry*;
-		auto dump_member_variable_layout(CComPtr<IDiaSymbol>& symbol, const SymbolNameInfo&, EnumEntriesTypeAlias = nullptr, struct Class* class_entry = nullptr) -> void;
-		auto dump_member_variable_layouts(std::unordered_map<File::StringType, SymbolNameInfo>& names) -> void;
 	};
 }
 

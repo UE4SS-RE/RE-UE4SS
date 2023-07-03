@@ -30,7 +30,7 @@ auto static get_user_selection() -> int32_t
 // 
 //     std::cin.get();
 //     return selection;
-    return 1;
+    return 2;
 }
 
 // We're outside DllMain here

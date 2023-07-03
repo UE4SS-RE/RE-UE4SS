@@ -348,6 +348,8 @@ namespace RC::UVTD
 			// todo: call params
 			return return_type + STR(" (*)");
 		}
+		case PDB::CodeView::TPI::TypeRecordKind::LF_BITFIELD:
+			return get_type_name(tpi_stream, record->data.LF_BITFIELD.type);
 		default:
 			__debugbreak();
 			return STR("<UNKNOWN TYPE>");
