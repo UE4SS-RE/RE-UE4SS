@@ -12,9 +12,6 @@
 #include <PDB_DBIStream.h>
 #include <PDB_TPIStream.h>
 
-#include <atlbase.h>
-#include <dia2.h>
-
 namespace RC::UVTD
 {
 	enum class DumpMode { VTable, MemberVars, SolBindings };
@@ -147,12 +144,6 @@ namespace RC::UVTD
 	public:
 		auto get_or_create_enum_entry(const File::StringType& symbol_name, const File::StringType& symbol_name_clean) -> EnumEntry&;
 		auto get_or_create_class_entry(const File::StringType& symbol_name, const File::StringType& symbol_name_clean, const SymbolNameInfo& name_info) -> Class&;
-
-		auto generate_const_qualifier(CComPtr<IDiaSymbol>& symbol) -> bool;
-		auto generate_type(CComPtr<IDiaSymbol>& symbol) -> File::StringType;
-
-		auto generate_function_params(CComPtr<IDiaSymbol>& symbol) -> std::vector<FunctionParam>;
-		auto generate_function_signature(CComPtr<IDiaSymbol>& symbol) -> MethodSignature;
 
 		auto generate_method_signature(const PDB::TPIStream& tpi_stream, const PDB::CodeView::TPI::FieldList* method_record) -> MethodSignature;
 

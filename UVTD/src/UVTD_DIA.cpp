@@ -20,9 +20,6 @@
 #include <Psapi.h>
 #include <dbghelp.h>
 
-#include <atlbase.h>
-#include <dia2.h>
-
 namespace RC::UVTD
 {
     bool processing_events{false};
@@ -34,24 +31,6 @@ namespace RC::UVTD
         {
             input_handler.process_event();
             std::this_thread::sleep_for(std::chrono::milliseconds(5));
-        }
-    }
-
-    auto constexpr static is_symbol_valid(HRESULT result) -> bool
-    {
-        if (result != S_OK && result != S_FALSE)
-        {
-            Output::send(STR("Ran into an error with a symbol, error: {}\n"), to_wstring(HRESULTToString(result)));
-            return false;
-        }
-        else if (result == S_FALSE)
-        {
-            //Output::send(STR("Symbol not valid but no error\n"));
-            return false;
-        }
-        else
-        {
-            return true;
         }
     }
 

@@ -13,9 +13,6 @@
 #include <Function/Function.hpp>
 #include <DynamicOutput/DynamicOutput.hpp>
 
-#include <dia2.h>
-#include <atlbase.h>
-
 namespace RC::UVTD
 {
     extern bool processing_events;

@@ -63,13 +63,13 @@ set(${TARGET}_Sources
         )
 
 add_executable(${TARGET} ${${TARGET}_Sources})
-target_include_directories(${TARGET} PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include> "${CMAKE_CURRENT_SOURCE_DIR}/external_deps/DIA_SDK/include")
+target_include_directories(${TARGET} PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>)
 target_compile_options(${TARGET} PRIVATE ${PRIVATE_COMPILE_OPTIONS})
 target_link_options(${TARGET} PRIVATE ${PRIVATE_LINK_OPTIONS})
 target_compile_features(${TARGET} PUBLIC ${PUBLIC_COMPILE_FEATURES})
 set(UVTD_LINK_WITH_LIBRARIES File Input DynamicOutput)
 set(UVTD_LINK_WITH_INTERFACE_LIBRARIES Function Helpers)
-target_link_libraries(${TARGET} PRIVATE ${UVTD_LINK_WITH_LIBRARIES} ${UVTD_LINK_WITH_INTERFACE_LIBRARIES} "${CMAKE_CURRENT_SOURCE_DIR}/external_deps/DIA_SDK/lib/amd64/diaguids.lib" raw_pdb)
+target_link_libraries(${TARGET} PRIVATE ${UVTD_LINK_WITH_LIBRARIES} ${UVTD_LINK_WITH_INTERFACE_LIBRARIES} raw_pdb)
 
 if (${MAKE_DEPENDENCIES_STATIC} EQUAL 1)
     target_compile_definitions(${TARGET} PRIVATE ${UVTD_COMPILE_DEFINITIONS})

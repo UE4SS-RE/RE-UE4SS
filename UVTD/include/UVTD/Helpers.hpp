@@ -12,9 +12,6 @@
 #include <Windows.h>
 #undef NOMINMAX
 
-#include <atlbase.h>
-#include <dia2.h>
-
 namespace RC::UVTD
 {
 	struct ObjectItem
@@ -188,21 +185,7 @@ namespace RC::UVTD
 
 	auto to_string_type(const char* c_str) -> File::StringType;
 
-	auto HRESULTToString(HRESULT result) -> std::string;
-
 	auto is_valid_type_to_dump(File::StringType type_name) -> bool;
-
-	auto sym_tag_to_string(DWORD sym_tag) -> File::StringViewType;
-
-	auto base_type_to_string(CComPtr<IDiaSymbol> symbol) -> File::StringType;
-
-	auto kind_to_string(DWORD kind) -> File::StringViewType;
-
-	auto generate_pointer_type(CComPtr<IDiaSymbol> symbol) -> File::StringType;
-
-	auto get_symbol_name(CComPtr<IDiaSymbol> symbol) -> File::StringType;
-
-	auto get_type_name(CComPtr<IDiaSymbol> type) -> File::StringType;
 }
 
 #endif
