@@ -7,17 +7,17 @@ namespace RC::UVTD
 {
 	auto SolBindingsGenerator::generate_code() -> void
 	{
-		TypeContainer container;
-
-		VTableDumper vtable_dumper{ symbols };
-		vtable_dumper.generate_code();
-		container.join(vtable_dumper.get_type_container());
-
-		MemberVarsDumper member_vars_dumper{ symbols };
-		member_vars_dumper.generate_code();
-		container.join(member_vars_dumper.get_type_container());
-
-		type_container = std::move(container);
+// 		TypeContainer container;
+// 
+// 		VTableDumper vtable_dumper{ symbols };
+// 		vtable_dumper.generate_code();
+// 		container.join(vtable_dumper.get_type_container());
+// 
+// 		MemberVarsDumper member_vars_dumper{ symbols };
+// 		member_vars_dumper.generate_code();
+// 		container.join(member_vars_dumper.get_type_container());
+// 
+// 		type_container = std::move(container);
 	}
 
 	auto SolBindingsGenerator::generate_files() -> void

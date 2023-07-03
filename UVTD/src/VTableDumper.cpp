@@ -1,7 +1,9 @@
 #define NOMINMAX
 
+#include <iostream>
 #include <filesystem>
 #include <format>
+#include <unordered_set>
 
 #include <UVTD/VTableDumper.hpp>
 #include <UVTD/Helpers.hpp>
@@ -11,164 +13,90 @@
 
 #include <Windows.h>
 
-#include <atlbase.h>
-#include <dia2.h>
+#include <PDB_GlobalSymbolStream.h>
+#include <PDB_CoalescedMSFStream.h>
+#include <PDB_PublicSymbolStream.h>
+#include <PDB_ModuleInfoStream.h>
+#include <PDB_ModuleSymbolStream.h>
+#include <PDB_TPIStream.h>
+#include <PDB_IPIStream.h>
 
 namespace RC::UVTD 
 {
-	auto VTableDumper::dump_vtable_for_symbol(CComPtr<IDiaSymbol>& symbol, const SymbolNameInfo& name_info, EnumEntry* enum_entries, Class* class_entry) -> void
+	auto VTableDumper::process_class(const PDB::TPIStream& tpi_stream, const PDB::CodeView::TPI::Record* class_record, const File::StringType& class_name, const SymbolNameInfo& name_info) -> void
 	{
-		// Symbol name => Offset in vtable
-		static std::unordered_map<File::StringType, uint32_t> functions_already_dumped{};
+		File::StringType class_name_clean = Symbols::clean_name(class_name);
 
-		auto symbol_name = get_symbol_name(symbol);
-		//Output::send(STR("symbol_name: {}\n"), symbol_name);
+		auto& class_entry = type_container.get_or_create_class_entry(class_name, class_name_clean, name_info);
 
-		bool could_not_replace_prefix{};
-		for (const auto& UPrefixed : UPrefixToFPrefix)
+		auto fields = tpi_stream.GetTypeRecord(class_record->data.LF_CLASS.field);
+
+		auto list_size = fields->header.size - sizeof(uint16_t);
+		for (size_t i = 0; i < list_size; i++)
 		{
-			for (size_t i = symbol_name.find(UPrefixed); i != symbol_name.npos; i = symbol_name.find(UPrefixed))
+			auto field_record = (PDB::CodeView::TPI::FieldList*)((uint8_t*)&fields->data.LF_FIELD.list + i);
+
+			if (field_record->kind == PDB::CodeView::TPI::TypeRecordKind::LF_METHOD || 
+				field_record->kind == PDB::CodeView::TPI::TypeRecordKind::LF_ONEMETHOD)
 			{
-				if (symbols.is_425_plus)
-				{
-					could_not_replace_prefix = true;
-					break;
-				}
-				symbol_name.replace(i, 1, STR("F"));
-				++i;
+				process_method(tpi_stream, field_record, class_entry);
 			}
 		}
+	}
 
-		if (could_not_replace_prefix)
-		{
-			return;
-		}
+	auto VTableDumper::process_method(const PDB::TPIStream& tpi_stream, const PDB::CodeView::TPI::FieldList* method_record, Class& class_entry) -> void
+	{
+		static std::unordered_map<File::StringType, uint32_t> functions_already_dumped{};
+
+		const auto is_virtual = method_record->data.LF_ONEMETHOD.attributes.mprop == (uint16_t)PDB::CodeView::TPI::MethodProperty::Intro ||
+			method_record->data.LF_ONEMETHOD.attributes.mprop == (uint16_t)PDB::CodeView::TPI::MethodProperty::PureIntro;
+
+		if (!is_virtual) return;
+
+		int32_t vtable_offset = method_record->data.LF_ONEMETHOD.vbaseoff[0];
+		File::StringType method_name = Symbols::get_method_name(method_record);
 
 		bool is_overload{};
-		if (auto it = functions_already_dumped.find(symbol_name); it != functions_already_dumped.end())
+		if (auto it = functions_already_dumped.find(method_name); it != functions_already_dumped.end())
 		{
-			symbol_name.append(std::format(STR("_{}"), ++it->second));
+			method_name.append(std::format(STR("_{}"), ++it->second));
 			is_overload = true;
 		}
 
-		File::StringType symbol_name_clean{ symbol_name };
-		std::replace(symbol_name_clean.begin(), symbol_name_clean.end(), ':', '_');
-		std::replace(symbol_name_clean.begin(), symbol_name_clean.end(), '~', '$');
+		Output::send(STR("  method {} offset {}\n"), method_name, vtable_offset);
 
-		DWORD sym_tag;
-		symbol->get_symTag(&sym_tag);
+		File::StringType method_name_clean = Symbols::clean_name(method_name);
 
-		auto process_struct_or_class = [&]()
-		{
-			if (valid_udt_names.find(symbol_name) == valid_udt_names.end()) { return; }
-			functions_already_dumped.clear();
-			//Output::send(STR("Dumping vtable for symbol '{}', tag: '{}'\n"), symbol_name, sym_tag_to_string(sym_tag));
-
-			auto& local_enum_entries = type_container.get_or_create_enum_entry(symbol_name, symbol_name_clean);
-			auto& local_class_entry = type_container.get_or_create_class_entry(symbol_name, symbol_name_clean, name_info);
-
-			HRESULT hr;
-			CComPtr<IDiaEnumSymbols> sub_symbols;
-			if (hr = symbol->findChildren(SymTagNull, nullptr, NULL, &sub_symbols.p); hr == S_OK)
-			{
-				CComPtr<IDiaSymbol> sub_symbol;
-				ULONG num_symbols_fetched{};
-				while (sub_symbols->Next(1, &sub_symbol.p, &num_symbols_fetched) == S_OK && num_symbols_fetched == 1)
-				{
-					SymbolNameInfo new_name_info = name_info;
-					dump_vtable_for_symbol(sub_symbol, new_name_info, &local_enum_entries, &local_class_entry);
-				}
-				sub_symbol = nullptr;
-			}
-			sub_symbols = nullptr;
-		};
-
-		if (sym_tag == SymTagUDT)
-		{
-			process_struct_or_class();	
-		}
-		else if (sym_tag == SymTagBaseClass)
-		{
-			process_struct_or_class();
-		}
-		else if (sym_tag == SymTagFunction)
-		{
-			if (!enum_entries) { throw std::runtime_error{ "enum_entries is nullptr" }; }
-			if (!class_entry) { throw std::runtime_error{ "class_entry is nullptr" }; }
-
-			BOOL is_virtual = FALSE;
-			symbol->get_virtual(&is_virtual);
-			if (is_virtual == FALSE) { return; }
-
-
-			HRESULT hr;
-			DWORD offset_in_vtable = 0;
-			if (hr = symbol->get_virtualBaseOffset(&offset_in_vtable); hr != S_OK)
-			{
-				throw std::runtime_error{ std::format("Call to 'get_virtualBaseOffset' failed with error '{}'", HRESULTToString(hr)) };
-			}
-
-			//Output::send(STR("Dumping virtual function for symbol '{}', tag: '{}', offset: '{}'\n"), symbol_name, sym_tag_to_string(sym_tag), offset_in_vtable / 8);
-
-			auto& function = class_entry->functions[offset_in_vtable];
-			function.name = symbol_name_clean;
-			function.signature = symbols.generate_function_signature(symbol);
-			function.offset = offset_in_vtable;
-			function.is_overload = is_overload;
-			functions_already_dumped.emplace(symbol_name, 1);
-		}
+		auto& function = class_entry.functions[vtable_offset];
+		function.name = method_name_clean;
+		function.signature = symbols.generate_method_signature(tpi_stream, method_record);
+		function.offset = vtable_offset;
+		function.is_overload = is_overload;
+		functions_already_dumped.emplace(method_name, 1);
 	}
 
 	auto VTableDumper::dump_vtable_for_symbol(std::unordered_map<File::StringType, SymbolNameInfo>& names) -> void
 	{
-		Output::send(STR("Dumping {} struct symbols for {}\n"), names.size(), symbols.pdb_file.filename().stem().wstring());
+		Output::send(STR("Dumping {} struct symbols for {}\n"), names.size(), symbols.pdb_file_path.filename().stem().wstring());
 
-		CComPtr<IDiaEnumSymbols> dia_enum_symbols;
-		for (const auto& [name, name_info] : names)
+		const PDB::TPIStream tpi_stream = PDB::CreateTPIStream(symbols.pdb_file);
+
+		for (const PDB::CodeView::TPI::Record* type_record : tpi_stream.GetTypeRecords())
 		{
-			//Output::send(STR("Looking for {}\n"), name);
-			HRESULT hr{};
-
-			if (hr = symbols.dia_session->findChildren(nullptr, SymTagNull, nullptr, nsNone, &dia_enum_symbols.p); hr != S_OK)
+			if (type_record->header.kind == PDB::CodeView::TPI::TypeRecordKind::LF_CLASS || type_record->header.kind == PDB::CodeView::TPI::TypeRecordKind::LF_STRUCTURE)
 			{
-				throw std::runtime_error{ std::format("Call to 'findChildren' failed with error '{}'", HRESULTToString(hr)) };
-			}
+				if (type_record->data.LF_CLASS.property.fwdref) continue;
 
-			CComPtr<IDiaSymbol> symbol;
-			ULONG celt_fetched;
-			if (hr = dia_enum_symbols->Next(1, &symbol.p, &celt_fetched); hr != S_OK)
-			{
-				throw std::runtime_error{ std::format("Ran into an error with a symbol while calling 'Next', error: {}\n", HRESULTToString(hr)) };
-			}
+				const File::StringType class_name = Symbols::get_leaf_name(type_record->data.LF_CLASS.data, type_record->data.LF_CLASS.lfEasy.kind);
+				if (!names.contains(class_name)) continue;
 
-			CComPtr<IDiaEnumSymbols> sub_symbols;
-			hr = symbol->findChildren(SymTagNull, name.c_str(), NULL, &sub_symbols.p);
-			if (hr != S_OK)
-			{
-				throw std::runtime_error{ std::format("Ran into a problem while calling 'findChildren', error: {}\n", HRESULTToString(hr)) };
-			}
+				const auto name_info = names.find(class_name);
+				if (name_info == names.end()) continue;
 
-			CComPtr<IDiaSymbol> sub_symbol;
-			ULONG num_symbols_fetched;
-
-			sub_symbols->Next(1, &sub_symbol.p, &num_symbols_fetched);
-			if (name == STR("UConsole"))
-			{
-				LONG count;
-				sub_symbols->get_Count(&count);
-				//Output::send(STR("  Symbols count: {}\n"), count);
-				//Output::send(STR("  sub_symbol: {}\n"), (void*)sub_symbol);
+				process_class(tpi_stream, type_record, class_name, name_info->second);
 			}
-			if (!sub_symbol)
-			{
-				//Output::send(STR("Missed symbol '{}'\n"), name);
-				symbol = nullptr;
-				sub_symbols = nullptr;
-				dia_enum_symbols = nullptr;
-				continue;
-			}
-			dump_vtable_for_symbol(sub_symbol, name_info);
 		}
+		return;
 	}
 
 	auto VTableDumper::generate_code() -> void
@@ -200,7 +128,7 @@ namespace RC::UVTD
 		static std::filesystem::path virtual_gen_output_include_path = virtual_gen_output_path / "generated_include";
 		static std::filesystem::path virtual_gen_function_bodies_path = virtual_gen_output_include_path / "FunctionBodies";
 
-		File::StringType pdb_name = symbols.pdb_file.filename().stem();
+		File::StringType pdb_name = symbols.pdb_file_path.filename().stem();
 
 		if (std::filesystem::exists(vtable_gen_output_include_path))
 		{

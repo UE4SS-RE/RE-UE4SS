@@ -8,8 +8,7 @@
 #include <UVTD/TypeContainer.hpp>
 #include <File/File.hpp>
 
-#include <atlbase.h>
-#include <dia2.h>
+#include <PDB_TPIStream.h>
 
 namespace RC::UVTD
 {
@@ -33,7 +32,10 @@ namespace RC::UVTD
 		auto get_type_container() const -> const TypeContainer& { return type_container; }
 
 	private:
-		auto dump_vtable_for_symbol(CComPtr<IDiaSymbol>& symbol, const SymbolNameInfo&, EnumEntry* = nullptr, struct Class* class_entry = nullptr) -> void;
+		auto process_class(const PDB::TPIStream& tpi_stream, const PDB::CodeView::TPI::Record* class_record, const File::StringType& class_name, const SymbolNameInfo& name_info) -> void;
+		auto process_method(const PDB::TPIStream& tpi_stream, const PDB::CodeView::TPI::FieldList* method_record, Class& class_entry) -> void;
+
+	private:
 		auto dump_vtable_for_symbol(std::unordered_map<File::StringType, SymbolNameInfo>& names) -> void;
 	};
 }

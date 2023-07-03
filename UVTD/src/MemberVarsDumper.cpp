@@ -31,7 +31,7 @@ namespace RC::UVTD
 		static std::filesystem::path virtual_gen_output_include_path = virtual_gen_output_path / "generated_include";
 		static std::filesystem::path virtual_gen_function_bodies_path = virtual_gen_output_include_path / "FunctionBodies";
 
-		File::StringType pdb_name = symbols.pdb_file.filename().stem();
+		File::StringType pdb_name = symbols.pdb_file_path.filename().stem();
 
 		if (std::filesystem::exists(member_variable_layouts_gen_output_include_path))
 		{
@@ -481,46 +481,46 @@ namespace RC::UVTD
 
 	auto MemberVarsDumper::dump_member_variable_layouts(std::unordered_map<File::StringType, SymbolNameInfo>& names) -> void
 	{
-		Output::send(STR("Dumping {} symbols for {}\n"), names.size(), symbols.pdb_file.filename().stem().wstring());
+		Output::send(STR("Dumping {} symbols for {}\n"), names.size(), symbols.pdb_file_path.filename().stem().wstring());
 
 		CComPtr<IDiaEnumSymbols> dia_enum_symbols;
 		for (const auto& [name, name_info] : names)
 		{
-			Output::send(STR("{}...\n"), name);
-			HRESULT hr{};
-			if (hr = symbols.dia_session->findChildren(nullptr, SymTagNull, nullptr, nsNone, &dia_enum_symbols.p); hr != S_OK)
-			{
-				throw std::runtime_error{ std::format("Call to 'findChildren' failed with error '{}'", HRESULTToString(hr)) };
-			}
-
-			CComPtr<IDiaSymbol> symbol;
-			ULONG celt_fetched;
-			if (hr = dia_enum_symbols->Next(1, &symbol.p, &celt_fetched); hr != S_OK)
-			{
-				throw std::runtime_error{ std::format("Ran into an error with a symbol while calling 'Next', error: {}\n", HRESULTToString(hr)) };
-			}
-
-			CComPtr<IDiaEnumSymbols> sub_symbols;
-			hr = symbol->findChildren(SymTagNull, name.c_str(), NULL, &sub_symbols.p);
-			if (hr != S_OK)
-			{
-				throw std::runtime_error{ std::format("Ran into a problem while calling 'findChildren', error: {}\n", HRESULTToString(hr)) };
-			}
-
-			CComPtr<IDiaSymbol> sub_symbol;
-			ULONG num_symbols_fetched;
-
-			sub_symbols->Next(1, &sub_symbol.p, &num_symbols_fetched);
-			if (!sub_symbol)
-			{
-				//Output::send(STR("Missed symbol '{}'\n"), name);
-				symbol = nullptr;
-				sub_symbols = nullptr;
-				dia_enum_symbols = nullptr;
-				continue;
-			}
-
-			dump_member_variable_layout(sub_symbol, name_info);
+// 			Output::send(STR("{}...\n"), name);
+// 			HRESULT hr{};
+// 			if (hr = symbols.dia_session->findChildren(nullptr, SymTagNull, nullptr, nsNone, &dia_enum_symbols.p); hr != S_OK)
+// 			{
+// 				throw std::runtime_error{ std::format("Call to 'findChildren' failed with error '{}'", HRESULTToString(hr)) };
+// 			}
+// 
+// 			CComPtr<IDiaSymbol> symbol;
+// 			ULONG celt_fetched;
+// 			if (hr = dia_enum_symbols->Next(1, &symbol.p, &celt_fetched); hr != S_OK)
+// 			{
+// 				throw std::runtime_error{ std::format("Ran into an error with a symbol while calling 'Next', error: {}\n", HRESULTToString(hr)) };
+// 			}
+// 
+// 			CComPtr<IDiaEnumSymbols> sub_symbols;
+// 			hr = symbol->findChildren(SymTagNull, name.c_str(), NULL, &sub_symbols.p);
+// 			if (hr != S_OK)
+// 			{
+// 				throw std::runtime_error{ std::format("Ran into a problem while calling 'findChildren', error: {}\n", HRESULTToString(hr)) };
+// 			}
+// 
+// 			CComPtr<IDiaSymbol> sub_symbol;
+// 			ULONG num_symbols_fetched;
+// 
+// 			sub_symbols->Next(1, &sub_symbol.p, &num_symbols_fetched);
+// 			if (!sub_symbol)
+// 			{
+// 				//Output::send(STR("Missed symbol '{}'\n"), name);
+// 				symbol = nullptr;
+// 				sub_symbols = nullptr;
+// 				dia_enum_symbols = nullptr;
+// 				continue;
+// 			}
+// 
+// 			dump_member_variable_layout(sub_symbol, name_info);
 		}
 	}
 }

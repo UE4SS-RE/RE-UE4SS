@@ -20,16 +20,17 @@ auto static get_user_selection() -> int32_t
     Output::send(STR("0. Exit\n"));
 
     int32_t selection{};
-    std::cin >> selection;
-    if (!std::cin.good())
-    {
-        selection = 9;
-        std::cin.clear();
-        std::cin.ignore();
-    }
-
-    std::cin.get();
-    return selection;
+//     std::cin >> selection;
+//     if (!std::cin.good())
+//     {
+//         selection = 9;
+//         std::cin.clear();
+//         std::cin.ignore();
+//     }
+// 
+//     std::cin.get();
+//     return selection;
+    return 1;
 }
 
 // We're outside DllMain here
@@ -88,6 +89,7 @@ auto thread_dll_start([[maybe_unused]]LPVOID thread_param) -> unsigned long
             {
                 // Reserved for NOP, ask user again.
             }
+            break;
         }
     }
     catch (std::exception& e)

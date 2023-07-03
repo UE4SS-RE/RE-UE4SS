@@ -1,10 +1,43 @@
 #include <format>
+#include <algorithm>
 
 #include <UVTD/Symbols.hpp>
 #include <UVTD/Helpers.hpp>
+#include <File/File.hpp>
+
+#include <PDB.h>
 
 namespace RC::UVTD
 {
+	Symbols::Symbols(std::filesystem::path pdb_file_path) :
+		pdb_file_path(pdb_file_path),
+		pdb_file_handle(std::move(File::open(pdb_file_path))),
+		pdb_file_map(std::move(pdb_file_handle.memory_map())),
+		pdb_file(pdb_file_map.data())
+	{
+		auto version_string = this->pdb_file_path.filename().stem().string();
+		auto major_version = std::atoi(version_string.substr(0, 1).c_str());
+		auto minor_version = std::atoi(version_string.substr(2).c_str());
+		is_425_plus = (major_version > 4) || (major_version == 4 && minor_version >= 25);
+
+		if (!std::filesystem::exists(pdb_file_path))
+		{
+			throw std::runtime_error{ std::format("PDB '{}' not found", pdb_file_path.string()) };
+		}
+
+		if (PDB::HasValidDBIStream(pdb_file) != PDB::ErrorCode::Success)
+		{
+			throw std::runtime_error{ std::format("PDB '{}' doesn't contain a valid DBI stream", pdb_file_path.string()) };
+		}
+
+		if (PDB::HasValidTPIStream(pdb_file) != PDB::ErrorCode::Success)
+		{
+			throw std::runtime_error{ std::format("PDB '{}' doesn't contain a valid TPI stream", pdb_file_path.string()) };
+		}
+
+		dbi_stream = PDB::CreateDBIStream(pdb_file);
+	}
+
 	auto Symbols::generate_const_qualifier(CComPtr<IDiaSymbol>& symbol) -> bool
 	{
 		HRESULT hr;
@@ -49,9 +82,9 @@ namespace RC::UVTD
 
 		// TODO: Const for pointers
 		//       We only support const for non-pointers and the data the pointer is pointing to
-		auto return_type_name = get_symbol_name(function_type_symbol);
-		auto pointer_type = generate_pointer_type(function_type_symbol);
-		File::StringType const_qualifier = generate_const_qualifier(function_type_symbol) ? STR("const") : STR("");
+ 		auto return_type_name = get_symbol_name(function_type_symbol);
+ 		auto pointer_type = generate_pointer_type(function_type_symbol);
+ 		File::StringType const_qualifier = generate_const_qualifier(function_type_symbol) ? STR("const") : STR("");
 
 		return std::format(STR("{}{}{}"), const_qualifier.empty() ? STR("") : std::format(STR("{} "), const_qualifier), return_type_name, pointer_type);
 	}
@@ -90,9 +123,10 @@ namespace RC::UVTD
 				}
 
 				params.push_back(FunctionParam{
-					.type = generate_type(sub_symbol),
-					.name = get_symbol_name(sub_symbol)
+					.type = generate_type(sub_symbol)
 				});
+
+				sub_symbol = nullptr;
 			}
 			sub_symbol = nullptr;
 		}
@@ -101,48 +135,280 @@ namespace RC::UVTD
 		return params;
 	}
 
-	auto Symbols::generate_function_signature(CComPtr<IDiaSymbol>& symbol) -> FunctionSignature
+	auto Symbols::generate_function_signature(CComPtr<IDiaSymbol>& symbol) -> MethodSignature
 	{
-		DWORD tag;
-		symbol->get_symTag(&tag);
-		auto params = generate_function_params(symbol);
 		auto return_type = generate_type(symbol);
-		auto const_qualifier = generate_const_qualifier(symbol);
-
-		return FunctionSignature{
+		auto params = generate_function_params(symbol);
+		return MethodSignature{
 			.return_type = return_type,
-			.name = get_symbol_name(symbol),
+			.name = STR("none"),
 			.params = params,
-			.const_qualifier = const_qualifier
+			.const_qualifier = false
 		};
+// 		DWORD tag;
+// 		symbol->get_symTag(&tag);
+// 		auto params = generate_function_params(symbol);
+// 		auto return_type = generate_type(symbol);
+// 		auto const_qualifier = generate_const_qualifier(symbol);
+// 
+// 		return FunctionSignature{
+// 			.return_type = return_type,
+// 			.name = get_symbol_name(symbol),
+// 			.params = params,
+// 			.const_qualifier = const_qualifier
+// 		};
 	}
 
-	auto Symbols::setup_symbol_loader() -> void
+	auto Symbols::generate_method_signature(const PDB::TPIStream& tpi_stream, const PDB::CodeView::TPI::FieldList* method_record) -> MethodSignature
 	{
-		if (!std::filesystem::exists(pdb_file))
+		MethodSignature signature{};
+
+		auto function_record = tpi_stream.GetTypeRecord(method_record->data.LF_ONEMETHOD.index);
+		auto this_pointer = tpi_stream.GetTypeRecord(function_record->data.LF_MFUNCTION.thistype);
+
+		signature.name = Symbols::get_method_name(method_record);
+		signature.const_qualifier = this_pointer->data.LF_POINTER.attr.isconst;
+
+		auto arg_list = tpi_stream.GetTypeRecord(function_record->data.LF_MFUNCTION.arglist);
+		for (size_t i = 0; i < function_record->data.LF_MFUNCTION.parmcount; i++)
 		{
-			throw std::runtime_error{ std::format("PDB '{}' not found", pdb_file.string()) };
+			auto argument = Symbols::get_type_name(tpi_stream, arg_list->data.LF_ARGLIST.arg[i]);
+			signature.params.push_back(FunctionParam{
+				.type = argument
+			});
 		}
 
-		auto hr = CoCreateInstance(CLSID_DiaSource, nullptr, CLSCTX_INPROC_SERVER, __uuidof(IDiaDataSource), reinterpret_cast<void**>(&dia_source));
-		if (FAILED(hr))
+		if (function_record->data.LF_MFUNCTION.rvtype)
 		{
-			throw std::runtime_error{ std::format("CoCreateInstance failed. Register msdia140.dll. Error: {}", HRESULTToString(hr)) };
+			signature.return_type = Symbols::get_type_name(tpi_stream, function_record->data.LF_MFUNCTION.rvtype);
 		}
 
-		if (hr = dia_source->loadDataFromPdb(pdb_file.c_str()); FAILED(hr))
+		return signature;
+	}
+
+	auto Symbols::get_type_name(const PDB::TPIStream& tpi_stream, uint32_t record_index) -> File::StringType
+	{
+		if (record_index < tpi_stream.GetFirstTypeIndex())
 		{
-			throw std::runtime_error{ std::format("Failed to load symbol data with error: {}", HRESULTToString(hr)) };
+			auto type = static_cast<PDB::CodeView::TPI::TypeIndexKind>(record_index);
+			switch (type)
+			{
+			case PDB::CodeView::TPI::TypeIndexKind::T_NOTYPE:
+				return STR("<NO TYPE>");
+			case PDB::CodeView::TPI::TypeIndexKind::T_HRESULT:
+				return STR("HRESULT");
+			case PDB::CodeView::TPI::TypeIndexKind::T_32PHRESULT:
+			case PDB::CodeView::TPI::TypeIndexKind::T_64PHRESULT:
+				return STR("PHRESULT");
+			case PDB::CodeView::TPI::TypeIndexKind::T_VOID:
+				return STR("void");
+			case PDB::CodeView::TPI::TypeIndexKind::T_32PVOID:
+			case PDB::CodeView::TPI::TypeIndexKind::T_64PVOID:
+			case PDB::CodeView::TPI::TypeIndexKind::T_PVOID:
+				return STR("void*");
+
+			case PDB::CodeView::TPI::TypeIndexKind::T_32PBOOL08:
+			case PDB::CodeView::TPI::TypeIndexKind::T_32PBOOL16:
+			case PDB::CodeView::TPI::TypeIndexKind::T_32PBOOL32:
+			case PDB::CodeView::TPI::TypeIndexKind::T_32PBOOL64:
+			case PDB::CodeView::TPI::TypeIndexKind::T_64PBOOL08:
+			case PDB::CodeView::TPI::TypeIndexKind::T_64PBOOL16:
+			case PDB::CodeView::TPI::TypeIndexKind::T_64PBOOL32:
+			case PDB::CodeView::TPI::TypeIndexKind::T_64PBOOL64:
+				return STR("bool*");
+
+			case PDB::CodeView::TPI::TypeIndexKind::T_BOOL08:
+			case PDB::CodeView::TPI::TypeIndexKind::T_BOOL16:
+			case PDB::CodeView::TPI::TypeIndexKind::T_BOOL32:
+				return STR("bool");
+
+			case PDB::CodeView::TPI::TypeIndexKind::T_RCHAR:
+			case PDB::CodeView::TPI::TypeIndexKind::T_CHAR:
+				return STR("char");
+			case PDB::CodeView::TPI::TypeIndexKind::T_32PRCHAR:
+			case PDB::CodeView::TPI::TypeIndexKind::T_32PCHAR:
+			case PDB::CodeView::TPI::TypeIndexKind::T_64PRCHAR:
+			case PDB::CodeView::TPI::TypeIndexKind::T_64PCHAR:
+			case PDB::CodeView::TPI::TypeIndexKind::T_PRCHAR:
+			case PDB::CodeView::TPI::TypeIndexKind::T_PCHAR:
+				return STR("char*");
+
+			case PDB::CodeView::TPI::TypeIndexKind::T_UCHAR:
+				return STR("unsigned char");
+			case PDB::CodeView::TPI::TypeIndexKind::T_32PUCHAR:
+			case PDB::CodeView::TPI::TypeIndexKind::T_64PUCHAR:
+			case PDB::CodeView::TPI::TypeIndexKind::T_PUCHAR:
+				return STR("unsigned char*");
+			case PDB::CodeView::TPI::TypeIndexKind::T_WCHAR:
+				return STR("wchar_t");
+			case PDB::CodeView::TPI::TypeIndexKind::T_32PWCHAR:
+			case PDB::CodeView::TPI::TypeIndexKind::T_64PWCHAR:
+			case PDB::CodeView::TPI::TypeIndexKind::T_PWCHAR:
+				return STR("wchar_t*");
+			case PDB::CodeView::TPI::TypeIndexKind::T_SHORT:
+				return STR("int16_t");
+			case PDB::CodeView::TPI::TypeIndexKind::T_32PSHORT:
+			case PDB::CodeView::TPI::TypeIndexKind::T_64PSHORT:
+			case PDB::CodeView::TPI::TypeIndexKind::T_PSHORT:
+				return STR("int16_t*");
+			case PDB::CodeView::TPI::TypeIndexKind::T_USHORT:
+				return STR("uint16_t");
+			case PDB::CodeView::TPI::TypeIndexKind::T_32PUSHORT:
+			case PDB::CodeView::TPI::TypeIndexKind::T_64PUSHORT:
+			case PDB::CodeView::TPI::TypeIndexKind::T_PUSHORT:
+				return STR("uint16_t*");
+			case PDB::CodeView::TPI::TypeIndexKind::T_LONG:
+				return STR("int32_t");
+			case PDB::CodeView::TPI::TypeIndexKind::T_32PLONG:
+			case PDB::CodeView::TPI::TypeIndexKind::T_64PLONG:
+			case PDB::CodeView::TPI::TypeIndexKind::T_PLONG:
+				return STR("int32_t*");
+			case PDB::CodeView::TPI::TypeIndexKind::T_ULONG:
+				return STR("uint32_t");
+			case PDB::CodeView::TPI::TypeIndexKind::T_32PULONG:
+			case PDB::CodeView::TPI::TypeIndexKind::T_64PULONG:
+			case PDB::CodeView::TPI::TypeIndexKind::T_PULONG:
+				return STR("uint32_t*");
+			case PDB::CodeView::TPI::TypeIndexKind::T_REAL32:
+				return STR("float");
+			case PDB::CodeView::TPI::TypeIndexKind::T_32PREAL32:
+			case PDB::CodeView::TPI::TypeIndexKind::T_64PREAL32:
+			case PDB::CodeView::TPI::TypeIndexKind::T_PREAL32:
+				return STR("float*");
+			case PDB::CodeView::TPI::TypeIndexKind::T_REAL64:
+				return STR("double");
+			case PDB::CodeView::TPI::TypeIndexKind::T_32PREAL64:
+			case PDB::CodeView::TPI::TypeIndexKind::T_64PREAL64:
+			case PDB::CodeView::TPI::TypeIndexKind::T_PREAL64:
+				return STR("double*");
+			case PDB::CodeView::TPI::TypeIndexKind::T_QUAD:
+				return STR("int64_t");
+			case PDB::CodeView::TPI::TypeIndexKind::T_32PQUAD:
+			case PDB::CodeView::TPI::TypeIndexKind::T_64PQUAD:
+			case PDB::CodeView::TPI::TypeIndexKind::T_PQUAD:
+				return STR("int64_t*");
+			case PDB::CodeView::TPI::TypeIndexKind::T_UQUAD:
+				return STR("uint64_t");
+			case PDB::CodeView::TPI::TypeIndexKind::T_32PUQUAD:
+			case PDB::CodeView::TPI::TypeIndexKind::T_64PUQUAD:
+			case PDB::CodeView::TPI::TypeIndexKind::T_PUQUAD:
+				return STR("uint64_t*");
+			case PDB::CodeView::TPI::TypeIndexKind::T_INT4:
+				return STR("int32_t");
+			case PDB::CodeView::TPI::TypeIndexKind::T_32PINT4:
+			case PDB::CodeView::TPI::TypeIndexKind::T_64PINT4:
+			case PDB::CodeView::TPI::TypeIndexKind::T_PINT4:
+				return STR("int32_t*");
+			case PDB::CodeView::TPI::TypeIndexKind::T_UINT4:
+				return STR("uint32_t");
+			case PDB::CodeView::TPI::TypeIndexKind::T_32PUINT4:
+			case PDB::CodeView::TPI::TypeIndexKind::T_64PUINT4:
+			case PDB::CodeView::TPI::TypeIndexKind::T_PUINT4:
+				return STR("uint32_t*");
+			default:
+				__debugbreak();
+				return STR("<UNKNOWN TYPE>");
+				break;
+			}
 		}
 
-		if (hr = dia_source->openSession(&dia_session); FAILED(hr))
+		auto* record = tpi_stream.GetTypeRecord(record_index);
+		if (!record) return STR("<NONE>");
+
+		switch (record->header.kind)
 		{
-			throw std::runtime_error{ std::format("Call to 'openSession' failed with error: {}", HRESULTToString(hr)) };
+		case PDB::CodeView::TPI::TypeRecordKind::LF_CLASS:
+		case PDB::CodeView::TPI::TypeRecordKind::LF_STRUCTURE:
+			return get_leaf_name(record->data.LF_CLASS.data, record->data.LF_CLASS.lfEasy.kind);
+		case PDB::CodeView::TPI::TypeRecordKind::LF_ENUM:
+			return to_string_type(record->data.LF_ENUM.name);
+		case PDB::CodeView::TPI::TypeRecordKind::LF_MODIFIER:
+		{
+			const auto modifier_attr = record->data.LF_MODIFIER.attr;
+			std::vector<File::StringType> modifiers{};
+
+			if (modifier_attr.MOD_const)
+				modifiers.push_back(STR("const"));
+			if (modifier_attr.MOD_volatile)
+				modifiers.push_back(STR("volatile"));
+
+			File::StringType modifier_string{};
+			for (const auto& modifier : modifiers)
+			{
+				modifier_string += modifier + STR(" ");
+			}
+
+			return modifier_string + get_type_name(tpi_stream, record->data.LF_MODIFIER.type);
+		}
+		case PDB::CodeView::TPI::TypeRecordKind::LF_POINTER: 
+			return get_type_name(tpi_stream, record->data.LF_POINTER.utype) + STR("*");
+		case PDB::CodeView::TPI::TypeRecordKind::LF_PROCEDURE:
+		{
+			auto return_type = get_type_name(tpi_stream, record->data.LF_PROCEDURE.rvtype);
+			// todo: call params
+			return return_type + STR(" (*)");
+		}
+		default:
+			__debugbreak();
+			return STR("<UNKNOWN TYPE>");
+		}
+	}
+
+	auto Symbols::get_method_name(const PDB::CodeView::TPI::FieldList* method_record) -> File::StringType
+	{
+		auto methodAttributes = static_cast<PDB::CodeView::TPI::MethodProperty>(method_record->data.LF_ONEMETHOD.attributes.mprop);
+		switch (methodAttributes)
+		{
+		case PDB::CodeView::TPI::MethodProperty::Intro:
+		case PDB::CodeView::TPI::MethodProperty::PureIntro:
+			return to_string_type(&reinterpret_cast<const char*>(method_record->data.LF_ONEMETHOD.vbaseoff)[sizeof(uint32_t)]);
+		default:
+			break;
 		}
 
-		if (hr = dia_session->get_globalScope(&dia_global_symbol); FAILED(hr))
+		return to_string_type(&reinterpret_cast<const char*>(method_record->data.LF_ONEMETHOD.vbaseoff)[0]);
+	}
+
+	auto static get_leaf_size(PDB::CodeView::TPI::TypeRecordKind kind) -> size_t
+	{
+		if (kind < PDB::CodeView::TPI::TypeRecordKind::LF_NUMERIC)
 		{
-			throw std::runtime_error{ std::format("Call to 'get_globalScope' failed with error: {}", HRESULTToString(hr)) };
+			// No leaf can have an index less than LF_NUMERIC (0x8000)
+			// so word is the value...
+			return sizeof(PDB::CodeView::TPI::TypeRecordKind);
 		}
+
+		switch (kind)
+		{
+		case PDB::CodeView::TPI::TypeRecordKind::LF_CHAR:
+			return sizeof(PDB::CodeView::TPI::TypeRecordKind) + sizeof(uint8_t);
+
+		case PDB::CodeView::TPI::TypeRecordKind::LF_USHORT:
+		case PDB::CodeView::TPI::TypeRecordKind::LF_SHORT:
+			return sizeof(PDB::CodeView::TPI::TypeRecordKind) + sizeof(uint16_t);
+
+		case PDB::CodeView::TPI::TypeRecordKind::LF_LONG:
+		case PDB::CodeView::TPI::TypeRecordKind::LF_ULONG:
+			return sizeof(PDB::CodeView::TPI::TypeRecordKind) + sizeof(uint32_t);
+
+		case PDB::CodeView::TPI::TypeRecordKind::LF_QUADWORD:
+		case PDB::CodeView::TPI::TypeRecordKind::LF_UQUADWORD:
+			return sizeof(PDB::CodeView::TPI::TypeRecordKind) + sizeof(uint64_t);
+		}
+		return 0;
+	}
+
+	auto Symbols::get_leaf_name(const char* data, PDB::CodeView::TPI::TypeRecordKind kind) -> File::StringType
+	{
+		return to_string_type(&data[get_leaf_size(kind)]);
+	}
+
+	auto Symbols::clean_name(const File::StringType& name) -> File::StringType
+	{
+		File::StringType name_clean{ name };
+		std::replace(name_clean.begin(), name_clean.end(), ':', '_');
+		std::replace(name_clean.begin(), name_clean.end(), '~', '$');
+
+		return name_clean;
 	}
 }

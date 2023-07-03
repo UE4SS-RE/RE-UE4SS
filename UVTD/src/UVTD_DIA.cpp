@@ -87,22 +87,27 @@ namespace RC::UVTD
         for (const std::filesystem::path& pdb : pdbs_to_dump) {
 			TRY([&] {
 				{
-                    Symbols symbols{ pdb };
                     switch (dump_mode) {
                     case DumpMode::VTable: {
-                        VTableDumper dumper{ symbols };
+						Symbols symbols{ pdb };
+
+                        VTableDumper dumper{ std::move(symbols) };
                         dumper.generate_code();
                         dumper.generate_files();
                         break;
                     }
                     case DumpMode::MemberVars: {
-                        MemberVarsDumper dumper{ symbols };
+						Symbols symbols{ pdb };
+
+                        MemberVarsDumper dumper{ std::move(symbols) };
                         dumper.generate_code();
                         dumper.generate_files();
                         break;
                     }
                     case DumpMode::SolBindings: {
-                        SolBindingsGenerator generator{ symbols };
+						Symbols symbols{ pdb };
+
+                        SolBindingsGenerator generator{ std::move(symbols) };
                         generator.generate_code();
                         generator.generate_files();
                     }

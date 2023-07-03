@@ -8,6 +8,10 @@
 
 #include <File/File.hpp>
 
+#include <PDB_RawFile.h>
+#include <PDB_DBIStream.h>
+#include <PDB_TPIStream.h>
+
 #include <atlbase.h>
 #include <dia2.h>
 
@@ -47,15 +51,14 @@ namespace RC::UVTD
 	struct FunctionParam
 	{
 		File::StringType type;
-		File::StringType name;
 
 		auto to_string() const -> File::StringType
 		{
-			return std::format(STR("{} {}"), type, name);
+			return std::format(STR("{}"), type);
 		}
 	};
 
-	struct FunctionSignature
+	struct MethodSignature
 	{
 		File::StringType return_type;
 		File::StringType name;
@@ -76,10 +79,10 @@ namespace RC::UVTD
 		}
 	};
 
-	struct FunctionBody
+	struct MethodBody
 	{
 		File::StringType name;
-		FunctionSignature signature;
+		MethodSignature signature;
 		uint32_t offset;
 		bool is_overload;
 	};
@@ -88,7 +91,7 @@ namespace RC::UVTD
 	{
 		File::StringType class_name;
 		File::StringType class_name_clean;
-		std::map<uint32_t, FunctionBody> functions;
+		std::map<uint32_t, MethodBody> functions;
 		// Key: Variable name
 		std::map<File::StringType, MemberVariable> variables;
 		uint32_t last_virtual_offset;
@@ -101,7 +104,6 @@ namespace RC::UVTD
 		struct MemberVariable
 		{
 			File::StringType type;
-			File::StringType name;
 			int32_t offset;
 		};
 
@@ -116,7 +118,7 @@ namespace RC::UVTD
 		{
 			File::StringType class_name;
 			File::StringType class_name_clean;
-			std::map<uint32_t, FunctionBody> functions;
+			std::map<uint32_t, MethodBody> functions;
 			// Key: Variable name
 			std::map<File::StringType, MemberVariable> variables;
 			uint32_t last_virtual_offset;
@@ -125,28 +127,22 @@ namespace RC::UVTD
 		};
 
 	public:
-		std::filesystem::path pdb_file;
+		std::filesystem::path pdb_file_path;
+		File::Handle pdb_file_handle;
+		std::span<uint8_t> pdb_file_map;
+
+		PDB::RawFile pdb_file;
+		PDB::DBIStream dbi_stream;
+		PDB::TPIStream tpi_stream;
 		bool is_425_plus;
 
 		std::unordered_map<File::StringType, EnumEntry> enum_entries;
 		std::unordered_map<File::StringType, Class> class_entries;
 
-		CComPtr<IDiaDataSource> dia_source;
-		CComPtr<IDiaSession> dia_session;
-		CComPtr<IDiaSymbol> dia_global_symbol;
-
 	public:
 		Symbols() = delete;
 
-		explicit Symbols(std::filesystem::path pdb_file) : pdb_file(std::move(pdb_file))
-		{
-			auto version_string = this->pdb_file.filename().stem().string();
-			auto major_version = std::atoi(version_string.substr(0, 1).c_str());
-			auto minor_version = std::atoi(version_string.substr(2).c_str());
-			is_425_plus = (major_version > 4) || (major_version == 4 && minor_version >= 25);
-
-			setup_symbol_loader();
-		}
+		explicit Symbols(std::filesystem::path pdb_file_path);
 
 	public:
 		auto get_or_create_enum_entry(const File::StringType& symbol_name, const File::StringType& symbol_name_clean) -> EnumEntry&;
@@ -156,7 +152,16 @@ namespace RC::UVTD
 		auto generate_type(CComPtr<IDiaSymbol>& symbol) -> File::StringType;
 
 		auto generate_function_params(CComPtr<IDiaSymbol>& symbol) -> std::vector<FunctionParam>;
-		auto generate_function_signature(CComPtr<IDiaSymbol>& symbol) -> FunctionSignature;
+		auto generate_function_signature(CComPtr<IDiaSymbol>& symbol) -> MethodSignature;
+
+		auto generate_method_signature(const PDB::TPIStream& tpi_stream, const PDB::CodeView::TPI::FieldList* method_record) -> MethodSignature;
+
+	public:
+		auto static get_type_name(const PDB::TPIStream& tpi_stream, uint32_t record_index) -> File::StringType;
+		auto static get_method_name(const PDB::CodeView::TPI::FieldList* method_record) -> File::StringType;
+		auto static get_leaf_name(const char* data, PDB::CodeView::TPI::TypeRecordKind kind) -> File::StringType;
+
+		auto static clean_name(const File::StringType& name) -> File::StringType;
 
 	private:
 		auto setup_symbol_loader() -> void;
