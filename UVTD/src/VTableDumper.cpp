@@ -171,7 +171,7 @@ namespace RC::UVTD
             function_body_file_device.set_file_name_and_path(vtable_gen_output_function_bodies_path / std::format(STR("{}_VTableOffsets_{}_FunctionBody.cpp"), pdb_name, class_name));
             function_body_file_device.set_formatter([](File::StringViewType string) {
                 return File::StringType{ string };
-                });
+            });
 
             for (const auto& [function_index, function_entry] : class_entry.functions)
             {
@@ -195,7 +195,7 @@ namespace RC::UVTD
         ini_file_device.set_file_name_and_path(vtable_templates_output_path / template_file);
         ini_file_device.set_formatter([](File::StringViewType string) {
             return File::StringType{ string };
-            });
+        });
 
         for (const auto& [class_name, class_entry] : type_container.get_class_entries())
         {

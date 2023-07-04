@@ -61,14 +61,14 @@ namespace RC::UVTD
             "PDBs/5_02.pdb",
         };
 
-		CoInitializeEx(nullptr, COINIT_MULTITHREADED);
+        CoInitializeEx(nullptr, COINIT_MULTITHREADED);
 
         for (const std::filesystem::path& pdb : pdbs_to_dump) {
-			TRY([&] {
-				{
+            TRY([&] {
+                {
                     switch (dump_mode) {
                     case DumpMode::VTable: {
-						Symbols symbols{ pdb };
+                        Symbols symbols{ pdb };
 
                         VTableDumper dumper{ std::move(symbols) };
                         dumper.generate_code();
@@ -76,7 +76,7 @@ namespace RC::UVTD
                         break;
                     }
                     case DumpMode::MemberVars: {
-						Symbols symbols{ pdb };
+                        Symbols symbols{ pdb };
 
                         MemberVarsDumper dumper{ std::move(symbols) };
                         dumper.generate_code();
@@ -84,7 +84,7 @@ namespace RC::UVTD
                         break;
                     }
                     case DumpMode::SolBindings: {
-						Symbols symbols{ pdb };
+                        Symbols symbols{ pdb };
 
                         SolBindingsGenerator generator{ std::move(symbols) };
                         generator.generate_code();
@@ -93,10 +93,10 @@ namespace RC::UVTD
                     }
 
                     Output::send(STR("Code generated.\n"));
-				}
-			});
+                }
+            });
         }
 
-		CoUninitialize();
+        CoUninitialize();
     }
 }

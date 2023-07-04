@@ -9,21 +9,21 @@
 
 namespace RC::UVTD
 {
-	class SolBindingsGenerator
-	{
-	private:
-		Symbols symbols;
-		TypeContainer type_container;
+    class SolBindingsGenerator
+    {
+    private:
+        Symbols symbols;
+        TypeContainer type_container;
 
-	public:
-		SolBindingsGenerator() = delete;
+    public:
+        SolBindingsGenerator() = delete;
 
-		explicit SolBindingsGenerator(Symbols symbols) : symbols(std::move(symbols)) {}
+        explicit SolBindingsGenerator(Symbols symbols) : symbols(std::move(symbols)) {}
 
-	public:
-		auto generate_code() -> void;
-		auto generate_files() -> void;
-	};
+    public:
+        auto generate_code() -> void;
+        auto generate_files() -> void;
+    };
 }
 
 #endif

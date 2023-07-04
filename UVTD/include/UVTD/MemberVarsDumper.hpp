@@ -9,19 +9,19 @@
 
 namespace RC::UVTD
 {
-	class MemberVarsDumper
-	{
-	private:
-		Symbols symbols;
-		TypeContainer type_container;
+    class MemberVarsDumper
+    {
+    private:
+        Symbols symbols;
+        TypeContainer type_container;
 
-	public:
-		MemberVarsDumper() = delete;
-		explicit MemberVarsDumper(Symbols symbols) : symbols(std::move(symbols))
-		{
+    public:
+        MemberVarsDumper() = delete;
+        explicit MemberVarsDumper(Symbols symbols) : symbols(std::move(symbols))
+        {
 
 
-		}
+        }
 
     private:
         auto process_class(const PDB::TPIStream& tpi_stream, const PDB::CodeView::TPI::Record* class_record, const File::StringType& class_name, const SymbolNameInfo& name_info) -> void;
@@ -30,13 +30,13 @@ namespace RC::UVTD
     private:
         auto dump_member_variable_layouts(std::unordered_map<File::StringType, SymbolNameInfo>& names) -> void;
 
-	public:
-		auto generate_code() -> void;
-		auto generate_files() -> void;
+    public:
+        auto generate_code() -> void;
+        auto generate_files() -> void;
 
-	public:
-		auto get_type_container() const -> const TypeContainer& { return type_container; }
-	};
+    public:
+        auto get_type_container() const -> const TypeContainer& { return type_container; }
+    };
 }
 
 #endif
