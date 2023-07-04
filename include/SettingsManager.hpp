@@ -6,6 +6,8 @@
 
 #include <Common.hpp>
 #include <File/File.hpp>
+#include <glaze/glaze.hpp>
+#include <glaze/core/macros.hpp>
 #include <GUI/GUI.hpp>
 
 namespace RC
@@ -99,6 +101,117 @@ namespace RC
     public:
         auto deserialize(std::filesystem::path& file_name) -> void;
     };
+
+    /*class RC_UE4SS_API ProgramSettingsManager
+    {
+    public:
+        struct ProgramSettings
+        {
+            /*Path Override Settings#1#
+            File::StringType ModsFolderPath{};
+            
+            /*General Settings#1#
+            bool EnableHotReloadSystem{false};
+            bool UseCache{true};
+            bool InvalidateCacheIfDLLDiffers{true};
+            bool EnableDebugKeyBindings{false};
+            int64_t SecondsToScanBeforeGivingUp{30};
+            bool UseUObjectArrayCache{true};
+
+            /*Engine Version Override Settings#1#
+            int64_t MajorVersion{-1};
+            int64_t MinorVersion{-1};
+
+            /*ObjectDumper Settings#1#
+            bool LoadAllAssetsBeforeDumpingObjects{false};
+
+
+            /*CXXHeaderGenerator Settings#1#
+            bool DumpOffsetsAndSizes{true};
+            bool KeepMemoryLayout{false};
+            bool LoadAllAssetsBeforeGeneratingCXXHeaders{false};
+
+
+            /*UHTHeaderGenerator Settings#1#
+            bool IgnoreAllCoreEngineModules{false};
+            bool IgnoreEngineAndCoreUObject{true};
+            bool MakeAllFunctionsBlueprintCallable{true};
+            bool MakeAllPropertyBlueprintsReadWrite{true};
+            bool MakeEnumClassesBlueprintType{true};
+            bool MakeAllConfigsEngineConfig{true};
+
+            /*Debug Settings#1#
+            bool SimpleConsoleEnabled{true};
+            bool DebugConsoleEnabled{true};
+            bool DebugConsoleVisible{true};
+            float DebugGUIFontScaling{1.0};
+            GUI::GfxBackend GraphicsAPI{GUI::GfxBackend::GLFW3_OpenGL3};
+            int64_t LiveViewObjectsPerGroup{64 * 1024 / 2};
+
+            /*Scan Threads Settings#1#
+            int64_t SigScannerNumThreads{8};
+            int64_t SigScannerMultithreadingModuleSizeThreshold{16777216};
+
+            /*Memory Usage Settings#1#
+            int64_t MaxMemoryUsageDuringAssetLoading{85};
+
+            /*Hook Settings#1#
+            bool HookProcessInternal{true};
+            bool HookProcessLocalScriptFunction{true};
+            bool HookInitGameState{true};
+            bool HookCallFunctionByNameWithArguments{true};
+            bool HookBeginPlay{true};
+            bool HookLocalPlayerExec{true};
+            int64_t FExecVTableOffsetInLocalPlayer{0x28};
+
+            /*Experimental Features Settings#1#
+            bool GUIUFunctionCaller{false};
+        };
+
+        GLZ_META
+        (
+            ProgramSettings,
+            ModsFolderPath,
+            EnableHotReloadSystem,
+            UseCache,
+            InvalidateCacheIfDLLDiffers,
+            EnableDebugKeyBindings,
+            SecondsToScanBeforeGivingUp,
+            UseUObjectArrayCache,
+            MajorVersion,
+            MinorVersion,
+            LoadAllAssetsBeforeDumpingObjects,
+            DumpOffsetsAndSizes,
+            KeepMemoryLayout,
+            LoadAllAssetsBeforeGeneratingCXXHeaders,
+            IgnoreAllCoreEngineModules,
+            IgnoreEngineAndCoreUObject,
+            MakeAllFunctionsBlueprintCallable,
+            MakeAllPropertyBlueprintsReadWrite,
+            MakeEnumClassesBlueprintType,
+            MakeAllConfigsEngineConfig,
+            SimpleConsoleEnabled,
+            DebugConsoleEnabled,
+            DebugConsoleVisible,
+            DebugGUIFontScaling,
+            GraphicsAPI,
+            LiveViewObjectsPerGroup,
+            SigScannerNumThreads,
+            SigScannerMultithreadingModuleSizeThreshold,
+            MaxMemoryUsageDuringAssetLoading,
+            HookProcessInternal,
+            HookProcessLocalScriptFunction,
+            HookInitGameState,
+            HookCallFunctionByNameWithArguments,
+            HookBeginPlay,
+            HookLocalPlayerExec,
+            FExecVTableOffsetInLocalPlayer,
+            GUIUFunctionCaller
+        );
+    };*/
+    
 }
+
+
 
 #endif //UE4SS_SETTINGSMANAGER_HPP

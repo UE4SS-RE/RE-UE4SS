@@ -19,7 +19,7 @@ else ()
 endif ()
 
 # We're only using C++20 features but we need to use C++23 so that we get std::format which only exists in the "latest" flag in MSVC
-set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD 23)
 
 set(TARGET ue4ss)
 project(${TARGET})
@@ -201,8 +201,10 @@ add_subdirectory("Dependencies/FunctionTimer")
 add_subdirectory("Dependencies/ScopedTimer")
 add_subdirectory("Dependencies/ParserBase")
 add_subdirectory("Dependencies/IniParser")
+add_subdirectory("Dependencies/glaze")
 add_subdirectory("Dependencies/JSON")
 add_subdirectory("Dependencies/ArgsParser")
+
 
 # Version override -> START
 file(READ ${UE4SS_GENERATED_SOURCE_DIR}/version.cache UE4SS_LIB_VERSION)
@@ -333,7 +335,7 @@ target_compile_options(${TARGET} PRIVATE ${PRIVATE_COMPILE_OPTIONS})
 target_link_options(${TARGET} PRIVATE ${PRIVATE_LINK_OPTIONS})
 target_compile_features(${TARGET} PUBLIC ${PUBLIC_COMPILE_FEATURES})
 target_compile_definitions(${TARGET} PUBLIC $<${MAKE_DEPENDENCIES_SHARED}:LUA_BUILD_AS_DLL>)
-set(UE4SS_LINK_WITH_LIBRARIES File DynamicOutput Unreal SinglePassSigScanner FunctionTimer Function IniParser JSON Input PolyHook_2 d3d11 GLFW opengl32 luajit lua51)
+set(UE4SS_LINK_WITH_LIBRARIES File DynamicOutput Unreal SinglePassSigScanner FunctionTimer Function IniParser glaze::glaze JSON Input PolyHook_2 d3d11 GLFW opengl32 luajit lua51)
 set(UE4SS_LINK_WITH_INTERFACE_LIBRARIES Function Constructs Helpers MProgram ScopedTimer)
 target_link_libraries(${TARGET} PUBLIC ${UE4SS_LINK_WITH_LIBRARIES} ${UE4SS_LINK_WITH_INTERFACE_LIBRARIES})
 

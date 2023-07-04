@@ -9,3 +9,6 @@
 [submodule "Dependencies/zydis"]
 	path = Dependencies/zydis
 	url = git@github.com:zyantific/zydis.git
+[submodule "Dependencies/glaze"]
+	path = Dependencies/glaze
+	url = git@github.com:stephenberry/glaze.git
