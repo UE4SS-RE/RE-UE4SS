@@ -14,12 +14,12 @@ RegisterHook("/Script/Engine.PlayerController:ClientRestart", function(self, New
     end
     
     local CreatedCheatManager = StaticConstructObject(CheatManagerClass, PlayerController, 0, 0, 0, nil, false, false, nil)
-	if CreatedCheatManager:IsValid() then
+    if CreatedCheatManager:IsValid() then
         print(string.format("[CheatManager Creator] Constructed CheatManager [0x%X]\n", CreatedCheatManager:GetAddress()))
         
-		PlayerController.CheatManager = CreatedCheatManager
-		print("[CheatManager Creator] Enabled CheatManager\n")
-	else
-		print("[CheatManager Creator] Was unable to construct CheatManager, therefor, could not enable Cheat Manager\n")
-	end
+        PlayerController.CheatManager = CreatedCheatManager
+        print("[CheatManager Creator] Enabled CheatManager\n")
+    else
+        print("[CheatManager Creator] Was unable to construct CheatManager, therefor, could not enable Cheat Manager\n")
+    end
 end)

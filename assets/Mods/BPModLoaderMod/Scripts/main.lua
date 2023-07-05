@@ -266,7 +266,7 @@ local function LoadMods(GameMode)
 end
 
 local function LoadModsManual()
-	LoadMods(UEHelpers.GetWorld())
+    LoadMods(UEHelpers.GetWorld())
 end
 
 RegisterInitGameStatePostHook(function(ContextParam)
