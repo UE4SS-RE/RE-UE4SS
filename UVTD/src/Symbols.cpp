@@ -243,6 +243,7 @@ namespace RC::UVTD
         }
         case PDB::CodeView::TPI::TypeRecordKind::LF_POINTER: 
             return get_type_name(tpi_stream, record->data.LF_POINTER.utype) + STR("*");
+        case PDB::CodeView::TPI::TypeRecordKind::LF_MFUNCTION:
         case PDB::CodeView::TPI::TypeRecordKind::LF_PROCEDURE:
         {
             auto return_type = get_type_name(tpi_stream, record->data.LF_PROCEDURE.rvtype);
