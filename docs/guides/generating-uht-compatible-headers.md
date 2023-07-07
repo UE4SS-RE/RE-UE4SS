@@ -2,14 +2,14 @@
 
 ## Supported versions
 
-While the UHT header generator is only officially supported in `4.25+`, it has worked for older game versions (tested on `4.18.3`; `4.17` (has some default property issues that should be fixed soon)).
+While the UHT header generator is only officially supported in `4.25+`, it has worked for older game versions (tested on `4.18.3`; `4.17` (has some default property issues that should be fixed soon)). It also works for `5.0+`.
 
 ## How to use
 
 The key bind to generate headers is by default `CTRL` + `Numpad 9`, and it can be changed in `Mods/Keybinds/Scripts/main.lua`.
 
 To utilize the generated headers to their full potential, see [UE4GameProjectGenerator](https://github.com/Buckminsterfullerene02/UE4GameProjectGenerator) by Archengius (link to Buck's fork because of a couple fixes that Arch is too lazy to merge).
-> The project generator only works in `>4.25`. If generating a project for an older engine version, generate it by compiling the project generator for `4.25+`.
+> The project generator is only garuanteed to work in `>4.25`. If generating a project for an older engine version, generate it by compiling the project generator for `4.25+`.
 
 Before compiling the projectgencommandlet, open `GameProjectGenerator.uproject` and your game's pluginmanifest or `.uproject` and add any default engine plugins used by the game or plugins that the game uses and you found open source or purchased (it is not recommended to include purchased plugins in a public uproject) to the commandlet's uproject file.
 
@@ -117,6 +117,103 @@ Remove TEnumAsByte<> (but not the type inside of it) in:
 Then right click the .uproject and hit "regenerate solution files".
 
 If you get the "failed to create version memory for PCH" errors when trying to build or pack, do it again.
+```
+
+### Palia
+```
+Error 1
+
+System.ArgumentException - String cannot contain a minus sign if the base is not 10.
+Note: If you get Null Error on the Same files add:
+
+Null = 0x0
+
+Fix:
+  Example = -0x1, -> Example = 0x1
+    
+Error 2
+   
+Unable to find 'class', 'delegate', 'enum', or 'struct' with name 'XYZ'    
+
+Fix:
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(XYZ); , close to the Top of header Files.
+
+Error 3
+"is not supported by blueprint.  Function: "
+
+Fix:
+-> Remove BlueprintReadWrite
+-> or Remove BlueprintCallable
+
+Error 4
+XX value wrapped from positive to negative value
+
+Fix:
+
+WHATEVER = UMAP(BLA) -> WHATEVER = 0x0
+
+Error 5
+static_assert failed: 'The structure 'XXX' is used in a TSet but does not have a GetValueTypeHash defined'    
+
+Fix:
+On the Headerfile at the very bottom add:
+
+FORCEINLINE uint32 GetTypeHash(const XXX) { return 0; }
+
+Error 6
+cannot instantiate abstract class
+
+fix:
+
+cpp looks like:
+
+ UAbilitySystemComponent* AActorWithGAS::GetAbilitySystemComponent() const {
+    return nullptr;
+ }
+ 
+ Go to Header File and add:
+ 
+ UAbilitySystemComponent* GetAbilitySystemComponent() const override;
+
+
+Error 7
+modifiers not allowed on static member functions
+
+Fix: 
+Remove the modifier, like "const"
+
+Example:
+static TSoftObjectPtr<Test> SomeFunction(some args) const;  <- remove const
+
+In both h and cpp File.
+
+
+Error 8
+'AAkAMbientSound' no appropriate default consturctor available. 
+
+
+Fix:
+-------
+Header File
+-------
+AkAmbientSound();
+
+->
+
+AkAmbientSound(const class FObjectInitializer& ObjectInitializer);
+
+-------
+CPP File
+-------
+AkAmbientSound::AkAmbientSound() {
+    this->AkEvent = NULL;
+}
+
+->
+
+AkAmbientSound::AkAmbientSound(const class FObjectInitializer& ObjectInitializer) : Super(ObjectInitializer)  {
+    this->AkEvent = NULL;
+}
 ```
 
 ### Astro Colony
