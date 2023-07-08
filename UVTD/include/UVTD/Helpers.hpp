@@ -184,8 +184,6 @@ namespace RC::UVTD
     };
 
     auto to_string_type(const char* c_str) -> File::StringType;
-
-    auto is_valid_type_to_dump(File::StringType type_name) -> bool;
 }
 
 #endif

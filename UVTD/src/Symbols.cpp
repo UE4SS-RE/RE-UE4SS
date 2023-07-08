@@ -134,11 +134,11 @@ namespace RC::UVTD
                 return STR("char*");
 
             case PDB::CodeView::TPI::TypeIndexKind::T_UCHAR:
-                return STR("unsigned char");
+                return STR("uint8");
             case PDB::CodeView::TPI::TypeIndexKind::T_32PUCHAR:
             case PDB::CodeView::TPI::TypeIndexKind::T_64PUCHAR:
             case PDB::CodeView::TPI::TypeIndexKind::T_PUCHAR:
-                return STR("unsigned char*");
+                return STR("uint8*");
             case PDB::CodeView::TPI::TypeIndexKind::T_WCHAR:
                 return STR("wchar_t");
             case PDB::CodeView::TPI::TypeIndexKind::T_32PWCHAR:
@@ -146,29 +146,29 @@ namespace RC::UVTD
             case PDB::CodeView::TPI::TypeIndexKind::T_PWCHAR:
                 return STR("wchar_t*");
             case PDB::CodeView::TPI::TypeIndexKind::T_SHORT:
-                return STR("int16_t");
+                return STR("int16");
             case PDB::CodeView::TPI::TypeIndexKind::T_32PSHORT:
             case PDB::CodeView::TPI::TypeIndexKind::T_64PSHORT:
             case PDB::CodeView::TPI::TypeIndexKind::T_PSHORT:
-                return STR("int16_t*");
+                return STR("int16*");
             case PDB::CodeView::TPI::TypeIndexKind::T_USHORT:
-                return STR("uint16_t");
+                return STR("uint16");
             case PDB::CodeView::TPI::TypeIndexKind::T_32PUSHORT:
             case PDB::CodeView::TPI::TypeIndexKind::T_64PUSHORT:
             case PDB::CodeView::TPI::TypeIndexKind::T_PUSHORT:
-                return STR("uint16_t*");
+                return STR("uint16*");
             case PDB::CodeView::TPI::TypeIndexKind::T_LONG:
-                return STR("int32_t");
+                return STR("int32");
             case PDB::CodeView::TPI::TypeIndexKind::T_32PLONG:
             case PDB::CodeView::TPI::TypeIndexKind::T_64PLONG:
             case PDB::CodeView::TPI::TypeIndexKind::T_PLONG:
-                return STR("int32_t*");
+                return STR("int32*");
             case PDB::CodeView::TPI::TypeIndexKind::T_ULONG:
-                return STR("uint32_t");
+                return STR("uint32");
             case PDB::CodeView::TPI::TypeIndexKind::T_32PULONG:
             case PDB::CodeView::TPI::TypeIndexKind::T_64PULONG:
             case PDB::CodeView::TPI::TypeIndexKind::T_PULONG:
-                return STR("uint32_t*");
+                return STR("uint32*");
             case PDB::CodeView::TPI::TypeIndexKind::T_REAL32:
                 return STR("float");
             case PDB::CodeView::TPI::TypeIndexKind::T_32PREAL32:
@@ -182,29 +182,29 @@ namespace RC::UVTD
             case PDB::CodeView::TPI::TypeIndexKind::T_PREAL64:
                 return STR("double*");
             case PDB::CodeView::TPI::TypeIndexKind::T_QUAD:
-                return STR("int64_t");
+                return STR("int64");
             case PDB::CodeView::TPI::TypeIndexKind::T_32PQUAD:
             case PDB::CodeView::TPI::TypeIndexKind::T_64PQUAD:
             case PDB::CodeView::TPI::TypeIndexKind::T_PQUAD:
-                return STR("int64_t*");
+                return STR("int64*");
             case PDB::CodeView::TPI::TypeIndexKind::T_UQUAD:
-                return STR("uint64_t");
+                return STR("uint64");
             case PDB::CodeView::TPI::TypeIndexKind::T_32PUQUAD:
             case PDB::CodeView::TPI::TypeIndexKind::T_64PUQUAD:
             case PDB::CodeView::TPI::TypeIndexKind::T_PUQUAD:
-                return STR("uint64_t*");
+                return STR("uint64*");
             case PDB::CodeView::TPI::TypeIndexKind::T_INT4:
-                return STR("int32_t");
+                return STR("int32");
             case PDB::CodeView::TPI::TypeIndexKind::T_32PINT4:
             case PDB::CodeView::TPI::TypeIndexKind::T_64PINT4:
             case PDB::CodeView::TPI::TypeIndexKind::T_PINT4:
-                return STR("int32_t*");
+                return STR("int32*");
             case PDB::CodeView::TPI::TypeIndexKind::T_UINT4:
-                return STR("uint32_t");
+                return STR("uint32");
             case PDB::CodeView::TPI::TypeIndexKind::T_32PUINT4:
             case PDB::CodeView::TPI::TypeIndexKind::T_64PUINT4:
             case PDB::CodeView::TPI::TypeIndexKind::T_PUINT4:
-                return STR("uint32_t*");
+                return STR("uint32*");
             default:
                 __debugbreak();
                 return STR("<UNKNOWN TYPE>");
@@ -227,8 +227,6 @@ namespace RC::UVTD
             const auto modifier_attr = record->data.LF_MODIFIER.attr;
             std::vector<File::StringType> modifiers{};
 
-            if (modifier_attr.MOD_const)
-                modifiers.push_back(STR("const"));
             if (modifier_attr.MOD_volatile)
                 modifiers.push_back(STR("volatile"));
 
@@ -246,8 +244,16 @@ namespace RC::UVTD
         case PDB::CodeView::TPI::TypeRecordKind::LF_PROCEDURE:
         {
             auto return_type = get_type_name(tpi_stream, record->data.LF_PROCEDURE.rvtype);
-            // todo: call params
-            return return_type + STR(" (*)");
+            auto arg_list = tpi_stream.GetTypeRecord(record->data.LF_PROCEDURE.arglist);
+            File::StringType args{};
+
+            for (size_t i = 0; i < arg_list->data.LF_ARGLIST.count; i++)
+            {
+                bool should_add_comma = i < arg_list->data.LF_ARGLIST.count - 1;
+                args.append(std::format(STR("{}{}"), get_type_name(tpi_stream, arg_list->data.LF_ARGLIST.arg[i]), should_add_comma ? STR(", ") : STR("")));
+            }
+
+            return std::format(STR("Function<{}({})>"), return_type, args);
         }
         case PDB::CodeView::TPI::TypeRecordKind::LF_BITFIELD:
             return get_type_name(tpi_stream, record->data.LF_BITFIELD.type);
