@@ -141,7 +141,7 @@ namespace RC::UVTD
         auto get_or_create_enum_entry(const File::StringType& symbol_name, const File::StringType& symbol_name_clean) -> EnumEntry&;
         auto get_or_create_class_entry(const File::StringType& symbol_name, const File::StringType& symbol_name_clean, const SymbolNameInfo& name_info) -> Class&;
 
-        auto generate_method_signature(const PDB::TPIStream& tpi_stream, const PDB::CodeView::TPI::FieldList* method_record) -> MethodSignature;
+        auto generate_method_signature(const PDB::TPIStream& tpi_stream, const PDB::CodeView::TPI::Record* function_record, File::StringType method_name) -> MethodSignature;
 
     public:
         auto static get_type_name(const PDB::TPIStream& tpi_stream, uint32_t record_index) -> File::StringType;
@@ -149,6 +149,8 @@ namespace RC::UVTD
         auto static get_leaf_name(const char* data, PDB::CodeView::TPI::TypeRecordKind kind) -> File::StringType;
 
         auto static clean_name(const File::StringType& name) -> File::StringType;
+
+        auto static is_virtual(PDB::CodeView::TPI::MemberAttributes attributes) -> bool;
 
     private:
         auto setup_symbol_loader() -> void;

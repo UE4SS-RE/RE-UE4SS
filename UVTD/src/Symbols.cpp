@@ -60,15 +60,14 @@ namespace RC::UVTD
         return *this;
     }
 
-    auto Symbols::generate_method_signature(const PDB::TPIStream& tpi_stream, const PDB::CodeView::TPI::FieldList* method_record) -> MethodSignature
+    auto Symbols::generate_method_signature(const PDB::TPIStream& tpi_stream, const PDB::CodeView::TPI::Record* function_record, File::StringType method_name) -> MethodSignature
     {
         MethodSignature signature{};
 
-        auto function_record = tpi_stream.GetTypeRecord(method_record->data.LF_ONEMETHOD.index);
         auto this_pointer = tpi_stream.GetTypeRecord(function_record->data.LF_MFUNCTION.thistype);
 
-        signature.name = Symbols::get_method_name(method_record);
-        signature.const_qualifier = this_pointer->data.LF_POINTER.attr.isconst;
+        signature.name = method_name;
+        signature.const_qualifier = this_pointer != nullptr ? this_pointer->data.LF_POINTER.attr.isconst : false;
 
         auto arg_list = tpi_stream.GetTypeRecord(function_record->data.LF_MFUNCTION.arglist);
         for (size_t i = 0; i < function_record->data.LF_MFUNCTION.parmcount; i++)
@@ -314,5 +313,11 @@ namespace RC::UVTD
         std::replace(name_clean.begin(), name_clean.end(), '~', '$');
 
         return name_clean;
+    }
+
+    auto Symbols::is_virtual(PDB::CodeView::TPI::MemberAttributes attributes) -> bool
+    {
+        return attributes.mprop == (uint16_t)PDB::CodeView::TPI::MethodProperty::Intro ||
+            attributes.mprop == (uint16_t)PDB::CodeView::TPI::MethodProperty::PureIntro;
     }
 }
