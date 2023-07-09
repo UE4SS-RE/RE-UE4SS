@@ -2558,6 +2558,9 @@ Overloads:
 
             TRY([&]() { lua_data.lua->call_function(0, 0); });
 
+            // thread_ref came from lua_newthread, we can let it GC now.
+            luaL_unref(lua_data.lua->get_lua_state(), LUA_REGISTRYINDEX, lua_data.lua_action_thread_ref);
+
             // No longer promising to be in the game thread
             set_is_in_game_thread(*lua_data.lua, false);
             LuaMod::m_is_currently_executing_game_action = false;
@@ -2583,15 +2586,16 @@ Overloads:
             if (!lua.is_function()) { lua.throw_error(error_overload_not_found); }
 
             auto mod = get_mod_ref(lua);
-            auto hook_lua = make_hook_state(mod);
+            auto hook_lua = make_hook_state(mod); // operates on LuaMod::m_lua incrementing its stack via lua_newthread
 
             // Duplicate the Lua function to the top of the stack for lua_xmove and luaL_ref
-            lua_pushvalue(lua.get_lua_state(), 1);
+            lua_pushvalue(lua.get_lua_state(), 1); // operates on LuaMadeSimple::Lua::m_lua_state
 
             lua_xmove(lua.get_lua_state(), hook_lua->get_lua_state(), 1);
 
             // Take a reference to the Lua function (it also pops it of the stack)
             const auto lua_callback_registry_index = luaL_ref(hook_lua->get_lua_state(), LUA_REGISTRYINDEX);
+            const auto lua_thread_registry_index = luaL_ref(mod->lua().get_lua_state(), LUA_REGISTRYINDEX);
 
             Unreal::UFunction* unreal_function = Unreal::UObjectGlobals::StaticFindObject<Unreal::UFunction*>(nullptr, nullptr, function_name_no_prefix);
             if (!unreal_function)
@@ -2614,7 +2618,8 @@ Overloads:
                         unreal_function,
                         mod,
                         *hook_lua,
-                        lua_callback_registry_index
+                        lua_callback_registry_index,
+                        lua_thread_registry_index
                         })
                 );
                 auto pre_id = unreal_function->RegisterPreHook(&lua_unreal_script_function_hook_pre, custom_data.get());
@@ -2669,13 +2674,17 @@ Overloads:
 
             lua_xmove(lua.get_lua_state(), hook_lua->get_lua_state(), 1);
 
+            const auto func_ref = luaL_ref(hook_lua->get_lua_state(), LUA_REGISTRYINDEX);
+            const auto thread_ref = luaL_ref(mod->lua().get_lua_state(), LUA_REGISTRYINDEX);
+            SimpleLuaAction simpleAction{hook_lua, func_ref, thread_ref};
             {
                 std::lock_guard<std::recursive_mutex> guard{LuaMod::m_thread_actions_mutex};
-                mod->m_game_thread_actions.emplace_back(SimpleLuaAction{hook_lua, luaL_ref(hook_lua->get_lua_state(), LUA_REGISTRYINDEX)});
+                mod->m_game_thread_actions.emplace_back(simpleAction);
             }
 
             if (!mod->m_is_process_event_hooked)
             {
+                mod->m_is_process_event_hooked = true; // below can't fail, we don't want infinite processevent hooks.
                 Unreal::Hook::RegisterProcessEventPreCallback(&process_event_hook);
             }
 
@@ -2900,11 +2909,22 @@ Overloads:
         start_async_thread();
 
         m_is_started = true;
-        main_lua()->execute_file(m_scripts_path + L"\\main.lua");
+        // Don't crash on syntax errors.
+        try
+        {
+            main_lua()->execute_file(m_scripts_path + L"\\main.lua");
+        }
+        catch (std::runtime_error& e)
+        {
+            Output::send<LogLevel::Error>(STR("{}\n"), to_wstring(e.what()));
+        }
     }
 
     auto LuaMod::uninstall() -> void
     {
+        // ProcessEvent hook may try to run, and the lua state will not be valid
+        std::lock_guard<std::recursive_mutex> guard{LuaMod::m_thread_actions_mutex};
+
         Output::send(STR("Stopping mod '{}' for uninstall\n"), m_mod_name);
         
         if (m_async_thread.joinable())
@@ -2915,10 +2935,7 @@ Overloads:
 
         if (m_hook_lua.size() > 0)
         {
-            for (auto lua : m_hook_lua)
-            {
-                lua_resetthread(lua->get_lua_state());
-            }
+            m_hook_lua.clear(); // lua_newthread results are handled by lua GC
         }
 
         if (m_async_lua && m_async_lua->get_lua_state())

@@ -46,6 +46,7 @@ namespace RC
         {
             const LuaMadeSimple::Lua* lua;
             int32_t lua_action_function_ref{};
+            int32_t lua_action_thread_ref{};
         };
 
         struct AsyncAction
