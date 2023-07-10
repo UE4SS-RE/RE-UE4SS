@@ -102,6 +102,14 @@ namespace RC::GUI
         {
             return;
         }
+        if (!LiveView::s_search_options.exclude_class_name.empty())
+        {
+            auto class_name = object->GetClassPrivate()->GetName();
+            if (auto pos = class_name.find(LiveView::s_search_options.exclude_class_name); pos != class_name.npos)
+            {
+                return;
+            }
+        }
 
         auto object_full_name = get_object_full_name_cxx_string(object);
         std::transform(object_full_name.begin(), object_full_name.end(), object_full_name.begin(), [](char c) {
@@ -1711,6 +1719,16 @@ namespace RC::GUI
                 if (!default_objects_only_enabled) { ImGui::BeginDisabled(); }
                 ImGui::Checkbox("CDOs only", &s_search_options.default_objects_only);
                 if (!default_objects_only_enabled) { ImGui::EndDisabled(); }
+
+                // Row 4
+                ImGui::TableNextRow();
+                ImGui::TableNextColumn();
+                ImGui::Text("Exclude class name");
+                ImGui::TableNextColumn();
+                if (ImGui::InputText("##ExcludeClassName", &s_search_options.internal_exclude_class_name))
+                {
+                    s_search_options.exclude_class_name = to_wstring(s_search_options.internal_exclude_class_name);
+                }
 
                 ImGui::EndTable();
             }
