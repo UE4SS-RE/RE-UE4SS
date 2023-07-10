@@ -64,6 +64,50 @@ namespace RC::GUI
 
     static auto get_object_full_name_cxx_string(UObject* object) -> std::string;
 
+    static auto filter_out_objects(UObject* object) -> bool
+    {
+        auto is_instance = [&] {
+            return !object->HasAnyFlags(static_cast<EObjectFlags>(RF_ClassDefaultObject | RF_ArchetypeObject)) &&
+                    !object->IsA<UStruct>() &&
+                    !object->IsA<UField>() &&
+                    !object->IsA<UPackage>();
+        };
+
+        if (LiveView::s_search_options.instances_only && !is_instance()) { return true; }
+        if (LiveView::s_search_options.non_instances_only && (object->IsA<UFunction>() || is_instance())) { return true; }
+        if (!LiveView::s_search_options.include_default_objects && object->HasAnyFlags(static_cast<EObjectFlags>(RF_ClassDefaultObject | RF_ArchetypeObject))) { return true; }
+        if (LiveView::s_search_options.default_objects_only && !object->HasAnyFlags(static_cast<EObjectFlags>(RF_ClassDefaultObject | RF_ArchetypeObject))) { return true; }
+        if (LiveView::s_name_search_results_set.contains(object)) { return true; }
+        if (object->IsA<UFunction>() && LiveView::s_search_options.function_param_flags != CPF_None)
+        {
+            auto as_function = static_cast<UFunction*>(object);
+            auto first_property = as_function->GetFirstProperty();
+            if (!first_property || (first_property->HasAnyPropertyFlags(CPF_ReturnParm) && !first_property->HasNext())) { return true; }
+            bool has_all_required_flags{true};
+            for (const auto& param : as_function->ForEachProperty())
+            {
+                if (param->HasAnyPropertyFlags(CPF_ReturnParm) && !LiveView::s_search_options.function_param_flags_include_return_property) { continue; }
+                has_all_required_flags = param->HasAllPropertyFlags(LiveView::s_search_options.function_param_flags);
+            }
+            if (!has_all_required_flags) { return true; }
+        }
+        else if (LiveView::s_search_options.function_param_flags != CPF_None)
+        {
+            return true;
+        }
+
+        if (!LiveView::s_search_options.exclude_class_name.empty())
+        {
+            auto class_name = object->GetClassPrivate()->GetName();
+            if (auto pos = class_name.find(LiveView::s_search_options.exclude_class_name); pos != class_name.npos)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     static auto attempt_to_add_search_result(UObject* object) -> void
     {
         // TODO: Stop using the 'HashObject' function when needing the address of an FFieldClassVariant because it's not designed to return an address.
@@ -73,49 +117,6 @@ namespace RC::GUI
             return;
         }
 
-        auto is_instance = [&] {
-            return !object->HasAnyFlags(static_cast<EObjectFlags>(RF_ClassDefaultObject | RF_ArchetypeObject)) &&
-                    !object->IsA<UStruct>() &&
-                    !object->IsA<UField>() &&
-                    !object->IsA<UPackage>();
-        };
-
-        if (LiveView::s_search_options.instances_only && !is_instance()) { return; }
-        if (LiveView::s_search_options.non_instances_only && (object->IsA<UFunction>() || is_instance())) { return; }
-        if (!LiveView::s_search_options.include_default_objects && object->HasAnyFlags(static_cast<EObjectFlags>(RF_ClassDefaultObject | RF_ArchetypeObject))) { return; }
-        if (LiveView::s_search_options.default_objects_only && !object->HasAnyFlags(static_cast<EObjectFlags>(RF_ClassDefaultObject | RF_ArchetypeObject))) { return; }
-        if (LiveView::s_name_search_results_set.contains(object)) { return; }
-        if (object->IsA<UFunction>() && LiveView::s_search_options.function_param_flags != CPF_None)
-        {
-            auto as_function = static_cast<UFunction*>(object);
-            auto first_property = as_function->GetFirstProperty();
-            if (!first_property || (first_property->HasAnyPropertyFlags(CPF_ReturnParm) && !first_property->HasNext())) { return; }
-            bool has_all_required_flags{true};
-            for (const auto& param : as_function->ForEachProperty())
-            {
-                if (param->HasAnyPropertyFlags(CPF_ReturnParm) && !LiveView::s_search_options.function_param_flags_include_return_property) { continue; }
-                has_all_required_flags = param->HasAllPropertyFlags(LiveView::s_search_options.function_param_flags);
-            }
-            if (!has_all_required_flags) { return; }
-        }
-        else if (LiveView::s_search_options.function_param_flags != CPF_None)
-        {
-            return;
-        }
-        if (!LiveView::s_search_options.exclude_class_name.empty())
-        {
-            auto class_name = object->GetClassPrivate()->GetName();
-            if (auto pos = class_name.find(LiveView::s_search_options.exclude_class_name); pos != class_name.npos)
-            {
-                return;
-            }
-        }
-
-        auto object_full_name = get_object_full_name_cxx_string(object);
-        std::transform(object_full_name.begin(), object_full_name.end(), object_full_name.begin(), [](char c) {
-            return std::tolower(c);
-        });
-
         auto name_to_search_by = LiveView::s_name_to_search_by;
         std::transform(name_to_search_by.begin(), name_to_search_by.end(), name_to_search_by.begin(), [](char c) {
             return std::tolower(c);
@@ -123,7 +124,7 @@ namespace RC::GUI
 
         if (LiveView::s_search_options.include_inheritance)
         {
-            for (UStruct* super : object->GetClassPrivate()->ForEachSuperStruct()) 
+            for (UStruct* super : object->GetClassPrivate()->ForEachSuperStruct())
             {
                 auto super_full_name = get_object_full_name_cxx_string(super);
                 std::transform(super_full_name.begin(), super_full_name.end(), super_full_name.begin(), [](char c) {
@@ -138,7 +139,14 @@ namespace RC::GUI
             }
         }
 
+        if (filter_out_objects(object)) { return; }
+
         if (LiveView::s_search_options.include_inheritance && LiveView::s_name_search_results_set.contains(object)) { return; }
+
+        auto object_full_name = get_object_full_name_cxx_string(object);
+        std::transform(object_full_name.begin(), object_full_name.end(), object_full_name.begin(), [](char c) {
+            return std::tolower(c);
+        });
 
         if (object_full_name.find(name_to_search_by) != object_full_name.npos)
         {
@@ -541,6 +549,7 @@ namespace RC::GUI
             {
                 return LoopAction::Continue;
             }
+            if (filter_out_objects(object)) { return LoopAction::Continue; }
             callable(object);
             return LoopAction::Continue;
         });
