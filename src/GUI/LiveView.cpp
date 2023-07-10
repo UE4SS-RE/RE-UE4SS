@@ -549,7 +549,7 @@ namespace RC::GUI
             {
                 return LoopAction::Continue;
             }
-            if (filter_out_objects(object)) { return LoopAction::Continue; }
+            if (s_search_options.apply_when_not_searching && filter_out_objects(object)) { return LoopAction::Continue; }
             callable(object);
             return LoopAction::Continue;
         });
@@ -1689,6 +1689,8 @@ namespace RC::GUI
         if (ImGui::BeginPopupContextItem("##search-options"))
         {
             ImGui::Text("Search options");
+            ImGui::SameLine();
+            ImGui::Checkbox("Apply when not searching", &s_search_options.apply_when_not_searching);
             if (ImGui::BeginTable("search_options_table", 2))
             {
                 bool instances_only_enabled = !(s_search_options.non_instances_only || s_search_options.default_objects_only);

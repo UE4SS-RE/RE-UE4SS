@@ -28,6 +28,7 @@ namespace RC::GUI
     
     struct SearchOptions
     {
+        bool apply_when_not_searching{};
         bool include_inheritance{};
         bool instances_only{};
         bool non_instances_only{};
