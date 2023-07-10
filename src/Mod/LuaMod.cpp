@@ -98,6 +98,7 @@ namespace RC
         const Mod* mod;
         const LuaMadeSimple::Lua& lua;
         const int lua_callback_ref;
+        const int lua_thread_ref;
 
         bool has_return_value{};
         // Will be non-nullptr if the UFunction has a return value
