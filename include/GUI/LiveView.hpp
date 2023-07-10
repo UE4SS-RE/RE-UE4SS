@@ -37,7 +37,8 @@ namespace RC::GUI
         std::array<bool, 255> function_param_checkboxes{};
         EPropertyFlags function_param_flags{};
         bool function_param_flags_include_return_property{};
-        std::string exclude_class_name{};
+        std::string internal_exclude_class_name{};
+        StringType exclude_class_name{};
     };
 
     class LiveView

@@ -105,7 +105,7 @@ namespace RC::GUI
         if (!LiveView::s_search_options.exclude_class_name.empty())
         {
             auto class_name = object->GetClassPrivate()->GetName();
-            if (auto pos = class_name.find(to_wstring(LiveView::s_search_options.exclude_class_name)); pos != class_name.npos)
+            if (auto pos = class_name.find(LiveView::s_search_options.exclude_class_name); pos != class_name.npos)
             {
                 return;
             }
@@ -1725,7 +1725,10 @@ namespace RC::GUI
                 ImGui::TableNextColumn();
                 ImGui::Text("Exclude class name");
                 ImGui::TableNextColumn();
-                ImGui::InputText("##ExcludeClassName", &s_search_options.exclude_class_name);
+                if (ImGui::InputText("##ExcludeClassName", &s_search_options.internal_exclude_class_name))
+                {
+                    s_search_options.exclude_class_name = to_wstring(s_search_options.internal_exclude_class_name);
+                }
 
                 ImGui::EndTable();
             }
