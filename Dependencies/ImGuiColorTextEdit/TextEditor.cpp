@@ -857,7 +857,7 @@ void TextEditor::Render()
 {
     Lines originalLines{};
     bool originalLinesAltered{};
-    if (mTextFilter)
+    if (mTextFilter && mTextFilter->IsActive())
     {
         originalLines = mLines;
         mLines.erase(std::remove_if(mLines.begin(), mLines.end(), [&](Line& line) -> bool {
