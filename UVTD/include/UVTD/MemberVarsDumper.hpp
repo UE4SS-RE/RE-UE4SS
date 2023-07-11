@@ -36,6 +36,9 @@ namespace RC::UVTD
 
     public:
         auto get_type_container() const -> const TypeContainer& { return type_container; }
+    
+    public:
+        static auto output_cleanup() -> void;
     };
 }
 

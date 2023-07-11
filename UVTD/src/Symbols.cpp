@@ -244,16 +244,20 @@ namespace RC::UVTD
         case PDB::CodeView::TPI::TypeRecordKind::LF_PROCEDURE:
         {
             auto return_type = get_type_name(tpi_stream, record->data.LF_PROCEDURE.rvtype);
-            auto arg_list = tpi_stream.GetTypeRecord(record->data.LF_PROCEDURE.arglist);
+            File::StringType args = get_type_name(tpi_stream, record->data.LF_PROCEDURE.arglist);
+            return std::format(STR("Function<{}({})>"), return_type, args);
+        }
+        case PDB::CodeView::TPI::TypeRecordKind::LF_ARGLIST:
+        {
             File::StringType args{};
 
-            for (size_t i = 0; i < arg_list->data.LF_ARGLIST.count; i++)
+            for (size_t i = 0; i < record->data.LF_ARGLIST.count; i++)
             {
-                bool should_add_comma = i < arg_list->data.LF_ARGLIST.count - 1;
-                args.append(std::format(STR("{}{}"), get_type_name(tpi_stream, arg_list->data.LF_ARGLIST.arg[i]), should_add_comma ? STR(", ") : STR("")));
+                bool should_add_comma = i < record->data.LF_ARGLIST.count - 1;
+                args.append(std::format(STR("{}{}"), get_type_name(tpi_stream, record->data.LF_ARGLIST.arg[i]), should_add_comma ? STR(", ") : STR("")));
             }
 
-            return std::format(STR("Function<{}({})>"), return_type, args);
+            return args;
         }
         case PDB::CodeView::TPI::TypeRecordKind::LF_BITFIELD:
             return get_type_name(tpi_stream, record->data.LF_BITFIELD.type);
