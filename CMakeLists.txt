@@ -313,7 +313,7 @@ set(${TARGET}_Sources
         "${CMAKE_CURRENT_SOURCE_DIR}/Dependencies/imgui/backends/imgui_impl_opengl3.cpp"
         "${CMAKE_CURRENT_SOURCE_DIR}/Dependencies/imgui/backends/imgui_impl_glfw.cpp"
         "${CMAKE_CURRENT_SOURCE_DIR}/Dependencies/ImGuiColorTextEdit/TextEditor.cpp"
-        #"${CMAKE_CURRENT_SOURCE_DIR}/Dependencies/imgui/imgui_demo.cpp"
+        "${CMAKE_CURRENT_SOURCE_DIR}/Dependencies/imgui/imgui_demo.cpp"
         )
 add_library(${TARGET} SHARED ${${TARGET}_Sources})
 target_include_directories(${TARGET} PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include> $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/generated_include>)

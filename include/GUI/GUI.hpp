@@ -156,6 +156,7 @@ namespace RC::GUI
 
     public:
         bool m_event_thread_busy{};
+        bool m_show_imgui_demo{};
 
     private:
         static std::vector<EndOfFrameCallback> s_end_of_frame_callbacks;

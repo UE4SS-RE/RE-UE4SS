@@ -3,6 +3,7 @@
 #include <string>
 #include <regex>
 #include <cmath>
+#include <iostream>
 
 #include "TextEditor.h"
 

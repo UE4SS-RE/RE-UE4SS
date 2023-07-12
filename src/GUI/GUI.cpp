@@ -1,6 +1,7 @@
 #include <GUI/GUI.hpp>
 
 #include <memory>
+#include <chrono>
 
 #include <ExceptionHandling.hpp>
 #include <DynamicOutput/DynamicOutput.hpp>
@@ -60,10 +61,15 @@ namespace RC::GUI
 
         if (show_window)
         {
+            if (m_show_imgui_demo)
+            {
+                ImGui::ShowDemoWindow();
+            }
+
             ImGui::SetNextWindowPos({0, 0});
             auto current_window_size = m_os_backend->is_valid() ? m_os_backend->get_window_size() : m_gfx_backend->get_window_size();
             ImGui::SetNextWindowSize({static_cast<float>(current_window_size.x), static_cast<float>(current_window_size.y)});
-            ImGui::Begin("MainWindow", &show_window, ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
+            ImGui::Begin("MainWindow", &show_window, ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse | ImGuiWindowFlags_NoBringToFrontOnFocus);
 
             if (ImGui::BeginTabBar("##MainTabBar", ImGuiTabBarFlags_None))
             {
@@ -97,6 +103,25 @@ namespace RC::GUI
                         }, this);
                     }
                     if (event_thread_busy) { ImGui::EndDisabled(); }
+
+                    ImGui::SameLine();
+                    ImGui::Checkbox("Show ImGui Demo", &m_show_imgui_demo);
+
+                    ImGui::SameLine();
+                    if (ImGui::Button("Log stuff"))
+                    {
+                        std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
+
+                        int n = 10000;
+                        for (int i = 0; i < n; i++)
+                            Output::send<LogLevel::Verbose>(STR("SPAM\n"));
+
+                        std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
+
+                        auto time = std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count();
+
+                        Output::send<LogLevel::Warning>(STR("sent {} messages in {}ms\n"), n, time);
+                    }
 
                     get_console().render();
 
