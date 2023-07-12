@@ -316,13 +316,12 @@ namespace RC::UVTD
         return to_string_type(&data[get_leaf_size(kind)]);
     }
 
-    auto Symbols::clean_name(const File::StringType& name) -> File::StringType
+    auto Symbols::clean_name(File::StringType name) -> File::StringType
     {
-        File::StringType name_clean{ name };
-        std::replace(name_clean.begin(), name_clean.end(), ':', '_');
-        std::replace(name_clean.begin(), name_clean.end(), '~', '$');
+        std::replace(name.begin(), name.end(), ':', '_');
+        std::replace(name.begin(), name.end(), '~', '$');
 
-        return name_clean;
+        return name;
     }
 
     auto Symbols::is_virtual(PDB::CodeView::TPI::MemberAttributes attributes) -> bool

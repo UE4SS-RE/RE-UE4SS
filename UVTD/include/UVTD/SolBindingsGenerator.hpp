@@ -23,6 +23,9 @@ namespace RC::UVTD
     public:
         auto generate_code() -> void;
         auto generate_files() -> void;
+
+    public:
+        static auto output_cleanup() -> void;
     };
 }
 

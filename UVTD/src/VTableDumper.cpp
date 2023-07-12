@@ -23,8 +23,12 @@
 
 namespace RC::UVTD 
 {
-    auto VTableDumper::process_class(const PDB::TPIStream& tpi_stream, const PDB::CodeView::TPI::Record* class_record, const File::StringType& class_name, const SymbolNameInfo& name_info) -> void
+    auto VTableDumper::process_class(const PDB::TPIStream& tpi_stream, const PDB::CodeView::TPI::Record* class_record, const File::StringType& name, const SymbolNameInfo& name_info) -> void
     {
+        auto changed = change_prefix(name, symbols.is_425_plus);
+        if (!changed.has_value()) return;
+
+        File::StringType class_name = *changed;
         File::StringType class_name_clean = Symbols::clean_name(class_name);
 
         auto& class_entry = type_container.get_or_create_class_entry(class_name, class_name_clean, name_info);
@@ -169,54 +173,7 @@ namespace RC::UVTD
 
     auto VTableDumper::generate_files() -> void
     {
-        static std::filesystem::path vtable_gen_output_path = "GeneratedVTables";
-        static std::filesystem::path vtable_gen_output_include_path = vtable_gen_output_path / "generated_include";
-        static std::filesystem::path vtable_gen_output_src_path = vtable_gen_output_path / "generated_src";
-        static std::filesystem::path vtable_gen_output_function_bodies_path = vtable_gen_output_include_path / "FunctionBodies";
-        static std::filesystem::path vtable_templates_output_path = "VTableLayoutTemplates";
-        static std::filesystem::path member_variable_layouts_gen_output_path = "GeneratedMemberVariableLayouts";
-        static std::filesystem::path member_variable_layouts_gen_output_include_path = member_variable_layouts_gen_output_path / "generated_include";
-        static std::filesystem::path member_variable_layouts_gen_output_src_path = member_variable_layouts_gen_output_path / "generated_src";
-        static std::filesystem::path member_variable_layouts_gen_function_bodies_path = member_variable_layouts_gen_output_include_path / "FunctionBodies";
-        static std::filesystem::path member_variable_layouts_templates_output_path = "MemberVarLayoutTemplates";
-        static std::filesystem::path virtual_gen_output_path = "GeneratedVirtualImplementations";
-        static std::filesystem::path virtual_gen_output_include_path = virtual_gen_output_path / "generated_include";
-        static std::filesystem::path virtual_gen_function_bodies_path = virtual_gen_output_include_path / "FunctionBodies";
-
         File::StringType pdb_name = symbols.pdb_file_path.filename().stem();
-
-        if (std::filesystem::exists(vtable_gen_output_include_path))
-        {
-            for (const auto& item : std::filesystem::directory_iterator(vtable_gen_output_include_path))
-            {
-                if (item.is_directory()) { continue; }
-                if (item.path().extension() != STR(".hpp") && item.path().extension() != STR(".cpp")) { continue; }
-
-                File::delete_file(item.path());
-            }
-        }
-
-        if (std::filesystem::exists(vtable_gen_output_function_bodies_path))
-        {
-            for (const auto& item : std::filesystem::directory_iterator(vtable_gen_output_function_bodies_path))
-            {
-                if (item.is_directory()) { continue; }
-                if (item.path().extension() != STR(".cpp")) { continue; }
-
-                File::delete_file(item.path());
-            }
-        }
-
-        if (std::filesystem::exists(vtable_gen_output_src_path))
-        {
-            for (const auto& item : std::filesystem::directory_iterator(vtable_gen_output_src_path))
-            {
-                if (item.is_directory()) { continue; }
-                if (item.path().extension() != STR(".cpp")) { continue; }
-
-                File::delete_file(item.path());
-            }
-        }
 
         for (const auto& [class_name, class_entry] : type_container.get_class_entries())
         {
@@ -266,6 +223,42 @@ namespace RC::UVTD
             }
 
             ini_dumper.send(STR("\n"));
+        }
+    }
+
+    auto VTableDumper::output_cleanup() -> void
+    {
+        if (std::filesystem::exists(vtable_gen_output_include_path))
+        {
+            for (const auto& item : std::filesystem::directory_iterator(vtable_gen_output_include_path))
+            {
+                if (item.is_directory()) { continue; }
+                if (item.path().extension() != STR(".hpp") && item.path().extension() != STR(".cpp")) { continue; }
+
+                File::delete_file(item.path());
+            }
+        }
+
+        if (std::filesystem::exists(vtable_gen_output_function_bodies_path))
+        {
+            for (const auto& item : std::filesystem::directory_iterator(vtable_gen_output_function_bodies_path))
+            {
+                if (item.is_directory()) { continue; }
+                if (item.path().extension() != STR(".cpp")) { continue; }
+
+                File::delete_file(item.path());
+            }
+        }
+
+        if (std::filesystem::exists(vtable_gen_output_src_path))
+        {
+            for (const auto& item : std::filesystem::directory_iterator(vtable_gen_output_src_path))
+            {
+                if (item.is_directory()) { continue; }
+                if (item.path().extension() != STR(".cpp")) { continue; }
+
+                File::delete_file(item.path());
+            }
         }
     }
 }

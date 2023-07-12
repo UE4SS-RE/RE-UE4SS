@@ -3,6 +3,7 @@
 
 #include <unordered_set>
 #include <unordered_map>
+#include <optional>
 #include <vector>
 
 #include <UVTD/Symbols.hpp>
@@ -14,6 +15,22 @@
 
 namespace RC::UVTD
 {
+    static std::filesystem::path vtable_gen_output_path = "GeneratedVTables";
+    static std::filesystem::path vtable_gen_output_include_path = vtable_gen_output_path / "generated_include";
+    static std::filesystem::path vtable_gen_output_src_path = vtable_gen_output_path / "generated_src";
+    static std::filesystem::path vtable_gen_output_function_bodies_path = vtable_gen_output_include_path / "FunctionBodies";
+    static std::filesystem::path vtable_templates_output_path = "VTableLayoutTemplates";
+    static std::filesystem::path virtual_gen_output_path = "GeneratedVirtualImplementations";
+    static std::filesystem::path virtual_gen_output_include_path = virtual_gen_output_path / "generated_include";
+    static std::filesystem::path virtual_gen_function_bodies_path = virtual_gen_output_include_path / "FunctionBodies";
+
+    static std::filesystem::path member_variable_layouts_gen_output_path = "GeneratedMemberVariableLayouts";
+    static std::filesystem::path member_variable_layouts_gen_output_include_path = member_variable_layouts_gen_output_path / "generated_include";
+    static std::filesystem::path member_variable_layouts_gen_output_src_path = member_variable_layouts_gen_output_path / "generated_src";
+    static std::filesystem::path member_variable_layouts_gen_function_bodies_path = member_variable_layouts_gen_output_include_path / "FunctionBodies";
+    static std::filesystem::path member_variable_layouts_templates_output_path = "MemberVarLayoutTemplates";
+
+
     struct ObjectItem
     {
         File::StringType name{};
@@ -183,7 +200,26 @@ namespace RC::UVTD
             STR("USetProperty"),
     };
 
+    static inline std::vector<File::StringType> uprefix_to_fprefix{
+            STR("UProperty"),
+            STR("UMulticastDelegateProperty"),
+            STR("UObjectPropertyBase"),
+            STR("UStructProperty"),
+            STR("UArrayProperty"),
+            STR("UMapProperty"),
+            STR("UBoolProperty"),
+            STR("UByteProperty"),
+            STR("UNumericProperty"),
+            STR("UEnumProperty"),
+            STR("UClassProperty"),
+            STR("USoftClassProperty"),
+            STR("UDelegateProperty"),
+            STR("UInterfaceProperty"),
+            STR("USetProperty"),
+    };
+
     auto to_string_type(const char* c_str) -> File::StringType;
+    auto change_prefix(File::StringType input, bool is_425_plus) -> std::optional<File::StringType>;
 }
 
 #endif

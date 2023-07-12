@@ -4,7 +4,21 @@ namespace RC::UVTD
 {
     auto TypeContainer::join(const TypeContainer& other) -> void
     {
-        class_entries.insert(other.class_entries.begin(), other.class_entries.end());
+        for (const auto& [_, class_entry] : other.class_entries)
+        {
+            SymbolNameInfo name_info = SymbolNameInfo{ class_entry.valid_for_vtable, class_entry.valid_for_member_vars };
+            Class& this_entry = get_or_create_class_entry(class_entry.class_name, class_entry.class_name_clean, name_info);
+
+            for (const auto& [vtable_offset, function] : class_entry.functions)
+            {
+                this_entry.functions[vtable_offset] = function;
+            }
+
+            for (const auto& [variable_name, variable] : class_entry.variables)
+            {
+                this_entry.variables[variable_name] = variable;
+            }
+        }
     }
 
     auto TypeContainer::get_or_create_class_entry(const File::StringType& symbol_name, const File::StringType& symbol_name_clean, const SymbolNameInfo& name_info) -> Class&

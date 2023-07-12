@@ -12,21 +12,10 @@ namespace RC::UVTD
         type_container = member_vars_dumper.get_type_container();
     }
 
+    static std::filesystem::path sol_bindings_output_path = "SolBindings";
+
     auto SolBindingsGenerator::generate_files() -> void
     {
-        static std::filesystem::path sol_bindings_output_path = "SolBindings";
-
-        if (std::filesystem::exists(sol_bindings_output_path))
-        {
-            for (const auto& item : std::filesystem::directory_iterator(sol_bindings_output_path))
-            {
-                if (item.is_directory()) { continue; }
-                if (item.path().extension() != STR(".hpp") && item.path().extension() != STR(".cpp")) { continue; }
-
-                File::delete_file(item.path());
-            }
-        }
-
         for (const auto& [class_name, class_entry] : type_container.get_class_entries())
         {
             if (class_entry.variables.empty()) continue;
@@ -70,6 +59,20 @@ namespace RC::UVTD
                 header_wrapper_dumper.send(STR(",\n    \"Get{}\", static_cast<{}&({}::*)()>(&{}::Get{})"), final_variable_name, variable.type, final_class_name, final_class_name, final_variable_name);
             }
             header_wrapper_dumper.send(STR("\n);\n"));
+        }
+    }
+
+    auto SolBindingsGenerator::output_cleanup() -> void
+    {
+        if (std::filesystem::exists(sol_bindings_output_path))
+        {
+            for (const auto& item : std::filesystem::directory_iterator(sol_bindings_output_path))
+            {
+                if (item.is_directory()) { continue; }
+                if (item.path().extension() != STR(".hpp") && item.path().extension() != STR(".cpp")) { continue; }
+
+                File::delete_file(item.path());
+            }
         }
     }
 }

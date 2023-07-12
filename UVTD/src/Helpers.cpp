@@ -23,4 +23,19 @@ namespace RC::UVTD
         return converted;
 #endif
     }
+
+    auto change_prefix(File::StringType input, bool is_425_plus) -> std::optional<File::StringType>
+    {
+        for (const auto& prefixed : uprefix_to_fprefix)
+        {
+            for (size_t index = input.find(prefixed); index != input.npos; index = input.find(prefixed))
+            {
+                if (is_425_plus) return {};
+                input.replace(index, 1, STR("F"));
+                index++;
+            }
+        }
+
+        return input;
+    }
 }

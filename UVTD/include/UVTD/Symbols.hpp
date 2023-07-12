@@ -148,7 +148,7 @@ namespace RC::UVTD
         auto static get_method_name(const PDB::CodeView::TPI::FieldList* method_record) -> File::StringType;
         auto static get_leaf_name(const char* data, PDB::CodeView::TPI::TypeRecordKind kind) -> File::StringType;
 
-        auto static clean_name(const File::StringType& name) -> File::StringType;
+        auto static clean_name(File::StringType name) -> File::StringType;
 
         auto static is_virtual(PDB::CodeView::TPI::MemberAttributes attributes) -> bool;
 

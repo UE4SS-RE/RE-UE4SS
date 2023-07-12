@@ -39,6 +39,9 @@ namespace RC::UVTD
 
     private:
         auto dump_vtable_for_symbol(std::unordered_map<File::StringType, SymbolNameInfo>& names) -> void;
+
+    public:
+        static auto output_cleanup() -> void;
     };
 }
 
