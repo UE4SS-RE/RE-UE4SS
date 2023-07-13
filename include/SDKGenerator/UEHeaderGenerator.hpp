@@ -100,10 +100,11 @@ namespace RC::UEGenerator
     protected:
         std::wstring m_file_base_name;
         FFilePath m_full_file_path;
-
+    
+    public:
         std::wstring m_file_contents_buffer;
         int32_t m_current_indent_count;
-    public:
+        
         GeneratedFile(const FFilePath& full_file_path);
         virtual ~GeneratedFile() = default;
 
@@ -114,9 +115,9 @@ namespace RC::UEGenerator
 
         auto append_line(const std::wstring& line) -> void;
         auto append_line_no_indent(const std::wstring& line) -> void;
-
+        
         auto begin_indent_level() -> void;
-        auto end_ident_level() -> void;
+        auto end_indent_level() -> void;
         auto serialize_file_content_to_disk() -> bool;
         
         virtual auto has_content_to_save() const -> bool;
@@ -254,7 +255,6 @@ namespace RC::UEGenerator
 
         auto static convert_module_name_to_api_name(const std::wstring& module_name) -> std::wstring;
         auto static get_module_name_for_package(UObject* package) -> std::wstring;
-        auto static sanitize_enumeration_name(const std::wstring& enumeration_name) -> std::wstring;
 
         auto static get_class_blueprint_info(UClass* function) -> ClassBlueprintInfo;
         auto static is_struct_blueprint_type(UScriptStruct* property) -> bool;
