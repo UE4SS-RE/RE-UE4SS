@@ -255,6 +255,8 @@ namespace RC::UEGenerator
 
         auto static convert_module_name_to_api_name(const std::wstring& module_name) -> std::wstring;
         auto static get_module_name_for_package(UObject* package) -> std::wstring;
+        auto static sanitize_enumeration_name(const std::wstring& enumeration_name) -> std::wstring;
+        auto static get_highest_enum(UEnum* uenum) -> int64_t;
 
         auto static get_class_blueprint_info(UClass* function) -> ClassBlueprintInfo;
         auto static is_struct_blueprint_type(UScriptStruct* property) -> bool;

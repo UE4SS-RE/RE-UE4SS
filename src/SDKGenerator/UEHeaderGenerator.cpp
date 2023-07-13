@@ -551,7 +551,7 @@ namespace RC::UEGenerator
     auto UEHeaderGenerator::generate_enum_definition(UEnum* uenum, GeneratedSourceFile& header_data) -> void
     {
         const StringType native_enum_name = get_native_enum_name(uenum, false);
-        const int64 highest_enum_value = uenum->GetHighestEnum();
+        const int64 highest_enum_value = get_highest_enum(uenum);
         const bool can_use_uint8_override = highest_enum_value <= 255;
         const StringType enum_flags_string = generate_enum_flags(uenum);
         const auto underlying_type = m_underlying_enum_types.find(native_enum_name);
@@ -603,7 +603,7 @@ namespace RC::UEGenerator
         int64 expected_next_enum_value = 0;
         for (auto [Name, Value] : uenum->ForEachName()) 
         {
-            StringType result_enumeration_line = UEnum::SanitizeEnumerationName(Name.ToString());
+            StringType result_enumeration_line = sanitize_enumeration_name(Name.ToString());
 
             StringType pre_append_result_line = result_enumeration_line;
             if (Value != expected_next_enum_value)
@@ -924,7 +924,7 @@ namespace RC::UEGenerator
         {
             if (Value == enum_value)
             {
-                enum_constant_name = UEnum::SanitizeEnumerationName(Name.ToString());
+                enum_constant_name = sanitize_enumeration_name(Name.ToString());
             }
         }
         if (enum_constant_name.empty())
@@ -2340,7 +2340,7 @@ namespace RC::UEGenerator
     auto UEHeaderGenerator::generate_enum_flags(UEnum* uenum) const -> std::wstring
     {
         FlagFormatHelper flag_format_helper{};
-        const int64 highest_enum_value = uenum->GetHighestEnum();
+        const int64 highest_enum_value = get_highest_enum(uenum);
 
         auto enum_flags = uenum->GetEnumFlags();
 
@@ -2373,7 +2373,39 @@ namespace RC::UEGenerator
         }
         return flag_format_helper.build_flag_string();
     }
-        
+
+    auto UEHeaderGenerator::sanitize_enumeration_name(const std::wstring& enumeration_name) -> std::wstring
+    {
+        std::wstring result_enum_name = enumeration_name;
+
+        //Remove enumeration name from the string
+        size_t enum_name_string_split = enumeration_name.find(STR("::"));
+        if (enum_name_string_split != std::wstring::npos)
+        {
+            result_enum_name.erase(0, enum_name_string_split + 2);
+        }
+        return result_enum_name;
+    }
+
+    auto UEHeaderGenerator::get_highest_enum(UEnum* uenum) -> int64_t
+    {
+        if (!uenum || uenum->NumEnums() <= 0) { return 0; }
+
+        int64 highest_enum_value = 0;
+        const StringType enum_prefix = uenum->GenerateEnumPrefix();
+        const StringType expected_max_name = std::format(STR("{}_MAX"), enum_prefix);
+
+        for (auto [Name, Value] : uenum->ForEachName())
+        {
+            StringType enum_name = sanitize_enumeration_name(Name.ToString());
+            if (enum_name != expected_max_name && Value > highest_enum_value)
+            {
+                highest_enum_value = Value;
+            }
+        }
+        return highest_enum_value;
+    }
+
     auto UEHeaderGenerator::generate_function_flags(UFunction* function, bool is_function_pure_virtual) const -> std::wstring
     {
         FlagFormatHelper flag_format_helper{};
