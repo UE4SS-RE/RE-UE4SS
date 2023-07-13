@@ -114,7 +114,6 @@ namespace RC::UEGenerator
 
         auto append_line(const std::wstring& line) -> void;
         auto append_line_no_indent(const std::wstring& line) -> void;
-        
         auto begin_indent_level() -> void;
         auto end_indent_level() -> void;
         auto serialize_file_content_to_disk() -> bool;
