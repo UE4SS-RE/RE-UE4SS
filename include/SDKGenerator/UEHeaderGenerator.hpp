@@ -101,10 +101,9 @@ namespace RC::UEGenerator
         std::wstring m_file_base_name;
         FFilePath m_full_file_path;
     
-    public:
         std::wstring m_file_contents_buffer;
         int32_t m_current_indent_count;
-        
+    public:
         GeneratedFile(const FFilePath& full_file_path);
         virtual ~GeneratedFile() = default;
 
