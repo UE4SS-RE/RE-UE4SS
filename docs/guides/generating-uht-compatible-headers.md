@@ -9,7 +9,7 @@ While the UHT header generator is only officially supported in `4.25+`, it has w
 The key bind to generate headers is by default `CTRL` + `Numpad 9`, and it can be changed in `Mods/Keybinds/Scripts/main.lua`.
 
 To utilize the generated headers to their full potential, see [UE4GameProjectGenerator](https://github.com/Buckminsterfullerene02/UE4GameProjectGenerator) by Archengius (link to Buck's fork because of a couple fixes that Arch is too lazy to merge).
-> The project generator is only guaranteed to work in `>4.22`, though it has worked for some older versions. If generating a project for an older engine version than `4.25`, generate it by compiling the project generator for `4.25+` first.
+> The project generator is only tested to work in vanilla `>4.22` (so is subject to change on custom engine versions), though it has worked for some older versions. If generating a project for an older engine version than `4.25`, generate it by compiling the project generator for `4.25` first.
 
 Before compiling the projectgencommandlet, open `GameProjectGenerator.uproject` and your game's pluginmanifest or `.uproject` and add any default engine plugins used by the game or plugins that the game uses and you found open source or purchased (it is not recommended to include purchased plugins in a public uproject) to the commandlet's uproject file.
 
