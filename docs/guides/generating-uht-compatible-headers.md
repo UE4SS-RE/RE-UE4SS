@@ -9,7 +9,8 @@ While the UHT header generator is only officially supported in `4.25+`, it has w
 The key bind to generate headers is by default `CTRL` + `Numpad 9`, and it can be changed in `Mods/Keybinds/Scripts/main.lua`.
 
 To utilize the generated headers to their full potential, see [UE4GameProjectGenerator](https://github.com/Buckminsterfullerene02/UE4GameProjectGenerator) by Archengius (link to Buck's fork because of a couple fixes that Arch is too lazy to merge).
-> The project generator is only tested to work in vanilla `>4.22` (so is subject to change on custom engine versions), though it has worked for some older versions. If generating a project for an older engine version than `4.25`, generate it by compiling the project generator for `4.25` first.
+> The project generator will only compile for UE versions `4.22` and higher. Engine customizations by developers may lead to unexpected results.
+> If generating a project for an engine version older than `4.22`, generate it by compiling the project generator for `4.22` or higher first.
 
 Before compiling the projectgencommandlet, open `GameProjectGenerator.uproject` and your game's pluginmanifest or `.uproject` and add any default engine plugins used by the game or plugins that the game uses and you found open source or purchased (it is not recommended to include purchased plugins in a public uproject) to the commandlet's uproject file.
 
@@ -122,43 +123,29 @@ If you get the "failed to create version memory for PCH" errors when trying to b
 ### Game 3
 ```
 Error 1
+In an Enum class:
 System.ArgumentException - String cannot contain a minus sign if the base is not 10.
-Note: If you get Null Error on the Same files add:
-
-Null = 0x0
 
 Fix:
-  Example = -0x1, -> Example = 0x1
-    
-Error 2  
-Unable to find 'class', 'delegate', 'enum', or 'struct' with name 'XYZ'    
+Remove the BlueprintType meta tag and the uint8 override on the enum ': uint8'.
+
+
+Error 2
+Unable to find 'class', 'delegate', 'enum', or 'struct' with name 'XYZ', where XYZ is an FStruct used within a class with no separate UStruct declaration.
 
 Fix:
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(XYZ); , close to the Top of header Files.
 
+
 Error 3
-"is not supported by blueprint.  Function: "
+"is not supported by blueprint."
 
 Fix:
 -> Remove BlueprintReadWrite
 -> or Remove BlueprintCallable
 
+
 Error 4
-XX value wrapped from positive to negative value
-
-Fix:
-
-WHATEVER = UMAP(BLA) -> WHATEVER = 0x0
-
-Error 5
-static_assert failed: 'The structure 'XXX' is used in a TSet but does not have a GetValueTypeHash defined'    
-
-Fix:
-On the Headerfile at the very bottom add:
-
-FORCEINLINE uint32 GetTypeHash(const XXX) { return 0; }
-
-Error 6
 cannot instantiate abstract class
 
 fix:
@@ -174,7 +161,7 @@ cpp looks like:
  UAbilitySystemComponent* GetAbilitySystemComponent() const override;
 
 
-Error 7
+Error 5
 modifiers not allowed on static member functions
 
 Fix: 
@@ -186,7 +173,7 @@ static TSoftObjectPtr<Test> SomeFunction(some args) const;  <- remove const
 In both h and cpp File.
 
 
-Error 8
+Error 6
 'AAkAMbientSound' no appropriate default consturctor available.
 
 Fix:
