@@ -1221,21 +1221,29 @@ Overloads:
                     lua.throw_error("Tried to unregister a hook with Lua function 'UnregisterHook' but the PostCallbackId supplied was too large (>int32)");
                 }
 
-                bool is_native{};
-
+                // Hooks on native UFunctions will have both of these IDs.
                 auto native_hook_pre_id_it = LuaMod::m_generic_hook_id_to_native_hook_id.find(static_cast<int32_t>(pre_id));
                 auto native_hook_post_id_it = LuaMod::m_generic_hook_id_to_native_hook_id.find(static_cast<int32_t>(post_id));
                 if (native_hook_pre_id_it != LuaMod::m_generic_hook_id_to_native_hook_id.end() && native_hook_post_id_it != LuaMod::m_generic_hook_id_to_native_hook_id.end())
-                {
-                    is_native = true;
-                }
-
-                if (is_native)
                 {
                     Output::send<LogLevel::Verbose>(STR("Unregistering native hook with pre-id: {}\n"), native_hook_pre_id_it->first);
                     unreal_function->UnregisterHook(static_cast<int32_t>(native_hook_pre_id_it->second));
                     Output::send<LogLevel::Verbose>(STR("Unregistering native hook with post-id: {}\n"), native_hook_post_id_it->first);
                     unreal_function->UnregisterHook(static_cast<int32_t>(native_hook_post_id_it->second));
+
+                    // LuaUnrealScriptFunctionData contains the hook's lua registry references, captured in RegisterHook in two different lua states.
+                    for (auto hook_iter = g_hooked_script_function_data.begin(); hook_iter != g_hooked_script_function_data.end(); hook_iter++)
+                    {
+                        RC::LuaUnrealScriptFunctionData* hook_data = (*hook_iter).get();
+                        if (hook_data->post_callback_id == post_id && hook_data->pre_callback_id == pre_id)
+                        {
+                            auto mod = get_mod_ref(lua);
+                            luaL_unref(hook_data->lua.get_lua_state(), LUA_REGISTRYINDEX, hook_data->lua_callback_ref);
+                            luaL_unref(mod->lua().get_lua_state(), LUA_REGISTRYINDEX, hook_data->lua_thread_ref);
+                            g_hooked_script_function_data.erase(hook_iter);
+                            break;
+                        }
+                    }
                 }
                 else
                 {
