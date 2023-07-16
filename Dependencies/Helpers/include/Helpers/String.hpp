@@ -6,6 +6,8 @@
 #include <string>
 #include <cwctype>
 #include <vector>
+#include <unordered_map>
+#include <shared_mutex>
 
 #include <File/Macros.hpp>
 
@@ -147,6 +149,28 @@ namespace RC
         std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter{};
         return converter.from_bytes(input);
 #pragma warning(default: 4996)
+    }
+
+    auto inline to_const_wstring(std::string_view input) -> const std::wstring&
+    {
+        static std::unordered_map<std::string_view, std::wstring> wstringpool;
+        static std::shared_mutex wstringpool_lock;
+
+        // Allow multiple readers that are stalled when any thread is writing.
+        {
+            std::shared_lock<std::shared_mutex> read_guard(wstringpool_lock);
+            if (wstringpool.contains(input)) return wstringpool[input];
+        }
+
+        auto temp_input = std::string{input};
+        auto new_str = to_wstring(temp_input);
+
+        // Stall the readers to insert a new string.
+        {
+            std::lock_guard<std::shared_mutex> write_guard(wstringpool_lock);
+            const auto& [emplaced_iter, unused] = wstringpool.emplace(input, std::move(new_str));
+            return emplaced_iter->second;
+        }
     }
 
     auto inline to_wstring(std::string_view input) -> std::wstring
