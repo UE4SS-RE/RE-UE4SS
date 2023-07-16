@@ -28,6 +28,7 @@ namespace RC::GUI
     
     struct SearchOptions
     {
+        bool apply_when_not_searching{};
         bool include_inheritance{};
         bool instances_only{};
         bool non_instances_only{};
@@ -37,6 +38,8 @@ namespace RC::GUI
         std::array<bool, 255> function_param_checkboxes{};
         EPropertyFlags function_param_flags{};
         bool function_param_flags_include_return_property{};
+        std::string internal_exclude_class_name{};
+        StringType exclude_class_name{};
     };
 
     class LiveView

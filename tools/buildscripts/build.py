@@ -145,7 +145,7 @@ def package(args):
 
         bin_dir = 'Output/ue4ss/Binaries/x64/Release'
         bin_name = 'xinput1_3' if target_xinput else 'ue4ss'
-        cppsdk_name = 'cppsdk_xinput' if target_xinput else 'cppsdk'
+        cppsdk_name = 'UE4SS-cppsdk_xinput' if target_xinput else 'UE4SS-cppsdk'
 
         shutil.copyfile(os.path.join(bin_dir, f'{bin_name}.dll'), os.path.join(staging_dir, f'{bin_name}.dll'))
         shutil.copyfile(os.path.join(bin_dir, f'{cppsdk_name}.dll'), os.path.join(staging_dir, 'Mods', 'UE4SS-cppsdk.dll'))
@@ -180,10 +180,10 @@ def package(args):
     package_release(target_xinput = True, is_dev_release = True)
 
     # CustomGameConfigs
-    shutil.make_archive(os.path.join(release_output, 'zCustomGameConfigs'), 'zip', 'CustomGameConfigs')
+    shutil.make_archive(os.path.join(release_output, 'zCustomGameConfigs'), 'zip', 'assets/CustomGameConfigs')
 
     # MapGenBP
-    shutil.make_archive(os.path.join(release_output, 'zMapGenBP'), 'zip', 'MapGenBP')
+    shutil.make_archive(os.path.join(release_output, 'zMapGenBP'), 'zip', 'assets/MapGenBP')
 
     changelog = parse_changelog()
     with open(os.path.join(release_output, 'release_notes.md'), 'w') as file:

@@ -294,6 +294,30 @@ namespace RC::File
 
     auto WinFile::close_file() -> void
     {
+        if (m_memory_map)
+        {
+            if (UnmapViewOfFile(m_memory_map) == 0)
+            {
+                THROW_INTERNAL_FILE_ERROR(std::format("[WinFile::close_file] Was unable to unmap file, error: {}", GetLastError()))
+            }
+            else
+            {
+                m_memory_map = nullptr;
+            }
+        }
+
+        if (m_map_handle)
+        {
+            if (CloseHandle(m_map_handle) == 0)
+            {
+                THROW_INTERNAL_FILE_ERROR(std::format("[WinFile::close_file] Was unable to close map handle, error: {}", GetLastError()))
+            }
+            else
+            {
+                m_map_handle = nullptr;
+            }
+        }
+
         if (!is_valid() || !is_file_open()) { return; }
 
         if (CloseHandle(m_file) == 0)
@@ -385,6 +409,42 @@ namespace RC::File
         }
     }
 
+    auto WinFile::memory_map() -> std::span<uint8_t>
+    {
+        DWORD handle_desired_access{};
+        DWORD mapping_desired_access{};
+        switch (m_open_properties.open_for)
+        {
+            case OpenFor::Writing:
+            case OpenFor::Appending:
+                handle_desired_access = PAGE_READWRITE;
+                mapping_desired_access = FILE_MAP_WRITE;
+                break;
+            case OpenFor::Reading:
+                handle_desired_access = PAGE_READONLY;
+                mapping_desired_access = FILE_MAP_READ;
+                break;
+            default:
+                THROW_INTERNAL_FILE_ERROR("[WinFile::memory_map] Tried to memory map file but 'm_open_properties' contains invalid data.")
+        }
+
+        m_map_handle = CreateFileMapping(get_raw_handle(), nullptr, handle_desired_access, 0, 0, nullptr);
+        if (!m_map_handle)
+        {
+            THROW_INTERNAL_FILE_ERROR(std::format("[WinFile::memory_map] Tried to memory map file but 'CreateFileMapping' returned error: {}", GetLastError()))
+        }
+
+        m_memory_map = static_cast<uint8_t*>(MapViewOfFile(m_map_handle, mapping_desired_access, 0, 0, 0));
+        if (!m_memory_map)
+        {
+            THROW_INTERNAL_FILE_ERROR(std::format("[WinFile::memory_map] Tried to memory map file but 'MapViewOfFile' returned error: {}", GetLastError()))
+        }
+
+        MEMORY_BASIC_INFORMATION buffer{};
+        auto size = VirtualQuery(m_memory_map, &buffer, sizeof(decltype(buffer)));
+        return std::span(m_memory_map, size);
+    }
+
     auto WinFile::open_file(const std::filesystem::path& file_name_and_path, const OpenProperties& open_properties) -> WinFile
     {
         // Reminder: std::filesystem::canonical() will get the full path & file name on the drive
@@ -465,6 +525,7 @@ namespace RC::File
 
         file.m_file_path_and_name = file_name_and_path;
         file.set_is_file_open(true);
+        file.m_open_properties = open_properties;
 
         return file;
     }

@@ -36,23 +36,23 @@ local function CreatePlayer()
     CachePlayerControllers()
 
     print(string.format("GameplayStatics: %s\n", GetGameplayStatics():GetFullName()))
-	ExecuteInGameThread(function()
-		NewController = GetGameplayStatics():CreatePlayer(PlayerControllerTable[1], #PlayerControllerTable, true)
-	end)
+    ExecuteInGameThread(function()
+        NewController = GetGameplayStatics():CreatePlayer(PlayerControllerTable[1], #PlayerControllerTable, true)
+    end)
     if NewController:IsValid() then
         table.insert(PlayerControllerTable, NewController)
         print(string.format("Player %s created.\n", #PlayerControllerTable))
     else
         print("Player could not be created.\n")
     end
-	
+    
 end
 
 function DestroyPlayer()
 
     -- The caller is caching the player controllers so that it can output that the correct player is being destroyed.
-	CachePlayerControllers()
-	
+    CachePlayerControllers()
+    
     if #PlayerControllerTable == 1 then
         print("Player could not be destroyed, only 1 player exists.\n")
         return
@@ -62,10 +62,10 @@ function DestroyPlayer()
     local ControllerToRemove = PlayerControllerTable[#PlayerControllerTable]
     print(string.format("Removing %s\n", ControllerToRemove:GetFullName()))
     if not ControllerToRemove:IsValid() then print("PlayerController to be removed is not valid.\nPlayerController could not be destroyed.\n") return end
-	
-	ExecuteInGameThread(function()
-		GetGameplayStatics():RemovePlayer(ControllerToRemove, true)
-	end)
+    
+    ExecuteInGameThread(function()
+        GetGameplayStatics():RemovePlayer(ControllerToRemove, true)
+    end)
 end
 
 function TeleportPlayers()
@@ -78,21 +78,21 @@ function TeleportPlayers()
     end
 
     local DidTeleport = false
-	
+    
     print(string.format("Attempting to Teleport to Player 1..\n"))
-	
-	ExecuteInGameThread(function()
-		PlayerPawn = PlayerControllerTable[1].Pawn
-		PlayerPawnLocationVec = PlayerPawn.RootComponent:K2_GetComponentLocation()
-		PlayerPawnLocationRot = PlayerPawn.RootComponent:K2_GetComponentRotation()
-		local HitResult = {}
-		for i, EachPlayerController in ipairs(PlayerControllerTable) do
-			if i > 1 and EachPlayerController.Pawn:IsValid() then
-				EachPlayerController.Pawn:K2_SetActorLocationAndRotation(PlayerPawnLocationVec, PlayerPawnLocationRot, false, HitResult, false)
-				DidTeleport = true
-			end
-		end
-	end)
+    
+    ExecuteInGameThread(function()
+        PlayerPawn = PlayerControllerTable[1].Pawn
+        PlayerPawnLocationVec = PlayerPawn.RootComponent:K2_GetComponentLocation()
+        PlayerPawnLocationRot = PlayerPawn.RootComponent:K2_GetComponentRotation()
+        local HitResult = {}
+        for i, EachPlayerController in ipairs(PlayerControllerTable) do
+            if i > 1 and EachPlayerController.Pawn:IsValid() then
+                EachPlayerController.Pawn:K2_SetActorLocationAndRotation(PlayerPawnLocationVec, PlayerPawnLocationRot, false, HitResult, false)
+                DidTeleport = true
+            end
+        end
+    end)
 
     if DidTeleport then
         print("Players teleport to Player 1.\n")

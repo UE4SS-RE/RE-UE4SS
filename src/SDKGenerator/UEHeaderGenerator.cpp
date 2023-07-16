@@ -268,13 +268,13 @@ namespace RC::UEGenerator
             module_build_file.append_line(std::format(STR("\"{}\","), other_module_name));
         }
 
-        module_build_file.end_ident_level();
+        module_build_file.end_indent_level();
         module_build_file.append_line(STR("});"));
 
-        module_build_file.end_ident_level();
+        module_build_file.end_indent_level();
         module_build_file.append_line(STR("}"));
 
-        module_build_file.end_ident_level();
+        module_build_file.end_indent_level();
         module_build_file.append_line(STR("}"));
 
         module_build_file.serialize_file_content_to_disk();
@@ -319,7 +319,7 @@ namespace RC::UEGenerator
 
         header_data.begin_indent_level();
         header_data.append_line(STR("GENERATED_BODY()"));
-        header_data.end_ident_level();
+        header_data.end_indent_level();
 
         header_data.append_line(STR("};"));
         header_data.append_line(STR(""));
@@ -360,7 +360,7 @@ namespace RC::UEGenerator
             }
         }
 
-        header_data.end_ident_level();
+        header_data.end_indent_level();
         header_data.append_line(STR("};"));
     }
 
@@ -492,7 +492,7 @@ namespace RC::UEGenerator
             }
         }
 
-        header_data.end_ident_level();
+        header_data.end_indent_level();
         header_data.append_line(STR("};"));
     }
 
@@ -544,15 +544,18 @@ namespace RC::UEGenerator
         append_access_modifier(header_data, AccessModifier::Public, current_access_modifier);
         header_data.append_line(std::format(STR("{}{}();"), !is_struct_exported ? api_macro_name : STR(""), struct_native_name));
 
-        header_data.end_ident_level();
+        header_data.end_indent_level();
         header_data.append_line(STR("};"));
     }
 
     auto UEHeaderGenerator::generate_enum_definition(UEnum* uenum, GeneratedSourceFile& header_data) -> void
     {
-        const std::wstring native_enum_name = get_native_enum_name(uenum, false);
-        const std::wstring enum_flags_string = generate_enum_flags(uenum);
-
+        const StringType native_enum_name = get_native_enum_name(uenum, false);
+        const int64 highest_enum_value = get_highest_enum(uenum);
+        const bool can_use_uint8_override = highest_enum_value <= 255;
+        const StringType enum_flags_string = generate_enum_flags(uenum);
+        const auto underlying_type = m_underlying_enum_types.find(native_enum_name);
+        const bool has_known_underlying_type = underlying_type != m_underlying_enum_types.end();
         UEnum::ECppForm cpp_form = uenum->GetCppForm();
 
         header_data.append_line(std::format(STR("UENUM({})"), enum_flags_string));
@@ -569,11 +572,9 @@ namespace RC::UEGenerator
         }
         else if (cpp_form == UEnum::ECppForm::EnumClass)
         {
-            const auto underlying_type = m_underlying_enum_types.find(native_enum_name);
-
-            if (underlying_type == m_underlying_enum_types.end())
+            if (!has_known_underlying_type)
             {
-                if (UE4SSProgram::settings_manager.UHTHeaderGenerator.MakeEnumClassesBlueprintType)
+                if (UE4SSProgram::settings_manager.UHTHeaderGenerator.MakeEnumClassesBlueprintType && can_use_uint8_override)
                 {
                     header_data.append_line(std::format(STR("enum class {} : uint8 {{"), native_enum_name));
                 }
@@ -598,43 +599,45 @@ namespace RC::UEGenerator
 
         header_data.begin_indent_level();
 
-        int64_t expected_next_enum_value = 0;
+        StringType enum_prefix = uenum->GenerateEnumPrefix();
+        int64 expected_next_enum_value = 0;
         for (auto [Name, Value] : uenum->ForEachName()) 
         {
-            std::wstring result_enumeration_line = sanitize_enumeration_name(Name.ToString());
-            bool enum_constant_has_explicit_number = false;
+            StringType result_enumeration_line = sanitize_enumeration_name(Name.ToString());
 
+            StringType pre_append_result_line = result_enumeration_line;
             if (Value != expected_next_enum_value)
             {
-                const std::wstring MinusSign = Value < 0 ? STR("-") : STR("");
+                const StringType MinusSign = Value < 0 ? STR("-") : STR("");
                 result_enumeration_line.append(std::format(STR(" = {}0x{:X}"), MinusSign, std::abs(Value)));
-                enum_constant_has_explicit_number = true;
             }
             expected_next_enum_value = Value + 1;
 
-            if (result_enumeration_line.ends_with(STR("_MAX")))
+            if (pre_append_result_line.ends_with(STR("_MAX")))
             {
-                const std::wstring expected_full_constant_name = std::format(STR("{}_MAX"), uenum->GetName());
+                const StringType expected_full_constant_name = std::format(STR("{}_MAX"), enum_prefix);
 
-                //Skip enum _MAX constant if it has the following number and matching name, which means it has been autogenerated
-                if (result_enumeration_line == expected_full_constant_name && !enum_constant_has_explicit_number)
+                int64_t expected_max_value = highest_enum_value + 1;
+                
+                // Skip enum _MAX constant if it has a matching name and is 1 greater than the highest value used, which means it has been autogenerated
+                if (pre_append_result_line == expected_full_constant_name && Value == expected_max_value)
                 {
                     continue;
                 }
                 //Otherwise, just make sure it's hidden and not visible to the end user
                 result_enumeration_line.append(STR(" UMETA(Hidden)"));
             }
-
+            
             result_enumeration_line.append(STR(","));
             header_data.append_line(result_enumeration_line);
         }
 
-        header_data.end_ident_level();
+        header_data.end_indent_level();
         header_data.append_line(STR("};"));
 
         if (cpp_form == UEnum::ECppForm::Namespaced)
         {
-            header_data.end_ident_level();
+            header_data.end_indent_level();
             header_data.append_line(STR("}"));
         }
     }
@@ -735,7 +738,7 @@ namespace RC::UEGenerator
                 }
             }
 
-            implementation_file.end_ident_level();
+            implementation_file.end_indent_level();
             implementation_file.append_line(STR("}"));
             implementation_file.append_line(STR(""));
         }
@@ -770,7 +773,7 @@ namespace RC::UEGenerator
             implementation_file.append_line(STR("// Null default object."));
         }
 
-        implementation_file.end_ident_level();
+        implementation_file.end_indent_level();
         implementation_file.append_line(STR("}"));
     }
 
@@ -796,7 +799,7 @@ namespace RC::UEGenerator
         //TODO: ScriptStruct->DestroyStruct(StructDefaultObject);
         free(struct_default_object);
 
-        implementation_file.end_ident_level();
+        implementation_file.end_indent_level();
         implementation_file.append_line(STR("}"));
     }
 
@@ -1258,7 +1261,7 @@ namespace RC::UEGenerator
                 implementation_file.append_line(std::format(STR("return {};"), default_value));
             }
 
-            implementation_file.end_ident_level();
+            implementation_file.end_indent_level();
             implementation_file.append_line(STR("}"));
         }
 
@@ -1269,7 +1272,7 @@ namespace RC::UEGenerator
 
             implementation_file.append_line(STR("return true;"));
 
-            implementation_file.end_ident_level();
+            implementation_file.end_indent_level();
             implementation_file.append_line(STR("}"));
         }
     }
@@ -2337,6 +2340,7 @@ namespace RC::UEGenerator
     auto UEHeaderGenerator::generate_enum_flags(UEnum* uenum) const -> std::wstring
     {
         FlagFormatHelper flag_format_helper{};
+        const int64 highest_enum_value = get_highest_enum(uenum);
 
         auto enum_flags = uenum->GetEnumFlags();
 
@@ -2356,7 +2360,7 @@ namespace RC::UEGenerator
             if (cpp_form == UEnum::ECppForm::EnumClass)
             {
                 const auto underlying_type = m_underlying_enum_types.find(enum_native_name);
-                if (underlying_type == m_underlying_enum_types.end() || underlying_type->second == STR("uint8"))
+                if ((underlying_type == m_underlying_enum_types.end() || underlying_type->second == STR("uint8")) && highest_enum_value <= 255)
                 {
                     // Underlying type is implicit or explicitly uint8.
                     flag_format_helper.add_switch(STR("BlueprintType"));
@@ -2369,7 +2373,39 @@ namespace RC::UEGenerator
         }
         return flag_format_helper.build_flag_string();
     }
-        
+
+    auto UEHeaderGenerator::sanitize_enumeration_name(const std::wstring& enumeration_name) -> std::wstring
+    {
+        std::wstring result_enum_name = enumeration_name;
+
+        //Remove enumeration name from the string
+        size_t enum_name_string_split = enumeration_name.find(STR("::"));
+        if (enum_name_string_split != std::wstring::npos)
+        {
+            result_enum_name.erase(0, enum_name_string_split + 2);
+        }
+        return result_enum_name;
+    }
+
+    auto UEHeaderGenerator::get_highest_enum(UEnum* uenum) -> int64_t
+    {
+        if (!uenum || uenum->NumEnums() <= 0) { return 0; }
+
+        int64 highest_enum_value = 0;
+        const StringType enum_prefix = uenum->GenerateEnumPrefix();
+        const StringType expected_max_name = std::format(STR("{}_MAX"), enum_prefix);
+
+        for (auto [Name, Value] : uenum->ForEachName())
+        {
+            StringType enum_name = sanitize_enumeration_name(Name.ToString());
+            if (enum_name != expected_max_name && Value > highest_enum_value)
+            {
+                highest_enum_value = Value;
+            }
+        }
+        return highest_enum_value;
+    }
+
     auto UEHeaderGenerator::generate_function_flags(UFunction* function, bool is_function_pure_virtual) const -> std::wstring
     {
         FlagFormatHelper flag_format_helper{};
@@ -2831,19 +2867,6 @@ namespace RC::UEGenerator
         }
 
         return is_shadowing;
-    }
-
-    auto UEHeaderGenerator::sanitize_enumeration_name(const std::wstring& enumeration_name) -> std::wstring
-    {
-        std::wstring result_enum_name = enumeration_name;
-
-        //Remove enumeration name from the string
-        size_t enum_name_string_split = enumeration_name.find(STR("::"));
-        if (enum_name_string_split != std::wstring::npos)
-        {
-            result_enum_name.erase(0, enum_name_string_split + 2);
-        }
-        return result_enum_name;
     }
 
     auto UEHeaderGenerator::get_module_name_for_package(UObject* package) -> std::wstring
@@ -3422,12 +3445,12 @@ namespace RC::UEGenerator
         m_current_indent_count++;
     }
 
-    auto GeneratedFile::end_ident_level() -> void
+    auto GeneratedFile::end_indent_level() -> void
     {
         m_current_indent_count--;
         if (m_current_indent_count < 0)
         {
-            throw std::invalid_argument("Attempt to pop empty ident level stack");
+            throw std::invalid_argument("Attempt to pop empty indent level stack");
         }
     }
 

@@ -169,21 +169,33 @@ set(POLYHOOK_USE_EXTERNAL_ZYDIS ON CACHE BOOL "Use external zydis libary" FORCE)
 set(ASMJIT_STATIC ${MAKE_POLYHOOK_DEPENDENCIES_STATIC} CACHE BOOL "Build 'asmjit' library as static" FORCE)
 set(POLYHOOK_BUILD_STATIC_RUNTIME OFF CACHE BOOL "Use static runtime" FORCE)
 
-# disable 'install' by replacing with no-op before calling add_subdirectory
-macro (install)
-endmacro ()
-# disable 'set_target_properties' to prevent PolyHook from setting MSVC_RUNTIME_LIBRARY to "MultiThreaded$<$<CONFIG:Debug>:Debug>DLL"
-# seriously, this can't be good, but it keeps working
-macro (set_target_properties)
-endmacro ()
+# add a conditional for disabling 'set_target_properties' on demand to prevent PolyHook from setting MSVC_RUNTIME_LIBRARY to "MultiThreaded$<$<CONFIG:Debug>:Debug>DLL"
+if(NOT DEFINED _DISABLE_SET_PROPERTIES)
+  set(_DISABLE_SET_PROPERTIES TRUE)
+
+  macro(set_target_properties)
+    if (NOT _DISABLE_SET_PROPERTIES)
+        _set_target_properties(${ARGV})
+    endif()
+  endmacro()
+endif()
+
+# add a conditional for disabling 'install' on demand
+if(NOT DEFINED _DISABLE_INSTALL)
+  set(_DISABLE_INSTALL TRUE)
+
+  macro(install)
+    if (NOT _DISABLE_INSTALL)
+        _install(${ARGV})
+    endif()
+  endmacro()
+endif()
+
 add_subdirectory(Dependencies/PolyHook_2_0)
-# clean up macros
-macro (set_target_properties)
-  _set_target_properties(${ARGV})
-endmacro ()
-macro (install)
-  _install(${ARGV})
-endmacro ()
+
+# re-enable 'set_target_properties' and 'install' since we're done adding PolyHook
+set(_DISABLE_SET_PROPERTIES FALSE)
+set(_DISABLE_INSTALL FALSE)
 
 if (${COMPILER_NAME} STREQUAL Clang)
     set(PUBLIC_ONLY_COMPILE_OPTIONS -Wno-everything -Wno-all -Wno-extra -Wno-pedantic -Wno-c++98-compat -Wno-c++98-compat-pedantic -Wno-bitwise-instead-of-logical)
