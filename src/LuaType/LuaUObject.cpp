@@ -1229,30 +1229,7 @@ Overloads:
             // It means that the UFunction was found and is stored in 'property', so we don't need to do anything to find it
             if (!field && property_name != Unreal::FName(0u, 0u))
             {
-                std::vector<Unreal::UObject*> found_functions;
-                Unreal::UObjectGlobals::FindObjects(Unreal::GFunctionName, property_name, found_functions);
-
-                for (const auto& found_function : found_functions)
-                {
-                    Unreal::UStruct* inheritance_to_test = static_cast<Unreal::UStruct*>(found_function->GetOuterPrivate());
-                    Unreal::UStruct* base_class = base->GetClassPrivate();
-
-                    while (base_class)
-                    {
-                        if (inheritance_to_test == base_class)
-                        {
-                            func = static_cast<Unreal::UFunction*>(found_function);
-                            break;
-                        }
-
-                        Unreal::UStruct* next = base_class->GetSuperStruct();
-
-                        // This shouldn't be the case with the super struct linked list, but I'm putting this here just in case
-                        if (base_class == next) { break; }
-
-                        base_class = next;
-                    }
-                }
+                func = base->GetFunctionByNameInChain(property_name);
             }
             else
             {
