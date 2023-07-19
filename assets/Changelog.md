@@ -30,6 +30,10 @@ Added `UEnum::GenereateEnumPrefeix`, which is the same as https://docs.unrealeng
 ### Live View
 Can now view enum values in the Live View debugger
 
+Added a search option to exclude objects of a class with a name containing the specified (case-sensitive) string
+
+Added a checkbox that toggles search options globally, meaning when not searching
+
 ### UHT Dumper
 Removed unnecessary explicit `_MAX` elements from enums
 
@@ -147,11 +151,7 @@ Add Lua Type generator for use by a Lua language server (TrumanK). See https://m
 Font scaling setting for Live View
 
 ### Live View
-Added "PlayerControlled" to the Live View tab
-
-Added a search option to exclude objects of a class with a name containing the specified (case-sensitive) string
-
-Added a checkbox that toggles search options globally, meaning when not searching
+Add "PlayerControlled" to the Live View tab
 
 ### Lua
 Add IsValid() to TArray
