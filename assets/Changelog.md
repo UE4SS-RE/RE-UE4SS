@@ -151,7 +151,7 @@ Add Lua Type generator for use by a Lua language server (TrumanK). See https://m
 Font scaling setting for Live View
 
 ### Live View
-Add "PlayerControlled" to the Live View tab
+Add "PlayerControlled" to the liveview tab
 
 ### Lua
 Add IsValid() to TArray
@@ -167,7 +167,7 @@ Fixed bug that could cause hooked functions to not process the return value prop
 Lua_lock implementation/threading fixes (ParcelRot)
 
 ### UHT Dumper
-Removed predeclarations in .cpp files
+Remove predeclarations in .cpp files
 
 ### QoL
 Add font scaling setting to live view GUI
