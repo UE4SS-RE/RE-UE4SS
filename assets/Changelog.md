@@ -6,6 +6,8 @@ TBD
 ### General
 Added support for UE Version 5.2 games
 
+Added additional AOB for `FName::ToString` - LongerWarrior
+
 ### C++ API
 Finalize C++ API and add required dll to builds - LocalCC; Truman
 
@@ -15,8 +17,29 @@ Fixed initialization functions not being correctly called when a mod is restarte
 
 Fixed attempted mod loading when cppsdk doesn't exist - LocalCC
 
+Added `UFunction::RegisterPreHookForInstance` and `UFunction::RegisterPostHookForInstance`  
+These functions work the same as `UFunction::RegisterPreHook`/`UFunction::RegisterPostHook` except the callback is only fired if the context matches the specified instance  
+These new functions need to be handled with care as they can cause crashes if you don't validate that the instance you're passing during registration is valid inside the callback
+
+Added overloads for `UObject::GetFunctionByName` and `UObject::GetFunctionByNameInChain` that take an `FName` instead of a string
+
+Added `UEnum::NumEnums`, which returns the number of enum values for the enum
+
+Added `UEnum::GenereateEnumPrefix`, which is the same as https://docs.unrealengine.com/5.2/en-US/API/Runtime/CoreUObject/UObject/UEnum/GenerateEnumPrefix/
+
 ### Live View
 Can now view enum values in the Live View debugger
+
+Added a search option to exclude objects of a class with a name containing the specified (case-sensitive) string
+
+Added a checkbox that toggles search options globally, meaning when not searching
+
+### UHT Dumper
+Removed unnecessary explicit `_MAX` elements from enums
+
+Fixed enums inappropriately using `uint8`
+
+Made `FWeakObjectPtr` overridable unless used in a TArray or TMap
 
 ### Experimental
 Added ExperimentalFeatures section to UE4SS-settings.ini.  All experimental features will default to being turned off.  To use referenced features, change the relevant config setting to = 1
@@ -36,12 +59,17 @@ Add common TArray instantiations
 ### Lua API
 Fixed unregisterhook
 
+Improved stability when using hooks or `ExecuteInGameThread`
+
 ## Changes
 
 ### USMap Dumper
 Add additional extensions - Atenfyr; Archengius
 
 Fix bug with enums with 256 entries - Atenfyr
+
+### C++ API
+The callbacks for all hook registration functions inside the `Unreal::Hook` namespace can now take lambdas that capture variables
 
 ### Sig Scanner
 Change AOB Sig Scanner backend to use std::find for major performance increase - inspired by Truman
@@ -50,6 +78,12 @@ Scan for specified time rather than number of attempts due to speed increase
 
 ### Performance
 Change to generators for certain major iterators - LocalCC
+
+Improved performance for U/FProperty lookups
+
+Improved performance for UFunction lookups
+
+Improved performance of the live log, it's now O(n) - trumank
 
 ### BP Mod Loader
 Add ability to specify load order - Okaetsu
