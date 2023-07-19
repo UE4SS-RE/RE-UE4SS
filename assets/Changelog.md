@@ -151,7 +151,7 @@ Add Lua Type generator for use by a Lua language server (TrumanK). See https://m
 Font scaling setting for Live View
 
 ### Live View
-Add "PlayerControlled" to the liveview tab
+Add "PlayerControlled" to liveview tab
 
 ### Lua
 Add IsValid() to TArray
