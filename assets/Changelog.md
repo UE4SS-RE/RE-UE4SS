@@ -25,7 +25,7 @@ Added overloads for `UObject::GetFunctionByName` and `UObject::GetFunctionByName
 
 Added `UEnum::NumEnums`, which returns the number of enum values for the enum
 
-Added `UEnum::GenereateEnumPrefeix`, which is the same as https://docs.unrealengine.com/5.2/en-US/API/Runtime/CoreUObject/UObject/UEnum/GenerateEnumPrefix/
+Added `UEnum::GenereateEnumPrefix`, which is the same as https://docs.unrealengine.com/5.2/en-US/API/Runtime/CoreUObject/UObject/UEnum/GenerateEnumPrefix/
 
 ### Live View
 Can now view enum values in the Live View debugger
