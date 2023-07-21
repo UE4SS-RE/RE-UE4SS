@@ -105,6 +105,14 @@ namespace RC::GUI
             }
         }
 
+        if (!LiveView::s_search_options.has_property.empty())
+        {
+            if (!object->GetPropertyByNameInChain(LiveView::s_search_options.has_property.c_str()))
+            {
+                return true;
+            }
+        }
+
         return false;
     }
 
@@ -1739,6 +1747,16 @@ namespace RC::GUI
                 if (ImGui::InputText("##ExcludeClassName", &s_search_options.internal_exclude_class_name))
                 {
                     s_search_options.exclude_class_name = to_wstring(s_search_options.internal_exclude_class_name);
+                }
+
+                // Row 5
+                ImGui::TableNextRow();
+                ImGui::TableNextColumn();
+                ImGui::Text("Has property");
+                ImGui::TableNextColumn();
+                if (ImGui::InputText("##HasProperty", &s_search_options.internal_has_property))
+                {
+                    s_search_options.has_property = to_wstring(s_search_options.internal_has_property);
                 }
 
                 ImGui::EndTable();
