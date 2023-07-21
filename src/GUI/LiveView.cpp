@@ -105,6 +105,14 @@ namespace RC::GUI
             }
         }
 
+        if (!LiveView::s_search_options.has_property.empty())
+        {
+            if (!object->GetPropertyByNameInChain(LiveView::s_search_options.has_property.c_str()))
+            {
+                return true;
+            }
+        }
+
         return false;
     }
 
@@ -1741,6 +1749,16 @@ namespace RC::GUI
                     s_search_options.exclude_class_name = to_wstring(s_search_options.internal_exclude_class_name);
                 }
 
+                // Row 5
+                ImGui::TableNextRow();
+                ImGui::TableNextColumn();
+                ImGui::Text("Has property");
+                ImGui::TableNextColumn();
+                if (ImGui::InputText("##HasProperty", &s_search_options.internal_has_property))
+                {
+                    s_search_options.has_property = to_wstring(s_search_options.internal_has_property);
+                }
+
                 ImGui::EndTable();
             }
             ImGui::EndPopup();
@@ -1938,16 +1956,24 @@ namespace RC::GUI
         else
         {
             auto num_elements = UObjectArray::GetNumElements();
-            int num_total_chunks = (num_elements / s_max_elements_per_chunk) + (num_elements % s_max_elements_per_chunk == 0 ? 0 : 1);
-            for (int i = 0; i < num_total_chunks; ++i)
+
+            if (!s_search_options.apply_when_not_searching)
             {
-                if (ImGui_TreeNodeEx(std::format("Group #{}", i).c_str(), i + s_chunk_id_start, ImGuiTreeNodeFlags_CollapsingHeader))
+                int num_total_chunks = (num_elements / s_max_elements_per_chunk) + (num_elements % s_max_elements_per_chunk == 0 ? 0 : 1);
+                for (int i = 0; i < num_total_chunks; ++i)
                 {
-                    ::RC::GUI::collapse_all_except(i + s_chunk_id_start);
-                    auto start = s_max_elements_per_chunk * i;
-                    auto end = start + s_max_elements_per_chunk;
-                    do_iteration(start, end);
+                    if (ImGui_TreeNodeEx(std::format("Group #{}", i).c_str(), i + s_chunk_id_start, ImGuiTreeNodeFlags_CollapsingHeader))
+                    {
+                        ::RC::GUI::collapse_all_except(i + s_chunk_id_start);
+                        auto start = s_max_elements_per_chunk * i;
+                        auto end = start + s_max_elements_per_chunk;
+                        do_iteration(start, end);
+                    }
                 }
+            }
+            else
+            {
+                do_iteration(0, UObjectArray::GetNumElements());
             }
         }
         ImGui::PopStyleVar();

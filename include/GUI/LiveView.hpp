@@ -40,6 +40,8 @@ namespace RC::GUI
         bool function_param_flags_include_return_property{};
         std::string internal_exclude_class_name{};
         StringType exclude_class_name{};
+        std::string internal_has_property{};
+        StringType has_property{};
     };
 
     class LiveView
