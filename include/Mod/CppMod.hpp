@@ -18,6 +18,7 @@ namespace RC
         std::wstring m_dlls_path;
 
         HMODULE m_main_dll_module = NULL;
+        DLL_DIRECTORY_COOKIE m_dlls_path_cookie = NULL;
         start_type m_start_mod_func = nullptr;
         uninstall_type m_uninstall_mod_func = nullptr;
 

@@ -20,6 +20,8 @@ namespace RC
         }
 
         auto dll_path = m_dlls_path + L"\\main.dll";
+        // Add mods dlls directory to search path for dynamic/shared linked libraries in mods
+        m_dlls_path_cookie = AddDllDirectory(m_dlls_path.c_str());
         m_main_dll_module = LoadLibraryW(dll_path.c_str());
 
         if (!m_main_dll_module)
@@ -87,6 +89,9 @@ namespace RC
 
     CppMod::~CppMod()
     {
-        if (m_main_dll_module) { FreeLibrary(m_main_dll_module); }
+        if (m_main_dll_module) { 
+            FreeLibrary(m_main_dll_module); 
+            RemoveDllDirectory(m_dlls_path_cookie);
+        }
     }
 }
