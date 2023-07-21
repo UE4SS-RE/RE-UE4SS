@@ -48,7 +48,7 @@ def export_version(ref, name):
 
     # copy README.md to <version>/src/
     # rewrite absolute URLs to relative mdBook URLs
-    copy_transform('README.md', os.path.join(src_dir, 'README.md'), lambda content: re.sub(r'\(https://uess.dev/dev/([^)#]+)\.html(#[^)]*)?\)', r'(\1.md\2)', content))
+    copy_transform('README.md', os.path.join(src_dir, 'README.md'), lambda content: re.sub(r'\(https://docs.ue4ss.com/dev/([^)#]+)\.html(#[^)]*)?\)', r'(\1.md\2)', content))
 
     # insert banner
     if name != 'release':
