@@ -38,6 +38,8 @@ namespace RC
         RC_UE4SS_API auto virtual on_unreal_init() -> void {}
 
         RC_UE4SS_API auto virtual on_program_start() -> void {}
+
+        RC_UE4SS_API auto virtual on_dll_load(std::wstring_view dll_name) -> void {}
     };
 }
 

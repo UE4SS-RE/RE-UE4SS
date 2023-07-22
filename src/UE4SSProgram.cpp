@@ -127,6 +127,38 @@ namespace RC
         Output::send(STR("\n##### MEMBER OFFSETS END #####\n\n"));
     }
 
+    void* HookedLoadLibraryA(const char* dll_name)
+    {
+        UE4SSProgram& program = UE4SSProgram::get_program();
+        HMODULE lib = PLH::FnCast(program.m_hook_trampoline_load_library_a, &LoadLibraryA)(dll_name);
+        program.fire_dll_load_for_cpp_mods(to_wstring(dll_name));
+        return lib;
+    }
+
+    void* HookedLoadLibraryExA(const char* dll_name, void* file, int32_t flags)
+    {
+        UE4SSProgram& program = UE4SSProgram::get_program();
+        HMODULE lib = PLH::FnCast(program.m_hook_trampoline_load_library_ex_a, &LoadLibraryExA)(dll_name, file, flags);
+        program.fire_dll_load_for_cpp_mods(to_wstring(dll_name));
+        return lib;
+    }
+
+    void* HookedLoadLibraryW(const wchar_t* dll_name)
+    {
+        UE4SSProgram& program = UE4SSProgram::get_program();
+        HMODULE lib = PLH::FnCast(program.m_hook_trampoline_load_library_w, &LoadLibraryW)(dll_name);
+        program.fire_dll_load_for_cpp_mods(dll_name);
+        return lib;
+    }
+
+    void* HookedLoadLibraryExW(const wchar_t* dll_name, void* file, int32_t flags)
+    {
+        UE4SSProgram& program = UE4SSProgram::get_program();
+        HMODULE lib = PLH::FnCast(program.m_hook_trampoline_load_library_ex_w, &LoadLibraryExW)(dll_name, file, flags);
+        program.fire_dll_load_for_cpp_mods(dll_name);
+        return lib;
+    }
+
     UE4SSProgram::UE4SSProgram(const std::wstring& moduleFilePath, std::initializer_list<BinaryOptions> options) : MProgram(options)
     {
         TIME_FUNCTION()
@@ -190,6 +222,40 @@ namespace RC
             Output::send(STR("WITH_CASE_PRESERVING_NAME: No\n\n"));
 #endif
 
+            m_load_library_a_hook = std::make_unique<PLH::IatHook>(
+                "kernel32.dll",
+                "LoadLibraryA",
+                std::bit_cast<uint64_t>(&HookedLoadLibraryA),
+                &m_hook_trampoline_load_library_a,
+                L"");
+            m_load_library_a_hook->hook();
+
+            m_load_library_ex_a_hook = std::make_unique<PLH::IatHook>(
+                "kernel32.dll",
+                "LoadLibraryExA",
+                std::bit_cast<uint64_t>(&HookedLoadLibraryExA),
+                &m_hook_trampoline_load_library_ex_a,
+                L"");
+            m_load_library_ex_a_hook->hook();
+
+            m_load_library_w_hook = std::make_unique<PLH::IatHook>(
+                "kernel32.dll",
+                "LoadLibraryW",
+                std::bit_cast<uint64_t>(&HookedLoadLibraryW),
+                &m_hook_trampoline_load_library_w,
+                L"");
+            m_load_library_w_hook->hook();
+
+            m_load_library_ex_w_hook = std::make_unique<PLH::IatHook>(
+                "kernel32.dll",
+                "LoadLibraryExW",
+                std::bit_cast<uint64_t>(&HookedLoadLibraryExW),
+                &m_hook_trampoline_load_library_ex_w,
+                L"");
+            m_load_library_ex_w_hook->hook();
+
+            Unreal::UnrealInitializer::SetupUnrealModules();
+
             setup_mods();
             install_cpp_mods();
             start_cpp_mods();
@@ -214,6 +280,38 @@ namespace RC
             Output::send(STR("log directory: {}\n"), m_log_directory.c_str());
             Output::send(STR("object dumper directory: {}\n\n\n"), m_object_dumper_output_directory.c_str());
 
+        }
+        catch (std::runtime_error& e)
+        {
+            // Returns to main from here which checks, displays & handles whether to close the program or not
+            // If has_error() returns false that means that set_error was not called
+            // In that case we need to copy the exception message to the error buffer before we return to main
+            if (!m_error_object->has_error())
+            {
+                copy_error_into_message(e.what());
+
+            }
+            return;
+        }
+    }
+
+    UE4SSProgram::~UE4SSProgram()
+    {
+        // Shut down the event loop
+        m_processing_events = false;
+
+        // It's possible that main() will destroy the default devices (they are static)
+        // However it's also possible that this program object is constructed in a context where main() is not gonna immediately exit
+        // Because of that and because the default devices are created in the constructor, it's preferred to explicitly close all default devices in the destructor
+        Output::close_all_default_devices();
+    }
+
+    auto UE4SSProgram::init() -> void
+    {
+        TIME_FUNCTION();
+
+        try
+        {
             setup_unreal();
 
             Output::send(STR("Unreal Engine modules ({}):\n"), SigScannerStaticData::m_is_modular ? STR("modular") : STR("non-modular"));
@@ -254,24 +352,13 @@ namespace RC
             // Returns to main from here which checks, displays & handles whether to close the program or not
             // If has_error() returns false that means that set_error was not called
             // In that case we need to copy the exception message to the error buffer before we return to main
-            if (!m_error_object->has_error())
+            if (!m_error_object->has_error()) 
             {
-                copy_error_into_message(e.what());
+                copy_error_into_message(e.what()); 
 
             }
             return;
         }
-    }
-
-    UE4SSProgram::~UE4SSProgram()
-    {
-        // Shut down the event loop
-        m_processing_events = false;
-
-        // It's possible that main() will destroy the default devices (they are static)
-        // However it's also possible that this program object is constructed in a context where main() is not gonna immediately exit
-        // Because of that and because the default devices are created in the constructor, it's preferred to explicitly close all default devices in the destructor
-        Output::close_all_default_devices();
     }
 
     auto UE4SSProgram::setup_paths(const std::wstring& moduleFilePathString) -> void
@@ -923,6 +1010,17 @@ namespace RC
         {
             if (!dynamic_cast<CppMod*>(mod.get())) { continue; }
             mod->fire_program_start();
+        }
+    }
+
+    auto UE4SSProgram::fire_dll_load_for_cpp_mods(std::wstring_view dll_name) -> void
+    {
+        for (const auto& mod : m_mods)
+        {
+            if (auto cpp_mod = dynamic_cast<CppMod*>(mod.get()); cpp_mod)
+            {
+                cpp_mod->fire_dll_load(dll_name);
+            }
         }
     }
     
