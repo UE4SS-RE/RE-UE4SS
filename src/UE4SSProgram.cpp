@@ -679,16 +679,24 @@ namespace RC
                 m_debugging_gui.get_live_view().set_listeners_allowed(false);
             }
 
+            auto stop_gui = [&] {
+                if (m_render_thread.joinable())
+                {
+                    m_render_thread.request_stop();
+                    m_render_thread.join();
+                }
+            };
+
             m_input_handler.register_keydown_event(Input::Key::O, { Input::ModifierKey::CONTROL }, [&]() {
                 TRY([&] {
                     if (!get_debugging_ui().is_open())
                     {
-                        if (m_render_thread.joinable())
-                        {
-                            m_render_thread.request_stop();
-                            m_render_thread.join();
-                        }
+                        stop_gui();
                         m_render_thread = std::jthread{ &GUI::gui_thread, &m_debugging_gui };
+                    }
+                    else
+                    {
+                        stop_gui();
                     }
                     });
                 });
