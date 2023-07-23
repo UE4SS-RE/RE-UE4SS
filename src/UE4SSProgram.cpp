@@ -776,8 +776,9 @@ namespace RC
 
             m_input_handler.register_keydown_event(Input::Key::O, { Input::ModifierKey::CONTROL }, [&]() {
                 TRY([&] {
+                    auto was_gui_open = get_debugging_ui().is_open();
                     stop_gui();
-                    if (!get_debugging_ui().is_open())
+                    if (!was_gui_open)
                     {
                         m_render_thread = std::jthread{ &GUI::gui_thread, &m_debugging_gui };
                     }
