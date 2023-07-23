@@ -87,6 +87,11 @@ namespace RC
         if (m_mod) { m_mod->on_update(); }
     }
 
+    auto CppMod::fire_dll_load(std::wstring_view dll_name) -> void
+    {
+        if (m_mod) { m_mod->on_dll_load(dll_name); }
+    }
+
     CppMod::~CppMod()
     {
         if (m_main_dll_module) { 

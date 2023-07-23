@@ -7,6 +7,7 @@
 #include <string_view>
 #include <mutex>
 
+#include <polyhook2/PE/IatHook.hpp>
 #include <Common.hpp>
 #include <MProgram.hpp>
 #include <SettingsManager.hpp>
@@ -104,6 +105,19 @@ namespace RC
         std::vector<Event> m_queued_events{};
         std::mutex m_event_queue_mutex{};
 
+    private:
+        std::unique_ptr<PLH::IatHook> m_load_library_a_hook;
+        uint64_t m_hook_trampoline_load_library_a;
+
+        std::unique_ptr<PLH::IatHook> m_load_library_ex_a_hook;
+        uint64_t m_hook_trampoline_load_library_ex_a;
+
+        std::unique_ptr<PLH::IatHook> m_load_library_w_hook;
+        uint64_t m_hook_trampoline_load_library_w;
+
+        std::unique_ptr<PLH::IatHook> m_load_library_ex_w_hook;
+        uint64_t m_hook_trampoline_load_library_ex_w;
+
     public:
         static inline std::vector<std::unique_ptr<Mod>> m_mods;
 
@@ -159,8 +173,10 @@ namespace RC
         auto uninstall_mods() -> void;
         auto fire_unreal_init_for_cpp_mods() -> void;
         auto fire_program_start_for_cpp_mods() -> void;
+        auto fire_dll_load_for_cpp_mods(std::wstring_view dll_name) -> void;
 
     public:
+        auto init() -> void;
         auto is_program_started() -> bool;
         auto reinstall_mods() -> void;
         auto get_object_dumper_output_directory() -> const File::StringType;
@@ -217,6 +233,12 @@ namespace RC
         {
             return *s_program;
         }
+
+    private:
+        friend void* HookedLoadLibraryA(const char* dll_name);
+        friend void* HookedLoadLibraryExA(const char* dll_name, void* file, int32_t flags);
+        friend void* HookedLoadLibraryW(const wchar_t* dll_name);
+        friend void* HookedLoadLibraryExW(const wchar_t* dll_name, void* file, int32_t flags);
     };
 }
 
