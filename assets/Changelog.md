@@ -8,8 +8,12 @@ Added support for UE Version 5.2 games
 
 Added additional AOB for `FName::ToString` - LongerWarrior
 
+The shortcut (CTRL + O) for opening the GUI is now a toggle, meaning it can also be used for closing the GUI
+
 ### C++ API
 Finalize C++ API and add required dll to builds - LocalCC; Truman
+
+C++ mods are now loaded earlier, and will keep the game from starting until all mods have finished executing their `start_mod` function
 
 Expose IMGui to C++ mods - Truman
 
