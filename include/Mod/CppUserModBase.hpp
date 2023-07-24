@@ -31,7 +31,7 @@ namespace RC
         RC_UE4SS_API virtual ~CppUserModBase() = default;
 
     public:
-        RC_UE4SS_API auto virtual on_update() -> void = 0;
+        RC_UE4SS_API auto virtual on_update() -> void {}
 
         // The 'Unreal' module has been initialized.
         // Before this fires, you cannot use anything in the 'Unreal' namespace.
