@@ -1,10 +1,11 @@
 # Creating a C++ mod
 
 This guide will help you create a C++ mod using UE4SS.  
-It's split up into three parts.  
+It's split up into four parts.  
 Part one goes over the prerequisites.  
 Part two goes over creating the most basic C++ mod possible.  
-Part three will show you how to interact with UE4SS and UE itself (via UE4SS).
+Part three will show you how to interact with UE4SS and UE itself (via UE4SS).  
+Part four will cover installation of the mod.
 
 ## Part 1
 1. Make an Epic account and link it to your GitHub account.
@@ -117,4 +118,36 @@ auto on_unreal_init() -> void override
 Note that `Output::send` doesn't require a `LogLevel` and that we're using `{}` in the format string instead of `%s`.  
 The `Output::send` function uses `std::format` in the back-end so you should do some research around std::format or libfmt if you want to know more about it.
 
-7. Right click your project and hit `Build`.  
+7. Right click your project and hit `Build`.
+
+## Part #4
+
+1. This part assumes you have UE4SS installed for your game already. If not, refer to the [installation guide](./installation-guide.md). 
+
+2. After building, you will have the following files:
+    - `UE4SS-cppsdk_xinput.dll` in `MyMods\Output\ue4ss\Binaries\x64\Release`
+    - `MyAwesomeMod.dll` in `MyMods\Output\MyAwesomeMod\Release`
+    
+3. Navigate over to your game's executable folder and open `Mods` folder. Here we'll do a couple things:  
+    - Move `UE4SS-cppsdk_xinput.dll` here and rename it to `UE4SS-cppsdk.dll`. You will only have to do this once unless there are changes to the cppsdk dll your mod is using.
+    - Create a folder structure in `Mods` that looks like `MyAwesomeMod\dlls` and move `MyAwesomeMod.dll` inside the `dlls` folder and rename it to `main.dll`.
+
+4. To enable loading of your mod in-game you will have to edit the `mods.txt` located in the `Mods` folder. By default it looks something like this:
+```
+CheatManagerEnablerMod : 1
+ActorDumperMod : 0
+ConsoleCommandsMod : 1
+ConsoleEnablerMod : 1
+SplitScreenMod : 0
+LineTraceMod : 1
+BPModLoaderMod : 1
+jsbLuaProfilerMod : 0
+
+
+
+; Built-in keybinds, do not move up!
+Keybinds : 1
+```
+Here you will want to add the line `MyAwesomeMod : 1` to enable `MyAwesomeMod`.
+
+5. Launch your game and if everything was done correctly, you should see the text "MyAwesomeMod says hello" highlighted in blue somewhere at the top of UE4SS console.
