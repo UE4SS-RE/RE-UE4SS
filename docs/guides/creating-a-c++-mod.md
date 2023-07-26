@@ -122,7 +122,7 @@ The `Output::send` function uses `std::format` in the back-end so you should do 
 
 ## Part #4
 
-1. This part assumes you have UE4SS installed for your game already. If not, refer to the [installation guide](./installation-guide.md). 
+1. This part assumes you have UE4SS installed for your game already. If not, refer to the [installation guide](../installation-guide.md). 
 
 2. After building, you will have the following files:
     - `UE4SS-cppsdk_xinput.dll` in `MyMods\Output\ue4ss\Binaries\x64\Release`
