@@ -18,7 +18,7 @@ namespace RC::UVTD
     extern bool processing_events;
     extern Input::Handler input_handler;
 
-    auto main(DumpMode) -> void;
+    auto main(DumpSettings) -> void;
 }
 
 #endif //RC_UVTD_HPP

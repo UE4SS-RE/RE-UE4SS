@@ -57,6 +57,7 @@ auto thread_dll_start([[maybe_unused]]LPVOID thread_param) -> unsigned long
 
         for (int32_t selection = get_user_selection(); selection != 1337; selection = get_user_selection())
         {
+            UVTD::DumpSettings settings{};
             if (selection == 0)
             {
                 break;
@@ -64,30 +65,27 @@ auto thread_dll_start([[maybe_unused]]LPVOID thread_param) -> unsigned long
             else if (selection == 1)
             {
                 Output::send(STR("Generating VTable layouts...\n"));
-                UVTD::main(UVTD::DumpMode::VTable);
+                settings.should_dump_vtable = true;
             }
             else if (selection == 2)
             {
                 Output::send(STR("Generating class/struct member variable layouts...\n"));
-                UVTD::main(UVTD::DumpMode::MemberVars);
+                settings.should_dump_member_vars = true;
             }
             else if (selection == 3)
             {
                 Output::send(STR("Generating sol bindings...\n"));
-                UVTD::main(UVTD::DumpMode::SolBindings);
+                settings.should_dump_sol_bindings = true;
             }
             else if (selection == 4)
             {
-                Output::send(STR("Generating VTable layouts...\n"));
-                UVTD::main(UVTD::DumpMode::VTable);
+                Output::send(STR("Generating VTable layouts and class/struct member variable layouts...\n"));
+                settings.should_dump_vtable = true;
+                settings.should_dump_member_vars = true;
+            }
+            
+            UVTD::main(settings);
 
-                Output::send(STR("Generating class/struct member variable layouts...\n"));
-                UVTD::main(UVTD::DumpMode::MemberVars);
-            }
-            else if (selection == 9)
-            {
-                // Reserved for NOP, ask user again.
-            }
             break;
         }
     }

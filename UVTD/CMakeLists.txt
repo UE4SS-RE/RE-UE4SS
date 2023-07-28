@@ -58,6 +58,8 @@ set(${TARGET}_Sources
         "${CMAKE_CURRENT_SOURCE_DIR}/src/Symbols.cpp"
         "${CMAKE_CURRENT_SOURCE_DIR}/src/TypeContainer.cpp"
         "${CMAKE_CURRENT_SOURCE_DIR}/src/VTableDumper.cpp"
+        "${CMAKE_CURRENT_SOURCE_DIR}/src/UnrealVirtualGenerator.cpp"
+        "${CMAKE_CURRENT_SOURCE_DIR}/src/TemplateClassParser.cpp"
         "${CMAKE_CURRENT_SOURCE_DIR}/src/MemberVarsDumper.cpp"
         "${CMAKE_CURRENT_SOURCE_DIR}/src/MemberVarsWrapperGenerator.cpp"
         "${CMAKE_CURRENT_SOURCE_DIR}/src/SolBindingsGenerator.cpp"

@@ -3,6 +3,7 @@
 
 #include <UVTD/Symbols.hpp>
 #include <UVTD/Helpers.hpp>
+#include <UVTD/TemplateClassParser.hpp>
 #include <File/File.hpp>
 
 #include <PDB.h>
@@ -86,7 +87,7 @@ namespace RC::UVTD
         return signature;
     }
 
-    auto Symbols::get_type_name(const PDB::TPIStream& tpi_stream, uint32_t record_index) -> File::StringType
+    auto Symbols::get_type_name(const PDB::TPIStream& tpi_stream, uint32_t record_index, bool check_valid) -> File::StringType
     {
         if (record_index < tpi_stream.GetFirstTypeIndex())
         {
@@ -219,7 +220,17 @@ namespace RC::UVTD
         {
         case PDB::CodeView::TPI::TypeRecordKind::LF_CLASS:
         case PDB::CodeView::TPI::TypeRecordKind::LF_STRUCTURE:
-            return get_leaf_name(record->data.LF_CLASS.data, record->data.LF_CLASS.lfEasy.kind);
+        {
+            File::StringType name = get_leaf_name(record->data.LF_CLASS.data, record->data.LF_CLASS.lfEasy.kind);
+            ParsedTemplateClass parsed = TemplateClassParser::Parse(name);
+
+            if (parsed.class_name == STR("TMap"))
+            {
+                name = STR("TMap<") + parsed.template_args[0] + STR(", ") + parsed.template_args[1] + STR(">");
+            }
+            if (check_valid && !valid_udt_names.contains(name)) return STR("void");
+            return name;
+        }
         case PDB::CodeView::TPI::TypeRecordKind::LF_ENUM:
             return to_string_type(record->data.LF_ENUM.name);
         case PDB::CodeView::TPI::TypeRecordKind::LF_MODIFIER:
@@ -236,16 +247,16 @@ namespace RC::UVTD
                 modifier_string += modifier + STR(" ");
             }
 
-            return modifier_string + get_type_name(tpi_stream, record->data.LF_MODIFIER.type);
+            return modifier_string + get_type_name(tpi_stream, record->data.LF_MODIFIER.type, check_valid);
         }
         case PDB::CodeView::TPI::TypeRecordKind::LF_POINTER: 
-            return get_type_name(tpi_stream, record->data.LF_POINTER.utype) + STR("*");
+            return get_type_name(tpi_stream, record->data.LF_POINTER.utype, check_valid) + STR("*");
         case PDB::CodeView::TPI::TypeRecordKind::LF_MFUNCTION:
         case PDB::CodeView::TPI::TypeRecordKind::LF_PROCEDURE:
         {
-            auto return_type = get_type_name(tpi_stream, record->data.LF_PROCEDURE.rvtype);
-            File::StringType args = get_type_name(tpi_stream, record->data.LF_PROCEDURE.arglist);
-            return std::format(STR("Function<{}({})>"), return_type, args);
+            File::StringType return_type = get_type_name(tpi_stream, record->data.LF_PROCEDURE.rvtype, true);
+            File::StringType args = get_type_name(tpi_stream, record->data.LF_PROCEDURE.arglist, check_valid);
+            return std::format(STR("std::function<{}({})>"), return_type, args);
         }
         case PDB::CodeView::TPI::TypeRecordKind::LF_ARGLIST:
         {
@@ -254,13 +265,13 @@ namespace RC::UVTD
             for (size_t i = 0; i < record->data.LF_ARGLIST.count; i++)
             {
                 bool should_add_comma = i < record->data.LF_ARGLIST.count - 1;
-                args.append(std::format(STR("{}{}"), get_type_name(tpi_stream, record->data.LF_ARGLIST.arg[i]), should_add_comma ? STR(", ") : STR("")));
+                args.append(std::format(STR("{}{}"), get_type_name(tpi_stream, record->data.LF_ARGLIST.arg[i], true), should_add_comma ? STR(", ") : STR("")));
             }
 
             return args;
         }
         case PDB::CodeView::TPI::TypeRecordKind::LF_BITFIELD:
-            return get_type_name(tpi_stream, record->data.LF_BITFIELD.type);
+            return get_type_name(tpi_stream, record->data.LF_BITFIELD.type, check_valid);
         default:
             __debugbreak();
             return STR("<UNKNOWN TYPE>");

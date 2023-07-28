@@ -14,7 +14,12 @@
 
 namespace RC::UVTD
 {
-    enum class DumpMode { VTable, MemberVars, SolBindings };
+    struct DumpSettings
+    {
+        bool should_dump_vtable{};
+        bool should_dump_member_vars{};
+        bool should_dump_sol_bindings{};
+    };
 
     enum class ValidForVTable { Yes, No };
     enum class ValidForMemberVars { Yes, No };
@@ -144,7 +149,7 @@ namespace RC::UVTD
         auto generate_method_signature(const PDB::TPIStream& tpi_stream, const PDB::CodeView::TPI::Record* function_record, File::StringType method_name) -> MethodSignature;
 
     public:
-        auto static get_type_name(const PDB::TPIStream& tpi_stream, uint32_t record_index) -> File::StringType;
+        auto static get_type_name(const PDB::TPIStream& tpi_stream, uint32_t record_index, bool check_valid = false) -> File::StringType;
         auto static get_method_name(const PDB::CodeView::TPI::FieldList* method_record) -> File::StringType;
         auto static get_leaf_name(const char* data, PDB::CodeView::TPI::TypeRecordKind kind) -> File::StringType;
 
