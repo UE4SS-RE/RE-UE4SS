@@ -9,6 +9,7 @@
 #include <Unreal/UObject.hpp>
 #include <Unreal/UObjectArray.hpp>
 #include <Unreal/FString.hpp>
+#include <Unreal/FText.hpp>
 #include <Unreal/FMemory.hpp>
 
 namespace RC
@@ -185,6 +186,37 @@ namespace RC
                         scan_result.Errors.emplace_back("Was unable to find AOB for 'StaticConstructObject' via Lua script");
                     }
                 });
+            };
+        }
+
+        std::wstring lua_ftc_scan_script = working_directory / "UE4SS_Signatures/FText_Constructor.lua";
+        if (std::filesystem::exists(lua_ftc_scan_script))
+        { 
+            config.ScanOverrides.ftext_constructor = [lua_ftc_scan_script](std::vector<SignatureContainer>& signature_containers, Unreal::Signatures::ScanResult& scan_result) mutable {
+                scan_from_lua_script(
+                    lua_ftc_scan_script,
+                    signature_containers,
+                    [&scan_result](void* address) {
+                        Unreal::FText text = Unreal::FText(L"bCanBeDamaged", address);
+
+                        if (text == L"bCanBeDamaged")
+                        {
+                            Output::send(STR("FText::FText address: {} <- Lua Script\n"), address);
+                            Unreal::FText::ConstructorInternal.assign_address(address);
+                            return DidLuaScanSucceed::Yes;
+                        }
+                        else
+                        {
+                            scan_result.Errors.emplace_back("Lua script 'FText_Constructor.lua' did not return a valid address for FText::FText.");
+                            return DidLuaScanSucceed::No;
+                        }
+                    },
+                    [&scan_result]([[maybe_unused]] DidLuaScanSucceed did_lua_scan_succeed) {
+                        if (!Unreal::FText::ConstructorInternal.get_function_address())
+                        {
+                            scan_result.Errors.emplace_back("Lua script 'FText_Constructor.lua' did not return a valid address for FText::FText.");
+                        }
+                    });
             };
         }
     }

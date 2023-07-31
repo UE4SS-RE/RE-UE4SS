@@ -1049,12 +1049,12 @@ namespace RC::LuaType
         {
             case Operation::GetNonTrivialLocal:
             case Operation::Get:
-                LuaType::FText::construct(params.lua, text);
+                LuaType::FText::construct(params.lua, *text);
                 return;
             case Operation::Set:
             {
                 auto& lua_other_object = params.lua.get_userdata<LuaType::FText>(params.stored_at_index);
-                text->SetString(lua_other_object.get_remote_cpp_object()->ToFString());
+                text->SetString(std::move(lua_other_object.get_local_cpp_object().ToFString()));
                 return;
             }
             case Operation::GetParam:

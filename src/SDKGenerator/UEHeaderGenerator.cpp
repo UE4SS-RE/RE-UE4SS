@@ -1051,7 +1051,7 @@ namespace RC::UEGenerator
         if (field_class_name == STR("TextProperty"))
         {
             FText* text_value = property->ContainerPtrToValuePtr<FText>(object);
-            const std::wstring text_value_string = text_value->ToString();
+            const std::wstring text_value_string = text_value->ToFString().GetCharArray();
 
             if (text_value_string != STR(""))
             {

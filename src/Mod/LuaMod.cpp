@@ -2655,7 +2655,7 @@ Overloads:
             else
             {
                 std::string error_message{"Was unable to register a hook with Lua function 'RegisterHook', information:\n"};
-                error_message.append(std::format("UFunction::Func: {}\n", func_ptr));
+                error_message.append(std::format("UFunction::Func: {}\n", std::bit_cast<void*>(func_ptr)));
                 error_message.append(std::format("ProcessInternal: {}\n", Unreal::UObject::ProcessInternalInternal.get_function_address()));
                 error_message.append(std::format("FUNC_Native: {}\n", static_cast<uint32_t>(unreal_function->HasAnyFunctionFlags(Unreal::EFunctionFlags::FUNC_Native))));
                 lua.throw_error(error_message);
