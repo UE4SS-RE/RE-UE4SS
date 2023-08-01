@@ -39,17 +39,19 @@ auto thread_dll_start(UE4SSProgram* program) -> unsigned long
     return 0;
 }
 
-// We're still inside DllMain so be careful what you do here
-auto dll_process_attached(HMODULE moduleHandle) -> void
+auto process_initialized(HMODULE moduleHandle) -> void
 {
     wchar_t moduleFilenameBuffer[1024]{'\0'};
     GetModuleFileNameW(moduleHandle, moduleFilenameBuffer, sizeof(moduleFilenameBuffer) / sizeof(wchar_t));
 
     auto program = new UE4SSProgram(moduleFilenameBuffer, {});
-    if (HANDLE handle = CreateThread(nullptr, 0, reinterpret_cast<LPTHREAD_START_ROUTINE>(thread_dll_start), (LPVOID)program, 0, nullptr); handle)
-    {
-        CloseHandle(handle);
-    }
+    if (HANDLE handle = CreateThread(nullptr, 0, reinterpret_cast<LPTHREAD_START_ROUTINE>(thread_dll_start), (LPVOID)program, 0, nullptr); handle) { CloseHandle(handle); }
+}
+
+// We're still inside DllMain so be careful what you do here
+auto dll_process_attached(HMODULE moduleHandle) -> void
+{
+    QueueUserAPC((PAPCFUNC)process_initialized, GetCurrentThread(), (ULONG_PTR)moduleHandle);
 }
 
 auto WIN_API_FUNCTION_NAME(HMODULE hModule,
