@@ -9,11 +9,7 @@
 #include <Helpers/String.hpp>
 #include "UE4SSProgram.hpp"
 
-#if UE4SS_LIB_BUILD_AS_XINPUT
-#define WIN_API_FUNCTION_NAME DllMain_Wrapped
-#else
 #define WIN_API_FUNCTION_NAME DllMain
-#endif
 
 using namespace RC;
 

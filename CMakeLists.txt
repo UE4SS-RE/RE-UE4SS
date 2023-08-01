@@ -325,40 +325,25 @@ set(UE4SS_LINK_WITH_LIBRARIES File DynamicOutput Unreal SinglePassSigScanner Lua
 set(UE4SS_LINK_WITH_INTERFACE_LIBRARIES Function Constructs Helpers MProgram ScopedTimer)
 target_link_libraries(${TARGET} PUBLIC ${UE4SS_LINK_WITH_LIBRARIES} ${UE4SS_LINK_WITH_INTERFACE_LIBRARIES})
 
-set(XINPUT_TARGET xinput1_3)
-enable_language(ASM_MASM)
-file(GLOB XINPUT_SOURCES "xinput/*")
-add_library(${XINPUT_TARGET} SHARED ${${TARGET}_Sources} ${XINPUT_SOURCES})
-target_include_directories(${XINPUT_TARGET} PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include> $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/generated_include>)
-target_compile_features(${XINPUT_TARGET} PUBLIC cxx_std_20)
-target_compile_definitions(${XINPUT_TARGET} PUBLIC $<${MAKE_DEPENDENCIES_SHARED}:LUA_BUILD_AS_DLL> UE4SS_LIB_BUILD_AS_XINPUT=1)
-target_compile_options(${XINPUT_TARGET} PRIVATE ${PRIVATE_COMPILE_OPTIONS})
-target_link_options(${XINPUT_TARGET} PRIVATE ${PRIVATE_LINK_OPTIONS})
-target_link_libraries(${XINPUT_TARGET} PUBLIC ${UE4SS_LINK_WITH_LIBRARIES} ${UE4SS_LINK_WITH_INTERFACE_LIBRARIES})
-
 if (${MAKE_DEPENDENCIES_STATIC} EQUAL 1)
     target_compile_definitions(${TARGET} PRIVATE ${UE4SS_COMPILE_DEFINITIONS})
-    target_compile_definitions(${XINPUT_TARGET} PRIVATE ${UE4SS_COMPILE_DEFINITIONS})
 endif()
 
 set_property(TARGET ${TARGET} PROPERTY INTERPROCEDURAL_OPTIMIZATION TRUE)
-set_property(TARGET ${XINPUT_TARGET} PROPERTY INTERPROCEDURAL_OPTIMIZATION TRUE)
 
 # Making sure that the linked C runtime is a dll so that C++ mods will work correctly
 set_property(TARGET ${TARGET} PROPERTY MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>DLL")
-set_property(TARGET ${XINPUT_TARGET} PROPERTY MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>DLL")
 
 # imgui -> START
 set(IMGUI_INCLUDES Dependencies/imgui Dependencies/ImGuiColorTextEdit)
 target_include_directories(${TARGET} PUBLIC ${IMGUI_INCLUDES})
-target_include_directories(${XINPUT_TARGET} PUBLIC ${IMGUI_INCLUDES})
 # imgui -> END
 
 # GLFW -> START
 add_library(GLFW STATIC IMPORTED)
 set_property(TARGET GLFW PROPERTY IMPORTED_LOCATION "${CMAKE_CURRENT_SOURCE_DIR}/Dependencies/GLFW/lib-vc2022/glfw3.lib")
 target_include_directories(${TARGET} PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/Dependencies/GLFW/include")
-target_include_directories(${XINPUT_TARGET} PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/Dependencies/GLFW/include")
 # GLFW -> END
 
-add_subdirectory("cppsdk")
+add_subdirectory("proxy_generator")
+add_subdirectory("proxy")
