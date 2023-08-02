@@ -919,16 +919,6 @@ namespace RC
 
         if (!std::filesystem::exists(m_mods_directory)) { set_error("Mods directory doesn't exist, please create it: <%S>", m_mods_directory.c_str()); }
 
-        auto cpp_sdk_path = m_mods_directory / "UE4SS-cppsdk.dll";
-        bool cpp_sdk_loaded = false;
-        if (std::filesystem::exists(cpp_sdk_path))
-        {
-            HMODULE cpp_sdk = LoadLibraryW(cpp_sdk_path.c_str());
-            if (cpp_sdk) { cpp_sdk_loaded = true; }
-        }
-
-        if (!cpp_sdk_loaded) { Output::send<LogLevel::Warning>(STR("Cppsdk not present, cpp mods will not be loaded\n")); }
-
         for (const auto& sub_directory : std::filesystem::directory_iterator(m_mods_directory))
         {
             std::error_code ec;
@@ -948,7 +938,7 @@ namespace RC
             {
                 // Create the mod but don't install it yet
                 if (std::filesystem::exists(sub_directory.path() / "scripts")) m_mods.emplace_back(std::make_unique<LuaMod>(*this, sub_directory.path().stem().wstring(), sub_directory.path().wstring()));
-                if (cpp_sdk_loaded && std::filesystem::exists(sub_directory.path() / "dlls")) m_mods.emplace_back(std::make_unique<CppMod>(*this, sub_directory.path().stem().wstring(), sub_directory.path().wstring()));
+                if (std::filesystem::exists(sub_directory.path() / "dlls")) m_mods.emplace_back(std::make_unique<CppMod>(*this, sub_directory.path().stem().wstring(), sub_directory.path().wstring()));
             }
         }
     }

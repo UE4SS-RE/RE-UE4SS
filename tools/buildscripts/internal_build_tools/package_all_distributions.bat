@@ -1,18 +1,11 @@
-set CASE_PRESERVING=0
-set BUILD_AS_XINPUT=1
-call internal_build_tools/package_binary.bat "UE4SS - XInput" "xinput1_3"
-
 :: Case-preserving builds have been turned off because we no longer support them widely.
 :: set CASE_PRESERVING=1
-:: set BUILD_AS_XINPUT=1
 :: call internal_build_tools/package_binary.bat "UE4SS - XInput - Case Preserving" "xinput1_3"
 
 :: set CASE_PRESERVING=1
-:: set BUILD_AS_XINPUT=0
 :: call internal_build_tools/package_binary.bat "UE4SS - Standard - Case Preserving" "ue4ss"
 
 set CASE_PRESERVING=0
-set BUILD_AS_XINPUT=0
 call internal_build_tools/package_binary.bat "UE4SS - Standard" "ue4ss"
 
 :: Cleanup

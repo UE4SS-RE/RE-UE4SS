@@ -37,8 +37,6 @@ set zip_exe="C:\Program Files\7-Zip\7z.exe"
 
 set enable_with_case_preserving_file=enable_with_case_preserving.build_option
 set disable_with_case_preserving_file=disable_with_case_preserving.build_option
-set enable_build_as_xinput_file=enable_build_as_xinput.build_option
-set disable_build_as_xinput_file=disable_build_as_xinput.build_option
 set build_file=VS_Solution\ue4ss_rewritten.sln
 set build_output_directory=Output\ue4ss\Binaries\x64\Release
 set staging_directory=Staging

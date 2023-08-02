@@ -43,12 +43,7 @@ if not defined IS_BETA_RELEASE (
 )
 
 :: String builder for final packaged filename -> START
-set packaged_filename=UE4SS
-if %BUILD_AS_XINPUT% == 1 (
-    set packaged_filename=%packaged_filename%_Xinput
-) else (
-    set packaged_filename=%packaged_filename%_Standard
-)
+set packaged_filename=UE4SS_Standard
 
 if %CASE_PRESERVING% == 1 (
     set packaged_filename=%packaged_filename%_CasePreserving
@@ -79,11 +74,7 @@ call internal_build_tools/reload_cmake.bat
 
 Rem Build project
 if %LOG_LEVEL%==VERBOSE echo Building...
-if %BUILD_AS_XINPUT% == 1 (
-    MSBuild.exe /m "VS_Solution\xinput1_3.vcxproj" /property:Configuration=Release > nul
-) else (
-    MSBuild.exe /m "VS_Solution\ue4ss.vcxproj" /property:Configuration=Release > nul
-)
+MSBuild.exe /m "VS_Solution\ue4ss.vcxproj" /property:Configuration=Release > nul
 
 Rem Copy files to staging directory
 if %LOG_LEVEL%==VERBOSE echo Staging binaries
