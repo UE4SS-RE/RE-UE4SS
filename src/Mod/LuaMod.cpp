@@ -2213,7 +2213,7 @@ Overloads:
             bool was_asset_found{};
             bool did_asset_load{};
             Unreal::FAssetData asset_data = asset_registry->GetAssetByObjectPath(asset_path_and_name);
-            if (asset_data.ObjectPath().GetComparisonIndex())
+            if ((Unreal::Version::IsAtMost(5, 0) && asset_data.ObjectPath().GetComparisonIndex()) || asset_data.PackageName().GetComparisonIndex())
             {
                 was_asset_found = true;
                 loaded_asset = Unreal::UAssetRegistryHelpers::GetAsset(asset_data);
