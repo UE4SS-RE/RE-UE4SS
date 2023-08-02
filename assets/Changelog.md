@@ -6,20 +6,26 @@ TBD
 ### General
 Added support for UE Version 5.2 games
 
+Changed to a new proxy DLL loading system. - LocalCC  
+Different proxy DLLs can now easily be compiled for cases where xinput1_3 cannot be used for any reason.  
+Alternative proxys may be compiled by specifying `-DUE4SS_PROXY_PATH=/Path/To/DLL.dll` when running the CMake command.
+
 Added additional AOB for `FName::ToString` - LongerWarrior
 
 The shortcut (CTRL + O) for opening the GUI is now a toggle, meaning it can also be used for closing the GUI
 
+
 ### C++ API
-Finalize C++ API and add required dll to builds - LocalCC; Truman
+Finalize C++ API. - LocalCC; Truman
+
+Removed need for "cppsdk" when linking C++ mods.  This is due to the new proxy system. - LocalCC  
+Due to the above change, C++ mods now only need to link to UE4SS.
 
 C++ mods are now loaded earlier, and will keep the game from starting until all mods have finished executing their `start_mod` function
 
 Expose IMGui to C++ mods - Truman
 
 Fixed initialization functions not being correctly called when a mod is restarted - LocalCC
-
-Fixed attempted mod loading when cppsdk doesn't exist - LocalCC
 
 Added `UFunction::RegisterPreHookForInstance` and `UFunction::RegisterPostHookForInstance`  
 These functions work the same as `UFunction::RegisterPreHook`/`UFunction::RegisterPostHook` except the callback is only fired if the context matches the specified instance  
@@ -29,7 +35,7 @@ Added overloads for `UObject::GetFunctionByName` and `UObject::GetFunctionByName
 
 Added `UEnum::NumEnums`, which returns the number of enum values for the enum
 
-Added `UEnum::GenereateEnumPrefix`, which is the same as https://docs.unrealengine.com/5.2/en-US/API/Runtime/CoreUObject/UObject/UEnum/GenerateEnumPrefix/
+Added `UEnum::GenerateEnumPrefix`, which is the same as https://docs.unrealengine.com/5.2/en-US/API/Runtime/CoreUObject/UObject/UEnum/GenerateEnumPrefix/
 
 ### Live View
 Can now view enum values in the Live View debugger
