@@ -226,15 +226,23 @@ namespace RC
         return to_u16string(temp_input);
     }
 
-    auto inline to_ue4ss_string(const auto& input) -> StringType
+    auto inline to_generic_string(const auto& input) -> StringType
     {
-        if constexpr (std::is_same_v<std::remove_cvref_t<std::remove_pointer_t<std::remove_cvref_t<decltype(input)>>>, StringType> || std::is_same_v<std::remove_cvref_t<std::remove_pointer_t<std::remove_cvref_t<decltype(input)>>>, CharType>)
+        if constexpr (std::is_same_v<std::remove_cvref_t<std::remove_pointer_t<std::remove_cvref_t<decltype(input)>>>, StringViewType>)
+        {
+            return StringType{input};
+        }
+        else if constexpr (std::is_same_v<std::remove_cvref_t<std::remove_pointer_t<std::remove_cvref_t<decltype(input)>>>, StringType> || std::is_same_v<std::remove_cvref_t<std::remove_pointer_t<std::remove_cvref_t<decltype(input)>>>, CharType>)
         {
             return input;
         }
         else
         {
+#if RC_IS_ANSI == 1
+            return to_string(input);
+#else
             return to_wstring(input);
+#endif
         }
     }
 
