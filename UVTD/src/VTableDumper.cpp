@@ -1,29 +1,32 @@
 #define NOMINMAX
 
-#include <iostream>
 #include <filesystem>
 #include <format>
+#include <iostream>
 #include <unordered_set>
 
-#include <UVTD/VTableDumper.hpp>
-#include <UVTD/Helpers.hpp>
-#include <UVTD/Symbols.hpp>
 #include <DynamicOutput/DynamicOutput.hpp>
 #include <Helpers/String.hpp>
+#include <UVTD/Helpers.hpp>
+#include <UVTD/Symbols.hpp>
+#include <UVTD/VTableDumper.hpp>
 
 #include <Windows.h>
 
-#include <PDB_GlobalSymbolStream.h>
 #include <PDB_CoalescedMSFStream.h>
-#include <PDB_PublicSymbolStream.h>
+#include <PDB_GlobalSymbolStream.h>
+#include <PDB_IPIStream.h>
 #include <PDB_ModuleInfoStream.h>
 #include <PDB_ModuleSymbolStream.h>
+#include <PDB_PublicSymbolStream.h>
 #include <PDB_TPIStream.h>
-#include <PDB_IPIStream.h>
 
-namespace RC::UVTD 
+namespace RC::UVTD
 {
-    auto VTableDumper::process_class(const PDB::TPIStream& tpi_stream, const PDB::CodeView::TPI::Record* class_record, const File::StringType& name, const SymbolNameInfo& name_info) -> void
+    auto VTableDumper::process_class(const PDB::TPIStream& tpi_stream,
+                                     const PDB::CodeView::TPI::Record* class_record,
+                                     const File::StringType& name,
+                                     const SymbolNameInfo& name_info) -> void
     {
         auto changed = change_prefix(name, symbols.is_425_plus);
         if (!changed.has_value()) return;
@@ -42,12 +45,12 @@ namespace RC::UVTD
 
             switch (field_record->kind)
             {
-                case PDB::CodeView::TPI::TypeRecordKind::LF_METHOD:
-                    process_method_overload_list(tpi_stream, field_record, class_entry);
-                    break;
-                case PDB::CodeView::TPI::TypeRecordKind::LF_ONEMETHOD:
-                    process_onemethod(tpi_stream, field_record, class_entry);
-                    break;
+            case PDB::CodeView::TPI::TypeRecordKind::LF_METHOD:
+                process_method_overload_list(tpi_stream, field_record, class_entry);
+                break;
+            case PDB::CodeView::TPI::TypeRecordKind::LF_ONEMETHOD:
+                process_onemethod(tpi_stream, field_record, class_entry);
+                break;
             }
         }
     }
@@ -104,7 +107,7 @@ namespace RC::UVTD
         static std::unordered_map<File::StringType, std::unordered_map<File::StringType, uint32_t>> functions_already_dumped{};
 
         const auto is_virtual = method_record->data.LF_ONEMETHOD.attributes.mprop == (uint16_t)PDB::CodeView::TPI::MethodProperty::Intro ||
-            method_record->data.LF_ONEMETHOD.attributes.mprop == (uint16_t)PDB::CodeView::TPI::MethodProperty::PureIntro;
+                                method_record->data.LF_ONEMETHOD.attributes.mprop == (uint16_t)PDB::CodeView::TPI::MethodProperty::PureIntro;
         if (!is_virtual) return;
 
         File::StringType method_name = Symbols::get_method_name(method_record);
@@ -112,7 +115,7 @@ namespace RC::UVTD
         auto function_record = tpi_stream.GetTypeRecord(method_record->data.LF_ONEMETHOD.index);
 
         bool is_overload{};
-        
+
         if (auto it = functions_already_dumped.find(class_entry.class_name); it != functions_already_dumped.end())
         {
             if (auto it2 = it->second.find(method_name); it2 != it->second.end())
@@ -142,7 +145,8 @@ namespace RC::UVTD
 
         for (const PDB::CodeView::TPI::Record* type_record : tpi_stream.GetTypeRecords())
         {
-            if (type_record->header.kind == PDB::CodeView::TPI::TypeRecordKind::LF_CLASS || type_record->header.kind == PDB::CodeView::TPI::TypeRecordKind::LF_STRUCTURE)
+            if (type_record->header.kind == PDB::CodeView::TPI::TypeRecordKind::LF_CLASS ||
+                type_record->header.kind == PDB::CodeView::TPI::TypeRecordKind::LF_STRUCTURE)
             {
                 if (type_record->data.LF_CLASS.property.fwdref) continue;
 
@@ -164,8 +168,8 @@ namespace RC::UVTD
         for (const auto& object_item : s_object_items)
         {
             if (object_item.valid_for_vtable != ValidForVTable::Yes) continue;
-            
-            vtable_names.emplace(object_item.name, SymbolNameInfo{ object_item.valid_for_vtable, object_item.valid_for_member_vars });
+
+            vtable_names.emplace(object_item.name, SymbolNameInfo{object_item.valid_for_vtable, object_item.valid_for_member_vars});
         }
 
         dump_vtable_for_symbol(vtable_names);
@@ -180,9 +184,10 @@ namespace RC::UVTD
             Output::send(STR("Generating file '{}_VTableOffsets_{}_FunctionBody.cpp'\n"), pdb_name, class_entry.class_name_clean);
             Output::Targets<Output::NewFileDevice> function_body_dumper;
             auto& function_body_file_device = function_body_dumper.get_device<Output::NewFileDevice>();
-            function_body_file_device.set_file_name_and_path(vtable_gen_output_function_bodies_path / std::format(STR("{}_VTableOffsets_{}_FunctionBody.cpp"), pdb_name, class_name));
+            function_body_file_device.set_file_name_and_path(vtable_gen_output_function_bodies_path /
+                                                             std::format(STR("{}_VTableOffsets_{}_FunctionBody.cpp"), pdb_name, class_name));
             function_body_file_device.set_formatter([](File::StringViewType string) {
-                return File::StringType{ string };
+                return File::StringType{string};
             });
 
             for (const auto& [function_index, function_entry] : class_entry.functions)
@@ -193,7 +198,10 @@ namespace RC::UVTD
                     local_class_name.replace(0, 1, STR("F"));
                 }
 
-                function_body_dumper.send(STR("if (auto it = {}::VTableLayoutMap.find(STR(\"{}\")); it == {}::VTableLayoutMap.end())\n"), local_class_name, function_entry.name, local_class_name);
+                function_body_dumper.send(STR("if (auto it = {}::VTableLayoutMap.find(STR(\"{}\")); it == {}::VTableLayoutMap.end())\n"),
+                                          local_class_name,
+                                          function_entry.name,
+                                          local_class_name);
                 function_body_dumper.send(STR("{\n"));
                 function_body_dumper.send(STR("    {}::VTableLayoutMap.emplace(STR(\"{}\"), 0x{:X});\n"), local_class_name, function_entry.name, function_entry.offset);
                 function_body_dumper.send(STR("}\n\n"));
@@ -206,7 +214,7 @@ namespace RC::UVTD
         auto& ini_file_device = ini_dumper.get_device<Output::NewFileDevice>();
         ini_file_device.set_file_name_and_path(vtable_templates_output_path / template_file);
         ini_file_device.set_formatter([](File::StringViewType string) {
-            return File::StringType{ string };
+            return File::StringType{string};
         });
 
         for (const auto& [class_name, class_entry] : type_container.get_class_entries())
@@ -232,8 +240,14 @@ namespace RC::UVTD
         {
             for (const auto& item : std::filesystem::directory_iterator(vtable_gen_output_include_path))
             {
-                if (item.is_directory()) { continue; }
-                if (item.path().extension() != STR(".hpp") && item.path().extension() != STR(".cpp")) { continue; }
+                if (item.is_directory())
+                {
+                    continue;
+                }
+                if (item.path().extension() != STR(".hpp") && item.path().extension() != STR(".cpp"))
+                {
+                    continue;
+                }
 
                 File::delete_file(item.path());
             }
@@ -243,8 +257,14 @@ namespace RC::UVTD
         {
             for (const auto& item : std::filesystem::directory_iterator(vtable_gen_output_function_bodies_path))
             {
-                if (item.is_directory()) { continue; }
-                if (item.path().extension() != STR(".cpp")) { continue; }
+                if (item.is_directory())
+                {
+                    continue;
+                }
+                if (item.path().extension() != STR(".cpp"))
+                {
+                    continue;
+                }
 
                 File::delete_file(item.path());
             }
@@ -254,11 +274,17 @@ namespace RC::UVTD
         {
             for (const auto& item : std::filesystem::directory_iterator(vtable_gen_output_src_path))
             {
-                if (item.is_directory()) { continue; }
-                if (item.path().extension() != STR(".cpp")) { continue; }
+                if (item.is_directory())
+                {
+                    continue;
+                }
+                if (item.path().extension() != STR(".cpp"))
+                {
+                    continue;
+                }
 
                 File::delete_file(item.path());
             }
         }
     }
-}
+} // namespace RC::UVTD

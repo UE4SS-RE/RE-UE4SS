@@ -47,4 +47,4 @@ namespace RC::UVTD
 
         return parsed;
     }
-}
+} // namespace RC::UVTD

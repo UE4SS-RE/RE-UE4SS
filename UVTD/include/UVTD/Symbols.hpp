@@ -1,15 +1,15 @@
 #ifndef UNREALVTABLEDUMPER_SYMBOLS_HPP
 #define UNREALVTABLEDUMPER_SYMBOLS_HPP
 
-#include <unordered_map>
-#include <map>
-#include <vector>
 #include <format>
+#include <map>
+#include <unordered_map>
+#include <vector>
 
 #include <File/File.hpp>
 
-#include <PDB_RawFile.h>
 #include <PDB_DBIStream.h>
+#include <PDB_RawFile.h>
 #include <PDB_TPIStream.h>
 
 namespace RC::UVTD
@@ -21,17 +21,24 @@ namespace RC::UVTD
         bool should_dump_sol_bindings{};
     };
 
-    enum class ValidForVTable { Yes, No };
-    enum class ValidForMemberVars { Yes, No };
+    enum class ValidForVTable
+    {
+        Yes,
+        No
+    };
+    enum class ValidForMemberVars
+    {
+        Yes,
+        No
+    };
 
     struct SymbolNameInfo
     {
         ValidForVTable valid_for_vtable{};
         ValidForMemberVars valid_for_member_vars{};
 
-        explicit SymbolNameInfo(ValidForVTable valid_for_vtable, ValidForMemberVars valid_for_member_vars) :
-            valid_for_vtable(valid_for_vtable),
-            valid_for_member_vars(valid_for_member_vars)
+        explicit SymbolNameInfo(ValidForVTable valid_for_vtable, ValidForMemberVars valid_for_member_vars)
+            : valid_for_vtable(valid_for_vtable), valid_for_member_vars(valid_for_member_vars)
         {
         }
     };
@@ -90,12 +97,13 @@ namespace RC::UVTD
         // Key: Variable name
         std::map<File::StringType, MemberVariable> variables;
         uint32_t last_virtual_offset{};
-        ValidForVTable valid_for_vtable{ ValidForVTable::No };
-        ValidForMemberVars valid_for_member_vars{ ValidForMemberVars::No };
+        ValidForVTable valid_for_vtable{ValidForVTable::No};
+        ValidForMemberVars valid_for_member_vars{ValidForMemberVars::No};
     };
 
-    class Symbols {
-    public:
+    class Symbols
+    {
+      public:
         struct MemberVariable
         {
             File::StringType type;
@@ -107,8 +115,8 @@ namespace RC::UVTD
             File::StringType name;
             File::StringType name_clean;
             std::map<File::StringType, MemberVariable> variables;
-        };		
-        
+        };
+
         struct Class
         {
             File::StringType class_name;
@@ -117,11 +125,11 @@ namespace RC::UVTD
             // Key: Variable name
             std::map<File::StringType, MemberVariable> variables;
             uint32_t last_virtual_offset;
-            ValidForVTable valid_for_vtable{ ValidForVTable::No };
-            ValidForMemberVars valid_for_member_vars{ ValidForMemberVars::No };
+            ValidForVTable valid_for_vtable{ValidForVTable::No};
+            ValidForMemberVars valid_for_member_vars{ValidForMemberVars::No};
         };
 
-    public:
+      public:
         std::filesystem::path pdb_file_path;
         File::Handle pdb_file_handle;
         std::span<uint8_t> pdb_file_map;
@@ -133,7 +141,7 @@ namespace RC::UVTD
         std::unordered_map<File::StringType, EnumEntry> enum_entries;
         std::unordered_map<File::StringType, Class> class_entries;
 
-    public:
+      public:
         Symbols() = delete;
 
         explicit Symbols(std::filesystem::path pdb_file_path);
@@ -142,13 +150,14 @@ namespace RC::UVTD
 
         Symbols& operator=(const Symbols& other);
 
-    public:
+      public:
         auto get_or_create_enum_entry(const File::StringType& symbol_name, const File::StringType& symbol_name_clean) -> EnumEntry&;
         auto get_or_create_class_entry(const File::StringType& symbol_name, const File::StringType& symbol_name_clean, const SymbolNameInfo& name_info) -> Class&;
 
-        auto generate_method_signature(const PDB::TPIStream& tpi_stream, const PDB::CodeView::TPI::Record* function_record, File::StringType method_name) -> MethodSignature;
+        auto generate_method_signature(const PDB::TPIStream& tpi_stream, const PDB::CodeView::TPI::Record* function_record, File::StringType method_name)
+                -> MethodSignature;
 
-    public:
+      public:
         auto static get_type_name(const PDB::TPIStream& tpi_stream, uint32_t record_index, bool check_valid = false) -> File::StringType;
         auto static get_method_name(const PDB::CodeView::TPI::FieldList* method_record) -> File::StringType;
         auto static get_leaf_name(const char* data, PDB::CodeView::TPI::TypeRecordKind kind) -> File::StringType;
@@ -157,9 +166,9 @@ namespace RC::UVTD
 
         auto static is_virtual(PDB::CodeView::TPI::MemberAttributes attributes) -> bool;
 
-    private:
+      private:
         auto setup_symbol_loader() -> void;
     };
-}
+} // namespace RC::UVTD
 
 #endif

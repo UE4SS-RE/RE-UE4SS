@@ -1,5 +1,5 @@
-#include <iostream>
 #include <filesystem>
+#include <iostream>
 
 #include <DynamicOutput/DynamicOutput.hpp>
 #include <Helpers/String.hpp>
@@ -33,7 +33,7 @@ auto static get_user_selection() -> int32_t
 }
 
 // We're outside DllMain here
-auto thread_dll_start([[maybe_unused]]LPVOID thread_param) -> unsigned long
+auto thread_dll_start([[maybe_unused]] LPVOID thread_param) -> unsigned long
 {
 
     std::filesystem::path module_path{};
@@ -83,7 +83,7 @@ auto thread_dll_start([[maybe_unused]]LPVOID thread_param) -> unsigned long
                 settings.should_dump_vtable = true;
                 settings.should_dump_member_vars = true;
             }
-            
+
             UVTD::main(settings);
 
             break;
@@ -116,15 +116,15 @@ auto DllMain(HMODULE hModule, DWORD ul_reason_for_call, [[maybe_unused]] LPVOID 
 {
     switch (ul_reason_for_call)
     {
-        case DLL_PROCESS_ATTACH:
-            dll_process_attached(hModule);
-            break;
-        case DLL_THREAD_ATTACH:
-            break;
-        case DLL_THREAD_DETACH:
-            break;
-        case DLL_PROCESS_DETACH:
-            break;
+    case DLL_PROCESS_ATTACH:
+        dll_process_attached(hModule);
+        break;
+    case DLL_THREAD_ATTACH:
+        break;
+    case DLL_THREAD_DETACH:
+        break;
+    case DLL_PROCESS_DETACH:
+        break;
     }
     return TRUE;
 }

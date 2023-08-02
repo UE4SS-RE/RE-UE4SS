@@ -2,16 +2,16 @@
 #define RC_UVTD_HPP
 
 #include <filesystem>
-#include <unordered_set>
-#include <set>
 #include <map>
+#include <set>
+#include <unordered_set>
 #include <utility>
 
-#include <UVTD/Symbols.hpp>
-#include <File/File.hpp>
-#include <Input/Handler.hpp>
-#include <Function/Function.hpp>
 #include <DynamicOutput/DynamicOutput.hpp>
+#include <File/File.hpp>
+#include <Function/Function.hpp>
+#include <Input/Handler.hpp>
+#include <UVTD/Symbols.hpp>
 
 namespace RC::UVTD
 {
@@ -19,6 +19,6 @@ namespace RC::UVTD
     extern Input::Handler input_handler;
 
     auto main(DumpSettings) -> void;
-}
+} // namespace RC::UVTD
 
-#endif //RC_UVTD_HPP
+#endif // RC_UVTD_HPP

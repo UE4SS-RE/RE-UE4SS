@@ -15,9 +15,9 @@ namespace RC::UVTD
 
     class TemplateClassParser
     {
-    public:
+      public:
         static ParsedTemplateClass Parse(File::StringViewType input);
     };
-}
+} // namespace RC::UVTD
 
 #endif

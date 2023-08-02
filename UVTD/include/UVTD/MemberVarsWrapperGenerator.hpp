@@ -7,23 +7,22 @@ namespace RC::UVTD
 {
     class MemberVarsWrapperGenerator
     {
-    private:
+      private:
         TypeContainer type_container;
 
-    public:
+      public:
         MemberVarsWrapperGenerator() = delete;
 
         explicit MemberVarsWrapperGenerator(TypeContainer container) : type_container(std::move(container))
         {
-
         }
 
-    public:
+      public:
         auto generate_files() -> void;
 
-    public:
+      public:
         static auto output_cleanup() -> void;
     };
-}
+} // namespace RC::UVTD
 
 #endif

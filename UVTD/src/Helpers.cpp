@@ -1,7 +1,7 @@
 #include <format>
 
-#include <UVTD/Helpers.hpp>
 #include <Helpers/String.hpp>
+#include <UVTD/Helpers.hpp>
 
 namespace RC::UVTD
 {
@@ -38,4 +38,4 @@ namespace RC::UVTD
 
         return input;
     }
-}
+} // namespace RC::UVTD

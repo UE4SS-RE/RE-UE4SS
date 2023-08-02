@@ -1,7 +1,7 @@
 #include <UVTD/UnrealVirtualGenerator.hpp>
 
-#include <UVTD/Helpers.hpp>
 #include <DynamicOutput/DynamicOutput.hpp>
+#include <UVTD/Helpers.hpp>
 
 namespace RC::UVTD
 {
@@ -18,8 +18,8 @@ namespace RC::UVTD
         auto& virtual_header_file_device = virtual_header_dumper.get_device<Output::NewFileDevice>();
         virtual_header_file_device.set_file_name_and_path(virtual_header_file);
         virtual_header_file_device.set_formatter([](File::StringViewType string) {
-            return File::StringType{ string };
-            });
+            return File::StringType{string};
+        });
 
         auto virtual_src_file = virtual_gen_function_bodies_path / std::format(STR("UnrealVirtual{}.cpp"), pdb_name_no_underscore);
 
@@ -29,24 +29,25 @@ namespace RC::UVTD
         auto& virtual_src_file_device = virtual_src_dumper.get_device<Output::NewFileDevice>();
         virtual_src_file_device.set_file_name_and_path(virtual_src_file);
         virtual_src_file_device.set_formatter([](File::StringViewType string) {
-            return File::StringType{ string };
-            });
+            return File::StringType{string};
+        });
 
         bool is_case_preserving_pdb = !(CasePreservingVariants.find(pdb_name) == CasePreservingVariants.end());
         bool is_non_case_preserving_pdb = !(NonCasePreservingVariants.find(pdb_name) == NonCasePreservingVariants.end());
 
         if (!is_case_preserving_pdb)
         {
-            virtual_header_dumper.send(STR("#ifndef RC_UNREAL_UNREAL_VIRTUAL_{}\n#define RC_UNREAL_UNREAL_VIRTUAL{}_HPP\n\n"), pdb_name_no_underscore, pdb_name_no_underscore);
+            virtual_header_dumper.send(STR("#ifndef RC_UNREAL_UNREAL_VIRTUAL{}_HPP\n"), pdb_name_no_underscore);
+            virtual_header_dumper.send(STR("#define RC_UNREAL_UNREAL_VIRTUAL{}_HPP\n"), pdb_name_no_underscore);
             virtual_header_dumper.send(STR("#include <Unreal/VersionedContainer/UnrealVirtualImpl/UnrealVirtualBaseVC.hpp>\n\n"));
             virtual_header_dumper.send(STR("namespace RC::Unreal\n"));
             virtual_header_dumper.send(STR("{\n"));
             virtual_header_dumper.send(STR("    class UnrealVirtual{} : public UnrealVirtualBaseVC\n"), pdb_name_no_underscore);
             virtual_header_dumper.send(STR("    {\n"));
-            virtual_header_dumper.send(STR("        void set_virtual_offsets() override;\n"));
+            virtual_header_dumper.send(STR("        auto set_virtual_offsets() -> void override;\n"));
             virtual_header_dumper.send(STR("    };\n"));
             virtual_header_dumper.send(STR("}\n\n\n"));
-            virtual_header_dumper.send(STR("#endif // RC_UNREAL_UNREAL_VIRTUAL{}_HPP\n"), pdb_name_no_underscore);
+            virtual_header_dumper.send(STR("#endif //RC_UNREAL_UNREAL_VIRTUAL{}_HPP\n"), pdb_name_no_underscore);
 
             virtual_src_dumper.send(STR("#include <Unreal/VersionedContainer/UnrealVirtualImpl/UnrealVirtual{}.hpp>\n\n"), pdb_name_no_underscore);
             virtual_src_dumper.send(STR("#include <functional>\n\n"));
@@ -80,7 +81,7 @@ namespace RC::UVTD
             virtual_src_dumper.send(STR("#include <Unreal/UPlayer.hpp>\n"));
             virtual_src_dumper.send(STR("#include <Unreal/ULocalPlayer.hpp>\n"));
             virtual_src_dumper.send(STR("#include <Unreal/ITextData.hpp>\n"));
-            //virtual_src_dumper.send(STR("#include <Unreal/UConsole.hpp>\n"));
+            // virtual_src_dumper.send(STR("#include <Unreal/UConsole.hpp>\n"));
             virtual_src_dumper.send(STR("\n"));
             virtual_src_dumper.send(STR("namespace RC::Unreal\n"));
             virtual_src_dumper.send(STR("{\n"));
@@ -106,7 +107,10 @@ namespace RC::UVTD
                 virtual_src_dumper.send(STR("#ifdef WITH_CASE_PRESERVING_NAME\n"));
                 for (const auto& [class_name, class_entry] : type_container.get_class_entries())
                 {
-                    if (class_entry.variables.empty()) { continue; }
+                    if (class_entry.variables.empty())
+                    {
+                        continue;
+                    }
 
                     if (class_entry.valid_for_member_vars == ValidForMemberVars::Yes)
                     {
@@ -118,7 +122,10 @@ namespace RC::UVTD
 
             for (const auto& [class_name, class_entry] : type_container.get_class_entries())
             {
-                if (class_entry.variables.empty()) { continue; }
+                if (class_entry.variables.empty())
+                {
+                    continue;
+                }
 
                 if (class_entry.valid_for_member_vars == ValidForMemberVars::Yes)
                 {
@@ -142,8 +149,14 @@ namespace RC::UVTD
         {
             for (const auto& item : std::filesystem::directory_iterator(virtual_gen_output_include_path))
             {
-                if (item.is_directory()) { continue; }
-                if (item.path().extension() != STR(".hpp")) { continue; }
+                if (item.is_directory())
+                {
+                    continue;
+                }
+                if (item.path().extension() != STR(".hpp"))
+                {
+                    continue;
+                }
 
                 File::delete_file(item.path());
             }
@@ -153,11 +166,17 @@ namespace RC::UVTD
         {
             for (const auto& item : std::filesystem::directory_iterator(virtual_gen_function_bodies_path))
             {
-                if (item.is_directory()) { continue; }
-                if (item.path().extension() != STR(".cpp")) { continue; }
+                if (item.is_directory())
+                {
+                    continue;
+                }
+                if (item.path().extension() != STR(".cpp"))
+                {
+                    continue;
+                }
 
                 File::delete_file(item.path());
             }
         }
     }
-}
+} // namespace RC::UVTD

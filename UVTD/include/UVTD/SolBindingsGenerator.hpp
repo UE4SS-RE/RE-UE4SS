@@ -3,30 +3,32 @@
 
 #include <unordered_map>
 
+#include <File/File.hpp>
 #include <UVTD/Symbols.hpp>
 #include <UVTD/TypeContainer.hpp>
-#include <File/File.hpp>
 
 namespace RC::UVTD
 {
     class SolBindingsGenerator
     {
-    private:
+      private:
         Symbols symbols;
         TypeContainer type_container;
 
-    public:
+      public:
         SolBindingsGenerator() = delete;
 
-        explicit SolBindingsGenerator(Symbols symbols) : symbols(std::move(symbols)) {}
+        explicit SolBindingsGenerator(Symbols symbols) : symbols(std::move(symbols))
+        {
+        }
 
-    public:
+      public:
         auto generate_code() -> void;
         auto generate_files() -> void;
 
-    public:
+      public:
         static auto output_cleanup() -> void;
     };
-}
+} // namespace RC::UVTD
 
 #endif
