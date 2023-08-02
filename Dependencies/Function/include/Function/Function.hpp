@@ -101,7 +101,7 @@ namespace RC
         auto operator()(Params... params) -> ReturnType
         {
             if (!this->m_is_ready) { throw std::runtime_error{"Function object not ready but was called anyway"}; }
-            return this->m_active_func(params...);
+            return this->m_active_func(std::forward<Params>(params)...);
         }
     };
 }

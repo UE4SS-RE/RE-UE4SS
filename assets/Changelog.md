@@ -60,8 +60,13 @@ Fix case preserving names switch - LocalCC
 
 Add common TArray instantiations
 
+### C++ API
+Fixed FText constructor implementation via optional AOB - LocalCC
+
 ### Lua API
 Fixed unregisterhook
+
+Fixed FText:ToString - LocalCC
 
 Improved stability when using hooks or `ExecuteInGameThread`
 
