@@ -149,7 +149,8 @@ def package(args):
         shutil.copyfile(os.path.join(bin_dir, f'{bin_name}.dll'), os.path.join(staging_dir, f'{bin_name}.dll'))
 
         if is_dev_release:
-            shutil.copyfile(os.path.join(bin_dir, f'{bin_name}.pdb'), os.path.join(staging_dir, f'{bin_name}.pdb'))
+            if not target_xinput:
+                shutil.copyfile(os.path.join(bin_dir, f'{bin_name}.pdb'), os.path.join(staging_dir, f'{bin_name}.pdb'))
             if os.path.exists(os.path.join(staging_dir, 'docs')):
                 shutil.copytree('docs', os.path.join(staging_dir, 'docs'))
 
