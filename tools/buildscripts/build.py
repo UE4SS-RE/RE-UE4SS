@@ -145,10 +145,8 @@ def package(args):
 
         bin_dir = 'Output/ue4ss/Binaries/x64/Release'
         bin_name = 'xinput1_3' if target_xinput else 'ue4ss'
-        cppsdk_name = 'UE4SS-cppsdk_xinput' if target_xinput else 'UE4SS-cppsdk'
 
         shutil.copyfile(os.path.join(bin_dir, f'{bin_name}.dll'), os.path.join(staging_dir, f'{bin_name}.dll'))
-        shutil.copyfile(os.path.join(bin_dir, f'{cppsdk_name}.dll'), os.path.join(staging_dir, 'Mods', 'UE4SS-cppsdk.dll'))
 
         if is_dev_release:
             shutil.copyfile(os.path.join(bin_dir, f'{bin_name}.pdb'), os.path.join(staging_dir, f'{bin_name}.pdb'))
@@ -161,9 +159,6 @@ def package(args):
             os.remove(os.path.join(staging_dir, f'{bin_name}.dll'))
         if os.path.exists(os.path.join(staging_dir, f'{bin_name}.pdb')):
             os.remove(os.path.join(staging_dir, f'{bin_name}.pdb'))
-
-        if os.path.exists(os.path.join(staging_dir, 'Mods', 'UE4SS-cppsdk.dll')):
-            os.remove(os.path.join(staging_dir, 'Mods', 'UE4SS-cppsdk.dll'))
 
         if is_dev_release and os.path.exists(os.path.join(staging_dir, 'docs')):
             shutil.rmtree(os.path.join(staging_dir, 'docs'), ignore_errors=False)
