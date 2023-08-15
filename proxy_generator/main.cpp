@@ -4,6 +4,7 @@
 #include <filesystem>
 #include <vector>
 #include <string>
+#include <set>
 #include <iostream>
 #include <fstream>
 #include <format>
@@ -24,7 +25,16 @@ using std::ofstream;
 
 using std::string;
 
-std::vector<string> DumpExports(const fs::path& dll_path)
+struct ExportFunction {
+    uint16_t ordinal;
+    bool is_named;
+    string name;
+
+    ExportFunction(uint16_t ordinal, bool is_named, string name) : ordinal(ordinal), is_named(is_named), name(name)
+    {}
+};
+
+std::vector<ExportFunction> DumpExports(const fs::path& dll_path)
 {
     auto dll_file = File::open(dll_path);
     const auto dll_file_map = dll_file.memory_map();
@@ -42,12 +52,33 @@ std::vector<string> DumpExports(const fs::path& dll_path)
     IMAGE_NT_HEADERS* nt_header = (IMAGE_NT_HEADERS*)(dll_file_map.data() + dos_header->e_lfanew);
     
     DWORD* name_rvas = (DWORD*)ImageRvaToVa(nt_header, dll_file_map.data(), export_directory->AddressOfNames, NULL);
+    DWORD* function_rvas = (DWORD*)ImageRvaToVa(nt_header, dll_file_map.data(), export_directory->AddressOfFunctions, NULL);
+    uint16_t* ordinals = (uint16_t*)ImageRvaToVa(nt_header, dll_file_map.data(), export_directory->AddressOfNameOrdinals, NULL);
 
-    std::vector<string> exports;
+    std::vector<ExportFunction> exports;
+    std::set<uint16_t> exported_ordinals;
+
     for (size_t i = 0; i < export_directory->NumberOfNames; i++)
     {
         std::string export_name = (char*)ImageRvaToVa(nt_header, dll_file_map.data(), name_rvas[i], NULL);
-        exports.push_back(export_name);
+        uint16_t ordinal = ordinals[i] + 1;
+
+        ExportFunction named_export(ordinal, true, export_name);
+        exports.push_back(named_export);
+
+        exported_ordinals.insert(ordinal);
+    }
+
+    for (size_t i = 0; i < export_directory->NumberOfFunctions; i++)
+    {
+        uint16_t ordinal = (uint16_t)(export_directory->Base + i);
+        uint32_t function_rva = function_rvas[i];
+
+        if (function_rva == 0) continue;
+        if (exported_ordinals.contains(ordinal)) continue; // a named function for this ordinal was already exported
+
+        ExportFunction ordinal_export(ordinal, false, std::format("ordinal{}", ordinal));
+        exports.push_back(ordinal_export);
     }
 
     return exports;
@@ -82,7 +113,7 @@ int _tmain(int argc, TCHAR* argv[])
 
     for (const auto [e, index] : exports | views::enumerate)
     {
-        def_file << std::format("  {}=f{} @{}", e, index, index + 1) << endl;
+        def_file << std::format("  {}=f{} @{}", e.name, index, e.ordinal) << endl;
     }
     def_file.close();
 
@@ -120,7 +151,8 @@ int _tmain(int argc, TCHAR* argv[])
 
     for (const auto [e, index] : exports | views::enumerate)
     {
-        cpp_file << std::format("    mProcs[{}] = (uintptr_t)GetProcAddress(SOriginalDll, \"{}\");", index, e) << endl;
+        string getter = e.is_named ? std::format("\"{}\"", e.name) : std::format("MAKEINTRESOURCEA({})", e.ordinal);
+        cpp_file << std::format("    mProcs[{}] = (uintptr_t)GetProcAddress(SOriginalDll, {});", index, getter) << endl;
     }
 
     cpp_file << "}" << endl;
