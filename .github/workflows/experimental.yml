@@ -10,6 +10,8 @@ on:
       - "generated_src/**"
       - "generated_include/**"
       - "Dependencies/**"
+      - "proxy"
+      - "proxy_generator"
 
 permissions:
   contents: read
