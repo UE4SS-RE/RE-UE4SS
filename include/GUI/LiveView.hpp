@@ -25,24 +25,6 @@ namespace RC::GUI
     using namespace RC::Unreal;
 
     class UFunctionCallerWidget;
-    
-    struct SearchOptions
-    {
-        bool apply_when_not_searching{};
-        bool include_inheritance{};
-        bool instances_only{};
-        bool non_instances_only{};
-        bool include_default_objects{true};
-        bool default_objects_only{};
-        bool function_param_flags_required{};
-        std::array<bool, 255> function_param_checkboxes{};
-        EPropertyFlags function_param_flags{};
-        bool function_param_flags_include_return_property{};
-        std::string internal_exclude_class_name{};
-        StringType exclude_class_name{};
-        std::string internal_has_property{};
-        StringType has_property{};
-    };
 
     class LiveView
     {
@@ -139,7 +121,8 @@ namespace RC::GUI
         static std::vector<Watch> s_watches;
         static std::unordered_map<WatchIdentifier, Watch*> s_watch_map;
         static std::unordered_map<void*, std::vector<Watch*>> s_watch_containers;
-        static SearchOptions s_search_options;
+        static bool s_include_inheritance;
+        static bool s_apply_search_filters_when_not_searching;
         static bool s_create_listener_removed;
         static bool s_delete_listener_removed;
         static bool s_selected_item_deleted;
