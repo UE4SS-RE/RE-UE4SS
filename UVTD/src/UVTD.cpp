@@ -124,8 +124,10 @@ namespace RC::UVTD
             MemberVarsWrapperGenerator::output_cleanup();
             MemberVarsWrapperGenerator wrapper_generator{std::move(shared_container)};
             wrapper_generator.generate_files();
+
+            Output::send(STR("Code generated.\n"));
         }
 
-        CoUninitialize();
+        Output::send(STR("All done.\n"));
     }
 } // namespace RC::UVTD
