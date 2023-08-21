@@ -11,6 +11,14 @@
 #include <GUI/GUI.hpp>
 #include <GUI/ImGuiUtility.hpp>
 #include <GUI/UFunctionCallerWidget.hpp>
+#include <GUI/LiveView/Filter/SearchFilter.hpp>
+#include <GUI/LiveView/Filter/InstancesOnly.hpp>
+#include <GUI/LiveView/Filter/NonInstancesOnly.hpp>
+#include <GUI/LiveView/Filter/IncludeDefaultObjects.hpp>
+#include <GUI/LiveView/Filter/DefaultObjectsOnly.hpp>
+#include <GUI/LiveView/Filter/FunctionParamFlags.hpp>
+#include <GUI/LiveView/Filter/ExcludeClassName.hpp>
+#include <GUI/LiveView/Filter/HasProperty.hpp>
 #include <ExceptionHandling.hpp>
 #include <DynamicOutput/DynamicOutput.hpp>
 #include <Helpers/String.hpp>
@@ -38,6 +46,16 @@ namespace RC::GUI
 {
     using namespace Unreal;
 
+    static auto SearchFilters = Filter::Types<
+        Filter::InstancesOnly,
+        Filter::NonInstancesOnly,
+        Filter::IncludeDefaultObjects,
+        Filter::DefaultObjectsOnly,
+        Filter::FunctionParamFlags,
+        Filter::ExcludeClassName,
+        Filter::HasProperty
+    >{};
+
     static int s_max_elements_per_chunk{};
     static int s_chunk_id_start{};
 
@@ -55,7 +73,8 @@ namespace RC::GUI
     std::vector<LiveView::Watch> LiveView::s_watches{};
     std::unordered_map<LiveView::WatchIdentifier, LiveView::Watch*> LiveView::s_watch_map;
     std::unordered_map<void*, std::vector<LiveView::Watch*>> LiveView::s_watch_containers{};
-    SearchOptions LiveView::s_search_options{};
+    bool LiveView::s_include_inheritance{};
+    bool LiveView::s_apply_search_filters_when_not_searching{};
     bool LiveView::s_create_listener_removed{};
     bool LiveView::s_delete_listener_removed{};
     bool LiveView::s_selected_item_deleted{};
@@ -66,53 +85,9 @@ namespace RC::GUI
 
     static auto filter_out_objects(UObject* object) -> bool
     {
-        auto is_instance = [&] {
-            return !object->HasAnyFlags(static_cast<EObjectFlags>(RF_ClassDefaultObject | RF_ArchetypeObject)) &&
-                    !object->IsA<UStruct>() &&
-                    !object->IsA<UField>() &&
-                    !object->IsA<UPackage>();
-        };
-
-        if (LiveView::s_search_options.instances_only && !is_instance()) { return true; }
-        if (LiveView::s_search_options.non_instances_only && (object->IsA<UFunction>() || is_instance())) { return true; }
-        if (!LiveView::s_search_options.include_default_objects && object->HasAnyFlags(static_cast<EObjectFlags>(RF_ClassDefaultObject | RF_ArchetypeObject))) { return true; }
-        if (LiveView::s_search_options.default_objects_only && !object->HasAnyFlags(static_cast<EObjectFlags>(RF_ClassDefaultObject | RF_ArchetypeObject))) { return true; }
+        APPLY_PRE_SEARCH_FILTERS(SearchFilters)
         if (LiveView::s_name_search_results_set.contains(object)) { return true; }
-        if (object->IsA<UFunction>() && LiveView::s_search_options.function_param_flags != CPF_None)
-        {
-            auto as_function = static_cast<UFunction*>(object);
-            auto first_property = as_function->GetFirstProperty();
-            if (!first_property || (first_property->HasAnyPropertyFlags(CPF_ReturnParm) && !first_property->HasNext())) { return true; }
-            bool has_all_required_flags{true};
-            for (const auto& param : as_function->ForEachProperty())
-            {
-                if (param->HasAnyPropertyFlags(CPF_ReturnParm) && !LiveView::s_search_options.function_param_flags_include_return_property) { continue; }
-                has_all_required_flags = param->HasAllPropertyFlags(LiveView::s_search_options.function_param_flags);
-            }
-            if (!has_all_required_flags) { return true; }
-        }
-        else if (LiveView::s_search_options.function_param_flags != CPF_None)
-        {
-            return true;
-        }
-
-        if (!LiveView::s_search_options.exclude_class_name.empty())
-        {
-            auto class_name = object->GetClassPrivate()->GetName();
-            if (auto pos = class_name.find(LiveView::s_search_options.exclude_class_name); pos != class_name.npos)
-            {
-                return true;
-            }
-        }
-
-        if (!LiveView::s_search_options.has_property.empty())
-        {
-            if (!object->GetPropertyByNameInChain(LiveView::s_search_options.has_property.c_str()))
-            {
-                return true;
-            }
-        }
-
+        APPLY_POST_SEARCH_FILTERS(SearchFilters)
         return false;
     }
 
@@ -130,7 +105,7 @@ namespace RC::GUI
             return std::tolower(c);
         });
 
-        if (LiveView::s_search_options.include_inheritance)
+        if (LiveView::s_include_inheritance)
         {
             for (UStruct* super : object->GetClassPrivate()->ForEachSuperStruct())
             {
@@ -149,7 +124,7 @@ namespace RC::GUI
 
         if (filter_out_objects(object)) { return; }
 
-        if (LiveView::s_search_options.include_inheritance && LiveView::s_name_search_results_set.contains(object)) { return; }
+        if (LiveView::s_include_inheritance && LiveView::s_name_search_results_set.contains(object)) { return; }
 
         auto object_full_name = get_object_full_name_cxx_string(object);
         std::transform(object_full_name.begin(), object_full_name.end(), object_full_name.begin(), [](char c) {
@@ -557,7 +532,7 @@ namespace RC::GUI
             {
                 return LoopAction::Continue;
             }
-            if (s_search_options.apply_when_not_searching && filter_out_objects(object)) { return LoopAction::Continue; }
+            if (s_apply_search_filters_when_not_searching && filter_out_objects(object)) { return LoopAction::Continue; }
             callable(object);
             return LoopAction::Continue;
         });
@@ -1698,26 +1673,26 @@ namespace RC::GUI
         {
             ImGui::Text("Search options");
             ImGui::SameLine();
-            ImGui::Checkbox("Apply when not searching", &s_search_options.apply_when_not_searching);
+            ImGui::Checkbox("Apply when not searching", &s_apply_search_filters_when_not_searching);
             if (ImGui::BeginTable("search_options_table", 2))
             {
-                bool instances_only_enabled = !(s_search_options.non_instances_only || s_search_options.default_objects_only);
-                bool non_instances_only_enabled = !(s_search_options.instances_only || s_search_options.default_objects_only);
-                bool default_objects_only_enabled = !(s_search_options.non_instances_only || s_search_options.instances_only);
+                bool instances_only_enabled = !(Filter::NonInstancesOnly::s_enabled || Filter::DefaultObjectsOnly::s_enabled);
+                bool non_instances_only_enabled = !(Filter::InstancesOnly::s_enabled || Filter::DefaultObjectsOnly::s_enabled);
+                bool default_objects_only_enabled = !(Filter::NonInstancesOnly::s_enabled || Filter::InstancesOnly::s_enabled);
 
                 //  Row #1
                 ImGui::TableNextRow();
                 ImGui::TableNextColumn();
-                ImGui::Checkbox("Include inheritance", &s_search_options.include_inheritance);
+                ImGui::Checkbox("Include inheritance", &s_include_inheritance);
                 ImGui::TableNextColumn();
                 if (!instances_only_enabled) { ImGui::BeginDisabled(); }
-                ImGui::Checkbox("Instances only", &s_search_options.instances_only);
+                ImGui::Checkbox("Instances only", &Filter::InstancesOnly::s_enabled);
                 if (!instances_only_enabled) { ImGui::EndDisabled(); }
 
                 // Row #2
                 ImGui::TableNextRow();
                 ImGui::TableNextColumn();
-                ImGui::Checkbox("Function parameter flags", &s_search_options.function_param_flags_required);
+                ImGui::Checkbox("Function parameter flags", &Filter::FunctionParamFlags::s_enabled);
                 if (ImGui::IsItemHovered())
                 {
                     ImGui::BeginTooltip();
@@ -1727,16 +1702,16 @@ namespace RC::GUI
                 }
                 ImGui::TableNextColumn();
                 if (!non_instances_only_enabled) { ImGui::BeginDisabled(); }
-                ImGui::Checkbox("Non-instances only", &s_search_options.non_instances_only);
+                ImGui::Checkbox("Non-instances only", &Filter::NonInstancesOnly::s_enabled);
                 if (!non_instances_only_enabled) { ImGui::EndDisabled(); }
 
                 // Row #3
                 ImGui::TableNextRow();
                 ImGui::TableNextColumn();
-                ImGui::Checkbox("Include CDOs", &s_search_options.include_default_objects);
+                ImGui::Checkbox("Include CDOs", &Filter::IncludeDefaultObjects::s_enabled);
                 ImGui::TableNextColumn();
                 if (!default_objects_only_enabled) { ImGui::BeginDisabled(); }
-                ImGui::Checkbox("CDOs only", &s_search_options.default_objects_only);
+                ImGui::Checkbox("CDOs only", &Filter::DefaultObjectsOnly::s_enabled);
                 if (!default_objects_only_enabled) { ImGui::EndDisabled(); }
 
                 // Row 4
@@ -1744,9 +1719,9 @@ namespace RC::GUI
                 ImGui::TableNextColumn();
                 ImGui::Text("Exclude class name");
                 ImGui::TableNextColumn();
-                if (ImGui::InputText("##ExcludeClassName", &s_search_options.internal_exclude_class_name))
+                if (ImGui::InputText("##ExcludeClassName", &Filter::ExcludeClassName::s_internal_value))
                 {
-                    s_search_options.exclude_class_name = to_wstring(s_search_options.internal_exclude_class_name);
+                    Filter::ExcludeClassName::s_value = to_wstring(Filter::ExcludeClassName::s_internal_value);
                 }
 
                 // Row 5
@@ -1754,9 +1729,9 @@ namespace RC::GUI
                 ImGui::TableNextColumn();
                 ImGui::Text("Has property");
                 ImGui::TableNextColumn();
-                if (ImGui::InputText("##HasProperty", &s_search_options.internal_has_property))
+                if (ImGui::InputText("##HasProperty", &Filter::HasProperty::s_internal_value))
                 {
-                    s_search_options.has_property = to_wstring(s_search_options.internal_has_property);
+                    Filter::HasProperty::s_value = to_wstring(Filter::HasProperty::s_internal_value);
                 }
 
                 ImGui::EndTable();
@@ -1764,7 +1739,7 @@ namespace RC::GUI
             ImGui::EndPopup();
         }
 
-        if (s_search_options.function_param_flags_required && ImGui::Begin("##search-option-function-param-flags-required", &s_search_options.function_param_flags_required, ImGuiWindowFlags_NoCollapse))
+        if (Filter::FunctionParamFlags::s_enabled && ImGui::Begin("##search-option-function-param-flags-required", &Filter::FunctionParamFlags::s_enabled, ImGuiWindowFlags_NoCollapse))
         {
             if (ImGui::BeginTable("search_options_function_param_flags_table", 2))
             {
@@ -1821,26 +1796,26 @@ namespace RC::GUI
                     CPF_SkipSerialization
                 };
 
-                static_assert(s_search_options.function_param_checkboxes.size() >= s_all_property_flags.size(), "The checkbox array is too small.");
+                static_assert(Filter::FunctionParamFlags::s_checkboxes.size() >= s_all_property_flags.size(), "The checkbox array is too small.");
 
                 auto render_column = [] (size_t i){
                     auto property_flag_string = PropertyFlagsStringifier{s_all_property_flags[i]}.flags_string;
-                    if (ImGui::Checkbox(property_flag_string.c_str(), &s_search_options.function_param_checkboxes[i]))
+                    if (ImGui::Checkbox(property_flag_string.c_str(), &Filter::FunctionParamFlags::s_checkboxes[i]))
                     {
-                        if (s_search_options.function_param_checkboxes[i])
+                        if (Filter::FunctionParamFlags::s_checkboxes[i])
                         {
-                            s_search_options.function_param_flags |= s_all_property_flags[i];
+                            Filter::FunctionParamFlags::s_value |= s_all_property_flags[i];
                         }
                         else
                         {
-                            s_search_options.function_param_flags &= ~s_all_property_flags[i];
+                            Filter::FunctionParamFlags::s_value &= ~s_all_property_flags[i];
                         }
                     }
                 };
 
                 ImGui::TableNextRow();
                 ImGui::TableNextColumn();
-                ImGui::Checkbox("Also check return property flags", &s_search_options.function_param_flags_include_return_property);
+                ImGui::Checkbox("Also check return property flags", &Filter::FunctionParamFlags::s_include_return_property);
 
                 for (size_t i = 0; i < s_all_property_flags.size(); ++i)
                 {
@@ -1957,7 +1932,7 @@ namespace RC::GUI
         {
             auto num_elements = UObjectArray::GetNumElements();
 
-            if (!s_search_options.apply_when_not_searching)
+            if (!s_apply_search_filters_when_not_searching)
             {
                 int num_total_chunks = (num_elements / s_max_elements_per_chunk) + (num_elements % s_max_elements_per_chunk == 0 ? 0 : 1);
                 for (int i = 0; i < num_total_chunks; ++i)
