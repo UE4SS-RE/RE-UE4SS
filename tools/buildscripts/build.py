@@ -134,46 +134,47 @@ def package(args):
         with open(mods_path, mode='w', encoding='utf-8-sig') as file:
             file.write(content)
 
-    def package_release(target_xinput: bool, is_dev_release: bool):
+    def package_release(is_dev_release: bool):
         version = subprocess.check_output(['git', 'describe', '--tags']).decode('utf-8').strip()
         if is_dev_release:
-            main_zip_name = f'zDEV-UE4SS_{"Xinput" if target_xinput else "Standard"}_{version}'
+            main_zip_name = f'zDEV-UE4SS_{version}'
             staging_dir = staging_dev
         else:
-            main_zip_name = f'UE4SS_{"Xinput" if target_xinput else "Standard"}_{version}'
+            main_zip_name = f'UE4SS_{version}'
             staging_dir = staging_release
 
         bin_dir = 'Output/ue4ss/Binaries/x64/Release'
-        bin_name = 'xinput1_3' if target_xinput else 'ue4ss'
 
-        shutil.copyfile(os.path.join(bin_dir, f'{bin_name}.dll'), os.path.join(staging_dir, f'{bin_name}.dll'))
+        # main dll
+        shutil.copy(os.path.join(bin_dir, 'ue4ss.dll'), staging_dir)
+
+        # proxy
+        shutil.copy(os.path.join(bin_dir, 'xinput1_3.dll'), staging_dir)
 
         if is_dev_release:
-            if not target_xinput:
-                shutil.copyfile(os.path.join(bin_dir, f'{bin_name}.pdb'), os.path.join(staging_dir, f'{bin_name}.pdb'))
+            shutil.copy(os.path.join(bin_dir, 'ue4ss.pdb'), staging_dir)
             if os.path.exists(os.path.join(staging_dir, 'docs')):
                 shutil.copytree('docs', os.path.join(staging_dir, 'docs'))
 
-        shutil.make_archive(os.path.join(release_output, main_zip_name), 'zip', staging_dir)
+        output = os.path.join(release_output, main_zip_name)
+        shutil.make_archive(output, 'zip', staging_dir)
+        print(f'created package {output}.zip')
 
-        if os.path.exists(os.path.join(staging_dir, f'{bin_name}.dll')):
-            os.remove(os.path.join(staging_dir, f'{bin_name}.dll'))
-        if os.path.exists(os.path.join(staging_dir, f'{bin_name}.pdb')):
-            os.remove(os.path.join(staging_dir, f'{bin_name}.pdb'))
+        # clean up
+        for bin in ['ue4ss.dll', 'xinput1_3.dll', 'ue4ss.pdb']:
+            try:
+                os.remove(os.path.join(staging_dir, bin))
+            except:
+                pass
 
-        if is_dev_release and os.path.exists(os.path.join(staging_dir, 'docs')):
-            shutil.rmtree(os.path.join(staging_dir, 'docs'), ignore_errors=False)
+        shutil.rmtree(os.path.join(staging_dir, 'docs'), ignore_errors=True)
 
 
     make_staging_dirs();
 
     # Package UE4SS Standard
-    package_release(target_xinput = False, is_dev_release = False)
-    package_release(target_xinput = False, is_dev_release = True)
-
-    # Package UE4SS Xinput
-    package_release(target_xinput = True, is_dev_release = False)
-    package_release(target_xinput = True, is_dev_release = True)
+    package_release(is_dev_release = False)
+    package_release(is_dev_release = True)
 
     # CustomGameConfigs
     shutil.make_archive(os.path.join(release_output, 'zCustomGameConfigs'), 'zip', 'assets/CustomGameConfigs')
