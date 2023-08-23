@@ -48,11 +48,11 @@ Since the process is quite complicated, here will just cover the general steps y
    - Must return the exact address of the start of the function 'FName::ToString'.  
      Function signature: `public: void cdecl FName::ToString(class FString & ptr64)const __ptr64`
 - FName_Constructor
-   - Must return the exact address of the start of the function 'FName::FName'.  
+   - Must return the exact address of the start of the function 'FName::FName'.
+   - This callback is likely to be called many times and we do a check behind the scenes to confirm if we found the right constructor.   
      Function signature: `public: cdecl FName::FName(wchar_t const * ptr64,enum EFindName) __ptr64`
 - FText_Constructor
   - Must return the exact address of the start of the function 'FText::FText'.  
-    This callback is likely to be called many times and we do a check behind the scenes to confirm if we found the right constructor.  
     Function signature: `public: cdecl FText::FText(class FString & ptr64)const __ptr64`
 - StaticConstructObject
    - Must return the exact address of the start of the global function 'StaticConstructObject_Internal'.  
