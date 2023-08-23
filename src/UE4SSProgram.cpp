@@ -54,6 +54,7 @@
 #include <Unreal/ULocalPlayer.hpp>
 #include <Unreal/UObjectArray.hpp>
 #include <Unreal/UnrealInitializer.hpp>
+#include <Unreal/TPair.hpp>
 
 namespace RC
 {
@@ -1614,6 +1615,8 @@ namespace RC
         template class RC_UE4SS_API TArray<UScriptStruct*>;
         template class RC_UE4SS_API TArray<UStruct*>;
         template class RC_UE4SS_API TArray<UWorld*>;
+
+        template class RC_UE4SS_API TArray<TPair<FName, int64_t>>;
     }
 }
 
