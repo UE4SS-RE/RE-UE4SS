@@ -226,7 +226,7 @@ namespace RC::UEGenerator
         auto generate_property(UObject* uclass, FProperty* property, GeneratedSourceFile& header_data) -> void;
         auto generate_function(UClass* uclass, UFunction* function, GeneratedSourceFile& header_data, bool is_generating_interface, const CaseInsensitiveSet& blacklisted_property_names, bool generate_as_override = false) -> void;
 
-        auto generate_property_value(FProperty* property, void* object, GeneratedSourceFile& implementation_file, const std::wstring& property_scope) -> void;
+        auto generate_property_value(UStruct* ustruct, FProperty* property, void* object, GeneratedSourceFile& implementation_file, const std::wstring& property_scope) -> void;
         auto generate_function_implementation(UClass* uclass, UFunction* function, GeneratedSourceFile& implementation_file, bool is_generating_interface, const CaseInsensitiveSet& blacklisted_property_names) -> void;
 
         auto generate_interface_flags(UClass* uinterface) const -> std::wstring;
