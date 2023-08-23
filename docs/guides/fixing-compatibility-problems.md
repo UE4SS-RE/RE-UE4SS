@@ -25,6 +25,7 @@ Since the process is quite complicated, here will just cover the general steps y
     - GUObjectArray.lua
     - FName_ToString.lua
     - FName_Constructor.lua
+    - FText_Constructor.lua
     - StaticConstructObject.lua
     - GMalloc.lua
 4. Inside the `.lua` file you need a global `Register` function with no params
