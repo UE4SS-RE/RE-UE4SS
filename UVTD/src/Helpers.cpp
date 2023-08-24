@@ -38,4 +38,24 @@ namespace RC::UVTD
 
         return input;
     }
+
+    auto unify_uobject_array_if_needed(StringType& out_variable_type) -> bool
+    {
+        static constexpr StringViewType fixed_uobject_array_string = STR("FFixedUObjectArray");
+        static constexpr StringViewType chunked_fixed_uobject_array_string = STR("FChunkedFixedUObjectArray");
+        if (auto fixed_uobject_array_pos = out_variable_type.find(fixed_uobject_array_string); fixed_uobject_array_pos != out_variable_type.npos)
+        {
+            out_variable_type.replace(fixed_uobject_array_pos, fixed_uobject_array_string.length(), STR("TUObjectArray"));
+            return true;
+        }
+        else if (auto chunked_fixed_uobject_array_pos = out_variable_type.find(chunked_fixed_uobject_array_string); chunked_fixed_uobject_array_pos != out_variable_type.npos)
+        {
+            out_variable_type.replace(chunked_fixed_uobject_array_pos, chunked_fixed_uobject_array_string.length(), STR("TUObjectArray"));
+            return true;
+        }
+        else
+        {
+            return false;
+        }
+    }
 } // namespace RC::UVTD

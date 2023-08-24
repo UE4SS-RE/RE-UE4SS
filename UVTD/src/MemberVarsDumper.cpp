@@ -248,19 +248,22 @@ namespace RC::UVTD
                 default_ini_dumper.send(STR("{} = -1\n"), variable.name);
 
                 File::StringType final_variable_name = variable.name;
+                File::StringType final_class_name = class_entry.class_name;
 
                 if (variable.name == STR("EnumFlags"))
                 {
                     final_variable_name = STR("EnumFlags_Internal");
                 }
 
+                unify_uobject_array_if_needed(final_class_name);
+
                 default_setter_src_dumper.send(STR("if (auto it = {}::MemberOffsets.find(STR(\"{}\")); it == {}::MemberOffsets.end())\n"),
-                                               class_entry.class_name,
+                                               final_class_name,
                                                final_variable_name,
-                                               class_entry.class_name);
+                                               final_class_name);
                 default_setter_src_dumper.send(STR("{\n"));
                 default_setter_src_dumper.send(STR("    {}::MemberOffsets.emplace(STR(\"{}\"), 0x{:X});\n"),
-                                               class_entry.class_name,
+                                               final_class_name,
                                                final_variable_name,
                                                variable.offset);
                 default_setter_src_dumper.send(STR("}\n\n"));

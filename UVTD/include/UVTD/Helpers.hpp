@@ -97,7 +97,11 @@ namespace RC::UVTD
                                                          {STR("FFieldPathProperty"), ValidForVTable::No, ValidForMemberVars::Yes},
                                                          {STR("FSetProperty"), ValidForVTable::No, ValidForMemberVars::Yes},
                                                          {STR("USetProperty"), ValidForVTable::No, ValidForMemberVars::Yes},
-                                                         {STR("ITextData"), ValidForVTable::Yes, ValidForMemberVars::No}};
+                                                         {STR("ITextData"), ValidForVTable::Yes, ValidForMemberVars::No},
+                                                         {STR("FUObjectArray"), ValidForVTable::No, ValidForMemberVars::Yes},
+                                                         {STR("FChunkedFixedUObjectArray"), ValidForVTable::No, ValidForMemberVars::Yes},
+                                                         {STR("FFixedUObjectArray"), ValidForVTable::No, ValidForMemberVars::Yes},
+                                                         {STR("FUObjectItem"), ValidForVTable::No, ValidForMemberVars::Yes}};
 
     static inline std::unordered_map<File::StringType, std::unordered_set<File::StringType>> s_private_variables{
             {STR("FField"),
@@ -213,6 +217,9 @@ namespace RC::UVTD
 
     auto to_string_type(const char* c_str) -> File::StringType;
     auto change_prefix(File::StringType input, bool is_425_plus) -> std::optional<File::StringType>;
+
+    // Workaround that lets us have a unified 'TUObjectArray' struct regardless if the engine version uses a chunked or non-chunked variant of TUObjectArray.
+    auto unify_uobject_array_if_needed(StringType& out_variable_type) -> bool;
 } // namespace RC::UVTD
 
 #endif

@@ -50,8 +50,10 @@ namespace RC::UVTD
                 return File::StringType{string};
             });
 
+            auto final_class_name = class_entry.class_name;
+            unify_uobject_array_if_needed(final_class_name);
             header_wrapper_dumper.send(STR("static std::unordered_map<File::StringType, int32_t> MemberOffsets;\n\n"));
-            wrapper_src_dumper.send(STR("std::unordered_map<File::StringType, int32_t> {}::MemberOffsets{{}};\n\n"), class_entry.class_name);
+            wrapper_src_dumper.send(STR("std::unordered_map<File::StringType, int32_t> {}::MemberOffsets{{}};\n\n"), final_class_name);
 
             auto private_variables_for_class = s_private_variables.find(class_entry.class_name);
 
@@ -90,6 +92,8 @@ namespace RC::UVTD
                     is_private = true;
                 }
 
+                unify_uobject_array_if_needed(final_type_name);
+
                 if (is_private)
                 {
                     header_wrapper_dumper.send(STR("private:\n"));
@@ -99,9 +103,9 @@ namespace RC::UVTD
                     header_wrapper_dumper.send(STR("public:\n"));
                 }
 
-                header_wrapper_dumper.send(STR("    {}& Get{}();\n"), variable.type, final_variable_name);
-                header_wrapper_dumper.send(STR("    const {}& Get{}() const;\n\n"), variable.type, final_variable_name);
-                wrapper_src_dumper.send(STR("{}& {}::Get{}()\n"), variable.type, class_entry.class_name, final_variable_name);
+                header_wrapper_dumper.send(STR("    {}& Get{}();\n"), final_type_name, final_variable_name);
+                header_wrapper_dumper.send(STR("    const {}& Get{}() const;\n\n"), final_type_name, final_variable_name);
+                wrapper_src_dumper.send(STR("{}& {}::Get{}()\n"), final_type_name, final_class_name, final_variable_name);
                 if (class_entry.class_name == STR("FArchive") || class_entry.class_name == STR("FArchiveState"))
                 {
                     wrapper_src_dumper.send(STR("{\n"));
@@ -110,20 +114,20 @@ namespace RC::UVTD
                     wrapper_src_dumper.send(STR("    static auto offset = offsets.find(STR(\"{}\"));\n"), final_variable_name);
                     wrapper_src_dumper.send(STR("    if (offset == offsets.end()) {{ throw std::runtime_error{{\"Tried getting member variable '{}::{}' that "
                                                 "doesn't exist in this engine version.\"}}; }}\n"),
-                                            class_entry.class_name,
+                                            final_class_name,
                                             final_variable_name);
-                    wrapper_src_dumper.send(STR("    return *Helper::Casting::ptr_cast<{}*>(this, offset->second);\n"), variable.type);
+                    wrapper_src_dumper.send(STR("    return *Helper::Casting::ptr_cast<{}*>(this, offset->second);\n"), final_type_name);
                     wrapper_src_dumper.send(STR("}\n"));
-                    wrapper_src_dumper.send(STR("const {}& {}::Get{}() const\n"), variable.type, class_entry.class_name, final_variable_name);
+                    wrapper_src_dumper.send(STR("const {}& {}::Get{}() const\n"), final_type_name, final_class_name, final_variable_name);
                     wrapper_src_dumper.send(STR("{\n"));
                     wrapper_src_dumper.send(
                             STR("    static auto& offsets = Version::IsBelow(4, 25) ? FArchive::MemberOffsets : FArchiveState::MemberOffsets;\n"));
                     wrapper_src_dumper.send(STR("    static auto offset = offsets.find(STR(\"{}\"));\n"), final_variable_name);
                     wrapper_src_dumper.send(STR("    if (offset == offsets.end()) {{ throw std::runtime_error{{\"Tried getting member variable '{}::{}' that "
                                                 "doesn't exist in this engine version.\"}}; }}\n"),
-                                            class_entry.class_name,
+                                            final_class_name,
                                             final_variable_name);
-                    wrapper_src_dumper.send(STR("    return *Helper::Casting::ptr_cast<const {}*>(this, offset->second);\n"), variable.type);
+                    wrapper_src_dumper.send(STR("    return *Helper::Casting::ptr_cast<const {}*>(this, offset->second);\n"), final_type_name);
                     wrapper_src_dumper.send(STR("}\n\n"));
                 }
                 else
@@ -132,26 +136,26 @@ namespace RC::UVTD
                     wrapper_src_dumper.send(STR("    static auto offset = MemberOffsets.find(STR(\"{}\"));\n"), final_variable_name);
                     wrapper_src_dumper.send(STR("    if (offset == MemberOffsets.end()) {{ throw std::runtime_error{{\"Tried getting member variable '{}::{}' "
                                                 "that doesn't exist in this engine version.\"}}; }}\n"),
-                                            class_entry.class_name,
+                                            final_class_name,
                                             final_variable_name);
-                    wrapper_src_dumper.send(STR("    return *Helper::Casting::ptr_cast<{}*>(this, offset->second);\n"), variable.type);
+                    wrapper_src_dumper.send(STR("    return *Helper::Casting::ptr_cast<{}*>(this, offset->second);\n"), final_type_name);
                     wrapper_src_dumper.send(STR("}\n"));
-                    wrapper_src_dumper.send(STR("const {}& {}::Get{}() const\n"), variable.type, class_entry.class_name, final_variable_name);
+                    wrapper_src_dumper.send(STR("const {}& {}::Get{}() const\n"), final_type_name, final_class_name, final_variable_name);
                     wrapper_src_dumper.send(STR("{\n"));
                     wrapper_src_dumper.send(STR("    static auto offset = MemberOffsets.find(STR(\"{}\"));\n"), final_variable_name);
                     wrapper_src_dumper.send(STR("    if (offset == MemberOffsets.end()) {{ throw std::runtime_error{{\"Tried getting member variable '{}::{}' "
                                                 "that doesn't exist in this engine version.\"}}; }}\n"),
-                                            class_entry.class_name,
+                                            final_class_name,
                                             final_variable_name);
-                    wrapper_src_dumper.send(STR("    return *Helper::Casting::ptr_cast<const {}*>(this, offset->second);\n"), variable.type);
+                    wrapper_src_dumper.send(STR("    return *Helper::Casting::ptr_cast<const {}*>(this, offset->second);\n"), final_type_name);
                     wrapper_src_dumper.send(STR("}\n\n"));
                 }
 
                 macro_setter_dumper.send(STR("if (auto val = parser.get_int64(STR(\"{}\"), STR(\"{}\"), -1); val != -1)\n"),
-                                         class_entry.class_name,
+                                         final_class_name,
                                          final_variable_name);
                 macro_setter_dumper.send(STR("    Unreal::{}::MemberOffsets.emplace(STR(\"{}\"), static_cast<int32_t>(val));\n"),
-                                         class_entry.class_name,
+                                         final_class_name,
                                          final_variable_name);
             }
         }
