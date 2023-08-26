@@ -134,6 +134,8 @@ namespace RC::UEGenerator
         bool m_is_implementation_file;
         bool m_needs_get_type_hash;
     public:
+        std::wstring m_implementation_constructor;
+        
         GeneratedSourceFile(const FFilePath& file_path, const std::wstring& file_module_name, bool is_implementation_file, UObject* object);
 
         //Delete copy and move constructors and assignment operator
@@ -198,6 +200,9 @@ namespace RC::UEGenerator
         // Storage to ensure that we don't have duplicate file names
         static std::map<File::StringType, UniqueName> m_used_file_names;
         static std::map<UObject*, int32_t> m_dependency_object_to_unique_id;
+
+        // Storage for class defaultsubojects when populating property initializers
+        std::unordered_map<std::wstring, std::wstring> m_class_subobjects;
 
     public:
         UEHeaderGenerator(const FFilePath& root_directory);

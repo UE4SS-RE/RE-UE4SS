@@ -456,7 +456,7 @@ namespace RC::UEGenerator
         std::wstring constructor_string;
         if (uclass->IsChildOf<AActor>())
         {
-            /*constructor_string.append(STR("const FObjectInitializer& ObjectInitializer"));*/
+            constructor_string.append(STR("const FObjectInitializer& ObjectInitializer"));
         }
         header_data.append_line(std::format(STR("{}({});"), class_native_name, constructor_string));
 
@@ -712,6 +712,56 @@ namespace RC::UEGenerator
     auto UEHeaderGenerator::generate_object_implementation(UClass* uclass, GeneratedSourceFile& implementation_file) -> void
     {
         const std::wstring class_native_name = get_native_class_name(uclass);
+
+        std::wstring constructor_content_string;
+        std::wstring constructor_postfix_string;
+        UClass* super_class = uclass->GetSuperClass();
+        const std::wstring native_parent_class_name = super_class ? get_native_class_name(super_class) : STR("UObjectUtility");
+
+        //Generate constructor implementation except for overrides.
+        
+        //If class is a child of AActor we add the UObjectInitializer constructor.
+        //This may not be required in all cases, but is necessary to override subcomponents and does not hurt anything.
+        std::wstring object_initializer_overrides;
+        if (uclass->IsChildOf<AActor>())
+        {
+            constructor_content_string.append(STR("const FObjectInitializer& ObjectInitializer"));
+            constructor_postfix_string.append(std::format(STR(") : Super(ObjectInitializer{}"), object_initializer_overrides));
+        }
+        //If parent class contains the UObjectInitializer constructor without default value,
+        //we need to create the explicit call to such constructor and pass UObjectInitializer::Get() as the argument.
+        else if (m_classes_with_object_initializer.contains(native_parent_class_name))
+        {
+            constructor_postfix_string.append(std::format(STR(" : {}(FObjectInitializer::Get()"), native_parent_class_name));
+        }
+        
+        implementation_file.m_implementation_constructor.append(std::format(STR("{}::{}({}{}"), class_native_name, class_native_name, constructor_content_string, constructor_postfix_string));
+
+        implementation_file.begin_indent_level();
+
+        //Generate and initialize properties
+        UObject* class_default_object = uclass->GetClassDefaultObject();
+
+        if (class_default_object != nullptr) 
+        {
+            for (FProperty* property : uclass->ForEachPropertyInChain()) 
+            {
+                generate_property_value(uclass, property, class_default_object, implementation_file, STR("this->"));
+            }
+        }
+        else 
+        {
+            implementation_file.append_line(STR("// Null default object."));
+        }
+        m_class_subobjects.clear();
+        implementation_file.end_indent_level();
+        implementation_file.append_line(STR("}\n"));
+
+        //Finalize constructor.  We do this after the property generation because we need information from the properties
+        //to determine the required overrides within the constructor.
+        implementation_file.m_implementation_constructor.append(STR(") {"));
+        
+        
         CaseInsensitiveSet blacklisted_property_names = collect_blacklisted_property_names(uclass);
 
         //Generate functions
@@ -754,50 +804,6 @@ namespace RC::UEGenerator
             implementation_file.append_line(STR("}"));
             implementation_file.append_line(STR(""));
         }
-
-        std::wstring constructor_content_string;
-        std::wstring constructor_postfix_string;
-        UClass* super_class = uclass->GetSuperClass();
-        const std::wstring native_parent_class_name = super_class ? get_native_class_name(super_class) : STR("UObjectUtility");
-
-        //If class is a child of AActor we add the UObjectInitializer constructor.
-        //This may not be required in all cases, but is necessary to override subcomponents and does not hurt anything.
-        if (uclass->IsChildOf<AActor>())
-        {
-            /*constructor_content_string.append(STR("const FObjectInitializer& ObjectInitializer"));
-
-            std::wstring object_initializer_overrides = STR("ObjectInitializer");
-            
-            constructor_postfix_string.append(std::format(STR(" : Super({})"), object_initializer_overrides));*/
-        }
-        //If parent class contains the UObjectInitializer constructor without default value,
-        //we need to create the explicit call to such constructor and pass UObjectInitializer::Get() as the argument.
-        else if (m_classes_with_object_initializer.contains(native_parent_class_name))
-        {
-            constructor_postfix_string.append(std::format(STR(" : {}(FObjectInitializer::Get())"), native_parent_class_name));
-        }
-        
-        //Generate constructor implementation and initialize properties inside
-        implementation_file.append_line(std::format(STR("{}::{}({}){} {{"), class_native_name, class_native_name, constructor_content_string, constructor_postfix_string));
-        implementation_file.begin_indent_level();
-
-        //Generate properties
-        UObject* class_default_object = uclass->GetClassDefaultObject();
-
-        if (class_default_object != nullptr) 
-        {
-            for (FProperty* property : uclass->ForEachPropertyInChain()) 
-            {
-                generate_property_value(uclass, property, class_default_object, implementation_file, STR("this->"));
-            }
-        }
-        else 
-        {
-            implementation_file.append_line(STR("// Null default object."));
-        }
-
-        implementation_file.end_indent_level();
-        implementation_file.append_line(STR("}"));
     }
 
     auto UEHeaderGenerator::generate_struct_implementation(UScriptStruct* script_struct, GeneratedSourceFile& implementation_file) -> void
@@ -805,7 +811,7 @@ namespace RC::UEGenerator
         const std::wstring struct_native_name = get_native_struct_name(script_struct);
 
         //Generate constructor implementation and initialize properties inside
-        implementation_file.append_line(std::format(STR("{}::{}() {{"), struct_native_name, struct_native_name));
+        implementation_file.m_implementation_constructor.append(std::format(STR("{}::{}() {{"), struct_native_name, struct_native_name));
         implementation_file.begin_indent_level();
 
         //Generate properties
@@ -985,25 +991,28 @@ namespace RC::UEGenerator
     auto UEHeaderGenerator::generate_property_value(UStruct* ustruct, FProperty* property, void* object, GeneratedSourceFile& implementation_file, const std::wstring& property_scope) -> void
     {
         const std::wstring property_name = property->GetName();
+        //Populate super for checks to ensure values are only initialized if they are overriden in the child class
+        UStruct* super;
         void* super_object = nullptr;
         FProperty* super_property = nullptr;
         auto as_class = Cast<UClass>(ustruct);
         if (as_class)
         {
-            super_object = as_class->GetClassDefaultObject();
+            super = as_class->GetSuperClass();
+            super_object = Cast<UClass>(super)->GetClassDefaultObject();
             if (super_object != nullptr)
             {
-                super_property = as_class->GetSuperClass()->GetPropertyByNameInChain(property_name.data());
+                super_property = super->GetPropertyByNameInChain(property_name.data());
             }
         }
         else
         {
-            UStruct* super_struct = ustruct->GetSuperStruct();
-            if (super_struct != nullptr)
+            super = ustruct->GetSuperStruct();
+            if (super != nullptr)
             {
-                super_object = malloc(super_struct->GetPropertiesSize());
-                memset(super_object, 0, super_struct->GetPropertiesSize());
-                super_property = super_struct->GetPropertyByNameInChain(property_name.data());
+                super_object = malloc(super->GetPropertiesSize());
+                memset(super_object, 0, super->GetPropertiesSize());
+                super_property = super->GetPropertyByNameInChain(property_name.data());
             }
         }
 
@@ -1013,6 +1022,7 @@ namespace RC::UEGenerator
             FByteProperty* byte_property = static_cast<FByteProperty*>(property);
             uint8_t* byte_property_value = byte_property->ContainerPtrToValuePtr<uint8_t>(object);
 
+            //Ensure property either does not exist in parent class or is overriden in the CDO for the child class
             if (super_property != nullptr)
             {
                 FByteProperty* super_byte_property = static_cast<FByteProperty*>(super_property);
@@ -1047,7 +1057,8 @@ namespace RC::UEGenerator
             
             FNumericProperty* underlying_property = p_enum_property->GetUnderlyingProperty();
             int64 value = underlying_property->GetSignedIntPropertyValue(p_enum_property->ContainerPtrToValuePtr<int64>(object));
-
+            
+            //Ensure property either does not exist in parent class or is overriden in the CDO for the child class
             if (super_property != nullptr)
             {
                 FNumericProperty* super_underlying_property = static_cast<FEnumProperty*>(super_property)->GetUnderlyingProperty();
@@ -1073,6 +1084,7 @@ namespace RC::UEGenerator
             uint8_t* byte_value = raw_property_value + byte_offset;
             bool result_bool_value = !!(*byte_value & field_mask);
 
+            //Ensure property either does not exist in parent class or is overriden in the CDO for the child class
             if (super_property != nullptr)
             {
                 FBoolProperty* super_bool_property = static_cast<FBoolProperty*>(super_property);
@@ -1097,6 +1109,7 @@ namespace RC::UEGenerator
             FName* name_value = property->ContainerPtrToValuePtr<FName>(object);
             const std::wstring name_value_string = name_value->ToString();
 
+            //Ensure property either does not exist in parent class or is overriden in the CDO for the child class
             if (super_property != nullptr)
             {
                 FName* super_name_value = super_property->ContainerPtrToValuePtr<FName>(super_object);
@@ -1118,6 +1131,7 @@ namespace RC::UEGenerator
             FString* string_value = property->ContainerPtrToValuePtr<FString>(object);
             const std::wstring string_value_string = string_value->GetCharArray();
 
+            //Ensure property either does not exist in parent class or is overriden in the CDO for the child class
             if (super_property != nullptr)
             {
                 FString* super_string_value = super_property->ContainerPtrToValuePtr<FString>(super_object);
@@ -1139,6 +1153,7 @@ namespace RC::UEGenerator
             FText* text_value = property->ContainerPtrToValuePtr<FText>(object);
             const auto text_value_string = text_value->ToString();
 
+            //Ensure property either does not exist in parent class or is overriden in the CDO for the child class
             if (super_property != nullptr)
             {
                 FText* super_text_value = super_property->ContainerPtrToValuePtr<FText>(super_object);
@@ -1160,6 +1175,7 @@ namespace RC::UEGenerator
             FClassProperty* class_property = static_cast<FClassProperty*>(property);
             UClass* class_value = *class_property->ContainerPtrToValuePtr<UClass*>(object);
 
+            //Ensure property either does not exist in parent class or is overriden in the CDO for the child class
             if (super_property != nullptr)
             {
                 FClassProperty* super_class_property = static_cast<FClassProperty*>(super_property);
@@ -1195,34 +1211,99 @@ namespace RC::UEGenerator
         {
             FObjectProperty* object_property = static_cast<FObjectProperty*>(property);
             UObject* sub_object_value = *object_property->ContainerPtrToValuePtr<UObject*>(object);
+            FObjectProperty* super_object_property;
+            UObject* super_sub_object_value = NULL;
 
+            //Ensure property either does not exist in parent class or is overriden in the CDO for the child class
             if (super_property != nullptr)
             {
-                FObjectProperty* super_object_property = static_cast<FObjectProperty*>(super_property);
-                UObject* super_sub_object_value = *super_object_property->ContainerPtrToValuePtr<UObject*>(super_object);
-                if (sub_object_value == super_sub_object_value) { return; }
+                super_object_property = static_cast<FObjectProperty*>(super_property);
+                super_sub_object_value = *super_object_property->ContainerPtrToValuePtr<UObject*>(super_object);
+                if (sub_object_value == NULL && super_sub_object_value == NULL) { return; }
             }
             
             if (sub_object_value == NULL)
             {
                 //If object value is NULL, generate a simple NULL constant
+                //TODO: Needs additional checks to see if the class is abstract to potentially change this to a default object init
                 generate_simple_assignment_expression(property, STR("NULL"), implementation_file, property_scope);
-
+                return;
             }
-            else if (sub_object_value->HasAnyFlags(EObjectFlags::RF_DefaultSubObject))
+            
+            if (sub_object_value->HasAnyFlags(EObjectFlags::RF_DefaultSubObject))
             {
-                //Generate a CreateDefaultSubobject function call
                 UClass* object_class_type = sub_object_value->GetClassPrivate();
-                implementation_file.add_dependency_object(object_class_type, DependencyLevel::Include);
-
-                const std::wstring object_class_name = get_native_class_name(object_class_type);
                 const std::wstring object_name = sub_object_value->GetName();
-                const std::wstring initializer = std::format(STR("CreateDefaultSubobject<{}>(TEXT(\"{}\"))"), object_class_name, object_name);
+                
+                
+                UClass* super_object_class_type{};
+                //Additional checks to ensure this property needs to be initialized in the current class
+                if (super_sub_object_value)
+                {
+                    super_object_class_type = super_sub_object_value->GetClassPrivate();
+                    const std::wstring super_object_name = super_sub_object_value->GetName();
+                    if ((object_class_type == super_object_class_type) && (object_name == super_object_name)) { return; }
+                }
 
+                bool parent_component_found = false;
+
+                //Check to see if any other property in the super initialized a component with the same name to ensure
+                //we are not creating the subobject in a child class unnecessarily.
+                if (super_object && !super_property)
+                {
+                    for (FProperty* check_super_property : super->ForEachPropertyInChain())
+                    {
+                        if (check_super_property->IsA<FObjectProperty>())
+                        {
+                            FObjectProperty* check_super_object_property = static_cast<FObjectProperty*>(check_super_property);
+                            UObject* check_super_sub_object_value = *check_super_object_property->ContainerPtrToValuePtr<UObject*>(super_object);
+                            if (check_super_sub_object_value)
+                            {
+                                std::wstring check_super_object_name = check_super_sub_object_value->GetName();
+                                if (check_super_object_name == object_name) { parent_component_found = true; }
+                            }
+                        }
+                    }
+                }
+                
+                //Generate an initializer by either setting this property to a pre-existing property
+                //overriding the object class of an existing component, or creating a new default subobject
+                std::wstring initializer{};
+                if (auto it = m_class_subobjects.find(object_name); it != m_class_subobjects.end())
+                {
+                    //Set property to equal previous property referencing the same object
+                    initializer = it->second;
+                    generate_simple_assignment_expression(property, initializer, implementation_file, property_scope);
+                    return;
+                }
+                
+                if ((super_object_class_type && object_class_type != super_object_class_type) || parent_component_found)
+                {
+                    //Add an objectinitializer default subobject class override to the constructor
+                    implementation_file.add_dependency_object(object_class_type, DependencyLevel::Include);
+                    implementation_file.m_implementation_constructor.append(std::format(STR(".SetDefaultSubobjectClass<{}>(TEXT(\"{}\"))"), get_native_class_name(object_class_type), object_name));
+                    m_class_subobjects.try_emplace(object_name, property->GetName());
+                    return;
+                }
+
+                //Generate a CreateDefaultSubobject function call
+                implementation_file.add_dependency_object(object_class_type, DependencyLevel::Include);
+                const std::wstring object_class_name = get_native_class_name(object_class_type);
+                initializer = std::format(STR("CreateDefaultSubobject<{}>(TEXT(\"{}\"))"), object_class_name, object_name);
+                m_class_subobjects.try_emplace(object_name, property->GetName());
                 generate_simple_assignment_expression(property, initializer, implementation_file, property_scope);
+                return;
             }
-            else if (UClass* sub_object_as_class = Cast<UClass>(sub_object_value))
+            
+            if (UClass* sub_object_as_class = Cast<UClass>(sub_object_value))
             {
+                //Ensure property either does not exist in parent class or is overriden in the CDO for the child class
+                if (super_sub_object_value != nullptr)
+                {
+                    UClass* super_sub_object_as_class = Cast<UClass>(sub_object_value);
+                    if (sub_object_as_class == super_sub_object_as_class) { return; }
+                }
+                
                 //Generate a ::StaticClass call if this object represents a class
                 implementation_file.add_dependency_object(sub_object_as_class, DependencyLevel::Include);
 
@@ -1230,12 +1311,12 @@ namespace RC::UEGenerator
                 const std::wstring initializer = std::format(STR("{}::StaticClass()"), object_class_name);
 
                 generate_simple_assignment_expression(property, initializer, implementation_file, property_scope);
+                return;
             }
-            else
-            {
-                //Unhandled case, might be some external object reference
-                Output::send(STR("Unhandled default value of the FObjectProperty {}: {}\n"), property->GetFullName(), sub_object_value->GetFullName());
-            }
+            
+            //Unhandled case, might be some external object reference
+            Output::send(STR("Unhandled default value of the FObjectProperty {}: {}\n"), property->GetFullName(), sub_object_value->GetFullName());
+
             return;
         }
         
@@ -1265,6 +1346,7 @@ namespace RC::UEGenerator
         {
             FScriptArray* property_value = property->ContainerPtrToValuePtr<FScriptArray>(object);
 
+            //Ensure property either does not exist in parent class or is overriden in the CDO for the child class
             if (super_property != nullptr)
             {
                 FScriptArray* super_property_value = super_property->ContainerPtrToValuePtr<FScriptArray>(super_object);
@@ -1294,6 +1376,7 @@ namespace RC::UEGenerator
         {
             FNumericProperty* numeric_property = static_cast<FNumericProperty*>(property);
 
+            //Ensure property either does not exist in parent class or is overriden in the CDO for the child class
             if (super_property != nullptr)
             {
                 FNumericProperty* super_numeric_property = static_cast<FNumericProperty*>(super_property);
@@ -3650,6 +3733,12 @@ namespace RC::UEGenerator
         if (!pre_declarations_string.empty())
         {
             result_header_contents.append(pre_declarations_string);
+            result_header_contents.append(STR("\n"));
+        }
+
+        if (!m_implementation_constructor.empty())
+        {
+            result_header_contents.append(m_implementation_constructor);
             result_header_contents.append(STR("\n"));
         }
 
