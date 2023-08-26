@@ -1274,24 +1274,63 @@ namespace RC::UEGenerator
                     //Set property to equal previous property referencing the same object
                     initializer = it->second;
                     generate_simple_assignment_expression(property, initializer, implementation_file, property_scope);
-                    return;
                 }
-                
-                if ((super_object_class_type && object_class_type != super_object_class_type) || parent_component_found)
+                else if ((super_object_class_type && object_class_type != super_object_class_type) || parent_component_found)
                 {
                     //Add an objectinitializer default subobject class override to the constructor
                     implementation_file.add_dependency_object(object_class_type, DependencyLevel::Include);
                     implementation_file.m_implementation_constructor.append(std::format(STR(".SetDefaultSubobjectClass<{}>(TEXT(\"{}\"))"), get_native_class_name(object_class_type), object_name));
                     m_class_subobjects.try_emplace(object_name, property->GetName());
-                    return;
                 }
-
-                //Generate a CreateDefaultSubobject function call
-                implementation_file.add_dependency_object(object_class_type, DependencyLevel::Include);
-                const std::wstring object_class_name = get_native_class_name(object_class_type);
-                initializer = std::format(STR("CreateDefaultSubobject<{}>(TEXT(\"{}\"))"), object_class_name, object_name);
-                m_class_subobjects.try_emplace(object_name, property->GetName());
-                generate_simple_assignment_expression(property, initializer, implementation_file, property_scope);
+                else
+                {
+                    //Generate a CreateDefaultSubobject function call
+                    implementation_file.add_dependency_object(object_class_type, DependencyLevel::Include);
+                    const std::wstring object_class_name = get_native_class_name(object_class_type);
+                    initializer = std::format(STR("CreateDefaultSubobject<{}>(TEXT(\"{}\"))"), object_class_name, object_name);
+                    m_class_subobjects.try_emplace(object_name, property->GetName());
+                    generate_simple_assignment_expression(property, initializer, implementation_file, property_scope);
+                }
+                
+                FObjectProperty* attach_parent_property = static_cast<FObjectProperty*>(sub_object_value->GetPropertyByNameInChain(STR("AttachParent")));
+                UObject* attach_parent_object_value{};
+                if (attach_parent_property)
+                {
+                    attach_parent_object_value = *attach_parent_property->ContainerPtrToValuePtr<UObject*>(sub_object_value);
+                }
+                if (attach_parent_object_value != NULL)
+                {
+                    const std::wstring attach_parent_object_name = attach_parent_object_value->GetName();
+                    std::wstring attach_string;
+                    if (auto it = m_class_subobjects.find(attach_parent_object_name); it != m_class_subobjects.end())
+                    {
+                        //Set property to equal previous property referencing the same object
+                        attach_string = std::format(STR("SetupAttachment({})"), it->second);
+                    }
+                    else
+                    {
+                        if (as_class)
+                        {
+                            for (FProperty* check_property : as_class->ForEachPropertyInChain())
+                            {
+                                if (check_property->IsA<FObjectProperty>())
+                                {
+                                    FObjectProperty* check_object_property = static_cast<FObjectProperty*>(check_property);
+                                    UObject* check_sub_object_value = *check_object_property->ContainerPtrToValuePtr<UObject*>(object);
+                                    if (check_sub_object_value)
+                                    {
+                                        std::wstring check_object_name = check_sub_object_value->GetName();
+                                        if (check_object_name == attach_parent_object_name)
+                                        {
+                                            attach_string = std::format(STR("SetupAttachment({})"), check_property->GetName());
+                                        }
+                                    }
+                                }
+                            }
+                            generate_simple_assignment_expression(property, attach_string, implementation_file, property_scope);
+                        }
+                    }
+                }
                 return;
             }
             
@@ -1370,8 +1409,7 @@ namespace RC::UEGenerator
         {
             return;
         }
-
-        // Used to be 'property->is_child_of'
+        
         if (property->IsA<FNumericProperty>())
         {
             FNumericProperty* numeric_property = static_cast<FNumericProperty*>(property);
