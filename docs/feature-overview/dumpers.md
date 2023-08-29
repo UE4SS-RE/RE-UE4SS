@@ -4,7 +4,7 @@
 
 The C++ dumper is a tool that generates C++ headers from UE4 classes and blueprints.
 
-The keybind to generate headers is by default `CTRL` + `D`, and it can be changed in `Mods/Keybinds/Scripts/main.lua`.
+The keybind to generate headers is by default `CTRL` + `H`, and it can be changed in `Mods/Keybinds/Scripts/main.lua`.
 
 It generates a `.hpp` file for each blueprint (including animation blueprint and widget blueprint), and then all of the base classes inside of `<ProjectName>.hpp` or `<EngineModule>.hpp`. All classes are at the top of the files, followed by all structs. Enums are seperated into files named the same as their class, but with `_enums` appended to the end.
 
@@ -63,7 +63,7 @@ The keybind to generate headers is by default `CTRL` + `Numpad 9`, and it can be
 
 Dumps all loaded objects to the file `UE4SS_ObjectDump.txt` (you can turn on force loading for all assets). 
 
-The keybind to dump objects is by default `J`, and can be changed in `Mods/Keybinds/Scripts/main.lua`.
+The keybind to dump objects is by default `CTRL` + `J`, and can be changed in `Mods/Keybinds/Scripts/main.lua`.
 
 Example output:
 ```
