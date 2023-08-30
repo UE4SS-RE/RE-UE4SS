@@ -19,7 +19,7 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v4
         with:
-          python-version: '3.x'
+          python-version: "3.x"
 
       - name: Setup MSVC
         uses: ilammy/msvc-dev-cmd@v1
@@ -29,6 +29,9 @@ jobs:
 
       - name: Setup DirectX SDK (for xinput1_3.dll)
         run: |
+          Invoke-WebRequest -URI https://download.microsoft.com/download/8/4/A/84A35BF1-DAFE-4AE8-82AF-AD2AE20B6B14/directx_Jun2010_redist.exe -OutFile dxredist.exe
+          Start-Process -Wait dxredist.exe -ArgumentList "/q /t:`"$PWD/dxredist`" /c"
+          Start-Process -Wait dxredist/DXSETUP.exe /silent
           Invoke-WebRequest -URI https://download.microsoft.com/download/1/7/1/1718CCC4-6315-4D8E-9543-8E28A4E18C4C/dxwebsetup.exe -OutFile dxwebsetup.exe
           Start-Process -Wait dxwebsetup.exe /q
 
@@ -53,6 +56,7 @@ jobs:
           tags: true
 
       - name: Release
+        id: release
         uses: softprops/action-gh-release@v1
         with:
           tag_name: ${{ steps.release_commit.outputs.release_tag }}
@@ -62,3 +66,20 @@ jobs:
             release/zDEV-UE4SS_v*.zip
             release/zCustomGameConfigs.zip
             release/zMapGenBP.zip
+
+      - name: Get workflow token
+        id: get_workflow_token
+        uses: peter-murray/workflow-application-token-action@v2
+        with:
+          application_id: ${{ secrets.WORKFLOW_DISPATCHER_APPID }}
+          application_private_key: ${{ secrets.WORKFLOW_DISPATCHER_KEY }}
+          permissions: "actions:write"
+
+      - name: Trigger website update
+        uses: benc-uk/workflow-dispatch@v1
+        with:
+          workflow: publish.yml
+          ref: main
+          repo: UE4SS-RE/website
+          token: ${{ steps.get_workflow_token.outputs.token }}
+          inputs: '{ "releaseLink": "${{ fromJson(steps.release.outputs.assets)[0].browser_download_url }}" }'
