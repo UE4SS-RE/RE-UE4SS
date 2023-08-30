@@ -132,10 +132,10 @@ namespace RC::GUI::Dumpers
             static auto static_mesh_component_class = UObjectGlobals::StaticFindObject<UClass*>(nullptr, nullptr, STR("/Script/Engine.StaticMeshComponent"));
             auto static_mesh_components = actor->K2_GetComponentsByClass(static_mesh_component_class);
 
-            for (auto [static_mesh_component_ptr, static_mesh_component_index] : static_mesh_components | views::enumerate)
+            for (auto static_mesh_component_It = static_mesh_components.CreateIterator(); static_mesh_component_It; ++static_mesh_component_It)
             {
-                if (!static_mesh_component_ptr) { continue; }
-                auto static_mesh_component = static_mesh_component_ptr;
+                if (!static_mesh_component_It) { continue; }
+                auto static_mesh_component = Cast<UObject>(*static_mesh_component_It);
 
                 auto mesh = *static_mesh_component->GetValuePtrByPropertyNameInChain<UObject*>(STR("StaticMesh"));
                 if (!mesh)
@@ -182,18 +182,20 @@ namespace RC::GUI::Dumpers
                 if (Version::IsAtMost(4, 19))
                 {
                     auto materials = mesh->GetValuePtrByPropertyName<TArray<FStaticMaterial_419AndBelow>>(STR("StaticMaterials"));
-                    for (auto [material, material_index] : *materials | views::enumerate)
+                    for (auto mat_It = materials->CreateIterator(); mat_It; ++mat_It)
                     {
-                        LoopAction action = materials_for_each_body(material.MaterialInterface, material_index, materials->Num());
+                        FStaticMaterial_419AndBelow material = *mat_It;
+                        LoopAction action = materials_for_each_body(material.MaterialInterface, mat_It.GetIndex(), materials->Num());
                         if (action == LoopAction::Break) break;
                     }
                 }
                 else
                 {
                     auto materials = mesh->GetValuePtrByPropertyName<TArray<FStaticMaterial_420AndAbove>>(STR("StaticMaterials"));
-                    for (auto [material, material_index] : *materials | views::enumerate)
+                    for (auto mat_It = materials->CreateIterator(); mat_It; ++mat_It)
                     {
-                        LoopAction action = materials_for_each_body(material.MaterialInterface, material_index, materials->Num());
+                        FStaticMaterial_420AndAbove material = *mat_It;
+                        LoopAction action = materials_for_each_body(material.MaterialInterface, mat_It.GetIndex(), materials->Num());
                         if (action == LoopAction::Break) { break; }
                     }
                 }
@@ -276,6 +278,7 @@ namespace RC::GUI::Dumpers
 	    file_buffer.append(generate_actors_csv_file(dump_actor_class));
         auto file = File::open(std::format(STR("{}\\{}-ue4ss_static_mesh_data.csv"), UE4SSProgram::get_program().get_working_directory(), long(std::time(nullptr))), File::OpenFor::Writing, File::OverwriteExistingFile::Yes, File::CreateIfNonExistent::Yes);
 	    file.write_string_to_file(file_buffer);
+        Output::send(STR("Finished dumping CSV of all loaded static mesh actors, positions and mesh properties\n"));
 	}
 
     void call_generate_all_actor_file()
@@ -285,6 +288,7 @@ namespace RC::GUI::Dumpers
 	    file_buffer.append(generate_actors_csv_file(AActor::StaticClass()));
         auto file = File::open(std::format(STR("{}\\{}-ue4ss_actor_data.csv"), UE4SSProgram::get_program().get_working_directory(), long(std::time(nullptr))), File::OpenFor::Writing, File::OverwriteExistingFile::Yes, File::CreateIfNonExistent::Yes);
 	    file.write_string_to_file(file_buffer);
+        Output::send(STR("Finished dumping CSV of all loaded actor types, positions and mesh properties\n"));
 	}
     
 
