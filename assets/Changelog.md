@@ -14,6 +14,10 @@ Added additional AOB for `FName::ToString` - LongerWarrior
 
 The shortcut (CTRL + O) for opening the GUI is now a toggle, meaning it can also be used for closing the GUI
 
+The shortcut (previously J) for dumping objects (generating UE4SS_ObjectDump.txt) has been changed to CTRL + J
+
+The shortcut (previously D) for generating CXX headers has been changed to CTRL + H
+
 
 ### C++ API
 Finalize C++ API. - LocalCC; Truman
