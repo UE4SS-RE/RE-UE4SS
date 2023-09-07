@@ -1047,13 +1047,13 @@ namespace RC::GUI
         if (!currently_selected_object.first || !currently_selected_object.second) { return; }
         
         auto uenum = static_cast<UEnum*>(currently_selected_object.second);
-        auto& names = uenum->GetNames();
+        auto names = uenum->GetEnumNames();
         std::string plus = "+";
         std::string minus = "-";
         int32_t index = -1;
         StringType enum_name{};
         
-        for (const auto& name : names)
+        for (const auto name : names)
         {
             bool open_edit_name_popup{};
             bool open_edit_value_popup{};
@@ -1157,9 +1157,9 @@ namespace RC::GUI
                 {
                     FOutputDevice placeholder_device{};
                     StringType new_name = to_wstring(m_current_property_value_buffer);
-                    FName new_key = RC::Unreal::FName(new_name, FNAME_Add);                    
-                    names[index].Key = new_key;
-                    if (names[index].Key.ToString() != new_name)
+                    FName new_key = FName(new_name, FNAME_Add);
+                    uenum->EditNameAt(index, new_key);
+                    if (uenum->GetEnumNames()[index].Key.ToString() != new_name)
                     {
                         m_modal_edit_property_value_error_unable_to_edit = true;
                         ImGui::OpenPopup("UnableToSetNewEnumNameError");
@@ -1196,8 +1196,9 @@ namespace RC::GUI
                 {
                     FOutputDevice placeholder_device{};
                     int64_t new_value = m_current_enum_value_buffer;
-                    names[index].Value = new_value;
-                    if (names[index].Value != new_value)
+                    uenum->EditValueAt(index, new_value);
+
+                    if (uenum->GetEnumNames()[index].Value != new_value)
                     {
                         m_modal_edit_property_value_error_unable_to_edit = true;
                         ImGui::OpenPopup("UnableToSetNewEnumValueError");
@@ -1236,13 +1237,12 @@ namespace RC::GUI
                 {
                     FOutputDevice placeholder_device{};
                     StringType new_name = to_wstring(m_current_property_value_buffer);
-                    FName new_key = RC::Unreal::FName(new_name, FNAME_Add);
+                    FName new_key = FName(new_name, FNAME_Add);
                     int64 value = names[index].Value;
-                    const TPair<FName, int64> CastItem = TPair{new_key, value};
 
-                    uenum->InsertIntoNames(CastItem, index, true);
+                    uenum->InsertIntoNames(TPair{new_key, value}, index, true);
                     
-                    if (names[index].Key.ToString() != new_name)
+                    if (uenum->GetEnumNames()[index].Key.ToString() != new_name)
                     {
                         m_modal_edit_property_value_error_unable_to_edit = true;
                         ImGui::OpenPopup("UnableToAddNewEnumNameError");
