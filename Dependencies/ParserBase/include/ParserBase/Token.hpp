@@ -1,5 +1,4 @@
-#ifndef RC_PARSER_TOKEN_HPP
-#define RC_PARSER_TOKEN_HPP
+#pragma once
 
 #include <string>
 #include <memory>
@@ -112,4 +111,4 @@ namespace RC::ParserBase
 }
 
 
-#endif //RC_PARSER_TOKEN_HPP
+

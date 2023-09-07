@@ -1,5 +1,4 @@
-#ifndef UE4SS_LUACUSTOMMEMBERFUNCTIONS_HPP
-#define UE4SS_LUACUSTOMMEMBERFUNCTIONS_HPP
+#pragma once
 
 #include <unordered_map>
 
@@ -394,4 +393,4 @@ namespace RC::UnrealRuntimeTypes
     };
 }
 
-#endif //UE4SS_LUACUSTOMMEMBERFUNCTIONS_HPP
+

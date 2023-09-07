@@ -1,5 +1,4 @@
-#ifndef RC_INTEGER_HPP
-#define RC_INTEGER_HPP
+#pragma once
 
 #include <cstdint>
 #include <concepts>
@@ -40,4 +39,4 @@ namespace RC::Helper::Integer
     }
 }
 
-#endif //RC_INTEGER_HPP
+

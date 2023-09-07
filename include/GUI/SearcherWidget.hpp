@@ -1,5 +1,4 @@
-#ifndef UE4SS_GUI_SEARCHER_WIDGET_HPP
-#define UE4SS_GUI_SEARCHER_WIDGET_HPP
+#pragma once
 
 #include <string>
 
@@ -49,4 +48,4 @@ namespace RC::GUI
     };
 }
 
-#endif // UE4SS_GUI_SEARCHER_WIDGET_HPP
+

@@ -1,5 +1,4 @@
-#ifndef UE4SS_REWRITTEN_LUATARRAY_HPP
-#define UE4SS_REWRITTEN_LUATARRAY_HPP
+#pragma once
 
 #include <LuaType/LuaUObject.hpp>
 #pragma warning(disable: 4005)
@@ -47,4 +46,4 @@ namespace RC::LuaType
 }
 
 
-#endif //UE4SS_REWRITTEN_LUATARRAY_HPP
+

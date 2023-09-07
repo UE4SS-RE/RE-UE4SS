@@ -1,5 +1,4 @@
-#ifndef UE4SS_REWRITE_MAYBE_UE4SSPROGRAM_HPP
-#define UE4SS_REWRITE_MAYBE_UE4SSPROGRAM_HPP
+#pragma once
 
 #include <thread>
 #include <functional>
@@ -242,4 +241,4 @@ namespace RC
     };
 }
 
-#endif //UE4SS_REWRITE_MAYBE_UE4SSPROGRAM_HPP
+

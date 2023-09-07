@@ -1,5 +1,4 @@
-#ifndef RC_FILE_HPP
-#define RC_FILE_HPP
+#pragma once
 
 #include <File/Common.hpp>
 #include <File/HandleTemplate.hpp>
@@ -16,4 +15,4 @@ namespace RC::File
     RC_FILE_API auto delete_file(const std::filesystem::path& file_path_and_name) -> void;
 }
 
-#endif //RC_FILE_HPP
+

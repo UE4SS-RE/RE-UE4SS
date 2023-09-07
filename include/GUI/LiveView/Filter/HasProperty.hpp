@@ -1,5 +1,4 @@
-#ifndef UE4SS_GUI_HAS_PROPERTY_HPP
-#define UE4SS_GUI_HAS_PROPERTY_HPP
+#pragma once
 
 #include <GUI/LiveView/Filter/SearchFilter.hpp>
 
@@ -19,4 +18,4 @@ namespace RC::GUI::Filter
     };
 }
 
-#endif //UE4SS_GUI_HAS_PROPERTY_HPP
+

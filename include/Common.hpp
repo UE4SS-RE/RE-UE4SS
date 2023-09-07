@@ -1,5 +1,4 @@
-#ifndef UE4SS_REWRITTEN_COMMON_HPP
-#define UE4SS_REWRITTEN_COMMON_HPP
+#pragma once
 
 #ifndef RC_UE4SS_EXPORTS
 #ifndef RC_UE4SS_API
@@ -11,4 +10,3 @@
 #endif
 #endif
 
-#endif // UE4SS_REWRITTEN_COMMON_HPP

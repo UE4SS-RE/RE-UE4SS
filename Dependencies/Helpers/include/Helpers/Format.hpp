@@ -1,5 +1,4 @@
-#ifndef RC_FORMAT_HPP
-#define RC_FORMAT_HPP
+#pragma once
 
 #include <string>
 
@@ -56,4 +55,4 @@ namespace RC
     }
 }
 
-#endif //RC_FORMAT_HPP
+

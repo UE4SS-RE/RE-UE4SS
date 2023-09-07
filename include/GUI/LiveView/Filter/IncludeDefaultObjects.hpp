@@ -1,5 +1,4 @@
-#ifndef UE4SS_GUI_INCLUDE_DEFAULT_OBJECTS_HPP
-#define UE4SS_GUI_INCLUDE_DEFAULT_OBJECTS_HPP
+#pragma once
 
 #include <GUI/LiveView/Filter/SearchFilter.hpp>
 
@@ -18,4 +17,4 @@ namespace RC::GUI::Filter
     };
 }
 
-#endif //UE4SS_GUI_INCLUDE_DEFAULT_OBJECTS_HPP
+

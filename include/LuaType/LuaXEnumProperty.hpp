@@ -1,5 +1,4 @@
-#ifndef UE4SS_REWRITTEN_LUAXENUMPROPERTY_HPP
-#define UE4SS_REWRITTEN_LUAXENUMPROPERTY_HPP
+#pragma once
 
 #include <LuaType/LuaXProperty.hpp>
 
@@ -34,4 +33,4 @@ namespace RC::LuaType
 }
 
 
-#endif //UE4SS_REWRITTEN_LUAXENUMPROPERTY_HPP
+

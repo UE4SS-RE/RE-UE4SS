@@ -1,5 +1,4 @@
-#ifndef RC_JSON_STRING_HPP
-#define RC_JSON_STRING_HPP
+#pragma once
 
 #include <format>
 
@@ -32,4 +31,4 @@ namespace RC::JSON
     };
 }
 
-#endif //RC_JSON_STRING_HPP
+

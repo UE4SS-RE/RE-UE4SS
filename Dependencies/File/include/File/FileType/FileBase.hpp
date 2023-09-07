@@ -1,5 +1,4 @@
-#ifndef RC_FILE_FILEBASE_HPP
-#define RC_FILE_FILEBASE_HPP
+#pragma once
 
 #include <type_traits>
 #include <span>
@@ -99,4 +98,4 @@ namespace RC::File
 }
 
 
-#endif //RC_FILE_FILEBASE_HPP
+

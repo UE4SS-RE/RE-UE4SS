@@ -1,5 +1,4 @@
-#ifndef RC_MPROGRAM_HPP
-#define RC_MPROGRAM_HPP
+#pragma once
 
 #include <initializer_list>
 #include <memory>
@@ -55,4 +54,4 @@ namespace RC
     };
 }
 
-#endif //RC_MPROGRAM_HPP
+

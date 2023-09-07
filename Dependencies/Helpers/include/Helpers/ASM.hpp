@@ -1,5 +1,4 @@
-#ifndef RC_ASM_HPP
-#define RC_ASM_HPP
+#pragma once
 
 #include <array>
 #include <cstdint>
@@ -170,4 +169,4 @@ namespace RC::Helper::ASM
     }
 }
 
-#endif //RC_ASM_HPP
+

@@ -1,5 +1,4 @@
-#ifndef UE4SS_REWRITTEN_LUAUSCRIPTSTRUCT_HPP
-#define UE4SS_REWRITTEN_LUAUSCRIPTSTRUCT_HPP
+#pragma once
 
 #include <LuaType/LuaUStruct.hpp>
 
@@ -52,4 +51,4 @@ namespace RC::LuaType
 }
 
 
-#endif //UE4SS_REWRITTEN_LUAUSCRIPTSTRUCT_HPP
+

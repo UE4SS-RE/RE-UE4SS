@@ -1,5 +1,4 @@
-#ifndef UE4SS_GUITAB_HPP
-#define UE4SS_GUITAB_HPP
+#pragma once
 
 #include <File/Macros.hpp>
 #include <GUI/GUI.hpp>
@@ -21,4 +20,4 @@ namespace RC::GUI
     };
 }
 
-#endif // UE4SS_GUITAB_HPP
+

@@ -1,5 +1,4 @@
-#ifndef UE4SS_GUI_DUMPERS_HPP
-#define UE4SS_GUI_DUMPERS_HPP
+#pragma once
 
 namespace RC::GUI::Dumpers
 {
@@ -17,4 +16,4 @@ namespace RC::GUI::Dumpers
     
 }
 
-#endif //UE4SS_GUI_DUMPERS_HPP
+

@@ -1,5 +1,4 @@
-#ifndef RC_FILE_EXCEPTIONS_HPP
-#define RC_FILE_EXCEPTIONS_HPP
+#pragma once
 
 #include <stdexcept>
 
@@ -13,4 +12,4 @@ namespace RC::File
     };
 }
 
-#endif //RC_FILE_EXCEPTIONS_HPP
+

@@ -1,5 +1,4 @@
-#ifndef RC_LUA_MADE_SIMPLE_HPP
-#define RC_LUA_MADE_SIMPLE_HPP
+#pragma once
 
 #include <optional>
 #include <functional>
@@ -807,4 +806,4 @@ namespace RC::LuaMadeSimple
 }
 
 
-#endif //RC_LUA_MADE_SIMPLE_HPP
+

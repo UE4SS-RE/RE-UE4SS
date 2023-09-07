@@ -1,5 +1,4 @@
-#ifndef RC_ASM_HELPER_HPP
-#define RC_ASM_HELPER_HPP
+#pragma once
 
 #include <ASMHelper/Common.hpp>
 #include <Zydis/Zydis.h>
@@ -21,4 +20,4 @@ namespace RC::ASM
     RC_ASM_API auto resolve_function_address_from_potential_jmp(void* function_ptr) -> void*;
 }
 
-#endif // RC_ASM_HELPER_HPP
+

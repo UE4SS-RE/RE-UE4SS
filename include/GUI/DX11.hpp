@@ -1,5 +1,4 @@
-#ifndef UE4SS_GUI_DX11_HPP
-#define UE4SS_GUI_DX11_HPP
+#pragma once
 
 #include <GUI/GUI.hpp>
 
@@ -23,4 +22,4 @@ namespace RC::GUI
     };
 }
 
-#endif //UE4SS_GUI_DX11_HPP
+

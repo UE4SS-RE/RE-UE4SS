@@ -1,5 +1,4 @@
-#ifndef UE4SS_REWRITTEN_LUATSOFTCLASSPTR_HPP
-#define UE4SS_REWRITTEN_LUATSOFTCLASSPTR_HPP
+#pragma once
 
 #include <LuaType/LuaUObject.hpp>
 #include <Unreal/Property/FSoftClassProperty.hpp>
@@ -28,4 +27,4 @@ namespace RC::LuaType
 
 
 
-#endif //UE4SS_REWRITTEN_LUATSOFTCLASSPTR_HPP
+

@@ -1,5 +1,4 @@
-#ifndef RC_INPUT_KEYDEF_HPP
-#define RC_INPUT_KEYDEF_HPP
+#pragma once
 
 #include <stdexcept>
 
@@ -254,4 +253,4 @@ namespace RC::Input
     auto operator++(Input::Key& key) -> Input::Key&;
 }
 
-#endif //RC_INPUT_KEYDEF_HPP
+

@@ -1,5 +1,4 @@
-#ifndef RC_LUA_MADE_SIMPLE_COMMON_HPP
-#define RC_LUA_MADE_SIMPLE_COMMON_HPP
+#pragma once
 
 #ifndef RC_LUA_MADE_SIMPLE_EXPORTS
 #ifndef RC_LUA_MADE_SIMPLE_BUILD_STATIC
@@ -17,4 +16,4 @@
 #endif
 #endif
 
-#endif //RC_LUA_MADE_SIMPLE_COMMON_HPP
+

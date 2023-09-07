@@ -1,5 +1,4 @@
-#ifndef UE4SS_REWRITTEN_LUAFSTRING_HPP
-#define UE4SS_REWRITTEN_LUAFSTRING_HPP
+#pragma once
 
 #include <LuaType/LuaUObject.hpp>
 
@@ -31,4 +30,4 @@ namespace RC::LuaType
 }
 
 
-#endif //UE4SS_REWRITTEN_LUAFSTRING_HPP
+

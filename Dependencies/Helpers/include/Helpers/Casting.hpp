@@ -1,5 +1,4 @@
-#ifndef RC_CASTING_HPP
-#define RC_CASTING_HPP
+#pragma once
 
 #include <cstdint>
 #include <bit>
@@ -71,4 +70,3 @@ namespace RC::Helper::Casting
 #endif
 }
 
-#endif //RC_CASTING_HPP

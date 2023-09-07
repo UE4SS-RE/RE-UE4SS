@@ -1,5 +1,4 @@
-#ifndef UE4SS_GUI_CONSOLE_HPP
-#define UE4SS_GUI_CONSOLE_HPP
+#pragma once
 
 #include <vector>
 #include <string>
@@ -49,4 +48,4 @@ namespace RC::GUI
     };
 }
 
-#endif //UE4SS_GUI_CONSOLE_HPP
+

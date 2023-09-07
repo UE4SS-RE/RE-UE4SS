@@ -1,5 +1,4 @@
-#ifndef UE4SS_GUI_HPP
-#define UE4SS_GUI_HPP
+#pragma once
 
 #include <thread>
 #include <memory>
@@ -195,4 +194,4 @@ namespace RC::GUI
     }
 }
 
-#endif //UE4SS_GUI_HPP
+

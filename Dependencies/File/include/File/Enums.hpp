@@ -1,5 +1,4 @@
-#ifndef RC_FILE_ENUMS_HPP
-#define RC_FILE_ENUMS_HPP
+#pragma once
 
 namespace RC::File
 {
@@ -37,4 +36,4 @@ namespace RC::File
     };
 }
 
-#endif //RC_FILE_ENUMS_HPP
+

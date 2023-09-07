@@ -1,5 +1,4 @@
-#ifndef RC_JSON_PARSER_TYPES_HPP
-#define RC_JSON_PARSER_TYPES_HPP
+#pragma once
 
 namespace RC::JSON
 {
@@ -250,4 +249,4 @@ namespace RC::JSON::Parser
 }
 //*/
 
-#endif //RC_JSON_PARSER_TYPES_HPP
+

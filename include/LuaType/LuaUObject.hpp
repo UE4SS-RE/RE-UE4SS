@@ -1,5 +1,4 @@
-#ifndef UE4SS_REWRITTEN_LUAUOBJECT_HPP
-#define UE4SS_REWRITTEN_LUAUOBJECT_HPP
+#pragma once
 
 #define NOMINMAX
 
@@ -767,4 +766,4 @@ Overloads:
 }
 
 
-#endif //UE4SS_REWRITTEN_LUAUOBJECT_HPP
+

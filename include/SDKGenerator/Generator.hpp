@@ -1,5 +1,4 @@
-#ifndef UE4SS_REWRITTEN_SDKGENERATOR_GENERATOR_HPP
-#define UE4SS_REWRITTEN_SDKGENERATOR_GENERATOR_HPP
+#pragma once
 
 #include <filesystem>
 #include <unordered_map>
@@ -31,4 +30,4 @@ namespace RC::UEGenerator
 }
 
 
-#endif //UE4SS_REWRITTEN_SDKGENERATOR_GENERATOR_HPP
+

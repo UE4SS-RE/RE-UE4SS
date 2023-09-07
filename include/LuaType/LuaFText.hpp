@@ -1,5 +1,4 @@
-#ifndef UE4SS_REWRITTEN_LUAFTEXT_HPP
-#define UE4SS_REWRITTEN_LUAFTEXT_HPP
+#pragma once
 
 #include <LuaType/LuaUObject.hpp>
 #include <LuaMadeSimple/LuaMadeSimple.hpp>
@@ -32,4 +31,4 @@ namespace RC::LuaType
 }
 
 
-#endif //UE4SS_REWRITTEN_LUAFTEXT_HPP
+

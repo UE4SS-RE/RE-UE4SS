@@ -1,5 +1,4 @@
-#ifndef RC_FILE_COMMON_HPP
-#define RC_FILE_COMMON_HPP
+#pragma once
 
 #ifndef RC_FILE_EXPORTS
 #ifndef RC_FILE_BUILD_STATIC
@@ -17,4 +16,4 @@
 #endif
 #endif
 
-#endif //RC_FILE_COMMON_HPP
+

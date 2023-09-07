@@ -1,5 +1,4 @@
-#ifndef RC_FUNCTION_HPP
-#define RC_FUNCTION_HPP
+#pragma once
 
 #include <bit>
 #include <stdexcept>
@@ -106,4 +105,4 @@ namespace RC
     };
 }
 
-#endif //RC_FUNCTION_HPP
+

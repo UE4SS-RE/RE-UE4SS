@@ -1,5 +1,4 @@
-#ifndef RC_ASM_HELPER_COMMON_HPP
-#define RC_ASM_HELPER_COMMON_HPP
+#pragma once
 
 #ifndef RC_ASM_HELPER_EXPORTS
 #ifndef RC_ASM_HELPER_BUILD_STATIC
@@ -17,4 +16,4 @@
 #endif
 #endif
 
-#endif //RC_ASM_HELPER_COMMON_HPP
+
