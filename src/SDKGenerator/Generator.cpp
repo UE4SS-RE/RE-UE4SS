@@ -468,7 +468,7 @@ namespace RC::UEGenerator
 
             File::StringType content_buffer;
             UEnum* uenum = static_cast<UEnum*>(native_object);
-            auto& enum_names = uenum->GetEnumNames();
+            auto enum_names = uenum->GetEnumNames();
 
             specification.generate_enum_declaration(content_buffer, uenum);
             const auto cpp_form = uenum->GetCppForm();

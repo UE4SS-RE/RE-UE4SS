@@ -78,6 +78,7 @@ namespace RC::GUI
         std::unordered_set<UObject*> m_opened_tree_nodes{};
         UObject* m_currently_opened_tree_node{};
         std::string m_current_property_value_buffer{};
+        int64_t m_current_enum_value_buffer{};
         float m_top_size{300.0f};
         float m_bottom_size{0.0f};
         UFunctionCallerWidget* m_function_caller_widget{};
@@ -91,6 +92,7 @@ namespace RC::GUI
         bool m_listeners_set{};
         bool m_listeners_allowed{};
         bool m_is_initialized{};
+
 
     public:
         LiveView();

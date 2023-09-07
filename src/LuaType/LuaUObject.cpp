@@ -944,7 +944,7 @@ namespace RC::LuaType
 
                 std::string prop_name = to_string(params.property->GetName());
 
-                auto& names = enum_ptr->GetEnumNames();
+                auto names = enum_ptr->GetEnumNames();
                 for (Unreal::FEnumNamePair& elem : names)
                 {
                     std::string elem_name = to_string(elem.Key.ToString());
