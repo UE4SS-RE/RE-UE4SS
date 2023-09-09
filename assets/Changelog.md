@@ -29,7 +29,9 @@ C++ mods are now loaded earlier, and will keep the game from starting until all 
 
 Expose IMGui to C++ mods - Truman
 
-Fixed initialization functions not being correctly called when a mod is restarted - LocalCC
+Added `on_lua_start` for C++ mods.  
+This function fires whenever a Lua mod by the same name as the C++ mod is started.  
+It allows interactions with Lua from C++ mods.
 
 Added `UFunction::RegisterPreHookForInstance` and `UFunction::RegisterPostHookForInstance`  
 These functions work the same as `UFunction::RegisterPreHook`/`UFunction::RegisterPostHook` except the callback is only fired if the context matches the specified instance  
@@ -72,6 +74,10 @@ Add common TArray instantiations
 
 ### C++ API
 Fixed FText constructor implementation via optional AOB - LocalCC
+
+Fixed initialization functions not being correctly called when a mod is restarted - LocalCC
+
+Fixed C++ mods not loading if a Lua mod with the same name is present
 
 ### Lua API
 Fixed unregisterhook

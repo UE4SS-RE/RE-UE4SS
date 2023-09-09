@@ -1346,34 +1346,6 @@ namespace RC
         }
     }
 
-    template<>
-    auto UE4SSProgram::find_mod_by_name<LuaMod>(std::wstring_view mod_name, IsInstalled is_installed, IsStarted is_started) -> LuaMod*
-    {
-        return static_cast<LuaMod*>(find_mod_by_name_internal(mod_name, is_installed, is_started, [](auto elem) -> bool {
-            return dynamic_cast<LuaMod*>(elem);
-        }));
-    }
-
-    template<>
-    auto UE4SSProgram::find_mod_by_name<CppMod>(std::wstring_view mod_name, IsInstalled is_installed, IsStarted is_started) -> CppMod*
-    {
-        return static_cast<CppMod*>(find_mod_by_name_internal(mod_name, is_installed, is_started, [](auto elem) -> bool {
-            return dynamic_cast<CppMod*>(elem);
-        }));
-    }
-
-    template<>
-    auto UE4SSProgram::find_mod_by_name<LuaMod>(std::string_view mod_name, IsInstalled is_installed, IsStarted is_started) -> LuaMod*
-    {
-        return find_mod_by_name<LuaMod>(to_wstring(mod_name), is_installed, is_started);
-    }
-
-    template<>
-    auto UE4SSProgram::find_mod_by_name<CppMod>(std::string_view mod_name, IsInstalled is_installed, IsStarted is_started) -> CppMod*
-    {
-        return find_mod_by_name<CppMod>(to_wstring(mod_name), is_installed, is_started);
-    }
-
     auto UE4SSProgram::find_lua_mod_by_name(std::string_view mod_name, UE4SSProgram::IsInstalled installed_only, IsStarted is_started) -> LuaMod*
     {
         return static_cast<LuaMod*>(find_mod_by_name<LuaMod>(mod_name, installed_only, is_started));
