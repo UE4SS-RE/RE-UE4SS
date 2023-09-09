@@ -85,8 +85,6 @@ auto thread_dll_start([[maybe_unused]] LPVOID thread_param) -> unsigned long
             }
 
             UVTD::main(settings);
-
-            break;
         }
     }
     catch (std::exception& e)
