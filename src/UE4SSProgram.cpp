@@ -1051,7 +1051,7 @@ namespace RC
                 std::wstring mod_name = explode_by_occurrence(current_line, L':', 1);
                 std::wstring mod_enabled = explode_by_occurrence(current_line, L':', ExplodeType::FromEnd);
 
-                auto mod = UE4SSProgram::find_mod_by_name(mod_name, UE4SSProgram::IsInstalled::Yes);
+                auto mod = UE4SSProgram::find_mod_by_name<ModType>(mod_name, UE4SSProgram::IsInstalled::Yes);
                 if (!mod || !dynamic_cast<ModType*>(mod)) { continue; }
 
                 if (!mod_enabled.empty() && mod_enabled[0] == L'1')
@@ -1079,7 +1079,7 @@ namespace RC
             if (!std::filesystem::exists(mod_directory.path() / "enabled.txt", ec)) { continue; }
             if (ec.value() != 0) { return std::format("exists ran into error {}", ec.value()); }
 
-            auto mod = UE4SSProgram::find_mod_by_name(mod_directory.path().stem().c_str(), UE4SSProgram::IsInstalled::Yes);
+            auto mod = UE4SSProgram::find_mod_by_name<ModType>(mod_directory.path().stem().c_str(), UE4SSProgram::IsInstalled::Yes);
             if (!dynamic_cast<ModType*>(mod)) { continue; }
             if (!mod)
             {
@@ -1321,11 +1321,12 @@ namespace RC
         return m_input_handler.is_keydown_event_registered(key, modifier_keys);
     }
 
-    auto UE4SSProgram::find_mod_by_name(std::wstring_view mod_name, IsInstalled is_installed, IsStarted is_started) -> Mod*
+    auto UE4SSProgram::find_mod_by_name_internal(std::wstring_view mod_name, IsInstalled is_installed, IsStarted is_started, FMBNI_ExtraPredicate extra_predicate) -> Mod*
     {
         auto mod_exists_with_name = std::find_if(m_mods.begin(), m_mods.end(), [&](auto& elem) -> bool {
             bool found = true;
 
+            if (!extra_predicate(elem.get())) { found = false; }
             if (mod_name != elem->get_name()) { found = false; }
             if (is_installed == IsInstalled::Yes && !elem->is_installable()) { found = false; }
             if (is_started == IsStarted::Yes && !elem->is_started()) { found = false; }
@@ -1345,19 +1346,42 @@ namespace RC
         }
     }
 
-    auto UE4SSProgram::find_mod_by_name(std::string_view mod_name, UE4SSProgram::IsInstalled installed_only, IsStarted is_started) -> Mod*
+    template<>
+    auto UE4SSProgram::find_mod_by_name<LuaMod>(std::wstring_view mod_name, IsInstalled is_installed, IsStarted is_started) -> LuaMod*
     {
-        return find_mod_by_name(to_wstring(mod_name), installed_only, is_started);
+        return static_cast<LuaMod*>(find_mod_by_name_internal(mod_name, is_installed, is_started, [](auto elem) -> bool {
+            return dynamic_cast<LuaMod*>(elem);
+        }));
+    }
+
+    template<>
+    auto UE4SSProgram::find_mod_by_name<CppMod>(std::wstring_view mod_name, IsInstalled is_installed, IsStarted is_started) -> CppMod*
+    {
+        return static_cast<CppMod*>(find_mod_by_name_internal(mod_name, is_installed, is_started, [](auto elem) -> bool {
+            return dynamic_cast<CppMod*>(elem);
+        }));
+    }
+
+    template<>
+    auto UE4SSProgram::find_mod_by_name<LuaMod>(std::string_view mod_name, IsInstalled is_installed, IsStarted is_started) -> LuaMod*
+    {
+        return find_mod_by_name<LuaMod>(to_wstring(mod_name), is_installed, is_started);
+    }
+
+    template<>
+    auto UE4SSProgram::find_mod_by_name<CppMod>(std::string_view mod_name, IsInstalled is_installed, IsStarted is_started) -> CppMod*
+    {
+        return find_mod_by_name<CppMod>(to_wstring(mod_name), is_installed, is_started);
     }
 
     auto UE4SSProgram::find_lua_mod_by_name(std::string_view mod_name, UE4SSProgram::IsInstalled installed_only, IsStarted is_started) -> LuaMod*
     {
-        return dynamic_cast<LuaMod*>(find_mod_by_name(mod_name, installed_only, is_started));
+        return static_cast<LuaMod*>(find_mod_by_name<LuaMod>(mod_name, installed_only, is_started));
     }
 
     auto UE4SSProgram::find_lua_mod_by_name(std::wstring_view mod_name, UE4SSProgram::IsInstalled installed_only, IsStarted is_started) -> LuaMod*
     {
-        return dynamic_cast<LuaMod*>(find_mod_by_name(mod_name, installed_only, is_started));
+        return static_cast<LuaMod*>(find_mod_by_name<LuaMod>(mod_name, installed_only, is_started));
     }
 
     auto UE4SSProgram::get_object_dumper_output_directory() -> const File::StringType
