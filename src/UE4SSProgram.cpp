@@ -1168,9 +1168,9 @@ namespace RC
         m_pause_events_processing = false;
 
         setup_mods();
-        start_lua_mods();
         start_cpp_mods();
-        
+        start_lua_mods();
+
         if (Unreal::UnrealInitializer::StaticStorage::bIsInitialized)
         {
             fire_unreal_init_for_cpp_mods();
