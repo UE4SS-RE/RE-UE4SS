@@ -1,5 +1,7 @@
 #pragma once
 
+#include <vector>
+
 #include <Common.hpp>
 #include <File/Macros.hpp>
 
@@ -13,6 +15,11 @@ namespace RC
         const StringType ModAuthors{};
         const StringType ModIntendedSDKVersion{};
     };
+
+    namespace LuaMadeSimple
+    {
+        class Lua;
+    }
 
     // When making C++ mods, keep in mind that they will break if UE4SS and the mod don't use the same C Runtime library version
     // This includes them being compiled in different configurations (Debug/Release).
@@ -37,6 +44,15 @@ namespace RC
         RC_UE4SS_API auto virtual on_unreal_init() -> void {}
 
         RC_UE4SS_API auto virtual on_program_start() -> void {}
+
+        /**
+         * Executes after a Lua mod of the same name is started.
+         * @param lua This is the main Lua instance.
+         * @param main_lua This is the main Lua thread instance.
+         * @param async_lua This is the Lua instance for asynchronous things like ExecuteAsync and ExecuteWithDelay.
+         * @param hook_luas This is a container of Lua instances that are used for game-thread hooks like ExecuteInGameThread.
+         */
+        RC_UE4SS_API auto virtual on_lua_start(LuaMadeSimple::Lua& lua, LuaMadeSimple::Lua& main_lua, LuaMadeSimple::Lua& async_lua, std::vector<LuaMadeSimple::Lua*>& hook_luas) -> void {}
 
         RC_UE4SS_API auto virtual on_dll_load(std::wstring_view dll_name) -> void {}
     };

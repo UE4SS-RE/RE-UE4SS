@@ -75,7 +75,7 @@ namespace RC::GUI::Dumpers
         FMeshUVChannelInfo UVChannelData;
     };
 
-	auto generate_root_component_csv(UObject* root_component) -> StringType
+    auto generate_root_component_csv(UObject* root_component) -> StringType
     {
         StringType root_actor_buffer{};
 
@@ -105,7 +105,7 @@ namespace RC::GUI::Dumpers
     {
         StringType file_buffer{};
 
-        file_buffer.append(STR("---,Actor,Location,Rotation,Scale,Mesh,Materials\n"));
+        file_buffer.append(STR("---,Actor,Location,Rotation,Scale,Meshes\n"));
 
         size_t actor_count{};
         FindObjectSearcher(dump_actor_class, AnySuperStruct::StaticClass()).ForEach([&](UObject* object) {
@@ -128,81 +128,100 @@ namespace RC::GUI::Dumpers
 
             // TODO: build system to handle other types of components - possibly including a way to specify which components to dump and which properties are important via a config file
             actor_buffer.append(generate_root_component_csv(*root_component));
-                
+            actor_buffer.append(STR("\""));                
             static auto static_mesh_component_class = UObjectGlobals::StaticFindObject<UClass*>(nullptr, nullptr, STR("/Script/Engine.StaticMeshComponent"));
-            auto static_mesh_components = actor->K2_GetComponentsByClass(static_mesh_component_class);
-
-            for (auto static_mesh_component_It = static_mesh_components.CreateIterator(); static_mesh_component_It; ++static_mesh_component_It)
+            const auto& static_mesh_components = actor->K2_GetComponentsByClass(static_mesh_component_class);
+            if (static_mesh_components.Num() > 0)
             {
-                if (!static_mesh_component_It) { continue; }
-                auto static_mesh_component = Cast<UObject>(*static_mesh_component_It);
-
-                auto mesh = *static_mesh_component->GetValuePtrByPropertyNameInChain<UObject*>(STR("StaticMesh"));
-                if (!mesh)
+                actor_buffer.append(STR("("));
+                for (auto [static_mesh_component_ptr, static_mesh_component_index] : static_mesh_components | views::enumerate)
                 {
-                    Output::send<LogLevel::Warning>(STR("SKIPPING COMPONENT! StaticMeshComponent '{}' has no mesh."), static_mesh_component->GetOuterPrivate()->GetName());
-                    continue;
-                }
-
-                static auto mesh_property = static_mesh_component->GetPropertyByNameInChain(STR("StaticMesh"));
-                FString mesh_string{};
-                mesh_property->ExportTextItem(mesh_string, &mesh, nullptr, nullptr, 0);
-                actor_buffer.append(std::format(STR("\"{}\","), mesh_string.GetCharArray()));
-
-                auto materials_for_each_body = [&](UObject* material_interface, size_t material_index, int32 num_materials) {
-                    if (material_interface)
+                    const auto mesh = *static_mesh_component_ptr->GetValuePtrByPropertyNameInChain<UObject*>(STR("StaticMesh"));
+                    if (!mesh)
                     {
-                        auto material_full_name = material_interface->GetOuterPrivate()->GetFullName();
-                        auto material_type_space_location = material_full_name.find(STR(" "));
-                        if (material_type_space_location == material_full_name.npos)
-                        {
-                            Output::send<LogLevel::Warning>(STR("SKIPPING MATERIAL! Was unable to find space in full material name in component: '{}'."), material_full_name);
-                            return LoopAction::Continue;
-                        }
+                        Output::send<LogLevel::Warning>(STR("SKIPPING COMPONENT! StaticMeshComponent '{}' has no mesh.\n"), static_mesh_component_ptr->GetOuterPrivate()->GetName());
+                        continue;
+                    }
 
-                        if (material_type_space_location > static_cast<unsigned long long>(std::numeric_limits<long long>::max()))
+                    static auto mesh_property = static_mesh_component_ptr->GetPropertyByNameInChain(STR("StaticMesh"));
+                    FString mesh_string{};
+                    mesh_property->ExportTextItem(mesh_string, &mesh, nullptr, nullptr, 0);
+                    actor_buffer.append(std::format(STR("(StaticMesh={}',"), mesh_string.GetCharArray()));
+                    
+                    auto materials_for_each_body = [&](const UObject* material_interface) {
+                        if (material_interface)
                         {
-                            throw std::runtime_error{"integer overflow when converting material_type_space_location signed"};
-                        }
-                        auto material_typeless_name = StringViewType{material_full_name.begin() + static_cast<long long>(material_type_space_location) + 1,
-                                material_full_name.end()};
+                            auto material_full_name = material_interface->GetOuterPrivate()->GetFullName();
+                            const auto material_type_space_location = material_full_name.find(STR(" "));
+                            if (material_type_space_location == material_full_name.npos)
+                            {
+                                Output::send<LogLevel::Warning>(STR("SKIPPING MATERIAL! Was unable to find space in full material name in component: '{}'.\n"), material_full_name);
+                                return;
+                            }
 
-                        actor_buffer.append(std::format(STR("{}'"), material_interface->GetClassPrivate()->GetName()));
-                        actor_buffer.append(std::format(STR("\"\"{}"), material_typeless_name));
-                        actor_buffer.append(STR("\"\"'"));
-                        if (material_index + 1 < num_materials)
+                            if (material_type_space_location > static_cast<unsigned long long>(std::numeric_limits<long long>::max()))
+                            {
+                                throw std::runtime_error{"integer overflow when converting material_type_space_location signed\n"};
+                            }
+                            auto material_typeless_name = StringViewType{material_full_name.begin() + static_cast<long long>(material_type_space_location) + 1,
+                                    material_full_name.end()};
+
+                            actor_buffer.append(std::format(STR("{}'"), material_interface->GetClassPrivate()->GetName()));
+                            actor_buffer.append(std::format(STR("\"\"{}"), material_typeless_name));
+                            actor_buffer.append(STR("\"\"'"));
+                        }
+                    };
+                    
+                    if (Version::IsAtMost(4, 19))
+                    {
+                        const auto materials = *mesh->GetValuePtrByPropertyName<TArray<FStaticMaterial_419AndBelow>>(STR("StaticMaterials"));
+                        if (materials.GetData())
                         {
-                            actor_buffer.append(STR(","));
+                            actor_buffer.append(STR("Materials=("));
+                        }
+                        for (auto [material, material_index] : materials | views::enumerate)
+                        {
+                            materials_for_each_body(material.MaterialInterface);
+                            if (material_index + 1 < materials.Num())
+                            {
+                                actor_buffer.append(STR(","));
+                            }
+                            else
+                            {
+                                actor_buffer.append(STR(")"));
+                            }
                         }
                     }
-                    return LoopAction::Continue;
-                };
+                    else
+                    {
+                        const auto& materials = *mesh->GetValuePtrByPropertyName<TArray<FStaticMaterial_420AndAbove>>(STR("StaticMaterials"));
+                        if (materials.GetData())
+                        {
+                            actor_buffer.append(STR("Materials=("));
+                        }
+                        for (auto [material, material_index] : materials | views::enumerate)
+                        {
+                            materials_for_each_body(material.MaterialInterface);
+                            if (material_index + 1 < materials.Num())
+                            {
+                                actor_buffer.append(STR(","));
+                            }
+                            else
+                            {
+                                actor_buffer.append(STR(")"));
+                            }
+                        }
+                    }
+                    actor_buffer.append(STR(")"));
 
-                actor_buffer.append(STR("\"("));
-                if (Version::IsAtMost(4, 19))
-                {
-                    auto materials = mesh->GetValuePtrByPropertyName<TArray<FStaticMaterial_419AndBelow>>(STR("StaticMaterials"));
-                    for (auto mat_It = materials->CreateIterator(); mat_It; ++mat_It)
+                    if (static_mesh_component_index + 1 < static_mesh_components.Num())
                     {
-                        FStaticMaterial_419AndBelow material = *mat_It;
-                        LoopAction action = materials_for_each_body(material.MaterialInterface, mat_It.GetIndex(), materials->Num());
-                        if (action == LoopAction::Break) break;
+                        actor_buffer.append(STR(","));
                     }
                 }
-                else
-                {
-                    auto materials = mesh->GetValuePtrByPropertyName<TArray<FStaticMaterial_420AndAbove>>(STR("StaticMaterials"));
-                    for (auto mat_It = materials->CreateIterator(); mat_It; ++mat_It)
-                    {
-                        FStaticMaterial_420AndAbove material = *mat_It;
-                        LoopAction action = materials_for_each_body(material.MaterialInterface, mat_It.GetIndex(), materials->Num());
-                        if (action == LoopAction::Break) { break; }
-                    }
-                }
-                actor_buffer.append(STR(")\""));
+                actor_buffer.append(STR(")"));
             }
-
-            actor_buffer.append(STR("\n"));
+            actor_buffer.append(STR("\"\n"));
             file_buffer.append(actor_buffer);
 
             ++actor_count;
@@ -271,25 +290,25 @@ namespace RC::GUI::Dumpers
     auto CurrentDumpNums = MapDumpFileName{};
     
     void call_generate_static_mesh_file()
-	{
-	    Output::send(STR("Dumping CSV of all loaded static mesh actors, positions and mesh properties\n"));
-	    static auto dump_actor_class = UObjectGlobals::StaticFindObject<UClass*>(nullptr, nullptr, STR("/Script/Engine.StaticMeshActor"));
-	    std::wstring file_buffer{};
-	    file_buffer.append(generate_actors_csv_file(dump_actor_class));
+    {
+        Output::send(STR("Dumping CSV of all loaded static mesh actors, positions and mesh properties\n"));
+        static auto dump_actor_class = UObjectGlobals::StaticFindObject<UClass*>(nullptr, nullptr, STR("/Script/Engine.StaticMeshActor"));
+        std::wstring file_buffer{};
+        file_buffer.append(generate_actors_csv_file(dump_actor_class));
         auto file = File::open(std::format(STR("{}\\{}-ue4ss_static_mesh_data.csv"), UE4SSProgram::get_program().get_working_directory(), long(std::time(nullptr))), File::OpenFor::Writing, File::OverwriteExistingFile::Yes, File::CreateIfNonExistent::Yes);
-	    file.write_string_to_file(file_buffer);
+        file.write_string_to_file(file_buffer);
         Output::send(STR("Finished dumping CSV of all loaded static mesh actors, positions and mesh properties\n"));
-	}
+    }
 
     void call_generate_all_actor_file()
-	{
-	    Output::send(STR("Dumping CSV of all loaded actor types, positions and mesh properties\n"));
-	    std::wstring file_buffer{};
-	    file_buffer.append(generate_actors_csv_file(AActor::StaticClass()));
+    {
+        Output::send(STR("Dumping CSV of all loaded actor types, positions and mesh properties\n"));
+        std::wstring file_buffer{};
+        file_buffer.append(generate_actors_csv_file(AActor::StaticClass()));
         auto file = File::open(std::format(STR("{}\\{}-ue4ss_actor_data.csv"), UE4SSProgram::get_program().get_working_directory(), long(std::time(nullptr))), File::OpenFor::Writing, File::OverwriteExistingFile::Yes, File::CreateIfNonExistent::Yes);
-	    file.write_string_to_file(file_buffer);
+        file.write_string_to_file(file_buffer);
         Output::send(STR("Finished dumping CSV of all loaded actor types, positions and mesh properties\n"));
-	}
+    }
     
 
     auto render() -> void

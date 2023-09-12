@@ -944,11 +944,10 @@ namespace RC::LuaType
 
                 std::string prop_name = to_string(params.property->GetName());
 
-                auto names = enum_ptr->GetEnumNames();
-                for (Unreal::FEnumNamePair& elem : names)
+                for (const auto& elem : enum_ptr->ForEachName())
                 {
                     std::string elem_name = to_string(elem.Key.ToString());
-                    table.add_pair(elem_name.c_str(), static_cast<unsigned int>(elem.Value));
+                    table.add_pair(elem_name.c_str(), elem.Value);
                 }
 
                 // TODO: Optimize this... it'll probably do a dynamic allocation here in order to fit the new beginning of the string

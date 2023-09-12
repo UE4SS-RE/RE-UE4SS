@@ -1,5 +1,7 @@
 #pragma once
 
+#include <vector>
+
 #include <Windows.h>
 
 #include <Mod/CppUserModBase.hpp>
@@ -7,6 +9,11 @@
 
 namespace RC
 {
+    namespace LuaMadeSimple
+    {
+        class Lua;
+    }
+
     class CppMod : public Mod
     {
     private:
@@ -32,6 +39,8 @@ namespace RC
     public:
         auto start_mod() -> void override;
         auto uninstall() -> void override;
+
+        auto fire_on_lua_start(LuaMadeSimple::Lua& lua, LuaMadeSimple::Lua& main_lua, LuaMadeSimple::Lua& async_lua, std::vector<LuaMadeSimple::Lua*>& hook_luas) -> void;
 
         auto fire_unreal_init() -> void override;
         auto fire_program_start() -> void override;
