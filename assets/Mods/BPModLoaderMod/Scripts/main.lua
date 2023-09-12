@@ -289,21 +289,6 @@ end)
 
 RegisterKeyBind(Key.INS, LoadModsManual)
 
-RegisterCustomEvent("PrintToModLoader", function(ParamContext, ParamMessage)
-    -- Retrieve the param value from the param container.
-    local Message = ParamMessage:get()
-
-    -- We must do type-checking here!
-    -- This is to guard against mods that don't use the correct params for their custom event.
-    -- There's no way to avoid it.
-    if Message:type() ~= "FString" then error(string.format("PrintToModLoader Param #1 must be FString but was %s", Message:type())) end
-
-    -- Now the 'Message' param is validated and we're safe to use it.
-    local NameParts = Explode(ParamContext:get():GetClass():GetFullName(), "/");
-    local ModName = NameParts[#NameParts - 1]
-    Log(string.format("[%s] %s\n", ModName, Message:ToString()))
-end)
-
 RegisterCustomEvent("GetPersistentObject", function(ParamContext, ParamModName)
     -- TODO: Implement.
 end)
