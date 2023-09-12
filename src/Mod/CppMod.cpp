@@ -14,7 +14,7 @@ namespace RC
 
         if (!std::filesystem::exists(m_dlls_path))
         {
-            Output::send<LogLevel::Warning>(STR("Could not find the dlls folder for mod {}"), m_mod_name);
+            Output::send<LogLevel::Warning>(STR("Could not find the dlls folder for mod {}\n"), m_mod_name);
             set_installable(false);
             return;
         }
@@ -26,7 +26,7 @@ namespace RC
 
         if (!m_main_dll_module)
         {
-            Output::send<LogLevel::Warning>(STR("Failed to load dll <{}> for mod {}, error code: 0x{:x}"), dll_path, m_mod_name, GetLastError());
+            Output::send<LogLevel::Warning>(STR("Failed to load dll <{}> for mod {}, error code: 0x{:x}\n"), dll_path, m_mod_name, GetLastError());
             set_installable(false);
             return;
         }
@@ -36,7 +36,7 @@ namespace RC
 
         if (!m_start_mod_func || !m_uninstall_mod_func)
         {
-            Output::send<LogLevel::Warning>(STR("Failed to find exported mod lifecycle functions for mod {}"), m_mod_name);
+            Output::send<LogLevel::Warning>(STR("Failed to find exported mod lifecycle functions for mod {}\n"), m_mod_name);
 
             FreeLibrary(m_main_dll_module);
             m_main_dll_module = NULL;
@@ -57,7 +57,7 @@ namespace RC
         {
             if (!Output::has_internal_error())
             {
-                Output::send<LogLevel::Warning>(STR("Failed to load dll <{}> for mod {}, because: {}\n"), m_dlls_path + L"\\main.dll", m_mod_name, to_wstring(e.what()));
+                Output::send<LogLevel::Warning>(STR("Failed to load dll <{}> for mod {}, because: {}\n"), m_dlls_path + L"\\main.dll\n", m_mod_name, to_wstring(e.what()));
             }
             else
             {
