@@ -72,6 +72,11 @@ namespace RC
         if (m_mod && m_uninstall_mod_func) { m_uninstall_mod_func(m_mod); }
     }
 
+    auto CppMod::fire_on_lua_start(LuaMadeSimple::Lua& lua, LuaMadeSimple::Lua& main_lua, LuaMadeSimple::Lua& async_lua, std::vector<LuaMadeSimple::Lua*>& hook_luas) -> void
+    {
+        if (m_mod) { m_mod->on_lua_start(lua, main_lua, async_lua, hook_luas); }
+    }
+
     auto CppMod::fire_unreal_init() -> void
     {
         if (m_mod) { m_mod->on_unreal_init(); }

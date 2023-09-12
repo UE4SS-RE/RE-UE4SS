@@ -468,12 +468,10 @@ namespace RC::UEGenerator
 
             File::StringType content_buffer;
             UEnum* uenum = static_cast<UEnum*>(native_object);
-            auto enum_names = uenum->GetEnumNames();
 
             specification.generate_enum_declaration(content_buffer, uenum);
-            const auto cpp_form = uenum->GetCppForm();
 
-            for (Unreal::FEnumNamePair& elem : enum_names)
+            for (const auto& elem : uenum->ForEachName())
             {
                 auto enum_value_full_name = elem.Key.ToString();
                 size_t colon_pos = enum_value_full_name.rfind(STR(":"));
@@ -681,7 +679,7 @@ namespace RC::UEGenerator
                 content_buffer.append(std::format(STR("enum class {} {{\n"), get_native_enum_name(uenum, false)));
             }
         }
-        auto generate_enum_member(File::StringType& content_buffer, UEnum* uenum, const File::StringType& enum_value_name, Unreal::FEnumNamePair& elem) -> void
+        auto generate_enum_member(File::StringType& content_buffer, UEnum* uenum, const File::StringType& enum_value_name, const Unreal::FEnumNamePair& elem) -> void
         {
             content_buffer.append(std::format(STR("{}{}{} = {},\n"), generate_tab(), uenum->GetCppForm() == UEnum::ECppForm::Namespaced ? generate_tab() : STR(""), enum_value_name, elem.Value));
         }
@@ -1028,7 +1026,7 @@ namespace RC::UEGenerator
             auto enum_name = uenum->GetName();
             content_buffer.append(std::format(STR("---@enum {}\n{} = {{\n"), enum_name, enum_name));
         }
-        auto generate_enum_member(File::StringType& content_buffer, UEnum* uenum, const File::StringType& enum_value_name, Unreal::FEnumNamePair& elem) -> void
+        auto generate_enum_member(File::StringType& content_buffer, UEnum* uenum, const File::StringType& enum_value_name, const Unreal::FEnumNamePair& elem) -> void
         {
             content_buffer.append(std::format(STR("{}{} = {},\n"), generate_tab(), enum_value_name, elem.Value));
         }

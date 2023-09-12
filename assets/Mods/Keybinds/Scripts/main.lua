@@ -11,8 +11,8 @@
     Valid keys and modifier keys can be found at the bottom of this file.
 --]]
 Keybinds = {
-    ["ObjectDumper"]                 = {["Key"] = Key.J,             ["ModifierKeys"] = {}},
-    ["CXXHeaderGenerator"]           = {["Key"] = Key.D,             ["ModifierKeys"] = {ModifierKey.CONTROL}},
+    ["ObjectDumper"]                 = {["Key"] = Key.J,             ["ModifierKeys"] = {ModifierKey.CONTROL}},
+    ["CXXHeaderGenerator"]           = {["Key"] = Key.H,             ["ModifierKeys"] = {ModifierKey.CONTROL}},
     ["UHTCompatibleHeaderGenerator"] = {["Key"] = Key.NUM_NINE,      ["ModifierKeys"] = {ModifierKey.CONTROL}},
     ["DumpStaticMeshes"]             = {["Key"] = Key.NUM_EIGHT,     ["ModifierKeys"] = {ModifierKey.CONTROL}},
     ["DumpAllActors"]                = {["Key"] = Key.NUM_SEVEN,     ["ModifierKeys"] = {ModifierKey.CONTROL}},

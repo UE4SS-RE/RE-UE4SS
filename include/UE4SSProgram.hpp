@@ -16,6 +16,7 @@
 #include <Input/Handler.hpp>
 #include <Mod/Mod.hpp>
 #include <Mod/LuaMod.hpp>
+#include <Mod/CppMod.hpp>
 #include <LuaLibrary.hpp>
 #include <DynamicOutput/DynamicOutput.hpp>
 #include <GUI/GUI.hpp>
@@ -219,13 +220,43 @@ namespace RC
         static auto install_cpp_mods() -> void;
         static auto install_lua_mods() -> void;
 
+        using FMBNI_ExtraPredicate = std::function<bool(Mod*)>;
+        static auto find_mod_by_name_internal(std::wstring_view mod_name, IsInstalled = IsInstalled::No, IsStarted = IsStarted::No, FMBNI_ExtraPredicate extra_predicate = {}) -> Mod*;
+
     public:
         RC_UE4SS_API static auto dump_uobject(Unreal::UObject* object, std::unordered_set<Unreal::FField*>* dumped_fields, StringType& out_line, bool is_below_425) -> void;
         RC_UE4SS_API static auto dump_xproperty(Unreal::FProperty* property, StringType& out_line) -> void;
         RC_UE4SS_API static auto dump_all_objects_and_properties(const File::StringType& output_path_and_file_name) -> void;
 
-        RC_UE4SS_API static auto find_mod_by_name(std::wstring_view mod_name, IsInstalled = IsInstalled::No, IsStarted = IsStarted::No) -> Mod*;
-        RC_UE4SS_API static auto find_mod_by_name(std::string_view mod_name, IsInstalled = IsInstalled::No, IsStarted = IsStarted::No) -> Mod*;
+        template<typename T>
+        static auto find_mod_by_name(std::wstring_view mod_name, IsInstalled = IsInstalled::No, IsStarted = IsStarted::No) -> T* { std::abort(); };
+        template<typename T>
+        static auto find_mod_by_name(std::string_view mod_name, IsInstalled = IsInstalled::No, IsStarted = IsStarted::No) -> T* { std::abort(); };
+        template<>
+        static auto find_mod_by_name<LuaMod>(std::wstring_view mod_name, IsInstalled is_installed, IsStarted is_started) -> LuaMod*
+        {
+            return static_cast<LuaMod*>(find_mod_by_name_internal(mod_name, is_installed, is_started, [](auto elem) -> bool {
+                return dynamic_cast<LuaMod*>(elem);
+            }));
+        }
+        template<>
+        static auto find_mod_by_name<CppMod>(std::wstring_view mod_name, IsInstalled is_installed, IsStarted is_started) -> CppMod*
+        {
+            return static_cast<CppMod*>(find_mod_by_name_internal(mod_name, is_installed, is_started, [](auto elem) -> bool {
+                return dynamic_cast<CppMod*>(elem);
+            }));
+        }
+        template<>
+        auto find_mod_by_name<LuaMod>(std::string_view mod_name, IsInstalled is_installed, IsStarted is_started) -> LuaMod*
+        {
+            return find_mod_by_name<LuaMod>(to_wstring(mod_name), is_installed, is_started);
+        }
+        template<>
+        auto find_mod_by_name<CppMod>(std::string_view mod_name, IsInstalled is_installed, IsStarted is_started) -> CppMod*
+        {
+            return find_mod_by_name<CppMod>(to_wstring(mod_name), is_installed, is_started);
+        }
+
         RC_UE4SS_API static auto find_lua_mod_by_name(std::wstring_view mod_name, IsInstalled = IsInstalled::No, IsStarted = IsStarted::No) -> LuaMod*;
         RC_UE4SS_API static auto find_lua_mod_by_name(std::string_view mod_name, IsInstalled = IsInstalled::No, IsStarted = IsStarted::No) -> LuaMod*;
         static auto static_cleanup() -> void;
