@@ -20,22 +20,6 @@ local DefaultModConfig = {}
 DefaultModConfig.AssetName = "ModActor_C"
 DefaultModConfig.AssetNameAsFName = FName("ModActor_C")
 
--- Explodes a string by a delimiter into a table
-local function Explode(String, Delimiter)
-    local ExplodedString = {}
-    local Iterator = 1
-    local DelimiterFrom, DelimiterTo = string.find(String, Delimiter, Iterator)
-
-    while DelimiterTo do
-        table.insert(ExplodedString, string.sub(String, Iterator, DelimiterFrom-1))
-        Iterator = DelimiterTo + 1
-        DelimiterFrom, DelimiterTo = string.find(String, Delimiter, Iterator)
-    end
-    table.insert(ExplodedString, string.sub(String, Iterator))
-
-    return ExplodedString
-end
-
 -- Checks if the beginning of a string contains a certain pattern.
 local function StartsWith(String, StringToCompare)
     return string.sub(String,1,string.len(StringToCompare))==StringToCompare
