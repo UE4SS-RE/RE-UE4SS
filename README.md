@@ -41,7 +41,9 @@ If your game is in the custom config list, extract the contents from the relevan
 
   [Creating Compatible Blueprint Mods](https://www.youtube.com/watch?v=fB3yT85XhVA)
 
-  [Unreal Engine Modding Server Invite](https://discord.gg/zVvsE9mEEa) - For discussion of UE4SS
+  [UE4SS Discord Server Invite](https://discord.gg/7qhRGHF9Tt)
+
+  [Unreal Engine Modding Discord Server Invite](https://discord.gg/zVvsE9mEEa)
 
 ## Build requirements
 
