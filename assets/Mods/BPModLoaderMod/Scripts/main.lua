@@ -272,7 +272,3 @@ RegisterBeginPlayPostHook(function(ContextParam)
 end)
 
 RegisterKeyBind(Key.INS, LoadModsManual)
-
-RegisterCustomEvent("GetPersistentObject", function(ParamContext, ParamModName)
-    -- TODO: Implement.
-end)
