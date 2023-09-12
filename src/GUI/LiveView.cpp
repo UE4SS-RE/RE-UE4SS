@@ -1027,7 +1027,6 @@ namespace RC::GUI
                     ImGui::Text("FProperty::ImportText returned NULL.");
                     ImGui::EndPopup();
                 }
-
                 ImGui::EndPopup();
             }
 
@@ -1036,9 +1035,11 @@ namespace RC::GUI
                 m_modal_edit_property_value_opened_this_frame = false;
             }
         }
-
         return next_item_to_render;
     }
+
+    
+
 
     auto LiveView::render_enum() -> void
     {
@@ -1046,9 +1047,226 @@ namespace RC::GUI
         if (!currently_selected_object.first || !currently_selected_object.second) { return; }
         
         auto uenum = static_cast<UEnum*>(currently_selected_object.second);
-        for (const auto& name : uenum->ForEachName())
+        auto names = uenum->GetEnumNames();
+        std::string plus = "+";
+        std::string minus = "-";
+        int32_t index = -1;
+        StringType enum_name{};
+        
+        for (const auto name : names)
         {
-            ImGui::Text("%S <=> %i", name.Key.ToString().c_str(), name.Value);
+            bool open_edit_name_popup{};
+            bool open_edit_value_popup{};
+            bool open_add_name_popup{};
+            ++index;
+            enum_name = name.Key.ToString();
+            ImGui::AlignTextToFramePadding();
+            ImGui::Text("%S <=> %lld", enum_name.c_str(), name.Value);
+            
+            if (ImGui::BeginPopupContextItem(to_string(std::format(STR("context-menu-{}"), enum_name)).c_str()))
+            {
+                if (ImGui::MenuItem("Copy name"))
+                {
+                    ImGui::SetClipboardText(to_string(enum_name).c_str());
+                }
+                if (ImGui::MenuItem("Copy value"))
+                {
+                    ImGui::SetClipboardText(std::to_string(name.Value).c_str());
+                }
+                if (ImGui::MenuItem("Edit name"))
+                {
+                    open_edit_name_popup = true;
+                    m_modal_edit_property_value_is_open = true;
+                }
+                if (ImGui::MenuItem("Edit value"))
+                {
+                    open_edit_value_popup = true;
+                    m_modal_edit_property_value_is_open = true;
+                }
+                ImGui::EndPopup();
+            }
+            
+
+            ImGui::SameLine(ImGui::GetWindowContentRegionMax().x - (ImGui::CalcTextSize(plus.c_str()).x + ImGui::CalcTextSize(minus.c_str()).x) * 3);
+            ImGui::PushID(to_string(std::format(STR("button_add_{}"), enum_name)).c_str());
+            if (ImGui::Button("+"))
+            {
+                open_add_name_popup = true;
+                m_modal_edit_property_value_is_open = true;
+            }
+            ImGui::PopID();
+            
+            ImGui::SameLine(ImGui::GetWindowContentRegionMax().x - ImGui::CalcTextSize(minus.c_str()).x * 3);
+            ImGui::PushID(to_string(std::format(STR("button_remove_{}"), enum_name)).c_str());
+            if (ImGui::Button("-"))
+            {
+                uenum->RemoveFromNamesAt(index, 1); 
+            }
+            ImGui::PopID();            
+            
+
+            std::string edit_enum_name_modal_name = to_string(std::format(STR("Edit enum name for: {}"), name.Key.ToString()));
+
+            std::string edit_enum_value_modal_name = to_string(std::format(STR("Edit enum value for: {}"), name.Key.ToString()));
+
+            std::string add_enum_name_modal_name = to_string(std::format(STR("Enter new enum name after: {}"), name.Key.ToString()));
+            
+            if (open_edit_name_popup)
+            {
+                ImGui::OpenPopup(edit_enum_name_modal_name.c_str());
+                if (!m_modal_edit_property_value_opened_this_frame)
+                {
+                    m_modal_edit_property_value_opened_this_frame = true;
+                    m_current_property_value_buffer = to_string(enum_name);
+                }
+            }
+            
+            if (open_edit_value_popup)
+            {
+                ImGui::OpenPopup(edit_enum_value_modal_name.c_str());
+                if (!m_modal_edit_property_value_opened_this_frame)
+                {
+                    m_modal_edit_property_value_opened_this_frame = true;
+                    m_current_enum_value_buffer = name.Value;
+                }
+            }
+
+            if (open_add_name_popup)
+            {
+                ImGui::OpenPopup(add_enum_name_modal_name.c_str());
+                if (!m_modal_edit_property_value_opened_this_frame)
+                {
+                    m_modal_edit_property_value_opened_this_frame = true;
+                    m_current_property_value_buffer = to_string(enum_name);
+                }
+            }
+
+            /**
+             *
+             * ImGui Popup Modal for editing the names in the UEnum names array.
+             * 
+             */
+            if (ImGui::BeginPopupModal(edit_enum_name_modal_name.c_str(), &m_modal_edit_property_value_is_open))
+            {
+                ImGui::Text("Edit the enumerator's name.");
+                ImGui::Text("The game could crash if the new name is invalid or if the old name or value is expected to be used elsewhere.");
+                ImGui::Text("The game may not use this value without additional patches.");
+                ImGui::PushItemWidth(-1.0f);
+                ImGui::InputText("##CurrentNameValue", &m_current_property_value_buffer);
+                if (ImGui::Button("Apply"))
+                {
+                    FOutputDevice placeholder_device{};
+                    StringType new_name = to_wstring(m_current_property_value_buffer);
+                    FName new_key = FName(new_name, FNAME_Add);
+                    uenum->EditNameAt(index, new_key);
+                    if (uenum->GetEnumNames()[index].Key.ToString() != new_name)
+                    {
+                        m_modal_edit_property_value_error_unable_to_edit = true;
+                        ImGui::OpenPopup("UnableToSetNewEnumNameError");
+                    }
+                    else
+                    {
+                        ImGui::CloseCurrentPopup();
+                    }
+                }
+
+                if (ImGui::BeginPopupModal("UnableToSetNewEnumNameError", &m_modal_edit_property_value_error_unable_to_edit, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_AlwaysAutoResize))
+                {
+                    ImGui::Text("Was unable to set new name.");
+                    ImGui::EndPopup();
+                }
+                
+                ImGui::EndPopup();
+            }
+            
+            /**
+             *
+             * ImGui Popup Modal for editing the values in the UEnum names array.
+             * 
+             */
+            if (ImGui::BeginPopupModal(edit_enum_value_modal_name.c_str(), &m_modal_edit_property_value_is_open))
+            {
+                ImGui::Text("Edit the enumerator's value.");
+                ImGui::Text("The game could crash if the new value is invalid or if the old name or value is expected to be used elsewhere.");
+                ImGui::Text("The game may not use this value without additional patches.");
+                ImGui::PushItemWidth(-1.0f);
+                ImGuiDataType_ imgui_data_type = Version::IsBelow(4, 15) ? ImGuiDataType_U8 : ImGuiDataType_S64;
+                ImGui::InputScalar("##CurrentNameValue", imgui_data_type, &m_current_enum_value_buffer);
+                if (ImGui::Button("Apply"))
+                {
+                    FOutputDevice placeholder_device{};
+                    int64_t new_value = m_current_enum_value_buffer;
+                    uenum->EditValueAt(index, new_value);
+
+                    if (uenum->GetEnumNames()[index].Value != new_value)
+                    {
+                        m_modal_edit_property_value_error_unable_to_edit = true;
+                        ImGui::OpenPopup("UnableToSetNewEnumValueError");
+                    }
+                    else
+                    {
+                        ImGui::CloseCurrentPopup();
+                    }
+                    m_current_enum_value_buffer = {};
+                }
+
+                if (ImGui::BeginPopupModal("UnableToSetNewEnumValueError", &m_modal_edit_property_value_error_unable_to_edit, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_AlwaysAutoResize))
+                {
+                    ImGui::Text("Was unable to set new value.");
+                    ImGui::EndPopup();
+                }
+                
+                ImGui::EndPopup();
+            }
+
+            /**
+             *
+             * ImGui Popup Modal for adding new enumerators to the UEnum names array.
+             * 
+             */
+            if (ImGui::BeginPopupModal(add_enum_name_modal_name.c_str(), &m_modal_edit_property_value_is_open))
+            {
+
+                ImGui::Text("Enter the name of the new enumerator at the index of the selected enumerator.");
+                ImGui::Text("This shifts all enumerators with a value greater than the current enumerators value up by one.");
+                ImGui::Text("The game could crash if the new name is invalid or if the old name or value is expected to be used elsewhere.");
+                ImGui::Text("The game may not use this value without additional patches.");
+                ImGui::PushItemWidth(-1.0f);
+                ImGui::InputText("##CurrentNameValue", &m_current_property_value_buffer);
+                if (ImGui::Button("Apply"))
+                {
+                    FOutputDevice placeholder_device{};
+                    StringType new_name = to_wstring(m_current_property_value_buffer);
+                    FName new_key = FName(new_name, FNAME_Add);
+                    int64 value = names[index].Value;
+
+                    uenum->InsertIntoNames(TPair{new_key, value}, index, true);
+                    
+                    if (uenum->GetEnumNames()[index].Key.ToString() != new_name)
+                    {
+                        m_modal_edit_property_value_error_unable_to_edit = true;
+                        ImGui::OpenPopup("UnableToAddNewEnumNameError");
+                    }
+                    else
+                    {
+                        ImGui::CloseCurrentPopup();
+                    }
+                    m_current_property_value_buffer.clear();
+                }
+
+                if (ImGui::BeginPopupModal("UnableToAddNewEnumNameError", &m_modal_edit_property_value_error_unable_to_edit, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_AlwaysAutoResize))
+                {
+                    ImGui::Text("Was unable to insert new name.");
+                    ImGui::EndPopup();
+                }
+                
+                ImGui::EndPopup();
+            }
+            
+            if (m_modal_edit_property_value_opened_this_frame)
+            {
+                m_modal_edit_property_value_opened_this_frame = false;
+            }
         }
     }
 
