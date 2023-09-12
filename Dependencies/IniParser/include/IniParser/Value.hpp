@@ -1,5 +1,4 @@
-#ifndef RC_INI_PARSER_VALUE_HPP
-#define RC_INI_PARSER_VALUE_HPP
+#pragma once
 
 #include <cstdint>
 #include <array>
@@ -73,4 +72,4 @@ namespace RC::Ini
 }
 
 
-#endif //RC_INI_PARSER_VALUE_HPP
+

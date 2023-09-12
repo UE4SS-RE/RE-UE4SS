@@ -1,5 +1,4 @@
-#ifndef UE4SS_LUASCRIPTMEMORYACCESS_HPP
-#define UE4SS_LUASCRIPTMEMORYACCESS_HPP
+#pragma once
 
 struct lua_State;
 
@@ -33,4 +32,4 @@ namespace RC
     auto lua_Test_WriteInt64_wrapper(lua_State* lua_state) -> int;
 }
 
-#endif //UE4SS_LUASCRIPTMEMORYACCESS_HPP
+

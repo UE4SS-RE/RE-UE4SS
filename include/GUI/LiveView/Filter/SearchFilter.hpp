@@ -1,5 +1,4 @@
-#ifndef UE4SS_GUI_SEARCH_FILTER_HPP
-#define UE4SS_GUI_SEARCH_FILTER_HPP
+#pragma once
 
 #include <Unreal/UPackage.hpp>
 #include <Unreal/UObject.hpp>
@@ -125,4 +124,4 @@ if (eval_post_search_filters(Filters, object)) { return true; }
     }
 }
 
-#endif //UE4SS_GUI_SEARCH_FILTER_HPP
+

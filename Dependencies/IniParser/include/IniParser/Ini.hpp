@@ -1,5 +1,4 @@
-#ifndef RC_INI_PARSER_INI_HPP
-#define RC_INI_PARSER_INI_HPP
+#pragma once
 
 #include <unordered_map>
 
@@ -52,4 +51,4 @@ namespace RC::Ini
     };
 }
 
-#endif //RC_INI_PARSER_INI_HPP
+

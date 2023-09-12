@@ -1,5 +1,4 @@
-#ifndef RC_JSON_TOKEN_PARSER_HPP
-#define RC_JSON_TOKEN_PARSER_HPP
+#pragma once
 
 #include <vector>
 #include <variant>
@@ -141,4 +140,4 @@ namespace RC::JSON::Parser
 
 }
 
-#endif //RC_JSON_TOKEN_PARSER_HPP
+

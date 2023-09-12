@@ -1,5 +1,4 @@
-#ifndef RC_ARGS_PARSER_HPP
-#define RC_ARGS_PARSER_HPP
+#pragma once
 
 #include <vector>
 #include <unordered_map>
@@ -146,4 +145,4 @@ namespace RC
     };
 }
 
-#endif //RC_ARGS_PARSER_HPP
+

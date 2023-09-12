@@ -1,5 +1,4 @@
-#ifndef RC_JSON_ARRAY_HPP
-#define RC_JSON_ARRAY_HPP
+#pragma once
 
 #include <vector>
 #include <memory>
@@ -81,4 +80,4 @@ namespace RC::JSON
     };
 }
 
-#endif //RC_JSON_ARRAY_HPP
+

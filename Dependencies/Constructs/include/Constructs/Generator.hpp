@@ -1,5 +1,4 @@
-#ifndef UE4SS_REWRITTEN_GENERATOR_HPP
-#define UE4SS_REWRITTEN_GENERATOR_HPP
+#pragma once
 
 #include <algorithm>
 #include <coroutine>
@@ -160,4 +159,3 @@ namespace RC
     };
 }
 
-#endif // UE4SS_REWRITTEN_GENERATOR_HPP

@@ -1,5 +1,4 @@
-#ifndef UE4SS_REWRITTEN_UNREALDEF_HPP
-#define UE4SS_REWRITTEN_UNREALDEF_HPP
+#pragma once
 
 #pragma warning(disable: 4005)
 #include <Unreal/UObjectGlobals.hpp>
@@ -95,4 +94,4 @@ namespace RC
     using UAssetRegistryHelpers = Unreal::UAssetRegistryHelpers;
 }
 
-#endif //UE4SS_REWRITTEN_UNREALDEF_HPP
+

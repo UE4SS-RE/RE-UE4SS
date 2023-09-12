@@ -1,5 +1,4 @@
-#ifndef UE4SS_REWRITTEN_LUAMOD_HPP
-#define UE4SS_REWRITTEN_LUAMOD_HPP
+#pragma once
 
 #include <string>
 #include <chrono>
@@ -173,4 +172,3 @@ namespace RC
     };
 }
 
-#endif //UE4SS_REWRITTEN_LUAMOD_HPP

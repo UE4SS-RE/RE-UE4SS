@@ -1,5 +1,4 @@
-#ifndef UE4SS_REWRITTEN_CPPMODUSERBASE_HPP
-#define UE4SS_REWRITTEN_CPPMODUSERBASE_HPP
+#pragma once
 
 #include <vector>
 
@@ -59,4 +58,3 @@ namespace RC
     };
 }
 
-#endif // UE4SS_REWRITTEN_CPPMODUSERBASE_HPP

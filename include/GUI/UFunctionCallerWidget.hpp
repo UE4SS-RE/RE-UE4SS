@@ -1,5 +1,4 @@
-#ifndef UE4SS_GUI_UFUNCTION_CALLER_WIDGET_HPP
-#define UE4SS_GUI_UFUNCTION_CALLER_WIDGET_HPP
+#pragma once
 
 #include <vector>
 #include <string>
@@ -77,4 +76,4 @@ namespace RC::GUI
     };
 }
 
-#endif // UE4SS_GUI_UFUNCTION_CALLER_WIDGET_HPP
+

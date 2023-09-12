@@ -1,5 +1,4 @@
-#ifndef UE4SS_REWRITTEN_LUACUSTOMPROPERTY_HPP
-#define UE4SS_REWRITTEN_LUACUSTOMPROPERTY_HPP
+#pragma once
 
 #include <memory>
 #include <string>
@@ -45,4 +44,4 @@ namespace RC::LuaType
 }
 
 
-#endif //UE4SS_REWRITTEN_LUACUSTOMPROPERTY_HPP
+

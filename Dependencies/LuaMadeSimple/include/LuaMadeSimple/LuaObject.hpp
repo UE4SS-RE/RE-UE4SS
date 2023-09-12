@@ -1,5 +1,4 @@
-#ifndef RC_LUA_MADE_SIMPLE_LUA_OBJECT_HPP
-#define RC_LUA_MADE_SIMPLE_LUA_OBJECT_HPP
+#pragma once
 
 #include <string>
 #include <LuaMadeSimple/LuaMadeSimple.hpp>
@@ -180,4 +179,4 @@ namespace RC::LuaMadeSimple::Type
         }
     };
 }
-#endif //RC_LUA_MADE_SIMPLE_LUA_OBJECT_HPP
+

@@ -1,5 +1,4 @@
-﻿#ifndef RC_JSON_HPP
-#define RC_JSON_HPP
+﻿#pragma once
 
 #include <JSON/Common.hpp>
 #include <JSON/Null.hpp>
@@ -20,4 +19,4 @@ namespace RC::JSON
     */
 }
 
-#endif //RC_JSON_HPP
+

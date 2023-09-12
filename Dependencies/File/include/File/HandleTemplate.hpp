@@ -1,5 +1,4 @@
-#ifndef RC_FILE_HANDLETEMPLATE_HPP
-#define RC_FILE_HANDLETEMPLATE_HPP
+#pragma once
 
 #include <string>
 #include <memory>
@@ -180,4 +179,4 @@ namespace RC::File
     };
 }
 
-#endif //RC_FILE_HANDLETEMPLATE_HPP
+

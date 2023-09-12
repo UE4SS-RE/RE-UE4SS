@@ -1,5 +1,4 @@
-#ifndef RC_INI_PARSER_SECTION_HPP
-#define RC_INI_PARSER_SECTION_HPP
+#pragma once
 
 #include <unordered_map>
 #include <vector>
@@ -58,4 +57,4 @@ namespace RC::Ini
     using OrderedList = List;
 }
 
-#endif //RC_INI_PARSER_SECTION_HPP
+

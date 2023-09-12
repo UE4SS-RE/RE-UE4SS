@@ -1,5 +1,4 @@
-#ifndef UE4SS_GUI_LIVE_VIEW_HPP
-#define UE4SS_GUI_LIVE_VIEW_HPP
+#pragma once
 
 #include <vector>
 #include <unordered_set>
@@ -196,4 +195,4 @@ namespace std
     };
 }
 
-#endif //UE4SS_GUI_LIVE_VIEW_HPP
+

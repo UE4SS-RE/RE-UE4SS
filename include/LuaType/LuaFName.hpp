@@ -1,5 +1,4 @@
-#ifndef UE4SS_REWRITTEN_LUAFNAME_HPP
-#define UE4SS_REWRITTEN_LUAFNAME_HPP
+#pragma once
 
 #include <LuaType/LuaUObject.hpp>
 #include <Unreal/NameTypes.hpp>
@@ -28,4 +27,4 @@ namespace RC::LuaType
 
 
 
-#endif //UE4SS_REWRITTEN_LUAFNAME_HPP
+

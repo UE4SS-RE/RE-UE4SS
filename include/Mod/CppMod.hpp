@@ -1,5 +1,4 @@
-#ifndef UE4SS_REWRITTEN_CPPMOD_HPP
-#define UE4SS_REWRITTEN_CPPMOD_HPP
+#pragma once
 
 #include <vector>
 
@@ -50,4 +49,3 @@ namespace RC
     };
 }
 
-#endif // UE4SS_REWRITTEN_CPPMOD_HPP

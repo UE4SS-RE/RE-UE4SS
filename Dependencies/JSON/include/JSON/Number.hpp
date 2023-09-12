@@ -1,5 +1,4 @@
-#ifndef RC_JSON_NUMBER_HPP
-#define RC_JSON_NUMBER_HPP
+#pragma once
 
 #include <bit>
 
@@ -138,4 +137,4 @@ namespace RC::JSON
     };
 }
 
-#endif //RC_JSON_NUMBER_HPP
+

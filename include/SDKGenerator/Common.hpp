@@ -1,5 +1,4 @@
-#ifndef UE4SS_REWRITTEN_SDKGENERATOR_COMMON_HPP
-#define UE4SS_REWRITTEN_SDKGENERATOR_COMMON_HPP
+#pragma once
 
 #include <File/File.hpp>
 
@@ -41,4 +40,4 @@ namespace RC
     }
 }
 
-#endif //UE4SS_REWRITTEN_SDKGENERATOR_COMMON_HPP
+

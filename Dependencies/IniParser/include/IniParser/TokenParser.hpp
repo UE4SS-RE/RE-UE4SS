@@ -1,5 +1,4 @@
-#ifndef RC_INI_TOKEN_PARSER_HPP
-#define RC_INI_TOKEN_PARSER_HPP
+#pragma once
 
 #include <array>
 #include <unordered_map>
@@ -61,4 +60,4 @@ namespace RC::Ini
     };
 }
 
-#endif //RC_INI_TOKEN_PARSER_HPP
+

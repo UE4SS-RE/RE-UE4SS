@@ -1,5 +1,4 @@
-#ifndef RC_JSON_PARSER_HPP
-#define RC_JSON_PARSER_HPP
+#pragma once
 
 #include <memory>
 
@@ -15,4 +14,3 @@ namespace RC::JSON::Parser
     RC_JSON_API auto parse(const File::Handle&) -> std::unique_ptr<JSON::Object>;
 }
 
-#endif // RC_JSON_PARSER_HPP

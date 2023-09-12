@@ -1,5 +1,4 @@
-#ifndef RC_JSON_OBJECT_HPP
-#define RC_JSON_OBJECT_HPP
+#pragma once
 
 #include <variant>
 #include <vector>
@@ -84,4 +83,4 @@ namespace RC::JSON
     };
 }
 
-#endif //RC_JSON_OBJECT_HPP
+

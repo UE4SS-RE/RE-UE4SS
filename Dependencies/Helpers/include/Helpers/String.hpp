@@ -1,5 +1,4 @@
-#ifndef RC_STRING_HPP
-#define RC_STRING_HPP
+#pragma once
 
 #include <locale>
 #include <codecvt>
@@ -284,5 +283,5 @@ namespace RC
     }
 }
 
-#endif //RC_STRING_HPP
+
 

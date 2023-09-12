@@ -1,5 +1,4 @@
-#ifndef UE4SS_REWRITTEN_LUAUCLASS_HPP
-#define UE4SS_REWRITTEN_LUAUCLASS_HPP
+#pragma once
 
 #include <LuaMadeSimple/LuaObject.hpp>
 #include <LuaType/LuaUObject.hpp>
@@ -39,4 +38,4 @@ namespace RC::LuaType
 }
 
 
-#endif //UE4SS_REWRITTEN_LUAUCLASS_HPP
+

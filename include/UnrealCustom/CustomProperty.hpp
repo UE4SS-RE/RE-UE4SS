@@ -1,5 +1,4 @@
-#ifndef UE4SS_CUSTOMPROPERTY_HPP
-#define UE4SS_CUSTOMPROPERTY_HPP
+#pragma once
 
 #include <cstdint>
 #include <memory>
@@ -77,4 +76,4 @@ namespace RC::Unreal
 
 #pragma warning(default: 4068)
 
-#endif //UE4SS_CUSTOMPROPERTY_HPP
+

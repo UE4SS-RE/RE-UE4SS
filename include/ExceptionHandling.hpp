@@ -1,5 +1,4 @@
-#ifndef UE4SS_EXCEPTION_HANDLING_HPP
-#define UE4SS_EXCEPTION_HANDLING_HPP
+#pragma once
 
 #include <stdexcept>
 
@@ -37,4 +36,4 @@ namespace RC
     }
 }
 
-#endif //UE4SS_EXCEPTION_HANDLING_HPP
+

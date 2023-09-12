@@ -1,5 +1,4 @@
-#ifndef UE4SS_GUI_EXCLUDE_CLASS_NAME_HPP
-#define UE4SS_GUI_EXCLUDE_CLASS_NAME_HPP
+#pragma once
 
 #include <GUI/LiveView/Filter/SearchFilter.hpp>
 #include <Unreal/UClass.hpp>
@@ -29,4 +28,4 @@ namespace RC::GUI::Filter
     };
 }
 
-#endif //UE4SS_GUI_EXCLUDE_CLASS_NAME_HPP
+

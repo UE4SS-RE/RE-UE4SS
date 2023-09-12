@@ -1,5 +1,4 @@
-#ifndef UE4SS_GUI_GLFW3_OPENGL3_HPP
-#define UE4SS_GUI_GLFW3_OPENGL3_HPP
+#pragma once
 
 #include <GUI/GUI.hpp>
 
@@ -30,4 +29,4 @@ namespace RC::GUI
     };
 }
 
-#endif //UE4SS_GUI_GLFW3_OPENGL3_HPP
+

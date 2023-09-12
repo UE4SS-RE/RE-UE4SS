@@ -1,5 +1,4 @@
-#ifndef UE4SS_REWRITTEN_LUAUFUNCTION_HPP
-#define UE4SS_REWRITTEN_LUAUFUNCTION_HPP
+#pragma once
 
 #include <array>
 
@@ -68,4 +67,4 @@ namespace RC::LuaType
 }
 
 
-#endif //UE4SS_REWRITTEN_LUAUFUNCTION_HPP
+

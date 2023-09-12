@@ -1,5 +1,4 @@
-#ifndef UE4SS_OBJECT_TO_STRING_HPP
-#define UE4SS_OBJECT_TO_STRING_HPP
+#pragma once
 
 #include <functional>
 #include <unordered_map>
@@ -52,4 +51,4 @@ namespace RC::ObjectDumper
     auto init() -> void;
 }
 
-#endif //UE4SS_OBJECT_TO_STRING_HPP
+
