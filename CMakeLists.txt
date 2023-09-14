@@ -353,4 +353,3 @@ target_include_directories(${TARGET} PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/Depend
 # GLFW -> END
 
 add_subdirectory("proxy_generator")
-add_subdirectory("proxy")
