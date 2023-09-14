@@ -55,7 +55,7 @@
 #include <Unreal/Property/FTextProperty.hpp>
 #include <Unreal/Property/FStrProperty.hpp>
 #include <UnrealCustom/CustomProperty.hpp>
-#include <Unreal/PrimitiveTypes.hpp>
+#include <Unreal/Core/HAL/Platform.hpp>
 #include <Unreal/UKismetSystemLibrary.hpp>
 #include <Unreal/Hooks.hpp>
 #pragma warning(default: 4005)

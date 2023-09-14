@@ -3,7 +3,7 @@
 #include <unordered_map>
 
 #include <lua.hpp>
-#include <Unreal/PrimitiveTypes.hpp>
+#include <Unreal/Core/HAL/Platform.hpp>
 #include <Unreal/FScriptArray.hpp>
 #include <Unreal/Property/FArrayProperty.hpp>
 #include <Unreal/UObject.hpp>
