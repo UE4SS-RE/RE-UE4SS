@@ -1,14 +1,13 @@
 cmake_minimum_required(VERSION 3.18)
 enable_language(CXX)
 include(CheckIPOSupported)
+include(GNUInstallDirs)
+
+
+
 check_ipo_supported(RESULT supported OUTPUT error)
 message("IPO - Supported: ${supported}; ${error}")
 message("Project: UE4SS")
-
-if (NOT DEFINED CMAKE_BUILD_TYPE)
-    set(CMAKE_BUILD_TYPE "Debug")
-    message("Build Type not defined, defaulting to: ${CMAKE_BUILD_TYPE}")
-endif ()
 
 set(MAKE_DEPENDENCIES_SHARED 0)
 set(STATIC_EXPORTS 1)
@@ -29,6 +28,17 @@ set(CMAKE_CXX_STANDARD 20)
 set(TARGET ue4ss)
 project(${TARGET})
 
+# Output path -> START
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/Output/${PROJECT_NAME}/${CMAKE_INSTALL_BINDIR})
+if(UNIX)
+ set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/Output/${PROJECT_NAME}/${CMAKE_INSTALL_LIBDIR})
+ set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/Output/${PROJECT_NAME}/${CMAKE_INSTALL_LIBDIR})
+else()
+ set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/Output/${PROJECT_NAME}/${CMAKE_INSTALL_BINDIR})
+ set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/Output/${PROJECT_NAME}/${CMAKE_INSTALL_BINDIR})
+endif()
+# Output path -> END
+
 # Release Settings -> START
 set(UE4SS_LIB_BETA_STARTED 1)           # Whether or not beta releases have started for the current major version
 set(UE4SS_LIB_IS_BETA 1)                # Whether or not this is a beta release
@@ -43,26 +53,7 @@ set(LLVM_PATH "D:\\LLVM\\14.0.6\\llvm+clang-14.0.6-x86_64-windows-msvc-release-m
 set(BUILD_SCRIPT_DIR ${CMAKE_HOME_DIRECTORY})
 # Settings -> END
 
-# Output path -> START
-set(UE4SS_OUTPUT_DEBUG_DIR ${CMAKE_SOURCE_DIR}/Output/${PROJECT_NAME}/Binaries/x64/Debug)
-set(UE4SS_OUTPUT_RELEASE_DIR ${CMAKE_SOURCE_DIR}/Output/${PROJECT_NAME}/Binaries/x64/Release)
-if (${CMAKE_BUILD_TYPE} MATCHES Debug)
-    set(LIBRARY_OUTPUT_PATH ${UE4SS_OUTPUT_DEBUG_DIR})
-    set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${UE4SS_OUTPUT_DEBUG_DIR})
-    message("Debug (lib output ${LIBRARY_OUTPUT_PATH} rt output ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})")
-elseif (${CMAKE_BUILD_TYPE} MATCHES Release)
-    set(LIBRARY_OUTPUT_PATH ${UE4SS_OUTPUT_RELEASE_DIR})
-    set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${UE4SS_OUTPUT_RELEASE_DIR})
-else ()
-    set(LIBRARY_OUTPUT_PATH ${CMAKE_HOME_DIRECTORY}/Output/${PROJECT_NAME}/Binaries/x64)
-    set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_HOME_DIRECTORY}/Output/${PROJECT_NAME}/Binaries/x64)
-    message("Unknown build type. Defaulting to parent output directory. (Build type: ${CMAKE_BUILD_TYPE})")
-endif ()
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_DEBUG ${UE4SS_OUTPUT_DEBUG_DIR})
-set(CMAKE_LIBRARY_OUTPUT_DIRECTORY_DEBUG ${UE4SS_OUTPUT_DEBUG_DIR})
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_RELEASE ${UE4SS_OUTPUT_RELEASE_DIR})
-set(CMAKE_LIBRARY_OUTPUT_DIRECTORY_RELEASE ${UE4SS_OUTPUT_RELEASE_DIR})
-# Output path -> END
+
 
 # UE4SS
 # Options -> START
@@ -120,6 +111,7 @@ add_subdirectory("Dependencies/Constructs")
 add_subdirectory("Dependencies/Helpers")
 add_subdirectory("Dependencies/SinglePassSigScanner")
 
+
 # Zydis
 if (${MAKE_DEPENDENCIES_SHARED} EQUAL 1)
     set(ZYDIS_BUILD_SHARED_LIB ON CACHE BOOL "Build zydis as shared libary" FORCE)
@@ -136,7 +128,7 @@ include_directories(Dependencies/zydis/dependencies/zycore/include)
 include_directories(${CMAKE_CURRENT_BINARY_DIR}/Dependencies/zydis)
 include_directories(${CMAKE_CURRENT_BINARY_DIR}/Dependencies/zydis/zycore)
 set(CMAKE_PREFIX_PATH
-    ${LIBRARY_OUTPUT_PATH}/${CMAKE_BUILD_TYPE}
+    ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}
     ${CMAKE_CURRENT_SOURCE_DIR}/Dependencies/zydis/include
     ${CMAKE_CURRENT_SOURCE_DIR}/Dependencies/zydis/dependencies/zycore/include
     )
