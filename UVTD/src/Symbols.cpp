@@ -221,7 +221,7 @@ namespace RC::UVTD
             {
                 name = STR("TMap<") + parsed.template_args[0] + STR(", ") + parsed.template_args[1] + STR(">");
             }
-            if (check_valid && !valid_udt_names.contains(name)) return STR("void");
+            if (check_valid && !s_valid_udt_names.contains(name)) return STR("void");
             return name;
         }
         case PDB::CodeView::TPI::TypeRecordKind::LF_ENUM:

@@ -35,7 +35,7 @@ Add the class or struct name to the following variables and function implementat
 
     static std::vector<ObjectItem> s_object_items
     
-    static std::unordered_set<File::StringType> valid_udt_names
+    static std::unordered_set<File::StringType> s_valid_udt_names
     
     auto static is_valid_type_to_dump(File::StringType type_name) -> bool
 

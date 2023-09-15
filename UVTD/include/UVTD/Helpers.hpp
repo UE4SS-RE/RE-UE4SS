@@ -113,33 +113,15 @@ namespace RC::UVTD
              }},
     };
 
-    static std::unordered_set<File::StringType> NonCasePreservingVariants{
+    static std::unordered_set<File::StringType> s_non_case_preserving_variants{
             {STR("4_27")},
     };
 
-    static std::unordered_set<File::StringType> CasePreservingVariants{
+    static std::unordered_set<File::StringType> s_case_preserving_variants{
             {STR("4_27_CasePreserving")},
     };
 
-    static inline std::vector<File::StringType> UPrefixToFPrefix{
-            STR("UProperty"),
-            STR("UMulticastDelegateProperty"),
-            STR("UObjectPropertyBase"),
-            STR("UStructProperty"),
-            STR("UArrayProperty"),
-            STR("UMapProperty"),
-            STR("UBoolProperty"),
-            STR("UByteProperty"),
-            STR("UNumericProperty"),
-            STR("UEnumProperty"),
-            STR("UClassProperty"),
-            STR("USoftClassProperty"),
-            STR("UDelegateProperty"),
-            STR("UInterfaceProperty"),
-            STR("USetProperty"),
-    };
-
-    static inline std::unordered_set<File::StringType> valid_udt_names{STR("UScriptStruct::ICppStructOps"),
+    static inline std::unordered_set<File::StringType> s_valid_udt_names{STR("UScriptStruct::ICppStructOps"),
                                                                        STR("UObjectBase"),
                                                                        STR("UObjectBaseUtility"),
                                                                        STR("UObject"),
@@ -197,7 +179,7 @@ namespace RC::UVTD
                                                                        STR("USetProperty"),
                                                                        STR("FFrame")};
 
-    static inline std::vector<File::StringType> uprefix_to_fprefix{
+    static inline std::vector<File::StringType> s_uprefix_to_fprefix{
             STR("UProperty"),
             STR("UMulticastDelegateProperty"),
             STR("UObjectPropertyBase"),

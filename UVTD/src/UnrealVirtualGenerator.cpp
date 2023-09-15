@@ -32,8 +32,8 @@ namespace RC::UVTD
             return File::StringType{string};
         });
 
-        bool is_case_preserving_pdb = !(CasePreservingVariants.find(pdb_name) == CasePreservingVariants.end());
-        bool is_non_case_preserving_pdb = !(NonCasePreservingVariants.find(pdb_name) == NonCasePreservingVariants.end());
+        bool is_case_preserving_pdb = !(s_case_preserving_variants.find(pdb_name) == s_case_preserving_variants.end());
+        bool is_non_case_preserving_pdb = !(s_non_case_preserving_variants.find(pdb_name) == s_non_case_preserving_variants.end());
 
         if (!is_case_preserving_pdb)
         {
