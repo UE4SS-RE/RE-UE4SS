@@ -313,7 +313,15 @@ namespace RC::UVTD
 
     auto Symbols::get_leaf_name(const char* data, PDB::CodeView::TPI::TypeRecordKind kind) -> File::StringType
     {
-        return to_string_type(&data[get_leaf_size(kind)]);
+        auto name = to_string_type(&data[get_leaf_size(kind)]);
+        if (auto it = s_member_rename_map.find(name); it != s_member_rename_map.end())
+        {
+            return it->second;
+        }
+        else
+        {
+            return name;
+        }
     }
 
     auto Symbols::clean_name(File::StringType name) -> File::StringType

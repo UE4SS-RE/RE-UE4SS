@@ -197,6 +197,13 @@ namespace RC::UVTD
             STR("USetProperty"),
     };
 
+    // Any members by the name 'LHS' will instead use 'RHS' in generated code.
+    static inline std::unordered_map<StringType, StringType> s_member_rename_map{
+            {STR("Class"), STR("ClassPrivate")},
+            {STR("Name"), STR("NamePrivate")},
+            {STR("Outer"), STR("OuterPrivate")},
+    };
+
     auto to_string_type(const char* c_str) -> File::StringType;
     auto change_prefix(File::StringType input, bool is_425_plus) -> std::optional<File::StringType>;
 
