@@ -143,7 +143,7 @@ def package(args):
             main_zip_name = f'UE4SS_{version}'
             staging_dir = staging_release
 
-        bin_dir = 'Output/ue4ss/Binaries/x64/Release'
+        bin_dir = 'Output/ue4ss/bin'
 
         # main dll
         shutil.copy(os.path.join(bin_dir, 'ue4ss.dll'), staging_dir)
