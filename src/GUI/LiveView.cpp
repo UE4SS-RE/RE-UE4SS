@@ -1945,7 +1945,6 @@ namespace RC::GUI
         if (return_property)
         {
             FString return_property_text{};
-            //auto container_ptr = return_property->ContainerPtrToValuePtr<void*>(context.RESULT_DECL);
             auto container_ptr = context.RESULT_DECL;
             return_property->ExportTextItem(return_property_text, container_ptr, container_ptr, std::bit_cast<UObject*>(function), NULL);
             buffer.append(std::format(STR("    {}"), return_property_text.GetCharArray()));
