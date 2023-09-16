@@ -1,6 +1,7 @@
 #include <SDKGenerator/Common.hpp>
 #include <DynamicOutput/DynamicOutput.hpp>
 #pragma warning(disable: 4005)
+#include <UnrealDef.hpp>
 #include <Unreal/UClass.hpp>
 #include <Unreal/AActor.hpp>
 #include <Unreal/UEnum.hpp>
@@ -32,35 +33,7 @@
 
 namespace RC::UEGenerator
 {
-    using UObject = Unreal::UObject;
-    using UClass = Unreal::UClass;
-    using AActor = Unreal::AActor;
-    using UEnum = Unreal::UEnum;
-    using UScriptStruct = Unreal::UScriptStruct;
-    using UFunction = Unreal::UFunction;
-    using UInterface = Unreal::UInterface;
-    using FProperty = Unreal::FProperty;
-    using FByteProperty = Unreal::FByteProperty;
-    using FEnumProperty = Unreal::FEnumProperty;
-    using FNumericProperty = Unreal::FNumericProperty;
-    using FBoolProperty = Unreal::FBoolProperty;
-    using FObjectProperty = Unreal::FObjectProperty;
-    using FObjectPtrProperty = Unreal::FObjectPtrProperty;
-    using FWeakObjectProperty = Unreal::FWeakObjectProperty;
-    using FLazyObjectProperty = Unreal::FLazyObjectProperty;
-    using FSoftObjectProperty = Unreal::FSoftObjectProperty;
-    using FClassProperty = Unreal::FClassProperty;
-    using FClassPtrProperty = Unreal::FClassPtrProperty;
-    using FSoftClassProperty = Unreal::FSoftClassProperty;
-    using FInterfaceProperty = Unreal::FInterfaceProperty;
-    using FStructProperty = Unreal::FStructProperty;
-    using FDelegateProperty = Unreal::FDelegateProperty;
-    using FMulticastInlineDelegateProperty = Unreal::FMulticastInlineDelegateProperty;
-    using FMulticastSparseDelegateProperty = Unreal::FMulticastSparseDelegateProperty;
-    using FFieldPathProperty = Unreal::FFieldPathProperty;
-    using FArrayProperty = Unreal::FArrayProperty;
-    using FSetProperty = Unreal::FSetProperty;
-    using FMapProperty = Unreal::FMapProperty;
+    using namespace Unreal;
 
     auto get_native_class_name(UClass* uclass, bool interface_name) -> File::StringType
     {
@@ -159,7 +132,7 @@ namespace RC::UEGenerator
         const std::wstring field_class_name = property->GetClass().GetName();
 
         //Byte Property
-        if (field_class_name == STR("ByteProperty"))
+        if (property->IsA<FByteProperty>())
         {
             FByteProperty* byte_property = static_cast<FByteProperty*>(property);
             UEnum* enum_value = byte_property->GetEnum();
@@ -174,7 +147,7 @@ namespace RC::UEGenerator
         }
 
         //Enum Property
-        if (field_class_name == STR("EnumProperty"))
+        if (property->IsA<FEnumProperty>())
         {
             FEnumProperty* enum_property = static_cast<FEnumProperty*>(property);
             UEnum* uenum = enum_property->GetEnum();
@@ -189,7 +162,7 @@ namespace RC::UEGenerator
         }
 
         //Bool Property
-        if (field_class_name == STR("BoolProperty"))
+        if (property->IsA<FBoolProperty>())
         {
             FBoolProperty* bool_property = static_cast<FBoolProperty*>(property);
             if (is_top_level_declaration && bool_property->GetFieldMask() != 255)
@@ -200,39 +173,39 @@ namespace RC::UEGenerator
         }
 
         //Standard Numeric Properties
-        if (field_class_name == STR("Int8Property"))
+        if (property->IsA<FInt8Property>())
         {
             return STR("int8");
         }
-        else if (field_class_name == STR("Int16Property"))
+        else if (property->IsA<FInt16Property>())
         {
             return STR("int16");
         }
-        else if (field_class_name == STR("IntProperty"))
+        else if (property->IsA<FIntProperty>())
         {
             return STR("int32");
         }
-        else if (field_class_name == STR("Int64Property"))
+        else if (property->IsA<FInt64Property>())
         {
             return STR("int64");
         }
-        else if (field_class_name == STR("UInt16Property"))
+        else if (property->IsA<FUInt16Property>())
         {
             return STR("uint16");
         }
-        else if (field_class_name == STR("UInt32Property"))
+        else if (property->IsA<FUInt32Property>())
         {
             return STR("uint32");
         }
-        else if (field_class_name == STR("UInt64Property"))
+        else if (property->IsA<FUInt64Property>())
         {
             return STR("uint64");
         }
-        else if (field_class_name == STR("FloatProperty"))
+        else if (property->IsA<FFloatProperty>())
         {
             return STR("float");
         }
-        else if (field_class_name == STR("DoubleProperty"))
+        else if (property->IsA<FDoubleProperty>())
         {
             return STR("double");
         }
@@ -240,7 +213,7 @@ namespace RC::UEGenerator
         //Object Properties
         // TODO: Verify that the syntax for 'AssetObjectProperty' is the same as for 'ObjectProperty'.
         //       If it's not, then add another branch here after you figure out what the syntax should be.
-        if (field_class_name == STR("ObjectProperty") || field_class_name == STR("AssetObjectProperty"))
+        if (property->IsA<FObjectProperty>() || property->IsA<FAssetObjectProperty>())
         {
             FObjectProperty* object_property = static_cast<FObjectProperty*>(property);
             UClass* property_class = object_property->GetPropertyClass();
@@ -269,7 +242,7 @@ namespace RC::UEGenerator
             }
         }
 
-        if (field_class_name == STR("WeakObjectProperty"))
+        if (property->IsA<FWeakObjectProperty>())
         {
             FWeakObjectProperty* weak_object_property = static_cast<FWeakObjectProperty*>(property);
             UClass* property_class = weak_object_property->GetPropertyClass();
@@ -288,7 +261,7 @@ namespace RC::UEGenerator
             return std::format(STR("TWeakObjectPtr<{}>"), property_class_name);
         }
 
-        if (field_class_name == STR("LazyObjectProperty"))
+        if (property->IsA<FLazyObjectProperty>())
         {
             FLazyObjectProperty* lazy_object_property = static_cast<FLazyObjectProperty*>(property);
             UClass* property_class = lazy_object_property->GetPropertyClass();
@@ -307,7 +280,7 @@ namespace RC::UEGenerator
             return std::format(STR("TLazyObjectPtr<{}>"), property_class_name);
         }
 
-        if (field_class_name == STR("SoftObjectProperty"))
+        if (property->IsA<FSoftObjectProperty>())
         {
             FSoftObjectProperty* soft_object_property = static_cast<FSoftObjectProperty*>(property);
             UClass* property_class = soft_object_property->GetPropertyClass();
@@ -322,7 +295,7 @@ namespace RC::UEGenerator
         }
 
         //Class Properties
-        if (field_class_name == STR("ClassProperty") || field_class_name == STR("AssetClassProperty"))
+        if (property->IsA<FClassProperty>() || property->IsA<FAssetClassProperty>())
         {
             FClassProperty* class_property = static_cast<FClassProperty*>(property);
             UClass* meta_class = class_property->GetMetaClass();
@@ -347,7 +320,7 @@ namespace RC::UEGenerator
             return STR("TObjectPtr<UClass>");
         }
 
-        if (field_class_name == STR("SoftClassProperty"))
+        if (property->IsA<FSoftClassProperty>())
         {
             FSoftClassProperty* soft_class_property = static_cast<FSoftClassProperty*>(property);
             UClass* meta_class = soft_class_property->GetMetaClass();
@@ -362,7 +335,7 @@ namespace RC::UEGenerator
         }
 
         //Interface Property
-        if (field_class_name == STR("InterfaceProperty"))
+        if (property->IsA<FInterfaceProperty>())
         {
             FInterfaceProperty* interface_property = static_cast<FInterfaceProperty*>(property);
             UClass* interface_class = interface_property->GetInterfaceClass();
@@ -382,7 +355,7 @@ namespace RC::UEGenerator
         }
 
         //Struct Property
-        if (field_class_name == STR("StructProperty"))
+        if (property->IsA<FStructProperty>())
         {
             FStructProperty* struct_property = static_cast<FStructProperty*>(property);
             UScriptStruct* script_struct = struct_property->GetStruct();
@@ -397,7 +370,7 @@ namespace RC::UEGenerator
         }
 
         //Delegate Properties
-        if (field_class_name == STR("DelegateProperty"))
+        if (property->IsA<FDelegateProperty>())
         {
             FDelegateProperty* delegate_property = static_cast<FDelegateProperty*>(property);
 
@@ -407,7 +380,7 @@ namespace RC::UEGenerator
 
         // In 4.23, they replaced 'MulticastDelegateProperty' with 'Inline' & 'Sparse' variants
         // It looks like the delegate macro might be the same as the 'Inline' variant in later versions, so we'll use the same branch here
-        if (field_class_name == STR("MulticastInlineDelegateProperty") || field_class_name == STR("MulticastDelegateProperty"))
+        if (property->IsA<FMulticastInlineDelegateProperty>() || property->IsA<FMulticastDelegateProperty>())
         {
             FMulticastInlineDelegateProperty* delegate_property = static_cast<FMulticastInlineDelegateProperty*>(property);
 
@@ -415,7 +388,7 @@ namespace RC::UEGenerator
             return delegate_type_name;
         }
 
-        if (field_class_name == STR("MulticastSparseDelegateProperty"))
+        if (property->IsA<FMulticastSparseDelegateProperty>())
         {
             FMulticastSparseDelegateProperty* delegate_property = static_cast<FMulticastSparseDelegateProperty*>(property);
 
@@ -424,7 +397,7 @@ namespace RC::UEGenerator
         }
 
         //Field path property
-        if (field_class_name == STR("FieldPathProperty"))
+        if (property->IsA<FFieldPathProperty>())
         {
             FFieldPathProperty* field_path_property = static_cast<FFieldPathProperty*>(property);
             const std::wstring property_class_name = field_path_property->GetPropertyClass()->GetName();
@@ -433,7 +406,7 @@ namespace RC::UEGenerator
 
         //Collection and Map Properties
         // TODO: This is missing support for freeze image array properties because XArrayProperty is incomplete. (low priority)
-        if (field_class_name == STR("ArrayProperty"))
+        if (property->IsA<FArrayProperty>())
         {
             FArrayProperty* array_property = static_cast<FArrayProperty*>(property);
             FProperty* inner_property = array_property->GetInner();
@@ -450,7 +423,7 @@ namespace RC::UEGenerator
             return std::format(STR("TArray<{}>"), inner_property_type);
         }
 
-        if (field_class_name == STR("SetProperty"))
+        if (property->IsA<FSetProperty>())
         {
             FSetProperty* set_property = static_cast<FSetProperty*>(property);
             FProperty* element_prop = set_property->GetElementProp();
@@ -460,7 +433,7 @@ namespace RC::UEGenerator
         }
 
         // TODO: This is missing support for freeze image map properties because XMapProperty is incomplete. (low priority)
-        if (field_class_name == STR("MapProperty"))
+        if (property->IsA<FMapProperty>())
         {
             FMapProperty* map_property = static_cast<FMapProperty*>(property);
             FProperty* key_property = map_property->GetKeyProp();
@@ -487,15 +460,15 @@ namespace RC::UEGenerator
         }
 
         //Standard properties that do not have any special attributes
-        if (field_class_name == STR("NameProperty"))
+        if (property->IsA<FNameProperty>())
         {
             return STR("FName");
         }
-        else if (field_class_name == STR("StrProperty"))
+        else if (property->IsA<FStrProperty>())
         {
             return STR("FString");
         }
-        else if (field_class_name == STR("TextProperty"))
+        else if (property->IsA<FTextProperty>())
         {
             return STR("FText");
         }

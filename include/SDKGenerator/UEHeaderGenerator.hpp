@@ -223,8 +223,8 @@ namespace RC::UEGenerator
         auto generate_object_definition(UClass* interface_function, GeneratedSourceFile& header_data) -> void;
         auto generate_struct_definition(UScriptStruct* property, GeneratedSourceFile& header_data) -> void;
         auto generate_enum_definition(UEnum* name_pair, GeneratedSourceFile& header_data) -> void;
-        auto generate_global_delegate_declaration(UFunction* signature_function, GeneratedSourceFile& header_data) -> void;
-        auto generate_delegate_type_declaration(UFunction* signature_function, GeneratedSourceFile& header_data) -> void;
+        auto generate_global_delegate_declaration(UFunction* signature_function, UClass* delegate_class, GeneratedSourceFile& header_data) -> void;
+        auto generate_delegate_type_declaration(UFunction* signature_function, UClass* delagate_class, GeneratedSourceFile& header_data) -> void;
         auto generate_object_implementation(UClass* property, GeneratedSourceFile& implementation_file) -> void;
         auto generate_struct_implementation(UScriptStruct* property, GeneratedSourceFile& implementation_file) -> void;
 
@@ -246,7 +246,8 @@ namespace RC::UEGenerator
         auto generate_default_property_value(FProperty* property, GeneratedSourceFile& header_data, const std::wstring& ContextName) -> std::wstring;
 
         auto generate_enum_value(UEnum* uenum, int64_t enum_value) -> std::wstring;
-        auto generate_simple_assignment_expression(FProperty* property, const std::wstring& value, GeneratedSourceFile& implementation_file, const std::wstring& property_scope) -> void;
+        auto generate_simple_assignment_expression(FProperty* property, const std::wstring& value, GeneratedSourceFile& implementation_file, const std::wstring& property_scope, const std::wstring& operator_type = STR(" = ")) -> void;
+        auto generate_advanced_assignment_expression(FProperty* property, const std::wstring& value, GeneratedSourceFile& implementation_file, const std::wstring& property_scope, const std::wstring& property_type, const std::wstring& operator_type = STR(" = ")) -> void;
 
         auto static generate_parameter_count_string(int32_t parameter_count) -> std::wstring;
         auto static determine_primary_game_module_name() -> std::wstring;
