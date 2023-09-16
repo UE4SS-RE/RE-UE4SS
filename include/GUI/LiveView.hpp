@@ -9,6 +9,7 @@
 
 #include <DynamicOutput/DynamicOutput.hpp>
 #include <Unreal/UnrealFlags.hpp>
+#include <Unreal/UFunctionStructs.hpp>
 
 namespace RC::Unreal
 {
@@ -49,6 +50,14 @@ namespace RC::GUI
                 FindFirstOf,
             };
 
+            enum class Type
+            {
+                Property,
+                Function,
+            };
+
+            static std::mutex s_watch_lock;
+
             Output::Targets<Output::FileDevice> output{};
             FProperty* property{};
             UObject* container{};
@@ -64,6 +73,8 @@ namespace RC::GUI
             bool load_on_startup{};
             bool was_stop_load_on_startup_requested{};
             bool enabled{};
+            bool function_is_hooked{};
+            std::pair<int, int> function_hook_ids{};
 
             Watch() = delete;
             Watch(StringType&& object_name, StringType&& property_name);
@@ -119,7 +130,7 @@ namespace RC::GUI
         static std::vector<UObject*> s_name_search_results;
         static std::unordered_set<UObject*> s_name_search_results_set;
         static std::string s_name_to_search_by;
-        static std::vector<Watch> s_watches;
+        static std::vector<std::unique_ptr<Watch>> s_watches;
         static std::unordered_map<WatchIdentifier, Watch*> s_watch_map;
         static std::unordered_map<void*, std::vector<Watch*>> s_watch_containers;
         static bool s_include_inheritance;
@@ -178,6 +189,11 @@ namespace RC::GUI
         auto process_watches() -> void;
         auto set_listeners_allowed(bool new_value) -> void { m_listeners_allowed = new_value; }
         auto are_listeners_allowed() -> bool { return m_listeners_allowed; }
+
+    public:
+        static auto process_property_watch(Watch& watch) -> void;
+        static auto process_function_pre_watch(Unreal::UnrealScriptFunctionCallableContext& context, void*) -> void;
+        static auto process_function_post_watch(Unreal::UnrealScriptFunctionCallableContext& context, void*) -> void;
     };
 }
 

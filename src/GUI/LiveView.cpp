@@ -24,6 +24,7 @@
 #include <Helpers/String.hpp>
 #include <JSON/JSON.hpp>
 #include <JSON/Parser/Parser.hpp>
+#include <Constructs/Views/EnumerateView.hpp>
 #include <UE4SSProgram.hpp>
 #include <Unreal/UnrealInitializer.hpp>
 #include <Unreal/UPackage.hpp>
@@ -63,6 +64,7 @@ namespace RC::GUI
     static std::unordered_map<const UObject*, std::string> s_object_ptr_to_full_name{};
 
     static std::mutex s_object_ptr_to_full_name_mutex{};
+    std::mutex LiveView::Watch::s_watch_lock{};
 
     std::vector<LiveView::ObjectOrProperty> LiveView::s_object_view_history{{nullptr, nullptr, false}};
     size_t LiveView::s_currently_selected_object_index{};
@@ -70,7 +72,7 @@ namespace RC::GUI
     std::vector<UObject*> LiveView::s_name_search_results{};
     std::unordered_set<UObject*> LiveView::s_name_search_results_set{};
     std::string LiveView::s_name_to_search_by{};
-    std::vector<LiveView::Watch> LiveView::s_watches{};
+    std::vector<std::unique_ptr<LiveView::Watch>> LiveView::s_watches{};
     std::unordered_map<LiveView::WatchIdentifier, LiveView::Watch*> LiveView::s_watch_map;
     std::unordered_map<void*, std::vector<LiveView::Watch*>> LiveView::s_watch_containers{};
     bool LiveView::s_include_inheritance{};
@@ -146,21 +148,25 @@ namespace RC::GUI
 
         LiveView::s_name_search_results_set.erase(object);
 
-        auto watch_it = LiveView::s_watch_containers.find(object);
-        if (watch_it != LiveView::s_watch_containers.end())
         {
-            LiveView::s_watches.erase(std::remove_if(LiveView::s_watches.begin(), LiveView::s_watches.end(), [&](const auto& item) {
-                if (item.container == object)
-                {
-                    LiveView::s_watch_map.erase(LiveView::s_watch_map.find({item.container, item.property}));
-                    return true;
-                }
-                else
-                {
-                    return false;
-                }
-            }), LiveView::s_watches.end());
-            LiveView::s_watch_containers.erase(watch_it);
+            std::lock_guard<decltype(LiveView::Watch::s_watch_lock)> lock{LiveView::Watch::s_watch_lock};
+            auto watch_it = LiveView::s_watch_containers.find(object);
+            if (watch_it != LiveView::s_watch_containers.end())
+            {
+                LiveView::s_watches.erase(std::remove_if(LiveView::s_watches.begin(), LiveView::s_watches.end(), [&](const auto& item_ptr) {
+                    const auto& item = *item_ptr;
+                    if (item.container == object)
+                    {
+                        LiveView::s_watch_map.erase(LiveView::s_watch_map.find({item.container, item.property}));
+                        return true;
+                    }
+                    else
+                    {
+                        return false;
+                    }
+                }), LiveView::s_watches.end());
+                LiveView::s_watch_containers.erase(watch_it);
+            }
         }
     }
 
@@ -224,12 +230,29 @@ namespace RC::GUI
     };
     FLiveViewDeleteListener FLiveViewDeleteListener::LiveViewDeleteListener{};
 
+    static auto toggle_function_watch(LiveView::Watch& watch, bool new_value) -> void
+    {
+        watch.enabled = new_value;
+        if (new_value)
+        {
+            if (watch.function_is_hooked)
+            {
+                UObjectGlobals::UnregisterHook(static_cast<UFunction*>(watch.container), watch.function_hook_ids);
+            }
+            watch.function_hook_ids = UObjectGlobals::RegisterHook(static_cast<UFunction*>(watch.container), &LiveView::process_function_pre_watch, &LiveView::process_function_post_watch, nullptr);
+        }
+        else
+        {
+            UObjectGlobals::UnregisterHook(static_cast<UFunction*>(watch.container), watch.function_hook_ids);
+        }
+    }
+
     static auto add_watch(const LiveView::WatchIdentifier& watch_id, UObject* object, FProperty* property) -> LiveView::Watch&
     {
-        auto& watch = LiveView::s_watches.emplace_back(LiveView::Watch{
+        std::lock_guard<decltype(LiveView::Watch::s_watch_lock)> lock{LiveView::Watch::s_watch_lock};
+        auto& watch = *LiveView::s_watches.emplace_back(std::make_unique<LiveView::Watch>(
                 object->GetOuterPrivate()->GetName() + STR(".") + object->GetName(),
-                property->GetName()
-        });
+                property->GetName()));
         watch.enabled = true;
         watch.property = property;
         watch.container = object;
@@ -244,6 +267,29 @@ namespace RC::GUI
     static auto add_watch(UObject* object, FProperty* property) -> LiveView::Watch&
     {
         return add_watch(LiveView::WatchIdentifier{object, property}, object, property);
+    }
+
+    static auto add_watch(const LiveView::WatchIdentifier& watch_id, UFunction* function) -> LiveView::Watch&
+    {
+        std::lock_guard<decltype(LiveView::Watch::s_watch_lock)> lock{LiveView::Watch::s_watch_lock};
+        auto& watch = *LiveView::s_watches.emplace_back(std::make_unique<LiveView::Watch>(
+            function->GetOuterPrivate()->GetName() + STR(".") + function->GetName(),
+            // Workaround for our JSON parser not being able to parse an empty string.
+            STR(" ")));
+        watch.property = nullptr;
+        watch.container = function;
+        watch.hash = std::hash<LiveView::WatchIdentifier>()(watch_id);
+        toggle_function_watch(watch, true);
+
+        LiveView::s_watch_map.emplace(watch_id, &watch);
+
+        auto& watch_container = LiveView::s_watch_containers[function];
+        return *watch_container.emplace_back(&watch);
+    }
+
+    static auto add_watch(UFunction* function) -> LiveView::Watch&
+    {
+        return add_watch(LiveView::WatchIdentifier{function, nullptr}, function);
     }
 
     static auto serialize_watch_to_json_object(const LiveView::Watch& watch) -> std::unique_ptr<JSON::Object>
@@ -265,6 +311,7 @@ namespace RC::GUI
         }
         json_object->new_string(STR("PropertyName"), watch.property_name);
         json_object->new_number(STR("AcquisitionMethod"), static_cast<int32_t>(watch.acquisition_method));
+        json_object->new_number(STR("WatchType"), watch.container->IsA<UFunction>() ? static_cast<int32_t>(LiveView::Watch::Type::Function) : static_cast<int32_t>(LiveView::Watch::Type::Property));
         return json_object;
     }
 
@@ -284,6 +331,7 @@ namespace RC::GUI
             auto acquisition_id = json_watch_object.get<JSON::String>(STR("AcquisitionID")).get_view();
             auto property_name = json_watch_object.get<JSON::String>(STR("PropertyName")).get_view();
             auto acquisition_method = static_cast<LiveView::Watch::AcquisitionMethod>(json_watch_object.get<JSON::Number>(STR("AcquisitionMethod")).get<int64_t>());
+            auto watch_type = static_cast<LiveView::Watch::Type>(json_watch_object.get<JSON::Number>(STR("WatchType")).get<int64_t>());
 
             UObject* object{};
             switch (acquisition_method)
@@ -299,12 +347,23 @@ namespace RC::GUI
             }
             if (!object) { return LoopAction::Continue; }
 
-            auto property = object->GetPropertyByNameInChain(property_name.data());
-            if (!property) { return LoopAction::Continue; }
+            LiveView::Watch* watch = [&]() -> LiveView::Watch* {
+                if (watch_type == LiveView::Watch::Type::Property)
+                {
+                    auto property = object->GetPropertyByNameInChain(property_name.data());
+                    if (!property) { return nullptr; }
+                    return &add_watch(object, property);
+                }
+                else
+                {
+                    return &add_watch(static_cast<UFunction*>(object));
+                }
+            }();
 
-            auto& watch = add_watch(object, property);
-            watch.load_on_startup = true;
-            watch.acquisition_method = acquisition_method;
+            if (!watch) { return LoopAction::Continue; }
+
+            watch->load_on_startup = true;
+            watch->acquisition_method = acquisition_method;
 
             return LoopAction::Continue;
         });
@@ -322,10 +381,13 @@ namespace RC::GUI
         auto json = JSON::Object{};
         auto& json_uobjects = json.new_array(STR("Watches"));
 
-        for (const auto& watch : LiveView::s_watches)
         {
-            if (!watch.load_on_startup) { continue; }
-            json_uobjects.add_object(serialize_watch_to_json_object(watch));
+            std::lock_guard<decltype(LiveView::Watch::s_watch_lock)> lock{LiveView::Watch::s_watch_lock};
+            for (const auto& watch : LiveView::s_watches)
+            {
+                if (!watch->load_on_startup) { continue; }
+                json_uobjects.add_object(serialize_watch_to_json_object(*watch));
+            }
         }
 
         auto json_file = File::open(StringType{UE4SSProgram::get_program().get_working_directory()} + std::format(STR("\\watches\\watches.meta.json")),
@@ -1816,27 +1878,98 @@ namespace RC::GUI
         return 1;
     }
 
+    auto LiveView::process_property_watch(Watch& watch) -> void
+    {
+        FString live_value_fstring{};
+        watch.property->ExportTextItem(live_value_fstring, watch.property->ContainerPtrToValuePtr<void>(watch.container), nullptr, nullptr, 0);
+        auto live_value_string = StringType{live_value_fstring.GetCharArray()};
+
+        if (watch.property_value == live_value_string) { return; }
+
+        watch.property_value = std::move(live_value_string);
+
+        const auto when_as_string = std::format(STR("{:%H:%M:%S}"), std::chrono::system_clock::now());
+        watch.history.append(to_string(when_as_string + STR(" ") + watch.property_value + STR("\n")));
+
+        if (watch.write_to_file)
+        {
+            watch.output.send(STR("{}\n"), watch.property_value);
+        }
+    }
+
+    auto LiveView::process_function_pre_watch(Unreal::UnrealScriptFunctionCallableContext& context, void*) -> void
+    {
+        // TODO: Log params in pre-state ?
+    }
+
+    auto LiveView::process_function_post_watch(Unreal::UnrealScriptFunctionCallableContext& context, void*) -> void
+    {
+        auto function = context.TheStack.Node();
+        std::lock_guard<decltype(LiveView::Watch::s_watch_lock)> lock{LiveView::Watch::s_watch_lock};
+        auto it = s_watch_containers.find(function);
+        if (it == s_watch_containers.end()) { return; }
+        if (it->second.empty()) { return; }
+        auto& watch = *it->second[0];
+
+        auto num_params = function->GetNumParms();
+
+        StringType buffer{STR("Received call.\n  Locals:\n")};
+
+        bool has_local_params{};
+        for (const auto& [param, count] : function->ForEachProperty() | views::enumerate)
+        {
+            if (param->HasAnyPropertyFlags(CPF_OutParm | CPF_ReturnParm)) { continue; }
+            has_local_params = true;
+            FString param_text{};
+            auto container_ptr = param->ContainerPtrToValuePtr<void*>(context.TheStack.Locals());
+            param->ExportTextItem(param_text, container_ptr, container_ptr, std::bit_cast<UObject*>(function), NULL);
+            buffer.append(std::format(STR("    {} = {}\n"), param->GetName(), param_text.GetCharArray()));
+        }
+        if (!has_local_params) { buffer.append(STR("    <No Local Params>\n")); }
+
+        bool has_out_params{};
+        buffer.append(STR("  Out:\n"));
+        for (const auto& [param, count] : function->ForEachProperty() | views::enumerate)
+        {
+            if (param->HasAnyPropertyFlags(CPF_ReturnParm)) { continue; }
+            if (!param->HasAnyPropertyFlags(CPF_OutParm)) { continue; }
+            has_out_params = true;
+            FString param_text{};
+            auto container_ptr = param->ContainerPtrToValuePtr<void*>(context.TheStack.Locals());
+            param->ExportTextItem(param_text, container_ptr, container_ptr, std::bit_cast<UObject*>(function), NULL);
+            buffer.append(std::format(STR("    {} = {}\n"), param->GetName(), param_text.GetCharArray()));
+        }
+        if (!has_out_params) { buffer.append(STR("    <No Out Params>\n")); }
+
+        buffer.append(STR("  ReturnValue\n"));
+        auto return_property = function->GetReturnProperty();
+        if (return_property)
+        {
+            FString return_property_text{};
+            //auto container_ptr = return_property->ContainerPtrToValuePtr<void*>(context.RESULT_DECL);
+            auto container_ptr = context.RESULT_DECL;
+            return_property->ExportTextItem(return_property_text, container_ptr, container_ptr, std::bit_cast<UObject*>(function), NULL);
+            buffer.append(std::format(STR("    {}"), return_property_text.GetCharArray()));
+        }
+        else
+        {
+            buffer.append(STR("    <No Return Value>"));
+        }
+
+        buffer.append(STR("\n\n"));
+        watch.history.append(to_string(buffer));
+    }
+
     auto LiveView::process_watches() -> void
     {
+        std::lock_guard<decltype(Watch::s_watch_lock)> lock{Watch::s_watch_lock};
         for (auto& watch : s_watches)
         {
-            if (!watch.enabled) { continue; }
+            if (!watch->enabled) { continue; }
+            if (!watch->container) { continue; }
+            if (watch->container->IsA<UFunction>()) { continue; }
 
-            FString live_value_fstring{};
-            watch.property->ExportTextItem(live_value_fstring, watch.property->ContainerPtrToValuePtr<void>(watch.container), nullptr, nullptr, 0);
-            auto live_value_string = StringType{live_value_fstring.GetCharArray()};
-
-            if (watch.property_value == live_value_string) { continue; }
-
-            watch.property_value = std::move(live_value_string);
-
-            const auto when_as_string = std::format(STR("{:%H:%M:%S}"), std::chrono::system_clock::now());
-            watch.history.append(to_string(when_as_string + STR(" ") + watch.property_value + STR("\n")));
-
-            if (watch.write_to_file)
-            {
-                watch.output.send(STR("{}\n"), watch.property_value);
-            }
+            process_property_watch(*watch);
         }
     }
 
@@ -2105,6 +2238,23 @@ namespace RC::GUI
                             Output::send(STR("Copy Full Name: {}\n"), object->GetFullName());
                             ImGui::SetClipboardText(tree_node_name.c_str());
                         }
+                        if (object->IsA<UFunction>())
+                        {
+                            auto watch_id = WatchIdentifier{object, nullptr};
+                            auto function_watcher_it = s_watch_map.find(watch_id);
+                            if (function_watcher_it == s_watch_map.end())
+                            {
+                                ImGui::Separator();
+                                if (ImGui::MenuItem("Watch value"))
+                                {
+                                    add_watch(watch_id, static_cast<UFunction*>(object));
+                                }
+                            }
+                            else
+                            {
+                                ImGui::Checkbox("Watch value", &function_watcher_it->second->enabled);
+                            }
+                        }
                         ImGui::EndPopup();
                     }
                 };
@@ -2187,9 +2337,17 @@ namespace RC::GUI
 
     static auto toggle_all_watches(bool check) -> void
     {
+        std::lock_guard<decltype(LiveView::Watch::s_watch_lock)> lock{LiveView::Watch::s_watch_lock};
         for (auto& watch : LiveView::s_watches)
         {
-            watch.enabled = check;
+            if (watch->container->IsA<UFunction>())
+            {
+                toggle_function_watch(*watch, check);
+            }
+            else
+            {
+                watch->enabled = check;
+            }
         }
     }
 
@@ -2222,73 +2380,74 @@ namespace RC::GUI
             ImGui::TableSetupColumn("##watch-from-disk", ImGuiTableColumnFlags_WidthFixed, 21.0f);
             ImGui::TableHeadersRow();
 
-            for (auto& watch : s_watches)
             {
-                ImGui::TableNextRow();
-                ImGui::TableNextColumn();
-                ImGui::Checkbox(to_string(std::format(STR("##watch-on-off-{}"), watch.hash)).c_str(), &watch.enabled);
-                if (ImGui::IsItemHovered())
+                std::lock_guard<decltype(LiveView::Watch::s_watch_lock)> lock{LiveView::Watch::s_watch_lock};
+                for (auto& watch_ptr : s_watches)
                 {
-                    ImGui::BeginTooltip();
-                    ImGui::Text("On/Off");
-                    ImGui::EndTooltip();
-                }
-                ImGui::SameLine(0.0f, 2.0f);
-                ImGui::Checkbox(to_string(std::format(STR("##watch-write-to-file-{}"), watch.hash)).c_str(), &watch.write_to_file);
-                if (ImGui::IsItemHovered())
-                {
-                    ImGui::BeginTooltip();
-                    ImGui::Text("Write to file");
-                    ImGui::EndTooltip();
-                }
-                ImGui::SameLine(0.0f, 2.0f);
-                if (!watch.show_history)
-                {
-                    ImGui::PushID(std::format("button_open_history_{}", watch.hash).c_str());
-                    if (ImGui::Button("+", {20.0f, 0.0f}))
+                    auto& watch = *watch_ptr;
+                    ImGui::TableNextRow();
+                    ImGui::TableNextColumn();
+                    if (ImGui::Checkbox(to_string(std::format(STR("##watch-on-off-{}"), watch.hash)).c_str(), &watch.enabled))
                     {
-                        watch.show_history = true;
+                        if (watch.container->IsA<UFunction>())
+                        {
+                            toggle_function_watch(watch, watch.enabled);
+                        }
                     }
-                    ImGui::PopID();
-                }
-                else
-                {
-                    ImGui::PushID(std::format("button_close_history_{}", watch.hash).c_str());
-                    if (ImGui::Button("-", {20.0f, 0.0f}))
+                    if (ImGui::IsItemHovered())
                     {
-                        watch.show_history = false;
+                        ImGui::BeginTooltip();
+                        ImGui::Text("On/Off");
+                        ImGui::EndTooltip();
                     }
-                    ImGui::PopID();
-                }
-                ImGui::TableNextColumn();
-                ImGui::Text("%S.%S", watch.object_name.c_str(), watch.property_name.c_str());
-                if (watch.show_history)
-                {
-                    ImGui::PushID(std::format("history_{}", watch.hash).c_str());
-                    ImGui::InputTextMultiline("##history", &watch.history, {-13.0f, 0.0f}, ImGuiInputTextFlags_ReadOnly);
-                    ImGui_AutoScroll("##history", &watch.history_previous_max_scroll_y);
-                    ImGui::PopID();
-                }
-                ImGui::TableNextColumn();
-                if (ImGui::Checkbox(to_string(std::format(STR("##watch-from-disk-{}"), watch.hash)).c_str(), &watch.load_on_startup))
-                {
-                    save_watches_to_disk();
-                }
-                ImGui::SetNextWindowSize({690.0f, 0.0f});
-                if (ImGui::BeginPopupContextItem(to_string(std::format(STR("##watch-from-disk-settings-popup-{}"), watch.hash)).c_str()))
-                {
-                    ImGui::Text("Acquisition Method");
-                    ImGui::Text("This determines how the watch will be reacquired.");
-                    ImGui::RadioButton("StaticFindObject", std::bit_cast<int*>(&watch.acquisition_method), static_cast<int>(Watch::AcquisitionMethod::StaticFindObject));
-                    ImGui::RadioButton("FindFirstOf", std::bit_cast<int*>(&watch.acquisition_method), static_cast<int>(Watch::AcquisitionMethod::FindFirstOf));
-                    save_watches_to_disk();
-                    ImGui::EndPopup();
-                }
-                if (ImGui::IsItemHovered())
-                {
-                    ImGui::BeginTooltip();
-                    ImGui::Text("Auto-create on startup.\nRight-click for options.");
-                    ImGui::EndTooltip();
+                    ImGui::SameLine(0.0f, 2.0f);
+                    ImGui::Checkbox(to_string(std::format(STR("##watch-write-to-file-{}"), watch.hash)).c_str(), &watch.write_to_file);
+                    if (ImGui::IsItemHovered())
+                    {
+                        ImGui::BeginTooltip();
+                        ImGui::Text("Write to file");
+                        ImGui::EndTooltip();
+                    }
+                    ImGui::SameLine(0.0f, 2.0f);
+                    if (!watch.show_history)
+                    {
+                        ImGui::PushID(std::format("button_open_history_{}", watch.hash).c_str());
+                        if (ImGui::Button("+", {20.0f, 0.0f})) { watch.show_history = true; }
+                        ImGui::PopID();
+                    }
+                    else
+                    {
+                        ImGui::PushID(std::format("button_close_history_{}", watch.hash).c_str());
+                        if (ImGui::Button("-", {20.0f, 0.0f})) { watch.show_history = false; }
+                        ImGui::PopID();
+                    }
+                    ImGui::TableNextColumn();
+                    ImGui::Text("%S.%S", watch.object_name.c_str(), watch.property_name.c_str());
+                    if (watch.show_history)
+                    {
+                        ImGui::PushID(std::format("history_{}", watch.hash).c_str());
+                        ImGui::InputTextMultiline("##history", &watch.history, {-13.0f, 200.0f}, ImGuiInputTextFlags_ReadOnly);
+                        ImGui_AutoScroll("##history", &watch.history_previous_max_scroll_y);
+                        ImGui::PopID();
+                    }
+                    ImGui::TableNextColumn();
+                    if (ImGui::Checkbox(to_string(std::format(STR("##watch-from-disk-{}"), watch.hash)).c_str(), &watch.load_on_startup)) { save_watches_to_disk(); }
+                    ImGui::SetNextWindowSize({690.0f, 0.0f});
+                    if (ImGui::BeginPopupContextItem(to_string(std::format(STR("##watch-from-disk-settings-popup-{}"), watch.hash)).c_str()))
+                    {
+                        ImGui::Text("Acquisition Method");
+                        ImGui::Text("This determines how the watch will be reacquired.");
+                        ImGui::RadioButton("StaticFindObject", std::bit_cast<int*>(&watch.acquisition_method), static_cast<int>(Watch::AcquisitionMethod::StaticFindObject));
+                        ImGui::RadioButton("FindFirstOf", std::bit_cast<int*>(&watch.acquisition_method), static_cast<int>(Watch::AcquisitionMethod::FindFirstOf));
+                        save_watches_to_disk();
+                        ImGui::EndPopup();
+                    }
+                    if (ImGui::IsItemHovered())
+                    {
+                        ImGui::BeginTooltip();
+                        ImGui::Text("Auto-create on startup.\nRight-click for options.");
+                        ImGui::EndTooltip();
+                    }
                 }
             }
 
