@@ -24,7 +24,6 @@
 #include <Helpers/String.hpp>
 #include <JSON/JSON.hpp>
 #include <JSON/Parser/Parser.hpp>
-#include <Constructs/Views/EnumerateView.hpp>
 #include <UE4SSProgram.hpp>
 #include <Unreal/UnrealInitializer.hpp>
 #include <Unreal/UPackage.hpp>
@@ -1916,7 +1915,7 @@ namespace RC::GUI
         StringType buffer{STR("Received call.\n  Locals:\n")};
 
         bool has_local_params{};
-        for (const auto& [param, count] : function->ForEachProperty() | views::enumerate)
+        for (const auto& param : function->ForEachProperty())
         {
             if (param->HasAnyPropertyFlags(CPF_OutParm | CPF_ReturnParm)) { continue; }
             has_local_params = true;
@@ -1929,7 +1928,7 @@ namespace RC::GUI
 
         bool has_out_params{};
         buffer.append(STR("  Out:\n"));
-        for (const auto& [param, count] : function->ForEachProperty() | views::enumerate)
+        for (const auto& param : function->ForEachProperty())
         {
             if (param->HasAnyPropertyFlags(CPF_ReturnParm)) { continue; }
             if (!param->HasAnyPropertyFlags(CPF_OutParm)) { continue; }
