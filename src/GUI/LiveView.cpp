@@ -1912,8 +1912,12 @@ namespace RC::GUI
 
         auto num_params = function->GetNumParms();
 
-        StringType buffer{STR("Received call.\n  Locals:\n")};
+        const auto when_as_string = std::format(STR("{:%H:%M:%S}"), std::chrono::system_clock::now());
+        StringType buffer{std::format(STR("Received call @ {}.\n"), when_as_string)};
 
+        buffer.append(std::format(STR("  Context:\n    {}\n"), context.Context->GetFullName()));
+
+        buffer.append(STR("  Locals:\n"));
         bool has_local_params{};
         for (const auto& param : function->ForEachProperty())
         {
