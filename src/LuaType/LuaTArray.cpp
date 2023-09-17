@@ -212,15 +212,13 @@ namespace RC::LuaType
         auto& lua_object = lua.get_userdata<TArray>();
         int64_t array_index = lua.get_integer() - 1; // Subtracting 1 here to account for that fact that Lua tables are 1-indexed
 
-        if (array_index > lua_object.get_remote_cpp_object()->Num())
+        auto array = lua_object.get_remote_cpp_object();
+        auto num = array->Num();
+        if (array_index > num || num == 0)
         {
-            if (operation == Operation::Get || operation == Operation::GetParam)
-            {
-                Output::send(STR("[Error][Lua] Tried accessing element of TArray but the index was out of range\n"));
-                lua.set_nil();
-            }
-
-            return;
+            // We've verified with the above if-statement that we're not out-of-bounds for an int32.
+            int32_t count = array_index == 0 || num == 0 ? 1 : static_cast<int32_t>(array_index - num);
+            lua_object.get_remote_cpp_object()->AddZeroed(count, lua_object.m_inner_property->GetElementSize(), Unreal::DEFAULT_ALIGNMENT);
         }
 
         handle_unreal_property_value(operation, lua, lua_object.get_remote_cpp_object(), array_index, lua_object);
