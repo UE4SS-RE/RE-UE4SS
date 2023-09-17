@@ -86,6 +86,8 @@ Fixed FText:ToString - LocalCC
 
 Improved stability when using hooks or `ExecuteInGameThread`
 
+TArrays are now resized when indexing into them
+
 ## Changes
 
 ### USMap Dumper
