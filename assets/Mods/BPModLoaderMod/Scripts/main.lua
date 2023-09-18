@@ -20,22 +20,6 @@ local DefaultModConfig = {}
 DefaultModConfig.AssetName = "ModActor_C"
 DefaultModConfig.AssetNameAsFName = FName("ModActor_C")
 
--- Explodes a string by a delimiter into a table
-local function Explode(String, Delimiter)
-    local ExplodedString = {}
-    local Iterator = 1
-    local DelimiterFrom, DelimiterTo = string.find(String, Delimiter, Iterator)
-
-    while DelimiterTo do
-        table.insert(ExplodedString, string.sub(String, Iterator, DelimiterFrom-1))
-        Iterator = DelimiterTo + 1
-        DelimiterFrom, DelimiterTo = string.find(String, Delimiter, Iterator)
-    end
-    table.insert(ExplodedString, string.sub(String, Iterator))
-
-    return ExplodedString
-end
-
 -- Checks if the beginning of a string contains a certain pattern.
 local function StartsWith(String, StringToCompare)
     return string.sub(String,1,string.len(StringToCompare))==StringToCompare
@@ -288,22 +272,3 @@ RegisterBeginPlayPostHook(function(ContextParam)
 end)
 
 RegisterKeyBind(Key.INS, LoadModsManual)
-
-RegisterCustomEvent("PrintToModLoader", function(ParamContext, ParamMessage)
-    -- Retrieve the param value from the param container.
-    local Message = ParamMessage:get()
-
-    -- We must do type-checking here!
-    -- This is to guard against mods that don't use the correct params for their custom event.
-    -- There's no way to avoid it.
-    if Message:type() ~= "FString" then error(string.format("PrintToModLoader Param #1 must be FString but was %s", Message:type())) end
-
-    -- Now the 'Message' param is validated and we're safe to use it.
-    local NameParts = Explode(ParamContext:get():GetClass():GetFullName(), "/");
-    local ModName = NameParts[#NameParts - 1]
-    Log(string.format("[%s] %s\n", ModName, Message:ToString()))
-end)
-
-RegisterCustomEvent("GetPersistentObject", function(ParamContext, ParamModName)
-    -- TODO: Implement.
-end)

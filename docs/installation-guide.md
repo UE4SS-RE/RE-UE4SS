@@ -21,23 +21,23 @@ There are four concepts you need to know about.
 
 You can install UE4SS in a couple of different ways.
 
-### Method #1 (Preferred)
+### Method #1 - Automatic Injection (Preferred)
 
-> Using method #1 will mean that the `root directory` and `working directory` are treated as one single directory that happens to also be the same directory as your `game working directory`.
+> Using method #1 will mean that the `root directory` and `working directory` are treated as one single directory that happens to also be the same directory as your `game executable directory`.
 
-The preferred and most straightforward way to install UE4SS is to choose the `ue4ss_xinput` download and then just drag & drop all the necessary files in `<game executable directory>`.
+The preferred and most straightforward way to install UE4SS is to choose the `ue4ss_xinput` download and then just drag & drop all the necessary files into the `game executable directory`.
 
 Now all you need to do is start your game and UE4SS will automatically be injected.
 
-### Method #2
+### Method #2 - Manual Injection
 
-> Using method #2 will mean that the `root directory` and `working directory` are treated as one single directory that happens to also be the same directory as your `game working directory`.
+> Using method #2 will mean that the `root directory` and `working directory` are treated as one single directory that happens to also be the same directory as your `game executable directory`,  
+but any directory may be used.
 
-Same as using method #1 except you choose the "ue4ss_standard" download and any instances of `xinput1_3.dll` becomes `ue4ss.dll`.
+Following the download of `ue4ss_xinput`, delete `xinput1_3.dll`.  Afterwards, launch the game and manually inject `ue4ss.dll` using your injector of choice.
 
-This method requires that you manually inject `ue4ss.dll` after the game is launched.
 
-### Method #3
+### Method #3 - Central Install Location
 
 This method is a way to install UE4SS in one place for all your games. Simply extract the zip file in any directory _outside_ the `game directory`, this is what's known as the `root directory`.  
 
@@ -52,19 +52,21 @@ D:\Games\Epic Games\SatisfactoryEarlyAccess\FactoryGame\Binaries\Win64\FactoryGa
 Then the name of your `working directory` should be `SatisfactoryEarlyAccess`.  
 This directory will be automatically found and used by UE4SS if it exists.
 
-As of UE4SS 1.1, the following files & folders exist inside the `working directory`:
+As of UE4SS 2.6, the following files & folders exist inside the `working directory`:
 
 - Mods
     - Mod folders
     - mods.txt
 - UE4SS-settings.ini
 - UE4SS.log
-- UE4SS-ObjectDump.txt
+- ue4ss.dll
+- xinput1_3.dll (Optional proxy dll when using Method #1.  Can be any DLL name.)
 
 Now all you need to do is start your game and point your injector of choice to `<root directory>/ue4ss.dll`.
 
 ## Last but not least...
 
-If you use method #3, if you keep a copy of `UE4SS-settings.ini` inside the `root directory` then this file will act as a default for all the games that don't have a `working directory` as long as you still point your injector to the `root directory`.  
+If you use method #3, if you keep a copy of `UE4SS-settings.ini` inside the `root directory` then this file will act as a default for all the games that don't have a `working directory`  
+as long as you still point your injector to the `root directory`.  
 
 This way you can use method #3 for most of your games and at the same time you can use method #2 for other games if method #3 is problematic for you.

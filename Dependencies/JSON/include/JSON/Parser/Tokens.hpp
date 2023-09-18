@@ -1,5 +1,4 @@
-#ifndef RC_JSON_PARSER_TOKENS_HPP
-#define RC_JSON_PARSER_TOKENS_HPP
+#pragma once
 
 namespace RC::JSON::Parser
 {
@@ -50,4 +49,4 @@ namespace RC::JSON::Parser
     }
 }
 
-#endif //RC_JSON_PARSER_TOKENS_HPP
+

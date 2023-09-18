@@ -1,5 +1,4 @@
-#ifndef RC_FILE_INTERNALFILE_HPP
-#define RC_FILE_INTERNALFILE_HPP
+#pragma once
 
 #include <File/Common.hpp>
 #include <File/Enums.hpp>
@@ -35,4 +34,4 @@ namespace RC::File
     };
 }
 
-#endif //RC_FILE_INTERNALFILE_HPP
+

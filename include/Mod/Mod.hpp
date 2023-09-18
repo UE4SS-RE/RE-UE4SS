@@ -1,5 +1,4 @@
-#ifndef UE4SS_REWRITTEN_MOD_HPP
-#define UE4SS_REWRITTEN_MOD_HPP
+#pragma once
 
 #include <string>
 #include <chrono>
@@ -78,4 +77,4 @@ namespace RC
 }
 
 
-#endif //UE4SS_REWRITTEN_MOD_HPP
+

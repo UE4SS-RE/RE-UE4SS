@@ -944,11 +944,10 @@ namespace RC::LuaType
 
                 std::string prop_name = to_string(params.property->GetName());
 
-                auto& names = enum_ptr->GetEnumNames();
-                for (Unreal::FEnumNamePair& elem : names)
+                for (const auto& elem : enum_ptr->ForEachName())
                 {
                     std::string elem_name = to_string(elem.Key.ToString());
-                    table.add_pair(elem_name.c_str(), static_cast<unsigned int>(elem.Value));
+                    table.add_pair(elem_name.c_str(), elem.Value);
                 }
 
                 // TODO: Optimize this... it'll probably do a dynamic allocation here in order to fit the new beginning of the string
@@ -1049,12 +1048,12 @@ namespace RC::LuaType
         {
             case Operation::GetNonTrivialLocal:
             case Operation::Get:
-                LuaType::FText::construct(params.lua, text);
+                LuaType::FText::construct(params.lua, *text);
                 return;
             case Operation::Set:
             {
                 auto& lua_other_object = params.lua.get_userdata<LuaType::FText>(params.stored_at_index);
-                text->SetString(lua_other_object.get_remote_cpp_object()->ToFString());
+                text->SetString(std::move(lua_other_object.get_local_cpp_object().ToFString()));
                 return;
             }
             case Operation::GetParam:
@@ -1229,30 +1228,7 @@ Overloads:
             // It means that the UFunction was found and is stored in 'property', so we don't need to do anything to find it
             if (!field && property_name != Unreal::FName(0u, 0u))
             {
-                std::vector<Unreal::UObject*> found_functions;
-                Unreal::UObjectGlobals::FindObjects(Unreal::GFunctionName, property_name, found_functions);
-
-                for (const auto& found_function : found_functions)
-                {
-                    Unreal::UStruct* inheritance_to_test = static_cast<Unreal::UStruct*>(found_function->GetOuterPrivate());
-                    Unreal::UStruct* base_class = base->GetClassPrivate();
-
-                    while (base_class)
-                    {
-                        if (inheritance_to_test == base_class)
-                        {
-                            func = static_cast<Unreal::UFunction*>(found_function);
-                            break;
-                        }
-
-                        Unreal::UStruct* next = base_class->GetSuperStruct();
-
-                        // This shouldn't be the case with the super struct linked list, but I'm putting this here just in case
-                        if (base_class == next) { break; }
-
-                        base_class = next;
-                    }
-                }
+                func = base->GetFunctionByNameInChain(property_name);
             }
             else
             {

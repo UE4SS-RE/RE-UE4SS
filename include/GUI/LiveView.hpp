@@ -1,5 +1,4 @@
-#ifndef UE4SS_GUI_LIVE_VIEW_HPP
-#define UE4SS_GUI_LIVE_VIEW_HPP
+#pragma once
 
 #include <vector>
 #include <unordered_set>
@@ -10,6 +9,7 @@
 
 #include <DynamicOutput/DynamicOutput.hpp>
 #include <Unreal/UnrealFlags.hpp>
+#include <Unreal/UFunctionStructs.hpp>
 
 namespace RC::Unreal
 {
@@ -25,22 +25,6 @@ namespace RC::GUI
     using namespace RC::Unreal;
 
     class UFunctionCallerWidget;
-    
-    struct SearchOptions
-    {
-        bool apply_when_not_searching{};
-        bool include_inheritance{};
-        bool instances_only{};
-        bool non_instances_only{};
-        bool include_default_objects{true};
-        bool default_objects_only{};
-        bool function_param_flags_required{};
-        std::array<bool, 255> function_param_checkboxes{};
-        EPropertyFlags function_param_flags{};
-        bool function_param_flags_include_return_property{};
-        std::string internal_exclude_class_name{};
-        StringType exclude_class_name{};
-    };
 
     class LiveView
     {
@@ -66,6 +50,14 @@ namespace RC::GUI
                 FindFirstOf,
             };
 
+            enum class Type
+            {
+                Property,
+                Function,
+            };
+
+            static std::mutex s_watch_lock;
+
             Output::Targets<Output::FileDevice> output{};
             FProperty* property{};
             UObject* container{};
@@ -81,6 +73,8 @@ namespace RC::GUI
             bool load_on_startup{};
             bool was_stop_load_on_startup_requested{};
             bool enabled{};
+            bool function_is_hooked{};
+            std::pair<int, int> function_hook_ids{};
 
             Watch() = delete;
             Watch(StringType&& object_name, StringType&& property_name);
@@ -94,6 +88,7 @@ namespace RC::GUI
         std::unordered_set<UObject*> m_opened_tree_nodes{};
         UObject* m_currently_opened_tree_node{};
         std::string m_current_property_value_buffer{};
+        int64_t m_current_enum_value_buffer{};
         float m_top_size{300.0f};
         float m_bottom_size{0.0f};
         UFunctionCallerWidget* m_function_caller_widget{};
@@ -107,6 +102,7 @@ namespace RC::GUI
         bool m_listeners_set{};
         bool m_listeners_allowed{};
         bool m_is_initialized{};
+
 
     public:
         LiveView();
@@ -134,10 +130,11 @@ namespace RC::GUI
         static std::vector<UObject*> s_name_search_results;
         static std::unordered_set<UObject*> s_name_search_results_set;
         static std::string s_name_to_search_by;
-        static std::vector<Watch> s_watches;
+        static std::vector<std::unique_ptr<Watch>> s_watches;
         static std::unordered_map<WatchIdentifier, Watch*> s_watch_map;
         static std::unordered_map<void*, std::vector<Watch*>> s_watch_containers;
-        static SearchOptions s_search_options;
+        static bool s_include_inheritance;
+        static bool s_apply_search_filters_when_not_searching;
         static bool s_create_listener_removed;
         static bool s_delete_listener_removed;
         static bool s_selected_item_deleted;
@@ -192,6 +189,11 @@ namespace RC::GUI
         auto process_watches() -> void;
         auto set_listeners_allowed(bool new_value) -> void { m_listeners_allowed = new_value; }
         auto are_listeners_allowed() -> bool { return m_listeners_allowed; }
+
+    public:
+        static auto process_property_watch(Watch& watch) -> void;
+        static auto process_function_pre_watch(Unreal::UnrealScriptFunctionCallableContext& context, void*) -> void;
+        static auto process_function_post_watch(Unreal::UnrealScriptFunctionCallableContext& context, void*) -> void;
     };
 }
 
@@ -209,4 +211,4 @@ namespace std
     };
 }
 
-#endif //UE4SS_GUI_LIVE_VIEW_HPP
+

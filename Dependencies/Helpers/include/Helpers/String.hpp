@@ -1,11 +1,12 @@
-#ifndef RC_STRING_HPP
-#define RC_STRING_HPP
+#pragma once
 
 #include <locale>
 #include <codecvt>
 #include <string>
 #include <cwctype>
 #include <vector>
+#include <unordered_map>
+#include <shared_mutex>
 
 #include <File/Macros.hpp>
 
@@ -149,6 +150,28 @@ namespace RC
 #pragma warning(default: 4996)
     }
 
+    auto inline to_const_wstring(std::string_view input) -> const std::wstring&
+    {
+        static std::unordered_map<std::string_view, std::wstring> wstringpool;
+        static std::shared_mutex wstringpool_lock;
+
+        // Allow multiple readers that are stalled when any thread is writing.
+        {
+            std::shared_lock<std::shared_mutex> read_guard(wstringpool_lock);
+            if (wstringpool.contains(input)) return wstringpool[input];
+        }
+
+        auto temp_input = std::string{input};
+        auto new_str = to_wstring(temp_input);
+
+        // Stall the readers to insert a new string.
+        {
+            std::lock_guard<std::shared_mutex> write_guard(wstringpool_lock);
+            const auto& [emplaced_iter, unused] = wstringpool.emplace(input, std::move(new_str));
+            return emplaced_iter->second;
+        }
+    }
+
     auto inline to_wstring(std::string_view input) -> std::wstring
     {
         auto temp_input = std::string{input};
@@ -202,15 +225,23 @@ namespace RC
         return to_u16string(temp_input);
     }
 
-    auto inline to_ue4ss_string(const auto& input) -> StringType
+    auto inline to_generic_string(const auto& input) -> StringType
     {
-        if constexpr (std::is_same_v<std::remove_cvref_t<std::remove_pointer_t<std::remove_cvref_t<decltype(input)>>>, StringType> || std::is_same_v<std::remove_cvref_t<std::remove_pointer_t<std::remove_cvref_t<decltype(input)>>>, CharType>)
+        if constexpr (std::is_same_v<std::remove_cvref_t<std::remove_pointer_t<std::remove_cvref_t<decltype(input)>>>, StringViewType>)
+        {
+            return StringType{input};
+        }
+        else if constexpr (std::is_same_v<std::remove_cvref_t<std::remove_pointer_t<std::remove_cvref_t<decltype(input)>>>, StringType> || std::is_same_v<std::remove_cvref_t<std::remove_pointer_t<std::remove_cvref_t<decltype(input)>>>, CharType>)
         {
             return input;
         }
         else
         {
+#if RC_IS_ANSI == 1
+            return to_string(input);
+#else
             return to_wstring(input);
+#endif
         }
     }
 
@@ -252,5 +283,5 @@ namespace RC
     }
 }
 
-#endif //RC_STRING_HPP
+
 

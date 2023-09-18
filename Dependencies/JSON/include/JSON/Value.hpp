@@ -1,5 +1,4 @@
-#ifndef RC_JSON_VALUE_HPP
-#define RC_JSON_VALUE_HPP
+#pragma once
 
 #include <JSON/Common.hpp>
 
@@ -79,4 +78,4 @@ namespace RC::JSON
     };
 }
 
-#endif //RC_JSON_VALUE_HPP
+

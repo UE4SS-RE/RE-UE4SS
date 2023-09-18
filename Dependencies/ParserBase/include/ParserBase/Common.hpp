@@ -1,5 +1,4 @@
-#ifndef RC_PARSER_BASE_COMMON_HPP
-#define RC_PARSER_BASE_COMMON_HPP
+#pragma once
 
 #ifndef RC_EXPORT
 #ifndef RC_PARSER_BASE_BUILD_STATIC
@@ -17,4 +16,4 @@
 #endif
 #endif
 
-#endif //RC_PARSER_BASE_COMMON_HPP
+

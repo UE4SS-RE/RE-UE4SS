@@ -1,5 +1,4 @@
-#ifndef RC_INI_PARSER_TOKENS_HPP
-#define RC_INI_PARSER_TOKENS_HPP
+#pragma once
 
 enum TokenType : int
 {
@@ -15,4 +14,4 @@ enum TokenType : int
 };
 using IniTokenType = TokenType;
 
-#endif //RC_INI_PARSER_TOKENS_HPP
+

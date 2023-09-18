@@ -1,5 +1,4 @@
-#ifndef UE4SS_LUATESTS_HPP
-#define UE4SS_LUATESTS_HPP
+#pragma once
 
 #include <cstdint>
 
@@ -23,4 +22,4 @@ namespace RC
     auto Test_Get_UObject_Nullptr() -> UObject*;
 }
 
-#endif //UE4SS_LUATESTS_HPP
+

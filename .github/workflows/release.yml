@@ -27,6 +27,11 @@ jobs:
       - name: Setup Ninja
         uses: seanmiddleditch/gha-setup-ninja@v3
 
+      - name: Setup DirectX SDK (for xinput1_3.dll)
+        run: |
+          Invoke-WebRequest -URI https://download.microsoft.com/download/1/7/1/1718CCC4-6315-4D8E-9543-8E28A4E18C4C/dxwebsetup.exe -OutFile dxwebsetup.exe
+          Start-Process -Wait dxwebsetup.exe /q
+
       - name: Release Commit
         id: release_commit
         run: python build.py release_commit ${{ github.actor }}
@@ -53,9 +58,7 @@ jobs:
           tag_name: ${{ steps.release_commit.outputs.release_tag }}
           body_path: release/release_notes.md
           files: |
-            release/UE4SS_Standard_v*.zip
-            release/UE4SS_Xinput_v*.zip
-            release/zDEV-UE4SS_Standard_v*.zip
-            release/zDEV-UE4SS_Xinput_v*.zip
+            release/UE4SS_v*.zip
+            release/zDEV-UE4SS_v*.zip
             release/zCustomGameConfigs.zip
             release/zMapGenBP.zip

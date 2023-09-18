@@ -1,6 +1,10 @@
 cmake_minimum_required(VERSION 3.18)
 enable_language(CXX)
 include(CheckIPOSupported)
+include(GNUInstallDirs)
+
+
+
 check_ipo_supported(RESULT supported OUTPUT error)
 message("IPO - Supported: ${supported}; ${error}")
 message("Project: UE4SS")
@@ -24,7 +28,16 @@ set(CMAKE_CXX_STANDARD 20)
 set(TARGET ue4ss)
 project(${TARGET})
 
-list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/internal_build_tools")
+# Output path -> START
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/Output/${PROJECT_NAME}/${CMAKE_INSTALL_BINDIR})
+if(UNIX)
+ set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/Output/${PROJECT_NAME}/${CMAKE_INSTALL_LIBDIR})
+ set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/Output/${PROJECT_NAME}/${CMAKE_INSTALL_LIBDIR})
+else()
+ set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/Output/${PROJECT_NAME}/${CMAKE_INSTALL_BINDIR})
+ set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/Output/${PROJECT_NAME}/${CMAKE_INSTALL_BINDIR})
+endif()
+# Output path -> END
 
 # Release Settings -> START
 set(UE4SS_LIB_BETA_STARTED 1)           # Whether or not beta releases have started for the current major version
@@ -40,24 +53,7 @@ set(LLVM_PATH "D:\\LLVM\\14.0.6\\llvm+clang-14.0.6-x86_64-windows-msvc-release-m
 set(BUILD_SCRIPT_DIR ${CMAKE_HOME_DIRECTORY})
 # Settings -> END
 
-# Output path -> START
-set(UE4SS_OUTPUT_DEBUG_DIR ${CMAKE_SOURCE_DIR}/Output/${PROJECT_NAME}/Binaries/x64/Debug)
-set(UE4SS_OUTPUT_RELEASE_DIR ${CMAKE_SOURCE_DIR}/Output/${PROJECT_NAME}/Binaries/x64/Release)
-if (${CMAKE_BUILD_TYPE} MATCHES Debug)
-    set(LIBRARY_OUTPUT_PATH ${UE4SS_OUTPUT_DEBUG_DIR})
-    set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${UE4SS_OUTPUT_DEBUG_DIR})
-elseif (${CMAKE_BUILD_TYPE} MATCHES Release)
-    set(LIBRARY_OUTPUT_PATH ${UE4SS_OUTPUT_RELEASE_DIR})
-    set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${UE4SS_OUTPUT_RELEASE_DIR})
-else ()
-    set(LIBRARY_OUTPUT_PATH ${CMAKE_HOME_DIRECTORY}/Output/${PROJECT_NAME}/Binaries/x64)
-    message("Unknown build type. (Build type: ${CMAKE_BUILD_TYPE})")
-endif ()
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_DEBUG ${UE4SS_OUTPUT_DEBUG_DIR})
-set(CMAKE_LIBRARY_OUTPUT_DIRECTORY_DEBUG ${UE4SS_OUTPUT_DEBUG_DIR})
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_RELEASE ${UE4SS_OUTPUT_RELEASE_DIR})
-set(CMAKE_LIBRARY_OUTPUT_DIRECTORY_RELEASE ${UE4SS_OUTPUT_RELEASE_DIR})
-# Output path -> END
+
 
 # UE4SS
 # Options -> START
@@ -71,10 +67,6 @@ endif()
 # Very temporary fix for ninja/clang thinking we should use MSVC simulation
 unset(CMAKE_CXX_SIMULATE_ID)
 
-message("CMAKE_CXX_COMPILER_ID: ${CMAKE_CXX_COMPILER_ID}")
-message("CMAKE_CXX_SIMULATE_ID: ${CMAKE_CXX_SIMULATE_ID}")
-message("CMAKE_CXX_COMPILER_FRONTEND_VARIANT: ${CMAKE_CXX_COMPILER_FRONTEND_VARIANT}")
-
 set(PRIVATE_COMPILE_DEFINITIONS
         $<${MAKE_DEPENDENCIES_SHARED}:RC_EXPORT RC_FUNCTION_EXPORTS>
         $<${MAKE_DEPENDENCIES_STATIC}:RC_FUNCTION_BUILD_STATIC>)
@@ -85,13 +77,14 @@ include(tools/buildscripts/internal_build_tools/DetermineCompiler.cmake)
 if ((${COMPILER_NAME} STREQUAL Clang) AND (${COMPILER_FRONTEND_NAME} STREQUAL GNU))
     # Hopefully temporary fix for ninja/clang thinking we should use MSVC simulation
     unset(CMAKE_CXX_SIMULATE_ID)
-    set(PRIVATE_COMPILE_OPTIONS "$<IF:$<COMPILE_LANGUAGE:ASM_MASM>,,-g;-gcodeview;-fcolor-diagnostics;-Wall;-Wextra;-Wno-unknown-pragmas;-Wno-unused-parameter;-Wno-c++98-compat;-Wno-c++98-compat-pedantic;-Wno-shadow-uncaptured-local;-Wno-deprecated-copy-with-dtor;-Wno-everything;-Wno-all;-Wno-extra>")
+    set(PRIVATE_COMPILE_OPTIONS "$<IF:$<COMPILE_LANGUAGE:ASM_MASM>,,-g;-gcodeview;-fcolor-diagnostics;-Wall;-Wextra;-Wno-unknown-pragmas;-Wno-unused-parameter;-Wno-c++98-compat;-Wno-c++98-compat-pedantic;-Wno-shadow-uncaptured-local;-Wno-deprecated-copy-with-dtor;-Wno-everything;-Wno-all;-Wno-extra;-fms-extensions;-Wignored-attributes>")
     set(PRIVATE_LINK_OPTIONS "$<IF:$<COMPILE_LANGUAGE:ASM_MASM>,,-g>")
+    add_compile_definitions(printf_s=printf)
 elseif ((${COMPILER_NAME} STREQUAL MSVC) OR (${COMPILER_SIMULATION_NAME} STREQUAL MSVC))
     set(PRIVATE_COMPILE_OPTIONS $<$<CONFIG:RELEASE>:/Zi> $<IF:$<COMPILE_LANGUAGE:ASM_MASM>,,/MP /W3 /wd4005 /wd4251 /wd4068 /Zc:preprocessor>)
     set(PRIVATE_LINK_OPTIONS /DEBUG:FULL)
     if (${COMPILER_NAME} STREQUAL Clang)
-        add_compile_options(-Wno-ignored-attributes -Wno-unknown-pragmas -Wno-ignored-attributes -Wno-unused-private-field -Wno-unused-local-typedef -Wno-tautological-undefined-compare -Wno-microsoft-template -Wno-unused-value -Wno-missing-braces -Wno-unused-function -Wno-extra-tokens)
+        add_compile_options(-Wno-ignored-attributes -Wno-unknown-pragmas -Wno-ignored-attributes -Wno-unused-private-field -Wno-unused-local-typedef -Wno-tautological-undefined-compare -Wno-microsoft-template -Wno-unused-value -Wno-missing-braces -Wno-unused-function -Wno-extra-tokens;-fms-extensions;-Wignored-attributes)
     endif ()
 endif ()
 set(PUBLIC_COMPILE_FEATURES cxx_std_20)
@@ -143,7 +136,7 @@ include_directories(Dependencies/zydis/dependencies/zycore/include)
 include_directories(${CMAKE_CURRENT_BINARY_DIR}/Dependencies/zydis)
 include_directories(${CMAKE_CURRENT_BINARY_DIR}/Dependencies/zydis/zycore)
 set(CMAKE_PREFIX_PATH
-    ${LIBRARY_OUTPUT_PATH}/${CMAKE_BUILD_TYPE}
+    ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}
     ${CMAKE_CURRENT_SOURCE_DIR}/Dependencies/zydis/include
     ${CMAKE_CURRENT_SOURCE_DIR}/Dependencies/zydis/dependencies/zycore/include
     )
@@ -349,45 +342,24 @@ set(UE4SS_LINK_WITH_LIBRARIES File DynamicOutput Unreal SinglePassSigScanner Fun
 set(UE4SS_LINK_WITH_INTERFACE_LIBRARIES Function Constructs Helpers MProgram ScopedTimer)
 target_link_libraries(${TARGET} PUBLIC ${UE4SS_LINK_WITH_LIBRARIES} ${UE4SS_LINK_WITH_INTERFACE_LIBRARIES})
 
-set(XINPUT_TARGET xinput1_3)
-enable_language(ASM_MASM)
-file(GLOB XINPUT_SOURCES "xinput/*")
-add_library(${XINPUT_TARGET} SHARED ${${TARGET}_Sources} ${XINPUT_SOURCES})
-target_include_directories(${XINPUT_TARGET} PUBLIC
-	$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-	$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/generated_include>
-	$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/Dependencies/sol3/include>
-	$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/Dependencies/map-macro>
-	)
-target_compile_features(${XINPUT_TARGET} PUBLIC cxx_std_20)
-target_compile_definitions(${XINPUT_TARGET} PUBLIC $<${MAKE_DEPENDENCIES_SHARED}:LUA_BUILD_AS_DLL> UE4SS_LIB_BUILD_AS_XINPUT=1)
-target_compile_options(${XINPUT_TARGET} PRIVATE ${PRIVATE_COMPILE_OPTIONS})
-target_link_options(${XINPUT_TARGET} PRIVATE ${PRIVATE_LINK_OPTIONS})
-target_link_libraries(${XINPUT_TARGET} PUBLIC ${UE4SS_LINK_WITH_LIBRARIES} ${UE4SS_LINK_WITH_INTERFACE_LIBRARIES})
-
 if (${MAKE_DEPENDENCIES_STATIC} EQUAL 1)
     target_compile_definitions(${TARGET} PRIVATE ${UE4SS_COMPILE_DEFINITIONS})
-    target_compile_definitions(${XINPUT_TARGET} PRIVATE ${UE4SS_COMPILE_DEFINITIONS})
 endif()
 
 set_property(TARGET ${TARGET} PROPERTY INTERPROCEDURAL_OPTIMIZATION TRUE)
-set_property(TARGET ${XINPUT_TARGET} PROPERTY INTERPROCEDURAL_OPTIMIZATION TRUE)
 
 # Making sure that the linked C runtime is a dll so that C++ mods will work correctly
 set_property(TARGET ${TARGET} PROPERTY MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>DLL")
-set_property(TARGET ${XINPUT_TARGET} PROPERTY MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>DLL")
 
 # imgui -> START
 set(IMGUI_INCLUDES Dependencies/imgui Dependencies/ImGuiColorTextEdit)
 target_include_directories(${TARGET} PUBLIC ${IMGUI_INCLUDES})
-target_include_directories(${XINPUT_TARGET} PUBLIC ${IMGUI_INCLUDES})
 # imgui -> END
 
 # GLFW -> START
 add_library(GLFW STATIC IMPORTED)
 set_property(TARGET GLFW PROPERTY IMPORTED_LOCATION "${CMAKE_CURRENT_SOURCE_DIR}/Dependencies/GLFW/lib-vc2022/glfw3.lib")
 target_include_directories(${TARGET} PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/Dependencies/GLFW/include")
-target_include_directories(${XINPUT_TARGET} PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/Dependencies/GLFW/include")
 # GLFW -> END
 
 # luajit -> START
@@ -396,15 +368,14 @@ add_library(lua51 STATIC IMPORTED)
 set_property(TARGET luajit PROPERTY IMPORTED_LOCATION "${CMAKE_CURRENT_SOURCE_DIR}/Dependencies/luajit/src/luajit.lib")
 set_property(TARGET lua51 PROPERTY IMPORTED_LOCATION "${CMAKE_CURRENT_SOURCE_DIR}/Dependencies/luajit/src/lua51.lib")
 target_include_directories(${TARGET} PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/Dependencies/luajit/src")
-target_include_directories(${XINPUT_TARGET} PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/Dependencies/luajit/src")
 # This forces a rebuild of luajit on every build of UE4SS which isn't ideal but it will have to do for now.
 # Ideally, this should be set up to only build luajit if the lib files are missing OR the build mode changed.
 # Note that this custom command is Windows specific because of hard-coded use of "cmd" and .bat files.
 add_custom_command(
-	TARGET ${XINPUT_TARGET}
+	TARGET ${TARGET}
 	PRE_BUILD
 	COMMAND "cmd" \"%VS2022INSTALLDIR%/VC/Auxiliary/Build/vcvars64.bat\" && cd \"${CMAKE_CURRENT_SOURCE_DIR}/Dependencies/luajit/src\" && msvcbuild.bat $<$<CONFIG:Debug>:debug> static
 )
 # luajit -> END
 
-add_subdirectory("cppsdk")
+add_subdirectory("proxy_generator")

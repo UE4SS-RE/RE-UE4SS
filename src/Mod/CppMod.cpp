@@ -14,17 +14,19 @@ namespace RC
 
         if (!std::filesystem::exists(m_dlls_path))
         {
-            Output::send<LogLevel::Warning>(STR("Could not find the dlls folder for mod {}"), m_mod_name);
+            Output::send<LogLevel::Warning>(STR("Could not find the dlls folder for mod {}\n"), m_mod_name);
             set_installable(false);
             return;
         }
 
         auto dll_path = m_dlls_path + L"\\main.dll";
+        // Add mods dlls directory to search path for dynamic/shared linked libraries in mods
+        m_dlls_path_cookie = AddDllDirectory(m_dlls_path.c_str());
         m_main_dll_module = LoadLibraryW(dll_path.c_str());
 
         if (!m_main_dll_module)
         {
-            Output::send<LogLevel::Warning>(STR("Failed to load dll <{}> for mod {}, error code: 0x{:x}"), dll_path, m_mod_name, GetLastError());
+            Output::send<LogLevel::Warning>(STR("Failed to load dll <{}> for mod {}, error code: 0x{:x}\n"), dll_path, m_mod_name, GetLastError());
             set_installable(false);
             return;
         }
@@ -34,7 +36,7 @@ namespace RC
 
         if (!m_start_mod_func || !m_uninstall_mod_func)
         {
-            Output::send<LogLevel::Warning>(STR("Failed to find exported mod lifecycle functions for mod {}"), m_mod_name);
+            Output::send<LogLevel::Warning>(STR("Failed to find exported mod lifecycle functions for mod {}\n"), m_mod_name);
 
             FreeLibrary(m_main_dll_module);
             m_main_dll_module = NULL;
@@ -55,7 +57,7 @@ namespace RC
         {
             if (!Output::has_internal_error())
             {
-                Output::send<LogLevel::Warning>(STR("Failed to load dll <{}> for mod {}, because: {}\n"), m_dlls_path + L"\\main.dll", m_mod_name, to_wstring(e.what()));
+                Output::send<LogLevel::Warning>(STR("Failed to load dll <{}> for mod {}, because: {}\n"), m_dlls_path + L"\\main.dll\n", m_mod_name, to_wstring(e.what()));
             }
             else
             {
@@ -68,6 +70,11 @@ namespace RC
     {
         Output::send(STR("Stopping C++ mod '{}' for uninstall\n"), m_mod_name);
         if (m_mod && m_uninstall_mod_func) { m_uninstall_mod_func(m_mod); }
+    }
+
+    auto CppMod::fire_on_lua_start(LuaMadeSimple::Lua& lua, LuaMadeSimple::Lua& main_lua, LuaMadeSimple::Lua& async_lua, std::vector<LuaMadeSimple::Lua*>& hook_luas) -> void
+    {
+        if (m_mod) { m_mod->on_lua_start(lua, main_lua, async_lua, hook_luas); }
     }
 
     auto CppMod::fire_unreal_init() -> void
@@ -85,8 +92,16 @@ namespace RC
         if (m_mod) { m_mod->on_update(); }
     }
 
+    auto CppMod::fire_dll_load(std::wstring_view dll_name) -> void
+    {
+        if (m_mod) { m_mod->on_dll_load(dll_name); }
+    }
+
     CppMod::~CppMod()
     {
-        if (m_main_dll_module) { FreeLibrary(m_main_dll_module); }
+        if (m_main_dll_module) { 
+            FreeLibrary(m_main_dll_module); 
+            RemoveDllDirectory(m_dlls_path_cookie);
+        }
     }
 }

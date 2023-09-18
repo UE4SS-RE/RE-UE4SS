@@ -10,6 +10,8 @@ on:
       - "generated_src/**"
       - "generated_include/**"
       - "Dependencies/**"
+      - "proxy"
+      - "proxy_generator"
 
 permissions:
   contents: read
@@ -38,6 +40,14 @@ jobs:
       - name: Setup Ninja
         uses: seanmiddleditch/gha-setup-ninja@v3
 
+      - name: Setup DirectX SDK (for xinput1_3.dll)
+        run: |
+          Invoke-WebRequest -URI https://download.microsoft.com/download/8/4/A/84A35BF1-DAFE-4AE8-82AF-AD2AE20B6B14/directx_Jun2010_redist.exe -OutFile dxredist.exe
+          Start-Process -Wait dxredist.exe -ArgumentList "/q /t:`"$PWD/dxredist`" /c"
+          Start-Process -Wait dxredist/DXSETUP.exe /silent
+          Invoke-WebRequest -URI https://download.microsoft.com/download/1/7/1/1718CCC4-6315-4D8E-9543-8E28A4E18C4C/dxwebsetup.exe -OutFile dxwebsetup.exe
+          Start-Process -Wait dxwebsetup.exe /q
+
       - name: Build
         run: |
           cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
@@ -53,9 +63,7 @@ jobs:
           tag_name: experimental
           body_path: release/release_notes.md
           files: |
-            release/UE4SS_Standard_v*.zip
-            release/UE4SS_Xinput_v*.zip
-            release/zDEV-UE4SS_Standard_v*.zip
-            release/zDEV-UE4SS_Xinput_v*.zip
+            release/UE4SS_v*.zip
+            release/zDEV-UE4SS_v*.zip
             release/zCustomGameConfigs.zip
             release/zMapGenBP.zip

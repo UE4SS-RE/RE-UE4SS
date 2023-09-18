@@ -1,5 +1,4 @@
-#ifndef RC_FILE_WINFILE_HPP
-#define RC_FILE_WINFILE_HPP
+#pragma once
 
 #include <filesystem>
 #include <format>
@@ -92,4 +91,4 @@ namespace RC::File
 }
 
 
-#endif //RC_FILE_WINFILE_HPP
+

@@ -8,6 +8,7 @@
 #include <limits>
 
 #include <Mod/LuaMod.hpp>
+#include <Mod/CppMod.hpp>
 #include <Helpers/Format.hpp>
 #include <Helpers/String.hpp>
 #include <ExceptionHandling.hpp>
@@ -54,7 +55,7 @@
 #include <Unreal/Property/FTextProperty.hpp>
 #include <Unreal/Property/FStrProperty.hpp>
 #include <UnrealCustom/CustomProperty.hpp>
-#include <Unreal/PrimitiveTypes.hpp>
+#include <Unreal/Core/HAL/Platform.hpp>
 #include <Unreal/UKismetSystemLibrary.hpp>
 #include <Unreal/Hooks.hpp>
 #pragma warning(default: 4005)
@@ -2213,7 +2214,7 @@ Overloads:
             bool was_asset_found{};
             bool did_asset_load{};
             Unreal::FAssetData asset_data = asset_registry->GetAssetByObjectPath(asset_path_and_name);
-            if (asset_data.ObjectPath().GetComparisonIndex())
+            if ((Unreal::Version::IsAtMost(5, 0) && asset_data.ObjectPath().GetComparisonIndex()) || asset_data.PackageName().GetComparisonIndex())
             {
                 was_asset_found = true;
                 loaded_asset = Unreal::UAssetRegistryHelpers::GetAsset(asset_data);
@@ -2655,7 +2656,7 @@ Overloads:
             else
             {
                 std::string error_message{"Was unable to register a hook with Lua function 'RegisterHook', information:\n"};
-                error_message.append(std::format("UFunction::Func: {}\n", func_ptr));
+                error_message.append(std::format("UFunction::Func: {}\n", std::bit_cast<void*>(func_ptr)));
                 error_message.append(std::format("ProcessInternal: {}\n", Unreal::UObject::ProcessInternalInternal.get_function_address()));
                 error_message.append(std::format("FUNC_Native: {}\n", static_cast<uint32_t>(unreal_function->HasAnyFunctionFlags(Unreal::EFunctionFlags::FUNC_Native))));
                 lua.throw_error(error_message);
@@ -2907,11 +2908,22 @@ Overloads:
         lua_setglobal(lua.get_lua_state(), "__OriginalReturnValue");
     }
 
+    auto LuaMod::fire_on_lua_start_for_cpp_mod() -> void
+    {
+        auto cpp_mod = UE4SSProgram::find_mod_by_name<CppMod>(get_name(), UE4SSProgram::IsInstalled::Yes);
+        if (cpp_mod)
+        {
+            cpp_mod->fire_on_lua_start(m_lua, *m_main_lua, *m_async_lua, m_hook_lua);
+        }
+    }
+
     auto LuaMod::start_mod() -> void
     {
         prepare_mod(lua());
         make_main_state(this, lua());
         setup_lua_global_functions_main_state_only();
+
+        fire_on_lua_start_for_cpp_mod();
 
         make_async_state(this, lua());
 

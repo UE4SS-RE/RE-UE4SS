@@ -1,5 +1,4 @@
-#ifndef RC_JSON_COMMON_HPP
-#define RC_JSON_COMMON_HPP
+#pragma once
 
 #ifndef RC_JSON_EXPORTS
 #ifndef RC_JSON_BUILD_STATIC
@@ -41,4 +40,4 @@ namespace RC::JSON
     }
 }
 
-#endif //RC_JSON_COMMON_HPP
+

@@ -1,5 +1,4 @@
-#ifndef UE4SS_REWRITTEN_UNREALDEF_HPP
-#define UE4SS_REWRITTEN_UNREALDEF_HPP
+#pragma once
 
 #pragma warning(disable: 4005)
 #include <Unreal/UObjectGlobals.hpp>
@@ -31,7 +30,6 @@
 #include <Unreal/Property/FSoftClassProperty.hpp>
 #include <Unreal/Property/FEnumProperty.hpp>
 #include <Unreal/Property/FFieldPathProperty.hpp>
-//#include <Unreal/XStructData.hpp>
 #include <Unreal/FFrame.hpp>
 #include <Unreal/UEnum.hpp>
 #include <Unreal/FWeakObjectPtr.hpp>
@@ -73,7 +71,6 @@ namespace RC
     template<typename T>
     using TArray = Unreal::TArray<T>;
     using UFunction = Unreal::UFunction;
-    using XStruct = Unreal::XStructData;
     template<typename T1, typename T2>
     using TMap = Unreal::TMap<T1, T2>;
 
@@ -97,4 +94,4 @@ namespace RC
     using UAssetRegistryHelpers = Unreal::UAssetRegistryHelpers;
 }
 
-#endif //UE4SS_REWRITTEN_UNREALDEF_HPP
+

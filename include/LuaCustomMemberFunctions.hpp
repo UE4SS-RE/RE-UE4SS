@@ -1,10 +1,9 @@
-#ifndef UE4SS_LUACUSTOMMEMBERFUNCTIONS_HPP
-#define UE4SS_LUACUSTOMMEMBERFUNCTIONS_HPP
+#pragma once
 
 #include <unordered_map>
 
 #include <lua.hpp>
-#include <Unreal/PrimitiveTypes.hpp>
+#include <Unreal/Core/HAL/Platform.hpp>
 #include <Unreal/FScriptArray.hpp>
 #include <Unreal/Property/FArrayProperty.hpp>
 #include <Unreal/UObject.hpp>
@@ -394,4 +393,4 @@ namespace RC::UnrealRuntimeTypes
     };
 }
 
-#endif //UE4SS_LUACUSTOMMEMBERFUNCTIONS_HPP
+

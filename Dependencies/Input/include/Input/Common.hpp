@@ -1,5 +1,4 @@
-#ifndef RC_INPUT_COMMON_HPP
-#define RC_INPUT_COMMON_HPP
+#pragma once
 
 #ifndef RC_INPUT_EXPORTS
 #ifndef RC_INPUT_BUILD_STATIC
@@ -17,4 +16,4 @@
 #endif
 #endif
 
-#endif //RC_INPUT_COMMON_HPP
+

@@ -1,5 +1,4 @@
-#ifndef RC_FUNCTION_HPP
-#define RC_FUNCTION_HPP
+#pragma once
 
 #include <bit>
 #include <stdexcept>
@@ -23,9 +22,9 @@ namespace RC
         Function& operator=(Function&&) = delete;
 
         using FunctionSignature = ReturnType(*)(Params...);
-        FunctionSignature m_active_func;
-        FunctionSignature m_stored_original_func;
-        void* m_function_address;
+        FunctionSignature m_active_func{};
+        FunctionSignature m_stored_original_func{};
+        void* m_function_address{};
         bool m_is_ready = false;
 
     public:
@@ -51,7 +50,6 @@ namespace RC
         // Used as a helper when you only have a void* and it needs to be converted to a real function pointer
         auto assign_address(void* func_address) -> void
         {
-            if (!func_address) { throw std::runtime_error{"Tried to set the function pointer of a Function object to nullptr"}; }
             m_active_func = std::bit_cast<FunctionSignature>(func_address);
             m_stored_original_func = m_active_func;
             m_function_address = func_address;
@@ -102,9 +100,9 @@ namespace RC
         auto operator()(Params... params) -> ReturnType
         {
             if (!this->m_is_ready) { throw std::runtime_error{"Function object not ready but was called anyway"}; }
-            return this->m_active_func(params...);
+            return this->m_active_func(std::forward<Params>(params)...);
         }
     };
 }
 
-#endif //RC_FUNCTION_HPP
+

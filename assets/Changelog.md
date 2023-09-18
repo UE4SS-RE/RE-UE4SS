@@ -6,17 +6,56 @@ TBD
 ### General
 Added support for UE Version 5.2 games
 
+Changed to a new proxy DLL loading system. - LocalCC  
+Different proxy DLLs can now easily be compiled for cases where xinput1_3 cannot be used for any reason.  
+Alternative proxys may be compiled by specifying `-DUE4SS_PROXY_PATH=/Path/To/DLL.dll` when running the CMake command.
+
+Added additional AOB for `FName::ToString` - LongerWarrior
+
+The shortcut (CTRL + O) for opening the GUI is now a toggle, meaning it can also be used for closing the GUI
+
+The shortcut (previously J) for dumping objects (generating UE4SS_ObjectDump.txt) has been changed to CTRL + J
+
+The shortcut (previously D) for generating CXX headers has been changed to CTRL + H
+
+
 ### C++ API
-Finalize C++ API and add required dll to builds - LocalCC; Truman
+Finalize C++ API. - LocalCC; Truman
+
+Removed need for "cppsdk" when linking C++ mods.  This is due to the new proxy system. - LocalCC  
+Due to the above change, C++ mods now only need to link to UE4SS.
+
+C++ mods are now loaded earlier, and will keep the game from starting until all mods have finished executing their `start_mod` function
 
 Expose IMGui to C++ mods - Truman
 
-Fixed initialization functions not being correctly called when a mod is restarted - LocalCC
+Added `on_lua_start` for C++ mods.  
+This function fires whenever a Lua mod by the same name as the C++ mod is started.  
+It allows interactions with Lua from C++ mods.
 
-Fixed attempted mod loading when cppsdk doesn't exist - LocalCC
+Added `UFunction::RegisterPreHookForInstance` and `UFunction::RegisterPostHookForInstance`  
+These functions work the same as `UFunction::RegisterPreHook`/`UFunction::RegisterPostHook` except the callback is only fired if the context matches the specified instance  
+These new functions need to be handled with care as they can cause crashes if you don't validate that the instance you're passing during registration is valid inside the callback
+
+Added overloads for `UObject::GetFunctionByName` and `UObject::GetFunctionByNameInChain` that take an `FName` instead of a string
+
+Added `UEnum::NumEnums`, which returns the number of enum values for the enum
+
+Added `UEnum::GenerateEnumPrefix`, which is the same as https://docs.unrealengine.com/5.2/en-US/API/Runtime/CoreUObject/UObject/UEnum/GenerateEnumPrefix/
 
 ### Live View
 Can now view enum values in the Live View debugger
+
+Added a search option to exclude objects of a class with a name containing the specified (case-sensitive) string
+
+Added a checkbox that toggles search options globally, meaning when not searching
+
+### UHT Dumper
+Removed unnecessary explicit `_MAX` elements from enums
+
+Fixed enums inappropriately using `uint8`
+
+Made `FWeakObjectPtr` overridable unless used in a TArray or TMap
 
 ### Experimental
 Added ExperimentalFeatures section to UE4SS-settings.ini.  All experimental features will default to being turned off.  To use referenced features, change the relevant config setting to = 1
@@ -33,8 +72,21 @@ Fix case preserving names switch - LocalCC
 
 Add common TArray instantiations
 
+### C++ API
+Fixed FText constructor implementation via optional AOB - LocalCC
+
+Fixed initialization functions not being correctly called when a mod is restarted - LocalCC
+
+Fixed C++ mods not loading if a Lua mod with the same name is present
+
 ### Lua API
 Fixed unregisterhook
+
+Fixed FText:ToString - LocalCC
+
+Improved stability when using hooks or `ExecuteInGameThread`
+
+TArrays are now resized when indexing into them
 
 ## Changes
 
@@ -43,6 +95,9 @@ Add additional extensions - Atenfyr; Archengius
 
 Fix bug with enums with 256 entries - Atenfyr
 
+### C++ API
+The callbacks for all hook registration functions inside the `Unreal::Hook` namespace can now take lambdas that capture variables
+
 ### Sig Scanner
 Change AOB Sig Scanner backend to use std::find for major performance increase - inspired by Truman
 
@@ -50,6 +105,12 @@ Scan for specified time rather than number of attempts due to speed increase
 
 ### Performance
 Change to generators for certain major iterators - LocalCC
+
+Improved performance for U/FProperty lookups
+
+Improved performance for UFunction lookups
+
+Improved performance of the live log, it's now O(n) - trumank
 
 ### BP Mod Loader
 Add ability to specify load order - Okaetsu

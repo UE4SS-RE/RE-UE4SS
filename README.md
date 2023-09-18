@@ -4,16 +4,16 @@ Lua scripting system platform, C++ Modding API, SDK generator, blueprint mod loa
 
 ## Major features
 
-- [Lua Scripting API](https://uess.dev/dev/lua-api.html): Write lua mods based on the UE object system
-- [Blueprint Modloading](https://uess.dev/dev/feature-overview/blueprint-modloader.html): Spawn blueprint mods automatically without editing/replacing game files
-- [C++ Modding API](https://uess.dev/dev/guides/creating-a-c%2B%2B-mod.html): Write C++ mods based on the UE object system
-- [Live Property Viewer and Editor](https://uess.dev/dev/feature-overview/live-view.html): Search, view, edit & watch the properties of every loaded object, great for debugging mods or figuring out how values are changed during runtime
-- [UHT Dumper](https://uess.dev/dev/feature-overview/dumpers.html#unreal-header-tool-uht-dumper): Generate Unreal Header Tool compatible C++ headers for creating a mirror .uproject for your game
-- [C++ Header Dumper](https://uess.dev/dev/feature-overview/dumpers.html#c-header-generator): Generate standard C++ headers from reflected classes and blueprints, with offsets
-- [Universal UE Mods](https://uess.dev/dev/feature-overview/universal-mods.html): Unlock the game console and other universal mods
-- [Dumpers for File Parsing](https://uess.dev/dev/feature-overview/dumpers.html#usmap-dumper): Generate `.usmap` mapping files for unversioned properties
-- [UMAP Recreation Dumper](https://uess.dev/dev/feature-overview/dumpers.html#umap-recreation-dumper): Dump all loaded actors to file to generate `.umaps` in-editor
-- Other Features, including [Experimental](https://uess.dev/dev/feature-overview/experimental.html) features at times
+- [Lua Scripting API](https://docs.ue4ss.com/dev/lua-api.html): Write lua mods based on the UE object system
+- [Blueprint Modloading](https://docs.ue4ss.com/dev/feature-overview/blueprint-modloader.html): Spawn blueprint mods automatically without editing/replacing game files
+- [C++ Modding API](https://docs.ue4ss.com/dev/guides/creating-a-c%2B%2B-mod.html): Write C++ mods based on the UE object system
+- [Live Property Viewer and Editor](https://docs.ue4ss.com/dev/feature-overview/live-view.html): Search, view, edit & watch the properties of every loaded object, great for debugging mods or figuring out how values are changed during runtime
+- [UHT Dumper](https://docs.ue4ss.com/dev/feature-overview/dumpers.html#unreal-header-tool-uht-dumper): Generate Unreal Header Tool compatible C++ headers for creating a mirror .uproject for your game
+- [C++ Header Dumper](https://docs.ue4ss.com/dev/feature-overview/dumpers.html#c-header-generator): Generate standard C++ headers from reflected classes and blueprints, with offsets
+- [Universal UE Mods](https://docs.ue4ss.com/dev/feature-overview/universal-mods.html): Unlock the game console and other universal mods
+- [Dumpers for File Parsing](https://docs.ue4ss.com/dev/feature-overview/dumpers.html#usmap-dumper): Generate `.usmap` mapping files for unversioned properties
+- [UMAP Recreation Dumper](https://docs.ue4ss.com/dev/feature-overview/dumpers.html#umap-recreation-dumper): Dump all loaded actors to file to generate `.umaps` in-editor
+- Other Features, including [Experimental](https://docs.ue4ss.com/dev/feature-overview/experimental.html) features at times
 
 ## Targeting UE Versions: From 4.12 To 5.2
 
@@ -29,19 +29,21 @@ If your game is in the custom config list, extract the contents from the relevan
 
 ## Links
 
-  [Full installation guide](https://uess.dev/dev/installation-guide.html)
+  [Full installation guide](https://docs.ue4ss.com/dev/installation-guide.html)
 
-  [Fixing compatibility problems](https://uess.dev/dev/guides/fixing-compatibility-problems.html)
+  [Fixing compatibility problems](https://docs.ue4ss.com/dev/guides/fixing-compatibility-problems.html)
 
-  [Lua API - Overview](https://uess.dev/dev/lua-api.html)
+  [Lua API - Overview](https://docs.ue4ss.com/dev/lua-api.html)
 
-  [Generating UHT compatible headers](https://uess.dev/dev/guides/generating-uht-compatible-headers.html)
+  [Generating UHT compatible headers](https://docs.ue4ss.com/dev/guides/generating-uht-compatible-headers.html)
 
-  [Custom Game Configs](https://uess.dev/dev/custom-game-configs.html)
+  [Custom Game Configs](https://docs.ue4ss.com/dev/custom-game-configs.html)
 
   [Creating Compatible Blueprint Mods](https://www.youtube.com/watch?v=fB3yT85XhVA)
 
-  [Unreal Engine Modding Server Invite](https://discord.gg/zVvsE9mEEa) - For discussion of UE4SS
+  [UE4SS Discord Server Invite](https://discord.gg/7qhRGHF9Tt)
+
+  [Unreal Engine Modding Discord Server Invite](https://discord.gg/zVvsE9mEEa)
 
 ## Build requirements
 

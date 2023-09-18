@@ -1,5 +1,4 @@
-#ifndef RC_FUNCTION_TIMER_HPP
-#define RC_FUNCTION_TIMER_HPP
+#pragma once
 
 #include <vector>
 #include <unordered_map>
@@ -267,4 +266,4 @@ FunctionTimerFrameGuard function_timer_frame_guard{function_timer_frame ? functi
 
 }
 
-#endif //RC_FUNCTION_TIMER_HPP
+

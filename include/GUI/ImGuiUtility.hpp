@@ -1,5 +1,4 @@
-#ifndef UE4SS_GUI_IMGUI_UTILITY_HPP
-#define UE4SS_GUI_IMGUI_UTILITY_HPP
+#pragma once
 
 #include <JSON/JSON.hpp>
 //#include <JSONParser/JSON.hpp>
@@ -17,4 +16,4 @@ namespace RC::GUI
     auto ImGui_TreeNodeEx(const char* label, const char* str_id, ImGuiTreeNodeFlags flags) -> bool;
 }
 
-#endif //UE4SS_GUI_IMGUI_UTILITY_HPP
+

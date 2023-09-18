@@ -1,5 +1,6 @@
 #define NOMINMAX
 #include <Windows.h>
+#include <tlhelp32.h>
 #include <cstdio>
 #include <iostream>
 #include <future>
@@ -9,27 +10,18 @@
 #include <Helpers/String.hpp>
 #include "UE4SSProgram.hpp"
 
-#if UE4SS_LIB_BUILD_AS_XINPUT
-#define WIN_API_FUNCTION_NAME DllMain_Wrapped
-#else
 #define WIN_API_FUNCTION_NAME DllMain
-#endif
 
 using namespace RC;
 
 // We're outside DllMain here
-auto thread_dll_start([[maybe_unused]]LPVOID thread_param) -> unsigned long
+auto thread_dll_start(UE4SSProgram* program) -> unsigned long
 {
     // Wrapper for entire program
     // Everything must be channeled through MProgram
     // One of the purposes for this is to forward any errors to main so that we can close or keep the window/console open
     // There is atleast one more purpose but I forgot what it was...
-
-    HMODULE moduleHandle = reinterpret_cast<HMODULE>(thread_param);
-    wchar_t moduleFilenameBuffer[1024] {'\0'};
-    GetModuleFileNameW(moduleHandle, moduleFilenameBuffer, sizeof(moduleFilenameBuffer) / sizeof(wchar_t));
-
-    auto program = new UE4SSProgram(moduleFilenameBuffer, {});
+    program->init();
 
     if (auto e = program->get_error_object(); e->has_error())
     {
@@ -48,12 +40,65 @@ auto thread_dll_start([[maybe_unused]]LPVOID thread_param) -> unsigned long
     return 0;
 }
 
+auto process_initialized(HMODULE moduleHandle) -> void
+{
+    wchar_t moduleFilenameBuffer[1024]{'\0'};
+    GetModuleFileNameW(moduleHandle, moduleFilenameBuffer, sizeof(moduleFilenameBuffer) / sizeof(wchar_t));
+
+    auto program = new UE4SSProgram(moduleFilenameBuffer, {});
+    if (HANDLE handle = CreateThread(nullptr, 0, reinterpret_cast<LPTHREAD_START_ROUTINE>(thread_dll_start), (LPVOID)program, 0, nullptr); handle) { CloseHandle(handle); }
+}
+
+auto get_main_thread_id() -> DWORD
+{
+    HANDLE snapshot = CreateToolhelp32Snapshot(TH32CS_SNAPTHREAD, 0);
+    if (snapshot == INVALID_HANDLE_VALUE) { return 0; }
+
+    DWORD currentPid = GetCurrentProcessId();
+
+    THREADENTRY32 th32;
+    th32.dwSize = sizeof(THREADENTRY32);
+
+    uint64_t earliestCreationTime = std::numeric_limits<uint64_t>::max();
+    DWORD mainThreadId = 0;
+    
+    for (Thread32First(snapshot, &th32); Thread32Next(snapshot, &th32);) {
+        if (th32.th32OwnerProcessID != currentPid) { continue; }
+
+        HANDLE thread = OpenThread(THREAD_QUERY_INFORMATION, false, th32.th32ThreadID);
+        if (!thread) { continue; }
+
+        FILETIME threadTimes[4];
+        if (!GetThreadTimes(thread, &threadTimes[0], &threadTimes[1], &threadTimes[2], &threadTimes[3])) 
+        { 
+            CloseHandle(thread);
+            continue;
+        }
+
+        uint64_t creationTime = ((uint64_t)threadTimes[0].dwHighDateTime << 32) | threadTimes[0].dwLowDateTime;
+        if (creationTime < earliestCreationTime)
+        {
+            earliestCreationTime = creationTime;
+            mainThreadId = th32.th32ThreadID;
+        }
+
+        CloseHandle(thread);
+    }
+
+    return mainThreadId;
+}
+
 // We're still inside DllMain so be careful what you do here
 auto dll_process_attached(HMODULE moduleHandle) -> void
 {
-    if (HANDLE handle = CreateThread(nullptr, 0, reinterpret_cast<LPTHREAD_START_ROUTINE>(thread_dll_start), moduleHandle, 0, nullptr); handle)
+    // injected through proxy
+    if (GetCurrentThreadId() == get_main_thread_id())
     {
-        CloseHandle(handle);
+        QueueUserAPC((PAPCFUNC)process_initialized, GetCurrentThread(), (ULONG_PTR)moduleHandle);
+    }
+    else // injected manually -> thread id different from main
+    {
+        process_initialized(moduleHandle);
     }
 }
 

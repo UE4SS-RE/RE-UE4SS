@@ -1,5 +1,4 @@
-#ifndef RC_EXPERIMENTAL_PARSER_HPP
-#define RC_EXPERIMENTAL_PARSER_HPP
+#pragma once
 
 #include <ProtoParser/Tokenizer.hpp>
 #include <ProtoParser/TokenParser.hpp>
@@ -130,4 +129,4 @@ namespace RC::Parser::Experimental
     auto test() -> void;
 }
 
-#endif //RC_EXPERIMENTAL_PARSER_HPP
+

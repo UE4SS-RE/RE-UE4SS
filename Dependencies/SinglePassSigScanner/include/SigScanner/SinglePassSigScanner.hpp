@@ -1,5 +1,4 @@
-#ifndef RC_SINGLE_PASS_SIG_SCANNER_HPP
-#define RC_SINGLE_PASS_SIG_SCANNER_HPP
+#pragma once
 
 #include <array>
 #include <vector>
@@ -325,4 +324,4 @@ namespace RC
 }
 
 
-#endif //RC_SINGLE_PASS_SIG_SCANNER_HPP
+

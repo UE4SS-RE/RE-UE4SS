@@ -1,5 +1,4 @@
-#ifndef UE4SS_REWRITTEN_SIGNATURES_HPP
-#define UE4SS_REWRITTEN_SIGNATURES_HPP
+#pragma once
 
 #include <functional>
 
@@ -27,4 +26,4 @@ namespace RC
     auto setup_lua_scan_overrides(std::filesystem::path& working_directory, Unreal::UnrealInitializer::Config&) -> void;
 }
 
-#endif //UE4SS_REWRITTEN_SIGNATURES_HPP
+

@@ -1,5 +1,4 @@
-#ifndef UE4SS_REWRITTEN_LUAUOBJECT_HPP
-#define UE4SS_REWRITTEN_LUAUOBJECT_HPP
+#pragma once
 
 #define NOMINMAX
 
@@ -567,7 +566,7 @@ Overloads:
         {
             auto& lua_object = lua.get_userdata<SelfType>();
 
-            std::wstring member_name = to_wstring(lua.get_string());
+            const std::wstring& member_name = to_const_wstring(lua.get_string());
 
             // If nullptr then we assume the UObject wasn't found so lets return an invalid UObject to Lua
             // This allows the safe chaining of "__index" as long as the Lua script checks ":IsValid()" before using the object
@@ -767,4 +766,4 @@ Overloads:
 }
 
 
-#endif //UE4SS_REWRITTEN_LUAUOBJECT_HPP
+

@@ -1,5 +1,4 @@
-#ifndef RC_ERROR_OBJECT_HPP
-#define RC_ERROR_OBJECT_HPP
+#pragma once
 
 #include <cstdio>
 
@@ -95,4 +94,4 @@ namespace RC
     };
 }
 
-#endif //RC_ERROR_OBJECT_HPP
+

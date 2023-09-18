@@ -1,5 +1,4 @@
-#ifndef RC_FUNCTION_TIMER_COMMON_HPP
-#define RC_FUNCTION_TIMER_COMMON_HPP
+#pragma once
 
 #ifndef RC_FUNCTION_TIMER_EXPORTS
 #ifndef RC_FUNCTION_TIMER_BUILD_STATIC
@@ -17,4 +16,4 @@
 #endif
 #endif
 
-#endif //RC_FUNCTION_TIMER_COMMON_HPP
+

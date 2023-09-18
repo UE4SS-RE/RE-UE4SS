@@ -1,5 +1,4 @@
-#ifndef UE4SS_SETTINGSMANAGER_HPP
-#define UE4SS_SETTINGSMANAGER_HPP
+#pragma once
 
 #include <cstdint>
 #include <filesystem>
@@ -101,4 +100,4 @@ namespace RC
     };
 }
 
-#endif //UE4SS_SETTINGSMANAGER_HPP
+

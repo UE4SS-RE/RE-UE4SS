@@ -1,12 +1,13 @@
 #include <LuaType/LuaFText.hpp>
 #include <Unreal/FText.hpp>
 #include <Unreal/FString.hpp>
+#include <DynamicOutput/DynamicOutput.hpp>
 
 namespace RC::LuaType
 {
-    FText::FText(Unreal::FText* object) : RemoteObjectBase<Unreal::FText, FTextName>(object) {}
+    FText::FText(Unreal::FText object) : LocalObjectBase<Unreal::FText, FTextName>(std::move(object)) {}
 
-    auto FText::construct(const LuaMadeSimple::Lua& lua, Unreal::FText* unreal_object) -> const LuaMadeSimple::Lua::Table
+    auto FText::construct(const LuaMadeSimple::Lua& lua, Unreal::FText unreal_object) -> const LuaMadeSimple::Lua::Table
     {
         LuaType::FText lua_object{unreal_object};
 
@@ -48,9 +49,10 @@ namespace RC::LuaType
     auto FText::setup_member_functions(const LuaMadeSimple::Lua::Table& table) -> void
     {
         table.add_pair("ToString", [](const LuaMadeSimple::Lua& lua) -> int {
-            const auto& lua_object = lua.get_userdata<FText>();
+            auto& lua_object = lua.get_userdata<FText>();
 
-            lua.set_string(to_string(lua_object.get_remote_cpp_object()->ToString()));
+            const auto& fstring = lua_object.get_local_cpp_object().ToFString();
+            lua.set_string(to_string(fstring.GetCharArray()));
 
             return 1;
         });

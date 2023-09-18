@@ -1,5 +1,4 @@
-#ifndef UE4SS_CONSOLE_OUTPUT_DEVICE_HPP
-#define UE4SS_CONSOLE_OUTPUT_DEVICE_HPP
+#pragma once
 
 #ifdef UE4SS_CONSOLE_COLORS_ENABLED
 #include <mutex>
@@ -37,4 +36,4 @@ namespace RC::Output
 }
 
 
-#endif //UE4SS_CONSOLE_OUTPUT_DEVICE_HPP
+

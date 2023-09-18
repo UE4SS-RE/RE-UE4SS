@@ -1,5 +1,4 @@
-#ifndef UE4SS_REWRITTEN_LUAMOD_HPP
-#define UE4SS_REWRITTEN_LUAMOD_HPP
+#pragma once
 
 #include <string>
 #include <chrono>
@@ -129,6 +128,7 @@ namespace RC
         auto setup_lua_global_functions(const LuaMadeSimple::Lua& lua) const -> void;
         auto setup_lua_global_functions_main_state_only() const -> void;
         auto setup_lua_classes(const LuaMadeSimple::Lua& lua) const -> void;
+        auto fire_on_lua_start_for_cpp_mod() -> void;
 
     public:
         auto start_mod() -> void override;
@@ -172,4 +172,3 @@ namespace RC
     };
 }
 
-#endif //UE4SS_REWRITTEN_LUAMOD_HPP

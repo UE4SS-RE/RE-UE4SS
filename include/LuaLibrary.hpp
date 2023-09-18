@@ -1,5 +1,4 @@
-#ifndef UE4SS_REWRITTEN_LUALIBRARY_HPP
-#define UE4SS_REWRITTEN_LUALIBRARY_HPP
+#pragma once
 
 #include <cstdint>
 #include <Common.hpp>
@@ -100,4 +99,4 @@ namespace RC::LuaLibrary
 };
 
 
-#endif //UE4SS_REWRITTEN_LUALIBRARY_HPP
+

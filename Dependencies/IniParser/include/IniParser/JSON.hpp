@@ -1,5 +1,4 @@
-#ifndef RC_JSON_PARSER_HPP
-#define RC_JSON_PARSER_HPP
+#pragma once
 
 #include <vector>
 #include <memory>
@@ -199,4 +198,4 @@ namespace RC::Parser
     };
 }
 
-#endif //RC_JSON_PARSER_HPP
+

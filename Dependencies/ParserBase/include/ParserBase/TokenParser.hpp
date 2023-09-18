@@ -1,5 +1,4 @@
-#ifndef RC_PARSER_TOKENPARSER_HPP
-#define RC_PARSER_TOKENPARSER_HPP
+#pragma once
 
 #include <vector>
 #include <optional>
@@ -95,4 +94,4 @@ namespace RC::ParserBase
     };
 }
 
-#endif // RC_PARSER_TOKENPARSER_HPP
+

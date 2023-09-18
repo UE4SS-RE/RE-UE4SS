@@ -1,5 +1,4 @@
-#ifndef UE4SS_REWRITTEN_LUAFTEXT_HPP
-#define UE4SS_REWRITTEN_LUAFTEXT_HPP
+#pragma once
 
 #include <LuaType/LuaUObject.hpp>
 #include <LuaMadeSimple/LuaMadeSimple.hpp>
@@ -12,14 +11,14 @@ namespace RC::Unreal
 namespace RC::LuaType
 {
     struct FTextName { constexpr static const char* ToString() { return "FText"; }};
-    class FText : public RemoteObjectBase<Unreal::FText, FTextName>
+    class FText : public LocalObjectBase<Unreal::FText, FTextName>
     {
     private:
-        explicit FText(Unreal::FText* object);
+        explicit FText(Unreal::FText object);
 
     public:
         FText() = delete;
-        auto static construct(const LuaMadeSimple::Lua&, Unreal::FText*) -> const LuaMadeSimple::Lua::Table;
+        auto static construct(const LuaMadeSimple::Lua&, Unreal::FText) -> const LuaMadeSimple::Lua::Table;
         auto static construct(const LuaMadeSimple::Lua&, BaseObject&) -> const LuaMadeSimple::Lua::Table;
 
     private:
@@ -32,4 +31,4 @@ namespace RC::LuaType
 }
 
 
-#endif //UE4SS_REWRITTEN_LUAFTEXT_HPP
+

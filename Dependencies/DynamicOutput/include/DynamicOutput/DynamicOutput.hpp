@@ -1,5 +1,4 @@
-#ifndef RC_DYNAMIC_OUTPUT_HPP
-#define RC_DYNAMIC_OUTPUT_HPP
+#pragma once
 
 // Include this file when using the default output devices
 
@@ -20,4 +19,4 @@ namespace RC::Output
     using DefaultFileDevice = FileDevice;
 }
 
-#endif //RC_DYNAMIC_OUTPUT_HPP
+

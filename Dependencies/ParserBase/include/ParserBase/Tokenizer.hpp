@@ -1,5 +1,4 @@
-#ifndef RC_PARSER_TOKENIZER_HPP
-#define RC_PARSER_TOKENIZER_HPP
+#pragma once
 
 #include <vector>
 #include <string>
@@ -50,4 +49,4 @@ namespace RC::ParserBase
     };
 }
 
-#endif //RC_PARSER_TOKENIZER_HPP
+

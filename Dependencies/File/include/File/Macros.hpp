@@ -1,5 +1,4 @@
-#ifndef RC_FILE_MACROS_HPP
-#define RC_FILE_MACROS_HPP
+#pragma once
 
 // Set this to 1 to use ANSI (char*) instead of wide strings (wchar_t*)
 #ifndef RC_IS_ANSI
@@ -67,4 +66,4 @@ namespace RC
     constexpr auto ToString = File::ToString;
 }
 
-#endif //RC_FILE_MACROS_HPP
+
