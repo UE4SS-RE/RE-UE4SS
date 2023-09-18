@@ -323,7 +323,7 @@ namespace RC
             else
             {
                 StringType error_message{STR("Was unable to register a hook with Lua function 'RegisterHook', information:\n")};
-                error_message.append(std::format(STR("UFunction::Func: {}\n"), func_ptr));
+                error_message.append(std::format(STR("UFunction::Func: {}\n"), std::bit_cast<void*>(func_ptr)));
                 error_message.append(std::format(STR("ProcessInternal: {}\n"), UObject::ProcessInternalInternal.get_function_address()));
                 error_message.append(std::format(STR("FUNC_Native: {}"), static_cast<uint32_t>(unreal_function->HasAnyFunctionFlags(EFunctionFlags::FUNC_Native))));
                 return exit_script_with_error<2>(state, error_message);

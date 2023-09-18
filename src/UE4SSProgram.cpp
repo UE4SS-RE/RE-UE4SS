@@ -327,7 +327,6 @@ namespace RC
             }
 
             fire_unreal_init_for_cpp_mods();
-            setup_unreal_properties();
             UAssetRegistry::SetMaxMemoryUsageDuringAssetLoading(settings_manager.Memory.MaxMemoryUsageDuringAssetLoading);
 
             output_all_member_offsets();

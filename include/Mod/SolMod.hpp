@@ -1,5 +1,4 @@
-#ifndef UE4SS_REWRITTEN_SOL_MOD_HPP
-#define UE4SS_REWRITTEN_SOL_MOD_HPP
+#pragma once
 
 #include <memory>
 #include <mutex>
@@ -89,5 +88,3 @@ namespace RC
         static auto global_uninstall() -> void;
     };
 }
-
-#endif // UE4SS_REWRITTEN_SOL_MOD_HPP

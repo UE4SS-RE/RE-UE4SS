@@ -1,10 +1,12 @@
-#ifndef UE4SS_REWRITTEN_SOL_HELPERS_HPP
-#define UE4SS_REWRITTEN_SOL_HELPERS_HPP
+#pragma once
 
 #include <type_traits>
 #include <string>
 #include <string_view>
 
+#ifdef check
+#undef check
+#endif
 #define SOL_ALL_SAFETIES_ON 1
 //#define SOL_SAFE_GETTER 0
 #define SOL_PRINT_ERRORS 0
@@ -25,6 +27,8 @@
 #include <Unreal/UEnum.hpp>
 #include <Unreal/World.hpp>
 #include <Unreal/AActor.hpp>
+#include <Unreal/UInterface.hpp>
+#include <Unreal/Property/FSoftObjectProperty.hpp>
 #include <map.h>
 
 #define SOL_REMOVE_CVREF(x) std::declval<x>()
@@ -378,9 +382,7 @@ namespace RC
     {
         class UObject;
         struct FWeakObjectPtr;
-        struct FSoftObjectPtr;
         class UClass;
-        class UInterface;
     }
     
     using namespace Unreal;
@@ -706,5 +708,3 @@ namespace RC
     auto lua_unreal_script_function_hook_pre(UnrealScriptFunctionCallableContext context, void* custom_data) -> void;
     auto lua_unreal_script_function_hook_post(UnrealScriptFunctionCallableContext context, void* custom_data) -> void;
 }
-
-#endif // UE4SS_REWRITTEN_SOL_HELPERS_HPP
