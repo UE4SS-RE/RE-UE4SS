@@ -67,6 +67,8 @@ endif()
 # Very temporary fix for ninja/clang thinking we should use MSVC simulation
 unset(CMAKE_CXX_SIMULATE_ID)
 
+message("CMAKE_CXX_COMPILER_ID: ${CMAKE_CXX_COMPILER_ID}")
+
 set(PRIVATE_COMPILE_DEFINITIONS
         $<${MAKE_DEPENDENCIES_SHARED}:RC_EXPORT RC_FUNCTION_EXPORTS>
         $<${MAKE_DEPENDENCIES_STATIC}:RC_FUNCTION_BUILD_STATIC>)
@@ -77,9 +79,22 @@ elseif (${CMAKE_CXX_COMPILER_ID} STREQUAL Clang)
     set(PRIVATE_COMPILE_OPTIONS "$<IF:$<COMPILE_LANGUAGE:ASM_MASM>,,-g;-gcodeview;-fcolor-diagnostics;-Wno-unknown-pragmas;-Wno-unused-parameter;-fms-extensions;-Wignored-attributes>")
     set(PRIVATE_LINK_OPTIONS "$<IF:$<COMPILE_LANGUAGE:ASM_MASM>,,-g>")
     add_compile_definitions(printf_s=printf)
+elseif (${CMAKE_CXX_COMPILER_ID} STREQUAL GNU)
+    set(PRIVATE_COMPILE_OPTIONS "$<IF:$<COMPILE_LANGUAGE:ASM_MASM>,,-fms-extensions>")
 endif ()
 set(PUBLIC_COMPILE_FEATURES cxx_std_20)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
+# CLion Fixes -> START
+# There's a bug with CLion that causes it to not recognize our API macros.
+# This in turn causes it to break completely as it cannot see our struct definitions properly.
+if ($ENV{CLION_IDE})
+    add_compile_definitions(
+            RC_UE4SS_API=
+            RC_UE_API=
+    )
+endif ()
+# CLion Fixes -> END
 
 set(UE4SS_COMPILE_DEFINITIONS
         RC_UE4SS_EXPORTS
