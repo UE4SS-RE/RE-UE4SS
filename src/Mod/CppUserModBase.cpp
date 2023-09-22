@@ -13,6 +13,15 @@ namespace RC
         }
     }
 
+    CppUserModBase::~CppUserModBase()
+    {
+        if (GUITab)
+        {
+            UE4SSProgram::get_program().remove_gui_tab(GUITab);
+            GUITab = nullptr;
+        }
+    }
+
     auto CppUserModBase::register_tab(std::wstring_view tab_name) -> void
     {
         GUITab = std::make_shared<GUI::GUITab>(tab_name, this);

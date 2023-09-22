@@ -43,7 +43,7 @@ namespace RC
 
     public:
         RC_UE4SS_API CppUserModBase();
-        RC_UE4SS_API virtual ~CppUserModBase() = default;
+        RC_UE4SS_API virtual ~CppUserModBase();
 
     public:
         RC_UE4SS_API auto virtual on_update() -> void {}
