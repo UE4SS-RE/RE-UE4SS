@@ -1,6 +1,5 @@
 #include <Mod/CppUserModBase.hpp>
 #include <Mod/CppMod.hpp>
-#include <GUI/GUITab.hpp>
 #include <UE4SSProgram.hpp>
 
 namespace RC
@@ -15,16 +14,19 @@ namespace RC
 
     CppUserModBase::~CppUserModBase()
     {
-        if (GUITab)
+        for (const auto& tab : GUITabs)
         {
-            UE4SSProgram::get_program().remove_gui_tab(GUITab);
-            GUITab = nullptr;
+            if (tab)
+            {
+                UE4SSProgram::get_program().remove_gui_tab(tab);
+            }
         }
+        GUITabs.clear();
     }
 
-    auto CppUserModBase::register_tab(std::wstring_view tab_name) -> void
+    auto CppUserModBase::register_tab(std::wstring_view tab_name, GUI::GUITab::RenderFunctionType render_function) -> void
     {
-        GUITab = std::make_shared<GUI::GUITab>(tab_name, this);
-        UE4SSProgram::get_program().add_gui_tab(GUITab);
+        auto& tab = GUITabs.emplace_back(std::make_shared<GUI::GUITab>(tab_name, render_function, this));
+        UE4SSProgram::get_program().add_gui_tab(tab);
     }
 }

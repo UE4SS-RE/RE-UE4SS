@@ -5,6 +5,7 @@
 
 #include <Common.hpp>
 #include <File/Macros.hpp>
+#include <GUI/GUITab.hpp>
 
 namespace RC
 {
@@ -22,17 +23,12 @@ namespace RC
         class Lua;
     }
 
-    namespace GUI
-    {
-        class GUITab;
-    }
-
     // When making C++ mods, keep in mind that they will break if UE4SS and the mod don't use the same C Runtime library version
     // This includes them being compiled in different configurations (Debug/Release).
     class CppUserModBase
     {
     protected:
-        std::shared_ptr<GUI::GUITab> GUITab{};
+        std::vector<std::shared_ptr<GUI::GUITab>> GUITabs{};
 
     public:
         StringType ModName{};
@@ -68,7 +64,7 @@ namespace RC
         RC_UE4SS_API auto virtual render_tab() -> void {};
 
     protected:
-        RC_UE4SS_API auto register_tab(std::wstring_view tab_name) -> void;
+        RC_UE4SS_API auto register_tab(std::wstring_view tab_name, GUI::GUITab::RenderFunctionType) -> void;
     };
 }
 

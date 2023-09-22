@@ -16,16 +16,20 @@ namespace RC::GUI
     {
     friend class DebuggingGUI;
 
-    protected:
+    public:
+        using RenderFunctionType = void(*)(CppUserModBase*);
+
+    private:
+        RenderFunctionType render_function{};
         CppUserModBase* owner{};
         StringType tab_name{};
 
     public:
         GUITab() = delete;
-        explicit GUITab(StringViewType name, CppUserModBase* owner) : tab_name(name), owner(owner) {};
+        explicit GUITab(StringViewType name, RenderFunctionType render_function, CppUserModBase* owner) : tab_name(name), render_function(render_function), owner(owner) {};
         ~GUITab() = default;
 
-    protected:
+    private:
         auto get_owner() -> CppUserModBase* { return owner; }
     };
 }

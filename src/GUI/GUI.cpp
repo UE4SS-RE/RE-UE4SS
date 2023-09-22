@@ -154,7 +154,7 @@ namespace RC::GUI
                     {
                         if (ImGui::BeginTabItem(to_string(tab->tab_name).c_str()))
                         {
-                            if (tab->get_owner()) { tab->get_owner()->render_tab(); }
+                            if (tab->render_function) { tab->render_function(tab->get_owner()); }
                             ImGui::EndTabItem();
                         }
                     }
