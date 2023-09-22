@@ -1,9 +1,11 @@
 #pragma once
 
 #include <vector>
+#include <memory>
 
 #include <Common.hpp>
 #include <File/Macros.hpp>
+#include <GUI/GUITab.hpp>
 
 namespace RC
 {
@@ -25,6 +27,9 @@ namespace RC
     // This includes them being compiled in different configurations (Debug/Release).
     class CppUserModBase
     {
+    protected:
+        std::vector<std::shared_ptr<GUI::GUITab>> GUITabs{};
+
     public:
         StringType ModName{};
         StringType ModVersion{};
@@ -34,7 +39,7 @@ namespace RC
 
     public:
         RC_UE4SS_API CppUserModBase();
-        RC_UE4SS_API virtual ~CppUserModBase() = default;
+        RC_UE4SS_API virtual ~CppUserModBase();
 
     public:
         RC_UE4SS_API auto virtual on_update() -> void {}
@@ -55,6 +60,11 @@ namespace RC
         RC_UE4SS_API auto virtual on_lua_start(LuaMadeSimple::Lua& lua, LuaMadeSimple::Lua& main_lua, LuaMadeSimple::Lua& async_lua, std::vector<LuaMadeSimple::Lua*>& hook_luas) -> void {}
 
         RC_UE4SS_API auto virtual on_dll_load(std::wstring_view dll_name) -> void {}
+
+        RC_UE4SS_API auto virtual render_tab() -> void {};
+
+    protected:
+        RC_UE4SS_API auto register_tab(std::wstring_view tab_name, GUI::GUITab::RenderFunctionType) -> void;
     };
 }
 
