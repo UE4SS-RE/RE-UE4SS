@@ -1,6 +1,7 @@
 #pragma once
 
 #include <vector>
+#include <memory>
 
 #include <Common.hpp>
 #include <File/Macros.hpp>
@@ -21,10 +22,18 @@ namespace RC
         class Lua;
     }
 
+    namespace GUI
+    {
+        class GUITab;
+    }
+
     // When making C++ mods, keep in mind that they will break if UE4SS and the mod don't use the same C Runtime library version
     // This includes them being compiled in different configurations (Debug/Release).
     class CppUserModBase
     {
+    protected:
+        std::shared_ptr<GUI::GUITab> GUITab{};
+
     public:
         StringType ModName{};
         StringType ModVersion{};
@@ -55,6 +64,11 @@ namespace RC
         RC_UE4SS_API auto virtual on_lua_start(LuaMadeSimple::Lua& lua, LuaMadeSimple::Lua& main_lua, LuaMadeSimple::Lua& async_lua, std::vector<LuaMadeSimple::Lua*>& hook_luas) -> void {}
 
         RC_UE4SS_API auto virtual on_dll_load(std::wstring_view dll_name) -> void {}
+
+        RC_UE4SS_API auto virtual render_tab() -> void {};
+
+    protected:
+        RC_UE4SS_API auto register_tab(std::wstring_view tab_name) -> void;
     };
 }
 

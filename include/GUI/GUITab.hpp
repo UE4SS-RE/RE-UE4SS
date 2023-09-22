@@ -1,7 +1,14 @@
 #pragma once
 
+#include <utility>
+
 #include <File/Macros.hpp>
 #include <GUI/GUI.hpp>
+
+namespace RC
+{
+    class CppUserModBase;
+}
 
 namespace RC::GUI
 {
@@ -10,13 +17,16 @@ namespace RC::GUI
     friend class DebuggingGUI;
 
     protected:
+        CppUserModBase* owner{};
         StringType TabName{};
 
     public:
-        GUITab() = default;
+        GUITab() = delete;
+        explicit GUITab(StringViewType Name, CppUserModBase* owner) : TabName(Name), owner(owner) {};
         ~GUITab() = default;
 
-        virtual auto render() -> void {}
+    protected:
+        auto get_owner() -> CppUserModBase* { return owner; }
     };
 }
 
