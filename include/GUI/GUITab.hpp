@@ -18,11 +18,11 @@ namespace RC::GUI
 
     protected:
         CppUserModBase* owner{};
-        StringType TabName{};
+        StringType tab_name{};
 
     public:
         GUITab() = delete;
-        explicit GUITab(StringViewType Name, CppUserModBase* owner) : TabName(Name), owner(owner) {};
+        explicit GUITab(StringViewType name, CppUserModBase* owner) : tab_name(name), owner(owner) {};
         ~GUITab() = default;
 
     protected:
