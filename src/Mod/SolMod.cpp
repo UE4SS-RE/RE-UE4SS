@@ -1003,6 +1003,7 @@ namespace RC
             sol::meta_function::new_index, sol::policies(&handle_uobject_property_setter, &pointer_policy),
             "type", [](sol::this_state state) { return get_class_name(state); },
             "IsValid", &UObject_IsValid,
+            "GetAddress", [](UObject* self) { return std::bit_cast<uintptr_t>(self); },
             "GetClassPrivate", CHOOSE_MEMBER_OVERLOAD(UObject, GetClassPrivate),
             "GetInternalIndex", CHOOSE_MEMBER_OVERLOAD(UObject, GetInternalIndex),
             "GetNamePrivate", CHOOSE_MEMBER_OVERLOAD(UObject, GetNamePrivate),
