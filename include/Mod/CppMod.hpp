@@ -2,6 +2,7 @@
 
 #include <vector>
 
+#define NOMINMAX
 #include <Windows.h>
 
 #include <Mod/CppUserModBase.hpp>
