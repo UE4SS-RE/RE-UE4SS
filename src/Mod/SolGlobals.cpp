@@ -395,12 +395,12 @@ namespace RC
         sol.set_function("Test4", [](bool test_bool) {
             Output::send<LogLevel::Verbose>(STR("test_bool: {}\n"), test_bool);
         });
-        sol.set_function("Test5", [](UObject* object) {
+        sol.set_function("Test5", sol::policies([](UObject* object) {
             Output::send<LogLevel::Verbose>(STR("object: {}\n"), object ? STR("non-nullptr") : STR("nullptr"));
-        });
-        sol.set_function("Test6", [](UClass* uclass) {
+        }, &pointer_policy));
+        sol.set_function("Test6", sol::policies([](UClass* uclass) {
             Output::send<LogLevel::Verbose>(STR("class: {}\n"), uclass ? STR("non-nullptr") : STR("nullptr"));
-        });
+        }, &pointer_policy));
         sol.set_function("StaticConstructObject", sol::policies(sol::overload(
             [](UClass* uclass, UObject* outer) {
                 FStaticConstructObjectParameters params{uclass, outer};

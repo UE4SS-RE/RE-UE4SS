@@ -4,6 +4,9 @@
 #include <string>
 #include <string_view>
 
+#include <DynamicOutput/DynamicOutput.hpp>
+#undef S
+
 #ifdef check
 #undef check
 #endif
@@ -15,7 +18,6 @@
 #define SOL_USING_CXX_LUAJIT 1
 #define SOL_USE_INTEROP 1
 #include <sol/sol.hpp>
-#include <DynamicOutput/DynamicOutput.hpp>
 
 #include <Unreal/UFunctionStructs.hpp>
 #include <Unreal/NameTypes.hpp>
@@ -130,35 +132,36 @@ Action;
 // it's been modified slightly
 inline auto dump_stack(lua_State* lua_state, const char* message) -> void
 {
-    printf_s("\n\nLUA Stack dump -> START------------------------------\n%s\n", message);
+    using namespace RC;
+    Output::send(STR("\n\nLUA Stack dump -> START------------------------------\n{}\n"), to_wstring(message));
     int top = lua_gettop(lua_state);
     for (int i = 1; i <= top; i++)
     {
-        printf_s("%d\t%s\t", i, luaL_typename(lua_state, i));
+        Output::send(STR("{}\t{}\t"), i, to_wstring(luaL_typename(lua_state, i)));
         switch (lua_type(lua_state, i))
         {
         case LUA_TNUMBER:
-            printf_s("%g", lua_tonumber(lua_state, i));
+            Output::send(STR("{}"), lua_tonumber(lua_state, i));
             break;
         case LUA_TSTRING:
-            printf_s("%s", lua_tostring(lua_state, i));
+            Output::send(STR("{}"), to_wstring(lua_tostring(lua_state, i)));
             break;
         case LUA_TBOOLEAN:
-            printf_s("%s", (lua_toboolean(lua_state, i) ? "true" : "false"));
+            Output::send(STR("{}"), (lua_toboolean(lua_state, i) ? STR("true") : STR("false")));
             break;
         case LUA_TNIL:
-            printf_s("nil");
+            Output::send(STR("nil"));
             break;
         case LUA_TFUNCTION:
-            printf_s("function");
+            Output::send(STR("function"));
             break;
         default:
-            printf_s("%p", lua_topointer(lua_state, i));
+            Output::send(STR("{}"), lua_topointer(lua_state, i));
             break;
         }
-        printf_s("\n");
+        Output::send(STR("\n"));
     }
-    printf_s("\nLUA Stack dump -> END----------------------------\n\n");
+    Output::send(STR("\nLUA Stack dump -> END----------------------------\n\n"));
 }
 
 // This was a failed attempt to get sol_lua_check/sol_lua_get to convert numbers to booleans.
@@ -194,55 +197,30 @@ inline auto dump_stack(lua_State* lua_state, const char* message) -> void
 //    }
 //}
 
-template<typename Handler>
-auto sol_lua_check(sol::types<RC::Unreal::FName>, lua_State* lua_state, int index, Handler&& handler, sol::stack::record& tracking) -> bool
+namespace RC
 {
-    int absolute_index = lua_absindex(lua_state, index);
-    bool success = sol::stack::check<sol::nil_t>(lua_state, absolute_index, &sol::no_panic) ||
-                   sol::stack::check<int>(lua_state, absolute_index, &sol::no_panic) ||
-                   (sol::stack::check<bool>(lua_state, absolute_index, &sol::no_panic) && !sol::stack::get<bool>(lua_state, absolute_index));
-    tracking.use(1);
-    return success;
-}
-
-inline auto sol_lua_get(sol::types<RC::Unreal::FName>, lua_State* lua_state, int index, sol::stack::record& tracking) -> RC::Unreal::FName
-{
-    using namespace ::RC;
-    using namespace ::RC::Unreal;
-    int absolute_index = lua_absindex(lua_state, index);
-    if (auto maybe_nil = sol::stack::get<std::optional<sol::nil_t>>(lua_state, absolute_index); maybe_nil.has_value())
+    struct InvalidObject
     {
-        tracking.use(1);
-        return NAME_None;
-    }
-    else if (auto maybe_int = sol::stack::get<std::optional<int>>(lua_state, absolute_index); maybe_int.has_value())
-    {
-        tracking.use(1);
-        return FName(maybe_int.value());
-    }
-    else if (auto maybe_bool = sol::stack::get<std::optional<bool>>(lua_state, absolute_index); maybe_bool.has_value())
-    {
-        tracking.use(1);
-        return NAME_None;
-    }
-    else
-    {
-        std::abort();
-    }
+        static auto Index(sol::stack_object, sol::this_state) -> std::function<InvalidObject()>
+        {
+            return [] { return InvalidObject{}; };
+        }
+    };
 }
 
 template<typename T, typename Handler>
 auto sol_lua_interop_check(sol::types<T>, lua_State* lua_state, int relindex, sol::type index_type, Handler&& handler, sol::stack::record& tracking) -> bool
 {
+    using namespace RC;
     using namespace RC::Unreal;
 
     if constexpr (std::is_same_v<T, bool>)
     {
-        if (auto maybe_bool = sol::stack::check<bool>(lua_state, relindex))
+        if (sol::stack::check<bool>(lua_state, relindex))
         {
             return true;
         }
-        else if (auto maybe_int = sol::stack::check<int>(lua_state, relindex))
+        else if (sol::stack::check<int>(lua_state, relindex))
         {
             return true;
         }
@@ -253,11 +231,15 @@ auto sol_lua_interop_check(sol::types<T>, lua_State* lua_state, int relindex, so
     }
     else if constexpr (std::is_same_v<T, FName>)
     {
-        if (auto maybe_int = sol::stack::check<int>(lua_state, relindex))
+        if (sol::stack::check<InvalidObject>(lua_state, relindex))
         {
             return true;
         }
-        else if (auto maybe_nil = sol::stack::check<sol::nil_t>(lua_state, relindex))
+        else if (sol::stack::check<int>(lua_state, relindex))
+        {
+            return true;
+        }
+        else if (sol::stack::check<sol::nil_t>(lua_state, relindex))
         {
             return true;
         }
@@ -268,13 +250,17 @@ auto sol_lua_interop_check(sol::types<T>, lua_State* lua_state, int relindex, so
     }
     else if constexpr (std::is_convertible_v<std::remove_cvref_t<T*>, UObject*>)
     {
-        if (auto maybe_int = sol::stack::get<std::optional<int>>(lua_state, relindex); maybe_int.has_value())
+        if (sol::stack::check<InvalidObject>(lua_state, relindex))
         {
-            return maybe_int.value() == 0;
+            return true;
         }
-        else if (auto maybe_bool = sol::stack::get<std::optional<bool>>(lua_state, relindex); maybe_bool.has_value())
+        else if (sol::stack::check<int>(lua_state, relindex))
         {
-            return !maybe_bool.value();
+            return true;
+        }
+        else if (sol::stack::check<bool>(lua_state, relindex))
+        {
+            return true;
         }
         else
         {
@@ -283,17 +269,21 @@ auto sol_lua_interop_check(sol::types<T>, lua_State* lua_state, int relindex, so
     }
     else if constexpr (std::is_convertible_v<std::remove_cvref_t<T*>, FObjectInstancingGraph*>)
     {
-        if (auto maybe_int = sol::stack::get<std::optional<int>>(lua_state, relindex); maybe_int.has_value())
-        {
-            return maybe_int.value() == 0;
-        }
-        else if (auto maybe_nil = sol::stack::get<std::optional<sol::nil_t>>(lua_state, relindex); maybe_nil.has_value())
+        if (sol::stack::check<InvalidObject>(lua_state, relindex))
         {
             return true;
         }
-        if (auto maybe_bool = sol::stack::get<std::optional<bool>>(lua_state, relindex); maybe_bool.has_value())
+        else if (sol::stack::check<int>(lua_state, relindex))
         {
-            return !maybe_bool.value();
+            return true;
+        }
+        else if (sol::stack::check<sol::nil_t>(lua_state, relindex))
+        {
+            return true;
+        }
+        else if (sol::stack::check<bool>(lua_state, relindex))
+        {
+            return true;
         }
         else
         {
@@ -330,11 +320,16 @@ auto create_sol_userdata(lua_State* lua_state, Args&&... args) -> std::condition
 template <typename T>
 auto sol_lua_interop_get(sol::types<T> t, lua_State* lua_state, int relindex, void* unadjusted_pointer, sol::stack::record& tracking) -> std::pair<bool, T*>
 {
+    using namespace RC;
     using namespace RC::Unreal;
 
     if constexpr (std::is_same_v<T, FName>)
     {
-        if (auto maybe_int = sol::stack::get<std::optional<int>>(lua_state, relindex); maybe_int.has_value())
+        if (auto maybe_invalid_object = sol::stack::get<std::optional<InvalidObject>>(lua_state, relindex); maybe_invalid_object.has_value())
+        {
+            return {true, create_sol_userdata<FName>(lua_state, NAME_None)};
+        }
+        else if (auto maybe_int = sol::stack::get<std::optional<int>>(lua_state, relindex); maybe_int.has_value())
         {
             return {true, create_sol_userdata<FName>(lua_state, maybe_int.value())};
         }
@@ -349,16 +344,22 @@ auto sol_lua_interop_get(sol::types<T> t, lua_State* lua_state, int relindex, vo
     }
     else if constexpr (std::is_convertible_v<std::remove_cvref_t<T*>, UObject*>)
     {
-        if (auto maybe_int = sol::stack::get<std::optional<int>>(lua_state, relindex); maybe_int.has_value())
+        if (sol::stack::check<InvalidObject>(lua_state, relindex))
         {
-            // We're converting any number to nullptr.
-            // This number realistically should only be zero because of the interop_check function.
+            // We're converting InvalidObject to nullptr.
+            // InvalidObject is always equal to nullptr for pointer types.
             return {true, nullptr};
         }
-        else if (auto maybe_bool = sol::stack::get<std::optional<bool>>(lua_state, relindex); maybe_bool.has_value())
+        else if (auto maybe_int = sol::stack::get<std::optional<int>>(lua_state, relindex); maybe_int.has_value())
+        {
+            // We're converting any number to T*.
+            return {true, reinterpret_cast<T*>(static_cast<uintptr_t>(maybe_int.value()))};
+        }
+        else if (sol::stack::check<bool>(lua_state, relindex))
         {
             // We're converting any bool to nullptr.
-            // This bool realistically should only be false because of the interop_check function.
+            // We only allow bools to be converted to nullptr.
+            // The only other option would be "true" or "1" which is never a valid pointer.
             return {true, nullptr};
         }
         else
@@ -401,14 +402,6 @@ namespace RC
             return maybe_mod.value();
         }
     }
-
-    struct InvalidObject
-    {
-        static auto Index(sol::stack_object, sol::this_state) -> std::function<InvalidObject()>
-        {
-            return [] { return InvalidObject{}; };
-        }
-    };
 
     struct PropertyPusherFunctionParams;
     using PropertyPusherFunction = std::string (*)(const PropertyPusherFunctionParams&);
@@ -462,7 +455,11 @@ namespace RC
 
     inline auto auto_construct_uobject(sol::state_view state, UObject* object) -> void
     {
-        if (object->IsA<UFunction>())
+        if (!object)
+        {
+            sol::stack::push(state, InvalidObject{});
+        }
+        else if (object->IsA<UFunction>())
         {
             //UFunction::construct(lua, nullptr, static_cast<UFunction*>(object));
         }
@@ -492,13 +489,13 @@ namespace RC
             //AActor::construct(lua, static_cast<AActor*>(object));
         }
     }
-    
+
     inline auto pointer_policy(lua_State* lua_state, int current_stack_return_count) -> int
     {
         // Multiple return values are not handled!
         if (current_stack_return_count == 1 && lua_isnil(lua_state, -1))
         {
-            sol::stack::push(lua_state, InvalidObject{});   
+            sol::stack::push(lua_state, InvalidObject{});
         }
 
         auto maybe_uobject = sol::stack::get<std::optional<UObject*>>(lua_state);

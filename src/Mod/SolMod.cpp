@@ -601,6 +601,8 @@ namespace RC
         if (auto property_pusher = lookup_property_pusher(self.inner_property->GetClass().GetFName()); property_pusher)
         {
             auto array_index = maybe_array_index.value();
+            // Subtracting 1 here to account for that fact that Lua tables are 1-indexed
+            if (array_index > 0) { --array_index; }
             auto data = static_cast<uint8_t*>(self.array->GetData()) + (array_index * self.inner_property->GetElementSize());
             auto pusher_params = PropertyPusherFunctionParams{state, nullptr, self.inner_property, data, PushType::ToLua, nullptr, self.base};
             if (auto error_msg = property_pusher(pusher_params); !error_msg.empty())
