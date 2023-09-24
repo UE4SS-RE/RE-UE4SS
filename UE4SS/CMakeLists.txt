@@ -131,82 +131,9 @@ target_compile_features(${TARGET} PUBLIC cxx_std_20)
 
 target_include_directories(${TARGET} PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include> $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/generated_include>)
 
-# Build configurations -> START
-list(APPEND GAME_TYPES "Game")
-list(APPEND PLATFORM_TYPES "Win64")
-list(APPEND SHIPPING_TYPES "Dev" "Debug" "Shipping" "Test")
-
-# Game definitions
-set(Game_DEFINITIONS UE_GAME)
-
-# Platform definitions
-set(Win64_DEFINITIONS PLATFORM_WINDOWS)
-
-# Shipping definitions
-set(Dev_DEFINITIONS UE_BUILD_DEVELOPMENT)
-set(Debug_DEFINITIONS UE_BUILD_DEBUG)
-set(Shipping_DEFINITIONS UE_BUILD_SHIPPING)
-set(Test_DEFINITIONS UE_BUILD_TEST)
-
-# Fallback linker flags, if the triplet doesn't have flags defined
-set(DEFAULT_SHARED_LINKER_FLAGS)
-set(DEFAULT_EXE_LINKER_FLAGS)
-# Fallback compiler flags if the triplet doesn't have flags defined
-set(DEFAULT_CXX_FLAGS)
-set(DEFAULT_C_FLAGS)
-
-set(BUILD_CONFIGS)
-
-foreach (game_type ${GAME_TYPES})
-    foreach (platform_type ${PLATFORM_TYPES})
-        foreach (shipping_type ${SHIPPING_TYPES})
-            set(triplet ${game_type}-${platform_type}-${shipping_type})
-            list(APPEND BUILD_CONFIGS ${triplet})
-
-            set(definitions
-                    ${${game_type}_DEFINITIONS}
-                    ${${platform_type}_DEFINITIONS}
-                    ${${shipping_type}_DEFINITIONS})
-            add_compile_definitions("$<$<STREQUAL:$<CONFIG>,${triplet}>:${definitions}>")
-
-            if (NOT DEFINED CMAKE_SHARED_LINKER_FLAGS_${triplet})
-                set(CMAKE_SHARED_LINKER_FLAGS_${triplet} ${DEFAULT_SHARED_LINKER_FLAGS})
-            endif ()
-
-            if (NOT DEFINED CMAKE_EXE_LINKER_FLAGS_${triplet})
-                set(CMAKE_EXE_LINKER_FLAGS_${triplet} ${DEFAULT_EXE_LINKER_FLAGS})
-            endif ()
-
-            if (NOT DEFINED CMAKE_CXX_FLAGS_${triplet})
-                set(CMAKE_CXX_FLAGS_${triplet} ${DEFAULT_CXX_FLAGS})
-            endif ()
-
-            if (NOT DEFINED CMAKE_C_FLAGS_${triplet})
-                set(CMAKE_C_FLAGS_${triplet} ${DEFAULT_C_FLAGS})
-            endif ()
-        endforeach ()
-    endforeach ()
-endforeach ()
-
-get_property(is_multi_config GLOBAL PROPERTY GENERATOR_IS_MULTI_CONFIG)
-
-if (is_multi_config)
-    set(CMAKE_CONFIGURATION_TYPES ${BUILD_CONFIGS} CACHE STRING "" FORCE)
-else ()
-    if (NOT CMAKE_BUILD_TYPE)
-        message("Defaulting to Game-Win64-Shipping")
-        set(CMAKE_BUILD_TYPE Game-Win64-Shipping CACHE STRING "" FORCE)
-    endif ()
-
-    set_property(CACHE CMAKE_BUILD_TYPE PROPERTY HELPSTRING "Choose build type")
-    set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS ${BUILD_CONFIGS})
-endif ()
-
-# Build configurations -> END
-
-
 # First party static build -> START
-add_compile_definitions(RC_UE4SS_EXPORTS
+target_compile_definitions(${TARGET} PUBLIC
+        RC_UE4SS_EXPORTS
         RC_ASM_HELPER_BUILD_STATIC
         RC_FILE_BUILD_STATIC
         RC_DYNAMIC_OUTPUT_BUILD_STATIC

@@ -13,7 +13,7 @@ option(MAKE_DEPENDENCIES_SHARED "Make dependencies shared" OFF)
 # Settings -> END
 
 # Projects -> START
-set(PROJECTS "UE4SS")
+set(PROJECTS "UE4SS" "UVTD")
 # Projects -> END
 
 # Tell WinAPI macros to map to unicode functions instead of ansi

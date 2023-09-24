@@ -9,7 +9,6 @@
 
 #include <DynamicOutput/DynamicOutput.hpp>
 #include <File/File.hpp>
-#include <Function/Function.hpp>
 #include <Input/Handler.hpp>
 #include <UVTD/Symbols.hpp>
 
