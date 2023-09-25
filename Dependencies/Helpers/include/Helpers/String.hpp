@@ -145,7 +145,7 @@ namespace RC
     auto inline to_wstring(std::string& input) -> std::wstring
     {
 #pragma warning(disable: 4996)
-        std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter{};
+        static std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter{};
         return converter.from_bytes(input);
 #pragma warning(default: 4996)
     }
@@ -192,7 +192,7 @@ namespace RC
     auto inline to_string(std::wstring& input) -> std::string
     {
 #pragma warning(disable: 4996)
-        std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter{};
+        static std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter{};
         return converter.to_bytes(input);
 #pragma warning(default: 4996)
     }
