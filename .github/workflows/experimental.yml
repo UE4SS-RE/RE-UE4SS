@@ -5,13 +5,12 @@ on:
   push:
     branches: [ "main" ]
     paths:
-      - "src/**"
-      - "include/**"
-      - "generated_src/**"
-      - "generated_include/**"
-      - "Dependencies/**"
-      - "proxy"
-      - "proxy_generator"
+      - "UE4SS/src/**"
+      - "UE4SS/include/**"
+      - "UE4SS/generated_src/**"
+      - "UE4SS/generated_include/**"
+      - "deps/**"
+      - "UE4SS/proxy_generator/**"
 
 permissions:
   contents: read
