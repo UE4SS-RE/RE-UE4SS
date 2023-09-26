@@ -11,8 +11,8 @@
 
 #define WIN32_LEAN_AND_MEAN
 #define NOMINMAX
-#include <ImageHlp.h>
 #include <Windows.h>
+#include <ImageHlp.h>
 #include <tchar.h>
 
 using namespace RC;

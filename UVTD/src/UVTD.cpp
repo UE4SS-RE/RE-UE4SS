@@ -18,8 +18,8 @@
 #include <UVTD/UnrealVirtualGenerator.hpp>
 #include <UVTD/VTableDumper.hpp>
 
-#include <Psapi.h>
 #include <Windows.h>
+#include <Psapi.h>
 #include <dbghelp.h>
 
 namespace RC::UVTD
