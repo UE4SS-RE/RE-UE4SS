@@ -2,14 +2,13 @@
 
 #include <algorithm>
 #include <coroutine>
-#include <ranges>
-#include <algorithm>
 #include <numeric>
+#include <ranges>
 #include <vector>
 
 namespace RC
 {
-    template<typename T>
+    template <typename T>
     struct Generator
     {
         struct promise_type;
@@ -38,9 +37,10 @@ namespace RC
                 return {};
             }
             auto unhandled_exception() -> void
-            {}
+            {
+            }
 
-            template<std::convertible_to<T> From>
+            template <std::convertible_to<T> From>
             auto yield_value(From&& from) -> std::suspend_always
             {
                 value = std::forward<From>(from);
@@ -48,7 +48,8 @@ namespace RC
             }
 
             auto return_void() -> void
-            {}
+            {
+            }
         };
 
         struct iterator
@@ -61,7 +62,8 @@ namespace RC
 
             iterator() = default;
             constexpr explicit iterator(handle_type handle) : handle(handle)
-            {}
+            {
+            }
 
             constexpr auto operator==(const iterator& other) const -> bool
             {
@@ -77,12 +79,16 @@ namespace RC
             {
                 handle.resume();
 
-                if (handle.done()) { handle = nullptr; }
+                if (handle.done())
+                {
+                    handle = nullptr;
+                }
 
                 return *this;
             }
 
-            auto operator++(int) -> iterator& {
+            auto operator++(int) -> iterator&
+            {
                 iterator temp = *this;
                 *++this;
                 return temp;
@@ -98,12 +104,13 @@ namespace RC
                 return std::addressof(operator*());
             }
 
-        private:
+          private:
             handle_type handle;
         };
 
         Generator(handle_type handle) : handle(handle)
-        {}
+        {
+        }
         Generator(const Generator&) = delete;
         Generator& operator=(const Generator&) = delete;
 
@@ -114,7 +121,8 @@ namespace RC
 
         Generator& operator=(const Generator&& other) noexcept
         {
-            if (this != &other) {
+            if (this != &other)
+            {
                 if (handle) handle.destroy();
                 handle = other.handle;
                 other.handle = {};
@@ -154,8 +162,8 @@ namespace RC
         {
             return {};
         }
-    private:
+
+      private:
         handle_type handle;
     };
-}
-
+} // namespace RC

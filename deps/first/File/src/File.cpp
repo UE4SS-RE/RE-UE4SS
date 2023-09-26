@@ -26,4 +26,4 @@ namespace RC::File
     {
         Handle::FileType::delete_file(file_path_and_name);
     }
-}
+} // namespace RC::File

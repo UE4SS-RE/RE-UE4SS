@@ -2,20 +2,18 @@
 
 #include <LuaType/LuaTArray.hpp>
 #include <LuaType/LuaUObject.hpp>
-#pragma warning(disable: 4005)
-#include <Unreal/Property/NumericPropertyTypes.hpp>
-#include <Unreal/Property/FArrayProperty.hpp>
+#pragma warning(disable : 4005)
 #include <DynamicOutput/DynamicOutput.hpp>
-#pragma warning(default: 4005)
+#include <Unreal/Property/FArrayProperty.hpp>
+#include <Unreal/Property/NumericPropertyTypes.hpp>
+#pragma warning(default : 4005)
 
 namespace RC::LuaType
 {
-    TArray::TArray(const PusherParams& params) :
-            RemoteObjectBase<Unreal::FScriptArray, TArrayName>(static_cast<Unreal::FScriptArray*>(params.data)),
-            m_base(params.base),
-            
-            m_property(static_cast<Unreal::FArrayProperty*>(params.property)),
-            m_inner_property(m_property->GetInner())
+    TArray::TArray(const PusherParams& params)
+        : RemoteObjectBase<Unreal::FScriptArray, TArrayName>(static_cast<Unreal::FScriptArray*>(params.data)), m_base(params.base),
+
+          m_property(static_cast<Unreal::FArrayProperty*>(params.property)), m_inner_property(m_property->GetInner())
     {
     }
 
@@ -76,7 +74,7 @@ namespace RC::LuaType
         });
     }
 
-    template<LuaMadeSimple::Type::IsFinal is_final>
+    template <LuaMadeSimple::Type::IsFinal is_final>
     auto TArray::setup_member_functions(const LuaMadeSimple::Lua::Table& table) -> void
     {
         table.add_pair("GetArrayAddress", [](const LuaMadeSimple::Lua& lua) -> int {
@@ -137,13 +135,11 @@ namespace RC::LuaType
                     //       It appears that the Lua stack is getting corrupted somehow, or lua_object is getting GC'd by Lua.
                     //       It seems to only affect large arrays, and I don't know how to fix it.
                     void* property_value = array_data + (i * lua_object.m_inner_property->GetElementSize());
-                    const PusherParams pusher_params{
-                            .operation = LuaMadeSimple::Type::Operation::GetParam,
-                            .lua = lua,
-                            .base = lua_object.m_base,
-                            .data = property_value,
-                            .property = lua_object.m_inner_property
-                    };
+                    const PusherParams pusher_params{.operation = LuaMadeSimple::Type::Operation::GetParam,
+                                                     .lua = lua,
+                                                     .base = lua_object.m_base,
+                                                     .data = property_value,
+                                                     .property = lua_object.m_inner_property};
                     StaticState::m_property_value_pushers[name_comparison_index](pusher_params);
 
                     // Call function passing index & the element
@@ -154,7 +150,9 @@ namespace RC::LuaType
             }
             else
             {
-                lua.throw_error(std::format("[TArray:ForEach] Tried iterating an array but the unreal property has no registered handler (via ArrayProperty). Property type '{}' not supported.", to_string(property_type_name.ToString())));
+                lua.throw_error(std::format("[TArray:ForEach] Tried iterating an array but the unreal property has no registered handler (via ArrayProperty). "
+                                            "Property type '{}' not supported.",
+                                            to_string(property_type_name.ToString())));
             }
 
             return 0;
@@ -177,11 +175,15 @@ namespace RC::LuaType
 
             // If this is the final object then we also want to finalize creating the table
             // If not then it's the responsibility of the overriding object to call 'make_global()'
-            //table.make_global(ClassName::ToString());
+            // table.make_global(ClassName::ToString());
         }
     }
 
-    auto TArray::handle_unreal_property_value(const LuaMadeSimple::Type::Operation operation, const LuaMadeSimple::Lua& lua, Unreal::FScriptArray* array, int64_t array_index, const TArray& lua_object) -> void
+    auto TArray::handle_unreal_property_value(const LuaMadeSimple::Type::Operation operation,
+                                              const LuaMadeSimple::Lua& lua,
+                                              Unreal::FScriptArray* array,
+                                              int64_t array_index,
+                                              const TArray& lua_object) -> void
     {
         Unreal::FName property_type_fname = lua_object.m_inner_property->GetClass().GetFName();
         int32_t name_comparison_index = property_type_fname.GetComparisonIndex();
@@ -191,19 +193,18 @@ namespace RC::LuaType
             uint8_t* array_data = static_cast<uint8_t*>(array->GetData());
             void* property_value = array_data + (array_index * lua_object.m_inner_property->GetElementSize());
 
-            const PusherParams pusher_params{
-                    .operation = operation,
-                    .lua = lua,
-                    .base = lua_object.m_base,
-                    .data = property_value,
-                    .property = lua_object.m_inner_property
-            };
+            const PusherParams pusher_params{.operation = operation,
+                                             .lua = lua,
+                                             .base = lua_object.m_base,
+                                             .data = property_value,
+                                             .property = lua_object.m_inner_property};
             StaticState::m_property_value_pushers[name_comparison_index](pusher_params);
         }
         else
         {
             std::string property_type_name = to_string(property_type_fname.ToString());
-            lua.throw_error(std::format("Tried accessing unreal property without a registered handler (via ArrayProperty). Property type '{}' not supported.", property_type_name));
+            lua.throw_error(std::format("Tried accessing unreal property without a registered handler (via ArrayProperty). Property type '{}' not supported.",
+                                        property_type_name));
         }
     }
 
@@ -223,4 +224,4 @@ namespace RC::LuaType
 
         handle_unreal_property_value(operation, lua, lua_object.get_remote_cpp_object(), array_index, lua_object);
     }
-}
+} // namespace RC::LuaType

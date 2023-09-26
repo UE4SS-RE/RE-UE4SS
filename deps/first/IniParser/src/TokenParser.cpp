@@ -1,11 +1,11 @@
-#include <format>
 #include <cwctype>
+#include <format>
 
 #include <Helpers/String.hpp>
 #include <IniParser/TokenParser.hpp>
-#include <ParserBase/Token.hpp>
 #include <IniParser/Tokens.hpp>
 #include <IniParser/Value.hpp>
+#include <ParserBase/Token.hpp>
 
 namespace RC::Ini
 {
@@ -65,7 +65,7 @@ namespace RC::Ini
         bool has_decimal_or_negative_prefix = [&]() {
             return data.size() > 1 && data[0] == L'.' || data[0] == L'-';
         }();
-        
+
         if (!has_decimal_or_negative_prefix && std::iswdigit(data[0]) == 0)
         {
             return Float{0, false};
@@ -154,18 +154,18 @@ namespace RC::Ini
     {
         switch (state)
         {
-            case State::StartOfFile:
-                return STR("StartOfFile");
-            case State::SetSectionValue:
-                return STR("SetSectionValue");
-            case State::NewLineStarted:
-                return STR("NewLineStarted");
-            case State::CreateNewOrSetCurrentSection:
-                return STR("CreateNewOrSetCurrentSection");
-            case State::CreateSectionKey:
-                return STR("CreateSectionKey");
-            case State::StoreSectionKey:
-                return STR("StoreSectionKey");
+        case State::StartOfFile:
+            return STR("StartOfFile");
+        case State::SetSectionValue:
+            return STR("SetSectionValue");
+        case State::NewLineStarted:
+            return STR("NewLineStarted");
+        case State::CreateNewOrSetCurrentSection:
+            return STR("CreateNewOrSetCurrentSection");
+        case State::CreateSectionKey:
+            return STR("CreateSectionKey");
+        case State::StoreSectionKey:
+            return STR("StoreSectionKey");
         }
 
         return STR("UnknownState");
@@ -179,8 +179,7 @@ namespace RC::Ini
         while (true)
         {
             const auto token_type = current_token->get_type();
-            if (token_type == IniTokenType::EndOfFile ||
-                token_type == IniTokenType::CarriageReturn)
+            if (token_type == IniTokenType::EndOfFile || token_type == IniTokenType::CarriageReturn)
             {
                 break;
             }
@@ -273,7 +272,8 @@ namespace RC::Ini
 
         if (m_current_character_data.empty())
         {
-            throw std::runtime_error{std::format("Syntax error ({} : {}): Expected Characters, got {}", token.get_line(), token.get_column(), to_string(token.to_string()))};
+            throw std::runtime_error{
+                    std::format("Syntax error ({} : {}): Expected Characters, got {}", token.get_line(), token.get_column(), to_string(token.to_string()))};
         }
 
         if (auto section = m_output.find(m_current_character_data); section != m_output.end())
@@ -338,10 +338,8 @@ namespace RC::Ini
         }
         else
         {
-            throw std::runtime_error{std::format("Syntax error({} : {}): Invalid state {}",
-                                                 token.get_line(),
-                                                 token.get_column(),
-                                                 to_string(state_to_string(m_current_state)))};
+            throw std::runtime_error{
+                    std::format("Syntax error({} : {}): Invalid state {}", token.get_line(), token.get_column(), to_string(state_to_string(m_current_state)))};
         }
     }
 
@@ -364,17 +362,24 @@ namespace RC::Ini
 
         if (!m_current_section)
         {
-            throw std::runtime_error{std::format("Syntax error ({} : {}): No section. Global variables not supported, please create a [Section]", token.get_line(), token.get_column())};
+            throw std::runtime_error{std::format("Syntax error ({} : {}): No section. Global variables not supported, please create a [Section]",
+                                                 token.get_line(),
+                                                 token.get_column())};
         }
 
         if (m_current_character_data.empty())
         {
-            throw std::runtime_error{std::format("Syntax error ({} : {}): Expected Characters, got {}", token.get_line(), token.get_column(), to_string(token.to_string()))};
+            throw std::runtime_error{
+                    std::format("Syntax error ({} : {}): Expected Characters, got {}", token.get_line(), token.get_column(), to_string(token.to_string()))};
         }
 
         if (m_current_section->is_ordered_list)
         {
-            throw std::runtime_error{std::format("Syntax error ({} : {}): Previous item is in ordered-list mode, expected another list item, got key/value pair", token.get_line(), token.get_column(), to_string(token.to_string()))};
+            throw std::runtime_error{
+                    std::format("Syntax error ({} : {}): Previous item is in ordered-list mode, expected another list item, got key/value pair",
+                                token.get_line(),
+                                token.get_column(),
+                                to_string(token.to_string()))};
         }
 
         // Create the value with the correct key and an empty value and store a pointer to it so that the value can be set later
@@ -399,7 +404,11 @@ namespace RC::Ini
             // If the Equals token has set 'is_ordered_list', and the section already has values, then we have previous items that aren't in ordered-list mode
             if (!m_current_section->key_value_pairs.empty() && !m_current_section->is_ordered_list)
             {
-                throw std::runtime_error{std::format("Syntax error ({} : {}): Previous item is in key/value mode, expected another key/value item, got ordered-list item", token.get_line(), token.get_column(), to_string(token.to_string()))};
+                throw std::runtime_error{
+                        std::format("Syntax error ({} : {}): Previous item is in key/value mode, expected another key/value item, got ordered-list item",
+                                    token.get_line(),
+                                    token.get_column(),
+                                    to_string(token.to_string()))};
             }
 
             if (m_current_section->is_ordered_list)
@@ -436,33 +445,33 @@ namespace RC::Ini
     {
         switch (token.get_type())
         {
-            case CarriageReturn:
-                break;
-            case NewLine:
-                handle_new_line_token(token);
-                break;
-            case Space:
-                handle_space_token(token);
-                break;
-            case Characters:
-                handle_characters_token(token);
-                break;
-            case Equals:
-                handle_equals_token(token);
-                break;
-            case ClosingSquareBracket:
-                handle_closing_square_bracket_token(token);
-                break;
-            case OpeningSquareBracket:
-                handle_opening_square_bracket_token(token);
-                break;
-            case SemiColon:
-                handle_semi_colon_token(token);
-                break;
-            case EndOfFile:
-            default:
-                // No other tokens need handling for this particular ini parser
-                break;
+        case CarriageReturn:
+            break;
+        case NewLine:
+            handle_new_line_token(token);
+            break;
+        case Space:
+            handle_space_token(token);
+            break;
+        case Characters:
+            handle_characters_token(token);
+            break;
+        case Equals:
+            handle_equals_token(token);
+            break;
+        case ClosingSquareBracket:
+            handle_closing_square_bracket_token(token);
+            break;
+        case OpeningSquareBracket:
+            handle_opening_square_bracket_token(token);
+            break;
+        case SemiColon:
+            handle_semi_colon_token(token);
+            break;
+        case EndOfFile:
+        default:
+            // No other tokens need handling for this particular ini parser
+            break;
         }
     }
-}
+} // namespace RC::Ini

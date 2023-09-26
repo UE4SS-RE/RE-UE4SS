@@ -8,13 +8,13 @@ namespace RC::GUI
 {
     class Backend_GLFW3_OpenGL3 : public GfxBackendBase
     {
-    private:
+      private:
         GLFWwindow* m_window{};
 
-    public:
+      public:
         ~Backend_GLFW3_OpenGL3() = default;
 
-    public:
+      public:
         auto init() -> void override;
         auto imgui_backend_newframe() -> void override;
         auto render(const float clear_color_with_alpha[4]) -> void override;
@@ -27,6 +27,4 @@ namespace RC::GUI
         auto get_window_size() -> WindowSize override;
         auto exit_requested() -> bool override;
     };
-}
-
-
+} // namespace RC::GUI

@@ -27,8 +27,11 @@ namespace RC::Ini
         tc.add(ParserBase::Token::create(IniTokenType::CarriageReturn, STR("CarriageReturn"), STR("\r")));
         tc.add(ParserBase::Token::create(IniTokenType::NewLine, STR("NewLine"), STR("\n")));
         tc.add(ParserBase::Token::create(IniTokenType::Space, STR("Space"), STR(" ")));
-        tc.add(ParserBase::Token::create(IniTokenType::Characters, STR("Characters"), STR(""), ParserBase::Token::HasData::Yes)); // Empty identifier will match everything that no other token identifier matches
-        tc.add(ParserBase::Token::create/*<IniInternal::TokenEqualsAlwaysHaveCharactersUntilEndLine>*/(IniTokenType::Equals, STR("Equals"), STR("=")));
+        tc.add(ParserBase::Token::create(IniTokenType::Characters,
+                                         STR("Characters"),
+                                         STR(""),
+                                         ParserBase::Token::HasData::Yes)); // Empty identifier will match everything that no other token identifier matches
+        tc.add(ParserBase::Token::create /*<IniInternal::TokenEqualsAlwaysHaveCharactersUntilEndLine>*/ (IniTokenType::Equals, STR("Equals"), STR("=")));
         tc.add(ParserBase::Token::create(IniTokenType::ClosingSquareBracket, STR("CloseSquareBracket"), STR("]")));
         tc.add(ParserBase::Token::create(IniTokenType::OpeningSquareBracket, STR("OpenSquareBracket"), STR("[")));
         tc.add(ParserBase::Token::create(IniTokenType::SemiColon, STR("SemiColon"), STR(";")));
@@ -38,7 +41,8 @@ namespace RC::Ini
         return tc;
     }
 
-    auto Parser::get_value(const File::StringType& section, const File::StringType& key, CanThrow can_throw) const -> std::optional<std::reference_wrapper<const Value>>
+    auto Parser::get_value(const File::StringType& section, const File::StringType& key, CanThrow can_throw) const
+            -> std::optional<std::reference_wrapper<const Value>>
     {
         if (!m_parsing_is_complete)
         {
@@ -102,7 +106,8 @@ namespace RC::Ini
         return get_list(section);
     }
 
-    auto Parser::get_string(const File::StringType& section, const File::StringType& key, const File::StringType& default_value) const noexcept -> const File::StringType&
+    auto Parser::get_string(const File::StringType& section, const File::StringType& key, const File::StringType& default_value) const noexcept
+            -> const File::StringType&
     {
         const auto maybe_value = get_value(section, key, CanThrow::No);
         if (!maybe_value.has_value())
@@ -123,7 +128,7 @@ namespace RC::Ini
         }
     }
 
-    auto Parser::get_string(const File::StringType& section, const File::StringType& key) const  -> const File::StringType&
+    auto Parser::get_string(const File::StringType& section, const File::StringType& key) const -> const File::StringType&
     {
         const auto maybe_value = get_value(section, key);
         if (!maybe_value.has_value())
@@ -269,4 +274,4 @@ namespace RC::Ini
             }
         }
     }
-}
+} // namespace RC::Ini

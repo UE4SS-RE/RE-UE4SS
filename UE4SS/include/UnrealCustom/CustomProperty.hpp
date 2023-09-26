@@ -6,7 +6,7 @@
 #include <Helpers/Casting.hpp>
 #include <Unreal/FProperty.hpp>
 
-#pragma warning(disable: 4068)
+#pragma warning(disable : 4068)
 
 namespace RC::Unreal
 {
@@ -17,18 +17,18 @@ namespace RC::Unreal
     // Used when creating custom properties
     class CustomProperty : public FProperty
     {
-    private:
-        // Untyped data
-        // The proper data will be copied inside at the proper offsets using StaticOffsetFinder
-        #pragma clang diagnostic push
-        #pragma clang diagnostic ignored "-Wunused-private-field"
+      private:
+// Untyped data
+// The proper data will be copied inside at the proper offsets using StaticOffsetFinder
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wunused-private-field"
         std::byte m_data[0x128]{};
-        #pragma clang diagnostic pop
+#pragma clang diagnostic pop
 
-    public:
+      public:
         CustomProperty(int32_t offset_internal, int32_t element_size);
 
-    public:
+      public:
         auto static construct(int32_t offset_internal, UClass* belongs_to_class, UClass* inner_class, int32_t element_size) -> std::unique_ptr<CustomProperty>;
 
         // 'set_member_variable' is not used anymore because we're using a completely different system for retrieving member variable offsets.
@@ -53,27 +53,26 @@ namespace RC::Unreal
 
     class CustomArrayProperty : public CustomProperty
     {
-    public:
+      public:
         CustomArrayProperty(int32_t offset_internal, int32_t element_size);
 
-    public:
+      public:
         // Used for the C++ API
         auto static construct(int32_t offset_internal, FProperty* array_inner, int32_t element_size) -> std::unique_ptr<CustomProperty>;
 
         // Used for the Lua API
-        auto static construct(int32_t offset_internal, UClass* belongs_to_class, UClass* inner_class, FProperty* array_inner, int32_t element_size) -> std::unique_ptr<CustomProperty>;
+        auto static construct(int32_t offset_internal, UClass* belongs_to_class, UClass* inner_class, FProperty* array_inner, int32_t element_size)
+                -> std::unique_ptr<CustomProperty>;
     };
 
     class CustomStructProperty : public CustomProperty
     {
-    public:
+      public:
         CustomStructProperty(int32_t offset_internal, int32_t element_size);
 
-    public:
+      public:
         auto static construct(int32_t offset_internal, UScriptStruct* script_struct, int32_t element_size) -> std::unique_ptr<CustomProperty>;
     };
-}
+} // namespace RC::Unreal
 
-#pragma warning(default: 4068)
-
-
+#pragma warning(default : 4068)

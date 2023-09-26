@@ -1,8 +1,8 @@
 #include <format>
 
 #include <IniParser/JSON.hpp>
-#include <ParserBase/Tokenizer.hpp>
 #include <ParserBase/Token.hpp>
+#include <ParserBase/Tokenizer.hpp>
 
 namespace RC::Parser
 {
@@ -13,7 +13,10 @@ namespace RC::Parser
 
     static auto has_only_spaces(const File::StringType& data) -> bool
     {
-        if (std::all_of(data.begin(), data.end(), [](File::CharType c) { return std::isspace(c) || c == '\n'; })) {
+        if (std::all_of(data.begin(), data.end(), [](File::CharType c) {
+                return std::isspace(c) || c == '\n';
+            }))
+        {
             printf_s("SKIPPING\n");
             return true;
         }
@@ -119,12 +122,12 @@ namespace RC::Parser
         {
             if (static_cast<ObjectScope*>(m_current_item)->m_previous_line_without_comma == 0)
             {
-                throw std::runtime_error{std::format("Syntax error ({} : {}): Unexpected 'Comma' token, expected 'CloseCurlyBrace'.", token.get_line(), token.get_column())};
+                throw std::runtime_error{
+                        std::format("Syntax error ({} : {}): Unexpected 'Comma' token, expected 'CloseCurlyBrace'.", token.get_line(), token.get_column())};
             }
         }
         else if (m_current_item->get_type() == ItemType::Array)
         {
-
         }
 
         m_processed_token_types += TokenType::CloseCurlyBrace;
@@ -152,7 +155,9 @@ namespace RC::Parser
                 // Enforce 'Comma' token, if this isn't the first item
                 if (!typed_current_item.m_members.empty() && typed_current_item.m_previous_line_without_comma != 0)
                 {
-                    throw std::runtime_error{std::format("Syntax error ({} : {}): Expected 'Comma' token before new item.", typed_current_item.m_previous_line_without_comma, typed_current_item.m_previous_column_without_comma)};
+                    throw std::runtime_error{std::format("Syntax error ({} : {}): Expected 'Comma' token before new item.",
+                                                         typed_current_item.m_previous_line_without_comma,
+                                                         typed_current_item.m_previous_column_without_comma)};
                 }
 
                 auto& item = typed_current_item.m_members.emplace_back(std::make_unique<StringItem>(value));
@@ -176,7 +181,10 @@ namespace RC::Parser
             // Consume the closing 'DoubleQuote' token
             if (peek().get_type() != TokenType::DoubleQuote)
             {
-                throw std::runtime_error{std::format("Syntax error ({} : {}): Expected 'DoubleQuote' token, got '{}'.", token.get_line(), token.get_column(), to_string(token.to_string()))};
+                throw std::runtime_error{std::format("Syntax error ({} : {}): Expected 'DoubleQuote' token, got '{}'.",
+                                                     token.get_line(),
+                                                     token.get_column(),
+                                                     to_string(token.to_string()))};
             }
             parse_double_quote(consume());
 
@@ -218,7 +226,6 @@ namespace RC::Parser
         }
         else if (item_type == ItemType::Array)
         {
-
         }
         else
         {
@@ -241,8 +248,7 @@ namespace RC::Parser
             // This means that this is the LHS of an assignment, not the RHS
             // Therefore we expect the next token to be an assignment token (Colon)
             auto last_processed_token_type = m_processed_token_types[-1];
-            if (last_processed_token_type == TokenType::Comma ||
-                last_processed_token_type == TokenType::OpenCurlyBrace ||
+            if (last_processed_token_type == TokenType::Comma || last_processed_token_type == TokenType::OpenCurlyBrace ||
                 last_processed_token_type == TokenType::OpenSquareBracket)
             {
                 skip_all_spaces();
@@ -250,7 +256,10 @@ namespace RC::Parser
                 auto& peeked_token = peek();
                 if (peeked_token.get_type() != TokenType::Colon)
                 {
-                    throw std::runtime_error{std::format("Syntax error ({} : {}): Expected 'Colon' token, got '{}'.", peeked_token.get_line(), peeked_token.get_column(), to_string(peeked_token.to_string()))};
+                    throw std::runtime_error{std::format("Syntax error ({} : {}): Expected 'Colon' token, got '{}'.",
+                                                         peeked_token.get_line(),
+                                                         peeked_token.get_column(),
+                                                         to_string(peeked_token.to_string()))};
                 }
             }
 
@@ -296,41 +305,40 @@ namespace RC::Parser
         // If type is 'Default', then this is the first token
         // If type is 'Characters', then let the 'Characters' handler handle this as a 'Characters' token may be ignored if it's only spaces
         // Otherwise, if the type is not what is expected, throw an exception
-        if (m_next_token_expected != TokenType::Default &&
-            token_type != TokenType::Characters &&
-            token_type != m_next_token_expected)
+        if (m_next_token_expected != TokenType::Default && token_type != TokenType::Characters && token_type != m_next_token_expected)
         {
-            throw std::runtime_error{std::format("Syntax error ({} : {}): Expected 'Colon' token, got '{}'.", token.get_line(), token.get_column(), to_string(token.to_string()))};
+            throw std::runtime_error{
+                    std::format("Syntax error ({} : {}): Expected 'Colon' token, got '{}'.", token.get_line(), token.get_column(), to_string(token.to_string()))};
         }
 
         switch (token_type)
         {
-            case Default:
-                break;
-            case OpenCurlyBrace:
-                parse_open_curly_brace(token);
-                break;
-            case CloseCurlyBrace:
-                parse_close_curly_brace(token);
-                break;
-            case OpenSquareBracket:
-                break;
-            case CloseSquareBracket:
-                break;
-            case Colon:
-                parse_colon(token);
-                break;
-            case Comma:
-                parse_comma(token);
-                break;
-            case DoubleQuote:
-                parse_double_quote(token);
-                break;
-            case Characters:
-                parse_characters(token);
-                break;
-            case EndOfFile:
-                break;
+        case Default:
+            break;
+        case OpenCurlyBrace:
+            parse_open_curly_brace(token);
+            break;
+        case CloseCurlyBrace:
+            parse_close_curly_brace(token);
+            break;
+        case OpenSquareBracket:
+            break;
+        case CloseSquareBracket:
+            break;
+        case Colon:
+            parse_colon(token);
+            break;
+        case Comma:
+            parse_comma(token);
+            break;
+        case DoubleQuote:
+            parse_double_quote(token);
+            break;
+        case Characters:
+            parse_characters(token);
+            break;
+        case EndOfFile:
+            break;
         }
     }
 
@@ -390,7 +398,7 @@ namespace RC::Parser
     "my third key": {
         "my fourth key: "some other string value"
     }
-})";    //*/
+})"; //*/
 
         JSON parser;
         parser.parse(input);
@@ -402,4 +410,4 @@ namespace RC::Parser
             printf_s("%S\n", item->to_string().c_str());
         }
     }
-}
+} // namespace RC::Parser

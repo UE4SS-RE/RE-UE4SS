@@ -17,11 +17,11 @@ namespace RC
 
     class CppMod : public Mod
     {
-    private:
+      private:
         typedef CppUserModBase* (*start_type)();
         typedef void (*uninstall_type)(CppUserModBase*);
 
-    private:
+      private:
         std::wstring m_dlls_path;
 
         HMODULE m_main_dll_module = NULL;
@@ -31,22 +31,22 @@ namespace RC
 
         CppUserModBase* m_mod = nullptr;
 
-    public:
+      public:
         CppMod(UE4SSProgram&, std::wstring&& mod_name, std::wstring&& mod_path);
         CppMod(CppMod&) = delete;
         CppMod(CppMod&&) = delete;
         ~CppMod() override;
 
-    public:
+      public:
         auto start_mod() -> void override;
         auto uninstall() -> void override;
 
-        auto fire_on_lua_start(LuaMadeSimple::Lua& lua, LuaMadeSimple::Lua& main_lua, LuaMadeSimple::Lua& async_lua, std::vector<LuaMadeSimple::Lua*>& hook_luas) -> void;
+        auto fire_on_lua_start(LuaMadeSimple::Lua& lua, LuaMadeSimple::Lua& main_lua, LuaMadeSimple::Lua& async_lua, std::vector<LuaMadeSimple::Lua*>& hook_luas)
+                -> void;
 
         auto fire_unreal_init() -> void override;
         auto fire_program_start() -> void override;
         auto fire_update() -> void override;
         auto fire_dll_load(std::wstring_view dll_name) -> void;
     };
-}
-
+} // namespace RC

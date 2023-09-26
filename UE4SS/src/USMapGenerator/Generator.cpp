@@ -1,24 +1,24 @@
 #include <vector>
 
 // writer.h is missing includes and I'd like to keep it unchanged so I'll include the missing files here instead.
-#include <string>
-#include <sstream>
 #include <Unreal/Common.hpp>
+#include <sstream>
+#include <string>
 
+#include <DynamicOutput/DynamicOutput.hpp>
 #include <USMapGenerator/Generator.hpp>
 #include <USMapGenerator/writer.h>
-#include <DynamicOutput/DynamicOutput.hpp>
-#include <Unreal/UnrealVersion.hpp>
-#include <Unreal/UObjectGlobals.hpp>
-#include <Unreal/UObject.hpp>
-#include <Unreal/UClass.hpp>
-#include <Unreal/UScriptStruct.hpp>
-#include <Unreal/UEnum.hpp>
 #include <Unreal/NameTypes.hpp>
-#include <Unreal/Property/NumericPropertyTypes.hpp>
-#include <Unreal/Property/FEnumProperty.hpp>
 #include <Unreal/Property/FArrayProperty.hpp>
+#include <Unreal/Property/FEnumProperty.hpp>
 #include <Unreal/Property/FMapProperty.hpp>
+#include <Unreal/Property/NumericPropertyTypes.hpp>
+#include <Unreal/UClass.hpp>
+#include <Unreal/UEnum.hpp>
+#include <Unreal/UObject.hpp>
+#include <Unreal/UObjectGlobals.hpp>
+#include <Unreal/UScriptStruct.hpp>
+#include <Unreal/UnrealVersion.hpp>
 
 namespace RC::OutTheShade
 {
@@ -141,11 +141,11 @@ namespace RC::OutTheShade
         else if (Class.HasAnyCastFlags(CASTCLASS_FByteProperty))
         {
             FByteProperty* ByteProp = static_cast<FByteProperty*>(Prop);
-            if (ByteProp->GetEnum())
-                return EPropertyType::EnumAsByteProperty;
+            if (ByteProp->GetEnum()) return EPropertyType::EnumAsByteProperty;
             return EPropertyType::ByteProperty;
         }
-        else if (Class.HasAnyCastFlags(CASTCLASS_FMulticastDelegateProperty | CASTCLASS_FMulticastInlineDelegateProperty | CASTCLASS_FMulticastSparseDelegateProperty))
+        else if (Class.HasAnyCastFlags(CASTCLASS_FMulticastDelegateProperty | CASTCLASS_FMulticastInlineDelegateProperty |
+                                       CASTCLASS_FMulticastSparseDelegateProperty))
         {
             return EPropertyType::MulticastDelegateProperty;
         }
@@ -189,20 +189,17 @@ namespace RC::OutTheShade
 
         // Warning: converting 'Idx' from int to uint16.
         // Warning: converting 'GetArrayDim()' from int to uint8.
-        FPropertyData(FProperty* P, int Idx) :
-            Prop(P),
-            Index(static_cast<uint16_t>(Idx)),
-            ArrayDim(static_cast<uint8_t>(P->GetArrayDim())),
-            Name(P->GetFName()),
-            PropertyType(GetPropertyType(P))
+        FPropertyData(FProperty* P, int Idx)
+            : Prop(P), Index(static_cast<uint16_t>(Idx)), ArrayDim(static_cast<uint8_t>(P->GetArrayDim())), Name(P->GetFName()), PropertyType(GetPropertyType(P))
         {
         }
     };
 
     auto generate_usmap() -> void
     {
-        Output::send(STR("Mappings Generator by OutTheShade\nAttempting to dump mappings...\nPort of https://github.com/OutTheShade/UnrealMappingsDumper Commit SHA 4da8c66\n"));
-        
+        Output::send(STR("Mappings Generator by OutTheShade\nAttempting to dump mappings...\nPort of https://github.com/OutTheShade/UnrealMappingsDumper "
+                         "Commit SHA 4da8c66\n"));
+
         StreamWriter Buffer;
         std::unordered_map<FName, int> NameMap;
         std::unordered_map<UObject*, FName> ModulePathsMap;
@@ -210,16 +207,15 @@ namespace RC::OutTheShade
         std::vector<UEnum*> Enums;
         std::vector<UStruct*> Structs; // TODO: a better way than making this completely dynamic
 
-        std::function<void(class FProperty*, EPropertyType)> WriteProperty = [&](FProperty* Prop, EPropertyType Type)
-        {
+        std::function<void(class FProperty*, EPropertyType)> WriteProperty = [&](FProperty* Prop, EPropertyType Type) {
             if (Type == EPropertyType::EnumAsByteProperty)
                 Buffer.Write(EPropertyType::EnumProperty);
-            else Buffer.Write(Type);
+            else
+                Buffer.Write(Type);
 
             switch (Type)
             {
-            case EPropertyType::EnumProperty:
-            {
+            case EPropertyType::EnumProperty: {
                 auto EnumProp = static_cast<FEnumProperty*>(Prop);
 
                 auto Inner = EnumProp->GetUnderlyingProp();
@@ -229,29 +225,25 @@ namespace RC::OutTheShade
 
                 break;
             }
-            case EPropertyType::EnumAsByteProperty:
-            {
+            case EPropertyType::EnumAsByteProperty: {
                 Buffer.Write(EPropertyType::ByteProperty);
                 Buffer.Write(NameMap[static_cast<FByteProperty*>(Prop)->GetEnum()->GetNamePrivate()]);
 
                 break;
             }
-            case EPropertyType::StructProperty:
-            {
+            case EPropertyType::StructProperty: {
                 Buffer.Write(NameMap[static_cast<FStructProperty*>(Prop)->GetStruct()->GetNamePrivate()]);
                 break;
             }
             case EPropertyType::SetProperty:
-            case EPropertyType::ArrayProperty:
-            {
+            case EPropertyType::ArrayProperty: {
                 auto Inner = static_cast<FArrayProperty*>(Prop)->GetInner();
                 auto InnerType = GetPropertyType(Inner);
                 WriteProperty(Inner, InnerType);
 
                 break;
             }
-            case EPropertyType::MapProperty:
-            {
+            case EPropertyType::MapProperty: {
                 auto Inner = static_cast<FMapProperty*>(Prop)->GetKeyProp();
                 auto InnerType = GetPropertyType(Inner);
                 WriteProperty(Inner, InnerType);
@@ -265,42 +257,42 @@ namespace RC::OutTheShade
             }
         };
 
-        UObjectGlobals::ForEachUObject([&](UObject* Object, ...)
-		{
-			if (Object->GetClassPrivate() == UClass::StaticClass() ||
-			Object->GetClassPrivate() == UScriptStruct::StaticClass())
-			{
-				auto Struct = static_cast<UStruct*>(Object);
+        UObjectGlobals::ForEachUObject([&](UObject* Object, ...) {
+            if (Object->GetClassPrivate() == UClass::StaticClass() || Object->GetClassPrivate() == UScriptStruct::StaticClass())
+            {
+                auto Struct = static_cast<UStruct*>(Object);
 
-				Structs.push_back(Struct);
+                Structs.push_back(Struct);
 
-				NameMap.insert_or_assign(Struct->GetNamePrivate(), 0);
+                NameMap.insert_or_assign(Struct->GetNamePrivate(), 0);
 
-				if (Struct->GetSuperStruct() && !NameMap.contains(Struct->GetSuperStruct()->GetNamePrivate()))
-					NameMap.insert_or_assign(Struct->GetSuperStruct()->GetNamePrivate(), 0);
+                if (Struct->GetSuperStruct() && !NameMap.contains(Struct->GetSuperStruct()->GetNamePrivate()))
+                    NameMap.insert_or_assign(Struct->GetSuperStruct()->GetNamePrivate(), 0);
 
                 for (FProperty* Prop : Struct->ForEachProperty())
                 {
                     NameMap.insert_or_assign(Prop->GetFName(), 0);
                 }
-			}
-			else if (Object->GetClassPrivate() == UEnum::StaticClass())
-			{
-				auto Enum = static_cast<UEnum*>(Object);
-				Enums.push_back(Enum);
+            }
+            else if (Object->GetClassPrivate() == UEnum::StaticClass())
+            {
+                auto Enum = static_cast<UEnum*>(Object);
+                Enums.push_back(Enum);
 
-				NameMap.insert_or_assign(Enum->GetNamePrivate(), 0);
+                NameMap.insert_or_assign(Enum->GetNamePrivate(), 0);
 
                 for (auto& [Key, _] : Enum->ForEachName())
                 {
                     NameMap.insert_or_assign(Key, 0);
                 }
-			}
+            }
 
-            if (Object->GetClassPrivate() == UClass::StaticClass() || Object->GetClassPrivate() == UScriptStruct::StaticClass() || Object->GetClassPrivate() == UEnum::StaticClass())
+            if (Object->GetClassPrivate() == UClass::StaticClass() || Object->GetClassPrivate() == UScriptStruct::StaticClass() ||
+                Object->GetClassPrivate() == UEnum::StaticClass())
             {
                 std::wstring RawPathName = Object->GetPathName();
-                std::wstring::size_type PathNameStart = 0; // include first bit (Script/Game) to avoid ambiguity; to drop it, replace with RawPathName.find_first_of('/', 1) + 1;
+                std::wstring::size_type PathNameStart =
+                        0; // include first bit (Script/Game) to avoid ambiguity; to drop it, replace with RawPathName.find_first_of('/', 1) + 1;
                 std::wstring::size_type PathNameLength = RawPathName.find_last_of('.') - PathNameStart;
                 std::wstring FinalPathStr = RawPathName.substr(PathNameStart, PathNameLength);
                 FName FinalPathName = FName(FinalPathStr);
@@ -310,7 +302,7 @@ namespace RC::OutTheShade
             }
 
             return LoopAction::Continue;
-		});
+        });
 
         // Warning: Converting size_t (uint64) to int.
         Buffer.Write<int>(static_cast<int>(NameMap.size()));
@@ -400,13 +392,13 @@ namespace RC::OutTheShade
         // extensions //
 
         Buffer.Write<uint32_t>(0x54584543); // "CEXT"; magic
-        Buffer.Write<uint8_t>(0); // extensions layout version; 0 (Initial)
+        Buffer.Write<uint8_t>(0);           // extensions layout version; 0 (Initial)
 
         Buffer.Write<uint32_t>(3); // number of extensions, 3 right now
 
         // extension 1: PPTH (object paths)
         Buffer.Write<uint32_t>(0x48545050); // ext id
-        Buffer.Write<uint32_t>(0); // size; unknown for now
+        Buffer.Write<uint32_t>(0);          // size; unknown for now
 
         std::streampos extStartPos = Buffer.GetBuffer().tellp();
         Buffer.Write<uint8_t>(0); // PPTH version; 0
@@ -429,7 +421,7 @@ namespace RC::OutTheShade
 
         // extension 2: EATR (extended attributes)
         Buffer.Write<uint32_t>(0x52544145); // ext id
-        Buffer.Write<uint32_t>(0); // size; unknown for now
+        Buffer.Write<uint32_t>(0);          // size; unknown for now
 
         extStartPos = Buffer.GetBuffer().tellp();
         Buffer.Write<uint8_t>(0); // EATR version; 0
@@ -442,7 +434,7 @@ namespace RC::OutTheShade
         for (auto Struct : Structs)
         {
             if (Struct->GetClassPrivate() == UScriptStruct::StaticClass())
-            { 
+            {
                 Buffer.Write<uint8_t>(1);
                 Buffer.Write<int32_t>(((UScriptStruct*)Struct)->GetStructFlags());
             }
@@ -458,9 +450,11 @@ namespace RC::OutTheShade
             }
 
             std::vector<uint64_t> propFlags;
-            for (FProperty* Props : Struct->ForEachProperty()) propFlags.push_back(static_cast<uint64_t>(Props->GetPropertyFlags()));
+            for (FProperty* Props : Struct->ForEachProperty())
+                propFlags.push_back(static_cast<uint64_t>(Props->GetPropertyFlags()));
             Buffer.Write<uint32_t>(static_cast<uint32_t>(propFlags.size()));
-            for (uint64_t propFlag : propFlags) Buffer.Write<uint64_t>(propFlag);
+            for (uint64_t propFlag : propFlags)
+                Buffer.Write<uint64_t>(propFlag);
         }
         extEndPos = Buffer.GetBuffer().tellp();
 
@@ -471,7 +465,7 @@ namespace RC::OutTheShade
 
         // extension 3: ENVP (enum name/value pairs)
         Buffer.Write<uint32_t>(0x50564E45); // ext id
-        Buffer.Write<uint32_t>(0); // size; unknown for now
+        Buffer.Write<uint32_t>(0);          // size; unknown for now
 
         extStartPos = Buffer.GetBuffer().tellp();
         Buffer.Write<uint8_t>(0); // ENVP version; 0
@@ -479,7 +473,8 @@ namespace RC::OutTheShade
         for (auto Enum : Enums)
         {
             uint32_t EnumNameCount = 0;
-            for (auto _ : Enum->ForEachName()) ++EnumNameCount;
+            for (auto _ : Enum->ForEachName())
+                ++EnumNameCount;
             Buffer.Write<uint32_t>(EnumNameCount);
 
             for (auto& [Key, val] : Enum->ForEachName())
@@ -498,21 +493,21 @@ namespace RC::OutTheShade
         // end of extensions //
 
         std::vector<uint8_t> UsmapData;
-		std::string UncompressedStream = Buffer.GetBuffer().str();
-		UsmapData.resize(UncompressedStream.size());
-		memcpy(UsmapData.data(), UncompressedStream.data(), UsmapData.size());
+        std::string UncompressedStream = Buffer.GetBuffer().str();
+        UsmapData.resize(UncompressedStream.size());
+        memcpy(UsmapData.data(), UncompressedStream.data(), UsmapData.size());
 
         auto FileOutput = FileWriter("Mappings.usmap");
 
-        FileOutput.Write<uint16_t>(0x30C4); //magic
-        FileOutput.Write<uint8_t>(0); //version
-        FileOutput.Write<uint8_t>(0); //compression
+        FileOutput.Write<uint16_t>(0x30C4); // magic
+        FileOutput.Write<uint8_t>(0);       // version
+        FileOutput.Write<uint8_t>(0);       // compression
         // Warning: Converting size_t (uint64) to int.
-        FileOutput.Write<uint32_t>(static_cast<uint32_t>(UsmapData.size())); //compressed size
-        FileOutput.Write<uint32_t>(Buffer.Size()); //decompressed size
+        FileOutput.Write<uint32_t>(static_cast<uint32_t>(UsmapData.size())); // compressed size
+        FileOutput.Write<uint32_t>(Buffer.Size());                           // decompressed size
 
         FileOutput.Write(UsmapData.data(), UsmapData.size());
 
         Output::send(STR("Mappings Generation Completed Successfully!\n"));
     }
-}
+} // namespace RC::OutTheShade

@@ -1,18 +1,20 @@
-#include <LuaType/LuaUWorld.hpp>
+#include <DynamicOutput/Output.hpp>
 #include <LuaType/LuaAActor.hpp>
 #include <LuaType/LuaUClass.hpp>
-#include <Unreal/UClass.hpp>
+#include <LuaType/LuaUWorld.hpp>
 #include <Unreal/AActor.hpp>
-#include <Unreal/World.hpp>
-#include <Unreal/UnrealCoreStructs.hpp>
+#include <Unreal/GameplayStatics.hpp>
 #include <Unreal/Rotator.hpp>
 #include <Unreal/Transform.hpp>
-#include <Unreal/GameplayStatics.hpp>
-#include <DynamicOutput/Output.hpp>
+#include <Unreal/UClass.hpp>
+#include <Unreal/UnrealCoreStructs.hpp>
+#include <Unreal/World.hpp>
 
 namespace RC::LuaType
 {
-    UWorld::UWorld(Unreal::UWorld* object) : RemoteObjectBase<Unreal::UWorld, UWorldName>(object) {}
+    UWorld::UWorld(Unreal::UWorld* object) : RemoteObjectBase<Unreal::UWorld, UWorldName>(object)
+    {
+    }
 
     auto UWorld::construct(const LuaMadeSimple::Lua& lua, Unreal::UWorld* unreal_object) -> const LuaMadeSimple::Lua::Table
     {
@@ -49,12 +51,12 @@ namespace RC::LuaType
         return table;
     }
 
-    auto UWorld::setup_metamethods([[maybe_unused]]BaseObject& base_object) -> void
+    auto UWorld::setup_metamethods([[maybe_unused]] BaseObject& base_object) -> void
     {
         // UWorld has no metamethods
     }
 
-    template<LuaMadeSimple::Type::IsFinal is_final>
+    template <LuaMadeSimple::Type::IsFinal is_final>
     auto UWorld::setup_member_functions(const LuaMadeSimple::Lua::Table& table) -> void
     {
         table.add_pair("SpawnActor", [](const LuaMadeSimple::Lua& lua) -> int {
@@ -75,26 +77,23 @@ Overloads:
             Unreal::FVector location{};
             if (lua.is_userdata())
             {
-                //location = lua.get_userdata<FVector>().get_remote_cpp_object();
+                // location = lua.get_userdata<FVector>().get_remote_cpp_object();
                 lua.throw_error(error_overload_not_found);
             }
             else if (lua.is_table())
             {
                 lua.for_each_in_table([&](const LuaMadeSimple::LuaTableReference& table) {
-                    if (table.key.is_string() && table.key.get_string() == "X" &&
-                        table.value.is_number())
+                    if (table.key.is_string() && table.key.get_string() == "X" && table.value.is_number())
                     {
                         location.SetX(table.value.get_number());
                     }
 
-                    if (table.key.is_string() && table.key.get_string() == "Y" &&
-                        table.value.is_number())
+                    if (table.key.is_string() && table.key.get_string() == "Y" && table.value.is_number())
                     {
                         location.SetY(table.value.get_number());
                     }
 
-                    if (table.key.is_string() && table.key.get_string() == "Z" &&
-                        table.value.is_number())
+                    if (table.key.is_string() && table.key.get_string() == "Z" && table.value.is_number())
                     {
                         location.SetZ(table.value.get_number());
                     }
@@ -109,26 +108,23 @@ Overloads:
             Unreal::FRotator rotation{};
             if (lua.is_userdata())
             {
-                //location = lua.get_userdata<FRotator>().get_remote_cpp_object();
+                // location = lua.get_userdata<FRotator>().get_remote_cpp_object();
                 lua.throw_error(error_overload_not_found);
             }
             else if (lua.is_table())
             {
                 lua.for_each_in_table([&](const LuaMadeSimple::LuaTableReference& table) {
-                    if (table.key.is_string() && table.key.get_string() == "Yaw" &&
-                        table.value.is_number())
+                    if (table.key.is_string() && table.key.get_string() == "Yaw" && table.value.is_number())
                     {
                         rotation.Yaw = table.value.get_number();
                     }
 
-                    if (table.key.is_string() && table.key.get_string() == "Pitch" &&
-                        table.value.is_number())
+                    if (table.key.is_string() && table.key.get_string() == "Pitch" && table.value.is_number())
                     {
                         rotation.Pitch = table.value.get_number();
                     }
 
-                    if (table.key.is_string() && table.key.get_string() == "Roll" &&
-                        table.value.is_number())
+                    if (table.key.is_string() && table.key.get_string() == "Roll" && table.value.is_number())
                     {
                         rotation.Roll = table.value.get_number();
                     }
@@ -155,7 +151,7 @@ Overloads:
 
             // If this is the final object then we also want to finalize creating the table
             // If not then it's the responsibility of the overriding object to call 'make_global()'
-            //table.make_global(ClassName::ToString());
+            // table.make_global(ClassName::ToString());
         }
     }
-}
+} // namespace RC::LuaType

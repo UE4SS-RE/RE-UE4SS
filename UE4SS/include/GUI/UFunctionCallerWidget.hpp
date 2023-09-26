@@ -1,7 +1,7 @@
 #pragma once
 
-#include <vector>
 #include <string>
+#include <vector>
 
 #include <GUI/SearcherWidget.hpp>
 
@@ -10,7 +10,7 @@ namespace RC::Unreal
     class UObject;
     class UFunction;
     class FProperty;
-}
+} // namespace RC::Unreal
 
 namespace RC::GUI
 {
@@ -39,13 +39,13 @@ namespace RC::GUI
 
     class UFunctionCallerWidget
     {
-    public:
+      public:
         UFunctionCallerWidget();
 
-    private:
+      private:
         SearcherWidget m_searcher{&ufunction_caller_search_mode_changed, &ufunction_caller_all_iterator, &ufunction_caller_search_iterator, this};
 
-    private:
+      private:
         std::vector<CallableUFunction> m_callable_functions{};
         std::vector<UFunctionParam> m_params_for_selected_function{};
         CallableUFunction* m_currently_selected_function{};
@@ -55,25 +55,32 @@ namespace RC::GUI
         bool m_function_for_instance_is_selected{};
         bool m_is_cache_valid{};
 
-    private:
+      private:
         auto is_widget_open() -> bool&;
-        auto is_cache_valid() -> bool { return m_is_cache_valid; }
+        auto is_cache_valid() -> bool
+        {
+            return m_is_cache_valid;
+        }
         auto cache_instance(UObject* instance) -> void;
         auto deselect_all_functions() -> void;
         auto select_function(CallableUFunction&) -> void;
-        auto is_function_selected() -> bool { return m_currently_selected_function; }
-        auto selected_function() -> CallableUFunction& { return *m_currently_selected_function; }
+        auto is_function_selected() -> bool
+        {
+            return m_currently_selected_function;
+        }
+        auto selected_function() -> CallableUFunction&
+        {
+            return *m_currently_selected_function;
+        }
         auto call_selected_function(UObject* instance) -> void;
         auto render_param_example(UFunctionParam& param) -> void;
         auto render_param_type(UFunctionParam& param) -> void;
 
-    public:
+      public:
         auto open_widget_deferred() -> void;
         auto invalidate_cache() -> void;
 
-    public:
+      public:
         auto render(UObject* instance) -> void;
     };
-}
-
-
+} // namespace RC::GUI

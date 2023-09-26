@@ -1,29 +1,29 @@
+#include <ctime>
 #include <format>
 #include <string>
-#include <ctime>
 #include <utility>
 
 #include <Constructs/Views/EnumerateView.hpp>
-#include <GUI/Dumpers.hpp>
 #include <DynamicOutput/DynamicOutput.hpp>
-#include <File/Macros.hpp>
 #include <File/File.hpp>
+#include <File/Macros.hpp>
+#include <GUI/Dumpers.hpp>
 #include <JSON/JSON.hpp>
 #include <USMapGenerator/Generator.hpp>
 #ifdef TEXT
 #undef TEXT
 #endif
+#include <SDKGenerator/TMapOverrideGen.hpp>
 #include <UE4SSProgram.hpp>
-#include <Unreal/UnrealInitializer.hpp>
-#include <Unreal/Searcher/ObjectSearcher.hpp>
-#include <Unreal/NameTypes.hpp>
-#include <Unreal/UClass.hpp>
 #include <Unreal/AActor.hpp>
+#include <Unreal/NameTypes.hpp>
+#include <Unreal/Searcher/ObjectSearcher.hpp>
+#include <Unreal/UClass.hpp>
 #include <Unreal/UFunction.hpp>
 #include <Unreal/UScriptStruct.hpp>
+#include <Unreal/UnrealInitializer.hpp>
 #include <chrono>
 #include <imgui.h>
-#include <SDKGenerator/TMapOverrideGen.hpp>
 
 namespace RC::GUI::Dumpers
 {
@@ -33,7 +33,11 @@ namespace RC::GUI::Dumpers
     //       They need to be controlled by the engine version select or before 2.0 releases.
 
     // In KH3, there's an extra float either at the end of FMeshUVChannelInfo or at the end of FStaticMaterial, I can't tell which one.
-    enum { MAX_TEXCOORDS = 4, MAX_STATIC_TEXCOORDS = 8 };
+    enum
+    {
+        MAX_TEXCOORDS = 4,
+        MAX_STATIC_TEXCOORDS = 8
+    };
     struct FMeshUVChannelInfo
     {
         bool bInitialized;
@@ -59,7 +63,7 @@ namespace RC::GUI::Dumpers
         /** Data used for texture streaming relative to each UV channels. */
         FMeshUVChannelInfo UVChannelData;
     };
-    
+
     struct FStaticMaterial_420AndAbove
     {
         using UMaterialInterface = ::RC::Unreal::UObject;
@@ -97,7 +101,7 @@ namespace RC::GUI::Dumpers
         FString scale_string{};
         scale_property->ExportTextItem(scale_string, scale, nullptr, nullptr, 0);
         root_actor_buffer.append(std::format(STR("\"{}\","), scale_string.GetCharArray()));
-        
+
         return root_actor_buffer;
     }
 
@@ -109,12 +113,18 @@ namespace RC::GUI::Dumpers
 
         size_t actor_count{};
         FindObjectSearcher(dump_actor_class, AnySuperStruct::StaticClass()).ForEach([&](UObject* object) {
-            if (object->HasAnyFlags(RF_ClassDefaultObject)) { return LoopAction::Continue; }
+            if (object->HasAnyFlags(RF_ClassDefaultObject))
+            {
+                return LoopAction::Continue;
+            }
 
             auto actor = static_cast<AActor*>(object);
-            
+
             auto root_component = actor->GetValuePtrByPropertyNameInChain<UObject*>(STR("RootComponent"));
-            if (!root_component || !*root_component) { return LoopAction::Continue; }
+            if (!root_component || !*root_component)
+            {
+                return LoopAction::Continue;
+            }
 
             StringType actor_buffer{};
 
@@ -128,7 +138,7 @@ namespace RC::GUI::Dumpers
 
             // TODO: build system to handle other types of components - possibly including a way to specify which components to dump and which properties are important via a config file
             actor_buffer.append(generate_root_component_csv(*root_component));
-            actor_buffer.append(STR("\""));                
+            actor_buffer.append(STR("\""));
             static auto static_mesh_component_class = UObjectGlobals::StaticFindObject<UClass*>(nullptr, nullptr, STR("/Script/Engine.StaticMeshComponent"));
             const auto& static_mesh_components = actor->K2_GetComponentsByClass(static_mesh_component_class);
             if (static_mesh_components.Num() > 0)
@@ -139,7 +149,8 @@ namespace RC::GUI::Dumpers
                     const auto mesh = *static_mesh_component_ptr->GetValuePtrByPropertyNameInChain<UObject*>(STR("StaticMesh"));
                     if (!mesh)
                     {
-                        Output::send<LogLevel::Warning>(STR("SKIPPING COMPONENT! StaticMeshComponent '{}' has no mesh.\n"), static_mesh_component_ptr->GetOuterPrivate()->GetName());
+                        Output::send<LogLevel::Warning>(STR("SKIPPING COMPONENT! StaticMeshComponent '{}' has no mesh.\n"),
+                                                        static_mesh_component_ptr->GetOuterPrivate()->GetName());
                         continue;
                     }
 
@@ -147,7 +158,7 @@ namespace RC::GUI::Dumpers
                     FString mesh_string{};
                     mesh_property->ExportTextItem(mesh_string, &mesh, nullptr, nullptr, 0);
                     actor_buffer.append(std::format(STR("(StaticMesh={}',"), mesh_string.GetCharArray()));
-                    
+
                     auto materials_for_each_body = [&](const UObject* material_interface) {
                         if (material_interface)
                         {
@@ -155,7 +166,8 @@ namespace RC::GUI::Dumpers
                             const auto material_type_space_location = material_full_name.find(STR(" "));
                             if (material_type_space_location == material_full_name.npos)
                             {
-                                Output::send<LogLevel::Warning>(STR("SKIPPING MATERIAL! Was unable to find space in full material name in component: '{}'.\n"), material_full_name);
+                                Output::send<LogLevel::Warning>(STR("SKIPPING MATERIAL! Was unable to find space in full material name in component: '{}'.\n"),
+                                                                material_full_name);
                                 return;
                             }
 
@@ -164,14 +176,14 @@ namespace RC::GUI::Dumpers
                                 throw std::runtime_error{"integer overflow when converting material_type_space_location signed\n"};
                             }
                             auto material_typeless_name = StringViewType{material_full_name.begin() + static_cast<long long>(material_type_space_location) + 1,
-                                    material_full_name.end()};
+                                                                         material_full_name.end()};
 
                             actor_buffer.append(std::format(STR("{}'"), material_interface->GetClassPrivate()->GetName()));
                             actor_buffer.append(std::format(STR("\"\"{}"), material_typeless_name));
                             actor_buffer.append(STR("\"\"'"));
                         }
                     };
-                    
+
                     if (Version::IsAtMost(4, 19))
                     {
                         const auto materials = *mesh->GetValuePtrByPropertyName<TArray<FStaticMaterial_419AndBelow>>(STR("StaticMaterials"));
@@ -228,7 +240,6 @@ namespace RC::GUI::Dumpers
             return LoopAction::Continue;
         });
 
-
         return file_buffer;
     }
 
@@ -238,12 +249,18 @@ namespace RC::GUI::Dumpers
 
         size_t actor_count{};
         FindObjectSearcher(class_to_dump, AnySuperStruct::StaticClass()).ForEach([&](UObject* object) {
-            if (object->HasAnyFlags(RF_ClassDefaultObject)) { return LoopAction::Continue; }
+            if (object->HasAnyFlags(RF_ClassDefaultObject))
+            {
+                return LoopAction::Continue;
+            }
 
             auto actor = static_cast<AActor*>(object);
-            
+
             auto root_component = actor->GetValuePtrByPropertyNameInChain<UObject*>(STR("RootComponent"));
-            if (!root_component || !*root_component) { return LoopAction::Continue; }
+            if (!root_component || !*root_component)
+            {
+                return LoopAction::Continue;
+            }
 
             auto& actor_json_object = global_json_array.new_object();
 
@@ -288,14 +305,18 @@ namespace RC::GUI::Dumpers
     }
 
     auto CurrentDumpNums = MapDumpFileName{};
-    
+
     void call_generate_static_mesh_file()
     {
         Output::send(STR("Dumping CSV of all loaded static mesh actors, positions and mesh properties\n"));
         static auto dump_actor_class = UObjectGlobals::StaticFindObject<UClass*>(nullptr, nullptr, STR("/Script/Engine.StaticMeshActor"));
         std::wstring file_buffer{};
         file_buffer.append(generate_actors_csv_file(dump_actor_class));
-        auto file = File::open(std::format(STR("{}\\{}-ue4ss_static_mesh_data.csv"), UE4SSProgram::get_program().get_working_directory(), long(std::time(nullptr))), File::OpenFor::Writing, File::OverwriteExistingFile::Yes, File::CreateIfNonExistent::Yes);
+        auto file =
+                File::open(std::format(STR("{}\\{}-ue4ss_static_mesh_data.csv"), UE4SSProgram::get_program().get_working_directory(), long(std::time(nullptr))),
+                           File::OpenFor::Writing,
+                           File::OverwriteExistingFile::Yes,
+                           File::CreateIfNonExistent::Yes);
         file.write_string_to_file(file_buffer);
         Output::send(STR("Finished dumping CSV of all loaded static mesh actors, positions and mesh properties\n"));
     }
@@ -305,32 +326,37 @@ namespace RC::GUI::Dumpers
         Output::send(STR("Dumping CSV of all loaded actor types, positions and mesh properties\n"));
         std::wstring file_buffer{};
         file_buffer.append(generate_actors_csv_file(AActor::StaticClass()));
-        auto file = File::open(std::format(STR("{}\\{}-ue4ss_actor_data.csv"), UE4SSProgram::get_program().get_working_directory(), long(std::time(nullptr))), File::OpenFor::Writing, File::OverwriteExistingFile::Yes, File::CreateIfNonExistent::Yes);
+        auto file = File::open(std::format(STR("{}\\{}-ue4ss_actor_data.csv"), UE4SSProgram::get_program().get_working_directory(), long(std::time(nullptr))),
+                               File::OpenFor::Writing,
+                               File::OverwriteExistingFile::Yes,
+                               File::CreateIfNonExistent::Yes);
         file.write_string_to_file(file_buffer);
         Output::send(STR("Finished dumping CSV of all loaded actor types, positions and mesh properties\n"));
     }
-    
 
     auto render() -> void
     {
-        if (!UnrealInitializer::StaticStorage::bIsInitialized) { return; }
+        if (!UnrealInitializer::StaticStorage::bIsInitialized)
+        {
+            return;
+        }
 
         if (ImGui::Button("Dump all static actor meshes to file"))
         {
-            
+
             call_generate_static_mesh_file();
 
-            /*auto file = File::open(StringType{UE4SSProgram::get_program().get_working_directory()} + STR("\\ue4ss_static_mesh_data.json"), File::OpenFor::Writing, File::OverwriteExistingFile::Yes, File::CreateIfNonExistent::Yes);
-            file.write_string_to_file(generate_actors_json_file(dump_actor_class));*/
+            /*auto file = File::open(StringType{UE4SSProgram::get_program().get_working_directory()} + STR("\\ue4ss_static_mesh_data.json"), File::OpenFor::Writing,
+            File::OverwriteExistingFile::Yes, File::CreateIfNonExistent::Yes); file.write_string_to_file(generate_actors_json_file(dump_actor_class));*/
         }
-        
+
         if (ImGui::Button("Dump all actors to file"))
         {
-            
+
             call_generate_all_actor_file();
 
-            /*auto file = File::open(StringType{UE4SSProgram::get_program().get_working_directory()} + STR("\\ue4ss_actor_data.json"), File::OpenFor::Writing, File::OverwriteExistingFile::Yes, File::CreateIfNonExistent::Yes);
-            file.write_string_to_file(generate_actors_json_file(AActor::StaticClass()));*/
+            /*auto file = File::open(StringType{UE4SSProgram::get_program().get_working_directory()} + STR("\\ue4ss_actor_data.json"), File::OpenFor::Writing,
+            File::OverwriteExistingFile::Yes, File::CreateIfNonExistent::Yes); file.write_string_to_file(generate_actors_json_file(AActor::StaticClass()));*/
         }
 
         /*ImGui::SameLine();*/
@@ -356,7 +382,7 @@ namespace RC::GUI::Dumpers
         {
             OutTheShade::generate_usmap();
         }
-        
+
         if (ImGui::Button("Generate TMapOverride file\n"))
         {
             UEGenerator::TMapOverrideGenerator::generate_tmapoverride();
@@ -379,5 +405,4 @@ namespace RC::GUI::Dumpers
             UE4SSProgram::get_program().generate_lua_types(working_dir + STR("\\Mods\\shared\\types"));
         }
     }
-}
-
+} // namespace RC::GUI::Dumpers

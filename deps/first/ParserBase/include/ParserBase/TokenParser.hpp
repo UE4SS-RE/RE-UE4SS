@@ -1,19 +1,19 @@
 #pragma once
 
-#include <vector>
+#include <functional>
 #include <optional>
 #include <string>
-#include <functional>
+#include <vector>
 
 #include <File/Macros.hpp>
 #include <ParserBase/Common.hpp>
 
 namespace RC::ParserBase
 {
-    using OrDoCallable = void(*)();
+    using OrDoCallable = void (*)();
     class TokenParser
     {
-    public:
+      public:
         enum class Operation
         {
             ContinueAsNormal,
@@ -32,35 +32,37 @@ namespace RC::ParserBase
             No,
         };
 
-    private:
+      private:
         const class Tokenizer& m_tokenizer;
         mutable File::StringType m_data;
 
-    protected:
+      protected:
         mutable size_t m_current_token_index_being_parsed{0};
         mutable size_t m_backward_token_index{0};
 
-    public:
+      public:
         // Investigate whether I want to std::move the input here
         RC_PB_API TokenParser(const class Tokenizer&, File::StringType& input);
 
-    protected:
+      protected:
         RC_PB_API virtual auto parse_token(const class Token& token) -> void = 0;
 
-    private:
+      private:
         RC_PB_API auto calc_next_token_offset(size_t current_offset, PeekDirection) const -> size_t;
         RC_PB_API auto get_start_token_index_ref(PeekDirection peek_direction, Consume consume, size_t& fallback) const -> size_t&;
-        //using PeekUntilCallable = bool(*)(const Token&);
+        // using PeekUntilCallable = bool(*)(const Token&);
         using PeekUntilCallable = std::function<bool(const Token&)>;
-        RC_PB_API auto peek_until_internal(Consume consume, const std::vector<int>& find_types, PeekUntilCallable, PeekDirection = PeekDirection::Forward) const -> void;
-        RC_PB_API auto peek_and_ignore_until_internal(Consume consume, const std::vector<int>& find_types, PeekDirection peek_direction) const -> const class Token&;
+        RC_PB_API auto peek_until_internal(Consume consume, const std::vector<int>& find_types, PeekUntilCallable, PeekDirection = PeekDirection::Forward) const
+                -> void;
+        RC_PB_API auto peek_and_ignore_until_internal(Consume consume, const std::vector<int>& find_types, PeekDirection peek_direction) const -> const
+                class Token&;
         RC_PB_API auto peek_continually_internal(Consume consume, PeekUntilCallable) const -> bool;
 
-    protected:
+      protected:
         RC_PB_API auto get_token(size_t index) const -> const class Token&;
         RC_PB_API auto get_data(const class Token&) const -> const File::StringType;
 
-        //auto find_token_with_data(int token_type, File::StringViewType data) const -> std::optional<std::reference_wrapper<const class Token>>;
+        // auto find_token_with_data(int token_type, File::StringViewType data) const -> std::optional<std::reference_wrapper<const class Token>>;
 
         // Explanation for this particular implementation of peak/consume
         // When you peek, you aren't advancing the cursor
@@ -89,9 +91,7 @@ namespace RC::ParserBase
         RC_PB_API auto consume_and_ignore_until(const int find_type, PeekDirection = PeekDirection::Forward) const -> const class Token&;
         RC_PB_API auto consume_and_ignore_until(const std::vector<int>& find_types, PeekDirection = PeekDirection::Forward) const -> const class Token&;
 
-    public:
+      public:
         RC_PB_API auto parse() -> void;
     };
-}
-
-
+} // namespace RC::ParserBase

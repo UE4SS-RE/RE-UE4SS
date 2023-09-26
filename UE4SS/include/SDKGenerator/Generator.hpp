@@ -15,7 +15,7 @@ namespace RC::Unreal
     class UClass;
     class UScriptStruct;
     class FProperty;
-}
+} // namespace RC::Unreal
 
 namespace RC::UEGenerator
 {
@@ -27,7 +27,4 @@ namespace RC::UEGenerator
 
     auto generate_cxx_headers(const std::filesystem::path directory_to_generate_in) -> void;
     auto generate_lua_types(const std::filesystem::path directory_to_generate_in) -> void;
-}
-
-
-
+} // namespace RC::UEGenerator

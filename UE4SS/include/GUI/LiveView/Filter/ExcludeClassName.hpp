@@ -7,7 +7,7 @@ namespace RC::GUI::Filter
 {
     class ExcludeClassName
     {
-    public:
+      public:
         static inline StringType s_debug_name{STR("ExcludeClassName")};
         static inline StringType s_value{};
         static inline std::string s_internal_value{};
@@ -26,6 +26,4 @@ namespace RC::GUI::Filter
             }
         }
     };
-}
-
-
+} // namespace RC::GUI::Filter

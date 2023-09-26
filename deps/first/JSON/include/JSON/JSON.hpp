@@ -1,12 +1,12 @@
 ﻿#pragma once
 
+#include <JSON/Array.hpp>
+#include <JSON/Bool.hpp>
 #include <JSON/Common.hpp>
 #include <JSON/Null.hpp>
-#include <JSON/Object.hpp>
-#include <JSON/Array.hpp>
-#include <JSON/String.hpp>
 #include <JSON/Number.hpp>
-#include <JSON/Bool.hpp>
+#include <JSON/Object.hpp>
+#include <JSON/String.hpp>
 
 namespace RC::JSON
 {
@@ -18,5 +18,3 @@ namespace RC::JSON
         First item must an anonymous object
     */
 }
-
-

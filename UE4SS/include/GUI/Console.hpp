@@ -1,12 +1,12 @@
 #pragma once
 
-#include <vector>
-#include <string>
 #include <mutex>
+#include <string>
+#include <vector>
 
 #include <DynamicOutput/OutputDevice.hpp>
-#include <imgui.h>
 #include <TextEditor.h>
+#include <imgui.h>
 
 using namespace RC;
 
@@ -14,7 +14,7 @@ namespace RC::GUI
 {
     class Console
     {
-    private:
+      private:
         char m_input_buffer[256]{};
         std::vector<std::string> m_lines{};
         ImGuiTextFilter m_filter{};
@@ -22,10 +22,10 @@ namespace RC::GUI
         float m_current_console_output_width{};
         std::mutex m_lines_mutex{};
         TextEditor m_text_editor{};
-        TextEditor::Breakpoints  m_breakpoints{};
+        TextEditor::Breakpoints m_breakpoints{};
         const size_t m_maximum_num_lines{50000};
 
-    public:
+      public:
         Console()
         {
             m_text_editor.SetConsoleMode(true);
@@ -36,16 +36,14 @@ namespace RC::GUI
             m_text_editor.SetTextFilter(&m_filter);
         }
 
-    private:
+      private:
         auto GetLanguageDefinitionNone() -> const TextEditor::LanguageDefinition&;
         auto GetPalette() const -> const TextEditor::Palette&;
 
-    public:
+      public:
         auto render() -> void;
         auto render_search_box() -> void;
         auto add_line(const std::string&, Color::Color) -> void;
         auto add_line(const std::wstring&, Color::Color) -> void;
     };
-}
-
-
+} // namespace RC::GUI

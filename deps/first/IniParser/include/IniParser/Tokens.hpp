@@ -13,5 +13,3 @@ enum TokenType : int
     EndOfFile,
 };
 using IniTokenType = TokenType;
-
-

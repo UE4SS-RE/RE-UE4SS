@@ -14,7 +14,10 @@ namespace RC::JSON::Parser
             tc.add(ParserBase::Token::create(TokenType::CarriageReturn, STR("CarriageReturn"), STR("\r")));
             tc.add(ParserBase::Token::create(TokenType::NewLine, STR("NewLine"), STR("\n")));
             tc.add(ParserBase::Token::create(TokenType::DoubleQuote, STR("DoubleQuote"), STR("\"")));
-            tc.add(ParserBase::Token::create(TokenType::Characters, STR("Characters"), STR(""), ParserBase::Token::HasData::Yes)); // Empty identifier will match everything that no other token identifier matches
+            tc.add(ParserBase::Token::create(TokenType::Characters,
+                                             STR("Characters"),
+                                             STR(""),
+                                             ParserBase::Token::HasData::Yes)); // Empty identifier will match everything that no other token identifier matches
             tc.add(ParserBase::Token::create(TokenType::ClosingCurlyBrace, STR("ClosingCurlyBrace"), STR("}")));
             tc.add(ParserBase::Token::create(TokenType::OpeningCurlyBrace, STR("OpeningCurlyBrace"), STR("{")));
             tc.add(ParserBase::Token::create(TokenType::ClosingSquareBracket, STR("ClosingSquareBracket"), STR("]")));
@@ -47,7 +50,7 @@ namespace RC::JSON::Parser
             return std::move(global_object);
             // Parse Tokens -> END
         }
-    }
+    } // namespace Internal
 
     auto parse(File::StringType& input) -> std::unique_ptr<JSON::Object>
     {
@@ -59,4 +62,4 @@ namespace RC::JSON::Parser
         auto input = file.read_all();
         return Internal::parse_internal(input);
     }
-}
+} // namespace RC::JSON::Parser

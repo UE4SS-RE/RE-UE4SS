@@ -21,32 +21,30 @@ namespace RC::JSON::Parser
     {
         switch (token_type)
         {
-            case CarriageReturn:
-                return "CarriageReturn";
-            case NewLine:
-                return "NewLine";
-            case DoubleQuote:
-                return "DoubleQuote";
-            case Characters:
-                return "Characters";
-            case ClosingCurlyBrace:
-                return "ClosingCurlyBrace";
-            case OpeningCurlyBrace:
-                return "OpeningCurlyBrace";
-            case ClosingSquareBracket:
-                return "ClosingSquareBracket";
-            case OpeningSquareBracket:
-                return "OpeningSquareBracket";
-            case Comma:
-                return "Comma";
-            case Colon:
-                return "Colon";
-            case EndOfFile:
-                return "EndOfFile";
+        case CarriageReturn:
+            return "CarriageReturn";
+        case NewLine:
+            return "NewLine";
+        case DoubleQuote:
+            return "DoubleQuote";
+        case Characters:
+            return "Characters";
+        case ClosingCurlyBrace:
+            return "ClosingCurlyBrace";
+        case OpeningCurlyBrace:
+            return "OpeningCurlyBrace";
+        case ClosingSquareBracket:
+            return "ClosingSquareBracket";
+        case OpeningSquareBracket:
+            return "OpeningSquareBracket";
+        case Comma:
+            return "Comma";
+        case Colon:
+            return "Colon";
+        case EndOfFile:
+            return "EndOfFile";
         }
 
         return "UnhandledToken";
     }
-}
-
-
+} // namespace RC::JSON::Parser

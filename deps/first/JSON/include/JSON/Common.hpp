@@ -31,13 +31,14 @@ namespace RC::JSON
 
     auto inline indent(int32_t* indent_level, File::StringType& string) -> void
     {
-        if (!indent_level) { throw std::runtime_error{"Must supply an indent_level pointer"}; };
+        if (!indent_level)
+        {
+            throw std::runtime_error{"Must supply an indent_level pointer"};
+        };
 
         for (int32_t i = 0; i < *indent_level; ++i)
         {
             string.append(STR("  "));
         }
     }
-}
-
-
+} // namespace RC::JSON

@@ -6,23 +6,23 @@
 #include <functional>
 
 #include <Constructs/Generator.hpp>
-#include <LuaMadeSimple/LuaObject.hpp>
-#include <Helpers/String.hpp>
 #include <DynamicOutput/DynamicOutput.hpp>
+#include <Helpers/String.hpp>
+#include <LuaMadeSimple/LuaObject.hpp>
 #include <LuaType/LuaCustomProperty.hpp>
-#pragma warning(disable: 4005)
-#include <Unreal/UObject.hpp>
-#include <Unreal/UClass.hpp>
-#include <Unreal/UStruct.hpp>
-#include <Unreal/World.hpp>
+#pragma warning(disable : 4005)
 #include <Unreal/FOutputDevice.hpp>
 #include <Unreal/FProperty.hpp>
 #include <Unreal/NameTypes.hpp>
+#include <Unreal/UClass.hpp>
+#include <Unreal/UObject.hpp>
 #include <Unreal/UObjectArray.hpp>
+#include <Unreal/UStruct.hpp>
 #include <Unreal/VersionedContainer/Container.hpp>
-#pragma warning(default: 4005)
+#include <Unreal/World.hpp>
+#pragma warning(default : 4005)
 
-template<typename SupposedIntegralType>
+template <typename SupposedIntegralType>
 concept IsConvertableToLuaInteger = std::is_integral_v<SupposedIntegralType>;
 
 namespace RC::LuaType
@@ -31,7 +31,7 @@ namespace RC::LuaType
     {
         static FLuaObjectDeleteListener s_lua_object_delete_listener;
 
-        void NotifyUObjectDeleted(const Unreal::UObjectBase* object, [[maybe_unused]]int32_t index) override;
+        void NotifyUObjectDeleted(const Unreal::UObjectBase* object, [[maybe_unused]] int32_t index) override;
 
         void OnUObjectArrayShutdown() override
         {
@@ -43,40 +43,92 @@ namespace RC::LuaType
 
     using Operation = LuaMadeSimple::Type::Operation;
 
-    template<typename ObjectType, template<typename T> typename LuaObjectBase, typename ObjectName>
+    template <typename ObjectType, template <typename T> typename LuaObjectBase, typename ObjectName>
     class ObjectBase : public LuaObjectBase<ObjectType>
     {
-    protected:
+      protected:
         using SelfType = ObjectBase<ObjectType, LuaObjectBase, ObjectName>;
         using Super = SelfType;
         using ClassName = ObjectName;
 
-    public:
-        ObjectBase(ObjectType* object) : LuaObjectBase<ObjectType>(ObjectName::ToString(), object) {}
-        ObjectBase(ObjectType&& object) : LuaObjectBase<ObjectType>(ObjectName::ToString(), std::move(object)) {}
+      public:
+        ObjectBase(ObjectType* object) : LuaObjectBase<ObjectType>(ObjectName::ToString(), object)
+        {
+        }
+        ObjectBase(ObjectType&& object) : LuaObjectBase<ObjectType>(ObjectName::ToString(), std::move(object))
+        {
+        }
         ObjectBase() = delete;
         virtual ~ObjectBase() = default;
 
-    public:
+      public:
         // Whether this object is a specific type or inherits from a specific type
-        virtual auto derives_from_actor()           -> bool { return false; }
-        virtual auto derives_from_name()            -> bool { return false; }
-        virtual auto derives_from_string()          -> bool { return false; }
-        virtual auto derives_from_text()            -> bool { return false; }
-        virtual auto derives_from_weak_object_ptr() -> bool { return false; }
-        virtual auto derives_from_mod()             -> bool { return false; }
-        virtual auto derives_from_array()           -> bool { return false; }
-        virtual auto derives_from_class()           -> bool { return false; }
-        virtual auto derives_from_enum()            -> bool { return false; }
-        virtual auto derives_from_function()        -> bool { return false; }
-        virtual auto derives_from_object()          -> bool { return false; }
-        virtual auto derives_from_script_struct()   -> bool { return false; }
-        virtual auto derives_from_world()           -> bool { return false; }
-        virtual auto derives_from_property()        -> bool { return false; }
-        virtual auto derives_from_property_class()  -> bool { return false; }
-        virtual auto derives_from_ufunction()       -> bool { return false; }
+        virtual auto derives_from_actor() -> bool
+        {
+            return false;
+        }
+        virtual auto derives_from_name() -> bool
+        {
+            return false;
+        }
+        virtual auto derives_from_string() -> bool
+        {
+            return false;
+        }
+        virtual auto derives_from_text() -> bool
+        {
+            return false;
+        }
+        virtual auto derives_from_weak_object_ptr() -> bool
+        {
+            return false;
+        }
+        virtual auto derives_from_mod() -> bool
+        {
+            return false;
+        }
+        virtual auto derives_from_array() -> bool
+        {
+            return false;
+        }
+        virtual auto derives_from_class() -> bool
+        {
+            return false;
+        }
+        virtual auto derives_from_enum() -> bool
+        {
+            return false;
+        }
+        virtual auto derives_from_function() -> bool
+        {
+            return false;
+        }
+        virtual auto derives_from_object() -> bool
+        {
+            return false;
+        }
+        virtual auto derives_from_script_struct() -> bool
+        {
+            return false;
+        }
+        virtual auto derives_from_world() -> bool
+        {
+            return false;
+        }
+        virtual auto derives_from_property() -> bool
+        {
+            return false;
+        }
+        virtual auto derives_from_property_class() -> bool
+        {
+            return false;
+        }
+        virtual auto derives_from_ufunction() -> bool
+        {
+            return false;
+        }
 
-    public:
+      public:
         // Constructor for RemoteObjectBase
         auto static construct(const LuaMadeSimple::Lua& lua, Unreal::UObject* unreal_object) -> const LuaMadeSimple::Lua::Table
         {
@@ -112,7 +164,7 @@ namespace RC::LuaType
             return table;
         }
 
-        template<LuaMadeSimple::Type::IsFinal is_final>
+        template <LuaMadeSimple::Type::IsFinal is_final>
         auto static setup_member_functions(const LuaMadeSimple::Lua::Table& table) -> void
         {
             // Overridden functions from 'Lua::RemoteObject'.
@@ -146,17 +198,23 @@ namespace RC::LuaType
 
                 // If this is the final object then we also want to finalize creating the table
                 // If not then it's the responsibility of the overriding object to call 'make_global()
-                //table.make_global("RemoteObjectBase");
+                // table.make_global("RemoteObjectBase");
             }
         }
     };
 
-    struct UE4SSBaseObjectName { constexpr static const char* ToString() { return "UE4SSBaseObject"; } };
+    struct UE4SSBaseObjectName
+    {
+        constexpr static const char* ToString()
+        {
+            return "UE4SSBaseObject";
+        }
+    };
 
-    template<typename DerivedType, typename ObjectName>
+    template <typename DerivedType, typename ObjectName>
     using RemoteObjectBase = ObjectBase<DerivedType, LuaMadeSimple::Type::RemoteObject, ObjectName>;
 
-    template<typename DerivedType, typename ObjectName>
+    template <typename DerivedType, typename ObjectName>
     using LocalObjectBase = ObjectBase<DerivedType, LuaMadeSimple::Type::LocalObject, ObjectName>;
 
     using UE4SSBaseObject = ObjectBase<uint8_t, LuaMadeSimple::Type::RemoteObject, UE4SSBaseObjectName>;
@@ -225,33 +283,45 @@ namespace RC::LuaType
     auto push_functionproperty(const FunctionPusherParams&) -> void;
     // Push to Lua -> END
 
-    auto handle_unreal_property_value(const Operation operation, const LuaMadeSimple::Lua&, Unreal::UObject* base, Unreal::FName property_name, Unreal::FField* field) -> void;
+    auto handle_unreal_property_value(const Operation operation, const LuaMadeSimple::Lua&, Unreal::UObject* base, Unreal::FName property_name, Unreal::FField* field)
+            -> void;
 
     auto is_a_implementation(const LuaMadeSimple::Lua& lua) -> int;
 
-    template<typename DerivedType, typename ObjectName>
+    template <typename DerivedType, typename ObjectName>
     class UObjectBase;
 
-    struct UObjectName { constexpr static const char* ToString() { return "UObject"; } };
+    struct UObjectName
+    {
+        constexpr static const char* ToString()
+        {
+            return "UObject";
+        }
+    };
     using UObject = UObjectBase<Unreal::UObject, UObjectName>;
-    
+
     auto add_to_global_unreal_objects_map(Unreal::UObject* object) -> void;
     auto is_object_in_global_unreal_object_map(Unreal::UObject* object) -> bool;
-    
-    template<typename DerivedType, typename ObjectName>
+
+    template <typename DerivedType, typename ObjectName>
     class UObjectBase : public RemoteObjectBase<DerivedType, ObjectName>
     {
-    protected:
+      protected:
         using Super = RemoteObjectBase<DerivedType, ObjectName>;
         using SelfType = Super;
 
-    public:
-        explicit UObjectBase(DerivedType* object) : Super(object) {}
+      public:
+        explicit UObjectBase(DerivedType* object) : Super(object)
+        {
+        }
 
-    public:
-        auto derives_from_object() -> bool override { return true; }
+      public:
+        auto derives_from_object() -> bool override
+        {
+            return true;
+        }
 
-    public:
+      public:
         UObjectBase() = delete;
         virtual ~UObjectBase() = default;
 
@@ -295,7 +365,7 @@ namespace RC::LuaType
             return table;
         }
 
-    private:
+      private:
         auto static setup_metamethods(LuaMadeSimple::Type::BaseObject& base_object) -> void
         {
             // Another object can override these metamethods by calling the 'create()' function again
@@ -320,8 +390,8 @@ namespace RC::LuaType
             });
         }
 
-    public:
-        template<LuaMadeSimple::Type::IsFinal is_final>
+      public:
+        template <LuaMadeSimple::Type::IsFinal is_final>
         auto static setup_member_functions(const LuaMadeSimple::Lua::Table& table) -> void
         {
             Super::template setup_member_functions<LuaMadeSimple::Type::IsFinal::No>(table);
@@ -403,7 +473,10 @@ namespace RC::LuaType
                     }
 
                     auto* obj_as_struct = Unreal::Cast<Unreal::UStruct>(reflected_object);
-                    if (!obj_as_struct) { obj_as_struct = reflected_object->GetClassPrivate(); }
+                    if (!obj_as_struct)
+                    {
+                        obj_as_struct = reflected_object->GetClassPrivate();
+                    }
                     auto* property = obj_as_struct->FindProperty(Unreal::FName(property_name));
 
                     construct_xproperty(lua, property);
@@ -535,7 +608,8 @@ Overloads:
 
             table.add_pair("IsValid", [](const LuaMadeSimple::Lua& lua) -> int {
                 const auto& lua_object = lua.get_userdata<SelfType>();
-                if (lua_object.get_remote_cpp_object() && !lua_object.get_remote_cpp_object()->IsUnreachable() && is_object_in_global_unreal_object_map(lua_object.get_remote_cpp_object()))
+                if (lua_object.get_remote_cpp_object() && !lua_object.get_remote_cpp_object()->IsUnreachable() &&
+                    is_object_in_global_unreal_object_map(lua_object.get_remote_cpp_object()))
                 {
                     lua.set_bool(true);
                 }
@@ -557,11 +631,11 @@ Overloads:
 
                 // If this is the final object then we also want to finalize creating the table
                 // If not then it's the responsibility of the overriding object to call 'make_global()
-                //table.make_global("UObject");
+                // table.make_global("UObject");
             }
         }
 
-    private:
+      private:
         auto static prepare_to_handle(const Operation operation, const LuaMadeSimple::Lua& lua) -> void
         {
             auto& lua_object = lua.get_userdata<SelfType>();
@@ -575,17 +649,17 @@ Overloads:
                 // If the operation is not "Get" then this isn't "__index" and we want to do nothing in this case
                 switch (operation)
                 {
-                    case Operation::Get:
-                    case Operation::GetParam:
-                        // Construct an empty object to allow for safe chaining with a validity check at the end
-                        SelfType::construct(lua, static_cast<DerivedType*>(nullptr));
-                        break;
-                    case Operation::Set:
-                        Output::send(STR("[Lua][Error] Tried setting member variable '{}' but UObject instance is nullptr\n"), member_name);
-                        break;
-                    default:
-                        Output::send(STR("[Lua][Error] The UObject instance is nullptr & operation type was invalid\n"));
-                        break;
+                case Operation::Get:
+                case Operation::GetParam:
+                    // Construct an empty object to allow for safe chaining with a validity check at the end
+                    SelfType::construct(lua, static_cast<DerivedType*>(nullptr));
+                    break;
+                case Operation::Set:
+                    Output::send(STR("[Lua][Error] Tried setting member variable '{}' but UObject instance is nullptr\n"), member_name);
+                    break;
+                default:
+                    Output::send(STR("[Lua][Error] The UObject instance is nullptr & operation type was invalid\n"));
+                    break;
                 }
 
                 return;
@@ -598,7 +672,10 @@ Overloads:
             {
                 auto* object = lua_object.get_remote_cpp_object();
                 auto* obj_as_struct = Unreal::Cast<Unreal::UStruct>(object);
-                if (!obj_as_struct) { obj_as_struct = object->GetClassPrivate(); }
+                if (!obj_as_struct)
+                {
+                    obj_as_struct = object->GetClassPrivate();
+                }
                 field = obj_as_struct->FindProperty(property_name);
             }
 
@@ -606,18 +683,16 @@ Overloads:
         }
     };
 
-    template<typename ParamType>
+    template <typename ParamType>
     class LocalUnrealParam : public LuaMadeSimple::Type::LocalObject<ParamType>
     {
-    private:
+      private:
         Unreal::FProperty* m_property{};
         Unreal::UObject* m_base{};
 
-    public:
-        LocalUnrealParam(ParamType object, Unreal::UObject* base, Unreal::FProperty* property) :
-                LuaMadeSimple::Type::LocalObject<ParamType>("LocalParam", std::move(object)),
-                m_property(property),
-                m_base(base)
+      public:
+        LocalUnrealParam(ParamType object, Unreal::UObject* base, Unreal::FProperty* property)
+            : LuaMadeSimple::Type::LocalObject<ParamType>("LocalParam", std::move(object)), m_property(property), m_base(base)
         {
         }
 
@@ -644,7 +719,7 @@ Overloads:
             return table;
         }
 
-    private:
+      private:
         auto static setup_metamethods(LuaMadeSimple::Type::BaseObject& base_object) -> void
         {
             base_object.get_metamethods().create(LuaMadeSimple::Lua::MetaMethod::Index, [](const LuaMadeSimple::Lua& lua) -> int {
@@ -678,7 +753,7 @@ Overloads:
 
             // If this is the final object then we also want to finalize creating the table
             // If not then it's the responsibility of the overriding object to call 'make_global()'
-            //table.make_global("LocalUnrealParam");
+            // table.make_global("LocalUnrealParam");
         }
 
         auto static prepare_to_handle(const Operation operation, const LuaMadeSimple::Lua& lua) -> void
@@ -690,13 +765,11 @@ Overloads:
 
             if (StaticState::m_property_value_pushers.contains(type_name_comparison_index))
             {
-                const PusherParams pusher_params{
-                        .operation = operation,
-                        .lua = lua,
-                        .base = lua_object.m_base,
-                        .data = lua_object.get_local_cpp_object().get_data_ptr(),
-                        .property = lua_object.m_property
-                };
+                const PusherParams pusher_params{.operation = operation,
+                                                 .lua = lua,
+                                                 .base = lua_object.m_base,
+                                                 .data = lua_object.get_local_cpp_object().get_data_ptr(),
+                                                 .property = lua_object.m_property};
                 StaticState::m_property_value_pushers[type_name_comparison_index](pusher_params);
             }
             else
@@ -704,7 +777,9 @@ Overloads:
                 // We can either throw an error and kill the execution
                 /**/
                 std::wstring property_type_name = property_type.ToString();
-                lua.throw_error(std::format("[LocalUnrealParam::prepare_to_handle] Tried accessing unreal property without a registered handler. Property type '{}' not supported.", to_string(property_type_name)));
+                lua.throw_error(std::format(
+                        "[LocalUnrealParam::prepare_to_handle] Tried accessing unreal property without a registered handler. Property type '{}' not supported.",
+                        to_string(property_type_name)));
                 //*/
 
                 // Or we can treat unhandled property types as some sort of generic type
@@ -719,12 +794,12 @@ Overloads:
 
     class RemoteUnrealParam : public LuaMadeSimple::Type::RemoteObject<void>
     {
-    private:
+      private:
         Unreal::FProperty* m_property{};
         Unreal::UObject* m_base{};
         Unreal::FName m_type{};
 
-    public:
+      public:
         explicit RemoteUnrealParam(void* param_ptr, Unreal::UObject* base, Unreal::FProperty* param_property_type_name, const Unreal::FName type);
         explicit RemoteUnrealParam(void* data_ptr, const Unreal::FName type);
 
@@ -732,38 +807,38 @@ Overloads:
         auto static construct(const LuaMadeSimple::Lua&, void* param_ptr, Unreal::UObject* base, Unreal::FProperty* property) -> const LuaMadeSimple::Lua::Table;
         auto static construct(const LuaMadeSimple::Lua&, void* data_ptr, const Unreal::FName type) -> const LuaMadeSimple::Lua::Table;
 
-    private:
+      private:
         auto static setup_metamethods(BaseObject&) -> void;
         auto static setup_member_functions(LuaMadeSimple::Lua::Table& table) -> void;
         auto static prepare_to_handle(const Operation, const LuaMadeSimple::Lua&) -> void;
     };
 
-    template<IsConvertableToLuaInteger IntegerType>
+    template <IsConvertableToLuaInteger IntegerType>
     auto push_integer(const PusherParams& params) -> void
     {
         IntegerType* integer_ptr = static_cast<IntegerType*>(params.data);
-        if (!integer_ptr) { params.lua.throw_error("[push_integer] data pointer is nullptr"); }
+        if (!integer_ptr)
+        {
+            params.lua.throw_error("[push_integer] data pointer is nullptr");
+        }
 
         switch (params.operation)
         {
-            case Operation::GetNonTrivialLocal:
-            case Operation::Get:
-                params.lua.set_integer(*integer_ptr);
-                return;
-            case Operation::Set:
-                *integer_ptr = static_cast<IntegerType>(params.lua.get_integer(params.stored_at_index));
-                return;
-            case Operation::GetParam:
-                RemoteUnrealParam::construct(params.lua, integer_ptr, params.base, params.property);
-                return;
-            default:
-                params.lua.throw_error("[push_integer] Unhandled Operation");
-                break;
+        case Operation::GetNonTrivialLocal:
+        case Operation::Get:
+            params.lua.set_integer(*integer_ptr);
+            return;
+        case Operation::Set:
+            *integer_ptr = static_cast<IntegerType>(params.lua.get_integer(params.stored_at_index));
+            return;
+        case Operation::GetParam:
+            RemoteUnrealParam::construct(params.lua, integer_ptr, params.base, params.property);
+            return;
+        default:
+            params.lua.throw_error("[push_integer] Unhandled Operation");
+            break;
         }
 
         params.lua.throw_error(std::format("[push_integer] Unknown Operation ({}) not supported", static_cast<int32_t>(params.operation)));
     }
-}
-
-
-
+} // namespace RC::LuaType

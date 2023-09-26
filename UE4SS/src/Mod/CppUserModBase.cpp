@@ -1,5 +1,5 @@
-#include <Mod/CppUserModBase.hpp>
 #include <Mod/CppMod.hpp>
+#include <Mod/CppUserModBase.hpp>
 #include <UE4SSProgram.hpp>
 
 namespace RC
@@ -29,4 +29,4 @@ namespace RC
         auto& tab = GUITabs.emplace_back(std::make_shared<GUI::GUITab>(tab_name, render_function, this));
         UE4SSProgram::get_program().add_gui_tab(tab);
     }
-}
+} // namespace RC

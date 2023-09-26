@@ -1,8 +1,8 @@
 #include <fstream>
 
+#include <File/File.hpp>
 #include <File/FileType/WinFile.hpp>
 #include <File/HandleTemplate.hpp>
-#include <File/File.hpp>
 
 #define NOMINMAX
 #include <Windows.h>
@@ -85,10 +85,13 @@ namespace RC::File
         return std::filesystem::exists(m_serialization_file_path_and_name);
     }
 
-    template<typename DataType>
+    template <typename DataType>
     auto write_to_file(WinFile& file, DataType* data, DWORD num_bytes_to_write) -> void
     {
-        if (!file.is_file_open()) { THROW_INTERNAL_FILE_ERROR("[WinFile::write_to_file] Tried writing to file but the file is not open") }
+        if (!file.is_file_open())
+        {
+            THROW_INTERNAL_FILE_ERROR("[WinFile::write_to_file] Tried writing to file but the file is not open")
+        }
 
         DWORD bytes_written{};
         if (!WriteFile(file.get_file(), data, num_bytes_to_write, &bytes_written, nullptr))
@@ -112,7 +115,8 @@ namespace RC::File
     {
         if (m_serialization_file_path_and_name.empty())
         {
-            THROW_INTERNAL_FILE_ERROR("[WinFile::serialize_identifying_properties]: Path & file name for serialization file is empty, please call 'set_serialization_output_file'")
+            THROW_INTERNAL_FILE_ERROR("[WinFile::serialize_identifying_properties]: Path & file name for serialization file is empty, please call "
+                                      "'set_serialization_output_file'")
         }
 
         BY_HANDLE_FILE_INFORMATION file_info{};
@@ -170,15 +174,42 @@ namespace RC::File
         BY_HANDLE_FILE_INFORMATION live_info{};
         GetFileInformationByHandle(m_file, &live_info);
 
-        if (live_info.dwVolumeSerialNumber != m_identifying_properties.volume_serial_number) { return false; }
-        if (live_info.nFileIndexLow != m_identifying_properties.file_index_low) { return false; }
-        if (live_info.nFileIndexHigh != m_identifying_properties.file_index_high) { return false; }
-        if (live_info.ftLastWriteTime.dwLowDateTime != m_identifying_properties.last_write_time_low) { return false; }
-        if (live_info.ftLastWriteTime.dwHighDateTime != m_identifying_properties.last_write_time_high) { return false; }
-        if (live_info.ftCreationTime.dwLowDateTime != m_identifying_properties.creation_time_low) { return false; }
-        if (live_info.ftCreationTime.dwHighDateTime != m_identifying_properties.creation_time_high) { return false; }
-        if (live_info.nFileSizeLow != m_identifying_properties.file_size_low) { return false; }
-        if (live_info.nFileSizeHigh != m_identifying_properties.file_size_high) { return false; }
+        if (live_info.dwVolumeSerialNumber != m_identifying_properties.volume_serial_number)
+        {
+            return false;
+        }
+        if (live_info.nFileIndexLow != m_identifying_properties.file_index_low)
+        {
+            return false;
+        }
+        if (live_info.nFileIndexHigh != m_identifying_properties.file_index_high)
+        {
+            return false;
+        }
+        if (live_info.ftLastWriteTime.dwLowDateTime != m_identifying_properties.last_write_time_low)
+        {
+            return false;
+        }
+        if (live_info.ftLastWriteTime.dwHighDateTime != m_identifying_properties.last_write_time_high)
+        {
+            return false;
+        }
+        if (live_info.ftCreationTime.dwLowDateTime != m_identifying_properties.creation_time_low)
+        {
+            return false;
+        }
+        if (live_info.ftCreationTime.dwHighDateTime != m_identifying_properties.creation_time_high)
+        {
+            return false;
+        }
+        if (live_info.nFileSizeLow != m_identifying_properties.file_size_low)
+        {
+            return false;
+        }
+        if (live_info.nFileSizeHigh != m_identifying_properties.file_size_high)
+        {
+            return false;
+        }
         return true;
     }
 
@@ -186,7 +217,8 @@ namespace RC::File
     {
         if (m_serialization_file_path_and_name.empty())
         {
-            THROW_INTERNAL_FILE_ERROR("[WinFile::invalidate_serialization] Could not invalidate serialization file because 'm_serialization_file_path_and_name' was empty, please call 'set_serialization_output_file'")
+            THROW_INTERNAL_FILE_ERROR("[WinFile::invalidate_serialization] Could not invalidate serialization file because "
+                                      "'m_serialization_file_path_and_name' was empty, please call 'set_serialization_output_file'")
         }
 
         if (std::filesystem::exists(m_serialization_file_path_and_name))
@@ -195,7 +227,7 @@ namespace RC::File
         }
     }
 
-    template<typename DataType>
+    template <typename DataType>
     auto serialize_typed_item(DataType data, Handle& output_file) -> void
     {
         write_to_file(output_file.get_underlying_type(), &data, sizeof(DataType));
@@ -205,7 +237,8 @@ namespace RC::File
     {
         if (m_serialization_file_path_and_name.empty())
         {
-            THROW_INTERNAL_FILE_ERROR("[WinFile::serialize_item]: Path & file name for serialization file is empty, please call 'set_serialization_output_file'")
+            THROW_INTERNAL_FILE_ERROR(
+                    "[WinFile::serialize_item]: Path & file name for serialization file is empty, please call 'set_serialization_output_file'")
         }
 
         if (!serialization_file_exists() && !is_internal_item)
@@ -219,22 +252,22 @@ namespace RC::File
 
         switch (data.data_type)
         {
-            case GenericDataType::UnsignedLong:
-                serialize_typed_item<unsigned long>(data.data_ulong, serialization_file);
-                serialization_file.get_underlying_type().m_offset_to_next_serialized_item += sizeof(unsigned long);
-                break;
-            case GenericDataType::SignedLong:
-                serialize_typed_item<signed long>(data.data_long, serialization_file);
-                serialization_file.get_underlying_type().m_offset_to_next_serialized_item += sizeof(signed long);
-                break;
-            case GenericDataType::UnsignedLongLong:
-                serialize_typed_item<unsigned long long>(data.data_ulonglong, serialization_file);
-                serialization_file.get_underlying_type().m_offset_to_next_serialized_item += sizeof(unsigned long long);
-                break;
-            case GenericDataType::SignedLongLong:
-                serialize_typed_item<signed long long>(data.data_longlong, serialization_file);
-                serialization_file.get_underlying_type().m_offset_to_next_serialized_item += sizeof(signed long long);
-                break;
+        case GenericDataType::UnsignedLong:
+            serialize_typed_item<unsigned long>(data.data_ulong, serialization_file);
+            serialization_file.get_underlying_type().m_offset_to_next_serialized_item += sizeof(unsigned long);
+            break;
+        case GenericDataType::SignedLong:
+            serialize_typed_item<signed long>(data.data_long, serialization_file);
+            serialization_file.get_underlying_type().m_offset_to_next_serialized_item += sizeof(signed long);
+            break;
+        case GenericDataType::UnsignedLongLong:
+            serialize_typed_item<unsigned long long>(data.data_ulonglong, serialization_file);
+            serialization_file.get_underlying_type().m_offset_to_next_serialized_item += sizeof(unsigned long long);
+            break;
+        case GenericDataType::SignedLongLong:
+            serialize_typed_item<signed long long>(data.data_longlong, serialization_file);
+            serialization_file.get_underlying_type().m_offset_to_next_serialized_item += sizeof(signed long long);
+            break;
         }
 
         serialization_file.close();
@@ -246,7 +279,8 @@ namespace RC::File
         {
             if (m_serialization_file_path_and_name.empty())
             {
-                THROW_INTERNAL_FILE_ERROR("[WinFile::get_serialized_item]: Path & file name for serialization file is empty, please call 'set_serialization_output_file'")
+                THROW_INTERNAL_FILE_ERROR(
+                        "[WinFile::get_serialized_item]: Path & file name for serialization file is empty, please call 'set_serialization_output_file'")
             }
 
             Handle cache_file = open(m_serialization_file_path_and_name);
@@ -255,7 +289,8 @@ namespace RC::File
             auto res = ReadFile(cache_file.get_raw_handle(), &m_cache, cache_size, &bytes_read, nullptr);
             if (res == 0)
             {
-                THROW_INTERNAL_FILE_ERROR(std::format("[WinFile::get_serialized_item] Tried deserializing file but was unable to complete operation. Error: {}", GetLastError()))
+                THROW_INTERNAL_FILE_ERROR(
+                        std::format("[WinFile::get_serialized_item] Tried deserializing file but was unable to complete operation. Error: {}", GetLastError()))
             }
 
             cache_file.close();
@@ -280,7 +315,10 @@ namespace RC::File
 
     auto WinFile::create_all_directories(const std::filesystem::path& file_name_and_path) -> void
     {
-        if (file_name_and_path.parent_path().empty()) { return; }
+        if (file_name_and_path.parent_path().empty())
+        {
+            return;
+        }
 
         try
         {
@@ -288,7 +326,9 @@ namespace RC::File
         }
         catch (const std::filesystem::filesystem_error& e)
         {
-            THROW_INTERNAL_FILE_ERROR(std::format("[WinFile::create_all_directories] Tried creating directories '{}' but encountered an error. Error: {}", file_name_and_path.string(), e.what()))
+            THROW_INTERNAL_FILE_ERROR(std::format("[WinFile::create_all_directories] Tried creating directories '{}' but encountered an error. Error: {}",
+                                                  file_name_and_path.string(),
+                                                  e.what()))
         }
     }
 
@@ -318,7 +358,10 @@ namespace RC::File
             }
         }
 
-        if (!is_valid() || !is_file_open()) { return; }
+        if (!is_valid() || !is_file_open())
+        {
+            return;
+        }
 
         if (CloseHandle(m_file) == 0)
         {
@@ -344,9 +387,11 @@ namespace RC::File
         }
 
         std::string string_converted_to_utf8(string_size, 0);
-        if (WideCharToMultiByte(CP_UTF8, 0, string_to_write.data(), static_cast<int>(string_to_write.size()), &string_converted_to_utf8[0], string_size, NULL, NULL) == 0)
+        if (WideCharToMultiByte(CP_UTF8, 0, string_to_write.data(), static_cast<int>(string_to_write.size()), &string_converted_to_utf8[0], string_size, NULL, NULL) ==
+            0)
         {
-            THROW_INTERNAL_FILE_ERROR(std::format("[WinFile::write_string_to_file] Tried writing string to file but could not convert to utf-8. Error: {}", GetLastError()))
+            THROW_INTERNAL_FILE_ERROR(
+                    std::format("[WinFile::write_string_to_file] Tried writing string to file but could not convert to utf-8. Error: {}", GetLastError()))
         }
 
         write_to_file(*this, string_converted_to_utf8.c_str(), string_size);
@@ -366,15 +411,42 @@ namespace RC::File
             THROW_INTERNAL_FILE_ERROR(std::format("[WinFile::is_same_as] Tried retrieving file information by handle. Error: {}", GetLastError()))
         }
 
-        if (file_info.dwVolumeSerialNumber != other_file_info.dwVolumeSerialNumber) { return false; }
-        if (file_info.nFileIndexLow != other_file_info.nFileIndexLow) { return false; }
-        if (file_info.nFileIndexHigh != other_file_info.nFileIndexHigh) { return false; }
-        if (file_info.ftLastWriteTime.dwLowDateTime != other_file_info.ftLastWriteTime.dwLowDateTime) { return false; }
-        if (file_info.ftLastWriteTime.dwHighDateTime != other_file_info.ftLastWriteTime.dwHighDateTime) { return false; }
-        if (file_info.ftCreationTime.dwLowDateTime != other_file_info.ftCreationTime.dwLowDateTime) { return false; }
-        if (file_info.ftCreationTime.dwHighDateTime != other_file_info.ftCreationTime.dwHighDateTime) { return false; }
-        if (file_info.nFileSizeLow != other_file_info.nFileSizeLow) { return false; }
-        if (file_info.nFileSizeHigh != other_file_info.nFileSizeHigh) { return false; }
+        if (file_info.dwVolumeSerialNumber != other_file_info.dwVolumeSerialNumber)
+        {
+            return false;
+        }
+        if (file_info.nFileIndexLow != other_file_info.nFileIndexLow)
+        {
+            return false;
+        }
+        if (file_info.nFileIndexHigh != other_file_info.nFileIndexHigh)
+        {
+            return false;
+        }
+        if (file_info.ftLastWriteTime.dwLowDateTime != other_file_info.ftLastWriteTime.dwLowDateTime)
+        {
+            return false;
+        }
+        if (file_info.ftLastWriteTime.dwHighDateTime != other_file_info.ftLastWriteTime.dwHighDateTime)
+        {
+            return false;
+        }
+        if (file_info.ftCreationTime.dwLowDateTime != other_file_info.ftCreationTime.dwLowDateTime)
+        {
+            return false;
+        }
+        if (file_info.ftCreationTime.dwHighDateTime != other_file_info.ftCreationTime.dwHighDateTime)
+        {
+            return false;
+        }
+        if (file_info.nFileSizeLow != other_file_info.nFileSizeLow)
+        {
+            return false;
+        }
+        if (file_info.nFileSizeHigh != other_file_info.nFileSizeHigh)
+        {
+            return false;
+        }
         return true;
     }
 
@@ -400,7 +472,10 @@ namespace RC::File
             StringType file_contents;
             stream.seekg(0, std::ios::end);
             auto size = stream.tellg();
-            if (size == -1) { return {}; }
+            if (size == -1)
+            {
+                return {};
+            }
             file_contents.resize(size);
             stream.seekg(start, std::ios::beg);
             stream.read(&file_contents[0], file_contents.size());
@@ -415,17 +490,17 @@ namespace RC::File
         DWORD mapping_desired_access{};
         switch (m_open_properties.open_for)
         {
-            case OpenFor::Writing:
-            case OpenFor::Appending:
-                handle_desired_access = PAGE_READWRITE;
-                mapping_desired_access = FILE_MAP_WRITE;
-                break;
-            case OpenFor::Reading:
-                handle_desired_access = PAGE_READONLY;
-                mapping_desired_access = FILE_MAP_READ;
-                break;
-            default:
-                THROW_INTERNAL_FILE_ERROR("[WinFile::memory_map] Tried to memory map file but 'm_open_properties' contains invalid data.")
+        case OpenFor::Writing:
+        case OpenFor::Appending:
+            handle_desired_access = PAGE_READWRITE;
+            mapping_desired_access = FILE_MAP_WRITE;
+            break;
+        case OpenFor::Reading:
+            handle_desired_access = PAGE_READONLY;
+            mapping_desired_access = FILE_MAP_READ;
+            break;
+        default:
+            THROW_INTERNAL_FILE_ERROR("[WinFile::memory_map] Tried to memory map file but 'm_open_properties' contains invalid data.")
         }
 
         m_map_handle = CreateFileMapping(get_raw_handle(), nullptr, handle_desired_access, 0, 0, nullptr);
@@ -459,16 +534,16 @@ namespace RC::File
         DWORD desired_access;
         switch (open_properties.open_for)
         {
-            case OpenFor::Writing:
-                desired_access = GENERIC_WRITE;
-                break;
-            case OpenFor::Appending:
-                desired_access = FILE_APPEND_DATA;
-                break;
-            case OpenFor::Reading:
-                desired_access = GENERIC_READ;
-                break;
-            default:
+        case OpenFor::Writing:
+            desired_access = GENERIC_WRITE;
+            break;
+        case OpenFor::Appending:
+            desired_access = FILE_APPEND_DATA;
+            break;
+        case OpenFor::Reading:
+            desired_access = GENERIC_READ;
+            break;
+        default:
             THROW_INTERNAL_FILE_ERROR("[WinFile::open_file] Tried to open file but received invalid data for the 'OpenFor' parameter.")
         }
 
@@ -493,17 +568,28 @@ namespace RC::File
         // This very badly named API may create a new file or it may not but it will always open a file (unless there's an error)
         if constexpr (sizeof(CharType) > 1)
         {
-            file.set_file(CreateFileW(file_name_and_path.wstring().c_str(), desired_access, FILE_SHARE_READ | FILE_SHARE_WRITE, nullptr, creation_disposition, FILE_ATTRIBUTE_NORMAL, nullptr));
+            file.set_file(CreateFileW(file_name_and_path.wstring().c_str(),
+                                      desired_access,
+                                      FILE_SHARE_READ | FILE_SHARE_WRITE,
+                                      nullptr,
+                                      creation_disposition,
+                                      FILE_ATTRIBUTE_NORMAL,
+                                      nullptr));
         }
         else
         {
-            file.set_file(CreateFileA(file_name_and_path.string().c_str(), desired_access, FILE_SHARE_READ | FILE_SHARE_WRITE, nullptr, creation_disposition, FILE_ATTRIBUTE_NORMAL, nullptr));
+            file.set_file(CreateFileA(file_name_and_path.string().c_str(),
+                                      desired_access,
+                                      FILE_SHARE_READ | FILE_SHARE_WRITE,
+                                      nullptr,
+                                      creation_disposition,
+                                      FILE_ATTRIBUTE_NORMAL,
+                                      nullptr));
         }
 
         if (file.get_file() == INVALID_HANDLE_VALUE)
         {
-            std::string_view open_type =
-                    open_properties.open_for == OpenFor::Writing || open_properties.open_for == OpenFor::Appending ? "writing" : "reading";
+            std::string_view open_type = open_properties.open_for == OpenFor::Writing || open_properties.open_for == OpenFor::Appending ? "writing" : "reading";
 
             DWORD error = GetLastError();
             if (error == 2)
@@ -516,10 +602,11 @@ namespace RC::File
             }
             else
             {
-                THROW_INTERNAL_FILE_ERROR(std::format(
-                        "[WinFile::open_file] Tried opening file for {} but encountered an error. Path & File: {} | GetLastError() = {}\n",
-                        open_type, file_name_and_path.string(), error
-                ))
+                THROW_INTERNAL_FILE_ERROR(
+                        std::format("[WinFile::open_file] Tried opening file for {} but encountered an error. Path & File: {} | GetLastError() = {}\n",
+                                    open_type,
+                                    file_name_and_path.string(),
+                                    error))
             }
         }
 
@@ -529,4 +616,4 @@ namespace RC::File
 
         return file;
     }
-}
+} // namespace RC::File

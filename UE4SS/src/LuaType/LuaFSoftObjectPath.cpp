@@ -1,12 +1,14 @@
-#include <LuaType/LuaFSoftObjectPath.hpp>
-#include <LuaType/LuaFName.hpp>
-#include <LuaType/LuaFString.hpp>
 #include <DynamicOutput/DynamicOutput.hpp>
 #include <Helpers/String.hpp>
+#include <LuaType/LuaFName.hpp>
+#include <LuaType/LuaFSoftObjectPath.hpp>
+#include <LuaType/LuaFString.hpp>
 
 namespace RC::LuaType
 {
-    FSoftObjectPath::FSoftObjectPath(Unreal::FSoftObjectPath& object) : LocalObjectBase<Unreal::FSoftObjectPath, FSoftObjectPathName>(std::move(object)) {}
+    FSoftObjectPath::FSoftObjectPath(Unreal::FSoftObjectPath& object) : LocalObjectBase<Unreal::FSoftObjectPath, FSoftObjectPathName>(std::move(object))
+    {
+    }
 
     auto FSoftObjectPath::construct(const LuaMadeSimple::Lua& lua, Unreal::FSoftObjectPath& unreal_object) -> const LuaMadeSimple::Lua::Table
     {
@@ -44,10 +46,9 @@ namespace RC::LuaType
 
     auto FSoftObjectPath::setup_metamethods(BaseObject& base_object) -> void
     {
-
     }
 
-    template<LuaMadeSimple::Type::IsFinal is_final>
+    template <LuaMadeSimple::Type::IsFinal is_final>
     auto FSoftObjectPath::setup_member_functions(LuaMadeSimple::Lua::Table& table, std::string_view metatable_name) -> void
     {
         table.add_pair("GetAssetPathName", [](const LuaMadeSimple::Lua& lua) -> int {
@@ -71,7 +72,7 @@ namespace RC::LuaType
 
             // If this is the final object then we also want to finalize creating the table
             // If not then it's the responsibility of the overriding object to call 'make_global()'
-            //table.make_global(metatable_name);// , is_final == LuaMadeSimple::Type::IsFinal::No);
+            // table.make_global(metatable_name);// , is_final == LuaMadeSimple::Type::IsFinal::No);
         }
     }
-}
+} // namespace RC::LuaType

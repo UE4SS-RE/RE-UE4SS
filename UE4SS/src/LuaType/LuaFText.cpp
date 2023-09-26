@@ -1,11 +1,13 @@
-#include <LuaType/LuaFText.hpp>
-#include <Unreal/FText.hpp>
-#include <Unreal/FString.hpp>
 #include <DynamicOutput/DynamicOutput.hpp>
+#include <LuaType/LuaFText.hpp>
+#include <Unreal/FString.hpp>
+#include <Unreal/FText.hpp>
 
 namespace RC::LuaType
 {
-    FText::FText(Unreal::FText object) : LocalObjectBase<Unreal::FText, FTextName>(std::move(object)) {}
+    FText::FText(Unreal::FText object) : LocalObjectBase<Unreal::FText, FTextName>(std::move(object))
+    {
+    }
 
     auto FText::construct(const LuaMadeSimple::Lua& lua, Unreal::FText unreal_object) -> const LuaMadeSimple::Lua::Table
     {
@@ -45,7 +47,7 @@ namespace RC::LuaType
         // AActor has no metamethods
     }
 
-    template<LuaMadeSimple::Type::IsFinal is_final>
+    template <LuaMadeSimple::Type::IsFinal is_final>
     auto FText::setup_member_functions(const LuaMadeSimple::Lua::Table& table) -> void
     {
         table.add_pair("ToString", [](const LuaMadeSimple::Lua& lua) -> int {
@@ -66,7 +68,7 @@ namespace RC::LuaType
 
             // If this is the final object then we also want to finalize creating the table
             // If not then it's the responsibility of the overriding object to call 'make_global()'
-            //table.make_global(ClassName::ToString());
+            // table.make_global(ClassName::ToString());
         }
     }
-}
+} // namespace RC::LuaType

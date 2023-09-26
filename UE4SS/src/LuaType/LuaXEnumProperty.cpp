@@ -1,13 +1,15 @@
-#include <LuaType/LuaXEnumProperty.hpp>
-#include <LuaType/LuaUObject.hpp>
 #include <LuaType/LuaUEnum.hpp>
-#pragma warning(disable: 4005)
+#include <LuaType/LuaUObject.hpp>
+#include <LuaType/LuaXEnumProperty.hpp>
+#pragma warning(disable : 4005)
 #include <Unreal/Property/FEnumProperty.hpp>
-#pragma warning(default: 4005)
+#pragma warning(default : 4005)
 
 namespace RC::LuaType
 {
-    XEnumProperty::XEnumProperty(Unreal::FEnumProperty* object) : RemoteObjectBase<Unreal::FEnumProperty, FEnumPropertyName>(object) {}
+    XEnumProperty::XEnumProperty(Unreal::FEnumProperty* object) : RemoteObjectBase<Unreal::FEnumProperty, FEnumPropertyName>(object)
+    {
+    }
 
     auto XEnumProperty::construct(const LuaMadeSimple::Lua& lua, Unreal::FEnumProperty* unreal_object) -> const LuaMadeSimple::Lua::Table
     {
@@ -42,12 +44,12 @@ namespace RC::LuaType
         return table;
     }
 
-    auto XEnumProperty::setup_metamethods([[maybe_unused]]BaseObject& base_object) -> void
+    auto XEnumProperty::setup_metamethods([[maybe_unused]] BaseObject& base_object) -> void
     {
         // XEnumProperty has no metamethods
     }
 
-    template<LuaMadeSimple::Type::IsFinal is_final>
+    template <LuaMadeSimple::Type::IsFinal is_final>
     auto XEnumProperty::setup_member_functions(const LuaMadeSimple::Lua::Table& table) -> void
     {
         table.add_pair("GetEnum", [](const LuaMadeSimple::Lua& lua) -> int {
@@ -67,7 +69,7 @@ namespace RC::LuaType
 
             // If this is the final object then we also want to finalize creating the table
             // If not then it's the responsibility of the overriding object to call 'make_global()'
-            //table.make_global(ClassName::ToString());
+            // table.make_global(ClassName::ToString());
         }
     }
-}
+} // namespace RC::LuaType

@@ -1,21 +1,19 @@
 #include <bit>
 
 #include <LuaType/LuaCustomProperty.hpp>
-#pragma warning(disable: 4005)
-#include <Unreal/UClass.hpp>
+#pragma warning(disable : 4005)
 #include <Unreal/FProperty.hpp>
-#include <UnrealCustom/CustomProperty.hpp>
+#include <Unreal/UClass.hpp>
 #include <Unreal/UnrealVersion.hpp>
-#pragma warning(default: 4005)
+#include <UnrealCustom/CustomProperty.hpp>
+#pragma warning(default : 4005)
 
 namespace RC::LuaType
 {
     LuaCustomProperty::PropertyList LuaCustomProperty::StaticStorage::property_list;
 
-    LuaCustomProperty::LuaCustomProperty(std::wstring name, std::unique_ptr<Unreal::CustomProperty> property)
-            : m_name(name), m_property(std::move(property))
+    LuaCustomProperty::LuaCustomProperty(std::wstring name, std::unique_ptr<Unreal::CustomProperty> property) : m_name(name), m_property(std::move(property))
     {
-
     }
 
     auto LuaCustomProperty::PropertyList::add(std::wstring property_name, std::unique_ptr<Unreal::CustomProperty> property) -> void
@@ -70,4 +68,4 @@ namespace RC::LuaType
 
         return custom_property_found;
     }
-}
+} // namespace RC::LuaType

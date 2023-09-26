@@ -1,8 +1,8 @@
 #include <fstream>
 #include <sstream>
 
-#include <ParserBase/Tokenizer.hpp>
 #include <ParserBase/Token.hpp>
+#include <ParserBase/Tokenizer.hpp>
 
 namespace RC::ParserBase
 {
@@ -43,7 +43,7 @@ namespace RC::ParserBase
 
     auto Tokenizer::tokenize(const File::StringType& input) -> void
     {
-        //printf_s("Tokenizer::tokenize()\n\n");
+        // printf_s("Tokenizer::tokenize()\n\n");
 
         if (!m_token_container.m_has_eof_token_type)
         {
@@ -69,7 +69,7 @@ namespace RC::ParserBase
             printf_s("\n");
         }
         //*/
-        
+
         if (input.empty())
         {
             throw std::runtime_error{"[Tokenizer::tokenize] Input was empty"};
@@ -156,7 +156,7 @@ namespace RC::ParserBase
                         }
                     }
 
-                    if (all_rules_obeyed/* && !identifier_should_match_all*/)
+                    if (all_rules_obeyed /* && !identifier_should_match_all*/)
                     {
                         // current_empty_token.clear();
                         token_found = {.token = &token, .matched_anything = identifier_should_match_all};
@@ -225,4 +225,4 @@ namespace RC::ParserBase
     {
         return m_tokens_in_input.back();
     }
-}
+} // namespace RC::ParserBase

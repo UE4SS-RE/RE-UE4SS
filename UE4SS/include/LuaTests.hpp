@@ -20,6 +20,4 @@ namespace RC
     auto GetArrayTest2() -> Unreal::TArray<int16_t>&;
     auto GetArrayTest3() -> Unreal::TArray<FName>;
     auto Test_Get_UObject_Nullptr() -> UObject*;
-}
-
-
+} // namespace RC

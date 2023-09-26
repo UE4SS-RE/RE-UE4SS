@@ -1,12 +1,12 @@
 #include <format>
 
-#include <LuaType/LuaUFunction.hpp>
 #include <Helpers/Integer.hpp>
+#include <LuaType/LuaUFunction.hpp>
 #include <stdexcept>
-#pragma warning(disable: 4005)
-#include <Unreal/UFunction.hpp>
+#pragma warning(disable : 4005)
 #include <Unreal/FProperty.hpp>
-#pragma warning(default: 4005)
+#include <Unreal/UFunction.hpp>
+#pragma warning(default : 4005)
 
 namespace RC::LuaType
 {
@@ -26,7 +26,9 @@ namespace RC::LuaType
         return m_params;
     }
 
-    UFunction::UFunction(Unreal::UObject* base, Unreal::UFunction* function) : UObjectBase<Unreal::UFunction, UFunctionName>(function), m_base(base) {}
+    UFunction::UFunction(Unreal::UObject* base, Unreal::UFunction* function) : UObjectBase<Unreal::UFunction, UFunctionName>(function), m_base(base)
+    {
+    }
 
     auto UFunction::construct(const LuaMadeSimple::Lua& lua, Unreal::UObject* owning_object, Unreal::UFunction* function) -> const LuaMadeSimple::Lua::Table
     {
@@ -70,7 +72,7 @@ namespace RC::LuaType
         });
     }
 
-    template<LuaMadeSimple::Type::IsFinal is_final>
+    template <LuaMadeSimple::Type::IsFinal is_final>
     auto UFunction::setup_member_functions(const LuaMadeSimple::Lua::Table& table) -> void
     {
         table.add_pair("GetFunctionFlags", [](const LuaMadeSimple::Lua& lua) -> int {
@@ -99,7 +101,7 @@ namespace RC::LuaType
 
             // If this is the final object then we also want to finalize creating the table
             // If not then it's the responsibility of the overriding object to call 'make_global()'
-            //table.make_global(ClassName::ToString());
+            // table.make_global(ClassName::ToString());
         }
     }
-}
+} // namespace RC::LuaType

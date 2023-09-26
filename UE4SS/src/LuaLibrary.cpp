@@ -1,13 +1,13 @@
 #include <format>
 
+#include <DynamicOutput/DynamicOutput.hpp>
 #include <Helpers/Casting.hpp>
+#include <Helpers/String.hpp>
 #include <LuaLibrary.hpp>
 #include <LuaMadeSimple/LuaMadeSimple.hpp>
-#include <DynamicOutput/DynamicOutput.hpp>
-#include <Helpers/String.hpp>
 #include <UE4SSProgram.hpp>
-#include <Unreal/UnrealInitializer.hpp>
 #include <Unreal/FOutputDevice.hpp>
+#include <Unreal/UnrealInitializer.hpp>
 
 namespace RC::LuaLibrary
 {
@@ -40,7 +40,8 @@ namespace RC::LuaLibrary
 
         if (!lua.is_string())
         {
-            lua.throw_error(std::format("[do_tests => lambda(register_function(print))] Parameter #1 must be of type 'string'. Was of type '{}'.", lua.get_type_string()));
+            lua.throw_error(std::format("[do_tests => lambda(register_function(print))] Parameter #1 must be of type 'string'. Was of type '{}'.",
+                                        lua.get_type_string()));
         }
 
         std::wstring format = to_wstring(lua.get_string());
@@ -107,24 +108,24 @@ namespace RC::LuaLibrary
     {
         switch (status)
         {
-            case ExportedFunctionStatus::NO_ERROR_TO_EXPORT:
-                return L"NO_ERROR_TO_EXPORT | 0";
-            case ExportedFunctionStatus::UNKNOWN_ERROR:
-                return L"UNKNOWN_ERROR | 7";
-            case ExportedFunctionStatus::SUCCESS:
-                return L"SUCCESS | 1";
-            case ExportedFunctionStatus::VARIABLE_NOT_FOUND:
-                return L"VARIABLE_NOT_FOUND | 2";
-            case ExportedFunctionStatus::MOD_IS_NULLPTR:
-                return L"MOD_IS_NULLPTR | 3";
-            case ExportedFunctionStatus::SCRIPT_FUNCTION_RETURNED_FALSE:
-                return L"SCRIPT_FUNCTION_RETURNED_FALSE | 4";
-            case ExportedFunctionStatus::UNABLE_TO_CALL_SCRIPT_FUNCTION:
-                return L"UNABLE_TO_CALL_SCRIPT_FUNCTION | 5";
-            case ExportedFunctionStatus::SCRIPT_FUNCTION_NOT_FOUND:
-                return L"SCRIPT_FUNCTION_NOT_FOUND | 6";
-            case ExportedFunctionStatus::UE4SS_NOT_INITIALIZED:
-                return L"UE4SS_NOT_INITIALIZED | 8";
+        case ExportedFunctionStatus::NO_ERROR_TO_EXPORT:
+            return L"NO_ERROR_TO_EXPORT | 0";
+        case ExportedFunctionStatus::UNKNOWN_ERROR:
+            return L"UNKNOWN_ERROR | 7";
+        case ExportedFunctionStatus::SUCCESS:
+            return L"SUCCESS | 1";
+        case ExportedFunctionStatus::VARIABLE_NOT_FOUND:
+            return L"VARIABLE_NOT_FOUND | 2";
+        case ExportedFunctionStatus::MOD_IS_NULLPTR:
+            return L"MOD_IS_NULLPTR | 3";
+        case ExportedFunctionStatus::SCRIPT_FUNCTION_RETURNED_FALSE:
+            return L"SCRIPT_FUNCTION_RETURNED_FALSE | 4";
+        case ExportedFunctionStatus::UNABLE_TO_CALL_SCRIPT_FUNCTION:
+            return L"UNABLE_TO_CALL_SCRIPT_FUNCTION | 5";
+        case ExportedFunctionStatus::SCRIPT_FUNCTION_NOT_FOUND:
+            return L"SCRIPT_FUNCTION_NOT_FOUND | 6";
+        case ExportedFunctionStatus::UE4SS_NOT_INITIALIZED:
+            return L"UE4SS_NOT_INITIALIZED | 8";
         }
 
         return L"Missed switch case";
@@ -133,7 +134,10 @@ namespace RC::LuaLibrary
     auto get_lua_state_by_mod_name(const char* mod_name) -> lua_State*
     {
         auto* mod = UE4SSProgram::find_lua_mod_by_name(mod_name);
-        if (!mod) { return nullptr; }
+        if (!mod)
+        {
+            return nullptr;
+        }
         return mod->lua().get_lua_state();
     };
 
@@ -224,7 +228,10 @@ namespace RC::LuaLibrary
         }
     }
 
-    auto set_script_variable_default_data([[maybe_unused]]const char* mod_name, [[maybe_unused]]const char* variable_name, [[maybe_unused]]DefaultDataStruct& external_data, ReturnValue& return_struct) -> void
+    auto set_script_variable_default_data([[maybe_unused]] const char* mod_name,
+                                          [[maybe_unused]] const char* variable_name,
+                                          [[maybe_unused]] DefaultDataStruct& external_data,
+                                          ReturnValue& return_struct) -> void
     {
         try
         {
@@ -272,12 +279,12 @@ namespace RC::LuaLibrary
             {
                 switch (external_data.data1_type)
                 {
-                    case DefaultDataType::ConstCharPtr:
-                        lua_table.add_pair("data1", external_data.data1.as_string);
-                        break;
-                    case DefaultDataType::Float:
-                        lua_table.add_pair("data1", external_data.data1.as_float);
-                        break;
+                case DefaultDataType::ConstCharPtr:
+                    lua_table.add_pair("data1", external_data.data1.as_string);
+                    break;
+                case DefaultDataType::Float:
+                    lua_table.add_pair("data1", external_data.data1.as_float);
+                    break;
                 }
             }
 
@@ -285,12 +292,12 @@ namespace RC::LuaLibrary
             {
                 switch (external_data.data2_type)
                 {
-                    case DefaultDataType::ConstCharPtr:
-                        lua_table.add_pair("data2", external_data.data2.as_string);
-                        break;
-                    case DefaultDataType::Float:
-                        lua_table.add_pair("data2", external_data.data2.as_float);
-                        break;
+                case DefaultDataType::ConstCharPtr:
+                    lua_table.add_pair("data2", external_data.data2.as_string);
+                    break;
+                case DefaultDataType::Float:
+                    lua_table.add_pair("data2", external_data.data2.as_float);
+                    break;
                 }
             }
 
@@ -298,12 +305,12 @@ namespace RC::LuaLibrary
             {
                 switch (external_data.data3_type)
                 {
-                    case DefaultDataType::ConstCharPtr:
-                        lua_table.add_pair("data3", external_data.data3.as_string);
-                        break;
-                    case DefaultDataType::Float:
-                        lua_table.add_pair("data3", external_data.data3.as_float);
-                        break;
+                case DefaultDataType::ConstCharPtr:
+                    lua_table.add_pair("data3", external_data.data3.as_string);
+                    break;
+                case DefaultDataType::Float:
+                    lua_table.add_pair("data3", external_data.data3.as_float);
+                    break;
                 }
             }
 
@@ -311,12 +318,12 @@ namespace RC::LuaLibrary
             {
                 switch (external_data.data4_type)
                 {
-                    case DefaultDataType::ConstCharPtr:
-                        lua_table.add_pair("data4", external_data.data4.as_string);
-                        break;
-                    case DefaultDataType::Float:
-                        lua_table.add_pair("data4", external_data.data4.as_float);
-                        break;
+                case DefaultDataType::ConstCharPtr:
+                    lua_table.add_pair("data4", external_data.data4.as_string);
+                    break;
+                case DefaultDataType::Float:
+                    lua_table.add_pair("data4", external_data.data4.as_float);
+                    break;
                 }
             }
 
@@ -418,4 +425,4 @@ namespace RC::LuaLibrary
     {
         return Unreal::UnrealInitializer::StaticStorage::bIsInitialized;
     }
-}
+} // namespace RC::LuaLibrary

@@ -1,25 +1,25 @@
 #pragma once
 
-#include <string>
-#include <memory>
 #include <filesystem>
+#include <memory>
 #include <span>
+#include <string>
 
 #include <File/Common.hpp>
-#include <File/FileType/FileBase.hpp>
 #include <File/Enums.hpp>
 #include <File/Exceptions.hpp>
+#include <File/FileType/FileBase.hpp>
 
 namespace RC::File
 {
-    template<ImplementsFileInterface UnderlyingAbstraction>
+    template <ImplementsFileInterface UnderlyingAbstraction>
     class HandleTemplate
     {
-    public:
+      public:
         using FileType = UnderlyingAbstraction;
         using ThisType = HandleTemplate<UnderlyingAbstraction>;
 
-    private:
+      private:
         friend auto construct_handle(const std::filesystem::path& file_name, const OpenProperties& open_properties) -> ThisType;
 
         friend auto operator==(ThisType& a, ThisType& b) -> bool
@@ -27,16 +27,15 @@ namespace RC::File
             return a.m_internal_handle.is_same_as(b.m_internal_handle);
         }
 
-    private:
+      private:
         FileType m_internal_handle{};
 
-    protected:
-        explicit HandleTemplate(FileType&& internal_handle)
-                : m_internal_handle(std::move(internal_handle))
+      protected:
+        explicit HandleTemplate(FileType&& internal_handle) : m_internal_handle(std::move(internal_handle))
         {
         }
 
-    public:
+      public:
         HandleTemplate() = default;
         HandleTemplate(const HandleTemplate&) = delete;
         HandleTemplate& operator=(const HandleTemplate& original) = delete;
@@ -51,9 +50,12 @@ namespace RC::File
             m_internal_handle = std::move(original.m_internal_handle);
             original.m_internal_handle.invalidate_file();
         }
-        ~HandleTemplate() { close(); }
+        ~HandleTemplate()
+        {
+            close();
+        }
 
-    public:
+      public:
         [[nodiscard]] auto is_valid() -> bool
         {
             return m_internal_handle.is_valid();
@@ -104,49 +106,49 @@ namespace RC::File
             m_internal_handle.invalidate_serialization();
         }
 
-        template<typename SerializedDataType>
+        template <typename SerializedDataType>
         auto serialize_item(SerializedDataType data) -> void
         {
             throw std::runtime_error{"not reached"};
         }
 
-        template<>
+        template <>
         auto serialize_item(unsigned long data) -> void
         {
             m_internal_handle.serialize_item({.data_type = GenericDataType::UnsignedLong, .data_ulong = data}, false);
         }
 
-        template<>
+        template <>
         auto serialize_item(signed long data) -> void
         {
             m_internal_handle.serialize_item({.data_type = GenericDataType::SignedLong, .data_long = data}, false);
         }
 
-        template<>
+        template <>
         auto serialize_item(unsigned long long data) -> void
         {
             m_internal_handle.serialize_item({.data_type = GenericDataType::UnsignedLongLong, .data_ulonglong = data}, false);
         }
 
-        template<>
+        template <>
         auto serialize_item(signed long long data) -> void
         {
             m_internal_handle.serialize_item({.data_type = GenericDataType::SignedLongLong, .data_longlong = data}, false);
         }
 
-        template<>
+        template <>
         auto serialize_item(unsigned int data) -> void
         {
             serialize_item<unsigned long>(data);
         }
 
-        template<>
+        template <>
         auto serialize_item(signed int data) -> void
         {
             serialize_item<signed long>(data);
         }
 
-        template<typename SerializedDataType>
+        template <typename SerializedDataType>
         auto get_serialized_item() -> SerializedDataType
         {
             auto* data = static_cast<SerializedDataType*>(m_internal_handle.get_serialized_item(sizeof(SerializedDataType), false));
@@ -177,6 +179,4 @@ namespace RC::File
             m_internal_handle.close_current_file();
         }
     };
-}
-
-
+} // namespace RC::File

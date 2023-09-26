@@ -2,7 +2,7 @@
 
 namespace RC::JSON
 {
-    template<typename T>
+    template <typename T>
     struct TypedKeyValuePair
     {
         const StringType& key;
@@ -14,18 +14,20 @@ namespace RC::JSON
         StringType key{};
         std::unique_ptr<JSON::Value> value{};
 
-        template<typename JSONElementType>
+        template <typename JSONElementType>
         auto is() const -> bool
         {
             return value->get_type() == JSONElementType::static_type;
         }
 
-        template<typename JSONElementType>
+        template <typename JSONElementType>
         auto as() -> TypedKeyValuePair<JSONElementType>
         {
             if (value->get_type() != JSONElementType::static_type)
             {
-                throw std::runtime_error{std::format("JSONKeyValuePair::as<JSONElementType>: actual type '{}' did not match requested type '{}'", type_to_string(value->get_type()), type_to_string(JSONElementType::static_type))};
+                throw std::runtime_error{std::format("JSONKeyValuePair::as<JSONElementType>: actual type '{}' did not match requested type '{}'",
+                                                     type_to_string(value->get_type()),
+                                                     type_to_string(JSONElementType::static_type))};
             }
             else
             {
@@ -33,12 +35,14 @@ namespace RC::JSON
             }
         }
 
-        template<typename JSONElementType>
+        template <typename JSONElementType>
         auto as() const -> TypedKeyValuePair<JSONElementType>
         {
             if (value->get_type() != JSONElementType::static_type)
             {
-                throw std::runtime_error{std::format("JSONKeyValuePair::as<JSONElementType>: actual type '{}' did not match requested type '{}'", type_to_string(value->get_type()), type_to_string(JSONElementType::static_type))};
+                throw std::runtime_error{std::format("JSONKeyValuePair::as<JSONElementType>: actual type '{}' did not match requested type '{}'",
+                                                     type_to_string(value->get_type()),
+                                                     type_to_string(JSONElementType::static_type))};
             }
             else
             {
@@ -46,7 +50,7 @@ namespace RC::JSON
             }
         }
     };
-}
+} // namespace RC::JSON
 
 /*
 namespace RC::JSON::Parser
@@ -95,7 +99,8 @@ namespace RC::JSON::Parser
         {
             if (get_type() != JSONElementType::static_type())
             {
-                throw std::runtime_error{std::format("JSONKeyValuePair::as<JSONElementType>: actual type '{}' did not match requested type '{}'", type_to_string(get_type()), type_to_string(JSONElementType::static_type()))};
+                throw std::runtime_error{std::format("JSONKeyValuePair::as<JSONElementType>: actual type '{}' did not match requested type '{}'",
+type_to_string(get_type()), type_to_string(JSONElementType::static_type()))};
             }
             else
             {
@@ -108,7 +113,8 @@ namespace RC::JSON::Parser
         {
             if (get_type() != JSONElementType::static_type())
             {
-                throw std::runtime_error{std::format("JSONKeyValuePair::as<JSONElementType>: actual type '{}' did not match requested type '{}'", type_to_string(get_type()), type_to_string(JSONElementType::static_type()))};
+                throw std::runtime_error{std::format("JSONKeyValuePair::as<JSONElementType>: actual type '{}' did not match requested type '{}'",
+type_to_string(get_type()), type_to_string(JSONElementType::static_type()))};
             }
             else
             {
@@ -248,5 +254,3 @@ namespace RC::JSON::Parser
     };
 }
 //*/
-
-

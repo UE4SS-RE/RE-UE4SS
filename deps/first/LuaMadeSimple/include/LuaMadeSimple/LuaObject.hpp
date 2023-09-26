@@ -1,7 +1,7 @@
 #pragma once
 
-#include <string>
 #include <LuaMadeSimple/LuaMadeSimple.hpp>
+#include <string>
 
 namespace RC::LuaMadeSimple::Type
 {
@@ -13,10 +13,10 @@ namespace RC::LuaMadeSimple::Type
 
     enum class Operation
     {
-        Get,                    // Return to Lua some value that it can work with
-        GetNonTrivialLocal,     // Return to Lua a non-trivial type that's been made trivial (example: StructProperty as a Lua table)
-        Set,                    // Take from Lua some value
-        GetParam,               // Return to Lua a container of a value that's supposed to be used as a Lua function param
+        Get,                // Return to Lua some value that it can work with
+        GetNonTrivialLocal, // Return to Lua a non-trivial type that's been made trivial (example: StructProperty as a Lua table)
+        Set,                // Take from Lua some value
+        GetParam,           // Return to Lua a container of a value that's supposed to be used as a Lua function param
     };
 
     // Container for MetaMethods after the object has been fully constructed.
@@ -28,17 +28,19 @@ namespace RC::LuaMadeSimple::Type
 
     class RC_LMS_API BaseObject
     {
-    private:
+      private:
         const char* m_object_name;
 
         // Storage for metamethods during object construction.
         // Is available & usable after construction only if cast to the proper type.
         LuaMadeSimple::Lua::MetaMethods metamethods_before_construction;
 
-    protected:
-        explicit BaseObject(const char* object_name) : m_object_name(object_name) {}
+      protected:
+        explicit BaseObject(const char* object_name) : m_object_name(object_name)
+        {
+        }
 
-    public:
+      public:
         auto get_object_name() const -> const char*
         {
             return m_object_name;
@@ -57,16 +59,18 @@ namespace RC::LuaMadeSimple::Type
 
     // Only used for non-local types
     // The object gets copied into here
-    template<typename ObjectType>
+    template <typename ObjectType>
     class LocalObject : public BaseObject
     {
-    private:
+      private:
         ObjectType m_local_storage;
 
-    protected:
-        LocalObject(const char* object_name, ObjectType&& object) : BaseObject(object_name), m_local_storage(object) {}
+      protected:
+        LocalObject(const char* object_name, ObjectType&& object) : BaseObject(object_name), m_local_storage(object)
+        {
+        }
 
-    public:
+      public:
         auto get_local_cpp_object() -> ObjectType&
         {
             return m_local_storage;
@@ -74,16 +78,18 @@ namespace RC::LuaMadeSimple::Type
     };
 
     // Only used for remote types (data stored elsewhere, only pointer is stored locally to this object)
-    template<typename ObjectType>
+    template <typename ObjectType>
     class RemoteObject : public BaseObject
     {
-    private:
+      private:
         ObjectType* m_cpp_object;
 
-    protected:
-        RemoteObject(const char* object_name, ObjectType* object) : BaseObject(object_name), m_cpp_object(object) {}
+      protected:
+        RemoteObject(const char* object_name, ObjectType* object) : BaseObject(object_name), m_cpp_object(object)
+        {
+        }
 
-    public:
+      public:
         RemoteObject() = delete;
 
         // For constructing a RemoteObject with a trivial templated type
@@ -112,7 +118,7 @@ namespace RC::LuaMadeSimple::Type
         // For constructing a RemoteObject with a non-trivial templated type that can have overrides
         // The non-trivial type must place a call to 'table.make_global'
         // The unused "construct_to" param can be used if you want to do something with meta tables potentially so the param stays for now
-        auto static construct(const LuaMadeSimple::Lua& lua, [[maybe_unused]]BaseObject& construct_to) -> const LuaMadeSimple::Lua::Table
+        auto static construct(const LuaMadeSimple::Lua& lua, [[maybe_unused]] BaseObject& construct_to) -> const LuaMadeSimple::Lua::Table
         {
             LuaMadeSimple::Lua::Table table = lua.prepare_new_table();
 
@@ -122,8 +128,8 @@ namespace RC::LuaMadeSimple::Type
             return table;
         }
 
-    public:
-        template<IsFinal is_final>
+      public:
+        template <IsFinal is_final>
         auto static setup_member_functions(LuaMadeSimple::Lua::Table& table) -> void
         {
             table.add_pair("GetAddress", [](const LuaMadeSimple::Lua& lua) -> int {
@@ -178,5 +184,4 @@ namespace RC::LuaMadeSimple::Type
             return m_cpp_object;
         }
     };
-}
-
+} // namespace RC::LuaMadeSimple::Type

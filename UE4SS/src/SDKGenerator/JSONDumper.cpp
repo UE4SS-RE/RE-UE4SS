@@ -1,15 +1,15 @@
-#include <SDKGenerator/JSONDumper.hpp>
-#include <SDKGenerator/Common.hpp>
-#include <Timer/ScopedTimer.hpp>
 #include <DynamicOutput/DynamicOutput.hpp>
-#include <UE4SSProgram.hpp>
 #include <JSON/JSON.hpp>
-#pragma warning(disable: 4005)
-#include <Unreal/UClass.hpp>
-#include <Unreal/UFunction.hpp>
+#include <SDKGenerator/Common.hpp>
+#include <SDKGenerator/JSONDumper.hpp>
+#include <Timer/ScopedTimer.hpp>
+#include <UE4SSProgram.hpp>
+#pragma warning(disable : 4005)
 #include <Unreal/FProperty.hpp>
 #include <Unreal/UAssetRegistry.hpp>
-#pragma warning(default: 4005)
+#include <Unreal/UClass.hpp>
+#include <Unreal/UFunction.hpp>
+#pragma warning(default : 4005)
 
 namespace RC::UEGenerator::JSONDumper
 {
@@ -25,8 +25,7 @@ namespace RC::UEGenerator::JSONDumper
         }
 
         UClass* object_class = object->GetClassPrivate();
-        if (!object_class->IsChildOf<Unreal::UBlueprintGeneratedClass>() ||
-            object_class->IsChildOf<Unreal::UAnimBlueprintGeneratedClass>())
+        if (!object_class->IsChildOf<Unreal::UBlueprintGeneratedClass>() || object_class->IsChildOf<Unreal::UAnimBlueprintGeneratedClass>())
         {
             return false;
         }
@@ -42,13 +41,34 @@ namespace RC::UEGenerator::JSONDumper
             return false;
         }
 
-        if (class_name.find(STR("BP_")) != class_name.npos) { return true; }
-        if (class_name.find(STR("ENE_")) != class_name.npos) { return true; }
-        if (class_name.find(STR("BPL_")) != class_name.npos) { return true; }
-        if (class_name.find(STR("OBJ_")) != class_name.npos) { return true; }
-        if (class_name.find(STR("LIB_")) != class_name.npos) { return true; }
-        if (class_name.find(STR("PRJ_")) != class_name.npos) { return true; }
-        if (class_name.find(STR("WPN_")) != class_name.npos) { return true; }
+        if (class_name.find(STR("BP_")) != class_name.npos)
+        {
+            return true;
+        }
+        if (class_name.find(STR("ENE_")) != class_name.npos)
+        {
+            return true;
+        }
+        if (class_name.find(STR("BPL_")) != class_name.npos)
+        {
+            return true;
+        }
+        if (class_name.find(STR("OBJ_")) != class_name.npos)
+        {
+            return true;
+        }
+        if (class_name.find(STR("LIB_")) != class_name.npos)
+        {
+            return true;
+        }
+        if (class_name.find(STR("PRJ_")) != class_name.npos)
+        {
+            return true;
+        }
+        if (class_name.find(STR("WPN_")) != class_name.npos)
+        {
+            return true;
+        }
 
         return false;
     }
@@ -64,11 +84,20 @@ namespace RC::UEGenerator::JSONDumper
         }
 
         FName property_fname = property->GetFName();
-        if (property_fname.Equals(uber_graph_frame_name)) { return true; }
-        if (property_fname.Equals(default_scene_root_name)) { return true; }
+        if (property_fname.Equals(uber_graph_frame_name))
+        {
+            return true;
+        }
+        if (property_fname.Equals(default_scene_root_name))
+        {
+            return true;
+        }
 
         auto property_name = property_fname.ToString();
-        if (property_name.find(STR("CallFunc")) != property_name.npos) { return true; }
+        if (property_name.find(STR("CallFunc")) != property_name.npos)
+        {
+            return true;
+        }
 
         return false;
     }
@@ -83,17 +112,44 @@ namespace RC::UEGenerator::JSONDumper
         static FName user_construction_script_name = FName(STR("UserConstructionScript"));
 
         FName function_fname = function->GetNamePrivate();
-        if (function_fname.Equals(receive_name)) { return true; }
-        if (function_fname.Equals(receive_typo_name)) { return true; }
-        if (function_fname.Equals(receive_begin_play_name)) { return true; }
-        if (function_fname.Equals(receive_destroyed_name)) { return true; }
-        if (function_fname.Equals(receive_tick_name)) { return true; }
-        if (function_fname.Equals(user_construction_script_name)) { return true; }
+        if (function_fname.Equals(receive_name))
+        {
+            return true;
+        }
+        if (function_fname.Equals(receive_typo_name))
+        {
+            return true;
+        }
+        if (function_fname.Equals(receive_begin_play_name))
+        {
+            return true;
+        }
+        if (function_fname.Equals(receive_destroyed_name))
+        {
+            return true;
+        }
+        if (function_fname.Equals(receive_tick_name))
+        {
+            return true;
+        }
+        if (function_fname.Equals(user_construction_script_name))
+        {
+            return true;
+        }
 
         auto function_name = function_fname.ToString();
-        if (function_name.find(STR("Ubergraph")) != function_name.npos) { return true; }
-        if (function_name.find(STR("OnTick_")) != function_name.npos) { return true; }
-        if (function_name.find(STR("OnLoaded")) != function_name.npos) { return true; }
+        if (function_name.find(STR("Ubergraph")) != function_name.npos)
+        {
+            return true;
+        }
+        if (function_name.find(STR("OnTick_")) != function_name.npos)
+        {
+            return true;
+        }
+        if (function_name.find(STR("OnLoaded")) != function_name.npos)
+        {
+            return true;
+        }
 
         return false;
     }
@@ -106,18 +162,27 @@ namespace RC::UEGenerator::JSONDumper
 
     auto static should_skip_function(UFunction* function) -> bool
     {
-        if ((function->GetFunctionFlags() & EFunctionFlags::FUNC_Delegate) != 0) { return true; }
+        if ((function->GetFunctionFlags() & EFunctionFlags::FUNC_Delegate) != 0)
+        {
+            return true;
+        }
         // Can't use FUNC_Event or FUNC_BlueprintEvent because it seems that everything has these flag
-        //if ((function->get_function_flags() & EFunctionFlags::FUNC_Event) != 0) { return true; }
-        //if ((function->get_function_flags() & EFunctionFlags::FUNC_BlueprintEvent) != 0) { return true; }
-        if (is_event(function)) { return true; }
+        // if ((function->get_function_flags() & EFunctionFlags::FUNC_Event) != 0) { return true; }
+        // if ((function->get_function_flags() & EFunctionFlags::FUNC_BlueprintEvent) != 0) { return true; }
+        if (is_event(function))
+        {
+            return true;
+        }
 
         return should_skip_general_function(function);
     }
 
     auto static should_skip_event(File::StringViewType event_name) -> bool
     {
-        if (event_name.find(STR("BndEvt")) != event_name.npos) { return true; }
+        if (event_name.find(STR("BndEvt")) != event_name.npos)
+        {
+            return true;
+        }
         return false;
     }
 
@@ -130,11 +195,17 @@ namespace RC::UEGenerator::JSONDumper
         auto json = JSON::Array{};
 
         UObjectGlobals::ForEachUObject([&](void* raw_object, int32_t chunk_index, int32_t object_index) {
-            if (!raw_object) { return LoopAction::Continue; }
+            if (!raw_object)
+            {
+                return LoopAction::Continue;
+            }
             UObject* object = static_cast<UObject*>(raw_object);
 
             auto object_name = object->GetName();
-            if (!is_valid_class_to_dump(object_name, object)) { return LoopAction::Continue; }
+            if (!is_valid_class_to_dump(object_name, object))
+            {
+                return LoopAction::Continue;
+            }
             UClass* object_as_class = static_cast<UClass*>(object);
 
             object_name.erase(object_name.size() - 2, 2);
@@ -153,11 +224,20 @@ namespace RC::UEGenerator::JSONDumper
             auto& events = bp_class.new_array(STR("events"));
             for (UFunction* event_function : object_as_class->ForEachFunction())
             {
-                if (should_skip_general_function(event_function)) { continue; }
-                if (!is_event(event_function)) { continue; }
+                if (should_skip_general_function(event_function))
+                {
+                    continue;
+                }
+                if (!is_event(event_function))
+                {
+                    continue;
+                }
 
                 auto event_name = event_function->GetName();
-                if (should_skip_event(event_name)) { continue; }
+                if (should_skip_event(event_name))
+                {
+                    continue;
+                }
 
                 auto& bp_events = events.new_object();
                 bp_events.new_string(STR("name"), event_name);
@@ -165,7 +245,10 @@ namespace RC::UEGenerator::JSONDumper
                 auto& bp_event_args = bp_events.new_array(STR("args"));
                 for (FProperty* param : event_function->ForEachProperty())
                 {
-                    if (should_skip_property(param)) { continue; }
+                    if (should_skip_property(param))
+                    {
+                        continue;
+                    }
 
                     auto& bp_event_arg = bp_event_args.new_object();
                     bp_event_arg.new_string(STR("name"), param->GetName());
@@ -179,7 +262,10 @@ namespace RC::UEGenerator::JSONDumper
             auto& functions = bp_class.new_array(STR("functions"));
             for (UFunction* function : object_as_class->ForEachFunction())
             {
-                if (should_skip_function(function)) { continue; }
+                if (should_skip_function(function))
+                {
+                    continue;
+                }
 
                 auto& bp_function = functions.new_object();
                 bp_function.new_string(STR("name"), function->GetName());
@@ -187,7 +273,10 @@ namespace RC::UEGenerator::JSONDumper
                 auto& bp_function_args = bp_function.new_array(STR("args"));
                 for (FProperty* param : function->ForEachProperty())
                 {
-                    if (should_skip_property(param)) { continue; }
+                    if (should_skip_property(param))
+                    {
+                        continue;
+                    }
 
                     auto& bp_function_arg = bp_function_args.new_object();
                     bp_function_arg.new_string(STR("name"), param->GetName());
@@ -201,7 +290,10 @@ namespace RC::UEGenerator::JSONDumper
             auto& properties = bp_class.new_array(STR("properties"));
             for (FProperty* property : object_as_class->ForEachProperty())
             {
-                if (should_skip_property(property)) { continue; }
+                if (should_skip_property(property))
+                {
+                    continue;
+                }
 
                 auto& bp_property = properties.new_object();
                 bp_property.new_string(STR("name"), property->GetName());
@@ -211,8 +303,14 @@ namespace RC::UEGenerator::JSONDumper
             auto& delegates = bp_class.new_array(STR("delegates"));
             for (UFunction* delegate_function : object_as_class->ForEachFunction())
             {
-                if (should_skip_general_function(delegate_function)) { continue; }
-                if ((delegate_function->GetFunctionFlags() & EFunctionFlags::FUNC_Delegate) == 0) { continue; }
+                if (should_skip_general_function(delegate_function))
+                {
+                    continue;
+                }
+                if ((delegate_function->GetFunctionFlags() & EFunctionFlags::FUNC_Delegate) == 0)
+                {
+                    continue;
+                }
 
                 auto& bp_delegate = delegates.new_object();
                 bp_delegate.new_string(STR("name"), delegate_function->GetName());
@@ -220,7 +318,10 @@ namespace RC::UEGenerator::JSONDumper
                 auto& bp_delegate_args = bp_delegate.new_array(STR("args"));
                 for (FProperty* param : delegate_function->ForEachProperty())
                 {
-                    if (should_skip_property(param)) { continue; }
+                    if (should_skip_property(param))
+                    {
+                        continue;
+                    }
 
                     auto& bp_delegate_arg = bp_delegate_args.new_object();
                     bp_delegate_arg.new_string(STR("name"), param->GetName());
@@ -242,4 +343,4 @@ namespace RC::UEGenerator::JSONDumper
         Output::send(STR("Unloading all forcefully loaded assets\n"));
         UAssetRegistry::FreeAllForcefullyLoadedAssets();
     }
-}
+} // namespace RC::UEGenerator::JSONDumper

@@ -1,29 +1,29 @@
-#include <format>
 #include <cwctype>
-#include <set>
+#include <format>
 #include <locale>
+#include <set>
 
-#include <SDKGenerator/Generator.hpp>
 #include <SDKGenerator/Common.hpp>
+#include <SDKGenerator/Generator.hpp>
 #include <UE4SSProgram.hpp>
-#pragma warning(disable: 4005)
-#include <Unreal/TypeChecker.hpp>
-#include <Unreal/UObjectGlobals.hpp>
-#include <Unreal/UFunction.hpp>
+#pragma warning(disable : 4005)
+#include <DynamicOutput/DynamicOutput.hpp>
 #include <Unreal/FProperty.hpp>
-#include <Unreal/UClass.hpp>
-#include <Unreal/UInterface.hpp>
-#include <Unreal/UScriptStruct.hpp>
-#include <Unreal/UEnum.hpp>
-#include <Unreal/Property/FClassProperty.hpp>
-#include <Unreal/Property/FStructProperty.hpp>
 #include <Unreal/Property/FArrayProperty.hpp>
-#include <Unreal/Property/FMapProperty.hpp>
+#include <Unreal/Property/FClassProperty.hpp>
 #include <Unreal/Property/FDelegateProperty.hpp>
+#include <Unreal/Property/FMapProperty.hpp>
 #include <Unreal/Property/FMulticastInlineDelegateProperty.hpp>
 #include <Unreal/Property/FMulticastSparseDelegateProperty.hpp>
-#include <DynamicOutput/DynamicOutput.hpp>
-#pragma warning(default: 4005)
+#include <Unreal/Property/FStructProperty.hpp>
+#include <Unreal/TypeChecker.hpp>
+#include <Unreal/UClass.hpp>
+#include <Unreal/UEnum.hpp>
+#include <Unreal/UFunction.hpp>
+#include <Unreal/UInterface.hpp>
+#include <Unreal/UObjectGlobals.hpp>
+#include <Unreal/UScriptStruct.hpp>
+#pragma warning(default : 4005)
 
 namespace RC::UEGenerator
 {
@@ -102,7 +102,8 @@ namespace RC::UEGenerator
             return STR("class");
         }
     }
-    auto generate_class_name(UStruct* class_to_generate) -> File::StringType {
+    auto generate_class_name(UStruct* class_to_generate) -> File::StringType
+    {
         if (class_to_generate->GetClassPrivate()->IsChildOf<UScriptStruct>())
         {
             return get_native_struct_name(std::bit_cast<UScriptStruct*>(class_to_generate));
@@ -118,16 +119,14 @@ namespace RC::UEGenerator
         }
     }
 
-
-    template<typename T>
+    template <typename T>
     class TypeGenerator
     {
-    private:
+      private:
         T specification{};
         const std::filesystem::path m_directory_to_generate_in;
 
-    public:
-
+      public:
         struct FileName
         {
             uint32_t num_collisions{};
@@ -138,7 +137,7 @@ namespace RC::UEGenerator
         std::unordered_map<File::StringType, FileName> m_file_names{};
         std::unordered_map<Unreal::UObject*, ObjectInfo> m_classes_dumped{};
 
-    public:
+      public:
         TypeGenerator() = delete;
         TypeGenerator(const std::filesystem::path directory_to_generate_in) : m_directory_to_generate_in(directory_to_generate_in)
         {
@@ -148,11 +147,12 @@ namespace RC::UEGenerator
         auto create_all_files() -> void
         {
             Output::send(STR("Creating all files...\n"));
-            for (auto&[comparison_index, generated_file] : m_files)
+            for (auto& [comparison_index, generated_file] : m_files)
             {
                 if (!generated_file.ordered_primary_file_contents.empty())
                 {
-                    generated_file.primary_file = File::open(generated_file.primary_file_name, File::OpenFor::Appending, File::OverwriteExistingFile::Yes, File::CreateIfNonExistent::Yes);
+                    generated_file.primary_file =
+                            File::open(generated_file.primary_file_name, File::OpenFor::Appending, File::OverwriteExistingFile::Yes, File::CreateIfNonExistent::Yes);
 
                     specification.generate_file_header(generated_file);
 
@@ -180,7 +180,8 @@ namespace RC::UEGenerator
 
                 if (!generated_file.ordered_secondary_file_contents.empty())
                 {
-                    generated_file.secondary_file = File::open(generated_file.secondary_file_name, File::OpenFor::Appending, File::OverwriteExistingFile::Yes, File::CreateIfNonExistent::Yes);
+                    generated_file.secondary_file =
+                            File::open(generated_file.secondary_file_name, File::OpenFor::Appending, File::OverwriteExistingFile::Yes, File::CreateIfNonExistent::Yes);
 
                     sort_files(generated_file.ordered_secondary_file_contents);
 
@@ -224,7 +225,7 @@ namespace RC::UEGenerator
                     other_content.push_back(line);
                 }
             }
-            
+
             sort_types(struct_content);
             sort_types(class_content);
             sort_types(other_content);
@@ -319,7 +320,11 @@ namespace RC::UEGenerator
             return false;
         }
 
-        auto generate_function_declaration(ObjectInfo& owner, const FunctionInfo& function_info, GeneratedFile& generated_file, File::StringType& out_current_class_content, IsDelegateFunction is_delegate_function = IsDelegateFunction::No) -> void
+        auto generate_function_declaration(ObjectInfo& owner,
+                                           const FunctionInfo& function_info,
+                                           GeneratedFile& generated_file,
+                                           File::StringType& out_current_class_content,
+                                           IsDelegateFunction is_delegate_function = IsDelegateFunction::No) -> void
         {
             std::optional<PropertyInfo> return_property_info = [&]() -> std::optional<PropertyInfo> {
                 for (const auto& property_info : function_info.params)
@@ -361,7 +366,10 @@ namespace RC::UEGenerator
 
         auto generate_class_dependency(ObjectInfo& owner, UStruct* inherited_class, File::StringType& current_class_content) -> void
         {
-            if (!inherited_class) { return; }
+            if (!inherited_class)
+            {
+                return;
+            }
 
             if (!m_classes_dumped.contains(inherited_class))
             {
@@ -390,21 +398,21 @@ namespace RC::UEGenerator
             }
             else if (property->IsA<FClassProperty>())
             {
-                //return generate_class_dependency(owner, static_cast<XClassProperty*>(property)->get_meta_class());
+                // return generate_class_dependency(owner, static_cast<XClassProperty*>(property)->get_meta_class());
                 return false;
             }
             else if (property->IsA<FObjectProperty>())
             {
-                //return generate_class_dependency(owner, static_cast<XObjectProperty*>(property)->get_property_class());
+                // return generate_class_dependency(owner, static_cast<XObjectProperty*>(property)->get_property_class());
                 return true;
             }
             else if (property->IsA<FArrayProperty>())
             {
-                //return generate_class_dependency_from_property(owner, static_cast<XArrayProperty*>(property)->get_inner());
-                //if (static_cast<XArrayProperty*>(property)->get_inner()->is_child_of<XObjectProperty>())
+                // return generate_class_dependency_from_property(owner, static_cast<XArrayProperty*>(property)->get_inner());
+                // if (static_cast<XArrayProperty*>(property)->get_inner()->is_child_of<XObjectProperty>())
                 //{
-                //    return true;
-                //}
+                //     return true;
+                // }
                 XProperty* inner = static_cast<FArrayProperty*>(property)->GetInner();
                 if (inner->IsA<FStructProperty>())
                 {
@@ -436,13 +444,16 @@ namespace RC::UEGenerator
         auto make_function_info(ObjectInfo& owner, UFunction* function, File::StringType& current_class_content) -> FunctionInfo
         {
             FunctionInfo function_info{
-                .function = function,
-                .owner = owner,
+                    .function = function,
+                    .owner = owner,
             };
 
             for (XProperty* param : function->ForEachProperty())
             {
-                if (!param->HasAnyPropertyFlags(Unreal::CPF_Parm | Unreal::CPF_ReturnParm)) { continue; }
+                if (!param->HasAnyPropertyFlags(Unreal::CPF_Parm | Unreal::CPF_ReturnParm))
+                {
+                    continue;
+                }
 
                 function_info.params.emplace_back(PropertyInfo{param, generate_class_dependency_from_property(owner, param, current_class_content)});
             }
@@ -489,7 +500,7 @@ namespace RC::UEGenerator
 
         auto generate_package(UObject* package, File::StringType& out) -> void
         {
-            UObjectGlobals::ForEachUObject([&](void* object, [[maybe_unused]]int32_t chunk_index, [[maybe_unused]]int32_t object_index) {
+            UObjectGlobals::ForEachUObject([&](void* object, [[maybe_unused]] int32_t chunk_index, [[maybe_unused]] int32_t object_index) {
                 return LoopAction::Continue;
             });
         }
@@ -498,7 +509,10 @@ namespace RC::UEGenerator
         {
             UObject* package{};
             UObject* outer = object;
-            if (!outer) { return nullptr; }
+            if (!outer)
+            {
+                return nullptr;
+            }
 
             do
             {
@@ -557,15 +571,15 @@ namespace RC::UEGenerator
                 secondary_file_path_and_name.replace_extension(ext);
 
                 GeneratedFile generated_file{
-                    .primary_file_name = primary_file_path_and_name,
-                    .secondary_file_name = secondary_file_path_and_name,
-                    .ordered_primary_file_contents = {},
-                    .ordered_secondary_file_contents = {},
-                    .package_name = package_name,
-                    .primary_file = {},
-                    .secondary_file = {},
-                    .primary_file_has_no_contents = true,
-                    .secondary_file_has_no_contents = true,
+                        .primary_file_name = primary_file_path_and_name,
+                        .secondary_file_name = secondary_file_path_and_name,
+                        .ordered_primary_file_contents = {},
+                        .ordered_secondary_file_contents = {},
+                        .package_name = package_name,
+                        .primary_file = {},
+                        .secondary_file = {},
+                        .primary_file_has_no_contents = true,
+                        .secondary_file_has_no_contents = true,
                 };
 
                 auto& file_in_map = m_files.emplace(std::move(package_fname), std::move(generated_file)).first->second;
@@ -575,18 +589,27 @@ namespace RC::UEGenerator
 
         auto cleanup_old_sdk() -> void
         {
-            if (!std::filesystem::exists(m_directory_to_generate_in)) { return; }
+            if (!std::filesystem::exists(m_directory_to_generate_in))
+            {
+                return;
+            }
 
             for (const auto& item : std::filesystem::directory_iterator(m_directory_to_generate_in))
             {
-                if (item.is_directory()) { continue; }
-                if (item.path().extension() != specification.get_file_extension()) { continue; }
+                if (item.is_directory())
+                {
+                    continue;
+                }
+                if (item.path().extension() != specification.get_file_extension())
+                {
+                    continue;
+                }
 
                 File::delete_file(item.path());
             }
         }
 
-    public:
+      public:
         auto generate() -> void
         {
             Output::send(STR("Cleaning up old SDK files...\n"));
@@ -597,7 +620,7 @@ namespace RC::UEGenerator
             m_classes_dumped.reserve(400000);
 
             size_t num_objects_generated{};
-            UObjectGlobals::ForEachUObject([&](void* untyped_object, [[maybe_unused]]int32_t chunk_index, [[maybe_unused]]int32_t object_index) {
+            UObjectGlobals::ForEachUObject([&](void* untyped_object, [[maybe_unused]] int32_t chunk_index, [[maybe_unused]] int32_t object_index) {
                 UObject* object = static_cast<UObject*>(untyped_object);
                 UClass* object_class = object->GetClassPrivate();
 
@@ -616,9 +639,7 @@ namespace RC::UEGenerator
 
                     return LoopAction::Continue;
                 }
-                else if ((object_class->IsChildOf<UClass>() ||
-                          object_class->IsChildOf<UScriptStruct>()) &&
-                         !m_classes_dumped.contains(object))
+                else if ((object_class->IsChildOf<UClass>() || object_class->IsChildOf<UScriptStruct>()) && !m_classes_dumped.contains(object))
                 {
                     // Generate a class for this object
                     auto& object_info = m_classes_dumped.emplace(object, ObjectInfo{object}).first->second;
@@ -645,14 +666,15 @@ namespace RC::UEGenerator
 
     class CXXHeaderGenerator
     {
-    public:
+      public:
         auto get_file_extension() -> File::StringType
         {
             return STR(".hpp");
         }
         auto generate_file_header(GeneratedFile& generated_file) -> void
         {
-            generated_file.primary_file.write_string_to_file(std::format(STR("#ifndef UE4SS_SDK_{}_HPP\n#define UE4SS_SDK_{}_HPP\n\n"), generated_file.package_name, generated_file.package_name));
+            generated_file.primary_file.write_string_to_file(
+                    std::format(STR("#ifndef UE4SS_SDK_{}_HPP\n#define UE4SS_SDK_{}_HPP\n\n"), generated_file.package_name, generated_file.package_name));
 
             if (!generated_file.secondary_file_has_no_contents)
             {
@@ -681,7 +703,11 @@ namespace RC::UEGenerator
         }
         auto generate_enum_member(File::StringType& content_buffer, UEnum* uenum, const File::StringType& enum_value_name, const Unreal::FEnumNamePair& elem) -> void
         {
-            content_buffer.append(std::format(STR("{}{}{} = {},\n"), generate_tab(), uenum->GetCppForm() == UEnum::ECppForm::Namespaced ? generate_tab() : STR(""), enum_value_name, elem.Value));
+            content_buffer.append(std::format(STR("{}{}{} = {},\n"),
+                                              generate_tab(),
+                                              uenum->GetCppForm() == UEnum::ECppForm::Namespaced ? generate_tab() : STR(""),
+                                              enum_value_name,
+                                              elem.Value));
         }
         auto generate_enum_end(File::StringType& content_buffer, UEnum* uenum) -> void
         {
@@ -693,7 +719,8 @@ namespace RC::UEGenerator
                 content_buffer.append(STR("\n}"));
             }
         }
-        auto should_generate_class(UStruct* native_class) {
+        auto should_generate_class(UStruct* native_class)
+        {
             return true;
         }
         auto generate_class(TypeGenerator<CXXHeaderGenerator>* generator, ObjectInfo& object_info, GeneratedFile& generated_file, File::StringType& current_class_content)
@@ -711,7 +738,8 @@ namespace RC::UEGenerator
             std::vector<PropertyInfo> properties_to_generate{};
             for (XProperty* property : native_class->ForEachProperty())
             {
-                properties_to_generate.emplace_back(PropertyInfo{property, generator->generate_class_dependency_from_property(object_info, property, current_class_content)});
+                properties_to_generate.emplace_back(
+                        PropertyInfo{property, generator->generate_class_dependency_from_property(object_info, property, current_class_content)});
             }
 
             std::vector<FunctionInfo> functions_to_generate{};
@@ -721,9 +749,13 @@ namespace RC::UEGenerator
 
                 for (XProperty* param : function->ForEachProperty())
                 {
-                    if (!param->HasAnyPropertyFlags(Unreal::CPF_Parm | Unreal::CPF_ReturnParm)) { continue; }
+                    if (!param->HasAnyPropertyFlags(Unreal::CPF_Parm | Unreal::CPF_ReturnParm))
+                    {
+                        continue;
+                    }
 
-                    function_info.params.emplace_back(PropertyInfo{param, generator->generate_class_dependency_from_property(object_info, param, current_class_content)});
+                    function_info.params.emplace_back(
+                            PropertyInfo{param, generator->generate_class_dependency_from_property(object_info, param, current_class_content)});
                 }
             }
 
@@ -744,10 +776,10 @@ namespace RC::UEGenerator
                 try
                 {
                     part_one = std::format(STR("{}{}{} {};"),
-                                                generate_tab(),
-                                                property_info.should_forward_declare ? STR("class ") : STR(""),
-                                                generate_property_cxx_name(property, true, native_class, EnableForwardDeclarations::Yes),
-                                                property->GetName());
+                                           generate_tab(),
+                                           property_info.should_forward_declare ? STR("class ") : STR(""),
+                                           generate_property_cxx_name(property, true, native_class, EnableForwardDeclarations::Yes),
+                                           property->GetName());
                 }
                 catch (std::exception& e)
                 {
@@ -759,15 +791,35 @@ namespace RC::UEGenerator
 
                 if (property->IsA<FDelegateProperty>())
                 {
-                    generator->generate_function_declaration(object_info, generator->make_function_info(object_info, static_cast<FDelegateProperty*>(property)->GetSignatureFunction(), current_class_content), generated_file, content_buffer, IsDelegateFunction::Yes);
+                    generator->generate_function_declaration(object_info,
+                                                             generator->make_function_info(object_info,
+                                                                                           static_cast<FDelegateProperty*>(property)->GetSignatureFunction(),
+                                                                                           current_class_content),
+                                                             generated_file,
+                                                             content_buffer,
+                                                             IsDelegateFunction::Yes);
                 }
                 else if (property->IsA<FMulticastInlineDelegateProperty>())
                 {
-                    generator->generate_function_declaration(object_info, generator->make_function_info(object_info, static_cast<FMulticastInlineDelegateProperty*>(property)->GetSignatureFunction(), current_class_content), generated_file, content_buffer, IsDelegateFunction::Yes);
+                    generator->generate_function_declaration(
+                            object_info,
+                            generator->make_function_info(object_info,
+                                                          static_cast<FMulticastInlineDelegateProperty*>(property)->GetSignatureFunction(),
+                                                          current_class_content),
+                            generated_file,
+                            content_buffer,
+                            IsDelegateFunction::Yes);
                 }
                 else if (property->IsA<FMulticastSparseDelegateProperty>())
                 {
-                    generator->generate_function_declaration(object_info, generator->make_function_info(object_info, static_cast<FMulticastSparseDelegateProperty*>(property)->GetSignatureFunction(), current_class_content), generated_file, content_buffer, IsDelegateFunction::Yes);
+                    generator->generate_function_declaration(
+                            object_info,
+                            generator->make_function_info(object_info,
+                                                          static_cast<FMulticastSparseDelegateProperty*>(property)->GetSignatureFunction(),
+                                                          current_class_content),
+                            generated_file,
+                            content_buffer,
+                            IsDelegateFunction::Yes);
                 }
 
                 if (UE4SSProgram::settings_manager.CXXHeaderGenerator.KeepMemoryLayout)
@@ -781,15 +833,18 @@ namespace RC::UEGenerator
 
                         int32_t next_property_offset = next_property->GetOffset_Internal();
 
-                        if (current_property_offset != next_property_offset &&
-                            current_property_end_location != next_property_offset)
+                        if (current_property_offset != next_property_offset && current_property_end_location != next_property_offset)
                         {
                             // Add padding
                             int32_t padding_property_offset = current_property_end_location;
                             int32_t padding_property_size = next_property_offset - padding_property_offset;
 
-                            auto padding_part_one = std::format(STR("{}char {}[0x{:X}];"), generate_tab(), std::format(STR("padding_{}"), num_padding_elements++), padding_property_size);
-                            content_buffer.append(std::format(STR("{:85} // 0x{:04X} (size: 0x{:X})\n"), padding_part_one, padding_property_offset, padding_property_size));
+                            auto padding_part_one = std::format(STR("{}char {}[0x{:X}];"),
+                                                                generate_tab(),
+                                                                std::format(STR("padding_{}"), num_padding_elements++),
+                                                                padding_property_size);
+                            content_buffer.append(
+                                    std::format(STR("{:85} // 0x{:04X} (size: 0x{:X})\n"), padding_part_one, padding_property_offset, padding_property_size));
                         }
                     }
                 }
@@ -822,7 +877,8 @@ namespace RC::UEGenerator
             auto class_name = generate_class_name(native_class);
             if (inherits_from_class)
             {
-                content_buffer.append(std::format(STR("{} {} : public {}\n{{\n"), generate_prefix(native_class), class_name, generate_class_name(inherits_from_class)));
+                content_buffer.append(
+                        std::format(STR("{} {} : public {}\n{{\n"), generate_prefix(native_class), class_name, generate_class_name(inherits_from_class)));
             }
             else
             {
@@ -830,10 +886,10 @@ namespace RC::UEGenerator
             }
         }
         auto generate_class_struct_end(File::StringType& content_buffer,
-                const File::StringType& class_name,
-                size_t class_size,
-                int32_t num_padding_elements,
-                XProperty* last_property_in_this_class) -> void
+                                       const File::StringType& class_name,
+                                       size_t class_size,
+                                       int32_t num_padding_elements,
+                                       XProperty* last_property_in_this_class) -> void
         {
             if (UE4SSProgram::settings_manager.CXXHeaderGenerator.KeepMemoryLayout)
             {
@@ -866,7 +922,8 @@ namespace RC::UEGenerator
                 {
                     // No reflected member variables exist but there are non-reflected member variables
                     // Add padding for non-reflected member variables, for alignment purposes
-                    auto padding_part_one = std::format(STR("{}char {}[0x{:X}];"), generate_tab(), std::format(STR("padding_{}"), num_padding_elements), class_size);
+                    auto padding_part_one =
+                            std::format(STR("{}char {}[0x{:X}];"), generate_tab(), std::format(STR("padding_{}"), num_padding_elements), class_size);
                     content_buffer.append(std::format(STR("{:85} // 0x0000 (size: 0x{:X})\n"), padding_part_one, 0x0));
                 }
             }
@@ -884,12 +941,12 @@ namespace RC::UEGenerator
         }
 
         auto generate_function_declaration(TypeGenerator<CXXHeaderGenerator>* generator,
-                File::StringType& current_class_content,
-                ObjectInfo& owner,
-                const FunctionInfo& function_info,
-                File::StringType function_name,
-                XProperty* return_property,
-                std::optional<PropertyInfo> return_property_info) -> void
+                                           File::StringType& current_class_content,
+                                           ObjectInfo& owner,
+                                           const FunctionInfo& function_info,
+                                           File::StringType function_name,
+                                           XProperty* return_property,
+                                           std::optional<PropertyInfo> return_property_info) -> void
         {
             File::StringType function_type_name{};
             if (return_property)
@@ -900,7 +957,9 @@ namespace RC::UEGenerator
                 }
                 catch (std::exception& e)
                 {
-                    Output::send<LogLevel::Warning>(STR("Could not generate function '{}' because: {}\n"), function_info.function->GetFullName(), to_wstring(e.what()));
+                    Output::send<LogLevel::Warning>(STR("Could not generate function '{}' because: {}\n"),
+                                                    function_info.function->GetFullName(),
+                                                    to_wstring(e.what()));
                     return;
                 }
 
@@ -923,16 +982,19 @@ namespace RC::UEGenerator
                 {
                     try
                     {
-                        current_class_content.append(std::format(STR("{}{}{}{} {}"),
-                                                                                param_info.property->HasAnyPropertyFlags(Unreal::CPF_ConstParm) ? STR("const ") : STR(""),
-                                                                                param_info.should_forward_declare ? STR("class ") : STR(""),
-                                                                                generate_property_cxx_name(param_info.property, true, function_info.function, EnableForwardDeclarations::Yes),
-                                                                                param_info.property->HasAnyPropertyFlags(Unreal::CPF_ReferenceParm | Unreal::CPF_OutParm) ? STR("&") : STR(""),
-                                                                                param_info.property->GetName()));
+                        current_class_content.append(
+                                std::format(STR("{}{}{}{} {}"),
+                                            param_info.property->HasAnyPropertyFlags(Unreal::CPF_ConstParm) ? STR("const ") : STR(""),
+                                            param_info.should_forward_declare ? STR("class ") : STR(""),
+                                            generate_property_cxx_name(param_info.property, true, function_info.function, EnableForwardDeclarations::Yes),
+                                            param_info.property->HasAnyPropertyFlags(Unreal::CPF_ReferenceParm | Unreal::CPF_OutParm) ? STR("&") : STR(""),
+                                            param_info.property->GetName()));
                     }
                     catch (std::exception& e)
                     {
-                        Output::send<LogLevel::Warning>(STR("Could not generate function '{}' because: {}\n"), function_info.function->GetFullName(), to_wstring(e.what()));
+                        Output::send<LogLevel::Warning>(STR("Could not generate function '{}' because: {}\n"),
+                                                        function_info.function->GetFullName(),
+                                                        to_wstring(e.what()));
                         return;
                     }
 
@@ -952,10 +1014,13 @@ namespace RC::UEGenerator
 
     class LuaTypesGenerator
     {
-    private:
+      private:
         auto is_valid_lua_symbol(const File::StringType& str) -> bool
         {
-            static const std::set<File::StringType> keywords = {STR("and"), STR("break"), STR("do"), STR("else"), STR("elseif"), STR("end"), STR("false"), STR("for"), STR("function"), STR("if"), STR("in"), STR("local"), STR("nil"), STR("not"), STR("or"), STR("repeat"), STR("return"), STR("then"), STR("true"), STR("until"), STR("while")};
+            static const std::set<File::StringType> keywords = {STR("and"),   STR("break"), STR("do"),       STR("else"),   STR("elseif"), STR("end"),
+                                                                STR("false"), STR("for"),   STR("function"), STR("if"),     STR("in"),     STR("local"),
+                                                                STR("nil"),   STR("not"),   STR("or"),       STR("repeat"), STR("return"), STR("then"),
+                                                                STR("true"),  STR("until"), STR("while")};
             if (keywords.contains(str))
             {
                 return false;
@@ -1011,7 +1076,7 @@ namespace RC::UEGenerator
             return valid;
         }
 
-    public:
+      public:
         auto get_file_extension() -> File::StringType
         {
             return STR(".lua");
@@ -1020,7 +1085,9 @@ namespace RC::UEGenerator
         {
             generated_file.primary_file.write_string_to_file(STR("---@meta\n\n"));
         }
-        auto generate_file_footer(GeneratedFile& generated_file) -> void {}
+        auto generate_file_footer(GeneratedFile& generated_file) -> void
+        {
+        }
         auto generate_enum_declaration(File::StringType& content_buffer, UEnum* uenum) -> void
         {
             auto enum_name = uenum->GetName();
@@ -1035,7 +1102,8 @@ namespace RC::UEGenerator
             content_buffer.append(STR("}"));
         }
 
-        auto should_generate_class(UStruct* native_class) {
+        auto should_generate_class(UStruct* native_class)
+        {
             // skip UObject to define externally
             return native_class != UObject::StaticClass();
         }
@@ -1054,7 +1122,8 @@ namespace RC::UEGenerator
             std::vector<PropertyInfo> properties_to_generate{};
             for (XProperty* property : native_class->ForEachProperty())
             {
-                properties_to_generate.emplace_back(PropertyInfo{property, generator->generate_class_dependency_from_property(object_info, property, current_class_content)});
+                properties_to_generate.emplace_back(
+                        PropertyInfo{property, generator->generate_class_dependency_from_property(object_info, property, current_class_content)});
             }
 
             std::vector<FunctionInfo> functions_to_generate{};
@@ -1064,9 +1133,13 @@ namespace RC::UEGenerator
 
                 for (XProperty* param : function->ForEachProperty())
                 {
-                    if (!param->HasAnyPropertyFlags(Unreal::CPF_Parm | Unreal::CPF_ReturnParm)) { continue; }
+                    if (!param->HasAnyPropertyFlags(Unreal::CPF_Parm | Unreal::CPF_ReturnParm))
+                    {
+                        continue;
+                    }
 
-                    function_info.params.emplace_back(PropertyInfo{param, generator->generate_class_dependency_from_property(object_info, param, current_class_content)});
+                    function_info.params.emplace_back(
+                            PropertyInfo{param, generator->generate_class_dependency_from_property(object_info, param, current_class_content)});
                 }
             }
 
@@ -1086,10 +1159,14 @@ namespace RC::UEGenerator
                 try
                 {
                     const auto& property_name = property->GetName();
-                    if (is_valid_lua_symbol(property_name)) {
+                    if (is_valid_lua_symbol(property_name))
+                    {
                         content_buffer.append(std::format(STR("---@field {} {}\n"), property_name, generate_property_lua_name(property, true, native_class)));
-                    } else {
-                        content_buffer.append(std::format(STR("---@field [{}] {}\n"), quote_lua_symbol(property_name), generate_property_lua_name(property, true, native_class)));
+                    }
+                    else
+                    {
+                        content_buffer.append(
+                                std::format(STR("---@field [{}] {}\n"), quote_lua_symbol(property_name), generate_property_lua_name(property, true, native_class)));
                     }
                 }
                 catch (std::exception& e)
@@ -1135,10 +1212,10 @@ namespace RC::UEGenerator
             }
         }
         auto generate_class_struct_end(File::StringType& content_buffer,
-                const File::StringType& class_name,
-                size_t class_size,
-                int32_t num_padding_elements,
-                XProperty* last_property_in_this_class) -> void
+                                       const File::StringType& class_name,
+                                       size_t class_size,
+                                       int32_t num_padding_elements,
+                                       XProperty* last_property_in_this_class) -> void
         {
             content_buffer.append(std::format(STR("{} = {{}}\n"), class_name));
         }
@@ -1147,12 +1224,12 @@ namespace RC::UEGenerator
         }
 
         auto generate_function_declaration(TypeGenerator<LuaTypesGenerator>* generator,
-                File::StringType& current_class_content,
-                ObjectInfo& owner,
-                const FunctionInfo& function_info,
-                File::StringType function_name,
-                XProperty* return_property,
-                std::optional<PropertyInfo> return_property_info) -> void
+                                           File::StringType& current_class_content,
+                                           ObjectInfo& owner,
+                                           const FunctionInfo& function_info,
+                                           File::StringType function_name,
+                                           XProperty* return_property,
+                                           std::optional<PropertyInfo> return_property_info) -> void
         {
             for (size_t i = 0; i < function_info.params.size(); ++i)
             {
@@ -1163,11 +1240,15 @@ namespace RC::UEGenerator
                     {
                         auto param_name = param_info.property->GetName();
                         // TODO disambiguate param renames
-                        current_class_content.append(std::format(STR("---@param {} {}\n"), make_valid_symbol(param_name), generate_property_lua_name(param_info.property, true, function_info.function)));
+                        current_class_content.append(std::format(STR("---@param {} {}\n"),
+                                                                 make_valid_symbol(param_name),
+                                                                 generate_property_lua_name(param_info.property, true, function_info.function)));
                     }
                     catch (std::exception& e)
                     {
-                        Output::send<LogLevel::Warning>(STR("Could not generate function '{}' because: {}\n"), function_info.function->GetFullName(), to_wstring(e.what()));
+                        Output::send<LogLevel::Warning>(STR("Could not generate function '{}' because: {}\n"),
+                                                        function_info.function->GetFullName(),
+                                                        to_wstring(e.what()));
                         return;
                     }
                 }
@@ -1181,7 +1262,9 @@ namespace RC::UEGenerator
                 }
                 catch (std::exception& e)
                 {
-                    Output::send<LogLevel::Warning>(STR("Could not generate function '{}' because: {}\n"), function_info.function->GetFullName(), to_wstring(e.what()));
+                    Output::send<LogLevel::Warning>(STR("Could not generate function '{}' because: {}\n"),
+                                                    function_info.function->GetFullName(),
+                                                    to_wstring(e.what()));
                     return;
                 }
             }
@@ -1231,4 +1314,4 @@ namespace RC::UEGenerator
         TypeGenerator<LuaTypesGenerator> generator{directory_to_generate_in};
         generator.generate();
     }
-}
+} // namespace RC::UEGenerator

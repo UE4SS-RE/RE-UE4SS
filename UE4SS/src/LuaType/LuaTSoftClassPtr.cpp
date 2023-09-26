@@ -1,12 +1,14 @@
-#include <LuaType/LuaTSoftClassPtr.hpp>
-#include <LuaType/LuaFWeakObjectPtr.hpp>
-#include <LuaType/LuaFSoftObjectPath.hpp>
 #include <DynamicOutput/DynamicOutput.hpp>
 #include <Helpers/String.hpp>
+#include <LuaType/LuaFSoftObjectPath.hpp>
+#include <LuaType/LuaFWeakObjectPtr.hpp>
+#include <LuaType/LuaTSoftClassPtr.hpp>
 
 namespace RC::LuaType
 {
-    TSoftClassPtr::TSoftClassPtr(Unreal::FSoftObjectPtr object) : LocalObjectBase<Unreal::FSoftObjectPtr, TSoftClassPtrName>(std::move(object)) {}
+    TSoftClassPtr::TSoftClassPtr(Unreal::FSoftObjectPtr object) : LocalObjectBase<Unreal::FSoftObjectPtr, TSoftClassPtrName>(std::move(object))
+    {
+    }
 
     auto TSoftClassPtr::construct(const LuaMadeSimple::Lua& lua, Unreal::FSoftObjectPtr& unreal_object) -> const LuaMadeSimple::Lua::Table
     {
@@ -32,7 +34,8 @@ namespace RC::LuaType
 
     auto TSoftClassPtr::construct(const LuaMadeSimple::Lua& lua, BaseObject& construct_to) -> const LuaMadeSimple::Lua::Table
     {
-        LuaMadeSimple::Lua::Table table = lua.prepare_new_table();;
+        LuaMadeSimple::Lua::Table table = lua.prepare_new_table();
+        ;
 
         auto metatable_name = "TSoftClassPtrUserdata";
 
@@ -44,10 +47,9 @@ namespace RC::LuaType
 
     auto TSoftClassPtr::setup_metamethods(BaseObject& base_object) -> void
     {
-
     }
 
-    template<LuaMadeSimple::Type::IsFinal is_final>
+    template <LuaMadeSimple::Type::IsFinal is_final>
     auto TSoftClassPtr::setup_member_functions(LuaMadeSimple::Lua::Table& table, std::string_view metatable_name) -> void
     {
         table.add_pair("GetTagAtLastTest", [](const LuaMadeSimple::Lua& lua) -> int {
@@ -71,7 +73,7 @@ namespace RC::LuaType
 
             // If this is the final object then we also want to finalize creating the table
             // If not then it's the responsibility of the overriding object to call 'make_global()'
-            //table.make_global(metatable_name);// , is_final == LuaMadeSimple::Type::IsFinal::No);
+            // table.make_global(metatable_name);// , is_final == LuaMadeSimple::Type::IsFinal::No);
         }
     }
-}
+} // namespace RC::LuaType

@@ -367,7 +367,7 @@ namespace RC::Parser::Experimental
             }
             else
             {
-                throw std::runtime_error{ "Syntax error: Expected Characters or Space(s)" };
+                throw std::runtime_error{"Syntax error: Expected Characters or Space(s)"};
             }
         }();
 
@@ -467,7 +467,7 @@ namespace RC::Parser::Experimental
                     const auto& token = consume_and_ignore_until(TokenType::Characters);
                     if (token.get_type() == TokenType::EndOfFile)
                     {
-                        throw std::runtime_error{ "Syntax error: Expected 'Characters', got 'EndOfFile'" };
+                        throw std::runtime_error{"Syntax error: Expected 'Characters', got 'EndOfFile'"};
                     }
                     else
                     {
@@ -497,21 +497,21 @@ namespace RC::Parser::Experimental
     {
         switch (token.get_type())
         {
-            case TokenType::Equals:
-                handle_operator_equals(token);
-                break;
-            case TokenType::Plus:
-                handle_operator_plus(token);
-                break;
-            case TokenType::OpeningSquareBracket:
-                handle_opening_square_bracket(token);
-                break;
-            case TokenType::SemiColon:
-                handle_single_line_comment();
-                break;
-            default:
-                // No other tokens need handling for this particular ini parser
-                break;
+        case TokenType::Equals:
+            handle_operator_equals(token);
+            break;
+        case TokenType::Plus:
+            handle_operator_plus(token);
+            break;
+        case TokenType::OpeningSquareBracket:
+            handle_opening_square_bracket(token);
+            break;
+        case TokenType::SemiColon:
+            handle_single_line_comment();
+            break;
+        default:
+            // No other tokens need handling for this particular ini parser
+            break;
         }
     }
 
@@ -536,15 +536,17 @@ namespace RC::Parser::Experimental
         tc.add(Parser::Token::create(TokenType::CarriageReturn, L"CarriageReturn", L"\r"));
         tc.add(Parser::Token::create(TokenType::NewLine, L"NewLine", L"\n"));
         tc.add(Parser::Token::create(TokenType::Space, L"Space", L" "));
-        tc.add(Parser::Token::create(TokenType::Characters, L"Characters", L"", Parser::Token::HasData::Yes)); // Empty identifier will match everything that no other token identifier matches
+        tc.add(Parser::Token::create(TokenType::Characters,
+                                     L"Characters",
+                                     L"",
+                                     Parser::Token::HasData::Yes)); // Empty identifier will match everything that no other token identifier matches
         tc.add(Parser::Token::create(TokenType::Equals, L"Equals", L"="));
-        //tc.add(Parser::Token::create(IniFileToken::Plus, L"Plus", L"+"));
+        // tc.add(Parser::Token::create(IniFileToken::Plus, L"Plus", L"+"));
 
         auto close_square_bracket_token = tc.add(Parser::Token::create(TokenType::ClosingSquareBracket, L"CloseSquareBracket", L"]"));
 
-        auto token = Parser::Token::create<
-                TokenMustEndWithOppositeToken,
-                TokenMustHaveCharsBeforeEnd>(TokenType::OpeningSquareBracket, L"OpenSquareBracket", L"[");
+        auto token =
+                Parser::Token::create<TokenMustEndWithOppositeToken, TokenMustHaveCharsBeforeEnd>(TokenType::OpeningSquareBracket, L"OpenSquareBracket", L"[");
         tc.add(std::move(token));
 
         tc.add(Parser::Token::create(TokenType::SemiColon, L"SemiColon", L";"));
@@ -648,4 +650,4 @@ var5 = a string with spaces
         printf_s("AnotherSection.var4 = %S\n", parser.get_string(L"AnotherSection", L"var4", default_value).c_str());
         printf_s("AnotherSection.var5 = %S\n", parser.get_string(L"AnotherSection", L"var5", default_value).c_str());
     }
-}
+} // namespace RC::Parser::Experimental

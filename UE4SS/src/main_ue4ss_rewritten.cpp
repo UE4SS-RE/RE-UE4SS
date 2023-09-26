@@ -1,14 +1,14 @@
 #define NOMINMAX
 #include <Windows.h>
-#include <tlhelp32.h>
 #include <cstdio>
-#include <iostream>
 #include <future>
+#include <iostream>
 #include <memory>
+#include <tlhelp32.h>
 
+#include "UE4SSProgram.hpp"
 #include <DynamicOutput/DynamicOutput.hpp>
 #include <Helpers/String.hpp>
-#include "UE4SSProgram.hpp"
 
 #define WIN_API_FUNCTION_NAME DllMain
 
@@ -46,13 +46,19 @@ auto process_initialized(HMODULE moduleHandle) -> void
     GetModuleFileNameW(moduleHandle, moduleFilenameBuffer, sizeof(moduleFilenameBuffer) / sizeof(wchar_t));
 
     auto program = new UE4SSProgram(moduleFilenameBuffer, {});
-    if (HANDLE handle = CreateThread(nullptr, 0, reinterpret_cast<LPTHREAD_START_ROUTINE>(thread_dll_start), (LPVOID)program, 0, nullptr); handle) { CloseHandle(handle); }
+    if (HANDLE handle = CreateThread(nullptr, 0, reinterpret_cast<LPTHREAD_START_ROUTINE>(thread_dll_start), (LPVOID)program, 0, nullptr); handle)
+    {
+        CloseHandle(handle);
+    }
 }
 
 auto get_main_thread_id() -> DWORD
 {
     HANDLE snapshot = CreateToolhelp32Snapshot(TH32CS_SNAPTHREAD, 0);
-    if (snapshot == INVALID_HANDLE_VALUE) { return 0; }
+    if (snapshot == INVALID_HANDLE_VALUE)
+    {
+        return 0;
+    }
 
     DWORD currentPid = GetCurrentProcessId();
 
@@ -61,16 +67,23 @@ auto get_main_thread_id() -> DWORD
 
     uint64_t earliestCreationTime = std::numeric_limits<uint64_t>::max();
     DWORD mainThreadId = 0;
-    
-    for (Thread32First(snapshot, &th32); Thread32Next(snapshot, &th32);) {
-        if (th32.th32OwnerProcessID != currentPid) { continue; }
+
+    for (Thread32First(snapshot, &th32); Thread32Next(snapshot, &th32);)
+    {
+        if (th32.th32OwnerProcessID != currentPid)
+        {
+            continue;
+        }
 
         HANDLE thread = OpenThread(THREAD_QUERY_INFORMATION, false, th32.th32ThreadID);
-        if (!thread) { continue; }
+        if (!thread)
+        {
+            continue;
+        }
 
         FILETIME threadTimes[4];
-        if (!GetThreadTimes(thread, &threadTimes[0], &threadTimes[1], &threadTimes[2], &threadTimes[3])) 
-        { 
+        if (!GetThreadTimes(thread, &threadTimes[0], &threadTimes[1], &threadTimes[2], &threadTimes[3]))
+        {
             CloseHandle(thread);
             continue;
         }
@@ -102,23 +115,20 @@ auto dll_process_attached(HMODULE moduleHandle) -> void
     }
 }
 
-auto WIN_API_FUNCTION_NAME(HMODULE hModule,
-                      DWORD ul_reason_for_call,
-                      [[maybe_unused]] LPVOID lpReserved
-) -> BOOL
+auto WIN_API_FUNCTION_NAME(HMODULE hModule, DWORD ul_reason_for_call, [[maybe_unused]] LPVOID lpReserved) -> BOOL
 {
     switch (ul_reason_for_call)
     {
-        case DLL_PROCESS_ATTACH:
-            dll_process_attached(hModule);
-            break;
-        case DLL_THREAD_ATTACH:
-            break;
-        case DLL_THREAD_DETACH:
-            break;
-        case DLL_PROCESS_DETACH:
-            UE4SSProgram::static_cleanup();
-            break;
+    case DLL_PROCESS_ATTACH:
+        dll_process_attached(hModule);
+        break;
+    case DLL_THREAD_ATTACH:
+        break;
+    case DLL_THREAD_DETACH:
+        break;
+    case DLL_PROCESS_DETACH:
+        UE4SSProgram::static_cleanup();
+        break;
     }
     return TRUE;
 }

@@ -1,14 +1,14 @@
 #pragma once
 
 #include <array>
-#include <vector>
 #include <functional>
 #include <mutex>
+#include <vector>
 
 #include <SigScanner/Common.hpp>
 
 #define HI_NIBBLE(b) (((b) >> 4) & 0x0F)
-#define LO_NIBBLE(b) ((b) & 0x0F)
+#define LO_NIBBLE(b) ((b)&0x0F)
 
 // Windows.h forward declarations
 struct _SYSTEM_INFO;
@@ -174,7 +174,7 @@ namespace RC
 
     class RC_SPSS_API ScanTargetArray
     {
-    public:
+      public:
         std::array<WIN_MODULEINFO, static_cast<size_t>(ScanTarget::Max)> array{};
 
         auto operator[](ScanTarget index) -> MODULEINFO&;
@@ -185,7 +185,7 @@ namespace RC
     // In the future there might be a multi-threaded version of SinglePassScanner
     class RC_SPSS_API SigScannerStaticData
     {
-    public:
+      public:
         // Store all of the MODULEINFO structs for all of the scan targets
         // Can a vector of something non-windows be stored here and then a static MODULEINFO can be created in the cpp file ?
         static ScanTargetArray m_modules_info;
@@ -218,14 +218,14 @@ namespace RC
 
     class SignatureContainer
     {
-    private:
+      private:
         // Member variables in this class shouldn't be mutable outside of the scanner internals
         // They cannot simply be private because this class isn't part of the scanner
         // They cannot be const because they need to be mutated by the scanner
         // The solution is to make everything private and give the scanner access by using the 'friend' keyword
         friend class SinglePassScanner;
 
-    private:
+      private:
         std::vector<SignatureData> signatures;
         const std::function<bool(SignatureContainer&)> on_match_found;
         const std::function<void(SignatureContainer&)> on_scan_finished;
@@ -252,76 +252,92 @@ namespace RC
         // The scanner will set this to the size of the signature that was matched
         size_t match_signature_size{};
 
-    public:
-        template<typename OnMatchFound, typename OnScanFinished>
-        SignatureContainer(
-                std::vector<SignatureData> sig_param,
-                OnMatchFound on_match_found_param,
-                OnScanFinished on_scan_finished_param
-        ):
-                signatures(std::move(sig_param)),
-                on_match_found(on_match_found_param),
-                on_scan_finished(on_scan_finished_param) {}
+      public:
+        template <typename OnMatchFound, typename OnScanFinished>
+        SignatureContainer(std::vector<SignatureData> sig_param, OnMatchFound on_match_found_param, OnScanFinished on_scan_finished_param)
+            : signatures(std::move(sig_param)), on_match_found(on_match_found_param), on_scan_finished(on_scan_finished_param)
+        {
+        }
 
-        template<typename OnMatchFound, typename OnScanFinished>
-        SignatureContainer(
-                std::vector<SignatureData> sig_param,
-                OnMatchFound on_match_found_param,
-                OnScanFinished on_scan_finished_param,
-                bool store_results_param
-        ):
-                signatures(std::move(sig_param)),
-                on_match_found(on_match_found_param),
-                on_scan_finished(on_scan_finished_param),
-                store_results(store_results_param) {}
+        template <typename OnMatchFound, typename OnScanFinished>
+        SignatureContainer(std::vector<SignatureData> sig_param, OnMatchFound on_match_found_param, OnScanFinished on_scan_finished_param, bool store_results_param)
+            : signatures(std::move(sig_param)), on_match_found(on_match_found_param), on_scan_finished(on_scan_finished_param), store_results(store_results_param)
+        {
+        }
 
-    public:
-        [[nodiscard]] auto get_match_address() const -> uint8_t* { return match_address; }
-        [[nodiscard]] auto get_index_into_signatures() const -> size_t { return index_into_signatures; }
-        [[nodiscard]] auto get_did_succeed() -> bool& { return did_succeed; }
-        [[nodiscard]] auto get_did_succeed() const -> bool { return did_succeed; }
-        [[nodiscard]] auto get_signatures() const -> const std::vector<SignatureData>& { return signatures; }
-        [[nodiscard]] auto get_result_store() const -> const std::vector<SignatureContainerLight>& { return result_store; }
-        [[nodiscard]] auto get_match_signature_size() const -> size_t { return match_signature_size; }
+      public:
+        [[nodiscard]] auto get_match_address() const -> uint8_t*
+        {
+            return match_address;
+        }
+        [[nodiscard]] auto get_index_into_signatures() const -> size_t
+        {
+            return index_into_signatures;
+        }
+        [[nodiscard]] auto get_did_succeed() -> bool&
+        {
+            return did_succeed;
+        }
+        [[nodiscard]] auto get_did_succeed() const -> bool
+        {
+            return did_succeed;
+        }
+        [[nodiscard]] auto get_signatures() const -> const std::vector<SignatureData>&
+        {
+            return signatures;
+        }
+        [[nodiscard]] auto get_result_store() const -> const std::vector<SignatureContainerLight>&
+        {
+            return result_store;
+        }
+        [[nodiscard]] auto get_match_signature_size() const -> size_t
+        {
+            return match_signature_size;
+        }
     };
 
     class SinglePassScanner
     {
-    private:
+      private:
         static std::mutex m_scanner_mutex;
 
-    public:
+      public:
         enum class ScanMethod
         {
             Scalar,
             StdFind,
         };
 
-    public:
+      public:
         RC_SPSS_API static uint32_t m_num_threads;
         RC_SPSS_API static ScanMethod m_scan_method;
 
         // The minimum size a module has to be for multi-threading to be enabled
         // Smaller modules might increase the cost of scanning due to the cost of creating threads
-        RC_SPSS_API static uint32_t m_multithreading_module_size_threshold ;
+        RC_SPSS_API static uint32_t m_multithreading_module_size_threshold;
 
-
-    private:
+      private:
         RC_SPSS_API auto static string_to_vector(std::string_view signature) -> std::vector<int>;
         RC_SPSS_API auto static string_to_vector(const std::vector<SignatureData>& signatures) -> std::vector<std::vector<int>>;
         RC_SPSS_API auto static format_aob_strings(std::vector<SignatureContainer>& signature_containers) -> void;
 
-    public:
-        RC_SPSS_API auto static scanner_work_thread(uint8_t* start_address, uint8_t* end_address, SYSTEM_INFO& info, std::vector<SignatureContainer>& signature_containers) -> void;
-        RC_SPSS_API auto static scanner_work_thread_scalar(uint8_t* start_address, uint8_t* end_address, SYSTEM_INFO& info, std::vector<SignatureContainer>& signature_containers) -> void;
-        RC_SPSS_API auto static scanner_work_thread_stdfind(uint8_t* start_address, uint8_t* end_address, SYSTEM_INFO& info, std::vector<SignatureContainer>& signature_containers) -> void;
+      public:
+        RC_SPSS_API auto static scanner_work_thread(uint8_t* start_address,
+                                                    uint8_t* end_address,
+                                                    SYSTEM_INFO& info,
+                                                    std::vector<SignatureContainer>& signature_containers) -> void;
+        RC_SPSS_API auto static scanner_work_thread_scalar(uint8_t* start_address,
+                                                           uint8_t* end_address,
+                                                           SYSTEM_INFO& info,
+                                                           std::vector<SignatureContainer>& signature_containers) -> void;
+        RC_SPSS_API auto static scanner_work_thread_stdfind(uint8_t* start_address,
+                                                            uint8_t* end_address,
+                                                            SYSTEM_INFO& info,
+                                                            std::vector<SignatureContainer>& signature_containers) -> void;
 
         using SignatureContainerMap = std::unordered_map<ScanTarget, std::vector<SignatureContainer>>;
         RC_SPSS_API auto static start_scan(SignatureContainerMap& signature_containers) -> void;
 
         RC_SPSS_API auto static string_scan(std::wstring_view string_to_scan_for, ScanTarget = ScanTarget::MainExe) -> void*;
     };
-}
-
-
-
+} // namespace RC

@@ -1,13 +1,15 @@
-#include <LuaType/LuaXArrayProperty.hpp>
 #include <LuaType/LuaUObject.hpp>
+#include <LuaType/LuaXArrayProperty.hpp>
 #include <LuaType/LuaXProperty.hpp>
-#pragma warning(disable: 4005)
+#pragma warning(disable : 4005)
 #include <Unreal/Property/FArrayProperty.hpp>
-#pragma warning(default: 4005)
+#pragma warning(default : 4005)
 
 namespace RC::LuaType
 {
-    XArrayProperty::XArrayProperty(Unreal::FArrayProperty* object) : RemoteObjectBase<Unreal::FArrayProperty, FArrayPropertyName>(object) {}
+    XArrayProperty::XArrayProperty(Unreal::FArrayProperty* object) : RemoteObjectBase<Unreal::FArrayProperty, FArrayPropertyName>(object)
+    {
+    }
 
     auto XArrayProperty::construct(const LuaMadeSimple::Lua& lua, Unreal::FArrayProperty* unreal_object) -> const LuaMadeSimple::Lua::Table
     {
@@ -42,12 +44,12 @@ namespace RC::LuaType
         return table;
     }
 
-    auto XArrayProperty::setup_metamethods([[maybe_unused]]BaseObject& base_object) -> void
+    auto XArrayProperty::setup_metamethods([[maybe_unused]] BaseObject& base_object) -> void
     {
         // XArrayProperty has no metamethods
     }
 
-    template<LuaMadeSimple::Type::IsFinal is_final>
+    template <LuaMadeSimple::Type::IsFinal is_final>
     auto XArrayProperty::setup_member_functions(const LuaMadeSimple::Lua::Table& table) -> void
     {
         table.add_pair("GetInner", [](const LuaMadeSimple::Lua& lua) -> int {
@@ -67,7 +69,7 @@ namespace RC::LuaType
 
             // If this is the final object then we also want to finalize creating the table
             // If not then it's the responsibility of the overriding object to call 'make_global()'
-            //table.make_global(ClassName::ToString());
+            // table.make_global(ClassName::ToString());
         }
     }
-}
+} // namespace RC::LuaType

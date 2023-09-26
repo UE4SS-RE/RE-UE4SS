@@ -18,6 +18,4 @@ namespace RC::ASM
     RC_ASM_API auto resolve_call(void* instruction_ptr) -> void*;
 
     RC_ASM_API auto resolve_function_address_from_potential_jmp(void* function_ptr) -> void*;
-}
-
-
+} // namespace RC::ASM

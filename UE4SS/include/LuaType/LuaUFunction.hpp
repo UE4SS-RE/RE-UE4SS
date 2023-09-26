@@ -2,8 +2,8 @@
 
 #include <array>
 
-#include <LuaType/LuaUObject.hpp>
 #include <LuaMadeSimple/LuaMadeSimple.hpp>
+#include <LuaType/LuaUObject.hpp>
 
 namespace RC::Unreal
 {
@@ -25,46 +25,55 @@ namespace RC::LuaType
 
     class DynamicUnrealFunctionOutParameters
     {
-    private:
+      private:
         size_t m_last{0};
         using ParamsArray = std::array<PropertyAndLuaRefPair, 10>;
         ParamsArray m_params;
 
-    public:
+      public:
         auto add(const PropertyAndLuaRefPair) -> void;
         auto get(size_t index) -> const PropertyAndLuaRefPair&;
         auto get() -> const ParamsArray&;
     };
 
-    struct UFunctionName { constexpr static const char* ToString() { return "UFunction"; } };
+    struct UFunctionName
+    {
+        constexpr static const char* ToString()
+        {
+            return "UFunction";
+        }
+    };
     class UFunction : public UObjectBase<Unreal::UFunction, UFunctionName>
     {
-    private:
+      private:
         // This is the 'this' pointer for this UFunction
         Unreal::UObject* m_base{};
 
-    private:
+      private:
         explicit UFunction(Unreal::UObject* base, Unreal::UFunction* function);
 
-    public:
+      public:
         UFunction() = delete;
         auto static construct(const LuaMadeSimple::Lua&, Unreal::UObject*, Unreal::UFunction*) -> const LuaMadeSimple::Lua::Table;
         auto static construct(const LuaMadeSimple::Lua&, BaseObject&) -> const LuaMadeSimple::Lua::Table;
 
-    private:
+      private:
         auto static setup_metamethods(BaseObject&) -> void;
 
-    private:
-        template<LuaMadeSimple::Type::IsFinal is_final>
+      private:
+        template <LuaMadeSimple::Type::IsFinal is_final>
         auto static setup_member_functions(const LuaMadeSimple::Lua::Table&) -> void;
 
-    public:
-        auto derives_from_ufunction() -> bool override { return true; }
+      public:
+        auto derives_from_ufunction() -> bool override
+        {
+            return true;
+        }
 
-    public:
-        auto get_base() -> Unreal::UObject* { return m_base; }
+      public:
+        auto get_base() -> Unreal::UObject*
+        {
+            return m_base;
+        }
     };
-}
-
-
-
+} // namespace RC::LuaType

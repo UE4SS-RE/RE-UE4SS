@@ -49,4 +49,4 @@ namespace RC::Output
     {
         DefaultTargets::close_all_default_devices();
     }
-}
+} // namespace RC::Output

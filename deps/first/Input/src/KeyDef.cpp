@@ -14,4 +14,4 @@ namespace RC::Input
 
         return key;
     }
-}
+} // namespace RC::Input

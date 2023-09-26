@@ -1,32 +1,32 @@
-#include <SDKGenerator/Common.hpp>
 #include <DynamicOutput/DynamicOutput.hpp>
-#pragma warning(disable: 4005)
-#include <Unreal/UClass.hpp>
+#include <SDKGenerator/Common.hpp>
+#pragma warning(disable : 4005)
 #include <Unreal/AActor.hpp>
-#include <Unreal/UEnum.hpp>
-#include <Unreal/UScriptStruct.hpp>
-#include <Unreal/UFunction.hpp>
-#include <Unreal/UInterface.hpp>
-#include <Unreal/Property/NumericPropertyTypes.hpp>
-#include <Unreal/Property/FEnumProperty.hpp>
+#include <Unreal/Property/FArrayProperty.hpp>
 #include <Unreal/Property/FBoolProperty.hpp>
-#include <Unreal/Property/FObjectProperty.hpp>
-#include <Unreal/Property/FWeakObjectProperty.hpp>
-#include <Unreal/Property/FLazyObjectProperty.hpp>
-#include <Unreal/Property/FSoftObjectProperty.hpp>
 #include <Unreal/Property/FClassProperty.hpp>
-#include <Unreal/Property/FSoftClassProperty.hpp>
-#include <Unreal/Property/FInterfaceProperty.hpp>
-#include <Unreal/Property/FStructProperty.hpp>
 #include <Unreal/Property/FDelegateProperty.hpp>
+#include <Unreal/Property/FEnumProperty.hpp>
+#include <Unreal/Property/FFieldPathProperty.hpp>
+#include <Unreal/Property/FInterfaceProperty.hpp>
+#include <Unreal/Property/FLazyObjectProperty.hpp>
+#include <Unreal/Property/FMapProperty.hpp>
 #include <Unreal/Property/FMulticastInlineDelegateProperty.hpp>
 #include <Unreal/Property/FMulticastSparseDelegateProperty.hpp>
-#include <Unreal/Property/FFieldPathProperty.hpp>
-#include <Unreal/Property/FArrayProperty.hpp>
+#include <Unreal/Property/FObjectProperty.hpp>
 #include <Unreal/Property/FSetProperty.hpp>
-#include <Unreal/Property/FMapProperty.hpp>
+#include <Unreal/Property/FSoftClassProperty.hpp>
+#include <Unreal/Property/FSoftObjectProperty.hpp>
+#include <Unreal/Property/FStructProperty.hpp>
+#include <Unreal/Property/FWeakObjectProperty.hpp>
+#include <Unreal/Property/NumericPropertyTypes.hpp>
+#include <Unreal/UClass.hpp>
+#include <Unreal/UEnum.hpp>
+#include <Unreal/UFunction.hpp>
+#include <Unreal/UInterface.hpp>
 #include <Unreal/UPackage.hpp>
-#pragma warning(default: 4005)
+#include <Unreal/UScriptStruct.hpp>
+#pragma warning(default : 4005)
 
 #define DELEGATE_SIGNATURE_POSTFIX STR("__DelegateSignature")
 
@@ -103,11 +103,11 @@ namespace RC::UEGenerator
     {
         std::wstring result_string;
 
-        //Seems to be not needed, because enum objects, unlike classes or structs, retain their normal E prefix
-        //ResultString.append(STR("E"));
+        // Seems to be not needed, because enum objects, unlike classes or structs, retain their normal E prefix
+        // ResultString.append(STR("E"));
         result_string.append(uenum->GetName());
 
-        //Namespaced enums need to have ::Type appended for the type
+        // Namespaced enums need to have ::Type appended for the type
         if (uenum->GetCppForm() == UEnum::ECppForm::Namespaced && include_type)
         {
             result_string.append(STR("::Type"));
@@ -129,18 +129,18 @@ namespace RC::UEGenerator
     {
         std::wstring resulting_name = property_name;
 
-        //Remove heading underscore, used by private variables in some games
+        // Remove heading underscore, used by private variables in some games
         if (resulting_name.length() >= 2 && resulting_name[0] == '_')
         {
             resulting_name.erase(0, 1);
         }
-        //Remove heading m if it is followed by uppercase letter, used by variables in some games
+        // Remove heading m if it is followed by uppercase letter, used by variables in some games
         if (resulting_name.length() >= 2 && resulting_name[0] == 'm' && towupper(resulting_name[1]) == resulting_name[1])
         {
             resulting_name.erase(0, 1);
         }
 
-        //Make sure first character is uppercase
+        // Make sure first character is uppercase
         if (resulting_name.length() >= 1)
         {
             resulting_name[0] = towupper(resulting_name[0]);
@@ -154,11 +154,12 @@ namespace RC::UEGenerator
         return std::format(STR("F{}{}"), context_name, property_name);
     }
 
-    auto generate_property_cxx_name(FProperty* property, bool is_top_level_declaration, UObject* class_context, EnableForwardDeclarations enable_forward_declarations) -> File::StringType
+    auto generate_property_cxx_name(FProperty* property, bool is_top_level_declaration, UObject* class_context, EnableForwardDeclarations enable_forward_declarations)
+            -> File::StringType
     {
         const std::wstring field_class_name = property->GetClass().GetName();
 
-        //Byte Property
+        // Byte Property
         if (field_class_name == STR("ByteProperty"))
         {
             FByteProperty* byte_property = static_cast<FByteProperty*>(property);
@@ -166,14 +167,14 @@ namespace RC::UEGenerator
 
             if (enum_value != NULL)
             {
-                //Non-EnumClass enumerations should be wrapped into TEnumAsByte according to UHT
+                // Non-EnumClass enumerations should be wrapped into TEnumAsByte according to UHT
                 const std::wstring enum_type_name = get_native_enum_name(enum_value);
                 return std::format(STR("TEnumAsByte<{}>"), enum_type_name);
             }
             return STR("uint8");
         }
 
-        //Enum Property
+        // Enum Property
         if (field_class_name == STR("EnumProperty"))
         {
             FEnumProperty* enum_property = static_cast<FEnumProperty*>(property);
@@ -188,7 +189,7 @@ namespace RC::UEGenerator
             return enum_type_name;
         }
 
-        //Bool Property
+        // Bool Property
         if (field_class_name == STR("BoolProperty"))
         {
             FBoolProperty* bool_property = static_cast<FBoolProperty*>(property);
@@ -199,7 +200,7 @@ namespace RC::UEGenerator
             return STR("bool");
         }
 
-        //Standard Numeric Properties
+        // Standard Numeric Properties
         if (field_class_name == STR("Int8Property"))
         {
             return STR("int8");
@@ -237,9 +238,9 @@ namespace RC::UEGenerator
             return STR("double");
         }
 
-        //Object Properties
-        // TODO: Verify that the syntax for 'AssetObjectProperty' is the same as for 'ObjectProperty'.
-        //       If it's not, then add another branch here after you figure out what the syntax should be.
+        // Object Properties
+        //  TODO: Verify that the syntax for 'AssetObjectProperty' is the same as for 'ObjectProperty'.
+        //        If it's not, then add another branch here after you figure out what the syntax should be.
         if (field_class_name == STR("ObjectProperty") || field_class_name == STR("AssetObjectProperty"))
         {
             FObjectProperty* object_property = static_cast<FObjectProperty*>(property);
@@ -321,7 +322,7 @@ namespace RC::UEGenerator
             return std::format(STR("TSoftObjectPtr<{}>"), property_class_name);
         }
 
-        //Class Properties
+        // Class Properties
         if (field_class_name == STR("ClassProperty") || field_class_name == STR("AssetClassProperty"))
         {
             FClassProperty* class_property = static_cast<FClassProperty*>(property);
@@ -361,7 +362,7 @@ namespace RC::UEGenerator
             return std::format(STR("TSoftClassPtr<{}>"), meta_class_name);
         }
 
-        //Interface Property
+        // Interface Property
         if (field_class_name == STR("InterfaceProperty"))
         {
             FInterfaceProperty* interface_property = static_cast<FInterfaceProperty*>(property);
@@ -381,7 +382,7 @@ namespace RC::UEGenerator
             return std::format(STR("TScriptInterface<{}>"), interface_class_name);
         }
 
-        //Struct Property
+        // Struct Property
         if (field_class_name == STR("StructProperty"))
         {
             FStructProperty* struct_property = static_cast<FStructProperty*>(property);
@@ -396,7 +397,7 @@ namespace RC::UEGenerator
             return native_struct_name;
         }
 
-        //Delegate Properties
+        // Delegate Properties
         if (field_class_name == STR("DelegateProperty"))
         {
             FDelegateProperty* delegate_property = static_cast<FDelegateProperty*>(property);
@@ -423,7 +424,7 @@ namespace RC::UEGenerator
             return delegate_type_name;
         }
 
-        //Field path property
+        // Field path property
         if (field_class_name == STR("FieldPathProperty"))
         {
             FFieldPathProperty* field_path_property = static_cast<FFieldPathProperty*>(property);
@@ -431,8 +432,8 @@ namespace RC::UEGenerator
             return std::format(STR("TFieldPath<F{}>"), property_class_name);
         }
 
-        //Collection and Map Properties
-        // TODO: This is missing support for freeze image array properties because XArrayProperty is incomplete. (low priority)
+        // Collection and Map Properties
+        //  TODO: This is missing support for freeze image array properties because XArrayProperty is incomplete. (low priority)
         if (field_class_name == STR("ArrayProperty"))
         {
             FArrayProperty* array_property = static_cast<FArrayProperty*>(property);
@@ -486,7 +487,7 @@ namespace RC::UEGenerator
             return std::format(STR("TMap<{}, {}>"), key_type, value_type);
         }
 
-        //Standard properties that do not have any special attributes
+        // Standard properties that do not have any special attributes
         if (field_class_name == STR("NameProperty"))
         {
             return STR("FName");
@@ -506,7 +507,7 @@ namespace RC::UEGenerator
     {
         const std::wstring field_class_name = property->GetClass().GetName();
 
-        //Byte Property
+        // Byte Property
         if (field_class_name == STR("ByteProperty"))
         {
             FByteProperty* byte_property = static_cast<FByteProperty*>(property);
@@ -514,14 +515,14 @@ namespace RC::UEGenerator
 
             if (enum_value != NULL)
             {
-                //Non-EnumClass enumerations should be wrapped into TEnumAsByte according to UHT
+                // Non-EnumClass enumerations should be wrapped into TEnumAsByte according to UHT
                 const std::wstring enum_type_name = get_native_enum_name(enum_value);
                 return std::format(STR("{}"), enum_type_name);
             }
             return STR("uint8");
         }
 
-        //Enum Property
+        // Enum Property
         if (field_class_name == STR("EnumProperty"))
         {
             FEnumProperty* enum_property = static_cast<FEnumProperty*>(property);
@@ -536,13 +537,13 @@ namespace RC::UEGenerator
             return enum_type_name;
         }
 
-        //Bool Property
+        // Bool Property
         if (field_class_name == STR("BoolProperty"))
         {
             return STR("boolean");
         }
 
-        //Standard Numeric Properties
+        // Standard Numeric Properties
         if (field_class_name == STR("Int8Property"))
         {
             return STR("int8");
@@ -580,9 +581,9 @@ namespace RC::UEGenerator
             return STR("double");
         }
 
-        //Object Properties
-        // TODO: Verify that the syntax for 'AssetObjectProperty' is the same as for 'ObjectProperty'.
-        //       If it's not, then add another branch here after you figure out what the syntax should be.
+        // Object Properties
+        //  TODO: Verify that the syntax for 'AssetObjectProperty' is the same as for 'ObjectProperty'.
+        //        If it's not, then add another branch here after you figure out what the syntax should be.
         if (field_class_name == STR("ObjectProperty") || field_class_name == STR("AssetObjectProperty"))
         {
             FObjectProperty* object_property = static_cast<FObjectProperty*>(property);
@@ -656,7 +657,7 @@ namespace RC::UEGenerator
             return std::format(STR("TSoftObjectPtr<{}>"), property_class_name);
         }
 
-        //Class Properties
+        // Class Properties
         if (field_class_name == STR("ClassProperty") || field_class_name == STR("AssetClassProperty"))
         {
             FClassProperty* class_property = static_cast<FClassProperty*>(property);
@@ -692,7 +693,7 @@ namespace RC::UEGenerator
             return std::format(STR("TSoftClassPtr<{}>"), meta_class_name);
         }
 
-        //Interface Property
+        // Interface Property
         if (field_class_name == STR("InterfaceProperty"))
         {
             FInterfaceProperty* interface_property = static_cast<FInterfaceProperty*>(property);
@@ -708,7 +709,7 @@ namespace RC::UEGenerator
             return std::format(STR("TScriptInterface<{}>"), interface_class_name);
         }
 
-        //Struct Property
+        // Struct Property
         if (field_class_name == STR("StructProperty"))
         {
             FStructProperty* struct_property = static_cast<FStructProperty*>(property);
@@ -723,7 +724,7 @@ namespace RC::UEGenerator
             return native_struct_name;
         }
 
-        //Delegate Properties
+        // Delegate Properties
         if (field_class_name == STR("DelegateProperty"))
         {
             FDelegateProperty* delegate_property = static_cast<FDelegateProperty*>(property);
@@ -750,7 +751,7 @@ namespace RC::UEGenerator
             return delegate_type_name;
         }
 
-        //Field path property
+        // Field path property
         if (field_class_name == STR("FieldPathProperty"))
         {
             FFieldPathProperty* field_path_property = static_cast<FFieldPathProperty*>(property);
@@ -758,8 +759,8 @@ namespace RC::UEGenerator
             return std::format(STR("TFieldPath<F{}>"), property_class_name);
         }
 
-        //Collection and Map Properties
-        // TODO: This is missing support for freeze image array properties because XArrayProperty is incomplete. (low priority)
+        // Collection and Map Properties
+        //  TODO: This is missing support for freeze image array properties because XArrayProperty is incomplete. (low priority)
         if (field_class_name == STR("ArrayProperty"))
         {
             FArrayProperty* array_property = static_cast<FArrayProperty*>(property);
@@ -794,7 +795,7 @@ namespace RC::UEGenerator
             return std::format(STR("TMap<{}, {}>"), key_type, value_type);
         }
 
-        //Standard properties that do not have any special attributes
+        // Standard properties that do not have any special attributes
         if (field_class_name == STR("NameProperty"))
         {
             return STR("FName");
@@ -810,56 +811,65 @@ namespace RC::UEGenerator
         throw std::runtime_error(RC::fmt("Unsupported property class %S", field_class_name.c_str()));
     }
 
-    auto get_native_delegate_type_name(Unreal::UFunction* signature_function, Unreal::UClass* current_class, bool strip_outer_name) -> File::StringType {
-        if (!is_delegate_signature_function(signature_function)) {
-           throw std::runtime_error(RC::fmt("Function %S is not a delegate signature function", signature_function->GetName().c_str()));
+    auto get_native_delegate_type_name(Unreal::UFunction* signature_function, Unreal::UClass* current_class, bool strip_outer_name) -> File::StringType
+    {
+        if (!is_delegate_signature_function(signature_function))
+        {
+            throw std::runtime_error(RC::fmt("Function %S is not a delegate signature function", signature_function->GetName().c_str()));
         }
 
-        //Delegate names always start with F and have __DelegateSignature postfix
+        // Delegate names always start with F and have __DelegateSignature postfix
         File::StringType delegate_type_name = strip_delegate_signature_postfix(signature_function);
         delegate_type_name.insert(0, STR("F"));
 
-        //Return the delegate name without the outer name if we have been requested to strip it
-        if (strip_outer_name) {
+        // Return the delegate name without the outer name if we have been requested to strip it
+        if (strip_outer_name)
+        {
             return delegate_type_name;
         }
 
         UObject* delegate_outer = signature_function->GetOuterPrivate();
 
-        //If delegate is declared inside the class, we need to retrieve the class name and use it as the outer type
-        if (UClass* delegate_outer_class = Unreal::Cast<UClass>(delegate_outer)) {
+        // If delegate is declared inside the class, we need to retrieve the class name and use it as the outer type
+        if (UClass* delegate_outer_class = Unreal::Cast<UClass>(delegate_outer))
+        {
 
-            //Skip the scope declaration if delegate is declared inside the current class
-            if (delegate_outer_class != current_class) {
-                //For interface, delegates are declared inside the interface definition
+            // Skip the scope declaration if delegate is declared inside the current class
+            if (delegate_outer_class != current_class)
+            {
+                // For interface, delegates are declared inside the interface definition
                 bool is_class_interface = delegate_outer_class->IsChildOf<UInterface>();
                 const File::StringType outer_class_name = get_native_class_name(delegate_outer_class, is_class_interface);
 
                 delegate_type_name.insert(0, STR("::"));
                 delegate_type_name.insert(0, outer_class_name);
-
             }
-        } else if (!delegate_outer->IsA<Unreal::UPackage>()) {
-            //Delegate signature functions should never exist outside the UPackage or UClass
+        }
+        else if (!delegate_outer->IsA<Unreal::UPackage>())
+        {
+            // Delegate signature functions should never exist outside the UPackage or UClass
             throw std::runtime_error(RC::fmt("Delegate signature function %S does not have class or package as outer", delegate_outer->GetName().c_str()));
         }
         return delegate_type_name;
     }
 
-    auto is_delegate_signature_function(Unreal::UFunction* function) -> bool {
+    auto is_delegate_signature_function(Unreal::UFunction* function) -> bool
+    {
         return (function->GetFunctionFlags() & Unreal::FUNC_Delegate) != 0 && function->GetName().ends_with(DELEGATE_SIGNATURE_POSTFIX);
     }
 
-    auto strip_delegate_signature_postfix(Unreal::UFunction* signature_function) -> File::StringType {
-        if (!is_delegate_signature_function(signature_function)) {
+    auto strip_delegate_signature_postfix(Unreal::UFunction* signature_function) -> File::StringType
+    {
+        if (!is_delegate_signature_function(signature_function))
+        {
             throw std::runtime_error(RC::fmt("Function %S is not a delegate signature function", signature_function->GetName().c_str()));
         }
 
-        //Delegate names always start with F and have __DelegateSignature postfix
+        // Delegate names always start with F and have __DelegateSignature postfix
         const File::StringType delegate_signature_postfix = DELEGATE_SIGNATURE_POSTFIX;
 
         File::StringType delegate_name = signature_function->GetName();
         delegate_name.erase(delegate_name.length() - delegate_signature_postfix.length());
         return delegate_name;
     }
-}
+} // namespace RC::UEGenerator

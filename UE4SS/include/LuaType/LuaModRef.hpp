@@ -18,21 +18,18 @@ namespace RC::LuaType
     };
     class LuaModRef : public RemoteObjectBase<RC::LuaMod, ModName>
     {
-    private:
+      private:
         explicit LuaModRef(RC::LuaMod* object);
 
-    public:
+      public:
         LuaModRef() = delete;
         auto static construct(const LuaMadeSimple::Lua&, RC::LuaMod*) -> const LuaMadeSimple::Lua::Table;
 
-    private:
+      private:
         auto static setup_metamethods(BaseObject&) -> void;
 
-    private:
-        template<LuaMadeSimple::Type::IsFinal is_final>
+      private:
+        template <LuaMadeSimple::Type::IsFinal is_final>
         auto static setup_member_functions(const LuaMadeSimple::Lua::Table&) -> void;
     };
-}
-
-
-
+} // namespace RC::LuaType

@@ -9,28 +9,31 @@ namespace RC::Unreal
 
 namespace RC::LuaType
 {
-    struct FArrayPropertyName { constexpr static const char* ToString() { return "ArrayProperty"; }};
+    struct FArrayPropertyName
+    {
+        constexpr static const char* ToString()
+        {
+            return "ArrayProperty";
+        }
+    };
     class XArrayProperty : public RemoteObjectBase<Unreal::FArrayProperty, FArrayPropertyName>
     {
-    public:
+      public:
         using Super = XProperty;
 
-    private:
+      private:
         explicit XArrayProperty(Unreal::FArrayProperty* object);
 
-    public:
+      public:
         XArrayProperty() = delete;
         auto static construct(const LuaMadeSimple::Lua&, Unreal::FArrayProperty*) -> const LuaMadeSimple::Lua::Table;
         auto static construct(const LuaMadeSimple::Lua&, BaseObject&) -> const LuaMadeSimple::Lua::Table;
 
-    private:
+      private:
         auto static setup_metamethods(BaseObject&) -> void;
 
-    private:
-        template<LuaMadeSimple::Type::IsFinal is_final>
+      private:
+        template <LuaMadeSimple::Type::IsFinal is_final>
         auto static setup_member_functions(const LuaMadeSimple::Lua::Table&) -> void;
     };
-}
-
-
-
+} // namespace RC::LuaType

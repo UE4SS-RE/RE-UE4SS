@@ -4,7 +4,7 @@
 
 namespace RC::JSON
 {
-    template<typename SupposedJSONNumber>
+    template <typename SupposedJSONNumber>
     concept JSONNumber = std::is_same_v<SupposedJSONNumber, int32_t> || std::is_same_v<SupposedJSONNumber, float> || std::is_same_v<SupposedJSONNumber, double>;
 
     enum class Type
@@ -21,18 +21,18 @@ namespace RC::JSON
     {
         switch (type)
         {
-            case Type::Null:
-                return "Null";
-            case Type::Object:
-                return "Object";
-            case Type::Array:
-                return "Array";
-            case Type::String:
-                return "String";
-            case Type::Number:
-                return "Number";
-            case Type::Bool:
-                return "Bool";
+        case Type::Null:
+            return "Null";
+        case Type::Object:
+            return "Object";
+        case Type::Array:
+            return "Array";
+        case Type::String:
+            return "String";
+        case Type::Number:
+            return "Number";
+        case Type::Bool:
+            return "Bool";
         }
 
         return "UnhandledType";
@@ -46,36 +46,34 @@ namespace RC::JSON
 
     class RC_JSON_API Value
     {
-    public:
+      public:
         virtual ~Value() = default;
 
-    public:
+      public:
         virtual auto serialize(ShouldFormat, int32_t* indent_level) -> StringType = 0;
         virtual auto get_type() const -> Type = 0;
 
-    public:
-        template<typename T>
+      public:
+        template <typename T>
         auto is() -> bool
         {
             return get_type() == T::static_type;
         }
-        template<typename T>
+        template <typename T>
         auto is() const -> bool
         {
             return get_type() == T::static_type;
         }
 
-        template<typename T>
+        template <typename T>
         auto as() const -> const T*
         {
             return static_cast<const T*>(this);
         }
-        template<typename T>
+        template <typename T>
         auto as() -> T*
         {
             return static_cast<T*>(this);
         }
     };
-}
-
-
+} // namespace RC::JSON

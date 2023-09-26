@@ -1,20 +1,22 @@
 #include <format>
 
 #include <Helpers/Casting.hpp>
+#include <LuaType/LuaUObject.hpp>
 #include <LuaType/LuaUScriptStruct.hpp>
 #include <LuaType/LuaUStruct.hpp>
-#include <LuaType/LuaUObject.hpp>
 #include <LuaType/LuaXStructProperty.hpp>
-#pragma warning(disable: 4005)
-#include <Unreal/UScriptStruct.hpp>
+#pragma warning(disable : 4005)
 #include <Unreal/FProperty.hpp>
 #include <Unreal/Property/FStructProperty.hpp>
-#pragma warning(default: 4005)
+#include <Unreal/UScriptStruct.hpp>
+#pragma warning(default : 4005)
 #include <DynamicOutput/Output.hpp>
 
 namespace RC::LuaType
 {
-    UScriptStruct::UScriptStruct(ScriptStructWrapper object) : LocalObjectBase<ScriptStructWrapper, UScriptStructName>(std::move(object)) {}
+    UScriptStruct::UScriptStruct(ScriptStructWrapper object) : LocalObjectBase<ScriptStructWrapper, UScriptStructName>(std::move(object))
+    {
+    }
 
     auto UScriptStruct::construct(const LuaMadeSimple::Lua& lua, ScriptStructWrapper& unreal_object) -> const LuaMadeSimple::Lua::Table
     {
@@ -28,7 +30,7 @@ namespace RC::LuaType
         if (lua.is_nil(-1))
         {
             lua.discard_value(-1);
-            //LuaType::Super::construct(lua, lua_object);
+            // LuaType::Super::construct(lua, lua_object);
             lua.prepare_new_table();
             setup_metamethods(lua_object);
             setup_member_functions<LuaMadeSimple::Type::IsFinal::Yes>(table);
@@ -65,7 +67,7 @@ namespace RC::LuaType
         });
     }
 
-    template<LuaMadeSimple::Type::IsFinal is_final>
+    template <LuaMadeSimple::Type::IsFinal is_final>
     auto UScriptStruct::setup_member_functions(const LuaMadeSimple::Lua::Table& table) -> void
     {
         Super::setup_member_functions<LuaMadeSimple::Type::IsFinal::No>(table);
@@ -153,18 +155,22 @@ namespace RC::LuaType
 
             // If this is the final object then we also want to finalize creating the table
             // If not then it's the responsibility of the overriding object to call 'make_global()'
-            //table.make_global(ClassName::ToString());
+            // table.make_global(ClassName::ToString());
         }
     }
 
-    auto UScriptStruct::handle_unreal_property_value(const LuaMadeSimple::Type::Operation operation, const LuaMadeSimple::Lua& lua, ScriptStructWrapper& struct_data, RC::Unreal::FName property_name) -> void
+    auto UScriptStruct::handle_unreal_property_value(const LuaMadeSimple::Type::Operation operation,
+                                                     const LuaMadeSimple::Lua& lua,
+                                                     ScriptStructWrapper& struct_data,
+                                                     RC::Unreal::FName property_name) -> void
     {
         // Access the given property in the given UScriptStruct
 
         Unreal::FStructProperty* property = reinterpret_cast<Unreal::FStructProperty*>(struct_data.script_struct->FindProperty(property_name));
         if (!property)
         {
-            lua.throw_error(std::format("[handle_unreal_property_value]: Was unable to retrieve property mapped to '{}'", to_string(struct_data.script_struct->GetFullName())));
+            lua.throw_error(std::format("[handle_unreal_property_value]: Was unable to retrieve property mapped to '{}'",
+                                        to_string(struct_data.script_struct->GetFullName())));
         }
 
         auto property_type_fname = property->GetClass().GetFName();
@@ -174,19 +180,14 @@ namespace RC::LuaType
         {
             void* data = Helper::Casting::ptr_cast<void*>(struct_data.start_of_struct, property->GetOffset_Internal());
 
-            const PusherParams pusher_params{
-                    .operation = operation,
-                    .lua = lua,
-                    .base = nullptr,
-                    .data = data,
-                    .property = property
-            };
+            const PusherParams pusher_params{.operation = operation, .lua = lua, .base = nullptr, .data = data, .property = property};
             StaticState::m_property_value_pushers[name_comparison_index](pusher_params);
         }
         else
         {
             std::string property_type_name = to_string(property_type_fname.ToString());
-            lua.throw_error(std::format("Tried accessing unreal property without a registered handler (via StructProperty). Property type '{}' not supported.", property_type_name));
+            lua.throw_error(std::format("Tried accessing unreal property without a registered handler (via StructProperty). Property type '{}' not supported.",
+                                        property_type_name));
         }
     }
 
@@ -206,4 +207,4 @@ namespace RC::LuaType
 
         handle_unreal_property_value(operation, lua, lua_object.get_local_cpp_object(), property_name);
     }
-}
+} // namespace RC::LuaType

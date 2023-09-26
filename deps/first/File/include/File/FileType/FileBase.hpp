@@ -1,21 +1,21 @@
 #pragma once
 
-#include <type_traits>
 #include <span>
+#include <type_traits>
 
-#include <File/InternalFile.hpp>
 #include <File/Enums.hpp>
+#include <File/InternalFile.hpp>
 #include <File/Macros.hpp>
 
 namespace RC::File
 {
-    template<typename InternalFileType>
+    template <typename InternalFileType>
     class RC_FILE_API FileInterface
     {
-    public:
+      public:
         virtual ~FileInterface() = default;
 
-    public:
+      public:
         // Returns whether the underlying file handle is valid
         virtual auto is_valid() noexcept -> bool = 0;
 
@@ -93,9 +93,6 @@ namespace RC::File
         */
     };
 
-    template<typename FileAbstraction>
+    template <typename FileAbstraction>
     concept ImplementsFileInterface = std::is_base_of_v<FileInterface<FileAbstraction>, FileAbstraction>;
-}
-
-
-
+} // namespace RC::File

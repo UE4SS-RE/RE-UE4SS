@@ -5,15 +5,15 @@
 #endif
 
 #include <DynamicOutput/Common.hpp>
-#include <DynamicOutput/OutputDevice.hpp>
 #include <DynamicOutput/Macros.hpp>
+#include <DynamicOutput/OutputDevice.hpp>
 
 namespace RC::Output
 {
     // Very simple class that outputs to stdout
     class ConsoleDevice : public OutputDevice
     {
-    public:
+      public:
 #if ENABLE_OUTPUT_DEVICE_DEBUG_MODE
         ConsoleDevice()
         {
@@ -28,12 +28,9 @@ namespace RC::Output
         ~ConsoleDevice() override = default;
 #endif
 
-    public:
+      public:
         auto has_optional_arg() const -> bool override;
         auto receive(File::StringViewType fmt) const -> void override;
         auto receive_with_optional_arg(File::StringViewType fmt, int32_t optional_arg = 0) const -> void override;
     };
-}
-
-
-
+} // namespace RC::Output

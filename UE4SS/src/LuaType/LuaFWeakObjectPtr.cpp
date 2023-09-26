@@ -1,10 +1,12 @@
+#include <DynamicOutput/Output.hpp>
 #include <LuaType/LuaFWeakObjectPtr.hpp>
 #include <LuaType/LuaUObject.hpp>
-#include <DynamicOutput/Output.hpp>
 
 namespace RC::LuaType
 {
-    FWeakObjectPtr::FWeakObjectPtr(Unreal::FWeakObjectPtr object) : LocalObjectBase<Unreal::FWeakObjectPtr, FWeakObjectPtrName>(std::move(object)) {}
+    FWeakObjectPtr::FWeakObjectPtr(Unreal::FWeakObjectPtr object) : LocalObjectBase<Unreal::FWeakObjectPtr, FWeakObjectPtrName>(std::move(object))
+    {
+    }
 
     auto FWeakObjectPtr::construct(const LuaMadeSimple::Lua& lua, Unreal::FWeakObjectPtr unreal_object) -> const LuaMadeSimple::Lua::Table
     {
@@ -39,12 +41,12 @@ namespace RC::LuaType
         return table;
     }
 
-    auto FWeakObjectPtr::setup_metamethods([[maybe_unused]]BaseObject& base_object) -> void
+    auto FWeakObjectPtr::setup_metamethods([[maybe_unused]] BaseObject& base_object) -> void
     {
         // FWeakObjectPtr has no metamethods
     }
 
-    template<LuaMadeSimple::Type::IsFinal is_final>
+    template <LuaMadeSimple::Type::IsFinal is_final>
     auto FWeakObjectPtr::setup_member_functions(const LuaMadeSimple::Lua::Table& table) -> void
     {
         table.add_pair("Get", [](const LuaMadeSimple::Lua& lua) -> int {
@@ -62,7 +64,7 @@ namespace RC::LuaType
 
             // If this is the final object then we also want to finalize creating the table
             // If not then it's the responsibility of the overriding object to call 'make_global()'
-            //table.make_global(ClassName::ToString());
+            // table.make_global(ClassName::ToString());
         }
     }
-}
+} // namespace RC::LuaType

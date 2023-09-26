@@ -4,7 +4,7 @@
 
 namespace RC
 {
-    template<typename ...Args>
+    template <typename... Args>
     auto static fmt(const char* fmt, Args... args) -> std::string
     {
         constexpr size_t out_string_length = 1000;
@@ -29,7 +29,7 @@ namespace RC
         return out_string;
     }
 
-    template<typename ...Args>
+    template <typename... Args>
     auto static fmt(const wchar_t* fmt, Args... args) -> std::wstring
     {
         constexpr size_t out_string_length = 1000;
@@ -53,6 +53,4 @@ namespace RC
 
         return out_string;
     }
-}
-
-
+} // namespace RC

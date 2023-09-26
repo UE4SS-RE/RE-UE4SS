@@ -11,7 +11,7 @@ namespace RC
 {
     class RC_UE4SS_API SettingsManager
     {
-    public:
+      public:
         struct SectionOverrides
         {
             File::StringType ModsFolderPath{};
@@ -92,12 +92,10 @@ namespace RC
             bool GUIUFunctionCaller{false};
         } Experimental;
 
-    public:
+      public:
         SettingsManager() = default;
 
-    public:
+      public:
         auto deserialize(std::filesystem::path& file_name) -> void;
     };
-}
-
-
+} // namespace RC

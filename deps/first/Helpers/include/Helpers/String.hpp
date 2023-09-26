@@ -1,12 +1,12 @@
 #pragma once
 
-#include <locale>
 #include <codecvt>
-#include <string>
 #include <cwctype>
-#include <vector>
-#include <unordered_map>
+#include <locale>
 #include <shared_mutex>
+#include <string>
+#include <unordered_map>
+#include <vector>
 
 #include <File/Macros.hpp>
 
@@ -67,7 +67,10 @@ namespace RC
         for (int64_t i = 0; i < std::count(in_str.begin(), in_str.end(), delimiter); i++)
         {
             found_occurrence = in_str.find(delimiter, found_occurrence + 1);
-            if (i + 1 == occurrence) { return in_str.substr(0, found_occurrence); }
+            if (i + 1 == occurrence)
+            {
+                return in_str.substr(0, found_occurrence);
+            }
         }
 
         // No occurrence was found, returning empty string for now
@@ -134,7 +137,10 @@ namespace RC
         for (int64_t i = 0; i < std::count(in_str.begin(), in_str.end(), delimiter); i++)
         {
             found_occurrence = in_str.find(delimiter, found_occurrence + 1);
-            if (i + 1 == occurrence) { return in_str.substr(0, found_occurrence); }
+            if (i + 1 == occurrence)
+            {
+                return in_str.substr(0, found_occurrence);
+            }
         }
 
         // No occurrence was found, returning empty string for now
@@ -144,10 +150,10 @@ namespace RC
 
     auto inline to_wstring(std::string& input) -> std::wstring
     {
-#pragma warning(disable: 4996)
+#pragma warning(disable : 4996)
         static std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter{};
         return converter.from_bytes(input);
-#pragma warning(default: 4996)
+#pragma warning(default : 4996)
     }
 
     auto inline to_const_wstring(std::string_view input) -> const std::wstring&
@@ -191,10 +197,10 @@ namespace RC
 
     auto inline to_string(std::wstring& input) -> std::string
     {
-#pragma warning(disable: 4996)
+#pragma warning(disable : 4996)
         static std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter{};
         return converter.to_bytes(input);
-#pragma warning(default: 4996)
+#pragma warning(default : 4996)
     }
 
     auto inline to_string(std::wstring_view input) -> std::string
@@ -231,7 +237,8 @@ namespace RC
         {
             return StringType{input};
         }
-        else if constexpr (std::is_same_v<std::remove_cvref_t<std::remove_pointer_t<std::remove_cvref_t<decltype(input)>>>, StringType> || std::is_same_v<std::remove_cvref_t<std::remove_pointer_t<std::remove_cvref_t<decltype(input)>>>, CharType>)
+        else if constexpr (std::is_same_v<std::remove_cvref_t<std::remove_pointer_t<std::remove_cvref_t<decltype(input)>>>, StringType> ||
+                           std::is_same_v<std::remove_cvref_t<std::remove_pointer_t<std::remove_cvref_t<decltype(input)>>>, CharType>)
         {
             return input;
         }
@@ -250,8 +257,8 @@ namespace RC
         auto inline iequal(std::wstring_view a, std::wstring_view b)
         {
             return a.size() == b.size() && std::equal(a.begin(), a.end(), b.begin(), [](const wchar_t a_char, const wchar_t b_char) {
-                return std::towlower(a_char) == std::towlower(b_char);
-            });
+                       return std::towlower(a_char) == std::towlower(b_char);
+                   });
         }
 
         auto inline iequal(std::wstring& a, const wchar_t* b)
@@ -267,8 +274,8 @@ namespace RC
         auto inline iequal(std::string_view a, std::string_view b)
         {
             return a.size() == b.size() && std::equal(a.begin(), a.end(), b.begin(), [](const char a_char, const char b_char) {
-                return (std::tolower(a_char) == std::tolower(b_char));
-            });
+                       return (std::tolower(a_char) == std::tolower(b_char));
+                   });
         }
 
         auto inline iequal(std::string& a, const char* b)
@@ -280,8 +287,5 @@ namespace RC
         {
             return iequal(std::string_view{a}, b);
         }
-    }
-}
-
-
-
+    } // namespace String
+} // namespace RC

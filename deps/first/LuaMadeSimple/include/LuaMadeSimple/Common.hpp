@@ -15,5 +15,3 @@
 #define RC_LMS_API __declspec(dllexport)
 #endif
 #endif
-
-

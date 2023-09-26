@@ -74,8 +74,7 @@ if (auto val = parser.get_int64(STR("UFunction"), STR("EventGraphFunction"), -1)
     Unreal::UFunction::MemberOffsets.emplace(STR("EventGraphFunction"), static_cast<int32_t>(val));
 if (auto val = parser.get_int64(STR("UFunction"), STR("FirstPropertyToInit"), -1); val != -1)
     Unreal::UFunction::MemberOffsets.emplace(STR("FirstPropertyToInit"), static_cast<int32_t>(val));
-if (auto val = parser.get_int64(STR("UFunction"), STR("Func"), -1); val != -1)
-    Unreal::UFunction::MemberOffsets.emplace(STR("Func"), static_cast<int32_t>(val));
+if (auto val = parser.get_int64(STR("UFunction"), STR("Func"), -1); val != -1) Unreal::UFunction::MemberOffsets.emplace(STR("Func"), static_cast<int32_t>(val));
 if (auto val = parser.get_int64(STR("UFunction"), STR("FunctionFlags"), -1); val != -1)
     Unreal::UFunction::MemberOffsets.emplace(STR("FunctionFlags"), static_cast<int32_t>(val));
 if (auto val = parser.get_int64(STR("UFunction"), STR("NumParms"), -1); val != -1)
@@ -90,8 +89,7 @@ if (auto val = parser.get_int64(STR("UFunction"), STR("RepOffset"), -1); val != 
     Unreal::UFunction::MemberOffsets.emplace(STR("RepOffset"), static_cast<int32_t>(val));
 if (auto val = parser.get_int64(STR("UFunction"), STR("ReturnValueOffset"), -1); val != -1)
     Unreal::UFunction::MemberOffsets.emplace(STR("ReturnValueOffset"), static_cast<int32_t>(val));
-if (auto val = parser.get_int64(STR("UField"), STR("Next"), -1); val != -1)
-    Unreal::UField::MemberOffsets.emplace(STR("Next"), static_cast<int32_t>(val));
+if (auto val = parser.get_int64(STR("UField"), STR("Next"), -1); val != -1) Unreal::UField::MemberOffsets.emplace(STR("Next"), static_cast<int32_t>(val));
 if (auto val = parser.get_int64(STR("FEnumProperty"), STR("Enum"), -1); val != -1)
     Unreal::FEnumProperty::MemberOffsets.emplace(STR("Enum"), static_cast<int32_t>(val));
 if (auto val = parser.get_int64(STR("FEnumProperty"), STR("UnderlyingProp"), -1); val != -1)
@@ -112,8 +110,7 @@ if (auto val = parser.get_int64(STR("UStruct"), STR("PropertyLink"), -1); val !=
     Unreal::UStruct::MemberOffsets.emplace(STR("PropertyLink"), static_cast<int32_t>(val));
 if (auto val = parser.get_int64(STR("UStruct"), STR("RefLink"), -1); val != -1)
     Unreal::UStruct::MemberOffsets.emplace(STR("RefLink"), static_cast<int32_t>(val));
-if (auto val = parser.get_int64(STR("UStruct"), STR("Script"), -1); val != -1)
-    Unreal::UStruct::MemberOffsets.emplace(STR("Script"), static_cast<int32_t>(val));
+if (auto val = parser.get_int64(STR("UStruct"), STR("Script"), -1); val != -1) Unreal::UStruct::MemberOffsets.emplace(STR("Script"), static_cast<int32_t>(val));
 if (auto val = parser.get_int64(STR("UStruct"), STR("ScriptAndPropertyObjectReferences"), -1); val != -1)
     Unreal::UStruct::MemberOffsets.emplace(STR("ScriptAndPropertyObjectReferences"), static_cast<int32_t>(val));
 if (auto val = parser.get_int64(STR("UStruct"), STR("ScriptObjectReferences"), -1); val != -1)
@@ -354,8 +351,7 @@ if (auto val = parser.get_int64(STR("AActor"), STR("LastNetUpdateTime"), -1); va
     Unreal::AActor::MemberOffsets.emplace(STR("LastNetUpdateTime"), static_cast<int32_t>(val));
 if (auto val = parser.get_int64(STR("AActor"), STR("LastRenderTime"), -1); val != -1)
     Unreal::AActor::MemberOffsets.emplace(STR("LastRenderTime"), static_cast<int32_t>(val));
-if (auto val = parser.get_int64(STR("AActor"), STR("Layers"), -1); val != -1)
-    Unreal::AActor::MemberOffsets.emplace(STR("Layers"), static_cast<int32_t>(val));
+if (auto val = parser.get_int64(STR("AActor"), STR("Layers"), -1); val != -1) Unreal::AActor::MemberOffsets.emplace(STR("Layers"), static_cast<int32_t>(val));
 if (auto val = parser.get_int64(STR("AActor"), STR("MinNetUpdateFrequency"), -1); val != -1)
     Unreal::AActor::MemberOffsets.emplace(STR("MinNetUpdateFrequency"), static_cast<int32_t>(val));
 if (auto val = parser.get_int64(STR("AActor"), STR("NetCullDistanceSquared"), -1); val != -1)
@@ -366,8 +362,7 @@ if (auto val = parser.get_int64(STR("AActor"), STR("NetDriverName"), -1); val !=
     Unreal::AActor::MemberOffsets.emplace(STR("NetDriverName"), static_cast<int32_t>(val));
 if (auto val = parser.get_int64(STR("AActor"), STR("NetPriority"), -1); val != -1)
     Unreal::AActor::MemberOffsets.emplace(STR("NetPriority"), static_cast<int32_t>(val));
-if (auto val = parser.get_int64(STR("AActor"), STR("NetTag"), -1); val != -1)
-    Unreal::AActor::MemberOffsets.emplace(STR("NetTag"), static_cast<int32_t>(val));
+if (auto val = parser.get_int64(STR("AActor"), STR("NetTag"), -1); val != -1) Unreal::AActor::MemberOffsets.emplace(STR("NetTag"), static_cast<int32_t>(val));
 if (auto val = parser.get_int64(STR("AActor"), STR("NetUpdateFrequency"), -1); val != -1)
     Unreal::AActor::MemberOffsets.emplace(STR("NetUpdateFrequency"), static_cast<int32_t>(val));
 if (auto val = parser.get_int64(STR("AActor"), STR("NetUpdateTime"), -1); val != -1)
@@ -418,14 +413,12 @@ if (auto val = parser.get_int64(STR("AActor"), STR("ReplicatedMovement"), -1); v
     Unreal::AActor::MemberOffsets.emplace(STR("ReplicatedMovement"), static_cast<int32_t>(val));
 if (auto val = parser.get_int64(STR("AActor"), STR("ReplicatedSubObjects"), -1); val != -1)
     Unreal::AActor::MemberOffsets.emplace(STR("ReplicatedSubObjects"), static_cast<int32_t>(val));
-if (auto val = parser.get_int64(STR("AActor"), STR("Role"), -1); val != -1)
-    Unreal::AActor::MemberOffsets.emplace(STR("Role"), static_cast<int32_t>(val));
+if (auto val = parser.get_int64(STR("AActor"), STR("Role"), -1); val != -1) Unreal::AActor::MemberOffsets.emplace(STR("Role"), static_cast<int32_t>(val));
 if (auto val = parser.get_int64(STR("AActor"), STR("RootComponent"), -1); val != -1)
     Unreal::AActor::MemberOffsets.emplace(STR("RootComponent"), static_cast<int32_t>(val));
 if (auto val = parser.get_int64(STR("AActor"), STR("SpawnCollisionHandlingMethod"), -1); val != -1)
     Unreal::AActor::MemberOffsets.emplace(STR("SpawnCollisionHandlingMethod"), static_cast<int32_t>(val));
-if (auto val = parser.get_int64(STR("AActor"), STR("Tags"), -1); val != -1)
-    Unreal::AActor::MemberOffsets.emplace(STR("Tags"), static_cast<int32_t>(val));
+if (auto val = parser.get_int64(STR("AActor"), STR("Tags"), -1); val != -1) Unreal::AActor::MemberOffsets.emplace(STR("Tags"), static_cast<int32_t>(val));
 if (auto val = parser.get_int64(STR("AActor"), STR("TimerHandle_LifeSpanExpired"), -1); val != -1)
     Unreal::AActor::MemberOffsets.emplace(STR("TimerHandle_LifeSpanExpired"), static_cast<int32_t>(val));
 if (auto val = parser.get_int64(STR("AActor"), STR("UpdateOverlapsMethodDuringLevelStreaming"), -1); val != -1)
@@ -482,8 +475,7 @@ if (auto val = parser.get_int64(STR("AActor"), STR("bHasFinishedSpawning"), -1);
     Unreal::AActor::MemberOffsets.emplace(STR("bHasFinishedSpawning"), static_cast<int32_t>(val));
 if (auto val = parser.get_int64(STR("AActor"), STR("bHasRegisteredAllComponents"), -1); val != -1)
     Unreal::AActor::MemberOffsets.emplace(STR("bHasRegisteredAllComponents"), static_cast<int32_t>(val));
-if (auto val = parser.get_int64(STR("AActor"), STR("bHidden"), -1); val != -1)
-    Unreal::AActor::MemberOffsets.emplace(STR("bHidden"), static_cast<int32_t>(val));
+if (auto val = parser.get_int64(STR("AActor"), STR("bHidden"), -1); val != -1) Unreal::AActor::MemberOffsets.emplace(STR("bHidden"), static_cast<int32_t>(val));
 if (auto val = parser.get_int64(STR("AActor"), STR("bIgnoresOriginShifting"), -1); val != -1)
     Unreal::AActor::MemberOffsets.emplace(STR("bIgnoresOriginShifting"), static_cast<int32_t>(val));
 if (auto val = parser.get_int64(STR("AActor"), STR("bIsEditorOnlyActor"), -1); val != -1)
@@ -640,10 +632,8 @@ if (auto val = parser.get_int64(STR("FField"), STR("FlagsPrivate"), -1); val != 
     Unreal::FField::MemberOffsets.emplace(STR("FlagsPrivate"), static_cast<int32_t>(val));
 if (auto val = parser.get_int64(STR("FField"), STR("NamePrivate"), -1); val != -1)
     Unreal::FField::MemberOffsets.emplace(STR("NamePrivate"), static_cast<int32_t>(val));
-if (auto val = parser.get_int64(STR("FField"), STR("Next"), -1); val != -1)
-    Unreal::FField::MemberOffsets.emplace(STR("Next"), static_cast<int32_t>(val));
-if (auto val = parser.get_int64(STR("FField"), STR("Owner"), -1); val != -1)
-    Unreal::FField::MemberOffsets.emplace(STR("Owner"), static_cast<int32_t>(val));
+if (auto val = parser.get_int64(STR("FField"), STR("Next"), -1); val != -1) Unreal::FField::MemberOffsets.emplace(STR("Next"), static_cast<int32_t>(val));
+if (auto val = parser.get_int64(STR("FField"), STR("Owner"), -1); val != -1) Unreal::FField::MemberOffsets.emplace(STR("Owner"), static_cast<int32_t>(val));
 if (auto val = parser.get_int64(STR("FClassProperty"), STR("MetaClass"), -1); val != -1)
     Unreal::FClassProperty::MemberOffsets.emplace(STR("MetaClass"), static_cast<int32_t>(val));
 if (auto val = parser.get_int64(STR("FBoolProperty"), STR("ByteMask"), -1); val != -1)
@@ -702,8 +692,7 @@ if (auto val = parser.get_int64(STR("UWorld"), STR("LevelSequenceActors"), -1); 
     Unreal::UWorld::MemberOffsets.emplace(STR("LevelSequenceActors"), static_cast<int32_t>(val));
 if (auto val = parser.get_int64(STR("UWorld"), STR("NextSwitchCountdown"), -1); val != -1)
     Unreal::UWorld::MemberOffsets.emplace(STR("NextSwitchCountdown"), static_cast<int32_t>(val));
-if (auto val = parser.get_int64(STR("UWorld"), STR("NextURL"), -1); val != -1)
-    Unreal::UWorld::MemberOffsets.emplace(STR("NextURL"), static_cast<int32_t>(val));
+if (auto val = parser.get_int64(STR("UWorld"), STR("NextURL"), -1); val != -1) Unreal::UWorld::MemberOffsets.emplace(STR("NextURL"), static_cast<int32_t>(val));
 if (auto val = parser.get_int64(STR("UWorld"), STR("NumInvalidReflectionCaptureComponents"), -1); val != -1)
     Unreal::UWorld::MemberOffsets.emplace(STR("NumInvalidReflectionCaptureComponents"), static_cast<int32_t>(val));
 if (auto val = parser.get_int64(STR("UWorld"), STR("NumLightingUnbuiltObjects"), -1); val != -1)
@@ -780,8 +769,7 @@ if (auto val = parser.get_int64(STR("UWorld"), STR("bHack_Force_UsesGameHiddenFl
     Unreal::UWorld::MemberOffsets.emplace(STR("bHack_Force_UsesGameHiddenFlags_True"), static_cast<int32_t>(val));
 if (auto val = parser.get_int64(STR("UWorld"), STR("bHasEverBeenInitialized"), -1); val != -1)
     Unreal::UWorld::MemberOffsets.emplace(STR("bHasEverBeenInitialized"), static_cast<int32_t>(val));
-if (auto val = parser.get_int64(STR("UWorld"), STR("bInTick"), -1); val != -1)
-    Unreal::UWorld::MemberOffsets.emplace(STR("bInTick"), static_cast<int32_t>(val));
+if (auto val = parser.get_int64(STR("UWorld"), STR("bInTick"), -1); val != -1) Unreal::UWorld::MemberOffsets.emplace(STR("bInTick"), static_cast<int32_t>(val));
 if (auto val = parser.get_int64(STR("UWorld"), STR("bInitializedAndNeedsCleanup"), -1); val != -1)
     Unreal::UWorld::MemberOffsets.emplace(STR("bInitializedAndNeedsCleanup"), static_cast<int32_t>(val));
 if (auto val = parser.get_int64(STR("UWorld"), STR("bIsBuilt"), -1); val != -1)
@@ -878,22 +866,18 @@ if (auto val = parser.get_int64(STR("UClass"), STR("SparseClassDataStruct"), -1)
     Unreal::UClass::MemberOffsets.emplace(STR("SparseClassDataStruct"), static_cast<int32_t>(val));
 if (auto val = parser.get_int64(STR("UClass"), STR("UberGraphFramePointerProperty"), -1); val != -1)
     Unreal::UClass::MemberOffsets.emplace(STR("UberGraphFramePointerProperty"), static_cast<int32_t>(val));
-if (auto val = parser.get_int64(STR("UClass"), STR("bCooked"), -1); val != -1)
-    Unreal::UClass::MemberOffsets.emplace(STR("bCooked"), static_cast<int32_t>(val));
+if (auto val = parser.get_int64(STR("UClass"), STR("bCooked"), -1); val != -1) Unreal::UClass::MemberOffsets.emplace(STR("bCooked"), static_cast<int32_t>(val));
 if (auto val = parser.get_int64(STR("UClass"), STR("bLayoutChanging"), -1); val != -1)
     Unreal::UClass::MemberOffsets.emplace(STR("bLayoutChanging"), static_cast<int32_t>(val));
-if (auto val = parser.get_int64(STR("UEnum"), STR("CppForm"), -1); val != -1)
-    Unreal::UEnum::MemberOffsets.emplace(STR("CppForm"), static_cast<int32_t>(val));
-if (auto val = parser.get_int64(STR("UEnum"), STR("CppType"), -1); val != -1)
-    Unreal::UEnum::MemberOffsets.emplace(STR("CppType"), static_cast<int32_t>(val));
+if (auto val = parser.get_int64(STR("UEnum"), STR("CppForm"), -1); val != -1) Unreal::UEnum::MemberOffsets.emplace(STR("CppForm"), static_cast<int32_t>(val));
+if (auto val = parser.get_int64(STR("UEnum"), STR("CppType"), -1); val != -1) Unreal::UEnum::MemberOffsets.emplace(STR("CppType"), static_cast<int32_t>(val));
 if (auto val = parser.get_int64(STR("UEnum"), STR("EnumDisplayNameFn"), -1); val != -1)
     Unreal::UEnum::MemberOffsets.emplace(STR("EnumDisplayNameFn"), static_cast<int32_t>(val));
 if (auto val = parser.get_int64(STR("UEnum"), STR("EnumFlags_Internal"), -1); val != -1)
     Unreal::UEnum::MemberOffsets.emplace(STR("EnumFlags_Internal"), static_cast<int32_t>(val));
 if (auto val = parser.get_int64(STR("UEnum"), STR("EnumPackage"), -1); val != -1)
     Unreal::UEnum::MemberOffsets.emplace(STR("EnumPackage"), static_cast<int32_t>(val));
-if (auto val = parser.get_int64(STR("UEnum"), STR("Names"), -1); val != -1)
-    Unreal::UEnum::MemberOffsets.emplace(STR("Names"), static_cast<int32_t>(val));
+if (auto val = parser.get_int64(STR("UEnum"), STR("Names"), -1); val != -1) Unreal::UEnum::MemberOffsets.emplace(STR("Names"), static_cast<int32_t>(val));
 if (auto val = parser.get_int64(STR("FMapProperty"), STR("KeyProp"), -1); val != -1)
     Unreal::FMapProperty::MemberOffsets.emplace(STR("KeyProp"), static_cast<int32_t>(val));
 if (auto val = parser.get_int64(STR("FMapProperty"), STR("ValueProp"), -1); val != -1)

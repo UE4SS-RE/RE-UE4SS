@@ -1,14 +1,14 @@
 #pragma once
 
-#include <vector>
-#include <unordered_map>
 #include <chrono>
-#include <numeric>
 #include <limits>
+#include <numeric>
+#include <unordered_map>
+#include <vector>
 
-#include <Timer/Common.hpp>
 #include <DynamicOutput/DynamicOutput.hpp>
 #include <Helpers/String.hpp>
+#include <Timer/Common.hpp>
 
 #define TIME_FUNCTION_MACRO_V2 1
 
@@ -17,16 +17,16 @@ namespace RC
 #if TIME_FUNCTION_MACRO_V2 == 0
     class RC_FNCTMR_API FunctionTimer
     {
-    private:
+      private:
         std::chrono::time_point<std::chrono::steady_clock> m_start;
         std::wstring m_function_name;
 
-    public:
+      public:
         FunctionTimer(std::wstring_view function_name);
         FunctionTimer(std::string_view function_name);
         ~FunctionTimer();
 
-    public:
+      public:
         auto get_function_name() -> std::wstring;
     };
 
@@ -38,18 +38,17 @@ namespace RC
 
     class RC_FNCTMR_API FunctionTimerCollection
     {
-    private:
+      private:
         static inline std::vector<SavedFunctionTimer> m_timers;
 
-    public:
+      public:
         auto static add_timer(FunctionTimer* timer, double duration) -> void;
         auto static dump() -> void;
     };
 
 #if defined(TIME_FUNCTION_MACRO_ENABLED)
 #ifndef TIME_FUNCTION
-#define TIME_FUNCTION() \
-FunctionTimer scoped_function_timer{__FUNCSIG__};
+#define TIME_FUNCTION() FunctionTimer scoped_function_timer{__FUNCSIG__};
 #endif
 #else
 #define TIME_FUNCTION()
@@ -62,8 +61,8 @@ FunctionTimer scoped_function_timer{__FUNCSIG__};
 
     struct RC_FNCTMR_API FunctionTimerInternalFrame
     {
-        //std::chrono::time_point<std::chrono::steady_clock> start{};
-        //std::chrono::time_point<std::chrono::steady_clock> end{};
+        // std::chrono::time_point<std::chrono::steady_clock> start{};
+        // std::chrono::time_point<std::chrono::steady_clock> end{};
         FunctionTimerInterval start{};
         FunctionTimerInterval end{};
 
@@ -75,25 +74,26 @@ FunctionTimer scoped_function_timer{__FUNCSIG__};
 
     class RC_FNCTMR_API FunctionTimerFrame
     {
-    public:
+      public:
         std::string function_name{};
         size_t self_frame_index{};
         size_t end_frame_index{};
         size_t hits{1};
         std::vector<FunctionTimerInternalFrame> hit_frames{};
 
-    public:
-        FunctionTimerFrame(std::string function_name) : function_name(function_name), self_frame_index(s_frame_stack.size()), end_frame_index(s_frame_stack.size())
+      public:
+        FunctionTimerFrame(std::string function_name)
+            : function_name(function_name), self_frame_index(s_frame_stack.size()), end_frame_index(s_frame_stack.size())
         {
             hit_frames.reserve(100000);
         }
 
-    public:
+      public:
         static std::vector<FunctionTimerFrame> s_frame_stack;
         static std::unordered_map<std::string, size_t> s_functions_on_stack;
         static bool s_timer_enabled;
 
-    public:
+      public:
         static auto start_profiling() -> void
         {
             s_frame_stack.clear();
@@ -135,7 +135,7 @@ FunctionTimer scoped_function_timer{__FUNCSIG__};
             scoped_out.send(STR("Duration is in seconds\n"));
             scoped_out.send(STR("Scientific notation is likely a tiny number\n\n\n"));
 
-            //std::vector<int> vec{10, 5, 8, 3, 2, 8};
+            // std::vector<int> vec{10, 5, 8, 3, 2, 8};
 
             for (const auto& frame : s_frame_stack)
             {
@@ -146,8 +146,8 @@ FunctionTimer scoped_function_timer{__FUNCSIG__};
                 for (size_t i = frame.self_frame_index + 1; i < frame.end_frame_index; i++)
                 {
                     const auto& called_frame = s_frame_stack[i];
-                    //const auto dur = called_frame.calculate_duration();
-                    //exclusive_duration -= dur;
+                    // const auto dur = called_frame.calculate_duration();
+                    // exclusive_duration -= dur;
 
                     for (const auto& hit_frame : called_frame.hit_frames)
                     {
@@ -163,13 +163,13 @@ FunctionTimer scoped_function_timer{__FUNCSIG__};
                     average_inclusive_vec.emplace_back(hit_frame.calculate_duration());
                 }
 
-                //auto average_inclusive = std::accumulate(average_inclusive_vec.begin(), average_inclusive_vec.end(), 0ll, [n = 0](auto cma, auto i) mutable {
-                //    return cma + (i - cma) / ++n;
-                //});
+                // auto average_inclusive = std::accumulate(average_inclusive_vec.begin(), average_inclusive_vec.end(), 0ll, [n = 0](auto cma, auto i) mutable {
+                //     return cma + (i - cma) / ++n;
+                // });
                 //
-                //auto average_exclusive = std::accumulate(average_exclusive_vec.begin(), average_exclusive_vec.end(), 0ll, [n = 0](auto cma, auto i) mutable {
-                //    return cma + (i - cma) / ++n;
-                //});
+                // auto average_exclusive = std::accumulate(average_exclusive_vec.begin(), average_exclusive_vec.end(), 0ll, [n = 0](auto cma, auto i) mutable {
+                //     return cma + (i - cma) / ++n;
+                // });
 
                 FunctionTimerIntervalUnderlyingType average_inclusive{};
                 if (!frame.hit_frames.empty())
@@ -191,9 +191,12 @@ FunctionTimer scoped_function_timer{__FUNCSIG__};
                     Output::send(STR("No frames captured between the start and end of this frame\n"));
                 }
 
-                //if (average_exclusive == 0) { average_exclusive = average_exclusive_vec.empty() ? exclusive_duration : average_exclusive_vec.front();
-                if (average_exclusive == 0) { average_exclusive = average_inclusive; }
-                //if (average_inclusive == 0) { average_inclusive = average_inclusive_vec.empty() ? average_exclusive : average_inclusive_vec.front(); }
+                // if (average_exclusive == 0) { average_exclusive = average_exclusive_vec.empty() ? exclusive_duration : average_exclusive_vec.front();
+                if (average_exclusive == 0)
+                {
+                    average_exclusive = average_inclusive;
+                }
+                // if (average_inclusive == 0) { average_inclusive = average_inclusive_vec.empty() ? average_exclusive : average_inclusive_vec.front(); }
 
                 scoped_out.send(STR("Frame: {}\n"), to_wstring(frame.function_name));
                 scoped_out.send(STR("\tHits: {}\n"), frame.hits);
@@ -202,7 +205,7 @@ FunctionTimer scoped_function_timer{__FUNCSIG__};
             }
         }
 
-    public:
+      public:
         auto start_timer() -> void
         {
             hit_frames.emplace_back().start = std::chrono::duration_cast<FunctionTimerInterval>(FunctionTimerClockType::now().time_since_epoch());
@@ -225,7 +228,10 @@ FunctionTimer scoped_function_timer{__FUNCSIG__};
             FunctionTimerIntervalUnderlyingType duration{};
             for (const auto& hit_frame : hit_frames)
             {
-                if (hit_frame.end < hit_frame.start) { continue; }
+                if (hit_frame.end < hit_frame.start)
+                {
+                    continue;
+                }
                 duration += hit_frame.calculate_duration();
             }
             return duration;
@@ -234,10 +240,10 @@ FunctionTimer scoped_function_timer{__FUNCSIG__};
 
     class RC_FNCTMR_API FunctionTimerFrameGuard
     {
-    public:
+      public:
         size_t self_frame_index{};
 
-    public:
+      public:
         ~FunctionTimerFrameGuard()
         {
             if (!FunctionTimerFrame::s_frame_stack.empty() && self_frame_index != std::numeric_limits<size_t>::max())
@@ -249,14 +255,14 @@ FunctionTimer scoped_function_timer{__FUNCSIG__};
 
 #if defined(TIME_FUNCTION_MACRO_ENABLED)
 #ifndef TIME_FUNCTION
-#define TIME_FUNCTION() \
-FunctionTimerFrame* function_timer_frame{}; \
-if (FunctionTimerFrame::s_timer_enabled) \
-{ \
-    function_timer_frame = FunctionTimerFrame::new_frame(__FUNCSIG__); \
-    function_timer_frame->start_timer();  \
-} \
-FunctionTimerFrameGuard function_timer_frame_guard{function_timer_frame ? function_timer_frame->self_frame_index : std::numeric_limits<size_t>::max()};
+#define TIME_FUNCTION()                                                                                                                                        \
+    FunctionTimerFrame* function_timer_frame{};                                                                                                                \
+    if (FunctionTimerFrame::s_timer_enabled)                                                                                                                   \
+    {                                                                                                                                                          \
+        function_timer_frame = FunctionTimerFrame::new_frame(__FUNCSIG__);                                                                                     \
+        function_timer_frame->start_timer();                                                                                                                   \
+    }                                                                                                                                                          \
+    FunctionTimerFrameGuard function_timer_frame_guard{function_timer_frame ? function_timer_frame->self_frame_index : std::numeric_limits<size_t>::max()};
 #endif
 #else
 #define TIME_FUNCTION()
@@ -264,6 +270,4 @@ FunctionTimerFrameGuard function_timer_frame_guard{function_timer_frame ? functi
 
 #endif
 
-}
-
-
+} // namespace RC

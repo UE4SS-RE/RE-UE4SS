@@ -49,6 +49,4 @@ namespace RC::ObjectDumper
     auto scriptstruct_to_string_complex(void* p_this, std::wstring& out_line, ObjectToStringComplexDeclCallable callable) -> void;
 
     auto init() -> void;
-}
-
-
+} // namespace RC::ObjectDumper

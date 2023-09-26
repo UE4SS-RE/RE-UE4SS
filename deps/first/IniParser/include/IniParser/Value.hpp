@@ -1,7 +1,7 @@
 #pragma once
 
-#include <cstdint>
 #include <array>
+#include <cstdint>
 
 #include <File/File.hpp>
 #include <IniParser/Common.hpp>
@@ -10,7 +10,7 @@ namespace RC::Ini
 {
     class Value
     {
-    public:
+      public:
         enum class Type
         {
             NoType,
@@ -22,7 +22,7 @@ namespace RC::Ini
             Max,
         };
 
-    private:
+      private:
         // Always use "m_ref->value" instead of "value"
         // That way it returns properly if this value is a reference to another variable
         // The "m_ref->value" member is set to self if it doesn't refer to another variable
@@ -36,14 +36,26 @@ namespace RC::Ini
 
         const Value* m_ref{nullptr};
 
-    public:
+      public:
         RC_INI_PARSER_API auto get_ref() const -> const Value*;
         RC_INI_PARSER_API auto set_ref(const Value* new_ref) -> void;
 
-        RC_INI_PARSER_API auto is_valid_string() const -> bool { return is_valid_type<Type::String>(); }
-        RC_INI_PARSER_API auto is_valid_int64() const -> bool { return is_valid_type<Type::Int64>(); }
-        RC_INI_PARSER_API auto is_valid_float() const -> bool { return is_valid_type<Type::Float>(); }
-        RC_INI_PARSER_API auto is_valid_bool() const -> bool { return is_valid_type<Type::Bool>(); }
+        RC_INI_PARSER_API auto is_valid_string() const -> bool
+        {
+            return is_valid_type<Type::String>();
+        }
+        RC_INI_PARSER_API auto is_valid_int64() const -> bool
+        {
+            return is_valid_type<Type::Int64>();
+        }
+        RC_INI_PARSER_API auto is_valid_float() const -> bool
+        {
+            return is_valid_type<Type::Float>();
+        }
+        RC_INI_PARSER_API auto is_valid_bool() const -> bool
+        {
+            return is_valid_type<Type::Bool>();
+        }
 
         RC_INI_PARSER_API auto get_string_value() const -> const File::StringType&;
         RC_INI_PARSER_API auto get_int64_value() const -> int64_t;
@@ -55,21 +67,18 @@ namespace RC::Ini
         RC_INI_PARSER_API auto add_float_value(const File::StringType& data) -> void;
         RC_INI_PARSER_API auto add_bool_value(bool data) -> void;
 
-    private:
-        template<Type ValueType>
+      private:
+        template <Type ValueType>
         auto add_type() -> void
         {
             m_valid_types[static_cast<int32_t>(ValueType)] = true;
             ++m_num_valid_types;
         }
 
-        template<Type ValueType>
+        template <Type ValueType>
         [[nodiscard]] auto is_valid_type() const -> bool
         {
             return m_valid_types[static_cast<int32_t>(ValueType)];
         }
     };
-}
-
-
-
+} // namespace RC::Ini

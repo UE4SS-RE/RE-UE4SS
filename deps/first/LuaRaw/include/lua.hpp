@@ -4,13 +4,13 @@
 
 /*
 extern "C" {
+#include "lauxlib.h"
 #include "lua.h"
 #include "lualib.h"
-#include "lauxlib.h"
 }
 */
 
 // Lua was compiled as C++ so 'extern "C"' should not be used here
+#include "lauxlib.h"
 #include "lua.h"
 #include "lualib.h"
-#include "lauxlib.h"

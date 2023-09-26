@@ -15,5 +15,3 @@
 #define RC_SPSS_API __declspec(dllexport)
 #endif
 #endif
-
-

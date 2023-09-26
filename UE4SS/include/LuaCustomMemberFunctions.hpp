@@ -2,13 +2,13 @@
 
 #include <unordered_map>
 
-#include <lua.hpp>
 #include <Unreal/Core/HAL/Platform.hpp>
 #include <Unreal/FScriptArray.hpp>
 #include <Unreal/Property/FArrayProperty.hpp>
+#include <Unreal/Property/FObjectProperty.hpp>
 #include <Unreal/UObject.hpp>
 #include <Unreal/UScriptStruct.hpp>
-#include <Unreal/Property/FObjectProperty.hpp>
+#include <lua.hpp>
 
 namespace RC
 {
@@ -41,7 +41,7 @@ namespace RC
     auto lua_print_wrapper(lua_State*) -> int;
     auto lua_FindAllOf_wrapper(lua_State*) -> int;
     auto lua_RegisterKeyBind_wrapper(lua_State*) -> int;
-}
+} // namespace RC
 
 namespace RC::LuaBackCompat
 {
@@ -55,7 +55,7 @@ namespace RC::LuaBackCompat
 
     auto lua_RegisterHook_wrapper(lua_State*) -> int;
     auto lua_UObjectBase_IsA_wrapper(lua_State*) -> int;
-}
+} // namespace RC::LuaBackCompat
 
 namespace RC::UnrealRuntimeTypes
 {
@@ -131,24 +131,30 @@ namespace RC::UnrealRuntimeTypes
 
     class Array
     {
-    private:
+      private:
         FScriptArray* ScriptArray{};
         FArrayProperty* Type{};
         int32_t TypeSize{};
         size_t TypeAlignment{};
-        using TypeHandlerFunction = void(*)();
+        using TypeHandlerFunction = void (*)();
         using TypeHandlerMap = std::unordered_map<std::string, TypeHandlerFunction>;
         TypeHandlerMap TypeHandlers{
                 {"Pointer", &Array_Type_Handler_Ptr},
                 {"wchar_t", &Array_Type_Handler_WChar_T},
         };
 
-    public:
+      public:
         Array(size_t TypeSize, std::vector<std::string>& TypeNames);
 
-    public:
-        FScriptArray* GetScriptArray() { return ScriptArray; }
-        FArrayProperty* GetType() { return Type; }
+      public:
+        FScriptArray* GetScriptArray()
+        {
+            return ScriptArray;
+        }
+        FArrayProperty* GetType()
+        {
+            return Type;
+        }
 
         template <typename CallableType>
         auto WithScriptArray(CallableType&& Callable) const
@@ -158,32 +164,35 @@ namespace RC::UnrealRuntimeTypes
 
         int32 AddUninitializedValues(int32 Count)
         {
-            const int32 OldNum = WithScriptArray([this, Count](auto* Array) { return Array->Add(Count, TypeSize, TypeAlignment); });
+            const int32 OldNum = WithScriptArray([this, Count](auto* Array) {
+                return Array->Add(Count, TypeSize, TypeAlignment);
+            });
             return OldNum;
         }
     };
 
-    template<typename T>
-    concept HasStaticClassMemberFunction =
-    requires(T t) {
-        { T::StaticClass() };
+    template <typename T>
+    concept HasStaticClassMemberFunction = requires(T t) {
+        {
+            T::StaticClass()
+        };
     };
 
     struct ArrayTest
     {
-    private:
+      private:
         FScriptArray* ScriptArray{};
         FScriptArray InlineScriptArray{};
         bool IsScriptArrayInline{};
 
-    public:
+      public:
         size_t ElementSize{};
         size_t ElementMinAlignment{};
         std::string TypeName{};
         FArrayProperty* Property{};
         bool TypeIsAlwaysPointer{};
 
-    private:
+      private:
         uint8* GetRawPtr(int32 Index = 0)
         {
             if (!Num())
@@ -208,7 +217,7 @@ namespace RC::UnrealRuntimeTypes
             }
         }
 
-    public:
+      public:
         // Script constructor! Do not use directly!
         ArrayTest() : IsScriptArrayInline(true)
         {
@@ -220,27 +229,22 @@ namespace RC::UnrealRuntimeTypes
                   size_t ElementMinAlignment,
                   const std::string& TypeName,
                   bool TypeIsAlwaysPointer,
-                  FArrayProperty* Property = nullptr) : ScriptArray(ScriptArray),
-                                                        IsScriptArrayInline(false),
-                                                        ElementSize(ElementSize),
-                                                        ElementMinAlignment(ElementMinAlignment),
-                                                        TypeName(TypeName),
-                                                        TypeIsAlwaysPointer(TypeIsAlwaysPointer),
-                                                        Property(Property) {}
+                  FArrayProperty* Property = nullptr)
+            : ScriptArray(ScriptArray), IsScriptArrayInline(false), ElementSize(ElementSize), ElementMinAlignment(ElementMinAlignment), TypeName(TypeName),
+              TypeIsAlwaysPointer(TypeIsAlwaysPointer), Property(Property)
+        {
+        }
 
         ArrayTest(FScriptArray&& ScriptArray,
                   size_t ElementSize,
                   size_t ElementMinAlignment,
                   const std::string& TypeName,
                   bool TypeIsAlwaysPointer,
-                  FArrayProperty* Property = nullptr) : ScriptArray(nullptr),
-                                                        InlineScriptArray(std::move(ScriptArray), ElementSize, ElementMinAlignment),
-                                                        IsScriptArrayInline(true),
-                                                        ElementSize(ElementSize),
-                                                        ElementMinAlignment(ElementMinAlignment),
-                                                        TypeName(TypeName),
-                                                        TypeIsAlwaysPointer(TypeIsAlwaysPointer),
-                                                        Property(Property) {}
+                  FArrayProperty* Property = nullptr)
+            : ScriptArray(nullptr), InlineScriptArray(std::move(ScriptArray), ElementSize, ElementMinAlignment), IsScriptArrayInline(true),
+              ElementSize(ElementSize), ElementMinAlignment(ElementMinAlignment), TypeName(TypeName), TypeIsAlwaysPointer(TypeIsAlwaysPointer), Property(Property)
+        {
+        }
 
         ArrayTest(ArrayTest&& From)
         {
@@ -263,7 +267,10 @@ namespace RC::UnrealRuntimeTypes
 
         ~ArrayTest()
         {
-            if (!GetScriptArray()) { return; }
+            if (!GetScriptArray())
+            {
+                return;
+            }
             if (Property)
             {
                 if (IsScriptArrayInline)
@@ -290,19 +297,40 @@ namespace RC::UnrealRuntimeTypes
             }
         }
 
-        auto Num() -> int32 { return GetScriptArray() ? GetScriptArray()->Num() : 0; }
-        auto Max() -> int32 { return GetScriptArray() ? GetScriptArray()->Max() : 0; }
-
-        using FuncParamType = bool(*)(int);
-        typedef bool(*FuncParamTypedef)(int);
-        auto FuncTestOne(bool(*func_param)(int)) -> void { func_param(1); }
-        auto FuncTestTwo(FuncParamType func_param) -> void { func_param(2); }
-        auto FuncTestThree(FuncParamTypedef func_param) -> void { func_param(3); }
-        auto FuncTestFour(std::function<bool(int)> func_param) -> void { func_param(4); }
-
-        auto ForEach(LoopAction(*Callable)(int Index, void* Element)) -> void
+        auto Num() -> int32
         {
-            if (!GetScriptArray() || !GetScriptArray()->GetData() || GetScriptArray()->IsEmpty()) { return; }
+            return GetScriptArray() ? GetScriptArray()->Num() : 0;
+        }
+        auto Max() -> int32
+        {
+            return GetScriptArray() ? GetScriptArray()->Max() : 0;
+        }
+
+        using FuncParamType = bool (*)(int);
+        typedef bool (*FuncParamTypedef)(int);
+        auto FuncTestOne(bool (*func_param)(int)) -> void
+        {
+            func_param(1);
+        }
+        auto FuncTestTwo(FuncParamType func_param) -> void
+        {
+            func_param(2);
+        }
+        auto FuncTestThree(FuncParamTypedef func_param) -> void
+        {
+            func_param(3);
+        }
+        auto FuncTestFour(std::function<bool(int)> func_param) -> void
+        {
+            func_param(4);
+        }
+
+        auto ForEach(LoopAction (*Callable)(int Index, void* Element)) -> void
+        {
+            if (!GetScriptArray() || !GetScriptArray()->GetData() || GetScriptArray()->IsEmpty())
+            {
+                return;
+            }
 
             printf_s("ScriptArray: %p\n", GetScriptArray());
             printf_s("Data: %p\n", GetScriptArray()->GetData());
@@ -313,19 +341,28 @@ namespace RC::UnrealRuntimeTypes
                 // For type-information, we might need to store the UClass pointer instead of just the size & alignment.
                 // That might collide with properties whenever support for that is added.
                 // Maybe we can store both, one being nullptr when not applicable.
-                //printf_s("[%i] Element: %p\n", i, Element);
-                if (Callable(i, Element) == LoopAction::Break) { break; }
+                // printf_s("[%i] Element: %p\n", i, Element);
+                if (Callable(i, Element) == LoopAction::Break)
+                {
+                    break;
+                }
             }
         }
 
         auto GetElementAtIndex(int32 index) -> void*
         {
-            if (!GetScriptArray() || !GetScriptArray()->GetData() || GetScriptArray()->IsEmpty()) { return nullptr; }
+            if (!GetScriptArray() || !GetScriptArray()->GetData() || GetScriptArray()->IsEmpty())
+            {
+                return nullptr;
+            }
             printf_s("ScriptArray: %p\n", GetScriptArray());
             printf_s("Data: %p\n", GetScriptArray()->GetData());
             printf_s("*Data: %p\n", *(void**)GetScriptArray()->GetData());
 
-            if (!GetScriptArray()->IsValidIndex(index)) { return nullptr; }
+            if (!GetScriptArray()->IsValidIndex(index))
+            {
+                return nullptr;
+            }
 
             auto Element = std::bit_cast<void*>(std::bit_cast<char*>(GetScriptArray()->GetData()) + ElementMinAlignment * index);
             printf_s("[%i] Element: %p\n", index, Element);
@@ -340,11 +377,10 @@ namespace RC::UnrealRuntimeTypes
         UScriptStruct* script_struct{};
         bool is_user_constructed{};
 
-        LuaUScriptStruct(UObject* base, FStructProperty* struct_property, UScriptStruct* script_struct, bool is_user_constructed = false) :
-                base(base),
-                struct_property(struct_property),
-                script_struct(script_struct),
-                is_user_constructed(is_user_constructed) {}
+        LuaUScriptStruct(UObject* base, FStructProperty* struct_property, UScriptStruct* script_struct, bool is_user_constructed = false)
+            : base(base), struct_property(struct_property), script_struct(script_struct), is_user_constructed(is_user_constructed)
+        {
+        }
 
         LuaUScriptStruct(const LuaUScriptStruct& from)
         {
@@ -391,6 +427,4 @@ namespace RC::UnrealRuntimeTypes
             }
         }
     };
-}
-
-
+} // namespace RC::UnrealRuntimeTypes

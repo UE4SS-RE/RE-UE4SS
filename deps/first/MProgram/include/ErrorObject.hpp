@@ -6,7 +6,7 @@ namespace RC
 {
     class ErrorObject
     {
-    private:
+      private:
         static constexpr unsigned long long m_message_buffer_max_size = 2000;
 
         char m_message[m_message_buffer_max_size]{"An error occurred but no error message was supplied."};
@@ -16,7 +16,7 @@ namespace RC
         // Allow the 'CanError' class to modify the contents of the error object
         friend class CanError;
 
-    public:
+      public:
         ErrorObject(bool default_should_close_program = false) noexcept
         {
             m_close_program = default_should_close_program;
@@ -33,7 +33,7 @@ namespace RC
             m_close_program = should_program_close;
         }
 
-    protected:
+      protected:
         auto copy_error(const char* message) noexcept -> void
         {
             size_t msg_len = strlen(message);
@@ -53,7 +53,7 @@ namespace RC
             }
         }
 
-        template <typename ...Args>
+        template <typename... Args>
         auto copy_error(const char* fmt, Args... args) noexcept -> void
         {
             size_t msg_len = strlen(fmt);
@@ -73,25 +73,20 @@ namespace RC
             }
         }
 
-    public:
-        [[nodiscard]]
-        auto get_message() noexcept -> const char*
+      public:
+        [[nodiscard]] auto get_message() noexcept -> const char*
         {
             return m_message;
         }
 
-        [[nodiscard]]
-        auto program_should_close() noexcept -> bool
+        [[nodiscard]] auto program_should_close() noexcept -> bool
         {
             return m_close_program;
         }
 
-        [[nodiscard]]
-        auto has_error() noexcept -> bool
+        [[nodiscard]] auto has_error() noexcept -> bool
         {
             return m_has_error;
         }
     };
-}
-
-
+} // namespace RC

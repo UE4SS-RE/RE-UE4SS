@@ -1,43 +1,43 @@
 #pragma once
 
-#pragma warning(disable: 4005)
-#include <Unreal/UObjectGlobals.hpp>
-#include <Unreal/UnrealFlags.hpp>
-#include <Unreal/UObject.hpp>
+#pragma warning(disable : 4005)
 #include <Unreal/AActor.hpp>
-#include <Unreal/UClass.hpp>
-#include <Unreal/UStruct.hpp>
 #include <Unreal/FField.hpp>
-#include <Unreal/NameTypes.hpp>
-#include <Unreal/TArray.hpp>
-#include <Unreal/TMap.hpp>
-#include <Unreal/UFunction.hpp>
+#include <Unreal/FFrame.hpp>
 #include <Unreal/FProperty.hpp>
-#include <Unreal/Property/NumericPropertyTypes.hpp>
-#include <Unreal/Property/FObjectProperty.hpp>
-#include <Unreal/Property/FWeakObjectProperty.hpp>
-#include <Unreal/Property/FClassProperty.hpp>
-#include <Unreal/Property/FBoolProperty.hpp>
+#include <Unreal/FWeakObjectPtr.hpp>
+#include <Unreal/NameTypes.hpp>
 #include <Unreal/Property/FArrayProperty.hpp>
-#include <Unreal/Property/FStructProperty.hpp>
-#include <Unreal/Property/FNameProperty.hpp>
-#include <Unreal/Property/FTextProperty.hpp>
-#include <Unreal/Property/FStrProperty.hpp>
+#include <Unreal/Property/FBoolProperty.hpp>
+#include <Unreal/Property/FClassProperty.hpp>
 #include <Unreal/Property/FDelegateProperty.hpp>
-#include <Unreal/Property/FMulticastInlineDelegateProperty.hpp>
-#include <Unreal/Property/FMulticastSparseDelegateProperty.hpp>
-#include <Unreal/Property/FSetProperty.hpp>
-#include <Unreal/Property/FSoftClassProperty.hpp>
 #include <Unreal/Property/FEnumProperty.hpp>
 #include <Unreal/Property/FFieldPathProperty.hpp>
-#include <Unreal/FFrame.hpp>
+#include <Unreal/Property/FMulticastInlineDelegateProperty.hpp>
+#include <Unreal/Property/FMulticastSparseDelegateProperty.hpp>
+#include <Unreal/Property/FNameProperty.hpp>
+#include <Unreal/Property/FObjectProperty.hpp>
+#include <Unreal/Property/FSetProperty.hpp>
+#include <Unreal/Property/FSoftClassProperty.hpp>
+#include <Unreal/Property/FStrProperty.hpp>
+#include <Unreal/Property/FStructProperty.hpp>
+#include <Unreal/Property/FTextProperty.hpp>
+#include <Unreal/Property/FWeakObjectProperty.hpp>
+#include <Unreal/Property/NumericPropertyTypes.hpp>
+#include <Unreal/TArray.hpp>
+#include <Unreal/TMap.hpp>
+#include <Unreal/UClass.hpp>
 #include <Unreal/UEnum.hpp>
-#include <Unreal/FWeakObjectPtr.hpp>
-//#include <Unreal/CustomType.hpp>
+#include <Unreal/UFunction.hpp>
+#include <Unreal/UObject.hpp>
+#include <Unreal/UObjectGlobals.hpp>
+#include <Unreal/UStruct.hpp>
+#include <Unreal/UnrealFlags.hpp>
+// #include <Unreal/CustomType.hpp>
 #include <Unreal/FAssetData.hpp>
 #include <Unreal/UAssetRegistry.hpp>
 #include <Unreal/UAssetRegistryHelpers.hpp>
-#pragma warning(default: 4005)
+#pragma warning(default : 4005)
 
 namespace RC
 {
@@ -68,10 +68,10 @@ namespace RC
     using FNameProperty = Unreal::FNameProperty;
     using FTextProperty = Unreal::FTextProperty;
     using FStrProperty = Unreal::FStrProperty;
-    template<typename T>
+    template <typename T>
     using TArray = Unreal::TArray<T>;
     using UFunction = Unreal::UFunction;
-    template<typename T1, typename T2>
+    template <typename T1, typename T2>
     using TMap = Unreal::TMap<T1, T2>;
 
     using UnrealScriptFunction = Unreal::UnrealScriptFunction;
@@ -87,11 +87,9 @@ namespace RC
     using FEnumProperty = Unreal::FEnumProperty;
     using FFieldPathProperty = Unreal::FFieldPathProperty;
 
-    //using CustomArrayProperty = Unreal::CustomArrayProperty;
-    //using CustomStructProperty = Unreal::CustomStructProperty;
+    // using CustomArrayProperty = Unreal::CustomArrayProperty;
+    // using CustomStructProperty = Unreal::CustomStructProperty;
     using FAssetData = Unreal::FAssetData;
     using UAssetRegistry = Unreal::UAssetRegistry;
     using UAssetRegistryHelpers = Unreal::UAssetRegistryHelpers;
-}
-
-
+} // namespace RC

@@ -1,9 +1,11 @@
-#include <LuaType/LuaXFieldClass.hpp>
 #include <LuaType/LuaFName.hpp>
+#include <LuaType/LuaXFieldClass.hpp>
 
 namespace RC::LuaType
 {
-    XFieldClass::XFieldClass(Unreal::FFieldClassVariant object) : LocalObjectBase<Unreal::FFieldClassVariant, FFieldClassName>(std::move(object)) {}
+    XFieldClass::XFieldClass(Unreal::FFieldClassVariant object) : LocalObjectBase<Unreal::FFieldClassVariant, FFieldClassName>(std::move(object))
+    {
+    }
 
     auto XFieldClass::construct(const LuaMadeSimple::Lua& lua, Unreal::FFieldClassVariant unreal_object) -> const LuaMadeSimple::Lua::Table
     {
@@ -38,12 +40,12 @@ namespace RC::LuaType
         return table;
     }
 
-    auto XFieldClass::setup_metamethods([[maybe_unused]]BaseObject& base_object) -> void
+    auto XFieldClass::setup_metamethods([[maybe_unused]] BaseObject& base_object) -> void
     {
         // XFieldClass has no metamethods
     }
 
-    template<LuaMadeSimple::Type::IsFinal is_final>
+    template <LuaMadeSimple::Type::IsFinal is_final>
     auto XFieldClass::setup_member_functions(const LuaMadeSimple::Lua::Table& table) -> void
     {
         table.add_pair("GetFName", [](const LuaMadeSimple::Lua& lua) -> int {
@@ -61,7 +63,7 @@ namespace RC::LuaType
 
             // If this is the final object then we also want to finalize creating the table
             // If not then it's the responsibility of the overriding object to call 'make_global()'
-            //table.make_global(ClassName::ToString());
+            // table.make_global(ClassName::ToString());
         }
     }
-}
+} // namespace RC::LuaType

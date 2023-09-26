@@ -1,24 +1,26 @@
 #pragma once
 
-#include <string>
 #include <memory>
+#include <string>
 #include <vector>
 
-#include <ParserBase/Common.hpp>
 #include <File/Macros.hpp>
+#include <ParserBase/Common.hpp>
 
 namespace RC::ParserBase
 {
     class TokenRule
     {
-    private:
+      private:
         File::StringType m_debug_name;
 
-    public:
-        explicit TokenRule(File::StringViewType rule_name) : m_debug_name(rule_name) {}
+      public:
+        explicit TokenRule(File::StringViewType rule_name) : m_debug_name(rule_name)
+        {
+        }
         virtual ~TokenRule() = default;
 
-    public:
+      public:
         RC_PB_API virtual auto exec(const class Token& token, const File::CharType* start_of_token, size_t current_cursor_location, class Tokenizer&) -> int = 0;
 
         [[nodiscard]] RC_PB_API virtual auto to_string() const -> File::StringType
@@ -29,17 +31,17 @@ namespace RC::ParserBase
 
     class Token
     {
-    private:
+      private:
         friend class Tokenizer;
 
-    public:
+      public:
         enum class HasData
         {
             Yes,
             No,
         };
 
-    private:
+      private:
         File::StringType m_debug_name;
         File::StringType m_identifier;
         std::vector<std::shared_ptr<TokenRule>> m_rules;
@@ -50,10 +52,10 @@ namespace RC::ParserBase
         mutable size_t m_column{};
         HasData m_has_data;
 
-    public:
+      public:
         RC_PB_API Token(int type, File::StringViewType name, File::StringViewType identifier, HasData has_data = HasData::No);
 
-    public:
+      public:
         RC_PB_API auto get_type() const -> int;
         RC_PB_API auto set_has_data(HasData) -> void;
         RC_PB_API auto has_data() const -> bool;
@@ -65,7 +67,7 @@ namespace RC::ParserBase
         RC_PB_API auto get_line() const -> size_t;
         RC_PB_API auto get_column() const -> size_t;
 
-        template<typename TokenRuleType>
+        template <typename TokenRuleType>
         auto add_rule(std::shared_ptr<TokenRuleType>&& token_rule) -> void
         {
             m_rules.emplace_back(std::move(token_rule));
@@ -74,15 +76,15 @@ namespace RC::ParserBase
         RC_PB_API auto get_rules() const -> const std::vector<std::shared_ptr<TokenRule>>&;
         [[nodiscard]] RC_PB_API auto to_string() const -> File::StringType;
 
-    public:
-        template<typename TokenRuleType>
+      public:
+        template <typename TokenRuleType>
         auto static create_internal(Token& token) -> void
         {
             auto rule = std::make_shared<TokenRuleType>();
             token.add_rule(std::move(rule));
         }
 
-        template<typename TokenRuleTypeOne, typename TokenRuleTypeTwo, typename ...TokenRuleTypes>
+        template <typename TokenRuleTypeOne, typename TokenRuleTypeTwo, typename... TokenRuleTypes>
         auto static create_internal(Token& token) -> void
         {
             auto rule = std::make_shared<TokenRuleTypeOne>();
@@ -92,7 +94,7 @@ namespace RC::ParserBase
 
         RC_PB_API auto static create(int type, File::StringViewType name, File::StringViewType identifier, HasData = HasData::No) -> Token;
 
-        template<typename TokenRuleType>
+        template <typename TokenRuleType>
         auto static create(int type, File::StringViewType name, File::StringViewType identifier, HasData has_data = HasData::No) -> Token
         {
             Token token{type, name, identifier, has_data};
@@ -100,7 +102,7 @@ namespace RC::ParserBase
             return token;
         }
 
-        template<typename TokenRuleTypeOne, typename TokenRuleTypeTwo, typename ...TokenRuleTypes>
+        template <typename TokenRuleTypeOne, typename TokenRuleTypeTwo, typename... TokenRuleTypes>
         auto static create(int type, File::StringViewType name, File::StringViewType identifier, HasData has_data = HasData::No) -> Token
         {
             Token token{type, name, identifier, has_data};
@@ -108,7 +110,4 @@ namespace RC::ParserBase
             return token;
         }
     };
-}
-
-
-
+} // namespace RC::ParserBase

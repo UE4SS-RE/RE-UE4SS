@@ -1,10 +1,12 @@
-#include <LuaType/LuaUEnum.hpp>
 #include <LuaType/LuaFName.hpp>
+#include <LuaType/LuaUEnum.hpp>
 #include <Unreal/UEnum.hpp>
 
 namespace RC::LuaType
 {
-    UEnum::UEnum(Unreal::UEnum* object) : RemoteObjectBase<Unreal::UEnum, UEnumName>(object) {}
+    UEnum::UEnum(Unreal::UEnum* object) : RemoteObjectBase<Unreal::UEnum, UEnumName>(object)
+    {
+    }
 
     auto UEnum::construct(const LuaMadeSimple::Lua& lua, Unreal::UEnum* unreal_object) -> const LuaMadeSimple::Lua::Table
     {
@@ -46,7 +48,7 @@ namespace RC::LuaType
         // UEnum has no metamethods
     }
 
-    template<LuaMadeSimple::Type::IsFinal is_final>
+    template <LuaMadeSimple::Type::IsFinal is_final>
     auto UEnum::setup_member_functions(const LuaMadeSimple::Lua::Table& table) -> void
     {
         Super::setup_member_functions<LuaMadeSimple::Type::IsFinal::No>(table);
@@ -94,7 +96,8 @@ Overloads:
                 if (lua.is_bool(2) && lua.get_bool(2))
                 {
                     break;
-                }                else
+                }
+                else
                 {
                     // There's a 'nil' on the stack because we told Lua that we expect a return value.
                     // Lua will put 'nil' on the stack if the Lua function doesn't explicitly return anything.
@@ -116,7 +119,7 @@ Overloads:
 
             // If this is the final object then we also want to finalize creating the table
             // If not then it's the responsibility of the overriding object to call 'make_global()'
-            //table.make_global(ClassName::ToString());
+            // table.make_global(ClassName::ToString());
         }
     }
-}
+} // namespace RC::LuaType

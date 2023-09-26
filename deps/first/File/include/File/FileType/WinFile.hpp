@@ -4,14 +4,14 @@
 #include <format>
 
 #include <File/Common.hpp>
-#include <File/Macros.hpp>
 #include <File/FileType/FileBase.hpp>
+#include <File/Macros.hpp>
 
 namespace RC::File
 {
     class WinFile : public FileInterface<WinFile>
     {
-    private:
+      private:
         using HANDLE = void*;
 
         struct IdentifyingProperties
@@ -27,7 +27,7 @@ namespace RC::File
             unsigned long file_size_high{};
         };
 
-    private:
+      private:
         HANDLE m_file{};
         HANDLE m_map_handle{};
         uint8_t* m_memory_map{};
@@ -42,19 +42,19 @@ namespace RC::File
         bool m_has_cached_identifying_properties{};
         bool m_is_file_open{};
 
-    public:
+      public:
         ~WinFile() override = default;
 
-    private:
+      private:
         auto static create_all_directories(const std::filesystem::path& file_name_and_path) -> void;
 
-    private:
+      private:
         auto close_file() -> void;
 
-    public:
+      public:
         [[nodiscard]] auto is_file_open() const -> bool;
 
-    public:
+      public:
         RC_FILE_API auto set_file(HANDLE new_file) -> void;
         RC_FILE_API auto set_is_file_open(bool new_is_open) -> void;
         RC_FILE_API auto get_file() -> HANDLE;
@@ -85,10 +85,7 @@ namespace RC::File
 
     // This file is automatically included ONLY if Windows is detected
     // Therefore, it's not necessary to do any checks here
-    template<ImplementsFileInterface UnderlyingAbstraction>
+    template <ImplementsFileInterface UnderlyingAbstraction>
     class HandleTemplate;
     using Handle = HandleTemplate<WinFile>;
-}
-
-
-
+} // namespace RC::File

@@ -87,4 +87,4 @@ namespace RC::Ini
 
         add_type<Type::Bool>();
     }
-}
+} // namespace RC::Ini

@@ -11,7 +11,7 @@ namespace RC::File
         {
             static inline bool internal_error{};
         };
-    }
+    } // namespace Internal
 
     struct RC_FILE_API OpenProperties
     {
@@ -24,14 +24,11 @@ namespace RC::File
     {
         GenericDataType data_type;
 
-        union
-        {
+        union {
             unsigned long data_ulong;
             signed long data_long;
             unsigned long long data_ulonglong;
             signed long long data_longlong;
         };
     };
-}
-
-
+} // namespace RC::File

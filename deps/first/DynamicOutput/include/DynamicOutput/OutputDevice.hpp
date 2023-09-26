@@ -22,7 +22,7 @@ namespace RC
             Blue,
             Purple,
         };
-    }
+    } // namespace Color
     namespace LogLevel
     {
         enum LogLevel
@@ -33,26 +33,26 @@ namespace RC
             Warning = Color::Yellow,
             Error = Color::Red,
         };
-    }
-}
+    } // namespace LogLevel
+} // namespace RC
 
 namespace RC::Output
 {
     class RC_DYNOUT_API OutputDevice
     {
-    protected:
+      protected:
         // Whether the device is ready to process output
         // It's up to each derived device to decide when they're ready and whether they use this member at all
         mutable bool m_is_device_ready{};
 
         // Formatter function
-        using Formatter = File::StringType(*)(File::StringViewType);
+        using Formatter = File::StringType (*)(File::StringViewType);
         Formatter m_formatter{&default_format_string};
 
-    public:
+      public:
         virtual ~OutputDevice() = default;
 
-    public:
+      public:
         virtual auto has_optional_arg() const -> bool;
 
         virtual auto receive(File::StringViewType fmt) const -> void = 0;
@@ -60,18 +60,17 @@ namespace RC::Output
         // The 'optional_arg' type should be cast to the proper enum by the derived class
         virtual auto receive_with_optional_arg(File::StringViewType fmt, int32_t optional_arg = 0) const -> void;
 
-        virtual auto lock() const -> void {};
+        virtual auto lock() const -> void{};
 
-        virtual auto unlock() const -> void {};
+        virtual auto unlock() const -> void{};
 
-    public:
+      public:
         auto set_formatter(Formatter new_formatter) -> void;
 
-    protected:
+      protected:
         auto static get_now_as_string() -> const File::StringType;
         auto static default_format_string(File::StringViewType) -> File::StringType;
     };
-}
+} // namespace RC::Output
 
-
-#endif //UE4SS_REWRITTEN_OUTPUTDEVICE_HPP
+#endif // UE4SS_REWRITTEN_OUTPUTDEVICE_HPP
