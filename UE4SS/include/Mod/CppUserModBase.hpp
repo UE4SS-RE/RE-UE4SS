@@ -1,7 +1,7 @@
 #pragma once
 
-#include <vector>
 #include <memory>
+#include <vector>
 
 #include <Common.hpp>
 #include <File/Macros.hpp>
@@ -27,28 +27,34 @@ namespace RC
     // This includes them being compiled in different configurations (Debug/Release).
     class CppUserModBase
     {
-    protected:
+      protected:
         std::vector<std::shared_ptr<GUI::GUITab>> GUITabs{};
 
-    public:
+      public:
         StringType ModName{};
         StringType ModVersion{};
         StringType ModDescription{};
         StringType ModAuthors{};
         StringType ModIntendedSDKVersion{};
 
-    public:
+      public:
         RC_UE4SS_API CppUserModBase();
         RC_UE4SS_API virtual ~CppUserModBase();
 
-    public:
-        RC_UE4SS_API auto virtual on_update() -> void {}
+      public:
+        RC_UE4SS_API auto virtual on_update() -> void
+        {
+        }
 
         // The 'Unreal' module has been initialized.
         // Before this fires, you cannot use anything in the 'Unreal' namespace.
-        RC_UE4SS_API auto virtual on_unreal_init() -> void {}
+        RC_UE4SS_API auto virtual on_unreal_init() -> void
+        {
+        }
 
-        RC_UE4SS_API auto virtual on_program_start() -> void {}
+        RC_UE4SS_API auto virtual on_program_start() -> void
+        {
+        }
 
         /**
          * Executes after a Lua mod of the same name is started.
@@ -57,14 +63,20 @@ namespace RC
          * @param async_lua This is the Lua instance for asynchronous things like ExecuteAsync and ExecuteWithDelay.
          * @param hook_luas This is a container of Lua instances that are used for game-thread hooks like ExecuteInGameThread.
          */
-        RC_UE4SS_API auto virtual on_lua_start(LuaMadeSimple::Lua& lua, LuaMadeSimple::Lua& main_lua, LuaMadeSimple::Lua& async_lua, std::vector<LuaMadeSimple::Lua*>& hook_luas) -> void {}
+        RC_UE4SS_API auto virtual on_lua_start(LuaMadeSimple::Lua& lua,
+                                               LuaMadeSimple::Lua& main_lua,
+                                               LuaMadeSimple::Lua& async_lua,
+                                               std::vector<LuaMadeSimple::Lua*>& hook_luas) -> void
+        {
+        }
 
-        RC_UE4SS_API auto virtual on_dll_load(std::wstring_view dll_name) -> void {}
+        RC_UE4SS_API auto virtual on_dll_load(std::wstring_view dll_name) -> void
+        {
+        }
 
-        RC_UE4SS_API auto virtual render_tab() -> void {};
+        RC_UE4SS_API auto virtual render_tab() -> void{};
 
-    protected:
+      protected:
         RC_UE4SS_API auto register_tab(std::wstring_view tab_name, GUI::GUITab::RenderFunctionType) -> void;
     };
-}
-
+} // namespace RC

@@ -1,7 +1,7 @@
 #pragma once
 
-#include <cstdint>
 #include <bit>
+#include <cstdint>
 
 #ifdef _WIN32
 #define WINDOWS
@@ -11,7 +11,7 @@
 
 namespace RC::Helper::Casting
 {
-    template<typename To, typename From>
+    template <typename To, typename From>
     auto ptr_cast(From ptr, int32_t offset = 0) -> To
     {
         static_assert(std::is_pointer_v<To> && std::is_pointer_v<From>, "ptr_cast can only be used on pointer types");
@@ -20,7 +20,7 @@ namespace RC::Helper::Casting
     }
 
     // Adds an offset to a pointer and then dereferences it
-    template<typename To, typename From>
+    template <typename To, typename From>
     auto ptr_cast_deref(From ptr, int32_t offset = 0) -> To
     {
         static_assert(std::is_pointer_v<From>, "ptr_cast_deref can only cast from pointer types");
@@ -29,7 +29,7 @@ namespace RC::Helper::Casting
     }
 
     // Compatibility with older code from before 'ptr_cast' existed
-    template<typename To, typename From>
+    template <typename To, typename From>
     auto offset_deref(From ptr, int32_t offset)
     {
         return ptr_cast_deref<To>(ptr, offset);
@@ -39,7 +39,7 @@ namespace RC::Helper::Casting
     // Adds an offset to a "pointer", checks if it's pointing to valid memory and then dereferences it
     // Returns 0 if the "pointer" is not pointing to valid memory
     // TODO: Figure out some way to deal with the process_handle param... it's annoying to provide it for every call
-    template<typename To, typename From>
+    template <typename To, typename From>
     auto ptr_cast_deref_safe(From ptr, int32_t offset, HANDLE process_handle) -> To
     {
         static_assert(std::is_pointer_v<From>, "ptr_cast_deref_safe can only cast from pointer types");
@@ -62,11 +62,10 @@ namespace RC::Helper::Casting
     }
 
     // Compatibility with older code from before 'ptr_cast' existed
-    template<typename To, typename From>
+    template <typename To, typename From>
     static auto offset_deref_safe(From* base_ptr, int32_t offset, HANDLE process_handle) -> To
     {
         return ptr_cast_deref_safe<To>(base_ptr, offset, process_handle);
     }
 #endif
-}
-
+} // namespace RC::Helper::Casting

@@ -6,10 +6,10 @@ namespace RC::GUI
 {
     class Backend_Windows : public OSBackendBase
     {
-    public:
+      public:
         ~Backend_Windows() = default;
 
-    public:
+      public:
         auto init() -> void override;
         auto imgui_backend_newframe() -> void override;
         auto create_window() -> void override;
@@ -20,6 +20,4 @@ namespace RC::GUI
         auto get_window_size() -> WindowSize override;
         auto on_gfx_backend_set() -> void override;
     };
-}
-
-
+} // namespace RC::GUI

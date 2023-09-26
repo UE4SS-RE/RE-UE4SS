@@ -1,20 +1,20 @@
-#include <LuaType/LuaXProperty.hpp>
+#include <LuaType/LuaFName.hpp>
+#include <LuaType/LuaUObject.hpp>
+#include <LuaType/LuaXArrayProperty.hpp>
+#include <LuaType/LuaXBoolProperty.hpp>
+#include <LuaType/LuaXEnumProperty.hpp>
 #include <LuaType/LuaXFieldClass.hpp>
 #include <LuaType/LuaXObjectProperty.hpp>
-#include <LuaType/LuaXBoolProperty.hpp>
+#include <LuaType/LuaXProperty.hpp>
 #include <LuaType/LuaXStructProperty.hpp>
-#include <LuaType/LuaXEnumProperty.hpp>
-#include <LuaType/LuaXArrayProperty.hpp>
-#include <LuaType/LuaUObject.hpp>
-#include <LuaType/LuaFName.hpp>
-#pragma warning(disable: 4005)
+#pragma warning(disable : 4005)
 #include <Unreal/FProperty.hpp>
-#include <Unreal/Property/FObjectProperty.hpp>
-#include <Unreal/Property/FBoolProperty.hpp>
-#include <Unreal/Property/FStructProperty.hpp>
-#include <Unreal/Property/FEnumProperty.hpp>
 #include <Unreal/Property/FArrayProperty.hpp>
-#pragma warning(default: 4005)
+#include <Unreal/Property/FBoolProperty.hpp>
+#include <Unreal/Property/FEnumProperty.hpp>
+#include <Unreal/Property/FObjectProperty.hpp>
+#include <Unreal/Property/FStructProperty.hpp>
+#pragma warning(default : 4005)
 
 namespace RC::LuaType
 {
@@ -51,7 +51,9 @@ namespace RC::LuaType
         }
     }
 
-    XProperty::XProperty(Unreal::FProperty* object) : RemoteObjectBase<Unreal::FProperty, FPropertyName>(object) {}
+    XProperty::XProperty(Unreal::FProperty* object) : RemoteObjectBase<Unreal::FProperty, FPropertyName>(object)
+    {
+    }
 
     auto XProperty::construct(const LuaMadeSimple::Lua& lua, Unreal::FProperty* unreal_object) -> const LuaMadeSimple::Lua::Table
     {
@@ -86,12 +88,12 @@ namespace RC::LuaType
         return table;
     }
 
-    auto XProperty::setup_metamethods([[maybe_unused]]BaseObject& base_object) -> void
+    auto XProperty::setup_metamethods([[maybe_unused]] BaseObject& base_object) -> void
     {
         // XProperty has no metamethods
     }
 
-    template<LuaMadeSimple::Type::IsFinal is_final>
+    template <LuaMadeSimple::Type::IsFinal is_final>
     auto XProperty::setup_member_functions(const LuaMadeSimple::Lua::Table& table) -> void
     {
         Super::setup_member_functions<LuaMadeSimple::Type::IsFinal::No>(table);
@@ -258,7 +260,7 @@ Overloads:
                 throw std::runtime_error{error_overload_not_found};
             }
             auto* owner_object = lua.get_userdata<UObject>().get_remote_cpp_object();
-            
+
             lua_object.get_remote_cpp_object()->ImportText(buffer.c_str(), data, port_flags, owner_object, nullptr);
             return 0;
         });
@@ -272,7 +274,7 @@ Overloads:
 
             // If this is the final object then we also want to finalize creating the table
             // If not then it's the responsibility of the overriding object to call 'make_global()'
-            //table.make_global(ClassName::ToString());
+            // table.make_global(ClassName::ToString());
         }
     }
-}
+} // namespace RC::LuaType

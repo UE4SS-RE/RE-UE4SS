@@ -1,34 +1,42 @@
-#include <SettingsManager.hpp>
-#include <IniParser/Ini.hpp>
 #include <Helpers/String.hpp>
+#include <IniParser/Ini.hpp>
+#include <SettingsManager.hpp>
 
-#define REGISTER_STRING_SETTING(member_var, section_name, key)          \
-try                                                                     \
-{                                                                       \
-    (member_var) = parser.get_string(section_name, STR(#key));          \
-}                                                                       \
-catch (std::exception&) {}
+#define REGISTER_STRING_SETTING(member_var, section_name, key)                                                                                                 \
+    try                                                                                                                                                        \
+    {                                                                                                                                                          \
+        (member_var) = parser.get_string(section_name, STR(#key));                                                                                             \
+    }                                                                                                                                                          \
+    catch (std::exception&)                                                                                                                                    \
+    {                                                                                                                                                          \
+    }
 
-#define REGISTER_INT64_SETTING(member_var, section_name, key)           \
-try                                                                     \
-{                                                                       \
-    (member_var) = parser.get_int64(section_name, STR(#key));           \
-}                                                                       \
-catch (std::exception&) {}
+#define REGISTER_INT64_SETTING(member_var, section_name, key)                                                                                                  \
+    try                                                                                                                                                        \
+    {                                                                                                                                                          \
+        (member_var) = parser.get_int64(section_name, STR(#key));                                                                                              \
+    }                                                                                                                                                          \
+    catch (std::exception&)                                                                                                                                    \
+    {                                                                                                                                                          \
+    }
 
-#define REGISTER_BOOL_SETTING(member_var, section_name, key)            \
-try                                                                     \
-{                                                                       \
-    (member_var) = parser.get_bool(section_name, STR(#key));            \
-}                                                                       \
-catch (std::exception&) {}
+#define REGISTER_BOOL_SETTING(member_var, section_name, key)                                                                                                   \
+    try                                                                                                                                                        \
+    {                                                                                                                                                          \
+        (member_var) = parser.get_bool(section_name, STR(#key));                                                                                               \
+    }                                                                                                                                                          \
+    catch (std::exception&)                                                                                                                                    \
+    {                                                                                                                                                          \
+    }
 
-#define REGISTER_FLOAT_SETTING(member_var, section_name, key)            \
-try                                                                     \
-{                                                                       \
-(member_var) = parser.get_float(section_name, STR(#key));            \
-}                                                                       \
-catch (std::exception&) {}
+#define REGISTER_FLOAT_SETTING(member_var, section_name, key)                                                                                                  \
+    try                                                                                                                                                        \
+    {                                                                                                                                                          \
+        (member_var) = parser.get_float(section_name, STR(#key));                                                                                              \
+    }                                                                                                                                                          \
+    catch (std::exception&)                                                                                                                                    \
+    {                                                                                                                                                          \
+    }
 
 namespace RC
 {
@@ -72,13 +80,12 @@ namespace RC
 
         constexpr static File::CharType section_debug[] = STR("Debug");
         REGISTER_BOOL_SETTING(Debug.SimpleConsoleEnabled, section_debug, ConsoleEnabled)
-        REGISTER_BOOL_SETTING(Debug.DebugConsoleEnabled , section_debug, GuiConsoleEnabled)
+        REGISTER_BOOL_SETTING(Debug.DebugConsoleEnabled, section_debug, GuiConsoleEnabled)
         REGISTER_BOOL_SETTING(Debug.DebugConsoleVisible, section_debug, GuiConsoleVisible)
         REGISTER_FLOAT_SETTING(Debug.DebugGUIFontScaling, section_debug, GuiConsoleFontScaling)
         StringType graphics_api_string{};
         REGISTER_STRING_SETTING(graphics_api_string, section_debug, GraphicsAPI)
-        if (String::iequal(graphics_api_string, STR("DX11")) ||
-            String::iequal(graphics_api_string, STR("D3D11")))
+        if (String::iequal(graphics_api_string, STR("DX11")) || String::iequal(graphics_api_string, STR("D3D11")))
         {
             Debug.GraphicsAPI = GUI::GfxBackend::DX11;
         }
@@ -107,4 +114,4 @@ namespace RC
         constexpr static File::CharType section_experimental_features[] = STR("ExperimentalFeatures");
         REGISTER_BOOL_SETTING(Experimental.GUIUFunctionCaller, section_experimental_features, GUIUFunctionCaller)
     }
-}
+} // namespace RC

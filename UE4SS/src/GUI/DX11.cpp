@@ -1,8 +1,8 @@
 #include <GUI/DX11.hpp>
 
-#include <imgui.h>
 #include <backends/imgui_impl_dx11.h>
 #include <d3d11.h>
+#include <imgui.h>
 
 namespace RC::GUI
 {
@@ -90,10 +90,24 @@ namespace RC::GUI
         sd.SwapEffect = DXGI_SWAP_EFFECT_DISCARD;
 
         UINT createDeviceFlags = 0;
-        //createDeviceFlags |= D3D11_CREATE_DEVICE_DEBUG;
+        // createDeviceFlags |= D3D11_CREATE_DEVICE_DEBUG;
         D3D_FEATURE_LEVEL featureLevel;
-        const D3D_FEATURE_LEVEL featureLevelArray[2] = {D3D_FEATURE_LEVEL_11_0, D3D_FEATURE_LEVEL_10_0,};
-        if (D3D11CreateDeviceAndSwapChain(NULL, D3D_DRIVER_TYPE_HARDWARE, NULL, createDeviceFlags, featureLevelArray, 2, D3D11_SDK_VERSION, &sd, &g_pSwapChain, &g_pd3dDevice, &featureLevel, &g_pd3dDeviceContext) != S_OK)
+        const D3D_FEATURE_LEVEL featureLevelArray[2] = {
+                D3D_FEATURE_LEVEL_11_0,
+                D3D_FEATURE_LEVEL_10_0,
+        };
+        if (D3D11CreateDeviceAndSwapChain(NULL,
+                                          D3D_DRIVER_TYPE_HARDWARE,
+                                          NULL,
+                                          createDeviceFlags,
+                                          featureLevelArray,
+                                          2,
+                                          D3D11_SDK_VERSION,
+                                          &sd,
+                                          &g_pSwapChain,
+                                          &g_pd3dDevice,
+                                          &featureLevel,
+                                          &g_pd3dDeviceContext) != S_OK)
         {
             return false;
         }
@@ -138,4 +152,4 @@ namespace RC::GUI
             g_mainRenderTargetView = NULL;
         }
     }
-}
+} // namespace RC::GUI

@@ -49,20 +49,20 @@ namespace RC::JSON
 
         switch (m_stored_type)
         {
-            case Type::UInt32:
-                return ToString(get<uint32_t>());
-            case Type::UInt64:
-                return ToString(get<uint64_t>());
-            case Type::Int32:
-                return ToString(get<int32_t>());
-            case Type::Int64:
-                return ToString(get<int64_t>());
-            case Type::Float:
-                return ToString(get<float>());
-            case Type::Double:
-                return ToString(get<double>());
+        case Type::UInt32:
+            return ToString(get<uint32_t>());
+        case Type::UInt64:
+            return ToString(get<uint64_t>());
+        case Type::Int32:
+            return ToString(get<int32_t>());
+        case Type::Int64:
+            return ToString(get<int64_t>());
+        case Type::Float:
+            return ToString(get<float>());
+        case Type::Double:
+            return ToString(get<double>());
         }
 
         throw std::runtime_error{"JSON number was not valid"};
     }
-}
+} // namespace RC::JSON

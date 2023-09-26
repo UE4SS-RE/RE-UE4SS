@@ -10,14 +10,16 @@ auto main(int argc, char* argv[]) -> int
 
     try
     {
-        ArgsParser args_parser{argc, argv, {
-                "arg_one",
-                "arg_two",
-                "arg_three",
-                "output",
-                "sources",
-                "compiler_flags",
-        }};
+        ArgsParser args_parser{argc,
+                               argv,
+                               {
+                                       "arg_one",
+                                       "arg_two",
+                                       "arg_three",
+                                       "output",
+                                       "sources",
+                                       "compiler_flags",
+                               }};
 
         auto arg_one = args_parser.get_arg("arg_one");
         printf_s("arg_one: %s\n", arg_one.c_str());

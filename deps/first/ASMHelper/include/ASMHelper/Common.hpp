@@ -15,5 +15,3 @@
 #define RC_ASM_API __declspec(dllexport)
 #endif
 #endif
-
-

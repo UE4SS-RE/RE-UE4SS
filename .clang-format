@@ -1,87 +1,19 @@
+# Format Style Options - Created with Clang Power Tools
 ---
-AccessModifierOffset: -4
-AlignAfterOpenBracket: Align
-AlignConsecutiveMacros: None
-AlignConsecutiveAssignments: None
-AlignConsecutiveDeclarations: None
-AlignEscapedNewlines: Left
-AlignOperands: true
-AlignTrailingComments: false
 AllowAllArgumentsOnNextLine: false
-AllowAllParametersOfDeclarationOnNextLine: true
-AllowShortBlocksOnASingleLine: Always
-AllowShortCaseLabelsOnASingleLine: true
-AllowShortFunctionsOnASingleLine: None
+AllowShortBlocksOnASingleLine: Empty
+AllowShortLambdasOnASingleLine: Empty
 AllowShortIfStatementsOnASingleLine: WithoutElse
-AllowShortLambdasOnASingleLine: None
-AlwaysBreakAfterReturnType: None
-AlwaysBreakBeforeMultilineStrings: false
 AlwaysBreakTemplateDeclarations: Yes
+BasedOnStyle: Microsoft
 BinPackArguments: false
 BinPackParameters: false
-BreakBeforeBraces: Custom
-BraceWrapping:
-  AfterCaseLabel: true
-  AfterClass: true
-  AfterControlStatement: Always
-  AfterEnum: true
-  AfterFunction: true
-  AfterNamespace: true
-  AfterObjCDeclaration: true
-  AfterStruct: true
-  AfterUnion: true
-  AfterExternBlock: true
-  BeforeCatch: true
-  BeforeElse: true
-  BeforeLambdaBody: false
-  BeforeWhile: true
-  IndentBraces: false
-  SplitEmptyFunction: false
-  SplitEmptyRecord: false
-  SplitEmptyNamespace: false
-BreakBeforeTernaryOperators: false
-BreakConstructorInitializers: BeforeColon
-BreakInheritanceList: AfterColon
-ColumnLimit: 210
-CompactNamespaces: false
-ConstructorInitializerAllOnOneLineOrOnePerLine: true
-Cpp11BracedListStyle: true
-DerivePointerAlignment: false
-FixNamespaceComments: false
-IncludeBlocks: Regroup
-IndentCaseLabels: true
-IndentPPDirectives: None
-IndentWidth: 4
-IndentWrappedFunctionNames: false
-KeepEmptyLinesAtTheStartOfBlocks: false
-Language: Cpp
-MaxEmptyLinesToKeep: 2
+ColumnLimit: 160
+ContinuationIndentWidth: 8
 NamespaceIndentation: All
+ObjCBreakBeforeNestedBlockParam: false
+PenaltyBreakBeforeFirstCallParameter: 120
+PenaltyExcessCharacter: 5
 PointerAlignment: Left
-ReflowComments: false
-SortIncludes: Never
-SortUsingDeclarations: false
-SpaceAfterCStyleCast: false
-SpaceAfterLogicalNot: false
-SpaceAfterTemplateKeyword: false
-SpaceBeforeAssignmentOperators: true
-SpaceBeforeCpp11BracedList: false
-SpaceBeforeCtorInitializerColon: true
-SpaceBeforeInheritanceColon: true
-SpaceBeforeParens: ControlStatements
-SpaceBeforeRangeBasedForLoopColon: true
-SpaceInEmptyParentheses: false
-SpacesBeforeTrailingComments: 1
-SpacesInAngles: false
-SpacesInCStyleCastParentheses: false
-SpacesInContainerLiterals: false
-SpacesInParentheses: false
-SpacesInSquareBrackets: false
-Standard: c++20
-TabWidth: 4
-UseTab: Never
-PenaltyReturnTypeOnItsOwnLine: 1000
-BitFieldColonSpacing: Both
-AlignConsecutiveBitFields: Consecutive
-
+Standard: Latest
 ...

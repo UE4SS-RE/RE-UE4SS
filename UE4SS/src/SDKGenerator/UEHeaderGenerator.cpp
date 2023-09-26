@@ -4,48 +4,48 @@
 #undef TEXT
 #endif
 
-#include <set>
-#include <unordered_map>
-#include <unordered_set>
 #include <algorithm>
 #include <format>
 #include <fstream>
+#include <set>
+#include <unordered_map>
+#include <unordered_set>
 
 #include <SDKGenerator/UEHeaderGenerator.hpp>
-#pragma warning(disable: 4005)
+#pragma warning(disable : 4005)
 #include <DynamicOutput/DynamicOutput.hpp>
 #include <UE4SSProgram.hpp>
+#include <Unreal/AActor.hpp>
 #include <Unreal/FScriptArray.hpp>
 #include <Unreal/FString.hpp>
-#include <Unreal/UClass.hpp>
-#include <Unreal/UEnum.hpp>
-#include <Unreal/UInterface.hpp>
-#include <Unreal/UActorComponent.hpp>
-#include <Unreal/UnrealFlags.hpp>
-#include <Unreal/UScriptStruct.hpp>
-#include <Unreal/UFunction.hpp>
 #include <Unreal/FText.hpp>
-#include <Unreal/AActor.hpp>
-#include <Unreal/UPackage.hpp>
-#include <Unreal/Property/NumericPropertyTypes.hpp>
+#include <Unreal/Property/FArrayProperty.hpp>
 #include <Unreal/Property/FBoolProperty.hpp>
-#include <Unreal/Property/FObjectProperty.hpp>
-#include <Unreal/Property/FWeakObjectProperty.hpp>
-#include <Unreal/Property/FLazyObjectProperty.hpp>
-#include <Unreal/Property/FSoftObjectProperty.hpp>
-#include <Unreal/Property/FSoftClassProperty.hpp>
 #include <Unreal/Property/FClassProperty.hpp>
-#include <Unreal/Property/FStructProperty.hpp>
 #include <Unreal/Property/FDelegateProperty.hpp>
+#include <Unreal/Property/FEnumProperty.hpp>
+#include <Unreal/Property/FFieldPathProperty.hpp>
+#include <Unreal/Property/FInterfaceProperty.hpp>
+#include <Unreal/Property/FLazyObjectProperty.hpp>
+#include <Unreal/Property/FMapProperty.hpp>
 #include <Unreal/Property/FMulticastInlineDelegateProperty.hpp>
 #include <Unreal/Property/FMulticastSparseDelegateProperty.hpp>
-#include <Unreal/Property/FEnumProperty.hpp>
-#include <Unreal/Property/FArrayProperty.hpp>
-#include <Unreal/Property/FMapProperty.hpp>
-#include <Unreal/Property/FInterfaceProperty.hpp>
-#include <Unreal/Property/FFieldPathProperty.hpp>
+#include <Unreal/Property/FObjectProperty.hpp>
 #include <Unreal/Property/FSetProperty.hpp>
-#pragma warning(default: 4005)
+#include <Unreal/Property/FSoftClassProperty.hpp>
+#include <Unreal/Property/FSoftObjectProperty.hpp>
+#include <Unreal/Property/FStructProperty.hpp>
+#include <Unreal/Property/FWeakObjectProperty.hpp>
+#include <Unreal/Property/NumericPropertyTypes.hpp>
+#include <Unreal/UActorComponent.hpp>
+#include <Unreal/UClass.hpp>
+#include <Unreal/UEnum.hpp>
+#include <Unreal/UFunction.hpp>
+#include <Unreal/UInterface.hpp>
+#include <Unreal/UPackage.hpp>
+#include <Unreal/UScriptStruct.hpp>
+#include <Unreal/UnrealFlags.hpp>
+#pragma warning(default : 4005)
 
 namespace RC::UEGenerator
 {
@@ -64,12 +64,8 @@ namespace RC::UEGenerator
         static FName rich_curve_name = FName(STR("RichCurve"), FNAME_Add);
 
         auto subtype_name = subtype->GetNamePrivate();
-        if (subtype_name == float_interval_name ||
-            subtype_name == spline_curves_name ||
-            subtype_name == int32_interval_name ||
-            subtype_name == bone_reference_name ||
-            subtype_name == overlap_result_name||
-            subtype_name == rich_curve_name)
+        if (subtype_name == float_interval_name || subtype_name == spline_curves_name || subtype_name == int32_interval_name ||
+            subtype_name == bone_reference_name || subtype_name == overlap_result_name || subtype_name == rich_curve_name)
         {
             return false;
         }
@@ -139,7 +135,8 @@ namespace RC::UEGenerator
                 m_meta_helper = std::shared_ptr<FlagFormatHelper>(new FlagFormatHelper(false));
             }
         }
-    public:
+
+      public:
         FlagFormatHelper() : FlagFormatHelper(true)
         {
         }
@@ -287,9 +284,12 @@ namespace RC::UEGenerator
 
         module_impl_file.append_line(STR("#include \"Modules/ModuleManager.h\""));
         module_impl_file.append_line(STR(""));
-        if (module_name != m_primary_module_name) {
+        if (module_name != m_primary_module_name)
+        {
             module_impl_file.append_line(std::format(STR("IMPLEMENT_MODULE(FDefaultGameModuleImpl, {});"), module_name));
-        } else {
+        }
+        else
+        {
             module_impl_file.append_line(std::format(STR("IMPLEMENT_PRIMARY_GAME_MODULE(FDefaultGameModuleImpl, {}, {});"), module_name, module_name));
         }
 
@@ -313,7 +313,7 @@ namespace RC::UEGenerator
 
         std::wstring parent_interface_class_name = get_native_class_name(super_class);
 
-        //Generate interface UCLASS declaration
+        // Generate interface UCLASS declaration
         header_data.append_line(std::format(STR("UINTERFACE({})"), interface_flags_string));
         header_data.append_line(std::format(STR("class {}{} : public {} {{"), maybe_api_name, interface_class_native_name, parent_interface_class_name));
 
@@ -324,7 +324,7 @@ namespace RC::UEGenerator
         header_data.append_line(STR("};"));
         header_data.append_line(STR(""));
 
-        //Generate interface real class declaration
+        // Generate interface real class declaration
         const std::wstring interface_native_name = get_native_class_name(uclass, true);
         const std::wstring parent_interface_name = get_native_class_name(super_class, true);
 
@@ -336,7 +336,7 @@ namespace RC::UEGenerator
         AccessModifier current_access_modifier = AccessModifier::None;
         append_access_modifier(header_data, AccessModifier::Public, current_access_modifier);
 
-        //Generate delegate type declarations for the current class
+        // Generate delegate type declarations for the current class
         int32_t NumDelegatesGenerated = 0;
         for (UFunction* function : uclass->ForEachFunction())
         {
@@ -346,11 +346,12 @@ namespace RC::UEGenerator
                 NumDelegatesGenerated++;
             }
         }
-        if (NumDelegatesGenerated) {
+        if (NumDelegatesGenerated)
+        {
             header_data.append_line(STR(""));
         }
 
-        //Generate interface functions
+        // Generate interface functions
         for (UFunction* function : uclass->ForEachFunction())
         {
             if (!is_delegate_signature_function(function))
@@ -416,9 +417,9 @@ namespace RC::UEGenerator
         CaseInsensitiveSet blacklisted_property_names = collect_blacklisted_property_names(uclass);
         bool encountered_replicated_properties = false;
 
-        //Generate delegate type declarations for the current class
+        // Generate delegate type declarations for the current class
         int32_t NumDelegatesGenerated = 0;
-        for (UFunction* function : uclass->ForEachFunction()) 
+        for (UFunction* function : uclass->ForEachFunction())
         {
             if (is_delegate_signature_function(function))
             {
@@ -426,17 +427,18 @@ namespace RC::UEGenerator
                 NumDelegatesGenerated++;
             }
         }
-        if (NumDelegatesGenerated) {
+        if (NumDelegatesGenerated)
+        {
             header_data.append_line(STR(""));
         }
 
-        //Generate properties
-        for (FProperty* property : uclass->ForEachProperty()) 
+        // Generate properties
+        for (FProperty* property : uclass->ForEachProperty())
         {
             encountered_replicated_properties |= (property->GetPropertyFlags() & CPF_Net) != 0;
             append_access_modifier(header_data, get_property_access_modifier(property), current_access_modifier);
             generate_property(uclass, property, header_data);
-            
+
             if (auto as_map_property = CastField<FMapProperty>(property))
             {
                 if (auto as_struct_property = CastField<FStructProperty>(as_map_property->GetKeyProp()))
@@ -447,20 +449,20 @@ namespace RC::UEGenerator
             }
         }
 
-        //Make sure constructor and replicated properties methods are public
+        // Make sure constructor and replicated properties methods are public
         append_access_modifier(header_data, AccessModifier::Public, current_access_modifier);
 
-        //Generate constructor
+        // Generate constructor
         header_data.append_line(std::format(STR("{}();"), class_native_name));
 
-        //Generate GetLifetimeReplicatedProps override if we have encountered replicated properties
+        // Generate GetLifetimeReplicatedProps override if we have encountered replicated properties
         if (encountered_replicated_properties)
         {
             header_data.append_line(STR("virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;"));
             header_data.append_line(STR(""));
         }
 
-        //Generate functions
+        // Generate functions
         std::unordered_set<FName> implemented_functions;
         for (UFunction* function : uclass->ForEachFunction())
         {
@@ -480,7 +482,7 @@ namespace RC::UEGenerator
         }
         for (const RC::Unreal::FImplementedInterface& uinterface : implemented_interfaces)
         {
-            for (UFunction* interface_function : uinterface.Class->ForEachFunction()) 
+            for (UFunction* interface_function : uinterface.Class->ForEachFunction())
             {
                 bool should_skip = (interface_function->GetFunctionFlags() & FUNC_BlueprintEvent);
 
@@ -524,12 +526,12 @@ namespace RC::UEGenerator
         AccessModifier current_access_modifier = AccessModifier::None;
         append_access_modifier(header_data, AccessModifier::Public, current_access_modifier);
 
-        //Generate struct properties
-        for (FProperty* property : script_struct->ForEachProperty()) 
+        // Generate struct properties
+        for (FProperty* property : script_struct->ForEachProperty())
         {
             append_access_modifier(header_data, get_property_access_modifier(property), current_access_modifier);
             generate_property(script_struct, property, header_data);
-            
+
             if (auto as_map_property = CastField<FMapProperty>(property))
             {
                 if (auto as_struct_property = CastField<FStructProperty>(as_map_property->GetKeyProp()))
@@ -540,7 +542,7 @@ namespace RC::UEGenerator
             }
         }
 
-        //Generate constructor and make sure it's public
+        // Generate constructor and make sure it's public
         append_access_modifier(header_data, AccessModifier::Public, current_access_modifier);
         header_data.append_line(std::format(STR("{}{}();"), !is_struct_exported ? api_macro_name : STR(""), struct_native_name));
 
@@ -580,7 +582,7 @@ namespace RC::UEGenerator
                 }
                 else
                 {
-                    //Enum has never been used in any native classes or structures, go with implicit type
+                    // Enum has never been used in any native classes or structures, go with implicit type
                     header_data.append_line(std::format(STR("enum class {} {{"), native_enum_name));
                 }
             }
@@ -588,7 +590,7 @@ namespace RC::UEGenerator
             {
                 std::wstring underlying_type_string = underlying_type->second;
 
-                //If this enum is blueprint visible, it should totally be uint8 and nothing else, no matter what the underlying property says
+                // If this enum is blueprint visible, it should totally be uint8 and nothing else, no matter what the underlying property says
                 if (m_blueprint_visible_enums.contains(native_enum_name))
                 {
                     underlying_type_string = STR("uint8");
@@ -601,7 +603,7 @@ namespace RC::UEGenerator
 
         StringType enum_prefix = uenum->GenerateEnumPrefix();
         int64 expected_next_enum_value = 0;
-        for (auto [Name, Value] : uenum->ForEachName()) 
+        for (auto [Name, Value] : uenum->ForEachName())
         {
             StringType result_enumeration_line = sanitize_enumeration_name(Name.ToString());
 
@@ -618,16 +620,16 @@ namespace RC::UEGenerator
                 const StringType expected_full_constant_name = std::format(STR("{}_MAX"), enum_prefix);
 
                 int64_t expected_max_value = highest_enum_value + 1;
-                
+
                 // Skip enum _MAX constant if it has a matching name and is 1 greater than the highest value used, which means it has been autogenerated
                 if (pre_append_result_line == expected_full_constant_name && Value == expected_max_value)
                 {
                     continue;
                 }
-                //Otherwise, just make sure it's hidden and not visible to the end user
+                // Otherwise, just make sure it's hidden and not visible to the end user
                 result_enumeration_line.append(STR(" UMETA(Hidden)"));
             }
-            
+
             result_enumeration_line.append(STR(","));
             header_data.append_line(result_enumeration_line);
         }
@@ -645,11 +647,12 @@ namespace RC::UEGenerator
     auto UEHeaderGenerator::generate_delegate_type_declaration(UFunction* signature_function, GeneratedSourceFile& header_data) -> void
     {
         auto function_flags = signature_function->GetFunctionFlags();
-        if ((function_flags & Unreal::FUNC_Delegate) == 0) {
+        if ((function_flags & Unreal::FUNC_Delegate) == 0)
+        {
             throw std::runtime_error(RC::fmt("Delegate Signature function %S is missing FUNC_Delegate flag", signature_function->GetName().c_str()));
         }
 
-        //TODO not particularly nice or reliable, but will do for now
+        // TODO not particularly nice or reliable, but will do for now
         const bool is_sparse = signature_function->GetClassPrivate()->GetName() == STR("SparseDelegateFunction");
 
         const bool is_multicast = (function_flags & Unreal::FUNC_MulticastDelegate) != 0;
@@ -660,8 +663,9 @@ namespace RC::UEGenerator
 
         std::wstring delegate_macro_string;
 
-        //Delegate macro declaration is only allowed on the top level delegates, class-based types are limited to being implicit
-        if (signature_function->GetOuterPrivate()->IsA<UPackage>()) {
+        // Delegate macro declaration is only allowed on the top level delegates, class-based types are limited to being implicit
+        if (signature_function->GetOuterPrivate()->IsA<UPackage>())
+        {
             delegate_macro_string.append(STR("UDELEGATE("));
             delegate_macro_string.append(generate_function_flags(signature_function));
             delegate_macro_string.append(STR(") "));
@@ -670,7 +674,8 @@ namespace RC::UEGenerator
         PropertyTypeDeclarationContext context(delegate_type_name, &header_data);
 
         int32_t num_delegate_parameters = 0;
-        std::wstring delegate_parameter_list = generate_function_parameter_list(nullptr, signature_function, header_data, true, context.context_name, {}, &num_delegate_parameters);
+        std::wstring delegate_parameter_list =
+                generate_function_parameter_list(nullptr, signature_function, header_data, true, context.context_name, {}, &num_delegate_parameters);
         if (num_delegate_parameters > 0)
         {
             delegate_parameter_list.insert(0, STR(", "));
@@ -702,8 +707,8 @@ namespace RC::UEGenerator
         const std::wstring class_native_name = get_native_class_name(uclass);
         CaseInsensitiveSet blacklisted_property_names = collect_blacklisted_property_names(uclass);
 
-        //Generate functions
-        for (UFunction* function : uclass->ForEachFunction()) 
+        // Generate functions
+        for (UFunction* function : uclass->ForEachFunction())
         {
             if (!is_delegate_signature_function(function))
             {
@@ -714,23 +719,24 @@ namespace RC::UEGenerator
 
         bool encountered_replicated_properties = false;
 
-        for (FProperty* property : uclass->ForEachProperty()) 
+        for (FProperty* property : uclass->ForEachProperty())
         {
             encountered_replicated_properties |= (property->GetPropertyFlags() & CPF_Net) != 0;
         }
 
-        //Generate replicated properties implementation if we really need it
+        // Generate replicated properties implementation if we really need it
         if (encountered_replicated_properties)
         {
             implementation_file.add_extra_include(STR("Net/UnrealNetwork.h"));
 
-            implementation_file.append_line(std::format(STR("void {}::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const {{"), class_native_name));
+            implementation_file.append_line(
+                    std::format(STR("void {}::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const {{"), class_native_name));
             implementation_file.begin_indent_level();
 
             implementation_file.append_line(STR("Super::GetLifetimeReplicatedProps(OutLifetimeProps);"));
             implementation_file.append_line(STR(""));
 
-            for (FProperty* property : uclass->ForEachProperty()) 
+            for (FProperty* property : uclass->ForEachProperty())
             {
                 if ((property->GetPropertyFlags() & CPF_Net) != 0)
                 {
@@ -747,28 +753,28 @@ namespace RC::UEGenerator
         UClass* super_class = uclass->GetSuperClass();
         const std::wstring native_parent_class_name = super_class ? get_native_class_name(super_class) : STR("UObjectUtility");
 
-        //If parent class contains the UObjectInitializer constructor without default value,
-        //we need to create the explicit call to such constructor and pass UObjectInitializer::Get() as the argument
+        // If parent class contains the UObjectInitializer constructor without default value,
+        // we need to create the explicit call to such constructor and pass UObjectInitializer::Get() as the argument
         if (m_classes_with_object_initializer.contains(native_parent_class_name))
         {
             constructor_postfix_string.append(std::format(STR(" : {}(FObjectInitializer::Get())"), native_parent_class_name));
         }
 
-        //Generate constructor implementation and initialize properties inside
+        // Generate constructor implementation and initialize properties inside
         implementation_file.append_line(std::format(STR("{}::{}(){} {{"), class_native_name, class_native_name, constructor_postfix_string));
         implementation_file.begin_indent_level();
 
-        //Generate properties
+        // Generate properties
         UObject* class_default_object = uclass->GetClassDefaultObject();
 
-        if (class_default_object != nullptr) 
+        if (class_default_object != nullptr)
         {
-            for (FProperty* property : uclass->ForEachProperty()) 
+            for (FProperty* property : uclass->ForEachProperty())
             {
                 generate_property_value(property, class_default_object, implementation_file, STR("this->"));
             }
         }
-        else 
+        else
         {
             implementation_file.append_line(STR("// Null default object."));
         }
@@ -781,22 +787,22 @@ namespace RC::UEGenerator
     {
         const std::wstring struct_native_name = get_native_struct_name(script_struct);
 
-        //Generate constructor implementation and initialize properties inside
+        // Generate constructor implementation and initialize properties inside
         implementation_file.append_line(std::format(STR("{}::{}() {{"), struct_native_name, struct_native_name));
         implementation_file.begin_indent_level();
 
-        //Generate properties
+        // Generate properties
         void* struct_default_object = malloc(script_struct->GetPropertiesSize());
 
-        //TODO: ScriptStruct->InitializeStruct(StructDefaultObject);
+        // TODO: ScriptStruct->InitializeStruct(StructDefaultObject);
         memset(struct_default_object, 0, script_struct->GetPropertiesSize());
 
-        for (FProperty* property : script_struct->ForEachProperty()) 
+        for (FProperty* property : script_struct->ForEachProperty())
         {
             generate_property_value(property, struct_default_object, implementation_file, STR("this->"));
         }
 
-        //TODO: ScriptStruct->DestroyStruct(StructDefaultObject);
+        // TODO: ScriptStruct->DestroyStruct(StructDefaultObject);
         free(struct_default_object);
 
         implementation_file.end_indent_level();
@@ -850,8 +856,13 @@ namespace RC::UEGenerator
         header_data.append_line(STR(""));
     }
 
-//TODO FUNC_Final is not properly handled (should be always set except some weird cases)
-    auto UEHeaderGenerator::generate_function(UClass* uclass, UFunction* function, GeneratedSourceFile& header_data, bool is_generating_interface, const CaseInsensitiveSet& blacklisted_property_names, bool generate_as_override) -> void
+    // TODO FUNC_Final is not properly handled (should be always set except some weird cases)
+    auto UEHeaderGenerator::generate_function(UClass* uclass,
+                                              UFunction* function,
+                                              GeneratedSourceFile& header_data,
+                                              bool is_generating_interface,
+                                              const CaseInsensitiveSet& blacklisted_property_names,
+                                              bool generate_as_override) -> void
     {
         auto function_flags = function->GetFunctionFlags();
         const std::wstring context_name = uclass->GetName();
@@ -864,9 +875,9 @@ namespace RC::UEGenerator
         }
         else if ((function_flags & FUNC_BlueprintEvent) == 0 && is_generating_interface)
         {
-            //When we have a blueprint function that is not blueprint event inside the interface,
-            //it means we are dealing with the native interface that cannot be implemented via blueprints
-            //and uses pure virtual functions implemented through native code
+            // When we have a blueprint function that is not blueprint event inside the interface,
+            // it means we are dealing with the native interface that cannot be implemented via blueprints
+            // and uses pure virtual functions implemented through native code
             function_modifier_string.append(STR("virtual "));
             is_function_pure_virtual = true;
         }
@@ -910,7 +921,12 @@ namespace RC::UEGenerator
         header_data.append_line(std::format(STR("UFUNCTION({})"), function_flags_string));
         // Format for virtual functions
         // virtual <return type> <function_name>(<params>) PURE_VIRTUAL(<function name>, <return statement>)
-        header_data.append_line(std::format(STR("{}{} {}({}){};"), function_modifier_string, return_property_string, function->GetName(), function_argument_list, function_extra_postfix_string));
+        header_data.append_line(std::format(STR("{}{} {}({}){};"),
+                                            function_modifier_string,
+                                            return_property_string,
+                                            function->GetName(),
+                                            function_argument_list,
+                                            function_extra_postfix_string));
         header_data.append_line(STR(""));
     }
 
@@ -920,7 +936,7 @@ namespace RC::UEGenerator
         const std::wstring enum_native_name = get_native_enum_name(uenum, false);
 
         std::wstring enum_constant_name;
-        for (auto [Name, Value] : uenum->ForEachName()) 
+        for (auto [Name, Value] : uenum->ForEachName())
         {
             if (Value == enum_value)
             {
@@ -929,12 +945,14 @@ namespace RC::UEGenerator
         }
         if (enum_constant_name.empty())
         {
-            Output::send(STR("Warning: Invalid value for enum '{}', casting instead of using enum name. Value '{}' will be cast to the enum.\n"), enum_native_name, enum_value);
+            Output::send(STR("Warning: Invalid value for enum '{}', casting instead of using enum name. Value '{}' will be cast to the enum.\n"),
+                         enum_native_name,
+                         enum_value);
             return std::format(STR("({}){}"), enum_native_name, enum_value);
         }
         else
         {
-            //Regular enumerations do not really need an enum name prefix
+            // Regular enumerations do not really need an enum name prefix
             if (cpp_form == UEnum::ECppForm::Regular)
             {
                 return enum_constant_name;
@@ -943,7 +961,10 @@ namespace RC::UEGenerator
         }
     }
 
-    auto UEHeaderGenerator::generate_simple_assignment_expression(FProperty* property, const std::wstring& value, GeneratedSourceFile& implementation_file, const std::wstring& property_scope) -> void
+    auto UEHeaderGenerator::generate_simple_assignment_expression(FProperty* property,
+                                                                  const std::wstring& value,
+                                                                  GeneratedSourceFile& implementation_file,
+                                                                  const std::wstring& property_scope) -> void
     {
         const std::wstring field_class_name = property->GetName();
         if (property->GetArrayDim() == 1)
@@ -959,11 +980,12 @@ namespace RC::UEGenerator
         }
     }
 
-    auto UEHeaderGenerator::generate_property_value(FProperty* property, void* object, GeneratedSourceFile& implementation_file, const std::wstring& property_scope) -> void
+    auto UEHeaderGenerator::generate_property_value(FProperty* property, void* object, GeneratedSourceFile& implementation_file, const std::wstring& property_scope)
+            -> void
     {
         const std::wstring field_class_name = property->GetClass().GetName();
 
-        //Byte Property
+        // Byte Property
         if (field_class_name == STR("ByteProperty"))
         {
             FByteProperty* byte_property = static_cast<FByteProperty*>(property);
@@ -983,7 +1005,7 @@ namespace RC::UEGenerator
             return;
         }
 
-        //Enum Property
+        // Enum Property
         if (field_class_name == STR("EnumProperty"))
         {
             FEnumProperty* p_enum_property = static_cast<FEnumProperty*>(property);
@@ -995,14 +1017,14 @@ namespace RC::UEGenerator
 
             implementation_file.add_dependency_object(uenum, DependencyLevel::Include);
             FNumericProperty* underlying_property = p_enum_property->GetUnderlyingProperty();
-             int64 value = underlying_property->GetSignedIntPropertyValue(p_enum_property->ContainerPtrToValuePtr<int64>(object));
+            int64 value = underlying_property->GetSignedIntPropertyValue(p_enum_property->ContainerPtrToValuePtr<int64>(object));
             std::wstring result_property_value = generate_enum_value(uenum, value);
 
             generate_simple_assignment_expression(property, result_property_value, implementation_file, property_scope);
             return;
         }
 
-        //Bool Property
+        // Bool Property
         if (field_class_name == STR("BoolProperty"))
         {
             FBoolProperty* bool_property = static_cast<FBoolProperty*>(property);
@@ -1019,7 +1041,7 @@ namespace RC::UEGenerator
             return;
         }
 
-        //Name property is generated as normal string assignment
+        // Name property is generated as normal string assignment
         if (field_class_name == STR("NameProperty"))
         {
             FName* name_value = property->ContainerPtrToValuePtr<FName>(object);
@@ -1033,7 +1055,7 @@ namespace RC::UEGenerator
             return;
         }
 
-        //String properties are just normal strings
+        // String properties are just normal strings
         if (field_class_name == STR("StrProperty"))
         {
             FString* string_value = property->ContainerPtrToValuePtr<FString>(object);
@@ -1047,7 +1069,7 @@ namespace RC::UEGenerator
             return;
         }
 
-        //Text properties are treated as FText::FromString, although it's not ideal
+        // Text properties are treated as FText::FromString, although it's not ideal
         if (field_class_name == STR("TextProperty"))
         {
             FText* text_value = property->ContainerPtrToValuePtr<FText>(object);
@@ -1060,7 +1082,7 @@ namespace RC::UEGenerator
             }
         }
 
-        //Object Properties are handled either as NULL, default subobjects, or UClass objects
+        // Object Properties are handled either as NULL, default subobjects, or UClass objects
         if (field_class_name == STR("ObjectProperty"))
         {
             FObjectProperty* object_property = static_cast<FObjectProperty*>(property);
@@ -1068,13 +1090,12 @@ namespace RC::UEGenerator
 
             if (sub_object_value == NULL)
             {
-                //If object value is NULL, generate a simple NULL constant
+                // If object value is NULL, generate a simple NULL constant
                 generate_simple_assignment_expression(property, STR("NULL"), implementation_file, property_scope);
-
             }
             else if (sub_object_value->HasAnyFlags(EObjectFlags::RF_DefaultSubObject))
             {
-                //Generate a CreateDefaultSubobject function call
+                // Generate a CreateDefaultSubobject function call
                 UClass* object_class_type = sub_object_value->GetClassPrivate();
                 implementation_file.add_dependency_object(object_class_type, DependencyLevel::Include);
 
@@ -1086,7 +1107,7 @@ namespace RC::UEGenerator
             }
             else if (UClass* sub_object_as_class = Cast<UClass>(sub_object_value))
             {
-                //Generate a ::StaticClass call if this object represents a class
+                // Generate a ::StaticClass call if this object represents a class
                 implementation_file.add_dependency_object(sub_object_as_class, DependencyLevel::Include);
 
                 const std::wstring object_class_name = get_native_class_name(sub_object_as_class);
@@ -1096,13 +1117,13 @@ namespace RC::UEGenerator
             }
             else
             {
-                //Unhandled case, might be some external object reference
+                // Unhandled case, might be some external object reference
                 Output::send(STR("Unhandled default value of the FObjectProperty {}: {}\n"), property->GetFullName(), sub_object_value->GetFullName());
             }
             return;
         }
 
-        //Class Properties are handled either as NULL or StaticClass references
+        // Class Properties are handled either as NULL or StaticClass references
         if (field_class_name == STR("ClassProperty"))
         {
             FClassProperty* class_property = static_cast<FClassProperty*>(property);
@@ -1110,15 +1131,14 @@ namespace RC::UEGenerator
 
             if (class_value == NULL)
             {
-                //If class value is NULL, generate a simple NULL assignment
+                // If class value is NULL, generate a simple NULL assignment
                 generate_simple_assignment_expression(property, STR("NULL"), implementation_file, property_scope);
-
             }
             else if ((class_value->GetClassFlags() & CLASS_Native) != 0)
             {
                 implementation_file.add_dependency_object(class_value, DependencyLevel::Include);
 
-                //Otherwise, generate StaticClass call, assuming the class is native
+                // Otherwise, generate StaticClass call, assuming the class is native
                 const std::wstring object_class_name = get_native_class_name(class_value);
                 const std::wstring initializer = std::format(STR("{}::StaticClass()"), object_class_name);
 
@@ -1126,14 +1146,14 @@ namespace RC::UEGenerator
             }
             else
             {
-                //Unhandled case, reference to the non-native blueprint class potentially?
+                // Unhandled case, reference to the non-native blueprint class potentially?
                 Output::send(STR("Unhandled default value of the FClassProperty {}: {}\n"), property->GetFullName(), class_value->GetFullName());
             }
             return;
         }
 
-        //Struct properties are serialization as normal struct constructors with custom scope
-        //TODO there are a lot of issues with that regarding member access, unnecessary assignments and so on
+        // Struct properties are serialization as normal struct constructors with custom scope
+        // TODO there are a lot of issues with that regarding member access, unnecessary assignments and so on
         /*if (FieldClassName == STR("StructProperty")) {
             XStructProperty* StructProperty = static_cast<XStructProperty*>(Property);
             UScriptStruct* ScriptStruct = StructProperty->get_script_struct();
@@ -1146,10 +1166,9 @@ namespace RC::UEGenerator
             const std::wstring NewPropertyScope = std::format(STR("{}{}."), PropertyScope, StructProperty->GetName());
 
             //Generate values for each struct property
-            //TODO we do not really need to generate assignments for each struct member, we only really need members that are different from the constructor set defaults
-            ScriptStruct->ForEachProperty([&](FProperty* NestedStructProperty) {
-                GeneratePropertyValue(NestedStructProperty, StructDataPointer, ImplementationFile, NewPropertyScope);
-                return RC::LoopAction::Continue;
+            //TODO we do not really need to generate assignments for each struct member, we only really need members that are different from the constructor set
+        defaults ScriptStruct->ForEachProperty([&](FProperty* NestedStructProperty) { GeneratePropertyValue(NestedStructProperty, StructDataPointer,
+        ImplementationFile, NewPropertyScope); return RC::LoopAction::Continue;
             });
             return;
         }*/
@@ -1158,7 +1177,7 @@ namespace RC::UEGenerator
         {
             FScriptArray* property_value = property->ContainerPtrToValuePtr<FScriptArray>(object);
 
-            //Reserve the needed amount of elements
+            // Reserve the needed amount of elements
             if (property_value->Num() > 0)
             {
                 implementation_file.append_line(std::format(STR("{}{}.AddDefaulted({});"), property_scope, property->GetName(), property_value->Num()));
@@ -1166,7 +1185,7 @@ namespace RC::UEGenerator
             return;
         }
 
-        //TODO: Support collection/map properties initialization later
+        // TODO: Support collection/map properties initialization later
         if (field_class_name == STR("ArrayProperty"))
         {
             return;
@@ -1201,7 +1220,11 @@ namespace RC::UEGenerator
         }
     }
 
-    auto UEHeaderGenerator::generate_function_implementation(UClass* uclass, UFunction* function, GeneratedSourceFile& implementation_file, bool is_generating_interface, const CaseInsensitiveSet& blacklisted_property_names) -> void
+    auto UEHeaderGenerator::generate_function_implementation(UClass* uclass,
+                                                             UFunction* function,
+                                                             GeneratedSourceFile& implementation_file,
+                                                             bool is_generating_interface,
+                                                             const CaseInsensitiveSet& blacklisted_property_names) -> void
     {
         const std::wstring class_native_name = get_native_class_name(uclass, is_generating_interface);
         const std::wstring raw_function_name = function->GetName();
@@ -1210,14 +1233,14 @@ namespace RC::UEGenerator
 
         std::wstring function_implementation_name;
         std::wstring net_validate_function_name;
-        bool is_input_function_const = ((function_flags) & FUNC_Const) != 0;
+        bool is_input_function_const = ((function_flags)&FUNC_Const) != 0;
 
         if ((function_flags & FUNC_Net) != 0)
         {
-            //Network functions always have the implementation inside the _Implementation function
+            // Network functions always have the implementation inside the _Implementation function
             function_implementation_name = std::format(STR("{}::{}_Implementation"), class_native_name, raw_function_name);
 
-            //Validated network functions by default have their validation function name set to _Validate
+            // Validated network functions by default have their validation function name set to _Validate
             if ((function_flags & FUNC_NetValidate) != 0)
             {
                 net_validate_function_name = std::format(STR("{}::{}_Validate"), class_native_name, raw_function_name);
@@ -1225,8 +1248,8 @@ namespace RC::UEGenerator
         }
         else if ((function_flags & FUNC_BlueprintEvent) != 0)
         {
-            //Blueprint Events use _Implementation by default too, but only BlueprintNativeEvents.
-            //BlueprintImplementableEvents do not have any native functions at all, they're just thunks
+            // Blueprint Events use _Implementation by default too, but only BlueprintNativeEvents.
+            // BlueprintImplementableEvents do not have any native functions at all, they're just thunks
             if ((function_flags & FUNC_Native) != 0)
             {
                 function_implementation_name = std::format(STR("{}::{}_Implementation"), class_native_name, raw_function_name);
@@ -1234,25 +1257,28 @@ namespace RC::UEGenerator
         }
         else
         {
-            //Otherwise, normal UFunctions get a standard name matching the function in question
+            // Otherwise, normal UFunctions get a standard name matching the function in question
             function_implementation_name = std::format(STR("{}::{}"), class_native_name, raw_function_name);
         }
 
         std::wstring function_parameter_list;
         if (!function_implementation_name.empty() || !net_validate_function_name.empty())
         {
-            function_parameter_list = generate_function_parameter_list(uclass, function, implementation_file, false, context.context_name, blacklisted_property_names);
+            function_parameter_list =
+                    generate_function_parameter_list(uclass, function, implementation_file, false, context.context_name, blacklisted_property_names);
         }
 
         if (!function_implementation_name.empty())
         {
             FProperty* return_value_property = function->GetReturnProperty();
 
-            const std::wstring return_value_type = return_value_property ?
-                                                   generate_property_type_declaration(return_value_property, context) : STR("void");
+            const std::wstring return_value_type = return_value_property ? generate_property_type_declaration(return_value_property, context) : STR("void");
 
-            implementation_file.append_line(std::format(STR("{} {}({}){} {{"), return_value_type, function_implementation_name,
-                                                        function_parameter_list, is_input_function_const ? STR(" const") : STR("")));
+            implementation_file.append_line(std::format(STR("{} {}({}){} {{"),
+                                                        return_value_type,
+                                                        function_implementation_name,
+                                                        function_parameter_list,
+                                                        is_input_function_const ? STR(" const") : STR("")));
             implementation_file.begin_indent_level();
 
             if (return_value_property != NULL)
@@ -1281,28 +1307,28 @@ namespace RC::UEGenerator
     {
         switch (parameter_count)
         {
-            case 0:
-                return STR("");
-            case 1:
-                return STR("_OneParam");
-            case 2:
-                return STR("_TwoParams");
-            case 3:
-                return STR("_ThreeParams");
-            case 4:
-                return STR("_FourParams");
-            case 5:
-                return STR("_FiveParams");
-            case 6:
-                return STR("_SixParams");
-            case 7:
-                return STR("_SevenParams");
-            case 8:
-                return STR("_EightParams");
-            case 9:
-                return STR("_NineParams");
-            default:
-                throw std::invalid_argument("Invalid delegate parameter count");
+        case 0:
+            return STR("");
+        case 1:
+            return STR("_OneParam");
+        case 2:
+            return STR("_TwoParams");
+        case 3:
+            return STR("_ThreeParams");
+        case 4:
+            return STR("_FourParams");
+        case 5:
+            return STR("_FiveParams");
+        case 6:
+            return STR("_SixParams");
+        case 7:
+            return STR("_SevenParams");
+        case 8:
+            return STR("_EightParams");
+        case 9:
+            return STR("_NineParams");
+        default:
+            throw std::invalid_argument("Invalid delegate parameter count");
         }
     }
 
@@ -1377,48 +1403,43 @@ namespace RC::UEGenerator
         {
             switch (ch)
             {
-                case STR('\r'):
+            case STR('\r'): {
+                continue;
+            }
+            case STR('\n'): {
+                result.append(STR("\\n"));
+                previous_character_was_hex = false;
+                break;
+            }
+            case STR('\\'): {
+                result.append(STR("\\\\"));
+                previous_character_was_hex = false;
+                break;
+            }
+            case STR('\"'): {
+                result.append(STR("\\\""));
+                previous_character_was_hex = false;
+                break;
+            }
+            default: {
+                if (ch < 31 || ch >= 128)
                 {
-                    continue;
+                    result.append(std::format(STR("\\x{:04X}"), ch));
+                    previous_character_was_hex = true;
                 }
-                case STR('\n'):
+                else
                 {
-                    result.append(STR("\\n"));
-                    previous_character_was_hex = false;
-                    break;
-                }
-                case STR('\\'):
-                {
-                    result.append(STR("\\\\"));
-                    previous_character_was_hex = false;
-                    break;
-                }
-                case STR('\"'):
-                {
-                    result.append(STR("\\\""));
-                    previous_character_was_hex = false;
-                    break;
-                }
-                default:
-                {
-                    if (ch < 31 || ch >= 128)
+                    // We close and open the literal (with TEXT) here in order to ensure that successive hex characters aren't
+                    // appended to the hex sequence, causing a different number
+                    if (previous_character_was_hex && iswxdigit(ch) != 0)
                     {
-                        result.append(std::format(STR("\\x{:04X}"), ch));
-                        previous_character_was_hex = true;
+                        result.append(STR("\")TEXT(\""));
                     }
-                    else
-                    {
-                        // We close and open the literal (with TEXT) here in order to ensure that successive hex characters aren't
-                        // appended to the hex sequence, causing a different number
-                        if (previous_character_was_hex && iswxdigit(ch) != 0)
-                        {
-                            result.append(STR("\")TEXT(\""));
-                        }
-                        previous_character_was_hex = false;
-                        result.push_back(ch);
-                    }
-                    break;
+                    previous_character_was_hex = false;
+                    result.push_back(ch);
                 }
+                break;
+            }
             }
         }
         result.append(STR("\")"));
@@ -1432,10 +1453,15 @@ namespace RC::UEGenerator
         return uppercase_string;
     }
 
-    auto UEHeaderGenerator::add_module_and_sub_module_dependencies(std::set<std::wstring>& out_module_dependencies, const std::wstring& module_name, bool add_self_module) -> void
+    auto UEHeaderGenerator::add_module_and_sub_module_dependencies(std::set<std::wstring>& out_module_dependencies,
+                                                                   const std::wstring& module_name,
+                                                                   bool add_self_module) -> void
     {
         // Prevent infinite recursion
-        if (out_module_dependencies.contains(module_name)) { return; }
+        if (out_module_dependencies.contains(module_name))
+        {
+            return;
+        }
 
         if (add_self_module)
         {
@@ -1464,7 +1490,7 @@ namespace RC::UEGenerator
                 result_set.insert(property->GetName());
             }
 
-            for (UFunction* function : class_object->ForEachFunction()) 
+            for (UFunction* function : class_object->ForEachFunction())
             {
                 result_set.insert(function->GetName());
             }
@@ -1473,7 +1499,7 @@ namespace RC::UEGenerator
         {
             UScriptStruct* script_struct = static_cast<UScriptStruct*>(uclass);
 
-            for (FProperty* property : script_struct->ForEachProperty()) 
+            for (FProperty* property : script_struct->ForEachProperty())
             {
                 result_set.insert(property->GetName());
             }
@@ -1481,8 +1507,8 @@ namespace RC::UEGenerator
         return result_set;
     }
 
-//TODO CannotImplementInterfaceInBlueprint is not exactly right,
-//TODO you can have interface with no implementable blueprint methods but that you can still implement in blueprint
+    // TODO CannotImplementInterfaceInBlueprint is not exactly right,
+    // TODO you can have interface with no implementable blueprint methods but that you can still implement in blueprint
     auto UEHeaderGenerator::generate_interface_flags(UClass* uinterface) const -> std::wstring
     {
         FlagFormatHelper flag_format_helper{};
@@ -1581,10 +1607,10 @@ namespace RC::UEGenerator
         {
             flag_format_helper.add_switch(STR("NoExport"));
         }
-        //TODO not quite the case, because UHT boilerplate implicitly marks every native class as CLASS_Intrinsic
-        //if ((ClassOwnFlags & CLASS_Intrinsic) != 0) {
-        //    FlagFormatHelper.AddSwitch(STR("Intrinsic"));
-        //}
+        // TODO not quite the case, because UHT boilerplate implicitly marks every native class as CLASS_Intrinsic
+        // if ((ClassOwnFlags & CLASS_Intrinsic) != 0) {
+        //     FlagFormatHelper.AddSwitch(STR("Intrinsic"));
+        // }
 
         if ((class_own_flags & CLASS_Const) != 0)
         {
@@ -1596,8 +1622,7 @@ namespace RC::UEGenerator
         }
 
         UClass* class_within = uclass->GetClassWithin();
-        if (class_within != NULL && class_within != UObject::StaticClass() &&
-            (super_class == NULL || class_within != super_class->GetClassWithin()))
+        if (class_within != NULL && class_within != UObject::StaticClass() && (super_class == NULL || class_within != super_class->GetClassWithin()))
         {
             flag_format_helper.add_parameter(STR("Within"), class_within->GetName());
         }
@@ -1683,8 +1708,8 @@ namespace RC::UEGenerator
             flag_format_helper.add_switch(STR("DontCollapseCategories"));
         }
 
-        //Mark all UActorComponent derived classes as BlueprintSpawnableComponent by default
-        //This will allow using them inside the Simple Construction Script of the blueprint assets
+        // Mark all UActorComponent derived classes as BlueprintSpawnableComponent by default
+        // This will allow using them inside the Simple Construction Script of the blueprint assets
         if (uclass->IsChildOf<UActorComponent>())
         {
             flag_format_helper.get_meta()->add_switch(STR("BlueprintSpawnableComponent"));
@@ -1700,7 +1725,7 @@ namespace RC::UEGenerator
         UClass* current_class = Unreal::Cast<UClass>(property->GetOutermostOwner());
         const std::wstring field_class_name = property->GetClass().GetName();
 
-        //Byte Property
+        // Byte Property
         if (field_class_name == STR("ByteProperty"))
         {
             FByteProperty* byte_property = static_cast<FByteProperty*>(property);
@@ -1720,13 +1745,13 @@ namespace RC::UEGenerator
                     this->m_blueprint_visible_enums.insert(enum_type_name);
                 }
 
-                //Non-EnumClass enumerations should be wrapped into TEnumAsByte according to UHT
+                // Non-EnumClass enumerations should be wrapped into TEnumAsByte according to UHT
                 return std::format(STR("TEnumAsByte<{}>"), enum_type_name);
             }
             return STR("uint8");
         }
 
-        //Enum Property
+        // Enum Property
         if (field_class_name == STR("EnumProperty"))
         {
             FEnumProperty* enum_property = static_cast<FEnumProperty*>(property);
@@ -1753,7 +1778,7 @@ namespace RC::UEGenerator
             return enum_type_name;
         }
 
-        //Bool Property
+        // Bool Property
         if (field_class_name == STR("BoolProperty"))
         {
             FBoolProperty* bool_property = static_cast<FBoolProperty*>(property);
@@ -1768,7 +1793,7 @@ namespace RC::UEGenerator
             return STR("bool");
         }
 
-        //Standard Numeric Properties
+        // Standard Numeric Properties
         if (field_class_name == STR("Int8Property"))
         {
             return STR("int8");
@@ -1806,9 +1831,9 @@ namespace RC::UEGenerator
             return STR("double");
         }
 
-        //Object Properties
-        // TODO: Verify that the syntax for 'AssetObjectProperty' is the same as for 'ObjectProperty'.
-        //       If it's not, then add another branch here after you figure out what the syntax should be.
+        // Object Properties
+        //  TODO: Verify that the syntax for 'AssetObjectProperty' is the same as for 'ObjectProperty'.
+        //        If it's not, then add another branch here after you figure out what the syntax should be.
         if (field_class_name == STR("ObjectProperty") || field_class_name == STR("AssetObjectProperty"))
         {
             FObjectProperty* object_property = static_cast<FObjectProperty*>(property);
@@ -1904,7 +1929,7 @@ namespace RC::UEGenerator
             return std::format(STR("TSoftObjectPtr<{}>"), property_class_name);
         }
 
-        //Class Properties
+        // Class Properties
         if (field_class_name == STR("ClassProperty") || field_class_name == STR("AssetClassProperty"))
         {
             FClassProperty* class_property = static_cast<FClassProperty*>(property);
@@ -1950,7 +1975,7 @@ namespace RC::UEGenerator
             return std::format(STR("TSoftClassPtr<{}>"), meta_class_name);
         }
 
-        //Interface Property
+        // Interface Property
         if (field_class_name == STR("InterfaceProperty"))
         {
             FInterfaceProperty* interface_property = static_cast<FInterfaceProperty*>(property);
@@ -1970,7 +1995,7 @@ namespace RC::UEGenerator
             return std::format(STR("TScriptInterface<{}>"), interface_class_name);
         }
 
-        //Struct Property
+        // Struct Property
         if (field_class_name == STR("StructProperty"))
         {
             FStructProperty* struct_property = static_cast<FStructProperty*>(property);
@@ -1991,14 +2016,15 @@ namespace RC::UEGenerator
             return native_struct_name;
         }
 
-        //Delegate Properties
+        // Delegate Properties
         if (field_class_name == STR("DelegateProperty"))
         {
             FDelegateProperty* delegate_property = static_cast<FDelegateProperty*>(property);
             UFunction* delegate_signature_function = delegate_property->GetSignatureFunction();
             if (!delegate_signature_function)
             {
-                throw std::runtime_error{std::format("FunctionSignature is nullptr, cannot deduce function for '{}'\n", to_string(delegate_property->GetFullName()))};
+                throw std::runtime_error{
+                        std::format("FunctionSignature is nullptr, cannot deduce function for '{}'\n", to_string(delegate_property->GetFullName()))};
             }
 
             if (context.source_file != NULL)
@@ -2016,7 +2042,8 @@ namespace RC::UEGenerator
             UFunction* delegate_signature_function = delegate_property->GetSignatureFunction();
             if (!delegate_signature_function)
             {
-                throw std::runtime_error{std::format("FunctionSignature is nullptr, cannot deduce function for '{}'\n", to_string(delegate_property->GetFullName()))};
+                throw std::runtime_error{
+                        std::format("FunctionSignature is nullptr, cannot deduce function for '{}'\n", to_string(delegate_property->GetFullName()))};
             }
 
             if (context.source_file != NULL)
@@ -2032,7 +2059,8 @@ namespace RC::UEGenerator
             UFunction* delegate_signature_function = delegate_property->GetSignatureFunction();
             if (!delegate_signature_function)
             {
-                throw std::runtime_error{std::format("FunctionSignature is nullptr, cannot deduce function for '{}'\n", to_string(delegate_property->GetFullName()))};
+                throw std::runtime_error{
+                        std::format("FunctionSignature is nullptr, cannot deduce function for '{}'\n", to_string(delegate_property->GetFullName()))};
             }
 
             if (context.source_file != NULL)
@@ -2042,7 +2070,7 @@ namespace RC::UEGenerator
             return get_native_delegate_type_name(delegate_signature_function, current_class);
         }
 
-        //Field path property
+        // Field path property
         if (field_class_name == STR("FieldPathProperty"))
         {
             FFieldPathProperty* field_path_property = static_cast<FFieldPathProperty*>(property);
@@ -2050,8 +2078,8 @@ namespace RC::UEGenerator
             return std::format(STR("TFieldPath<F{}>"), property_class_name);
         }
 
-        //Collection and Map Properties
-        // TODO: This is missing support for freeze image array properties because XArrayProperty is incomplete. (low priority)
+        // Collection and Map Properties
+        //  TODO: This is missing support for freeze image array properties because XArrayProperty is incomplete. (low priority)
         if (field_class_name == STR("ArrayProperty"))
         {
             FArrayProperty* array_property = static_cast<FArrayProperty*>(property);
@@ -2083,7 +2111,7 @@ namespace RC::UEGenerator
             return std::format(STR("TMap<{}, {}>"), key_type, value_type);
         }
 
-        //Standard properties that do not have any special attributes
+        // Standard properties that do not have any special attributes
         if (field_class_name == STR("NameProperty"))
         {
             return STR("FName");
@@ -2096,7 +2124,9 @@ namespace RC::UEGenerator
         {
             return STR("FText");
         }
-        throw std::runtime_error(RC::fmt("[generate_property_type_declaration] Unsupported property class '%S', full name: '%S'", field_class_name.c_str(), property->GetFullName().c_str()));
+        throw std::runtime_error(RC::fmt("[generate_property_type_declaration] Unsupported property class '%S', full name: '%S'",
+                                         field_class_name.c_str(),
+                                         property->GetFullName().c_str()));
     }
     //*/
 
@@ -2105,13 +2135,13 @@ namespace RC::UEGenerator
         FlagFormatHelper flag_format_helper{};
         auto property_flags = property->GetPropertyFlags();
 
-        //CPF_ConstParm is handled explicitly in the parameter list generator, it will generate const before parameter
-        //if ((PropertyFlags & CPF_ConstParm) != 0) {
-        //    FlagFormatHelper.AddSwitch(STR("Const"));
-        //}
+        // CPF_ConstParm is handled explicitly in the parameter list generator, it will generate const before parameter
+        // if ((PropertyFlags & CPF_ConstParm) != 0) {
+        //     FlagFormatHelper.AddSwitch(STR("Const"));
+        // }
 
-        //We only want to add UPARAM(Ref) when parameter is marked as reference AND output,
-        //while not being marked as constant, because if it's marked as constant, it might be a parameter passed by const reference
+        // We only want to add UPARAM(Ref) when parameter is marked as reference AND output,
+        // while not being marked as constant, because if it's marked as constant, it might be a parameter passed by const reference
         if ((property_flags & CPF_ReferenceParm) != 0 && (property_flags & CPF_OutParm) != 0 && (property_flags & CPF_ConstParm) == 0)
         {
             flag_format_helper.add_switch(STR("Ref"));
@@ -2288,14 +2318,15 @@ namespace RC::UEGenerator
             flag_format_helper.add_switch(STR("SkipSerialization"));
         }
 
-        //Need to have all of these flags, otherwise we might accidentally get Instanced of delegate properties; CPF_ExportObject is not set for delegate properties
+        // Need to have all of these flags, otherwise we might accidentally get Instanced of delegate properties; CPF_ExportObject is not set for delegate properties
         uint64_t instanced_flags = CPF_ExportObject | CPF_InstancedReference;
-        
+
         // Instanced Arrays use CPF_ContainsInstancedReference instead of CPF_InstancedReference
         uint64_t instanced_array_flags = CPF_ExportObject | CPF_ContainsInstancedReference;
 
         if (((property_flags & instanced_flags) == instanced_flags || (property_flags & instanced_array_flags) == instanced_array_flags) &&
-            (property->IsA<FObjectProperty>() || (property->IsA<FArrayProperty>() && static_cast<FArrayProperty*>(property)->GetInner()->IsA<FObjectProperty>()) || (property->IsA<FMapProperty>() && static_cast<FMapProperty*>(property)->GetValueProp()->IsA<FObjectProperty>())))
+            (property->IsA<FObjectProperty>() || (property->IsA<FArrayProperty>() && static_cast<FArrayProperty*>(property)->GetInner()->IsA<FObjectProperty>()) ||
+             (property->IsA<FMapProperty>() && static_cast<FMapProperty*>(property)->GetValueProp()->IsA<FObjectProperty>())))
         {
             flag_format_helper.add_switch(STR("Instanced"));
         }
@@ -2317,7 +2348,8 @@ namespace RC::UEGenerator
         EStructFlags struct_own_flags = (EStructFlags)(struct_flags & (~(parent_struct_flags & STRUCT_Inherit)));
 
         const std::wstring native_struct_name = get_native_struct_name(script_struct);
-        if (is_struct_blueprint_type(script_struct) || m_blueprint_visible_structs.contains(native_struct_name) || UE4SSProgram::settings_manager.UHTHeaderGenerator.MakeAllPropertyBlueprintsReadWrite)
+        if (is_struct_blueprint_type(script_struct) || m_blueprint_visible_structs.contains(native_struct_name) ||
+            UE4SSProgram::settings_manager.UHTHeaderGenerator.MakeAllPropertyBlueprintsReadWrite)
         {
             flag_format_helper.add_switch(STR("BlueprintType"));
         }
@@ -2378,7 +2410,7 @@ namespace RC::UEGenerator
     {
         std::wstring result_enum_name = enumeration_name;
 
-        //Remove enumeration name from the string
+        // Remove enumeration name from the string
         size_t enum_name_string_split = enumeration_name.find(STR("::"));
         if (enum_name_string_split != std::wstring::npos)
         {
@@ -2389,7 +2421,10 @@ namespace RC::UEGenerator
 
     auto UEHeaderGenerator::get_highest_enum(UEnum* uenum) -> int64_t
     {
-        if (!uenum || uenum->NumEnums() <= 0) { return 0; }
+        if (!uenum || uenum->NumEnums() <= 0)
+        {
+            return 0;
+        }
 
         int64 highest_enum_value = 0;
         const StringType enum_prefix = uenum->GenerateEnumPrefix();
@@ -2424,15 +2459,15 @@ namespace RC::UEGenerator
         bool blueprint_callable_added = false;
         if ((function_flags & FUNC_BlueprintCallable) != 0)
         {
-            //Interface functions cannot be BlueprintPure
+            // Interface functions cannot be BlueprintPure
             if ((function_flags & FUNC_BlueprintPure) != 0 && !is_interface_function)
             {
                 flag_format_helper.add_switch(STR("BlueprintPure"));
             }
             else
             {
-                //If function is marked as FUNC_Const but not as BlueprintPure,
-                //it has been explicitly marked as blueprint impure, and we need to preserve this behavior
+                // If function is marked as FUNC_Const but not as BlueprintPure,
+                // it has been explicitly marked as blueprint impure, and we need to preserve this behavior
                 if ((function_flags & FUNC_Const) != 0 && !is_interface_function)
                 {
                     flag_format_helper.add_parameter(STR("BlueprintPure"), STR("false"));
@@ -2444,7 +2479,7 @@ namespace RC::UEGenerator
         if (!blueprint_callable_added && UE4SSProgram::settings_manager.UHTHeaderGenerator.MakeAllFunctionsBlueprintCallable && !is_function_pure_virtual)
         {
             bool has_invalid_param{};
-            for (FProperty* param : function->ForEachProperty()) 
+            for (FProperty* param : function->ForEachProperty())
             {
                 if (!is_subtype_valid(param))
                 {
@@ -2520,11 +2555,11 @@ namespace RC::UEGenerator
         {
             flag_format_helper.add_switch(STR("BlueprintCosmetic"));
         }
-        
+
         static auto latent_action_info = UObjectGlobals::StaticFindObject<UClass*>(nullptr, nullptr, STR("/Script/Engine.LatentActionInfo"));
         bool bWCFound = false;
         bool bLAFound = false;
-        for (FProperty* param : function->ForEachProperty()) 
+        for (FProperty* param : function->ForEachProperty())
         {
             auto param_name = param->GetName();
             auto param_uc_name = string_to_uppercase(param_name);
@@ -2538,9 +2573,9 @@ namespace RC::UEGenerator
                 // We now know this is a StructProperty.
                 if (as_struct_property->GetStruct()->IsChildOf(latent_action_info))
                 {
-                  flag_format_helper.get_meta()->add_parameter(STR("LatentInfo"), std::format(STR("\"{}\""), param_name));
-                  flag_format_helper.get_meta()->add_switch(STR("Latent"));
-                  bLAFound = true;
+                    flag_format_helper.get_meta()->add_parameter(STR("LatentInfo"), std::format(STR("\"{}\""), param_name));
+                    flag_format_helper.get_meta()->add_switch(STR("Latent"));
+                    bLAFound = true;
                 }
             }
             if (bWCFound && bLAFound)
@@ -2548,22 +2583,28 @@ namespace RC::UEGenerator
                 break;
             }
         }
-        
+
         return flag_format_helper.build_flag_string();
     }
 
-    auto UEHeaderGenerator::generate_function_parameter_list(UClass* uclass, UFunction* function, GeneratedSourceFile& header_data, bool generate_comma_before_name, const std::wstring& context_name, const CaseInsensitiveSet& blacklisted_property_names, int32_t* out_num_params) -> std::wstring
+    auto UEHeaderGenerator::generate_function_parameter_list(UClass* uclass,
+                                                             UFunction* function,
+                                                             GeneratedSourceFile& header_data,
+                                                             bool generate_comma_before_name,
+                                                             const std::wstring& context_name,
+                                                             const CaseInsensitiveSet& blacklisted_property_names,
+                                                             int32_t* out_num_params) -> std::wstring
     {
         std::wstring function_arguments_string;
 
-        for (FProperty* property : function->ForEachProperty()) 
+        for (FProperty* property : function->ForEachProperty())
         {
             auto property_flags = property->GetPropertyFlags();
             if ((property_flags & CPF_Parm) != 0 && (property_flags & CPF_ReturnParm) == 0)
             {
                 std::wstring param_declaration;
 
-                //We only generate UPARAM declarations if we are not generating the implementation file
+                // We only generate UPARAM declarations if we are not generating the implementation file
                 if (!header_data.is_implementation_file())
                 {
                     const std::wstring parameter_flags_string = generate_function_argument_flags(property);
@@ -2575,13 +2616,12 @@ namespace RC::UEGenerator
                     }
                 }
 
-                //Force const reference when we're dealing with strings, and they are not passed by reference
-                //UHT for whatever reason completely strips const and reference flags from string properties, but happily generates them in boilerplate code
+                // Force const reference when we're dealing with strings, and they are not passed by reference
+                // UHT for whatever reason completely strips const and reference flags from string properties, but happily generates them in boilerplate code
                 const bool should_force_const_ref =
-                        ((property_flags & (CPF_ReferenceParm | CPF_OutParm)) == 0) &&
-                        (property->GetClass().GetName() == STR("StrProperty"));
+                        ((property_flags & (CPF_ReferenceParm | CPF_OutParm)) == 0) && (property->GetClass().GetName() == STR("StrProperty"));
 
-                //Append const keyword to the parameter declaration if it is marked as const parameter
+                // Append const keyword to the parameter declaration if it is marked as const parameter
                 if ((property_flags & CPF_ConstParm) != 0 || should_force_const_ref)
                 {
                     param_declaration.append(STR("const "));
@@ -2590,8 +2630,8 @@ namespace RC::UEGenerator
                 PropertyTypeDeclarationContext context(context_name, &header_data);
                 param_declaration.append(generate_property_type_declaration(property, context));
 
-                //Reference will be appended if the parameter has a CPF_ReferenceParm flag set,
-                //which would also be always set for output parameters
+                // Reference will be appended if the parameter has a CPF_ReferenceParm flag set,
+                // which would also be always set for output parameters
                 if ((property_flags & (CPF_ReferenceParm | CPF_OutParm)) != 0 || should_force_const_ref)
                 {
                     param_declaration.append(STR("&"));
@@ -2605,7 +2645,7 @@ namespace RC::UEGenerator
 
                 std::wstring property_name = property->GetName();
 
-                //If property name is blacklisted, capitalize first letter and prepend New
+                // If property name is blacklisted, capitalize first letter and prepend New
                 if ((uclass && is_function_parameter_shadowing(uclass, property)) || blacklisted_property_names.contains(property_name))
                 {
                     property_name[0] = towupper(property_name[0]);
@@ -2615,11 +2655,14 @@ namespace RC::UEGenerator
 
                 function_arguments_string.append(param_declaration);
                 function_arguments_string.append(STR(", "));
-                if (out_num_params) { (*out_num_params)++; }
+                if (out_num_params)
+                {
+                    (*out_num_params)++;
+                }
             }
         }
 
-        //remove trailing comma and space from the arguments string
+        // remove trailing comma and space from the arguments string
         if (!function_arguments_string.empty())
         {
             function_arguments_string.erase(function_arguments_string.size() - 2);
@@ -2632,7 +2675,7 @@ namespace RC::UEGenerator
         const std::wstring field_class_name = property->GetClass().GetName();
         PropertyTypeDeclarationContext context(ContextName, &header_data);
 
-        //Byte Property
+        // Byte Property
         if (field_class_name == STR("ByteProperty"))
         {
             FByteProperty* byte_property = static_cast<FByteProperty*>(property);
@@ -2646,7 +2689,7 @@ namespace RC::UEGenerator
             return STR("0");
         }
 
-        //Enum Property
+        // Enum Property
         if (field_class_name == STR("EnumProperty"))
         {
             FEnumProperty* enum_property = static_cast<FEnumProperty*>(property);
@@ -2660,18 +2703,14 @@ namespace RC::UEGenerator
             return generate_enum_value(uenum, first_enum_constant_value);
         }
 
-        //Bool Property
+        // Bool Property
         if (field_class_name == STR("BoolProperty"))
         {
             return STR("false");
         }
-        //Standard Numeric Properties
-        if (field_class_name == STR("Int8Property") ||
-            field_class_name == STR("Int16Property") ||
-            field_class_name == STR("IntProperty") ||
-            field_class_name == STR("Int64Property") ||
-            field_class_name == STR("UInt16Property") ||
-            field_class_name == STR("UInt32Property") ||
+        // Standard Numeric Properties
+        if (field_class_name == STR("Int8Property") || field_class_name == STR("Int16Property") || field_class_name == STR("IntProperty") ||
+            field_class_name == STR("Int64Property") || field_class_name == STR("UInt16Property") || field_class_name == STR("UInt32Property") ||
             field_class_name == STR("UInt64Property"))
         {
             return STR("0");
@@ -2685,28 +2724,21 @@ namespace RC::UEGenerator
             return STR("0.0");
         }
 
-        //Object Properties
-        if (field_class_name == STR("ObjectProperty") ||
-            field_class_name == STR("WeakObjectProperty") ||
-            field_class_name == STR("LazyObjectProperty") ||
-            field_class_name == STR("SoftObjectProperty") ||
-            field_class_name == STR("AssetObjectProperty") ||
-            property->IsA<FObjectPtrProperty>())
+        // Object Properties
+        if (field_class_name == STR("ObjectProperty") || field_class_name == STR("WeakObjectProperty") || field_class_name == STR("LazyObjectProperty") ||
+            field_class_name == STR("SoftObjectProperty") || field_class_name == STR("AssetObjectProperty") || property->IsA<FObjectPtrProperty>())
         {
             return STR("NULL");
         }
 
-        //Class Properties
-        if (field_class_name == STR("ClassProperty") ||
-            field_class_name == STR("SoftClassProperty") ||
-            field_class_name == STR("InterfaceProperty") ||
-            field_class_name == STR("AssetClassProperty") ||
-            property->IsA<FClassPtrProperty>())
+        // Class Properties
+        if (field_class_name == STR("ClassProperty") || field_class_name == STR("SoftClassProperty") || field_class_name == STR("InterfaceProperty") ||
+            field_class_name == STR("AssetClassProperty") || property->IsA<FClassPtrProperty>())
         {
             return STR("NULL");
         }
 
-        //Struct Property
+        // Struct Property
         if (field_class_name == STR("StructProperty"))
         {
             FStructProperty* struct_property = static_cast<FStructProperty*>(property);
@@ -2720,22 +2752,21 @@ namespace RC::UEGenerator
             return std::format(STR("{}{{}}"), native_struct_name);
         }
 
-        //Delegate Properties
-        if (field_class_name == STR("DelegateProperty") ||
-            field_class_name == STR("MulticastInlineDelegateProperty") ||
+        // Delegate Properties
+        if (field_class_name == STR("DelegateProperty") || field_class_name == STR("MulticastInlineDelegateProperty") ||
             field_class_name == STR("MulticastSparseDelegateProperty"))
         {
             const std::wstring delegate_type_name = generate_delegate_name(property, context.context_name);
             return std::format(STR("{}()"), delegate_type_name);
         }
 
-        //Field path property
+        // Field path property
         if (field_class_name == STR("FieldPathProperty"))
         {
             return STR("FFieldPath()");
         }
 
-        //Collection and Map Properties
+        // Collection and Map Properties
         if (field_class_name == STR("ArrayProperty"))
         {
             FArrayProperty* array_property = static_cast<FArrayProperty*>(property);
@@ -2766,7 +2797,7 @@ namespace RC::UEGenerator
             return std::format(STR("TMap<{}, {}>()"), key_type, value_type);
         }
 
-        //Various string, name and text properties
+        // Various string, name and text properties
         if (field_class_name == STR("NameProperty"))
         {
             return STR("NAME_None");
@@ -2779,14 +2810,16 @@ namespace RC::UEGenerator
         {
             return STR("FText::GetEmpty()");
         }
-        throw std::runtime_error(RC::fmt("[generate_default_property_value] Unsupported property class '%S', full name: '%S'", field_class_name.c_str(), property->GetFullName().c_str()));
+        throw std::runtime_error(RC::fmt("[generate_default_property_value] Unsupported property class '%S', full name: '%S'",
+                                         field_class_name.c_str(),
+                                         property->GetFullName().c_str()));
     }
 
     auto UEHeaderGenerator::get_class_blueprint_info(UClass* uclass) -> ClassBlueprintInfo
     {
-        //These 3 classes are "Intrinsically" blueprintable - they are blueprintable and BlueprintType themselves,
-        //but this modifier is not passed through the class hierarchy like normally done
-        //So to force generation of correct Blueprintable/BlueprintType statements, we report them as non-blueprint-types
+        // These 3 classes are "Intrinsically" blueprintable - they are blueprintable and BlueprintType themselves,
+        // but this modifier is not passed through the class hierarchy like normally done
+        // So to force generation of correct Blueprintable/BlueprintType statements, we report them as non-blueprint-types
         if (uclass == UObject::StaticClass() || uclass == UActorComponent::StaticClass() || uclass == USceneComponent::StaticClass())
         {
             return ClassBlueprintInfo();
@@ -2799,7 +2832,7 @@ namespace RC::UEGenerator
             blueprint_info = get_class_blueprint_info(super_class);
         }
 
-        for (FProperty* property : uclass->ForEachProperty()) 
+        for (FProperty* property : uclass->ForEachProperty())
         {
             auto property_flags = property->GetPropertyFlags();
 
@@ -2810,7 +2843,7 @@ namespace RC::UEGenerator
             }
         }
 
-        for (UFunction* function : uclass->ForEachFunction()) 
+        for (UFunction* function : uclass->ForEachFunction())
         {
             auto function_flags = function->GetFunctionFlags();
 
@@ -2841,7 +2874,7 @@ namespace RC::UEGenerator
         }
         bool is_blueprint_type = false;
 
-        for (FProperty* property : script_struct->ForEachProperty()) 
+        for (FProperty* property : script_struct->ForEachProperty())
         {
             auto property_flags = property->GetPropertyFlags();
 
@@ -2857,7 +2890,7 @@ namespace RC::UEGenerator
     auto UEHeaderGenerator::is_function_parameter_shadowing(UClass* uclass, FProperty* function_parameter) -> bool
     {
         bool is_shadowing = false;
-        for (FProperty* property : uclass->ForEachPropertyInChain()) 
+        for (FProperty* property : uclass->ForEachPropertyInChain())
         {
             if (property->GetFName().Equals(function_parameter->GetFName()))
             {
@@ -2889,13 +2922,13 @@ namespace RC::UEGenerator
         this->m_root_directory = root_directory;
         this->m_primary_module_name = determine_primary_game_module_name();
 
-        //Force inclusion of Core and CoreUObject into all the generated module build files
+        // Force inclusion of Core and CoreUObject into all the generated module build files
         this->m_forced_module_dependencies.insert(STR("Core"));
         this->m_forced_module_dependencies.insert(STR("CoreUObject"));
-        //TODO not optimal, but still needed for the majority of the cases
+        // TODO not optimal, but still needed for the majority of the cases
         this->m_forced_module_dependencies.insert(STR("Engine"));
 
-        //Add few classes that require explicit UObjectInitializer constructor call
+        // Add few classes that require explicit UObjectInitializer constructor call
         this->m_classes_with_object_initializer.insert(STR("UUserWidget"));
         this->m_classes_with_object_initializer.insert(STR("UMovieSceneTrack"));
         this->m_classes_with_object_initializer.insert(STR("APlayerStart"));
@@ -2906,8 +2939,8 @@ namespace RC::UEGenerator
 
     auto UEHeaderGenerator::ignore_selected_modules() -> void
     {
-        //Never generate CoreUObject, since it contains a lot of intrinsic classes and is generally always the same
-        //Also skip engine initially because engine contents should not change much either
+        // Never generate CoreUObject, since it contains a lot of intrinsic classes and is generally always the same
+        // Also skip engine initially because engine contents should not change much either
 
         // Skip "Engine" and "CoreUObject" if requested
         if (UE4SSProgram::settings_manager.UHTHeaderGenerator.IgnoreEngineAndCoreUObject ||
@@ -3098,15 +3131,16 @@ namespace RC::UEGenerator
             }
             else if (UFunction* function = Cast<UFunction>(typed_object))
             {
-                //We are looking for delegate signature functions located inside the native packages
-                //When they are located directly on the top level, they will result in a separate header, otherwise they will
-                //be included into their respective outer header
+                // We are looking for delegate signature functions located inside the native packages
+                // When they are located directly on the top level, they will result in a separate header, otherwise they will
+                // be included into their respective outer header
                 if (is_delegate_signature_function(function) && function->GetOuterPrivate()->IsA<UPackage>())
                 {
                     UPackage* outer_package = Cast<UPackage>(function->GetOuterPrivate());
 
-                    //Make sure the function package actually corresponds to the real native module
-                    if (!get_module_name_for_package(outer_package).empty()) {
+                    // Make sure the function package actually corresponds to the real native module
+                    if (!get_module_name_for_package(outer_package).empty())
+                    {
                         native_delegates_to_dump.push_back(function);
                     }
                 }
@@ -3119,13 +3153,13 @@ namespace RC::UEGenerator
 
         for (UFunction* delegate_signature_function : native_delegates_to_dump)
         {
-            //Output::send(STR("Dumping native delegate type {}\n"), global_delegate_signature->GetName());
+            // Output::send(STR("Dumping native delegate type {}\n"), global_delegate_signature->GetName());
             generate_object_description_file(delegate_signature_function);
         }
 
         for (UClass* class_to_dump : native_classes_to_dump)
         {
-            //Output::send(STR("Dumping native class {}\n"), class_to_dump->GetName());
+            // Output::send(STR("Dumping native class {}\n"), class_to_dump->GetName());
             generate_object_description_file(class_to_dump);
         }
 
@@ -3133,7 +3167,7 @@ namespace RC::UEGenerator
 
         for (UScriptStruct* struct_to_dump : native_structs_to_dump)
         {
-            //Output::send(STR("Dumping native struct {}\n"), struct_to_dump->GetName());
+            // Output::send(STR("Dumping native struct {}\n"), struct_to_dump->GetName());
             generate_object_description_file(struct_to_dump);
         }
 
@@ -3141,7 +3175,7 @@ namespace RC::UEGenerator
 
         for (UEnum* enum_to_dump : native_enums_to_dump)
         {
-            //Output::send(STR("Dumping native enum {}\n"), enum_to_dump->GetName());
+            // Output::send(STR("Dumping native enum {}\n"), enum_to_dump->GetName());
             generate_object_description_file(enum_to_dump);
         }
 
@@ -3215,7 +3249,8 @@ namespace RC::UEGenerator
             return false;
         }
 
-        GeneratedSourceFile& header_file = m_header_files.emplace_back(GeneratedSourceFile::create_source_file(m_root_directory, module_name, file_base_name, false, object));
+        GeneratedSourceFile& header_file =
+                m_header_files.emplace_back(GeneratedSourceFile::create_source_file(m_root_directory, module_name, file_base_name, false, object));
         GeneratedSourceFile implementation_file = GeneratedSourceFile::create_source_file(m_root_directory, module_name, file_base_name, true, object);
         implementation_file.set_header_file(&header_file);
 
@@ -3254,7 +3289,8 @@ namespace RC::UEGenerator
         }
         else
         {
-            throw std::runtime_error(RC::fmt("Provided object %S is not of a supported type: %S", object->GetName().c_str(), object->GetClassPrivate()->GetName().c_str()));
+            throw std::runtime_error(
+                    RC::fmt("Provided object %S is not of a supported type: %S", object->GetName().c_str(), object->GetClassPrivate()->GetName().c_str()));
         }
 
         auto iterator = this->m_module_dependencies.find(module_name);
@@ -3274,7 +3310,7 @@ namespace RC::UEGenerator
         // otherwise the below code for copy_dependency_module_names will not work.
         header_file.generate_file_contents();
 
-        //Record module names used in the headers
+        // Record module names used in the headers
         std::shared_ptr<std::set<std::wstring>> out_dependency_module_names = iterator->second;
         header_file.copy_dependency_module_names(*out_dependency_module_names);
         implementation_file.copy_dependency_module_names(*out_dependency_module_names);
@@ -3294,20 +3330,19 @@ namespace RC::UEGenerator
 
             if (uclass->IsChildOf(UInterface::StaticClass()))
             {
-                pre_declarations.push_back({ STR("class "), get_native_class_name(uclass, true), STR(";\n") });
+                pre_declarations.push_back({STR("class "), get_native_class_name(uclass, true), STR(";\n")});
             }
-            pre_declarations.push_back({ STR("class "), get_native_class_name(uclass, false), STR(";\n") });
-
+            pre_declarations.push_back({STR("class "), get_native_class_name(uclass, false), STR(";\n")});
         }
         else if (object_class->IsChildOf(UScriptStruct::StaticClass()))
         {
             UScriptStruct* script_struct = static_cast<UScriptStruct*>(object);
 
-            pre_declarations.push_back({ STR("struct "), get_native_struct_name(script_struct), STR(";\n") });
+            pre_declarations.push_back({STR("struct "), get_native_struct_name(script_struct), STR(";\n")});
         }
         else if (object_class->IsChildOf(UEnum::StaticClass()))
         {
-            //TODO do we want them? They're not that easy since we do not know enum types precisely in advance
+            // TODO do we want them? They're not that easy since we do not know enum types precisely in advance
             throw std::invalid_argument("Enum pre-declarations are not supported");
         }
         else
@@ -3318,26 +3353,32 @@ namespace RC::UEGenerator
         return pre_declarations;
     }
 
-    auto UEHeaderGenerator::get_header_name_for_object(UObject* object, bool get_existing_header) -> std::wstring {
+    auto UEHeaderGenerator::get_header_name_for_object(UObject* object, bool get_existing_header) -> std::wstring
+    {
         File::StringType header_name{};
         UObject* final_object{};
 
-        if (object->IsA<UClass>() || object->IsA<UScriptStruct>()) {
-            //Class and struct headers follow the relevant object name
+        if (object->IsA<UClass>() || object->IsA<UScriptStruct>())
+        {
+            // Class and struct headers follow the relevant object name
             header_name = object->GetName();
             final_object = object;
-        } else if (object->IsA<UEnum>()) {
-            //Enumeration usually have the E prefix which will be present in the header names
-            //We do not strip it because there are some broken headers that do not follow that convention (e.g. funny Wwise)
+        }
+        else if (object->IsA<UEnum>())
+        {
+            // Enumeration usually have the E prefix which will be present in the header names
+            // We do not strip it because there are some broken headers that do not follow that convention (e.g. funny Wwise)
             header_name = object->GetName();
             final_object = object;
-        } else {
-            //Delegate signature functions need to have their postfix removed
+        }
+        else
+        {
+            // Delegate signature functions need to have their postfix removed
             UFunction* signature_function = Unreal::Cast<UFunction>(object);
             if (signature_function != nullptr && is_delegate_signature_function(signature_function))
             {
 
-                //If delegate is not declared inside the package, it is declared in the header of it's outer
+                // If delegate is not declared inside the package, it is declared in the header of it's outer
                 if (!signature_function->GetOuterPrivate()->IsA<UPackage>())
                 {
                     final_object = signature_function->GetOuterPrivate();
@@ -3345,8 +3386,8 @@ namespace RC::UEGenerator
                 }
                 else
                 {
-                    //Otherwise, remove the postfix and use the function name as the header name
-                    //Also append the delegate postfix because apparently there can be conflicts
+                    // Otherwise, remove the postfix and use the function name as the header name
+                    // Also append the delegate postfix because apparently there can be conflicts
                     std::wstring DelegateName = strip_delegate_signature_postfix(signature_function);
                     DelegateName.append(STR("Delegate"));
                     header_name = DelegateName;
@@ -3357,7 +3398,7 @@ namespace RC::UEGenerator
 
         if (header_name.empty())
         {
-            //Unsupported dependency object type
+            // Unsupported dependency object type
             throw std::runtime_error(RC::fmt("Unsupported dependency object type %S: %S", object->GetClassPrivate()->GetName().c_str(), object->GetName().c_str()));
         }
 
@@ -3384,32 +3425,37 @@ namespace RC::UEGenerator
         return header_name;
     }
 
-    auto UEHeaderGenerator::generate_global_delegate_declaration(UFunction* signature_function, GeneratedSourceFile& header_data) -> void {
+    auto UEHeaderGenerator::generate_global_delegate_declaration(UFunction* signature_function, GeneratedSourceFile& header_data) -> void
+    {
         generate_delegate_type_declaration(signature_function, header_data);
     }
 
-    auto UEHeaderGenerator::determine_primary_game_module_name() -> std::wstring {
+    auto UEHeaderGenerator::determine_primary_game_module_name() -> std::wstring
+    {
         HMODULE primary_executable_module = GetModuleHandleW(NULL);
-        wchar_t module_name_buffer[1024] {'\0'};
+        wchar_t module_name_buffer[1024]{'\0'};
         GetModuleFileNameW(primary_executable_module, module_name_buffer, ARRAYSIZE(module_name_buffer));
 
-        //Retrieve the filename from the full path, strip down the extension
+        // Retrieve the filename from the full path, strip down the extension
         FFilePath root_executable_path((std::wstring(module_name_buffer)));
         std::wstring filename = root_executable_path.filename().replace_extension().wstring();
 
-        //Remove the shipping file postfix
+        // Remove the shipping file postfix
         std::wstring shipping_postfix = STR("-Win64-Shipping");
-        if (filename.ends_with(shipping_postfix)) {
+        if (filename.ends_with(shipping_postfix))
+        {
             filename.erase(filename.length() - shipping_postfix.length());
         }
         return filename;
     }
 
-    auto UEHeaderGenerator::generate_cross_module_include(UObject* object, const std::wstring& module_name, const std::wstring& fallback_name) -> std::wstring {
-        //Retrieve the most top level object located inside the native package
+    auto UEHeaderGenerator::generate_cross_module_include(UObject* object, const std::wstring& module_name, const std::wstring& fallback_name) -> std::wstring
+    {
+        // Retrieve the most top level object located inside the native package
         UObject* top_level_object = object;
 
-        while (!top_level_object->GetOuterPrivate()->IsA<UPackage>()) {
+        while (!top_level_object->GetOuterPrivate()->IsA<UPackage>())
+        {
             top_level_object = top_level_object->GetOuterPrivate();
         }
 
@@ -3460,7 +3506,7 @@ namespace RC::UEGenerator
         {
             return false;
         }
-        //TODO might be slow, maybe move it out into the header generator?
+        // TODO might be slow, maybe move it out into the header generator?
         std::filesystem::create_directories(this->m_full_file_path.parent_path());
 
         std::wofstream file_output_stream;
@@ -3484,7 +3530,11 @@ namespace RC::UEGenerator
         return !m_file_contents_buffer.empty();
     }
 
-    auto GeneratedSourceFile::create_source_file(const FFilePath& root_dir, const std::wstring& module_name, const std::wstring& base_name, bool is_implementation_file, UObject* object) -> GeneratedSourceFile
+    auto GeneratedSourceFile::create_source_file(const FFilePath& root_dir,
+                                                 const std::wstring& module_name,
+                                                 const std::wstring& base_name,
+                                                 bool is_implementation_file,
+                                                 UObject* object) -> GeneratedSourceFile
     {
         FFilePath full_file_path;
         if (is_implementation_file)
@@ -3498,7 +3548,8 @@ namespace RC::UEGenerator
         return GeneratedSourceFile(full_file_path, module_name, is_implementation_file, object);
     }
 
-    GeneratedSourceFile::GeneratedSourceFile(const FFilePath& file_path, const std::wstring& file_module_name, bool is_implementation_file, UObject* object) : GeneratedFile(file_path)
+    GeneratedSourceFile::GeneratedSourceFile(const FFilePath& file_path, const std::wstring& file_module_name, bool is_implementation_file, UObject* object)
+        : GeneratedFile(file_path)
     {
         this->m_file_module_name = file_module_name;
         this->m_is_implementation_file = is_implementation_file;
@@ -3519,7 +3570,7 @@ namespace RC::UEGenerator
     {
         const auto iterator = m_dependencies.find(object);
 
-        //Only add the dependency if we don't have one already or requested level is higher than the current one
+        // Only add the dependency if we don't have one already or requested level is higher than the current one
         if (iterator == m_dependencies.end() || (int32_t)iterator->second <= (int32_t)dependency_level)
         {
             m_dependencies.insert_or_assign(object, dependency_level);
@@ -3553,39 +3604,39 @@ namespace RC::UEGenerator
         std::vector<std::vector<std::wstring>> include_lines;
         std::vector<std::wstring> cross_module_includes;
 
-        //For the header file, we generate the pragma and minimal core includes
+        // For the header file, we generate the pragma and minimal core includes
         if (!m_is_implementation_file)
         {
             result_include_string.append(STR("#pragma once\n"));
             result_include_string.append(STR("#include \"CoreMinimal.h\"\n"));
         }
-        //For CPP implementation file, we need to generate the header include
+        // For CPP implementation file, we need to generate the header include
         if (m_is_implementation_file)
         {
             if (m_header_file != NULL)
             {
-                //Generate it if we have the correct header file set
+                // Generate it if we have the correct header file set
                 result_include_string.append(std::format(STR("#include \"{}.h\"\n"), m_header_file->m_file_base_name));
             }
             else
             {
-                //Otherwise, we generate a simple minimal core include
+                // Otherwise, we generate a simple minimal core include
                 result_include_string.append(STR("#include \"CoreMinimal.h\"\n"));
             }
         }
 
-        //Generate extra includes we might need that do not represent objects
+        // Generate extra includes we might need that do not represent objects
         for (const std::wstring& extra_included_file : m_extra_includes)
         {
-            include_lines.push_back({ STR("#include \""), extra_included_file, STR("\"\n") });
+            include_lines.push_back({STR("#include \""), extra_included_file, STR("\"\n")});
         }
 
-        //Generate includes for the relevant object files
+        // Generate includes for the relevant object files
         for (const auto& dependency_pair : m_dependencies)
         {
             UObject* dependency_object = dependency_pair.first;
 
-            //Only want to generate include dependencies
+            // Only want to generate include dependencies
             if (dependency_pair.second != DependencyLevel::Include)
             {
                 continue;
@@ -3593,13 +3644,13 @@ namespace RC::UEGenerator
 
             const std::wstring object_header_name = UEHeaderGenerator::get_header_name_for_object(dependency_object, true);
 
-            //Definitely skip include if object in question is placed into this header
+            // Definitely skip include if object in question is placed into this header
             if (object_header_name == m_file_base_name)
             {
                 continue;
             }
 
-            //Skip includes that have already been generated on the header file
+            // Skip includes that have already been generated on the header file
             if (m_is_implementation_file && m_header_file != NULL)
             {
                 if (m_header_file->has_dependency(dependency_object, DependencyLevel::Include))
@@ -3612,22 +3663,22 @@ namespace RC::UEGenerator
 
             if (!native_module_name.empty())
             {
-                //If this package corresponds to the file inside this module, we generate the normal include,
-                //since generated headers are always located in the module root and follow one file per object convention
+                // If this package corresponds to the file inside this module, we generate the normal include,
+                // since generated headers are always located in the module root and follow one file per object convention
                 if (m_file_module_name == native_module_name)
                 {
-                    include_lines.push_back({ STR("#include \""), object_header_name, STR(".h\"\n") });
+                    include_lines.push_back({STR("#include \""), object_header_name, STR(".h\"\n")});
                 }
                 else
                 {
-                    //Otherwise, we generate an include stub which will be handled by the unreal engine commandlet later
+                    // Otherwise, we generate an include stub which will be handled by the unreal engine commandlet later
                     m_dependency_module_names.insert(native_module_name);
                     cross_module_includes.push_back(UEHeaderGenerator::generate_cross_module_include(dependency_object, native_module_name, object_header_name));
                 }
             }
         }
 
-        //Sort the cross module includes and add them to the result so that they are always above the rest of the includes
+        // Sort the cross module includes and add them to the result so that they are always above the rest of the includes
         std::sort(cross_module_includes.begin(), cross_module_includes.end());
 
         // Remove duplicates - there are sometimes multiple instances of the same cross module include
@@ -3638,7 +3689,7 @@ namespace RC::UEGenerator
             result_include_string.append(cross_module_include);
         }
 
-        //Sort the includes by module name, since we want to make sure that they are always in the same order
+        // Sort the includes by module name, since we want to make sure that they are always in the same order
         std::sort(include_lines.begin(), include_lines.end(), [](const std::vector<std::wstring>& a, const std::vector<std::wstring>& b) {
             return a[1] < b[1];
         });
@@ -3651,7 +3702,7 @@ namespace RC::UEGenerator
             }
         }
 
-        //Last include of the header file should always be a generated one
+        // Last include of the header file should always be a generated one
         if (!m_is_implementation_file)
         {
             result_include_string.append(std::format(STR("#include \"{}.generated.h\"\n"), m_file_base_name));
@@ -3664,18 +3715,18 @@ namespace RC::UEGenerator
         std::wstring result_declarations;
         std::vector<std::vector<std::vector<std::wstring>>> pre_declarations;
 
-        //Generate pre-declarations for the relevant object files
+        // Generate pre-declarations for the relevant object files
         for (const auto& dependency_pair : m_dependencies)
         {
             UObject* dependency_object = dependency_pair.first;
 
-            //Only want to generate pre-declarations
+            // Only want to generate pre-declarations
             if (dependency_pair.second != DependencyLevel::PreDeclaration)
             {
                 continue;
             }
 
-            //We still need to reference the object's owner module
+            // We still need to reference the object's owner module
             UObject* package = dependency_object->GetOutermost();
             std::wstring native_module_name = UEHeaderGenerator::get_module_name_for_package(package);
 
@@ -3687,12 +3738,14 @@ namespace RC::UEGenerator
             if (!m_is_implementation_file) pre_declarations.push_back(UEHeaderGenerator::generate_object_pre_declaration(dependency_object));
         }
 
-        //Sort the entries alphabetically by the class name
-        std::sort(pre_declarations.begin(), pre_declarations.end(), [](const std::vector<std::vector<std::wstring>>& a, const std::vector<std::vector<std::wstring>>& b) {
-            return a[0][1] < b[0][1];
-        });
+        // Sort the entries alphabetically by the class name
+        std::sort(pre_declarations.begin(),
+                  pre_declarations.end(),
+                  [](const std::vector<std::vector<std::wstring>>& a, const std::vector<std::vector<std::wstring>>& b) {
+                      return a[0][1] < b[0][1];
+                  });
 
-        //Add pre_declarations to result_declarations
+        // Add pre_declarations to result_declarations
         for (const auto& declaration : pre_declarations)
         {
             for (const auto& line : declaration)
@@ -3715,7 +3768,6 @@ namespace RC::UEGenerator
     auto GeneratedSourceFile::has_dependency(UObject* object, DependencyLevel dependency_level) -> bool
     {
         const auto iterator = m_dependencies.find(object);
-        return iterator != m_dependencies.end() &&
-               ((int32_t)iterator->second >= (int32_t)dependency_level);
+        return iterator != m_dependencies.end() && ((int32_t)iterator->second >= (int32_t)dependency_level);
     }
-}
+} // namespace RC::UEGenerator

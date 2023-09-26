@@ -1,7 +1,7 @@
 #pragma once
 
-#include <Unreal/UPackage.hpp>
 #include <Unreal/UObject.hpp>
+#include <Unreal/UPackage.hpp>
 #include <Unreal/UStruct.hpp>
 
 // To create a new filter:
@@ -18,22 +18,26 @@ namespace RC::GUI::Filter
 {
     using namespace Unreal;
 
-    template<typename...>
-    struct Types{};
-
-    template<typename T>
-    concept CanPreEval = requires(T t)
+    template <typename...>
+    struct Types
     {
-        { T::pre_eval(std::declval<UObject*>()) };
     };
 
-    template<typename T>
-    concept CanPostEval = requires(T t)
-    {
-        { T::post_eval(std::declval<UObject*>()) };
+    template <typename T>
+    concept CanPreEval = requires(T t) {
+        {
+            T::pre_eval(std::declval<UObject*>())
+        };
     };
 
-    template<typename T>
+    template <typename T>
+    concept CanPostEval = requires(T t) {
+        {
+            T::post_eval(std::declval<UObject*>())
+        };
+    };
+
+    template <typename T>
     auto eval_pre_search_filters(Types<T>&, UObject* object) -> bool
     {
         if constexpr (CanPreEval<T>)
@@ -46,7 +50,7 @@ namespace RC::GUI::Filter
         }
     }
 
-    template<typename T, typename... Ts>
+    template <typename T, typename... Ts>
     auto eval_pre_search_filters(Types<T, Ts...>&, UObject* object) -> bool
     {
         auto eval_next_filters = [&] {
@@ -71,7 +75,7 @@ namespace RC::GUI::Filter
         }
     }
 
-    template<typename T>
+    template <typename T>
     auto eval_post_search_filters(Types<T>&, UObject* object) -> bool
     {
         if constexpr (CanPostEval<T>)
@@ -84,7 +88,7 @@ namespace RC::GUI::Filter
         }
     }
 
-    template<typename T, typename... Ts>
+    template <typename T, typename... Ts>
     auto eval_post_search_filters(Types<T, Ts...>&, UObject* object) -> bool
     {
         auto eval_next_filters = [&] {
@@ -109,19 +113,21 @@ namespace RC::GUI::Filter
         }
     }
 
-#define APPLY_PRE_SEARCH_FILTERS(Filters) \
-if (eval_pre_search_filters(Filters, object)) { return true; }
+#define APPLY_PRE_SEARCH_FILTERS(Filters)                                                                                                                      \
+    if (eval_pre_search_filters(Filters, object))                                                                                                              \
+    {                                                                                                                                                          \
+        return true;                                                                                                                                           \
+    }
 
-#define APPLY_POST_SEARCH_FILTERS(Filters) \
-if (eval_post_search_filters(Filters, object)) { return true; }
+#define APPLY_POST_SEARCH_FILTERS(Filters)                                                                                                                     \
+    if (eval_post_search_filters(Filters, object))                                                                                                             \
+    {                                                                                                                                                          \
+        return true;                                                                                                                                           \
+    }
 
     static auto is_instance(UObject* object) -> bool
     {
-        return !object->HasAnyFlags(static_cast<EObjectFlags>(RF_ClassDefaultObject | RF_ArchetypeObject)) &&
-               !object->IsA<UStruct>() &&
-               !object->IsA<UField>() &&
-               !object->IsA<UPackage>();
+        return !object->HasAnyFlags(static_cast<EObjectFlags>(RF_ClassDefaultObject | RF_ArchetypeObject)) && !object->IsA<UStruct>() &&
+               !object->IsA<UField>() && !object->IsA<UPackage>();
     }
-}
-
-
+} // namespace RC::GUI::Filter

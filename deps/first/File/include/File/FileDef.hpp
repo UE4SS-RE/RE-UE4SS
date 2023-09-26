@@ -18,6 +18,4 @@ namespace RC::File
 #endif
 #endif
 
-}
-
-
+} // namespace RC::File

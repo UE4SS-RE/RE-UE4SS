@@ -4,7 +4,9 @@
 
 namespace RC::LuaType
 {
-    AActor::AActor(Unreal::AActor* object) : UObjectBase<Unreal::AActor, AActorName>(object) {}
+    AActor::AActor(Unreal::AActor* object) : UObjectBase<Unreal::AActor, AActorName>(object)
+    {
+    }
 
     auto AActor::construct(const LuaMadeSimple::Lua& lua, Unreal::AActor* unreal_object) -> const LuaMadeSimple::Lua::Table
     {
@@ -46,7 +48,7 @@ namespace RC::LuaType
         // AActor has no metamethods
     }
 
-    template<LuaMadeSimple::Type::IsFinal is_final>
+    template <LuaMadeSimple::Type::IsFinal is_final>
     auto AActor::setup_member_functions(const LuaMadeSimple::Lua::Table& table) -> void
     {
         table.add_pair("GetWorld", [](const LuaMadeSimple::Lua& lua) -> int {
@@ -88,7 +90,7 @@ namespace RC::LuaType
 
             // If this is the final object then we also want to finalize creating the table
             // If not then it's the responsibility of the overriding object to call 'make_global()'
-            //table.make_global(ClassName::ToString());
+            // table.make_global(ClassName::ToString());
         }
     }
-}
+} // namespace RC::LuaType

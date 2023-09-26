@@ -1,18 +1,18 @@
 #include <GUI/BPMods.hpp>
 
 #include <limits>
-#include <vector>
 #include <unordered_map>
+#include <vector>
 
 #include <DynamicOutput/DynamicOutput.hpp>
-#include <Helpers/String.hpp>
 #include <GUI/ImGuiUtility.hpp>
-#include <Unreal/UObjectGlobals.hpp>
-#include <Unreal/UClass.hpp>
+#include <Helpers/String.hpp>
 #include <Unreal/AActor.hpp>
 #include <Unreal/FString.hpp>
-#include <Unreal/TArray.hpp>
 #include <Unreal/ReflectedFunction.hpp>
+#include <Unreal/TArray.hpp>
+#include <Unreal/UClass.hpp>
+#include <Unreal/UObjectGlobals.hpp>
 
 #include <imgui.h>
 
@@ -22,17 +22,20 @@ namespace RC::GUI::BPMods
 
     class ModActor : public AActor
     {
-    public:
+      public:
         struct ModMenuButtonPressed_Params
         {
             int32_t Index; // 0x0
         };
 
-    public:
+      public:
         auto ModMenuButtonPressed(int32_t Index) -> void
         {
             auto Function = GetFunctionByNameInChain(STR("ModMenuButtonPressed"));
-            if (!Function) { return; }
+            if (!Function)
+            {
+                return;
+            }
 
             ModMenuButtonPressed_Params Params{Index};
             ProcessEvent(Function, &Params);
@@ -52,7 +55,7 @@ namespace RC::GUI::BPMods
     auto render() -> void
     {
         static auto mod_actor_name = FName(STR("ModActor_C"), FNAME_Add);
-        
+
         std::vector<UObject*> mod_actors{};
         UObjectGlobals::FindAllOf(mod_actor_name, mod_actors);
         for (size_t i = 0; i < mod_actors.size(); ++i)
@@ -70,7 +73,8 @@ namespace RC::GUI::BPMods
 
             static auto mod_description_name = FName(STR("ModDescription"), FNAME_Add);
             auto mod_description_property = mod_class->FindProperty(mod_description_name);
-            mod_info.ModDescription = mod_description_property ? to_string(mod_description_property->ContainerPtrToValuePtr<FString>(mod_actor)->GetCharArray()) : "Unknown";
+            mod_info.ModDescription =
+                    mod_description_property ? to_string(mod_description_property->ContainerPtrToValuePtr<FString>(mod_actor)->GetCharArray()) : "Unknown";
 
             static auto mod_version_name = FName(STR("ModVersion"), FNAME_Add);
             auto mod_version_property = mod_class->FindProperty(mod_version_name);
@@ -102,13 +106,16 @@ namespace RC::GUI::BPMods
                     ImGui::Indent();
                     for (size_t i2 = 0; i2 < mod_info.ModButtons.size(); ++i2)
                     {
-                            if (i2 > std::numeric_limits<int32_t>::max()) { continue; }
-                            const auto& mod_button = mod_info.ModButtons[i2];
-                            if (ImGui::Button(std::format("{}", mod_button).c_str()))
-                            {
-                                Output::send(STR("Mod button {} hit.\n"), to_wstring(mod_button));
-                                mod_info.ModActor->ModMenuButtonPressed(static_cast<int32_t>(i2));
-                            }
+                        if (i2 > std::numeric_limits<int32_t>::max())
+                        {
+                            continue;
+                        }
+                        const auto& mod_button = mod_info.ModButtons[i2];
+                        if (ImGui::Button(std::format("{}", mod_button).c_str()))
+                        {
+                            Output::send(STR("Mod button {} hit.\n"), to_wstring(mod_button));
+                            mod_info.ModActor->ModMenuButtonPressed(static_cast<int32_t>(i2));
+                        }
                     }
                     ImGui::Unindent();
                 }
@@ -117,4 +124,4 @@ namespace RC::GUI::BPMods
             }
         }
     }
-}
+} // namespace RC::GUI::BPMods

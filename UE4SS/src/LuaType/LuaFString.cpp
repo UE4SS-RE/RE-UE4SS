@@ -1,12 +1,14 @@
-#include <LuaType/LuaFString.hpp>
 #include <Helpers/String.hpp>
-#pragma warning(disable: 4005)
+#include <LuaType/LuaFString.hpp>
+#pragma warning(disable : 4005)
 #include <Unreal/FString.hpp>
-#pragma warning(default: 4005)
+#pragma warning(default : 4005)
 
 namespace RC::LuaType
 {
-    FString::FString( Unreal::FString* object) : RemoteObjectBase<Unreal::FString, FStringName>(object) {}
+    FString::FString(Unreal::FString* object) : RemoteObjectBase<Unreal::FString, FStringName>(object)
+    {
+    }
 
     auto FString::construct(const LuaMadeSimple::Lua& lua, Unreal::FString* unreal_object) -> const LuaMadeSimple::Lua::Table
     {
@@ -41,12 +43,12 @@ namespace RC::LuaType
         return table;
     }
 
-    auto FString::setup_metamethods([[maybe_unused]]BaseObject& base_object) -> void
+    auto FString::setup_metamethods([[maybe_unused]] BaseObject& base_object) -> void
     {
         // FString has no metamethods
     }
 
-    template<LuaMadeSimple::Type::IsFinal is_final>
+    template <LuaMadeSimple::Type::IsFinal is_final>
     auto FString::setup_member_functions(const LuaMadeSimple::Lua::Table& table) -> void
     {
         table.add_pair("ToString", [](const LuaMadeSimple::Lua& lua) -> int {
@@ -82,7 +84,7 @@ namespace RC::LuaType
 
             // If this is the final object then we also want to finalize creating the table
             // If not then it's the responsibility of the overriding object to call 'make_global()'
-            //table.make_global(ClassName::ToString());
+            // table.make_global(ClassName::ToString());
         }
     }
-}
+} // namespace RC::LuaType

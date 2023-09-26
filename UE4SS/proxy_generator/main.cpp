@@ -2,36 +2,38 @@
 #include <File/File.hpp>
 
 #include <filesystem>
-#include <vector>
-#include <string>
-#include <set>
-#include <iostream>
-#include <fstream>
 #include <format>
+#include <fstream>
+#include <iostream>
+#include <set>
+#include <string>
+#include <vector>
 
 #define WIN32_LEAN_AND_MEAN
 #define NOMINMAX
-#include <Windows.h>
 #include <ImageHlp.h>
+#include <Windows.h>
 #include <tchar.h>
 
 using namespace RC;
 namespace fs = std::filesystem;
 
-using std::cout;
 using std::cerr;
+using std::cout;
 using std::endl;
 using std::ofstream;
 
 using std::string;
 
-struct ExportFunction {
+struct ExportFunction
+{
     uint16_t ordinal;
     bool is_named;
     string name;
 
     ExportFunction(uint16_t ordinal, bool is_named, string name) : ordinal(ordinal), is_named(is_named), name(name)
-    {}
+    {
+    }
 };
 
 std::vector<ExportFunction> DumpExports(const fs::path& dll_path)
@@ -39,18 +41,19 @@ std::vector<ExportFunction> DumpExports(const fs::path& dll_path)
     auto dll_file = File::open(dll_path);
     const auto dll_file_map = dll_file.memory_map();
 
-    ULONG export_directory_size = 0; 
-    IMAGE_EXPORT_DIRECTORY* export_directory = (IMAGE_EXPORT_DIRECTORY*)ImageDirectoryEntryToData(dll_file_map.data(), FALSE, IMAGE_DIRECTORY_ENTRY_EXPORT, &export_directory_size);
+    ULONG export_directory_size = 0;
+    IMAGE_EXPORT_DIRECTORY* export_directory =
+            (IMAGE_EXPORT_DIRECTORY*)ImageDirectoryEntryToData(dll_file_map.data(), FALSE, IMAGE_DIRECTORY_ENTRY_EXPORT, &export_directory_size);
 
-    if (export_directory == nullptr) 
-    { 
+    if (export_directory == nullptr)
+    {
         cerr << std::format("Failed to get export directory, reason: {:x}", GetLastError()) << endl;
         return {};
     }
 
     IMAGE_DOS_HEADER* dos_header = (IMAGE_DOS_HEADER*)dll_file_map.data();
     IMAGE_NT_HEADERS* nt_header = (IMAGE_NT_HEADERS*)(dll_file_map.data() + dos_header->e_lfanew);
-    
+
     DWORD* name_rvas = (DWORD*)ImageRvaToVa(nt_header, dll_file_map.data(), export_directory->AddressOfNames, NULL);
     DWORD* function_rvas = (DWORD*)ImageRvaToVa(nt_header, dll_file_map.data(), export_directory->AddressOfFunctions, NULL);
     uint16_t* ordinals = (uint16_t*)ImageRvaToVa(nt_header, dll_file_map.data(), export_directory->AddressOfNameOrdinals, NULL);
@@ -87,7 +90,7 @@ std::vector<ExportFunction> DumpExports(const fs::path& dll_path)
 int _tmain(int argc, TCHAR* argv[])
 {
     if (argc != 3)
-    { 
+    {
         cerr << "Invalid arguments! Expected: proxy_generator.exe <input_dll_name> <output_path>" << endl;
         return -1;
     }
@@ -127,7 +130,7 @@ int _tmain(int argc, TCHAR* argv[])
         asm_file << std::format("  jmp mProcs[8*{}]", index) << endl;
         asm_file << std::format("f{} endp", index) << endl;
     }
-    
+
     asm_file << "end" << endl;
     asm_file.close();
 
@@ -187,11 +190,10 @@ int _tmain(int argc, TCHAR* argv[])
     cpp_file << "    }" << endl;
     cpp_file << "    return TRUE;" << endl;
     cpp_file << "}" << endl;
-    
+
     cpp_file.close();
 
     cout << "Finished generating!" << endl;
 
     return 0;
 }
-

@@ -1,8 +1,8 @@
 #pragma once
 
-#include <ProtoParser/Tokenizer.hpp>
-#include <ProtoParser/TokenParser.hpp>
 #include <ProtoParser/Token.hpp>
+#include <ProtoParser/TokenParser.hpp>
+#include <ProtoParser/Tokenizer.hpp>
 
 namespace RC::Parser::Experimental
 {
@@ -23,7 +23,7 @@ namespace RC::Parser::Experimental
 
     class RuleOne : public Parser::TokenRule
     {
-    public:
+      public:
         [[nodiscard]] auto to_string() const -> std::wstring override
         {
             return L"RuleOne";
@@ -32,8 +32,10 @@ namespace RC::Parser::Experimental
 
     class TokenMustEndWithOppositeToken : public Parser::TokenRule
     {
-    public:
-        TokenMustEndWithOppositeToken() : TokenRule(L"TokenMustEndWithOppositeToken") {}
+      public:
+        TokenMustEndWithOppositeToken() : TokenRule(L"TokenMustEndWithOppositeToken")
+        {
+        }
 
         auto exec(const Parser::Token& token, const wchar_t* start_of_token, size_t current_cursor_location, Tokenizer& tokenizer) -> int override
         {
@@ -49,8 +51,10 @@ namespace RC::Parser::Experimental
 
     class TokenMustHaveCharsBeforeEnd : public Parser::TokenRule
     {
-    public:
-        TokenMustHaveCharsBeforeEnd() : TokenRule(L"TokenMustHaveCharsBeforeEnd") {}
+      public:
+        TokenMustHaveCharsBeforeEnd() : TokenRule(L"TokenMustHaveCharsBeforeEnd")
+        {
+        }
 
         auto exec(const Parser::Token& token, const wchar_t* start_of_token, size_t current_cursor_location, Tokenizer& tokenizer) -> int override
         {
@@ -66,7 +70,7 @@ namespace RC::Parser::Experimental
 
     class ExperimentalTokenParser : public Parser::TokenParser
     {
-    public:
+      public:
         struct Value
         {
             // Always use "ref->value" instead of "value"
@@ -81,7 +85,7 @@ namespace RC::Parser::Experimental
             std::unordered_map<std::wstring, Value> key_value_pairs{};
         };
 
-    private:
+      private:
         using SectionContainer = std::unordered_map<std::wstring, Section>;
         SectionContainer& m_output;
         Section* m_current_section{};
@@ -89,15 +93,17 @@ namespace RC::Parser::Experimental
         Value* m_variable_to_assign_to{};
         std::wstring m_temporary{};
 
-    public:
-        ExperimentalTokenParser(const Parser::Tokenizer& tokenizer, std::wstring input, std::unordered_map<std::wstring, Section>& output) : TokenParser(tokenizer, input),
-                                                                                                                                             m_output(output) {}
+      public:
+        ExperimentalTokenParser(const Parser::Tokenizer& tokenizer, std::wstring input, std::unordered_map<std::wstring, Section>& output)
+            : TokenParser(tokenizer, input), m_output(output)
+        {
+        }
 
-    public:
+      public:
         auto static find_variable_by_name(Section* section, const std::wstring& name) -> std::optional<std::reference_wrapper<Value>>;
         auto static find_variable_by_name(SectionContainer& sections, const std::wstring& name) -> std::optional<std::reference_wrapper<Value>>;
 
-    private:
+      private:
         auto find_variable_by_name(const std::wstring& name) -> std::optional<std::reference_wrapper<Value>>;
         auto try_set_section_value(Value& pair_value, const Parser::Token& token, bool is_space_valid = true) -> void;
         auto handle_operator_equals(const Parser::Token& token) -> void;
@@ -105,28 +111,26 @@ namespace RC::Parser::Experimental
         auto handle_opening_square_bracket(const Parser::Token& token) -> void;
         auto handle_single_line_comment() -> void;
 
-    protected:
+      protected:
         auto parse_token(const Parser::Token& token) -> void override;
 
-    public:
+      public:
     };
 
     class ExperimentalParser
     {
-    private:
+      private:
         std::unordered_map<std::wstring, ExperimentalTokenParser::Section> m_sections;
 
-    public:
+      public:
         ExperimentalParser(const std::wstring& input);
 
-    private:
+      private:
         auto create_available_tokens_for_tokenizer() -> Parser::TokenContainer;
 
-    public:
+      public:
         auto get_string(const std::wstring& section, const std::wstring& key, const std::wstring& default_value) -> std::wstring;
     };
 
     auto test() -> void;
-}
-
-
+} // namespace RC::Parser::Experimental

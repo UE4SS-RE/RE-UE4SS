@@ -1,27 +1,31 @@
 #include <algorithm>
 #include <cwctype>
-#include <string>
 #include <format>
 #include <stdexcept>
+#include <string>
 
+#include <Helpers/String.hpp>
 #include <JSON/Parser/TokenParser.hpp>
 #include <ParserBase/Token.hpp>
-#include <Helpers/String.hpp>
 
 namespace RC::JSON::Parser
 {
-#define RC_ASSERT(Expression) \
-        if (!(Expression)) \
-        { \
-            throw std::runtime_error{"runtime assert: [" #Expression " == false]"}; \
-        }
+#define RC_ASSERT(Expression)                                                                                                                                  \
+    if (!(Expression))                                                                                                                                         \
+    {                                                                                                                                                          \
+        throw std::runtime_error{"runtime assert: [" #Expression " == false]"};                                                                                \
+    }
 
-#define RC_VERIFY_SYNTAX(Expression) \
-        if (!(Expression)) \
-        { \
-            const auto& err_token = get_token(m_current_token_index_being_parsed); \
-            throw std::runtime_error{std::format("Syntax error ({} : {}): Expected '{}' token, got '{}'.", err_token.get_line() + 1, err_token.get_column(), token_type_to_string(m_expected_token), to_string(err_token.to_string()))}; \
-        }
+#define RC_VERIFY_SYNTAX(Expression)                                                                                                                           \
+    if (!(Expression))                                                                                                                                         \
+    {                                                                                                                                                          \
+        const auto& err_token = get_token(m_current_token_index_being_parsed);                                                                                 \
+        throw std::runtime_error{std::format("Syntax error ({} : {}): Expected '{}' token, got '{}'.",                                                         \
+                                             err_token.get_line() + 1,                                                                                         \
+                                             err_token.get_column(),                                                                                           \
+                                             token_type_to_string(m_expected_token),                                                                           \
+                                             to_string(err_token.to_string()))};                                                                               \
+    }
 
     static auto is_number(StringViewType data) -> bool
     {
@@ -48,7 +52,10 @@ namespace RC::JSON::Parser
 
         // The bottom of the stack is presumed to be the global scope.
         // Never remove the global scope.
-        if (m_storage.size() <= 1) { return m_storage.back(); }
+        if (m_storage.size() <= 1)
+        {
+            return m_storage.back();
+        }
         auto& top_item = m_storage.back();
         m_storage.pop_back();
         return top_item;
@@ -61,7 +68,9 @@ namespace RC::JSON::Parser
 
     static auto has_only_spaces(const File::StringType& data) -> bool
     {
-        return std::all_of(data.begin(), data.end(), [](File::CharType c) { return std::isspace(c) || c == '\n'; });
+        return std::all_of(data.begin(), data.end(), [](File::CharType c) {
+            return std::isspace(c) || c == '\n';
+        });
     }
 
     auto TokenParser::do_comma_verification() -> void
@@ -93,7 +102,8 @@ namespace RC::JSON::Parser
             int local_peek_counter = peek_counter;
 
             const auto& token = peek(local_peek_counter);
-            if ((token.get_type() != TokenType::CarriageReturn && token.get_type() != TokenType::NewLine && token.get_type() != TokenType::Characters) || (token.has_data() && !has_only_spaces(get_data(token))))
+            if ((token.get_type() != TokenType::CarriageReturn && token.get_type() != TokenType::NewLine && token.get_type() != TokenType::Characters) ||
+                (token.has_data() && !has_only_spaces(get_data(token))))
             {
                 break;
             }
@@ -157,9 +167,12 @@ namespace RC::JSON::Parser
         {
             auto data_raw = get_data(token);
             StringType data_no_spaces = data_raw;
-            data_no_spaces.erase(std::remove_if(data_no_spaces.begin(), data_no_spaces.end(), [](wchar_t c) {
-                return std::isspace(c);
-            }), data_no_spaces.end());
+            data_no_spaces.erase(std::remove_if(data_no_spaces.begin(),
+                                                data_no_spaces.end(),
+                                                [](wchar_t c) {
+                                                    return std::isspace(c);
+                                                }),
+                                 data_no_spaces.end());
 
             auto is_valid_number = is_number(data_no_spaces);
 
@@ -289,34 +302,34 @@ namespace RC::JSON::Parser
 
         switch (token.get_type())
         {
-            case DoubleQuote:
-                handle_double_quote_token(token);
-                break;
-            case Characters:
-                handle_characters_token(token);
-                break;
-            case ClosingCurlyBrace:
-                handle_closing_curly_brace_token(token);
-                break;
-            case OpeningCurlyBrace:
-                handle_opening_curly_brace_token(token);
-                break;
-            case ClosingSquareBracket:
-                handle_closing_square_bracket_token(token);
-                break;
-            case OpeningSquareBracket:
-                handle_opening_square_bracket_token(token);
-                break;
-            case Comma:
-                handle_comma_token(token);
-                break;
-            case Colon:
-                handle_colon_token(token);
-                break;
-            case EndOfFile:
-            default:
-                // No other tokens need handling for this particular parser
-                break;
+        case DoubleQuote:
+            handle_double_quote_token(token);
+            break;
+        case Characters:
+            handle_characters_token(token);
+            break;
+        case ClosingCurlyBrace:
+            handle_closing_curly_brace_token(token);
+            break;
+        case OpeningCurlyBrace:
+            handle_opening_curly_brace_token(token);
+            break;
+        case ClosingSquareBracket:
+            handle_closing_square_bracket_token(token);
+            break;
+        case OpeningSquareBracket:
+            handle_opening_square_bracket_token(token);
+            break;
+        case Comma:
+            handle_comma_token(token);
+            break;
+        case Colon:
+            handle_colon_token(token);
+            break;
+        case EndOfFile:
+        default:
+            // No other tokens need handling for this particular parser
+            break;
         }
 
         if (!m_defer_element_creation)
@@ -336,4 +349,4 @@ namespace RC::JSON::Parser
             }
         }
     }
-}
+} // namespace RC::JSON::Parser

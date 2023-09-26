@@ -26,7 +26,7 @@ namespace RC::Ini
 
     class TokenParser : public ParserBase::TokenParser
     {
-    private:
+      private:
         using SectionContainer = std::unordered_map<File::StringType, Section>;
         SectionContainer& m_output;
         Section* m_current_section{};
@@ -34,18 +34,17 @@ namespace RC::Ini
         File::StringType m_current_character_data{};
         State m_current_state{State::StartOfFile};
 
-    public:
-        TokenParser(const ParserBase::Tokenizer& tokenizer,
-                    File::StringType& input,
-                    std::unordered_map<File::StringType, Section>& output)
-                : ParserBase::TokenParser(tokenizer, input),
-                  m_output(output) {}
+      public:
+        TokenParser(const ParserBase::Tokenizer& tokenizer, File::StringType& input, std::unordered_map<File::StringType, Section>& output)
+            : ParserBase::TokenParser(tokenizer, input), m_output(output)
+        {
+        }
 
-    public:
+      public:
         RC_INI_PARSER_API auto static find_variable_by_name(Section* section, const File::StringType& name) -> std::optional<std::reference_wrapper<Value>>;
 
-    private:
-        RC_INI_PARSER_API auto find_variable_by_name(const File::StringType& name) -> std::optional <std::reference_wrapper<Value>>;
+      private:
+        RC_INI_PARSER_API auto find_variable_by_name(const File::StringType& name) -> std::optional<std::reference_wrapper<Value>>;
         RC_INI_PARSER_API auto characters_to_string(const ParserBase::Token& characters_token) -> File::StringType;
         RC_INI_PARSER_API auto handle_opening_square_bracket_token(const ParserBase::Token& token) -> void;
         RC_INI_PARSER_API auto handle_closing_square_bracket_token(const ParserBase::Token& token) -> void;
@@ -55,9 +54,7 @@ namespace RC::Ini
         RC_INI_PARSER_API auto handle_new_line_token(const ParserBase::Token& token) -> void;
         RC_INI_PARSER_API auto handle_semi_colon_token(const ParserBase::Token& token) -> void;
 
-    protected:
+      protected:
         RC_INI_PARSER_API auto parse_token(const ParserBase::Token& token) -> void override;
     };
-}
-
-
+} // namespace RC::Ini

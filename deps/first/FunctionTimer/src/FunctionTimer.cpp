@@ -1,12 +1,16 @@
-#include <Timer/FunctionTimer.hpp>
 #include <DynamicOutput/DynamicOutput.hpp>
 #include <Helpers/String.hpp>
+#include <Timer/FunctionTimer.hpp>
 
 namespace RC
 {
 #if TIME_FUNCTION_MACRO_V2 == 0
-    FunctionTimer::FunctionTimer(std::wstring_view function_name) : m_start(std::chrono::steady_clock::now()), m_function_name(function_name) {}
-    FunctionTimer::FunctionTimer(std::string_view function_name) : m_start(std::chrono::steady_clock::now()), m_function_name(to_wstring(function_name)) {}
+    FunctionTimer::FunctionTimer(std::wstring_view function_name) : m_start(std::chrono::steady_clock::now()), m_function_name(function_name)
+    {
+    }
+    FunctionTimer::FunctionTimer(std::string_view function_name) : m_start(std::chrono::steady_clock::now()), m_function_name(to_wstring(function_name))
+    {
+    }
 
     FunctionTimer::~FunctionTimer()
     {
@@ -24,10 +28,7 @@ namespace RC
     {
         // Copy the timer to permanent storage
         // The original will get destroyed after its destructor finishes executing
-        m_timers.emplace_back(SavedFunctionTimer{
-            .function_name = timer->get_function_name(),
-            .duration = duration
-        });
+        m_timers.emplace_back(SavedFunctionTimer{.function_name = timer->get_function_name(), .duration = duration});
     }
 
     auto FunctionTimerCollection::dump() -> void
@@ -46,9 +47,9 @@ namespace RC
         }
 #endif
     }
-#else // TIME_FUNCTION_MACRO_V2 == 0
+#else  // TIME_FUNCTION_MACRO_V2 == 0
     std::vector<FunctionTimerFrame> FunctionTimerFrame::s_frame_stack{};
     std::unordered_map<std::string, size_t> FunctionTimerFrame::s_functions_on_stack{};
     bool FunctionTimerFrame::s_timer_enabled{};
 #endif // TIME_FUNCTION_MACRO_V2 == 0
-}
+} // namespace RC

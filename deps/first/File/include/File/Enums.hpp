@@ -34,6 +34,4 @@ namespace RC::File
         UnsignedLongLong,
         SignedLongLong,
     };
-}
-
-
+} // namespace RC::File

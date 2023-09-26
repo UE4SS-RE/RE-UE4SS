@@ -4,10 +4,16 @@
 
 namespace RC::GUI
 {
-    SearcherWidget::SearcherWidget(SearchModeChangedCallback ufunction_caller_search_mode_changed_callback, IteratorCallback all_iterator, IteratorCallback search_iterator, void* userdata)
+    SearcherWidget::SearcherWidget(SearchModeChangedCallback ufunction_caller_search_mode_changed_callback,
+                                   IteratorCallback all_iterator,
+                                   IteratorCallback search_iterator,
+                                   void* userdata)
     {
         m_search_by_name_buffer = new char[m_search_buffer_capacity];
-        strncpy_s(m_search_by_name_buffer, m_default_search_buffer.size() + sizeof(char), m_default_search_buffer.data(), m_default_search_buffer.size() + sizeof(char));
+        strncpy_s(m_search_by_name_buffer,
+                  m_default_search_buffer.size() + sizeof(char),
+                  m_default_search_buffer.data(),
+                  m_default_search_buffer.size() + sizeof(char));
         m_all_iterator = all_iterator;
         m_search_iterator = search_iterator;
         m_ufunction_caller_search_mode_changed_callback = ufunction_caller_search_mode_changed_callback;
@@ -39,12 +45,17 @@ namespace RC::GUI
 
     auto SearcherWidget::render() -> void
     {
-        if (ImGui::InputText("##Search by name", m_search_by_name_buffer, m_search_buffer_capacity, ImGuiInputTextFlags_EnterReturnsTrue | ImGuiInputTextFlags_CallbackAlways, &search_field_always_callback, this))
+        if (ImGui::InputText("##Search by name",
+                             m_search_by_name_buffer,
+                             m_search_buffer_capacity,
+                             ImGuiInputTextFlags_EnterReturnsTrue | ImGuiInputTextFlags_CallbackAlways,
+                             &search_field_always_callback,
+                             this))
         {
             std::string search_buffer{m_search_by_name_buffer};
             if (search_buffer.empty())
             {
-                //Output::send(STR("Search all functions\n"));
+                // Output::send(STR("Search all functions\n"));
                 m_name_to_search_by.clear();
                 m_current_iterator = m_all_iterator;
                 m_is_searching_by_name = false;
@@ -52,7 +63,7 @@ namespace RC::GUI
             }
             else
             {
-                //Output::send(STR("Search for: {}\n"), search_buffer.empty() ? STR("") : to_wstring(search_buffer));
+                // Output::send(STR("Search for: {}\n"), search_buffer.empty() ? STR("") : to_wstring(search_buffer));
                 m_name_to_search_by = search_buffer;
                 m_current_iterator = m_search_iterator;
                 m_is_searching_by_name = true;
@@ -61,7 +72,10 @@ namespace RC::GUI
         }
         if (!m_is_searching_by_name && m_search_field_clear_requested && !ImGui::IsItemActive())
         {
-            strncpy_s(m_search_by_name_buffer, m_default_search_buffer.size() + sizeof(char), m_default_search_buffer.data(), m_default_search_buffer.size() + sizeof(char));
+            strncpy_s(m_search_by_name_buffer,
+                      m_default_search_buffer.size() + sizeof(char),
+                      m_default_search_buffer.data(),
+                      m_default_search_buffer.size() + sizeof(char));
             m_search_field_clear_requested = false;
             m_search_field_cleared = false;
         }
@@ -73,4 +87,4 @@ namespace RC::GUI
             }
         }
     }
-}
+} // namespace RC::GUI

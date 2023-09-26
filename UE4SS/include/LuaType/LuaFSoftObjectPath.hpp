@@ -5,26 +5,28 @@
 
 namespace RC::LuaType
 {
-    struct FSoftObjectPathName { constexpr static const char* ToString() { return "FSoftObjectPath"; }};
+    struct FSoftObjectPathName
+    {
+        constexpr static const char* ToString()
+        {
+            return "FSoftObjectPath";
+        }
+    };
     class FSoftObjectPath : public LocalObjectBase<Unreal::FSoftObjectPath, FSoftObjectPathName>
     {
-    private:
+      private:
         explicit FSoftObjectPath(Unreal::FSoftObjectPath& object);
 
-    public:
+      public:
         FSoftObjectPath() = delete;
         auto static construct(const LuaMadeSimple::Lua&, Unreal::FSoftObjectPath&) -> const LuaMadeSimple::Lua::Table;
         auto static construct(const LuaMadeSimple::Lua&, BaseObject&) -> const LuaMadeSimple::Lua::Table;
 
-    private:
+      private:
         auto static setup_metamethods(BaseObject&) -> void;
 
-    private:
-        template<LuaMadeSimple::Type::IsFinal is_final>
+      private:
+        template <LuaMadeSimple::Type::IsFinal is_final>
         auto static setup_member_functions(LuaMadeSimple::Lua::Table&, std::string_view) -> void;
     };
-}
-
-
-
-
+} // namespace RC::LuaType

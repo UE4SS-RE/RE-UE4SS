@@ -1,13 +1,15 @@
-#include <LuaType/LuaFOutputDevice.hpp>
 #include <Helpers/String.hpp>
+#include <LuaType/LuaFOutputDevice.hpp>
 
-#pragma warning(disable: 4005)
+#pragma warning(disable : 4005)
 #include <Unreal/FOutputDevice.hpp>
-#pragma warning(default: 4005)
+#pragma warning(default : 4005)
 
 namespace RC::LuaType
 {
-    FOutputDevice::FOutputDevice(Unreal::FOutputDevice* object) : RemoteObjectBase<Unreal::FOutputDevice, FOutputDeviceName>(object) {}
+    FOutputDevice::FOutputDevice(Unreal::FOutputDevice* object) : RemoteObjectBase<Unreal::FOutputDevice, FOutputDeviceName>(object)
+    {
+    }
 
     auto FOutputDevice::construct(const LuaMadeSimple::Lua& lua, Unreal::FOutputDevice* unreal_object) -> const LuaMadeSimple::Lua::Table
     {
@@ -41,12 +43,12 @@ namespace RC::LuaType
         return table;
     }
 
-    auto FOutputDevice::setup_metamethods([[maybe_unused]]BaseObject& base_object) -> void
+    auto FOutputDevice::setup_metamethods([[maybe_unused]] BaseObject& base_object) -> void
     {
         // FOutputDevice has no metamethods
     }
 
-    template<LuaMadeSimple::Type::IsFinal is_final>
+    template <LuaMadeSimple::Type::IsFinal is_final>
     auto FOutputDevice::setup_member_functions(const LuaMadeSimple::Lua::Table& table) -> void
     {
         table.add_pair("Log", [](const LuaMadeSimple::Lua& lua) -> int {
@@ -77,7 +79,7 @@ Overloads:
 
             // If this is the final object then we also want to finalize creating the table
             // If not then it's the responsibility of the overriding object to call 'make_global()'
-            //table.make_global(ClassName::ToString());
+            // table.make_global(ClassName::ToString());
         }
     }
-}
+} // namespace RC::LuaType

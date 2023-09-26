@@ -2,14 +2,14 @@
 
 #include <stdexcept>
 
-#include <Helpers/String.hpp>
 #include <DynamicOutput/DynamicOutput.hpp>
+#include <Helpers/String.hpp>
 
 namespace RC
 {
     // Will try some code and properly propagate any exceptions
     // This is a simple helper function to avoid having 15 extra lines of code everywhere
-    template<typename CodeToTry>
+    template <typename CodeToTry>
     auto constexpr TRY(CodeToTry code_to_try)
     {
         try
@@ -34,6 +34,4 @@ namespace RC
             }
         }
     }
-}
-
-
+} // namespace RC

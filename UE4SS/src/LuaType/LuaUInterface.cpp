@@ -1,12 +1,15 @@
-#include <LuaType/LuaUInterface.hpp>
-#include <LuaType/LuaUFunction.hpp>
-#include <Unreal/UInterface.hpp>
-#include <Unreal/UFunction.hpp>
 #include <DynamicOutput/Output.hpp>
+#include <LuaType/LuaUFunction.hpp>
+#include <LuaType/LuaUInterface.hpp>
+#include <Unreal/UFunction.hpp>
+#include <Unreal/UInterface.hpp>
 
 namespace RC::LuaType
 {
-    UInterface::UInterface(Unreal::UInterface* object) : UObjectBase<Unreal::UInterface, UInterfaceName>(object) /*LuaMadeSimple::Type::RemoteObject<Unreal::UInterface>("UInterface", object)*/ {}
+    UInterface::UInterface(Unreal::UInterface* object)
+        : UObjectBase<Unreal::UInterface, UInterfaceName>(object) /*LuaMadeSimple::Type::RemoteObject<Unreal::UInterface>("UInterface", object)*/
+    {
+    }
 
     auto UInterface::construct(const LuaMadeSimple::Lua& lua, Unreal::UInterface* unreal_object) -> const LuaMadeSimple::Lua::Table
     {
@@ -43,12 +46,12 @@ namespace RC::LuaType
         return table;
     }
 
-    auto UInterface::setup_metamethods([[maybe_unused]]BaseObject& base_object) -> void
+    auto UInterface::setup_metamethods([[maybe_unused]] BaseObject& base_object) -> void
     {
         // UInterface has no metamethods
     }
 
-    template<LuaMadeSimple::Type::IsFinal is_final>
+    template <LuaMadeSimple::Type::IsFinal is_final>
     auto UInterface::setup_member_functions(const LuaMadeSimple::Lua::Table& table) -> void
     {
         Super::setup_member_functions<LuaMadeSimple::Type::IsFinal::No>(table);
@@ -62,7 +65,7 @@ namespace RC::LuaType
 
             // If this is the final object then we also want to finalize creating the table
             // If not then it's the responsibility of the overriding object to call 'make_global()'
-            //table.make_global(ClassName::ToString());
+            // table.make_global(ClassName::ToString());
         }
     }
-}
+} // namespace RC::LuaType

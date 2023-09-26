@@ -4,7 +4,9 @@ struct lua_State;
 
 namespace RC
 {
-    struct MemoryItem {};
+    struct MemoryItem
+    {
+    };
 
     // Native functions
     auto AllocateMemory(size_t size) -> MemoryItem*;
@@ -30,6 +32,4 @@ namespace RC
     auto lua_Test_WriteInt16_wrapper(lua_State* lua_state) -> int;
     auto lua_Test_WriteInt32_wrapper(lua_State* lua_state) -> int;
     auto lua_Test_WriteInt64_wrapper(lua_State* lua_state) -> int;
-}
-
-
+} // namespace RC

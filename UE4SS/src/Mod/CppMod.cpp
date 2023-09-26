@@ -57,7 +57,10 @@ namespace RC
         {
             if (!Output::has_internal_error())
             {
-                Output::send<LogLevel::Warning>(STR("Failed to load dll <{}> for mod {}, because: {}\n"), m_dlls_path + L"\\main.dll\n", m_mod_name, to_wstring(e.what()));
+                Output::send<LogLevel::Warning>(STR("Failed to load dll <{}> for mod {}, because: {}\n"),
+                                                m_dlls_path + L"\\main.dll\n",
+                                                m_mod_name,
+                                                to_wstring(e.what()));
             }
             else
             {
@@ -69,39 +72,59 @@ namespace RC
     auto CppMod::uninstall() -> void
     {
         Output::send(STR("Stopping C++ mod '{}' for uninstall\n"), m_mod_name);
-        if (m_mod && m_uninstall_mod_func) { m_uninstall_mod_func(m_mod); }
+        if (m_mod && m_uninstall_mod_func)
+        {
+            m_uninstall_mod_func(m_mod);
+        }
     }
 
-    auto CppMod::fire_on_lua_start(LuaMadeSimple::Lua& lua, LuaMadeSimple::Lua& main_lua, LuaMadeSimple::Lua& async_lua, std::vector<LuaMadeSimple::Lua*>& hook_luas) -> void
+    auto CppMod::fire_on_lua_start(LuaMadeSimple::Lua& lua, LuaMadeSimple::Lua& main_lua, LuaMadeSimple::Lua& async_lua, std::vector<LuaMadeSimple::Lua*>& hook_luas)
+            -> void
     {
-        if (m_mod) { m_mod->on_lua_start(lua, main_lua, async_lua, hook_luas); }
+        if (m_mod)
+        {
+            m_mod->on_lua_start(lua, main_lua, async_lua, hook_luas);
+        }
     }
 
     auto CppMod::fire_unreal_init() -> void
     {
-        if (m_mod) { m_mod->on_unreal_init(); }
+        if (m_mod)
+        {
+            m_mod->on_unreal_init();
+        }
     }
 
     auto CppMod::fire_program_start() -> void
     {
-        if (m_mod) { m_mod->on_program_start(); }
+        if (m_mod)
+        {
+            m_mod->on_program_start();
+        }
     }
 
     auto CppMod::fire_update() -> void
     {
-        if (m_mod) { m_mod->on_update(); }
+        if (m_mod)
+        {
+            m_mod->on_update();
+        }
     }
 
     auto CppMod::fire_dll_load(std::wstring_view dll_name) -> void
     {
-        if (m_mod) { m_mod->on_dll_load(dll_name); }
+        if (m_mod)
+        {
+            m_mod->on_dll_load(dll_name);
+        }
     }
 
     CppMod::~CppMod()
     {
-        if (m_main_dll_module) { 
-            FreeLibrary(m_main_dll_module); 
+        if (m_main_dll_module)
+        {
+            FreeLibrary(m_main_dll_module);
             RemoveDllDirectory(m_dlls_path_cookie);
         }
     }
-}
+} // namespace RC

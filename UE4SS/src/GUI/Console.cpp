@@ -1,10 +1,10 @@
-#include <memory>
 #include <ctype.h>
+#include <memory>
 
+#include <DynamicOutput/DynamicOutput.hpp>
 #include <GUI/Console.hpp>
 #include <GUI/GUI.hpp>
 #include <GUI/ImGuiUtility.hpp>
-#include <DynamicOutput/DynamicOutput.hpp>
 #include <UE4SSProgram.hpp>
 
 #include <imgui_internal.h>
@@ -36,29 +36,29 @@ namespace RC::GUI
 
     auto Console::GetPalette() const -> const TextEditor::Palette&
     {
-        const static TextEditor::Palette p = { {
-                ImGui::ColorConvertFloat4ToU32(ImVec4{0.800f, 0.800f, 0.800f, 1.0f}),	// Default
-                0xffd69c56,	// Keyword
-                0xff00ff00,	// Number
-                0xff7070e0,	// String
-                0xff70a0e0, // Char literal
-                0xffffffff, // Punctuation
-                0xff408080,	// Preprocessor
-                0xffaaaaaa, // Identifier
-                0xff9bc64d, // Known identifier
-                0xffc040a0, // Preproc identifier
-                0xff206020, // Comment (single line)
-                0xff406020, // Comment (multi line)
+        const static TextEditor::Palette p = {{
+                ImGui::ColorConvertFloat4ToU32(ImVec4{0.800f, 0.800f, 0.800f, 1.0f}), // Default
+                0xffd69c56,                                                           // Keyword
+                0xff00ff00,                                                           // Number
+                0xff7070e0,                                                           // String
+                0xff70a0e0,                                                           // Char literal
+                0xffffffff,                                                           // Punctuation
+                0xff408080,                                                           // Preprocessor
+                0xffaaaaaa,                                                           // Identifier
+                0xff9bc64d,                                                           // Known identifier
+                0xffc040a0,                                                           // Preproc identifier
+                0xff206020,                                                           // Comment (single line)
+                0xff406020,                                                           // Comment (multi line)
                 ImGui::ColorConvertFloat4ToU32(ImVec4{0.156f, 0.156f, 0.156f, 1.0f}), // Background
-                0xffe0e0e0, // Cursor
-                0x80a06020, // Selection
-                0x800020ff, // ErrorMarker
-                0x40f08000, // Breakpoint
-                0xff707000, // Line number
-                0x40000000, // Current line fill
-                0x40808080, // Current line fill (inactive)
-                0x40a0a0a0, // Current line edge
-        } };
+                0xffe0e0e0,                                                           // Cursor
+                0x80a06020,                                                           // Selection
+                0x800020ff,                                                           // ErrorMarker
+                0x40f08000,                                                           // Breakpoint
+                0xff707000,                                                           // Line number
+                0x40000000,                                                           // Current line fill
+                0x40808080,                                                           // Current line fill (inactive)
+                0x40a0a0a0,                                                           // Current line edge
+        }};
         return p;
     }
 
@@ -98,17 +98,16 @@ namespace RC::GUI
         }
 
         const float footer_height_to_reserve = (ImGui::GetStyle().ItemSpacing.y * 10.0f) + ImGui::GetFrameHeightWithSpacing();
-        ImGui_InputTextMultiline_WithAutoScroll("##consolebuffer", console_buffer.data(), console_buffer.size() + 1, {-10, -footer_height_to_reserve}, ImGuiInputTextFlags_ReadOnly, nullptr, nullptr, &m_previous_max_scroll_y);
-        m_current_console_output_width = ImGui::CalcItemWidth();
+        ImGui_InputTextMultiline_WithAutoScroll("##consolebuffer", console_buffer.data(), console_buffer.size() + 1, {-10, -footer_height_to_reserve},
+        ImGuiInputTextFlags_ReadOnly, nullptr, nullptr, &m_previous_max_scroll_y); m_current_console_output_width = ImGui::CalcItemWidth();
 
         ImGui::Separator();
 
         ImGui::BeginDisabled(true);
         bool reclaim_focus{};
-        ImGuiInputTextFlags input_text_flags = ImGuiInputTextFlags_EnterReturnsTrue | ImGuiInputTextFlags_CallbackCompletion | ImGuiInputTextFlags_CallbackHistory;
-        auto text_edit_callback_wrapper = [](ImGuiInputTextCallbackData* data) -> int {
-            Console* console = static_cast<Console*>(data->UserData);
-            Output::send(STR("text_edit_callback_wrapper\n"));
+        ImGuiInputTextFlags input_text_flags = ImGuiInputTextFlags_EnterReturnsTrue | ImGuiInputTextFlags_CallbackCompletion |
+        ImGuiInputTextFlags_CallbackHistory; auto text_edit_callback_wrapper = [](ImGuiInputTextCallbackData* data) -> int { Console* console =
+        static_cast<Console*>(data->UserData); Output::send(STR("text_edit_callback_wrapper\n"));
             //return console->text_edit_callback(data);
             return 0;
         };
@@ -143,27 +142,26 @@ namespace RC::GUI
         m_filter.Draw("Search log", 200);
     }
 
-
     static auto LogLevel_to_ImColor(Color::Color color) -> std::pair<ImColor, ImColor>
     {
         switch (color)
         {
-            case Color::Default:
-                return {g_imgui_text_editor_default_bg_color, g_imgui_text_editor_default_text_color};
-            case Color::NoColor:
-                return {g_imgui_text_editor_normal_bg_color, g_imgui_text_editor_normal_text_color};
-            case Color::Cyan:
-                return {g_imgui_text_editor_verbose_bg_color, g_imgui_text_editor_verbose_text_color};
-            case Color::Yellow:
-                return {g_imgui_text_editor_warning_bg_color, g_imgui_text_editor_warning_text_color};
-            case Color::Red:
-                return {g_imgui_text_editor_error_bg_color, g_imgui_text_editor_error_text_color};                
-            case Color::Green:
-                return {g_imgui_text_editor_default_bg_color, g_imgui_text_green_color};
-            case Color::Blue:
-                return {g_imgui_text_editor_default_bg_color, g_imgui_text_blue_color};
-            case Color::Purple:
-                return {g_imgui_text_editor_default_bg_color, g_imgui_text_purple_color};
+        case Color::Default:
+            return {g_imgui_text_editor_default_bg_color, g_imgui_text_editor_default_text_color};
+        case Color::NoColor:
+            return {g_imgui_text_editor_normal_bg_color, g_imgui_text_editor_normal_text_color};
+        case Color::Cyan:
+            return {g_imgui_text_editor_verbose_bg_color, g_imgui_text_editor_verbose_text_color};
+        case Color::Yellow:
+            return {g_imgui_text_editor_warning_bg_color, g_imgui_text_editor_warning_text_color};
+        case Color::Red:
+            return {g_imgui_text_editor_error_bg_color, g_imgui_text_editor_error_text_color};
+        case Color::Green:
+            return {g_imgui_text_editor_default_bg_color, g_imgui_text_green_color};
+        case Color::Blue:
+            return {g_imgui_text_editor_default_bg_color, g_imgui_text_blue_color};
+        case Color::Purple:
+            return {g_imgui_text_editor_default_bg_color, g_imgui_text_purple_color};
         }
 
         throw std::runtime_error{"[LogLevel_to_ImColor] Unhandled log_level"};
@@ -176,8 +174,14 @@ namespace RC::GUI
         {
             throw std::runtime_error{"Somehow we negative amount of lines in the console"};
         }
-        if (static_cast<size_t>(m_text_editor.GetTotalLines()) >= m_maximum_num_lines) { m_text_editor.ClearLines(); }
-        if (m_lines.size() >= m_maximum_num_lines) { m_lines.clear(); }
+        if (static_cast<size_t>(m_text_editor.GetTotalLines()) >= m_maximum_num_lines)
+        {
+            m_text_editor.ClearLines();
+        }
+        if (m_lines.size() >= m_maximum_num_lines)
+        {
+            m_lines.clear();
+        }
         if (color != Color::Default && color != Color::NoColor)
         {
             m_text_editor.GetLineColorMarkers().emplace(m_text_editor.GetTotalLines() + 1, LogLevel_to_ImColor(color));
@@ -194,8 +198,14 @@ namespace RC::GUI
         {
             throw std::runtime_error{"Somehow we negative amount of lines in the console"};
         }
-        if (static_cast<size_t>(m_text_editor.GetTotalLines()) >= m_maximum_num_lines) { m_text_editor.ClearLines(); }
-        if (m_lines.size() >= m_maximum_num_lines) { m_lines.clear(); }
+        if (static_cast<size_t>(m_text_editor.GetTotalLines()) >= m_maximum_num_lines)
+        {
+            m_text_editor.ClearLines();
+        }
+        if (m_lines.size() >= m_maximum_num_lines)
+        {
+            m_lines.clear();
+        }
         if (color != Color::Default && color != Color::NoColor)
         {
             m_text_editor.GetLineColorMarkers().emplace(m_text_editor.GetTotalLines() + 1, LogLevel_to_ImColor(color));
@@ -203,4 +213,4 @@ namespace RC::GUI
         m_lines.emplace_back(ansi_string);
         m_text_editor.AddTextLine(ansi_string);
     }
-}
+} // namespace RC::GUI

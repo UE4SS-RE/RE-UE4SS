@@ -1,13 +1,15 @@
-#include <LuaType/LuaXStructProperty.hpp>
 #include <LuaType/LuaUObject.hpp>
 #include <LuaType/LuaUScriptStruct.hpp>
-#pragma warning(disable: 4005)
+#include <LuaType/LuaXStructProperty.hpp>
+#pragma warning(disable : 4005)
 #include <Unreal/Property/FStructProperty.hpp>
-#pragma warning(default: 4005)
+#pragma warning(default : 4005)
 
 namespace RC::LuaType
 {
-    XStructProperty::XStructProperty(Unreal::FStructProperty* object) : RemoteObjectBase<Unreal::FStructProperty, FStructPropertyName>(object) {}
+    XStructProperty::XStructProperty(Unreal::FStructProperty* object) : RemoteObjectBase<Unreal::FStructProperty, FStructPropertyName>(object)
+    {
+    }
 
     auto XStructProperty::construct(const LuaMadeSimple::Lua& lua, Unreal::FStructProperty* unreal_object) -> const LuaMadeSimple::Lua::Table
     {
@@ -44,12 +46,12 @@ namespace RC::LuaType
         return table;
     }
 
-    auto XStructProperty::setup_metamethods([[maybe_unused]]BaseObject& base_object) -> void
+    auto XStructProperty::setup_metamethods([[maybe_unused]] BaseObject& base_object) -> void
     {
         // XStructProperty has no metamethods
     }
 
-    template<LuaMadeSimple::Type::IsFinal is_final>
+    template <LuaMadeSimple::Type::IsFinal is_final>
     auto XStructProperty::setup_member_functions(const LuaMadeSimple::Lua::Table& table) -> void
     {
         table.add_pair("GetStruct", [](const LuaMadeSimple::Lua& lua) -> int {
@@ -70,7 +72,7 @@ namespace RC::LuaType
 
             // If this is the final object then we also want to finalize creating the table
             // If not then it's the responsibility of the overriding object to call 'make_global()'
-            //table.make_global(ClassName::ToString());
+            // table.make_global(ClassName::ToString());
         }
     }
-}
+} // namespace RC::LuaType

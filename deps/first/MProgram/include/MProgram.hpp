@@ -10,7 +10,7 @@ namespace RC
 {
     class MProgram : public CanError
     {
-    public:
+      public:
         enum BinaryOptions : int
         {
             Nothing = 0,
@@ -19,10 +19,10 @@ namespace RC
             Max
         };
 
-    protected:
+      protected:
         bool m_binary_options[Max]{};
 
-    protected:
+      protected:
         MProgram()
         {
             create_error_object();
@@ -30,7 +30,7 @@ namespace RC
 
         MProgram(std::initializer_list<BinaryOptions> options)
         {
-            for (auto& option: options)
+            for (auto& option : options)
             {
                 m_binary_options[option] = true;
             }
@@ -40,18 +40,16 @@ namespace RC
 
         ~MProgram() = default;
 
-    public:
+      public:
         auto should_close() -> bool
         {
             return m_binary_options[CloseOnError];
         }
 
-    private:
+      private:
         auto create_error_object() -> void
         {
             m_error_object = std::make_shared<ErrorObject>(m_binary_options[CloseOnError]);
         }
     };
-}
-
-
+} // namespace RC

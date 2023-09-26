@@ -14,28 +14,36 @@ namespace RC::Ini
         bool is_ordered_list{};
     };
 
-    template<typename F>
+    template <typename F>
     concept CallableWithKeyValuePair = std::invocable<F&, StringType, Ini::Value&>;
 
     class List
     {
-    private:
+      private:
         Section* m_section{};
 
-    public:
-        List(Section* section) : m_section(section) {}
+      public:
+        List(Section* section) : m_section(section)
+        {
+        }
 
-    public:
+      public:
         auto size() -> size_t
         {
-            if (!m_section) { return 0; }
+            if (!m_section)
+            {
+                return 0;
+            }
             return m_section->ordered_list.size();
         }
 
-        template<typename Callable>
+        template <typename Callable>
         auto for_each(Callable callable)
         {
-            if (!m_section) { return; }
+            if (!m_section)
+            {
+                return;
+            }
             if constexpr (CallableWithKeyValuePair<Callable>)
             {
                 for (const auto& [key, value] : m_section->key_value_pairs)
@@ -55,6 +63,4 @@ namespace RC::Ini
 
     // Backwards compatibility just in case some external code made direct references to 'OrderedList'.
     using OrderedList = List;
-}
-
-
+} // namespace RC::Ini

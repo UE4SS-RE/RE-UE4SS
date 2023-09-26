@@ -1,8 +1,8 @@
 #pragma once
 
-#include <vector>
-#include <unordered_map>
 #include <format>
+#include <unordered_map>
+#include <vector>
 
 namespace RC
 {
@@ -16,19 +16,20 @@ namespace RC
             bool contains_multiple_arguments{};
         };
 
-    private:
+      private:
         int m_arg_count{};
         char** m_raw_args{};
         std::unordered_map<std::string, Arg> m_args{};
         const std::vector<std::string> m_accepted_arguments{};
 
-    public:
-        ArgsParser(int argc, char* argv[], const std::vector<std::string>& accepted_arguments) : m_arg_count(argc), m_raw_args(argv), m_accepted_arguments(accepted_arguments)
+      public:
+        ArgsParser(int argc, char* argv[], const std::vector<std::string>& accepted_arguments)
+            : m_arg_count(argc), m_raw_args(argv), m_accepted_arguments(accepted_arguments)
         {
             parse();
         }
 
-    private:
+      private:
         auto parse() -> void
         {
             /*
@@ -44,7 +45,7 @@ namespace RC
             {
                 const auto arg = std::string{m_raw_args[current_arg]};
 
-                //printf_s("arg: %s\n", arg.c_str());
+                // printf_s("arg: %s\n", arg.c_str());
                 for (const auto& accepted_argument : m_accepted_arguments)
                 {
                     if (auto arg_name_pos = arg.find(accepted_argument); arg_name_pos != arg.npos)
@@ -118,7 +119,7 @@ namespace RC
             //*/
         }
 
-    public:
+      public:
         auto get_arg(std::string arg_name) -> std::string
         {
             if (auto it = m_args.find(arg_name); it != m_args.end())
@@ -143,6 +144,4 @@ namespace RC
             }
         }
     };
-}
-
-
+} // namespace RC

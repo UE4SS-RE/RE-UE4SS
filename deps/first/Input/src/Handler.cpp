@@ -11,7 +11,10 @@ namespace RC::Input
     {
         for (const auto& required_modifier_key : modifier_keys)
         {
-            if (required_modifier_key == ModifierKey::MOD_KEY_START_OF_ENUM) { continue;}
+            if (required_modifier_key == ModifierKey::MOD_KEY_START_OF_ENUM)
+            {
+                continue;
+            }
 
             if (modifier_key == required_modifier_key)
             {
@@ -55,7 +58,10 @@ namespace RC::Input
 
         for (const auto& active_window_class : m_active_window_classes)
         {
-            if (wcscmp(current_window_class_name, active_window_class) == 0) { return true; }
+            if (wcscmp(current_window_class_name, active_window_class) == 0)
+            {
+                return true;
+            }
         }
 
         return false;
@@ -63,7 +69,10 @@ namespace RC::Input
 
     auto Handler::process_event() -> void
     {
-        if (!is_program_focused()) { return; }
+        if (!is_program_focused())
+        {
+            return;
+        }
 
         std::vector<EventCallbackCallable> callbacks_to_call{};
 
@@ -71,7 +80,10 @@ namespace RC::Input
         bool is_any_modifier_keys_down = false;
         bool any_keys_are_down = false;
 
-        if (m_any_keys_are_down) { skip_this_frame = true; }
+        if (m_any_keys_are_down)
+        {
+            skip_this_frame = true;
+        }
 
         // Check if any modifier keys are down
         for (auto& [modifier_key, key_is_down] : m_modifier_keys_down)
@@ -139,7 +151,10 @@ namespace RC::Input
 
         for (const auto& callback : callbacks_to_call)
         {
-            if (skip_this_frame) { return; }
+            if (skip_this_frame)
+            {
+                return;
+            }
             callback();
         }
     }
@@ -217,10 +232,16 @@ namespace RC::Input
                     }
                 }
 
-                if (!is_key_registered_with_no_modifier_keys) { break; }
+                if (!is_key_registered_with_no_modifier_keys)
+                {
+                    break;
+                }
             }
-            
-            if (!is_key_registered_with_no_modifier_keys) { break; }
+
+            if (!is_key_registered_with_no_modifier_keys)
+            {
+                break;
+            }
         }
 
         return is_key_registered && is_key_registered_with_no_modifier_keys;
@@ -262,7 +283,10 @@ namespace RC::Input
                     {
                         for (const auto modifier_key_to_check : modifier_keys)
                         {
-                            if (modifier_key_to_check == ModifierKey::MOD_KEY_START_OF_ENUM) { continue; }
+                            if (modifier_key_to_check == ModifierKey::MOD_KEY_START_OF_ENUM)
+                            {
+                                continue;
+                            }
 
                             if (modifier_key_to_check == modifier_key)
                             {
@@ -274,16 +298,28 @@ namespace RC::Input
                             }
                         }
 
-                        if (all_modifier_keys_match) { break; }
+                        if (all_modifier_keys_match)
+                        {
+                            break;
+                        }
                     }
 
-                    if (all_modifier_keys_match) { break; }
+                    if (all_modifier_keys_match)
+                    {
+                        break;
+                    }
                 }
 
-                if (all_modifier_keys_match) { break; }
+                if (all_modifier_keys_match)
+                {
+                    break;
+                }
             }
 
-            if (all_modifier_keys_match) { break; }
+            if (all_modifier_keys_match)
+            {
+                break;
+            }
         }
 
         return is_key_registered && all_modifier_keys_match;
@@ -303,4 +339,4 @@ namespace RC::Input
     {
         m_allow_input = new_value;
     }
-}
+} // namespace RC::Input

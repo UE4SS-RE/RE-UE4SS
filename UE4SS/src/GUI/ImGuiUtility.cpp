@@ -27,9 +27,19 @@ namespace RC::GUI
         }
     }
 
-    auto ImGui_InputTextMultiline_WithAutoScroll(const char* label, char* buf, size_t buf_size, const ImVec2& size, ImGuiInputTextFlags flags, ImGuiInputTextCallback callback, void* user_data, float* previous_max_scroll_y)
+    auto ImGui_InputTextMultiline_WithAutoScroll(const char* label,
+                                                 char* buf,
+                                                 size_t buf_size,
+                                                 const ImVec2& size,
+                                                 ImGuiInputTextFlags flags,
+                                                 ImGuiInputTextCallback callback,
+                                                 void* user_data,
+                                                 float* previous_max_scroll_y)
     {
-        if (!previous_max_scroll_y) { throw std::runtime_error{"Cannot call 'ImGui_InputTextMultiline_WithAutoScroll' with parameter 'previous_max_scroll_y' == nullptr"}; }
+        if (!previous_max_scroll_y)
+        {
+            throw std::runtime_error{"Cannot call 'ImGui_InputTextMultiline_WithAutoScroll' with parameter 'previous_max_scroll_y' == nullptr"};
+        }
 
         ImGui::InputTextMultiline(label, buf, buf_size, size, flags, callback, user_data);
         ImGui_AutoScroll(label, previous_max_scroll_y);
@@ -57,8 +67,7 @@ namespace RC::GUI
     auto ImGui_TreeNodeEx(const char* label, int int_id, ImGuiTreeNodeFlags flags) -> bool
     {
         ImGuiWindow* window = ImGui::GetCurrentWindow();
-        if (window->SkipItems)
-            return false;
+        if (window->SkipItems) return false;
 
         return ImGui::TreeNodeBehavior(window->GetID(int_id), flags, label, NULL);
     }
@@ -66,8 +75,7 @@ namespace RC::GUI
     auto ImGui_TreeNodeEx(const char* label, void* ptr_id, ImGuiTreeNodeFlags flags) -> bool
     {
         ImGuiWindow* window = ImGui::GetCurrentWindow();
-        if (window->SkipItems)
-            return false;
+        if (window->SkipItems) return false;
 
         return ImGui::TreeNodeBehavior(window->GetID(ptr_id), flags, label, NULL);
     }
@@ -75,8 +83,7 @@ namespace RC::GUI
     auto ImGui_TreeNodeEx(const char* label, const char* str_id, ImGuiTreeNodeFlags flags) -> bool
     {
         ImGuiWindow* window = ImGui::GetCurrentWindow();
-        if (window->SkipItems)
-            return false;
+        if (window->SkipItems) return false;
 
         return ImGui::TreeNodeBehavior(window->GetID(str_id), flags, label, NULL);
     }
@@ -218,4 +225,4 @@ namespace RC::GUI
     {
         Output::send<LogLevel::Verbose>(STR("{}Integer: {}\n"), indent(), element.get<int64_t>());
     }
-}
+} // namespace RC::GUI

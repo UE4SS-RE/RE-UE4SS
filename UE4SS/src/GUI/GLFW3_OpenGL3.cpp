@@ -2,10 +2,10 @@
 
 #include <stdexcept>
 
-#include <imgui.h>
+#include <GLFW/glfw3.h>
 #include <backends/imgui_impl_glfw.h>
 #include <backends/imgui_impl_opengl3.h>
-#include <GLFW/glfw3.h>
+#include <imgui.h>
 
 namespace RC::GUI
 {
@@ -18,17 +18,23 @@ namespace RC::GUI
     {
         // Setup window
         glfwSetErrorCallback(glfw_error_callback);
-        if (!glfwInit()) { throw std::runtime_error{"Was unable to initialize glfw"}; }
+        if (!glfwInit())
+        {
+            throw std::runtime_error{"Was unable to initialize glfw"};
+        }
 
         // GL 3.2 + GLSL 150
         const char* glsl_version = "#version 150";
         glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
         glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 2);
-        glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);  // 3.2+ only
+        glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE); // 3.2+ only
 
         // Create window with graphics context
         m_window = glfwCreateWindow(1280, 800, "UE4SS Debugging Tools (OpenGL 3)", NULL, NULL);
-        if (m_window == NULL) { throw std::runtime_error{"Was unable to create glfw window"}; }
+        if (m_window == NULL)
+        {
+            throw std::runtime_error{"Was unable to create glfw window"};
+        }
         glfwMakeContextCurrent(m_window);
         glfwSwapInterval(1); // Enable vsync
 
@@ -103,4 +109,4 @@ namespace RC::GUI
     {
         return glfwWindowShouldClose(m_window);
     }
-}
+} // namespace RC::GUI

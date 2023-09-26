@@ -1,36 +1,36 @@
 #pragma once
 
-#include <thread>
 #include <functional>
+#include <mutex>
 #include <string>
 #include <string_view>
-#include <mutex>
+#include <thread>
 
-#include <polyhook2/PE/IatHook.hpp>
 #include <Common.hpp>
-#include <MProgram.hpp>
-#include <SettingsManager.hpp>
-#include <Unreal/UnrealVersion.hpp>
-#include <Unreal/TArray.hpp>
-#include <Input/Handler.hpp>
-#include <Mod/Mod.hpp>
-#include <Mod/LuaMod.hpp>
-#include <Mod/CppMod.hpp>
-#include <LuaLibrary.hpp>
 #include <DynamicOutput/DynamicOutput.hpp>
 #include <GUI/GUI.hpp>
 #include <GUI/GUITab.hpp>
+#include <Input/Handler.hpp>
+#include <LuaLibrary.hpp>
+#include <MProgram.hpp>
+#include <Mod/CppMod.hpp>
+#include <Mod/LuaMod.hpp>
+#include <Mod/Mod.hpp>
+#include <SettingsManager.hpp>
+#include <Unreal/TArray.hpp>
+#include <Unreal/UnrealVersion.hpp>
+#include <polyhook2/PE/IatHook.hpp>
 
 // Used to set up ImGui context and allocator in DLL mods
-#define UE4SS_ENABLE_IMGUI() \
-{ \
-    ImGui::SetCurrentContext(UE4SSProgram::get_current_imgui_context()); \
-    ImGuiMemAllocFunc alloc_func{}; \
-    ImGuiMemFreeFunc free_func{}; \
-    void* user_data{}; \
-    UE4SSProgram::get_current_imgui_allocator_functions(&alloc_func, &free_func, &user_data); \
-    ImGui::SetAllocatorFunctions(alloc_func, free_func, user_data); \
-}
+#define UE4SS_ENABLE_IMGUI()                                                                                                                                   \
+    {                                                                                                                                                          \
+        ImGui::SetCurrentContext(UE4SSProgram::get_current_imgui_context());                                                                                   \
+        ImGuiMemAllocFunc alloc_func{};                                                                                                                        \
+        ImGuiMemFreeFunc free_func{};                                                                                                                          \
+        void* user_data{};                                                                                                                                     \
+        UE4SSProgram::get_current_imgui_allocator_functions(&alloc_func, &free_func, &user_data);                                                              \
+        ImGui::SetAllocatorFunctions(alloc_func, free_func, user_data);                                                                                        \
+    }
 
 namespace RC
 {
@@ -40,7 +40,7 @@ namespace RC
         class UObjectBase;
         class UObjectBaseUtility;
         class UWorld;
-    }
+    } // namespace Unreal
 
     namespace Output
     {
@@ -64,24 +64,24 @@ namespace RC
 
     class UE4SSProgram : public MProgram
     {
-    public:
+      public:
         constexpr static wchar_t m_settings_file_name[] = L"UE4SS-settings.ini";
         constexpr static wchar_t m_log_file_name[] = L"UE4SS.log";
         constexpr static wchar_t m_object_dumper_file_name[] = L"UE4SS_ObjectDump.txt";
 
-    public:
+      public:
         RC_UE4SS_API static SettingsManager settings_manager;
         static inline bool unreal_is_shutting_down{};
 
-    public:
+      public:
         bool m_is_program_started;
 
-    protected:
+      protected:
         Input::Handler m_input_handler{L"ConsoleWindowClass", L"UnrealWindow"};
         std::jthread m_event_loop;
         std::jthread m_render_thread;
 
-    private:
+      private:
         std::filesystem::path m_game_path_and_exe_name;
         std::filesystem::path m_root_directory;
         std::filesystem::path m_module_file_path;
@@ -96,7 +96,7 @@ namespace RC
         Output::ConsoleDevice* m_console_device{};
         GUI::DebuggingGUI m_debugging_gui{};
 
-        using EventCallable = void(*)(void* data);
+        using EventCallable = void (*)(void* data);
         struct Event
         {
             EventCallable callable{};
@@ -105,7 +105,7 @@ namespace RC
         std::vector<Event> m_queued_events{};
         std::mutex m_event_queue_mutex{};
 
-    private:
+      private:
         std::unique_ptr<PLH::IatHook> m_load_library_a_hook;
         uint64_t m_hook_trampoline_load_library_a;
 
@@ -118,7 +118,7 @@ namespace RC
         std::unique_ptr<PLH::IatHook> m_load_library_ex_w_hook;
         uint64_t m_hook_trampoline_load_library_ex_w;
 
-    public:
+      public:
         static inline std::vector<std::unique_ptr<Mod>> m_mods;
 
         static inline RecognizableStruct m_shared_functions{};
@@ -129,7 +129,7 @@ namespace RC
         bool m_processing_events{};
         bool m_pause_events_processing{};
 
-    public:
+      public:
         enum class IsInstalled
         {
             Yes,
@@ -142,13 +142,13 @@ namespace RC
             No
         };
 
-    public:
+      public:
         UE4SSProgram(const std::wstring& ModuleFilePath, std::initializer_list<BinaryOptions> options);
         ~UE4SSProgram();
         UE4SSProgram(const UE4SSProgram&) = delete;
         UE4SSProgram(UE4SSProgram&&) = delete;
 
-    private:
+      private:
         auto setup_paths(const std::wstring& moduleFilePath) -> void;
         enum class FunctionStatus
         {
@@ -164,7 +164,7 @@ namespace RC
         auto on_program_start() -> void;
         auto setup_unreal_properties() -> void;
 
-    protected:
+      protected:
         auto update() -> void;
         auto setup_cpp_mods() -> void;
         auto start_cpp_mods() -> void;
@@ -175,7 +175,7 @@ namespace RC
         auto fire_program_start_for_cpp_mods() -> void;
         auto fire_dll_load_for_cpp_mods(std::wstring_view dll_name) -> void;
 
-    public:
+      public:
         auto init() -> void;
         auto is_program_started() -> bool;
         auto reinstall_mods() -> void;
@@ -208,49 +208,60 @@ namespace RC
             return m_processing_events;
         }
 
-    public:
+      public:
         // API pass-through for use outside the private scope of UE4SSProgram
         RC_UE4SS_API auto register_keydown_event(Input::Key, const Input::EventCallbackCallable&, uint8_t custom_data = 0) -> void;
-        RC_UE4SS_API auto register_keydown_event(Input::Key, const Input::Handler::ModifierKeyArray&, const Input::EventCallbackCallable&, uint8_t custom_data = 0) -> void;
+        RC_UE4SS_API auto register_keydown_event(Input::Key, const Input::Handler::ModifierKeyArray&, const Input::EventCallbackCallable&, uint8_t custom_data = 0)
+                -> void;
         RC_UE4SS_API auto is_keydown_event_registered(Input::Key) -> bool;
         RC_UE4SS_API auto is_keydown_event_registered(Input::Key, const Input::Handler::ModifierKeyArray&) -> bool;
 
-    private:
+      private:
         static auto install_cpp_mods() -> void;
         static auto install_lua_mods() -> void;
 
         using FMBNI_ExtraPredicate = std::function<bool(Mod*)>;
-        static auto find_mod_by_name_internal(std::wstring_view mod_name, IsInstalled = IsInstalled::No, IsStarted = IsStarted::No, FMBNI_ExtraPredicate extra_predicate = {}) -> Mod*;
+        static auto find_mod_by_name_internal(std::wstring_view mod_name,
+                                              IsInstalled = IsInstalled::No,
+                                              IsStarted = IsStarted::No,
+                                              FMBNI_ExtraPredicate extra_predicate = {}) -> Mod*;
 
-    public:
-        RC_UE4SS_API static auto dump_uobject(Unreal::UObject* object, std::unordered_set<Unreal::FField*>* dumped_fields, StringType& out_line, bool is_below_425) -> void;
+      public:
+        RC_UE4SS_API static auto dump_uobject(Unreal::UObject* object, std::unordered_set<Unreal::FField*>* dumped_fields, StringType& out_line, bool is_below_425)
+                -> void;
         RC_UE4SS_API static auto dump_xproperty(Unreal::FProperty* property, StringType& out_line) -> void;
         RC_UE4SS_API static auto dump_all_objects_and_properties(const File::StringType& output_path_and_file_name) -> void;
 
-        template<typename T>
-        static auto find_mod_by_name(std::wstring_view mod_name, IsInstalled = IsInstalled::No, IsStarted = IsStarted::No) -> T* { std::abort(); };
-        template<typename T>
-        static auto find_mod_by_name(std::string_view mod_name, IsInstalled = IsInstalled::No, IsStarted = IsStarted::No) -> T* { std::abort(); };
-        template<>
+        template <typename T>
+        static auto find_mod_by_name(std::wstring_view mod_name, IsInstalled = IsInstalled::No, IsStarted = IsStarted::No) -> T*
+        {
+            std::abort();
+        };
+        template <typename T>
+        static auto find_mod_by_name(std::string_view mod_name, IsInstalled = IsInstalled::No, IsStarted = IsStarted::No) -> T*
+        {
+            std::abort();
+        };
+        template <>
         auto find_mod_by_name<LuaMod>(std::wstring_view mod_name, IsInstalled is_installed, IsStarted is_started) -> LuaMod*
         {
             return static_cast<LuaMod*>(find_mod_by_name_internal(mod_name, is_installed, is_started, [](auto elem) -> bool {
                 return dynamic_cast<LuaMod*>(elem);
             }));
         }
-        template<>
+        template <>
         auto find_mod_by_name<CppMod>(std::wstring_view mod_name, IsInstalled is_installed, IsStarted is_started) -> CppMod*
         {
             return static_cast<CppMod*>(find_mod_by_name_internal(mod_name, is_installed, is_started, [](auto elem) -> bool {
                 return dynamic_cast<CppMod*>(elem);
             }));
         }
-        template<>
+        template <>
         auto find_mod_by_name<LuaMod>(std::string_view mod_name, IsInstalled is_installed, IsStarted is_started) -> LuaMod*
         {
             return find_mod_by_name<LuaMod>(to_wstring(mod_name), is_installed, is_started);
         }
-        template<>
+        template <>
         auto find_mod_by_name<CppMod>(std::string_view mod_name, IsInstalled is_installed, IsStarted is_started) -> CppMod*
         {
             return find_mod_by_name<CppMod>(to_wstring(mod_name), is_installed, is_started);
@@ -264,12 +275,10 @@ namespace RC
             return *s_program;
         }
 
-    private:
+      private:
         friend void* HookedLoadLibraryA(const char* dll_name);
         friend void* HookedLoadLibraryExA(const char* dll_name, void* file, int32_t flags);
         friend void* HookedLoadLibraryW(const wchar_t* dll_name);
         friend void* HookedLoadLibraryExW(const wchar_t* dll_name, void* file, int32_t flags);
     };
-}
-
-
+} // namespace RC

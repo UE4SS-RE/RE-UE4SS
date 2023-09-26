@@ -15,5 +15,3 @@
 #define RC_DYNOUT_API __declspec(dllexport)
 #endif
 #endif
-
-

@@ -15,5 +15,3 @@
 #define RC_FILE_API __declspec(dllexport)
 #endif
 #endif
-
-

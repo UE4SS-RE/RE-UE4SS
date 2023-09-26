@@ -1,8 +1,8 @@
 #pragma once
 
-#include <optional>
-#include <functional>
 #include <format>
+#include <functional>
+#include <optional>
 
 #include <LuaMadeSimple/Common.hpp>
 #include <lua.hpp>
@@ -26,7 +26,7 @@ namespace RC::LuaMadeSimple
     /**
      * @tparam StackIndex Valid values are -1 for table key and -2 for table value
      */
-    template<int32_t StackIndex>
+    template <int32_t StackIndex>
     struct RC_LMS_API LuaTableData
     {
         const class Lua* lua{};
@@ -101,7 +101,7 @@ namespace RC::LuaMadeSimple
     {
         friend RC_LMS_API auto process_lua_function(lua_State* lua_state) -> int;
 
-    private:
+      private:
         lua_State* m_lua_state;
 
         std::vector<PostFunctionProcessCallback> m_post_function_process_callbacks;
@@ -112,20 +112,20 @@ namespace RC::LuaMadeSimple
         // Holds how many tables deep a nested table iteration operation currently is
         mutable int32_t m_num_tables_being_iterated{};
 
-    public:
+      public:
         RC_LMS_API Lua(lua_State* lua_state);
         RC_LMS_API ~Lua();
 
-    public:
+      public:
         /**
          * External definition of a Lua function
          */
-        using LuaFunction = int(*)(const Lua&);
+        using LuaFunction = int (*)(const Lua&);
 
         /**
          * Internal definition of a Lua function
          */
-        using LuaFunctionInternal = int(*)(lua_State*);
+        using LuaFunctionInternal = int (*)(lua_State*);
 
         /**
          * Type of Lua <-> C++ call interaction
@@ -170,28 +170,28 @@ namespace RC::LuaMadeSimple
             std::optional<LuaFunction> equal = std::nullopt;
             std::optional<LuaFunction> length = std::nullopt;
 
-            template<typename LuaCallable>
+            template <typename LuaCallable>
             auto create(MetaMethod metamethod, LuaCallable lua_callable) -> void
             {
                 switch (metamethod)
                 {
-                    case MetaMethod::Gc:
-                        gc = lua_callable;
-                        return;
-                    case MetaMethod::Index:
-                        index = lua_callable;
-                        return;
-                    case MetaMethod::NewIndex:
-                        new_index = lua_callable;
-                        return;
-                    case MetaMethod::Call:
-                        call = lua_callable;
-                        return;
-                    case MetaMethod::Equal:
-                        equal = lua_callable;
-                        return;
-                    case MetaMethod::Length:
-                        length = lua_callable;
+                case MetaMethod::Gc:
+                    gc = lua_callable;
+                    return;
+                case MetaMethod::Index:
+                    index = lua_callable;
+                    return;
+                case MetaMethod::NewIndex:
+                    new_index = lua_callable;
+                    return;
+                case MetaMethod::Call:
+                    call = lua_callable;
+                    return;
+                case MetaMethod::Equal:
+                    equal = lua_callable;
+                    return;
+                case MetaMethod::Length:
+                    length = lua_callable;
                 }
 
                 // TODO: use throw_error() here
@@ -205,13 +205,13 @@ namespace RC::LuaMadeSimple
 
         class RC_LMS_API Registry
         {
-        private:
+          private:
             const Lua& m_lua_instance;
 
-        public:
+          public:
             Registry(const Lua& lua);
 
-        public:
+          public:
             auto get_lua_instance() const -> const Lua&;
             auto make_ref() const -> int32_t;
             auto get_string_ref(int32_t registry_index) const -> void;
@@ -222,22 +222,22 @@ namespace RC::LuaMadeSimple
             auto get_table_ref(int32_t registry_index) const -> void;
         };
 
-    private:
+      private:
         const Registry m_registry;
 
-    public:
+      public:
         class RC_LMS_API Table
         {
-        private:
+          private:
             const Lua& m_lua_instance;
             MetaMethods m_metamethods{};
             bool m_has_table_marked_for_pop{false};
             bool m_has_userdata{true};
 
-        public:
+          public:
             explicit Table(const Lua& lua_instance);
 
-        private:
+          private:
             /**
              * (internal)
              * Adds a function to a table as a value
@@ -246,7 +246,7 @@ namespace RC::LuaMadeSimple
             auto add_function_value_internal(LuaFunction function) const -> void;
             auto push_field_name_and_value(std::string_view field_name) -> int32_t;
 
-        public:
+          public:
             auto get_lua_instance() const -> const Lua&;
             auto get_metamethods() -> MetaMethods&;
 
@@ -255,11 +255,10 @@ namespace RC::LuaMadeSimple
              * Must call fuse_pair() when using add_key() & add_value()
              * @param key
              */
-            template<typename KeyType>
+            template <typename KeyType>
             auto add_key(KeyType key) const -> void
             {
-                if constexpr (std::is_same_v<KeyType, const char*> ||
-                              std::is_same_v<KeyType, char*>)
+                if constexpr (std::is_same_v<KeyType, const char*> || std::is_same_v<KeyType, char*>)
                 {
                     lua_pushstring(get_lua_instance().get_lua_state(), key);
                 }
@@ -282,11 +281,10 @@ namespace RC::LuaMadeSimple
              * Must call fuse_pair() when using add_key() & add_value()
              * @param value
              */
-            template<typename ValueType>
+            template <typename ValueType>
             auto add_value(ValueType value) const -> void
             {
-                if constexpr (std::is_same_v<ValueType, const char*> ||
-                              std::is_same_v<ValueType, char*>)
+                if constexpr (std::is_same_v<ValueType, const char*> || std::is_same_v<ValueType, char*>)
                 {
                     lua_pushstring(get_lua_instance().get_lua_state(), value);
                 }
@@ -302,8 +300,7 @@ namespace RC::LuaMadeSimple
                 {
                     lua_pushinteger(get_lua_instance().get_lua_state(), static_cast<int>(value));
                 }
-                else if constexpr (std::is_same_v<ValueType, float> ||
-                                   std::is_same_v<ValueType, double>)
+                else if constexpr (std::is_same_v<ValueType, float> || std::is_same_v<ValueType, double>)
                 {
                     lua_pushnumber(get_lua_instance().get_lua_state(), value);
                 }
@@ -334,7 +331,7 @@ namespace RC::LuaMadeSimple
              * @param key
              * @param value
              */
-            template<typename KeyType, typename ValueType>
+            template <typename KeyType, typename ValueType>
             auto add_pair(KeyType key, ValueType value) const -> void
             {
                 // Key
@@ -361,7 +358,7 @@ namespace RC::LuaMadeSimple
              * Converts a std::vector to a Lua table
              * @param convert_from_vector
              */
-            template<typename VectorInnerType, typename VectorAllocator>
+            template <typename VectorInnerType, typename VectorAllocator>
             auto vector_to_table(const std::vector<VectorInnerType, VectorAllocator>& convert_from_vector) -> void
             {
                 for (size_t i = 0; i < convert_from_vector.size(); ++i)
@@ -369,7 +366,6 @@ namespace RC::LuaMadeSimple
                     // Lua scripts expects table to be one-index so add 1 to the vector index
                     add_pair(i + 1, convert_from_vector[i]);
                 }
-
             }
 
             /**
@@ -387,7 +383,7 @@ namespace RC::LuaMadeSimple
              */
             auto make_global(std::string_view table_name) const -> void;
 
-        public:
+          public:
             // Finds a value corresponding to the key at the top of the Lua stack
             // Use the Lua::get_<type>() functions to retrieve the value (i.e: lua.get_integer())
             auto find_value() -> void;
@@ -401,7 +397,7 @@ namespace RC::LuaMadeSimple
             auto get_float_field(std::string_view field_name, bool* has_error = nullptr) -> float;
             auto get_table_field(std::string_view field_name, bool* has_error = nullptr) -> Lua::Table&;
 
-            template<typename ObjectType>
+            template <typename ObjectType>
             auto get_userdata_field(std::string_view field_name, bool* has_error = nullptr) -> ObjectType&
             {
                 int pushed_type = push_field_name_and_value(field_name);
@@ -413,7 +409,9 @@ namespace RC::LuaMadeSimple
                     }
                     else
                     {
-                        get_lua_instance().throw_error(std::format("[get_userdata_field] Attempted to get field: '{}' but the type was '{}'", field_name, lua_typename(get_lua_instance().get_lua_state(), pushed_type)));
+                        get_lua_instance().throw_error(std::format("[get_userdata_field] Attempted to get field: '{}' but the type was '{}'",
+                                                                   field_name,
+                                                                   lua_typename(get_lua_instance().get_lua_state(), pushed_type)));
                     }
                 }
 
@@ -421,7 +419,7 @@ namespace RC::LuaMadeSimple
             }
         };
 
-    private:
+      private:
         /**
          * Internal representation of how Lua should treat a C++ object
          */
@@ -431,14 +429,14 @@ namespace RC::LuaMadeSimple
             SharedHeapObject,
         };
 
-    public:
+      public:
         /**
          * Used as the 'value' param for LuaMadeSimple::Lua::Table::add_pair()
          */
-        template<typename ObjectType>
+        template <typename ObjectType>
         struct Userdata
         {
-        public:
+          public:
             // Used to retrieve the type when doing std::is_same_v with a Userdata type
             using InnerType = ObjectType;
 
@@ -448,15 +446,19 @@ namespace RC::LuaMadeSimple
             // Metamethods that the userdata should contain
             const OptionalMetaMethods table_metamethods{std::nullopt};
 
-        public:
-            Userdata(InnerType&& object) : inner_object(std::move(object)) {}
-            Userdata(InnerType&& object, const MetaMethods metamethods) : inner_object(std::move(object)), table_metamethods(metamethods) {}
+          public:
+            Userdata(InnerType&& object) : inner_object(std::move(object))
+            {
+            }
+            Userdata(InnerType&& object, const MetaMethods metamethods) : inner_object(std::move(object)), table_metamethods(metamethods)
+            {
+            }
         };
 
-        template<typename ObjectType>
+        template <typename ObjectType>
         struct SharedUserdata
         {
-        public:
+          public:
             // Used to retrieve the type when doing std::is_same_v with a Userdata type
             using InnerType = ObjectType;
 
@@ -471,27 +473,31 @@ namespace RC::LuaMadeSimple
             // Metamethods that the userdata should contain
             const OptionalMetaMethods table_metamethods{std::nullopt};
 
-        public:
-            SharedUserdata(const std::shared_ptr<InnerType>& object) : inner_object(object) {}
-            SharedUserdata(const std::shared_ptr<InnerType>& object, const MetaMethods metamethods) : inner_object(object), table_metamethods(metamethods) {}
+          public:
+            SharedUserdata(const std::shared_ptr<InnerType>& object) : inner_object(object)
+            {
+            }
+            SharedUserdata(const std::shared_ptr<InnerType>& object, const MetaMethods metamethods) : inner_object(object), table_metamethods(metamethods)
+            {
+            }
         };
 
-    public:
+      public:
         RC_LMS_API auto status_to_string(int status) const -> std::string_view;
         RC_LMS_API auto resolve_status_message(int status, bool from_lua_only = false) const -> std::string;
 
-    private:
+      private:
         // Returns whether the '__gc' metamethod should be automatically created
         RC_LMS_API auto add_metamethods(const MetaMethods&, const Table& metatable) const -> bool;
 
-    public:
+      public:
         // Debug function
         RC_LMS_API auto dump_stack(const char* message = "") const -> void;
 
         RC_LMS_API auto handle_error(const std::string&) const -> const std::string;
         RC_LMS_API auto throw_error(const std::string&) const -> void;
 
-        template<typename CodeToTry>
+        template <typename CodeToTry>
         auto constexpr TRY(CodeToTry code_to_try) const -> void
         {
             try
@@ -504,7 +510,7 @@ namespace RC::LuaMadeSimple
             }
         }
 
-        template<typename CodeToTry>
+        template <typename CodeToTry>
         auto constexpr TRY(CodeToTry code_to_try) -> void
         {
             TRY(code_to_try);
@@ -585,14 +591,14 @@ namespace RC::LuaMadeSimple
 
         RC_LMS_API auto new_thread() const -> Lua&;
 
-    private:
+      private:
         RC_LMS_API auto construct_metamethods_object(const OptionalMetaMethods&, std::optional<std::string_view> metatable_name = std::nullopt) const -> void;
 
-    public:
+      public:
         // Create a new metatable and put references to member functions table in it
         // A metatable is automatically attached with a __gc metamethod that calls the ObjectType destructor
         // More metamethods can be supplied via the 'metamethods' parameter (see the 'MetaMethods' struct)
-        template<typename ObjectType>
+        template <typename ObjectType>
         auto new_metatable(std::optional<std::string_view> metatable_name = std::nullopt, OptionalMetaMethods metamethods = std::nullopt) const -> void
         {
             auto create_auto_gc_metamethod = [](Table& metatable) {
@@ -601,7 +607,7 @@ namespace RC::LuaMadeSimple
                     userdata->~ObjectType();
 
                     return 0;
-                    });
+                });
             };
 
             bool custom_gc_method{};
@@ -641,8 +647,11 @@ namespace RC::LuaMadeSimple
 
         // Transfer ownership of a C++ object stored on the stack to Lua via userdata
         // More metamethods can be supplied via the 'metamethods' parameter (see the 'MetaMethods' struct)
-        template<typename ObjectType>
-        auto transfer_stack_object(ObjectType&& object, std::optional<std::string_view> metatable_name = std::nullopt, OptionalMetaMethods metamethods = std::nullopt, bool is_metamethod_container = false) const -> void
+        template <typename ObjectType>
+        auto transfer_stack_object(ObjectType&& object,
+                                   std::optional<std::string_view> metatable_name = std::nullopt,
+                                   OptionalMetaMethods metamethods = std::nullopt,
+                                   bool is_metamethod_container = false) const -> void
         {
             auto* userdata = static_cast<ObjectType*>(lua_newuserdatauv(get_lua_state(), sizeof(ObjectType), 5));
 
@@ -685,7 +694,7 @@ namespace RC::LuaMadeSimple
             }
             lua_setiuservalue(get_lua_state(), -2, 5);
 
-            new(userdata) ObjectType(std::move(object));
+            new (userdata) ObjectType(std::move(object));
 
             // Remove dangling table
             lua_remove(get_lua_state(), -2);
@@ -696,10 +705,12 @@ namespace RC::LuaMadeSimple
         // Share a heap object (std::shared_ptr) with Lua via userdata
         // A metatable is automatically attached with a __gc metamethod that calls the ObjectType destructor
         // More metamethods can be supplied via the 'metamethods' parameter (see the 'MetaMethods' struct)
-        template<typename ObjectType>
-        auto share_heap_object(const std::shared_ptr<ObjectType>& object, std::optional<std::string_view> metatable_name = std::nullopt, OptionalMetaMethods metamethods = std::nullopt) const -> void
+        template <typename ObjectType>
+        auto share_heap_object(const std::shared_ptr<ObjectType>& object,
+                               std::optional<std::string_view> metatable_name = std::nullopt,
+                               OptionalMetaMethods metamethods = std::nullopt) const -> void
         {
-            auto create_auto_gc_metamethod = [](Table& metatable){
+            auto create_auto_gc_metamethod = [](Table& metatable) {
                 metatable.add_pair("__gc", [](lua_State* lua_state) -> int {
                     auto* userdata = static_cast<std::shared_ptr<ObjectType>*>(lua_touserdata(lua_state, 1));
                     userdata->~shared_ptr<ObjectType>();
@@ -742,7 +753,7 @@ namespace RC::LuaMadeSimple
             set_integer(UserdataInternalType::SharedHeapObject);
             lua_setiuservalue(get_lua_state(), -2, 2);
 
-            new(userdata) std::shared_ptr<ObjectType>(object);
+            new (userdata) std::shared_ptr<ObjectType>(object);
 
             // Remove dangling table
             lua_remove(get_lua_state(), -2);
@@ -752,7 +763,7 @@ namespace RC::LuaMadeSimple
 
         [[nodiscard]] RC_LMS_API auto is_userdata(int32_t force_index = 1) const -> bool;
 
-        template<typename ObjectType>
+        template <typename ObjectType>
         [[nodiscard]] auto get_userdata(int32_t force_index = 1, bool preserve_stack = false) const -> ObjectType&
         {
             lua_getiuservalue(get_lua_state(), force_index, 2);
@@ -780,7 +791,10 @@ namespace RC::LuaMadeSimple
             }
             else [[unlikely]]
             {
-                luaL_traceback(get_lua_state(), get_lua_state(), "[get_userdata] The user value 'userdata_internal_type' corresponding to this userdata was invalid\"", 0);
+                luaL_traceback(get_lua_state(),
+                               get_lua_state(),
+                               "[get_userdata] The user value 'userdata_internal_type' corresponding to this userdata was invalid\"",
+                               0);
                 throw std::runtime_error{"See traceback"};
             }
         }
@@ -790,7 +804,7 @@ namespace RC::LuaMadeSimple
     RC_LMS_API auto throw_error(lua_State*, const std::string&) -> void;
     [[nodiscard]] RC_LMS_API auto new_state() -> Lua&;
 
-    template<typename CodeToTry>
+    template <typename CodeToTry>
     auto constexpr TRY(lua_State* lua_state, CodeToTry code_to_try) -> int
     {
         try
@@ -803,7 +817,4 @@ namespace RC::LuaMadeSimple
             return 0;
         }
     }
-}
-
-
-
+} // namespace RC::LuaMadeSimple

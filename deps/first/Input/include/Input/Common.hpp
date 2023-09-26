@@ -15,5 +15,3 @@
 #define RC_INPUT_API __declspec(dllexport)
 #endif
 #endif
-
-

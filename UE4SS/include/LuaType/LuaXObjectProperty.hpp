@@ -9,28 +9,31 @@ namespace RC::Unreal
 
 namespace RC::LuaType
 {
-    struct FObjectPropertyName { constexpr static const char* ToString() { return "ObjectProperty"; }};
+    struct FObjectPropertyName
+    {
+        constexpr static const char* ToString()
+        {
+            return "ObjectProperty";
+        }
+    };
     class XObjectProperty : public RemoteObjectBase<Unreal::FObjectProperty, FObjectPropertyName>
     {
-    public:
+      public:
         using Super = XProperty;
 
-    private:
+      private:
         explicit XObjectProperty(Unreal::FObjectProperty* object);
 
-    public:
+      public:
         XObjectProperty() = delete;
         auto static construct(const LuaMadeSimple::Lua&, Unreal::FObjectProperty*) -> const LuaMadeSimple::Lua::Table;
         auto static construct(const LuaMadeSimple::Lua&, BaseObject&) -> const LuaMadeSimple::Lua::Table;
 
-    private:
+      private:
         auto static setup_metamethods(BaseObject&) -> void;
 
-    private:
-        template<LuaMadeSimple::Type::IsFinal is_final>
+      private:
+        template <LuaMadeSimple::Type::IsFinal is_final>
         auto static setup_member_functions(const LuaMadeSimple::Lua::Table&) -> void;
     };
-}
-
-
-
+} // namespace RC::LuaType

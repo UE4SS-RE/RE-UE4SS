@@ -6,7 +6,7 @@ namespace RC::GUI::Filter
 {
     class DefaultObjectsOnly
     {
-    public:
+      public:
         static inline StringType s_debug_name{STR("DefaultObjectsOnly")};
         static inline bool s_enabled{};
 
@@ -15,6 +15,4 @@ namespace RC::GUI::Filter
             return s_enabled && !object->HasAnyFlags(static_cast<EObjectFlags>(RF_ClassDefaultObject | RF_ArchetypeObject));
         }
     };
-}
-
-
+} // namespace RC::GUI::Filter

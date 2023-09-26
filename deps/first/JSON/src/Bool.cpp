@@ -2,7 +2,9 @@
 
 namespace RC::JSON
 {
-    Bool::Bool(bool value) : m_underlying_value(value) {}
+    Bool::Bool(bool value) : m_underlying_value(value)
+    {
+    }
 
     auto Bool::serialize(ShouldFormat should_format, int32_t* indent_level) -> StringType
     {
@@ -10,4 +12,4 @@ namespace RC::JSON
         (void)indent_level;
         return m_underlying_value ? STR("true") : STR("false");
     }
-}
+} // namespace RC::JSON

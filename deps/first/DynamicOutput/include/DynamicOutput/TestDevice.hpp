@@ -1,14 +1,14 @@
 #ifndef UE4SS_REWRITTEN_TESTDEVICE_HPP
 #define UE4SS_REWRITTEN_TESTDEVICE_HPP
 
-#include <DynamicOutput/OutputDevice.hpp>
 #include <DynamicOutput/Macros.hpp>
+#include <DynamicOutput/OutputDevice.hpp>
 
 namespace RC::Output
 {
     class TestDevice : public OutputDevice
     {
-    public:
+      public:
         enum class OptionalArgTest
         {
             ValueDefault,
@@ -17,7 +17,7 @@ namespace RC::Output
             ValueThree,
         };
 
-    public:
+      public:
 #if ENABLE_OUTPUT_DEVICE_DEBUG_MODE
         TestDevice()
         {
@@ -32,7 +32,7 @@ namespace RC::Output
         ~TestDevice() override = default;
 #endif
 
-    public:
+      public:
         auto has_optional_arg() const -> bool override
         {
             return true;
@@ -48,18 +48,18 @@ namespace RC::Output
             OptionalArgTest typed_optional_arg = static_cast<OptionalArgTest>(optional_arg);
             switch (typed_optional_arg)
             {
-                case OptionalArgTest::ValueDefault:
-                    printf_s("Optional Arg: ValueDefault - ");
-                    break;
-                case OptionalArgTest::ValueOne:
-                    printf_s("Optional Arg: ValueOne - ");
-                    break;
-                case OptionalArgTest::ValueTwo:
-                    printf_s("Optional Arg: ValueTwo - ");
-                    break;
-                case OptionalArgTest::ValueThree:
-                    printf_s("Optional Arg: ValueThree - ");
-                    break;
+            case OptionalArgTest::ValueDefault:
+                printf_s("Optional Arg: ValueDefault - ");
+                break;
+            case OptionalArgTest::ValueOne:
+                printf_s("Optional Arg: ValueOne - ");
+                break;
+            case OptionalArgTest::ValueTwo:
+                printf_s("Optional Arg: ValueTwo - ");
+                break;
+            case OptionalArgTest::ValueThree:
+                printf_s("Optional Arg: ValueThree - ");
+                break;
             }
 
 #if ENABLE_OUTPUT_DEVICE_DEBUG_MODE
@@ -69,7 +69,6 @@ namespace RC::Output
 #endif
         }
     };
-}
+} // namespace RC::Output
 
-
-#endif //UE4SS_REWRITTEN_TESTDEVICE_HPP
+#endif // UE4SS_REWRITTEN_TESTDEVICE_HPP

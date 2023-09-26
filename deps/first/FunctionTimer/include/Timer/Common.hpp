@@ -15,5 +15,3 @@
 #define RC_FNCTMR_API __declspec(dllexport)
 #endif
 #endif
-
-

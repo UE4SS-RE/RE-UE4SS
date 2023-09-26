@@ -11,31 +11,37 @@ namespace RC::Unreal
 
 namespace RC::LuaType
 {
-    struct UClassName { constexpr static const char* ToString() { return "UClass"; }};
+    struct UClassName
+    {
+        constexpr static const char* ToString()
+        {
+            return "UClass";
+        }
+    };
     class UClass : public UObjectBase<Unreal::UClass, UClassName>
     {
-    public:
+      public:
         using Super = LuaType::UStruct;
 
-    private:
+      private:
         explicit UClass(Unreal::UClass* object);
 
-    public:
-        auto derives_from_class() -> bool override { return true; }
+      public:
+        auto derives_from_class() -> bool override
+        {
+            return true;
+        }
 
-    public:
+      public:
         UClass() = delete;
         auto static construct(const LuaMadeSimple::Lua&, Unreal::UClass*) -> const LuaMadeSimple::Lua::Table;
         auto static construct(const LuaMadeSimple::Lua&, BaseObject&) -> const LuaMadeSimple::Lua::Table;
 
-    private:
+      private:
         auto static setup_metamethods(BaseObject&) -> void;
 
-    public:
-        template<LuaMadeSimple::Type::IsFinal is_final>
+      public:
+        template <LuaMadeSimple::Type::IsFinal is_final>
         auto static setup_member_functions(const LuaMadeSimple::Lua::Table&) -> void;
     };
-}
-
-
-
+} // namespace RC::LuaType

@@ -6,7 +6,7 @@ namespace RC::GUI::Filter
 {
     class HasProperty
     {
-    public:
+      public:
         static inline StringType s_debug_name{STR("HasProperty")};
         static inline StringType s_value{};
         static inline std::string s_internal_value{};
@@ -16,6 +16,4 @@ namespace RC::GUI::Filter
             return !s_value.empty() && !object->GetPropertyByNameInChain(s_value.c_str());
         }
     };
-}
-
-
+} // namespace RC::GUI::Filter

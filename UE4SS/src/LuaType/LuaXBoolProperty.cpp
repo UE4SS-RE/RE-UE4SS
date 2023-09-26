@@ -1,13 +1,15 @@
-#include <LuaType/LuaXBoolProperty.hpp>
-#include <LuaType/LuaUObject.hpp>
 #include <LuaType/LuaUClass.hpp>
-#pragma warning(disable: 4005)
+#include <LuaType/LuaUObject.hpp>
+#include <LuaType/LuaXBoolProperty.hpp>
+#pragma warning(disable : 4005)
 #include <Unreal/Property/FBoolProperty.hpp>
-#pragma warning(default: 4005)
+#pragma warning(default : 4005)
 
 namespace RC::LuaType
 {
-    XBoolProperty::XBoolProperty(Unreal::FBoolProperty* object) : RemoteObjectBase<Unreal::FBoolProperty, FBoolPropertyName>(object) {}
+    XBoolProperty::XBoolProperty(Unreal::FBoolProperty* object) : RemoteObjectBase<Unreal::FBoolProperty, FBoolPropertyName>(object)
+    {
+    }
 
     auto XBoolProperty::construct(const LuaMadeSimple::Lua& lua, Unreal::FBoolProperty* unreal_object) -> const LuaMadeSimple::Lua::Table
     {
@@ -42,12 +44,12 @@ namespace RC::LuaType
         return table;
     }
 
-    auto XBoolProperty::setup_metamethods([[maybe_unused]]BaseObject& base_object) -> void
+    auto XBoolProperty::setup_metamethods([[maybe_unused]] BaseObject& base_object) -> void
     {
         // XBoolProperty has no metamethods
     }
 
-    template<LuaMadeSimple::Type::IsFinal is_final>
+    template <LuaMadeSimple::Type::IsFinal is_final>
     auto XBoolProperty::setup_member_functions(const LuaMadeSimple::Lua::Table& table) -> void
     {
         Super::setup_member_functions<LuaMadeSimple::Type::IsFinal::No>(table);
@@ -85,7 +87,7 @@ namespace RC::LuaType
 
             // If this is the final object then we also want to finalize creating the table
             // If not then it's the responsibility of the overriding object to call 'make_global()'
-            //table.make_global(ClassName::ToString());
+            // table.make_global(ClassName::ToString());
         }
     }
-}
+} // namespace RC::LuaType

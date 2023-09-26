@@ -1,33 +1,33 @@
 #include <format>
 
 #include <ObjectDumper/ObjectToString.hpp>
-#pragma warning(disable: 4005)
-#include <Unreal/UObject.hpp>
-#include <Unreal/UClass.hpp>
-#include <Unreal/UScriptStruct.hpp>
-#include <Unreal/UFunction.hpp>
-#include <Unreal/UEnum.hpp>
+#pragma warning(disable : 4005)
 #include <Unreal/FProperty.hpp>
 #include <Unreal/Property/FArrayProperty.hpp>
+#include <Unreal/Property/FBoolProperty.hpp>
 #include <Unreal/Property/FClassProperty.hpp>
 #include <Unreal/Property/FDelegateProperty.hpp>
+#include <Unreal/Property/FEnumProperty.hpp>
 #include <Unreal/Property/FFieldPathProperty.hpp>
 #include <Unreal/Property/FInterfaceProperty.hpp>
+#include <Unreal/Property/FLazyObjectProperty.hpp>
 #include <Unreal/Property/FMapProperty.hpp>
 #include <Unreal/Property/FMulticastDelegateProperty.hpp>
 #include <Unreal/Property/FMulticastInlineDelegateProperty.hpp>
 #include <Unreal/Property/FMulticastSparseDelegateProperty.hpp>
-#include <Unreal/Property/FStructProperty.hpp>
-#include <Unreal/Property/NumericPropertyTypes.hpp>
 #include <Unreal/Property/FNameProperty.hpp>
-#include <Unreal/Property/FBoolProperty.hpp>
 #include <Unreal/Property/FSoftClassProperty.hpp>
-#include <Unreal/Property/FWeakObjectProperty.hpp>
-#include <Unreal/Property/FLazyObjectProperty.hpp>
-#include <Unreal/Property/FEnumProperty.hpp>
-#include <Unreal/Property/FTextProperty.hpp>
 #include <Unreal/Property/FStrProperty.hpp>
-#pragma warning(default: 4005)
+#include <Unreal/Property/FStructProperty.hpp>
+#include <Unreal/Property/FTextProperty.hpp>
+#include <Unreal/Property/FWeakObjectProperty.hpp>
+#include <Unreal/Property/NumericPropertyTypes.hpp>
+#include <Unreal/UClass.hpp>
+#include <Unreal/UEnum.hpp>
+#include <Unreal/UFunction.hpp>
+#include <Unreal/UObject.hpp>
+#include <Unreal/UScriptStruct.hpp>
+#pragma warning(default : 4005)
 
 namespace RC::ObjectDumper
 {
@@ -118,7 +118,7 @@ namespace RC::ObjectDumper
                 // If this code is not executed then we'll not be having another line and the dumper will add the new line
                 out_line.append(L"\n");
 
-                get_to_string_complex(array_inner_class)(array_inner, out_line, [&]([[maybe_unused]]void* prop) {
+                get_to_string_complex(array_inner_class)(array_inner, out_line, [&]([[maybe_unused]] void* prop) {
                     // It's possible that a new line is supposed to be appended here
                 });
             }
@@ -161,8 +161,7 @@ namespace RC::ObjectDumper
                     // If this code is not executed then we'll not be having another line and the dumper will add the new line
                     out_line.append(L"\n");
 
-                    get_to_string_complex(property_class)(property, out_line, [&]([[maybe_unused]]void* prop) {
-                    });
+                    get_to_string_complex(property_class)(property, out_line, [&]([[maybe_unused]] void* prop) {});
                 }
 
                 callable(property);
@@ -298,8 +297,8 @@ namespace RC::ObjectDumper
         object_to_string_functions[UWidgetBlueprintGeneratedClass::StaticClass()->HashObject()] = &class_to_string;
         object_to_string_functions[UAnimBlueprintGeneratedClass::StaticClass()->HashObject()] = &class_to_string;
         object_to_string_functions[UFunction::StaticClass()->HashObject()] = &function_to_string;
-        //object_to_string_functions[UDelegateFunction::StaticClass()->HashObject()] = &function_to_string;
-        //object_to_string_functions[USparseDelegateFunction::StaticClass()->HashObject()] = &function_to_string;
+        // object_to_string_functions[UDelegateFunction::StaticClass()->HashObject()] = &function_to_string;
+        // object_to_string_functions[USparseDelegateFunction::StaticClass()->HashObject()] = &function_to_string;
         object_to_string_functions[UScriptStruct::StaticClass()->HashObject()] = &object_to_string;
         object_to_string_complex_functions[UScriptStruct::StaticClass()->HashObject()] = &scriptstruct_to_string_complex;
         object_to_string_functions[FObjectProperty::StaticClass().HashObject()] = &objectproperty_to_string;
@@ -338,7 +337,7 @@ namespace RC::ObjectDumper
         object_to_string_functions[FStrProperty::StaticClass().HashObject()] = &property_to_string;
         object_to_string_functions[FDelegateProperty::StaticClass().HashObject()] = &delegateproperty_to_string;
         object_to_string_functions[FMulticastDelegateProperty::StaticClass().HashObject()] = &multicastdelegateproperty_to_string;
-        if (Version::IsAtLeast(4,23))
+        if (Version::IsAtLeast(4, 23))
         {
             object_to_string_functions[FMulticastInlineDelegateProperty::StaticClass().HashObject()] = &multicastdelegateproperty_to_string;
             object_to_string_functions[FMulticastSparseDelegateProperty::StaticClass().HashObject()] = &multicastdelegateproperty_to_string;
@@ -349,4 +348,4 @@ namespace RC::ObjectDumper
             object_to_string_functions[FFieldPathProperty::StaticClass().HashObject()] = &fieldpathproperty_to_string;
         }
     }
-}
+} // namespace RC::ObjectDumper

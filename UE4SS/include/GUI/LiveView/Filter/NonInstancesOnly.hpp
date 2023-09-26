@@ -7,7 +7,7 @@ namespace RC::GUI::Filter
 {
     class NonInstancesOnly
     {
-    public:
+      public:
         static inline StringType s_debug_name{STR("NonInstancesOnly")};
         static inline bool s_enabled{};
 
@@ -16,6 +16,4 @@ namespace RC::GUI::Filter
             return s_enabled && (object->IsA<UFunction>() || is_instance(object));
         }
     };
-}
-
-
+} // namespace RC::GUI::Filter

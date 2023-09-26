@@ -1,9 +1,9 @@
 #include <GUI/Windows.hpp>
 
-#include <imgui.h>
-#include <backends/imgui_impl_win32.h>
-#include <tchar.h>
 #include <GUI/DX11.hpp>
+#include <backends/imgui_impl_win32.h>
+#include <imgui.h>
+#include <tchar.h>
 
 #ifndef WIN32_LEAN_AND_MEAN
 #define WIN32_LEAN_AND_MEAN
@@ -42,9 +42,9 @@ namespace RC::GUI
             title_bar_text.append(STR(" (DX11)"));
         }
 
-        //ImGui_ImplWin32_EnableDpiAwareness()
+        // ImGui_ImplWin32_EnableDpiAwareness()
         s_wc.cbSize = sizeof(WNDCLASSEX);
-        //wc.style = CS_CLASSDC;
+        // wc.style = CS_CLASSDC;
         s_wc.style = CS_HREDRAW | CS_VREDRAW;
         s_wc.lpfnWndProc = WndProc;
         s_wc.cbClsExtra = 0L;
@@ -52,7 +52,7 @@ namespace RC::GUI
         s_wc.hInstance = GetModuleHandle(NULL);
         s_wc.hIcon = NULL;
         s_wc.hCursor = NULL;
-        //wc.hbrBackground = NULL;
+        // wc.hbrBackground = NULL;
         s_wc.hbrBackground = CreateSolidBrush(RGB(0, 0, 0));
         s_wc.lpszMenuName = NULL;
         s_wc.lpszClassName = title_bar_text.c_str();
@@ -127,19 +127,19 @@ namespace RC::GUI
 
         switch (msg)
         {
-            case WM_SIZE:
-                s_gfx_backend->handle_window_resize(wParam, lParam);
+        case WM_SIZE:
+            s_gfx_backend->handle_window_resize(wParam, lParam);
+            return 0;
+        case WM_SYSCOMMAND:
+            if ((wParam & 0xfff0) == SC_KEYMENU)
+            { // Disable ALT application menu
                 return 0;
-            case WM_SYSCOMMAND:
-                if ((wParam & 0xfff0) == SC_KEYMENU)
-                { // Disable ALT application menu
-                    return 0;
-                }
-                break;
-            case WM_DESTROY:
-                ::PostQuitMessage(0);
-                return 0;
+            }
+            break;
+        case WM_DESTROY:
+            ::PostQuitMessage(0);
+            return 0;
         }
         return ::DefWindowProc(hWnd, msg, wParam, lParam);
     }
-}
+} // namespace RC::GUI

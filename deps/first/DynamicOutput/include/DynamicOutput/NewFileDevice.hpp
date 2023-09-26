@@ -8,14 +8,13 @@ namespace RC::Output
     // Identical to FileDevice except it deletes the file & re-creates it before outputting anything
     class NewFileDevice : public FileDevice
     {
-    public:
+      public:
         NewFileDevice()
         {
             this->m_always_create_file = true;
         }
     };
 
-}
+} // namespace RC::Output
 
-
-#endif //UE4SS_REWRITTEN_NEWFILEDEVICE_HPP
+#endif // UE4SS_REWRITTEN_NEWFILEDEVICE_HPP

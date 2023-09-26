@@ -1,15 +1,15 @@
 #pragma once
 
-#include <vector>
-#include <unordered_set>
-#include <unordered_map>
 #include <functional>
-#include <variant>
 #include <memory>
+#include <unordered_map>
+#include <unordered_set>
+#include <variant>
+#include <vector>
 
 #include <DynamicOutput/DynamicOutput.hpp>
-#include <Unreal/UnrealFlags.hpp>
 #include <Unreal/UFunctionStructs.hpp>
+#include <Unreal/UnrealFlags.hpp>
 
 namespace RC::Unreal
 {
@@ -18,7 +18,7 @@ namespace RC::Unreal
     class UStruct;
     class UClass;
     class FProperty;
-}
+} // namespace RC::Unreal
 
 namespace RC::GUI
 {
@@ -28,8 +28,8 @@ namespace RC::GUI
 
     class LiveView
     {
-    public:
-        using ObjectIteratorCallable = void(LiveView::*)(int32_t, int32_t, const std::function<void(UObject*)>&);
+      public:
+        using ObjectIteratorCallable = void (LiveView::*)(int32_t, int32_t, const std::function<void(UObject*)>&);
 
         struct WatchIdentifier
         {
@@ -80,7 +80,7 @@ namespace RC::GUI
             Watch(StringType&& object_name, StringType&& property_name);
         };
 
-    private:
+      private:
         std::string_view m_default_search_buffer{"Search by type, path, and name..."};
         constexpr static size_t m_search_buffer_capacity = 2000;
         char* m_search_by_name_buffer{};
@@ -103,16 +103,14 @@ namespace RC::GUI
         bool m_listeners_allowed{};
         bool m_is_initialized{};
 
-
-    public:
+      public:
         LiveView();
         ~LiveView();
 
-    public:
+      public:
         struct ObjectOrProperty
         {
-            union
-            {
+            union {
                 const FUObjectItem* object_item{};
                 FProperty* property;
             };
@@ -123,7 +121,7 @@ namespace RC::GUI
             auto GetFullName() const -> std::string;
         };
 
-    public:
+      public:
         static std::vector<ObjectOrProperty> s_object_view_history;
         static size_t s_currently_selected_object_index;
         static std::unordered_map<UObject*, std::vector<size_t>> s_history_object_to_index;
@@ -141,13 +139,21 @@ namespace RC::GUI
         static bool s_need_to_filter_out_properties;
         static bool s_watches_loaded_from_disk;
 
-    private:
-        enum class AffectsHistory { Yes, No };
+      private:
+        enum class AffectsHistory
+        {
+            Yes,
+            No
+        };
 
-    public:
-        enum class UseIndex { Yes, No };
+      public:
+        enum class UseIndex
+        {
+            Yes,
+            No
+        };
 
-    private:
+      private:
         auto render_info_panel() -> void;
         auto render_info_panel_as_object(const FUObjectItem*, UObject*) -> void;
         auto render_info_panel_as_property(FProperty*) -> void;
@@ -159,10 +165,21 @@ namespace RC::GUI
         auto render_class(UClass*) -> void;
         auto render_super_struct(UStruct*) -> void;
 
-        enum class ContainerType { Object, NonObject, };
-        auto render_property_value(FProperty* property, ContainerType container_type, void* container, FProperty** last_property_in, bool* tried_to_open_nullptr_object, bool is_watchable = true, int32_t first_offset = -1, bool container_is_array = false) -> std::variant<std::monostate, UObject*, FProperty*>;
+        enum class ContainerType
+        {
+            Object,
+            NonObject,
+        };
+        auto render_property_value(FProperty* property,
+                                   ContainerType container_type,
+                                   void* container,
+                                   FProperty** last_property_in,
+                                   bool* tried_to_open_nullptr_object,
+                                   bool is_watchable = true,
+                                   int32_t first_offset = -1,
+                                   bool container_is_array = false) -> std::variant<std::monostate, UObject*, FProperty*>;
 
-    private:
+      private:
         auto collapse_all_except(void* except_id) -> void;
         auto search_by_name() -> void;
         auto select_object(size_t index, const FUObjectItem* object_item, UObject* object, AffectsHistory = AffectsHistory::Yes) -> void;
@@ -171,35 +188,51 @@ namespace RC::GUI
         auto get_selected_object(size_t index = 0, UseIndex = UseIndex::No) -> std::pair<const FUObjectItem*, UObject*>;
         auto get_selected_property(size_t index = 0, UseIndex = UseIndex::No) -> FProperty*;
 
-    private:
+      private:
         auto guobjectarray_iterator(int32_t int_data_1, int32_t int_data_2, const std::function<void(UObject*)>& callable) -> void;
-        auto guobjectarray_by_name_iterator([[maybe_unused]]int32_t int_data_1, [[maybe_unused]]int32_t int_data_2, const std::function<void(UObject*)>& callable) -> void;
+        auto guobjectarray_by_name_iterator([[maybe_unused]] int32_t int_data_1, [[maybe_unused]] int32_t int_data_2, const std::function<void(UObject*)>& callable)
+                -> void;
 
-    public:
-        auto was_search_field_clear_requested() -> bool { return m_search_field_clear_requested; }
-        auto was_search_field_cleared() -> bool { return m_search_field_cleared; }
-        auto set_search_field_cleared(bool new_value) -> void { m_search_field_cleared = new_value; }
+      public:
+        auto was_search_field_clear_requested() -> bool
+        {
+            return m_search_field_clear_requested;
+        }
+        auto was_search_field_cleared() -> bool
+        {
+            return m_search_field_cleared;
+        }
+        auto set_search_field_cleared(bool new_value) -> void
+        {
+            m_search_field_cleared = new_value;
+        }
 
-    public:
+      public:
         auto set_listeners() -> void;
         auto unset_listeners() -> void;
         auto initialize() -> void;
         auto render() -> void;
         auto render_watches() -> void;
         auto process_watches() -> void;
-        auto set_listeners_allowed(bool new_value) -> void { m_listeners_allowed = new_value; }
-        auto are_listeners_allowed() -> bool { return m_listeners_allowed; }
+        auto set_listeners_allowed(bool new_value) -> void
+        {
+            m_listeners_allowed = new_value;
+        }
+        auto are_listeners_allowed() -> bool
+        {
+            return m_listeners_allowed;
+        }
 
-    public:
+      public:
         static auto process_property_watch(Watch& watch) -> void;
         static auto process_function_pre_watch(Unreal::UnrealScriptFunctionCallableContext& context, void*) -> void;
         static auto process_function_post_watch(Unreal::UnrealScriptFunctionCallableContext& context, void*) -> void;
     };
-}
+} // namespace RC::GUI
 
 namespace std
 {
-    template<>
+    template <>
     struct hash<::RC::GUI::LiveView::WatchIdentifier>
     {
         auto operator()(const ::RC::GUI::LiveView::WatchIdentifier& watch_identifier) const -> size_t
@@ -209,6 +242,4 @@ namespace std
             return container_hash ^ property_hash;
         }
     };
-}
-
-
+} // namespace std

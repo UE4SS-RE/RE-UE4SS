@@ -1,8 +1,8 @@
-#include <JSON/Object.hpp>
 #include <JSON/Array.hpp>
-#include <JSON/String.hpp>
-#include <JSON/Null.hpp>
 #include <JSON/Bool.hpp>
+#include <JSON/Null.hpp>
+#include <JSON/Object.hpp>
+#include <JSON/String.hpp>
 
 namespace RC::JSON
 {
@@ -61,7 +61,10 @@ namespace RC::JSON
 
     auto Object::serialize(ShouldFormat should_format, int32_t* indent_level) -> StringType
     {
-        if (!indent_level) { throw std::runtime_error{"Must supply an indent_level pointer"}; };
+        if (!indent_level)
+        {
+            throw std::runtime_error{"Must supply an indent_level pointer"};
+        };
 
         StringType object_as_string{};
 
@@ -117,9 +120,9 @@ namespace RC::JSON
 
         if (!m_members.empty() || m_is_global_object == IsGlobalObject::Yes)
         {
-            //object_as_string.erase(object_as_string.end() - 2);
+            // object_as_string.erase(object_as_string.end() - 2);
         }
 
         return object_as_string;
     }
-}
+} // namespace RC::JSON

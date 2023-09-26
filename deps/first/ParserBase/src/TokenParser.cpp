@@ -1,6 +1,6 @@
+#include <ParserBase/Token.hpp>
 #include <ParserBase/TokenParser.hpp>
 #include <ParserBase/Tokenizer.hpp>
-#include <ParserBase/Token.hpp>
 
 namespace RC::ParserBase
 {
@@ -17,7 +17,7 @@ namespace RC::ParserBase
     {
         if (!token.has_data())
         {
-            throw std::runtime_error{ "Tried retrieving data of a token that doesn't have any data" };
+            throw std::runtime_error{"Tried retrieving data of a token that doesn't have any data"};
         }
 
         auto data = m_data.substr(token.get_start(), token.get_end() - token.get_start() + 1);
@@ -145,15 +145,15 @@ namespace RC::ParserBase
             return --current_offset;
         }
 
-        throw std::runtime_error{ "[calc_next_token_offset] Invalid PeekDirection" };
+        throw std::runtime_error{"[calc_next_token_offset] Invalid PeekDirection"};
     }
-    
+
     auto TokenParser::peek_until_internal(Consume consume, const std::vector<int>& find_types, PeekUntilCallable callable, PeekDirection peek_direction) const -> void
     {
         const auto& tokens = m_tokenizer.get_tokens();
         size_t num_tokens = tokens.size();
 
-        size_t peek_i{ m_current_token_index_being_parsed };
+        size_t peek_i{m_current_token_index_being_parsed};
         size_t& i = get_start_token_index_ref(peek_direction, consume, peek_i);
 
         size_t next_token_index = calc_next_token_offset(i, peek_direction);
@@ -171,7 +171,10 @@ namespace RC::ParserBase
                 }
             }
 
-            if (master_break) { break; }
+            if (master_break)
+            {
+                break;
+            }
         }
     }
 
@@ -224,7 +227,7 @@ namespace RC::ParserBase
         return return_value;
     }
 
-    auto TokenParser::peek_until(const int find_type, PeekUntilCallable callable, PeekDirection  peek_direction) const -> void
+    auto TokenParser::peek_until(const int find_type, PeekUntilCallable callable, PeekDirection peek_direction) const -> void
     {
         peek_until(std::vector<int>{find_type}, callable, peek_direction);
     }
@@ -234,7 +237,7 @@ namespace RC::ParserBase
         peek_until_internal(Consume::No, find_types, callable, peek_direction);
     }
 
-    auto TokenParser::consume_until(const int find_type, PeekUntilCallable callable, PeekDirection  peek_direction) const -> void
+    auto TokenParser::consume_until(const int find_type, PeekUntilCallable callable, PeekDirection peek_direction) const -> void
     {
         consume_until(std::vector<int>{find_type}, callable, peek_direction);
     }
@@ -273,4 +276,4 @@ namespace RC::ParserBase
             parse_token(tokens[m_current_token_index_being_parsed]);
         }
     }
-}
+} // namespace RC::ParserBase

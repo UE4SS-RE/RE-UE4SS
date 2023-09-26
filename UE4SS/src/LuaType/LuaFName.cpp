@@ -1,12 +1,14 @@
 #include <limits>
 
-#include <LuaType/LuaFName.hpp>
 #include <DynamicOutput/DynamicOutput.hpp>
 #include <Helpers/String.hpp>
+#include <LuaType/LuaFName.hpp>
 
 namespace RC::LuaType
 {
-    FName::FName(Unreal::FName object) : LocalObjectBase<Unreal::FName, FNameName>(std::move(object)) {}
+    FName::FName(Unreal::FName object) : LocalObjectBase<Unreal::FName, FNameName>(std::move(object))
+    {
+    }
 
     auto FName::construct(const LuaMadeSimple::Lua& lua, Unreal::FName unreal_object) -> const LuaMadeSimple::Lua::Table
     {
@@ -43,7 +45,7 @@ namespace RC::LuaType
 
     auto FName::setup_metamethods(BaseObject& base_object) -> void
     {
-        base_object.get_metamethods().create(LuaMadeSimple::Lua::MetaMethod::Call, []([[maybe_unused]]const LuaMadeSimple::Lua& lua) -> int {
+        base_object.get_metamethods().create(LuaMadeSimple::Lua::MetaMethod::Call, []([[maybe_unused]] const LuaMadeSimple::Lua& lua) -> int {
             // Acts as a "constructor" for FName
             std::string error_overload_not_found{R"(
 No overload found for function 'FName'.
@@ -77,7 +79,7 @@ Overloads:
             {
                 find_type = static_cast<Unreal::EFindName>(lua.get_integer());
             }
-            
+
             if (name_string.empty())
             {
                 if (name_comparison_index < 0)
@@ -98,7 +100,7 @@ Overloads:
             return 1;
         });
 
-        base_object.get_metamethods().create(LuaMadeSimple::Lua::MetaMethod::Equal, []([[maybe_unused]]const LuaMadeSimple::Lua& lua) -> int {
+        base_object.get_metamethods().create(LuaMadeSimple::Lua::MetaMethod::Equal, []([[maybe_unused]] const LuaMadeSimple::Lua& lua) -> int {
             if (!lua.is_userdata(1) || !lua.is_userdata(2))
             {
                 lua.throw_error("FName __eq metamethod called but there was not two userdata to compare");
@@ -111,7 +113,7 @@ Overloads:
         });
     }
 
-    template<LuaMadeSimple::Type::IsFinal is_final>
+    template <LuaMadeSimple::Type::IsFinal is_final>
     auto FName::setup_member_functions(LuaMadeSimple::Lua::Table& table) -> void
     {
         table.add_pair("ToString", [](const LuaMadeSimple::Lua& lua) -> int {
@@ -151,7 +153,7 @@ Overloads:
 
             // If this is the final object then we also want to finalize creating the table
             // If not then it's the responsibility of the overriding object to call 'make_global()'
-            //table.make_global("FNameUserdata");
+            // table.make_global("FNameUserdata");
         }
     }
-}
+} // namespace RC::LuaType

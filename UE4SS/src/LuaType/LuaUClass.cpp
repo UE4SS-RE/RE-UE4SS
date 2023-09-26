@@ -1,12 +1,15 @@
+#include <DynamicOutput/Output.hpp>
 #include <LuaType/LuaUClass.hpp>
 #include <LuaType/LuaUFunction.hpp>
 #include <Unreal/UClass.hpp>
 #include <Unreal/UFunction.hpp>
-#include <DynamicOutput/Output.hpp>
 
 namespace RC::LuaType
 {
-    UClass::UClass(Unreal::UClass* object) : UObjectBase<Unreal::UClass, UClassName>(object) /*LuaMadeSimple::Type::RemoteObject<Unreal::UClass>("UClass", object)*/ {}
+    UClass::UClass(Unreal::UClass* object)
+        : UObjectBase<Unreal::UClass, UClassName>(object) /*LuaMadeSimple::Type::RemoteObject<Unreal::UClass>("UClass", object)*/
+    {
+    }
 
     auto UClass::construct(const LuaMadeSimple::Lua& lua, Unreal::UClass* unreal_object) -> const LuaMadeSimple::Lua::Table
     {
@@ -43,12 +46,12 @@ namespace RC::LuaType
         return table;
     }
 
-    auto UClass::setup_metamethods([[maybe_unused]]BaseObject& base_object) -> void
+    auto UClass::setup_metamethods([[maybe_unused]] BaseObject& base_object) -> void
     {
         // UClass has no metamethods
     }
 
-    template<LuaMadeSimple::Type::IsFinal is_final>
+    template <LuaMadeSimple::Type::IsFinal is_final>
     auto UClass::setup_member_functions(const LuaMadeSimple::Lua::Table& table) -> void
     {
         Super::setup_member_functions<LuaMadeSimple::Type::IsFinal::No>(table);
@@ -72,7 +75,7 @@ namespace RC::LuaType
 
         table.add_pair("IsChildOf", [](const LuaMadeSimple::Lua& lua) -> int {
             const auto& lua_object = lua.get_userdata<UClass>();
-            
+
             const auto& param_1 = lua.get_userdata<UClass>();
             lua.set_bool(lua_object.get_remote_cpp_object()->IsChildOf(param_1.get_remote_cpp_object()));
 
@@ -88,7 +91,7 @@ namespace RC::LuaType
 
             // If this is the final object then we also want to finalize creating the table
             // If not then it's the responsibility of the overriding object to call 'make_global()'
-            //table.make_global(ClassName::ToString());
+            // table.make_global(ClassName::ToString());
         }
     }
-}
+} // namespace RC::LuaType

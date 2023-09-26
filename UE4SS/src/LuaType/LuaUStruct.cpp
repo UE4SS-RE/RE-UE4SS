@@ -1,14 +1,16 @@
-#include <LuaType/LuaUStruct.hpp>
-#include <LuaType/LuaUFunction.hpp>
-#include <LuaType/LuaXProperty.hpp>
-#include <Unreal/UStruct.hpp>
-#include <Unreal/UFunction.hpp>
-#include <Unreal/FProperty.hpp>
 #include <DynamicOutput/Output.hpp>
+#include <LuaType/LuaUFunction.hpp>
+#include <LuaType/LuaUStruct.hpp>
+#include <LuaType/LuaXProperty.hpp>
+#include <Unreal/FProperty.hpp>
+#include <Unreal/UFunction.hpp>
+#include <Unreal/UStruct.hpp>
 
 namespace RC::LuaType
 {
-    UStruct::UStruct(Unreal::UStruct* object) : UObjectBase<Unreal::UStruct, UStructName>(object) {}
+    UStruct::UStruct(Unreal::UStruct* object) : UObjectBase<Unreal::UStruct, UStructName>(object)
+    {
+    }
 
     auto UStruct::construct(const LuaMadeSimple::Lua& lua, Unreal::UStruct* unreal_object) -> const LuaMadeSimple::Lua::Table
     {
@@ -45,12 +47,12 @@ namespace RC::LuaType
         return table;
     }
 
-    auto UStruct::setup_metamethods([[maybe_unused]]BaseObject& base_object) -> void
+    auto UStruct::setup_metamethods([[maybe_unused]] BaseObject& base_object) -> void
     {
         // UClass has no metamethods
     }
 
-    template<LuaMadeSimple::Type::IsFinal is_final>
+    template <LuaMadeSimple::Type::IsFinal is_final>
     auto UStruct::setup_member_functions(const LuaMadeSimple::Lua::Table& table) -> void
     {
         Super::setup_member_functions<LuaMadeSimple::Type::IsFinal::No>(table);
@@ -77,7 +79,10 @@ namespace RC::LuaType
                 lua.call_function(1, 1);
 
                 // We explicitly specify index 2 because we duplicated the function earlier and that's located at index 1.
-                if (lua.is_bool(2) && lua.get_bool(2)) { break; }
+                if (lua.is_bool(2) && lua.get_bool(2))
+                {
+                    break;
+                }
                 else
                 {
                     // There's a 'nil' on the stack because we told Lua that we expect a return value.
@@ -105,7 +110,10 @@ namespace RC::LuaType
                 lua.call_function(1, 1);
 
                 // We explicitly specify index 2 because we duplicated the function earlier and that's located at index 1.
-                if (lua.is_bool(2) && lua.get_bool(2)) { break; }
+                if (lua.is_bool(2) && lua.get_bool(2))
+                {
+                    break;
+                }
                 else
                 {
                     // There's a 'nil' on the stack because we told Lua that we expect a return value.
@@ -128,7 +136,7 @@ namespace RC::LuaType
 
             // If this is the final object then we also want to finalize creating the table
             // If not then it's the responsibility of the overriding object to call 'make_global()'
-            //table.make_global(ClassName::ToString());
+            // table.make_global(ClassName::ToString());
         }
     }
-}
+} // namespace RC::LuaType

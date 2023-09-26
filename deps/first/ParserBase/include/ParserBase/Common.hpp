@@ -15,5 +15,3 @@
 #define RC_PB_API __declspec(dllexport)
 #endif
 #endif
-
-

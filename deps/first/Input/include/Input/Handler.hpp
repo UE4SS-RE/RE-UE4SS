@@ -3,11 +3,10 @@
 
 // TODO: Abstract more... need to get rid of Windows.h from InputHandler.cpp
 
-
 #include <cstdint>
-#include <vector>
 #include <functional>
 #include <unordered_map>
+#include <vector>
 
 #include <Input/Common.hpp>
 #include <Input/KeyDef.hpp>
@@ -34,17 +33,17 @@ namespace RC::Input
 
     class RC_INPUT_API Handler
     {
-    private:
+      private:
         std::vector<const wchar_t*> m_active_window_classes{};
         std::vector<KeySet> m_key_sets{};
         std::unordered_map<ModifierKey, bool> m_modifier_keys_down{};
         bool m_any_keys_are_down{};
         bool m_allow_input{true};
 
-    public:
+      public:
         Handler() = delete;
-        template<typename ...WindowClasses>
-        explicit Handler(WindowClasses ...window_classes)
+        template <typename... WindowClasses>
+        explicit Handler(WindowClasses... window_classes)
         {
             static_assert(std::conjunction<std::is_same<const wchar_t*, WindowClasses>...>::value, "WindowClasses must be of type const wchar_t*");
 
@@ -56,15 +55,15 @@ namespace RC::Input
             register_window_classes(window_classes...);
         }
 
-    private:
-        template<typename WindowClass>
+      private:
+        template <typename WindowClass>
         auto register_window_classes(WindowClass window_class) -> void
         {
             m_active_window_classes.emplace_back(window_class);
         }
 
-        template<typename WindowClass, typename ...WindowClasses>
-        auto register_window_classes(WindowClass window_class, WindowClasses ...window_classes) -> void
+        template <typename WindowClass, typename... WindowClasses>
+        auto register_window_classes(WindowClass window_class, WindowClasses... window_classes) -> void
         {
             m_active_window_classes.emplace_back(window_class);
             register_window_classes(window_classes...);
@@ -73,7 +72,7 @@ namespace RC::Input
         auto are_modifier_keys_down(const std::vector<ModifierKey>&) -> bool;
         auto is_program_focused() -> bool;
 
-    public:
+      public:
         auto process_event() -> void;
         auto register_keydown_event(Input::Key, EventCallbackCallable, uint8_t custom_data = 0) -> void;
 
@@ -87,6 +86,6 @@ namespace RC::Input
         auto get_allow_input() -> bool;
         auto set_allow_input(bool new_value) -> void;
     };
-}
+} // namespace RC::Input
 
-#endif //IO_INPUT_HANDLER_HPP
+#endif // IO_INPUT_HANDLER_HPP

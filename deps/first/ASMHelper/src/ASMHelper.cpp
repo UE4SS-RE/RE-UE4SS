@@ -32,7 +32,6 @@ namespace RC::ASM
         return instruction.raw.mnemonic == ZYDIS_MNEMONIC_CALL;
     }
 
-    
     auto resolve_absolute_address(void* in_instruction_ptr) -> void*
     {
         auto instruction = get_first_instruction_at_address(in_instruction_ptr);
@@ -77,4 +76,4 @@ namespace RC::ASM
             return function_ptr;
         }
     }
-}
+} // namespace RC::ASM

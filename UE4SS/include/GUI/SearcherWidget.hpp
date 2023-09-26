@@ -8,23 +8,22 @@ namespace RC::GUI
 {
     class SearcherWidget
     {
-    public:
+      public:
         enum class SearchMode
         {
             All,
             ByName,
         };
 
-    public:
-        using IteratorCallback = void(*)(void* userdata);
-        using SearchModeChangedCallback = void(*)(void* userdata, SearchMode);
+      public:
+        using IteratorCallback = void (*)(void* userdata);
+        using SearchModeChangedCallback = void (*)(void* userdata, SearchMode);
 
-
-    public:
+      public:
         SearcherWidget() = delete;
         SearcherWidget(SearchModeChangedCallback, IteratorCallback all_iterator, IteratorCallback search_iterator, void* userdata = nullptr);
 
-    private:
+      private:
         friend auto search_field_always_callback(ImGuiInputTextCallbackData* data) -> int;
         constexpr static size_t m_search_buffer_capacity = 2000;
         std::string_view m_default_search_buffer{"Search name..."};
@@ -39,13 +38,11 @@ namespace RC::GUI
         bool m_search_field_cleared{};
         bool m_is_searching_by_name{};
 
-    public:
+      public:
         auto render() -> void;
 
-    public:
+      public:
         auto was_search_requested() -> bool;
         auto get_search_value() -> const std::string&;
     };
-}
-
-
+} // namespace RC::GUI

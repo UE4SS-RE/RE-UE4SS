@@ -8,4 +8,4 @@ namespace RC::JSON
         (void)indent_level;
         return STR("null");
     }
-}
+} // namespace RC::JSON

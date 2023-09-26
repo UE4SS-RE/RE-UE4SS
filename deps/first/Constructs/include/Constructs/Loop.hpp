@@ -8,6 +8,6 @@ namespace RC
         Continue,
         Break,
     };
-}
+} // namespace RC
 
-#endif //UE4SS_REWRITTEN_LOOP_HPP
+#endif // UE4SS_REWRITTEN_LOOP_HPP

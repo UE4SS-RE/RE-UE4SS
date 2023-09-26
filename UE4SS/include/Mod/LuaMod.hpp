@@ -1,15 +1,15 @@
 #pragma once
 
-#include <string>
 #include <chrono>
-#include <thread>
 #include <mutex>
+#include <string>
+#include <thread>
 #include <unordered_map>
 #include <unordered_set>
 
-#include <Mod/Mod.hpp>
 #include <File/File.hpp>
 #include <LuaMadeSimple/LuaMadeSimple.hpp>
+#include <Mod/Mod.hpp>
 
 namespace RC
 {
@@ -24,16 +24,16 @@ namespace RC
 
     class LuaMod : public Mod
     {
-    private:
+      private:
         std::wstring m_scripts_path;
         LuaMadeSimple::Lua& m_lua;
 
-    public:
+      public:
         std::vector<LuaMadeSimple::Lua*> m_hook_lua{};
         LuaMadeSimple::Lua* m_main_lua{};
         LuaMadeSimple::Lua* m_async_lua{};
 
-    public:
+      public:
         enum class ActionType
         {
             Immediate,
@@ -106,31 +106,31 @@ namespace RC
         static inline bool m_is_currently_executing_game_action{};
         static inline std::recursive_mutex m_thread_actions_mutex{};
 
-    private:
+      private:
         std::jthread m_async_thread;
         bool m_processing_events{};
         bool m_pause_events_processing{};
         bool m_is_process_event_hooked{};
         std::mutex m_actions_lock{};
 
-    public:
+      public:
         LuaMod(UE4SSProgram&, std::wstring&& mod_name, std::wstring&& mod_path);
         ~LuaMod() override = default;
 
-    private:
+      private:
         auto start_async_thread() -> void
         {
             m_async_thread = std::jthread{&Mod::update_async, this};
         }
 
-    private:
+      private:
         auto setup_lua_require_paths(const LuaMadeSimple::Lua& lua) const -> void;
         auto setup_lua_global_functions(const LuaMadeSimple::Lua& lua) const -> void;
         auto setup_lua_global_functions_main_state_only() const -> void;
         auto setup_lua_classes(const LuaMadeSimple::Lua& lua) const -> void;
         auto fire_on_lua_start_for_cpp_mod() -> void;
 
-    public:
+      public:
         auto start_mod() -> void override;
         auto uninstall() -> void override;
 
@@ -150,7 +150,7 @@ namespace RC
             m_actions_lock.unlock();
         }
 
-    public:
+      public:
         // Called once when the program is starting, after mods are setup but before any mods have been started
         auto static on_program_start() -> void;
 
@@ -170,5 +170,4 @@ namespace RC
         static LuaMadeSimple::Lua* console_executor;
         static bool console_executor_enabled;
     };
-}
-
+} // namespace RC
