@@ -124,7 +124,7 @@ set(BUILD_CONFIGS)
 foreach (game_type ${GAME_TYPES})
     foreach (platform_type ${PLATFORM_TYPES})
         foreach (shipping_type ${SHIPPING_TYPES})
-            set(triplet ${game_type}-${platform_type}-${shipping_type})
+            set(triplet ${game_type}_${platform_type}_${shipping_type})
             list(APPEND BUILD_CONFIGS ${triplet})
 
             set(definitions
