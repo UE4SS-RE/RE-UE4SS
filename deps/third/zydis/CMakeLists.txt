@@ -1,0 +1,22 @@
+include(FetchContent)
+
+set(FETCHCONTENT_QUIET OFF)
+
+if (UE4SS_zydis_BUILD_SHARED)
+    set(ZYDIS_BUILD_SHARED_LIB ON CACHE BOOL "Build zydis as a shared library" FORCE)
+    set(ZYCORE_BUILD_SHARED_LIB ON CACHE BOOL "Build zycore as shared libary" FORCE)
+else ()
+    set(ZYDIS_BUILD_SHARED_LIB OFF CACHE BOOL "Build zydis as a shared library" FORCE)
+    set(ZYCORE_BUILD_SHARED_LIB OFF CACHE BOOL "Build zycore as shared libary" FORCE)
+endif ()
+
+set(ZYDIS_BUILD_TOOLS OFF CACHE BOOL "")
+set(ZYDIS_BUILD_EXAMPLES OFF CACHE BOOL "")
+
+FetchContent_Declare(zydis
+    PREFIX ${CMAKE_CURRENT_BINARY_DIR}/zydis
+    GIT_REPOSITORY git@github.com:zyantific/zydis.git
+    GIT_TAG v3.1.0
+    GIT_PROGRESS ON)
+
+FetchContent_MakeAvailable(zydis)

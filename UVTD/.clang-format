@@ -1,0 +1,19 @@
+# Format Style Options - Created with Clang Power Tools
+---
+AllowAllArgumentsOnNextLine: false
+AllowShortBlocksOnASingleLine: Empty
+AllowShortLambdasOnASingleLine: Empty
+AllowShortIfStatementsOnASingleLine: WithoutElse
+AlwaysBreakTemplateDeclarations: Yes
+BasedOnStyle: Microsoft
+BinPackArguments: false
+BinPackParameters: false
+ColumnLimit: 160
+ContinuationIndentWidth: 8
+NamespaceIndentation: All
+ObjCBreakBeforeNestedBlockParam: false
+PenaltyBreakBeforeFirstCallParameter: 120
+PenaltyExcessCharacter: 5
+PointerAlignment: Left
+Standard: Latest
+...
