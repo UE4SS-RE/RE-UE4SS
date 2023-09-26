@@ -3,8 +3,8 @@
 #include <regex>
 
 #define NOMINMAX
-#include <Psapi.h>
 #include <Windows.h>
+#include <Psapi.h>
 
 #include <SigScanner/SinglePassSigScanner.hpp>
 
