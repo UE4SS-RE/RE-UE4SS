@@ -16,4 +16,5 @@ PenaltyBreakBeforeFirstCallParameter: 120
 PenaltyExcessCharacter: 5
 PointerAlignment: Left
 Standard: Latest
+SortIncludes: false
 ...
