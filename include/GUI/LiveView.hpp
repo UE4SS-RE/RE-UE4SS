@@ -140,6 +140,7 @@ namespace RC::GUI
         static bool s_selected_item_deleted;
         static bool s_need_to_filter_out_properties;
         static bool s_watches_loaded_from_disk;
+        static bool s_use_regex_for_search;
 
     private:
         enum class AffectsHistory { Yes, No };

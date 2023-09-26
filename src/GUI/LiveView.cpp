@@ -6,6 +6,7 @@
 #include <unordered_map>
 #include <variant>
 #include <mutex>
+#include <regex>
 
 #include <GUI/LiveView.hpp>
 #include <GUI/GUI.hpp>
@@ -81,6 +82,7 @@ namespace RC::GUI
     bool LiveView::s_selected_item_deleted{};
     bool LiveView::s_need_to_filter_out_properties{};
     bool LiveView::s_watches_loaded_from_disk{};
+    bool LiveView::s_use_regex_for_search{};
 
     static auto get_object_full_name_cxx_string(UObject* object) -> std::string;
 
@@ -131,6 +133,16 @@ namespace RC::GUI
         std::transform(object_full_name.begin(), object_full_name.end(), object_full_name.begin(), [](char c) {
             return std::tolower(c);
         });
+
+        if (LiveView::s_use_regex_for_search)
+        {
+            if (std::regex_search(object_full_name.begin(), object_full_name.end(), std::regex(name_to_search_by)))
+            {
+                LiveView::s_name_search_results.emplace_back(object);
+                LiveView::s_name_search_results_set.emplace(object);
+            }
+            return;
+        }
 
         if (object_full_name.find(name_to_search_by) != object_full_name.npos)
         {
@@ -2070,6 +2082,11 @@ namespace RC::GUI
                 // Row 4
                 ImGui::TableNextRow();
                 ImGui::TableNextColumn();
+                ImGui::Checkbox("Use Regex for search", &s_use_regex_for_search);
+
+                // Row 5
+                ImGui::TableNextRow();
+                ImGui::TableNextColumn();
                 ImGui::Text("Exclude class name");
                 ImGui::TableNextColumn();
                 if (ImGui::InputText("##ExcludeClassName", &Filter::ExcludeClassName::s_internal_value))
@@ -2077,7 +2094,7 @@ namespace RC::GUI
                     Filter::ExcludeClassName::s_value = to_wstring(Filter::ExcludeClassName::s_internal_value);
                 }
 
-                // Row 5
+                // Row 6
                 ImGui::TableNextRow();
                 ImGui::TableNextColumn();
                 ImGui::Text("Has property");
