@@ -126,8 +126,10 @@ set(${TARGET}_Sources
 
 add_library(${TARGET} SHARED ${UE4SS_Sources})
 
-target_compile_options(${TARGET} PUBLIC "${PRIVATE_COMPILE_OPTIONS}")
-target_link_options(${TARGET} PUBLIC "${PRIVATE_LINK_OPTIONS}")
+if (NOT UE4SS_NO_CUSTOM_FLAGS)
+    target_compile_options(${TARGET} PUBLIC "${PRIVATE_COMPILE_OPTIONS}")
+    target_link_options(${TARGET} PUBLIC "${PRIVATE_LINK_OPTIONS}")
+endif ()
 
 # Enabling c++20 support
 target_compile_features(${TARGET} PUBLIC cxx_std_20)
