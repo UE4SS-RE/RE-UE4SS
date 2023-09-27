@@ -34,7 +34,7 @@ project(${TARGET})
 
 add_library(${TARGET} SHARED "dllmain.cpp")
 target_include_directories(${TARGET} PRIVATE .)
-target_link_libraries(${TARGET} PUBLIC ue4ss)
+target_link_libraries(${TARGET} PUBLIC UE4SS)
 ```
 2. Make a file called `dllmain.cpp` in `MyMods/MyAwesomeMod` and put this inside it:
 ```c++
@@ -86,7 +86,7 @@ extern "C"
 6. Find your project (in my case: MyAwesomeMod) in the solution explorer and right click it and hit `Build`.
 
 ## Part #3
-In this part, we're going to learn how to output messages to the GUI console, find a UObject by name, and output that name to the GUI console.
+In this part, we're going to learn how to log to file, and both consoles, as well as find a UObject by name, and log that name.
 1. Add `#include <DynamicOutput/DynamicOutput.hpp>` under `#include <Mod/CppUserModBase.hpp>`.  
 You can now also remove `#include <stdio.h>` because we'll be removing the use of `printf` which was the only thing that required it.
 2. To save some time and annoyance and make the code look a bit better, add this line below all the includes:
@@ -111,7 +111,7 @@ We also get some support for colors via the `LogLevel` enum.
 auto on_unreal_init() -> void override
 {
     // You are allowed to use the 'Unreal' namespace in this function and anywhere else after this function has fired.
-    auto Object = UObjectGlobals::StaticFindObject(nullptr, nullptr, STR("/Script/CoreUObject.Object"));
+    auto Object = UObjectGlobals::StaticFindObject<UObject*>(nullptr, nullptr, STR("/Script/CoreUObject.Object"));
     Output::send<LogLevel::Verbose>(STR("Object Name: {}\n"), Object->GetFullName());
 }
 ```
