@@ -126,13 +126,16 @@ set(${TARGET}_Sources
 
 add_library(${TARGET} SHARED ${UE4SS_Sources})
 
+target_compile_options(${TARGET} PUBLIC "${PRIVATE_COMPILE_OPTIONS}")
+target_link_options(${TARGET} PUBLIC "${PRIVATE_LINK_OPTIONS}")
+
 # Enabling c++20 support
 target_compile_features(${TARGET} PUBLIC cxx_std_20)
 
 target_include_directories(${TARGET} PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include> $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/generated_include>)
 
 # First party static build -> START
-target_compile_definitions(${TARGET} PUBLIC
+target_compile_definitions(${TARGET} PRIVATE
         RC_UE4SS_EXPORTS
         RC_ASM_HELPER_BUILD_STATIC
         RC_FILE_BUILD_STATIC

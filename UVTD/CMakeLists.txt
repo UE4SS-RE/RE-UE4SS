@@ -20,13 +20,16 @@ set(${TARGET}_Sources
 
 add_executable(${TARGET} ${${TARGET}_Sources})
 
+target_compile_options(${TARGET} PUBLIC "${PRIVATE_COMPILE_OPTIONS}")
+target_link_options(${TARGET} PUBLIC "${PRIVATE_LINK_OPTIONS}")
+
 # Enabling c++20 support
 target_compile_features(${TARGET} PUBLIC cxx_std_20)
 
 target_include_directories(${TARGET} PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>)
 
 # First party static build -> START
-target_compile_definitions(${TARGET} PUBLIC
+target_compile_definitions(${TARGET} PRIVATE
         RC_FILE_BUILD_STATIC
         RC_DYNAMIC_OUTPUT_BUILD_STATIC
         RC_SINGLE_PASS_SIG_SCANNER_BUILD_STATIC
