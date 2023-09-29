@@ -18,6 +18,11 @@ The shortcut (previously J) for dumping objects (generating UE4SS_ObjectDump.txt
 
 The shortcut (previously D) for generating CXX headers has been changed to CTRL + H
 
+### Lua API
+Added an optional third parameter to `RegisterHook`  
+If provided, it will act as a post callback hook where out-params can be modified  
+Note that for BP-only functions, both callbacks act as post callbacks
+
 
 ### C++ API
 Finalize C++ API. - LocalCC; Truman
