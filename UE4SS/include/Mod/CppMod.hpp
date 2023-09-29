@@ -44,6 +44,9 @@ namespace RC
         auto fire_on_lua_start(LuaMadeSimple::Lua& lua, LuaMadeSimple::Lua& main_lua, LuaMadeSimple::Lua& async_lua, std::vector<LuaMadeSimple::Lua*>& hook_luas)
                 -> void;
 
+        auto fire_on_lua_stop(LuaMadeSimple::Lua& lua, LuaMadeSimple::Lua& main_lua, LuaMadeSimple::Lua& async_lua, std::vector<LuaMadeSimple::Lua*>& hook_luas)
+                -> void;
+
         auto fire_unreal_init() -> void override;
         auto fire_program_start() -> void override;
         auto fire_update() -> void override;

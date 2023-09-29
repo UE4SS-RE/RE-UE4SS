@@ -3120,6 +3120,15 @@ Overloads:
         }
     }
 
+    auto LuaMod::fire_on_lua_stop_for_cpp_mod() -> void
+    {
+        auto cpp_mod = UE4SSProgram::find_mod_by_name<CppMod>(get_name(), UE4SSProgram::IsInstalled::Yes);
+        if (cpp_mod)
+        {
+            cpp_mod->fire_on_lua_stop(m_lua, *m_main_lua, *m_async_lua, m_hook_lua);
+        }
+    }
+
     auto LuaMod::start_mod() -> void
     {
         prepare_mod(lua());
@@ -3150,6 +3159,8 @@ Overloads:
         std::lock_guard<std::recursive_mutex> guard{LuaMod::m_thread_actions_mutex};
 
         Output::send(STR("Stopping mod '{}' for uninstall\n"), m_mod_name);
+
+        fire_on_lua_stop_for_cpp_mod();
 
         if (m_async_thread.joinable())
         {
