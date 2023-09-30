@@ -13,6 +13,9 @@ endif ()
 set(ZYDIS_BUILD_TOOLS OFF CACHE BOOL "")
 set(ZYDIS_BUILD_EXAMPLES OFF CACHE BOOL "")
 
+set(ASMTK_NO_CUSTOM_FLAGS ON CACHE BOOL "" FORCE)
+set(ASMJIT_NO_CUSTOM_FLAGS ON CACHE BOOL "" FORCE)
+
 FetchContent_Declare(zydis
     PREFIX ${CMAKE_CURRENT_BINARY_DIR}/zydis
     GIT_REPOSITORY git@github.com:zyantific/zydis.git

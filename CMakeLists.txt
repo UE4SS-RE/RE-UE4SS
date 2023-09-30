@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.18)
-project(UE4SSRepo)
+project(UE4SSMonorepo)
 
 enable_language(CXX ASM_MASM)
 include(CheckIPOSupported)
@@ -10,7 +10,6 @@ message("IPO - Supported: ${supported}; ${error}")
 
 # Settings -> START
 option(MAKE_DEPENDENCIES_SHARED "Make dependencies shared" OFF)
-option(UE4SS_NO_CUSTOM_FLAGS "Disable compilation flags added by UE4SS" OFF)
 option(UE4SS_CONSOLE_COLORS_ENABLED "Enable console colors" OFF)
 # Settings -> END
 
@@ -79,102 +78,89 @@ set(Test_DEFINITIONS UE_BUILD_TEST)
 
 # Platform definitions
 set(Win64_DEFINITIONS PLATFORM_WINDOWS)
+
 # Definitions -> END
 
-# Compiler Flags and Options -> START
-set(PRIVATE_COMPILE_OPTIONS "")
-set(PRIVATE_LINK_OPTIONS "")
-
-# Compiler Flags -> START
-# Target compiler flags
-set(Game_FLAGS "")
-set(CasePreserving_FLAGS ${Game_FLAGS})
-
-# Configuration compiler flags
-set(Debug_FLAGS ${CMAKE_CXX_FLAGS_DEBUG})
-# set(Dev_FLAGS ${CMAKE_CXX_FLAGS_DEBUG})
-set(Shipping_FLAGS ${CMAKE_CXX_FLAGS_RELEASE})
-set(Test_FLAGS ${CMAKE_CXX_FLAGS_RELWITHDEBINFO})
-
-# Platform compiler flags
-set(Win64_FLAGS "")
-
-# Fallback linker flags, if the triplet doesn't have flags defined
-set(DEFAULT_SHARED_LINKER_FLAGS)
-set(DEFAULT_EXE_LINKER_FLAGS)
-# Fallback compiler flags if the triplet doesn't have flags defined
-set(DEFAULT_CXX_FLAGS)
-set(DEFAULT_C_FLAGS)
-# Compiler Flags -> END
+# Initializing compiler-specific options
+add_subdirectory("compiler_options")
 
 # Compiler Options -> START
-if (NOT UE4SS_NO_CUSTOM_FLAGS)
-    if (${CMAKE_CXX_COMPILER_ID} STREQUAL MSVC)
-        set(PRIVATE_COMPILE_OPTIONS "$<IF:$<COMPILE_LANGUAGE:ASM_MASM>,$<$<CONFIG:GAME_SHIPPING_WIN64>:/Zi>,/MP;$<$<CONFIG:GAME_SHIPPING_WIN64>:/Zi>;/W3;/wd4005;/wd4251;/wd4068;/Zc:inline;/Zc:strictStrings>")
-        set(PRIVATE_LINK_OPTIONS /DEBUG:FULL)
-    elseif (${CMAKE_CXX_COMPILER_ID} STREQUAL Clang)
-        set(PRIVATE_COMPILE_OPTIONS "$<IF:$<COMPILE_LANGUAGE:ASM_MASM>,,-g;-gcodeview;-fcolor-diagnostics;-Wno-unknown-pragmas;-Wno-unused-parameter;-fms-extensions;-Wignored-attributes;>")
-        set(PRIVATE_LINK_OPTIONS "$<IF:$<COMPILE_LANGUAGE:ASM_MASM>,,-g>")
-        # add_compile_definitions(printf_s=printf)
-    elseif (${CMAKE_CXX_COMPILER_ID} STREQUAL GNU)
-        set(PRIVATE_COMPILE_OPTIONS "$<IF:$<COMPILE_LANGUAGE:ASM_MASM>,,-fms-extensions>")
-    endif ()
-endif ()
-
-add_compile_options("${PRIVATE_COMPILE_OPTIONS}")
-add_link_options("${PRIVATE_LINK_OPTIONS}")
+add_compile_options("$<$<NOT:$<COMPILE_LANGUAGE:ASM_MASM>>:${DEFAULT_COMPILER_FLAGS}>")
+add_link_options("${DEFAULT_SHARED_LINKER_FLAGS}" "${DEFAULT_EXE_LINKER_FLAGS}")
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 # Compiler Options -> END
 
-set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
-# Compiler Flags and Options -> END
+# Compiler Flags -> START
+function (listToString VARNAME VALUE)
+    string(REPLACE ";" " " result "${VALUE}")
+    set(${VARNAME} "${result}" PARENT_SCOPE)
+endfunction ()
+
+function (stringToList VARNAME VALUE)
+    string(REPLACE " " ";" result "${VALUE}")
+    set(${VARNAME} "${result}" PARENT_SCOPE)
+endfunction ()
+
+# APPEND is needed here because compiler_options might set additional args
+# Target compiler flags
+list(APPEND Game_FLAGS "")
+list(APPEND CasePreserving_FLAGS ${Game_FLAGS})
+
+# Configuration compiler flags
+stringToList(DEBUG_FLAGS_LIST "${CMAKE_CXX_FLAGS_DEBUG}")
+list(APPEND Debug_FLAGS ${DEBUG_FLAGS_LIST})
+# list(APPEND Dev_FLAGS ${CMAKE_CXX_FLAGS_DEBUG})
+stringToList(RELEASE_FLAGS_LIST "${CMAKE_CXX_FLAGS_RELEASE}")
+list(APPEND Shipping_FLAGS ${RELEASE_FLAGS_LIST})
+stringToList(RELWITHDEBINFO_FLAGS_LIST "${CMAKE_CXX_FLAGS_RELWITHDEBINFO}")
+list(APPEND Test_FLAGS ${RELWITHDEBINFO_FLAGS_LIST})
+# Compiler Flags -> END
 
 set(BUILD_CONFIGS)
+set(TARGET_COMPILE_OPTIONS "$<$<NOT:$<COMPILE_LANGUAGE:ASM_MASM>>:${DEFAULT_COMPILER_FLAGS}>")
+set(TARGET_LINK_OPTIONS "${DEFAULT_EXE_LINKER_FLAGS}" "${DEFAULT_SHARED_LINKER_FLAGS}")
 
 foreach (target_type ${TARGET_TYPES})
-    foreach (configuration_type ${CONFIGURATION_TYPES})
-        foreach (platform_type ${PLATFORM_TYPES})
-            set(triplet ${target_type}_${configuration_type}_${platform_type})
+    foreach (platform_type ${PLATFORM_TYPES})
+        foreach (configuration_type ${CONFIGURATION_TYPES})
+            set(triplet ${target_type}_${platform_type}_${configuration_type})
             list(APPEND BUILD_CONFIGS ${triplet})
 
             set(definitions
                     ${${target_type}_DEFINITIONS}
-                    ${${configuration_type}_DEFINITIONS}
-                    ${${platform_type}_DEFINITIONS})
+                    ${${platform_type}_DEFINITIONS}
+                    ${${configuration_type}_DEFINITIONS})
             add_compile_definitions("$<$<STREQUAL:$<CONFIG>,${triplet}>:${definitions}>")
             string(TOUPPER ${triplet} triplet_upper)
-            if (NOT UE4SS_NO_CUSTOM_FLAGS)
-                set(compiler_flags
-                        ${${target_type}_FLAGS}
-                        ${${configuration_type}_FLAGS}
-                        ${${platform_type}_FLAGS})
-                set(CMAKE_CXX_FLAGS_${triplet_upper} ${compiler_flags})
-                set(CMAKE_C_FLAGS_${triplet_upper} ${compiler_flags})
-            endif ()
 
-            if (NOT DEFINED CMAKE_SHARED_LINKER_FLAGS_${triplet_upper})
-                set(CMAKE_SHARED_LINKER_FLAGS_${triplet_upper} ${DEFAULT_SHARED_LINKER_FLAGS})
-            endif ()
+            set(compiler_flags
+                    ${${target_type}_FLAGS}
+                    ${${platform_type}_FLAGS}
+                    ${${configuration_type}_FLAGS})
 
-            if (NOT DEFINED CMAKE_EXE_LINKER_FLAGS_${triplet_upper})
-                set(CMAKE_EXE_LINKER_FLAGS_${triplet_upper} ${DEFAULT_EXE_LINKER_FLAGS})
-            endif ()
+            listToString(final_compiler_flags "${DEFAULT_COMPILER_FLAGS}" "${compiler_flags}")
+            set(CMAKE_CXX_FLAGS_${triplet_upper} "${final_compiler_flags}" CACHE STRING "" FORCE)
+            set(CMAKE_C_FLAGS_${triplet_upper} "${final_compiler_flags}" CACHE STRING "" FORCE)
 
-            if (NOT DEFINED CMAKE_CXX_FLAGS_${triplet_upper})
-                set(CMAKE_CXX_FLAGS_${triplet_upper} ${DEFAULT_CXX_FLAGS})
-            endif ()
+            list(APPEND TARGET_COMPILE_OPTIONS "$<$<STREQUAL:$<CONFIG>,${triplet}>:${compiler_flags}>")
 
-            if (NOT DEFINED CMAKE_C_FLAGS_${triplet_upper})
-                set(CMAKE_C_FLAGS_${triplet_upper} ${DEFAULT_C_FLAGS})
-            endif ()
+            set(linker_flags
+                ${${target_type}_LINKER_FLAGS}
+                ${${platform_type}_LINKER_FLAGS}
+                ${${configuration_type}_LINKER_FLAGS})
+
+            listToString(exe_linker_flags "${DEFAULT_EXE_LINKER_FLAGS}" "${linker_flags}")
+            set(CMAKE_EXE_LINKER_FLAGS_${triplet_upper} "${exe_linker_flags}" CACHE STRING "" FORCE)
+
+            listToString(shared_linker_flags "${DEFAULT_SHARED_LINKER_FLAGS}" "${linker_flags}")
+            set(CMAKE_SHARED_LINKER_FLAGS_${triplet_upper} "${shared_linker_flags}" CACHE STRING "" FORCE)
+
+            listToString(target_linker_flags "${DEFAULT_EXE_LINKER_FLAGS}" "${DEFAULT_SHARED_LINKER_FLAGS}" "${linker_flags}")
+            list(APPEND TARGET_LINK_OPTIONS "$<$<STREQUAL:$<CONFIG>,${triplet}>:${target_linker_flags}>")
         endforeach ()
     endforeach ()
 endforeach ()
 # Build configurations -> END
-
-# ASM Flags -> START
-set(ASMTK_NO_CUSTOM_FLAGS ON CACHE BOOL "" FORCE)
-set(ASMJIT_NO_CUSTOM_FLAGS ON CACHE BOOL "" FORCE)
-# ASM Flags -> END
 
 add_subdirectory("deps")
 
@@ -205,6 +191,12 @@ foreach (target ${TARGETS})
             RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/Output/$<CONFIG>/${CMAKE_INSTALL_BINDIR}/${target}
             LIBRARY_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/Output/$<CONFIG>/${CMAKE_INSTALL_BINDIR}/${target}
             ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/Output/$<CONFIG>/${CMAKE_INSTALL_BINDIR}/${target})
+
+    get_target_property(TARGET_TYPE ${target} TYPE)
+    if (NOT ${TARGET_TYPE} STREQUAL UTILITY)
+        target_compile_options(${target} PUBLIC "${TARGET_COMPILE_OPTIONS}")
+        target_link_options(${target} PUBLIC "${final_target_link_options}")
+    endif ()
 endforeach ()
 # Output path -> END
 
@@ -215,8 +207,8 @@ if (is_multi_config)
     set(CMAKE_CONFIGURATION_TYPES ${BUILD_CONFIGS} CACHE STRING "" FORCE)
 else ()
     if (NOT CMAKE_BUILD_TYPE)
-        message("Defaulting to Game_Shipping_Win64")
-        set(CMAKE_BUILD_TYPE Game_Shipping_Win64 CACHE STRING "" FORCE)
+        message("Defaulting to Game_Win64_Shipping")
+        set(CMAKE_BUILD_TYPE Game_Win64_Shipping CACHE STRING "" FORCE)
     endif ()
 
     set_property(CACHE CMAKE_BUILD_TYPE PROPERTY HELPSTRING "Choose build type")
