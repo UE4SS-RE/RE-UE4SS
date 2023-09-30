@@ -54,9 +54,9 @@ endif ()
 # CLion fixes -> END
 
 # Output path -> START
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/Output/bin/$<CONFIG>)
-set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/Output/lib/$<CONFIG>)
-set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/Output/archive/$<CONFIG>)
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/Output/$<CONFIG>/bin)
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/Output/$<CONFIG>/lib)
+set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/Output/$<CONFIG>/archive)
 # Output path -> END
 
 # Build configurations -> START
@@ -188,9 +188,9 @@ endforeach ()
 foreach (target ${TARGETS})
     message("${target}")
     set_target_properties(${target} PROPERTIES
-            RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/Output/${target}/$<CONFIG>
-            LIBRARY_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/Output/${target}/$<CONFIG>
-            ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/Output/${target}/$<CONFIG>)
+            RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/Output/$<CONFIG>/${target}
+            LIBRARY_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/Output/$<CONFIG>/${target}
+            ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/Output/$<CONFIG>/${target})
 
     get_target_property(TARGET_TYPE ${target} TYPE)
     if (NOT ${TARGET_TYPE} STREQUAL UTILITY)
