@@ -195,10 +195,21 @@ foreach (target ${TARGETS})
     get_target_property(TARGET_TYPE ${target} TYPE)
     if (NOT ${TARGET_TYPE} STREQUAL UTILITY)
         target_compile_options(${target} PUBLIC "${TARGET_COMPILE_OPTIONS}")
-        target_link_options(${target} PUBLIC "${final_target_link_options}")
+        target_link_options(${target} PUBLIC "${TARGET_LINK_OPTIONS}")
     endif ()
+
+    get_target_property(DEPS ${target} LINK_LIBRARIES)
+    foreach (dep_target ${DEPS})
+        if (TARGET ${dep_target})
+            get_target_property(DEP_IMPORTED ${dep_target} IMPORTED)
+            get_target_property(DEP_TARGET_TYPE ${dep_target} TYPE)
+            if (NOT ${DEP_IMPORTED} AND NOT ${DEP_TARGET_TYPE} STREQUAL INTERFACE_LIBRARY)
+                target_compile_options(${dep_target} PUBLIC "${TARGET_COMPILE_OPTIONS}")
+                target_link_options(${dep_target} PUBLIC "${TARGET_LINK_OPTIONS}")
+            endif ()
+        endif ()
+    endforeach ()
 endforeach ()
-# Output path -> END
 
 # Default configuration -> START
 get_property(is_multi_config GLOBAL PROPERTY GENERATOR_IS_MULTI_CONFIG)
