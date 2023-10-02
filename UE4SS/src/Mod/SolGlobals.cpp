@@ -39,181 +39,675 @@ namespace RC
                                                }),
                                        &pointer_policy));
 
-        // clang-format off
-        sol.new_enum<Input::Key>("Key", {
-            { "LEFT_MOUSE_BUTTON", Input::Key::LEFT_MOUSE_BUTTON, },
-            { "RIGHT_MOUSE_BUTTON", Input::Key::RIGHT_MOUSE_BUTTON, },
-            { "CANCEL", Input::Key::CANCEL, },
-            { "MIDDLE_MOUSE_BUTTON", Input::Key::MIDDLE_MOUSE_BUTTON, },
-            { "XBUTTON_ONE", Input::Key::XBUTTON_ONE, },
-            { "XBUTTON_TWO", Input::Key::XBUTTON_TWO, },
-            { "BACKSPACE", Input::Key::BACKSPACE, },
-            { "TAB", Input::Key::TAB, },
-            { "CLEAR", Input::Key::CLEAR, },
-            { "RETURN", Input::Key::RETURN, },
-            { "PAUSE", Input::Key::PAUSE, },
-            { "CAPS_LOCK", Input::Key::CAPS_LOCK, },
-            { "IME_KANA", Input::Key::IME_KANA, },
-            { "IME_HANGUEL", Input::Key::IME_HANGUEL, },
-            { "IME_HANGUL", Input::Key::IME_HANGUL, },
-            { "IME_ON", Input::Key::IME_ON, },
-            { "IME_JUNJA", Input::Key::IME_JUNJA, },
-            { "IME_FINAL", Input::Key::IME_FINAL, },
-            { "IME_HANJA", Input::Key::IME_HANJA, },
-            { "IME_KANJI", Input::Key::IME_KANJI, },
-            { "IME_OFF", Input::Key::IME_OFF, },
-            { "ESCAPE", Input::Key::ESCAPE, },
-            { "IME_CONVERT", Input::Key::IME_CONVERT, },
-            { "IME_NONCONVERT", Input::Key::IME_NONCONVERT, },
-            { "IME_ACCEPT", Input::Key::IME_ACCEPT, },
-            { "IME_MODECHANGE", Input::Key::IME_MODECHANGE, },
-            { "SPACE", Input::Key::SPACE, },
-            { "PAGE_UP", Input::Key::PAGE_UP, },
-            { "PAGE_DOWN", Input::Key::PAGE_DOWN, },
-            { "END", Input::Key::END, },
-            { "HOME", Input::Key::HOME, },
-            { "LEFT_ARROW", Input::Key::LEFT_ARROW, },
-            { "UP_ARROW", Input::Key::UP_ARROW, },
-            { "RIGHT_ARROW", Input::Key::RIGHT_ARROW, },
-            { "DOWN_ARROW", Input::Key::DOWN_ARROW, },
-            { "SELECT", Input::Key::SELECT, },
-            { "PRINT", Input::Key::PRINT, },
-            { "EXECUTE", Input::Key::EXECUTE, },
-            { "PRINT_SCREEN", Input::Key::PRINT_SCREEN, },
-            { "INS", Input::Key::INS, },
-            { "DEL", Input::Key::DEL, },
-            { "HELP", Input::Key::HELP, },
-            { "ZERO", Input::Key::ZERO, },
-            { "ONE", Input::Key::ONE, },
-            { "TWO", Input::Key::TWO, },
-            { "THREE", Input::Key::THREE, },
-            { "FOUR", Input::Key::FOUR, },
-            { "FIVE", Input::Key::FIVE, },
-            { "SIX", Input::Key::SIX, },
-            { "SEVEN", Input::Key::SEVEN, },
-            { "EIGHT", Input::Key::EIGHT, },
-            { "NINE", Input::Key::NINE, },
-            { "A", Input::Key::A, },
-            { "B", Input::Key::B, },
-            { "C", Input::Key::C, },
-            { "D", Input::Key::D, },
-            { "E", Input::Key::E, },
-            { "F", Input::Key::F, },
-            { "G", Input::Key::G, },
-            { "H", Input::Key::H, },
-            { "I", Input::Key::I, },
-            { "J", Input::Key::J, },
-            { "K", Input::Key::K, },
-            { "L", Input::Key::L, },
-            { "M", Input::Key::M, },
-            { "N", Input::Key::N, },
-            { "O", Input::Key::O, },
-            { "P", Input::Key::P, },
-            { "Q", Input::Key::Q, },
-            { "R", Input::Key::R, },
-            { "S", Input::Key::S, },
-            { "T", Input::Key::T, },
-            { "U", Input::Key::U, },
-            { "V", Input::Key::V, },
-            { "W", Input::Key::W, },
-            { "X", Input::Key::X, },
-            { "Y", Input::Key::Y, },
-            { "Z", Input::Key::Z, },
-            { "LEFT_WIN", Input::Key::LEFT_WIN, },
-            { "RIGHT_WIN", Input::Key::RIGHT_WIN, },
-            { "APPS", Input::Key::APPS, },
-            { "SLEEP", Input::Key::SLEEP, },
-            { "NUM_ZERO", Input::Key::NUM_ZERO, },
-            { "NUM_ONE", Input::Key::NUM_ONE, },
-            { "NUM_TWO", Input::Key::NUM_TWO, },
-            { "NUM_THREE", Input::Key::NUM_THREE, },
-            { "NUM_FOUR", Input::Key::NUM_FOUR, },
-            { "NUM_FIVE", Input::Key::NUM_FIVE, },
-            { "NUM_SIX", Input::Key::NUM_SIX, },
-            { "NUM_SEVEN", Input::Key::NUM_SEVEN, },
-            { "NUM_EIGHT", Input::Key::NUM_EIGHT, },
-            { "NUM_NINE", Input::Key::NUM_NINE, },
-            { "MULTIPLY", Input::Key::MULTIPLY, },
-            { "ADD", Input::Key::ADD, },
-            { "SEPARATOR", Input::Key::SEPARATOR, },
-            { "SUBTRACT", Input::Key::SUBTRACT, },
-            { "DECIMAL", Input::Key::DECIMAL, },
-            { "DIVIDE", Input::Key::DIVIDE, },
-            { "F1", Input::Key::F1, },
-            { "F2", Input::Key::F2, },
-            { "F3", Input::Key::F3, },
-            { "F4", Input::Key::F4, },
-            { "F5", Input::Key::F5, },
-            { "F6", Input::Key::F6, },
-            { "F7", Input::Key::F7, },
-            { "F8", Input::Key::F8, },
-            { "F9", Input::Key::F9, },
-            { "F10", Input::Key::F10, },
-            { "F11", Input::Key::F11, },
-            { "F12", Input::Key::F12, },
-            { "F13", Input::Key::F13, },
-            { "F14", Input::Key::F14, },
-            { "F15", Input::Key::F15, },
-            { "F16", Input::Key::F16, },
-            { "F17", Input::Key::F17, },
-            { "F18", Input::Key::F18, },
-            { "F19", Input::Key::F19, },
-            { "F20", Input::Key::F20, },
-            { "F21", Input::Key::F21, },
-            { "F22", Input::Key::F22, },
-            { "F23", Input::Key::F23, },
-            { "F24", Input::Key::F24, },
-            { "NUM_LOCK", Input::Key::NUM_LOCK, },
-            { "SCROLL_LOCK", Input::Key::SCROLL_LOCK, },
-            { "BROWSER_BACK", Input::Key::BROWSER_BACK, },
-            { "BROWSER_FORWARD", Input::Key::BROWSER_FORWARD, },
-            { "BROWSER_REFRESH", Input::Key::BROWSER_REFRESH, },
-            { "BROWSER_STOP", Input::Key::BROWSER_STOP, },
-            { "BROWSER_SEARCH", Input::Key::BROWSER_SEARCH, },
-            { "BROWSER_FAVORITES", Input::Key::BROWSER_FAVORITES, },
-            { "BROWSER_HOME", Input::Key::BROWSER_HOME, },
-            { "VOLUME_MUTE", Input::Key::VOLUME_MUTE, },
-            { "VOLUME_DOWN", Input::Key::VOLUME_DOWN, },
-            { "VOLUME_UP", Input::Key::VOLUME_UP, },
-            { "MEDIA_NEXT_TRACK", Input::Key::MEDIA_NEXT_TRACK, },
-            { "MEDIA_PREV_TRACK", Input::Key::MEDIA_PREV_TRACK, },
-            { "MEDIA_STOP", Input::Key::MEDIA_STOP, },
-            { "MEDIA_PLAY_PAUSE", Input::Key::MEDIA_PLAY_PAUSE, },
-            { "LAUNCH_MAIL", Input::Key::LAUNCH_MAIL, },
-            { "LAUNCH_MEDIA_SELECT", Input::Key::LAUNCH_MEDIA_SELECT, },
-            { "LAUNCH_APP1", Input::Key::LAUNCH_APP1, },
-            { "LAUNCH_APP2", Input::Key::LAUNCH_APP2, },
-            { "OEM_ONE", Input::Key::OEM_ONE, },
-            { "OEM_PLUS", Input::Key::OEM_PLUS, },
-            { "OEM_COMMA", Input::Key::OEM_COMMA, },
-            { "OEM_MINUS", Input::Key::OEM_MINUS, },
-            { "OEM_PERIOD", Input::Key::OEM_PERIOD, },
-            { "OEM_TWO", Input::Key::OEM_TWO, },
-            { "OEM_THREE", Input::Key::OEM_THREE, },
-            { "OEM_FOUR", Input::Key::OEM_FOUR, },
-            { "OEM_FIVE", Input::Key::OEM_FIVE, },
-            { "OEM_SIX", Input::Key::OEM_SIX, },
-            { "OEM_SEVEN", Input::Key::OEM_SEVEN, },
-            { "OEM_EIGHT", Input::Key::OEM_EIGHT, },
-            { "OEM_102", Input::Key::OEM_102, },
-            { "IME_PROCESS", Input::Key::IME_PROCESS, },
-            { "PACKET", Input::Key::PACKET, },
-            { "ATTN", Input::Key::ATTN, },
-            { "CRSEL", Input::Key::CRSEL, },
-            { "EXSEL", Input::Key::EXSEL, },
-            { "EREOF", Input::Key::EREOF, },
-            { "PLAY", Input::Key::PLAY, },
-            { "ZOOM", Input::Key::ZOOM, },
-            { "PA1", Input::Key::PA1, },
-            { "OEM_CLEAR", Input::Key::OEM_CLEAR }
-        });
+        sol.new_enum<Input::Key>("Key",
+                                 {{
+                                          "LEFT_MOUSE_BUTTON",
+                                          Input::Key::LEFT_MOUSE_BUTTON,
+                                  },
+                                  {
+                                          "RIGHT_MOUSE_BUTTON",
+                                          Input::Key::RIGHT_MOUSE_BUTTON,
+                                  },
+                                  {
+                                          "CANCEL",
+                                          Input::Key::CANCEL,
+                                  },
+                                  {
+                                          "MIDDLE_MOUSE_BUTTON",
+                                          Input::Key::MIDDLE_MOUSE_BUTTON,
+                                  },
+                                  {
+                                          "XBUTTON_ONE",
+                                          Input::Key::XBUTTON_ONE,
+                                  },
+                                  {
+                                          "XBUTTON_TWO",
+                                          Input::Key::XBUTTON_TWO,
+                                  },
+                                  {
+                                          "BACKSPACE",
+                                          Input::Key::BACKSPACE,
+                                  },
+                                  {
+                                          "TAB",
+                                          Input::Key::TAB,
+                                  },
+                                  {
+                                          "CLEAR",
+                                          Input::Key::CLEAR,
+                                  },
+                                  {
+                                          "RETURN",
+                                          Input::Key::RETURN,
+                                  },
+                                  {
+                                          "PAUSE",
+                                          Input::Key::PAUSE,
+                                  },
+                                  {
+                                          "CAPS_LOCK",
+                                          Input::Key::CAPS_LOCK,
+                                  },
+                                  {
+                                          "IME_KANA",
+                                          Input::Key::IME_KANA,
+                                  },
+                                  {
+                                          "IME_HANGUEL",
+                                          Input::Key::IME_HANGUEL,
+                                  },
+                                  {
+                                          "IME_HANGUL",
+                                          Input::Key::IME_HANGUL,
+                                  },
+                                  {
+                                          "IME_ON",
+                                          Input::Key::IME_ON,
+                                  },
+                                  {
+                                          "IME_JUNJA",
+                                          Input::Key::IME_JUNJA,
+                                  },
+                                  {
+                                          "IME_FINAL",
+                                          Input::Key::IME_FINAL,
+                                  },
+                                  {
+                                          "IME_HANJA",
+                                          Input::Key::IME_HANJA,
+                                  },
+                                  {
+                                          "IME_KANJI",
+                                          Input::Key::IME_KANJI,
+                                  },
+                                  {
+                                          "IME_OFF",
+                                          Input::Key::IME_OFF,
+                                  },
+                                  {
+                                          "ESCAPE",
+                                          Input::Key::ESCAPE,
+                                  },
+                                  {
+                                          "IME_CONVERT",
+                                          Input::Key::IME_CONVERT,
+                                  },
+                                  {
+                                          "IME_NONCONVERT",
+                                          Input::Key::IME_NONCONVERT,
+                                  },
+                                  {
+                                          "IME_ACCEPT",
+                                          Input::Key::IME_ACCEPT,
+                                  },
+                                  {
+                                          "IME_MODECHANGE",
+                                          Input::Key::IME_MODECHANGE,
+                                  },
+                                  {
+                                          "SPACE",
+                                          Input::Key::SPACE,
+                                  },
+                                  {
+                                          "PAGE_UP",
+                                          Input::Key::PAGE_UP,
+                                  },
+                                  {
+                                          "PAGE_DOWN",
+                                          Input::Key::PAGE_DOWN,
+                                  },
+                                  {
+                                          "END",
+                                          Input::Key::END,
+                                  },
+                                  {
+                                          "HOME",
+                                          Input::Key::HOME,
+                                  },
+                                  {
+                                          "LEFT_ARROW",
+                                          Input::Key::LEFT_ARROW,
+                                  },
+                                  {
+                                          "UP_ARROW",
+                                          Input::Key::UP_ARROW,
+                                  },
+                                  {
+                                          "RIGHT_ARROW",
+                                          Input::Key::RIGHT_ARROW,
+                                  },
+                                  {
+                                          "DOWN_ARROW",
+                                          Input::Key::DOWN_ARROW,
+                                  },
+                                  {
+                                          "SELECT",
+                                          Input::Key::SELECT,
+                                  },
+                                  {
+                                          "PRINT",
+                                          Input::Key::PRINT,
+                                  },
+                                  {
+                                          "EXECUTE",
+                                          Input::Key::EXECUTE,
+                                  },
+                                  {
+                                          "PRINT_SCREEN",
+                                          Input::Key::PRINT_SCREEN,
+                                  },
+                                  {
+                                          "INS",
+                                          Input::Key::INS,
+                                  },
+                                  {
+                                          "DEL",
+                                          Input::Key::DEL,
+                                  },
+                                  {
+                                          "HELP",
+                                          Input::Key::HELP,
+                                  },
+                                  {
+                                          "ZERO",
+                                          Input::Key::ZERO,
+                                  },
+                                  {
+                                          "ONE",
+                                          Input::Key::ONE,
+                                  },
+                                  {
+                                          "TWO",
+                                          Input::Key::TWO,
+                                  },
+                                  {
+                                          "THREE",
+                                          Input::Key::THREE,
+                                  },
+                                  {
+                                          "FOUR",
+                                          Input::Key::FOUR,
+                                  },
+                                  {
+                                          "FIVE",
+                                          Input::Key::FIVE,
+                                  },
+                                  {
+                                          "SIX",
+                                          Input::Key::SIX,
+                                  },
+                                  {
+                                          "SEVEN",
+                                          Input::Key::SEVEN,
+                                  },
+                                  {
+                                          "EIGHT",
+                                          Input::Key::EIGHT,
+                                  },
+                                  {
+                                          "NINE",
+                                          Input::Key::NINE,
+                                  },
+                                  {
+                                          "A",
+                                          Input::Key::A,
+                                  },
+                                  {
+                                          "B",
+                                          Input::Key::B,
+                                  },
+                                  {
+                                          "C",
+                                          Input::Key::C,
+                                  },
+                                  {
+                                          "D",
+                                          Input::Key::D,
+                                  },
+                                  {
+                                          "E",
+                                          Input::Key::E,
+                                  },
+                                  {
+                                          "F",
+                                          Input::Key::F,
+                                  },
+                                  {
+                                          "G",
+                                          Input::Key::G,
+                                  },
+                                  {
+                                          "H",
+                                          Input::Key::H,
+                                  },
+                                  {
+                                          "I",
+                                          Input::Key::I,
+                                  },
+                                  {
+                                          "J",
+                                          Input::Key::J,
+                                  },
+                                  {
+                                          "K",
+                                          Input::Key::K,
+                                  },
+                                  {
+                                          "L",
+                                          Input::Key::L,
+                                  },
+                                  {
+                                          "M",
+                                          Input::Key::M,
+                                  },
+                                  {
+                                          "N",
+                                          Input::Key::N,
+                                  },
+                                  {
+                                          "O",
+                                          Input::Key::O,
+                                  },
+                                  {
+                                          "P",
+                                          Input::Key::P,
+                                  },
+                                  {
+                                          "Q",
+                                          Input::Key::Q,
+                                  },
+                                  {
+                                          "R",
+                                          Input::Key::R,
+                                  },
+                                  {
+                                          "S",
+                                          Input::Key::S,
+                                  },
+                                  {
+                                          "T",
+                                          Input::Key::T,
+                                  },
+                                  {
+                                          "U",
+                                          Input::Key::U,
+                                  },
+                                  {
+                                          "V",
+                                          Input::Key::V,
+                                  },
+                                  {
+                                          "W",
+                                          Input::Key::W,
+                                  },
+                                  {
+                                          "X",
+                                          Input::Key::X,
+                                  },
+                                  {
+                                          "Y",
+                                          Input::Key::Y,
+                                  },
+                                  {
+                                          "Z",
+                                          Input::Key::Z,
+                                  },
+                                  {
+                                          "LEFT_WIN",
+                                          Input::Key::LEFT_WIN,
+                                  },
+                                  {
+                                          "RIGHT_WIN",
+                                          Input::Key::RIGHT_WIN,
+                                  },
+                                  {
+                                          "APPS",
+                                          Input::Key::APPS,
+                                  },
+                                  {
+                                          "SLEEP",
+                                          Input::Key::SLEEP,
+                                  },
+                                  {
+                                          "NUM_ZERO",
+                                          Input::Key::NUM_ZERO,
+                                  },
+                                  {
+                                          "NUM_ONE",
+                                          Input::Key::NUM_ONE,
+                                  },
+                                  {
+                                          "NUM_TWO",
+                                          Input::Key::NUM_TWO,
+                                  },
+                                  {
+                                          "NUM_THREE",
+                                          Input::Key::NUM_THREE,
+                                  },
+                                  {
+                                          "NUM_FOUR",
+                                          Input::Key::NUM_FOUR,
+                                  },
+                                  {
+                                          "NUM_FIVE",
+                                          Input::Key::NUM_FIVE,
+                                  },
+                                  {
+                                          "NUM_SIX",
+                                          Input::Key::NUM_SIX,
+                                  },
+                                  {
+                                          "NUM_SEVEN",
+                                          Input::Key::NUM_SEVEN,
+                                  },
+                                  {
+                                          "NUM_EIGHT",
+                                          Input::Key::NUM_EIGHT,
+                                  },
+                                  {
+                                          "NUM_NINE",
+                                          Input::Key::NUM_NINE,
+                                  },
+                                  {
+                                          "MULTIPLY",
+                                          Input::Key::MULTIPLY,
+                                  },
+                                  {
+                                          "ADD",
+                                          Input::Key::ADD,
+                                  },
+                                  {
+                                          "SEPARATOR",
+                                          Input::Key::SEPARATOR,
+                                  },
+                                  {
+                                          "SUBTRACT",
+                                          Input::Key::SUBTRACT,
+                                  },
+                                  {
+                                          "DECIMAL",
+                                          Input::Key::DECIMAL,
+                                  },
+                                  {
+                                          "DIVIDE",
+                                          Input::Key::DIVIDE,
+                                  },
+                                  {
+                                          "F1",
+                                          Input::Key::F1,
+                                  },
+                                  {
+                                          "F2",
+                                          Input::Key::F2,
+                                  },
+                                  {
+                                          "F3",
+                                          Input::Key::F3,
+                                  },
+                                  {
+                                          "F4",
+                                          Input::Key::F4,
+                                  },
+                                  {
+                                          "F5",
+                                          Input::Key::F5,
+                                  },
+                                  {
+                                          "F6",
+                                          Input::Key::F6,
+                                  },
+                                  {
+                                          "F7",
+                                          Input::Key::F7,
+                                  },
+                                  {
+                                          "F8",
+                                          Input::Key::F8,
+                                  },
+                                  {
+                                          "F9",
+                                          Input::Key::F9,
+                                  },
+                                  {
+                                          "F10",
+                                          Input::Key::F10,
+                                  },
+                                  {
+                                          "F11",
+                                          Input::Key::F11,
+                                  },
+                                  {
+                                          "F12",
+                                          Input::Key::F12,
+                                  },
+                                  {
+                                          "F13",
+                                          Input::Key::F13,
+                                  },
+                                  {
+                                          "F14",
+                                          Input::Key::F14,
+                                  },
+                                  {
+                                          "F15",
+                                          Input::Key::F15,
+                                  },
+                                  {
+                                          "F16",
+                                          Input::Key::F16,
+                                  },
+                                  {
+                                          "F17",
+                                          Input::Key::F17,
+                                  },
+                                  {
+                                          "F18",
+                                          Input::Key::F18,
+                                  },
+                                  {
+                                          "F19",
+                                          Input::Key::F19,
+                                  },
+                                  {
+                                          "F20",
+                                          Input::Key::F20,
+                                  },
+                                  {
+                                          "F21",
+                                          Input::Key::F21,
+                                  },
+                                  {
+                                          "F22",
+                                          Input::Key::F22,
+                                  },
+                                  {
+                                          "F23",
+                                          Input::Key::F23,
+                                  },
+                                  {
+                                          "F24",
+                                          Input::Key::F24,
+                                  },
+                                  {
+                                          "NUM_LOCK",
+                                          Input::Key::NUM_LOCK,
+                                  },
+                                  {
+                                          "SCROLL_LOCK",
+                                          Input::Key::SCROLL_LOCK,
+                                  },
+                                  {
+                                          "BROWSER_BACK",
+                                          Input::Key::BROWSER_BACK,
+                                  },
+                                  {
+                                          "BROWSER_FORWARD",
+                                          Input::Key::BROWSER_FORWARD,
+                                  },
+                                  {
+                                          "BROWSER_REFRESH",
+                                          Input::Key::BROWSER_REFRESH,
+                                  },
+                                  {
+                                          "BROWSER_STOP",
+                                          Input::Key::BROWSER_STOP,
+                                  },
+                                  {
+                                          "BROWSER_SEARCH",
+                                          Input::Key::BROWSER_SEARCH,
+                                  },
+                                  {
+                                          "BROWSER_FAVORITES",
+                                          Input::Key::BROWSER_FAVORITES,
+                                  },
+                                  {
+                                          "BROWSER_HOME",
+                                          Input::Key::BROWSER_HOME,
+                                  },
+                                  {
+                                          "VOLUME_MUTE",
+                                          Input::Key::VOLUME_MUTE,
+                                  },
+                                  {
+                                          "VOLUME_DOWN",
+                                          Input::Key::VOLUME_DOWN,
+                                  },
+                                  {
+                                          "VOLUME_UP",
+                                          Input::Key::VOLUME_UP,
+                                  },
+                                  {
+                                          "MEDIA_NEXT_TRACK",
+                                          Input::Key::MEDIA_NEXT_TRACK,
+                                  },
+                                  {
+                                          "MEDIA_PREV_TRACK",
+                                          Input::Key::MEDIA_PREV_TRACK,
+                                  },
+                                  {
+                                          "MEDIA_STOP",
+                                          Input::Key::MEDIA_STOP,
+                                  },
+                                  {
+                                          "MEDIA_PLAY_PAUSE",
+                                          Input::Key::MEDIA_PLAY_PAUSE,
+                                  },
+                                  {
+                                          "LAUNCH_MAIL",
+                                          Input::Key::LAUNCH_MAIL,
+                                  },
+                                  {
+                                          "LAUNCH_MEDIA_SELECT",
+                                          Input::Key::LAUNCH_MEDIA_SELECT,
+                                  },
+                                  {
+                                          "LAUNCH_APP1",
+                                          Input::Key::LAUNCH_APP1,
+                                  },
+                                  {
+                                          "LAUNCH_APP2",
+                                          Input::Key::LAUNCH_APP2,
+                                  },
+                                  {
+                                          "OEM_ONE",
+                                          Input::Key::OEM_ONE,
+                                  },
+                                  {
+                                          "OEM_PLUS",
+                                          Input::Key::OEM_PLUS,
+                                  },
+                                  {
+                                          "OEM_COMMA",
+                                          Input::Key::OEM_COMMA,
+                                  },
+                                  {
+                                          "OEM_MINUS",
+                                          Input::Key::OEM_MINUS,
+                                  },
+                                  {
+                                          "OEM_PERIOD",
+                                          Input::Key::OEM_PERIOD,
+                                  },
+                                  {
+                                          "OEM_TWO",
+                                          Input::Key::OEM_TWO,
+                                  },
+                                  {
+                                          "OEM_THREE",
+                                          Input::Key::OEM_THREE,
+                                  },
+                                  {
+                                          "OEM_FOUR",
+                                          Input::Key::OEM_FOUR,
+                                  },
+                                  {
+                                          "OEM_FIVE",
+                                          Input::Key::OEM_FIVE,
+                                  },
+                                  {
+                                          "OEM_SIX",
+                                          Input::Key::OEM_SIX,
+                                  },
+                                  {
+                                          "OEM_SEVEN",
+                                          Input::Key::OEM_SEVEN,
+                                  },
+                                  {
+                                          "OEM_EIGHT",
+                                          Input::Key::OEM_EIGHT,
+                                  },
+                                  {
+                                          "OEM_102",
+                                          Input::Key::OEM_102,
+                                  },
+                                  {
+                                          "IME_PROCESS",
+                                          Input::Key::IME_PROCESS,
+                                  },
+                                  {
+                                          "PACKET",
+                                          Input::Key::PACKET,
+                                  },
+                                  {
+                                          "ATTN",
+                                          Input::Key::ATTN,
+                                  },
+                                  {
+                                          "CRSEL",
+                                          Input::Key::CRSEL,
+                                  },
+                                  {
+                                          "EXSEL",
+                                          Input::Key::EXSEL,
+                                  },
+                                  {
+                                          "EREOF",
+                                          Input::Key::EREOF,
+                                  },
+                                  {
+                                          "PLAY",
+                                          Input::Key::PLAY,
+                                  },
+                                  {
+                                          "ZOOM",
+                                          Input::Key::ZOOM,
+                                  },
+                                  {
+                                          "PA1",
+                                          Input::Key::PA1,
+                                  },
+                                  {"OEM_CLEAR", Input::Key::OEM_CLEAR}});
 
-        sol.new_enum<Input::ModifierKey>("ModifierKey", {
-            { "SHIFT", Input::ModifierKey::SHIFT, },
-            { "CONTROL", Input::ModifierKey::CONTROL, },
-            { "ALT", Input::ModifierKey::ALT }
-        });
-        // clang-format on
+        sol.new_enum<Input::ModifierKey>("ModifierKey",
+                                         {{
+                                                  "SHIFT",
+                                                  Input::ModifierKey::SHIFT,
+                                          },
+                                          {
+                                                  "CONTROL",
+                                                  Input::ModifierKey::CONTROL,
+                                          },
+                                          {"ALT", Input::ModifierKey::ALT}});
 
         sol.set("NAME_None", NAME_None);
 
