@@ -66,6 +66,7 @@ namespace RC
         static std::vector<LuaCallbackData> m_init_game_state_post_callbacks;
         static std::unordered_map<StringType, LuaCallbackData> m_script_hook_callbacks;
         static std::unordered_map<int32_t, int32_t> m_generic_hook_id_to_native_hook_id;
+        static std::unordered_map<File::StringType, LuaCallbackData> m_custom_command_lua_pre_callbacks;
         static int32_t m_last_generic_hook_id;
 
       public:

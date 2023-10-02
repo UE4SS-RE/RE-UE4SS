@@ -660,5 +660,27 @@ namespace RC
                     .registry_indexes = {{callback_in_gameplay_state}},
             });
         });
+        sol.set_function("RegisterConsoleCommandHandler", [&](sol::this_state state, const StringType& command_name, sol::function callback) {
+            auto mod = get_mod_ref(state);
+            if (!mod)
+            {
+                return exit_script_with_error(state, STR("Could not register a console command handler because the pointer to 'Mod' was nullptr"));
+            }
+
+            auto gameplay_state = m_sol_gameplay_states.emplace_back(sol::thread::create(state)).lua_state();
+            sol::function callback_in_gameplay_state = sol::function(gameplay_state, callback);
+
+            if (auto iter = SolMod::m_custom_command_lua_pre_callbacks.find(command_name); iter != SolMod::m_custom_command_lua_pre_callbacks.end())
+            {
+                iter->second.registry_indexes.emplace_back(callback_in_gameplay_state);
+            }
+            else
+            {
+                SolMod::m_custom_command_lua_pre_callbacks.emplace(command_name,
+                                                                   LuaCallbackData{.lua = gameplay_state,
+                                                                                   .instance_of_class = nullptr,
+                                                                                   .registry_indexes = {{callback_in_gameplay_state}}});
+            }
+        });
     }
 } // namespace RC

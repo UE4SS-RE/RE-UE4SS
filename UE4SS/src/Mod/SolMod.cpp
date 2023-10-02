@@ -19,6 +19,7 @@
 #include <Unreal/FText.hpp>
 #include <Unreal/AGameModeBase.hpp>
 #include <Unreal/UFunctionStructs.hpp>
+#include <Unreal/UGameViewportClient.hpp>
 #include <Unreal/Property/FSoftObjectProperty.hpp>
 #include <Unreal/Property/FSoftClassProperty.hpp>
 #include <Unreal/Property/FStructProperty.hpp>
@@ -36,6 +37,7 @@ namespace RC
     std::vector<LuaCallbackData> SolMod::m_init_game_state_post_callbacks{};
     std::unordered_map<StringType, LuaCallbackData> SolMod::m_script_hook_callbacks{};
     std::unordered_map<int32_t, int32_t> SolMod::m_generic_hook_id_to_native_hook_id{};
+    std::unordered_map<StringType, LuaCallbackData> SolMod::m_custom_command_lua_pre_callbacks{};
     int32_t SolMod::m_last_generic_hook_id{};
 
     auto ParamPtrWrapper::unwrap(lua_State* lua_state) -> void
@@ -1404,6 +1406,51 @@ namespace RC
                 }
 
                 // set_is_in_game_thread(lua, false);
+            }
+        });
+
+        Unreal::Hook::RegisterProcessConsoleExecCallback([](Unreal::UObject* context, const TCHAR* cmd, Unreal::FOutputDevice& ar, Unreal::UObject* executor) -> bool {
+            (void)executor;
+
+            if (!Unreal::Cast<Unreal::UGameViewportClient>(context))
+            {
+                return false;
+            }
+
+            auto command_parts = explode_by_occurrence(cmd, ' ');
+            StringType command_name;
+            if (command_parts.size() > 1)
+            {
+                command_name = command_parts[0];
+            }
+            else
+            {
+                command_name = cmd;
+            }
+            command_parts.erase(command_parts.begin());
+
+            if (auto it = m_custom_command_lua_pre_callbacks.find(command_name); it != m_custom_command_lua_pre_callbacks.end())
+            {
+                const auto& callback_data = it->second;
+
+                bool return_value{};
+
+                for (const auto& registry_index : callback_data.registry_indexes)
+                {
+                    // set_is_in_game_thread(callback_data.lua, true);
+                    auto lua_callback_result =
+                            call_function_dont_wrap_params_safe(callback_data.lua, registry_index.lua_callback, cmd, sol::as_table(command_parts), ar, executor);
+                    // set_is_in_game_thread(callback_data.lua, false);
+                    if (lua_callback_result.valid() && lua_callback_result.return_count() > 0)
+                    {
+                        if (auto maybe_bool = lua_callback_result.get<std::optional<bool>>())
+                        {
+                            return_value = maybe_bool.value();
+                        }
+                    }
+                }
+
+                return return_value;
             }
         });
     }
