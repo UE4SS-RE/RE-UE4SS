@@ -70,40 +70,42 @@ set(${TARGET}_Sources
     "${CMAKE_CURRENT_SOURCE_DIR}/src/UE4SSProgram.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/SettingsManager.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/ObjectDumper/ObjectToString.cpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/Signatures.cpp"
+    #"${CMAKE_CURRENT_SOURCE_DIR}/src/Signatures.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Mod/Mod.cpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/Mod/LuaMod.cpp"
+    #"${CMAKE_CURRENT_SOURCE_DIR}/src/Mod/LuaMod.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Mod/CppMod.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Mod/CppUserModBase.cpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/UnrealCustom/CustomProperty.cpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/LuaLibrary.cpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/LuaType/LuaModRef.cpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/LuaType/LuaUObject.cpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/LuaType/LuaUStruct.cpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/LuaType/LuaUClass.cpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/LuaType/LuaAActor.cpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/LuaType/LuaFName.cpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/LuaType/LuaUScriptStruct.cpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/LuaType/LuaTArray.cpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/LuaType/LuaUFunction.cpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/LuaType/LuaCustomProperty.cpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/LuaType/LuaFText.cpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/LuaType/LuaFString.cpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/LuaType/LuaXProperty.cpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/LuaType/LuaXFieldClass.cpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/LuaType/LuaXObjectProperty.cpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/LuaType/LuaXBoolProperty.cpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/LuaType/LuaXStructProperty.cpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/LuaType/LuaXEnumProperty.cpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/LuaType/LuaXArrayProperty.cpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/LuaType/LuaXInterfaceProperty.cpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/LuaType/LuaUEnum.cpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/LuaType/LuaFOutputDevice.cpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/LuaType/LuaFWeakObjectPtr.cpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/LuaType/LuaFSoftObjectPath.cpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/LuaType/LuaTSoftClassPtr.cpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/LuaType/LuaUWorld.cpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/LuaType/LuaUInterface.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Mod/SolMod.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Mod/SolGlobals.cpp"
+    #"${CMAKE_CURRENT_SOURCE_DIR}/src/UnrealCustom/CustomProperty.cpp"
+    #"${CMAKE_CURRENT_SOURCE_DIR}/src/LuaLibrary.cpp"
+    #"${CMAKE_CURRENT_SOURCE_DIR}/src/LuaType/LuaModRef.cpp"
+    #"${CMAKE_CURRENT_SOURCE_DIR}/src/LuaType/LuaUObject.cpp"
+    #"${CMAKE_CURRENT_SOURCE_DIR}/src/LuaType/LuaUStruct.cpp"
+    #"${CMAKE_CURRENT_SOURCE_DIR}/src/LuaType/LuaUClass.cpp"
+    #"${CMAKE_CURRENT_SOURCE_DIR}/src/LuaType/LuaAActor.cpp"
+    #"${CMAKE_CURRENT_SOURCE_DIR}/src/LuaType/LuaFName.cpp"
+    #"${CMAKE_CURRENT_SOURCE_DIR}/src/LuaType/LuaUScriptStruct.cpp"
+    #"${CMAKE_CURRENT_SOURCE_DIR}/src/LuaType/LuaTArray.cpp"
+    #"${CMAKE_CURRENT_SOURCE_DIR}/src/LuaType/LuaUFunction.cpp"
+    #"${CMAKE_CURRENT_SOURCE_DIR}/src/LuaType/LuaCustomProperty.cpp"
+    #"${CMAKE_CURRENT_SOURCE_DIR}/src/LuaType/LuaFText.cpp"
+    #"${CMAKE_CURRENT_SOURCE_DIR}/src/LuaType/LuaFString.cpp"
+    #"${CMAKE_CURRENT_SOURCE_DIR}/src/LuaType/LuaXProperty.cpp"
+    #"${CMAKE_CURRENT_SOURCE_DIR}/src/LuaType/LuaXFieldClass.cpp"
+    #"${CMAKE_CURRENT_SOURCE_DIR}/src/LuaType/LuaXObjectProperty.cpp"
+    #"${CMAKE_CURRENT_SOURCE_DIR}/src/LuaType/LuaXBoolProperty.cpp"
+    #"${CMAKE_CURRENT_SOURCE_DIR}/src/LuaType/LuaXStructProperty.cpp"
+    #"${CMAKE_CURRENT_SOURCE_DIR}/src/LuaType/LuaXEnumProperty.cpp"
+    #"${CMAKE_CURRENT_SOURCE_DIR}/src/LuaType/LuaXArrayProperty.cpp"
+    #"${CMAKE_CURRENT_SOURCE_DIR}/src/LuaType/LuaXInterfaceProperty.cpp"
+    #"${CMAKE_CURRENT_SOURCE_DIR}/src/LuaType/LuaUEnum.cpp"
+    #"${CMAKE_CURRENT_SOURCE_DIR}/src/LuaType/LuaFOutputDevice.cpp"
+    #"${CMAKE_CURRENT_SOURCE_DIR}/src/LuaType/LuaFWeakObjectPtr.cpp"
+    #"${CMAKE_CURRENT_SOURCE_DIR}/src/LuaType/LuaFSoftObjectPath.cpp"
+    #"${CMAKE_CURRENT_SOURCE_DIR}/src/LuaType/LuaTSoftClassPtr.cpp"
+    #"${CMAKE_CURRENT_SOURCE_DIR}/src/LuaType/LuaUWorld.cpp"
+    #"${CMAKE_CURRENT_SOURCE_DIR}/src/LuaType/LuaUInterface.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/SDKGenerator/Common.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/SDKGenerator/Generator.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/SDKGenerator/UEHeaderGenerator.cpp"
@@ -135,6 +137,8 @@ endif ()
 target_compile_features(${TARGET} PUBLIC cxx_std_20)
 
 target_include_directories(${TARGET} PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include> $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/generated_include>)
+target_include_directories(${TARGET} PUBLIC $<BUILD_INTERFACE:${CMAKE_HOME_DIRECTORY}/deps/third/sol3/include>)
+target_include_directories(${TARGET} PUBLIC $<BUILD_INTERFACE:${CMAKE_HOME_DIRECTORY}/deps/third/map-macro>)
 
 # First party static build -> START
 target_compile_definitions(${TARGET} PRIVATE
@@ -158,10 +162,10 @@ target_compile_definitions(${TARGET} PRIVATE
 
 target_link_libraries(${TARGET} PUBLIC
     File DynamicOutput Unreal
-    SinglePassSigScanner LuaMadeSimple FunctionTimer
+    SinglePassSigScanner lua51 FunctionTimer
     Function IniParser JSON
     Input Constructs Helpers 
-    MProgram ScopedTimer)
+    MProgram ScopedTimer luajit)
 
 target_link_libraries(${TARGET} PUBLIC
     ImGui PolyHook_2 d3d11 GLFW opengl32)
@@ -172,3 +176,11 @@ set_property(TARGET ${TARGET} PROPERTY INTERPROCEDURAL_OPTIMIZATION ON)
 set_property(TARGET ${TARGET} PROPERTY MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>DLL")
 
 set_target_properties(${TARGET} PROPERTIES OUTPUT_NAME "ue4ss")
+
+# luajit -> START
+add_library(luajit STATIC IMPORTED)
+add_library(lua51 STATIC IMPORTED)
+set_property(TARGET luajit PROPERTY IMPORTED_LOCATION "${CMAKE_BINARY_DIR}/_deps/luajit-src/src/luajit.lib")
+set_property(TARGET lua51 PROPERTY IMPORTED_LOCATION "${CMAKE_BINARY_DIR}/_deps/luajit-src/src/lua51.lib")
+target_include_directories(${TARGET} PRIVATE "${CMAKE_BINARY_DIR}/_deps/luajit-src/src")
+# luajit -> END

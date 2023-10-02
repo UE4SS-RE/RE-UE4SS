@@ -24,8 +24,6 @@
 #include <Helpers/String.hpp>
 #include <IniParser/Ini.hpp>
 #include <LuaLibrary.hpp>
-#include <LuaType/LuaCustomProperty.hpp>
-#include <LuaType/LuaUObject.hpp>
 #include <Mod/CppMod.hpp>
 #include <Mod/SolMod.hpp>
 #include <Mod/Mod.hpp>
