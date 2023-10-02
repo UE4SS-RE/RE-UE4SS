@@ -52,9 +52,9 @@ namespace RC
     static std::unordered_map<uint32_t, PropertyPusherFunction> g_property_pushers{};
     static auto lookup_property_pusher(FName name) -> PropertyPusherFunction
     {
-        //auto comparison_index = name.GetComparisonIndex();
-        //if (comparison_index > g_max_property_pushers) { return nullptr; }
-        //return g_property_pushers[comparison_index];
+        // auto comparison_index = name.GetComparisonIndex();
+        // if (comparison_index > g_max_property_pushers) { return nullptr; }
+        // return g_property_pushers[comparison_index];
         if (auto it = g_property_pushers.find(name.GetComparisonIndex()); it != g_property_pushers.end())
         {
             return it->second;
@@ -77,7 +77,7 @@ namespace RC
         auto& lua_data = *static_cast<LuaUnrealScriptFunctionData*>(custom_data);
 
         // This is a promise that we're in the game thread, used by other functions to ensure that we don't execute when unsafe
-        //set_is_in_game_thread(lua_data.lua, true);
+        // set_is_in_game_thread(lua_data.lua, true);
 
         // Storage for all UFunction parameters. This is passed to sol before the callback is called.
         std::vector<ParamPtrWrapper> param_wrappers{};
@@ -102,7 +102,7 @@ namespace RC
         bool has_properties_to_process = lua_data.has_return_value || num_unreal_params > 0;
         if (has_properties_to_process && context.TheStack.Locals())
         {
-            //context.TheStack.CurrentNativeFunction()->ForEachProperty([&](Unreal::FProperty* param) {
+            // context.TheStack.CurrentNativeFunction()->ForEachProperty([&](Unreal::FProperty* param) {
             for (auto param : context.TheStack.CurrentNativeFunction()->ForEachProperty())
             {
                 // Skip this property if it's not a parameter
@@ -129,22 +129,27 @@ namespace RC
                 }
                 else
                 {
-                    EXIT_NATIVE_HOOK_WITH_ERROR(break, lua_data,
-                        std::format(STR("[unreal_script_function_hook_pre] Tried accessing unreal property without a registered handler. Property type '{}' not supported.\n"),
-                        param->GetClass().GetName()))
+                    EXIT_NATIVE_HOOK_WITH_ERROR(break,
+                                                lua_data,
+                                                std::format(STR("[unreal_script_function_hook_pre] Tried accessing unreal property without a registered "
+                                                                "handler. Property type '{}' not supported.\n"),
+                                                            param->GetClass().GetName()))
                 }
             };
         }
 
-        if (lua_data.function_processing_failed) { return; }
+        if (lua_data.function_processing_failed)
+        {
+            return;
+        }
 
         // Call the Lua function with the correct number of parameters & return values
         call_function_dont_wrap_params_safe(lua_data.lua, lua_data.lua_callback, param_wrappers);
         /*
         auto function_name_only = context.TheStack.CurrentNativeFunction()->GetName();
         auto class_name = context.TheStack.CurrentNativeFunction()->GetOuterPrivate()->GetName();
-        auto callback = sol::state_view{lua_data.lua}.get<sol::function>(std::format("__ue4ss_sol_{}_{}_callback_in_state", to_string(class_name), to_string(function_name_only)));
-        callback(sol::as_args(param_wrappers));
+        auto callback = sol::state_view{lua_data.lua}.get<sol::function>(std::format("__ue4ss_sol_{}_{}_callback_in_state", to_string(class_name),
+        to_string(function_name_only))); callback(sol::as_args(param_wrappers));
         //*/
 
         // The params for the Lua script will be 'userdata' and they will have get/set functions
@@ -156,7 +161,7 @@ namespace RC
         // This function continues in 'lua_unreal_script_function_hook_post' which executes immediately after the original function gets called
 
         // No longer promising to be in the game thread
-        //set_is_in_game_thread(lua_data.lua, false);
+        // set_is_in_game_thread(lua_data.lua, false);
     }
 
     auto lua_unreal_script_function_hook_post(UnrealScriptFunctionCallableContext context, void* custom_data) -> void
@@ -166,10 +171,13 @@ namespace RC
         // Fetch the data corresponding to this UFunction
         auto& lua_data = *static_cast<LuaUnrealScriptFunctionData*>(custom_data);
 
-        if (lua_data.function_processing_failed) { return; }
+        if (lua_data.function_processing_failed)
+        {
+            return;
+        }
 
         // This is a promise that we're in the game thread, used by other functions to ensure that we don't execute when unsafe
-        //set_is_in_game_thread(lua_data.lua, true);
+        // set_is_in_game_thread(lua_data.lua, true);
 
         // Fetch & override the return value from Lua if one exists
         if (lua_data.has_return_value && lua_data.lua_callback_result.valid() && lua_data.lua_callback_result.return_count() > 0)
@@ -179,7 +187,13 @@ namespace RC
                 // Keep in mind that the if this was a Blueprint UFunction then the entire byte-code will already have executed
                 // That means that changing the return value here won't affect the script itself
                 // If this was a native UFunction then changing the return value here will have the desired effect
-                auto pusher_params = PropertyPusherFunctionParams{lua_data.lua, &lua_data.lua_callback_result, lua_data.return_property, context.RESULT_DECL, PushType::FromLua, nullptr, context.Context};
+                auto pusher_params = PropertyPusherFunctionParams{lua_data.lua,
+                                                                  &lua_data.lua_callback_result,
+                                                                  lua_data.return_property,
+                                                                  context.RESULT_DECL,
+                                                                  PushType::FromLua,
+                                                                  nullptr,
+                                                                  context.Context};
                 if (auto error_msg = property_pusher(pusher_params); !error_msg.empty())
                 {
                     EXIT_NATIVE_HOOK_WITH_ERROR(void, lua_data, std::format(STR("Error setting return value: {}\n"), to_wstring(error_msg)))
@@ -190,12 +204,15 @@ namespace RC
                 // If the type wasn't supported then we simply output a warning and then do nothing
                 auto parameter_type_name = lua_data.return_property->GetClass().GetName();
                 auto parameter_name = lua_data.return_property->GetName();
-                Output::send(STR("Tried altering return value of a hooked UFunction without a registered handler for return type Return property '{}' of type '{}' not supported.\n"), parameter_name, parameter_type_name);
+                Output::send(STR("Tried altering return value of a hooked UFunction without a registered handler for return type Return property '{}' of type "
+                                 "'{}' not supported.\n"),
+                             parameter_name,
+                             parameter_type_name);
             }
         }
 
         // No longer promising to be in the game thread
-        //set_is_in_game_thread(lua_data.lua, false);
+        // set_is_in_game_thread(lua_data.lua, false);
 
         is_mid_script_execution = false;
     }
@@ -204,7 +221,10 @@ namespace RC
     {
         std::lock_guard<decltype(SolMod::m_thread_actions_mutex)> guard{SolMod::m_thread_actions_mutex};
         auto execute_hook = [&](std::unordered_map<StringType, LuaCallbackData>& callback_container, bool precise_name_match) {
-            if (callback_container.empty()) { return; }
+            if (callback_container.empty())
+            {
+                return;
+            }
 
             bool exit_early{};
             if (auto it = callback_container.find(precise_name_match ? Stack.Node()->GetFullName() : Stack.Node()->GetName()); it != callback_container.end())
@@ -214,7 +234,7 @@ namespace RC
                 {
                     sol::state_view lua = callback_data.lua;
 
-                    //set_is_in_game_thread(lua, true);
+                    // set_is_in_game_thread(lua, true);
 
                     std::vector<ParamPtrWrapper> param_wrappers{};
                     push_objectproperty({lua, nullptr, nullptr, &Context, PushType::ToLuaParam, &param_wrappers});
@@ -223,14 +243,23 @@ namespace RC
                     auto return_value_offset = node->GetReturnValueOffset();
                     auto has_return_value = return_value_offset != 0xFFFF;
                     auto num_unreal_params = node->GetNumParms();
-                    if (has_return_value && num_unreal_params > 0) { --num_unreal_params; }
+                    if (has_return_value && num_unreal_params > 0)
+                    {
+                        --num_unreal_params;
+                    }
 
                     if (has_return_value || num_unreal_params > 0)
                     {
                         for (auto param : node->ForEachProperty())
                         {
-                            if (!param->HasAnyPropertyFlags(Unreal::EPropertyFlags::CPF_Parm)) { continue; }
-                            if (has_return_value && param->GetOffset_Internal() == return_value_offset) { continue; }
+                            if (!param->HasAnyPropertyFlags(Unreal::EPropertyFlags::CPF_Parm))
+                            {
+                                continue;
+                            }
+                            if (has_return_value && param->GetOffset_Internal() == return_value_offset)
+                            {
+                                continue;
+                            }
 
                             auto param_type = param->GetClass().GetFName();
                             if (auto property_pusher = lookup_property_pusher(param->GetClass().GetFName()); property_pusher)
@@ -244,15 +273,19 @@ namespace RC
                             }
                             else
                             {
-                                Output::send<LogLevel::Error>(STR("[script_hook] Tried accessing unreal property without a registered handler. Property type '{}' not supported.\n"),
-                                    param_type.ToString());
+                                Output::send<LogLevel::Error>(
+                                        STR("[script_hook] Tried accessing unreal property without a registered handler. Property type '{}' not supported.\n"),
+                                        param_type.ToString());
                                 exit_early = true;
                                 break;
                             }
                         };
                     }
 
-                    if (exit_early) { break; }
+                    if (exit_early)
+                    {
+                        break;
+                    }
 
                     auto lua_callback_result = call_function_dont_wrap_params_safe(lua, registry_index.lua_callback);
 
@@ -266,7 +299,8 @@ namespace RC
                                 // Keep in mind that the if this was a Blueprint UFunction then the entire byte-code will already have executed
                                 // That means that changing the return value here won't affect the script itself
                                 // If this was a native UFunction then changing the return value here will have the desired effect
-                                auto pusher_params = PropertyPusherFunctionParams{lua, &lua_callback_result, return_property, RESULT_DECL, PushType::FromLua, nullptr, Context};
+                                auto pusher_params =
+                                        PropertyPusherFunctionParams{lua, &lua_callback_result, return_property, RESULT_DECL, PushType::FromLua, nullptr, Context};
                                 if (auto error_msg = property_pusher(pusher_params); !error_msg.empty())
                                 {
                                     Output::send<LogLevel::Error>(STR("Error setting return value: {}\n"), to_wstring(error_msg));
@@ -277,16 +311,19 @@ namespace RC
                                 // If the type wasn't supported then we simply output a warning and then do nothing
                                 auto return_property_type_name = return_property->GetClass().GetName();
                                 auto return_property_name = return_property->GetName();
-                                Output::send(STR("Tried altering return value of a custom BP function without a registered handler for return type Return property '{}' of type '{}' not supported.\n"), return_property_name, return_property_type_name);
+                                Output::send(STR("Tried altering return value of a custom BP function without a registered handler for return type Return "
+                                                 "property '{}' of type '{}' not supported.\n"),
+                                             return_property_name,
+                                             return_property_type_name);
                             }
                         }
 
-                        //set_is_in_game_thread(lua, false);
+                        // set_is_in_game_thread(lua, false);
                     }
                 }
             }
         };
-        
+
         execute_hook(SolMod::m_custom_event_callbacks, false);
         execute_hook(SolMod::m_script_hook_callbacks, true);
     }
@@ -300,54 +337,64 @@ namespace RC
             m_delayed_actions.insert(m_delayed_actions.end(), std::make_move_iterator(m_pending_actions.begin()), std::make_move_iterator(m_pending_actions.end()));
             m_pending_actions.clear();
         }
-        
-        m_delayed_actions.erase(std::remove_if(m_delayed_actions.begin(), m_delayed_actions.end(),
-            [&](AsyncAction& action) -> bool {
-                auto passed = now - std::chrono::duration_cast<std::chrono::milliseconds>(action.created_at.time_since_epoch()).count();
-                auto duration_since_creation = (action.type == ActionType::Immediate || passed >= action.delay);
-                if (duration_since_creation)
-                {
-                    std::lock_guard<decltype(SolMod::m_thread_actions_mutex)> guard{SolMod::m_thread_actions_mutex};
-                    bool result = true;
-                    try
-                    {
-                        if (action.type == ActionType::Loop)
-                        {
-                            auto lua_callback_result = call_function_dont_wrap_params_safe(sol(State::Async), action.lua_action_function);
-                            if (lua_callback_result.valid() && lua_callback_result.return_count() > 0)
-                            {
-                                auto maybe_result = lua_callback_result.get<std::optional<bool>>();
-                                if (maybe_result.has_value()) { result = maybe_result.value(); }
-                            }
-                            action.created_at = std::chrono::steady_clock::now();
-                        }
-                        else
-                        {
-                            call_function_dont_wrap_params_safe(sol(State::Async), action.lua_action_function);
-                        }
-                    }
-                    catch (std::runtime_error& e)
-                    {
-                        Output::send(STR("[{}] {}\n"), to_wstring(action.type == ActionType::Loop ? "LoopAsync" : "DelayedAction"), to_wstring(e.what()));
-                    }
 
-                    return result;
-                }
-                else
-                {
-                    return false;
-                }
-            }), m_delayed_actions.end());
+        m_delayed_actions.erase(std::remove_if(m_delayed_actions.begin(),
+                                               m_delayed_actions.end(),
+                                               [&](AsyncAction& action) -> bool {
+                                                   auto passed =
+                                                           now -
+                                                           std::chrono::duration_cast<std::chrono::milliseconds>(action.created_at.time_since_epoch()).count();
+                                                   auto duration_since_creation = (action.type == ActionType::Immediate || passed >= action.delay);
+                                                   if (duration_since_creation)
+                                                   {
+                                                       std::lock_guard<decltype(SolMod::m_thread_actions_mutex)> guard{SolMod::m_thread_actions_mutex};
+                                                       bool result = true;
+                                                       try
+                                                       {
+                                                           if (action.type == ActionType::Loop)
+                                                           {
+                                                               auto lua_callback_result =
+                                                                       call_function_dont_wrap_params_safe(sol(State::Async), action.lua_action_function);
+                                                               if (lua_callback_result.valid() && lua_callback_result.return_count() > 0)
+                                                               {
+                                                                   auto maybe_result = lua_callback_result.get<std::optional<bool>>();
+                                                                   if (maybe_result.has_value())
+                                                                   {
+                                                                       result = maybe_result.value();
+                                                                   }
+                                                               }
+                                                               action.created_at = std::chrono::steady_clock::now();
+                                                           }
+                                                           else
+                                                           {
+                                                               call_function_dont_wrap_params_safe(sol(State::Async), action.lua_action_function);
+                                                           }
+                                                       }
+                                                       catch (std::runtime_error& e)
+                                                       {
+                                                           Output::send(STR("[{}] {}\n"),
+                                                                        to_wstring(action.type == ActionType::Loop ? "LoopAsync" : "DelayedAction"),
+                                                                        to_wstring(e.what()));
+                                                       }
+
+                                                       return result;
+                                                   }
+                                                   else
+                                                   {
+                                                       return false;
+                                                   }
+                                               }),
+                                m_delayed_actions.end());
     }
 
     auto SolMod::sol(State state) -> sol::state_view
     {
         if (state == State::UE4SS)
         {
-            //if (!m_sol_state_ue4ss)
+            // if (!m_sol_state_ue4ss)
             //{
-            //    Output::send<LogLevel::Error>(STR("[SolMod::sol] m_sol_state_ue4ss is nullptr, crashing\n"));
-            //}
+            //     Output::send<LogLevel::Error>(STR("[SolMod::sol] m_sol_state_ue4ss is nullptr, crashing\n"));
+            // }
             return m_sol_state_ue4ss;
         }
         else
@@ -401,7 +448,7 @@ namespace RC
 
     static auto UObject_IsValid(UObject* object) -> bool
     {
-        return object && !object->IsUnreachable()/* && is_object_in_global_unreal_object_map(object)*/;
+        return object && !object->IsUnreachable() /* && is_object_in_global_unreal_object_map(object)*/;
     }
 
     static auto Test() -> void
@@ -443,7 +490,7 @@ namespace RC
         return 0;
     }
 
-    static auto luajit_exception_handler_test(lua_State* lua_state, int(*func)(lua_State*)) -> int
+    static auto luajit_exception_handler_test(lua_State* lua_state, int (*func)(lua_State*)) -> int
     {
         Output::send(STR("luajit_exception_handler_test\n"));
         return 0;
@@ -479,13 +526,16 @@ namespace RC
         auto member_name = maybe_member_name.value();
         auto property_name = FName(member_name);
         // Uncomment when custom properties have been implemented.
-        //FField* field = LuaCustomProperty::StaticStorage::property_list.find_or_nullptr(self, member_name);
+        // FField* field = LuaCustomProperty::StaticStorage::property_list.find_or_nullptr(self, member_name);
         FField* field = nullptr;
 
         if (!field)
         {
             auto obj_as_struct = Cast<UStruct>(&self);
-            if (!obj_as_struct) { obj_as_struct = self.GetClassPrivate(); }
+            if (!obj_as_struct)
+            {
+                obj_as_struct = self.GetClassPrivate();
+            }
             field = obj_as_struct->FindProperty(property_name);
         }
 
@@ -507,15 +557,7 @@ namespace RC
 
             if (func)
             {
-                auto pusher_params = PropertyPusherFunctionParams{
-                    state,
-                    nullptr,
-                    nullptr,
-                    func,
-                    PushType::None,
-                    nullptr,
-                    nullptr
-                };
+                auto pusher_params = PropertyPusherFunctionParams{state, nullptr, nullptr, func, PushType::None, nullptr, nullptr};
                 push_functionproperty(pusher_params);
                 return 1;
             }
@@ -543,8 +585,9 @@ namespace RC
             }
             else
             {
-                Output::send<LogLevel::Error>(STR("[handle_uobject_property_getter] Tried accessing unreal property without a registered handler. Property type '{}' not supported.\n"),
-                    property->GetClass().GetName());
+                Output::send<LogLevel::Error>(STR("[handle_uobject_property_getter] Tried accessing unreal property without a registered handler. Property "
+                                                  "type '{}' not supported.\n"),
+                                              property->GetClass().GetName());
                 return 0;
             }
         }
@@ -570,20 +613,24 @@ namespace RC
         FStructProperty* property{};
 
         // Accessor the LocalParam API
-        void* get_data_ptr() { return start_of_struct; }
+        void* get_data_ptr()
+        {
+            return start_of_struct;
+        }
     };
 
     struct sol_FScriptArray
     {
-    public:
+      public:
         FScriptArray* array{};
         UObject* base{};
         FArrayProperty* property{};
         FProperty* inner_property{};
 
-    public:
+      public:
         sol_FScriptArray() = delete;
-        sol_FScriptArray(FScriptArray* in_array, UObject* in_base, FArrayProperty* in_property) : array(in_array), base(in_base), property(in_property), inner_property(in_property->GetInner())
+        sol_FScriptArray(FScriptArray* in_array, UObject* in_base, FArrayProperty* in_property)
+            : array(in_array), base(in_base), property(in_property), inner_property(in_property->GetInner())
         {
         }
     };
@@ -602,21 +649,26 @@ namespace RC
         {
             auto array_index = maybe_array_index.value();
             // Subtracting 1 here to account for that fact that Lua tables are 1-indexed
-            if (array_index > 0) { --array_index; }
+            if (array_index > 0)
+            {
+                --array_index;
+            }
             auto data = static_cast<uint8_t*>(self.array->GetData()) + (array_index * self.inner_property->GetElementSize());
             auto pusher_params = PropertyPusherFunctionParams{state, nullptr, self.inner_property, data, PushType::ToLua, nullptr, self.base};
             if (auto error_msg = property_pusher(pusher_params); !error_msg.empty())
             {
-                Output::send<LogLevel::Error>(STR("[handle_array_property] Error while trying to access unreal property (via ArrayProperty). Property type '{}', error: {}\n"),
-                    self.inner_property->GetClass().GetName(),
-                    to_wstring(error_msg));
+                Output::send<LogLevel::Error>(
+                        STR("[handle_array_property] Error while trying to access unreal property (via ArrayProperty). Property type '{}', error: {}\n"),
+                        self.inner_property->GetClass().GetName(),
+                        to_wstring(error_msg));
                 return 0;
             }
         }
         else
         {
-            Output::send<LogLevel::Error>(STR("[handle_array_property] Tried accessing unreal property without a registered handler (via ArrayProperty). Property type '{}' not supported.\n"),
-                self.inner_property->GetClass().GetName());
+            Output::send<LogLevel::Error>(STR("[handle_array_property] Tried accessing unreal property without a registered handler (via ArrayProperty). "
+                                              "Property type '{}' not supported.\n"),
+                                          self.inner_property->GetClass().GetName());
             return 0;
         }
         return 1;
@@ -640,20 +692,26 @@ namespace RC
 
     class DynamicUnrealFunctionOutParameters
     {
-    private:
+      private:
         size_t m_last{0};
         using ParamsArray = std::array<PropertyAndLuaRefPair, 10>;
         ParamsArray m_params{};
 
-    public:
+      public:
         auto add(const PropertyAndLuaRefPair param_ref_pair) -> void
         {
             m_params[m_last] = param_ref_pair;
             ++m_last;
         }
 
-        auto get(size_t index) -> const PropertyAndLuaRefPair& { return m_params[index]; }
-        auto get() -> const ParamsArray& { return m_params; }
+        auto get(size_t index) -> const PropertyAndLuaRefPair&
+        {
+            return m_params[index];
+        }
+        auto get() -> const ParamsArray&
+        {
+            return m_params;
+        }
     };
 
     static auto handle_ufunction_call(lua_State* lua_state) -> int
@@ -691,7 +749,9 @@ namespace RC
 
             if (num_supplied_params != num_expected_params_with_return_value)
             {
-                Output::send<LogLevel::Error>(STR("[handle_ufunction_call] UFunction expected {} parameters, received {}\n"), num_expected_params, num_supplied_params);
+                Output::send<LogLevel::Error>(STR("[handle_ufunction_call] UFunction expected {} parameters, received {}\n"),
+                                              num_expected_params,
+                                              num_supplied_params);
                 return 0;
             }
 
@@ -700,7 +760,10 @@ namespace RC
                 auto offset_internal = param_next->GetOffset_Internal();
 
                 // BP-only functions can have non-param properties, let's skip those.
-                if (!param_next->HasAnyPropertyFlags(CPF_Parm)) { continue; }
+                if (!param_next->HasAnyPropertyFlags(CPF_Parm))
+                {
+                    continue;
+                }
 
                 if (offset_internal == return_value_offset)
                 {
@@ -708,7 +771,8 @@ namespace RC
                 }
                 else
                 {
-                    if (param_next->HasAnyPropertyFlags(CPF_OutParm) && !param_next->HasAnyPropertyFlags(CPF_ReturnParm) && !param_next->HasAnyPropertyFlags(CPF_ConstParm))
+                    if (param_next->HasAnyPropertyFlags(CPF_OutParm) && !param_next->HasAnyPropertyFlags(CPF_ReturnParm) &&
+                        !param_next->HasAnyPropertyFlags(CPF_ConstParm))
                     {
                         has_out_params = true;
 
@@ -716,7 +780,8 @@ namespace RC
 
                         if (!sol::stack::check<sol::table>(state))
                         {
-                            Output::send<LogLevel::Error>(STR("Tried storing reference to a Lua table for an 'Out' parameter when calling a UFunction but no table was on the stack\n"));
+                            Output::send<LogLevel::Error>(STR(
+                                    "Tried storing reference to a Lua table for an 'Out' parameter when calling a UFunction but no table was on the stack\n"));
                             return 0;
                         }
 
@@ -724,10 +789,7 @@ namespace RC
                         lua_pushvalue(state, 3);
 
                         // Take a reference to the Lua table (it also pops it of the stack)
-                        auto ref_pair = PropertyAndLuaRefPair{
-                            .property = param_next,
-                            .lua_ref = luaL_ref(state, LUA_REGISTRYINDEX)
-                        };
+                        auto ref_pair = PropertyAndLuaRefPair{.property = param_next, .lua_ref = luaL_ref(state, LUA_REGISTRYINDEX)};
                         dynamic_unreal_function_out_parameters.add(ref_pair);
 
                         // Removing the original table at stack index 3.
@@ -743,7 +805,13 @@ namespace RC
                     if (auto property_pusher = lookup_property_pusher(param_next->GetClass().GetFName()); property_pusher)
                     {
                         void* data = &dynamic_unreal_function_data.data[offset_internal];
-                        auto pusher_params = PropertyPusherFunctionParams{state, nullptr, param_next, data, PushType::FromLua, nullptr, static_cast<UObject*>(static_cast<void*>(dynamic_unreal_function_data.data))};
+                        auto pusher_params = PropertyPusherFunctionParams{state,
+                                                                          nullptr,
+                                                                          param_next,
+                                                                          data,
+                                                                          PushType::FromLua,
+                                                                          nullptr,
+                                                                          static_cast<UObject*>(static_cast<void*>(dynamic_unreal_function_data.data))};
                         if (auto error_msg = property_pusher(pusher_params); !error_msg.empty())
                         {
                             Output::send<LogLevel::Error>(STR("Error setting UFunction param value: {}\n"), to_wstring(error_msg));
@@ -753,7 +821,10 @@ namespace RC
                     else
                     {
                         auto property_type_name = param_next->GetClass().GetName();
-                        Output::send<LogLevel::Error>(STR("Tried calling UFunction without a registered handler for parameter. Parameter '{}' of type '{}' not supported.\n"), param_next->GetName(), property_type_name);
+                        Output::send<LogLevel::Error>(
+                                STR("Tried calling UFunction without a registered handler for parameter. Parameter '{}' of type '{}' not supported.\n"),
+                                param_next->GetName(),
+                                property_type_name);
                         return 0;
                     }
                 }
@@ -790,7 +861,14 @@ namespace RC
                 if (auto property_pusher = lookup_property_pusher(param->GetClass().GetFName()); property_pusher)
                 {
                     void* data = &dynamic_unreal_function_data.data[param->GetOffset_Internal()];
-                    auto pusher_params = PropertyPusherFunctionParams{state, nullptr, param, data, PushType::ToLuaNonTrivialLocal, nullptr, static_cast<UObject*>(static_cast<void*>(dynamic_unreal_function_data.data)), false};
+                    auto pusher_params = PropertyPusherFunctionParams{state,
+                                                                      nullptr,
+                                                                      param,
+                                                                      data,
+                                                                      PushType::ToLuaNonTrivialLocal,
+                                                                      nullptr,
+                                                                      static_cast<UObject*>(static_cast<void*>(dynamic_unreal_function_data.data)),
+                                                                      false};
                     if (auto error_msg = property_pusher(pusher_params); !error_msg.empty())
                     {
                         Output::send<LogLevel::Error>(STR("Error setting UFunction 'Out' param value: {}\n"), to_wstring(error_msg));
@@ -800,7 +878,8 @@ namespace RC
                 else
                 {
                     auto property_type_name = param->GetClass().GetName();
-                    Output::send<LogLevel::Error>(STR("Tried calling UFunction without a registered handler 'Out' param. Type '{}' not supported.\n"), property_type_name);
+                    Output::send<LogLevel::Error>(STR("Tried calling UFunction without a registered handler 'Out' param. Type '{}' not supported.\n"),
+                                                  property_type_name);
                     return 0;
                 }
 
@@ -831,7 +910,9 @@ namespace RC
             else
             {
                 auto property_type_name = return_value_property->GetClass().GetName();
-                Output::send<LogLevel::Error>(STR("Tried calling UFunction without a registered handler for return value. Return value of type '{}' not supported.\n"), property_type_name);
+                Output::send<LogLevel::Error>(
+                        STR("Tried calling UFunction without a registered handler for return value. Return value of type '{}' not supported.\n"),
+                        property_type_name);
                 return 0;
             }
         }
@@ -847,7 +928,9 @@ namespace RC
         auto property_name = FName(sol::stack::get<StringType>(state, 2), FNAME_Find);
         if (property_name.GetComparisonIndex() == 0)
         {
-            Output::send<LogLevel::Error>(STR("Property '{}' not found in UScriptStruct '{}'\n"), property_name.ToString(), script_struct.script_struct->GetFullName());
+            Output::send<LogLevel::Error>(STR("Property '{}' not found in UScriptStruct '{}'\n"),
+                                          property_name.ToString(),
+                                          script_struct.script_struct->GetFullName());
             return 0;
         }
         else
@@ -867,7 +950,9 @@ namespace RC
             else
             {
                 auto property_type_name = struct_property->GetClass().GetName();
-                Output::send<LogLevel::Error>(STR("Tried accessing unreal property without a registered handler (via StructProperty). Property type '{}' not supported.\n"), property_type_name);
+                Output::send<LogLevel::Error>(
+                        STR("Tried accessing unreal property without a registered handler (via StructProperty). Property type '{}' not supported.\n"),
+                        property_type_name);
                 return 0;
             }
             return 1;
@@ -892,8 +977,10 @@ namespace RC
         auto property_pusher = lookup_property_pusher(self.inner_property->GetClass().GetFName());
         if (!property_pusher)
         {
-            return exit_script_with_error(state, std::format(STR("[tarray_for_each] Tried accessing unreal property without a registered handler. Property type '{}' not supported.\n"),
-                self.inner_property->GetClass().GetName()));
+            return exit_script_with_error(
+                    state,
+                    std::format(STR("[tarray_for_each] Tried accessing unreal property without a registered handler. Property type '{}' not supported.\n"),
+                                self.inner_property->GetClass().GetName()));
         }
 
         auto array_size = array.Num();
@@ -916,7 +1003,10 @@ namespace RC
             if (lua_callback_result.valid() && lua_callback_result.return_count() > 0)
             {
                 auto maybe_result = lua_callback_result.get<std::optional<bool>>();
-                if (maybe_result.has_value() && maybe_result.value()) { break; }
+                if (maybe_result.has_value() && maybe_result.value())
+                {
+                    break;
+                }
             }
         }
     }
@@ -927,120 +1017,188 @@ namespace RC
             Output::send(STR("[Lua] {}"), message);
         });
 
-        sol.new_usertype<ParamPtrWrapper>("ParamPtrWrapper",
-            "type", [](sol::this_state state) { return get_class_name(state); },
-            "get", [](lua_State* lua_state) -> int {
-                auto maybe_self = sol::stack::get<std::optional<ParamPtrWrapper>>(lua_state);
-                if (!maybe_self.has_value())
-                {
-                    Output::send<LogLevel::Warning>(STR("ParamPtrWrapper.get called on a non-ParamPtrWrapper instance\n"));
-                    sol::stack::push(lua_state, InvalidObject{});
-                }
-                else
-                {
-                    maybe_self->unwrap(lua_state);
-                }
-                return 1;
-            },
-            "set", [](lua_State* lua_state) -> int {
-                auto maybe_self = sol::stack::get<std::optional<ParamPtrWrapper>>(lua_state, 1);
-                if (!maybe_self.has_value())
-                {
-                    Output::send<LogLevel::Warning>(STR("ParamPtrWrapper.set called on a non-ParamPtrWrapper instance\n"));
-                }
-                else
-                {
-                    maybe_self->rewrap(lua_state);
-                }
-                return 0;
-            }
-        );
+        sol.new_usertype<ParamPtrWrapper>(
+                "ParamPtrWrapper",
+                "type",
+                [](sol::this_state state) {
+                    return get_class_name(state);
+                },
+                "get",
+                [](lua_State* lua_state) -> int {
+                    auto maybe_self = sol::stack::get<std::optional<ParamPtrWrapper>>(lua_state);
+                    if (!maybe_self.has_value())
+                    {
+                        Output::send<LogLevel::Warning>(STR("ParamPtrWrapper.get called on a non-ParamPtrWrapper instance\n"));
+                        sol::stack::push(lua_state, InvalidObject{});
+                    }
+                    else
+                    {
+                        maybe_self->unwrap(lua_state);
+                    }
+                    return 1;
+                },
+                "set",
+                [](lua_State* lua_state) -> int {
+                    auto maybe_self = sol::stack::get<std::optional<ParamPtrWrapper>>(lua_state, 1);
+                    if (!maybe_self.has_value())
+                    {
+                        Output::send<LogLevel::Warning>(STR("ParamPtrWrapper.set called on a non-ParamPtrWrapper instance\n"));
+                    }
+                    else
+                    {
+                        maybe_self->rewrap(lua_state);
+                    }
+                    return 0;
+                });
 
         auto unreal_class = UObjectGlobals::StaticFindObject<UClass*>(nullptr, nullptr, STR("/Script/Engine.Actor"));
 
-        auto sol_class_InvalidObject = sol.new_usertype<InvalidObject>("InvalidObject",
-            sol::meta_function::index, &InvalidObject::Index,
-            "type", [](sol::this_state state) { return get_class_name(state); },
-            "IsValid", [] { return false; }
-        );
+        auto sol_class_InvalidObject = sol.new_usertype<InvalidObject>(
+                "InvalidObject",
+                sol::meta_function::index,
+                &InvalidObject::Index,
+                "type",
+                [](sol::this_state state) {
+                    return get_class_name(state);
+                },
+                "IsValid",
+                [] {
+                    return false;
+                });
 
-        sol.new_usertype<FName>("FName",
-            sol::no_constructor,
-            sol::call_constructor, sol::factories(
-                [] { return FName(); },
-                [](int64_t index_and_number) { return FName(index_and_number); },
-                [](const StringType& name) { return FName(name, FNAME_Add); },
-                [](const StringType& name, EFindName find_name) { return FName(name, find_name); }
-            ),
-            "type", [](sol::this_state state) { return get_class_name(state); },
-            "ToString", CHOOSE_MEMBER_OVERLOAD(FName, ToString)
-        );
+        sol.new_usertype<FName>(
+                "FName",
+                sol::no_constructor,
+                sol::call_constructor,
+                sol::factories(
+                        [] {
+                            return FName();
+                        },
+                        [](int64_t index_and_number) {
+                            return FName(index_and_number);
+                        },
+                        [](const StringType& name) {
+                            return FName(name, FNAME_Add);
+                        },
+                        [](const StringType& name, EFindName find_name) {
+                            return FName(name, find_name);
+                        }),
+                "type",
+                [](sol::this_state state) {
+                    return get_class_name(state);
+                },
+                "ToString",
+                CHOOSE_MEMBER_OVERLOAD(FName, ToString));
 
         sol.new_usertype<ScriptStructWrapper>("UScriptStruct",
-            sol::no_constructor,
-            sol::meta_function::index, sol::policies(&handle_uscriptstruct_property_getter, &pointer_policy),
-            sol::meta_function::new_index, sol::policies(&handle_uscriptstruct_property_setter, &pointer_policy),
-            "type", [](sol::this_state state) { return get_class_name(state); }
-        );
+                                              sol::no_constructor,
+                                              sol::meta_function::index,
+                                              sol::policies(&handle_uscriptstruct_property_getter, &pointer_policy),
+                                              sol::meta_function::new_index,
+                                              sol::policies(&handle_uscriptstruct_property_setter, &pointer_policy),
+                                              "type",
+                                              [](sol::this_state state) {
+                                                  return get_class_name(state);
+                                              });
 
-        sol.new_usertype<sol_FScriptArray>("TArray",
-            sol::no_constructor,
-            // TODO: index & new_index(?) meta function.
-            sol::meta_function::index, sol::policies(&handle_array_property_getter, &pointer_policy),
-            "type", [](sol::this_state state) { return get_class_name(state); },
-            "ForEach", &tarray_for_each
-        );
+        sol.new_usertype<sol_FScriptArray>(
+                "TArray",
+                sol::no_constructor,
+                // TODO: index & new_index(?) meta function.
+                sol::meta_function::index,
+                sol::policies(&handle_array_property_getter, &pointer_policy),
+                "type",
+                [](sol::this_state state) {
+                    return get_class_name(state);
+                },
+                "ForEach",
+                &tarray_for_each);
 
-        sol.new_usertype<UFunction>("UFunction",
-            sol::no_constructor,
-            sol::meta_function::call, sol::policies(&handle_ufunction_call),
-            "type", [](sol::this_state state) { return get_class_name(state); }
-        );
+        sol.new_usertype<UFunction>("UFunction", sol::no_constructor, sol::meta_function::call, sol::policies(&handle_ufunction_call), "type", [](sol::this_state state) {
+            return get_class_name(state);
+        });
 
-        sol.new_usertype<UObject>("UObject",
-            sol::no_constructor,
-            sol::meta_function::index, sol::policies(&handle_uobject_property_getter, &pointer_policy),
-            sol::meta_function::new_index, sol::policies(&handle_uobject_property_setter, &pointer_policy),
-            "type", [](sol::this_state state) { return get_class_name(state); },
-            "IsValid", &UObject_IsValid,
-            "GetAddress", [](UObject* self) { return std::bit_cast<uintptr_t>(self); },
-            "GetClassPrivate", CHOOSE_MEMBER_OVERLOAD(UObject, GetClassPrivate),
-            "GetInternalIndex", CHOOSE_MEMBER_OVERLOAD(UObject, GetInternalIndex),
-            "GetNamePrivate", CHOOSE_MEMBER_OVERLOAD(UObject, GetNamePrivate),
-            "GetObjectFlags", CHOOSE_MEMBER_OVERLOAD(UObject, GetObjectFlags),
-            "GetOuterPrivate", CHOOSE_MEMBER_OVERLOAD(UObject, GetOuterPrivate),
-            "SetFlagsTo", CHOOSE_MEMBER_OVERLOAD(UObject, SetFlagsTo, EObjectFlags), // Temporary! Remove before release! Only for testing the CHOOSE macro.
-            "PostRename", CHOOSE_MEMBER_OVERLOAD(UObject, PostRename, UObject*, const FName), // Temporary! Remove before release! Only for testing the CHOOSE macro.
-            "GetFullName", sol::overload(
-                [](UObject* self) { return self->GetFullName(); },
-                CHOOSE_CONST_MEMBER_OVERLOAD(UObject, GetFullName, UObject*)
-            )
-        );
+        sol.new_usertype<UObject>(
+                "UObject",
+                sol::no_constructor,
+                sol::meta_function::index,
+                sol::policies(&handle_uobject_property_getter, &pointer_policy),
+                sol::meta_function::new_index,
+                sol::policies(&handle_uobject_property_setter, &pointer_policy),
+                "type",
+                [](sol::this_state state) {
+                    return get_class_name(state);
+                },
+                "IsValid",
+                &UObject_IsValid,
+                "GetAddress",
+                [](UObject* self) {
+                    return std::bit_cast<uintptr_t>(self);
+                },
+                "GetClassPrivate",
+                CHOOSE_MEMBER_OVERLOAD(UObject, GetClassPrivate),
+                "GetInternalIndex",
+                CHOOSE_MEMBER_OVERLOAD(UObject, GetInternalIndex),
+                "GetNamePrivate",
+                CHOOSE_MEMBER_OVERLOAD(UObject, GetNamePrivate),
+                "GetObjectFlags",
+                CHOOSE_MEMBER_OVERLOAD(UObject, GetObjectFlags),
+                "GetOuterPrivate",
+                CHOOSE_MEMBER_OVERLOAD(UObject, GetOuterPrivate),
+                "SetFlagsTo",
+                CHOOSE_MEMBER_OVERLOAD(UObject, SetFlagsTo, EObjectFlags), // Temporary! Remove before release! Only for testing the CHOOSE macro.
+                "PostRename",
+                CHOOSE_MEMBER_OVERLOAD(UObject, PostRename, UObject*, const FName), // Temporary! Remove before release! Only for testing the CHOOSE macro.
+                "GetFullName",
+                sol::overload(
+                        [](UObject* self) {
+                            return self->GetFullName();
+                        },
+                        CHOOSE_CONST_MEMBER_OVERLOAD(UObject, GetFullName, UObject*)));
 
         sol.new_usertype<UClass>("UClass",
-            sol::no_constructor,
-            sol::base_classes, sol::bases<UObject>(),
-            "GetClassAddReferencedObjects", CHOOSE_MEMBER_OVERLOAD(UClass, GetClassAddReferencedObjects),
-            "GetClassCastFlags", CHOOSE_MEMBER_OVERLOAD(UClass, GetClassCastFlags),
-            "GetClassConfigName", CHOOSE_MEMBER_OVERLOAD(UClass, GetClassConfigName),
-            "GetClassConstructor", CHOOSE_MEMBER_OVERLOAD(UClass, GetClassConstructor),
-            "GetClassDefaultObject", CHOOSE_MEMBER_OVERLOAD(UClass, GetClassDefaultObject),
-            "GetClassFlags", CHOOSE_MEMBER_OVERLOAD(UClass, GetClassFlags),
-            "GetClassGeneratedBy", CHOOSE_MEMBER_OVERLOAD(UClass, GetClassGeneratedBy),
-            "GetClassUnique", CHOOSE_MEMBER_OVERLOAD(UClass, GetClassUnique),
-            "GetClassVTableHelperCtorCaller", CHOOSE_MEMBER_OVERLOAD(UClass, GetClassVTableHelperCtorCaller),
-            "GetClassWithin", CHOOSE_MEMBER_OVERLOAD(UClass, GetClassWithin),
-            "GetFirstOwnedClassRep", CHOOSE_MEMBER_OVERLOAD(UClass, GetFirstOwnedClassRep),
-            "GetInterfaces", CHOOSE_MEMBER_OVERLOAD(UClass, GetInterfaces),
-            "GetNetFields", CHOOSE_MEMBER_OVERLOAD(UClass, GetNetFields),
-            "GetSparseClassData", CHOOSE_MEMBER_OVERLOAD(UClass, GetSparseClassData),
-            "GetSparseClassDataStruct", CHOOSE_MEMBER_OVERLOAD(UClass, GetSparseClassDataStruct),
-            "GetUberGraphFramePointerProperty", CHOOSE_MEMBER_OVERLOAD(UClass, GetUberGraphFramePointerProperty),
-            "GetbCooked", CHOOSE_MEMBER_OVERLOAD(UClass, GetbCooked),
-            "GetbLayoutChanging", CHOOSE_MEMBER_OVERLOAD(UClass, GetbLayoutChanging),
+                                 sol::no_constructor,
+                                 sol::base_classes,
+                                 sol::bases<UObject>(),
+                                 "GetClassAddReferencedObjects",
+                                 CHOOSE_MEMBER_OVERLOAD(UClass, GetClassAddReferencedObjects),
+                                 "GetClassCastFlags",
+                                 CHOOSE_MEMBER_OVERLOAD(UClass, GetClassCastFlags),
+                                 "GetClassConfigName",
+                                 CHOOSE_MEMBER_OVERLOAD(UClass, GetClassConfigName),
+                                 "GetClassConstructor",
+                                 CHOOSE_MEMBER_OVERLOAD(UClass, GetClassConstructor),
+                                 "GetClassDefaultObject",
+                                 CHOOSE_MEMBER_OVERLOAD(UClass, GetClassDefaultObject),
+                                 "GetClassFlags",
+                                 CHOOSE_MEMBER_OVERLOAD(UClass, GetClassFlags),
+                                 "GetClassGeneratedBy",
+                                 CHOOSE_MEMBER_OVERLOAD(UClass, GetClassGeneratedBy),
+                                 "GetClassUnique",
+                                 CHOOSE_MEMBER_OVERLOAD(UClass, GetClassUnique),
+                                 "GetClassVTableHelperCtorCaller",
+                                 CHOOSE_MEMBER_OVERLOAD(UClass, GetClassVTableHelperCtorCaller),
+                                 "GetClassWithin",
+                                 CHOOSE_MEMBER_OVERLOAD(UClass, GetClassWithin),
+                                 "GetFirstOwnedClassRep",
+                                 CHOOSE_MEMBER_OVERLOAD(UClass, GetFirstOwnedClassRep),
+                                 "GetInterfaces",
+                                 CHOOSE_MEMBER_OVERLOAD(UClass, GetInterfaces),
+                                 "GetNetFields",
+                                 CHOOSE_MEMBER_OVERLOAD(UClass, GetNetFields),
+                                 "GetSparseClassData",
+                                 CHOOSE_MEMBER_OVERLOAD(UClass, GetSparseClassData),
+                                 "GetSparseClassDataStruct",
+                                 CHOOSE_MEMBER_OVERLOAD(UClass, GetSparseClassDataStruct),
+                                 "GetUberGraphFramePointerProperty",
+                                 CHOOSE_MEMBER_OVERLOAD(UClass, GetUberGraphFramePointerProperty),
+                                 "GetbCooked",
+                                 CHOOSE_MEMBER_OVERLOAD(UClass, GetbCooked),
+                                 "GetbLayoutChanging",
+                                 CHOOSE_MEMBER_OVERLOAD(UClass, GetbLayoutChanging),
 
-            "Test", &Test
-        );
+                                 "Test",
+                                 &Test);
 
         sol.set("c", unreal_class);
         sol.set("empty_object", InvalidObject{});
@@ -1074,7 +1232,7 @@ namespace RC
         m_sol_state_async = sol::thread::create(sol());
 
         state_init(sol());
-        //state_init(sol(State::Gameplay));
+        // state_init(sol(State::Gameplay));
 
         start_async_thread();
 
@@ -1107,12 +1265,15 @@ namespace RC
             return false;
         });
 
-        while (is_mid_script_execution) { std::this_thread::sleep_for(std::chrono::milliseconds(5)); }
+        while (is_mid_script_execution)
+        {
+            std::this_thread::sleep_for(std::chrono::milliseconds(5));
+        }
 
         auto& key_events = UE4SSProgram::get_program().get_events();
         std::erase_if(key_events, [&](Input::KeySet& input_event) -> bool {
             bool were_all_events_registered_from_lua = true;
-            for (auto&[key, vector_of_key_data] : input_event.key_data)
+            for (auto& [key, vector_of_key_data] : input_event.key_data)
             {
                 std::erase_if(vector_of_key_data, [&](Input::KeyData& key_data) -> bool {
                     if (std::bit_cast<SolMod*>(key_data.custom_data) == this)
@@ -1144,15 +1305,15 @@ namespace RC
 
     auto SolMod::on_program_start() -> void
     {
-        //g_property_pushers.resize(g_max_property_pushers, nullptr);
+        // g_property_pushers.resize(g_max_property_pushers, nullptr);
         auto add_property_pusher = [](FName name, PropertyPusherFunction pusher) {
             // Turns out that not all properties have a low comparison index.
-            //if (name.GetComparisonIndex() < g_max_property_pushers)
+            // if (name.GetComparisonIndex() < g_max_property_pushers)
             //{
-                Output::send(STR("{}: {:X}\n"), name.ToString(), name.GetComparisonIndex());
-                g_property_pushers[name.GetComparisonIndex()] = pusher;
+            Output::send(STR("{}: {:X}\n"), name.ToString(), name.GetComparisonIndex());
+            g_property_pushers[name.GetComparisonIndex()] = pusher;
             //}
-            //else
+            // else
             //{
             //    throw std::runtime_error{std::format(
             //        "[add_property_pusher] ComparisonIndex (0x{:X}) of property '{}' was too high to be usable", name.GetComparisonIndex(), to_string(name.ToString())
@@ -1171,15 +1332,15 @@ namespace RC
         add_property_pusher(FName(L"UInt32Property"), &push_uint32property);
         add_property_pusher(FName(L"UInt64Property"), &push_uint64property);
         add_property_pusher(FName(L"StructProperty"), &push_structproperty); // Needs custom implementation for implicit Lua table conversions.
-        add_property_pusher(FName(L"ArrayProperty"), &push_arrayproperty); // Needs custom implementation. for implicit Lua table conversions.
+        add_property_pusher(FName(L"ArrayProperty"), &push_arrayproperty);   // Needs custom implementation. for implicit Lua table conversions.
         add_property_pusher(FName(L"FloatProperty"), &push_floatproperty);
         add_property_pusher(FName(L"DoubleProperty"), &push_doubleproperty);
         add_property_pusher(FName(L"BoolProperty"), &push_boolproperty);
-        //add_property_pusher(FName(L"EnumProperty"), &push_enumproperty); // Needs custom implementation to keep compatibility.
+        // add_property_pusher(FName(L"EnumProperty"), &push_enumproperty); // Needs custom implementation to keep compatibility.
         add_property_pusher(FName(L"WeakObjectProperty"), &push_weakobjectproperty); // Might need a custom implementation, for now let's try the macro.
         add_property_pusher(FName(L"NameProperty"), &push_nameproperty);
-        //add_property_pusher(FName(L"TextProperty"), &push_textproperty); // Might need custom implementation to keep compatiblity.
-        //add_property_pusher(FName(L"StrProperty"), &push_strproperty); // Might need custom implementation for implicit conversions from Lua string to FString.
+        // add_property_pusher(FName(L"TextProperty"), &push_textproperty); // Might need custom implementation to keep compatiblity.
+        // add_property_pusher(FName(L"StrProperty"), &push_strproperty); // Might need custom implementation for implicit conversions from Lua string to FString.
         add_property_pusher(FName(L"SoftClassProperty"), &push_softclassproperty);
         add_property_pusher(FName(L"InterfaceProperty"), &push_interfaceproperty);
 
@@ -1220,14 +1381,14 @@ namespace RC
             for (const auto& callback_data : m_init_game_state_pre_callbacks)
             {
                 const auto& lua = callback_data.lua;
-                //set_is_in_game_thread(lua, true);
+                // set_is_in_game_thread(lua, true);
 
                 for (const auto registry_index : callback_data.registry_indexes)
                 {
                     call_function_wrap_params_safe(lua, registry_index.lua_callback, Context);
                 }
 
-                //set_is_in_game_thread(lua, false);
+                // set_is_in_game_thread(lua, false);
             }
         });
 
@@ -1235,14 +1396,14 @@ namespace RC
             for (const auto& callback_data : m_init_game_state_post_callbacks)
             {
                 const auto& lua = callback_data.lua;
-                //set_is_in_game_thread(lua, true);
+                // set_is_in_game_thread(lua, true);
 
                 for (const auto registry_index : callback_data.registry_indexes)
                 {
                     call_function_wrap_params_safe(lua, registry_index.lua_callback, Context);
                 }
 
-                //set_is_in_game_thread(lua, false);
+                // set_is_in_game_thread(lua, false);
             }
         });
     }
@@ -1250,19 +1411,19 @@ namespace RC
     auto SolMod::global_uninstall() -> void
     {
         SolMod::m_static_construct_object_lua_callbacks.clear();
-        //SolMod::m_process_console_exec_pre_callbacks.clear();
-        //SolMod::m_process_console_exec_post_callbacks.clear();
-        //SolMod::m_global_command_lua_callbacks.clear();
-        //SolMod::m_custom_command_lua_pre_callbacks.clear();
+        // SolMod::m_process_console_exec_pre_callbacks.clear();
+        // SolMod::m_process_console_exec_post_callbacks.clear();
+        // SolMod::m_global_command_lua_callbacks.clear();
+        // SolMod::m_custom_command_lua_pre_callbacks.clear();
         SolMod::m_custom_event_callbacks.clear();
         SolMod::m_init_game_state_pre_callbacks.clear();
         SolMod::m_init_game_state_post_callbacks.clear();
-        //SolMod::m_begin_play_pre_callbacks.clear();
-        //SolMod::m_begin_play_post_callbacks.clear();
-        //SolMod::m_call_function_by_name_with_arguments_pre_callbacks.clear();
-        //SolMod::m_call_function_by_name_with_arguments_post_callbacks.clear();
-        //SolMod::m_local_player_exec_pre_callbacks.clear();
-        //SolMod::m_local_player_exec_post_callbacks.clear();
+        // SolMod::m_begin_play_pre_callbacks.clear();
+        // SolMod::m_begin_play_post_callbacks.clear();
+        // SolMod::m_call_function_by_name_with_arguments_pre_callbacks.clear();
+        // SolMod::m_call_function_by_name_with_arguments_post_callbacks.clear();
+        // SolMod::m_local_player_exec_pre_callbacks.clear();
+        // SolMod::m_local_player_exec_post_callbacks.clear();
         SolMod::m_script_hook_callbacks.clear();
         SolMod::m_generic_hook_id_to_native_hook_id.clear();
     }
@@ -1312,7 +1473,8 @@ namespace RC
                     lua_pushstring(params.lua_state, field_name.c_str());
 
                     void* data = &static_cast<unsigned char*>(params.data)[field->GetOffset_Internal()];
-                    auto pusher_params = PropertyPusherFunctionParams{params.lua_state, nullptr, field, data, PushType::ToLuaNonTrivialLocal, nullptr, std::bit_cast<UObject*>(data)};
+                    auto pusher_params =
+                            PropertyPusherFunctionParams{params.lua_state, nullptr, field, data, PushType::ToLuaNonTrivialLocal, nullptr, std::bit_cast<UObject*>(data)};
                     if (auto error_msg = property_pusher(pusher_params); !error_msg.empty())
                     {
                         return std::format("[push_structproperty] Error getting property value: {}\n", error_msg);
@@ -1322,13 +1484,19 @@ namespace RC
                 else
                 {
                     auto property_type_name = field->GetClass().GetName();
-                    return to_string(std::format(STR("[push_structproperty] Tried getting without a registered handler. 'StructProperty'.'{}' not supported. Field: '{}'.\n"), property_type_name, field->GetName()));
+                    return to_string(std::format(
+                            STR("[push_structproperty] Tried getting without a registered handler. 'StructProperty'.'{}' not supported. Field: '{}'.\n"),
+                            property_type_name,
+                            field->GetName()));
                 }
             }
         }
         else if (params.push_type == PushType::ToLuaParam)
         {
-            if (!params.param_wrappers) { return "[push_structproperty] Tried setting Lua param but param wrapper pointer was nullptr"; }
+            if (!params.param_wrappers)
+            {
+                return "[push_structproperty] Tried setting Lua param but param wrapper pointer was nullptr";
+            }
             params.param_wrappers->emplace_back(ParamPtrWrapper{params.property, params.data, &push_structproperty});
         }
         else
@@ -1344,7 +1512,8 @@ namespace RC
         using OptionalValue = std::optional<Value>;
         if (params.push_type == PushType::FromLua)
         {
-            if (auto maybe_table = params.result ? params.result->get<std::optional<sol::table>>() : sol::stack::get<std::optional<sol::table>>(params.lua_state); maybe_table.has_value())
+            if (auto maybe_table = params.result ? params.result->get<std::optional<sol::table>>() : sol::stack::get<std::optional<sol::table>>(params.lua_state);
+                maybe_table.has_value())
             {
                 auto array_property = static_cast<FArrayProperty*>(params.property);
                 auto inner = array_property->GetInner();
@@ -1366,7 +1535,10 @@ namespace RC
                     auto array = new unsigned char[array_property->GetElementSize() * table_length];
                     for (const auto& field : table)
                     {
-                        if (!field.first.is<int>()) { continue; }
+                        if (!field.first.is<int>())
+                        {
+                            continue;
+                        }
 
                         auto data = &array[array_element_size * element_index];
                         auto pusher_params = PropertyPusherFunctionParams{params.lua_state, nullptr, inner, data, PushType::FromLua, nullptr, params.base};
@@ -1378,10 +1550,13 @@ namespace RC
                     }
                 }
             }
-            else if (auto maybe_nil = params.result ? params.result->get<std::optional<sol::nil_t>>() : sol::stack::get<std::optional<sol::nil_t>>(params.lua_state); maybe_nil.has_value())
+            else if (auto maybe_nil =
+                             params.result ? params.result->get<std::optional<sol::nil_t>>() : sol::stack::get<std::optional<sol::nil_t>>(params.lua_state);
+                     maybe_nil.has_value())
             {
             }
-            else if (auto maybe_script_array = params.result ? params.result->get<OptionalValue>() : sol::stack::get<OptionalValue>(params.lua_state); maybe_script_array.has_value())
+            else if (auto maybe_script_array = params.result ? params.result->get<OptionalValue>() : sol::stack::get<OptionalValue>(params.lua_state);
+                     maybe_script_array.has_value())
             {
                 return "[push_arrayproperty] FScriptArray as userdata is not yet implemented";
             }
@@ -1403,7 +1578,9 @@ namespace RC
             if (!property_pusher)
             {
                 std::string inner_type_name = to_string(inner->GetClass().GetName());
-                return std::format("[push_arrayproperty] Tried interacting with an array but the inner property has no registered handler. Property type '{}' not supported.", inner_type_name);
+                return std::format("[push_arrayproperty] Tried interacting with an array but the inner property has no registered handler. Property type '{}' "
+                                   "not supported.",
+                                   inner_type_name);
             }
 
             auto array_container = static_cast<FScriptArray*>(params.data);
@@ -1427,7 +1604,10 @@ namespace RC
         }
         else if (params.push_type == PushType::ToLuaParam)
         {
-            if (!params.param_wrappers) { return "[push_arrayproperty] Tried setting Lua param but param wrapper pointer was nullptr"; }
+            if (!params.param_wrappers)
+            {
+                return "[push_arrayproperty] Tried setting Lua param but param wrapper pointer was nullptr";
+            }
             params.param_wrappers->emplace_back(ParamPtrWrapper{params.property, params.data, &push_interfaceproperty});
         }
         else
@@ -1442,4 +1622,4 @@ namespace RC
         sol::stack::push(params.lua_state, static_cast<UFunction*>(params.data));
         return {};
     }
-}
+} // namespace RC

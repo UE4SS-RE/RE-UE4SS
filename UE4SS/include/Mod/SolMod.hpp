@@ -28,7 +28,7 @@ namespace RC
 
     class SolMod : public Mod
     {
-    private:
+      private:
         StringType m_scripts_path{};
         sol::state m_sol_state_ue4ss{};
         std::vector<sol::thread> m_sol_gameplay_states{};
@@ -37,8 +37,13 @@ namespace RC
         std::mutex m_actions_lock{};
         std::jthread m_async_thread{};
 
-    public:
-        enum class ActionType { Immediate, Delayed, Loop };
+      public:
+        enum class ActionType
+        {
+            Immediate,
+            Delayed,
+            Loop
+        };
         struct AsyncAction
         {
             // TODO: Use LuaMadeSimple instead of lua_State*
@@ -51,8 +56,8 @@ namespace RC
         };
         std::vector<AsyncAction> m_pending_actions{};
         std::vector<AsyncAction> m_delayed_actions{};
-        
-    public:
+
+      public:
         static std::recursive_mutex m_thread_actions_mutex;
         static std::vector<std::unique_ptr<LuaUnrealScriptFunctionData>> m_hooked_script_function_data;
         static std::vector<LuaCallbackData> m_static_construct_object_lua_callbacks;
@@ -63,28 +68,32 @@ namespace RC
         static std::unordered_map<int32_t, int32_t> m_generic_hook_id_to_native_hook_id;
         static int32_t m_last_generic_hook_id;
 
-    public:
+      public:
         SolMod(UE4SSProgram&, StringType&& mod_name, StringType&& mod_path);
         ~SolMod() override;
 
-    private:
+      private:
         auto state_init(sol::state_view sol) -> void;
         auto setup_lua_global_functions(sol::state_view) -> void;
         auto start_async_thread() -> void;
         auto clear_delayed_actions() -> void;
 
-    public:
-        enum class State { UE4SS, Async };
+      public:
+        enum class State
+        {
+            UE4SS,
+            Async
+        };
         auto sol(State = State::UE4SS) -> sol::state_view;
         auto process_delayed_actions() -> void;
 
-    public:
+      public:
         auto start_mod() -> void override;
         auto uninstall() -> void override;
         auto update_async() -> void override;
 
-    public:
+      public:
         static auto on_program_start() -> void;
         static auto global_uninstall() -> void;
     };
-}
+} // namespace RC

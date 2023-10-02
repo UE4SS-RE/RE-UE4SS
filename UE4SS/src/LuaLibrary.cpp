@@ -54,7 +54,10 @@ namespace RC::LuaLibrary
     {
     }
 
-    auto set_script_variable_default_data([[maybe_unused]] const char* mod_name, [[maybe_unused]] const char* variable_name, [[maybe_unused]] DefaultDataStruct& external_data, ReturnValue& return_struct) -> void
+    auto set_script_variable_default_data([[maybe_unused]] const char* mod_name,
+                                          [[maybe_unused]] const char* variable_name,
+                                          [[maybe_unused]] DefaultDataStruct& external_data,
+                                          ReturnValue& return_struct) -> void
     {
     }
 
@@ -66,7 +69,7 @@ namespace RC::LuaLibrary
     {
         return Unreal::UnrealInitializer::StaticStorage::bIsInitialized;
     }
-}
+} // namespace RC::LuaLibrary
 #else
 namespace RC::LuaLibrary
 {

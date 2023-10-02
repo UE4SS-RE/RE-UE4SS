@@ -34,7 +34,7 @@
 
 #define LuaModType SolMod
 #if LuaModType == SolMod
-    #define UE4SS_USE_SOL
+#define UE4SS_USE_SOL
 #endif
 
 namespace RC
@@ -57,10 +57,10 @@ namespace RC
         // Sha1 hash with no salt: "RecognizableString"
         char recognizable_string[41]{"81acd41b7490f7b70ec6455657855733e21d7c0e"};
 
-        //LuaLibrary::SetScriptVariableInt32Signature set_script_variable_int32_function;
-        //LuaLibrary::SetScriptVariableDefaultDataSignature set_script_variable_default_data_function;
-        //LuaLibrary::CallScriptFunctionSignature call_script_function_function;
-        //LuaLibrary::IsUE4SSInitializedSignature is_ue4ss_initialized_function;
+        // LuaLibrary::SetScriptVariableInt32Signature set_script_variable_int32_function;
+        // LuaLibrary::SetScriptVariableDefaultDataSignature set_script_variable_default_data_function;
+        // LuaLibrary::CallScriptFunctionSignature call_script_function_function;
+        // LuaLibrary::IsUE4SSInitializedSignature is_ue4ss_initialized_function;
 
         // Ensure that we have zero-initialized memory at the end of the struct
         // This means that we can reliably check whether a function exists externally

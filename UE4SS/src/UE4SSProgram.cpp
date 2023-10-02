@@ -370,13 +370,13 @@ namespace RC
         std::filesystem::path game_exe_path = exe_path_buffer;
         std::filesystem::path game_directory_path = game_exe_path.parent_path();
         m_working_directory = m_root_directory;
-        #ifdef UE4SS_USE_SOL
+#ifdef UE4SS_USE_SOL
         m_mods_directory = m_working_directory / "Mods_sol";
-        #else
+#else
         m_mods_directory = m_working_directory / "Mods";
         m_game_executable_directory = game_directory_path /*game_exe_path.parent_path()*/;
-        #endif
-        m_game_executable_directory = game_directory_path/*game_exe_path.parent_path()*/;
+#endif
+        m_game_executable_directory = game_directory_path /*game_exe_path.parent_path()*/;
         m_settings_path_and_file = m_root_directory;
         m_game_path_and_exe_name = game_exe_path;
         m_object_dumper_output_directory = m_game_executable_directory;
@@ -397,11 +397,11 @@ namespace RC
             {
                 m_has_game_specific_config = true;
                 m_working_directory = item.path();
-                #ifdef UE4SS_USE_SOL
+#ifdef UE4SS_USE_SOL
                 m_mods_directory = item.path().wstring() + L"\\Mods_sol";
-                #else
+#else
                 m_mods_directory = item.path().wstring() + L"\\Mods";
-                #endif
+#endif
                 m_settings_path_and_file = std::move(item.path());
                 m_log_directory = m_working_directory;
                 m_object_dumper_output_directory = m_working_directory;
@@ -540,7 +540,7 @@ namespace RC
         }
 
         // If any Lua scripts are found, add overrides so that the Lua script can perform the aob scan instead of the Unreal API itself
-        //setup_lua_scan_overrides(m_working_directory, config);
+        // setup_lua_scan_overrides(m_working_directory, config);
 
         // Virtual function offset overrides
         TRY([&]() {
@@ -756,10 +756,10 @@ namespace RC
 
     auto UE4SSProgram::share_lua_functions() -> void
     {
-        //m_shared_functions.set_script_variable_int32_function = &LuaLibrary::set_script_variable_int32;
-        //m_shared_functions.set_script_variable_default_data_function = &LuaLibrary::set_script_variable_default_data;
-        //m_shared_functions.call_script_function_function = &LuaLibrary::call_script_function;
-        //m_shared_functions.is_ue4ss_initialized_function = &LuaLibrary::is_ue4ss_initialized;
+        // m_shared_functions.set_script_variable_int32_function = &LuaLibrary::set_script_variable_int32;
+        // m_shared_functions.set_script_variable_default_data_function = &LuaLibrary::set_script_variable_default_data;
+        // m_shared_functions.call_script_function_function = &LuaLibrary::call_script_function;
+        // m_shared_functions.is_ue4ss_initialized_function = &LuaLibrary::is_ue4ss_initialized;
         Output::send(STR("m_shared_functions: {}\n"), static_cast<void*>(&m_shared_functions));
     }
 
@@ -1210,7 +1210,7 @@ namespace RC
 
         // Remove all custom properties
         // Uncomment when custom properties are working
-        //LuaModType::LuaCustomProperty::StaticStorage::property_list.clear();
+        // LuaModType::LuaCustomProperty::StaticStorage::property_list.clear();
 
         // Reset the Lua callbacks for the global Lua function 'NotifyOnNewObject'
         LuaModType::m_static_construct_object_lua_callbacks.clear();

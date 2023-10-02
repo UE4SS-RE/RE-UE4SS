@@ -26,12 +26,20 @@ namespace RC
 
     auto SolMod::setup_lua_global_functions(sol::state_view sol) -> void
     {
-        sol.set_function("StaticFindObject", sol::policies(sol::overload(
-            [](const StringType& name) { return UObjectGlobals::StaticFindObject(nullptr, nullptr, name); },
-            [](UClass* uclass, UObject* in_outer, const StringType& name) { return UObjectGlobals::StaticFindObject(uclass, in_outer, name); },
-            [](UClass* uclass, UObject* in_outer, const StringType& name, bool exact_class) { return UObjectGlobals::StaticFindObject(uclass, in_outer, name, exact_class); }
-        ), &pointer_policy));
+        sol.set_function("StaticFindObject",
+                         sol::policies(sol::overload(
+                                               [](const StringType& name) {
+                                                   return UObjectGlobals::StaticFindObject(nullptr, nullptr, name);
+                                               },
+                                               [](UClass* uclass, UObject* in_outer, const StringType& name) {
+                                                   return UObjectGlobals::StaticFindObject(uclass, in_outer, name);
+                                               },
+                                               [](UClass* uclass, UObject* in_outer, const StringType& name, bool exact_class) {
+                                                   return UObjectGlobals::StaticFindObject(uclass, in_outer, name, exact_class);
+                                               }),
+                                       &pointer_policy));
 
+        // clang-format off
         sol.new_enum<Input::Key>("Key", {
             { "LEFT_MOUSE_BUTTON", Input::Key::LEFT_MOUSE_BUTTON, },
             { "RIGHT_MOUSE_BUTTON", Input::Key::RIGHT_MOUSE_BUTTON, },
@@ -205,53 +213,78 @@ namespace RC
             { "CONTROL", Input::ModifierKey::CONTROL, },
             { "ALT", Input::ModifierKey::ALT }
         });
+        // clang-format on
 
         sol.set("NAME_None", NAME_None);
 
         sol.set_function("FindFirstOf", CHOOSE_FREE_OVERLOAD(UObjectGlobals::FindFirstOf, const std::wstring&));
         sol.set_function("FindAllOf", CHOOSE_FREE_OVERLOAD(UObjectGlobals::FindAllOf, const std::wstring&, std::vector<UObject*>&));
-        sol.set_function("IsKeyBindRegistered", sol::overload(
-            [](Input::Key key) { return UE4SSProgram::get_program().is_keydown_event_registered(key); },
-            [](Input::Key key, sol::nested<Input::Handler::ModifierKeyArray> modifier_keys) {
-                return UE4SSProgram::get_program().is_keydown_event_registered(key, modifier_keys.value());
-            }
-        ));
+        sol.set_function("IsKeyBindRegistered",
+                         sol::overload(
+                                 [](Input::Key key) {
+                                     return UE4SSProgram::get_program().is_keydown_event_registered(key);
+                                 },
+                                 [](Input::Key key, sol::nested<Input::Handler::ModifierKeyArray> modifier_keys) {
+                                     return UE4SSProgram::get_program().is_keydown_event_registered(key, modifier_keys.value());
+                                 }));
         // When calling 'register_keydown_event', we use the pointer to the mod for 'custom_data' to signify that this keydown event was created by that mod.
         // We then use this data to unregister keybinds belonging to this mod later.
-        sol.set_function("RegisterKeyBindAsync", sol::overload(
-            [&](sol::this_state state, Input::Key key, sol::function callback) {
-                UE4SSProgram::get_program().register_keydown_event(key, [=] {
-                    call_function_dont_wrap_params_safe(state, callback);
-                }, std::bit_cast<uintptr_t>(this));
-            },
-            [&](sol::this_state state, Input::Key key, sol::nested<std::vector<Input::ModifierKey>> modifier_keys, sol::function callback) {
-                Input::Handler::ModifierKeyArray modifier_keys_array{};
-                for (size_t i = 0; i < modifier_keys.value().size(); ++i) { if (i >= Input::max_modifier_keys) break; modifier_keys_array[i] = modifier_keys.value()[i]; }
-                UE4SSProgram::get_program().register_keydown_event(key, modifier_keys_array, [=] {
-                    call_function_dont_wrap_params_safe(state, callback);
-                }, std::bit_cast<uintptr_t>(this));
-            }
-        ));
-        sol.set_function("RegisterKeyBind", sol::overload(
-            [&](sol::this_state state, Input::Key key, sol::function callback) {
-                UE4SSProgram::get_program().register_keydown_event(key, [=] {
-                    call_function_with_manual_handler_safe(state, [&](const std::vector<ParamPtrWrapper>& params) {
-                        std::lock_guard<std::recursive_mutex> guard{SolMod::m_thread_actions_mutex};
-                        return callback(sol::as_args(params));
-                    });
-                }, std::bit_cast<uintptr_t>(this));
-            },
-            [&](sol::this_state state, Input::Key key, sol::nested<std::vector<Input::ModifierKey>> modifier_keys, sol::function callback) {
-                Input::Handler::ModifierKeyArray modifier_keys_array{};
-                for (size_t i = 0; i < modifier_keys.value().size(); ++i) { if (i >= Input::max_modifier_keys) break; modifier_keys_array[i] = modifier_keys.value()[i]; }
-                UE4SSProgram::get_program().register_keydown_event(key, modifier_keys_array, [=] {
-                    call_function_with_manual_handler_safe(state, [&](const std::vector<ParamPtrWrapper>& params) {
-                        std::lock_guard<std::recursive_mutex> guard{SolMod::m_thread_actions_mutex};
-                        return callback(sol::as_args(params));
-                    });
-                }, std::bit_cast<uintptr_t>(this));
-            }
-        ));
+        sol.set_function("RegisterKeyBindAsync",
+                         sol::overload(
+                                 [&](sol::this_state state, Input::Key key, sol::function callback) {
+                                     UE4SSProgram::get_program().register_keydown_event(
+                                             key,
+                                             [=] {
+                                                 call_function_dont_wrap_params_safe(state, callback);
+                                             },
+                                             std::bit_cast<uintptr_t>(this));
+                                 },
+                                 [&](sol::this_state state, Input::Key key, sol::nested<std::vector<Input::ModifierKey>> modifier_keys, sol::function callback) {
+                                     Input::Handler::ModifierKeyArray modifier_keys_array{};
+                                     for (size_t i = 0; i < modifier_keys.value().size(); ++i)
+                                     {
+                                         if (i >= Input::max_modifier_keys) break;
+                                         modifier_keys_array[i] = modifier_keys.value()[i];
+                                     }
+                                     UE4SSProgram::get_program().register_keydown_event(
+                                             key,
+                                             modifier_keys_array,
+                                             [=] {
+                                                 call_function_dont_wrap_params_safe(state, callback);
+                                             },
+                                             std::bit_cast<uintptr_t>(this));
+                                 }));
+        sol.set_function("RegisterKeyBind",
+                         sol::overload(
+                                 [&](sol::this_state state, Input::Key key, sol::function callback) {
+                                     UE4SSProgram::get_program().register_keydown_event(
+                                             key,
+                                             [=] {
+                                                 call_function_with_manual_handler_safe(state, [&](const std::vector<ParamPtrWrapper>& params) {
+                                                     std::lock_guard<std::recursive_mutex> guard{SolMod::m_thread_actions_mutex};
+                                                     return callback(sol::as_args(params));
+                                                 });
+                                             },
+                                             std::bit_cast<uintptr_t>(this));
+                                 },
+                                 [&](sol::this_state state, Input::Key key, sol::nested<std::vector<Input::ModifierKey>> modifier_keys, sol::function callback) {
+                                     Input::Handler::ModifierKeyArray modifier_keys_array{};
+                                     for (size_t i = 0; i < modifier_keys.value().size(); ++i)
+                                     {
+                                         if (i >= Input::max_modifier_keys) break;
+                                         modifier_keys_array[i] = modifier_keys.value()[i];
+                                     }
+                                     UE4SSProgram::get_program().register_keydown_event(
+                                             key,
+                                             modifier_keys_array,
+                                             [=] {
+                                                 call_function_with_manual_handler_safe(state, [&](const std::vector<ParamPtrWrapper>& params) {
+                                                     std::lock_guard<std::recursive_mutex> guard{SolMod::m_thread_actions_mutex};
+                                                     return callback(sol::as_args(params));
+                                                 });
+                                             },
+                                             std::bit_cast<uintptr_t>(this));
+                                 }));
         sol.set_function("RegisterHook", [&](sol::this_state state, StringType function_name, sol::function callback) {
             sol::variadic_results return_values{};
 
@@ -268,7 +301,9 @@ namespace RC
             auto unreal_function = UObjectGlobals::StaticFindObject<UFunction*>(nullptr, nullptr, function_name_no_prefix);
             if (!unreal_function)
             {
-                return exit_script_with_error<2>(state, STR("Tried to register a hook with Lua function 'RegisterHook' but no UFunction with the specified name was found."));
+                return exit_script_with_error<2>(
+                        state,
+                        STR("Tried to register a hook with Lua function 'RegisterHook' but no UFunction with the specified name was found."));
             }
 
             auto mod_ref = get_mod_ref(state);
@@ -285,20 +320,10 @@ namespace RC
             int32_t generic_pre_id{};
             int32_t generic_post_id{};
             auto func_ptr = unreal_function->GetFunc();
-            if (func_ptr &&
-                func_ptr != UObject::ProcessInternalInternal.get_function_address() &&
-                unreal_function->HasAnyFunctionFlags(EFunctionFlags::FUNC_Native))
+            if (func_ptr && func_ptr != UObject::ProcessInternalInternal.get_function_address() && unreal_function->HasAnyFunctionFlags(EFunctionFlags::FUNC_Native))
             {
-                auto& custom_data = m_hooked_script_function_data.emplace_back(
-                    std::make_unique<LuaUnrealScriptFunctionData>(LuaUnrealScriptFunctionData{
-                        0,
-                        0,
-                        unreal_function,
-                        this,
-                        gameplay_state,
-                        std::move(callback_in_gameplay_state)
-                    })
-                );
+                auto& custom_data = m_hooked_script_function_data.emplace_back(std::make_unique<LuaUnrealScriptFunctionData>(
+                        LuaUnrealScriptFunctionData{0, 0, unreal_function, this, gameplay_state, std::move(callback_in_gameplay_state)}));
                 auto pre_id = unreal_function->RegisterPreHook(&lua_unreal_script_function_hook_pre, custom_data.get());
                 auto post_id = unreal_function->RegisterPostHook(&lua_unreal_script_function_hook_post, custom_data.get());
                 custom_data->pre_callback_id = pre_id;
@@ -307,18 +332,23 @@ namespace RC
                 generic_pre_id = m_last_generic_hook_id;
                 m_generic_hook_id_to_native_hook_id.emplace(++m_last_generic_hook_id, post_id);
                 generic_post_id = m_last_generic_hook_id;
-                Output::send<LogLevel::Verbose>(STR("[RegisterHook] Registered native hook ({}, {}) for {}\n"), generic_pre_id, generic_post_id, unreal_function->GetFullName());
+                Output::send<LogLevel::Verbose>(STR("[RegisterHook] Registered native hook ({}, {}) for {}\n"),
+                                                generic_pre_id,
+                                                generic_post_id,
+                                                unreal_function->GetFullName());
             }
-            else if (func_ptr &&
-                func_ptr == UObject::ProcessInternalInternal.get_function_address() &&
-                !unreal_function->HasAnyFunctionFlags(EFunctionFlags::FUNC_Native))
+            else if (func_ptr && func_ptr == UObject::ProcessInternalInternal.get_function_address() &&
+                     !unreal_function->HasAnyFunctionFlags(EFunctionFlags::FUNC_Native))
             {
                 ++m_last_generic_hook_id;
                 auto [callback_data, _] = m_script_hook_callbacks.emplace(unreal_function->GetFullName(), LuaCallbackData{gameplay_state, nullptr, {}});
                 callback_data->second.registry_indexes.emplace_back(LuaCallbackData::RegistryIndex{callback_in_gameplay_state, m_last_generic_hook_id});
                 generic_pre_id = m_last_generic_hook_id;
                 generic_post_id = m_last_generic_hook_id;
-                Output::send<LogLevel::Verbose>(STR("[RegisterHook] Registered script hook ({}, {}) for {}\n"), generic_pre_id, generic_post_id, unreal_function->GetFullName());
+                Output::send<LogLevel::Verbose>(STR("[RegisterHook] Registered script hook ({}, {}) for {}\n"),
+                                                generic_pre_id,
+                                                generic_post_id,
+                                                unreal_function->GetFullName());
             }
             else
             {
@@ -334,13 +364,19 @@ namespace RC
         sol.set_function("UnregisterHook", [](sol::this_state state, StringType function_name, int32_t pre_id, int32_t post_id) {
             auto function_name_no_prefix = function_name.substr(function_name.find_first_of(L"/"), function_name.size());
             auto unreal_function = UObjectGlobals::StaticFindObject<UFunction*>(nullptr, nullptr, function_name_no_prefix);
-            if (!unreal_function) { return exit_script_with_error(state, STR("Tried to unregister a hook with Lua function 'UnregisterHook' but no UFunction with the specified name was found.")); }
+            if (!unreal_function)
+            {
+                return exit_script_with_error(
+                        state,
+                        STR("Tried to unregister a hook with Lua function 'UnregisterHook' but no UFunction with the specified name was found."));
+            }
 
             bool is_native{};
 
             auto native_hook_pre_id_it = SolMod::m_generic_hook_id_to_native_hook_id.find(pre_id);
             auto native_hook_post_id_it = SolMod::m_generic_hook_id_to_native_hook_id.find(post_id);
-            if (native_hook_pre_id_it != SolMod::m_generic_hook_id_to_native_hook_id.end() && native_hook_post_id_it != SolMod::m_generic_hook_id_to_native_hook_id.end())
+            if (native_hook_pre_id_it != SolMod::m_generic_hook_id_to_native_hook_id.end() &&
+                native_hook_post_id_it != SolMod::m_generic_hook_id_to_native_hook_id.end())
             {
                 is_native = true;
             }
@@ -354,18 +390,23 @@ namespace RC
             }
             else
             {
-                if (auto callback_data_it = SolMod::m_script_hook_callbacks.find(unreal_function->GetFullName()); callback_data_it != SolMod::m_script_hook_callbacks.end())
+                if (auto callback_data_it = SolMod::m_script_hook_callbacks.find(unreal_function->GetFullName());
+                    callback_data_it != SolMod::m_script_hook_callbacks.end())
                 {
                     Output::send<LogLevel::Verbose>(STR("Unregistering script hook with id: {}\n"), post_id);
                     auto& registry_indexes = callback_data_it->second.registry_indexes;
-                    registry_indexes.erase(std::remove_if(registry_indexes.begin(), registry_indexes.end(), [&](LuaCallbackData::RegistryIndex& registry_index) -> bool {
-                        return post_id == registry_index.identifier;
-                    }), registry_indexes.end());
+                    registry_indexes.erase(std::remove_if(registry_indexes.begin(),
+                                                          registry_indexes.end(),
+                                                          [&](LuaCallbackData::RegistryIndex& registry_index) -> bool {
+                                                              return post_id == registry_index.identifier;
+                                                          }),
+                                           registry_indexes.end());
                 }
             }
         });
         sol.set_function("DumpAllObjects", [] {
-            UE4SSProgram::dump_all_objects_and_properties(UE4SSProgram::get_program().get_object_dumper_output_directory() + STR("\\") + UE4SSProgram::m_object_dumper_file_name);
+            UE4SSProgram::dump_all_objects_and_properties(UE4SSProgram::get_program().get_object_dumper_output_directory() + STR("\\") +
+                                                          UE4SSProgram::m_object_dumper_file_name);
         });
         sol.set_function("GenerateSDK", [] {
             auto working_dir = StringType{UE4SSProgram::get_program().get_working_directory()};
@@ -395,86 +436,123 @@ namespace RC
         sol.set_function("Test4", [](bool test_bool) {
             Output::send<LogLevel::Verbose>(STR("test_bool: {}\n"), test_bool);
         });
-        sol.set_function("Test5", sol::policies([](UObject* object) {
-            Output::send<LogLevel::Verbose>(STR("object: {}\n"), object ? STR("non-nullptr") : STR("nullptr"));
-        }, &pointer_policy));
-        sol.set_function("Test6", sol::policies([](UClass* uclass) {
-            Output::send<LogLevel::Verbose>(STR("class: {}\n"), uclass ? STR("non-nullptr") : STR("nullptr"));
-        }, &pointer_policy));
-        sol.set_function("StaticConstructObject", sol::policies(sol::overload(
-            [](UClass* uclass, UObject* outer) {
-                FStaticConstructObjectParameters params{uclass, outer};
-                return UObjectGlobals::StaticConstructObject(params);
-            },
-            [](UClass* uclass, UObject* outer, FName name) {
-                FStaticConstructObjectParameters params{uclass, outer};
-                params.Name = name;
-                return UObjectGlobals::StaticConstructObject(params);
-            },
-            [](UClass* uclass, UObject* outer, FName name, EObjectFlags flags) {
-                FStaticConstructObjectParameters params{uclass, outer};
-                params.Name = name;
-                params.SetFlags = flags;
-                return UObjectGlobals::StaticConstructObject(params);
-            },
-            [](UClass* uclass, UObject* outer, FName name, EObjectFlags flags, EInternalObjectFlags internal_flags) {
-                FStaticConstructObjectParameters params{uclass, outer};
-                params.Name = name;
-                params.SetFlags = flags;
-                params.InternalSetFlags = internal_flags;
-                return UObjectGlobals::StaticConstructObject(params);
-            },
-            [](UClass* uclass, UObject* outer, FName name, EObjectFlags flags, EInternalObjectFlags internal_flags, bool copy_transients_from_class_defaults) {
-                FStaticConstructObjectParameters params{uclass, outer};
-                params.Name = name;
-                params.SetFlags = flags;
-                params.InternalSetFlags = internal_flags;
-                params.bCopyTransientsFromClassDefaults = copy_transients_from_class_defaults;
-                return UObjectGlobals::StaticConstructObject(params);
-            },
-            [](UClass* uclass, UObject* outer, FName name, EObjectFlags flags, EInternalObjectFlags internal_flags, bool copy_transients_from_class_defaults, bool assume_template_is_archetype) {
-                FStaticConstructObjectParameters params{uclass, outer};
-                params.Name = name;
-                params.SetFlags = flags;
-                params.InternalSetFlags = internal_flags;
-                params.bCopyTransientsFromClassDefaults = copy_transients_from_class_defaults;
-                params.bAssumeTemplateIsArchetype = assume_template_is_archetype;
-                return UObjectGlobals::StaticConstructObject(params);
-            },
-            [](UClass* uclass, UObject* outer, FName name, EObjectFlags flags, EInternalObjectFlags internal_flags, bool copy_transients_from_class_defaults, bool assume_template_is_archetype, UObject* tmplate) {
-                FStaticConstructObjectParameters params{uclass, outer};
-                params.Name = name;
-                params.SetFlags = flags;
-                params.InternalSetFlags = internal_flags;
-                params.bCopyTransientsFromClassDefaults = copy_transients_from_class_defaults;
-                params.bAssumeTemplateIsArchetype = assume_template_is_archetype;
-                params.Template = tmplate;
-                return UObjectGlobals::StaticConstructObject(params);
-            },
-            [](UClass* uclass, UObject* outer, FName name, EObjectFlags flags, EInternalObjectFlags internal_flags, bool copy_transients_from_class_defaults, bool assume_template_is_archetype, UObject* tmplate, FObjectInstancingGraph* instance_graph) {
-                FStaticConstructObjectParameters params{uclass, outer};
-                params.Name = name;
-                params.SetFlags = flags;
-                params.InternalSetFlags = internal_flags;
-                params.bCopyTransientsFromClassDefaults = copy_transients_from_class_defaults;
-                params.bAssumeTemplateIsArchetype = assume_template_is_archetype;
-                params.Template = tmplate;
-                params.InstanceGraph = instance_graph;
-                return UObjectGlobals::StaticConstructObject(params);
-            },
-            [](UClass* uclass, UObject* outer, FName name, EObjectFlags flags, EInternalObjectFlags internal_flags, bool copy_transients_from_class_defaults, bool assume_template_is_archetype, UObject* tmplate, FObjectInstancingGraph* instance_graph, UPackage* external_package) {
-                FStaticConstructObjectParameters params{uclass, outer};
-                params.Name = name;
-                params.SetFlags = flags;
-                params.InternalSetFlags = internal_flags;
-                params.bCopyTransientsFromClassDefaults = copy_transients_from_class_defaults;
-                params.bAssumeTemplateIsArchetype = assume_template_is_archetype;
-                params.Template = tmplate;
-                params.InstanceGraph = instance_graph;
-                params.ExternalPackage = external_package;
-                return UObjectGlobals::StaticConstructObject(params);
-            }
-        ), &pointer_policy));
+        sol.set_function("Test5",
+                         sol::policies(
+                                 [](UObject* object) {
+                                     Output::send<LogLevel::Verbose>(STR("object: {}\n"), object ? STR("non-nullptr") : STR("nullptr"));
+                                 },
+                                 &pointer_policy));
+        sol.set_function("Test6",
+                         sol::policies(
+                                 [](UClass* uclass) {
+                                     Output::send<LogLevel::Verbose>(STR("class: {}\n"), uclass ? STR("non-nullptr") : STR("nullptr"));
+                                 },
+                                 &pointer_policy));
+        sol.set_function("StaticConstructObject",
+                         sol::policies(sol::overload(
+                                               [](UClass* uclass, UObject* outer) {
+                                                   FStaticConstructObjectParameters params{uclass, outer};
+                                                   return UObjectGlobals::StaticConstructObject(params);
+                                               },
+                                               [](UClass* uclass, UObject* outer, FName name) {
+                                                   FStaticConstructObjectParameters params{uclass, outer};
+                                                   params.Name = name;
+                                                   return UObjectGlobals::StaticConstructObject(params);
+                                               },
+                                               [](UClass* uclass, UObject* outer, FName name, EObjectFlags flags) {
+                                                   FStaticConstructObjectParameters params{uclass, outer};
+                                                   params.Name = name;
+                                                   params.SetFlags = flags;
+                                                   return UObjectGlobals::StaticConstructObject(params);
+                                               },
+                                               [](UClass* uclass, UObject* outer, FName name, EObjectFlags flags, EInternalObjectFlags internal_flags) {
+                                                   FStaticConstructObjectParameters params{uclass, outer};
+                                                   params.Name = name;
+                                                   params.SetFlags = flags;
+                                                   params.InternalSetFlags = internal_flags;
+                                                   return UObjectGlobals::StaticConstructObject(params);
+                                               },
+                                               [](UClass* uclass, UObject* outer, FName name, EObjectFlags flags, EInternalObjectFlags internal_flags, bool copy_transients_from_class_defaults) {
+                                                   FStaticConstructObjectParameters params{uclass, outer};
+                                                   params.Name = name;
+                                                   params.SetFlags = flags;
+                                                   params.InternalSetFlags = internal_flags;
+                                                   params.bCopyTransientsFromClassDefaults = copy_transients_from_class_defaults;
+                                                   return UObjectGlobals::StaticConstructObject(params);
+                                               },
+                                               [](UClass* uclass,
+                                                  UObject* outer,
+                                                  FName name,
+                                                  EObjectFlags flags,
+                                                  EInternalObjectFlags internal_flags,
+                                                  bool copy_transients_from_class_defaults,
+                                                  bool assume_template_is_archetype) {
+                                                   FStaticConstructObjectParameters params{uclass, outer};
+                                                   params.Name = name;
+                                                   params.SetFlags = flags;
+                                                   params.InternalSetFlags = internal_flags;
+                                                   params.bCopyTransientsFromClassDefaults = copy_transients_from_class_defaults;
+                                                   params.bAssumeTemplateIsArchetype = assume_template_is_archetype;
+                                                   return UObjectGlobals::StaticConstructObject(params);
+                                               },
+                                               [](UClass* uclass,
+                                                  UObject* outer,
+                                                  FName name,
+                                                  EObjectFlags flags,
+                                                  EInternalObjectFlags internal_flags,
+                                                  bool copy_transients_from_class_defaults,
+                                                  bool assume_template_is_archetype,
+                                                  UObject* tmplate) {
+                                                   FStaticConstructObjectParameters params{uclass, outer};
+                                                   params.Name = name;
+                                                   params.SetFlags = flags;
+                                                   params.InternalSetFlags = internal_flags;
+                                                   params.bCopyTransientsFromClassDefaults = copy_transients_from_class_defaults;
+                                                   params.bAssumeTemplateIsArchetype = assume_template_is_archetype;
+                                                   params.Template = tmplate;
+                                                   return UObjectGlobals::StaticConstructObject(params);
+                                               },
+                                               [](UClass* uclass,
+                                                  UObject* outer,
+                                                  FName name,
+                                                  EObjectFlags flags,
+                                                  EInternalObjectFlags internal_flags,
+                                                  bool copy_transients_from_class_defaults,
+                                                  bool assume_template_is_archetype,
+                                                  UObject* tmplate,
+                                                  FObjectInstancingGraph* instance_graph) {
+                                                   FStaticConstructObjectParameters params{uclass, outer};
+                                                   params.Name = name;
+                                                   params.SetFlags = flags;
+                                                   params.InternalSetFlags = internal_flags;
+                                                   params.bCopyTransientsFromClassDefaults = copy_transients_from_class_defaults;
+                                                   params.bAssumeTemplateIsArchetype = assume_template_is_archetype;
+                                                   params.Template = tmplate;
+                                                   params.InstanceGraph = instance_graph;
+                                                   return UObjectGlobals::StaticConstructObject(params);
+                                               },
+                                               [](UClass* uclass,
+                                                  UObject* outer,
+                                                  FName name,
+                                                  EObjectFlags flags,
+                                                  EInternalObjectFlags internal_flags,
+                                                  bool copy_transients_from_class_defaults,
+                                                  bool assume_template_is_archetype,
+                                                  UObject* tmplate,
+                                                  FObjectInstancingGraph* instance_graph,
+                                                  UPackage* external_package) {
+                                                   FStaticConstructObjectParameters params{uclass, outer};
+                                                   params.Name = name;
+                                                   params.SetFlags = flags;
+                                                   params.InternalSetFlags = internal_flags;
+                                                   params.bCopyTransientsFromClassDefaults = copy_transients_from_class_defaults;
+                                                   params.bAssumeTemplateIsArchetype = assume_template_is_archetype;
+                                                   params.Template = tmplate;
+                                                   params.InstanceGraph = instance_graph;
+                                                   params.ExternalPackage = external_package;
+                                                   return UObjectGlobals::StaticConstructObject(params);
+                                               }),
+                                       &pointer_policy));
         sol.set_function("RegisterCustomProperty", []() {
             // Re-implement to make registration simpler ?
             // If so we'd have to have a way for mods to provide a Lua callback to handle setting/getting property values.
@@ -488,75 +566,99 @@ namespace RC
                 if (lua_callback_result.valid() && lua_callback_result.return_count() > 0)
                 {
                     auto maybe_result = lua_callback_result.get<std::optional<int>>();
-                    if (maybe_result.has_value() && maybe_result.value() == 1) { return_value = LoopAction::Break; }
+                    if (maybe_result.has_value() && maybe_result.value() == 1)
+                    {
+                        return_value = LoopAction::Break;
+                    }
                 }
                 return return_value;
             });
         });
         sol.set_function("NotifyOnNewObject", [&](sol::this_state state, StringType class_name, sol::function callback) {
             auto instance_of_class = UObjectGlobals::StaticFindObject<UClass*>(nullptr, nullptr, class_name);
-            if (!instance_of_class) { return exit_script_with_error(state, std::format(STR("Could not register callback to notify on new object because no class was found with name '{}'"), class_name)); }
+            if (!instance_of_class)
+            {
+                return exit_script_with_error(state,
+                                              std::format(STR("Could not register callback to notify on new object because no class was found with name '{}'"),
+                                                          class_name));
+            }
             auto mod = get_mod_ref(state);
-            if (!mod) { return exit_script_with_error(state, STR("Could not register callback to notify on new object because the pointer to 'Mod' was nullptr")); }
+            if (!mod)
+            {
+                return exit_script_with_error(state, STR("Could not register callback to notify on new object because the pointer to 'Mod' was nullptr"));
+            }
             auto gameplay_state = m_sol_gameplay_states.emplace_back(sol::thread::create(state)).lua_state();
             auto callback_in_gameplay_state = sol::function(gameplay_state, callback);
             m_static_construct_object_lua_callbacks.emplace_back(LuaCallbackData{gameplay_state, instance_of_class, {{std::move(callback_in_gameplay_state)}}});
         });
         sol.set_function("ExecuteWithDelay", [](sol::this_state state, int64_t delay_in_milliseconds, sol::function callback) {
             auto mod = get_mod_ref(state);
-            if (!mod) { return exit_script_with_error(state, STR("Could not register callback to execute with delay because the pointer to 'Mod' was nullptr")); }
+            if (!mod)
+            {
+                return exit_script_with_error(state, STR("Could not register callback to execute with delay because the pointer to 'Mod' was nullptr"));
+            }
 
             sol::function callback_in_async_state = sol::function(mod->sol(State::Async), callback);
 
             std::lock_guard<decltype(m_actions_lock)> guard{mod->m_actions_lock};
             mod->m_pending_actions.emplace_back(AsyncAction{
-                callback_in_async_state,
-                ActionType::Delayed,
-                std::chrono::steady_clock::now(),
-                delay_in_milliseconds,
+                    callback_in_async_state,
+                    ActionType::Delayed,
+                    std::chrono::steady_clock::now(),
+                    delay_in_milliseconds,
             });
         });
         sol.set_function("RegisterCustomEvent", [&](sol::this_state state, StringType event_name, sol::function callback) {
             auto mod = get_mod_ref(state);
-            if (!mod) { return exit_script_with_error(state, STR("Could not register callback to execute custom event because the pointer to 'Mod' was nullptr")); }
+            if (!mod)
+            {
+                return exit_script_with_error(state, STR("Could not register callback to execute custom event because the pointer to 'Mod' was nullptr"));
+            }
 
             auto gameplay_state = m_sol_gameplay_states.emplace_back(sol::thread::create(state)).lua_state();
             sol::function callback_in_gameplay_state = sol::function(gameplay_state, callback);
 
-            SolMod::m_custom_event_callbacks.emplace(event_name, LuaCallbackData{
-                .lua = gameplay_state,
-                .instance_of_class = nullptr,
-                .registry_indexes = {{callback_in_gameplay_state}},
-            });
+            SolMod::m_custom_event_callbacks.emplace(event_name,
+                                                     LuaCallbackData{
+                                                             .lua = gameplay_state,
+                                                             .instance_of_class = nullptr,
+                                                             .registry_indexes = {{callback_in_gameplay_state}},
+                                                     });
         });
         sol.set_function("UnregisterCustomEvent", [](StringType event_name) {
             SolMod::m_custom_event_callbacks.erase(event_name);
         });
         sol.set_function("RegisterInitGameStatePreHook", [&](sol::this_state state, sol::function callback) {
             auto mod = get_mod_ref(state);
-            if (!mod) { return exit_script_with_error(state, STR("Could not register InitGameState pre-hook because the pointer to 'Mod' was nullptr")); }
+            if (!mod)
+            {
+                return exit_script_with_error(state, STR("Could not register InitGameState pre-hook because the pointer to 'Mod' was nullptr"));
+            }
 
             auto gameplay_state = m_sol_gameplay_states.emplace_back(sol::thread::create(state)).lua_state();
             sol::function callback_in_gameplay_state = sol::function(gameplay_state, callback);
 
             SolMod::m_init_game_state_pre_callbacks.emplace_back(LuaCallbackData{
-                .lua = gameplay_state,
-                .instance_of_class = nullptr,
-                .registry_indexes = {{callback_in_gameplay_state}},
+                    .lua = gameplay_state,
+                    .instance_of_class = nullptr,
+                    .registry_indexes = {{callback_in_gameplay_state}},
             });
         });
         sol.set_function("RegisterInitGameStatePostHook", [&](sol::this_state state, sol::function callback) {
             auto mod = get_mod_ref(state);
-            if (!mod) { return exit_script_with_error(state, STR("Could not register InitGameState post-hook because the pointer to 'Mod' was nullptr")); }
+            if (!mod)
+            {
+                return exit_script_with_error(state, STR("Could not register InitGameState post-hook because the pointer to 'Mod' was nullptr"));
+            }
 
             auto gameplay_state = m_sol_gameplay_states.emplace_back(sol::thread::create(state)).lua_state();
             sol::function callback_in_gameplay_state = sol::function(gameplay_state, callback);
 
             SolMod::m_init_game_state_post_callbacks.emplace_back(LuaCallbackData{
-                .lua = gameplay_state,
-                .instance_of_class = nullptr,
-                .registry_indexes = {{callback_in_gameplay_state}},
+                    .lua = gameplay_state,
+                    .instance_of_class = nullptr,
+                    .registry_indexes = {{callback_in_gameplay_state}},
             });
         });
     }
-}
+} // namespace RC

@@ -11,7 +11,7 @@
 #undef check
 #endif
 #define SOL_ALL_SAFETIES_ON 1
-//#define SOL_SAFE_GETTER 0
+// #define SOL_SAFE_GETTER 0
 #define SOL_PRINT_ERRORS 0
 #define SOL_EXCEPTIONS 1
 #define SOL_EXCEPTIONS_SAFE_PROPAGATION 1
@@ -37,96 +37,124 @@
 
 #define SOL_ARGS(...) __VA_ARGS__
 
-#define SOL_MEMBER_FUNC_NEEDS_PTR_POLICY(Type, Func, Yes, No, ...) \
-if constexpr (std::is_pointer_v<std::remove_reference_t<decltype(std::declval<Type>().Func(__VA_OPT__(MAP_LIST(SOL_REMOVE_CVREF, __VA_ARGS__))))>>) \
-{ \
-    return Yes(); \
-} \
-else \
-{ \
-    return No(); \
-}
+#define SOL_MEMBER_FUNC_NEEDS_PTR_POLICY(Type, Func, Yes, No, ...)                                                                                             \
+    if constexpr (std::is_pointer_v<std::remove_reference_t<decltype(std::declval<Type>().Func(__VA_OPT__(MAP_LIST(SOL_REMOVE_CVREF, __VA_ARGS__))))>>)        \
+    {                                                                                                                                                          \
+        return Yes();                                                                                                                                          \
+    }                                                                                                                                                          \
+    else                                                                                                                                                       \
+    {                                                                                                                                                          \
+        return No();                                                                                                                                           \
+    }
 
-#define SOL_FREE_FUNC_NEEDS_PTR_POLICY(Func, Yes, No, ...) \
-if constexpr (std::is_pointer_v<std::remove_reference_t<decltype(Func(__VA_OPT__(MAP_LIST(SOL_REMOVE_CVREF, __VA_ARGS__))))>>) \
-{ \
-    return Yes(); \
-} \
-else \
-{ \
-    return No(); \
-}
+#define SOL_FREE_FUNC_NEEDS_PTR_POLICY(Func, Yes, No, ...)                                                                                                     \
+    if constexpr (std::is_pointer_v<std::remove_reference_t<decltype(Func(__VA_OPT__(MAP_LIST(SOL_REMOVE_CVREF, __VA_ARGS__))))>>)                             \
+    {                                                                                                                                                          \
+        return Yes();                                                                                                                                          \
+    }                                                                                                                                                          \
+    else                                                                                                                                                       \
+    {                                                                                                                                                          \
+        return No();                                                                                                                                           \
+    }
 
 // Choose a member-function overload by specifying a class/struct name, function name, and arg types.
-#define CHOOSE_MEMBER_OVERLOAD(Type, Func, ...) \
-[] { \
-    SOL_MEMBER_FUNC_NEEDS_PTR_POLICY(Type, Func, \
-        [] { return sol::policies(static_cast<decltype(std::declval<Type>().Func(__VA_OPT__(MAP_LIST(SOL_REMOVE_CVREF, __VA_ARGS__))))(Type::*)(__VA_ARGS__)>(&Type::Func), &pointer_policy); }, \
-        [] { return static_cast<decltype(std::declval<Type>().Func(__VA_OPT__(MAP_LIST(SOL_REMOVE_CVREF, __VA_ARGS__))))(Type::*)(__VA_ARGS__)>(&Type::Func); }, \
-    __VA_ARGS__) \
-}()
+#define CHOOSE_MEMBER_OVERLOAD(Type, Func, ...)                                                                                                                        \
+    [] {                                                                                                                                                               \
+        SOL_MEMBER_FUNC_NEEDS_PTR_POLICY(                                                                                                                              \
+                Type,                                                                                                                                                  \
+                Func,                                                                                                                                                  \
+                [] {                                                                                                                                                   \
+                    return sol::policies(static_cast<decltype(std::declval<Type>().Func(__VA_OPT__(MAP_LIST(SOL_REMOVE_CVREF, __VA_ARGS__)))) (Type::*)(__VA_ARGS__)>( \
+                                                 &Type::Func),                                                                                                         \
+                                         &pointer_policy);                                                                                                             \
+                },                                                                                                                                                     \
+                [] {                                                                                                                                                   \
+                    return static_cast<decltype(std::declval<Type>().Func(__VA_OPT__(MAP_LIST(SOL_REMOVE_CVREF, __VA_ARGS__)))) (Type::*)(__VA_ARGS__)>(               \
+                            &Type::Func);                                                                                                                              \
+                },                                                                                                                                                     \
+                __VA_ARGS__)                                                                                                                                           \
+    }()
 
 // Choose a const member-function overload by specifying a class/struct name, function name, and arg types.
-#define CHOOSE_CONST_MEMBER_OVERLOAD(Type, Func, ...) \
-[] { \
-    SOL_MEMBER_FUNC_NEEDS_PTR_POLICY(Type, Func, \
-        [] { return sol::policies(static_cast<decltype(std::declval<Type>().Func(__VA_OPT__(MAP_LIST(SOL_REMOVE_CVREF, __VA_ARGS__))))(Type::*)(__VA_ARGS__) const>(&Type::Func), &pointer_policy); }, \
-        [] { return static_cast<decltype(std::declval<Type>().Func(__VA_OPT__(MAP_LIST(SOL_REMOVE_CVREF, __VA_ARGS__))))(Type::*)(__VA_ARGS__) const>(&Type::Func); }, \
-    __VA_ARGS__) \
-}()
+#define CHOOSE_CONST_MEMBER_OVERLOAD(Type, Func, ...)                                                                                                           \
+    [] {                                                                                                                                                        \
+        SOL_MEMBER_FUNC_NEEDS_PTR_POLICY(                                                                                                                       \
+                Type,                                                                                                                                           \
+                Func,                                                                                                                                           \
+                [] {                                                                                                                                            \
+                    return sol::policies(                                                                                                                       \
+                            static_cast<decltype(std::declval<Type>().Func(__VA_OPT__(MAP_LIST(SOL_REMOVE_CVREF, __VA_ARGS__)))) (Type::*)(__VA_ARGS__) const>( \
+                                    &Type::Func),                                                                                                               \
+                            &pointer_policy);                                                                                                                   \
+                },                                                                                                                                              \
+                [] {                                                                                                                                            \
+                    return static_cast<decltype(std::declval<Type>().Func(__VA_OPT__(MAP_LIST(SOL_REMOVE_CVREF, __VA_ARGS__)))) (Type::*)(__VA_ARGS__) const>(  \
+                            &Type::Func);                                                                                                                       \
+                },                                                                                                                                              \
+                __VA_ARGS__)                                                                                                                                    \
+    }()
 
 // Choose a free-function overload by specifying a function name, and arg types.
-#define CHOOSE_FREE_OVERLOAD(Func, ...) \
-[] { \
-    SOL_FREE_FUNC_NEEDS_PTR_POLICY(Func, \
-        [] { return sol::policies(static_cast<decltype(Func(__VA_OPT__(MAP_LIST(SOL_REMOVE_CVREF, __VA_ARGS__))))(*)(__VA_ARGS__)>(&Func), &pointer_policy); }, \
-        [] { return static_cast<decltype(Func(__VA_OPT__(MAP_LIST(SOL_REMOVE_CVREF, __VA_ARGS__))))(*)(__VA_ARGS__)>(&Func); }, \
-    __VA_ARGS__) \
-}()
+#define CHOOSE_FREE_OVERLOAD(Func, ...)                                                                                                                        \
+    [] {                                                                                                                                                       \
+        SOL_FREE_FUNC_NEEDS_PTR_POLICY(                                                                                                                        \
+                Func,                                                                                                                                          \
+                [] {                                                                                                                                           \
+                    return sol::policies(static_cast<decltype(Func(__VA_OPT__(MAP_LIST(SOL_REMOVE_CVREF, __VA_ARGS__)))) (*)(__VA_ARGS__)>(&Func),             \
+                                         &pointer_policy);                                                                                                     \
+                },                                                                                                                                             \
+                [] {                                                                                                                                           \
+                    return static_cast<decltype(Func(__VA_OPT__(MAP_LIST(SOL_REMOVE_CVREF, __VA_ARGS__)))) (*)(__VA_ARGS__)>(&Func);                           \
+                },                                                                                                                                             \
+                __VA_ARGS__)                                                                                                                                   \
+    }()
 
-#define REGISTER_SOL_SERIALIZER(TypeName, Type) \
-static auto push_##TypeName##property(const PropertyPusherFunctionParams& params) -> std::string \
-{ \
-    using Value = Type; \
-    using OptionalValue = std::optional<Value>; \
-    if (params.push_type == PushType::FromLua) \
-    { \
-        auto maybe_value = params.result ? params.result->get<OptionalValue>() : sol::stack::get<OptionalValue>(params.lua_state); \
-        if (!maybe_value.has_value()) \
-        { \
-            return "[push_" #TypeName "property] Tried to push non-" #Type " as " #Type; \
-        } \
-        *std::bit_cast<Value*>(params.data) = maybe_value.value(); \
-        sol::stack::pop_n(params.lua_state, 1); \
-    } \
-    else if (params.push_type == PushType::ToLua || params.push_type == PushType::ToLuaNonTrivialLocal) \
-    { \
-        if (params.data) \
-        { \
-            sol::stack::push(params.lua_state, *std::bit_cast<Value*>(params.data)); \
-        } \
-        else \
-        { \
-            sol::stack::push(params.lua_state, InvalidObject{}); \
-        } \
-    } \
-    else if (params.push_type == PushType::ToLuaParam) \
-    { \
-        if (!params.param_wrappers) { return "[push_" #TypeName "property] Tried setting Lua param but param wrapper pointer was nullptr"; } \
-        params.param_wrappers->emplace_back(ParamPtrWrapper{params.property, params.data, &push_##TypeName##property}); \
-    } \
-    else \
-    { \
-        return "[push_" #TypeName "property] Unhandled Operation";\
-    } \
-    return {}; \
-}
+#define REGISTER_SOL_SERIALIZER(TypeName, Type)                                                                                                                \
+    static auto push_##TypeName##property(const PropertyPusherFunctionParams& params) -> std::string                                                           \
+    {                                                                                                                                                          \
+        using Value = Type;                                                                                                                                    \
+        using OptionalValue = std::optional<Value>;                                                                                                            \
+        if (params.push_type == PushType::FromLua)                                                                                                             \
+        {                                                                                                                                                      \
+            auto maybe_value = params.result ? params.result->get<OptionalValue>() : sol::stack::get<OptionalValue>(params.lua_state);                         \
+            if (!maybe_value.has_value())                                                                                                                      \
+            {                                                                                                                                                  \
+                return "[push_" #TypeName "property] Tried to push non-" #Type " as " #Type;                                                                   \
+            }                                                                                                                                                  \
+            *std::bit_cast<Value*>(params.data) = maybe_value.value();                                                                                         \
+            sol::stack::pop_n(params.lua_state, 1);                                                                                                            \
+        }                                                                                                                                                      \
+        else if (params.push_type == PushType::ToLua || params.push_type == PushType::ToLuaNonTrivialLocal)                                                    \
+        {                                                                                                                                                      \
+            if (params.data)                                                                                                                                   \
+            {                                                                                                                                                  \
+                sol::stack::push(params.lua_state, *std::bit_cast<Value*>(params.data));                                                                       \
+            }                                                                                                                                                  \
+            else                                                                                                                                               \
+            {                                                                                                                                                  \
+                sol::stack::push(params.lua_state, InvalidObject{});                                                                                           \
+            }                                                                                                                                                  \
+        }                                                                                                                                                      \
+        else if (params.push_type == PushType::ToLuaParam)                                                                                                     \
+        {                                                                                                                                                      \
+            if (!params.param_wrappers)                                                                                                                        \
+            {                                                                                                                                                  \
+                return "[push_" #TypeName "property] Tried setting Lua param but param wrapper pointer was nullptr";                                           \
+            }                                                                                                                                                  \
+            params.param_wrappers->emplace_back(ParamPtrWrapper{params.property, params.data, &push_##TypeName##property});                                    \
+        }                                                                                                                                                      \
+        else                                                                                                                                                   \
+        {                                                                                                                                                      \
+            return "[push_" #TypeName "property] Unhandled Operation";                                                                                         \
+        }                                                                                                                                                      \
+        return {};                                                                                                                                             \
+    }
 
-#define EXIT_NATIVE_HOOK_WITH_ERROR(Action, LuaData, ErrorMessage) \
-Output::send<LogLevel::Error>(ErrorMessage); \
-LuaData.function_processing_failed = true; \
-is_mid_script_execution = false; \
-Action;
+#define EXIT_NATIVE_HOOK_WITH_ERROR(Action, LuaData, ErrorMessage)                                                                                             \
+    Output::send<LogLevel::Error>(ErrorMessage);                                                                                                               \
+    LuaData.function_processing_failed = true;                                                                                                                 \
+    is_mid_script_execution = false;                                                                                                                           \
+    Action;
 
 // dumpstack function from: https://stackoverflow.com/questions/59091462/from-c-how-can-i-print-the-contents-of-the-lua-stack/59097940#59097940
 // it's been modified slightly
@@ -165,8 +193,8 @@ inline auto dump_stack(lua_State* lua_state, const char* message) -> void
 }
 
 // This was a failed attempt to get sol_lua_check/sol_lua_get to convert numbers to booleans.
-//template<typename Handler>
-//auto sol_lua_check(sol::types<bool>, lua_State* lua_state, int index, Handler&& handler, sol::stack::record& tracking) -> bool
+// template<typename Handler>
+// auto sol_lua_check(sol::types<bool>, lua_State* lua_state, int index, Handler&& handler, sol::stack::record& tracking) -> bool
 //{
 //    dump_stack(lua_state, "sol_lua_check, bool");
 //	int absolute_index = lua_absindex(lua_state, index);
@@ -175,7 +203,7 @@ inline auto dump_stack(lua_State* lua_state, const char* message) -> void
 //	return success;
 //}
 //
-//inline auto sol_lua_get(sol::types<bool>, lua_State* lua_state, int index, sol::stack::record& tracking) -> bool
+// inline auto sol_lua_get(sol::types<bool>, lua_State* lua_state, int index, sol::stack::record& tracking) -> bool
 //{
 //    // For some reason, sol isn't calling this function.
 //    // meta::meta_detail::is_adl_sol_lua_get_v<Tu> seems to fail.
@@ -203,12 +231,14 @@ namespace RC
     {
         static auto Index(sol::stack_object, sol::this_state) -> std::function<InvalidObject()>
         {
-            return [] { return InvalidObject{}; };
+            return [] {
+                return InvalidObject{};
+            };
         }
     };
-}
+} // namespace RC
 
-template<typename T, typename Handler>
+template <typename T, typename Handler>
 auto sol_lua_interop_check(sol::types<T>, lua_State* lua_state, int relindex, sol::type index_type, Handler&& handler, sol::stack::record& tracking) -> bool
 {
     using namespace RC;
@@ -296,7 +326,7 @@ auto sol_lua_interop_check(sol::types<T>, lua_State* lua_state, int relindex, so
     }
 }
 
-template<typename InT, typename ...Args>
+template <typename InT, typename... Args>
 auto create_sol_userdata(lua_State* lua_state, Args&&... args) -> std::conditional_t<std::is_pointer_v<std::remove_cvref_t<InT>>, InT, InT*>
 {
     using T = std::conditional_t<std::is_pointer_v<std::remove_cvref_t<InT>>, std::remove_pointer_t<InT>, InT>;
@@ -384,10 +414,10 @@ namespace RC
         class UObject;
         struct FWeakObjectPtr;
         class UClass;
-    }
-    
+    } // namespace Unreal
+
     using namespace Unreal;
-    
+
     class SolMod;
     inline auto get_mod_ref(sol::state_view sol) -> SolMod*
     {
@@ -407,19 +437,26 @@ namespace RC
     using PropertyPusherFunction = std::string (*)(const PropertyPusherFunctionParams&);
     class ParamPtrWrapper
     {
-    private:
+      private:
         FProperty* property{};
         void* value_ptr{};
         const PropertyPusherFunction property_pusher{};
 
-    public:
-        ParamPtrWrapper(FProperty* in_property, void* data, PropertyPusherFunction pusher) : property(in_property), value_ptr(data), property_pusher(pusher) {};
+      public:
+        ParamPtrWrapper(FProperty* in_property, void* data, PropertyPusherFunction pusher) : property(in_property), value_ptr(data), property_pusher(pusher){};
 
         auto unwrap(lua_State* lua_state) -> void;
         auto rewrap(lua_State* lua_state) -> void;
     };
 
-    enum class PushType { None, FromLua, ToLua, ToLuaParam, ToLuaNonTrivialLocal };
+    enum class PushType
+    {
+        None,
+        FromLua,
+        ToLua,
+        ToLuaParam,
+        ToLuaNonTrivialLocal
+    };
     struct PropertyPusherFunctionParams
     {
         lua_State* lua_state{};
@@ -431,7 +468,7 @@ namespace RC
         void* base{};
         bool create_new_if_to_lua_non_trivial_local{true};
     };
-    
+
     REGISTER_SOL_SERIALIZER(int8, int8_t)
     REGISTER_SOL_SERIALIZER(int16, int16_t)
     REGISTER_SOL_SERIALIZER(int, int32_t)
@@ -461,7 +498,7 @@ namespace RC
         }
         else if (object->IsA<UFunction>())
         {
-            //UFunction::construct(lua, nullptr, static_cast<UFunction*>(object));
+            // UFunction::construct(lua, nullptr, static_cast<UFunction*>(object));
         }
         else if (object->IsA<UClass>())
         {
@@ -469,24 +506,24 @@ namespace RC
         }
         else if (object->IsA<UScriptStruct>())
         {
-            //ScriptStructWrapper script_struct_wrapper{static_cast<UScriptStruct*>(object), nullptr, nullptr};
-            //UScriptStruct::construct(lua, script_struct_wrapper);
+            // ScriptStructWrapper script_struct_wrapper{static_cast<UScriptStruct*>(object), nullptr, nullptr};
+            // UScriptStruct::construct(lua, script_struct_wrapper);
         }
         else if (object->IsA<UStruct>())
         {
-            //UStruct::construct(lua, static_cast<UStruct*>(object));
+            // UStruct::construct(lua, static_cast<UStruct*>(object));
         }
         else if (object->IsA<UEnum>())
         {
-            //UEnum::construct(lua, static_cast<UEnum*>(object));
+            // UEnum::construct(lua, static_cast<UEnum*>(object));
         }
         else if (object->IsA<UWorld>())
         {
-            //UWorld::construct(lua, static_cast<UWorld*>(object));
+            // UWorld::construct(lua, static_cast<UWorld*>(object));
         }
         else if (object->IsA<AActor>())
         {
-            //AActor::construct(lua, static_cast<AActor*>(object));
+            // AActor::construct(lua, static_cast<AActor*>(object));
         }
     }
 
@@ -499,7 +536,10 @@ namespace RC
         }
 
         auto maybe_uobject = sol::stack::get<std::optional<UObject*>>(lua_state);
-        if (!maybe_uobject) { return current_stack_return_count; }
+        if (!maybe_uobject)
+        {
+            return current_stack_return_count;
+        }
         auto_construct_uobject(lua_state, maybe_uobject.value());
         return current_stack_return_count;
     }
@@ -511,7 +551,7 @@ namespace RC
         UFunction* unreal_function;
         SolMod* mod;
         lua_State* lua;
-        //const int lua_callback_ref;
+        // const int lua_callback_ref;
         sol::function lua_callback;
         sol::protected_function_result lua_callback_result;
         bool function_processing_failed{};
@@ -521,41 +561,93 @@ namespace RC
         FProperty* return_property{};
     };
 
-    template<typename T>
+    template <typename T>
     struct NoWrap
     {
         T value;
-        NoWrap(T new_value) { value = new_value; }
+        NoWrap(T new_value)
+        {
+            value = new_value;
+        }
     };
 
-    template<typename>
-    struct is_wrapped : std::true_type {};
-    template<typename T>
-    struct is_wrapped<NoWrap<T>> : std::false_type {};
-    template<typename T>
+    template <typename>
+    struct is_wrapped : std::true_type
+    {
+    };
+    template <typename T>
+    struct is_wrapped<NoWrap<T>> : std::false_type
+    {
+    };
+    template <typename T>
     static constexpr bool is_wrapped_t = is_wrapped<T>::value;
-    
-    template<typename ...>
+
+    template <typename...>
     constexpr std::false_type generate_false{};
-    
-    template<typename Type>
+
+    template <typename Type>
     auto static get_pusher_from_cpp_type()
     {
-        if constexpr (std::is_same_v<std::remove_cvref_t<Type>, int8_t>) { return &push_int8property; }
-        else if constexpr (std::is_same_v<std::remove_cvref_t<Type>, int16_t>) { return &push_int16property; }
-        else if constexpr (std::is_same_v<std::remove_cvref_t<Type>, int32_t>) { return &push_intproperty; }
-        else if constexpr (std::is_same_v<std::remove_cvref_t<Type>, int64_t>) { return &push_int64property; }
-        else if constexpr (std::is_same_v<std::remove_cvref_t<Type>, uint8_t>) { return &push_byteproperty; }
-        else if constexpr (std::is_same_v<std::remove_cvref_t<Type>, uint16_t>) { return &push_uint16property; }
-        else if constexpr (std::is_same_v<std::remove_cvref_t<Type>, uint32_t>) { return &push_uint32property; }
-        else if constexpr (std::is_same_v<std::remove_cvref_t<Type>, uint64_t>) { return &push_uint64property; }
-        else if constexpr (std::is_same_v<std::remove_cvref_t<Type>, float>) { return &push_floatproperty; }
-        else if constexpr (std::is_same_v<std::remove_cvref_t<Type>, double>) { return &push_doubleproperty; }
-        else if constexpr (std::is_same_v<std::remove_cvref_t<Type>, bool>) { return &push_boolproperty; }
-        else if constexpr (std::is_same_v<std::remove_cvref_t<Type>, FWeakObjectPtr*>) { return &push_weakobjectproperty; }
-        else if constexpr (std::is_same_v<std::remove_cvref_t<Type>, FSoftObjectPtr*>) { return &push_softclassproperty; }
-        else if constexpr (std::is_same_v<std::remove_cvref_t<Type>, FName>) { return &push_nameproperty; }
-        else if constexpr (std::is_same_v<std::remove_cvref_t<Type>, UInterface>) { return &push_interfaceproperty; }
+        if constexpr (std::is_same_v<std::remove_cvref_t<Type>, int8_t>)
+        {
+            return &push_int8property;
+        }
+        else if constexpr (std::is_same_v<std::remove_cvref_t<Type>, int16_t>)
+        {
+            return &push_int16property;
+        }
+        else if constexpr (std::is_same_v<std::remove_cvref_t<Type>, int32_t>)
+        {
+            return &push_intproperty;
+        }
+        else if constexpr (std::is_same_v<std::remove_cvref_t<Type>, int64_t>)
+        {
+            return &push_int64property;
+        }
+        else if constexpr (std::is_same_v<std::remove_cvref_t<Type>, uint8_t>)
+        {
+            return &push_byteproperty;
+        }
+        else if constexpr (std::is_same_v<std::remove_cvref_t<Type>, uint16_t>)
+        {
+            return &push_uint16property;
+        }
+        else if constexpr (std::is_same_v<std::remove_cvref_t<Type>, uint32_t>)
+        {
+            return &push_uint32property;
+        }
+        else if constexpr (std::is_same_v<std::remove_cvref_t<Type>, uint64_t>)
+        {
+            return &push_uint64property;
+        }
+        else if constexpr (std::is_same_v<std::remove_cvref_t<Type>, float>)
+        {
+            return &push_floatproperty;
+        }
+        else if constexpr (std::is_same_v<std::remove_cvref_t<Type>, double>)
+        {
+            return &push_doubleproperty;
+        }
+        else if constexpr (std::is_same_v<std::remove_cvref_t<Type>, bool>)
+        {
+            return &push_boolproperty;
+        }
+        else if constexpr (std::is_same_v<std::remove_cvref_t<Type>, FWeakObjectPtr*>)
+        {
+            return &push_weakobjectproperty;
+        }
+        else if constexpr (std::is_same_v<std::remove_cvref_t<Type>, FSoftObjectPtr*>)
+        {
+            return &push_softclassproperty;
+        }
+        else if constexpr (std::is_same_v<std::remove_cvref_t<Type>, FName>)
+        {
+            return &push_nameproperty;
+        }
+        else if constexpr (std::is_same_v<std::remove_cvref_t<Type>, UInterface>)
+        {
+            return &push_interfaceproperty;
+        }
         // This branch must be the last branch in this constexpr-if-statement.
         // Otherwise we can't override types that inherit from UObject but that needs their pusher.
         else if constexpr (std::is_convertible_v<std::remove_cvref_t<Type>, UObject*>)
@@ -567,10 +659,14 @@ namespace RC
             static_assert(generate_false<Type>, "Type was unhandled and couldn't be converted to a pusher.");
         }
     }
-    
+
     // Internal function, use 'call_function_safe' instead.
-    enum class ParamsAreWrapped { Yes, No };
-    template<ParamsAreWrapped params_are_wrapped, typename Callable, typename ...Params>
+    enum class ParamsAreWrapped
+    {
+        Yes,
+        No
+    };
+    template <ParamsAreWrapped params_are_wrapped, typename Callable, typename... Params>
     static auto call_function_safe_internal(sol::state_view state, const Callable& function, Params&&... params) -> sol::protected_function_result
     {
         sol::protected_function_result result{};
@@ -597,7 +693,7 @@ namespace RC
         return result;
     }
 
-    template<typename ...Params>
+    template <typename... Params>
     auto call_function_wrap_params_safe_internal(sol::state_view state, auto&& function, Params&&... params)
     {
         std::vector<ParamPtrWrapper> param_wrappers{};
@@ -606,20 +702,20 @@ namespace RC
         //                   We can use 'is_wrapped_t<T>' but since we're doing an unfold expression thing, how can we apply this ?
         //       Problem #2: The ordering of params might be a problem.
         //                   If param #1 is NoWrap, params #2 and #3 are not NoWrap, and param #4 is NoWrap, is it even possible ?
-        //                   We would most likely need multiple vectors of ParamPtrWrapper. 
-        //                   It appears to be possible to have non-as_args params sprinkled in with as_args params. 
-        //                   But somehow we need the order correct. 
+        //                   We would most likely need multiple vectors of ParamPtrWrapper.
+        //                   It appears to be possible to have non-as_args params sprinkled in with as_args params.
+        //                   But somehow we need the order correct.
         //                   Maybe we could use a special pusher ?
         //                   A special pusher isn't going to work; We have to give the param to the function call, we can't push onto the stack.
         //                   For now, we'll just use a different function for this.
         (void(get_pusher_from_cpp_type<Params>()({state, nullptr, nullptr, &params, PushType::ToLuaParam, &param_wrappers})), ...);
         return call_function_safe_internal<ParamsAreWrapped::Yes>(state, function, param_wrappers);
     }
-    
+
     // Call a Lua function and wrap the params if they aren't already wrapped.
     // A call to ':get()' has to be used in order to retrieve the param value.
     // A call to ':set(new_value)' can be utilized to set the value of the param.
-    template<typename Callable, typename ...Params>
+    template <typename Callable, typename... Params>
     auto static call_function_wrap_params_safe(sol::state_view state, const Callable& function, Params&&... params) -> sol::protected_function_result
     {
         if constexpr (sizeof...(Params) == 1)
@@ -642,7 +738,7 @@ namespace RC
     // Call a Lua function and don't wrap the params.
     // If there's only one param and it's of type 'vector<ParamPtrWrapper>', treat as already wrapped.
     // If there's multiple params or the only param isn't 'vector<ParamPtrWrapper', no wrapping will occur, meaning no setting of the params in Lua and no call to :get() is needed.
-    template<typename Callable, typename ...Params>
+    template <typename Callable, typename... Params>
     auto static call_function_dont_wrap_params_safe(sol::state_view state, const Callable& function, Params&&... params) -> sol::protected_function_result
     {
         if constexpr (sizeof...(Params) == 1)
@@ -662,8 +758,8 @@ namespace RC
         }
     }
 
-    template<typename Callable, typename... Params>
-    auto static call_function_with_manual_handler_safe(sol::state_view state, const Callable& function, Params&&... params)->sol::protected_function_result
+    template <typename Callable, typename... Params>
+    auto static call_function_with_manual_handler_safe(sol::state_view state, const Callable& function, Params&&... params) -> sol::protected_function_result
     {
         std::vector<ParamPtrWrapper> param_wrappers{};
         (void(param_wrappers.emplace_back(ParamPtrWrapper{&params, nullptr})), ...);
@@ -683,7 +779,7 @@ namespace RC
         return return_values;
     }
 
-    template<int NumberOfReturnValues = 0>
+    template <int NumberOfReturnValues = 0>
     auto exit_script_with_error(sol::state_view state, StringType error_message) -> std::conditional_t<NumberOfReturnValues == 0, void, sol::variadic_results>
     {
         Output::send<LogLevel::Error>(STR("{}\n"), error_message);
@@ -704,4 +800,4 @@ namespace RC
 
     auto lua_unreal_script_function_hook_pre(UnrealScriptFunctionCallableContext context, void* custom_data) -> void;
     auto lua_unreal_script_function_hook_post(UnrealScriptFunctionCallableContext context, void* custom_data) -> void;
-}
+} // namespace RC
