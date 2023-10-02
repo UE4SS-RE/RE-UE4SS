@@ -586,7 +586,7 @@ namespace RC
     constexpr std::false_type generate_false{};
 
     template <typename Type>
-    auto static get_pusher_from_cpp_type()
+    static auto get_pusher_from_cpp_type()
     {
         if constexpr (std::is_same_v<std::remove_cvref_t<Type>, int8_t>)
         {
@@ -716,7 +716,7 @@ namespace RC
     // A call to ':get()' has to be used in order to retrieve the param value.
     // A call to ':set(new_value)' can be utilized to set the value of the param.
     template <typename Callable, typename... Params>
-    auto static call_function_wrap_params_safe(sol::state_view state, const Callable& function, Params&&... params) -> sol::protected_function_result
+    static auto call_function_wrap_params_safe(sol::state_view state, const Callable& function, Params&&... params) -> sol::protected_function_result
     {
         if constexpr (sizeof...(Params) == 1)
         {
@@ -739,7 +739,7 @@ namespace RC
     // If there's only one param and it's of type 'vector<ParamPtrWrapper>', treat as already wrapped.
     // If there's multiple params or the only param isn't 'vector<ParamPtrWrapper', no wrapping will occur, meaning no setting of the params in Lua and no call to :get() is needed.
     template <typename Callable, typename... Params>
-    auto static call_function_dont_wrap_params_safe(sol::state_view state, const Callable& function, Params&&... params) -> sol::protected_function_result
+    static auto call_function_dont_wrap_params_safe(sol::state_view state, const Callable& function, Params&&... params) -> sol::protected_function_result
     {
         if constexpr (sizeof...(Params) == 1)
         {
@@ -759,7 +759,7 @@ namespace RC
     }
 
     template <typename Callable, typename... Params>
-    auto static call_function_with_manual_handler_safe(sol::state_view state, const Callable& function, Params&&... params) -> sol::protected_function_result
+    static auto call_function_with_manual_handler_safe(sol::state_view state, const Callable& function, Params&&... params) -> sol::protected_function_result
     {
         std::vector<ParamPtrWrapper> param_wrappers{};
         (void(param_wrappers.emplace_back(ParamPtrWrapper{&params, nullptr})), ...);
