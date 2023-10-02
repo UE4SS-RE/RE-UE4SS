@@ -1015,129 +1015,195 @@ namespace RC
 
     static auto setup_lua_classes(sol::state_view sol) -> void
     {
-        // clang-format off
         sol.set_function("print", [](const StringType& message) {
             Output::send(STR("[Lua] {}"), message);
         });
 
-        sol.new_usertype<ParamPtrWrapper>("ParamPtrWrapper",
-            "type", [](sol::this_state state) { return get_class_name(state); },
-            "get", [](lua_State* lua_state) -> int {
-                auto maybe_self = sol::stack::get<std::optional<ParamPtrWrapper>>(lua_state);
-                if (!maybe_self.has_value())
-                {
-                    Output::send<LogLevel::Warning>(STR("ParamPtrWrapper.get called on a non-ParamPtrWrapper instance\n"));
-                    sol::stack::push(lua_state, InvalidObject{});
-                }
-                else
-                {
-                    maybe_self->unwrap(lua_state);
-                }
-                return 1;
-            },
-            "set", [](lua_State* lua_state) -> int {
-                auto maybe_self = sol::stack::get<std::optional<ParamPtrWrapper>>(lua_state, 1);
-                if (!maybe_self.has_value())
-                {
-                    Output::send<LogLevel::Warning>(STR("ParamPtrWrapper.set called on a non-ParamPtrWrapper instance\n"));
-                }
-                else
-                {
-                    maybe_self->rewrap(lua_state);
-                }
-                return 0;
-            }
-        );
+        sol.new_usertype<ParamPtrWrapper>(
+                "ParamPtrWrapper",
+                "type",
+                [](sol::this_state state) {
+                    return get_class_name(state);
+                },
+                "get",
+                [](lua_State* lua_state) -> int {
+                    auto maybe_self = sol::stack::get<std::optional<ParamPtrWrapper>>(lua_state);
+                    if (!maybe_self.has_value())
+                    {
+                        Output::send<LogLevel::Warning>(STR("ParamPtrWrapper.get called on a non-ParamPtrWrapper instance\n"));
+                        sol::stack::push(lua_state, InvalidObject{});
+                    }
+                    else
+                    {
+                        maybe_self->unwrap(lua_state);
+                    }
+                    return 1;
+                },
+                "set",
+                [](lua_State* lua_state) -> int {
+                    auto maybe_self = sol::stack::get<std::optional<ParamPtrWrapper>>(lua_state, 1);
+                    if (!maybe_self.has_value())
+                    {
+                        Output::send<LogLevel::Warning>(STR("ParamPtrWrapper.set called on a non-ParamPtrWrapper instance\n"));
+                    }
+                    else
+                    {
+                        maybe_self->rewrap(lua_state);
+                    }
+                    return 0;
+                });
 
         auto unreal_class = UObjectGlobals::StaticFindObject<UClass*>(nullptr, nullptr, STR("/Script/Engine.Actor"));
 
-        auto sol_class_InvalidObject = sol.new_usertype<InvalidObject>("InvalidObject",
-            sol::meta_function::index, &InvalidObject::Index,
-            "type", [](sol::this_state state) { return get_class_name(state); },
-            "IsValid", [] { return false; }
-        );
+        auto sol_class_InvalidObject = sol.new_usertype<InvalidObject>(
+                "InvalidObject",
+                sol::meta_function::index,
+                &InvalidObject::Index,
+                "type",
+                [](sol::this_state state) {
+                    return get_class_name(state);
+                },
+                "IsValid",
+                [] {
+                    return false;
+                });
 
-        sol.new_usertype<FName>("FName",
-            sol::no_constructor,
-            sol::call_constructor, sol::factories(
-                [] { return FName(); },
-                [](int64_t index_and_number) { return FName(index_and_number); },
-                [](const StringType& name) { return FName(name, FNAME_Add); },
-                [](const StringType& name, EFindName find_name) { return FName(name, find_name); }
-            ),
-            "type", [](sol::this_state state) { return get_class_name(state); },
-            "ToString", CHOOSE_MEMBER_OVERLOAD(FName, ToString)
-        );
+        sol.new_usertype<FName>(
+                "FName",
+                sol::no_constructor,
+                sol::call_constructor,
+                sol::factories(
+                        [] {
+                            return FName();
+                        },
+                        [](int64_t index_and_number) {
+                            return FName(index_and_number);
+                        },
+                        [](const StringType& name) {
+                            return FName(name, FNAME_Add);
+                        },
+                        [](const StringType& name, EFindName find_name) {
+                            return FName(name, find_name);
+                        }),
+                "type",
+                [](sol::this_state state) {
+                    return get_class_name(state);
+                },
+                "ToString",
+                CHOOSE_MEMBER_OVERLOAD(FName, ToString));
 
         sol.new_usertype<ScriptStructWrapper>("UScriptStruct",
-            sol::no_constructor,
-            sol::meta_function::index, sol::policies(&handle_uscriptstruct_property_getter, &pointer_policy),
-            sol::meta_function::new_index, sol::policies(&handle_uscriptstruct_property_setter, &pointer_policy),
-            "type", [](sol::this_state state) { return get_class_name(state); }
-        );
+                                              sol::no_constructor,
+                                              sol::meta_function::index,
+                                              sol::policies(&handle_uscriptstruct_property_getter, &pointer_policy),
+                                              sol::meta_function::new_index,
+                                              sol::policies(&handle_uscriptstruct_property_setter, &pointer_policy),
+                                              "type",
+                                              [](sol::this_state state) {
+                                                  return get_class_name(state);
+                                              });
 
-        sol.new_usertype<sol_FScriptArray>("TArray",
-            sol::no_constructor,
-            // TODO: index & new_index(?) meta function.
-            sol::meta_function::index, sol::policies(&handle_array_property_getter, &pointer_policy),
-            "type", [](sol::this_state state) { return get_class_name(state); },
-            "ForEach", &tarray_for_each
-        );
+        sol.new_usertype<sol_FScriptArray>(
+                "TArray",
+                sol::no_constructor,
+                // TODO: index & new_index(?) meta function.
+                sol::meta_function::index,
+                sol::policies(&handle_array_property_getter, &pointer_policy),
+                "type",
+                [](sol::this_state state) {
+                    return get_class_name(state);
+                },
+                "ForEach",
+                &tarray_for_each);
 
-        sol.new_usertype<UFunction>("UFunction",
-            sol::no_constructor,
-            sol::meta_function::call, sol::policies(&handle_ufunction_call),
-            "type", [](sol::this_state state) { return get_class_name(state); }
-        );
+        sol.new_usertype<UFunction>("UFunction", sol::no_constructor, sol::meta_function::call, sol::policies(&handle_ufunction_call), "type", [](sol::this_state state) {
+            return get_class_name(state);
+        });
 
-        sol.new_usertype<UObject>("UObject",
-            sol::no_constructor,
-            sol::meta_function::index, sol::policies(&handle_uobject_property_getter, &pointer_policy),
-            sol::meta_function::new_index, sol::policies(&handle_uobject_property_setter, &pointer_policy),
-            "type", [](sol::this_state state) { return get_class_name(state); },
-            "IsValid", &UObject_IsValid,
-            "GetAddress", [](UObject* self) { return std::bit_cast<uintptr_t>(self); },
-            "GetClassPrivate", CHOOSE_MEMBER_OVERLOAD(UObject, GetClassPrivate),
-            "GetInternalIndex", CHOOSE_MEMBER_OVERLOAD(UObject, GetInternalIndex),
-            "GetNamePrivate", CHOOSE_MEMBER_OVERLOAD(UObject, GetNamePrivate),
-            "GetObjectFlags", CHOOSE_MEMBER_OVERLOAD(UObject, GetObjectFlags),
-            "GetOuterPrivate", CHOOSE_MEMBER_OVERLOAD(UObject, GetOuterPrivate),
-            "SetFlagsTo", CHOOSE_MEMBER_OVERLOAD(UObject, SetFlagsTo, EObjectFlags), // Temporary! Remove before release! Only for testing the CHOOSE macro.
-            "PostRename", CHOOSE_MEMBER_OVERLOAD(UObject, PostRename, UObject*, const FName), // Temporary! Remove before release! Only for testing the CHOOSE macro.
-            "GetFullName", sol::overload(
-                [](UObject* self) { return self->GetFullName(); },
-                CHOOSE_CONST_MEMBER_OVERLOAD(UObject, GetFullName, UObject*)
-            )
-        );
+        sol.new_usertype<UObject>(
+                "UObject",
+                sol::no_constructor,
+                sol::meta_function::index,
+                sol::policies(&handle_uobject_property_getter, &pointer_policy),
+                sol::meta_function::new_index,
+                sol::policies(&handle_uobject_property_setter, &pointer_policy),
+                "type",
+                [](sol::this_state state) {
+                    return get_class_name(state);
+                },
+                "IsValid",
+                &UObject_IsValid,
+                "GetAddress",
+                [](UObject* self) {
+                    return std::bit_cast<uintptr_t>(self);
+                },
+                "GetClassPrivate",
+                CHOOSE_MEMBER_OVERLOAD(UObject, GetClassPrivate),
+                "GetInternalIndex",
+                CHOOSE_MEMBER_OVERLOAD(UObject, GetInternalIndex),
+                "GetNamePrivate",
+                CHOOSE_MEMBER_OVERLOAD(UObject, GetNamePrivate),
+                "GetObjectFlags",
+                CHOOSE_MEMBER_OVERLOAD(UObject, GetObjectFlags),
+                "GetOuterPrivate",
+                CHOOSE_MEMBER_OVERLOAD(UObject, GetOuterPrivate),
+                "SetFlagsTo",
+                CHOOSE_MEMBER_OVERLOAD(UObject, SetFlagsTo, EObjectFlags), // Temporary! Remove before release! Only for testing the CHOOSE macro.
+                "PostRename",
+                CHOOSE_MEMBER_OVERLOAD(UObject, PostRename, UObject*, const FName), // Temporary! Remove before release! Only for testing the CHOOSE macro.
+                "GetFullName",
+                sol::overload(
+                        [](UObject* self) {
+                            return self->GetFullName();
+                        },
+                        CHOOSE_CONST_MEMBER_OVERLOAD(UObject, GetFullName, UObject*)));
 
         sol.new_usertype<UClass>("UClass",
-            sol::no_constructor,
-            sol::base_classes, sol::bases<UObject>(),
-            "GetClassAddReferencedObjects", CHOOSE_MEMBER_OVERLOAD(UClass, GetClassAddReferencedObjects),
-            "GetClassCastFlags", CHOOSE_MEMBER_OVERLOAD(UClass, GetClassCastFlags),
-            "GetClassConfigName", CHOOSE_MEMBER_OVERLOAD(UClass, GetClassConfigName),
-            "GetClassConstructor", CHOOSE_MEMBER_OVERLOAD(UClass, GetClassConstructor),
-            "GetClassDefaultObject", CHOOSE_MEMBER_OVERLOAD(UClass, GetClassDefaultObject),
-            "GetClassFlags", CHOOSE_MEMBER_OVERLOAD(UClass, GetClassFlags),
-            "GetClassGeneratedBy", CHOOSE_MEMBER_OVERLOAD(UClass, GetClassGeneratedBy),
-            "GetClassUnique", CHOOSE_MEMBER_OVERLOAD(UClass, GetClassUnique),
-            "GetClassVTableHelperCtorCaller", CHOOSE_MEMBER_OVERLOAD(UClass, GetClassVTableHelperCtorCaller),
-            "GetClassWithin", CHOOSE_MEMBER_OVERLOAD(UClass, GetClassWithin),
-            "GetFirstOwnedClassRep", CHOOSE_MEMBER_OVERLOAD(UClass, GetFirstOwnedClassRep),
-            "GetInterfaces", CHOOSE_MEMBER_OVERLOAD(UClass, GetInterfaces),
-            "GetNetFields", CHOOSE_MEMBER_OVERLOAD(UClass, GetNetFields),
-            "GetSparseClassData", CHOOSE_MEMBER_OVERLOAD(UClass, GetSparseClassData),
-            "GetSparseClassDataStruct", CHOOSE_MEMBER_OVERLOAD(UClass, GetSparseClassDataStruct),
-            "GetUberGraphFramePointerProperty", CHOOSE_MEMBER_OVERLOAD(UClass, GetUberGraphFramePointerProperty),
-            "GetbCooked", CHOOSE_MEMBER_OVERLOAD(UClass, GetbCooked),
-            "GetbLayoutChanging", CHOOSE_MEMBER_OVERLOAD(UClass, GetbLayoutChanging),
+                                 sol::no_constructor,
+                                 sol::base_classes,
+                                 sol::bases<UObject>(),
+                                 "GetClassAddReferencedObjects",
+                                 CHOOSE_MEMBER_OVERLOAD(UClass, GetClassAddReferencedObjects),
+                                 "GetClassCastFlags",
+                                 CHOOSE_MEMBER_OVERLOAD(UClass, GetClassCastFlags),
+                                 "GetClassConfigName",
+                                 CHOOSE_MEMBER_OVERLOAD(UClass, GetClassConfigName),
+                                 "GetClassConstructor",
+                                 CHOOSE_MEMBER_OVERLOAD(UClass, GetClassConstructor),
+                                 "GetClassDefaultObject",
+                                 CHOOSE_MEMBER_OVERLOAD(UClass, GetClassDefaultObject),
+                                 "GetClassFlags",
+                                 CHOOSE_MEMBER_OVERLOAD(UClass, GetClassFlags),
+                                 "GetClassGeneratedBy",
+                                 CHOOSE_MEMBER_OVERLOAD(UClass, GetClassGeneratedBy),
+                                 "GetClassUnique",
+                                 CHOOSE_MEMBER_OVERLOAD(UClass, GetClassUnique),
+                                 "GetClassVTableHelperCtorCaller",
+                                 CHOOSE_MEMBER_OVERLOAD(UClass, GetClassVTableHelperCtorCaller),
+                                 "GetClassWithin",
+                                 CHOOSE_MEMBER_OVERLOAD(UClass, GetClassWithin),
+                                 "GetFirstOwnedClassRep",
+                                 CHOOSE_MEMBER_OVERLOAD(UClass, GetFirstOwnedClassRep),
+                                 "GetInterfaces",
+                                 CHOOSE_MEMBER_OVERLOAD(UClass, GetInterfaces),
+                                 "GetNetFields",
+                                 CHOOSE_MEMBER_OVERLOAD(UClass, GetNetFields),
+                                 "GetSparseClassData",
+                                 CHOOSE_MEMBER_OVERLOAD(UClass, GetSparseClassData),
+                                 "GetSparseClassDataStruct",
+                                 CHOOSE_MEMBER_OVERLOAD(UClass, GetSparseClassDataStruct),
+                                 "GetUberGraphFramePointerProperty",
+                                 CHOOSE_MEMBER_OVERLOAD(UClass, GetUberGraphFramePointerProperty),
+                                 "GetbCooked",
+                                 CHOOSE_MEMBER_OVERLOAD(UClass, GetbCooked),
+                                 "GetbLayoutChanging",
+                                 CHOOSE_MEMBER_OVERLOAD(UClass, GetbLayoutChanging),
 
-            "Test", &Test
-        );
+                                 "Test",
+                                 &Test);
 
         sol.set("c", unreal_class);
         sol.set("empty_object", InvalidObject{});
-        // clang-format off
     }
 
     auto SolMod::state_init(sol::state_view sol) -> void
