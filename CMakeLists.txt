@@ -5,6 +5,10 @@ enable_language(CXX ASM_MASM)
 include(CheckIPOSupported)
 include(GNUInstallDirs)
 
+# CMake Module / Tool Path -> START
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
+# CMake Module / Tool Path -> END
+
 check_ipo_supported(RESULT supported OUTPUT error)
 message("IPO - Supported: ${supported}; ${error}")
 
