@@ -82,7 +82,7 @@ set(Win64_DEFINITIONS PLATFORM_WINDOWS)
 # Definitions -> END
 
 # Initializing compiler-specific options
-add_subdirectory("compiler_options")
+add_subdirectory("cmake/CompilerOptions")
 
 # Compiler Options -> START
 add_compile_options("$<$<NOT:$<COMPILE_LANGUAGE:ASM_MASM>>:${DEFAULT_COMPILER_FLAGS}>")
