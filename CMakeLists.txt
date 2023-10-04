@@ -54,9 +54,9 @@ endif ()
 # CLion fixes -> END
 
 # Output path -> START
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/Output/$<CONFIG>/bin)
-set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/Output/$<CONFIG>/lib)
-set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/Output/$<CONFIG>/archive)
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/Output/$<CONFIG>/${CMAKE_INSTALL_BINDIR})
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/Output/$<CONFIG>/${CMAKE_INSTALL_BINDIR})
+set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/Output/$<CONFIG>/${CMAKE_INSTALL_BINDIR})
 # Output path -> END
 
 # Build configurations -> START
@@ -186,11 +186,10 @@ foreach (project ${PROJECTS})
 endforeach ()
 
 foreach (target ${TARGETS})
-    message("${target}")
     set_target_properties(${target} PROPERTIES
-            RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/Output/$<CONFIG>/${target}
-            LIBRARY_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/Output/$<CONFIG>/${target}
-            ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/Output/$<CONFIG>/${target})
+            RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/Output/$<CONFIG>/${target}/${CMAKE_INSTALL_BINDIR}
+            LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/Output/$<CONFIG>/${target}/${CMAKE_INSTALL_BINDIR}
+            ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/Output/$<CONFIG>/${target}/${CMAKE_INSTALL_BINDIR})
 
     get_target_property(TARGET_TYPE ${target} TYPE)
     if (NOT ${TARGET_TYPE} STREQUAL UTILITY)
