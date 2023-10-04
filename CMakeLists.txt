@@ -125,22 +125,22 @@ set(TARGET_COMPILE_OPTIONS "$<$<NOT:$<COMPILE_LANGUAGE:ASM_MASM>>:${DEFAULT_COMP
 set(TARGET_LINK_OPTIONS "${DEFAULT_EXE_LINKER_FLAGS}" "${DEFAULT_SHARED_LINKER_FLAGS}")
 
 foreach (target_type ${TARGET_TYPES})
-    foreach (platform_type ${PLATFORM_TYPES})
-        foreach (configuration_type ${CONFIGURATION_TYPES})
-            set(triplet ${target_type}_${platform_type}_${configuration_type})
+    foreach (configuration_type ${CONFIGURATION_TYPES})
+        foreach (platform_type ${PLATFORM_TYPES})
+            set(triplet ${target_type}__${configuration_type}__${platform_type})
             list(APPEND BUILD_CONFIGS ${triplet})
 
             set(definitions
                     ${${target_type}_DEFINITIONS}
-                    ${${platform_type}_DEFINITIONS}
-                    ${${configuration_type}_DEFINITIONS})
+                    ${${configuration_type}_DEFINITIONS}
+                    ${${platform_type}_DEFINITIONS})
             add_compile_definitions("$<$<STREQUAL:$<CONFIG>,${triplet}>:${definitions}>")
             string(TOUPPER ${triplet} triplet_upper)
 
             set(compiler_flags
                     ${${target_type}_FLAGS}
-                    ${${platform_type}_FLAGS}
-                    ${${configuration_type}_FLAGS})
+                    ${${configuration_type}_FLAGS}
+                    ${${platform_type}_FLAGS})
 
             listToString(final_compiler_flags "${DEFAULT_COMPILER_FLAGS}" "${compiler_flags}")
             set(CMAKE_CXX_FLAGS_${triplet_upper} "${final_compiler_flags}" CACHE STRING "" FORCE)
@@ -150,8 +150,8 @@ foreach (target_type ${TARGET_TYPES})
 
             set(linker_flags
                 ${${target_type}_LINKER_FLAGS}
-                ${${platform_type}_LINKER_FLAGS}
-                ${${configuration_type}_LINKER_FLAGS})
+                ${${configuration_type}_LINKER_FLAGS}
+                ${${platform_type}_LINKER_FLAGS})
 
             listToString(exe_linker_flags "${DEFAULT_EXE_LINKER_FLAGS}" "${linker_flags}")
             set(CMAKE_EXE_LINKER_FLAGS_${triplet_upper} "${exe_linker_flags}" CACHE STRING "" FORCE)
@@ -221,8 +221,8 @@ if (is_multi_config)
     set(CMAKE_CONFIGURATION_TYPES ${BUILD_CONFIGS} CACHE STRING "" FORCE)
 else ()
     if (NOT CMAKE_BUILD_TYPE)
-        message("Defaulting to Game_Win64_Shipping")
-        set(CMAKE_BUILD_TYPE Game_Win64_Shipping CACHE STRING "" FORCE)
+        message("Defaulting to Game__Shipping__Win64")
+        set(CMAKE_BUILD_TYPE Game__Shipping__Win64 CACHE STRING "" FORCE)
     endif ()
 
     set_property(CACHE CMAKE_BUILD_TYPE PROPERTY HELPSTRING "Choose build type")
