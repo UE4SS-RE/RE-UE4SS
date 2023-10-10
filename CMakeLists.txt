@@ -28,19 +28,19 @@ message("CMAKE_CXX_COMPILER_ID: ${CMAKE_CXX_COMPILER_ID}")
 
 
 if (UE4SS_CONSOLE_COLORS_ENABLED)
-    add_compile_definitions(UE4SS_CONSOLE_COLORS_ENABLED)
+    list(APPEND TARGET_COMPILE_DEFINITIONS UE4SS_CONSOLE_COLORS_ENABLED)
 endif ()
 
 # Tell WinAPI macros to map to unicode functions instead of ansi
-add_compile_definitions(_UNICODE)
-add_compile_definitions(UNICODE)
+list(APPEND TARGET_COMPILE_DEFINITIONS _UNICODE)
+list(APPEND TARGET_COMPILE_DEFINITIONS UNICODE)
 
 
 # CLion fixes -> START
 # There's a bug with CLion that causes it to not recognize our API macros.
 # This in turn causes it to break completely as it cannot see our struct definitions properly.
 if ($ENV{CLION_IDE})
-    add_compile_definitions(
+    list(APPEND TARGET_COMPILE_DEFINITIONS
             RC_UE4SS_API=
             RC_UE_API=
             RC_ASM_API=
@@ -134,7 +134,8 @@ foreach (target_type ${TARGET_TYPES})
                     ${${target_type}_DEFINITIONS}
                     ${${configuration_type}_DEFINITIONS}
                     ${${platform_type}_DEFINITIONS})
-            add_compile_definitions("$<$<STREQUAL:$<CONFIG>,${triplet}>:${definitions}>")
+            list(APPEND TARGET_COMPILE_DEFINITIONS "$<$<STREQUAL:$<CONFIG>,${triplet}>:${definitions}>")
+            add_compile_definitions("${TARGET_COMPILE_DEFINITIONS}")
             string(TOUPPER ${triplet} triplet_upper)
 
             set(compiler_flags
@@ -199,6 +200,7 @@ foreach (target ${TARGETS})
     if (NOT ${TARGET_TYPE} STREQUAL UTILITY)
         target_compile_options(${target} PUBLIC "${TARGET_COMPILE_OPTIONS}")
         target_link_options(${target} PUBLIC "${TARGET_LINK_OPTIONS}")
+        target_compile_definitions(${target} PUBLIC "${TARGET_COMPILE_DEFINITIONS}")
     endif ()
 
     get_target_property(DEPS ${target} LINK_LIBRARIES)
@@ -209,6 +211,7 @@ foreach (target ${TARGETS})
             if (NOT ${DEP_IMPORTED} AND NOT ${DEP_TARGET_TYPE} STREQUAL INTERFACE_LIBRARY)
                 target_compile_options(${dep_target} PUBLIC "${TARGET_COMPILE_OPTIONS}")
                 target_link_options(${dep_target} PUBLIC "${TARGET_LINK_OPTIONS}")
+                target_compile_definitions(${target} PUBLIC "${TARGET_COMPILE_DEFINITIONS}")
             endif ()
         endif ()
     endforeach ()
