@@ -17,6 +17,7 @@
 #include <GUI/LiveView/Filter/ExcludeClassName.hpp>
 #include <GUI/LiveView/Filter/FunctionParamFlags.hpp>
 #include <GUI/LiveView/Filter/HasProperty.hpp>
+#include <GUI/LiveView/Filter/HasPropertyType.hpp>
 #include <GUI/LiveView/Filter/IncludeDefaultObjects.hpp>
 #include <GUI/LiveView/Filter/InstancesOnly.hpp>
 #include <GUI/LiveView/Filter/NonInstancesOnly.hpp>
@@ -53,7 +54,8 @@ namespace RC::GUI
                                               Filter::DefaultObjectsOnly,
                                               Filter::FunctionParamFlags,
                                               Filter::ExcludeClassName,
-                                              Filter::HasProperty>{};
+                                              Filter::HasProperty,
+                                              Filter::HasPropertyType>{};
 
     static int s_max_elements_per_chunk{};
     static int s_chunk_id_start{};
@@ -2561,6 +2563,16 @@ namespace RC::GUI
                 if (ImGui::InputText("##HasProperty", &Filter::HasProperty::s_internal_value))
                 {
                     Filter::HasProperty::s_value = to_wstring(Filter::HasProperty::s_internal_value);
+                }
+
+                // Row 7
+                ImGui::TableNextRow();
+                ImGui::TableNextColumn();
+                ImGui::Text("Has property of type");
+                ImGui::TableNextColumn();
+                if (ImGui::InputText("##HasPropertyType", &Filter::HasPropertyType::s_internal_value))
+                {
+                    Filter::HasPropertyType::s_value = FName(to_wstring(Filter::HasPropertyType::s_internal_value), FNAME_Add);
                 }
 
                 ImGui::EndTable();
