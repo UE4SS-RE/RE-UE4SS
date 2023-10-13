@@ -56,6 +56,8 @@ Can now view enum values in the Live View debugger
 
 Added a search option to exclude objects of a class with a name containing the specified (case-sensitive) string
 
+Added a search option to exclude objects that don't have a property of the specified type
+
 Added a checkbox that toggles search options globally, meaning when not searching
 
 ### UHT Dumper
