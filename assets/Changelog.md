@@ -33,6 +33,9 @@ Added `on_lua_start` for C++ mods.
 This function fires whenever a Lua mod by the same name as the C++ mod is started.  
 It allows interactions with Lua from C++ mods.
 
+Added `on_lua_stop` for C++ mods.
+This function fires right before a Lua mod by the same name as the C++ mod is about to be stopped.
+
 Added `UFunction::RegisterPreHookForInstance` and `UFunction::RegisterPostHookForInstance`  
 These functions work the same as `UFunction::RegisterPreHook`/`UFunction::RegisterPostHook` except the callback is only fired if the context matches the specified instance  
 These new functions need to be handled with care as they can cause crashes if you don't validate that the instance you're passing during registration is valid inside the callback
