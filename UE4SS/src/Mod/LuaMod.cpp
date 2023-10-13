@@ -97,6 +97,7 @@ namespace RC
         const Mod* mod;
         const LuaMadeSimple::Lua& lua;
         const int lua_callback_ref;
+        const int lua_post_callback_ref;
         const int lua_thread_ref;
 
         bool has_return_value{};
@@ -212,45 +213,135 @@ namespace RC
         // This is a promise that we're in the game thread, used by other functions to ensure that we don't execute when unsafe
         set_is_in_game_thread(lua_data.lua, true);
 
-        // If 'nil' exists on the Lua stack, that means that the UFunction expected a return value but the Lua script didn't return anything
-        // So we can simply clean the stack and let the UFunction decide the return value on its own
-        if (lua_data.lua.is_nil())
-        {
-            lua_data.lua.discard_value();
-        }
-        else if (lua_data.lua.get_stack_size() > 0 && lua_data.has_return_value && lua_data.return_property && context.RESULT_DECL)
-        {
-            // Fetch the return value from Lua if the UFunction expects one
-            // If no return value exists then assume that the Lua script didn't want to override the original
-            // Keep in mind that the if this was a Blueprint UFunction then the entire byte-code will already have executed
-            // That means that changing the return value here won't affect the script itself
-            // If this was a native UFunction then changing the return value here will have the desired effect
-
-            Unreal::FName property_type_name = lua_data.return_property->GetClass().GetFName();
-            int32_t name_comparison_index = property_type_name.GetComparisonIndex();
-
-            if (LuaType::StaticState::m_property_value_pushers.contains(name_comparison_index))
+        auto process_return_value = [&]() {
+            // If 'nil' exists on the Lua stack, that means that the UFunction expected a return value but the Lua script didn't return anything
+            // So we can simply clean the stack and let the UFunction decide the return value on its own
+            if (lua_data.lua.is_nil())
             {
-                const LuaType::PusherParams pusher_params{.operation = LuaType::Operation::Set,
-                                                          .lua = lua_data.lua,
-                                                          .base = static_cast<Unreal::UObject*>(context.RESULT_DECL),
-                                                          .data = context.RESULT_DECL,
-                                                          .property = lua_data.return_property};
-                LuaType::StaticState::m_property_value_pushers[name_comparison_index](pusher_params);
-            }
-            else
-            {
-                // If the type wasn't supported then we simply clean the Lua stack, output a warning and then do nothing
                 lua_data.lua.discard_value();
-
-                std::wstring parameter_type_name = property_type_name.ToString();
-                std::wstring parameter_name = lua_data.return_property->GetName();
-
-                Output::send(STR("Tried altering return value of a hooked UFunction without a registered handler for return type Return property '{}' of type "
-                                 "'{}' not supported."),
-                             parameter_name,
-                             parameter_type_name);
             }
+            else if (lua_data.lua.get_stack_size() > 0 && lua_data.has_return_value && lua_data.return_property && context.RESULT_DECL)
+            {
+                // Fetch the return value from Lua if the UFunction expects one
+                // If no return value exists then assume that the Lua script didn't want to override the original
+                // Keep in mind that the if this was a Blueprint UFunction then the entire byte-code will already have executed
+                // That means that changing the return value here won't affect the script itself
+                // If this was a native UFunction then changing the return value here will have the desired effect
+
+                Unreal::FName property_type_name = lua_data.return_property->GetClass().GetFName();
+                int32_t name_comparison_index = property_type_name.GetComparisonIndex();
+
+                if (LuaType::StaticState::m_property_value_pushers.contains(name_comparison_index))
+                {
+                    const LuaType::PusherParams pusher_params{.operation = LuaType::Operation::Set,
+                                                              .lua = lua_data.lua,
+                                                              .base = static_cast<Unreal::UObject*>(context.RESULT_DECL),
+                                                              .data = context.RESULT_DECL,
+                                                              .property = lua_data.return_property};
+                    LuaType::StaticState::m_property_value_pushers[name_comparison_index](pusher_params);
+                }
+                else
+                {
+                    // If the type wasn't supported then we simply clean the Lua stack, output a warning and then do nothing
+                    lua_data.lua.discard_value();
+
+                    std::wstring parameter_type_name = property_type_name.ToString();
+                    std::wstring parameter_name = lua_data.return_property->GetName();
+
+                    Output::send(
+                            STR("Tried altering return value of a hooked UFunction without a registered handler for return type Return property '{}' of type "
+                                "'{}' not supported."),
+                            parameter_name,
+                            parameter_type_name);
+                }
+            }
+        };
+
+        if (lua_data.lua.get_stack_size() > 0)
+        {
+            // Processing potential return value from the first callback.
+            // This only exists to keep compatibility with mods that set return values in the first callback.
+            process_return_value();
+        }
+
+        if (lua_data.lua_post_callback_ref != -1)
+        {
+            // Use the stored registry index to put a Lua function on the Lua stack
+            // This is the function that was provided by the Lua call to "RegisterHook"
+            lua_data.lua.registry().get_function_ref(lua_data.lua_post_callback_ref);
+
+            // Set up the first param (context / this-ptr)
+            static auto s_object_property_name = Unreal::FName(STR("ObjectProperty"));
+            LuaType::RemoteUnrealParam::construct(lua_data.lua, &context.Context, s_object_property_name);
+
+            // Attempt at dynamically fetching the params
+            uint16_t return_value_offset = context.TheStack.CurrentNativeFunction()->GetReturnValueOffset();
+
+            // 'ReturnValueOffset' is 0xFFFF if the UFunction return type is void
+            lua_data.has_return_value = return_value_offset != 0xFFFF;
+
+            uint8_t num_unreal_params = context.TheStack.CurrentNativeFunction()->GetNumParms();
+            if (lua_data.has_return_value)
+            {
+                // Subtract one from the number of params if there's a return value
+                // This is because Unreal treats the return value as a param, and it's included in the 'NumParms' member variable
+                --num_unreal_params;
+            }
+
+            bool has_properties_to_process = lua_data.has_return_value || num_unreal_params > 0;
+            if (has_properties_to_process && context.TheStack.Locals())
+            {
+                for (Unreal::FProperty* func_prop : context.TheStack.CurrentNativeFunction()->ForEachProperty())
+                {
+                    // Skip this property if it's not a parameter
+                    if (!func_prop->HasAnyPropertyFlags(Unreal::EPropertyFlags::CPF_Parm))
+                    {
+                        continue;
+                    }
+
+                    // Skip if this property corresponds to the return value
+                    if (lua_data.has_return_value && func_prop->GetOffset_Internal() == return_value_offset)
+                    {
+                        lua_data.return_property = func_prop;
+                        continue;
+                    }
+
+                    Unreal::FName property_type = func_prop->GetClass().GetFName();
+                    int32_t name_comparison_index = property_type.GetComparisonIndex();
+
+                    if (LuaType::StaticState::m_property_value_pushers.contains(name_comparison_index))
+                    {
+                        // Non-typed pointer to the current parameter value
+                        // void* data = &context.TheStack.Locals[current_param_offset];
+                        void* data = func_prop->ContainerPtrToValuePtr<void>(context.TheStack.Locals());
+
+                        // Keeping track of where in the 'Locals' array the next property is
+                        // current_param_offset += func_prop->GetSize();
+
+                        // Set up a call to a handler for this type of Unreal property (the param)
+                        // The FName is being used as a key for an unordered_map which has the types & corresponding handlers filled right after the dll is injected
+                        const LuaType::PusherParams pusher_params{.operation = LuaType::Operation::GetParam,
+                                                                  .lua = lua_data.lua,
+                                                                  .base = nullptr,
+                                                                  .data = data,
+                                                                  .property = func_prop};
+                        LuaType::StaticState::m_property_value_pushers[name_comparison_index](pusher_params);
+                    }
+                    else
+                    {
+                        lua_data.lua.throw_error(std::format(
+                                "[unreal_script_function_hook] Tried accessing unreal property without a registered handler. Property type '{}' not supported.",
+                                to_string(property_type.ToString())));
+                    }
+                }
+            }
+
+            // Call the Lua function with the correct number of parameters & return values
+            // Increasing the 'num_params' by one to account for the 'this / context' param
+            lua_data.lua.call_function(num_unreal_params + 1, 1);
+
+            // Processing potential return value from the second callback.
+            process_return_value();
         }
 
         // No longer promising to be in the game thread
@@ -1290,6 +1381,10 @@ Overloads:
                         {
                             auto mod = get_mod_ref(lua);
                             luaL_unref(hook_data->lua.get_lua_state(), LUA_REGISTRYINDEX, hook_data->lua_callback_ref);
+                            if (hook_data->lua_post_callback_ref != -1)
+                            {
+                                luaL_unref(hook_data->lua.get_lua_state(), LUA_REGISTRYINDEX, hook_data->lua_post_callback_ref);
+                            }
                             luaL_unref(mod->lua().get_lua_state(), LUA_REGISTRYINDEX, hook_data->lua_thread_ref);
                             g_hooked_script_function_data.erase(hook_iter);
                             break;
@@ -2784,7 +2879,7 @@ Overloads:
             std::string error_overload_not_found{R"(
 No overload found for function 'RegisterHook'.
 Overloads:
-#1: RegisterHook(string UFunction_Name, LuaFunction callback))"};
+#1: RegisterHook(string UFunction_Name, LuaFunction Callback, LuaFunction PostCallback))"};
 
             if (!lua.is_string())
             {
@@ -2804,12 +2899,23 @@ Overloads:
 
             // Duplicate the Lua function to the top of the stack for lua_xmove and luaL_ref
             lua_pushvalue(lua.get_lua_state(), 1); // operates on LuaMadeSimple::Lua::m_lua_state
-
             lua_xmove(lua.get_lua_state(), hook_lua->get_lua_state(), 1);
 
             // Take a reference to the Lua function (it also pops it of the stack)
             const auto lua_callback_registry_index = luaL_ref(hook_lua->get_lua_state(), LUA_REGISTRYINDEX);
             const auto lua_thread_registry_index = luaL_ref(mod->lua().get_lua_state(), LUA_REGISTRYINDEX);
+
+            bool has_post_callback{};
+            int lua_post_callback_registry_index = -1;
+            if (lua.is_function())
+            {
+                lua.discard_value();
+                // Duplicate the second Lua function to the top of the stack for lua_xmove and luaL_ref
+                lua_pushvalue(lua.get_lua_state(), 1); // operates on LuaMadeSimple::Lua::m_lua_state
+                lua_xmove(lua.get_lua_state(), hook_lua->get_lua_state(), 1);
+                lua_post_callback_registry_index = luaL_ref(hook_lua->get_lua_state(), LUA_REGISTRYINDEX);
+                has_post_callback = true;
+            }
 
             Unreal::UFunction* unreal_function = Unreal::UObjectGlobals::StaticFindObject<Unreal::UFunction*>(nullptr, nullptr, function_name_no_prefix);
             if (!unreal_function)
@@ -2825,7 +2931,7 @@ Overloads:
                 unreal_function->HasAnyFunctionFlags(Unreal::EFunctionFlags::FUNC_Native))
             {
                 auto& custom_data = g_hooked_script_function_data.emplace_back(std::make_unique<LuaUnrealScriptFunctionData>(
-                        LuaUnrealScriptFunctionData{0, 0, unreal_function, mod, *hook_lua, lua_callback_registry_index, lua_thread_registry_index}));
+                        LuaUnrealScriptFunctionData{0, 0, unreal_function, mod, *hook_lua, lua_callback_registry_index, lua_post_callback_registry_index, lua_thread_registry_index}));
                 auto pre_id = unreal_function->RegisterPreHook(&lua_unreal_script_function_hook_pre, custom_data.get());
                 auto post_id = unreal_function->RegisterPostHook(&lua_unreal_script_function_hook_post, custom_data.get());
                 custom_data->pre_callback_id = pre_id;
