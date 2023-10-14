@@ -40,6 +40,7 @@
 #include <Unreal/UPackage.hpp>
 #include <Unreal/UScriptStruct.hpp>
 #include <Unreal/UnrealInitializer.hpp>
+#include <Unreal/UKismetNodeHelperLibrary.hpp>
 #include <imgui.h>
 #include <imgui_internal.h>
 #include <misc/cpp/imgui_stdlib.h>
@@ -1482,7 +1483,6 @@ namespace RC::GUI
         std::string plus = "+";
         std::string minus = "-";
         int32_t index = -1;
-        StringType enum_name{};
 
         for (const auto name : names)
         {
@@ -1490,7 +1490,7 @@ namespace RC::GUI
             bool open_edit_value_popup{};
             bool open_add_name_popup{};
             ++index;
-            enum_name = name.Key.ToString();
+            auto enum_name = UKismetNodeHelperLibrary::GetEnumeratorUserFriendlyName(uenum, index);
             ImGui::AlignTextToFramePadding();
             ImGui::Text("%S <=> %lld", enum_name.c_str(), name.Value);
 
