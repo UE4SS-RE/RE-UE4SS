@@ -123,6 +123,14 @@ target_compile_features(${TARGET} PUBLIC cxx_std_20)
 
 target_include_directories(${TARGET} PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include> $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/generated_include>)
 
+file(GLOB_RECURSE UE4SS_HEADERS include/**.hpp)
+target_sources(${TARGET} PUBLIC
+    FILE_SET ue4ss_headers TYPE HEADERS
+    BASE_DIRS include
+    FILES ${UE4SS_HEADERS})
+get_property("TARGET_SOURCE_FILES" TARGET "${TARGET}" PROPERTY SOURCES)
+source_group(TREE "${CMAKE_CURRENT_LIST_DIR}" FILES ${TARGET_SOURCE_FILES} ${UE4SS_HEADERS})
+
 # First party static build -> START
 target_compile_definitions(${TARGET} PRIVATE
         RC_UE4SS_EXPORTS
