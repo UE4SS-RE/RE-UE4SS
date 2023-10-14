@@ -32,6 +32,8 @@ Due to the above change, C++ mods now only need to link to UE4SS.
 
 C++ mods are now loaded earlier, and will keep the game from starting until all mods have finished executing their `start_mod` function
 
+Made calls to `UObject::StaticClass` work for custom UObject classes that have been made with the `DECLARE_EXTERNAL_OBJECT_CLASS` and `IMPLEMENT_EXTERNAL_OBJECT_CLASS` macros
+
 Expose IMGui to C++ mods - Truman
 
 Added `on_lua_start` for C++ mods.  
@@ -50,6 +52,10 @@ Added overloads for `UObject::GetFunctionByName` and `UObject::GetFunctionByName
 Added `UEnum::NumEnums`, which returns the number of enum values for the enum
 
 Added `UEnum::GenerateEnumPrefix`, which is the same as https://docs.unrealengine.com/5.2/en-US/API/Runtime/CoreUObject/UObject/UEnum/GenerateEnumPrefix/
+
+Added `UGameplayStatics::FindNearestActor`
+
+Added the following functions to `AActor`: `K2_DestroyActor`, `K2_SetActorLocation`, `K2_SetActorLocationAndRotation`, `K2_GetActorRotation`, `K2_SetActorRotation`, `GetActorScale3D`, `SetActorScale3D`, `GetActorEnableCollision`, `SetActorEnableCollision`, `SetActorHiddenInGame`, `IsActorTickEnabled`, `SetActorTickEnabled`, `GetActorTickInterval`, `SetActorTickInterval`, `GetActorTimeDilation` 
 
 ### Live View
 Can now view enum values in the Live View debugger
