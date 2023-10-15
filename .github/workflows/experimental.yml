@@ -21,6 +21,12 @@ jobs:
     runs-on: windows-2022
 
     steps:
+      - name: Setup github SSH
+        uses: shimataro/ssh-key-action@v2
+        with:
+          key: ${{ secrets.UEPSEUDO_SSH_KEY }}
+          known_hosts: unnecessary
+
       - name: Checkout
         uses: actions/checkout@v3
         with:
