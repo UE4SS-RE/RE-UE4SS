@@ -3398,7 +3398,15 @@ Overloads:
                             if (auto it = LuaType::StaticState::m_property_value_pushers.find(param_type_comparison_index);
                                 it != LuaType::StaticState::m_property_value_pushers.end())
                             {
-                                auto data = param->ContainerPtrToValuePtr<void>(Stack.Locals());
+                                void* data{};
+                                if (param->HasAnyPropertyFlags(Unreal::EPropertyFlags::CPF_OutParm))
+                                {
+                                    data = Unreal::FindOutParamValueAddress(Stack, param);
+                                }
+                                else
+                                {
+                                    data = param->ContainerPtrToValuePtr<void>(Stack.Locals());
+                                }
                                 const LuaType::PusherParams pusher_param{
                                         .operation = LuaType::Operation::GetParam,
                                         .lua = lua,

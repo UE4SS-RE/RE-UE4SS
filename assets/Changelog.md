@@ -23,6 +23,7 @@ Added an optional third parameter to `RegisterHook`
 If provided, it will act as a post callback hook where out-params can be modified  
 Note that for BP-only functions, both callbacks act as post callbacks
 
+Out-params for script hooks (`RegisterCustomEvent` or `RegisterHook` on a BP-only UFunction) can now be set by doing `Param:set(<new-value>)`
 
 ### C++ API
 Finalize C++ API. - LocalCC; Truman
