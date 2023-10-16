@@ -32,6 +32,7 @@
 #include <Unreal/Property/FArrayProperty.hpp>
 #include <Unreal/Property/FBoolProperty.hpp>
 #include <Unreal/Property/FObjectProperty.hpp>
+#include <Unreal/Property/FEnumProperty.hpp>
 #include <Unreal/UClass.hpp>
 #include <Unreal/UEnum.hpp>
 #include <Unreal/UFunction.hpp>
@@ -1384,6 +1385,13 @@ namespace RC::GUI
                 ImGui::TreePop();
             }
             render_property_value_context_menu(tree_node_id);
+        }
+        else if (auto enum_property = CastField<FEnumProperty>(property); enum_property)
+        {
+            auto value_raw = std::bit_cast<uint8*>(container_ptr);
+            auto value_as_string = Unreal::UKismetNodeHelperLibrary::GetEnumeratorUserFriendlyName(enum_property->GetEnum(), *value_raw);
+            ImGui::SameLine();
+            ImGui::Text("%S", value_as_string.c_str());
         }
         else
         {
