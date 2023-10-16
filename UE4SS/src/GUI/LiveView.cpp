@@ -1324,7 +1324,7 @@ namespace RC::GUI
                     inner_property->ExportTextItem(struct_prop_text_item,
                                                    struct_prop_container_ptr,
                                                    struct_prop_container_ptr,
-                                                   static_cast<UObject*>(*container_ptr),
+                                                   nullptr,
                                                    NULL);
 
                     ImGui::Indent();
