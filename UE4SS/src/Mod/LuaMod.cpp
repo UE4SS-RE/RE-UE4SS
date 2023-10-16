@@ -140,7 +140,7 @@ namespace RC
         }
 
         bool has_properties_to_process = lua_data.has_return_value || num_unreal_params > 0;
-        if (has_properties_to_process && context.TheStack.Locals())
+        if (has_properties_to_process && (context.TheStack.Locals() || context.TheStack.OutParms()))
         {
             // int32_t current_param_offset{};
 
@@ -165,8 +165,15 @@ namespace RC
                 if (LuaType::StaticState::m_property_value_pushers.contains(name_comparison_index))
                 {
                     // Non-typed pointer to the current parameter value
-                    // void* data = &context.TheStack.Locals[current_param_offset];
-                    void* data = func_prop->ContainerPtrToValuePtr<void>(context.TheStack.Locals());
+                    void* data{};
+                    if (func_prop->HasAnyPropertyFlags(Unreal::EPropertyFlags::CPF_OutParm))
+                    {
+                        data = Unreal::FindOutParamValueAddress(context.TheStack, func_prop);
+                    }
+                    else
+                    {
+                        data = func_prop->ContainerPtrToValuePtr<void>(context.TheStack.Locals());
+                    }
 
                     // Keeping track of where in the 'Locals' array the next property is
                     // current_param_offset += func_prop->GetSize();

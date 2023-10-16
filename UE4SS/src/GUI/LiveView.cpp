@@ -2361,7 +2361,7 @@ namespace RC::GUI
             }
             has_out_params = true;
             FString param_text{};
-            auto container_ptr = param->ContainerPtrToValuePtr<void*>(context.TheStack.Locals());
+            auto container_ptr = FindOutParamValueAddress(context.TheStack, param);
             param->ExportTextItem(param_text, container_ptr, container_ptr, std::bit_cast<UObject*>(function), NULL);
             buffer.append(std::format(STR("    {} = {}\n"), param->GetName(), param_text.GetCharArray()));
         }
