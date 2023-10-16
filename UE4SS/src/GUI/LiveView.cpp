@@ -1388,7 +1388,7 @@ namespace RC::GUI
             }
             render_property_value_context_menu(tree_node_id);
         }
-        else if (property->IsA<FEnumProperty>() || property->IsA<FByteProperty>())
+        else if (property->IsA<FEnumProperty>() || (property->IsA<FByteProperty>() && static_cast<FByteProperty*>(property)->IsEnum()))
         {
             UEnum* uenum{};
             if (property->IsA<FByteProperty>())
