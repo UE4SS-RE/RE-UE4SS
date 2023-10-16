@@ -10,6 +10,7 @@
 
 #include <DynamicOutput/DynamicOutput.hpp>
 #include <ExceptionHandling.hpp>
+#include <Constructs/Views/EnumerateView.hpp>
 #include <GUI/GUI.hpp>
 #include <GUI/ImGuiUtility.hpp>
 #include <GUI/LiveView.hpp>
@@ -33,6 +34,7 @@
 #include <Unreal/Property/FBoolProperty.hpp>
 #include <Unreal/Property/FObjectProperty.hpp>
 #include <Unreal/Property/FEnumProperty.hpp>
+#include <Unreal/Property/NumericPropertyTypes.hpp>
 #include <Unreal/UClass.hpp>
 #include <Unreal/UEnum.hpp>
 #include <Unreal/UFunction.hpp>
@@ -1386,12 +1388,31 @@ namespace RC::GUI
             }
             render_property_value_context_menu(tree_node_id);
         }
-        else if (auto enum_property = CastField<FEnumProperty>(property); enum_property)
+        else if (property->IsA<FEnumProperty>() || property->IsA<FByteProperty>())
         {
-            auto value_raw = std::bit_cast<uint8*>(container_ptr);
-            auto value_as_string = Unreal::UKismetNodeHelperLibrary::GetEnumeratorUserFriendlyName(enum_property->GetEnum(), *value_raw);
+            UEnum* uenum{};
+            if (property->IsA<FByteProperty>())
+            {
+                uenum = static_cast<FByteProperty*>(property)->GetEnum();
+            }
+            else
+            {
+                uenum = static_cast<FEnumProperty*>(property)->GetEnum();
+            }
+            auto value_raw = *std::bit_cast<uint8*>(container_ptr);
+            uint8 enum_index{};
+            for (const auto& [key_value_pair, index] : uenum->ForEachName() | views::enumerate)
+            {
+                if (key_value_pair.Value == value_raw)
+                {
+                    enum_index = index;
+                    break;
+                }
+            }
+            auto value_as_string = Unreal::UKismetNodeHelperLibrary::GetEnumeratorUserFriendlyName(uenum, enum_index);
             ImGui::SameLine();
             ImGui::Text("%S", value_as_string.c_str());
+            render_property_value_context_menu();
         }
         else
         {
