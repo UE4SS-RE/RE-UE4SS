@@ -6,17 +6,25 @@ TBD
 ### General
 Added support for UE Version 5.2 games
 
-Changed to a new proxy DLL loading system. - LocalCC  
+New proxy DLL loading system. - LocalCC  
 Different proxy DLLs can now easily be compiled for cases where xinput1_3 cannot be used for any reason.  
 Alternative proxys may be compiled by specifying `-DUE4SS_PROXY_PATH=/Path/To/DLL.dll` when running the CMake command.
 
 Added additional AOB for `FName::ToString` - LongerWarrior
 
-The shortcut (CTRL + O) for opening the GUI is now a toggle, meaning it can also be used for closing the GUI
+### Live View
+Can now view enum values in the Live View debugger
 
-The shortcut (previously J) for dumping objects (generating UE4SS_ObjectDump.txt) has been changed to CTRL + J
+Added a search option to exclude objects of a class with a name containing the specified (case-sensitive) string
 
-The shortcut (previously D) for generating CXX headers has been changed to CTRL + H
+Added a search option to exclude objects that don't have a property of the specified type
+
+Added a checkbox that toggles search options globally, meaning when not searching
+
+### UHT Dumper
+Removed unnecessary explicit `_MAX` elements from enums
+
+Made `FWeakObjectPtr` overridable unless used in a TArray or TMap
 
 ### Lua API
 Added an optional third parameter to `RegisterHook`  
@@ -56,26 +64,60 @@ Added `UEnum::GenerateEnumPrefix`, which is the same as https://docs.unrealengin
 
 Added `UGameplayStatics::FindNearestActor`
 
-Added the following functions to `AActor`: `K2_DestroyActor`, `K2_SetActorLocation`, `K2_SetActorLocationAndRotation`, `K2_GetActorRotation`, `K2_SetActorRotation`, `GetActorScale3D`, `SetActorScale3D`, `GetActorEnableCollision`, `SetActorEnableCollision`, `SetActorHiddenInGame`, `IsActorTickEnabled`, `SetActorTickEnabled`, `GetActorTickInterval`, `SetActorTickInterval`, `GetActorTimeDilation` - Okaetsu 
-
-### Live View
-Can now view enum values in the Live View debugger
-
-Added a search option to exclude objects of a class with a name containing the specified (case-sensitive) string
-
-Added a search option to exclude objects that don't have a property of the specified type
-
-Added a checkbox that toggles search options globally, meaning when not searching
-
-### UHT Dumper
-Removed unnecessary explicit `_MAX` elements from enums
-
-Made `FWeakObjectPtr` overridable unless used in a TArray or TMap
+Added the following functions to `AActor`: `K2_DestroyActor`, `K2_SetActorLocation`, `K2_SetActorLocationAndRotation`, `K2_GetActorRotation`, `K2_SetActorRotation`, `GetActorScale3D`, `SetActorScale3D`, `GetActorEnableCollision`, `SetActorEnableCollision`, `SetActorHiddenInGame`, `IsActorTickEnabled`, `SetActorTickEnabled`, `GetActorTickInterval`, `SetActorTickInterval`, `GetActorTimeDilation` - Okaetsu
 
 ### Experimental
 Added ExperimentalFeatures section to UE4SS-settings.ini.  All experimental features will default to being turned off.  To use referenced features, change the relevant config setting to = 1
 
 Added ability to call UFunctions from Live View GUI
+
+
+## Changes
+
+### General
+The shortcut (CTRL + O) for opening the GUI is now a toggle, meaning it can also be used for closing the GUI
+
+The shortcut (previously J) for dumping objects (generating UE4SS_ObjectDump.txt) has been changed to CTRL + J
+
+The shortcut (previously D) for generating CXX headers has been changed to CTRL + H
+
+Change AOB Sig Scanner backend to use std::find for major performance increase - inspired by Truman
+
+Scan for specified time rather than number of attempts due to speed increase
+
+Improved performance for U/FProperty lookups
+
+Improved performance for UFunction lookups
+
+Improved performance of the GUI log, it's now O(n) - trumank
+
+BPModLoaderMod: Add ability to specify load order - Okaetsu
+
+Add additional extensions to USMap dumper - Atenfyr; Archengius
+
+Fix bug in USMap dumper with enums with 256 entries - Atenfyr
+
+### Live View
+
+### UHT Dumper
+
+### Lua API
+Improved reliability of `IsValid`
+
+### C++ API
+The callbacks for all hook registration functions inside the `Unreal::Hook` namespace can now take lambdas that capture variables
+
+Changed many functions to use coroutines - LocalCC  
+This means the syntax for those functions is now identical to a range-based for loop instead of a function taking a callback
+
+### Repo & Build Process
+Add automated release script - Truman
+
+Change documentation build process - Truman; Buckminsterfullerene
+
+Removed libfmt dependency
+
+Gradual work on getting Clang to work - LocalCC; Narknon
 
 
 ## Fixes
@@ -88,6 +130,18 @@ Fix case preserving names switch - LocalCC
 ### Live View
 Fixed two crashes occurring when exploring structs nested in arrays or other structs
 
+### UHT Dumper
+Fixed enums inappropriately using `uint8`
+
+### Lua API
+Fixed `UnregisterHook`
+
+Fixed FText:ToString - LocalCC
+
+Improved stability when using hooks or `ExecuteInGameThread`
+
+TArrays are now resized when being indexed into if necessary
+
 ### C++ API
 Fixed FText constructor implementation via optional AOB - LocalCC
 
@@ -95,60 +149,6 @@ Fixed initialization functions not being correctly called when a mod is restarte
 
 Fixed C++ mods not loading if a Lua mod with the same name is present
 
-### Lua API
-Fixed unregisterhook
-
-Fixed FText:ToString - LocalCC
-
-Improved stability when using hooks or `ExecuteInGameThread`
-
-TArrays are now resized when indexing into them
-
-### UHT Dumper
-Fixed enums inappropriately using `uint8`
-
-## Changes
-
-### USMap Dumper
-Add additional extensions - Atenfyr; Archengius
-
-Fix bug with enums with 256 entries - Atenfyr
-
-### C++ API
-The callbacks for all hook registration functions inside the `Unreal::Hook` namespace can now take lambdas that capture variables
-
-### Sig Scanner
-Change AOB Sig Scanner backend to use std::find for major performance increase - inspired by Truman
-
-Scan for specified time rather than number of attempts due to speed increase
-
-### Performance
-Change to generators for certain major iterators - LocalCC
-
-Improved performance for U/FProperty lookups
-
-Improved performance for UFunction lookups
-
-Improved performance of the live log, it's now O(n) - trumank
-
-### BP Mod Loader
-Add ability to specify load order - Okaetsu
-
-
-## Misc.
-Changes to IsValid for increased reliability
-
-Add destroy listener
-
-### Repo
-Add automated release script - Truman
-
-Change documentation build process - Truman; Buckminsterfullerene
-
-Removed FMT dependency
-
-### Build Process
-Fix compiling for Clang - LocalCC; Narknon
 
 ## Settings
 
