@@ -14,6 +14,16 @@ Added additional AOB for `FName::ToString` - LongerWarrior
 
 The shortcut (CTRL + O) for opening the GUI is now a toggle, meaning it can also be used for closing the GUI
 
+The shortcut (previously J) for dumping objects (generating UE4SS_ObjectDump.txt) has been changed to CTRL + J
+
+The shortcut (previously D) for generating CXX headers has been changed to CTRL + H
+
+### Lua API
+Added an optional third parameter to `RegisterHook`  
+If provided, it will act as a post callback hook where out-params can be modified  
+Note that for BP-only functions, both callbacks act as post callbacks
+
+Out-params for script hooks (`RegisterCustomEvent` or `RegisterHook` on a BP-only UFunction) can now be set by doing `Param:set(<new-value>)`
 
 ### C++ API
 Finalize C++ API. - LocalCC; Truman
@@ -23,9 +33,16 @@ Due to the above change, C++ mods now only need to link to UE4SS.
 
 C++ mods are now loaded earlier, and will keep the game from starting until all mods have finished executing their `start_mod` function
 
+Made calls to `UObject::StaticClass` work for custom UObject classes that have been made with the `DECLARE_EXTERNAL_OBJECT_CLASS` and `IMPLEMENT_EXTERNAL_OBJECT_CLASS` macros
+
 Expose IMGui to C++ mods - Truman
 
-Fixed initialization functions not being correctly called when a mod is restarted - LocalCC
+Added `on_lua_start` for C++ mods.  
+This function fires whenever a Lua mod by the same name as the C++ mod is started.  
+It allows interactions with Lua from C++ mods.
+
+Added `on_lua_stop` for C++ mods.
+This function fires right before a Lua mod by the same name as the C++ mod is about to be stopped.
 
 Added `UFunction::RegisterPreHookForInstance` and `UFunction::RegisterPostHookForInstance`  
 These functions work the same as `UFunction::RegisterPreHook`/`UFunction::RegisterPostHook` except the callback is only fired if the context matches the specified instance  
@@ -37,10 +54,16 @@ Added `UEnum::NumEnums`, which returns the number of enum values for the enum
 
 Added `UEnum::GenerateEnumPrefix`, which is the same as https://docs.unrealengine.com/5.2/en-US/API/Runtime/CoreUObject/UObject/UEnum/GenerateEnumPrefix/
 
+Added `UGameplayStatics::FindNearestActor`
+
+Added the following functions to `AActor`: `K2_DestroyActor`, `K2_SetActorLocation`, `K2_SetActorLocationAndRotation`, `K2_GetActorRotation`, `K2_SetActorRotation`, `GetActorScale3D`, `SetActorScale3D`, `GetActorEnableCollision`, `SetActorEnableCollision`, `SetActorHiddenInGame`, `IsActorTickEnabled`, `SetActorTickEnabled`, `GetActorTickInterval`, `SetActorTickInterval`, `GetActorTimeDilation` - Okaetsu 
+
 ### Live View
 Can now view enum values in the Live View debugger
 
 Added a search option to exclude objects of a class with a name containing the specified (case-sensitive) string
+
+Added a search option to exclude objects that don't have a property of the specified type
 
 Added a checkbox that toggles search options globally, meaning when not searching
 
@@ -69,12 +92,18 @@ Add common TArray instantiations
 ### C++ API
 Fixed FText constructor implementation via optional AOB - LocalCC
 
+Fixed initialization functions not being correctly called when a mod is restarted - LocalCC
+
+Fixed C++ mods not loading if a Lua mod with the same name is present
+
 ### Lua API
 Fixed unregisterhook
 
 Fixed FText:ToString - LocalCC
 
 Improved stability when using hooks or `ExecuteInGameThread`
+
+TArrays are now resized when indexing into them
 
 ## Changes
 

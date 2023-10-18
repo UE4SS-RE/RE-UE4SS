@@ -1,11 +1,3 @@
-[submodule "Dependencies/Unreal"]
-	path = Dependencies/Unreal
+[submodule "deps/first/Unreal"]
+	path = deps/first/Unreal
 	url = git@github.com:Re-UE4SS/UEPseudo.git
-	branch = main
-[submodule "Dependencies/PolyHook_2_0"]
-	path = Dependencies/PolyHook_2_0
-	url = git@github.com:stevemk14ebr/PolyHook_2_0.git
-	branch = master
-[submodule "Dependencies/zydis"]
-	path = Dependencies/zydis
-	url = git@github.com:zyantific/zydis.git
