@@ -138,7 +138,8 @@ namespace RC::UEGenerator
         GeneratedSourceFile* m_header_file;
         bool m_is_implementation_file;
         bool m_needs_get_type_hash;
-    public:
+
+      public:
         std::wstring m_implementation_constructor;
 
         GeneratedSourceFile(const FFilePath& file_path, const std::wstring& file_module_name, bool is_implementation_file, UObject* object);
@@ -228,7 +229,7 @@ namespace RC::UEGenerator
         // Storage for class defaultsubojects when populating property initializers
         std::unordered_map<std::wstring, std::wstring> m_class_subobjects;
 
-    public:
+      public:
         UEHeaderGenerator(const FFilePath& root_directory);
 
         // Delete copy, move and assignment operators
@@ -261,8 +262,13 @@ namespace RC::UEGenerator
                                const CaseInsensitiveSet& blacklisted_property_names,
                                bool generate_as_override = false) -> void;
 
-        auto generate_property_value(UStruct* ustruct, FProperty* property, void* object, GeneratedSourceFile& implementation_file, const std::wstring& property_scope) -> void;
-        auto generate_function_implementation(UClass* uclass, UFunction* function, GeneratedSourceFile& implementation_file, bool is_generating_interface, const CaseInsensitiveSet& blacklisted_property_names) -> void;
+        auto generate_property_value(UStruct* ustruct, FProperty* property, void* object, GeneratedSourceFile& implementation_file, const std::wstring& property_scope)
+                -> void;
+        auto generate_function_implementation(UClass* uclass,
+                                              UFunction* function,
+                                              GeneratedSourceFile& implementation_file,
+                                              bool is_generating_interface,
+                                              const CaseInsensitiveSet& blacklisted_property_names) -> void;
 
         auto generate_interface_flags(UClass* uinterface) const -> std::wstring;
         auto generate_class_flags(UClass* uclass) const -> std::wstring;
@@ -282,8 +288,17 @@ namespace RC::UEGenerator
         auto generate_default_property_value(FProperty* property, GeneratedSourceFile& header_data, const std::wstring& ContextName) -> std::wstring;
 
         auto generate_enum_value(UEnum* uenum, int64_t enum_value) -> std::wstring;
-        auto generate_simple_assignment_expression(FProperty* property, const std::wstring& value, GeneratedSourceFile& implementation_file, const std::wstring& property_scope, const std::wstring& operator_type = STR(" = ")) -> void;
-        auto generate_advanced_assignment_expression(FProperty* property, const std::wstring& value, GeneratedSourceFile& implementation_file, const std::wstring& property_scope, const std::wstring& property_type, const std::wstring& operator_type = STR(" = ")) -> void;
+        auto generate_simple_assignment_expression(FProperty* property,
+                                                   const std::wstring& value,
+                                                   GeneratedSourceFile& implementation_file,
+                                                   const std::wstring& property_scope,
+                                                   const std::wstring& operator_type = STR(" = ")) -> void;
+        auto generate_advanced_assignment_expression(FProperty* property,
+                                                     const std::wstring& value,
+                                                     GeneratedSourceFile& implementation_file,
+                                                     const std::wstring& property_scope,
+                                                     const std::wstring& property_type,
+                                                     const std::wstring& operator_type = STR(" = ")) -> void;
 
         auto static generate_parameter_count_string(int32_t parameter_count) -> std::wstring;
         auto static determine_primary_game_module_name() -> std::wstring;

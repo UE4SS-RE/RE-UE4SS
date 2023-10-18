@@ -1,6 +1,6 @@
 #include <DynamicOutput/DynamicOutput.hpp>
 #include <SDKGenerator/Common.hpp>
-#pragma warning(disable: 4005)
+#pragma warning(disable : 4005)
 #include <Unreal/AActor.hpp>
 #include <Unreal/Property/FArrayProperty.hpp>
 #include <Unreal/Property/FBoolProperty.hpp>
@@ -27,7 +27,7 @@
 #include <Unreal/UPackage.hpp>
 #include <Unreal/UScriptStruct.hpp>
 #include <UnrealDef.hpp>
-#pragma warning(default: 4005)
+#pragma warning(default : 4005)
 
 #define DELEGATE_SIGNATURE_POSTFIX STR("__DelegateSignature")
 
@@ -295,7 +295,7 @@ namespace RC::UEGenerator
             return std::format(STR("TSoftObjectPtr<{}>"), property_class_name);
         }
 
-        //Class Properties
+        // Class Properties
         if (property->IsA<FClassProperty>() || property->IsA<FAssetClassProperty>())
         {
             FClassProperty* class_property = static_cast<FClassProperty*>(property);
