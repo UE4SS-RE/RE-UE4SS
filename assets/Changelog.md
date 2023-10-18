@@ -87,7 +87,7 @@ Finish adding version 4.11 support
 
 Fix case preserving names switch - LocalCC
 
-Add common TArray instantiations
+Fixed two crashes occurring when exploring structs nested in arrays or other structs
 
 ### C++ API
 Fixed FText constructor implementation via optional AOB - LocalCC
