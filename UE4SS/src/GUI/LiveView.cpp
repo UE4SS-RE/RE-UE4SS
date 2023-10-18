@@ -1687,7 +1687,8 @@ namespace RC::GUI
                     FName new_key = FName(new_name, FNAME_Add);
                     int64 value = names[index].Value;
 
-                    uenum->InsertIntoNames(TPair{new_key, value}, index, true);
+                    // NOTE: Explicitly giving specifying template params for TPair because Clang can't handle TPair being a templated using statement.
+                    uenum->InsertIntoNames(TPair<decltype(new_key), decltype(value)>{new_key, value}, index, true);
 
                     if (uenum->GetEnumNames()[index].Key.ToString() != new_name)
                     {

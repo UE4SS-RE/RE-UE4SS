@@ -38,7 +38,7 @@ namespace RC::GUI::Filter
     };
 
     template <typename T>
-    auto eval_pre_search_filters(Types<T>&, UObject* object) -> bool
+    auto eval_pre_search_filters(T&, UObject* object) -> bool
     {
         if constexpr (CanPreEval<T>)
         {
@@ -76,7 +76,7 @@ namespace RC::GUI::Filter
     }
 
     template <typename T>
-    auto eval_post_search_filters(Types<T>&, UObject* object) -> bool
+    auto eval_post_search_filters(T&, UObject* object) -> bool
     {
         if constexpr (CanPostEval<T>)
         {
