@@ -70,8 +70,6 @@ Added a checkbox that toggles search options globally, meaning when not searchin
 ### UHT Dumper
 Removed unnecessary explicit `_MAX` elements from enums
 
-Fixed enums inappropriately using `uint8`
-
 Made `FWeakObjectPtr` overridable unless used in a TArray or TMap
 
 ### Experimental
@@ -87,6 +85,7 @@ Finish adding version 4.11 support
 
 Fix case preserving names switch - LocalCC
 
+### Live View
 Fixed two crashes occurring when exploring structs nested in arrays or other structs
 
 ### C++ API
@@ -104,6 +103,9 @@ Fixed FText:ToString - LocalCC
 Improved stability when using hooks or `ExecuteInGameThread`
 
 TArrays are now resized when indexing into them
+
+### UHT Dumper
+Fixed enums inappropriately using `uint8`
 
 ## Changes
 
