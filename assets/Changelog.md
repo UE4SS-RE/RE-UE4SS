@@ -15,11 +15,23 @@ Added additional AOB for `FName::ToString` - LongerWarrior
 ### Live View
 Can now view enum values in the Live View debugger
 
-Added a search option to exclude objects of a class with a name containing the specified (case-sensitive) string
-
-Added a search option to exclude objects that don't have a property of the specified type
-
 Added a checkbox that toggles search options globally, meaning when not searching
+
+Added search filter `Function parameter flags`, it excludes objects that are non-UFunctions and UFunctions that don't have params with the specified flags
+
+Added search filter `Non-instances only`
+
+Added search filter `Include CDOs`, it includes objects that are not a ClassDefaultObject or an ArchetypeObject
+
+Added search filter `CDOs only`, it excludes objects that are not a ClassDefaultObject or an ArchetypeObject
+
+Added search filter `Use Regex for search` - HW12Dev
+
+Added search filter `Exclude class name`, it excludes objects with a ClassPrivate name not containing the specified (case-sensitive) string
+
+Added search filter `Has property`, it exclude objects that don't have a property (inheritance included) of the specified (case-sensitive) name
+
+Added search filter `Has property of type`, it excludes objects that don't have a property (inheritance included) of the specified (case-sensitive) type
 
 ### UHT Dumper
 Removed unnecessary explicit `_MAX` elements from enums
