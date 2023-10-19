@@ -1558,6 +1558,8 @@ namespace RC
 
                 return return_value;
             }
+
+            return false;
         });
     }
 
