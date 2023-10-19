@@ -553,6 +553,7 @@ namespace RC
         lua_State* lua;
         // const int lua_callback_ref;
         sol::function lua_callback;
+        sol::function lua_post_callback;
         sol::protected_function_result lua_callback_result;
         bool function_processing_failed{};
 

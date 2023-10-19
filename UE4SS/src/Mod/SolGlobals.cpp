@@ -320,7 +320,7 @@ namespace RC
                                              },
                                              std::bit_cast<uintptr_t>(this));
                                  }));
-        sol.set_function("RegisterHook", [&](sol::this_state state, StringType function_name, sol::function callback) {
+        auto RegisterHook_Lambda = [](decltype(this) self, sol::this_state state, StringType function_name, sol::function callback, sol::function post_callback = sol::nil) {
             sol::variadic_results return_values{};
 
             StringType function_name_no_prefix{};
@@ -347,10 +347,15 @@ namespace RC
                 return exit_script_with_error<2>(state, STR("Tried to register a hook with Lua function 'RegisterHook' but no ModRef global was found"));
             }
 
-            auto gameplay_state = m_sol_gameplay_states.emplace_back(sol::thread::create(state)).lua_state();
+            auto gameplay_state = self->m_sol_gameplay_states.emplace_back(sol::thread::create(state)).lua_state();
 
             // Move the Lua callback from the UE4SS Lua state to the gameplay state, which is a Lua thread.
             sol::function callback_in_gameplay_state = sol::function(gameplay_state, callback);
+            sol::function post_callback_in_gameplay_state{};
+            if (post_callback.valid())
+            {
+                post_callback_in_gameplay_state = sol::function(gameplay_state, callback);
+            }
 
             int32_t generic_pre_id{};
             int32_t generic_post_id{};
@@ -358,7 +363,7 @@ namespace RC
             if (func_ptr && func_ptr != UObject::ProcessInternalInternal.get_function_address() && unreal_function->HasAnyFunctionFlags(EFunctionFlags::FUNC_Native))
             {
                 auto& custom_data = m_hooked_script_function_data.emplace_back(std::make_unique<LuaUnrealScriptFunctionData>(
-                        LuaUnrealScriptFunctionData{0, 0, unreal_function, this, gameplay_state, std::move(callback_in_gameplay_state)}));
+                        LuaUnrealScriptFunctionData{0, 0, unreal_function, self, gameplay_state, std::move(callback_in_gameplay_state), std::move(post_callback_in_gameplay_state)}));
                 auto pre_id = unreal_function->RegisterPreHook(&lua_unreal_script_function_hook_pre, custom_data.get());
                 auto post_id = unreal_function->RegisterPostHook(&lua_unreal_script_function_hook_post, custom_data.get());
                 custom_data->pre_callback_id = pre_id;
@@ -395,7 +400,15 @@ namespace RC
             }
 
             return return_from_function_with_values(state, generic_pre_id, generic_post_id);
-        });
+        };
+        sol.set_function("RegisterHook",
+                         sol::overload(
+                                 [&](sol::this_state state, StringType function_name, sol::function callback) {
+                                     RegisterHook_Lambda(this, state, function_name, callback);
+                                 },
+                                 [&](sol::this_state state, StringType function_name, sol::function callback, sol::function post_callback) {
+                                     RegisterHook_Lambda(this, state, function_name, callback, post_callback);
+                                 }));
         sol.set_function("UnregisterHook", [](sol::this_state state, StringType function_name, int32_t pre_id, int32_t post_id) {
             auto function_name_no_prefix = function_name.substr(function_name.find_first_of(L"/"), function_name.size());
             auto unreal_function = UObjectGlobals::StaticFindObject<UFunction*>(nullptr, nullptr, function_name_no_prefix);

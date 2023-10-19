@@ -102,7 +102,7 @@ namespace RC
         }
 
         bool has_properties_to_process = lua_data.has_return_value || num_unreal_params > 0;
-        if (has_properties_to_process && context.TheStack.Locals())
+        if (has_properties_to_process && (context.TheStack.Locals() || context.TheStack.OutParms()))
         {
             // context.TheStack.CurrentNativeFunction()->ForEachProperty([&](Unreal::FProperty* param) {
             for (auto param : context.TheStack.CurrentNativeFunction()->ForEachProperty())
@@ -122,7 +122,15 @@ namespace RC
 
                 if (auto property_pusher = lookup_property_pusher(param->GetClass().GetFName()); property_pusher)
                 {
-                    void* data = param->ContainerPtrToValuePtr<void>(context.TheStack.Locals());
+                    void* data{};
+                    if (param->HasAnyPropertyFlags(Unreal::EPropertyFlags::CPF_OutParm))
+                    {
+                        data = Unreal::FindOutParamValueAddress(context.TheStack, param);
+                    }
+                    else
+                    {
+                        data = param->ContainerPtrToValuePtr<void>(context.TheStack.Locals());
+                    }
                     auto pusher_params = PropertyPusherFunctionParams{lua_data.lua, nullptr, param, data, PushType::ToLuaParam, &param_wrappers, context.Context};
                     if (auto error_msg = property_pusher(pusher_params); !error_msg.empty())
                     {
@@ -182,35 +190,125 @@ namespace RC
         // set_is_in_game_thread(lua_data.lua, true);
 
         // Fetch & override the return value from Lua if one exists
-        if (lua_data.has_return_value && lua_data.lua_callback_result.valid() && lua_data.lua_callback_result.return_count() > 0)
-        {
-            if (auto property_pusher = lookup_property_pusher(lua_data.return_property->GetClass().GetFName()); property_pusher)
+        auto process_return_value = [&]() {
+            if (lua_data.has_return_value && lua_data.lua_callback_result.valid())
             {
-                // Keep in mind that the if this was a Blueprint UFunction then the entire byte-code will already have executed
-                // That means that changing the return value here won't affect the script itself
-                // If this was a native UFunction then changing the return value here will have the desired effect
-                auto pusher_params = PropertyPusherFunctionParams{lua_data.lua,
-                                                                  &lua_data.lua_callback_result,
-                                                                  lua_data.return_property,
-                                                                  context.RESULT_DECL,
-                                                                  PushType::FromLua,
-                                                                  nullptr,
-                                                                  context.Context};
-                if (auto error_msg = property_pusher(pusher_params); !error_msg.empty())
+                if (auto property_pusher = lookup_property_pusher(lua_data.return_property->GetClass().GetFName()); property_pusher)
                 {
-                    EXIT_NATIVE_HOOK_WITH_ERROR(void, lua_data, std::format(STR("Error setting return value: {}\n"), to_wstring(error_msg)))
+                    // Keep in mind that the if this was a Blueprint UFunction then the entire byte-code will already have executed
+                    // That means that changing the return value here won't affect the script itself
+                    // If this was a native UFunction then changing the return value here will have the desired effect
+                    auto pusher_params = PropertyPusherFunctionParams{lua_data.lua,
+                                                                      &lua_data.lua_callback_result,
+                                                                      lua_data.return_property,
+                                                                      context.RESULT_DECL,
+                                                                      PushType::FromLua,
+                                                                      nullptr,
+                                                                      context.Context};
+                    if (auto error_msg = property_pusher(pusher_params); !error_msg.empty())
+                    {
+                        EXIT_NATIVE_HOOK_WITH_ERROR(void, lua_data, std::format(STR("Error setting return value: {}\n"), to_wstring(error_msg)))
+                    }
+                }
+                else
+                {
+                    // If the type wasn't supported then we simply output a warning and then do nothing
+                    auto parameter_type_name = lua_data.return_property->GetClass().GetName();
+                    auto parameter_name = lua_data.return_property->GetName();
+                    Output::send(STR("Tried altering return value of a hooked UFunction without a registered handler for return type Return property '{}' of type "
+                                     "'{}' not supported.\n"),
+                                 parameter_name,
+                                 parameter_type_name);
                 }
             }
-            else
+        };
+
+        if (lua_data.lua_callback_result.return_count() > 0)
+        {
+            // Processing potential return value from the first callback.
+            // This only exists to keep compatibility with mods that set return values in the first callback.
+            process_return_value();
+        }
+
+        if (lua_data.lua_post_callback.valid())
+        {
+            // Storage for all UFunction parameters. This is passed to sol before the callback is called.
+            std::vector<ParamPtrWrapper> param_wrappers{};
+
+            // Set up the first param (context / this-ptr)
+            push_objectproperty({lua_data.lua, nullptr, nullptr, &context.Context, PushType::ToLuaParam, &param_wrappers});
+
+            // Attempt at dynamically fetching the params
+            uint16_t return_value_offset = context.TheStack.CurrentNativeFunction()->GetReturnValueOffset();
+
+            // 'ReturnValueOffset' is 0xFFFF if the UFunction return type is void
+            lua_data.has_return_value = return_value_offset != 0xFFFF;
+
+            uint8_t num_unreal_params = context.TheStack.CurrentNativeFunction()->GetNumParms();
+            if (lua_data.has_return_value)
             {
-                // If the type wasn't supported then we simply output a warning and then do nothing
-                auto parameter_type_name = lua_data.return_property->GetClass().GetName();
-                auto parameter_name = lua_data.return_property->GetName();
-                Output::send(STR("Tried altering return value of a hooked UFunction without a registered handler for return type Return property '{}' of type "
-                                 "'{}' not supported.\n"),
-                             parameter_name,
-                             parameter_type_name);
+                // Subtract one from the number of params if there's a return value
+                // This is because Unreal treats the return value as a param, and it's included in the 'NumParms' member variable
+                --num_unreal_params;
             }
+
+            bool has_properties_to_process = lua_data.has_return_value || num_unreal_params > 0;
+            if (has_properties_to_process && (context.TheStack.Locals() || context.TheStack.OutParms()))
+            {
+                // context.TheStack.CurrentNativeFunction()->ForEachProperty([&](Unreal::FProperty* param) {
+                for (auto param : context.TheStack.CurrentNativeFunction()->ForEachProperty())
+                {
+                    // Skip this property if it's not a parameter
+                    if (!param->HasAnyPropertyFlags(Unreal::EPropertyFlags::CPF_Parm))
+                    {
+                        continue;
+                    }
+
+                    // Skip if this property corresponds to the return value
+                    if (lua_data.has_return_value && param->GetOffset_Internal() == return_value_offset)
+                    {
+                        lua_data.return_property = param;
+                        continue;
+                    }
+
+                    if (auto property_pusher = lookup_property_pusher(param->GetClass().GetFName()); property_pusher)
+                    {
+                        void* data{};
+                        if (param->HasAnyPropertyFlags(Unreal::EPropertyFlags::CPF_OutParm))
+                        {
+                            data = Unreal::FindOutParamValueAddress(context.TheStack, param);
+                        }
+                        else
+                        {
+                            data = param->ContainerPtrToValuePtr<void>(context.TheStack.Locals());
+                        }
+                        auto pusher_params = PropertyPusherFunctionParams{lua_data.lua, nullptr, param, data, PushType::ToLuaParam, &param_wrappers, context.Context};
+                        if (auto error_msg = property_pusher(pusher_params); !error_msg.empty())
+                        {
+                            EXIT_NATIVE_HOOK_WITH_ERROR(break, lua_data, std::format(STR("Error setting parameter value: {}\n"), to_wstring(error_msg)))
+                        }
+                    }
+                    else
+                    {
+                        EXIT_NATIVE_HOOK_WITH_ERROR(break,
+                                                    lua_data,
+                                                    std::format(STR("[unreal_script_function_hook_pre] Tried accessing unreal property without a registered "
+                                                                    "handler. Property type '{}' not supported.\n"),
+                                                                param->GetClass().GetName()))
+                    }
+                };
+            }
+
+            if (lua_data.function_processing_failed)
+            {
+                return;
+            }
+
+            // Call the Lua function with the correct number of parameters & return values
+            call_function_dont_wrap_params_safe(lua_data.lua, lua_data.lua_post_callback, param_wrappers);
+
+            // Processing potential return value from the second callback.
+            process_return_value();
         }
 
         // No longer promising to be in the game thread
@@ -266,7 +364,15 @@ namespace RC
                             auto param_type = param->GetClass().GetFName();
                             if (auto property_pusher = lookup_property_pusher(param->GetClass().GetFName()); property_pusher)
                             {
-                                void* data = param->ContainerPtrToValuePtr<void>(Stack.Locals());
+                                void* data{};
+                                if (param->HasAnyPropertyFlags(Unreal::EPropertyFlags::CPF_OutParm))
+                                {
+                                    data = Unreal::FindOutParamValueAddress(Stack, param);
+                                }
+                                else
+                                {
+                                    data = param->ContainerPtrToValuePtr<void>(Stack.Locals());
+                                }
                                 auto pusher_params = PropertyPusherFunctionParams{lua, nullptr, param, data, PushType::ToLuaParam, &param_wrappers, Context};
                                 if (auto error_msg = property_pusher(pusher_params); !error_msg.empty())
                                 {
