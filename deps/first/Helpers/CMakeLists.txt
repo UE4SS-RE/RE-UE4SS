@@ -10,3 +10,5 @@ add_library(${TARGET} INTERFACE)
 target_compile_features(${TARGET} INTERFACE cxx_std_20)
 
 target_include_directories(${TARGET} INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/include)
+
+target_link_libraries(${TARGET} INTERFACE File Function safetyhook)

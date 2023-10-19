@@ -19,7 +19,7 @@ set(ASMJIT_NO_CUSTOM_FLAGS ON CACHE BOOL "" FORCE)
 FetchContent_Declare(zydis
     PREFIX ${CMAKE_CURRENT_BINARY_DIR}/zydis
     GIT_REPOSITORY git@github.com:zyantific/zydis.git
-    GIT_TAG v3.1.0
+    GIT_TAG v4.0.0
     GIT_PROGRESS ON)
 
 FetchContent_MakeAvailable(zydis)

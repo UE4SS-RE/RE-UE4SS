@@ -9,6 +9,7 @@ namespace RC::ASM
     {
         void* address{};
         ZydisDecodedInstruction raw{};
+        ZydisDecodedOperand operands[ZYDIS_MAX_OPERAND_COUNT]{};
     };
 
     RC_ASM_API auto is_jmp_instruction(void* instruction_ptr) -> bool;
