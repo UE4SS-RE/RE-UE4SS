@@ -55,6 +55,7 @@ message("Major: ${UE4SS_LIB_VERSION_MAJOR}, Minor: ${UE4SS_LIB_VERSION_MINOR}, H
 set(${TARGET}_Sources
     "${CMAKE_CURRENT_SOURCE_DIR}/src/main_ue4ss_rewritten.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/UE4SSProgram.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/CrashDumper.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/SettingsManager.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/ObjectDumper/ObjectToString.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Signatures.cpp"
@@ -159,7 +160,7 @@ target_link_libraries(${TARGET} PUBLIC
     MProgram ScopedTimer)
 
 target_link_libraries(${TARGET} PUBLIC
-    ImGui PolyHook_2 d3d11 GLFW opengl32)
+    ImGui PolyHook_2 d3d11 GLFW opengl32 dbghelp)
 
 set_property(TARGET ${TARGET} PROPERTY INTERPROCEDURAL_OPTIMIZATION ON)
 
