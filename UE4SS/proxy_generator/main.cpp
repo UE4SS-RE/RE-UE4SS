@@ -182,7 +182,7 @@ int _tmain(int argc, TCHAR* argv[])
     cpp_file << "    {" << endl;
     cpp_file << "        load_original_dll();" << endl;
     cpp_file << "        setup_functions();" << endl;
-    cpp_file << "        LoadLibrary(STR(\"ue4ss.dll\"));" << endl;
+    cpp_file << "        LoadLibrary(STR(\"UE4SS.dll\"));" << endl;
     cpp_file << "    }" << endl;
     cpp_file << "    else if (fdwReason == DLL_PROCESS_DETACH)" << endl;
     cpp_file << "    {" << endl;

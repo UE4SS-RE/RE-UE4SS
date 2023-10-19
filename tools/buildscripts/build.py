@@ -143,16 +143,31 @@ def package(args):
             main_zip_name = f'UE4SS_{version}'
             staging_dir = staging_release
 
-        bin_dir = 'Output/ue4ss/bin'
+        ue4ss_dll_path = ''
+        ue4ss_pdb_path = ''
+        xinput1_3_dll_path = ''
+
+        scan_start_dir = '.'
+        if str(args.d) != 'None':
+            scan_start_dir = str(args.d)
+
+        for root, dirs, files in os.walk(scan_start_dir):
+            for file in files:
+                if file.lower() == "ue4ss.dll":
+                    ue4ss_dll_path = os.path.join(root, file)
+                if file.lower() == "ue4ss.pdb":
+                    ue4ss_pdb_path = os.path.join(root, file)
+                if file.lower() == "xinput1_3.dll":
+                    xinput1_3_dll_path = os.path.join(root, file)
 
         # main dll
-        shutil.copy(os.path.join(bin_dir, 'ue4ss.dll'), staging_dir)
+        shutil.copy(ue4ss_dll_path, staging_dir)
 
         # proxy
-        shutil.copy(os.path.join(bin_dir, 'xinput1_3.dll'), staging_dir)
+        shutil.copy(xinput1_3_dll_path, staging_dir)
 
         if is_dev_release:
-            shutil.copy(os.path.join(bin_dir, 'ue4ss.pdb'), staging_dir)
+            shutil.copy(ue4ss_pdb_path, staging_dir)
             if os.path.exists(os.path.join(staging_dir, 'docs')):
                 shutil.copytree('docs', os.path.join(staging_dir, 'docs'))
 
@@ -198,6 +213,7 @@ parser = argparse.ArgumentParser()
 subparsers = parser.add_subparsers(dest='command', required=True)
 package_parser = subparsers.add_parser('package')
 package_parser.add_argument('-e', action='store_true')
+package_parser.add_argument('-d', action='store')
 release_commit_parser = subparsers.add_parser('release_commit')
 release_commit_parser.add_argument('username', nargs='?')
 args = parser.parse_args()

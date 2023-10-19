@@ -1162,9 +1162,28 @@ namespace RC
 
     auto UE4SSProgram::uninstall_mods() -> void
     {
+        std::vector<CppMod*> cpp_mods{};
+        std::vector<LuaMod*> lua_mods{};
         for (auto& mod : m_mods)
         {
+            if (auto cpp_mod = dynamic_cast<CppMod*>(mod.get()); cpp_mod)
+            {
+                cpp_mods.emplace_back(cpp_mod);
+            }
+            else if (auto lua_mod = dynamic_cast<LuaMod*>(mod.get()); lua_mod)
+            {
+                lua_mods.emplace_back(lua_mod);
+            }
+        }
+
+        for (auto& mod : lua_mods)
+        {
             // Remove any actions, or we'll get an internal error as the lua ref won't be valid
+            mod->uninstall();
+        }
+
+        for (auto& mod : cpp_mods)
+        {
             mod->uninstall();
         }
 

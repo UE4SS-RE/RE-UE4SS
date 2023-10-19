@@ -21,6 +21,12 @@ jobs:
     runs-on: windows-2022
 
     steps:
+      - name: Setup github SSH
+        uses: shimataro/ssh-key-action@v2
+        with:
+          key: ${{ secrets.UEPSEUDO_SSH_KEY }}
+          known_hosts: unnecessary
+
       - name: Checkout
         uses: actions/checkout@v3
         with:
@@ -49,7 +55,7 @@ jobs:
 
       - name: Build
         run: |
-          cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
+          cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Game__Shipping__Win64
           cmake --build build
 
       - name: Package

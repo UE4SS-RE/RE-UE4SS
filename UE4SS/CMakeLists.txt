@@ -11,19 +11,6 @@ option(UE4SS_LIB_BETA_IS_STARTED "Have beta releases started for the current maj
 option(UE4SS_LIB_IS_BETA "Is this a beta release" ON)
 # Release settings -> END
 
-# Settings -> START
-option(UE4SS_CONSOLE_COLORS_ENABLED "Enable console colors" OFF)
-option(UE4SS_WITH_CASE_PRESERVING_NAME "Use case-preserving FNames" OFF)
-
-if (UE4SS_CONSOLE_COLORS_ENABLED)
-    add_compile_definitions(UE4SS_CONSOLE_COLORS_ENABLED)
-endif ()
-
-if (UE4SS_WITH_CASE_PRESERVING_NAME)
-    add_compile_definitions(WITH_CASE_PRESERVING_NAME)
-endif ()
-# Settings -> END
-
 # Codegen settings -> START
 set(UE4SS_GENERATED_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/generated_include")
 set(UE4SS_GENERATED_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/generated_src")
@@ -140,6 +127,14 @@ target_include_directories(${TARGET} PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SO
 target_include_directories(${TARGET} PUBLIC $<BUILD_INTERFACE:${CMAKE_HOME_DIRECTORY}/deps/third/sol3/include>)
 target_include_directories(${TARGET} PUBLIC $<BUILD_INTERFACE:${CMAKE_HOME_DIRECTORY}/deps/third/map-macro>)
 
+file(GLOB_RECURSE UE4SS_HEADERS include/**.hpp)
+target_sources(${TARGET} PUBLIC
+    FILE_SET ue4ss_headers TYPE HEADERS
+    BASE_DIRS include
+    FILES ${UE4SS_HEADERS})
+get_property("TARGET_SOURCE_FILES" TARGET "${TARGET}" PROPERTY SOURCES)
+source_group(TREE "${CMAKE_CURRENT_LIST_DIR}" FILES ${TARGET_SOURCE_FILES} ${UE4SS_HEADERS})
+
 # First party static build -> START
 target_compile_definitions(${TARGET} PRIVATE
         RC_UE4SS_EXPORTS
@@ -175,7 +170,7 @@ set_property(TARGET ${TARGET} PROPERTY INTERPROCEDURAL_OPTIMIZATION ON)
 # Making sure that the linked C runtime is a dll so that C++ mods will work correctly
 set_property(TARGET ${TARGET} PROPERTY MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>DLL")
 
-set_target_properties(${TARGET} PROPERTIES OUTPUT_NAME "ue4ss")
+set_target_properties(${TARGET} PROPERTIES OUTPUT_NAME "UE4SS")
 
 # luajit -> START
 add_library(luajit STATIC IMPORTED)

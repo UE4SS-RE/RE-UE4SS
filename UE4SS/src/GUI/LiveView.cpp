@@ -10,6 +10,7 @@
 
 #include <DynamicOutput/DynamicOutput.hpp>
 #include <ExceptionHandling.hpp>
+#include <Constructs/Views/EnumerateView.hpp>
 #include <GUI/GUI.hpp>
 #include <GUI/ImGuiUtility.hpp>
 #include <GUI/LiveView.hpp>
@@ -17,6 +18,7 @@
 #include <GUI/LiveView/Filter/ExcludeClassName.hpp>
 #include <GUI/LiveView/Filter/FunctionParamFlags.hpp>
 #include <GUI/LiveView/Filter/HasProperty.hpp>
+#include <GUI/LiveView/Filter/HasPropertyType.hpp>
 #include <GUI/LiveView/Filter/IncludeDefaultObjects.hpp>
 #include <GUI/LiveView/Filter/InstancesOnly.hpp>
 #include <GUI/LiveView/Filter/NonInstancesOnly.hpp>
@@ -31,6 +33,8 @@
 #include <Unreal/Property/FArrayProperty.hpp>
 #include <Unreal/Property/FBoolProperty.hpp>
 #include <Unreal/Property/FObjectProperty.hpp>
+#include <Unreal/Property/FEnumProperty.hpp>
+#include <Unreal/Property/NumericPropertyTypes.hpp>
 #include <Unreal/UClass.hpp>
 #include <Unreal/UEnum.hpp>
 #include <Unreal/UFunction.hpp>
@@ -39,6 +43,7 @@
 #include <Unreal/UPackage.hpp>
 #include <Unreal/UScriptStruct.hpp>
 #include <Unreal/UnrealInitializer.hpp>
+#include <Unreal/UKismetNodeHelperLibrary.hpp>
 #include <imgui.h>
 #include <imgui_internal.h>
 #include <misc/cpp/imgui_stdlib.h>
@@ -53,7 +58,8 @@ namespace RC::GUI
                                               Filter::DefaultObjectsOnly,
                                               Filter::FunctionParamFlags,
                                               Filter::ExcludeClassName,
-                                              Filter::HasProperty>{};
+                                              Filter::HasProperty,
+                                              Filter::HasPropertyType>{};
 
     static int s_max_elements_per_chunk{};
     static int s_chunk_id_start{};
@@ -1182,8 +1188,7 @@ namespace RC::GUI
                                          FProperty** last_property_in,
                                          bool* tried_to_open_nullptr_object,
                                          bool is_watchable,
-                                         int32 first_offset,
-                                         bool container_is_array) -> std::variant<std::monostate, UObject*, FProperty*>
+                                         int32 first_offset) -> std::variant<std::monostate, UObject*, FProperty*>
     {
         std::variant<std::monostate, UObject*, FProperty*> next_item_to_render{};
         auto property_offset = property->GetOffset_Internal();
@@ -1233,7 +1238,7 @@ namespace RC::GUI
                 {
                     ImGui::SetClipboardText(to_string(property_text.GetCharArray()).c_str());
                 }
-                if (container_type == ContainerType::Object)
+                if (container_type == ContainerType::Object || container_type == ContainerType::Struct)
                 {
                     if (ImGui::MenuItem("Edit value"))
                     {
@@ -1299,7 +1304,7 @@ namespace RC::GUI
         {
             ImGui::Text("0x%X%s %s:",
                         first_offset,
-                        container_is_array ? std::format("").c_str() : std::format(" (0x{:X})", property_offset).c_str(),
+                        container_type == ContainerType::Array ? std::format("").c_str() : std::format(" (0x{:X})", property_offset).c_str(),
                         property_name.c_str());
         }
         if (auto struct_property = CastField<FStructProperty>(property); struct_property && struct_property->GetStruct()->GetFirstProperty())
@@ -1315,16 +1320,12 @@ namespace RC::GUI
                 {
                     FString struct_prop_text_item{};
                     auto struct_prop_container_ptr = inner_property->ContainerPtrToValuePtr<void*>(container_ptr);
-                    inner_property->ExportTextItem(struct_prop_text_item,
-                                                   struct_prop_container_ptr,
-                                                   struct_prop_container_ptr,
-                                                   static_cast<UObject*>(*container_ptr),
-                                                   NULL);
+                    inner_property->ExportTextItem(struct_prop_text_item, struct_prop_container_ptr, struct_prop_container_ptr, nullptr, NULL);
 
                     ImGui::Indent();
                     FProperty* last_struct_prop{};
                     next_item_to_render = render_property_value(inner_property,
-                                                                inner_property->IsA<FObjectProperty>() ? ContainerType::Object : ContainerType::NonObject,
+                                                                ContainerType::Struct,
                                                                 container_ptr,
                                                                 &last_struct_prop,
                                                                 tried_to_open_nullptr_object,
@@ -1359,14 +1360,8 @@ namespace RC::GUI
                     ImGui::Text("[%i]:", i);
                     ImGui::Indent();
                     ImGui::SameLine();
-                    next_item_to_render = render_property_value(inner_property,
-                                                                inner_property->IsA<FObjectProperty>() ? ContainerType::Object : ContainerType::NonObject,
-                                                                element_container_ptr,
-                                                                nullptr,
-                                                                tried_to_open_nullptr_object,
-                                                                false,
-                                                                element_offset,
-                                                                true);
+                    next_item_to_render =
+                            render_property_value(inner_property, ContainerType::Array, element_container_ptr, nullptr, tried_to_open_nullptr_object, false, element_offset);
                     ImGui::Unindent();
 
                     if (!std::holds_alternative<std::monostate>(next_item_to_render))
@@ -1381,6 +1376,32 @@ namespace RC::GUI
                 ImGui::TreePop();
             }
             render_property_value_context_menu(tree_node_id);
+        }
+        else if (property->IsA<FEnumProperty>() || (property->IsA<FByteProperty>() && static_cast<FByteProperty*>(property)->IsEnum()))
+        {
+            UEnum* uenum{};
+            if (property->IsA<FByteProperty>())
+            {
+                uenum = static_cast<FByteProperty*>(property)->GetEnum();
+            }
+            else
+            {
+                uenum = static_cast<FEnumProperty*>(property)->GetEnum();
+            }
+            auto value_raw = *std::bit_cast<uint8*>(container_ptr);
+            uint8 enum_index{};
+            for (const auto& [key_value_pair, index] : uenum->ForEachName() | views::enumerate)
+            {
+                if (key_value_pair.Value == value_raw)
+                {
+                    enum_index = index;
+                    break;
+                }
+            }
+            auto value_as_string = Unreal::UKismetNodeHelperLibrary::GetEnumeratorUserFriendlyName(uenum, enum_index);
+            ImGui::SameLine();
+            ImGui::Text("%S", value_as_string.c_str());
+            render_property_value_context_menu();
         }
         else
         {
@@ -1404,65 +1425,61 @@ namespace RC::GUI
             ImGui::EndTooltip();
         }
 
-        // TODO: The 'container' variable should be a variant or something because it could be a struct or array, it's not guaranteed to be a UObject.
+        auto obj = container_type == ContainerType::Array ? *static_cast<UObject**>(container) : static_cast<UObject*>(container);
+        StringType parent_name{};
         if (container_type == ContainerType::Object)
         {
-            auto obj = container_is_array ? *static_cast<UObject**>(container) : static_cast<UObject*>(container);
-            auto obj_name = obj ? obj->GetName() : STR("None");
-            auto edit_property_value_modal_name = to_string(std::format(STR("Edit value of property: {}->{}"), obj_name, property->GetName()));
+            parent_name = obj ? obj->GetName() : STR("None");
+        }
+        auto edit_property_value_modal_name = to_string(std::format(STR("Edit value of property: {}->{}"), parent_name, property->GetName()));
 
-            if (open_edit_value_popup)
+        if (open_edit_value_popup)
+        {
+            ImGui::OpenPopup(edit_property_value_modal_name.c_str());
+            if (!m_modal_edit_property_value_opened_this_frame)
             {
-                ImGui::OpenPopup(edit_property_value_modal_name.c_str());
-                if (!m_modal_edit_property_value_opened_this_frame)
+                m_modal_edit_property_value_opened_this_frame = true;
+                m_current_property_value_buffer = to_string(property_text.GetCharArray());
+            }
+        }
+
+        if (ImGui::BeginPopupModal(edit_property_value_modal_name.c_str(), &m_modal_edit_property_value_is_open))
+        {
+            ImGui::Text("Uses the same format as the 'set' UE4 console command.");
+            ImGui::Text("The game could crash if the new value is invalid.");
+            ImGui::Text("The game can override the new value immediately.");
+            ImGui::PushItemWidth(-1.0f);
+            ImGui::InputText("##CurrentPropertyValue", &m_current_property_value_buffer);
+            if (ImGui::Button("Apply"))
+            {
+                FOutputDevice placeholder_device{};
+                if (!property->ImportText(to_wstring(m_current_property_value_buffer).c_str(), property->ContainerPtrToValuePtr<void>(container), NULL, obj, &placeholder_device))
                 {
-                    m_modal_edit_property_value_opened_this_frame = true;
-                    m_current_property_value_buffer = to_string(property_text.GetCharArray());
+                    m_modal_edit_property_value_error_unable_to_edit = true;
+                    ImGui::OpenPopup("UnableToSetNewPropertyValueError");
+                }
+                else
+                {
+                    ImGui::CloseCurrentPopup();
                 }
             }
 
-            if (ImGui::BeginPopupModal(edit_property_value_modal_name.c_str(), &m_modal_edit_property_value_is_open))
+            if (ImGui::BeginPopupModal("UnableToSetNewPropertyValueError",
+                                       &m_modal_edit_property_value_error_unable_to_edit,
+                                       ImGuiWindowFlags_NoResize | ImGuiWindowFlags_AlwaysAutoResize))
             {
-                ImGui::Text("Uses the same format as the 'set' UE4 console command.");
-                ImGui::Text("The game could crash if the new value is invalid.");
-                ImGui::Text("The game can override the new value immediately.");
-                ImGui::PushItemWidth(-1.0f);
-                ImGui::InputText("##CurrentPropertyValue", &m_current_property_value_buffer);
-                if (ImGui::Button("Apply"))
-                {
-                    FOutputDevice placeholder_device{};
-                    if (!property->ImportText(to_wstring(m_current_property_value_buffer).c_str(),
-                                              property->ContainerPtrToValuePtr<void>(container),
-                                              NULL,
-                                              obj,
-                                              &placeholder_device))
-                    {
-                        m_modal_edit_property_value_error_unable_to_edit = true;
-                        ImGui::OpenPopup("UnableToSetNewPropertyValueError");
-                    }
-                    else
-                    {
-                        ImGui::CloseCurrentPopup();
-                    }
-                }
-
-                if (ImGui::BeginPopupModal("UnableToSetNewPropertyValueError",
-                                           &m_modal_edit_property_value_error_unable_to_edit,
-                                           ImGuiWindowFlags_NoResize | ImGuiWindowFlags_AlwaysAutoResize))
-                {
-                    ImGui::Text("Was unable to set new value, please make sure you're using the correct format.");
-                    ImGui::NewLine();
-                    ImGui::Text("Technical details:");
-                    ImGui::Text("FProperty::ImportText returned NULL.");
-                    ImGui::EndPopup();
-                }
+                ImGui::Text("Was unable to set new value, please make sure you're using the correct format.");
+                ImGui::NewLine();
+                ImGui::Text("Technical details:");
+                ImGui::Text("FProperty::ImportText returned NULL.");
                 ImGui::EndPopup();
             }
+            ImGui::EndPopup();
+        }
 
-            if (m_modal_edit_property_value_opened_this_frame)
-            {
-                m_modal_edit_property_value_opened_this_frame = false;
-            }
+        if (m_modal_edit_property_value_opened_this_frame)
+        {
+            m_modal_edit_property_value_opened_this_frame = false;
         }
         return next_item_to_render;
     }
@@ -1480,7 +1497,6 @@ namespace RC::GUI
         std::string plus = "+";
         std::string minus = "-";
         int32_t index = -1;
-        StringType enum_name{};
 
         for (const auto name : names)
         {
@@ -1488,7 +1504,7 @@ namespace RC::GUI
             bool open_edit_value_popup{};
             bool open_add_name_popup{};
             ++index;
-            enum_name = name.Key.ToString();
+            auto enum_name = UKismetNodeHelperLibrary::GetEnumeratorUserFriendlyName(uenum, index);
             ImGui::AlignTextToFramePadding();
             ImGui::Text("%S <=> %lld", enum_name.c_str(), name.Value);
 
@@ -1671,7 +1687,8 @@ namespace RC::GUI
                     FName new_key = FName(new_name, FNAME_Add);
                     int64 value = names[index].Value;
 
-                    uenum->InsertIntoNames(TPair{new_key, value}, index, true);
+                    // NOTE: Explicitly giving specifying template params for TPair because Clang can't handle TPair being a templated using statement.
+                    uenum->InsertIntoNames(TPair<decltype(new_key), decltype(value)>{new_key, value}, index, true);
 
                     if (uenum->GetEnumNames()[index].Key.ToString() != new_name)
                     {
@@ -2359,7 +2376,7 @@ namespace RC::GUI
             }
             has_out_params = true;
             FString param_text{};
-            auto container_ptr = param->ContainerPtrToValuePtr<void*>(context.TheStack.Locals());
+            auto container_ptr = FindOutParamValueAddress(context.TheStack, param);
             param->ExportTextItem(param_text, container_ptr, container_ptr, std::bit_cast<UObject*>(function), NULL);
             buffer.append(std::format(STR("    {} = {}\n"), param->GetName(), param_text.GetCharArray()));
         }
@@ -2561,6 +2578,16 @@ namespace RC::GUI
                 if (ImGui::InputText("##HasProperty", &Filter::HasProperty::s_internal_value))
                 {
                     Filter::HasProperty::s_value = to_wstring(Filter::HasProperty::s_internal_value);
+                }
+
+                // Row 7
+                ImGui::TableNextRow();
+                ImGui::TableNextColumn();
+                ImGui::Text("Has property of type");
+                ImGui::TableNextColumn();
+                if (ImGui::InputText("##HasPropertyType", &Filter::HasPropertyType::s_internal_value))
+                {
+                    Filter::HasPropertyType::s_value = FName(to_wstring(Filter::HasPropertyType::s_internal_value), FNAME_Add);
                 }
 
                 ImGui::EndTable();

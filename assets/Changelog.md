@@ -6,18 +6,44 @@ TBD
 ### General
 Added support for UE Version 5.2 games
 
-Changed to a new proxy DLL loading system. - LocalCC  
+New proxy DLL loading system. - LocalCC  
 Different proxy DLLs can now easily be compiled for cases where xinput1_3 cannot be used for any reason.  
 Alternative proxys may be compiled by specifying `-DUE4SS_PROXY_PATH=/Path/To/DLL.dll` when running the CMake command.
 
 Added additional AOB for `FName::ToString` - LongerWarrior
 
-The shortcut (CTRL + O) for opening the GUI is now a toggle, meaning it can also be used for closing the GUI
+### Live View
+Can now view enum values in the Live View debugger
 
-The shortcut (previously J) for dumping objects (generating UE4SS_ObjectDump.txt) has been changed to CTRL + J
+Added a checkbox that toggles search options globally, meaning when not searching
 
-The shortcut (previously D) for generating CXX headers has been changed to CTRL + H
+Added search filter `Function parameter flags`, it excludes objects that are non-UFunctions and UFunctions that don't have params with the specified flags
 
+Added search filter `Non-instances only`
+
+Added search filter `Include CDOs`, it includes objects that are not a ClassDefaultObject or an ArchetypeObject
+
+Added search filter `CDOs only`, it excludes objects that are not a ClassDefaultObject or an ArchetypeObject
+
+Added search filter `Use Regex for search` - HW12Dev
+
+Added search filter `Exclude class name`, it excludes objects with a ClassPrivate name not containing the specified (case-sensitive) string
+
+Added search filter `Has property`, it exclude objects that don't have a property (inheritance included) of the specified (case-sensitive) name
+
+Added search filter `Has property of type`, it excludes objects that don't have a property (inheritance included) of the specified (case-sensitive) type
+
+### UHT Dumper
+Removed unnecessary explicit `_MAX` elements from enums
+
+Made `FWeakObjectPtr` overridable unless used in a TArray or TMap
+
+### Lua API
+Added an optional third parameter to `RegisterHook`  
+If provided, it will act as a post callback hook where out-params can be modified  
+Note that for BP-only functions, both callbacks act as post callbacks
+
+Out-params for script hooks (`RegisterCustomEvent` or `RegisterHook` on a BP-only UFunction) can now be set by doing `Param:set(<new-value>)`
 
 ### C++ API
 Finalize C++ API. - LocalCC; Truman
@@ -27,11 +53,16 @@ Due to the above change, C++ mods now only need to link to UE4SS.
 
 C++ mods are now loaded earlier, and will keep the game from starting until all mods have finished executing their `start_mod` function
 
+Made calls to `UObject::StaticClass` work for custom UObject classes that have been made with the `DECLARE_EXTERNAL_OBJECT_CLASS` and `IMPLEMENT_EXTERNAL_OBJECT_CLASS` macros
+
 Expose IMGui to C++ mods - Truman
 
 Added `on_lua_start` for C++ mods.  
 This function fires whenever a Lua mod by the same name as the C++ mod is started.  
 It allows interactions with Lua from C++ mods.
+
+Added `on_lua_stop` for C++ mods.
+This function fires right before a Lua mod by the same name as the C++ mod is about to be stopped.
 
 Added `UFunction::RegisterPreHookForInstance` and `UFunction::RegisterPostHookForInstance`  
 These functions work the same as `UFunction::RegisterPreHook`/`UFunction::RegisterPostHook` except the callback is only fired if the context matches the specified instance  
@@ -43,24 +74,62 @@ Added `UEnum::NumEnums`, which returns the number of enum values for the enum
 
 Added `UEnum::GenerateEnumPrefix`, which is the same as https://docs.unrealengine.com/5.2/en-US/API/Runtime/CoreUObject/UObject/UEnum/GenerateEnumPrefix/
 
-### Live View
-Can now view enum values in the Live View debugger
+Added `UGameplayStatics::FindNearestActor`
 
-Added a search option to exclude objects of a class with a name containing the specified (case-sensitive) string
-
-Added a checkbox that toggles search options globally, meaning when not searching
-
-### UHT Dumper
-Removed unnecessary explicit `_MAX` elements from enums
-
-Fixed enums inappropriately using `uint8`
-
-Made `FWeakObjectPtr` overridable unless used in a TArray or TMap
+Added the following functions to `AActor`: `K2_DestroyActor`, `K2_SetActorLocation`, `K2_SetActorLocationAndRotation`, `K2_GetActorRotation`, `K2_SetActorRotation`, `GetActorScale3D`, `SetActorScale3D`, `GetActorEnableCollision`, `SetActorEnableCollision`, `SetActorHiddenInGame`, `IsActorTickEnabled`, `SetActorTickEnabled`, `GetActorTickInterval`, `SetActorTickInterval`, `GetActorTimeDilation` - Okaetsu
 
 ### Experimental
 Added ExperimentalFeatures section to UE4SS-settings.ini.  All experimental features will default to being turned off.  To use referenced features, change the relevant config setting to = 1
 
 Added ability to call UFunctions from Live View GUI
+
+
+## Changes
+
+### General
+The shortcut (CTRL + O) for opening the GUI is now a toggle, meaning it can also be used for closing the GUI
+
+The shortcut (previously J) for dumping objects (generating UE4SS_ObjectDump.txt) has been changed to CTRL + J
+
+The shortcut (previously D) for generating CXX headers has been changed to CTRL + H
+
+Change AOB Sig Scanner backend to use std::find for major performance increase - inspired by Truman
+
+Scan for specified time rather than number of attempts due to speed increase
+
+Improved performance for U/FProperty lookups
+
+Improved performance for UFunction lookups
+
+Improved performance of the GUI log, it's now O(n) - trumank
+
+BPModLoaderMod: Add ability to specify load order - Okaetsu
+
+Add additional extensions to USMap dumper - Atenfyr; Archengius
+
+Fix bug in USMap dumper with enums with 256 entries - Atenfyr
+
+### Live View
+
+### UHT Dumper
+
+### Lua API
+Improved reliability of `IsValid`
+
+### C++ API
+The callbacks for all hook registration functions inside the `Unreal::Hook` namespace can now take lambdas that capture variables
+
+Changed many functions to use coroutines - LocalCC  
+This means the syntax for those functions is now identical to a range-based for loop instead of a function taking a callback
+
+### Repo & Build Process
+Add automated release script - Truman
+
+Change documentation build process - Truman; Buckminsterfullerene
+
+Removed libfmt dependency
+
+Gradual work on getting Clang to work - LocalCC; Narknon
 
 
 ## Fixes
@@ -70,7 +139,20 @@ Finish adding version 4.11 support
 
 Fix case preserving names switch - LocalCC
 
-Add common TArray instantiations
+### Live View
+Fixed two crashes occurring when exploring structs nested in arrays or other structs
+
+### UHT Dumper
+Fixed enums inappropriately using `uint8`
+
+### Lua API
+Fixed `UnregisterHook`
+
+Fixed FText:ToString - LocalCC
+
+Improved stability when using hooks or `ExecuteInGameThread`
+
+TArrays are now resized when being indexed into if necessary
 
 ### C++ API
 Fixed FText constructor implementation via optional AOB - LocalCC
@@ -79,57 +161,6 @@ Fixed initialization functions not being correctly called when a mod is restarte
 
 Fixed C++ mods not loading if a Lua mod with the same name is present
 
-### Lua API
-Fixed unregisterhook
-
-Fixed FText:ToString - LocalCC
-
-Improved stability when using hooks or `ExecuteInGameThread`
-
-TArrays are now resized when indexing into them
-
-## Changes
-
-### USMap Dumper
-Add additional extensions - Atenfyr; Archengius
-
-Fix bug with enums with 256 entries - Atenfyr
-
-### C++ API
-The callbacks for all hook registration functions inside the `Unreal::Hook` namespace can now take lambdas that capture variables
-
-### Sig Scanner
-Change AOB Sig Scanner backend to use std::find for major performance increase - inspired by Truman
-
-Scan for specified time rather than number of attempts due to speed increase
-
-### Performance
-Change to generators for certain major iterators - LocalCC
-
-Improved performance for U/FProperty lookups
-
-Improved performance for UFunction lookups
-
-Improved performance of the live log, it's now O(n) - trumank
-
-### BP Mod Loader
-Add ability to specify load order - Okaetsu
-
-
-## Misc.
-Changes to IsValid for increased reliability
-
-Add destroy listener
-
-### Repo
-Add automated release script - Truman
-
-Change documentation build process - Truman; Buckminsterfullerene
-
-Removed FMT dependency
-
-### Build Process
-Fix compiling for Clang - LocalCC; Narknon
 
 ## Settings
 
