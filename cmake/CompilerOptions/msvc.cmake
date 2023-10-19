@@ -1,4 +1,4 @@
-set(DEFAULT_COMPILER_FLAGS "/MP;/W3;/wd4005;/wd4251;/wd4068;/Zc:inline;/Zc:strictStrings" PARENT_SCOPE)
+set(DEFAULT_COMPILER_FLAGS "/MP;/W3;/wd4005;/wd4251;/wd4068;/Zc:inline;/Zc:strictStrings;/Zc:preprocessor" PARENT_SCOPE)
 
 set(LINKER_FLAGS "/DEBUG:FULL")
 set(DEFAULT_SHARED_LINKER_FLAGS "${LINKER_FLAGS}" PARENT_SCOPE)
