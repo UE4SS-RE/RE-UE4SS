@@ -354,7 +354,7 @@ namespace RC
             sol::function post_callback_in_gameplay_state{};
             if (post_callback.valid())
             {
-                post_callback_in_gameplay_state = sol::function(gameplay_state, callback);
+                post_callback_in_gameplay_state = sol::function(gameplay_state, post_callback);
             }
 
             int32_t generic_pre_id{};
