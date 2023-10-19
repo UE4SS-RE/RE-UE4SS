@@ -7,8 +7,8 @@ RegisterConsoleCommandHandler("set", function(FullCommand, Parameters, Ar)
     local ClassOrObjectName = Parameters[1]
     local PropertyName = Parameters[2]
     local NewPropertyValue = Parameters[3]
-    
-    local BannedFlags = EObjectFlags.RF_ClassDefaultObject | EObjectFlags.RF_ArchetypeObject
+
+    local BannedFlags = bit.bor(EObjectFlags.RF_ClassDefaultObject, EObjectFlags.RF_ArchetypeObject)
     
     if not ClassOrObjectName or ClassOrObjectName == "" or ClassOrObjectName == " " then
         Log("No class or object name supplied")
