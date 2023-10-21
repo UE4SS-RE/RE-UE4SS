@@ -215,10 +215,11 @@ namespace RC
                     // If the type wasn't supported then we simply output a warning and then do nothing
                     auto parameter_type_name = lua_data.return_property->GetClass().GetName();
                     auto parameter_name = lua_data.return_property->GetName();
-                    Output::send(STR("Tried altering return value of a hooked UFunction without a registered handler for return type Return property '{}' of type "
-                                     "'{}' not supported.\n"),
-                                 parameter_name,
-                                 parameter_type_name);
+                    Output::send(
+                            STR("Tried altering return value of a hooked UFunction without a registered handler for return type Return property '{}' of type "
+                                "'{}' not supported.\n"),
+                            parameter_name,
+                            parameter_type_name);
                 }
             }
         };
@@ -282,7 +283,8 @@ namespace RC
                         {
                             data = param->ContainerPtrToValuePtr<void>(context.TheStack.Locals());
                         }
-                        auto pusher_params = PropertyPusherFunctionParams{lua_data.lua, nullptr, param, data, PushType::ToLuaParam, &param_wrappers, context.Context};
+                        auto pusher_params =
+                                PropertyPusherFunctionParams{lua_data.lua, nullptr, param, data, PushType::ToLuaParam, &param_wrappers, context.Context};
                         if (auto error_msg = property_pusher(pusher_params); !error_msg.empty())
                         {
                             EXIT_NATIVE_HOOK_WITH_ERROR(break, lua_data, std::format(STR("Error setting parameter value: {}\n"), to_wstring(error_msg)))
@@ -1262,7 +1264,11 @@ namespace RC
                         [](UObject* self) {
                             return self->GetFullName();
                         },
-                        CHOOSE_CONST_MEMBER_OVERLOAD(UObject, GetFullName, UObject*)));
+                        CHOOSE_CONST_MEMBER_OVERLOAD(UObject, GetFullName, UObject*)),
+
+                // 2.X Compatibility
+                "GetFName",
+                CHOOSE_MEMBER_OVERLOAD(UObject, GetNamePrivate));
 
         sol.new_usertype<UClass>("UClass",
                                  sol::no_constructor,

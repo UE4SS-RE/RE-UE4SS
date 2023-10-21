@@ -253,7 +253,11 @@ namespace RC
         sol.set("NAME_None", NAME_None);
 
         sol.set_function("FindFirstOf", CHOOSE_FREE_OVERLOAD(UObjectGlobals::FindFirstOf, const std::wstring&));
-        sol.set_function("FindAllOf", CHOOSE_FREE_OVERLOAD(UObjectGlobals::FindAllOf, const std::wstring&, std::vector<UObject*>&));
+        sol.set_function("FindAllOf", [](StringType object_name) -> sol::as_table_t<std::vector<UObject*>> {
+            std::vector<UObject*> objects{};
+            UObjectGlobals::FindAllOf(object_name, objects);
+            return objects;
+        });
         sol.set_function("IsKeyBindRegistered",
                          sol::overload(
                                  [](Input::Key key) {
