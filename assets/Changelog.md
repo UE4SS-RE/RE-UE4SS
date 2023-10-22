@@ -58,11 +58,13 @@ Made calls to `UObject::StaticClass` work for custom UObject classes that have b
 Expose IMGui to C++ mods - Truman
 
 Added `on_lua_start` for C++ mods.  
-This function fires whenever a Lua mod by the same name as the C++ mod is started.  
+Overload #1: This function fires whenever any Lua mod is started.  
+Overload #2: This function fires whenever a Lua mod by the same name as the C++ mod is started.  
 It allows interactions with Lua from C++ mods.
 
-Added `on_lua_stop` for C++ mods.
-This function fires right before a Lua mod by the same name as the C++ mod is about to be stopped.
+Added `on_lua_stop` for C++ mods.  
+Overload #1: This function fires whenever any Lua mod is about to be stopped.  
+Overload #2: This function fires right before a Lua mod by the same name as the C++ mod is about to be stopped.
 
 Added `UFunction::RegisterPreHookForInstance` and `UFunction::RegisterPostHookForInstance`  
 These functions work the same as `UFunction::RegisterPreHook`/`UFunction::RegisterPostHook` except the callback is only fired if the context matches the specified instance  
