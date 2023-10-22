@@ -64,8 +64,7 @@ endif ()
 target_include_directories(${TARGET} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
 
 target_compile_definitions(${TARGET} PRIVATE
-        $<$<BOOL:${UE4SS_${TARGET}_BUILD_SHARED}>:
-            RC_${MODULE_NAME}_EXPORTS>
+        RC_${MODULE_NAME}_EXPORTS
         $<$<NOT:$<BOOL:${UE4SS_${TARGET}_BUILD_SHARED}>>:
             RC_${MODULE_NAME}_BUILD_STATIC>)
 
