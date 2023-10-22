@@ -128,8 +128,8 @@ namespace RC
         auto setup_lua_global_functions(const LuaMadeSimple::Lua& lua) const -> void;
         auto setup_lua_global_functions_main_state_only() const -> void;
         auto setup_lua_classes(const LuaMadeSimple::Lua& lua) const -> void;
-        auto fire_on_lua_start_for_cpp_mod() -> void;
-        auto fire_on_lua_stop_for_cpp_mod() -> void;
+        auto fire_on_lua_start_for_cpp_mods() -> void;
+        auto fire_on_lua_stop_for_cpp_mods() -> void;
 
       public:
         auto start_mod() -> void override;
