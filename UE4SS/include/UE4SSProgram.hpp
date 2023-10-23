@@ -7,6 +7,7 @@
 #include <thread>
 
 #include <Common.hpp>
+#include <CrashDumper.hpp>
 #include <DynamicOutput/DynamicOutput.hpp>
 #include <GUI/GUI.hpp>
 #include <GUI/GUITab.hpp>
@@ -19,7 +20,6 @@
 #include <SettingsManager.hpp>
 #include <Unreal/TArray.hpp>
 #include <Unreal/UnrealVersion.hpp>
-#include <polyhook2/PE/IatHook.hpp>
 
 // Used to set up ImGui context and allocator in DLL mods
 #define UE4SS_ENABLE_IMGUI()                                                                                                                                   \
@@ -80,6 +80,9 @@ namespace RC
         Input::Handler m_input_handler{L"ConsoleWindowClass", L"UnrealWindow"};
         std::jthread m_event_loop;
         std::jthread m_render_thread;
+
+      private:
+        CrashDumper m_crash_dumper{};
 
       private:
         std::filesystem::path m_game_path_and_exe_name;

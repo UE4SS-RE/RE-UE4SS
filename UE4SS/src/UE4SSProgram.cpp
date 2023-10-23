@@ -178,6 +178,13 @@ namespace RC
                 return;
             }
 
+            if (settings_manager.CrashDump.EnableDumping)
+            {
+                m_crash_dumper.enable();
+            }
+
+            m_crash_dumper.set_full_memory_dump(settings_manager.CrashDump.FullMemoryDump);
+
             m_debugging_gui.set_gfx_backend(settings_manager.Debug.GraphicsAPI);
 
             // Setup the log file
