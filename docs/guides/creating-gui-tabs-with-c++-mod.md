@@ -1,3 +1,5 @@
+# Creating GUI tabs with a C++ mod
+
 This guide will show how you create tabs for the GUI with a C++ mod, and the guide will take the form of comments in the code example below:
 ```c++
 #include <Mod/CppUserModBase.hpp>
@@ -49,7 +51,7 @@ public:
         // It's recommended that you use 'register_tab' instead of this function.
         m_less_safe_tab = std::make_shared<GUI::GUITab>(STR("My Less Safe Tab"), [](CppUserModBase* instance) {
             // This callback is identical to the one used with 'register_tab' except 'instance' is always nullptr.
-            ImGui::Text(std::format("This is the contents of the less safe tab").c_str());
+            ImGui::Text("This is the contents of the less safe tab");
         });
         UE4SSProgram::get_program().add_gui_tab(m_less_safe_tab);
     }
