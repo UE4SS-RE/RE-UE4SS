@@ -7,6 +7,7 @@
 #include <unordered_map>
 #include <unordered_set>
 
+#include <Common.hpp>
 #include <File/File.hpp>
 #include <LuaMadeSimple/LuaMadeSimple.hpp>
 #include <Mod/Mod.hpp>
@@ -20,9 +21,9 @@ namespace RC
         class UClass;
     }
 
-    auto get_mod_ref(const LuaMadeSimple::Lua& lua) -> class LuaMod*;
+    RC_UE4SS_API auto get_mod_ref(const LuaMadeSimple::Lua& lua) -> class LuaMod*;
 
-    class LuaMod : public Mod
+    class RC_UE4SS_API LuaMod : public Mod
     {
       private:
         std::wstring m_scripts_path;
