@@ -85,6 +85,7 @@
 - [C++ API](./cpp-api.md)
   - [C++ Examples](./cpp-api/cpp-examples.md)
   - [Creating a C++ Mod](./guides/creating-a-c++-mod.md)
+  - [Installing a C++ Mod](./guides/installing-a-c++-mod.md)
 - [Guides]()
   - [Fixing missing AOBs](./guides/fixing-compatibility-problems.md)
   - [Generating UHT headers](./guides/generating-uht-compatible-headers.md)
