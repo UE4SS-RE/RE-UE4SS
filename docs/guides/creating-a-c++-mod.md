@@ -122,4 +122,4 @@ The `Output::send` function uses `std::format` in the back-end so you should do 
 
 ## Part #4
 
-[Click to go to guide for installing a C++ Mod](./guides/installing-a-c++-mod.md)
+[Click to go to guide for installing a C++ Mod](./installing-a-c++-mod.md)
