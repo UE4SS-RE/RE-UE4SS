@@ -57,7 +57,7 @@ public:
         printf("MyAwesomeMod says hello\n");
     }
 
-    ~MyAwesomeMod()
+    ~MyAwesomeMod() override
     {
     }
 
