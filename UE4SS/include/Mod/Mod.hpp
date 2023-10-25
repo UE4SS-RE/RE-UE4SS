@@ -51,8 +51,8 @@ namespace RC
       public:
         auto get_name() const -> std::wstring_view;
 
-        auto virtual start_mod() -> void = 0;
-        auto virtual uninstall() -> void = 0;
+        virtual auto start_mod() -> void = 0;
+        virtual auto uninstall() -> void = 0;
 
         auto set_installable(bool) -> void;
         auto is_installable() const -> bool;
@@ -62,15 +62,15 @@ namespace RC
 
       public:
         // Main update from the program
-        auto virtual fire_update() -> void;
+        virtual auto fire_update() -> void;
 
-        auto virtual fire_unreal_init() -> void{};
+        virtual auto fire_unreal_init() -> void{};
 
         // Called once when the program is starting, after mods are setup but before any mods have been started
-        auto virtual fire_program_start() -> void{};
+        virtual auto fire_program_start() -> void{};
 
         // Async update
         // Used when the main update function would block other mods from executing their scripts
-        auto virtual update_async() -> void;
+        virtual auto update_async() -> void;
     };
 } // namespace RC
