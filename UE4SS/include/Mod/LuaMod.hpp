@@ -23,7 +23,7 @@ namespace RC
 
     RC_UE4SS_API auto get_mod_ref(const LuaMadeSimple::Lua& lua) -> class LuaMod*;
 
-    class RC_UE4SS_API LuaMod : public Mod
+    class LuaMod : public Mod
     {
       private:
         std::wstring m_scripts_path;
@@ -138,16 +138,16 @@ namespace RC
 
         auto prepare_mod(const LuaMadeSimple::Lua& lua) -> void;
 
-        auto lua() const -> const LuaMadeSimple::Lua&;
-        auto main_lua() const -> const LuaMadeSimple::Lua*;
-        auto async_lua() const -> const LuaMadeSimple::Lua*;
-        auto get_lua_state() const -> lua_State*;
+        RC_UE4SS_API auto lua() const -> const LuaMadeSimple::Lua&;
+        RC_UE4SS_API auto main_lua() const -> const LuaMadeSimple::Lua*;
+        RC_UE4SS_API auto async_lua() const -> const LuaMadeSimple::Lua*;
+        RC_UE4SS_API auto get_lua_state() const -> lua_State*;
 
-        auto actions_lock() -> void
+        RC_UE4SS_API auto actions_lock() -> void
         {
             m_actions_lock.lock();
         }
-        auto actions_unlock() -> void
+        RC_UE4SS_API auto actions_unlock() -> void
         {
             m_actions_lock.unlock();
         }
