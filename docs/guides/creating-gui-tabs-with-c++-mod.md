@@ -19,7 +19,7 @@ public:
         ModDescription = STR("This is my awesome mod");
         ModAuthors = STR("UE4SS Team");
         
-        // It's critical that we enable ImGui before we create our tab.
+        // It's critical that you enable ImGui before you create your tab.
         // If you don't do this, a crash will occur as soon as ImGui tries to render anything in your tab.
         UE4SS_ENABLE_IMGUI()
         
@@ -32,12 +32,12 @@ public:
             // In this callback, you can start rendering the contents of your tab with ImGui. 
             ImGui::Text("This is the contents of the tab");
             
-            // We can access members of our mod class with the 'instance' param.
+            // You can access members of your mod class with the 'instance' param.
             auto mod = dynamic_cast<MyAwesomeMod*>(instance);
             if (!mod)
             {
                 // Something went wrong that caused the 'instance' to not be correctly set.
-                // Let's abort the rest of the function before we access an invalid pointer.
+                // Let's abort the rest of the function so that you don't access an invalid pointer.
                 return;
             }
             
@@ -58,7 +58,7 @@ public:
 
     ~MyAwesomeMod() override
     {
-        // Because we created a tab with 'UE4SSProgram::add_gui_tab', we must manually remove it.
+        // Because you created a tab with 'UE4SSProgram::add_gui_tab', you must manually remove it.
         // Failure to remove the tab will result in a crash.
         UE4SSProgram::get_program().remove_gui_tab(m_less_safe_tab);
     }
