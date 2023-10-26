@@ -88,6 +88,8 @@ namespace RC::GUI
     bool LiveView::s_watches_loaded_from_disk{};
     bool LiveView::s_use_regex_for_search{};
 
+    static LiveView* s_live_view{};
+
     static auto get_object_full_name_cxx_string(UObject* object) -> std::string;
 
     static auto filter_out_objects(UObject* object) -> bool
@@ -149,10 +151,20 @@ namespace RC::GUI
 
         if (LiveView::s_use_regex_for_search)
         {
-            if (std::regex_search(object_full_name.begin(), object_full_name.end(), std::regex(name_to_search_by)))
+            try
             {
-                LiveView::s_name_search_results.emplace_back(object);
-                LiveView::s_name_search_results_set.emplace(object);
+                if (std::regex_search(object_full_name.begin(), object_full_name.end(), std::regex(name_to_search_by)))
+                {
+                    LiveView::s_name_search_results.emplace_back(object);
+                    LiveView::s_name_search_results_set.emplace(object);
+                }
+            }
+            catch (std::exception& e)
+            {
+                UE4SS_ERROR_OUTPUTTER()
+                LiveView::s_name_to_search_by.clear();
+                s_live_view->set_is_searching_by_name(false);
+                s_live_view->set_search_field_clear_requested(true);
             }
             return;
         }
@@ -874,6 +886,8 @@ namespace RC::GUI
                   m_default_search_buffer.size() + sizeof(char),
                   m_default_search_buffer.data(),
                   m_default_search_buffer.size() + sizeof(char));
+
+        s_live_view = this;
     }
 
     LiveView::~LiveView()
