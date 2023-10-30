@@ -46,6 +46,7 @@
 #include <Unreal/UPackage.hpp>
 #include <Unreal/UnrealVersion.hpp>
 #include <UnrealCustom/CustomProperty.hpp>
+#include <IniParser/Ini.hpp>
 #pragma warning(default : 4005)
 
 #include <Timer/FunctionTimer.hpp>
@@ -55,6 +56,25 @@ namespace RC
 
     Mod::Mod(UE4SSProgram& program, std::wstring&& mod_name, std::wstring&& mod_path) : m_program(program), m_mod_name(mod_name), m_mod_path(mod_path)
     {
+        m_deps_path = mod_path + L"/Deps.dep";
+        if (std::filesystem::exists(m_deps_path))
+		{
+            m_has_deps = true;
+
+            std::wifstream depsFile(m_deps_path);
+            std::wstring line;
+
+            while (std::getline(depsFile, line))
+            {
+                line.erase(std::remove_if(line.begin(), line.end(), ::iswspace), line.end());
+                m_dependencies.push_back(line);
+            }
+            depsFile.close();
+            for (auto& dep : m_dependencies)
+            {
+				Output::send<LogLevel::Verbose>(L"Found dependency: {}\n", dep);
+            }
+		}
     }
 
     auto Mod::get_name() const -> std::wstring_view
@@ -70,6 +90,16 @@ namespace RC
     auto Mod::is_installable() const -> bool
     {
         return m_installable;
+    }
+
+    auto Mod::has_deps() const -> bool
+    {
+        return m_has_deps;
+    }
+   
+    auto Mod::get_deps() -> std::vector<std::wstring>&
+    {
+        return m_dependencies;
     }
 
     auto Mod::set_installed(bool is_installed) -> void

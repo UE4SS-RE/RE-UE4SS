@@ -949,6 +949,7 @@ namespace RC
             set_error("Mods directory doesn't exist, please create it: <%S>", m_mods_directory.c_str());
         }
 
+        std::map<std::wstring, int> mod_name_to_index_map;
         for (const auto& sub_directory : std::filesystem::directory_iterator(m_mods_directory))
         {
             std::error_code ec;
@@ -966,6 +967,10 @@ namespace RC
             std::wstring directory_lowercase = sub_directory.path().stem().wstring();
             std::transform(directory_lowercase.begin(), directory_lowercase.end(), directory_lowercase.begin(), std::towlower);
 
+            // To ignore stuff like .git and .vscode
+            if (sub_directory.path().stem().wstring()[0] == L'.')
+				continue;
+
             if (directory_lowercase == L"shared")
             {
                 // Do stuff when shared libraries have been implemented
@@ -978,7 +983,41 @@ namespace RC
                 if (std::filesystem::exists(sub_directory.path() / "dlls"))
                     m_mods.emplace_back(std::make_unique<CppMod>(*this, sub_directory.path().stem().wstring(), sub_directory.path().wstring()));
             }
+
+            mod_name_to_index_map.insert({sub_directory.path().stem().wstring(), m_mods.size() - 1});
+            
         }
+
+        auto shuffle_loader_array = [&]() -> bool {
+                bool has_swapped = false;
+                for (auto& [mod_name, index] : mod_name_to_index_map)
+                {
+                    auto* mod = m_mods[index].get();
+                    for (auto& depname : mod->get_deps())
+                    {
+                        int otherIndex = mod_name_to_index_map[depname];
+                        index = mod_name_to_index_map[mod_name]; // Re calculate the index each loop for making sure we dont undo stuff by swapping stuff already swapped
+                        if (otherIndex > index)
+                        {
+                            has_swapped = true;
+                            m_mods[index].swap(m_mods[otherIndex]);
+                            int tempIndex = index;
+                            mod_name_to_index_map[mod_name] = otherIndex;
+                            mod_name_to_index_map[depname] = index;
+                            Output::send<LogLevel::Verbose>(L"Swapped {} with {} from index {} to {}\n", mod_name, depname, tempIndex, otherIndex);
+                        }
+                    }
+                }
+                return has_swapped;
+            };
+        auto loop_shuffle = [&]() -> void {
+                while (shuffle_loader_array())
+				{
+				}
+			};
+    
+    	loop_shuffle();
+
     }
 
     template <typename ModType>
@@ -994,7 +1033,7 @@ namespace RC
             bool mod_name_is_taken = std::find_if(mods.begin(), mods.end(), [&](auto& elem) {
                                          return elem->get_name() == mod->get_name();
                                      }) == mods.end();
-
+            
             if (mod_name_is_taken)
             {
                 mod->set_installable(false);

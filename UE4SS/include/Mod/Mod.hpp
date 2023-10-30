@@ -28,6 +28,8 @@ namespace RC
 #pragma warning(disable : 4251)
         std::wstring m_mod_name;
         std::wstring m_mod_path;
+        std::wstring m_deps_path;
+        std::vector<std::wstring> m_dependencies;
 #pragma warning(default : 4251)
 
       protected:
@@ -35,6 +37,7 @@ namespace RC
         // This is true by default and is only false if the state of the mod won't allow for a successful installation
         bool m_installable{true};
         bool m_installed{false};
+        bool m_has_deps{false};
         mutable bool m_is_started{false};
 
       public:
@@ -56,6 +59,8 @@ namespace RC
 
         auto set_installable(bool) -> void;
         auto is_installable() const -> bool;
+        auto has_deps() const -> bool;
+        auto get_deps() -> std::vector<std::wstring>&;
         auto set_installed(bool) -> void;
         auto is_installed() const -> bool;
         auto is_started() const -> bool;
