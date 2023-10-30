@@ -16,10 +16,4 @@ set(ZYDIS_BUILD_EXAMPLES OFF CACHE BOOL "")
 set(ASMTK_NO_CUSTOM_FLAGS ON CACHE BOOL "" FORCE)
 set(ASMJIT_NO_CUSTOM_FLAGS ON CACHE BOOL "" FORCE)
 
-FetchContent_Declare(zydis
-    PREFIX ${CMAKE_CURRENT_BINARY_DIR}/zydis
-    GIT_REPOSITORY git@github.com:zyantific/zydis.git
-    GIT_TAG v3.1.0
-    GIT_PROGRESS ON)
-
 FetchContent_MakeAvailable(zydis)
