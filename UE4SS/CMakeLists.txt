@@ -153,7 +153,7 @@ target_compile_definitions(${TARGET} PRIVATE
 # First party static build -> END
 
 target_link_libraries(${TARGET} PUBLIC
-    File DynamicOutput Unreal
+    File glaze::glaze DynamicOutput Unreal
     SinglePassSigScanner LuaMadeSimple FunctionTimer
     Function IniParser JSON
     Input Constructs Helpers 

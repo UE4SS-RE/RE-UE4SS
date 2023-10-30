@@ -5,6 +5,17 @@ set(FETCHCONTENT_QUIET OFF)
 # Third Party Dependencies -> START
 add_subdirectory("GLFW")
 
+# glaze JSON library start
+FetchContent_Declare(
+  glaze
+  GIT_REPOSITORY https://github.com/stephenberry/glaze.git
+  GIT_TAG v1.5.5
+  GIT_SHALLOW TRUE
+)
+
+FetchContent_MakeAvailable(glaze)
+# glaze JSON library end
+
 # ImGui start
 FetchContent_Declare(ImGui
     GIT_REPOSITORY git@github.com:ocornut/imgui.git
