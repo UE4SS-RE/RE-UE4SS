@@ -46,12 +46,6 @@ if(NOT DEFINED _DISABLE_INSTALL)
     endmacro()
 endif()
 
-FetchContent_Declare(PolyHook2
-    PREFIX ${CMAKE_CURRENT_BINARY_DIR}/PolyHook2
-    GIT_REPOSITORY git@github.com:stevemk14ebr/PolyHook_2_0.git
-    GIT_TAG 16bc0faf77a15b91b72763353901cfe34daf3174
-    GIT_PROGRESS ON)
-
 FetchContent_MakeAvailable(PolyHook2)
 
 # re-enable 'set_target_properties' and 'install' since we're done adding PolyHook

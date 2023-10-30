@@ -167,4 +167,4 @@ set_property(TARGET ${TARGET} PROPERTY INTERPROCEDURAL_OPTIMIZATION ON)
 # Making sure that the linked C runtime is a dll so that C++ mods will work correctly
 set_property(TARGET ${TARGET} PROPERTY MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>DLL")
 
-set_target_properties(${TARGET} PROPERTIES OUTPUT_NAME "UE4SS")
+set_target_properties(${TARGET} PROPERTIES OUTPUT_NAME "UE4SS" CXX_STANDARD 20)
