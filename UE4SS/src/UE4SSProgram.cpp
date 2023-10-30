@@ -995,6 +995,13 @@ namespace RC
                     auto* mod = m_mods[index].get();
                     for (auto& depname : mod->get_deps())
                     {
+                        auto it = mod_name_to_index_map.find(depname);
+                        if (it == mod_name_to_index_map.end())
+						{
+							Output::send<LogLevel::Error>(L"Mod {} has a dependency on {}, but it doesn't exist\n", mod_name, depname);
+                            std::abort();
+							continue;
+						}
                         int otherIndex = mod_name_to_index_map[depname];
                         index = mod_name_to_index_map[mod_name]; // Re calculate the index each loop for making sure we dont undo stuff by swapping stuff already swapped
                         if (otherIndex > index)
