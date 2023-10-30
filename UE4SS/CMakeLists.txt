@@ -120,7 +120,7 @@ if (NOT UE4SS_NO_CUSTOM_FLAGS)
 endif ()
 
 # Enabling c++20 support
-target_compile_features(${TARGET} PUBLIC cxx_std_20)
+target_compile_features(${TARGET} PUBLIC cxx_std_23)
 
 target_include_directories(${TARGET} PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include> $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/generated_include>)
 
@@ -167,4 +167,4 @@ set_property(TARGET ${TARGET} PROPERTY INTERPROCEDURAL_OPTIMIZATION ON)
 # Making sure that the linked C runtime is a dll so that C++ mods will work correctly
 set_property(TARGET ${TARGET} PROPERTY MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>DLL")
 
-set_target_properties(${TARGET} PROPERTIES OUTPUT_NAME "UE4SS" CXX_STANDARD 20)
+set_target_properties(${TARGET} PROPERTIES OUTPUT_NAME "UE4SS" CXX_STANDARD 23)
