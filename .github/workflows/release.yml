@@ -26,7 +26,7 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v4
         with:
-          python-version: '3.x'
+          python-version: "3.x"
 
       - name: Setup MSVC
         uses: ilammy/msvc-dev-cmd@v1
@@ -63,6 +63,7 @@ jobs:
           tags: true
 
       - name: Release
+        id: release
         uses: softprops/action-gh-release@v1
         with:
           tag_name: ${{ steps.release_commit.outputs.release_tag }}
@@ -72,3 +73,20 @@ jobs:
             release/zDEV-UE4SS_v*.zip
             release/zCustomGameConfigs.zip
             release/zMapGenBP.zip
+
+      - name: Get workflow token
+        id: get_workflow_token
+        uses: peter-murray/workflow-application-token-action@v2
+        with:
+          application_id: ${{ secrets.WORKFLOW_DISPATCHER_APPID }}
+          application_private_key: ${{ secrets.WORKFLOW_DISPATCHER_KEY }}
+          permissions: "actions:write"
+
+      - name: Trigger website update
+        uses: benc-uk/workflow-dispatch@v1
+        with:
+          workflow: publish.yml
+          ref: main
+          repo: UE4SS-RE/website
+          token: ${{ steps.get_workflow_token.outputs.token }}
+          inputs: '{ "releaseLink": "${{ fromJson(steps.release.outputs.assets)[0].browser_download_url }}" }'
