@@ -15,6 +15,8 @@ Added additional AOB for `FName::ToString` - LongerWarrior
 ### Live View
 Can now view enum values in the Live View debugger
 
+Added ClassFlags to UClass and derivatives
+
 Added a checkbox that toggles search options globally, meaning when not searching
 
 Added search filter `Function parameter flags`, it excludes objects that are non-UFunctions and UFunctions that don't have params with the specified flags

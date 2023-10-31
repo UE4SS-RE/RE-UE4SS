@@ -524,6 +524,14 @@ namespace RC::GUI
         std::string flags_string{};
         std::vector<std::string> flag_parts{};
 
+        static constexpr const char* popup_context_item_id_raw = "object_raw_flags_menu";
+        static constexpr const char* popup_context_item_id = "object_flags_menu";
+
+        static auto get_raw_flags(UObject* object) -> uint32_t
+        {
+            return static_cast<uint32_t>(object->GetObjectFlags());
+        }
+
         ObjectFlagsStringifier(UObject* object)
         {
             if (object->HasAnyFlags(RF_NoFlags))
@@ -649,6 +657,164 @@ namespace RC::GUI
             if (object->HasAnyFlags(RF_AllFlags))
             {
                 flag_parts.emplace_back("RF_AllFlags");
+            }
+
+            std::for_each(flag_parts.begin(), flag_parts.end(), [&](const std::string& flag_part) {
+                if (!flags_string.empty())
+                {
+                    flags_string.append(", ");
+                }
+                flags_string.append(std::move(flag_part));
+            });
+        }
+    };
+
+    struct ClassFlagsStringifier
+    {
+        std::string flags_string{};
+        std::vector<std::string> flag_parts{};
+
+        static constexpr const char* popup_context_item_id_raw = "class_raw_flags_menu";
+        static constexpr const char* popup_context_item_id = "class_flags_menu";
+
+        static auto get_raw_flags(UClass* object) -> uint32_t
+        {
+            return static_cast<uint32_t>(object->GetClassFlags());
+        }
+
+        ClassFlagsStringifier(UClass* uclass)
+        {
+            if (uclass->HasAnyClassFlags(CLASS_None))
+            {
+                flag_parts.emplace_back("CLASS_None");
+            }
+            if (uclass->HasAnyClassFlags(CLASS_Abstract))
+            {
+                flag_parts.emplace_back("CLASS_Abstract");
+            }
+            if (uclass->HasAnyClassFlags(CLASS_DefaultConfig))
+            {
+                flag_parts.emplace_back("CLASS_DefaultConfig");
+            }
+            if (uclass->HasAnyClassFlags(CLASS_Config))
+            {
+                flag_parts.emplace_back("CLASS_Config");
+            }
+            if (uclass->HasAnyClassFlags(CLASS_Transient))
+            {
+                flag_parts.emplace_back("CLASS_Transient");
+            }
+            if (uclass->HasAnyClassFlags(CLASS_Parsed))
+            {
+                flag_parts.emplace_back("CLASS_Parsed");
+            }
+            if (uclass->HasAnyClassFlags(CLASS_MatchedSerializers))
+            {
+                flag_parts.emplace_back("CLASS_MatchedSerializers");
+            }
+            if (uclass->HasAnyClassFlags(CLASS_ProjectUserConfig))
+            {
+                flag_parts.emplace_back("CLASS_ProjectUserConfig");
+            }
+            if (uclass->HasAnyClassFlags(CLASS_Native))
+            {
+                flag_parts.emplace_back("CLASS_Native");
+            }
+            if (uclass->HasAnyClassFlags(CLASS_NoExport))
+            {
+                flag_parts.emplace_back("CLASS_NoExport");
+            }
+            if (uclass->HasAnyClassFlags(CLASS_NotPlaceable))
+            {
+                flag_parts.emplace_back("CLASS_NotPlaceable");
+            }
+            if (uclass->HasAnyClassFlags(CLASS_PerObjectConfig))
+            {
+                flag_parts.emplace_back("CLASS_PerObjectConfig");
+            }
+            if (uclass->HasAnyClassFlags(CLASS_ReplicationDataIsSetUp))
+            {
+                flag_parts.emplace_back("CLASS_ReplicationDataIsSetUp");
+            }
+            if (uclass->HasAnyClassFlags(CLASS_EditInlineNew))
+            {
+                flag_parts.emplace_back("CLASS_EditInlineNew");
+            }
+            if (uclass->HasAnyClassFlags(CLASS_CollapseCategories))
+            {
+                flag_parts.emplace_back("CLASS_CollapseCategories");
+            }
+            if (uclass->HasAnyClassFlags(CLASS_Interface))
+            {
+                flag_parts.emplace_back("CLASS_Interface");
+            }
+            if (uclass->HasAnyClassFlags(CLASS_CustomConstructor))
+            {
+                flag_parts.emplace_back("CLASS_CustomConstructor");
+            }
+            if (uclass->HasAnyClassFlags(CLASS_Const))
+            {
+                flag_parts.emplace_back("CLASS_Const");
+            }
+            if (uclass->HasAnyClassFlags(CLASS_LayoutChanging))
+            {
+                flag_parts.emplace_back("CLASS_LayoutChanging");
+            }
+            if (uclass->HasAnyClassFlags(CLASS_CompiledFromBlueprint))
+            {
+                flag_parts.emplace_back("CLASS_CompiledFromBlueprint");
+            }
+            if (uclass->HasAnyClassFlags(CLASS_MinimalAPI))
+            {
+                flag_parts.emplace_back("CLASS_MinimalAPI");
+            }
+            if (uclass->HasAnyClassFlags(CLASS_RequiredAPI))
+            {
+                flag_parts.emplace_back("CLASS_RequiredAPI");
+            }
+            if (uclass->HasAnyClassFlags(CLASS_DefaultToInstanced))
+            {
+                flag_parts.emplace_back("CLASS_DefaultToInstanced");
+            }
+            if (uclass->HasAnyClassFlags(CLASS_TokenStreamAssembled))
+            {
+                flag_parts.emplace_back("CLASS_TokenStreamAssembled");
+            }
+            if (uclass->HasAnyClassFlags(CLASS_HasInstancedReference))
+            {
+                flag_parts.emplace_back("CLASS_HasInstancedReference");
+            }
+            if (uclass->HasAnyClassFlags(CLASS_Hidden))
+            {
+                flag_parts.emplace_back("CLASS_Hidden");
+            }
+            if (uclass->HasAnyClassFlags(CLASS_Deprecated))
+            {
+                flag_parts.emplace_back("CLASS_Deprecated");
+            }
+            if (uclass->HasAnyClassFlags(CLASS_HideDropDown))
+            {
+                flag_parts.emplace_back("CLASS_HideDropDown");
+            }
+            if (uclass->HasAnyClassFlags(CLASS_GlobalUserConfig))
+            {
+                flag_parts.emplace_back("CLASS_GlobalUserConfig");
+            }
+            if (uclass->HasAnyClassFlags(CLASS_Intrinsic))
+            {
+                flag_parts.emplace_back("CLASS_Intrinsic");
+            }
+            if (uclass->HasAnyClassFlags(CLASS_Constructed))
+            {
+                flag_parts.emplace_back("CLASS_Constructed");
+            }
+            if (uclass->HasAnyClassFlags(CLASS_ConfigDoNotCheckDefaults))
+            {
+                flag_parts.emplace_back("CLASS_ConfigDoNotCheckDefaults");
+            }
+            if (uclass->HasAnyClassFlags(CLASS_NewerVersionExists))
+            {
+                flag_parts.emplace_back("CLASS_NewerVersionExists");
             }
 
             std::for_each(flag_parts.begin(), flag_parts.end(), [&](const std::string& flag_part) {
@@ -1891,6 +2057,67 @@ namespace RC::GUI
         return false;
     }
 
+    template <typename Stringifier, typename ObjectType>
+    auto render_flags(ObjectType* generic_instance, const char* display_label) -> void
+    {
+        auto raw_unsafe_object_flags = Stringifier::get_raw_flags(generic_instance);
+        ImGui::Text("%s (Raw): 0x%X", display_label, raw_unsafe_object_flags);
+        if (ImGui::BeginPopupContextItem(Stringifier::popup_context_item_id_raw))
+        {
+            if (ImGui::MenuItem("Copy raw flags"))
+            {
+                ImGui::SetClipboardText(std::format("0x{:X}", static_cast<uint32_t>(raw_unsafe_object_flags)).c_str());
+            }
+            ImGui::EndPopup();
+        }
+        Stringifier flags_stringifier{generic_instance};
+        size_t current_flag_line_count{};
+        std::string current_flag_line{};
+        std::string all_flags{};
+        auto create_menu_for_copy_flags = [&](size_t menu_index) {
+            if (ImGui::BeginPopupContextItem(std::format("{}_{}", Stringifier::popup_context_item_id, menu_index).c_str()))
+            {
+                if (ImGui::MenuItem("Copy flags"))
+                {
+                    std::string flags_string_for_copy{};
+                    std::for_each(flags_stringifier.flag_parts.begin(), flags_stringifier.flag_parts.end(), [&](const std::string& flag_part) {
+                        if (!flags_string_for_copy.empty())
+                        {
+                            flags_string_for_copy.append(" | ");
+                        }
+                        flags_string_for_copy.append(flag_part);
+                    });
+                    ImGui::SetClipboardText(flags_string_for_copy.c_str());
+                }
+                ImGui::EndPopup();
+            }
+        };
+        ImGui::Text("%s:", display_label);
+        create_menu_for_copy_flags(99); // 'menu_index' of '99' because we'll never reach 99 lines of flags and we can't use '0' as that'll be used in the loop below.
+        ImGui::Indent();
+        for (size_t i = 0; i < flags_stringifier.flag_parts.size(); ++i)
+        {
+            const auto& flag_part_string = flags_stringifier.flag_parts[i];
+            const auto last_element_in_vector = i + 1 >= flags_stringifier.flag_parts.size();
+
+            if (current_flag_line_count < 3)
+            {
+                current_flag_line.append(flag_part_string + (last_element_in_vector ? "" : " | "));
+                ++current_flag_line_count;
+            }
+
+            if (current_flag_line_count >= 3 || last_element_in_vector)
+            {
+                ImGui::Text("%s", current_flag_line.c_str());
+                create_menu_for_copy_flags(i);
+                all_flags.append(current_flag_line);
+                current_flag_line.clear();
+                current_flag_line_count = 0;
+            }
+        }
+        ImGui::Unindent();
+    }
+
     auto LiveView::render_info_panel_as_object(const FUObjectItem* object_item, UObject* object) -> void
     {
         if (!object || (!object_item || object_item->IsUnreachable()))
@@ -1913,62 +2140,11 @@ namespace RC::GUI
         }
         ImGui::Text("ClassPrivate: %s", to_string(object->GetClassPrivate()->GetName()).c_str());
         ImGui::Text("Path: %S", object->GetPathName().c_str());
-        auto raw_unsafe_object_flags = object->GetObjectFlags();
-        ImGui::Text("ObjectFlags (Raw): 0x%X", raw_unsafe_object_flags);
-        if (ImGui::BeginPopupContextItem("object_raw_flags_menu"))
+        render_flags<ObjectFlagsStringifier>(object, "ObjectFlags");
+        if (auto as_class = Cast<UClass>(object); as_class)
         {
-            if (ImGui::MenuItem("Copy raw flags"))
-            {
-                ImGui::SetClipboardText(std::format("0x{:X}", static_cast<uint32_t>(raw_unsafe_object_flags)).c_str());
-            }
-            ImGui::EndPopup();
+            render_flags<ClassFlagsStringifier>(as_class, "ClassFlags");
         }
-        ObjectFlagsStringifier object_flags_stringifier{object};
-        size_t current_flag_line_count{};
-        std::string current_flag_line{};
-        std::string all_flags{};
-        auto create_menu_for_copy_flags = [&](size_t menu_index) {
-            if (ImGui::BeginPopupContextItem(std::format("property_flags_menu_{}", menu_index).c_str()))
-            {
-                if (ImGui::MenuItem("Copy flags"))
-                {
-                    std::string flags_string_for_copy{};
-                    std::for_each(object_flags_stringifier.flag_parts.begin(), object_flags_stringifier.flag_parts.end(), [&](const std::string& flag_part) {
-                        if (!flags_string_for_copy.empty())
-                        {
-                            flags_string_for_copy.append(" | ");
-                        }
-                        flags_string_for_copy.append(std::move(flag_part));
-                    });
-                    ImGui::SetClipboardText(flags_string_for_copy.c_str());
-                }
-                ImGui::EndPopup();
-            }
-        };
-        ImGui::Text("ObjectFlags:");
-        create_menu_for_copy_flags(99); // 'menu_index' of '99' because we'll never reach 99 lines of flags and we can't use '0' as that'll be used in the loop below.
-        ImGui::Indent();
-        for (size_t i = 0; i < object_flags_stringifier.flag_parts.size(); ++i)
-        {
-            const auto& property_flag_part_string = object_flags_stringifier.flag_parts[i];
-            const auto last_element_in_vector = i + 1 >= object_flags_stringifier.flag_parts.size();
-
-            if (current_flag_line_count < 3)
-            {
-                current_flag_line.append(std::move(property_flag_part_string) + (last_element_in_vector ? "" : " | "));
-                ++current_flag_line_count;
-            }
-
-            if (current_flag_line_count >= 3 || last_element_in_vector)
-            {
-                ImGui::Text("%s", current_flag_line.c_str());
-                create_menu_for_copy_flags(i);
-                all_flags.append(current_flag_line);
-                current_flag_line.clear();
-                current_flag_line_count = 0;
-            }
-        }
-        ImGui::Unindent();
         ImGui::Text("Player Controlled: %s", is_player_controlled(object) ? "Yes" : "No");
         ImGui::Separator();
         // Potential sizes: 385, -180 (open) | // 385, -286 (closed)
