@@ -53,6 +53,7 @@ namespace RC
             requires std::is_copy_assignable_v<T>
         {
             value = other.value;
+            return *this;
         }
 
         template <typename OtherC>
@@ -67,6 +68,7 @@ namespace RC
             requires std::is_move_assignable_v<T>
         {
             value = std::move(other.value);
+            return *this;
         }
 
         T operator*() const noexcept
