@@ -983,8 +983,8 @@ namespace RC
                 if (std::filesystem::exists(sub_directory.path() / "dlls"))
                     m_mods.emplace_back(std::make_unique<CppMod>(*this, sub_directory.path().stem().wstring(), sub_directory.path().wstring()));
             }
-
-            mod_name_to_index_map.insert({sub_directory.path().stem().wstring(), m_mods.size() - 1});
+            if (std::filesystem::exists(sub_directory.path() / "scripts") || std::filesystem::exists(sub_directory.path() / "dlls"))
+                mod_name_to_index_map.insert({sub_directory.path().stem().wstring(), m_mods.size() - 1});
             
         }
 
@@ -1011,19 +1011,17 @@ namespace RC
                             int tempIndex = index;
                             mod_name_to_index_map[mod_name] = otherIndex;
                             mod_name_to_index_map[depname] = index;
+                            m_force_enabled_mods.push_back(depname);
                             Output::send<LogLevel::Verbose>(L"Swapped {} with {} from index {} to {}\n", mod_name, depname, tempIndex, otherIndex);
                         }
                     }
                 }
                 return has_swapped;
             };
-        auto loop_shuffle = [&]() -> void {
-                while (shuffle_loader_array())
-				{
-				}
-			};
-    
-    	loop_shuffle();
+        
+        // Just makes sure that we have the correct order of mods and that all dependencies are met
+        while (shuffle_loader_array()) {};
+
 
     }
 
@@ -1110,7 +1108,7 @@ namespace RC
     }
 
     template <typename ModType>
-    auto start_mods() -> std::string
+    auto start_mods(std::vector<std::wstring>& force_enabled_mods) -> std::string
     {
         // Part #1: Start all mods that are enabled in mods.txt.
         Output::send(STR("Starting mods (from mods.txt load order)...\n"));
@@ -1160,6 +1158,14 @@ namespace RC
                     Output::send(STR("Starting {} mod '{}'\n"), std::is_same_v<ModType, LuaMod> ? STR("Lua") : STR("C++"), mod->get_name().data());
                     mod->start_mod();
                 }
+                else if (!mod_enabled.empty() && std::find_if(force_enabled_mods.begin(), force_enabled_mods.end(), [&](std::wstring& p) -> bool {
+                                                     return p == mod_name;
+                                                 }) != force_enabled_mods.end())
+                {
+                    Output::send<LogLevel::Warning>(STR("Starting {} mod '{}' (forced)\n"), std::is_same_v<ModType, LuaMod> ? STR("Lua") : STR("C++"), mod->get_name().data());
+                    mod->start_mod();
+                }
+
                 else
                 {
                     Output::send(STR("Mod '{}' disabled in mods.txt.\n"), mod_name);
@@ -1217,7 +1223,7 @@ namespace RC
 
     auto UE4SSProgram::start_lua_mods() -> void
     {
-        auto error_message = start_mods<LuaMod>();
+        auto error_message = start_mods<LuaMod>(m_force_enabled_mods);
         if (!error_message.empty())
         {
             set_error(error_message.c_str());
@@ -1226,7 +1232,7 @@ namespace RC
 
     auto UE4SSProgram::start_cpp_mods() -> void
     {
-        auto error_message = start_mods<CppMod>();
+        auto error_message = start_mods<CppMod>(m_force_enabled_mods);
         if (!error_message.empty())
         {
             set_error(error_message.c_str());

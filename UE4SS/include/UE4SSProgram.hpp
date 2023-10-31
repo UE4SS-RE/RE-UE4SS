@@ -95,6 +95,9 @@ namespace RC
         std::filesystem::path m_object_dumper_output_directory;
         std::filesystem::path m_default_settings_path_and_file;
         std::filesystem::path m_settings_path_and_file;
+
+        std::vector<std::wstring> m_force_enabled_mods{}; // Only used for dependency resolution
+
         Output::DebugConsoleDevice* m_debug_console_device{};
         Output::ConsoleDevice* m_console_device{};
         GUI::DebuggingGUI m_debugging_gui{};
