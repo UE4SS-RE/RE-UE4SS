@@ -4,20 +4,8 @@ project(ImGui)
 
 set(FETCHCONTENT_QUIET OFF)
 
-FetchContent_Declare(ImGui
-    GIT_REPOSITORY git@github.com:ocornut/imgui.git
-    GIT_TAG v1.89
-    GIT_PROGRESS ON
-    CONFIGURE_COMMAND "")
-
 FetchContent_Populate(ImGui)
 FetchContent_GetProperties(ImGui SOURCE_DIR ImGui_FETCHED_SOURCE)
-
-FetchContent_Declare(ImGuiTextEdit
-    GIT_REPOSITORY git@github.com:UE4SS-RE/ImGuiColorTextEdit.git
-    GIT_TAG master
-    GIT_PROGRESS ON
-    CONFIGURE_COMMAND "")
 
 FetchContent_Populate(ImGuiTextEdit)
 FetchContent_GetProperties(ImGuiTextEdit SOURCE_DIR ImGuiTextEdit_FETCHED_SOURCE)
