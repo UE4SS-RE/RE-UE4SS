@@ -827,6 +827,160 @@ namespace RC::GUI
         }
     };
 
+    struct FunctionFlagsStringifier
+    {
+        std::string flags_string{};
+        std::vector<std::string> flag_parts{};
+
+        static constexpr const char* popup_context_item_id_raw = "func_raw_flags_menu";
+        static constexpr const char* popup_context_item_id = "func_flags_menu";
+
+        static auto get_raw_flags(UFunction* function) -> uint32_t
+        {
+            return static_cast<uint32_t>(function->GetFunctionFlags());
+        }
+
+        FunctionFlagsStringifier(UFunction* function)
+        {
+            if (function->HasAnyFunctionFlags(FUNC_None))
+            {
+                flag_parts.emplace_back("FUNC_None");
+            }
+            if (function->HasAnyFunctionFlags(FUNC_Final))
+            {
+                flag_parts.emplace_back("FUNC_Final");
+            }
+            if (function->HasAnyFunctionFlags(FUNC_RequiredAPI))
+            {
+                flag_parts.emplace_back("FUNC_RequiredAPI");
+            }
+            if (function->HasAnyFunctionFlags(FUNC_BlueprintAuthorityOnly))
+            {
+                flag_parts.emplace_back("FUNC_BlueprintAuthorityOnly");
+            }
+            if (function->HasAnyFunctionFlags(FUNC_BlueprintCosmetic))
+            {
+                flag_parts.emplace_back("FUNC_BlueprintCosmetic");
+            }
+            if (function->HasAnyFunctionFlags(FUNC_Net))
+            {
+                flag_parts.emplace_back("FUNC_Net");
+            }
+            if (function->HasAnyFunctionFlags(FUNC_NetReliable))
+            {
+                flag_parts.emplace_back("FUNC_NetReliable");
+            }
+            if (function->HasAnyFunctionFlags(FUNC_NetRequest))
+            {
+                flag_parts.emplace_back("FUNC_NetRequest");
+            }
+            if (function->HasAnyFunctionFlags(FUNC_Exec))
+            {
+                flag_parts.emplace_back("FUNC_Exec");
+            }
+            if (function->HasAnyFunctionFlags(FUNC_Native))
+            {
+                flag_parts.emplace_back("FUNC_Native");
+            }
+            if (function->HasAnyFunctionFlags(FUNC_Event))
+            {
+                flag_parts.emplace_back("FUNC_Event");
+            }
+            if (function->HasAnyFunctionFlags(FUNC_NetResponse))
+            {
+                flag_parts.emplace_back("FUNC_NetResponse");
+            }
+            if (function->HasAnyFunctionFlags(FUNC_Static))
+            {
+                flag_parts.emplace_back("FUNC_Static");
+            }
+            if (function->HasAnyFunctionFlags(FUNC_NetMulticast))
+            {
+                flag_parts.emplace_back("FUNC_NetMulticast");
+            }
+            if (function->HasAnyFunctionFlags(FUNC_UbergraphFunction))
+            {
+                flag_parts.emplace_back("FUNC_UbergraphFunction");
+            }
+            if (function->HasAnyFunctionFlags(FUNC_MulticastDelegate))
+            {
+                flag_parts.emplace_back("FUNC_MulticastDelegate");
+            }
+            if (function->HasAnyFunctionFlags(FUNC_Public))
+            {
+                flag_parts.emplace_back("FUNC_Public");
+            }
+            if (function->HasAnyFunctionFlags(FUNC_Private))
+            {
+                flag_parts.emplace_back("FUNC_Private");
+            }
+            if (function->HasAnyFunctionFlags(FUNC_Protected))
+            {
+                flag_parts.emplace_back("FUNC_Protected");
+            }
+            if (function->HasAnyFunctionFlags(FUNC_Delegate))
+            {
+                flag_parts.emplace_back("FUNC_Delegate");
+            }
+            if (function->HasAnyFunctionFlags(FUNC_NetServer))
+            {
+                flag_parts.emplace_back("FUNC_NetServer");
+            }
+            if (function->HasAnyFunctionFlags(FUNC_HasOutParms))
+            {
+                flag_parts.emplace_back("FUNC_HasOutParms");
+            }
+            if (function->HasAnyFunctionFlags(FUNC_HasDefaults))
+            {
+                flag_parts.emplace_back("FUNC_HasDefaults");
+            }
+            if (function->HasAnyFunctionFlags(FUNC_NetClient))
+            {
+                flag_parts.emplace_back("FUNC_NetClient");
+            }
+            if (function->HasAnyFunctionFlags(FUNC_DLLImport))
+            {
+                flag_parts.emplace_back("FUNC_DLLImport");
+            }
+            if (function->HasAnyFunctionFlags(FUNC_BlueprintCallable))
+            {
+                flag_parts.emplace_back("FUNC_BlueprintCallable");
+            }
+            if (function->HasAnyFunctionFlags(FUNC_BlueprintEvent))
+            {
+                flag_parts.emplace_back("FUNC_BlueprintEvent");
+            }
+            if (function->HasAnyFunctionFlags(FUNC_BlueprintPure))
+            {
+                flag_parts.emplace_back("FUNC_BlueprintPure");
+            }
+            if (function->HasAnyFunctionFlags(FUNC_EditorOnly))
+            {
+                flag_parts.emplace_back("FUNC_EditorOnly");
+            }
+            if (function->HasAnyFunctionFlags(FUNC_Const))
+            {
+                flag_parts.emplace_back("FUNC_Const");
+            }
+            if (function->HasAnyFunctionFlags(FUNC_NetValidate))
+            {
+                flag_parts.emplace_back("FUNC_NetValidate");
+            }
+            if (function->HasAnyFunctionFlags(FUNC_AllFlags))
+            {
+                flag_parts.emplace_back("FUNC_AllFlags");
+            }
+
+            std::for_each(flag_parts.begin(), flag_parts.end(), [&](const std::string& flag_part) {
+                if (!flags_string.empty())
+                {
+                    flags_string.append(", ");
+                }
+                flags_string.append(std::move(flag_part));
+            });
+        }
+    };
+
     struct PropertyFlagsStringifier
     {
         std::string flags_string{};
@@ -2144,6 +2298,10 @@ namespace RC::GUI
         if (auto as_class = Cast<UClass>(object); as_class)
         {
             render_flags<ClassFlagsStringifier>(as_class, "ClassFlags");
+        }
+        else if (auto as_function = Cast<UFunction>(object); as_function)
+        {
+            render_flags<FunctionFlagsStringifier>(as_function, "FunctionFlags");
         }
         ImGui::Text("Player Controlled: %s", is_player_controlled(object) ? "Yes" : "No");
         ImGui::Separator();
