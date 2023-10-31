@@ -34,7 +34,6 @@
 #include <SDKGenerator/UEHeaderGenerator.hpp>
 #include <SigScanner/SinglePassSigScanner.hpp>
 #include <Signatures.hpp>
-#include <Timer/FunctionTimer.hpp>
 #include <Timer/ScopedTimer.hpp>
 #include <UE4SSProgram.hpp>
 #include <Unreal/AGameMode.hpp>
@@ -160,7 +159,6 @@ namespace RC
 
     UE4SSProgram::UE4SSProgram(const std::wstring& moduleFilePath, std::initializer_list<BinaryOptions> options) : MProgram(options)
     {
-        TIME_FUNCTION()
 
         s_program = this;
 
@@ -309,8 +307,6 @@ namespace RC
 
     auto UE4SSProgram::init() -> void
     {
-        TIME_FUNCTION();
-
         try
         {
             setup_unreal();
@@ -1666,8 +1662,6 @@ namespace RC
         // Do cleanup of static objects here
         // This function is called right before the DLL detaches from the game
         // Including when the player hits the 'X' button to exit the game
-#if TIME_FUNCTION_MACRO_V2 == 0
-        FunctionTimerCollection::dump();
-#endif
+
     }
 } // namespace RC
