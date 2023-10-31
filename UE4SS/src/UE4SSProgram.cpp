@@ -221,12 +221,15 @@ namespace RC
                          std::format(L"{}",
                                      UE4SS_LIB_BETA_STARTED == 0 ? L"" : (UE4SS_LIB_IS_BETA == 0 ? L" Beta #?" : std::format(L" Beta #{}", UE4SS_LIB_VERSION_BETA))),
                          to_wstring(UE4SS_LIB_BUILD_GITSHA));
-#ifdef WITH_CASE_PRESERVING_NAME
-            Output::send(STR("WITH_CASE_PRESERVING_NAME: Yes\n\n"));
-#else
-            Output::send(STR("WITH_CASE_PRESERVING_NAME: No\n\n"));
-#endif
 
+#ifdef __clang__
+    #define UE4SS_COMPILER L"Clang"
+#else
+    #define UE4SS_COMPILER L"MSVC"
+#endif
+            
+            Output::send(STR("Build Configuration: {} ({})\n"), to_wstring(UE4SS_CONFIGURATION), UE4SS_COMPILER);
+            
             m_load_library_a_hook = std::make_unique<PLH::IatHook>("kernel32.dll",
                                                                    "LoadLibraryA",
                                                                    std::bit_cast<uint64_t>(&HookedLoadLibraryA),

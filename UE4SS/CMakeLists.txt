@@ -36,7 +36,7 @@ if (NOT res EQUAL 0)
     set(UE4SS_LIB_BUILD_GITSHA "0")
 endif ()
 
-# Make the hard-coded build numbers available to source files
+# Make the hard-coded build numbers and current configuration available to source files
 add_compile_definitions(
         UE4SS_LIB_VERSION_MAJOR=${UE4SS_LIB_VERSION_MAJOR}
         UE4SS_LIB_VERSION_MINOR=${UE4SS_LIB_VERSION_MINOR}
@@ -46,6 +46,7 @@ add_compile_definitions(
         UE4SS_LIB_BETA_STARTED=$<BOOL:${UE4SS_LIB_BETA_IS_STARTED}>
         UE4SS_LIB_IS_BETA=$<BOOL:${UE4SS_LIB_IS_BETA}>
         UE4SS_LIB_BUILD_GITSHA="${UE4SS_LIB_BUILD_GITSHA}"
+        UE4SS_CONFIGURATION="$<CONFIG>"
 )
 # Versioning -> END
 
