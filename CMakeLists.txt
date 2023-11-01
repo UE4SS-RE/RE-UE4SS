@@ -42,7 +42,7 @@ list(APPEND TARGET_COMPILE_DEFINITIONS UNICODE)
 # CLion fixes -> START
 # There's a bug with CLion that causes it to not recognize our API macros.
 # This in turn causes it to break completely as it cannot see our struct definitions properly.
-if ($ENV{CLION_IDE})
+if ($ENV{CLION_IDE} AND DEFINED ${UE4SS_ENABLE_CLION_FIXES})
     list(APPEND TARGET_COMPILE_DEFINITIONS
             RC_UE4SS_API=
             RC_UE_API=
