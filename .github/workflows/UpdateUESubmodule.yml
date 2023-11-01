@@ -1,0 +1,67 @@
+name: Update UE Submodule and Create PR
+
+on:
+  workflow_dispatch:
+
+jobs:
+  update-submodule:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v3
+      with:
+        submodules: recursive
+        ssh-key: ${{ secrets.UEPSEUDO_SSH_KEY }}
+      
+    - name: Initialize submodule
+      run: |
+        git submodule update --init --recursive
+
+    - name: Get commits between HEAD and main in the submodule
+      id: submodule-commits
+      run: |
+        cd ./deps/first/Unreal
+        git fetch origin main
+        git log HEAD..main --pretty="tformat:* %s (**%an**) _%h_" > submodule-commits.txt
+
+    - name: Update submodule to latest commit on main branch
+      run: |
+        cd ./deps/first/Unreal
+        git checkout main
+        git pull origin main
+
+    - name: Create a new branch and commit submodule update
+      run: |
+        git checkout -b submodule-update-branch
+        git add -A
+        git commit -m "Update UE submodule with the following commits:
+        $(cat deps/first/Unreal/submodule-commits.txt)"
+        git push origin submodule-update-branch
+
+  create-pr:
+    needs: update-submodule
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Create Pull Request
+      uses: actions/github-script@v4
+      with:
+        script: |
+          const github = require('@actions/github');
+          const octokit = github.getOctokit(process.env.GITHUB_TOKEN);
+          const context = github.context;
+
+          const base = 'main'; // change to the target branch of your choice
+          const head = `submodule-update-branch`;
+
+          const { data: pullRequest } = await octokit.pulls.create({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            title: 'Update Submodule',
+            base,
+            head,
+            body: 'Updating submodule with recent commits.',
+          });
+
+          console.log(`Created Pull Request: ${pullRequest.html_url}`);
