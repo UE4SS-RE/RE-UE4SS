@@ -1,4 +1,4 @@
-name: Update UE Submodule and Create PR
+name: Update UE Submodule and PR
 
 on:
   workflow_dispatch:
