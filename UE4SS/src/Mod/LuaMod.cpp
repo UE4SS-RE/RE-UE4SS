@@ -58,7 +58,6 @@
 #include <UnrealCustom/CustomProperty.hpp>
 #pragma warning(default : 4005)
 
-#include <Timer/FunctionTimer.hpp>
 
 namespace RC
 {
@@ -108,7 +107,6 @@ namespace RC
 
     static auto lua_unreal_script_function_hook_pre(Unreal::UnrealScriptFunctionCallableContext context, void* custom_data) -> void
     {
-        TIME_FUNCTION()
 
         // Fetch the data corresponding to this UFunction
         auto& lua_data = *static_cast<LuaUnrealScriptFunctionData*>(custom_data);
@@ -3224,21 +3222,43 @@ Overloads:
         lua_setglobal(lua.get_lua_state(), "__OriginalReturnValue");
     }
 
-    auto LuaMod::fire_on_lua_start_for_cpp_mod() -> void
+    auto LuaMod::fire_on_lua_start_for_cpp_mods() -> void
     {
-        auto cpp_mod = UE4SSProgram::find_mod_by_name<CppMod>(get_name(), UE4SSProgram::IsInstalled::Yes);
-        if (cpp_mod)
+        if (!is_started())
         {
-            cpp_mod->fire_on_lua_start(m_lua, *m_main_lua, *m_async_lua, m_hook_lua);
+            return;
+        }
+
+        for (const auto& mod : UE4SSProgram::m_mods)
+        {
+            if (auto cpp_mod = dynamic_cast<CppMod*>(mod.get()); cpp_mod && mod->is_started())
+            {
+                if (mod->get_name() == get_name())
+                {
+                    cpp_mod->fire_on_lua_start(m_lua, *m_main_lua, *m_async_lua, m_hook_lua);
+                }
+                cpp_mod->fire_on_lua_start(get_name(), m_lua, *m_main_lua, *m_async_lua, m_hook_lua);
+            }
         }
     }
 
-    auto LuaMod::fire_on_lua_stop_for_cpp_mod() -> void
+    auto LuaMod::fire_on_lua_stop_for_cpp_mods() -> void
     {
-        auto cpp_mod = UE4SSProgram::find_mod_by_name<CppMod>(get_name(), UE4SSProgram::IsInstalled::Yes);
-        if (cpp_mod)
+        if (!is_started())
         {
-            cpp_mod->fire_on_lua_stop(m_lua, *m_main_lua, *m_async_lua, m_hook_lua);
+            return;
+        }
+
+        for (const auto& mod : UE4SSProgram::m_mods)
+        {
+            if (auto cpp_mod = dynamic_cast<CppMod*>(mod.get()); cpp_mod && mod->is_started())
+            {
+                if (mod->get_name() == get_name())
+                {
+                    cpp_mod->fire_on_lua_stop(m_lua, *m_main_lua, *m_async_lua, m_hook_lua);
+                }
+                cpp_mod->fire_on_lua_stop(get_name(), m_lua, *m_main_lua, *m_async_lua, m_hook_lua);
+            }
         }
     }
 
@@ -3248,13 +3268,14 @@ Overloads:
         make_main_state(this, lua());
         setup_lua_global_functions_main_state_only();
 
-        fire_on_lua_start_for_cpp_mod();
-
         make_async_state(this, lua());
 
         start_async_thread();
 
         m_is_started = true;
+
+        fire_on_lua_start_for_cpp_mods();
+
         // Don't crash on syntax errors.
         try
         {
@@ -3273,7 +3294,7 @@ Overloads:
 
         Output::send(STR("Stopping mod '{}' for uninstall\n"), m_mod_name);
 
-        fire_on_lua_stop_for_cpp_mod();
+        fire_on_lua_stop_for_cpp_mods();
 
         if (m_async_thread.joinable())
         {

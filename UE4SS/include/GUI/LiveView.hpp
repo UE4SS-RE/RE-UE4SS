@@ -195,6 +195,14 @@ namespace RC::GUI
                 -> void;
 
       public:
+        auto set_is_searching_by_name(bool new_value) -> void
+        {
+            m_is_searching_by_name = new_value;
+        }
+        auto set_search_field_clear_requested(bool new_value) -> void
+        {
+            m_search_field_clear_requested = new_value;
+        }
         auto was_search_field_clear_requested() -> bool
         {
             return m_search_field_clear_requested;

@@ -78,12 +78,36 @@ namespace RC
         }
     }
 
+    auto CppMod::fire_on_lua_start(StringViewType mod_name,
+                                   LuaMadeSimple::Lua& lua,
+                                   LuaMadeSimple::Lua& main_lua,
+                                   LuaMadeSimple::Lua& async_lua,
+                                   std::vector<LuaMadeSimple::Lua*>& hook_luas) -> void
+    {
+        if (m_mod)
+        {
+            m_mod->on_lua_start(mod_name, lua, main_lua, async_lua, hook_luas);
+        }
+    }
+
     auto CppMod::fire_on_lua_start(LuaMadeSimple::Lua& lua, LuaMadeSimple::Lua& main_lua, LuaMadeSimple::Lua& async_lua, std::vector<LuaMadeSimple::Lua*>& hook_luas)
             -> void
     {
         if (m_mod)
         {
             m_mod->on_lua_start(lua, main_lua, async_lua, hook_luas);
+        }
+    }
+
+    auto CppMod::fire_on_lua_stop(StringViewType mod_name,
+                                  LuaMadeSimple::Lua& lua,
+                                  LuaMadeSimple::Lua& main_lua,
+                                  LuaMadeSimple::Lua& async_lua,
+                                  std::vector<LuaMadeSimple::Lua*>& hook_luas) -> void
+    {
+        if (m_mod)
+        {
+            m_mod->on_lua_stop(mod_name, lua, main_lua, async_lua, hook_luas);
         }
     }
 

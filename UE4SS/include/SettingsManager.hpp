@@ -65,6 +65,12 @@ namespace RC
             int64_t LiveViewObjectsPerGroup{64 * 1024 / 2};
         } Debug;
 
+        struct SectionCrashDump
+        {
+            bool EnableDumping{true};
+            bool FullMemoryDump{false};
+        } CrashDump;
+
         struct SectionThreads
         {
             int64_t SigScannerNumThreads{8};

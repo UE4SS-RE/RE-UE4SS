@@ -8,6 +8,7 @@
 #include <Constructs/Generator.hpp>
 #include <DynamicOutput/DynamicOutput.hpp>
 #include <Helpers/String.hpp>
+#include <Common.hpp>
 #include <LuaMadeSimple/LuaObject.hpp>
 #include <LuaType/LuaCustomProperty.hpp>
 #pragma warning(disable : 4005)
@@ -203,7 +204,7 @@ namespace RC::LuaType
         }
     };
 
-    struct UE4SSBaseObjectName
+    struct RC_UE4SS_API UE4SSBaseObjectName
     {
         constexpr static const char* ToString()
         {
@@ -219,7 +220,7 @@ namespace RC::LuaType
 
     using UE4SSBaseObject = ObjectBase<uint8_t, LuaMadeSimple::Type::RemoteObject, UE4SSBaseObjectName>;
 
-    struct PusherParams
+    struct RC_UE4SS_API PusherParams
     {
         const Operation operation;
         const LuaMadeSimple::Lua& lua;
@@ -235,7 +236,7 @@ namespace RC::LuaType
         bool create_new_if_get_non_trivial_local{true};
     };
 
-    struct FunctionPusherParams
+    struct RC_UE4SS_API FunctionPusherParams
     {
         const LuaMadeSimple::Lua& lua;
         Unreal::UObject* base;
@@ -248,39 +249,39 @@ namespace RC::LuaType
         static inline std::unordered_map<int32_t, PropertyValuePusherCallable> m_property_value_pushers;
     };
 
-    auto auto_construct_object(const LuaMadeSimple::Lua&, Unreal::UObject*) -> void;
+    RC_UE4SS_API auto auto_construct_object(const LuaMadeSimple::Lua&, Unreal::UObject*) -> void;
 
     // Helpers to construct an object that we cannot have access to in this header
-    auto construct_fname(const LuaMadeSimple::Lua&) -> void;
-    auto construct_uclass(const LuaMadeSimple::Lua&) -> void;
-    auto construct_xproperty(const LuaMadeSimple::Lua&, Unreal::FProperty* property) -> void;
+    RC_UE4SS_API auto construct_fname(const LuaMadeSimple::Lua&) -> void;
+    RC_UE4SS_API auto construct_uclass(const LuaMadeSimple::Lua&) -> void;
+    RC_UE4SS_API auto construct_xproperty(const LuaMadeSimple::Lua&, Unreal::FProperty* property) -> void;
 
     // Push to Lua -> START
-    auto push_unhandledproperty(const PusherParams&) -> void;
-    auto push_objectproperty(const PusherParams&) -> void;
-    auto push_classproperty(const PusherParams&) -> void;
-    auto push_int8property(const PusherParams&) -> void;
-    auto push_int16property(const PusherParams&) -> void;
-    auto push_intproperty(const PusherParams&) -> void;
-    auto push_int64property(const PusherParams&) -> void;
-    auto push_byteproperty(const PusherParams&) -> void; // Unreal Engine calls uint8 a "byte"
-    auto push_uint16property(const PusherParams&) -> void;
-    auto push_uint32property(const PusherParams&) -> void;
-    auto push_uint64property(const PusherParams&) -> void;
-    auto push_structproperty(const PusherParams&) -> void;
-    auto push_arrayproperty(const PusherParams&) -> void;
-    auto push_floatproperty(const PusherParams&) -> void;
-    auto push_doubleproperty(const PusherParams&) -> void;
-    auto push_boolproperty(const PusherParams&) -> void;
-    auto push_enumproperty(const PusherParams&) -> void;
-    auto push_weakobjectproperty(const PusherParams&) -> void;
-    auto push_nameproperty(const PusherParams&) -> void;
-    auto push_textproperty(const PusherParams&) -> void;
-    auto push_strproperty(const PusherParams&) -> void;
-    auto push_softclassproperty(const PusherParams&) -> void;
-    auto push_interfaceproperty(const PusherParams&) -> void;
+    RC_UE4SS_API auto push_unhandledproperty(const PusherParams&) -> void;
+    RC_UE4SS_API auto push_objectproperty(const PusherParams&) -> void;
+    RC_UE4SS_API auto push_classproperty(const PusherParams&) -> void;
+    RC_UE4SS_API auto push_int8property(const PusherParams&) -> void;
+    RC_UE4SS_API auto push_int16property(const PusherParams&) -> void;
+    RC_UE4SS_API auto push_intproperty(const PusherParams&) -> void;
+    RC_UE4SS_API auto push_int64property(const PusherParams&) -> void;
+    RC_UE4SS_API auto push_byteproperty(const PusherParams&) -> void; // Unreal Engine calls uint8 a "byte"
+    RC_UE4SS_API auto push_uint16property(const PusherParams&) -> void;
+    RC_UE4SS_API auto push_uint32property(const PusherParams&) -> void;
+    RC_UE4SS_API auto push_uint64property(const PusherParams&) -> void;
+    RC_UE4SS_API auto push_structproperty(const PusherParams&) -> void;
+    RC_UE4SS_API auto push_arrayproperty(const PusherParams&) -> void;
+    RC_UE4SS_API auto push_floatproperty(const PusherParams&) -> void;
+    RC_UE4SS_API auto push_doubleproperty(const PusherParams&) -> void;
+    RC_UE4SS_API auto push_boolproperty(const PusherParams&) -> void;
+    RC_UE4SS_API auto push_enumproperty(const PusherParams&) -> void;
+    RC_UE4SS_API auto push_weakobjectproperty(const PusherParams&) -> void;
+    RC_UE4SS_API auto push_nameproperty(const PusherParams&) -> void;
+    RC_UE4SS_API auto push_textproperty(const PusherParams&) -> void;
+    RC_UE4SS_API auto push_strproperty(const PusherParams&) -> void;
+    RC_UE4SS_API auto push_softclassproperty(const PusherParams&) -> void;
+    RC_UE4SS_API auto push_interfaceproperty(const PusherParams&) -> void;
 
-    auto push_functionproperty(const FunctionPusherParams&) -> void;
+    RC_UE4SS_API auto push_functionproperty(const FunctionPusherParams&) -> void;
     // Push to Lua -> END
 
     auto handle_unreal_property_value(const Operation operation, const LuaMadeSimple::Lua&, Unreal::UObject* base, Unreal::FName property_name, Unreal::FField* field)
@@ -291,7 +292,7 @@ namespace RC::LuaType
     template <typename DerivedType, typename ObjectName>
     class UObjectBase;
 
-    struct UObjectName
+    struct RC_UE4SS_API UObjectName
     {
         constexpr static const char* ToString()
         {

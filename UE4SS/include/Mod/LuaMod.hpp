@@ -7,6 +7,7 @@
 #include <unordered_map>
 #include <unordered_set>
 
+#include <Common.hpp>
 #include <File/File.hpp>
 #include <LuaMadeSimple/LuaMadeSimple.hpp>
 #include <Mod/Mod.hpp>
@@ -20,7 +21,7 @@ namespace RC
         class UClass;
     }
 
-    auto get_mod_ref(const LuaMadeSimple::Lua& lua) -> class LuaMod*;
+    RC_UE4SS_API auto get_mod_ref(const LuaMadeSimple::Lua& lua) -> class LuaMod*;
 
     class LuaMod : public Mod
     {
@@ -128,8 +129,8 @@ namespace RC
         auto setup_lua_global_functions(const LuaMadeSimple::Lua& lua) const -> void;
         auto setup_lua_global_functions_main_state_only() const -> void;
         auto setup_lua_classes(const LuaMadeSimple::Lua& lua) const -> void;
-        auto fire_on_lua_start_for_cpp_mod() -> void;
-        auto fire_on_lua_stop_for_cpp_mod() -> void;
+        auto fire_on_lua_start_for_cpp_mods() -> void;
+        auto fire_on_lua_stop_for_cpp_mods() -> void;
 
       public:
         auto start_mod() -> void override;
@@ -137,16 +138,16 @@ namespace RC
 
         auto prepare_mod(const LuaMadeSimple::Lua& lua) -> void;
 
-        auto lua() const -> const LuaMadeSimple::Lua&;
-        auto main_lua() const -> const LuaMadeSimple::Lua*;
-        auto async_lua() const -> const LuaMadeSimple::Lua*;
-        auto get_lua_state() const -> lua_State*;
+        RC_UE4SS_API auto lua() const -> const LuaMadeSimple::Lua&;
+        RC_UE4SS_API auto main_lua() const -> const LuaMadeSimple::Lua*;
+        RC_UE4SS_API auto async_lua() const -> const LuaMadeSimple::Lua*;
+        RC_UE4SS_API auto get_lua_state() const -> lua_State*;
 
-        auto actions_lock() -> void
+        RC_UE4SS_API auto actions_lock() -> void
         {
             m_actions_lock.lock();
         }
-        auto actions_unlock() -> void
+        RC_UE4SS_API auto actions_unlock() -> void
         {
             m_actions_lock.unlock();
         }

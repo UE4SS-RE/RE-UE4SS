@@ -71,5 +71,5 @@ target_compile_definitions(${TARGET} PRIVATE
 if (${CMAKE_CXX_COMPILER_ID} STREQUAL MSVC)
     target_compile_options(${TARGET} PRIVATE /W0)
 elseif (${CMAKE_CXX_COMPILER_ID} STREQUAL Clang)
-    target_compile_options(${TARGET} PRIVATE -Wno-deprecated-enum-enum-conversion)
+    target_compile_options(${TARGET} PRIVATE -xc++;-Wno-deprecated-enum-enum-conversion)
 endif ()

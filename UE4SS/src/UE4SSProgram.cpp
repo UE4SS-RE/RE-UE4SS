@@ -34,7 +34,6 @@
 #include <SDKGenerator/UEHeaderGenerator.hpp>
 #include <SigScanner/SinglePassSigScanner.hpp>
 #include <Signatures.hpp>
-#include <Timer/FunctionTimer.hpp>
 #include <Timer/ScopedTimer.hpp>
 #include <UE4SSProgram.hpp>
 #include <Unreal/AGameMode.hpp>
@@ -160,7 +159,6 @@ namespace RC
 
     UE4SSProgram::UE4SSProgram(const std::wstring& moduleFilePath, std::initializer_list<BinaryOptions> options) : MProgram(options)
     {
-        TIME_FUNCTION()
 
         s_program = this;
 
@@ -177,6 +175,13 @@ namespace RC
                 create_emergency_console_for_early_error(std::format(STR("The IniParser failed to parse: {}"), to_wstring(e.what())));
                 return;
             }
+
+            if (settings_manager.CrashDump.EnableDumping)
+            {
+                m_crash_dumper.enable();
+            }
+
+            m_crash_dumper.set_full_memory_dump(settings_manager.CrashDump.FullMemoryDump);
 
             m_debugging_gui.set_gfx_backend(settings_manager.Debug.GraphicsAPI);
 
@@ -216,12 +221,15 @@ namespace RC
                          std::format(L"{}",
                                      UE4SS_LIB_BETA_STARTED == 0 ? L"" : (UE4SS_LIB_IS_BETA == 0 ? L" Beta #?" : std::format(L" Beta #{}", UE4SS_LIB_VERSION_BETA))),
                          to_wstring(UE4SS_LIB_BUILD_GITSHA));
-#ifdef WITH_CASE_PRESERVING_NAME
-            Output::send(STR("WITH_CASE_PRESERVING_NAME: Yes\n\n"));
-#else
-            Output::send(STR("WITH_CASE_PRESERVING_NAME: No\n\n"));
-#endif
 
+#ifdef __clang__
+    #define UE4SS_COMPILER L"Clang"
+#else
+    #define UE4SS_COMPILER L"MSVC"
+#endif
+            
+            Output::send(STR("UE4SS Build Configuration: {} ({})\n"), to_wstring(UE4SS_CONFIGURATION), UE4SS_COMPILER);
+            
             m_load_library_a_hook = std::make_unique<PLH::IatHook>("kernel32.dll",
                                                                    "LoadLibraryA",
                                                                    std::bit_cast<uint64_t>(&HookedLoadLibraryA),
@@ -302,8 +310,6 @@ namespace RC
 
     auto UE4SSProgram::init() -> void
     {
-        TIME_FUNCTION();
-
         try
         {
             setup_unreal();
@@ -1659,8 +1665,6 @@ namespace RC
         // Do cleanup of static objects here
         // This function is called right before the DLL detaches from the game
         // Including when the player hits the 'X' button to exit the game
-#if TIME_FUNCTION_MACRO_V2 == 0
-        FunctionTimerCollection::dump();
-#endif
+
     }
 } // namespace RC

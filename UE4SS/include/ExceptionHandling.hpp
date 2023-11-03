@@ -5,6 +5,16 @@
 #include <DynamicOutput/DynamicOutput.hpp>
 #include <Helpers/String.hpp>
 
+#define UE4SS_ERROR_OUTPUTTER()                                                                                                                                \
+    if (!Output::has_internal_error())                                                                                                                         \
+    {                                                                                                                                                          \
+        Output::send<LogLevel::Error>(STR("Error: {}\n"), to_wstring(e.what()));                                                                               \
+    }                                                                                                                                                          \
+    else                                                                                                                                                       \
+    {                                                                                                                                                          \
+        printf_s("Internal Error: %s\n", e.what());                                                                                                            \
+    }
+
 namespace RC
 {
     // Will try some code and properly propagate any exceptions
@@ -18,14 +28,7 @@ namespace RC
         }
         catch (std::exception& e)
         {
-            if (!Output::has_internal_error())
-            {
-                Output::send<LogLevel::Error>(STR("Error: {}\n"), to_wstring(e.what()));
-            }
-            else
-            {
-                printf_s("Internal Error: %s\n", e.what());
-            }
+            UE4SS_ERROR_OUTPUTTER()
 
             using LambdaReturnType = decltype(code_to_try());
             if constexpr (!std::is_same_v<LambdaReturnType, void>)

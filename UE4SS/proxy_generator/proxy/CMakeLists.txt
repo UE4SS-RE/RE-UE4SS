@@ -5,7 +5,7 @@ project(${TARGET})
 enable_language(ASM_MASM)
 
 if(NOT DEFINED UE4SS_PROXY_PATH OR NOT UE4SS_PROXY_PATH)
-    set(UE4SS_PROXY_PATH "C:\\Windows\\System32\\xinput1_3.dll")
+    set(UE4SS_PROXY_PATH "C:\\Windows\\System32\\dwmapi.dll")
 endif()
 
 cmake_path(GET UE4SS_PROXY_PATH STEM PROXY_NAME)
