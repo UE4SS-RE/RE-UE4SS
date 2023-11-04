@@ -265,9 +265,9 @@ namespace RC::ObjectDumper
         }
     }
 
-    auto class_to_string(void* p_this, std::wstring& out_line) -> void
+    auto struct_to_string(void* p_this, std::wstring& out_line) -> void
     {
-        UClass* typed_this = static_cast<UClass*>(p_this);
+        UStruct* typed_this = static_cast<UStruct*>(p_this);
 
         object_trivial_dump_to_string(p_this, out_line);
         out_line.append(std::format(L" [sps: {:016X}]", reinterpret_cast<uintptr_t>(typed_this->GetSuperStruct())));
@@ -292,14 +292,14 @@ namespace RC::ObjectDumper
     {
         object_to_string_functions[UEnum::StaticClass()->HashObject()] = &enum_to_string;
         object_to_string_functions[UUserDefinedEnum::StaticClass()->HashObject()] = &enum_to_string;
-        object_to_string_functions[UClass::StaticClass()->HashObject()] = &class_to_string;
-        object_to_string_functions[UBlueprintGeneratedClass::StaticClass()->HashObject()] = &class_to_string;
-        object_to_string_functions[UWidgetBlueprintGeneratedClass::StaticClass()->HashObject()] = &class_to_string;
-        object_to_string_functions[UAnimBlueprintGeneratedClass::StaticClass()->HashObject()] = &class_to_string;
+        object_to_string_functions[UClass::StaticClass()->HashObject()] = &struct_to_string;
+        object_to_string_functions[UBlueprintGeneratedClass::StaticClass()->HashObject()] = &struct_to_string;
+        object_to_string_functions[UWidgetBlueprintGeneratedClass::StaticClass()->HashObject()] = &struct_to_string;
+        object_to_string_functions[UAnimBlueprintGeneratedClass::StaticClass()->HashObject()] = &struct_to_string;
         object_to_string_functions[UFunction::StaticClass()->HashObject()] = &function_to_string;
         // object_to_string_functions[UDelegateFunction::StaticClass()->HashObject()] = &function_to_string;
         // object_to_string_functions[USparseDelegateFunction::StaticClass()->HashObject()] = &function_to_string;
-        object_to_string_functions[UScriptStruct::StaticClass()->HashObject()] = &object_to_string;
+        object_to_string_functions[UScriptStruct::StaticClass()->HashObject()] = &struct_to_string;
         object_to_string_complex_functions[UScriptStruct::StaticClass()->HashObject()] = &scriptstruct_to_string_complex;
         object_to_string_functions[FObjectProperty::StaticClass().HashObject()] = &objectproperty_to_string;
         object_to_string_functions[FObjectPtrProperty::StaticClass().HashObject()] = &objectproperty_to_string;
