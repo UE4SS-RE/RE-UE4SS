@@ -109,6 +109,14 @@ namespace RC::LuaType
             return 1;
         });
 
+        table.add_pair("Empty", [](const LuaMadeSimple::Lua& lua) -> int {
+            auto& lua_object = lua.get_userdata<TArray>();
+
+            lua_object.get_remote_cpp_object()->Empty(0, lua_object.m_inner_property->GetElementSize(), lua_object.m_inner_property->GetMinAlignment());
+
+            return 0;
+        });
+
         // This is a read-only ForEach implementation (if inner type is trivial)
         // TODO: Make it writable
         table.add_pair("ForEach", [](const LuaMadeSimple::Lua& lua) -> int {
