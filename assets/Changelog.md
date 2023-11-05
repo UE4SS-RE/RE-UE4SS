@@ -12,6 +12,8 @@ Alternative proxys may be compiled by specifying `-DUE4SS_PROXY_PATH=/Path/To/DL
 
 Added additional AOB for `FName::ToString` - LongerWarrior
 
+Added SuperStruct, `sps`, to Struct and ScriptStruct entries in the object dumper
+
 ### Live View
 Can now view enum values in the Live View debugger
 
@@ -46,6 +48,8 @@ If provided, it will act as a post callback hook where out-params can be modifie
 Note that for BP-only functions, both callbacks act as post callbacks
 
 Out-params for script hooks (`RegisterCustomEvent` or `RegisterHook` on a BP-only UFunction) can now be set by doing `Param:set(<new-value>)`
+
+Added the function `Empty` to TArray
 
 ### C++ API
 Finalize C++ API. - LocalCC; Truman
