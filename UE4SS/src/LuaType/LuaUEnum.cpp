@@ -112,7 +112,7 @@ Overloads:
 
         table.add_pair("GetEnumNameByIndex", [](const LuaMadeSimple::Lua& lua) -> int {
             std::string error_overload_not_found{R"(
-No overload found for function 'UEnum.InsertIntoNames'.
+No overload found for function 'UEnum.GetEnumNameByIndex'.
 Overloads:
 #1: GetNameByValue(integer Value))"};
 
@@ -124,19 +124,27 @@ Overloads:
             }
 
             auto value = lua.get_integer();
-            LuaType::FName::construct(lua, lua_object.get_remote_cpp_object()->GetEnumNameByIndex(value));
-            return 1;
+            auto enum_pair = lua_object.get_remote_cpp_object()->GetEnumNameByIndex(value);
+
+            LuaType::FName::construct(lua, enum_pair.Key);
+            lua.set_integer(enum_pair.Value);
+
+            return 2;
         });
 
         table.add_pair("InsertIntoNames", [](const LuaMadeSimple::Lua& lua) -> int {
             // Function: InsertIntoNames
             // Param #1: Enum key name
-            // Param #2: Enum key index
+            // Param #2: Enum value
+            // Param #3: Enum index
+            // (Optional) Param #4: Shift values
             std::string error_overload_not_found{R"(
 No overload found for function 'UEnum.InsertIntoNames'.
 Overloads:
-#1: InsertIntoNames(string Name, integer Index) // shiftValues = true
-#1: InsertIntoNames(string Name, integer Index, bool shiftValues)"};
+#1: InsertIntoNames(string Name, integer Value, integer Index) // shiftValues = true
+#1: InsertIntoNames(string Name, integer Value, integer Index, bool shiftValues)"};
+
+            auto& lua_object = lua.get_userdata<UEnum>();
 
             int32_t stack_size = lua.get_stack_size();
 
@@ -145,7 +153,8 @@ Overloads:
                 lua.throw_error("Function 'UEnum.InsertIntoNames' cannot be called with 0 parameters.");
             }
 
-            StringType param_name = L"";
+            StringType param_name{};
+            int param_value = 0;
             int param_index = 0;
             bool param_shift = true;
 
@@ -156,26 +165,34 @@ Overloads:
             }
             else
             {
-                lua.throw_error("ERROR: Could not load parameter for \"Name\"");
+                lua.throw_error("'UEnum.InsertIntoNames' could not load parameter for \"Name\"");
             }
 
-            // P2 (Index), integer
+            // P2 (Value), integer
+            if (lua.is_integer())
+            {
+                param_value = lua.get_integer();
+            }
+            else
+            {
+                lua.throw_error("'UEnum.InsertIntoNames' could not load parameter for \"Index\"");
+            }
+
+            // P3 (Index), integer
             if (lua.is_integer())
             {
                 param_index = lua.get_integer();
             }
             else
             {
-                lua.throw_error("ERROR: Could not load parameter for \"Index\"");
+                lua.throw_error("'UEnum.InsertIntoNames' could not load parameter for \"Index\"");
             }
 
-            // (Optional) P3 (ShiftValues), boolean
+            // (Optional) P4 (ShiftValues), boolean
             if (lua.is_bool())
             {
-                param_index = lua.get_bool();
+                param_shift = lua.get_bool();
             }
-
-            auto& lua_object = lua.get_userdata<UEnum>();
 
             Unreal::FName key = Unreal::FName(param_name, Unreal::FNAME_Add);
             auto pair = Unreal::TPair{key, Unreal::int64(param_index)};
@@ -193,6 +210,8 @@ No overload found for function 'UEnum.EditNameAt'.
 Overloads:
 #1: EditNameAt(integer Index, string NewName))"};
 
+            auto& lua_object = lua.get_userdata<UEnum>();
+
             int32_t stack_size = lua.get_stack_size();
 
             if (stack_size <= 0)
@@ -201,7 +220,7 @@ Overloads:
             }
 
             int param_index = 0;
-            std::string param_new_name = L"";
+            std::string param_new_name{};
 
             // P1 (Index), integer
             if (lua.is_integer())
@@ -210,23 +229,23 @@ Overloads:
             }
             else
             {
-                lua.throw_error("ERROR: Could not load parameter for \"Index\"");
+                lua.throw_error("'UEnum.EditNameAt' could not load parameter for \"Index\"");
             }
 
             // P2 (NewName), string
             if (lua.is_integer())
             {
-                param_new_name = to_wstring(lua.get_string());
+                param_new_name = lua.get_string();
             }
             else
             {
-                lua.throw_error("ERROR: Could not load parameter for \"NewName\"");
+                lua.throw_error("'UEnum.EditNameAt' could not load parameter for \"NewName\"");
             }
 
-            auto& lua_object = lua.get_userdata<UEnum>();
-            Unreal::FName new_key = Unreal::FName(param_new_name, Unreal::FNAME_Add);
+            Unreal::FName new_key = Unreal::FName(to_wstring(param_new_name), Unreal::FNAME_Add);
             lua_object.get_remote_cpp_object()->EditNameAt(param_index, new_key);
-            return 1;
+
+            return 0;
         });
 
         table.add_pair("EditValueAt", [](const LuaMadeSimple::Lua& lua) -> int {
@@ -237,6 +256,8 @@ Overloads:
 No overload found for function 'UEnum.EditValueAt'.
 Overloads:
 #1: EditValueAt(integer Index, integer NewValue))"};
+
+            auto& lua_object = lua.get_userdata<UEnum>();
 
             int32_t stack_size = lua.get_stack_size();
 
@@ -255,7 +276,7 @@ Overloads:
             }
             else
             {
-                lua.throw_error("ERROR: Could not load parameter for \"Index\"");
+                lua.throw_error("'UEnum.EditValueAt' Could not load parameter for \"Index\"");
             }
 
             // P2 (NewValue), integer
@@ -265,21 +286,26 @@ Overloads:
             }
             else
             {
-                lua.throw_error("ERROR: Could not load parameter for \"NewValue\"");
+                lua.throw_error("'UEnum.EditValueAt' Could not load parameter for \"NewValue\"");
             }
 
-            auto& lua_object = lua.get_userdata<UEnum>();
             lua_object.get_remote_cpp_object()->EditValueAt(param_index, param_new_value);
-            return 1;
+            return 0;
         });
 
         table.add_pair("RemoveFromNamesAt", [](const LuaMadeSimple::Lua& lua) -> int {
             // Function: InsertIntoNames
             // Param #1: Enum index
+            // (Optional) Param #2: Enum entry count
+            // (Optional) Param #3: Allow shrinking after removal
             std::string error_overload_not_found{R"(
 No overload found for function 'UEnum.RemoveFromNamesAt'.
 Overloads:
-#1: RemoveFromNamesAt(integer Index))"};
+#1: RemoveFromNamesAt(integer Index) // Count = 1, AllowShrinking = true
+#2: RemoveFromNamesAt(integer Index, integer Count) // AllowShrinking = true
+#3: RemoveFromNamesAt(integer Index, integer Count, bool AllowShrinking))"};
+
+            auto& lua_object = lua.get_userdata<UEnum>();
 
             int32_t stack_size = lua.get_stack_size();
 
@@ -289,6 +315,8 @@ Overloads:
             }
 
             int param_index = 0;
+            int param_count = 1;
+            bool param_allow_shrinking = true;
 
             // P1 (Index), integer
             if (lua.is_string())
@@ -297,12 +325,23 @@ Overloads:
             }
             else
             {
-                lua.throw_error("ERROR: Could not load parameter for \"Name\"");
+                lua.throw_error("'UEnum.RemoveFromNamesAt' Could not load parameter for \"Name\"");
             }
 
-            auto& lua_object = lua.get_userdata<UEnum>();
-            lua_object.get_remote_cpp_object()->RemoveFromNamesAt(param_index);
-            return 1;
+            // P2 (Count), integer
+            if (lua.is_string())
+            {
+                param_count = lua.get_integer();
+            }
+
+            // P3 (AllowShrinking), boolean
+            if (lua.is_bool())
+            {
+                param_allow_shrinking = lua.get_bool();
+            }
+
+            lua_object.get_remote_cpp_object()->RemoveFromNamesAt(param_index, param_count, param_allow_shrinking);
+            return 0;
         });
 
         if constexpr (is_final == LuaMadeSimple::Type::IsFinal::Yes)
