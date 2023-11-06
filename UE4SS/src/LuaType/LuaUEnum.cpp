@@ -304,5 +304,17 @@ Overloads:
             lua_object.get_remote_cpp_object()->RemoveFromNamesAt(param_index);
             return 1;
         });
+
+        if constexpr (is_final == LuaMadeSimple::Type::IsFinal::Yes)
+        {
+            table.add_pair("type", [](const LuaMadeSimple::Lua& lua) -> int {
+                lua.set_string(ClassName::ToString());
+                return 1;
+            });
+
+            // If this is the final object then we also want to finalize creating the table
+            // If not then it's the responsibility of the overriding object to call 'make_global()'
+            // table.make_global(ClassName::ToString());
+        }
     }
 } // namespace RC::LuaType
