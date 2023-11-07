@@ -8,32 +8,32 @@
 
 namespace RC::JSON
 {
-    class RC_JSON_API String : public Value
+    class String : public Value
     {
       public:
-        constexpr static Type static_type = Type::String;
+        RC_JSON_API constexpr static Type static_type = Type::String;
 
       private:
         StringType m_data{};
 
       public:
-        String() = default;
-        explicit String(StringViewType string);
-        ~String() override = default;
+        RC_JSON_API String() = default;
+        RC_JSON_API explicit String(StringViewType string);
+        RC_JSON_API ~String() override = default;
 
       public:
-        auto get() -> StringType&
+        RC_JSON_API auto get() -> StringType&
         {
             return m_data;
         }
-        auto get_view() const -> StringViewType
+        RC_JSON_API auto get_view() const -> StringViewType
         {
             return m_data;
         }
 
       public:
-        auto serialize(ShouldFormat should_format = ShouldFormat::No, int32_t* indent_level = nullptr) -> StringType override;
-        auto get_type() const -> Type override
+        RC_JSON_API auto serialize(ShouldFormat should_format = ShouldFormat::No, int32_t* indent_level = nullptr) -> StringType override;
+        RC_JSON_API auto get_type() const -> Type override
         {
             return Type::String;
         }
