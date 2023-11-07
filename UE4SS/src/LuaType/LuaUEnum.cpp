@@ -141,7 +141,7 @@ Overloads:
             std::string error_overload_not_found{R"(
 No overload found for function 'UEnum.InsertIntoNames'.
 Overloads:
-#1: InsertIntoNames(string Name, integer Value, integer Index) // shiftValues = true
+#1: InsertIntoNames(string Name, integer Value, integer Index) // shiftValues = false
 #1: InsertIntoNames(string Name, integer Value, integer Index, bool shiftValues)"};
 
             auto& lua_object = lua.get_userdata<UEnum>();
@@ -156,7 +156,7 @@ Overloads:
             StringType param_name{};
             int param_value = 0;
             int param_index = 0;
-            bool param_shift = true;
+            bool param_shift = false;
 
             // P1 (Name), string
             if (lua.is_string())

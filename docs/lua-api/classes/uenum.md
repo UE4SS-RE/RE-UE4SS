@@ -12,12 +12,12 @@
 
 ### ForEachName(LuaFunction Callback)
 
-- Iterates every `FName`/`Value` combination that belongs to this enum.
+- Iterates every `FName`, `Value` combination that belongs to this enum.
 - The callback has two params: `FName Name`, `integer Value`.
 - Return `true` in the callback to stop iterating.
 
 ### GetEnumNameByIndex(integer Index)
-- **Return type:** `FName`/`Integer`
+- **Return type:** `FName`, `Integer`
 - **Returns:** the `FName` that coresponds the given `Index`.
 - **Returns:** the `Integer` value that coresponds the given `Index`.
 
