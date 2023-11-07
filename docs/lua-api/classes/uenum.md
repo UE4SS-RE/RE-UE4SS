@@ -17,7 +17,7 @@
 - Return `true` in the callback to stop iterating.
 
 ### GetEnumNameByIndex(integer Index)
-- **Return type:** `FName`, `Integer`
+- **Return types:** `FName`, `Integer`
 - **Returns:** the `FName` that coresponds the given `Index`.
 - **Returns:** the `Integer` value that coresponds the given `Index`.
 
