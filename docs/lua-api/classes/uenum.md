@@ -22,7 +22,7 @@
 - **Returns:** the `Integer` value that coresponds the given `Index`.
 
 ### InsertIntoNames(string Name, integer Value, integer Index, boolean ShiftValues = true)
-- Inserts a `Name/Value` combination into a a `UEnum` at the given `Index`.
+- Inserts a `FName`/`Value` combination into a a `UEnum` at the given `Index`.
 - If `ShiftValues = true`, will shift all enum values greater than inserted value by one.
 
 ### EditNameAt(integer Index, string NewName)
