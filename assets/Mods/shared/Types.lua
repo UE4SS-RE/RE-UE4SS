@@ -820,3 +820,65 @@ function RemoteUnrealParam:type() end
 ---@class TSoftClassPtr<T> : string
 ---@class TSoftObjectPtr<T> : string
 ---@class TSubclassOf<T> : UClass
+
+
+---@class UEnum
+
+UEunm = {}
+
+--- Returns the `FName` that corresponds to the specified value.
+---@param Value integer
+function UEunm:GetNameByValue(Value) end
+
+--- Iterates every `FName`, `Value` combination that belongs to this enum.
+--- The callback has two params: `FName Name`, `integer Value`.
+--- Return `true` in the callback to stop iterating.
+---@param Callback function
+function UEunm:ForEachName(Callback) end
+
+--- Returns the `FName` and `Integer` value that coresponds the given `Index`.
+---@param Index integer
+function GetEnumNameByIndex(Index) end
+
+--- Inserts a `FName`/`Value` combination into a a `UEnum` at the given `Index`.
+--- If `ShiftValues = true`, will shift all enum values greater than inserted value by one.
+---@param Name string
+---@param Value integer
+---@param Index integer
+function UEunm:InsertIntoNames(Name, Value, Index) end
+
+--- Inserts a `FName`/`Value` combination into a a `UEnum` at the given `Index`.
+--- If `ShiftValues = true`, will shift all enum values greater than inserted value by one.
+---@param Name string
+---@param Value integer
+---@param Index integer
+---@param ShiftValues boolean
+function UEunm:InsertIntoNames(Name, Value, Index, ShiftValues) end
+
+--- At a given `Index`, will modify the found element in the `UEnum` and replace it's `Name` with the given `NewName`.
+---@param Index integer
+---@param NewName string
+function UEunm:EditNameAt(Index, NewName) end
+
+--- At a given `Index`, will modify the found element in the `UEnum` and replace it's `Value` with the given `NewValue`.
+---@param Index integer
+---@param NewValue integer
+function UEunm:EditValueAt(Index, NewValue) end
+
+--- Will remove `Count` element(s) at the given `Index` from a `UEnum`.
+--- If `AllowShrinkning = true`, will shrink the enum array when removing elements.
+---@param Index integer
+function UEunm:RemoveFromNamesAt(Index) end
+
+--- Will remove `Count` element(s) at the given `Index` from a `UEnum`.
+--- If `AllowShrinkning = true`, will shrink the enum array when removing elements.
+---@param Index integer
+---@param Count integer
+function UEunm:RemoveFromNamesAt(Index, Count) end
+
+--- Will remove `Count` element(s) at the given `Index` from a `UEnum`.
+--- If `AllowShrinkning = true`, will shrink the enum array when removing elements.
+---@param Index integer
+---@param Count integer
+---@param AllowShrinking boolean
+function UEunm:RemoveFromNamesAt(Index, Count, AllowShrinking) end

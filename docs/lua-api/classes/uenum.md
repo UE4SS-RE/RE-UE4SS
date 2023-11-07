@@ -26,7 +26,7 @@
 - If `ShiftValues = true`, will shift all enum values greater than inserted value by one.
 
 ### EditNameAt(integer Index, string NewName)
-- At a given `Index`, will modify the found element in the `UEnum` and replace it's Name with the given `NewName`.
+- At a given `Index`, will modify the found element in the `UEnum` and replace it's `Name` with the given `NewName`.
 
 ### EditValueAt(integer Index, integer NewValue)
 - At a given `Index`, will modify the found element in the `UEnum` and replace it's value with the given `NewValue`.
