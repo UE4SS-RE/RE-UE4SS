@@ -1554,7 +1554,7 @@ namespace RC::UEGenerator
                                             attach_string = std::format(STR("SetupAttachment(p_{}_Parent->ContainerPtrToValuePtr<{}>(this))"),
                                                                         check_property->GetName(),
                                                                         get_native_class_name(check_sub_object_value->GetClassPrivate()));
-                                            implementation_file.add_dependency_object(check_sub_object_value, DependencyLevel::Include);
+                                            implementation_file.add_dependency_object(check_sub_object_value->GetClassPrivate(), DependencyLevel::Include);
                                         }
                                         parent_found = true;
                                         break;
