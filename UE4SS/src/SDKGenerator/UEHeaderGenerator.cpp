@@ -73,6 +73,13 @@ namespace RC::UEGenerator
                 FName(STR("MovieSceneActorReferenceData"), FNAME_Add),
                 FName(STR("ExpressionInput"), FNAME_Add),
                 FName(STR("ScalarParameterNameAndCurve"), FNAME_Add),
+                FName(STR("PredictionKey"), FNAME_Add),
+                FName(STR("CustomPrimitiveData"), FNAME_Add),
+                FName(STR("EQSParamaterizedQueryExecutionRequest"), FNAME_Add),
+                FName(STR("BlendFilter"), FNAME_Add),
+                FName(STR("AIDataProviderFloatValue"), FNAME_Add),
+                FName(STR("AIDataProviderIntValue"), FNAME_Add),
+                FName(STR("AIDataProviderBoolValue"), FNAME_Add),
         };
 
         auto subtype_name = subtype->GetNamePrivate();
@@ -1060,6 +1067,7 @@ namespace RC::UEGenerator
             UStruct* ustruct, FProperty* property, void* object, GeneratedSourceFile& implementation_file, const std::wstring& property_scope) -> void
     {
         const std::wstring property_name = property->GetName();
+        if (property_name == STR("NativeClass") || property_name == STR("hudClass")) { return; }
         const bool private_access_modifier = get_property_access_modifier(property) == AccessModifier::Private;
         bool super_and_no_access = false;
         // Populate super for checks to ensure values are only initialized if they are overriden in the child class
@@ -1518,6 +1526,7 @@ namespace RC::UEGenerator
                     }
                     else if (as_class)
                     {
+                        std::set<StringType> parent_property_names{};
                         for (FProperty* check_property : as_class->ForEachPropertyInChain())
                         {
                             if (check_property->IsA<FObjectProperty>())
@@ -1535,12 +1544,17 @@ namespace RC::UEGenerator
                                         }
                                         else
                                         {
-                                            implementation_file.append_line(std::format(STR("FProperty* p_{}_Parent = GetClass()->FindPropertyByName(\"{}\");"),
+                                            StringType parent_property_name = std::format(STR("FProperty* p_{}_Parent = GetClass()->FindPropertyByName(\"{}\");"),
                                                                                         check_property->GetName(),
-                                                                                        check_property->GetName()));
+                                                                                        check_property->GetName());
+                                            if (!parent_property_names.contains(parent_property_name))
+                                            {
+                                                parent_property_names.emplace(parent_property_name);
+                                                implementation_file.append_line(parent_property_name);
+                                            }
                                             attach_string = std::format(STR("SetupAttachment(p_{}_Parent->ContainerPtrToValuePtr<{}>(this))"),
                                                                         check_property->GetName(),
-                                                                        check_sub_object_value->GetClassPrivate()->GetName());
+                                                                        get_native_class_name(check_sub_object_value->GetClassPrivate()));
                                         }
                                         parent_found = true;
                                         break;
