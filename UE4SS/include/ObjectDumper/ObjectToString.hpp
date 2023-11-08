@@ -43,7 +43,7 @@ namespace RC::ObjectDumper
     auto boolproperty_to_string(void* p_this, std::wstring& out_line) -> void;
 
     auto enum_to_string(void* p_this, std::wstring& out_line) -> void;
-    auto class_to_string(void* p_this, std::wstring& out_line) -> void;
+    auto struct_to_string(void* p_this, std::wstring& out_line) -> void;
     auto function_to_string(void* p_this, std::wstring& out_line) -> void;
 
     auto scriptstruct_to_string_complex(void* p_this, std::wstring& out_line, ObjectToStringComplexDeclCallable callable) -> void;

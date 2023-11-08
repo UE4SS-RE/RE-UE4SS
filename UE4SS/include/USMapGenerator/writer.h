@@ -22,7 +22,7 @@ class StreamWriter : IBufferWriter
 
 public:
 
-    ~StreamWriter()
+    virtual ~StreamWriter()
     {
         m_Stream.flush();
     }
@@ -81,7 +81,7 @@ public:
         printf("");
     }
 
-    ~FileWriter()
+    virtual ~FileWriter()
     {
         std::fclose(m_File);
     }

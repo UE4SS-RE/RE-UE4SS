@@ -118,6 +118,7 @@ namespace RC::JSON::Parser
         TokenParser(const ParserBase::Tokenizer& tokenizer, File::StringType& input) : ParserBase::TokenParser(tokenizer, input)
         {
         }
+        virtual ~TokenParser() = default;
 
       private:
         auto do_comma_verification() -> void;

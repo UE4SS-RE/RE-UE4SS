@@ -43,6 +43,7 @@ namespace RC::ParserBase
       public:
         // Investigate whether I want to std::move the input here
         RC_PB_API TokenParser(const class Tokenizer&, File::StringType& input);
+        RC_PB_API virtual ~TokenParser() = default;
 
       protected:
         RC_PB_API virtual auto parse_token(const class Token& token) -> void = 0;

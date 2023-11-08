@@ -116,17 +116,17 @@ Overloads:
                 lua.for_each_in_table([&](const LuaMadeSimple::LuaTableReference& table) {
                     if (table.key.is_string() && table.key.get_string() == "Yaw" && table.value.is_number())
                     {
-                        rotation.Yaw = table.value.get_number();
+                        rotation.SetYaw(table.value.get_number());
                     }
 
                     if (table.key.is_string() && table.key.get_string() == "Pitch" && table.value.is_number())
                     {
-                        rotation.Pitch = table.value.get_number();
+                        rotation.SetPitch(table.value.get_number());
                     }
 
                     if (table.key.is_string() && table.key.get_string() == "Roll" && table.value.is_number())
                     {
-                        rotation.Roll = table.value.get_number();
+                        rotation.SetRoll(table.value.get_number());
                     }
                     return false;
                 });
