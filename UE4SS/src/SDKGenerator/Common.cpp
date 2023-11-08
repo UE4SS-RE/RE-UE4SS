@@ -211,6 +211,50 @@ namespace RC::UEGenerator
             return STR("double");
         }
 
+        // Class Properties
+        if (property->IsA<FClassProperty>() || property->IsA<FAssetClassProperty>())
+        {
+            FClassProperty* class_property = static_cast<FClassProperty*>(property);
+            UClass* meta_class = class_property->GetMetaClass();
+
+            if (meta_class == NULL || meta_class == UObject::StaticClass())
+            {
+                return STR("UClass*");
+            }
+
+            File::StringType meta_class_name{};
+            if (enable_forward_declarations == EnableForwardDeclarations::Yes)
+            {
+                meta_class_name = STR("class ");
+            }
+            meta_class_name.append(get_native_class_name(meta_class, false));
+            return std::format(STR("TSubclassOf<{}>"), meta_class_name);
+        }
+
+        if (auto* class_property = CastField<FClassPtrProperty>(property); class_property)
+        {
+            // TODO: Confirm that this is accurate
+            return STR("TObjectPtr<UClass>");
+        }
+
+        if (property->IsA<FSoftClassProperty>())
+        {
+            FSoftClassProperty* soft_class_property = static_cast<FSoftClassProperty*>(property);
+            UClass* meta_class = soft_class_property->GetMetaClass();
+
+            if (meta_class == NULL)
+            {
+                return STR("TSoftClassPtr<UClass>");
+            }
+            else if (meta_class == UObject::StaticClass())
+            {
+                return STR("TSoftClassPtr<UObject>");
+            }
+            
+            const std::wstring meta_class_name = get_native_class_name(meta_class, false);
+            return std::format(STR("TSoftClassPtr<{}>"), meta_class_name);
+        }
+
         // Object Properties
         //  TODO: Verify that the syntax for 'AssetObjectProperty' is the same as for 'ObjectProperty'.
         //        If it's not, then add another branch here after you figure out what the syntax should be.
@@ -293,46 +337,6 @@ namespace RC::UEGenerator
 
             const std::wstring property_class_name = get_native_class_name(property_class, false);
             return std::format(STR("TSoftObjectPtr<{}>"), property_class_name);
-        }
-
-        // Class Properties
-        if (property->IsA<FClassProperty>() || property->IsA<FAssetClassProperty>())
-        {
-            FClassProperty* class_property = static_cast<FClassProperty*>(property);
-            UClass* meta_class = class_property->GetMetaClass();
-
-            if (meta_class == NULL || meta_class == UObject::StaticClass())
-            {
-                return STR("UClass*");
-            }
-
-            File::StringType meta_class_name{};
-            if (enable_forward_declarations == EnableForwardDeclarations::Yes)
-            {
-                meta_class_name = STR("class ");
-            }
-            meta_class_name.append(get_native_class_name(meta_class, false));
-            return std::format(STR("TSubclassOf<{}>"), meta_class_name);
-        }
-
-        if (auto* class_property = CastField<FClassPtrProperty>(property); class_property)
-        {
-            // TODO: Confirm that this is accurate
-            return STR("TObjectPtr<UClass>");
-        }
-
-        if (property->IsA<FSoftClassProperty>())
-        {
-            FSoftClassProperty* soft_class_property = static_cast<FSoftClassProperty*>(property);
-            UClass* meta_class = soft_class_property->GetMetaClass();
-
-            if (meta_class == NULL || meta_class == UObject::StaticClass())
-            {
-                return STR("TSoftClassPtr<UObject>");
-            }
-
-            const std::wstring meta_class_name = get_native_class_name(meta_class, false);
-            return std::format(STR("TSoftClassPtr<{}>"), meta_class_name);
         }
 
         // Interface Property

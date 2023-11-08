@@ -141,6 +141,7 @@ namespace RC::UEGenerator
 
       public:
         std::wstring m_implementation_constructor;
+        std::unordered_set<StringType> parent_property_names{};
 
         GeneratedSourceFile(const FFilePath& file_path, const std::wstring& file_module_name, bool is_implementation_file, UObject* object);
 

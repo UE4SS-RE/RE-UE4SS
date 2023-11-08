@@ -1048,7 +1048,7 @@ namespace RC::UEGenerator
                                                                     const std::wstring& operator_type) -> void
     {
         const std::wstring field_class_name = property->GetName();
-        implementation_file.append_line(std::format(STR("FProperty* p_{} = GetClass()->FindPropertyByName(\"{}\");"), field_class_name, field_class_name));
+        implementation_file.append_line(std::format(STR("const FProperty* p_{} = GetClass()->FindPropertyByName(\"{}\");"), field_class_name, field_class_name));
         if (property->GetArrayDim() == 1)
         {
             implementation_file.append_line(std::format(STR("*p_{}->ContainerPtrToValuePtr<{}>(this){}{};"), field_class_name, property_type, operator_type, value));
@@ -1526,7 +1526,6 @@ namespace RC::UEGenerator
                     }
                     else if (as_class)
                     {
-                        std::set<StringType> parent_property_names{};
                         for (FProperty* check_property : as_class->ForEachPropertyInChain())
                         {
                             if (check_property->IsA<FObjectProperty>())
@@ -1544,17 +1543,18 @@ namespace RC::UEGenerator
                                         }
                                         else
                                         {
-                                            StringType parent_property_name = std::format(STR("FProperty* p_{}_Parent = GetClass()->FindPropertyByName(\"{}\");"),
+                                            StringType parent_property_name = std::format(STR("const FProperty* p_{}_Parent = GetClass()->FindPropertyByName(\"{}\");"),
                                                                                         check_property->GetName(),
                                                                                         check_property->GetName());
-                                            if (!parent_property_names.contains(parent_property_name))
+                                            if (!implementation_file.parent_property_names.contains(parent_property_name))
                                             {
-                                                parent_property_names.emplace(parent_property_name);
+                                                implementation_file.parent_property_names.emplace(parent_property_name);
                                                 implementation_file.append_line(parent_property_name);
                                             }
                                             attach_string = std::format(STR("SetupAttachment(p_{}_Parent->ContainerPtrToValuePtr<{}>(this))"),
                                                                         check_property->GetName(),
                                                                         get_native_class_name(check_sub_object_value->GetClassPrivate()));
+                                            implementation_file.add_dependency_object(check_sub_object_value, DependencyLevel::Include);
                                         }
                                         parent_found = true;
                                         break;
@@ -2324,6 +2324,52 @@ namespace RC::UEGenerator
             return STR("double");
         }
 
+        // Class Properties
+        if (property->IsA<FClassProperty>() || property->IsA<FAssetClassProperty>())
+        {
+            FClassProperty* class_property = static_cast<FClassProperty*>(property);
+            UClass* meta_class = class_property->GetMetaClass();
+
+            if (meta_class == NULL || meta_class == UObject::StaticClass())
+            {
+                return STR("UClass*");
+            }
+
+            if (context.source_file != NULL)
+            {
+                context.source_file->add_dependency_object(meta_class, DependencyLevel::PreDeclaration);
+                context.source_file->add_extra_include(STR("Templates/SubclassOf.h"));
+            }
+            const std::wstring meta_class_name = get_native_class_name(meta_class, false);
+
+            return std::format(STR("TSubclassOf<{}>"), meta_class_name);
+        }
+
+        if (auto* class_property = CastField<FClassPtrProperty>(property); class_property)
+        {
+            // TODO: Confirm that this is accurate
+            return STR("TClassPtr<UClass>");
+        }
+
+        if (property->IsA<FSoftClassProperty>())
+        {
+            FSoftClassProperty* soft_class_property = static_cast<FSoftClassProperty*>(property);
+            UClass* meta_class = soft_class_property->GetMetaClass();
+
+            if (meta_class == NULL || meta_class == UObject::StaticClass())
+            {
+                return STR("TSoftClassPtr<UObject>");
+            }
+
+            if (context.source_file != NULL)
+            {
+                context.source_file->add_dependency_object(meta_class, DependencyLevel::PreDeclaration);
+            }
+            const std::wstring meta_class_name = get_native_class_name(meta_class, false);
+
+            return std::format(STR("TSoftClassPtr<{}>"), meta_class_name);
+        }
+
         // Object Properties
         //  TODO: Verify that the syntax for 'AssetObjectProperty' is the same as for 'ObjectProperty'.
         //        If it's not, then add another branch here after you figure out what the syntax should be.
@@ -2420,52 +2466,6 @@ namespace RC::UEGenerator
             const std::wstring property_class_name = get_native_class_name(property_class, false);
 
             return std::format(STR("TSoftObjectPtr<{}>"), property_class_name);
-        }
-
-        // Class Properties
-        if (property->IsA<FClassProperty>() || property->IsA<FAssetClassProperty>())
-        {
-            FClassProperty* class_property = static_cast<FClassProperty*>(property);
-            UClass* meta_class = class_property->GetMetaClass();
-
-            if (meta_class == NULL || meta_class == UObject::StaticClass())
-            {
-                return STR("UClass*");
-            }
-
-            if (context.source_file != NULL)
-            {
-                context.source_file->add_dependency_object(meta_class, DependencyLevel::PreDeclaration);
-                context.source_file->add_extra_include(STR("Templates/SubclassOf.h"));
-            }
-            const std::wstring meta_class_name = get_native_class_name(meta_class, false);
-
-            return std::format(STR("TSubclassOf<{}>"), meta_class_name);
-        }
-
-        if (auto* class_property = CastField<FClassPtrProperty>(property); class_property)
-        {
-            // TODO: Confirm that this is accurate
-            return STR("TObjectPtr<UClass>");
-        }
-
-        if (property->IsA<FSoftClassProperty>())
-        {
-            FSoftClassProperty* soft_class_property = static_cast<FSoftClassProperty*>(property);
-            UClass* meta_class = soft_class_property->GetMetaClass();
-
-            if (meta_class == NULL || meta_class == UObject::StaticClass())
-            {
-                return STR("TSoftClassPtr<UObject>");
-            }
-
-            if (context.source_file != NULL)
-            {
-                context.source_file->add_dependency_object(meta_class, DependencyLevel::PreDeclaration);
-            }
-            const std::wstring meta_class_name = get_native_class_name(meta_class, false);
-
-            return std::format(STR("TSoftClassPtr<{}>"), meta_class_name);
         }
 
         // Interface Property
