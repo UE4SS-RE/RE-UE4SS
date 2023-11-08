@@ -286,9 +286,9 @@ namespace RC::GUI::Dumpers
 
             auto& rotation_json_object = root_component_json_object.new_object(STR("Rotation"));
             auto rotation = (*root_component)->GetValuePtrByPropertyNameInChain<FRotator>(STR("RelativeRotation"));
-            rotation_json_object.new_number(STR("Pitch"), rotation->Pitch);
-            rotation_json_object.new_number(STR("Yaw"), rotation->Yaw);
-            rotation_json_object.new_number(STR("Roll"), rotation->Roll);
+            rotation_json_object.new_number(STR("Pitch"), rotation->GetPitch());
+            rotation_json_object.new_number(STR("Yaw"), rotation->GetYaw());
+            rotation_json_object.new_number(STR("Roll"), rotation->GetRoll());
 
             auto& scale_json_object = root_component_json_object.new_object(STR("Scale"));
             auto scale = (*root_component)->GetValuePtrByPropertyNameInChain<FVector>(STR("RelativeScale3D"));
