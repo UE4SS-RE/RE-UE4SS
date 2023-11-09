@@ -29,7 +29,7 @@
 - At a given `Index`, will modify the found element in the `UEnum` and replace its `Name` with the given `NewName`.
 
 ### EditValueAt(integer Index, integer NewValue)
-- At a given `Index`, will modify the found element in the `UEnum` and replace it's value with the given `NewValue`.
+- At a given `Index`, will modify the found element in the `UEnum` and replace its value with the given `NewValue`.
 
 ### RemoveFromNamesAt(integer Index, integer Count = 1, boolean AllowShrinking = true)
 - Will remove `Count` element(s) at the given `Index` from a `UEnum`.
