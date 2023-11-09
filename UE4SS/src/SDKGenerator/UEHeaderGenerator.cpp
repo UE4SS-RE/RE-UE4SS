@@ -30,11 +30,14 @@
 #include <Unreal/Property/FMapProperty.hpp>
 #include <Unreal/Property/FMulticastInlineDelegateProperty.hpp>
 #include <Unreal/Property/FMulticastSparseDelegateProperty.hpp>
+#include <Unreal/Property/FNameProperty.hpp>
 #include <Unreal/Property/FObjectProperty.hpp>
 #include <Unreal/Property/FSetProperty.hpp>
+#include <Unreal/Property/FStrProperty.hpp>
 #include <Unreal/Property/FSoftClassProperty.hpp>
 #include <Unreal/Property/FSoftObjectProperty.hpp>
 #include <Unreal/Property/FStructProperty.hpp>
+#include <Unreal/Property/FTextProperty.hpp>
 #include <Unreal/Property/FWeakObjectProperty.hpp>
 #include <Unreal/Property/NumericPropertyTypes.hpp>
 #include <Unreal/UActorComponent.hpp>
@@ -56,24 +59,39 @@ namespace RC::UEGenerator
 
     auto static is_subtype_struct_valid(UScriptStruct* subtype) -> bool
     {
-        static FName float_interval_name = FName(STR("FloatInterval"), FNAME_Add);
-        static FName spline_curves_name = FName(STR("SplineCurves"), FNAME_Add);
-        static FName int32_interval_name = FName(STR("Int32Interval"), FNAME_Add);
-        static FName bone_reference_name = FName(STR("BoneReference"), FNAME_Add);
-        static FName overlap_result_name = FName(STR("OverlapResult"), FNAME_Add);
-        static FName rich_curve_name = FName(STR("RichCurve"), FNAME_Add);
+
+        static const std::vector<FName> invalid_subtype_structs = {
+                FName(STR("FloatInterval"), FNAME_Add),
+                FName(STR("SplineCurves"), FNAME_Add),
+                FName(STR("Int32Interval"), FNAME_Add),
+                FName(STR("BoneReference"), FNAME_Add),
+                FName(STR("OverlapResult"), FNAME_Add),
+                FName(STR("RichCurve"), FNAME_Add),
+                FName(STR("MovieScenePropertyTrack"), FNAME_Add),
+                FName(STR("MovieSceneSection"), FNAME_Add),
+                FName(STR("MovieSceneFloatChannel"), FNAME_Add),
+                FName(STR("MovieSceneActorReferenceData"), FNAME_Add),
+                FName(STR("ExpressionInput"), FNAME_Add),
+                FName(STR("ScalarParameterNameAndCurve"), FNAME_Add),
+                FName(STR("PredictionKey"), FNAME_Add),
+                FName(STR("CustomPrimitiveData"), FNAME_Add),
+                FName(STR("EQSParamaterizedQueryExecutionRequest"), FNAME_Add),
+                FName(STR("BlendFilter"), FNAME_Add),
+                FName(STR("AIDataProviderFloatValue"), FNAME_Add),
+                FName(STR("AIDataProviderIntValue"), FNAME_Add),
+                FName(STR("AIDataProviderBoolValue"), FNAME_Add),
+        };
 
         auto subtype_name = subtype->GetNamePrivate();
-        if (subtype_name == float_interval_name || subtype_name == spline_curves_name || subtype_name == int32_interval_name ||
-            subtype_name == bone_reference_name || subtype_name == overlap_result_name || subtype_name == rich_curve_name)
+        for (const auto& subtype_struct_name : invalid_subtype_structs)
         {
-            return false;
+            if (subtype_name == subtype_struct_name)
+            {
+                return false;
+            }
         }
-        else
-        {
-            return true;
-        }
-    };
+        return true;
+    }
 
     auto static is_subtype_valid(FProperty* subtype) -> bool
     {
@@ -112,7 +130,7 @@ namespace RC::UEGenerator
         {
             return true;
         }
-    };
+    }
 
     auto string_to_uppercase(std::wstring s) -> std::wstring
     {
@@ -342,7 +360,7 @@ namespace RC::UEGenerator
         {
             if (is_delegate_signature_function(function))
             {
-                generate_delegate_type_declaration(function, header_data);
+                generate_delegate_type_declaration(function, uclass, header_data);
                 NumDelegatesGenerated++;
             }
         }
@@ -423,7 +441,7 @@ namespace RC::UEGenerator
         {
             if (is_delegate_signature_function(function))
             {
-                generate_delegate_type_declaration(function, header_data);
+                generate_delegate_type_declaration(function, uclass, header_data);
                 NumDelegatesGenerated++;
             }
         }
@@ -453,13 +471,19 @@ namespace RC::UEGenerator
         append_access_modifier(header_data, AccessModifier::Public, current_access_modifier);
 
         // Generate constructor
-        header_data.append_line(std::format(STR("{}();"), class_native_name));
+        std::wstring constructor_string;
+        if (uclass->IsChildOf<AActor>())
+        {
+            constructor_string.append(STR("const FObjectInitializer& ObjectInitializer"));
+        }
+        header_data.append_line(std::format(STR("{}({});"), class_native_name, constructor_string));
+        header_data.append_line_no_indent(STR(""));
 
         // Generate GetLifetimeReplicatedProps override if we have encountered replicated properties
         if (encountered_replicated_properties)
         {
             header_data.append_line(STR("virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;"));
-            header_data.append_line(STR(""));
+            header_data.append_line_no_indent(STR(""));
         }
 
         // Generate functions
@@ -477,7 +501,7 @@ namespace RC::UEGenerator
         // Generate overrides for all inherited virtual functions
         if (implemented_interfaces.Num() > 0)
         {
-            header_data.append_line(STR(""));
+            header_data.append_line_no_indent(STR(""));
             header_data.append_line(STR("// Fix for true pure virtual functions not being implemented"));
         }
         for (const RC::Unreal::FImplementedInterface& uinterface : implemented_interfaces)
@@ -615,14 +639,19 @@ namespace RC::UEGenerator
             }
             expected_next_enum_value = Value + 1;
 
-            if (pre_append_result_line.ends_with(STR("_MAX")))
+            StringType pre_append_result_line_lower = pre_append_result_line;
+            std::transform(pre_append_result_line_lower.begin(), pre_append_result_line_lower.end(), pre_append_result_line_lower.begin(), ::towlower);
+            if (pre_append_result_line_lower.ends_with(STR("_max")))
             {
                 const StringType expected_full_constant_name = std::format(STR("{}_MAX"), enum_prefix);
-
+                StringType expected_full_constant_name_lower = expected_full_constant_name;
+                std::transform(expected_full_constant_name_lower.begin(), expected_full_constant_name_lower.end(), expected_full_constant_name_lower.begin(), ::towlower);
+                
                 int64_t expected_max_value = highest_enum_value + 1;
 
                 // Skip enum _MAX constant if it has a matching name and is 1 greater than the highest value used, which means it has been autogenerated
-                if (pre_append_result_line == expected_full_constant_name && Value == expected_max_value)
+                if ((pre_append_result_line_lower == expected_full_constant_name_lower || pre_append_result_line_lower == sanitize_enumeration_name(expected_full_constant_name_lower)) &&
+                    Value == expected_max_value)
                 {
                     continue;
                 }
@@ -644,8 +673,18 @@ namespace RC::UEGenerator
         }
     }
 
-    auto UEHeaderGenerator::generate_delegate_type_declaration(UFunction* signature_function, GeneratedSourceFile& header_data) -> void
+    auto UEHeaderGenerator::generate_delegate_type_declaration(UFunction* signature_function, UClass* delegate_class, GeneratedSourceFile& header_data) -> void
     {
+        std::wstring owning_class;
+        if (delegate_class == nullptr)
+        {
+            owning_class = STR("UObject*");
+        }
+        else
+        {
+            owning_class = delegate_class->GetNamePrivate().ToString();
+        }
+
         auto function_flags = signature_function->GetFunctionFlags();
         if ((function_flags & Unreal::FUNC_Delegate) == 0)
         {
@@ -681,6 +720,11 @@ namespace RC::UEGenerator
             delegate_parameter_list.insert(0, STR(", "));
         }
 
+        if (num_delegate_parameters > 9)
+        {
+            Output::send<LogLevel::Error>(STR("Invalid delegate parameter count in Delegate: {}. Using _TooMany\n"), delegate_type_name);
+        }
+
         std::wstring return_value_declaration;
         if (return_value_property != NULL)
         {
@@ -688,7 +732,7 @@ namespace RC::UEGenerator
             return_value_declaration.append(STR(", "));
         }
 
-        std::wstring delegate_declaration_string = std::format(STR("{}DECLARE_DYNAMIC{}{}_DELEGATE{}{}{}({}{}{});"),
+        std::wstring delegate_declaration_string = std::format(STR("{}DECLARE_DYNAMIC{}{}_DELEGATE{}{}{}({}{}{}{});"),
                                                                delegate_macro_string,
                                                                is_multicast ? STR("_MULTICAST") : STR(""),
                                                                is_sparse ? STR("_SPARSE") : STR(""),
@@ -697,6 +741,8 @@ namespace RC::UEGenerator
                                                                declared_const ? STR("_Const") : STR(""),
                                                                return_value_declaration,
                                                                delegate_type_name,
+                                                               // TODO: Actually get delegate property name.
+                                                               is_sparse ? std::format(STR("{}, {}"), owning_class, STR("EnterPropertyName")) : STR(""),
                                                                delegate_parameter_list);
 
         header_data.append_line(delegate_declaration_string);
@@ -705,6 +751,56 @@ namespace RC::UEGenerator
     auto UEHeaderGenerator::generate_object_implementation(UClass* uclass, GeneratedSourceFile& implementation_file) -> void
     {
         const std::wstring class_native_name = get_native_class_name(uclass);
+
+        std::wstring constructor_content_string;
+        std::wstring constructor_postfix_string;
+        UClass* super_class = uclass->GetSuperClass();
+        const std::wstring native_parent_class_name = super_class ? get_native_class_name(super_class) : STR("UObjectUtility");
+
+        // Generate constructor implementation except for overrides.
+
+        // If class is a child of AActor we add the UObjectInitializer constructor.
+        // This may not be required in all cases, but is necessary to override subcomponents and does not hurt anything.
+        std::wstring object_initializer_overrides;
+        if (uclass->IsChildOf<AActor>())
+        {
+            constructor_content_string.append(STR("const FObjectInitializer& ObjectInitializer"));
+            constructor_postfix_string.append(std::format(STR(") : Super(ObjectInitializer{}"), object_initializer_overrides));
+        }
+        // If parent class contains the UObjectInitializer constructor without default value,
+        // we need to create the explicit call to such constructor and pass UObjectInitializer::Get() as the argument.
+        else if (m_classes_with_object_initializer.contains(native_parent_class_name))
+        {
+            constructor_postfix_string.append(std::format(STR(") : {}(FObjectInitializer::Get()"), native_parent_class_name));
+        }
+
+        implementation_file.m_implementation_constructor.append(
+                std::format(STR("{}::{}({}{}"), class_native_name, class_native_name, constructor_content_string, constructor_postfix_string));
+
+        implementation_file.begin_indent_level();
+
+        // Generate and initialize properties
+        UObject* class_default_object = uclass->GetClassDefaultObject();
+
+        if (class_default_object != nullptr)
+        {
+            for (FProperty* property : uclass->ForEachPropertyInChain())
+            {
+                generate_property_value(uclass, property, class_default_object, implementation_file, STR("this->"));
+            }
+        }
+        else
+        {
+            implementation_file.append_line(STR("// Null default object."));
+        }
+        m_class_subobjects.clear();
+        implementation_file.end_indent_level();
+        implementation_file.append_line(STR("}\n"));
+
+        // Finalize constructor.  We do this after the property generation because we need information from the properties
+        // to determine the required overrides within the constructor.
+        implementation_file.m_implementation_constructor.append(STR(") {"));
+
         CaseInsensitiveSet blacklisted_property_names = collect_blacklisted_property_names(uclass);
 
         // Generate functions
@@ -748,39 +844,6 @@ namespace RC::UEGenerator
             implementation_file.append_line(STR("}"));
             implementation_file.append_line(STR(""));
         }
-
-        std::wstring constructor_postfix_string;
-        UClass* super_class = uclass->GetSuperClass();
-        const std::wstring native_parent_class_name = super_class ? get_native_class_name(super_class) : STR("UObjectUtility");
-
-        // If parent class contains the UObjectInitializer constructor without default value,
-        // we need to create the explicit call to such constructor and pass UObjectInitializer::Get() as the argument
-        if (m_classes_with_object_initializer.contains(native_parent_class_name))
-        {
-            constructor_postfix_string.append(std::format(STR(" : {}(FObjectInitializer::Get())"), native_parent_class_name));
-        }
-
-        // Generate constructor implementation and initialize properties inside
-        implementation_file.append_line(std::format(STR("{}::{}(){} {{"), class_native_name, class_native_name, constructor_postfix_string));
-        implementation_file.begin_indent_level();
-
-        // Generate properties
-        UObject* class_default_object = uclass->GetClassDefaultObject();
-
-        if (class_default_object != nullptr)
-        {
-            for (FProperty* property : uclass->ForEachProperty())
-            {
-                generate_property_value(property, class_default_object, implementation_file, STR("this->"));
-            }
-        }
-        else
-        {
-            implementation_file.append_line(STR("// Null default object."));
-        }
-
-        implementation_file.end_indent_level();
-        implementation_file.append_line(STR("}"));
     }
 
     auto UEHeaderGenerator::generate_struct_implementation(UScriptStruct* script_struct, GeneratedSourceFile& implementation_file) -> void
@@ -788,7 +851,7 @@ namespace RC::UEGenerator
         const std::wstring struct_native_name = get_native_struct_name(script_struct);
 
         // Generate constructor implementation and initialize properties inside
-        implementation_file.append_line(std::format(STR("{}::{}() {{"), struct_native_name, struct_native_name));
+        implementation_file.m_implementation_constructor.append(std::format(STR("{}::{}() {{"), struct_native_name, struct_native_name));
         implementation_file.begin_indent_level();
 
         // Generate properties
@@ -797,9 +860,9 @@ namespace RC::UEGenerator
         // TODO: ScriptStruct->InitializeStruct(StructDefaultObject);
         memset(struct_default_object, 0, script_struct->GetPropertiesSize());
 
-        for (FProperty* property : script_struct->ForEachProperty())
+        for (FProperty* property : script_struct->ForEachPropertyInChain())
         {
-            generate_property_value(property, struct_default_object, implementation_file, STR("this->"));
+            generate_property_value(script_struct, property, struct_default_object, implementation_file, STR("this->"));
         }
 
         // TODO: ScriptStruct->DestroyStruct(StructDefaultObject);
@@ -964,49 +1027,122 @@ namespace RC::UEGenerator
     auto UEHeaderGenerator::generate_simple_assignment_expression(FProperty* property,
                                                                   const std::wstring& value,
                                                                   GeneratedSourceFile& implementation_file,
-                                                                  const std::wstring& property_scope) -> void
+                                                                  const std::wstring& property_scope,
+                                                                  const std::wstring& operator_type) -> void
     {
         const std::wstring field_class_name = property->GetName();
         if (property->GetArrayDim() == 1)
         {
-            implementation_file.append_line(std::format(STR("{}{} = {};"), property_scope, field_class_name, value));
+            implementation_file.append_line(std::format(STR("{}{}{}{};"), property_scope, field_class_name, operator_type, value));
         }
         else
         {
             for (int32_t i = 0; i < property->GetArrayDim(); i++)
             {
-                implementation_file.append_line(std::format(STR("{}{}[{}] = {};"), property_scope, field_class_name, i, value));
+                implementation_file.append_line(std::format(STR("{}{}[{}]{}{};"), property_scope, field_class_name, i, operator_type, value));
             }
         }
     }
 
-    auto UEHeaderGenerator::generate_property_value(FProperty* property, void* object, GeneratedSourceFile& implementation_file, const std::wstring& property_scope)
-            -> void
+    auto UEHeaderGenerator::generate_advanced_assignment_expression(FProperty* property,
+                                                                    const std::wstring& value,
+                                                                    GeneratedSourceFile& implementation_file,
+                                                                    const std::wstring& property_scope,
+                                                                    const std::wstring& property_type,
+                                                                    const std::wstring& operator_type) -> void
     {
-        const std::wstring field_class_name = property->GetClass().GetName();
+        const std::wstring field_class_name = property->GetName();
+        implementation_file.append_line(std::format(STR("const FProperty* p_{} = GetClass()->FindPropertyByName(\"{}\");"), field_class_name, field_class_name));
+        if (property->GetArrayDim() == 1)
+        {
+            implementation_file.append_line(std::format(STR("*p_{}->ContainerPtrToValuePtr<{}>(this){}{};"), field_class_name, property_type, operator_type, value));
+        }
+        else
+        {
+            for (int32_t i = 0; i < property->GetArrayDim(); i++)
+            {
+                implementation_file.append_line(
+                        std::format(STR("*p_{}->ContainerPtrToValuePtr<{}>(this){}[{}]{}{};"), field_class_name, property_scope, field_class_name, i, operator_type, value));
+            }
+        }
+    }
+
+    auto UEHeaderGenerator::generate_property_value(
+            UStruct* ustruct, FProperty* property, void* object, GeneratedSourceFile& implementation_file, const std::wstring& property_scope) -> void
+    {
+        const std::wstring property_name = property->GetName();
+        if (property_name == STR("NativeClass") || property_name == STR("hudClass")) { return; }
+        const bool private_access_modifier = get_property_access_modifier(property) == AccessModifier::Private;
+        bool super_and_no_access = false;
+        // Populate super for checks to ensure values are only initialized if they are overriden in the child class
+        UStruct* super;
+        void* super_object = nullptr;
+        FProperty* super_property = nullptr;
+        const std::wstring property_type = generate_property_cxx_name(property, true, ustruct);
+        auto as_class = Cast<UClass>(ustruct);
+        if (as_class)
+        {
+            super = as_class->GetSuperClass();
+            super_object = Cast<UClass>(super)->GetClassDefaultObject();
+            if (super_object != nullptr)
+            {
+                super_property = super->GetPropertyByNameInChain(property_name.data());
+            }
+        }
+        else
+        {
+            super = ustruct->GetSuperStruct();
+            if (super != nullptr)
+            {
+                super_object = malloc(super->GetPropertiesSize());
+                memset(super_object, 0, super->GetPropertiesSize());
+                super_property = super->GetPropertyByNameInChain(property_name.data());
+            }
+        }
 
         // Byte Property
-        if (field_class_name == STR("ByteProperty"))
+        if (property->IsA<FByteProperty>())
         {
             FByteProperty* byte_property = static_cast<FByteProperty*>(property);
             uint8_t* byte_property_value = byte_property->ContainerPtrToValuePtr<uint8_t>(object);
+
+            // Ensure property either does not exist in parent class or is overriden in the CDO for the child class
+            if (super_property != nullptr)
+            {
+                FByteProperty* super_byte_property = static_cast<FByteProperty*>(super_property);
+                uint8_t* super_byte_property_value = super_byte_property->ContainerPtrToValuePtr<uint8_t>(super_object);
+                if (*byte_property_value == *super_byte_property_value)
+                {
+                    return;
+                }
+                super_and_no_access = private_access_modifier;
+            }
 
             UEnum* uenum = byte_property->GetEnum();
             std::wstring result_property_value;
             if (uenum != NULL)
             {
+                const std::wstring enum_type_name = get_native_enum_name(uenum);
                 result_property_value = generate_enum_value(uenum, *byte_property_value);
             }
             else
             {
                 result_property_value = std::to_wstring(*byte_property_value);
             }
-            generate_simple_assignment_expression(property, result_property_value, implementation_file, property_scope);
+
+            if (!super_and_no_access)
+            {
+                generate_simple_assignment_expression(property, result_property_value, implementation_file, property_scope);
+            }
+            else
+            {
+                generate_advanced_assignment_expression(property, result_property_value, implementation_file, property_scope, property_type);
+            }
             return;
         }
 
         // Enum Property
-        if (field_class_name == STR("EnumProperty"))
+        if (property->IsA<FEnumProperty>())
         {
             FEnumProperty* p_enum_property = static_cast<FEnumProperty*>(property);
             UEnum* uenum = p_enum_property->GetEnum();
@@ -1015,124 +1151,205 @@ namespace RC::UEGenerator
                 throw std::runtime_error(RC::fmt("EnumProperty %S does not have a valid Enum value", property->GetName().c_str()));
             }
 
-            implementation_file.add_dependency_object(uenum, DependencyLevel::Include);
             FNumericProperty* underlying_property = p_enum_property->GetUnderlyingProperty();
             int64 value = underlying_property->GetSignedIntPropertyValue(p_enum_property->ContainerPtrToValuePtr<int64>(object));
-            std::wstring result_property_value = generate_enum_value(uenum, value);
 
-            generate_simple_assignment_expression(property, result_property_value, implementation_file, property_scope);
+            // Ensure property either does not exist in parent class or is overriden in the CDO for the child class
+            if (super_property != nullptr)
+            {
+                FNumericProperty* super_underlying_property = static_cast<FEnumProperty*>(super_property)->GetUnderlyingProperty();
+                int64 super_value = super_underlying_property->GetSignedIntPropertyValue(super_property->ContainerPtrToValuePtr<int64>(super_object));
+                if (value == super_value)
+                {
+                    return;
+                }
+                super_and_no_access = private_access_modifier;
+            }
+
+            implementation_file.add_dependency_object(uenum, DependencyLevel::Include);
+            std::wstring result_property_value = generate_enum_value(uenum, value);
+            if (!super_and_no_access)
+            {
+                generate_simple_assignment_expression(property, result_property_value, implementation_file, property_scope);
+            }
+            else
+            {
+                generate_advanced_assignment_expression(property, result_property_value, implementation_file, property_scope, property_type);
+            }
             return;
         }
 
         // Bool Property
-        if (field_class_name == STR("BoolProperty"))
+        if (property->IsA<FBoolProperty>())
         {
             FBoolProperty* bool_property = static_cast<FBoolProperty*>(property);
-            uint8_t* RawPropertyValue = bool_property->ContainerPtrToValuePtr<uint8>(object);
+            uint8_t* raw_property_value = bool_property->ContainerPtrToValuePtr<uint8>(object);
 
             uint8_t field_mask = bool_property->GetFieldMask();
             uint8_t byte_offset = bool_property->GetByteOffset();
 
-            uint8_t* byte_value = RawPropertyValue + byte_offset;
+            uint8_t* byte_value = raw_property_value + byte_offset;
             bool result_bool_value = !!(*byte_value & field_mask);
 
+            // Ensure property either does not exist in parent class or is overriden in the CDO for the child class
+            if (super_property != nullptr)
+            {
+                FBoolProperty* super_bool_property = static_cast<FBoolProperty*>(super_property);
+                uint8_t* super_raw_property_value = super_bool_property->ContainerPtrToValuePtr<uint8>(super_object);
+
+                uint8_t super_field_mask = super_bool_property->GetFieldMask();
+                uint8_t super_byte_offset = super_bool_property->GetByteOffset();
+
+                uint8_t* super_byte_value = super_raw_property_value + super_byte_offset;
+                bool super_result_bool_value = !!(*super_byte_value & super_field_mask);
+                if (result_bool_value == super_result_bool_value)
+                {
+                    return;
+                }
+                super_and_no_access = private_access_modifier;
+            }
+
             const std::wstring result_property_value = result_bool_value ? STR("true") : STR("false");
-            generate_simple_assignment_expression(property, result_property_value, implementation_file, property_scope);
+            if (!super_and_no_access)
+            {
+                generate_simple_assignment_expression(property, result_property_value, implementation_file, property_scope);
+            }
+            else
+            {
+                generate_advanced_assignment_expression(property, result_property_value, implementation_file, property_scope, property_type);
+            }
             return;
         }
 
         // Name property is generated as normal string assignment
-        if (field_class_name == STR("NameProperty"))
+        if (property->IsA<FNameProperty>())
         {
             FName* name_value = property->ContainerPtrToValuePtr<FName>(object);
             const std::wstring name_value_string = name_value->ToString();
 
+            // Ensure property either does not exist in parent class or is overriden in the CDO for the child class
+            if (super_property != nullptr)
+            {
+                FName* super_name_value = super_property->ContainerPtrToValuePtr<FName>(super_object);
+                const std::wstring super_name_value_string = super_name_value->ToString();
+                if (name_value_string == super_name_value_string)
+                {
+                    return;
+                }
+                super_and_no_access = private_access_modifier;
+            }
+
             if (name_value_string != STR("None"))
             {
-                const std::wstring result_value = std::format(STR("TEXT(\"{}\")"), name_value_string);
-                generate_simple_assignment_expression(property, result_value, implementation_file, property_scope);
+                const std::wstring result_property_value = std::format(STR("TEXT(\"{}\")"), name_value_string);
+                if (!super_and_no_access)
+                {
+                    generate_simple_assignment_expression(property, result_property_value, implementation_file, property_scope);
+                }
+                else
+                {
+                    generate_advanced_assignment_expression(property, result_property_value, implementation_file, property_scope, property_type);
+                }
             }
             return;
         }
 
         // String properties are just normal strings
-        if (field_class_name == STR("StrProperty"))
+        if (property->IsA<FStrProperty>())
         {
             FString* string_value = property->ContainerPtrToValuePtr<FString>(object);
             const std::wstring string_value_string = string_value->GetCharArray();
 
+            // Ensure property either does not exist in parent class or is overriden in the CDO for the child class
+            if (super_property != nullptr)
+            {
+                FString* super_string_value = super_property->ContainerPtrToValuePtr<FString>(super_object);
+                const std::wstring super_string_value_string = super_string_value->GetCharArray();
+                if (string_value_string == super_string_value_string)
+                {
+                    return;
+                }
+                super_and_no_access = private_access_modifier;
+            }
+
             if (string_value_string != STR(""))
             {
                 const std::wstring result_value = create_string_literal(string_value_string);
-                generate_simple_assignment_expression(property, result_value, implementation_file, property_scope);
+                if (!super_and_no_access)
+                {
+                    generate_simple_assignment_expression(property, result_value, implementation_file, property_scope);
+                }
+                else
+                {
+                    generate_advanced_assignment_expression(property, result_value, implementation_file, property_scope, property_type);
+                }
             }
             return;
         }
 
         // Text properties are treated as FText::FromString, although it's not ideal
-        if (field_class_name == STR("TextProperty"))
+        if (property->IsA<FTextProperty>())
         {
             FText* text_value = property->ContainerPtrToValuePtr<FText>(object);
             const auto text_value_string = text_value->ToString();
 
+            // Ensure property either does not exist in parent class or is overriden in the CDO for the child class
+            if (super_property != nullptr)
+            {
+                FText* super_text_value = super_property->ContainerPtrToValuePtr<FText>(super_object);
+                const auto super_text_value_string = super_text_value->ToString();
+                if (text_value_string == super_text_value_string)
+                {
+                    return;
+                }
+                super_and_no_access = private_access_modifier;
+            }
+
             if (text_value_string != STR(""))
             {
-                const std::wstring ResultValue = std::format(STR("FText::FromString({})"), create_string_literal(text_value_string));
-                generate_simple_assignment_expression(property, ResultValue, implementation_file, property_scope);
-            }
-        }
-
-        // Object Properties are handled either as NULL, default subobjects, or UClass objects
-        if (field_class_name == STR("ObjectProperty"))
-        {
-            FObjectProperty* object_property = static_cast<FObjectProperty*>(property);
-            UObject* sub_object_value = *object_property->ContainerPtrToValuePtr<UObject*>(object);
-
-            if (sub_object_value == NULL)
-            {
-                // If object value is NULL, generate a simple NULL constant
-                generate_simple_assignment_expression(property, STR("NULL"), implementation_file, property_scope);
-            }
-            else if (sub_object_value->HasAnyFlags(EObjectFlags::RF_DefaultSubObject))
-            {
-                // Generate a CreateDefaultSubobject function call
-                UClass* object_class_type = sub_object_value->GetClassPrivate();
-                implementation_file.add_dependency_object(object_class_type, DependencyLevel::Include);
-
-                const std::wstring object_class_name = get_native_class_name(object_class_type);
-                const std::wstring object_name = sub_object_value->GetName();
-                const std::wstring initializer = std::format(STR("CreateDefaultSubobject<{}>(TEXT(\"{}\"))"), object_class_name, object_name);
-
-                generate_simple_assignment_expression(property, initializer, implementation_file, property_scope);
-            }
-            else if (UClass* sub_object_as_class = Cast<UClass>(sub_object_value))
-            {
-                // Generate a ::StaticClass call if this object represents a class
-                implementation_file.add_dependency_object(sub_object_as_class, DependencyLevel::Include);
-
-                const std::wstring object_class_name = get_native_class_name(sub_object_as_class);
-                const std::wstring initializer = std::format(STR("{}::StaticClass()"), object_class_name);
-
-                generate_simple_assignment_expression(property, initializer, implementation_file, property_scope);
-            }
-            else
-            {
-                // Unhandled case, might be some external object reference
-                Output::send(STR("Unhandled default value of the FObjectProperty {}: {}\n"), property->GetFullName(), sub_object_value->GetFullName());
+                const std::wstring result_property_value = std::format(STR("FText::FromString({})"), create_string_literal(text_value_string));
+                if (!super_and_no_access)
+                {
+                    generate_simple_assignment_expression(property, result_property_value, implementation_file, property_scope);
+                }
+                else
+                {
+                    generate_advanced_assignment_expression(property, result_property_value, implementation_file, property_scope, property_type);
+                }
             }
             return;
         }
 
         // Class Properties are handled either as NULL or StaticClass references
-        if (field_class_name == STR("ClassProperty"))
+        if (property->IsA<FClassProperty>())
         {
             FClassProperty* class_property = static_cast<FClassProperty*>(property);
             UClass* class_value = *class_property->ContainerPtrToValuePtr<UClass*>(object);
+
+            // Ensure property either does not exist in parent class or is overriden in the CDO for the child class
+            if (super_property != nullptr)
+            {
+                FClassProperty* super_class_property = static_cast<FClassProperty*>(super_property);
+                UClass* super_class_value = *super_class_property->ContainerPtrToValuePtr<UClass*>(super_object);
+                if (class_value == super_class_value)
+                {
+                    return;
+                }
+                super_and_no_access = private_access_modifier;
+            }
 
             if (class_value == NULL)
             {
                 // If class value is NULL, generate a simple NULL assignment
                 generate_simple_assignment_expression(property, STR("NULL"), implementation_file, property_scope);
+                if (!super_and_no_access)
+                {
+                    generate_simple_assignment_expression(property, STR("NULL"), implementation_file, property_scope);
+                }
+                else
+                {
+                    generate_advanced_assignment_expression(property, STR("NULL"), implementation_file, property_scope, property_type);
+                }
             }
             else if ((class_value->GetClassFlags() & CLASS_Native) != 0)
             {
@@ -1142,13 +1359,262 @@ namespace RC::UEGenerator
                 const std::wstring object_class_name = get_native_class_name(class_value);
                 const std::wstring initializer = std::format(STR("{}::StaticClass()"), object_class_name);
 
-                generate_simple_assignment_expression(property, initializer, implementation_file, property_scope);
+                if (!super_and_no_access)
+                {
+                    generate_simple_assignment_expression(property, initializer, implementation_file, property_scope);
+                }
+                else
+                {
+                    generate_advanced_assignment_expression(property, initializer, implementation_file, property_scope, property_type);
+                }
             }
             else
             {
                 // Unhandled case, reference to the non-native blueprint class potentially?
                 Output::send(STR("Unhandled default value of the FClassProperty {}: {}\n"), property->GetFullName(), class_value->GetFullName());
             }
+            return;
+        }
+
+        // Object Properties are handled either as NULL, default subobjects, or UClass objects
+        if (property->IsA<FObjectProperty>())
+        {
+            FObjectProperty* object_property = static_cast<FObjectProperty*>(property);
+            UObject* sub_object_value = *object_property->ContainerPtrToValuePtr<UObject*>(object);
+            FObjectProperty* super_object_property;
+            UObject* super_sub_object_value = NULL;
+
+            // Ensure property either does not exist in parent class or is overriden in the CDO for the child class
+            if (super_property != nullptr)
+            {
+                super_object_property = static_cast<FObjectProperty*>(super_property);
+                super_sub_object_value = *super_object_property->ContainerPtrToValuePtr<UObject*>(super_object);
+                if (sub_object_value == NULL && super_sub_object_value == NULL)
+                {
+                    return;
+                }
+                super_and_no_access = private_access_modifier;
+            }
+
+            if (sub_object_value == NULL)
+            {
+                // If object value is NULL, generate a simple NULL constant
+                // TODO: Needs additional checks to see if the class is abstract to potentially change this to a default object init
+                if (!super_and_no_access)
+                {
+                    generate_simple_assignment_expression(property, STR("NULL"), implementation_file, property_scope);
+                }
+                else
+                {
+                    generate_advanced_assignment_expression(property, STR("NULL"), implementation_file, property_scope, property_type);
+                }
+                return;
+            }
+
+            if (sub_object_value->HasAnyFlags(EObjectFlags::RF_DefaultSubObject))
+            {
+                UClass* object_class_type = sub_object_value->GetClassPrivate();
+                const std::wstring object_name = sub_object_value->GetName();
+
+                UClass* super_object_class_type{};
+                // Additional checks to ensure this property needs to be initialized in the current class
+                if (super_sub_object_value)
+                {
+                    super_object_class_type = super_sub_object_value->GetClassPrivate();
+                    const std::wstring super_object_name = super_sub_object_value->GetName();
+                    if ((object_class_type == super_object_class_type) && (object_name == super_object_name))
+                    {
+                        return;
+                    }
+                    super_and_no_access = private_access_modifier;
+                }
+
+                bool parent_component_found = false;
+                std::wstring prior_property_variable{};
+
+                // Check to see if any other property in the super initialized a component with the same name to ensure
+                // we are not creating the subobject in a child class unnecessarily.
+                if (super_object && !super_property)
+                {
+                    for (FProperty* check_super_property : super->ForEachPropertyInChain())
+                    {
+                        if (check_super_property->IsA<FObjectProperty>())
+                        {
+                            FObjectProperty* check_super_object_property = static_cast<FObjectProperty*>(check_super_property);
+                            UObject* check_super_sub_object_value = *check_super_object_property->ContainerPtrToValuePtr<UObject*>(super_object);
+                            if (check_super_sub_object_value)
+                            {
+                                std::wstring check_super_object_name = check_super_sub_object_value->GetName();
+                                if (check_super_object_name == object_name)
+                                {
+                                    parent_component_found = true;
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // Generate an initializer by either setting this property to a pre-existing property
+                // overriding the object class of an existing component, or creating a new default subobject
+                std::wstring initializer{};
+                if (auto it = m_class_subobjects.find(object_name); it != m_class_subobjects.end())
+                {
+                    // Set property to equal previous property referencing the same object
+                    initializer = it->second;
+                    FProperty* prior_property = ustruct->GetPropertyByNameInChain(initializer.c_str());
+                    bool prior_private = get_property_access_modifier(prior_property) == AccessModifier::Private;
+                    if (prior_private)
+                    {
+                        UObject* check_sub_object_value = *prior_property->ContainerPtrToValuePtr<UObject*>(object);
+                        std::wstring prior_prop_class_name = STR("NULL");
+                        if (check_sub_object_value->GetClassPrivate() != nullptr)
+                        {
+                            prior_prop_class_name = get_native_class_name(check_sub_object_value->GetClassPrivate());
+                        }
+                        implementation_file.append_line(
+                                std::format(STR("FProperty* p_{}_Prior = GetClass()->FindPropertyByName(\"{}\");"), initializer, initializer));
+                        initializer = std::format(STR("*p_{}_Prior->ContainerPtrToValuePtr<{}*>(this)"), initializer, prior_prop_class_name);
+                    }
+                    if (!super_and_no_access)
+                    {
+                        generate_simple_assignment_expression(property, initializer, implementation_file, property_scope);
+                    }
+                    else
+                    {
+                        generate_advanced_assignment_expression(property, initializer, implementation_file, property_scope, property_type);
+                    }
+                }
+                else if ((super_object_class_type && object_class_type != super_object_class_type) || parent_component_found)
+                {
+                    // Add an objectinitializer default subobject class override to the constructor
+                    implementation_file.add_dependency_object(object_class_type, DependencyLevel::Include);
+                    implementation_file.m_implementation_constructor.append(
+                            std::format(STR(".SetDefaultSubobjectClass<{}>(TEXT(\"{}\"))"), get_native_class_name(object_class_type), object_name));
+                    m_class_subobjects.try_emplace(object_name, property->GetName());
+                }
+                else
+                {
+                    // Generate a CreateDefaultSubobject function call
+                    implementation_file.add_dependency_object(object_class_type, DependencyLevel::Include);
+                    const std::wstring object_class_name = get_native_class_name(object_class_type);
+                    initializer = std::format(STR("CreateDefaultSubobject<{}>(TEXT(\"{}\"))"), object_class_name, object_name);
+                    m_class_subobjects.try_emplace(object_name, property->GetName());
+                    if (!super_and_no_access)
+                    {
+                        generate_simple_assignment_expression(property, initializer, implementation_file, property_scope);
+                    }
+                    else
+                    {
+                        generate_advanced_assignment_expression(property, initializer, implementation_file, property_scope, property_type);
+                    }
+                }
+
+                FObjectProperty* attach_parent_property = static_cast<FObjectProperty*>(sub_object_value->GetPropertyByNameInChain(STR("AttachParent")));
+                UObject* attach_parent_object_value{};
+                if (attach_parent_property)
+                {
+                    attach_parent_object_value = *attach_parent_property->ContainerPtrToValuePtr<UObject*>(sub_object_value);
+                }
+                if (attach_parent_object_value != NULL)
+                {
+                    const std::wstring attach_parent_object_name = attach_parent_object_value->GetName();
+                    const std::wstring operator_type = STR("->");
+                    bool parent_found = false;
+                    std::wstring attach_string;
+                    if (auto it = m_class_subobjects.find(attach_parent_object_name); it != m_class_subobjects.end())
+                    {
+                        // Set property to equal previous property referencing the same object
+                        attach_string = std::format(STR("SetupAttachment({})"), it->second);
+                        parent_found = true;
+                    }
+                    else if (as_class)
+                    {
+                        for (FProperty* check_property : as_class->ForEachPropertyInChain())
+                        {
+                            if (check_property->IsA<FObjectProperty>())
+                            {
+                                FObjectProperty* check_object_property = static_cast<FObjectProperty*>(check_property);
+                                UObject* check_sub_object_value = *check_object_property->ContainerPtrToValuePtr<UObject*>(object);
+                                if (check_sub_object_value)
+                                {
+                                    std::wstring check_object_name = check_sub_object_value->GetName();
+                                    if (check_object_name == attach_parent_object_name)
+                                    {
+                                        if (get_property_access_modifier(check_object_property) != AccessModifier::Private)
+                                        {
+                                            attach_string = std::format(STR("SetupAttachment({})"), check_property->GetName());
+                                        }
+                                        else
+                                        {
+                                            StringType parent_property_name = std::format(STR("const FProperty* p_{}_Parent = GetClass()->FindPropertyByName(\"{}\");"),
+                                                                                        check_property->GetName(),
+                                                                                        check_property->GetName());
+                                            if (!implementation_file.parent_property_names.contains(parent_property_name))
+                                            {
+                                                implementation_file.parent_property_names.emplace(parent_property_name);
+                                                implementation_file.append_line(parent_property_name);
+                                            }
+                                            attach_string = std::format(STR("SetupAttachment(p_{}_Parent->ContainerPtrToValuePtr<{}>(this))"),
+                                                                        check_property->GetName(),
+                                                                        get_native_class_name(check_sub_object_value->GetClassPrivate()));
+                                            implementation_file.add_dependency_object(check_sub_object_value->GetClassPrivate(), DependencyLevel::Include);
+                                        }
+                                        parent_found = true;
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    if (parent_found)
+                    {
+                        if (!super_and_no_access)
+                        {
+                            generate_simple_assignment_expression(property, attach_string, implementation_file, property_scope, operator_type);
+                        }
+                        else
+                        {
+                            const std::wstring object_class_name = get_native_class_name(object_class_type);
+                            generate_advanced_assignment_expression(property, attach_string, implementation_file, property_scope, property_type, operator_type);
+                        }
+                    }
+                }
+                return;
+            }
+
+            if (UClass* sub_object_as_class = Cast<UClass>(sub_object_value))
+            {
+                // Ensure property either does not exist in parent class or is overriden in the CDO for the child class
+                if (super_sub_object_value != nullptr)
+                {
+                    UClass* super_sub_object_as_class = Cast<UClass>(sub_object_value);
+                    if (sub_object_as_class == super_sub_object_as_class)
+                    {
+                        return;
+                    }
+                    super_and_no_access = private_access_modifier;
+                }
+
+                // Generate a ::StaticClass call if this object represents a class
+                implementation_file.add_dependency_object(sub_object_as_class, DependencyLevel::Include);
+
+                const std::wstring object_class_name = get_native_class_name(sub_object_as_class);
+                const std::wstring initializer = std::format(STR("{}::StaticClass()"), object_class_name);
+                if (!super_and_no_access)
+                {
+                    generate_simple_assignment_expression(property, initializer, implementation_file, property_scope);
+                }
+                else
+                {
+                    generate_advanced_assignment_expression(property, initializer, implementation_file, property_scope, property_type);
+                }
+                return;
+            }
+
+            // Unhandled case, might be some external object reference
+            Output::send(STR("Unhandled default value of the FObjectProperty {}: {}\n"), property->GetFullName(), sub_object_value->GetFullName());
+
             return;
         }
 
@@ -1173,36 +1639,60 @@ namespace RC::UEGenerator
             return;
         }*/
 
-        if (field_class_name == STR("ArrayProperty"))
+        if (property->IsA<FArrayProperty>())
         {
             FScriptArray* property_value = property->ContainerPtrToValuePtr<FScriptArray>(object);
+
+            // Ensure property either does not exist in parent class or is overriden in the CDO for the child class
+            if (super_property != nullptr)
+            {
+                FScriptArray* super_property_value = super_property->ContainerPtrToValuePtr<FScriptArray>(super_object);
+                if (property_value == super_property_value)
+                {
+                    return;
+                }
+                super_and_no_access = private_access_modifier;
+            }
 
             // Reserve the needed amount of elements
             if (property_value->Num() > 0)
             {
-                implementation_file.append_line(std::format(STR("{}{}.AddDefaulted({});"), property_scope, property->GetName(), property_value->Num()));
+                if (!super_and_no_access)
+                {
+                    implementation_file.append_line(std::format(STR("{}{}.AddDefaulted({});"), property_scope, property->GetName(), property_value->Num()));
+                }
+                else
+                {
+                    // TODO
+                }
             }
             return;
         }
 
         // TODO: Support collection/map properties initialization later
-        if (field_class_name == STR("ArrayProperty"))
+        if (property->IsA<FSetProperty>())
         {
             return;
         }
-        if (field_class_name == STR("SetProperty"))
-        {
-            return;
-        }
-        if (field_class_name == STR("MapProperty"))
+        if (property->IsA<FMapProperty>())
         {
             return;
         }
 
-        // Used to be 'property->is_child_of'
         if (property->IsA<FNumericProperty>())
         {
             FNumericProperty* numeric_property = static_cast<FNumericProperty*>(property);
+
+            // Ensure property either does not exist in parent class or is overriden in the CDO for the child class
+            if (super_property != nullptr)
+            {
+                FNumericProperty* super_numeric_property = static_cast<FNumericProperty*>(super_property);
+                if (numeric_property == super_numeric_property)
+                {
+                    return;
+                }
+                super_and_no_access = private_access_modifier;
+            }
 
             std::wstring number_constant_string;
             if (!numeric_property->IsFloatingPoint())
@@ -1215,7 +1705,14 @@ namespace RC::UEGenerator
                 double value = numeric_property->GetFloatingPointPropertyValue(numeric_property->ContainerPtrToValuePtr<double>(object));
                 number_constant_string = std::format(STR("{:.2f}f"), value);
             }
-            generate_simple_assignment_expression(property, number_constant_string, implementation_file, property_scope);
+            if (!super_and_no_access)
+            {
+                generate_simple_assignment_expression(property, number_constant_string, implementation_file, property_scope);
+            }
+            else
+            {
+                generate_advanced_assignment_expression(property, number_constant_string, implementation_file, property_scope, property_type);
+            }
             return;
         }
     }
@@ -1328,7 +1825,7 @@ namespace RC::UEGenerator
         case 9:
             return STR("_NineParams");
         default:
-            throw std::invalid_argument("Invalid delegate parameter count");
+            return STR("_TooMany");
         }
     }
 
@@ -1472,7 +1969,7 @@ namespace RC::UEGenerator
         {
             for (const std::wstring& DependencyModuleName : *iterator->second)
             {
-                add_module_and_sub_module_dependencies(out_module_dependencies, DependencyModuleName);
+                out_module_dependencies.insert(DependencyModuleName);
             }
         }
     }
@@ -1726,7 +2223,7 @@ namespace RC::UEGenerator
         const std::wstring field_class_name = property->GetClass().GetName();
 
         // Byte Property
-        if (field_class_name == STR("ByteProperty"))
+        if (property->IsA<FByteProperty>())
         {
             FByteProperty* byte_property = static_cast<FByteProperty*>(property);
             UEnum* enum_value = byte_property->GetEnum();
@@ -1745,14 +2242,14 @@ namespace RC::UEGenerator
                     this->m_blueprint_visible_enums.insert(enum_type_name);
                 }
 
-                // Non-EnumClass enumerations should be wrapped into TEnumAsByte according to UHT
+                // Non-EnumClass enumerations should be wrapped into TEnumAsByte according to UHT, but implicit uint8s should not use TEnumAsByte
                 return std::format(STR("TEnumAsByte<{}>"), enum_type_name);
             }
             return STR("uint8");
         }
 
         // Enum Property
-        if (field_class_name == STR("EnumProperty"))
+        if (property->IsA<FEnumProperty>())
         {
             FEnumProperty* enum_property = static_cast<FEnumProperty*>(property);
             FNumericProperty* underlying_property = enum_property->GetUnderlyingProperty();
@@ -1779,7 +2276,7 @@ namespace RC::UEGenerator
         }
 
         // Bool Property
-        if (field_class_name == STR("BoolProperty"))
+        if (property->IsA<FBoolProperty>())
         {
             FBoolProperty* bool_property = static_cast<FBoolProperty*>(property);
             if (context.is_top_level_declaration && context.out_is_bitmask_bool != NULL)
@@ -1794,47 +2291,93 @@ namespace RC::UEGenerator
         }
 
         // Standard Numeric Properties
-        if (field_class_name == STR("Int8Property"))
+        if (property->IsA<FInt8Property>())
         {
             return STR("int8");
         }
-        else if (field_class_name == STR("Int16Property"))
+        else if (property->IsA<FInt16Property>())
         {
             return STR("int16");
         }
-        else if (field_class_name == STR("IntProperty"))
+        else if (property->IsA<FIntProperty>())
         {
             return STR("int32");
         }
-        else if (field_class_name == STR("Int64Property"))
+        else if (property->IsA<FInt64Property>())
         {
             return STR("int64");
         }
-        else if (field_class_name == STR("UInt16Property"))
+        else if (property->IsA<FUInt16Property>())
         {
             return STR("uint16");
         }
-        else if (field_class_name == STR("UInt32Property"))
+        else if (property->IsA<FUInt32Property>())
         {
             return STR("uint32");
         }
-        else if (field_class_name == STR("UInt64Property"))
+        else if (property->IsA<FUInt64Property>())
         {
             return STR("uint64");
         }
-        else if (field_class_name == STR("FloatProperty"))
+        else if (property->IsA<FFloatProperty>())
         {
             return STR("float");
         }
-        else if (field_class_name == STR("DoubleProperty"))
+        else if (property->IsA<FDoubleProperty>())
         {
             return STR("double");
+        }
+
+        // Class Properties
+        if (property->IsA<FClassProperty>() || property->IsA<FAssetClassProperty>())
+        {
+            FClassProperty* class_property = static_cast<FClassProperty*>(property);
+            UClass* meta_class = class_property->GetMetaClass();
+
+            if (meta_class == NULL || meta_class == UObject::StaticClass())
+            {
+                return STR("UClass*");
+            }
+
+            if (context.source_file != NULL)
+            {
+                context.source_file->add_dependency_object(meta_class, DependencyLevel::PreDeclaration);
+                context.source_file->add_extra_include(STR("Templates/SubclassOf.h"));
+            }
+            const std::wstring meta_class_name = get_native_class_name(meta_class, false);
+
+            return std::format(STR("TSubclassOf<{}>"), meta_class_name);
+        }
+
+        if (auto* class_property = CastField<FClassPtrProperty>(property); class_property)
+        {
+            // TODO: Confirm that this is accurate
+            return STR("TClassPtr<UClass>");
+        }
+
+        if (property->IsA<FSoftClassProperty>())
+        {
+            FSoftClassProperty* soft_class_property = static_cast<FSoftClassProperty*>(property);
+            UClass* meta_class = soft_class_property->GetMetaClass();
+
+            if (meta_class == NULL || meta_class == UObject::StaticClass())
+            {
+                return STR("TSoftClassPtr<UObject>");
+            }
+
+            if (context.source_file != NULL)
+            {
+                context.source_file->add_dependency_object(meta_class, DependencyLevel::PreDeclaration);
+            }
+            const std::wstring meta_class_name = get_native_class_name(meta_class, false);
+
+            return std::format(STR("TSoftClassPtr<{}>"), meta_class_name);
         }
 
         // Object Properties
         //  TODO: Verify that the syntax for 'AssetObjectProperty' is the same as for 'ObjectProperty'.
         //        If it's not, then add another branch here after you figure out what the syntax should be.
-        if (field_class_name == STR("ObjectProperty") || field_class_name == STR("AssetObjectProperty"))
+        if (property->IsA<FObjectProperty>() || property->IsA<FAssetObjectProperty>())
         {
             FObjectProperty* object_property = static_cast<FObjectProperty*>(property);
             UClass* property_class = object_property->GetPropertyClass();
@@ -1872,7 +2415,7 @@ namespace RC::UEGenerator
             }
         }
 
-        if (field_class_name == STR("WeakObjectProperty"))
+        if (property->IsA<FWeakObjectProperty>())
         {
             FWeakObjectProperty* weak_object_property = static_cast<FWeakObjectProperty*>(property);
             UClass* property_class = weak_object_property->GetPropertyClass();
@@ -1891,7 +2434,7 @@ namespace RC::UEGenerator
             return std::format(STR("TWeakObjectPtr<{}>"), property_class_name);
         }
 
-        if (field_class_name == STR("LazyObjectProperty"))
+        if (property->IsA<FLazyObjectProperty>())
         {
             FLazyObjectProperty* lazy_object_property = static_cast<FLazyObjectProperty*>(property);
             UClass* property_class = lazy_object_property->GetPropertyClass();
@@ -1910,7 +2453,7 @@ namespace RC::UEGenerator
             return std::format(STR("TLazyObjectPtr<{}>"), property_class_name);
         }
 
-        if (field_class_name == STR("SoftObjectProperty"))
+        if (property->IsA<FSoftObjectProperty>())
         {
             FSoftObjectProperty* soft_object_property = static_cast<FSoftObjectProperty*>(property);
             UClass* property_class = soft_object_property->GetPropertyClass();
@@ -1929,54 +2472,8 @@ namespace RC::UEGenerator
             return std::format(STR("TSoftObjectPtr<{}>"), property_class_name);
         }
 
-        // Class Properties
-        if (field_class_name == STR("ClassProperty") || field_class_name == STR("AssetClassProperty"))
-        {
-            FClassProperty* class_property = static_cast<FClassProperty*>(property);
-            UClass* meta_class = class_property->GetMetaClass();
-
-            if (meta_class == NULL || meta_class == UObject::StaticClass())
-            {
-                return STR("UClass*");
-            }
-
-            if (context.source_file != NULL)
-            {
-                context.source_file->add_dependency_object(meta_class, DependencyLevel::PreDeclaration);
-                context.source_file->add_extra_include(STR("Templates/SubclassOf.h"));
-            }
-            const std::wstring meta_class_name = get_native_class_name(meta_class, false);
-
-            return std::format(STR("TSubclassOf<{}>"), meta_class_name);
-        }
-
-        if (auto* class_property = CastField<FClassPtrProperty>(property); class_property)
-        {
-            // TODO: Confirm that this is accurate
-            return STR("TObjectPtr<UClass>");
-        }
-
-        if (field_class_name == STR("SoftClassProperty"))
-        {
-            FSoftClassProperty* soft_class_property = static_cast<FSoftClassProperty*>(property);
-            UClass* meta_class = soft_class_property->GetMetaClass();
-
-            if (meta_class == NULL || meta_class == UObject::StaticClass())
-            {
-                return STR("TSoftClassPtr<UObject>");
-            }
-
-            if (context.source_file != NULL)
-            {
-                context.source_file->add_dependency_object(meta_class, DependencyLevel::PreDeclaration);
-            }
-            const std::wstring meta_class_name = get_native_class_name(meta_class, false);
-
-            return std::format(STR("TSoftClassPtr<{}>"), meta_class_name);
-        }
-
         // Interface Property
-        if (field_class_name == STR("InterfaceProperty"))
+        if (property->IsA<FInterfaceProperty>())
         {
             FInterfaceProperty* interface_property = static_cast<FInterfaceProperty*>(property);
             UClass* interface_class = interface_property->GetInterfaceClass();
@@ -1996,7 +2493,7 @@ namespace RC::UEGenerator
         }
 
         // Struct Property
-        if (field_class_name == STR("StructProperty"))
+        if (property->IsA<FStructProperty>())
         {
             FStructProperty* struct_property = static_cast<FStructProperty*>(property);
             UScriptStruct* script_struct = struct_property->GetStruct();
@@ -2017,7 +2514,7 @@ namespace RC::UEGenerator
         }
 
         // Delegate Properties
-        if (field_class_name == STR("DelegateProperty"))
+        if (property->IsA<FDelegateProperty>())
         {
             FDelegateProperty* delegate_property = static_cast<FDelegateProperty*>(property);
             UFunction* delegate_signature_function = delegate_property->GetSignatureFunction();
@@ -2036,7 +2533,7 @@ namespace RC::UEGenerator
 
         // In 4.23, they replaced 'MulticastDelegateProperty' with 'Inline' & 'Sparse' variants
         // It looks like the delegate macro might be the same as the 'Inline' variant in later versions, so we'll use the same branch here
-        if (field_class_name == STR("MulticastInlineDelegateProperty") || field_class_name == STR("MulticastDelegateProperty"))
+        if (property->IsA<FMulticastInlineDelegateProperty>() || property->IsA<FMulticastDelegateProperty>())
         {
             FMulticastInlineDelegateProperty* delegate_property = static_cast<FMulticastInlineDelegateProperty*>(property);
             UFunction* delegate_signature_function = delegate_property->GetSignatureFunction();
@@ -2053,7 +2550,7 @@ namespace RC::UEGenerator
             return get_native_delegate_type_name(delegate_signature_function, current_class);
         }
 
-        if (field_class_name == STR("MulticastSparseDelegateProperty"))
+        if (property->IsA<FMulticastSparseDelegateProperty>())
         {
             FMulticastSparseDelegateProperty* delegate_property = static_cast<FMulticastSparseDelegateProperty*>(property);
             UFunction* delegate_signature_function = delegate_property->GetSignatureFunction();
@@ -2071,7 +2568,7 @@ namespace RC::UEGenerator
         }
 
         // Field path property
-        if (field_class_name == STR("FieldPathProperty"))
+        if (property->IsA<FFieldPathProperty>())
         {
             FFieldPathProperty* field_path_property = static_cast<FFieldPathProperty*>(property);
             const std::wstring property_class_name = field_path_property->GetPropertyClass()->GetName();
@@ -2080,7 +2577,7 @@ namespace RC::UEGenerator
 
         // Collection and Map Properties
         //  TODO: This is missing support for freeze image array properties because XArrayProperty is incomplete. (low priority)
-        if (field_class_name == STR("ArrayProperty"))
+        if (property->IsA<FArrayProperty>())
         {
             FArrayProperty* array_property = static_cast<FArrayProperty*>(property);
             FProperty* inner_property = array_property->GetInner();
@@ -2089,7 +2586,7 @@ namespace RC::UEGenerator
             return std::format(STR("TArray<{}>"), inner_property_type);
         }
 
-        if (field_class_name == STR("SetProperty"))
+        if (property->IsA<FSetProperty>())
         {
             FSetProperty* set_property = static_cast<FSetProperty*>(property);
             FProperty* element_prop = set_property->GetElementProp();
@@ -2099,7 +2596,7 @@ namespace RC::UEGenerator
         }
 
         // TODO: This is missing support for freeze image map properties because XMapProperty is incomplete. (low priority)
-        if (field_class_name == STR("MapProperty"))
+        if (property->IsA<FMapProperty>())
         {
             FMapProperty* map_property = static_cast<FMapProperty*>(property);
             FProperty* key_property = map_property->GetKeyProp();
@@ -2112,15 +2609,15 @@ namespace RC::UEGenerator
         }
 
         // Standard properties that do not have any special attributes
-        if (field_class_name == STR("NameProperty"))
+        if (property->IsA<FNameProperty>())
         {
             return STR("FName");
         }
-        else if (field_class_name == STR("StrProperty"))
+        else if (property->IsA<FStrProperty>())
         {
             return STR("FString");
         }
-        else if (field_class_name == STR("TextProperty"))
+        else if (property->IsA<FTextProperty>())
         {
             return STR("FText");
         }
@@ -2429,11 +2926,15 @@ namespace RC::UEGenerator
         int64 highest_enum_value = 0;
         const StringType enum_prefix = uenum->GenerateEnumPrefix();
         const StringType expected_max_name = std::format(STR("{}_MAX"), enum_prefix);
-
+        StringType expected_max_name_lower = expected_max_name;
+        std::transform(expected_max_name_lower.begin(), expected_max_name_lower.end(), expected_max_name_lower.begin(), ::towlower);
+        
         for (auto [Name, Value] : uenum->ForEachName())
         {
             StringType enum_name = sanitize_enumeration_name(Name.ToString());
-            if (enum_name != expected_max_name && Value > highest_enum_value)
+            StringType enum_name_lower = enum_name;
+            std::transform(enum_name_lower.begin(), enum_name_lower.end(), enum_name_lower.begin(), ::towlower);
+            if ((enum_name_lower != expected_max_name_lower && enum_name_lower != sanitize_enumeration_name(expected_max_name_lower)) && Value > highest_enum_value)
             {
                 highest_enum_value = Value;
             }
@@ -2928,10 +3429,11 @@ namespace RC::UEGenerator
         // TODO not optimal, but still needed for the majority of the cases
         this->m_forced_module_dependencies.insert(STR("Engine"));
 
-        // Add few classes that require explicit UObjectInitializer constructor call
+        // Add few classes that require explicit UObjectInitializer constructor call, excluding classes inheriting from AActor.
         this->m_classes_with_object_initializer.insert(STR("UUserWidget"));
+        this->m_classes_with_object_initializer.insert(STR("UListView"));
         this->m_classes_with_object_initializer.insert(STR("UMovieSceneTrack"));
-        this->m_classes_with_object_initializer.insert(STR("APlayerStart"));
+        this->m_classes_with_object_initializer.insert(STR("USoundWaveProcedural"));
         this->m_classes_with_object_initializer.insert(STR("URichTextBlock"));
         this->m_classes_with_object_initializer.insert(STR("URichTextBlockImageDecorator"));
         this->m_classes_with_object_initializer.insert(STR("URichTextBlockDecorator"));
@@ -3285,7 +3787,7 @@ namespace RC::UEGenerator
             {
                 throw std::runtime_error(RC::fmt("Delegate Signature Function %S does not have a UPackage as it's owner", function->GetName().c_str()));
             }
-            generate_global_delegate_declaration(function, header_file);
+            generate_global_delegate_declaration(function, NULL, header_file);
         }
         else
         {
@@ -3425,9 +3927,9 @@ namespace RC::UEGenerator
         return header_name;
     }
 
-    auto UEHeaderGenerator::generate_global_delegate_declaration(UFunction* signature_function, GeneratedSourceFile& header_data) -> void
+    auto UEHeaderGenerator::generate_global_delegate_declaration(UFunction* signature_function, UClass* delegate_class, GeneratedSourceFile& header_data) -> void
     {
-        generate_delegate_type_declaration(signature_function, header_data);
+        generate_delegate_type_declaration(signature_function, delegate_class, header_data);
     }
 
     auto UEHeaderGenerator::determine_primary_game_module_name() -> std::wstring
@@ -3587,6 +4089,12 @@ namespace RC::UEGenerator
         if (!pre_declarations_string.empty())
         {
             result_header_contents.append(pre_declarations_string);
+            result_header_contents.append(STR("\n"));
+        }
+
+        if (!m_implementation_constructor.empty())
+        {
+            result_header_contents.append(m_implementation_constructor);
             result_header_contents.append(STR("\n"));
         }
 

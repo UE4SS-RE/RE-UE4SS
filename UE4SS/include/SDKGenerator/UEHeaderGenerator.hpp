@@ -140,6 +140,9 @@ namespace RC::UEGenerator
         bool m_needs_get_type_hash;
 
       public:
+        std::wstring m_implementation_constructor;
+        std::unordered_set<StringType> parent_property_names{};
+
         GeneratedSourceFile(const FFilePath& file_path, const std::wstring& file_module_name, bool is_implementation_file, UObject* object);
 
         // Delete copy and move constructors and assignment operator
@@ -224,6 +227,9 @@ namespace RC::UEGenerator
         static std::map<File::StringType, UniqueName> m_used_file_names;
         static std::map<UObject*, int32_t> m_dependency_object_to_unique_id;
 
+        // Storage for class defaultsubojects when populating property initializers
+        std::unordered_map<std::wstring, std::wstring> m_class_subobjects;
+
       public:
         UEHeaderGenerator(const FFilePath& root_directory);
 
@@ -244,8 +250,8 @@ namespace RC::UEGenerator
         auto generate_object_definition(UClass* interface_function, GeneratedSourceFile& header_data) -> void;
         auto generate_struct_definition(UScriptStruct* property, GeneratedSourceFile& header_data) -> void;
         auto generate_enum_definition(UEnum* name_pair, GeneratedSourceFile& header_data) -> void;
-        auto generate_global_delegate_declaration(UFunction* signature_function, GeneratedSourceFile& header_data) -> void;
-        auto generate_delegate_type_declaration(UFunction* signature_function, GeneratedSourceFile& header_data) -> void;
+        auto generate_global_delegate_declaration(UFunction* signature_function, UClass* delegate_class, GeneratedSourceFile& header_data) -> void;
+        auto generate_delegate_type_declaration(UFunction* signature_function, UClass* delagate_class, GeneratedSourceFile& header_data) -> void;
         auto generate_object_implementation(UClass* property, GeneratedSourceFile& implementation_file) -> void;
         auto generate_struct_implementation(UScriptStruct* property, GeneratedSourceFile& implementation_file) -> void;
 
@@ -257,7 +263,8 @@ namespace RC::UEGenerator
                                const CaseInsensitiveSet& blacklisted_property_names,
                                bool generate_as_override = false) -> void;
 
-        auto generate_property_value(FProperty* property, void* object, GeneratedSourceFile& implementation_file, const std::wstring& property_scope) -> void;
+        auto generate_property_value(UStruct* ustruct, FProperty* property, void* object, GeneratedSourceFile& implementation_file, const std::wstring& property_scope)
+                -> void;
         auto generate_function_implementation(UClass* uclass,
                                               UFunction* function,
                                               GeneratedSourceFile& implementation_file,
@@ -285,7 +292,14 @@ namespace RC::UEGenerator
         auto generate_simple_assignment_expression(FProperty* property,
                                                    const std::wstring& value,
                                                    GeneratedSourceFile& implementation_file,
-                                                   const std::wstring& property_scope) -> void;
+                                                   const std::wstring& property_scope,
+                                                   const std::wstring& operator_type = STR(" = ")) -> void;
+        auto generate_advanced_assignment_expression(FProperty* property,
+                                                     const std::wstring& value,
+                                                     GeneratedSourceFile& implementation_file,
+                                                     const std::wstring& property_scope,
+                                                     const std::wstring& property_type,
+                                                     const std::wstring& operator_type = STR(" = ")) -> void;
 
         auto static generate_parameter_count_string(int32_t parameter_count) -> std::wstring;
         auto static determine_primary_game_module_name() -> std::wstring;
