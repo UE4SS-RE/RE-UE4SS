@@ -233,7 +233,7 @@ Overloads:
             }
 
             // P2 (NewName), string
-            if (lua.is_integer())
+            if (lua.is_string())
             {
                 param_new_name = lua.get_string();
             }
