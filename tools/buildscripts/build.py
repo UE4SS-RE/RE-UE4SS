@@ -145,7 +145,7 @@ def package(args):
 
         ue4ss_dll_path = ''
         ue4ss_pdb_path = ''
-        xinput1_3_dll_path = ''
+        dwmapi_dll_path = ''
 
         scan_start_dir = '.'
         if str(args.d) != 'None':
@@ -157,14 +157,14 @@ def package(args):
                     ue4ss_dll_path = os.path.join(root, file)
                 if file.lower() == "ue4ss.pdb":
                     ue4ss_pdb_path = os.path.join(root, file)
-                if file.lower() == "xinput1_3.dll":
-                    xinput1_3_dll_path = os.path.join(root, file)
+                if file.lower() == "dwmapi.dll":
+                    dwmapi_dll_path = os.path.join(root, file)
 
         # main dll
         shutil.copy(ue4ss_dll_path, staging_dir)
 
         # proxy
-        shutil.copy(xinput1_3_dll_path, staging_dir)
+        shutil.copy(dwmapi_dll_path, staging_dir)
 
         if is_dev_release:
             shutil.copy(ue4ss_pdb_path, staging_dir)
@@ -176,7 +176,7 @@ def package(args):
         print(f'created package {output}.zip')
 
         # clean up
-        for bin in ['ue4ss.dll', 'xinput1_3.dll', 'ue4ss.pdb']:
+        for bin in ['ue4ss.dll', 'dwmapi.dll', 'ue4ss.pdb']:
             try:
                 os.remove(os.path.join(staging_dir, bin))
             except:

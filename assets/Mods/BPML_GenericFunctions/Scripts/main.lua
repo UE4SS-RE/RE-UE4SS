@@ -42,16 +42,19 @@ RegisterCustomEvent("PrintToModLoader", function(ParamContext, ParamMessage)
 end)
 
 local UClassStaticRef = nil
-RegisterCustomEvent("ConstructPersistentObject", function(ParamContext, ParamClass)
+RegisterCustomEvent("ConstructPersistentObject", function(ParamContext, ParamClass, OutParam)
+    -- Param Type Checking
+    local Class = ParamClass:get()
+    if not Class:IsValid() then error("ConstructPersistentObject Param #1 must be a valid UClass") end
     if not UClassStaticRef then
         UClassStaticRef = StaticFindObject("/Script/CoreUObject.Class")
     end
     if not UClassStaticRef:IsValid() then error("ConstructPersistentObject could not find /Script/CoreUObject.Class") end
-
-    local Class = ParamClass:get()
-    if not Class:IsValid() then error("ConstructPersistentObject Param #1 must be a valid UClass") end
     if not Class:IsA(UClassStaticRef) then error("ConstructPersistentObject Param #1 must be a UClass or UClass derivative") end
+    local OutValue = OutParam:get()
+    if not OutValue:type() == "UObject" then error("ConstructPersistentObject Return Value must be a UObject") end
 
+    -- Function Logic
     local GameInstance = FindFirstOf("GameInstance")
     local GarbageCollectionKeepFlags = 0x0E000000
     local PersistentObject = StaticConstructObject(Class, GameInstance, 0, 0, GarbageCollectionKeepFlags, false, false, nil, nil, nil)
@@ -59,5 +62,6 @@ RegisterCustomEvent("ConstructPersistentObject", function(ParamContext, ParamCla
         Log(string.format("Was unable to construct persistent object: %s", Class:GetFullName()))
     end
 
-    return PersistentObject
+    -- Return Value
+    OutParam:set(PersistentObject)
 end)

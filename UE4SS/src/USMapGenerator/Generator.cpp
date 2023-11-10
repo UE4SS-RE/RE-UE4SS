@@ -415,7 +415,7 @@ namespace RC::OutTheShade
         std::streampos extEndPos = Buffer.GetBuffer().tellp();
 
         Buffer.GetBuffer().seekp(extStartPos);
-        Buffer.GetBuffer().seekp(-sizeof(uint32_t), std::ios_base::cur);
+        Buffer.GetBuffer().seekp(-(int32)sizeof(uint32), std::ios_base::cur);
         Buffer.Write<uint32_t>(extEndPos - extStartPos);
         Buffer.GetBuffer().seekp(extEndPos);
 
@@ -459,7 +459,7 @@ namespace RC::OutTheShade
         extEndPos = Buffer.GetBuffer().tellp();
 
         Buffer.GetBuffer().seekp(extStartPos);
-        Buffer.GetBuffer().seekp(-sizeof(uint32_t), std::ios_base::cur);
+        Buffer.GetBuffer().seekp(-(int32)sizeof(uint32), std::ios_base::cur);
         Buffer.Write<uint32_t>(extEndPos - extStartPos);
         Buffer.GetBuffer().seekp(extEndPos);
 
@@ -486,7 +486,7 @@ namespace RC::OutTheShade
         extEndPos = Buffer.GetBuffer().tellp();
 
         Buffer.GetBuffer().seekp(extStartPos);
-        Buffer.GetBuffer().seekp(-sizeof(uint32_t), std::ios_base::cur);
+        Buffer.GetBuffer().seekp(-(int32)sizeof(uint32), std::ios_base::cur);
         Buffer.Write<uint32_t>(extEndPos - extStartPos);
         Buffer.GetBuffer().seekp(extEndPos);
 

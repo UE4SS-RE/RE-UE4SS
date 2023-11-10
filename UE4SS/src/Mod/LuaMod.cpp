@@ -58,7 +58,6 @@
 #include <UnrealCustom/CustomProperty.hpp>
 #pragma warning(default : 4005)
 
-#include <Timer/FunctionTimer.hpp>
 
 namespace RC
 {
@@ -108,7 +107,6 @@ namespace RC
 
     static auto lua_unreal_script_function_hook_pre(Unreal::UnrealScriptFunctionCallableContext context, void* custom_data) -> void
     {
-        TIME_FUNCTION()
 
         // Fetch the data corresponding to this UFunction
         auto& lua_data = *static_cast<LuaUnrealScriptFunctionData*>(custom_data);

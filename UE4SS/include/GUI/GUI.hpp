@@ -168,6 +168,9 @@ namespace RC::GUI
         Console m_console{};
 
       public:
+        virtual ~DebuggingGUIBase() = default;
+
+      public:
         auto get_console() -> Console&
         {
             return m_console;

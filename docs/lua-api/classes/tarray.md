@@ -28,6 +28,9 @@
 - **Return type:** `integer`
 - **Returns:** the address in memory where the data for this array is stored.
 
+### Empty()
+- Clears the array.
+
 ### ForEach(function Callback)
 - Iterates the entire `TArray` and calls the callback function for each element in the array.
 - The callback params are: `integer index`, `RemoteUnrealParam elem` | `LocalUnrealParam elem`.

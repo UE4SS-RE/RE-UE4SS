@@ -1,6 +1,9 @@
 cmake_minimum_required(VERSION 3.18)
 project(UE4SSMonorepo)
 
+set(CMAKE_CXX_STANDARD 23)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
 enable_language(CXX ASM_MASM)
 include(CheckIPOSupported)
 include(GNUInstallDirs)
@@ -39,7 +42,7 @@ list(APPEND TARGET_COMPILE_DEFINITIONS UNICODE)
 # CLion fixes -> START
 # There's a bug with CLion that causes it to not recognize our API macros.
 # This in turn causes it to break completely as it cannot see our struct definitions properly.
-if ($ENV{CLION_IDE})
+if (DEFINED ENV{CLION_IDE} AND DEFINED UE4SS_ENABLE_CLION_FIXES)
     list(APPEND TARGET_COMPILE_DEFINITIONS
             RC_UE4SS_API=
             RC_UE_API=
@@ -81,7 +84,7 @@ set(Shipping_DEFINITIONS UE_BUILD_SHIPPING)
 set(Test_DEFINITIONS UE_BUILD_TEST)
 
 # Platform definitions
-set(Win64_DEFINITIONS PLATFORM_WINDOWS)
+set(Win64_DEFINITIONS PLATFORM_WINDOWS PLATFORM_MICROSOFT OVERRIDE_PLATFORM_HEADER_NAME=Windows UBT_COMPILED_PLATFORM=Win64)
 
 # Definitions -> END
 
