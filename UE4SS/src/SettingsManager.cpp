@@ -38,10 +38,67 @@
     {                                                                                                                                                          \
     }
 
-namespace RC
+namespace RC::Settings
 {
+    
+    auto SettingsManager::read_settings() -> void
+    {
+        SettingsManager s{};
+        std::string buffer{};
+        Output::send<LogLevel::Error>(STR("Finding Settings.\n"));
+        auto file = std::ofstream("./UE4SS-Settings.json", std::ios::in);
+        if (file)
+        {
+            Output::send<LogLevel::Error>(STR("Settings found.\n"));
+            glz::parse_error pe = glz::read_file_json(s, "./UE4SS-Settings.json", buffer);
+            if (pe)
+            {
+                std::string descriptive_error = glz::format_error(pe, buffer);
+
+                size_t count = descriptive_error.size() + 1;
+                wchar_t* converted_method_name = new wchar_t[count];
+
+                size_t num_of_char_converted = 0;
+                mbstowcs_s(&num_of_char_converted, converted_method_name, count, descriptive_error.data(), count);
+
+                auto converted = File::StringViewType(converted_method_name);
+
+                delete[] converted_method_name;
+                
+                Output::send<LogLevel::Error>(STR("{}\n\nError parsing settings file, please fix the file or delete it to generate new settings.\nContinuing with default settings...\n"), converted);
+            }
+            Output::send<LogLevel::Default>(STR("Settings read.\n"));
+        }
+        else
+        {
+            glz::write<glz::opts{.prettify = true}>(s, buffer);
+            glz::error_code ec = glz::buffer_to_file(buffer, "./UE4SS-Settings.json");
+            if (ec != glz::error_code::none)
+            {
+                auto arr = glz::detail::make_enum_to_string_array<glz::error_code>();
+                auto error_type_str = arr[static_cast<uint32_t>(ec)];
+                
+                size_t count = error_type_str.size() + 1;
+                wchar_t* converted_method_name = new wchar_t[count];
+
+                size_t num_of_char_converted = 0;
+                mbstowcs_s(&num_of_char_converted, converted_method_name, count, error_type_str.data(), count);
+
+                auto converted = File::StringViewType(converted_method_name);
+
+                delete[] converted_method_name;
+                
+                Output::send<LogLevel::Error>(STR("\nError {} when writing new settings file.\nContinuing with default settings...\n"), converted);
+            }
+            Output::send<LogLevel::Default>(STR("Settings created.\n"));
+        }   
+    }
+    
     auto SettingsManager::deserialize(std::filesystem::path& file_name) -> void
     {
+        const auto SettingsManager = new RC::Settings::SettingsManager();
+        SettingsManager->read_settings();
+
         auto file = File::open(file_name, File::OpenFor::Reading, File::OverwriteExistingFile::No, File::CreateIfNonExistent::Yes);
         Ini::Parser parser;
         parser.parse(file);
@@ -51,12 +108,12 @@ namespace RC
         REGISTER_STRING_SETTING(Overrides.ModsFolderPath, section_overrides, ModsFolderPath)
 
         constexpr static File::CharType section_general[] = STR("General");
-        REGISTER_BOOL_SETTING(General.EnableHotReloadSystem, section_general, EnableHotReloadSystem)
-        REGISTER_BOOL_SETTING(General.UseCache, section_general, UseCache)
-        REGISTER_BOOL_SETTING(General.InvalidateCacheIfDLLDiffers, section_general, InvalidateCacheIfDLLDiffers)
-        REGISTER_BOOL_SETTING(General.EnableDebugKeyBindings, section_general, EnableDebugKeyBindings)
-        REGISTER_INT64_SETTING(General.SecondsToScanBeforeGivingUp, section_general, SecondsToScanBeforeGivingUp)
-        REGISTER_BOOL_SETTING(General.UseUObjectArrayCache, section_general, bUseUObjectArrayCache)
+        REGISTER_BOOL_SETTING(General.EnableHotReloadSystem.value, section_general, EnableHotReloadSystem)
+        REGISTER_BOOL_SETTING(General.UseCache.value, section_general, UseCache)
+        REGISTER_BOOL_SETTING(General.InvalidateCacheIfDLLDiffers.value, section_general, InvalidateCacheIfDLLDiffers)
+        REGISTER_BOOL_SETTING(General.EnableDebugKeyBindings.value, section_general, EnableDebugKeyBindings)
+        REGISTER_INT64_SETTING(General.SecondsToScanBeforeGivingUp.value, section_general, SecondsToScanBeforeGivingUp)
+        REGISTER_BOOL_SETTING(General.UseUObjectArrayCache.value, section_general, bUseUObjectArrayCache)
 
         constexpr static File::CharType section_engine_version_override[] = STR("EngineVersionOverride");
         REGISTER_INT64_SETTING(EngineVersionOverride.MajorVersion, section_engine_version_override, MajorVersion)

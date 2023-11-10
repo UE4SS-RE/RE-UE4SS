@@ -85,7 +85,7 @@ namespace RC
     }
     //*/
 
-    SettingsManager UE4SSProgram::settings_manager{};
+    Settings::SettingsManager UE4SSProgram::settings_manager{};
 
 #define OUTPUT_MEMBER_OFFSETS_FOR_STRUCT(StructName)                                                                                                           \
     for (const auto& [name, offset] : Unreal::StructName::MemberOffsets)                                                                                       \
@@ -483,10 +483,10 @@ namespace RC
 
         Unreal::UnrealInitializer::Config config;
         config.CachePath = m_root_directory / "cache";
-        config.bInvalidateCacheIfSelfChanged = settings_manager.General.InvalidateCacheIfDLLDiffers;
-        config.bEnableCache = settings_manager.General.UseCache;
-        config.SecondsToScanBeforeGivingUp = settings_manager.General.SecondsToScanBeforeGivingUp;
-        config.bUseUObjectArrayCache = settings_manager.General.UseUObjectArrayCache;
+        config.bInvalidateCacheIfSelfChanged = settings_manager.General.InvalidateCacheIfDLLDiffers.value;
+        config.bEnableCache = settings_manager.General.UseCache.value;
+        config.SecondsToScanBeforeGivingUp = settings_manager.General.SecondsToScanBeforeGivingUp.value;
+        config.bUseUObjectArrayCache = settings_manager.General.UseUObjectArrayCache.value;
 
         // Retrieve from the config file the number of threads to be used for aob scanning
         {
@@ -774,7 +774,7 @@ namespace RC
 
         if (settings_manager.Debug.DebugConsoleEnabled)
         {
-            if (settings_manager.General.UseUObjectArrayCache)
+            if (settings_manager.General.UseUObjectArrayCache.value)
             {
                 m_debugging_gui.get_live_view().set_listeners_allowed(true);
                 m_debugging_gui.get_live_view().set_listeners();
@@ -815,7 +815,7 @@ namespace RC
         TRY([&] {
             ObjectDumper::init();
 
-            if (settings_manager.General.EnableHotReloadSystem)
+            if (settings_manager.General.EnableHotReloadSystem.value)
             {
                 m_input_handler.register_keydown_event(Input::Key::R, {Input::ModifierKey::CONTROL}, [&]() {
                     TRY([&] {
@@ -837,7 +837,7 @@ namespace RC
             start_lua_mods();
         });
 
-        if (settings_manager.General.EnableDebugKeyBindings)
+        if (settings_manager.General.EnableDebugKeyBindings.value)
         {
             m_input_handler.register_keydown_event(Input::Key::NUM_NINE, {Input::ModifierKey::CONTROL}, [&]() {
                 generate_uht_compatible_headers();
