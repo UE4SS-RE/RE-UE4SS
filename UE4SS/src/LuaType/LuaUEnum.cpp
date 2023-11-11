@@ -175,7 +175,7 @@ Overloads:
             }
             else
             {
-                lua.throw_error("'UEnum.InsertIntoNames' could not load parameter for \"Index\"");
+                lua.throw_error("'UEnum.InsertIntoNames' could not load parameter for \"Value\"");
             }
 
             // P3 (Index), integer
@@ -319,17 +319,17 @@ Overloads:
             bool param_allow_shrinking = true;
 
             // P1 (Index), integer
-            if (lua.is_string())
+            if (lua.is_integer())
             {
                 param_index = lua.get_integer();
             }
             else
             {
-                lua.throw_error("'UEnum.RemoveFromNamesAt' Could not load parameter for \"Name\"");
+                lua.throw_error("'UEnum.RemoveFromNamesAt' Could not load parameter for \"Index\"");
             }
 
             // P2 (Count), integer
-            if (lua.is_string())
+            if (lua.is_integer())
             {
                 param_count = lua.get_integer();
             }
