@@ -75,7 +75,7 @@ namespace RC::UEGenerator
                 FName(STR("ScalarParameterNameAndCurve"), FNAME_Add),
                 FName(STR("PredictionKey"), FNAME_Add),
                 FName(STR("CustomPrimitiveData"), FNAME_Add),
-                FName(STR("EQSParamaterizedQueryExecutionRequest"), FNAME_Add),
+                FName(STR("EQSParametrizedQueryExecutionRequest"), FNAME_Add),
                 FName(STR("BlendFilter"), FNAME_Add),
                 FName(STR("AIDataProviderFloatValue"), FNAME_Add),
                 FName(STR("AIDataProviderIntValue"), FNAME_Add),
@@ -472,7 +472,7 @@ namespace RC::UEGenerator
 
         // Generate constructor
         std::wstring constructor_string;
-        if (uclass->IsChildOf<AActor>())
+        if (uclass->IsChildOf<AActor>() || uclass->IsChildOf<UActorComponent>())
         {
             constructor_string.append(STR("const FObjectInitializer& ObjectInitializer"));
         }
@@ -627,17 +627,26 @@ namespace RC::UEGenerator
 
         StringType enum_prefix = uenum->GenerateEnumPrefix();
         int64 expected_next_enum_value = 0;
+        bool last_value_was_negative{false};
         for (auto [Name, Value] : uenum->ForEachName())
         {
             StringType result_enumeration_line = sanitize_enumeration_name(Name.ToString());
 
             StringType pre_append_result_line = result_enumeration_line;
-            if (Value != expected_next_enum_value)
+            if (Value == 0 || Value != expected_next_enum_value || last_value_was_negative)
             {
-                const StringType MinusSign = Value < 0 ? STR("-") : STR("");
-                result_enumeration_line.append(std::format(STR(" = {}0x{:X}"), MinusSign, std::abs(Value)));
+                if (Value == 0)
+                {
+                    result_enumeration_line.append(STR(" = 0x0"));
+                }
+                else
+                {
+                    const StringType MinusSign = Value < 0 ? STR("-") : STR("");
+                    result_enumeration_line.append(std::format(STR(" = {}0x{:X}"), MinusSign, std::abs(Value)));
+                }
             }
             expected_next_enum_value = Value + 1;
+            last_value_was_negative = Value < 0;
 
             StringType pre_append_result_line_lower = pre_append_result_line;
             std::transform(pre_append_result_line_lower.begin(), pre_append_result_line_lower.end(), pre_append_result_line_lower.begin(), ::towlower);
@@ -762,7 +771,7 @@ namespace RC::UEGenerator
         // If class is a child of AActor we add the UObjectInitializer constructor.
         // This may not be required in all cases, but is necessary to override subcomponents and does not hurt anything.
         std::wstring object_initializer_overrides;
-        if (uclass->IsChildOf<AActor>())
+        if (uclass->IsChildOf<AActor>() || uclass->IsChildOf<UActorComponent>())
         {
             constructor_content_string.append(STR("const FObjectInitializer& ObjectInitializer"));
             constructor_postfix_string.append(std::format(STR(") : Super(ObjectInitializer{}"), object_initializer_overrides));
@@ -784,7 +793,7 @@ namespace RC::UEGenerator
 
         if (class_default_object != nullptr)
         {
-            for (FProperty* property : uclass->ForEachPropertyInChain())
+            for (FProperty* property : uclass->OrderedForEachPropertyInChain())
             {
                 generate_property_value(uclass, property, class_default_object, implementation_file, STR("this->"));
             }
@@ -794,6 +803,20 @@ namespace RC::UEGenerator
             implementation_file.append_line(STR("// Null default object."));
         }
         m_class_subobjects.clear();
+
+        // Generate component attachments
+        for (auto attachment : implementation_file.attachments)
+        {
+            if (get<2>(attachment.second) == false)
+            {
+                generate_simple_assignment_expression(attachment.first, get<1>(attachment.second), implementation_file, STR("this->"), STR("->"));
+            }
+            else
+            {
+                generate_advanced_assignment_expression(attachment.first, get<1>(attachment.second), implementation_file, STR("this->"), get<0>(attachment.second), STR("->"));
+            }
+        }
+        
         implementation_file.end_indent_level();
         implementation_file.append_line(STR("}\n"));
 
@@ -860,7 +883,7 @@ namespace RC::UEGenerator
         // TODO: ScriptStruct->InitializeStruct(StructDefaultObject);
         memset(struct_default_object, 0, script_struct->GetPropertiesSize());
 
-        for (FProperty* property : script_struct->ForEachPropertyInChain())
+        for (FProperty* property : script_struct->OrderedForEachPropertyInChain())
         {
             generate_property_value(script_struct, property, struct_default_object, implementation_file, STR("this->"));
         }
@@ -1055,7 +1078,7 @@ namespace RC::UEGenerator
         implementation_file.append_line(std::format(STR("const FProperty* p_{} = GetClass()->FindPropertyByName(\"{}\");"), field_class_name, field_class_name));
         if (property->GetArrayDim() == 1)
         {
-            implementation_file.append_line(std::format(STR("*p_{}->ContainerPtrToValuePtr<{}>(this){}{};"), field_class_name, property_type, operator_type, value));
+            implementation_file.append_line(std::format(STR("(*p_{}->ContainerPtrToValuePtr<{}>(this)){}{};"), field_class_name, property_type, operator_type, value));
         }
         else
         {
@@ -1216,6 +1239,8 @@ namespace RC::UEGenerator
             }
             else
             {
+                // Skip private bitmask bools TODO: Fix setting these
+                if (bool_property->GetFieldMask() != 255) { return; }
                 generate_advanced_assignment_expression(property, result_property_value, implementation_file, property_scope, property_type);
             }
             return;
@@ -1436,7 +1461,7 @@ namespace RC::UEGenerator
                 // we are not creating the subobject in a child class unnecessarily.
                 if (super_object && !super_property)
                 {
-                    for (FProperty* check_super_property : super->ForEachPropertyInChain())
+                    for (FProperty* check_super_property : super->OrderedForEachPropertyInChain())
                     {
                         if (check_super_property->IsA<FObjectProperty>())
                         {
@@ -1478,10 +1503,12 @@ namespace RC::UEGenerator
                     }
                     if (!super_and_no_access)
                     {
+                        initializer = std::format(STR("({}*){}"), get_native_class_name(object_property->GetPropertyClass()), initializer);
                         generate_simple_assignment_expression(property, initializer, implementation_file, property_scope);
                     }
                     else
                     {
+                        initializer = std::format(STR("({}*){}"), get_native_class_name(object_property->GetPropertyClass()), initializer);
                         generate_advanced_assignment_expression(property, initializer, implementation_file, property_scope, property_type);
                     }
                 }
@@ -1491,7 +1518,7 @@ namespace RC::UEGenerator
                     implementation_file.add_dependency_object(object_class_type, DependencyLevel::Include);
                     implementation_file.m_implementation_constructor.append(
                             std::format(STR(".SetDefaultSubobjectClass<{}>(TEXT(\"{}\"))"), get_native_class_name(object_class_type), object_name));
-                    m_class_subobjects.try_emplace(object_name, property->GetName());
+                            m_class_subobjects.try_emplace(object_name, property->GetName());
                 }
                 else
                 {
@@ -1530,7 +1557,7 @@ namespace RC::UEGenerator
                     }
                     else if (as_class)
                     {
-                        for (FProperty* check_property : as_class->ForEachPropertyInChain())
+                        for (FProperty* check_property : as_class->OrderedForEachPropertyInChain())
                         {
                             if (check_property->IsA<FObjectProperty>())
                             {
@@ -1571,12 +1598,11 @@ namespace RC::UEGenerator
                     {
                         if (!super_and_no_access)
                         {
-                            generate_simple_assignment_expression(property, attach_string, implementation_file, property_scope, operator_type);
+                            implementation_file.attachments.try_emplace(property, std::tuple{property_type, attach_string, false});
                         }
                         else
                         {
-                            const std::wstring object_class_name = get_native_class_name(object_class_type);
-                            generate_advanced_assignment_expression(property, attach_string, implementation_file, property_scope, property_type, operator_type);
+                            implementation_file.attachments.try_emplace(property, std::tuple{property_type, attach_string, true});
                         }
                     }
                 }
@@ -3437,6 +3463,9 @@ namespace RC::UEGenerator
         this->m_classes_with_object_initializer.insert(STR("URichTextBlock"));
         this->m_classes_with_object_initializer.insert(STR("URichTextBlockImageDecorator"));
         this->m_classes_with_object_initializer.insert(STR("URichTextBlockDecorator"));
+        this->m_classes_with_object_initializer.insert(STR("USkeletalMeshComponentBudgeted"));
+        this->m_classes_with_object_initializer.insert(STR("UIPNetDriver"));
+        this->m_classes_with_object_initializer.insert(STR("UAITask"));
     }
 
     auto UEHeaderGenerator::ignore_selected_modules() -> void
