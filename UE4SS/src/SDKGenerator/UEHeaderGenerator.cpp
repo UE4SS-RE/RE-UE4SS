@@ -578,11 +578,12 @@ namespace RC::UEGenerator
     {
         const StringType native_enum_name = get_native_enum_name(uenum, false);
         const int64 highest_enum_value = get_highest_enum(uenum);
-        const bool can_use_uint8_override = highest_enum_value <= 255;
+        const bool can_use_uint8_override = (highest_enum_value <= 255 && get_lowest_enum(uenum) >= 0);
         const StringType enum_flags_string = generate_enum_flags(uenum);
         const auto underlying_type = m_underlying_enum_types.find(native_enum_name);
         const bool has_known_underlying_type = underlying_type != m_underlying_enum_types.end();
         UEnum::ECppForm cpp_form = uenum->GetCppForm();
+        bool enum_is_uint8{false};
 
         header_data.append_line(std::format(STR("UENUM({})"), enum_flags_string));
 
@@ -603,6 +604,7 @@ namespace RC::UEGenerator
                 if (UE4SSProgram::settings_manager.UHTHeaderGenerator.MakeEnumClassesBlueprintType && can_use_uint8_override)
                 {
                     header_data.append_line(std::format(STR("enum class {} : uint8 {{"), native_enum_name));
+                    enum_is_uint8 = true;
                 }
                 else
                 {
@@ -614,11 +616,6 @@ namespace RC::UEGenerator
             {
                 std::wstring underlying_type_string = underlying_type->second;
 
-                // If this enum is blueprint visible, it should totally be uint8 and nothing else, no matter what the underlying property says
-                if (m_blueprint_visible_enums.contains(native_enum_name))
-                {
-                    underlying_type_string = STR("uint8");
-                }
                 header_data.append_line(std::format(STR("enum class {} : {} {{"), native_enum_name, underlying_type_string));
             }
         }
@@ -627,26 +624,39 @@ namespace RC::UEGenerator
 
         StringType enum_prefix = uenum->GenerateEnumPrefix();
         int64 expected_next_enum_value = 0;
-        bool last_value_was_negative{false};
+        bool last_value_was_negative_one{false};
+        std::set<StringType> enum_name_set{};
         for (auto [Name, Value] : uenum->ForEachName())
         {
-            StringType result_enumeration_line = sanitize_enumeration_name(Name.ToString());
-
+            StringType enum_name = Name.ToString();
+            StringType result_enumeration_line = sanitize_enumeration_name(enum_name);
             StringType pre_append_result_line = result_enumeration_line;
-            if (Value == 0 || Value != expected_next_enum_value || last_value_was_negative)
+
+            // If an enum name is listed in the array twice, that likely means it is used as the value for another enum.  Long story short, don't print it.
+            if (enum_name_set.contains(enum_name))
             {
-                if (Value == 0)
-                {
-                    result_enumeration_line.append(STR(" = 0x0"));
-                }
-                else
-                {
-                    const StringType MinusSign = Value < 0 ? STR("-") : STR("");
-                    result_enumeration_line.append(std::format(STR(" = {}0x{:X}"), MinusSign, std::abs(Value)));
-                }
+                continue;
+            }
+            else
+            {
+                enum_name_set.emplace(enum_name);
+            }
+            
+            // Taking advantage of GetNameByValue returning the first result for the value to determine if there are any enumerator names that
+            // reference an already declared value/name.
+            StringType first_name_with_value = uenum->GetNameByValue(Value).ToString();
+            if (first_name_with_value != Name.ToString())
+            {
+                result_enumeration_line.append(std::format(STR(" = {}"), sanitize_enumeration_name(first_name_with_value)));
+            }
+            else if (Value != expected_next_enum_value || last_value_was_negative_one)
+            {
+                const StringType CastString = (enum_is_uint8 && Value < 0) ? STR("(uint8)") : STR("");
+                const StringType MinusSign = Value < 0 ? STR("-") : STR("");
+                result_enumeration_line.append(std::format(STR(" = {}{}{}"), CastString, MinusSign, std::abs(Value)));
             }
             expected_next_enum_value = Value + 1;
-            last_value_was_negative = Value < 0;
+            last_value_was_negative_one = (Value == -1);
 
             StringType pre_append_result_line_lower = pre_append_result_line;
             std::transform(pre_append_result_line_lower.begin(), pre_append_result_line_lower.end(), pre_append_result_line_lower.begin(), ::towlower);
@@ -1366,7 +1376,6 @@ namespace RC::UEGenerator
             if (class_value == NULL)
             {
                 // If class value is NULL, generate a simple NULL assignment
-                generate_simple_assignment_expression(property, STR("NULL"), implementation_file, property_scope);
                 if (!super_and_no_access)
                 {
                     generate_simple_assignment_expression(property, STR("NULL"), implementation_file, property_scope);
@@ -2177,35 +2186,43 @@ namespace RC::UEGenerator
             flag_format_helper.add_switch(STR("Placeable"));
         }
 
-        const std::wstring class_config_name = uclass->GetClassConfigName().ToString();
-        if (super_class == NULL || class_config_name != super_class->GetClassConfigName().ToString())
-        {
-            flag_format_helper.add_parameter(STR("Config"), class_config_name);
-        }
+        bool add_config_name{false};
 
         if ((class_own_flags & CLASS_DefaultConfig) != 0)
         {
             flag_format_helper.add_switch(STR("DefaultConfig"));
-            if (UE4SSProgram::settings_manager.UHTHeaderGenerator.MakeAllConfigsEngineConfig)
-            {
-                flag_format_helper.add_switch(STR("Config=Engine"));
-            }
+            add_config_name = true;
         }
         if ((class_own_flags & CLASS_GlobalUserConfig) != 0)
         {
             flag_format_helper.add_switch(STR("GlobalUserConfig"));
-            if (UE4SSProgram::settings_manager.UHTHeaderGenerator.MakeAllConfigsEngineConfig)
-            {
-                flag_format_helper.add_switch(STR("Config=Engine"));
-            }
+            add_config_name = true;
         }
         if ((class_own_flags & CLASS_ProjectUserConfig) != 0)
         {
             flag_format_helper.add_switch(STR("ProjectUserConfig"));
-            if (UE4SSProgram::settings_manager.UHTHeaderGenerator.MakeAllConfigsEngineConfig)
+            add_config_name = true;
+        }
+
+        for (FProperty* property : uclass->ForEachProperty())
+        {
+            if ((property->GetPropertyFlags() & CPF_Config) != 0 || (property->GetPropertyFlags() & CPF_GlobalConfig) != 0)
             {
-                flag_format_helper.add_switch(STR("Config=Engine"));
+                add_config_name = true;
             }
+        }
+
+        const std::wstring class_config_name = uclass->GetClassConfigName().ToString();
+        if (super_class == NULL || class_config_name != super_class->GetClassConfigName().ToString())
+        {
+            flag_format_helper.add_parameter(STR("Config"), class_config_name);
+            // Don't add our override config if we add the real one here
+            add_config_name = false;
+        }
+
+        if (UE4SSProgram::settings_manager.UHTHeaderGenerator.MakeAllConfigsEngineConfig && add_config_name)
+        {
+            flag_format_helper.add_parameter(STR("Config"), STR("Engine"));
         }
 
         if ((class_own_flags & CLASS_PerObjectConfig) != 0)
@@ -2253,7 +2270,7 @@ namespace RC::UEGenerator
         {
             FByteProperty* byte_property = static_cast<FByteProperty*>(property);
             UEnum* enum_value = byte_property->GetEnum();
-
+            
             if (enum_value != NULL)
             {
                 if (context.source_file != NULL)
@@ -2280,7 +2297,6 @@ namespace RC::UEGenerator
             FEnumProperty* enum_property = static_cast<FEnumProperty*>(property);
             FNumericProperty* underlying_property = enum_property->GetUnderlyingProperty();
             UEnum* uenum = enum_property->GetEnum();
-
             if (uenum == NULL)
             {
                 throw std::runtime_error(RC::fmt("EnumProperty %S does not have a valid Enum value", property->GetName().c_str()));
@@ -2894,8 +2910,8 @@ namespace RC::UEGenerator
 
     auto UEHeaderGenerator::generate_enum_flags(UEnum* uenum) const -> std::wstring
     {
+        
         FlagFormatHelper flag_format_helper{};
-        const int64 highest_enum_value = get_highest_enum(uenum);
 
         auto enum_flags = uenum->GetEnumFlags();
 
@@ -2903,19 +2919,18 @@ namespace RC::UEGenerator
         {
             flag_format_helper.add_switch(STR("Flags"));
         }
-
         const std::wstring enum_native_name = get_native_enum_name(uenum);
-        if (m_blueprint_visible_enums.contains(enum_native_name))
-        {
-            flag_format_helper.add_switch(STR("BlueprintType"));
-        }
-        else if (UE4SSProgram::settings_manager.UHTHeaderGenerator.MakeEnumClassesBlueprintType)
+
+        if (UE4SSProgram::settings_manager.UHTHeaderGenerator.MakeEnumClassesBlueprintType)
         {
             auto cpp_form = uenum->GetCppForm();
             if (cpp_form == UEnum::ECppForm::EnumClass)
             {
                 const auto underlying_type = m_underlying_enum_types.find(enum_native_name);
-                if ((underlying_type == m_underlying_enum_types.end() || underlying_type->second == STR("uint8")) && highest_enum_value <= 255)
+                if (underlying_type->second == STR("uint8") ||
+                    (underlying_type == m_underlying_enum_types.end() &&
+                    (get_highest_enum(uenum) <= 255 &&
+                    get_lowest_enum(uenum) >= 0)))
                 {
                     // Underlying type is implicit or explicitly uint8.
                     flag_format_helper.add_switch(STR("BlueprintType"));
@@ -2966,6 +2981,24 @@ namespace RC::UEGenerator
             }
         }
         return highest_enum_value;
+    }
+
+    auto UEHeaderGenerator::get_lowest_enum(UEnum* uenum) -> int64_t
+    {
+        if (!uenum || uenum->NumEnums() <= 0)
+        {
+            return 0;
+        }
+
+        int64 lowest_enum_value = 0;
+        for (auto [Name, Value] : uenum->ForEachName())
+        {
+            if (Value < lowest_enum_value)
+            {
+                lowest_enum_value = Value;
+            }
+        }
+        return lowest_enum_value;
     }
 
     auto UEHeaderGenerator::generate_function_flags(UFunction* function, bool is_function_pure_virtual) const -> std::wstring
@@ -3464,7 +3497,7 @@ namespace RC::UEGenerator
         this->m_classes_with_object_initializer.insert(STR("URichTextBlockImageDecorator"));
         this->m_classes_with_object_initializer.insert(STR("URichTextBlockDecorator"));
         this->m_classes_with_object_initializer.insert(STR("USkeletalMeshComponentBudgeted"));
-        this->m_classes_with_object_initializer.insert(STR("UIPNetDriver"));
+        this->m_classes_with_object_initializer.insert(STR("UIpNetDriver"));
         this->m_classes_with_object_initializer.insert(STR("UAITask"));
     }
 
