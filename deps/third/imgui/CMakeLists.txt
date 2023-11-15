@@ -15,6 +15,7 @@ set(ImGui_Sources
     "${ImGui_FETCHED_SOURCE}/imgui_draw.cpp"
     "${ImGui_FETCHED_SOURCE}/imgui_tables.cpp"
     "${ImGui_FETCHED_SOURCE}/imgui_widgets.cpp"
+    "${ImGui_FETCHED_SOURCE}/imgui_demo.cpp"
     "${ImGui_FETCHED_SOURCE}/misc/cpp/imgui_stdlib.cpp"
     "${ImGui_FETCHED_SOURCE}/backends/imgui_impl_win32.cpp"
     "${ImGui_FETCHED_SOURCE}/backends/imgui_impl_dx11.cpp"

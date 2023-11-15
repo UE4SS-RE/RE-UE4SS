@@ -1832,30 +1832,50 @@ namespace RC::GUI
         std::string minus = "-";
         int32_t index = -1;
 
+        if (!ImGui::BeginTable("Enum", 4, ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg | ImGuiTableFlags_Resizable )) { return; }
+        ImGui::TableSetupColumn("Name");
+        ImGui::TableSetupColumn("FriendlyName");
+        ImGui::TableSetupColumn("Value");
+        ImGui::TableSetupScrollFreeze(0, 1);
+        ImGui::TableHeadersRow();
+        
         for (const auto name : names)
         {
+            auto enum_name = name.Key.ToString();
+            auto enum_friendly_name = UKismetNodeHelperLibrary::GetEnumeratorUserFriendlyName(uenum, name.Value);
+            
+            ImGui::TableNextRow();
             bool open_edit_name_popup{};
             bool open_edit_value_popup{};
             bool open_add_name_popup{};
             ++index;
-            auto enum_name = UKismetNodeHelperLibrary::GetEnumeratorUserFriendlyName(uenum, index);
-            ImGui::AlignTextToFramePadding();
-            ImGui::Text("%S <=> %lld", enum_name.c_str(), name.Value);
-
+            
+            ImGui::TableNextColumn();
+            ImGui::Text("%S", enum_name.c_str());
             if (ImGui::BeginPopupContextItem(to_string(std::format(STR("context-menu-{}"), enum_name)).c_str()))
             {
                 if (ImGui::MenuItem("Copy name"))
                 {
                     ImGui::SetClipboardText(to_string(enum_name).c_str());
                 }
-                if (ImGui::MenuItem("Copy value"))
-                {
-                    ImGui::SetClipboardText(std::to_string(name.Value).c_str());
-                }
                 if (ImGui::MenuItem("Edit name"))
                 {
                     open_edit_name_popup = true;
                     m_modal_edit_property_value_is_open = true;
+                }
+                ImGui::EndPopup();
+            }
+            
+            ImGui::TableNextColumn();
+            ImGui::Text("%S", enum_friendly_name.c_str());
+            
+            ImGui::TableNextColumn();
+            ImGui::Text("%lld", name.Value);
+            if (ImGui::BeginPopupContextItem(to_string(std::format(STR("context-menu-{}-{}"), enum_name, name.Value)).c_str()))
+            {
+                if (ImGui::MenuItem("Copy value"))
+                {
+                    ImGui::SetClipboardText(std::to_string(name.Value).c_str());
                 }
                 if (ImGui::MenuItem("Edit value"))
                 {
@@ -1864,8 +1884,8 @@ namespace RC::GUI
                 }
                 ImGui::EndPopup();
             }
-
-            ImGui::SameLine(ImGui::GetWindowContentRegionMax().x - (ImGui::CalcTextSize(plus.c_str()).x + ImGui::CalcTextSize(minus.c_str()).x) * 3);
+            
+            ImGui::TableNextColumn();
             ImGui::PushID(to_string(std::format(STR("button_add_{}"), enum_name)).c_str());
             if (ImGui::Button("+"))
             {
@@ -1873,8 +1893,7 @@ namespace RC::GUI
                 m_modal_edit_property_value_is_open = true;
             }
             ImGui::PopID();
-
-            ImGui::SameLine(ImGui::GetWindowContentRegionMax().x - ImGui::CalcTextSize(minus.c_str()).x * 3);
+            ImGui::SameLine();
             ImGui::PushID(to_string(std::format(STR("button_remove_{}"), enum_name)).c_str());
             if (ImGui::Button("-"))
             {
@@ -2052,6 +2071,7 @@ namespace RC::GUI
                 m_modal_edit_property_value_opened_this_frame = false;
             }
         }
+        ImGui::EndTable(); // Enum Table
     }
 
     auto LiveView::render_bottom_panel() -> void
