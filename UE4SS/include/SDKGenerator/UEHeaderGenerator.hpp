@@ -142,6 +142,7 @@ namespace RC::UEGenerator
       public:
         std::wstring m_implementation_constructor;
         std::unordered_set<StringType> parent_property_names{};
+        std::map<FProperty*, std::tuple<StringType /*property type*/, StringType /*attach string*/, bool /*access type*/>> attachments{};
 
         GeneratedSourceFile(const FFilePath& file_path, const std::wstring& file_module_name, bool is_implementation_file, UObject* object);
 
@@ -315,6 +316,7 @@ namespace RC::UEGenerator
         auto static get_module_name_for_package(UObject* package) -> std::wstring;
         auto static sanitize_enumeration_name(const std::wstring& enumeration_name) -> std::wstring;
         auto static get_highest_enum(UEnum* uenum) -> int64_t;
+        auto static get_lowest_enum(UEnum* uenum) -> int64_t;
 
         auto static get_class_blueprint_info(UClass* function) -> ClassBlueprintInfo;
         auto static is_struct_blueprint_type(UScriptStruct* property) -> bool;

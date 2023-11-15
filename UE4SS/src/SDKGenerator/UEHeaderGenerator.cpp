@@ -75,7 +75,7 @@ namespace RC::UEGenerator
                 FName(STR("ScalarParameterNameAndCurve"), FNAME_Add),
                 FName(STR("PredictionKey"), FNAME_Add),
                 FName(STR("CustomPrimitiveData"), FNAME_Add),
-                FName(STR("EQSParamaterizedQueryExecutionRequest"), FNAME_Add),
+                FName(STR("EQSParametrizedQueryExecutionRequest"), FNAME_Add),
                 FName(STR("BlendFilter"), FNAME_Add),
                 FName(STR("AIDataProviderFloatValue"), FNAME_Add),
                 FName(STR("AIDataProviderIntValue"), FNAME_Add),
@@ -472,7 +472,7 @@ namespace RC::UEGenerator
 
         // Generate constructor
         std::wstring constructor_string;
-        if (uclass->IsChildOf<AActor>())
+        if (uclass->IsChildOf<AActor>() || uclass->IsChildOf<UActorComponent>())
         {
             constructor_string.append(STR("const FObjectInitializer& ObjectInitializer"));
         }
@@ -578,11 +578,12 @@ namespace RC::UEGenerator
     {
         const StringType native_enum_name = get_native_enum_name(uenum, false);
         const int64 highest_enum_value = get_highest_enum(uenum);
-        const bool can_use_uint8_override = highest_enum_value <= 255;
+        const bool can_use_uint8_override = (highest_enum_value <= 255 && get_lowest_enum(uenum) >= 0);
         const StringType enum_flags_string = generate_enum_flags(uenum);
         const auto underlying_type = m_underlying_enum_types.find(native_enum_name);
         const bool has_known_underlying_type = underlying_type != m_underlying_enum_types.end();
         UEnum::ECppForm cpp_form = uenum->GetCppForm();
+        bool enum_is_uint8{false};
 
         header_data.append_line(std::format(STR("UENUM({})"), enum_flags_string));
 
@@ -603,6 +604,7 @@ namespace RC::UEGenerator
                 if (UE4SSProgram::settings_manager.UHTHeaderGenerator.MakeEnumClassesBlueprintType && can_use_uint8_override)
                 {
                     header_data.append_line(std::format(STR("enum class {} : uint8 {{"), native_enum_name));
+                    enum_is_uint8 = true;
                 }
                 else
                 {
@@ -614,11 +616,6 @@ namespace RC::UEGenerator
             {
                 std::wstring underlying_type_string = underlying_type->second;
 
-                // If this enum is blueprint visible, it should totally be uint8 and nothing else, no matter what the underlying property says
-                if (m_blueprint_visible_enums.contains(native_enum_name))
-                {
-                    underlying_type_string = STR("uint8");
-                }
                 header_data.append_line(std::format(STR("enum class {} : {} {{"), native_enum_name, underlying_type_string));
             }
         }
@@ -627,17 +624,39 @@ namespace RC::UEGenerator
 
         StringType enum_prefix = uenum->GenerateEnumPrefix();
         int64 expected_next_enum_value = 0;
+        bool last_value_was_negative_one{false};
+        std::set<StringType> enum_name_set{};
         for (auto [Name, Value] : uenum->ForEachName())
         {
-            StringType result_enumeration_line = sanitize_enumeration_name(Name.ToString());
-
+            StringType enum_name = Name.ToString();
+            StringType result_enumeration_line = sanitize_enumeration_name(enum_name);
             StringType pre_append_result_line = result_enumeration_line;
-            if (Value != expected_next_enum_value)
+
+            // If an enum name is listed in the array twice, that likely means it is used as the value for another enum.  Long story short, don't print it.
+            if (enum_name_set.contains(enum_name))
             {
+                continue;
+            }
+            else
+            {
+                enum_name_set.emplace(enum_name);
+            }
+            
+            // Taking advantage of GetNameByValue returning the first result for the value to determine if there are any enumerator names that
+            // reference an already declared value/name.
+            StringType first_name_with_value = uenum->GetNameByValue(Value).ToString();
+            if (first_name_with_value != Name.ToString())
+            {
+                result_enumeration_line.append(std::format(STR(" = {}"), sanitize_enumeration_name(first_name_with_value)));
+            }
+            else if (Value != expected_next_enum_value || last_value_was_negative_one)
+            {
+                const StringType CastString = (enum_is_uint8 && Value < 0) ? STR("(uint8)") : STR("");
                 const StringType MinusSign = Value < 0 ? STR("-") : STR("");
-                result_enumeration_line.append(std::format(STR(" = {}0x{:X}"), MinusSign, std::abs(Value)));
+                result_enumeration_line.append(std::format(STR(" = {}{}{}"), CastString, MinusSign, std::abs(Value)));
             }
             expected_next_enum_value = Value + 1;
+            last_value_was_negative_one = (Value == -1);
 
             StringType pre_append_result_line_lower = pre_append_result_line;
             std::transform(pre_append_result_line_lower.begin(), pre_append_result_line_lower.end(), pre_append_result_line_lower.begin(), ::towlower);
@@ -762,7 +781,7 @@ namespace RC::UEGenerator
         // If class is a child of AActor we add the UObjectInitializer constructor.
         // This may not be required in all cases, but is necessary to override subcomponents and does not hurt anything.
         std::wstring object_initializer_overrides;
-        if (uclass->IsChildOf<AActor>())
+        if (uclass->IsChildOf<AActor>() || uclass->IsChildOf<UActorComponent>())
         {
             constructor_content_string.append(STR("const FObjectInitializer& ObjectInitializer"));
             constructor_postfix_string.append(std::format(STR(") : Super(ObjectInitializer{}"), object_initializer_overrides));
@@ -784,7 +803,7 @@ namespace RC::UEGenerator
 
         if (class_default_object != nullptr)
         {
-            for (FProperty* property : uclass->ForEachPropertyInChain())
+            for (FProperty* property : uclass->OrderedForEachPropertyInChain())
             {
                 generate_property_value(uclass, property, class_default_object, implementation_file, STR("this->"));
             }
@@ -794,6 +813,20 @@ namespace RC::UEGenerator
             implementation_file.append_line(STR("// Null default object."));
         }
         m_class_subobjects.clear();
+
+        // Generate component attachments
+        for (auto attachment : implementation_file.attachments)
+        {
+            if (get<2>(attachment.second) == false)
+            {
+                generate_simple_assignment_expression(attachment.first, get<1>(attachment.second), implementation_file, STR("this->"), STR("->"));
+            }
+            else
+            {
+                generate_advanced_assignment_expression(attachment.first, get<1>(attachment.second), implementation_file, STR("this->"), get<0>(attachment.second), STR("->"));
+            }
+        }
+        
         implementation_file.end_indent_level();
         implementation_file.append_line(STR("}\n"));
 
@@ -860,7 +893,7 @@ namespace RC::UEGenerator
         // TODO: ScriptStruct->InitializeStruct(StructDefaultObject);
         memset(struct_default_object, 0, script_struct->GetPropertiesSize());
 
-        for (FProperty* property : script_struct->ForEachPropertyInChain())
+        for (FProperty* property : script_struct->OrderedForEachPropertyInChain())
         {
             generate_property_value(script_struct, property, struct_default_object, implementation_file, STR("this->"));
         }
@@ -1055,7 +1088,7 @@ namespace RC::UEGenerator
         implementation_file.append_line(std::format(STR("const FProperty* p_{} = GetClass()->FindPropertyByName(\"{}\");"), field_class_name, field_class_name));
         if (property->GetArrayDim() == 1)
         {
-            implementation_file.append_line(std::format(STR("*p_{}->ContainerPtrToValuePtr<{}>(this){}{};"), field_class_name, property_type, operator_type, value));
+            implementation_file.append_line(std::format(STR("(*p_{}->ContainerPtrToValuePtr<{}>(this)){}{};"), field_class_name, property_type, operator_type, value));
         }
         else
         {
@@ -1216,6 +1249,8 @@ namespace RC::UEGenerator
             }
             else
             {
+                // Skip private bitmask bools TODO: Fix setting these
+                if (bool_property->GetFieldMask() != 255) { return; }
                 generate_advanced_assignment_expression(property, result_property_value, implementation_file, property_scope, property_type);
             }
             return;
@@ -1341,7 +1376,6 @@ namespace RC::UEGenerator
             if (class_value == NULL)
             {
                 // If class value is NULL, generate a simple NULL assignment
-                generate_simple_assignment_expression(property, STR("NULL"), implementation_file, property_scope);
                 if (!super_and_no_access)
                 {
                     generate_simple_assignment_expression(property, STR("NULL"), implementation_file, property_scope);
@@ -1436,7 +1470,7 @@ namespace RC::UEGenerator
                 // we are not creating the subobject in a child class unnecessarily.
                 if (super_object && !super_property)
                 {
-                    for (FProperty* check_super_property : super->ForEachPropertyInChain())
+                    for (FProperty* check_super_property : super->OrderedForEachPropertyInChain())
                     {
                         if (check_super_property->IsA<FObjectProperty>())
                         {
@@ -1478,10 +1512,12 @@ namespace RC::UEGenerator
                     }
                     if (!super_and_no_access)
                     {
+                        initializer = std::format(STR("({}*){}"), get_native_class_name(object_property->GetPropertyClass()), initializer);
                         generate_simple_assignment_expression(property, initializer, implementation_file, property_scope);
                     }
                     else
                     {
+                        initializer = std::format(STR("({}*){}"), get_native_class_name(object_property->GetPropertyClass()), initializer);
                         generate_advanced_assignment_expression(property, initializer, implementation_file, property_scope, property_type);
                     }
                 }
@@ -1491,7 +1527,7 @@ namespace RC::UEGenerator
                     implementation_file.add_dependency_object(object_class_type, DependencyLevel::Include);
                     implementation_file.m_implementation_constructor.append(
                             std::format(STR(".SetDefaultSubobjectClass<{}>(TEXT(\"{}\"))"), get_native_class_name(object_class_type), object_name));
-                    m_class_subobjects.try_emplace(object_name, property->GetName());
+                            m_class_subobjects.try_emplace(object_name, property->GetName());
                 }
                 else
                 {
@@ -1530,7 +1566,7 @@ namespace RC::UEGenerator
                     }
                     else if (as_class)
                     {
-                        for (FProperty* check_property : as_class->ForEachPropertyInChain())
+                        for (FProperty* check_property : as_class->OrderedForEachPropertyInChain())
                         {
                             if (check_property->IsA<FObjectProperty>())
                             {
@@ -1571,12 +1607,11 @@ namespace RC::UEGenerator
                     {
                         if (!super_and_no_access)
                         {
-                            generate_simple_assignment_expression(property, attach_string, implementation_file, property_scope, operator_type);
+                            implementation_file.attachments.try_emplace(property, std::tuple{property_type, attach_string, false});
                         }
                         else
                         {
-                            const std::wstring object_class_name = get_native_class_name(object_class_type);
-                            generate_advanced_assignment_expression(property, attach_string, implementation_file, property_scope, property_type, operator_type);
+                            implementation_file.attachments.try_emplace(property, std::tuple{property_type, attach_string, true});
                         }
                     }
                 }
@@ -2151,35 +2186,43 @@ namespace RC::UEGenerator
             flag_format_helper.add_switch(STR("Placeable"));
         }
 
-        const std::wstring class_config_name = uclass->GetClassConfigName().ToString();
-        if (super_class == NULL || class_config_name != super_class->GetClassConfigName().ToString())
-        {
-            flag_format_helper.add_parameter(STR("Config"), class_config_name);
-        }
+        bool add_config_name{false};
 
         if ((class_own_flags & CLASS_DefaultConfig) != 0)
         {
             flag_format_helper.add_switch(STR("DefaultConfig"));
-            if (UE4SSProgram::settings_manager.UHTHeaderGenerator.MakeAllConfigsEngineConfig)
-            {
-                flag_format_helper.add_switch(STR("Config=Engine"));
-            }
+            add_config_name = true;
         }
         if ((class_own_flags & CLASS_GlobalUserConfig) != 0)
         {
             flag_format_helper.add_switch(STR("GlobalUserConfig"));
-            if (UE4SSProgram::settings_manager.UHTHeaderGenerator.MakeAllConfigsEngineConfig)
-            {
-                flag_format_helper.add_switch(STR("Config=Engine"));
-            }
+            add_config_name = true;
         }
         if ((class_own_flags & CLASS_ProjectUserConfig) != 0)
         {
             flag_format_helper.add_switch(STR("ProjectUserConfig"));
-            if (UE4SSProgram::settings_manager.UHTHeaderGenerator.MakeAllConfigsEngineConfig)
+            add_config_name = true;
+        }
+
+        for (FProperty* property : uclass->ForEachProperty())
+        {
+            if ((property->GetPropertyFlags() & CPF_Config) != 0 || (property->GetPropertyFlags() & CPF_GlobalConfig) != 0)
             {
-                flag_format_helper.add_switch(STR("Config=Engine"));
+                add_config_name = true;
             }
+        }
+
+        const std::wstring class_config_name = uclass->GetClassConfigName().ToString();
+        if (super_class == NULL || class_config_name != super_class->GetClassConfigName().ToString())
+        {
+            flag_format_helper.add_parameter(STR("Config"), class_config_name);
+            // Don't add our override config if we add the real one here
+            add_config_name = false;
+        }
+
+        if (UE4SSProgram::settings_manager.UHTHeaderGenerator.MakeAllConfigsEngineConfig && add_config_name)
+        {
+            flag_format_helper.add_parameter(STR("Config"), STR("Engine"));
         }
 
         if ((class_own_flags & CLASS_PerObjectConfig) != 0)
@@ -2227,7 +2270,7 @@ namespace RC::UEGenerator
         {
             FByteProperty* byte_property = static_cast<FByteProperty*>(property);
             UEnum* enum_value = byte_property->GetEnum();
-
+            
             if (enum_value != NULL)
             {
                 if (context.source_file != NULL)
@@ -2254,7 +2297,6 @@ namespace RC::UEGenerator
             FEnumProperty* enum_property = static_cast<FEnumProperty*>(property);
             FNumericProperty* underlying_property = enum_property->GetUnderlyingProperty();
             UEnum* uenum = enum_property->GetEnum();
-
             if (uenum == NULL)
             {
                 throw std::runtime_error(RC::fmt("EnumProperty %S does not have a valid Enum value", property->GetName().c_str()));
@@ -2868,8 +2910,8 @@ namespace RC::UEGenerator
 
     auto UEHeaderGenerator::generate_enum_flags(UEnum* uenum) const -> std::wstring
     {
+        
         FlagFormatHelper flag_format_helper{};
-        const int64 highest_enum_value = get_highest_enum(uenum);
 
         auto enum_flags = uenum->GetEnumFlags();
 
@@ -2877,19 +2919,18 @@ namespace RC::UEGenerator
         {
             flag_format_helper.add_switch(STR("Flags"));
         }
-
         const std::wstring enum_native_name = get_native_enum_name(uenum);
-        if (m_blueprint_visible_enums.contains(enum_native_name))
-        {
-            flag_format_helper.add_switch(STR("BlueprintType"));
-        }
-        else if (UE4SSProgram::settings_manager.UHTHeaderGenerator.MakeEnumClassesBlueprintType)
+
+        if (UE4SSProgram::settings_manager.UHTHeaderGenerator.MakeEnumClassesBlueprintType)
         {
             auto cpp_form = uenum->GetCppForm();
             if (cpp_form == UEnum::ECppForm::EnumClass)
             {
                 const auto underlying_type = m_underlying_enum_types.find(enum_native_name);
-                if ((underlying_type == m_underlying_enum_types.end() || underlying_type->second == STR("uint8")) && highest_enum_value <= 255)
+                if (underlying_type->second == STR("uint8") ||
+                    (underlying_type == m_underlying_enum_types.end() &&
+                    (get_highest_enum(uenum) <= 255 &&
+                    get_lowest_enum(uenum) >= 0)))
                 {
                     // Underlying type is implicit or explicitly uint8.
                     flag_format_helper.add_switch(STR("BlueprintType"));
@@ -2940,6 +2981,24 @@ namespace RC::UEGenerator
             }
         }
         return highest_enum_value;
+    }
+
+    auto UEHeaderGenerator::get_lowest_enum(UEnum* uenum) -> int64_t
+    {
+        if (!uenum || uenum->NumEnums() <= 0)
+        {
+            return 0;
+        }
+
+        int64 lowest_enum_value = 0;
+        for (auto [Name, Value] : uenum->ForEachName())
+        {
+            if (Value < lowest_enum_value)
+            {
+                lowest_enum_value = Value;
+            }
+        }
+        return lowest_enum_value;
     }
 
     auto UEHeaderGenerator::generate_function_flags(UFunction* function, bool is_function_pure_virtual) const -> std::wstring
@@ -3437,6 +3496,9 @@ namespace RC::UEGenerator
         this->m_classes_with_object_initializer.insert(STR("URichTextBlock"));
         this->m_classes_with_object_initializer.insert(STR("URichTextBlockImageDecorator"));
         this->m_classes_with_object_initializer.insert(STR("URichTextBlockDecorator"));
+        this->m_classes_with_object_initializer.insert(STR("USkeletalMeshComponentBudgeted"));
+        this->m_classes_with_object_initializer.insert(STR("UIpNetDriver"));
+        this->m_classes_with_object_initializer.insert(STR("UAITask"));
     }
 
     auto UEHeaderGenerator::ignore_selected_modules() -> void
