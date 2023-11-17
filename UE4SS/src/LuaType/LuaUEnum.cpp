@@ -197,7 +197,7 @@ Overloads:
             Unreal::FName key = Unreal::FName(param_name, Unreal::FNAME_Add);
             auto pair = Unreal::TPair{key, Unreal::int64(param_index)};
 
-            lua_object.get_remote_cpp_object()->InsertIntoNames(pair, param_index, true);
+            lua_object.get_remote_cpp_object()->InsertIntoNames(pair, param_index, param_shift);
             return 1;
         });
 
