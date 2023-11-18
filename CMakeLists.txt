@@ -150,7 +150,7 @@ foreach (target_type ${TARGET_TYPES})
             set(CMAKE_CXX_FLAGS_${triplet_upper} "${final_compiler_flags}" CACHE STRING "" FORCE)
             set(CMAKE_C_FLAGS_${triplet_upper} "${final_compiler_flags}" CACHE STRING "" FORCE)
 
-            list(APPEND TARGET_COMPILE_OPTIONS "$<$<STREQUAL:$<CONFIG>,${triplet}>:${compiler_flags}>")
+            list(APPEND TARGET_COMPILE_OPTIONS "$<$<NOT:$<COMPILE_LANGUAGE:ASM_MASM>>:$<$<STREQUAL:$<CONFIG>,${triplet}>:${compiler_flags}>>")
 
             set(linker_flags
                 ${${target_type}_LINKER_FLAGS}
