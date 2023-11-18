@@ -78,6 +78,9 @@ namespace RC
         REGISTER_BOOL_SETTING(UHTHeaderGenerator.MakeEnumClassesBlueprintType, section_uht_header_generator, MakeEnumClassesBlueprintType)
         REGISTER_BOOL_SETTING(UHTHeaderGenerator.MakeAllConfigsEngineConfig, section_uht_header_generator, MakeAllConfigsEngineConfig)
 
+        constexpr static File::CharType section_sdkgenerator[] = STR("SDKGenerator");
+        REGISTER_STRING_SETTING(SDKGenerator.OutputPath, section_sdkgenerator, OutputPath)
+
         constexpr static File::CharType section_debug[] = STR("Debug");
         REGISTER_BOOL_SETTING(Debug.SimpleConsoleEnabled, section_debug, ConsoleEnabled)
         REGISTER_BOOL_SETTING(Debug.DebugConsoleEnabled, section_debug, GuiConsoleEnabled)

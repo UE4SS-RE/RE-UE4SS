@@ -118,3 +118,8 @@ Two prerequisites are required to load the dumped actors in-editor to reconstruc
 - Download `zMapGenBP.zip` from the Releases page and follow the instructions in the Readme file inside of it
 
 The keybind to dump mappings is by default `Ctrl` + `Numpad 7`, and can be changed in `Mods/Keybinds/Scripts/main.lua`.
+
+## SDK Generator
+
+Generate C++ classes, structs and enums for use in C++ mods.  
+See more [here](./sdk-generator.md).

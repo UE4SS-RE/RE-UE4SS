@@ -37,6 +37,16 @@ namespace RC::Ini
             return m_section->ordered_list.size();
         }
 
+        [[nodiscard]] auto ordered_end() const -> decltype(m_section->ordered_list)::const_iterator
+        {
+            return m_section->ordered_list.cend();
+        }
+
+        [[nodiscard]] auto find_ordered_element(StringViewType value) const -> decltype(m_section->ordered_list)::const_iterator
+        {
+            return std::find(m_section->ordered_list.cbegin(), m_section->ordered_list.cend(), value);
+        }
+
         template <typename Callable>
         auto for_each(Callable callable)
         {

@@ -8,6 +8,7 @@
 #include <GUI/GUITab.hpp>
 #include <GUI/LiveView.hpp>
 #include <Helpers/String.hpp>
+#include <SDKGenerator/SDKGenerator.hpp>
 #include <imgui.h>
 
 namespace RC::GUI
@@ -196,6 +197,9 @@ namespace RC::GUI
         bool m_exit_requested{};
         std::vector<std::shared_ptr<GUITab>> m_tabs;
         std::mutex m_tabs_mutex;
+        std::vector<std::pair<std::string, UEGenerator::SDKBackendSettings>> m_sdk_generator_backends{{"Select Backends", {}}};
+        bool m_has_cached_cxx_sdk_backends{};
+        size_t m_selected_backend_index{};
 
       public:
         bool m_event_thread_busy{};

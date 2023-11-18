@@ -3,6 +3,7 @@
 #include <vector>
 
 #define NOMINMAX
+#define NOGDI
 #include <Windows.h>
 
 #include <Mod/CppUserModBase.hpp>

@@ -55,6 +55,11 @@ namespace RC
             bool MakeAllConfigsEngineConfig{};
         } UHTHeaderGenerator;
 
+        struct SDKGenerator
+        {
+            StringType OutputPath{};
+        } SDKGenerator;
+
         struct SectionDebug
         {
             bool SimpleConsoleEnabled{true};

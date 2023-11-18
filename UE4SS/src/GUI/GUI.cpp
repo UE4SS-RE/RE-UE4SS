@@ -3,7 +3,9 @@
 #include <memory>
 
 #include <DynamicOutput/DynamicOutput.hpp>
+#include <Constructs/Views/EnumerateView.hpp>
 #include <ExceptionHandling.hpp>
+#include <SDKGenerator/SDKGenerator.hpp>
 #include <GUI/BPMods.hpp>
 #include <GUI/DX11.hpp>
 #include <GUI/Dumpers.hpp>
@@ -95,6 +97,135 @@ namespace RC::GUI
                                     static_cast<GUI::DebuggingGUI*>(data)->m_event_thread_busy = false;
                                 },
                                 this);
+                    }
+                    if (event_thread_busy)
+                    {
+                        ImGui::EndDisabled();
+                    }
+
+                    if (event_thread_busy)
+                    {
+                        ImGui::BeginDisabled(true);
+                    }
+                    ImGui::SameLine();
+                    if (ImGui::Button("Generate BP SDK"))
+                    {
+                        ImGui::OpenPopup("Generate SDK");
+                    }
+                    if (ImGui::BeginPopupModal("Generate SDK", nullptr, ImGuiWindowFlags_NoResize))
+                    {
+                        static const auto backends_path = StringType{UE4SSProgram::get_program().get_working_directory()} + STR("/UE4SS_SDK_Backends");
+                        if (!m_has_cached_cxx_sdk_backends && std::filesystem::exists(backends_path))
+                        {
+                            for (const auto& item : std::filesystem::directory_iterator(backends_path))
+                            {
+                                static constexpr auto glz_opts = glz::opts{
+                                        .format = glz::json,
+                                        .comments = false,              // Write out comments
+                                        .error_on_unknown_keys = false, // Error when an unknown key is encountered
+                                        .skip_null_members = true,      // Skip writing out params in an object if the value is null
+                                        .use_hash_comparison = true,    // Will replace some string equality checks with hash checks
+                                        .prettify = true,               // Write out prettified JSON
+                                        .indentation_char = ' ',        // Prettified JSON indentation char
+                                        .indentation_width = 3,         // Prettified JSON indentation size
+                                        .shrink_to_fit = false,         // Shrinks dynamic containers to new size to save memory
+                                        .write_type_info = true,        // Write type info for meta objects in variants
+                                        .force_conformance = false,     // Do not allow invalid json normally accepted such as comments, nan, inf.
+                                        .error_on_missing_keys =
+                                                true, // Require all non nullable keys to be present in the object. Use // skip_null_members = false to require nullable members
+                                        .error_on_const_read =
+                                                false, // Error if attempt is made to read into a const value, by default the value is skipped without error
+                                        .layout = glz::rowwise, // CSV row wise output/input
+                                        .quoted_num = false,    // treat numbers as quoted or array-like types as having quoted numbers
+                                        .number = false,        // read numbers as strings and write these string as numbers
+                                        .raw = false,           // write out string like values without quotes
+                                };
+                                std::error_code ec{};
+                                if (item.is_directory())
+                                {
+                                    continue;
+                                }
+                                if (ec.value() != 0)
+                                {
+                                    throw std::runtime_error{"GUI: Generate SDK: ec.value() != 0"};
+                                }
+                                UEGenerator::SDKBackendSettings_ASCII settings_ascii{};
+                                settings_ascii.ExcludedTypes.value.clear(); // Defaults are only used during dev to keep track. Remove this and the defaults later!
+                                settings_ascii.UnreflectedTypes.value.clear(); // Defaults are only used during dev to keep track. Remove this and the defaults later!
+                                std::string settings_buffer{};
+                                auto ec2 =
+                                        glz::read_file_json<glz_opts, UEGenerator::SDKBackendSettings_ASCII>(settings_ascii, item.path().string(), settings_buffer);
+                                if (ec2)
+                                {
+                                    Output::send<LogLevel::Error>(STR("Error '{}' while trying to read JSON: '{}'\n"),
+                                                                  to_wstring(glz::format_error(ec2, settings_buffer)),
+                                                                  item.path().wstring());
+                                }
+                                else
+                                {
+                                    UEGenerator::SDKBackendSettings settings{};
+                                    settings.IncludePrefix = to_wstring(settings_ascii.IncludePrefix.value);
+                                    settings.HeaderFileExtension = to_wstring(settings_ascii.HeaderFileExtension.value);
+                                    settings.UnrealImplementationNamespace = to_wstring(settings_ascii.UnrealImplementationNamespace.value);
+                                    settings.SDKNamespace = to_wstring(settings_ascii.SDKNamespace.value);
+                                    for (const auto& setting : settings_ascii.ExcludedTypes.value)
+                                    {
+                                        settings.ExcludedTypes.emplace(to_wstring(setting));
+                                    }
+                                    for (const auto& [key, value] : settings_ascii.UnreflectedTypes.value)
+                                    {
+                                        settings.UnreflectedTypes.emplace(to_wstring(key), to_wstring(value));
+                                    }
+                                    m_sdk_generator_backends.emplace_back(item.path().stem().string(), settings);
+                                }
+                            }
+                            m_has_cached_cxx_sdk_backends = true;
+                        }
+                        if (ImGui::BeginCombo("##cxx_sdk_generator_backend_combo", m_sdk_generator_backends[m_selected_backend_index].first.c_str()))
+                        {
+                            for (const auto& [backend, i] : m_sdk_generator_backends | views::enumerate)
+                            {
+                                const auto is_selected = m_selected_backend_index == i;
+                                if (ImGui::Selectable(backend.first.c_str(), is_selected))
+                                {
+                                    m_selected_backend_index = i;
+                                }
+                                if (is_selected)
+                                {
+                                    ImGui::SetItemDefaultFocus();
+                                }
+                            }
+                            ImGui::EndCombo();
+                        }
+                        if (m_selected_backend_index == 0)
+                        {
+                            ImGui::BeginDisabled();
+                        }
+                        if (ImGui::Button("Generate"))
+                        {
+                            m_event_thread_busy = true;
+                            UE4SSProgram::get_program().queue_event(
+                                    [](void* data) {
+                                        RC::TRY([&] {
+                                            auto gui = static_cast<GUI::DebuggingGUI*>(data);
+                                            auto& selected_backend = gui->m_sdk_generator_backends[gui->m_selected_backend_index];
+                                            UEGenerator::generate_sdk(std::filesystem::path{UE4SSProgram::get_program().get_working_directory()} / "UE4SS_SDK",
+                                                                      selected_backend.second);
+                                            gui->m_event_thread_busy = false;
+                                        });
+                                    },
+                                    this);
+                        }
+                        if (m_selected_backend_index == 0)
+                        {
+                            ImGui::EndDisabled();
+                        }
+                        ImGui::SameLine();
+                        if (ImGui::Button("Cancel"))
+                        {
+                            ImGui::CloseCurrentPopup();
+                        }
+                        ImGui::EndPopup();
                     }
                     if (event_thread_busy)
                     {
