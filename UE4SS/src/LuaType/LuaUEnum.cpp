@@ -154,8 +154,8 @@ Overloads:
             }
 
             StringType param_name{};
-            int param_value = 0;
-            int param_index = 0;
+            int64_t param_value = 0;
+            int32_t param_index = 0;
             bool param_shift = false;
 
             // P1 (Name), string
@@ -194,8 +194,8 @@ Overloads:
                 param_shift = lua.get_bool();
             }
 
-            Unreal::FName key = Unreal::FName(param_name, Unreal::FNAME_Add);
-            auto pair = Unreal::TPair{key, Unreal::int64(param_index)};
+            const Unreal::FName key{param_name, Unreal::FNAME_Add};
+            const auto pair = Unreal::TPair{key, param_value};
 
             lua_object.get_remote_cpp_object()->InsertIntoNames(pair, param_index, param_shift);
             return 1;
@@ -219,7 +219,7 @@ Overloads:
                 lua.throw_error("Function 'UEnum.EditValueAt' cannot be called with 0 parameters.");
             }
 
-            int param_index = 0;
+            int32_t param_index = 0;
             std::string param_new_name{};
 
             // P1 (Index), integer
@@ -266,8 +266,8 @@ Overloads:
                 lua.throw_error("Function 'UEnum.EditValueAt' cannot be called with 0 parameters.");
             }
 
-            int param_index = 0;
-            int param_new_value = 0;
+            int32_t param_index = 0;
+            int64_t param_new_value = 0;
 
             // P1 (Index), integer
             if (lua.is_integer())
@@ -314,8 +314,8 @@ Overloads:
                 lua.throw_error("Function 'UEnum.RemoveFromNamesAt' cannot be called with 0 parameters.");
             }
 
-            int param_index = 0;
-            int param_count = 1;
+            int32_t param_index = 0;
+            int32_t param_count = 1;
             bool param_allow_shrinking = true;
 
             // P1 (Index), integer
