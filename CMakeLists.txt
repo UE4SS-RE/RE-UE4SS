@@ -170,6 +170,8 @@ foreach (target_type ${TARGET_TYPES})
 endforeach ()
 # Build configurations -> END
 
+add_subdirectory("cppmods")
+
 add_subdirectory("deps")
 
 foreach (project ${PROJECTS})
