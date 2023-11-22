@@ -88,6 +88,10 @@ set(Win64_DEFINITIONS PLATFORM_WINDOWS PLATFORM_MICROSOFT OVERRIDE_PLATFORM_HEAD
 
 # Definitions -> END
 
+# Vars -> START
+set(Win64_VARS CMAKE_SYSTEM_PROCESSOR=x86_64)
+# Vars -> END
+
 # Initializing compiler-specific options
 add_subdirectory("cmake/CompilerOptions")
 
@@ -165,6 +169,12 @@ foreach (target_type ${TARGET_TYPES})
 
             listToString(target_linker_flags "${DEFAULT_EXE_LINKER_FLAGS}" "${DEFAULT_SHARED_LINKER_FLAGS}" "${linker_flags}")
             list(APPEND TARGET_LINK_OPTIONS "$<$<STREQUAL:$<CONFIG>,${triplet}>:${target_linker_flags}>")
+
+            foreach (variable in ${${platform_type}_VARS})
+                string(REGEX MATCH "^[^=]+" name ${variable})
+                string(REPLACE "${name}=" "" value ${variable})
+                set(${name} ${value})
+            endforeach ()
         endforeach ()
     endforeach ()
 endforeach ()

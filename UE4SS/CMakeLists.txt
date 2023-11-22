@@ -157,11 +157,13 @@ target_link_libraries(${TARGET} PUBLIC
     File glaze::glaze DynamicOutput
     Unreal SinglePassSigScanner LuaMadeSimple
     Function IniParser JSON
-    Input Constructs Helpers 
-    MProgram ScopedTimer Profiler)
+    Input Constructs Helpers
+    MProgram ScopedTimer Profiler
+    patternsleuth_bind
+)
 
 target_link_libraries(${TARGET} PUBLIC
-    ImGui PolyHook_2 d3d11 GLFW opengl32 dbghelp)
+    ImGui PolyHook_2 d3d11 GLFW opengl32 dbghelp psapi)
 
 
 
