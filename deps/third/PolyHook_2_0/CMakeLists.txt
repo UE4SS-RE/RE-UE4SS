@@ -24,17 +24,6 @@ set(POLYHOOK_USE_EXTERNAL_ZYDIS ON CACHE BOOL "Use external zydis libary" FORCE)
 set(ASMJIT_STATIC ${MAKE_POLYHOOK_DEPENDENCIES_STATIC} CACHE BOOL "Build 'asmjit' library as static" FORCE)
 set(POLYHOOK_BUILD_STATIC_RUNTIME OFF CACHE BOOL "Use static runtime" FORCE)
 
-# add a conditional for disabling 'set_target_properties' on demand to prevent PolyHook from setting MSVC_RUNTIME_LIBRARY to "MultiThreaded$<$<CONFIG:Debug>:Debug>DLL"
-if(NOT DEFINED _DISABLE_SET_PROPERTIES)
-    set(_DISABLE_SET_PROPERTIES TRUE)
-
-    macro(set_target_properties)
-        if (NOT _DISABLE_SET_PROPERTIES)
-            _set_target_properties(${ARGV})
-        endif()
-    endmacro()
-endif()
-
 # add a conditional for disabling 'install' on demand
 if(NOT DEFINED _DISABLE_INSTALL)
     set(_DISABLE_INSTALL TRUE)
@@ -46,8 +35,12 @@ if(NOT DEFINED _DISABLE_INSTALL)
     endmacro()
 endif()
 
+# prevent PolyHook from setting MSVC_RUNTIME_LIBRARY to "MultiThreaded$<$<CONFIG:Debug>:Debug>DLL" by unsetting 'MSVC' var
+set(TMP_MSVC ${MSVC})
+unset(MSVC)
+
 FetchContent_MakeAvailable(PolyHook2)
 
-# re-enable 'set_target_properties' and 'install' since we're done adding PolyHook
-set(_DISABLE_SET_PROPERTIES FALSE)
+# re-enable 'install' and reset 'MSVC' since we're done adding PolyHook
+set(MSVC ${TMP_MSVC})
 set(_DISABLE_INSTALL FALSE)

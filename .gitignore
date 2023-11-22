@@ -67,6 +67,7 @@ _ReSharper*/
 
 /generated_include/build_number.hpp
 /docs-repo
+/deps/first/patternsleuth_bind/target
 
 # clangd cache
 .cache

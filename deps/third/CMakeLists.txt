@@ -62,4 +62,13 @@ FetchContent_Declare(raw_pdb
 add_subdirectory("raw_pdb")
 # raw_pdb end
 
+# corrosion start
+FetchContent_Declare(
+    Corrosion
+    GIT_REPOSITORY https://github.com/corrosion-rs/corrosion.git
+    GIT_TAG 123be1e3d8170c86e121392e8bffa4def7dc3447)
+
+add_subdirectory("corrosion")
+# corrosion end
+
 # Third Party Depenedencies
