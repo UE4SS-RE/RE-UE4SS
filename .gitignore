@@ -67,3 +67,7 @@ _ReSharper*/
 
 /generated_include/build_number.hpp
 /docs-repo
+
+# clangd cache
+.cache
+.xwin-cache
