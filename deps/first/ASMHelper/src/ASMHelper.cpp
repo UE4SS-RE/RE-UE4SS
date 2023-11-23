@@ -10,14 +10,15 @@ namespace RC::ASM
     {
         auto instruction_ptr = static_cast<uint8_t*>(in_instruction_ptr);
         ZydisDecoder decoder{};
-        ZydisDecoderInit(&decoder, ZYDIS_MACHINE_MODE_LONG_64, ZYDIS_ADDRESS_WIDTH_64);
+        ZydisDecoderInit(&decoder, ZYDIS_MACHINE_MODE_LONG_64, ZYDIS_STACK_WIDTH_64);
         ZyanUSize offset = 0;
-        ZydisDecodedInstruction instruction{};
-        while (ZYAN_SUCCESS(ZydisDecoderDecodeBuffer(&decoder, instruction_ptr + offset, 16 - offset, &instruction)))
+
+        Instruction instruction{in_instruction_ptr, {}, {}};
+        while (ZYAN_SUCCESS(ZydisDecoderDecodeFull(&decoder, instruction_ptr + offset, 16 - offset, &instruction.raw, instruction.operands)))
         {
             break;
         }
-        return {in_instruction_ptr, instruction};
+        return instruction;
     }
 
     auto is_jmp_instruction(void* in_instruction_ptr) -> bool
@@ -36,7 +37,7 @@ namespace RC::ASM
     {
         auto instruction = get_first_instruction_at_address(in_instruction_ptr);
         ZyanU64 resolved_address{};
-        if (ZYAN_SUCCESS(ZydisCalcAbsoluteAddress(&instruction.raw, &instruction.raw.operands[0], std::bit_cast<ZyanU64>(in_instruction_ptr), &resolved_address)))
+        if (ZYAN_SUCCESS(ZydisCalcAbsoluteAddress(&instruction.raw, &instruction.operands[0], std::bit_cast<ZyanU64>(in_instruction_ptr), &resolved_address)))
         {
             return std::bit_cast<void*>(resolved_address);
         }

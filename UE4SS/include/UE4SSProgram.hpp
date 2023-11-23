@@ -21,6 +21,8 @@
 #include <Unreal/TArray.hpp>
 #include <Unreal/UnrealVersion.hpp>
 
+#include <safetyhook.hpp>
+
 // Used to set up ImGui context and allocator in DLL mods
 #define UE4SS_ENABLE_IMGUI()                                                                                                                                   \
     {                                                                                                                                                          \
@@ -109,17 +111,10 @@ namespace RC
         std::mutex m_event_queue_mutex{};
 
       private:
-        std::unique_ptr<PLH::IatHook> m_load_library_a_hook;
-        uint64_t m_hook_trampoline_load_library_a;
-
-        std::unique_ptr<PLH::IatHook> m_load_library_ex_a_hook;
-        uint64_t m_hook_trampoline_load_library_ex_a;
-
-        std::unique_ptr<PLH::IatHook> m_load_library_w_hook;
-        uint64_t m_hook_trampoline_load_library_w;
-
-        std::unique_ptr<PLH::IatHook> m_load_library_ex_w_hook;
-        uint64_t m_hook_trampoline_load_library_ex_w;
+        SafetyHookInline m_load_library_a_hook;
+        SafetyHookInline m_load_library_ex_a_hook;
+        SafetyHookInline m_load_library_w_hook;
+        SafetyHookInline m_load_library_ex_w_hook;
 
       public:
         static inline std::vector<std::unique_ptr<Mod>> m_mods;
