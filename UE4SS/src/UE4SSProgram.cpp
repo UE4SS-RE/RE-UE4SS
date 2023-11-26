@@ -13,6 +13,7 @@
 #include <limits>
 #include <unordered_set>
 
+#include <Profiler/Profiler.hpp>
 #include <DynamicOutput/DynamicOutput.hpp>
 #include <ExceptionHandling.hpp>
 #include <GUI/ConsoleOutputDevice.hpp>
@@ -159,7 +160,7 @@ namespace RC
 
     UE4SSProgram::UE4SSProgram(const std::wstring& moduleFilePath, std::initializer_list<BinaryOptions> options) : MProgram(options)
     {
-
+        ProfilerScope();
         s_program = this;
 
         try
@@ -223,13 +224,13 @@ namespace RC
                          to_wstring(UE4SS_LIB_BUILD_GITSHA));
 
 #ifdef __clang__
-    #define UE4SS_COMPILER L"Clang"
+#define UE4SS_COMPILER L"Clang"
 #else
-    #define UE4SS_COMPILER L"MSVC"
+#define UE4SS_COMPILER L"MSVC"
 #endif
-            
+
             Output::send(STR("UE4SS Build Configuration: {} ({})\n"), to_wstring(UE4SS_CONFIGURATION), UE4SS_COMPILER);
-            
+
             m_load_library_a_hook = std::make_unique<PLH::IatHook>("kernel32.dll",
                                                                    "LoadLibraryA",
                                                                    std::bit_cast<uint64_t>(&HookedLoadLibraryA),
@@ -310,6 +311,7 @@ namespace RC
 
     auto UE4SSProgram::init() -> void
     {
+        ProfilerScope();
         try
         {
             setup_unreal();
@@ -362,6 +364,7 @@ namespace RC
 
     auto UE4SSProgram::setup_paths(const std::wstring& moduleFilePathString) -> void
     {
+        ProfilerScope();
         const std::filesystem::path moduleFilePath = std::filesystem::path(moduleFilePathString);
         m_root_directory = moduleFilePath.parent_path().wstring();
         m_module_file_path = moduleFilePath.wstring();
@@ -476,6 +479,7 @@ namespace RC
 
     auto UE4SSProgram::setup_unreal() -> void
     {
+        ProfilerScope();
         // Retrieve offsets from the config file
         const std::wstring offset_overrides_section{L"OffsetOverrides"};
 
@@ -544,6 +548,7 @@ namespace RC
 
         // Virtual function offset overrides
         TRY([&]() {
+            ProfilerScopeNamed("loading virtual function offset overrides");
             static File::StringType virtual_function_offset_override_file{(m_working_directory / STR("VTableLayout.ini")).wstring()};
             if (std::filesystem::exists(virtual_function_offset_override_file))
             {
@@ -765,6 +770,7 @@ namespace RC
 
     auto UE4SSProgram::on_program_start() -> void
     {
+        ProfilerScope();
         using namespace Unreal;
 
         // Commented out because this system (turn off hotkeys when in-game console is open) it doesn't work properly.
@@ -859,6 +865,8 @@ namespace RC
 
             if (!is_queue_empty())
             {
+                ProfilerScopeNamed("event processing");
+
                 static constexpr size_t max_events_executed_per_frame = 5;
                 size_t num_events_executed{};
                 std::lock_guard<std::mutex> guard(m_event_queue_mutex);
@@ -900,15 +908,20 @@ namespace RC
 
             m_input_handler.process_event();
 
-            for (auto& mod : m_mods)
             {
-                if (mod->is_started())
+                ProfilerScopeNamed("mod update processing");
+
+                for (auto& mod : m_mods)
                 {
-                    mod->fire_update();
+                    if (mod->is_started())
+                    {
+                        mod->fire_update();
+                    }
                 }
             }
 
             std::this_thread::sleep_for(std::chrono::milliseconds(5));
+            ProfilerFrameMark();
         }
         Output::send(STR("Event loop end\n"));
     }
@@ -941,6 +954,8 @@ namespace RC
 
     auto UE4SSProgram::setup_mods() -> void
     {
+        ProfilerScope();
+
         Output::send(STR("Setting up mods...\n"));
 
         if (!std::filesystem::exists(m_mods_directory))
@@ -983,6 +998,7 @@ namespace RC
     template <typename ModType>
     auto install_mods(std::vector<std::unique_ptr<Mod>>& mods) -> void
     {
+        ProfilerScope();
         for (auto& mod : mods)
         {
             if (!dynamic_cast<ModType*>(mod.get()))
@@ -1029,6 +1045,7 @@ namespace RC
 
     auto UE4SSProgram::fire_unreal_init_for_cpp_mods() -> void
     {
+        ProfilerScope();
         for (const auto& mod : m_mods)
         {
             if (!dynamic_cast<CppMod*>(mod.get()))
@@ -1041,6 +1058,7 @@ namespace RC
 
     auto UE4SSProgram::fire_program_start_for_cpp_mods() -> void
     {
+        ProfilerScope();
         for (const auto& mod : m_mods)
         {
             if (!dynamic_cast<CppMod*>(mod.get()))
@@ -1065,6 +1083,7 @@ namespace RC
     template <typename ModType>
     auto start_mods() -> std::string
     {
+        ProfilerScope();
         // Part #1: Start all mods that are enabled in mods.txt.
         Output::send(STR("Starting mods (from mods.txt load order)...\n"));
 
@@ -1170,6 +1189,7 @@ namespace RC
 
     auto UE4SSProgram::start_lua_mods() -> void
     {
+        ProfilerScope();
         auto error_message = start_mods<LuaMod>();
         if (!error_message.empty())
         {
@@ -1179,6 +1199,7 @@ namespace RC
 
     auto UE4SSProgram::start_cpp_mods() -> void
     {
+        ProfilerScope();
         auto error_message = start_mods<CppMod>();
         if (!error_message.empty())
         {
@@ -1188,6 +1209,7 @@ namespace RC
 
     auto UE4SSProgram::uninstall_mods() -> void
     {
+        ProfilerScope();
         std::vector<CppMod*> cpp_mods{};
         std::vector<LuaMod*> lua_mods{};
         for (auto& mod : m_mods)
@@ -1224,6 +1246,7 @@ namespace RC
 
     auto UE4SSProgram::reinstall_mods() -> void
     {
+        ProfilerScope();
         Output::send(STR("Re-installing all mods\n"));
 
         // Stop processing events while stuff isn't properly setup
@@ -1298,6 +1321,7 @@ namespace RC
 
     auto UE4SSProgram::generate_uht_compatible_headers() -> void
     {
+        ProfilerScope();
         Output::send(STR("Generating UHT compatible headers...\n"));
 
         double generator_duration{};
@@ -1314,11 +1338,13 @@ namespace RC
 
     auto UE4SSProgram::generate_cxx_headers(const std::filesystem::path& output_dir) -> void
     {
+        ProfilerScope();
         if (settings_manager.CXXHeaderGenerator.LoadAllAssetsBeforeGeneratingCXXHeaders)
         {
             Output::send(STR("Loading all assets...\n"));
             double asset_loading_duration{};
             {
+                ProfilerScopeNamed("loading all assets");
                 ScopedTimer loading_timer{&asset_loading_duration};
 
                 UAssetRegistry::LoadAllAssets();
@@ -1328,6 +1354,7 @@ namespace RC
 
         double generator_duration;
         {
+            ProfilerScopeNamed("unloading all force-loaded assets");
             ScopedTimer generator_timer{&generator_duration};
 
             UEGenerator::generate_cxx_headers(output_dir);
@@ -1341,11 +1368,13 @@ namespace RC
 
     auto UE4SSProgram::generate_lua_types(const std::filesystem::path& output_dir) -> void
     {
+        ProfilerScope();
         if (settings_manager.CXXHeaderGenerator.LoadAllAssetsBeforeGeneratingCXXHeaders)
         {
             Output::send(STR("Loading all assets...\n"));
             double asset_loading_duration{};
             {
+                ProfilerScopeNamed("loading all assets");
                 ScopedTimer loading_timer{&asset_loading_duration};
 
                 UAssetRegistry::LoadAllAssets();
@@ -1355,6 +1384,7 @@ namespace RC
 
         double generator_duration;
         {
+            ProfilerScopeNamed("unloading all force-loaded assets");
             ScopedTimer generator_timer{&generator_duration};
 
             UEGenerator::generate_lua_types(output_dir);
@@ -1665,6 +1695,5 @@ namespace RC
         // Do cleanup of static objects here
         // This function is called right before the DLL detaches from the game
         // Including when the player hits the 'X' button to exit the game
-
     }
 } // namespace RC

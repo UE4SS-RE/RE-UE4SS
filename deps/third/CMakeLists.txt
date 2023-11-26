@@ -61,4 +61,14 @@ FetchContent_Declare(raw_pdb
     
 add_subdirectory("raw_pdb")
 # raw_pdb end
+
+# Tracy start
+FetchContent_Declare(Tracy
+    GIT_REPOSITORY git@github.com:wolfpld/tracy.git
+    GIT_TAG v0.10
+    GIT_PROGRESS ON)
+
+add_subdirectory("Tracy")
+# Tracy end
+
 # Third Party Depenedencies
