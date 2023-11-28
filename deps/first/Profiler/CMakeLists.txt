@@ -1,5 +1,8 @@
 cmake_minimum_required(VERSION 3.18)
 
+include(FetchContent)
+set(FETCHCONTENT_QUIET OFF)
+
 set(TARGET Profiler)
 project(${TARGET})
 message("Project: ${TARGET} (HEADER-ONLY)")
@@ -22,6 +25,15 @@ if (${RC_PROFILER_DISABLE})
 endif ()
 
 if (${RC_PROFILER_FLAVOR} STREQUAL Tracy)
+    # Tracy start
+    FetchContent_Declare(Tracy
+        GIT_REPOSITORY git@github.com:wolfpld/tracy.git
+        GIT_TAG v0.10
+        GIT_PROGRESS ON)
+
+    add_subdirectory("deps/Tracy")
+    # Tracy end
+
     target_compile_definitions(${TARGET} INTERFACE IS_TRACY=1 IS_SUPERLUMINAL=0)
     target_link_libraries(${TARGET} INTERFACE TracyClient)
 elseif (${RC_PROFILER_FLAVOR} STREQUAL Superluminal)
