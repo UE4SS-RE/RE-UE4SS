@@ -154,7 +154,7 @@ target_compile_definitions(${TARGET} PRIVATE
 # First party static build -> END
 
 target_link_libraries(${TARGET} PUBLIC
-    File glaze::glaze DynamicOutput
+    File glaze::glaze DynamicOutput cpptrace-lib
     Unreal SinglePassSigScanner LuaMadeSimple
     Function IniParser JSON
     Input Constructs Helpers 

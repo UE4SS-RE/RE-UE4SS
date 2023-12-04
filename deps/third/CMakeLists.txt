@@ -61,4 +61,11 @@ FetchContent_Declare(raw_pdb
     
 add_subdirectory("raw_pdb")
 # raw_pdb end
+
+FetchContent_Declare(
+  cpptrace
+  GIT_REPOSITORY https://github.com/jeremy-rifkin/cpptrace.git
+  GIT_TAG        v0.3.0 # <HASH or TAG>
+)
+add_subdirectory("cpptrace")
 # Third Party Depenedencies

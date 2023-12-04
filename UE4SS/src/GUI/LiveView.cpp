@@ -7,6 +7,11 @@
 #include <unordered_map>
 #include <variant>
 #include <regex>
+#include <sstream>
+#include <iostream>
+#include <stacktrace>
+
+#include <cpptrace/cpptrace.hpp>
 
 #include <DynamicOutput/DynamicOutput.hpp>
 #include <ExceptionHandling.hpp>
@@ -2708,6 +2713,8 @@ namespace RC::GUI
 
         const auto when_as_string = std::format(STR("{:%H:%M:%S}"), std::chrono::system_clock::now());
         StringType buffer{std::format(STR("Received call @ {}.\n"), when_as_string)};
+
+        buffer.append(std::format(STR("  Call stack:\n{}\n"), to_wstring(cpptrace::generate_trace().to_string())));
 
         buffer.append(std::format(STR("  Context:\n    {}\n"), context.Context->GetFullName()));
 
