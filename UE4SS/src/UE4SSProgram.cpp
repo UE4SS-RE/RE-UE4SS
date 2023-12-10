@@ -311,7 +311,9 @@ namespace RC
 
     auto UE4SSProgram::init() -> void
     {
+        ProfilerSetThreadName("UE4SS-InitThread");
         ProfilerScope();
+
         try
         {
             setup_unreal();
@@ -853,6 +855,8 @@ namespace RC
 
     auto UE4SSProgram::update() -> void
     {
+        ProfilerSetThreadName("UE4SS-UpdateThread");
+
         on_program_start();
 
         Output::send(STR("Event loop start\n"));
