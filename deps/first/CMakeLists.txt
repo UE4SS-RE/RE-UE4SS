@@ -16,4 +16,5 @@ add_subdirectory("ParserBase")
 add_subdirectory("ScopedTimer")
 add_subdirectory("SinglePassSigScanner")
 add_subdirectory("Unreal")
+add_subdirectory("Profiler")
 # First party dependencies -> END

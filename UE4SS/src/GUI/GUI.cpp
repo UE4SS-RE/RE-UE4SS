@@ -2,6 +2,7 @@
 
 #include <memory>
 
+#include <Profiler/Profiler.hpp>
 #include <DynamicOutput/DynamicOutput.hpp>
 #include <ExceptionHandling.hpp>
 #include <GUI/BPMods.hpp>
@@ -374,6 +375,8 @@ namespace RC::GUI
 
     auto gui_thread(std::stop_token stop_token, DebuggingGUI* debugging_ui) -> void
     {
+        ProfilerSetThreadName("UE4SS-GuiThread");
+
         if (!debugging_ui)
         {
             Output::send<LogLevel::Error>(STR("Could not start GUI render thread because 'debugging_ui' was nullptr."));

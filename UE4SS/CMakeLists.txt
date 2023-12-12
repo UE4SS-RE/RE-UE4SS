@@ -158,10 +158,12 @@ target_link_libraries(${TARGET} PUBLIC
     Unreal SinglePassSigScanner LuaMadeSimple
     Function IniParser JSON
     Input Constructs Helpers 
-    MProgram ScopedTimer)
+    MProgram ScopedTimer Profiler)
 
 target_link_libraries(${TARGET} PUBLIC
     ImGui PolyHook_2 d3d11 GLFW opengl32 dbghelp)
+
+
 
 set_property(TARGET ${TARGET} PROPERTY INTERPROCEDURAL_OPTIMIZATION ON)
 
