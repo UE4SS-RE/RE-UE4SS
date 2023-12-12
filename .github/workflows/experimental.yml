@@ -28,7 +28,7 @@ jobs:
           known_hosts: unnecessary
 
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           submodules: recursive
           fetch-depth: 0 # needed to get commits since last tag
