@@ -93,4 +93,5 @@
   - [Creating a C++ Mod](./guides/creating-a-c++-mod.md)
   - [Installing a C++ Mod](./guides/installing-a-c++-mod.md)
   - [GUI tabs with a C++ Mod](./guides/creating-gui-tabs-with-c++-mod.md)
+  - [Creating a Lua Mod](./guides/creating-a-lua-mod.md)
   - [Using Custom Lua Bindings](./guides/using-custom-lua-bindings.md)
