@@ -7,6 +7,8 @@ Part two goes over creating the most basic C++ mod possible.
 Part three will show you how to interact with UE4SS and UE itself (via UE4SS).  
 Part four will cover installation of the mod.
 
+> The guide requires having a working C++ development environment with `cmake` and `git`, preferably similar to the one required to build UE4SS itself from sources.
+
 ## Part 1
 1. Make an Epic account and link it to your GitHub account.
 2. Make a directory somewhere on your computer, the name doesn't matter but I named mine `MyMods`.
