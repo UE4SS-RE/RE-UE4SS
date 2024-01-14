@@ -148,6 +148,9 @@ This is an overall list of API definitions available in UE4SS. For more readable
     FName(integer ComparisonIndex) -> FName
         - Returns the FName for this string/ComparisonIndex or the FName for "None" if the name doesn't exist
 
+    FText(string Text) -> FText
+        - Returns the FText representation of this string
+
     StaticConstructObject(UClass Class,
                           UObject Outer,
                           FName Name, #Optional

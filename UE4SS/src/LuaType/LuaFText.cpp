@@ -42,9 +42,48 @@ namespace RC::LuaType
         return table;
     }
 
-    auto FText::setup_metamethods(BaseObject&) -> void
+    auto FText::setup_metamethods(BaseObject& base_object) -> void
     {
-        // AActor has no metamethods
+        base_object.get_metamethods().create(LuaMadeSimple::Lua::MetaMethod::Call, []([[maybe_unused]] const LuaMadeSimple::Lua& lua) -> int {
+            // Acts as a "constructor" for FText
+            std::string error_overload_not_found{R"(
+No overload found for function 'FText'.
+Overloads:
+#1: FText(string Text)
+)"};
+
+            if (lua.is_userdata())
+            {
+                // Discard the userdata since it's unwanted data
+                lua.discard_value();
+            }
+
+            StringType text_string{};
+            if (lua.is_string())
+            {
+                text_string = to_wstring(lua.get_string());
+            }
+            else
+            {
+                lua.throw_error(error_overload_not_found);
+            }
+
+            LuaType::FText::construct(lua, Unreal::FText(text_string));
+
+            return 1;
+        });
+
+        base_object.get_metamethods().create(LuaMadeSimple::Lua::MetaMethod::Equal, []([[maybe_unused]] const LuaMadeSimple::Lua& lua) -> int {
+            if (!lua.is_userdata(1) || !lua.is_userdata(2))
+            {
+                lua.throw_error("FText __eq metamethod called but there was not two userdata to compare");
+            }
+
+            auto name_a = lua.get_userdata<LuaType::FText>();
+            auto name_b = lua.get_userdata<LuaType::FText>();
+            // FText objects are equal if their string representations are equal
+            return name_a.get_local_cpp_object().ToString() == name_b.get_local_cpp_object().ToString();
+        });
     }
 
     template <LuaMadeSimple::Type::IsFinal is_final>
@@ -57,6 +96,18 @@ namespace RC::LuaType
             lua.set_string(to_string(fstring.GetCharArray()));
 
             return 1;
+        });
+
+        table.add_pair("Equals", [](const LuaMadeSimple::Lua& lua) -> int {
+            if (!lua.is_userdata(1) || !lua.is_userdata(2))
+            {
+                lua.throw_error("FText.Equals called but there was not two userdata to compare (use ':' to call, not '.')");
+            }
+
+            auto name_a = lua.get_userdata<LuaType::FText>();
+            auto name_b = lua.get_userdata<LuaType::FText>();
+
+            return name_a.get_local_cpp_object().ToString() == name_b.get_local_cpp_object().ToString();
         });
 
         if constexpr (is_final == LuaMadeSimple::Type::IsFinal::Yes)
