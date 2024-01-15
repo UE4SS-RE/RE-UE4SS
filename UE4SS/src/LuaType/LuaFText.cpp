@@ -104,10 +104,10 @@ Overloads:
                 lua.throw_error("FText.Equals called but there was not two userdata to compare (use ':' to call, not '.')");
             }
 
-            auto name_a = lua.get_userdata<LuaType::FText>();
-            auto name_b = lua.get_userdata<LuaType::FText>();
+            auto text_a = lua.get_userdata<LuaType::FText>();
+            auto text_b = lua.get_userdata<LuaType::FText>();
 
-            return name_a.get_local_cpp_object().ToString() == name_b.get_local_cpp_object().ToString();
+            return text_a.get_local_cpp_object().ToString() == text_b.get_local_cpp_object().ToString();
         });
 
         if constexpr (is_final == LuaMadeSimple::Type::IsFinal::Yes)
