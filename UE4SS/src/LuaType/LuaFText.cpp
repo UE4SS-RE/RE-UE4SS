@@ -79,10 +79,10 @@ Overloads:
                 lua.throw_error("FText __eq metamethod called but there was not two userdata to compare");
             }
 
-            auto name_a = lua.get_userdata<LuaType::FText>();
-            auto name_b = lua.get_userdata<LuaType::FText>();
+            auto text_a = lua.get_userdata<LuaType::FText>();
+            auto text_b = lua.get_userdata<LuaType::FText>();
             // FText objects are equal if their string representations are equal
-            return name_a.get_local_cpp_object().ToString() == name_b.get_local_cpp_object().ToString();
+            return text_a.get_local_cpp_object().ToString() == text_b.get_local_cpp_object().ToString();
         });
     }
 
