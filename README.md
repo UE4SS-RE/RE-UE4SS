@@ -52,6 +52,7 @@ If your game is in the custom config list, extract the contents from the relevan
 - A version of MSVC that supports C++20, including std::format.
   - Visual Studio 2019 (recent versions), and Visual Studio 2022 will work.
   - More compilers will hopefully be supported in the future.
+- Rust toolchain 1.73.0 or greater
 
 
 ## Build instructions
