@@ -14,12 +14,15 @@ There are four concepts you need to know about.
     - Example of a `game directory`: `D:\Games\Epic Games\SatisfactoryEarlyAccess\`
 4. The `game executable directory`.
     - This directory contains the real executable file for your game and is not part of the UE4SS directory structure.
+    - You can also recognize it as the game executable located there is usually the largest (much larger than the wrapper above) and is the one running as the child process of the wrapper when the game is running.
     - Example of a `game executable directory`: 
     `D:\Games\Epic Games\SatisfactoryEarlyAccess\FactoryGame\Binaries\Win64\`
 
 ## Choosing an installation directory
 
 You can install UE4SS in a couple of different ways.
+
+The goal is to have the *.DLL of UE4SS to be loaded by the target game one way or another, and have the configuration files and `\Mods\` directory in the correct place for UE4SS to find them.
 
 ### Method #1 - Automatic Injection (Preferred)
 
@@ -60,7 +63,7 @@ As of UE4SS 2.6, the following files & folders exist inside the `working directo
 - UE4SS-settings.ini
 - UE4SS.log
 - ue4ss.dll
-- xinput1_3.dll (Optional proxy dll when using Method #1.  Can be any DLL name.)
+- xinput1_3.dll (Optional proxy dll when using Method #1. Can have a name of any DLL that is loaded by the game engine or by its dependencies)
 
 Now all you need to do is start your game and point your injector of choice to `<root directory>/ue4ss.dll`.
 
@@ -70,3 +73,12 @@ If you use method #3, if you keep a copy of `UE4SS-settings.ini` inside the `roo
 as long as you still point your injector to the `root directory`.  
 
 This way you can use method #3 for most of your games and at the same time you can use method #2 for other games if method #3 is problematic for you.
+
+
+## How to verify that UE4SS is running successfully?
+
+Try any of the following:
+* Press any of the default keyboard shortcuts, such as `@` or `F10` that open the in-game console (using built-in `ConsoleEnablerMod`)
+* Check that the log file `UE4SS.log` is created in the same folder as the UE4SS main DLL, and that the log file contains fresh timestamps and no errors.
+* Enable the GUI console in `UE4SS-settings.ini` and check that it appears as a separate window (rendered with OpenGL by default).
+* (For developers, if the game is confirmed to be safely debuggable) Check that the UE4SS library is being loaded in a debugger and has its threads spawned in the target game's process and in a reasonable state.

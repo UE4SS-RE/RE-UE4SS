@@ -1,6 +1,8 @@
 # Creating GUI tabs with a C++ mod
 
-This guide will show how you create tabs for the GUI with a C++ mod, and the guide will take the form of comments in the code example below:
+> UE4SS already includes the ImGui library to render its console GUI, built from the [UE4SS-RE/imgui](https://github.com/UE4SS-RE/imgui) repo. Refer to [ImGui documentation in that repo](https://github.com/UE4SS-RE/imgui/tree/master/docs) on how to use ImGui-specific classes and methods for rendering actual buttons and textboxes and other window objects.
+
+This guide will show how you create custom tabs for the GUI with a C++ mod, and the guide will take the form of comments in the code example below:
 ```c++
 #include <Mod/CppUserModBase.hpp>
 #include <UE4SSProgram.hpp>
