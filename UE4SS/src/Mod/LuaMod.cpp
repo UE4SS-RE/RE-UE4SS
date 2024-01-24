@@ -358,7 +358,7 @@ namespace RC
             // Call the Lua function with the correct number of parameters & return values
             // Increasing the 'num_params' by one to account for the 'this / context' param
             // Increasing it again if there's a return value because we store that as the second param
-            lua_data.lua.call_function(num_unreal_params + lua_data.has_return_value ? 2 : 1, 1);
+            lua_data.lua.call_function(num_unreal_params + (lua_data.has_return_value ? 2 : 1), 1);
 
             // Processing potential return value from the second callback.
             process_return_value();
