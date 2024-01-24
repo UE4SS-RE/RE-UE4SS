@@ -3148,6 +3148,8 @@ Overloads:
         // Without this, the metatable won't be created until an FName is constructed by another part of UE4SS
         LuaType::FName::construct(lua, Unreal::FName(static_cast<int64_t>(0)));
         lua_setglobal(lua.get_lua_state(), "FName");
+        LuaType::FName::construct(lua, Unreal::NAME_None);
+        lua_setglobal(lua.get_lua_state(), "NAME_None");
         // FName Class -> END
 
         // FPackageName -> START

@@ -10,7 +10,7 @@ local function RemapConsoleKeys()
     local ConsoleKeys = InputSettings.ConsoleKeys
     
     -- This sets the first console key to F10
-    ConsoleKeys[1].KeyName = FName("F10")
+    ConsoleKeys[1].KeyName = FName("F10", EFindName.FNAME_Find)
     
     ConsoleKeys:ForEach(function(index, elem_wrapper)
         local KeyStruct = elem_wrapper:get()

@@ -18,7 +18,7 @@ local ModOrderList = {}
 
 local DefaultModConfig = {}
 DefaultModConfig.AssetName = "ModActor_C"
-DefaultModConfig.AssetNameAsFName = FName("ModActor_C")
+DefaultModConfig.AssetNameAsFName = UEHelpers.FindOrAddFName("ModActor_C")
 
 -- Checks if the beginning of a string contains a certain pattern.
 local function StartsWith(String, StringToCompare)
@@ -132,7 +132,7 @@ local function LoadModConfigs()
                 dofile(ModFile.__absolute_path)
                 if type(Mods[ModDirectoryName]) ~= "table" then break end
                 if not Mods[ModDirectoryName].AssetName then break end
-                Mods[ModDirectoryName].AssetNameAsFName = FName(Mods[ModDirectoryName].AssetName)
+                Mods[ModDirectoryName].AssetNameAsFName = UEHelpers.FindOrAddFName(Mods[ModDirectoryName].AssetName)
                 break
             end
         end
@@ -188,12 +188,12 @@ local function LoadMod(ModName, ModInfo, GameMode)
     local AssetData = nil
     if UnrealVersion.IsBelow(5, 1) then
         AssetData = {
-            ["ObjectPath"] = FName(string.format("%s.%s", ModInfo.AssetPath, ModInfo.AssetName), EFindName.FNAME_Add),
+            ["ObjectPath"] = UEHelpers.FindOrAddFName(string.format("%s.%s", ModInfo.AssetPath, ModInfo.AssetName)),
         }
     else
         AssetData = {
-            ["PackageName"] = FName(ModInfo.AssetPath, EFindName.FNAME_Add),
-            ["AssetName"] = FName(ModInfo.AssetName, EFindName.FNAME_Add),
+            ["PackageName"] = UEHelpers.FindOrAddFName(ModInfo.AssetPath),
+            ["AssetName"] = UEHelpers.FindOrAddFName(ModInfo.AssetName),
         }
     end
 
