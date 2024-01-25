@@ -262,13 +262,6 @@ namespace RC
             }
         };
 
-        if (lua_data.lua.get_stack_size() > 0)
-        {
-            // Processing potential return value from the first callback.
-            // This only exists to keep compatibility with mods that set return values in the first callback.
-            process_return_value();
-        }
-
         if (lua_data.lua_post_callback_ref != -1)
         {
             // Use the stored registry index to put a Lua function on the Lua stack
@@ -360,7 +353,11 @@ namespace RC
             // Increasing it again if there's a return value because we store that as the second param
             lua_data.lua.call_function(num_unreal_params + (lua_data.has_return_value ? 2 : 1), 1);
 
-            // Processing potential return value from the second callback.
+            // Processing potential return values from both callbacks.
+            // Stack pos 1: return value from callback 1 (nil if nothing returned)
+            // Stack pos 2: return value from callback 2
+            // We will always have at leaste two return values, either one can be nil, and we need to process both in case one isn't nil.
+            process_return_value();
             process_return_value();
         }
 
