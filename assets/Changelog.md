@@ -10,7 +10,7 @@ New proxy DLL loading system. - LocalCC
 Different proxy DLLs can now easily be compiled for cases where xinput1_3 cannot be used for any reason.  
 Alternative proxys may be compiled by specifying `-DUE4SS_PROXY_PATH=/Path/To/DLL.dll` when running the CMake command.
 
-Added additional AOB for `FName::ToString` - LongerWarrior
+Replace built-in address scans with [patternsleuth](https://github.com/trumank/patternsleuth) which should greatly improve accuracy and reduce need for manual AOB configuration - trumank, LongerWarrior
 
 Added SuperStruct, `sps`, to Struct and ScriptStruct entries in the object dumper
 
