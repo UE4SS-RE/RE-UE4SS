@@ -45,7 +45,8 @@ Made `FWeakObjectPtr` overridable unless used in a TArray or TMap
 ### Lua API
 Added an optional third parameter to `RegisterHook`  
 If provided, it will act as a post callback hook where out-params can be modified  
-Note that for BP-only functions, both callbacks act as post callbacks
+Note that for BP-only functions, both callbacks act as post callbacks  
+If the hooked function has a return value, the second param to the post callback will be the return value
 
 Out-params for script hooks (`RegisterCustomEvent` or `RegisterHook` on a BP-only UFunction) can now be set by doing `Param:set(<new-value>)`
 

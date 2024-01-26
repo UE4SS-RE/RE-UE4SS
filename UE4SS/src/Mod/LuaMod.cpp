@@ -262,13 +262,6 @@ namespace RC
             }
         };
 
-        if (lua_data.lua.get_stack_size() > 0)
-        {
-            // Processing potential return value from the first callback.
-            // This only exists to keep compatibility with mods that set return values in the first callback.
-            process_return_value();
-        }
-
         if (lua_data.lua_post_callback_ref != -1)
         {
             // Use the stored registry index to put a Lua function on the Lua stack
@@ -291,6 +284,20 @@ namespace RC
                 // Subtract one from the number of params if there's a return value
                 // This is because Unreal treats the return value as a param, and it's included in the 'NumParms' member variable
                 --num_unreal_params;
+
+                // Set up the return value param so that Lua can access the original return value
+                auto return_property = context.TheStack.CurrentNativeFunction()->GetReturnProperty();
+                auto return_property_type = return_property->GetClass().GetFName();
+                int32_t name_comparison_index = return_property_type.GetComparisonIndex();
+                if (LuaType::StaticState::m_property_value_pushers.contains(name_comparison_index))
+                {
+                    const LuaType::PusherParams pusher_params{.operation = LuaType::Operation::GetParam,
+                                          .lua = lua_data.lua,
+                                          .base = nullptr,
+                                          .data = context.RESULT_DECL,
+                                          .property = return_property};
+                    LuaType::StaticState::m_property_value_pushers[name_comparison_index](pusher_params);
+                }
             }
 
             bool has_properties_to_process = lua_data.has_return_value || num_unreal_params > 0;
@@ -343,9 +350,14 @@ namespace RC
 
             // Call the Lua function with the correct number of parameters & return values
             // Increasing the 'num_params' by one to account for the 'this / context' param
-            lua_data.lua.call_function(num_unreal_params + 1, 1);
+            // Increasing it again if there's a return value because we store that as the second param
+            lua_data.lua.call_function(num_unreal_params + (lua_data.has_return_value ? 2 : 1), 1);
 
-            // Processing potential return value from the second callback.
+            // Processing potential return values from both callbacks.
+            // Stack pos 1: return value from callback 1 (nil if nothing returned)
+            // Stack pos 2: return value from callback 2
+            // We will always have at leaste two return values, either one can be nil, and we need to process both in case one isn't nil.
+            process_return_value();
             process_return_value();
         }
 
