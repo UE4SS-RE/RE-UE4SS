@@ -17,6 +17,7 @@
 #include <LuaType/LuaAActor.hpp>
 #include <LuaType/LuaCustomProperty.hpp>
 #include <LuaType/LuaFName.hpp>
+#include <LuaType/LuaFText.hpp>
 #include <LuaType/LuaFOutputDevice.hpp>
 #include <LuaType/LuaModRef.hpp>
 #include <LuaType/LuaUClass.hpp>
@@ -614,7 +615,7 @@ namespace RC
         object_internal_flags_table.make_global("EInternalObjectFlags");
     }
 
-    static auto regrister_efindname(const LuaMadeSimple::Lua& lua) -> void
+    static auto register_efindname(const LuaMadeSimple::Lua& lua) -> void
     {
         LuaMadeSimple::Lua::Table efindname_table = lua.prepare_new_table();
         efindname_table.add_pair("FNAME_Find", static_cast<std::underlying_type_t<Unreal::EFindName>>(Unreal::EFindName::FNAME_Find));
@@ -3162,6 +3163,13 @@ Overloads:
         lua_setglobal(lua.get_lua_state(), "FName");
         // FName Class -> END
 
+        // FText Class -> START
+        // Pre-load the global FText table
+        // Without this, the metatable won't be created until an FText is constructed by another part of UE4SS
+        LuaType::FText::construct(lua, Unreal::FText());
+        lua_setglobal(lua.get_lua_state(), "FText");
+        // FText Class -> END
+
         // FPackageName -> START
         auto package_name = lua.prepare_new_table();
         package_name.set_has_userdata(false);
@@ -3228,7 +3236,7 @@ Overloads:
 
         register_all_property_types(lua);
         register_object_flags(lua);
-        regrister_efindname(lua);
+        register_efindname(lua);
 
         lua.set_nil();
         lua_setglobal(lua.get_lua_state(), "__OriginalReturnValue");
