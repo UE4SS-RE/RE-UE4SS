@@ -19,6 +19,7 @@
     - [CustomPropertyInfo](./lua-api/table-definitions/custompropertyinfo.md)
     - [EObjectFlags](./lua-api/table-definitions/eobjectflags.md)
     - [EInternalObjectFlags](./lua-api/table-definitions/einternalobjectflags.md)
+    - [EFindName](./lua-api/table-definitions/efindname.md)
   - [Classes]()
     - [RemoteObject](./lua-api/classes/remoteobject.md)
     - [LocalObject](./lua-api/classes/localobject.md)

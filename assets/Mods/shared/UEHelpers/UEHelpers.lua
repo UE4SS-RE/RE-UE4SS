@@ -90,6 +90,14 @@ function UEHelpers.GetGameMapsSettings(ForceInvalidateCache)
     return CacheDefaultObject("/Script/EngineSettings.Default__GameMapsSettings", "UEHelpers_GameMapsSettings", ForceInvalidateCache)
 end
 
+function UEHelpers.FindOrAddFName(Name)
+    local NameFound = FName(Name, EFindName.FNAME_Find)
+    if NameFound == NAME_None then
+        NameFound = FName(Name, EFindName.FNAME_Add)
+    end
+    return NameFound
+end
+
 -- Exported functions -> END
 
 return UEHelpers

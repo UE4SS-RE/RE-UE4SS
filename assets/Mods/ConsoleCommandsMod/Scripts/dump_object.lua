@@ -1,6 +1,8 @@
 -- This is a custom implementation of UEs "obj dump <obj>" command.
 -- It doesn't have a 1:1 feature set.
 
+local UEHelpers = require("UEHelpers")
+
 --[[
     TODO: Expand on the console command format.
           You should be able to specify a sub-object, sub-struct, sub-array, sub-map, etc.
@@ -141,7 +143,7 @@ local function GetObjectByName(ObjectName)
 end
 
 local function GetPropertyByName(ObjectIn, PropertyName)
-    local PropertyFName = FName(PropertyName)
+    local PropertyFName = UEHelpers.FindOrAddFName(PropertyName)
     local Object = nil
 
     if ObjectIn:IsA(UClassStaticClass) or ObjectIn:IsA(UScriptStructStaticClass) then
