@@ -9,6 +9,7 @@
 #include <USMapGenerator/Generator.hpp>
 #include <USMapGenerator/writer.h>
 #include <Unreal/NameTypes.hpp>
+#include <Unreal/Property/FSetProperty.hpp>
 #include <Unreal/Property/FArrayProperty.hpp>
 #include <Unreal/Property/FEnumProperty.hpp>
 #include <Unreal/Property/FMapProperty.hpp>
@@ -235,7 +236,13 @@ namespace RC::OutTheShade
                 Buffer.Write(NameMap[static_cast<FStructProperty*>(Prop)->GetStruct()->GetNamePrivate()]);
                 break;
             }
-            case EPropertyType::SetProperty:
+            case EPropertyType::SetProperty: {
+                auto Inner = static_cast<FSetProperty*>(Prop)->GetElementProp();
+                auto InnerType = GetPropertyType(Inner);
+                WriteProperty(Inner, InnerType);
+
+                break;
+            }
             case EPropertyType::ArrayProperty: {
                 auto Inner = static_cast<FArrayProperty*>(Prop)->GetInner();
                 auto InnerType = GetPropertyType(Inner);
