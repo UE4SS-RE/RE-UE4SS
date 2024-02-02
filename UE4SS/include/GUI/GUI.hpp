@@ -140,11 +140,6 @@ namespace RC::GUI
     };
 
     extern ImColor g_imgui_bg_color;
-    extern ImColor g_imgui_bg_hover_color;
-    extern ImColor g_imgui_bg_active_color;
-    extern ImColor g_imgui_bg_header_color;
-    extern ImColor g_imgui_bg_header_hover_color;
-    extern ImColor g_imgui_bg_header_active_color;
     extern ImColor g_imgui_text_color;
     extern ImColor g_imgui_text_inactive_color;
     extern ImColor g_imgui_text_editor_default_bg_color;

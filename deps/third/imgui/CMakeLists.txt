@@ -10,6 +10,9 @@ FetchContent_GetProperties(ImGui SOURCE_DIR ImGui_FETCHED_SOURCE)
 FetchContent_Populate(ImGuiTextEdit)
 FetchContent_GetProperties(ImGuiTextEdit SOURCE_DIR ImGuiTextEdit_FETCHED_SOURCE)
 
+FetchContent_Populate(IconFontCppHeaders)
+FetchContent_GetProperties(IconFontCppHeaders SOURCE_DIR IconFontCppHeaders_FETCHED_SOURCE)
+
 set(ImGui_Sources
     "${ImGui_FETCHED_SOURCE}/imgui.cpp"
     "${ImGui_FETCHED_SOURCE}/imgui_draw.cpp"
@@ -32,4 +35,5 @@ target_link_libraries(ImGui PUBLIC GLFW)
 
 target_include_directories(ImGui PUBLIC 
     "${ImGui_FETCHED_SOURCE}"
-    "${ImGuiTextEdit_FETCHED_SOURCE}")
+    "${ImGuiTextEdit_FETCHED_SOURCE}"
+    "${IconFontCppHeaders_FETCHED_SOURCE}")
