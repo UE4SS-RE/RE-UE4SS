@@ -22,6 +22,7 @@
 #include <LuaType/LuaModRef.hpp>
 #include <LuaType/LuaUClass.hpp>
 #include <LuaType/LuaUObject.hpp>
+#include <LuaType/LuaFURL.hpp>
 #include <Mod/CppMod.hpp>
 #include <Mod/LuaMod.hpp>
 #pragma warning(disable : 4005)
@@ -30,6 +31,8 @@
 #include <USMapGenerator/Generator.hpp>
 #include <Unreal/Core/HAL/Platform.hpp>
 #include <Unreal/FFrame.hpp>
+#include <Unreal/FURL.hpp>
+#include <Unreal/FWorldContext.hpp>
 #include <Unreal/FOutputDevice.hpp>
 #include <Unreal/FProperty.hpp>
 #include <Unreal/Hooks.hpp>
@@ -58,7 +61,6 @@
 #include <Unreal/UnrealVersion.hpp>
 #include <UnrealCustom/CustomProperty.hpp>
 #pragma warning(default : 4005)
-
 
 namespace RC
 {
@@ -293,10 +295,10 @@ namespace RC
                 if (LuaType::StaticState::m_property_value_pushers.contains(name_comparison_index))
                 {
                     const LuaType::PusherParams pusher_params{.operation = LuaType::Operation::GetParam,
-                                          .lua = lua_data.lua,
-                                          .base = nullptr,
-                                          .data = context.RESULT_DECL,
-                                          .property = return_property};
+                                                              .lua = lua_data.lua,
+                                                              .base = nullptr,
+                                                              .data = context.RESULT_DECL,
+                                                              .property = return_property};
                     LuaType::StaticState::m_property_value_pushers[name_comparison_index](pusher_params);
                 }
             }
@@ -648,6 +650,8 @@ namespace RC
         LuaMod::m_global_command_lua_callbacks.clear();
         LuaMod::m_custom_command_lua_pre_callbacks.clear();
         LuaMod::m_custom_event_callbacks.clear();
+        LuaMod::m_load_map_pre_callbacks.clear();
+        LuaMod::m_load_map_post_callbacks.clear();
         LuaMod::m_init_game_state_pre_callbacks.clear();
         LuaMod::m_init_game_state_post_callbacks.clear();
         LuaMod::m_begin_play_pre_callbacks.clear();
@@ -1938,6 +1942,56 @@ Overloads:
             auto custom_event_name = to_wstring(lua.get_string());
 
             LuaMod::m_custom_event_callbacks.erase(custom_event_name);
+
+            return 0;
+        });
+
+        lua.register_function("RegisterLoadMapPreHook", [](const LuaMadeSimple::Lua& lua) -> int {
+            std::string error_overload_not_found{R"(
+No overload found for function 'RegisterLoadMapPreHook'.
+Overloads:
+#1: RegisterLoadMapPreHook(LuaFunction Callback))"};
+
+            if (!lua.is_function())
+            {
+                lua.throw_error(error_overload_not_found);
+            }
+
+            auto mod = get_mod_ref(lua);
+            auto hook_lua = make_hook_state(mod);
+
+            lua_xmove(lua.get_lua_state(), hook_lua->get_lua_state(), 1);
+
+            // Take a reference to the lua function (it also pops it off the stack)
+            const int32_t lua_callback_registry_index = hook_lua->registry().make_ref();
+
+            LuaMod::m_load_map_pre_callbacks.emplace_back(
+                    LuaMod::LuaCallbackData{.lua = lua, .instance_of_class = nullptr, .registry_indexes = {{lua_callback_registry_index}}});
+
+            return 0;
+        });
+
+        lua.register_function("RegisterLoadMapPostHook", [](const LuaMadeSimple::Lua& lua) -> int {
+            std::string error_overload_not_found{R"(
+No overload found for function 'RegisterLoadMapPostHook'.
+Overloads:
+#1: RegisterLoadMapPostHook(LuaFunction Callback))"};
+
+            if (!lua.is_function())
+            {
+                lua.throw_error(error_overload_not_found);
+            }
+
+            auto mod = get_mod_ref(lua);
+            auto hook_lua = make_hook_state(mod);
+
+            lua_xmove(lua.get_lua_state(), hook_lua->get_lua_state(), 1);
+
+            // Take a reference to the lua function (it also pops it off the stack)
+            const int32_t lua_callback_registry_index = hook_lua->registry().make_ref();
+
+            LuaMod::m_load_map_post_callbacks.emplace_back(
+                    LuaMod::LuaCallbackData{.lua = lua, .instance_of_class = nullptr, .registry_indexes = {{lua_callback_registry_index}}});
 
             return 0;
         });
@@ -3531,6 +3585,88 @@ Overloads:
     auto LuaMod::on_program_start() -> void
     {
         Unreal::UObjectArray::AddUObjectDeleteListener(&LuaType::FLuaObjectDeleteListener::s_lua_object_delete_listener);
+
+        Unreal::Hook::RegisterLoadMapPreCallback(
+                [](Unreal::UEngine* Engine, Unreal::FWorldContext& WorldContext, Unreal::FURL URL, Unreal::UPendingNetGame* PendingGame, Unreal::FString& Error)
+                        -> std::pair<bool, bool> {
+                    for (const auto& callback_data : m_load_map_pre_callbacks)
+                    {
+                        const auto& lua = callback_data.lua;
+
+                        std::pair<bool, bool> return_value{};
+
+                        for (const auto registry_index : callback_data.registry_indexes)
+                        {
+                            lua.registry().get_function_ref(registry_index.lua_index);
+                            static auto s_object_property_name = Unreal::FName(STR("ObjectProperty"));
+                            LuaType::RemoteUnrealParam::construct(lua, &Engine, s_object_property_name);
+                            LuaType::RemoteUnrealParam::construct(lua, WorldContext.GetThisCurrentWorld().UnderlyingObjectPointer, s_object_property_name);
+                            LuaType::FURL::construct(lua, URL);
+                            LuaType::RemoteUnrealParam::construct(lua, PendingGame, s_object_property_name);
+                            callback_data.lua.set_string(to_string(Error.GetCharArray()));
+                            lua.call_function(4, 1);
+
+                            if (callback_data.lua.is_nil())
+                            {
+                                return_value.first = false;
+                                callback_data.lua.discard_value();
+                            }
+                            else if (!callback_data.lua.is_bool())
+                            {
+                                throw std::runtime_error{"A callback for 'LoadMap' must return bool or nil"};
+                            }
+                            else
+                            {
+                                return_value.first = true;
+                                return_value.second = callback_data.lua.get_bool();
+                            }
+                        }
+
+                        return return_value;
+                    }
+                    return std::pair<bool, bool>{false, false};
+                });
+
+        Unreal::Hook::RegisterLoadMapPostCallback(
+                [](Unreal::UEngine* Engine, Unreal::FWorldContext& WorldContext, Unreal::FURL URL, Unreal::UPendingNetGame* PendingGame, Unreal::FString& Error)
+                        -> std::pair<bool, bool> {
+                    for (const auto& callback_data : m_load_map_post_callbacks)
+                    {
+                        const auto& lua = callback_data.lua;
+
+                        std::pair<bool, bool> return_value{};
+
+                        for (const auto registry_index : callback_data.registry_indexes)
+                        {
+                            lua.registry().get_function_ref(registry_index.lua_index);
+                            static auto s_object_property_name = Unreal::FName(STR("ObjectProperty"));
+                            LuaType::RemoteUnrealParam::construct(lua, &Engine, s_object_property_name);
+                            LuaType::RemoteUnrealParam::construct(lua, &WorldContext.GetThisCurrentWorld().UnderlyingObjectPointer, s_object_property_name);
+                            LuaType::FURL::construct(lua, URL);
+                            LuaType::RemoteUnrealParam::construct(lua, &PendingGame, s_object_property_name);
+                            callback_data.lua.set_string(to_string(Error.GetCharArray()));
+                            lua.call_function(5, 1);
+
+                            if (callback_data.lua.is_nil())
+                            {
+                                return_value.first = false;
+                                callback_data.lua.discard_value();
+                            }
+                            else if (!callback_data.lua.is_bool())
+                            {
+                                throw std::runtime_error{"A callback for 'LoadMap' must return bool or nil"};
+                            }
+                            else
+                            {
+                                return_value.first = true;
+                                return_value.second = callback_data.lua.get_bool();
+                            }
+                        }
+
+                        return return_value;
+                    }
+                    return std::pair<bool, bool>{false, false};
+                });
 
         Unreal::Hook::RegisterInitGameStatePreCallback([]([[maybe_unused]] Unreal::AGameModeBase* Context) {
             TRY([&] {

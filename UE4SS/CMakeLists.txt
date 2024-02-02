@@ -72,6 +72,7 @@ set(${TARGET}_Sources
     "${CMAKE_CURRENT_SOURCE_DIR}/src/LuaType/LuaUClass.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/LuaType/LuaAActor.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/LuaType/LuaFName.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/LuaType/LuaFURL.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/LuaType/LuaUScriptStruct.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/LuaType/LuaTArray.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/LuaType/LuaUFunction.cpp"

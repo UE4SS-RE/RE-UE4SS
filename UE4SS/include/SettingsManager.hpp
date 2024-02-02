@@ -87,6 +87,7 @@ namespace RC
             bool HookProcessInternal{true};
             bool HookProcessLocalScriptFunction{true};
             bool HookInitGameState{true};
+            bool HookLoadMap{true};
             bool HookCallFunctionByNameWithArguments{true};
             bool HookBeginPlay{true};
             bool HookLocalPlayerExec{true};

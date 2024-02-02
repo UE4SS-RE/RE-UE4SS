@@ -42,6 +42,7 @@
 #include <Unreal/GameplayStatics.hpp>
 #include <Unreal/Searcher/ObjectSearcher.hpp>
 #include <Unreal/TPair.hpp>
+#include <Unreal/UEngine.hpp>
 #include <Unreal/TypeChecker.hpp>
 #include <Unreal/UActorComponent.hpp>
 #include <Unreal/UInterface.hpp>
@@ -602,6 +603,13 @@ namespace RC
                     Unreal::UField::VTableLayoutMap.emplace(item, offset);
                 });
 
+                Output::send<Color::Blue>(STR("UEngine\n"));
+                uint32_t uengine_size = retrieve_vtable_layout_from_ini(STR("UEngine"), [&](uint32_t index, File::StringType& item) {
+                    uint32_t offset = calculate_virtual_function_offset(index, uobjectbase_size, uobjectbaseutility_size, uobject_size);
+                    Output::send(STR("UEngine::{} = 0x{:X}\n"), item, offset);
+                    Unreal::UEngine::VTableLayoutMap.emplace(item, offset);
+                });
+
                 Output::send<Color::Blue>(STR("UScriptStruct::ICppStructOps\n"));
                 retrieve_vtable_layout_from_ini(STR("UScriptStruct::ICppStructOps"), [&](uint32_t index, File::StringType& item) {
                     uint32_t offset = calculate_virtual_function_offset(index, 0);
@@ -736,6 +744,7 @@ namespace RC
 
         config.bHookProcessInternal = settings_manager.Hooks.HookProcessInternal;
         config.bHookProcessLocalScriptFunction = settings_manager.Hooks.HookProcessLocalScriptFunction;
+        config.bHookLoadMap = settings_manager.Hooks.HookLoadMap;
         config.bHookInitGameState = settings_manager.Hooks.HookInitGameState;
         config.bHookCallFunctionByNameWithArguments = settings_manager.Hooks.HookCallFunctionByNameWithArguments;
         config.bHookBeginPlay = settings_manager.Hooks.HookBeginPlay;

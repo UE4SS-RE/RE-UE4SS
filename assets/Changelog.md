@@ -52,6 +52,8 @@ Out-params for script hooks (`RegisterCustomEvent` or `RegisterHook` on a BP-onl
 
 Added the function `Empty` to TArray
 
+Added `RegisterLoadMapPreHook`/`RegisterLoadMapPostHook` hooks for `UEngine::LoadMap`.
+
 ### C++ API
 Finalize C++ API. - LocalCC; Truman
 
