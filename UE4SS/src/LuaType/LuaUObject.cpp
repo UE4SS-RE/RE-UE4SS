@@ -1107,7 +1107,7 @@ namespace RC::LuaType
             {
                 auto lua_string = params.lua.get_string();
                 auto fstring = Unreal::FString{to_wstring(lua_string).c_str()};
-                string->SetCharArray(fstring.GetCharTArray());
+                *string = fstring;
             }
             else if (params.lua.is_userdata())
             {
