@@ -18,8 +18,8 @@
 #include <UVTD/UnrealVirtualGenerator.hpp>
 #include <UVTD/VTableDumper.hpp>
 
-#include <Windows.h>
 #include <Psapi.h>
+#include <Windows.h>
 #include <dbghelp.h>
 
 namespace RC::UVTD
@@ -39,6 +39,7 @@ namespace RC::UVTD
     auto main(DumpSettings dump_settings) -> void
     {
         static std::vector<std::filesystem::path> pdbs_to_dump{
+                "PDBs/4_10.pdb",
                 "PDBs/4_11.pdb",
                 "PDBs/4_12.pdb",
                 "PDBs/4_13.pdb",
@@ -61,6 +62,7 @@ namespace RC::UVTD
                 "PDBs/5_00.pdb",
                 "PDBs/5_01.pdb",
                 "PDBs/5_02.pdb",
+                "PDBs/5_03.pdb",
         };
 
         UnrealVirtualGenerator::output_cleanup();

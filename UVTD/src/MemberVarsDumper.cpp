@@ -100,6 +100,12 @@ namespace RC::UVTD
             STR("FOnPlatformUserIdChanged"),
             STR("FObjectSubsystemCollection"),
             STR("FSceneViewStateReference"),
+            STR("UPendingNetGame"),
+            STR("FFullyLoadedPackagesInfo"),
+            STR("UObjectReferencer"),
+            STR("FNamedNetDriver"),
+            STR("FSeamlessTravelHandler"),
+            STR("FLevelStreamingStatus"),
     };
 
     auto MemberVarsDumper::process_class(const PDB::TPIStream& tpi_stream,
@@ -260,10 +266,7 @@ namespace RC::UVTD
                                                final_variable_name,
                                                final_class_name);
                 default_setter_src_dumper.send(STR("{\n"));
-                default_setter_src_dumper.send(STR("    {}::MemberOffsets.emplace(STR(\"{}\"), 0x{:X});\n"),
-                                               final_class_name,
-                                               final_variable_name,
-                                               variable.offset);
+                default_setter_src_dumper.send(STR("    {}::MemberOffsets.emplace(STR(\"{}\"), 0x{:X});\n"), final_class_name, final_variable_name, variable.offset);
                 default_setter_src_dumper.send(STR("}\n\n"));
             }
 
