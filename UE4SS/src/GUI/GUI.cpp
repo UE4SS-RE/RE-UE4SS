@@ -18,18 +18,15 @@
 #endif
 
 #include "Roboto.hpp"
+#include "FaSolid900.hpp"
 #include <imgui.h>
+#include <IconsFontAwesome5.h>
 
 namespace RC::GUI
 {
-    ImColor g_imgui_bg_color{40, 40, 40, 255};
-    ImColor g_imgui_bg_hover_color = ImColor{60, 60, 60, 255};
-    ImColor g_imgui_bg_active_color = ImColor{50, 50, 50, 255};
-    ImColor g_imgui_bg_header_color{50, 50, 50, 255};
-    ImColor g_imgui_bg_header_hover_color = ImColor{70, 70, 70, 255};
-    ImColor g_imgui_bg_header_active_color = ImColor{60, 60, 60, 255};
-    ImColor g_imgui_text_color = ImColor{204, 204, 204, 255};
-    ImColor g_imgui_text_inactive_color = ImColor{204, 204, 204, 200};
+    ImColor g_imgui_bg_color{0.22f, 0.22f, 0.22f, 1.00f};
+    ImColor g_imgui_text_color = ImColor{0.95f, 0.95f, 0.95f, 1.00f};
+    ImColor g_imgui_text_inactive_color = ImVec4{0.50f, 0.50f, 0.50f, 1.00f};
     ImColor g_imgui_text_editor_default_bg_color = g_imgui_bg_color;
     ImColor g_imgui_text_editor_default_text_color = g_imgui_text_color;
     ImColor g_imgui_text_editor_normal_bg_color = g_imgui_bg_color;
@@ -74,7 +71,7 @@ namespace RC::GUI
 
             if (ImGui::BeginTabBar("##MainTabBar", ImGuiTabBarFlags_None))
             {
-                if (ImGui::BeginTabItem("Console"))
+                if (ImGui::BeginTabItem(ICON_FA_TERMINAL " Console"))
                 {
                     get_console().render_search_box();
 
@@ -86,7 +83,7 @@ namespace RC::GUI
                     {
                         ImGui::BeginDisabled(true);
                     }
-                    if (ImGui::Button("Dump Objects & Properties"))
+                    if (ImGui::Button(ICON_FA_ARCHIVE " Dump Objects & Properties"))
                     {
                         m_event_thread_busy = true;
                         UE4SSProgram::get_program().queue_event(
@@ -107,7 +104,7 @@ namespace RC::GUI
                         ImGui::BeginDisabled(true);
                     }
                     ImGui::SameLine();
-                    if (ImGui::Button("Restart All Mods"))
+                    if (ImGui::Button(ICON_FA_SYNC " Restart All Mods"))
                     {
                         m_event_thread_busy = true;
                         UE4SSProgram::get_program().queue_event(
@@ -135,7 +132,7 @@ namespace RC::GUI
                 {
                     ImGui::BeginDisabled(true);
                 }
-                if (ImGui::BeginTabItem("Live View"))
+                if (ImGui::BeginTabItem(ICON_FA_FILE_ALT " Live View"))
                 {
                     listeners_are_required = true;
                     m_live_view.set_listeners();
@@ -147,7 +144,7 @@ namespace RC::GUI
                     should_unset_listeners = true;
                 }
 
-                if (ImGui::BeginTabItem("Watches"))
+                if (ImGui::BeginTabItem(ICON_FA_EYE "Watches"))
                 {
                     listeners_are_required = true;
                     m_live_view.render_watches();
@@ -163,13 +160,13 @@ namespace RC::GUI
                     m_live_view.unset_listeners();
                 }
 
-                if (ImGui::BeginTabItem("Dumpers"))
+                if (ImGui::BeginTabItem(ICON_FA_ARCHIVE " Dumpers"))
                 {
                     Dumpers::render();
                     ImGui::EndTabItem();
                 }
 
-                if (ImGui::BeginTabItem("BP Mods"))
+                if (ImGui::BeginTabItem(ICON_FA_PUZZLE_PIECE " BP Mods"))
                 {
                     BPMods::render();
                     ImGui::EndTabItem();
@@ -205,13 +202,94 @@ namespace RC::GUI
 
     static auto gui_setup_style() -> void
     {
-        ImGui::StyleColorsDark();
-        // ImGui::GetIO().FontGlobalScale = 2.0f;
-        //  prefer to reload font + rebuild ImFontAtlas + call style.ScaleAllSizes().
-        // ImGui::GetStyle().ScaleAllSizes(2.0f);
-        // ImGui::GetIO().DisplayFramebufferScale.x = 2;
-        // ImGui::GetIO().DisplayFramebufferScale.y = 2;
-        // ImGui::GetIO().Fonts->Build();
+        ImGuiStyle& style = ImGui::GetStyle();
+
+        style.WindowPadding = ImVec2(8, 8);
+        style.FramePadding = ImVec2(12, 5);
+        style.CellPadding = ImVec2(3, 3);
+        style.ItemSpacing = ImVec2(8, 4);
+        style.ItemInnerSpacing = ImVec2(4, 4);
+        style.TouchExtraPadding = ImVec2(0, 0);
+        style.IndentSpacing = 21;
+        style.ScrollbarSize = 14;
+        style.GrabMinSize = 12;
+
+        style.WindowBorderSize = 0;
+        style.ChildBorderSize = 1;
+        style.PopupBorderSize = 0;
+        style.FrameBorderSize = 0;
+        style.TabBorderSize = 0;
+
+        style.WindowRounding = 5;
+        style.ChildRounding = 0;
+        style.FrameRounding = 3;
+        style.PopupRounding = 0;
+        style.ScrollbarRounding = 9;
+        style.GrabRounding = 3;
+        style.LogSliderDeadzone = 4;
+        style.TabRounding = 4;
+
+        style.WindowTitleAlign = ImVec2(0.50f, 0.50f);
+        style.WindowMenuButtonPosition = ImGuiDir_Left;
+        style.ColorButtonPosition = ImGuiDir_Right;
+        style.ButtonTextAlign = ImVec2(0.50f, 0.50f);
+        style.SelectableTextAlign = ImVec2(0.00f, 0.00f);
+
+        style.DisplaySafeAreaPadding = ImVec2(3, 3);
+
+        style.Colors[ImGuiCol_Text] = g_imgui_text_color;
+        style.Colors[ImGuiCol_TextDisabled] = g_imgui_text_inactive_color;
+        style.Colors[ImGuiCol_WindowBg] = ImVec4(0.03f, 0.03f, 0.03f, 0.94f);
+        style.Colors[ImGuiCol_ChildBg] = ImVec4(0.00f, 0.00f, 0.00f, 0.00f);
+        style.Colors[ImGuiCol_PopupBg] = ImVec4(0.08f, 0.08f, 0.08f, 0.94f);
+        style.Colors[ImGuiCol_Border] = ImVec4(0.43f, 0.43f, 0.50f, 0.50f);
+        style.Colors[ImGuiCol_BorderShadow] = ImVec4(0.00f, 0.00f, 0.00f, 0.00f);
+        style.Colors[ImGuiCol_FrameBg] = g_imgui_bg_color;
+        style.Colors[ImGuiCol_FrameBgHovered] = ImVec4(0.26f, 0.26f, 0.26f, 1.00f);
+        style.Colors[ImGuiCol_FrameBgActive] = ImVec4(0.30f, 0.30f, 0.30f, 1.00f);
+        style.Colors[ImGuiCol_TitleBg] = ImVec4(0.04f, 0.04f, 0.04f, 1.00f);
+        style.Colors[ImGuiCol_TitleBgActive] = ImVec4(0.52f, 0.20f, 0.41f, 1.00f);
+        style.Colors[ImGuiCol_TitleBgCollapsed] = ImVec4(0.00f, 0.00f, 0.00f, 0.51f);
+        style.Colors[ImGuiCol_MenuBarBg] = ImVec4(0.14f, 0.14f, 0.14f, 1.00f);
+        style.Colors[ImGuiCol_ScrollbarBg] = ImVec4(0.02f, 0.02f, 0.02f, 0.53f);
+        style.Colors[ImGuiCol_ScrollbarGrab] = ImVec4(0.31f, 0.31f, 0.31f, 1.00f);
+        style.Colors[ImGuiCol_ScrollbarGrabHovered] = ImVec4(0.41f, 0.41f, 0.41f, 1.00f);
+        style.Colors[ImGuiCol_ScrollbarGrabActive] = ImVec4(0.51f, 0.51f, 0.51f, 1.00f);
+        style.Colors[ImGuiCol_CheckMark] = ImVec4(0.66f, 0.21f, 0.58f, 1.00f);
+        style.Colors[ImGuiCol_SliderGrab] = ImVec4(0.55f, 0.22f, 0.45f, 1.00f);
+        style.Colors[ImGuiCol_SliderGrabActive] = ImVec4(0.63f, 0.24f, 0.50f, 1.00f);
+        style.Colors[ImGuiCol_Button] = ImVec4(0.51f, 0.23f, 0.42f, 1.00f);
+        style.Colors[ImGuiCol_ButtonHovered] = ImVec4(0.59f, 0.22f, 0.48f, 1.00f);
+        style.Colors[ImGuiCol_ButtonActive] = ImVec4(0.63f, 0.24f, 0.50f, 1.00f);
+        style.Colors[ImGuiCol_Header] = ImVec4(0.20f, 0.20f, 0.20f, 1.00f);
+        style.Colors[ImGuiCol_HeaderHovered] = ImVec4(0.27f, 0.27f, 0.27f, 1.00f);
+        style.Colors[ImGuiCol_HeaderActive] = ImVec4(0.24f, 0.24f, 0.24f, 1.00f);
+        style.Colors[ImGuiCol_Separator] = ImVec4(0.43f, 0.43f, 0.50f, 0.50f);
+        style.Colors[ImGuiCol_SeparatorHovered] = ImVec4(0.10f, 0.40f, 0.75f, 0.78f);
+        style.Colors[ImGuiCol_SeparatorActive] = ImVec4(0.10f, 0.40f, 0.75f, 1.00f);
+        style.Colors[ImGuiCol_ResizeGrip] = ImVec4(0.92f, 0.24f, 0.84f, 0.20f);
+        style.Colors[ImGuiCol_ResizeGripHovered] = ImVec4(0.92f, 0.24f, 0.84f, 0.67f);
+        style.Colors[ImGuiCol_ResizeGripActive] = ImVec4(0.92f, 0.24f, 0.84f, 0.95f);
+        style.Colors[ImGuiCol_Tab] = ImVec4(0.51f, 0.23f, 0.42f, 1.00f);
+        style.Colors[ImGuiCol_TabHovered] = ImVec4(0.59f, 0.22f, 0.48f, 1.00f);
+        style.Colors[ImGuiCol_TabActive] = ImVec4(0.63f, 0.24f, 0.50f, 1.00f);
+        style.Colors[ImGuiCol_TabUnfocused] = ImVec4(0.07f, 0.10f, 0.15f, 0.97f);
+        style.Colors[ImGuiCol_TabUnfocusedActive] = ImVec4(0.14f, 0.26f, 0.42f, 1.00f);
+        style.Colors[ImGuiCol_PlotLines] = ImVec4(0.61f, 0.61f, 0.61f, 1.00f);
+        style.Colors[ImGuiCol_PlotLinesHovered] = ImVec4(1.00f, 0.43f, 0.35f, 1.00f);
+        style.Colors[ImGuiCol_PlotHistogram] = ImVec4(0.90f, 0.70f, 0.00f, 1.00f);
+        style.Colors[ImGuiCol_PlotHistogramHovered] = ImVec4(1.00f, 0.60f, 0.00f, 1.00f);
+        style.Colors[ImGuiCol_TableHeaderBg] = ImVec4(0.19f, 0.19f, 0.20f, 1.00f);
+        style.Colors[ImGuiCol_TableBorderStrong] = ImVec4(0.31f, 0.31f, 0.35f, 1.00f);
+        style.Colors[ImGuiCol_TableBorderLight] = ImVec4(0.23f, 0.23f, 0.25f, 1.00f);
+        style.Colors[ImGuiCol_TableRowBg] = ImVec4(0.00f, 0.00f, 0.00f, 0.00f);
+        style.Colors[ImGuiCol_TableRowBgAlt] = ImVec4(1.00f, 1.00f, 1.00f, 0.06f);
+        style.Colors[ImGuiCol_TextSelectedBg] = ImVec4(0.65f, 0.24f, 0.57f, 0.38f);
+        style.Colors[ImGuiCol_DragDropTarget] = ImVec4(1.00f, 1.00f, 0.00f, 0.90f);
+        style.Colors[ImGuiCol_NavHighlight] = ImVec4(0.26f, 0.59f, 0.98f, 1.00f);
+        style.Colors[ImGuiCol_NavWindowingHighlight] = ImVec4(1.00f, 1.00f, 1.00f, 0.70f);
+        style.Colors[ImGuiCol_NavWindowingDimBg] = ImVec4(0.80f, 0.80f, 0.80f, 0.20f);
+        style.Colors[ImGuiCol_ModalWindowDimBg] = ImVec4(0.80f, 0.80f, 0.80f, 0.35f);
     }
 
     auto DebuggingGUI::main_loop_internal() -> void
@@ -222,21 +300,6 @@ namespace RC::GUI
         }
 
         m_is_open = true;
-
-        auto& style = ImGui::GetStyle();
-        // style.Colors[ImGuiCol_FrameBg] = ImVec4{0.118f, 0.118f, 0.118f, 1.0f};
-        // style.Colors[ImGuiCol_Tab] = ImVec4{0.118f, 0.118f, 0.118f, 1.0f};
-        // style.Colors[ImGuiCol_TabHovered] = ImVec4{0.118f, 0.118f, 0.118f, 1.0f};
-        // style.Colors[ImGuiCol_TabActive] = ImVec4{0.118f, 0.118f, 0.118f, 1.0f};
-        // style.Colors[ImGuiCol_Text] = ImVec4{0.800f, 0.800f, 0.800f, 1.0f};
-        style.Colors[ImGuiCol_FrameBg] = g_imgui_bg_color;
-        style.Colors[ImGuiCol_Tab] = g_imgui_bg_color;
-        style.Colors[ImGuiCol_TabHovered] = g_imgui_bg_hover_color;
-        style.Colors[ImGuiCol_TabActive] = g_imgui_bg_active_color;
-        style.Colors[ImGuiCol_Header] = g_imgui_bg_header_color;
-        style.Colors[ImGuiCol_HeaderHovered] = g_imgui_bg_header_hover_color;
-        style.Colors[ImGuiCol_HeaderActive] = g_imgui_bg_header_active_color;
-        style.Colors[ImGuiCol_Text] = g_imgui_text_color;
 
         ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
 
@@ -321,9 +384,21 @@ namespace RC::GUI
 
         gui_setup_style();
         io.Fonts->Clear();
+
+        float base_font_size = 14 * UE4SSProgram::settings_manager.Debug.DebugGUIFontScaling;
+
         ImFontConfig font_cfg;
         font_cfg.FontDataOwnedByAtlas = false; // if true it will try to free memory and fail
-        io.Fonts->AddFontFromMemoryTTF(Roboto, sizeof(Roboto), 14 * UE4SSProgram::settings_manager.Debug.DebugGUIFontScaling, &font_cfg);
+        io.Fonts->AddFontFromMemoryTTF(Roboto, sizeof(Roboto), base_font_size, &font_cfg);
+
+        float icon_font_size = base_font_size * 2.0f / 3.0f; // FontAwesome fonts need to have their sizes reduced;
+        static const ImWchar icons_ranges[] = {ICON_MIN_FA, ICON_MAX_16_FA, 0};
+        ImFontConfig icons_cfg;
+        icons_cfg.MergeMode = true;
+        icons_cfg.PixelSnapH = true;
+        icons_cfg.GlyphMinAdvanceX = icon_font_size;
+        io.Fonts->AddFontFromMemoryTTF(FaSolid900, sizeof(FaSolid900), icon_font_size, &icons_cfg, icons_ranges);
+
         m_os_backend->init();
         m_gfx_backend->init();
 

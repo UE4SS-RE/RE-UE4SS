@@ -51,7 +51,7 @@ namespace RC::GUI
                 0xff406020,                                                           // Comment (multi line)
                 ImGui::ColorConvertFloat4ToU32(ImVec4{0.156f, 0.156f, 0.156f, 1.0f}), // Background
                 0xffe0e0e0,                                                           // Cursor
-                0x80a06020,                                                           // Selection
+                ImGui::ColorConvertFloat4ToU32(ImVec4{0.65f, 0.24f, 0.57f, 0.38f}),   // Selection
                 0x800020ff,                                                           // ErrorMarker
                 0x40f08000,                                                           // Breakpoint
                 0xff707000,                                                           // Line number

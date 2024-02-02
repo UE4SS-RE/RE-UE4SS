@@ -31,6 +31,13 @@ FetchContent_Declare(ImGuiTextEdit
     GIT_PROGRESS ON
     CONFIGURE_COMMAND "")
     
+FetchContent_Declare(IconFontCppHeaders
+    GIT_REPOSITORY git@github.com:juliettef/IconFontCppHeaders.git
+    GIT_TAG main
+    GIT_SHALLOW TRUE
+    GIT_PROGRESS ON
+    CONFIGURE_COMMAND "")
+
 add_subdirectory("imgui")
 # ImGui end
 

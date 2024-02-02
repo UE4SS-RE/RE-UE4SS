@@ -46,6 +46,7 @@
 #include <Unreal/UKismetNodeHelperLibrary.hpp>
 #include <imgui.h>
 #include <imgui_internal.h>
+#include <IconsFontAwesome5.h>
 #include <misc/cpp/imgui_stdlib.h>
 
 namespace RC::GUI
@@ -1832,24 +1833,27 @@ namespace RC::GUI
         std::string minus = "-";
         int32_t index = -1;
 
-        if (!ImGui::BeginTable("Enum", 4, ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg | ImGuiTableFlags_Resizable )) { return; }
+        if (!ImGui::BeginTable("Enum", 4, ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg | ImGuiTableFlags_Resizable))
+        {
+            return;
+        }
         ImGui::TableSetupColumn("Name");
         ImGui::TableSetupColumn("FriendlyName");
         ImGui::TableSetupColumn("Value");
         ImGui::TableSetupScrollFreeze(0, 1);
         ImGui::TableHeadersRow();
-        
+
         for (const auto name : names)
         {
             auto enum_name = name.Key.ToString();
             auto enum_friendly_name = UKismetNodeHelperLibrary::GetEnumeratorUserFriendlyName(uenum, name.Value);
-            
+
             ImGui::TableNextRow();
             bool open_edit_name_popup{};
             bool open_edit_value_popup{};
             bool open_add_name_popup{};
             ++index;
-            
+
             ImGui::TableNextColumn();
             ImGui::Text("%S", enum_name.c_str());
             if (ImGui::BeginPopupContextItem(to_string(std::format(STR("context-menu-{}"), enum_name)).c_str()))
@@ -1865,10 +1869,10 @@ namespace RC::GUI
                 }
                 ImGui::EndPopup();
             }
-            
+
             ImGui::TableNextColumn();
             ImGui::Text("%S", enum_friendly_name.c_str());
-            
+
             ImGui::TableNextColumn();
             ImGui::Text("%lld", name.Value);
             if (ImGui::BeginPopupContextItem(to_string(std::format(STR("context-menu-{}-{}"), enum_name, name.Value)).c_str()))
@@ -1884,7 +1888,7 @@ namespace RC::GUI
                 }
                 ImGui::EndPopup();
             }
-            
+
             ImGui::TableNextColumn();
             ImGui::PushID(to_string(std::format(STR("button_add_{}"), enum_name)).c_str());
             if (ImGui::Button("+"))
@@ -2584,7 +2588,7 @@ namespace RC::GUI
 
         size_t next_object_index_to_select{};
 
-        if (ImGui::Button("<<<"))
+        if (ImGui::Button(ICON_FA_ANGLE_DOUBLE_LEFT))
         {
             next_object_index_to_select = s_currently_selected_object_index;
             if (s_currently_selected_object_index > 0 && static_cast<int64_t>(s_currently_selected_object_index) - 1 > 0)
@@ -2598,7 +2602,7 @@ namespace RC::GUI
             next_object_index_to_select = selected_next_object.first;
         }
         ImGui::SameLine();
-        if (ImGui::Button(">>>"))
+        if (ImGui::Button(ICON_FA_ANGLE_DOUBLE_RIGHT))
         {
             next_object_index_to_select = s_currently_selected_object_index;
             if (s_currently_selected_object_index + 1 < s_object_view_history.size())
@@ -2621,7 +2625,7 @@ namespace RC::GUI
             {
                 ImGui::BeginDisabled();
             }
-            if (ImGui::Button("Find functions"))
+            if (ImGui::Button(ICON_FA_SEARCH " Find functions"))
             {
                 m_function_caller_widget->open_widget_deferred();
             }
@@ -2815,7 +2819,7 @@ namespace RC::GUI
         {
             ImGui::BeginDisabled();
         }
-        ImGui::PushItemWidth(-130.0f);
+        ImGui::PushItemWidth(-160.0f);
         bool push_inactive_text_color = !m_search_field_cleared;
         if (push_inactive_text_color)
         {
@@ -3060,7 +3064,7 @@ namespace RC::GUI
             if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled))
             {
                 ImGui::BeginTooltip();
-                ImGui::Text("Feature disabled due to 'General.bUseUObjectArrayCache' being set to 0 in UE4SS-settings.ini.");
+                ImGui::Text(ICON_FA_BAN " Feature disabled due to 'General.bUseUObjectArrayCache' being set to 0 in UE4SS-settings.ini.");
                 ImGui::EndTooltip();
             }
         }
@@ -3084,7 +3088,7 @@ namespace RC::GUI
         }
 
         ImGui::SameLine();
-        if (ImGui::Button("Copy search result"))
+        if (ImGui::Button(ICON_FA_COPY " Copy search result"))
         {
             StringType result{};
             auto is_below_425 = Version::IsBelow(4, 25);
@@ -3108,7 +3112,7 @@ namespace RC::GUI
                 auto render_context_menu = [&] {
                     if (ImGui::BeginPopupContextItem(tree_node_name.c_str()))
                     {
-                        if (ImGui::MenuItem("Copy Full Name"))
+                        if (ImGui::MenuItem(ICON_FA_COPY " Copy Full Name"))
                         {
                             Output::send(STR("Copy Full Name: {}\n"), object->GetFullName());
                             ImGui::SetClipboardText(tree_node_name.c_str());
@@ -3120,14 +3124,14 @@ namespace RC::GUI
                             if (function_watcher_it == s_watch_map.end())
                             {
                                 ImGui::Separator();
-                                if (ImGui::MenuItem("Watch value"))
+                                if (ImGui::MenuItem(ICON_FA_EYE " Watch value"))
                                 {
                                     add_watch(watch_id, static_cast<UFunction*>(object));
                                 }
                             }
                             else
                             {
-                                ImGui::Checkbox("Watch value", &function_watcher_it->second->enabled);
+                                ImGui::Checkbox(ICON_FA_EYE " Watch value", &function_watcher_it->second->enabled);
                             }
                         }
                         ImGui::EndPopup();
