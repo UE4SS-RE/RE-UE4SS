@@ -53,6 +53,7 @@ namespace RC::UVTD
             virtual_src_dumper.send(STR("#include <functional>\n\n"));
             virtual_src_dumper.send(STR("// These are all the structs that have virtuals that need to have their offset set\n"));
             virtual_src_dumper.send(STR("#include <Unreal/UObject.hpp>\n"));
+            virtual_src_dumper.send(STR("#include <Unreal/UEngine.hpp>\n"));
             virtual_src_dumper.send(STR("#include <Unreal/UScriptStruct.hpp>\n"));
             virtual_src_dumper.send(STR("#include <Unreal/FOutputDevice.hpp>\n"));
             virtual_src_dumper.send(STR("#include <Unreal/FField.hpp>\n"));
@@ -75,6 +76,8 @@ namespace RC::UVTD
             virtual_src_dumper.send(STR("#include <Unreal/UClass.hpp>\n"));
             virtual_src_dumper.send(STR("#include <Unreal/World.hpp>\n"));
             virtual_src_dumper.send(STR("#include <Unreal/UEnum.hpp>\n"));
+            virtual_src_dumper.send(STR("#include <Unreal/UEngine.hpp>\n"));
+            virtual_src_dumper.send(STR("#include <Unreal/FWorldContext.hpp>\n"));
             virtual_src_dumper.send(STR("#include <Unreal/FArchive.hpp>\n"));
             virtual_src_dumper.send(STR("#include <Unreal/AGameModeBase.hpp>\n"));
             virtual_src_dumper.send(STR("#include <Unreal/AGameMode.hpp>\n"));

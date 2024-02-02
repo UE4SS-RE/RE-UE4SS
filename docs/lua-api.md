@@ -180,6 +180,16 @@ This is an overall list of API definitions available in UE4SS. For more readable
 
     RegisterCustomEvent(string EventName, function Callback)
         - Registers a callback that will get called when a BP function/event is called with the name 'EventName'.
+    
+    RegisterLoadMapPreHook(function Callback)
+        - Registers a callback that will get called before UEngine::LoadMap is called.
+        - The callback params are: UEngine Engine, struct FWorldContext& WorldContext, FURL URL, class UPendingNetGame* PendingGame, FString& Error
+        - Params (except strings & bools & FOutputDevice) must be retrieved via 'Param:Get()' and set via 'Param:Set()'.
+        
+    RegisterLoadMapPostHook(function Callback)
+        - Registers a callback that will get called after UEngine::LoadMap is called.
+        - The callback params are: UEngine Enigne, struct FWorldContext& WorldContext, FURL URL, class UPendingNetGame* PendingGame, FString& Error
+        - Params (except strings & bools & FOutputDevice) must be retrieved via 'Param:Get()' and set via 'Param:Set()'.
 
     RegisterInitGameStatePreHook(function Callback)
         - Registers a callback that will get called before AGameModeBase::InitGameState is called.

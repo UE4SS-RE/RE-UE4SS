@@ -171,6 +171,16 @@ Global Functions
     UnregisterCustomEvent(string EventName)
         - Unregisters a custom event callback globally for the specified event.
 
+    RegisterLoadMapPreHook(function Callback)
+        - Registers a callback that will get called before UEngine::LoadMap is called.
+        - The callback params are: UEngine Engine, struct FWorldContext& WorldContext, FURL URL, class UPendingNetGame* PendingGame, FString& Error
+        - Params (except strings & bools & FOutputDevice) must be retrieved via 'Param:Get()' and set via 'Param:Set()'.
+        
+    RegisterLoadMapPostHook(function Callback)
+        - Registers a callback that will get called after UEngine::LoadMap is called.
+        - The callback params are: UEngine Engine, struct FWorldContext& WorldContext, FURL URL, class UPendingNetGame* PendingGame, FString& Error
+        - Params (except strings & bools & FOutputDevice) must be retrieved via 'Param:Get()' and set via 'Param:Set()'.
+
     RegisterInitGameStatePreHook(function Callback)
         - Registers a callback that will get called before AGameModeBase::InitGameState is called.
         - The callback params are: AGameModeBase Context

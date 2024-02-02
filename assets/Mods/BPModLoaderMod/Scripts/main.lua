@@ -174,7 +174,7 @@ end
 local AssetRegistryHelpers = nil
 local AssetRegistry = nil
 
-local function LoadMod(ModName, ModInfo, GameMode)
+local function LoadMod(ModName, ModInfo, World)
     if ModInfo.Priority ~= nil then
         Log(string.format("Loading mod [Priority: #%i]: %s\n", ModInfo.Priority, ModName))
     else
@@ -201,8 +201,6 @@ local function LoadMod(ModName, ModInfo, GameMode)
         local ModClass = AssetRegistryHelpers:GetAsset(AssetData)
         if not ModClass:IsValid() then error("ModClass is not valid") end
 
-        -- TODO: Use 'UEHelpers' to get the world.
-        local World = GameMode:GetWorld()
         if not World:IsValid() then error("World is not valid") end
 
         local Actor = World:SpawnActor(ModClass, {}, {})
@@ -240,11 +238,11 @@ end
 
 
 
-local function LoadMods(GameMode)
+local function LoadMods(World)
     CacheAssetRegistry()
     for _, ModInfo in ipairs(OrderedMods) do
         if type(ModInfo) == "table" then
-            LoadMod(ModInfo.Name, ModInfo, GameMode)
+            LoadMod(ModInfo.Name, ModInfo, World)
         end
     end
 end
@@ -253,8 +251,8 @@ local function LoadModsManual()
     LoadMods(UEHelpers.GetWorld())
 end
 
-RegisterInitGameStatePostHook(function(ContextParam)
-    LoadMods(ContextParam:get())
+RegisterLoadMapPostHook(function(Engine, World)
+    LoadMods(World:get())
 end)
 
 RegisterBeginPlayPostHook(function(ContextParam)
