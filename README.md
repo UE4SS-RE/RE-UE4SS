@@ -15,7 +15,7 @@ Lua scripting system platform, C++ Modding API, SDK generator, blueprint mod loa
 - [UMAP Recreation Dumper](https://docs.ue4ss.com/dev/feature-overview/dumpers.html#umap-recreation-dumper): Dump all loaded actors to file to generate `.umaps` in-editor
 - Other Features, including [Experimental](https://docs.ue4ss.com/dev/feature-overview/experimental.html) features at times
 
-## Targeting UE Versions: From 4.12 To 5.2
+## Targeting UE Versions: From 4.12 To 5.3
 
 The goal of UE4SS is not to be a plug-n-play solution that always works with every game.
 The goal is to have an underlying system that works for most games.
@@ -23,9 +23,11 @@ You may need to update AOBs on your own, and there's a guide for that below.
 
 ## Basic Installation
 
-The easiest installation is via downloading the xinput version of the latest non-experimental build from [Releases](https://github.com/UE4SS-RE/RE-UE4SS/releases) and extracting the zip content to `/{Gameroot}/GameName/Binaries/Win64/`.
+The easiest installation is via downloading the non-dev version of the latest non-experimental build from [Releases](https://github.com/UE4SS-RE/RE-UE4SS/releases) and extracting the zip content to `/{Gameroot}/GameName/Binaries/Win64/`.
 
 If your game is in the custom config list, extract the contents from the relevant folder to `Win64` as well.
+
+If you are planning on doing mod development using UE4SS, you can do the same as above but download the zDEV version instead. 
 
 ## Links
 
