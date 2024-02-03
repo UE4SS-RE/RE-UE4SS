@@ -111,6 +111,23 @@ Overloads:
 
             return name_a.get_local_cpp_object() == name_b.get_local_cpp_object();
         });
+
+        base_object.get_metamethods().create(LuaMadeSimple::Lua::MetaMethod::ToString, []([[maybe_unused]] const LuaMadeSimple::Lua& lua) -> int {
+            if (!lua.is_userdata())
+            {
+                lua.throw_error(std::format("{} __tostring metamethod called but there was no userdata", ClassName::ToString()));
+            }
+
+            std::string name;
+
+            auto& fname = lua.get_userdata<FName>().get_local_cpp_object();
+            name.append(ClassName::ToString());
+            name.append(std::format(" \"{}\": {:016X}", to_string(fname.ToString()), reinterpret_cast<uintptr_t>(&fname)));
+
+            lua.set_string(name);
+
+            return 1;
+        });
     }
 
     template <LuaMadeSimple::Type::IsFinal is_final>

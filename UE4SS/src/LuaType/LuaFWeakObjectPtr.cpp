@@ -43,7 +43,29 @@ namespace RC::LuaType
 
     auto FWeakObjectPtr::setup_metamethods([[maybe_unused]] BaseObject& base_object) -> void
     {
-        // FWeakObjectPtr has no metamethods
+        base_object.get_metamethods().create(LuaMadeSimple::Lua::MetaMethod::ToString, []([[maybe_unused]] const LuaMadeSimple::Lua& lua) -> int {
+            if (!lua.is_userdata())
+            {
+                lua.throw_error(std::format("{} __tostring metamethod called but there was no userdata", ClassName::ToString()));
+            }
+
+            std::string name;
+
+            auto& fptr = lua.get_userdata<FWeakObjectPtr>().get_local_cpp_object();
+            name.append(ClassName::ToString());
+            if (fptr.Get())
+            {
+                name.append(std::format(" -> {:016X}: {:016X}", reinterpret_cast<uintptr_t>(fptr.Get()), reinterpret_cast<uintptr_t>(&fptr)));
+            }
+            else
+            {
+                name.append(std::format(" -> NULL: {:016X}", reinterpret_cast<uintptr_t>(fptr.Get()), reinterpret_cast<uintptr_t>(&fptr)));
+            }
+
+            lua.set_string(name);
+
+            return 1;
+        });
     }
 
     template <LuaMadeSimple::Type::IsFinal is_final>

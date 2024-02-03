@@ -45,7 +45,22 @@ namespace RC::LuaType
 
     auto FString::setup_metamethods([[maybe_unused]] BaseObject& base_object) -> void
     {
-        // FString has no metamethods
+        base_object.get_metamethods().create(LuaMadeSimple::Lua::MetaMethod::ToString, []([[maybe_unused]] const LuaMadeSimple::Lua& lua) -> int {
+            if (!lua.is_userdata())
+            {
+                lua.throw_error(std::format("{} __tostring metamethod called but there was no userdata", ClassName::ToString()));
+            }
+
+            std::string name;
+
+            auto* fstring = lua.get_userdata<LuaType::FString>().get_remote_cpp_object();
+            name.append(ClassName::ToString());
+            name.append(std::format(" \"{}\": {:016X}", to_string(fstring->GetCharArray()), reinterpret_cast<uintptr_t>(fstring)));
+
+            lua.set_string(name);
+
+            return 1;
+        });
     }
 
     template <LuaMadeSimple::Type::IsFinal is_final>

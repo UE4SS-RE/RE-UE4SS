@@ -389,6 +389,29 @@ namespace RC::LuaType
                 }
                 return 0;
             });
+
+            base_object.get_metamethods().create(LuaMadeSimple::Lua::MetaMethod::ToString, []([[maybe_unused]] const LuaMadeSimple::Lua& lua) -> int {
+                if (!lua.is_userdata())
+                {
+                    lua.throw_error(std::format("{} __tostring metamethod called but there was no userdata", ObjectName::ToString()));
+                }
+
+                std::string name;
+
+                const auto& lua_object = lua.get_userdata<SelfType>();
+                if (lua_object.get_remote_cpp_object())
+                {
+                    name.append(to_string(lua_object.get_remote_cpp_object()->GetClassPrivate()->GetName()));
+                    name.append(std::format(": {:016X}", reinterpret_cast<uintptr_t>(lua_object.get_remote_cpp_object())));
+                } else {
+                    name.append(ObjectName::ToString());
+                    name.append(": NULL");
+                }
+
+                lua.set_string(name);
+
+                return 1;
+            });
         }
 
       public:
@@ -731,6 +754,24 @@ Overloads:
             base_object.get_metamethods().create(LuaMadeSimple::Lua::MetaMethod::NewIndex, [](const LuaMadeSimple::Lua& lua) -> int {
                 prepare_to_handle(Operation::Set, lua);
                 return 0;
+            });
+
+            base_object.get_metamethods().create(LuaMadeSimple::Lua::MetaMethod::ToString, []([[maybe_unused]] const LuaMadeSimple::Lua& lua) -> int {
+                if (!lua.is_userdata())
+                {
+                    lua.throw_error("LocalUnrealParam __tostring metamethod called but there was no userdata");
+                }
+
+                std::string name;
+
+                const auto& lua_object = lua.get_userdata<LuaType::LocalUnrealParam<ParamType>>();
+                name.append("LocalUnrealParam<");
+                name.append(to_string(lua_object.m_property->GetClass().GetName()));
+                name.append(std::format(">: 0x{:012x}", reinterpret_cast<uintptr_t>(&lua_object)));
+
+                lua.set_string(name);
+
+                return 1;
             });
         }
 
