@@ -394,6 +394,7 @@ namespace RC::GUI
         float icon_font_size = base_font_size * 2.0f / 3.0f; // FontAwesome fonts need to have their sizes reduced;
         static const ImWchar icons_ranges[] = {ICON_MIN_FA, ICON_MAX_16_FA, 0};
         ImFontConfig icons_cfg;
+        icons_cfg.FontDataOwnedByAtlas = false; // if true it will try to free memory and fail
         icons_cfg.MergeMode = true;
         icons_cfg.PixelSnapH = true;
         icons_cfg.GlyphMinAdvanceX = icon_font_size;
