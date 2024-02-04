@@ -1,6 +1,6 @@
 v3.0.0
 ==============
-2024-02-03
+2024-02-04
 
 After 9 months in development, we hope 3.0 was worth the wait. We want future releases to be more frequent, as constantly telling people "try latest experimental" is never a good solution.
 
@@ -140,6 +140,10 @@ BPModLoaderMod: Add ability to specify load order - Okaetsu
 Add additional extensions to USMap dumper - Atenfyr; Archengius
 
 Fix bug in USMap dumper with enums with 256 entries - Atenfyr
+
+### Live View
+
+### UHT Dumper
 
 ### Lua API
 Improved reliability of `IsValid`
