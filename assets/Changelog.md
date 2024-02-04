@@ -1,6 +1,6 @@
 v3.0.0
 ==============
-TBD
+2024-02-04
 
 After 9 months in development, we hope 3.0 was worth the wait. We want future releases to be more frequent, as constantly telling people "try latest experimental" is never a good solution.
 
