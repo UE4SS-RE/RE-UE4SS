@@ -129,7 +129,7 @@ Overloads:
                 }
                 auto& userdata = lua.get_userdata<LuaType::UE4SSBaseObject>();
                 std::string_view lua_object_name = userdata.get_object_name();
-                if (lua_object_name == "UObject" || lua_object_name == "World" || lua_object_name == "Actor" || lua_object_name == "UClass" ||
+                if (lua_object_name == "UObject" || lua_object_name == "UWorld" || lua_object_name == "AActor" || lua_object_name == "UClass" ||
                     lua_object_name == "UEnum" || lua_object_name == "UScriptStruct" || lua_object_name == "UStruct")
                 {
                     RC::LuaMod::m_shared_lua_variables[variable_name] =
