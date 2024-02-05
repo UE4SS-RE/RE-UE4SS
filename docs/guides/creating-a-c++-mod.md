@@ -10,13 +10,14 @@ Part four will cover installation of the mod.
 > The guide requires having a working C++ development environment with `cmake` and `git`, preferably similar to the one required to build UE4SS itself from sources.
 
 ## Part 1
-1. Make an Epic account and link it to your GitHub account.
-2. Make a directory somewhere on your computer, the name doesn't matter but I named mine `MyMods`.
-3. Clone the RE-UE4SS repo so that you end up with `MyMods/RE-UE4SS`.
-4. Open CMD and cd into `RE-UE4SS` and execute: `git submodule update --init --recursive`
-5. Go back to the `MyMods` directory and create a new directory, this directory will contain your mod source files.
+1. Make an Epic account and link it to your GitHub account
+2. Check your email and accept the invitation to the @EpicGames GitHub organization for Unreal source access.
+3. Make a directory somewhere on your computer, the name doesn't matter but I named mine `MyMods`.
+4. Clone the RE-UE4SS repo so that you end up with `MyMods/RE-UE4SS`.
+5. Open CMD and cd into `RE-UE4SS` and execute: `git submodule update --init --recursive`
+6. Go back to the `MyMods` directory and create a new directory, this directory will contain your mod source files.
 I named mine `MyAwesomeMod`.
-6. Create a file called `CMakeLists.txt` inside `MyMods` and put this inside it:
+7. Create a file called `CMakeLists.txt` inside `MyMods` and put this inside it:
 ```cmake
 cmake_minimum_required(VERSION 3.18)
 
