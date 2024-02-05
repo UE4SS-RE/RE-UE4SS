@@ -2657,7 +2657,7 @@ Overloads:
                 auto& userdata = lua.get_userdata<LuaType::UE4SSBaseObject>(1, true);
                 std::string_view lua_object_name = userdata.get_object_name();
                 // TODO: Redo when there's a bette way of checking whether a lua object is derived from UObject
-                if (lua_object_name == "UObject" || lua_object_name == "World" || lua_object_name == "Actor")
+                if (lua_object_name == "UObject" || lua_object_name == "UWorld" || lua_object_name == "AActor")
                 {
                     in_outer = lua.get_userdata<LuaType::UObject>().get_remote_cpp_object();
                     could_be_in_outer = true;
