@@ -1,3 +1,56 @@
+v3.1.0
+==============
+TBD
+## New
+
+### General
+
+### Live View
+
+### UHT Dumper
+
+### Lua API
+
+### C++ API
+
+### Experimental
+
+
+## Changes
+
+### General
+
+### Live View
+
+### UHT Dumper
+
+### Lua API
+
+### C++ API
+
+### Repo & Build Process
+
+
+## Fixes
+
+### General
+
+### Live View
+
+### UHT Dumper
+
+### Lua API
+
+### C++ API
+
+
+## Settings
+
+### Added
+
+### Removed
+
+
 v3.0.0
 ==============
 2024-02-04
