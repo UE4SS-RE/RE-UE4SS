@@ -41,7 +41,7 @@ namespace RC::ParserBase
         m_token_container = std::move(token_container);
     }
 
-    auto Tokenizer::tokenize(const File::StringType& input) -> void
+    auto Tokenizer::tokenize(const SystemStringType& input) -> void
     {
         // printf_s("Tokenizer::tokenize()\n\n");
 
@@ -75,12 +75,12 @@ namespace RC::ParserBase
             throw std::runtime_error{"[Tokenizer::tokenize] Input was empty"};
         }
 
-        File::StringType a;
+        SystemStringType a;
 
         const File::CharType* input_array = input.c_str();
         size_t global_cursor{};
 
-        auto peek = [&](File::StringType& out_str, const File::CharType* character, size_t num_chars) -> void {
+        auto peek = [&](SystemStringType& out_str, const File::CharType* character, size_t num_chars) -> void {
             if (global_cursor + num_chars <= input.size())
             {
                 for (size_t i = 0; i < num_chars; ++i)
@@ -97,8 +97,8 @@ namespace RC::ParserBase
             bool matched_anything{false};
         };
 
-        File::StringType current_empty_token{};
-        File::StringType empty_token_data{};
+        SystemStringType current_empty_token{};
+        SystemStringType empty_token_data{};
         TokenFoundWrapper empty_token{};
         size_t start_of_empty_token{};
         bool start_of_empty_token_set{};
@@ -137,8 +137,8 @@ namespace RC::ParserBase
                 int advance_cursor_by{-1};
                 bool all_rules_obeyed{true};
 
-                File::StringViewType identifier_to_find = token.get_identifier();
-                File::StringType compare_to;
+                SystemStringViewType identifier_to_find = token.get_identifier();
+                SystemStringType compare_to;
                 size_t identifier_size = identifier_to_find.size();
                 peek(compare_to, c, identifier_size);
                 bool identifier_should_match_all = identifier_to_find.empty();
@@ -213,7 +213,7 @@ namespace RC::ParserBase
         // This is required because the loop above stops at end-of-file without processing it
         deal_with_possible_empty_token();
 
-        m_tokens_in_input.emplace_back(Token{m_token_container.m_eof_token_type, STR("EndOfFile"), STR("--EOF-DO-NOT-PARSE--")});
+        m_tokens_in_input.emplace_back(Token{m_token_container.m_eof_token_type, SYSSTR("EndOfFile"), SYSSTR("--EOF-DO-NOT-PARSE--")});
     }
 
     auto Tokenizer::get_tokens() const -> const std::vector<Token>&

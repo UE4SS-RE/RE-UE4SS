@@ -56,7 +56,7 @@ namespace RC::UVTD
 
         auto to_string() const -> File::StringType
         {
-            return std::format(STR("{}"), type);
+            return std::format(SYSSTR("{}"), type);
         }
     };
 
@@ -74,10 +74,10 @@ namespace RC::UVTD
             for (size_t i = 0; i < params.size(); i++)
             {
                 bool should_add_comma = i < params.size() - 1;
-                params_string.append(std::format(STR("{}{}"), params[i].to_string(), should_add_comma ? STR(", ") : STR("")));
+                params_string.append(std::format(SYSSTR("{}{}"), params[i].to_string(), should_add_comma ? STR(", ") : STR("")));
             }
 
-            return std::format(STR("{} {}({}){};"), return_type, name, params_string, const_qualifier ? STR("const") : STR(""));
+            return std::format(SYSSTR("{} {}({}){};"), return_type, name, params_string, const_qualifier ? STR("const") : STR(""));
         }
     };
 

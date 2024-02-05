@@ -114,7 +114,7 @@ namespace RC::LuaType
             if (lua_object.get_remote_cpp_object())
             {
                 // Set the return value to the ansi version of the full name
-                lua.set_string(to_string(lua_object.get_remote_cpp_object()->GetFullName()).c_str());
+                lua.set_string(UEStringToSystemString(lua_object.get_remote_cpp_object()->GetFullName()).c_str());
             }
             else
             {
@@ -147,7 +147,7 @@ Overloads:
             if (lua.is_table())
             {
                 int64_t ffield_class_pointer{};
-                lua.for_each_in_table([&](const LuaMadeSimple::LuaTableReference& table) {
+                lua.for_each_in_table([&](const LuaMadeSimple::LuaTableReference<LuaMadeSimple::Lua>& table) {
                     if (table.key.is_string() && table.key.get_string() == "FFieldClassPointer")
                     {
                         if (!table.value.is_integer())
@@ -224,10 +224,10 @@ Overloads:
 
             const auto& lua_object = lua.get_userdata<XProperty>();
 
-            File::StringType buffer;
+            SystemStringType buffer;
             if (lua.is_string())
             {
-                buffer = to_wstring(lua.get_string());
+                buffer = to_generic_string(lua.get_string());
             }
             else
             {
@@ -261,7 +261,7 @@ Overloads:
             }
             auto* owner_object = lua.get_userdata<UObject>().get_remote_cpp_object();
 
-            lua_object.get_remote_cpp_object()->ImportText(buffer.c_str(), data, port_flags, owner_object, nullptr);
+            lua_object.get_remote_cpp_object()->ImportText(SystemStringToUEString(buffer).c_str(), data, port_flags, owner_object, nullptr);
             return 0;
         });
 

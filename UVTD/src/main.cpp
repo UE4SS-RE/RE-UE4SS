@@ -12,12 +12,12 @@ using namespace RC;
 
 auto static get_user_selection() -> int32_t
 {
-    Output::send(STR("What would you like to do ?\n"));
-    Output::send(STR("1. Generate VTable layouts\n"));
-    Output::send(STR("2. Generate class/struct member variable layouts\n"));
-    Output::send(STR("3. Generate sol bindings\n"));
-    Output::send(STR("4. Everything\n"));
-    Output::send(STR("0. Exit\n"));
+    Output::send(SYSSTR("What would you like to do ?\n"));
+    Output::send(SYSSTR("1. Generate VTable layouts\n"));
+    Output::send(SYSSTR("2. Generate class/struct member variable layouts\n"));
+    Output::send(SYSSTR("3. Generate sol bindings\n"));
+    Output::send(SYSSTR("4. Everything\n"));
+    Output::send(SYSSTR("0. Exit\n"));
 
     int32_t selection{};
     std::cin >> selection;
@@ -53,7 +53,7 @@ auto thread_dll_start([[maybe_unused]] LPVOID thread_param) -> unsigned long
 
     try
     {
-        Output::send(STR("Unreal Virtual Table Dumper -> START\n"));
+        Output::send(SYSSTR("Unreal Virtual Table Dumper -> START\n"));
 
         for (int32_t selection = get_user_selection(); selection != 1337; selection = get_user_selection())
         {
@@ -64,22 +64,22 @@ auto thread_dll_start([[maybe_unused]] LPVOID thread_param) -> unsigned long
             }
             else if (selection == 1)
             {
-                Output::send(STR("Generating VTable layouts...\n"));
+                Output::send(SYSSTR("Generating VTable layouts...\n"));
                 settings.should_dump_vtable = true;
             }
             else if (selection == 2)
             {
-                Output::send(STR("Generating class/struct member variable layouts...\n"));
+                Output::send(SYSSTR("Generating class/struct member variable layouts...\n"));
                 settings.should_dump_member_vars = true;
             }
             else if (selection == 3)
             {
-                Output::send(STR("Generating sol bindings...\n"));
+                Output::send(SYSSTR("Generating sol bindings...\n"));
                 settings.should_dump_sol_bindings = true;
             }
             else if (selection == 4)
             {
-                Output::send(STR("Generating VTable layouts and class/struct member variable layouts...\n"));
+                Output::send(SYSSTR("Generating VTable layouts and class/struct member variable layouts...\n"));
                 settings.should_dump_vtable = true;
                 settings.should_dump_member_vars = true;
             }
@@ -89,7 +89,7 @@ auto thread_dll_start([[maybe_unused]] LPVOID thread_param) -> unsigned long
     }
     catch (std::exception& e)
     {
-        Output::send(STR("Exception caught: {}\n"), to_wstring(e.what()));
+        Output::send(SYSSTR("Exception caught: {}\n"), to_wstring(e.what()));
     }
 
     return 0;

@@ -333,7 +333,7 @@ namespace RC::GUI
             {
                 if (!Output::has_internal_error())
                 {
-                    Output::send<LogLevel::Error>(STR("Error: {}\n"), to_wstring(e.what()));
+                    Output::send<LogLevel::Error>(SYSSTR("Error: {}\n"), to_generic_string(e.what()));
                 }
                 else
                 {

@@ -26,7 +26,7 @@ namespace RC
     class LuaMod : public Mod
     {
       private:
-        std::wstring m_scripts_path;
+        SystemStringType m_scripts_path;
         LuaMadeSimple::Lua& m_lua;
 
       public:
@@ -97,8 +97,8 @@ namespace RC
         static inline std::vector<LuaCallbackData> m_call_function_by_name_with_arguments_post_callbacks;
         static inline std::vector<LuaCallbackData> m_local_player_exec_pre_callbacks;
         static inline std::vector<LuaCallbackData> m_local_player_exec_post_callbacks;
-        static inline std::unordered_map<File::StringType, LuaCallbackData> m_global_command_lua_callbacks;
-        static inline std::unordered_map<File::StringType, LuaCallbackData> m_custom_command_lua_pre_callbacks;
+        static inline std::unordered_map<SystemStringType, LuaCallbackData> m_global_command_lua_callbacks;
+        static inline std::unordered_map<SystemStringType, LuaCallbackData> m_custom_command_lua_pre_callbacks;
         static inline std::vector<SimpleLuaAction> m_game_thread_actions{};
         // This is storage that persists through hot-reloads.
         static inline std::unordered_map<std::string, SharedLuaVariable> m_shared_lua_variables{};
@@ -109,7 +109,7 @@ namespace RC
         static inline std::vector<LuaCallbackData> m_init_game_state_post_callbacks{};
         static inline std::vector<LuaCallbackData> m_begin_play_pre_callbacks{};
         static inline std::vector<LuaCallbackData> m_begin_play_post_callbacks{};
-        static inline std::unordered_map<StringType, LuaCallbackData> m_script_hook_callbacks{};
+        static inline std::unordered_map<SystemStringType, LuaCallbackData> m_script_hook_callbacks{};
         static inline std::unordered_map<int32_t, int32_t> m_generic_hook_id_to_native_hook_id{};
         // Generic hook ids are generated incrementally so the first one is 0 and the next one is always +1 from the last id.
         static inline int32_t m_last_generic_hook_id{};
@@ -124,7 +124,7 @@ namespace RC
         std::mutex m_actions_lock{};
 
       public:
-        LuaMod(UE4SSProgram&, std::wstring&& mod_name, std::wstring&& mod_path);
+        LuaMod(UE4SSProgram&, SystemStringType&& mod_name, SystemStringType&& mod_path);
         ~LuaMod() override = default;
 
       private:

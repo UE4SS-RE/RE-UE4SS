@@ -57,7 +57,7 @@ namespace RC::LuaType
             const wchar_t* string_data = lua_object.get_local_cpp_object().GetCharArray();
             if (string_data)
             {
-                lua.set_string(to_string(string_data));
+                lua.set_string(to_string(UEStringType(string_data)));
             }
             else
             {

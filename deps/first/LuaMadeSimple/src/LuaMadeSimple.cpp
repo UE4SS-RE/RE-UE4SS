@@ -434,7 +434,7 @@ namespace RC::LuaMadeSimple
         }
     }
 
-    auto Lua::execute_file(std::wstring_view file_name_and_path) const -> void
+    auto Lua::execute_file(std::u16string_view file_name_and_path) const -> void
     {
 #pragma warning(disable : 4244)
         std::string file_name_and_path_ansi = std::string(file_name_and_path.begin(), file_name_and_path.end());
@@ -455,7 +455,7 @@ namespace RC::LuaMadeSimple
         }
     }
 
-    auto Lua::execute_string(std::wstring_view code) const -> void
+    auto Lua::execute_string(std::u16string_view code) const -> void
     {
 #pragma warning(disable : 4244)
         std::string code_ansi = std::string(code.begin(), code.end());
@@ -662,7 +662,7 @@ namespace RC::LuaMadeSimple
             // It's up to the 'callable' to fetch the key/value from the stack
             // This makes dealing with different types easier
             // TODO: Make it so you don't need to pass the 'this' pointer to both the key & value struct
-            LuaTableReference table{.key = {this}, .value = {this}};
+            LuaTableReference<Lua> table{.key = {this}, .value = {this}};
             if (callable(table))
             {
                 lua_pop(get_lua_state(), 3);

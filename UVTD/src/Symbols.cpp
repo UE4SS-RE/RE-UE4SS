@@ -246,7 +246,7 @@ namespace RC::UVTD
         case PDB::CodeView::TPI::TypeRecordKind::LF_PROCEDURE: {
             File::StringType return_type = get_type_name(tpi_stream, record->data.LF_PROCEDURE.rvtype, true);
             File::StringType args = get_type_name(tpi_stream, record->data.LF_PROCEDURE.arglist, check_valid);
-            return std::format(STR("std::function<{}({})>"), return_type, args);
+            return std::format(SYSSTR("std::function<{}({})>"), return_type, args);
         }
         case PDB::CodeView::TPI::TypeRecordKind::LF_ARGLIST: {
             File::StringType args{};
@@ -254,7 +254,7 @@ namespace RC::UVTD
             for (size_t i = 0; i < record->data.LF_ARGLIST.count; i++)
             {
                 bool should_add_comma = i < record->data.LF_ARGLIST.count - 1;
-                args.append(std::format(STR("{}{}"), get_type_name(tpi_stream, record->data.LF_ARGLIST.arg[i], true), should_add_comma ? STR(", ") : STR("")));
+                args.append(std::format(SYSSTR("{}{}"), get_type_name(tpi_stream, record->data.LF_ARGLIST.arg[i], true), should_add_comma ? STR(", ") : STR("")));
             }
 
             return args;

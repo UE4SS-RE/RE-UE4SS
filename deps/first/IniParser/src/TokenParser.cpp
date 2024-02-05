@@ -28,10 +28,10 @@ namespace RC::Ini
         bool is_bool{false};
     };
 
-    auto static is_int(File::StringViewType data) -> Int
+    auto static is_int(SystemStringType data) -> Int
     {
         bool has_0x_prefix = [&]() {
-            return (data.size() > 2 && data[0] == L'0' && (data[1] == L'x' || data[1] == L'X'));
+            return (data.size() > 2 && data[0] == SYSSTR('0') && (data[1] == SYSSTR('x') || data[1] == SYSSTR('X')));
         }();
 
         if (!has_0x_prefix && data[0] != L'-' && std::iswdigit(data[0]) == 0)
@@ -40,10 +40,10 @@ namespace RC::Ini
         }
         else
         {
-            File::StringViewType string = has_0x_prefix ? File::StringViewType{data.begin() + 2, data.end()} : data;
-            if (!has_0x_prefix && data[0] == STR('-'))
+            SystemStringType string = has_0x_prefix ? SystemStringType{data.begin() + 2, data.end()} : data;
+            if (!has_0x_prefix && data[0] == SYSSTR('-'))
             {
-                string = File::StringViewType{string.begin() + 1, string.end()};
+                string = SystemStringType{string.begin() + 1, string.end()};
             }
             bool is_int = std::ranges::all_of(string.begin(), string.end(), [&](const File::CharType c) {
                 if constexpr (std::is_same_v<File::CharType, wchar_t>)
@@ -60,10 +60,10 @@ namespace RC::Ini
         }
     }
 
-    auto static is_float(File::StringViewType data) -> Float
+    auto static is_float(SystemStringType data) -> Float
     {
         bool has_decimal_or_negative_prefix = [&]() {
-            return data.size() > 1 && data[0] == L'.' || data[0] == L'-';
+            return data.size() > 1 && data[0] == SYSSTR('.') || data[0] == SYSSTR('-');
         }();
 
         if (!has_decimal_or_negative_prefix && std::iswdigit(data[0]) == 0)
@@ -72,19 +72,19 @@ namespace RC::Ini
         }
         else
         {
-            File::StringViewType string = data.ends_with(STR('f')) ? File::StringViewType{data.begin(), data.end() - 1} : data;
+            SystemStringType string = data.ends_with(SYSSTR('f')) ? SystemStringType{data.begin(), data.end() - 1} : data;
             if (has_decimal_or_negative_prefix)
             {
-                string = File::StringViewType{string.begin() + 1, string.end()};
+                string = SystemStringType{string.begin() + 1, string.end()};
             }
             bool is_float = std::ranges::all_of(string.begin(), string.end(), [&](const File::CharType c) {
                 if constexpr (std::is_same_v<File::CharType, wchar_t>)
                 {
-                    return has_decimal_or_negative_prefix ? std::iswxdigit(c) : std::iswdigit(c) != 0 || c == STR('.');
+                    return has_decimal_or_negative_prefix ? std::iswxdigit(c) : std::iswdigit(c) != 0 || c == SYSSTR('.');
                 }
                 else
                 {
-                    return has_decimal_or_negative_prefix ? std::isxdigit(c) : std::isdigit(c) != 0 || c == STR('.');
+                    return has_decimal_or_negative_prefix ? std::isxdigit(c) : std::isdigit(c) != 0 || c == SYSSTR('.');
                 }
             });
 
@@ -92,20 +92,17 @@ namespace RC::Ini
         }
     }
 
-    auto static is_bool(const File::StringType& data) -> Bool
+    auto static is_bool(const SystemStringType& data) -> Bool
     {
-        File::StringType all_lower_string_data = data;
-        // TODO: This to_lower implementation is not string-type agnostic
-        //       A code change would be required if 'File::StringType' is defined as a char instead of a wchar_t
-        //       Solution: Make two overloads in the string helper library, one for 'std::string' and one for 'std::wstring'
-        std::transform(all_lower_string_data.begin(), all_lower_string_data.end(), all_lower_string_data.begin(), [](wchar_t c) {
+        SystemStringType all_lower_string_data = data;
+        std::transform(all_lower_string_data.begin(), all_lower_string_data.end(), all_lower_string_data.begin(), [](SystemCharType c) {
             return std::towlower(c);
         });
-        if (all_lower_string_data == STR("true") || all_lower_string_data == STR("1"))
+        if (all_lower_string_data == SYSSTR("true") || all_lower_string_data == SYSSTR("1"))
         {
             return Bool{.value = true, .is_bool = true};
         }
-        else if (all_lower_string_data == STR("false") || all_lower_string_data == STR("0"))
+        else if (all_lower_string_data == SYSSTR("false") || all_lower_string_data == SYSSTR("0"))
         {
             return Bool{.value = false, .is_bool = true};
         }
@@ -115,7 +112,7 @@ namespace RC::Ini
         }
     }
 
-    auto TokenParser::find_variable_by_name(Section* section, const RC::StringType& name) -> std::optional<std::reference_wrapper<Value>>
+    auto TokenParser::find_variable_by_name(Section* section, const RC::SystemStringType& name) -> std::optional<std::reference_wrapper<Value>>
     {
         auto const& var = section->key_value_pairs.find(name);
         if (var != section->key_value_pairs.end())
@@ -128,7 +125,7 @@ namespace RC::Ini
         }
     }
 
-    auto TokenParser::find_variable_by_name(const StringType& name) -> std::optional<std::reference_wrapper<Value>>
+    auto TokenParser::find_variable_by_name(const SystemStringType& name) -> std::optional<std::reference_wrapper<Value>>
     {
         size_t occurrence_of_dot = name.find_first_of(L'.');
         if (occurrence_of_dot == name.npos || occurrence_of_dot + 1 > name.size())
@@ -144,38 +141,38 @@ namespace RC::Ini
             }
             else
             {
-                const File::StringType requested_variable_name = name.substr(occurrence_of_dot + 1, name.size());
+                const SystemStringType requested_variable_name = name.substr(occurrence_of_dot + 1, name.size());
                 return find_variable_by_name(&requested_section->second, requested_variable_name);
             }
         }
     }
 
-    auto state_to_string(State state) -> File::StringType
+    auto state_to_string(State state) -> SystemStringType
     {
         switch (state)
         {
         case State::StartOfFile:
-            return STR("StartOfFile");
+            return SYSSTR("StartOfFile");
         case State::SetSectionValue:
-            return STR("SetSectionValue");
+            return SYSSTR("SetSectionValue");
         case State::NewLineStarted:
-            return STR("NewLineStarted");
+            return SYSSTR("NewLineStarted");
         case State::CreateNewOrSetCurrentSection:
-            return STR("CreateNewOrSetCurrentSection");
+            return SYSSTR("CreateNewOrSetCurrentSection");
         case State::CreateSectionKey:
-            return STR("CreateSectionKey");
+            return SYSSTR("CreateSectionKey");
         case State::StoreSectionKey:
-            return STR("StoreSectionKey");
+            return SYSSTR("StoreSectionKey");
         }
 
-        return STR("UnknownState");
+        return SYSSTR("UnknownState");
     }
 
-    auto TokenParser::characters_to_string(const ParserBase::Token& characters_token) -> File::StringType
+    auto TokenParser::characters_to_string(const ParserBase::Token& characters_token) -> SystemStringType
     {
         auto* current_token = &characters_token;
 
-        File::StringType full_value{};
+        SystemStringType full_value{};
         while (true)
         {
             const auto token_type = current_token->get_type();
@@ -185,7 +182,7 @@ namespace RC::Ini
             }
             else if (token_type == IniTokenType::Space)
             {
-                full_value.append(STR(" "));
+                full_value.append(SYSSTR(" "));
             }
             else if (token_type == IniTokenType::Characters)
             {
@@ -193,7 +190,7 @@ namespace RC::Ini
             }
             else if (token_type == IniTokenType::Equals)
             {
-                full_value.append(STR("="));
+                full_value.append(SYSSTR("="));
             }
             else if (token_type == IniTokenType::ClosingSquareBracket)
             {
@@ -204,15 +201,15 @@ namespace RC::Ini
                     // The next token is the last token on this line and since it's ] we don't want to include it in the string
                     break;
                 }
-                full_value.append(STR("]"));
+                full_value.append(SYSSTR("]"));
             }
             else if (token_type == IniTokenType::OpeningSquareBracket)
             {
-                full_value.append(STR("["));
+                full_value.append(SYSSTR("["));
             }
             else if (token_type == IniTokenType::SemiColon)
             {
-                full_value.append(STR(";"));
+                full_value.append(SYSSTR(";"));
             }
 
             // Exit early and let the state machine deal with the new line
@@ -293,7 +290,7 @@ namespace RC::Ini
     {
         if (m_current_state == State::CreateNewOrSetCurrentSection)
         {
-            m_current_character_data.append(STR(" "));
+            m_current_character_data.append(SYSSTR(" "));
         }
     }
 
@@ -384,7 +381,7 @@ namespace RC::Ini
 
         // Create the value with the correct key and an empty value and store a pointer to it so that the value can be set later
         m_current_value = &m_current_section->key_value_pairs.emplace(m_current_character_data, Value{}).first->second;
-        m_current_value->add_string_value(STR(""));
+        m_current_value->add_string_value(SYSSTR(""));
         m_current_value->set_ref(m_current_value);
         m_current_character_data.clear();
 

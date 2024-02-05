@@ -2,7 +2,7 @@
 
 namespace RC::Parser::Experimental
 {
-    auto ExperimentalTokenParser::find_variable_by_name(Section* section, const std::wstring& name) -> std::optional<std::reference_wrapper<Value>>
+    auto ExperimentalTokenParser::find_variable_by_name(Section* section, const SystemStringType& name) -> std::optional<std::reference_wrapper<Value>>
     {
         auto const& var = section->key_value_pairs.find(name);
         if (var != section->key_value_pairs.end())
@@ -15,7 +15,7 @@ namespace RC::Parser::Experimental
         }
     }
 
-    auto ExperimentalTokenParser::find_variable_by_name(SectionContainer& sections, const std::wstring& name) -> std::optional<std::reference_wrapper<Value>>
+    auto ExperimentalTokenParser::find_variable_by_name(SectionContainer& sections, const SystemStringType& name) -> std::optional<std::reference_wrapper<Value>>
     {
         std::optional<std::reference_wrapper<Value>> value_found = [&]() -> std::optional<std::reference_wrapper<Value>> {
             for (auto& [_, section] : sections)
@@ -33,7 +33,7 @@ namespace RC::Parser::Experimental
         return value_found;
     }
 
-    auto ExperimentalTokenParser::find_variable_by_name(const std::wstring& name) -> std::optional<std::reference_wrapper<Value>>
+    auto ExperimentalTokenParser::find_variable_by_name(const SystemStringType& name) -> std::optional<std::reference_wrapper<Value>>
     {
         size_t occurrence_of_dot = name.find_first_of(L'.');
         if (occurrence_of_dot == name.npos || occurrence_of_dot + 1 > name.size())
@@ -49,7 +49,7 @@ namespace RC::Parser::Experimental
             }
             else
             {
-                const std::wstring requested_variable_name = name.substr(occurrence_of_dot + 1, name.size());
+                const SystemStringType requested_variable_name = name.substr(occurrence_of_dot + 1, name.size());
                 return find_variable_by_name(&requested_section->second, requested_variable_name);
             }
         }
@@ -60,12 +60,12 @@ namespace RC::Parser::Experimental
         const auto token_type = token.get_type();
         if (token_type == TokenType::EndOfFile || token_type == TokenType::NewLine)
         {
-            pair_value.value = L"";
+            pair_value.value = SYSSTR("");
             pair_value.ref = &pair_value;
         }
         else if (token_type == TokenType::Characters)
         {
-            std::wstring value_data{};
+            SystemStringType value_data{};
             consume_continually([&](const Parser::Token& token) {
                 const auto token_type = token.get_type();
                 if (token_type == TokenType::EndOfFile || token_type == TokenType::NewLine)
@@ -85,7 +85,7 @@ namespace RC::Parser::Experimental
                 else if (token_type == TokenType::Space)
                 {
                     // Append space
-                    value_data.append(L" ");
+                    value_data.append(SYSSTR(" "));
 
                     // Consume another token
                     return false;
@@ -161,7 +161,7 @@ namespace RC::Parser::Experimental
             }
             else if (previous_token.get_type() == TokenType::Characters)
             {
-                std::wstring key_name = get_data(previous_token);
+                SystemStringType key_name = get_data(previous_token);
                 const auto& key_value_pair_iter = m_current_section->key_value_pairs.find(key_name);
                 if (key_value_pair_iter == m_current_section->key_value_pairs.end())
                 {
@@ -188,7 +188,7 @@ namespace RC::Parser::Experimental
                 }
                 else if (characters_token.get_type() == TokenType::Characters)
                 {
-                    const std::wstring key_name = get_data(characters_token);
+                    const SystemStringType key_name = get_data(characters_token);
                     const auto& maybe_variable = find_variable_by_name(key_name);
                     if (maybe_variable.has_value())
                     {
@@ -250,7 +250,7 @@ namespace RC::Parser::Experimental
         // May be a variable or a temporary (Characters token)
         bool lhs_is_variable{};
         bool lhs_is_temporary{};
-        std::wstring lhs = [&]() {
+        SystemStringType lhs = [&]() {
             if (!m_temporary.empty())
             {
                 lhs_is_temporary = true;
@@ -265,7 +265,7 @@ namespace RC::Parser::Experimental
                 }
                 else
                 {
-                    const std::wstring lhs_data = get_data(lhs_token);
+                    const SystemStringType lhs_data = get_data(lhs_token);
                     auto maybe_variable = find_variable_by_name(lhs_data);
                     if (maybe_variable.has_value())
                     {
@@ -306,8 +306,8 @@ namespace RC::Parser::Experimental
         // }
 
         // Find rhs
-        std::wstring rhs = [&]() {
-            std::wstring rhs_temporary{};
+        SystemStringType rhs = [&]() {
+            SystemStringType rhs_temporary{};
             const auto& next_token = peek();
 
             if (next_token.get_type() == TokenType::EndOfFile)
@@ -332,7 +332,7 @@ namespace RC::Parser::Experimental
             }
             else if (next_token.get_type() == TokenType::Space)
             {
-                rhs_temporary += L" ";
+                rhs_temporary += SYSSTR(" ");
                 consume(); // Consume the first Space
 
                 consume_until(TokenType::Characters, [&](const Parser::Token& token) {
@@ -346,7 +346,7 @@ namespace RC::Parser::Experimental
                         }
                         else
                         {
-                            rhs_temporary += L" ";
+                            rhs_temporary += SYSSTR(" ");
                             return false;
                         }
                     }
@@ -476,7 +476,7 @@ namespace RC::Parser::Experimental
                 }
             }();
 
-            std::wstring section_name = get_data(section_name_token);
+            SystemStringType section_name = get_data(section_name_token);
             if (auto section = m_output.find(section_name); section != m_output.end())
             {
                 m_current_section = &section->second;
@@ -515,7 +515,7 @@ namespace RC::Parser::Experimental
         }
     }
 
-    ExperimentalParser::ExperimentalParser(const std::wstring& input)
+    ExperimentalParser::ExperimentalParser(const SystemStringType& input)
     {
         // Tokenize -> START
         Parser::Tokenizer tokenizer;
@@ -533,28 +533,28 @@ namespace RC::Parser::Experimental
     {
         Parser::TokenContainer tc;
 
-        tc.add(Parser::Token::create(TokenType::CarriageReturn, L"CarriageReturn", L"\r"));
-        tc.add(Parser::Token::create(TokenType::NewLine, L"NewLine", L"\n"));
-        tc.add(Parser::Token::create(TokenType::Space, L"Space", L" "));
+        tc.add(Parser::Token::create(TokenType::CarriageReturn, SYSSTR("CarriageReturn"), SYSSTR("\r")));
+        tc.add(Parser::Token::create(TokenType::NewLine, SYSSTR("NewLine"), SYSSTR("\n")));
+        tc.add(Parser::Token::create(TokenType::Space, SYSSTR("Space"), SYSSTR(" ")));
         tc.add(Parser::Token::create(TokenType::Characters,
-                                     L"Characters",
-                                     L"",
+                                     SYSSTR("Characters"),
+                                     SYSSTR(""),
                                      Parser::Token::HasData::Yes)); // Empty identifier will match everything that no other token identifier matches
-        tc.add(Parser::Token::create(TokenType::Equals, L"Equals", L"="));
-        // tc.add(Parser::Token::create(IniFileToken::Plus, L"Plus", L"+"));
+        tc.add(Parser::Token::create(TokenType::Equals, SYSSTR("Equals"), SYSSTR("=")));
+        // tc.add(Parser::Token::create(IniFileToken::Plus, SYSSTR("Plus"), SYSSTR("+")));
 
-        auto close_square_bracket_token = tc.add(Parser::Token::create(TokenType::ClosingSquareBracket, L"CloseSquareBracket", L"]"));
+        auto close_square_bracket_token = tc.add(Parser::Token::create(TokenType::ClosingSquareBracket, SYSSTR("CloseSquareBracket"), SYSSTR("]")));
 
         auto token =
-                Parser::Token::create<TokenMustEndWithOppositeToken, TokenMustHaveCharsBeforeEnd>(TokenType::OpeningSquareBracket, L"OpenSquareBracket", L"[");
+                Parser::Token::create<TokenMustEndWithOppositeToken, TokenMustHaveCharsBeforeEnd>(TokenType::OpeningSquareBracket, SYSSTR("OpenSquareBracket"), SYSSTR("["));
         tc.add(std::move(token));
 
-        tc.add(Parser::Token::create(TokenType::SemiColon, L"SemiColon", L";"));
+        tc.add(Parser::Token::create(TokenType::SemiColon, SYSSTR("SemiColon"), SYSSTR(";")));
 
         return tc;
     }
 
-    auto ExperimentalParser::get_string(const std::wstring& section, const std::wstring& key, const std::wstring& default_value) -> std::wstring
+    auto ExperimentalParser::get_string(const SystemStringType& section, const SystemStringType& key, const SystemStringType& default_value) -> SystemStringType
     {
         auto section_iter = m_sections.find(section);
         if (section_iter == m_sections.end())
@@ -590,7 +590,7 @@ var6 = hello +  + world
 var7 = 1 + 2 + 3 + 4
  */
 
-        std::wstring config_str = LR"(
+        SystemStringType config_str = R"(
     [ SectionOne]
     ; This is a comment and as such should be ignored by the parser
     var1 = 2
@@ -624,30 +624,30 @@ var5 = a string with spaces
         printf_s("Creating experimental parser\n");
         ExperimentalParser parser{config_str};
 
-        constexpr wchar_t default_value[] = L"<var_not_found>";
-        printf_s("SectionOne.var1 = %S\n", parser.get_string(L"SectionOne", L"var1", default_value).c_str());
-        printf_s("SectionOne.var2 = %S\n", parser.get_string(L"SectionOne", L"var2", default_value).c_str());
-        printf_s("SectionOne.var3 = %S\n", parser.get_string(L"SectionOne", L"var3", default_value).c_str());
-        printf_s("SectionOne.var4 = %S\n", parser.get_string(L"SectionOne", L"var4", default_value).c_str());
-        printf_s("SectionOne.var5 = %S\n", parser.get_string(L"SectionOne", L"var5", default_value).c_str());
-        printf_s("SectionOne.var6 = %S\n", parser.get_string(L"SectionOne", L"var6", default_value).c_str());
-        printf_s("SectionOne.var7 = %S\n", parser.get_string(L"SectionOne", L"var7", default_value).c_str());
+        constexpr char16_t default_value[] = SYSSTR("<var_not_found>");
+        printf_s("SectionOne.var1 = %S\n", parser.get_string(SYSSTR("SectionOne"), SYSSTR("var1"), default_value).c_str());
+        printf_s("SectionOne.var2 = %S\n", parser.get_string(SYSSTR("SectionOne"), SYSSTR("var2"), default_value).c_str());
+        printf_s("SectionOne.var3 = %S\n", parser.get_string(SYSSTR("SectionOne"), SYSSTR("var3"), default_value).c_str());
+        printf_s("SectionOne.var4 = %S\n", parser.get_string(SYSSTR("SectionOne"), SYSSTR("var4"), default_value).c_str());
+        printf_s("SectionOne.var5 = %S\n", parser.get_string(SYSSTR("SectionOne"), SYSSTR("var5"), default_value).c_str());
+        printf_s("SectionOne.var6 = %S\n", parser.get_string(SYSSTR("SectionOne"), SYSSTR("var6"), default_value).c_str());
+        printf_s("SectionOne.var7 = %S\n", parser.get_string(SYSSTR("SectionOne"), SYSSTR("var7"), default_value).c_str());
         printf_s("\n");
-        printf_s("SectionTwo.var1 = %S\n", parser.get_string(L"SectionTwo", L"var1", default_value).c_str());
-        printf_s("SectionTwo.var2 = %S\n", parser.get_string(L"SectionTwo", L"var2", default_value).c_str());
-        printf_s("SectionTwo.var3 = %S\n", parser.get_string(L"SectionTwo", L"var3", default_value).c_str());
-        printf_s("SectionTwo.var4 = %S\n", parser.get_string(L"SectionTwo", L"var4", default_value).c_str());
-        printf_s("SectionTwo.var5 = %S\n", parser.get_string(L"SectionTwo", L"var5", default_value).c_str());
-        printf_s("SectionTwo.var6 = %S\n", parser.get_string(L"SectionTwo", L"var6", default_value).c_str());
-        printf_s("SectionTwo.var7 = %S\n", parser.get_string(L"SectionTwo", L"var7", default_value).c_str());
-        printf_s("SectionTwo.var8 = %S\n", parser.get_string(L"SectionTwo", L"var8", default_value).c_str());
-        printf_s("SectionTwo.var9 = %S\n", parser.get_string(L"SectionTwo", L"var9", default_value).c_str());
-        printf_s("SectionTwo.var10 = %S\n", parser.get_string(L"SectionTwo", L"var10", default_value).c_str());
+        printf_s("SectionTwo.var1 = %S\n", parser.get_string(SYSSTR("SectionTwo"), SYSSTR("var1"), default_value).c_str());
+        printf_s("SectionTwo.var2 = %S\n", parser.get_string(SYSSTR("SectionTwo"), SYSSTR("var2"), default_value).c_str());
+        printf_s("SectionTwo.var3 = %S\n", parser.get_string(SYSSTR("SectionTwo"), SYSSTR("var3"), default_value).c_str());
+        printf_s("SectionTwo.var4 = %S\n", parser.get_string(SYSSTR("SectionTwo"), SYSSTR("var4"), default_value).c_str());
+        printf_s("SectionTwo.var5 = %S\n", parser.get_string(SYSSTR("SectionTwo"), SYSSTR("var5"), default_value).c_str());
+        printf_s("SectionTwo.var6 = %S\n", parser.get_string(SYSSTR("SectionTwo"), SYSSTR("var6"), default_value).c_str());
+        printf_s("SectionTwo.var7 = %S\n", parser.get_string(SYSSTR("SectionTwo"), SYSSTR("var7"), default_value).c_str());
+        printf_s("SectionTwo.var8 = %S\n", parser.get_string(SYSSTR("SectionTwo"), SYSSTR("var8"), default_value).c_str());
+        printf_s("SectionTwo.var9 = %S\n", parser.get_string(SYSSTR("SectionTwo"), SYSSTR("var9"), default_value).c_str());
+        printf_s("SectionTwo.var10 = %S\n", parser.get_string(SYSSTR("SectionTwo"), SYSSTR("var10"), default_value).c_str());
         printf_s("\n");
-        printf_s("AnotherSection.var1 = %S\n", parser.get_string(L"AnotherSection", L"var1", default_value).c_str());
-        printf_s("AnotherSection.var2 = %S\n", parser.get_string(L"AnotherSection", L"var2", default_value).c_str());
-        printf_s("AnotherSection.var3 = %S\n", parser.get_string(L"AnotherSection", L"var3", default_value).c_str());
-        printf_s("AnotherSection.var4 = %S\n", parser.get_string(L"AnotherSection", L"var4", default_value).c_str());
-        printf_s("AnotherSection.var5 = %S\n", parser.get_string(L"AnotherSection", L"var5", default_value).c_str());
+        printf_s("AnotherSection.var1 = %S\n", parser.get_string(SYSSTR("AnotherSection"), SYSSTR("var1"), default_value).c_str());
+        printf_s("AnotherSection.var2 = %S\n", parser.get_string(SYSSTR("AnotherSection"), SYSSTR("var2"), default_value).c_str());
+        printf_s("AnotherSection.var3 = %S\n", parser.get_string(SYSSTR("AnotherSection"), SYSSTR("var3"), default_value).c_str());
+        printf_s("AnotherSection.var4 = %S\n", parser.get_string(SYSSTR("AnotherSection"), SYSSTR("var4"), default_value).c_str());
+        printf_s("AnotherSection.var5 = %S\n", parser.get_string(SYSSTR("AnotherSection"), SYSSTR("var5"), default_value).c_str());
     }
 } // namespace RC::Parser::Experimental

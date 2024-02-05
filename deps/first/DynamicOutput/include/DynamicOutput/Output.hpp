@@ -19,7 +19,11 @@
 #if RC_IS_ANSI == 1
 #define RC_STD_MAKE_FORMAT_ARGS std::make_format_args
 #else
+#ifdef WIN32
 #define RC_STD_MAKE_FORMAT_ARGS std::make_wformat_args
+#else
+#define RC_STD_MAKE_FORMAT_ARGS std::make_format_args
+#endif
 #endif
 
 namespace RC::Output
@@ -122,11 +126,11 @@ namespace RC::Output
 
                 if (device->has_optional_arg())
                 {
-                    device->receive_with_optional_arg(std::vformat(content), RC_STD_MAKE_FORMAT_ARGS(static_cast<int32_t>(optional_arg)));
+                    device->receive_with_optional_arg(content, 0);
                 }
                 else
                 {
-                    device->receive(std::vformat(content));
+                    device->receive(content);
                 }
             }
         }
@@ -343,11 +347,11 @@ namespace RC::Output
 
             if (device->has_optional_arg())
             {
-                device->receive_with_optional_arg(std::vformat(content, RC_STD_MAKE_FORMAT_ARGS(fmt_args...)), optional_arg);
+                device->receive_with_optional_arg(std::vformat((std::string)content, RC_STD_MAKE_FORMAT_ARGS(fmt_args...)), optional_arg);
             }
             else
             {
-                device->receive(std::vformat(content, RC_STD_MAKE_FORMAT_ARGS(fmt_args...)));
+                device->receive(std::vformat((std::string)content, RC_STD_MAKE_FORMAT_ARGS(fmt_args...)));
             }
         }
     }

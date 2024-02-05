@@ -26,9 +26,9 @@ namespace RC::UVTD
 
             auto final_class_name = class_name;
 
-            auto wrapper_header_file = sol_bindings_output_path / std::format(STR("SolBindings_{}.hpp"), final_class_name_clean);
+            auto wrapper_header_file = sol_bindings_output_path / std::format(SYSSTR("SolBindings_{}.hpp"), final_class_name_clean);
 
-            Output::send(STR("Generating file '{}'\n"), wrapper_header_file.wstring());
+            Output::send(SYSSTR("Generating file '{}'\n"), wrapper_header_file.wstring());
 
             Output::Targets<Output::NewFileDevice> header_wrapper_dumper;
 

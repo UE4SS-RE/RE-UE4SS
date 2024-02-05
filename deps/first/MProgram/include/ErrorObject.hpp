@@ -1,6 +1,12 @@
 #pragma once
 
 #include <cstdio>
+#include <cstring>
+
+#ifdef LINUX
+#define sprintf_s snprintf
+#define strncpy_s strncpy
+#endif
 
 namespace RC
 {

@@ -6,6 +6,8 @@
 #include <File/File.hpp>
 #include <ProtoParser/TokenParser.hpp>
 
+#include <File/Macros.hpp>
+
 namespace RC::Parser
 {
     namespace JSONInternal
@@ -24,31 +26,31 @@ namespace RC::Parser
             EndOfFile,
         };
 
-        auto static token_type_to_string(const TokenType token_type) -> File::StringType
+        auto static token_type_to_string(const TokenType token_type) -> SystemStringType
         {
             switch (token_type)
             {
             case Default:
-                return STR("Default");
+                return SYSSTR("Default");
             case OpenCurlyBrace:
-                return STR("OpenCurlyBrace");
+                return SYSSTR("OpenCurlyBrace");
             case CloseCurlyBrace:
-                return STR("CloseCurlyBrace");
+                return SYSSTR("CloseCurlyBrace");
             case OpenSquareBracket:
-                return STR("OpenSquareBracket");
+                return SYSSTR("OpenSquareBracket");
             case CloseSquareBracket:
-                return STR("CloseSquareBracket");
+                return SYSSTR("CloseSquareBracket");
             case Colon:
-                return STR("Colon");
+                return SYSSTR("Colon");
             case Comma:
-                return STR("Comma");
+                return SYSSTR("Comma");
                 break;
             case DoubleQuote:
-                return STR("DoubleQuote");
+                return SYSSTR("DoubleQuote");
             case Characters:
-                return STR("Characters");
+                return SYSSTR("Characters");
             case EndOfFile:
-                return STR("EndOfFile");
+                return SYSSTR("EndOfFile");
             }
         }
 
@@ -63,29 +65,29 @@ namespace RC::Parser
         class ItemBase
         {
           public:
-            File::StringType m_name{STR("--UNNAMED-ITEM--")};
+            SystemStringType m_name{SYSSTR("--UNNAMED-ITEM--")};
             bool m_is_global_scope{false};
 
           public:
-            auto get_name() -> File::StringViewType;
+            auto get_name() -> SystemStringType;
 
             virtual ~ItemBase() = default;
-            virtual auto to_string() -> File::StringType = 0;
+            virtual auto to_string() -> SystemStringType = 0;
             virtual auto get_type() -> ItemType = 0;
         };
 
         class StringItem : public ItemBase
         {
           public:
-            File::StringType m_value{};
+            SystemStringType m_value{};
 
           public:
             StringItem() = default;
-            StringItem(const File::StringType& value) : m_value(value)
+            StringItem(const SystemStringType& value) : m_value(value)
             {
             }
 
-            auto to_string() -> File::StringType override;
+            auto to_string() -> SystemStringType override;
             auto get_type() -> ItemType override
             {
                 return ItemType::String;
@@ -100,7 +102,7 @@ namespace RC::Parser
             size_t m_previous_column_without_comma{};
 
           public:
-            auto to_string() -> File::StringType override;
+            auto to_string() -> SystemStringType override;
             auto get_type() -> ItemType override
             {
                 return ItemType::Object;
@@ -113,7 +115,7 @@ namespace RC::Parser
             std::vector<std::unique_ptr<ItemBase>> m_members{};
 
           public:
-            auto to_string() -> File::StringType override;
+            auto to_string() -> SystemStringType override;
             auto get_type() -> ItemType override
             {
                 return ItemType::Array;
@@ -160,18 +162,18 @@ namespace RC::Parser
             ItemType m_next_item_expected{};
             TokenType m_next_token_expected{TokenType::Default};
             TokenTypeStack m_processed_token_types{};
-            File::StringType m_string_value_buffer{};
+            SystemStringType m_string_value_buffer{};
 
             bool m_double_quote_opened{false};
             bool m_double_quote_successfully_closed{false};
 
           public:
-            TokenParser(const Parser::Tokenizer& tokenizer, File::StringType& input) : Parser::TokenParser(tokenizer, input)
+            TokenParser(const Parser::Tokenizer& tokenizer, SystemStringType& input) : Parser::TokenParser(tokenizer, input)
             {
             }
 
           private:
-            auto token_to_string(const Token& token) -> File::StringType;
+            auto token_to_string(const Token& token) -> SystemStringType;
             auto skip_all_spaces() -> void;
 
             auto parse_open_curly_brace(const Token& token) -> void;
@@ -198,10 +200,10 @@ namespace RC::Parser
         JSON() = default;
 
       private:
-        auto parse_internal(File::StringType& input) -> void;
+        auto parse_internal(SystemStringType& input) -> void;
 
       public:
-        auto parse(File::StringType& input) -> void;
+        auto parse(SystemStringType& input) -> void;
         auto parse(File::Handle&) -> void;
         auto release_contents() -> std::vector<std::unique_ptr<JSONInternal::ItemBase>>;
 

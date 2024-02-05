@@ -10,9 +10,9 @@ namespace RC::UVTD
         auto pdb_name_no_underscore = pdb_name;
         pdb_name_no_underscore.replace(pdb_name_no_underscore.find(STR('_')), 1, STR(""));
 
-        auto virtual_header_file = virtual_gen_output_include_path / std::format(STR("UnrealVirtual{}.hpp"), pdb_name_no_underscore);
+        auto virtual_header_file = virtual_gen_output_include_path / std::format(SYSSTR("UnrealVirtual{}.hpp"), pdb_name_no_underscore);
 
-        Output::send(STR("Generating file '{}'\n"), virtual_header_file.wstring());
+        Output::send(SYSSTR("Generating file '{}'\n"), virtual_header_file.wstring());
 
         Output::Targets<Output::NewFileDevice> virtual_header_dumper;
         auto& virtual_header_file_device = virtual_header_dumper.get_device<Output::NewFileDevice>();
@@ -21,9 +21,9 @@ namespace RC::UVTD
             return File::StringType{string};
         });
 
-        auto virtual_src_file = virtual_gen_function_bodies_path / std::format(STR("UnrealVirtual{}.cpp"), pdb_name_no_underscore);
+        auto virtual_src_file = virtual_gen_function_bodies_path / std::format(SYSSTR("UnrealVirtual{}.cpp"), pdb_name_no_underscore);
 
-        Output::send(STR("Generating file '{}'\n"), virtual_src_file.wstring());
+        Output::send(SYSSTR("Generating file '{}'\n"), virtual_src_file.wstring());
 
         Output::Targets<Output::NewFileDevice> virtual_src_dumper;
         auto& virtual_src_file_device = virtual_src_dumper.get_device<Output::NewFileDevice>();

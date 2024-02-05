@@ -150,9 +150,9 @@ namespace RC::GUI
             s_do_call = false;
             auto& function_flags = s_function->GetFunctionFlags();
             function_flags |= FUNC_Exec;
-            Output::send(STR("Processing command: {}\n"), s_cmd);
+            Output::send(SYSSTR("Processing command: {}\n"), s_cmd);
             bool call_succeeded = s_instance->ProcessConsoleExec(s_cmd.c_str(), s_ar, s_executor);
-            Output::send(STR("call_succeeded: {}\n"), call_succeeded);
+            Output::send(SYSSTR("call_succeeded: {}\n"), call_succeeded);
             function_flags &= ~FUNC_Exec;
         }
     }
@@ -164,13 +164,13 @@ namespace RC::GUI
         }
         auto function = m_currently_selected_function->function;
 
-        auto cmd = std::format(STR("{}"), function->GetName());
+        auto cmd = std::format(SYSSTR("{}"), UEStringToSystemString(function->GetName()));
         for (const auto& param : m_params_for_selected_function)
         {
-            cmd.append(std::format(STR(" {}"), to_wstring(param.value_from_ui)));
+            cmd.append(std::format(SYSSTR(" {}"), to_wstring(param.value_from_ui)));
         }
 
-        Output::send(STR("Queueing command: {}\n"), cmd);
+        Output::send(SYSSTR("Queueing command: {}\n"), cmd);
 
         s_cmd = cmd;
         s_instance = instance;
@@ -245,19 +245,19 @@ namespace RC::GUI
 
     static auto get_typeless_object_name(UObject* object) -> std::string
     {
-        auto object_name = to_string(object->GetFullName());
+        auto object_name = UEStringToSystemString(object->GetFullName());
         auto object_name_type_space_location = object_name.find(" ");
         if (object_name_type_space_location == object_name.npos)
         {
-            Output::send<LogLevel::Warning>(STR("Could not copy name of PlayerController, was unable to find space in full PlayerController name: '{}'."),
-                                            to_wstring(object_name));
+            Output::send<LogLevel::Warning>(SYSSTR("Could not copy name of PlayerController, was unable to find space in full PlayerController name: '{}'."),
+                                            object_name);
             return {};
         }
         else
         {
             if (object_name_type_space_location > static_cast<unsigned long long>(std::numeric_limits<long long>::max()))
             {
-                Output::send<LogLevel::Warning>(STR("integer overflow when converting pc_name_type_space_location to signed"));
+                Output::send<LogLevel::Warning>(SYSSTR("integer overflow when converting pc_name_type_space_location to signed"));
                 return {};
             }
             else
@@ -313,7 +313,7 @@ namespace RC::GUI
     {
         m_prev_instance = instance;
 
-        auto popup_modal_id = to_string(std::format(STR("##functions-for-{}"), instance->HashObject()));
+        auto popup_modal_id = to_string(std::format(SYSSTR("##functions-for-{}"), instance->HashObject()));
         auto& is_open = is_widget_open();
         if (is_open)
         {

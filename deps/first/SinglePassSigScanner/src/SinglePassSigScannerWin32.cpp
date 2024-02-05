@@ -2,12 +2,22 @@
 #include <future>
 #include <regex>
 
+#include <cstring>
+
+#ifdef WIN32
 #define NOMINMAX
 #include <Windows.h>
 #include <Psapi.h>
+#endif
+
 
 #include <Profiler/Profiler.hpp>
 #include <SigScanner/SinglePassSigScanner.hpp>
+
+#ifdef LINUX
+#include <SigScanner/Linux/DLData.hpp>
+#define byte uint8_t
+#endif
 
 namespace RC
 {
@@ -18,7 +28,7 @@ namespace RC
     SinglePassScanner::ScanMethod SinglePassScanner::m_scan_method = ScanMethod::Scalar;
     uint32_t SinglePassScanner::m_multithreading_module_size_threshold = 0x1000000;
     std::mutex SinglePassScanner::m_scanner_mutex{};
-
+#ifdef WIN32
     auto WIN_MODULEINFO::operator=(MODULEINFO other) -> WIN_MODULEINFO&
     {
         lpBaseOfDll = other.lpBaseOfDll;
@@ -31,6 +41,13 @@ namespace RC
     {
         return *std::bit_cast<MODULEINFO*>(&array[static_cast<size_t>(index)]);
     }
+#else
+    auto ScanTargetArray::operator[](ScanTarget index) -> DLData&
+    {
+        return array[static_cast<size_t>(index)];
+    }
+#endif
+
 
     auto ScanTargetToString(ScanTarget scan_target) -> std::string
     {

@@ -158,7 +158,7 @@ namespace RC::UVTD
 
     auto MemberVarsDumper::dump_member_variable_layouts(std::unordered_map<File::StringType, SymbolNameInfo>& names) -> void
     {
-        Output::send(STR("Dumping {} symbols for {}\n"), names.size(), symbols.pdb_file_path.filename().stem().wstring());
+        Output::send(SYSSTR("Dumping {} symbols for {}\n"), names.size(), symbols.pdb_file_path.filename().stem().wstring());
 
         const PDB::TPIStream tpi_stream = PDB::CreateTPIStream(symbols.pdb_file);
 
@@ -201,7 +201,7 @@ namespace RC::UVTD
 
         auto default_template_file = std::filesystem::path{STR("MemberVariableLayout.ini")};
 
-        Output::send(STR("Generating file '{}'\n"), default_template_file.wstring());
+        Output::send(SYSSTR("Generating file '{}'\n"), default_template_file.wstring());
 
         Output::Targets<Output::NewFileDevice> default_ini_dumper;
         auto& default_ini_file_device = default_ini_dumper.get_device<Output::NewFileDevice>();
@@ -210,9 +210,9 @@ namespace RC::UVTD
             return File::StringType{string};
         });
 
-        auto template_file = std::format(STR("MemberVariableLayout_{}_Template.ini"), pdb_name);
+        auto template_file = std::format(SYSSTR("MemberVariableLayout_{}_Template.ini"), pdb_name);
 
-        Output::send(STR("Generating file '{}'\n"), template_file);
+        Output::send(SYSSTR("Generating file '{}'\n"), template_file);
 
         Output::Targets<Output::NewFileDevice> ini_dumper;
         auto& ini_file_device = ini_dumper.get_device<Output::NewFileDevice>();
@@ -232,9 +232,9 @@ namespace RC::UVTD
             }
 
             auto default_setter_src_file = member_variable_layouts_gen_function_bodies_path /
-                                           std::format(STR("{}_MemberVariableLayout_DefaultSetter_{}.cpp"), pdb_name, class_entry.class_name_clean);
+                                           std::format(SYSSTR("{}_MemberVariableLayout_DefaultSetter_{}.cpp"), pdb_name, class_entry.class_name_clean);
 
-            Output::send(STR("Generating file '{}'\n"), default_setter_src_file.wstring());
+            Output::send(SYSSTR("Generating file '{}'\n"), default_setter_src_file.wstring());
 
             Output::Targets<Output::NewFileDevice> default_setter_src_dumper;
             auto& default_setter_src_file_device = default_setter_src_dumper.get_device<Output::NewFileDevice>();

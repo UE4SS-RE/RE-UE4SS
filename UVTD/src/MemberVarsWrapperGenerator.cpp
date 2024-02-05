@@ -10,7 +10,7 @@ namespace RC::UVTD
     {
         auto macro_setter_file = std::filesystem::path{STR("MacroSetter.hpp")};
 
-        Output::send(STR("Generating file '{}'\n"), macro_setter_file.wstring());
+        Output::send(SYSSTR("Generating file '{}'\n"), macro_setter_file.wstring());
 
         Output::Targets<Output::NewFileDevice> macro_setter_dumper;
         auto& macro_setter_file_device = macro_setter_dumper.get_device<Output::NewFileDevice>();
@@ -27,9 +27,9 @@ namespace RC::UVTD
             }
 
             auto wrapper_header_file = member_variable_layouts_gen_output_include_path /
-                                       std::format(STR("MemberVariableLayout_HeaderWrapper_{}.hpp"), class_entry.class_name_clean);
+                                       std::format(SYSSTR("MemberVariableLayout_HeaderWrapper_{}.hpp"), class_entry.class_name_clean);
 
-            Output::send(STR("Generating file '{}'\n"), wrapper_header_file.wstring());
+            Output::send(SYSSTR("Generating file '{}'\n"), wrapper_header_file.wstring());
 
             Output::Targets<Output::NewFileDevice> header_wrapper_dumper;
             auto& wrapper_header_file_device = header_wrapper_dumper.get_device<Output::NewFileDevice>();
@@ -39,9 +39,9 @@ namespace RC::UVTD
             });
 
             auto wrapper_src_file =
-                    member_variable_layouts_gen_output_include_path / std::format(STR("MemberVariableLayout_SrcWrapper_{}.hpp"), class_entry.class_name_clean);
+                    member_variable_layouts_gen_output_include_path / std::format(SYSSTR("MemberVariableLayout_SrcWrapper_{}.hpp"), class_entry.class_name_clean);
 
-            Output::send(STR("Generating file '{}'\n"), wrapper_src_file.wstring());
+            Output::send(SYSSTR("Generating file '{}'\n"), wrapper_src_file.wstring());
 
             Output::Targets<Output::NewFileDevice> wrapper_src_dumper;
             auto& wrapper_src_file_device = wrapper_src_dumper.get_device<Output::NewFileDevice>();

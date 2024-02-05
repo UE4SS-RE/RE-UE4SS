@@ -5,6 +5,8 @@
 #include <set>
 #include <unordered_map>
 #include <unordered_set>
+#include <cstring>
+#include <vector>
 
 #include <File/File.hpp>
 #include <SDKGenerator/Common.hpp>
@@ -26,15 +28,15 @@ namespace RC::Unreal
 
 namespace RC::UEGenerator
 {
-    using FFilePath = std::filesystem::path;
-    using UObject = RC::Unreal::UObject;
-    using UStruct = RC::Unreal::UStruct;
-    using UClass = RC::Unreal::UClass;
-    using FProperty = RC::Unreal::FProperty;
-    using FField = RC::Unreal::FField;
-    using UEnum = RC::Unreal::UEnum;
-    using UScriptStruct = RC::Unreal::UScriptStruct;
-    using UFunction = RC::Unreal::UFunction;
+    using FFilePath = ::std::filesystem::path;
+    using UObject = ::RC::Unreal::UObject;
+    using UStruct = ::RC::Unreal::UStruct;
+    using UClass = ::RC::Unreal::UClass;
+    using FProperty = ::RC::Unreal::FProperty;
+    using FField = ::RC::Unreal::FField;
+    using UEnum = ::RC::Unreal::UEnum;
+    using UScriptStruct = ::RC::Unreal::UScriptStruct;
+    using UFunction = ::RC::Unreal::UFunction;
 
     enum class DependencyLevel
     {
@@ -65,14 +67,14 @@ namespace RC::UEGenerator
 
     struct PropertyTypeDeclarationContext
     {
-        std::wstring context_name;
+        SystemStringType context_name;
 
         class GeneratedSourceFile* source_file;
 
         bool is_top_level_declaration;
         bool* out_is_bitmask_bool;
 
-        PropertyTypeDeclarationContext(const std::wstring& context_name,
+        PropertyTypeDeclarationContext(const SystemStringType& context_name,
                                        GeneratedSourceFile* source_file = NULL,
                                        bool is_top_level_declaration = false,
                                        bool* out_is_bitmask_bool = NULL)
@@ -91,21 +93,26 @@ namespace RC::UEGenerator
 
     struct StringInsensitiveCompare
     {
-        auto operator()(const std::wstring& a, const std::wstring& b) const -> bool
+        auto operator()(const SystemStringType& a, const SystemStringType& b) const -> bool
         {
+            #ifdef LINUX
+            return strcasecmp(a.c_str(), b.c_str()) < 0;
+
+            #else
             return _wcsicmp(a.c_str(), b.c_str()) < 0;
+            #endif
         }
     };
 
-    using CaseInsensitiveSet = std::set<std::wstring, StringInsensitiveCompare>;
+    using CaseInsensitiveSet = ::std::set<SystemStringType, StringInsensitiveCompare>;
 
     class GeneratedFile
     {
       protected:
-        std::wstring m_file_base_name;
+        SystemStringType m_file_base_name;
         FFilePath m_full_file_path;
 
-        std::wstring m_file_contents_buffer;
+        SystemStringType m_file_contents_buffer;
         int32_t m_current_indent_count;
 
       public:
@@ -117,34 +124,52 @@ namespace RC::UEGenerator
         GeneratedFile(GeneratedFile&&) = default;
         auto operator=(const GeneratedFile&) -> void = delete;
 
-        auto append_line(const std::wstring& line) -> void;
-        auto append_line_no_indent(const std::wstring& line) -> void;
+        auto append_line(const SystemStringType& line) -> void;
+        auto append_line_no_indent(const SystemStringType& line) -> void;
         auto begin_indent_level() -> void;
         auto end_indent_level() -> void;
         auto serialize_file_content_to_disk() -> bool;
 
         virtual auto has_content_to_save() const -> bool;
-        virtual auto generate_file_contents() -> std::wstring;
+        virtual auto generate_file_contents() -> SystemStringType;
     };
 
     class GeneratedSourceFile : public GeneratedFile
     {
       private:
-        std::wstring m_file_module_name;
-        std::map<UObject*, DependencyLevel> m_dependencies;
-        std::set<std::wstring> m_extra_includes;
-        mutable std::set<std::wstring> m_dependency_module_names;
+        SystemStringType m_file_module_name;
+        ::std::map<UObject*, DependencyLevel> m_dependencies;
+        ::std::set<SystemStringType> m_extra_includes;
+        mutable ::std::set<SystemStringType> m_dependency_module_names;
         UObject* m_object;
         GeneratedSourceFile* m_header_file;
         bool m_is_implementation_file;
         bool m_needs_get_type_hash;
 
       public:
-        std::wstring m_implementation_constructor;
-        std::unordered_set<StringType> parent_property_names{};
-        std::map<FProperty*, std::tuple<StringType /*property type*/, StringType /*attach string*/, bool /*access type*/>> attachments{};
+        // workaround for clang tuple bug 
+        // https://github.com/llvm/llvm-project/issues/17042
+        struct attachment_data {
+            SystemStringType property_type; // <0>
+            SystemStringType attach_string; // <1>
+            bool access_type; // <2>
 
-        GeneratedSourceFile(const FFilePath& file_path, const std::wstring& file_module_name, bool is_implementation_file, UObject* object);
+            attachment_data(const SystemStringType& property_type, const SystemStringType& attach_string, bool access_type)
+                : property_type(property_type), attach_string(attach_string), access_type(access_type)
+            {
+            }
+
+            attachment_data(const attachment_data& other) = default;
+            attachment_data(attachment_data&& other) = default;
+            auto operator=(const attachment_data&) -> attachment_data& = default;
+            auto operator=(attachment_data&&) -> attachment_data& = default;
+
+        };
+        SystemStringType m_implementation_constructor;
+        ::std::unordered_set<SystemStringType> parent_property_names{};
+        ::std::map<FProperty*, attachment_data> attachments{};
+
+        GeneratedSourceFile(const FFilePath& file_path, const SystemStringType& file_module_name, bool is_implementation_file, UObject* object);
 
         // Delete copy and move constructors and assignment operator
         GeneratedSourceFile(const GeneratedSourceFile&) = delete;
@@ -153,9 +178,9 @@ namespace RC::UEGenerator
 
         auto set_header_file(GeneratedSourceFile* header_file) -> void;
         auto add_dependency_object(UObject* object, DependencyLevel dependency_level) -> void;
-        auto add_extra_include(const std::wstring& included_file_name) -> void;
+        auto add_extra_include(const SystemStringType& included_file_name) -> void;
 
-        auto get_header_module_name() const -> const std::wstring&
+        auto get_header_module_name() const -> const SystemStringType&
         {
             return m_file_module_name;
         }
@@ -179,30 +204,30 @@ namespace RC::UEGenerator
 
         virtual auto has_content_to_save() const -> bool override;
 
-        auto copy_dependency_module_names(std::set<std::wstring>& out_dependency_module_names) const -> void
+        auto copy_dependency_module_names(::std::set<SystemStringType>& out_dependency_module_names) const -> void
         {
             out_dependency_module_names.insert(m_dependency_module_names.begin(), m_dependency_module_names.end());
         }
 
         auto static create_source_file(const FFilePath& root_dir,
-                                       const std::wstring& module_name,
-                                       const std::wstring& base_name,
+                                       const SystemStringType& module_name,
+                                       const SystemStringType& base_name,
                                        bool is_implementation_file,
                                        UObject* object) -> GeneratedSourceFile;
-        virtual auto generate_file_contents() -> std::wstring override;
+        virtual auto generate_file_contents() -> SystemStringType override;
 
       protected:
         auto has_dependency(UObject* object, DependencyLevel dependency_level) -> bool;
 
-        auto generate_pre_declarations_string() const -> std::wstring;
-        auto generate_includes_string() const -> std::wstring;
+        auto generate_pre_declarations_string() const -> SystemStringType;
+        auto generate_includes_string() const -> SystemStringType;
     };
 
     struct UniqueName
     {
         static constexpr int32_t HAS_NO_DUPLICATES = 1;
 
-        File::StringType name{};
+        SystemStringType name{};
         int32_t usable_id{HAS_NO_DUPLICATES};
     };
 
@@ -210,26 +235,26 @@ namespace RC::UEGenerator
     {
       private:
         FFilePath m_root_directory;
-        std::wstring m_primary_module_name;
+        SystemStringType m_primary_module_name;
 
-        std::set<std::wstring> m_forced_module_dependencies;
-        std::set<std::wstring> m_ignored_module_names;
-        std::set<std::wstring> m_classes_with_object_initializer;
+        ::std::set<SystemStringType> m_forced_module_dependencies;
+        ::std::set<SystemStringType> m_ignored_module_names;
+        ::std::set<SystemStringType> m_classes_with_object_initializer;
 
-        std::unordered_map<std::wstring, std::wstring> m_underlying_enum_types;
-        std::set<std::wstring> m_blueprint_visible_enums;
-        std::set<std::wstring> m_blueprint_visible_structs;
-        std::map<std::wstring, std::shared_ptr<std::set<std::wstring>>> m_module_dependencies;
+        ::std::unordered_map<SystemStringType, SystemStringType> m_underlying_enum_types;
+        ::std::set<SystemStringType> m_blueprint_visible_enums;
+        ::std::set<SystemStringType> m_blueprint_visible_structs;
+        ::std::map<SystemStringType, ::std::shared_ptr<::std::set<SystemStringType>>> m_module_dependencies;
 
-        std::vector<GeneratedSourceFile> m_header_files;
-        std::unordered_set<UStruct*> m_structs_that_need_get_type_hash;
+        ::std::vector<GeneratedSourceFile> m_header_files;
+        ::std::unordered_set<UStruct*> m_structs_that_need_get_type_hash;
 
         // Storage to ensure that we don't have duplicate file names
-        static std::map<File::StringType, UniqueName> m_used_file_names;
-        static std::map<UObject*, int32_t> m_dependency_object_to_unique_id;
+        static ::std::map<SystemStringType, UniqueName> m_used_file_names;
+        static ::std::map<UObject*, int32_t> m_dependency_object_to_unique_id;
 
         // Storage for class defaultsubojects when populating property initializers
-        std::unordered_map<std::wstring, std::wstring> m_class_subobjects;
+        ::std::unordered_map<SystemStringType, SystemStringType> m_class_subobjects;
 
       public:
         UEHeaderGenerator(const FFilePath& root_directory);
@@ -243,8 +268,8 @@ namespace RC::UEGenerator
 
         auto dump_native_packages() -> void;
         auto generate_object_description_file(UObject* object) -> bool;
-        auto generate_module_build_file(const std::wstring& module_name) -> void;
-        auto generate_module_implementation_file(const std::wstring& module_name) -> void;
+        auto generate_module_build_file(const SystemStringType& module_name) -> void;
+        auto generate_module_implementation_file(const SystemStringType& module_name) -> void;
 
       private:
         auto generate_interface_definition(UClass* function, GeneratedSourceFile& header_data) -> void;
@@ -264,7 +289,7 @@ namespace RC::UEGenerator
                                const CaseInsensitiveSet& blacklisted_property_names,
                                bool generate_as_override = false) -> void;
 
-        auto generate_property_value(UStruct* ustruct, FProperty* property, void* object, GeneratedSourceFile& implementation_file, const std::wstring& property_scope)
+        auto generate_property_value(UStruct* ustruct, FProperty* property, void* object, GeneratedSourceFile& implementation_file, const SystemStringType& property_scope)
                 -> void;
         auto generate_function_implementation(UClass* uclass,
                                               UFunction* function,
@@ -272,49 +297,49 @@ namespace RC::UEGenerator
                                               bool is_generating_interface,
                                               const CaseInsensitiveSet& blacklisted_property_names) -> void;
 
-        auto generate_interface_flags(UClass* uinterface) const -> std::wstring;
-        auto generate_class_flags(UClass* uclass) const -> std::wstring;
-        auto generate_struct_flags(UScriptStruct* script_struct) const -> std::wstring;
-        auto generate_enum_flags(UEnum* uenum) const -> std::wstring;
-        auto generate_property_type_declaration(FProperty* property, const PropertyTypeDeclarationContext& context) -> std::wstring;
-        auto generate_property_flags(FProperty* property) const -> std::wstring;
-        auto generate_function_argument_flags(FProperty* property) const -> std::wstring;
-        auto generate_function_flags(UFunction* function, bool is_function_pure_virtual = false) const -> std::wstring;
+        auto generate_interface_flags(UClass* uinterface) const -> SystemStringType;
+        auto generate_class_flags(UClass* uclass) const -> SystemStringType;
+        auto generate_struct_flags(UScriptStruct* script_struct) const -> SystemStringType;
+        auto generate_enum_flags(UEnum* uenum) const -> SystemStringType;
+        auto generate_property_type_declaration(FProperty* property, const PropertyTypeDeclarationContext& context) -> SystemStringType;
+        auto generate_property_flags(FProperty* property) const -> SystemStringType;
+        auto generate_function_argument_flags(FProperty* property) const -> SystemStringType;
+        auto generate_function_flags(UFunction* function, bool is_function_pure_virtual = false) const -> SystemStringType;
         auto generate_function_parameter_list(UClass* property,
                                               UFunction* function,
                                               GeneratedSourceFile& header_data,
                                               bool generate_comma_before_name,
-                                              const std::wstring& context_name,
+                                              const SystemStringType& context_name,
                                               const CaseInsensitiveSet& blacklisted_property_names,
-                                              int32_t* out_num_params = NULL) -> std::wstring;
-        auto generate_default_property_value(FProperty* property, GeneratedSourceFile& header_data, const std::wstring& ContextName) -> std::wstring;
+                                              int32_t* out_num_params = NULL) -> SystemStringType;
+        auto generate_default_property_value(FProperty* property, GeneratedSourceFile& header_data, const SystemStringType& ContextName) -> SystemStringType;
 
-        auto generate_enum_value(UEnum* uenum, int64_t enum_value) -> std::wstring;
+        auto generate_enum_value(UEnum* uenum, int64_t enum_value) -> SystemStringType;
         auto generate_simple_assignment_expression(FProperty* property,
-                                                   const std::wstring& value,
+                                                   const SystemStringType& value,
                                                    GeneratedSourceFile& implementation_file,
-                                                   const std::wstring& property_scope,
-                                                   const std::wstring& operator_type = STR(" = ")) -> void;
+                                                   const SystemStringType& property_scope,
+                                                   const SystemStringType& operator_type = SYSSTR(" = ")) -> void;
         auto generate_advanced_assignment_expression(FProperty* property,
-                                                     const std::wstring& value,
+                                                     const SystemStringType& value,
                                                      GeneratedSourceFile& implementation_file,
-                                                     const std::wstring& property_scope,
-                                                     const std::wstring& property_type,
-                                                     const std::wstring& operator_type = STR(" = ")) -> void;
+                                                     const SystemStringType& property_scope,
+                                                     const SystemStringType& property_type,
+                                                     const SystemStringType& operator_type = SYSSTR(" = ")) -> void;
 
-        auto static generate_parameter_count_string(int32_t parameter_count) -> std::wstring;
-        auto static determine_primary_game_module_name() -> std::wstring;
+        auto static generate_parameter_count_string(int32_t parameter_count) -> SystemStringType;
+        auto static determine_primary_game_module_name() -> SystemStringType;
 
       public:
-        auto add_module_and_sub_module_dependencies(std::set<std::wstring>& out_module_dependencies, const std::wstring& module_name, bool add_self_module = true)
+        auto add_module_and_sub_module_dependencies(::std::set<SystemStringType>& out_module_dependencies, const SystemStringType& module_name, bool add_self_module = true)
                 -> void;
         auto static collect_blacklisted_property_names(UObject* property) -> CaseInsensitiveSet;
 
-        auto static generate_object_pre_declaration(UObject* object) -> std::vector<std::vector<std::wstring>>;
+        auto static generate_object_pre_declaration(UObject* object) -> ::std::vector<::std::vector<SystemStringType>>;
 
-        auto static convert_module_name_to_api_name(const std::wstring& module_name) -> std::wstring;
-        auto static get_module_name_for_package(UObject* package) -> std::wstring;
-        auto static sanitize_enumeration_name(const std::wstring& enumeration_name) -> std::wstring;
+        auto static convert_module_name_to_api_name(const SystemStringType& module_name) -> SystemStringType;
+        auto static get_module_name_for_package(UObject* package) -> SystemStringType;
+        auto static sanitize_enumeration_name(const SystemStringType& enumeration_name) -> SystemStringType;
         auto static get_highest_enum(UEnum* uenum) -> int64_t;
         auto static get_lowest_enum(UEnum* uenum) -> int64_t;
 
@@ -325,8 +350,8 @@ namespace RC::UEGenerator
         auto static append_access_modifier(GeneratedSourceFile& header_data, AccessModifier needed_access, AccessModifier& current_access) -> void;
         auto static get_property_access_modifier(FProperty* property) -> AccessModifier;
         auto static get_function_access_modifier(UFunction* function) -> AccessModifier;
-        auto static create_string_literal(const std::wstring& string) -> std::wstring;
-        auto static get_header_name_for_object(UObject* object, bool get_existing_header = false) -> std::wstring;
-        auto static generate_cross_module_include(UObject* object, const std::wstring& module_name, const std::wstring& fallback_name) -> std::wstring;
+        auto static create_string_literal(const SystemStringType& string) -> SystemStringType;
+        auto static get_header_name_for_object(UObject* object, bool get_existing_header = false) -> SystemStringType;
+        auto static generate_cross_module_include(UObject* object, const SystemStringType& module_name, const SystemStringType& fallback_name) -> SystemStringType;
     };
 } // namespace RC::UEGenerator

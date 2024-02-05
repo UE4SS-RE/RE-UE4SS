@@ -25,12 +25,12 @@ namespace RC::Output
     auto OutputDevice::get_now_as_string() -> const File::StringType
     {
         auto now = std::chrono::system_clock::now();
-        const File::StringType when_as_string = std::format(STR("{:%Y-%m-%d %X}"), now);
+        const File::StringType when_as_string = std::format(SYSSTR("{:%Y-%m-%d %X}"), now);
         return when_as_string;
     }
 
     auto OutputDevice::default_format_string(File::StringViewType string_to_format) -> File::StringType
     {
-        return std::format(STR("[{}] {}"), get_now_as_string(), string_to_format);
+        return std::format(SYSSTR("[{}] {}"), get_now_as_string(), string_to_format);
     }
 } // namespace RC::Output

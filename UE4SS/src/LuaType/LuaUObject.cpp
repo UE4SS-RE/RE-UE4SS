@@ -755,7 +755,7 @@ namespace RC::LuaType
             {
                 array = new unsigned char[array_property->GetElementSize() * table_length];
 
-                params.lua.for_each_in_table([&](LuaMadeSimple::LuaTableReference table) -> bool {
+                params.lua.for_each_in_table([&](LuaMadeSimple::LuaTableReference<LuaMadeSimple::Lua> table) -> bool {
                     // Skip this table entry if the key wasn't numerical, who knows what the user put in their script
                     if (!table.key.is_integer())
                     {
@@ -1016,7 +1016,7 @@ namespace RC::LuaType
         }
         case Operation::Set:
             // For now, doing nothing just to get past the error
-            Output::send(STR("[push_weakobjectproperty] Operation::Set is not supported\n"));
+            Output::send(SYSSTR("[push_weakobjectproperty] Operation::Set is not supported\n"));
             return;
         case Operation::GetParam:
             params.lua.throw_error("[push_weakobjectproperty] Operation::GetParam is not supported");
@@ -1107,7 +1107,7 @@ namespace RC::LuaType
             if (params.lua.is_string())
             {
                 auto lua_string = params.lua.get_string();
-                auto fstring = Unreal::FString{to_wstring(lua_string).c_str()};
+                auto fstring = Unreal::FString{ SystemStringToUEString(to_generic_string(lua_string)).c_str() };
                 *string = fstring;
             }
             else if (params.lua.is_userdata())
@@ -1233,7 +1233,7 @@ Overloads:
         }
         else if (lua.is_string())
         {
-            auto* object_class = Unreal::UObjectGlobals::StaticFindObject<Unreal::UClass*>(nullptr, nullptr, to_wstring(lua.get_string()));
+            auto* object_class = Unreal::UObjectGlobals::StaticFindObject<Unreal::UClass*>(nullptr, nullptr, SystemStringToUEString(to_generic_string(lua.get_string())));
             lua.set_bool(is_a_internal(lua, object, object_class));
         }
         else

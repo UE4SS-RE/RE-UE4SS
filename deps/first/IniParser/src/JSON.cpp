@@ -11,7 +11,7 @@ namespace RC::Parser
         return std::string{in.begin(), in.end()};
     }
 
-    static auto has_only_spaces(const File::StringType& data) -> bool
+    static auto has_only_spaces(const SystemStringType& data) -> bool
     {
         if (std::all_of(data.begin(), data.end(), [](File::CharType c) {
                 return std::isspace(c) || c == '\n';
@@ -27,11 +27,11 @@ namespace RC::Parser
         }
     }
 
-    auto JSONInternal::ItemBase::get_name() -> File::StringViewType
+    auto JSONInternal::ItemBase::get_name() -> SystemStringViewType
     {
         if (m_is_global_scope)
         {
-            return STR("-- IS ANONYMOUS GLOBAL --");
+            return SYSSTR("-- IS ANONYMOUS GLOBAL --");
         }
         else
         {
@@ -39,31 +39,31 @@ namespace RC::Parser
         }
     }
 
-    auto JSONInternal::StringItem::to_string() -> File::StringType
+    auto JSONInternal::StringItem::to_string() -> SystemStringType
     {
-        return std::format(STR("String = \"{}\""), m_value);
+        return std::format(SYSSTR("String = \"{}\""), m_value);
     }
 
-    auto JSONInternal::ObjectScope::to_string() -> File::StringType
+    auto JSONInternal::ObjectScope::to_string() -> SystemStringType
     {
-        File::StringType str = std::format(STR("Object = \"{}\""), get_name());
+        SystemStringType str = std::format(SYSSTR("Object = \"{}\""), get_name());
 
         for (const auto& member : m_members)
         {
-            str.append(std::format(STR("\n\"{}\" = {}"), member->get_name(), member->to_string()));
+            str.append(std::format(SYSSTR("\n\"{}\" = {}"), member->get_name(), member->to_string()));
         }
 
         return str;
     }
 
-    auto JSONInternal::ArrayScope::to_string() -> File::StringType
+    auto JSONInternal::ArrayScope::to_string() -> SystemStringType
     {
-        return std::format(STR("Array = \"{}\""), get_name());
+        return std::format(SYSSTR("Array = \"{}\""), get_name());
     }
 
-    auto JSONInternal::TokenParser::token_to_string(const Token& token) -> File::StringType
+    auto JSONInternal::TokenParser::token_to_string(const Token& token) -> SystemStringType
     {
-        File::StringType string{};
+        SystemStringType string{};
 
         // TODO: Support manual escaping of double quotes with '\'
         while (peek().get_type() != TokenType::DoubleQuote)
@@ -342,18 +342,18 @@ namespace RC::Parser
         }
     }
 
-    auto JSON::parse_internal(File::StringType& input) -> void
+    auto JSON::parse_internal(SystemStringType& input) -> void
     {
         Tokenizer tokenizer;
         TokenContainer tc;
-        tc.add(Token::create(JSONInternal::TokenType::OpenCurlyBrace, STR("OpenCurlyBrace"), STR("{")));
-        tc.add(Token::create(JSONInternal::TokenType::CloseCurlyBrace, STR("CloseCurlyBrace"), STR("}")));
-        tc.add(Token::create(JSONInternal::TokenType::OpenSquareBracket, STR("OpenSquareBracket"), STR("[")));
-        tc.add(Token::create(JSONInternal::TokenType::CloseSquareBracket, STR("CloseSquareBracket"), STR("]")));
-        tc.add(Token::create(JSONInternal::TokenType::Colon, STR("Colon"), STR(":")));
-        tc.add(Token::create(JSONInternal::TokenType::Comma, STR("Comma"), STR(",")));
-        tc.add(Token::create(JSONInternal::TokenType::DoubleQuote, STR("DoubleQuote"), STR("\"")));
-        tc.add(Token::create(JSONInternal::TokenType::Characters, STR("Characters"), STR(""), Token::HasData::Yes));
+        tc.add(Token::create(JSONInternal::TokenType::OpenCurlyBrace, SYSSTR("OpenCurlyBrace"), SYSSTR("{")));
+        tc.add(Token::create(JSONInternal::TokenType::CloseCurlyBrace, SYSSTR("CloseCurlyBrace"), SYSSTR("}")));
+        tc.add(Token::create(JSONInternal::TokenType::OpenSquareBracket, SYSSTR("OpenSquareBracket"), SYSSTR("[")));
+        tc.add(Token::create(JSONInternal::TokenType::CloseSquareBracket, SYSSTR("CloseSquareBracket"), SYSSTR("]")));
+        tc.add(Token::create(JSONInternal::TokenType::Colon, SYSSTR("Colon"), SYSSTR(":")));
+        tc.add(Token::create(JSONInternal::TokenType::Comma, SYSSTR("Comma"), SYSSTR(",")));
+        tc.add(Token::create(JSONInternal::TokenType::DoubleQuote, SYSSTR("DoubleQuote"), SYSSTR("\"")));
+        tc.add(Token::create(JSONInternal::TokenType::Characters, SYSSTR("Characters"), SYSSTR(""), Token::HasData::Yes));
         tc.set_eof_token(JSONInternal::TokenType::EndOfFile);
         tokenizer.set_available_tokens(std::move(tc));
         tokenizer.tokenize(input);
@@ -362,7 +362,7 @@ namespace RC::Parser
         m_token_parser->parse();
     }
 
-    auto JSON::parse(File::StringType& input) -> void
+    auto JSON::parse(SystemStringType& input) -> void
     {
         parse_internal(input);
     }
@@ -391,7 +391,7 @@ namespace RC::Parser
         */
 
         /**/
-        File::StringType input = LR"(
+        SystemStringType input = LR"(
 {
     "my key": "my string, value",
     "my second key": "my other string value",

@@ -41,31 +41,31 @@ namespace RC::UEGenerator::JSONDumper
             return false;
         }
 
-        if (class_name.find(STR("BP_")) != class_name.npos)
+        if (class_name.find(SYSSTR("BP_")) != class_name.npos)
         {
             return true;
         }
-        if (class_name.find(STR("ENE_")) != class_name.npos)
+        if (class_name.find(SYSSTR("ENE_")) != class_name.npos)
         {
             return true;
         }
-        if (class_name.find(STR("BPL_")) != class_name.npos)
+        if (class_name.find(SYSSTR("BPL_")) != class_name.npos)
         {
             return true;
         }
-        if (class_name.find(STR("OBJ_")) != class_name.npos)
+        if (class_name.find(SYSSTR("OBJ_")) != class_name.npos)
         {
             return true;
         }
-        if (class_name.find(STR("LIB_")) != class_name.npos)
+        if (class_name.find(SYSSTR("LIB_")) != class_name.npos)
         {
             return true;
         }
-        if (class_name.find(STR("PRJ_")) != class_name.npos)
+        if (class_name.find(SYSSTR("PRJ_")) != class_name.npos)
         {
             return true;
         }
-        if (class_name.find(STR("WPN_")) != class_name.npos)
+        if (class_name.find(SYSSTR("WPN_")) != class_name.npos)
         {
             return true;
         }
@@ -179,7 +179,7 @@ namespace RC::UEGenerator::JSONDumper
 
     auto static should_skip_event(File::StringViewType event_name) -> bool
     {
-        if (event_name.find(STR("BndEvt")) != event_name.npos)
+        if (event_name.find(SYSSTR("BndEvt")) != event_name.npos)
         {
             return true;
         }
@@ -188,10 +188,10 @@ namespace RC::UEGenerator::JSONDumper
 
     auto dump_to_json(File::StringViewType file_name) -> void
     {
-        Output::send(STR("Loading all assets...\n"));
+        Output::send(SYSSTR("Loading all assets...\n"));
         UAssetRegistry::LoadAllAssets();
 
-        Output::send(STR("Dumping to JSON file\n"));
+        Output::send(SYSSTR("Dumping to JSON file\n"));
         auto json = JSON::Array{};
 
         UObjectGlobals::ForEachUObject([&](void* raw_object, int32_t chunk_index, int32_t object_index) {
@@ -201,7 +201,7 @@ namespace RC::UEGenerator::JSONDumper
             }
             UObject* object = static_cast<UObject*>(raw_object);
 
-            auto object_name = object->GetName();
+            auto object_name = UEStringToSystemString(object->GetName());
             if (!is_valid_class_to_dump(object_name, object))
             {
                 return LoopAction::Continue;
@@ -211,17 +211,17 @@ namespace RC::UEGenerator::JSONDumper
             object_name.erase(object_name.size() - 2, 2);
 
             auto& bp_class = json.new_object();
-            bp_class.new_string(STR("bp_class"), object_name);
+            bp_class.new_string(SYSSTR("bp_class"), object_name);
             if (auto* super_struct = object_as_class->GetSuperStruct(); super_struct)
             {
-                bp_class.new_string(STR("inherits"), super_struct->GetName());
+                bp_class.new_string(SYSSTR("inherits"), UEStringToSystemString(super_struct->GetName()));
             }
             else
             {
-                bp_class.new_null(STR("inherits"));
+                bp_class.new_null(SYSSTR("inherits"));
             }
 
-            auto& events = bp_class.new_array(STR("events"));
+            auto& events = bp_class.new_array(SYSSTR("events"));
             for (UFunction* event_function : object_as_class->ForEachFunction())
             {
                 if (should_skip_general_function(event_function))
@@ -233,16 +233,16 @@ namespace RC::UEGenerator::JSONDumper
                     continue;
                 }
 
-                auto event_name = event_function->GetName();
+                auto event_name = UEStringToSystemString(event_function->GetName());
                 if (should_skip_event(event_name))
                 {
                     continue;
                 }
 
                 auto& bp_events = events.new_object();
-                bp_events.new_string(STR("name"), event_name);
+                bp_events.new_string(SYSSTR("name"), event_name);
 
-                auto& bp_event_args = bp_events.new_array(STR("args"));
+                auto& bp_event_args = bp_events.new_array(SYSSTR("args"));
                 for (FProperty* param : event_function->ForEachProperty())
                 {
                     if (should_skip_property(param))
@@ -251,15 +251,15 @@ namespace RC::UEGenerator::JSONDumper
                     }
 
                     auto& bp_event_arg = bp_event_args.new_object();
-                    bp_event_arg.new_string(STR("name"), param->GetName());
-                    bp_event_arg.new_string(STR("type"), generate_property_cxx_name(param, true, event_function));
+                    bp_event_arg.new_string(SYSSTR("name"), UEStringToSystemString(param->GetName()));
+                    bp_event_arg.new_string(SYSSTR("type"), generate_property_cxx_name(param, true, event_function));
                     bool is_out = param->HasAnyPropertyFlags(EPropertyFlags::CPF_OutParm) && !param->HasAnyPropertyFlags(EPropertyFlags::CPF_ConstParm);
-                    bp_event_arg.new_bool(STR("is_out"), is_out);
-                    bp_event_arg.new_bool(STR("is_return"), param->HasAnyPropertyFlags(Unreal::EPropertyFlags::CPF_ReturnParm));
+                    bp_event_arg.new_bool(SYSSTR("is_out"), is_out);
+                    bp_event_arg.new_bool(SYSSTR("is_return"), param->HasAnyPropertyFlags(Unreal::EPropertyFlags::CPF_ReturnParm));
                 }
             }
 
-            auto& functions = bp_class.new_array(STR("functions"));
+            auto& functions = bp_class.new_array(SYSSTR("functions"));
             for (UFunction* function : object_as_class->ForEachFunction())
             {
                 if (should_skip_function(function))
@@ -268,9 +268,9 @@ namespace RC::UEGenerator::JSONDumper
                 }
 
                 auto& bp_function = functions.new_object();
-                bp_function.new_string(STR("name"), function->GetName());
+                bp_function.new_string(SYSSTR("name"), UEStringToSystemString(function->GetName()));
 
-                auto& bp_function_args = bp_function.new_array(STR("args"));
+                auto& bp_function_args = bp_function.new_array(SYSSTR("args"));
                 for (FProperty* param : function->ForEachProperty())
                 {
                     if (should_skip_property(param))
@@ -279,15 +279,15 @@ namespace RC::UEGenerator::JSONDumper
                     }
 
                     auto& bp_function_arg = bp_function_args.new_object();
-                    bp_function_arg.new_string(STR("name"), param->GetName());
-                    bp_function_arg.new_string(STR("type"), generate_property_cxx_name(param, true, function));
+                    bp_function_arg.new_string(SYSSTR("name"), UEStringToSystemString(param->GetName()));
+                    bp_function_arg.new_string(SYSSTR("type"), generate_property_cxx_name(param, true, function));
                     bool is_out = param->HasAnyPropertyFlags(EPropertyFlags::CPF_OutParm) && !param->HasAnyPropertyFlags(EPropertyFlags::CPF_ConstParm);
-                    bp_function_arg.new_bool(STR("is_out"), is_out);
-                    bp_function_arg.new_bool(STR("is_return"), param->HasAnyPropertyFlags(Unreal::EPropertyFlags::CPF_ReturnParm));
+                    bp_function_arg.new_bool(SYSSTR("is_out"), is_out);
+                    bp_function_arg.new_bool(SYSSTR("is_return"), param->HasAnyPropertyFlags(Unreal::EPropertyFlags::CPF_ReturnParm));
                 }
             }
 
-            auto& properties = bp_class.new_array(STR("properties"));
+            auto& properties = bp_class.new_array(SYSSTR("properties"));
             for (FProperty* property : object_as_class->ForEachProperty())
             {
                 if (should_skip_property(property))
@@ -296,11 +296,11 @@ namespace RC::UEGenerator::JSONDumper
                 }
 
                 auto& bp_property = properties.new_object();
-                bp_property.new_string(STR("name"), property->GetName());
-                bp_property.new_string(STR("type"), generate_property_cxx_name(property, true, object_as_class));
+                bp_property.new_string(SYSSTR("name"),UEStringToSystemString(property->GetName()));
+                bp_property.new_string(SYSSTR("type"), generate_property_cxx_name(property, true, object_as_class));
             }
 
-            auto& delegates = bp_class.new_array(STR("delegates"));
+            auto& delegates = bp_class.new_array(SYSSTR("delegates"));
             for (UFunction* delegate_function : object_as_class->ForEachFunction())
             {
                 if (should_skip_general_function(delegate_function))
@@ -313,9 +313,9 @@ namespace RC::UEGenerator::JSONDumper
                 }
 
                 auto& bp_delegate = delegates.new_object();
-                bp_delegate.new_string(STR("name"), delegate_function->GetName());
+                bp_delegate.new_string(SYSSTR("name"), UEStringToSystemString(delegate_function->GetName()));
 
-                auto& bp_delegate_args = bp_delegate.new_array(STR("args"));
+                auto& bp_delegate_args = bp_delegate.new_array(SYSSTR("args"));
                 for (FProperty* param : delegate_function->ForEachProperty())
                 {
                     if (should_skip_property(param))
@@ -324,11 +324,11 @@ namespace RC::UEGenerator::JSONDumper
                     }
 
                     auto& bp_delegate_arg = bp_delegate_args.new_object();
-                    bp_delegate_arg.new_string(STR("name"), param->GetName());
-                    bp_delegate_arg.new_string(STR("type"), generate_property_cxx_name(param, true, delegate_function));
+                    bp_delegate_arg.new_string(SYSSTR("name"), UEStringToSystemString(param->GetName()));
+                    bp_delegate_arg.new_string(SYSSTR("type"), generate_property_cxx_name(param, true, delegate_function));
                     bool is_out = param->HasAnyPropertyFlags(EPropertyFlags::CPF_OutParm) && !param->HasAnyPropertyFlags(EPropertyFlags::CPF_ConstParm);
-                    bp_delegate_arg.new_bool(STR("is_out"), is_out);
-                    bp_delegate_arg.new_bool(STR("is_return"), param->HasAnyPropertyFlags(Unreal::EPropertyFlags::CPF_ReturnParm));
+                    bp_delegate_arg.new_bool(SYSSTR("is_out"), is_out);
+                    bp_delegate_arg.new_bool(SYSSTR("is_return"), param->HasAnyPropertyFlags(Unreal::EPropertyFlags::CPF_ReturnParm));
                 }
             }
 
@@ -340,7 +340,7 @@ namespace RC::UEGenerator::JSONDumper
         json_file.write_string_to_file(json.serialize(JSON::ShouldFormat::Yes, &indent_level));
         json_file.close();
 
-        Output::send(STR("Unloading all forcefully loaded assets\n"));
+        Output::send(SYSSTR("Unloading all forcefully loaded assets\n"));
         UAssetRegistry::FreeAllForcefullyLoadedAssets();
     }
 } // namespace RC::UEGenerator::JSONDumper

@@ -26,8 +26,8 @@ namespace RC
 
       protected:
 #pragma warning(disable : 4251)
-        std::wstring m_mod_name;
-        std::wstring m_mod_path;
+        SystemStringType m_mod_name;
+        SystemStringType m_mod_path;
 #pragma warning(default : 4251)
 
       protected:
@@ -45,11 +45,11 @@ namespace RC
         };
 
       public:
-        Mod(UE4SSProgram&, std::wstring&& mod_name, std::wstring&& mod_path);
+        Mod(UE4SSProgram&, SystemStringType&& mod_name, SystemStringType&& mod_path);
         virtual ~Mod() = default;
 
       public:
-        auto get_name() const -> std::wstring_view;
+        auto get_name() const -> SystemStringViewType;
 
         virtual auto start_mod() -> void = 0;
         virtual auto uninstall() -> void = 0;

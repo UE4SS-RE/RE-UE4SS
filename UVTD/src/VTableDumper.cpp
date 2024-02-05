@@ -90,7 +90,7 @@ namespace RC::UVTD
             File::StringType overload_name = method_name_clean;
             if (overload_index != 0)
             {
-                overload_name += std::format(STR("_{}"), overload_index);
+                overload_name += std::format(SYSSTR("_{}"), overload_index);
             }
             overload_index++;
 
@@ -120,12 +120,12 @@ namespace RC::UVTD
         {
             if (auto it2 = it->second.find(method_name); it2 != it->second.end())
             {
-                method_name.append(std::format(STR("_{}"), ++it2->second));
+                method_name.append(std::format(SYSSTR("_{}"), ++it2->second));
                 is_overload = true;
             }
         }
 
-        Output::send(STR("  method {} offset {}\n"), method_name, vtable_offset);
+        Output::send(SYSSTR("  method {} offset {}\n"), method_name, vtable_offset);
 
         File::StringType method_name_clean = Symbols::clean_name(method_name);
 
@@ -139,7 +139,7 @@ namespace RC::UVTD
 
     auto VTableDumper::dump_vtable_for_symbol(std::unordered_map<File::StringType, SymbolNameInfo>& names) -> void
     {
-        Output::send(STR("Dumping {} struct symbols for {}\n"), names.size(), symbols.pdb_file_path.filename().stem().wstring());
+        Output::send(SYSSTR("Dumping {} struct symbols for {}\n"), names.size(), symbols.pdb_file_path.filename().stem().wstring());
 
         const PDB::TPIStream tpi_stream = PDB::CreateTPIStream(symbols.pdb_file);
 
@@ -181,11 +181,11 @@ namespace RC::UVTD
 
         for (const auto& [class_name, class_entry] : type_container.get_class_entries())
         {
-            Output::send(STR("Generating file '{}_VTableOffsets_{}_FunctionBody.cpp'\n"), pdb_name, class_entry.class_name_clean);
+            Output::send(SYSSTR("Generating file '{}_VTableOffsets_{}_FunctionBody.cpp'\n"), pdb_name, class_entry.class_name_clean);
             Output::Targets<Output::NewFileDevice> function_body_dumper;
             auto& function_body_file_device = function_body_dumper.get_device<Output::NewFileDevice>();
             function_body_file_device.set_file_name_and_path(vtable_gen_output_function_bodies_path /
-                                                             std::format(STR("{}_VTableOffsets_{}_FunctionBody.cpp"), pdb_name, class_name));
+                                                             std::format(SYSSTR("{}_VTableOffsets_{}_FunctionBody.cpp"), pdb_name, class_name));
             function_body_file_device.set_formatter([](File::StringViewType string) {
                 return File::StringType{string};
             });
@@ -208,8 +208,8 @@ namespace RC::UVTD
             }
         }
 
-        auto template_file = std::format(STR("VTableLayout_{}_Template.ini"), pdb_name);
-        Output::send(STR("Generating file '{}'\n"), template_file);
+        auto template_file = std::format(SYSSTR("VTableLayout_{}_Template.ini"), pdb_name);
+        Output::send(SYSSTR("Generating file '{}'\n"), template_file);
         Output::Targets<Output::NewFileDevice> ini_dumper;
         auto& ini_file_device = ini_dumper.get_device<Output::NewFileDevice>();
         ini_file_device.set_file_name_and_path(vtable_templates_output_path / template_file);

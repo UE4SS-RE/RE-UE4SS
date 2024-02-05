@@ -63,9 +63,9 @@ namespace RC::Output
             }
 
 #if ENABLE_OUTPUT_DEVICE_DEBUG_MODE
-            printf_s("TestDevice received: %S", fmt.c_str());
+            printf_s("TestDevice received: "SystemStringPrint, fmt.c_str());
 #else
-            printf_s("%S", fmt.data());
+            printf_s(SystemStringPrint, fmt.data());
 #endif
         }
     };

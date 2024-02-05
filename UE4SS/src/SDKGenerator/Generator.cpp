@@ -85,7 +85,7 @@ namespace RC::UEGenerator
         File::StringType tab_storage{};
         for (size_t i = 0; i < num_tabs; ++i)
         {
-            tab_storage += STR("    ");
+            tab_storage += SYSSTR("    ");
         }
 
         return tab_storage;
@@ -95,11 +95,11 @@ namespace RC::UEGenerator
         UClass* obj_class = obj->GetClassPrivate();
         if (obj_class->IsChildOf<UScriptStruct>())
         {
-            return STR("struct");
+            return SYSSTR("struct");
         }
         else
         {
-            return STR("class");
+            return SYSSTR("class");
         }
     }
     auto generate_class_name(UStruct* class_to_generate) -> File::StringType
@@ -146,7 +146,7 @@ namespace RC::UEGenerator
 
         auto create_all_files() -> void
         {
-            Output::send(STR("Creating all files...\n"));
+            Output::send(SYSSTR("Creating all files...\n"));
             for (auto& [comparison_index, generated_file] : m_files)
             {
                 if (!generated_file.ordered_primary_file_contents.empty())
@@ -166,7 +166,7 @@ namespace RC::UEGenerator
 
                     if (combined_file_contents.empty())
                     {
-                        Output::send(STR("Empty primary file contents in '{}'\n"), generated_file.package_name);
+                        Output::send(SYSSTR("Empty primary file contents in '{}'\n"), generated_file.package_name);
                     }
                     else
                     {
@@ -193,7 +193,7 @@ namespace RC::UEGenerator
 
                     if (combined_file_contents.empty())
                     {
-                        Output::send(STR("Empty secondary file contents in '{}'\n"), generated_file.package_name);
+                        Output::send(SYSSTR("Empty secondary file contents in '{}'\n"), generated_file.package_name);
                     }
                     else
                     {
@@ -212,11 +212,11 @@ namespace RC::UEGenerator
             std::vector<File::StringType> other_content;
             for (auto& line : content)
             {
-                if (line.starts_with(STR("struct")))
+                if (line.starts_with(SYSSTR("struct")))
                 {
                     struct_content.push_back(line);
                 }
-                else if (line.starts_with(STR("class")))
+                else if (line.starts_with(SYSSTR("class")))
                 {
                     class_content.push_back(line);
                 }
@@ -246,16 +246,16 @@ namespace RC::UEGenerator
             });
         }
 
-        auto get_class_name(const auto& x) -> std::wstring
+        auto get_class_name(const auto& x) -> SystemStringType
         {
             // Using this method instead of regex because it is extremely slow
-            auto class_name = x.substr(x.find(STR(' ')) + 1);
-            class_name = class_name.substr(0, class_name.find(STR(' ')));
-            if (class_name == STR("class"))
+            auto class_name = x.substr(x.find(SYSSTR(' ')) + 1);
+            class_name = class_name.substr(0, class_name.find(SYSSTR(' ')));
+            if (class_name == SYSSTR("class"))
             {
                 // Case for enum class
-                class_name = x.substr(x.find(STR(' ')) + 7);
-                class_name = class_name.substr(0, class_name.find(STR(' ')));
+                class_name = x.substr(x.find(SYSSTR(' ')) + 7);
+                class_name = class_name.substr(0, class_name.find(SYSSTR(' ')));
             }
             return class_name;
         }
@@ -269,7 +269,7 @@ namespace RC::UEGenerator
         {
             if (UE4SSProgram::settings_manager.CXXHeaderGenerator.DumpOffsetsAndSizes)
             {
-                return std::format(STR("{:85} // 0x{:04X} (size: 0x{:X})"), line, property->GetOffset_Internal(), property->GetSize());
+                return std::format(SYSSTR("{:85} // 0x{:04X} (size: 0x{:X})"), line, property->GetOffset_Internal(), property->GetSize());
             }
             else
             {
@@ -342,14 +342,14 @@ namespace RC::UEGenerator
                 return return_property_info.has_value() ? return_property_info.value().property : nullptr;
             }();
 
-            File::StringType function_name{function_info.function->GetName()};
+            File::StringType function_name{UEStringToSystemString(function_info.function->GetName())};
             if (is_delegate_function == IsDelegateFunction::Yes)
             {
                 // Remove the last 19 characters, which is always '__DelegateSignature' for delegates
                 function_name.erase(function_name.size() - 19, 19);
             }
 
-            StringType current_class_content{};
+            SystemStringType current_class_content{};
             specification.generate_function_declaration(this, current_class_content, owner, function_info, function_name, return_property, return_property_info);
 
             // Commenting out this code because all network replicated functions are events
@@ -357,10 +357,10 @@ namespace RC::UEGenerator
             /*
             if ((function->get_function_flags() & Unreal::EFunctionFlags::FUNC_Event) != 0)
             {
-                current_class_content.append(STR(" // EVENT"));
+                current_class_content.append(SYSSTR(" // EVENT"));
             }
             //*/
-            current_class_content.append(STR("\n"));
+            current_class_content.append(SYSSTR("\n"));
             out_current_class_content.append(current_class_content);
         }
 
@@ -488,12 +488,12 @@ namespace RC::UEGenerator
                 size_t colon_pos = enum_value_full_name.rfind(STR(":"));
                 auto enum_value_name = colon_pos == enum_value_full_name.npos ? enum_value_full_name : enum_value_full_name.substr(colon_pos + 1);
 
-                specification.generate_enum_member(content_buffer, uenum, enum_value_name, elem);
+                specification.generate_enum_member(content_buffer, uenum, UEStringToSystemString(enum_value_name), elem);
             }
 
             specification.generate_enum_end(content_buffer, uenum);
 
-            content_buffer.append(STR("\n\n"));
+            content_buffer.append(SYSSTR("\n\n"));
 
             generated_file.ordered_secondary_file_contents.push_back(content_buffer);
         }
@@ -538,8 +538,8 @@ namespace RC::UEGenerator
             else
             {
                 // Get rid of everything before the last slash + the last slash, leaving only the actual name
-                File::StringType package_name = package->GetNamePrivate().ToString();
-                package_name = package_name.substr(package_name.rfind(STR("/")) + 1);
+                File::StringType package_name = UEStringToSystemString(package->GetNamePrivate().ToString());
+                package_name = package_name.substr(package_name.rfind(SYSSTR("/")) + 1);
                 File::StringType package_name_all_lower = package_name;
                 std::transform(package_name_all_lower.begin(), package_name_all_lower.end(), package_name_all_lower.begin(), [](File::CharType c) {
                     return std::towlower(c);
@@ -549,8 +549,8 @@ namespace RC::UEGenerator
                 {
                     // File name collision
                     auto& file_name = m_file_names[package_name_all_lower];
-                    package_name.append(std::format(STR("_DUPL_{}"), ++file_name.num_collisions));
-                    Output::send(STR("File name collision, renamed to '{}'\n"), package_name);
+                    package_name.append(std::format(SYSSTR("_DUPL_{}"), ++file_name.num_collisions));
+                    Output::send(SYSSTR("File name collision, renamed to '{}'\n"), package_name);
                 }
                 else
                 {
@@ -558,8 +558,12 @@ namespace RC::UEGenerator
                 }
 
                 // The '\\?\' at the beginning of the string unlocks path size restriction from MAX_PATH to 32k
+                #ifdef WIN32
                 std::filesystem::path directory_to_generate_in = std::filesystem::path("\\\\?\\");
                 directory_to_generate_in += (m_directory_to_generate_in);
+                #else
+                std::filesystem::path directory_to_generate_in =  (m_directory_to_generate_in);
+                #endif
 
                 File::StringType ext = specification.get_file_extension();
                 std::filesystem::path primary_file_path_and_name = directory_to_generate_in;
@@ -567,7 +571,7 @@ namespace RC::UEGenerator
                 primary_file_path_and_name.replace_extension(ext);
 
                 std::filesystem::path secondary_file_path_and_name = directory_to_generate_in;
-                secondary_file_path_and_name.append(package_name + STR("_enums"));
+                secondary_file_path_and_name.append(package_name + SYSSTR("_enums"));
                 secondary_file_path_and_name.replace_extension(ext);
 
                 GeneratedFile generated_file{
@@ -612,9 +616,9 @@ namespace RC::UEGenerator
       public:
         auto generate() -> void
         {
-            Output::send(STR("Cleaning up old SDK files...\n"));
+            Output::send(SYSSTR("Cleaning up old SDK files...\n"));
             cleanup_old_sdk();
-            Output::send(STR("Generating SDK...\n"));
+            Output::send(SYSSTR("Generating SDK...\n"));
 
             // 400k should be enough for most games, and it's highly unlikely to cause more than one reallocation even if the game is huge
             m_classes_dumped.reserve(400000);
@@ -669,54 +673,54 @@ namespace RC::UEGenerator
       public:
         auto get_file_extension() -> File::StringType
         {
-            return STR(".hpp");
+            return SYSSTR(".hpp");
         }
         auto generate_file_header(GeneratedFile& generated_file) -> void
         {
             generated_file.primary_file.write_string_to_file(
-                    std::format(STR("#ifndef UE4SS_SDK_{}_HPP\n#define UE4SS_SDK_{}_HPP\n\n"), generated_file.package_name, generated_file.package_name));
+                    std::format(SYSSTR("#ifndef UE4SS_SDK_{}_HPP\n#define UE4SS_SDK_{}_HPP\n\n"), generated_file.package_name, generated_file.package_name));
 
             if (!generated_file.secondary_file_has_no_contents)
             {
-                generated_file.primary_file.write_string_to_file(std::format(STR("#include \"{}\"\n\n"), generated_file.secondary_file_name.filename().c_str()));
+                generated_file.primary_file.write_string_to_file(std::format(SYSSTR("#include \"{}\"\n\n"), generated_file.secondary_file_name.filename().c_str()));
             }
         }
         auto generate_file_footer(GeneratedFile& generated_file) -> void
         {
-            generated_file.primary_file.write_string_to_file(std::format(STR("#endif\n")));
+            generated_file.primary_file.write_string_to_file(std::format(SYSSTR("#endif\n")));
         }
         auto generate_enum_declaration(File::StringType& content_buffer, UEnum* uenum) -> void
         {
             const auto cpp_form = uenum->GetCppForm();
             if (cpp_form == UEnum::ECppForm::Regular)
             {
-                content_buffer.append(std::format(STR("enum {} {{\n"), get_native_enum_name(uenum, false)));
+                content_buffer.append(std::format(SYSSTR("enum {} {{\n"), get_native_enum_name(uenum, false)));
             }
             else if (cpp_form == UEnum::ECppForm::Namespaced)
             {
-                content_buffer.append(std::format(STR("namespace {} {{\n{}enum Type {{\n"), get_native_enum_name(uenum, false), generate_tab()));
+                content_buffer.append(std::format(SYSSTR("namespace {} {{\n{}enum Type {{\n"), get_native_enum_name(uenum, false), generate_tab()));
             }
             else if (cpp_form == UEnum::ECppForm::EnumClass)
             {
-                content_buffer.append(std::format(STR("enum class {} {{\n"), get_native_enum_name(uenum, false)));
+                content_buffer.append(std::format(SYSSTR("enum class {} {{\n"), get_native_enum_name(uenum, false)));
             }
         }
         auto generate_enum_member(File::StringType& content_buffer, UEnum* uenum, const File::StringType& enum_value_name, const Unreal::FEnumNamePair& elem) -> void
         {
-            content_buffer.append(std::format(STR("{}{}{} = {},\n"),
+            content_buffer.append(std::format(SYSSTR("{}{}{} = {},\n"),
                                               generate_tab(),
-                                              uenum->GetCppForm() == UEnum::ECppForm::Namespaced ? generate_tab() : STR(""),
+                                              uenum->GetCppForm() == UEnum::ECppForm::Namespaced ? generate_tab() : SYSSTR(""),
                                               enum_value_name,
                                               elem.Value));
         }
         auto generate_enum_end(File::StringType& content_buffer, UEnum* uenum) -> void
         {
             const auto cpp_form = uenum->GetCppForm();
-            content_buffer.append(std::format(STR("{}}};"), cpp_form == UEnum::ECppForm::Namespaced ? generate_tab() : STR("")));
+            content_buffer.append(std::format(SYSSTR("{}}};"), cpp_form == UEnum::ECppForm::Namespaced ? generate_tab() : SYSSTR("")));
 
             if (cpp_form == UEnum::ECppForm::Namespaced)
             {
-                content_buffer.append(STR("\n}"));
+                content_buffer.append(SYSSTR("\n}"));
             }
         }
         auto should_generate_class(UStruct* native_class)
@@ -772,22 +776,22 @@ namespace RC::UEGenerator
                 int32_t current_property_offset = property->GetOffset_Internal();
                 int32_t current_property_size = property->GetSize();
 
-                StringType part_one{};
+                SystemStringType part_one{};
                 try
                 {
-                    part_one = std::format(STR("{}{}{} {};"),
+                    part_one = std::format(SYSSTR("{}{}{} {};"),
                                            generate_tab(),
-                                           property_info.should_forward_declare ? STR("class ") : STR(""),
+                                           property_info.should_forward_declare ? SYSSTR("class ") : SYSSTR(""),
                                            generate_property_cxx_name(property, true, native_class, EnableForwardDeclarations::Yes),
-                                           property->GetName());
+                                           UEStringToSystemString(property->GetName()));
                 }
                 catch (std::exception& e)
                 {
-                    Output::send<LogLevel::Warning>(STR("Could not generate property '{}' because: {}\n"), property->GetFullName(), to_wstring(e.what()));
+                    Output::send<LogLevel::Warning>(SYSSTR("Could not generate property '{}' because: {}\n"),UEStringToSystemString(property->GetFullName()), to_generic_string(e.what()));
                     continue;
                 }
 
-                content_buffer.append(std::format(STR("{}\n"), generator->generate_offset_comment(property, part_one)));
+                content_buffer.append(std::format(SYSSTR("{}\n"), generator->generate_offset_comment(property, part_one)));
 
                 if (property->IsA<FDelegateProperty>())
                 {
@@ -839,12 +843,12 @@ namespace RC::UEGenerator
                             int32_t padding_property_offset = current_property_end_location;
                             int32_t padding_property_size = next_property_offset - padding_property_offset;
 
-                            auto padding_part_one = std::format(STR("{}char {}[0x{:X}];"),
+                            auto padding_part_one = std::format(SYSSTR("{}char {}[0x{:X}];"),
                                                                 generate_tab(),
-                                                                std::format(STR("padding_{}"), num_padding_elements++),
+                                                                std::format(SYSSTR("padding_{}"), num_padding_elements++),
                                                                 padding_property_size);
                             content_buffer.append(
-                                    std::format(STR("{:85} // 0x{:04X} (size: 0x{:X})\n"), padding_part_one, padding_property_offset, padding_property_size));
+                                    std::format(SYSSTR("{:85} // 0x{:04X} (size: 0x{:X})\n"), padding_part_one, padding_property_offset, padding_property_size));
                         }
                     }
                 }
@@ -858,7 +862,7 @@ namespace RC::UEGenerator
             // Functions
             if (native_class->HasChildren())
             {
-                content_buffer.append(STR("\n"));
+                content_buffer.append(SYSSTR("\n"));
                 for (const auto& function_info : functions_to_generate)
                 {
                     generator->generate_function_declaration(object_info, function_info, generated_file, content_buffer);
@@ -867,7 +871,7 @@ namespace RC::UEGenerator
 
             generate_class_end(content_buffer, class_size);
 
-            content_buffer.append(STR("\n\n"));
+            content_buffer.append(SYSSTR("\n\n"));
 
             current_class_content.append(content_buffer);
         }
@@ -878,11 +882,11 @@ namespace RC::UEGenerator
             if (inherits_from_class)
             {
                 content_buffer.append(
-                        std::format(STR("{} {} : public {}\n{{\n"), generate_prefix(native_class), class_name, generate_class_name(inherits_from_class)));
+                        std::format(SYSSTR("{} {} : public {}\n{{\n"), generate_prefix(native_class), class_name, generate_class_name(inherits_from_class)));
             }
             else
             {
-                content_buffer.append(std::format(STR("{} {}\n{{\n"), generate_prefix(native_class), class_name));
+                content_buffer.append(std::format(SYSSTR("{} {}\n{{\n"), generate_prefix(native_class), class_name));
             }
         }
         auto generate_class_struct_end(File::StringType& content_buffer,
@@ -912,8 +916,8 @@ namespace RC::UEGenerator
                             printf_s("last_property_offset: %X\n", last_property_offset);
                             printf_s("first_property_offset: %X\n", first_property_offset);
 
-                            auto padding_part_one = std::format(STR("{}char {}[0x{:X}];"), generate_tab(), std::format(STR("padding_{}"), num_padding_elements), padding_size);
-                            out.append(std::format(STR("{:85} // 0x{:04X} (size: 0x{:X})\n"), padding_part_one, last_property_offset + last_property_size, padding_size));
+                            auto padding_part_one = std::format(SYSSTR("{}char {}[0x{:X}];"), generate_tab(), std::format(SYSSTR("padding_{}"), num_padding_elements), padding_size);
+                            out.append(std::format(SYSSTR("{:85} // 0x{:04X} (size: 0x{:X})\n"), padding_part_one, last_property_offset + last_property_size, padding_size));
                         }
                     }
                     //*/
@@ -923,8 +927,8 @@ namespace RC::UEGenerator
                     // No reflected member variables exist but there are non-reflected member variables
                     // Add padding for non-reflected member variables, for alignment purposes
                     auto padding_part_one =
-                            std::format(STR("{}char {}[0x{:X}];"), generate_tab(), std::format(STR("padding_{}"), num_padding_elements), class_size);
-                    content_buffer.append(std::format(STR("{:85} // 0x0000 (size: 0x{:X})\n"), padding_part_one, 0x0));
+                            std::format(SYSSTR("{}char {}[0x{:X}];"), generate_tab(), std::format(SYSSTR("padding_{}"), num_padding_elements), class_size);
+                    content_buffer.append(std::format(SYSSTR("{:85} // 0x0000 (size: 0x{:X})\n"), padding_part_one, 0x0));
                 }
             }
         }
@@ -932,11 +936,11 @@ namespace RC::UEGenerator
         {
             if (UE4SSProgram::settings_manager.CXXHeaderGenerator.DumpOffsetsAndSizes)
             {
-                content_buffer.append(std::format(STR("}}; // Size: 0x{:X}"), class_size));
+                content_buffer.append(std::format(SYSSTR("}}; // Size: 0x{:X}"), class_size));
             }
             else
             {
-                content_buffer.append(STR("};"));
+                content_buffer.append(SYSSTR("};"));
             }
         }
 
@@ -957,23 +961,23 @@ namespace RC::UEGenerator
                 }
                 catch (std::exception& e)
                 {
-                    Output::send<LogLevel::Warning>(STR("Could not generate function '{}' because: {}\n"),
-                                                    function_info.function->GetFullName(),
-                                                    to_wstring(e.what()));
+                    Output::send<LogLevel::Warning>(SYSSTR("Could not generate function '{}' because: {}\n"),
+                                                    UEStringToSystemString(function_info.function->GetFullName()),
+                                                    to_generic_string(e.what()));
                     return;
                 }
 
                 if (return_property_info.value().should_forward_declare && !generator->check_ignore_forward_declaration(owner, return_property))
                 {
-                    function_type_name.insert(0, STR("class "));
+                    function_type_name.insert(0, SYSSTR("class "));
                 }
             }
             else
             {
-                function_type_name = STR("void");
+                function_type_name = SYSSTR("void");
             }
 
-            current_class_content.append(std::format(STR("{}{} {}("), generate_tab(), function_type_name, function_name));
+            current_class_content.append(std::format(SYSSTR("{}{} {}("), generate_tab(), function_type_name, function_name));
 
             for (size_t i = 0; i < function_info.params.size(); ++i)
             {
@@ -983,18 +987,18 @@ namespace RC::UEGenerator
                     try
                     {
                         current_class_content.append(
-                                std::format(STR("{}{}{}{} {}"),
-                                            param_info.property->HasAnyPropertyFlags(Unreal::CPF_ConstParm) ? STR("const ") : STR(""),
-                                            param_info.should_forward_declare ? STR("class ") : STR(""),
+                                std::format(SYSSTR("{}{}{}{} {}"),
+                                            param_info.property->HasAnyPropertyFlags(Unreal::CPF_ConstParm) ? SYSSTR("const ") : SYSSTR(""),
+                                            param_info.should_forward_declare ? SYSSTR("class ") : SYSSTR(""),
                                             generate_property_cxx_name(param_info.property, true, function_info.function, EnableForwardDeclarations::Yes),
-                                            param_info.property->HasAnyPropertyFlags(Unreal::CPF_ReferenceParm | Unreal::CPF_OutParm) ? STR("&") : STR(""),
-                                            param_info.property->GetName()));
+                                            param_info.property->HasAnyPropertyFlags(Unreal::CPF_ReferenceParm | Unreal::CPF_OutParm) ? SYSSTR("&") : SYSSTR(""),
+                                            UEStringToSystemString(param_info.property->GetName())));
                     }
                     catch (std::exception& e)
                     {
-                        Output::send<LogLevel::Warning>(STR("Could not generate function '{}' because: {}\n"),
-                                                        function_info.function->GetFullName(),
-                                                        to_wstring(e.what()));
+                        Output::send<LogLevel::Warning>(SYSSTR("Could not generate function '{}' because: {}\n"),
+                                                        UEStringToSystemString(function_info.function->GetFullName()),
+                                                        to_generic_string(e.what()));
                         return;
                     }
 
@@ -1003,12 +1007,12 @@ namespace RC::UEGenerator
                         auto* next_param = function_info.params[i + 1].property;
                         if (next_param && (!next_param->HasAnyPropertyFlags(Unreal::CPF_ReturnParm) || i + 2 < function_info.params.size()))
                         {
-                            current_class_content.append(STR(", "));
+                            current_class_content.append(SYSSTR(", "));
                         }
                     }
                 }
             }
-            current_class_content.append(STR(");"));
+            current_class_content.append(SYSSTR(");"));
         }
     };
 
@@ -1017,10 +1021,10 @@ namespace RC::UEGenerator
       private:
         auto is_valid_lua_symbol(const File::StringType& str) -> bool
         {
-            static const std::set<File::StringType> keywords = {STR("and"),   STR("break"), STR("do"),       STR("else"),   STR("elseif"), STR("end"),
-                                                                STR("false"), STR("for"),   STR("function"), STR("if"),     STR("in"),     STR("local"),
-                                                                STR("nil"),   STR("not"),   STR("or"),       STR("repeat"), STR("return"), STR("then"),
-                                                                STR("true"),  STR("until"), STR("while")};
+            static const std::set<File::StringType> keywords = {SYSSTR("and"),   SYSSTR("break"), SYSSTR("do"),       SYSSTR("else"),   SYSSTR("elseif"), SYSSTR("end"),
+                                                                SYSSTR("false"), SYSSTR("for"),   SYSSTR("function"), SYSSTR("if"),     SYSSTR("in"),     SYSSTR("local"),
+                                                                SYSSTR("nil"),   SYSSTR("not"),   SYSSTR("or"),       SYSSTR("repeat"), SYSSTR("return"), SYSSTR("then"),
+                                                                SYSSTR("true"),  SYSSTR("until"), SYSSTR("while")};
             if (keywords.contains(str))
             {
                 return false;
@@ -1079,27 +1083,27 @@ namespace RC::UEGenerator
       public:
         auto get_file_extension() -> File::StringType
         {
-            return STR(".lua");
+            return SYSSTR(".lua");
         }
         auto generate_file_header(GeneratedFile& generated_file) -> void
         {
-            generated_file.primary_file.write_string_to_file(STR("---@meta\n\n"));
+            generated_file.primary_file.write_string_to_file(SYSSTR("---@meta\n\n"));
         }
         auto generate_file_footer(GeneratedFile& generated_file) -> void
         {
         }
         auto generate_enum_declaration(File::StringType& content_buffer, UEnum* uenum) -> void
         {
-            auto enum_name = uenum->GetName();
-            content_buffer.append(std::format(STR("---@enum {}\n{} = {{\n"), enum_name, enum_name));
+            auto enum_name = UEStringToSystemString(uenum->GetName());
+            content_buffer.append(std::format(SYSSTR("---@enum {}\n{} = {{\n"), enum_name, enum_name));
         }
         auto generate_enum_member(File::StringType& content_buffer, UEnum* uenum, const File::StringType& enum_value_name, const Unreal::FEnumNamePair& elem) -> void
         {
-            content_buffer.append(std::format(STR("{}{} = {},\n"), generate_tab(), enum_value_name, elem.Value));
+            content_buffer.append(std::format(SYSSTR("{}{} = {},\n"), generate_tab(), enum_value_name, elem.Value));
         }
         auto generate_enum_end(File::StringType& content_buffer, UEnum* uenum) -> void
         {
-            content_buffer.append(STR("}"));
+            content_buffer.append(SYSSTR("}"));
         }
 
         auto should_generate_class(UStruct* native_class)
@@ -1158,20 +1162,20 @@ namespace RC::UEGenerator
 
                 try
                 {
-                    const auto& property_name = property->GetName();
+                    const auto& property_name = UEStringToSystemString(property->GetName());
                     if (is_valid_lua_symbol(property_name))
                     {
-                        content_buffer.append(std::format(STR("---@field {} {}\n"), property_name, generate_property_lua_name(property, true, native_class)));
+                        content_buffer.append(std::format(SYSSTR("---@field {} {}\n"), property_name, generate_property_lua_name(property, true, native_class)));
                     }
                     else
                     {
                         content_buffer.append(
-                                std::format(STR("---@field [{}] {}\n"), quote_lua_symbol(property_name), generate_property_lua_name(property, true, native_class)));
+                                std::format(SYSSTR("---@field [{}] {}\n"), quote_lua_symbol(property_name), generate_property_lua_name(property, true, native_class)));
                     }
                 }
                 catch (std::exception& e)
                 {
-                    Output::send<LogLevel::Warning>(STR("Could not generate property '{}' because: {}\n"), property->GetFullName(), to_wstring(e.what()));
+                    Output::send<LogLevel::Warning>(SYSSTR("Could not generate property '{}' because: {}\n"), UEStringToSystemString(property->GetFullName()), to_generic_string(e.what()));
                     continue;
                 }
 
@@ -1186,7 +1190,7 @@ namespace RC::UEGenerator
             // Functions
             if (native_class->HasChildren())
             {
-                content_buffer.append(STR("\n"));
+                content_buffer.append(SYSSTR("\n"));
                 for (const auto& function_info : functions_to_generate)
                 {
                     generator->generate_function_declaration(object_info, function_info, generated_file, content_buffer);
@@ -1195,7 +1199,7 @@ namespace RC::UEGenerator
 
             generate_class_end(content_buffer, class_size);
 
-            content_buffer.append(STR("\n\n"));
+            content_buffer.append(SYSSTR("\n\n"));
 
             current_class_content.append(content_buffer);
         }
@@ -1204,11 +1208,11 @@ namespace RC::UEGenerator
             auto class_name = generate_class_name(native_class);
             if (inherits_from_class)
             {
-                content_buffer.append(std::format(STR("---@class {} : {}\n"), class_name, generate_class_name(inherits_from_class)));
+                content_buffer.append(std::format(SYSSTR("---@class {} : {}\n"), class_name, generate_class_name(inherits_from_class)));
             }
             else
             {
-                content_buffer.append(std::format(STR("---@class {}\n"), class_name));
+                content_buffer.append(std::format(SYSSTR("---@class {}\n"), class_name));
             }
         }
         auto generate_class_struct_end(File::StringType& content_buffer,
@@ -1217,7 +1221,7 @@ namespace RC::UEGenerator
                                        int32_t num_padding_elements,
                                        XProperty* last_property_in_this_class) -> void
         {
-            content_buffer.append(std::format(STR("{} = {{}}\n"), class_name));
+            content_buffer.append(std::format(SYSSTR("{} = {{}}\n"), class_name));
         }
         auto generate_class_end(File::StringType& content_buffer, size_t class_size) -> void
         {
@@ -1238,17 +1242,17 @@ namespace RC::UEGenerator
                 {
                     try
                     {
-                        auto param_name = param_info.property->GetName();
+                        auto param_name = UEStringToSystemString(param_info.property->GetName());
                         // TODO disambiguate param renames
-                        current_class_content.append(std::format(STR("---@param {} {}\n"),
+                        current_class_content.append(std::format(SYSSTR("---@param {} {}\n"),
                                                                  make_valid_symbol(param_name),
                                                                  generate_property_lua_name(param_info.property, true, function_info.function)));
                     }
                     catch (std::exception& e)
                     {
-                        Output::send<LogLevel::Warning>(STR("Could not generate function '{}' because: {}\n"),
-                                                        function_info.function->GetFullName(),
-                                                        to_wstring(e.what()));
+                        Output::send<LogLevel::Warning>(SYSSTR("Could not generate function '{}' because: {}\n"),
+                                                        UEStringToSystemString( function_info.function->GetFullName()),
+                                                        to_generic_string(e.what()));
                         return;
                     }
                 }
@@ -1258,13 +1262,13 @@ namespace RC::UEGenerator
             {
                 try
                 {
-                    current_class_content.append(std::format(STR("---@return {}\n"), generate_property_lua_name(return_property, true, function_info.function)));
+                    current_class_content.append(std::format(SYSSTR("---@return {}\n"), generate_property_lua_name(return_property, true, function_info.function)));
                 }
                 catch (std::exception& e)
                 {
-                    Output::send<LogLevel::Warning>(STR("Could not generate function '{}' because: {}\n"),
-                                                    function_info.function->GetFullName(),
-                                                    to_wstring(e.what()));
+                    Output::send<LogLevel::Warning>(SYSSTR("Could not generate function '{}' because: {}\n"),
+                                                    UEStringToSystemString(function_info.function->GetFullName()),
+                                                    to_generic_string(e.what()));
                     return;
                 }
             }
@@ -1273,11 +1277,11 @@ namespace RC::UEGenerator
 
             if (is_valid_lua_symbol(function_name))
             {
-                current_class_content.append(std::format(STR("function {}:{}("), class_name, function_name));
+                current_class_content.append(std::format(SYSSTR("function {}:{}("), class_name, function_name));
             }
             else
             {
-                current_class_content.append(std::format(STR("{}[{}] = function("), class_name, quote_lua_symbol(function_name)));
+                current_class_content.append(std::format(SYSSTR("{}[{}] = function("), class_name, quote_lua_symbol(function_name)));
             }
 
             for (size_t i = 0; i < function_info.params.size(); ++i)
@@ -1285,21 +1289,21 @@ namespace RC::UEGenerator
                 const auto& param_info = function_info.params[i];
                 if (!param_info.property->HasAnyPropertyFlags(Unreal::CPF_ReturnParm))
                 {
-                    auto param_name = param_info.property->GetName();
+                    auto param_name = UEStringToSystemString(param_info.property->GetName());
                     // TODO disambiguate param renames
-                    current_class_content.append(std::format(STR("{}"), make_valid_symbol(param_name)));
+                    current_class_content.append(std::format(SYSSTR("{}"), make_valid_symbol(param_name)));
 
                     if (i + 1 < function_info.params.size())
                     {
                         auto* next_param = function_info.params[i + 1].property;
                         if (next_param && (!next_param->HasAnyPropertyFlags(Unreal::CPF_ReturnParm) || i + 2 < function_info.params.size()))
                         {
-                            current_class_content.append(STR(", "));
+                            current_class_content.append(SYSSTR(", "));
                         }
                     }
                 }
             }
-            current_class_content.append(STR(") end"));
+            current_class_content.append(SYSSTR(") end"));
         }
     };
 

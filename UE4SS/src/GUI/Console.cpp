@@ -107,14 +107,14 @@ namespace RC::GUI
         bool reclaim_focus{};
         ImGuiInputTextFlags input_text_flags = ImGuiInputTextFlags_EnterReturnsTrue | ImGuiInputTextFlags_CallbackCompletion |
         ImGuiInputTextFlags_CallbackHistory; auto text_edit_callback_wrapper = [](ImGuiInputTextCallbackData* data) -> int { Console* console =
-        static_cast<Console*>(data->UserData); Output::send(STR("text_edit_callback_wrapper\n"));
+        static_cast<Console*>(data->UserData); Output::send(SYSSTR("text_edit_callback_wrapper\n"));
             //return console->text_edit_callback(data);
             return 0;
         };
         ImGui::PushItemWidth(-12.0f);
         if (ImGui::InputText("##console_input_buffer", m_input_buffer, IM_ARRAYSIZE(m_input_buffer), input_text_flags, text_edit_callback_wrapper, this))
         {
-            Output::send(STR("ConsoleInput\n"));
+            Output::send(SYSSTR("ConsoleInput\n"));
             reclaim_focus = true;
         }
         ImGui::PopItemWidth();

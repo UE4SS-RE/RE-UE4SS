@@ -7,6 +7,7 @@
 #include <string>
 #include <unordered_map>
 #include <vector>
+#include <algorithm>
 
 #include <File/Macros.hpp>
 
@@ -35,6 +36,23 @@ namespace RC
         if (occurrence != std::wstring::npos)
         {
             return_value = start_or_end == ExplodeType::FromEnd ? in_str_wide.substr(occurrence + 1, std::wstring::npos) : in_str_wide.substr(0, occurrence);
+        }
+        else
+        {
+            return_value = in_str_wide;
+        }
+
+        return return_value;
+    }
+
+    auto inline explode_by_occurrence(const std::u16string& in_str_wide, const char16_t delimiter, ExplodeType start_or_end) -> std::u16string
+    {
+        size_t occurrence = (start_or_end == ExplodeType::FromStart ? in_str_wide.find_first_of(delimiter) : in_str_wide.find_last_of(delimiter));
+
+        std::u16string return_value;
+        if (occurrence != std::wstring::npos)
+        {
+            return_value = start_or_end == ExplodeType::FromEnd ? in_str_wide.substr(occurrence + 1, std::u16string::npos) : in_str_wide.substr(0, occurrence);
         }
         else
         {
@@ -131,7 +149,51 @@ namespace RC
         return result;
     }
 
+    auto inline explode_by_occurrence(const std::u16string& in_str_wide, const char16_t delimiter) -> std::vector<std::u16string>
+    {
+        std::vector<std::u16string> result;
+
+        size_t counter{};
+        size_t start_offset{};
+
+        for (const char16_t* current_char = in_str_wide.c_str(); *current_char; ++current_char)
+        {
+            if (*current_char == delimiter || counter == in_str_wide.length() - 1)
+            {
+                std::u16string sub_str = in_str_wide.substr(start_offset, counter - start_offset + (counter == in_str_wide.length() - 1 ? 1 : 0));
+                if (start_offset > 0)
+                {
+                    sub_str.erase(0, 1);
+                }
+                result.emplace_back(sub_str);
+
+                start_offset = counter;
+            }
+
+            ++counter;
+        }
+
+        return result;
+    }
+
     auto inline explode_by_occurrence(const std::wstring& in_str, const wchar_t delimiter, const int32_t occurrence) -> std::wstring
+    {
+        size_t found_occurrence{};
+        for (int64_t i = 0; i < std::count(in_str.begin(), in_str.end(), delimiter); i++)
+        {
+            found_occurrence = in_str.find(delimiter, found_occurrence + 1);
+            if (i + 1 == occurrence)
+            {
+                return in_str.substr(0, found_occurrence);
+            }
+        }
+
+        // No occurrence was found, returning empty string for now
+        return {};
+    }
+    /* explode_by_occurrence -> END */
+
+    auto inline explode_by_occurrence(const std::u16string& in_str, const char16_t delimiter, const int32_t occurrence) -> std::u16string
     {
         size_t found_occurrence{};
         for (int64_t i = 0; i < std::count(in_str.begin(), in_str.end(), delimiter); i++)
@@ -203,10 +265,31 @@ namespace RC
 #pragma warning(default : 4996)
     }
 
+    auto inline to_string(std::u16string& input) -> std::string
+    {
+        return std::wstring_convert<std::codecvt_utf8_utf16<char16_t>, char16_t>{}.to_bytes(input);
+    }
+
     auto inline to_string(std::wstring_view input) -> std::string
     {
         auto temp_input = std::wstring{input};
         return to_string(temp_input);
+    }
+
+    auto inline to_string(std::u16string_view input) -> std::string
+    {
+        auto temp_input = std::u16string{input};
+        return to_string(temp_input);
+    }
+
+    auto inline to_string(std::string_view input) -> std::string
+    {
+        return std::string{input};
+    }
+
+    auto inline to_string(std::string input) -> std::string
+    {
+        return std::string{input};
     }
 
     auto inline to_u16string(std::wstring& input) -> std::u16string
@@ -231,14 +314,14 @@ namespace RC
         return to_u16string(temp_input);
     }
 
-    auto inline to_generic_string(const auto& input) -> StringType
+    auto inline to_generic_string(const auto& input) -> SystemStringType
     {
-        if constexpr (std::is_same_v<std::remove_cvref_t<std::remove_pointer_t<std::remove_cvref_t<decltype(input)>>>, StringViewType>)
+        if constexpr (std::is_same_v<std::remove_cvref_t<std::remove_pointer_t<std::remove_cvref_t<decltype(input)>>>, SystemStringViewType>)
         {
-            return StringType{input};
+            return SystemStringType{input};
         }
-        else if constexpr (std::is_same_v<std::remove_cvref_t<std::remove_pointer_t<std::remove_cvref_t<decltype(input)>>>, StringType> ||
-                           std::is_same_v<std::remove_cvref_t<std::remove_pointer_t<std::remove_cvref_t<decltype(input)>>>, CharType>)
+        else if constexpr (std::is_same_v<std::remove_cvref_t<std::remove_pointer_t<std::remove_cvref_t<decltype(input)>>>, SystemStringType> ||
+                           std::is_same_v<std::remove_cvref_t<std::remove_pointer_t<std::remove_cvref_t<decltype(input)>>>, SystemCharType>)
         {
             return input;
         }
@@ -247,7 +330,11 @@ namespace RC
 #if RC_IS_ANSI == 1
             return to_string(input);
 #else
+#ifdef WIN32
             return to_wstring(input);
+#else
+            return to_string(input);
+#endif
 #endif
         }
     }
@@ -261,14 +348,31 @@ namespace RC
                    });
         }
 
+        auto inline iequal(std::u16string_view a, std::u16string_view b)
+        {
+            return a.size() == b.size() && std::equal(a.begin(), a.end(), b.begin(), [](const char16_t a_char, const char16_t b_char) {
+                       return std::towlower(a_char) == std::towlower(b_char);
+                   });
+        }
+
         auto inline iequal(std::wstring& a, const wchar_t* b)
         {
             return iequal(a, std::wstring_view{b});
         }
 
+        auto inline iequal(std::u16string& a, const char16_t* b)
+        {
+            return iequal(a, std::u16string_view{b});
+        }
+
         auto inline iequal(const wchar_t* a, std::wstring& b)
         {
             return iequal(std::wstring_view{a}, b);
+        }
+
+        auto inline iequal(const char16_t* a, std::u16string& b)
+        {
+            return iequal(std::u16string_view{a}, b);
         }
 
         auto inline iequal(std::string_view a, std::string_view b)

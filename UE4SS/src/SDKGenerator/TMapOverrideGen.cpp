@@ -25,7 +25,7 @@ namespace RC::UEGenerator
 
     auto TMapOverrideGenerator::generate_tmapoverride() -> void
     {
-        Output::send(STR("Dumping TMap Property Overrides\n"));
+        Output::send(SYSSTR("Dumping TMap Property Overrides\n"));
 
         auto fm_object = JSON::Object{};
         auto uaapi_object = JSON::Object{};
@@ -53,7 +53,7 @@ namespace RC::UEGenerator
 
                         MapProperties.insert(property->GetFName());
 
-                        auto property_name = property->GetFName().ToString();
+                        auto property_name = UEStringToSystemString(property->GetFName().ToString());
 
                         auto key_as_struct_property = CastField<FStructProperty>(static_cast<FMapProperty*>(property)->GetKeyProp());
                         auto key_struct_type = key_as_struct_property ? key_as_struct_property->GetStruct() : nullptr;
@@ -67,32 +67,32 @@ namespace RC::UEGenerator
                         {
                             continue;
                         }
-                        Output::send(STR("Found Relevant TMap Property: {} in Class: {}\n"), property_name, object->GetName());
+                        Output::send(SYSSTR("Found Relevant TMap Property: {} in Class: {}\n"), property_name, UEStringToSystemString(object->GetName()));
 
                         auto& fm_json_object = fm_object.new_object(property_name);
                         auto& uaapi_array = uaapi_object.new_array(property_name);
 
                         if (is_key_valid)
                         {
-                            auto key_name = key_as_struct_property->GetStruct()->GetName();
-                            fm_json_object.new_string(STR("Key"), key_name);
+                            auto key_name = UEStringToSystemString(key_as_struct_property->GetStruct()->GetName());
+                            fm_json_object.new_string(SYSSTR("Key"), key_name);
                             uaapi_array.new_string(key_name);
                         }
                         else
                         {
-                            fm_json_object.new_string(STR("Key"), STR(""));
+                            fm_json_object.new_string(SYSSTR("Key"), SYSSTR(""));
                             uaapi_array.new_null();
                         }
 
                         if (is_value_valid)
                         {
-                            auto value_name = value_as_struct_property->GetStruct()->GetName();
-                            fm_json_object.new_string(STR("Value"), value_name);
+                            auto value_name = UEStringToSystemString(value_as_struct_property->GetStruct()->GetName());
+                            fm_json_object.new_string(SYSSTR("Value"), value_name);
                             uaapi_array.new_string(value_name);
                         }
                         else
                         {
-                            fm_json_object.new_string(STR("Value"), STR(""));
+                            fm_json_object.new_string(SYSSTR("Value"), SYSSTR(""));
                             uaapi_array.new_null();
                         }
 
@@ -110,17 +110,17 @@ namespace RC::UEGenerator
         // Retrieve JSON as a string.
         int32_t indent_level{};
 
-        auto uaapifile = open(StringType{UE4SSProgram::get_program().get_working_directory()} + STR("\\UAssetAPITMapOverrides.json"),
+        auto uaapifile = open(SystemStringType{UE4SSProgram::get_program().get_working_directory()} + SYSSTR("\\UAssetAPITMapOverrides.json"),
                               File::OpenFor::Writing,
                               File::OverwriteExistingFile::Yes,
                               File::CreateIfNonExistent::Yes);
-        auto fmodelfile = open(StringType{UE4SSProgram::get_program().get_working_directory()} + STR("\\FModelTMapOverrides.json"),
+        auto fmodelfile = open(SystemStringType{UE4SSProgram::get_program().get_working_directory()} + SYSSTR("\\FModelTMapOverrides.json"),
                                File::OpenFor::Writing,
                                File::OverwriteExistingFile::Yes,
                                File::CreateIfNonExistent::Yes);
         uaapifile.write_string_to_file(uaapi_object.serialize(JSON::ShouldFormat::Yes, &indent_level));
         fmodelfile.write_string_to_file(fm_object.serialize(JSON::ShouldFormat::Yes, &indent_level));
-        Output::send(STR("Finished Dumping {} TMap Properties\n"), num_objects_generated);
+        Output::send(SYSSTR("Finished Dumping {} TMap Properties\n"), num_objects_generated);
         MapProperties.clear();
     }
 } // namespace RC::UEGenerator

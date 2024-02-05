@@ -8,12 +8,13 @@ namespace RC
     {
         if (ModIntendedSDKVersion.empty())
         {
-            ModIntendedSDKVersion = std::format(STR("{}.{}.{}"), UE4SS_LIB_VERSION_MAJOR, UE4SS_LIB_VERSION_MINOR, UE4SS_LIB_VERSION_HOTFIX);
+            ModIntendedSDKVersion = std::format(SYSSTR("{}.{}.{}"), UE4SS_LIB_VERSION_MAJOR, UE4SS_LIB_VERSION_MINOR, UE4SS_LIB_VERSION_HOTFIX);
         }
     }
 
     CppUserModBase::~CppUserModBase()
     {
+        #ifdef HAS_GUI
         for (const auto& tab : GUITabs)
         {
             if (tab)
@@ -47,8 +48,10 @@ namespace RC
 
             return were_all_events_registered_from_this_mod;
         });
+        #endif
     }
 
+#ifdef HAS_GUI
     auto CppUserModBase::register_tab(std::wstring_view tab_name, GUI::GUITab::RenderFunctionType render_function) -> void
     {
         auto& tab = GUITabs.emplace_back(std::make_shared<GUI::GUITab>(tab_name, render_function, this));
@@ -67,4 +70,5 @@ namespace RC
     {
         UE4SSProgram::get_program().register_keydown_event(key, callback, modifier_keys, 2, new KeyDownEventData{custom_data, this});
     }
+#endif
 } // namespace RC

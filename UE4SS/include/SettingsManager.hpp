@@ -5,7 +5,10 @@
 
 #include <Common.hpp>
 #include <File/File.hpp>
+
+#ifdef HAS_GUI
 #include <GUI/GUI.hpp>
+#endif
 
 namespace RC
 {
@@ -61,7 +64,10 @@ namespace RC
             bool DebugConsoleEnabled{true};
             bool DebugConsoleVisible{true};
             float DebugGUIFontScaling{1.0};
+            #ifdef HAS_GUI
             GUI::GfxBackend GraphicsAPI{GUI::GfxBackend::GLFW3_OpenGL3};
+            #endif
+            int64_t LiveViewObjectsPerGroup{64 * 1024 / 2};
         } Debug;
 
         struct SectionCrashDump

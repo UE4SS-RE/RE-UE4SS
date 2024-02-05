@@ -14,8 +14,9 @@ namespace RC::Output
         mutable bool m_windows_console_mode_set{};
 
       private:
+#ifdef WIN32
         auto set_windows_console_out_mode_if_needed() const -> void;
-
+#endif
       public:
       public:
 #if ENABLE_OUTPUT_DEVICE_DEBUG_MODE

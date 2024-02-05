@@ -6,27 +6,36 @@
 #include <Helpers/String.hpp>
 #include <Mod/CppMod.hpp>
 
+#ifdef LINUX
+#define printf_s printf
+#endif
+
 namespace RC
 {
-    CppMod::CppMod(UE4SSProgram& program, std::wstring&& mod_name, std::wstring&& mod_path) : Mod(program, std::move(mod_name), std::move(mod_path))
+    CppMod::CppMod(UE4SSProgram& program, SystemStringType&& mod_name, SystemStringType&& mod_path) : Mod(program, std::move(mod_name), std::move(mod_path))
     {
-        m_dlls_path = m_mod_path + L"\\dlls";
+        std::filesystem::path m_dlls_path = m_mod_path;
+
+        m_dlls_path = m_dlls_path / SYSSTR("dlls");
 
         if (!std::filesystem::exists(m_dlls_path))
         {
-            Output::send<LogLevel::Warning>(STR("Could not find the dlls folder for mod {}\n"), m_mod_name);
+            Output::send<LogLevel::Warning>(SYSSTR("Could not find the dlls folder for mod {}\n"), to_generic_string(m_mod_name));
             set_installable(false);
             return;
         }
 
-        auto dll_path = m_dlls_path + L"\\main.dll";
+#define STRINGIFY(x) #x
+#define CONCATENATE_WIDE_STRING(name, ext) SYSSTR(name) STRINGIFY(ext)
+        auto dll_path = m_dlls_path / CONCATENATE_WIDE_STRING("main", DLLEXT);
+#ifdef WIN32
         // Add mods dlls directory to search path for dynamic/shared linked libraries in mods
         m_dlls_path_cookie = AddDllDirectory(m_dlls_path.c_str());
         m_main_dll_module = LoadLibraryExW(dll_path.c_str(), NULL, LOAD_LIBRARY_SEARCH_DLL_LOAD_DIR | LOAD_LIBRARY_SEARCH_DEFAULT_DIRS);
 
         if (!m_main_dll_module)
         {
-            Output::send<LogLevel::Warning>(STR("Failed to load dll <{}> for mod {}, error code: 0x{:x}\n"), dll_path, m_mod_name, GetLastError());
+            Output::send<LogLevel::Warning>(SYSSTR("Failed to load dll <{}> for mod {}, error code: 0x{:x}\n"), dll_path, m_mod_name, GetLastError());
             set_installable(false);
             return;
         }
@@ -36,7 +45,7 @@ namespace RC
 
         if (!m_start_mod_func || !m_uninstall_mod_func)
         {
-            Output::send<LogLevel::Warning>(STR("Failed to find exported mod lifecycle functions for mod {}\n"), m_mod_name);
+            Output::send<LogLevel::Warning>(SYSSTR("Failed to find exported mod lifecycle functions for mod {}\n"), m_mod_name);
 
             FreeLibrary(m_main_dll_module);
             m_main_dll_module = NULL;
@@ -44,6 +53,7 @@ namespace RC
             set_installable(false);
             return;
         }
+#endif
     }
 
     auto CppMod::start_mod() -> void
@@ -57,10 +67,10 @@ namespace RC
         {
             if (!Output::has_internal_error())
             {
-                Output::send<LogLevel::Warning>(STR("Failed to load dll <{}> for mod {}, because: {}\n"),
-                                                m_dlls_path + L"\\main.dll\n",
+                Output::send<LogLevel::Warning>(SYSSTR("Failed to load dll <{}> for mod {}, because: {}\n"),
+                                                (std::filesystem::path {m_dlls_path} / CONCATENATE_WIDE_STRING("main", DLLEXT)).generic_string()  + "\n",
                                                 m_mod_name,
-                                                to_wstring(e.what()));
+                                                to_generic_string(e.what()));
             }
             else
             {
@@ -71,14 +81,14 @@ namespace RC
 
     auto CppMod::uninstall() -> void
     {
-        Output::send(STR("Stopping C++ mod '{}' for uninstall\n"), m_mod_name);
+        Output::send(SYSSTR("Stopping C++ mod '{}' for uninstall\n"), m_mod_name);
         if (m_mod && m_uninstall_mod_func)
         {
             m_uninstall_mod_func(m_mod);
         }
     }
 
-    auto CppMod::fire_on_lua_start(StringViewType mod_name,
+    auto CppMod::fire_on_lua_start(SystemStringViewType mod_name,
                                    LuaMadeSimple::Lua& lua,
                                    LuaMadeSimple::Lua& main_lua,
                                    LuaMadeSimple::Lua& async_lua,
@@ -99,7 +109,7 @@ namespace RC
         }
     }
 
-    auto CppMod::fire_on_lua_stop(StringViewType mod_name,
+    auto CppMod::fire_on_lua_stop(SystemStringViewType mod_name,
                                   LuaMadeSimple::Lua& lua,
                                   LuaMadeSimple::Lua& main_lua,
                                   LuaMadeSimple::Lua& async_lua,
@@ -152,7 +162,7 @@ namespace RC
         }
     }
 
-    auto CppMod::fire_dll_load(std::wstring_view dll_name) -> void
+    auto CppMod::fire_dll_load(SystemStringViewType dll_name) -> void
     {
         if (m_mod)
         {
@@ -162,10 +172,12 @@ namespace RC
 
     CppMod::~CppMod()
     {
+        #ifdef WIN32
         if (m_main_dll_module)
         {
             FreeLibrary(m_main_dll_module);
             RemoveDllDirectory(m_dlls_path_cookie);
         }
+        #endif
     }
 } // namespace RC

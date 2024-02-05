@@ -18,7 +18,7 @@ namespace RC
     {
     }
 
-    auto scan_from_lua_script(std::wstring& script_file_path_and_name,
+    auto scan_from_lua_script(SystemStringType& script_file_path_and_name,
                               std::vector<SignatureContainer>& signature_containers,
                               LuaScriptMatchFoundFunc& match_found_func,
                               LuaScriptScanCompleteFunc& scan_complete_func) -> void
@@ -38,7 +38,7 @@ namespace RC
 
         if (!lua.is_global_function(global_register_func_name) || !lua.is_global_function(global_on_match_found_func_name))
         {
-            Output::send(STR("Lua functions 'Register' and 'OnMatchFound' must be present in {}\n"), script_file_path_and_name);
+            Output::send(SYSSTR("Lua functions 'Register' and 'OnMatchFound' must be present in {}\n"), script_file_path_and_name);
             throw std::runtime_error{"See error message above"};
         }
 
@@ -91,7 +91,7 @@ namespace RC
 
     auto setup_lua_scan_overrides(std::filesystem::path& working_directory, Unreal::UnrealInitializer::Config& config) -> void
     {
-        std::wstring lua_guobjectarray_scan_script = working_directory / "UE4SS_Signatures/GUObjectArray.lua";
+        SystemStringType lua_guobjectarray_scan_script = (working_directory / "UE4SS_Signatures/GUObjectArray.lua").generic_string();
         if (std::filesystem::exists(lua_guobjectarray_scan_script))
         {
             config.ScanOverrides.guobjectarray = [lua_guobjectarray_scan_script](std::vector<SignatureContainer>& signature_containers,
@@ -100,7 +100,7 @@ namespace RC
                         lua_guobjectarray_scan_script,
                         signature_containers,
                         [](void* address) {
-                            Output::send(STR("GUObjectArray address: {} <- Lua Script\n"), address);
+                            Output::send(SYSSTR("GUObjectArray address: {} <- Lua Script\n"), address);
                             Unreal::UObjectArray::SetupGUObjectArrayAddress(address);
                             return DidLuaScanSucceed::Yes;
                         },
@@ -113,7 +113,7 @@ namespace RC
             };
         }
 
-        std::wstring lua_fts_scan_script = working_directory / "UE4SS_Signatures/FName_ToString.lua";
+        SystemStringType lua_fts_scan_script = (working_directory / "UE4SS_Signatures/FName_ToString.lua").generic_string();
         if (std::filesystem::exists(lua_fts_scan_script))
         {
             config.ScanOverrides.fname_to_string = [lua_fts_scan_script](std::vector<SignatureContainer>& signature_containers,
@@ -122,7 +122,7 @@ namespace RC
                         lua_fts_scan_script,
                         signature_containers,
                         [](void* address) {
-                            Output::send(STR("FName::ToString address: {} <- Lua Script\n"), address);
+                            Output::send(SYSSTR("FName::ToString address: {} <- Lua Script\n"), address);
                             Unreal::FName::ToStringInternal.assign_address(address);
                             return DidLuaScanSucceed::Yes;
                         },
@@ -135,7 +135,7 @@ namespace RC
             };
         }
 
-        std::wstring lua_fnc_scan_script = working_directory / "UE4SS_Signatures/FName_Constructor.lua";
+        SystemStringType lua_fnc_scan_script = (working_directory / "UE4SS_Signatures/FName_Constructor.lua").generic_string();
         if (std::filesystem::exists(lua_fnc_scan_script))
         {
             config.ScanOverrides.fname_constructor = [lua_fnc_scan_script](std::vector<SignatureContainer>& signature_containers,
@@ -144,11 +144,11 @@ namespace RC
                         lua_fnc_scan_script,
                         signature_containers,
                         [&scan_result](void* address) {
-                            Unreal::FName name = Unreal::FName(L"bCanBeDamaged", Unreal::FNAME_Find, address);
+                            Unreal::FName name = Unreal::FName(STR("bCanBeDamaged"), Unreal::FNAME_Find, address);
 
-                            if (name == L"bCanBeDamaged")
+                            if (name == STR("bCanBeDamaged"))
                             {
-                                Output::send(STR("FName::FName address: {} <- Lua Script\n"), address);
+                                Output::send(SYSSTR("FName::FName address: {} <- Lua Script\n"), address);
                                 Unreal::FName::ConstructorInternal.assign_address(address);
                                 return DidLuaScanSucceed::Yes;
                             }
@@ -168,8 +168,8 @@ namespace RC
         }
 
         // For compatibility, we look for 'FMemory_Free.lua' if 'GMalloc.lua' doesn't exist.
-        std::wstring lua_ffree_scan_script_new = working_directory / "UE4SS_Signatures/GMalloc.lua";
-        std::wstring lua_ffree_scan_script_compat = working_directory / "UE4SS_Signatures/FMemory_Free.lua";
+        SystemStringType lua_ffree_scan_script_new = (working_directory / "UE4SS_Signatures/GMalloc.lua").generic_string();
+        SystemStringType lua_ffree_scan_script_compat = (working_directory / "UE4SS_Signatures/FMemory_Free.lua").generic_string();
         auto lua_ffree_scan_script = std::filesystem::exists(lua_ffree_scan_script_new) ? lua_ffree_scan_script_new : lua_ffree_scan_script_compat;
         if (std::filesystem::exists(lua_ffree_scan_script))
         {
@@ -179,7 +179,7 @@ namespace RC
                         lua_ffree_scan_script,
                         signature_containers,
                         [](void* address) {
-                            Output::send(STR("GMalloc address: {} <- Lua Script\n"), address);
+                            Output::send(SYSSTR("GMalloc address: {} <- Lua Script\n"), address);
                             Unreal::FMalloc::UnrealStaticGMalloc = static_cast<Unreal::FMalloc**>(address);
                             Unreal::GMalloc = *Unreal::FMalloc::UnrealStaticGMalloc;
                             return DidLuaScanSucceed::Yes;
@@ -193,7 +193,7 @@ namespace RC
             };
         }
 
-        std::wstring lua_sco_scan_script = working_directory / "UE4SS_Signatures/StaticConstructObject.lua";
+        SystemStringType lua_sco_scan_script = (working_directory / "UE4SS_Signatures/StaticConstructObject.lua").generic_string();
         if (std::filesystem::exists(lua_sco_scan_script))
         {
             config.ScanOverrides.static_construct_object = [lua_sco_scan_script](std::vector<SignatureContainer>& signature_containers,
@@ -202,7 +202,7 @@ namespace RC
                         lua_sco_scan_script,
                         signature_containers,
                         [](void* address) {
-                            Output::send(STR("StaticConstructObject_Internal address: {} <- Lua Script\n"), address);
+                            Output::send(SYSSTR("StaticConstructObject_Internal address: {} <- Lua Script\n"), address);
                             Unreal::UObjectGlobals::SetupStaticConstructObjectInternalAddress(address);
                             return DidLuaScanSucceed::Yes;
                         },
@@ -215,7 +215,7 @@ namespace RC
             };
         }
 
-        std::wstring lua_ftc_scan_script = working_directory / "UE4SS_Signatures/FText_Constructor.lua";
+        SystemStringType lua_ftc_scan_script = (working_directory / "UE4SS_Signatures/FText_Constructor.lua").generic_string();
         if (std::filesystem::exists(lua_ftc_scan_script))
         {
             config.ScanOverrides.ftext_constructor = [lua_ftc_scan_script](std::vector<SignatureContainer>& signature_containers,
@@ -224,11 +224,11 @@ namespace RC
                         lua_ftc_scan_script,
                         signature_containers,
                         [&scan_result](void* address) {
-                            Unreal::FText text = Unreal::FText(L"bCanBeDamaged", address);
+                            Unreal::FText text = Unreal::FText(STR("bCanBeDamaged"), address);
 
-                            if (text == L"bCanBeDamaged")
+                            if (text == STR("bCanBeDamaged"))
                             {
-                                Output::send(STR("FText::FText address: {} <- Lua Script\n"), address);
+                                Output::send(SYSSTR("FText::FText address: {} <- Lua Script\n"), address);
                                 Unreal::FText::ConstructorInternal.assign_address(address);
                                 return DidLuaScanSucceed::Yes;
                             }

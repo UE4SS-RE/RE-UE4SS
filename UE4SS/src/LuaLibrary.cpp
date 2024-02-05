@@ -9,6 +9,12 @@
 #include <Unreal/FOutputDevice.hpp>
 #include <Unreal/UnrealInitializer.hpp>
 
+#ifdef WIN32
+#include <Windows.h>
+#else
+#include <unistd.h>
+#endif
+
 namespace RC::LuaLibrary
 {
     auto get_outputdevice_ref(const LuaMadeSimple::Lua& lua) -> const Unreal::FOutputDevice*
@@ -33,13 +39,13 @@ namespace RC::LuaLibrary
     {
         auto* output_device = get_outputdevice_ref(lua);
 
-        StringType formatted_string = STR("[Lua] ");
-        StringType outdevice_string;
+        SystemStringType formatted_string = SYSSTR("[Lua] ");
+        SystemStringType outdevice_string;
         if (output_device)
         {
             // Remove stack item from get_outputdevice_ref's lua_getglobal
             lua.discard_value(-1);
-            outdevice_string = STR("[Lua] ");
+            outdevice_string = SYSSTR("[Lua] ");
         }
 
         int32_t stack_size = lua.get_stack_size();
@@ -47,13 +53,13 @@ namespace RC::LuaLibrary
         {
             // lua_tostring (macro of lua_tolstring) is NOT the same as luaL_tolstring
             // luaL_tolstring provides tostring()-ish conversion for any value
-            auto lua_str = to_generic_string(luaL_tolstring(lua.get_lua_state(), i, nullptr));
+            auto lua_str = to_system(luaL_tolstring(lua.get_lua_state(), i, nullptr));
 
             if (i > 1)
             {
                 // Use double tab, as single tab might make the spacing too thin in the console
-                formatted_string.append(STR("\t\t"));
-                if (output_device) outdevice_string.append(STR("        "));
+                formatted_string.append(SYSSTR("\t\t"));
+                if (output_device) outdevice_string.append(SYSSTR("        "));
             }
             formatted_string.append(lua_str);
             if (output_device) outdevice_string.append(lua_str);
@@ -66,24 +72,22 @@ namespace RC::LuaLibrary
 
         if (output_device) output_device->Log(outdevice_string.c_str());
 
-        return 0;
-    }
-
-    auto deref_to_int32(const LuaMadeSimple::Lua& lua) -> int
-    {
-        if (lua.get_stack_size() != 1 || !lua.is_integer())
-        {
-            Output::send(STR("[Fatal] Lua function 'DerefToInt32' must have only 1 parameter and it must be of type 'int'.\n"));
+            Output::send(SYSSTR("[Fatal] Lua function 'DerefToInt32' must have only 1 parameter and it must be of type 'int'.\n"));
             lua.set_nil();
             return 1;
         }
 
         int32_t* int32_ptr = reinterpret_cast<int32_t*>(lua.get_integer());
-        int32_t int32_val = Helper::Casting::offset_deref_safe<int32_t>(int32_ptr, 0, GetCurrentProcess());
+        #ifdef WIN32
+        auto self = GetCurrentProcess();
+        #else
+        auto self = getpid();
+        #endif
+        int32_t int32_val = Helper::Casting::offset_deref_safe<int32_t>(int32_ptr, 0, self);
 
         if (int32_val == 0)
         {
-            Output::send(STR("[Fatal] Address passed to Lua function 'DerefToInt32' was not a valid pointer.\n"));
+            Output::send(SYSSTR("[Fatal] Address passed to Lua function 'DerefToInt32' was not a valid pointer.\n"));
             lua.set_nil();
             return 1;
         }
@@ -98,7 +102,7 @@ namespace RC::LuaLibrary
         // Logging will only happen to the debug console but it's something at least
         if (!Output::has_internal_error())
         {
-            Output::send(STR("Error: {}\n"), to_wstring(e));
+            Output::send(SYSSTR("Error: {}\n"), to_generic_string(e));
         }
         else
         {
@@ -106,31 +110,31 @@ namespace RC::LuaLibrary
         }
     }
 
-    static auto exported_function_status_to_string(ExportedFunctionStatus status) -> std::wstring_view
+    static auto exported_function_status_to_string(ExportedFunctionStatus status) -> SystemStringViewType
     {
         switch (status)
         {
         case ExportedFunctionStatus::NO_ERROR_TO_EXPORT:
-            return L"NO_ERROR_TO_EXPORT | 0";
+            return SYSSTR("NO_ERROR_TO_EXPORT | 0");
         case ExportedFunctionStatus::UNKNOWN_ERROR:
-            return L"UNKNOWN_ERROR | 7";
+            return SYSSTR("UNKNOWN_ERROR | 7");
         case ExportedFunctionStatus::SUCCESS:
-            return L"SUCCESS | 1";
+            return SYSSTR("SUCCESS | 1");
         case ExportedFunctionStatus::VARIABLE_NOT_FOUND:
-            return L"VARIABLE_NOT_FOUND | 2";
+            return SYSSTR("VARIABLE_NOT_FOUND | 2");
         case ExportedFunctionStatus::MOD_IS_NULLPTR:
-            return L"MOD_IS_NULLPTR | 3";
+            return SYSSTR("MOD_IS_NULLPTR | 3");
         case ExportedFunctionStatus::SCRIPT_FUNCTION_RETURNED_FALSE:
-            return L"SCRIPT_FUNCTION_RETURNED_FALSE | 4";
+            return SYSSTR("SCRIPT_FUNCTION_RETURNED_FALSE | 4");
         case ExportedFunctionStatus::UNABLE_TO_CALL_SCRIPT_FUNCTION:
-            return L"UNABLE_TO_CALL_SCRIPT_FUNCTION | 5";
+            return SYSSTR("UNABLE_TO_CALL_SCRIPT_FUNCTION | 5");
         case ExportedFunctionStatus::SCRIPT_FUNCTION_NOT_FOUND:
-            return L"SCRIPT_FUNCTION_NOT_FOUND | 6";
+            return SYSSTR("SCRIPT_FUNCTION_NOT_FOUND | 6");
         case ExportedFunctionStatus::UE4SS_NOT_INITIALIZED:
-            return L"UE4SS_NOT_INITIALIZED | 8";
+            return SYSSTR("UE4SS_NOT_INITIALIZED | 8");
         }
 
-        return L"Missed switch case";
+        return SYSSTR("Missed switch case");
     }
 
     auto get_lua_state_by_mod_name(const char* mod_name) -> lua_State*
@@ -184,7 +188,7 @@ namespace RC::LuaLibrary
             if (!Unreal::UnrealInitializer::StaticStorage::bIsInitialized)
             {
                 return_struct.status = ExportedFunctionStatus::UE4SS_NOT_INITIALIZED;
-                Output::send(STR("set_script_variable_int32 | UE4SS is not initialized\n"));
+                Output::send(SYSSTR("set_script_variable_int32 | UE4SS is not initialized\n"));
                 return;
             }
 
@@ -194,14 +198,14 @@ namespace RC::LuaLibrary
             const std::wstring variable_name_wide = std::wstring(tmp_var_name.begin(), tmp_var_name.end());
             const std::string tmp_mod_name = mod_name;
             const std::wstring mod_name_wide = std::wstring(tmp_mod_name.begin(), tmp_mod_name.end());
-            Output::send(STR("Setting variable '{}' in mod '{}' to {}\n"), variable_name_wide, mod_name_wide, new_value);
+            Output::send(SYSSTR("Setting variable '{}' in mod '{}' to {}\n"), variable_name_wide, mod_name_wide, new_value);
             //*/
 
             auto mod = UE4SSProgram::find_lua_mod_by_name(mod_name, UE4SSProgram::IsInstalled::Yes, UE4SSProgram::IsStarted::Yes);
             if (!mod)
             {
                 return_struct.status = ExportedFunctionStatus::MOD_IS_NULLPTR;
-                Output::send(STR("set_script_variable_int32 | return_struct.status: {}\n"), exported_function_status_to_string(return_struct.status));
+                Output::send(SYSSTR("set_script_variable_int32 | return_struct.status: {}\n"), exported_function_status_to_string(return_struct.status));
                 return;
             }
 
@@ -213,7 +217,7 @@ namespace RC::LuaLibrary
             if (type == LUA_TNIL)
             {
                 return_struct.status = ExportedFunctionStatus::VARIABLE_NOT_FOUND;
-                Output::send(STR("set_script_variable_int32 | return_struct.status: {}\n"), exported_function_status_to_string(return_struct.status));
+                Output::send(SYSSTR("set_script_variable_int32 | return_struct.status: {}\n"), exported_function_status_to_string(return_struct.status));
                 return;
             }
 
@@ -221,7 +225,7 @@ namespace RC::LuaLibrary
             lua_setglobal(lua.get_lua_state(), variable_name);
 
             return_struct.status = ExportedFunctionStatus::SUCCESS;
-            Output::send(STR("set_script_variable_int32 | return_struct.status: {}\n"), exported_function_status_to_string(return_struct.status));
+            Output::send(SYSSTR("set_script_variable_int32 | return_struct.status: {}\n"), exported_function_status_to_string(return_struct.status));
         }
         catch (std::runtime_error& e)
         {
@@ -240,7 +244,7 @@ namespace RC::LuaLibrary
             if (!Unreal::UnrealInitializer::StaticStorage::bIsInitialized)
             {
                 return_struct.status = ExportedFunctionStatus::UE4SS_NOT_INITIALIZED;
-                Output::send(STR("set_script_variable_default_data | UE4SS is not initialized\n"));
+                Output::send(SYSSTR("set_script_variable_default_data | UE4SS is not initialized\n"));
                 return;
             }
 
@@ -257,11 +261,11 @@ namespace RC::LuaLibrary
                 {
                     const std::string tmp_data1_value_ansi = external_data.data1.as_string;
                     const std::wstring data1_value_wide = std::wstring(tmp_data1_value_ansi.begin(), tmp_data1_value_ansi.end());
-                    Output::send(STR("Setting '{}.data1' as string to '{}' in mod '{}'"), variable_name_wide, data1_value_wide, mod_name_wide);
+                    Output::send(SYSSTR("Setting '{}.data1' as string to '{}' in mod '{}'"), variable_name_wide, data1_value_wide, mod_name_wide);
                     break;
                 }
                 case DefaultDataType::Float:
-                    Output::send(STR("Setting '{}.data1' as float to '{}' in mod '{}'"), variable_name_wide, external_data.data1.as_float, mod_name_wide);
+                    Output::send(SYSSTR("Setting '{}.data1' as float to '{}' in mod '{}'"), variable_name_wide, external_data.data1.as_float, mod_name_wide);
                     break;
             }
             //*/
@@ -270,7 +274,7 @@ namespace RC::LuaLibrary
             if (!mod)
             {
                 return_struct.status = ExportedFunctionStatus::MOD_IS_NULLPTR;
-                Output::send(STR("set_script_variable_default_data | return_struct.status: {}\n"), exported_function_status_to_string(return_struct.status));
+                Output::send(SYSSTR("set_script_variable_default_data | return_struct.status: {}\n"), exported_function_status_to_string(return_struct.status));
                 return;
             }
 
@@ -347,7 +351,7 @@ namespace RC::LuaLibrary
             if (!Unreal::UnrealInitializer::StaticStorage::bIsInitialized)
             {
                 return_struct.status = ExportedFunctionStatus::UE4SS_NOT_INITIALIZED;
-                Output::send(STR("call_script_function | UE4SS is not initialized\n"));
+                Output::send(SYSSTR("call_script_function | UE4SS is not initialized\n"));
                 return;
             }
 
@@ -357,14 +361,14 @@ namespace RC::LuaLibrary
             const std::wstring func_name_wide = std::wstring(tmp_func_name.begin(), tmp_func_name.end());
             const std::string tmp_mod_name = mod_name;
             const std::wstring mod_name_wide = std::wstring(tmp_mod_name.begin(), tmp_mod_name.end());
-            Output::send(STR("Calling script function '{}' in mod '{}'\n"), func_name_wide, mod_name_wide);
+            Output::send(SYSSTR("Calling script function '{}' in mod '{}'\n"), func_name_wide, mod_name_wide);
             //*/
 
             auto mod = UE4SSProgram::find_lua_mod_by_name(mod_name, UE4SSProgram::IsInstalled::Yes, UE4SSProgram::IsStarted::Yes);
             if (!mod)
             {
                 return_struct.status = ExportedFunctionStatus::MOD_IS_NULLPTR;
-                Output::send(STR("call_script_function | return_struct.status: {}\n"), exported_function_status_to_string(return_struct.status));
+                Output::send(SYSSTR("call_script_function | return_struct.status: {}\n"), exported_function_status_to_string(return_struct.status));
                 return;
             }
 
@@ -377,7 +381,7 @@ namespace RC::LuaLibrary
             catch (std::runtime_error&)
             {
                 return_struct.status = ExportedFunctionStatus::SCRIPT_FUNCTION_NOT_FOUND;
-                Output::send(STR("call_script_function | return_struct.status: {}\n"), exported_function_status_to_string(return_struct.status));
+                Output::send(SYSSTR("call_script_function | return_struct.status: {}\n"), exported_function_status_to_string(return_struct.status));
                 return;
             }
 
@@ -414,7 +418,7 @@ namespace RC::LuaLibrary
                 return_struct.status = ExportedFunctionStatus::SUCCESS;
             }
 
-            Output::send(STR("call_script_function | return_struct.status: {}\n"), exported_function_status_to_string(return_struct.status));
+            Output::send(SYSSTR("call_script_function | return_struct.status: {}\n"), exported_function_status_to_string(return_struct.status));
         }
         catch (std::runtime_error& e)
         {
