@@ -3021,7 +3021,7 @@ Overloads:
                      !unreal_function->HasAnyFunctionFlags(Unreal::EFunctionFlags::FUNC_Native))
             {
                 ++m_last_generic_hook_id;
-                auto [callback_data, _] = LuaMod::m_script_hook_callbacks.emplace(unreal_function->GetFullName(), LuaCallbackData{lua, nullptr, {}});
+                auto [callback_data, _] = LuaMod::m_script_hook_callbacks.emplace(unreal_function->GetFullName(), LuaCallbackData{*hook_lua, nullptr, {}});
                 callback_data->second.registry_indexes.emplace_back(LuaMod::LuaCallbackData::RegistryIndex{lua_callback_registry_index, m_last_generic_hook_id});
                 generic_pre_id = m_last_generic_hook_id;
                 generic_post_id = m_last_generic_hook_id;
