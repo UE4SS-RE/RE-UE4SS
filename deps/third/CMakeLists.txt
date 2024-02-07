@@ -44,7 +44,7 @@ add_subdirectory("imgui")
 # Zydis start
 FetchContent_Declare(zydis
     GIT_REPOSITORY git@github.com:zyantific/zydis.git
-    GIT_TAG v3.1.0
+    GIT_TAG v4.1.0
     GIT_SHALLOW TRUE
     GIT_PROGRESS ON)
     
