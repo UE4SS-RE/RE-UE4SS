@@ -19,6 +19,10 @@ Game where the bug occurred, and the UE engine version of the game.
 A clear and concise description of what the bug is.
 
 
+**Mods directory**
+A zip of your Mods folder if you've installed any mods that don't come with UE4SS by default
+
+
 **To Reproduce**
 Steps to reproduce the behavior:
 1. Launch game
