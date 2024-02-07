@@ -4,6 +4,7 @@ TBD
 ## New
 
 ### General
+Added new docs pages for devlogs, C++ examples, C++ BP macros - Buckminsterfullerene
 
 ### Live View
 
@@ -19,6 +20,7 @@ TBD
 ## Changes
 
 ### General
+Update docs installation guide for 3.0.0 - Buckminsterfullerene
 
 ### Live View
 
@@ -36,10 +38,12 @@ TBD
 ### General
 
 ### Live View
+Fix gui crash when clicking close window button ([#337](https://github.com/UE4SS-RE/RE-UE4SS/pull/337)) - localcc
 
 ### UHT Dumper
 
 ### Lua API
+Fix FindObject and Mod:SetSharedVariable userdata type matching ([#342](https://github.com/UE4SS-RE/RE-UE4SS/pull/342)) - Lyrth
 
 ### C++ API
 

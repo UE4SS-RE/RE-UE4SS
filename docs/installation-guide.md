@@ -1,11 +1,11 @@
-# Installation Guide
+# Installation
 
 ## Core structure concept
 
 There are four concepts you need to know about.
 
 1. The `root directory`.
-    - This directory contains the ue4ss dll file.
+    - This directory contains the UE4SS dll file.
 2. The `working directory`.
     - This directory contains configuration and mod files and is located inside the `root directory`.
 3. The `game directory`.
@@ -18,31 +18,52 @@ There are four concepts you need to know about.
     - Example of a `game executable directory`: 
     `D:\Games\Epic Games\SatisfactoryEarlyAccess\FactoryGame\Binaries\Win64\`
 
-## Choosing an installation directory
+## Choosing an installation method
 
 You can install UE4SS in a couple of different ways.
 
-The goal is to have the *.DLL of UE4SS to be loaded by the target game one way or another, and have the configuration files and `\Mods\` directory in the correct place for UE4SS to find them.
+The goal is to have the *.dll of UE4SS to be loaded by the target game one way or another, and have the configuration files and `\Mods\` directory in the correct place for UE4SS to find them.
 
-### Method #1 - Automatic Injection (Preferred)
+### Method #1 - Basic Install
 
 > Using method #1 will mean that the `root directory` and `working directory` are treated as one single directory that happens to also be the same directory as your `game executable directory`.
 
-The preferred and most straightforward way to install UE4SS is to choose the `ue4ss_xinput` download and then just drag & drop all the necessary files into the `game executable directory`.
+The basic install is intended for end-users who are using UE4SS for mods that use it and don't need to do any development work. There should be no extra windows visible when using this method.
+
+The preferred and most straightforward way to install UE4SS is to choose the `UE4SS_v{version_number}` download (e.g. `UE4SS_v3.0.0`) and then just drag & drop all the necessary files into the `game executable directory`.
 
 Now all you need to do is start your game and UE4SS will automatically be injected.
 
-### Method #2 - Manual Injection
+### Method #2 - Developer Install
 
-> Using method #2 will mean that the `root directory` and `working directory` are treated as one single directory that happens to also be the same directory as your `game executable directory`,  
+> Using method #2 will mean that the `root directory` and `working directory` are treated as one single directory that happens to also be the same directory as your `game executable directory`.
+
+The developer install is intended for mod developers or users who wish to use UE4SS for debugging, dumping or other utilities. The difference between this version and the basic install version is that there are some extra files included, and slightly different default settings in the `UE4SS-settings.ini` file, such as the console and GUI console being visible.
+
+The preferred and most straightforward way to install UE4SS is to choose the `zDEV-UE4SS_v{version_number}` download (e.g. `zDEV-UE4SS_v3.0.0`) and then just drag & drop all the necessary files into the `game executable directory`.
+
+Now all you need to do is start your game and UE4SS will automatically be injected.
+
+## Expirimental Install
+
+If you want the latest and greatest features and don't mind the potential for more bugs than the main release, you can visit the [experimental part of releases](https://github.com/UE4SS-RE/RE-UE4SS/releases/tag/experimental) which is automatically updated for each commit to the main branch.
+
+There are a lot of older files in the experimental releases, so you will need to look for the latest downloads. You can tell which are the latest by looking at the date of the release.
+
+There are two main packages you need to look for: basic, and dev. They are in a similar formats as above, but with `-commit number-commit hash` appended to the end of the version number. For example, a basic install might look like `UE4SS_v3.0.0-5-ga5e818e.zip` and a dev install might look like `zDEV-UE4SS_v3.0.0-5-ga5e818e.zip`.
+
+> **Note:** If you are using the experimental version for development, you should be using the dev version of the docs, which you can get to by appending docs.ue4ss.com with `/dev` (e.g. this page would be `https://docs.ue4ss.com/dev/installation-guide`).
+
+## Manual Injection
+
+> Using manual injection will mean that the `root directory` and `working directory` are treated as one single directory that happens to also be the same directory as your `game executable directory`,  
 but any directory may be used.
 
-Following the download of `ue4ss_xinput`, delete `xinput1_3.dll`.  Afterwards, launch the game and manually inject `ue4ss.dll` using your injector of choice.
+Following the download of basic or dev methods (stable or experimental) and delete `dwmapi.dll`.  Afterwards, launch the game and manually inject `UE4SS.dll` using your injector of choice.
 
+## Central Install Location
 
-### Method #3 - Central Install Location
-
-This method is a way to install UE4SS in one place for all your games. Simply extract the zip file in any directory _outside_ the `game directory`, this is what's known as the `root directory`.  
+This method is a way to install UE4SS in one place for all your games. Simply extract the zip file of your choice (basic or dev) in any directory _outside_ the `game directory`, this is what's known as the `root directory`.  
 
 You will then create a folder inside with the name of your game and drag `UE4SS-settings.ini` in to it, this is what's known as the `working directory`.
 
@@ -55,24 +76,21 @@ D:\Games\Epic Games\SatisfactoryEarlyAccess\FactoryGame\Binaries\Win64\FactoryGa
 Then the name of your `working directory` should be `SatisfactoryEarlyAccess`.  
 This directory will be automatically found and used by UE4SS if it exists.
 
-As of UE4SS 2.6, the following files & folders exist inside the `working directory`:
+As of UE4SS 3.0 (basic install), the following files & folders exist inside the `working directory`:
 
 - Mods
     - Mod folders
     - mods.txt
 - UE4SS-settings.ini
 - UE4SS.log
-- ue4ss.dll
-- xinput1_3.dll (Optional proxy dll when using Method #1. Can have a name of any DLL that is loaded by the game engine or by its dependencies)
+- UE4SS.dll
+- dwmapi.dll (Can have a name of any DLL that is loaded by the game engine or by its dependencies)
 
-Now all you need to do is start your game and point your injector of choice to `<root directory>/ue4ss.dll`.
+Now all you need to do is start your game and point your injector of choice to `<root directory>/UE4SS.dll`.
 
-## Last but not least...
+If you use this method, if you keep a copy of `UE4SS-settings.ini` inside the `root directory` then this file will act as a default for all the games that don't have a `working directory` as long as you still point your injector to the `root directory`.  
 
-If you use method #3, if you keep a copy of `UE4SS-settings.ini` inside the `root directory` then this file will act as a default for all the games that don't have a `working directory`  
-as long as you still point your injector to the `root directory`.  
-
-This way you can use method #3 for most of your games and at the same time you can use method #2 for other games if method #3 is problematic for you.
+This way you can use this method for most of your games and at the same time you can use method #1 or method #2 for other games.
 
 
 ## How to verify that UE4SS is running successfully?
