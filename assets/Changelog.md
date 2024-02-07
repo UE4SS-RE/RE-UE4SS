@@ -1,5 +1,67 @@
 v3.0.0
 ==============
+TBD
+
+Notes for next release go here.
+
+-UE4SS team
+
+## New
+
+### General
+
+### Live View
+
+### UHT Dumper
+
+### Lua API
+
+### C++ API
+
+### Experimental
+
+
+## Changes
+
+### General
+
+### Live View
+
+### UHT Dumper
+
+### Lua API
+
+### C++ API
+
+### Repo & Build Process
+
+
+## Fixes
+
+### General
+
+### Live View
+
+### UHT Dumper
+
+### Lua API
+Fixed `RegisterHook` using the wrong Lua instance for non-native UFunctions.
+
+### C++ API
+
+
+## Settings
+
+### Added:
+```
+```
+
+### Removed:
+```
+```
+
+v3.0.0
+==============
 2024-02-04
 
 After 9 months in development, we hope 3.0 was worth the wait. We want future releases to be more frequent, as constantly telling people "try latest experimental" is never a good solution.
