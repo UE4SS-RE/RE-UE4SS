@@ -55,7 +55,7 @@ def export_version(ref, name):
         readme_path = os.path.join(src_dir, 'README.md')
         with open(readme_path, 'r') as file:
             lines = file.readlines()
-        lines.insert(2, '\n> WARNING: This is the dev version of the UE4SS docs. The API and features are subject to change at any time. If you are developing mods for UE4SS, you should reference the [latest release](../release) instead.\n')
+        lines.insert(2, '\n> WARNING: This is the dev version of the UE4SS docs. The API and features are subject to change at any time. If you are developing mods for UE4SS, you should reference the [latest release](../release) instead.\n\n')
         with open(readme_path, 'w') as file:
             file.writelines(lines)
 

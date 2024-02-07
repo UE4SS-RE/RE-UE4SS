@@ -1,3 +1,7 @@
+FOR MOST UP TO DATE VERSION OF THIS DOCUMENTATION, PLEASE VISIT: 
+- IF YOU ARE ON LATEST RELEASE: https://docs.ue4ss.com/lua-api/
+- IF YOU ARE ON LATEST EXPERIMENTAL; https://docs.ue4ss.com/dev/lua-api
+
 Table Definitions
     - The definitions appear as: FieldName | FieldValueType
     - Fields that only have numeric field names have '#' as their name in this definition for clarity

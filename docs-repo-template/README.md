@@ -1,3 +1,3 @@
 # Wiki
 
-https://ue4ss-re.github.io/docs/
+https://docs.ue4ss.com/
