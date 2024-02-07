@@ -2,8 +2,8 @@ local UEHelpers = require("UEHelpers")
 
 local VerboseLogging = true
 
-local function Log(Message, AlwaysLog)
-    if not VerboseLogging and not AlwaysLog then return end
+local function Log(Message, OnlyLogIfVerbose)
+    if not VerboseLogging and OnlyLogIfVerbose then return end
     print(Message)
 end
 
@@ -183,6 +183,7 @@ local function LoadMod(ModName, ModInfo, World)
 
     if ModInfo.AssetPath == nil or ModInfo.AssetPath == nil then
         Log(string.format("Could not load mod '%s' because it has no asset path or name.\n", ModName))
+        return
     end
 
     local AssetData = nil
@@ -213,7 +214,7 @@ local function LoadMod(ModName, ModInfo, World)
                 Log(string.format("Executing 'PreBeginPlay' for mod '%s'\n", Actor:GetFullName()))
                 PreBeginPlay()
             else
-                Log("PreBeginPlay not valid\n")
+                Log("PreBeginPlay not valid\n", true)
             end
         end
     end)
@@ -264,7 +265,7 @@ RegisterBeginPlayPostHook(function(ContextParam)
             Log(string.format("Executing 'PostBeginPlay' for mod '%s'\n", Context:GetFullName()))
             PostBeginPlay()
         else
-            Log("PostBeginPlay not valid\n")
+            Log("PostBeginPlay not valid\n", true)
         end
     end
 end)
