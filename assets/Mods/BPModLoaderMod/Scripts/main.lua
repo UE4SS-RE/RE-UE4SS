@@ -271,7 +271,7 @@ RegisterBeginPlayPostHook(function(ContextParam)
             Log(string.format("Executing 'PostBeginPlay' for mod '%s'\n", Context:GetFullName()))
             PostBeginPlay()
         else
-            Log(string.format("PostBeginPlay not valid for mod %s\n", Context:GetFullName(), true)
+            Log(string.format("PostBeginPlay not valid for mod %s\n", Context:GetFullName(), true))
         end
     end
 end)
