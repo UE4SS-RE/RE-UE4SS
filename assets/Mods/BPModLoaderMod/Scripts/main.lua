@@ -1,6 +1,6 @@
 local UEHelpers = require("UEHelpers")
 
-local VerboseLogging = true
+local VerboseLogging = false
 
 local function Log(Message, OnlyLogIfVerbose)
     if not VerboseLogging and OnlyLogIfVerbose then return end
