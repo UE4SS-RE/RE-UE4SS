@@ -76,7 +76,12 @@ namespace RC::Output
 #if ENABLE_OUTPUT_DEVICE_DEBUG_MODE
         printf_s("DebugConsoleDevice received: %S", m_formatter(fmt).c_str());
 #else
+#ifdef WIN32
         printf_s("%s" SystemStringPrint"\033[0m", log_level_to_color(static_cast<Color::Color>(optional_arg)).c_str(), m_formatter(fmt).c_str());
+#else
+        fprintf(stderr, "%s" SystemStringPrint"\033[0m", log_level_to_color(static_cast<Color::Color>(optional_arg)).c_str(), m_formatter(fmt).c_str());
+        
+#endif
 #endif
     }
 } // namespace RC::Output
