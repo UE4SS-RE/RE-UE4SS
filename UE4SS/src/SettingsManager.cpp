@@ -46,7 +46,6 @@ namespace RC
         Ini::Parser parser;
         parser.parse(file);
         file.close();
-
         constexpr static File::CharType section_overrides[] = SYSSTR("Overrides");
         REGISTER_STRING_SETTING(Overrides.ModsFolderPath, section_overrides, ModsFolderPath)
 
@@ -97,9 +96,9 @@ namespace RC
         #endif
         REGISTER_INT64_SETTING(Debug.LiveViewObjectsPerGroup, section_debug, LiveViewObjectsPerGroup);
 
-        constexpr static File::CharType section_crash_dump[] = SYSSTR("CrashDump");
-        REGISTER_BOOL_SETTING(CrashDump.EnableDumping, section_crash_dump, EnableDumping);
-        REGISTER_BOOL_SETTING(CrashDump.FullMemoryDump, section_crash_dump, FullMemoryDump);
+        ///constexpr static File::CharType section_crash_dump[] = SYSSTR("CrashDump");
+        ///REGISTER_BOOL_SETTING(CrashDump.EnableDumping, section_crash_dump, EnableDumping);
+        ///REGISTER_BOOL_SETTING(CrashDump.FullMemoryDump, section_crash_dump, FullMemoryDump);
 
         constexpr static File::CharType section_threads[] = SYSSTR("Threads");
         REGISTER_INT64_SETTING(Threads.SigScannerNumThreads, section_threads, SigScannerNumThreads)
