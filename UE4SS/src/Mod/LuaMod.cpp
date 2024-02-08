@@ -355,14 +355,14 @@ namespace RC
             // Increasing the 'num_params' by one to account for the 'this / context' param
             // Increasing it again if there's a return value because we store that as the second param
             lua_data.lua.call_function(num_unreal_params + (lua_data.has_return_value ? 2 : 1), 1);
-
-            // Processing potential return values from both callbacks.
-            // Stack pos 1: return value from callback 1 (nil if nothing returned)
-            // Stack pos 2: return value from callback 2
-            // We will always have at leaste two return values, either one can be nil, and we need to process both in case one isn't nil.
-            process_return_value();
-            process_return_value();
         }
+
+        // Processing potential return values from both callbacks.
+        // Stack pos 1: return value from callback 1 (nil if nothing returned)
+        // Stack pos 2: return value from callback 2
+        // We will always have at leaste two return values, either one can be nil, and we need to process both in case one isn't nil.
+        process_return_value();
+        process_return_value();
 
         // No longer promising to be in the game thread
         set_is_in_game_thread(lua_data.lua, false);
