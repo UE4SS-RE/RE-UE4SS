@@ -284,7 +284,7 @@ namespace RC::File
             return;
         }
 
-        if (fclose(m_file) == 0)
+        if (fclose(m_file) != 0)
         {
             THROW_INTERNAL_FILE_ERROR(std::format("[StdFile::close_file] Was unable to close file, error: {}", errno))
         }
@@ -472,6 +472,7 @@ namespace RC::File
             modes = "rb";
             break;
         default:
+            printf("open_for: %d\n", open_properties.open_for);
             THROW_INTERNAL_FILE_ERROR("[StdFile::open_file] Tried to open file but received invalid data for the 'OpenFor' parameter.")
         }
 
@@ -486,6 +487,7 @@ namespace RC::File
         {
             if (!std::filesystem::exists(file_name_and_path))
             {
+                printf("file_name_and_path: %s not exists\n", file_name_and_path.string().c_str());
                 THROW_INTERNAL_FILE_ERROR(std::format("[StdFile::open_file] Tried opening file but file does not exist: {}", file_name_and_path.string()))
             }
         }
@@ -500,6 +502,7 @@ namespace RC::File
             std::string_view open_type = open_properties.open_for == OpenFor::Writing || open_properties.open_for == OpenFor::Appending ? "writing" : "reading";
 
             int error = errno;
+            printf("open file %s failed, error: %d\n", file_name_and_path.string().c_str(), error);
             THROW_INTERNAL_FILE_ERROR(
                         std::format("[StdFile::open_file] Tried opening file for {} but encountered an error. Path & File: {} | errno = {}\n",
                                     open_type,
