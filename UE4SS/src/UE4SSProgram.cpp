@@ -41,7 +41,7 @@
 #include <Unreal/AGameModeBase.hpp>
 #include <Unreal/GameplayStatics.hpp>
 #include <Unreal/Searcher/ObjectSearcher.hpp>
-#include <Unreal/TPair.hpp>
+#include <Unreal/Core/Templates/Tuple.hpp>
 #include <Unreal/UEngine.hpp>
 #include <Unreal/TypeChecker.hpp>
 #include <Unreal/UActorComponent.hpp>

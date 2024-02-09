@@ -11,12 +11,6 @@
 #define STR(str) L##str
 #endif
 
-#ifdef S
-static_assert(false, "UE4SS define 'S' is already defined, please solve this");
-#else
-#define S(str) STR(str)
-#endif
-
 #define THROW_INTERNAL_FILE_ERROR(msg)                                                                                                                         \
     RC::File::Internal::StaticStorage::internal_error = true;                                                                                                  \
     throw std::runtime_error{msg};

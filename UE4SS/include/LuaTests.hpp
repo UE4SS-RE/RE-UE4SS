@@ -2,7 +2,7 @@
 
 #include <cstdint>
 
-#include <Unreal/TArray.hpp>
+#include <Unreal/Core/Containers/Array.hpp>
 #include <Unreal/World.hpp>
 
 namespace RC

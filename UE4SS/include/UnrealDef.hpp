@@ -24,8 +24,8 @@
 #include <Unreal/Property/FTextProperty.hpp>
 #include <Unreal/Property/FWeakObjectProperty.hpp>
 #include <Unreal/Property/NumericPropertyTypes.hpp>
-#include <Unreal/TArray.hpp>
-#include <Unreal/TMap.hpp>
+#include <Unreal/Core/Containers/Array.hpp>
+#include <Unreal/Core/Containers/Map.hpp>
 #include <Unreal/UClass.hpp>
 #include <Unreal/UEnum.hpp>
 #include <Unreal/UFunction.hpp>
