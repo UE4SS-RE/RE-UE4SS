@@ -18,7 +18,7 @@
 #include <Mod/LuaMod.hpp>
 #include <Mod/Mod.hpp>
 #include <SettingsManager.hpp>
-#include <Unreal/TArray.hpp>
+#include <Unreal/Core/Containers/Array.hpp>
 #include <Unreal/UnrealVersion.hpp>
 
 // Used to set up ImGui context and allocator in DLL mods

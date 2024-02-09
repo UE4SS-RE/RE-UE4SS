@@ -10,7 +10,7 @@
 #include <Unreal/AActor.hpp>
 #include <Unreal/FString.hpp>
 #include <Unreal/ReflectedFunction.hpp>
-#include <Unreal/TArray.hpp>
+#include <Unreal/Core/Containers/Array.hpp>
 #include <Unreal/UClass.hpp>
 #include <Unreal/UObjectGlobals.hpp>
 
