@@ -3,14 +3,14 @@
 ## Inheritance
 [LocalObject](./localobject.md)
 
-## Methods
+## Metamethods
 
-### __index(string StructMemberVarName) 
+### __index
 
+- **Usage:** `UScriptStruct["StructMemberName"]` or `UScriptStruct.StructMemberName`
 - **Return type:** `auto`
-- **Returns:** the value for the supplied variable
-- Can return any type, you can use the `type()` function on the returned value to figure out what Lua class it's using (if non-trivial type)
-> Note: `__index` is a Lua [metamethod](https://gist.github.com/oatmealine/655c9e64599d0f0dd47687c1186de99f#indexing) and allows the access operation `userdata[key]`
+- Returns the value for the supplied member name.
+- Can return any type, you can use the `type()` function on the returned value to figure out what Lua class it's using (if non-trivial type).
 
 - **Example:**
 ```lua
@@ -21,10 +21,10 @@ local item = scriptStruct['Item']
 local item = scriptStruct.Item
 ```
 
-### __newindex(string StructMemberVarName, auto NewValue)
+### __newindex
 
-- Attempts to set the value for the supplied variable
-> Note: `__newindex` is a Lua [metamethod](https://gist.github.com/oatmealine/655c9e64599d0f0dd47687c1186de99f#indexing) and is an indexing assignment of `userdata[key] = value`
+- **Usage:** `UScriptStruct["StructMemberName"] = NewValue` or `UScriptStruct.StructMemberName = NewValue`
+- Attempts to set the value for the supplied member name to `NewValue`.
 
 - **Example:**
 ```lua
@@ -34,6 +34,8 @@ local scriptStruct = FindFirstOf('_UI_Items_C')
 scriptStruct['Item'] = 5
 scriptStruct.Item = 5
 ```
+
+## Methods
 
 ### GetBaseAddress()
 
