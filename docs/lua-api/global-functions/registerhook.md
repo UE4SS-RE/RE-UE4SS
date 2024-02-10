@@ -12,11 +12,11 @@ Returns two ids, both of which must be passed to `UnregisterHook` if you want to
 
 ## Parameters
 
-| # | Type     | Information                                                                                                                                                                  |
-|---|----------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| 1 | string   | Full name of the UFunction to hook. Type prefix has no effect.                                                                                                               |
-| 2 | function | If UFunction is native/non-BP: Callback to execute before the UFunction is executed.<br/>If UFunction is non-native/BP: Callback to execute after the UFunction is executed. |
-| 3 | function | (optional)<br/>If UFunction is native/non-BP: Callback to execute after the UFunction is executed<br/>If UFunction is non-native/BP: Param does nothing.                     |
+| # | Type     | Information                                                                                                                                                         |
+|---|----------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| 1 | string   | Full name of the UFunction to hook. Type prefix has no effect.                                                                                                      |
+| 2 | function | If UFunction path starts with `/Script/`: Callback to execute before the UFunction is executed.<br/>Otherwise: Callback to execute after the UFunction is executed. |
+| 3 | function | (optional)<br/>If UFunction path starts with `/Script/`: Callback to execute after the UFunction is executed<br/>Otherwise: Param does nothing.                     |
 
 ## Return Values
 
