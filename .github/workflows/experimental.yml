@@ -42,13 +42,15 @@ jobs:
       - name: Setup MSVC
         uses: ilammy/msvc-dev-cmd@v1
 
-      - name: Setup Ninja
-        uses: seanmiddleditch/gha-setup-ninja@v3
+      - name: Setup xmake
+        uses: xmake-io/github-action-setup-xmake@v1
+        with:
+          xmake-version: latest
 
       - name: Build
         run: |
-          cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Game__Shipping__Win64
-          cmake --build build
+          xmake f -m "Game__Shipping__Win64"
+          xmake build
 
       - name: Package
         run: python tools/buildscripts/build.py package -e
