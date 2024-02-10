@@ -5,11 +5,13 @@ The `UObject` class is the base class that most other Unreal Engine game objects
 ## Inheritance
 [RemoteObject](./remoteobject.md)
 
-## Methods
+## Metamethods
 
-### __index(string MemberVariableName)
+### __index
 
-- **Returns:** either a member variable (reflected property or custom property) or a UFunction.
+- **Usage:** `UObject["ObjectMemberName"]` or `UObject.ObjectMemberName`
+
+- Returns either a member variable (reflected property or custom property) or a UFunction.
 
 - This method can return any type, and you can use the UObject-specific `type()` function on the returned value to figure out the type if the type is non-trivial. 
 
@@ -30,11 +32,18 @@ The `UObject` class is the base class that most other Unreal Engine game objects
 
     -- Retrieve a trivial type
     local JumpMaxCount = Character.JumpMaxCount
+
+    -- Call a UFunction member on the object
+    -- Remember to use a colon (:) for calls
+    local CanCharacterJump = Character:CanJump()
+
     ```
 
-### __newindex(string MemberVariableName, auto NewValue)
+### __newindex
 
-- **Sets:** the value of a member variable.
+- **Usage:** `UObject["ObjectMemberName"] = NewValue` or `UObject.ObjectMemberName = NewValue`
+
+- Sets the value of a member variable to `NewValue`.
 
 - **Example:**
     Sets the value of `MaxParticleResize` in the first instance of class `UEngine` in memory.
@@ -42,6 +51,8 @@ The `UObject` class is the base class that most other Unreal Engine game objects
     local Engine = FindFirstOf("Engine")
     Engine.MaxParticleResize = 4
     ```
+
+## Methods
 
 ### GetFullName()
 
@@ -149,11 +160,11 @@ The `UObject` class is the base class that most other Unreal Engine game objects
 ### GetPropertyValue(string MemberVariableName)
 
 - **Return type:** `auto`
-- Identical to `__index`
+- Identical to `__index` metamethod (doing `UObject["ObjectMemberName"]`)
 
-### SetPropertyValue(string MemberVariableName auto NewValue)
+### SetPropertyValue(string MemberVariableName, auto NewValue)
 
-- Identical to `__newindex`
+- Identical to `__newindex` metamethod (doing `UObject["ObjectMemberName"] = NewValue`)
 
 ### IsClass()
 
@@ -190,7 +201,7 @@ The `UObject` class is the base class that most other Unreal Engine game objects
 - **Return type:** `bool`
 - **Returns:** whether the object has any of the specified internal flags.
 
-### CallFunction(UFunction function, auto Params...)
+### CallFunction(UFunction Function, auto Params...)
 
 - Calls the supplied `UFunction` on this `UObject`.
 
@@ -203,3 +214,4 @@ The `UObject` class is the base class that most other Unreal Engine game objects
 - **Return type:** `string`
 - **Returns:** the type of this object as known by UE4SS
 - This does not return the type as known by Unreal
+- Not equivalent to doing `type(UObject)`, which returns the type as known by Lua (a 'userdata')

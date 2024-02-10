@@ -3,14 +3,24 @@
 ## Inheritance
 [RemoteObject](./remoteobject.md)
 
-## Methods
+## Metamethods
 
-### __index(integer ArrayIndex)
-- Attempts to retrieve the value at the specified offset in the array.
+### __index
+- **Usage:** `TArray[ArrayIndex]`
+- **Return type:** `auto`
+- Attempts to retrieve the value at the specified integer offset `ArrayIndex` in the array.
 - Can return any type, you can use the `type()` function on the returned value to figure out what Lua class it's using (if non-trivial type).
 
-### __newindex(integer ArrayIndex, auto NewValue)
-- Attempts to set the value at the specified offset in the array.
+### __newindex
+- **Usage:** `TArray[ArrayIndex] = NewValue`
+- Attempts to set the value at the specified integer offset `ArrayIndex` in the array to `NewValue`.
+
+### __len
+- **Usage:** `#TArray`
+- **Return type:** `integer`
+- Returns the number of current elements in the array.
+
+## Methods
 
 ### GetArrayAddress()
 - **Return type:** `integer`
