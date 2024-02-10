@@ -10,7 +10,8 @@ extern "C" {
 }
 */
 
-// Lua was compiled as C++ so 'extern "C"' should not be used here
+extern "C" {
 #include "lauxlib.h"
 #include "lua.h"
 #include "lualib.h"
+}

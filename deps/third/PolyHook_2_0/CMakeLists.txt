@@ -1,3 +1,5 @@
+cmake_minimum_required(VERSION 3.27)
+
 include(FetchContent)
 
 set(FETCHCONTENT_QUIET OFF)
@@ -8,6 +10,10 @@ set(ZYCORE_LIBRARY Zycore)
 get_target_property(ZYDIS_INCLUDE_DIR ${ZYDIS_LIBRARY} INCLUDE_DIRECTORIES)
 get_target_property(ZYCORE_INCLUDE_DIR ${ZYCORE_LIBRARY} INCLUDE_DIRECTORIES)
 message(${ZYDIS_INCLUDE_DIR})
+FetchContent_Declare(PolyHook2
+    GIT_REPOSITORY git@github.com:stevemk14ebr/PolyHook_2_0.git
+    GIT_TAG 16bc0faf77a15b91b72763353901cfe34daf3174
+    GIT_PROGRESS ON)
 
 if (${UE4SS_PolyHook_BUILD_SHARED})
     set(MAKE_POLYHOOK_DEPENDENCIES_SHARED ON)

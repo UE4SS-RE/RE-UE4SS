@@ -68,3 +68,6 @@ _ReSharper*/
 # clangd cache
 .cache
 .xwin-cache
+
+# xmake generated projects
+vsxmake2022

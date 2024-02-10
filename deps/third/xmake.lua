@@ -1,0 +1,11 @@
+includes("zycore")
+includes("zydis")
+includes("Polyhook_2_0")
+includes("glaze")
+includes("imgui")
+includes("glad")
+includes("raw_pdb")
+
+add_requires("zycore")
+add_requires("zydis")
+add_requires("polyhook_2")
