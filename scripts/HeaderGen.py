@@ -3,6 +3,8 @@
 
 import os
 import sys
+import re
+import pickle
 
 DEFAULT_FILENAME = "./UnrealGame-Linux-Shipping.debug"
 DEFAULT_SEARCH_DIR = "../deps/first/Unreal/generated_include"
@@ -19,6 +21,8 @@ MEMBER_TEMPLATE = """if (auto it = {ClassName}::MemberOffsets.find(STR("{MemberN
     UWorld::MemberOffsets.emplace(STR("{MemberName}"), 0x{MemberOffset:02x});
 }}
 """
+
+Version = "5_01"
 
 class CMember:
     def __init__(self, name, offset):
@@ -94,48 +98,13 @@ def GetClassNames(search_dir = DEFAULT_SEARCH_DIR):
     # glob all file with pattern "MemberVariableLayout_HeaderWrapper_{ClassName}.hpp"
     # return list of class names
     """
-    import glob, re
-    return [re.search(r"MemberVariableLayout_HeaderWrapper_(.*).hpp", file).group(1) for file in glob.glob(f"{search_dir}/MemberVariableLayout_HeaderWrapper_*.hpp")]
+    import glob
+    tabA = [re.search(rf"{Version}_VTableOffsets_(.*)_FunctionBody\.cpp", file).group(1) for file in glob.glob(f"{search_dir}/FunctionBodies/{Version}_VTableOffsets_*.cpp")]
+    tabB = [re.search(rf"{Version}_MemberVariableLayout_DefaultSetter_(.*)\.cpp", file).group(1) for file in glob.glob(f"{search_dir}/FunctionBodies/{Version}_MemberVariableLayout_DefaultSetter_*.cpp")]
+    return list(dict.fromkeys(tabA + tabB))
     """
-    return ['UGameViewportClient',
-            'UEnum',
-            'UConsole',
-            'UDataTable',
-            'FClassProperty',
-            'FByteProperty',
-            'FDelegateProperty',
-            'UFunction',
-            'FEnumProperty',
-            'FSetProperty',
-            'FInterfaceProperty',
-            'FFieldPathProperty',
-            'AGameMode',
-            'UObjectBase',
-            'FObjectPropertyBase',
-            'AActor',
-            'FBoolProperty',
-            'UScriptStruct__ICppStructOps',
-            'FMulticastDelegateProperty',
-            'UPlayer',
-            'FOutputDevice',
-            'UField',
-            'FMapProperty',
-            'FArchive',
-            'FSoftClassProperty',
-            'FStructProperty',
-            'ULocalPlayer',
-            'UWorld',
-            'AGameModeBase',
-            'FConsoleVariableBase',
-            'FConsoleCommandBase',
-            'FArchiveState',
-            'UScriptStruct',
-            'FConsoleManager',
-            'UStruct',
-            'FProperty',
-            'FArrayProperty',
-            'UClass',
-            'FField']
+
+    return  ['FArchiveState', 'UDataTable', 'FConsoleManager', 'UPlayer', 'UObjectBaseUtility', 'AGameMode', 'FMalloc', 'UField', 'UGameViewportClient', 'FField', 'FNumericProperty', 'IConsoleVariable', 'AGameModeBase', 'FMulticastDelegateProperty', 'UObject', 'AActor', 'IConsoleManager', 'IConsoleObject', 'FArchive', 'FConsoleVariableBase', 'FOutputDevice', 'ITextData', 'FProperty', 'FObjectPropertyBase', 'ULocalPlayer', 'UScriptStruct__ICppStructOps', 'UObjectBase', 'FConsoleCommandBase', 'UConsole', 'UStruct', 'IConsoleCommand', 'FInterfaceProperty', 'FByteProperty', 'FSoftClassProperty', 'FStructProperty', 'UEnum', 'FBoolProperty', 'UWorld', 'UClass', 'FEnumProperty', 'FClassProperty', 'FFieldPathProperty', 'FArrayProperty', 'FMapProperty', 'FSetProperty', 'UScriptStruct', 'FDelegateProperty', 'UFunction']
 
 from elftools.dwarf.die import DIE
 from elftools.elf.elffile import ELFFile
@@ -181,7 +150,6 @@ def ProcessFile(filename = DEFAULT_FILENAME, outfile= "database.pkl", target_cla
     started = True
     if os.path.exists(outfile):
         with open(outfile, "rb") as f:
-            import pickle
             database = pickle.load(f)
             progress = pickle.load(f)
             started = False
@@ -198,7 +166,6 @@ def ProcessFile(filename = DEFAULT_FILENAME, outfile= "database.pkl", target_cla
         ScanCU(database, target_class, cu)
         # pickle dump
         with open(outfile, "wb") as f:
-            import pickle
             pickle.dump(database, f)
             pickle.dump(cu.get_top_DIE().attributes['DW_AT_name'].value.decode('utf-8'), f) # dump progress
         print(f"{cu.get_top_DIE().attributes['DW_AT_name'].value.decode('utf-8')} done...")
@@ -235,12 +202,27 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Generate header file for C++, using DRAWF information from .debug files")
     parser.add_argument("-s", "--scan", help="Scan mode", action="store_true")
     parser.add_argument("-g", "--generate", help="Generate header file", action="store_true")
+    parser.add_argument("-i", "--info", help="Print infos", action="store_true")
+    parser.add_argument("-v", "--version", help="Set version", nargs="?", default=Version)
 
     parser.add_argument("-o", "--output", help="Output file", nargs="?", default="database.pkl")
     parser.add_argument("-c", "--class", help="Target class", nargs="+", metavar="class_", default=GetClassNames())
     parser.add_argument("-t", "--target", help="Target directory", nargs="?", default=DEFAULT_GENERATED_DIR)
     parser.add_argument("filename", help="Filename", nargs="?", default=DEFAULT_FILENAME)
     args = parser.parse_args()
+
+    if args.version:
+        # valid version = "\d_\d\d"
+        if not re.match(r"\d_\d\d", args.version):
+            print("Invalid version")
+            sys.exit(1)
+        Version = args.version
+
+    if args.info:
+        print("  Class names: ", GetClassNames())
+        print("  Default search dir: ", resolve_path(DEFAULT_SEARCH_DIR))
+        print("  Default generated dir: ", resolve_path(DEFAULT_GENERATED_DIR))
+        sys.exit(0)
 
     if args.scan:
         if not args.output:
