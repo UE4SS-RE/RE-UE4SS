@@ -1420,12 +1420,9 @@ Overloads:
                     {
                         Output::send<LogLevel::Verbose>(STR("Unregistering script hook with id: {}\n"), post_id);
                         auto& registry_indexes = callback_data_it->second.registry_indexes;
-                        registry_indexes.erase(std::remove_if(registry_indexes.begin(),
-                                                              registry_indexes.end(),
-                                                              [&](LuaMod::LuaCallbackData::RegistryIndex& registry_index) -> bool {
-                                                                  return post_id == registry_index.identifier;
-                                                              }),
-                                               registry_indexes.end());
+                        std::erase_if(registry_indexes, [&](const auto& pair) -> bool {
+                            return post_id == pair.second.identifier;
+                        });
                     }
                 }
 
@@ -1888,7 +1885,10 @@ Overloads:
 
             Unreal::UClass* instance_of_class = Unreal::UObjectGlobals::StaticFindObject<Unreal::UClass*>(nullptr, nullptr, class_name);
 
-            LuaMod::m_static_construct_object_lua_callbacks.emplace_back(LuaMod::LuaCallbackData{*hook_lua, instance_of_class, {{lua_callback_registry_index}}});
+            LuaMod::m_static_construct_object_lua_callbacks.emplace_back(
+                    LuaMod::LuaCallbackData{*hook_lua,
+                                            instance_of_class,
+                                            {std::pair<const LuaMadeSimple::Lua*, LuaMod::LuaCallbackData::RegistryIndex>{hook_lua, lua_callback_registry_index}}});
 
             return 0;
         });
@@ -1919,12 +1919,13 @@ Overloads:
             // Take a reference to the Lua function (it also pops it of the stack)
             const int32_t lua_callback_registry_index = hook_lua->registry().make_ref();
 
-            LuaMod::m_custom_event_callbacks.emplace(event_name,
-                                                     LuaMod::LuaCallbackData{
-                                                             .lua = lua,
-                                                             .instance_of_class = nullptr,
-                                                             .registry_indexes = {{lua_callback_registry_index}},
-                                                     });
+            LuaMod::m_custom_event_callbacks.emplace(
+                    event_name,
+                    LuaMod::LuaCallbackData{
+                            .lua = lua,
+                            .instance_of_class = nullptr,
+                            .registry_indexes = {std::pair<const LuaMadeSimple::Lua*, LuaMod::LuaCallbackData::RegistryIndex>{&lua, {lua_callback_registry_index}}},
+                    });
 
             return 0;
         });
@@ -1965,8 +1966,10 @@ Overloads:
             // Take a reference to the lua function (it also pops it off the stack)
             const int32_t lua_callback_registry_index = hook_lua->registry().make_ref();
 
-            LuaMod::m_load_map_pre_callbacks.emplace_back(
-                    LuaMod::LuaCallbackData{.lua = lua, .instance_of_class = nullptr, .registry_indexes = {{lua_callback_registry_index}}});
+            LuaMod::m_load_map_pre_callbacks.emplace_back(LuaMod::LuaCallbackData{
+                    .lua = lua,
+                    .instance_of_class = nullptr,
+                    .registry_indexes = {std::pair<const LuaMadeSimple::Lua*, LuaMod::LuaCallbackData::RegistryIndex>{&lua, lua_callback_registry_index}}});
 
             return 0;
         });
@@ -1990,8 +1993,10 @@ Overloads:
             // Take a reference to the lua function (it also pops it off the stack)
             const int32_t lua_callback_registry_index = hook_lua->registry().make_ref();
 
-            LuaMod::m_load_map_post_callbacks.emplace_back(
-                    LuaMod::LuaCallbackData{.lua = lua, .instance_of_class = nullptr, .registry_indexes = {{lua_callback_registry_index}}});
+            LuaMod::m_load_map_post_callbacks.emplace_back(LuaMod::LuaCallbackData{
+                    .lua = lua,
+                    .instance_of_class = nullptr,
+                    .registry_indexes = {std::pair<const LuaMadeSimple::Lua*, LuaMod::LuaCallbackData::RegistryIndex>{&lua, lua_callback_registry_index}}});
 
             return 0;
         });
@@ -2018,7 +2023,7 @@ Overloads:
             LuaMod::m_init_game_state_pre_callbacks.emplace_back(LuaMod::LuaCallbackData{
                     .lua = lua,
                     .instance_of_class = nullptr,
-                    .registry_indexes = {{lua_callback_registry_index}},
+                    .registry_indexes = {std::pair<const LuaMadeSimple::Lua*, LuaMod::LuaCallbackData::RegistryIndex>{&lua, lua_callback_registry_index}},
             });
 
             return 0;
@@ -2046,7 +2051,7 @@ Overloads:
             LuaMod::m_init_game_state_post_callbacks.emplace_back(LuaMod::LuaCallbackData{
                     .lua = lua,
                     .instance_of_class = nullptr,
-                    .registry_indexes = {{lua_callback_registry_index}},
+                    .registry_indexes = {std::pair<const LuaMadeSimple::Lua*, LuaMod::LuaCallbackData::RegistryIndex>{&lua, lua_callback_registry_index}},
             });
 
             return 0;
@@ -2074,7 +2079,7 @@ Overloads:
             LuaMod::m_begin_play_pre_callbacks.emplace_back(LuaMod::LuaCallbackData{
                     .lua = lua,
                     .instance_of_class = nullptr,
-                    .registry_indexes = {{lua_callback_registry_index}},
+                    .registry_indexes = {std::pair<const LuaMadeSimple::Lua*, LuaMod::LuaCallbackData::RegistryIndex>{&lua, lua_callback_registry_index}},
             });
 
             return 0;
@@ -2102,7 +2107,7 @@ Overloads:
             LuaMod::m_begin_play_post_callbacks.emplace_back(LuaMod::LuaCallbackData{
                     .lua = lua,
                     .instance_of_class = nullptr,
-                    .registry_indexes = {{lua_callback_registry_index}},
+                    .registry_indexes = {std::pair<const LuaMadeSimple::Lua*, LuaMod::LuaCallbackData::RegistryIndex>{&lua, lua_callback_registry_index}},
             });
 
             return 0;
@@ -2359,7 +2364,7 @@ Overloads:
             callback = &LuaMod::m_process_console_exec_pre_callbacks.emplace_back(LuaMod::LuaCallbackData{*hook_lua, nullptr, {}});
             lua_xmove(lua.get_lua_state(), callback->lua.get_lua_state(), 1);
             const int32_t lua_function_ref = callback->lua.registry().make_ref();
-            callback->registry_indexes.emplace_back(LuaMod::LuaCallbackData::RegistryIndex{lua_function_ref});
+            callback->registry_indexes.emplace_back(hook_lua, LuaMod::LuaCallbackData::RegistryIndex{lua_function_ref});
             return 0;
         });
 
@@ -2380,7 +2385,7 @@ Overloads:
             callback = &LuaMod::m_process_console_exec_post_callbacks.emplace_back(LuaMod::LuaCallbackData{*hook_lua, nullptr, {}});
             lua_xmove(lua.get_lua_state(), callback->lua.get_lua_state(), 1);
             const int32_t lua_function_ref = callback->lua.registry().make_ref();
-            callback->registry_indexes.emplace_back(LuaMod::LuaCallbackData::RegistryIndex{lua_function_ref});
+            callback->registry_indexes.emplace_back(hook_lua, LuaMod::LuaCallbackData::RegistryIndex{lua_function_ref});
             return 0;
         });
 
@@ -2401,7 +2406,7 @@ Overloads:
             callback = &LuaMod::m_call_function_by_name_with_arguments_pre_callbacks.emplace_back(LuaMod::LuaCallbackData{*hook_lua, nullptr, {}});
             lua_xmove(lua.get_lua_state(), callback->lua.get_lua_state(), 1);
             const int32_t lua_function_ref = callback->lua.registry().make_ref();
-            callback->registry_indexes.emplace_back(LuaMod::LuaCallbackData::RegistryIndex{lua_function_ref});
+            callback->registry_indexes.emplace_back(hook_lua, LuaMod::LuaCallbackData::RegistryIndex{lua_function_ref});
             return 0;
         });
 
@@ -2422,7 +2427,7 @@ Overloads:
             callback = &LuaMod::m_call_function_by_name_with_arguments_post_callbacks.emplace_back(LuaMod::LuaCallbackData{*hook_lua, nullptr, {}});
             lua_xmove(lua.get_lua_state(), callback->lua.get_lua_state(), 1);
             const int32_t lua_function_ref = callback->lua.registry().make_ref();
-            callback->registry_indexes.emplace_back(LuaMod::LuaCallbackData::RegistryIndex{lua_function_ref});
+            callback->registry_indexes.emplace_back(hook_lua, LuaMod::LuaCallbackData::RegistryIndex{lua_function_ref});
             return 0;
         });
 
@@ -2443,7 +2448,7 @@ Overloads:
             callback = &LuaMod::m_local_player_exec_pre_callbacks.emplace_back(LuaMod::LuaCallbackData{*hook_lua, nullptr, {}});
             lua_xmove(lua.get_lua_state(), callback->lua.get_lua_state(), 1);
             const int32_t lua_function_ref = callback->lua.registry().make_ref();
-            callback->registry_indexes.emplace_back(LuaMod::LuaCallbackData::RegistryIndex{lua_function_ref});
+            callback->registry_indexes.emplace_back(hook_lua, LuaMod::LuaCallbackData::RegistryIndex{lua_function_ref});
             return 0;
         });
 
@@ -2464,7 +2469,7 @@ Overloads:
             callback = &LuaMod::m_local_player_exec_post_callbacks.emplace_back(LuaMod::LuaCallbackData{*hook_lua, nullptr, {}});
             lua_xmove(lua.get_lua_state(), callback->lua.get_lua_state(), 1);
             const int32_t lua_function_ref = callback->lua.registry().make_ref();
-            callback->registry_indexes.emplace_back(LuaMod::LuaCallbackData::RegistryIndex{lua_function_ref});
+            callback->registry_indexes.emplace_back(hook_lua, LuaMod::LuaCallbackData::RegistryIndex{lua_function_ref});
             return 0;
         });
 
@@ -2499,7 +2504,7 @@ Overloads:
             }
             lua_xmove(lua.get_lua_state(), callback->lua.get_lua_state(), 1);
             const int32_t lua_function_ref = callback->lua.registry().make_ref();
-            callback->registry_indexes.emplace_back(LuaMod::LuaCallbackData::RegistryIndex{lua_function_ref});
+            callback->registry_indexes.emplace_back(&lua, LuaMod::LuaCallbackData::RegistryIndex{lua_function_ref});
             return 0;
         });
 
@@ -2534,7 +2539,7 @@ Overloads:
             }
             lua_xmove(lua.get_lua_state(), callback->lua.get_lua_state(), 1);
             const int32_t lua_function_ref = callback->lua.registry().make_ref();
-            callback->registry_indexes.emplace_back(LuaMod::LuaCallbackData::RegistryIndex{lua_function_ref});
+            callback->registry_indexes.emplace_back(&lua, LuaMod::LuaCallbackData::RegistryIndex{lua_function_ref});
             return 0;
         });
 
@@ -3021,8 +3026,9 @@ Overloads:
                      !unreal_function->HasAnyFunctionFlags(Unreal::EFunctionFlags::FUNC_Native))
             {
                 ++m_last_generic_hook_id;
-                auto [callback_data, _] = LuaMod::m_script_hook_callbacks.emplace(unreal_function->GetFullName(), LuaCallbackData{lua, nullptr, {}});
-                callback_data->second.registry_indexes.emplace_back(LuaMod::LuaCallbackData::RegistryIndex{lua_callback_registry_index, m_last_generic_hook_id});
+                auto [callback_data, _] = LuaMod::m_script_hook_callbacks.emplace(unreal_function->GetFullName(), LuaCallbackData{*hook_lua, nullptr, {}});
+                callback_data->second.registry_indexes.emplace_back(hook_lua,
+                                                                    LuaMod::LuaCallbackData::RegistryIndex{lua_callback_registry_index, m_last_generic_hook_id});
                 generic_pre_id = m_last_generic_hook_id;
                 generic_post_id = m_last_generic_hook_id;
                 Output::send<LogLevel::Verbose>(STR("[RegisterHook] Registered script hook ({}, {}) for {}\n"),
@@ -3464,9 +3470,9 @@ Overloads:
             if (auto it = callback_container.find(precise_name_match ? Stack.Node()->GetFullName() : Stack.Node()->GetName()); it != callback_container.end())
             {
                 const auto& callback_data = it->second;
-                for (const auto registry_index : callback_data.registry_indexes)
+                for (const auto& [lua_ptr, registry_index] : callback_data.registry_indexes)
                 {
-                    const auto& lua = callback_data.lua;
+                    const auto& lua = *lua_ptr;
 
                     set_is_in_game_thread(lua, true);
 
@@ -3591,12 +3597,12 @@ Overloads:
                         -> std::pair<bool, bool> {
                     for (const auto& callback_data : m_load_map_pre_callbacks)
                     {
-                        const auto& lua = callback_data.lua;
-
                         std::pair<bool, bool> return_value{};
 
-                        for (const auto registry_index : callback_data.registry_indexes)
+                        for (const auto& [lua_ptr, registry_index] : callback_data.registry_indexes)
                         {
+                            const auto& lua = *lua_ptr;
+
                             lua.registry().get_function_ref(registry_index.lua_index);
                             static auto s_object_property_name = Unreal::FName(STR("ObjectProperty"));
                             LuaType::RemoteUnrealParam::construct(lua, &Engine, s_object_property_name);
@@ -3632,12 +3638,12 @@ Overloads:
                         -> std::pair<bool, bool> {
                     for (const auto& callback_data : m_load_map_post_callbacks)
                     {
-                        const auto& lua = callback_data.lua;
-
                         std::pair<bool, bool> return_value{};
 
-                        for (const auto registry_index : callback_data.registry_indexes)
+                        for (const auto& [lua_ptr, registry_index] : callback_data.registry_indexes)
                         {
+                            const auto& lua = *lua_ptr;
+
                             lua.registry().get_function_ref(registry_index.lua_index);
                             static auto s_object_property_name = Unreal::FName(STR("ObjectProperty"));
                             LuaType::RemoteUnrealParam::construct(lua, &Engine, s_object_property_name);
@@ -3672,11 +3678,12 @@ Overloads:
             TRY([&] {
                 for (const auto& callback_data : m_init_game_state_pre_callbacks)
                 {
-                    const auto& lua = callback_data.lua;
                     // set_is_in_game_thread(lua, true);
 
-                    for (const auto registry_index : callback_data.registry_indexes)
+                    for (const auto& [lua_ptr, registry_index] : callback_data.registry_indexes)
                     {
+                        const auto& lua = *lua_ptr;
+
                         lua.registry().get_function_ref(registry_index.lua_index);
                         static auto s_object_property_name = Unreal::FName(STR("ObjectProperty"));
                         LuaType::RemoteUnrealParam::construct(lua, &Context, s_object_property_name);
@@ -3692,11 +3699,12 @@ Overloads:
             TRY([&] {
                 for (const auto& callback_data : m_init_game_state_post_callbacks)
                 {
-                    const auto& lua = callback_data.lua;
                     // set_is_in_game_thread(lua, true);
 
-                    for (const auto registry_index : callback_data.registry_indexes)
+                    for (const auto& [lua_ptr, registry_index] : callback_data.registry_indexes)
                     {
+                        const auto& lua = *lua_ptr;
+
                         lua.registry().get_function_ref(registry_index.lua_index);
                         static auto s_object_property_name = Unreal::FName(STR("ObjectProperty"));
                         LuaType::RemoteUnrealParam::construct(lua, &Context, s_object_property_name);
@@ -3712,11 +3720,12 @@ Overloads:
             TRY([&] {
                 for (const auto& callback_data : m_begin_play_pre_callbacks)
                 {
-                    const auto& lua = callback_data.lua;
                     // set_is_in_game_thread(lua, true);
 
-                    for (const auto registry_index : callback_data.registry_indexes)
+                    for (const auto& [lua_ptr, registry_index] : callback_data.registry_indexes)
                     {
+                        const auto& lua = *lua_ptr;
+
                         lua.registry().get_function_ref(registry_index.lua_index);
                         static auto s_object_property_name = Unreal::FName(STR("ObjectProperty"));
                         LuaType::RemoteUnrealParam::construct(lua, &Context, s_object_property_name);
@@ -3732,11 +3741,12 @@ Overloads:
             TRY([&] {
                 for (const auto& callback_data : m_begin_play_post_callbacks)
                 {
-                    const auto& lua = callback_data.lua;
                     // set_is_in_game_thread(lua, true);
 
-                    for (const auto registry_index : callback_data.registry_indexes)
+                    for (const auto& [lua_ptr, registry_index] : callback_data.registry_indexes)
                     {
+                        const auto& lua = *lua_ptr;
+
                         lua.registry().get_function_ref(registry_index.lua_index);
                         static auto s_object_property_name = Unreal::FName(STR("ObjectProperty"));
                         LuaType::RemoteUnrealParam::construct(lua, &Context, s_object_property_name);
@@ -3758,7 +3768,7 @@ Overloads:
                     {
                         try
                         {
-                            for (const auto& registry_index : callback_data.registry_indexes)
+                            for (const auto& [lua, registry_index] : callback_data.registry_indexes)
                             {
                                 callback_data.lua.registry().get_function_ref(registry_index.lua_index);
                                 LuaType::auto_construct_object(callback_data.lua, constructed_object);
@@ -3787,7 +3797,7 @@ Overloads:
 
                     Unreal::Hook::ULocalPlayerExecCallbackReturnValue return_value{};
 
-                    for (const auto& registry_index : callback_data.registry_indexes)
+                    for (const auto& [lua, registry_index] : callback_data.registry_indexes)
                     {
                         callback_data.lua.registry().get_function_ref(registry_index.lua_index);
 
@@ -3847,7 +3857,7 @@ Overloads:
 
                     Unreal::Hook::ULocalPlayerExecCallbackReturnValue return_value{};
 
-                    for (const auto& registry_index : callback_data.registry_indexes)
+                    for (const auto& [lua, registry_index] : callback_data.registry_indexes)
                     {
                         callback_data.lua.registry().get_function_ref(registry_index.lua_index);
 
@@ -3908,7 +3918,7 @@ Overloads:
 
                             std::pair<bool, bool> return_value{};
 
-                            for (const auto& registry_index : callback_data.registry_indexes)
+                            for (const auto& [lua, registry_index] : callback_data.registry_indexes)
                             {
                                 callback_data.lua.registry().get_function_ref(registry_index.lua_index);
 
@@ -3956,7 +3966,7 @@ Overloads:
 
                             std::pair<bool, bool> return_value{};
 
-                            for (const auto& registry_index : callback_data.registry_indexes)
+                            for (const auto& [lua, registry_index] : callback_data.registry_indexes)
                             {
                                 callback_data.lua.registry().get_function_ref(registry_index.lua_index);
 
@@ -4087,7 +4097,7 @@ Overloads:
 
                             std::pair<bool, bool> return_value{};
 
-                            for (const auto& registry_index : callback_data.registry_indexes)
+                            for (const auto& [lua, registry_index] : callback_data.registry_indexes)
                             {
                                 callback_data.lua.registry().get_function_ref(registry_index.lua_index);
 
@@ -4143,7 +4153,7 @@ Overloads:
 
                             std::pair<bool, bool> return_value{};
 
-                            for (const auto& registry_index : callback_data.registry_indexes)
+                            for (const auto& [lua, registry_index] : callback_data.registry_indexes)
                             {
                                 callback_data.lua.registry().get_function_ref(registry_index.lua_index);
 
@@ -4217,7 +4227,7 @@ Overloads:
 
                     bool return_value{};
 
-                    for (const auto& registry_index : callback_data.registry_indexes)
+                    for (const auto& [lua, registry_index] : callback_data.registry_indexes)
                     {
                         callback_data.lua.registry().get_function_ref(registry_index.lua_index);
                         callback_data.lua.set_string(to_string(command));
@@ -4277,7 +4287,7 @@ Overloads:
 
                     bool return_value{};
 
-                    for (const auto& registry_index : callback_data.registry_indexes)
+                    for (const auto& [lua, registry_index] : callback_data.registry_indexes)
                     {
                         callback_data.lua.registry().get_function_ref(registry_index.lua_index);
                         callback_data.lua.set_string(to_string(command));
