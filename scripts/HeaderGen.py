@@ -214,8 +214,8 @@ def GenerateHeaderFile(target_dir = DEFAULT_GENERATED_DIR, database = "database.
             import pickle
             database = pickle.load(f)
     # generate header files
-    VFunc = "Linux_5_11_VTableOffsets_{ClassName}_FunctionBody.cpp"
-    Member = "Linux_5_11_MemberVariableLayout_DefaultSetter_{ClassName}.cpp"
+    VFunc = "Linux_5_01_VTableOffsets_{ClassName}_FunctionBody.cpp"
+    Member = "Linux_5_01_MemberVariableLayout_DefaultSetter_{ClassName}.cpp"
     for c in database.classes.values():
         print(f"Generating {c.name}...")
         with open(target_dir + VFunc.format(ClassName=c.name), "w") as f:
