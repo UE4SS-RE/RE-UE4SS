@@ -179,8 +179,8 @@ def ProcessFile(filename = DEFAULT_FILENAME, target_dir = DEFAULT_GENERATED_DIR,
     
     # if database_.pkl exists, load it and resume from last progress
     started = True
-    if os.path.exists("database_.pkl"):
-        with open("database_.pkl", "rb") as f:
+    if os.path.exists("database.pkl"):
+        with open("database.pkl", "rb") as f:
             import pickle
             database = pickle.load(f)
             progress = pickle.load(f)
@@ -197,20 +197,19 @@ def ProcessFile(filename = DEFAULT_FILENAME, target_dir = DEFAULT_GENERATED_DIR,
 
         ScanCU(database, target_class, cu)
         # pickle dump
-        with open("database_.pkl", "wb") as f:
+        with open("database.pkl", "wb") as f:
             import pickle
             pickle.dump(database, f)
             pickle.dump(cu.get_top_DIE().attributes['DW_AT_name'].value.decode('utf-8'), f) # dump progress
         print(f"{cu.get_top_DIE().attributes['DW_AT_name'].value.decode('utf-8')} done...")
 
     # generate header files
-    path = DEFAULT_GENERATED_DIR
     VFunc = "Linux_5_11_VTableOffsets_{ClassName}_FunctionBody.cpp"
     Member = "Linux_5_11_MemberVariableLayout_DefaultSetter_{ClassName}.cpp"
     for c in database.classes.values():
-        with open(path + VFunc.format(ClassName=c.name), "w") as f:
+        with open(target_dir + VFunc.format(ClassName=c.name), "w") as f:
             f.write(c.GenerateVTable())
-        with open(path + Member.format(ClassName=c.name), "w") as f:
+        with open(target_dir + Member.format(ClassName=c.name), "w") as f:
             f.write(c.GenerateMember())
 
 def resolve_path(path):
