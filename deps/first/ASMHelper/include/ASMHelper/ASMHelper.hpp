@@ -9,10 +9,8 @@ namespace RC::ASM
     {
         void* address{};
         ZydisDecodedInstruction raw{};
+        ZydisDecodedOperand* operands{};
     };
-
-    RC_ASM_API auto is_jmp_instruction(void* instruction_ptr) -> bool;
-    RC_ASM_API auto is_call_instruction(void* instruction_ptr) -> bool;
 
     RC_ASM_API auto resolve_jmp(void* instruction_ptr) -> void*;
     RC_ASM_API auto resolve_call(void* instruction_ptr) -> void*;
