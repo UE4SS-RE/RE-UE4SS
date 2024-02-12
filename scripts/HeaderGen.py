@@ -172,15 +172,15 @@ def ScanCU(database, classes, cu):
                                 klass.AddVFunc(link_name, name_m, m.attributes['DW_AT_vtable_elem_location'].value[1] * 8)
                     print()
 
-def ProcessFile(filename = DEFAULT_FILENAME, target_dir = DEFAULT_GENERATED_DIR, target_class = GetClassNames()):
+def ProcessFile(filename = DEFAULT_FILENAME, outfile= "database.pkl", target_class = GetClassNames()):
     with open(filename, 'rb') as f:
         elffile = ELFFile(f)
         dwarfinfo = elffile.get_dwarf_info()
     
     # if database_.pkl exists, load it and resume from last progress
     started = True
-    if os.path.exists("database.pkl"):
-        with open("database.pkl", "rb") as f:
+    if os.path.exists(outfile):
+        with open(outfile, "rb") as f:
             import pickle
             database = pickle.load(f)
             progress = pickle.load(f)
@@ -197,53 +197,69 @@ def ProcessFile(filename = DEFAULT_FILENAME, target_dir = DEFAULT_GENERATED_DIR,
 
         ScanCU(database, target_class, cu)
         # pickle dump
-        with open("database.pkl", "wb") as f:
+        with open(outfile, "wb") as f:
             import pickle
             pickle.dump(database, f)
             pickle.dump(cu.get_top_DIE().attributes['DW_AT_name'].value.decode('utf-8'), f) # dump progress
         print(f"{cu.get_top_DIE().attributes['DW_AT_name'].value.decode('utf-8')} done...")
+    
+    print("CU scan done")
 
+    return database
+
+def GenerateHeaderFile(target_dir = DEFAULT_GENERATED_DIR, database = "database.pkl"):
+    print("Generating header files...")
+    if isinstance(database, str):
+        with open(database, "rb") as f:
+            import pickle
+            database = pickle.load(f)
     # generate header files
     VFunc = "Linux_5_11_VTableOffsets_{ClassName}_FunctionBody.cpp"
     Member = "Linux_5_11_MemberVariableLayout_DefaultSetter_{ClassName}.cpp"
     for c in database.classes.values():
+        print(f"Generating {c.name}...")
         with open(target_dir + VFunc.format(ClassName=c.name), "w") as f:
             f.write(c.GenerateVTable())
         with open(target_dir + Member.format(ClassName=c.name), "w") as f:
             f.write(c.GenerateMember())
+            
 
 def resolve_path(path):
     return os.path.abspath(os.path.expanduser(path))
 
 if __name__ == "__main__":
-    # get optional arguments
-    if len(sys.argv) > 1:
-        filename = sys.argv[1]
-    else:
-        filename = DEFAULT_FILENAME
-    if len(sys.argv) > 2:
-        target_dir = sys.argv[2]
-    else:
-        target_dir = "generated"
-    if len(sys.argv) > 3:
-        target_class = sys.argv[3:]
-    else:
-        target_class = GetClassNames()
+    # -help/--help for usage
+    # -s in scan mode, args are [scan debug file] -o for output file -c for target class, can have a -g for generate header file
+    # -g for generate header mode, args are [database.pkl] -t for target directory
+    import argparse
+    parser = argparse.ArgumentParser(description="Generate header file for C++, using DRAWF information from .debug files")
+    parser.add_argument("-s", "--scan", help="Scan mode", action="store_true")
+    parser.add_argument("-g", "--generate", help="Generate header file", action="store_true")
 
-    # check validity of arguments
-    if filename == '-h' or filename == '--help':
-        print(f"Usage: {sys.argv[0]} [filename] [target_dir] [target_class...]")
-        print(f"    Default filename: {resolve_path(DEFAULT_FILENAME)}")
-        print(f"    Default target_dir: {resolve_path(DEFAULT_GENERATED_DIR)}")
-        print(f"    Default target_class: {' '.join(GetClassNames())}")
-        sys.exit(0)
+    parser.add_argument("-o", "--output", help="Output file", nargs="?", default="database.pkl")
+    parser.add_argument("-c", "--class", help="Target class", nargs="+", metavar="class_", default=GetClassNames())
+    parser.add_argument("-t", "--target", help="Target directory", nargs="?", default=DEFAULT_GENERATED_DIR)
+    parser.add_argument("filename", help="Filename", nargs="?", default=DEFAULT_FILENAME)
+    args = parser.parse_args()
 
-    if not os.path.exists(filename):
-        print(f"File {filename} not found")
-        sys.exit(1)
-
-    if not os.path.exists(target_dir):
-        print(f"Directory {target_dir} not found")
-        sys.exit(1)
-    
-    rocessFile(filename, target_dir, target_class)
+    if args.scan:
+        if not args.output:
+            print("Output file not specified")
+            sys.exit(1)
+        if not args.class_:
+            print("Target class not specified")
+            sys.exit(1)
+        if args.generate:
+            if not args.target:
+                print("Target directory not specified")
+        database = ProcessFile(args.filename, args.output, args.class_)
+        if args.generate:
+            GenerateHeaderFile(args.target, database)
+    else:
+        if args.generate:
+            if not args.target:
+                print("Target directory not specified")
+            fn = args.filename
+            if fn == DEFAULT_FILENAME:
+                fn = "database.pkl"
+            GenerateHeaderFile(args.target, args.filename)
