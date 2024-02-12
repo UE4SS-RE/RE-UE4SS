@@ -1,9 +1,9 @@
 local UEHelpers = require("UEHelpers")
 
-local VerboseLogging = true
+local VerboseLogging = false
 
-local function Log(Message, AlwaysLog)
-    if not VerboseLogging and not AlwaysLog then return end
+local function Log(Message, OnlyLogIfVerbose)
+    if not VerboseLogging and OnlyLogIfVerbose then return end
     print(Message)
 end
 
@@ -183,6 +183,7 @@ local function LoadMod(ModName, ModInfo, World)
 
     if ModInfo.AssetPath == nil or ModInfo.AssetPath == nil then
         Log(string.format("Could not load mod '%s' because it has no asset path or name.\n", ModName))
+        return
     end
 
     local AssetData = nil
@@ -199,9 +200,15 @@ local function LoadMod(ModName, ModInfo, World)
 
     ExecuteInGameThread(function()
         local ModClass = AssetRegistryHelpers:GetAsset(AssetData)
-        if not ModClass:IsValid() then error("ModClass is not valid") end
+        if not ModClass:IsValid() then
+			local ObjectPath = AssetData.ObjectPath and AssetData.ObjectPath:ToString() or ""
+			local PackageName = AssetData.PackageName and AssetData.PackageName:ToString() or ""
+			local AssetName = AssetData.AssetName and AssetData.AssetName:ToString() or ""
+			Log(string.format("ModClass for '%s' is not valid\nObjectPath: %s\nPackageName: %s\nAssetName: %s", ModName, ObjectPath,PackageName, AssetName))
+			return
+		end
 
-        if not World:IsValid() then error("World is not valid") end
+        if not World:IsValid() then Log(string.format("World is not valid for '%s' to spawn in", ModName)) return end
 
         local Actor = World:SpawnActor(ModClass, {}, {})
         if not Actor:IsValid() then
@@ -210,10 +217,10 @@ local function LoadMod(ModName, ModInfo, World)
             Log(string.format("Actor: %s\n", Actor:GetFullName()))
             local PreBeginPlay = Actor.PreBeginPlay
             if PreBeginPlay:IsValid() then
-                Log(string.format("Executing 'PreBeginPlay' for mod '%s'\n", Actor:GetFullName()))
+                Log(string.format("Executing 'PreBeginPlay' for mod '%s', with path: '%s'\n", ModName, Actor:GetFullName()))
                 PreBeginPlay()
             else
-                Log("PreBeginPlay not valid\n")
+                Log(string.format("PreBeginPlay not valid for mod %s\n", ModName), true)
             end
         end
     end)
@@ -264,7 +271,7 @@ RegisterBeginPlayPostHook(function(ContextParam)
             Log(string.format("Executing 'PostBeginPlay' for mod '%s'\n", Context:GetFullName()))
             PostBeginPlay()
         else
-            Log("PostBeginPlay not valid\n")
+            Log(string.format("PostBeginPlay not valid for mod %s\n", Context:GetFullName(), true))
         end
     end
 end)
