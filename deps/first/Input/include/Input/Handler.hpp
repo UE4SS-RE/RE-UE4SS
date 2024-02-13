@@ -47,7 +47,6 @@ namespace RC::Input
         {
             static_assert(std::conjunction<std::is_same<const wchar_t*, WindowClasses>...>::value, "WindowClasses must be of type const wchar_t*");
 
-            m_modifier_keys_down.emplace(ModifierKey::MOD_KEY_START_OF_ENUM, false);
             m_modifier_keys_down.emplace(ModifierKey::SHIFT, false);
             m_modifier_keys_down.emplace(ModifierKey::CONTROL, false);
             m_modifier_keys_down.emplace(ModifierKey::ALT, false);
