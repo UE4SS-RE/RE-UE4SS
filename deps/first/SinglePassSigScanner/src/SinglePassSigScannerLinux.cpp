@@ -734,7 +734,7 @@ namespace RC
         // If not modular then the containers get merged into one scan target
         // That way there are no extra scans
         // If modular then loop the containers and retrieve the scan target for each and pass everything to the do_scan() lambda
-
+        fprintf(stderr, "signature_containers.size() = %d\n", signature_containers.size());
         if (!SigScannerStaticData::m_is_modular)
         {
             DLData merged_module_info{};
@@ -743,6 +743,7 @@ namespace RC
             for (const auto& [scan_target, outer_container] : signature_containers)
             {
                 merged_module_info = *std::bit_cast<DLData*>(&SigScannerStaticData::m_modules_info[scan_target]);
+                fprintf(stderr, "outer_container len = %d\n", outer_container.size());
                 for (const auto& signature_container : outer_container)
                 {
                     merged_containers.emplace_back(signature_container);
@@ -751,8 +752,10 @@ namespace RC
 
             if (merged_containers.empty())
             {
-                throw std::runtime_error{"[SinglePassScanner::start_scan] Could not merge containers. Either there were not containers to merge or there was "
-                                         "an internal error."};
+                fprintf(stderr, "No containers to merge\n");
+                return ;
+                //throw std::runtime_error{"[SinglePassScanner::start_scan] Could not merge containers. Either there were not containers to merge or there was "
+                //                         "an internal error."};
             }
 
             uint8_t* module_start_address = static_cast<uint8_t*>(merged_module_info.base_address);
