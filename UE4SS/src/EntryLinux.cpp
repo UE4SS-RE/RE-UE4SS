@@ -28,7 +28,7 @@ void UE4SS_Start()
         std::cerr << "Failed to find libUE4SS.so path" << std::endl;
         return;
     }
-    #define EARLY_THROW_TEST
+    //#define EARLY_THROW_TEST
     #ifdef EARLY_THROW_TEST
     try {
         throw std::runtime_error{"Hello from Here!"};
