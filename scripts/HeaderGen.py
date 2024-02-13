@@ -123,7 +123,7 @@ def GetClassNames(search_dir = DEFAULT_SEARCH_DIR):
     """
     return  ['FArchiveState', 'UDataTable', 'FConsoleManager', 'UPlayer', 'UObjectBaseUtility', 'AGameMode', 'FMalloc', 'UField', 'UGameViewportClient', 'FField', 'FNumericProperty', 'IConsoleVariable', 'AGameModeBase', 'FMulticastDelegateProperty', 'UObject', 'AActor', 'IConsoleManager', 'IConsoleObject', 'FArchive', 'FConsoleVariableBase', 'FOutputDevice', 'ITextData', 'FProperty', 'FObjectPropertyBase', 'ULocalPlayer', 'UScriptStruct::ICppStructOps', 'UObjectBase', 'FConsoleCommandBase', 'UConsole', 'UStruct', 'IConsoleCommand', 'FInterfaceProperty', 'FByteProperty', 'FSoftClassProperty', 'FStructProperty', 'UEnum', 'FBoolProperty', 'UWorld', 'UClass', 'FEnumProperty', 'FClassProperty', 'FFieldPathProperty', 'FArrayProperty', 'FMapProperty', 'FSetProperty', 'UScriptStruct', 'FDelegateProperty', 'UFunction']
 
-AdditonalClasses = ['FUObjectArray']
+AdditonalClasses = []
 
 from elftools.dwarf.die import DIE
 from elftools.elf.elffile import ELFFile
