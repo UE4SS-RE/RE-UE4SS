@@ -79,6 +79,16 @@ class CClass:
             results.append(vfunc.GenerateVFunc(self.name, generatedName[vfunc.name]))
         return "\n".join(results)
 
+    def __str__(self):
+        return "\n".join([
+            f"Class {self.name}{{",
+                "\t// Members",
+                "\n".join([f"\t{member.name} @ 0x{member.offset:02x}" for member in self.members.values()]),
+                "\t// VFuncs",
+                "\n".join([f"\t{vfunc.name} @ 0x{vfunc.slotoffset:02x} // {vunfc.mangledname}" for vfunc in self.vfuncs.values()]),
+            "}"
+        ])
+
     def HasMember(self):
         return len(self.members) > 0
     
@@ -264,6 +274,9 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Generate header file for C++, using DRAWF information from .debug files")
     parser.add_argument("-s", "--scan", help="Scan mode", action="store_true")
     parser.add_argument("-g", "--generate", help="Generate header file", action="store_true")
+    # -p only one class
+    parser.add_argument("-p", "--print", help="Print definition for class", nargs="?", default=None)
+
     parser.add_argument("-i", "--info", help="Print infos", action="store_true")
     parser.add_argument("-v", "--version", help="Set version", nargs="?", default=Version)
     parser.add_argument("-a", "--addition", help="Add additional classes for scan", nargs="+", default=AdditonalClasses)
@@ -287,6 +300,20 @@ if __name__ == "__main__":
         print("  Default generated dir: ", resolve_path(DEFAULT_GENERATED_DIR))
         sys.exit(0)
 
+    if args.print:
+        fn = args.filename
+        if fn == DEFAULT_FILENAME:
+            fn = "database.pkl"
+        if not os.path.exists(fn):
+            print("Database file not found")
+            sys.exit(1)
+        with open(fn, "rb") as f:
+            database = pickle.load(f)
+        if args.print not in database.classes:
+            print(f"Class {args.print} not found")
+            sys.exit(1)
+        print(str(database.classes[args.print]))
+        sys.exit(0)
     if args.scan:
         if not args.output:
             print("Output file not specified")
@@ -307,4 +334,7 @@ if __name__ == "__main__":
             fn = args.filename
             if fn == DEFAULT_FILENAME:
                 fn = "database.pkl"
+            if not os.path.exists(fn):
+                print("Database file not found")
+                sys.exit(1)
             GenerateHeaderFile(args.target, args.filename, args.class_)
