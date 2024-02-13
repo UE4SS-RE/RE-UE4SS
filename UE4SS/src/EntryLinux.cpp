@@ -108,20 +108,20 @@ int  __libc_start_main(
     next_main = main;
     typeof(&__libc_start_main) orig = (typeof(&__libc_start_main))dlsym(RTLD_NEXT, "__libc_start_main");
     // gxx fix
-    void *current___gxx_personality_v0 = dlsym(RTLD_NEXT, "__gxx_personality_v0");
     Dl_info dl_info;
     Elf64_Sym *sym;
-    dladdr1(current___gxx_personality_v0, &dl_info, (void**) &sym, RTLD_DL_SYMENT);
-    fprintf(stderr, "__gxx_personality_v0 found in %s @ %p\n", dl_info.dli_fname, current___gxx_personality_v0);
-    if (strstr(dl_info.dli_fname, "libsteam_api.so") != nullptr) {
-        fprintf(stderr, "libsteam_api shit detected\n");
+    // libsteam_api is okay, the UE engine is causing problem
+    
+    void *current___cxa_throw = dlsym(RTLD_DEFAULT, "__cxa_throw");
+    dladdr1(current___cxa_throw, &dl_info, (void**) &sym, RTLD_DL_SYMENT);
+    fprintf(stderr, "__cxa_throw found in %s @ %p\n", dl_info.dli_fname, current___cxa_throw);
+    if ((unsigned long)current___cxa_throw < 0x7fffffff) {
+        fprintf(stderr, "maybe UE, patched\n");
         mprotect((void*)ALIGN_DOWN_PAGE(sym), ALIGN_UP_PAGE(sym + 1) - ALIGN_DOWN_PAGE(sym), PROT_READ | PROT_WRITE);
         sym->st_info = ELF64_ST_INFO(STB_LOCAL, ELF64_ST_TYPE(sym->st_info));
         sym->st_other = STV_INTERNAL;
+        // assume this is UE5's address range and remove this symbol
     }
-    current___gxx_personality_v0 = dlsym(RTLD_DEFAULT, "__gxx_personality_v0");
-    fprintf(stderr, "Now the current___gxx_personality_v0 is %p\n", current___gxx_personality_v0);
-
     // remove LD_PRELOAD from environ
     int nenv = 0;
     for (int i = 0; environ[i]; i++)
