@@ -93,6 +93,8 @@ int hooked_main(int argc, char **argv, char **envp) {
 #define ALIGN_UP_PAGE(x) (( ((unsigned long)(x)) + 0xFFF) & ~0xFFF)
 #define ALIGN_DOWN_PAGE(x) (((unsigned long)(x)) & ~0xFFF)
 
+extern char **environ;
+
 extern "C" {
 int  __libc_start_main(
     int (*main)(int, char **, char **),
@@ -120,8 +122,22 @@ int  __libc_start_main(
     current___gxx_personality_v0 = dlsym(RTLD_DEFAULT, "__gxx_personality_v0");
     fprintf(stderr, "Now the current___gxx_personality_v0 is %p\n", current___gxx_personality_v0);
 
+    // remove LD_PRELOAD from environ
+    int nenv = 0;
+    for (int i = 0; environ[i]; i++)
+        nenv ++;
+    for (int i = 0; i < nenv; i++) {
+        if (strncmp(environ[i], "LD_PRELOAD=", 11) == 0) {
+            fprintf(stderr, "Found LD_PRELOAD @%d %s\n", i, environ[i]);
+            environ[i] = environ[nenv - 1];
+            nenv --;
+        }
+    }
+    environ[nenv] = NULL;
+
     return orig(hooked_main, argc, argv, init, fini, rtld_fini, stack_end);
 }
+
 }
 
 // destructor
