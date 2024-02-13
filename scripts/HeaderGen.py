@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # generate header file for C++, using DRAWF information from .debug files
-
+# e.g., ./HeaderGen.py -s -g -t ../deps/first/Unreal/generated_include/FunctionBodies /mnt/d/Projects/palworld/UnrealGame-Linux-Shipping.debug
 import os
 import sys
 import re
@@ -79,6 +79,12 @@ class CClass:
             results.append(vfunc.GenerateVFunc(self.name, generatedName[vfunc.name]))
         return "\n".join(results)
 
+    def HasMember(self):
+        return len(self.members) > 0
+    
+    def HasVFunc(self):
+        return len(self.vfuncs) > 0
+
 class Database:
     def __init__(self):
         self.classes = {}
@@ -101,23 +107,40 @@ def GetClassNames(search_dir = DEFAULT_SEARCH_DIR):
     import glob
     tabA = [re.search(rf"{Version}_VTableOffsets_(.*)_FunctionBody\.cpp", file).group(1) for file in glob.glob(f"{search_dir}/FunctionBodies/{Version}_VTableOffsets_*.cpp")]
     tabB = [re.search(rf"{Version}_MemberVariableLayout_DefaultSetter_(.*)\.cpp", file).group(1) for file in glob.glob(f"{search_dir}/FunctionBodies/{Version}_MemberVariableLayout_DefaultSetter_*.cpp")]
-    return list(dict.fromkeys(tabA + tabB))
+    l = list(dict.fromkeys(tabA + tabB))
+    # replace _ to :
+    return [x.replace("_", ":") for x in l]
     """
+    return  ['FArchiveState', 'UDataTable', 'FConsoleManager', 'UPlayer', 'UObjectBaseUtility', 'AGameMode', 'FMalloc', 'UField', 'UGameViewportClient', 'FField', 'FNumericProperty', 'IConsoleVariable', 'AGameModeBase', 'FMulticastDelegateProperty', 'UObject', 'AActor', 'IConsoleManager', 'IConsoleObject', 'FArchive', 'FConsoleVariableBase', 'FOutputDevice', 'ITextData', 'FProperty', 'FObjectPropertyBase', 'ULocalPlayer', 'UScriptStruct::ICppStructOps', 'UObjectBase', 'FConsoleCommandBase', 'UConsole', 'UStruct', 'IConsoleCommand', 'FInterfaceProperty', 'FByteProperty', 'FSoftClassProperty', 'FStructProperty', 'UEnum', 'FBoolProperty', 'UWorld', 'UClass', 'FEnumProperty', 'FClassProperty', 'FFieldPathProperty', 'FArrayProperty', 'FMapProperty', 'FSetProperty', 'UScriptStruct', 'FDelegateProperty', 'UFunction']
 
-    return  ['FArchiveState', 'UDataTable', 'FConsoleManager', 'UPlayer', 'UObjectBaseUtility', 'AGameMode', 'FMalloc', 'UField', 'UGameViewportClient', 'FField', 'FNumericProperty', 'IConsoleVariable', 'AGameModeBase', 'FMulticastDelegateProperty', 'UObject', 'AActor', 'IConsoleManager', 'IConsoleObject', 'FArchive', 'FConsoleVariableBase', 'FOutputDevice', 'ITextData', 'FProperty', 'FObjectPropertyBase', 'ULocalPlayer', 'UScriptStruct__ICppStructOps', 'UObjectBase', 'FConsoleCommandBase', 'UConsole', 'UStruct', 'IConsoleCommand', 'FInterfaceProperty', 'FByteProperty', 'FSoftClassProperty', 'FStructProperty', 'UEnum', 'FBoolProperty', 'UWorld', 'UClass', 'FEnumProperty', 'FClassProperty', 'FFieldPathProperty', 'FArrayProperty', 'FMapProperty', 'FSetProperty', 'UScriptStruct', 'FDelegateProperty', 'UFunction']
+AdditonalClasses = ['FUObjectArray']
 
 from elftools.dwarf.die import DIE
 from elftools.elf.elffile import ELFFile
 from elftools.elf.sections import SymbolTableSection
 
-def ScanCU(database, classes, cu):
-    for ch in cu.get_top_DIE().iter_children():
-        if ch.tag == 'DW_TAG_class_type':
+def SubClassMatch(name, classes):
+    newclasses = []
+    for i in classes:
+        if i.startswith(name + "::"):
+            # remove i::
+            newclasses.append(i[len(name) + 2:])
+    if len(newclasses) == 0:
+        return None
+    return newclasses
+
+# test
+# print(SubClassMatch("UScriptStruct", GetClassNames()))
+
+def ScanCU(database, classes, citer, prefix = []):
+    for ch in citer:
+        if ch.tag == 'DW_TAG_class_type' or ch.tag == 'DW_TAG_structure_type' or ch.tag == 'DW_TAG_union_type':
             if ch.attributes.get('DW_AT_name'):
                 name = ch.attributes['DW_AT_name'].value.decode('utf-8')
                 if name in classes:
-                    print(name)
-                    klass = database.GetClass(name)
+                    longname = "::".join(prefix + [name])
+                    print(longname)
+                    klass = database.GetClass(longname)
                     for m in ch.iter_children():
                         name_m = m.attributes.get('DW_AT_name')
                         if not name_m:
@@ -140,55 +163,94 @@ def ScanCU(database, classes, cu):
                                 print(f"  vfunc: {name_m} aka {link_name} @ {m.attributes['DW_AT_vtable_elem_location'].value[1] * 8}")
                                 klass.AddVFunc(link_name, name_m, m.attributes['DW_AT_vtable_elem_location'].value[1] * 8)
                     print()
+                if (subclasses := SubClassMatch(name, classes)) is not None:
+                    ScanCU(database, subclasses, ch.iter_children(), prefix + [name])
 
-def ProcessFile(filename = DEFAULT_FILENAME, outfile= "database.pkl", target_class = GetClassNames()):
-    with open(filename, 'rb') as f:
-        elffile = ELFFile(f)
-        dwarfinfo = elffile.get_dwarf_info()
-    
+def RunSingle(conn, dwarfinfo, outfile, cus, idx, target_class):
     # if database_.pkl exists, load it and resume from last progress
     started = True
     if os.path.exists(outfile):
         with open(outfile, "rb") as f:
             database = pickle.load(f)
             progress = pickle.load(f)
-            started = False
     else:
         database = Database()
-
-    for cu in dwarfinfo.iter_CUs():
-        if cu.get_top_DIE().attributes.get('DW_AT_name').value.decode('utf-8') == progress:
-            started = True
+        progress = 0
+    
+    # iter from idx
+    for i, cu in enumerate(cus):
+        if i < progress:
             continue
-        if not started:
+        if i < idx:
             continue
-
-        ScanCU(database, target_class, cu)
+        print(f"Scanning {cu.get_top_DIE().attributes['DW_AT_name'].value.decode('utf-8')} ...")
+        ScanCU(database, target_class, cu.get_top_DIE().iter_children())
+        print(f"{cu.get_top_DIE().attributes['DW_AT_name'].value.decode('utf-8')} done...")
         # pickle dump
         with open(outfile, "wb") as f:
             pickle.dump(database, f)
-            pickle.dump(cu.get_top_DIE().attributes['DW_AT_name'].value.decode('utf-8'), f) # dump progress
-        print(f"{cu.get_top_DIE().attributes['DW_AT_name'].value.decode('utf-8')} done...")
+            pickle.dump(i + 1, f)
+            conn.send(i + 1)
+            conn.close()
+            return
+    conn.send(i + 1)
+    conn.close()
     
+
+from multiprocessing import Process, Pipe
+
+def ProcessFile(filename = DEFAULT_FILENAME, outfile= "database.pkl", target_class = GetClassNames()):
+    with open(filename, 'rb') as f:
+        elffile = ELFFile(f)
+        dwarfinfo = elffile.get_dwarf_info()
+
+    target_class += AdditonalClasses
+    
+    cus = list(dwarfinfo.iter_CUs())
+    idx = 0
+    while idx < len(cus):
+        parent_conn, child_conn = Pipe()
+        p = Process(target=RunSingle, args=(child_conn, dwarfinfo, outfile, cus, idx, target_class))
+        p.start()
+        idx = parent_conn.recv()
+        p.join()
+
     print("CU scan done")
 
-    return database
-
-def GenerateHeaderFile(target_dir = DEFAULT_GENERATED_DIR, database = "database.pkl"):
+def GenerateHeaderFile(target_dir = DEFAULT_GENERATED_DIR, database = "database.pkl", target_class = GetClassNames()):
     print("Generating header files...")
     if isinstance(database, str):
         with open(database, "rb") as f:
             import pickle
             database = pickle.load(f)
     # generate header files
-    VFunc = "Linux_5_01_VTableOffsets_{ClassName}_FunctionBody.cpp"
-    Member = "Linux_5_01_MemberVariableLayout_DefaultSetter_{ClassName}.cpp"
+    VFunc = "Linux_{Version}_VTableOffsets_{ClassName}_FunctionBody.cpp"
+    Member = "Linux_{Version}_MemberVariableLayout_DefaultSetter_{ClassName}.cpp"
+    GeneratedVFuncs = set()
+    GeneratedMembers = set()
+    TargetClasses = set(target_class)
     for c in database.classes.values():
+        if c.name not in TargetClasses:
+            continue
         print(f"Generating {c.name}...")
-        with open(target_dir + VFunc.format(ClassName=c.name), "w") as f:
-            f.write(c.GenerateVTable())
-        with open(target_dir + Member.format(ClassName=c.name), "w") as f:
-            f.write(c.GenerateMember())
+        if c.HasVFunc():
+            with open(target_dir + "/" + VFunc.format(ClassName=c.name.replace(':', "_"), Version=Version), "w") as f:
+                f.write(c.GenerateVTable())
+            GeneratedVFuncs.add(c.name)
+            print(f"  {VFunc.format(ClassName=c.name, Version=Version)} done")
+        if c.HasMember():
+            with open(target_dir + "/" + Member.format(ClassName=c.name.replace(':', "_"), Version=Version), "w") as f:
+                f.write(c.GenerateMember())
+            print(f"  {Member.format(ClassName=c.name, Version=Version)} done")
+            GeneratedMembers.add(c.name)
+    print("Header files gerenation done.")
+    print("Summary:")
+    print("  Generated VFuncs: ", len(GeneratedVFuncs))
+    print("  Generated Members: ", len(GeneratedMembers))
+    # print classes not generated
+    print("Classes not generated:")
+    print("  VFuncs: ", TargetClasses - GeneratedVFuncs)
+    print("  Members: ", TargetClasses - GeneratedMembers)
             
 
 def resolve_path(path):
@@ -204,9 +266,10 @@ if __name__ == "__main__":
     parser.add_argument("-g", "--generate", help="Generate header file", action="store_true")
     parser.add_argument("-i", "--info", help="Print infos", action="store_true")
     parser.add_argument("-v", "--version", help="Set version", nargs="?", default=Version)
+    parser.add_argument("-a", "--addition", help="Add additional classes for scan", nargs="+", default=AdditonalClasses)
 
     parser.add_argument("-o", "--output", help="Output file", nargs="?", default="database.pkl")
-    parser.add_argument("-c", "--class", help="Target class", nargs="+", metavar="class_", default=GetClassNames())
+    parser.add_argument("-c", "--class", help="Target class", nargs="+", dest="class_", default=GetClassNames())
     parser.add_argument("-t", "--target", help="Target directory", nargs="?", default=DEFAULT_GENERATED_DIR)
     parser.add_argument("filename", help="Filename", nargs="?", default=DEFAULT_FILENAME)
     args = parser.parse_args()
@@ -234,9 +297,9 @@ if __name__ == "__main__":
         if args.generate:
             if not args.target:
                 print("Target directory not specified")
-        database = ProcessFile(args.filename, args.output, args.class_)
+        ProcessFile(args.filename, args.output, args.class_)
         if args.generate:
-            GenerateHeaderFile(args.target, database)
+            GenerateHeaderFile(args.target, args.output, args.class_)
     else:
         if args.generate:
             if not args.target:
@@ -244,4 +307,4 @@ if __name__ == "__main__":
             fn = args.filename
             if fn == DEFAULT_FILENAME:
                 fn = "database.pkl"
-            GenerateHeaderFile(args.target, args.filename)
+            GenerateHeaderFile(args.target, args.filename, args.class_)
