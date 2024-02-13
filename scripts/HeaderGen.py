@@ -18,7 +18,7 @@ FUNCTION_TEMPLATE = """if (auto it = {ClassName}::VTableLayoutMap.find(STR("{Fun
 
 MEMBER_TEMPLATE = """if (auto it = {ClassName}::MemberOffsets.find(STR("{MemberName}")); it == {ClassName}::MemberOffsets.end())
 {{
-    UWorld::MemberOffsets.emplace(STR("{MemberName}"), 0x{MemberOffset:02x});
+    {ClassName}::MemberOffsets.emplace(STR("{MemberName}"), 0x{MemberOffset:02x});
 }}
 """
 
