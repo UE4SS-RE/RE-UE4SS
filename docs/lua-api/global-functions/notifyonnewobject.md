@@ -25,3 +25,37 @@ NotifyOnNewObject("/Script/Engine.Actor", function(ConstructedObject)
     print(string.format("Constructed: %s\n", ConstructedObject:GetFullName()))
 end)
 ```
+
+## What NOT to do
+
+Please don't duplicate the `NotifyOnNewObject` call for the same class multiple times, as it could cause performance issues if multiple mods are doing it (which has been seen in the wild).
+
+For example, this:
+```lua
+NotifyOnNewObject("/Script/Engine.PlayerController", function(PlayerController)
+    PlayerController.bShowMouseCursor = true
+end)
+NotifyOnNewObject("/Script/Engine.PlayerController", function(PlayerController)
+    PlayerController.bForceFeedbackEnabled = false
+end)
+NotifyOnNewObject("/Script/Engine.PlayerController", function(PlayerController)
+    PlayerController.InputYawScale = 2.5
+end)
+NotifyOnNewObject("/Script/Engine.PlayerController", function(PlayerController)
+    PlayerController.InputPitchScale = -2.5
+end)
+NotifyOnNewObject("/Script/Engine.PlayerController", function(PlayerController)
+    PlayerController.InputRollScale = 1.0
+end)
+```
+
+should just be this:
+```lua
+NotifyOnNewObject("/Script/Engine.PlayerController", function(PlayerController)
+    PlayerController.bShowMouseCursor = true
+    PlayerController.bForceFeedbackEnabled = false
+    PlayerController.InputYawScale = 2.5
+    PlayerController.InputPitchScale = -2.5
+    PlayerController.InputRollScale = 1.0
+end)
+```
