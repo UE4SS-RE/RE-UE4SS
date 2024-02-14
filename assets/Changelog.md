@@ -1,10 +1,30 @@
-v3.1.0
+v3.0.1
 ==============
 TBD
+
+This is a patch release for 3.0.0. Installing over 3.0 is as simple as replacing all files except for your `UE4SS-settings.ini` if you have custom configs.
+
+If you have not yet installed since 2.5.2, please see the installation instructions in the v3.0.0 release notes. **Remember to delete the old xinput1_3.dll as it crashes the game if you still have it!**
+
+**C++ mods must be rebuilt to work on 3.0.1.**
+
+**Current known issues & solutions:**
+1. If you have the GUI console enabled and visible, and on launch the window is blank/white, go into `UE4SS-settings.ini` and set `GraphicsAPI = dx11`.
+2. If you're experiencing game crashes on startup, try setting `bUseUObjectArrayCache = false` in `UE4SS-settings.ini`. 
+3. If mods aren't working as expected, make sure you follow their install instructions properly, not based on "what worked before". This is due to UE4SS supporting a number of different mod types and the way they're installed can vary.
+
+**Additional couple of notes for mod authors:**
+1. We have noticed a number of popular mods that have fallen down a pitfall that may very well lead to performance issues. Please refer to [this section](https://docs.ue4ss.com/dev/lua-api/global-functions/notifyonnewobject.html#what-not-to-do) in the docs for more information. 
+2. If you're developing on the latest experimental version, please make sure to use the `docs.ue4ss.com/dev` version of the docs as this is updated with the latest changes.
+
+-UE4SS team
+
 ## New
 
 ### General
-Added new docs pages for devlogs, C++ examples, C++ BP macros - Buckminsterfullerene
+Added new docs pages for devlogs, C++ examples, C++ BP macros ([UE4SS #355](https://github.com/UE4SS-RE/RE-UE4SS/pull/355)) - Buckminsterfullerene
+
+Added examplanation of 'ai' to the Object Dumper doc page ([UE4SS #349](https://github.com/UE4SS-RE/RE-UE4SS/pull/349))
 
 ### Live View
 
@@ -20,33 +40,54 @@ Added new docs pages for devlogs, C++ examples, C++ BP macros - Buckminsterfulle
 ## Changes
 
 ### General
-Update docs installation guide for 3.0.0 - Buckminsterfullerene
+Update docs installation guide for 3.0.0 ([UE4SS #355](https://github.com/UE4SS-RE/RE-UE4SS/pull/355)) - Buckminsterfullerene
+
+Added step to C++ prerequisits to join Epic Games org for repo access ([UE4SS #339](https://github.com/UE4SS-RE/RE-UE4SS/pull/339)) - groffta
+
+Updated Lua doc for RegisterHook to accurately state how the callback params work ([UE4SS #372](https://github.com/UE4SS-RE/RE-UE4SS/pull/372))
+
+Clarify Lua metamethod usage for some classes ([UE4SS #376](https://github.com/UE4SS-RE/RE-UE4SS/pull/376)) - Lyrth
 
 ### Live View
 
 ### UHT Dumper
 
 ### Lua API
+Fixed bug where RegisterHook on native functions couldn't affect return values unless you had both a pre and a post hook ([UE4SS #366](https://github.com/UE4SS-RE/RE-UE4SS/pull/366))
 
 ### C++ API
 
 ### Repo & Build Process
+Removed custom game configs for games that don't need them anymore ([UE4SS #386](https://github.com/UE4SS-RE/RE-UE4SS/pull/386)) - Buckminsterfullerene
+
+Added mods directory zip as an explicit step to the bug report template ([UE4SS #358](https://github.com/UE4SS-RE/RE-UE4SS/pull/358))
+
+Added PR template ([UE4SS #363](https://github.com/UE4SS-RE/RE-UE4SS/pull/363)) - Buckminsterfullerene
 
 
 ## Fixes
 
 ### General
+Fixed "FindAllOf" dereferencing a nullptr ([UEPsuedo #78](https://github.com/Re-UE4SS/UEPseudo/pull/78)) - localcc
+
+Fixed a memory leak when BPMacros.hpp was used ([UEPsuedo #75](https://github.com/Re-UE4SS/UEPseudo/pull/75))
+
+Fixed modifier key issue causing keybinds to not work ([UE4SS #389](https://github.com/UE4SS-RE/RE-UE4SS/pull/389)) - Tangerie
 
 ### Live View
-Fix gui crash when clicking close window button ([#337](https://github.com/UE4SS-RE/RE-UE4SS/pull/337)) - localcc
+Fix GUI crash when clicking close window button ([UE4SS #337](https://github.com/UE4SS-RE/RE-UE4SS/pull/337)) - localcc
 
 ### UHT Dumper
 
 ### Lua API
-Fix FindObject and Mod:SetSharedVariable userdata type matching ([#342](https://github.com/UE4SS-RE/RE-UE4SS/pull/342)) - Lyrth
+Fix Lua FString setter ([UE4SS #325](https://github.com/UE4SS-RE/RE-UE4SS/pull/325)) - Yangff
+
+Fix FindObject and Mod:SetSharedVariable userdata type matching ([UE4SS #342](https://github.com/UE4SS-RE/RE-UE4SS/pull/342)) - Lyrth
+
+Fixed non-native UFunctions hooks not working if hooked by multiple mods ([UE4SS #351](https://github.com/UE4SS-RE/RE-UE4SS/pull/351))
 
 ### C++ API
-
+Fix TProperty cpp mods linking issue ([UEPsuedo #77](https://github.com/Re-UE4SS/UEPseudo/pull/77)) - localcc
 
 ## Settings
 
