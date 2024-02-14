@@ -70,6 +70,8 @@
 #include <UnrealCustom/CustomProperty.hpp>
 #pragma warning(default : 4005)
 
+#include <luaconf.h>
+
 namespace RC
 {
     LuaMadeSimple::Lua* LuaStatics::console_executor{};
@@ -827,17 +829,17 @@ namespace RC
 
         lua_getfield(lua_state, -1, "path");
         std::string current_paths = lua_tostring(lua_state, -1);
-        current_paths.append(std::format(";{}\\{}\\Scripts\\?.lua", to_string(m_program.get_mods_directory()).c_str(), to_string(get_name())));
-        current_paths.append(std::format(";{}\\shared\\?.lua", to_string(m_program.get_mods_directory()).c_str()));
-        current_paths.append(std::format(";{}\\shared\\?\\?.lua", to_string(m_program.get_mods_directory()).c_str()));
+        current_paths.append(std::format(";{}" LUA_DIRSEP "{}" LUA_DIRSEP "Scripts" LUA_DIRSEP "?.lua", to_string(m_program.get_mods_directory()).c_str(), to_string(get_name())));
+        current_paths.append(std::format(";{}" LUA_DIRSEP "shared" LUA_DIRSEP "?.lua", to_string(m_program.get_mods_directory()).c_str()));
+        current_paths.append(std::format(";{}" LUA_DIRSEP "shared" LUA_DIRSEP "?" LUA_DIRSEP "?.lua", to_string(m_program.get_mods_directory()).c_str()));
         lua_pop(lua_state, 1);
         lua_pushstring(lua_state, current_paths.c_str());
         lua_setfield(lua_state, -2, "path");
 
         lua_getfield(lua_state, -1, "cpath");
         std::string current_cpaths = lua_tostring(lua_state, -1);
-        current_cpaths.append(std::format(";{}\\{}\\Scripts\\?.dll", to_string(m_program.get_mods_directory()).c_str(), to_string(get_name())));
-        current_cpaths.append(std::format(";{}\\{}\\?.dll", to_string(m_program.get_mods_directory()).c_str(), to_string(get_name())));
+        current_cpaths.append(std::format(";{}" LUA_DIRSEP "{}" LUA_DIRSEP "Scripts" LUA_DIRSEP "?.dll", to_string(m_program.get_mods_directory()).c_str(), to_string(get_name())));
+        current_cpaths.append(std::format(";{}" LUA_DIRSEP "{}" LUA_DIRSEP "?.dll", to_string(m_program.get_mods_directory()).c_str(), to_string(get_name())));
         lua_pop(lua_state, 1);
         lua_pushstring(lua_state, current_cpaths.c_str());
         lua_setfield(lua_state, -2, "cpath");
@@ -2133,8 +2135,8 @@ No overload found for function 'IterateGameDirectories'.
 Overloads:
 #1: IterateGameDirectories()"};
 
-            std::filesystem::path game_executable_directory = UE4SSProgram::get_program().get_game_executable_directory();
-            auto game_content_dir = game_executable_directory.parent_path().parent_path() / "Content";
+            std::filesystem::path game_exe_directory = UE4SSProgram::get_program().get_game_directory();
+            auto game_content_dir = game_exe_directory.parent_path().parent_path() / "Content";
             if (!std::filesystem::exists(game_content_dir))
             {
                 Output::send<LogLevel::Warning>(SYSSTR("IterateGameDirectories: Could not locate the root directory because the directory structure is unknown "
@@ -2143,8 +2145,8 @@ Overloads:
                 return 1;
             }
 
-            auto game_name = game_executable_directory.parent_path().parent_path().stem();
-            auto game_root_directory = game_executable_directory.parent_path().parent_path().parent_path();
+            auto game_name = game_exe_directory.parent_path().parent_path().stem();
+            auto game_root_directory = game_exe_directory.parent_path().parent_path().parent_path();
             auto directories_table = lua.prepare_new_table();
 
             std::function<void(const std::filesystem::path&, LuaMadeSimple::Lua::Table&)> iterate_directory =
@@ -2249,8 +2251,8 @@ No overload found for function 'CreateLogicModsDirectory'.
 Overloads:
 #1: CreateLogicModsDirectory()"};
 
-            std::filesystem::path game_executable_directory = UE4SSProgram::get_program().get_game_executable_directory();
-            auto game_content_dir = game_executable_directory.parent_path().parent_path() / "Content";
+            std::filesystem::path game_exe_directory = UE4SSProgram::get_program().get_game_directory();
+            auto game_content_dir = game_exe_directory.parent_path().parent_path() / "Content";
             if (!std::filesystem::exists(game_content_dir))
             {
                 lua.throw_error("CreateLogicModsDirectory: Could not locate the \"Content\" directory because the directory structure is unknown (not "
