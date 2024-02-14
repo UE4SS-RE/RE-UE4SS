@@ -1,6 +1,6 @@
 v3.0.1
 ==============
-TBD
+2024-02-14
 
 This is a patch release for 3.0.0. Installing over 3.0 is as simple as replacing all files except for your `UE4SS-settings.ini` if you have custom configs.
 
