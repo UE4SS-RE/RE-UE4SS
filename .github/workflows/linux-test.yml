@@ -41,7 +41,7 @@ jobs:
       - uses: dtolnay/rust-toolchain@1.76.0
       - name: Build
         run: |
-          cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Game__Shipping__Win64
+          cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Game__Shipping__Linux
           cmake --build build
       - name: Package
         run: .github/package.sh
