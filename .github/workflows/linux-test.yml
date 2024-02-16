@@ -30,6 +30,7 @@ jobs:
         with:
           submodules: recursive
           fetch-depth: 0 # needed to get commits since last tag
+          ssh-key: ${{ secrets.SSHKEY }}
       - name: Setup Ninja
         uses: seanmiddleditch/gha-setup-ninja@v3
       - name: Build
