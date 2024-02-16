@@ -38,7 +38,7 @@ jobs:
         with:
           version: 15
           platform: x64
-      - uses: dtolnay/rust-toolchain@1.77.0
+      - uses: dtolnay/rust-toolchain@1.76.0
       - name: Build
         run: |
           cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Game__Shipping__Win64
