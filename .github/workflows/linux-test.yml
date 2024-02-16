@@ -11,6 +11,7 @@ on:
       - "UE4SS/generated_include/**"
       - "deps/**"
       - "UE4SS/proxy_generator/**"
+      - ".github/**"
 
 permissions:
   contents: read
