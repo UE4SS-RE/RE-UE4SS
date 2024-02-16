@@ -34,10 +34,12 @@ jobs:
       - name: Setup Ninja
         uses: seanmiddleditch/gha-setup-ninja@v3
       - name: Set up Clang
-        uses: Totto16/setup-clang@v1
+        uses: KyleMayes/install-llvm-action@v1
         with:
-          version: 16
+          version: "16.0"
           platform: x64
+          env: true
+          ubuntu-version: 22.04
       - uses: dtolnay/rust-toolchain@1.76.0
       - name: Build
         run: |
