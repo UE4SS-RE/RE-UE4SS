@@ -24,17 +24,15 @@ jobs:
         with:
           submodules: recursive
           fetch-depth: 0 # needed to get commits since last tag
-
       - name: Setup Ninja
         uses: seanmiddleditch/gha-setup-ninja@v3
-
       - name: Build
         run: |
           cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Game__Shipping__Win64
           cmake --build build
-       - name: Package
+      - name: Package
         run: .github/package.sh
-       - name: Upload Artifacts
+      - name: Upload Artifacts
         uses: actions/upload-artifact@v3
         with:
           name: Linux-Release
