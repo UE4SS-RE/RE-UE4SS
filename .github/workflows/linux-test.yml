@@ -20,10 +20,14 @@ jobs:
   make-release:
     runs-on: ubuntu-22.04
     steps:
+      - name: Setup github SSH
+        uses: shimataro/ssh-key-action@v2
+        with:
+          key: ${{ secrets.SSHKEY }}
+          known_hosts: unnecessary
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          key: ${{ secrets.SSHKEY }}
           submodules: recursive
           fetch-depth: 0 # needed to get commits since last tag
       - name: Setup Ninja
