@@ -12,6 +12,7 @@ on:
       - "deps/**"
       - "UE4SS/proxy_generator/**"
       - ".github/**"
+      - "CMakeLists.txt"
 
 permissions:
   contents: read
