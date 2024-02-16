@@ -23,6 +23,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
+          key: ${{ secrets.SSHKEY }}
           submodules: recursive
           fetch-depth: 0 # needed to get commits since last tag
       - name: Setup Ninja
