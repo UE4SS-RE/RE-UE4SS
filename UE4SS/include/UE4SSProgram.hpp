@@ -169,9 +169,9 @@ namespace RC
 #endif
 
       public:
-        static inline std::vector<std::unique_ptr<Mod>> m_mods;
+        std::vector<std::unique_ptr<Mod>> m_mods;
 
-        static inline RecognizableStruct m_shared_functions{};
+        RecognizableStruct m_shared_functions{};
 
         static inline UE4SSProgram* s_program{};
 
