@@ -41,11 +41,17 @@ jobs:
           platform: x64
           env: true
           ubuntu-version: 22.04
-      - uses: dtolnay/rust-toolchain@1.76.0
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@1.76.0
+      - name: Run sccache-cache
+        uses: mozilla-actions/sccache-action@v0.0.3
       - name: Build
         run: |
-          cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Game__Shipping__Linux
+          cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Game__Shipping__Linux -DCMAKE_C_COMPILER_LAUNCHER=sccache -DCMAKE_CXX_COMPILER_LAUNCHER=sccache
           cmake --build build
+        env:
+          SCCACHE_GHA_ENABLED: "true"
+          RUSTC_WRAPPER: "sccache"
       - name: Package
         run: .github/package.sh
       - name: Upload Artifacts
