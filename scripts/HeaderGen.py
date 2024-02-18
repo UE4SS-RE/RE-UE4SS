@@ -16,9 +16,9 @@ FUNCTION_TEMPLATE = """if (auto it = {ClassName}::VTableLayoutMap.find(STR("{Fun
 }}
 """
 
-MEMBER_TEMPLATE = """if (auto it = {ClassName}::MemberOffsets.find(STR("{MemberName}")); it == {ClassName}::MemberOffsets.end())
+MEMBER_TEMPLATE = """if (auto it = {ClassName}::MemberOffsets.find(SYSSTR("{MemberName}")); it == {ClassName}::MemberOffsets.end())
 {{
-    {ClassName}::MemberOffsets.emplace(STR("{MemberName}"), 0x{MemberOffset:02x});
+    {ClassName}::MemberOffsets.emplace(SYSSTR("{MemberName}"), 0x{MemberOffset:02x});
 }}
 """
 
