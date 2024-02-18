@@ -2142,7 +2142,7 @@ Overloads:
                                 continue;
                             }
                             auto path = item.path().stem();
-                            current_directory_table.add_key(path == game_name ? "Game" : path.string().c_str());
+                            current_directory_table.add_key(path == game_name ? "Game" : to_string(path.wstring()).c_str());
                             auto next_directory_table = lua.prepare_new_table();
                             iterate_directory(item.path(), next_directory_table);
                             current_directory_table.fuse_pair();
@@ -2204,8 +2204,8 @@ Overloads:
                                         {
                                             files_table.add_key(i);
                                             auto file_table = lua.prepare_new_table();
-                                            file_table.add_pair("__name", item.path().filename().string().c_str());
-                                            file_table.add_pair("__absolute_path", item.path().string().c_str());
+                                            file_table.add_pair("__name", to_string(item.path().filename().wstring()).c_str());
+                                            file_table.add_pair("__absolute_path", to_string(item.path().wstring()).c_str());
                                             files_table.fuse_pair();
                                         }
                                         ++i;
@@ -2219,8 +2219,8 @@ Overloads:
                                 }
                             });
                         });
-                        meta_table.add_pair("__name", directory.stem().string().c_str());
-                        meta_table.add_pair("__absolute_path", directory.string().c_str());
+                        meta_table.add_pair("__name", to_string(directory.stem().wstring()).c_str());
+                        meta_table.add_pair("__absolute_path", to_string(directory.wstring()).c_str());
                         lua_setmetatable(lua.get_lua_state(), -2);
                     };
 
