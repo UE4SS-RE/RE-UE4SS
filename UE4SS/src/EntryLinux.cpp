@@ -96,6 +96,18 @@ int hooked_main(int argc, char **argv, char **envp) {
 extern char **environ;
 
 extern "C" {
+
+struct link_map_private {
+    Elf64_Addr l_addr;
+    char *l_name;
+    Elf64_Dyn *l_ld; 
+    struct link_map_private *l_next, *l_prev;
+    struct link_map_private *l_real;
+    Lmid_t l_ns;
+    struct libname_list *l_libname;
+    Elf64_Dyn *l_info[DT_NUM + 0 + DT_VERSIONTAGNUM + DT_EXTRANUM + DT_VALNUM + DT_ADDRNUM];
+};
+
 int  __libc_start_main(
     int (*main)(int, char **, char **),
     int argc,
@@ -111,7 +123,6 @@ int  __libc_start_main(
     Dl_info dl_info;
     Elf64_Sym *sym;
     // libsteam_api is okay, the UE engine is causing problem
-    
     void *current___cxa_throw = dlsym(RTLD_DEFAULT, "__cxa_throw");
     dladdr1(current___cxa_throw, &dl_info, (void**) &sym, RTLD_DL_SYMENT);
     fprintf(stderr, "__cxa_throw found in %s @ %p\n", dl_info.dli_fname, current___cxa_throw);
@@ -121,7 +132,105 @@ int  __libc_start_main(
         sym->st_info = ELF64_ST_INFO(STB_LOCAL, ELF64_ST_TYPE(sym->st_info));
         sym->st_other = STV_INTERNAL;
         // assume this is UE5's address range and remove this symbol
+        void *working___cxa_throw = dlsym(RTLD_DEFAULT, "__cxa_throw");
+        struct link_map_private* map1;
+        dladdr1(working___cxa_throw, &dl_info, (void**) &map1, RTLD_DL_SYMENT);
+        fprintf(stderr, "now we're using __cxa_throw from %s @ %p\n", dl_info.dli_fname, working___cxa_throw);
+
+        struct data_encap {
+            void *working___cxa_throw;
+            void *current___cxa_throw;
+        } data = {working___cxa_throw, current___cxa_throw};
+        dl_iterate_phdr([](struct dl_phdr_info *info, size_t size, void *data) -> int {
+            auto working___cxa_throw = ((struct data_encap*)data)->working___cxa_throw;
+            auto current___cxa_throw = ((struct data_encap*)data)->current___cxa_throw;
+            fprintf(stderr, "Examing %s @ %p... \n", info->dlpi_name, info->dlpi_addr);
+            // skip vdso 
+            if (strstr(info->dlpi_name, "vdso") != nullptr) {
+                fprintf(stderr, "  Skipping %s\n", info->dlpi_name);
+                return 0;
+            }
+            // get dynamic
+            Elf64_Dyn *dyn = nullptr;
+            for (int i = 0; i < info->dlpi_phnum; i++) {
+                if (info->dlpi_phdr[i].p_type == PT_DYNAMIC) {
+                    dyn = (Elf64_Dyn *)(info->dlpi_phdr[i].p_vaddr + info->dlpi_addr);
+                }
+            }
+
+            // iterate dynamic, find .plt.got
+            struct RELA_INFOS {
+                Elf64_Rela *rela;
+                ssize_t sz;
+            } rela_infos[2] = {};
+            // symbol table
+            Elf64_Sym *sym = nullptr;
+            // string table
+            char *strtab = nullptr;
+            for (int i = 0; dyn[i].d_tag != DT_NULL; i++) {
+                // DT_JMPREL
+                if (dyn[i].d_tag == DT_JMPREL) {
+                    rela_infos[0].rela = (Elf64_Rela *)(dyn[i].d_un.d_ptr);
+                }
+                if (dyn[i].d_tag == DT_RELA) {
+                    rela_infos[1].rela = (Elf64_Rela *)(dyn[i].d_un.d_ptr);
+                }
+                // DT_SYMTAB
+                if (dyn[i].d_tag == DT_SYMTAB) {
+                    sym = (Elf64_Sym *)(dyn[i].d_un.d_ptr);
+                }
+                // DT_STRTAB
+                if (dyn[i].d_tag == DT_STRTAB) {
+                    strtab = (char *)(dyn[i].d_un.d_ptr);
+                }
+                // DT_PLTRELSZ
+                if (dyn[i].d_tag == DT_PLTRELSZ) {
+                    rela_infos[0].sz = dyn[i].d_un.d_val;
+                }
+                // DT_RELASZ
+                if (dyn[i].d_tag == DT_RELASZ) {
+                    rela_infos[1].sz = dyn[i].d_un.d_val;
+                }
+            }
+            if (sym == nullptr || strtab == nullptr) {
+                fprintf(stderr, "  No sym or strtab found %p %p\n", sym, strtab);
+                return 0;
+            }
+            if ((rela_infos[0].rela == nullptr) && (rela_infos[1].rela == nullptr)) {
+                fprintf(stderr, "  No rela found %p %p\n", rela_infos[0].rela, rela_infos[1].rela);
+                return 0;
+            }
+            auto process_rela = [&] (Elf64_Rela *rela, ssize_t sz, Elf64_Sym *sym, char *strtab) {
+                fprintf(stderr, "  Found rela @ %p, sym @ %p, strtab @ %p\n", rela, sym, strtab);
+                for (int i = 0; i < sz / sizeof(Elf64_Rela); i++) {
+                    if (sym[ELF64_R_SYM(rela[i].r_info)].st_name != 0) {
+                        char *name = strtab + sym[ELF64_R_SYM(rela[i].r_info)].st_name;
+                        if (strncmp(name, "__cxa_throw", 11) == 0) {
+                            fprintf(stderr, "  Found __cxa_throw symbol @ %p\n", rela[i].r_offset);
+                        } else {
+                            continue;
+                        }
+                        // got table address
+                        unsigned long* address = (unsigned long *)(rela[i].r_offset + info->dlpi_addr);
+                        if (*address == (unsigned long)current___cxa_throw) {
+                            fprintf(stderr, "  Found __cxa_throw in .plt.got @ %p, offset = %d\n", address, rela[i].r_offset);
+                            mprotect((void*)ALIGN_DOWN_PAGE(address), ALIGN_UP_PAGE(address + 1) - ALIGN_DOWN_PAGE(address), PROT_READ | PROT_WRITE);
+                            *address = (unsigned long)working___cxa_throw;
+                            fprintf(stderr, "  Patched __cxa_throw to @ %p\n", working___cxa_throw);
+                        }
+                    }
+                }
+            };
+            for (int i = 0; i < 2; i++) {
+                if (rela_infos[i].rela != nullptr) {
+                    process_rela(rela_infos[i].rela, rela_infos[i].sz, sym, strtab);
+                }
+            }
+            return 0;
+        }, &data);
+    
     }
+    
     // remove LD_PRELOAD from environ
     int nenv = 0;
     for (int i = 0; environ[i]; i++)
