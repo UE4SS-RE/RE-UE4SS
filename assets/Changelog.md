@@ -35,12 +35,14 @@ TBD
 ## Fixes
 
 ### General
+Fixed BPModLoaderMod giving "bad conversion" errors.
 
 ### Live View
 
 ### UHT Dumper
 
 ### Lua API
+Fixed the "IterateGameDirectories" global function throwing "bad conversion" errors.
 
 ### C++ API
 
