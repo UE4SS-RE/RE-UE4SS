@@ -158,7 +158,7 @@ int  __libc_start_main(
                 }
             }
 
-            // iterate dynamic, find .plt.got
+            // iterate dynamic, find relocation to __cxa_throw
             struct RELA_INFOS {
                 Elf64_Rela *rela;
                 ssize_t sz;
