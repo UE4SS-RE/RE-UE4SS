@@ -3,23 +3,35 @@ option("ue4ssProxyPath")
     set_description("Set path for a dll to generate the proxy for")
 
 target("proxy_files")
-    set_kind("phony")
+    set_kind("binary")
     add_deps("proxy_generator")
 
-    on_build(function (target)
-        import("target_helpers", { rootdir = os.projectdir() })
-        local proxy_path = get_config("ue4ssProxyPath")
-        local proxy_name = target_helpers.get_path_filename(proxy_path)
+    set_policy("build.across_targets_in_parallel", false)
 
+    on_build(function (target)
         local proxy_generator = path.join(os.projectdir(), target:dep("proxy_generator"):targetfile())
-        os.execv(proxy_generator, {proxy_path, target:autogendir()})
+        local output_path = path.join(os.projectdir(), target:autogendir())
+        local file = get_config("ue4ssProxyPath")
+
+        os.mkdir(output_path)
+
+        os.execv(proxy_generator, {file, output_path})
+    end)
+
+    on_link(function () end)
+
+    after_clean(function (target)
+        os.rm(target:autogendir())
     end)
 
 target("proxy")
     set_kind("shared")
     add_options("ue4ssProxyPath")
     set_languages("cxx20")
+    set_exceptions("cxx")
     add_rules("c++", "asm")
+
+    set_policy("build.across_targets_in_parallel", false)
 
     add_deps("File", "proxy_files")
 
@@ -37,7 +49,7 @@ target("proxy")
 
         build_configs:config(target)
 
-        local output_path = target:dep("proxy_files"):autogendir()
+        local output_path = path.join(os.projectdir(), target:dep("proxy_files"):autogendir())
         local proxy_name = target_helpers.get_path_filename(get_config("ue4ssProxyPath"))
 
         target:add("files", path.join(output_path, "dllmain.cpp"), { always_added = true })

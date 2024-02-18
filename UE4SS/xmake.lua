@@ -40,6 +40,7 @@ end
 target(projectName)
     set_kind("shared")
     set_languages("cxx20")
+    set_exceptions("cxx")
 
     add_options("ue4ssBetaIsStarted", "ue4ssIsBeta")
 
