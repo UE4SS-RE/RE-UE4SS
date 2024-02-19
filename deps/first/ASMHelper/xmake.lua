@@ -1,7 +1,7 @@
 local projectName = "ASMHelper"
 
 target(projectName)
-    set_kind("shared")
+    set_kind("static")
     set_languages("cxx20")
     set_exceptions("cxx")
 
@@ -18,6 +18,6 @@ target(projectName)
         
         print("Project: " .. projectName .. " (STATIC)")
 
-        target:add("defines", target_helpers.project_name_to_exports_define(projectName))
-        target:add("defines", target_helpers.project_name_to_build_static_define(projectName), { public = true })
+        target:add("defines", "RC_ASM_HELPER_EXPORTS")
+        target:add("defines", "RC_ASM_HELPER_BUILD_STATIC", { public = true })
     end)

@@ -1,7 +1,7 @@
 local projectName = "DynamicOutput"
 
 target(projectName)
-    set_kind("shared")
+    set_kind("static")
     set_languages("cxx20")
     set_exceptions("cxx")
 
