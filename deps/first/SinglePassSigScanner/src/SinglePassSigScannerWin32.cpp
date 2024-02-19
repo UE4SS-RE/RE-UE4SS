@@ -14,11 +14,6 @@
 #include <Profiler/Profiler.hpp>
 #include <SigScanner/SinglePassSigScanner.hpp>
 
-#ifdef LINUX
-#include <SigScanner/Linux/DLData.hpp>
-#define byte uint8_t
-#endif
-
 namespace RC
 {
     ScanTargetArray SigScannerStaticData::m_modules_info;
@@ -375,7 +370,7 @@ namespace RC
         return vector_of_signatures;
     }
 
-    auto SinglePassScanner::string_scan(std::u16string_view string_to_scan_for, ScanTarget scan_target) -> void*
+    auto SinglePassScanner::string_scan(std::wstring_view string_to_scan_for, ScanTarget scan_target) -> void*
     {
         auto module = SigScannerStaticData::m_modules_info[scan_target];
 
@@ -406,7 +401,7 @@ namespace RC
                         break;
                     }
 
-                    std::u16string_view maybe_string = std::u16string_view((const wchar_t*)region_start, string_to_scan_for.size());
+                    auto maybe_string = std::wstring_view((const wchar_t*)region_start, string_to_scan_for.size());
                     if (maybe_string == string_to_scan_for)
                     {
                         address_found = region_start;

@@ -25,6 +25,9 @@
 #include <chrono>
 #include <imgui.h>
 
+#undef min
+#undef max
+
 namespace RC::GUI::Dumpers
 {
     using namespace ::RC::Unreal;
@@ -79,9 +82,9 @@ namespace RC::GUI::Dumpers
         FMeshUVChannelInfo UVChannelData;
     };
 
-    auto generate_root_component_csv(UObject* root_component) -> StringType
+    auto generate_root_component_csv(UObject* root_component) -> UEStringType
     {
-        StringType root_actor_buffer{};
+        UEStringType root_actor_buffer{};
 
         static auto location_property = root_component->GetPropertyByNameInChain(STR("RelativeLocation"));
         static auto rotation_property = root_component->GetPropertyByNameInChain(STR("RelativeRotation"));
@@ -105,9 +108,9 @@ namespace RC::GUI::Dumpers
         return root_actor_buffer;
     }
 
-    static auto generate_actors_csv_file(UClass* dump_actor_class) -> StringType
+    static auto generate_actors_csv_file(UClass* dump_actor_class) -> UEStringType
     {
-        StringType file_buffer{};
+        UEStringType file_buffer{};
 
         file_buffer.append(STR("---,Actor,Location,Rotation,Scale,Meshes\n"));
 
@@ -126,7 +129,7 @@ namespace RC::GUI::Dumpers
                 return LoopAction::Continue;
             }
 
-            StringType actor_buffer{};
+            UEStringType actor_buffer{};
 
             actor_buffer.append(std::format(SYSSTR("Row_{},"), actor_count));
 
@@ -175,7 +178,7 @@ namespace RC::GUI::Dumpers
                             {
                                 throw std::runtime_error{"integer overflow when converting material_type_space_location signed\n"};
                             }
-                            auto material_typeless_name = StringViewType{material_full_name.begin() + static_cast<long long>(material_type_space_location) + 1,
+                            auto material_typeless_name = UEStringViewType{material_full_name.begin() + static_cast<long long>(material_type_space_location) + 1,
                                                                          material_full_name.end()};
 
                             actor_buffer.append(std::format(SYSSTR("{}'"), material_interface->GetClassPrivate()->GetName()));
@@ -243,7 +246,7 @@ namespace RC::GUI::Dumpers
         return file_buffer;
     }
 
-    static auto generate_actors_json_file(UClass* class_to_dump) -> StringType
+    static auto generate_actors_json_file(UClass* class_to_dump) -> UEStringType
     {
         auto global_json_array = JSON::Array{};
 
@@ -270,13 +273,13 @@ namespace RC::GUI::Dumpers
             static auto class_property = game_mode_base->GetPropertyByNameInChain(STR("GameStateClass"));
             FString actor_class_string{};
             class_property->ExportTextItem(actor_class_string, &actor->GetClassPrivate(), nullptr, nullptr, 0);
-            actor_json_object.new_string(STR("Actor"), std::format(SYSSTR("{}"), StringViewType{actor_class_string.GetCharArray()}));
+            actor_json_object.new_string(STR("Actor"), std::format(SYSSTR("{}"), UEStringViewType{actor_class_string.GetCharArray()}));
 
             auto& root_component_json_object = actor_json_object.new_object(STR("RootComponent"));
 
             FString root_component_class_string{};
             class_property->ExportTextItem(root_component_class_string, &(*root_component)->GetClassPrivate(), nullptr, nullptr, 0);
-            root_component_json_object.new_string(STR("SceneComponentClass"), std::format(SYSSTR("{}"), StringViewType{root_component_class_string.GetCharArray()}));
+            root_component_json_object.new_string(STR("SceneComponentClass"), std::format(SYSSTR("{}"), UEStringViewType{root_component_class_string.GetCharArray()}));
 
             auto& location_json_object = root_component_json_object.new_object(STR("Location"));
             auto location = (*root_component)->GetValuePtrByPropertyNameInChain<FVector>(STR("RelativeLocation"));

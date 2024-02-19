@@ -200,7 +200,7 @@ namespace RC::UVTD
     };
 
     // Any members by the name 'LHS' will instead use 'RHS' in generated code.
-    static inline std::unordered_map<StringType, StringType> s_member_rename_map{
+    static inline std::unordered_map<UEStringType, UEStringType> s_member_rename_map{
             {STR("Class"), STR("ClassPrivate")},
             {STR("Name"), STR("NamePrivate")},
             {STR("Outer"), STR("OuterPrivate")},
@@ -210,7 +210,7 @@ namespace RC::UVTD
     auto change_prefix(File::StringType input, bool is_425_plus) -> std::optional<File::StringType>;
 
     // Workaround that lets us have a unified 'TUObjectArray' struct regardless if the engine version uses a chunked or non-chunked variant of TUObjectArray.
-    auto unify_uobject_array_if_needed(StringType& out_variable_type) -> bool;
+    auto unify_uobject_array_if_needed(UEStringType& out_variable_type) -> bool;
 } // namespace RC::UVTD
 
 #endif

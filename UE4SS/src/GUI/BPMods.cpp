@@ -16,6 +16,9 @@
 
 #include <imgui.h>
 
+#undef min
+#undef max
+
 namespace RC::GUI::BPMods
 {
     using namespace RC::Unreal;

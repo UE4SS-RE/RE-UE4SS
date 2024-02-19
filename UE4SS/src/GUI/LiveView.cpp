@@ -49,6 +49,9 @@
 #include <IconsFontAwesome5.h>
 #include <misc/cpp/imgui_stdlib.h>
 
+#undef max
+#undef min
+
 namespace RC::GUI
 {
     using namespace Unreal;
@@ -560,7 +563,7 @@ namespace RC::GUI
         case LiveView::Watch::AcquisitionMethod::StaticFindObject: {
             auto object_full_name = watch.container->GetFullName();
             auto object_type_space_location = object_full_name.find(STR(" "));
-            auto object_typeless_name = StringType{object_full_name.begin() + object_type_space_location + 1, object_full_name.end()};
+            auto object_typeless_name = UEStringType{object_full_name.begin() + object_type_space_location + 1, object_full_name.end()};
             json_object->new_string(STR("AcquisitionID"), object_typeless_name);
             break;
         }
@@ -672,7 +675,7 @@ namespace RC::GUI
             }
         }
 
-        auto json_file = File::open(StringType{UE4SSProgram::get_program().get_working_directory()} + std::format(SYSSTR("\\watches\\watches.meta.json")),
+        auto json_file = File::open(std::filesystem::path{UE4SSProgram::get_program().get_working_directory()} / "watches" / "watches.meta.json",
                                     File::OpenFor::Writing,
                                     File::OverwriteExistingFile::Yes,
                                     File::CreateIfNonExistent::Yes);
@@ -709,10 +712,10 @@ namespace RC::GUI
         UObjectArray::RemoveUObjectDeleteListener(&FLiveViewDeleteListener::LiveViewDeleteListener);
     }
 
-    LiveView::Watch::Watch(StringType&& object_name, StringType&& property_name) : object_name(object_name), property_name(property_name)
+    LiveView::Watch::Watch(UEStringType&& object_name, UEStringType&& property_name) : object_name(object_name), property_name(property_name)
     {
         auto& file_device = output.get_device<Output::FileDevice>();
-        file_device.set_file_name_and_path(StringType{UE4SSProgram::get_program().get_working_directory()} +
+        file_device.set_file_name_and_path(UEStringType{UE4SSProgram::get_program().get_working_directory()} +
                                            std::format(SYSSTR("\\watches\\ue4ss_watch_{}_{}.txt"), object_name, property_name));
         file_device.set_formatter([](File::StringViewType string) -> File::StringType {
             const auto when_as_string = std::format(SYSSTR("{:%Y-%m-%d %H:%M:%S}"), std::chrono::system_clock::now());
@@ -1981,7 +1984,7 @@ namespace RC::GUI
         }
 
         auto obj = container_type == ContainerType::Array ? *static_cast<UObject**>(container) : static_cast<UObject*>(container);
-        StringType parent_name{};
+        UEStringType parent_name{};
         if (container_type == ContainerType::Object)
         {
             parent_name = obj ? obj->GetName() : STR("None");
@@ -2176,7 +2179,7 @@ namespace RC::GUI
                 if (ImGui::Button("Apply"))
                 {
                     FOutputDevice placeholder_device{};
-                    StringType new_name = to_wstring(m_current_property_value_buffer);
+                    UEStringType new_name = to_wstring(m_current_property_value_buffer);
                     FName new_key = FName(new_name, FNAME_Add);
                     uenum->EditNameAt(index, new_key);
                     if (uenum->GetEnumNames()[index].Key.ToString() != new_name)
@@ -2260,7 +2263,7 @@ namespace RC::GUI
                 if (ImGui::Button("Apply"))
                 {
                     FOutputDevice placeholder_device{};
-                    StringType new_name = to_wstring(m_current_property_value_buffer);
+                    UEStringType new_name = to_wstring(m_current_property_value_buffer);
                     FName new_key = FName(new_name, FNAME_Add);
                     int64 value = names[index].Value;
 
@@ -2897,7 +2900,7 @@ namespace RC::GUI
     {
         FString live_value_fstring{};
         watch.property->ExportTextItem(live_value_fstring, watch.property->ContainerPtrToValuePtr<void>(watch.container), nullptr, nullptr, 0);
-        auto live_value_string = StringType{live_value_fstring.GetCharArray()};
+        auto live_value_string = UEStringType{live_value_fstring.GetCharArray()};
 
         if (watch.property_value == live_value_string)
         {
@@ -2943,7 +2946,7 @@ namespace RC::GUI
         auto num_params = function->GetNumParms();
 
         const auto when_as_string = std::format(SYSSTR("{:%H:%M:%S}"), std::chrono::system_clock::now());
-        StringType buffer{std::format(SYSSTR("Received call @ {}.\n"), when_as_string)};
+        UEStringType buffer{std::format(SYSSTR("Received call @ {}.\n"), when_as_string)};
 
         buffer.append(std::format(SYSSTR("  Context:\n    {}\n"), context.Context->GetFullName()));
 
@@ -3414,7 +3417,7 @@ namespace RC::GUI
         // Remember to update text width calculations for the last ImGui::PushItemWidth call if this text gets updated.
         if (ImGui::Button(ICON_FA_COPY " Copy search result"))
         {
-            StringType result{};
+            UEStringType result{};
             auto is_below_425 = Version::IsBelow(4, 25);
             for (const auto& search_result : s_name_search_results)
             {

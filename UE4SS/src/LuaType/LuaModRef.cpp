@@ -50,7 +50,7 @@ Overloads:
             {
                 throw std::runtime_error{error_overload_not_found};
             }
-            auto variable_name = std::string{lua.get_string()};
+            auto variable_name = to_system(lua.get_string());
 
             RC::LuaMod::SharedLuaVariable* currently_stored_value{};
             if (auto it = RC::LuaMod::m_shared_lua_variables.find(variable_name); it != RC::LuaMod::m_shared_lua_variables.end())
@@ -159,7 +159,7 @@ Overloads:
             {
                 throw std::runtime_error{error_overload_not_found};
             }
-            auto variable_name = std::string{lua.get_string()};
+            auto variable_name = to_system(lua.get_string());
 
             if (auto it = RC::LuaMod::m_shared_lua_variables.find(variable_name); it != RC::LuaMod::m_shared_lua_variables.end())
             {

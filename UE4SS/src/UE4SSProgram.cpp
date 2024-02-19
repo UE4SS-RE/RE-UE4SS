@@ -236,7 +236,7 @@ namespace RC
                          std::format(SYSSTR("{}"), UE4SS_LIB_VERSION_PRERELEASE == 0 ? SYSSTR("") : std::format(SYSSTR(" PreRelease #{}"), UE4SS_LIB_VERSION_PRERELEASE)),
                          std::format(SYSSTR("{}"),
                                      UE4SS_LIB_BETA_STARTED == 0 ? SYSSTR("") : (UE4SS_LIB_IS_BETA == 0 ? SYSSTR(" Beta #?") : std::format(SYSSTR(" Beta #{}"), UE4SS_LIB_VERSION_BETA))),
-                         SYSSTR(UE4SS_LIB_BUILD_GITSHA));
+                         to_system(UE4SS_LIB_BUILD_GITSHA));
 
 #ifdef __clang__
 #define UE4SS_COMPILER SYSSTR("Clang")
@@ -244,7 +244,7 @@ namespace RC
 #define UE4SS_COMPILER SYSSTR("MSVC")
 #endif
 
-            Output::send(SYSSTR("UE4SS Build Configuration: {} ({})\n"), SYSSTR(UE4SS_CONFIGURATION), UE4SS_COMPILER);
+            Output::send(SYSSTR("UE4SS Build Configuration: {} ({})\n"), to_system(UE4SS_CONFIGURATION), UE4SS_COMPILER);
 #ifdef WIN32
             m_load_library_a_hook = std::make_unique<PLH::IatHook>("kernel32.dll",
                                                                    "LoadLibraryA",
@@ -1618,17 +1618,6 @@ namespace RC
         {
             return mod_exists_with_name->get();
         }
-    }
-
-    auto UE4SSProgram::find_lua_mod_by_name(SystemStringViewType mod_name, UE4SSProgram::IsInstalled installed_only, IsStarted is_started) -> LuaMod*
-    {
-        return static_cast<LuaMod*>(find_mod_by_name<LuaMod>(mod_name, installed_only, is_started));
-    }
-
-    auto UE4SSProgram::find_lua_mod_by_name(UEStringViewType mod_name, UE4SSProgram::IsInstalled installed_only, IsStarted is_started) -> LuaMod*
-    {
-        auto sysstr = to_system(UEStringType{mod_name});
-        return static_cast<LuaMod*>(find_mod_by_name<LuaMod>(sysstr, installed_only, is_started));
     }
 
     auto UE4SSProgram::get_object_dumper_output_directory() -> const SystemStringType

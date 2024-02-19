@@ -79,7 +79,7 @@ namespace RC::JSON::Parser
             }
         }
         template <typename ValueType>
-        auto add_element_to_top(SystemStringType key, std::unique_ptr<ValueType> value) -> ValueType*
+        auto add_element_to_top(UEStringType key, std::unique_ptr<ValueType> value) -> ValueType*
         {
             auto& top = peek_top();
             if (top.is<JSON::Object>())
@@ -107,7 +107,7 @@ namespace RC::JSON::Parser
       private:
         std::unique_ptr<JSON::Object> m_global_object;
         ScopeStack m_scope_stack{};
-        SystemStringType m_last_key{};
+        UEStringType m_last_key{};
         std::unique_ptr<JSON::Value> m_last_value{};
         State m_current_state{State::StartOfFile};
         TokenType m_expected_token{};
@@ -115,7 +115,7 @@ namespace RC::JSON::Parser
         bool m_defer_element_creation{};
 
       public:
-        TokenParser(const ParserBase::Tokenizer& tokenizer, SystemStringType& input) : ParserBase::TokenParser(tokenizer, input)
+        TokenParser(const ParserBase::Tokenizer& tokenizer, UEStringType& input) : ParserBase::TokenParser(tokenizer, input)
         {
         }
         virtual ~TokenParser() = default;

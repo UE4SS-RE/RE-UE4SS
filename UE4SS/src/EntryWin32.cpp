@@ -138,7 +138,7 @@ auto WIN_API_FUNCTION_NAME(HMODULE hModule, DWORD ul_reason_for_call, [[maybe_un
 std::filesystem::path get_executable_path() {
     wchar_t exe_path_buffer[1024];
     GetModuleFileNameW(GetModuleHandle(nullptr), exe_path_buffer, 1023);
-    return std::filesystem::path(buffer);
+    return std::filesystem::path(exe_path_buffer);
 }
 
 

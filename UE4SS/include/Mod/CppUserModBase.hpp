@@ -14,11 +14,11 @@ namespace RC
 {
     struct ModMetadata
     {
-        const SystemStringType ModName{};
-        const SystemStringType ModVersion{};
-        const SystemStringType ModDescription{};
-        const SystemStringType ModAuthors{};
-        const SystemStringType ModIntendedSDKVersion{};
+        const UEStringType ModName{};
+        const UEStringType ModVersion{};
+        const UEStringType ModDescription{};
+        const UEStringType ModAuthors{};
+        const UEStringType ModIntendedSDKVersion{};
     };
 
     namespace LuaMadeSimple
@@ -35,11 +35,11 @@ namespace RC
         std::vector<std::shared_ptr<GUI::GUITab>> GUITabs{};
       #endif
       public:
-        SystemStringType ModName{};
-        SystemStringType ModVersion{};
-        SystemStringType ModDescription{};
-        SystemStringType ModAuthors{};
-        SystemStringType ModIntendedSDKVersion{};
+        UEStringType ModName{};
+        UEStringType ModVersion{};
+        UEStringType ModDescription{};
+        UEStringType ModAuthors{};
+        UEStringType ModIntendedSDKVersion{};
 
       public:
         RC_UE4SS_API CppUserModBase();
@@ -75,7 +75,7 @@ namespace RC
          * @param async_lua This is the Lua instance for asynchronous things like ExecuteAsync and ExecuteWithDelay.
          * @param hook_luas This is a container of Lua instances that are used for game-thread hooks like ExecuteInGameThread.
          */
-        RC_UE4SS_API virtual auto on_lua_start(SystemStringViewType mod_name,
+        RC_UE4SS_API virtual auto on_lua_start(UEStringViewType mod_name,
                                                LuaMadeSimple::Lua& lua,
                                                LuaMadeSimple::Lua& main_lua,
                                                LuaMadeSimple::Lua& async_lua,
@@ -106,7 +106,7 @@ namespace RC
          * @param async_lua This is the Lua instance for asynchronous things like ExecuteAsync and ExecuteWithDelay.
          * @param hook_luas This is a container of Lua instances that are used for game-thread hooks like ExecuteInGameThread.
          */
-        RC_UE4SS_API virtual auto on_lua_stop(SystemStringViewType mod_name,
+        RC_UE4SS_API virtual auto on_lua_stop(UEStringViewType mod_name,
                                               LuaMadeSimple::Lua& lua,
                                               LuaMadeSimple::Lua& main_lua,
                                               LuaMadeSimple::Lua& async_lua,
@@ -128,7 +128,7 @@ namespace RC
         {
         }
 
-        RC_UE4SS_API virtual auto on_dll_load(SystemStringType dll_name) -> void
+        RC_UE4SS_API virtual auto on_dll_load(UEStringViewType dll_name) -> void
         {
         }
 

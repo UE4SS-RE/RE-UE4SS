@@ -42,7 +42,7 @@ namespace RC::JSON
         m_stored_type = Type::Double;
     }
 
-    auto Number::serialize(ShouldFormat should_format, int32_t* indent_level) -> SystemStringType
+    auto Number::serialize(ShouldFormat should_format, int32_t* indent_level) -> UEStringType
     {
         (void)should_format;
         (void)indent_level;

@@ -2,10 +2,10 @@
 
 namespace RC::JSON
 {
-    auto Null::serialize(ShouldFormat should_format, int32_t* indent_level) -> SystemStringType
+    auto Null::serialize(ShouldFormat should_format, int32_t* indent_level) -> UEStringType
     {
         (void)should_format;
         (void)indent_level;
-        return SYSSTR("null");
+        return STR("null");
     }
 } // namespace RC::JSON

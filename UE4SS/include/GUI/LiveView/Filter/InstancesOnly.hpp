@@ -7,7 +7,7 @@ namespace RC::GUI::Filter
     class InstancesOnly
     {
       public:
-        static inline StringType s_debug_name{STR("InstancesOnly")};
+        static inline UEStringType s_debug_name{STR("InstancesOnly")};
         static inline bool s_enabled{};
         static auto pre_eval(UObject* object) -> bool
         {

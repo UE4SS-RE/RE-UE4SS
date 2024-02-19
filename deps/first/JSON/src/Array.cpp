@@ -36,22 +36,22 @@ namespace RC::JSON
         m_members.emplace_back(std::move(object));
     }
 
-    auto Array::serialize(ShouldFormat should_format, int32_t* indent_level) -> SystemStringType
+    auto Array::serialize(ShouldFormat should_format, int32_t* indent_level) -> UEStringType
     {
         if (!indent_level)
         {
             throw std::runtime_error{"Must supply an indent_level pointer"};
         };
 
-        SystemStringType array_as_string{};
+        UEStringType array_as_string{};
 
         if (should_format == ShouldFormat::Yes && !m_members.empty())
         {
-            array_as_string.append(SYSSTR("[\n"));
+            array_as_string.append(STR("[\n"));
         }
         else
         {
-            array_as_string.append(SYSSTR("["));
+            array_as_string.append(STR("["));
         }
 
         ++(*indent_level);
@@ -70,11 +70,11 @@ namespace RC::JSON
             {
                 if (should_format == ShouldFormat::Yes)
                 {
-                    array_as_string.append(SYSSTR(",\n"));
+                    array_as_string.append(STR(",\n"));
                 }
                 else
                 {
-                    array_as_string.append(SYSSTR(","));
+                    array_as_string.append(STR(","));
                 }
             }
 
@@ -85,13 +85,13 @@ namespace RC::JSON
 
         if (should_format == ShouldFormat::Yes && !m_members.empty())
         {
-            array_as_string.append(SYSSTR("\n"));
+            array_as_string.append(STR("\n"));
             indent(indent_level, array_as_string);
-            array_as_string.append(SYSSTR("]"));
+            array_as_string.append(STR("]"));
         }
         else
         {
-            array_as_string.append(SYSSTR("]"));
+            array_as_string.append(STR("]"));
         }
 
         if (!m_members.empty())

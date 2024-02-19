@@ -1373,7 +1373,7 @@ Overloads:
                     lua.throw_error(error_overload_not_found);
                 }
 
-                auto function_name = to_u16string(lua.get_string());
+                auto function_name = to_ue(lua.get_string());
                 auto function_name_no_prefix = function_name.substr(function_name.find_first_of(STR(" ")) + 1, function_name.size());
 
                 Unreal::UFunction* unreal_function = Unreal::UObjectGlobals::StaticFindObject<Unreal::UFunction*>(nullptr, nullptr, function_name_no_prefix);
@@ -2579,7 +2579,7 @@ Overloads:
             {
                 throw std::runtime_error{error_overload_not_found};
             }
-            auto asset_path_and_name = Unreal::FName(to_u16string(lua.get_string()), Unreal::FNAME_Add);
+            auto asset_path_and_name = Unreal::FName(to_ue(lua.get_string()), Unreal::FNAME_Add);
 
             auto* asset_registry = static_cast<Unreal::UAssetRegistry*>(Unreal::UAssetRegistryHelpers::GetAssetRegistry().ObjectPointer);
             if (!asset_registry)
@@ -2630,7 +2630,7 @@ Overloads:
             bool could_be_in_class{};
             if (lua.is_string())
             {
-                object_class_name = Unreal::FName(to_u16string(lua.get_string()), Unreal::FNAME_Add);
+                object_class_name = Unreal::FName(to_ue(lua.get_string()), Unreal::FNAME_Add);
             }
             else if (lua.is_userdata())
             {
@@ -2673,7 +2673,7 @@ Overloads:
             bool could_be_object_short_name{};
             if (lua.is_string())
             {
-                object_short_name = Unreal::FName(to_u16string(lua.get_string()), Unreal::FNAME_Add);
+                object_short_name = Unreal::FName(to_ue(lua.get_string()), Unreal::FNAME_Add);
                 could_be_object_short_name = true;
             }
             else if (lua.is_userdata())
@@ -2757,7 +2757,7 @@ Overloads:
 
             if (could_be_in_class && could_be_in_outer && could_be_in_name)
             {
-                LuaType::auto_construct_object(lua, Unreal::UObjectGlobals::FindObject(in_class, in_outer, to_u16string(in_name), exact_class));
+                LuaType::auto_construct_object(lua, Unreal::UObjectGlobals::FindObject(in_class, in_outer, to_ue(in_name), exact_class));
             }
             else
             {
@@ -2804,7 +2804,7 @@ Overloads:
             bool object_class_name_supplied{true};
             if (lua.is_string())
             {
-                object_class_name = Unreal::FName(to_u16string(lua.get_string()), Unreal::FNAME_Add);
+                object_class_name = Unreal::FName(to_ue(lua.get_string()), Unreal::FNAME_Add);
             }
             else if (lua.is_userdata())
             {
@@ -2842,7 +2842,7 @@ Overloads:
             Unreal::FName object_short_name{};
             if (lua.is_string())
             {
-                object_short_name = Unreal::FName(to_u16string(lua.get_string()), Unreal::FNAME_Add);
+                object_short_name = Unreal::FName(to_ue(lua.get_string()), Unreal::FNAME_Add);
             }
             else if (lua.is_userdata())
             {
@@ -3333,7 +3333,7 @@ Overloads:
             return;
         }
 
-        for (const auto& mod : UE4SSProgram::m_mods)
+        for (const auto& mod : UE4SSProgram::get_program().m_mods)
         {
             if (auto cpp_mod = dynamic_cast<CppMod*>(mod.get()); cpp_mod && mod->is_started())
             {
@@ -3353,7 +3353,7 @@ Overloads:
             return;
         }
 
-        for (const auto& mod : UE4SSProgram::m_mods)
+        for (const auto& mod : UE4SSProgram::get_program().m_mods)
         {
             if (auto cpp_mod = dynamic_cast<CppMod*>(mod.get()); cpp_mod && mod->is_started())
             {

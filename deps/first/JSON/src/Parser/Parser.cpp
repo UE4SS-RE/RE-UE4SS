@@ -11,12 +11,12 @@ namespace RC::JSON::Parser
         {
             ParserBase::TokenContainer tc;
 
-            tc.add(ParserBase::Token::create(TokenType::CarriageReturn, SYSSTR("CarriageReturn"), SYSSTR("\r")));
-            tc.add(ParserBase::Token::create(TokenType::NewLine, SYSSTR("NewLine"), SYSSTR("\n")));
-            tc.add(ParserBase::Token::create(TokenType::DoubleQuote, SYSSTR("DoubleQuote"), SYSSTR("\"")));
+            tc.add(ParserBase::Token::create(TokenType::CarriageReturn, STR("CarriageReturn"), STR("\r")));
+            tc.add(ParserBase::Token::create(TokenType::NewLine, STR("NewLine"), STR("\n")));
+            tc.add(ParserBase::Token::create(TokenType::DoubleQuote, STR("DoubleQuote"), STR("\"")));
             tc.add(ParserBase::Token::create(TokenType::Characters,
-                                             SYSSTR("Characters"),
-                                             SYSSTR(""),
+                                             STR("Characters"),
+                                             STR(""),
                                              ParserBase::Token::HasData::Yes)); // Empty identifier will match everything that no other token identifier matches
             tc.add(ParserBase::Token::create(TokenType::ClosingCurlyBrace, STR("ClosingCurlyBrace"), STR("}")));
             tc.add(ParserBase::Token::create(TokenType::OpeningCurlyBrace, STR("OpeningCurlyBrace"), STR("{")));
@@ -32,7 +32,7 @@ namespace RC::JSON::Parser
             return tc;
         }
 
-        static auto parse_internal(SystemStringType& input) -> std::unique_ptr<JSON::Object>
+        static auto parse_internal(UEStringType& input) -> std::unique_ptr<JSON::Object>
         {
             // Tokenize -> START
             ParserBase::Tokenizer tokenizer;
@@ -56,12 +56,13 @@ namespace RC::JSON::Parser
 
     auto parse(SystemStringType& input) -> std::unique_ptr<JSON::Object>
     {
-        return Internal::parse_internal(input);
+        auto ue_input = to_ue(input);
+        return Internal::parse_internal(ue_input);
     }
 
     auto parse(const File::Handle& file) -> std::unique_ptr<JSON::Object>
     {
-        auto input = file.read_all();
+        auto input = to_ue(file.read_all());
         return Internal::parse_internal(input);
     }
 } // namespace RC::JSON::Parser

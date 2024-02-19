@@ -41,7 +41,7 @@ namespace RC::JSON
       public:
         auto new_object() -> class Object&;
         auto new_array() -> class Array&;
-        auto new_string(const SystemStringType& value) -> void;
+        auto new_string(const UEStringType& value) -> void;
         auto new_null() -> void;
         auto new_bool(bool value) -> void;
 
@@ -87,7 +87,7 @@ namespace RC::JSON
         }
 
       public:
-        auto serialize(ShouldFormat should_format = ShouldFormat::No, int32_t* indent_level = nullptr) -> SystemStringType override;
+        auto serialize(ShouldFormat should_format = ShouldFormat::No, int32_t* indent_level = nullptr) -> UEStringType override;
         auto get_type() const -> Type override
         {
             return Type::Array;

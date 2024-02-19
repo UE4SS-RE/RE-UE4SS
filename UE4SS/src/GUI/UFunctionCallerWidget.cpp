@@ -18,6 +18,9 @@
 #include <imgui.h>
 #include <misc/cpp/imgui_stdlib.h>
 
+#undef min
+#undef max
+
 namespace RC::GUI
 {
     UFunctionCallerWidget::UFunctionCallerWidget() = default;
@@ -139,7 +142,7 @@ namespace RC::GUI
 
     static bool s_do_call{};
     static UObject* s_instance{};
-    static StringType s_cmd{};
+    static UEStringType s_cmd{};
     static FOutputDevice s_ar{};
     static UFunction* s_function{};
     static UObject* s_executor{};
@@ -246,7 +249,7 @@ namespace RC::GUI
     static auto get_typeless_object_name(UObject* object) -> std::string
     {
         auto object_name = to_system(object->GetFullName());
-        auto object_name_type_space_location = object_name.find(" ");
+        auto object_name_type_space_location = object_name.find(SYSSTR(" "));
         if (object_name_type_space_location == object_name.npos)
         {
             Output::send<LogLevel::Warning>(SYSSTR("Could not copy name of PlayerController, was unable to find space in full PlayerController name: '{}'."),
@@ -283,7 +286,7 @@ namespace RC::GUI
         return params.ReturnValue;
     }
 
-    static auto render_other_list(std::string_view menu_name, StringViewType class_name, UFunctionParam& param) -> void
+    static auto render_other_list(std::string_view menu_name, UEStringViewType class_name, UFunctionParam& param) -> void
     {
         if (ImGui::BeginMenu(menu_name.data()))
         {

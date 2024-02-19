@@ -31,7 +31,7 @@ namespace RC
         lua.register_function("DerefToInt32", LuaLibrary::deref_to_int32);
         lua.register_function("dereftoint32", LuaLibrary::deref_to_int32);
 
-        lua.execute_file(script_file_path_and_name);
+        lua.execute_file(to_lua(script_file_path_and_name));
 
         constexpr const char* global_register_func_name = "Register";
         constexpr const char* global_on_match_found_func_name = "OnMatchFound";

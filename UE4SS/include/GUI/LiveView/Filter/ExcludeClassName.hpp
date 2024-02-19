@@ -5,20 +5,25 @@
 
 namespace RC::GUI::Filter
 {
-    class HasProperty
+    class ExcludeClassName
     {
       public:
-        static inline UEStringType s_debug_name{STR("HasProperty")};
+        static inline UEStringType s_debug_name{STR("ExcludeClassName")};
         static inline UEStringType s_value{};
         static inline std::string s_internal_value{};
 
         static auto post_eval(UObject* object) -> bool
         {
-            for (const auto& property : list_properties)
+            if (!s_value.empty())
             {
-                if (!property.empty() && !object->GetPropertyByNameInChain(property.c_str())) return true;
+                auto class_name = object->GetClassPrivate()->GetName();
+                auto pos = class_name.find(s_value);
+                return pos != class_name.npos;
             }
-            return false;
+            else
+            {
+                return false;
+            }
         }
     };
 } // namespace RC::GUI::Filter

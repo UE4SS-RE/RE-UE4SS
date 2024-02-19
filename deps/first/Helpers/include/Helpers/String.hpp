@@ -247,6 +247,16 @@ namespace RC
         }
     }
 
+    auto inline to_wstring(std::wstring_view input) -> std::wstring
+    {
+        return std::wstring{input};
+    }
+
+    auto inline to_wstring(std::wstring& input) -> std::wstring
+    {
+        return std::wstring{input};
+    }
+
     auto inline to_wstring(std::string_view input) -> std::wstring
     {
         auto temp_input = std::string{input};
@@ -287,7 +297,9 @@ namespace RC
 
     auto inline to_string(std::u16string& input) -> std::string
     {
+#pragma warning(disable : 4996)
         return std::wstring_convert<std::codecvt_utf8_utf16<char16_t>, char16_t>{}.to_bytes(input);
+#pragma warning(default : 4996)
     }
 
     auto inline to_string(std::wstring_view input) -> std::string
@@ -432,7 +444,41 @@ namespace RC
             return std::forward<T>(arg);
         }
     }
+    
+    template <typename T>
+    struct is_std_string_type : std::disjunction<std::is_same<T, std::string>, std::is_same<T, std::string_view>>
+    {
+    };
 
+    template <typename T>
+    struct not_std_string_like_t : std::conjunction<is_string_like_t<std::decay_t<T>>, std::negation<is_std_string_type<std::decay_t<T>>>>
+    {
+    };
+
+
+    template <typename T>
+    auto inline to_std_string(T&& input) -> std::string
+    {
+        return to_string(input);
+    }
+
+    template <typename T>
+    auto to_stdstr(T&& arg)
+    {
+        if constexpr (can_be_string_view_t<T>::value)
+        {
+            return to_stdstr(stringviewify(std::forward<T>(arg)));
+        }
+        else if constexpr (not_std_string_like_t<std::decay_t<T>>::value)
+        {
+            return to_std_string(std::forward<T>(arg));
+        }
+        else
+        {
+            return std::forward<T>(arg);
+        }
+    }
+    
     template<typename T>
     struct is_system_string_type : std::disjunction<
         std::is_same<T, SystemStringType>,

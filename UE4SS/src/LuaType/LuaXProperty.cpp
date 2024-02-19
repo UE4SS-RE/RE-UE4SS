@@ -114,7 +114,7 @@ namespace RC::LuaType
             if (lua_object.get_remote_cpp_object())
             {
                 // Set the return value to the ansi version of the full name
-                lua.set_string(to_system(lua_object.get_remote_cpp_object()->GetFullName()).c_str());
+                lua.set_string(to_lua(lua_object.get_remote_cpp_object()->GetFullName()).c_str());
             }
             else
             {

@@ -434,7 +434,7 @@ namespace RC::LuaMadeSimple
         }
     }
 
-    auto Lua::execute_file(std::u16string_view file_name_and_path) const -> void
+    auto Lua::execute_file(std::wstring_view file_name_and_path) const -> void
     {
 #pragma warning(disable : 4244)
         std::string file_name_and_path_ansi = std::string(file_name_and_path.begin(), file_name_and_path.end());
@@ -455,7 +455,7 @@ namespace RC::LuaMadeSimple
         }
     }
 
-    auto Lua::execute_string(std::u16string_view code) const -> void
+    auto Lua::execute_string(std::wstring_view code) const -> void
     {
 #pragma warning(disable : 4244)
         std::string code_ansi = std::string(code.begin(), code.end());

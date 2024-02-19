@@ -26,31 +26,31 @@ namespace RC::Parser
             EndOfFile,
         };
 
-        auto static token_type_to_string(const TokenType token_type) -> SystemStringType
+        auto static token_type_to_string(const TokenType token_type) -> std::string
         {
             switch (token_type)
             {
             case Default:
-                return SYSSTR("Default");
+                return std::string("Default");
             case OpenCurlyBrace:
-                return SYSSTR("OpenCurlyBrace");
+                return std::string("OpenCurlyBrace");
             case CloseCurlyBrace:
-                return SYSSTR("CloseCurlyBrace");
+                return std::string("CloseCurlyBrace");
             case OpenSquareBracket:
-                return SYSSTR("OpenSquareBracket");
+                return std::string("OpenSquareBracket");
             case CloseSquareBracket:
-                return SYSSTR("CloseSquareBracket");
+                return std::string("CloseSquareBracket");
             case Colon:
-                return SYSSTR("Colon");
+                return std::string("Colon");
             case Comma:
-                return SYSSTR("Comma");
+                return std::string("Comma");
                 break;
             case DoubleQuote:
-                return SYSSTR("DoubleQuote");
+                return std::string("DoubleQuote");
             case Characters:
-                return SYSSTR("Characters");
+                return std::string("Characters");
             case EndOfFile:
-                return SYSSTR("EndOfFile");
+                return std::string("EndOfFile");
             }
         }
 
@@ -65,7 +65,7 @@ namespace RC::Parser
         class ItemBase
         {
           public:
-            SystemStringType m_name{SYSSTR("--UNNAMED-ITEM--")};
+            UEStringType m_name{STR("--UNNAMED-ITEM--")};
             bool m_is_global_scope{false};
 
           public:
