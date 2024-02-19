@@ -216,8 +216,8 @@ namespace RC::LuaType
                     }
                     else
                     {
-                        std::string parameter_type_name = to_string(property_type_fname.ToString());
-                        std::string parameter_name = to_string(param_next->GetName());
+                        auto parameter_type_name = to_string(property_type_fname.ToString());
+                        auto parameter_name = to_string(param_next->GetName());
                         lua.throw_error(
                                 std::format("Tried calling UFunction without a registered handler for parameter. Parameter '{}' of type '{}' not supported.",
                                             parameter_name,
@@ -249,7 +249,7 @@ namespace RC::LuaType
                 auto reuse_same_table = param->IsA<Unreal::FArrayProperty>() || param->IsA<Unreal::FStructProperty>();
                 if (!reuse_same_table)
                 {
-                    lua_table.add_key(to_string(param->GetName()).c_str());
+                    lua_table.add_key(to_lua(param->GetName()).c_str());
                 }
 
                 Unreal::FName param_type_fname = param->GetClass().GetFName();
@@ -271,7 +271,7 @@ namespace RC::LuaType
                 }
                 else
                 {
-                    std::string param_type_name = to_string(param_type_fname.ToString());
+                    auto param_type_name = to_string(param_type_fname.ToString());
                     lua.throw_error(std::format("Tried calling UFunction without a registered handler 'Out' param. Type '{}' not supported.", param_type_name));
                 }
 
@@ -537,7 +537,7 @@ namespace RC::LuaType
                 //    return LoopAction::Continue;
                 //}
 
-                std::string field_name = to_string(field->GetName());
+                auto field_name = to_lua(field->GetName());
 
                 Unreal::FName field_type = field->GetClass().GetFName();
                 int32_t name_comparison_index = field_type.GetComparisonIndex();
@@ -562,10 +562,10 @@ namespace RC::LuaType
                 }
                 else
                 {
-                    std::string field_type_name = to_string(field_type.ToString());
+                    auto field_type_name = to_string(field_type.ToString());
                     lua.throw_error(std::format("Tried getting without a registered handler. 'StructProperty'.'{}' not supported. Field: '{}'",
                                                 field_type_name,
-                                                field_name));
+                                                to_string(field_name)));
                 }
             };
 
@@ -581,7 +581,7 @@ namespace RC::LuaType
             for (Unreal::FProperty* field : script_struct->ForEachPropertyInChain())
             {
                 Unreal::FName field_type_fname = field->GetClass().GetFName();
-                const std::string field_name = to_string(field->GetName());
+                const auto field_name = to_lua(field->GetName());
 
                 // At the top of the stack now: table that has struct data
 
@@ -622,10 +622,10 @@ namespace RC::LuaType
                 }
                 else
                 {
-                    std::string field_type_name = to_string(field_type_fname.ToString());
+                    auto field_type_name = to_string(field_type_fname.ToString());
                     params.lua.throw_error(std::format("Tried pushing (Operation::Set) StructProperty without a registered handler for field '{} {}'.",
                                                        field_type_name,
-                                                       field_name));
+                                                       to_string(field_name)));
                 }
             };
 
@@ -724,7 +724,7 @@ namespace RC::LuaType
             }
             else
             {
-                std::string property_type_name = to_string(property_type_fname.ToString());
+                auto property_type_name = to_string(property_type_fname.ToString());
                 lua.throw_error(
                         std::format("Tried interacting with an array but the inner property has no registered handler. Property type '{}' not supported.",
                                     property_type_name));
@@ -739,7 +739,7 @@ namespace RC::LuaType
             int32_t name_comparison_index = inner_type_fname.GetComparisonIndex();
             if (!StaticState::m_property_value_pushers.contains(name_comparison_index))
             {
-                std::string inner_type_name = to_string(inner_type_fname.ToString());
+                auto inner_type_name = to_string(inner_type_fname.ToString());
                 params.lua.throw_error(std::format("Tried pushing (Operation::Set) ArrayProperty with unsupported inner type of '{}'", inner_type_name));
             }
 
@@ -958,11 +958,11 @@ namespace RC::LuaType
             // Make global table to store enum name/value pairs -> START
             auto table = params.lua.prepare_new_table();
 
-            std::string prop_name = to_string(params.property->GetName());
+            auto prop_name = to_lua(params.property->GetName());
 
             for (const auto& elem : enum_ptr->ForEachName())
             {
-                std::string elem_name = to_string(elem.Key.ToString());
+                auto elem_name = to_lua(elem.Key.ToString());
                 table.add_pair(elem_name.c_str(), elem.Value);
             }
 
@@ -1297,7 +1297,7 @@ Overloads:
         {
             // We can either throw an error and kill the execution
             /**/
-            std::string property_type_name = to_string(property_type.ToString());
+            auto property_type_name = to_string(property_type.ToString());
             lua.throw_error(std::format(
                     "[handle_unreal_property_value] Tried accessing unreal property without a registered handler. Property type '{}' not supported.",
                     property_type_name));
@@ -1422,7 +1422,7 @@ Overloads:
         {
             // We can either throw an error and kill the execution
             /**/
-            std::string property_type_name = to_string(lua_object.m_type.ToString());
+            auto property_type_name = to_string(lua_object.m_type.ToString());
             lua.throw_error(std::format(
                     "[RemoteUnrealParam::prepare_to_handle] Tried accessing unreal property without a registered handler. Property type '{}' not supported.",
                     property_type_name));
