@@ -308,10 +308,10 @@ namespace RC
         template <typename T>
         static auto find_mod_by_name(SystemStringViewType mod_name, IsInstalled is_installed = IsInstalled::No, IsStarted is_started = IsStarted::No) -> T*
         {
-             return find_mod_by_name<T>(to_generic_string(mod_name), is_installed, is_started);
+             return find_mod_by_name<T>(to_system(mod_name), is_installed, is_started);
         };
 
-        RC_UE4SS_API static auto find_lua_mod_by_name(UEViewType mod_name, IsInstalled = IsInstalled::No, IsStarted = IsStarted::No) -> LuaMod*;
+        RC_UE4SS_API static auto find_lua_mod_by_name(UEStringViewType mod_name, IsInstalled = IsInstalled::No, IsStarted = IsStarted::No) -> LuaMod*;
         RC_UE4SS_API static auto find_lua_mod_by_name(SystemStringViewType mod_name, IsInstalled = IsInstalled::No, IsStarted = IsStarted::No) -> LuaMod*;
         static auto static_cleanup() -> void;
         RC_UE4SS_API static auto get_program() -> UE4SSProgram&

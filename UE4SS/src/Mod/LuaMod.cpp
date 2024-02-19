@@ -9,7 +9,6 @@
 
 #include <DynamicOutput/DynamicOutput.hpp>
 #include <ExceptionHandling.hpp>
-#include <Helpers/Format.hpp>
 #include <Helpers/String.hpp>
 
 #ifdef HAS_INPUT
@@ -266,8 +265,8 @@ namespace RC
                     // If the type wasn't supported then we simply clean the Lua stack, output a warning and then do nothing
                     lua_data.lua.discard_value();
 
-                    auto parameter_type_name = UEStringToSystemString(property_type_name.ToString());
-                    auto parameter_name = UEStringToSystemString(lua_data.return_property->GetName());
+                    auto parameter_type_name = to_system(property_type_name.ToString());
+                    auto parameter_name = to_system(lua_data.return_property->GetName());
 
                     Output::send(
                             SYSSTR("Tried altering return value of a hooked UFunction without a registered handler for return type Return property '{}' of type "
@@ -875,7 +874,7 @@ Overloads:
             // Ignores any params after P1
             if (lua.is_string())
             {
-                Unreal::UObject* object = Unreal::UObjectGlobals::StaticFindObject(nullptr, nullptr, SystemStringToUEString(to_generic_string(lua.get_string())));
+                Unreal::UObject* object = Unreal::UObjectGlobals::StaticFindObject(nullptr, nullptr, to_ue(to_system(lua.get_string())));
 
                 // Construct a Lua object of type 'UObject'
                 // Auto constructing is nullptr safe
@@ -935,7 +934,7 @@ Overloads:
             // P3 (Name), string
             if (lua.is_string())
             {
-                param_name = to_generic_string(lua.get_string());
+                param_name = to_system(lua.get_string());
             }
             else
             {
@@ -949,7 +948,7 @@ Overloads:
             }
             // There's no error if P4 isn't a bool, simply ignore all parameters after P3
 
-            Unreal::UObject* object = Unreal::UObjectGlobals::StaticFindObject(param_class, param_in_outer, SystemStringToUEString(param_name), param_exact_class);
+            Unreal::UObject* object = Unreal::UObjectGlobals::StaticFindObject(param_class, param_in_outer, to_ue(param_name), param_exact_class);
 
             // Construct a Lua object of type 'UObject'
             // Auto constructing is nullptr safe
@@ -977,7 +976,7 @@ Overloads:
             // Ignores any params after P1
             if (lua.is_string())
             {
-                Unreal::UObject* object = Unreal::UObjectGlobals::FindFirstOf(SystemStringToUEString(to_generic_string(lua.get_string())));
+                Unreal::UObject* object = Unreal::UObjectGlobals::FindFirstOf(to_ue(to_system(lua.get_string())));
 
                 // Construct a Lua object of type 'UObject'
                 // Auto constructing is nullptr safe
@@ -1154,7 +1153,7 @@ Overloads:
                     }
                     catch (std::runtime_error& e)
                     {
-                        Output::send(SYSSTR("{}\n"), to_generic_string(lua.handle_error(e.what())));
+                        Output::send(SYSSTR("{}\n"), to_system(lua.handle_error(e.what())));
                     }
                 };
 
@@ -1273,7 +1272,7 @@ Overloads:
                     }
                     catch (std::runtime_error& e)
                     {
-                        Output::send(SYSSTR("{}\n"), to_generic_string(lua.handle_error(e.what())));
+                        Output::send(SYSSTR("{}\n"), to_system(lua.handle_error(e.what())));
                     }
                 };
 
@@ -1373,8 +1372,8 @@ Overloads:
                     lua.throw_error(error_overload_not_found);
                 }
 
-                UEStringType function_name = to_u16string(lua.get_string());
-                UEStringType function_name_no_prefix = function_name.substr(function_name.find_first_of(STR(" ")) + 1, function_name.size());
+                auto function_name = to_u16string(lua.get_string());
+                auto function_name_no_prefix = function_name.substr(function_name.find_first_of(STR(" ")) + 1, function_name.size());
 
                 Unreal::UFunction* unreal_function = Unreal::UObjectGlobals::StaticFindObject<Unreal::UFunction*>(nullptr, nullptr, function_name_no_prefix);
                 if (!unreal_function)
@@ -1435,7 +1434,7 @@ Overloads:
                 }
                 else
                 {
-                    if (auto callback_data_it = LuaMod::m_script_hook_callbacks.find(UEStringToSystemString(unreal_function->GetFullName()));
+                    if (auto callback_data_it = LuaMod::m_script_hook_callbacks.find(to_system(unreal_function->GetFullName()));
                         callback_data_it != LuaMod::m_script_hook_callbacks.end())
                     {
                         Output::send<LogLevel::Verbose>(SYSSTR("Unregistering script hook with id: {}\n"), post_id);
@@ -1736,12 +1735,12 @@ Overloads:
             };
 
             // Always required, for all property types
-            property_info.name = to_generic_string(lua_table.get_string_field("Name"));
+            property_info.name = to_system(lua_table.get_string_field("Name"));
             property_info.type.name = lua_table.get_table_field("Type").get_string_field("Name");
             property_info.type.size = verify_and_convert_int64_to_int32("Type", "Size");
             property_info.type.ffieldclass_pointer = reinterpret_cast<void*>(lua_table.get_table_field("Type").get_int_field("FFieldClassPointer"));
             property_info.type.static_pointer = reinterpret_cast<void*>(lua_table.get_table_field("Type").get_int_field("StaticPointer"));
-            property_info.belongs_to_class = to_generic_string(lua_table.get_string_field("BelongsToClass"));
+            property_info.belongs_to_class = to_system(lua_table.get_string_field("BelongsToClass"));
 
             std::string oi_property_name;
             int32_t oi_relative_offset{};
@@ -1784,7 +1783,7 @@ Overloads:
                 lua.throw_error("Parameter #1 for function 'RegisterCustomProperty'. The table is missing required fields.");
             }
 
-            Unreal::UClass* belongs_to_class = Unreal::UObjectGlobals::StaticFindObject<Unreal::UClass*>(nullptr, nullptr, SystemStringToUEString(property_info.belongs_to_class));
+            Unreal::UClass* belongs_to_class = Unreal::UObjectGlobals::StaticFindObject<Unreal::UClass*>(nullptr, nullptr, to_ue(property_info.belongs_to_class));
             if (!belongs_to_class)
             {
                 lua.throw_error("Tried to 'RegisterCustomProperty' but 'BelongsToClass' could not be found");
@@ -1792,7 +1791,7 @@ Overloads:
 
             if (property_info.offset_internal_is_table)
             {
-                auto name = Unreal::FName(SystemStringToUEString(oi_property_name));
+                auto name = Unreal::FName(to_ue(oi_property_name));
                 Unreal::FProperty* oi_property = belongs_to_class->FindProperty(name);
                 if (!oi_property)
                 {
@@ -1888,7 +1887,7 @@ Overloads:
                 lua.throw_error(error_overload_not_found);
             }
 
-            SystemStringType  class_name = to_generic_string(lua.get_string());
+            auto class_name = to_system(lua.get_string());
 
             if (!lua.is_function())
             {
@@ -1906,7 +1905,7 @@ Overloads:
             const auto func_ref = hook_lua->registry().make_ref();
             const auto thread_ref = mod->lua().registry().make_ref();
 
-            Unreal::UClass* instance_of_class = Unreal::UObjectGlobals::StaticFindObject<Unreal::UClass*>(nullptr, nullptr, SystemStringToUEString(class_name));
+            Unreal::UClass* instance_of_class = Unreal::UObjectGlobals::StaticFindObject<Unreal::UClass*>(nullptr, nullptr, to_ue(class_name));
 
             LuaMod::m_static_construct_object_lua_callbacks.emplace_back(LuaMod::LuaCancellableCallbackData{hook_lua, instance_of_class, func_ref, thread_ref});
 
@@ -1924,7 +1923,7 @@ Overloads:
                 lua.throw_error(error_overload_not_found);
             }
 
-            SystemStringType  event_name = to_generic_string(lua.get_string());
+            auto event_name = to_system(lua.get_string());
 
             if (!lua.is_function())
             {
@@ -1960,7 +1959,7 @@ Overloads:
             {
                 lua.throw_error(error_overload_not_found);
             }
-            auto custom_event_name = to_generic_string(lua.get_string());
+            auto custom_event_name = to_system_string(lua.get_string());
 
             LuaMod::m_custom_event_callbacks.erase(custom_event_name);
 
@@ -2504,7 +2503,7 @@ Overloads:
             {
                 throw std::runtime_error{error_overload_not_found};
             }
-            auto command_name = to_generic_string(lua.get_string());
+            auto command_name = to_system_string(lua.get_string());
 
             if (!lua.is_function())
             {
@@ -2539,7 +2538,7 @@ Overloads:
             {
                 throw std::runtime_error{error_overload_not_found};
             }
-            auto command_name = to_generic_string(lua.get_string());
+            auto command_name = to_system_string(lua.get_string());
 
             if (!lua.is_function())
             {
@@ -2984,8 +2983,8 @@ Overloads:
                 lua.throw_error(error_overload_not_found);
             }
 
-            SystemStringType  function_name = to_generic_string(lua.get_string());
-            SystemStringType  function_name_no_prefix = function_name.substr(function_name.find_first_of(SYSSTR("/")), function_name.size());
+            auto function_name = to_system(lua.get_string());
+            auto function_name_no_prefix = function_name.substr(function_name.find_first_of(SYSSTR("/")), function_name.size());
 
             if (!lua.is_function())
             {
@@ -3015,7 +3014,7 @@ Overloads:
                 has_post_callback = true;
             }
 
-            Unreal::UFunction* unreal_function = Unreal::UObjectGlobals::StaticFindObject<Unreal::UFunction*>(nullptr, nullptr, SystemStringToUEString(function_name_no_prefix));
+            Unreal::UFunction* unreal_function = Unreal::UObjectGlobals::StaticFindObject<Unreal::UFunction*>(nullptr, nullptr, to_ue(function_name_no_prefix));
             if (!unreal_function)
             {
                 lua.throw_error("Tried to register a hook with Lua function 'RegisterHook' but no UFunction with the specified name was found.");
@@ -3041,13 +3040,13 @@ Overloads:
                 Output::send<LogLevel::Verbose>(SYSSTR("[RegisterHook] Registered native hook ({}, {}) for {}\n"),
                                                 generic_pre_id,
                                                 generic_post_id,
-                                                UEStringToSystemString(unreal_function->GetFullName()));
+                                                to_system(unreal_function->GetFullName()));
             }
             else if (func_ptr && func_ptr == Unreal::UObject::ProcessInternalInternal.get_function_address() &&
                      !unreal_function->HasAnyFunctionFlags(Unreal::EFunctionFlags::FUNC_Native))
             {
                 ++m_last_generic_hook_id;
-                auto [callback_data, _] = LuaMod::m_script_hook_callbacks.emplace(UEStringToSystemString(unreal_function->GetFullName()), LuaCallbackData{lua, nullptr, {}});
+                auto [callback_data, _] = LuaMod::m_script_hook_callbacks.emplace(to_system(unreal_function->GetFullName()), LuaCallbackData{lua, nullptr, {}});
                 callback_data->second.registry_indexes.emplace_back(hook_lua,
                                                                     LuaMod::LuaCallbackData::RegistryIndex{lua_callback_registry_index, m_last_generic_hook_id});
                 generic_pre_id = m_last_generic_hook_id;
@@ -3055,7 +3054,7 @@ Overloads:
                 Output::send<LogLevel::Verbose>(SYSSTR("[RegisterHook] Registered script hook ({}, {}) for {}\n"),
                                                 generic_pre_id,
                                                 generic_post_id,
-                                                UEStringToSystemString(unreal_function->GetFullName()));
+                                                to_system(unreal_function->GetFullName()));
             }
             else
             {
@@ -3267,8 +3266,8 @@ Overloads:
             {
                 lua.throw_error(error_overload_not_found);
             }
-            auto local_str = SystemStringToUEString(to_generic_string(lua.get_string()));
-            UEViewType PossiblyLongName = local_str;
+            auto local_str = to_ue(lua.get_string());
+            UEStringViewType PossiblyLongName = local_str;
             lua.set_bool(Unreal::FPackageName::IsShortPackageName(PossiblyLongName));
 
             return 1;
@@ -3284,8 +3283,8 @@ Overloads:
             {
                 lua.throw_error(error_overload_not_found);
             }
-            auto local_str = SystemStringToUEString(to_generic_string(lua.get_string()));
-            UEViewType InLongPackageName = local_str;
+            auto local_str = to_ue(lua.get_string());
+            UEStringViewType InLongPackageName = local_str;
             lua.set_bool(Unreal::FPackageName::IsValidLongPackageName(InLongPackageName));
 
             return 1;
@@ -3396,7 +3395,7 @@ Overloads:
         }
         catch (std::runtime_error& e)
         {
-            Output::send<LogLevel::Error>(SYSSTR("{}\n"), to_generic_string(e.what()));
+            Output::send<LogLevel::Error>(SYSSTR("{}\n"), to_system(e.what()));
         }
     }
 
@@ -3436,8 +3435,8 @@ Overloads:
         std::erase_if(g_hooked_script_function_data, [&](std::unique_ptr<LuaUnrealScriptFunctionData>& item) -> bool {
             if (item->mod == this)
             {
-                Output::send(SYSSTR("\tUnregistering hook by id '{}#{}' for mod {}\n"), UEStringToSystemString(item->unreal_function->GetName()), item->pre_callback_id, item->mod->get_name());
-                Output::send(SYSSTR("\tUnregistering hook by id '{}#{}' for mod {}\n"), UEStringToSystemString(item->unreal_function->GetName()), item->post_callback_id, item->mod->get_name());
+                Output::send(SYSSTR("\tUnregistering hook by id '{}#{}' for mod {}\n"), to_system(item->unreal_function->GetName()), item->pre_callback_id, item->mod->get_name());
+                Output::send(SYSSTR("\tUnregistering hook by id '{}#{}' for mod {}\n"), to_system(item->unreal_function->GetName()), item->post_callback_id, item->mod->get_name());
                 item->unreal_function->UnregisterHook(item->pre_callback_id);
                 item->unreal_function->UnregisterHook(item->post_callback_id);
                 return true;
@@ -3498,7 +3497,7 @@ Overloads:
             {
                 return;
             }
-            if (auto it = callback_container.find(precise_name_match ? UEStringToSystemString(Stack.Node()->GetFullName()) : UEStringToSystemString(Stack.Node()->GetName())); it != callback_container.end())
+            if (auto it = callback_container.find(precise_name_match ? to_system(Stack.Node()->GetFullName()) : to_system(Stack.Node()->GetName())); it != callback_container.end())
             {
                 const auto& callback_data = it->second;
                 for (const auto& [lua_ptr, registry_index] : callback_data.registry_indexes)
@@ -3592,13 +3591,10 @@ Overloads:
                             }
                             else
                             {
-                                SystemStringType  return_property_type_name = UEStringToSystemString(return_property_type.ToString());
-                                SystemStringType  return_property_name = UEStringToSystemString(return_property->GetName());
-
                                 Output::send(SYSSTR("Tried altering return value of a custom BP function without a registered handler for return type Return "
                                                  "property '{}' of type '{}' not supported."),
-                                             return_property_name,
-                                             return_property_type_name);
+                                             return_property->GetName(),
+                                             return_property_type.ToString());
                             }
                         }
                     }
@@ -3807,7 +3803,7 @@ Overloads:
                         }
                         catch (std::runtime_error& e)
                         {
-                            Output::send(SYSSTR("{}\n"), to_generic_string(e.what()));
+                            Output::send(SYSSTR("{}\n"), to_system(e.what()));
                         }
 
                         if (cancel)
@@ -4049,26 +4045,26 @@ Overloads:
                 ar.Log((const RC::Unreal::TCHAR*) log_message.c_str());
             };
 
-            if (!LuaStatics::console_executor_enabled && String::iequal(UEViewType{(UECharType*)cmd}, STR("luastart")))
+            if (!LuaStatics::console_executor_enabled && String::iequal(UEStringViewType{(UECharType*)cmd}, STR("luastart")))
             {
                 start_console_lua_executor();
                 logln(SYSSTR("Console Lua executor started"));
                 return true;
             }
-            else if (LuaStatics::console_executor_enabled && String::iequal(UEViewType{(UECharType*)cmd}, STR("luastop")))
+            else if (LuaStatics::console_executor_enabled && String::iequal(UEStringViewType{(UECharType*)cmd}, STR("luastop")))
             {
                 stop_console_lua_executor();
                 logln(SYSSTR("Console Lua executor stopped"));
                 return true;
             }
-            else if (LuaStatics::console_executor_enabled && String::iequal(UEViewType{(UECharType*)cmd}, STR("luarestart")))
+            else if (LuaStatics::console_executor_enabled && String::iequal(UEStringViewType{(UECharType*)cmd}, STR("luarestart")))
             {
                 stop_console_lua_executor();
                 start_console_lua_executor();
                 logln(SYSSTR("Console Lua executor restarted"));
                 return true;
             }
-            else if (String::iequal(UEViewType{(UECharType*)cmd}, STR("clear")))
+            else if (String::iequal(UEStringViewType{(UECharType*)cmd}, STR("clear")))
             {
                 // TODO: Replace with proper implementation when we have UGameViewportClient and UConsole.
                 //       This should be fairly cross-game & cross-engine-version compatible even without the proper implementation.
@@ -4110,7 +4106,7 @@ Overloads:
                 }
                 catch (std::runtime_error& e)
                 {
-                    logln(to_generic_string(e.what()));
+                    logln(to_system(e.what()));
                 }
 
                 // We always return true when the console Lua executor is enabled in order to suppress other handlers
@@ -4126,7 +4122,7 @@ Overloads:
         Unreal::Hook::RegisterProcessConsoleExecGlobalPreCallback(
                 [](Unreal::UObject* context, const RC::Unreal::TCHAR* cmd, Unreal::FOutputDevice& ar, Unreal::UObject* executor) -> std::pair<bool, bool> {
                     return TRY([&] {
-                        auto command = UEViewType{(const UECharType*) cmd};
+                        auto command = UEStringViewType{(const UECharType*) cmd};
                         auto command_parts = explode_by_occurrence((const UECharType*) cmd, ' ');
 
                         for (const auto& callback_data : m_process_console_exec_pre_callbacks)
@@ -4182,7 +4178,7 @@ Overloads:
         Unreal::Hook::RegisterProcessConsoleExecGlobalPostCallback(
                 [](Unreal::UObject* context, const RC::Unreal::TCHAR* cmd, Unreal::FOutputDevice& ar, Unreal::UObject* executor) -> std::pair<bool, bool> {
                     return TRY([&] {
-                        auto command = UEViewType {(const UECharType*) cmd};
+                        auto command = UEStringViewType {(const UECharType*) cmd};
                         auto command_parts = explode_by_occurrence((const UECharType*)cmd, ' ');
 
                         for (const auto& callback_data : m_process_console_exec_post_callbacks)
@@ -4244,7 +4240,7 @@ Overloads:
             }
 
             return TRY([&] {
-                auto command = UEStringToSystemString(cmd);
+                auto command = to_system(cmd);
                 auto command_parts = explode_by_occurrence(command, ' ');
                 SystemStringType command_name;
                 if (command_parts.size() > 1)
@@ -4304,7 +4300,7 @@ Overloads:
             (void)executor;
 
             return TRY([&] {
-                auto command = UEStringToSystemString(cmd);
+                auto command = to_system(cmd);
                 auto command_parts = explode_by_occurrence(command, ' ');
                 SystemStringType command_name;
                 if (command_parts.size() > 1)
@@ -4424,8 +4420,8 @@ Overloads:
                                                        catch (std::runtime_error& e)
                                                        {
                                                            Output::send(SYSSTR("[{}] {}\n"),
-                                                                        to_generic_string(action.type == LuaMod::ActionType::Loop ? SYSSTR("LoopAsync") : SYSSTR("DelayedAction")),
-                                                                        to_generic_string(e.what()));
+                                                                        to_system(action.type == LuaMod::ActionType::Loop ? SYSSTR("LoopAsync") : SYSSTR("DelayedAction")),
+                                                                        to_system(e.what()));
                                                        }
 
                                                        return result;

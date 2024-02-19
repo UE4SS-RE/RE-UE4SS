@@ -346,7 +346,7 @@ namespace RC
         using SignatureContainerMap = std::unordered_map<ScanTarget, std::vector<SignatureContainer>>;
         RC_SPSS_API auto static start_scan(SignatureContainerMap& signature_containers) -> void;
 #ifdef WIN32
-        RC_SPSS_API auto static string_scan(std::wstring_view string_to_scan_for, ScanTarget = ScanTarget::MainExe) -> void*;
+        RC_SPSS_API auto static string_scan(std::u16string_view string_to_scan_for, ScanTarget = ScanTarget::MainExe) -> void*;
 #endif
     };
 } // namespace RC

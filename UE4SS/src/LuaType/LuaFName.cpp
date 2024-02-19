@@ -64,7 +64,7 @@ Overloads:
             Unreal::EFindName find_type{Unreal::EFindName::FNAME_Add};
             if (lua.is_string())
             {
-                name_string = to_generic_string(lua.get_string());
+                name_string = to_system(lua.get_string());
             }
             else if (lua.is_integer())
             {
@@ -94,7 +94,7 @@ Overloads:
             }
             else
             {
-                LuaType::FName::construct(lua, Unreal::FName(SystemStringToUEString(name_string), find_type));
+                LuaType::FName::construct(lua, Unreal::FName(to_ue(name_string), find_type));
             }
 
             return 1;

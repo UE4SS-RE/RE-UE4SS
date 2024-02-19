@@ -342,7 +342,7 @@ namespace RC::UEGenerator
                 return return_property_info.has_value() ? return_property_info.value().property : nullptr;
             }();
 
-            File::StringType function_name{UEStringToSystemString(function_info.function->GetName())};
+            File::StringType function_name{to_system(function_info.function->GetName())};
             if (is_delegate_function == IsDelegateFunction::Yes)
             {
                 // Remove the last 19 characters, which is always '__DelegateSignature' for delegates
@@ -488,7 +488,7 @@ namespace RC::UEGenerator
                 size_t colon_pos = enum_value_full_name.rfind(STR(":"));
                 auto enum_value_name = colon_pos == enum_value_full_name.npos ? enum_value_full_name : enum_value_full_name.substr(colon_pos + 1);
 
-                specification.generate_enum_member(content_buffer, uenum, UEStringToSystemString(enum_value_name), elem);
+                specification.generate_enum_member(content_buffer, uenum, to_system(enum_value_name), elem);
             }
 
             specification.generate_enum_end(content_buffer, uenum);
@@ -538,7 +538,7 @@ namespace RC::UEGenerator
             else
             {
                 // Get rid of everything before the last slash + the last slash, leaving only the actual name
-                File::StringType package_name = UEStringToSystemString(package->GetNamePrivate().ToString());
+                File::StringType package_name = to_system(package->GetNamePrivate().ToString());
                 package_name = package_name.substr(package_name.rfind(SYSSTR("/")) + 1);
                 File::StringType package_name_all_lower = package_name;
                 std::transform(package_name_all_lower.begin(), package_name_all_lower.end(), package_name_all_lower.begin(), [](File::CharType c) {
@@ -783,11 +783,11 @@ namespace RC::UEGenerator
                                            generate_tab(),
                                            property_info.should_forward_declare ? SYSSTR("class ") : SYSSTR(""),
                                            generate_property_cxx_name(property, true, native_class, EnableForwardDeclarations::Yes),
-                                           UEStringToSystemString(property->GetName()));
+                                           to_system(property->GetName()));
                 }
                 catch (std::exception& e)
                 {
-                    Output::send<LogLevel::Warning>(SYSSTR("Could not generate property '{}' because: {}\n"),UEStringToSystemString(property->GetFullName()), to_generic_string(e.what()));
+                    Output::send<LogLevel::Warning>(SYSSTR("Could not generate property '{}' because: {}\n"),to_system(property->GetFullName()), to_system(e.what()));
                     continue;
                 }
 
@@ -962,8 +962,8 @@ namespace RC::UEGenerator
                 catch (std::exception& e)
                 {
                     Output::send<LogLevel::Warning>(SYSSTR("Could not generate function '{}' because: {}\n"),
-                                                    UEStringToSystemString(function_info.function->GetFullName()),
-                                                    to_generic_string(e.what()));
+                                                    to_system(function_info.function->GetFullName()),
+                                                    to_system(e.what()));
                     return;
                 }
 
@@ -992,13 +992,13 @@ namespace RC::UEGenerator
                                             param_info.should_forward_declare ? SYSSTR("class ") : SYSSTR(""),
                                             generate_property_cxx_name(param_info.property, true, function_info.function, EnableForwardDeclarations::Yes),
                                             param_info.property->HasAnyPropertyFlags(Unreal::CPF_ReferenceParm | Unreal::CPF_OutParm) ? SYSSTR("&") : SYSSTR(""),
-                                            UEStringToSystemString(param_info.property->GetName())));
+                                            to_system(param_info.property->GetName())));
                     }
                     catch (std::exception& e)
                     {
                         Output::send<LogLevel::Warning>(SYSSTR("Could not generate function '{}' because: {}\n"),
-                                                        UEStringToSystemString(function_info.function->GetFullName()),
-                                                        to_generic_string(e.what()));
+                                                        to_system(function_info.function->GetFullName()),
+                                                        to_system(e.what()));
                         return;
                     }
 
@@ -1094,7 +1094,7 @@ namespace RC::UEGenerator
         }
         auto generate_enum_declaration(File::StringType& content_buffer, UEnum* uenum) -> void
         {
-            auto enum_name = UEStringToSystemString(uenum->GetName());
+            auto enum_name = to_system(uenum->GetName());
             content_buffer.append(std::format(SYSSTR("---@enum {}\n{} = {{\n"), enum_name, enum_name));
         }
         auto generate_enum_member(File::StringType& content_buffer, UEnum* uenum, const File::StringType& enum_value_name, const Unreal::FEnumNamePair& elem) -> void
@@ -1162,7 +1162,7 @@ namespace RC::UEGenerator
 
                 try
                 {
-                    const auto& property_name = UEStringToSystemString(property->GetName());
+                    const auto& property_name = to_system(property->GetName());
                     if (is_valid_lua_symbol(property_name))
                     {
                         content_buffer.append(std::format(SYSSTR("---@field {} {}\n"), property_name, generate_property_lua_name(property, true, native_class)));
@@ -1175,7 +1175,7 @@ namespace RC::UEGenerator
                 }
                 catch (std::exception& e)
                 {
-                    Output::send<LogLevel::Warning>(SYSSTR("Could not generate property '{}' because: {}\n"), UEStringToSystemString(property->GetFullName()), to_generic_string(e.what()));
+                    Output::send<LogLevel::Warning>(SYSSTR("Could not generate property '{}' because: {}\n"), to_system(property->GetFullName()), to_system(e.what()));
                     continue;
                 }
 
@@ -1242,7 +1242,7 @@ namespace RC::UEGenerator
                 {
                     try
                     {
-                        auto param_name = UEStringToSystemString(param_info.property->GetName());
+                        auto param_name = to_system(param_info.property->GetName());
                         // TODO disambiguate param renames
                         current_class_content.append(std::format(SYSSTR("---@param {} {}\n"),
                                                                  make_valid_symbol(param_name),
@@ -1251,8 +1251,8 @@ namespace RC::UEGenerator
                     catch (std::exception& e)
                     {
                         Output::send<LogLevel::Warning>(SYSSTR("Could not generate function '{}' because: {}\n"),
-                                                        UEStringToSystemString( function_info.function->GetFullName()),
-                                                        to_generic_string(e.what()));
+                                                        to_system( function_info.function->GetFullName()),
+                                                        to_system(e.what()));
                         return;
                     }
                 }
@@ -1267,8 +1267,8 @@ namespace RC::UEGenerator
                 catch (std::exception& e)
                 {
                     Output::send<LogLevel::Warning>(SYSSTR("Could not generate function '{}' because: {}\n"),
-                                                    UEStringToSystemString(function_info.function->GetFullName()),
-                                                    to_generic_string(e.what()));
+                                                    to_system(function_info.function->GetFullName()),
+                                                    to_system(e.what()));
                     return;
                 }
             }
@@ -1289,7 +1289,7 @@ namespace RC::UEGenerator
                 const auto& param_info = function_info.params[i];
                 if (!param_info.property->HasAnyPropertyFlags(Unreal::CPF_ReturnParm))
                 {
-                    auto param_name = UEStringToSystemString(param_info.property->GetName());
+                    auto param_name = to_system(param_info.property->GetName());
                     // TODO disambiguate param renames
                     current_class_content.append(std::format(SYSSTR("{}"), make_valid_symbol(param_name)));
 

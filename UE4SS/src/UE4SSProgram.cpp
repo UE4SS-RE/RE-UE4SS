@@ -23,7 +23,6 @@
 #include <GUI/LiveView.hpp>
 #endif
 #include <Helpers/ASM.hpp>
-#include <Helpers/Format.hpp>
 #include <Helpers/Integer.hpp>
 #include <Helpers/String.hpp>
 #include <IniParser/Ini.hpp>
@@ -100,7 +99,7 @@ namespace RC
 #define OUTPUT_MEMBER_OFFSETS_FOR_STRUCT(StructName)                                                                                                           \
     for (const auto& [name, offset] : Unreal::StructName::MemberOffsets)                                                                                       \
     {                                                                                                                                                          \
-        Output::send(SYSSTR(#StructName "::{} = 0x{:X}\n"), UEStringToSystemString(name), offset);                                                                                        \
+        Output::send(SYSSTR(#StructName "::{} = 0x{:X}\n"), to_system(name), offset);                                                                                        \
     }
 
     auto output_all_member_offsets() -> void
@@ -140,7 +139,7 @@ namespace RC
     {
         UE4SSProgram& program = UE4SSProgram::get_program();
         HMODULE lib = PLH::FnCast(program.m_hook_trampoline_load_library_a, &LoadLibraryA)(dll_name);
-        program.fire_dll_load_for_cpp_mods(to_generic_string(dll_name));
+        program.fire_dll_load_for_cpp_mods(to_system(dll_name));
         return lib;
     }
 
@@ -148,7 +147,7 @@ namespace RC
     {
         UE4SSProgram& program = UE4SSProgram::get_program();
         HMODULE lib = PLH::FnCast(program.m_hook_trampoline_load_library_ex_a, &LoadLibraryExA)(dll_name, file, flags);
-        program.fire_dll_load_for_cpp_mods(to_generic_string(dll_name));
+        program.fire_dll_load_for_cpp_mods(to_system(dll_name));
         return lib;
     }
 
@@ -184,7 +183,7 @@ namespace RC
             }
             catch (std::exception& e)
             {
-                create_emergency_console_for_early_error(std::format(SYSSTR("The IniParser failed to parse: {}"), to_generic_string(e.what())));
+                create_emergency_console_for_early_error(std::format(SYSSTR("The IniParser failed to parse: {}"), to_system(e.what())));
                 return;
             }
 
@@ -343,7 +342,7 @@ namespace RC
                 // only log modules with unique addresses (non-modular builds have everything in MainExe)
                 if (i == static_cast<size_t>(ScanTarget::MainExe) || main_exe_ptr != module.lpBaseOfDll)
                 {
-                    auto module_name = to_generic_string(ScanTargetToString(i));
+                    auto module_name = to_system(ScanTargetToString(i));
                     Output::send(SYSSTR("{} @ {} size={:#x}\n"), module_name.c_str(), module.lpBaseOfDll, module.SizeOfImage);
                 }
             }
@@ -355,7 +354,7 @@ namespace RC
                 // only log modules with unique addresses (non-modular builds have everything in MainExe)
                 if (i == static_cast<size_t>(ScanTarget::MainExe) || main_exe_ptr != module.base_address) 
                 {
-                    auto module_name = to_generic_string(ScanTargetToString(i));
+                    auto module_name = to_system(ScanTargetToString(i));
                     // FIXME: FIX Why this won't WORK?
                     // Output::send(SYSSTR("{} @ {} size={:#x}\n"), module_name, module.base_address, module.size);
                 }
@@ -612,7 +611,7 @@ namespace RC
                     auto list = parser.get_ordered_list(section_name);
                     uint32_t vtable_size = list.size() - 1;
                     list.for_each([&](uint32_t index, SystemStringType& item) {
-                        auto ue_str = SystemStringToUEString(item);
+                        auto ue_str = to_ue(item);
                         callable(index, item, ue_str);
                     });
                     return vtable_size;
@@ -1626,9 +1625,9 @@ namespace RC
         return static_cast<LuaMod*>(find_mod_by_name<LuaMod>(mod_name, installed_only, is_started));
     }
 
-    auto UE4SSProgram::find_lua_mod_by_name(UEViewType mod_name, UE4SSProgram::IsInstalled installed_only, IsStarted is_started) -> LuaMod*
+    auto UE4SSProgram::find_lua_mod_by_name(UEStringViewType mod_name, UE4SSProgram::IsInstalled installed_only, IsStarted is_started) -> LuaMod*
     {
-        auto sysstr = UEStringToSystemString(UEStringType{mod_name});
+        auto sysstr = to_system(UEStringType{mod_name});
         return static_cast<LuaMod*>(find_mod_by_name<LuaMod>(sysstr, installed_only, is_started));
     }
 

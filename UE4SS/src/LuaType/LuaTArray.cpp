@@ -23,7 +23,7 @@ namespace RC::LuaType
 
         if (!lua_object.m_inner_property)
         {
-            Output::send<LogLevel::Error>(SYSSTR("TArray::construct: m_inner_property is nullptr for {}"), UEStringToSystemString(lua_object.m_property->GetFullName()));
+            Output::send<LogLevel::Error>(SYSSTR("TArray::construct: m_inner_property is nullptr for {}"), to_system(lua_object.m_property->GetFullName()));
         }
 
         auto metatable_name = ClassName::ToString();

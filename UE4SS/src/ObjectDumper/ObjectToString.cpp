@@ -61,7 +61,7 @@ namespace RC::ObjectDumper
         UObject* p_typed_this = static_cast<UObject*>(p_this);
 
         out_line.append(std::format(SYSSTR("[{:016X}] "), reinterpret_cast<uintptr_t>(p_this)));
-        out_line.append(UEStringToSystemString(p_typed_this->GetFullName()));
+        out_line.append(to_system(p_typed_this->GetFullName()));
         out_line.append(std::format(SYSSTR(" [n: {:X}] [c: {:016X}] [or: {:016X}]"),
                                     p_typed_this->GetNamePrivate().GetComparisonIndex(),
                                     reinterpret_cast<uintptr_t>(p_typed_this->GetClassPrivate()),
@@ -78,7 +78,7 @@ namespace RC::ObjectDumper
         FProperty* p_typed_this = static_cast<FProperty*>(p_this);
 
         out_line.append(std::format(SYSSTR("[{:016X}] "), reinterpret_cast<uintptr_t>(p_this)));
-        out_line.append(UEStringToSystemString(p_typed_this->GetFullName()));
+        out_line.append(to_system(p_typed_this->GetFullName()));
         out_line.append(std::format(SYSSTR(" [o: {:X}] "), p_typed_this->GetOffset_Internal()));
 
         auto property_class = p_typed_this->GetClass();
@@ -127,7 +127,7 @@ namespace RC::ObjectDumper
         }
         else
         {
-            out_line.append(UEStringToSystemString(array_inner->GetFullName()));
+            out_line.append(to_system(array_inner->GetFullName()));
             callable(array_inner);
         }
     }
@@ -168,7 +168,7 @@ namespace RC::ObjectDumper
             }
             else
             {
-                out_line.append(UEStringToSystemString(property->GetFullName()));
+                out_line.append(to_system(property->GetFullName()));
                 callable(property);
             }
         };
@@ -261,7 +261,7 @@ namespace RC::ObjectDumper
 
         for (auto& Elem : typed_this->ForEachName())
         {
-            out_line.append(std::format(SYSSTR("\n[{:016X}] {} [n: {:X}] [v: {}]"), 0, UEStringToSystemString(Elem.Key.ToString()), Elem.Key.GetComparisonIndex(), Elem.Value));
+            out_line.append(std::format(SYSSTR("\n[{:016X}] {} [n: {:X}] [v: {}]"), 0, to_system(Elem.Key.ToString()), Elem.Key.GetComparisonIndex(), Elem.Value));
         }
     }
 

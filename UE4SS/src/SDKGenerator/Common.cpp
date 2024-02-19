@@ -27,6 +27,7 @@
 #include <Unreal/UPackage.hpp>
 #include <Unreal/UScriptStruct.hpp>
 #include <UnrealDef.hpp>
+#include <Helpers/Format.hpp>
 #pragma warning(default : 4005)
 
 #define DELEGATE_SIGNATURE_POSTFIX STR("__DelegateSignature")
@@ -57,7 +58,7 @@ namespace RC::UEGenerator
             result_string.append(SYSSTR("DEPRECATED_"));
         }
 
-        result_string.append(UEStringToSystemString(uclass->GetName()));
+        result_string.append(to_system(uclass->GetName()));
         return result_string;
     }
 
@@ -79,7 +80,7 @@ namespace RC::UEGenerator
 
         // Seems to be not needed, because enum objects, unlike classes or structs, retain their normal E prefix
         // ResultString.append(SYSSTR("E"));
-        result_string.append(UEStringToSystemString(uenum->GetName()));
+        result_string.append(to_system(uenum->GetName()));
 
         // Namespaced enums need to have ::Type appended for the type
         if (uenum->GetCppForm() == UEnum::ECppForm::Namespaced && include_type)
@@ -94,7 +95,7 @@ namespace RC::UEGenerator
         SystemStringType result_string;
 
         result_string.append(SYSSTR("F"));
-        result_string.append(UEStringToSystemString(script_struct->GetName()));
+        result_string.append(to_system(script_struct->GetName()));
 
         return result_string;
     }
@@ -124,14 +125,14 @@ namespace RC::UEGenerator
 
     auto generate_delegate_name(FProperty* property, const File::StringType& context_name) -> File::StringType
     {
-        const SystemStringType property_name = sanitize_property_name(UEStringToSystemString(property->GetName()));
+        const auto property_name = sanitize_property_name(to_system_string(property->GetName()));
         return std::format(SYSSTR("F{}{}"), context_name, property_name);
     }
 
     auto generate_property_cxx_name(FProperty* property, bool is_top_level_declaration, UObject* class_context, EnableForwardDeclarations enable_forward_declarations)
             -> File::StringType
     {
-        const SystemStringType field_class_name = UEStringToSystemString(property->GetClass().GetName());
+        const auto field_class_name = to_system(property->GetClass().GetName());
 
         // Byte Property
         if (property->IsA<FByteProperty>())
@@ -156,7 +157,7 @@ namespace RC::UEGenerator
 
             if (uenum == NULL)
             {
-                throw std::runtime_error(RC::fmt("EnumProperty %S does not have a valid Enum value", property->GetName().c_str()));
+                throw std::runtime_error(RC::fmt("EnumProperty {} does not have a valid Enum value", property->GetName()));
             }
 
             const SystemStringType enum_type_name = get_native_enum_name(uenum);
@@ -368,7 +369,7 @@ namespace RC::UEGenerator
 
             if (script_struct == NULL)
             {
-                throw std::runtime_error(RC::fmt("Struct is NULL for StructProperty %S", property->GetName().c_str()));
+                throw std::runtime_error(RC::fmt("Struct is NULL for StructProperty {}", property->GetName()));
             }
 
             const SystemStringType native_struct_name = get_native_struct_name(script_struct);
@@ -380,7 +381,7 @@ namespace RC::UEGenerator
         {
             FDelegateProperty* delegate_property = static_cast<FDelegateProperty*>(property);
 
-            const SystemStringType delegate_type_name = generate_delegate_name(delegate_property, UEStringToSystemString(class_context->GetName()));
+            const auto delegate_type_name = generate_delegate_name(delegate_property, to_system(class_context->GetName()));
             return delegate_type_name;
         }
 
@@ -390,7 +391,7 @@ namespace RC::UEGenerator
         {
             FMulticastInlineDelegateProperty* delegate_property = static_cast<FMulticastInlineDelegateProperty*>(property);
 
-            const SystemStringType delegate_type_name = generate_delegate_name(delegate_property, UEStringToSystemString(class_context->GetName()));
+            const auto delegate_type_name = generate_delegate_name(delegate_property, to_system(class_context->GetName()));
             return delegate_type_name;
         }
 
@@ -398,7 +399,7 @@ namespace RC::UEGenerator
         {
             FMulticastSparseDelegateProperty* delegate_property = static_cast<FMulticastSparseDelegateProperty*>(property);
 
-            const SystemStringType delegate_type_name = generate_delegate_name(delegate_property, UEStringToSystemString(class_context->GetName()));
+            const auto delegate_type_name = generate_delegate_name(delegate_property, to_system(class_context->GetName()));
             return delegate_type_name;
         }
 
@@ -406,7 +407,7 @@ namespace RC::UEGenerator
         if (property->IsA<FFieldPathProperty>())
         {
             FFieldPathProperty* field_path_property = static_cast<FFieldPathProperty*>(property);
-            const SystemStringType property_class_name = UEStringToSystemString(field_path_property->GetPropertyClass()->GetName());
+            const auto property_class_name = to_system(field_path_property->GetPropertyClass()->GetName());
             return std::format(SYSSTR("TFieldPath<F{}>"), property_class_name);
         }
 
@@ -478,12 +479,12 @@ namespace RC::UEGenerator
         {
             return SYSSTR("FText");
         }
-        throw std::runtime_error(RC::fmt("Unsupported property class " SystemStringPrint, field_class_name.c_str()));
+        throw std::runtime_error(RC::fmt("Unsupported property class " SystemStringPrint, field_class_name));
     }
 
     auto generate_property_lua_name(FProperty* property, bool is_top_level_declaration, UObject* class_context) -> File::StringType
     {
-        const SystemStringType field_class_name = UEStringToSystemString(property->GetClass().GetName());
+        const auto field_class_name = to_system(property->GetClass().GetName());
 
         // Byte Property
         if (field_class_name == SYSSTR("ByteProperty"))
@@ -508,7 +509,7 @@ namespace RC::UEGenerator
 
             if (uenum == NULL)
             {
-                throw std::runtime_error(RC::fmt("EnumProperty %S does not have a valid Enum value", property->GetName().c_str()));
+                throw std::runtime_error(RC::fmt("EnumProperty {} does not have a valid Enum value", property->GetName()));
             }
 
             const SystemStringType enum_type_name = get_native_enum_name(uenum);
@@ -695,7 +696,7 @@ namespace RC::UEGenerator
 
             if (script_struct == NULL)
             {
-                throw std::runtime_error(RC::fmt("Struct is NULL for StructProperty %S", property->GetName().c_str()));
+                throw std::runtime_error(RC::fmt("Struct is NULL for StructProperty {}", property->GetName()));
             }
 
             const SystemStringType native_struct_name = get_native_struct_name(script_struct);
@@ -707,7 +708,7 @@ namespace RC::UEGenerator
         {
             FDelegateProperty* delegate_property = static_cast<FDelegateProperty*>(property);
 
-            const SystemStringType delegate_type_name = generate_delegate_name(delegate_property, UEStringToSystemString(class_context->GetName()));
+            const auto delegate_type_name = generate_delegate_name(delegate_property, to_system(class_context->GetName()));
             return delegate_type_name;
         }
 
@@ -717,7 +718,7 @@ namespace RC::UEGenerator
         {
             FMulticastInlineDelegateProperty* delegate_property = static_cast<FMulticastInlineDelegateProperty*>(property);
 
-            const SystemStringType delegate_type_name = generate_delegate_name(delegate_property, UEStringToSystemString(class_context->GetName()));
+            const auto delegate_type_name = generate_delegate_name(delegate_property, to_system(class_context->GetName()));
             return delegate_type_name;
         }
 
@@ -725,7 +726,7 @@ namespace RC::UEGenerator
         {
             FMulticastSparseDelegateProperty* delegate_property = static_cast<FMulticastSparseDelegateProperty*>(property);
 
-            const SystemStringType delegate_type_name = generate_delegate_name(delegate_property, UEStringToSystemString(class_context->GetName()));
+            const auto delegate_type_name = generate_delegate_name(delegate_property, to_system(class_context->GetName()));
             return delegate_type_name;
         }
 
@@ -733,7 +734,7 @@ namespace RC::UEGenerator
         if (field_class_name == SYSSTR("FieldPathProperty"))
         {
             FFieldPathProperty* field_path_property = static_cast<FFieldPathProperty*>(property);
-            const SystemStringType property_class_name = UEStringToSystemString(field_path_property->GetPropertyClass()->GetName());
+            const auto property_class_name = to_system(field_path_property->GetPropertyClass()->GetName());
             return std::format(SYSSTR("TFieldPath<F{}>"), property_class_name);
         }
 
@@ -786,14 +787,14 @@ namespace RC::UEGenerator
         {
             return SYSSTR("FText");
         }
-        throw std::runtime_error(RC::fmt("Unsupported property class %S", field_class_name.c_str()));
+        throw std::runtime_error(RC::fmt("Unsupported property class {}", field_class_name));
     }
 
     auto get_native_delegate_type_name(Unreal::UFunction* signature_function, Unreal::UClass* current_class, bool strip_outer_name) -> File::StringType
     {
         if (!is_delegate_signature_function(signature_function))
         {
-            throw std::runtime_error(RC::fmt("Function %S is not a delegate signature function", signature_function->GetName().c_str()));
+            throw std::runtime_error(RC::fmt("Function {} is not a delegate signature function", signature_function->GetName()));
         }
 
         // Delegate names always start with F and have __DelegateSignature postfix
@@ -826,7 +827,7 @@ namespace RC::UEGenerator
         else if (!delegate_outer->IsA<Unreal::UPackage>())
         {
             // Delegate signature functions should never exist outside the UPackage or UClass
-            throw std::runtime_error(RC::fmt("Delegate signature function %S does not have class or package as outer", delegate_outer->GetName().c_str()));
+            throw std::runtime_error(RC::fmt("Delegate signature function {} does not have class or package as outer", delegate_outer->GetName()));
         }
         return delegate_type_name;
     }
@@ -840,13 +841,13 @@ namespace RC::UEGenerator
     {
         if (!is_delegate_signature_function(signature_function))
         {
-            throw std::runtime_error(RC::fmt("Function %S is not a delegate signature function", signature_function->GetName().c_str()));
+            throw std::runtime_error(RC::fmt("Function {} is not a delegate signature function", signature_function->GetName()));
         }
 
         // Delegate names always start with F and have __DelegateSignature postfix
         const SystemStringType delegate_signature_postfix = DELEGATE_SIGNATURE_POSTFIX_SYS;
 
-        SystemStringType delegate_name = UEStringToSystemString (signature_function->GetName());
+        auto delegate_name = to_system(signature_function->GetName());
         delegate_name.erase(delegate_name.length() - delegate_signature_postfix.length());
         return delegate_name;
     }

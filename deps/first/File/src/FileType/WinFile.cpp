@@ -28,7 +28,7 @@ namespace RC::File
     {
         if constexpr (sizeof(CharType) > 1)
         {
-            if (DeleteFileW(file_path_and_name.wstring().c_str()) == 0)
+            if (DeleteFileW(file_path_and_name.u16string().c_str()) == 0)
             {
                 THROW_INTERNAL_FILE_ERROR(std::format("[WinFile::delete_file] Was unable to delete file, error: {}", GetLastError()))
             }

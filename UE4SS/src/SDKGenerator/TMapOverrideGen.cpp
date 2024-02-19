@@ -53,7 +53,7 @@ namespace RC::UEGenerator
 
                         MapProperties.insert(property->GetFName());
 
-                        auto property_name = UEStringToSystemString(property->GetFName().ToString());
+                        auto property_name = to_system(property->GetFName().ToString());
 
                         auto key_as_struct_property = CastField<FStructProperty>(static_cast<FMapProperty*>(property)->GetKeyProp());
                         auto key_struct_type = key_as_struct_property ? key_as_struct_property->GetStruct() : nullptr;
@@ -67,14 +67,14 @@ namespace RC::UEGenerator
                         {
                             continue;
                         }
-                        Output::send(SYSSTR("Found Relevant TMap Property: {} in Class: {}\n"), property_name, UEStringToSystemString(object->GetName()));
+                        Output::send(SYSSTR("Found Relevant TMap Property: {} in Class: {}\n"), property_name, to_system(object->GetName()));
 
                         auto& fm_json_object = fm_object.new_object(property_name);
                         auto& uaapi_array = uaapi_object.new_array(property_name);
 
                         if (is_key_valid)
                         {
-                            auto key_name = UEStringToSystemString(key_as_struct_property->GetStruct()->GetName());
+                            auto key_name = to_system(key_as_struct_property->GetStruct()->GetName());
                             fm_json_object.new_string(SYSSTR("Key"), key_name);
                             uaapi_array.new_string(key_name);
                         }
@@ -86,7 +86,7 @@ namespace RC::UEGenerator
 
                         if (is_value_valid)
                         {
-                            auto value_name = UEStringToSystemString(value_as_struct_property->GetStruct()->GetName());
+                            auto value_name = to_system(value_as_struct_property->GetStruct()->GetName());
                             fm_json_object.new_string(SYSSTR("Value"), value_name);
                             uaapi_array.new_string(value_name);
                         }

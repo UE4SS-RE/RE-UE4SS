@@ -61,14 +61,14 @@ Overloads:
             SystemStringType text_string{};
             if (lua.is_string())
             {
-                text_string = to_generic_string(lua.get_string());
+                text_string = to_system(lua.get_string());
             }
             else
             {
                 lua.throw_error(error_overload_not_found);
             }
 
-            LuaType::FText::construct(lua, Unreal::FText(SystemStringToUEString(text_string)));
+            LuaType::FText::construct(lua, Unreal::FText(to_ue(text_string)));
 
             return 1;
         });

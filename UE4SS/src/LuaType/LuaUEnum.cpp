@@ -162,7 +162,7 @@ Overloads:
             // P1 (Name), string
             if (lua.is_string())
             {
-                param_name = to_generic_string(lua.get_string());
+                param_name = to_system(lua.get_string());
             }
             else
             {
@@ -195,7 +195,7 @@ Overloads:
                 param_shift = lua.get_bool();
             }
 
-            const Unreal::FName key{SystemStringToUEString(param_name), Unreal::FNAME_Add};
+            const Unreal::FName key{to_ue(param_name), Unreal::FNAME_Add};
             const auto pair = Unreal::TPair<Unreal::FName, Unreal::int64>{key, param_value};
 
             lua_object.get_remote_cpp_object()->InsertIntoNames(pair, param_index, param_shift);
@@ -243,7 +243,7 @@ Overloads:
                 lua.throw_error("'UEnum.EditNameAt' could not load parameter for \"NewName\"");
             }
 
-            Unreal::FName new_key = Unreal::FName(SystemStringToUEString(to_generic_string(param_new_name)), Unreal::FNAME_Add);
+            Unreal::FName new_key = Unreal::FName(to_ue(to_system(param_new_name)), Unreal::FNAME_Add);
             lua_object.get_remote_cpp_object()->EditNameAt(param_index, new_key);
 
             return 0;

@@ -1,90 +1,13 @@
 #pragma once
 
 #include <string>
-#include <cstring>
-#include <cwchar>
-
-#ifdef LINUX
-#define swprintf_s swprintf
-#define sprintf_s snprintf
-#endif
+#include <format>
 
 namespace RC
 {
-    template <typename... Args>
-    auto static fmt(const char* fmt, Args... args) -> std::string
+    template <typename... FmtArgs>
+    auto static fmt(const std::string_view&& fmt, FmtArgs&&... fmt_args) -> std::string
     {
-        constexpr size_t out_string_length = 1000;
-        char out_string[out_string_length];
-
-        size_t msg_len = strlen(fmt);
-
-        // Attempt to give a hint if the buffer is too small
-        if (msg_len > out_string_length)
-        {
-            fmt = "An error occurred but the message was too long for the buffer.";
-            msg_len = strlen(fmt);
-        }
-
-        // If the buffer is too small for the hint message then I guess we do nothing
-        // The default message will be used which can't be too small since it's calculated at compile-time
-        if (msg_len < out_string_length)
-        {
-            sprintf_s(out_string, out_string_length, fmt, args...);
-        }
-
-        return out_string;
+        return std::vformat(std::forward<const std::string_view>(fmt), RC_STD_MAKE_FORMAT_ARGS(to_file(std::forward<FmtArgs>(fmt_args))...));
     }
-
-    template <typename... Args>
-    auto static fmt(const wchar_t* fmt, Args... args) -> std::wstring
-    {
-        constexpr size_t out_string_length = 1000;
-        wchar_t out_string[out_string_length];
-
-        size_t msg_len = wcslen(fmt);
-
-        // Attempt to give a hint if the buffer is too small
-        if (msg_len > out_string_length)
-        {
-            fmt = L"An error occurred but the message was too long for the buffer.";
-            msg_len = wcslen(fmt);
-        }
-
-        // If the buffer is too small for the hint message then I guess we do nothing
-        // The default message will be used which can't be too small since it's calculated at compile-time
-        if (msg_len < out_string_length)
-        {
-            swprintf_s(out_string, out_string_length, fmt, args...);
-        }
-
-        return out_string;
-    }
-
-/*
-    template <typename... Args>
-    auto static fmt(const char16_t* fmt, Args... args) -> std::wstring
-    {
-        constexpr size_t out_string_length = 1000;
-        char16_t out_string[out_string_length];
-
-        size_t msg_len = wcslen(fmt);
-
-        // Attempt to give a hint if the buffer is too small
-        if (msg_len > out_string_length)
-        {
-            fmt = L"An error occurred but the message was too long for the buffer.";
-            msg_len = wcslen(fmt);
-        }
-
-        // If the buffer is too small for the hint message then I guess we do nothing
-        // The default message will be used which can't be too small since it's calculated at compile-time
-        if (msg_len < out_string_length)
-        {
-            swprintf_s(out_string, out_string_length, fmt, args...);
-        }
-
-        return out_string;
-    }
-*/
-} // namespace RC
+}

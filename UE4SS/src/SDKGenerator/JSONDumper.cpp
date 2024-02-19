@@ -201,7 +201,7 @@ namespace RC::UEGenerator::JSONDumper
             }
             UObject* object = static_cast<UObject*>(raw_object);
 
-            auto object_name = UEStringToSystemString(object->GetName());
+            auto object_name = to_system(object->GetName());
             if (!is_valid_class_to_dump(object_name, object))
             {
                 return LoopAction::Continue;
@@ -214,7 +214,7 @@ namespace RC::UEGenerator::JSONDumper
             bp_class.new_string(SYSSTR("bp_class"), object_name);
             if (auto* super_struct = object_as_class->GetSuperStruct(); super_struct)
             {
-                bp_class.new_string(SYSSTR("inherits"), UEStringToSystemString(super_struct->GetName()));
+                bp_class.new_string(SYSSTR("inherits"), to_system(super_struct->GetName()));
             }
             else
             {
@@ -233,7 +233,7 @@ namespace RC::UEGenerator::JSONDumper
                     continue;
                 }
 
-                auto event_name = UEStringToSystemString(event_function->GetName());
+                auto event_name = to_system(event_function->GetName());
                 if (should_skip_event(event_name))
                 {
                     continue;
@@ -251,7 +251,7 @@ namespace RC::UEGenerator::JSONDumper
                     }
 
                     auto& bp_event_arg = bp_event_args.new_object();
-                    bp_event_arg.new_string(SYSSTR("name"), UEStringToSystemString(param->GetName()));
+                    bp_event_arg.new_string(SYSSTR("name"), to_system(param->GetName()));
                     bp_event_arg.new_string(SYSSTR("type"), generate_property_cxx_name(param, true, event_function));
                     bool is_out = param->HasAnyPropertyFlags(EPropertyFlags::CPF_OutParm) && !param->HasAnyPropertyFlags(EPropertyFlags::CPF_ConstParm);
                     bp_event_arg.new_bool(SYSSTR("is_out"), is_out);
@@ -268,7 +268,7 @@ namespace RC::UEGenerator::JSONDumper
                 }
 
                 auto& bp_function = functions.new_object();
-                bp_function.new_string(SYSSTR("name"), UEStringToSystemString(function->GetName()));
+                bp_function.new_string(SYSSTR("name"), to_system(function->GetName()));
 
                 auto& bp_function_args = bp_function.new_array(SYSSTR("args"));
                 for (FProperty* param : function->ForEachProperty())
@@ -279,7 +279,7 @@ namespace RC::UEGenerator::JSONDumper
                     }
 
                     auto& bp_function_arg = bp_function_args.new_object();
-                    bp_function_arg.new_string(SYSSTR("name"), UEStringToSystemString(param->GetName()));
+                    bp_function_arg.new_string(SYSSTR("name"), to_system(param->GetName()));
                     bp_function_arg.new_string(SYSSTR("type"), generate_property_cxx_name(param, true, function));
                     bool is_out = param->HasAnyPropertyFlags(EPropertyFlags::CPF_OutParm) && !param->HasAnyPropertyFlags(EPropertyFlags::CPF_ConstParm);
                     bp_function_arg.new_bool(SYSSTR("is_out"), is_out);
@@ -296,7 +296,7 @@ namespace RC::UEGenerator::JSONDumper
                 }
 
                 auto& bp_property = properties.new_object();
-                bp_property.new_string(SYSSTR("name"),UEStringToSystemString(property->GetName()));
+                bp_property.new_string(SYSSTR("name"),to_system(property->GetName()));
                 bp_property.new_string(SYSSTR("type"), generate_property_cxx_name(property, true, object_as_class));
             }
 
@@ -313,7 +313,7 @@ namespace RC::UEGenerator::JSONDumper
                 }
 
                 auto& bp_delegate = delegates.new_object();
-                bp_delegate.new_string(SYSSTR("name"), UEStringToSystemString(delegate_function->GetName()));
+                bp_delegate.new_string(SYSSTR("name"), to_system(delegate_function->GetName()));
 
                 auto& bp_delegate_args = bp_delegate.new_array(SYSSTR("args"));
                 for (FProperty* param : delegate_function->ForEachProperty())
@@ -324,7 +324,7 @@ namespace RC::UEGenerator::JSONDumper
                     }
 
                     auto& bp_delegate_arg = bp_delegate_args.new_object();
-                    bp_delegate_arg.new_string(SYSSTR("name"), UEStringToSystemString(param->GetName()));
+                    bp_delegate_arg.new_string(SYSSTR("name"), to_system(param->GetName()));
                     bp_delegate_arg.new_string(SYSSTR("type"), generate_property_cxx_name(param, true, delegate_function));
                     bool is_out = param->HasAnyPropertyFlags(EPropertyFlags::CPF_OutParm) && !param->HasAnyPropertyFlags(EPropertyFlags::CPF_ConstParm);
                     bp_delegate_arg.new_bool(SYSSTR("is_out"), is_out);

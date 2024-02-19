@@ -375,7 +375,7 @@ namespace RC
         return vector_of_signatures;
     }
 
-    auto SinglePassScanner::string_scan(std::wstring_view string_to_scan_for, ScanTarget scan_target) -> void*
+    auto SinglePassScanner::string_scan(std::u16string_view string_to_scan_for, ScanTarget scan_target) -> void*
     {
         auto module = SigScannerStaticData::m_modules_info[scan_target];
 
@@ -406,7 +406,7 @@ namespace RC
                         break;
                     }
 
-                    std::wstring_view maybe_string = std::wstring_view((const wchar_t*)region_start, string_to_scan_for.size());
+                    std::u16string_view maybe_string = std::u16string_view((const wchar_t*)region_start, string_to_scan_for.size());
                     if (maybe_string == string_to_scan_for)
                     {
                         address_found = region_start;

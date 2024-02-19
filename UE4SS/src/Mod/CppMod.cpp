@@ -20,7 +20,7 @@ namespace RC
 
         if (!std::filesystem::exists(m_dlls_path))
         {
-            Output::send<LogLevel::Warning>(SYSSTR("Could not find the dlls folder for mod {}\n"), to_generic_string(m_mod_name));
+            Output::send<LogLevel::Warning>(SYSSTR("Could not find the dlls folder for mod {}\n"), to_system(m_mod_name));
             set_installable(false);
             return;
         }
@@ -70,7 +70,7 @@ namespace RC
                 Output::send<LogLevel::Warning>(SYSSTR("Failed to load dll <{}> for mod {}, because: {}\n"),
                                                 (std::filesystem::path {m_dlls_path} / CONCATENATE_WIDE_STRING("main", DLLEXT)).generic_string()  + "\n",
                                                 m_mod_name,
-                                                to_generic_string(e.what()));
+                                                to_system(e.what()));
             }
             else
             {

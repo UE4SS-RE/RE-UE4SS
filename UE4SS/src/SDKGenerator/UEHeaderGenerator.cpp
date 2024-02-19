@@ -51,6 +51,7 @@
 #include <Unreal/UPackage.hpp>
 #include <Unreal/UScriptStruct.hpp>
 #include <Unreal/UnrealFlags.hpp>
+#include <Helpers/Format.hpp>
 #pragma warning(default : 4005)
 
 namespace RC::UEGenerator
@@ -632,8 +633,8 @@ namespace RC::UEGenerator
         for (auto [Name, Value] : uenum->ForEachName())
         {
             UEStringType enum_name = Name.ToString();
-            SystemStringType result_enumeration_line = sanitize_enumeration_name(UEStringToSystemString(enum_name));
-            SystemStringType pre_append_result_line = result_enumeration_line;
+            auto result_enumeration_line = sanitize_enumeration_name(to_system(enum_name));
+            auto pre_append_result_line = result_enumeration_line;
 
             // If an enum name is listed in the array twice, that likely means it is used as the value for another enum.  Long story short, don't print it.
             if (enum_name_set.contains(enum_name))
@@ -647,15 +648,15 @@ namespace RC::UEGenerator
             
             // Taking advantage of GetNameByValue returning the first result for the value to determine if there are any enumerator names that
             // reference an already declared value/name.
-            UEStringType first_name_with_value = uenum->GetNameByValue(Value).ToString();
+            auto first_name_with_value = uenum->GetNameByValue(Value).ToString();
             if (first_name_with_value != Name.ToString())
             {
-                result_enumeration_line.append(std::format(SYSSTR(" = {}"), sanitize_enumeration_name(UEStringToSystemString(first_name_with_value))));
+                result_enumeration_line.append(std::format(SYSSTR(" = {}"), sanitize_enumeration_name(to_system(first_name_with_value))));
             }
             else if (Value != expected_next_enum_value || last_value_was_negative_one)
             {
-                const SystemStringType CastString = (enum_is_uint8 && Value < 0) ? SYSSTR("(uint8)") : SYSSTR("");
-                const SystemStringType MinusSign = Value < 0 ? SYSSTR("-") : SYSSTR("");
+                const auto CastString = (enum_is_uint8 && Value < 0) ? SYSSTR("(uint8)") : SYSSTR("");
+                const auto MinusSign = Value < 0 ? SYSSTR("-") : SYSSTR("");
                 result_enumeration_line.append(std::format(SYSSTR(" = {}{}{}"), CastString, MinusSign, Value < 0 ? -Value : Value));
             }
             expected_next_enum_value = Value + 1;
@@ -665,7 +666,7 @@ namespace RC::UEGenerator
             std::transform(pre_append_result_line_lower.begin(), pre_append_result_line_lower.end(), pre_append_result_line_lower.begin(), ::towlower);
             if (pre_append_result_line_lower.ends_with(SYSSTR("_max")))
             {
-                const SystemStringType expected_full_constant_name = std::format(SYSSTR("{}_MAX"), UEStringToSystemString(enum_prefix));
+                const auto expected_full_constant_name = std::format(SYSSTR("{}_MAX"), to_system(enum_prefix));
                 SystemStringType expected_full_constant_name_lower = expected_full_constant_name;
                 std::transform(expected_full_constant_name_lower.begin(), expected_full_constant_name_lower.end(), expected_full_constant_name_lower.begin(), ::towlower);
                 
@@ -704,13 +705,13 @@ namespace RC::UEGenerator
         }
         else
         {
-            owning_class = UEStringToSystemString(delegate_class->GetNamePrivate().ToString());
+            owning_class = to_system(delegate_class->GetNamePrivate().ToString());
         }
 
         auto function_flags = signature_function->GetFunctionFlags();
         if ((function_flags & Unreal::FUNC_Delegate) == 0)
         {
-            throw std::runtime_error(RC::fmt("Delegate Signature function %S is missing FUNC_Delegate flag", signature_function->GetName().c_str()));
+            throw std::runtime_error(RC::fmt("Delegate Signature function {} is missing FUNC_Delegate flag", signature_function->GetName()));
         }
 
         // TODO not particularly nice or reliable, but will do for now
@@ -872,7 +873,7 @@ namespace RC::UEGenerator
             {
                 if ((property->GetPropertyFlags() & CPF_Net) != 0)
                 {
-                    implementation_file.append_line(std::format(SYSSTR("DOREPLIFETIME({}, {});"), class_native_name, UEStringToSystemString(property->GetName())));
+                    implementation_file.append_line(std::format(SYSSTR("DOREPLIFETIME({}, {});"), class_native_name, to_system(property->GetName())));
                 }
             }
 
@@ -913,7 +914,7 @@ namespace RC::UEGenerator
         const SystemStringType property_flags_string = generate_property_flags(property);
 
         bool is_bitmask_bool = false;
-        PropertyTypeDeclarationContext Context(UEStringToSystemString(uclass->GetName()), &header_data, true, &is_bitmask_bool);
+        PropertyTypeDeclarationContext Context(to_system(uclass->GetName()), &header_data, true, &is_bitmask_bool);
 
         SystemStringType property_type_string{};
         bool type_is_valid = true;
@@ -925,14 +926,14 @@ namespace RC::UEGenerator
         catch (std::exception& e)
         {
             type_is_valid = false;
-            error_string = to_generic_string(std::string(e.what()));
+            error_string = to_system(std::string(e.what()));
         }
 
         if (!type_is_valid)
         {
             Output::send<LogLevel::Warning>(SYSSTR("Warning: {}\n"), error_string);
             header_data.append_line(std::format(SYSSTR("// UPROPERTY({})"), property_flags_string));
-            header_data.append_line(std::format(SYSSTR("// Missed Property: {}"), UEStringToSystemString(property->GetName())));
+            header_data.append_line(std::format(SYSSTR("// Missed Property: {}"), to_system(property->GetName())));
             header_data.append_line(std::format(SYSSTR("// {}"), error_string));
             header_data.append_line(SYSSTR(""));
             return;
@@ -942,7 +943,7 @@ namespace RC::UEGenerator
         if (property->GetArrayDim() != 1)
         {
             property_extra_declaration.append(SYSSTR("["));
-            property_extra_declaration.append(to_generic_string(std::to_string(property->GetArrayDim())));
+            property_extra_declaration.append(to_system(std::to_string(property->GetArrayDim())));
             property_extra_declaration.append(SYSSTR("]"));
         }
         else if (is_bitmask_bool)
@@ -951,7 +952,7 @@ namespace RC::UEGenerator
         }
 
         header_data.append_line(std::format(SYSSTR("UPROPERTY({})"), property_flags_string));
-        header_data.append_line(std::format(SYSSTR("{} {}{};"), property_type_string, UEStringToSystemString(property->GetName()), property_extra_declaration));
+        header_data.append_line(std::format(SYSSTR("{} {}{};"), property_type_string, to_system(property->GetName()), property_extra_declaration));
         header_data.append_line(SYSSTR(""));
     }
 
@@ -985,7 +986,7 @@ namespace RC::UEGenerator
         SystemStringType return_property_string;
         if (return_property != NULL)
         {
-            PropertyTypeDeclarationContext context(UEStringToSystemString(uclass->GetName()), &header_data);
+            PropertyTypeDeclarationContext context(to_system(uclass->GetName()), &header_data);
             return_property_string = generate_property_type_declaration(return_property, context);
         }
         else
@@ -1003,7 +1004,7 @@ namespace RC::UEGenerator
             SystemStringType return_statement_string;
             if (return_property != NULL)
             {
-                const SystemStringType default_property_value = generate_default_property_value(return_property, header_data, UEStringToSystemString(context_name));
+                const auto default_property_value = generate_default_property_value(return_property, header_data, to_system(context_name));
                 return_statement_string = std::format(SYSSTR(" return {};"), default_property_value);
             }
 
@@ -1011,19 +1012,19 @@ namespace RC::UEGenerator
             {
                 function_extra_postfix_string.append(SYSSTR(" override"));
             }
-            function_extra_postfix_string.append(std::format(SYSSTR(" PURE_VIRTUAL({},{})"), UEStringToSystemString(function->GetName()), return_statement_string));
+            function_extra_postfix_string.append(std::format(SYSSTR(" PURE_VIRTUAL({},{})"), to_system(function->GetName()), return_statement_string));
         }
 
-        SystemStringType function_argument_list = generate_function_parameter_list(uclass, function, header_data, false, UEStringToSystemString(context_name), blacklisted_property_names);
+        auto function_argument_list = generate_function_parameter_list(uclass, function, header_data, false, to_system(context_name), blacklisted_property_names);
 
-        const SystemStringType function_flags_string = generate_function_flags(function, is_function_pure_virtual);
+        const auto function_flags_string = generate_function_flags(function, is_function_pure_virtual);
         header_data.append_line(std::format(SYSSTR("UFUNCTION({})"), function_flags_string));
         // Format for virtual functions
         // virtual <return type> <function_name>(<params>) PURE_VIRTUAL(<function name>, <return statement>)
         header_data.append_line(std::format(SYSSTR("{}{} {}({}){};"),
                                             function_modifier_string,
                                             return_property_string,
-                                            UEStringToSystemString(function->GetName()),
+                                            to_system(function->GetName()),
                                             function_argument_list,
                                             function_extra_postfix_string));
         header_data.append_line(SYSSTR(""));
@@ -1039,7 +1040,7 @@ namespace RC::UEGenerator
         {
             if (Value == enum_value)
             {
-                enum_constant_name = sanitize_enumeration_name(UEStringToSystemString(Name.ToString()));
+                enum_constant_name = sanitize_enumeration_name(to_system(Name.ToString()));
             }
         }
         if (enum_constant_name.empty())
@@ -1066,7 +1067,7 @@ namespace RC::UEGenerator
                                                                   const SystemStringType& property_scope,
                                                                   const SystemStringType& operator_type) -> void
     {
-        const SystemStringType field_class_name = UEStringToSystemString(property->GetName());
+        const auto field_class_name = to_system(property->GetName());
         if (property->GetArrayDim() == 1)
         {
             implementation_file.append_line(std::format(SYSSTR("{}{}{}{};"), property_scope, field_class_name, operator_type, value));
@@ -1087,7 +1088,7 @@ namespace RC::UEGenerator
                                                                     const SystemStringType& property_type,
                                                                     const SystemStringType& operator_type) -> void
     {
-        const SystemStringType field_class_name = UEStringToSystemString(property->GetName());
+        const auto field_class_name = to_system(property->GetName());
         implementation_file.append_line(std::format(SYSSTR("const FProperty* p_{} = GetClass()->FindPropertyByName(\"{}\");"), field_class_name, field_class_name));
         if (property->GetArrayDim() == 1)
         {
@@ -1188,7 +1189,7 @@ namespace RC::UEGenerator
             UEnum* uenum = p_enum_property->GetEnum();
             if (uenum == NULL)
             {
-                throw std::runtime_error(RC::fmt("EnumProperty %S does not have a valid Enum value", property->GetName().c_str()));
+                throw std::runtime_error(RC::fmt("EnumProperty {} does not have a valid Enum value", property->GetName()));
             }
 
             FNumericProperty* underlying_property = p_enum_property->GetUnderlyingProperty();
@@ -1267,13 +1268,13 @@ namespace RC::UEGenerator
         if (property->IsA<FNameProperty>())
         {
             FName* name_value = property->ContainerPtrToValuePtr<FName>(object);
-            const SystemStringType name_value_string = UEStringToSystemString(name_value->ToString());
+            const auto name_value_string = to_system(name_value->ToString());
 
             // Ensure property either does not exist in parent class or is overriden in the CDO for the child class
             if (super_property != nullptr)
             {
                 FName* super_name_value = super_property->ContainerPtrToValuePtr<FName>(super_object);
-                const SystemStringType super_name_value_string = UEStringToSystemString(super_name_value->ToString());
+                const auto super_name_value_string = to_system(super_name_value->ToString());
                 if (name_value_string == super_name_value_string)
                 {
                     return;
@@ -1300,13 +1301,13 @@ namespace RC::UEGenerator
         if (property->IsA<FStrProperty>())
         {
             FString* string_value = property->ContainerPtrToValuePtr<FString>(object);
-            const SystemStringType string_value_string = UEStringToSystemString(UEStringType (string_value->GetCharArray()));
+            const auto string_value_string = to_system(UEStringType (string_value->GetCharArray()));
 
             // Ensure property either does not exist in parent class or is overriden in the CDO for the child class
             if (super_property != nullptr)
             {
                 FString* super_string_value = super_property->ContainerPtrToValuePtr<FString>(super_object);
-                const SystemStringType super_string_value_string = UEStringToSystemString(UEStringType (super_string_value->GetCharArray()));
+                const auto super_string_value_string = to_system(UEStringType (super_string_value->GetCharArray()));
                 if (string_value_string == super_string_value_string)
                 {
                     return;
@@ -1349,7 +1350,7 @@ namespace RC::UEGenerator
 
             if (text_value_string != STR(""))
             {
-                const SystemStringType result_property_value = std::format(SYSSTR("FText::FromString({})"), create_string_literal(UEStringToSystemString(text_value_string)));
+                const auto result_property_value = std::format(SYSSTR("FText::FromString({})"), create_string_literal(to_system(text_value_string)));
                 if (!super_and_no_access)
                 {
                     generate_simple_assignment_expression(property, result_property_value, implementation_file, property_scope);
@@ -1412,7 +1413,7 @@ namespace RC::UEGenerator
             else
             {
                 // Unhandled case, reference to the non-native blueprint class potentially?
-                Output::send(SYSSTR("Unhandled default value of the FClassProperty {}: {}\n"), UEStringToSystemString(property->GetFullName()), UEStringToSystemString(class_value->GetFullName()));
+                Output::send(SYSSTR("Unhandled default value of the FClassProperty {}: {}\n"), to_system(property->GetFullName()), to_system(class_value->GetFullName()));
             }
             return;
         }
@@ -1455,14 +1456,14 @@ namespace RC::UEGenerator
             if (sub_object_value->HasAnyFlags(EObjectFlags::RF_DefaultSubObject))
             {
                 UClass* object_class_type = sub_object_value->GetClassPrivate();
-                const SystemStringType object_name = UEStringToSystemString(sub_object_value->GetName());
+                const auto object_name = to_system(sub_object_value->GetName());
 
                 UClass* super_object_class_type{};
                 // Additional checks to ensure this property needs to be initialized in the current class
                 if (super_sub_object_value)
                 {
                     super_object_class_type = super_sub_object_value->GetClassPrivate();
-                    const SystemStringType super_object_name = UEStringToSystemString(super_sub_object_value->GetName());
+                    const auto super_object_name = to_system(super_sub_object_value->GetName());
                     if ((object_class_type == super_object_class_type) && (object_name == super_object_name))
                     {
                         return;
@@ -1485,7 +1486,7 @@ namespace RC::UEGenerator
                             UObject* check_super_sub_object_value = *check_super_object_property->ContainerPtrToValuePtr<UObject*>(super_object);
                             if (check_super_sub_object_value)
                             {
-                                SystemStringType check_super_object_name = UEStringToSystemString(check_super_sub_object_value->GetName());
+                                auto check_super_object_name = to_system(check_super_sub_object_value->GetName());
                                 if (check_super_object_name == object_name)
                                 {
                                     parent_component_found = true;
@@ -1503,7 +1504,7 @@ namespace RC::UEGenerator
                 {
                     // Set property to equal previous property referencing the same object
                     initializer = it->second;
-                    FProperty* prior_property = ustruct->GetPropertyByNameInChain(SystemStringToUEString(initializer).c_str());
+                    FProperty* prior_property = ustruct->GetPropertyByNameInChain(to_ue(initializer).c_str());
                     bool prior_private = get_property_access_modifier(prior_property) == AccessModifier::Private;
                     if (prior_private)
                     {
@@ -1534,7 +1535,7 @@ namespace RC::UEGenerator
                     implementation_file.add_dependency_object(object_class_type, DependencyLevel::Include);
                     implementation_file.m_implementation_constructor.append(
                             std::format(SYSSTR(".SetDefaultSubobjectClass<{}>(TEXT(\"{}\"))"), get_native_class_name(object_class_type), object_name));
-                            m_class_subobjects.try_emplace(object_name, UEStringToSystemString(property->GetName()));
+                            m_class_subobjects.try_emplace(object_name, to_system(property->GetName()));
                 }
                 else
                 {
@@ -1542,7 +1543,7 @@ namespace RC::UEGenerator
                     implementation_file.add_dependency_object(object_class_type, DependencyLevel::Include);
                     const SystemStringType object_class_name = get_native_class_name(object_class_type);
                     initializer = std::format(SYSSTR("CreateDefaultSubobject<{}>(TEXT(\"{}\"))"), object_class_name, object_name);
-                    m_class_subobjects.try_emplace(object_name, UEStringToSystemString(property->GetName()));
+                    m_class_subobjects.try_emplace(object_name, to_system(property->GetName()));
                     if (!super_and_no_access)
                     {
                         generate_simple_assignment_expression(property, initializer, implementation_file, property_scope);
@@ -1561,7 +1562,7 @@ namespace RC::UEGenerator
                 }
                 if (attach_parent_object_value != NULL)
                 {
-                    const SystemStringType attach_parent_object_name = UEStringToSystemString (attach_parent_object_value->GetName());
+                    const auto attach_parent_object_name = to_system(attach_parent_object_value->GetName());
                     const SystemStringType operator_type = SYSSTR("->");
                     bool parent_found = false;
                     SystemStringType attach_string;
@@ -1581,25 +1582,25 @@ namespace RC::UEGenerator
                                 UObject* check_sub_object_value = *check_object_property->ContainerPtrToValuePtr<UObject*>(object);
                                 if (check_sub_object_value)
                                 {
-                                    SystemStringType check_object_name = UEStringToSystemString(check_sub_object_value->GetName());
+                                    auto check_object_name = to_system(check_sub_object_value->GetName());
                                     if (check_object_name == attach_parent_object_name)
                                     {
                                         if (get_property_access_modifier(check_object_property) != AccessModifier::Private)
                                         {
-                                            attach_string = std::format(SYSSTR("SetupAttachment({})"), UEStringToSystemString(check_property->GetName()));
+                                            attach_string = std::format(SYSSTR("SetupAttachment({})"), to_system(check_property->GetName()));
                                         }
                                         else
                                         {
-                                            SystemStringType parent_property_name = std::format(SYSSTR("const FProperty* p_{}_Parent = GetClass()->FindPropertyByName(\"{}\");"),
-                                                                                       UEStringToSystemString(check_property->GetName()),
-                                                                                       UEStringToSystemString(check_property->GetName()));
+                                            auto parent_property_name = std::format(SYSSTR("const FProperty* p_{}_Parent = GetClass()->FindPropertyByName(\"{}\");"),
+                                                                                       to_system(check_property->GetName()),
+                                                                                       to_system(check_property->GetName()));
                                             if (!implementation_file.parent_property_names.contains(parent_property_name))
                                             {
                                                 implementation_file.parent_property_names.emplace(parent_property_name);
                                                 implementation_file.append_line(parent_property_name);
                                             }
                                             attach_string = std::format(SYSSTR("SetupAttachment(p_{}_Parent->ContainerPtrToValuePtr<{}>(this))"),
-                                                                        UEStringToSystemString(check_property->GetName()),
+                                                                        to_system(check_property->GetName()),
                                                                         get_native_class_name(check_sub_object_value->GetClassPrivate()));
                                             implementation_file.add_dependency_object(check_sub_object_value->GetClassPrivate(), DependencyLevel::Include);
                                         }
@@ -1655,7 +1656,7 @@ namespace RC::UEGenerator
             }
 
             // Unhandled case, might be some external object reference
-            Output::send(SYSSTR("Unhandled default value of the FObjectProperty {}: {}\n"), UEStringToSystemString(property->GetFullName()), UEStringToSystemString(sub_object_value->GetFullName()));
+            Output::send(SYSSTR("Unhandled default value of the FObjectProperty {}: {}\n"), to_system(property->GetFullName()), to_system(sub_object_value->GetFullName()));
 
             return;
         }
@@ -1701,7 +1702,7 @@ namespace RC::UEGenerator
             {
                 if (!super_and_no_access)
                 {
-                    implementation_file.append_line(std::format(SYSSTR("{}{}.AddDefaulted({});"), property_scope, UEStringToSystemString(property->GetName()), (int32_t)property_value->Num()));
+                    implementation_file.append_line(std::format(SYSSTR("{}{}.AddDefaulted({});"), property_scope, to_system(property->GetName()), (int32_t)property_value->Num()));
                 }
                 else
                 {
@@ -1740,7 +1741,7 @@ namespace RC::UEGenerator
             if (!numeric_property->IsFloatingPoint())
             {
                 int64 value = numeric_property->GetSignedIntPropertyValue(numeric_property->ContainerPtrToValuePtr<int64>(object));
-                number_constant_string = to_generic_string( std::to_string(value));
+                number_constant_string = to_system( std::to_string(value));
             }
             else
             {
@@ -1765,10 +1766,10 @@ namespace RC::UEGenerator
                                                              bool is_generating_interface,
                                                              const CaseInsensitiveSet& blacklisted_property_names) -> void
     {
-        const SystemStringType class_native_name = get_native_class_name(uclass, is_generating_interface);
-        const SystemStringType raw_function_name = UEStringToSystemString(function->GetName());
+        const auto class_native_name = get_native_class_name(uclass, is_generating_interface);
+        const auto raw_function_name = to_system(function->GetName());
         auto function_flags = function->GetFunctionFlags();
-        PropertyTypeDeclarationContext context(UEStringToSystemString(uclass->GetName()), &implementation_file);
+        PropertyTypeDeclarationContext context(to_system(uclass->GetName()), &implementation_file);
 
         SystemStringType function_implementation_name;
         SystemStringType net_validate_function_name;
@@ -2026,12 +2027,12 @@ namespace RC::UEGenerator
 
             for (FProperty* property : class_object->ForEachProperty())
             {
-                result_set.insert(UEStringToSystemString(property->GetName()));
+                result_set.insert(to_system(property->GetName()));
             }
 
             for (UFunction* function : class_object->ForEachFunction())
             {
-                result_set.insert(UEStringToSystemString(function->GetName()));
+                result_set.insert(to_system(function->GetName()));
             }
         }
         else if (uclass->GetClassPrivate()->IsChildOf(UScriptStruct::StaticClass()))
@@ -2040,7 +2041,7 @@ namespace RC::UEGenerator
 
             for (FProperty* property : script_struct->ForEachProperty())
             {
-                result_set.insert(UEStringToSystemString(property->GetName()));
+                result_set.insert(to_system(property->GetName()));
             }
         }
         return result_set;
@@ -2163,7 +2164,7 @@ namespace RC::UEGenerator
         UClass* class_within = uclass->GetClassWithin();
         if (class_within != NULL && class_within != UObject::StaticClass() && (super_class == NULL || class_within != super_class->GetClassWithin()))
         {
-            flag_format_helper.add_parameter(SYSSTR("Within"), UEStringToSystemString(class_within->GetName()));
+            flag_format_helper.add_parameter(SYSSTR("Within"), to_system(class_within->GetName()));
         }
 
         if ((class_own_flags & CLASS_Transient) != 0)
@@ -2222,7 +2223,7 @@ namespace RC::UEGenerator
         const UEStringType class_config_name = uclass->GetClassConfigName().ToString();
         if (super_class == NULL || class_config_name != super_class->GetClassConfigName().ToString())
         {
-            flag_format_helper.add_parameter(SYSSTR("Config"), UEStringToSystemString(class_config_name));
+            flag_format_helper.add_parameter(SYSSTR("Config"), to_system(class_config_name));
             // Don't add our override config if we add the real one here
             add_config_name = false;
         }
@@ -2306,7 +2307,7 @@ namespace RC::UEGenerator
             UEnum* uenum = enum_property->GetEnum();
             if (uenum == NULL)
             {
-                throw std::runtime_error(RC::fmt("EnumProperty %S does not have a valid Enum value", property->GetName().c_str()));
+                throw std::runtime_error(RC::fmt("EnumProperty {} does not have a valid Enum value", property->GetName()));
             }
             if (context.source_file != NULL)
             {
@@ -2549,7 +2550,7 @@ namespace RC::UEGenerator
 
             if (script_struct == NULL)
             {
-                throw std::runtime_error(RC::fmt("Struct is NULL for StructProperty %S", property->GetName().c_str()));
+                throw std::runtime_error(RC::fmt("Struct is NULL for StructProperty {}", property->GetName()));
             }
             const SystemStringType native_struct_name = get_native_struct_name(script_struct);
 
@@ -2620,7 +2621,7 @@ namespace RC::UEGenerator
         if (property->IsA<FFieldPathProperty>())
         {
             FFieldPathProperty* field_path_property = static_cast<FFieldPathProperty*>(property);
-            const SystemStringType property_class_name = UEStringToSystemString(field_path_property->GetPropertyClass()->GetName());
+            const auto property_class_name = to_system(field_path_property->GetPropertyClass()->GetName());
             return std::format(SYSSTR("TFieldPath<F{}>"), property_class_name);
         }
 
@@ -2670,9 +2671,9 @@ namespace RC::UEGenerator
         {
             return SYSSTR("FText");
         }
-        throw std::runtime_error(RC::fmt("[generate_property_type_declaration] Unsupported property class '%S', full name: '%S'",
-                                         field_class_name.c_str(),
-                                         property->GetFullName().c_str()));
+        throw std::runtime_error(RC::fmt("[generate_property_type_declaration] Unsupported property class '{}', full name: '{}'",
+                                         field_class_name,
+                                         property->GetFullName()));
     }
     //*/
 
@@ -2813,7 +2814,7 @@ namespace RC::UEGenerator
         {
             if ((property_flags & CPF_RepNotify) != 0)
             {
-                const SystemStringType rep_notify_func_name = UEStringToSystemString(property->GetRepNotifyFunc().ToString());
+                const auto rep_notify_func_name = to_system(property->GetRepNotifyFunc().ToString());
                 flag_format_helper.add_parameter(SYSSTR("ReplicatedUsing"), rep_notify_func_name);
             }
             else
@@ -2972,15 +2973,15 @@ namespace RC::UEGenerator
         }
 
         int64 highest_enum_value = 0;
-        const SystemStringType enum_prefix = UEStringToSystemString(uenum->GenerateEnumPrefix());
-        const SystemStringType expected_max_name = std::format(SYSSTR("{}_MAX"), enum_prefix);
-        SystemStringType expected_max_name_lower = expected_max_name;
+        const auto enum_prefix = to_system(uenum->GenerateEnumPrefix());
+        const auto expected_max_name = std::format(SYSSTR("{}_MAX"), enum_prefix);
+        auto expected_max_name_lower = expected_max_name;
         std::transform(expected_max_name_lower.begin(), expected_max_name_lower.end(), expected_max_name_lower.begin(), ::towlower);
         
         for (auto [Name, Value] : uenum->ForEachName())
         {
-            SystemStringType enum_name = sanitize_enumeration_name(UEStringToSystemString(Name.ToString()));
-            SystemStringType enum_name_lower = enum_name;
+            auto enum_name = sanitize_enumeration_name(to_system(Name.ToString()));
+            auto enum_name_lower = enum_name;
             std::transform(enum_name_lower.begin(), enum_name_lower.end(), enum_name_lower.begin(), ::towlower);
             if ((enum_name_lower != expected_max_name_lower && enum_name_lower != sanitize_enumeration_name(expected_max_name_lower)) && Value > highest_enum_value)
             {
@@ -3128,7 +3129,7 @@ namespace RC::UEGenerator
         bool bLAFound = false;
         for (FProperty* param : function->ForEachProperty())
         {
-            auto param_name = UEStringToSystemString(param->GetName());
+            auto param_name = to_system(param->GetName());
             auto param_uc_name = string_to_uppercase(param_name);
             if (param_uc_name.find(SYSSTR("WORLDCONTEXT")) != param_uc_name.npos)
             {
@@ -3210,7 +3211,7 @@ namespace RC::UEGenerator
                 }
                 param_declaration.append(SYSSTR(" "));
 
-                SystemStringType property_name = UEStringToSystemString(property->GetName());
+                auto property_name = to_system(property->GetName());
 
                 // If property name is blacklisted, capitalize first letter and prepend New
                 if ((uclass && is_function_parameter_shadowing(uclass, property)) || blacklisted_property_names.contains(property_name))
@@ -3239,7 +3240,7 @@ namespace RC::UEGenerator
 
     auto UEHeaderGenerator::generate_default_property_value(FProperty* property, GeneratedSourceFile& header_data, const SystemStringType& ContextName) -> SystemStringType
     {
-        const SystemStringType field_class_name = UEStringToSystemString(property->GetClass().GetName());
+        const auto field_class_name = to_system(property->GetClass().GetName());
         PropertyTypeDeclarationContext context(ContextName, &header_data);
 
         // Byte Property
@@ -3264,7 +3265,7 @@ namespace RC::UEGenerator
 
             if (uenum == NULL)
             {
-                throw std::runtime_error(RC::fmt("EnumProperty %S does not have a valid Enum value", property->GetName().c_str()));
+                throw std::runtime_error(RC::fmt("EnumProperty {} does not have a valid Enum value", property->GetName()));
             }
             const int64_t first_enum_constant_value = uenum->GetEnumNameByIndex(0).Value;
             return generate_enum_value(uenum, first_enum_constant_value);
@@ -3313,7 +3314,7 @@ namespace RC::UEGenerator
 
             if (script_struct == NULL)
             {
-                throw std::runtime_error(RC::fmt("Struct is NULL for StructProperty %S", property->GetName().c_str()));
+                throw std::runtime_error(RC::fmt("Struct is NULL for StructProperty {}", property->GetName()));
             }
             const SystemStringType native_struct_name = get_native_struct_name(script_struct);
             return std::format(SYSSTR("{}{{}}"), native_struct_name);
@@ -3377,9 +3378,9 @@ namespace RC::UEGenerator
         {
             return SYSSTR("FText::GetEmpty()");
         }
-        throw std::runtime_error(RC::fmt("[generate_default_property_value] Unsupported property class '%S', full name: '%S'",
-                                         field_class_name.c_str(),
-                                         property->GetFullName().c_str()));
+        throw std::runtime_error(RC::fmt("[generate_default_property_value] Unsupported property class '{}', full name: '{}'",
+                                         field_class_name,
+                                         property->GetFullName()));
     }
 
     auto UEHeaderGenerator::get_class_blueprint_info(UClass* uclass) -> ClassBlueprintInfo
@@ -3475,7 +3476,7 @@ namespace RC::UEGenerator
         {
             throw std::invalid_argument("Encountered a package with an outer object set");
         }
-        SystemStringType package_name = UEStringToSystemString(package->GetName());
+        auto package_name = to_system(package->GetName());
         if (!package_name.starts_with(SYSSTR("/Script/")))
         {
             return SYSSTR("");
@@ -3850,18 +3851,18 @@ namespace RC::UEGenerator
         {
             if (!is_delegate_signature_function(function))
             {
-                throw std::runtime_error(RC::fmt("Function %S is not a delegate signature function", function->GetName().c_str()));
+                throw std::runtime_error(RC::fmt("Function {} is not a delegate signature function", function->GetName()));
             }
             if (!function->GetOuterPrivate()->IsA<UPackage>())
             {
-                throw std::runtime_error(RC::fmt("Delegate Signature Function %S does not have a UPackage as it's owner", function->GetName().c_str()));
+                throw std::runtime_error(RC::fmt("Delegate Signature Function {} does not have a UPackage as it's owner", function->GetName()));
             }
             generate_global_delegate_declaration(function, NULL, header_file);
         }
         else
         {
             throw std::runtime_error(
-                    RC::fmt("Provided object %S is not of a supported type: %S", object->GetName().c_str(), object->GetClassPrivate()->GetName().c_str()));
+                    RC::fmt("Provided object {} is not of a supported type: {}", object->GetName(), object->GetClassPrivate()->GetName()));
         }
 
         auto iterator = this->m_module_dependencies.find(module_name);
@@ -3932,14 +3933,14 @@ namespace RC::UEGenerator
         if (object->IsA<UClass>() || object->IsA<UScriptStruct>())
         {
             // Class and struct headers follow the relevant object name
-            header_name = UEStringToSystemString(object->GetName());
+            header_name = to_system(object->GetName());
             final_object = object;
         }
         else if (object->IsA<UEnum>())
         {
             // Enumeration usually have the E prefix which will be present in the header names
             // We do not strip it because there are some broken headers that do not follow that convention (e.g. funny Wwise)
-            header_name = UEStringToSystemString(object->GetName());
+            header_name = to_system(object->GetName());
             final_object = object;
         }
         else
@@ -3970,7 +3971,7 @@ namespace RC::UEGenerator
         if (header_name.empty())
         {
             // Unsupported dependency object type
-            throw std::runtime_error(RC::fmt("Unsupported dependency object type %S: %S", object->GetClassPrivate()->GetName().c_str(), object->GetName().c_str()));
+            throw std::runtime_error(RC::fmt("Unsupported dependency object type {}: {}", object->GetClassPrivate()->GetName(), object->GetName()));
         }
 
         if (get_existing_header)
@@ -4033,7 +4034,7 @@ namespace RC::UEGenerator
             top_level_object = top_level_object->GetOuterPrivate();
         }
 
-        const SystemStringType object_name = UEStringToSystemString(top_level_object->GetName());
+        const auto object_name = to_system(top_level_object->GetName());
         return std::format(SYSSTR("//CROSS-MODULE INCLUDE V2: -ModuleName={} -ObjectName={} -FallbackName={}\n"), module_name, object_name, fallback_name);
     }
 

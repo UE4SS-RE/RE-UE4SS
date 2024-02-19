@@ -164,7 +164,7 @@ namespace RC::GUI
         }
         auto function = m_currently_selected_function->function;
 
-        auto cmd = std::format(SYSSTR("{}"), UEStringToSystemString(function->GetName()));
+        auto cmd = std::format(SYSSTR("{}"), to_system(function->GetName()));
         for (const auto& param : m_params_for_selected_function)
         {
             cmd.append(std::format(SYSSTR(" {}"), to_wstring(param.value_from_ui)));
@@ -245,7 +245,7 @@ namespace RC::GUI
 
     static auto get_typeless_object_name(UObject* object) -> std::string
     {
-        auto object_name = UEStringToSystemString(object->GetFullName());
+        auto object_name = to_system(object->GetFullName());
         auto object_name_type_space_location = object_name.find(" ");
         if (object_name_type_space_location == object_name.npos)
         {

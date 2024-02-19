@@ -36,7 +36,7 @@ void UE4SS_Start()
         fprintf(stderr, "%s\n", e.what());
     }
     #endif
-    SystemStringType ue4sspath = to_generic_string(dl_info.dli_fname);
+    auto ue4sspath = to_system_string(dl_info.dli_fname);
     auto program = new UE4SSProgram(ue4sspath, {});
     
     // use pthread here
@@ -50,7 +50,7 @@ void UE4SS_Start()
             // Logging will only happen to the debug console but it's something at least
             if (!Output::has_internal_error())
             {
-                Output::send<LogLevel::Error>(SYSSTR("Fatal Error: {}\n"), to_generic_string(e->get_message()));
+                Output::send<LogLevel::Error>(SYSSTR("Fatal Error: {}\n"), e->get_message());
             }
             else
             {

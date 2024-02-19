@@ -462,7 +462,7 @@ namespace RC::LuaType
                     {
                         lua.throw_error("Function 'GetProperty' requires a string as the first parameter");
                     }
-                    SystemStringType property_name = to_generic_string(lua.get_string(2));
+                    auto property_name = to_system(lua.get_string(2));
 
                     auto reflection_table = lua.get_table();
                     const auto& reflected_object = reflection_table.get_userdata_field<SelfType>("ReflectedObject").get_remote_cpp_object();
@@ -478,7 +478,7 @@ namespace RC::LuaType
                     {
                         obj_as_struct = reflected_object->GetClassPrivate();
                     }
-                    auto* property = obj_as_struct->FindProperty(Unreal::FName(SystemStringToUEString(property_name)));
+                    auto* property = obj_as_struct->FindProperty(Unreal::FName(to_ue(property_name)));
 
                     construct_xproperty(lua, property);
                     return 1;
@@ -586,7 +586,7 @@ Overloads:
                 {
                     lua.throw_error(error_overload_not_found);
                 }
-                auto cmd = to_generic_string(lua.get_string());
+                auto cmd = to_system(lua.get_string());
 
                 if (lua.get_stack_size() < 2)
                 {
@@ -601,7 +601,7 @@ Overloads:
                 auto executor = lua.get_userdata<LuaType::UObject>();
 
                 auto ar = Unreal::FOutputDevice{};
-                auto return_value = lua_object.get_remote_cpp_object()->ProcessConsoleExec(SystemStringToUEString(cmd).c_str(), ar, executor.get_remote_cpp_object());
+                auto return_value = lua_object.get_remote_cpp_object()->ProcessConsoleExec(to_ue_string(cmd).c_str(), ar, executor.get_remote_cpp_object());
 
                 lua.set_bool(return_value);
                 return 1;
@@ -641,7 +641,7 @@ Overloads:
         {
             auto& lua_object = lua.get_userdata<SelfType>();
 
-            const SystemStringType& member_name = to_generic_string(lua.get_string());
+            auto member_name = to_system_string(lua.get_string());
 
             // If nullptr then we assume the UObject wasn't found so lets return an invalid UObject to Lua
             // This allows the safe chaining of "__index" as long as the Lua script checks ":IsValid()" before using the object
@@ -666,7 +666,7 @@ Overloads:
                 return;
             }
 
-            Unreal::FName property_name = Unreal::FName(SystemStringToUEString(member_name));
+            Unreal::FName property_name = Unreal::FName(to_ue(member_name));
             Unreal::FField* field = LuaCustomProperty::StaticStorage::property_list.find_or_nullptr(lua_object.get_remote_cpp_object(), member_name);
 
             if (!field)
@@ -777,10 +777,10 @@ Overloads:
             {
                 // We can either throw an error and kill the execution
                 /**/
-                SystemStringType property_type_name = UEStringToSystemString(property_type.ToString());
+                auto property_type_name = to_string(property_type.ToString());
                 lua.throw_error(std::format(
                         "[LocalUnrealParam::prepare_to_handle] Tried accessing unreal property without a registered handler. Property type '{}' not supported.",
-                        to_string(property_type_name)));
+                        property_type_name));
                 //*/
 
                 // Or we can treat unhandled property types as some sort of generic type
