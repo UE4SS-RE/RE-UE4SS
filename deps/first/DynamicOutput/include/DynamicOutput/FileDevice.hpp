@@ -57,7 +57,7 @@ namespace RC::Output
     {
         if (m_always_create_file)
         {
-            m_file = File::open(m_file_name_and_path, File::OpenFor::Appending, File::OverwriteExistingFile::Yes, File::CreateIfNonExistent::Yes);
+            m_file = File::open(m_file_name_and_path, File::OpenFor::Writing, File::OverwriteExistingFile::Yes, File::CreateIfNonExistent::Yes);
         }
         else
         {
