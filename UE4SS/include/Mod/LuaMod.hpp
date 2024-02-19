@@ -101,8 +101,8 @@ namespace RC
         static inline std::unordered_map<SystemStringType, LuaCallbackData> m_custom_command_lua_pre_callbacks;
         static inline std::vector<SimpleLuaAction> m_game_thread_actions{};
         // This is storage that persists through hot-reloads.
-        static inline std::unordered_map<std::string, SharedLuaVariable> m_shared_lua_variables{};
-        static inline std::unordered_map<StringType, LuaCallbackData> m_custom_event_callbacks{};
+        static inline std::unordered_map<SystemStringType, SharedLuaVariable> m_shared_lua_variables{};
+        static inline std::unordered_map<SystemStringType, LuaCallbackData> m_custom_event_callbacks{};
         static inline std::vector<LuaCallbackData> m_load_map_pre_callbacks{};
         static inline std::vector<LuaCallbackData> m_load_map_post_callbacks{};
         static inline std::vector<LuaCallbackData> m_init_game_state_pre_callbacks{};

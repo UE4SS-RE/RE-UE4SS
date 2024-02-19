@@ -26,11 +26,13 @@
 #include <LuaType/LuaModRef.hpp>
 #include <LuaType/LuaUClass.hpp>
 #include <LuaType/LuaUObject.hpp>
+#include <LuaType/LuaFURL.hpp>
+
 
 #ifdef HAS_CPPMOD
-#include <LuaType/LuaFURL.hpp>
 #include <Mod/CppMod.hpp>
 #endif
+
 
 #include <Mod/LuaMod.hpp>
 #pragma warning(disable : 4005)
