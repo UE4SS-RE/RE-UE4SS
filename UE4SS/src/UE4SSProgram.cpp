@@ -653,13 +653,6 @@ namespace RC
                     Unreal::UEngine::VTableLayoutMap.emplace(item_ue, offset);
                 });
 
-                Output::send<Color::Blue>(SYSSTR("UEngine\n"));
-                uint32_t uengine_size = retrieve_vtable_layout_from_ini(SYSSTR("UEngine"), [&](uint32_t index, SystemStringType& item, UEStringType& item_ue) {
-                    uint32_t offset = calculate_virtual_function_offset(index, uobjectbase_size, uobjectbaseutility_size, uobject_size);
-                    Output::send(SYSSTR("UEngine::{} = 0x{:X}\n"), item, offset);
-                    Unreal::UEngine::VTableLayoutMap.emplace(item_ue, offset);
-                });
-
                 Output::send<Color::Blue>(SYSSTR("UScriptStruct::ICppStructOps\n"));
                 retrieve_vtable_layout_from_ini(SYSSTR("UScriptStruct::ICppStructOps"), [&](uint32_t index, SystemStringType& item, UEStringType& item_ue) {
                     uint32_t offset = calculate_virtual_function_offset(index, 0);

@@ -3048,7 +3048,8 @@ Overloads:
             {
                 ++m_last_generic_hook_id;
                 auto [callback_data, _] = LuaMod::m_script_hook_callbacks.emplace(UEStringToSystemString(unreal_function->GetFullName()), LuaCallbackData{lua, nullptr, {}});
-                callback_data->second.registry_indexes.emplace_back(LuaMod::LuaCallbackData::RegistryIndex{lua_callback_registry_index, m_last_generic_hook_id});
+                callback_data->second.registry_indexes.emplace_back(hook_lua,
+                                                                    LuaMod::LuaCallbackData::RegistryIndex{lua_callback_registry_index, m_last_generic_hook_id});
                 generic_pre_id = m_last_generic_hook_id;
                 generic_post_id = m_last_generic_hook_id;
                 Output::send<LogLevel::Verbose>(SYSSTR("[RegisterHook] Registered script hook ({}, {}) for {}\n"),
