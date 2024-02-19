@@ -646,10 +646,11 @@ namespace RC
         // Verify that there's a 'Scripts' directory
         // Give the full path to the 'Scripts' directory to the mod container
         std::filesystem::path mod_path_fs = m_mod_path;
-        m_scripts_path = (mod_path_fs / SYSSTR("scripts")).generic_string();
-
+        auto path = (mod_path_fs / SYSSTR("scripts"));
+        m_scripts_path = to_system_string(path);
+        
         // If the 'Scripts' directory doesn't exist then mark the mod as non-installable and move on to the next mod
-        if (!std::filesystem::exists(m_scripts_path))
+        if (!std::filesystem::exists(path))
         {
             set_installable(false);
             return;
@@ -1454,8 +1455,8 @@ Overloads:
                 {
                     lua.throw_error("Could not dump objects and properties because the pointer to 'Mod' was nullptr");
                 }
-                UE4SSProgram::dump_all_objects_and_properties((std::filesystem::path{mod->m_program.get_object_dumper_output_directory()} / 
-                                                              UE4SSProgram::m_object_dumper_file_name).generic_string());
+                UE4SSProgram::dump_all_objects_and_properties(to_system_string(std::filesystem::path{mod->m_program.get_object_dumper_output_directory()} / 
+                                                              UE4SSProgram::m_object_dumper_file_name));
                 return 0;
             });
 
@@ -3391,7 +3392,7 @@ Overloads:
         // Don't crash on syntax errors.
         try
         {
-            main_lua()->execute_file((std::filesystem::path {m_scripts_path} / SYSSTR("main.lua")).generic_string());
+            main_lua()->execute_file(to_system_string(std::filesystem::path {m_scripts_path} / SYSSTR("main.lua")));
         }
         catch (std::runtime_error& e)
         {

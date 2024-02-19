@@ -272,11 +272,6 @@ namespace RC
 #endif
     }
 
-    auto inline to_wstring(std::filesystem::path& input) -> std::wstring
-    {
-        return input.wstring();
-    }
-
     auto inline to_string(std::wstring& input) -> std::string
     {
 #ifdef WIN32
@@ -317,11 +312,6 @@ namespace RC
         return std::string{input};
     }
 
-    auto inline to_string(std::filesystem::path& input) -> std::string
-    {
-        return input.string();
-    }
-
     auto inline to_u16string(std::wstring& input) -> std::u16string
     {
 #ifdef WIN32
@@ -359,11 +349,6 @@ namespace RC
     auto inline to_u16string(std::u16string& input) -> std::u16string
     {
         return std::u16string{input};
-    }
-
-    auto inline to_u16string(std::filesystem::path& input) -> std::u16string
-    {
-        return input.u16string();
     }
 
     // Type traits to check if T is a string type that needs conversion
@@ -459,6 +444,27 @@ namespace RC
 
     template <typename T>
     auto inline to_system_string(T&& input) -> SystemStringType {
+        if constexpr (std::is_same_v<std::decay_t<T>, std::filesystem::path> || std::is_same_v<std::decay_t<T>, const std::filesystem::path>) {
+            // just a workaround here
+            auto hold = input;
+            if constexpr (std::is_same_v<SystemStringType, std::string>)
+            {
+                return input.string();
+            }
+            else if constexpr (std::is_same_v<SystemStringType, std::wstring>)
+            {
+                return input.wstring();
+            }
+            else if constexpr (std::is_same_v<SystemStringType, std::u16string>)
+            {
+                return input.u16string();
+            }
+            else 
+            {
+                static_assert(dependent_false<T>::value, "Unsupported SystemStringType.");
+            }
+        } 
+        else 
         if constexpr (std::is_same_v<SystemStringType, std::string>)
         {
             return to_string(input);

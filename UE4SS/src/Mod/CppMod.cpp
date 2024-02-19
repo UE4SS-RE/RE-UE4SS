@@ -68,9 +68,9 @@ namespace RC
             if (!Output::has_internal_error())
             {
                 Output::send<LogLevel::Warning>(SYSSTR("Failed to load dll <{}> for mod {}, because: {}\n"),
-                                                (std::filesystem::path {m_dlls_path} / CONCATENATE_WIDE_STRING("main", DLLEXT)).generic_string()  + "\n",
+                                                to_system_string(std::filesystem::path {m_dlls_path} / CONCATENATE_WIDE_STRING("main", DLLEXT))  + "\n",
                                                 m_mod_name,
-                                                to_system(e.what()));
+                                                e.what());
             }
             else
             {

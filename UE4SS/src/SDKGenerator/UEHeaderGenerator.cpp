@@ -4041,7 +4041,7 @@ namespace RC::UEGenerator
     GeneratedFile::GeneratedFile(const FFilePath& full_file_path)
     {
         this->m_full_file_path = full_file_path;
-        this->m_file_base_name = full_file_path.filename().replace_extension().generic_string();
+        this->m_file_base_name = to_system_string(full_file_path.filename().replace_extension());
         this->m_current_indent_count = 0;
     }
 

@@ -202,7 +202,7 @@ namespace RC
 
             // Setup the log file
             auto& file_device = Output::set_default_devices<Output::NewFileDevice>();
-            file_device.set_file_name_and_path((m_log_directory / m_log_file_name).generic_string());
+            file_device.set_file_name_and_path(to_system_string(m_log_directory / m_log_file_name));
 
             create_simple_console();
 
@@ -399,8 +399,8 @@ namespace RC
     {
         ProfilerScope();
         const std::filesystem::path moduleFilePath = std::filesystem::path(moduleFilePathString);
-        m_root_directory = moduleFilePath.parent_path().generic_string();
-        m_module_file_path = moduleFilePath.generic_string();
+        m_root_directory = to_system_string(moduleFilePath.parent_path());
+        m_module_file_path = to_system_string(moduleFilePath);
 
         // The default working directory is the root directory
         // Can be changed by creating a <GameName> directory in the root directory
@@ -593,7 +593,7 @@ namespace RC
         TRY([&]() {
             ProfilerScopeNamed("loading virtual function offset overrides");
             fprintf(stderr, "Loading offset\n");
-            static File::StringType virtual_function_offset_override_file{(m_working_directory / SYSSTR("VTableLayout.ini")).generic_string()};
+            static auto virtual_function_offset_override_file{m_working_directory / SYSSTR("VTableLayout.ini")};
             if (std::filesystem::exists(virtual_function_offset_override_file))
             {
                 auto file =
@@ -1039,7 +1039,7 @@ namespace RC
                 set_error("is_directory ran into error %d", ec.value());
             }
 
-            SystemStringType directory_lowercase = sub_directory.path().stem().generic_string();
+            SystemStringType directory_lowercase = to_system_string(sub_directory.path().stem());
             std::transform(directory_lowercase.begin(), directory_lowercase.end(), directory_lowercase.begin(), std::towlower);
 
             if (directory_lowercase == SYSSTR("shared"))
@@ -1050,10 +1050,10 @@ namespace RC
             {
                 // Create the mod but don't install it yet
                 if (std::filesystem::exists(sub_directory.path() / "scripts"))
-                    m_mods.emplace_back(std::make_unique<LuaMod>(*this, sub_directory.path().stem().generic_string(), sub_directory.path().generic_string()));
+                    m_mods.emplace_back(std::make_unique<LuaMod>(*this, to_system_string(sub_directory.path().stem()), to_system_string(sub_directory.path())));
 #ifdef HAS_CPPMOD
                 if (std::filesystem::exists(sub_directory.path() / "dlls"))
-                    m_mods.emplace_back(std::make_unique<CppMod>(*this, sub_directory.path().stem().generic_string(), sub_directory.path().generic_string()));
+                    m_mods.emplace_back(std::make_unique<CppMod>(*this, to_system_string(sub_directory.path().stem()), to_system_string(sub_directory.path())));
 #endif
             }
         }
@@ -1249,7 +1249,7 @@ namespace RC
                 return std::format("exists ran into error {}", ec.value());
             }
 
-            auto mod = UE4SSProgram::find_mod_by_name<ModType>(mod_directory.path().stem().generic_string(), UE4SSProgram::IsInstalled::Yes);
+            auto mod = UE4SSProgram::find_mod_by_name<ModType>(to_system_string(mod_directory.path().stem()), UE4SSProgram::IsInstalled::Yes);
             if (!dynamic_cast<ModType*>(mod))
             {
                 continue;
@@ -1412,7 +1412,7 @@ namespace RC
 
     auto UE4SSProgram::get_module_directory() -> File::StringViewType
     {
-        m_module_file_path_str = m_module_file_path.generic_string();
+        m_module_file_path_str = to_system_string(m_module_file_path);
         return m_module_file_path_str;
     }
 
@@ -1423,13 +1423,13 @@ namespace RC
 
     auto UE4SSProgram::get_working_directory() -> File::StringViewType
     {
-        m_working_directory_str = m_working_directory.generic_string();
+        m_working_directory_str = to_system_string(m_working_directory);
         return m_working_directory_str;
     }
 
     auto UE4SSProgram::get_mods_directory() -> File::StringViewType
     {
-        m_mods_directory_str = m_mods_directory.generic_string();
+        m_mods_directory_str = to_system_string(m_mods_directory);
         return m_mods_directory_str;
     }
 
@@ -1440,7 +1440,7 @@ namespace RC
     
     auto UE4SSProgram::get_game_directory() -> File::StringViewType
     {
-        m_game_executable_str = m_game_executable_directory.generic_string();
+        m_game_executable_str = to_system_string(m_game_executable_directory);
         return m_game_executable_str;
     }
 
@@ -1631,9 +1631,9 @@ namespace RC
         return static_cast<LuaMod*>(find_mod_by_name<LuaMod>(sysstr, installed_only, is_started));
     }
 
-    auto UE4SSProgram::get_object_dumper_output_directory() -> const File::StringType
+    auto UE4SSProgram::get_object_dumper_output_directory() -> const SystemStringType
     {
-        return m_object_dumper_output_directory.generic_string();
+        return to_system_string(m_object_dumper_output_directory);
     }
 
     auto UE4SSProgram::dump_uobject(UObject* object, std::unordered_set<FField*>* in_dumped_fields, SystemStringType& out_line, bool is_below_425) -> void
@@ -1743,7 +1743,7 @@ namespace RC
         }
     }
 
-    auto UE4SSProgram::dump_all_objects_and_properties(const File::StringType& output_path_and_file_name) -> void
+    auto UE4SSProgram::dump_all_objects_and_properties(const SystemStringType& output_path_and_file_name) -> void
     {
         /*
         Output::send(SYSSTR("Test msg with no fmt args, and no optional arg\n"));
