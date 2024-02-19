@@ -67,7 +67,7 @@ namespace RC::UEGenerator
                         {
                             continue;
                         }
-                        Output::send(SYSSTR("Found Relevant TMap Property: {} in Class: {}\n"), property_name, to_system(object->GetName()));
+                        Output::send(SYSSTR("Found Relevant TMap Property: {} in Class: {}\n"), property_name, object->GetName());
 
                         auto& fm_json_object = fm_object.new_object(property_name);
                         auto& uaapi_array = uaapi_object.new_array(property_name);

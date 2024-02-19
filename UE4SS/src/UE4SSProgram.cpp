@@ -99,7 +99,7 @@ namespace RC
 #define OUTPUT_MEMBER_OFFSETS_FOR_STRUCT(StructName)                                                                                                           \
     for (const auto& [name, offset] : Unreal::StructName::MemberOffsets)                                                                                       \
     {                                                                                                                                                          \
-        Output::send(SYSSTR(#StructName "::{} = 0x{:X}\n"), to_system(name), offset);                                                                                        \
+        Output::send(SYSSTR(#StructName "::{} = 0x{:X}\n"), name, offset);                                                                                        \
     }
 
     auto output_all_member_offsets() -> void

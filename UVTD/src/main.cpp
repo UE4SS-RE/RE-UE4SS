@@ -89,7 +89,7 @@ auto thread_dll_start([[maybe_unused]] LPVOID thread_param) -> unsigned long
     }
     catch (std::exception& e)
     {
-        Output::send(SYSSTR("Exception caught: {}\n"), to_wstring(e.what()));
+        Output::send(SYSSTR("Exception caught: {}\n"), e.what());
     }
 
     return 0;
