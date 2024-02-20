@@ -11,7 +11,7 @@ on:
       - "UE4SS/generated_include/**"
       - "deps/**"
       - "UE4SS/proxy_generator/**"
-      - ".github/**"
+      - ".github/windows-test.yml"
       - "CMakeLists.txt"
 
 permissions:
@@ -40,7 +40,7 @@ jobs:
         uses: dtolnay/rust-toolchain@1.76.0
       - name: Build
         run: |
-          cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Game__Shipping__Windows
+          cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Game__Shipping__Win64
           cmake --build build
         env:
           SCCACHE_GHA_ENABLED: "true"
