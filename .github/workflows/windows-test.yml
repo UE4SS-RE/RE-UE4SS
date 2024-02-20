@@ -42,9 +42,6 @@ jobs:
         run: |
           cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Game__Shipping__Win64
           cmake --build build
-        env:
-          SCCACHE_GHA_ENABLED: "true"
-          RUSTC_WRAPPER: "sccache"
       - name: Upload Artifacts
         uses: actions/upload-artifact@v3
         with:
