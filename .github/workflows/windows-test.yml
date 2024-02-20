@@ -1,4 +1,4 @@
-name: Linux Test Build
+name: Windows Test Build
 
 on:
   workflow_dispatch:
