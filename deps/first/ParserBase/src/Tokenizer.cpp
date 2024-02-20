@@ -41,7 +41,7 @@ namespace RC::ParserBase
         m_token_container = std::move(token_container);
     }
 
-    auto Tokenizer::tokenize(const UEStringType& input) -> void
+    auto Tokenizer::tokenize(const SystemStringType& input) -> void
     {
         // printf_s("Tokenizer::tokenize()\n\n");
 
@@ -75,12 +75,12 @@ namespace RC::ParserBase
             throw std::runtime_error{"[Tokenizer::tokenize] Input was empty"};
         }
 
-        UEStringType a;
+        SystemStringType a;
 
-        const UECharType* input_array = input.c_str();
+        const SystemCharType* input_array = input.c_str();
         size_t global_cursor{};
 
-        auto peek = [&](SystemStringType& out_str, const UECharType* character, size_t num_chars) -> void {
+        auto peek = [&](SystemStringType& out_str, const SystemCharType* character, size_t num_chars) -> void {
             if (global_cursor + num_chars <= input.size())
             {
                 for (size_t i = 0; i < num_chars; ++i)
@@ -102,7 +102,7 @@ namespace RC::ParserBase
         TokenFoundWrapper empty_token{};
         size_t start_of_empty_token{};
         bool start_of_empty_token_set{};
-        const UECharType* c = input_array;
+        const SystemCharType* c = input_array;
 
         auto deal_with_possible_empty_token = [&]() {
             if (empty_token.token)
@@ -137,8 +137,8 @@ namespace RC::ParserBase
                 int advance_cursor_by{-1};
                 bool all_rules_obeyed{true};
 
-                UEStringViewType identifier_to_find = token.get_identifier();
-                UEStringType compare_to;
+                SystemStringViewType identifier_to_find = token.get_identifier();
+                SystemStringType compare_to;
                 size_t identifier_size = identifier_to_find.size();
                 peek(compare_to, c, identifier_size);
                 bool identifier_should_match_all = identifier_to_find.empty();

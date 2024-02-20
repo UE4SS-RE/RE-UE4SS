@@ -304,8 +304,8 @@ namespace RC::File
         try
         {
             static std::wstring_convert<std::codecvt_utf8_utf16<char16_t>, char16_t> converter{};
-            atuo utf8_string = converter.to_bytes(input);
-            write_file_string_to_file(*this, utf8_string.data(), utf8_string.size());
+            auto utf8_string = converter.to_bytes(string_to_write.begin(), string_to_write.begin() + string_to_write.size());
+            write_file_string_to_file(utf8_string);
         } catch  (const std::exception& e) {
             THROW_INTERNAL_FILE_ERROR(std::format("[StdFile::write_string_to_file] Tried writing string to file but could not convert to utf-8. Error: {}", e.what()))
         }

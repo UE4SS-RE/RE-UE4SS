@@ -508,7 +508,7 @@ namespace RC
         if (std::filesystem::exists(file_path))
         {
             auto file = File::open(file_path);
-            if (auto file_contents = file.read_all(); !file_contents.empty())
+            if (auto file_contents = file.read_file_all(); !file_contents.empty())
             {
                 Ini::Parser parser;
                 parser.parse(file_contents);

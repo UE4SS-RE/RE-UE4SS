@@ -32,9 +32,9 @@ namespace RC::JSON::Parser
         throw std::runtime_error{e};                                                                                                                           \
     }
 
-    static auto is_number(UEStringViewType data) -> bool
+    static auto is_number(SystemStringViewType data) -> bool
     {
-        return std::ranges::all_of(data.begin(), data.end(), [&](const UECharType c) {
+        return std::ranges::all_of(data.begin(), data.end(), [&](const SystemCharType c) {
             return std::iswdigit((wchar_t)c) != 0;
         });
     }
@@ -64,10 +64,10 @@ namespace RC::JSON::Parser
         return m_storage.back();
     }
 
-    static auto has_only_spaces(const UEStringType& data) -> bool
+    static auto has_only_spaces(const SystemStringType& data) -> bool
     {
-        return std::all_of(data.begin(), data.end(), [](UECharType c) {
-            return std::isspace(c) || c == '\n';
+        return std::all_of(data.begin(), data.end(), [](SystemCharType c) {
+            return std::iswspace(c) || c == SYSSTR('\n');
         });
     }
 
@@ -164,7 +164,7 @@ namespace RC::JSON::Parser
         else if (m_current_state == State::ReadValue)
         {
             auto data_raw = get_data(token);
-            UEStringType data_no_spaces = data_raw;
+            SystemStringType data_no_spaces = data_raw;
             data_no_spaces.erase(std::remove_if(data_no_spaces.begin(),
                                                 data_no_spaces.end(),
                                                 [](wchar_t c) {

@@ -75,7 +75,7 @@ namespace RC
          * @param async_lua This is the Lua instance for asynchronous things like ExecuteAsync and ExecuteWithDelay.
          * @param hook_luas This is a container of Lua instances that are used for game-thread hooks like ExecuteInGameThread.
          */
-        RC_UE4SS_API virtual auto on_lua_start(UEStringViewType mod_name,
+        RC_UE4SS_API virtual auto on_lua_start(SystemStringViewType mod_name,
                                                LuaMadeSimple::Lua& lua,
                                                LuaMadeSimple::Lua& main_lua,
                                                LuaMadeSimple::Lua& async_lua,
@@ -106,7 +106,7 @@ namespace RC
          * @param async_lua This is the Lua instance for asynchronous things like ExecuteAsync and ExecuteWithDelay.
          * @param hook_luas This is a container of Lua instances that are used for game-thread hooks like ExecuteInGameThread.
          */
-        RC_UE4SS_API virtual auto on_lua_stop(UEStringViewType mod_name,
+        RC_UE4SS_API virtual auto on_lua_stop(SystemStringViewType mod_name,
                                               LuaMadeSimple::Lua& lua,
                                               LuaMadeSimple::Lua& main_lua,
                                               LuaMadeSimple::Lua& async_lua,
@@ -128,7 +128,7 @@ namespace RC
         {
         }
 
-        RC_UE4SS_API virtual auto on_dll_load(UEStringViewType dll_name) -> void
+        RC_UE4SS_API virtual auto on_dll_load(SystemStringViewType dll_name) -> void
         {
         }
 

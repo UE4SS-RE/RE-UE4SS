@@ -167,7 +167,7 @@ namespace RC::JSON
         }
 
       public:
-        auto serialize([[maybe_unused]] ShouldFormat should_format = ShouldFormat::No, [[maybe_unused]] int32_t* indent_level = nullptr) -> UEStringType override;
+        auto serialize([[maybe_unused]] ShouldFormat should_format = ShouldFormat::No, [[maybe_unused]] int32_t* indent_level = nullptr) -> SystemStringType override;
         auto get_type() const -> JSON::Type override
         {
             return JSON::Type::Number;

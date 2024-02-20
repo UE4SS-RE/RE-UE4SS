@@ -11,28 +11,28 @@ namespace RC::JSON::Parser
         {
             ParserBase::TokenContainer tc;
 
-            tc.add(ParserBase::Token::create(TokenType::CarriageReturn, STR("CarriageReturn"), STR("\r")));
-            tc.add(ParserBase::Token::create(TokenType::NewLine, STR("NewLine"), STR("\n")));
-            tc.add(ParserBase::Token::create(TokenType::DoubleQuote, STR("DoubleQuote"), STR("\"")));
+            tc.add(ParserBase::Token::create(TokenType::CarriageReturn, SYSSTR("CarriageReturn"), SYSSTR("\r")));
+            tc.add(ParserBase::Token::create(TokenType::NewLine, SYSSTR("NewLine"), SYSSTR("\n")));
+            tc.add(ParserBase::Token::create(TokenType::DoubleQuote, SYSSTR("DoubleQuote"), SYSSTR("\"")));
             tc.add(ParserBase::Token::create(TokenType::Characters,
-                                             STR("Characters"),
-                                             STR(""),
+                                             SYSSTR("Characters"),
+                                             SYSSTR(""),
                                              ParserBase::Token::HasData::Yes)); // Empty identifier will match everything that no other token identifier matches
-            tc.add(ParserBase::Token::create(TokenType::ClosingCurlyBrace, STR("ClosingCurlyBrace"), STR("}")));
-            tc.add(ParserBase::Token::create(TokenType::OpeningCurlyBrace, STR("OpeningCurlyBrace"), STR("{")));
-            tc.add(ParserBase::Token::create(TokenType::ClosingSquareBracket, STR("ClosingSquareBracket"), STR("]")));
-            tc.add(ParserBase::Token::create(TokenType::OpeningSquareBracket, STR("OpeningSquareBracket"), STR("[")));
-            tc.add(ParserBase::Token::create(TokenType::Comma, STR("Comma"), STR(",")));
-            tc.add(ParserBase::Token::create(TokenType::Colon, STR("Colon"), STR(":")));
-            tc.add(ParserBase::Token::create(TokenType::True, STR("True"), STR("true")));
-            tc.add(ParserBase::Token::create(TokenType::False, STR("False"), STR("false")));
+            tc.add(ParserBase::Token::create(TokenType::ClosingCurlyBrace, SYSSTR("ClosingCurlyBrace"), SYSSTR("}")));
+            tc.add(ParserBase::Token::create(TokenType::OpeningCurlyBrace, SYSSTR("OpeningCurlyBrace"), SYSSTR("{")));
+            tc.add(ParserBase::Token::create(TokenType::ClosingSquareBracket, SYSSTR("ClosingSquareBracket"), SYSSTR("]")));
+            tc.add(ParserBase::Token::create(TokenType::OpeningSquareBracket, SYSSTR("OpeningSquareBracket"), SYSSTR("[")));
+            tc.add(ParserBase::Token::create(TokenType::Comma, SYSSTR("Comma"), SYSSTR(",")));
+            tc.add(ParserBase::Token::create(TokenType::Colon, SYSSTR("Colon"), SYSSTR(":")));
+            tc.add(ParserBase::Token::create(TokenType::True, SYSSTR("True"), SYSSTR("true")));
+            tc.add(ParserBase::Token::create(TokenType::False, SYSSTR("False"), SYSSTR("false")));
 
             tc.set_eof_token(TokenType::EndOfFile);
 
             return tc;
         }
 
-        static auto parse_internal(UEStringType& input) -> std::unique_ptr<JSON::Object>
+        static auto parse_internal(SystemStringType& input) -> std::unique_ptr<JSON::Object>
         {
             // Tokenize -> START
             ParserBase::Tokenizer tokenizer;
@@ -56,19 +56,19 @@ namespace RC::JSON::Parser
 
     auto parse(File::StringType& input) -> std::unique_ptr<JSON::Object>
     {
-        auto ue_input = to_ue(input);
-        return Internal::parse_internal(ue_input);
+        auto sys_input = to_system(input);
+        return Internal::parse_internal(sys_input);
     }
 
     auto parse(UEStringType& input) -> std::unique_ptr<JSON::Object>
     {
-        auto ue_input = input;
-        return Internal::parse_internal(ue_input);
+        auto sys_input = to_system(input);
+        return Internal::parse_internal(sys_input);
     }
 
     auto parse(const File::Handle& file) -> std::unique_ptr<JSON::Object>
     {
-        auto input = file.read_all();
+        auto input = file.read_file_all();
         return Internal::parse_internal(input);
     }
 } // namespace RC::JSON::Parser

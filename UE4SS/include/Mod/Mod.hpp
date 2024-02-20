@@ -26,8 +26,9 @@ namespace RC
 
       protected:
 #pragma warning(disable : 4251)
-        UEStringType m_mod_name;
-        UEStringType m_mod_path;
+        // we almost never use this to interact with UE
+        SystemStringType m_mod_name;
+        SystemStringType m_mod_path;
 #pragma warning(default : 4251)
 
       protected:
@@ -45,7 +46,7 @@ namespace RC
         };
 
       public:
-        Mod(UE4SSProgram&, UEStringType&& mod_name, UEStringType&& mod_path);
+        Mod(UE4SSProgram&, SystemStringType&& mod_name, SystemStringType&& mod_path);
         virtual ~Mod() = default;
 
       public:

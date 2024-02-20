@@ -37,28 +37,28 @@ namespace RC::UEGenerator
 {
     using namespace Unreal;
 
-    auto get_native_class_name(UClass* uclass, bool interface_name) -> UEStringType
+    auto get_native_class_name(UClass* uclass, bool interface_name) -> SystemStringType
     {
-        UEStringType result_string;
+        SystemStringType result_string;
 
         if (interface_name)
         {
-            result_string.append(STR("I"));
+            result_string.append(SYSSTR("I"));
         }
         else if (uclass->IsChildOf<AActor>())
         {
-            result_string.append(STR("A"));
+            result_string.append(SYSSTR("A"));
         }
         else
         {
-            result_string.append(STR("U"));
+            result_string.append(SYSSTR("U"));
         }
         if ((uclass->GetClassFlags() & Unreal::CLASS_Deprecated) != 0)
         {
-            result_string.append(STR("DEPRECATED_"));
+            result_string.append(SYSSTR("DEPRECATED_"));
         }
 
-        result_string.append(to_ue(uclass->GetName()));
+        result_string.append(to_system(uclass->GetName()));
         return result_string;
     }
 
@@ -74,35 +74,35 @@ namespace RC::UEGenerator
         }
     }
 
-    auto get_native_enum_name(UEnum* uenum, bool include_type) -> UEStringType
+    auto get_native_enum_name(UEnum* uenum, bool include_type) -> SystemStringType
     {
-        UEStringType result_string;
+        SystemStringType result_string;
 
         // Seems to be not needed, because enum objects, unlike classes or structs, retain their normal E prefix
         // ResultString.append(SYSSTR("E"));
-        result_string.append(to_ue(uenum->GetName()));
+        result_string.append(to_system(uenum->GetName()));
 
         // Namespaced enums need to have ::Type appended for the type
         if (uenum->GetCppForm() == UEnum::ECppForm::Namespaced && include_type)
         {
-            result_string.append(STR("::Type"));
+            result_string.append(SYSSTR("::Type"));
         }
         return result_string;
     }
 
-    auto get_native_struct_name(UScriptStruct* script_struct) -> UEStringType
+    auto get_native_struct_name(UScriptStruct* script_struct) -> SystemStringType
     {
-        UEStringType result_string;
+        SystemStringType result_string;
 
-        result_string.append(STR("F"));
-        result_string.append(to_ue(script_struct->GetName()));
+        result_string.append(SYSSTR("F"));
+        result_string.append(to_system(script_struct->GetName()));
 
         return result_string;
     }
 
-    auto sanitize_property_name(const UEStringType& property_name) -> UEStringType
+    auto sanitize_property_name(const SystemStringType& property_name) -> SystemStringType
     {
-        UEStringType resulting_name = property_name;
+        SystemStringType resulting_name = property_name;
 
         // Remove heading underscore, used by private variables in some games
         if (resulting_name.length() >= 2 && resulting_name[0] == STR('_'))
@@ -130,7 +130,7 @@ namespace RC::UEGenerator
     }
 
     auto generate_property_cxx_name(FProperty* property, bool is_top_level_declaration, UObject* class_context, EnableForwardDeclarations enable_forward_declarations)
-            -> UEStringType
+            -> SystemStringType
     {
         const auto field_class_name = to_system(property->GetClass().GetName());
 

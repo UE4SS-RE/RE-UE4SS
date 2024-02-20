@@ -4107,7 +4107,7 @@ Overloads:
                 }
                 catch (std::runtime_error& e)
                 {
-                    logln(to_system(e.what()));
+                    logln(to_system_string(e.what()));
                 }
 
                 // We always return true when the console Lua executor is enabled in order to suppress other handlers

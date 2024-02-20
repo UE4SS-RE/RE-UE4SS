@@ -5,13 +5,13 @@ namespace RC::JSON
     template <typename T>
     struct TypedKeyValuePair
     {
-        const UEStringType& key;
+        const SystemStringType& key;
         T* value{};
     };
 
     struct KeyValuePair
     {
-        UEStringType key{};
+        SystemStringType key{};
         std::unique_ptr<JSON::Value> value{};
 
         template <typename JSONElementType>

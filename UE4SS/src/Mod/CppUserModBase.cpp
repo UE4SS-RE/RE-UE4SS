@@ -8,7 +8,7 @@ namespace RC
     {
         if (ModIntendedSDKVersion.empty())
         {
-            ModIntendedSDKVersion = std::format(SYSSTR("{}.{}.{}"), UE4SS_LIB_VERSION_MAJOR, UE4SS_LIB_VERSION_MINOR, UE4SS_LIB_VERSION_HOTFIX);
+            ModIntendedSDKVersion = to_ue(std::format(SYSSTR("{}.{}.{}"), UE4SS_LIB_VERSION_MAJOR, UE4SS_LIB_VERSION_MINOR, UE4SS_LIB_VERSION_HOTFIX));
         }
     }
 

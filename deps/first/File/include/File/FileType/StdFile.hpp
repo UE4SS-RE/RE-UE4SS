@@ -78,7 +78,7 @@ namespace RC::File
         [[nodiscard]] RC_FILE_API auto static open_file(const std::filesystem::path& file_name_and_path, const OpenProperties& open_properties) -> StdFile;
 
         [[nodiscard]] RC_FILE_API auto read_file_all() const -> SystemStringType override;
-        RC_FILE_API auto auto write_file_string_to_file(StringViewType) -> void override;
+        RC_FILE_API auto write_file_string_to_file(StringViewType) -> void override;
         // File Interface -> END
     };
 

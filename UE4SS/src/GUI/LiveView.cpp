@@ -586,7 +586,7 @@ namespace RC::GUI
     
         bool is_legacy = !std::filesystem::exists(working_directory_path) && std::filesystem::exists(legacy_root_directory_path);
         auto json_file = File::open(is_legacy ? legacy_root_directory_path : working_directory_path, File::OpenFor::Reading, File::OverwriteExistingFile::No, File::CreateIfNonExistent::Yes);
-        auto json_file_contents = json_file.read_all();
+        auto json_file_contents = json_file.read_file_all();
         if (json_file_contents.empty())
         {
             return;
@@ -680,7 +680,7 @@ namespace RC::GUI
                                     File::OverwriteExistingFile::Yes,
                                     File::CreateIfNonExistent::Yes);
         int32_t json_indent_level{};
-        json_file.write_string_to_file(json.serialize(JSON::ShouldFormat::Yes, &json_indent_level));
+        json_file.write_file_string_to_file(to_file(json.serialize(JSON::ShouldFormat::Yes, &json_indent_level)));
     }
 
     static auto save_watches_to_disk() -> void

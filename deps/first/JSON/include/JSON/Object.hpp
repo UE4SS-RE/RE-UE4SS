@@ -30,7 +30,7 @@ namespace RC::JSON
 
 #pragma warning(disable : 4251)
       private:
-        std::unordered_map<UEStringType, std::unique_ptr<JSON::Value>> m_members{};
+        std::unordered_map<SystemStringType, std::unique_ptr<JSON::Value>> m_members{};
         IsGlobalObject m_is_global_object{IsGlobalObject::No};
 #pragma warning(default : 4251)
 
@@ -44,17 +44,17 @@ namespace RC::JSON
         auto operator=(const Object&) -> Object& = delete;
 
       private:
-        auto find_value_by_key(const UEStringType& key) const -> Value*;
-        auto find_value_by_key(const UEStringType& key) -> Value*;
+        auto find_value_by_key(const SystemStringType& key) const -> Value*;
+        auto find_value_by_key(const SystemStringType& key) -> Value*;
 
       public:
-        auto new_object(UEStringType name) -> Object&;
-        auto new_array(UEStringType name) -> class Array&;
-        auto new_string(UEStringType name, const UEStringType& value) -> void;
-        auto new_null(UEStringType name) -> void;
-        auto new_bool(UEStringType name, bool value) -> void;
+        auto new_object(SystemStringType name) -> Object&;
+        auto new_array(SystemStringType name) -> class Array&;
+        auto new_string(SystemStringType name, const SystemStringType& value) -> void;
+        auto new_null(SystemStringType name) -> void;
+        auto new_bool(SystemStringType name, bool value) -> void;
 
-        auto add_object(UEStringType name, std::unique_ptr<Object>) -> void;
+        auto add_object(SystemStringType name, std::unique_ptr<Object>) -> void;
 
         auto get() -> decltype(m_members)&
         {
@@ -66,7 +66,7 @@ namespace RC::JSON
         };
 
         template <typename ValueType>
-        auto get(const UEStringType& key) const -> ValueType&
+        auto get(const SystemStringType& key) const -> ValueType&
         {
             auto value = find_value_by_key(key);
             if (!value)
@@ -77,7 +77,7 @@ namespace RC::JSON
         }
 
         template <typename ValueType>
-        auto get(const UEStringType& key) -> ValueType&
+        auto get(const SystemStringType& key) -> ValueType&
         {
             auto value = find_value_by_key(key);
             if (!value)
@@ -88,12 +88,12 @@ namespace RC::JSON
         }
 
         template <JSONNumber number_type>
-        auto new_number(UEStringType name, number_type value) -> void
+        auto new_number(SystemStringType name, number_type value) -> void
         {
             m_members.emplace(std::move(name), std::make_unique<Number>(value));
         }
 
-        auto serialize(ShouldFormat should_format = ShouldFormat::No, int32_t* indent_level = nullptr) -> UEStringType override;
+        auto serialize(ShouldFormat should_format = ShouldFormat::No, int32_t* indent_level = nullptr) -> SystemStringType override;
         auto get_type() const -> Type override
         {
             return Type::Object;

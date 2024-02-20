@@ -5,7 +5,7 @@
 
 namespace RC::Ini
 {
-    auto Parser::parse_internal(UEStringType& input) -> void
+    auto Parser::parse_internal(SystemStringType& input) -> void
     {
         // Tokenize -> START
         ParserBase::Tokenizer tokenizer;
@@ -25,24 +25,24 @@ namespace RC::Ini
     {
         ParserBase::TokenContainer tc;
 
-        tc.add(ParserBase::Token::create(IniTokenType::CarriageReturn, STR("CarriageReturn"), STR("\r")));
-        tc.add(ParserBase::Token::create(IniTokenType::NewLine, STR("NewLine"), STR("\n")));
-        tc.add(ParserBase::Token::create(IniTokenType::Space, STR("Space"), STR(" ")));
+        tc.add(ParserBase::Token::create(IniTokenType::CarriageReturn, SYSSTR("CarriageReturn"), SYSSTR("\r")));
+        tc.add(ParserBase::Token::create(IniTokenType::NewLine, SYSSTR("NewLine"), SYSSTR("\n")));
+        tc.add(ParserBase::Token::create(IniTokenType::Space, SYSSTR("Space"), SYSSTR(" ")));
         tc.add(ParserBase::Token::create(IniTokenType::Characters,
-                                         STR("Characters"),
-                                         STR(""),
+                                         SYSSTR("Characters"),
+                                         SYSSTR(""),
                                          ParserBase::Token::HasData::Yes)); // Empty identifier will match everything that no other token identifier matches
-        tc.add(ParserBase::Token::create /*<IniInternal::TokenEqualsAlwaysHaveCharactersUntilEndLine>*/ (IniTokenType::Equals, STR("Equals"), STR("=")));
-        tc.add(ParserBase::Token::create(IniTokenType::ClosingSquareBracket, STR("CloseSquareBracket"), STR("]")));
-        tc.add(ParserBase::Token::create(IniTokenType::OpeningSquareBracket, STR("OpenSquareBracket"), STR("[")));
-        tc.add(ParserBase::Token::create(IniTokenType::SemiColon, STR("SemiColon"), STR(";")));
+        tc.add(ParserBase::Token::create /*<IniInternal::TokenEqualsAlwaysHaveCharactersUntilEndLine>*/ (IniTokenType::Equals, SYSSTR("Equals"), SYSSTR("=")));
+        tc.add(ParserBase::Token::create(IniTokenType::ClosingSquareBracket, SYSSTR("CloseSquareBracket"), SYSSTR("]")));
+        tc.add(ParserBase::Token::create(IniTokenType::OpeningSquareBracket, SYSSTR("OpenSquareBracket"), SYSSTR("[")));
+        tc.add(ParserBase::Token::create(IniTokenType::SemiColon, SYSSTR("SemiColon"), SYSSTR(";")));
 
         tc.set_eof_token(IniTokenType::EndOfFile);
 
         return tc;
     }
 
-    auto Parser::get_value(const UEStringType& section, const UEStringType& key, CanThrow can_throw) const
+    auto Parser::get_value(const SystemStringType& section, const SystemStringType& key, CanThrow can_throw) const
             -> std::optional<std::reference_wrapper<const Value>>
     {
         if (!m_parsing_is_complete)
@@ -77,18 +77,18 @@ namespace RC::Ini
         }
     }
 
-    auto Parser::parse(UEStringType& input) -> void
+    auto Parser::parse(SystemStringType& input) -> void
     {
         parse_internal(input);
     }
 
     auto Parser::parse(const File::Handle& file) -> void
     {
-        auto input = file.read_all();
+        auto input = file.read_file_all();
         parse_internal(input);
     }
 
-    auto Parser::get_list(const UEStringType& section) -> List
+    auto Parser::get_list(const SystemStringType& section) -> List
     {
 
         const auto& section_iter = m_sections.find(section);
@@ -102,13 +102,13 @@ namespace RC::Ini
         }
     }
 
-    auto Parser::get_ordered_list(const UEStringType& section) -> List
+    auto Parser::get_ordered_list(const SystemStringType& section) -> List
     {
         return get_list(section);
     }
 
-    auto Parser::get_string(const UEStringType& section, const UEStringType& key, const UEStringType& default_value) const noexcept
-            -> const UEStringType&
+    auto Parser::get_string(const SystemStringType& section, const SystemStringType& key, const SystemStringType& default_value) const noexcept
+            -> const SystemStringType&
     {
         const auto maybe_value = get_value(section, key, CanThrow::No);
         if (!maybe_value.has_value())
@@ -129,7 +129,7 @@ namespace RC::Ini
         }
     }
 
-    auto Parser::get_string(const UEStringType& section, const UEStringType& key) const -> const UEStringType&
+    auto Parser::get_string(const SystemStringType& section, const SystemStringType& key) const -> const SystemStringType&
     {
         const auto maybe_value = get_value(section, key);
         if (!maybe_value.has_value())
@@ -150,7 +150,7 @@ namespace RC::Ini
         }
     }
 
-    auto Parser::get_int64(const UEStringType& section, const UEStringType& key, int64_t default_value) const noexcept -> int64_t
+    auto Parser::get_int64(const SystemStringType& section, const SystemStringType& key, int64_t default_value) const noexcept -> int64_t
     {
         const auto maybe_value = get_value(section, key, CanThrow::No);
         if (!maybe_value.has_value())
@@ -171,7 +171,7 @@ namespace RC::Ini
         }
     }
 
-    auto Parser::get_int64(const UEStringType& section, const UEStringType& key) const -> int64_t
+    auto Parser::get_int64(const SystemStringType& section, const SystemStringType& key) const -> int64_t
     {
         const auto maybe_value = get_value(section, key);
         if (!maybe_value.has_value())
@@ -192,7 +192,7 @@ namespace RC::Ini
         }
     }
 
-    auto Parser::get_float(const UEStringType& section, const UEStringType& key, float default_value) const noexcept -> float
+    auto Parser::get_float(const SystemStringType& section, const SystemStringType& key, float default_value) const noexcept -> float
     {
         const auto maybe_value = get_value(section, key, CanThrow::No);
         if (!maybe_value.has_value())
@@ -213,7 +213,7 @@ namespace RC::Ini
         }
     }
 
-    auto Parser::get_float(const UEStringType& section, const UEStringType& key) const -> float
+    auto Parser::get_float(const SystemStringType& section, const SystemStringType& key) const -> float
     {
         const auto maybe_value = get_value(section, key);
         if (!maybe_value.has_value())
@@ -234,7 +234,7 @@ namespace RC::Ini
         }
     }
 
-    auto Parser::get_bool(const UEStringType& section, const UEStringType& key, bool default_value) const noexcept -> bool
+    auto Parser::get_bool(const SystemStringType& section, const SystemStringType& key, bool default_value) const noexcept -> bool
     {
         const auto maybe_value = get_value(section, key, CanThrow::No);
         if (!maybe_value.has_value())
@@ -255,7 +255,7 @@ namespace RC::Ini
         }
     }
 
-    auto Parser::get_bool(const UEStringType& section, const UEStringType& key) const -> bool
+    auto Parser::get_bool(const SystemStringType& section, const SystemStringType& key) const -> bool
     {
         const auto maybe_value = get_value(section, key);
         if (!maybe_value.has_value())

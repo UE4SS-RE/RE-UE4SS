@@ -8,6 +8,7 @@
 #include <DynamicOutput/Macros.hpp>
 #include <DynamicOutput/OutputDevice.hpp>
 #include <File/File.hpp>
+#include <Helpers/String.hpp>
 
 namespace RC::Output
 {
@@ -82,7 +83,7 @@ namespace RC::Output
         // Do file output stuff here
         // File should already be open & be ready for writing (happens in constructor)
 
-        m_file.write_string_to_file(m_formatter(fmt));
+        m_file.write_file_string_to_file(to_file(m_formatter(fmt)));
     }
     // OutputDevice Interface -> END
 

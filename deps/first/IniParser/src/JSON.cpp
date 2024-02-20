@@ -362,14 +362,14 @@ namespace RC::Parser
         m_token_parser->parse();
     }
 
-    auto JSON::parse(UEStringType& input) -> void
+    auto JSON::parse(SystemStringType& input) -> void
     {
         parse_internal(input);
     }
 
     auto JSON::parse(File::Handle& file) -> void
     {
-        auto input = file.read_all();
+        auto input = file.read_file_all();
         parse_internal(input);
     }
 

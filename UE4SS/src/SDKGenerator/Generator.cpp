@@ -677,17 +677,22 @@ namespace RC::UEGenerator
         }
         auto generate_file_header(GeneratedFile& generated_file) -> void
         {
-            generated_file.primary_file.write_string_to_file(
-                    std::format(SYSSTR("#ifndef UE4SS_SDK_{}_HPP\n#define UE4SS_SDK_{}_HPP\n\n"), generated_file.package_name, generated_file.package_name));
+            generated_file.primary_file.write_file_string_to_file(
+                    to_file(std::format(SYSSTR("#ifndef UE4SS_SDK_{}_HPP\n#define UE4SS_SDK_{}_HPP\n\n"), generated_file.package_name, generated_file.package_name))
+            );
 
             if (!generated_file.secondary_file_has_no_contents)
             {
-                generated_file.primary_file.write_string_to_file(std::format(SYSSTR("#include \"{}\"\n\n"), generated_file.secondary_file_name.filename().c_str()));
+                generated_file.primary_file.write_file_string_to_file(
+                    to_file(std::format(SYSSTR("#include \"{}\"\n\n"), generated_file.secondary_file_name.filename().c_str()))
+                );
             }
         }
         auto generate_file_footer(GeneratedFile& generated_file) -> void
         {
-            generated_file.primary_file.write_string_to_file(std::format(SYSSTR("#endif\n")));
+            generated_file.primary_file.write_file_string_to_file(
+                IOSTR(SYSSTR("#endif\n"))
+            );
         }
         auto generate_enum_declaration(SystemStringType& content_buffer, UEnum* uenum) -> void
         {
@@ -1087,7 +1092,7 @@ namespace RC::UEGenerator
         }
         auto generate_file_header(GeneratedFile& generated_file) -> void
         {
-            generated_file.primary_file.write_string_to_file(SYSSTR("---@meta\n\n"));
+            generated_file.primary_file.write_file_string_to_file(IOSTR("---@meta\n\n"));
         }
         auto generate_file_footer(GeneratedFile& generated_file) -> void
         {
