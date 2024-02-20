@@ -1,0 +1,52 @@
+name: Linux Test Build
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ "linux-port" ]
+    paths:
+      - "UE4SS/src/**"
+      - "UE4SS/include/**"
+      - "UE4SS/generated_src/**"
+      - "UE4SS/generated_include/**"
+      - "deps/**"
+      - "UE4SS/proxy_generator/**"
+      - ".github/**"
+      - "CMakeLists.txt"
+
+permissions:
+  contents: read
+
+jobs:
+  make-release:
+    runs-on: windows-2022
+    steps:
+      - name: Setup github SSH
+        uses: shimataro/ssh-key-action@v2
+        with:
+          key: ${{ secrets.SSHKEY }}
+          known_hosts: unnecessary
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          fetch-depth: 0 # needed to get commits since last tag
+          ssh-key: ${{ secrets.SSHKEY }}
+      - name: Setup MSVC
+        uses: ilammy/msvc-dev-cmd@v1
+      - name: Setup Ninja
+        uses: seanmiddleditch/gha-setup-ninja@v3
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@1.76.0
+      - name: Build
+        run: |
+          cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Game__Shipping__Windows
+          cmake --build build
+        env:
+          SCCACHE_GHA_ENABLED: "true"
+          RUSTC_WRAPPER: "sccache"
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: Windows-Release
+          path: build/Output/Game__Shipping__Win64/UE4SS/bin
