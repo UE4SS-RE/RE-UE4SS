@@ -34,8 +34,8 @@ Steps to reproduce the behavior:
 A clear and concise description of what you expected to happen.
 
 
-**Screenshots and UE4SS Log**
-If applicable, add screenshots to help explain your problem, and upload the log.
+**Screenshots, UE4SS Log, and .dmp file**
+If applicable, add screenshots to help explain your problem, and upload the log and .dmp files located in the Win64 directory.
 
 
 **Desktop (please complete the following information):**
