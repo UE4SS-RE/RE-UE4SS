@@ -68,7 +68,7 @@ namespace RC::JSON::Parser
 
     auto parse(const File::Handle& file) -> std::unique_ptr<JSON::Object>
     {
-        auto input = file.read_file_all();
+        auto input = to_system_string(file.read_file_all());
         return Internal::parse_internal(input);
     }
 } // namespace RC::JSON::Parser

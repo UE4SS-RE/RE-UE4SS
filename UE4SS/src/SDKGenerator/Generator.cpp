@@ -691,7 +691,7 @@ namespace RC::UEGenerator
         auto generate_file_footer(GeneratedFile& generated_file) -> void
         {
             generated_file.primary_file.write_file_string_to_file(
-                IOSTR(SYSSTR("#endif\n"))
+                IOSTR("#endif\n")
             );
         }
         auto generate_enum_declaration(SystemStringType& content_buffer, UEnum* uenum) -> void

@@ -84,7 +84,7 @@ namespace RC::Ini
 
     auto Parser::parse(const File::Handle& file) -> void
     {
-        auto input = file.read_file_all();
+        auto input = to_system_string(file.read_file_all());
         parse_internal(input);
     }
 

@@ -1319,7 +1319,7 @@ namespace RC::UEGenerator
 
             if (string_value_string != SYSSTR(""))
             {
-                const SystemStringType result_value = create_string_literal(string_value_string);
+                const auto result_value = create_string_literal(to_system_string(string_value_string));
                 if (!super_and_no_access)
                 {
                     generate_simple_assignment_expression(property, result_value, implementation_file, property_scope);

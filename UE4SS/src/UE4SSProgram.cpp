@@ -511,7 +511,8 @@ namespace RC
             if (auto file_contents = file.read_file_all(); !file_contents.empty())
             {
                 Ini::Parser parser;
-                parser.parse(file_contents);
+                auto content = to_system_string(file_contents);
+                parser.parse(content);
                 file.close();
 
                 // The following code is auto-generated.
