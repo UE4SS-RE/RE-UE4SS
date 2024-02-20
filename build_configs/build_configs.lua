@@ -184,8 +184,6 @@ function config(self, target)
     self:apply_target_options(target, config_options)
     self:apply_target_options(target, platform_options)
 
-    local is_debug = modes.config == "Debug" or modes.config == "Dev"
-    target:set("runtimes", (is_debug and "MDd" or "MD"), { public = true })
 end
 
 -- Construct output dir for target
@@ -206,6 +204,19 @@ end
 function clean_output_dir(self, target)
     local output_dir = self:construct_output_dir(target)
     os.rm(output_dir)
+end
+
+-- Get runtime for current mode
+function get_runtime_for_current_mode()
+    local mode = get_config("mode")
+
+    if mode == nil then
+        return "MD"
+    end
+
+    local modes = mode_string_to_modes(nil, mode)
+    local is_debug = modes.config == "Debug" or modes.config == "Dev"
+    return is_debug and "MDd" or "MD"
 end
 
 -- return module: build_configs
