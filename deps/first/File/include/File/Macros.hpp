@@ -132,7 +132,7 @@ namespace RC
     using UEIStreamType = std::basic_ifstream<std::u16string::value_type>;
     using UEOStreamType = std::basic_ofstream<std::u16string::value_type>;
     constexpr auto ToUEString = [](auto&& numeric_value) constexpr -> decltype(auto) {
-        return std::to_u16string(std::forward<decltype(numeric_value)>(numeric_value));
+        return to_ue(std::to_string(std::forward<decltype(numeric_value)>(numeric_value)));
     };
 #endif // WIN32
 #define UEStringPrint "%S"
