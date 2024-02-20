@@ -170,10 +170,10 @@ int _tmain(int argc, TCHAR* argv[])
 
     cpp_file << "void load_original_dll()" << endl;
     cpp_file << "{" << endl;
-    cpp_file << "    File::CharType path[MAX_PATH];" << endl;
+    cpp_file << "    SystemCharType path[MAX_PATH];" << endl;
     cpp_file << "    GetSystemDirectory(path, MAX_PATH);" << endl;
     cpp_file << endl;
-    cpp_file << std::format("    File::StringType dll_path = File::StringType(path) + STR(\"\\\\{}\");", input_dll_name.string()) << endl;
+    cpp_file << std::format("    SystemStringType dll_path = SystemStringType(path) + SYSSTR(\"\\\\{}\");", input_dll_name.string()) << endl;
     cpp_file << endl;
     cpp_file << "    SOriginalDll = LoadLibrary(dll_path.c_str());" << endl;
     cpp_file << "    if (!SOriginalDll)" << endl;
