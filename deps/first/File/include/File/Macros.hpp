@@ -122,18 +122,12 @@ namespace RC
     using UECharType = std::wstring::value_type;
     using UEIStreamType = std::wifstream;
     using UEOStreamType = std::wofstream;
-    constexpr auto ToUEString = [](auto&& numeric_value) constexpr -> decltype(auto) {
-        return std::to_wstring(std::forward<decltype(numeric_value)>(numeric_value));
-    };
 #else
     using UEStringType = std::u16string;
     using UEStringViewType = std::u16string_view;
     using UECharType = std::u16string::value_type;
     using UEIStreamType = std::basic_ifstream<std::u16string::value_type>;
     using UEOStreamType = std::basic_ofstream<std::u16string::value_type>;
-    constexpr auto ToUEString = [](auto&& numeric_value) constexpr -> decltype(auto) {
-        return to_ue(std::to_string(std::forward<decltype(numeric_value)>(numeric_value)));
-    };
 #endif // WIN32
 #define UEStringPrint "%S"
 #endif // RC_IS_ANSI
