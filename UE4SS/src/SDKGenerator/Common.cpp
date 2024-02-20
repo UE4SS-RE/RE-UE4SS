@@ -37,28 +37,28 @@ namespace RC::UEGenerator
 {
     using namespace Unreal;
 
-    auto get_native_class_name(UClass* uclass, bool interface_name) -> File::StringType
+    auto get_native_class_name(UClass* uclass, bool interface_name) -> UEStringType
     {
-        File::StringType result_string;
+        UEStringType result_string;
 
         if (interface_name)
         {
-            result_string.append(SYSSTR("I"));
+            result_string.append(STR("I"));
         }
         else if (uclass->IsChildOf<AActor>())
         {
-            result_string.append(SYSSTR("A"));
+            result_string.append(STR("A"));
         }
         else
         {
-            result_string.append(SYSSTR("U"));
+            result_string.append(STR("U"));
         }
         if ((uclass->GetClassFlags() & Unreal::CLASS_Deprecated) != 0)
         {
-            result_string.append(SYSSTR("DEPRECATED_"));
+            result_string.append(STR("DEPRECATED_"));
         }
 
-        result_string.append(to_system(uclass->GetName()));
+        result_string.append(to_ue(uclass->GetName()));
         return result_string;
     }
 
@@ -74,43 +74,43 @@ namespace RC::UEGenerator
         }
     }
 
-    auto get_native_enum_name(UEnum* uenum, bool include_type) -> File::StringType
+    auto get_native_enum_name(UEnum* uenum, bool include_type) -> UEStringType
     {
-        SystemStringType result_string;
+        UEStringType result_string;
 
         // Seems to be not needed, because enum objects, unlike classes or structs, retain their normal E prefix
         // ResultString.append(SYSSTR("E"));
-        result_string.append(to_system(uenum->GetName()));
+        result_string.append(to_ue(uenum->GetName()));
 
         // Namespaced enums need to have ::Type appended for the type
         if (uenum->GetCppForm() == UEnum::ECppForm::Namespaced && include_type)
         {
-            result_string.append(SYSSTR("::Type"));
+            result_string.append(STR("::Type"));
         }
         return result_string;
     }
 
-    auto get_native_struct_name(UScriptStruct* script_struct) -> File::StringType
+    auto get_native_struct_name(UScriptStruct* script_struct) -> UEStringType
     {
-        SystemStringType result_string;
+        UEStringType result_string;
 
-        result_string.append(SYSSTR("F"));
-        result_string.append(to_system(script_struct->GetName()));
+        result_string.append(STR("F"));
+        result_string.append(to_ue(script_struct->GetName()));
 
         return result_string;
     }
 
-    auto sanitize_property_name(const File::StringType& property_name) -> File::StringType
+    auto sanitize_property_name(const UEStringType& property_name) -> UEStringType
     {
-        SystemStringType resulting_name = property_name;
+        UEStringType resulting_name = property_name;
 
         // Remove heading underscore, used by private variables in some games
-        if (resulting_name.length() >= 2 && resulting_name[0] == '_')
+        if (resulting_name.length() >= 2 && resulting_name[0] == STR('_'))
         {
             resulting_name.erase(0, 1);
         }
         // Remove heading m if it is followed by uppercase letter, used by variables in some games
-        if (resulting_name.length() >= 2 && resulting_name[0] == 'm' && towupper(resulting_name[1]) == resulting_name[1])
+        if (resulting_name.length() >= 2 && resulting_name[0] == STR('m') && towupper(resulting_name[1]) == resulting_name[1])
         {
             resulting_name.erase(0, 1);
         }
@@ -123,14 +123,14 @@ namespace RC::UEGenerator
         return resulting_name;
     }
 
-    auto generate_delegate_name(FProperty* property, const File::StringType& context_name) -> File::StringType
+    auto generate_delegate_name(FProperty* property, const UEStringType& context_name) -> SystemStringType
     {
         const auto property_name = sanitize_property_name(to_system_string(property->GetName()));
-        return std::format(SYSSTR("F{}{}"), context_name, property_name);
+        return std::format(SYSSTR("F{}{}"), to_system(context_name), to_system(property_name));
     }
 
     auto generate_property_cxx_name(FProperty* property, bool is_top_level_declaration, UObject* class_context, EnableForwardDeclarations enable_forward_declarations)
-            -> File::StringType
+            -> UEStringType
     {
         const auto field_class_name = to_system(property->GetClass().GetName());
 
@@ -143,7 +143,7 @@ namespace RC::UEGenerator
             if (enum_value != NULL)
             {
                 // Non-EnumClass enumerations should be wrapped into TEnumAsByte according to UHT
-                const SystemStringType enum_type_name = get_native_enum_name(enum_value);
+                const SystemStringType enum_type_name = to_system(get_native_enum_name(enum_value));
                 return std::format(SYSSTR("TEnumAsByte<{}>"), enum_type_name);
             }
             return SYSSTR("uint8");
@@ -224,7 +224,7 @@ namespace RC::UEGenerator
                 return SYSSTR("UClass*");
             }
 
-            File::StringType meta_class_name{};
+            SystemStringType meta_class_name{};
             if (enable_forward_declarations == EnableForwardDeclarations::Yes)
             {
                 meta_class_name = SYSSTR("class ");
@@ -299,7 +299,7 @@ namespace RC::UEGenerator
                 return SYSSTR("TWeakObjectPtr<UObject>");
             }
 
-            File::StringType property_class_name{};
+            SystemStringType property_class_name{};
             if (enable_forward_declarations == EnableForwardDeclarations::Yes)
             {
                 property_class_name = std::format(SYSSTR("class "));
@@ -318,7 +318,7 @@ namespace RC::UEGenerator
                 return SYSSTR("TLazyObjectPtr<UObject>");
             }
 
-            File::StringType property_class_name{};
+            SystemStringType property_class_name{};
             if (enable_forward_declarations == EnableForwardDeclarations::Yes)
             {
                 property_class_name = SYSSTR("class ");
@@ -352,7 +352,7 @@ namespace RC::UEGenerator
                 return SYSSTR("FScriptInterface");
             }
 
-            File::StringType interface_class_name{};
+            SystemStringType interface_class_name{};
             if (enable_forward_declarations == EnableForwardDeclarations::Yes)
             {
                 interface_class_name = SYSSTR("class ");
@@ -418,7 +418,7 @@ namespace RC::UEGenerator
             FArrayProperty* array_property = static_cast<FArrayProperty*>(property);
             FProperty* inner_property = array_property->GetInner();
 
-            File::StringType inner_property_type{};
+            SystemStringType inner_property_type{};
             if (enable_forward_declarations == EnableForwardDeclarations::Yes && !is_integral_type(inner_property))
             {
                 if (inner_property->IsA<FObjectProperty>())
@@ -446,8 +446,8 @@ namespace RC::UEGenerator
             FProperty* key_property = map_property->GetKeyProp();
             FProperty* value_property = map_property->GetValueProp();
 
-            File::StringType key_type{};
-            File::StringType value_type{};
+            SystemStringType key_type{};
+            SystemStringType value_type{};
             if (enable_forward_declarations == EnableForwardDeclarations::Yes && !is_integral_type(key_property) && !is_integral_type(value_property))
             {
                 if (!key_property->IsA<FClassPtrProperty>())
@@ -482,7 +482,7 @@ namespace RC::UEGenerator
         throw std::runtime_error(RC::fmt("Unsupported property class " SystemStringPrint, field_class_name));
     }
 
-    auto generate_property_lua_name(FProperty* property, bool is_top_level_declaration, UObject* class_context) -> File::StringType
+    auto generate_property_lua_name(FProperty* property, bool is_top_level_declaration, UObject* class_context) -> SystemStringType
     {
         const auto field_class_name = to_system(property->GetClass().GetName());
 
@@ -602,7 +602,7 @@ namespace RC::UEGenerator
                 return SYSSTR("TWeakObjectPtr<UObject>");
             }
 
-            File::StringType property_class_name{};
+            SystemStringType property_class_name{};
             property_class_name.append(get_native_class_name(property_class, false));
             return std::format(SYSSTR("TWeakObjectPtr<{}>"), property_class_name);
         }
@@ -617,7 +617,7 @@ namespace RC::UEGenerator
                 return SYSSTR("TLazyObjectPtr<UObject>");
             }
 
-            File::StringType property_class_name{};
+            SystemStringType property_class_name{};
             property_class_name.append(get_native_class_name(property_class, false));
             return std::format(SYSSTR("TLazyObjectPtr<{}>"), property_class_name);
         }
@@ -647,7 +647,7 @@ namespace RC::UEGenerator
                 return SYSSTR("UClass");
             }
 
-            File::StringType meta_class_name{};
+            SystemStringType meta_class_name{};
             meta_class_name.append(get_native_class_name(meta_class, false));
             return std::format(SYSSTR("TSubclassOf<{}>"), meta_class_name);
         }
@@ -683,7 +683,7 @@ namespace RC::UEGenerator
                 return SYSSTR("FScriptInterface");
             }
 
-            File::StringType interface_class_name{};
+            SystemStringType interface_class_name{};
             interface_class_name.append(get_native_class_name(interface_class, true));
             return std::format(SYSSTR("TScriptInterface<{}>"), interface_class_name);
         }
@@ -745,7 +745,7 @@ namespace RC::UEGenerator
             FArrayProperty* array_property = static_cast<FArrayProperty*>(property);
             FProperty* inner_property = array_property->GetInner();
 
-            File::StringType inner_property_type{};
+            SystemStringType inner_property_type{};
             inner_property_type.append(generate_property_lua_name(inner_property, is_top_level_declaration, class_context));
             return std::format(SYSSTR("TArray<{}>"), inner_property_type);
         }
@@ -766,8 +766,8 @@ namespace RC::UEGenerator
             FProperty* key_property = map_property->GetKeyProp();
             FProperty* value_property = map_property->GetValueProp();
 
-            File::StringType key_type{};
-            File::StringType value_type{};
+            SystemStringType key_type{};
+            SystemStringType value_type{};
             key_type.append(generate_property_lua_name(key_property, is_top_level_declaration, class_context));
             value_type.append(generate_property_lua_name(value_property, is_top_level_declaration, class_context));
 
@@ -790,7 +790,7 @@ namespace RC::UEGenerator
         throw std::runtime_error(RC::fmt("Unsupported property class {}", field_class_name));
     }
 
-    auto get_native_delegate_type_name(Unreal::UFunction* signature_function, Unreal::UClass* current_class, bool strip_outer_name) -> File::StringType
+    auto get_native_delegate_type_name(Unreal::UFunction* signature_function, Unreal::UClass* current_class, bool strip_outer_name) -> SystemStringType
     {
         if (!is_delegate_signature_function(signature_function))
         {
@@ -798,7 +798,7 @@ namespace RC::UEGenerator
         }
 
         // Delegate names always start with F and have __DelegateSignature postfix
-        File::StringType delegate_type_name = strip_delegate_signature_postfix(signature_function);
+        SystemStringType delegate_type_name = strip_delegate_signature_postfix(signature_function);
         delegate_type_name.insert(0, SYSSTR("F"));
 
         // Return the delegate name without the outer name if we have been requested to strip it
@@ -818,7 +818,7 @@ namespace RC::UEGenerator
             {
                 // For interface, delegates are declared inside the interface definition
                 bool is_class_interface = delegate_outer_class->IsChildOf<UInterface>();
-                const File::StringType outer_class_name = get_native_class_name(delegate_outer_class, is_class_interface);
+                const SystemStringType outer_class_name = get_native_class_name(delegate_outer_class, is_class_interface);
 
                 delegate_type_name.insert(0, SYSSTR("::"));
                 delegate_type_name.insert(0, outer_class_name);
@@ -837,7 +837,7 @@ namespace RC::UEGenerator
         return (function->GetFunctionFlags() & Unreal::FUNC_Delegate) != 0 && function->GetName().ends_with(DELEGATE_SIGNATURE_POSTFIX);
     }
 
-    auto strip_delegate_signature_postfix(Unreal::UFunction* signature_function) -> File::StringType
+    auto strip_delegate_signature_postfix(Unreal::UFunction* signature_function) -> SystemStringType
     {
         if (!is_delegate_signature_function(signature_function))
         {

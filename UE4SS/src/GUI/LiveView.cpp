@@ -717,7 +717,7 @@ namespace RC::GUI
         auto& file_device = output.get_device<Output::FileDevice>();
         file_device.set_file_name_and_path(UEStringType{UE4SSProgram::get_program().get_working_directory()} +
                                            std::format(SYSSTR("\\watches\\ue4ss_watch_{}_{}.txt"), object_name, property_name));
-        file_device.set_formatter([](File::StringViewType string) -> File::StringType {
+        file_device.set_formatter([](SystemStringViewType string) -> SystemStringType {
             const auto when_as_string = std::format(SYSSTR("{:%Y-%m-%d %H:%M:%S}"), std::chrono::system_clock::now());
             return std::format(SYSSTR("[{}] {}"), when_as_string, string);
         });

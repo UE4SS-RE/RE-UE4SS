@@ -46,7 +46,7 @@ namespace RC::Output
         mutable bool m_is_device_ready{};
 
         // Formatter function
-        using Formatter = File::StringType (*)(File::StringViewType);
+        using Formatter = SystemStringType (*)(SystemStringViewType);
         Formatter m_formatter{&default_format_string};
 
       public:
@@ -55,10 +55,10 @@ namespace RC::Output
       public:
         virtual auto has_optional_arg() const -> bool;
 
-        virtual auto receive(File::StringViewType fmt) const -> void = 0;
+        virtual auto receive(SystemStringViewType fmt) const -> void = 0;
 
         // The 'optional_arg' type should be cast to the proper enum by the derived class
-        virtual auto receive_with_optional_arg(File::StringViewType fmt, int32_t optional_arg = 0) const -> void;
+        virtual auto receive_with_optional_arg(SystemStringViewType fmt, int32_t optional_arg = 0) const -> void;
 
         virtual auto lock() const -> void{};
 
@@ -68,8 +68,8 @@ namespace RC::Output
         auto set_formatter(Formatter new_formatter) -> void;
 
       protected:
-        auto static get_now_as_string() -> const File::StringType;
-        auto static default_format_string(File::StringViewType) -> File::StringType;
+        auto static get_now_as_string() -> const SystemStringType;
+        auto static default_format_string(SystemStringViewType) -> SystemStringType;
     };
 } // namespace RC::Output
 

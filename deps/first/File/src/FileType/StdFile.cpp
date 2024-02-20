@@ -298,13 +298,29 @@ namespace RC::File
     {
         return m_is_file_open;
     }
-
-    auto StdFile::write_string_to_file(StringViewType string_to_write) -> void
+    
+    auto StdFile::write_string_to_file(UEStringViewType string_to_write) -> void
     {   
-        try {
-            write_to_file(*this, string_to_write.data(), string_to_write.size());
+        try
+        {
+            static std::wstring_convert<std::codecvt_utf8_utf16<char16_t>, char16_t> converter{};
+            atuo utf8_string = converter.to_bytes(input);
+            write_file_string_to_file(*this, utf8_string.data(), utf8_string.size());
         } catch  (const std::exception& e) {
             THROW_INTERNAL_FILE_ERROR(std::format("[StdFile::write_string_to_file] Tried writing string to file but could not convert to utf-8. Error: {}", e.what()))
+        }
+    }
+
+    auto StdFile::write_file_string_to_file(StringViewType string_to_write) -> void
+    {
+        try
+        {
+            write_to_file(*this, string_to_write.data(), string_to_write.size());
+        }
+        catch (const std::exception& e)
+        {
+            THROW_INTERNAL_FILE_ERROR(
+                    std::format("[StdFile::write_string_to_file] Tried writing string to file but could not convert to utf-8. Error: {}", e.what()))
         }
     }
 
@@ -375,7 +391,7 @@ namespace RC::File
         return true;
     }
 
-    auto StdFile::read_all() const -> StringType
+    auto StdFile::read_file_all() const -> StringType
     {
         StreamType stream{get_file_path(), std::ios::in | std::ios::binary};
         if (!stream)
@@ -401,14 +417,19 @@ namespace RC::File
             {
                 return {};
             }
-            file_contents.resize(size);
+            file_contents.resize(size - start);
             stream.seekg(start, std::ios::beg);
-            stream.read(&file_contents[0], file_contents.size());
+            stream.read(&file_contents[0], file_contents.size() - start);
             stream.close();
             return file_contents;
         }
     }
 
+    auto StdFile::read_all() const -> UEStringType
+    {
+        auto utf8_string = read_file_all();
+        return std::wstring_convert<std::codecvt_utf8_utf16<char16_t>, char16_t>{}.from_bytes(utf8_string);
+    }
 
     auto StdFile::memory_map() -> std::span<uint8_t>
     {

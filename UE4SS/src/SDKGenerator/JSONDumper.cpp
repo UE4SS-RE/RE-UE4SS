@@ -15,7 +15,7 @@ namespace RC::UEGenerator::JSONDumper
 {
     using namespace ::RC::Unreal;
 
-    auto static is_valid_class_to_dump(File::StringViewType class_name, UObject* object) -> bool
+    auto static is_valid_class_to_dump(SystemStringViewType class_name, UObject* object) -> bool
     {
         static bool is_below_425 = Unreal::Version::IsBelow(4, 25);
         if (is_below_425 && Unreal::TypeChecker::is_property(object))
@@ -177,7 +177,7 @@ namespace RC::UEGenerator::JSONDumper
         return should_skip_general_function(function);
     }
 
-    auto static should_skip_event(File::StringViewType event_name) -> bool
+    auto static should_skip_event(SystemStringViewType event_name) -> bool
     {
         if (event_name.find(SYSSTR("BndEvt")) != event_name.npos)
         {
@@ -186,7 +186,7 @@ namespace RC::UEGenerator::JSONDumper
         return false;
     }
 
-    auto dump_to_json(File::StringViewType file_name) -> void
+    auto dump_to_json(SystemStringViewType file_name) -> void
     {
         Output::send(SYSSTR("Loading all assets...\n"));
         UAssetRegistry::LoadAllAssets();
@@ -337,7 +337,7 @@ namespace RC::UEGenerator::JSONDumper
 
         auto json_file = File::open(file_name, File::OpenFor::Writing, File::OverwriteExistingFile::Yes, File::CreateIfNonExistent::Yes);
         int32_t indent_level{};
-        json_file.write_string_to_file(json.serialize(JSON::ShouldFormat::Yes, &indent_level));
+        json_file.write_file_string_to_file(to_file(json.serialize(JSON::ShouldFormat::Yes, &indent_level)));
         json_file.close();
 
         Output::send(SYSSTR("Unloading all forcefully loaded assets\n"));

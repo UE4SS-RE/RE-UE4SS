@@ -54,15 +54,21 @@ namespace RC::JSON::Parser
         }
     } // namespace Internal
 
-    auto parse(SystemStringType& input) -> std::unique_ptr<JSON::Object>
+    auto parse(File::StringType& input) -> std::unique_ptr<JSON::Object>
     {
         auto ue_input = to_ue(input);
         return Internal::parse_internal(ue_input);
     }
 
+    auto parse(UEStringType& input) -> std::unique_ptr<JSON::Object>
+    {
+        auto ue_input = input;
+        return Internal::parse_internal(ue_input);
+    }
+
     auto parse(const File::Handle& file) -> std::unique_ptr<JSON::Object>
     {
-        auto input = to_ue(file.read_all());
+        auto input = file.read_all();
         return Internal::parse_internal(input);
     }
 } // namespace RC::JSON::Parser

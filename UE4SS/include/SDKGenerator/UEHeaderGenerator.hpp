@@ -351,7 +351,7 @@ namespace RC::UEGenerator
         auto static get_property_access_modifier(FProperty* property) -> AccessModifier;
         auto static get_function_access_modifier(UFunction* function) -> AccessModifier;
         auto static create_string_literal(const UEStringType& string) -> UEStringType;
-        auto static get_header_name_for_object(UObject* object, bool get_existing_header = false) -> UEStringType;
+        auto static get_header_name_for_object(UObject* object, bool get_existing_header = false) -> SystemStringType;
         auto static generate_cross_module_include(UObject* object, const UEStringType& module_name, const UEStringType& fallback_name) -> UEStringType;
     };
 } // namespace RC::UEGenerator

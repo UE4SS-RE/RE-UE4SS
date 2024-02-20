@@ -12,7 +12,7 @@ namespace RC::ObjectDumper
     extern std::unordered_map<ToStringHash, ObjectToStringDecl> object_to_string_functions;
 
     using ObjectToStringComplexDeclCallable = const std::function<void(void*)>&;
-    using ObjectToStringComplexDecl = std::function<void(void*, File::StringType&, ObjectToStringComplexDeclCallable)>;
+    using ObjectToStringComplexDecl = std::function<void(void*, SystemStringType&, ObjectToStringComplexDeclCallable)>;
     extern std::unordered_map<ToStringHash, ObjectToStringComplexDecl> object_to_string_complex_functions;
 
     auto get_to_string(size_t hash) -> ObjectToStringDecl;

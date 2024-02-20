@@ -71,18 +71,18 @@ namespace RC::UEGenerator
     {
         std::filesystem::path primary_file_name;
         std::filesystem::path secondary_file_name;
-        std::vector<File::StringType> ordered_primary_file_contents;
-        std::vector<File::StringType> ordered_secondary_file_contents;
-        File::StringType package_name;
+        std::vector<SystemStringType> ordered_primary_file_contents;
+        std::vector<SystemStringType> ordered_secondary_file_contents;
+        SystemStringType package_name;
         File::Handle primary_file;
         File::Handle secondary_file;
         bool primary_file_has_no_contents;
         bool secondary_file_has_no_contents;
     };
 
-    auto generate_tab(size_t num_tabs = 1) -> File::StringType
+    auto generate_tab(size_t num_tabs = 1) -> SystemStringType
     {
-        File::StringType tab_storage{};
+        SystemStringType tab_storage{};
         for (size_t i = 0; i < num_tabs; ++i)
         {
             tab_storage += SYSSTR("    ");
@@ -90,7 +90,7 @@ namespace RC::UEGenerator
 
         return tab_storage;
     }
-    auto generate_prefix(UStruct* obj) -> File::StringType
+    auto generate_prefix(UStruct* obj) -> SystemStringType
     {
         UClass* obj_class = obj->GetClassPrivate();
         if (obj_class->IsChildOf<UScriptStruct>())
@@ -102,7 +102,7 @@ namespace RC::UEGenerator
             return SYSSTR("class");
         }
     }
-    auto generate_class_name(UStruct* class_to_generate) -> File::StringType
+    auto generate_class_name(UStruct* class_to_generate) -> SystemStringType
     {
         if (class_to_generate->GetClassPrivate()->IsChildOf<UScriptStruct>())
         {
@@ -134,7 +134,7 @@ namespace RC::UEGenerator
 
         // Map of FName.ComparisonIndex -> File::Handle
         std::unordered_map<Unreal::FName, GeneratedFile> m_files{};
-        std::unordered_map<File::StringType, FileName> m_file_names{};
+        std::unordered_map<SystemStringType, FileName> m_file_names{};
         std::unordered_map<Unreal::UObject*, ObjectInfo> m_classes_dumped{};
 
       public:
@@ -158,7 +158,7 @@ namespace RC::UEGenerator
 
                     sort_files(generated_file.ordered_primary_file_contents);
 
-                    File::StringType combined_file_contents;
+                    SystemStringType combined_file_contents;
                     for (auto& line : generated_file.ordered_primary_file_contents)
                     {
                         combined_file_contents.append(line);
@@ -170,7 +170,7 @@ namespace RC::UEGenerator
                     }
                     else
                     {
-                        generated_file.primary_file.write_string_to_file(combined_file_contents);
+                        generated_file.primary_file.write_file_string_to_file(to_file(combined_file_contents));
                     }
 
                     specification.generate_file_footer(generated_file);
@@ -185,7 +185,7 @@ namespace RC::UEGenerator
 
                     sort_files(generated_file.ordered_secondary_file_contents);
 
-                    File::StringType combined_file_contents;
+                    SystemStringType combined_file_contents;
                     for (auto& line : generated_file.ordered_secondary_file_contents)
                     {
                         combined_file_contents.append(line);
@@ -197,7 +197,7 @@ namespace RC::UEGenerator
                     }
                     else
                     {
-                        generated_file.secondary_file.write_string_to_file(combined_file_contents);
+                        generated_file.secondary_file.write_file_string_to_file(to_file(combined_file_contents));
                     }
 
                     generated_file.secondary_file.close();
@@ -205,11 +205,11 @@ namespace RC::UEGenerator
             }
         }
 
-        auto sort_files(std::vector<File::StringType>& content) -> void
+        auto sort_files(std::vector<SystemStringType>& content) -> void
         {
-            std::vector<File::StringType> struct_content;
-            std::vector<File::StringType> class_content;
-            std::vector<File::StringType> other_content;
+            std::vector<SystemStringType> struct_content;
+            std::vector<SystemStringType> class_content;
+            std::vector<SystemStringType> other_content;
             for (auto& line : content)
             {
                 if (line.starts_with(SYSSTR("struct")))
@@ -237,7 +237,7 @@ namespace RC::UEGenerator
             content.insert(content.end(), other_content.begin(), other_content.end());
         }
 
-        auto sort_types(std::vector<File::StringType>& content) -> void
+        auto sort_types(std::vector<SystemStringType>& content) -> void
         {
             std::sort(content.begin(), content.end(), [&](const auto& a, const auto& b) {
                 auto a_class_name = get_class_name(a);
@@ -265,7 +265,7 @@ namespace RC::UEGenerator
             return object->GetClassPrivate()->GetNamePrivate().Equals(Unreal::GPackageName);
         }
 
-        auto generate_offset_comment(XProperty* property, File::StringType& line) -> File::StringType
+        auto generate_offset_comment(XProperty* property, SystemStringType& line) -> SystemStringType
         {
             if (UE4SSProgram::settings_manager.CXXHeaderGenerator.DumpOffsetsAndSizes)
             {
@@ -323,7 +323,7 @@ namespace RC::UEGenerator
         auto generate_function_declaration(ObjectInfo& owner,
                                            const FunctionInfo& function_info,
                                            GeneratedFile& generated_file,
-                                           File::StringType& out_current_class_content,
+                                           SystemStringType& out_current_class_content,
                                            IsDelegateFunction is_delegate_function = IsDelegateFunction::No) -> void
         {
             std::optional<PropertyInfo> return_property_info = [&]() -> std::optional<PropertyInfo> {
@@ -342,7 +342,7 @@ namespace RC::UEGenerator
                 return return_property_info.has_value() ? return_property_info.value().property : nullptr;
             }();
 
-            File::StringType function_name{to_system(function_info.function->GetName())};
+            SystemStringType function_name {to_system(function_info.function->GetName())};
             if (is_delegate_function == IsDelegateFunction::Yes)
             {
                 // Remove the last 19 characters, which is always '__DelegateSignature' for delegates
@@ -364,7 +364,7 @@ namespace RC::UEGenerator
             out_current_class_content.append(current_class_content);
         }
 
-        auto generate_class_dependency(ObjectInfo& owner, UStruct* inherited_class, File::StringType& current_class_content) -> void
+        auto generate_class_dependency(ObjectInfo& owner, UStruct* inherited_class, SystemStringType& current_class_content) -> void
         {
             if (!inherited_class)
             {
@@ -377,7 +377,7 @@ namespace RC::UEGenerator
                 if (package_file_for_inherited_class)
                 {
                     auto& inherited_object_info = m_classes_dumped.emplace(inherited_class, ObjectInfo{inherited_class, &owner}).first->second;
-                    File::StringType new_class_content{};
+                    SystemStringType new_class_content{};
                     generate_class(inherited_object_info, *package_file_for_inherited_class, new_class_content);
                     if (!package_file_for_inherited_class->primary_file_has_no_contents)
                     {
@@ -389,7 +389,7 @@ namespace RC::UEGenerator
             }
         }
 
-        auto generate_class_dependency_from_property(ObjectInfo& owner, XProperty* property, File::StringType& current_class_content) -> bool
+        auto generate_class_dependency_from_property(ObjectInfo& owner, XProperty* property, SystemStringType& current_class_content) -> bool
         {
             if (property->IsA<FStructProperty>())
             {
@@ -441,7 +441,7 @@ namespace RC::UEGenerator
             return false;
         }
 
-        auto make_function_info(ObjectInfo& owner, UFunction* function, File::StringType& current_class_content) -> FunctionInfo
+        auto make_function_info(ObjectInfo& owner, UFunction* function, SystemStringType& current_class_content) -> FunctionInfo
         {
             FunctionInfo function_info{
                     .function = function,
@@ -461,7 +461,7 @@ namespace RC::UEGenerator
             return function_info;
         }
 
-        auto generate_class(ObjectInfo object_info, GeneratedFile& generated_file, File::StringType& current_class_content) -> XProperty*
+        auto generate_class(ObjectInfo object_info, GeneratedFile& generated_file, SystemStringType& current_class_content) -> XProperty*
         {
             UStruct* native_class = static_cast<UStruct*>(object_info.object);
             if (specification.should_generate_class(native_class))
@@ -477,7 +477,7 @@ namespace RC::UEGenerator
         {
             generated_file.secondary_file_has_no_contents = false;
 
-            File::StringType content_buffer;
+            SystemStringType content_buffer;
             UEnum* uenum = static_cast<UEnum*>(native_object);
 
             specification.generate_enum_declaration(content_buffer, uenum);
@@ -498,7 +498,7 @@ namespace RC::UEGenerator
             generated_file.ordered_secondary_file_contents.push_back(content_buffer);
         }
 
-        auto generate_package(UObject* package, File::StringType& out) -> void
+        auto generate_package(UObject* package, SystemStringType& out) -> void
         {
             UObjectGlobals::ForEachUObject([&](void* object, [[maybe_unused]] int32_t chunk_index, [[maybe_unused]] int32_t object_index) {
                 return LoopAction::Continue;
@@ -538,10 +538,10 @@ namespace RC::UEGenerator
             else
             {
                 // Get rid of everything before the last slash + the last slash, leaving only the actual name
-                File::StringType package_name = to_system(package->GetNamePrivate().ToString());
+                SystemStringType package_name = to_system(package->GetNamePrivate().ToString());
                 package_name = package_name.substr(package_name.rfind(SYSSTR("/")) + 1);
-                File::StringType package_name_all_lower = package_name;
-                std::transform(package_name_all_lower.begin(), package_name_all_lower.end(), package_name_all_lower.begin(), [](File::CharType c) {
+                SystemStringType package_name_all_lower = package_name;
+                std::transform(package_name_all_lower.begin(), package_name_all_lower.end(), package_name_all_lower.begin(), [](SystemCharType c) {
                     return std::towlower(c);
                 });
 
@@ -565,7 +565,7 @@ namespace RC::UEGenerator
                 std::filesystem::path directory_to_generate_in =  (m_directory_to_generate_in);
                 #endif
 
-                File::StringType ext = specification.get_file_extension();
+                SystemStringType ext = specification.get_file_extension();
                 std::filesystem::path primary_file_path_and_name = directory_to_generate_in;
                 primary_file_path_and_name.append(package_name);
                 primary_file_path_and_name.replace_extension(ext);
@@ -647,7 +647,7 @@ namespace RC::UEGenerator
                 {
                     // Generate a class for this object
                     auto& object_info = m_classes_dumped.emplace(object, ObjectInfo{object}).first->second;
-                    File::StringType class_content{};
+                    SystemStringType class_content{};
                     generate_class(object_info, *package_file, class_content);
                     if (!package_file->primary_file_has_no_contents)
                     {
@@ -671,7 +671,7 @@ namespace RC::UEGenerator
     class CXXHeaderGenerator
     {
       public:
-        auto get_file_extension() -> File::StringType
+        auto get_file_extension() -> SystemStringType
         {
             return SYSSTR(".hpp");
         }
@@ -689,7 +689,7 @@ namespace RC::UEGenerator
         {
             generated_file.primary_file.write_string_to_file(std::format(SYSSTR("#endif\n")));
         }
-        auto generate_enum_declaration(File::StringType& content_buffer, UEnum* uenum) -> void
+        auto generate_enum_declaration(SystemStringType& content_buffer, UEnum* uenum) -> void
         {
             const auto cpp_form = uenum->GetCppForm();
             if (cpp_form == UEnum::ECppForm::Regular)
@@ -705,7 +705,7 @@ namespace RC::UEGenerator
                 content_buffer.append(std::format(SYSSTR("enum class {} {{\n"), get_native_enum_name(uenum, false)));
             }
         }
-        auto generate_enum_member(File::StringType& content_buffer, UEnum* uenum, const File::StringType& enum_value_name, const Unreal::FEnumNamePair& elem) -> void
+        auto generate_enum_member(SystemStringType& content_buffer, UEnum* uenum, const SystemStringType& enum_value_name, const Unreal::FEnumNamePair& elem) -> void
         {
             content_buffer.append(std::format(SYSSTR("{}{}{} = {},\n"),
                                               generate_tab(),
@@ -713,7 +713,7 @@ namespace RC::UEGenerator
                                               enum_value_name,
                                               elem.Value));
         }
-        auto generate_enum_end(File::StringType& content_buffer, UEnum* uenum) -> void
+        auto generate_enum_end(SystemStringType& content_buffer, UEnum* uenum) -> void
         {
             const auto cpp_form = uenum->GetCppForm();
             content_buffer.append(std::format(SYSSTR("{}}};"), cpp_form == UEnum::ECppForm::Namespaced ? generate_tab() : SYSSTR("")));
@@ -727,10 +727,10 @@ namespace RC::UEGenerator
         {
             return true;
         }
-        auto generate_class(TypeGenerator<CXXHeaderGenerator>* generator, ObjectInfo& object_info, GeneratedFile& generated_file, File::StringType& current_class_content)
+        auto generate_class(TypeGenerator<CXXHeaderGenerator>* generator, ObjectInfo& object_info, GeneratedFile& generated_file, SystemStringType& current_class_content)
         {
             UStruct* native_class = static_cast<UStruct*>(object_info.object);
-            File::StringType content_buffer{};
+            SystemStringType content_buffer{};
 
             UStruct* inherits_from_class = native_class->GetSuperStruct();
 
@@ -876,7 +876,7 @@ namespace RC::UEGenerator
             current_class_content.append(content_buffer);
         }
 
-        auto generate_class_declaration(File::StringType& content_buffer, UStruct* native_class, UStruct* inherits_from_class) -> void
+        auto generate_class_declaration(SystemStringType& content_buffer, UStruct* native_class, UStruct* inherits_from_class) -> void
         {
             auto class_name = generate_class_name(native_class);
             if (inherits_from_class)
@@ -889,8 +889,8 @@ namespace RC::UEGenerator
                 content_buffer.append(std::format(SYSSTR("{} {}\n{{\n"), generate_prefix(native_class), class_name));
             }
         }
-        auto generate_class_struct_end(File::StringType& content_buffer,
-                                       const File::StringType& class_name,
+        auto generate_class_struct_end(SystemStringType& content_buffer,
+                                       const SystemStringType& class_name,
                                        size_t class_size,
                                        int32_t num_padding_elements,
                                        XProperty* last_property_in_this_class) -> void
@@ -932,7 +932,7 @@ namespace RC::UEGenerator
                 }
             }
         }
-        auto generate_class_end(File::StringType& content_buffer, size_t class_size) -> void
+        auto generate_class_end(SystemStringType& content_buffer, size_t class_size) -> void
         {
             if (UE4SSProgram::settings_manager.CXXHeaderGenerator.DumpOffsetsAndSizes)
             {
@@ -945,14 +945,14 @@ namespace RC::UEGenerator
         }
 
         auto generate_function_declaration(TypeGenerator<CXXHeaderGenerator>* generator,
-                                           File::StringType& current_class_content,
+                                           SystemStringType& current_class_content,
                                            ObjectInfo& owner,
                                            const FunctionInfo& function_info,
-                                           File::StringType function_name,
+                                           SystemStringType function_name,
                                            XProperty* return_property,
                                            std::optional<PropertyInfo> return_property_info) -> void
         {
-            File::StringType function_type_name{};
+            SystemStringType function_type_name{};
             if (return_property)
             {
                 try
@@ -1019,9 +1019,9 @@ namespace RC::UEGenerator
     class LuaTypesGenerator
     {
       private:
-        auto is_valid_lua_symbol(const File::StringType& str) -> bool
+        auto is_valid_lua_symbol(const SystemStringType& str) -> bool
         {
-            static const std::set<File::StringType> keywords = {SYSSTR("and"),   SYSSTR("break"), SYSSTR("do"),       SYSSTR("else"),   SYSSTR("elseif"), SYSSTR("end"),
+            static const std::set<SystemStringType> keywords = {SYSSTR("and"),   SYSSTR("break"), SYSSTR("do"),       SYSSTR("else"),   SYSSTR("elseif"), SYSSTR("end"),
                                                                 SYSSTR("false"), SYSSTR("for"),   SYSSTR("function"), SYSSTR("if"),     SYSSTR("in"),     SYSSTR("local"),
                                                                 SYSSTR("nil"),   SYSSTR("not"),   SYSSTR("or"),       SYSSTR("repeat"), SYSSTR("return"), SYSSTR("then"),
                                                                 SYSSTR("true"),  SYSSTR("until"), SYSSTR("while")};
@@ -1046,9 +1046,9 @@ namespace RC::UEGenerator
             }
             return true;
         }
-        auto quote_lua_symbol(const File::StringType& symbol) -> File::StringType
+        auto quote_lua_symbol(const SystemStringType& symbol) -> SystemStringType
         {
-            File::StringType quoted;
+            SystemStringType quoted;
             quoted.reserve(symbol.size() + 2);
             quoted.push_back('\'');
             for (auto it = symbol.begin(); it != symbol.end(); ++it)
@@ -1063,9 +1063,9 @@ namespace RC::UEGenerator
             quoted.push_back('\'');
             return quoted;
         }
-        auto make_valid_symbol(const File::StringType& symbol) -> File::StringType
+        auto make_valid_symbol(const SystemStringType& symbol) -> SystemStringType
         {
-            File::StringType valid;
+            SystemStringType valid;
             valid.reserve(symbol.size());
             auto it = symbol.begin();
             if (it == symbol.end() || std::isdigit(*it))
@@ -1081,7 +1081,7 @@ namespace RC::UEGenerator
         }
 
       public:
-        auto get_file_extension() -> File::StringType
+        auto get_file_extension() -> SystemStringType
         {
             return SYSSTR(".lua");
         }
@@ -1092,16 +1092,16 @@ namespace RC::UEGenerator
         auto generate_file_footer(GeneratedFile& generated_file) -> void
         {
         }
-        auto generate_enum_declaration(File::StringType& content_buffer, UEnum* uenum) -> void
+        auto generate_enum_declaration(SystemStringType& content_buffer, UEnum* uenum) -> void
         {
             auto enum_name = to_system(uenum->GetName());
             content_buffer.append(std::format(SYSSTR("---@enum {}\n{} = {{\n"), enum_name, enum_name));
         }
-        auto generate_enum_member(File::StringType& content_buffer, UEnum* uenum, const File::StringType& enum_value_name, const Unreal::FEnumNamePair& elem) -> void
+        auto generate_enum_member(SystemStringType& content_buffer, UEnum* uenum, const SystemStringType& enum_value_name, const Unreal::FEnumNamePair& elem) -> void
         {
             content_buffer.append(std::format(SYSSTR("{}{} = {},\n"), generate_tab(), enum_value_name, elem.Value));
         }
-        auto generate_enum_end(File::StringType& content_buffer, UEnum* uenum) -> void
+        auto generate_enum_end(SystemStringType& content_buffer, UEnum* uenum) -> void
         {
             content_buffer.append(SYSSTR("}"));
         }
@@ -1111,10 +1111,10 @@ namespace RC::UEGenerator
             // skip UObject to define externally
             return native_class != UObject::StaticClass();
         }
-        auto generate_class(TypeGenerator<LuaTypesGenerator>* generator, ObjectInfo& object_info, GeneratedFile& generated_file, File::StringType& current_class_content)
+        auto generate_class(TypeGenerator<LuaTypesGenerator>* generator, ObjectInfo& object_info, GeneratedFile& generated_file, SystemStringType& current_class_content)
         {
             UStruct* native_class = static_cast<UStruct*>(object_info.object);
-            File::StringType content_buffer{};
+            SystemStringType content_buffer{};
 
             UStruct* inherits_from_class = native_class->GetSuperStruct();
 
@@ -1203,7 +1203,7 @@ namespace RC::UEGenerator
 
             current_class_content.append(content_buffer);
         }
-        auto generate_class_declaration(File::StringType& content_buffer, UStruct* native_class, UStruct* inherits_from_class) -> void
+        auto generate_class_declaration(SystemStringType& content_buffer, UStruct* native_class, UStruct* inherits_from_class) -> void
         {
             auto class_name = generate_class_name(native_class);
             if (inherits_from_class)
@@ -1215,23 +1215,23 @@ namespace RC::UEGenerator
                 content_buffer.append(std::format(SYSSTR("---@class {}\n"), class_name));
             }
         }
-        auto generate_class_struct_end(File::StringType& content_buffer,
-                                       const File::StringType& class_name,
+        auto generate_class_struct_end(SystemStringType& content_buffer,
+                                       const SystemStringType& class_name,
                                        size_t class_size,
                                        int32_t num_padding_elements,
                                        XProperty* last_property_in_this_class) -> void
         {
             content_buffer.append(std::format(SYSSTR("{} = {{}}\n"), class_name));
         }
-        auto generate_class_end(File::StringType& content_buffer, size_t class_size) -> void
+        auto generate_class_end(SystemStringType& content_buffer, size_t class_size) -> void
         {
         }
 
         auto generate_function_declaration(TypeGenerator<LuaTypesGenerator>* generator,
-                                           File::StringType& current_class_content,
+                                           SystemStringType& current_class_content,
                                            ObjectInfo& owner,
                                            const FunctionInfo& function_info,
-                                           File::StringType function_name,
+                                           SystemStringType function_name,
                                            XProperty* return_property,
                                            std::optional<PropertyInfo> return_property_info) -> void
         {

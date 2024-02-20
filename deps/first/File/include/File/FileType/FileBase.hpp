@@ -74,7 +74,8 @@ namespace RC::File
 
         // Write a string to the currently opened file
         // Throws std::runtime_error if an error occurred
-        virtual auto write_string_to_file(StringViewType) -> void = 0;
+        // Keep this function use UEStringViewType so it's wstring_view and compatible with old FileInterface
+        virtual auto write_string_to_file(UEStringViewType) -> void = 0;
 
         // Returns whether the currently opened file is the same as another opened file
         // Throws std::runtime_error if an error occurred
@@ -82,7 +83,8 @@ namespace RC::File
 
         // Returns the entire contents of the currently opened file as a string
         // Throws std::runtime_error if an error occurred
-        virtual auto read_all() const -> StringType = 0;
+        // Keep this function use UEStringViewType so it's wstring_view and compatible with old FileInterface
+        virtual auto read_all() const -> UEStringType = 0;
 
         virtual auto memory_map() -> std::span<uint8_t> = 0;
 
@@ -91,6 +93,17 @@ namespace RC::File
         // Throws std::runtime_error if an error occurred
         auto static open_file(const std::filesystem::path& file_name_and_path, const OpenProperties& open_properties) -> InternalFileType;
         */
+
+        
+        // Write a string to the currently opened file
+        // Throws std::runtime_error if an error occurred
+        // This is the actual function uses StringType.
+        virtual auto write_file_string_to_file(StringViewType) -> void = 0;
+
+        // Returns the entire contents of the currently opened file as a string
+        // Throws std::runtime_error if an error occurred
+        // This is the actual function uses StringType.
+        virtual auto read_file_all() const -> StringType = 0;
     };
 
     template <typename FileAbstraction>

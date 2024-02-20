@@ -16,7 +16,7 @@
 #else
 #if RC_IS_ANSI == 0
 #define SYSSTR(str) L##str
-#define IOSTR(str) L##str
+#define IOSTR(str) str
 #define STR(str) L##str
 #else
 #define SYSSTR(str) str
@@ -47,9 +47,13 @@ construct a Targets object and supply your own devices.") \
 
 namespace RC::File
 {
-    typedef std::basic_ofstream<std::u16string::value_type> u16ofstream;
-    typedef std::basic_ifstream<std::u16string::value_type> u16ifstream;
-
+    using StringType = std::string;
+    using StringViewType = std::string_view;
+    using CharType = char;
+    using StreamType = std::ifstream;
+    using IStreamType = std::ifstream;
+    using OStreamType = std::ofstream;
+/*
 #if RC_IS_ANSI == 1
     using StringType = std::string;
     using StringViewType = std::string_view;
@@ -70,7 +74,7 @@ namespace RC::File
     using StreamType = std::ifstream;
 #endif // WIN32
 #endif // RC_IS_ANSI
-
+*/
 } // namespace RC::File
 
 namespace RC

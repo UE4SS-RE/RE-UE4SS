@@ -32,7 +32,7 @@ namespace RC::UVTD
 
     struct ObjectItem
     {
-        File::StringType name{};
+        UEStringType name{};
         ValidForVTable valid_for_vtable{};
         ValidForMemberVars valid_for_member_vars{};
     };
@@ -105,7 +105,7 @@ namespace RC::UVTD
                                                          {STR("FFixedUObjectArray"), ValidForVTable::No, ValidForMemberVars::Yes},
                                                          {STR("FUObjectItem"), ValidForVTable::No, ValidForMemberVars::Yes}};
 
-    static inline std::unordered_map<File::StringType, std::unordered_set<File::StringType>> s_private_variables{
+    static inline std::unordered_map<UEStringType, std::unordered_set<UEStringType>> s_private_variables{
             {STR("FField"),
              {
                      STR("ClassPrivate"),
@@ -115,15 +115,15 @@ namespace RC::UVTD
              }},
     };
 
-    static std::unordered_set<File::StringType> s_non_case_preserving_variants{
+    static std::unordered_set<UEStringType> s_non_case_preserving_variants{
             {STR("4_27")},
     };
 
-    static std::unordered_set<File::StringType> s_case_preserving_variants{
+    static std::unordered_set<UEStringType> s_case_preserving_variants{
             {STR("4_27_CasePreserving")},
     };
 
-    static inline std::unordered_set<File::StringType> s_valid_udt_names{STR("UScriptStruct::ICppStructOps"),
+    static inline std::unordered_set<UEStringType> s_valid_udt_names{STR("UScriptStruct::ICppStructOps"),
                                                                          STR("UObjectBase"),
                                                                          STR("UObjectBaseUtility"),
                                                                          STR("UObject"),
@@ -181,7 +181,7 @@ namespace RC::UVTD
                                                                          STR("USetProperty"),
                                                                          STR("FFrame")};
 
-    static inline std::vector<File::StringType> s_uprefix_to_fprefix{
+    static inline std::vector<UEStringType> s_uprefix_to_fprefix{
             STR("UProperty"),
             STR("UMulticastDelegateProperty"),
             STR("UObjectPropertyBase"),
@@ -206,8 +206,8 @@ namespace RC::UVTD
             {STR("Outer"), STR("OuterPrivate")},
     };
 
-    auto to_string_type(const char* c_str) -> File::StringType;
-    auto change_prefix(File::StringType input, bool is_425_plus) -> std::optional<File::StringType>;
+    auto to_string_type(const char* c_str) -> UEStringType;
+    auto change_prefix(UEStringType input, bool is_425_plus) -> std::optional<UEStringType>;
 
     // Workaround that lets us have a unified 'TUObjectArray' struct regardless if the engine version uses a chunked or non-chunked variant of TUObjectArray.
     auto unify_uobject_array_if_needed(UEStringType& out_variable_type) -> bool;

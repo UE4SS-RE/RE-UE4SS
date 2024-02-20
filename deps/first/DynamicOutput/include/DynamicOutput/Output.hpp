@@ -118,7 +118,7 @@ namespace RC::Output
         };
 
         template <EnumType OptionalArg>
-        auto send(File::StringViewType content, OptionalArg optional_arg) -> void
+        auto send(SystemStringViewType content, OptionalArg optional_arg) -> void
         {
             if (m_opened_devices.empty())
             {
@@ -141,14 +141,14 @@ namespace RC::Output
         }
 
         template <typename... FmtArgs>
-        auto send(File::StringViewType&& content, FmtArgs&&... fmt_args) -> void
+        auto send(SystemStringViewType&& content, FmtArgs&&... fmt_args) -> void
         {
             if (m_opened_devices.empty())
             {
                 THROW_INTERNAL_FILE_ERROR("[Output::send] Attempted to send but there were no opened devices.");
             }
 
-            auto formated = std::vformat(std::forward<File::StringViewType>(content), RC_STD_MAKE_FORMAT_ARGS(to_file(std::forward<FmtArgs>(fmt_args))...));
+            auto formated = std::vformat(std::forward<SystemStringViewType>(content), RC_STD_MAKE_FORMAT_ARGS(to_system(std::forward<FmtArgs>(fmt_args))...));
 
             for (const auto& device : m_opened_devices)
             {
@@ -166,14 +166,14 @@ namespace RC::Output
         }
 
         template <EnumType OptionalArg, typename... FmtArgs>
-        auto send(File::StringViewType content, OptionalArg optional_arg, FmtArgs&&... fmt_args) -> void
+        auto send(SystemStringViewType content, OptionalArg optional_arg, FmtArgs&&... fmt_args) -> void
         {
             if (m_opened_devices.empty())
             {
                 THROW_INTERNAL_FILE_ERROR("[Output::send] Attempted to send but there were no opened devices.");
             }
 
-            auto formated = std::vformat(content, RC_STD_MAKE_FORMAT_ARGS(to_file(std::forward<FmtArgs>(fmt_args))...));
+            auto formated = std::vformat(content, RC_STD_MAKE_FORMAT_ARGS(to_system(std::forward<FmtArgs>(fmt_args))...));
 
             for (const auto& device : m_opened_devices)
             {
@@ -189,7 +189,7 @@ namespace RC::Output
             }
         }
 
-        auto send(const File::StringType& content) -> void
+        auto send(const SystemStringType& content) -> void
         {
             if (m_opened_devices.empty())
             {
@@ -212,14 +212,14 @@ namespace RC::Output
         }
 
         template <int32_t optional_arg, typename FmtArg, typename... FmtArgs>
-        auto send(File::StringViewType content, FmtArg&& fmt_arg, FmtArgs&&... fmt_args) -> void
+        auto send(SystemStringViewType content, FmtArg&& fmt_arg, FmtArgs&&... fmt_args) -> void
         {
             if (m_opened_devices.empty())
             {
                 THROW_INTERNAL_FILE_ERROR("[Output::send] Attempted to send but there were no opened devices.");
             }
 
-            auto formated = std::vformat(content, RC_STD_MAKE_FORMAT_ARGS(to_file(std::forward<FmtArgs>(fmt_arg), std::forward<FmtArgs>(fmt_args))...));
+            auto formated = std::vformat(content, RC_STD_MAKE_FORMAT_ARGS(to_system(std::forward<FmtArgs>(fmt_arg), std::forward<FmtArgs>(fmt_args))...));
 
             for (const auto& device : m_opened_devices)
             {
@@ -236,7 +236,7 @@ namespace RC::Output
         }
 
         template <int32_t optional_arg>
-        auto send(const File::StringType& content) -> void
+        auto send(const SystemStringType& content) -> void
         {
             if (m_opened_devices.empty())
             {
@@ -294,9 +294,9 @@ namespace RC::Output
     }
 
     template <typename... FmtArgs>
-    auto send(File::StringViewType content, FmtArgs&&... fmt_args) -> void
+    auto send(SystemStringViewType content, FmtArgs&&... fmt_args) -> void
     {
-        auto formated = std::vformat(content, RC_STD_MAKE_FORMAT_ARGS(to_file(std::forward<FmtArgs>(fmt_args))...));
+        auto formated = std::vformat(content, RC_STD_MAKE_FORMAT_ARGS(to_system(std::forward<FmtArgs>(fmt_args))...));
         for (const auto& device : DefaultTargets::get_default_devices_ref())
         {
             ASSERT_DEFAULT_OUTPUT_DEVICE_IS_VALID(device)
@@ -313,9 +313,9 @@ namespace RC::Output
     }
 
     template <EnumType OptionalArg, typename... FmtArgs>
-    auto send(File::StringViewType content, OptionalArg optional_arg, FmtArgs&&... fmt_args) -> void
+    auto send(SystemStringViewType content, OptionalArg optional_arg, FmtArgs&&... fmt_args) -> void
     {
-        auto formated = std::vformat(content, RC_STD_MAKE_FORMAT_ARGS(to_file(std::forward<FmtArgs>(fmt_args))...));
+        auto formated = std::vformat(content, RC_STD_MAKE_FORMAT_ARGS(to_system(std::forward<FmtArgs>(fmt_args))...));
         for (const auto& device : DefaultTargets::get_default_devices_ref())
         {
             ASSERT_DEFAULT_OUTPUT_DEVICE_IS_VALID(device)
@@ -331,10 +331,10 @@ namespace RC::Output
         }
     }
 
-    auto RC_DYNOUT_API send(File::StringViewType content) -> void;
+    auto RC_DYNOUT_API send(SystemStringViewType content) -> void;
 
     template <EnumType OptionalArg>
-    auto send(File::StringViewType content, OptionalArg optional_arg) -> void
+    auto send(SystemStringViewType content, OptionalArg optional_arg) -> void
     {
         for (const auto& device : DefaultTargets::get_default_devices_ref())
         {
@@ -352,9 +352,9 @@ namespace RC::Output
     }
 
     template <int32_t optional_arg, typename... FmtArgs>
-    auto send(File::StringViewType content, FmtArgs&&... fmt_args) -> void
+    auto send(SystemStringViewType content, FmtArgs&&... fmt_args) -> void
     {
-        auto formated = std::vformat(content, RC_STD_MAKE_FORMAT_ARGS(to_file(std::forward<FmtArgs>(fmt_args))...));
+        auto formated = std::vformat(content, RC_STD_MAKE_FORMAT_ARGS(to_system(std::forward<FmtArgs>(fmt_args))...));
         for (const auto& device : DefaultTargets::get_default_devices_ref())
         {
             ASSERT_DEFAULT_OUTPUT_DEVICE_IS_VALID(device)
@@ -371,7 +371,7 @@ namespace RC::Output
     }
 
     template <int32_t optional_arg>
-    auto send(File::StringViewType content) -> void
+    auto send(SystemStringViewType content) -> void
     {
         for (const auto& device : DefaultTargets::get_default_devices_ref())
         {

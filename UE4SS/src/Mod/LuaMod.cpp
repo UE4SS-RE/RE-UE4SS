@@ -647,7 +647,7 @@ namespace RC
         // Give the full path to the 'Scripts' directory to the mod container
         std::filesystem::path mod_path_fs = m_mod_path;
         auto path = (mod_path_fs / SYSSTR("scripts"));
-        m_scripts_path = to_system_string(path);
+        m_scripts_path = to_system(path);
         
         // If the 'Scripts' directory doesn't exist then mark the mod as non-installable and move on to the next mod
         if (!std::filesystem::exists(path))
@@ -4241,7 +4241,7 @@ Overloads:
             }
 
             return TRY([&] {
-                auto command = to_system(cmd);
+                auto command = to_system_string(cmd);
                 auto command_parts = explode_by_occurrence(command, ' ');
                 SystemStringType command_name;
                 if (command_parts.size() > 1)
@@ -4301,8 +4301,8 @@ Overloads:
             (void)executor;
 
             return TRY([&] {
-                auto command = to_system(cmd);
-                auto command_parts = explode_by_occurrence(command, ' ');
+                auto command = to_system_string(cmd);
+                auto command_parts = explode_by_occurrence(command, SYSSTR(' '));
                 SystemStringType command_name;
                 if (command_parts.size() > 1)
                 {

@@ -212,17 +212,67 @@ namespace RC
     }
     /* explode_by_occurrence -> END */
 
-    auto inline to_wstring(std::string& input) -> std::wstring
+    // ----------------------------- //
+    #define STRING_DISPATCH(STRING_T, ts, tw, tu16)                             \
+        if constexpr (std::is_same_v<STRING_T, std::string>)                    \
+        {   														            \
+            return ts(std::forward<T>(input));				                    \
+        }   														            \
+	    else if constexpr (std::is_same_v<STRING_T, std::wstring>)	            \
+	    {																        \
+	        return tw(std::forward<T>(input));						            \
+	    }																        \
+	    else if constexpr (std::is_same_v<STRING_T, std::u16string>)            \
+	    {																	    \
+	        return tu16(std::forward<T>(input));					            \
+	    }																	    \
+	    else																    \
+	    {																	    \
+	        static_assert(dependent_false<T>::value, "Unsupported " #STRING_T "."); \
+	    }
+    // ----------------------------- //
+    #define PATH_QUIRK(STRINGT)                                                             \
+        if constexpr (std::is_same_v<std::decay_t<T>, std::filesystem::path>                \
+             || std::is_same_v<std::decay_t<T>, const std::filesystem::path>)               \
+        {                                                                                   \
+            STRING_DISPATCH(STRINGT, to_string_path, to_wstring_path, to_u16string_path);   \
+        }
+    // ----------------------------- //
+
+    #define TO_STRING_QUIRK_DISPATCH(STRINGT)                               \
+        PATH_QUIRK(STRINGT)                                                 \
+	    else                                                                \
+	    {                                                                   \
+	        STRING_DISPATCH(STRINGT, to_string, to_wstring, to_u16string);  \
+	    }
+    // ----------------------------- //
+
+    auto inline to_string_path(const std::filesystem::path& input) -> std::string
     {
-        #if WIN32
+        return input.string();
+    }
+
+    auto inline to_wstring_path(const std::filesystem::path& input) -> std::wstring
+    {
+        return input.wstring();
+    }
+
+    auto inline to_u16string_path(const std::filesystem::path& input) -> std::u16string
+    {
+        return input.u16string();
+    }
+
+    auto inline to_wstring(std::string_view input) -> std::wstring
+    {
+#if WIN32
 #pragma warning(disable : 4996)
-            static std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter{};
-            return converter.from_bytes(input);
+        static std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter{};
+        return converter.from_bytes(input.data(), input.data() + input.length());
 #pragma warning(default : 4996)
-        #else
-            static std::wstring_convert<std::codecvt_utf8<wchar_t>> converter{};
-            return converter.from_bytes(input);
-        #endif
+#else
+        static std::wstring_convert<std::codecvt_utf8<wchar_t>> converter{};
+        return converter.from_bytes(input.data(), input.data() + input.length());
+#endif
     }
 
     auto inline to_const_wstring(std::string_view input) -> const std::wstring&
@@ -257,11 +307,6 @@ namespace RC
         return std::wstring{input};
     }
 
-    auto inline to_wstring(std::string_view input) -> std::wstring
-    {
-        auto temp_input = std::string{input};
-        return to_wstring(temp_input);
-    }
 
     auto inline to_wstring(std::u16string& input) -> std::wstring
     {
@@ -275,43 +320,41 @@ namespace RC
     auto inline to_wstring(std::u16string_view input) -> std::wstring
     {
 #ifdef WIN32
-        auto temp_input = std::u16string{input};
-        return to_wstring(temp_input);
+        return {input.begin(), input.end()};
 #else
-        return to_wstring(std::u16string{input});
+        throw std::runtime_error{"There is no reason to use this function on non-Windows platforms"};
 #endif
     }
 
-    auto inline to_string(std::wstring& input) -> std::string
+    /*
+    auto inline to_string(std::u16string& input) -> std::string
+    {
+#pragma warning(disable : 4996)
+        static std::wstring_convert<std::codecvt_utf8_utf16<char16_t>, char16_t> converter{};
+        return converter.to_bytes(input);
+#pragma warning(default : 4996)
+    }
+    */
+
+    auto inline to_string(std::wstring_view input) -> std::string
     {
 #ifdef WIN32
 #pragma warning(disable : 4996)
         static std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter{};
-        return converter.to_bytes(input);
+        return converter.to_bytes(input.data(), input.data() + input.length());
 #pragma warning(default : 4996)
 #else
         static std::wstring_convert<std::codecvt_utf8<wchar_t>> converter{};
-        return converter.to_bytes(input);
+        return converter.to_bytes(input.data(), input.data() + input.length());
 #endif
-    }
-
-    auto inline to_string(std::u16string& input) -> std::string
-    {
-#pragma warning(disable : 4996)
-        return std::wstring_convert<std::codecvt_utf8_utf16<char16_t>, char16_t>{}.to_bytes(input);
-#pragma warning(default : 4996)
-    }
-
-    auto inline to_string(std::wstring_view input) -> std::string
-    {
-        auto temp_input = std::wstring{input};
-        return to_string(temp_input);
     }
 
     auto inline to_string(std::u16string_view input) -> std::string
     {
-        auto temp_input = std::u16string{input};
-        return to_string(temp_input);
+#pragma warning(disable : 4996)
+        static std::wstring_convert<std::codecvt_utf8_utf16<char16_t>, char16_t> converter{};
+        return converter.to_bytes(input.data(), input.data() + input.length());
+#pragma warning(default : 4996)
     }
 
     auto inline to_string(std::string_view input) -> std::string
@@ -335,22 +378,30 @@ namespace RC
 
     auto inline to_u16string(std::wstring_view input) -> std::u16string
     {
-        auto temp_input = std::wstring{input};
-        return to_u16string(temp_input);
+        return to_u16string(std::wstring(input));
     }
 
+    /*
     auto inline to_u16string(std::string& input) -> std::u16string
     {
         // codecvt_utf8_utf16<char16_t>
         #pragma warning(disable : 4996)
-        return std::wstring_convert<std::codecvt_utf8_utf16<char16_t>, char16_t>{}.from_bytes(input);
+        static std::wstring_convert<std::codecvt_utf8_utf16<char16_t>, char16_t> converter {};
+        return converter.from_bytes(input);
         #pragma warning(default : 4996)
     }
+    */
 
     auto inline to_u16string(std::string_view input) -> std::u16string
     {
+        /*
         auto temp_input = std::string{input};
-        return to_u16string(temp_input);
+        return to_u16string(temp_input);*/
+        // codecvt_utf8_utf16<char16_t>
+#pragma warning(disable : 4996)
+        static std::wstring_convert<std::codecvt_utf8_utf16<char16_t>, char16_t> converter{};
+        return converter.from_bytes(input.data(), input.data() + input.length());
+#pragma warning(default : 4996)
     }
 
     auto inline to_u16string(std::u16string_view input) -> std::u16string
@@ -377,6 +428,11 @@ namespace RC
 
     template <typename T>
     struct dependent_false : std::false_type {};
+
+    template <typename T, bool ok>
+    struct dependent_ensure : std::true_type {};
+    template <typename T>
+    struct dependent_ensure<T, false> : std::false_type {};
 
     template <typename T>
     auto stringviewify(T&& tp) {
@@ -414,26 +470,18 @@ namespace RC
 
     template <typename T>
     auto inline to_file_string(T&& input) -> File::StringType {
-        if constexpr (std::is_same_v<File::StringType, std::string>)
-        {
-            return to_string(input);
-        }
-        else if constexpr (std::is_same_v<File::StringType, std::wstring>)
-        {
-            return to_wstring(input);
-        }
-        else if constexpr (std::is_same_v<File::StringType, std::u16string>)
-        {
-            return to_u16string(input);
-        } else {
-            static_assert(dependent_false<T>::value, "Unsupported SystemStringType.");
-        }
+        TO_STRING_QUIRK_DISPATCH(File::StringType);
     }
 
     template<typename T>
-    auto to_file(T&& arg) {
-        if constexpr (can_be_string_view_t<T>::value) {
-            return to_file_string(stringviewify(std::forward<T>(arg)));
+    auto to_file(T&& arg)
+    {
+        if constexpr (std::is_same_v<std::decay_t<T>, std::filesystem::path> || std::is_same_v<std::decay_t<T>, const std::filesystem::path>)
+        {
+            return to_file_string(std::forward<T>(arg));
+        }
+        else if constexpr (can_be_string_view_t<T>::value) {
+            return to_file(stringviewify(std::forward<T>(arg)));
         } 
         else if constexpr (not_file_string_like_t<std::decay_t<T>>::value) 
         {
@@ -447,25 +495,27 @@ namespace RC
     
     template <typename T>
     struct is_std_string_type : std::disjunction<std::is_same<T, std::string>, std::is_same<T, std::string_view>>
-    {
-    };
+    {};
 
     template <typename T>
     struct not_std_string_like_t : std::conjunction<is_string_like_t<std::decay_t<T>>, std::negation<is_std_string_type<std::decay_t<T>>>>
-    {
-    };
+    { };
 
 
     template <typename T>
     auto inline to_std_string(T&& input) -> std::string
     {
-        return to_string(input);
+        return to_string(std::forward<T>(input));
     }
 
     template <typename T>
     auto to_stdstr(T&& arg)
     {
-        if constexpr (can_be_string_view_t<T>::value)
+        if constexpr (std::is_same_v<std::decay_t<T>, std::filesystem::path> || std::is_same_v<std::decay_t<T>, const std::filesystem::path>)
+        {
+            return to_std_string(std::forward<T>(arg));
+        }
+        else if constexpr (can_be_string_view_t<T>::value)
         {
             return to_stdstr(stringviewify(std::forward<T>(arg)));
         }
@@ -490,49 +540,18 @@ namespace RC
 
     template <typename T>
     auto inline to_system_string(T&& input) -> SystemStringType {
-        if constexpr (std::is_same_v<std::decay_t<T>, std::filesystem::path> || std::is_same_v<std::decay_t<T>, const std::filesystem::path>) {
-            // just a workaround here
-            auto hold = input;
-            if constexpr (std::is_same_v<SystemStringType, std::string>)
-            {
-                return input.string();
-            }
-            else if constexpr (std::is_same_v<SystemStringType, std::wstring>)
-            {
-                return input.wstring();
-            }
-            else if constexpr (std::is_same_v<SystemStringType, std::u16string>)
-            {
-                return input.u16string();
-            }
-            else 
-            {
-                static_assert(dependent_false<T>::value, "Unsupported SystemStringType.");
-            }
-        } 
-        else 
-        if constexpr (std::is_same_v<SystemStringType, std::string>)
-        {
-            return to_string(input);
-        }
-        else if constexpr (std::is_same_v<SystemStringType, std::wstring>)
-        {
-            return to_wstring(input);
-        }
-        else if constexpr (std::is_same_v<SystemStringType, std::u16string>)
-        {
-            return to_u16string(input);
-        }
-        else 
-        {
-            static_assert(dependent_false<T>::value, "Unsupported SystemStringType.");
-        }
+        TO_STRING_QUIRK_DISPATCH(SystemStringType);
     }
 
     template<typename T>
     auto to_system(T&& arg) {
+        if constexpr (std::is_same_v<std::decay_t<T>, std::filesystem::path> || std::is_same_v<std::decay_t<T>, const std::filesystem::path>)
+        {
+            return to_system_string(std::forward<T>(arg));
+        }
+        else 
         if constexpr (can_be_string_view_t<T>::value) {
-            return to_system_string(stringviewify(std::forward<T>(arg)));
+            return to_system(stringviewify(std::forward<T>(arg)));
         } 
         else if constexpr (not_system_string_like_t<std::decay_t<T>>::value) 
         {
@@ -555,29 +574,19 @@ namespace RC
 
     template <typename T>
     auto inline to_ue_string(T&& input) -> UEStringType {
-        if constexpr (std::is_same_v<UEStringType, std::string>)
-        {
-            return to_string(input);
-        }
-        else if constexpr (std::is_same_v<UEStringType, std::wstring>)
-        {
-            return to_wstring(input);
-        }
-        else if constexpr (std::is_same_v<UEStringType, std::u16string>)
-        {
-            return to_u16string(input);
-        } 
-        else 
-        {
-            static_assert(dependent_false<T>::value, "Unsupported SystemStringType.");
-        }
+        TO_STRING_QUIRK_DISPATCH(UEStringType);
     }
 
     template<typename T>
-    auto to_ue(T&& arg) {
-        if constexpr (can_be_string_view_t<T>::value) 
+    auto to_ue(T&& arg)
+    {
+        if constexpr (std::is_same_v<std::decay_t<T>, std::filesystem::path> || std::is_same_v<std::decay_t<T>, const std::filesystem::path>)
         {
-            return to_ue_string(stringviewify(std::forward<T>(arg)));
+            return to_ue_string(std::forward<T>(arg));
+        }
+        else if constexpr (can_be_string_view_t<T>::value) 
+        {
+            return to_ue(stringviewify(std::forward<T>(arg)));
         } 
         else if constexpr (not_ue_string_like_t<std::decay_t<T>>::value) 
         {
@@ -602,7 +611,7 @@ namespace RC
     auto to_lua(T&& arg) {
         if constexpr (can_be_string_view_t<T>::value || not_lua_string_like_t<std::decay_t<T>>::value) 
         {
-            return to_string((arg));
+            return to_string(std::forward<T>(arg));
         } 
         else 
         {
@@ -610,7 +619,14 @@ namespace RC
         }
     }
 
+    // TODO: add an option to allow compile failure if to_XXXX failed.
+    // e.g., to_ue<true> -> must be able to convert to uestring, not passthrough.
+
     #define csfor_lua(x) (to_lua((x)).c_str())
+
+    #undef TO_STRING_QUIRK_DISPATCH
+    #undef PATH_QUIRK
+    #undef STRING_DISPATCH
 
     namespace String
     {

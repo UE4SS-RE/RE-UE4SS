@@ -26,19 +26,19 @@ namespace RC::UVTD
 
             auto final_class_name = class_name;
 
-            auto wrapper_header_file = sol_bindings_output_path / std::format(SYSSTR("SolBindings_{}.hpp"), final_class_name_clean);
+            auto wrapper_header_file = sol_bindings_output_path / std::format(SYSSTR("SolBindings_{}.hpp"), to_system(final_class_name_clean));
 
-            Output::send(SYSSTR("Generating file '{}'\n"), wrapper_header_file.wstring());
+            Output::send(SYSSTR("Generating file '{}'\n"), wrapper_header_file);
 
             Output::Targets<Output::NewFileDevice> header_wrapper_dumper;
 
             auto& wrapper_header_file_device = header_wrapper_dumper.get_device<Output::NewFileDevice>();
             wrapper_header_file_device.set_file_name_and_path(wrapper_header_file);
-            wrapper_header_file_device.set_formatter([](File::StringViewType string) {
-                return File::StringType{string};
+            wrapper_header_file_device.set_formatter([](SystemStringViewType string) {
+                return SystemStringType{string};
             });
 
-            header_wrapper_dumper.send(STR("auto sol_class_{} = sol().new_usertype<{}>(\"{}\""), final_class_name, final_class_name, final_class_name);
+            header_wrapper_dumper.send(SYSSTR("auto sol_class_{} = sol().new_usertype<{}>(\"{}\""), final_class_name, final_class_name, final_class_name);
 
             for (const auto& [variable_name, variable] : class_entry.variables)
             {
@@ -67,7 +67,7 @@ namespace RC::UVTD
                     continue;
                 }
 
-                File::StringType final_variable_name = variable.name;
+                UEStringType final_variable_name = variable.name;
 
                 if (variable.name == STR("EnumFlags"))
                 {

@@ -10,7 +10,7 @@ namespace RC::Output
         return false;
     }
 
-    auto OutputDevice::receive_with_optional_arg([[maybe_unused]] File::StringViewType fmt, [[maybe_unused]] int32_t optional_arg) const -> void
+    auto OutputDevice::receive_with_optional_arg([[maybe_unused]] SystemStringViewType fmt, [[maybe_unused]] int32_t optional_arg) const -> void
     {
         // This only exists to make it not required to implement
         // Most devices probably won't use this
@@ -22,14 +22,14 @@ namespace RC::Output
         m_formatter = new_formatter;
     }
 
-    auto OutputDevice::get_now_as_string() -> const File::StringType
+    auto OutputDevice::get_now_as_string() -> const SystemStringType
     {
         auto now = std::chrono::system_clock::now();
-        const File::StringType when_as_string = std::format(SYSSTR("{:%Y-%m-%d %X}"), now);
+        const SystemStringType when_as_string = std::format(SYSSTR("{:%Y-%m-%d %X}"), now);
         return when_as_string;
     }
 
-    auto OutputDevice::default_format_string(File::StringViewType string_to_format) -> File::StringType
+    auto OutputDevice::default_format_string(SystemStringViewType string_to_format) -> SystemStringType
     {
         return std::format(SYSSTR("[{}] {}"), get_now_as_string(), string_to_format);
     }

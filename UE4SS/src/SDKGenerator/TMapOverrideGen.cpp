@@ -118,8 +118,8 @@ namespace RC::UEGenerator
                                File::OpenFor::Writing,
                                File::OverwriteExistingFile::Yes,
                                File::CreateIfNonExistent::Yes);
-        uaapifile.write_string_to_file(uaapi_object.serialize(JSON::ShouldFormat::Yes, &indent_level));
-        fmodelfile.write_string_to_file(fm_object.serialize(JSON::ShouldFormat::Yes, &indent_level));
+        uaapifile.write_file_string_to_file(to_file(uaapi_object.serialize(JSON::ShouldFormat::Yes, &indent_level)));
+        fmodelfile.write_file_string_to_file(to_file(fm_object.serialize(JSON::ShouldFormat::Yes, &indent_level)));
         Output::send(SYSSTR("Finished Dumping {} TMap Properties\n"), num_objects_generated);
         MapProperties.clear();
     }

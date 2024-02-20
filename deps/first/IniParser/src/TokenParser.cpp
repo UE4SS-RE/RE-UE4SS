@@ -28,10 +28,10 @@ namespace RC::Ini
         bool is_bool{false};
     };
 
-    auto static is_int(SystemStringType data) -> Int
+    auto static is_int(UEStringType data) -> Int
     {
         bool has_0x_prefix = [&]() {
-            return (data.size() > 2 && data[0] == SYSSTR('0') && (data[1] == SYSSTR('x') || data[1] == SYSSTR('X')));
+            return (data.size() > 2 && data[0] == STR('0') && (data[1] == STR('x') || data[1] == STR('X')));
         }();
 
         if (!has_0x_prefix && data[0] != L'-' && std::iswdigit(data[0]) == 0)
@@ -40,13 +40,13 @@ namespace RC::Ini
         }
         else
         {
-            SystemStringType string = has_0x_prefix ? SystemStringType{data.begin() + 2, data.end()} : data;
-            if (!has_0x_prefix && data[0] == SYSSTR('-'))
+            UEStringType string = has_0x_prefix ? UEStringType{data.begin() + 2, data.end()} : data;
+            if (!has_0x_prefix && data[0] == STR('-'))
             {
-                string = SystemStringType{string.begin() + 1, string.end()};
+                string = UEStringType{string.begin() + 1, string.end()};
             }
-            bool is_int = std::ranges::all_of(string.begin(), string.end(), [&](const File::CharType c) {
-                if constexpr (std::is_same_v<File::CharType, wchar_t>)
+            bool is_int = std::ranges::all_of(string.begin(), string.end(), [&](const UECharType c) {
+                if constexpr (std::is_same_v<UECharType, wchar_t>)
                 {
                     return has_0x_prefix ? std::iswxdigit(c) : std::iswdigit(c) != 0;
                 }
@@ -60,10 +60,10 @@ namespace RC::Ini
         }
     }
 
-    auto static is_float(SystemStringType data) -> Float
+    auto static is_float(UEStringType data) -> Float
     {
         bool has_decimal_or_negative_prefix = [&]() {
-            return data.size() > 1 && data[0] == SYSSTR('.') || data[0] == SYSSTR('-');
+            return data.size() > 1 && data[0] == STR('.') || data[0] == STR('-');
         }();
 
         if (!has_decimal_or_negative_prefix && std::iswdigit(data[0]) == 0)
@@ -72,19 +72,19 @@ namespace RC::Ini
         }
         else
         {
-            SystemStringType string = data.ends_with(SYSSTR('f')) ? SystemStringType{data.begin(), data.end() - 1} : data;
+            UEStringType string = data.ends_with(STR('f')) ? UEStringType{data.begin(), data.end() - 1} : data;
             if (has_decimal_or_negative_prefix)
             {
-                string = SystemStringType{string.begin() + 1, string.end()};
+                string = UEStringType{string.begin() + 1, string.end()};
             }
-            bool is_float = std::ranges::all_of(string.begin(), string.end(), [&](const File::CharType c) {
-                if constexpr (std::is_same_v<File::CharType, wchar_t>)
+            bool is_float = std::ranges::all_of(string.begin(), string.end(), [&](const UECharType c) {
+                if constexpr (std::is_same_v<UECharType, wchar_t>)
                 {
-                    return has_decimal_or_negative_prefix ? std::iswxdigit(c) : std::iswdigit(c) != 0 || c == SYSSTR('.');
+                    return has_decimal_or_negative_prefix ? std::iswxdigit(c) : std::iswdigit(c) != 0 || c == STR('.');
                 }
                 else
                 {
-                    return has_decimal_or_negative_prefix ? std::isxdigit(c) : std::isdigit(c) != 0 || c == SYSSTR('.');
+                    return has_decimal_or_negative_prefix ? std::isxdigit(c) : std::isdigit(c) != 0 || c == STR('.');
                 }
             });
 
@@ -92,17 +92,17 @@ namespace RC::Ini
         }
     }
 
-    auto static is_bool(const SystemStringType& data) -> Bool
+    auto static is_bool(const UEStringType& data) -> Bool
     {
-        SystemStringType all_lower_string_data = data;
-        std::transform(all_lower_string_data.begin(), all_lower_string_data.end(), all_lower_string_data.begin(), [](SystemCharType c) {
+        UEStringType all_lower_string_data = data;
+        std::transform(all_lower_string_data.begin(), all_lower_string_data.end(), all_lower_string_data.begin(), [](UECharType c) {
             return std::towlower(c);
         });
-        if (all_lower_string_data == SYSSTR("true") || all_lower_string_data == SYSSTR("1"))
+        if (all_lower_string_data == STR("true") || all_lower_string_data == STR("1"))
         {
             return Bool{.value = true, .is_bool = true};
         }
-        else if (all_lower_string_data == SYSSTR("false") || all_lower_string_data == SYSSTR("0"))
+        else if (all_lower_string_data == STR("false") || all_lower_string_data == STR("0"))
         {
             return Bool{.value = false, .is_bool = true};
         }
@@ -112,7 +112,7 @@ namespace RC::Ini
         }
     }
 
-    auto TokenParser::find_variable_by_name(Section* section, const RC::SystemStringType& name) -> std::optional<std::reference_wrapper<Value>>
+    auto TokenParser::find_variable_by_name(Section* section, const RC::UEStringType& name) -> std::optional<std::reference_wrapper<Value>>
     {
         auto const& var = section->key_value_pairs.find(name);
         if (var != section->key_value_pairs.end())
@@ -125,7 +125,7 @@ namespace RC::Ini
         }
     }
 
-    auto TokenParser::find_variable_by_name(const SystemStringType& name) -> std::optional<std::reference_wrapper<Value>>
+    auto TokenParser::find_variable_by_name(const UEStringType& name) -> std::optional<std::reference_wrapper<Value>>
     {
         size_t occurrence_of_dot = name.find_first_of(L'.');
         if (occurrence_of_dot == name.npos || occurrence_of_dot + 1 > name.size())
@@ -141,38 +141,38 @@ namespace RC::Ini
             }
             else
             {
-                const SystemStringType requested_variable_name = name.substr(occurrence_of_dot + 1, name.size());
+                const UEStringType requested_variable_name = name.substr(occurrence_of_dot + 1, name.size());
                 return find_variable_by_name(&requested_section->second, requested_variable_name);
             }
         }
     }
 
-    auto state_to_string(State state) -> SystemStringType
+    auto state_to_string(State state) -> UEStringType
     {
         switch (state)
         {
         case State::StartOfFile:
-            return SYSSTR("StartOfFile");
+            return STR("StartOfFile");
         case State::SetSectionValue:
-            return SYSSTR("SetSectionValue");
+            return STR("SetSectionValue");
         case State::NewLineStarted:
-            return SYSSTR("NewLineStarted");
+            return STR("NewLineStarted");
         case State::CreateNewOrSetCurrentSection:
-            return SYSSTR("CreateNewOrSetCurrentSection");
+            return STR("CreateNewOrSetCurrentSection");
         case State::CreateSectionKey:
-            return SYSSTR("CreateSectionKey");
+            return STR("CreateSectionKey");
         case State::StoreSectionKey:
-            return SYSSTR("StoreSectionKey");
+            return STR("StoreSectionKey");
         }
 
-        return SYSSTR("UnknownState");
+        return STR("UnknownState");
     }
 
-    auto TokenParser::characters_to_string(const ParserBase::Token& characters_token) -> SystemStringType
+    auto TokenParser::characters_to_string(const ParserBase::Token& characters_token) -> UEStringType
     {
         auto* current_token = &characters_token;
 
-        SystemStringType full_value{};
+        UEStringType full_value{};
         while (true)
         {
             const auto token_type = current_token->get_type();
@@ -182,7 +182,7 @@ namespace RC::Ini
             }
             else if (token_type == IniTokenType::Space)
             {
-                full_value.append(SYSSTR(" "));
+                full_value.append(STR(" "));
             }
             else if (token_type == IniTokenType::Characters)
             {
@@ -190,7 +190,7 @@ namespace RC::Ini
             }
             else if (token_type == IniTokenType::Equals)
             {
-                full_value.append(SYSSTR("="));
+                full_value.append(STR("="));
             }
             else if (token_type == IniTokenType::ClosingSquareBracket)
             {
@@ -201,15 +201,15 @@ namespace RC::Ini
                     // The next token is the last token on this line and since it's ] we don't want to include it in the string
                     break;
                 }
-                full_value.append(SYSSTR("]"));
+                full_value.append(STR("]"));
             }
             else if (token_type == IniTokenType::OpeningSquareBracket)
             {
-                full_value.append(SYSSTR("["));
+                full_value.append(STR("["));
             }
             else if (token_type == IniTokenType::SemiColon)
             {
-                full_value.append(SYSSTR(";"));
+                full_value.append(STR(";"));
             }
 
             // Exit early and let the state machine deal with the new line
@@ -290,7 +290,7 @@ namespace RC::Ini
     {
         if (m_current_state == State::CreateNewOrSetCurrentSection)
         {
-            m_current_character_data.append(SYSSTR(" "));
+            m_current_character_data.append(STR(" "));
         }
     }
 
@@ -381,7 +381,7 @@ namespace RC::Ini
 
         // Create the value with the correct key and an empty value and store a pointer to it so that the value can be set later
         m_current_value = &m_current_section->key_value_pairs.emplace(m_current_character_data, Value{}).first->second;
-        m_current_value->add_string_value(SYSSTR(""));
+        m_current_value->add_string_value(STR(""));
         m_current_value->set_ref(m_current_value);
         m_current_character_data.clear();
 

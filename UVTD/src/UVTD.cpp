@@ -111,7 +111,7 @@ namespace RC::UVTD
                         generator.generate_files();
                     }
 
-                    File::StringType pdb_name = pdb.filename().stem();
+                    SystemStringType pdb_name = pdb.filename().stem();
                     UnrealVirtualGenerator virtual_generator(pdb_name, run_container);
                     virtual_generator.generate_files();
 

@@ -17,7 +17,7 @@ namespace RC
       public:
         struct SectionOverrides
         {
-            File::StringType ModsFolderPath{};
+            UEStringType ModsFolderPath{};
         } Overrides;
 
         struct SectionGeneral

@@ -62,12 +62,12 @@ namespace RC::Output
         return true;
     }
 
-    auto DebugConsoleDevice::receive(File::StringViewType fmt) const -> void
+    auto DebugConsoleDevice::receive(SystemStringViewType fmt) const -> void
     {
         receive_with_optional_arg(fmt, Color::NoColor);
     }
 
-    auto DebugConsoleDevice::receive_with_optional_arg(File::StringViewType fmt, [[maybe_unused]] int32_t optional_arg) const -> void
+    auto DebugConsoleDevice::receive_with_optional_arg(SystemStringViewType fmt, [[maybe_unused]] int32_t optional_arg) const -> void
     {
         #ifdef WIN32
         set_windows_console_out_mode_if_needed();

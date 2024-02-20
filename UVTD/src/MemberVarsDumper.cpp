@@ -7,7 +7,7 @@
 
 namespace RC::UVTD
 {
-    static inline std::vector<File::StringType> s_types_to_not_dump{
+    static inline std::vector<UEStringType> s_types_to_not_dump{
             STR("FUnversionedStructSchema"),
             STR("ELifetimeCondition"),
             STR("UAISystemBase"),
@@ -110,14 +110,14 @@ namespace RC::UVTD
 
     auto MemberVarsDumper::process_class(const PDB::TPIStream& tpi_stream,
                                          const PDB::CodeView::TPI::Record* class_record,
-                                         const File::StringType& name,
+                                         const UEStringType& name,
                                          const SymbolNameInfo& name_info) -> void
     {
         auto changed = change_prefix(name, symbols.is_425_plus);
         if (!changed.has_value()) return;
 
-        File::StringType class_name = *changed;
-        File::StringType class_name_clean = Symbols::clean_name(class_name);
+        auto class_name = *changed;
+        auto class_name_clean = Symbols::clean_name(class_name);
         auto& class_entry = type_container.get_or_create_class_entry(class_name, class_name_clean, name_info);
 
         auto fields = tpi_stream.GetTypeRecord(class_record->data.LF_CLASS.field);
@@ -136,11 +136,11 @@ namespace RC::UVTD
 
     auto MemberVarsDumper::process_member(const PDB::TPIStream& tpi_stream, const PDB::CodeView::TPI::FieldList* field_record, Class& class_entry) -> void
     {
-        File::StringType member_name = Symbols::get_leaf_name(field_record->data.LF_STMEMBER.name, field_record->data.LF_MEMBER.lfEasy.kind);
+        auto member_name = Symbols::get_leaf_name(field_record->data.LF_STMEMBER.name, field_record->data.LF_MEMBER.lfEasy.kind);
         auto changed = change_prefix(Symbols::get_type_name(tpi_stream, field_record->data.LF_MEMBER.index), symbols.is_425_plus);
         if (!changed.has_value()) return;
 
-        File::StringType type_name = *changed;
+        auto type_name = *changed;
 
         for (const auto& type_to_not_dump : s_types_to_not_dump)
         {
@@ -156,7 +156,7 @@ namespace RC::UVTD
         variable.offset = *(uint16_t*)field_record->data.LF_MEMBER.offset;
     }
 
-    auto MemberVarsDumper::dump_member_variable_layouts(std::unordered_map<File::StringType, SymbolNameInfo>& names) -> void
+    auto MemberVarsDumper::dump_member_variable_layouts(std::unordered_map<SystemStringType, SymbolNameInfo>& names) -> void
     {
         Output::send(SYSSTR("Dumping {} symbols for {}\n"), names.size(), symbols.pdb_file_path.filename().stem().wstring());
 
@@ -169,7 +169,7 @@ namespace RC::UVTD
             {
                 if (type_record->data.LF_CLASS.property.fwdref) continue;
 
-                const File::StringType class_name = Symbols::get_leaf_name(type_record->data.LF_CLASS.data, type_record->data.LF_CLASS.lfEasy.kind);
+                const SystemStringType class_name = Symbols::get_leaf_name(type_record->data.LF_CLASS.data, type_record->data.LF_CLASS.lfEasy.kind);
                 if (!names.contains(class_name)) continue;
 
                 const auto name_info = names.find(class_name);
@@ -184,7 +184,7 @@ namespace RC::UVTD
 
     auto MemberVarsDumper::generate_code() -> void
     {
-        std::unordered_map<File::StringType, SymbolNameInfo> member_vars_names;
+        std::unordered_map<SystemStringType, SymbolNameInfo> member_vars_names;
 
         for (ObjectItem& item : s_object_items)
         {
@@ -197,7 +197,7 @@ namespace RC::UVTD
 
     auto MemberVarsDumper::generate_files() -> void
     {
-        File::StringType pdb_name = symbols.pdb_file_path.filename().stem();
+        SystemStringType pdb_name = symbols.pdb_file_path.filename().stem();
 
         auto default_template_file = std::filesystem::path{STR("MemberVariableLayout.ini")};
 
@@ -206,8 +206,8 @@ namespace RC::UVTD
         Output::Targets<Output::NewFileDevice> default_ini_dumper;
         auto& default_ini_file_device = default_ini_dumper.get_device<Output::NewFileDevice>();
         default_ini_file_device.set_file_name_and_path(member_variable_layouts_templates_output_path / default_template_file);
-        default_ini_file_device.set_formatter([](File::StringViewType string) {
-            return File::StringType{string};
+        default_ini_file_device.set_formatter([](SystemStringViewType string) {
+            return SystemStringType{string};
         });
 
         auto template_file = std::format(SYSSTR("MemberVariableLayout_{}_Template.ini"), pdb_name);
@@ -217,8 +217,8 @@ namespace RC::UVTD
         Output::Targets<Output::NewFileDevice> ini_dumper;
         auto& ini_file_device = ini_dumper.get_device<Output::NewFileDevice>();
         ini_file_device.set_file_name_and_path(member_variable_layouts_templates_output_path / template_file);
-        ini_file_device.set_formatter([](File::StringViewType string) {
-            return File::StringType{string};
+        ini_file_device.set_formatter([](SystemStringViewType string) {
+            return SystemStringType{string};
         });
 
         auto pdb_name_no_underscore = pdb_name;
@@ -232,15 +232,15 @@ namespace RC::UVTD
             }
 
             auto default_setter_src_file = member_variable_layouts_gen_function_bodies_path /
-                                           std::format(SYSSTR("{}_MemberVariableLayout_DefaultSetter_{}.cpp"), pdb_name, class_entry.class_name_clean);
+                                           std::format(SYSSTR("{}_MemberVariableLayout_DefaultSetter_{}.cpp"), pdb_name, to_system(class_entry.class_name_clean));
 
             Output::send(SYSSTR("Generating file '{}'\n"), default_setter_src_file.wstring());
 
             Output::Targets<Output::NewFileDevice> default_setter_src_dumper;
             auto& default_setter_src_file_device = default_setter_src_dumper.get_device<Output::NewFileDevice>();
             default_setter_src_file_device.set_file_name_and_path(default_setter_src_file);
-            default_setter_src_file_device.set_formatter([](File::StringViewType string) {
-                return File::StringType{string};
+            default_setter_src_file_device.set_formatter([](SystemStringViewType string) {
+                return SystemStringType{string};
             });
 
             ini_dumper.send(STR("[{}]\n"), class_entry.class_name);
@@ -251,8 +251,8 @@ namespace RC::UVTD
                 ini_dumper.send(STR("{} = 0x{:X}\n"), variable.name, variable.offset);
                 default_ini_dumper.send(STR("{} = -1\n"), variable.name);
 
-                File::StringType final_variable_name = variable.name;
-                File::StringType final_class_name = class_entry.class_name;
+                SystemStringType final_variable_name = variable.name;
+                SystemStringType final_class_name = class_entry.class_name;
 
                 if (variable.name == STR("EnumFlags"))
                 {

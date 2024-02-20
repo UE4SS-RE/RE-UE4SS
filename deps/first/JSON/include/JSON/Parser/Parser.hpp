@@ -11,5 +11,6 @@
 namespace RC::JSON::Parser
 {
     RC_JSON_API auto parse(File::StringType& input) -> std::unique_ptr<JSON::Object>;
+    RC_JSON_API auto parse(UEStringType& input) -> std::unique_ptr<JSON::Object>;
     RC_JSON_API auto parse(const File::Handle&) -> std::unique_ptr<JSON::Object>;
 } // namespace RC::JSON::Parser

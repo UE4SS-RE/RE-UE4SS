@@ -75,11 +75,13 @@ namespace RC::File
         RC_FILE_API auto serialize_item(const GenericItemData& data, bool is_internal_item = false) -> void override;
         RC_FILE_API auto get_serialized_item(size_t data_size, bool is_internal_item = false) -> void* override;
         RC_FILE_API auto close_current_file() -> void override;
-        RC_FILE_API auto write_string_to_file(StringViewType string_to_write) -> void override;
+        RC_FILE_API auto write_string_to_file(UEStringViewType string_to_write) -> void override;
+        RC_FILE_API auto write_file_string_to_file(StringViewType string_to_write) -> void override;
         RC_FILE_API auto is_same_as(WinFile& other_file) -> bool override;
-        [[nodiscard]] RC_FILE_API auto read_all() const -> StringType override;
+        [[nodiscard]] RC_FILE_API auto read_all() const -> UEStringType override;
         [[nodiscard]] RC_FILE_API auto memory_map() -> std::span<uint8_t> override;
         [[nodiscard]] RC_FILE_API auto static open_file(const std::filesystem::path& file_name_and_path, const OpenProperties& open_properties) -> WinFile;
+        [[nodiscard]] RC_FILE_API auto read_file_all() const -> StringType override;
         // File Interface -> END
     };
 

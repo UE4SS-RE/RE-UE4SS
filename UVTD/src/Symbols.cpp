@@ -56,7 +56,7 @@ namespace RC::UVTD
         return *this;
     }
 
-    auto Symbols::generate_method_signature(const PDB::TPIStream& tpi_stream, const PDB::CodeView::TPI::Record* function_record, File::StringType method_name)
+    auto Symbols::generate_method_signature(const PDB::TPIStream& tpi_stream, const PDB::CodeView::TPI::Record* function_record, SystemStringType method_name)
             -> MethodSignature
     {
         MethodSignature signature{};
@@ -81,7 +81,7 @@ namespace RC::UVTD
         return signature;
     }
 
-    auto Symbols::get_type_name(const PDB::TPIStream& tpi_stream, uint32_t record_index, bool check_valid) -> File::StringType
+    auto Symbols::get_type_name(const PDB::TPIStream& tpi_stream, uint32_t record_index, bool check_valid) -> UEStringType
     {
         if (record_index < tpi_stream.GetFirstTypeIndex())
         {
@@ -214,7 +214,7 @@ namespace RC::UVTD
         {
         case PDB::CodeView::TPI::TypeRecordKind::LF_CLASS:
         case PDB::CodeView::TPI::TypeRecordKind::LF_STRUCTURE: {
-            File::StringType name = get_leaf_name(record->data.LF_CLASS.data, record->data.LF_CLASS.lfEasy.kind);
+            UEStringType name = get_leaf_name(record->data.LF_CLASS.data, record->data.LF_CLASS.lfEasy.kind);
             ParsedTemplateClass parsed = TemplateClassParser::Parse(name);
 
             if (parsed.class_name == STR("TMap"))
@@ -228,11 +228,11 @@ namespace RC::UVTD
             return to_string_type(record->data.LF_ENUM.name);
         case PDB::CodeView::TPI::TypeRecordKind::LF_MODIFIER: {
             const auto modifier_attr = record->data.LF_MODIFIER.attr;
-            std::vector<File::StringType> modifiers{};
+            std::vector<UEStringType> modifiers{};
 
             if (modifier_attr.MOD_volatile) modifiers.push_back(STR("volatile"));
 
-            File::StringType modifier_string{};
+            UEStringType modifier_string{};
             for (const auto& modifier : modifiers)
             {
                 modifier_string += modifier + STR(" ");
@@ -244,17 +244,18 @@ namespace RC::UVTD
             return get_type_name(tpi_stream, record->data.LF_POINTER.utype, check_valid) + STR("*");
         case PDB::CodeView::TPI::TypeRecordKind::LF_MFUNCTION:
         case PDB::CodeView::TPI::TypeRecordKind::LF_PROCEDURE: {
-            File::StringType return_type = get_type_name(tpi_stream, record->data.LF_PROCEDURE.rvtype, true);
-            File::StringType args = get_type_name(tpi_stream, record->data.LF_PROCEDURE.arglist, check_valid);
+            UEStringType return_type = get_type_name(tpi_stream, record->data.LF_PROCEDURE.rvtype, true);
+            UEStringType args = get_type_name(tpi_stream, record->data.LF_PROCEDURE.arglist, check_valid);
             return std::format(SYSSTR("std::function<{}({})>"), return_type, args);
         }
         case PDB::CodeView::TPI::TypeRecordKind::LF_ARGLIST: {
-            File::StringType args{};
+            UEStringType args{};
 
             for (size_t i = 0; i < record->data.LF_ARGLIST.count; i++)
             {
                 bool should_add_comma = i < record->data.LF_ARGLIST.count - 1;
-                args.append(std::format(SYSSTR("{}{}"), get_type_name(tpi_stream, record->data.LF_ARGLIST.arg[i], true), should_add_comma ? STR(", ") : STR("")));
+                //args.append(std::format(SYSSTR("{}{}"), get_type_name(tpi_stream, record->data.LF_ARGLIST.arg[i], true), should_add_comma ? STR(", ") : STR("")));
+                args.append(get_type_name(tpi_stream, record->data.LF_ARGLIST.arg[i], true) + (should_add_comma ? STR(", ") : STR("")));
             }
 
             return args;
@@ -267,7 +268,7 @@ namespace RC::UVTD
         }
     }
 
-    auto Symbols::get_method_name(const PDB::CodeView::TPI::FieldList* method_record) -> File::StringType
+    auto Symbols::get_method_name(const PDB::CodeView::TPI::FieldList* method_record) -> UEStringType
     {
         auto methodAttributes = static_cast<PDB::CodeView::TPI::MethodProperty>(method_record->data.LF_ONEMETHOD.attributes.mprop);
         switch (methodAttributes)
@@ -311,7 +312,7 @@ namespace RC::UVTD
         return 0;
     }
 
-    auto Symbols::get_leaf_name(const char* data, PDB::CodeView::TPI::TypeRecordKind kind) -> File::StringType
+    auto Symbols::get_leaf_name(const char* data, PDB::CodeView::TPI::TypeRecordKind kind) -> UEStringType
     {
         auto name = to_string_type(&data[get_leaf_size(kind)]);
         if (auto it = s_member_rename_map.find(name); it != s_member_rename_map.end())
@@ -324,7 +325,7 @@ namespace RC::UVTD
         }
     }
 
-    auto Symbols::clean_name(File::StringType name) -> File::StringType
+    auto Symbols::clean_name(UEStringType name) -> UEStringType
     {
         std::replace(name.begin(), name.end(), ':', '_');
         std::replace(name.begin(), name.end(), '~', '$');

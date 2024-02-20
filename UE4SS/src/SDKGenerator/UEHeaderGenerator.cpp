@@ -58,7 +58,7 @@ namespace RC::UEGenerator
 {
     using namespace RC::Unreal;
 
-    std::map<File::StringType, UniqueName> UEHeaderGenerator::m_used_file_names{};
+    std::map<SystemStringType, UniqueName> UEHeaderGenerator::m_used_file_names{};
     std::map<UObject*, int32_t> UEHeaderGenerator::m_dependency_object_to_unique_id{};
 
     auto static is_subtype_struct_valid(UScriptStruct* subtype) -> bool
@@ -3766,7 +3766,7 @@ namespace RC::UEGenerator
             bool is_class = object->IsA<UClass>();
             if ((is_struct || is_class) && m_structs_that_need_get_type_hash.find(std::bit_cast<UStruct*>(object)) != m_structs_that_need_get_type_hash.end())
             {
-                File::StringType name{};
+                SystemStringType name{};
                 if (is_class)
                 {
                     name = get_native_class_name(std::bit_cast<UClass*>(object));
@@ -3787,11 +3787,11 @@ namespace RC::UEGenerator
                 {
                     if (get_native_struct_name(super_struct) == STR("FTickFunction"))
                     {
-                        File::StringType name{};
+                        SystemStringType name{};
                         name = get_native_struct_name(struct_object);
                         header_file.append_line(STR(""));
                         header_file.append_line(STR("template<>"));
-                        header_file.append_line(std::format(STR("struct TStructOpsTypeTraits<{}> : public TStructOpsTypeTraitsBase2<{}>"), name, name));
+                        header_file.append_line(std::format(SYSSTR("struct TStructOpsTypeTraits<{}> : public TStructOpsTypeTraitsBase2<{}>"), name, name));
                         header_file.append_line(STR("{"));
                         header_file.append_line(STR("    enum"));
                         header_file.append_line(STR("    {"));
@@ -3925,22 +3925,22 @@ namespace RC::UEGenerator
         return pre_declarations;
     }
 
-    auto UEHeaderGenerator::get_header_name_for_object(UObject* object, bool get_existing_header) -> UEStringType
+    auto UEHeaderGenerator::get_header_name_for_object(UObject* object, bool get_existing_header) -> SystemStringType
     {
-        File::StringType header_name{};
+        SystemStringType header_name{};
         UObject* final_object{};
 
         if (object->IsA<UClass>() || object->IsA<UScriptStruct>())
         {
             // Class and struct headers follow the relevant object name
-            header_name = (object->GetName());
+            header_name = to_system(object->GetName());
             final_object = object;
         }
         else if (object->IsA<UEnum>())
         {
             // Enumeration usually have the E prefix which will be present in the header names
             // We do not strip it because there are some broken headers that do not follow that convention (e.g. funny Wwise)
-            header_name = (object->GetName());
+            header_name = to_system(object->GetName());
             final_object = object;
         }
         else
@@ -3978,14 +3978,14 @@ namespace RC::UEGenerator
         {
             if (auto it2 = m_dependency_object_to_unique_id.find(final_object); it2 != m_dependency_object_to_unique_id.end())
             {
-                header_name.append(std::format(STR("{}"), it2->second));
+                header_name.append(std::format(SYSSTR("{}"), it2->second));
             }
         }
         else
         {
             if (auto it = m_used_file_names.find(header_name); it != m_used_file_names.end())
             {
-                header_name.append(std::format(STR("{}"), ++it->second.usable_id));
+                header_name.append(std::format(SYSSTR("{}"), ++it->second.usable_id));
                 m_dependency_object_to_unique_id.emplace(final_object, it->second.usable_id);
             }
             else

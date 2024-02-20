@@ -202,7 +202,7 @@ namespace RC
 
             // Setup the log file
             auto& file_device = Output::set_default_devices<Output::NewFileDevice>();
-            file_device.set_file_name_and_path(to_system_string(m_log_directory / m_log_file_name));
+            file_device.set_file_name_and_path(to_system(m_log_directory / m_log_file_name));
 
             create_simple_console();
 
@@ -210,7 +210,7 @@ namespace RC
             if (settings_manager.Debug.DebugConsoleEnabled)
             {
                 m_console_device = &Output::set_default_devices<Output::ConsoleDevice>();
-                m_console_device->set_formatter([](File::StringViewType string) -> File::StringType {
+                m_console_device->set_formatter([](SystemStringViewType string) -> SystemStringType {
                     return std::format(SYSSTR("[{}] {}"), std::format(SYSSTR("{:%X}"), std::chrono::system_clock::now()), string);
                 });
                 if (settings_manager.Debug.DebugConsoleVisible)
@@ -399,8 +399,8 @@ namespace RC
     {
         ProfilerScope();
         const std::filesystem::path moduleFilePath = std::filesystem::path(moduleFilePathString);
-        m_root_directory = to_system_string(moduleFilePath.parent_path());
-        m_module_file_path = to_system_string(moduleFilePath);
+        m_root_directory = to_system(moduleFilePath.parent_path());
+        m_module_file_path = to_system(moduleFilePath);
 
         // The default working directory is the root directory
         // Can be changed by creating a <GameName> directory in the root directory
@@ -458,7 +458,7 @@ namespace RC
         }
     }
 
-    auto UE4SSProgram::create_emergency_console_for_early_error(File::StringViewType error_message) -> void
+    auto UE4SSProgram::create_emergency_console_for_early_error(SystemStringViewType error_message) -> void
     {
         settings_manager.Debug.SimpleConsoleEnabled = true;
         create_simple_console();
@@ -485,7 +485,7 @@ namespace RC
         {
             m_debug_console_device = &Output::set_default_devices<Output::DebugConsoleDevice>();
             Output::set_default_log_level<LogLevel::Normal>();
-            m_debug_console_device->set_formatter([](File::StringViewType string) -> File::StringType {
+            m_debug_console_device->set_formatter([](SystemStringViewType string) ->SystemStringType {
                 return std::format(SYSSTR("[{}] {}"), std::format(SYSSTR("{:%X}"), std::chrono::system_clock::now()), string);
             });
 #ifdef WIN32
@@ -1410,7 +1410,7 @@ namespace RC
         Output::send(SYSSTR("All mods re-installed\n"));
     }
 
-    auto UE4SSProgram::get_module_directory() -> File::StringViewType
+    auto UE4SSProgram::get_module_directory() -> SystemStringViewType
     {
         m_module_file_path_str = to_system_string(m_module_file_path);
         return m_module_file_path_str;
@@ -1421,13 +1421,13 @@ namespace RC
         return m_game_executable_directory.c_str();
     }
 
-    auto UE4SSProgram::get_working_directory() -> File::StringViewType
+    auto UE4SSProgram::get_working_directory() -> SystemStringViewType
     {
         m_working_directory_str = to_system_string(m_working_directory);
         return m_working_directory_str;
     }
 
-    auto UE4SSProgram::get_mods_directory() -> File::StringViewType
+    auto UE4SSProgram::get_mods_directory() -> SystemStringViewType
     {
         m_mods_directory_str = to_system_string(m_mods_directory);
         return m_mods_directory_str;
@@ -1438,7 +1438,7 @@ namespace RC
         return m_legacy_root_directory.c_str();
     }
     
-    auto UE4SSProgram::get_game_directory() -> File::StringViewType
+    auto UE4SSProgram::get_game_directory() -> SystemStringViewType
     {
         m_game_executable_str = to_system_string(m_game_executable_directory);
         return m_game_executable_str;
@@ -1778,8 +1778,8 @@ namespace RC
             Output::Targets<ObjectDumperOutputDevice> scoped_dumper_out;
             auto& file_device = scoped_dumper_out.get_device<ObjectDumperOutputDevice>();
             file_device.set_file_name_and_path(output_path_and_file_name);
-            file_device.set_formatter([](File::StringViewType string) -> File::StringType {
-                return File::StringType{string};
+            file_device.set_formatter([](SystemStringViewType string) -> SystemStringType {
+                return SystemStringType{string};
             });
 
             // Make string & reserve massive amounts of space to hopefully not reach the end of the string and require more

@@ -25,14 +25,14 @@ namespace RC::UVTD
 {
     auto VTableDumper::process_class(const PDB::TPIStream& tpi_stream,
                                      const PDB::CodeView::TPI::Record* class_record,
-                                     const File::StringType& name,
+                                     const UEStringType& name,
                                      const SymbolNameInfo& name_info) -> void
     {
         auto changed = change_prefix(name, symbols.is_425_plus);
         if (!changed.has_value()) return;
 
-        File::StringType class_name = *changed;
-        File::StringType class_name_clean = Symbols::clean_name(class_name);
+        UEStringType class_name = *changed;
+        UEStringType class_name_clean = Symbols::clean_name(class_name);
 
         auto& class_entry = type_container.get_or_create_class_entry(class_name, class_name_clean, name_info);
 
@@ -65,8 +65,8 @@ namespace RC::UVTD
     {
         auto list = tpi_stream.GetTypeRecord(method_record->data.LF_METHOD.mList);
 
-        File::StringType method_name = Symbols::get_method_name(method_record);
-        File::StringType method_name_clean = Symbols::clean_name(method_name);
+        UEStringType method_name = Symbols::get_method_name(method_record);
+        UEStringType method_name_clean = Symbols::clean_name(method_name);
 
         // this is required because METHOD struct size is not constant :)
         size_t next_offset = 0;
@@ -87,7 +87,7 @@ namespace RC::UVTD
             if (!Symbols::is_virtual(overload_record->METHOD.attributes)) continue;
             if (!function_record || function_record->header.kind != PDB::CodeView::TPI::TypeRecordKind::LF_MFUNCTION) continue;
 
-            File::StringType overload_name = method_name_clean;
+            UEStringType overload_name = method_name_clean;
             if (overload_index != 0)
             {
                 overload_name += std::format(SYSSTR("_{}"), overload_index);
@@ -104,13 +104,13 @@ namespace RC::UVTD
 
     auto VTableDumper::process_onemethod(const PDB::TPIStream& tpi_stream, const PDB::CodeView::TPI::FieldList* method_record, Class& class_entry) -> void
     {
-        static std::unordered_map<File::StringType, std::unordered_map<File::StringType, uint32_t>> functions_already_dumped{};
+        static std::unordered_map<UEStringType, std::unordered_map<UEStringType, uint32_t>> functions_already_dumped{};
 
         const auto is_virtual = method_record->data.LF_ONEMETHOD.attributes.mprop == (uint16_t)PDB::CodeView::TPI::MethodProperty::Intro ||
                                 method_record->data.LF_ONEMETHOD.attributes.mprop == (uint16_t)PDB::CodeView::TPI::MethodProperty::PureIntro;
         if (!is_virtual) return;
 
-        File::StringType method_name = Symbols::get_method_name(method_record);
+        UEStringType method_name = Symbols::get_method_name(method_record);
         int32_t vtable_offset = method_record->data.LF_ONEMETHOD.vbaseoff[0];
         auto function_record = tpi_stream.GetTypeRecord(method_record->data.LF_ONEMETHOD.index);
 
@@ -127,7 +127,7 @@ namespace RC::UVTD
 
         Output::send(SYSSTR("  method {} offset {}\n"), method_name, vtable_offset);
 
-        File::StringType method_name_clean = Symbols::clean_name(method_name);
+        UEStringType method_name_clean = Symbols::clean_name(method_name);
 
         auto& function = class_entry.functions[vtable_offset];
         function.name = method_name_clean;
@@ -137,7 +137,7 @@ namespace RC::UVTD
         functions_already_dumped.emplace(method_name, 1);
     }
 
-    auto VTableDumper::dump_vtable_for_symbol(std::unordered_map<File::StringType, SymbolNameInfo>& names) -> void
+    auto VTableDumper::dump_vtable_for_symbol(std::unordered_map<UEStringType, SymbolNameInfo>& names) -> void
     {
         Output::send(SYSSTR("Dumping {} struct symbols for {}\n"), names.size(), symbols.pdb_file_path.filename().stem().wstring());
 
@@ -150,7 +150,7 @@ namespace RC::UVTD
             {
                 if (type_record->data.LF_CLASS.property.fwdref) continue;
 
-                const File::StringType class_name = Symbols::get_leaf_name(type_record->data.LF_CLASS.data, type_record->data.LF_CLASS.lfEasy.kind);
+                const UEStringType class_name = Symbols::get_leaf_name(type_record->data.LF_CLASS.data, type_record->data.LF_CLASS.lfEasy.kind);
                 if (!names.contains(class_name)) continue;
 
                 const auto name_info = names.find(class_name);
@@ -164,7 +164,7 @@ namespace RC::UVTD
 
     auto VTableDumper::generate_code() -> void
     {
-        std::unordered_map<File::StringType, SymbolNameInfo> vtable_names;
+        std::unordered_map<UEStringType, SymbolNameInfo> vtable_names;
         for (const auto& object_item : s_object_items)
         {
             if (object_item.valid_for_vtable != ValidForVTable::Yes) continue;
@@ -177,7 +177,7 @@ namespace RC::UVTD
 
     auto VTableDumper::generate_files() -> void
     {
-        File::StringType pdb_name = symbols.pdb_file_path.filename().stem();
+        UEStringType pdb_name = symbols.pdb_file_path.filename().stem();
 
         for (const auto& [class_name, class_entry] : type_container.get_class_entries())
         {
@@ -186,8 +186,8 @@ namespace RC::UVTD
             auto& function_body_file_device = function_body_dumper.get_device<Output::NewFileDevice>();
             function_body_file_device.set_file_name_and_path(vtable_gen_output_function_bodies_path /
                                                              std::format(SYSSTR("{}_VTableOffsets_{}_FunctionBody.cpp"), pdb_name, class_name));
-            function_body_file_device.set_formatter([](File::StringViewType string) {
-                return File::StringType{string};
+            function_body_file_device.set_formatter([](SystemStringViewType string) {
+                return SystemStringType{string};
             });
 
             for (const auto& [function_index, function_entry] : class_entry.functions)
@@ -198,13 +198,13 @@ namespace RC::UVTD
                     local_class_name.replace(0, 1, STR("F"));
                 }
 
-                function_body_dumper.send(STR("if (auto it = {}::VTableLayoutMap.find(STR(\"{}\")); it == {}::VTableLayoutMap.end())\n"),
+                function_body_dumper.send(SYSSTR("if (auto it = {}::VTableLayoutMap.find(STR(\"{}\")); it == {}::VTableLayoutMap.end())\n"),
                                           local_class_name,
                                           function_entry.name,
                                           local_class_name);
-                function_body_dumper.send(STR("{\n"));
-                function_body_dumper.send(STR("    {}::VTableLayoutMap.emplace(STR(\"{}\"), 0x{:X});\n"), local_class_name, function_entry.name, function_entry.offset);
-                function_body_dumper.send(STR("}\n\n"));
+                function_body_dumper.send(SYSSTR("{\n"));
+                function_body_dumper.send(SYSSTR("    {}::VTableLayoutMap.emplace(STR(\"{}\"), 0x{:X});\n"), local_class_name, function_entry.name, function_entry.offset);
+                function_body_dumper.send(SYSSTR("}\n\n"));
             }
         }
 
@@ -213,24 +213,24 @@ namespace RC::UVTD
         Output::Targets<Output::NewFileDevice> ini_dumper;
         auto& ini_file_device = ini_dumper.get_device<Output::NewFileDevice>();
         ini_file_device.set_file_name_and_path(vtable_templates_output_path / template_file);
-        ini_file_device.set_formatter([](File::StringViewType string) {
-            return File::StringType{string};
+        ini_file_device.set_formatter([](SystemStringViewType string) {
+            return SystemStringType{string};
         });
 
         for (const auto& [class_name, class_entry] : type_container.get_class_entries())
         {
-            ini_dumper.send(STR("[{}]\n"), class_entry.class_name);
+            ini_dumper.send(SYSSTR("[{}]\n"), class_entry.class_name);
 
             for (const auto& [function_index, function_entry] : class_entry.functions)
             {
                 if (function_entry.is_overload)
                 {
-                    ini_dumper.send(STR("; {}\n"), function_entry.signature.to_string());
+                    ini_dumper.send(SYSSTR("; {}\n"), function_entry.signature.to_string());
                 }
-                ini_dumper.send(STR("{}\n"), function_entry.name);
+                ini_dumper.send(SYSSTR("{}\n"), function_entry.name);
             }
 
-            ini_dumper.send(STR("\n"));
+            ini_dumper.send(SYSSTR("\n"));
         }
     }
 
