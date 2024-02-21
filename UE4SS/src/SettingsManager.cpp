@@ -83,8 +83,9 @@ namespace RC
         REGISTER_BOOL_SETTING(Debug.DebugConsoleVisible, section_debug, GuiConsoleVisible)
         REGISTER_FLOAT_SETTING(Debug.DebugGUIFontScaling, section_debug, GuiConsoleFontScaling)
         #ifdef HAS_GUI
-        UEStringType graphics_api_string{};
+        SystemStringType graphics_api_string{};
         REGISTER_STRING_SETTING(graphics_api_string, section_debug, GraphicsAPI)
+        #ifdef WIN32
         if (String::iequal(graphics_api_string, SYSSTR("DX11")) || String::iequal(graphics_api_string, SYSSTR("D3D11")))
         {
             Debug.GraphicsAPI = GUI::GfxBackend::DX11;
@@ -93,6 +94,9 @@ namespace RC
         {
             Debug.GraphicsAPI = GUI::GfxBackend::GLFW3_OpenGL3;
         }
+        #else
+        Debug.GraphicsAPI = GUI::GfxBackend::TUI;
+        #endif
         #endif
         REGISTER_INT64_SETTING(Debug.LiveViewObjectsPerGroup, section_debug, LiveViewObjectsPerGroup);
 

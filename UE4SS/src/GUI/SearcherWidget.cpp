@@ -1,7 +1,7 @@
 #include <GUI/SearcherWidget.hpp>
 
 #include <imgui.h>
-
+#define strncpy_s(dest, destsz, src, count) strncpy((dest), (src), (((count) < (destsz)) ? (count) : (destsz)))
 namespace RC::GUI
 {
     SearcherWidget::SearcherWidget(SearchModeChangedCallback ufunction_caller_search_mode_changed_callback,

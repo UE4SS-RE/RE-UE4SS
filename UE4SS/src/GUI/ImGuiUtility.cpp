@@ -14,8 +14,13 @@ namespace RC::GUI
         // NOTE: This function makes use of 'imgui_internal.h'.
         //       As a result, this function is prone to break if you update Imgui.
         ImGuiContext& g = *GImGui;
+        #ifdef WIN32
         const char* child_window_name = NULL;
         ImFormatStringToTempBuffer(&child_window_name, NULL, "%s/%s_%08X", g.CurrentWindow->Name, label, ImGui::GetID(label));
+        #else
+        static char child_window_name[1024];
+        sprintf(child_window_name, "%s/%s_%08X", g.CurrentWindow->Name, label, ImGui::GetID(label));
+        #endif
         ImGuiWindow* child_window = ImGui::FindWindowByName(child_window_name);
         if (child_window)
         {
@@ -98,12 +103,12 @@ namespace RC::GUI
     static auto dump_json_integer_value(const JSON::Number& element) -> void;
 
     static int indent_level{};
-    static auto indent() -> std::wstring
+    static auto indent() -> SystemStringType
     {
-        std::wstring indents{};
+        SystemStringType indents{};
         for (int i = 0; i < indent_level; ++i)
         {
-            indents.append(STR("    "));
+            indents.append(SYSSTR("    "));
         }
         return indents;
     }
@@ -150,7 +155,7 @@ namespace RC::GUI
 
     static auto dump_json_object_pair(const JSON::TypedKeyValuePair<JSON::Object> element) -> void
     {
-        Output::send<LogLevel::Verbose>(STR("{}Object: {}\n"), indent(), element.key);
+        Output::send<LogLevel::Verbose>(SYSSTR("{}Object: {}\n"), indent(), element.key);
 
         const auto& object = element.value->get();
         for (const auto& [_, inner_element] : object)
@@ -163,7 +168,7 @@ namespace RC::GUI
 
     static auto dump_json_array_pair(const JSON::TypedKeyValuePair<JSON::Array> element) -> void
     {
-        Output::send<LogLevel::Verbose>(STR("{}Array: {}\n"), indent(), element.key);
+        Output::send<LogLevel::Verbose>(SYSSTR("{}Array: {}\n"), indent(), element.key);
 
         const auto& array = element.value->get();
         for (const auto& inner_element : array)
@@ -176,18 +181,18 @@ namespace RC::GUI
 
     static auto dump_json_string_pair(const JSON::TypedKeyValuePair<JSON::String> element) -> void
     {
-        Output::send<LogLevel::Verbose>(STR("{}String: {} == {}\n"), indent(), element.key, element.value->get_view());
+        Output::send<LogLevel::Verbose>(SYSSTR("{}String: {} == {}\n"), indent(), element.key, element.value->get_view());
     }
 
     static auto dump_json_integer_pair(const JSON::TypedKeyValuePair<JSON::Number> element) -> void
     {
-        Output::send<LogLevel::Verbose>(STR("{}Integer: {} == {}\n"), indent(), element.key, element.value->get<int64_t>());
+        Output::send<LogLevel::Verbose>(SYSSTR("{}Integer: {} == {}\n"), indent(), element.key, element.value->get<int64_t>());
     }
 
     static auto dump_json_object_value(const JSON::Object& element) -> void
     {
         ++indent_level;
-        Output::send<LogLevel::Verbose>(STR("{}Object <anon>\n"), indent());
+        Output::send<LogLevel::Verbose>(SYSSTR("{}Object <anon>\n"), indent());
 
         const auto& object = element.get();
         for (const auto& [_, inner_element] : object)
@@ -203,7 +208,7 @@ namespace RC::GUI
     static auto dump_json_array_value(const JSON::Array& element) -> void
     {
         ++indent_level;
-        Output::send<LogLevel::Verbose>(STR("{}Array <anon>\n"), indent());
+        Output::send<LogLevel::Verbose>(SYSSTR("{}Array <anon>\n"), indent());
 
         const auto& array = element.get();
         for (const auto& inner_element : array)
@@ -218,11 +223,11 @@ namespace RC::GUI
 
     static auto dump_json_string_value(const JSON::String& element) -> void
     {
-        Output::send<LogLevel::Verbose>(STR("{}String: {}\n"), indent(), element.get_view());
+        Output::send<LogLevel::Verbose>(SYSSTR("{}String: {}\n"), indent(), element.get_view());
     }
 
     static auto dump_json_integer_value(const JSON::Number& element) -> void
     {
-        Output::send<LogLevel::Verbose>(STR("{}Integer: {}\n"), indent(), element.get<int64_t>());
+        Output::send<LogLevel::Verbose>(SYSSTR("{}Integer: {}\n"), indent(), element.get<int64_t>());
     }
 } // namespace RC::GUI

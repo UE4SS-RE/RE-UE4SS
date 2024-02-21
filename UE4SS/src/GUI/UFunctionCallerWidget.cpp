@@ -142,7 +142,7 @@ namespace RC::GUI
 
     static bool s_do_call{};
     static UObject* s_instance{};
-    static UEStringType s_cmd{};
+    static SystemStringType s_cmd{};
     static FOutputDevice s_ar{};
     static UFunction* s_function{};
     static UObject* s_executor{};
@@ -154,7 +154,7 @@ namespace RC::GUI
             auto& function_flags = s_function->GetFunctionFlags();
             function_flags |= FUNC_Exec;
             Output::send(SYSSTR("Processing command: {}\n"), s_cmd);
-            bool call_succeeded = s_instance->ProcessConsoleExec(s_cmd.c_str(), s_ar, s_executor);
+            bool call_succeeded = s_instance->ProcessConsoleExec(to_ue(s_cmd).c_str(), s_ar, s_executor);
             Output::send(SYSSTR("call_succeeded: {}\n"), call_succeeded);
             function_flags &= ~FUNC_Exec;
         }
@@ -170,7 +170,7 @@ namespace RC::GUI
         auto cmd = std::format(SYSSTR("{}"), to_system(function->GetName()));
         for (const auto& param : m_params_for_selected_function)
         {
-            cmd.append(std::format(SYSSTR(" {}"), to_wstring(param.value_from_ui)));
+            cmd.append(std::format(SYSSTR(" {}"), to_system(param.value_from_ui)));
         }
 
         Output::send(SYSSTR("Queueing command: {}\n"), cmd);
@@ -226,23 +226,23 @@ namespace RC::GUI
     {
         if (auto as_struct_property = CastField<FStructProperty>(param.unreal_param); as_struct_property)
         {
-            ImGui::Text("%S (%S)", param.unreal_param->GetClass().GetName().c_str(), as_struct_property->GetStruct()->GetName().c_str());
+            ImGui::Text(SystemStringPrint" (" SystemStringPrint ")", to_system(param.unreal_param->GetClass().GetName()).c_str(), to_system(as_struct_property->GetStruct()->GetName()).c_str());
         }
         else if (auto as_array_property = CastField<FArrayProperty>(param.unreal_param); as_array_property)
         {
-            ImGui::Text("%S (%S)", param.unreal_param->GetClass().GetName().c_str(), as_array_property->GetInner()->GetName().c_str());
+            ImGui::Text(SystemStringPrint" (" SystemStringPrint ")", to_system(param.unreal_param->GetClass().GetName()).c_str(), to_system(as_array_property->GetInner()->GetName()).c_str());
         }
         else if (auto as_object_property = CastField<FObjectProperty>(param.unreal_param); as_object_property)
         {
-            ImGui::Text("%S (%S)", param.unreal_param->GetClass().GetName().c_str(), as_object_property->GetPropertyClass()->GetName().c_str());
+            ImGui::Text(SystemStringPrint" (" SystemStringPrint ")", to_system(param.unreal_param->GetClass().GetName()).c_str(), to_system(as_object_property->GetPropertyClass()->GetName()).c_str());
         }
         else if (auto as_class_property = CastField<FClassProperty>(param.unreal_param); as_class_property)
         {
-            ImGui::Text("%S (%S)", param.unreal_param->GetClass().GetName().c_str(), as_class_property->GetMetaClass()->GetName().c_str());
+            ImGui::Text(SystemStringPrint" (" SystemStringPrint ")", to_system(param.unreal_param->GetClass().GetName()).c_str(), to_system(as_class_property->GetMetaClass()->GetName()).c_str());
         }
         else
         {
-            ImGui::Text("%S", param.unreal_param->GetClass().GetName().c_str());
+            ImGui::Text(SystemStringPrint, to_system(param.unreal_param->GetClass().GetName()).c_str());
         }
     }
 

@@ -13,6 +13,7 @@
 #include <DynamicOutput/DynamicOutput.hpp>
 
 #ifdef HAS_GUI
+#include <imgui.h>
 #include <GUI/GUI.hpp>
 #include <GUI/GUITab.hpp>
 #endif
@@ -256,10 +257,12 @@ namespace RC
         {
             return ImGui::GetCurrentContext();
         }
+        #ifdef WIN32
         RC_UE4SS_API static auto get_current_imgui_allocator_functions(ImGuiMemAllocFunc* alloc_func, ImGuiMemFreeFunc* free_func, void** user_data) -> void
         {
             return ImGui::GetAllocatorFunctions(alloc_func, free_func, user_data);
         }
+        #endif
 #endif
         RC_UE4SS_API auto queue_event(EventCallable callable, void* data) -> void;
         RC_UE4SS_API auto is_queue_empty() -> bool;

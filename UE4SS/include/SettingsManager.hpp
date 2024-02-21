@@ -65,7 +65,11 @@ namespace RC
             bool DebugConsoleVisible{true};
             float DebugGUIFontScaling{1.0};
             #ifdef HAS_GUI
+            #ifdef WIN32
             GUI::GfxBackend GraphicsAPI{GUI::GfxBackend::GLFW3_OpenGL3};
+            #else
+            GUI::GfxBackend GraphicsAPI{GUI::GfxBackend::TUI};
+            #endif
             #endif
             int64_t LiveViewObjectsPerGroup{64 * 1024 / 2};
         } Debug;
