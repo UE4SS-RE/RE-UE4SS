@@ -12,7 +12,7 @@
     }                                                                                                                                                          \
     else                                                                                                                                                       \
     {                                                                                                                                                          \
-        printf_s("Internal Error: %s\n", e.what());                                                                                                            \
+        fprintf(stderr, "Internal Error: %s\n", e.what());                                                                                                            \
     }
 
 namespace RC
