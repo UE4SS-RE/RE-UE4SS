@@ -274,7 +274,7 @@ namespace RC
                                                                       SYSSTR(""));
             m_load_library_ex_w_hook->hook();
 #endif
-            Unreal::UnrealInitializer::SetupUnrealModules();
+            Unreal::UnrealInitializer::Platform::SetupUnrealModules();
 
             setup_mods();
             install_cpp_mods();

@@ -18,11 +18,6 @@ namespace RC
     SinglePassScanner::ScanMethod SinglePassScanner::m_scan_method = ScanMethod::Scalar;
     uint32_t SinglePassScanner::m_multithreading_module_size_threshold = 0x1000000;
     std::mutex SinglePassScanner::m_scanner_mutex{};
-    
-    auto ScanTargetArray::operator[](ScanTarget index) -> ModuleOS&
-    {
-        return array[static_cast<size_t>(index)];
-    }
 
     auto ScanTargetToString(ScanTarget scan_target) -> std::string
     {
@@ -429,7 +424,7 @@ namespace RC
         return pattern_data;
     }
 
-    auto SinglePassScanner::scanner_work_thread(uint8_t* start_address, uint8_t* end_address, SystemInfo& info, std::vector<SignatureContainer>& signature_containers)
+    auto SinglePassScanner::scanner_work_thread(uint8_t* start_address, uint8_t* end_address, SystemInfo *info, std::vector<SignatureContainer>& signature_containers)
             -> void
     {
         ProfilerSetThreadName("UE4SS-ScannerWorkThread");
@@ -480,7 +475,7 @@ namespace RC
 
     auto SinglePassScanner::scanner_work_thread_stdfind(uint8_t* start_address,
                                                         uint8_t* end_address,
-                                                        SystemInfo& info,
+                                                        SystemInfo* info,
                                                         std::vector<SignatureContainer>& signature_containers) -> void
     {
         ProfilerScope();
@@ -581,7 +576,7 @@ namespace RC
 
     auto SinglePassScanner::start_scan(SignatureContainerMap& signature_containers) -> void
     {
-        SystemInfo info = get_system_info();
+        SystemInfo* info = Platform::get_system_info();
 
         // If not modular then the containers get merged into one scan target
         // That way there are no extra scans
@@ -589,12 +584,12 @@ namespace RC
         fprintf(stderr, "signature_containers.size() = %d\n", signature_containers.size());
         if (!SigScannerStaticData::m_is_modular)
         {
-            ModuleOS merged_module_info{};
+            ModuleOS* merged_module_info{};
             std::vector<SignatureContainer> merged_containers;
 
             for (const auto& [scan_target, outer_container] : signature_containers)
             {
-                merged_module_info = *std::bit_cast<ModuleOS*>(&SigScannerStaticData::m_modules_info[scan_target]);
+                merged_module_info = std::bit_cast<ModuleOS*>(&SigScannerStaticData::m_modules_info[scan_target]);
                 fprintf(stderr, "outer_container len = %d\n", outer_container.size());
                 for (const auto& signature_container : outer_container)
                 {
@@ -629,7 +624,7 @@ namespace RC
                                                          &scanner_work_thread,
                                                          module_start_address + last_range,
                                                          module_start_address + last_range + range,
-                                                         std::ref(info),
+                                                         info,
                                                          std::ref(merged_containers)));
 
                     last_range += range;
@@ -644,7 +639,7 @@ namespace RC
             {
                 // Module is too small to make it overall faster to scan with multiple threads
                 uint8_t* module_end_address = static_cast<uint8_t*>(module_start_address + Platform::get_module_size(merged_module_info));
-                scanner_work_thread(module_start_address, module_end_address, merged_module_info, merged_containers);
+                scanner_work_thread(module_start_address, module_end_address, info, merged_containers);
             }
 
             for (auto& container : merged_containers)
@@ -657,11 +652,11 @@ namespace RC
             // This ranged for loop is performing a copy of unordered_map<ScanTarget, vector<SignatureContainer>>
             // Is this required ? Would it be worth trying to avoid copying here ?
             // Right now it can't be auto& or const auto& because the do_scan function takes a non-const since it needs to mutate the values inside the vector
-            auto info = SigScannerStaticData::m_modules_info[ScanTarget::MainExe];
+            auto info = Platform::get_system_info();
             for (auto& [scan_target, signature_container] : signature_containers)
             {
-                uint8_t* module_start_address = static_cast<uint8_t*>(Platform::get_module_base(SigScannerStaticData::m_modules_info[scan_target]));
-                uint8_t* module_end_address = static_cast<uint8_t*>(module_start_address + Platform::get_module_size(SigScannerStaticData::m_modules_info[scan_target]));
+                uint8_t* module_start_address = static_cast<uint8_t*>(Platform::get_module_base(&SigScannerStaticData::m_modules_info[scan_target]));
+                uint8_t* module_end_address = static_cast<uint8_t*>(module_start_address + Platform::get_module_size(&SigScannerStaticData::m_modules_info[scan_target]));
 
                 scanner_work_thread(module_start_address, module_end_address, info, signature_container);
 

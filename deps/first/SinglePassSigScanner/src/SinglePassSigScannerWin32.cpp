@@ -17,32 +17,39 @@
 namespace RC
 {
     
-    auto SinglePassScanner::get_system_info() -> SystemInfo
+    auto ScanTargetArray::operator[](ScanTarget index) -> ModuleOS&
     {
-        SYSTEM_INFO info{};
-        GetSystemInfo(&info);
-        return info;
+        return *std::bit_cast<MODULEINFO*>(&array[static_cast<size_t>(index)]);
     }
 
-    namespace Platform {
+
+    namespace Platform
+    {
+        auto get_system_info() -> SystemInfo*
+        {
+            static SYSTEM_INFO info{};
+            GetSystemInfo(&info);
+            return &info;
+        }
+
         // Get the start address of the system
-        auto get_start_address(SystemInfo &info) -> uint8_t* {
-            return static_cast<uint8_t*>(info.lpMinimumApplicationAddress);
+        auto get_start_address(SystemInfo *info) -> uint8_t* {
+            return static_cast<uint8_t*>(info->lpMinimumApplicationAddress);
         }
 
         // Get the end address of the system
-        auto get_end_address(SystemInfo &info) -> uint8_t* {
-            return static_cast<uint8_t*>(info.lpMaximumApplicationAddress);
+        auto get_end_address(SystemInfo *info) -> uint8_t* {
+            return static_cast<uint8_t*>(info->lpMaximumApplicationAddress);
         }
 
         // Get the size of the module
-        auto get_module_size(ModuleOS &info) -> size_t {
-            return info.SizeOfImage;
+        auto get_module_size(ModuleOS *info) -> uint32_t {
+            return info->SizeOfImage;
         }
 
         // Get the base address of the module
-        auto get_module_base(ModuleOS &info) -> uint8_t* {
-            return static_cast<uint8_t*>(info.lpBaseOfDll);
+        auto get_module_base(ModuleOS *info) -> uint8_t* {
+            return static_cast<uint8_t*>(info->lpBaseOfDll);
         }
     }; // namespace Platform
     
@@ -106,17 +113,17 @@ namespace RC
 
     auto SinglePassScanner::scanner_work_thread_scalar(uint8_t* start_address,
                                                        uint8_t* end_address,
-                                                       SYSTEM_INFO& info,
+                                                       SYSTEM_INFO* info,
                                                        std::vector<SignatureContainer>& signature_containers) -> void
     {
         ProfilerScope();
         if (!start_address)
         {
-            start_address = static_cast<uint8_t*>(info.lpMinimumApplicationAddress);
+            start_address = static_cast<uint8_t*>(info->lpMinimumApplicationAddress);
         }
         if (!end_address)
         {
-            start_address = static_cast<uint8_t*>(info.lpMaximumApplicationAddress);
+            start_address = static_cast<uint8_t*>(info->lpMaximumApplicationAddress);
         }
 
         MEMORY_BASIC_INFORMATION memory_info{};

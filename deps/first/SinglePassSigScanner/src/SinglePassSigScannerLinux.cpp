@@ -14,27 +14,32 @@
 namespace RC
 {
 
-    auto SinglePassScanner::get_system_info() -> SystemInfo
+    auto ScanTargetArray::operator[](ScanTarget index) -> ModuleOS&
     {
-        return SigScannerStaticData::m_modules_info[ScanTarget::MainExe];
+        return array[static_cast<size_t>(index)];
     }
 
-
-    namespace Platform {
-        auto get_start_address(DLData &info) -> uint8_t* {
-            return info.base_address;
+    namespace Platform
+    {
+        auto SinglePassScanner::get_system_info() -> SystemInfo*
+        {
+            return &SigScannerStaticData::m_modules_info[ScanTarget::MainExe];
         }
 
-        auto get_end_address(DLData &info) -> uint8_t* {
-            return info.base_address + info.size;
+        auto get_start_address(DLData *info) -> uint8_t* {
+            return info->base_address;
         }
 
-        auto get_module_size(DLData &info) -> uint32_t {
-            return info.size;
+        auto get_end_address(DLData *info) -> uint8_t* {
+            return info->base_address + info.size;
+        }
+
+        auto get_module_size(DLData *info) -> uint32_t {
+            return info->size;
         }
 
         auto get_module_base(DLData &info) -> uint8_t* {
-            return info.base_address;
+            return info->base_address;
         }
     }; // namespace Platform
 

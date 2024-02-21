@@ -312,20 +312,18 @@ namespace RC
         RC_SPSS_API auto static string_to_vector(const std::vector<SignatureData>& signatures) -> std::vector<std::vector<int>>;
         RC_SPSS_API auto static format_aob_strings(std::vector<SignatureContainer>& signature_containers) -> void;
 
-        RC_SPSS_API auto static get_system_info() -> SystemInfo;
-
       public:
         RC_SPSS_API auto static scanner_work_thread(uint8_t* start_address,
                                                     uint8_t* end_address,
-                                                    SystemInfo& info,
+                                                    SystemInfo* info,
                                                     std::vector<SignatureContainer>& signature_containers) -> void;
         RC_SPSS_API auto static scanner_work_thread_scalar(uint8_t* start_address,
                                                            uint8_t* end_address,
-                                                           SystemInfo& info,
+                                                           SystemInfo* info,
                                                            std::vector<SignatureContainer>& signature_containers) -> void;
         RC_SPSS_API auto static scanner_work_thread_stdfind(uint8_t* start_address,
                                                             uint8_t* end_address,
-                                                            SystemInfo& info,
+                                                            SystemInfo* info,
                                                             std::vector<SignatureContainer>& signature_containers) -> void;
 
         using SignatureContainerMap = std::unordered_map<ScanTarget, std::vector<SignatureContainer>>;
@@ -335,17 +333,20 @@ namespace RC
 
     
     namespace Platform {
+        // Get the system info
+        auto get_system_info() -> SystemInfo*;
+
         // Get the start address of the system
-        auto get_start_address(SystemInfo &info) -> uint8_t*;
+        auto get_start_address(SystemInfo *info) -> uint8_t*;
 
         // Get the end address of the system
-        auto get_end_address(SystemInfo &info) -> uint8_t*;
+        auto get_end_address(SystemInfo *info) -> uint8_t*;
 
         // Get the size of the module
-        auto get_module_size(ModuleOS &info) -> uint32_t;
+        auto get_module_size(ModuleOS *info) -> uint32_t;
 
         // Get the base address of the module
-        auto get_module_base(ModuleOS &info) -> uint8_t*;
+        auto get_module_base(ModuleOS *info) -> uint8_t*;
     }; // namespace Platform
 
 }; // namespace RC

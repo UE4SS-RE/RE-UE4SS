@@ -436,12 +436,12 @@ namespace RC
 
     template <typename T>
     auto stringviewify(T&& tp) {
-        if constexpr (std::is_same_v<std::decay_t<T>, UECharType*> || std::is_same_v<std::decay_t<T>, const UECharType*>) {
-            return UEStringViewType{tp};
-        } else if constexpr  (std::is_same_v<std::decay_t<T>, SystemCharType*> || std::is_same_v<std::decay_t<T>, const SystemCharType*>) {
-            return SystemStringViewType{tp};
-        } else if constexpr (std::is_same_v<std::decay_t<T>, File::CharType*> || std::is_same_v<std::decay_t<T>, const File::CharType*>) {
-            return File::StringViewType{tp};
+        if constexpr (std::is_same_v<std::decay_t<T>, char*> || std::is_same_v<std::decay_t<T>, const char*>) {
+            return std::string_view{tp};
+        } else if constexpr  (std::is_same_v<std::decay_t<T>, wchar_t*> || std::is_same_v<std::decay_t<T>, const wchar_t*>) {
+            return std::wstring_view{tp};
+        } else if constexpr (std::is_same_v<std::decay_t<T>, char16_t*> || std::is_same_v<std::decay_t<T>, const char16_t*>) {
+            return std::u16string_view{tp};
         } else {
             return std::forward<T>(tp);
         }
