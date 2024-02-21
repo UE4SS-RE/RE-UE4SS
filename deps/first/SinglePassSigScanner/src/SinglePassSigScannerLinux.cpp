@@ -21,7 +21,7 @@ namespace RC
 
     namespace Platform
     {
-        auto SinglePassScanner::get_system_info() -> SystemInfo*
+        auto get_system_info() -> SystemInfo*
         {
             return &SigScannerStaticData::m_modules_info[ScanTarget::MainExe];
         }
@@ -31,14 +31,14 @@ namespace RC
         }
 
         auto get_end_address(DLData *info) -> uint8_t* {
-            return info->base_address + info.size;
+            return info->base_address + info->size;
         }
 
         auto get_module_size(DLData *info) -> uint32_t {
             return info->size;
         }
 
-        auto get_module_base(DLData &info) -> uint8_t* {
+        auto get_module_base(DLData *info) -> uint8_t* {
             return info->base_address;
         }
     }; // namespace Platform
@@ -51,17 +51,17 @@ namespace RC
     // This function may have problem becasue we're not checking the memory region's permissions
     auto SinglePassScanner::scanner_work_thread_scalar(uint8_t* start_address,
                                                        uint8_t* end_address,
-                                                       DLData& info,
+                                                       DLData* info,
                                                        std::vector<SignatureContainer>& signature_containers) -> void
     {
         ProfilerScope();
         if (!start_address)
         {
-            start_address = static_cast<uint8_t*>(info.base_address);
+            start_address = Platform::get_start_address(info);
         }
         if (!end_address)
         {
-            end_address = static_cast<uint8_t*>(info.base_address + info.size);
+            end_address = Platform::get_end_address(info);
         }
 
         // TODO: Nasty nasty nasty. Come up with a better solution... wtf
@@ -98,7 +98,7 @@ namespace RC
         // Loop everything
         for (uint8_t* i = start_address; i < end_address; ++i)
         {
-            auto addr = info.find_phdr(i);
+            auto addr = info->find_phdr(i);
             if (addr == std::make_tuple(nullptr, 0, 0))
             {
                 continue;
