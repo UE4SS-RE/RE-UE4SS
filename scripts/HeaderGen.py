@@ -16,9 +16,9 @@ FUNCTION_TEMPLATE = """if (auto it = {ClassName}::VTableLayoutMap.find(STR("{Fun
 }}
 """
 
-MEMBER_TEMPLATE = """if (auto it = {ClassName}::MemberOffsets.find(SYSSTR("{MemberName}")); it == {ClassName}::MemberOffsets.end())
+MEMBER_TEMPLATE = """if (auto it = {ClassName}::MemberOffsets.find(STR("{MemberName}")); it == {ClassName}::MemberOffsets.end())
 {{
-    {ClassName}::MemberOffsets.emplace(SYSSTR("{MemberName}"), 0x{MemberOffset:02x});
+    {ClassName}::MemberOffsets.emplace(STR("{MemberName}"), 0x{MemberOffset:02x});
 }}
 """
 
@@ -30,10 +30,13 @@ class CMember:
         self.offset = offset
 
     def GenerateMember(self, className, count = None):
+        generated_name = self.name
+        if self.name == "EnumFlags":
+            generated_name = "EnumFlags_Internal"
         if count and count != 0:
-            return MEMBER_TEMPLATE.format(ClassName = className, MemberName =  f"{self.name}_{count}", MemberOffset = self.offset)
+            return MEMBER_TEMPLATE.format(ClassName = className, MemberName =  f"{generated_name}_{count}", MemberOffset = self.offset)
         else:
-            return MEMBER_TEMPLATE.format(ClassName = className, MemberName = self.name, MemberOffset = self.offset)
+            return MEMBER_TEMPLATE.format(ClassName = className, MemberName = generated_name, MemberOffset = self.offset)
     
 class CVFunc:
     def __init__(self, mangledname, name, slotoffset):
