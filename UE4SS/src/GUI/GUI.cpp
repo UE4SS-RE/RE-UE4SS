@@ -227,7 +227,11 @@ namespace RC::GUI
         ImGuiStyle& style = ImGui::GetStyle();
 
         style.WindowPadding = ImVec2(8, 8);
+        #ifdef WIN32
         style.FramePadding = ImVec2(12, 5);
+        #else
+        style.FramePadding = ImVec2(0.5f, 0.5f);
+        #endif
         style.CellPadding = ImVec2(3, 3);
         style.ItemSpacing = ImVec2(8, 4);
         style.ItemInnerSpacing = ImVec2(4, 4);
@@ -355,11 +359,13 @@ namespace RC::GUI
                 else
                 {
                     fprintf(stderr, "Internal Error: %s\n", e.what());
+                    fflush(stderr);
                 }
 
                 // You're not allowed to throw exceptions directly inside a frame!
                 // Use GUI::TRY to move exceptions to the end of the frame.
-                abort();
+                //abort();
+                asm("int3");
             }
 
             ImGui::Render();

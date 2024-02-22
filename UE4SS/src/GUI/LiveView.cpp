@@ -63,14 +63,6 @@
 #undef max
 #undef min
 
-#ifdef WIN32
-#define XOFFSET (-14.0f)
-#define XDIV 1
-#else
-#define XOFFSET 0
-#define XDIV (6.66f)
-#endif
-
 namespace RC::GUI
 {
     using namespace Unreal;
@@ -3578,8 +3570,9 @@ namespace RC::GUI
             load_watches_from_disk();
             s_watches_loaded_from_disk = true;
         }
-
-        ImGui::BeginChild("watch_render_frame", {-16.0f, -31.0f + -8.0f});
+        float xoffset = (XOFFSET == 0) ? (0.0f) : (XOFFSET - 2);
+        // TODO: ensure this / XDIV is okay? the old value is -35/XDIV
+        ImGui::BeginChild("watch_render_frame", {xoffset, (-31.0f + -8.0f) / XDIV});
 
         if (ImGui::Button("All Off"))
         {
@@ -3592,11 +3585,15 @@ namespace RC::GUI
         }
 
         static int num_columns = 3;
+        #ifdef WIN32
         ImGui::PushStyleVar(ImGuiStyleVar_CellPadding, {2.0f, 2.0f});
+        #endif
         if (ImGui::BeginTable("watch_table", num_columns, ImGuiTableFlags_Borders))
         {
+            // TODO: do we need controls_width = (XDIV == 1) ? (60.0f) : (60.0f / XDIV + 5.0f);?
             ImGui::TableSetupColumn("Controls", ImGuiTableColumnFlags_WidthFixed, ImGui::GetFrameHeight() * 3.0f + 4.0f);
             ImGui::TableSetupColumn("Watch Identifier", ImGuiTableColumnFlags_WidthStretch);
+            // TODO: why height here?
             ImGui::TableSetupColumn("Save", ImGuiTableColumnFlags_WidthFixed, ImGui::GetFrameHeight());
             ImGui::TableHeadersRow();
 
@@ -3652,7 +3649,7 @@ namespace RC::GUI
                     {
                         save_watches_to_disk();
                     }
-                    ImGui::SetNextWindowSize({690.0f, 0.0f});
+                    ImGui::SetNextWindowSize({690.0f / XDIV, 0.0f});
                     if (ImGui::BeginPopupContextItem(to_string(std::format(SYSSTR("##watch-from-disk-settings-popup-{}"), watch.hash)).c_str()))
                     {
                         ImGui::Text("Acquisition Method");
@@ -3674,7 +3671,9 @@ namespace RC::GUI
             }
 
             ImGui::EndTable();
+            #ifdef WIN32
             ImGui::PopStyleVar();
+            #endif
         }
         ImGui::EndChild();
     }

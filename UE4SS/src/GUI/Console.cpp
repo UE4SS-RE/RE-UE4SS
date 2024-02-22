@@ -130,7 +130,9 @@ namespace RC::GUI
         /**/
 
         std::lock_guard<std::mutex> guard(m_lines_mutex);
-        m_text_editor.Render("TextEditor", {-16.0f, -31.0f + -8.0f});
+        // TODO: ensure this ydiv is okay? 
+        // the old value is const float footer_height_to_reserve = ((ImGui::GetStyle().ItemSpacing.y * 10.0f) + ImGui::GetFrameHeightWithSpacing()) / YDIV;
+        m_text_editor.Render("TextEditor", {-16.0f / , (-31.0f + -8.0f)  / YDIV});
 
         ImGui_AutoScroll("TextEditor", &m_previous_max_scroll_y);
         //*/
@@ -138,7 +140,7 @@ namespace RC::GUI
 
     auto Console::render_search_box() -> void
     {
-        m_filter.Draw("Search log", 200);
+        m_filter.Draw("Search log", 200 / XDIV);
     }
 
     static auto LogLevel_to_ImColor(Color::Color color) -> std::pair<ImColor, ImColor>
