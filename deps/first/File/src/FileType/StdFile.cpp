@@ -336,12 +336,13 @@ namespace RC::File
             return;
         }
 
-        if (m_file != 0)
+        if (close(m_file) == -1)
         {
             THROW_INTERNAL_FILE_ERROR(std::format("[StdFile::close_file] Was unable to close file, error: {}", errno))
         }
         else
         {
+            m_file = 0;
             set_is_file_open(false);
         }
     }
