@@ -63,6 +63,14 @@
 #undef max
 #undef min
 
+#ifdef WIN32
+#define XOFFSET (-14.0f)
+#define XDIV 1
+#else
+#define XOFFSET 0
+#define XDIV (6.66f)
+#endif
+
 namespace RC::GUI
 {
     using namespace Unreal;
@@ -2818,7 +2826,7 @@ namespace RC::GUI
 
     auto LiveView::render_info_panel() -> void
     {
-        ImGui::BeginChild("LiveView_InfoPanel", {-16.0f, m_bottom_size}, true, ImGuiWindowFlags_HorizontalScrollbar);
+        ImGui::BeginChild("LiveView_InfoPanel", {XOFFSET, m_bottom_size}, true, ImGuiWindowFlags_HorizontalScrollbar);
 
         size_t next_object_index_to_select{};
 
@@ -3084,6 +3092,7 @@ namespace RC::GUI
 
         // Update this text if corresponding button's text changes. Textinput width = Spacing + Window margin + Button padding + Button text width
         ImGui::PushItemWidth(-(8.0f + 16.0f + ImGui::GetStyle().FramePadding.x * 2.0f + ImGui::CalcTextSize(ICON_FA_COPY " Copy search result").x));
+        // TODO: merge conflict, make sure this width is onky for TUI: old value is (-160.0f / XDIV
         bool push_inactive_text_color = !m_search_field_cleared;
         if (push_inactive_text_color)
         {
@@ -3445,6 +3454,7 @@ namespace RC::GUI
             m_top_size = std::max(ImGui::GetFrameHeight(), std::round(split_pane_height * (m_top_size / (m_top_size + m_bottom_size))));
         }
         m_bottom_size = std::max(ImGui::GetFrameHeight(), split_pane_height - m_top_size);
+        // do we need ImGui_Splitter(false, 4.0f, &m_top_size, &m_bottom_size, 12.0f, 12.0f, XOFFSET); on TUI?
         ImGui_Splitter(false, 4.0f, &m_top_size, &m_bottom_size, ImGui::GetFrameHeight(), ImGui::GetFrameHeight(), -16.0f);
 
         ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4{0.156f, 0.156f, 0.156f, 1.0f});
