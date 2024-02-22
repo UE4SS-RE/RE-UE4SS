@@ -6,16 +6,87 @@
 #include <File/HandleTemplate.hpp>
 
 #include <sys/mman.h>
+#include <fcntl.h>
 
 namespace RC::File
 {
+    auto StdFile::create_all_directories(const std::filesystem::path& file_name_and_path) -> void
+    {
+        if (file_name_and_path.parent_path().empty())
+        {
+            return;
+        }
+
+        try
+        {
+            std::filesystem::create_directories(file_name_and_path.parent_path());
+        }
+        catch (const std::filesystem::filesystem_error& e)
+        {
+            THROW_INTERNAL_FILE_ERROR(std::format("[StdFile::create_all_directories] Tried creating directories '{}' but encountered an error. Error: {}",
+                                                  file_name_and_path.string(),
+                                                  e.what()))
+        }
+    }
+
+    auto StdFile::calc_open_flags(const std::filesystem::path &file_name_and_path, const OpenProperties& open_properties) -> int
+    {
+
+        int flags {};
+        int rwflags {};
+        switch (open_properties.open_for)
+        {
+        case OpenFor::Writing:
+            rwflags = O_WRONLY;
+            break;
+        case OpenFor::Appending:
+            rwflags = O_WRONLY;
+            flags = O_APPEND;
+            break;
+        case OpenFor::Reading:
+            rwflags = O_RDONLY;
+            break;
+        default:
+            printf("open_for: %d\n", open_properties.open_for);
+            THROW_INTERNAL_FILE_ERROR("[StdFile::open_file] Tried to open file but received invalid data for the 'OpenFor' parameter.")
+        }
+
+        if (open_properties.overwrite_existing_file == OverwriteExistingFile::Yes) {
+            flags |= O_CREAT | O_TRUNC;
+            if (rwflags == O_RDONLY)
+            {
+                rwflags = O_RDWR;
+            }
+            create_all_directories(file_name_and_path);
+        }
+        else if (open_properties.create_if_non_existent == CreateIfNonExistent::Yes)
+        {
+            flags |= O_CREAT;
+            if (rwflags == O_RDONLY)
+            {
+                rwflags = O_RDWR;
+            }
+            create_all_directories(file_name_and_path);
+        }
+        else
+        {
+            if (!std::filesystem::exists(file_name_and_path))
+            {
+                printf("file_name_and_path: %s not exists\n", file_name_and_path.string().c_str());
+                THROW_INTERNAL_FILE_ERROR(std::format("[StdFile::open_file] Tried opening file but file does not exist: {}", file_name_and_path.string()))
+            }
+        }
+
+        return rwflags | flags;
+    }
+
     auto StdFile::is_valid() noexcept -> bool
     {
-        return m_file != nullptr;
+        return m_file > 0;
     }
 
     auto StdFile::invalidate_file() noexcept -> void {
-        m_file = nullptr;
+        m_file = 0;
     }
 
     auto StdFile::delete_file(const std::filesystem::path& file_path_and_name) -> void
@@ -51,7 +122,8 @@ namespace RC::File
 
     auto StdFile::get_raw_handle() noexcept -> void*
     {
-        return static_cast<void*>(m_file);
+        long a = m_file;
+        return (void*)(a);
     }
 
     auto StdFile::get_file_path() const noexcept -> const std::filesystem::path&
@@ -77,7 +149,7 @@ namespace RC::File
             THROW_INTERNAL_FILE_ERROR("[StdFile::write_to_file] Tried writing to file but the file is not open")
         }
 
-        size_t bytes_written = fwrite(data, sizeof(DataType), num_bytes_to_write, file.get_file());
+        size_t bytes_written = write(file.get_file(), data, sizeof(DataType) * num_bytes_to_write);
         if (bytes_written < 0) {
             THROW_INTERNAL_FILE_ERROR(std::format("[StdFile::write_to_file] Tried writing to file but was unable to complete operation. Error: {}", bytes_written));
         }
@@ -92,7 +164,7 @@ namespace RC::File
         }
 
         struct stat file_info{};
-        fstat(fileno(m_file), &file_info);
+        fstat(m_file, &file_info);
 
         serialize_item(GenericItemData{.data_type = GenericDataType::UnsignedLong, .data_ulong = file_info.st_dev}, true);
         serialize_item(GenericItemData{.data_type = GenericDataType::UnsignedLong, .data_ulong = file_info.st_ino}, true);
@@ -216,7 +288,7 @@ namespace RC::File
             }
 
             Handle cache_file = open(m_serialization_file_path_and_name);
-            auto bytes_read = fread(&m_cache, cache_size, 1, (HANDLE) cache_file.get_raw_handle());
+            auto bytes_read = read((int)cache_file.get_raw_handle(), &m_cache, cache_size);
             if (bytes_read < 0)
             {
                 THROW_INTERNAL_FILE_ERROR(
@@ -243,26 +315,6 @@ namespace RC::File
         close_file();
     }
 
-    auto StdFile::create_all_directories(const std::filesystem::path& file_name_and_path) -> void
-    {
-        if (file_name_and_path.parent_path().empty())
-        {
-            return;
-        }
-
-        try
-        {
-            std::filesystem::create_directories(file_name_and_path.parent_path());
-        }
-        catch (const std::filesystem::filesystem_error& e)
-        {
-            THROW_INTERNAL_FILE_ERROR(std::format("[StdFile::create_all_directories] Tried creating directories '{}' but encountered an error. Error: {}",
-                                                  file_name_and_path.string(),
-                                                  e.what()))
-        }
-    }
-
-
     auto StdFile::close_file() -> void
     {
         if (m_memory_map)
@@ -284,7 +336,7 @@ namespace RC::File
             return;
         }
 
-        if (fclose(m_file) != 0)
+        if (m_file != 0)
         {
             THROW_INTERNAL_FILE_ERROR(std::format("[StdFile::close_file] Was unable to close file, error: {}", errno))
         }
@@ -327,13 +379,13 @@ namespace RC::File
     auto StdFile::is_same_as(StdFile& other_file) -> bool
     {
         struct stat file_info{};
-        if (fstat(fileno(m_file), &file_info) != 0)
+        if (fstat(m_file, &file_info) != 0)
         {
             THROW_INTERNAL_FILE_ERROR(std::format("[StdFile::is_same_as] Tried retrieving file information by handle. Error: {}", errno))
         }
 
         struct stat other_file_info{};
-        if (fstat(fileno(other_file.get_file()), &other_file_info) != 0)
+        if (fstat(other_file.get_file(), &other_file_info) != 0)
         {
             THROW_INTERNAL_FILE_ERROR(std::format("[StdFile::is_same_as] Tried retrieving file information by handle. Error: {}", errno))
         }
@@ -393,34 +445,35 @@ namespace RC::File
 
     auto StdFile::read_file_all() const -> StringType
     {
-        StreamType stream{get_file_path(), std::ios::in | std::ios::binary};
-        if (!stream)
+        auto file_name_and_path = get_file_path();
+        int flags = O_RDONLY;
+        int readfd = ::open(file_name_and_path.string().c_str(), flags);
+        if (readfd < 0)
         {
             THROW_INTERNAL_FILE_ERROR(std::format("[StdFile::read_all] Tried to read entire file but returned error {}", errno))
         }
         else
         {
             // Strip the BOM if it exists
-            File::StreamType::off_type start{};
             File::CharType bom[3]{};
-            stream.read(bom, 3);
+            read(readfd, bom, 3);
+            off_t start = 0;
             if ((unsigned char)bom[0] == 0xEF && (unsigned char)bom[1] == 0xBB && (unsigned char)bom[2] == 0xBF)
             {
                 // BOM: UTF-8
                 start = 3;
             }
 
-            StringType file_contents;
-            stream.seekg(0, std::ios::end);
-            auto size = stream.tellg();
+            File::StringType file_contents;
+            ssize_t size = lseek(readfd, 0, SEEK_END);
+            lseek(readfd, start, SEEK_SET);
             if (size == -1)
             {
                 return {};
             }
             file_contents.resize(size - start);
-            stream.seekg(start, std::ios::beg);
-            stream.read(&file_contents[0], file_contents.size() - start);
-            stream.close();
+            read(readfd, &file_contents[0], size - start);
+            close(readfd);
             return file_contents;
         }
     }
@@ -447,13 +500,11 @@ namespace RC::File
         }
 
         // seek to get size to map while keep original file position
-        auto original_position = ftell(m_file);
-        fseek(m_file, 0, SEEK_END);
-        auto file_size = ftell(m_file);
-        fseek(m_file, original_position, SEEK_SET);
-
+        auto original_position = lseek(m_file, 0, SEEK_CUR);
+        auto file_size = lseek(m_file, 0, SEEK_END);
+        lseek(m_file, original_position, SEEK_SET);
         
-        auto res = mmap(nullptr, file_size, flags, MAP_SHARED, fileno(m_file), 0);
+        auto res = mmap(nullptr, file_size, flags, MAP_SHARED, m_file, 0);
         if (res == (void*) -1)
         {
             THROW_INTERNAL_FILE_ERROR(std::format("[StdFile::memory_map] Tried to memory map file but 'mmap' returned error: {}", errno))
@@ -476,59 +527,28 @@ namespace RC::File
         {
             THROW_INTERNAL_FILE_ERROR("[StdFile::open_file] Tried to open file but file_name_and_path was empty.")
         }
-        const char* modes;
-        switch (open_properties.open_for)
-        {
-        case OpenFor::Writing:
-            if (open_properties.overwrite_existing_file == OverwriteExistingFile::Yes) {
-                modes = "wb+";
-            } else {
-                modes = "wb";
-            }
-            break;
-        case OpenFor::Appending:
-            modes = "ab";
-            break;
-        case OpenFor::Reading:
-            modes = "rb";
-            break;
-        default:
-            printf("open_for: %d\n", open_properties.open_for);
-            THROW_INTERNAL_FILE_ERROR("[StdFile::open_file] Tried to open file but received invalid data for the 'OpenFor' parameter.")
-        }
 
-        if (open_properties.overwrite_existing_file == OverwriteExistingFile::Yes) {
-            create_all_directories(file_name_and_path);
-        }
-        else if (open_properties.create_if_non_existent == CreateIfNonExistent::Yes)
-        {
-            create_all_directories(file_name_and_path);
-        }
-        else
-        {
-            if (!std::filesystem::exists(file_name_and_path))
-            {
-                printf("file_name_and_path: %s not exists\n", file_name_and_path.string().c_str());
-                THROW_INTERNAL_FILE_ERROR(std::format("[StdFile::open_file] Tried opening file but file does not exist: {}", file_name_and_path.string()))
-            }
-        }
+        int flags = calc_open_flags(file_name_and_path, open_properties);
 
         StdFile file{};
 
         // This very badly named API may create a new file or it may not but it will always open a file (unless there's an error)
-        file.set_file(fopen(file_name_and_path.string().c_str(), modes));
+        int fd = ::open(file_name_and_path.string().c_str(), flags);
 
-        if (file.get_file() == NULL)
+        if (fd > 0)
+        {
+            file.set_file(fd);
+        }
+        else
         {
             std::string_view open_type = open_properties.open_for == OpenFor::Writing || open_properties.open_for == OpenFor::Appending ? "writing" : "reading";
 
-            int error = errno;
-            printf("open file %s failed, error: %d\n", file_name_and_path.string().c_str(), error);
+            fprintf(stderr, "open file %s failed, error: %d\n", file_name_and_path.string().c_str(), errno);
             THROW_INTERNAL_FILE_ERROR(
                         std::format("[StdFile::open_file] Tried opening file for {} but encountered an error. Path & File: {} | errno = {}\n",
                                     open_type,
                                     file_name_and_path.string(),
-                                    error))
+                                    errno))
         }
 
         file.m_file_path_and_name = file_name_and_path;
