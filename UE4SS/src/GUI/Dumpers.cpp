@@ -400,14 +400,14 @@ namespace RC::GUI::Dumpers
 
         if (ImGui::Button("Dump CXX Headers\n"))
         {
-            SystemStringType working_dir{UE4SSProgram::get_program().get_working_directory()};
-            UE4SSProgram::get_program().generate_cxx_headers(working_dir + SYSSTR("\\CXXHeaderDump"));
+            std::filesystem::path working_dir{UE4SSProgram::get_program().get_working_directory()};
+            UE4SSProgram::get_program().generate_cxx_headers(working_dir / SYSSTR("CXXHeaderDump"));
         }
 
         if (ImGui::Button("Generate Lua Types\n"))
         {
-            SystemStringType working_dir{UE4SSProgram::get_program().get_working_directory()};
-            UE4SSProgram::get_program().generate_lua_types(working_dir + SYSSTR("\\Mods\\shared\\types"));
+            std::filesystem::path working_dir{UE4SSProgram::get_program().get_working_directory()};
+            UE4SSProgram::get_program().generate_lua_types(working_dir / SYSSTR("Mods") / SYSSTR("shared") SYSSTR("types"));
         }
     }
 } // namespace RC::GUI::Dumpers
