@@ -65,9 +65,8 @@ void LuaLockInitial(lua_State * L){
 }
 
 void LuaLockFinal(lua_State * L){
-    if (lua_lock_mutex.init){
-        pthread_mutex_destroy(&lua_lock_mutex.mutex);
-        lua_lock_mutex.init = false;
+    if (lua_lock_mutex.init) {
+        LuaUnlock(L);
     }
 }
 
