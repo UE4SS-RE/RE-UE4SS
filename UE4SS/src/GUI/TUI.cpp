@@ -16,7 +16,7 @@ namespace RC::GUI
         g_screen = ImTui_ImplNcurses_Init(true);
 
         // disable stderr
-        freopen("./tui.log", "w", stderr);
+        freopen("./tui.log", "w+", stderr);
         setbuf(stderr, NULL);
         fprintf(stderr, "Backend_TUI::init\n");
         fflush(stderr);
