@@ -345,6 +345,13 @@ namespace RC::GUI::Dumpers
         {
             return;
         }
+        
+        // this give the button a little bit of space between the top of the window
+        // and the buttons themselves
+        #ifdef LINUX
+        ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, {0.0f, 1.0f});
+        ImGui::Spacing();
+        #endif
 
         if (ImGui::Button("Dump all static actor meshes to file"))
         {
@@ -409,5 +416,10 @@ namespace RC::GUI::Dumpers
             std::filesystem::path working_dir{UE4SSProgram::get_program().get_working_directory()};
             UE4SSProgram::get_program().generate_lua_types(working_dir / SYSSTR("Mods") / SYSSTR("shared") SYSSTR("types"));
         }
+
+        
+        #ifdef LINUX
+        ImGui::PopStyleVar();
+        #endif
     }
 } // namespace RC::GUI::Dumpers
