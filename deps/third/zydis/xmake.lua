@@ -1,5 +1,6 @@
 package("zydis")
-    set_urls("git@github.com:zyantific/zydis.git")
+    add_urls("git@github.com:zyantific/zydis.git")
+    add_urls("https://github.com/zyantific/zydis.git")
 
     add_versions("v3.1.0", "bfee99f49274a0eec3ffea16ede3a5bda9cda88f")
 

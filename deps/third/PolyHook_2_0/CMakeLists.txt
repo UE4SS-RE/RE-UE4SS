@@ -5,7 +5,7 @@ include(FetchContent)
 set(FETCHCONTENT_QUIET OFF)
 
 FetchContent_Declare(PolyHook2
-    GIT_REPOSITORY git@github.com:stevemk14ebr/PolyHook_2_0.git
+    GIT_REPOSITORY https://github.com/stevemk14ebr/PolyHook_2_0.git
     GIT_TAG 16bc0faf77a15b91b72763353901cfe34daf3174
     GIT_PROGRESS ON)
 

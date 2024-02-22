@@ -1,5 +1,6 @@
 package("zycore")
-    set_urls("git@github.com:zyantific/zycore-c.git")
+    add_urls("git@github.com:zyantific/zycore-c.git")
+    add_urls("https://github.com/zyantific/zycore-c.git")
     
     add_versions("v1.0.0", "3435866ecaa837376807ce934d2088ae46aa3fa3")
 

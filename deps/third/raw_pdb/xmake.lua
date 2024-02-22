@@ -1,5 +1,6 @@
 package("raw_pdb")
-    set_urls("git@github.com:MolecularMatters/raw_pdb.git")
+    add_urls("git@github.com:MolecularMatters/raw_pdb.git")
+    add_urls("https://github.com/MolecularMatters/raw_pdb.git")
 
     add_versions("v1.0.0", "8c6a7146393c83d27fa101e8bc8017f2a7f151df")
 

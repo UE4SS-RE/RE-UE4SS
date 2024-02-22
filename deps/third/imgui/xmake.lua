@@ -1,5 +1,6 @@
 package("ImGuiTextEdit")
-    set_urls("git@github.com:UE4SS-RE/ImGuiColorTextEdit.git")
+    add_urls("git@github.com:UE4SS-RE/ImGuiColorTextEdit.git")
+    add_urls("https://github.com/UE4SS-RE/ImGuiColorTextEdit.git")
 
     add_versions("v1.0", "master")
 
@@ -38,7 +39,8 @@ package("ImGuiTextEdit")
 package_end()
 
 package("IconFontCppHeaders")
-    set_urls("git@github.com:juliettef/IconFontCppHeaders.git")
+    add_urls("git@github.com:juliettef/IconFontCppHeaders.git")
+    add_urls("https://github.com/juliettef/IconFontCppHeaders.git")
     set_kind("library", { headeronly = true })
 
     add_versions("v1.0", "main")
