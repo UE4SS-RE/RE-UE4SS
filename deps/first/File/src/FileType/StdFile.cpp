@@ -534,7 +534,7 @@ namespace RC::File
         StdFile file{};
 
         // This very badly named API may create a new file or it may not but it will always open a file (unless there's an error)
-        int fd = ::open(file_name_and_path.string().c_str(), flags);
+        int fd = ::open(file_name_and_path.string().c_str(), flags, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH);
 
         if (fd > 0)
         {
