@@ -354,7 +354,7 @@ namespace RC::GUI
                 }
                 else
                 {
-                    printf_s("Internal Error: %s\n", e.what());
+                    fprintf(stderr, "Internal Error: %s\n", e.what());
                 }
 
                 // You're not allowed to throw exceptions directly inside a frame!
