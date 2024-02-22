@@ -254,7 +254,7 @@ namespace RC::UEGenerator
     {
         auto module_name_sys = to_system(module_name);
         const FFilePath module_file_path = m_root_directory / module_name_sys / std::format(SYSSTR("{}.Build.cs"), module_name_sys);
-        GeneratedFile module_build_file = GeneratedFile(module_file_path);
+        UEGeneratedFile module_build_file = UEGeneratedFile(module_file_path);
 
         module_build_file.append_line(SYSSTR("using UnrealBuildTool;"));
         module_build_file.append_line(SYSSTR(""));
@@ -304,7 +304,7 @@ namespace RC::UEGenerator
     {
         auto module_name_sys = to_system(module_name);
         const FFilePath module_file_path = m_root_directory / module_name_sys / SYSSTR("Private") / std::format(SYSSTR("{}Module.cpp"), module_name_sys);
-        GeneratedFile module_impl_file = GeneratedFile(module_file_path);
+        UEGeneratedFile module_impl_file = UEGeneratedFile(module_file_path);
 
         module_impl_file.append_line(SYSSTR("#include \"Modules/ModuleManager.h\""));
         module_impl_file.append_line(SYSSTR(""));
@@ -2937,10 +2937,11 @@ namespace RC::UEGenerator
             if (cpp_form == UEnum::ECppForm::EnumClass)
             {
                 const auto underlying_type = m_underlying_enum_types.find(enum_native_name);
-                if (underlying_type->second == SYSSTR("uint8") ||
-                    (underlying_type == m_underlying_enum_types.end() &&
-                    (get_highest_enum(uenum) <= 255 &&
-                    get_lowest_enum(uenum) >= 0)))
+                if ((underlying_type == m_underlying_enum_types.end() &&
+                        (get_highest_enum(uenum) <= 255 &&
+                        get_lowest_enum(uenum) >= 0)) ||
+                    ((underlying_type != m_underlying_enum_types.end()) && 
+                        (underlying_type->second == SYSSTR("uint8"))))
                 {
                     // Underlying type is implicit or explicitly uint8.
                     flag_format_helper.add_switch(SYSSTR("BlueprintType"));
@@ -4040,7 +4041,7 @@ namespace RC::UEGenerator
         return std::format(SYSSTR("//CROSS-MODULE INCLUDE V2: -ModuleName={} -ObjectName={} -FallbackName={}\n"), to_system(module_name), object_name, to_system(fallback_name));
     }
 
-    GeneratedFile::GeneratedFile(const FFilePath& full_file_path)
+    UEGeneratedFile::UEGeneratedFile(const FFilePath& full_file_path)
     {
         this->m_full_file_path = full_file_path;
         // [[keep]]
@@ -4048,7 +4049,7 @@ namespace RC::UEGenerator
         this->m_current_indent_count = 0;
     }
 
-    auto GeneratedFile::append_line(const SystemStringType& line) -> void
+    auto UEGeneratedFile::append_line(const SystemStringType& line) -> void
     {
         for (int32_t i = 0; i < m_current_indent_count; i++)
         {
@@ -4058,18 +4059,18 @@ namespace RC::UEGenerator
         m_file_contents_buffer.append(SYSSTR("\n"));
     }
 
-    auto GeneratedFile::append_line_no_indent(const SystemStringType& line) -> void
+    auto UEGeneratedFile::append_line_no_indent(const SystemStringType& line) -> void
     {
         m_file_contents_buffer.append(line);
         m_file_contents_buffer.append(SYSSTR("\n"));
     }
 
-    auto GeneratedFile::begin_indent_level() -> void
+    auto UEGeneratedFile::begin_indent_level() -> void
     {
         m_current_indent_count++;
     }
 
-    auto GeneratedFile::end_indent_level() -> void
+    auto UEGeneratedFile::end_indent_level() -> void
     {
         m_current_indent_count--;
         if (m_current_indent_count < 0)
@@ -4078,7 +4079,7 @@ namespace RC::UEGenerator
         }
     }
 
-    auto GeneratedFile::serialize_file_content_to_disk() -> bool
+    auto UEGeneratedFile::serialize_file_content_to_disk() -> bool
     {
         if (!has_content_to_save())
         {
@@ -4086,7 +4087,9 @@ namespace RC::UEGenerator
         }
         // TODO might be slow, maybe move it out into the header generator?
         std::filesystem::create_directories(this->m_full_file_path.parent_path());
-
+        auto file = File::open(m_full_file_path, File::OpenFor::Writing, File::OverwriteExistingFile::Yes, File::CreateIfNonExistent::Yes);
+        file.write_file_string_to_file(to_file(generate_file_contents()));
+        /*
         UEOStreamType file_output_stream;
         file_output_stream.open(m_full_file_path);
         if (!file_output_stream.is_open())
@@ -4095,16 +4098,16 @@ namespace RC::UEGenerator
         }
         // TODO: FIX STREAM
         file_output_stream << generate_file_contents().c_str();
-        file_output_stream.close();
+        file_output_stream.close();*/
         return true;
     }
 
-    auto GeneratedFile::generate_file_contents() -> SystemStringType
+    auto UEGeneratedFile::generate_file_contents() -> SystemStringType
     {
         return m_file_contents_buffer;
     }
 
-    auto GeneratedFile::has_content_to_save() const -> bool
+    auto UEGeneratedFile::has_content_to_save() const -> bool
     {
         return !m_file_contents_buffer.empty();
     }
@@ -4128,7 +4131,7 @@ namespace RC::UEGenerator
     }
 
     GeneratedSourceFile::GeneratedSourceFile(const FFilePath& file_path, const SystemStringType& file_module_name, bool is_implementation_file, UObject* object)
-        : GeneratedFile(file_path)
+        : UEGeneratedFile(file_path)
     {
         this->m_file_module_name = file_module_name;
         this->m_is_implementation_file = is_implementation_file;

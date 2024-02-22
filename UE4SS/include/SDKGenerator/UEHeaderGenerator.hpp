@@ -106,7 +106,7 @@ namespace RC::UEGenerator
 
     using CaseInsensitiveSet = ::std::set<SystemStringType, StringInsensitiveCompare>;
 
-    class GeneratedFile
+    class UEGeneratedFile
     {
       protected:
         SystemStringType m_file_base_name;
@@ -116,13 +116,13 @@ namespace RC::UEGenerator
         int32_t m_current_indent_count;
 
       public:
-        GeneratedFile(const FFilePath& full_file_path);
-        virtual ~GeneratedFile() = default;
+        UEGeneratedFile(const FFilePath& full_file_path);
+        virtual ~UEGeneratedFile() = default;
 
         // Delete copy and move constructors and assignment operator
-        GeneratedFile(const GeneratedFile&) = delete;
-        GeneratedFile(GeneratedFile&&) = default;
-        auto operator=(const GeneratedFile&) -> void = delete;
+        UEGeneratedFile(const UEGeneratedFile&) = delete;
+        UEGeneratedFile(UEGeneratedFile&&) = default;
+        auto operator=(const UEGeneratedFile&) -> void = delete;
 
         auto append_line(const SystemStringType& line) -> void;
         auto append_line_no_indent(const SystemStringType& line) -> void;
@@ -134,7 +134,7 @@ namespace RC::UEGenerator
         virtual auto generate_file_contents() -> SystemStringType;
     };
 
-    class GeneratedSourceFile : public GeneratedFile
+    class GeneratedSourceFile : public UEGeneratedFile
     {
       private:
         SystemStringType m_file_module_name;
