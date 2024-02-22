@@ -11,6 +11,18 @@
 #include <imgui.h>
 
 struct ImGuiSettingsHandler;
+#ifdef WIN32
+#define XOFFSET (-14.0f)
+#define XDIV 1
+#define YDIV 1
+#else
+#ifdef LINUX
+#define XOFFSET 0
+#define XDIV (6.66f)
+#define YDIV (21.1f)
+#endif
+#endif
+
 #ifdef LINUX
 namespace ImGui {
     static void BeginDisabled(bool disabled = true) {}
