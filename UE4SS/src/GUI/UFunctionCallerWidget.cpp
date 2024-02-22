@@ -14,6 +14,7 @@
 #include <Unreal/UObject.hpp>
 #include <Unreal/UObjectGlobals.hpp>
 #include <Unreal/UScriptStruct.hpp>
+#include <GUI/GUI.hpp>
 
 #include <imgui.h>
 #include <misc/cpp/imgui_stdlib.h>
@@ -323,7 +324,7 @@ namespace RC::GUI
             ImGui::OpenPopup(popup_modal_id.c_str());
         }
 
-        ImGui::PushStyleVar(ImGuiStyleVar_WindowMinSize, {925.0f, 300.0f});
+        ImGui::PushStyleVar(ImGuiStyleVar_WindowMinSize, {925.0f / XDIV, 300.0f / YDIV});
         if (ImGui::BeginPopupModal(popup_modal_id.c_str(), &is_open))
         {
             ImGui::PushItemWidth(-1.0f);

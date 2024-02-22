@@ -3445,8 +3445,9 @@ namespace RC::GUI
             // Window height changed, scale panes by ratio
             m_top_size = std::max(ImGui::GetFrameHeight(), std::round(split_pane_height * (m_top_size / (m_top_size + m_bottom_size))));
         }
+        // TODO: check the size for TUI as m_bottom_size = (ImGui::GetContentRegionMaxAbs().y - m_top_size) - 2.0f;
         m_bottom_size = std::max(ImGui::GetFrameHeight(), split_pane_height - m_top_size);
-        // do we need ImGui_Splitter(false, 4.0f, &m_top_size, &m_bottom_size, 12.0f, 12.0f, XOFFSET); on TUI?
+        // TODO: do we need ImGui_Splitter(false, 4.0f, &m_top_size, &m_bottom_size, 12.0f, 12.0f, XOFFSET); on TUI?
         ImGui_Splitter(false, 4.0f, &m_top_size, &m_bottom_size, ImGui::GetFrameHeight(), ImGui::GetFrameHeight(), -16.0f);
 
         ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4{0.156f, 0.156f, 0.156f, 1.0f});
