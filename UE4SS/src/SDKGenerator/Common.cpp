@@ -123,7 +123,7 @@ namespace RC::UEGenerator
         return resulting_name;
     }
 
-    auto generate_delegate_name(FProperty* property, const UEStringType& context_name) -> SystemStringType
+    auto generate_delegate_name(FProperty* property, const SystemStringType& context_name) -> SystemStringType
     {
         const auto property_name = sanitize_property_name(to_system_string(property->GetName()));
         return std::format(SYSSTR("F{}{}"), to_system(context_name), to_system(property_name));

@@ -110,11 +110,11 @@ namespace RC::UEGenerator
         // Retrieve JSON as a string.
         int32_t indent_level{};
 
-        auto uaapifile = open(SystemStringType{UE4SSProgram::get_program().get_working_directory()} + SYSSTR("\\UAssetAPITMapOverrides.json"),
+        auto uaapifile = open(std::filesystem::path{UE4SSProgram::get_program().get_working_directory()} / SYSSTR("UAssetAPITMapOverrides.json"),
                               File::OpenFor::Writing,
                               File::OverwriteExistingFile::Yes,
                               File::CreateIfNonExistent::Yes);
-        auto fmodelfile = open(SystemStringType{UE4SSProgram::get_program().get_working_directory()} + SYSSTR("\\FModelTMapOverrides.json"),
+        auto fmodelfile = open(std::filesystem::path{UE4SSProgram::get_program().get_working_directory()} / SYSSTR("FModelTMapOverrides.json"),
                                File::OpenFor::Writing,
                                File::OverwriteExistingFile::Yes,
                                File::CreateIfNonExistent::Yes);
