@@ -303,4 +303,10 @@ namespace RC::GUI
             code_to_try();
         });
     }
+
+#ifdef WIN32
+    #define ATTACH_ICON(icon, str) icon str
+#else
+    #define ATTACH_ICON(icon, str) ((icon str) + (UE4SSProgram::settings_manager.TUI.TUINerdFont ? (0) : (sizeof(icon) - 1)))
+#endif
 } // namespace RC::GUI

@@ -133,6 +133,7 @@ namespace RC
             REGISTER_INT64_SETTING(TUI.WheelDown, section_tui_features, WheelDown)
             REGISTER_BOOL_SETTING(TUI.TUIAsInputSource, section_tui_features, TUIAsInputSource)
             REGISTER_BOOL_SETTING(TUI.TUINerdFont, section_tui_features, TUINerdFont)
+            /*
             REGISTER_STRING_SETTING(TUI.TerminalCode, section_tui_features, TerminalCode)
             REGISTER_STRING_SETTING(TUI.ArchiveCode, section_tui_features, ArchiveCode)
             REGISTER_STRING_SETTING(TUI.SyncCode, section_tui_features, SyncCode)
@@ -144,6 +145,7 @@ namespace RC
             REGISTER_STRING_SETTING(TUI.BanCode, section_tui_features, BanCode)
             REGISTER_STRING_SETTING(TUI.CopyCode, section_tui_features, CopyCode)
             REGISTER_STRING_SETTING(TUI.SearchCode, section_tui_features, SearchCode)
+            */
         #endif
     }
 } // namespace RC

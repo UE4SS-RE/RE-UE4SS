@@ -118,6 +118,7 @@ namespace RC
             int WheelDown = 5;
             bool TUIAsInputSource = true;
             bool TUINerdFont = true;
+            /*
             SystemStringType TerminalCode = "f120";
             SystemStringType ArchiveCode = "f187";
             SystemStringType SyncCode = "f46a";
@@ -128,7 +129,7 @@ namespace RC
             SystemStringType AngleRightCode = "f101";
             SystemStringType BanCode = "f05e";
             SystemStringType CopyCode = "f0c5";
-            SystemStringType SearchCode = "f002";
+            SystemStringType SearchCode = "f002";*/
         } TUI;
 #endif
 

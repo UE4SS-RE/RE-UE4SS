@@ -52,12 +52,7 @@
 #ifdef WIN32
 #include <IconsFontAwesome5.h>
 #else
-#define ICON_FA_ANGLE_DOUBLE_LEFT "<<"
-#define ICON_FA_ANGLE_DOUBLE_RIGHT ">>"
-#define ICON_FA_BAN
-#define ICON_FA_COPY
-#define ICON_FA_EYE
-#define ICON_FA_SEARCH
+#include <GUI/NerdFont.hpp>
 #endif
 
 #undef max
@@ -2859,7 +2854,7 @@ namespace RC::GUI
             {
                 ImGui::BeginDisabled();
             }
-            if (ImGui::Button(ICON_FA_SEARCH " Find functions"))
+            if (ImGui::Button(ATTACH_ICON(ICON_FA_SEARCH," Find functions")))
             {
                 m_function_caller_widget->open_widget_deferred();
             }
@@ -3401,7 +3396,7 @@ namespace RC::GUI
             if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled))
             {
                 ImGui::BeginTooltip();
-                ImGui::Text(ICON_FA_BAN " Feature disabled due to 'General.bUseUObjectArrayCache' being set to 0 in UE4SS-settings.ini.");
+                ImGui::Text(ATTACH_ICON(ICON_FA_BAN, " Feature disabled due to 'General.bUseUObjectArrayCache' being set to 0 in UE4SS-settings.ini."));
                 ImGui::EndTooltip();
             }
         }
@@ -3425,9 +3420,7 @@ namespace RC::GUI
         }
 
         ImGui::SameLine();
-
-        // Remember to update text width calculations for the last ImGui::PushItemWidth call if this text gets updated.
-        if (ImGui::Button(ICON_FA_COPY " Copy search result"))
+        if (ImGui::Button(ATTACH_ICON(ICON_FA_COPY, " Copy search result")))
         {
             SystemStringType result{};
             auto is_below_425 = Version::IsBelow(4, 25);
@@ -3448,6 +3441,7 @@ namespace RC::GUI
         // TODO: check the size for TUI as m_bottom_size = (ImGui::GetContentRegionMaxAbs().y - m_top_size) - 2.0f;
         m_bottom_size = std::max(ImGui::GetFrameHeight(), split_pane_height - m_top_size);
         // TODO: do we need ImGui_Splitter(false, 4.0f, &m_top_size, &m_bottom_size, 12.0f, 12.0f, XOFFSET); on TUI?
+        // TODO: we need false, 0.5f?
         ImGui_Splitter(false, 4.0f, &m_top_size, &m_bottom_size, ImGui::GetFrameHeight(), ImGui::GetFrameHeight(), -16.0f);
 
         ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4{0.156f, 0.156f, 0.156f, 1.0f});
@@ -3460,7 +3454,7 @@ namespace RC::GUI
                 auto render_context_menu = [&] {
                     if (ImGui::BeginPopupContextItem(tree_node_name.c_str()))
                     {
-                        if (ImGui::MenuItem(ICON_FA_COPY " Copy Full Name"))
+                        if (ImGui::MenuItem(ATTACH_ICON(ICON_FA_COPY, " Copy Full Name")))
                         {
                             Output::send(SYSSTR("Copy Full Name: {}\n"), object->GetFullName());
                             ImGui::SetClipboardText(tree_node_name.c_str());
@@ -3472,14 +3466,14 @@ namespace RC::GUI
                             if (function_watcher_it == s_watch_map.end())
                             {
                                 ImGui::Separator();
-                                if (ImGui::MenuItem(ICON_FA_EYE " Watch value"))
+                                if (ImGui::MenuItem(ATTACH_ICON(ICON_FA_EYE, " Watch value")))
                                 {
                                     add_watch(watch_id, static_cast<UFunction*>(object));
                                 }
                             }
                             else
                             {
-                                ImGui::Checkbox(ICON_FA_EYE " Watch value", &function_watcher_it->second->enabled);
+                                ImGui::Checkbox(ATTACH_ICON(ICON_FA_EYE, " Watch value"), &function_watcher_it->second->enabled);
                             }
                         }
                         ImGui::EndPopup();
