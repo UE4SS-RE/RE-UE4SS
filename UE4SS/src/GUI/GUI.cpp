@@ -369,8 +369,11 @@ namespace RC::GUI
 
                 // You're not allowed to throw exceptions directly inside a frame!
                 // Use GUI::TRY to move exceptions to the end of the frame.
-                //abort();
+                #ifdef WIN32
+                __debugbreak();
+                #else
                 asm("int3");
+                #endif
             }
 
             ImGui::Render();

@@ -3445,8 +3445,12 @@ namespace RC::GUI
         ImGui_Splitter(false, 4.0f, &m_top_size, &m_bottom_size, ImGui::GetFrameHeight(), ImGui::GetFrameHeight(), -16.0f);
 
         ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4{0.156f, 0.156f, 0.156f, 1.0f});
-        ImGui::BeginChild("LiveView_TreeView", {-16.0f, m_top_size}, true);
 
+#ifdef WIN32
+        ImGui::BeginChild("LiveView_TreeView", {-16.0f, m_top_size}, true);
+#else
+        ImGui::BeginChild("LiveView_TreeView", {0, m_top_size}, true);
+#endif
         auto do_iteration = [&](int32_t int_data_1 = 0, int32_t int_data_2 = 0) {
             ((*this).*((*this).m_object_iterator))(int_data_1, int_data_2, [&](UObject* object) {
                 auto tree_node_name = std::string{get_object_full_name(object)};
