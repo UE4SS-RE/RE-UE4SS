@@ -109,6 +109,29 @@ namespace RC
             bool GUIUFunctionCaller{false};
         } Experimental;
 
+#ifdef LINUX
+        struct TUIFeatures 
+        {
+            int ButtonLeft = 1;
+            int ButtonRight = 3;
+            int WheelUp = 4;
+            int WheelDown = 5;
+            bool TUIAsInputSource = true;
+            bool TUINerdFont = true;
+            SystemStringType TerminalCode = "f120";
+            SystemStringType ArchiveCode = "f187";
+            SystemStringType SyncCode = "f46a";
+            SystemStringType FileCode = "f15b";
+            SystemStringType EyeCode = "f06e";
+            SystemStringType PuzzlePieceCode = "f12e";
+            SystemStringType AngleLeftCode = "f100";
+            SystemStringType AngleRightCode = "f101";
+            SystemStringType BanCode = "f05e";
+            SystemStringType CopyCode = "f0c5";
+            SystemStringType SearchCode = "f002";
+        } TUI;
+#endif
+
       public:
         SettingsManager() = default;
 

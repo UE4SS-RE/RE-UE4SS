@@ -124,5 +124,26 @@ namespace RC
 
         constexpr static SystemCharType section_experimental_features[] = SYSSTR("ExperimentalFeatures");
         REGISTER_BOOL_SETTING(Experimental.GUIUFunctionCaller, section_experimental_features, GUIUFunctionCaller)
+
+        #ifdef LINUX
+            constexpr static SystemCharType section_tui_features[] = SYSSTR("TUI");
+            REGISTER_INT64_SETTING(TUI.ButtonLeft, section_tui_features, ButtonLeft)
+            REGISTER_INT64_SETTING(TUI.ButtonRight, section_tui_features, ButtonRight)
+            REGISTER_INT64_SETTING(TUI.WheelUp, section_tui_features, WheelUp)
+            REGISTER_INT64_SETTING(TUI.WheelDown, section_tui_features, WheelDown)
+            REGISTER_BOOL_SETTING(TUI.TUIAsInputSource, section_tui_features, TUIAsInputSource)
+            REGISTER_BOOL_SETTING(TUI.TUINerdFont, section_tui_features, TUINerdFont)
+            REGISTER_STRING_SETTING(TUI.TerminalCode, section_tui_features, TerminalCode)
+            REGISTER_STRING_SETTING(TUI.ArchiveCode, section_tui_features, ArchiveCode)
+            REGISTER_STRING_SETTING(TUI.SyncCode, section_tui_features, SyncCode)
+            REGISTER_STRING_SETTING(TUI.FileCode, section_tui_features, FileCode)
+            REGISTER_STRING_SETTING(TUI.EyeCode, section_tui_features, EyeCode)
+            REGISTER_STRING_SETTING(TUI.PuzzlePieceCode, section_tui_features, PuzzlePieceCode)
+            REGISTER_STRING_SETTING(TUI.AngleLeftCode, section_tui_features, AngleLeftCode)
+            REGISTER_STRING_SETTING(TUI.AngleRightCode, section_tui_features, AngleRightCode)
+            REGISTER_STRING_SETTING(TUI.BanCode, section_tui_features, BanCode)
+            REGISTER_STRING_SETTING(TUI.CopyCode, section_tui_features, CopyCode)
+            REGISTER_STRING_SETTING(TUI.SearchCode, section_tui_features, SearchCode)
+        #endif
     }
 } // namespace RC
