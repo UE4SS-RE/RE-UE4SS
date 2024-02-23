@@ -1,3 +1,16 @@
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index 9376c4a..5e24536 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -64,6 +64,8 @@ if (IMTUI_SUPPORT_NCURSES)
+     if (MINGW)
+         set(CURSES_LIBRARIES pdcurses)
+     else()
++        set(CURSES_NEED_NCURSES TRUE)
++        set(CURSES_NEED_WIDE TRUE)
+         find_package(Curses REQUIRED)
+         CHECK_LIBRARY_EXISTS("${CURSES_NCURSES_LIBRARY}"
+             nodelay "" CURSES_NCURSES_HAS_NODELAY)
 diff --git a/include/imtui/imtui.h b/include/imtui/imtui.h
 index b77c342..100a4d8 100644
 --- a/include/imtui/imtui.h
