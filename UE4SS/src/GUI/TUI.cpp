@@ -10,6 +10,7 @@
 namespace RC::GUI
 {
     static ImTui::TScreen * g_screen = nullptr;
+    static bool tui_shutdown = false;
 
     void Backend_TUI::init() {
         //fprintf(stderr, "Backend_TUI::init\n");
@@ -22,8 +23,9 @@ namespace RC::GUI
         fflush(stderr);
         atexit([]() {
             // ensure that the screen is destroyed
-            ImTui_ImplNcurses_Shutdown();
-            g_screen = nullptr;
+            // ImTui_ImplNcurses_Shutdown(); do not call this here, we may not in UI thread
+            // set shutdown flag to allow async shutdown on UI thread
+            tui_shutdown = true;
         });
     }
 
@@ -44,6 +46,7 @@ namespace RC::GUI
     void Backend_TUI::shutdown() {
         ImTui_ImplNcurses_Shutdown();
         g_screen = nullptr;
+        tui_shutdown = true;
     }
 
     void Backend_TUI::cleanup() {
@@ -75,6 +78,9 @@ namespace RC::GUI
     }
 
     void Backend_GfxTUI::render(const float clear_color_with_alpha[4]) {
+        if (tui_shutdown) {
+            return;
+        }
         ImTui_ImplText_RenderDrawData(ImGui::GetDrawData(), g_screen);
         ImTui_ImplNcurses_DrawScreen();
     }
@@ -110,6 +116,6 @@ namespace RC::GUI
     }
 
     bool Backend_GfxTUI::exit_requested() {
-        return false;
+        return tui_shutdown;
     }
 }; // namespace RC::GUI
