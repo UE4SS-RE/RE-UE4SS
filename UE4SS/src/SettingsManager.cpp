@@ -82,6 +82,15 @@ namespace RC
         REGISTER_BOOL_SETTING(Debug.DebugConsoleEnabled, section_debug, GuiConsoleEnabled)
         REGISTER_BOOL_SETTING(Debug.DebugConsoleVisible, section_debug, GuiConsoleVisible)
         REGISTER_FLOAT_SETTING(Debug.DebugGUIFontScaling, section_debug, GuiConsoleFontScaling)
+
+        #ifdef LINUX
+        #ifdef HAS_GUI
+            if (Debug.SimpleConsoleEnabled && Debug.DebugConsoleVisible && Debug.DebugConsoleEnabled) {
+                Debug.SimpleConsoleEnabled = false;
+            }
+        #endif
+        #endif
+
         #ifdef HAS_GUI
         SystemStringType graphics_api_string{};
         REGISTER_STRING_SETTING(graphics_api_string, section_debug, GraphicsAPI)
