@@ -1,19 +1,10 @@
 #include <File/File.hpp>
 #include <algorithm>
 
+#include <Helpers/String.hpp>
+
 namespace RC::File
 {
-    // we can't access helper/string here? or can we add helper to file's dep? 
-    static bool case_insensitive_equals(char a, char b) 
-    {
-        return std::tolower(static_cast<unsigned char>(a)) ==  std::tolower(static_cast<unsigned char>(b));
-    }
-
-    static bool case_insensitive_compare(const std::string& a, const std::string& b) 
-    {
-        return std::equal(a.begin(), a.end(), b.begin(), b.end(), case_insensitive_equals);
-    }
-
     auto construct_handle(const std::filesystem::path& file_name, const OpenProperties& open_properties) -> Handle
     {
         auto internal_handle = Handle::FileType::open_file(file_name, open_properties);
@@ -65,7 +56,7 @@ namespace RC::File
                     // case-insensitive comparison
                     auto entry_filename = entry.path().filename().string();
                     auto part_filename = part.string();
-                    if (case_insensitive_compare(entry_filename, part_filename))
+                    if (String::iequal(entry_filename, part_filename))
                     {
                         full_path /= entry.path().filename();
                         found = true;
