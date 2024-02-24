@@ -646,26 +646,17 @@ namespace RC
         // Verify that there's a 'Scripts' directory
         // Give the full path to the 'Scripts' directory to the mod container
         std::filesystem::path mod_path_fs = m_mod_path;
-        auto path = (mod_path_fs / SYSSTR("scripts"));
-        if (std::filesystem::exists(path))
+        auto scripts_directory = File::get_path_if_exists(mod_path_fs, "Scripts");
+        if (scripts_directory)
         {
             // "scripts" get priority over "Scripts"
-            m_scripts_path = to_system(path);
+            m_scripts_path = to_system(*scripts_directory);
         } 
         else 
         {
-            // failed, we try the other case
-            path = (mod_path_fs / SYSSTR("Scripts"));
-            if (std::filesystem::exists(path))
-            {
-                m_scripts_path = to_system(path);
-            }
-            else 
-            {
-                // If the 'Scripts' directory doesn't exist then mark the mod as non-installable and move on to the next mod
-                set_installable(false);
-                return;
-            }
+            // If the 'Scripts' directory doesn't exist then mark the mod as non-installable and move on to the next mod
+            set_installable(false);
+            return;
         }
     }
 
@@ -843,8 +834,12 @@ namespace RC
 
         lua_getfield(lua_state, -1, "path");
         std::string current_paths = lua_tostring(lua_state, -1);
-        current_paths.append(std::format(";{}" LUA_DIRSEP "{}" LUA_DIRSEP "scripts" LUA_DIRSEP "?.lua", to_string(m_program.get_mods_directory()).c_str(), to_string(get_name())));
-        current_paths.append(std::format(";{}" LUA_DIRSEP "{}" LUA_DIRSEP "Scripts" LUA_DIRSEP "?.lua", to_string(m_program.get_mods_directory()).c_str(), to_string(get_name())));
+        auto scripts_directory = File::get_path_if_exists(m_mod_path, "Scripts");
+        if (scripts_directory)
+        {
+            auto scripts_path = ((*scripts_directory) / "?.lua").string();
+            current_paths.append(std::format(";{}", scripts_path));
+        }
         current_paths.append(std::format(";{}" LUA_DIRSEP "shared" LUA_DIRSEP "?.lua", to_string(m_program.get_mods_directory()).c_str()));
         current_paths.append(std::format(";{}" LUA_DIRSEP "shared" LUA_DIRSEP "?" LUA_DIRSEP "?.lua", to_string(m_program.get_mods_directory()).c_str()));
         lua_pop(lua_state, 1);
@@ -853,9 +848,13 @@ namespace RC
 
         lua_getfield(lua_state, -1, "cpath");
         std::string current_cpaths = lua_tostring(lua_state, -1);
-        current_cpaths.append(std::format(";{}" LUA_DIRSEP "{}" LUA_DIRSEP "scripts" LUA_DIRSEP "?.dll", to_string(m_program.get_mods_directory()).c_str(), to_string(get_name())));
-        current_cpaths.append(std::format(";{}" LUA_DIRSEP "{}" LUA_DIRSEP "Scripts" LUA_DIRSEP "?.dll", to_string(m_program.get_mods_directory()).c_str(), to_string(get_name())));
-        current_cpaths.append(std::format(";{}" LUA_DIRSEP "{}" LUA_DIRSEP "?.dll", to_string(m_program.get_mods_directory()).c_str(), to_string(get_name())));
+        if (scripts_directory)
+        {
+            #define STRINGIFY(x) #x
+            auto dlls_path = ((*scripts_directory) / ("?" STRINGIFY(DLLEXT))).string();
+            current_cpaths.append(std::format(";{}", dlls_path));
+        }
+        current_cpaths.append(std::format(";{}" LUA_DIRSEP "{}" LUA_DIRSEP "?" STRINGIFY(DLLEXT), to_string(m_program.get_mods_directory()).c_str(), to_string(get_name())));
         lua_pop(lua_state, 1);
         lua_pushstring(lua_state, current_cpaths.c_str());
         lua_setfield(lua_state, -2, "cpath");
@@ -2274,7 +2273,7 @@ Overloads:
                 lua.throw_error("CreateLogicModsDirectory: Could not locate the \"Content\" directory because the directory structure is unknown (not "
                                 "<RootGamePath>/Game/Content)\n");
             }
-            auto logic_mods_dir = game_content_dir / "Paks/LogicMods";
+            auto logic_mods_dir = game_content_dir / "Paks" / "LogicMods";
             if (std::filesystem::exists(logic_mods_dir))
             {
                 Output::send<LogLevel::Warning>(

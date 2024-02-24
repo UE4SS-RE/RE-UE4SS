@@ -445,13 +445,23 @@ namespace RC
         }
 
         m_log_directory = m_working_directory;
-        m_settings_path_and_file.append(m_settings_file_name);
-
-        // Check for legacy locations and update paths accordingly
-        if (std::filesystem::exists(m_legacy_root_directory / m_settings_file_name) && !std::filesystem::exists(m_settings_path_and_file))
+        auto resolaved_settings_file = File::get_path_if_exists(m_settings_path_and_file, m_settings_file_name);
+        if (resolaved_settings_file)
         {
-            m_settings_path_and_file = m_legacy_root_directory / m_settings_file_name;
+            m_settings_path_and_file = *resolaved_settings_file;
         }
+        else
+        {
+            // Check for legacy locations and update paths accordingly
+            resolaved_settings_file = File::get_path_if_exists(m_legacy_root_directory, m_settings_file_name);
+            if (resolaved_settings_file)
+            {
+                m_settings_path_and_file = *resolaved_settings_file;
+            } else {
+                throw std::runtime_error{"UE4SS-Settings.ini file not found"};
+            }
+        }
+
         if (std::filesystem::exists(m_legacy_root_directory / "Mods") && !std::filesystem::exists(m_mods_directory))
         {
             m_mods_directory = m_legacy_root_directory / "Mods";
@@ -1051,17 +1061,14 @@ namespace RC
             else
             {
                 // Create the mod but don't install it yet
-                if (std::filesystem::exists(sub_directory.path() / "scripts"))
+                auto scripts_directory = File::get_path_if_exists(sub_directory.path(), "Scripts");
+                auto dlls_directory = File::get_path_if_exists(sub_directory.path(), "dlls");
+                if (scripts_directory) {
                     m_mods.emplace_back(std::make_unique<LuaMod>(*this, to_system_string(sub_directory.path().stem()), to_system_string(sub_directory.path())));
-                #ifdef LINUX
-                else if (std::filesystem::exists(sub_directory.path() / "Scripts"))
-                    // avoid we have both "scripts" and "Scripts" in the same mod
-                    m_mods.emplace_back(std::make_unique<LuaMod>(*this, to_system_string(sub_directory.path().stem()), to_system_string(sub_directory.path())));
-                #endif
-#ifdef HAS_CPPMOD
-                if (std::filesystem::exists(sub_directory.path() / "dlls"))
+                }
+                if (dlls_directory) {
                     m_mods.emplace_back(std::make_unique<CppMod>(*this, to_system_string(sub_directory.path().stem()), to_system_string(sub_directory.path())));
-#endif
+                }
             }
         }
     }
@@ -1247,13 +1254,11 @@ namespace RC
                 return std::format("is_directory ran into error {}", ec.value());
             }
 
-            if (!std::filesystem::exists(mod_directory.path() / "enabled.txt", ec))
+            auto enabled = File::get_path_if_exists(mod_directory.path(), "enabled.txt");
+
+            if (!enabled.has_value())
             {
                 continue;
-            }
-            if (ec.value() != 0)
-            {
-                return std::format("exists ran into error {}", ec.value());
             }
 
             auto mod = UE4SSProgram::find_mod_by_name<ModType>(to_system_string(mod_directory.path().stem()), UE4SSProgram::IsInstalled::Yes);
