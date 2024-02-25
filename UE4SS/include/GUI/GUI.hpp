@@ -3,6 +3,7 @@
 #include <functional>
 #include <memory>
 #include <thread>
+#include <stop_token>
 
 #include <GUI/Console.hpp>
 #include <GUI/GUITab.hpp>
