@@ -203,7 +203,10 @@ namespace RC::UVTD
                                           function_entry.name,
                                           local_class_name);
                 function_body_dumper.send(SYSSTR("{\n"));
-                function_body_dumper.send(SYSSTR("    {}::VTableLayoutMap.emplace(STR(\"{}\"), 0x{:X});\n"), local_class_name, function_entry.name, function_entry.offset);
+                function_body_dumper.send(SYSSTR("    {}::VTableLayoutMap.emplace(STR(\"{}\"), 0x{:X});\n"),
+                                          local_class_name,
+                                          function_entry.name,
+                                          function_entry.offset);
                 function_body_dumper.send(SYSSTR("}\n\n"));
             }
         }

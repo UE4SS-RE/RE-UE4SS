@@ -89,11 +89,11 @@ namespace RC::GUI
         UObject* m_currently_opened_tree_node{};
         std::string m_current_property_value_buffer{};
         int64_t m_current_enum_value_buffer{};
-        #if defined(WIN32) || defined(HAS_GLFW)
+#if defined(WIN32) || defined(HAS_GLFW)
         float m_top_size{300.0f};
-        #else
+#else
         float m_top_size{14.0f};
-        #endif
+#endif
         float m_bottom_size{0.0f};
         UFunctionCallerWidget* m_function_caller_widget{};
         bool m_is_searching_by_name{};

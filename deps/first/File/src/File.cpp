@@ -30,7 +30,7 @@ namespace RC::File
         Handle::FileType::delete_file(file_path_and_name);
     }
 
-    auto get_path_if_exists(const std::filesystem::path& base, const std::filesystem::path& tail) -> std::optional<const std::filesystem::path> 
+    auto get_path_if_exists(const std::filesystem::path& base, const std::filesystem::path& tail) -> std::optional<const std::filesystem::path>
     {
         if (!std::filesystem::exists(base))
         {
@@ -44,7 +44,7 @@ namespace RC::File
         auto full_path = base.lexically_normal();
         for (const auto& part : normalized_tail)
         {
-            if (std::filesystem::exists(full_path / part)) 
+            if (std::filesystem::exists(full_path / part))
             {
                 full_path /= part;
             }

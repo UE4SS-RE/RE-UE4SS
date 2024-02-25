@@ -30,7 +30,6 @@
 #endif
 #endif
 
-
 namespace RC::Output
 {
     template <typename SupposedEnum>
@@ -124,7 +123,7 @@ namespace RC::Output
             {
                 THROW_INTERNAL_FILE_ERROR("[Output::send] Attempted to send but there were no opened devices.");
             }
-            
+
             for (const auto& device : m_opened_devices)
             {
                 ASSERT_OUTPUT_DEVICE_IS_VALID(device)

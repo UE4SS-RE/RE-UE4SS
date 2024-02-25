@@ -252,7 +252,7 @@ namespace RC::UEGenerator
             {
                 return SYSSTR("TSoftClassPtr<UObject>");
             }
-            
+
             const SystemStringType meta_class_name = get_native_class_name(meta_class, false);
             return std::format(SYSSTR("TSoftClassPtr<{}>"), meta_class_name);
         }

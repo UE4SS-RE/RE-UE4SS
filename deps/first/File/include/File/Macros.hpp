@@ -53,28 +53,28 @@ namespace RC::File
     using StreamType = std::ifstream;
     using IStreamType = std::ifstream;
     using OStreamType = std::ofstream;
-/*
-#if RC_IS_ANSI == 1
-    using StringType = std::string;
-    using StringViewType = std::string_view;
-    using CharType = char;
-    using StreamType = std::ifstream;
-#else
-// System String Types
-#ifdef WIN32
-    using StringType = std::wstring;
-    using StringViewType = std::wstring_view;
-    using CharType = std::wstring::value_type;
-    using StreamType = std::wifstream;
-#else
-    // on linux, use utf8
-    using StringType = std::string;
-    using StringViewType = std::string_view;
-    using CharType = char;
-    using StreamType = std::ifstream;
-#endif // WIN32
-#endif // RC_IS_ANSI
-*/
+    /*
+    #if RC_IS_ANSI == 1
+        using StringType = std::string;
+        using StringViewType = std::string_view;
+        using CharType = char;
+        using StreamType = std::ifstream;
+    #else
+    // System String Types
+    #ifdef WIN32
+        using StringType = std::wstring;
+        using StringViewType = std::wstring_view;
+        using CharType = std::wstring::value_type;
+        using StreamType = std::wifstream;
+    #else
+        // on linux, use utf8
+        using StringType = std::string;
+        using StringViewType = std::string_view;
+        using CharType = char;
+        using StreamType = std::ifstream;
+    #endif // WIN32
+    #endif // RC_IS_ANSI
+    */
 } // namespace RC::File
 
 namespace RC

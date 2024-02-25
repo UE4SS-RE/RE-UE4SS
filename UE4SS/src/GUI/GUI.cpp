@@ -107,9 +107,8 @@ namespace RC::GUI
                         UE4SSProgram::get_program().queue_event(
                                 [](void* data) {
                                     UE4SSProgram::dump_all_objects_and_properties(
-                                        to_system( std::filesystem::path { UE4SSProgram::get_program().get_object_dumper_output_directory() } 
-                                                /  UE4SSProgram::m_object_dumper_file_name)
-                                    );
+                                            to_system(std::filesystem::path{UE4SSProgram::get_program().get_object_dumper_output_directory()} /
+                                                      UE4SSProgram::m_object_dumper_file_name));
                                     static_cast<GUI::DebuggingGUI*>(data)->m_event_thread_busy = false;
                                 },
                                 this);
@@ -225,11 +224,11 @@ namespace RC::GUI
         ImGuiStyle& style = ImGui::GetStyle();
 
         style.WindowPadding = ImVec2(8, 8);
-        #if defined(WIN32) || defined(HAS_GLFW)
+#if defined(WIN32) || defined(HAS_GLFW)
         style.FramePadding = ImVec2(12, 5);
-        #else
+#else
         style.FramePadding = ImVec2(0.5f, 0.5f);
-        #endif
+#endif
         style.CellPadding = ImVec2(3, 3);
         style.ItemSpacing = ImVec2(8, 4);
         style.ItemInnerSpacing = ImVec2(4, 4);
@@ -283,13 +282,13 @@ namespace RC::GUI
         style.Colors[ImGuiCol_SliderGrab] = ImVec4(0.55f, 0.22f, 0.45f, 1.00f);
         style.Colors[ImGuiCol_SliderGrabActive] = ImVec4(0.63f, 0.24f, 0.50f, 1.00f);
         style.Colors[ImGuiCol_Button] = ImVec4(0.51f, 0.23f, 0.42f, 1.00f);
-        #if defined(WIN32) || defined(HAS_GLFW)
+#if defined(WIN32) || defined(HAS_GLFW)
         style.Colors[ImGuiCol_ButtonHovered] = ImVec4(0.59f, 0.22f, 0.48f, 1.00f);
         style.Colors[ImGuiCol_ButtonActive] = ImVec4(0.63f, 0.24f, 0.50f, 1.00f);
-        #else
+#else
         style.Colors[ImGuiCol_ButtonHovered] = ImVec4(0.4f, 0.5f, 0.8f, 1.00f);
         style.Colors[ImGuiCol_ButtonActive] = ImVec4(0.65f, 0.4f, 0.50f, 1.00f);
-        #endif
+#endif
         style.Colors[ImGuiCol_Header] = ImVec4(0.20f, 0.20f, 0.20f, 1.00f);
         style.Colors[ImGuiCol_HeaderHovered] = ImVec4(0.27f, 0.27f, 0.27f, 1.00f);
         style.Colors[ImGuiCol_HeaderActive] = ImVec4(0.24f, 0.24f, 0.24f, 1.00f);
@@ -300,13 +299,13 @@ namespace RC::GUI
         style.Colors[ImGuiCol_ResizeGripHovered] = ImVec4(0.92f, 0.24f, 0.84f, 0.67f);
         style.Colors[ImGuiCol_ResizeGripActive] = ImVec4(0.92f, 0.24f, 0.84f, 0.95f);
         style.Colors[ImGuiCol_Tab] = ImVec4(0.51f, 0.23f, 0.42f, 1.00f);
-        #if defined(WIN32) || defined(HAS_GLFW)
+#if defined(WIN32) || defined(HAS_GLFW)
         style.Colors[ImGuiCol_TabHovered] = ImVec4(0.59f, 0.22f, 0.48f, 1.00f);
         style.Colors[ImGuiCol_TabActive] = ImVec4(0.63f, 0.24f, 0.50f, 1.00f);
-        #else
+#else
         style.Colors[ImGuiCol_TabHovered] = ImVec4(0.4f, 0.5f, 0.8f, 1.00f);
         style.Colors[ImGuiCol_TabActive] = ImVec4(0.65f, 0.4f, 0.50f, 1.00f);
-        #endif
+#endif
         style.Colors[ImGuiCol_TabUnfocused] = ImVec4(0.07f, 0.10f, 0.15f, 0.97f);
         style.Colors[ImGuiCol_TabUnfocusedActive] = ImVec4(0.14f, 0.26f, 0.42f, 1.00f);
         style.Colors[ImGuiCol_PlotLines] = ImVec4(0.61f, 0.61f, 0.61f, 1.00f);
@@ -370,13 +369,13 @@ namespace RC::GUI
                     fflush(stderr);
                 }
 
-                // You're not allowed to throw exceptions directly inside a frame!
-                // Use GUI::TRY to move exceptions to the end of the frame.
-                #ifdef WIN32
+// You're not allowed to throw exceptions directly inside a frame!
+// Use GUI::TRY to move exceptions to the end of the frame.
+#ifdef WIN32
                 __debugbreak();
-                #else
+#else
                 asm("int3");
-                #endif
+#endif
             }
 
             ImGui::Render();
@@ -546,23 +545,23 @@ namespace RC::GUI
     {
         switch (backend)
         {
-            #ifdef WIN32
+#ifdef WIN32
         case GfxBackend::DX11:
             m_gfx_backend = std::make_unique<Backend_DX11>();
             m_os_backend = std::make_unique<Backend_Windows>();
             break;
-            #else
-        #ifdef HAS_GLFW
+#else
+#ifdef HAS_GLFW
         case GfxBackend::GLFW3_OpenGL3:
             m_gfx_backend = std::make_unique<Backend_GLFW3_OpenGL3>();
             m_os_backend = std::make_unique<Backend_NoOS>();
             break;
-        #else
+#else
         case GfxBackend::TUI:
             m_gfx_backend = std::make_unique<Backend_GfxTUI>();
             m_os_backend = std::make_unique<Backend_TUI>();
-            #endif
-        #endif
+#endif
+#endif
         }
 
         m_gfx_backend->set_os_backend(m_os_backend.get());

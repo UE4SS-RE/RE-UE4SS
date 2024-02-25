@@ -39,7 +39,7 @@ namespace RC::Output
         return "\033[0;0m";
     }
 
-    #ifdef WIN32
+#ifdef WIN32
     auto DebugConsoleDevice::set_windows_console_out_mode_if_needed() const -> void
     {
         if (m_windows_console_mode_set)
@@ -55,7 +55,7 @@ namespace RC::Output
         }
         m_windows_console_mode_set = true;
     }
-    #endif
+#endif
 
     auto DebugConsoleDevice::has_optional_arg() const -> bool
     {
@@ -69,18 +69,18 @@ namespace RC::Output
 
     auto DebugConsoleDevice::receive_with_optional_arg(SystemStringViewType fmt, [[maybe_unused]] int32_t optional_arg) const -> void
     {
-        #ifdef WIN32
+#ifdef WIN32
         set_windows_console_out_mode_if_needed();
-        #endif
+#endif
 
 #if ENABLE_OUTPUT_DEVICE_DEBUG_MODE
         printf_s("DebugConsoleDevice received: %S", m_formatter(fmt).c_str());
 #else
 #ifdef WIN32
-        printf_s("%s" SystemStringPrint"\033[0m", log_level_to_color(static_cast<Color::Color>(optional_arg)).c_str(), m_formatter(fmt).c_str());
+        printf_s("%s" SystemStringPrint "\033[0m", log_level_to_color(static_cast<Color::Color>(optional_arg)).c_str(), m_formatter(fmt).c_str());
 #else
-        fprintf(stderr, "%s" SystemStringPrint"\033[0m", log_level_to_color(static_cast<Color::Color>(optional_arg)).c_str(), m_formatter(fmt).c_str());
-        
+        fprintf(stderr, "%s" SystemStringPrint "\033[0m", log_level_to_color(static_cast<Color::Color>(optional_arg)).c_str(), m_formatter(fmt).c_str());
+
 #endif
 #endif
     }

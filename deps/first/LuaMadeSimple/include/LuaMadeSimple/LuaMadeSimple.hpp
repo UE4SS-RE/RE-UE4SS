@@ -87,7 +87,7 @@ namespace RC::LuaMadeSimple
     /**
      * Helper for dealing with Lua tables passed from Lua to C++
      */
-    template<class LuaT>
+    template <class LuaT>
     struct RC_LMS_API LuaTableReference
     {
         LuaTableData<-1, LuaT> key;

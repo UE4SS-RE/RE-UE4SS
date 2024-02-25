@@ -25,7 +25,7 @@
 namespace RC::UVTD
 {
     bool processing_events{false};
-    Input::Handler input_handler {};
+    Input::Handler input_handler{};
 
     auto static event_loop_update() -> void
     {

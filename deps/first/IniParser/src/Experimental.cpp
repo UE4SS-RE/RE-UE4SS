@@ -545,8 +545,9 @@ namespace RC::Parser::Experimental
 
         auto close_square_bracket_token = tc.add(Parser::Token::create(TokenType::ClosingSquareBracket, SYSSTR("CloseSquareBracket"), SYSSTR("]")));
 
-        auto token =
-                Parser::Token::create<TokenMustEndWithOppositeToken, TokenMustHaveCharsBeforeEnd>(TokenType::OpeningSquareBracket, SYSSTR("OpenSquareBracket"), SYSSTR("["));
+        auto token = Parser::Token::create<TokenMustEndWithOppositeToken, TokenMustHaveCharsBeforeEnd>(TokenType::OpeningSquareBracket,
+                                                                                                       SYSSTR("OpenSquareBracket"),
+                                                                                                       SYSSTR("["));
         tc.add(std::move(token));
 
         tc.add(Parser::Token::create(TokenType::SemiColon, SYSSTR("SemiColon"), SYSSTR(";")));

@@ -26,33 +26,35 @@ namespace RC
             return &SigScannerStaticData::m_modules_info[ScanTarget::MainExe];
         }
 
-        auto get_start_address(DLData *info) -> uint8_t* {
+        auto get_start_address(DLData* info) -> uint8_t*
+        {
             return info->base_address;
         }
 
-        auto get_end_address(DLData *info) -> uint8_t* {
+        auto get_end_address(DLData* info) -> uint8_t*
+        {
             return info->base_address + info->size;
         }
 
-        auto get_module_size(DLData *info) -> uint32_t {
+        auto get_module_size(DLData* info) -> uint32_t
+        {
             return info->size;
         }
 
-        auto get_module_base(DLData *info) -> uint8_t* {
+        auto get_module_base(DLData* info) -> uint8_t*
+        {
             return info->base_address;
         }
     }; // namespace Platform
 
-    auto SinglePassScanner::string_scan(std::wstring_view string_to_scan_for, ScanTarget scan_target) -> void* {
+    auto SinglePassScanner::string_scan(std::wstring_view string_to_scan_for, ScanTarget scan_target) -> void*
+    {
         throw std::runtime_error{"[SinglePassSigScanner::string_scan] Not implemented for Linux"};
     }
 
-
     // This function may have problem becasue we're not checking the memory region's permissions
-    auto SinglePassScanner::scanner_work_thread_scalar(uint8_t* start_address,
-                                                       uint8_t* end_address,
-                                                       DLData* info,
-                                                       std::vector<SignatureContainer>& signature_containers) -> void
+    auto SinglePassScanner::scanner_work_thread_scalar(uint8_t* start_address, uint8_t* end_address, DLData* info, std::vector<SignatureContainer>& signature_containers)
+            -> void
     {
         ProfilerScope();
         if (!start_address)
@@ -103,11 +105,13 @@ namespace RC
             {
                 continue;
             }
-            if (std::get<0>(addr) > i) {
+            if (std::get<0>(addr) > i)
+            {
                 i = std::get<0>(addr);
             }
             uint8_t* region_end = static_cast<uint8_t*>(std::get<0>(addr)) + std::get<1>(addr);
-            if ((std::get<2>(addr) & PF_R) == 0) {
+            if ((std::get<2>(addr) & PF_R) == 0)
+            {
                 i = region_end;
                 continue;
             }
@@ -188,7 +192,6 @@ namespace RC
             }
 
             i = scan_end;
-        
         }
     }
 } // namespace RC

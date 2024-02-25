@@ -17,7 +17,7 @@
 namespace RC::Input
 {
     using EventCallbackCallable = std::function<void()>;
-    
+
     struct InputEvent
     {
         Key key;
@@ -46,23 +46,23 @@ namespace RC::Input
     class RC_INPUT_API Handler
     {
       private:
-        //std::vector<KeySet> m_key_sets{};
+        // std::vector<KeySet> m_key_sets{};
         KeySet m_key_set{};
         bool m_allow_input{true};
         std::array<bool, max_keys> m_subscribed_keys{};
-        
+
         std::shared_ptr<PlatformInputSource> m_platform_handler;
         std::mutex m_event_mutex;
 
       public:
-        Handler() {};
+        Handler(){};
 
-      // Input source and event processing
+        // Input source and event processing
       public:
         auto set_input_source(std::string source) -> bool;
         auto process_event() -> void;
 
-      // Interfaces for UE4SS and ModSystem for event registration
+        // Interfaces for UE4SS and ModSystem for event registration
       public:
         auto init() -> void;
 
@@ -74,13 +74,16 @@ namespace RC::Input
 
         auto is_keydown_event_registered(Input::Key) -> bool;
         auto is_keydown_event_registered(Input::Key, const ModifierKeyArray&) -> bool;
-     
-        auto get_events_safe(std::function<void (KeySet&)>) -> void;
+
+        auto get_events_safe(std::function<void(KeySet&)>) -> void;
         auto clear_subscribed_keys() -> void;
 
         auto has_event_on_key(Input::Key key) -> bool;
-        auto get_subscribed_keys() const -> const std::array<bool, max_keys>& { return m_subscribed_keys; }
-      
+        auto get_subscribed_keys() const -> const std::array<bool, max_keys>&
+        {
+            return m_subscribed_keys;
+        }
+
         auto get_allow_input() -> bool;
         auto set_allow_input(bool new_value) -> void;
 
@@ -89,11 +92,11 @@ namespace RC::Input
       private:
         static std::unordered_map<std::string, std::shared_ptr<PlatformInputSource>> m_input_sources_store;
         static auto register_input_source(std::shared_ptr<PlatformInputSource> input_source) -> void;
-        
+
       public:
         static auto get_input_source(std::string source) -> std::shared_ptr<PlatformInputSource>
         {
-            if (m_input_sources_store.find(source) != m_input_sources_store.end()) 
+            if (m_input_sources_store.find(source) != m_input_sources_store.end())
             {
                 return m_input_sources_store[source];
             }

@@ -721,8 +721,8 @@ namespace RC::GUI
     LiveView::Watch::Watch(UEStringType&& object_name, UEStringType&& property_name) : object_name(object_name), property_name(property_name)
     {
         auto& file_device = output.get_device<Output::FileDevice>();
-        file_device.set_file_name_and_path(to_system_string(std::filesystem::path{UE4SSProgram::get_program().get_working_directory()} 
-            / "watches" / std::format("ue4ss_watch_{}_{}.txt", to_string(object_name), to_string(property_name))));
+        file_device.set_file_name_and_path(to_system_string(std::filesystem::path{UE4SSProgram::get_program().get_working_directory()} / "watches" /
+                                                            std::format("ue4ss_watch_{}_{}.txt", to_string(object_name), to_string(property_name))));
         file_device.set_formatter([](SystemStringViewType string) -> SystemStringType {
             const auto when_as_string = std::format(SYSSTR("{:%Y-%m-%d %H:%M:%S}"), std::chrono::system_clock::now());
             return std::format(SYSSTR("[{}] {}"), when_as_string, string);
@@ -1995,7 +1995,8 @@ namespace RC::GUI
         {
             parent_name = obj ? obj->GetName() : STR("None");
         }
-        auto edit_property_value_modal_name = to_string(std::format(SYSSTR("Edit value of property: {}->{}"), to_system(parent_name), to_system(property->GetName())));
+        auto edit_property_value_modal_name =
+                to_string(std::format(SYSSTR("Edit value of property: {}->{}"), to_system(parent_name), to_system(property->GetName())));
 
         if (open_edit_value_popup)
         {
@@ -2620,7 +2621,7 @@ namespace RC::GUI
         bool tried_to_open_nullptr_property{};
         auto property_full_name = property->GetFullName();
 
-        ImGui::Text("Selected: " SystemStringPrint , to_system(property->GetName()).c_str());
+        ImGui::Text("Selected: " SystemStringPrint, to_system(property->GetName()).c_str());
         ImGui::Text("Address: %016llX", std::bit_cast<uintptr_t>(property));
         if (ImGui::BeginPopupContextItem(to_string(property_full_name).c_str()))
         {
@@ -2854,7 +2855,7 @@ namespace RC::GUI
             {
                 ImGui::BeginDisabled();
             }
-            if (ImGui::Button(ATTACH_ICON(ICON_FA_SEARCH," Find functions")))
+            if (ImGui::Button(ATTACH_ICON(ICON_FA_SEARCH, " Find functions")))
             {
                 m_function_caller_widget->open_widget_deferred();
             }
@@ -2952,7 +2953,7 @@ namespace RC::GUI
         auto num_params = function->GetNumParms();
 
         const auto when_as_string = std::format(SYSSTR("{:%H:%M:%S}"), std::chrono::system_clock::now());
-        auto buffer { std::format(SYSSTR("Received call @ {}.\n"), when_as_string)};
+        auto buffer{std::format(SYSSTR("Received call @ {}.\n"), when_as_string)};
 
         buffer.append(std::format(SYSSTR("  Context:\n    {}\n"), to_system(context.Context->GetFullName())));
 
@@ -3584,10 +3585,11 @@ namespace RC::GUI
         }
 
         static int num_columns = 3;
-        #if defined(WIN32) || defined(HAS_GLFW)
+#if defined(WIN32) || defined(HAS_GLFW)
         ImGui::PushStyleVar(ImGuiStyleVar_CellPadding, {2.0f, 2.0f});
-        #endif
-        if (ImGui::BeginTable("watch_table", num_columns, ImGuiTableFlags_Borders))
+#endif
+        // TODO: do we need ImGuiTableFlags_NoPadOuterX?
+        if (ImGui::BeginTable("watch_table", num_columns, ImGuiTableFlags_Borders | ImGuiTableFlags_NoPadOuterX))
         {
             // TODO: do we need controls_width = (XDIV == 1) ? (60.0f) : (60.0f / XDIV + 5.0f);?
             ImGui::TableSetupColumn("Controls", ImGuiTableColumnFlags_WidthFixed, ImGui::GetFrameHeight() * 3.0f + 4.0f);
@@ -3670,9 +3672,9 @@ namespace RC::GUI
             }
 
             ImGui::EndTable();
-            #if defined(WIN32) || defined(HAS_GLFW)
+#if defined(WIN32) || defined(HAS_GLFW)
             ImGui::PopStyleVar();
-            #endif
+#endif
         }
         ImGui::EndChild();
     }

@@ -78,11 +78,11 @@ namespace RC::LuaLibrary
         }
 
         int32_t* int32_ptr = reinterpret_cast<int32_t*>(lua.get_integer());
-        #ifdef WIN32
+#ifdef WIN32
         auto self = GetCurrentProcess();
-        #else
+#else
         auto self = getpid();
-        #endif
+#endif
         int32_t int32_val = Helper::Casting::offset_deref_safe<int32_t>(int32_ptr, 0, self);
 
         if (int32_val == 0)

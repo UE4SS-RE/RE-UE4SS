@@ -8,8 +8,8 @@
 
 #include <File/File.hpp>
 
-#include <Helpers/String.hpp>
 #include <Helpers/Format.hpp>
+#include <Helpers/String.hpp>
 
 #include <PDB_DBIStream.h>
 #include <PDB_RawFile.h>

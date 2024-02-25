@@ -14,13 +14,13 @@ namespace RC::GUI
         // NOTE: This function makes use of 'imgui_internal.h'.
         //       As a result, this function is prone to break if you update Imgui.
         ImGuiContext& g = *GImGui;
-        #ifdef WIN32
+#ifdef WIN32
         const char* child_window_name = NULL;
         ImFormatStringToTempBuffer(&child_window_name, NULL, "%s/%s_%08X", g.CurrentWindow->Name, label, ImGui::GetID(label));
-        #else
+#else
         static char child_window_name[1024];
         sprintf(child_window_name, "%s/%s_%08X", g.CurrentWindow->Name, label, ImGui::GetID(label));
-        #endif
+#endif
         ImGuiWindow* child_window = ImGui::FindWindowByName(child_window_name);
         if (child_window)
         {

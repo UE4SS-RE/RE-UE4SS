@@ -252,13 +252,13 @@ namespace RC::Input
     {
         /// SAFETY: This is a bitfield, following static_assert ensures that the bitfield is not larger than 32 bits
         uint32_t keys;
-        
+
         // allow ops between keys
 
-        auto operator|(const ModifierKeys &key) -> ModifierKeys&;
-        auto operator|=(const ModifierKeys &key) -> ModifierKeys&;
-        auto operator|(const ModifierKey &key) -> ModifierKeys&;
-        auto operator|=(const ModifierKey &key) -> ModifierKeys&;
+        auto operator|(const ModifierKeys& key) -> ModifierKeys&;
+        auto operator|=(const ModifierKeys& key) -> ModifierKeys&;
+        auto operator|(const ModifierKey& key) -> ModifierKeys&;
+        auto operator|=(const ModifierKey& key) -> ModifierKeys&;
 
         auto operator==(const ModifierKeys& key) const -> bool;
         auto operator!=(const ModifierKeys& key) const -> bool;
@@ -266,14 +266,13 @@ namespace RC::Input
         auto operator<(const ModifierKeys& key) const -> bool;
         auto operator>(const ModifierKeys& key) const -> bool;
 
-
         ModifierKeys(const ModifierKey key) : keys{is_modify_key_valid(key) ? (1u << key) : 0} {};
         ModifierKeys(const ModifierKeys& other) : keys{other.keys} {};
 
         ModifierKeys() : keys{0} {};
-        
+
         template <typename... Args>
-        ModifierKeys(ModifierKey key, Args... args) : keys{ (is_modify_key_valid(key) ? (1 << key) : 0) | ModifierKeys(args...).keys} {};
+        ModifierKeys(ModifierKey key, Args... args) : keys{(is_modify_key_valid(key) ? (1 << key) : 0) | ModifierKeys(args...).keys} {};
 
         ModifierKeys(std::initializer_list<ModifierKey> keys);
 
@@ -289,7 +288,10 @@ namespace RC::Input
             }
         }
 
-        bool empty() const { return keys == 0; }
+        bool empty() const
+        {
+            return keys == 0;
+        }
     };
 
     static constexpr uint8_t max_modifier_keys = MODIFIER_KEYS_MAX;

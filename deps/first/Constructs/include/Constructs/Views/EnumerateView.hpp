@@ -161,7 +161,6 @@ namespace RC
     }
 } // namespace RC
 
-
 #else
 
 #include <iterator>
@@ -169,16 +168,18 @@ namespace RC
 // A simple enumerate impl for clang to avoid https://github.com/llvm/llvm-project/issues/60704
 namespace RC
 {
- 
+
     namespace views
     {
         template <typename T>
-        struct internal_enumerate {
+        struct internal_enumerate
+        {
             T& iterable;
             size_t index;
-            
-            template<typename It>
-            struct iterator : std::iterator<std::input_iterator_tag, std::pair<typename It::value_type, size_t>> {
+
+            template <typename It>
+            struct iterator : std::iterator<std::input_iterator_tag, std::pair<typename It::value_type, size_t>>
+            {
                 using iterator_category = std::input_iterator_tag;
                 using value_type = std::pair<typename It::value_type, size_t>;
                 using difference_type = std::ptrdiff_t;
@@ -188,52 +189,66 @@ namespace RC
                 size_t index;
                 It iter;
 
-                explicit iterator(size_t index, It iter) : index(index), iter(iter) {}
+                explicit iterator(size_t index, It iter) : index(index), iter(iter)
+                {
+                }
 
-                iterator& operator++() {
+                iterator& operator++()
+                {
                     ++index;
                     ++iter;
                     return *this;
                 }
 
-                bool operator!=(const iterator& other) const {
+                bool operator!=(const iterator& other) const
+                {
                     return iter != other.iter;
                 }
 
-                value_type operator*() const {
+                value_type operator*() const
+                {
                     return {*iter, index};
                 }
             };
 
-            auto begin() {
+            auto begin()
+            {
                 return iterator<std::decay_t<decltype(iterable.begin())>>(0, iterable.begin());
             }
 
-            auto end() {
+            auto end()
+            {
                 return iterator<std::decay_t<decltype(iterable.begin())>>(0, iterable.end());
             }
 
-            explicit internal_enumerate(T& iterable) : iterable(iterable), index(0) {}
+            explicit internal_enumerate(T& iterable) : iterable(iterable), index(0)
+            {
+            }
 
-            internal_enumerate operator | (T& iterable) {
+            internal_enumerate operator|(T& iterable)
+            {
                 return internal_enumerate(iterable);
             }
         };
 
-        struct enumerate_op {};
+        struct enumerate_op
+        {
+        };
         // operator |
         template <typename T>
-        internal_enumerate<T> operator | (T& iterable, enumerate_op) {
+        internal_enumerate<T> operator|(T& iterable, enumerate_op)
+        {
             return internal_enumerate<T>(iterable);
         }
 
         // T&& version
         template <typename T>
-        internal_enumerate<T> operator | (T&& iterable, enumerate_op) {
+        internal_enumerate<T> operator|(T&& iterable, enumerate_op)
+        {
             return internal_enumerate<T>(iterable);
         }
 
         inline constexpr enumerate_op enumerate;
-    };
+    }; // namespace views
 } // namespace RC
 #endif // __clang__

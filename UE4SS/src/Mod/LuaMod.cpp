@@ -263,11 +263,11 @@ namespace RC
                     auto parameter_type_name = to_system(property_type_name.ToString());
                     auto parameter_name = to_system(lua_data.return_property->GetName());
 
-                    Output::send(
-                            SYSSTR("Tried altering return value of a hooked UFunction without a registered handler for return type Return property '{}' of type "
-                                "'{}' not supported."),
-                            parameter_name,
-                            parameter_type_name);
+                    Output::send(SYSSTR("Tried altering return value of a hooked UFunction without a registered handler for return type Return property '{}' "
+                                        "of type "
+                                        "'{}' not supported."),
+                                 parameter_name,
+                                 parameter_type_name);
                 }
             }
         };
@@ -635,7 +635,7 @@ namespace RC
         efindname_table.make_global("EFindName");
     }
 
-    LuaMod::LuaMod(UE4SSProgram& program, SystemStringType && mod_name, SystemStringType && mod_path)
+    LuaMod::LuaMod(UE4SSProgram& program, SystemStringType&& mod_name, SystemStringType&& mod_path)
         : Mod(program, std::move(mod_name), std::move(mod_path)), m_lua(LuaMadeSimple::new_state())
     {
         // Verify that there's a 'Scripts' directory
@@ -646,8 +646,8 @@ namespace RC
         {
             // "scripts" get priority over "Scripts"
             m_scripts_path = to_system(*scripts_directory);
-        } 
-        else 
+        }
+        else
         {
             // If the 'Scripts' directory doesn't exist then mark the mod as non-installable and move on to the next mod
             set_installable(false);
@@ -845,11 +845,12 @@ namespace RC
         std::string current_cpaths = lua_tostring(lua_state, -1);
         if (scripts_directory)
         {
-            #define STRINGIFY(x) #x
+#define STRINGIFY(x) #x
             auto dlls_path = ((*scripts_directory) / ("?" STRINGIFY(DLLEXT))).string();
             current_cpaths.append(std::format(";{}", dlls_path));
         }
-        current_cpaths.append(std::format(";{}" LUA_DIRSEP "{}" LUA_DIRSEP "?" STRINGIFY(DLLEXT), to_string(m_program.get_mods_directory()).c_str(), to_string(get_name())));
+        current_cpaths.append(
+                std::format(";{}" LUA_DIRSEP "{}" LUA_DIRSEP "?" STRINGIFY(DLLEXT), to_string(m_program.get_mods_directory()).c_str(), to_string(get_name())));
         lua_pop(lua_state, 1);
         lua_pushstring(lua_state, current_cpaths.c_str());
         lua_setfield(lua_state, -2, "cpath");
@@ -905,7 +906,7 @@ Overloads:
 
             Unreal::UClass* param_class{};
             Unreal::UObject* param_in_outer{};
-            SystemStringType  param_name{};
+            SystemStringType param_name{};
             bool param_exact_class{};
 
             // P1 (Class), userdata
@@ -1064,7 +1065,7 @@ Overloads:
             lua.set_nil();
             return 1;
         });
-        
+
         if (is_true_mod == Mod::IsTrueMod::Yes)
         {
 #ifdef HAS_INPUT
@@ -1120,7 +1121,6 @@ Overloads:
                     {
                         lua.set_bool(mod->m_program.is_keydown_event_registered(key_to_check));
                     }
-
                 }
                 else
                 {
@@ -1461,8 +1461,8 @@ Overloads:
                 {
                     lua.throw_error("Could not dump objects and properties because the pointer to 'Mod' was nullptr");
                 }
-                UE4SSProgram::dump_all_objects_and_properties(to_system_string(std::filesystem::path{mod->m_program.get_object_dumper_output_directory()} / 
-                                                              UE4SSProgram::m_object_dumper_file_name));
+                UE4SSProgram::dump_all_objects_and_properties(
+                        to_system_string(std::filesystem::path{mod->m_program.get_object_dumper_output_directory()} / UE4SSProgram::m_object_dumper_file_name));
                 return 0;
             });
 
@@ -1641,9 +1641,9 @@ Overloads:
 
             struct PropertyInfo
             {
-                SystemStringType  name{};
+                SystemStringType name{};
                 PropertyTypeInfo type{}; // Figure out what to do here, it shouldn't be just a string
-                SystemStringType  belongs_to_class{};
+                SystemStringType belongs_to_class{};
                 int32_t offset_internal{-1};
                 int32_t element_size{-1}; // Is this required for trivial types like integers and floats ?
 
@@ -2150,7 +2150,7 @@ Overloads:
             if (!std::filesystem::exists(game_content_dir))
             {
                 Output::send<LogLevel::Warning>(SYSSTR("IterateGameDirectories: Could not locate the root directory because the directory structure is unknown "
-                                                    "(not <RootGamePath>/Game/Binaries/Win64)\n"));
+                                                       "(not <RootGamePath>/Game/Binaries/Win64)\n"));
                 lua.set_nil();
                 return 1;
             }
@@ -3331,7 +3331,6 @@ Overloads:
         lua_setglobal(lua.get_lua_state(), "__OriginalReturnValue");
     }
 
-
     auto LuaMod::fire_on_lua_start_for_cpp_mods() -> void
     {
         if (!is_started())
@@ -3389,7 +3388,7 @@ Overloads:
         // Don't crash on syntax errors.
         try
         {
-            main_lua()->execute_file(to_system_string(std::filesystem::path {m_scripts_path} / SYSSTR("main.lua")));
+            main_lua()->execute_file(to_system_string(std::filesystem::path{m_scripts_path} / SYSSTR("main.lua")));
         }
         catch (std::runtime_error& e)
         {
@@ -3433,8 +3432,14 @@ Overloads:
         std::erase_if(g_hooked_script_function_data, [&](std::unique_ptr<LuaUnrealScriptFunctionData>& item) -> bool {
             if (item->mod == this)
             {
-                Output::send(SYSSTR("\tUnregistering hook by id '{}#{}' for mod {}\n"), to_system(item->unreal_function->GetName()), item->pre_callback_id, item->mod->get_name());
-                Output::send(SYSSTR("\tUnregistering hook by id '{}#{}' for mod {}\n"), to_system(item->unreal_function->GetName()), item->post_callback_id, item->mod->get_name());
+                Output::send(SYSSTR("\tUnregistering hook by id '{}#{}' for mod {}\n"),
+                             to_system(item->unreal_function->GetName()),
+                             item->pre_callback_id,
+                             item->mod->get_name());
+                Output::send(SYSSTR("\tUnregistering hook by id '{}#{}' for mod {}\n"),
+                             to_system(item->unreal_function->GetName()),
+                             item->post_callback_id,
+                             item->mod->get_name());
                 item->unreal_function->UnregisterHook(item->pre_callback_id);
                 item->unreal_function->UnregisterHook(item->post_callback_id);
                 return true;
@@ -3495,7 +3500,8 @@ Overloads:
             {
                 return;
             }
-            if (auto it = callback_container.find(precise_name_match ? to_system(Stack.Node()->GetFullName()) : to_system(Stack.Node()->GetName())); it != callback_container.end())
+            if (auto it = callback_container.find(precise_name_match ? to_system(Stack.Node()->GetFullName()) : to_system(Stack.Node()->GetName()));
+                it != callback_container.end())
             {
                 const auto& callback_data = it->second;
                 for (const auto& [lua_ptr, registry_index] : callback_data.registry_indexes)
@@ -3590,7 +3596,7 @@ Overloads:
                             else
                             {
                                 Output::send(SYSSTR("Tried altering return value of a custom BP function without a registered handler for return type Return "
-                                                 "property '{}' of type '{}' not supported."),
+                                                    "property '{}' of type '{}' not supported."),
                                              return_property->GetName(),
                                              return_property_type.ToString());
                             }
@@ -3820,8 +3826,10 @@ Overloads:
             return constructed_object;
         });
 
-        Unreal::Hook::RegisterULocalPlayerExecPreCallback([](Unreal::ULocalPlayer* context, Unreal::UWorld* in_world, const RC::Unreal::TCHAR* cmd, Unreal::FOutputDevice& ar)
-                                                                  -> Unreal::Hook::ULocalPlayerExecCallbackReturnValue {
+        Unreal::Hook::RegisterULocalPlayerExecPreCallback([](Unreal::ULocalPlayer* context,
+                                                             Unreal::UWorld* in_world,
+                                                             const RC::Unreal::TCHAR* cmd,
+                                                             Unreal::FOutputDevice& ar) -> Unreal::Hook::ULocalPlayerExecCallbackReturnValue {
             return TRY([&] {
                 for (const auto& callback_data : m_local_player_exec_pre_callbacks)
                 {
@@ -3880,8 +3888,10 @@ Overloads:
             });
         });
 
-        Unreal::Hook::RegisterULocalPlayerExecPostCallback([](Unreal::ULocalPlayer* context, Unreal::UWorld* in_world, const RC::Unreal::TCHAR* cmd, Unreal::FOutputDevice& ar)
-                                                                   -> Unreal::Hook::ULocalPlayerExecCallbackReturnValue {
+        Unreal::Hook::RegisterULocalPlayerExecPostCallback([](Unreal::ULocalPlayer* context,
+                                                              Unreal::UWorld* in_world,
+                                                              const RC::Unreal::TCHAR* cmd,
+                                                              Unreal::FOutputDevice& ar) -> Unreal::Hook::ULocalPlayerExecCallbackReturnValue {
             return TRY([&] {
                 for (const auto& callback_data : m_local_player_exec_post_callbacks)
                 {
@@ -4037,91 +4047,92 @@ Overloads:
                 });
 
         // Lua from the in-game console.
-        Unreal::Hook::RegisterProcessConsoleExecCallback([](Unreal::UObject* context, const RC::Unreal::TCHAR* cmd, Unreal::FOutputDevice& ar, Unreal::UObject* executor) -> bool {
-            auto logln = [&ar](const SystemStringType& log_message) {
-                Output::send(std::format(SYSSTR("{}\n"), log_message));
-                ar.Log((const RC::Unreal::TCHAR*) log_message.c_str());
-            };
+        Unreal::Hook::RegisterProcessConsoleExecCallback(
+                [](Unreal::UObject* context, const RC::Unreal::TCHAR* cmd, Unreal::FOutputDevice& ar, Unreal::UObject* executor) -> bool {
+                    auto logln = [&ar](const SystemStringType& log_message) {
+                        Output::send(std::format(SYSSTR("{}\n"), log_message));
+                        ar.Log((const RC::Unreal::TCHAR*)log_message.c_str());
+                    };
 
-            if (!LuaStatics::console_executor_enabled && String::iequal(UEStringViewType{(UECharType*)cmd}, STR("luastart")))
-            {
-                start_console_lua_executor();
-                logln(SYSSTR("Console Lua executor started"));
-                return true;
-            }
-            else if (LuaStatics::console_executor_enabled && String::iequal(UEStringViewType{(UECharType*)cmd}, STR("luastop")))
-            {
-                stop_console_lua_executor();
-                logln(SYSSTR("Console Lua executor stopped"));
-                return true;
-            }
-            else if (LuaStatics::console_executor_enabled && String::iequal(UEStringViewType{(UECharType*)cmd}, STR("luarestart")))
-            {
-                stop_console_lua_executor();
-                start_console_lua_executor();
-                logln(SYSSTR("Console Lua executor restarted"));
-                return true;
-            }
-            else if (String::iequal(UEStringViewType{(UECharType*)cmd}, STR("clear")))
-            {
-                // TODO: Replace with proper implementation when we have UGameViewportClient and UConsole.
-                //       This should be fairly cross-game & cross-engine-version compatible even without the proper implementation.
-                //       This is because I don't think they've changed the layout here and we have a reflected property right before the unreflected one that we're looking for.
-                Unreal::UObject** console = static_cast<Unreal::UObject**>(context->GetValuePtrByPropertyName(STR("ViewportConsole")));
-                auto* default_texture_white = std::bit_cast<Unreal::TArray<Unreal::FString>*>(
-                        static_cast<uint8_t*>((*console)->GetValuePtrByPropertyNameInChain(STR("DefaultTexture_White"))) + 0x8);
-                auto* scrollback = std::bit_cast<int32_t*>(std::bit_cast<uint8_t*>(default_texture_white) + 0x10);
-                default_texture_white->SetNum(0);
-                default_texture_white->SetMax(0);
-                *scrollback = 0;
-                return true;
-            }
-            else if (LuaStatics::console_executor_enabled)
-            {
-                if (!LuaStatics::console_executor)
-                {
-                    logln(SYSSTR("Console Lua executor is enabled but the Lua instance is nullptr. Please try run RC_LUA_START again."));
-                    return true;
-                }
-
-                LuaLibrary::set_outputdevice_ref(*LuaStatics::console_executor, &ar);
-
-                // logln(std::format(SYSSTR("Executing '{}' as Lua"), cmd));
-
-                try
-                {
-                    if (int status = luaL_loadstring(LuaStatics::console_executor->get_lua_state(), to_string((UECharType*)cmd).c_str()); status != LUA_OK)
+                    if (!LuaStatics::console_executor_enabled && String::iequal(UEStringViewType{(UECharType*)cmd}, STR("luastart")))
                     {
-                        LuaStatics::console_executor->throw_error(
-                                std::format("luaL_loadstring returned {}", LuaStatics::console_executor->resolve_status_message(status, true)));
+                        start_console_lua_executor();
+                        logln(SYSSTR("Console Lua executor started"));
+                        return true;
                     }
-
-                    if (int status = lua_pcall(LuaStatics::console_executor->get_lua_state(), 0, LUA_MULTRET, 0); status != LUA_OK)
+                    else if (LuaStatics::console_executor_enabled && String::iequal(UEStringViewType{(UECharType*)cmd}, STR("luastop")))
                     {
-                        LuaStatics::console_executor->throw_error(
-                                std::format("lua_pcall returned {}", LuaStatics::console_executor->resolve_status_message(status, true)));
+                        stop_console_lua_executor();
+                        logln(SYSSTR("Console Lua executor stopped"));
+                        return true;
                     }
-                }
-                catch (std::runtime_error& e)
-                {
-                    logln(to_system_string(e.what()));
-                }
+                    else if (LuaStatics::console_executor_enabled && String::iequal(UEStringViewType{(UECharType*)cmd}, STR("luarestart")))
+                    {
+                        stop_console_lua_executor();
+                        start_console_lua_executor();
+                        logln(SYSSTR("Console Lua executor restarted"));
+                        return true;
+                    }
+                    else if (String::iequal(UEStringViewType{(UECharType*)cmd}, STR("clear")))
+                    {
+                        // TODO: Replace with proper implementation when we have UGameViewportClient and UConsole.
+                        //       This should be fairly cross-game & cross-engine-version compatible even without the proper implementation.
+                        //       This is because I don't think they've changed the layout here and we have a reflected property right before the unreflected one that we're looking for.
+                        Unreal::UObject** console = static_cast<Unreal::UObject**>(context->GetValuePtrByPropertyName(STR("ViewportConsole")));
+                        auto* default_texture_white = std::bit_cast<Unreal::TArray<Unreal::FString>*>(
+                                static_cast<uint8_t*>((*console)->GetValuePtrByPropertyNameInChain(STR("DefaultTexture_White"))) + 0x8);
+                        auto* scrollback = std::bit_cast<int32_t*>(std::bit_cast<uint8_t*>(default_texture_white) + 0x10);
+                        default_texture_white->SetNum(0);
+                        default_texture_white->SetMax(0);
+                        *scrollback = 0;
+                        return true;
+                    }
+                    else if (LuaStatics::console_executor_enabled)
+                    {
+                        if (!LuaStatics::console_executor)
+                        {
+                            logln(SYSSTR("Console Lua executor is enabled but the Lua instance is nullptr. Please try run RC_LUA_START again."));
+                            return true;
+                        }
 
-                // We always return true when the console Lua executor is enabled in order to suppress other handlers
-                return true;
-            }
-            else
-            {
-                return false;
-            }
-        });
+                        LuaLibrary::set_outputdevice_ref(*LuaStatics::console_executor, &ar);
+
+                        // logln(std::format(SYSSTR("Executing '{}' as Lua"), cmd));
+
+                        try
+                        {
+                            if (int status = luaL_loadstring(LuaStatics::console_executor->get_lua_state(), to_string((UECharType*)cmd).c_str()); status != LUA_OK)
+                            {
+                                LuaStatics::console_executor->throw_error(
+                                        std::format("luaL_loadstring returned {}", LuaStatics::console_executor->resolve_status_message(status, true)));
+                            }
+
+                            if (int status = lua_pcall(LuaStatics::console_executor->get_lua_state(), 0, LUA_MULTRET, 0); status != LUA_OK)
+                            {
+                                LuaStatics::console_executor->throw_error(
+                                        std::format("lua_pcall returned {}", LuaStatics::console_executor->resolve_status_message(status, true)));
+                            }
+                        }
+                        catch (std::runtime_error& e)
+                        {
+                            logln(to_system_string(e.what()));
+                        }
+
+                        // We always return true when the console Lua executor is enabled in order to suppress other handlers
+                        return true;
+                    }
+                    else
+                    {
+                        return false;
+                    }
+                });
 
         // RegisterProcessConsoleExecPreHook
         Unreal::Hook::RegisterProcessConsoleExecGlobalPreCallback(
                 [](Unreal::UObject* context, const RC::Unreal::TCHAR* cmd, Unreal::FOutputDevice& ar, Unreal::UObject* executor) -> std::pair<bool, bool> {
                     return TRY([&] {
-                        auto command = UEStringViewType{(const UECharType*) cmd};
-                        auto command_parts = explode_by_occurrence((const UECharType*) cmd, ' ');
+                        auto command = UEStringViewType{(const UECharType*)cmd};
+                        auto command_parts = explode_by_occurrence((const UECharType*)cmd, ' ');
 
                         for (const auto& callback_data : m_process_console_exec_pre_callbacks)
                         {
@@ -4176,7 +4187,7 @@ Overloads:
         Unreal::Hook::RegisterProcessConsoleExecGlobalPostCallback(
                 [](Unreal::UObject* context, const RC::Unreal::TCHAR* cmd, Unreal::FOutputDevice& ar, Unreal::UObject* executor) -> std::pair<bool, bool> {
                     return TRY([&] {
-                        auto command = UEStringViewType {(const UECharType*) cmd};
+                        auto command = UEStringViewType{(const UECharType*)cmd};
                         auto command_parts = explode_by_occurrence((const UECharType*)cmd, ' ');
 
                         for (const auto& callback_data : m_process_console_exec_post_callbacks)
@@ -4229,129 +4240,131 @@ Overloads:
                 });
 
         // RegisterConsoleCommandHandler
-        Unreal::Hook::RegisterProcessConsoleExecCallback([](Unreal::UObject* context, const RC::Unreal::TCHAR* cmd, Unreal::FOutputDevice& ar, Unreal::UObject* executor) -> bool {
-            (void)executor;
+        Unreal::Hook::RegisterProcessConsoleExecCallback(
+                [](Unreal::UObject* context, const RC::Unreal::TCHAR* cmd, Unreal::FOutputDevice& ar, Unreal::UObject* executor) -> bool {
+                    (void)executor;
 
-            if (!Unreal::Cast<Unreal::UGameViewportClient>(context))
-            {
-                return false;
-            }
-
-            return TRY([&] {
-                auto command = to_system_string(cmd);
-                auto command_parts = explode_by_occurrence(command, ' ');
-                SystemStringType command_name;
-                if (command_parts.size() > 1)
-                {
-                    command_name = command_parts[0];
-                }
-                else
-                {
-                    command_name = command;
-                }
-
-                if (auto it = m_custom_command_lua_pre_callbacks.find(command_name); it != m_custom_command_lua_pre_callbacks.end())
-                {
-                    const auto& callback_data = it->second;
-
-                    // This is a promise that we're in the game thread, used by other functions to ensure that we don't execute when unsafe
-                    set_is_in_game_thread(callback_data.lua, true);
-
-                    bool return_value{};
-
-                    for (const auto& [lua, registry_index] : callback_data.registry_indexes)
+                    if (!Unreal::Cast<Unreal::UGameViewportClient>(context))
                     {
-                        callback_data.lua.registry().get_function_ref(registry_index.lua_index);
-                        callback_data.lua.set_string(to_string(command));
-
-                        auto params_table = callback_data.lua.prepare_new_table();
-                        for (size_t i = 1; i < command_parts.size(); ++i)
-                        {
-                            const auto& command_part = command_parts[i];
-                            params_table.add_pair(i, to_string(command_part).c_str());
-                        }
-
-                        LuaType::FOutputDevice::construct(callback_data.lua, &ar);
-
-                        callback_data.lua.call_function(3, 1);
-
-                        if (!callback_data.lua.is_bool())
-                        {
-                            throw std::runtime_error{"A custom console command handle must return true or false"};
-                        }
-
-                        return_value = callback_data.lua.get_bool();
+                        return false;
                     }
-                    // No longer promising to be in the game thread
-                    set_is_in_game_thread(callback_data.lua, false);
 
-                    return return_value;
-                }
+                    return TRY([&] {
+                        auto command = to_system_string(cmd);
+                        auto command_parts = explode_by_occurrence(command, ' ');
+                        SystemStringType command_name;
+                        if (command_parts.size() > 1)
+                        {
+                            command_name = command_parts[0];
+                        }
+                        else
+                        {
+                            command_name = command;
+                        }
 
-                return false;
-            });
-        });
+                        if (auto it = m_custom_command_lua_pre_callbacks.find(command_name); it != m_custom_command_lua_pre_callbacks.end())
+                        {
+                            const auto& callback_data = it->second;
+
+                            // This is a promise that we're in the game thread, used by other functions to ensure that we don't execute when unsafe
+                            set_is_in_game_thread(callback_data.lua, true);
+
+                            bool return_value{};
+
+                            for (const auto& [lua, registry_index] : callback_data.registry_indexes)
+                            {
+                                callback_data.lua.registry().get_function_ref(registry_index.lua_index);
+                                callback_data.lua.set_string(to_string(command));
+
+                                auto params_table = callback_data.lua.prepare_new_table();
+                                for (size_t i = 1; i < command_parts.size(); ++i)
+                                {
+                                    const auto& command_part = command_parts[i];
+                                    params_table.add_pair(i, to_string(command_part).c_str());
+                                }
+
+                                LuaType::FOutputDevice::construct(callback_data.lua, &ar);
+
+                                callback_data.lua.call_function(3, 1);
+
+                                if (!callback_data.lua.is_bool())
+                                {
+                                    throw std::runtime_error{"A custom console command handle must return true or false"};
+                                }
+
+                                return_value = callback_data.lua.get_bool();
+                            }
+                            // No longer promising to be in the game thread
+                            set_is_in_game_thread(callback_data.lua, false);
+
+                            return return_value;
+                        }
+
+                        return false;
+                    });
+                });
 
         // RegisterConsoleCommandGlobalHandler
-        Unreal::Hook::RegisterProcessConsoleExecCallback([](Unreal::UObject* context, const RC::Unreal::TCHAR* cmd, Unreal::FOutputDevice& ar, Unreal::UObject* executor) -> bool {
-            (void)context;
-            (void)executor;
+        Unreal::Hook::RegisterProcessConsoleExecCallback(
+                [](Unreal::UObject* context, const RC::Unreal::TCHAR* cmd, Unreal::FOutputDevice& ar, Unreal::UObject* executor) -> bool {
+                    (void)context;
+                    (void)executor;
 
-            return TRY([&] {
-                auto command = to_system_string(cmd);
-                auto command_parts = explode_by_occurrence(command, SYSSTR(' '));
-                SystemStringType command_name;
-                if (command_parts.size() > 1)
-                {
-                    command_name = command_parts[0];
-                }
-                else
-                {
-                    command_name = command;
-                }
-
-                if (auto it = m_global_command_lua_callbacks.find(command_name); it != m_global_command_lua_callbacks.end())
-                {
-                    const auto& callback_data = it->second;
-
-                    // This is a promise that we're in the game thread, used by other functions to ensure that we don't execute when unsafe
-                    set_is_in_game_thread(callback_data.lua, true);
-
-                    bool return_value{};
-
-                    for (const auto& [lua, registry_index] : callback_data.registry_indexes)
-                    {
-                        callback_data.lua.registry().get_function_ref(registry_index.lua_index);
-                        callback_data.lua.set_string(to_string(command));
-
-                        auto params_table = callback_data.lua.prepare_new_table();
-                        for (size_t i = 1; i < command_parts.size(); ++i)
+                    return TRY([&] {
+                        auto command = to_system_string(cmd);
+                        auto command_parts = explode_by_occurrence(command, SYSSTR(' '));
+                        SystemStringType command_name;
+                        if (command_parts.size() > 1)
                         {
-                            const auto& command_part = command_parts[i];
-                            params_table.add_pair(i, to_string(command_part).c_str());
+                            command_name = command_parts[0];
+                        }
+                        else
+                        {
+                            command_name = command;
                         }
 
-                        LuaType::FOutputDevice::construct(callback_data.lua, &ar);
-
-                        callback_data.lua.call_function(3, 1);
-
-                        if (!callback_data.lua.is_bool())
+                        if (auto it = m_global_command_lua_callbacks.find(command_name); it != m_global_command_lua_callbacks.end())
                         {
-                            throw std::runtime_error{"A custom console command handle must return true or false"};
+                            const auto& callback_data = it->second;
+
+                            // This is a promise that we're in the game thread, used by other functions to ensure that we don't execute when unsafe
+                            set_is_in_game_thread(callback_data.lua, true);
+
+                            bool return_value{};
+
+                            for (const auto& [lua, registry_index] : callback_data.registry_indexes)
+                            {
+                                callback_data.lua.registry().get_function_ref(registry_index.lua_index);
+                                callback_data.lua.set_string(to_string(command));
+
+                                auto params_table = callback_data.lua.prepare_new_table();
+                                for (size_t i = 1; i < command_parts.size(); ++i)
+                                {
+                                    const auto& command_part = command_parts[i];
+                                    params_table.add_pair(i, to_string(command_part).c_str());
+                                }
+
+                                LuaType::FOutputDevice::construct(callback_data.lua, &ar);
+
+                                callback_data.lua.call_function(3, 1);
+
+                                if (!callback_data.lua.is_bool())
+                                {
+                                    throw std::runtime_error{"A custom console command handle must return true or false"};
+                                }
+
+                                return_value = callback_data.lua.get_bool();
+                            }
+
+                            // No longer promising to be in the game thread
+                            set_is_in_game_thread(callback_data.lua, false);
+
+                            return return_value;
                         }
 
-                        return_value = callback_data.lua.get_bool();
-                    }
-
-                    // No longer promising to be in the game thread
-                    set_is_in_game_thread(callback_data.lua, false);
-
-                    return return_value;
-                }
-
-                return false;
-            });
-        });
+                        return false;
+                    });
+                });
 
         if (Unreal::UObject::ProcessLocalScriptFunctionInternal.is_ready() && Unreal::Version::IsAtLeast(4, 22))
         {
@@ -4418,7 +4431,8 @@ Overloads:
                                                        catch (std::runtime_error& e)
                                                        {
                                                            Output::send(SYSSTR("[{}] {}\n"),
-                                                                        to_system(action.type == LuaMod::ActionType::Loop ? SYSSTR("LoopAsync") : SYSSTR("DelayedAction")),
+                                                                        to_system(action.type == LuaMod::ActionType::Loop ? SYSSTR("LoopAsync")
+                                                                                                                          : SYSSTR("DelayedAction")),
                                                                         to_system(e.what()));
                                                        }
 

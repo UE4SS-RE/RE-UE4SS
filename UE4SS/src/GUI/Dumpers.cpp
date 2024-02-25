@@ -169,8 +169,9 @@ namespace RC::GUI::Dumpers
                             const auto material_type_space_location = material_full_name.find(STR(" "));
                             if (material_type_space_location == material_full_name.npos)
                             {
-                                Output::send<LogLevel::Warning>(SYSSTR("SKIPPING MATERIAL! Was unable to find space in full material name in component: '{}'.\n"),
-                                                                material_full_name);
+                                Output::send<LogLevel::Warning>(
+                                        SYSSTR("SKIPPING MATERIAL! Was unable to find space in full material name in component: '{}'.\n"),
+                                        material_full_name);
                                 return;
                             }
 
@@ -179,9 +180,9 @@ namespace RC::GUI::Dumpers
                                 throw std::runtime_error{"integer overflow when converting material_type_space_location signed\n"};
                             }
                             auto material_typeless_name = UEStringViewType{material_full_name.begin() + static_cast<long long>(material_type_space_location) + 1,
-                                                                         material_full_name.end()};
+                                                                           material_full_name.end()};
 
-                            actor_buffer.append(std::format(SYSSTR("{}'"),to_system(material_interface->GetClassPrivate()->GetName())));
+                            actor_buffer.append(std::format(SYSSTR("{}'"), to_system(material_interface->GetClassPrivate()->GetName())));
                             actor_buffer.append(std::format(SYSSTR("\"\"{}"), to_system(material_typeless_name)));
                             actor_buffer.append(SYSSTR("\"\"'"));
                         }
@@ -315,12 +316,9 @@ namespace RC::GUI::Dumpers
         static auto dump_actor_class = UObjectGlobals::StaticFindObject<UClass*>(nullptr, nullptr, STR("/Script/Engine.StaticMeshActor"));
         SystemStringType file_buffer{};
         file_buffer.append(generate_actors_csv_file(dump_actor_class));
-        auto path = std::filesystem::path {UE4SSProgram::get_program().get_working_directory()} / std::format(SYSSTR("{}-ue4ss_static_mesh_data.csv"), long(std::time(nullptr)));
-        auto file =
-                File::open(path,
-                           File::OpenFor::Writing,
-                           File::OverwriteExistingFile::Yes,
-                           File::CreateIfNonExistent::Yes);
+        auto path = std::filesystem::path{UE4SSProgram::get_program().get_working_directory()} /
+                    std::format(SYSSTR("{}-ue4ss_static_mesh_data.csv"), long(std::time(nullptr)));
+        auto file = File::open(path, File::OpenFor::Writing, File::OverwriteExistingFile::Yes, File::CreateIfNonExistent::Yes);
         file.write_file_string_to_file(to_file(file_buffer));
         Output::send(SYSSTR("Finished dumping CSV of all loaded static mesh actors, positions and mesh properties\n"));
     }
@@ -329,12 +327,10 @@ namespace RC::GUI::Dumpers
     {
         Output::send(SYSSTR("Dumping CSV of all loaded actor types, positions and mesh properties\n"));
         SystemStringType file_buffer{};
-        auto path = std::filesystem::path {UE4SSProgram::get_program().get_working_directory()} / std::format(SYSSTR("{}-ue4ss_actor_data.csv"), long(std::time(nullptr)));
+        auto path = std::filesystem::path{UE4SSProgram::get_program().get_working_directory()} /
+                    std::format(SYSSTR("{}-ue4ss_actor_data.csv"), long(std::time(nullptr)));
         file_buffer.append(generate_actors_csv_file(AActor::StaticClass()));
-        auto file = File::open(path,
-                               File::OpenFor::Writing,
-                               File::OverwriteExistingFile::Yes,
-                               File::CreateIfNonExistent::Yes);
+        auto file = File::open(path, File::OpenFor::Writing, File::OverwriteExistingFile::Yes, File::CreateIfNonExistent::Yes);
         file.write_file_string_to_file(to_file(file_buffer));
         Output::send(SYSSTR("Finished dumping CSV of all loaded actor types, positions and mesh properties\n"));
     }
@@ -345,13 +341,13 @@ namespace RC::GUI::Dumpers
         {
             return;
         }
-        
-        // this give the button a little bit of space between the top of the window
-        // and the buttons themselves
-        #ifdef LINUX
+
+// this give the button a little bit of space between the top of the window
+// and the buttons themselves
+#ifdef LINUX
         ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, {0.0f, 1.0f});
         ImGui::Spacing();
-        #endif
+#endif
 
         if (ImGui::Button("Dump all static actor meshes to file"))
         {
@@ -417,9 +413,8 @@ namespace RC::GUI::Dumpers
             UE4SSProgram::get_program().generate_lua_types(working_dir / SYSSTR("Mods") / SYSSTR("shared") SYSSTR("types"));
         }
 
-        
-        #ifdef LINUX
+#ifdef LINUX
         ImGui::PopStyleVar();
-        #endif
+#endif
     }
 } // namespace RC::GUI::Dumpers

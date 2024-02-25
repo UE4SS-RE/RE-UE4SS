@@ -424,7 +424,7 @@ namespace RC
         return pattern_data;
     }
 
-    auto SinglePassScanner::scanner_work_thread(uint8_t* start_address, uint8_t* end_address, SystemInfo *info, std::vector<SignatureContainer>& signature_containers)
+    auto SinglePassScanner::scanner_work_thread(uint8_t* start_address, uint8_t* end_address, SystemInfo* info, std::vector<SignatureContainer>& signature_containers)
             -> void
     {
         ProfilerSetThreadName("UE4SS-ScannerWorkThread");
@@ -600,9 +600,9 @@ namespace RC
             if (merged_containers.empty())
             {
                 fprintf(stderr, "No containers to merge\n");
-                return ;
-                //throw std::runtime_error{"[SinglePassScanner::start_scan] Could not merge containers. Either there were not containers to merge or there was "
-                //                         "an internal error."};
+                return;
+                // throw std::runtime_error{"[SinglePassScanner::start_scan] Could not merge containers. Either there were not containers to merge or there was "
+                //                          "an internal error."};
             }
 
             uint8_t* module_start_address = Platform::get_module_base(merged_module_info);
@@ -656,7 +656,8 @@ namespace RC
             for (auto& [scan_target, signature_container] : signature_containers)
             {
                 uint8_t* module_start_address = static_cast<uint8_t*>(Platform::get_module_base(&SigScannerStaticData::m_modules_info[scan_target]));
-                uint8_t* module_end_address = static_cast<uint8_t*>(module_start_address + Platform::get_module_size(&SigScannerStaticData::m_modules_info[scan_target]));
+                uint8_t* module_end_address =
+                        static_cast<uint8_t*>(module_start_address + Platform::get_module_size(&SigScannerStaticData::m_modules_info[scan_target]));
 
                 scanner_work_thread(module_start_address, module_end_address, info, signature_container);
 
@@ -668,4 +669,3 @@ namespace RC
         }
     }
 }; // namespace RC
-

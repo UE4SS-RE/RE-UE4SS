@@ -20,7 +20,6 @@
 
 #else
 
-
 #ifndef RC_LMS_API
 #define RC_LMS_API
 #endif

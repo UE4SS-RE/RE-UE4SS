@@ -22,7 +22,6 @@ namespace RC::Input
         return *this;
     }
 
-
     auto ModifierKeys::operator|(const ModifierKey& key) -> ModifierKeys&
     {
         if (is_modify_key_valid(key))
@@ -32,12 +31,10 @@ namespace RC::Input
         return *this;
     }
 
-
     auto ModifierKeys::operator|=(const ModifierKeys& rkeys) -> ModifierKeys&
     {
         return *this = *this | rkeys;
     }
-
 
     auto ModifierKeys::operator|=(const ModifierKey& key) -> ModifierKeys&
     {
@@ -68,7 +65,7 @@ namespace RC::Input
     {
         for (auto key : keys)
         {
-            if (is_modify_key_valid(key)) 
+            if (is_modify_key_valid(key))
             {
                 this->keys |= (1 << key);
             }
@@ -77,12 +74,12 @@ namespace RC::Input
 
     auto operator&(const ModifierKeys& keys, const ModifierKey& key) -> bool
     {
-        return !! (keys.keys & (1 << key));
+        return !!(keys.keys & (1 << key));
     }
 
     auto operator&(const ModifierKeys& keys, const ModifierKeys& key) -> bool
     {
-        return !! (keys.keys & key.keys);
+        return !!(keys.keys & key.keys);
     }
 
 } // namespace RC::Input

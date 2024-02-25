@@ -16,7 +16,7 @@ namespace RC::Input
         }
 
         std::vector<EventCallbackCallable> callbacks_to_call{};
-        
+
         auto events = m_platform_handler->process_event(this);
 
         {
@@ -27,15 +27,14 @@ namespace RC::Input
                 auto key_set_array = m_key_set.key_data[event.key];
                 for (auto& key_data : key_set_array)
                 {
-                    if (key_data.required_modifier_keys == event.modifier_keys) 
+                    if (key_data.required_modifier_keys == event.modifier_keys)
                     {
                         callbacks_to_call.emplace_back(key_data.callback);
                     }
                 }
             }
         }
-        
-        
+
         // No need to lock the event mutex to call the callbacks
         // this avoids key registration inside the callback
         for (const auto& callback : callbacks_to_call)
@@ -109,7 +108,7 @@ namespace RC::Input
         return m_subscribed_keys[key];
     }
 
-    auto Handler::get_events_safe(std::function<void (KeySet&)> callback) -> void
+    auto Handler::get_events_safe(std::function<void(KeySet&)> callback) -> void
     {
         auto event_update_lock = std::lock_guard(m_event_mutex);
         callback(m_key_set);
@@ -157,7 +156,9 @@ namespace RC::Input
             {
                 return false;
             }
-        } else {
+        }
+        else
+        {
             auto input_source = m_input_sources_store.find(source);
             if (input_source == m_input_sources_store.end())
             {
@@ -186,7 +187,7 @@ namespace RC::Input
     auto Handler::register_input_source(std::shared_ptr<PlatformInputSource> input_source) -> void
     {
         std::string name = input_source->get_name();
-        if (m_input_sources_store.find(name) == m_input_sources_store.end()) 
+        if (m_input_sources_store.find(name) == m_input_sources_store.end())
         {
             m_input_sources_store[name] = input_source;
         }

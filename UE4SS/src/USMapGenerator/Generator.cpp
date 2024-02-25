@@ -203,7 +203,7 @@ namespace RC::OutTheShade
     auto generate_usmap() -> void
     {
         Output::send(SYSSTR("Mappings Generator by OutTheShade\nAttempting to dump mappings...\nPort of https://github.com/OutTheShade/UnrealMappingsDumper "
-                         "Commit SHA 4da8c66\n"));
+                            "Commit SHA 4da8c66\n"));
 
         StreamWriter Buffer;
         std::unordered_map<FName, int> NameMap;

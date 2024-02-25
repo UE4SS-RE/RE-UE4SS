@@ -10,18 +10,16 @@
 #include <Psapi.h>
 #endif
 
-
 #include <Profiler/Profiler.hpp>
 #include <SigScanner/SinglePassSigScanner.hpp>
 
 namespace RC
 {
-    
+
     auto ScanTargetArray::operator[](ScanTarget index) -> ModuleOS&
     {
         return *std::bit_cast<MODULEINFO*>(&array[static_cast<size_t>(index)]);
     }
-
 
     namespace Platform
     {
@@ -33,26 +31,30 @@ namespace RC
         }
 
         // Get the start address of the system
-        auto get_start_address(SystemInfo *info) -> uint8_t* {
+        auto get_start_address(SystemInfo* info) -> uint8_t*
+        {
             return static_cast<uint8_t*>(info->lpMinimumApplicationAddress);
         }
 
         // Get the end address of the system
-        auto get_end_address(SystemInfo *info) -> uint8_t* {
+        auto get_end_address(SystemInfo* info) -> uint8_t*
+        {
             return static_cast<uint8_t*>(info->lpMaximumApplicationAddress);
         }
 
         // Get the size of the module
-        auto get_module_size(ModuleOS *info) -> uint32_t {
+        auto get_module_size(ModuleOS* info) -> uint32_t
+        {
             return info->SizeOfImage;
         }
 
         // Get the base address of the module
-        auto get_module_base(ModuleOS *info) -> uint8_t* {
+        auto get_module_base(ModuleOS* info) -> uint8_t*
+        {
             return static_cast<uint8_t*>(info->lpBaseOfDll);
         }
     }; // namespace Platform
-    
+
     auto WIN_MODULEINFO::operator=(MODULEINFO other) -> WIN_MODULEINFO&
     {
         lpBaseOfDll = other.lpBaseOfDll;

@@ -1,4 +1,4 @@
-#pragma once 
+#pragma once
 
 #define ICON_FA_TERMINAL "\uf120"
 #define ICON_FA_ARCHIVE "\uf187"

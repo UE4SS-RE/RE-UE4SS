@@ -38,8 +38,8 @@ namespace RC::UVTD
                 return SystemStringType{string};
             });
 
-            auto wrapper_src_file =
-                    member_variable_layouts_gen_output_include_path / std::format(SYSSTR("MemberVariableLayout_SrcWrapper_{}.hpp"), class_entry.class_name_clean);
+            auto wrapper_src_file = member_variable_layouts_gen_output_include_path /
+                                    std::format(SYSSTR("MemberVariableLayout_SrcWrapper_{}.hpp"), class_entry.class_name_clean);
 
             Output::send(SYSSTR("Generating file '{}'\n"), wrapper_src_file.wstring());
 
@@ -151,9 +151,7 @@ namespace RC::UVTD
                     wrapper_src_dumper.send(STR("}\n\n"));
                 }
 
-                macro_setter_dumper.send(STR("if (auto val = parser.get_int64(STR(\"{}\"), STR(\"{}\"), -1); val != -1)\n"),
-                                         final_class_name,
-                                         final_variable_name);
+                macro_setter_dumper.send(STR("if (auto val = parser.get_int64(STR(\"{}\"), STR(\"{}\"), -1); val != -1)\n"), final_class_name, final_variable_name);
                 macro_setter_dumper.send(STR("    Unreal::{}::MemberOffsets.emplace(STR(\"{}\"), static_cast<int32_t>(val));\n"),
                                          final_class_name,
                                          final_variable_name);

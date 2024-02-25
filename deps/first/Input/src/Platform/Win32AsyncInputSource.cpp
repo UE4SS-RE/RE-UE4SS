@@ -74,7 +74,7 @@ namespace RC::Input
                 {
                     any_keys_are_down = true;
                     m_key_down[key] = true;
-                    m_input_events.emplace_back(InputEvent {static_cast<Key>(key), modifier_keys});
+                    m_input_events.emplace_back(InputEvent{static_cast<Key>(key), modifier_keys});
                 }
                 else if (!keyed && m_key_down[key])
                 {

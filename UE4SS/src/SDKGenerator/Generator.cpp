@@ -342,7 +342,7 @@ namespace RC::UEGenerator
                 return return_property_info.has_value() ? return_property_info.value().property : nullptr;
             }();
 
-            SystemStringType function_name {to_system(function_info.function->GetName())};
+            SystemStringType function_name{to_system(function_info.function->GetName())};
             if (is_delegate_function == IsDelegateFunction::Yes)
             {
                 // Remove the last 19 characters, which is always '__DelegateSignature' for delegates
@@ -557,13 +557,13 @@ namespace RC::UEGenerator
                     m_file_names.emplace(package_name_all_lower, FileName{});
                 }
 
-                // The '\\?\' at the beginning of the string unlocks path size restriction from MAX_PATH to 32k
-                #ifdef WIN32
+// The '\\?\' at the beginning of the string unlocks path size restriction from MAX_PATH to 32k
+#ifdef WIN32
                 std::filesystem::path directory_to_generate_in = std::filesystem::path("\\\\?\\");
                 directory_to_generate_in += (m_directory_to_generate_in);
-                #else
-                std::filesystem::path directory_to_generate_in =  (m_directory_to_generate_in);
-                #endif
+#else
+                std::filesystem::path directory_to_generate_in = (m_directory_to_generate_in);
+#endif
 
                 SystemStringType ext = specification.get_file_extension();
                 std::filesystem::path primary_file_path_and_name = directory_to_generate_in;
@@ -677,22 +677,18 @@ namespace RC::UEGenerator
         }
         auto generate_file_header(GeneratedFile& generated_file) -> void
         {
-            generated_file.primary_file.write_file_string_to_file(
-                    to_file(std::format(SYSSTR("#ifndef UE4SS_SDK_{}_HPP\n#define UE4SS_SDK_{}_HPP\n\n"), generated_file.package_name, generated_file.package_name))
-            );
+            generated_file.primary_file.write_file_string_to_file(to_file(
+                    std::format(SYSSTR("#ifndef UE4SS_SDK_{}_HPP\n#define UE4SS_SDK_{}_HPP\n\n"), generated_file.package_name, generated_file.package_name)));
 
             if (!generated_file.secondary_file_has_no_contents)
             {
                 generated_file.primary_file.write_file_string_to_file(
-                    to_file(std::format(SYSSTR("#include \"{}\"\n\n"), generated_file.secondary_file_name.filename().c_str()))
-                );
+                        to_file(std::format(SYSSTR("#include \"{}\"\n\n"), generated_file.secondary_file_name.filename().c_str())));
             }
         }
         auto generate_file_footer(GeneratedFile& generated_file) -> void
         {
-            generated_file.primary_file.write_file_string_to_file(
-                IOSTR("#endif\n")
-            );
+            generated_file.primary_file.write_file_string_to_file(IOSTR("#endif\n"));
         }
         auto generate_enum_declaration(SystemStringType& content_buffer, UEnum* uenum) -> void
         {
@@ -792,7 +788,9 @@ namespace RC::UEGenerator
                 }
                 catch (std::exception& e)
                 {
-                    Output::send<LogLevel::Warning>(SYSSTR("Could not generate property '{}' because: {}\n"),to_system(property->GetFullName()), to_system(e.what()));
+                    Output::send<LogLevel::Warning>(SYSSTR("Could not generate property '{}' because: {}\n"),
+                                                    to_system(property->GetFullName()),
+                                                    to_system(e.what()));
                     continue;
                 }
 
@@ -921,8 +919,9 @@ namespace RC::UEGenerator
                             printf_s("last_property_offset: %X\n", last_property_offset);
                             printf_s("first_property_offset: %X\n", first_property_offset);
 
-                            auto padding_part_one = std::format(SYSSTR("{}char {}[0x{:X}];"), generate_tab(), std::format(SYSSTR("padding_{}"), num_padding_elements), padding_size);
-                            out.append(std::format(SYSSTR("{:85} // 0x{:04X} (size: 0x{:X})\n"), padding_part_one, last_property_offset + last_property_size, padding_size));
+                            auto padding_part_one = std::format(SYSSTR("{}char {}[0x{:X}];"), generate_tab(), std::format(SYSSTR("padding_{}"),
+                    num_padding_elements), padding_size); out.append(std::format(SYSSTR("{:85} // 0x{:04X} (size: 0x{:X})\n"), padding_part_one,
+                    last_property_offset + last_property_size, padding_size));
                         }
                     }
                     //*/
@@ -1026,10 +1025,11 @@ namespace RC::UEGenerator
       private:
         auto is_valid_lua_symbol(const SystemStringType& str) -> bool
         {
-            static const std::set<SystemStringType> keywords = {SYSSTR("and"),   SYSSTR("break"), SYSSTR("do"),       SYSSTR("else"),   SYSSTR("elseif"), SYSSTR("end"),
-                                                                SYSSTR("false"), SYSSTR("for"),   SYSSTR("function"), SYSSTR("if"),     SYSSTR("in"),     SYSSTR("local"),
-                                                                SYSSTR("nil"),   SYSSTR("not"),   SYSSTR("or"),       SYSSTR("repeat"), SYSSTR("return"), SYSSTR("then"),
-                                                                SYSSTR("true"),  SYSSTR("until"), SYSSTR("while")};
+            static const std::set<SystemStringType> keywords = {SYSSTR("and"),    SYSSTR("break"),  SYSSTR("do"),   SYSSTR("else"),     SYSSTR("elseif"),
+                                                                SYSSTR("end"),    SYSSTR("false"),  SYSSTR("for"),  SYSSTR("function"), SYSSTR("if"),
+                                                                SYSSTR("in"),     SYSSTR("local"),  SYSSTR("nil"),  SYSSTR("not"),      SYSSTR("or"),
+                                                                SYSSTR("repeat"), SYSSTR("return"), SYSSTR("then"), SYSSTR("true"),     SYSSTR("until"),
+                                                                SYSSTR("while")};
             if (keywords.contains(str))
             {
                 return false;
@@ -1174,13 +1174,16 @@ namespace RC::UEGenerator
                     }
                     else
                     {
-                        content_buffer.append(
-                                std::format(SYSSTR("---@field [{}] {}\n"), quote_lua_symbol(property_name), generate_property_lua_name(property, true, native_class)));
+                        content_buffer.append(std::format(SYSSTR("---@field [{}] {}\n"),
+                                                          quote_lua_symbol(property_name),
+                                                          generate_property_lua_name(property, true, native_class)));
                     }
                 }
                 catch (std::exception& e)
                 {
-                    Output::send<LogLevel::Warning>(SYSSTR("Could not generate property '{}' because: {}\n"), to_system(property->GetFullName()), to_system(e.what()));
+                    Output::send<LogLevel::Warning>(SYSSTR("Could not generate property '{}' because: {}\n"),
+                                                    to_system(property->GetFullName()),
+                                                    to_system(e.what()));
                     continue;
                 }
 
@@ -1256,7 +1259,7 @@ namespace RC::UEGenerator
                     catch (std::exception& e)
                     {
                         Output::send<LogLevel::Warning>(SYSSTR("Could not generate function '{}' because: {}\n"),
-                                                        to_system( function_info.function->GetFullName()),
+                                                        to_system(function_info.function->GetFullName()),
                                                         to_system(e.what()));
                         return;
                     }

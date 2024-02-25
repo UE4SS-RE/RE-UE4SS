@@ -124,7 +124,7 @@ namespace RC
         std::filesystem::path m_module_file_path;
         std::filesystem::path m_working_directory;
         std::filesystem::path m_mods_directory;
-        
+
         SystemStringType m_module_file_path_str;
         SystemStringType m_working_directory_str;
         SystemStringType m_game_executable_str;
@@ -261,12 +261,12 @@ namespace RC
         {
             return ImGui::GetCurrentContext();
         }
-        #ifdef WIN32
+#ifdef WIN32
         RC_UE4SS_API static auto get_current_imgui_allocator_functions(ImGuiMemAllocFunc* alloc_func, ImGuiMemFreeFunc* free_func, void** user_data) -> void
         {
             return ImGui::GetAllocatorFunctions(alloc_func, free_func, user_data);
         }
-        #endif
+#endif
 #endif
         RC_UE4SS_API auto queue_event(EventCallable callable, void* data) -> void;
         RC_UE4SS_API auto is_queue_empty() -> bool;
@@ -315,14 +315,14 @@ namespace RC
         template <typename T>
         static auto find_mod_by_name(SystemStringViewType mod_name, IsInstalled is_installed = IsInstalled::No, IsStarted is_started = IsStarted::No) -> T*
         {
-             return find_mod_by_name<T>(to_system_string(mod_name), is_installed, is_started);
+            return find_mod_by_name<T>(to_system_string(mod_name), is_installed, is_started);
         };
 
         template <typename S>
         RC_UE4SS_API static auto find_lua_mod_by_name(S mod_name, IsInstalled is_installed = IsInstalled::No, IsStarted is_started = IsStarted::No) -> LuaMod*
         {
-             auto mod_name_str = to_system_string(mod_name);
-             return static_cast<LuaMod*>(find_mod_by_name<LuaMod>(mod_name_str, is_installed, is_started));
+            auto mod_name_str = to_system_string(mod_name);
+            return static_cast<LuaMod*>(find_mod_by_name<LuaMod>(mod_name_str, is_installed, is_started));
         }
         static auto static_cleanup() -> void;
         RC_UE4SS_API static auto get_program() -> UE4SSProgram&

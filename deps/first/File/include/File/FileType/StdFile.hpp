@@ -20,7 +20,9 @@ namespace RC::File
 
         struct IdentifyingProperties
         {
-            struct stat file_stat{};
+            struct stat file_stat
+            {
+            };
         };
 
       private:
@@ -43,8 +45,8 @@ namespace RC::File
 
       private:
         auto static create_all_directories(const std::filesystem::path& file_name_and_path) -> void;
-        auto static calc_open_flags(const std::filesystem::path &file_name_and_path, const OpenProperties& open_properties) -> int;
-        
+        auto static calc_open_flags(const std::filesystem::path& file_name_and_path, const OpenProperties& open_properties) -> int;
+
       private:
         auto close_file() -> void;
 

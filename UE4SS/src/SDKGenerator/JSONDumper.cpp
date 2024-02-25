@@ -296,7 +296,7 @@ namespace RC::UEGenerator::JSONDumper
                 }
 
                 auto& bp_property = properties.new_object();
-                bp_property.new_string(SYSSTR("name"),to_system(property->GetName()));
+                bp_property.new_string(SYSSTR("name"), to_system(property->GetName()));
                 bp_property.new_string(SYSSTR("type"), generate_property_cxx_name(property, true, object_as_class));
             }
 

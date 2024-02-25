@@ -9,34 +9,53 @@ namespace RC::Input
 {
     class QueueInputSource : public PlatformInputSource
     {
-        private:
-            static constexpr int max_inputs = 256;
-            RingBufferSPSC<InputEvent, max_inputs> m_input_queue;
-        protected:
-            bool m_activated {false};
-        private:
-            /// SAFETY: Only update and return m_input_events 
-            /// in process_event and flush_events functions 
-            std::vector<InputEvent> m_input_events;
-        public:
-            ~QueueInputSource() = default;
-            
-            // QueeueInputSource is not a implemented input source
-            // and should not be used directly
-            bool is_available() override { return false; };
+      private:
+        static constexpr int max_inputs = 256;
+        RingBufferSPSC<InputEvent, max_inputs> m_input_queue;
 
-            bool activate() override { return m_activated = true; };
+      protected:
+        bool m_activated{false};
 
-            bool deactivate() override { m_activated = false; return true; };
+      private:
+        /// SAFETY: Only update and return m_input_events
+        /// in process_event and flush_events functions
+        std::vector<InputEvent> m_input_events;
 
-            std::vector<InputEvent>& process_event(Handler* handler) override;
+      public:
+        ~QueueInputSource() = default;
 
-            int source_priority() override { return 0; }
+        // QueeueInputSource is not a implemented input source
+        // and should not be used directly
+        bool is_available() override
+        {
+            return false;
+        };
 
-            const char* get_name() override { return "Queue"; }
+        bool activate() override
+        {
+            return m_activated = true;
+        };
 
-        public:
-            auto push_input_event(const InputEvent& event) -> void;
+        bool deactivate() override
+        {
+            m_activated = false;
+            return true;
+        };
+
+        std::vector<InputEvent>& process_event(Handler* handler) override;
+
+        int source_priority() override
+        {
+            return 0;
+        }
+
+        const char* get_name() override
+        {
+            return "Queue";
+        }
+
+      public:
+        auto push_input_event(const InputEvent& event) -> void;
     };
 
-}; // RC::Input
+}; // namespace RC::Input

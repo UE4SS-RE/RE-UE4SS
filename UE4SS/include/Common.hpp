@@ -18,5 +18,4 @@
 #define RC_UE4SS_API
 #endif
 
-
 #endif

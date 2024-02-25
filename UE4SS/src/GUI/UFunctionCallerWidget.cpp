@@ -227,19 +227,27 @@ namespace RC::GUI
     {
         if (auto as_struct_property = CastField<FStructProperty>(param.unreal_param); as_struct_property)
         {
-            ImGui::Text(SystemStringPrint" (" SystemStringPrint ")", to_system(param.unreal_param->GetClass().GetName()).c_str(), to_system(as_struct_property->GetStruct()->GetName()).c_str());
+            ImGui::Text(SystemStringPrint " (" SystemStringPrint ")",
+                        to_system(param.unreal_param->GetClass().GetName()).c_str(),
+                        to_system(as_struct_property->GetStruct()->GetName()).c_str());
         }
         else if (auto as_array_property = CastField<FArrayProperty>(param.unreal_param); as_array_property)
         {
-            ImGui::Text(SystemStringPrint" (" SystemStringPrint ")", to_system(param.unreal_param->GetClass().GetName()).c_str(), to_system(as_array_property->GetInner()->GetName()).c_str());
+            ImGui::Text(SystemStringPrint " (" SystemStringPrint ")",
+                        to_system(param.unreal_param->GetClass().GetName()).c_str(),
+                        to_system(as_array_property->GetInner()->GetName()).c_str());
         }
         else if (auto as_object_property = CastField<FObjectProperty>(param.unreal_param); as_object_property)
         {
-            ImGui::Text(SystemStringPrint" (" SystemStringPrint ")", to_system(param.unreal_param->GetClass().GetName()).c_str(), to_system(as_object_property->GetPropertyClass()->GetName()).c_str());
+            ImGui::Text(SystemStringPrint " (" SystemStringPrint ")",
+                        to_system(param.unreal_param->GetClass().GetName()).c_str(),
+                        to_system(as_object_property->GetPropertyClass()->GetName()).c_str());
         }
         else if (auto as_class_property = CastField<FClassProperty>(param.unreal_param); as_class_property)
         {
-            ImGui::Text(SystemStringPrint" (" SystemStringPrint ")", to_system(param.unreal_param->GetClass().GetName()).c_str(), to_system(as_class_property->GetMetaClass()->GetName()).c_str());
+            ImGui::Text(SystemStringPrint " (" SystemStringPrint ")",
+                        to_system(param.unreal_param->GetClass().GetName()).c_str(),
+                        to_system(as_class_property->GetMetaClass()->GetName()).c_str());
         }
         else
         {

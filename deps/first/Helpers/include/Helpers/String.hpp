@@ -210,41 +210,40 @@ namespace RC
         // No occurrence was found, returning empty string for now
         return {};
     }
-    /* explode_by_occurrence -> END */
+/* explode_by_occurrence -> END */
 
-    // ----------------------------- //
-    #define STRING_DISPATCH(STRING_T, ts, tw, tu16)                             \
-        if constexpr (std::is_same_v<STRING_T, std::string>)                    \
-        {   														            \
-            return ts(std::forward<T>(input));				                    \
-        }   														            \
-	    else if constexpr (std::is_same_v<STRING_T, std::wstring>)	            \
-	    {																        \
-	        return tw(std::forward<T>(input));						            \
-	    }																        \
-	    else if constexpr (std::is_same_v<STRING_T, std::u16string>)            \
-	    {																	    \
-	        return tu16(std::forward<T>(input));					            \
-	    }																	    \
-	    else																    \
-	    {																	    \
-	        static_assert(dependent_false<T>::value, "Unsupported " #STRING_T "."); \
-	    }
-    // ----------------------------- //
-    #define PATH_QUIRK(STRINGT)                                                             \
-        if constexpr (std::is_same_v<std::decay_t<T>, std::filesystem::path>                \
-             || std::is_same_v<std::decay_t<T>, const std::filesystem::path>)               \
-        {                                                                                   \
-            STRING_DISPATCH(STRINGT, to_string_path, to_wstring_path, to_u16string_path);   \
-        }
+// ----------------------------- //
+#define STRING_DISPATCH(STRING_T, ts, tw, tu16)                                                                                                                \
+    if constexpr (std::is_same_v<STRING_T, std::string>)                                                                                                       \
+    {                                                                                                                                                          \
+        return ts(std::forward<T>(input));                                                                                                                     \
+    }                                                                                                                                                          \
+    else if constexpr (std::is_same_v<STRING_T, std::wstring>)                                                                                                 \
+    {                                                                                                                                                          \
+        return tw(std::forward<T>(input));                                                                                                                     \
+    }                                                                                                                                                          \
+    else if constexpr (std::is_same_v<STRING_T, std::u16string>)                                                                                               \
+    {                                                                                                                                                          \
+        return tu16(std::forward<T>(input));                                                                                                                   \
+    }                                                                                                                                                          \
+    else                                                                                                                                                       \
+    {                                                                                                                                                          \
+        static_assert(dependent_false<T>::value, "Unsupported " #STRING_T ".");                                                                                \
+    }
+// ----------------------------- //
+#define PATH_QUIRK(STRINGT)                                                                                                                                    \
+    if constexpr (std::is_same_v<std::decay_t<T>, std::filesystem::path> || std::is_same_v<std::decay_t<T>, const std::filesystem::path>)                      \
+    {                                                                                                                                                          \
+        STRING_DISPATCH(STRINGT, to_string_path, to_wstring_path, to_u16string_path);                                                                          \
+    }
     // ----------------------------- //
 
-    #define TO_STRING_QUIRK_DISPATCH(STRINGT)                               \
-        PATH_QUIRK(STRINGT)                                                 \
-	    else                                                                \
-	    {                                                                   \
-	        STRING_DISPATCH(STRINGT, to_string, to_wstring, to_u16string);  \
-	    }
+#define TO_STRING_QUIRK_DISPATCH(STRINGT)                                                                                                                      \
+    PATH_QUIRK(STRINGT)                                                                                                                                        \
+    else                                                                                                                                                       \
+    {                                                                                                                                                          \
+        STRING_DISPATCH(STRINGT, to_string, to_wstring, to_u16string);                                                                                         \
+    }
     // ----------------------------- //
 
     auto inline to_string_path(const std::filesystem::path& input) -> std::string
@@ -306,7 +305,6 @@ namespace RC
     {
         return std::wstring{input};
     }
-
 
     auto inline to_wstring(std::u16string& input) -> std::wstring
     {
@@ -415,92 +413,152 @@ namespace RC
     }
 
     // Type traits to check if T is a string type that needs conversion
-    template<typename T>
-    struct is_string_like_t : std::false_type {};
+    template <typename T>
+    struct is_string_like_t : std::false_type
+    {
+    };
 
     // Specializations for the types that need conversion
-    template<> struct is_string_like_t<std::string> : std::true_type {};
-    template<> struct is_string_like_t<std::wstring> : std::true_type {};
-    template<> struct is_string_like_t<std::u16string> : std::true_type {};
-    template<> struct is_string_like_t<std::wstring_view> : std::true_type {};
-    template<> struct is_string_like_t<std::u16string_view> : std::true_type {};
-    template<> struct is_string_like_t<std::string_view> : std::true_type {};
+    template <>
+    struct is_string_like_t<std::string> : std::true_type
+    {
+    };
+    template <>
+    struct is_string_like_t<std::wstring> : std::true_type
+    {
+    };
+    template <>
+    struct is_string_like_t<std::u16string> : std::true_type
+    {
+    };
+    template <>
+    struct is_string_like_t<std::wstring_view> : std::true_type
+    {
+    };
+    template <>
+    struct is_string_like_t<std::u16string_view> : std::true_type
+    {
+    };
+    template <>
+    struct is_string_like_t<std::string_view> : std::true_type
+    {
+    };
 
     template <typename T>
-    struct dependent_false : std::false_type {};
+    struct dependent_false : std::false_type
+    {
+    };
 
     template <typename T, bool ok>
-    struct dependent_ensure : std::true_type {};
+    struct dependent_ensure : std::true_type
+    {
+    };
     template <typename T>
-    struct dependent_ensure<T, false> : std::false_type {};
+    struct dependent_ensure<T, false> : std::false_type
+    {
+    };
 
     template <typename T>
-    auto stringviewify(T&& tp) {
-        if constexpr (std::is_same_v<std::decay_t<T>, char*> || std::is_same_v<std::decay_t<T>, const char*>) {
+    auto stringviewify(T&& tp)
+    {
+        if constexpr (std::is_same_v<std::decay_t<T>, char*> || std::is_same_v<std::decay_t<T>, const char*>)
+        {
             return std::string_view{tp};
-        } else if constexpr  (std::is_same_v<std::decay_t<T>, wchar_t*> || std::is_same_v<std::decay_t<T>, const wchar_t*>) {
+        }
+        else if constexpr (std::is_same_v<std::decay_t<T>, wchar_t*> || std::is_same_v<std::decay_t<T>, const wchar_t*>)
+        {
             return std::wstring_view{tp};
-        } else if constexpr (std::is_same_v<std::decay_t<T>, char16_t*> || std::is_same_v<std::decay_t<T>, const char16_t*>) {
+        }
+        else if constexpr (std::is_same_v<std::decay_t<T>, char16_t*> || std::is_same_v<std::decay_t<T>, const char16_t*>)
+        {
             return std::u16string_view{tp};
-        } else {
+        }
+        else
+        {
             return std::forward<T>(tp);
         }
     }
 
-    template<typename T>
-    struct _can_be_string_view_t : std::false_type {};
-    template<> struct _can_be_string_view_t<wchar_t*> : std::true_type {};
-    template<> struct _can_be_string_view_t<char*> : std::true_type {};
-    template<> struct _can_be_string_view_t<char16_t*> : std::true_type {};
-    template<> struct _can_be_string_view_t<const wchar_t*> : std::true_type {};
-    template<> struct _can_be_string_view_t<const char*> : std::true_type {};
-    template<> struct _can_be_string_view_t<const char16_t*> : std::true_type {};
-
-    template<typename T>
-    struct can_be_string_view_t : _can_be_string_view_t<std::decay_t<T>> {};
-
-    template<typename T>
-    struct is_file_string_type : std::disjunction<
-        std::is_same<T, File::StringType>,
-        std::is_same<T, File::StringViewType>
-    > {};
-
-    template<typename T>
-    struct not_file_string_like_t : std::conjunction<is_string_like_t<std::decay_t<T>>, std::negation<is_file_string_type<std::decay_t<T>>>> {};
+    template <typename T>
+    struct _can_be_string_view_t : std::false_type
+    {
+    };
+    template <>
+    struct _can_be_string_view_t<wchar_t*> : std::true_type
+    {
+    };
+    template <>
+    struct _can_be_string_view_t<char*> : std::true_type
+    {
+    };
+    template <>
+    struct _can_be_string_view_t<char16_t*> : std::true_type
+    {
+    };
+    template <>
+    struct _can_be_string_view_t<const wchar_t*> : std::true_type
+    {
+    };
+    template <>
+    struct _can_be_string_view_t<const char*> : std::true_type
+    {
+    };
+    template <>
+    struct _can_be_string_view_t<const char16_t*> : std::true_type
+    {
+    };
 
     template <typename T>
-    auto inline to_file_string(T&& input) -> File::StringType {
+    struct can_be_string_view_t : _can_be_string_view_t<std::decay_t<T>>
+    {
+    };
+
+    template <typename T>
+    struct is_file_string_type : std::disjunction<std::is_same<T, File::StringType>, std::is_same<T, File::StringViewType>>
+    {
+    };
+
+    template <typename T>
+    struct not_file_string_like_t : std::conjunction<is_string_like_t<std::decay_t<T>>, std::negation<is_file_string_type<std::decay_t<T>>>>
+    {
+    };
+
+    template <typename T>
+    auto inline to_file_string(T&& input) -> File::StringType
+    {
         TO_STRING_QUIRK_DISPATCH(File::StringType);
     }
 
-    template<typename T>
+    template <typename T>
     auto to_file(T&& arg)
     {
         if constexpr (std::is_same_v<std::decay_t<T>, std::filesystem::path> || std::is_same_v<std::decay_t<T>, const std::filesystem::path>)
         {
             return to_file_string(std::forward<T>(arg));
         }
-        else if constexpr (can_be_string_view_t<T>::value) {
+        else if constexpr (can_be_string_view_t<T>::value)
+        {
             return to_file(stringviewify(std::forward<T>(arg)));
-        } 
-        else if constexpr (not_file_string_like_t<std::decay_t<T>>::value) 
+        }
+        else if constexpr (not_file_string_like_t<std::decay_t<T>>::value)
         {
             return to_file_string(std::forward<T>(arg));
-        } 
-        else 
+        }
+        else
         {
             return std::forward<T>(arg);
         }
     }
-    
+
     template <typename T>
     struct is_std_string_type : std::disjunction<std::is_same<T, std::string>, std::is_same<T, std::string_view>>
-    {};
+    {
+    };
 
     template <typename T>
     struct not_std_string_like_t : std::conjunction<is_string_like_t<std::decay_t<T>>, std::negation<is_std_string_type<std::decay_t<T>>>>
-    { };
-
+    {
+    };
 
     template <typename T>
     auto inline to_std_string(T&& input) -> std::string
@@ -528,92 +586,99 @@ namespace RC
             return std::forward<T>(arg);
         }
     }
-    
-    template<typename T>
-    struct is_system_string_type : std::disjunction<
-        std::is_same<T, SystemStringType>,
-        std::is_same<T, SystemStringViewType>
-    > {};
-
-    template<typename T>
-    struct not_system_string_like_t : std::conjunction<is_string_like_t<std::decay_t<T>>,std::negation<is_system_string_type<std::decay_t<T>>>> {};
 
     template <typename T>
-    auto inline to_system_string(T&& input) -> SystemStringType {
+    struct is_system_string_type : std::disjunction<std::is_same<T, SystemStringType>, std::is_same<T, SystemStringViewType>>
+    {
+    };
+
+    template <typename T>
+    struct not_system_string_like_t : std::conjunction<is_string_like_t<std::decay_t<T>>, std::negation<is_system_string_type<std::decay_t<T>>>>
+    {
+    };
+
+    template <typename T>
+    auto inline to_system_string(T&& input) -> SystemStringType
+    {
         TO_STRING_QUIRK_DISPATCH(SystemStringType);
     }
 
-    template<typename T>
-    auto to_system(T&& arg) {
+    template <typename T>
+    auto to_system(T&& arg)
+    {
         if constexpr (std::is_same_v<std::decay_t<T>, std::filesystem::path> || std::is_same_v<std::decay_t<T>, const std::filesystem::path>)
         {
             return to_system_string(std::forward<T>(arg));
         }
-        else 
-        if constexpr (can_be_string_view_t<T>::value) {
+        else if constexpr (can_be_string_view_t<T>::value)
+        {
             return to_system(stringviewify(std::forward<T>(arg)));
-        } 
-        else if constexpr (not_system_string_like_t<std::decay_t<T>>::value) 
+        }
+        else if constexpr (not_system_string_like_t<std::decay_t<T>>::value)
         {
             return to_system_string(std::forward<T>(arg));
-        } 
-        else 
+        }
+        else
         {
             return std::forward<T>(arg);
         }
     }
 
-    template<typename T>
-    struct is_ue_string_type : std::disjunction<
-        std::is_same<T, UEStringType>,
-        std::is_same<T, UEStringViewType>
-    > {};
-
-    template<typename T>
-    struct not_ue_string_like_t : std::conjunction<is_string_like_t<std::decay_t<T>>, std::negation<is_ue_string_type<std::decay_t<T>>>> {};
+    template <typename T>
+    struct is_ue_string_type : std::disjunction<std::is_same<T, UEStringType>, std::is_same<T, UEStringViewType>>
+    {
+    };
 
     template <typename T>
-    auto inline to_ue_string(T&& input) -> UEStringType {
+    struct not_ue_string_like_t : std::conjunction<is_string_like_t<std::decay_t<T>>, std::negation<is_ue_string_type<std::decay_t<T>>>>
+    {
+    };
+
+    template <typename T>
+    auto inline to_ue_string(T&& input) -> UEStringType
+    {
         TO_STRING_QUIRK_DISPATCH(UEStringType);
     }
 
-    template<typename T>
+    template <typename T>
     auto to_ue(T&& arg)
     {
         if constexpr (std::is_same_v<std::decay_t<T>, std::filesystem::path> || std::is_same_v<std::decay_t<T>, const std::filesystem::path>)
         {
             return to_ue_string(std::forward<T>(arg));
         }
-        else if constexpr (can_be_string_view_t<T>::value) 
+        else if constexpr (can_be_string_view_t<T>::value)
         {
             return to_ue(stringviewify(std::forward<T>(arg)));
-        } 
-        else if constexpr (not_ue_string_like_t<std::decay_t<T>>::value) 
+        }
+        else if constexpr (not_ue_string_like_t<std::decay_t<T>>::value)
         {
             return to_ue_string(std::forward<T>(arg));
-        } 
-        else 
+        }
+        else
         {
             return std::forward<T>(arg);
         }
     }
 
-    template<typename T>
-    struct is_lua_string_type : std::disjunction<
-        std::is_same<T, std::string>,
-        std::is_same<T, std::string>
-    > {};
+    template <typename T>
+    struct is_lua_string_type : std::disjunction<std::is_same<T, std::string>, std::is_same<T, std::string>>
+    {
+    };
 
-    template<typename T>
-    struct not_lua_string_like_t : std::negation<is_lua_string_type<std::decay_t<T>>> {};
+    template <typename T>
+    struct not_lua_string_like_t : std::negation<is_lua_string_type<std::decay_t<T>>>
+    {
+    };
 
-    template<typename T>
-    auto to_lua(T&& arg) {
-        if constexpr (can_be_string_view_t<T>::value || not_lua_string_like_t<std::decay_t<T>>::value) 
+    template <typename T>
+    auto to_lua(T&& arg)
+    {
+        if constexpr (can_be_string_view_t<T>::value || not_lua_string_like_t<std::decay_t<T>>::value)
         {
             return to_string(std::forward<T>(arg));
-        } 
-        else 
+        }
+        else
         {
             return std::forward<T>(arg);
         }
@@ -622,11 +687,11 @@ namespace RC
     // TODO: add an option to allow compile failure if to_XXXX failed.
     // e.g., to_ue<true> -> must be able to convert to uestring, not passthrough.
 
-    #define csfor_lua(x) (to_lua((x)).c_str())
+#define csfor_lua(x) (to_lua((x)).c_str())
 
-    #undef TO_STRING_QUIRK_DISPATCH
-    #undef PATH_QUIRK
-    #undef STRING_DISPATCH
+#undef TO_STRING_QUIRK_DISPATCH
+#undef PATH_QUIRK
+#undef STRING_DISPATCH
 
     namespace String
     {

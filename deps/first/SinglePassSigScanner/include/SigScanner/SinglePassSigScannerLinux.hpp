@@ -15,10 +15,13 @@ namespace RC
         size_t size;
         // sorted by start address
         std::set<std::tuple<uint8_t*, size_t, int>> phdrs;
-        std::tuple<uint8_t*, size_t, int> find_phdr(uint8_t* addr) {
-            for (auto& phdr : phdrs) {
+        std::tuple<uint8_t*, size_t, int> find_phdr(uint8_t* addr)
+        {
+            for (auto& phdr : phdrs)
+            {
                 // use end address to find the phdr
-                if (std::get<0>(phdr) + std::get<1>(phdr) > addr) {
+                if (std::get<0>(phdr) + std::get<1>(phdr) > addr)
+                {
                     return phdr;
                 }
             }

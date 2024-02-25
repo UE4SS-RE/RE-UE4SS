@@ -5,7 +5,7 @@
 #define REGISTER_STRING_SETTING(member_var, section_name, key)                                                                                                 \
     try                                                                                                                                                        \
     {                                                                                                                                                          \
-        (member_var) = parser.get_string(section_name, SYSSTR(#key));                                                                                             \
+        (member_var) = parser.get_string(section_name, SYSSTR(#key));                                                                                          \
     }                                                                                                                                                          \
     catch (std::exception&)                                                                                                                                    \
     {                                                                                                                                                          \
@@ -14,7 +14,7 @@
 #define REGISTER_INT64_SETTING(member_var, section_name, key)                                                                                                  \
     try                                                                                                                                                        \
     {                                                                                                                                                          \
-        (member_var) = parser.get_int64(section_name, SYSSTR(#key));                                                                                              \
+        (member_var) = parser.get_int64(section_name, SYSSTR(#key));                                                                                           \
     }                                                                                                                                                          \
     catch (std::exception&)                                                                                                                                    \
     {                                                                                                                                                          \
@@ -23,7 +23,7 @@
 #define REGISTER_BOOL_SETTING(member_var, section_name, key)                                                                                                   \
     try                                                                                                                                                        \
     {                                                                                                                                                          \
-        (member_var) = parser.get_bool(section_name, SYSSTR(#key));                                                                                               \
+        (member_var) = parser.get_bool(section_name, SYSSTR(#key));                                                                                            \
     }                                                                                                                                                          \
     catch (std::exception&)                                                                                                                                    \
     {                                                                                                                                                          \
@@ -32,7 +32,7 @@
 #define REGISTER_FLOAT_SETTING(member_var, section_name, key)                                                                                                  \
     try                                                                                                                                                        \
     {                                                                                                                                                          \
-        (member_var) = parser.get_float(section_name, SYSSTR(#key));                                                                                              \
+        (member_var) = parser.get_float(section_name, SYSSTR(#key));                                                                                           \
     }                                                                                                                                                          \
     catch (std::exception&)                                                                                                                                    \
     {                                                                                                                                                          \
@@ -84,10 +84,10 @@ namespace RC
         REGISTER_BOOL_SETTING(Debug.DebugConsoleVisible, section_debug, GuiConsoleVisible)
         REGISTER_FLOAT_SETTING(Debug.DebugGUIFontScaling, section_debug, GuiConsoleFontScaling)
 
-        #ifdef HAS_GUI
+#ifdef HAS_GUI
         SystemStringType graphics_api_string{};
         REGISTER_STRING_SETTING(graphics_api_string, section_debug, GraphicsAPI)
-        #ifdef WIN32
+#ifdef WIN32
         if (String::iequal(graphics_api_string, SYSSTR("DX11")) || String::iequal(graphics_api_string, SYSSTR("D3D11")))
         {
             Debug.GraphicsAPI = GUI::GfxBackend::DX11;
@@ -96,19 +96,19 @@ namespace RC
         {
             Debug.GraphicsAPI = GUI::GfxBackend::GLFW3_OpenGL3;
         }
-        #else
-        #ifdef HAS_GLFW
+#else
+#ifdef HAS_GLFW
         Debug.GraphicsAPI = GUI::GfxBackend::GLFW3_OpenGL3;
-        #else
+#else
         Debug.GraphicsAPI = GUI::GfxBackend::TUI;
-        #endif
-        #endif
-        #endif
+#endif
+#endif
+#endif
         REGISTER_INT64_SETTING(Debug.LiveViewObjectsPerGroup, section_debug, LiveViewObjectsPerGroup);
 
-        ///constexpr static SystemCharType section_crash_dump[] = SSTR("CrashDump");
-        ///REGISTER_BOOL_SETTING(CrashDump.EnableDumping, section_crash_dump, EnableDumping);
-        ///REGISTER_BOOL_SETTING(CrashDump.FullMemoryDump, section_crash_dump, FullMemoryDump);
+        /// constexpr static SystemCharType section_crash_dump[] = SSTR("CrashDump");
+        /// REGISTER_BOOL_SETTING(CrashDump.EnableDumping, section_crash_dump, EnableDumping);
+        /// REGISTER_BOOL_SETTING(CrashDump.FullMemoryDump, section_crash_dump, FullMemoryDump);
 
         constexpr static SystemCharType section_threads[] = SYSSTR("Threads");
         REGISTER_INT64_SETTING(Threads.SigScannerNumThreads, section_threads, SigScannerNumThreads)
@@ -131,27 +131,27 @@ namespace RC
         constexpr static SystemCharType section_experimental_features[] = SYSSTR("ExperimentalFeatures");
         REGISTER_BOOL_SETTING(Experimental.GUIUFunctionCaller, section_experimental_features, GUIUFunctionCaller)
 
-        #ifdef LINUX
-            constexpr static SystemCharType section_tui_features[] = SYSSTR("TUI");
-            REGISTER_INT64_SETTING(TUI.ButtonLeft, section_tui_features, ButtonLeft)
-            REGISTER_INT64_SETTING(TUI.ButtonRight, section_tui_features, ButtonRight)
-            REGISTER_INT64_SETTING(TUI.WheelUp, section_tui_features, WheelUp)
-            REGISTER_INT64_SETTING(TUI.WheelDown, section_tui_features, WheelDown)
-            REGISTER_BOOL_SETTING(TUI.TUIAsInputSource, section_tui_features, TUIAsInputSource)
-            REGISTER_BOOL_SETTING(TUI.TUINerdFont, section_tui_features, TUINerdFont)
-            /*
-            REGISTER_STRING_SETTING(TUI.TerminalCode, section_tui_features, TerminalCode)
-            REGISTER_STRING_SETTING(TUI.ArchiveCode, section_tui_features, ArchiveCode)
-            REGISTER_STRING_SETTING(TUI.SyncCode, section_tui_features, SyncCode)
-            REGISTER_STRING_SETTING(TUI.FileCode, section_tui_features, FileCode)
-            REGISTER_STRING_SETTING(TUI.EyeCode, section_tui_features, EyeCode)
-            REGISTER_STRING_SETTING(TUI.PuzzlePieceCode, section_tui_features, PuzzlePieceCode)
-            REGISTER_STRING_SETTING(TUI.AngleLeftCode, section_tui_features, AngleLeftCode)
-            REGISTER_STRING_SETTING(TUI.AngleRightCode, section_tui_features, AngleRightCode)
-            REGISTER_STRING_SETTING(TUI.BanCode, section_tui_features, BanCode)
-            REGISTER_STRING_SETTING(TUI.CopyCode, section_tui_features, CopyCode)
-            REGISTER_STRING_SETTING(TUI.SearchCode, section_tui_features, SearchCode)
-            */
-        #endif
+#ifdef LINUX
+        constexpr static SystemCharType section_tui_features[] = SYSSTR("TUI");
+        REGISTER_INT64_SETTING(TUI.ButtonLeft, section_tui_features, ButtonLeft)
+        REGISTER_INT64_SETTING(TUI.ButtonRight, section_tui_features, ButtonRight)
+        REGISTER_INT64_SETTING(TUI.WheelUp, section_tui_features, WheelUp)
+        REGISTER_INT64_SETTING(TUI.WheelDown, section_tui_features, WheelDown)
+        REGISTER_BOOL_SETTING(TUI.TUIAsInputSource, section_tui_features, TUIAsInputSource)
+        REGISTER_BOOL_SETTING(TUI.TUINerdFont, section_tui_features, TUINerdFont)
+        /*
+        REGISTER_STRING_SETTING(TUI.TerminalCode, section_tui_features, TerminalCode)
+        REGISTER_STRING_SETTING(TUI.ArchiveCode, section_tui_features, ArchiveCode)
+        REGISTER_STRING_SETTING(TUI.SyncCode, section_tui_features, SyncCode)
+        REGISTER_STRING_SETTING(TUI.FileCode, section_tui_features, FileCode)
+        REGISTER_STRING_SETTING(TUI.EyeCode, section_tui_features, EyeCode)
+        REGISTER_STRING_SETTING(TUI.PuzzlePieceCode, section_tui_features, PuzzlePieceCode)
+        REGISTER_STRING_SETTING(TUI.AngleLeftCode, section_tui_features, AngleLeftCode)
+        REGISTER_STRING_SETTING(TUI.AngleRightCode, section_tui_features, AngleRightCode)
+        REGISTER_STRING_SETTING(TUI.BanCode, section_tui_features, BanCode)
+        REGISTER_STRING_SETTING(TUI.CopyCode, section_tui_features, CopyCode)
+        REGISTER_STRING_SETTING(TUI.SearchCode, section_tui_features, SearchCode)
+        */
+#endif
     }
 } // namespace RC

@@ -399,7 +399,6 @@ namespace RC::File
         write_to_file(*this, string_converted_to_utf8.c_str(), string_size);
     }
 
-    
     auto WinFile::write_file_string_to_file(StringViewType string_to_write) -> void
     {
         write_to_file(*this, string_to_write.data(), string_to_write.length());
@@ -462,18 +461,18 @@ namespace RC::File
     {
         auto file_contents = read_file_all();
         int string_size = MultiByteToWideChar(CP_UTF8, 0, (LPCCH)file_contents.c_str(), static_cast<int>(file_contents.size()), NULL, 0);
-		if (string_size == 0)
-		{
-			THROW_INTERNAL_FILE_ERROR(std::format("[WinFile::read_all] Tried reading entire file but could not convert to utf-16. Error: {}", GetLastError()))
-		}
+        if (string_size == 0)
+        {
+            THROW_INTERNAL_FILE_ERROR(std::format("[WinFile::read_all] Tried reading entire file but could not convert to utf-16. Error: {}", GetLastError()))
+        }
 
-		UEStringType string_converted_to_utf16(string_size, 0);
+        UEStringType string_converted_to_utf16(string_size, 0);
         if (MultiByteToWideChar(CP_UTF8, 0, (LPCCH)file_contents.c_str(), static_cast<int>(file_contents.size()), &string_converted_to_utf16[0], string_size) == 0)
-		{
-			THROW_INTERNAL_FILE_ERROR(std::format("[WinFile::read_all] Tried reading entire file but could not convert to utf-16. Error: {}", GetLastError()))
-		}
+        {
+            THROW_INTERNAL_FILE_ERROR(std::format("[WinFile::read_all] Tried reading entire file but could not convert to utf-16. Error: {}", GetLastError()))
+        }
 
-		return string_converted_to_utf16;
+        return string_converted_to_utf16;
     }
 
     auto WinFile::read_file_all() const -> StringType
@@ -510,15 +509,15 @@ namespace RC::File
             {
                 // try restoring file pointer
                 SetFilePointer(handle, file_pointer, nullptr, FILE_BEGIN);
-				THROW_INTERNAL_FILE_ERROR(std::format("[WinFile::read_file_all] Tried reading entire file but could not read BOM. Error: {}", GetLastError()))
-			}
+                THROW_INTERNAL_FILE_ERROR(std::format("[WinFile::read_file_all] Tried reading entire file but could not read BOM. Error: {}", GetLastError()))
+            }
             if (bom[0] == '\xEF' && bom[1] == '\xBB' && bom[2] == '\xBF')
-			{
+            {
                 file_size -= 3;
-			}
+            }
             else
             {
-                // roll back 
+                // roll back
                 SetFilePointer(handle, 0, nullptr, FILE_BEGIN);
             }
         }
@@ -526,17 +525,17 @@ namespace RC::File
         StringType file_contents(file_size, 0);
         DWORD bytes_read{};
         if (!ReadFile(handle, &file_contents[0], file_size, &bytes_read, nullptr))
-		{
+        {
             // try restoring file pointer
             SetFilePointer(handle, file_pointer, nullptr, FILE_BEGIN);
-			THROW_INTERNAL_FILE_ERROR(std::format("[WinFile::read_file_all] Tried reading entire file but could not read file contents. Error: {}", GetLastError()))
-		}
+            THROW_INTERNAL_FILE_ERROR(std::format("[WinFile::read_file_all] Tried reading entire file but could not read file contents. Error: {}", GetLastError()))
+        }
 
-    	file_contents[bytes_read] = 0;
+        file_contents[bytes_read] = 0;
 
         // restore file pointer
         SetFilePointer(handle, file_pointer, nullptr, FILE_BEGIN);
-		return file_contents;
+        return file_contents;
     }
 
     auto WinFile::memory_map() -> std::span<uint8_t>

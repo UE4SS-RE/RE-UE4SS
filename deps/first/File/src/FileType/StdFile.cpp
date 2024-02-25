@@ -29,11 +29,11 @@ namespace RC::File
         }
     }
 
-    auto StdFile::calc_open_flags(const std::filesystem::path &file_name_and_path, const OpenProperties& open_properties) -> int
+    auto StdFile::calc_open_flags(const std::filesystem::path& file_name_and_path, const OpenProperties& open_properties) -> int
     {
 
-        int flags {};
-        int rwflags {};
+        int flags{};
+        int rwflags{};
         switch (open_properties.open_for)
         {
         case OpenFor::Writing:
@@ -51,7 +51,8 @@ namespace RC::File
             THROW_INTERNAL_FILE_ERROR("[StdFile::open_file] Tried to open file but received invalid data for the 'OpenFor' parameter.")
         }
 
-        if (open_properties.overwrite_existing_file == OverwriteExistingFile::Yes) {
+        if (open_properties.overwrite_existing_file == OverwriteExistingFile::Yes)
+        {
             flags |= O_CREAT | O_TRUNC;
             if (rwflags == O_RDONLY)
             {
@@ -85,7 +86,8 @@ namespace RC::File
         return m_file > 0;
     }
 
-    auto StdFile::invalidate_file() noexcept -> void {
+    auto StdFile::invalidate_file() noexcept -> void
+    {
         m_file = 0;
     }
 
@@ -108,7 +110,6 @@ namespace RC::File
     {
         m_file = new_file;
     }
-
 
     auto StdFile::get_file() -> HANDLE
     {
@@ -150,7 +151,8 @@ namespace RC::File
         }
 
         size_t bytes_written = write(file.get_file(), data, sizeof(DataType) * num_bytes_to_write);
-        if (bytes_written < 0) {
+        if (bytes_written < 0)
+        {
             THROW_INTERNAL_FILE_ERROR(std::format("[StdFile::write_to_file] Tried writing to file but was unable to complete operation. Error: {}", bytes_written));
         }
     }
@@ -163,7 +165,9 @@ namespace RC::File
                                       "'set_serialization_output_file'")
         }
 
-        struct stat file_info{};
+        struct stat file_info
+        {
+        };
         fstat(m_file, &file_info);
 
         serialize_item(GenericItemData{.data_type = GenericDataType::UnsignedLong, .data_ulong = file_info.st_dev}, true);
@@ -177,7 +181,6 @@ namespace RC::File
         serialize_item(GenericItemData{.data_type = GenericDataType::SignedLong, .data_long = file_info.st_atime}, true);
         serialize_item(GenericItemData{.data_type = GenericDataType::SignedLong, .data_long = file_info.st_mtime}, true);
         serialize_item(GenericItemData{.data_type = GenericDataType::SignedLong, .data_long = file_info.st_ctime}, true);
-        
     }
 
     auto StdFile::deserialize_identifying_properties() -> void
@@ -193,13 +196,13 @@ namespace RC::File
         m_identifying_properties.file_stat.st_atime = *static_cast<signed long*>(get_serialized_item(sizeof(signed long), true));
         m_identifying_properties.file_stat.st_mtime = *static_cast<signed long*>(get_serialized_item(sizeof(signed long), true));
         m_identifying_properties.file_stat.st_ctime = *static_cast<signed long*>(get_serialized_item(sizeof(signed long), true));
-        m_offset_to_next_serialized_item = 11*8;
+        m_offset_to_next_serialized_item = 11 * 8;
 
         m_has_cached_identifying_properties = true;
-
     }
 
-    auto StdFile::is_deserialized_and_live_equal() -> bool {
+    auto StdFile::is_deserialized_and_live_equal() -> bool
+    {
         if (!m_has_cached_identifying_properties)
         {
             if (!std::filesystem::exists(m_serialization_file_path_and_name))
@@ -234,7 +237,6 @@ namespace RC::File
     {
         write_to_file(output_file.get_underlying_type(), &data, sizeof(DataType));
     }
-
 
     auto StdFile::serialize_item(const GenericItemData& data, bool is_internal_item) -> void
     {
@@ -275,7 +277,6 @@ namespace RC::File
 
         serialization_file.close();
     }
-
 
     auto StdFile::get_serialized_item(size_t data_size, bool is_internal_item) -> void*
     {
@@ -351,16 +352,19 @@ namespace RC::File
     {
         return m_is_file_open;
     }
-    
+
     auto StdFile::write_string_to_file(UEStringViewType string_to_write) -> void
-    {   
+    {
         try
         {
             static std::wstring_convert<std::codecvt_utf8_utf16<char16_t>, char16_t> converter{};
             auto utf8_string = converter.to_bytes(string_to_write.begin(), string_to_write.begin() + string_to_write.size());
             write_file_string_to_file(utf8_string);
-        } catch  (const std::exception& e) {
-            THROW_INTERNAL_FILE_ERROR(std::format("[StdFile::write_string_to_file] Tried writing string to file but could not convert to utf-8. Error: {}", e.what()))
+        }
+        catch (const std::exception& e)
+        {
+            THROW_INTERNAL_FILE_ERROR(
+                    std::format("[StdFile::write_string_to_file] Tried writing string to file but could not convert to utf-8. Error: {}", e.what()))
         }
     }
 
@@ -379,13 +383,17 @@ namespace RC::File
 
     auto StdFile::is_same_as(StdFile& other_file) -> bool
     {
-        struct stat file_info{};
+        struct stat file_info
+        {
+        };
         if (fstat(m_file, &file_info) != 0)
         {
             THROW_INTERNAL_FILE_ERROR(std::format("[StdFile::is_same_as] Tried retrieving file information by handle. Error: {}", errno))
         }
 
-        struct stat other_file_info{};
+        struct stat other_file_info
+        {
+        };
         if (fstat(other_file.get_file(), &other_file_info) != 0)
         {
             THROW_INTERNAL_FILE_ERROR(std::format("[StdFile::is_same_as] Tried retrieving file information by handle. Error: {}", errno))
@@ -504,19 +512,18 @@ namespace RC::File
         auto original_position = lseek(m_file, 0, SEEK_CUR);
         auto file_size = lseek(m_file, 0, SEEK_END);
         lseek(m_file, original_position, SEEK_SET);
-        
+
         auto res = mmap(nullptr, file_size, flags, MAP_SHARED, m_file, 0);
-        if (res == (void*) -1)
+        if (res == (void*)-1)
         {
             THROW_INTERNAL_FILE_ERROR(std::format("[StdFile::memory_map] Tried to memory map file but 'mmap' returned error: {}", errno))
         }
 
-        m_memory_map = (uint8_t*) res;
+        m_memory_map = (uint8_t*)res;
         m_memory_map_size = file_size;
 
         return std::span(m_memory_map, file_size);
     }
-
 
     auto StdFile::open_file(const std::filesystem::path& file_name_and_path, const OpenProperties& open_properties) -> StdFile
     {
@@ -545,11 +552,10 @@ namespace RC::File
             std::string_view open_type = open_properties.open_for == OpenFor::Writing || open_properties.open_for == OpenFor::Appending ? "writing" : "reading";
 
             fprintf(stderr, "open file %s failed, error: %d\n", file_name_and_path.string().c_str(), errno);
-            THROW_INTERNAL_FILE_ERROR(
-                        std::format("[StdFile::open_file] Tried opening file for {} but encountered an error. Path & File: {} | errno = {}\n",
-                                    open_type,
-                                    file_name_and_path.string(),
-                                    errno))
+            THROW_INTERNAL_FILE_ERROR(std::format("[StdFile::open_file] Tried opening file for {} but encountered an error. Path & File: {} | errno = {}\n",
+                                                  open_type,
+                                                  file_name_and_path.string(),
+                                                  errno))
         }
 
         file.m_file_path_and_name = file_name_and_path;
@@ -558,4 +564,4 @@ namespace RC::File
 
         return file;
     }
-}
+} // namespace RC::File

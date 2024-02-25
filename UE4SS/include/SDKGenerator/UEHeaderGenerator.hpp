@@ -95,12 +95,12 @@ namespace RC::UEGenerator
     {
         auto operator()(const SystemStringType& a, const SystemStringType& b) const -> bool
         {
-            #ifdef LINUX
+#ifdef LINUX
             // Create a case insensitive string compare for Linux
             return strcasecmp(a.c_str(), b.c_str()) < 0;
-            #else
+#else
             return _wcsicmp(a.c_str(), b.c_str()) < 0;
-            #endif
+#endif
         }
     };
 
@@ -147,12 +147,13 @@ namespace RC::UEGenerator
         bool m_needs_get_type_hash;
 
       public:
-        // workaround for clang tuple bug 
+        // workaround for clang tuple bug
         // https://github.com/llvm/llvm-project/issues/17042
-        struct attachment_data {
+        struct attachment_data
+        {
             SystemStringType property_type; // <0>
             SystemStringType attach_string; // <1>
-            bool access_type; // <2>
+            bool access_type;               // <2>
 
             attachment_data(const SystemStringType& property_type, const SystemStringType& attach_string, bool access_type)
                 : property_type(property_type), attach_string(attach_string), access_type(access_type)
@@ -163,7 +164,6 @@ namespace RC::UEGenerator
             attachment_data(attachment_data&& other) = default;
             auto operator=(const attachment_data&) -> attachment_data& = default;
             auto operator=(attachment_data&&) -> attachment_data& = default;
-
         };
         SystemStringType m_implementation_constructor;
         ::std::unordered_set<SystemStringType> parent_property_names{};
@@ -331,8 +331,9 @@ namespace RC::UEGenerator
         auto static determine_primary_game_module_name() -> SystemStringType;
 
       public:
-        auto add_module_and_sub_module_dependencies(::std::set<SystemStringType>& out_module_dependencies, const SystemStringType& module_name, bool add_self_module = true)
-                -> void;
+        auto add_module_and_sub_module_dependencies(::std::set<SystemStringType>& out_module_dependencies,
+                                                    const SystemStringType& module_name,
+                                                    bool add_self_module = true) -> void;
         auto static collect_blacklisted_property_names(UObject* property) -> CaseInsensitiveSet;
 
         auto static generate_object_pre_declaration(UObject* object) -> ::std::vector<::std::vector<SystemStringType>>;

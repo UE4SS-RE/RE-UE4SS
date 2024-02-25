@@ -16,4 +16,4 @@ namespace RC
     {
         return std::vformat(std::forward<const File::StringViewType>(fmt), std::make_format_args(to_file(std::forward<FmtArgs>(fmt_args))...));
     }
-}
+} // namespace RC

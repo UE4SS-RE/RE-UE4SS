@@ -135,14 +135,15 @@ auto WIN_API_FUNCTION_NAME(HMODULE hModule, DWORD ul_reason_for_call, [[maybe_un
     return TRUE;
 }
 
-std::filesystem::path get_executable_path() {
+std::filesystem::path get_executable_path()
+{
     wchar_t exe_path_buffer[1024];
     GetModuleFileNameW(GetModuleHandle(nullptr), exe_path_buffer, 1023);
     return std::filesystem::path(exe_path_buffer);
 }
 
-
-void add_dlsearch_folder(std::filesystem::path &path) {
+void add_dlsearch_folder(std::filesystem::path& path)
+{
     SetDefaultDllDirectories(LOAD_LIBRARY_SEARCH_DEFAULT_DIRS);
     // Make sure game directory DLLs are also included
     AddDllDirectory(path.c_str());

@@ -12,7 +12,8 @@ namespace RC::LuaType
 {
     LuaCustomProperty::PropertyList LuaCustomProperty::StaticStorage::property_list;
 
-    LuaCustomProperty::LuaCustomProperty(SystemStringType name, std::unique_ptr<Unreal::CustomProperty> property) : m_name(name), m_property(std::move(property))
+    LuaCustomProperty::LuaCustomProperty(SystemStringType name, std::unique_ptr<Unreal::CustomProperty> property)
+        : m_name(name), m_property(std::move(property))
     {
     }
 

@@ -139,7 +139,8 @@ namespace RC::ObjectDumper
         FMapProperty* typed_this = static_cast<FMapProperty*>(p_this);
         FProperty* key_property = typed_this->GetKeyProp();
         FProperty* value_property = typed_this->GetValueProp();
-        out_line.append(std::format(SYSSTR(" [kp: {:016X}] [vp: {:016X}]"), reinterpret_cast<uintptr_t>(key_property), reinterpret_cast<uintptr_t>(value_property)));
+        out_line.append(
+                std::format(SYSSTR(" [kp: {:016X}] [vp: {:016X}]"), reinterpret_cast<uintptr_t>(key_property), reinterpret_cast<uintptr_t>(value_property)));
     }
 
     auto mapproperty_to_string_complex(void* p_this, SystemStringType& out_line, ObjectToStringComplexDeclCallable callable) -> void

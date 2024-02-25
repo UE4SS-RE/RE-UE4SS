@@ -26,10 +26,15 @@ struct ImGuiSettingsHandler;
 
 #ifdef LINUX
 #ifndef HAS_GLFW
-namespace ImGui {
-    static void BeginDisabled(bool disabled = true) {}
-    static void EndDisabled() {}
-}
+namespace ImGui
+{
+    static void BeginDisabled(bool disabled = true)
+    {
+    }
+    static void EndDisabled()
+    {
+    }
+} // namespace ImGui
 #endif
 #endif
 
@@ -308,8 +313,8 @@ namespace RC::GUI
     }
 
 #ifdef WIN32
-    #define ATTACH_ICON(icon, str) icon str
+#define ATTACH_ICON(icon, str) icon str
 #else
-    #define ATTACH_ICON(icon, str) ((icon str) + (UE4SSProgram::settings_manager.TUI.TUINerdFont ? (0) : (sizeof(icon) - 1)))
+#define ATTACH_ICON(icon, str) ((icon str) + (UE4SSProgram::settings_manager.TUI.TUINerdFont ? (0) : (sizeof(icon) - 1)))
 #endif
 } // namespace RC::GUI

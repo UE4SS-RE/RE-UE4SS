@@ -75,7 +75,7 @@ namespace RC::Helper::Casting
         return ptr_cast_deref_safe<To>(base_ptr, offset, process_handle);
     }
 #else
-// use process_vm_readv
+    // use process_vm_readv
     template <typename To, typename From>
     auto ptr_cast_deref_safe(From ptr, int32_t offset, pid_t process_handle) -> To
     {
@@ -101,7 +101,6 @@ namespace RC::Helper::Casting
         {
             return *data_ptr;
         }
-
     }
 
     // Compatibility with older code from before 'ptr_cast' existed

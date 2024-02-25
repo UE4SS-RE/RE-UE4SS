@@ -65,13 +65,13 @@ namespace RC
             bool DebugConsoleEnabled{true};
             bool DebugConsoleVisible{true};
             float DebugGUIFontScaling{1.0};
-            #ifdef HAS_GUI
-            #ifdef WIN32
+#ifdef HAS_GUI
+#ifdef WIN32
             GUI::GfxBackend GraphicsAPI{GUI::GfxBackend::GLFW3_OpenGL3};
-            #else
+#else
             GUI::GfxBackend GraphicsAPI{GUI::GfxBackend::TUI};
-            #endif
-            #endif
+#endif
+#endif
             int64_t LiveViewObjectsPerGroup{64 * 1024 / 2};
         } Debug;
 
@@ -111,7 +111,7 @@ namespace RC
         } Experimental;
 
 #ifdef LINUX
-        struct TUIFeatures 
+        struct TUIFeatures
         {
             int ButtonLeft = 1;
             int ButtonRight = 3;

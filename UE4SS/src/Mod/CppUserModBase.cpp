@@ -14,7 +14,7 @@ namespace RC
 
     CppUserModBase::~CppUserModBase()
     {
-        #ifdef HAS_GUI
+#ifdef HAS_GUI
         for (const auto& tab : GUITabs)
         {
             if (tab)

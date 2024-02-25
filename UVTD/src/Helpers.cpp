@@ -34,7 +34,8 @@ namespace RC::UVTD
             out_variable_type.replace(fixed_uobject_array_pos, fixed_uobject_array_string.length(), STR("TUObjectArray"));
             return true;
         }
-        else if (auto chunked_fixed_uobject_array_pos = out_variable_type.find(chunked_fixed_uobject_array_string); chunked_fixed_uobject_array_pos != out_variable_type.npos)
+        else if (auto chunked_fixed_uobject_array_pos = out_variable_type.find(chunked_fixed_uobject_array_string);
+                 chunked_fixed_uobject_array_pos != out_variable_type.npos)
         {
             out_variable_type.replace(chunked_fixed_uobject_array_pos, chunked_fixed_uobject_array_string.length(), STR("TUObjectArray"));
             return true;

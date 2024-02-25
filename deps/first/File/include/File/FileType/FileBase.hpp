@@ -94,7 +94,6 @@ namespace RC::File
         auto static open_file(const std::filesystem::path& file_name_and_path, const OpenProperties& open_properties) -> InternalFileType;
         */
 
-        
         // Write a string to the currently opened file
         // Throws std::runtime_error if an error occurred
         // This is the actual function uses StringType.

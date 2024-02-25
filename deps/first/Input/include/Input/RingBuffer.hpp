@@ -3,7 +3,7 @@
 #include <atomic>
 #include <optional>
 
-namespace RC::Input 
+namespace RC::Input
 {
     /// SAFETY: This is ONLY a single producer, single consumer lock-free queue
     template <typename T, int max_buffer = 256>
@@ -44,5 +44,4 @@ namespace RC::Input
             return event;
         }
     };
-} // RC::Input
-
+} // namespace RC::Input

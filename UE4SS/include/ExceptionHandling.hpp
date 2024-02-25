@@ -8,11 +8,11 @@
 #define UE4SS_ERROR_OUTPUTTER()                                                                                                                                \
     if (!Output::has_internal_error())                                                                                                                         \
     {                                                                                                                                                          \
-        Output::send<LogLevel::Error>(SYSSTR("Error: {}\n"), to_system(e.what()));                                                                               \
+        Output::send<LogLevel::Error>(SYSSTR("Error: {}\n"), to_system(e.what()));                                                                             \
     }                                                                                                                                                          \
     else                                                                                                                                                       \
     {                                                                                                                                                          \
-        fprintf(stderr, "Internal Error: %s\n", e.what());                                                                                                            \
+        fprintf(stderr, "Internal Error: %s\n", e.what());                                                                                                     \
     }
 
 namespace RC
