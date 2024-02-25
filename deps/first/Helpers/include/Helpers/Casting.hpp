@@ -2,6 +2,7 @@
 
 #include <bit>
 #include <cstdint>
+#include <type_traits>
 
 #ifdef WIN32
 #ifdef _WIN32
