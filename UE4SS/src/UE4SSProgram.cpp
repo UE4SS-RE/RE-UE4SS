@@ -1205,15 +1205,15 @@ namespace RC
         Output::send(SYSSTR("Starting mods (from mods.txt load order)...\n"));
 
         std::filesystem::path mods_directory = UE4SSProgram::get_program().get_mods_directory();
-        SystemStringType enabled_mods_file{mods_directory / "mods.txt"};
-        if (!std::filesystem::exists(enabled_mods_file))
+        auto enabled_mods_file = File::get_path_if_exists(mods_directory, "mods.txt");
+        if (!enabled_mods_file.has_value())
         {
             Output::send(SYSSTR("No mods.txt file found...\n"));
         }
         else
         {
             // 'mods.txt' exists, lets parse it
-            SystemStreamType mods_stream{enabled_mods_file};
+            SystemStreamType mods_stream{ *enabled_mods_file};
 
             SystemStringType current_line;
             while (std::getline(mods_stream, current_line))
