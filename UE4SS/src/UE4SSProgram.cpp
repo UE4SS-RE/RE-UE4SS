@@ -200,6 +200,10 @@ namespace RC
             m_debugging_gui.set_gfx_backend(settings_manager.Debug.GraphicsAPI);
 #endif
 
+#ifdef HAS_INPUT
+            m_input_handler.init();
+#endif
+
             // Setup the log file
             auto& file_device = Output::set_default_devices<Output::NewFileDevice>();
             file_device.set_file_name_and_path(to_system(m_log_directory / m_log_file_name));
@@ -907,6 +911,20 @@ namespace RC
                         SYSSTR("FAssetData not available in <4.17, ignoring 'LoadAllAssetsBeforeDumpingObjects' & 'LoadAllAssetsBeforeGeneratingCXXHeaders'."));
             }
 
+
+#ifdef HAS_INPUT
+        if (! settings_manager.General.InputSource.empty())
+        {
+            if (m_input_handler.set_input_source(settings_manager.General.InputSource)) {
+                Output::send(SYSSTR("Input source set to: {}\n"), m_input_handler.get_current_input_source());
+            }
+            else 
+            {
+                Output::send<LogLevel::Error>(SYSSTR("Failed to set input source to: {}\n"), settings_manager.General.InputSource);
+            }
+        }
+#endif
+
             install_lua_mods();
             LuaMod::on_program_start();
             fire_program_start_for_cpp_mods();
@@ -1370,9 +1388,7 @@ namespace RC
 
         // Remove key binds that were set from Lua scripts
         #ifdef HAS_INPUT
-        auto& key_events = m_input_handler.get_events();
-        std::erase_if(key_events, [](Input::KeySet& input_event) -> bool {
-            bool were_all_events_registered_from_lua = true;
+        m_input_handler.get_events_safe([&](Input::KeySet& input_event) -> void {
             for (auto& [key, vector_of_key_data] : input_event.key_data)
             {
                 std::erase_if(vector_of_key_data, [&](Input::KeyData& key_data) -> bool {
@@ -1389,8 +1405,6 @@ namespace RC
                     }
                 });
             }
-
-            return were_all_events_registered_from_lua;
         });
         #endif
 

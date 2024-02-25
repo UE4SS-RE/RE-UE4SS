@@ -1,13 +1,12 @@
 #pragma once
 
 #include <stdexcept>
-
+#include <cstdint>
 namespace RC::Input
 {
     static constexpr uint32_t max_callbacks_per_event = 30;
     static constexpr uint8_t max_keys = 0xFF;
 
-#ifdef _WIN32
     enum Key : uint8_t
     {
         RESERVED_START_OF_ENUM = 0x0,
@@ -244,11 +243,60 @@ namespace RC::Input
         MODIFIER_KEYS_MAX,
     };
 
-    static constexpr uint8_t max_modifier_keys = MODIFIER_KEYS_MAX;
+    static inline bool is_modify_key_valid(ModifierKey key)
+    {
+        return (key < MODIFIER_KEYS_MAX) && (key > MOD_KEY_START_OF_ENUM);
+    }
 
-#else
-    static_assert(false, "The input library only works on Windows.");
-#endif
+    struct ModifierKeys
+    {
+        /// SAFETY: This is a bitfield, following static_assert ensures that the bitfield is not larger than 32 bits
+        uint32_t keys;
+        
+        // allow ops between keys
+
+        auto operator|(const ModifierKeys &key) -> ModifierKeys&;
+        auto operator|=(const ModifierKeys &key) -> ModifierKeys&;
+        auto operator|(const ModifierKey &key) -> ModifierKeys&;
+        auto operator|=(const ModifierKey &key) -> ModifierKeys&;
+
+        auto operator==(const ModifierKeys& key) const -> bool;
+        auto operator!=(const ModifierKeys& key) const -> bool;
+
+        auto operator<(const ModifierKeys& key) const -> bool;
+        auto operator>(const ModifierKeys& key) const -> bool;
+
+
+        ModifierKeys(const ModifierKey key) : keys{is_modify_key_valid(key) ? (1 << key) : 0} {};
+        ModifierKeys(const ModifierKeys& other) : keys{other.keys} {};
+
+        ModifierKeys() : keys{0} {};
+        
+        template <typename... Args>
+        ModifierKeys(ModifierKey key, Args... args) : keys{ (is_modify_key_valid(key) ? (1 << key) : 0) | ModifierKeys(args...).keys} {};
+
+        ModifierKeys(std::initializer_list<ModifierKey> keys);
+
+        template <typename TArray>
+        ModifierKeys(const TArray& keys) : keys{0}
+        {
+            for (auto key : keys)
+            {
+                if (is_modify_key_valid(key))
+                {
+                    this->keys |= (1 << key);
+                }
+            }
+        }
+
+        bool empty() const { return keys == 0; }
+    };
+
+    static constexpr uint8_t max_modifier_keys = MODIFIER_KEYS_MAX;
+    static_assert(max_modifier_keys < 32, "Modifier keys cannot exceed 32");
+
+    auto operator&(const ModifierKeys& keys, const ModifierKey& key) -> bool;
+    auto operator&(const ModifierKeys& keys, const ModifierKeys& key) -> bool;
 
     auto operator++(Input::Key& key) -> Input::Key&;
 } // namespace RC::Input

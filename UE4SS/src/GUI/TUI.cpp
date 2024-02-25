@@ -1,5 +1,8 @@
 #include <GUI/TUI.hpp>
 
+#include <Input/Handler.hpp>
+#include <Input/Platform/NcursesInputSource.hpp>
+
 #include <imtui/imtui.h>
 
 #include <imtui/imtui-impl-text.h>
@@ -11,13 +14,17 @@ namespace RC::GUI
 {
     static ImTui::TScreen * g_screen = nullptr;
     static bool tui_shutdown = false;
-
+    static std::shared_ptr<Input::NcursesInputSource> ncurses_source{};
+    int saved_stderr = -1;
     void Backend_TUI::init() {
         //fprintf(stderr, "Backend_TUI::init\n");
         g_screen = ImTui_ImplNcurses_Init(true);
+        auto source = Input::Handler::get_input_source("Ncurses");
+        ncurses_source = std::dynamic_pointer_cast<Input::NcursesInputSource>(source);
 
         // disable stderr
-        freopen("./tui.log", "w+", stderr);
+        saved_stderr = dup(STDERR_FILENO);
+        freopen("/dev/null", "w", stderr);
         setbuf(stderr, NULL);
         fprintf(stderr, "Backend_TUI::init\n");
         fflush(stderr);
@@ -31,7 +38,17 @@ namespace RC::GUI
 
     void Backend_TUI::imgui_backend_newframe() {
         //fprintf(stderr, "Backend_TUI::imgui_backend_newframe\n");
-        ImTui_ImplNcurses_NewFrame();
+        if (ncurses_source) {
+            ncurses_source->begin_frame();
+        }
+        ImTui_ImplNcurses_NewFrame([] (int x) {
+            if (ncurses_source) {
+                ncurses_source->receive_input(x);
+            }
+        });
+        if (ncurses_source) {
+            ncurses_source->end_frame();
+        }
     }
 
     void Backend_TUI::create_window() {
@@ -47,6 +64,10 @@ namespace RC::GUI
         ImTui_ImplNcurses_Shutdown();
         g_screen = nullptr;
         tui_shutdown = true;
+        dup2(saved_stderr, STDERR_FILENO);
+        close(saved_stderr);
+        saved_stderr = -1;
+        fprintf(stderr, "Backend_TUI::shutdown, stderr restored\n");
     }
 
     void Backend_TUI::cleanup() {
