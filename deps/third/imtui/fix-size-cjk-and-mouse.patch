@@ -11,6 +11,28 @@ index 9376c4a..5e24536 100644
          find_package(Curses REQUIRED)
          CHECK_LIBRARY_EXISTS("${CURSES_NCURSES_LIBRARY}"
              nodelay "" CURSES_NCURSES_HAS_NODELAY)
+diff --git a/include/imtui/imtui-impl-ncurses.h b/include/imtui/imtui-impl-ncurses.h
+index 51e64d3..5a05359 100644
+--- a/include/imtui/imtui-impl-ncurses.h
++++ b/include/imtui/imtui-impl-ncurses.h
+@@ -4,6 +4,8 @@
+ 
+ #pragma once
+ 
++#include <functional>
++
+ namespace ImTui {
+ struct TScreen;
+ }
+@@ -19,7 +21,7 @@ ImTui::TScreen * ImTui_ImplNcurses_Init(bool mouseSupport, float fps_active = 60
+ void ImTui_ImplNcurses_Shutdown();
+ 
+ // returns true if there is any user input from the keyboard/mouse
+-bool ImTui_ImplNcurses_NewFrame();
++bool ImTui_ImplNcurses_NewFrame(std::function<void(int)> inputCallback);
+ 
+ // active - specify which redraw rate to use: fps_active or fps_idle
+ void ImTui_ImplNcurses_DrawScreen(bool active = true);
 diff --git a/include/imtui/imtui.h b/include/imtui/imtui.h
 index b77c342..100a4d8 100644
 --- a/include/imtui/imtui.h
@@ -30,10 +52,20 @@ index b77c342..100a4d8 100644
  struct TScreen {
      int nx = 0;
 diff --git a/src/imtui-impl-ncurses.cpp b/src/imtui-impl-ncurses.cpp
-index 1d454ba..8b58dcf 100644
+index 1d454ba..40adeee 100644
 --- a/src/imtui-impl-ncurses.cpp
 +++ b/src/imtui-impl-ncurses.cpp
-@@ -101,7 +101,8 @@ ImTui::TScreen * ImTui_ImplNcurses_Init(bool mouseSupport, float fps_active, flo
+@@ -27,6 +27,9 @@
+ #include <ncurses.h>
+ #endif
+ 
++#include <termios.h>
++#include <unistd.h>
++
+ #include <array>
+ #include <chrono>
+ #include <map>
+@@ -101,7 +104,8 @@ ImTui::TScreen * ImTui_ImplNcurses_Init(bool mouseSupport, float fps_active, flo
      }
      fps_idle = std::min(fps_active, fps_idle);
      g_vsync = VSync(fps_active, fps_idle);
@@ -43,7 +75,7 @@ index 1d454ba..8b58dcf 100644
      initscr();
      use_default_colors();
      start_color();
-@@ -150,6 +151,42 @@ ImTui::TScreen * ImTui_ImplNcurses_Init(bool mouseSupport, float fps_active, flo
+@@ -150,15 +154,57 @@ ImTui::TScreen * ImTui_ImplNcurses_Init(bool mouseSupport, float fps_active, flo
  
  	getmaxyx(stdscr, screenSizeY, screenSizeX);
  	ImGui::GetIO().DisplaySize = ImVec2(screenSizeX, screenSizeY);
@@ -62,7 +94,6 @@ index 1d454ba..8b58dcf 100644
 +        int length = strlen(text);
 +        refresh();
 +        printf("\e]52;c;");
-+        fprintf(stderr, "Base64: ");
 +        for (int i = 0; i < length; ) {
 +            uint32_t c = 0;
 +            for (int j = 0; j < 3; j++) {
@@ -70,15 +101,12 @@ index 1d454ba..8b58dcf 100644
 +            }
 +            for (int j = 3; j >= 0; j--) {
 +                printf("%c", encoding_table[(c >> (6*j)) & 0x3F]);
-+                fprintf(stderr, "%c", encoding_table[(c >> (6*j)) & 0x3F]);
 +            }
 +        }
 +        int pad = (length + 2) % 3;
 +        for (int i = 0; i < pad; i++) {
 +            printf("=");
-+            fprintf(stderr, "=");
 +        }
-+        fprintf(stderr, "\n");
 +        printf("\a");
 +        fflush(stdout);
 +        refresh();
@@ -86,7 +114,35 @@ index 1d454ba..8b58dcf 100644
  
      return g_screen;
  }
-@@ -178,8 +215,10 @@ bool ImTui_ImplNcurses_NewFrame() {
+ 
++void reset_terminal_modes() {
++    struct termios term;
++    tcgetattr(STDIN_FILENO, &term);
++    term.c_iflag |= (ICRNL | INLCR); // Translate CR to NL on input
++    term.c_oflag |= (ONLCR); // Translate NL to CR-NL on output
++    tcsetattr(STDIN_FILENO, TCSANOW, &term);
++}
++
+ void ImTui_ImplNcurses_Shutdown() {
+     // ref #11 : https://github.com/ggerganov/imtui/issues/11
+     printf("\033[?1003l\n"); // Disable mouse movement events, as l = low
+ 
+     endwin();
++    reset_shell_mode();
++    reset_terminal_modes();
+ 
+     if (g_screen) {
+         delete g_screen;
+@@ -167,7 +213,7 @@ void ImTui_ImplNcurses_Shutdown() {
+     g_screen = nullptr;
+ }
+ 
+-bool ImTui_ImplNcurses_NewFrame() {
++bool ImTui_ImplNcurses_NewFrame(std::function<void(int)> inputCallback) {
+     bool hasInput = false;
+ 
+ 	int screenSizeX = 0;
+@@ -178,8 +224,10 @@ bool ImTui_ImplNcurses_NewFrame() {
  
      static int mx = 0;
      static int my = 0;
@@ -99,7 +155,7 @@ index 1d454ba..8b58dcf 100644
      static unsigned long mstate = 0;
      static char input[3];
  
-@@ -196,8 +235,8 @@ bool ImTui_ImplNcurses_NewFrame() {
+@@ -196,8 +244,8 @@ bool ImTui_ImplNcurses_NewFrame() {
  
          if (c == ERR) {
              if ((mstate & 0xf) == 0x1) {
@@ -110,7 +166,7 @@ index 1d454ba..8b58dcf 100644
              }
              break;
          } else if (c == KEY_MOUSE) {
-@@ -206,10 +245,14 @@ bool ImTui_ImplNcurses_NewFrame() {
+@@ -206,10 +254,14 @@ bool ImTui_ImplNcurses_NewFrame() {
                  mx = event.x;
                  my = event.y;
                  mstate = event.bstate;
@@ -129,7 +185,17 @@ index 1d454ba..8b58dcf 100644
                  //printf("mstate = 0x%016lx\n", mstate);
                  ImGui::GetIO().KeyCtrl |= ((mstate & 0x0F000000) == 0x01000000);
              }
-@@ -266,8 +309,12 @@ bool ImTui_ImplNcurses_NewFrame() {
+@@ -252,8 +304,8 @@ bool ImTui_ImplNcurses_NewFrame() {
+             } else {
+                 keysDown[c] = true;
+             }
++            inputCallback(c);
+         }
+-
+         hasInput = true;
+     }
+ 
+@@ -266,8 +318,12 @@ bool ImTui_ImplNcurses_NewFrame() {
  
      ImGui::GetIO().MousePos.x = mx;
      ImGui::GetIO().MousePos.y = my;
@@ -144,7 +210,7 @@ index 1d454ba..8b58dcf 100644
  
      ImGui::GetIO().DeltaTime = g_vsync.delta_s();
  
-@@ -315,8 +362,10 @@ void ImTui_ImplNcurses_DrawScreen(bool active) {
+@@ -315,8 +371,10 @@ void ImTui_ImplNcurses_DrawScreen(bool active) {
          move(y, 0);
          for (int x = 0; x < nx; ++x) {
              const auto cell = g_screen->data[y*nx + x];
@@ -157,7 +223,7 @@ index 1d454ba..8b58dcf 100644
              const uint16_t p = b*256 + f;
  
              if (colPairs[p].first == false) {
-@@ -337,8 +386,25 @@ void ImTui_ImplNcurses_DrawScreen(bool active) {
+@@ -337,8 +395,25 @@ void ImTui_ImplNcurses_DrawScreen(bool active) {
                  lastp = p;
              }
  
