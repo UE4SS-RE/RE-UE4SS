@@ -267,7 +267,7 @@ namespace RC::Input
         auto operator>(const ModifierKeys& key) const -> bool;
 
 
-        ModifierKeys(const ModifierKey key) : keys{is_modify_key_valid(key) ? (1 << key) : 0} {};
+        ModifierKeys(const ModifierKey key) : keys{is_modify_key_valid(key) ? (1u << key) : 0} {};
         ModifierKeys(const ModifierKeys& other) : keys{other.keys} {};
 
         ModifierKeys() : keys{0} {};

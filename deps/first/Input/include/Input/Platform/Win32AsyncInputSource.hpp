@@ -9,7 +9,7 @@
 
 namespace RC::Input
 {
-    class Win32InputSource : public PlatformInputSource
+    class Win32AsyncInputSource : public PlatformInputSource
     {
         private:
             std::vector<const wchar_t*> m_active_window_classes{};
@@ -24,7 +24,7 @@ namespace RC::Input
             std::vector<InputEvent> m_input_events{};
         public:
             template <typename... WindowClasses>
-            explicit Win32InputSource(WindowClasses... window_classes)
+          explicit Win32AsyncInputSource(WindowClasses... window_classes)
             {
                 static_assert(std::conjunction<std::is_same<const wchar_t*, WindowClasses>...>::value, "WindowClasses must be of type const wchar_t*");
 
@@ -59,8 +59,8 @@ namespace RC::Input
 
             bool deactivate() override { m_activated = false; return true; };
             
-            std::vector<InputEvent>& Win32InputSource::process_event(Handler* handler) override;
-            ~Win32InputSource() = default;
+            std::vector<InputEvent>& process_event(Handler* handler) override;
+            ~Win32AsyncInputSource() = default;
             int source_priority() override { return 0; }
 
             const char* get_name() override { return "Win32Async"; }

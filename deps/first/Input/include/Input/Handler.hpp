@@ -8,6 +8,8 @@
 #include <unordered_map>
 #include <vector>
 #include <memory>
+#include <array>
+#include <mutex>
 
 #include <Input/Common.hpp>
 #include <Input/KeyDef.hpp>

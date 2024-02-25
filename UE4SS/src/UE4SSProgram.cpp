@@ -913,7 +913,8 @@ namespace RC
 #ifdef HAS_INPUT
         if (! settings_manager.General.InputSource.empty())
         {
-            if (m_input_handler.set_input_source(settings_manager.General.InputSource)) {
+            if (m_input_handler.set_input_source(to_string(settings_manager.General.InputSource)))
+            {
                 Output::send(SYSSTR("Input source set to: {}\n"), m_input_handler.get_current_input_source());
             }
             else 
