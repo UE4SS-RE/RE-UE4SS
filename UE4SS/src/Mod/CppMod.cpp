@@ -57,7 +57,26 @@ namespace RC
         }
 
 #else
+        // use RTLD_LOCAL to avoid symbol conflicts
+        m_dl_handle = dlopen(dll_path.string().c_str(), RTLD_NOW | RTLD_LOCAL);
+        if (!m_dl_handle)
+        {
+            Output::send<LogLevel::Warning>(SYSSTR("Failed to load dll <{}> for mod {}, because: {}\n"), to_system_string(dll_path), m_mod_name, dlerror());
+            set_installable(false);
+            return;
+        }
 
+        m_start_mod_func = reinterpret_cast<start_type>(dlsym(m_dl_handle, "start_mod"));
+        m_uninstall_mod_func = reinterpret_cast<uninstall_type>(dlsym(m_dl_handle, "uninstall_mod"));
+
+        if (!m_start_mod_func || !m_uninstall_mod_func)
+        {
+            Output::send<LogLevel::Warning>(SYSSTR("Failed to find exported mod lifecycle functions for mod {}\n"), m_mod_name);
+            dlclose(m_dl_handle);
+            m_dl_handle = NULL;
+            set_installable(false);
+            return;
+        }
 #endif
     }
 
@@ -182,6 +201,12 @@ namespace RC
         {
             FreeLibrary(m_main_dll_module);
             RemoveDllDirectory(m_dlls_path_cookie);
+        }
+        #else
+        if (m_dl_handle)
+        {
+            dlclose(m_dl_handle);
+            m_dl_handle = NULL;
         }
         #endif
     }
