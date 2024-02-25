@@ -16,20 +16,27 @@ namespace RC
 {
     CppMod::CppMod(UE4SSProgram& program, SystemStringType&& mod_name, SystemStringType&& mod_path) : Mod(program, std::move(mod_name), std::move(mod_path))
     {
-        std::filesystem::path m_dlls_path = m_mod_path;
-
-        m_dlls_path = m_dlls_path / SYSSTR("dlls");
-
-        if (!std::filesystem::exists(m_dlls_path))
+        auto resolved_dlls_path = File::get_path_if_exists(mod_path, SYSSTR("dlls"));
+        if (resolved_dlls_path)
+        {
+            m_dlls_path = to_system_string(*resolved_dlls_path);
+        }
+        else
         {
             Output::send<LogLevel::Warning>(SYSSTR("Could not find the dlls folder for mod {}\n"), m_mod_name);
             set_installable(false);
             return;
         }
-
 #define STRINGIFY(x) #x
 #define CONCATENATE_WIDE_STRING(name, ext) SYSSTR(name) STRINGIFY(ext)
-        auto dll_path = m_dlls_path / CONCATENATE_WIDE_STRING("main", DLLEXT);
+        auto resolved_dll_path = File::get_path_if_exists(m_dlls_path, CONCATENATE_WIDE_STRING("main", DLLEXT));
+        if (!resolved_dll_path)
+        {
+            Output::send<LogLevel::Warning>(SYSSTR("Could not find the main dll for mod {}\n"), m_mod_name);
+            set_installable(false);
+            return;
+        }
+        auto dll_path = to_system_string(*resolved_dll_path);
 #ifdef WIN32
         // Add mods dlls directory to search path for dynamic/shared linked libraries in mods
         m_dlls_path_cookie = AddDllDirectory(m_dlls_path.c_str());
@@ -58,7 +65,7 @@ namespace RC
 
 #else
         // use RTLD_LOCAL to avoid symbol conflicts
-        m_dl_handle = dlopen(dll_path.string().c_str(), RTLD_NOW | RTLD_LOCAL);
+        m_dl_handle = dlopen(dll_path.c_str(), RTLD_NOW | RTLD_LOCAL);
         if (!m_dl_handle)
         {
             Output::send<LogLevel::Warning>(SYSSTR("Failed to load dll <{}> for mod {}, because: {}\n"), to_system_string(dll_path), m_mod_name, dlerror());
