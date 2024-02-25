@@ -77,6 +77,7 @@ namespace RC::Input
 
         auto get_events_safe(std::function<void(KeySet&)>) -> void;
         auto clear_subscribed_keys() -> void;
+        auto clear_subscribed_key(Key k) -> void;
 
         auto has_event_on_key(Input::Key key) -> bool;
         auto get_subscribed_keys() const -> const std::array<bool, max_keys>&

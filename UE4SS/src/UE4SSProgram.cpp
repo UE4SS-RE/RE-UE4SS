@@ -1395,6 +1395,11 @@ namespace RC
                         return false;
                     }
                 });
+
+                if (vector_of_key_data.empty())
+				{
+                    m_input_handler.clear_subscribed_key(key);
+				}
             }
         });
 #endif

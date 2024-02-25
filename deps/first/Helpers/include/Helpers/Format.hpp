@@ -3,6 +3,8 @@
 #include <string>
 #include <format>
 
+#include <Helpers/String.hpp>
+
 namespace RC
 {
     template <typename... FmtArgs>
