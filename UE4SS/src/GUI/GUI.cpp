@@ -550,6 +550,10 @@ namespace RC::GUI
             m_gfx_backend = std::make_unique<Backend_DX11>();
             m_os_backend = std::make_unique<Backend_Windows>();
             break;
+        case GfxBackend::GLFW3_OpenGL3:
+            m_gfx_backend = std::make_unique<Backend_GLFW3_OpenGL3>();
+            m_os_backend = std::make_unique<Backend_NoOS>();
+            break;
 #else
 #ifdef HAS_GLFW
         case GfxBackend::GLFW3_OpenGL3:
