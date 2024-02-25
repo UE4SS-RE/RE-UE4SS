@@ -97,7 +97,11 @@ namespace RC
             Debug.GraphicsAPI = GUI::GfxBackend::GLFW3_OpenGL3;
         }
         #else
+        #ifdef HAS_GLFW
+        Debug.GraphicsAPI = GUI::GfxBackend::GLFW3_OpenGL3;
+        #else
         Debug.GraphicsAPI = GUI::GfxBackend::TUI;
+        #endif
         #endif
         #endif
         REGISTER_INT64_SETTING(Debug.LiveViewObjectsPerGroup, section_debug, LiveViewObjectsPerGroup);

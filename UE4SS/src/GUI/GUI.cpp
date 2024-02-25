@@ -13,6 +13,9 @@
 #include <GUI/DX11.hpp>
 #include <GUI/GLFW3_OpenGL3.hpp>
 #else
+#ifdef HAS_GLFW
+#include <GUI/GLFW3_OpenGL3.hpp>
+#endif
 #include <GUI/TUI.hpp>
 #endif
 
@@ -22,7 +25,7 @@
 #undef TEXT
 #endif
 
-#ifdef WIN32
+#if defined(WIN32) || defined(HAS_GLFW)
 #include "Roboto.hpp"
 #include "FaSolid900.hpp"
 #include <IconsFontAwesome5.h>
@@ -222,7 +225,7 @@ namespace RC::GUI
         ImGuiStyle& style = ImGui::GetStyle();
 
         style.WindowPadding = ImVec2(8, 8);
-        #ifdef WIN32
+        #if defined(WIN32) || defined(HAS_GLFW)
         style.FramePadding = ImVec2(12, 5);
         #else
         style.FramePadding = ImVec2(0.5f, 0.5f);
@@ -280,7 +283,7 @@ namespace RC::GUI
         style.Colors[ImGuiCol_SliderGrab] = ImVec4(0.55f, 0.22f, 0.45f, 1.00f);
         style.Colors[ImGuiCol_SliderGrabActive] = ImVec4(0.63f, 0.24f, 0.50f, 1.00f);
         style.Colors[ImGuiCol_Button] = ImVec4(0.51f, 0.23f, 0.42f, 1.00f);
-        #ifdef WIN32
+        #if defined(WIN32) || defined(HAS_GLFW)
         style.Colors[ImGuiCol_ButtonHovered] = ImVec4(0.59f, 0.22f, 0.48f, 1.00f);
         style.Colors[ImGuiCol_ButtonActive] = ImVec4(0.63f, 0.24f, 0.50f, 1.00f);
         #else
@@ -297,7 +300,7 @@ namespace RC::GUI
         style.Colors[ImGuiCol_ResizeGripHovered] = ImVec4(0.92f, 0.24f, 0.84f, 0.67f);
         style.Colors[ImGuiCol_ResizeGripActive] = ImVec4(0.92f, 0.24f, 0.84f, 0.95f);
         style.Colors[ImGuiCol_Tab] = ImVec4(0.51f, 0.23f, 0.42f, 1.00f);
-        #ifdef WIN32
+        #if defined(WIN32) || defined(HAS_GLFW)
         style.Colors[ImGuiCol_TabHovered] = ImVec4(0.59f, 0.22f, 0.48f, 1.00f);
         style.Colors[ImGuiCol_TabActive] = ImVec4(0.63f, 0.24f, 0.50f, 1.00f);
         #else
@@ -512,7 +515,7 @@ namespace RC::GUI
         io.Fonts->Clear();
 
         float base_font_size = 14 * UE4SSProgram::settings_manager.Debug.DebugGUIFontScaling;
-#ifdef WIN32
+#if defined(WIN32) || defined(HAS_GLFW)
         ImFontConfig font_cfg;
         font_cfg.FontDataOwnedByAtlas = false; // if true it will try to free memory and fail
         io.Fonts->AddFontFromMemoryTTF(Roboto, sizeof(Roboto), base_font_size, &font_cfg);
@@ -548,15 +551,18 @@ namespace RC::GUI
             m_gfx_backend = std::make_unique<Backend_DX11>();
             m_os_backend = std::make_unique<Backend_Windows>();
             break;
+            #else
+        #ifdef HAS_GLFW
         case GfxBackend::GLFW3_OpenGL3:
             m_gfx_backend = std::make_unique<Backend_GLFW3_OpenGL3>();
             m_os_backend = std::make_unique<Backend_NoOS>();
             break;
-            #else
+        #else
         case GfxBackend::TUI:
             m_gfx_backend = std::make_unique<Backend_GfxTUI>();
             m_os_backend = std::make_unique<Backend_TUI>();
             #endif
+        #endif
         }
 
         m_gfx_backend->set_os_backend(m_os_backend.get());

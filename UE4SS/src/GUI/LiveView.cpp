@@ -49,7 +49,7 @@
 #include <imgui_internal.h>
 #include <misc/cpp/imgui_stdlib.h>
 
-#ifdef WIN32
+#if defined(WIN32) || defined(HAS_GLFW)
 #include <IconsFontAwesome5.h>
 #else
 #include <GUI/NerdFont.hpp>
@@ -3446,7 +3446,7 @@ namespace RC::GUI
 
         ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4{0.156f, 0.156f, 0.156f, 1.0f});
 
-#ifdef WIN32
+#if defined(WIN32) || defined(HAS_GLFW)
         ImGui::BeginChild("LiveView_TreeView", {-16.0f, m_top_size}, true);
 #else
         ImGui::BeginChild("LiveView_TreeView", {0, m_top_size}, true);
@@ -3584,7 +3584,7 @@ namespace RC::GUI
         }
 
         static int num_columns = 3;
-        #ifdef WIN32
+        #if defined(WIN32) || defined(HAS_GLFW)
         ImGui::PushStyleVar(ImGuiStyleVar_CellPadding, {2.0f, 2.0f});
         #endif
         if (ImGui::BeginTable("watch_table", num_columns, ImGuiTableFlags_Borders))
@@ -3670,7 +3670,7 @@ namespace RC::GUI
             }
 
             ImGui::EndTable();
-            #ifdef WIN32
+            #if defined(WIN32) || defined(HAS_GLFW)
             ImGui::PopStyleVar();
             #endif
         }
