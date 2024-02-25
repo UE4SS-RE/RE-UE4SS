@@ -5,6 +5,7 @@
 #include <optional>
 #include <memory>
 #include <string>
+#include <type_traits>
 
 #include <LuaMadeSimple/Common.hpp>
 #include <lua.hpp>
