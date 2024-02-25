@@ -24,9 +24,7 @@
 
 #include <LuaLibrary.hpp>
 #include <MProgram.hpp>
-#ifdef HAS_CPPMOD
 #include <Mod/CppMod.hpp>
-#endif
 #include <Mod/LuaMod.hpp>
 #include <Mod/Mod.hpp>
 #include <SettingsManager.hpp>

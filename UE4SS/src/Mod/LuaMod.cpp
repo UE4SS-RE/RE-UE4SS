@@ -27,12 +27,7 @@
 #include <LuaType/LuaUObject.hpp>
 #include <LuaType/LuaFURL.hpp>
 
-
-#ifdef HAS_CPPMOD
 #include <Mod/CppMod.hpp>
-#endif
-
-
 #include <Mod/LuaMod.hpp>
 #pragma warning(disable : 4005)
 #include <GUI/Dumpers.hpp>
@@ -3336,7 +3331,7 @@ Overloads:
         lua_setglobal(lua.get_lua_state(), "__OriginalReturnValue");
     }
 
-#ifdef HAS_CPPMOD
+
     auto LuaMod::fire_on_lua_start_for_cpp_mods() -> void
     {
         if (!is_started())
@@ -3376,15 +3371,6 @@ Overloads:
             }
         }
     }
-#else
-    auto LuaMod::fire_on_lua_start_for_cpp_mods() -> void
-    {
-    }
-
-    auto LuaMod::fire_on_lua_stop_for_cpp_mods() -> void
-    {
-    }
-#endif
 
     auto LuaMod::start_mod() -> void
     {

@@ -8,6 +8,8 @@
 
 #ifdef LINUX
 #define printf_s printf
+#define _GNU_SOURCE
+#include <dlfcn.h>
 #endif
 
 namespace RC
@@ -20,7 +22,7 @@ namespace RC
 
         if (!std::filesystem::exists(m_dlls_path))
         {
-            Output::send<LogLevel::Warning>(SYSSTR("Could not find the dlls folder for mod {}\n"), (m_mod_name));
+            Output::send<LogLevel::Warning>(SYSSTR("Could not find the dlls folder for mod {}\n"), m_mod_name);
             set_installable(false);
             return;
         }
@@ -53,6 +55,9 @@ namespace RC
             set_installable(false);
             return;
         }
+
+#else
+
 #endif
     }
 
