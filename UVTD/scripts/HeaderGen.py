@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # generate header file for C++, using DRAWF information from .debug files
-# e.g., ./HeaderGen.py -s -g -t ../deps/first/Unreal/generated_include/FunctionBodies /mnt/d/Projects/palworld/UnrealGame-Linux-Shipping.debug
+# e.g., ./HeaderGen.py -s -g -t ../../deps/first/Unreal/generated_include/FunctionBodies /<path to>/UnrealGame-Linux-Shipping.debug
 import os
 import sys
 import re
