@@ -151,7 +151,7 @@ namespace RC::UVTD
                     wrapper_src_dumper.send(STR("}\n\n"));
                 }
 
-                macro_setter_dumper.send(STR("if (auto val = parser.get_int64(STR(\"{}\"), STR(\"{}\"), -1); val != -1)\n"), final_class_name, final_variable_name);
+                macro_setter_dumper.send(STR("if (auto val = parser.get_int64(SYSSTR(\"{}\"), SYSSTR(\"{}\"), -1); val != -1)\n"), final_class_name, final_variable_name);
                 macro_setter_dumper.send(STR("    Unreal::{}::MemberOffsets.emplace(STR(\"{}\"), static_cast<int32_t>(val));\n"),
                                          final_class_name,
                                          final_variable_name);
