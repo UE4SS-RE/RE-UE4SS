@@ -10,6 +10,7 @@
 #include <algorithm>
 #include <filesystem>
 #include <type_traits>
+#include <mutex>
 
 #include <File/Macros.hpp>
 
@@ -269,8 +270,15 @@ namespace RC
         return converter.from_bytes(input.data(), input.data() + input.length());
 #pragma warning(default : 4996)
 #else
+#if __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+#endif
         static std::wstring_convert<std::codecvt_utf8<wchar_t>> converter{};
         return converter.from_bytes(input.data(), input.data() + input.length());
+#endif
+#if __clang__
+#pragma clang diagnostic pop
 #endif
     }
 
@@ -342,17 +350,31 @@ namespace RC
         return converter.to_bytes(input.data(), input.data() + input.length());
 #pragma warning(default : 4996)
 #else
+#if __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+#endif
         static std::wstring_convert<std::codecvt_utf8<wchar_t>> converter{};
         return converter.to_bytes(input.data(), input.data() + input.length());
+#if __clang__
+#pragma clang diagnostic pop
+#endif
 #endif
     }
 
     auto inline to_string(std::u16string_view input) -> std::string
     {
+#if __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+#endif
 #pragma warning(disable : 4996)
         static std::wstring_convert<std::codecvt_utf8_utf16<char16_t>, char16_t> converter{};
         return converter.to_bytes(input.data(), input.data() + input.length());
 #pragma warning(default : 4996)
+#if __clang__
+#pragma clang diagnostic pop
+#endif
     }
 
     auto inline to_string(std::string_view input) -> std::string
@@ -396,10 +418,17 @@ namespace RC
         auto temp_input = std::string{input};
         return to_u16string(temp_input);*/
         // codecvt_utf8_utf16<char16_t>
+#if __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+#endif
 #pragma warning(disable : 4996)
         static std::wstring_convert<std::codecvt_utf8_utf16<char16_t>, char16_t> converter{};
         return converter.from_bytes(input.data(), input.data() + input.length());
 #pragma warning(default : 4996)
+#if __clang__
+#pragma clang diagnostic pop
+#endif
     }
 
     auto inline to_u16string(std::u16string_view input) -> std::u16string
