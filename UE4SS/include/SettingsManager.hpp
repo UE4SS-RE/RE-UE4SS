@@ -117,7 +117,6 @@ namespace RC
             int ButtonRight = 3;
             int WheelUp = 4;
             int WheelDown = 5;
-            bool TUIAsInputSource = true;
             bool TUINerdFont = true;
             /*
             SystemStringType TerminalCode = "f120";

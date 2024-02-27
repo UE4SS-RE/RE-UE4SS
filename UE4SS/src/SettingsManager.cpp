@@ -133,11 +133,10 @@ namespace RC
 
 #ifdef LINUX
         constexpr static SystemCharType section_tui_features[] = SYSSTR("TUI");
-        REGISTER_INT64_SETTING(TUI.ButtonLeft, section_tui_features, ButtonLeft)
+        /*REGISTER_INT64_SETTING(TUI.ButtonLeft, section_tui_features, ButtonLeft)
         REGISTER_INT64_SETTING(TUI.ButtonRight, section_tui_features, ButtonRight)
         REGISTER_INT64_SETTING(TUI.WheelUp, section_tui_features, WheelUp)
-        REGISTER_INT64_SETTING(TUI.WheelDown, section_tui_features, WheelDown)
-        REGISTER_BOOL_SETTING(TUI.TUIAsInputSource, section_tui_features, TUIAsInputSource)
+        REGISTER_INT64_SETTING(TUI.WheelDown, section_tui_features, WheelDown)*/
         REGISTER_BOOL_SETTING(TUI.TUINerdFont, section_tui_features, TUINerdFont)
         /*
         REGISTER_STRING_SETTING(TUI.TerminalCode, section_tui_features, TerminalCode)
