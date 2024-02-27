@@ -17,7 +17,7 @@
 #include <Profiler/Profiler.hpp>
 #include <DynamicOutput/DynamicOutput.hpp>
 #include <ExceptionHandling.hpp>
-#ifdef HAS_GUI
+#ifdef HAS_UI
 #include <GUI/ConsoleOutputDevice.hpp>
 #include <GUI/GUI.hpp>
 #include <GUI/LiveView.hpp>
@@ -194,7 +194,7 @@ namespace RC
             m_crash_dumper.set_full_memory_dump(settings_manager.CrashDump.FullMemoryDump);
 #endif
 
-#ifdef HAS_GUI
+#ifdef HAS_UI
             m_debugging_gui.set_gfx_backend(settings_manager.Debug.GraphicsAPI);
 #endif
 
@@ -208,7 +208,7 @@ namespace RC
 
             create_simple_console();
 
-#ifdef HAS_GUI
+#ifdef HAS_UI
             if (settings_manager.Debug.DebugConsoleEnabled)
             {
                 m_console_device = &Output::set_default_devices<Output::ConsoleDevice>();
@@ -853,7 +853,7 @@ namespace RC
         /*
         UObjectArray::AddUObjectCreateListener(&FUEDeathListener::UEDeathListener);
         //*/
-#ifdef HAS_GUI
+#ifdef HAS_UI
         if (settings_manager.Debug.DebugConsoleEnabled)
         {
             if (settings_manager.General.UseUObjectArrayCache)
@@ -1542,7 +1542,7 @@ namespace RC
         UAssetRegistry::FreeAllForcefullyLoadedAssets();
         Output::send(SYSSTR("SDK generated in {} seconds.\n"), generator_duration);
     }
-#ifdef HAS_GUI
+#ifdef HAS_UI
     auto UE4SSProgram::stop_render_thread() -> void
     {
         if (m_render_thread.joinable())

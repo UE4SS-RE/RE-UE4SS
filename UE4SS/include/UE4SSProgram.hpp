@@ -12,7 +12,7 @@
 #endif
 #include <DynamicOutput/DynamicOutput.hpp>
 
-#ifdef HAS_GUI
+#ifdef HAS_UI
 #include <imgui.h>
 #include <GUI/GUI.hpp>
 #include <GUI/GUITab.hpp>
@@ -111,7 +111,7 @@ namespace RC
         std::jthread m_event_loop;
 
       public:
-#ifdef HAS_GUI
+#ifdef HAS_UI
         std::jthread m_render_thread;
 #endif
       private:
@@ -139,7 +139,7 @@ namespace RC
         Output::DebugConsoleDevice* m_debug_console_device{};
         Output::ConsoleDevice* m_console_device{};
 
-#ifdef HAS_GUI
+#ifdef HAS_UI
         GUI::DebuggingGUI m_debugging_gui{};
 #endif
 
@@ -249,7 +249,7 @@ namespace RC
             return m_input_handler;
         }
 #endif
-#ifdef HAS_GUI
+#ifdef HAS_UI
         auto get_debugging_ui() -> GUI::DebuggingGUI&
         {
             return m_debugging_gui;

@@ -6,7 +6,7 @@
 #include <Common.hpp>
 #include <File/File.hpp>
 
-#ifdef HAS_GUI
+#ifdef HAS_UI
 #include <GUI/GUI.hpp>
 #endif
 
@@ -65,10 +65,11 @@ namespace RC
             bool DebugConsoleEnabled{true};
             bool DebugConsoleVisible{true};
             float DebugGUIFontScaling{1.0};
-#ifdef HAS_GUI
-#ifdef WIN32
+#ifdef HAS_UI
+#ifdef HAS_GLFW
             GUI::GfxBackend GraphicsAPI{GUI::GfxBackend::GLFW3_OpenGL3};
-#else
+#endif
+#ifdef HAS_TUI
             GUI::GfxBackend GraphicsAPI{GUI::GfxBackend::TUI};
 #endif
 #endif

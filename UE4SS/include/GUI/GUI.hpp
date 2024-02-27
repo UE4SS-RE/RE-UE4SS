@@ -13,20 +13,25 @@
 
 struct ImGuiSettingsHandler;
 
-#if defined(WIN32) || defined(HAS_GLFW)
+#ifndef HAS_TUI
+#ifndef HAS_GUI
+static_assert(false, "HAS_GUI or HAS_TUI must be defined.");
+#endif
+
 #define XOFFSET (-14.0f)
 #define XDIV 1
 #define YDIV 1
+
 #else
-#ifdef LINUX
+
+#ifdef HAS_GUI
+static_assert(false, "HAS_GUI and HAS_TUI cannot be defined at the same time at this moment.");
+#endif
+
 #define XOFFSET 0
 #define XDIV (6.66f)
 #define YDIV (21.1f)
-#endif
-#endif
 
-#ifdef LINUX
-#ifndef HAS_GLFW
 namespace ImGui
 {
     static void BeginDisabled(bool disabled = true)
@@ -37,7 +42,6 @@ namespace ImGui
     }
 } // namespace ImGui
 #endif
-#endif
 
 namespace RC::GUI
 {
@@ -45,11 +49,13 @@ namespace RC::GUI
 
     enum class GfxBackend
     {
-#ifdef WIN32
+#ifdef HAS_D3D11
         DX11,
 #endif
+#ifdef HAS_GLFW
         GLFW3_OpenGL3,
-#ifdef LINUX
+#endif
+#ifdef HAS_TUI
         TUI
 #endif
     };
@@ -313,7 +319,7 @@ namespace RC::GUI
         });
     }
 
-#ifdef WIN32
+#ifdef HAS_GUI
 #define ATTACH_ICON(icon, str) icon str
 #else
 #define ATTACH_ICON(icon, str) ((icon str) + (UE4SSProgram::settings_manager.TUI.TUINerdFont ? (0) : (sizeof(icon) - 1)))
