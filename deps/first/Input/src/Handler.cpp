@@ -121,7 +121,7 @@ namespace RC::Input
 
     auto Handler::clear_subscribed_key(Key k) -> void
     {
-		m_subscribed_keys[k] = false;
+        m_subscribed_keys[k] = false;
     }
 
     auto Handler::get_allow_input() -> bool
