@@ -73,10 +73,6 @@ namespace RC::GUI
                 }
             });
         }
-        else
-        {
-            throw std::runtime_error{"Was unable to get GLFW3 input source"};
-        }
 #endif
 
         int left, top, right, bottom;
