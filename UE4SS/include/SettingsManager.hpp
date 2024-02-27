@@ -113,10 +113,10 @@ namespace RC
 #ifdef LINUX
         struct TUIFeatures
         {
-            int ButtonLeft = 1;
+            /*int ButtonLeft = 1;
             int ButtonRight = 3;
             int WheelUp = 4;
-            int WheelDown = 5;
+            int WheelDown = 5;*/
             bool TUINerdFont = true;
             /*
             SystemStringType TerminalCode = "f120";
