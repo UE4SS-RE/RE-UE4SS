@@ -80,6 +80,8 @@ namespace RC::GUI
     {
         ImGui_ImplOpenGL3_Shutdown();
         ImGui_ImplGlfw_Shutdown();
+        glfwDestroyWindow(m_window);
+        m_window = nullptr;
     }
 
     auto Backend_GLFW3_OpenGL3::cleanup() -> void
