@@ -35,7 +35,7 @@ namespace RC::File
         }
         else
         {
-            if (DeleteFileA(file_path_and_name.string().c_str()) != 0)
+            if (DeleteFileA(to_system_string(file_path_and_name).c_str()) == 0)
             {
                 THROW_INTERNAL_FILE_ERROR(std::format("[WinFile::delete_file] Was unable to delete file, error: {}", GetLastError()))
             }
