@@ -29,12 +29,6 @@ namespace RC::GUI
         setbuf(stderr, NULL);
         fprintf(stderr, "Backend_TUI::init\n");
         fflush(stderr);
-        atexit([]() {
-            // ensure that the screen is destroyed
-            // ImTui_ImplNcurses_Shutdown(); do not call this here, we may not in UI thread
-            // set shutdown flag to allow async shutdown on UI thread
-            tui_shutdown = true;
-        });
     }
 
     void Backend_TUI::imgui_backend_newframe()

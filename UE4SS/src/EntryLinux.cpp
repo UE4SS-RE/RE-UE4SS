@@ -18,6 +18,7 @@
 using namespace RC;
 
 pthread_t ue4ss_mainthread;
+static bool UE4SSInited = false;
 
 void UE4SS_Start()
 {
@@ -41,7 +42,7 @@ void UE4SS_Start()
 #endif
     auto ue4sspath = to_system_string(dl_info.dli_fname);
     auto program = new UE4SSProgram(ue4sspath, {});
-
+    UE4SSInited = true;
     // use pthread here
     pthread_create(
             &ue4ss_mainthread,
@@ -49,7 +50,6 @@ void UE4SS_Start()
             [](void* arg) -> void* {
                 auto program = (UE4SSProgram*)arg;
                 program->init();
-                fprintf(stderr, "inited in thread\n");
                 if (auto e = program->get_error_object(); e->has_error())
                 {
                     // If the output system errored out then use printf_s as a fallback
@@ -67,8 +67,6 @@ void UE4SS_Start()
             },
             program);
 }
-
-static bool UE4SSInited = false;
 
 /*
 void __attribute__((constructor)) UE4SS_Init() {
@@ -286,7 +284,8 @@ void __attribute__((destructor)) UE4SS_End()
 {
     if (UE4SSInited)
     {
-        // UE4SSProgram::static_cleanup();
+        // invoke cleanup when the program ends
+        UE4SSProgram::static_cleanup();
         UE4SSInited = false;
     }
 }
