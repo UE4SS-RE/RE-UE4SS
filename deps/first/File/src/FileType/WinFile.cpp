@@ -26,9 +26,9 @@ namespace RC::File
 
     auto WinFile::delete_file(const std::filesystem::path& file_path_and_name) -> void
     {
-        if constexpr (sizeof(CharType) > 1)
+        if constexpr (sizeof(SystemCharType) > 1)
         {
-            if (DeleteFileW(file_path_and_name.wstring().c_str()) == 0)
+            if (DeleteFileW(to_system_string(file_path_and_name).c_str()) == 0)
             {
                 THROW_INTERNAL_FILE_ERROR(std::format("[WinFile::delete_file] Was unable to delete file, error: {}", GetLastError()))
             }
@@ -624,9 +624,9 @@ namespace RC::File
         WinFile file{};
 
         // This very badly named API may create a new file or it may not but it will always open a file (unless there's an error)
-        if constexpr (sizeof(CharType) > 1)
+        if constexpr (sizeof(SystemCharType) > 1)
         {
-            file.set_file(CreateFileW(file_name_and_path.wstring().c_str(),
+            file.set_file(CreateFileW(to_system_string(file_name_and_path).c_str(),
                                       desired_access,
                                       FILE_SHARE_READ | FILE_SHARE_WRITE,
                                       nullptr,
@@ -636,7 +636,7 @@ namespace RC::File
         }
         else
         {
-            file.set_file(CreateFileA(file_name_and_path.string().c_str(),
+            file.set_file(CreateFileA(to_system_string(file_name_and_path).c_str(),
                                       desired_access,
                                       FILE_SHARE_READ | FILE_SHARE_WRITE,
                                       nullptr,
