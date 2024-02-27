@@ -10,12 +10,17 @@
 #include <backends/imgui_impl_opengl3.h>
 #include <imgui.h>
 
+#include <Input/Handler.hpp>
+#include <Input/Platform/GLFW3InputSource.hpp>
+
 namespace RC::GUI
 {
     static void glfw_error_callback(int error, const char* description)
     {
         Output::send<LogLevel::Error>(SYSSTR("Glfw Error {}: {}\n"), error, description);
     }
+
+    static std::shared_ptr<Input::GLFW3InputSource> g_input_source;
 
     auto Backend_GLFW3_OpenGL3::init() -> void
     {
@@ -44,6 +49,22 @@ namespace RC::GUI
         if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress))
         {
             throw std::runtime_error{"Was unable to initialize glad"};
+        }
+
+        if (auto source = Input::Handler::get_input_source("GLFW3"))
+        {
+            g_input_source = std::dynamic_pointer_cast<Input::GLFW3InputSource>(source);
+            glfwSetKeyCallback(m_window, [](GLFWwindow* window, int key, int scancode, int action, int mods) {
+                // map keys to windows'definition
+                if (g_input_source)
+                {
+                    g_input_source->receive_input(key, action, mods);
+                }
+            });
+        }
+        else
+        {
+            throw std::runtime_error{"Was unable to get GLFW3 input source"};
         }
 
         int left, top, right, bottom;
@@ -82,6 +103,7 @@ namespace RC::GUI
         ImGui_ImplGlfw_Shutdown();
         glfwDestroyWindow(m_window);
         m_window = nullptr;
+        g_input_source = nullptr;
     }
 
     auto Backend_GLFW3_OpenGL3::cleanup() -> void
