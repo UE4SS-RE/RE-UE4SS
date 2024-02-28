@@ -171,7 +171,7 @@ end
 
 -- Run on configure step for each target that wants unreal rules
 function config(self, target)
-    import("target_helpers", { rootdir = os.projectdir() })
+    import("target_helpers", { rootdir = get_config("ue4ssRoot") })
 
     local mode = get_config("mode")
     local modes = self:mode_string_to_modes(mode)

@@ -41,8 +41,8 @@ jobs:
 
       - name: Build
         run: |
-          cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Game__Shipping__Win64
-          cmake --build build
+          xmake f -m "Game__Shipping__Win64" --runtimes="MD"
+          xmake build
 
       - name: Package
         run: python tools/buildscripts/build.py package

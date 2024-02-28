@@ -1,3 +1,5 @@
+set_config("ue4ssRoot", os.curdir())
+
 includes("build_configs/build_configs.lua")
 
 add_rules(get_unreal_rules())
@@ -8,17 +10,17 @@ set_runtimes(get_runtime_for_current_mode())
 add_defines("_UNICODE", "UNICODE")
 
 after_load(function (target)
-    import("build_configs.build_configs")
+    import("build_configs.build_configs", { rootdir = get_config("ue4ssRoot") })
     build_configs:set_output_dir(target)
 end)
 
 on_config(function (target)
-    import("build_configs.build_configs")
+    import("build_configs.build_configs", { rootdir = get_config("ue4ssRoot") })
     build_configs:config(target)
 end)
 
 after_clean(function (target)
-    import("build_configs.build_configs")
+    import("build_configs.build_configs", { rootdir = get_config("ue4ssRoot") })
     build_configs:clean_output_dir(target)
 end)
 

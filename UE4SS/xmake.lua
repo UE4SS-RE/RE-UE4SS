@@ -41,6 +41,7 @@ target(projectName)
     set_kind("shared")
     set_languages("cxx20")
     set_exceptions("cxx")
+    set_default(true)
 
     add_options("ue4ssBetaIsStarted", "ue4ssIsBeta")
 
@@ -57,17 +58,18 @@ target(projectName)
         "IniParser", "JSON", "Input",
         "Constructs", "Helpers", "MProgram",
         "ScopedTimer", "Profiler", "patternsleuth_bind",
-        "glad"
+        "glad", { public = true }
     )
-    add_packages("imgui", "ImGuiTextEdit", "IconFontCppHeaders", "glfw", "opengl")
+    add_packages("imgui", "ImGuiTextEdit", "IconFontCppHeaders", "glfw", "opengl", { public = true })
 
-    add_packages("glaze", "polyhook_2")
+    add_packages("glaze", "polyhook_2", { public = true })
 
     add_links("dbghelp", "psapi", "d3d11")
 
     after_load(function (target)
-        import("build_configs.build_configs", { rootdir = os.projectdir() })
-        import("target_helpers", { rootdir = os.projectdir() })
+        local projectRoot = get_config("ue4ssRoot")
+        import("build_configs.build_configs", { rootdir = projectRoot })
+        import("target_helpers", { rootdir = projectRoot })
         
         print("Project: " .. projectName .. " (SHARED)")
 
@@ -87,7 +89,8 @@ target(projectName)
         target:add("defines", "UE4SS_LIB_BETA_STARTED=" .. (get_config("ue4ssBetaIsStarted") and "1" or "0"), { public = true })
         target:add("defines", "UE4SS_LIB_IS_BETA=" .. (get_config("ue4ssIsBeta") and "1" or "0"), { public = true })
 
-        local outdata, _ = os.iorunv("git", {"rev-parse", "--short", "HEAD"})
+        local git_dir = path.join(projectRoot, ".git")
+        local outdata, _ = os.iorunv("git", {"--git-dir=" .. git_dir, "--work-tree=" .. projectRoot, "rev-parse", "--short", "HEAD"})
         local commit_hash = outdata:gsub("%s+$", "")
         target:add("defines", "UE4SS_LIB_BUILD_GITSHA=\"" .. commit_hash .. "\"", { public = true })
         
