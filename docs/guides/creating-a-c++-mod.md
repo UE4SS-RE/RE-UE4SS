@@ -99,11 +99,18 @@ extern "C"
     }
 }
 ```
-3. In the command prompt, in the `MyMods` directory, execute:
+3. In the command prompt, in the `MyMods` directory, execute either:
+A.
 ```
 xmake f -m "Game__Shipping__Win64" --runtimes="MD"
+xmake
+```
+or B.
+```
 xmake project -k vsxmake2022
 ```
+If you chose option `B`, the VS solution will be in the `vsxmake2022` directory.
+
 4. Open `MyMods/vsxmake2022/MyMods.sln`
 5. Make sure that you're set to the `Game___Shipping__Win64` configuration unless you want to debug.
 6. Find your project (in my case: MyAwesomeMod) in the solution explorer and right click it and hit `Build`.
