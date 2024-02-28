@@ -105,11 +105,11 @@ Note that you should also commit & push the submodules that you've updated if th
 ## Updating git submodules
 
 If you want to update git submodules, you do so one of three ways:
-1. You can execute `git submodule update --init --recursive` to update all first-party submodules.
-2. You can also choose to update submodules one by one, by executing `git submodule update --init --recursive vendor/<RepoOwner>/<Repo>`.
-    Remember to not use the `--remote` option unless you actually want to update to the latest commit.
-3. If you would rather pick a specific commit or branch to update a submodule to then `cd` into the submodule directory for that submodule and execute `git checkout <branch name or commit>`.
-
+1. You can execute `git submodule update --init --recursive` to update all submodules.
+2. You can also choose to update submodules one by one, by executing `git submodule update --init --recursive deps/<first-or-third>/<Repo>`.
+    Do not use the `--remote` option unless you actually want to update to the latest commit.
+3. If you would rather pick a specific commit or branch to update a submodule to then `cd` into the submodule directory for that dependency and execute `git checkout <branch name or commit>`.
+The main dependency you might want to update from time to time is `deps/first/Unreal`.
 ## Credits
 
 All contributors since the project became open source: https://github.com/UE4SS-RE/RE-UE4SS/graphs/contributors
