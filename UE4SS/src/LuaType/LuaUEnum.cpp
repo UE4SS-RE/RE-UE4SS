@@ -243,7 +243,7 @@ Overloads:
                 lua.throw_error("'UEnum.EditNameAt' could not load parameter for \"NewName\"");
             }
 
-            Unreal::FName new_key = Unreal::FName(to_ue(to_system(param_new_name)), Unreal::FNAME_Add);
+            Unreal::FName new_key = Unreal::FName(to_ue_string(param_new_name), Unreal::FNAME_Add);
             lua_object.get_remote_cpp_object()->EditNameAt(param_index, new_key);
 
             return 0;

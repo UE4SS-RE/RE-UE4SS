@@ -1233,7 +1233,7 @@ Overloads:
         }
         else if (lua.is_string())
         {
-            auto* object_class = Unreal::UObjectGlobals::StaticFindObject<Unreal::UClass*>(nullptr, nullptr, to_ue(to_system(lua.get_string())));
+            auto* object_class = Unreal::UObjectGlobals::StaticFindObject<Unreal::UClass*>(nullptr, nullptr, to_ue_string(lua.get_string()));
             lua.set_bool(is_a_internal(lua, object, object_class));
         }
         else
