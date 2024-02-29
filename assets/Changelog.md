@@ -50,6 +50,10 @@ Fixed the "IterateGameDirectories" global function throwing "bad conversion" err
 ## Settings
 
 ### Added
+```
+[Hooks]
+HookLoadMap = 1
+```
 
 ### Removed
 
