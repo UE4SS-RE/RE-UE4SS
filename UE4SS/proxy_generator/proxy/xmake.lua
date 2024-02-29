@@ -9,9 +9,8 @@ target("proxy_files")
     set_policy("build.across_targets_in_parallel", false)
 
     on_build(function (target)
-        local projectRoot = get_config("ue4ssRoot")
-        local proxy_generator = path.join(projectRoot, target:dep("proxy_generator"):targetfile())
-        local output_path = path.join(projectRoot, target:autogendir())
+        local proxy_generator = path.join(os.projectdir(), target:dep("proxy_generator"):targetfile())
+        local output_path = path.join(os.projectdir(), target:autogendir())
         local file = get_config("ue4ssProxyPath")
 
         os.mkdir(output_path)
@@ -51,7 +50,7 @@ target("proxy")
 
         build_configs:config(target)
 
-        local output_path = path.join(projectRoot, target:dep("proxy_files"):autogendir())
+        local output_path = path.join(os.projectdir(), target:dep("proxy_files"):autogendir())
         local proxy_name = target_helpers.get_path_filename(get_config("ue4ssProxyPath"))
 
         target:add("files", path.join(output_path, "dllmain.cpp"), { always_added = true })

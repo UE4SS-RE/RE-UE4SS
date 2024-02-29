@@ -1,10 +1,12 @@
+includes("build_configs/build_configs.lua", { rootdir = get_config("ue4ssRoot") })
+
 includes("proxy_generator")
 
-add_requires("imgui v1.89", { configs = { win32 = true, dx11 = true, opengl3 = true, glfw_opengl3 = true } })
-add_requires("ImGuiTextEdit v1.0")
-add_requires("IconFontCppHeaders v1.0")
-add_requires("glfw 3.3.9")
-add_requires("opengl")
+add_requires("imgui v1.89", { debug = is_mode_debug(), configs = { win32 = true, dx11 = true, opengl3 = true, glfw_opengl3 = true, runtimes = get_mode_runtimes() } })
+add_requires("ImGuiTextEdit v1.0", { debug = is_mode_debug(), configs = { runtimes = get_mode_runtimes() } })
+add_requires("IconFontCppHeaders v1.0", { debug = is_mode_debug(), configs = { runtimes = get_mode_runtimes() } })
+add_requires("glfw 3.3.9", { debug = is_mode_debug(), configs = { runtimes = get_mode_runtimes() } })
+add_requires("opengl", { debug = is_mode_debug(), configs = { runtimes = get_mode_runtimes() } })
 
 option("ue4ssBetaIsStarted")
     set_default(true)
@@ -64,7 +66,7 @@ target(projectName)
 
     add_packages("glaze", "polyhook_2", { public = true })
 
-    add_links("dbghelp", "psapi", "d3d11")
+    add_links("dbghelp", "psapi", "d3d11", { public = true })
 
     after_load(function (target)
         local projectRoot = get_config("ue4ssRoot")

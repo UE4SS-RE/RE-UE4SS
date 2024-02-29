@@ -1,6 +1,7 @@
 local projectName = "UVTD"
 
-add_requires("raw_pdb")
+includes("build_configs/build_configs.lua", { rootdir = get_config("ue4ssRoot") })
+add_requires("raw_pdb", { debug = is_mode_debug(), config = { runtimes = get_mode_runtimes() } })
 
 target(projectName)
     set_kind("binary")
