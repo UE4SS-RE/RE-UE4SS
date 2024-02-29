@@ -42,4 +42,4 @@ Alternatively, place an empty text file named `enabled.txt` inside of the MyAwes
 and bypasses mods.txt, but may allow for easier installation by end users.
 
 
-5. Launch your game and if everything was done correctly, you should see the text "MyAwesomeMod says hello" highlighted in blue somewhere at the top of UE4SS console (before all the scanning occurs), and if you used the `on_unreal_init`, you should see "Object Name: /Script/CoreUObject.Object" highlighted in blue as well (right after the scanning finishes).
+5. Launch your game and if everything was done correctly, you should see the text "MyAwesomeMod says hello" highlighted in blue somewhere at the top of UE4SS console (before all the scanning occurs), and if you used the `on_unreal_init` function, you should see "Object Name: /Script/CoreUObject.Object" highlighted in blue as well (right after the scanning finishes).
