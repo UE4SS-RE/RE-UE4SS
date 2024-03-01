@@ -38,6 +38,7 @@ TBD
 Fixed BPModLoaderMod giving "bad conversion" errors.
 
 ### Live View
+Fixed the "Write to file" checkbox not working for functions in the `Watches` tab.
 
 ### UHT Dumper
 

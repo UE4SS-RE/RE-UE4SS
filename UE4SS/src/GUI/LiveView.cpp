@@ -2773,6 +2773,11 @@ namespace RC::GUI
 
         buffer.append(STR("\n\n"));
         watch.history.append(to_string(buffer));
+
+        if (watch.write_to_file)
+        {
+            watch.output.send(STR("{}"), buffer);
+        }
     }
 
     auto LiveView::process_watches() -> void
