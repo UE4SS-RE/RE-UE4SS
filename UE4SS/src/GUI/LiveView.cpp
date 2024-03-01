@@ -1644,7 +1644,6 @@ namespace RC::GUI
         }
         if (auto struct_property = CastField<FStructProperty>(property); struct_property && struct_property->GetStruct()->GetFirstProperty())
         {
-            is_watchable = false;
             ImGui::SameLine();
             auto tree_node_id = std::format("{}{}", static_cast<void*>(container_ptr), property_name);
             if (ImGui_TreeNodeEx(std::format("{}", to_string(property_text.GetCharArray())).c_str(), tree_node_id.c_str(), ImGuiTreeNodeFlags_NoAutoOpenOnLog))
@@ -1679,7 +1678,6 @@ namespace RC::GUI
         }
         else if (auto array_property = CastField<FArrayProperty>(property); array_property)
         {
-            is_watchable = false;
             ImGui::SameLine();
             auto tree_node_id = std::format("{}{}", static_cast<void*>(container_ptr), property_name);
             if (ImGui_TreeNodeEx(std::format("{}", to_string(property_text.GetCharArray())).c_str(), tree_node_id.c_str(), ImGuiTreeNodeFlags_NoAutoOpenOnLog))
