@@ -1,10 +1,9 @@
 local projectName = "Profiler"
 
-includes("build_configs/build_configs.lua", { rootdir = get_config("ue4ssRoot") })
 includes("deps/Tracy")
 
-add_requires("Tracy", { optional = true, debug = is_mode_debug(), config = { runtimes = get_mode_runtimes() } })
-add_requires("Superluminal", { system = true, optional = true, debug = is_mode_debug(), config = { runtimes = get_mode_runtimes() } })
+add_requires("Tracy", { optional = true, debug = is_mode_debug(), configs = { runtimes = get_mode_runtimes() } })
+add_requires("Superluminal", { system = true, optional = true, debug = is_mode_debug(), configs = { runtimes = get_mode_runtimes() } })
 
 option("profilerFlavor")
     set_default("Tracy")

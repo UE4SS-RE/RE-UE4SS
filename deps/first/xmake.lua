@@ -19,7 +19,6 @@ includes("Unreal")
 
 -- Patternsleuth -> START
 
-includes("build_configs/build_configs.lua", { rootdir = get_config("ue4ssRoot") })
 add_requires("cargo::patternsleuth_bind", { debug = is_mode_debug(), configs = { cargo_toml = path.join(os.scriptdir(), "patternsleuth_bind/Cargo.toml"), runtimes = get_mode_runtimes() } })
 
 target("patternsleuth_bind")

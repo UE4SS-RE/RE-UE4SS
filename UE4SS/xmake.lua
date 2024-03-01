@@ -1,5 +1,3 @@
-includes("build_configs/build_configs.lua", { rootdir = get_config("ue4ssRoot") })
-
 includes("proxy_generator")
 
 add_requires("imgui v1.89", { debug = is_mode_debug(), configs = { win32 = true, dx11 = true, opengl3 = true, glfw_opengl3 = true, runtimes = get_mode_runtimes() } })
