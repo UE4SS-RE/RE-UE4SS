@@ -2695,6 +2695,11 @@ namespace RC::GUI
 
     auto LiveView::process_function_post_watch(Unreal::UnrealScriptFunctionCallableContext& context, void*) -> void
     {
+        if (!UnrealInitializer::StaticStorage::bIsInitialized)
+        {
+            return;
+        }
+
         auto function = context.TheStack.Node();
         std::lock_guard<decltype(LiveView::Watch::s_watch_lock)> lock{LiveView::Watch::s_watch_lock};
         auto it = s_watch_containers.find(function);
@@ -2782,6 +2787,11 @@ namespace RC::GUI
 
     auto LiveView::process_watches() -> void
     {
+        if (!UnrealInitializer::StaticStorage::bIsInitialized)
+        {
+            return;
+        }
+
         std::lock_guard<decltype(Watch::s_watch_lock)> lock{Watch::s_watch_lock};
         for (auto& watch : s_watches)
         {
