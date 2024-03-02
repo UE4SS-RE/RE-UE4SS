@@ -7,7 +7,7 @@ import re
 import pickle
 
 DEFAULT_FILENAME = "./UnrealGame-Linux-Shipping.debug"
-DEFAULT_SEARCH_DIR = "../deps/first/Unreal/generated_include"
+DEFAULT_SEARCH_DIR = "../../deps/first/Unreal/generated_include"
 DEFAULT_GENERATED_DIR = "../generated"
 
 FUNCTION_TEMPLATE = """if (auto it = {ClassName}::VTableLayoutMap.find(STR("{FunctionName}")); it == {ClassName}::VTableLayoutMap.end())
@@ -116,15 +116,15 @@ class Database:
 def GetClassNames(search_dir = DEFAULT_SEARCH_DIR):
     # glob all file with pattern "MemberVariableLayout_HeaderWrapper_{ClassName}.hpp"
     # return list of class names
-    """
+    
     import glob
     tabA = [re.search(rf"{Version}_VTableOffsets_(.*)_FunctionBody\.cpp", file).group(1) for file in glob.glob(f"{search_dir}/FunctionBodies/{Version}_VTableOffsets_*.cpp")]
     tabB = [re.search(rf"{Version}_MemberVariableLayout_DefaultSetter_(.*)\.cpp", file).group(1) for file in glob.glob(f"{search_dir}/FunctionBodies/{Version}_MemberVariableLayout_DefaultSetter_*.cpp")]
     l = list(dict.fromkeys(tabA + tabB))
     # replace _ to :
     return [x.replace("_", ":") for x in l]
-    """
-    return  ['FArchiveState', 'UDataTable', 'FConsoleManager', "UEngine", 'UPlayer', 'UObjectBaseUtility', 'AGameMode', 'FMalloc', 'UField', 'UGameViewportClient', 'FField', 'FNumericProperty', 'IConsoleVariable', 'AGameModeBase', 'FMulticastDelegateProperty', 'UObject', 'AActor', 'IConsoleManager', 'IConsoleObject', 'FArchive', 'FConsoleVariableBase', 'FOutputDevice', 'ITextData', 'FProperty', 'FObjectPropertyBase', 'ULocalPlayer', 'UScriptStruct::ICppStructOps', 'UObjectBase', 'FConsoleCommandBase', 'UConsole', 'UStruct', 'IConsoleCommand', 'FInterfaceProperty', 'FByteProperty', 'FSoftClassProperty', 'FStructProperty', 'UEnum', 'FBoolProperty', 'UWorld', 'UClass', 'FEnumProperty', 'FClassProperty', 'FFieldPathProperty', 'FArrayProperty', 'FMapProperty', 'FSetProperty', 'UScriptStruct', 'FDelegateProperty', 'UFunction']
+    
+    # return  ['FArchiveState', 'UDataTable', 'FConsoleManager', "UEngine", 'UPlayer', 'UObjectBaseUtility', 'AGameMode', 'FMalloc', 'UField', 'UGameViewportClient', 'FField', 'FNumericProperty', 'IConsoleVariable', 'AGameModeBase', 'FMulticastDelegateProperty', 'UObject', 'AActor', 'IConsoleManager', 'IConsoleObject', 'FArchive', 'FConsoleVariableBase', 'FOutputDevice', 'ITextData', 'FProperty', 'FObjectPropertyBase', 'ULocalPlayer', 'UScriptStruct::ICppStructOps', 'UObjectBase', 'FConsoleCommandBase', 'UConsole', 'UStruct', 'IConsoleCommand', 'FInterfaceProperty', 'FByteProperty', 'FSoftClassProperty', 'FStructProperty', 'UEnum', 'FBoolProperty', 'UWorld', 'UClass', 'FEnumProperty', 'FClassProperty', 'FFieldPathProperty', 'FArrayProperty', 'FMapProperty', 'FSetProperty', 'UScriptStruct', 'FDelegateProperty', 'UFunction']
 
 AdditonalClasses = []
 
