@@ -1,4 +1,4 @@
-# BoolProperty
+# NumericProperty
 
 ## Inheritance
 [Property](./property.md)
