@@ -7,6 +7,7 @@
 #include <LuaType/LuaXObjectProperty.hpp>
 #include <LuaType/LuaXProperty.hpp>
 #include <LuaType/LuaXStructProperty.hpp>
+#include <LuaType/LuaXNumericProperty.hpp>
 #pragma warning(disable : 4005)
 #include <Unreal/FProperty.hpp>
 #include <Unreal/Property/FArrayProperty.hpp>
@@ -14,6 +15,7 @@
 #include <Unreal/Property/FEnumProperty.hpp>
 #include <Unreal/Property/FObjectProperty.hpp>
 #include <Unreal/Property/FStructProperty.hpp>
+#include <Unreal/Property/FNumericProperty.hpp>
 #pragma warning(default : 4005)
 
 namespace RC::LuaType
@@ -44,6 +46,10 @@ namespace RC::LuaType
         else if (auto* as_array_property = Unreal::CastField<Unreal::FArrayProperty>(property); as_array_property)
         {
             XArrayProperty::construct(lua, as_array_property);
+        }
+        else if (auto* as_numeric_proprety = Unreal::CastField<Unreal::FNumericProperty>(property); as_numeric_proprety)
+        {
+            XNumericProperty::construct(lua, as_numeric_proprety);
         }
         else
         {
