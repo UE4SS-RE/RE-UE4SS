@@ -11,6 +11,7 @@ TBD
 ### UHT Dumper
 
 ### Lua API
+Implemented `NumericProperty`, and its `IsFloatingPoint` member function.
 
 ### C++ API
 
