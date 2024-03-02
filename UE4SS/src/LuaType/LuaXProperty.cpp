@@ -47,9 +47,9 @@ namespace RC::LuaType
         {
             XArrayProperty::construct(lua, as_array_property);
         }
-        else if (auto* as_numeric_proprety = Unreal::CastField<Unreal::FNumericProperty>(property); as_numeric_proprety)
+        else if (auto* as_numeric_property = Unreal::CastField<Unreal::FNumericProperty>(property); as_numeric_property)
         {
-            XNumericProperty::construct(lua, as_numeric_proprety);
+            XNumericProperty::construct(lua, as_numeric_property);
         }
         else
         {
