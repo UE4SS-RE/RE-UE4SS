@@ -15,6 +15,7 @@ target(projectName)
     add_options("profilerFlavor")
     set_languages("cxx20")
     set_exceptions("cxx")
+    set_values("ue4ssDep", true)
 
     add_includedirs("include", { public = true })
     add_headerfiles("include/**.hpp")
@@ -25,7 +26,7 @@ target(projectName)
         print("Project: " .. projectName .. " (HEADER-ONLY)")
 
         target:add("defines", target_helpers.project_name_to_exports_define(projectName))
-        target:add("defines", target_helpers.project_name_to_build_static_define(projectName), { public = true })
+        target:add("defines", target_helpers.project_name_to_build_static_define(projectName))
 
         local flavor = get_config("profilerFlavor")
 

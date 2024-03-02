@@ -74,6 +74,7 @@ target(projectName)
         print("Project: " .. projectName .. " (SHARED)")
 
         build_configs:set_output_dir(target)
+        build_configs:export_deps(target)
 
         target:add("defines", target_helpers.project_name_to_exports_define(projectName))
         

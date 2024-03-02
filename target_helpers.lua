@@ -1,5 +1,9 @@
 -- Convert to SCREAMING_SNAKE_CASE
 function to_screaming_snake_case(s)
+    if s == "ASMHelper" then
+        return "ASM_HELPER"
+    end
+
     if s:find("_") == nil and s:upper() == s then
         return s
     end

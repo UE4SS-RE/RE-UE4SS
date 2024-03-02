@@ -201,7 +201,24 @@ function set_output_dir(self, target)
     target:set("objectdir", output_dir)
 end
 
--- Run after clean steap for each target that has custom output dir
+-- Run after load step for each target that has dependencies with `ue4ssDep`: true
+function export_deps(self, target)
+    import("target_helpers", { rootdir = get_config("ue4ssRoot") })
+
+    local additional_defines = {}
+    for _, dep in pairs(target:deps()) do
+        if dep:values("ue4ssDep") == true then
+            table.insert(additional_defines, target_helpers.project_name_to_build_static_define(dep:name()))
+        end
+    end
+    table.sort(additional_defines)
+
+    for _, define in pairs(additional_defines) do
+        target:add("defines", define)
+    end
+end
+
+-- Run after clean step for each target that has custom output dir
 function clean_output_dir(self, target)
     local output_dir = self:construct_output_dir(target)
     os.rm(output_dir)
