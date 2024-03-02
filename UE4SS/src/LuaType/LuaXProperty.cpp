@@ -178,6 +178,12 @@ Overloads:
                 }
                 return 1;
             }
+            else if (lua.is_userdata()) // FFieldClass, returned from Property:GetClass()
+            {
+                auto ffield_class = lua.get_userdata<LuaType::XFieldClass>();
+                lua.set_bool(lua_object.get_remote_cpp_object()->IsA(ffield_class.get_local_cpp_object()));
+                return 1;
+            }
             else
             {
                 lua.throw_error(error_overload_not_found);
