@@ -41,6 +41,11 @@ namespace RC::GUI
         glfwMakeContextCurrent(m_window);
         glfwSwapInterval(1); // Enable vsync
 
+        if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress))
+        {
+            throw std::runtime_error{"Was unable to initialize glad"};
+        }
+
         int left, top, right, bottom;
         glfwGetWindowFrameSize(m_window, &left, &top, &right, &bottom);
         glfwSetWindowSize(m_window, 1280 - left - right, 800 - top - bottom);
