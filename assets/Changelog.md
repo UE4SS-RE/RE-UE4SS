@@ -44,6 +44,8 @@ Fixed BPModLoaderMod giving "bad conversion" errors.
 ### Lua API
 Fixed the "IterateGameDirectories" global function throwing "bad conversion" errors.
 
+Fixed `FText` not working as a parameter (in `RegisterHook`, etc.).
+
 ### C++ API
 
 

@@ -1078,7 +1078,7 @@ namespace RC::LuaType
             return;
         }
         case Operation::GetParam:
-            params.lua.throw_error("[push_textproperty] Operation::GetParam is not supported");
+            RemoteUnrealParam::construct(params.lua, params.data, params.base, params.property);
             return;
         default:
             params.lua.throw_error("[push_textproperty] Unhandled Operation");
