@@ -7,6 +7,7 @@
 #include <unordered_map>
 #include <variant>
 #include <regex>
+#include <filesystem>
 
 #include <DynamicOutput/DynamicOutput.hpp>
 #include <ExceptionHandling.hpp>
@@ -46,8 +47,16 @@
 #include <Unreal/UKismetNodeHelperLibrary.hpp>
 #include <imgui.h>
 #include <imgui_internal.h>
-#include <IconsFontAwesome5.h>
 #include <misc/cpp/imgui_stdlib.h>
+
+#ifdef HAS_GUI
+#include <IconsFontAwesome5.h>
+#elif defined(HAS_TUI)
+#include <GUI/NerdFont.hpp>
+#endif
+
+#undef max
+#undef min
 
 namespace RC::GUI
 {
@@ -351,17 +360,17 @@ namespace RC::GUI
         case LiveView::Watch::AcquisitionMethod::StaticFindObject: {
             auto object_full_name = watch.container->GetFullName();
             auto object_type_space_location = object_full_name.find(STR(" "));
-            auto object_typeless_name = StringType{object_full_name.begin() + object_type_space_location + 1, object_full_name.end()};
-            json_object->new_string(STR("AcquisitionID"), object_typeless_name);
+            auto object_typeless_name = UEStringType{object_full_name.begin() + object_type_space_location + 1, object_full_name.end()};
+            json_object->new_string(SYSSTR("AcquisitionID"), to_system(object_typeless_name));
             break;
         }
         case LiveView::Watch::AcquisitionMethod::FindFirstOf:
-            json_object->new_string(STR("AcquisitionID"), watch.container->GetClassPrivate()->GetName());
+            json_object->new_string(SYSSTR("AcquisitionID"), to_system(watch.container->GetClassPrivate()->GetName()));
             break;
         }
-        json_object->new_string(STR("PropertyName"), watch.property_name);
-        json_object->new_number(STR("AcquisitionMethod"), static_cast<int32_t>(watch.acquisition_method));
-        json_object->new_number(STR("WatchType"),
+        json_object->new_string(SYSSTR("PropertyName"), to_system(watch.property_name));
+        json_object->new_number(SYSSTR("AcquisitionMethod"), static_cast<int32_t>(watch.acquisition_method));
+        json_object->new_number(SYSSTR("WatchType"),
                                 watch.container->IsA<UFunction>() ? static_cast<int32_t>(LiveView::Watch::Type::Function)
                                                                   : static_cast<int32_t>(LiveView::Watch::Type::Property));
         return json_object;
@@ -369,25 +378,25 @@ namespace RC::GUI
 
     static auto internal_load_watches_from_disk() -> void
     {
-        auto json_file = File::open(StringType{UE4SSProgram::get_program().get_working_directory()} + std::format(STR("\\watches\\watches.meta.json")),
+        auto json_file = File::open(std::filesystem::path{UE4SSProgram::get_program().get_working_directory()} / "watches" / "watches.meta.json",
                                     File::OpenFor::Reading,
                                     File::OverwriteExistingFile::No,
                                     File::CreateIfNonExistent::Yes);
-        auto json_file_contents = json_file.read_all();
+        auto json_file_contents = json_file.read_file_all();
         if (json_file_contents.empty())
         {
             return;
         }
 
         auto json_global_object = JSON::Parser::parse(json_file_contents);
-        const auto& elements = json_global_object->get<JSON::Array>(STR("Watches"));
+        const auto& elements = json_global_object->get<JSON::Array>(SYSSTR("Watches"));
         elements.for_each([](JSON::Value& element) {
             auto& json_watch_object = *element.as<JSON::Object>();
-            auto acquisition_id = json_watch_object.get<JSON::String>(STR("AcquisitionID")).get_view();
-            auto property_name = json_watch_object.get<JSON::String>(STR("PropertyName")).get_view();
+            auto acquisition_id = to_ue(json_watch_object.get<JSON::String>(SYSSTR("AcquisitionID")).get_view());
+            auto property_name = to_ue(json_watch_object.get<JSON::String>(SYSSTR("PropertyName")).get_view());
             auto acquisition_method =
-                    static_cast<LiveView::Watch::AcquisitionMethod>(json_watch_object.get<JSON::Number>(STR("AcquisitionMethod")).get<int64_t>());
-            auto watch_type = static_cast<LiveView::Watch::Type>(json_watch_object.get<JSON::Number>(STR("WatchType")).get<int64_t>());
+                    static_cast<LiveView::Watch::AcquisitionMethod>(json_watch_object.get<JSON::Number>(SYSSTR("AcquisitionMethod")).get<int64_t>());
+            auto watch_type = static_cast<LiveView::Watch::Type>(json_watch_object.get<JSON::Number>(SYSSTR("WatchType")).get<int64_t>());
 
             UObject* object{};
             switch (acquisition_method)
@@ -444,7 +453,7 @@ namespace RC::GUI
     static auto internal_save_watches_to_disk() -> void
     {
         auto json = JSON::Object{};
-        auto& json_uobjects = json.new_array(STR("Watches"));
+        auto& json_uobjects = json.new_array(SYSSTR("Watches"));
 
         {
             std::lock_guard<decltype(LiveView::Watch::s_watch_lock)> lock{LiveView::Watch::s_watch_lock};
@@ -458,12 +467,12 @@ namespace RC::GUI
             }
         }
 
-        auto json_file = File::open(StringType{UE4SSProgram::get_program().get_working_directory()} + std::format(STR("\\watches\\watches.meta.json")),
+        auto json_file = File::open(std::filesystem::path{UE4SSProgram::get_program().get_working_directory()} / "watches" / "watches.meta.json",
                                     File::OpenFor::Writing,
                                     File::OverwriteExistingFile::Yes,
                                     File::CreateIfNonExistent::Yes);
         int32_t json_indent_level{};
-        json_file.write_string_to_file(json.serialize(JSON::ShouldFormat::Yes, &json_indent_level));
+        json_file.write_file_string_to_file(to_file(json.serialize(JSON::ShouldFormat::Yes, &json_indent_level)));
     }
 
     static auto save_watches_to_disk() -> void
@@ -495,14 +504,14 @@ namespace RC::GUI
         UObjectArray::RemoveUObjectDeleteListener(&FLiveViewDeleteListener::LiveViewDeleteListener);
     }
 
-    LiveView::Watch::Watch(StringType&& object_name, StringType&& property_name) : object_name(object_name), property_name(property_name)
+    LiveView::Watch::Watch(UEStringType&& object_name, UEStringType&& property_name) : object_name(object_name), property_name(property_name)
     {
         auto& file_device = output.get_device<Output::FileDevice>();
-        file_device.set_file_name_and_path(StringType{UE4SSProgram::get_program().get_working_directory()} +
-                                           std::format(STR("\\watches\\ue4ss_watch_{}_{}.txt"), object_name, property_name));
-        file_device.set_formatter([](File::StringViewType string) -> File::StringType {
-            const auto when_as_string = std::format(STR("{:%Y-%m-%d %H:%M:%S}"), std::chrono::system_clock::now());
-            return std::format(STR("[{}] {}"), when_as_string, string);
+        file_device.set_file_name_and_path(to_system_string(std::filesystem::path{UE4SSProgram::get_program().get_working_directory()} / "watches" /
+                                                            std::format("ue4ss_watch_{}_{}.txt", to_string(object_name), to_string(property_name))));
+        file_device.set_formatter([](SystemStringViewType string) -> SystemStringType {
+            const auto when_as_string = std::format(SYSSTR("{:%Y-%m-%d %H:%M:%S}"), std::chrono::system_clock::now());
+            return std::format(SYSSTR("[{}] {}"), when_as_string, string);
         });
     }
 
@@ -511,8 +520,8 @@ namespace RC::GUI
         s_need_to_filter_out_properties = Version::IsBelow(4, 25);
         if (UE4SSProgram::settings_manager.Debug.LiveViewObjectsPerGroup > std::numeric_limits<int>::max())
         {
-            Output::send<LogLevel::Warning>(STR("Debug.LiveViewObjectsPerGroup is too large, must be no larger than 4294967295.\n"));
-            Output::send<LogLevel::Warning>(STR("Using default value for Debug.LiveViewObjectsPerGroup.\n"));
+            Output::send<LogLevel::Warning>(SYSSTR("Debug.LiveViewObjectsPerGroup is too large, must be no larger than 4294967295.\n"));
+            Output::send<LogLevel::Warning>(SYSSTR("Using default value for Debug.LiveViewObjectsPerGroup.\n"));
             UE4SSProgram::settings_manager.Debug.LiveViewObjectsPerGroup = 64 * 1024 / 2;
         }
         s_max_elements_per_chunk = static_cast<int>(UE4SSProgram::settings_manager.Debug.LiveViewObjectsPerGroup);
@@ -1319,7 +1328,7 @@ namespace RC::GUI
 
     auto LiveView::search_by_name() -> void
     {
-        Output::send(STR("Searching by name...\n"));
+        Output::send(SYSSTR("Searching by name...\n"));
         s_name_search_results.clear();
         s_name_search_results_set.clear();
         UObjectGlobals::ForEachUObject([&](UObject* object, ...) {
@@ -1462,14 +1471,14 @@ namespace RC::GUI
             }
         }
 
-        Output::send(STR("{}\n"), uclass->GetFullName());
+        Output::send(SYSSTR("{}\n"), uclass->GetFullName());
 
         ImGui::Text("Properties");
         for (FProperty* property : uclass->ForEachProperty())
         {
             if (ImGui::TreeNode(to_string(property->GetFullName()).c_str()))
             {
-                Output::send(STR("Show property: {}\n"), property->GetFullName());
+                Output::send(SYSSTR("Show property: {}\n"), property->GetFullName());
             }
         }
     }
@@ -1494,7 +1503,7 @@ namespace RC::GUI
         {
             if (ImGui::IsItemClicked())
             {
-                printf_s("Clicked: %S\n", ustruct->GetFullName().c_str());
+                printf_s("Clicked: " SystemStringPrint "\n", to_system(ustruct->GetFullName()).c_str());
                 select_object(0, ustruct->GetObjectItem(), ustruct, AffectsHistory::Yes);
             }
         }
@@ -1735,13 +1744,13 @@ namespace RC::GUI
             }
             auto value_as_string = Unreal::UKismetNodeHelperLibrary::GetEnumeratorUserFriendlyName(uenum, enum_index);
             ImGui::SameLine();
-            ImGui::Text("%S", value_as_string.c_str());
+            ImGui::Text(SystemStringPrint, to_system(value_as_string).c_str());
             render_property_value_context_menu();
         }
         else
         {
             ImGui::SameLine();
-            ImGui::Text("%S", property_text.GetCharArray());
+            ImGui::Text(SystemStringPrint, to_system_string(property_text.GetCharArray()).c_str());
             render_property_value_context_menu();
         }
 
@@ -1753,7 +1762,7 @@ namespace RC::GUI
         if (ImGui::IsItemHovered())
         {
             ImGui::BeginTooltip();
-            ImGui::Text("%S", property->GetFullName().c_str());
+            ImGui::Text(SystemStringPrint, to_system_string(property->GetFullName()).c_str());
             ImGui::Separator();
             ImGui::Text("Offset: 0x%X", property->GetOffset_Internal());
             ImGui::Text("Size: 0x%X", property->GetSize());
@@ -1761,12 +1770,13 @@ namespace RC::GUI
         }
 
         auto obj = container_type == ContainerType::Array ? *static_cast<UObject**>(container) : static_cast<UObject*>(container);
-        StringType parent_name{};
+        UEStringType parent_name{};
         if (container_type == ContainerType::Object)
         {
             parent_name = obj ? obj->GetName() : STR("None");
         }
-        auto edit_property_value_modal_name = to_string(std::format(STR("Edit value of property: {}->{}"), parent_name, property->GetName()));
+        auto edit_property_value_modal_name =
+                to_string(std::format(SYSSTR("Edit value of property: {}->{}"), to_system(parent_name), to_system(property->GetName())));
 
         if (open_edit_value_popup)
         {
@@ -1788,7 +1798,7 @@ namespace RC::GUI
             if (ImGui::Button("Apply"))
             {
                 FOutputDevice placeholder_device{};
-                if (!property->ImportText(to_wstring(m_current_property_value_buffer).c_str(), property->ContainerPtrToValuePtr<void>(container), NULL, obj, &placeholder_device))
+                if (!property->ImportText(to_ue(m_current_property_value_buffer).c_str(), property->ContainerPtrToValuePtr<void>(container), NULL, obj, &placeholder_device))
                 {
                     m_modal_edit_property_value_error_unable_to_edit = true;
                     ImGui::OpenPopup("UnableToSetNewPropertyValueError");
@@ -1855,8 +1865,8 @@ namespace RC::GUI
             ++index;
 
             ImGui::TableNextColumn();
-            ImGui::Text("%S", enum_name.c_str());
-            if (ImGui::BeginPopupContextItem(to_string(std::format(STR("context-menu-{}"), enum_name)).c_str()))
+            ImGui::Text(SystemStringPrint, to_system(enum_name).c_str());
+            if (ImGui::BeginPopupContextItem(to_string(std::format(SYSSTR("context-menu-{}"), to_system(enum_name))).c_str()))
             {
                 if (ImGui::MenuItem("Copy name"))
                 {
@@ -1871,11 +1881,11 @@ namespace RC::GUI
             }
 
             ImGui::TableNextColumn();
-            ImGui::Text("%S", enum_friendly_name.c_str());
+            ImGui::Text(SystemStringPrint, to_system(enum_friendly_name).c_str());
 
             ImGui::TableNextColumn();
             ImGui::Text("%lld", name.Value);
-            if (ImGui::BeginPopupContextItem(to_string(std::format(STR("context-menu-{}-{}"), enum_name, name.Value)).c_str()))
+            if (ImGui::BeginPopupContextItem(to_string(std::format(SYSSTR("context-menu-{}-{}"), to_system(enum_name), to_system(name.Value))).c_str()))
             {
                 if (ImGui::MenuItem("Copy value"))
                 {
@@ -1890,7 +1900,7 @@ namespace RC::GUI
             }
 
             ImGui::TableNextColumn();
-            ImGui::PushID(to_string(std::format(STR("button_add_{}"), enum_name)).c_str());
+            ImGui::PushID(to_string(std::format(SYSSTR("button_add_{}"), to_system(enum_name))).c_str());
             if (ImGui::Button("+"))
             {
                 open_add_name_popup = true;
@@ -1898,18 +1908,18 @@ namespace RC::GUI
             }
             ImGui::PopID();
             ImGui::SameLine();
-            ImGui::PushID(to_string(std::format(STR("button_remove_{}"), enum_name)).c_str());
+            ImGui::PushID(to_string(std::format(SYSSTR("button_remove_{}"), to_system(enum_name))).c_str());
             if (ImGui::Button("-"))
             {
                 uenum->RemoveFromNamesAt(index, 1);
             }
             ImGui::PopID();
 
-            std::string edit_enum_name_modal_name = to_string(std::format(STR("Edit enum name for: {}"), name.Key.ToString()));
+            std::string edit_enum_name_modal_name = to_string(std::format(SYSSTR("Edit enum name for: {}"), to_system(name.Key.ToString())));
 
-            std::string edit_enum_value_modal_name = to_string(std::format(STR("Edit enum value for: {}"), name.Key.ToString()));
+            std::string edit_enum_value_modal_name = to_string(std::format(SYSSTR("Edit enum value for: {}"), to_system(name.Key.ToString())));
 
-            std::string add_enum_name_modal_name = to_string(std::format(STR("Enter new enum name after: {}"), name.Key.ToString()));
+            std::string add_enum_name_modal_name = to_string(std::format(SYSSTR("Enter new enum name after: {}"), to_system(name.Key.ToString())));
 
             if (open_edit_name_popup)
             {
@@ -1956,7 +1966,7 @@ namespace RC::GUI
                 if (ImGui::Button("Apply"))
                 {
                     FOutputDevice placeholder_device{};
-                    StringType new_name = to_wstring(m_current_property_value_buffer);
+                    UEStringType new_name = to_ue(m_current_property_value_buffer);
                     FName new_key = FName(new_name, FNAME_Add);
                     uenum->EditNameAt(index, new_key);
                     if (uenum->GetEnumNames()[index].Key.ToString() != new_name)
@@ -2040,7 +2050,7 @@ namespace RC::GUI
                 if (ImGui::Button("Apply"))
                 {
                     FOutputDevice placeholder_device{};
-                    StringType new_name = to_wstring(m_current_property_value_buffer);
+                    UEStringType new_name = to_ue(m_current_property_value_buffer);
                     FName new_key = FName(new_name, FNAME_Add);
                     int64 value = names[index].Value;
 
@@ -2317,7 +2327,7 @@ namespace RC::GUI
             ImGui::EndPopup();
         }
         ImGui::Text("ClassPrivate: %s", to_string(object->GetClassPrivate()->GetName()).c_str());
-        ImGui::Text("Path: %S", object->GetPathName().c_str());
+        ImGui::Text("Path: " SystemStringPrint, to_system(object->GetPathName()).c_str());
         render_flags<ObjectFlagsStringifier>(object, "ObjectFlags");
         if (auto as_class = Cast<UClass>(object); as_class)
         {
@@ -2361,7 +2371,7 @@ namespace RC::GUI
                     auto supers_super = *supers_super_it;
                     super_size -= supers_super->GetPropertiesSize();
                 }
-                ImGui::Text("%S: 0x%X (0x%X)", super->GetName().c_str(), super_size, super->GetPropertiesSize());
+                ImGui::Text(SystemStringPrint ": 0x%X (0x%X)", to_system(super->GetName()).c_str(), super_size, super->GetPropertiesSize());
             }
 
             ImGui::Unindent();
@@ -2391,7 +2401,7 @@ namespace RC::GUI
         bool tried_to_open_nullptr_property{};
         auto property_full_name = property->GetFullName();
 
-        ImGui::Text("Selected: %S", property->GetName().c_str());
+        ImGui::Text("Selected: " SystemStringPrint, to_system(property->GetName()).c_str());
         ImGui::Text("Address: %016llX", std::bit_cast<uintptr_t>(property));
         if (ImGui::BeginPopupContextItem(to_string(property_full_name).c_str()))
         {
@@ -2401,8 +2411,8 @@ namespace RC::GUI
             }
             ImGui::EndPopup();
         }
-        ImGui::Text("Class: %S", property->GetClass().GetName().c_str());
-        ImGui::Text("Path: %S", property->GetPathName().c_str());
+        ImGui::Text("Class: " SystemStringPrint, to_system(property->GetClass().GetName()).c_str());
+        ImGui::Text("Path: " SystemStringPrint, to_system(property->GetPathName()).c_str());
 
         ImGui::Separator();
 
@@ -2466,7 +2476,7 @@ namespace RC::GUI
         ImGui::Unindent();
         ImGui::Text("RepIndex: %i (0x%X)", property->GetRepIndex(), property->GetRepIndex());
         ImGui::Text("OffsetInternal: %i (0x%X)", property->GetOffset_Internal(), property->GetOffset_Internal());
-        ImGui::Text("RepNotifyFunc: %S", property->GetRepNotifyFunc().ToString().c_str());
+        ImGui::Text("RepNotifyFunc: " SystemStringPrint, to_system(property->GetRepNotifyFunc().ToString()).c_str());
         if (ImGui::IsItemHovered())
         {
             ImGui::BeginTooltip();
@@ -2475,7 +2485,7 @@ namespace RC::GUI
         }
 
         auto render_property_pointer = [](std::string_view pointer_name, FProperty* property) {
-            ImGui::Text("%s: %p %S", pointer_name.data(), property, property ? property->GetFullName().c_str() : STR("None"));
+            ImGui::Text("%s: %p " SystemStringPrint, pointer_name.data(), property, property ? to_system(property->GetFullName()).c_str() : SYSSTR("None"));
             return property;
         };
         int go_to_property_menu_count{};
@@ -2584,7 +2594,7 @@ namespace RC::GUI
 
     auto LiveView::render_info_panel() -> void
     {
-        ImGui::BeginChild("LiveView_InfoPanel", {-14.0f, m_bottom_size}, true, ImGuiWindowFlags_HorizontalScrollbar);
+        ImGui::BeginChild("LiveView_InfoPanel", {XOFFSET, m_bottom_size}, true, ImGuiWindowFlags_HorizontalScrollbar);
 
         size_t next_object_index_to_select{};
 
@@ -2625,7 +2635,7 @@ namespace RC::GUI
             {
                 ImGui::BeginDisabled();
             }
-            if (ImGui::Button(ICON_FA_SEARCH " Find functions"))
+            if (ImGui::Button(ATTACH_ICON(ICON_FA_SEARCH, " Find functions")))
             {
                 m_function_caller_widget->open_widget_deferred();
             }
@@ -2670,7 +2680,7 @@ namespace RC::GUI
     {
         FString live_value_fstring{};
         watch.property->ExportTextItem(live_value_fstring, watch.property->ContainerPtrToValuePtr<void>(watch.container), nullptr, nullptr, 0);
-        auto live_value_string = StringType{live_value_fstring.GetCharArray()};
+        auto live_value_string = UEStringType{live_value_fstring.GetCharArray()};
 
         if (watch.property_value == live_value_string)
         {
@@ -2679,12 +2689,12 @@ namespace RC::GUI
 
         watch.property_value = std::move(live_value_string);
 
-        const auto when_as_string = std::format(STR("{:%H:%M:%S}"), std::chrono::system_clock::now());
-        watch.history.append(to_string(when_as_string + STR(" ") + watch.property_value + STR("\n")));
+        const auto when_as_string = std::format("{:%H:%M:%S}", std::chrono::system_clock::now());
+        watch.history.append(when_as_string + " " + to_string(watch.property_value) + "\n");
 
         if (watch.write_to_file)
         {
-            watch.output.send(STR("{}\n"), watch.property_value);
+            watch.output.send(SYSSTR("{}\n"), watch.property_value);
         }
     }
 
@@ -2710,12 +2720,12 @@ namespace RC::GUI
 
         auto num_params = function->GetNumParms();
 
-        const auto when_as_string = std::format(STR("{:%H:%M:%S}"), std::chrono::system_clock::now());
-        StringType buffer{std::format(STR("Received call @ {}.\n"), when_as_string)};
+        const auto when_as_string = std::format(SYSSTR("{:%H:%M:%S}"), std::chrono::system_clock::now());
+        auto buffer{std::format(SYSSTR("Received call @ {}.\n"), when_as_string)};
 
-        buffer.append(std::format(STR("  Context:\n    {}\n"), context.Context->GetFullName()));
+        buffer.append(std::format(SYSSTR("  Context:\n    {}\n"), to_system(context.Context->GetFullName())));
 
-        buffer.append(STR("  Locals:\n"));
+        buffer.append(SYSSTR("  Locals:\n"));
         bool has_local_params{};
         for (const auto& param : function->ForEachProperty())
         {
@@ -2727,15 +2737,15 @@ namespace RC::GUI
             FString param_text{};
             auto container_ptr = param->ContainerPtrToValuePtr<void*>(context.TheStack.Locals());
             param->ExportTextItem(param_text, container_ptr, container_ptr, std::bit_cast<UObject*>(function), NULL);
-            buffer.append(std::format(STR("    {} = {}\n"), param->GetName(), param_text.GetCharArray()));
+            buffer.append(std::format(SYSSTR("    {} = {}\n"), to_system(param->GetName()), to_system(param_text.GetCharArray())));
         }
         if (!has_local_params)
         {
-            buffer.append(STR("    <No Local Params>\n"));
+            buffer.append(SYSSTR("    <No Local Params>\n"));
         }
 
         bool has_out_params{};
-        buffer.append(STR("  Out:\n"));
+        buffer.append(SYSSTR("  Out:\n"));
         for (const auto& param : function->ForEachProperty())
         {
             if (param->HasAnyPropertyFlags(CPF_ReturnParm))
@@ -2750,28 +2760,28 @@ namespace RC::GUI
             FString param_text{};
             auto container_ptr = FindOutParamValueAddress(context.TheStack, param);
             param->ExportTextItem(param_text, container_ptr, container_ptr, std::bit_cast<UObject*>(function), NULL);
-            buffer.append(std::format(STR("    {} = {}\n"), param->GetName(), param_text.GetCharArray()));
+            buffer.append(std::format(SYSSTR("    {} = {}\n"), to_system(param->GetName()), to_system(param_text.GetCharArray())));
         }
         if (!has_out_params)
         {
-            buffer.append(STR("    <No Out Params>\n"));
+            buffer.append(SYSSTR("    <No Out Params>\n"));
         }
 
-        buffer.append(STR("  ReturnValue\n"));
+        buffer.append(SYSSTR("  ReturnValue\n"));
         auto return_property = function->GetReturnProperty();
         if (return_property)
         {
             FString return_property_text{};
             auto container_ptr = context.RESULT_DECL;
             return_property->ExportTextItem(return_property_text, container_ptr, container_ptr, std::bit_cast<UObject*>(function), NULL);
-            buffer.append(std::format(STR("    {}"), return_property_text.GetCharArray()));
+            buffer.append(std::format(SYSSTR("    {}"), to_system(return_property_text.GetCharArray())));
         }
         else
         {
-            buffer.append(STR("    <No Return Value>"));
+            buffer.append(SYSSTR("    <No Return Value>"));
         }
 
-        buffer.append(STR("\n\n"));
+        buffer.append(SYSSTR("\n\n"));
         watch.history.append(to_string(buffer));
     }
 
@@ -2819,7 +2829,7 @@ namespace RC::GUI
         {
             ImGui::BeginDisabled();
         }
-        ImGui::PushItemWidth(-160.0f);
+        ImGui::PushItemWidth(-160.0f / XDIV);
         bool push_inactive_text_color = !m_search_field_cleared;
         if (push_inactive_text_color)
         {
@@ -2837,14 +2847,14 @@ namespace RC::GUI
                 std::string search_buffer{m_search_by_name_buffer};
                 if (search_buffer.empty())
                 {
-                    Output::send(STR("Search all chunks\n"));
+                    Output::send(SYSSTR("Search all chunks\n"));
                     s_name_to_search_by.clear();
                     m_object_iterator = &LiveView::guobjectarray_iterator;
                     m_is_searching_by_name = false;
                 }
                 else
                 {
-                    Output::send(STR("Search for: {}\n"), search_buffer.empty() ? STR("") : to_wstring(search_buffer));
+                    Output::send(SYSSTR("Search for: {}\n"), search_buffer.empty() ? SYSSTR("") : to_system(search_buffer));
                     s_name_to_search_by = search_buffer;
                     m_object_iterator = &LiveView::guobjectarray_by_name_iterator;
                     m_is_searching_by_name = true;
@@ -2939,7 +2949,7 @@ namespace RC::GUI
                 ImGui::TableNextColumn();
                 if (ImGui::InputText("##ExcludeClassName", &Filter::ExcludeClassName::s_internal_value))
                 {
-                    Filter::ExcludeClassName::s_value = to_wstring(Filter::ExcludeClassName::s_internal_value);
+                    Filter::ExcludeClassName::s_value = to_ue(Filter::ExcludeClassName::s_internal_value);
                 }
 
                 // Row 6
@@ -2949,7 +2959,7 @@ namespace RC::GUI
                 ImGui::TableNextColumn();
                 if (ImGui::InputText("##HasProperty", &Filter::HasProperty::s_internal_value))
                 {
-                    Filter::HasProperty::s_value = to_wstring(Filter::HasProperty::s_internal_value);
+                    Filter::HasProperty::s_value = to_ue(Filter::HasProperty::s_internal_value);
                 }
 
                 // Row 7
@@ -2959,7 +2969,7 @@ namespace RC::GUI
                 ImGui::TableNextColumn();
                 if (ImGui::InputText("##HasPropertyType", &Filter::HasPropertyType::s_internal_value))
                 {
-                    Filter::HasPropertyType::s_value = FName(to_wstring(Filter::HasPropertyType::s_internal_value), FNAME_Add);
+                    Filter::HasPropertyType::s_value = FName(to_ue(Filter::HasPropertyType::s_internal_value), FNAME_Add);
                 }
 
                 ImGui::EndTable();
@@ -3064,7 +3074,7 @@ namespace RC::GUI
             if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled))
             {
                 ImGui::BeginTooltip();
-                ImGui::Text(ICON_FA_BAN " Feature disabled due to 'General.bUseUObjectArrayCache' being set to 0 in UE4SS-settings.ini.");
+                ImGui::Text(ATTACH_ICON(ICON_FA_BAN, " Feature disabled due to 'General.bUseUObjectArrayCache' being set to 0 in UE4SS-settings.ini."));
                 ImGui::EndTooltip();
             }
         }
@@ -3088,9 +3098,9 @@ namespace RC::GUI
         }
 
         ImGui::SameLine();
-        if (ImGui::Button(ICON_FA_COPY " Copy search result"))
+        if (ImGui::Button(ATTACH_ICON(ICON_FA_COPY, " Copy search result")))
         {
-            StringType result{};
+            SystemStringType result{};
             auto is_below_425 = Version::IsBelow(4, 25);
             for (const auto& search_result : s_name_search_results)
             {
@@ -3099,11 +3109,20 @@ namespace RC::GUI
             ImGui::SetClipboardText(to_string(result).c_str());
         }
 
+#ifdef HAS_GUI
         m_bottom_size = (ImGui::GetContentRegionMaxAbs().y - m_top_size) - 94.0f;
         ImGui_Splitter(false, 4.0f, &m_top_size, &m_bottom_size, 32.0f, 32.0f, -14.0f);
-
+#else
+        m_bottom_size = (ImGui::GetContentRegionMaxAbs().y - m_top_size) - 2.0f;
+        ImGui_Splitter(false, 0.5f, &m_top_size, &m_bottom_size, 12.0f, 12.0f, ImGui::GetContentRegionMaxAbs().x);
+#endif
         ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4{0.156f, 0.156f, 0.156f, 1.0f});
+
+#ifdef HAS_GUI
         ImGui::BeginChild("LiveView_TreeView", {-14.0f, m_top_size}, true);
+#else
+        ImGui::BeginChild("LiveView_TreeView", {0, m_top_size}, true);
+#endif
 
         auto do_iteration = [&](int32_t int_data_1 = 0, int32_t int_data_2 = 0) {
             ((*this).*((*this).m_object_iterator))(int_data_1, int_data_2, [&](UObject* object) {
@@ -3112,9 +3131,9 @@ namespace RC::GUI
                 auto render_context_menu = [&] {
                     if (ImGui::BeginPopupContextItem(tree_node_name.c_str()))
                     {
-                        if (ImGui::MenuItem(ICON_FA_COPY " Copy Full Name"))
+                        if (ImGui::MenuItem(ATTACH_ICON(ICON_FA_COPY, " Copy Full Name")))
                         {
-                            Output::send(STR("Copy Full Name: {}\n"), object->GetFullName());
+                            Output::send(SYSSTR("Copy Full Name: {}\n"), object->GetFullName());
                             ImGui::SetClipboardText(tree_node_name.c_str());
                         }
                         if (object->IsA<UFunction>())
@@ -3124,14 +3143,14 @@ namespace RC::GUI
                             if (function_watcher_it == s_watch_map.end())
                             {
                                 ImGui::Separator();
-                                if (ImGui::MenuItem(ICON_FA_EYE " Watch value"))
+                                if (ImGui::MenuItem(ATTACH_ICON(ICON_FA_EYE, " Watch value")))
                                 {
                                     add_watch(watch_id, static_cast<UFunction*>(object));
                                 }
                             }
                             else
                             {
-                                ImGui::Checkbox(ICON_FA_EYE " Watch value", &function_watcher_it->second->enabled);
+                                ImGui::Checkbox(ATTACH_ICON(ICON_FA_EYE, " Watch value"), &function_watcher_it->second->enabled);
                             }
                         }
                         ImGui::EndPopup();
@@ -3237,8 +3256,8 @@ namespace RC::GUI
             load_watches_from_disk();
             s_watches_loaded_from_disk = true;
         }
-
-        ImGui::BeginChild("watch_render_frame", {-13.0f, -35.0f});
+        float xoffset = (XOFFSET == 0) ? (0.0f) : (XOFFSET);
+        ImGui::BeginChild("watch_render_frame", {xoffset, -35.0f / XDIV});
 
         if (ImGui::Button("All Off"))
         {
@@ -3251,12 +3270,15 @@ namespace RC::GUI
         }
 
         static int num_columns = 3;
+#ifdef HAS_GUI
         ImGui::PushStyleVar(ImGuiStyleVar_CellPadding, {2.0f, 2.0f});
+#endif
         if (ImGui::BeginTable("watch_table", num_columns, ImGuiTableFlags_Borders | ImGuiTableFlags_NoPadOuterX))
         {
-            ImGui::TableSetupColumn("Controls", ImGuiTableColumnFlags_WidthFixed, 60.0f);
+            float controls_width = (XDIV == 1) ? (60.0f) : (60.0f / XDIV + 5.0f);
+            ImGui::TableSetupColumn("Controls", ImGuiTableColumnFlags_WidthFixed, controls_width);
             ImGui::TableSetupColumn("Watch Identifier", ImGuiTableColumnFlags_WidthStretch);
-            ImGui::TableSetupColumn("##watch-from-disk", ImGuiTableColumnFlags_WidthFixed, 21.0f);
+            ImGui::TableSetupColumn("##watch-from-disk", ImGuiTableColumnFlags_WidthFixed, 21.0f / XDIV);
             ImGui::TableHeadersRow();
 
             {
@@ -3266,7 +3288,7 @@ namespace RC::GUI
                     auto& watch = *watch_ptr;
                     ImGui::TableNextRow();
                     ImGui::TableNextColumn();
-                    if (ImGui::Checkbox(to_string(std::format(STR("##watch-on-off-{}"), watch.hash)).c_str(), &watch.enabled))
+                    if (ImGui::Checkbox(to_string(std::format(SYSSTR("##watch-on-off-{}"), watch.hash)).c_str(), &watch.enabled))
                     {
                         if (watch.container->IsA<UFunction>())
                         {
@@ -3280,7 +3302,7 @@ namespace RC::GUI
                         ImGui::EndTooltip();
                     }
                     ImGui::SameLine(0.0f, 2.0f);
-                    ImGui::Checkbox(to_string(std::format(STR("##watch-write-to-file-{}"), watch.hash)).c_str(), &watch.write_to_file);
+                    ImGui::Checkbox(to_string(std::format(SYSSTR("##watch-write-to-file-{}"), watch.hash)).c_str(), &watch.write_to_file);
                     if (ImGui::IsItemHovered())
                     {
                         ImGui::BeginTooltip();
@@ -3291,7 +3313,7 @@ namespace RC::GUI
                     if (!watch.show_history)
                     {
                         ImGui::PushID(std::format("button_open_history_{}", watch.hash).c_str());
-                        if (ImGui::Button("+", {20.0f, 0.0f}))
+                        if (ImGui::Button("+", {20.0f / XDIV, 0.0f}))
                         {
                             watch.show_history = true;
                         }
@@ -3300,28 +3322,28 @@ namespace RC::GUI
                     else
                     {
                         ImGui::PushID(std::format("button_close_history_{}", watch.hash).c_str());
-                        if (ImGui::Button("-", {20.0f, 0.0f}))
+                        if (ImGui::Button("-", {20.0f / XDIV, 0.0f}))
                         {
                             watch.show_history = false;
                         }
                         ImGui::PopID();
                     }
                     ImGui::TableNextColumn();
-                    ImGui::Text("%S.%S", watch.object_name.c_str(), watch.property_name.c_str());
+                    ImGui::Text(SystemStringPrint "." SystemStringPrint, to_system(watch.object_name).c_str(), to_system(watch.property_name).c_str());
                     if (watch.show_history)
                     {
                         ImGui::PushID(std::format("history_{}", watch.hash).c_str());
-                        ImGui::InputTextMultiline("##history", &watch.history, {-13.0f, 200.0f}, ImGuiInputTextFlags_ReadOnly);
+                        ImGui::InputTextMultiline("##history", &watch.history, {xoffset, 200.0f / YDIV}, ImGuiInputTextFlags_ReadOnly);
                         ImGui_AutoScroll("##history", &watch.history_previous_max_scroll_y);
                         ImGui::PopID();
                     }
                     ImGui::TableNextColumn();
-                    if (ImGui::Checkbox(to_string(std::format(STR("##watch-from-disk-{}"), watch.hash)).c_str(), &watch.load_on_startup))
+                    if (ImGui::Checkbox(to_string(std::format(SYSSTR("##watch-from-disk-{}"), watch.hash)).c_str(), &watch.load_on_startup))
                     {
                         save_watches_to_disk();
                     }
-                    ImGui::SetNextWindowSize({690.0f, 0.0f});
-                    if (ImGui::BeginPopupContextItem(to_string(std::format(STR("##watch-from-disk-settings-popup-{}"), watch.hash)).c_str()))
+                    ImGui::SetNextWindowSize({690.0f / XDIV, 0.0f});
+                    if (ImGui::BeginPopupContextItem(to_string(std::format(SYSSTR("##watch-from-disk-settings-popup-{}"), watch.hash)).c_str()))
                     {
                         ImGui::Text("Acquisition Method");
                         ImGui::Text("This determines how the watch will be reacquired.");
@@ -3342,7 +3364,9 @@ namespace RC::GUI
             }
 
             ImGui::EndTable();
+#ifdef HAS_GUI
             ImGui::PopStyleVar();
+#endif
         }
         ImGui::EndChild();
     }

@@ -1,5 +1,7 @@
 #pragma once
 
+#ifdef WIN32
+
 #ifndef RC_JSON_EXPORTS
 #ifndef RC_JSON_BUILD_STATIC
 #ifndef RC_JSON_API
@@ -16,6 +18,14 @@
 #endif
 #endif
 
+#else
+
+#ifndef RC_JSON_API
+#define RC_JSON_API
+#endif
+
+#endif
+
 #include <cstdint>
 
 #include <File/File.hpp>
@@ -29,7 +39,7 @@ namespace RC::JSON
         class ScopeStack;
     }
 
-    auto inline indent(int32_t* indent_level, File::StringType& string) -> void
+    auto inline indent(int32_t* indent_level, SystemStringType& string) -> void
     {
         if (!indent_level)
         {
@@ -38,7 +48,7 @@ namespace RC::JSON
 
         for (int32_t i = 0; i < *indent_level; ++i)
         {
-            string.append(STR("  "));
+            string.append(SYSSTR("  "));
         }
     }
 } // namespace RC::JSON

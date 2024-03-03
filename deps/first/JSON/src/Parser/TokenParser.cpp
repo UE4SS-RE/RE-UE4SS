@@ -27,17 +27,10 @@ namespace RC::JSON::Parser
                                              to_string(err_token.to_string()))};                                                                               \
     }
 
-    static auto is_number(StringViewType data) -> bool
+    static auto is_number(SystemStringViewType data) -> bool
     {
-        return std::ranges::all_of(data.begin(), data.end(), [&](const CharType c) {
-            if constexpr (std::is_same_v<File::CharType, wchar_t>)
-            {
-                return std::iswdigit(c) != 0;
-            }
-            else
-            {
-                return std::isdigit(c) != 0;
-            }
+        return std::ranges::all_of(data.begin(), data.end(), [&](const SystemCharType c) {
+            return std::iswdigit((wchar_t)c) != 0;
         });
     }
 
@@ -66,10 +59,10 @@ namespace RC::JSON::Parser
         return m_storage.back();
     }
 
-    static auto has_only_spaces(const File::StringType& data) -> bool
+    static auto has_only_spaces(const SystemStringType& data) -> bool
     {
-        return std::all_of(data.begin(), data.end(), [](File::CharType c) {
-            return std::isspace(c) || c == '\n';
+        return std::all_of(data.begin(), data.end(), [](SystemCharType c) {
+            return std::iswspace(c) || c == SYSSTR('\n');
         });
     }
 
@@ -166,7 +159,7 @@ namespace RC::JSON::Parser
         else if (m_current_state == State::ReadValue)
         {
             auto data_raw = get_data(token);
-            StringType data_no_spaces = data_raw;
+            SystemStringType data_no_spaces = data_raw;
             data_no_spaces.erase(std::remove_if(data_no_spaces.begin(),
                                                 data_no_spaces.end(),
                                                 [](wchar_t c) {
@@ -180,7 +173,7 @@ namespace RC::JSON::Parser
             {
                 do_comma_verification();
 
-                m_last_value = std::make_unique<JSON::Number>(std::stoll(data_no_spaces, nullptr));
+                m_last_value = std::make_unique<JSON::Number>((uint64_t)std::stoll(data_no_spaces, nullptr));
             }
             else
             {

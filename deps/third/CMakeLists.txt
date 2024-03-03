@@ -3,7 +3,9 @@ include(FetchContent)
 set(FETCHCONTENT_QUIET OFF)
 
 # Third Party Dependencies -> START
+if (WIN32 OR UE4SS_USE_GLFW_ON_LINUX)
 add_subdirectory("GLFW")
+endif()
 
 # glaze JSON library start
 FetchContent_Declare(
@@ -16,6 +18,7 @@ FetchContent_Declare(
 FetchContent_MakeAvailable(glaze)
 # glaze JSON library end
 
+if (WIN32 OR UE4SS_USE_GLFW_ON_LINUX)
 # ImGui start
 FetchContent_Declare(ImGui
     GIT_REPOSITORY git@github.com:ocornut/imgui.git
@@ -40,6 +43,7 @@ FetchContent_Declare(IconFontCppHeaders
 
 add_subdirectory("imgui")
 # ImGui end
+endif()
 
 # Zydis start
 FetchContent_Declare(zydis
@@ -60,6 +64,7 @@ FetchContent_Declare(PolyHook2
 add_subdirectory("PolyHook_2_0")
 # PolyHook end
 
+if (WIN32)
 # raw_pdb start
 FetchContent_Declare(raw_pdb
     GIT_REPOSITORY git@github.com:MolecularMatters/raw_pdb.git
@@ -68,6 +73,33 @@ FetchContent_Declare(raw_pdb
     
 add_subdirectory("raw_pdb")
 # raw_pdb end
+endif()
+
+if (LINUX)
+# imtui start
+FetchContent_Declare(imtui
+    GIT_REPOSITORY https://github.com/ggerganov/imtui.git
+    GIT_TAG 9f39c3e090c9b1e15557eac38a2f4389462f59df
+    PATCH_COMMAND git apply ${CMAKE_CURRENT_SOURCE_DIR}/imtui/fix-size-cjk-and-mouse.patch
+    UPDATE_DISCONNECTED 1
+    GIT_PROGRESS ON)
+FetchContent_Declare(ImGuiTextEdit
+    GIT_REPOSITORY git@github.com:UE4SS-RE/ImGuiColorTextEdit.git
+    GIT_TAG master
+    GIT_SHALLOW TRUE
+    GIT_PROGRESS ON
+    CONFIGURE_COMMAND "")
+add_subdirectory("imtui")
+endif()
+
+# fmtlib start
+#FetchContent_Declare(fmt
+#    GIT_REPOSITORY https://github.com/fmtlib/fmt
+#    GIT_TAG 10.2.1
+#    GIT_PROGRESS ON)
+
+#add_subdirectory("fmt")
+# fmtlib end
 
 # corrosion start
 FetchContent_Declare(

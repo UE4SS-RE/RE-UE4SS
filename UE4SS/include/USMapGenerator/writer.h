@@ -5,6 +5,10 @@
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wunused-variable"
 
+#ifdef LINUX
+#define fopen_s(pFile, filename, mode) ((*(pFile)) = fopen((filename), (mode))) == NULL
+#endif
+
 class IBufferWriter
 {
 public:
@@ -49,7 +53,7 @@ public:
 
     FORCEINLINE void Seek(int Pos, int Origin = SEEK_CUR) override
     {
-        m_Stream.seekp(Pos, Origin);
+        m_Stream.seekp((std::streamoff) Pos, (std::ios_base::seekdir) Origin);
     }
 
     uint32_t Size() override

@@ -36,10 +36,10 @@ namespace RC::GUI
 
     auto Backend_Windows::create_window() -> void
     {
-        StringType title_bar_text{STR("UE4SS Debugging Tools")};
+        SystemStringType title_bar_text{SYSSTR("UE4SS Debugging Tools")};
         if (dynamic_cast<Backend_DX11*>(m_gfx_backend))
         {
-            title_bar_text.append(STR(" (DX11)"));
+            title_bar_text.append(SYSSTR(" (DX11)"));
         }
 
         // ImGui_ImplWin32_EnableDpiAwareness()

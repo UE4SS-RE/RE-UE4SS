@@ -14,8 +14,9 @@ namespace RC::Output
         mutable bool m_windows_console_mode_set{};
 
       private:
+#ifdef WIN32
         auto set_windows_console_out_mode_if_needed() const -> void;
-
+#endif
       public:
       public:
 #if ENABLE_OUTPUT_DEVICE_DEBUG_MODE
@@ -34,8 +35,8 @@ namespace RC::Output
 
       public:
         auto has_optional_arg() const -> bool override;
-        auto receive(File::StringViewType fmt) const -> void override;
-        auto receive_with_optional_arg(File::StringViewType fmt, int32_t optional_arg = 0) const -> void override;
+        auto receive(SystemStringViewType fmt) const -> void override;
+        auto receive_with_optional_arg(SystemStringViewType fmt, int32_t optional_arg = 0) const -> void override;
     };
 } // namespace RC::Output
 

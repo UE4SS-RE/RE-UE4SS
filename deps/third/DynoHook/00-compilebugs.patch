@@ -1,0 +1,61 @@
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index 1633c1e..f215704 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -256,7 +256,7 @@ endif()
+ #Zydis
+ if(DYNOHOOK_USE_EXTERNAL_ZYDIS)
+     find_package(zydis REQUIRED)
+-    target_link_libraries(${PROJECT_NAME} PUBLIC Zydis::Zydis)
++    target_link_libraries(${PROJECT_NAME} PUBLIC Zydis)
+ else()
+     target_link_libraries(${PROJECT_NAME} PUBLIC $<BUILD_INTERFACE:Zydis>)
+     target_include_directories(${PROJECT_NAME} PUBLIC $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/zydis/include>)
+diff --git a/src/detours/x64_detour.cpp b/src/detours/x64_detour.cpp
+index 9e309dd..355119d 100644
+--- a/src/detours/x64_detour.cpp
++++ b/src/detours/x64_detour.cpp
+@@ -3,6 +3,8 @@
+ #include <asmtk/asmtk.h>
+ #include <Zydis/Register.h>
+ 
++#include <iterator>
++
+ using namespace std::string_literals;
+ 
+ using namespace dyno;
+diff --git a/src/mem_accessor.cpp b/src/mem_accessor.cpp
+index c3b6795..1d0b071 100644
+--- a/src/mem_accessor.cpp
++++ b/src/mem_accessor.cpp
+@@ -2,6 +2,8 @@
+ #include <dynohook/mem_protector.h>
+ #include <dynohook/os.h>
+ 
++#include <fstream>
++
+ using namespace dyno;
+ 
+ #if DYNO_PLATFORM_WINDOWS
+@@ -74,7 +76,7 @@ static region_t get_region_from_addr(uintptr_t addr) {
+ 					res.prot = res.prot | ProtFlag::X;
+ 
+ 				if (res.prot == ProtFlag::UNSET)
+-					res.prot = ProtFlag::NONE;
++					res.prot = ProtFlag::UNSET;
+ 
+ 				break;
+ 			}
+diff --git a/src/x64_hook.cpp b/src/x64_hook.cpp
+index b419a45..32c51cc 100644
+--- a/src/x64_hook.cpp
++++ b/src/x64_hook.cpp
+@@ -161,7 +161,7 @@ void x64Hook::writeModifyReturnAddress(Assembler& a) {
+ 	a.lea(rdx, qword_ptr(rsp, pushed));
+ 	a.mov(rsi, qword_ptr(rsp, pushed));
+ 	a.mov(rdi, this);
+-	a.sub(rsp, space);
++	a.sub(rsp, reserved);
+ 	a.call((void*&) setReturnAddress); // stack should be aligned by 16 bytes, call adds +8
+ 	a.add(rsp, reserved);
+ #endif

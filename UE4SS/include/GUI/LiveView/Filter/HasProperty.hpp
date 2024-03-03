@@ -7,8 +7,8 @@ namespace RC::GUI::Filter
     class HasProperty
     {
       public:
-        static inline StringType s_debug_name{STR("HasProperty")};
-        static inline StringType s_value{};
+        static inline UEStringType s_debug_name{STR("HasProperty")};
+        static inline UEStringType s_value{};
         static inline std::string s_internal_value{};
 
         static auto post_eval(UObject* object) -> bool

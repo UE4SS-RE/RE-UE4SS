@@ -8,7 +8,7 @@ namespace RC::GUI::Filter
     class NonInstancesOnly
     {
       public:
-        static inline StringType s_debug_name{STR("NonInstancesOnly")};
+        static inline UEStringType s_debug_name{STR("NonInstancesOnly")};
         static inline bool s_enabled{};
 
         static auto pre_eval(UObject* object) -> bool

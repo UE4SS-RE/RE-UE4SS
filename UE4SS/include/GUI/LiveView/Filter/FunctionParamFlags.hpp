@@ -9,7 +9,7 @@ namespace RC::GUI::Filter
     class FunctionParamFlags
     {
       public:
-        static inline StringType s_debug_name{STR("FunctionParamFlags")};
+        static inline UEStringType s_debug_name{STR("FunctionParamFlags")};
         static inline bool s_enabled{};
         static inline std::array<bool, 255> s_checkboxes{};
         static inline EPropertyFlags s_value{};

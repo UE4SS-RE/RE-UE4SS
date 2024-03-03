@@ -68,6 +68,12 @@ target_compile_definitions(${TARGET} PRIVATE
         $<$<NOT:$<BOOL:${UE4SS_${TARGET}_BUILD_SHARED}>>:
             RC_${MODULE_NAME}_BUILD_STATIC>)
 
+
+if (UNIX AND NOT APPLE)
+    # add LUA_USE_LINUX
+    target_compile_definitions(${TARGET} PRIVATE LUA_USE_LINUX)
+endif ()
+
 if (${CMAKE_CXX_COMPILER_ID} STREQUAL MSVC)
     target_compile_options(${TARGET} PRIVATE /W0)
 elseif (${CMAKE_CXX_COMPILER_ID} STREQUAL Clang)

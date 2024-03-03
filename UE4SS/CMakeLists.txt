@@ -4,7 +4,9 @@ set(TARGET UE4SS)
 project(${TARGET})
 message("Project: UE4SS")
 
+if (WIN32)
 add_subdirectory("proxy_generator")
+endif()
 
 # Release settings -> START
 option(UE4SS_LIB_BETA_IS_STARTED "Have beta releases started for the current major version" ON)
@@ -53,16 +55,40 @@ add_compile_definitions(
 message("UE4SS")
 message("Major: ${UE4SS_LIB_VERSION_MAJOR}, Minor: ${UE4SS_LIB_VERSION_MINOR}, Hotfix: ${UE4SS_LIB_VERSION_HOTFIX}, PreRelease: ${UE4SS_LIB_VERSION_PRERELEASE}, Beta: ${UE4SS_LIB_VERSION_BETA}")
 
+set(GUI_Sources
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/GUI/GUI.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/GUI/GUITab.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/GUI/Console.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/GUI/ConsoleOutputDevice.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/GUI/LiveView.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/GUI/Dumpers.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/GUI/BPMods.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/GUI/ImGuiUtility.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/GUI/UFunctionCallerWidget.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/GUI/SearcherWidget.cpp"
+)
+
+set(GUI_Sources_Win32
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/GUI/DX11.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/GUI/GLFW3_OpenGL3.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/GUI/Windows.cpp"
+)
+
+set(GUI_Sources_LinuxTUI
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/GUI/TUI.cpp"
+)
+
+set(GUI_Sources_LinuxGLFW3
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/GUI/GLFW3_OpenGL3.cpp"
+)
+
 set(${TARGET}_Sources
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/main_ue4ss_rewritten.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/UE4SSProgram.cpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/CrashDumper.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/SettingsManager.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/ObjectDumper/ObjectToString.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Signatures.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Mod/Mod.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Mod/LuaMod.cpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/Mod/CppMod.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Mod/CppUserModBase.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/UnrealCustom/CustomProperty.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/LuaLibrary.cpp"
@@ -94,25 +120,43 @@ set(${TARGET}_Sources
     "${CMAKE_CURRENT_SOURCE_DIR}/src/LuaType/LuaTSoftClassPtr.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/LuaType/LuaUWorld.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/LuaType/LuaUInterface.cpp"
+
     "${CMAKE_CURRENT_SOURCE_DIR}/src/SDKGenerator/Common.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/SDKGenerator/Generator.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/SDKGenerator/UEHeaderGenerator.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/SDKGenerator/JSONDumper.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/SDKGenerator/TMapOverrideGen.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/USMapGenerator/Generator.cpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/GUI/GUI.cpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/GUI/GUITab.cpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/GUI/DX11.cpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/GUI/GLFW3_OpenGL3.cpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/GUI/Windows.cpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/GUI/Console.cpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/GUI/ConsoleOutputDevice.cpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/GUI/LiveView.cpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/GUI/Dumpers.cpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/GUI/BPMods.cpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/GUI/ImGuiUtility.cpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/GUI/UFunctionCallerWidget.cpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/GUI/SearcherWidget.cpp")
+
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Mod/CppMod.cpp"
+)
+
+if (WIN32)
+    # append GUI sources
+    list(APPEND ${TARGET}_Sources ${GUI_Sources} ${GUI_Sources_Win32}
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/EntryWin32.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/CrashDumper.cpp"
+    )
+    # set c definition HAS_GUI
+    add_compile_definitions(HAS_UI)
+    add_compile_definitions(HAS_GUI)
+    add_compile_definitions(HAS_INPUT)
+else()
+    if (UE4SS_USE_TUI_ON_LINUX)
+        list(APPEND ${TARGET}_Sources ${GUI_Sources} ${GUI_Sources_LinuxTUI})
+        add_compile_definitions(HAS_UI)
+        add_compile_definitions(HAS_TUI)
+        add_compile_definitions(HAS_INPUT)
+    endif()
+    if (UE4SS_USE_GLFW_ON_LINUX)
+        list(APPEND ${TARGET}_Sources ${GUI_Sources} ${GUI_Sources_LinuxGLFW3})
+        add_compile_definitions(HAS_UI)
+        add_compile_definitions(HAS_GUI)
+        add_compile_definitions(HAS_INPUT)
+    endif()
+    list(APPEND ${TARGET}_Sources
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/EntryLinux.cpp")
+endif()
 
 add_library(${TARGET} SHARED ${UE4SS_Sources})
 
@@ -158,19 +202,39 @@ target_link_libraries(${TARGET} PUBLIC
     File glaze::glaze DynamicOutput
     Unreal SinglePassSigScanner LuaMadeSimple
     Function IniParser JSON
-    Input Constructs Helpers
+    Constructs Helpers
     MProgram ScopedTimer Profiler
-    patternsleuth_bind
 )
+if (WIN32)
+    target_link_libraries(${TARGET} PUBLIC
+        Input ImGui PolyHook_2 d3d11 GLFW opengl32 dbghelp psapi 
+        patternsleuth_bind)
+    add_compile_definitions(HAS_D3D11)
+    add_compile_definitions(HAS_GLFW)
+else()
+    target_link_libraries(${TARGET} PUBLIC
+        patternsleuth_bind PolyHook_2 dl)
+    if (UE4SS_USE_TUI_ON_LINUX)
+        target_link_libraries(${TARGET} PUBLIC imtui imtui-ncurses ImGuiText Input)
+    endif()
+    if (UE4SS_USE_GLFW_ON_LINUX)
+        target_link_libraries(${TARGET} PUBLIC ImGui Input GLFW)
+        add_compile_definitions(HAS_GLFW)
+    endif()
+    # add pthread?
+    set(THREADS_PREFER_PTHREAD_FLAG ON)
+    find_package(Threads REQUIRED)
+    target_link_libraries(${TARGET} PRIVATE Threads::Threads)
+    set(THREADS_PREFER_PTHREAD_FLAG OFF)
+endif()
 
-target_link_libraries(${TARGET} PUBLIC
-    ImGui PolyHook_2 d3d11 GLFW opengl32 dbghelp psapi)
-
-
-
-set_property(TARGET ${TARGET} PROPERTY INTERPROCEDURAL_OPTIMIZATION ON)
+if (WIN32)
+    set_property(TARGET ${TARGET} PROPERTY INTERPROCEDURAL_OPTIMIZATION ON)
+endif()
 
 # Making sure that the linked C runtime is a dll so that C++ mods will work correctly
+if (WIN32)
 set_property(TARGET ${TARGET} PROPERTY MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>DLL")
+endif()
 
 set_target_properties(${TARGET} PROPERTIES OUTPUT_NAME "UE4SS" CXX_STANDARD 23)

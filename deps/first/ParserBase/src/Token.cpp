@@ -2,7 +2,7 @@
 
 namespace RC::ParserBase
 {
-    Token::Token(int type, File::StringViewType name, File::StringViewType identifier, Token::HasData has_data)
+    Token::Token(int type, SystemStringViewType name, SystemStringViewType identifier, Token::HasData has_data)
         : m_debug_name(name), m_identifier(identifier), m_type(type), m_has_data(has_data)
     {
     }
@@ -42,7 +42,7 @@ namespace RC::ParserBase
         return m_end;
     }
 
-    auto Token::get_identifier() const -> File::StringViewType
+    auto Token::get_identifier() const -> SystemStringViewType
     {
         return m_identifier;
     }
@@ -62,12 +62,12 @@ namespace RC::ParserBase
         return m_rules;
     }
 
-    auto Token::to_string() const -> File::StringType
+    auto Token::to_string() const -> SystemStringType
     {
         return m_debug_name;
     }
 
-    auto Token::create(int type, File::StringViewType name, File::StringViewType identifier, HasData has_data) -> Token
+    auto Token::create(int type, SystemStringViewType name, SystemStringViewType identifier, HasData has_data) -> Token
     {
         Token token{type, name, identifier, has_data};
         return token;

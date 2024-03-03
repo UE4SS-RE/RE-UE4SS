@@ -1,5 +1,13 @@
 project(GLFW)
-
-add_library(GLFW STATIC IMPORTED GLOBAL)
-set_property(TARGET GLFW PROPERTY IMPORTED_LOCATION "${CMAKE_CURRENT_SOURCE_DIR}/lib-vc2022/glfw3.lib")
-target_include_directories(GLFW INTERFACE "${CMAKE_CURRENT_SOURCE_DIR}/include")
+if(WIN32)
+    add_library(GLFW STATIC IMPORTED GLOBAL)
+    set_property(TARGET GLFW PROPERTY IMPORTED_LOCATION "${CMAKE_CURRENT_SOURCE_DIR}/lib-vc2022/glfw3.lib")
+    target_include_directories(GLFW INTERFACE "${CMAKE_CURRENT_SOURCE_DIR}/include")
+else()
+    find_package(glfw3)
+    # export it as GLFW
+    get_target_property(GLFW_INCLUDE_DIRS glfw INTERFACE_INCLUDE_DIRECTORIES)
+    message(STATUS "GLFW Include Directories: ${GLFW_INCLUDE_DIRS}")
+    add_library(GLFW INTERFACE)
+    target_link_libraries(GLFW INTERFACE glfw)
+endif()

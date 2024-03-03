@@ -4,7 +4,15 @@ project(UE4SSMonorepo)
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+if (WIN32)
 enable_language(CXX ASM_MASM)
+endif()
+
+if (UNIX)
+    # add fPIC to all targets
+    set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+endif()
+
 include(CheckIPOSupported)
 include(GNUInstallDirs)
 
@@ -18,10 +26,16 @@ message("IPO - Supported: ${supported}; ${error}")
 # Settings -> START
 option(MAKE_DEPENDENCIES_SHARED "Make dependencies shared" OFF)
 option(UE4SS_CONSOLE_COLORS_ENABLED "Enable console colors" OFF)
+option(UE4SS_USE_TUI_ON_LINUX "Use TUI on Linux" ON)
+option(UE4SS_USE_GLFW_ON_LINUX "Use GLFW on Linux" OFF)
 # Settings -> END
 
 # Projects -> START
+if (WIN32)
 set(PROJECTS "UE4SS" "UVTD")
+else()
+set(PROJECTS "UE4SS")
+endif()
 # Projects -> END
 
 # Very temporary fix for ninja/clang thinking we should use MSVC simulation
@@ -70,7 +84,12 @@ set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/Output/$<CONFIG>/${CMAKE_
 list(APPEND TARGET_TYPES "Game" "CasePreserving")
 list(APPEND CONFIGURATION_TYPES "Debug" "Shipping" "Test")
 # list(APPEND CONFIGURATION_TYPES "Development")
+
+if (WIN32)
 list(APPEND PLATFORM_TYPES "Win64")
+else()
+list(APPEND PLATFORM_TYPES "Linux")
+endif()
 
 # Definitions -> START
 # Target definitions
@@ -84,7 +103,8 @@ set(Shipping_DEFINITIONS UE_BUILD_SHIPPING)
 set(Test_DEFINITIONS UE_BUILD_TEST STATS)
 
 # Platform definitions
-set(Win64_DEFINITIONS PLATFORM_WINDOWS PLATFORM_MICROSOFT OVERRIDE_PLATFORM_HEADER_NAME=Windows UBT_COMPILED_PLATFORM=Win64)
+set(Win64_DEFINITIONS PLATFORM_WINDOWS PLATFORM_MICROSOFT OVERRIDE_PLATFORM_HEADER_NAME=Windows UBT_COMPILED_PLATFORM=Win64 DLLEXT=.dll)
+set(Linux_DEFINITIONS PLATFORM_LINUX PLATFORM_UNIX LINUX OVERRIDE_PLATFORM_HEADER_NAME=Linux UBT_COMPILED_PLATFORM=Linux printf_s=printf DLLEXT=.so)
 
 # Definitions -> END
 
@@ -233,12 +253,19 @@ endforeach ()
 # Default configuration -> START
 get_property(is_multi_config GLOBAL PROPERTY GENERATOR_IS_MULTI_CONFIG)
 
+
+if (WIN32)
+    set(DEFAULT_BUILD_TYPE Game__Shipping__Win64)
+else()
+    set(DEFAULT_BUILD_TYPE Game__Shipping__Linux)
+endif()
+
 if (is_multi_config)
     set(CMAKE_CONFIGURATION_TYPES ${BUILD_CONFIGS} CACHE STRING "" FORCE)
 else ()
     if (NOT CMAKE_BUILD_TYPE)
         message("Defaulting to Game__Shipping__Win64")
-        set(CMAKE_BUILD_TYPE Game__Shipping__Win64 CACHE STRING "" FORCE)
+        set(CMAKE_BUILD_TYPE ${DEFAULT_BUILD_TYPE} CACHE STRING "" FORCE)
     endif ()
 
     set_property(CACHE CMAKE_BUILD_TYPE PROPERTY HELPSTRING "Choose build type")

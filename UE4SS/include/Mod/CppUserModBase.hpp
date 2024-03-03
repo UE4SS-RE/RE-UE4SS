@@ -5,17 +5,19 @@
 
 #include <Common.hpp>
 #include <File/Macros.hpp>
+#ifdef HAS_UI
 #include <GUI/GUITab.hpp>
+#endif
 
 namespace RC
 {
     struct ModMetadata
     {
-        const StringType ModName{};
-        const StringType ModVersion{};
-        const StringType ModDescription{};
-        const StringType ModAuthors{};
-        const StringType ModIntendedSDKVersion{};
+        const UEStringType ModName{};
+        const UEStringType ModVersion{};
+        const UEStringType ModDescription{};
+        const UEStringType ModAuthors{};
+        const UEStringType ModIntendedSDKVersion{};
     };
 
     namespace LuaMadeSimple
@@ -28,14 +30,15 @@ namespace RC
     class CppUserModBase
     {
       protected:
+#ifdef HAS_UI
         std::vector<std::shared_ptr<GUI::GUITab>> GUITabs{};
-
+#endif
       public:
-        StringType ModName{};
-        StringType ModVersion{};
-        StringType ModDescription{};
-        StringType ModAuthors{};
-        StringType ModIntendedSDKVersion{};
+        UEStringType ModName{};
+        UEStringType ModVersion{};
+        UEStringType ModDescription{};
+        UEStringType ModAuthors{};
+        UEStringType ModIntendedSDKVersion{};
 
       public:
         RC_UE4SS_API CppUserModBase();
@@ -65,7 +68,7 @@ namespace RC
          * @param async_lua This is the Lua instance for asynchronous things like ExecuteAsync and ExecuteWithDelay.
          * @param hook_luas This is a container of Lua instances that are used for game-thread hooks like ExecuteInGameThread.
          */
-        RC_UE4SS_API virtual auto on_lua_start(StringViewType mod_name,
+        RC_UE4SS_API virtual auto on_lua_start(SystemStringViewType mod_name,
                                                LuaMadeSimple::Lua& lua,
                                                LuaMadeSimple::Lua& main_lua,
                                                LuaMadeSimple::Lua& async_lua,
@@ -96,7 +99,7 @@ namespace RC
          * @param async_lua This is the Lua instance for asynchronous things like ExecuteAsync and ExecuteWithDelay.
          * @param hook_luas This is a container of Lua instances that are used for game-thread hooks like ExecuteInGameThread.
          */
-        RC_UE4SS_API virtual auto on_lua_stop(StringViewType mod_name,
+        RC_UE4SS_API virtual auto on_lua_stop(SystemStringViewType mod_name,
                                               LuaMadeSimple::Lua& lua,
                                               LuaMadeSimple::Lua& main_lua,
                                               LuaMadeSimple::Lua& async_lua,
@@ -118,13 +121,15 @@ namespace RC
         {
         }
 
-        RC_UE4SS_API virtual auto on_dll_load(std::wstring_view dll_name) -> void
+        RC_UE4SS_API virtual auto on_dll_load(SystemStringViewType dll_name) -> void
         {
         }
 
+#ifdef HAS_UI
         RC_UE4SS_API virtual auto render_tab() -> void{};
 
       protected:
-        RC_UE4SS_API auto register_tab(std::wstring_view tab_name, GUI::GUITab::RenderFunctionType) -> void;
+        RC_UE4SS_API auto register_tab(UEStringViewType tab_name, GUI::GUITab::RenderFunctionType) -> void;
+#endif
     };
 } // namespace RC

@@ -8,12 +8,13 @@ namespace RC
     {
         if (ModIntendedSDKVersion.empty())
         {
-            ModIntendedSDKVersion = std::format(STR("{}.{}.{}"), UE4SS_LIB_VERSION_MAJOR, UE4SS_LIB_VERSION_MINOR, UE4SS_LIB_VERSION_HOTFIX);
+            ModIntendedSDKVersion = to_ue(std::format(SYSSTR("{}.{}.{}"), UE4SS_LIB_VERSION_MAJOR, UE4SS_LIB_VERSION_MINOR, UE4SS_LIB_VERSION_HOTFIX));
         }
     }
 
     CppUserModBase::~CppUserModBase()
     {
+#ifdef HAS_UI
         for (const auto& tab : GUITabs)
         {
             if (tab)
@@ -22,11 +23,14 @@ namespace RC
             }
         }
         GUITabs.clear();
+#endif
     }
 
-    auto CppUserModBase::register_tab(std::wstring_view tab_name, GUI::GUITab::RenderFunctionType render_function) -> void
+#ifdef HAS_UI
+    auto CppUserModBase::register_tab(UEStringViewType tab_name, GUI::GUITab::RenderFunctionType render_function) -> void
     {
         auto& tab = GUITabs.emplace_back(std::make_shared<GUI::GUITab>(tab_name, render_function, this));
         UE4SSProgram::get_program().add_gui_tab(tab);
     }
+#endif
 } // namespace RC

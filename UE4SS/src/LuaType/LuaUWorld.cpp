@@ -82,7 +82,7 @@ Overloads:
             }
             else if (lua.is_table())
             {
-                lua.for_each_in_table([&](const LuaMadeSimple::LuaTableReference& table) {
+                lua.for_each_in_table([&](const LuaMadeSimple::LuaTableReference<LuaMadeSimple::Lua>& table) {
                     if (table.key.is_string() && table.key.get_string() == "X" && table.value.is_number())
                     {
                         location.SetX(table.value.get_number());
@@ -113,7 +113,7 @@ Overloads:
             }
             else if (lua.is_table())
             {
-                lua.for_each_in_table([&](const LuaMadeSimple::LuaTableReference& table) {
+                lua.for_each_in_table([&](const LuaMadeSimple::LuaTableReference<LuaMadeSimple::Lua>& table) {
                     if (table.key.is_string() && table.key.get_string() == "Yaw" && table.value.is_number())
                     {
                         rotation.SetYaw(table.value.get_number());

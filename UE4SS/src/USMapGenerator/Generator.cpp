@@ -21,6 +21,9 @@
 #include <Unreal/UScriptStruct.hpp>
 #include <Unreal/UnrealVersion.hpp>
 
+#undef min
+#undef max
+
 namespace RC::OutTheShade
 {
     using namespace ::RC::Unreal;
@@ -198,8 +201,8 @@ namespace RC::OutTheShade
 
     auto generate_usmap() -> void
     {
-        Output::send(STR("Mappings Generator by OutTheShade\nAttempting to dump mappings...\nPort of https://github.com/OutTheShade/UnrealMappingsDumper "
-                         "Commit SHA 4da8c66\n"));
+        Output::send(SYSSTR("Mappings Generator by OutTheShade\nAttempting to dump mappings...\nPort of https://github.com/OutTheShade/UnrealMappingsDumper "
+                            "Commit SHA 4da8c66\n"));
 
         StreamWriter Buffer;
         std::unordered_map<FName, int> NameMap;
@@ -297,11 +300,11 @@ namespace RC::OutTheShade
             if (Object->GetClassPrivate() == UClass::StaticClass() || Object->GetClassPrivate() == UScriptStruct::StaticClass() ||
                 Object->GetClassPrivate() == UEnum::StaticClass())
             {
-                std::wstring RawPathName = Object->GetPathName();
-                std::wstring::size_type PathNameStart =
+                UEStringType RawPathName = Object->GetPathName();
+                UEStringType::size_type PathNameStart =
                         0; // include first bit (Script/Game) to avoid ambiguity; to drop it, replace with RawPathName.find_first_of('/', 1) + 1;
-                std::wstring::size_type PathNameLength = RawPathName.find_last_of('.') - PathNameStart;
-                std::wstring FinalPathStr = RawPathName.substr(PathNameStart, PathNameLength);
+                UEStringType::size_type PathNameLength = RawPathName.find_last_of('.') - PathNameStart;
+                UEStringType FinalPathStr = RawPathName.substr(PathNameStart, PathNameLength);
                 FName FinalPathName = FName(FinalPathStr);
 
                 NameMap.insert_or_assign(FinalPathName, 0);
@@ -515,6 +518,6 @@ namespace RC::OutTheShade
 
         FileOutput.Write(UsmapData.data(), UsmapData.size());
 
-        Output::send(STR("Mappings Generation Completed Successfully!\n"));
+        Output::send(SYSSTR("Mappings Generation Completed Successfully!\n"));
     }
 } // namespace RC::OutTheShade

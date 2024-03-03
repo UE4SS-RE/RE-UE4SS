@@ -32,4 +32,4 @@ target_compile_definitions(${TARGET} PRIVATE
 
 target_include_directories(${TARGET} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
 
-target_link_libraries(${TARGET} PUBLIC File)
+target_link_libraries(${TARGET} PUBLIC File Helpers)

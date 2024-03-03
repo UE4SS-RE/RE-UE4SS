@@ -662,7 +662,7 @@ namespace RC::LuaMadeSimple
             // It's up to the 'callable' to fetch the key/value from the stack
             // This makes dealing with different types easier
             // TODO: Make it so you don't need to pass the 'this' pointer to both the key & value struct
-            LuaTableReference table{.key = {this}, .value = {this}};
+            LuaTableReference<Lua> table{.key = {this}, .value = {this}};
             if (callable(table))
             {
                 lua_pop(get_lua_state(), 3);

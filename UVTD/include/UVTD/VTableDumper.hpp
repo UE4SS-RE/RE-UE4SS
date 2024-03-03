@@ -39,14 +39,14 @@ namespace RC::UVTD
       private:
         auto process_class(const PDB::TPIStream& tpi_stream,
                            const PDB::CodeView::TPI::Record* class_record,
-                           const File::StringType& class_name,
+                           const UEStringType& class_name,
                            const SymbolNameInfo& name_info) -> void;
 
         auto process_method_overload_list(const PDB::TPIStream& tpi_stream, const PDB::CodeView::TPI::FieldList* method_record, Class& class_entry) -> void;
         auto process_onemethod(const PDB::TPIStream& tpi_stream, const PDB::CodeView::TPI::FieldList* onemethod_record, Class& class_entry) -> void;
 
       private:
-        auto dump_vtable_for_symbol(std::unordered_map<File::StringType, SymbolNameInfo>& names) -> void;
+        auto dump_vtable_for_symbol(std::unordered_map<UEStringType, SymbolNameInfo>& names) -> void;
 
       public:
         static auto output_cleanup() -> void;

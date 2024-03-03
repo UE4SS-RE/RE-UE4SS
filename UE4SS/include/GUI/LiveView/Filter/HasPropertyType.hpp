@@ -8,13 +8,16 @@ namespace RC::GUI::Filter
     class HasPropertyType
     {
       public:
-        static inline StringType s_debug_name{STR("HasPropertyType")};
+        static inline UEStringType s_debug_name{STR("HasPropertyType")};
         static inline FName s_value{};
         static inline std::string s_internal_value{};
 
         static auto post_eval(UObject* object) -> bool
         {
-            if (!s_value || s_internal_value.empty()) { return false; }
+            if (!s_value || s_internal_value.empty())
+            {
+                return false;
+            }
 
             auto as_struct = Cast<UStruct>(object);
             if (!as_struct)

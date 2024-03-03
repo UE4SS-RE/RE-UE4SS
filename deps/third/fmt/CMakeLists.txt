@@ -1,0 +1,2 @@
+include(FetchContent)
+FetchContent_MakeAvailable(fmt)

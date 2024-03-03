@@ -3,6 +3,7 @@
 #include <functional>
 #include <memory>
 #include <thread>
+#include <stop_token>
 
 #include <GUI/Console.hpp>
 #include <GUI/GUITab.hpp>
@@ -10,19 +11,62 @@
 #include <Helpers/String.hpp>
 #include <imgui.h>
 
+#ifndef HAS_TUI
+
+#ifndef HAS_GUI
+static_assert(false, "HAS_GUI or HAS_TUI must be defined.");
+#endif
+
+#define XOFFSET (-14.0f)
+#define XDIV 1
+#define YDIV 1
+
+#else
+
+#ifdef HAS_GUI
+static_assert(false, "HAS_GUI and HAS_TUI cannot be defined at the same time at this moment.");
+#endif
+
+#define XOFFSET 0
+#define XDIV (6.66f)
+#define YDIV (21.1f)
+
+namespace ImGui
+{
+    static void BeginDisabled(bool disabled = true)
+    {
+    }
+    static void EndDisabled()
+    {
+    }
+} // namespace ImGui
+#endif
+
 namespace RC::GUI
 {
     class GUITab; // dunno why forward declaration is necessary
 
     enum class GfxBackend
     {
+#ifdef HAS_D3D11
         DX11,
+#endif
+#ifdef HAS_GLFW
         GLFW3_OpenGL3,
+#endif
+#ifdef HAS_TUI
+        TUI
+#endif
     };
 
     enum class OSBackend
     {
+#ifdef WIN32
         Windows,
+#endif
+#ifdef LINUX
+        TUI,
+#endif
     };
 
     struct WindowSize
@@ -240,4 +284,10 @@ namespace RC::GUI
             code_to_try();
         });
     }
+
+#ifdef HAS_GUI
+#define ATTACH_ICON(icon, str) icon str
+#else
+#define ATTACH_ICON(icon, str) ((icon str) + (UE4SSProgram::settings_manager.TUI.TUINerdFont ? (0) : (sizeof(icon) - 1)))
+#endif
 } // namespace RC::GUI

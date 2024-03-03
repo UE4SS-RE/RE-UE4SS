@@ -4,7 +4,7 @@
 
 namespace RC::ParserBase
 {
-    TokenParser::TokenParser(const Tokenizer& tokenizer, File::StringType& input) : m_tokenizer(tokenizer), m_data(input)
+    TokenParser::TokenParser(const Tokenizer& tokenizer, SystemStringType& input) : m_tokenizer(tokenizer), m_data(input)
     {
     }
 
@@ -13,7 +13,7 @@ namespace RC::ParserBase
         return m_tokenizer.get_tokens()[index];
     }
 
-    auto TokenParser::get_data(const Token& token) const -> const File::StringType
+    auto TokenParser::get_data(const Token& token) const -> const SystemStringType
     {
         if (!token.has_data())
         {

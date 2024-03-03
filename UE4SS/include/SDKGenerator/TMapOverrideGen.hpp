@@ -7,12 +7,12 @@
 
 namespace RC::UEGenerator
 {
-    using RC::Unreal::FName;
+    using ::RC::Unreal::FName;
 
     class TMapOverrideGenerator
     {
       public:
-        static std::unordered_set<FName> MapProperties;
+        static ::std::unordered_set<FName> MapProperties;
         static auto generate_tmapoverride() -> void;
     };
 } // namespace RC::UEGenerator
