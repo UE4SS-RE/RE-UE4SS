@@ -2686,26 +2686,6 @@ namespace RC::GUI
         }
     }
 
-    struct UObjectArrayLock
-    {
-        UObjectArrayLock()
-        {
-            // TODO: Implement this in UVTD and UObjectArray.hpp if this works.
-            //       This is just a test for now, do not let this make it into main.
-            auto UObjectDeleteListenersCritical = std::bit_cast<CRITICAL_SECTION*>(static_cast<uint8_t*>(Container::UnrealVC->UObjectArray_get_internal_storage_ptr()) + 0x88);
-            EnterCriticalSection(std::bit_cast<::CRITICAL_SECTION*>(UObjectDeleteListenersCritical));
-            //UObjectArray::LockGUObjectArray();
-        }
-        ~UObjectArrayLock()
-        {
-            // TODO: Implement this in UVTD and UObjectArray.hpp if this works.
-            //       This is just a test for now, do not let this make it into main.
-            auto UObjectDeleteListenersCritical = std::bit_cast<CRITICAL_SECTION*>(static_cast<uint8_t*>(Container::UnrealVC->UObjectArray_get_internal_storage_ptr()) + 0x88);
-            LeaveCriticalSection(std::bit_cast<::CRITICAL_SECTION*>(UObjectDeleteListenersCritical));
-            //UObjectArray::UnlockGUObjectArray();
-        }
-    };
-
     auto LiveView::process_function_pre_watch(Unreal::UnrealScriptFunctionCallableContext& context, void*) -> void
     {
         // TODO: Log params in pre-state ?
@@ -2713,13 +2693,10 @@ namespace RC::GUI
 
     auto LiveView::process_function_post_watch(Unreal::UnrealScriptFunctionCallableContext& context, void*) -> void
     {
-        // The if-statement makes sure that we don't render anything if UE has already begun shutting down.
-        // The lock makes sure that UE can't shut down while we're rendering.
         if (!UnrealInitializer::StaticStorage::bIsInitialized)
         {
             return;
         }
-        UObjectArrayLock obj_array_lock{};
 
         auto function = context.TheStack.Node();
         std::lock_guard<decltype(LiveView::Watch::s_watch_lock)> lock{LiveView::Watch::s_watch_lock};
@@ -2808,13 +2785,10 @@ namespace RC::GUI
 
     auto LiveView::process_watches() -> void
     {
-        // The if-statement makes sure that we don't render anything if UE has already begun shutting down.
-        // The lock makes sure that UE can't shut down while we're rendering.
         if (!UnrealInitializer::StaticStorage::bIsInitialized)
         {
             return;
         }
-        UObjectArrayLock obj_array_lock{};
 
         std::lock_guard<decltype(Watch::s_watch_lock)> lock{Watch::s_watch_lock};
         for (auto& watch : s_watches)
@@ -2838,13 +2812,10 @@ namespace RC::GUI
 
     auto LiveView::render() -> void
     {
-        // The if-statement makes sure that we don't render anything if UE has already begun shutting down.
-        // The lock makes sure that UE can't shut down while we're rendering.
         if (!UnrealInitializer::StaticStorage::bIsInitialized)
         {
             return;
         }
-        UObjectArrayLock obj_array_lock{};
 
         if (!m_is_initialized)
         {
