@@ -2816,7 +2816,6 @@ namespace RC::GUI
         {
             return;
         }
-
         if (!m_is_initialized)
         {
             return;
