@@ -26,6 +26,7 @@ TBD
 ### UHT Dumper
 
 ### Lua API
+`print` now behaves like vanilla Lua (can now accept zero, one, or multiple arguments of any type).
 
 ### C++ API
 
@@ -526,7 +527,7 @@ v2.3.0
 
 ## New
 
-### Lua 
+### Lua
 
 * Added 'ModRef.SetSharedVariable' and 'ModRef.GetSharedVariable'
 * Added UObject.HasAnyInternalFlags

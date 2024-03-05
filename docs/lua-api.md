@@ -107,7 +107,7 @@ This is an overall list of API definitions available in UE4SS. For more readable
 
 ### Global Functions
 ```
-    print(string Message)
+    print(any... Message)
         - Does not have the capability to format. Use 'string.format' if you require formatting.
     
     StaticFindObject(string ObjectName) -> { UObject | AActor | nil }
