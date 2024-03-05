@@ -31,38 +31,40 @@ namespace RC::LuaLibrary
 
     auto global_print(const LuaMadeSimple::Lua& lua) -> int
     {
-        int32_t stack_size = lua.get_stack_size();
-
-        if (stack_size <= 0)
-        {
-            lua.throw_error("[do_tests => lambda(register_function(print))] stack_size was <= 0");
-        }
-
-        if (!lua.is_string())
-        {
-            lua.throw_error(std::format("[do_tests => lambda(register_function(print))] Parameter #1 must be of type 'string'. Was of type '{}'.",
-                                        lua.get_type_string()));
-        }
-
-        std::wstring format = to_wstring(lua.get_string());
-
-        // The output device is at the top of the stack, therefore we must call this function after retrieving all of the params.
         auto* output_device = get_outputdevice_ref(lua);
 
-        if (stack_size == 1)
+        StringType formatted_string = STR("[Lua] ");
+        StringType outdevice_string;
+        if (output_device)
         {
-            auto formatted_string = std::format(STR("[Lua] {}"), format.c_str());
-            Output::send(formatted_string);
-            if (output_device)
+            // Remove stack item from get_outputdevice_ref's lua_getglobal
+            lua.discard_value(-1);
+            outdevice_string = STR("[Lua] ");
+        }
+
+        int32_t stack_size = lua.get_stack_size();
+        for (int32_t i = 1; i <= stack_size; i++)
+        {
+            // lua_tostring (macro of lua_tolstring) is NOT the same as luaL_tolstring
+            // luaL_tolstring provides tostring()-ish conversion for any value
+            auto lua_str = to_generic_string(luaL_tolstring(lua.get_lua_state(), i, nullptr));
+
+            if (i > 1)
             {
-                output_device->Log(formatted_string.c_str());
+                // Use double tab, as single tab might make the spacing too thin in the console
+                formatted_string.append(STR("\t\t"));
+                if (output_device) outdevice_string.append(STR("        "));
             }
+            formatted_string.append(lua_str);
+            if (output_device) outdevice_string.append(lua_str);
+
+            // Remove the stack item produced by luaL_tolstring
+            lua.discard_value(-1);
         }
-        else if (stack_size >= 2)
-        {
-            // Extra params are not yet implemented.
-            // Remember to deal with the output device if you ever support more params (i.e. baked-in string.format).
-        }
+
+        Output::send(formatted_string);
+
+        if (output_device) output_device->Log(outdevice_string.c_str());
 
         return 0;
     }
