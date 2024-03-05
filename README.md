@@ -70,7 +70,7 @@ There are several different ways you can build UE4SS.
 
 ### Building from cli
 
-Configure the project using this command: `xmake f -m "<BuildMode>" --runtimes="MD"`
+Configure the project using this command: `xmake f -m "<BuildMode>"`
 
 The build modes are structured as follows: `<Target>__<Config>__<Platform>`
 

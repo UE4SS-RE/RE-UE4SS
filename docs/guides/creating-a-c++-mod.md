@@ -102,7 +102,7 @@ extern "C"
 3. In the command prompt, in the `MyMods` directory, execute either:
 A.
 ```
-xmake f -m "Game__Shipping__Win64" --runtimes="MD"
+xmake f -m "Game__Shipping__Win64"
 xmake
 ```
 or B.
