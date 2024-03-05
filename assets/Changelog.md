@@ -42,6 +42,8 @@ Fixed BPModLoaderMod giving "bad conversion" errors.
 ### UHT Dumper
 
 ### Lua API
+Fixed FString use after free.
+
 Fixed the "IterateGameDirectories" global function throwing "bad conversion" errors.
 
 ### C++ API
