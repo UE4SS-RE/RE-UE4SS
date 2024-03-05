@@ -68,8 +68,10 @@ target(projectName)
 
     after_load(function (target)
         local projectRoot = get_config("ue4ssRoot")
-        import("build_configs.build_configs", { rootdir = projectRoot })
-        import("target_helpers", { rootdir = projectRoot })
+
+        local scriptsRoot = get_config("scriptsRoot")
+        import("build_configs", { rootdir = scriptsRoot })
+        import("target_helpers", { rootdir = scriptsRoot })
         
         print("Project: " .. projectName .. " (SHARED)")
 

@@ -38,15 +38,17 @@ target("proxy")
     add_files("proxy.rc")
 
     on_load(function (target)
-        import("target_helpers", { rootdir = get_config("ue4ssRoot") })
+        import("target_helpers", { rootdir = get_config("scriptsRoot") })
         local filename = target_helpers.get_path_filename(get_config("ue4ssProxyPath"))
         target:set("basename", filename)
     end)
 
     on_config(function (target)
         local projectRoot = get_config("ue4ssRoot")
-        import("target_helpers", { rootdir = projectRoot })
-        import("build_configs.build_configs", { rootdir = projectRoot })
+
+        local scriptsRoot = get_config("scriptsRoot")
+        import("target_helpers", { rootdir = scriptsRoot })
+        import("build_configs", { rootdir = scriptsRoot })
 
         build_configs:config(target)
 

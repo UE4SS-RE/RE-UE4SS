@@ -171,7 +171,7 @@ end
 
 -- Run on configure step for each target that wants unreal rules
 function config(self, target)
-    import("target_helpers", { rootdir = get_config("ue4ssRoot") })
+    import("target_helpers", { rootdir = get_config("scriptsRoot") })
 
     local mode = get_config("mode")
     local modes = self:mode_string_to_modes(mode)
@@ -203,7 +203,7 @@ end
 
 -- Run after load step for each target that has dependencies with `ue4ssDep`: true
 function export_deps(self, target)
-    import("target_helpers", { rootdir = get_config("ue4ssRoot") })
+    import("target_helpers", { rootdir = get_config("scriptsRoot") })
 
     local additional_defines = {}
     for _, dep in pairs(target:deps()) do

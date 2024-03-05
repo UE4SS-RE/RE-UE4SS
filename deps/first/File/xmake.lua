@@ -13,7 +13,7 @@ target(projectName)
     
 
     on_load(function (target)
-        import("target_helpers", { rootdir = get_config("ue4ssRoot") })
+        import("target_helpers", { rootdir = get_config("scriptsRoot") })
         
         print("Project: " .. projectName .. " (STATIC)")
 

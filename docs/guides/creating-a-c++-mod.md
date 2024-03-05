@@ -41,17 +41,17 @@ target(projectName)
 
     -- set ue4ss compliant build configs
     on_load(function (target)
-        import("build_configs.build_configs", { rootdir = get_config("ue4ssRoot") })
+        import("build_configs", { rootdir = get_config("scriptsRoot") })
         build_configs:set_output_dir(target)
     end)
 
     on_config(function (target)
-        import("build_configs.build_configs", { rootdir = get_config("ue4ssRoot") })
+        import("build_configs", { rootdir = get_config("scriptsRoot") })
         build_configs:config(target)
     end)
 
     after_clean(function (target)
-        import("build_configs.build_configs", { rootdir = get_config("ue4ssRoot") })
+        import("build_configs", { rootdir = get_config("scriptsRoot") })
         build_configs:clean_output_dir(target)
     end)
 ```
