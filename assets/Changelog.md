@@ -43,6 +43,8 @@ Fixed BPModLoaderMod giving "bad conversion" errors.
 ### UHT Dumper
 
 ### Lua API
+Fixed FString use after free.
+
 Fixed the "IterateGameDirectories" global function throwing "bad conversion" errors.
 
 Fixed `FText` not working as a parameter (in `RegisterHook`, etc.).

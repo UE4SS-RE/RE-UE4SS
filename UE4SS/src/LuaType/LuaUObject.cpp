@@ -1112,7 +1112,7 @@ namespace RC::LuaType
             else if (params.lua.is_userdata())
             {
                 auto& rhs = params.lua.get_userdata<LuaType::FString>();
-                string->SetCharArray(rhs.get_remote_cpp_object()->GetCharTArray());
+                string->SetCharArray(rhs.get_local_cpp_object().GetCharTArray());
             }
             else
             {

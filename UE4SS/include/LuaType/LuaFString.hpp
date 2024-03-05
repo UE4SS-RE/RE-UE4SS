@@ -16,7 +16,7 @@ namespace RC::LuaType
             return "FString";
         }
     };
-    class FString : public RemoteObjectBase<Unreal::FString, FStringName>
+    class FString : public LocalObjectBase<Unreal::FString, FStringName>
     {
       private:
         explicit FString(Unreal::FString* object);
