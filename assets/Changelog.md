@@ -22,6 +22,7 @@ TBD
 ### General
 
 ### Live View
+Added support for watching ArrayProperty and StructProperty.
 
 ### UHT Dumper
 
