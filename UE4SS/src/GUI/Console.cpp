@@ -128,11 +128,10 @@ namespace RC::GUI
         //*/
 
         /**/
-        const float footer_height_to_reserve = (ImGui::GetStyle().ItemSpacing.y * 10.0f) + ImGui::GetFrameHeightWithSpacing();
-        {
-            std::lock_guard<std::mutex> guard(m_lines_mutex);
-            m_text_editor.Render("TextEditor", {-10, -footer_height_to_reserve});
-        }
+
+        std::lock_guard<std::mutex> guard(m_lines_mutex);
+        m_text_editor.Render("TextEditor", {-16.0f, -31.0f + -8.0f});
+
         ImGui_AutoScroll("TextEditor", &m_previous_max_scroll_y);
         //*/
     }

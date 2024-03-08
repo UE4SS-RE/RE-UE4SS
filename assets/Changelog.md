@@ -38,6 +38,8 @@ TBD
 ### General
 Fixed BPModLoaderMod giving "bad conversion" errors.
 
+Fixed some debug GUI layout alignments, especially with different GUI font scaling settings.
+
 ### Live View
 
 ### UHT Dumper
