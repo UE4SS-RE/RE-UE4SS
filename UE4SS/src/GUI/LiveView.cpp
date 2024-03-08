@@ -2584,7 +2584,7 @@ namespace RC::GUI
 
     auto LiveView::render_info_panel() -> void
     {
-        ImGui::BeginChild("LiveView_InfoPanel", {-14.0f, m_bottom_size}, true, ImGuiWindowFlags_HorizontalScrollbar);
+        ImGui::BeginChild("LiveView_InfoPanel", {-16.0f, m_bottom_size}, true, ImGuiWindowFlags_HorizontalScrollbar);
 
         size_t next_object_index_to_select{};
 
@@ -2819,7 +2819,9 @@ namespace RC::GUI
         {
             ImGui::BeginDisabled();
         }
-        ImGui::PushItemWidth(-160.0f);
+
+        // Update this text if corresponding button's text changes. Textinput width = Spacing + Window margin + Button padding + Button text width
+        ImGui::PushItemWidth(-(8.0f + 16.0f + ImGui::GetStyle().FramePadding.x * 2.0f + ImGui::CalcTextSize(ICON_FA_COPY " Copy search result").x));
         bool push_inactive_text_color = !m_search_field_cleared;
         if (push_inactive_text_color)
         {
@@ -3088,6 +3090,8 @@ namespace RC::GUI
         }
 
         ImGui::SameLine();
+
+        // Remember to update text width calculations for the last ImGui::PushItemWidth call if this text gets updated.
         if (ImGui::Button(ICON_FA_COPY " Copy search result"))
         {
             StringType result{};
@@ -3099,11 +3103,18 @@ namespace RC::GUI
             ImGui::SetClipboardText(to_string(result).c_str());
         }
 
-        m_bottom_size = (ImGui::GetContentRegionMaxAbs().y - m_top_size) - 94.0f;
-        ImGui_Splitter(false, 4.0f, &m_top_size, &m_bottom_size, 32.0f, 32.0f, -14.0f);
+        // Y - Windows title bar offset - Bottom window margin - Splitter height
+        auto split_pane_height = ImGui::GetContentRegionAvail().y - 31.0f - 8.0f - 4.0f;
+        if (m_bottom_size > 0 && m_bottom_size + m_top_size != split_pane_height)
+        {
+            // Window height changed, scale panes by ratio
+            m_top_size = std::max(ImGui::GetFrameHeight(), std::round(split_pane_height * (m_top_size / (m_top_size + m_bottom_size))));
+        }
+        m_bottom_size = std::max(ImGui::GetFrameHeight(), split_pane_height - m_top_size);
+        ImGui_Splitter(false, 4.0f, &m_top_size, &m_bottom_size, ImGui::GetFrameHeight(), ImGui::GetFrameHeight(), -16.0f);
 
         ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4{0.156f, 0.156f, 0.156f, 1.0f});
-        ImGui::BeginChild("LiveView_TreeView", {-14.0f, m_top_size}, true);
+        ImGui::BeginChild("LiveView_TreeView", {-16.0f, m_top_size}, true);
 
         auto do_iteration = [&](int32_t int_data_1 = 0, int32_t int_data_2 = 0) {
             ((*this).*((*this).m_object_iterator))(int_data_1, int_data_2, [&](UObject* object) {
@@ -3238,7 +3249,7 @@ namespace RC::GUI
             s_watches_loaded_from_disk = true;
         }
 
-        ImGui::BeginChild("watch_render_frame", {-13.0f, -35.0f});
+        ImGui::BeginChild("watch_render_frame", {-16.0f, -31.0f + -8.0f});
 
         if (ImGui::Button("All Off"))
         {
@@ -3252,11 +3263,11 @@ namespace RC::GUI
 
         static int num_columns = 3;
         ImGui::PushStyleVar(ImGuiStyleVar_CellPadding, {2.0f, 2.0f});
-        if (ImGui::BeginTable("watch_table", num_columns, ImGuiTableFlags_Borders | ImGuiTableFlags_NoPadOuterX))
+        if (ImGui::BeginTable("watch_table", num_columns, ImGuiTableFlags_Borders))
         {
-            ImGui::TableSetupColumn("Controls", ImGuiTableColumnFlags_WidthFixed, 60.0f);
+            ImGui::TableSetupColumn("Controls", ImGuiTableColumnFlags_WidthFixed, ImGui::GetFrameHeight() * 3.0f + 4.0f);
             ImGui::TableSetupColumn("Watch Identifier", ImGuiTableColumnFlags_WidthStretch);
-            ImGui::TableSetupColumn("##watch-from-disk", ImGuiTableColumnFlags_WidthFixed, 21.0f);
+            ImGui::TableSetupColumn("Save", ImGuiTableColumnFlags_WidthFixed, ImGui::GetFrameHeight());
             ImGui::TableHeadersRow();
 
             {
@@ -3288,30 +3299,18 @@ namespace RC::GUI
                         ImGui::EndTooltip();
                     }
                     ImGui::SameLine(0.0f, 2.0f);
-                    if (!watch.show_history)
-                    {
-                        ImGui::PushID(std::format("button_open_history_{}", watch.hash).c_str());
-                        if (ImGui::Button("+", {20.0f, 0.0f}))
-                        {
-                            watch.show_history = true;
-                        }
-                        ImGui::PopID();
-                    }
-                    else
-                    {
-                        ImGui::PushID(std::format("button_close_history_{}", watch.hash).c_str());
-                        if (ImGui::Button("-", {20.0f, 0.0f}))
-                        {
-                            watch.show_history = false;
-                        }
-                        ImGui::PopID();
-                    }
+                    ImGui::PushStyleVar(ImGuiStyleVar_SelectableTextAlign, ImVec2(0.5f, 0.5f));
+                    ImGui::PushID(std::format("collapse_history_{}", watch.hash).c_str());
+                    ImGui::Selectable(watch.show_history ? ICON_FA_MINUS : ICON_FA_PLUS, &watch.show_history, ImGuiSelectableFlags_NoPadWithHalfSpacing);
+                    ImGui::PopID();
+                    ImGui::PopStyleVar();
+
                     ImGui::TableNextColumn();
                     ImGui::Text("%S.%S", watch.object_name.c_str(), watch.property_name.c_str());
                     if (watch.show_history)
                     {
                         ImGui::PushID(std::format("history_{}", watch.hash).c_str());
-                        ImGui::InputTextMultiline("##history", &watch.history, {-13.0f, 200.0f}, ImGuiInputTextFlags_ReadOnly);
+                        ImGui::InputTextMultiline("##history", &watch.history, {-2.0f, ImGui::GetTextLineHeight() * 10.0f + ImGui::GetStyle().FramePadding.y * 2.0f}, ImGuiInputTextFlags_ReadOnly);
                         ImGui_AutoScroll("##history", &watch.history_previous_max_scroll_y);
                         ImGui::PopID();
                     }

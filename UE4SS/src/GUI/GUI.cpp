@@ -144,7 +144,7 @@ namespace RC::GUI
                     should_unset_listeners = true;
                 }
 
-                if (ImGui::BeginTabItem(ICON_FA_EYE "Watches"))
+                if (ImGui::BeginTabItem(ICON_FA_EYE " Watches"))
                 {
                     listeners_are_required = true;
                     m_live_view.render_watches();
