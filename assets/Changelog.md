@@ -28,6 +28,8 @@ TBD
 ### Lua API
 `print` now behaves like vanilla Lua (can now accept zero, one, or multiple arguments of any type).
 
+The callback of `NotifyOnNewObject` can now optionally return `true` to unregister itself.
+
 ### C++ API
 
 ### Repo & Build Process
