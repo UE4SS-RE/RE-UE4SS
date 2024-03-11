@@ -169,6 +169,21 @@ function mode_string_to_modes(self, str)
     }
 end
 
+-- Apply compiler options
+function apply_compiler_options(self, target)
+    for option, values in pairs(self:get_gnu_compile_options()) do
+        target:add(option, values, { tools = { "gcc", "ld" } })
+    end
+
+    for option, values in pairs(self:get_clang_compile_options()) do
+        target:add(option, values, { tools = { "clang", "lld" } })
+    end
+
+    for option, values in pairs(self:get_msvc_compile_options()) do
+        target:add(option, values, { tools = { "clang_cl", "cl", "link" } })
+    end
+end
+
 -- Run on configure step for each target that wants unreal rules
 function config(self, target)
     import("target_helpers", { rootdir = get_config("scriptsRoot") })
@@ -183,6 +198,8 @@ function config(self, target)
     self:apply_target_options(target, target_options)
     self:apply_target_options(target, config_options)
     self:apply_target_options(target, platform_options)
+
+    self:apply_compiler_options(target)
 
     target:set("runtimes", get_mode_runtimes())
 end
