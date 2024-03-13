@@ -219,7 +219,12 @@ namespace RC::LuaType
     auto TArray::prepare_to_handle(const LuaMadeSimple::Type::Operation operation, const LuaMadeSimple::Lua& lua) -> void
     {
         auto& lua_object = lua.get_userdata<TArray>();
-        int64_t array_index = lua.get_integer() - 1; // Subtracting 1 here to account for that fact that Lua tables are 1-indexed
+        int64_t array_index64 = lua.get_integer() - 1; // Subtracting 1 here to account for that fact that Lua tables are 1-indexed
+        if (array_index64 < 0 || array_index64 > std::numeric_limits<int32_t>::max())
+        {
+            lua.throw_error("TArray index out of range.");
+        }
+        int32_t array_index = static_cast<int32_t>(array_index64);
 
         auto array = lua_object.get_remote_cpp_object();
         auto num = array->Num();
