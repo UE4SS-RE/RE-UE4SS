@@ -223,10 +223,10 @@ namespace RC::LuaType
 
         auto array = lua_object.get_remote_cpp_object();
         auto num = array->Num();
-        if (array_index > num || num == 0)
+        if (array_index >= num || num == 0)
         {
             // We've verified with the above if-statement that we're not out-of-bounds for an int32.
-            int32_t count = array_index == 0 || num == 0 ? 1 : static_cast<int32_t>(array_index - num);
+            int32_t count = array_index == 0 || num == 0 ? 1 : static_cast<int32_t>(array_index - num + 1);
             lua_object.get_remote_cpp_object()->AddZeroed(count, lua_object.m_inner_property->GetElementSize(), Unreal::DEFAULT_ALIGNMENT);
         }
 
