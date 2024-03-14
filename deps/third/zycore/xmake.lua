@@ -3,8 +3,11 @@ package("zycore")
     add_urls("https://github.com/zyantific/zycore-c.git")
     
     add_versions("v1.0.0", "3435866ecaa837376807ce934d2088ae46aa3fa3")
+    add_versions("v1.5.0", "74620eefd233bec20daeb66e78e744ff06e273b7")
 
     add_deps("cmake")
+
+    add_defines("ZYCORE_STATIC_BUILD", { public = true })
 
     on_install(function (package)
         local configs = {}

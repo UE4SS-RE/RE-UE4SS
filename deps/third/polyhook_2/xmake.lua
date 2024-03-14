@@ -1,8 +1,8 @@
 package("polyhook_2")
+    set_policy("package.install_always", true)
+    
     set_sourcedir(os.scriptdir())
-
-    add_versions("v2.0.0", "")
-
+    
     add_deps("cmake", "zydis", "zycore")
 
     on_install(function (package)
@@ -14,6 +14,4 @@ package("polyhook_2")
         import("package.tools.cmake").install(package, configs, { packagedeps = { "zycore", "zydis" } })
         
     end)
-
-    
 package_end()

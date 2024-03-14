@@ -6,7 +6,7 @@ set(FETCHCONTENT_QUIET OFF)
 
 FetchContent_Declare(PolyHook2
     GIT_REPOSITORY https://github.com/stevemk14ebr/PolyHook_2_0.git
-    GIT_TAG 16bc0faf77a15b91b72763353901cfe34daf3174
+    GIT_TAG fd2a88f09c8ae89440858fc52573656141013c7f
     GIT_PROGRESS ON)
 
 if (${UE4SS_PolyHook_BUILD_SHARED})
@@ -16,7 +16,6 @@ else ()
     set(MAKE_POLYHOOK_DEPENDENCIES_SHARED OFF)
     set(MAKE_POLYHOOK_DEPENDENCIES_STATIC ON)
 endif ()
-
 
 set(POLYHOOK_BUILD_DLL ON CACHE BOOL "Build dll & lib instead of tests" FORCE)
 set(POLYHOOK_BUILD_SHARED_LIB ${MAKE_POLYHOOK_DEPENDENCIES_SHARED} CACHE BOOL "Build polyhook2 as shared libary" FORCE)
