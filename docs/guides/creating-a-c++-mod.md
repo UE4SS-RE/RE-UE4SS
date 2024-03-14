@@ -39,17 +39,18 @@ target(projectName)
 
     add_deps("UE4SS")
 
-    -- set ue4ss compliant build configs
-    on_load(function (target)
+    after_load(function (target)
         import("build_configs", { rootdir = get_config("scriptsRoot") })
+        import("target_helpers", { rootdir = get_config("scriptsRoot") })
         build_configs:set_output_dir(target)
+        build_configs:export_deps(target)
     end)
-
+    
     on_config(function (target)
         import("build_configs", { rootdir = get_config("scriptsRoot") })
         build_configs:config(target)
     end)
-
+    
     after_clean(function (target)
         import("build_configs", { rootdir = get_config("scriptsRoot") })
         build_configs:clean_output_dir(target)
