@@ -39,11 +39,9 @@ target(projectName)
 
     add_deps("UE4SS")
 
-    after_load(function (target)
+    on_load(function (target)
         import("build_configs", { rootdir = get_config("scriptsRoot") })
-        import("target_helpers", { rootdir = get_config("scriptsRoot") })
         build_configs:set_output_dir(target)
-        build_configs:export_deps(target)
     end)
     
     on_config(function (target)
