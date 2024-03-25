@@ -60,6 +60,7 @@ Fixed `FText` not working as a parameter (in `RegisterHook`, etc.).
 ```
 [Hooks]
 HookLoadMap = 1
+HookAActorTick = 1
 ```
 
 ### Removed
