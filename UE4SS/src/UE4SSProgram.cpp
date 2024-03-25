@@ -749,6 +749,7 @@ namespace RC
         config.bHookCallFunctionByNameWithArguments = settings_manager.Hooks.HookCallFunctionByNameWithArguments;
         config.bHookBeginPlay = settings_manager.Hooks.HookBeginPlay;
         config.bHookLocalPlayerExec = settings_manager.Hooks.HookLocalPlayerExec;
+        config.bHookAActorTick = settings_manager.Hooks.HookAActorTick;
         config.FExecVTableOffsetInLocalPlayer = settings_manager.Hooks.FExecVTableOffsetInLocalPlayer;
 
         Unreal::UnrealInitializer::Initialize(config);
