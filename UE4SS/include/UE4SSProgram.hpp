@@ -20,6 +20,7 @@
 #include <SettingsManager.hpp>
 #include <Unreal/Core/Containers/Array.hpp>
 #include <Unreal/UnrealVersion.hpp>
+#include <Unreal/AActor.hpp>
 
 // Used to set up ImGui context and allocator in DLL mods
 #define UE4SS_ENABLE_IMGUI()                                                                                                                                   \
@@ -30,6 +31,21 @@
         void* user_data{};                                                                                                                                     \
         UE4SSProgram::get_current_imgui_allocator_functions(&alloc_func, &free_func, &user_data);                                                              \
         ImGui::SetAllocatorFunctions(alloc_func, free_func, user_data);                                                                                        \
+    }
+
+// Helper macro to define runtime functionality for UE classes.
+// Must be called in 'on_unreal_init'.
+// Does the following:
+// 1. If the class inherits from AActor:
+//    1. Calls the 'Tick' function when the actor ticks if the class has defined a 'Tick' function returning void and taking a float.
+// USAGE EXAMPLE: ENABLE_CLASS_RUNTIME_FUNCTIONALITY(AMyActorClass)
+#define ENABLE_CLASS_RUNTIME_FUNCTIONALITY(Class)                                                                                                              \
+    if constexpr (std::is_convertible_v<Class, AActor>)                                                                                                        \
+    {                                                                                                                                                          \
+        if constexpr (HasTickFunction<Class>)                                                                                                                  \
+        {                                                                                                                                                      \
+            UE4SSProgram::get_program().register_class_for_tick_notification<Class>();                                                                         \
+        }                                                                                                                                                      \
     }
 
 namespace RC
@@ -60,6 +76,47 @@ namespace RC
         // Ensure that we have zero-initialized memory at the end of the struct
         // This means that we can reliably check whether a function exists externally
         uint64_t safety_padding[8]{0};
+    };
+
+    // A concept that checks if a class has a Tick function that takes a float and returns nothing.
+    template <typename T>
+    concept HasTickFunction = requires(T t) {
+        {
+            t.Tick(std::declval<float>())
+        } -> std::same_as<void>;
+    };
+
+    // We need to check at runtime if the type of actor (in the AActor::Tick hook) being ticked has a registered Tick function in UE4SS.
+    // I can think of two ways to do this:
+    // 1. Store compile-time type information at runtime in the form of a templated class with a non-templated base containing a virtual function.
+    //    The virtual function must be overridden by the templated class.
+    //    A unique_ptr is then created from the template class and stored in a vector as unique_ptr<Base>.
+    //    When any actor ticks, we iterate the vector and call the virtual function.
+    //    That dispatches the call to the correct virtual override, which will use Actor->IsA<T>() to determine whether the Tick function should be called.
+    //    We use the template type to cast the actor to the correct class type so that we can access its Tick function.
+    //    Problems: 1. Dynamic dispatch performance penalty.
+    //                 This might not matter much since we require a dynamic call regardless.
+    //                 It's just a matter of if vtable indexing adds enough overhead to matter.
+    // 2. Skip the virtual function, and instead store a pointer to the member function in the vector and call that instead.
+    //    We'd also need to store the UClass of the actor for use with the 'IsA' function since we wouldn't have access to the class type at compile-time.
+    //    Problems: 1. Storing the function pointer will be problematic because it's a member function which means it will require the class type.
+    //              While possible, it's not allowed in C++ to cast a function pointer to a void pointer or vice versa, so we shouldn't do that.
+    //              It might be allowed to store a function pointer as a uintptr_t or similar as long as the size is big enough, I'm not sure, and even if true, is it the same with a member function pointer ?
+    struct ActorTickNotificationDataBase
+    {
+        virtual ~ActorTickNotificationDataBase() = default;
+        virtual auto HandleTick(Unreal::AActor* Actor, float DeltaSeconds) -> void = 0;
+    };
+    template <typename T>
+    struct ActorTickNotificationData : ActorTickNotificationDataBase
+    {
+        auto HandleTick(Unreal::AActor* Actor, float DeltaSeconds) -> void override
+        {
+            if (Actor->IsA<T>())
+            {
+                static_cast<T*>(Actor)->Tick(DeltaSeconds);
+            }
+        }
     };
 
     class UE4SSProgram : public MProgram
@@ -98,6 +155,7 @@ namespace RC
         Output::DebugConsoleDevice* m_debug_console_device{};
         Output::ConsoleDevice* m_console_device{};
         GUI::DebuggingGUI m_debugging_gui{};
+        std::vector<std::unique_ptr<ActorTickNotificationDataBase>> m_actor_types_wanting_tick_notification{};
 
         using EventCallable = void (*)(void* data);
         struct Event
@@ -268,6 +326,12 @@ namespace RC
         auto find_mod_by_name<CppMod>(std::string_view mod_name, IsInstalled is_installed, IsStarted is_started) -> CppMod*
         {
             return find_mod_by_name<CppMod>(to_wstring(mod_name), is_installed, is_started);
+        }
+
+        template <typename ClassType>
+        auto register_class_for_tick_notification() -> void
+        {
+            m_actor_types_wanting_tick_notification.emplace_back(std::make_unique<ActorTickNotificationData<ClassType>>());
         }
 
         RC_UE4SS_API static auto find_lua_mod_by_name(std::wstring_view mod_name, IsInstalled = IsInstalled::No, IsStarted = IsStarted::No) -> LuaMod*;

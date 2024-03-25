@@ -860,6 +860,17 @@ namespace RC
                 generate_uht_compatible_headers();
             });
         }
+
+        // Register a hook for notifying all actors wanting tick notifications that a tick occurred.
+        // Should this be a pre or a post hook ?
+        // A pre hook makes sense because mod creators might want changes to affect the real Tick function.
+        // A post hook makes sense because mod creators might want to have the final say for the values of an actors properties.
+        Hook::RegisterAActorTickPostCallback([&](AActor* Instance, float DeltaSeconds) {
+            for (const auto& ActorType : m_actor_types_wanting_tick_notification)
+            {
+                ActorType->HandleTick(Instance, DeltaSeconds);
+            }
+        });
     }
 
     auto UE4SSProgram::update() -> void
@@ -1223,6 +1234,7 @@ namespace RC
     auto UE4SSProgram::uninstall_mods() -> void
     {
         ProfilerScope();
+        m_actor_types_wanting_tick_notification.clear();
         std::vector<CppMod*> cpp_mods{};
         std::vector<LuaMod*> lua_mods{};
         for (auto& mod : m_mods)
