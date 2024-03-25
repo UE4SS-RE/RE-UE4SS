@@ -13,6 +13,10 @@ TBD
 ### Lua API
 
 ### C++ API
+Added the `ENABLE_CLASS_RUNTIME_FUNCTIONALITY(<Class>)` macro.  
+Used in C++ mods in 'on_unreal_init'.  
+At the moment, all this does is enable automatic calling of `Tick` function in AActor classes.  
+See https://github.com/UE4SS-RE/RE-UE4SS/pull/442 for more information, and usage examples.
 
 ### Experimental
 
