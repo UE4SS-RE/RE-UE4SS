@@ -83,7 +83,14 @@ namespace RC
             Unreal::UClass* instance_of_class;
             std::vector<std::pair<const LuaMadeSimple::Lua*, RegistryIndex>> registry_indexes;
         };
-        static inline std::vector<LuaCallbackData> m_static_construct_object_lua_callbacks;
+        struct LuaCancellableCallbackData
+        {
+            const LuaMadeSimple::Lua* lua;
+            Unreal::UClass* instance_of_class;
+            int32_t lua_callback_function_ref{};
+            int32_t lua_callback_thread_ref{};
+        };
+        static inline std::vector<LuaCancellableCallbackData> m_static_construct_object_lua_callbacks;
         static inline std::vector<LuaCallbackData> m_process_console_exec_pre_callbacks;
         static inline std::vector<LuaCallbackData> m_process_console_exec_post_callbacks;
         static inline std::vector<LuaCallbackData> m_call_function_by_name_with_arguments_pre_callbacks;
