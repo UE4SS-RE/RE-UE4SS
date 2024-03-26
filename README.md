@@ -55,6 +55,7 @@ If you are planning on doing mod development using UE4SS, you can do the same as
   - Visual Studio 2019 (recent versions), and Visual Studio 2022 will work.
   - More compilers will hopefully be supported in the future.
 - Rust toolchain 1.73.0 or greater
+- [xmake](https://xmake.io/#/)
 
 
 ## Build instructions
@@ -64,26 +65,51 @@ If you are planning on doing mod development using UE4SS, you can do the same as
     Make sure your Github account is linked to your Epic Games account for UE source access.
     Do not use the `--remote` option because that will force third-party dependencies to update to the latest commit, and that can break things.
     You will need your github account to be linked to an Epic games account to pull the Unreal pseudo code submodule.
-3. There are three different ways you can build UE4SS.
-    1. Execute this command: `build_auto.bat <BuildMode> <Target>`, example: `build_auto.bat Release ue4ss`
-        Valid build modes are `Release` and `Debug`, and valid targets are `ue4ss` and `xinput1_3`.
-        Parallel compilation is enabled for this build method.
-    2. Open the root UE4SS directory in CLion, select `ue4ss` or `xinput1_3` from the target list and hit the build button.
-        Parallel compilation is **NOT** enabled for this build method.
-    3. Execute `VS_Solution/generate_vs_solution.bat` to generate a Visual Studio solution file.
-        Open the solution with Visual Studio 2019 or Visual Studio 2022, select the build type and build the `ue4ss` project.
-        Parallel compilation is enabled for this build method.
 
-## Updating dependencies
+There are several different ways you can build UE4SS.
 
-If you want to update dependencies, you do so one of three ways:
-1. You can execute `remote_update_first_party_submodules.bat` to update all first-party dependencies.
-2. You can also choose to update dependencies one by one, by executing `git submodule update --init --recursive vendor/<RepoOwner>/<Repo>`.
-    Remember to not use the `--remote` option unless you actually want to update to the latest commit.
-3. If you would rather pick a specific commit or branch to update a dependency to then `cd` into the submodule directory for that dependency and execute `git checkout <branch name or commit>`.
+### Building from cli
+
+Configure the project using this command: `xmake f -m "<BuildMode>"`
+
+The build modes are structured as follows: `<Target>__<Config>__<Platform>`
+
+Currently supported options for these are:
+
+* `Target`
+  * `Game` - for regular games
+  * `CasePreserving` - for games built with case preserving enabled
+
+* `Config`
+  * `Dev` - development build
+  * `Debug` - debug build
+  * `Shipping` - shipping(release) build
+  * `Test` - build for tests
+
+* `Platform`
+  * `Win64` - 64-bit windows
+
+
+Now to build it, just run `xmake`
+
+### Opening in an IDE
+
+#### Visual Studio / Rider
+
+To generate Visual Studio project files, run the `xmake project -k vsxmake2022` command.
+
+Afterwards open the generated `.sln` file inside of the `vsxmake2022` directory
 
 Note that you should also commit & push the submodules that you've updated if the reason why you updated was not because someone else pushed an update, and you're just catching up to it.
 
+## Updating git submodules
+
+If you want to update git submodules, you do so one of three ways:
+1. You can execute `git submodule update --init --recursive` to update all submodules.
+2. You can also choose to update submodules one by one, by executing `git submodule update --init --recursive deps/<first-or-third>/<Repo>`.
+    Do not use the `--remote` option unless you actually want to update to the latest commit.
+3. If you would rather pick a specific commit or branch to update a submodule to then `cd` into the submodule directory for that dependency and execute `git checkout <branch name or commit>`.
+The main dependency you might want to update from time to time is `deps/first/Unreal`.
 ## Credits
 
 All contributors since the project became open source: https://github.com/UE4SS-RE/RE-UE4SS/graphs/contributors

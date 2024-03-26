@@ -7,7 +7,7 @@ Part two goes over creating the most basic C++ mod possible.
 Part three will show you how to interact with UE4SS and UE itself (via UE4SS).  
 Part four will cover installation of the mod.
 
-> The guide requires having a working C++ development environment with `cmake` and `git`, preferably similar to the one required to build UE4SS itself from sources.
+> The guide requires having a working C++ development environment with `xmake` and `git`, preferably similar to the one required to build UE4SS itself from sources.
 
 ## Part 1
 1. Make an Epic account and link it to your GitHub account
@@ -17,27 +17,42 @@ Part four will cover installation of the mod.
 5. Open CMD and cd into `RE-UE4SS` and execute: `git submodule update --init --recursive`
 6. Go back to the `MyMods` directory and create a new directory, this directory will contain your mod source files.
 I named mine `MyAwesomeMod`.
-7. Create a file called `CMakeLists.txt` inside `MyMods` and put this inside it:
-```cmake
-cmake_minimum_required(VERSION 3.18)
-
-project(MyMods)
-
-add_subdirectory(RE-UE4SS)
-add_subdirectory(MyAwesomeMod)
+7. Create a file called `xmake.lua` inside `MyMods` and put this inside it:
+```lua
+includes("RE-UE4SS")
+includes("MyAwesomeMod")
 ```
 
 ## Part #2
-1. Create a file called `CMakeLists.txt` inside `MyMods/MyAwesomeMod` and put this inside it:
-```cmake
-cmake_minimum_required(VERSION 3.18)
+1. Create a file called `xmake.lua` inside `MyMods/MyAwesomeMod` and put this inside it:
+```lua
+local projectName = "MyAwesomeMod"
 
-set(TARGET MyAwesomeMod)
-project(${TARGET})
+target(projectName)
+    set_kind("shared")
+    set_languages("cxx20")
+    set_exceptions("cxx")
 
-add_library(${TARGET} SHARED "dllmain.cpp")
-target_include_directories(${TARGET} PRIVATE .)
-target_link_libraries(${TARGET} PUBLIC UE4SS)
+    add_includedirs(".")
+
+    add_files("dllmain.cpp")
+
+    add_deps("UE4SS")
+
+    on_load(function (target)
+        import("build_configs", { rootdir = get_config("scriptsRoot") })
+        build_configs:set_output_dir(target)
+    end)
+    
+    on_config(function (target)
+        import("build_configs", { rootdir = get_config("scriptsRoot") })
+        build_configs:config(target)
+    end)
+    
+    after_clean(function (target)
+        import("build_configs", { rootdir = get_config("scriptsRoot") })
+        build_configs:clean_output_dir(target)
+    end)
 ```
 2. Make a file called `dllmain.cpp` in `MyMods/MyAwesomeMod` and put this inside it:
 ```c++
@@ -83,9 +98,20 @@ extern "C"
     }
 }
 ```
-3. In the command prompt, in the `MyMods` directory, execute: `cmake -S . -B Output`
-4. Open `MyMods/Output/MyMods.sln`
-5. Make sure that you're set to the `Release` configuration unless you want to debug.
+3. In the command prompt, in the `MyMods` directory, execute either:
+A.
+```
+xmake f -m "Game__Shipping__Win64"
+xmake
+```
+or B.
+```
+xmake project -k vsxmake2022
+```
+If you chose option `B`, the VS solution will be in the `vsxmake2022` directory.
+
+4. Open `MyMods/vsxmake2022/MyMods.sln`
+5. Make sure that you're set to the `Game___Shipping__Win64` configuration unless you want to debug.
 6. Find your project (in my case: MyAwesomeMod) in the solution explorer and right click it and hit `Build`.
 
 ## Part #3

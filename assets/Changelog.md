@@ -4,6 +4,8 @@ TBD
 
 ## New
 
+Switch to xmake from cmake, makes building much more streamlined - localcc
+
 ### General
 
 ### Live View
