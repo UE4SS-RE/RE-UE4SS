@@ -138,8 +138,15 @@ local function LoadModConfigs()
         end
     end
 
+    local Files = LogicModsDir.__files
+    for _, ModDirectory in pairs(LogicModsDir) do
+        for _, ModFile in pairs(ModDirectory.__files) do
+            table.insert(Files, ModFile)
+        end
+    end
+
     -- Load a default configuration for mods that didn't have their own configuration.
-    for _, ModFile in pairs(LogicModsDir.__files) do
+    for _, ModFile in pairs(Files) do
         local ModName = ModFile.__name
         local ModNameNoExtension = ModName:match("(.+)%..+$")
         local FileExtension = ModName:match("^.+(%..+)$");
