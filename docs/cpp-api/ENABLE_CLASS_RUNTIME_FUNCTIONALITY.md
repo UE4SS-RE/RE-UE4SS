@@ -34,7 +34,7 @@ public:
     {
         Output::send(STR("AGame_Character Tick\n"));
     }
-}
+};
 IMPLEMENT_EXTERNAL_OBJECT_CLASS(AGame_Character)
 
 class MyAwesomeMod : public RC::CppUserModBase
