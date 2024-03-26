@@ -22,6 +22,7 @@ TBD
 ### General
 
 ### Live View
+Added support for watching ArrayProperty and StructProperty.
 
 ### UHT Dumper
 
@@ -41,6 +42,8 @@ Fixed BPModLoaderMod giving "bad conversion" errors.
 Fixed some debug GUI layout alignments, especially with different GUI font scaling settings.
 
 ### Live View
+Fixed the "Write to file" checkbox not working for functions in the `Watches` tab.
+Reduced the likelihood of a crash happening on shutdown when at least one watch is enabled.
 
 ### UHT Dumper
 
