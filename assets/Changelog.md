@@ -37,6 +37,8 @@ Added support for watching ArrayProperty and StructProperty.
 ## Fixes
 
 ### General
+Fixed adding elements to TArray in Lua incorrectly resizing and zeroing out previous values
+
 Fixed BPModLoaderMod giving "bad conversion" errors.
 
 Fixed some debug GUI layout alignments, especially with different GUI font scaling settings.

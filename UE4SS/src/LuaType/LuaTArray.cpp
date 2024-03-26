@@ -219,14 +219,19 @@ namespace RC::LuaType
     auto TArray::prepare_to_handle(const LuaMadeSimple::Type::Operation operation, const LuaMadeSimple::Lua& lua) -> void
     {
         auto& lua_object = lua.get_userdata<TArray>();
-        int64_t array_index = lua.get_integer() - 1; // Subtracting 1 here to account for that fact that Lua tables are 1-indexed
+        int64_t array_index64 = lua.get_integer() - 1; // Subtracting 1 here to account for that fact that Lua tables are 1-indexed
+        if (array_index64 < 0 || array_index64 > std::numeric_limits<int32_t>::max())
+        {
+            lua.throw_error("TArray index out of range.");
+        }
+        int32_t array_index = static_cast<int32_t>(array_index64);
 
         auto array = lua_object.get_remote_cpp_object();
         auto num = array->Num();
-        if (array_index > num || num == 0)
+        if (array_index >= num || num == 0)
         {
             // We've verified with the above if-statement that we're not out-of-bounds for an int32.
-            int32_t count = array_index == 0 || num == 0 ? 1 : static_cast<int32_t>(array_index - num);
+            int32_t count = array_index == 0 || num == 0 ? 1 : static_cast<int32_t>(array_index - num + 1);
             lua_object.get_remote_cpp_object()->AddZeroed(count, lua_object.m_inner_property->GetElementSize(), Unreal::DEFAULT_ALIGNMENT);
         }
 
