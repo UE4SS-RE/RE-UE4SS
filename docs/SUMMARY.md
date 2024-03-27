@@ -45,6 +45,7 @@
     - [StructProperty](./lua-api/classes/structproperty.md)
     - [BoolProperty](./lua-api/classes/boolproperty.md)
     - [ArrayProperty](./lua-api/classes/arrayproperty.md)
+    - [NumericProperty](./lua-api/classes/numericproperty.md)
     - [UObjectReflection](./lua-api/classes/uobjectreflection.md)
     - [FOutputDevice](./lua-api/classes/foutputdevice.md)
     - [FWeakObjectPtr](./lua-api/classes/fweakobjectptr.md)

@@ -65,3 +65,99 @@ RegisterCustomEvent("ConstructPersistentObject", function(ParamContext, ParamCla
     -- Return Value
     OutParam:set(PersistentObject)
 end)
+
+local RegisteredBPHooks = {}
+---@param Context UObject
+---@param HookName FString Full name of the function you want to register a hook for e.g /Script/Engine.PlayerController:ClientRestart
+---@param FunctionToCall FString Name of the function you want to be called from your own actor whenever the hooked function fires
+--- NOTE: Don't forget to unregister your hooks whenever your Actor gets destroyed.
+RegisterCustomEvent("RegisterHookFromBP", function (Context, HookName, FunctionToCall)
+    -- Type checking similar to PrintToModLoader
+    if HookName:get():type() ~= "FString" then error(string.format("RegisterHookFromBP Param #1 must be FString but was %s", HookName:get():type())) end
+    if FunctionToCall:get():type() ~= "FString" then error(string.format("RegisterHookFromBP Param #2 must be FString but was %s", FunctionToCall:get():type())) end
+
+    local HookName_AsString = HookName:get():ToString()
+
+    -- Intended to be a safeguard for checking if a hook is actually valid, but is this really needed?
+    local HookFunctionObj = StaticFindObject(HookName_AsString)
+    if HookFunctionObj == nil or not HookFunctionObj:IsValid() or HookFunctionObj:type() ~= "UFunction" then
+        error("Tried to hook invalid function '" .. HookName_AsString .. "'")
+    end
+
+    local FunctionName = FunctionToCall:get():ToString()
+    local Function = Context:get()[FunctionName]
+    if Function == nil or not Function:IsValid() or Function:type() ~= "UFunction" then
+        error("Function '" .. FunctionName .. "' doesn't exist in '" .. Context:get():GetFullName() .. "'")
+    end
+
+    if RegisteredBPHooks[HookName_AsString] == nil then
+        RegisteredBPHooks[HookName_AsString] = {}
+    end
+
+    local ClassFullName = Context:get():GetClass():GetFullName()
+    -- Prevent multiple hook registrations for a single function from the same Actor
+    if RegisteredBPHooks[HookName_AsString][ClassFullName] ~= nil then
+        UnregisterHook(
+            HookName_AsString,
+            RegisteredBPHooks[HookName_AsString][ClassFullName].PreHookId,
+            RegisteredBPHooks[HookName_AsString][ClassFullName].PostHookId
+        )
+    end
+
+    RegisteredBPHooks[HookName_AsString][ClassFullName] = {
+        Owner = Context:get(),
+        Function = Function,
+        PreHookId = 0,
+        PostHookId = 0
+    }
+
+    local PreHookId, PostHookId = RegisterHook(HookName_AsString, function (Context, ...)
+        for key, HookData in pairs(RegisteredBPHooks[HookName_AsString]) do
+            ---@class UObject
+            local Owner = HookData.Owner
+            if Owner ~= nil and Owner:IsValid() then
+                if HookData.Function ~= nil and HookData.Function:IsValid() then
+                    local argTable = {}
+                    local args = {...}
+                    for i=1,#args do
+                        table.insert(argTable, args[i]:get())
+                    end
+
+                    if #argTable > 0 then
+                        HookData.Function(Owner, Context:get(), table.unpack(argTable, 1, #argTable))
+                    else
+                        HookData.Function(Owner, Context:get())
+                    end
+                end
+            end
+        end
+    end)
+
+    RegisteredBPHooks[HookName_AsString][ClassFullName].PreHookId = PreHookId
+    RegisteredBPHooks[HookName_AsString][ClassFullName].PostHookId = PostHookId
+end)
+
+---@param HookName FString Full name of the function you want to unregister a hook for e.g /Script/Engine.PlayerController:ClientRestart
+RegisterCustomEvent("UnregisterHookFromBP", function (Context, HookName)
+    if HookName:get():type() ~= "FString" then error(string.format("UnregisterHookFromBP Param #1 must be FString but was %s", HookName:get():type())) end
+
+    local HookName_AsString = HookName:get():ToString()
+
+    if RegisteredBPHooks[HookName_AsString] == nil then
+        return
+    end
+
+    local ClassFullName = Context:get():GetClass():GetFullName()
+
+    if RegisteredBPHooks[HookName_AsString][ClassFullName] == nil then
+        return
+    end
+
+    UnregisterHook(
+        HookName_AsString,
+        RegisteredBPHooks[HookName_AsString][ClassFullName].PreHookId,
+        RegisteredBPHooks[HookName_AsString][ClassFullName].PostHookId
+    )
+
+    RegisteredBPHooks[HookName_AsString][ClassFullName] = nil
+end)

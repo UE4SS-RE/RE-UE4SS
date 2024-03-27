@@ -87,6 +87,7 @@ set(${TARGET}_Sources
     "${CMAKE_CURRENT_SOURCE_DIR}/src/LuaType/LuaXEnumProperty.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/LuaType/LuaXArrayProperty.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/LuaType/LuaXInterfaceProperty.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/LuaType/LuaXNumericProperty.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/LuaType/LuaUEnum.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/LuaType/LuaFOutputDevice.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/LuaType/LuaFWeakObjectPtr.cpp"
