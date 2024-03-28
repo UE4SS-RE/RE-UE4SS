@@ -62,8 +62,21 @@ namespace RC
         uint64_t safety_padding[8]{0};
     };
 
+    struct KeyDownEventData
+    {
+        // Custom data from the C++ mod.
+        // The 'custom_data' variable to UE4SSProgram::register_keydown_event will be used to determine the type of custom_data2.
+        uint8_t custom_data{};
+
+        // The C++ mod that created this event.
+        CppUserModBase* mod{};
+    };
+
     class UE4SSProgram : public MProgram
     {
+      public:
+        friend class CppUserModBase; // m_input_handler
+
       public:
         constexpr static wchar_t m_settings_file_name[] = L"UE4SS-settings.ini";
         constexpr static wchar_t m_log_file_name[] = L"UE4SS.log";
@@ -213,9 +226,12 @@ namespace RC
 
       public:
         // API pass-through for use outside the private scope of UE4SSProgram
-        RC_UE4SS_API auto register_keydown_event(Input::Key, const Input::EventCallbackCallable&, uint8_t custom_data = 0) -> void;
-        RC_UE4SS_API auto register_keydown_event(Input::Key, const Input::Handler::ModifierKeyArray&, const Input::EventCallbackCallable&, uint8_t custom_data = 0)
-                -> void;
+        RC_UE4SS_API auto register_keydown_event(Input::Key, const Input::EventCallbackCallable&, uint8_t custom_data = 0, void* custom_data2 = nullptr) -> void;
+        RC_UE4SS_API auto register_keydown_event(Input::Key,
+                                                 const Input::Handler::ModifierKeyArray&,
+                                                 const Input::EventCallbackCallable&,
+                                                 uint8_t custom_data = 0,
+                                                 void* custom_data2 = nullptr) -> void;
         RC_UE4SS_API auto is_keydown_event_registered(Input::Key) -> bool;
         RC_UE4SS_API auto is_keydown_event_registered(Input::Key, const Input::Handler::ModifierKeyArray&) -> bool;
 

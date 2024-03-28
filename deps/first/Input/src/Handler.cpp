@@ -159,7 +159,7 @@ namespace RC::Input
         }
     }
 
-    auto Handler::register_keydown_event(Input::Key key, EventCallbackCallable callback, uint8_t custom_data) -> void
+    auto Handler::register_keydown_event(Input::Key key, EventCallbackCallable callback, uint8_t custom_data, void* custom_data2) -> void
     {
         KeySet& key_set = [&]() -> KeySet& {
             for (auto& key_set : m_key_sets)
@@ -176,9 +176,11 @@ namespace RC::Input
         KeyData& key_data = key_set.key_data[key].emplace_back();
         key_data.callbacks.emplace_back(callback);
         key_data.custom_data = custom_data;
+        key_data.custom_data2 = custom_data2;
     }
 
-    auto Handler::register_keydown_event(Input::Key key, const ModifierKeyArray& modifier_keys, const EventCallbackCallable& callback, uint8_t custom_data) -> void
+    auto Handler::register_keydown_event(
+            Input::Key key, const ModifierKeyArray& modifier_keys, const EventCallbackCallable& callback, uint8_t custom_data, void* custom_data2) -> void
     {
         KeySet& key_set = [&]() -> KeySet& {
             for (auto& key_set : m_key_sets)
@@ -195,6 +197,7 @@ namespace RC::Input
         KeyData& key_data = key_set.key_data[key].emplace_back();
         key_data.callbacks.emplace_back(callback);
         key_data.custom_data = custom_data;
+        key_data.custom_data2 = custom_data2;
         key_data.requires_modifier_keys = true;
 
         for (const auto& modifier_key : modifier_keys)

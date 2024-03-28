@@ -13,6 +13,9 @@ TBD
 ### Lua API
 
 ### C++ API
+Key binds created with `UE4SSProgram::register_keydown_event` end up being duplicated upon mod hot-reload.  
+To fix this, `CppUserModBase::register_keydown_event` has been introduced.  
+It's used exactly the same way except without the `UE4SSProgram::` part.
 
 ### Experimental
 
