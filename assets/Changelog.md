@@ -43,6 +43,10 @@ Fixed adding elements to TArray in Lua incorrectly resizing and zeroing out prev
 
 Fixed BPModLoaderMod giving "bad conversion" errors.
 
+Fixed BPModLoaderMod calling `PostBeginPlay` multiple times for each ModActor
+
+Fixed BPModLoaderMod displaying 'PostBeginPlay not valid' when VerboseLogging is set to false
+
 Fixed some debug GUI layout alignments, especially with different GUI font scaling settings.
 
 ### Live View
