@@ -266,7 +266,7 @@ RegisterBeginPlayPostHook(function(ContextParam)
     local Context = ContextParam:get()
     for _,ModConfig in ipairs(OrderedMods) do
         if Context:GetClass():GetFName() ~= ModConfig.AssetNameAsFName then return end
-        local AssetPathWithClassPrefix = "BlueprintGeneratedClass " .. ModConfig.AssetPath .. "." .. ModConfig.AssetNameAsFName:ToString()
+        local AssetPathWithClassPrefix = "BlueprintGeneratedClass " .. ModConfig.AssetPath .. "." .. ModConfig.AssetName
         if AssetPathWithClassPrefix == Context:GetClass():GetFullName() then
             local PostBeginPlay = Context.PostBeginPlay
             if PostBeginPlay:IsValid() then
