@@ -246,7 +246,7 @@ function export_deps(self, target)
 end
 
 
--- Run after load step for each target that has dependencies with `ue4ssDep`: true
+-- If a target is a "ue4ssDep", add the target to the "deps" group for VS organization. 
 function set_project_groups(self, target)
     for _, dep in pairs(target:deps()) do
         if dep:values("ue4ssDep") == true then
