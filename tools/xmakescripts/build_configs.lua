@@ -134,22 +134,33 @@ function apply_target_options(self, target, options)
     end
 end
 
--- Get unreal rules
-function get_unreal_rules()
-    local unreal_rules = {}
+-- Returns a list of supported compilation modes
+-- CasePreserving__Shipping_Win64, Game_Debug_Win64, etc.
+function get_compilation_modes()
+    local comp_modes = {}
 
     for target_type, _ in pairs(TARGET_TYPES) do
         for config_type, _ in pairs(CONFIG_TYPES) do
             for platform_type, _ in pairs(PLATFORM_TYPES) do
                 local config_name = target_type .. "__" .. config_type .. "__" .. platform_type
-                local rule_name = "mode." .. config_name
-
-                table.insert(unreal_rules, rule_name)
-
-                rule(rule_name)
-                rule_end()
+                table.insert(comp_modes, config_name)
             end
         end
+    end
+
+    return comp_modes
+end
+
+-- Get unreal rules
+function get_unreal_rules()
+    local unreal_rules = {}
+
+    for _, config_name in ipairs(get_compilation_modes()) do
+        local rule_name = "mode." .. config_name
+        table.insert(unreal_rules, rule_name)
+
+        rule(rule_name)
+        rule_end()
     end
 
     return unreal_rules
@@ -207,7 +218,7 @@ end
 -- Construct output dir for target
 function construct_output_dir(self, target)
     local mode = get_config("mode")
-    local output_dir = path.join("Output", mode, target:name())
+    local output_dir = path.join("Binaries", mode, target:name())
     return output_dir
 end
 
@@ -215,7 +226,6 @@ end
 function set_output_dir(self, target)
     local output_dir = self:construct_output_dir(target)
     target:set("targetdir", output_dir)
-    target:set("objectdir", output_dir)
 end
 
 -- Run after load step for each target that has dependencies with `ue4ssDep`: true
@@ -232,6 +242,16 @@ function export_deps(self, target)
 
     for _, define in pairs(additional_defines) do
         target:add("defines", define)
+    end
+end
+
+
+-- Run after load step for each target that has dependencies with `ue4ssDep`: true
+function set_project_groups(self, target)
+    for _, dep in pairs(target:deps()) do
+        if dep:values("ue4ssDep") == true then
+            dep:set("group", "deps")
+        end
     end
 end
 
