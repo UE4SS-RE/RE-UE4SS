@@ -391,9 +391,7 @@ namespace RC
         m_game_path_and_exe_name = game_exe_path;
         m_object_dumper_output_directory = m_game_executable_directory;
 
-        // Allow loading of DLLs from mod folders
-        SetDefaultDllDirectories(LOAD_LIBRARY_SEARCH_DEFAULT_DIRS);
-        // Make sure game directory DLLs are also included
+        // Allow loading of DLLs from the game directory
         AddDllDirectory(game_exe_path.c_str());
 
         for (const auto& item : std::filesystem::directory_iterator(m_root_directory))
