@@ -49,6 +49,8 @@ Fixed BPModLoaderMod displaying 'PostBeginPlay not valid' when VerboseLogging is
 
 Fixed some debug GUI layout alignments, especially with different GUI font scaling settings.
 
+Fixed PalServer not accepting connections from players.
+
 ### Live View
 Fixed the "Write to file" checkbox not working for functions in the `Watches` tab.
 Reduced the likelihood of a crash happening on shutdown when at least one watch is enabled.
