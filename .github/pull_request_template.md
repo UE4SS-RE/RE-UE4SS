@@ -20,7 +20,8 @@ Please describe the tests that you ran to verify your changes. Provide instructi
 
 **Checklist**
 
-- [ ] I have performed a self-review of my own code.
+Please delete options that are not relevant. Update the list as the PR progresses.
+
 - [ ] I have commented my code, particularly in hard-to-understand areas.
 - [ ] I have made corresponding changes to the documentation.
 - [ ] I have added the necessary description of this PR to the changelog, and I have followed the same format as other entries.
