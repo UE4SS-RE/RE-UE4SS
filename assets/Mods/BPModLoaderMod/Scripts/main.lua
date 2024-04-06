@@ -262,6 +262,11 @@ RegisterLoadMapPostHook(function(Engine, World)
     LoadMods(World:get())
 end)
 
+local ExistingActor = FindFirstOf("Actor")
+if ExistingActor ~= nil and ExistingActor:IsValid() then
+    LoadMods(ExistingActor:GetWorld())
+end
+
 RegisterBeginPlayPostHook(function(ContextParam)
     local Context = ContextParam:get()
     for _,ModConfig in ipairs(OrderedMods) do

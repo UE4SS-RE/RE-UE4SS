@@ -40,6 +40,8 @@ Fixed BPModLoaderMod giving "bad conversion" errors.
 
 Fixed some debug GUI layout alignments, especially with different GUI font scaling settings.
 
+Fixes BPModLoaderMod not loading when UE4SS initializes too late.
+
 ### Live View
 
 ### UHT Dumper
