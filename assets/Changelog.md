@@ -49,6 +49,8 @@ Fixed BPModLoaderMod displaying 'PostBeginPlay not valid' when VerboseLogging is
 
 Fixed some debug GUI layout alignments, especially with different GUI font scaling settings.
 
+Fixes BPModLoaderMod not loading when UE4SS initializes too late.
+
 Fixed PalServer not accepting connections from players.
 
 ### Live View
