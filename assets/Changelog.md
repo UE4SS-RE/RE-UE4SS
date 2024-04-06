@@ -22,11 +22,14 @@ TBD
 ### General
 
 ### Live View
+Added support for watching ArrayProperty and StructProperty.
 
 ### UHT Dumper
 
 ### Lua API
 `print` now behaves like vanilla Lua (can now accept zero, one, or multiple arguments of any type).
+
+The callback of `NotifyOnNewObject` can now optionally return `true` to unregister itself.
 
 ### C++ API
 
@@ -36,13 +39,23 @@ TBD
 ## Fixes
 
 ### General
+Fixed adding elements to TArray in Lua incorrectly resizing and zeroing out previous values
+
 Fixed BPModLoaderMod giving "bad conversion" errors.
+
+Fixed BPModLoaderMod calling `PostBeginPlay` multiple times for each ModActor
+
+Fixed BPModLoaderMod displaying 'PostBeginPlay not valid' when VerboseLogging is set to false
 
 Fixed some debug GUI layout alignments, especially with different GUI font scaling settings.
 
 Fixes BPModLoaderMod not loading when UE4SS initializes too late.
 
+Fixed PalServer not accepting connections from players.
+
 ### Live View
+Fixed the "Write to file" checkbox not working for functions in the `Watches` tab.
+Reduced the likelihood of a crash happening on shutdown when at least one watch is enabled.
 
 ### UHT Dumper
 
@@ -62,6 +75,7 @@ Fixed `FText` not working as a parameter (in `RegisterHook`, etc.).
 ```
 [Hooks]
 HookLoadMap = 1
+HookAActorTick = 1
 ```
 
 ### Removed

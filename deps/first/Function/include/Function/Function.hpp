@@ -9,10 +9,10 @@
 namespace RC
 {
     template <typename>
-    class RC_UE_API Function;
+    class Function;
 
     template <typename ReturnType, typename... Params>
-    class RC_UE_API Function<ReturnType(Params...)>
+    class Function<ReturnType(Params...)>
     {
       private:
         // Make non-copyable & non-movable

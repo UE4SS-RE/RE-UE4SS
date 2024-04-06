@@ -1644,7 +1644,6 @@ namespace RC::GUI
         }
         if (auto struct_property = CastField<FStructProperty>(property); struct_property && struct_property->GetStruct()->GetFirstProperty())
         {
-            is_watchable = false;
             ImGui::SameLine();
             auto tree_node_id = std::format("{}{}", static_cast<void*>(container_ptr), property_name);
             if (ImGui_TreeNodeEx(std::format("{}", to_string(property_text.GetCharArray())).c_str(), tree_node_id.c_str(), ImGuiTreeNodeFlags_NoAutoOpenOnLog))
@@ -1679,7 +1678,6 @@ namespace RC::GUI
         }
         else if (auto array_property = CastField<FArrayProperty>(property); array_property)
         {
-            is_watchable = false;
             ImGui::SameLine();
             auto tree_node_id = std::format("{}{}", static_cast<void*>(container_ptr), property_name);
             if (ImGui_TreeNodeEx(std::format("{}", to_string(property_text.GetCharArray())).c_str(), tree_node_id.c_str(), ImGuiTreeNodeFlags_NoAutoOpenOnLog))
@@ -2695,6 +2693,11 @@ namespace RC::GUI
 
     auto LiveView::process_function_post_watch(Unreal::UnrealScriptFunctionCallableContext& context, void*) -> void
     {
+        if (!UnrealInitializer::StaticStorage::bIsInitialized)
+        {
+            return;
+        }
+
         auto function = context.TheStack.Node();
         std::lock_guard<decltype(LiveView::Watch::s_watch_lock)> lock{LiveView::Watch::s_watch_lock};
         auto it = s_watch_containers.find(function);
@@ -2773,10 +2776,20 @@ namespace RC::GUI
 
         buffer.append(STR("\n\n"));
         watch.history.append(to_string(buffer));
+
+        if (watch.write_to_file)
+        {
+            watch.output.send(STR("{}"), buffer);
+        }
     }
 
     auto LiveView::process_watches() -> void
     {
+        if (!UnrealInitializer::StaticStorage::bIsInitialized)
+        {
+            return;
+        }
+
         std::lock_guard<decltype(Watch::s_watch_lock)> lock{Watch::s_watch_lock};
         for (auto& watch : s_watches)
         {
