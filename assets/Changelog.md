@@ -4,8 +4,6 @@ TBD
 
 ## New
 
-Switch to xmake from cmake, makes building much more streamlined - localcc
-
 ### General
 
 ### Live View
@@ -22,16 +20,19 @@ Switch to xmake from cmake, makes building much more streamlined - localcc
 ## Changes
 
 ### General
+Switch to xmake from cmake which makes building much more streamlined ([UE4SS #377](https://github.com/UE4SS-RE/RE-UE4SS/pull/377), [UEPseudo #81](https://github.com/Re-UE4SS/UEPseudo/pull/81)) - localcc
+
+UE Platform support, which allows for much easier internal implementation of new Unreal classes ([UEPseudo #80](https://github.com/Re-UE4SS/UEPseudo/pull/80)) - narknon, localcc
 
 ### Live View
-Added support for watching ArrayProperty and StructProperty.
+Added support for watching ArrayProperty and StructProperty ([UE4SS #419](https://github.com/UE4SS-RE/RE-UE4SS/pull/419))
 
 ### UHT Dumper
 
 ### Lua API
-`print` now behaves like vanilla Lua (can now accept zero, one, or multiple arguments of any type).
+`print` now behaves like vanilla Lua (can now accept zero, one, or multiple arguments of any type) ([UE4SS #423](https://github.com/UE4SS-RE/RE-UE4SS/pull/423)) - Lyrth
 
-The callback of `NotifyOnNewObject` can now optionally return `true` to unregister itself.
+The callback of `NotifyOnNewObject` can now optionally return `true` to unregister itself ([UE4SS #432](https://github.com/UE4SS-RE/RE-UE4SS/pull/432)) - Lyrth
 
 ### C++ API
 
@@ -41,32 +42,33 @@ The callback of `NotifyOnNewObject` can now optionally return `true` to unregist
 ## Fixes
 
 ### General
-Fixed adding elements to TArray in Lua incorrectly resizing and zeroing out previous values
+Fixed adding elements to TArray in Lua incorrectly resizing and zeroing out previous values ([UE4SS #436](https://github.com/UE4SS-RE/RE-UE4SS/pull/436)) - dnchattan
 
-Fixed BPModLoaderMod giving "bad conversion" errors.
+Fixed BPModLoaderMod giving "bad conversion" errors ([UE4SS #398](https://github.com/UE4SS-RE/RE-UE4SS/pull/398))
 
-Fixed BPModLoaderMod calling `PostBeginPlay` multiple times for each ModActor
+Fixed BPModLoaderMod calling `PostBeginPlay` multiple times for each ModActor ([UE4SS #447](https://github.com/UE4SS-RE/RE-UE4SS/pull/447)) - Okaetsu
 
-Fixed BPModLoaderMod displaying 'PostBeginPlay not valid' when VerboseLogging is set to false
+Fixed BPModLoaderMod displaying 'PostBeginPlay not valid' when VerboseLogging is set to false ([UE4SS #447](https://github.com/UE4SS-RE/RE-UE4SS/pull/447)) - Okaetsu
 
-Fixed some debug GUI layout alignments, especially with different GUI font scaling settings.
+Fixed some debug GUI layout alignments, especially with different GUI font scaling settings ([UE4SS #429](https://github.com/UE4SS-RE/RE-UE4SS/pull/429)) - Lyrth
 
-Fixes BPModLoaderMod not loading when UE4SS initializes too late.
+Fixes BPModLoaderMod not loading when UE4SS initializes too late ([UE4SS #454](https://github.com/UE4SS-RE/RE-UE4SS/pull/454)) - localcc
 
-Fixed PalServer not accepting connections from players.
+Fixed PalServer not accepting connections from players ([UE4SS #453](https://github.com/UE4SS-RE/RE-UE4SS/pull/453))
 
 ### Live View
-Fixed the "Write to file" checkbox not working for functions in the `Watches` tab.
-Reduced the likelihood of a crash happening on shutdown when at least one watch is enabled.
+Fixed the "Write to file" checkbox not working for functions in the `Watches` tab ([UE4SS #419](https://github.com/UE4SS-RE/RE-UE4SS/pull/419))
+
+Reduced the likelihood of a crash happening on shutdown when at least one watch is enabled ([UE4SS #419](https://github.com/UE4SS-RE/RE-UE4SS/pull/419))
 
 ### UHT Dumper
 
 ### Lua API
-Fixed FString use after free.
+Fixed FString use after free ([UE4SS #425](https://github.com/UE4SS-RE/RE-UE4SS/pull/425)) - localcc
 
-Fixed the "IterateGameDirectories" global function throwing "bad conversion" errors.
+Fixed the "IterateGameDirectories" global function throwing "bad conversion" errors ([UE4SS #398](https://github.com/UE4SS-RE/RE-UE4SS/pull/398))
 
-Fixed `FText` not working as a parameter (in `RegisterHook`, etc.).
+Fixed `FText` not working as a parameter (in `RegisterHook`, etc.) ([UE4SS #422](https://github.com/UE4SS-RE/RE-UE4SS/pull/422)) - localcc
 
 ### C++ API
 
