@@ -18,7 +18,7 @@ permissions:
 jobs:
   make-release:
     permissions: write-all
-    runs-on: windows-2022
+    runs-on: [self-hosted, windows, x64]
 
     steps:
       - name: Setup github SSH
