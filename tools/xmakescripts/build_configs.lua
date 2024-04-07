@@ -49,7 +49,9 @@ PLATFORM_TYPES = {
             "PLATFORM_WINDOWS",
             "PLATFORM_MICROSOFT",
             "OVERRIDE_PLATFORM_HEADER_NAME=Windows",
-            "UBT_COMPILED_PLATFORM=Win64"
+            "UBT_COMPILED_PLATFORM=Win64",
+            "UNICODE",
+            "_UNICODE"
         }
     }
 }
@@ -130,7 +132,7 @@ end
 -- Apply targe options
 function apply_target_options(self, target, options)
     for option, values in pairs(options) do
-        target:add(option, values)
+        target:add(option, values, { public = true })
     end
 end
 
