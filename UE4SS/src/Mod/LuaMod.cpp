@@ -2199,17 +2199,18 @@ Overloads:
                                     }
                                     const auto current_path = std::string{lua.get_string()};
                                     auto files_table = lua.prepare_new_table();
-                                    for (int i = 1; const auto& item : std::filesystem::directory_iterator(current_path))
+                                    auto index = 1;
+                                    for (const auto& item : std::filesystem::directory_iterator(current_path))
                                     {
                                         if (!item.is_directory())
                                         {
-                                            files_table.add_key(i);
+                                            files_table.add_key(index);
                                             auto file_table = lua.prepare_new_table();
                                             file_table.add_pair("__name", to_string(item.path().filename().wstring()).c_str());
                                             file_table.add_pair("__absolute_path", to_string(item.path().wstring()).c_str());
                                             files_table.fuse_pair();
                                         }
-                                        ++i;
+                                        ++index;
                                     }
                                     return 1;
                                 }
