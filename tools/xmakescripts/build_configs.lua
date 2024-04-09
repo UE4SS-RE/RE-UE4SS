@@ -19,27 +19,34 @@ TARGET_TYPES = {
 
 CONFIG_TYPES = {
     ["Dev"] = {
+        ["symbols"] = {"debug"},
         ["defines"] = {
             "UE_BUILD_DEVELOPMENT",
             "STATS"
-        }
+        },
+        ["optimize"] = {"none"}
     },
     ["Debug"] = {
+        ["symbols"] = {"debug"},
         ["defines"] = {
             "UE_BUILD_DEBUG"
-        }
+        },
+        ["optimize"] = {"none"}
     },
     ["Shipping"] = {
         ["symbols"] = {"debug"},
         ["defines"] = {
             "UE_BUILD_SHIPPING"
-        }
+        },
+        ["optimize"] = {"fastest"}
     },
     ["Test"] = {
+        ["symbols"] = {"debug"},
         ["defines"] = {
             "UE_BUILD_TEST",
             "STATS"
-        }
+        },
+        ["optimize"] = {"none"}
     }
 }
 
