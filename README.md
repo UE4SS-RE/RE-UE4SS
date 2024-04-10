@@ -102,6 +102,13 @@ Afterwards open the generated `.sln` file inside of the `vsxmake2022` directory
 
 Note that you should also commit & push the submodules that you've updated if the reason why you updated was not because someone else pushed an update, and you're just catching up to it.
 
+**Note the following about how xmake interacts with VS**
+
+> The vs. build plugin performs the compile operation by directly calling the xmake command under vs, and also supports intellisense and definition jumps, as well as breakpoint debugging.
+
+This means that modifying the project properties within Visual Studio will not affect which flags are passed to the build when VS executes `xmake`. XMake provides some configurable project settings
+which can be found in VS under the `Project Properties -> Configuration Properties -> Xmake` menu.
+
 ## Updating git submodules
 
 If you want to update git submodules, you do so one of three ways:
