@@ -5,6 +5,13 @@
 
 local VerboseLogging = true
 
+local FunctionClass = StaticFindObject("/Script/CoreUObject.Function")
+if not FunctionClass:IsValid() then
+    -- No need to try again because the function class is guaranteed to exist when Lua mods are initialized.
+    -- If it doesn't exist, then something's gone horribly wrong or a massive engine change has occurred that removed/renamed this object.
+    error("/Script/CoreUObject.Function not found!")
+end
+
 local function Log(Message, AlwaysLog)
     if not VerboseLogging and not AlwaysLog then return end
     print(Message)
@@ -80,13 +87,13 @@ RegisterCustomEvent("RegisterHookFromBP", function (Context, HookName, FunctionT
 
     -- Safeguard for checking if the function hook target is actually valid
     local OriginalFunction = StaticFindObject(HookName_AsString)
-    if OriginalFunction == nil or not OriginalFunction:IsValid() or OriginalFunction:type() ~= "UFunction" then
-        error(string.format("Tried to hook invalid function '%s'", HookName_AsString))
+    if not OriginalFunction:IsA(FunctionClass) then
+        error("Not a function!")
     end
 
     local FunctionName = FunctionToCall:get():ToString()
     local CallbackFunction = Context:get()[FunctionName]
-    if CallbackFunction == nil or not CallbackFunction:IsValid() or CallbackFunction:type() ~= "UFunction" then
+    if not CallbackFunction:IsA(FunctionClass) then
         error(string.format("Function '%s' doesn't exist in '%s'", FunctionName, Context:get():GetFullName()))
     end
 
