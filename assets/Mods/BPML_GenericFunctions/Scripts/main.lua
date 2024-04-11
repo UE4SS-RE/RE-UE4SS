@@ -132,21 +132,38 @@ RegisterCustomEvent("RegisterHookFromBP", function (Context, HookName, FunctionT
         end
     end)
 
-    if #OriginalTypes+1 ~= #CallbackTypes then
-        error("Param count did not match!")
+    if #CallbackTypes == 0 then
+        error("Callback function must have atleast one param for Context!")
     end
 
-    if CallbackTypes[1]:GetPropertyClass():GetFullName() ~= ExpectedContextClass:GetFullName() then
-        error(string.format("Context Class did not match the expected Class '%s'", ExpectedContextClass:GetFName():ToString()))
+    -- Check that the first callback param matches the expected context class
+    if not CallbackTypes[1]:IsA(PropertyTypes.ObjectProperty) or CallbackTypes[1]:GetPropertyClass():GetFullName() ~= ExpectedContextClass:GetFullName() then
+        error(string.format("Expected '%s' as the Context Class, got '%s' instead!", ExpectedContextClass:GetFName():ToString(), 
+        CallbackTypes[1]:GetClass():GetFName():ToString()))
     end
 
-    for i = 1, #OriginalTypes, 1 do
-        -- Using i+1 here to skip Context from our Callback function, maybe there's a cleaner/better way?
-        if ((CallbackTypes[i+1]:IsA(OriginalTypes[i]:GetClass())) or (type(OriginalTypes[i].IsFloatingPoint) == "function" and CallbackTypes[i+1]:IsFloatingPoint() and OriginalTypes[i]:IsFloatingPoint())) then
-            
-        else
-            error("Param #" .. i .. " did not match the expected type '" .. OriginalTypes[i]:GetClass():GetFName():ToString() .. 
-            "' got '" .. CallbackTypes[i+1]:GetClass():GetFName():ToString() .. "'")
+    -- Remove Context from the table since we're done with it now
+    table.remove(CallbackTypes, 1)
+
+    if #OriginalTypes ~= #CallbackTypes then
+        error(string.format("Param count did not match, expected %d, but got %d!", #OriginalTypes + 1, #CallbackTypes + 1))
+    end
+
+    local WasParamInvalid = false
+    for i = 1, #CallbackTypes, 1 do
+        if not CallbackTypes[i]:IsA(OriginalTypes[i]:GetClass()) then
+            if type(CallbackTypes[i].IsFloatingPoint) ~= "function" then
+                WasParamInvalid = true
+            else
+                if not (CallbackTypes[i]:IsFloatingPoint() and OriginalTypes[i]:IsFloatingPoint()) then
+                    WasParamInvalid = true
+                end
+            end
+        end
+
+        if WasParamInvalid then
+            error(string.format("Param #%d did not match the expected type '%s' got '%s'", i + 1, OriginalTypes[i]:GetClass():GetFName():ToString(), 
+            CallbackTypes[i]:GetClass():GetFName():ToString()))
         end
     end
 
