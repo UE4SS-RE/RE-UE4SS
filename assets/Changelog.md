@@ -13,6 +13,8 @@ TBD
 ### Lua API
 Implemented `NumericProperty`, and its `IsFloatingPoint` member function.
 
+Implemented member functions `HasAnyPropertyFlags` and `HasAllPropertyFlags` for Property.
+
 ### C++ API
 
 ### Experimental

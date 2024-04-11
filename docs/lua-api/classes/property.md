@@ -21,6 +21,16 @@
 - **Return type:** `bool`
 - **Returns:** `true` if the property is of type `PropertyType`.
 
+### HasAllPropertyFlags(EPropertyFlags FlagsToCheck)
+
+- **Return type:** `bool`
+- **Returns:** whether the property has all of the specified flags.
+
+### HasAnyPropertyFlags(EPropertyFlags FlagsToCheck)
+
+- **Return type:** `bool`
+- **Returns:** whether the property has any of the specified flags.
+
 ### GetClass()
 
 - **Return type:** `PropertyClass`

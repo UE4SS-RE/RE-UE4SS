@@ -161,6 +161,24 @@ Overloads:
             return 1;
         });
 
+        table.add_pair("HasAllPropertyFlags", [](const LuaMadeSimple::Lua& lua) -> int {
+            std::string error_overload_not_found{R"(
+No overload found for function 'Property.HasAllPropertyFlags'.
+Overloads:
+#1: HasAllPropertyFlags(EPropertyFlags PropertyFlags))"};
+
+            const auto& lua_object = lua.get_userdata<SelfType>();
+
+            if (!lua.is_integer())
+            {
+                lua.throw_error(error_overload_not_found);
+            }
+
+            Unreal::EPropertyFlags object_flags = static_cast<Unreal::EPropertyFlags>(lua.get_integer());
+            lua.set_bool(lua_object.get_remote_cpp_object()->HasAllPropertyFlags(object_flags));
+            return 1;
+        });
+
         table.add_pair("IsA", [](const LuaMadeSimple::Lua& lua) -> int {
             std::string error_overload_not_found{R"(
 No overload found for function 'IsA'.
