@@ -78,20 +78,69 @@ RegisterCustomEvent("RegisterHookFromBP", function (Context, HookName, FunctionT
 
     local HookName_AsString = HookName:get():ToString()
 
-    -- Intended to be a safeguard for checking if a hook is actually valid, but is this really needed?
-    local HookFunctionObj = StaticFindObject(HookName_AsString)
-    if HookFunctionObj == nil or not HookFunctionObj:IsValid() or HookFunctionObj:type() ~= "UFunction" then
-        error("Tried to hook invalid function '" .. HookName_AsString .. "'")
+    -- Safeguard for checking if the function hook target is actually valid
+    local OriginalFunction = StaticFindObject(HookName_AsString)
+    if OriginalFunction == nil or not OriginalFunction:IsValid() or OriginalFunction:type() ~= "UFunction" then
+        error(string.format("Tried to hook invalid function '%s'", HookName_AsString))
     end
 
     local FunctionName = FunctionToCall:get():ToString()
-    local Function = Context:get()[FunctionName]
-    if Function == nil or not Function:IsValid() or Function:type() ~= "UFunction" then
-        error("Function '" .. FunctionName .. "' doesn't exist in '" .. Context:get():GetFullName() .. "'")
+    local CallbackFunction = Context:get()[FunctionName]
+    if CallbackFunction == nil or not CallbackFunction:IsValid() or CallbackFunction:type() ~= "UFunction" then
+        error(string.format("Function '%s' doesn't exist in '%s'", FunctionName, Context:get():GetFullName()))
     end
 
     if RegisteredBPHooks[HookName_AsString] == nil then
         RegisteredBPHooks[HookName_AsString] = {}
+    end
+
+    local ExpectedContextClass = OriginalFunction:GetOuter()
+
+    if not ExpectedContextClass:IsValid() or not ExpectedContextClass:IsClass() then
+        error("Context Class was invalid or not a Class")
+    end
+
+    local OriginalTypes = {}
+    local CallbackTypes = {}
+
+    OriginalFunction:ForEachProperty(function(Property)
+        if Property:HasAnyPropertyFlags(
+            EPropertyFlags.CPF_ConstParm | 
+            EPropertyFlags.CPF_Parm | 
+            EPropertyFlags.CPF_OutParm | 
+            EPropertyFlags.CPF_ReturnParm
+        ) then
+            table.insert(OriginalTypes, Property)
+        end
+    end)
+
+    CallbackFunction:ForEachProperty(function(Property)
+        if Property:HasAnyPropertyFlags(
+            EPropertyFlags.CPF_ConstParm | 
+            EPropertyFlags.CPF_Parm | 
+            EPropertyFlags.CPF_OutParm | 
+            EPropertyFlags.CPF_ReturnParm
+        ) then
+            table.insert(CallbackTypes, Property)
+        end
+    end)
+
+    if #OriginalTypes+1 ~= #CallbackTypes then
+        error("Param count did not match!")
+    end
+
+    if CallbackTypes[1]:GetPropertyClass():GetFullName() ~= ExpectedContextClass:GetFullName() then
+        error(string.format("Context Class did not match the expected Class '%s'", ExpectedContextClass:GetFName():ToString()))
+    end
+
+    for i = 1, #OriginalTypes, 1 do
+        -- Using i+1 here to skip Context from our Callback function, maybe there's a cleaner/better way?
+        if ((CallbackTypes[i+1]:IsA(OriginalTypes[i]:GetClass())) or (type(OriginalTypes[i].IsFloatingPoint) == "function" and CallbackTypes[i+1]:IsFloatingPoint() and OriginalTypes[i]:IsFloatingPoint())) then
+            
+        else
+            error("Param #" .. i .. " did not match the expected type '" .. OriginalTypes[i]:GetClass():GetFName():ToString() .. 
+            "' got '" .. CallbackTypes[i+1]:GetClass():GetFName():ToString() .. "'")
+        end
     end
 
     local ClassFullName = Context:get():GetClass():GetFullName()
@@ -106,7 +155,7 @@ RegisterCustomEvent("RegisterHookFromBP", function (Context, HookName, FunctionT
 
     RegisteredBPHooks[HookName_AsString][ClassFullName] = {
         Owner = Context:get(),
-        Function = Function,
+        Function = CallbackFunction,
         PreHookId = 0,
         PostHookId = 0
     }
