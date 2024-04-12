@@ -304,10 +304,6 @@ namespace RC::LuaMadeSimple
                 {
                     lua_pushinteger(get_lua_instance().get_lua_state(), value);
                 }
-                else if constexpr (std::is_same_v<ValueType, unsigned long long>)
-                {
-                    lua_pushinteger(get_lua_instance().get_lua_state(), static_cast<long long>(value));
-                }
                 else if constexpr (std::is_same_v<ValueType, unsigned int>)
                 {
                     lua_pushinteger(get_lua_instance().get_lua_state(), static_cast<int>(value));
