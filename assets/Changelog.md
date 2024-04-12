@@ -15,6 +15,8 @@ Implemented `NumericProperty`, and its `IsFloatingPoint` member function.
 
 Implemented member functions `HasAnyPropertyFlags` and `HasAllPropertyFlags` for Property.
 
+Implemented `RegisterHookFromBP` and `UnregisterHookFromBP` for Blueprint Mods.
+
 ### C++ API
 
 ### Experimental
