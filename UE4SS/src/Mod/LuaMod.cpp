@@ -23,6 +23,7 @@
 #include <LuaType/LuaUClass.hpp>
 #include <LuaType/LuaUObject.hpp>
 #include <LuaType/LuaFURL.hpp>
+#include <LuaType/LuaUInt64.hpp>
 #include <Mod/CppMod.hpp>
 #include <Mod/LuaMod.hpp>
 #pragma warning(disable : 4005)
@@ -619,82 +620,64 @@ namespace RC
 
     static auto register_property_flags(const LuaMadeSimple::Lua& lua) -> void
     {
+#define ADD_PROPERTY_FLAGS_PAIR(Key)                                                                                                                           \
+    property_flags_table.add_key(#Key);                                                                                                                        \
+    LuaType::UInt64::construct(lua, static_cast<std::underlying_type_t<Unreal::EPropertyFlags>>(Unreal::EPropertyFlags::Key));                                 \
+    property_flags_table.fuse_pair();
+
         LuaMadeSimple::Lua::Table property_flags_table = lua.prepare_new_table();
-        property_flags_table.add_pair("CPF_None", static_cast<std::underlying_type_t<Unreal::EPropertyFlags>>(Unreal::EPropertyFlags::CPF_None));
-        property_flags_table.add_pair("CPF_Edit", static_cast<std::underlying_type_t<Unreal::EPropertyFlags>>(Unreal::EPropertyFlags::CPF_Edit));
-        property_flags_table.add_pair("CPF_ConstParm", static_cast<std::underlying_type_t<Unreal::EPropertyFlags>>(Unreal::EPropertyFlags::CPF_ConstParm));
-        property_flags_table.add_pair("CPF_BlueprintVisible",
-                                      static_cast<std::underlying_type_t<Unreal::EPropertyFlags>>(Unreal::EPropertyFlags::CPF_BlueprintVisible));
-        property_flags_table.add_pair("CPF_ExportObject", static_cast<std::underlying_type_t<Unreal::EPropertyFlags>>(Unreal::EPropertyFlags::CPF_ExportObject));
-        property_flags_table.add_pair("CPF_BlueprintReadOnly",
-                                      static_cast<std::underlying_type_t<Unreal::EPropertyFlags>>(Unreal::EPropertyFlags::CPF_BlueprintReadOnly));
-        property_flags_table.add_pair("CPF_Net", static_cast<std::underlying_type_t<Unreal::EPropertyFlags>>(Unreal::EPropertyFlags::CPF_Net));
-        property_flags_table.add_pair("CPF_EditFixedSize", static_cast<std::underlying_type_t<Unreal::EPropertyFlags>>(Unreal::EPropertyFlags::CPF_EditFixedSize));
-        property_flags_table.add_pair("CPF_Parm", static_cast<std::underlying_type_t<Unreal::EPropertyFlags>>(Unreal::EPropertyFlags::CPF_Parm));
-        property_flags_table.add_pair("CPF_OutParm", static_cast<std::underlying_type_t<Unreal::EPropertyFlags>>(Unreal::EPropertyFlags::CPF_OutParm));
-        property_flags_table.add_pair("CPF_ZeroConstructor",
-                                      static_cast<std::underlying_type_t<Unreal::EPropertyFlags>>(Unreal::EPropertyFlags::CPF_ZeroConstructor));
-        property_flags_table.add_pair("CPF_ReturnParm", static_cast<std::underlying_type_t<Unreal::EPropertyFlags>>(Unreal::EPropertyFlags::CPF_ReturnParm));
-        property_flags_table.add_pair("CPF_DisableEditOnTemplate",
-                                      static_cast<std::underlying_type_t<Unreal::EPropertyFlags>>(Unreal::EPropertyFlags::CPF_DisableEditOnTemplate));
-        property_flags_table.add_pair("CPF_Transient", static_cast<std::underlying_type_t<Unreal::EPropertyFlags>>(Unreal::EPropertyFlags::CPF_Transient));
-        property_flags_table.add_pair("CPF_Config", static_cast<std::underlying_type_t<Unreal::EPropertyFlags>>(Unreal::EPropertyFlags::CPF_Config));
-        property_flags_table.add_pair("CPF_DisableEditOnInstance",
-                                      static_cast<std::underlying_type_t<Unreal::EPropertyFlags>>(Unreal::EPropertyFlags::CPF_DisableEditOnInstance));
-        property_flags_table.add_pair("CPF_EditConst", static_cast<std::underlying_type_t<Unreal::EPropertyFlags>>(Unreal::EPropertyFlags::CPF_EditConst));
-        property_flags_table.add_pair("CPF_GlobalConfig", static_cast<std::underlying_type_t<Unreal::EPropertyFlags>>(Unreal::EPropertyFlags::CPF_GlobalConfig));
-        property_flags_table.add_pair("CPF_InstancedReference",
-                                      static_cast<std::underlying_type_t<Unreal::EPropertyFlags>>(Unreal::EPropertyFlags::CPF_InstancedReference));
-        property_flags_table.add_pair("CPF_DuplicateTransient",
-                                      static_cast<std::underlying_type_t<Unreal::EPropertyFlags>>(Unreal::EPropertyFlags::CPF_DuplicateTransient));
-        property_flags_table.add_pair("CPF_SaveGame", static_cast<std::underlying_type_t<Unreal::EPropertyFlags>>(Unreal::EPropertyFlags::CPF_SaveGame));
-        property_flags_table.add_pair("CPF_NoClear", static_cast<std::underlying_type_t<Unreal::EPropertyFlags>>(Unreal::EPropertyFlags::CPF_NoClear));
-        property_flags_table.add_pair("CPF_ReferenceParm", static_cast<std::underlying_type_t<Unreal::EPropertyFlags>>(Unreal::EPropertyFlags::CPF_ReferenceParm));
-        property_flags_table.add_pair("CPF_BlueprintAssignable",
-                                      static_cast<std::underlying_type_t<Unreal::EPropertyFlags>>(Unreal::EPropertyFlags::CPF_BlueprintAssignable));
-        property_flags_table.add_pair("CPF_Deprecated", static_cast<std::underlying_type_t<Unreal::EPropertyFlags>>(Unreal::EPropertyFlags::CPF_Deprecated));
-        property_flags_table.add_pair("CPF_IsPlainOldData",
-                                      static_cast<std::underlying_type_t<Unreal::EPropertyFlags>>(Unreal::EPropertyFlags::CPF_IsPlainOldData));
-        property_flags_table.add_pair("CPF_RepSkip", static_cast<std::underlying_type_t<Unreal::EPropertyFlags>>(Unreal::EPropertyFlags::CPF_RepSkip));
-        property_flags_table.add_pair("CPF_RepNotify", static_cast<std::underlying_type_t<Unreal::EPropertyFlags>>(Unreal::EPropertyFlags::CPF_RepNotify));
-        property_flags_table.add_pair("CPF_Interp", static_cast<std::underlying_type_t<Unreal::EPropertyFlags>>(Unreal::EPropertyFlags::CPF_Interp));
-        property_flags_table.add_pair("CPF_NonTransactional",
-                                      static_cast<std::underlying_type_t<Unreal::EPropertyFlags>>(Unreal::EPropertyFlags::CPF_NonTransactional));
-        property_flags_table.add_pair("CPF_EditorOnly", static_cast<std::underlying_type_t<Unreal::EPropertyFlags>>(Unreal::EPropertyFlags::CPF_EditorOnly));
-        property_flags_table.add_pair("CPF_NoDestructor", static_cast<std::underlying_type_t<Unreal::EPropertyFlags>>(Unreal::EPropertyFlags::CPF_NoDestructor));
-        property_flags_table.add_pair("CPF_AutoWeak", static_cast<std::underlying_type_t<Unreal::EPropertyFlags>>(Unreal::EPropertyFlags::CPF_AutoWeak));
-        property_flags_table.add_pair("CPF_ContainsInstancedReference",
-                                      static_cast<std::underlying_type_t<Unreal::EPropertyFlags>>(Unreal::EPropertyFlags::CPF_ContainsInstancedReference));
-        property_flags_table.add_pair("CPF_AssetRegistrySearchable",
-                                      static_cast<std::underlying_type_t<Unreal::EPropertyFlags>>(Unreal::EPropertyFlags::CPF_AssetRegistrySearchable));
-        property_flags_table.add_pair("CPF_SimpleDisplay", static_cast<std::underlying_type_t<Unreal::EPropertyFlags>>(Unreal::EPropertyFlags::CPF_SimpleDisplay));
-        property_flags_table.add_pair("CPF_AdvancedDisplay",
-                                      static_cast<std::underlying_type_t<Unreal::EPropertyFlags>>(Unreal::EPropertyFlags::CPF_AdvancedDisplay));
-        property_flags_table.add_pair("CPF_Protected", static_cast<std::underlying_type_t<Unreal::EPropertyFlags>>(Unreal::EPropertyFlags::CPF_Protected));
-        property_flags_table.add_pair("CPF_BlueprintCallable",
-                                      static_cast<std::underlying_type_t<Unreal::EPropertyFlags>>(Unreal::EPropertyFlags::CPF_BlueprintCallable));
-        property_flags_table.add_pair("CPF_BlueprintAuthorityOnly",
-                                      static_cast<std::underlying_type_t<Unreal::EPropertyFlags>>(Unreal::EPropertyFlags::CPF_BlueprintAuthorityOnly));
-        property_flags_table.add_pair("CPF_TextExportTransient",
-                                      static_cast<std::underlying_type_t<Unreal::EPropertyFlags>>(Unreal::EPropertyFlags::CPF_TextExportTransient));
-        property_flags_table.add_pair("CPF_NonPIEDuplicateTransient",
-                                      static_cast<std::underlying_type_t<Unreal::EPropertyFlags>>(Unreal::EPropertyFlags::CPF_NonPIEDuplicateTransient));
-        property_flags_table.add_pair("CPF_ExposeOnSpawn", static_cast<std::underlying_type_t<Unreal::EPropertyFlags>>(Unreal::EPropertyFlags::CPF_ExposeOnSpawn));
-        property_flags_table.add_pair("CPF_PersistentInstance",
-                                      static_cast<std::underlying_type_t<Unreal::EPropertyFlags>>(Unreal::EPropertyFlags::CPF_PersistentInstance));
-        property_flags_table.add_pair("CPF_UObjectWrapper",
-                                      static_cast<std::underlying_type_t<Unreal::EPropertyFlags>>(Unreal::EPropertyFlags::CPF_UObjectWrapper));
-        property_flags_table.add_pair("CPF_HasGetValueTypeHash",
-                                      static_cast<std::underlying_type_t<Unreal::EPropertyFlags>>(Unreal::EPropertyFlags::CPF_HasGetValueTypeHash));
-        property_flags_table.add_pair("CPF_NativeAccessSpecifierPublic",
-                                      static_cast<std::underlying_type_t<Unreal::EPropertyFlags>>(Unreal::EPropertyFlags::CPF_NativeAccessSpecifierPublic));
-        property_flags_table.add_pair("CPF_NativeAccessSpecifierProtected",
-                                      static_cast<std::underlying_type_t<Unreal::EPropertyFlags>>(Unreal::EPropertyFlags::CPF_NativeAccessSpecifierProtected));
-        property_flags_table.add_pair("CPF_NativeAccessSpecifierPrivate",
-                                      static_cast<std::underlying_type_t<Unreal::EPropertyFlags>>(Unreal::EPropertyFlags::CPF_NativeAccessSpecifierPrivate));
-        property_flags_table.add_pair("CPF_SkipSerialization",
-                                      static_cast<std::underlying_type_t<Unreal::EPropertyFlags>>(Unreal::EPropertyFlags::CPF_SkipSerialization));
+        ADD_PROPERTY_FLAGS_PAIR(CPF_None)
+        ADD_PROPERTY_FLAGS_PAIR(CPF_Edit)
+        ADD_PROPERTY_FLAGS_PAIR(CPF_ConstParm)
+        ADD_PROPERTY_FLAGS_PAIR(CPF_BlueprintVisible)
+        ADD_PROPERTY_FLAGS_PAIR(CPF_ExportObject)
+        ADD_PROPERTY_FLAGS_PAIR(CPF_BlueprintReadOnly)
+        ADD_PROPERTY_FLAGS_PAIR(CPF_Net)
+        ADD_PROPERTY_FLAGS_PAIR(CPF_EditFixedSize)
+        ADD_PROPERTY_FLAGS_PAIR(CPF_Parm)
+        ADD_PROPERTY_FLAGS_PAIR(CPF_OutParm)
+        ADD_PROPERTY_FLAGS_PAIR(CPF_ZeroConstructor)
+        ADD_PROPERTY_FLAGS_PAIR(CPF_ReturnParm)
+        ADD_PROPERTY_FLAGS_PAIR(CPF_DisableEditOnTemplate)
+        ADD_PROPERTY_FLAGS_PAIR(CPF_Transient)
+        ADD_PROPERTY_FLAGS_PAIR(CPF_Config)
+        ADD_PROPERTY_FLAGS_PAIR(CPF_DisableEditOnInstance)
+        ADD_PROPERTY_FLAGS_PAIR(CPF_EditConst)
+        ADD_PROPERTY_FLAGS_PAIR(CPF_GlobalConfig)
+        ADD_PROPERTY_FLAGS_PAIR(CPF_InstancedReference)
+        ADD_PROPERTY_FLAGS_PAIR(CPF_DuplicateTransient)
+        ADD_PROPERTY_FLAGS_PAIR(CPF_SaveGame)
+        ADD_PROPERTY_FLAGS_PAIR(CPF_NoClear)
+        ADD_PROPERTY_FLAGS_PAIR(CPF_ReferenceParm)
+        ADD_PROPERTY_FLAGS_PAIR(CPF_BlueprintAssignable)
+        ADD_PROPERTY_FLAGS_PAIR(CPF_Deprecated)
+        ADD_PROPERTY_FLAGS_PAIR(CPF_IsPlainOldData)
+        ADD_PROPERTY_FLAGS_PAIR(CPF_RepSkip)
+        ADD_PROPERTY_FLAGS_PAIR(CPF_RepNotify)
+        ADD_PROPERTY_FLAGS_PAIR(CPF_Interp)
+        ADD_PROPERTY_FLAGS_PAIR(CPF_NonTransactional)
+        ADD_PROPERTY_FLAGS_PAIR(CPF_EditorOnly)
+        ADD_PROPERTY_FLAGS_PAIR(CPF_NoDestructor)
+        ADD_PROPERTY_FLAGS_PAIR(CPF_AutoWeak)
+        ADD_PROPERTY_FLAGS_PAIR(CPF_ContainsInstancedReference)
+        ADD_PROPERTY_FLAGS_PAIR(CPF_AssetRegistrySearchable)
+        ADD_PROPERTY_FLAGS_PAIR(CPF_SimpleDisplay)
+        ADD_PROPERTY_FLAGS_PAIR(CPF_AdvancedDisplay)
+        ADD_PROPERTY_FLAGS_PAIR(CPF_Protected)
+        ADD_PROPERTY_FLAGS_PAIR(CPF_BlueprintCallable)
+        ADD_PROPERTY_FLAGS_PAIR(CPF_BlueprintAuthorityOnly)
+        ADD_PROPERTY_FLAGS_PAIR(CPF_TextExportTransient)
+        ADD_PROPERTY_FLAGS_PAIR(CPF_NonPIEDuplicateTransient)
+        ADD_PROPERTY_FLAGS_PAIR(CPF_ExposeOnSpawn)
+        ADD_PROPERTY_FLAGS_PAIR(CPF_PersistentInstance)
+        ADD_PROPERTY_FLAGS_PAIR(CPF_UObjectWrapper)
+        ADD_PROPERTY_FLAGS_PAIR(CPF_HasGetValueTypeHash)
+        ADD_PROPERTY_FLAGS_PAIR(CPF_NativeAccessSpecifierPublic)
+        ADD_PROPERTY_FLAGS_PAIR(CPF_NativeAccessSpecifierProtected)
+        ADD_PROPERTY_FLAGS_PAIR(CPF_NativeAccessSpecifierPrivate)
+        ADD_PROPERTY_FLAGS_PAIR(CPF_SkipSerialization)
         property_flags_table.make_global("EPropertyFlags");
+#undef ADD_PROPERTY_FLAGS_PAIR
     }
 
     static auto register_efindname(const LuaMadeSimple::Lua& lua) -> void

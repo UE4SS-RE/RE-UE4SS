@@ -412,6 +412,8 @@ namespace RC::LuaMadeSimple
         create("__call", metamethods.call);
         create("__eq", metamethods.equal);
         create("__len", metamethods.length);
+        create("__band", metamethods.binary_and);
+        create("__bor", metamethods.binary_or);
 
         return custom_gc_method;
     };

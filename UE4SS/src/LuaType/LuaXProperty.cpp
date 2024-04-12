@@ -8,6 +8,7 @@
 #include <LuaType/LuaXProperty.hpp>
 #include <LuaType/LuaXStructProperty.hpp>
 #include <LuaType/LuaXNumericProperty.hpp>
+#include <LuaType/LuaUInt64.hpp>
 #pragma warning(disable : 4005)
 #include <Unreal/FProperty.hpp>
 #include <Unreal/Property/FArrayProperty.hpp>
@@ -151,12 +152,13 @@ Overloads:
 
             const auto& lua_object = lua.get_userdata<SelfType>();
 
-            if (!lua.is_integer())
+            if (!lua.is_userdata())
             {
                 lua.throw_error(error_overload_not_found);
             }
 
-            Unreal::EPropertyFlags object_flags = static_cast<Unreal::EPropertyFlags>(lua.get_integer());
+            auto& lua_uint64 = lua.get_userdata<LuaType::UInt64>();
+            auto object_flags = static_cast<Unreal::EPropertyFlags>(lua_uint64.get_local_cpp_object());
             lua.set_bool(lua_object.get_remote_cpp_object()->HasAnyPropertyFlags(object_flags));
             return 1;
         });
@@ -169,12 +171,13 @@ Overloads:
 
             const auto& lua_object = lua.get_userdata<SelfType>();
 
-            if (!lua.is_integer())
+            if (!lua.is_userdata())
             {
                 lua.throw_error(error_overload_not_found);
             }
 
-            Unreal::EPropertyFlags object_flags = static_cast<Unreal::EPropertyFlags>(lua.get_integer());
+            auto& lua_uint64 = lua.get_userdata<LuaType::UInt64>();
+            auto object_flags = static_cast<Unreal::EPropertyFlags>(lua_uint64.get_local_cpp_object());
             lua.set_bool(lua_object.get_remote_cpp_object()->HasAllPropertyFlags(object_flags));
             return 1;
         });
