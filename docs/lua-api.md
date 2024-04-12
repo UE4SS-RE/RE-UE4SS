@@ -2,15 +2,15 @@
 
 These are the Lua API functions available in UE4SS, on top of the standard libraries that Lua comes with by defualt.
 
-For version: **3.0.0**.
+For version: **3.1.0**
 
-Current status: **incomplete**.
+Current status: **mostly complete**
 
 ## Full API Overview
 
 This is an overall list of API definitions available in UE4SS. For more readable information, see the individual API definition pages in the collapsible sections 4.1, 4.2 and 4.3.
 
-> Warning: This API list is not updated as often as the individual API definition pages. It may be out of date.
+> **Warning: This API list is not updated since 2.5.2, so it out of date. Please refer to the individual API definition pages for the most up-to-date information.**
 
 ### Table Definitions
 - The definitions appear as: FieldName | FieldValueType

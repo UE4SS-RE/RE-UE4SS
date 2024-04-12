@@ -5,8 +5,6 @@
   - [Blueprint Modloading](./feature-overview/blueprint-modloader.md)
   - [Live Property Viewer and Editor](./feature-overview/live-view.md)
   - [Dumpers](./feature-overview/dumpers.md)
-  - [Universal UE Mods](./feature-overview/universal-mods.md)
-  - [Experimental](./feature-overview/experimental.md)
 - [Installation](./installation-guide.md)
 - [Custom Game Configs](./custom-game-configs.md)
 - [Lua API](./lua-api.md)
