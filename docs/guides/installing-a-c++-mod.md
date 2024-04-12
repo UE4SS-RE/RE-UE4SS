@@ -3,7 +3,7 @@
 1. This part assumes you have UE4SS installed and working for your game already. If not, refer to the [installation guide](../installation-guide.md). 
 
 2. After building, you will have the following file:
-    - `MyAwesomeMod.dll` in `MyMods\Output\<Configuration>\MyAwesomeMod`
+    - `MyAwesomeMod.dll` in `MyMods\Binaries\<Configuration>\MyAwesomeMod`
     
 3. Navigate over to your game's executable folder and open the `Mods` folder. Here we'll do a couple things:  
     - Create a folder structure in `Mods` that looks like `MyAwesomeMod\dlls`. 
