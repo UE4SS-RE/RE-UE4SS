@@ -87,8 +87,8 @@ RegisterCustomEvent("RegisterHookFromBP", function (Context, HookName, FunctionT
 
     -- Safeguard for checking if the function hook target is actually valid
     local OriginalFunction = StaticFindObject(HookName_AsString)
-    if not OriginalFunction:IsA(FunctionClass) then
-        error("Not a function!")
+    if not OriginalFunction:IsValid() or not OriginalFunction:IsA(FunctionClass) then
+        error(string.format("Function to hook not found: %s", HookName_AsString))
     end
 
     local FunctionName = FunctionToCall:get():ToString()
@@ -112,9 +112,9 @@ RegisterCustomEvent("RegisterHookFromBP", function (Context, HookName, FunctionT
 
     OriginalFunction:ForEachProperty(function(Property)
         if Property:HasAnyPropertyFlags(
-            EPropertyFlags.CPF_ConstParm | 
-            EPropertyFlags.CPF_Parm | 
-            EPropertyFlags.CPF_OutParm | 
+            EPropertyFlags.CPF_ConstParm |
+            EPropertyFlags.CPF_Parm |
+            EPropertyFlags.CPF_OutParm |
             EPropertyFlags.CPF_ReturnParm
         ) then
             table.insert(OriginalTypes, Property)
@@ -123,9 +123,9 @@ RegisterCustomEvent("RegisterHookFromBP", function (Context, HookName, FunctionT
 
     CallbackFunction:ForEachProperty(function(Property)
         if Property:HasAnyPropertyFlags(
-            EPropertyFlags.CPF_ConstParm | 
-            EPropertyFlags.CPF_Parm | 
-            EPropertyFlags.CPF_OutParm | 
+            EPropertyFlags.CPF_ConstParm |
+            EPropertyFlags.CPF_Parm |
+            EPropertyFlags.CPF_OutParm |
             EPropertyFlags.CPF_ReturnParm
         ) then
             table.insert(CallbackTypes, Property)
