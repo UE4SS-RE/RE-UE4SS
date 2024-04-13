@@ -75,6 +75,8 @@ Fixed the "IterateGameDirectories" global function throwing "bad conversion" err
 
 Fixed `FText` not working as a parameter (in `RegisterHook`, etc.) ([UE4SS #422](https://github.com/UE4SS-RE/RE-UE4SS/pull/422)) - localcc
 
+Fixed `BoolProperty` having the same metatable as `ObjectProperty` causing their member functions to occasionally not be found  
+
 ### C++ API
 
 

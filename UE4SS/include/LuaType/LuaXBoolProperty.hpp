@@ -13,7 +13,7 @@ namespace RC::LuaType
     {
         constexpr static const char* ToString()
         {
-            return "ObjectProperty";
+            return "BoolProperty";
         }
     };
     class XBoolProperty : public RemoteObjectBase<Unreal::FBoolProperty, FBoolPropertyName>
