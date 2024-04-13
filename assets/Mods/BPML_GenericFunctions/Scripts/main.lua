@@ -137,10 +137,9 @@ RegisterCustomEvent("RegisterHookFromBP", function (Context, HookName, FunctionT
     end
 
     -- Check that the first callback param matches the expected context class
-    if not CallbackTypes[1]:IsA(PropertyTypes.ObjectProperty) or CallbackTypes[1]:GetPropertyClass():GetFullName() ~= ExpectedContextClass:GetFullName() then
-        error(string.format("Expected '%s' as the Context Class, got '%s' instead!", ExpectedContextClass:GetFName():ToString(), 
-        CallbackTypes[1]:GetClass():GetFName():ToString()))
-    end
+	if not CallbackTypes[1]:IsA(PropertyTypes.ObjectProperty) then
+		error(string.format("Context must be an Object of some kind, got '%s' instead!", CallbackTypes[1]:GetClass():GetFName():ToString()))
+	end
 
     -- Remove Context from the table since we're done with it now
     table.remove(CallbackTypes, 1)
