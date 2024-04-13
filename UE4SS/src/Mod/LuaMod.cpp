@@ -127,12 +127,13 @@ namespace RC
         LuaType::RemoteUnrealParam::construct(lua_data.lua, &context.Context, s_object_property_name);
 
         // Attempt at dynamically fetching the params
-        uint16_t return_value_offset = context.TheStack.CurrentNativeFunction()->GetReturnValueOffset();
+        const auto FunctionBeingExecuted = lua_data.unreal_function;
+        uint16_t return_value_offset = FunctionBeingExecuted->GetReturnValueOffset();
 
         // 'ReturnValueOffset' is 0xFFFF if the UFunction return type is void
         lua_data.has_return_value = return_value_offset != 0xFFFF;
 
-        uint8_t num_unreal_params = context.TheStack.CurrentNativeFunction()->GetNumParms();
+        uint8_t num_unreal_params = FunctionBeingExecuted->GetNumParms();
         if (lua_data.has_return_value)
         {
             // Subtract one from the number of params if there's a return value
@@ -145,7 +146,7 @@ namespace RC
         {
             // int32_t current_param_offset{};
 
-            for (Unreal::FProperty* func_prop : context.TheStack.CurrentNativeFunction()->ForEachProperty())
+            for (Unreal::FProperty* func_prop : FunctionBeingExecuted->ForEachProperty())
             {
                 // Skip this property if it's not a parameter
                 if (!func_prop->HasAnyPropertyFlags(Unreal::EPropertyFlags::CPF_Parm))
@@ -276,12 +277,13 @@ namespace RC
             LuaType::RemoteUnrealParam::construct(lua_data.lua, &context.Context, s_object_property_name);
 
             // Attempt at dynamically fetching the params
-            uint16_t return_value_offset = context.TheStack.CurrentNativeFunction()->GetReturnValueOffset();
+            const auto FunctionBeingExecuted = lua_data.unreal_function;
+            uint16_t return_value_offset = FunctionBeingExecuted->GetReturnValueOffset();
 
             // 'ReturnValueOffset' is 0xFFFF if the UFunction return type is void
             lua_data.has_return_value = return_value_offset != 0xFFFF;
 
-            uint8_t num_unreal_params = context.TheStack.CurrentNativeFunction()->GetNumParms();
+            uint8_t num_unreal_params = FunctionBeingExecuted->GetNumParms();
             if (lua_data.has_return_value)
             {
                 // Subtract one from the number of params if there's a return value
@@ -289,7 +291,7 @@ namespace RC
                 --num_unreal_params;
 
                 // Set up the return value param so that Lua can access the original return value
-                auto return_property = context.TheStack.CurrentNativeFunction()->GetReturnProperty();
+                auto return_property = FunctionBeingExecuted->GetReturnProperty();
                 auto return_property_type = return_property->GetClass().GetFName();
                 int32_t name_comparison_index = return_property_type.GetComparisonIndex();
                 if (LuaType::StaticState::m_property_value_pushers.contains(name_comparison_index))
@@ -306,7 +308,7 @@ namespace RC
             bool has_properties_to_process = lua_data.has_return_value || num_unreal_params > 0;
             if (has_properties_to_process && context.TheStack.Locals())
             {
-                for (Unreal::FProperty* func_prop : context.TheStack.CurrentNativeFunction()->ForEachProperty())
+                for (Unreal::FProperty* func_prop : FunctionBeingExecuted->ForEachProperty())
                 {
                     // Skip this property if it's not a parameter
                     if (!func_prop->HasAnyPropertyFlags(Unreal::EPropertyFlags::CPF_Parm))
@@ -1888,8 +1890,7 @@ Overloads:
 
             Unreal::UClass* instance_of_class = Unreal::UObjectGlobals::StaticFindObject<Unreal::UClass*>(nullptr, nullptr, class_name);
 
-            LuaMod::m_static_construct_object_lua_callbacks.emplace_back(
-                    LuaMod::LuaCancellableCallbackData{hook_lua, instance_of_class, func_ref, thread_ref});
+            LuaMod::m_static_construct_object_lua_callbacks.emplace_back(LuaMod::LuaCancellableCallbackData{hook_lua, instance_of_class, func_ref, thread_ref});
 
             return 0;
         });

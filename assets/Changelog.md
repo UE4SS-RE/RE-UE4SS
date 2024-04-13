@@ -56,6 +56,8 @@ Fixes BPModLoaderMod not loading when UE4SS initializes too late ([UE4SS #454](h
 
 Fixed PalServer not accepting connections from players ([UE4SS #453](https://github.com/UE4SS-RE/RE-UE4SS/pull/453))
 
+Fixed freeze related to the error "Tried to execute UFunction::FuncPtr hook but there was no function map entry"
+
 ### Live View
 Fixed the "Write to file" checkbox not working for functions in the `Watches` tab ([UE4SS #419](https://github.com/UE4SS-RE/RE-UE4SS/pull/419))
 
