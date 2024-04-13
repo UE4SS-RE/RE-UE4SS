@@ -11,6 +11,11 @@ TBD
 ### UHT Dumper
 
 ### Lua API
+Implemented `NumericProperty`, and its `IsFloatingPoint` member function.
+
+Implemented member functions `HasAnyPropertyFlags` and `HasAllPropertyFlags` for Property.
+
+Implemented `RegisterHookFromBP` and `UnregisterHookFromBP` for Blueprint Mods.
 
 ### C++ API
 
@@ -69,6 +74,8 @@ Fixed FString use after free ([UE4SS #425](https://github.com/UE4SS-RE/RE-UE4SS/
 Fixed the "IterateGameDirectories" global function throwing "bad conversion" errors ([UE4SS #398](https://github.com/UE4SS-RE/RE-UE4SS/pull/398))
 
 Fixed `FText` not working as a parameter (in `RegisterHook`, etc.) ([UE4SS #422](https://github.com/UE4SS-RE/RE-UE4SS/pull/422)) - localcc
+
+Fixed `BoolProperty` having the same metatable as `ObjectProperty` causing their member functions to occasionally not be found  
 
 ### C++ API
 

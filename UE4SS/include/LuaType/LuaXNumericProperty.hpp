@@ -4,35 +4,35 @@
 
 namespace RC::Unreal
 {
-    class FBoolProperty;
+    class FNumericProperty;
 }
 
 namespace RC::LuaType
 {
-    struct FBoolPropertyName
+    struct FNumericPropertyName
     {
         constexpr static const char* ToString()
         {
-            return "BoolProperty";
+            return "NumericProperty";
         }
     };
-    class XBoolProperty : public RemoteObjectBase<Unreal::FBoolProperty, FBoolPropertyName>
+    class XNumericProperty : public RemoteObjectBase<Unreal::FNumericProperty, FNumericPropertyName>
     {
-      public:
+    public:
         using Super = XProperty;
 
-      private:
-        explicit XBoolProperty(Unreal::FBoolProperty* object);
+    private:
+        explicit XNumericProperty(Unreal::FNumericProperty* object);
 
-      public:
-        XBoolProperty() = delete;
-        auto static construct(const LuaMadeSimple::Lua&, Unreal::FBoolProperty*) -> const LuaMadeSimple::Lua::Table;
+    public:
+        XNumericProperty() = delete;
+        auto static construct(const LuaMadeSimple::Lua&, Unreal::FNumericProperty*) -> const LuaMadeSimple::Lua::Table;
         auto static construct(const LuaMadeSimple::Lua&, BaseObject&) -> const LuaMadeSimple::Lua::Table;
 
-      private:
+    private:
         auto static setup_metamethods(BaseObject&) -> void;
 
-      private:
+    private:
         template <LuaMadeSimple::Type::IsFinal is_final>
         auto static setup_member_functions(const LuaMadeSimple::Lua::Table&) -> void;
     };

@@ -4,6 +4,7 @@
 
 #include <LuaMadeSimple/LuaMadeSimple.hpp>
 #include <LuaType/LuaUObject.hpp>
+#include <LuaType/LuaUStruct.hpp>
 
 namespace RC::Unreal
 {
@@ -45,6 +46,9 @@ namespace RC::LuaType
     };
     class UFunction : public UObjectBase<Unreal::UFunction, UFunctionName>
     {
+      public:
+          using Super = UStruct;
+
       private:
         // This is the 'this' pointer for this UFunction
         Unreal::UObject* m_base{};
