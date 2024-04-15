@@ -6,7 +6,11 @@ includes("File")
 includes("Function")
 includes("Helpers")
 includes("IniParser")
-includes("Input")
+
+if (has_config("Input")) then
+    includes("Input")
+end
+
 includes("JSON")
 includes("LuaMadeSimple")
 includes("LuaRaw")

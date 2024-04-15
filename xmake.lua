@@ -15,6 +15,7 @@ if is_plat("windows") then
     set_allowedarchs("x64")
 elseif is_plat("linux") then
     set_allowedarchs("x86_64")
+    set_defaultarchs("x86_64")
 end
 set_allowedmodes(get_compilation_modes())
 

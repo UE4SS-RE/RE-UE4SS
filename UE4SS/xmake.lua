@@ -1,4 +1,7 @@
-includes("proxy_generator")
+
+if is_plat("windows") then
+    includes("proxy_generator")
+end
 
 if is_plat("windows") and has_config("GUI") then 
     add_requires("imgui v1.89", { debug = is_mode_debug(), configs = { win32 = true, dx11 = true, opengl3 = true, glfw_opengl3 = true, runtimes = get_mode_runtimes() } })
