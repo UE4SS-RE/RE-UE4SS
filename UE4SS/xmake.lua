@@ -1,11 +1,22 @@
 includes("proxy_generator")
 
-add_requires("imgui v1.89", { debug = is_mode_debug(), configs = { win32 = true, dx11 = true, opengl3 = true, glfw_opengl3 = true , runtimes = get_mode_runtimes()} } )
-add_requires("ImGuiTextEdit v1.0", { debug = is_mode_debug(), configs = {runtimes = get_mode_runtimes()} })
-add_requires("IconFontCppHeaders v1.0", { debug = is_mode_debug(), configs = {runtimes = get_mode_runtimes()}})
-add_requires("glfw 3.3.9", { debug = is_mode_debug() , configs = {runtimes = get_mode_runtimes()}})
-add_requires("opengl", { debug = is_mode_debug(), configs = {runtimes = get_mode_runtimes()} })
-add_requires("glaze", { debug = is_mode_debug(), configs = {runtimes = get_mode_runtimes()} })
+if is_plat("windows") and has_config("GUI") then 
+    add_requires("imgui v1.89", { debug = is_mode_debug(), configs = { win32 = true, dx11 = true, opengl3 = true, glfw_opengl3 = true, runtimes = get_mode_runtimes() } })
+end
+
+if has_config("UI") then
+    add_requires("ImGuiTextEdit v1.0", { debug = is_mode_debug(), configs = { runtimes = get_mode_runtimes() } })
+end
+
+if has_config("GUI") then
+    add_requires("IconFontCppHeaders v1.0", { debug = is_mode_debug(), configs = { runtimes = get_mode_runtimes() } })
+    add_requires("glfw 3.3.9", { debug = is_mode_debug(), configs = { runtimes = get_mode_runtimes() } })
+    add_requires("opengl", { debug = is_mode_debug(), configs = { runtimes = get_mode_runtimes() } })
+end
+
+if is_plat("linux") and has_config("TUI") then
+    add_requires("imtui v1.0.5", { debug = is_mode_debug(), configs = { runtimes = get_mode_runtimes() } })
+end
 
 option("ue4ssBetaIsStarted")
     set_default(true)
@@ -57,17 +68,32 @@ target(projectName)
     add_deps(
         "File", "DynamicOutput", "Unreal",
         "SinglePassSigScanner", "LuaMadeSimple", "Function",
-        "IniParser", "JSON", "Input",
+        "IniParser", "JSON", 
         "Constructs", "Helpers", "MProgram",
         "ScopedTimer", "Profiler", "patternsleuth_bind",
         "glad", { public = true }
     )
 
-    add_packages("imgui", "ImGuiTextEdit", "IconFontCppHeaders", "glfw", "opengl", { public = true })
+    add_options("UI", "GUI", "TUI", "Input")
 
+    if has_config("Input") then 
+        add_deps("Input", { public = true })
+    end
+
+    if is_plat("windows") then
+        if has_config("GUI") then
+            add_packages("ImGui", "ImGuiTextEdit", "IconFontCppHeaders", "glfw", "opengl", { public = true })
+            add_links("d3d11", { public = true })
+        end
+    elseif is_plat("linux") then
+        if has_config("GUI") then
+            add_packages("ImGui", "ImGuiTextEdit", "IconFontCppHeaders", "glfw", "opengl", { public = true })
+        elseif has_config("TUI") then
+            add_packages("imtui", "ImGuiTextEdit", { public = true })
+        end
+    end
+    
     add_packages("glaze", "polyhook_2", { public = true })
-
-    add_links("dbghelp", "psapi", "d3d11", { public = true })
 
     after_load(function (target)
         local projectRoot = get_config("ue4ssRoot")

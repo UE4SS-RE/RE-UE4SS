@@ -4,7 +4,28 @@ set_xmakever("2.9.2")
 -- when UE4SS is sub-moduled/`include("UE4SS")` in another xmake project.
 set_config("ue4ssRoot", os.scriptdir())
 
--- All non-binary outputs are written to the Intermediates dir.
+includes("tools/xmakescripts/build_configs.lua")
+includes("tools/xmakescripts/configurations.lua")
+
+add_rules(get_unreal_rules())
+
+-- Restrict the compilation modes/configs.
+set_allowedplats("windows", "linux")
+if is_plat("windows") then
+    set_allowedarchs("x64")
+elseif is_plat("linux") then
+    set_allowedarchs("x86_64")
+end
+set_allowedmodes(get_compilation_modes())
+
+if is_plat("windows") then
+    set_defaultmode("Game__Shipping__Win64")
+    set_runtimes(get_mode_runtimes())
+elseif is_plat("linux") then
+    set_defaultmode("Game__Shipping__Linux")
+end
+
+-- All non-binary outputs are stored in the Intermediates dir.
 set_config("buildir", "Intermediates")
 
 -- Any lua modules in this directory can be imported in the script scope by using
@@ -47,9 +68,7 @@ on_install(function(target) end)
 
 includes("deps")
 includes("UE4SS")
-includes("UVTD")
-includes("cppmods")
 
--- TODO: Remove this before the next release. It only exists to maintain backwards compat
--- warnings for older mod templates.
-set_config("scriptsRoot", path.join(os.scriptdir(), "tools/xmakescripts"))
+if is_plat("windows") then
+    includes("UVTD")
+end
