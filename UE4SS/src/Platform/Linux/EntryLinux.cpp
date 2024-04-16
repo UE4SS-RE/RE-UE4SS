@@ -7,13 +7,20 @@
 #include "UE4SSProgram.hpp"
 #include "Platform.hpp"
 
-#define _GNU_SOURCE
+// #define _GNU_SOURCE
 #include <dlfcn.h>
 #include <link.h>
 #include <elf.h>
 #include <pthread.h>
 #include <unistd.h>
 #include <sys/mman.h>
+
+// typeof is a gnu extension
+#ifndef typeof
+#ifdef __clang__
+#define typeof(x) __typeof__(x)
+#endif
+#endif
 
 using namespace RC;
 
