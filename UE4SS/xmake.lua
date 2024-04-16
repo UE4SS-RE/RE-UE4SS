@@ -67,6 +67,7 @@ target(projectName)
     add_headerfiles("generated_include/*.hpp")
 
     add_files("src/**.cpp")
+    remove_files("src/Platform/**.cpp")
 
     add_deps(
         "File", "DynamicOutput", "Unreal",
@@ -84,11 +85,16 @@ target(projectName)
     end
 
     if is_plat("windows") then
+        add_files("src/Platform/Win32/**.cpp")
         if has_config("GUI") then
             add_packages("ImGui", "ImGuiTextEdit", "IconFontCppHeaders", "glfw", "opengl", { public = true })
             add_links("d3d11", { public = true })
         end
     elseif is_plat("linux") then
+        add_files("src/Platform/Linux/**.cpp")
+        if not has_config("UI") then
+            remove_files("src/GUI/**.cpp")
+        end
         if has_config("GUI") then
             add_packages("ImGui", "ImGuiTextEdit", "IconFontCppHeaders", "glfw", "opengl", { public = true })
         elseif has_config("TUI") then

@@ -16,6 +16,7 @@ if is_plat("windows") then
 elseif is_plat("linux") then
     set_allowedarchs("x86_64")
     set_defaultarchs("x86_64")
+    set_toolchains("clang", "rust")
 end
 set_allowedmodes(get_compilation_modes())
 
