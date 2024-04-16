@@ -85,13 +85,14 @@ target(projectName)
     end
 
     if is_plat("windows") then
-        add_files("src/Platform/Win32/**.cpp")
+        add_files("src/Platform/Win32/CrashDumper.cpp")
+        add_files("src/Platform/Win32/EntryWin32.cpp")
         if has_config("GUI") then
             add_packages("ImGui", "ImGuiTextEdit", "IconFontCppHeaders", "glfw", "opengl", { public = true })
             add_links("d3d11", { public = true })
         end
     elseif is_plat("linux") then
-        add_files("src/Platform/Linux/**.cpp")
+        add_files("src/Platform/Linux/EntryLinux.cpp")
         if not has_config("UI") then
             remove_files("src/GUI/**.cpp")
         end
