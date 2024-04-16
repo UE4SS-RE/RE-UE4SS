@@ -3,7 +3,11 @@ includes("zydis")
 includes("polyhook_2")
 includes("glaze")
 
-if has_config("GUI") then
+if has_config("TUI") then
+    includes("imtui")
+end
+
+if has_config("UI") then
     includes("imgui")
 end
 

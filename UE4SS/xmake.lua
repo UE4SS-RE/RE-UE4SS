@@ -3,8 +3,10 @@ if is_plat("windows") then
     includes("proxy_generator")
 end
 
-if is_plat("windows") and has_config("GUI") then 
+if has_config("GUI") then 
     add_requires("imgui v1.89", { debug = is_mode_debug(), configs = { win32 = true, dx11 = true, opengl3 = true, glfw_opengl3 = true, runtimes = get_mode_runtimes() } })
+elseif has_config("TUI") then
+    add_requires("imtui v1.0.5", { debug = is_mode_debug(), configs = { runtimes = get_mode_runtimes() } })
 end
 
 if has_config("UI") then
@@ -15,10 +17,6 @@ if has_config("GUI") then
     add_requires("IconFontCppHeaders v1.0", { debug = is_mode_debug(), configs = { runtimes = get_mode_runtimes() } })
     add_requires("glfw 3.3.9", { debug = is_mode_debug(), configs = { runtimes = get_mode_runtimes() } })
     add_requires("opengl", { debug = is_mode_debug(), configs = { runtimes = get_mode_runtimes() } })
-end
-
-if is_plat("linux") and has_config("TUI") then
-    add_requires("imtui v1.0.5", { debug = is_mode_debug(), configs = { runtimes = get_mode_runtimes() } })
 end
 
 option("ue4ssBetaIsStarted")
