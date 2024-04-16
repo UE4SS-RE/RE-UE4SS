@@ -66,8 +66,7 @@ target(projectName)
     add_headerfiles("include/**.hpp")
     add_headerfiles("generated_include/*.hpp")
 
-    add_files("src/**.cpp")
-    remove_files("src/Platform/**.cpp")
+    add_files("src/**.cpp|Platform/**.cpp")
 
     add_deps(
         "File", "DynamicOutput", "Unreal",
@@ -83,7 +82,6 @@ target(projectName)
     if has_config("Input") then 
         add_deps("Input", { public = true })
     end
-
     if is_plat("windows") then
         add_files("src/Platform/Win32/CrashDumper.cpp")
         add_files("src/Platform/Win32/EntryWin32.cpp")

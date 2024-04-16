@@ -8,11 +8,8 @@ target(projectName)
 
     add_includedirs("include", { public = true })
     add_headerfiles("include/**.hpp")
-    remove_headerfiles("include/SigScanner/SinglePassSigScanner*?.hpp")
 
-    add_files("src/**.cpp")
-    remove_files("src/SinglePassSigScannerWin32.cpp")
-    remove_files("src/SinglePassSigScannerLinux.cpp")
+    add_files("src/**.cpp|SinglePassSigScanner*?.cpp")
     
     if is_plat("windows") then
         add_headerfiles("include/SigScanner/SinglePassSigScannerWin32.hpp")
