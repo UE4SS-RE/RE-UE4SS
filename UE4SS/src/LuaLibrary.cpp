@@ -70,7 +70,7 @@ namespace RC::LuaLibrary
 
         Output::send(formatted_string);
 
-        if (output_device) output_device->Log(outdevice_string.c_str());
+        if (output_device) output_device->Log(to_ue_string(outdevice_string).c_str());
 
             Output::send(SYSSTR("[Fatal] Lua function 'DerefToInt32' must have only 1 parameter and it must be of type 'int'.\n"));
             lua.set_nil();
