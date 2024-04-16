@@ -11,6 +11,8 @@ target(projectName)
 
     add_files("src/**.cpp|Platform/**.cpp")
 
+    add_deps("DynamicOutput")
+
     if is_plat("windows") then
         add_files("src/Platform/Win32AsyncInputSource.cpp")
         add_files("src/Platform/GLFW3InputSource.cpp")
@@ -20,6 +22,7 @@ target(projectName)
     if is_plat("linux") then
         add_files("src/Platform/GLFW3InputSource.cpp")
         add_files("src/Platform/NcursesInputSource.cpp")
+        add_files("src/Platform/QueueInputSource.cpp")
     end
     
     on_load(function (target)
