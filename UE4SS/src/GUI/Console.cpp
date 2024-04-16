@@ -132,7 +132,7 @@ namespace RC::GUI
         std::lock_guard<std::mutex> guard(m_lines_mutex);
         // TODO: ensure this ydiv is okay? 
         // the old value is const float footer_height_to_reserve = ((ImGui::GetStyle().ItemSpacing.y * 10.0f) + ImGui::GetFrameHeightWithSpacing()) / YDIV;
-        m_text_editor.Render("TextEditor", {-16.0f / , (-31.0f + -8.0f)  / YDIV});
+        m_text_editor.Render("TextEditor", {-16.0f / XDIV, (-31.0f + -8.0f)  / YDIV});
 
         ImGui_AutoScroll("TextEditor", &m_previous_max_scroll_y);
         //*/

@@ -3018,7 +3018,7 @@ namespace RC::GUI
 
         if (watch.write_to_file)
         {
-            watch.output.send(STR("{}"), buffer);
+            watch.output.send(SYSSTR("{}"), buffer);
         }
     }
 
@@ -3631,7 +3631,7 @@ namespace RC::GUI
                     ImGui::SameLine(0.0f, 2.0f);
                     ImGui::PushStyleVar(ImGuiStyleVar_SelectableTextAlign, ImVec2(0.5f, 0.5f));
                     ImGui::PushID(std::format("collapse_history_{}", watch.hash).c_str());
-                    ImGui::Selectable(watch.show_history ? ICON_FA_MINUS : ICON_FA_PLUS, &watch.show_history, ImGuiSelectableFlags_NoPadWithHalfSpacing);
+                    ImGui::Selectable(watch.show_history ? ICON_ALT(ICON_FA_MINUS, "-") : ICON_ALT(ICON_FA_PLUS, "+"), &watch.show_history, ImGuiSelectableFlags_NoPadWithHalfSpacing);
                     ImGui::PopID();
                     ImGui::PopStyleVar();
 

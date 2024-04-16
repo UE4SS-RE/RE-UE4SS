@@ -25,7 +25,7 @@ namespace RC::GUI
 
         // disable stderr
         saved_stderr = dup(STDERR_FILENO);
-        freopen("/dev/null", "w", stderr);
+        freopen("./imtui.log", "w", stderr);
         setbuf(stderr, NULL);
         fprintf(stderr, "Backend_TUI::init\n");
         fflush(stderr);

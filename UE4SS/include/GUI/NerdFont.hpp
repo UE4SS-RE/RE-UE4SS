@@ -12,3 +12,5 @@
 #define ICON_FA_BAN "\uf05e"
 #define ICON_FA_COPY "\uf0c5"
 #define ICON_FA_SEARCH "\uf002"
+#define ICON_FA_MINUS "\uf068"
+#define ICON_FA_PLUS "\uf067"

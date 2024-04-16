@@ -321,7 +321,9 @@ namespace RC::GUI
 
 #ifdef HAS_GUI
 #define ATTACH_ICON(icon, str) icon str
+#define ICON_ALT(icon, alt) icon
 #else
 #define ATTACH_ICON(icon, str) ((icon str) + (UE4SSProgram::settings_manager.TUI.TUINerdFont ? (0) : (sizeof(icon) - 1)))
+#define ICON_ALT(icon, alt) (UE4SSProgram::settings_manager.TUI.TUINerdFont) ? (icon) : (alt)
 #endif
 } // namespace RC::GUI

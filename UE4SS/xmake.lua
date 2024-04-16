@@ -64,7 +64,27 @@ target(projectName)
     add_headerfiles("include/**.hpp")
     add_headerfiles("generated_include/*.hpp")
 
-    add_files("src/**.cpp|Platform/**.cpp")
+    add_files("src/**.cpp|Platform/**.cpp|GUI/**.cpp")
+    
+    if has_config("UI") then
+        add_files("src/GUI/*.cpp")
+        if is_plat("windows") then
+            -- we think by deafult windows have everything just for easy... 
+            -- but this maybe not the case
+            add_files("src/GUI/Platform/D3D11/**.cpp")
+            add_files("src/GUI/Platform/GLFW/**.cpp")
+            add_files("src/GUI/Platform/GUI/**.cpp")
+            add_files("src/GUI/Platform/Windows/**.cpp")
+        else
+            if has_config("GUI") then
+                add_files("src/GUI/Platform/GUI/**.cpp")
+                add_files("src/GUI/Platform/GLFW/**.cpp")
+            end
+            if has_config("TUI") then 
+                add_files("src/GUI/Platform/TUI/**.cpp")
+            end
+        end
+    end
 
     add_deps(
         "File", "DynamicOutput", "Unreal",
@@ -77,9 +97,8 @@ target(projectName)
 
     add_options("UI", "GUI", "TUI", "Input")
 
-    if has_config("Input") then 
-        add_deps("Input", { public = true })
-    end
+    add_deps("Input", { public = true })
+    
     if is_plat("windows") then
         add_files("src/Platform/Win32/CrashDumper.cpp")
         add_files("src/Platform/Win32/EntryWin32.cpp")
@@ -89,9 +108,6 @@ target(projectName)
         end
     elseif is_plat("linux") then
         add_files("src/Platform/Linux/EntryLinux.cpp")
-        if not has_config("UI") then
-            remove_files("src/GUI/**.cpp")
-        end
         if has_config("GUI") then
             add_packages("ImGui", "ImGuiTextEdit", "IconFontCppHeaders", "glfw", "opengl", { public = true })
         elseif has_config("TUI") then
