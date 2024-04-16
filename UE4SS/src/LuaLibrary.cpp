@@ -72,17 +72,24 @@ namespace RC::LuaLibrary
 
         if (output_device) output_device->Log(to_ue_string(outdevice_string).c_str());
 
+        return 0;
+    }
+
+    auto deref_to_int32(const LuaMadeSimple::Lua& lua) -> int
+    {
+        if (lua.get_stack_size() != 1 || !lua.is_integer())
+        {
             Output::send(SYSSTR("[Fatal] Lua function 'DerefToInt32' must have only 1 parameter and it must be of type 'int'.\n"));
             lua.set_nil();
             return 1;
         }
 
         int32_t* int32_ptr = reinterpret_cast<int32_t*>(lua.get_integer());
-#ifdef WIN32
+        #ifdef WIN32
         auto self = GetCurrentProcess();
-#else
+        #else
         auto self = getpid();
-#endif
+        #endif
         int32_t int32_val = Helper::Casting::offset_deref_safe<int32_t>(int32_ptr, 0, self);
 
         if (int32_val == 0)
