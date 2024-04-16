@@ -9,7 +9,8 @@ target(projectName)
     add_includedirs("include", { public = true })
     add_headerfiles("include/**.hpp")
 
-    add_files("src/**.cpp|SinglePassSigScanner*?.cpp")
+    -- *? is not supported?
+    add_files("src/**.cpp|SinglePassSigScannerWin32.cpp|SinglePassSigScannerLinux.cpp")
     
     if is_plat("windows") then
         add_headerfiles("include/SigScanner/SinglePassSigScannerWin32.hpp")
