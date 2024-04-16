@@ -9,7 +9,13 @@ target(projectName)
     add_includedirs("include", { public = true }) 
     add_headerfiles("include/**.hpp")
 
-    add_files("src/**.cpp")
+    add_files("src/File.cpp")
+
+    if is_plat("windows") then
+        add_files("src/FileType/WinFile.cpp")
+    elseif is_plat("linux") then
+        add_files("src/FileType/StdFile.cpp")
+    end
     
     add_deps("Helpers")
 
