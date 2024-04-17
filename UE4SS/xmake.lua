@@ -81,7 +81,6 @@ target(projectName)
             add_files("src/GUI/Platform/Windows/**.cpp")
         else
             if has_config("GUI") then
-                add_files("src/GUI/Platform/GUI/**.cpp")
                 add_files("src/GUI/Platform/GLFW/**.cpp")
             end
             if has_config("TUI") then 
