@@ -4,7 +4,11 @@ if is_plat("windows") then
 end
 
 if has_config("GUI") then 
-    add_requires("imgui v1.89", { debug = is_mode_debug(), configs = { win32 = true, dx11 = true, opengl3 = true, glfw_opengl3 = true, runtimes = get_mode_runtimes() } })
+    if is_plat("windows") then
+        add_requires("imgui v1.89", { debug = is_mode_debug(), configs = { win32 = true, dx11 = true, opengl3 = true, glfw_opengl3 = true, runtimes = get_mode_runtimes() } })
+    else
+        add_requires("imgui v1.89", { debug = is_mode_debug(), configs = { win32 = false, dx11 = false, opengl3 = true, glfw_opengl3 = true, runtimes = get_mode_runtimes() } })
+    end
 elseif has_config("TUI") then
     add_requires("imtui v1.0.5", { debug = is_mode_debug(), configs = { runtimes = get_mode_runtimes() } })
 end
