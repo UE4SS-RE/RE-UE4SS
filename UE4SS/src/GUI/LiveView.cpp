@@ -108,7 +108,8 @@ namespace RC::GUI
     {
         // TODO: Stop using the 'HashObject' function when needing the address of an FFieldClassVariant because it's not designed to return an address.
         //       Maybe make the ToFieldClass/ToUClass functions public (append 'Unsafe' to the function names).
-        if (LiveView::s_need_to_filter_out_properties && object->IsA(std::bit_cast<UClass*>(FProperty::StaticClass().HashObject())))
+        if (LiveView::s_name_to_search_by.empty() ||
+            LiveView::s_need_to_filter_out_properties && object->IsA(std::bit_cast<UClass*>(FProperty::StaticClass().HashObject())))
         {
             return;
         }
