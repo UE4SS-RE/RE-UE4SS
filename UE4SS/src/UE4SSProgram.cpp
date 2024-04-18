@@ -793,7 +793,6 @@ namespace RC
             if (settings_manager.General.UseUObjectArrayCache)
             {
                 m_debugging_gui.get_live_view().set_listeners_allowed(true);
-                m_debugging_gui.get_live_view().set_listeners();
             }
             else
             {

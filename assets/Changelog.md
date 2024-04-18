@@ -61,10 +61,14 @@ Fixes BPModLoaderMod not loading when UE4SS initializes too late ([UE4SS #454](h
 
 Fixed PalServer not accepting connections from players ([UE4SS #453](https://github.com/UE4SS-RE/RE-UE4SS/pull/453))
 
+Fixed a crash that would occur randomly due to accidental execution of Live View search code ([UE4SS #475](https://github.com/UE4SS-RE/RE-UE4SS/pull/475))
+
 ### Live View
 Fixed the "Write to file" checkbox not working for functions in the `Watches` tab ([UE4SS #419](https://github.com/UE4SS-RE/RE-UE4SS/pull/419))
 
 Reduced the likelihood of a crash happening on shutdown when at least one watch is enabled ([UE4SS #419](https://github.com/UE4SS-RE/RE-UE4SS/pull/419))
+
+Fixed constantly searching even if the search field is empty, and even if not on the tab ([UE4SS #475](https://github.com/UE4SS-RE/RE-UE4SS/pull/475))
 
 ### UHT Dumper
 
