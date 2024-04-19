@@ -20,11 +20,16 @@ namespace RC::JSON::Parser
     if (!(Expression))                                                                                                                                         \
     {                                                                                                                                                          \
         const auto& err_token = get_token(m_current_token_index_being_parsed);                                                                                 \
-        throw std::runtime_error{std::format("Syntax error ({} : {}): Expected '{}' token, got '{}'.",                                                         \
-                                             err_token.get_line() + 1,                                                                                         \
-                                             err_token.get_column(),                                                                                           \
-                                             token_type_to_string(m_expected_token),                                                                           \
-                                             to_string(err_token.to_string()))};                                                                               \
+        auto e = std::format("Syntax error! ({} : {}): Expected '{}' token, got '{}'.",                                                                        \
+                             err_token.get_line() + 1,                                                                                                         \
+                             err_token.get_column(),                                                                                                           \
+                             token_type_to_string(m_expected_token),                                                                                           \
+                             to_string(err_token.to_string()));                                                                                                \
+        if (err_token.get_type() == TokenType::Characters)                                                                                                     \
+        {                                                                                                                                                      \
+            e.append(std::format("\nCharacters: '{}'", to_string(get_data(err_token))));                                                                         \
+        }                                                                                                                                                      \
+        throw std::runtime_error{e};                                                                                                                           \
     }
 
     static auto is_number(StringViewType data) -> bool
@@ -182,6 +187,12 @@ namespace RC::JSON::Parser
 
                 m_last_value = std::make_unique<JSON::Number>(std::stoll(data_no_spaces, nullptr));
             }
+            else if (!m_string_started)
+            {
+                // No string started (because no opening double quote).
+                // It might be another token so ignore this Character token and continue with the next one.
+                return;
+            }
             else
             {
                 m_expected_token = TokenType::DoubleQuote;
@@ -268,6 +279,12 @@ namespace RC::JSON::Parser
         m_current_state = State::ReadValue;
     }
 
+    auto TokenParser::handle_boolean_token(const ParserBase::Token& token, bool is_true) -> void
+    {
+        m_defer_element_creation = false;
+        m_last_value = std::make_unique<JSON::Bool>(is_true);
+    }
+
     auto TokenParser::parse_token(const ParserBase::Token& token) -> void
     {
         if (m_current_state == State::StartOfFile)
@@ -325,6 +342,12 @@ namespace RC::JSON::Parser
             break;
         case Colon:
             handle_colon_token(token);
+            break;
+        case True:
+            handle_boolean_token(token, true);
+            break;
+        case False:
+            handle_boolean_token(token, false);
             break;
         case EndOfFile:
         default:

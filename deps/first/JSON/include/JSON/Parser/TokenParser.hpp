@@ -134,6 +134,7 @@ namespace RC::JSON::Parser
         auto handle_characters_token(const ParserBase::Token&) -> void;
         auto handle_comma_token(const ParserBase::Token&) -> void;
         auto handle_colon_token(const ParserBase::Token&) -> void;
+        auto handle_boolean_token(const ParserBase::Token&, bool is_true) -> void;
 
       protected:
         auto parse_token(const ParserBase::Token&) -> void override;
