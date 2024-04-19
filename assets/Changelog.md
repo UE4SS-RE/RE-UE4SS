@@ -6,7 +6,7 @@ TBD
 
 ### General
 
-### Live View
+### Live View 
 
 ### UHT Dumper
 
@@ -29,6 +29,8 @@ UE Platform support, which allows for much easier internal implementation of new
 
 ### Live View
 Added support for watching ArrayProperty and StructProperty ([UE4SS #419](https://github.com/UE4SS-RE/RE-UE4SS/pull/419))
+
+Live view search filters supports a new filter `IncludeClassNames`; `IncludeClassNames`, `ExcludeClassNames`, `HasProperty` and `HasPropertyType` now allow comma seperated lists. Added ability to save filters which are loaded when the game is next launched ([UE4SS #472](https://github.com/UE4SS-RE/RE-UE4SS/pull/472)) - Buckminsterfullerene
 
 ### UHT Dumper
 
