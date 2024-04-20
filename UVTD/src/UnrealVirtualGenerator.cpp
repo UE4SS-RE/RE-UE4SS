@@ -39,7 +39,7 @@ namespace RC::UVTD
         {
             virtual_header_dumper.send(SYSSTR("#ifndef RC_UNREAL_UNREAL_VIRTUAL{}_HPP\n"), pdb_name_no_underscore);
             virtual_header_dumper.send(SYSSTR("#define RC_UNREAL_UNREAL_VIRTUAL{}_HPP\n"), pdb_name_no_underscore);
-            virtual_header_dumper.send(SYSSTR("#include <Unreal/VersionedContainer/UnrealVirtualImpl/UnrealVirtualBaseVC.hpp>\n\n"));
+            virtual_header_dumper.send(SYSSTR("#include <Unreal/VersionedContainer/UnrealVirtualImpl/UnrealVirtualBase.hpp>\n\n"));
             virtual_header_dumper.send(SYSSTR("namespace RC::Unreal\n"));
             virtual_header_dumper.send(SYSSTR("{\n"));
             virtual_header_dumper.send(SYSSTR("    class UnrealVirtual{} : public UnrealVirtualBaseVC\n"), pdb_name_no_underscore);

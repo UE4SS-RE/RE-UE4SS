@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
 # generate header file for C++, using DRAWF information from .debug files
-# e.g., ./HeaderGen.py -s -g -t ../../deps/first/Unreal/generated_include/FunctionBodies /<path to>/UnrealGame-Linux-Shipping.debug
+# e.g., ./HeaderGen.py -s -g -t ../../deps/first/Unreal/generated_include/Linux/FunctionBodies /<path to>/UnrealGame-Linux-Shipping.debug
 import os
 import sys
 import re
 import pickle
 
 DEFAULT_FILENAME = "./UnrealGame-Linux-Shipping.debug"
-DEFAULT_SEARCH_DIR = "../../deps/first/Unreal/generated_include"
+DEFAULT_SEARCH_DIR = "../../deps/first/Unreal/generated_include/Windows"
 DEFAULT_GENERATED_DIR = "../generated"
 
 FUNCTION_TEMPLATE = """if (auto it = {ClassName}::VTableLayoutMap.find(STR("{FunctionName}")); it == {ClassName}::VTableLayoutMap.end())
