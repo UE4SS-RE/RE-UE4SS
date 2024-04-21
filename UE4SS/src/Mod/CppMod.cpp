@@ -128,6 +128,14 @@ namespace RC
         }
     }
 
+    auto CppMod::fire_ui_init() -> void
+    {
+        if (m_mod)
+        {
+            m_mod->on_ui_init();
+        }
+    }
+
     auto CppMod::fire_program_start() -> void
     {
         if (m_mod)

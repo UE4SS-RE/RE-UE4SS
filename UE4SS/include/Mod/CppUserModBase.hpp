@@ -53,6 +53,12 @@ namespace RC
         {
         }
 
+        // The UI module has been initialized.
+        // This is where you need to use the 'UE4SS_ENABLE_IMGUI' macro if you want to utilize the imgui context of UE4SS.
+        RC_UE4SS_API virtual auto on_ui_init() -> void
+        {
+        }
+
         RC_UE4SS_API virtual auto on_program_start() -> void
         {
         }
