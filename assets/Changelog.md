@@ -5,8 +5,10 @@ TBD
 ## New
 
 ### General
+UE Platform support, which allows for much easier internal implementation of new Unreal classes ([UEPseudo #80](https://github.com/Re-UE4SS/UEPseudo/pull/80)) - narknon, localcc
 
 ### Live View 
+Added search filter: `IncludeClassNames`. ([UE4SS #472](https://github.com/UE4SS-RE/RE-UE4SS/pull/472)) - Buckminsterfullerene
 
 ### UHT Dumper
 
@@ -15,7 +17,7 @@ TBD
 ### C++ API
 Key binds created with `UE4SSProgram::register_keydown_event` end up being duplicated upon mod hot-reload.  
 To fix this, `CppUserModBase::register_keydown_event` has been introduced.  
-It's used exactly the same way except without the `UE4SSProgram::` part.
+It's used exactly the same way except without the `UE4SSProgram::` part. ([UE4SS #446](https://github.com/UE4SS-RE/RE-UE4SS/pull/446))
 
 ### Experimental
 
@@ -23,14 +25,13 @@ It's used exactly the same way except without the `UE4SSProgram::` part.
 ## Changes
 
 ### General
-Switch to xmake from cmake which makes building much more streamlined ([UE4SS #377](https://github.com/UE4SS-RE/RE-UE4SS/pull/377), [UEPseudo #81](https://github.com/Re-UE4SS/UEPseudo/pull/81)) - localcc
-
-UE Platform support, which allows for much easier internal implementation of new Unreal classes ([UEPseudo #80](https://github.com/Re-UE4SS/UEPseudo/pull/80)) - narknon, localcc
 
 ### Live View
 Added support for watching ArrayProperty and StructProperty ([UE4SS #419](https://github.com/UE4SS-RE/RE-UE4SS/pull/419))
 
-Live view search filters supports a new filter `IncludeClassNames`; `IncludeClassNames`, `ExcludeClassNames`, `HasProperty` and `HasPropertyType` now allow comma seperated lists. Added ability to save filters which are loaded when the game is next launched ([UE4SS #472](https://github.com/UE4SS-RE/RE-UE4SS/pull/472)) - Buckminsterfullerene
+The search filter `ExcludeClassName` can now be found in the `IncludeClassNames` dropdown list. ([UE4SS #472](https://github.com/UE4SS-RE/RE-UE4SS/pull/472)) - Buckminsterfullerene
+
+The following search filters now allow multiple values, with each value separated by a comma: `IncludeClassNames`, `ExcludeClassNames`, `HasProperty`, `HasPropertyType`. ([UE4SS #472](https://github.com/UE4SS-RE/RE-UE4SS/pull/472)) - Buckminsterfullerene
 
 ### UHT Dumper
 
@@ -42,6 +43,7 @@ The callback of `NotifyOnNewObject` can now optionally return `true` to unregist
 ### C++ API
 
 ### Repo & Build Process
+Switch to xmake from cmake which makes building much more streamlined ([UE4SS #377](https://github.com/UE4SS-RE/RE-UE4SS/pull/377), [UEPseudo #81](https://github.com/Re-UE4SS/UEPseudo/pull/81)) - localcc
 
 
 ## Fixes
