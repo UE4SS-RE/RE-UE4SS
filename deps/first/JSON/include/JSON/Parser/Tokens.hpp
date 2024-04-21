@@ -14,6 +14,8 @@ namespace RC::JSON::Parser
         OpeningSquareBracket,
         Comma,
         Colon,
+        True,
+        False,
         EndOfFile,
     };
 
@@ -41,6 +43,10 @@ namespace RC::JSON::Parser
             return "Comma";
         case Colon:
             return "Colon";
+        case True:
+            return "True";
+        case False:
+            return "False";
         case EndOfFile:
             return "EndOfFile";
         }

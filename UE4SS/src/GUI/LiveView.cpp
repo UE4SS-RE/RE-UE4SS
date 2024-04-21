@@ -15,7 +15,7 @@
 #include <GUI/ImGuiUtility.hpp>
 #include <GUI/LiveView.hpp>
 #include <GUI/LiveView/Filter/DefaultObjectsOnly.hpp>
-#include <GUI/LiveView/Filter/ExcludeClassName.hpp>
+#include "GUI/LiveView/Filter/ClassNamesFilter.hpp"
 #include <GUI/LiveView/Filter/FunctionParamFlags.hpp>
 #include <GUI/LiveView/Filter/HasProperty.hpp>
 #include <GUI/LiveView/Filter/HasPropertyType.hpp>
@@ -58,7 +58,7 @@ namespace RC::GUI
                                               Filter::IncludeDefaultObjects,
                                               Filter::DefaultObjectsOnly,
                                               Filter::FunctionParamFlags,
-                                              Filter::ExcludeClassName,
+                                              Filter::ClassNamesFilter,
                                               Filter::HasProperty,
                                               Filter::HasPropertyType>{};
 
@@ -87,6 +87,7 @@ namespace RC::GUI
     bool LiveView::s_selected_item_deleted{};
     bool LiveView::s_need_to_filter_out_properties{};
     bool LiveView::s_watches_loaded_from_disk{};
+    bool LiveView::s_filters_loaded_from_disk{};
     bool LiveView::s_use_regex_for_search{};
 
     static LiveView* s_live_view{};
@@ -108,7 +109,8 @@ namespace RC::GUI
     {
         // TODO: Stop using the 'HashObject' function when needing the address of an FFieldClassVariant because it's not designed to return an address.
         //       Maybe make the ToFieldClass/ToUClass functions public (append 'Unsafe' to the function names).
-        if (LiveView::s_need_to_filter_out_properties && object->IsA(std::bit_cast<UClass*>(FProperty::StaticClass().HashObject())))
+        if (LiveView::s_name_to_search_by.empty() ||
+            LiveView::s_need_to_filter_out_properties && object->IsA(std::bit_cast<UClass*>(FProperty::StaticClass().HashObject())))
         {
             return;
         }
@@ -279,6 +281,216 @@ namespace RC::GUI
     };
     FLiveViewDeleteListener FLiveViewDeleteListener::LiveViewDeleteListener{};
 
+    static auto add_bool_filter_to_json(JSON::Array& json_filters, const StringType& filter_name, bool is_enabled) -> void
+    {
+        auto& json_object = json_filters.new_object();
+        json_object.new_string(STR("FilterName"), filter_name);
+        auto& filter_data = json_object.new_object(STR("FilterData"));
+        filter_data.new_bool(STR("Enabled"), is_enabled);
+    }
+
+    template <typename ContainerType>
+    static auto add_array_filter_to_json(JSON::Array& json_filters, const StringType& filter_name, const ContainerType& container, const StringType& array_name) -> void
+    {
+        auto& json_object = json_filters.new_object();
+        json_object.new_string(STR("FilterName"), filter_name);
+        auto& filter_data = json_object.new_object(STR("FilterData"));
+
+        if (array_name == STR("ClassNames"))
+        {
+            filter_data.new_bool(STR("IsExclude"), Filter::ClassNamesFilter::b_is_exclude);
+        }
+        else if (array_name == STR("FunctionParamFlags"))
+        {
+            filter_data.new_bool(STR("IncludeReturnProperty"), Filter::FunctionParamFlags::s_include_return_property);
+        }
+
+        auto& values_array = filter_data.new_array(array_name);
+        for (const auto& value : container)
+        {
+            if constexpr (std::is_same_v<typename ContainerType::value_type, FName>)
+            {
+                values_array.new_string(value.ToString());
+            }
+            else if constexpr (std::is_same_v<typename ContainerType::value_type, bool>)
+            {
+                values_array.new_bool(value);
+            }
+            else
+            {
+                values_array.new_string(value);
+            }
+        }
+    }
+
+    static auto internal_save_filters_to_disk() -> void
+    {
+        auto json = JSON::Object{};
+        auto& json_filters = json.new_array(STR("Filters"));
+        {
+            add_bool_filter_to_json(json_filters, STR("IncludeInheritance"), LiveView::s_include_inheritance);
+            add_bool_filter_to_json(json_filters, STR("UseRegexForSearch"), LiveView::s_use_regex_for_search);
+            add_bool_filter_to_json(json_filters, STR("ApplySearchFiltersWhenNotSearching"), LiveView::s_apply_search_filters_when_not_searching);
+            add_bool_filter_to_json(json_filters, Filter::DefaultObjectsOnly::s_debug_name, Filter::DefaultObjectsOnly::s_enabled);
+            add_bool_filter_to_json(json_filters, Filter::IncludeDefaultObjects::s_debug_name, Filter::IncludeDefaultObjects::s_enabled);
+            add_bool_filter_to_json(json_filters, Filter::InstancesOnly::s_debug_name, Filter::InstancesOnly::s_enabled);
+            add_bool_filter_to_json(json_filters, Filter::NonInstancesOnly::s_debug_name, Filter::NonInstancesOnly::s_enabled);
+        }
+        {
+            add_array_filter_to_json(json_filters, Filter::ClassNamesFilter::s_debug_name, Filter::ClassNamesFilter::list_class_names, STR("ClassNames"));
+            add_array_filter_to_json(json_filters, Filter::HasProperty::s_debug_name, Filter::HasProperty::list_properties, STR("Properties"));
+            add_array_filter_to_json(json_filters, Filter::HasPropertyType::s_debug_name, Filter::HasPropertyType::list_property_types, STR("PropertyTypes"));
+            add_array_filter_to_json(json_filters, Filter::FunctionParamFlags::s_debug_name, Filter::FunctionParamFlags::s_checkboxes, STR("FunctionParamFlags"));
+        }
+
+        auto json_file =
+                File::open(StringType{UE4SSProgram::get_program().get_working_directory()} + std::format(STR("\\UE4SS-config\\liveview\\filters.meta.json")),
+                           File::OpenFor::Writing,
+                           File::OverwriteExistingFile::Yes,
+                           File::CreateIfNonExistent::Yes);
+        int32_t json_indent_level{};
+        json_file.write_string_to_file(json.serialize(JSON::ShouldFormat::Yes, &json_indent_level));
+    }
+
+    static auto save_filters_to_disk() -> void
+    {
+        TRY([] {
+            internal_save_filters_to_disk();
+        });
+    }
+
+    template <typename T>
+    static auto json_array_to_filters_list(JSON::Array& json_array, std::vector<T>& list, StringType type, std::string& internal_value) -> void
+    {
+        list.clear();
+        internal_value.clear();
+        json_array.for_each([&](JSON::Value& item) {
+            if (!item.is<JSON::String>())
+            {
+                throw std::runtime_error{std::format("Invalid {} in 'filters.meta.json'", to_string(type))};
+            }
+            list.emplace_back(item.as<JSON::String>()->get_view());
+            return LoopAction::Continue;
+        });
+        for (const auto& class_name : list)
+        {
+            if constexpr (std::is_same_v<T, FName>)
+            {
+                internal_value += to_string(class_name.ToString());
+            }
+            else
+            {
+                internal_value += to_string(class_name);
+            }
+            
+            if (&class_name != &list.back())
+            {
+                internal_value += ", ";
+            }
+        }
+    }
+
+    static auto internal_load_filters_from_disk() -> void
+    {
+        const auto json_file =
+                File::open(StringType{UE4SSProgram::get_program().get_working_directory()} + std::format(STR("\\UE4SS-config\\liveview\\filters.meta.json")),
+                           File::OpenFor::Reading,
+                           File::OverwriteExistingFile::No,
+                           File::CreateIfNonExistent::Yes);
+        auto json_file_contents = json_file.read_all();
+        if (json_file_contents.empty())
+        {
+            return;
+        }
+
+        const auto json_global_object = JSON::Parser::parse(json_file_contents);
+        const auto& json_filters = json_global_object->get<JSON::Array>(STR("Filters"));
+        json_filters.for_each([&](const JSON::Value& filter) {
+            if (!filter.is<JSON::Object>())
+            {
+                throw std::runtime_error{"Invalid filter in 'filters.meta.json'"};
+            }
+            auto& json_object = *filter.as<JSON::Object>();
+            auto filter_name = json_object.get<JSON::String>(STR("FilterName")).get_view();
+            auto& filter_data = json_object.get<JSON::Object>(STR("FilterData"));
+
+            if (filter_name == STR("IncludeInheritance"))
+            {
+                LiveView::s_include_inheritance = filter_data.get<JSON::Bool>(STR("Enabled")).get();
+            }
+            else if (filter_name == STR("UseRegexForSearch"))
+            {
+                LiveView::s_use_regex_for_search = filter_data.get<JSON::Bool>(STR("Enabled")).get();
+            }
+            else if (filter_name == STR("ApplySearchFiltersWhenNotSearching"))
+            {
+                LiveView::s_apply_search_filters_when_not_searching = filter_data.get<JSON::Bool>(STR("Enabled")).get();
+            }
+            else if (filter_name == Filter::DefaultObjectsOnly::s_debug_name)
+            {
+                Filter::DefaultObjectsOnly::s_enabled = filter_data.get<JSON::Bool>(STR("Enabled")).get();
+            }
+            else if (filter_name == Filter::IncludeDefaultObjects::s_debug_name)
+            {
+                Filter::IncludeDefaultObjects::s_enabled = filter_data.get<JSON::Bool>(STR("Enabled")).get();
+            }
+            else if (filter_name == Filter::InstancesOnly::s_debug_name)
+            {
+                Filter::InstancesOnly::s_enabled = filter_data.get<JSON::Bool>(STR("Enabled")).get();
+            }
+            else if (filter_name == Filter::NonInstancesOnly::s_debug_name)
+            {
+                Filter::NonInstancesOnly::s_enabled = filter_data.get<JSON::Bool>(STR("Enabled")).get();
+            }
+            else if (filter_name == Filter::ClassNamesFilter::s_debug_name)
+            {
+                Filter::ClassNamesFilter::b_is_exclude = filter_data.get<JSON::Bool>(STR("IsExclude")).get();
+                auto& class_names = filter_data.get<JSON::Array>(STR("ClassNames"));
+                json_array_to_filters_list(class_names, Filter::ClassNamesFilter::list_class_names, STR("class name"), Filter::ClassNamesFilter::s_internal_class_names);
+            }
+            else if (filter_name == Filter::HasProperty::s_debug_name)
+            {
+                auto& properties = filter_data.get<JSON::Array>(STR("Properties"));
+                json_array_to_filters_list(properties, Filter::HasProperty::list_properties, STR("property"), Filter::HasProperty::s_internal_properties);
+            }
+            else if (filter_name == Filter::HasPropertyType::s_debug_name)
+            {
+                auto& property_types = filter_data.get<JSON::Array>(STR("PropertyTypes"));
+                json_array_to_filters_list(property_types,
+                                           Filter::HasPropertyType::list_property_types,
+                                           STR("property type"),
+                                           Filter::HasPropertyType::s_internal_property_types);
+            }
+            else if (filter_name == Filter::FunctionParamFlags::s_debug_name)
+            {
+                Filter::FunctionParamFlags::s_include_return_property = filter_data.get<JSON::Bool>(STR("IncludeReturnProperty")).get();
+                Filter::FunctionParamFlags::s_checkboxes.fill(false);
+                auto& function_param_flags = filter_data.get<JSON::Array>(STR("FunctionParamFlags"));
+                if (function_param_flags.get().size() != Filter::FunctionParamFlags::s_checkboxes.size())
+                {
+                    throw std::runtime_error{"Invalid number of function param flag entires in 'filters.meta.json'"};
+                }
+                function_param_flags.for_each([](auto index, JSON::Value& flag) {
+                    if (!flag.is<JSON::Bool>())
+                    {
+                        throw std::runtime_error{"Invalid flag in 'filters.meta.json'"};
+                    }
+                    Filter::FunctionParamFlags::s_checkboxes[index] = flag.as<JSON::Bool>()->get();
+                    return LoopAction::Continue;
+                });
+            }
+
+            return LoopAction::Continue;
+        });
+    }
+
+    static auto load_filters_from_disk() -> void
+    {
+        TRY([] {
+            internal_load_filters_from_disk();
+        });
+    }
+
     static auto toggle_function_watch(LiveView::Watch& watch, bool new_value) -> void
     {
         watch.enabled = new_value;
@@ -382,6 +594,10 @@ namespace RC::GUI
         auto json_global_object = JSON::Parser::parse(json_file_contents);
         const auto& elements = json_global_object->get<JSON::Array>(STR("Watches"));
         elements.for_each([](JSON::Value& element) {
+            if (!element.is<JSON::Object>())
+            {
+                throw std::runtime_error{"Invalid watch in 'watches.meta.json'"};
+            }
             auto& json_watch_object = *element.as<JSON::Object>();
             auto acquisition_id = json_watch_object.get<JSON::String>(STR("AcquisitionID")).get_view();
             auto property_name = json_watch_object.get<JSON::String>(STR("PropertyName")).get_view();
@@ -1358,6 +1574,29 @@ namespace RC::GUI
             else
             {
                 ++tree_node;
+            }
+        }
+    }
+
+    auto LiveView::search() -> void
+    {
+        if (are_listeners_allowed())
+        {
+            std::string search_buffer{m_search_by_name_buffer};
+            if (search_buffer.empty())
+            {
+                Output::send(STR("Search all chunks\n"));
+                s_name_to_search_by.clear();
+                m_object_iterator = &LiveView::guobjectarray_iterator;
+                m_is_searching_by_name = false;
+            }
+            else
+            {
+                Output::send(STR("Search for: {}\n"), search_buffer.empty() ? STR("") : to_wstring(search_buffer));
+                s_name_to_search_by = search_buffer;
+                m_object_iterator = &LiveView::guobjectarray_by_name_iterator;
+                m_is_searching_by_name = true;
+                search_by_name();
             }
         }
     }
@@ -2827,6 +3066,12 @@ namespace RC::GUI
             s_watches_loaded_from_disk = true;
         }
 
+        if (!s_filters_loaded_from_disk)
+        {
+            load_filters_from_disk();
+            s_filters_loaded_from_disk = true;
+        }
+
         bool listeners_allowed = are_listeners_allowed();
         if (!listeners_allowed)
         {
@@ -2847,25 +3092,7 @@ namespace RC::GUI
                              &object_search_field_always_callback,
                              this))
         {
-            if (listeners_allowed)
-            {
-                std::string search_buffer{m_search_by_name_buffer};
-                if (search_buffer.empty())
-                {
-                    Output::send(STR("Search all chunks\n"));
-                    s_name_to_search_by.clear();
-                    m_object_iterator = &LiveView::guobjectarray_iterator;
-                    m_is_searching_by_name = false;
-                }
-                else
-                {
-                    Output::send(STR("Search for: {}\n"), search_buffer.empty() ? STR("") : to_wstring(search_buffer));
-                    s_name_to_search_by = search_buffer;
-                    m_object_iterator = &LiveView::guobjectarray_by_name_iterator;
-                    m_is_searching_by_name = true;
-                    search_by_name();
-                }
-            }
+            search();
         }
         if (ImGui::IsItemHovered())
         {
@@ -2890,7 +3117,7 @@ namespace RC::GUI
                 bool non_instances_only_enabled = !(Filter::InstancesOnly::s_enabled || Filter::DefaultObjectsOnly::s_enabled);
                 bool default_objects_only_enabled = !(Filter::NonInstancesOnly::s_enabled || Filter::InstancesOnly::s_enabled);
 
-                //  Row #1
+                //  Row 1
                 ImGui::TableNextRow();
                 ImGui::TableNextColumn();
                 ImGui::Checkbox("Include inheritance", &s_include_inheritance);
@@ -2905,17 +3132,10 @@ namespace RC::GUI
                     ImGui::EndDisabled();
                 }
 
-                // Row #2
+                // Row 2
                 ImGui::TableNextRow();
                 ImGui::TableNextColumn();
                 ImGui::Checkbox("Function parameter flags", &Filter::FunctionParamFlags::s_enabled);
-                if (ImGui::IsItemHovered())
-                {
-                    ImGui::BeginTooltip();
-                    ImGui::Text("You must manually refresh the search after selecting flags.");
-                    ImGui::Text("Manually refreshing the search can be done by clicking the search bar and hitting enter.");
-                    ImGui::EndTooltip();
-                }
                 ImGui::TableNextColumn();
                 if (!non_instances_only_enabled)
                 {
@@ -2927,7 +3147,7 @@ namespace RC::GUI
                     ImGui::EndDisabled();
                 }
 
-                // Row #3
+                // Row 3
                 ImGui::TableNextRow();
                 ImGui::TableNextColumn();
                 ImGui::Checkbox("Include CDOs", &Filter::IncludeDefaultObjects::s_enabled);
@@ -2950,11 +3170,42 @@ namespace RC::GUI
                 // Row 5
                 ImGui::TableNextRow();
                 ImGui::TableNextColumn();
-                ImGui::Text("Exclude class name");
-                ImGui::TableNextColumn();
-                if (ImGui::InputText("##ExcludeClassName", &Filter::ExcludeClassName::s_internal_value))
+                ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
+                const char* filter_modes[] = {"Exclude class names", "Include class names"};
+                int current_filter_mode = Filter::ClassNamesFilter::b_is_exclude ? 0 : 1;
+                if (ImGui::Combo("##FilterMode", &current_filter_mode, filter_modes, IM_ARRAYSIZE(filter_modes)))
                 {
-                    Filter::ExcludeClassName::s_value = to_wstring(Filter::ExcludeClassName::s_internal_value);
+                    Filter::ClassNamesFilter::b_is_exclude = current_filter_mode == 0;
+
+                    // Since the filter mode changed, reparse the class names list, reparse s_internal_class_names into list_class_names using new filter mode
+                    Filter::ClassNamesFilter::list_class_names.clear();
+                    if (!Filter::ClassNamesFilter::s_internal_class_names.empty())
+                    {
+                        std::istringstream ss(Filter::ClassNamesFilter::s_internal_class_names);
+                        std::string class_name;
+                        while (std::getline(ss, class_name, ','))
+                        {
+                            std::erase_if(class_name, isspace);
+                            Filter::ClassNamesFilter::list_class_names.emplace_back(to_wstring(class_name));
+                        }
+                    }
+                }
+
+                ImGui::TableNextColumn();
+                ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
+                if (ImGui::InputText("##ClassNamesFilter", &Filter::ClassNamesFilter::s_internal_class_names))
+                {
+                    Filter::ClassNamesFilter::list_class_names.clear();
+                    if (!Filter::ClassNamesFilter::s_internal_class_names.empty())
+                    {
+                        std::istringstream ss(Filter::ClassNamesFilter::s_internal_class_names);
+                        std::string class_name;
+                        while (std::getline(ss, class_name, ','))
+                        {
+                            std::erase_if(class_name, isspace);
+                            Filter::ClassNamesFilter::list_class_names.emplace_back(to_wstring(class_name));
+                        }
+                    }
                 }
 
                 // Row 6
@@ -2962,9 +3213,20 @@ namespace RC::GUI
                 ImGui::TableNextColumn();
                 ImGui::Text("Has property");
                 ImGui::TableNextColumn();
-                if (ImGui::InputText("##HasProperty", &Filter::HasProperty::s_internal_value))
+                ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
+                if (ImGui::InputText("##HasProperty", &Filter::HasProperty::s_internal_properties))
                 {
-                    Filter::HasProperty::s_value = to_wstring(Filter::HasProperty::s_internal_value);
+                    Filter::HasProperty::list_properties.clear();
+                    if (!Filter::HasProperty::s_internal_properties.empty())
+                    {
+                        std::istringstream ss(Filter::HasProperty::s_internal_properties);
+                        std::string property_name;
+                        while (std::getline(ss, property_name, ','))
+                        {
+                            std::erase_if(property_name, isspace);
+                            Filter::HasProperty::list_properties.emplace_back(to_wstring(property_name));
+                        }
+                    }
                 }
 
                 // Row 7
@@ -2972,9 +3234,41 @@ namespace RC::GUI
                 ImGui::TableNextColumn();
                 ImGui::Text("Has property of type");
                 ImGui::TableNextColumn();
-                if (ImGui::InputText("##HasPropertyType", &Filter::HasPropertyType::s_internal_value))
+                ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
+                if (ImGui::InputText("##HasPropertyType", &Filter::HasPropertyType::s_internal_property_types))
                 {
-                    Filter::HasPropertyType::s_value = FName(to_wstring(Filter::HasPropertyType::s_internal_value), FNAME_Add);
+                    Filter::HasPropertyType::list_property_types.clear();
+                    if (!Filter::HasPropertyType::s_internal_property_types.empty())
+                    {
+                        std::istringstream ss(Filter::HasPropertyType::s_internal_property_types);
+                        std::string property_type_name;
+                        while (std::getline(ss, property_type_name, ','))
+                        {
+                            std::erase_if(property_type_name, isspace);
+                            if (!property_type_name.empty())
+                            {
+                                Filter::HasPropertyType::list_property_types.emplace_back(FName(to_wstring(property_type_name), FNAME_Add));
+                            }
+                        }
+                    }
+                }
+
+                ImGui::TableNextRow();
+                ImGui::TableNextColumn();
+                if (ImGui::Button(ICON_FA_SEARCH " Refresh search"))
+                {
+                    search();
+                }
+                ImGui::TableNextColumn();
+                if (ImGui::Button(ICON_FA_SAVE " Save filters"))
+                {
+                    save_filters_to_disk();
+                }
+                if (ImGui::IsItemHovered())
+                {
+                    ImGui::BeginTooltip();
+                    ImGui::Text("Saves your filters to <UE4SS install location>/UE4SS-config/liveview/filters.meta.json");
+                    ImGui::EndTooltip();
                 }
 
                 ImGui::EndTable();
@@ -3323,7 +3617,10 @@ namespace RC::GUI
                     if (watch.show_history)
                     {
                         ImGui::PushID(std::format("history_{}", watch.hash).c_str());
-                        ImGui::InputTextMultiline("##history", &watch.history, {-2.0f, ImGui::GetTextLineHeight() * 10.0f + ImGui::GetStyle().FramePadding.y * 2.0f}, ImGuiInputTextFlags_ReadOnly);
+                        ImGui::InputTextMultiline("##history",
+                                                  &watch.history,
+                                                  {-2.0f, ImGui::GetTextLineHeight() * 10.0f + ImGui::GetStyle().FramePadding.y * 2.0f},
+                                                  ImGuiInputTextFlags_ReadOnly);
                         ImGui_AutoScroll("##history", &watch.history_previous_max_scroll_y);
                         ImGui::PopID();
                     }

@@ -6,13 +6,16 @@ TBD
 
 ### General
 
-### Live View
+### Live View 
 
 ### UHT Dumper
 
 ### Lua API
 
 ### C++ API
+Key binds created with `UE4SSProgram::register_keydown_event` end up being duplicated upon mod hot-reload.  
+To fix this, `CppUserModBase::register_keydown_event` has been introduced.  
+It's used exactly the same way except without the `UE4SSProgram::` part.
 
 ### Experimental
 
@@ -26,6 +29,8 @@ UE Platform support, which allows for much easier internal implementation of new
 
 ### Live View
 Added support for watching ArrayProperty and StructProperty ([UE4SS #419](https://github.com/UE4SS-RE/RE-UE4SS/pull/419))
+
+Live view search filters supports a new filter `IncludeClassNames`; `IncludeClassNames`, `ExcludeClassNames`, `HasProperty` and `HasPropertyType` now allow comma seperated lists. Added ability to save filters which are loaded when the game is next launched ([UE4SS #472](https://github.com/UE4SS-RE/RE-UE4SS/pull/472)) - Buckminsterfullerene
 
 ### UHT Dumper
 
@@ -56,12 +61,16 @@ Fixes BPModLoaderMod not loading when UE4SS initializes too late ([UE4SS #454](h
 
 Fixed PalServer not accepting connections from players ([UE4SS #453](https://github.com/UE4SS-RE/RE-UE4SS/pull/453))
 
-Fixed freeze related to the error "Tried to execute UFunction::FuncPtr hook but there was no function map entry"
+Fixed a crash that would occur randomly due to accidental execution of Live View search code ([UE4SS #475](https://github.com/UE4SS-RE/RE-UE4SS/pull/475))
+
+Fixed freeze related to the error "Tried to execute UFunction::FuncPtr hook but there was no function map entry" ([UE4SS #468](https://github.com/UE4SS-RE/RE-UE4SS/pull/468))
 
 ### Live View
 Fixed the "Write to file" checkbox not working for functions in the `Watches` tab ([UE4SS #419](https://github.com/UE4SS-RE/RE-UE4SS/pull/419))
 
 Reduced the likelihood of a crash happening on shutdown when at least one watch is enabled ([UE4SS #419](https://github.com/UE4SS-RE/RE-UE4SS/pull/419))
+
+Fixed constantly searching even if the search field is empty, and even if not on the tab ([UE4SS #475](https://github.com/UE4SS-RE/RE-UE4SS/pull/475))
 
 ### UHT Dumper
 
@@ -71,6 +80,8 @@ Fixed FString use after free ([UE4SS #425](https://github.com/UE4SS-RE/RE-UE4SS/
 Fixed the "IterateGameDirectories" global function throwing "bad conversion" errors ([UE4SS #398](https://github.com/UE4SS-RE/RE-UE4SS/pull/398))
 
 Fixed `FText` not working as a parameter (in `RegisterHook`, etc.) ([UE4SS #422](https://github.com/UE4SS-RE/RE-UE4SS/pull/422)) - localcc
+
+Fixed crash when calling UFunctions that take one or more 'out' params of type TArray<T>. ([UE4SS #477](https://github.com/UE4SS-RE/RE-UE4SS/pull/477))
 
 ### C++ API
 

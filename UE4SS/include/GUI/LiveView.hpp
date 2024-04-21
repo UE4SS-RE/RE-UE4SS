@@ -138,6 +138,7 @@ namespace RC::GUI
         static bool s_selected_item_deleted;
         static bool s_need_to_filter_out_properties;
         static bool s_watches_loaded_from_disk;
+        static bool s_filters_loaded_from_disk;
         static bool s_use_regex_for_search;
 
       private:
@@ -182,6 +183,7 @@ namespace RC::GUI
 
       private:
         auto collapse_all_except(void* except_id) -> void;
+        auto search() -> void;
         auto search_by_name() -> void;
         auto select_object(size_t index, const FUObjectItem* object_item, UObject* object, AffectsHistory = AffectsHistory::Yes) -> void;
         auto select_property(size_t index, FProperty* property, AffectsHistory affects_history) -> void;
@@ -191,8 +193,9 @@ namespace RC::GUI
 
       private:
         auto guobjectarray_iterator(int32_t int_data_1, int32_t int_data_2, const std::function<void(UObject*)>& callable) -> void;
-        auto guobjectarray_by_name_iterator([[maybe_unused]] int32_t int_data_1, [[maybe_unused]] int32_t int_data_2, const std::function<void(UObject*)>& callable)
-                -> void;
+        auto guobjectarray_by_name_iterator([[maybe_unused]] int32_t int_data_1,
+                                            [[maybe_unused]] int32_t int_data_2,
+                                            const std::function<void(UObject*)>& callable) -> void;
 
       public:
         auto set_is_searching_by_name(bool new_value) -> void

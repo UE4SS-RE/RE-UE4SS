@@ -246,7 +246,8 @@ namespace RC::LuaType
                 lua.registry().get_table_ref(lua_table_ref);
                 auto lua_table = lua.get_table();
 
-                if (!param->IsA<Unreal::FStructProperty>())
+                auto reuse_same_table = param->IsA<Unreal::FArrayProperty>() || param->IsA<Unreal::FStructProperty>();
+                if (!reuse_same_table)
                 {
                     lua_table.add_key(to_string(param->GetName()).c_str());
                 }
@@ -264,7 +265,7 @@ namespace RC::LuaType
                             .base = static_cast<Unreal::UObject*>(static_cast<void*>(dynamic_unreal_function_data.data)),
                             .data = data,
                             .property = param,
-                            .create_new_if_get_non_trivial_local = false,
+                            .create_new_if_get_non_trivial_local = !reuse_same_table,
                     };
                     StaticState::m_property_value_pushers[name_comparison_index](pusher_params);
                 }
@@ -274,7 +275,7 @@ namespace RC::LuaType
                     lua.throw_error(std::format("Tried calling UFunction without a registered handler 'Out' param. Type '{}' not supported.", param_type_name));
                 }
 
-                if (!param->IsA<Unreal::FStructProperty>())
+                if (!reuse_same_table)
                 {
                     lua_table.fuse_pair();
                 }

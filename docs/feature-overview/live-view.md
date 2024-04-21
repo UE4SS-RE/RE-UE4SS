@@ -6,7 +6,7 @@ In order to see it, you must make sure that the following configuration settings
 - `GuiConsoleEnabled`
 - `GuiConsoleVisible`
 
-If you are having any issues seeing the window, for example if it opens as blanked out/white, you can change the `GraphicsAPI` setting, for example to `dx11`.
+**If you are having any issues seeing the window, for example if it opens as blanked out/white, you can change the `GraphicsAPI` setting, for example to `dx11`.**
 
 Sometimes the font is too small to easily see (particularly on larger resolutions). You can edit the `GuiConsoleFontScaling` setting to change this.
 
@@ -14,19 +14,26 @@ Sometimes the font is too small to easily see (particularly on larger resolution
 
 You can right-click the search bar to show options.
 
-![live-viewer search options](https://github.com/UE4SS-RE/RE-UE4SS/assets/84156063/94c603df-bb18-4bb7-8fd7-70d50c628b85)
+![live-viewer search options](https://github.com/UE4SS-RE/RE-UE4SS/assets/84156063/11612a38-0d00-4700-8a41-f6649c8174c0)
 
-Explanations of the settings:
-- `Apply when not searching` will change the search results automatically, otherwise, you need to press enter on the search bar to apply settings changes.
-- `Include inheritance` will include any child objects of any search results.
-- `Instances only` will only include object instances. These are objects that are present in the level as part of actors (actors themselves, widgets, components etc.), and their properties are a reflection of the real-time values. These generally look like `<package name>_C` or `<package name>_C_<some instance id>` 
-- `Non-instances only` will only include the default state of object packages, i.e. ones that are loaded in memory but or not present in the level. You cannot change the values of these properties.
-- `CDOs only` will only include the class default objects which are basically the reflected properties inherited by non-instances from a UClass object. You can read more about CDOs [here](https://forums.unrealengine.com/t/what-is-cdo/310820/2). These typically look like `<full path>_GEN_VARIABLE` or `<package path>.Default__<package name>`. 
-- `Include CDOs` will include CDOs in any of your search criteria.
-- `Use Regex for search` allows you to use regex to make more specific searches.
-- `Exclude class name` allows you to exclude specific class names, for example `CanvasPanelSlot` or `StaticMeshComponent`. You can find the class name as the first part of each line. Currently, you can only enter one class name at a time, there is no comma seperate lists or similar.
-- `Has property` will only find objects with a property of a specific name, for example `Player Name`. This setting is only applied if you have entered any value in the search bar.
-- `Has property type` will only find objects with a property of a specific type, such as `BoolProperty` or `MulticastInlineDelegateProperty`.
+
+
+| Setting                  | Explanation                                                                                                                                                                                                                      |
+|--------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| Refresh search           | Refreshes the search results.                                                                                                                                                                                                    |
+| Save filters             | Saves the current search filters to `Win64/UE4SS-config/liveview/filters.meta.json`. Saved filters are loaded when the game is next launched.                                                                                    |
+| Apply when not searching | Changes the search results automatically, otherwise, you need to press refresh settings.                                                                                                                                         |
+| Include inheritance      | Includes any child objects of any search results.                                                                                                                                                                                |
+| Instances only           | Only includes object instances. These are objects present in the level as part of actors (actors themselves, widgets, components etc.), and their properties are a reflection of the real-time values. Examples include `<package name>_C` or `<package name>_C_<some instance id>`. |
+| Non-instances only       | Only includes the default state of object packages, which are loaded in memory but are not present in the level. You cannot change the values of these properties.                                                               |
+| CDOs only                | Only includes the class default objects (CDOs), which are the reflected properties inherited by non-instances from a UClass object. Examples include `<full path>_GEN_VARIABLE` or `<package path>.Default__<package name>`.     |
+| Include CDOs             | Includes CDOs in any of your search criteria.                                                                                                                                                                                    |
+| Use Regex for search     | Allows you to use regex to make more specific searches.                                                                                                                                                                          |
+| Exclude class names      | Allows you to exclude specific class names, e.g., `CanvasPanelSlot` or `StaticMeshComponent`. Comma seperated list, e.g., `CanvasPanelSlot, StaticMeshComponent,Package , Function`.                                             | 
+| Include class names      | Accessible by exclude class names dropdown. Allows you to include only specific class names, e.g., `CanvasPanelSlot` or `StaticMeshComponent`. Comma seperated list, e.g., `CanvasPanelSlot, StaticMeshComponent,Package , Function`. |
+| Has property             | Finds objects only if they have a property of a specific name, e.g., `Player Name`. This setting is applied only if you have entered any value in the search bar.                                                                |
+| Has property type        | Finds objects only if they have a property of a specific type, such as `BoolProperty` or `MulticastInlineDelegateProperty`.                                                                                                      |
+| Function parameter flags | Clicking on this checkbox opens a new popup. Allows you to select any number of flags to filter functions by and whether or not you want it to use your selected flags to check for the return flag                              |
 
 In the property viewer pane at the bottom, there are three sub-controls:
 - `<<` which goes backwards through your history.
@@ -50,9 +57,9 @@ Click the plus buttons on the left of each watch to expand the values box.
 
 On the left side of the watch, there are two checkboxes:
 - Enable/disable watch
-- Write the watch to a file. If this is enabled, when you close the game, the values from your watche will be saved as a text file in `Binaries/Win64/watches/`.
+- Write the watch to a file. If this is enabled, when you close the game, the values from your watche will be saved as a text file in `Win64/watches/`.
 
-On the right side of the watch, there is an option to save the watch which will be automatically re-added when you restart the game. This data is stored inside of `Binaries/Win64/watches/watches.meta.json`
+On the right side of the watch, there is an option to save the watch which will be automatically re-added when you restart the game. This data is stored inside of `Win64/watches/watches.meta.json`
 
 ![save watch](https://github.com/UE4SS-RE/RE-UE4SS/assets/84156063/8b223d1d-a77f-4222-b287-89da12529c89)
 ![method of watch re-aquisition](https://github.com/UE4SS-RE/RE-UE4SS/assets/84156063/6cea33d9-73ae-416c-9943-e71553a6433d)
