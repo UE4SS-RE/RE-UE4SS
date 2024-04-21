@@ -60,6 +60,7 @@ namespace RC
                 -> void;
 
         auto fire_unreal_init() -> void override;
+        auto fire_ui_init() -> void override;
         auto fire_program_start() -> void override;
         auto fire_update() -> void override;
         auto fire_dll_load(std::wstring_view dll_name) -> void;

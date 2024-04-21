@@ -17,6 +17,10 @@ Key binds created with `UE4SSProgram::register_keydown_event` end up being dupli
 To fix this, `CppUserModBase::register_keydown_event` has been introduced.  
 It's used exactly the same way except without the `UE4SSProgram::` part.
 
+Added `on_ui_init()`, it fires when the UI is initialized.  
+It's intended to use the `UE4SS_ENABLE_IMGUI` macro in this function.  
+Failing to do so will cause a crash when you try to render something with imgui.
+
 ### Experimental
 
 
@@ -82,7 +86,7 @@ Fixed `FText` not working as a parameter (in `RegisterHook`, etc.) ([UE4SS #422]
 Fixed crash when calling UFunctions that take one or more 'out' params of type TArray<T>. ([UE4SS #477](https://github.com/UE4SS-RE/RE-UE4SS/pull/477))
 
 ### C++ API
-
+Fixed a crash caused by a race condition enabled by C++ mods using `UE4SS_ENABLE_IMGUI` in their constructor ([UE4SS #481](https://github.com/UE4SS-RE/RE-UE4SS/pull/481))
 
 ## Settings
 

@@ -66,6 +66,8 @@ namespace RC
 
         virtual auto fire_unreal_init() -> void{};
 
+        virtual auto fire_ui_init() -> void{};
+
         // Called once when the program is starting, after mods are setup but before any mods have been started
         virtual auto fire_program_start() -> void{};
 
