@@ -21,10 +21,6 @@ public:
         ModDescription = STR("This is my awesome mod");
         ModAuthors = STR("UE4SS Team");
         
-        // It's critical that you enable ImGui before you create your tab.
-        // If you don't do this, a crash will occur as soon as ImGui tries to render anything in your tab.
-        UE4SS_ENABLE_IMGUI()
-        
         // The 'register_tab' function will tell UE4SS to render a tab.
         // Tabs registered this way will be automatically cleaned up when this C++ mod is destructed.
         // The first param is the display name of your tab.
@@ -63,6 +59,13 @@ public:
         // Because you created a tab with 'UE4SSProgram::add_gui_tab', you must manually remove it.
         // Failure to remove the tab will result in a crash.
         UE4SSProgram::get_program().remove_gui_tab(m_less_safe_tab);
+    }
+    
+    auto on_ui_init() -> void override
+    {
+        // It's critical that you enable ImGui if you intend to use ImGui within the context of UE4SS.
+        // If you don't do this, a crash will occur as soon as ImGui tries to render anything, for example in your tab.
+        UE4SS_ENABLE_IMGUI()
     }
     
     auto render_some_stuff(int Number) -> void

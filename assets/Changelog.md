@@ -19,8 +19,11 @@ Key binds created with `UE4SSProgram::register_keydown_event` end up being dupli
 To fix this, `CppUserModBase::register_keydown_event` has been introduced.  
 It's used exactly the same way except without the `UE4SSProgram::` part. ([UE4SS #446](https://github.com/UE4SS-RE/RE-UE4SS/pull/446))
 
-### BPModLoader
+Added `on_ui_init()`, it fires when the UI is initialized.  
+It's intended to use the `UE4SS_ENABLE_IMGUI` macro in this function.  
+Failing to do so will cause a crash when you try to render something with imgui.
 
+### BPModLoader
 
 ### Experimental
 
@@ -82,6 +85,7 @@ Fixed `FText` not working as a parameter (in `RegisterHook`, etc.) ([UE4SS #422]
 Fixed crash when calling UFunctions that take one or more 'out' params of type TArray<T>. ([UE4SS #477](https://github.com/UE4SS-RE/RE-UE4SS/pull/477))
 
 ### C++ API
+Fixed a crash caused by a race condition enabled by C++ mods using `UE4SS_ENABLE_IMGUI` in their constructor ([UE4SS #481](https://github.com/UE4SS-RE/RE-UE4SS/pull/481))
 
 ### BPModLoader
 Fixed "bad conversion" errors ([UE4SS #398](https://github.com/UE4SS-RE/RE-UE4SS/pull/398))
@@ -91,6 +95,7 @@ Fixed calling `PostBeginPlay` multiple times for each ModActor ([UE4SS #447](htt
 Fixed displaying 'PostBeginPlay not valid' when VerboseLogging is set to false ([UE4SS #447](https://github.com/UE4SS-RE/RE-UE4SS/pull/447)) - Okaetsu
 
 Fixes mods not loading when UE4SS initializes too late ([UE4SS #454](https://github.com/UE4SS-RE/RE-UE4SS/pull/454)) - localcc
+
 
 ## Settings
 
