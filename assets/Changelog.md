@@ -5,8 +5,10 @@ TBD
 ## New
 
 ### General
+UE Platform support, which allows for much easier internal implementation of new Unreal classes ([UEPseudo #80](https://github.com/Re-UE4SS/UEPseudo/pull/80)) - narknon, localcc
 
 ### Live View 
+Added search filter: `IncludeClassNames`. ([UE4SS #472](https://github.com/UE4SS-RE/RE-UE4SS/pull/472)) - Buckminsterfullerene
 
 ### UHT Dumper
 
@@ -15,11 +17,13 @@ TBD
 ### C++ API
 Key binds created with `UE4SSProgram::register_keydown_event` end up being duplicated upon mod hot-reload.  
 To fix this, `CppUserModBase::register_keydown_event` has been introduced.  
-It's used exactly the same way except without the `UE4SSProgram::` part.
+It's used exactly the same way except without the `UE4SSProgram::` part. ([UE4SS #446](https://github.com/UE4SS-RE/RE-UE4SS/pull/446))
 
 Added `on_ui_init()`, it fires when the UI is initialized.  
 It's intended to use the `UE4SS_ENABLE_IMGUI` macro in this function.  
 Failing to do so will cause a crash when you try to render something with imgui.
+
+### BPModLoader
 
 ### Experimental
 
@@ -27,14 +31,13 @@ Failing to do so will cause a crash when you try to render something with imgui.
 ## Changes
 
 ### General
-Switch to xmake from cmake which makes building much more streamlined ([UE4SS #377](https://github.com/UE4SS-RE/RE-UE4SS/pull/377), [UEPseudo #81](https://github.com/Re-UE4SS/UEPseudo/pull/81)) - localcc
-
-UE Platform support, which allows for much easier internal implementation of new Unreal classes ([UEPseudo #80](https://github.com/Re-UE4SS/UEPseudo/pull/80)) - narknon, localcc
 
 ### Live View
 Added support for watching ArrayProperty and StructProperty ([UE4SS #419](https://github.com/UE4SS-RE/RE-UE4SS/pull/419))
 
-Live view search filters supports a new filter `IncludeClassNames`; `IncludeClassNames`, `ExcludeClassNames`, `HasProperty` and `HasPropertyType` now allow comma seperated lists. Added ability to save filters which are loaded when the game is next launched ([UE4SS #472](https://github.com/UE4SS-RE/RE-UE4SS/pull/472)) - Buckminsterfullerene
+The search filter `ExcludeClassName` can now be found in the `IncludeClassNames` dropdown list. ([UE4SS #472](https://github.com/UE4SS-RE/RE-UE4SS/pull/472)) - Buckminsterfullerene
+
+The following search filters now allow multiple values, with each value separated by a comma: `IncludeClassNames`, `ExcludeClassNames`, `HasProperty`, `HasPropertyType`. ([UE4SS #472](https://github.com/UE4SS-RE/RE-UE4SS/pull/472)) - Buckminsterfullerene
 
 ### UHT Dumper
 
@@ -45,7 +48,11 @@ The callback of `NotifyOnNewObject` can now optionally return `true` to unregist
 
 ### C++ API
 
+### BPModLoader
+BPModLoader now supports loading mods from subdirectories within the `LogicMods` folder ([UE4SS #412](https://github.com/UE4SS-RE/RE-UE4SS/pull/412)) - Ethan Green
+
 ### Repo & Build Process
+Switch to xmake from cmake which makes building much more streamlined ([UE4SS #377](https://github.com/UE4SS-RE/RE-UE4SS/pull/377), [UEPseudo #81](https://github.com/Re-UE4SS/UEPseudo/pull/81)) - localcc
 
 
 ## Fixes
@@ -53,15 +60,7 @@ The callback of `NotifyOnNewObject` can now optionally return `true` to unregist
 ### General
 Fixed adding elements to TArray in Lua incorrectly resizing and zeroing out previous values ([UE4SS #436](https://github.com/UE4SS-RE/RE-UE4SS/pull/436)) - dnchattan
 
-Fixed BPModLoaderMod giving "bad conversion" errors ([UE4SS #398](https://github.com/UE4SS-RE/RE-UE4SS/pull/398))
-
-Fixed BPModLoaderMod calling `PostBeginPlay` multiple times for each ModActor ([UE4SS #447](https://github.com/UE4SS-RE/RE-UE4SS/pull/447)) - Okaetsu
-
-Fixed BPModLoaderMod displaying 'PostBeginPlay not valid' when VerboseLogging is set to false ([UE4SS #447](https://github.com/UE4SS-RE/RE-UE4SS/pull/447)) - Okaetsu
-
 Fixed some debug GUI layout alignments, especially with different GUI font scaling settings ([UE4SS #429](https://github.com/UE4SS-RE/RE-UE4SS/pull/429)) - Lyrth
-
-Fixes BPModLoaderMod not loading when UE4SS initializes too late ([UE4SS #454](https://github.com/UE4SS-RE/RE-UE4SS/pull/454)) - localcc
 
 Fixed PalServer not accepting connections from players ([UE4SS #453](https://github.com/UE4SS-RE/RE-UE4SS/pull/453))
 
@@ -87,6 +86,16 @@ Fixed crash when calling UFunctions that take one or more 'out' params of type T
 
 ### C++ API
 Fixed a crash caused by a race condition enabled by C++ mods using `UE4SS_ENABLE_IMGUI` in their constructor ([UE4SS #481](https://github.com/UE4SS-RE/RE-UE4SS/pull/481))
+
+### BPModLoader
+Fixed "bad conversion" errors ([UE4SS #398](https://github.com/UE4SS-RE/RE-UE4SS/pull/398))
+
+Fixed calling `PostBeginPlay` multiple times for each ModActor ([UE4SS #447](https://github.com/UE4SS-RE/RE-UE4SS/pull/447)) - Okaetsu
+
+Fixed displaying 'PostBeginPlay not valid' when VerboseLogging is set to false ([UE4SS #447](https://github.com/UE4SS-RE/RE-UE4SS/pull/447)) - Okaetsu
+
+Fixes mods not loading when UE4SS initializes too late ([UE4SS #454](https://github.com/UE4SS-RE/RE-UE4SS/pull/454)) - localcc
+
 
 ## Settings
 
