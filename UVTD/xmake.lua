@@ -1,6 +1,6 @@
 local projectName = "UVTD"
 
-add_requires("raw_pdb", { debug = is_mode_debug(), configs = { runtimes = get_mode_runtimes() } })
+add_requires("raw_pdb", { debug = is_mode_debug() })
 
 target(projectName)
     set_kind("binary")

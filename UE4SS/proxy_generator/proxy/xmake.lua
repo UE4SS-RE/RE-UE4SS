@@ -8,16 +8,15 @@ target("proxy_files")
 
     set_policy("build.across_targets_in_parallel", false)
 
+    -- Provide our own build logic by overriding xmake on_build()
     on_build(function (target)
-        local proxy_generator = path.join(os.projectdir(), target:dep("proxy_generator"):targetfile())
-        local output_path = path.join(os.projectdir(), target:autogendir())
-        local file = get_config("ue4ssProxyPath")
-
+        local proxy_generator = path.join(target:dep("proxy_generator"):targetfile())
+        local output_path = path.join(get_config("ue4ssRoot"), target:autogendir())
         os.mkdir(output_path)
-
-        os.execv(proxy_generator, {file, output_path})
+        os.execv(proxy_generator, {get_config("ue4ssProxyPath"), output_path})
     end)
 
+    -- We override on_link to stop xmake from attempting to link this target.
     on_link(function () end)
 
     after_clean(function (target)
@@ -37,24 +36,12 @@ target("proxy")
 
     add_files("proxy.rc")
 
-    on_load(function (target)
-        import("target_helpers", { rootdir = get_config("scriptsRoot") })
-        local filename = target_helpers.get_path_filename(get_config("ue4ssProxyPath"))
-        target:set("basename", filename)
-    end)
+    -- Set the name of the target file to be the base file name of the proxy dll ("dwmapi").
+    set_basename(path.basename(get_config("ue4ssProxyPath")))
 
     after_load(function (target)
-        local projectRoot = get_config("ue4ssRoot")
-
-        local scriptsRoot = get_config("scriptsRoot")
-        import("target_helpers", { rootdir = scriptsRoot })
-        import("build_configs", { rootdir = scriptsRoot })
-
-        build_configs:config(target)
-        build_configs:set_output_dir(target)
-
-        local output_path = path.join(os.projectdir(), target:dep("proxy_files"):autogendir())
-        local proxy_name = target_helpers.get_path_filename(get_config("ue4ssProxyPath"))
+        local output_path = path.join(get_config("ue4ssRoot"), target:dep("proxy_files"):autogendir())
+        local proxy_name = path.basename(target:targetfile())
 
         target:add("files", path.join(output_path, "dllmain.cpp"), { always_added = true })
         target:add("files", path.join(output_path, proxy_name .. ".asm"), { rule = "asm", always_added = true })

@@ -1,9 +1,11 @@
--- define module: build_configs
-local build_configs = build_configs or {}
-
 local gameDefines = { "UE_GAME" }
 
-TARGET_TYPES = {
+-- The target/config/platform tables map unreal modes (Game__Shipping__Win64, etc.) to build settings.
+-- The keys within each type should be a setting that xmake understands.
+-- Example: ["defines"] = { "UE_GAME" } is equivalent to add_defines("UE_GAME") or target:add("defines", "UE_GAME")
+-- All possible modes are generated from these target/config/platform tables.
+
+local TARGET_TYPES = {
     ["Game"] = {
         ["defines"] = {
             table.unpack(gameDefines)
@@ -17,21 +19,21 @@ TARGET_TYPES = {
     }
 }
 
-CONFIG_TYPES = {
+local CONFIG_TYPES = {
     ["Dev"] = {
         ["symbols"] = {"debug"},
         ["defines"] = {
             "UE_BUILD_DEVELOPMENT",
             "STATS"
         },
-        ["optimize"] = {"none"}
+        ["optimize"] = {"none"},
     },
     ["Debug"] = {
         ["symbols"] = {"debug"},
         ["defines"] = {
             "UE_BUILD_DEBUG"
         },
-        ["optimize"] = {"none"}
+        ["optimize"] = {"none"},
     },
     ["Shipping"] = {
         ["symbols"] = {"debug"},
@@ -50,7 +52,7 @@ CONFIG_TYPES = {
     }
 }
 
-PLATFORM_TYPES = {
+local PLATFORM_TYPES = {
     ["Win64"] = {
         ["defines"] = {
             "PLATFORM_WINDOWS",
@@ -63,7 +65,11 @@ PLATFORM_TYPES = {
     }
 }
 
-CLANG_COMPILE_OPTIONS = {
+-- The compile option tables map define what flags should be passed to each compiler.
+-- The keys within each type should be a setting that xmake understands.
+-- Example: ["cxflags"] = { "-g" } is equivalent to add_cxflags("-g") or target:add("cxflags", "-g")
+
+local CLANG_COMPILE_OPTIONS = {
     ["cxflags"] = {
         "-g",
         "-gcodeview",
@@ -81,13 +87,13 @@ CLANG_COMPILE_OPTIONS = {
     }
 }
 
-GNU_COMPILE_OPTIONS = {
+local GNU_COMPILE_OPTIONS = {
     ["cxflags"] = {
         "-fms-extensions"
     }
 }
 
-MSVC_COMPILE_OPTIONS = {
+local MSVC_COMPILE_OPTIONS = {
     ["cxflags"] = {
         "/MP",
         "/W3",
@@ -106,186 +112,105 @@ MSVC_COMPILE_OPTIONS = {
     }
 }
 
--- Get target types
-function get_target_types()
-    return TARGET_TYPES
-end
-
--- Get config types
-function get_config_types()
-    return CONFIG_TYPES
-end
-
--- Get platform types
-function get_platform_types()
-    return PLATFORM_TYPES
-end
-
--- Get clang compile options
-function get_clang_compile_options()
-    return CLANG_COMPILE_OPTIONS
-end
-
--- Get gnu compile options
-function get_gnu_compile_options()
-    return GNU_COMPILE_OPTIONS
-end
-
--- Get msvc compile options
-function get_msvc_compile_options()
-    return MSVC_COMPILE_OPTIONS
-end
-
--- Apply targe options
-function apply_target_options(self, target, options)
-    for option, values in pairs(options) do
-        target:add(option, values, { public = true })
-    end
-end
-
--- Returns a list of supported compilation modes
--- CasePreserving__Shipping_Win64, Game_Debug_Win64, etc.
-function get_compilation_modes()
-    local comp_modes = {}
-
+--- Generate xmake modes for each of the target__config__platform permutations.
+---@return table modes Table containing all target__config__platform permutations.
+function generate_compilation_modes()
+    local config_modes = {}
     for target_type, _ in pairs(TARGET_TYPES) do
         for config_type, _ in pairs(CONFIG_TYPES) do
             for platform_type, _ in pairs(PLATFORM_TYPES) do
                 local config_name = target_type .. "__" .. config_type .. "__" .. platform_type
-                table.insert(comp_modes, config_name)
+                table.append(config_modes, config_name)
+
+                -- Modes are defined as rules with the `mode.` prefix. Ex: mode.Game__Shipping__Win64
+                rule("mode."..config_name)
+                    -- Only trigger the mode-specific logic if we are configured for this mode with `xmake f -m "Game__Shipping__Win64".
+                    if is_mode(config_name) then
+                        -- Inherit our base rule that should run regardless of the configured mode.
+                        add_deps("ue4ss.mode.base")
+
+                        -- Apply the config options for this specific mode.
+                        on_config(function(target)
+                            import("mode_builder")
+                            mode_builder.apply_mode_options(target, TARGET_TYPES[target_type])
+                            mode_builder.apply_mode_options(target, CONFIG_TYPES[config_type])
+                            mode_builder.apply_mode_options(target, PLATFORM_TYPES[platform_type])
+                        end)
+                    end
+                rule_end()
             end
         end
     end
 
-    return comp_modes
+    return config_modes
 end
 
--- Get unreal rules
-function get_unreal_rules()
-    local unreal_rules = {}
-
-    for _, config_name in ipairs(get_compilation_modes()) do
-        local rule_name = "mode." .. config_name
-        table.insert(unreal_rules, rule_name)
-
-        rule(rule_name)
-        rule_end()
-    end
-
-    return unreal_rules
-end
-
--- Parse mode string into modes
-function mode_string_to_modes(self, str)
+--- Splits a mode string (Game__Shipping__Win64) into its component values.
+---@param mode string
+---@return string target_type
+---@return string config_type
+---@return string platform_type
+local function mode_string_to_modes(mode)
     local modes = {}
-    for t in string.gmatch(str, "(%w+)") do
+    for t in string.gmatch(mode, "(%w+)") do
         table.insert(modes, t)
     end
 
-    return {
-        ["target"] = modes[1],
-        ["config"] = modes[2],
-        ["platform"] = modes[3]
-    }
+    return modes[1], modes[2], modes[3]
 end
 
--- Apply compiler options
-function apply_compiler_options(self, target)
-    for option, values in pairs(self:get_gnu_compile_options()) do
-        target:add(option, values, { tools = { "gcc", "ld" } })
-    end
-
-    for option, values in pairs(self:get_clang_compile_options()) do
-        target:add(option, values, { tools = { "clang", "lld" } })
-    end
-
-    for option, values in pairs(self:get_msvc_compile_options()) do
-        target:add(option, values, { tools = { "clang_cl", "cl", "link" } })
-    end
-end
-
--- Run on configure step for each target that wants unreal rules
-function config(self, target)
-    import("target_helpers", { rootdir = get_config("scriptsRoot") })
-
-    local mode = get_config("mode")
-    local modes = self:mode_string_to_modes(mode)
-
-    local target_options = self:get_target_types()[modes.target]
-    local config_options = self:get_config_types()[modes.config]
-    local platform_options = self:get_platform_types()[modes.platform]
-
-    self:apply_target_options(target, target_options)
-    self:apply_target_options(target, config_options)
-    self:apply_target_options(target, platform_options)
-
-    self:apply_compiler_options(target)
-
-    target:set("runtimes", get_mode_runtimes())
-end
-
--- Construct output dir for target
-function construct_output_dir(self, target)
-    local mode = get_config("mode")
-    local output_dir = path.join("Binaries", mode, target:name())
-    return output_dir
-end
-
--- Run after load step for each target that wants custom output dir
-function set_output_dir(self, target)
-    local output_dir = self:construct_output_dir(target)
-    target:set("targetdir", output_dir)
-end
-
--- Run after load step for each target that has dependencies with `ue4ssDep`: true
-function export_deps(self, target)
-    import("target_helpers", { rootdir = get_config("scriptsRoot") })
-
-    local additional_defines = {}
-    for _, dep in pairs(target:deps()) do
-        if dep:values("ue4ssDep") == true then
-            table.insert(additional_defines, target_helpers.project_name_to_build_static_define(dep:name()))
-        end
-    end
-    table.sort(additional_defines)
-
-    for _, define in pairs(additional_defines) do
-        target:add("defines", define)
-    end
-end
-
-
--- If a target is a "ue4ssDep", add the target to the "deps" group for VS organization. 
-function set_project_groups(self, target)
-    for _, dep in pairs(target:deps()) do
-        if dep:values("ue4ssDep") == true then
-            dep:set("group", "deps")
-        end
-    end
-end
-
--- Run after clean step for each target that has custom output dir
-function clean_output_dir(self, target)
-    local output_dir = self:construct_output_dir(target)
-    os.rm(output_dir)
-end
-
--- Get if current mode is debug
+--- This function determines if an unreal style mode (Game__Shipping__Win64) should be considered a debug mode.
+--- This is useful when selecting the modes of dependencies that only have debug/release as valid modes.
+---@return boolean debug Returns if the unreal mode is a debug mode.
 function is_mode_debug()
     local mode = get_config("mode")
     if mode == nil then
         return false
     end
 
-    local modes = mode_string_to_modes(nil, mode)
-    return modes.config == "Debug" or modes.config == "Dev"
+    local target, config, platform = mode_string_to_modes(mode)
+    return config == "Debug" or config == "Dev"
 end
 
--- Get runtime for current mode
-function get_mode_runtimes()
-    local is_debug = is_mode_debug()
-    return is_debug and "MDd" or "MD"
-end
+-- This rule is used to modify settings for ALL modes regardless of which mode is configured.
+-- All modes (Game__Shipping__Win64, etc) inherit this mode.
+rule("ue4ss.mode.base")
+    on_config(function(target)
+        import("mode_builder")
+        -- Compiler flags are set in this rule since unreal modes currently do not change any compiler flags.
+        mode_builder.apply_compiler_options(target, GNU_COMPILE_OPTIONS, {"gcc", "ld"})
+        mode_builder.apply_compiler_options(target, CLANG_COMPILE_OPTIONS, {"clang", "lld"})
+        mode_builder.apply_compiler_options(target, MSVC_COMPILE_OPTIONS, { "clang_cl", "cl", "link" })
+    end)
 
--- return module: build_configs
-return build_configs
+    after_load(function(target)
+        -- Binary outputs are written to the `Binaries` dir.
+        target:set("targetdir", path.join(os.projectdir(), "Binaries", get_config("mode"), target:name()))
+    end)
+
+-- This rule applies defines to a target and all upstream targets.
+-- target ScopedTimer adds the flag -DRC_SCOPED_TIMER_BUILD_STATIC
+rule("ue4ss.defines.static")
+    after_load(function(target)
+        import("target_helpers")
+        target:add("defines", target_helpers.project_name_to_build_static_define(target:name()), {public = true})
+    end)
+
+-- This rule applies defines to a target and all upstream targets.
+-- target ScopedTimer adds the flag -DRC_SCOPED_TIMER_EXPORTS
+rule("ue4ss.defines.exports")
+    after_load(function(target)
+        import("target_helpers")
+        target:add("defines", target_helpers.project_name_to_exports_define(target:name()),{public = true})
+    end)
+
+-- This rule aggregates both the ue4ss.defines .static and .exports rules.
+-- It also adds any target with this rule to the `deps` group which is used for
+-- organization purposes within the generated VS solution.
+rule("ue4ss.dependency")
+    add_deps("ue4ss.defines.static", "ue4ss.defines.exports")
+
+    on_config(function(target)
+        target:set("groups", "deps")
+    end)
+

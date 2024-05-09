@@ -1,42 +1,42 @@
-set_config("ue4ssRoot", os.curdir())
-set_config("scriptsRoot", path.join(os.curdir(), "tools/xmakescripts"))
+-- We should use `get_config("ue4ssRoot")` instead of `os.projectdir()` or `$(projectdir)`.
+-- This is because os.projectdir() will return a higher parent dir
+-- when UE4SS is sub-moduled/`include("UE4SS")` in another xmake project.
+set_config("ue4ssRoot", os.scriptdir())
 
-includes("tools/xmakescripts/build_configs.lua")
-
-add_rules(get_unreal_rules())
-
--- Restrict the compilation modes/configs.
-set_allowedplats("windows")
-set_allowedarchs("x64")
-set_allowedmodes(get_compilation_modes())
-
-set_defaultmode("Game__Shipping__Win64")
-
-set_runtimes(get_mode_runtimes())
-
--- All non-binary outputs are stored in the Intermediates dir.
+-- All non-binary outputs are written to the Intermediates dir.
 set_config("buildir", "Intermediates")
 
--- Tell WinAPI macros to map to unicode functions instead of ansi
-add_defines("_UNICODE", "UNICODE")
+-- Any lua modules in this directory can be imported in the script scope by using
+-- /modules/my_module.lua           import("my_module")
+-- /modules/rules/my_module.lua     import("rules.my_module")
+add_moduledirs("tools/xmakescripts/modules")
 
-after_load(function (target)
-    import("build_configs", { rootdir = get_config("scriptsRoot") })
-    import("target_helpers", { rootdir = get_config("scriptsRoot") })
-    build_configs:set_output_dir(target)
-    build_configs:export_deps(target)
-end)
+-- Load the build_configs file into the global scope.
+includes("tools/xmakescripts/build_configs.lua")
 
-on_config(function (target)
-    import("build_configs", { rootdir = get_config("scriptsRoot") })
-    build_configs:config(target)
-    build_configs:set_project_groups(target)
-end)
+-- Generate the modes and add them to all targets.
+local modes = generate_compilation_modes()
 
-after_clean(function (target)
-    import("build_configs", { rootdir = get_config("scriptsRoot") })
-    build_configs:clean_output_dir(target)
-end)
+for _, mode in ipairs(modes) do
+    -- add_rules() expects the format `mode.Game__Shipping__Win64`
+    add_rules("mode."..mode)
+end
+
+if is_plat("windows") then
+    -- Globally set the runtimes for all targets.
+    set_runtimes(is_mode_debug() and "MDd" or "MD")
+end
+
+-- Restrict the compilation modes/configs.
+-- These restrictions are inherited upstream and downstream.
+-- Any project that `includes("UE4SS")` will inherit these global restrictions.
+set_allowedplats("windows")
+set_allowedarchs("x64")
+set_allowedmodes(modes)
+
+if is_plat("windows") then
+    set_defaultmode("Game__Shipping__Win64")
+end
 
 includes("deps")
 includes("UE4SS")

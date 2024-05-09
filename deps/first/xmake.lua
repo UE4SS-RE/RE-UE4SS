@@ -19,7 +19,7 @@ includes("Unreal")
 
 -- Patternsleuth -> START
 
-add_requires("cargo::patternsleuth_bind", { debug = is_mode_debug(), configs = { cargo_toml = path.join(os.scriptdir(), "patternsleuth_bind/Cargo.toml"), runtimes = get_mode_runtimes() } })
+add_requires("cargo::patternsleuth_bind", { debug = is_mode_debug(), configs = { cargo_toml = path.join(os.scriptdir(), "patternsleuth_bind/Cargo.toml") } })
 
 target("patternsleuth_bind")
     set_kind("static")
