@@ -2,27 +2,6 @@ option("ue4ssProxyPath")
     set_default("C:\\Windows\\System32\\dwmapi.dll")
     set_description("Set path for a dll to generate the proxy for")
 
-target("proxy_files")
-    set_kind("binary")
-    add_deps("proxy_generator")
-
-    set_policy("build.across_targets_in_parallel", false)
-
-    -- Provide our own build logic by overriding xmake on_build()
-    on_build(function (target)
-        local proxy_generator = path.join(target:dep("proxy_generator"):targetfile())
-        local output_path = path.join(get_config("ue4ssRoot"), target:autogendir())
-        os.mkdir(output_path)
-        os.execv(proxy_generator, {get_config("ue4ssProxyPath"), output_path})
-    end)
-
-    -- We override on_link to stop xmake from attempting to link this target.
-    on_link(function () end)
-
-    after_clean(function (target)
-        os.rm(target:autogendir())
-    end)
-
 target("proxy")
     set_kind("shared")
     add_options("ue4ssProxyPath")
@@ -32,7 +11,7 @@ target("proxy")
 
     set_policy("build.across_targets_in_parallel", false)
 
-    add_deps("File", "proxy_files")
+    add_deps("File", "proxy_generator")
 
     add_files("proxy.rc")
 
@@ -40,10 +19,14 @@ target("proxy")
     set_basename(path.basename(get_config("ue4ssProxyPath")))
 
     after_load(function (target)
-        local output_path = path.join(get_config("ue4ssRoot"), target:dep("proxy_files"):autogendir())
+        local output_path = path.join(get_config("ue4ssRoot"), target:dep("proxy_generator"):autogendir())
         local proxy_name = path.basename(target:targetfile())
-
         target:add("files", path.join(output_path, "dllmain.cpp"), { always_added = true })
         target:add("files", path.join(output_path, proxy_name .. ".asm"), { rule = "asm", always_added = true })
         target:add("files", path.join(output_path, proxy_name .. ".def"), { always_added = true })
+    end)
+
+    on_install(function(target)
+        os.mkdir(target:installdir())
+        os.cp(target:targetfile(), target:installdir())
     end)
