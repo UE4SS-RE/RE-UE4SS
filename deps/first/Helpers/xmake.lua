@@ -8,7 +8,3 @@ target(projectName)
 
     add_includedirs("include", { public = true })
     add_headerfiles("include/**.hpp")
-
-    on_load(function (target)
-        print("Project: " .. projectName .. " (HEADER-ONLY)")
-    end)

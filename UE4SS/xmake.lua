@@ -100,3 +100,10 @@ target(projectName)
         target:add("defines", "UE4SS_CONFIGURATION=\"" .. get_config("mode") .. "\"", { public = true })
     end)
 
+    on_install(function(target)
+        os.mkdir(target:installdir())
+        os.cp(target:targetfile(), target:installdir())
+        if target:symbolfile() then
+            os.cp(target:symbolfile(), target:installdir())
+        end
+    end)
