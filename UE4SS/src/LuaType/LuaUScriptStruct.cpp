@@ -169,7 +169,8 @@ namespace RC::LuaType
         auto property = static_cast<Unreal::FStructProperty*>(struct_data.script_struct->FindProperty(property_name));
         if (!property)
         {
-            lua.throw_error(std::format("[handle_unreal_property_value]: Was unable to retrieve property mapped to '{}'",
+            lua.throw_error(std::format("[handle_unreal_property_value]: Was unable to retrieve property '{}' mapped to '{}'",
+                                        to_string(property_name.ToString()),
                                         to_string(struct_data.script_struct->GetFullName())));
         }
 
