@@ -35,6 +35,16 @@ jobs:
         run: python build.py release_commit ${{ github.actor }}
         working-directory: ./tools/buildscripts
 
+      - name: Cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            .xmake
+            Binaries
+            Intermediates
+            C:/Users/runneradmin/AppData/Local/.xmake
+          key: ${{ runner.os }}-xmake-${{ hashFiles('**/xmake.lua') }}
+
       - name: Build
         run: |
           xmake f -m "Game__Shipping__Win64" -y
