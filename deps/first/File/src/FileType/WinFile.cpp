@@ -492,6 +492,7 @@ namespace RC::File
         {
         case OpenFor::Writing:
         case OpenFor::Appending:
+        case OpenFor::ReadWrite:
             handle_desired_access = PAGE_READWRITE;
             mapping_desired_access = FILE_MAP_WRITE;
             break;
@@ -516,8 +517,8 @@ namespace RC::File
         }
 
         MEMORY_BASIC_INFORMATION buffer{};
-        auto size = VirtualQuery(m_memory_map, &buffer, sizeof(decltype(buffer)));
-        return std::span(m_memory_map, size);
+        VirtualQuery(m_memory_map, &buffer, sizeof(decltype(buffer)));
+        return std::span(m_memory_map, buffer.RegionSize);
     }
 
     auto WinFile::open_file(const std::filesystem::path& file_name_and_path, const OpenProperties& open_properties) -> WinFile
@@ -542,6 +543,9 @@ namespace RC::File
             break;
         case OpenFor::Reading:
             desired_access = GENERIC_READ;
+            break;
+        case OpenFor::ReadWrite:
+            desired_access = GENERIC_READ | GENERIC_WRITE;
             break;
         default:
             THROW_INTERNAL_FILE_ERROR("[WinFile::open_file] Tried to open file but received invalid data for the 'OpenFor' parameter.")
