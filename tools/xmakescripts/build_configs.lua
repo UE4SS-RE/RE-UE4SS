@@ -1,3 +1,5 @@
+-- TODO: This file should be deleted before the next release?
+-- It helps people with old mod templates upgrade to the new template.
 local build_configs = build_configs or {}
 
 function config(self, target)
@@ -25,11 +27,12 @@ function clean_output_dir(self, target)
 end
 
 function _warn_mod_template_outdated(target)
-    raise("Your mod's xmake.lua file needs updating.")
+    print("SUGGESTED TEMPLATE:")
     print(format('target("%s")', target:name()))
     print('    add_rules("ue4ss.mod")')
     print('    add_includedirs(".")')
     print('    add_files("*.cpp")')
+    raise("Your mod's xmake.lua file needs updating.")
 end
 
 function _warn_unreal_submod_outdated()
