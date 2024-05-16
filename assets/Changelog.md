@@ -25,6 +25,9 @@ Failing to do so will cause a crash when you try to render something with imgui.
 
 BREAKING: Changed `FTransform` constructor to be identical to unreal.
 
+Added `OpenFor::ReadWrite`, to be used when calling `File::open`.  
+This can be used when calling `FileHandle::memory_map`, unlike `OpenFor::Writing`.  ([UE4SS #507](https://github.com/UE4SS-RE/RE-UE4SS/pull/507))
+
 ### BPModLoader
 
 ### Experimental
@@ -90,6 +93,8 @@ Fixed crash when calling UFunctions that take one or more 'out' params of type T
 
 ### C++ API
 Fixed a crash caused by a race condition enabled by C++ mods using `UE4SS_ENABLE_IMGUI` in their constructor ([UE4SS #481](https://github.com/UE4SS-RE/RE-UE4SS/pull/481))
+
+Fixed the `std::span` returned by `FileHandle::memory_map` being improperly sized. ([UE4SS #507](https://github.com/UE4SS-RE/RE-UE4SS/pull/507))
 
 ### BPModLoader
 Fixed "bad conversion" errors ([UE4SS #398](https://github.com/UE4SS-RE/RE-UE4SS/pull/398))
