@@ -11,21 +11,23 @@ set_config("buildir", "Intermediates")
 -- /modules/rules/my_module.lua     import("rules.my_module")
 add_moduledirs("tools/xmakescripts/modules")
 
--- Load the build_configs file into the global scope.
-includes("tools/xmakescripts/build_configs.lua")
+-- Load the build_rules file into the global scope.
+includes("tools/xmakescripts/rules/build_rules.lua")
 
--- Generate the modes and add them to all targets.
+-- Generate the mode rules.
 local modes = generate_compilation_modes()
 
-for _, mode in ipairs(modes) do
-    -- add_rules() expects the format `mode.Game__Shipping__Win64`
-    add_rules("mode."..mode)
-end
+-- Enter the existing ue4ss.base rule scope in order to add all xxx__xxx__xxx modes
+-- to the ue4ss.base rule.
+rule("ue4ss.base")
+    for _, mode in ipairs(modes) do
+        -- add_rules() expects the format `mode.Game__Shipping__Win64`
+        add_deps("mode."..mode)
+    end
+rule_end()
 
-if is_plat("windows") then
-    -- Globally set the runtimes for all targets.
-    set_runtimes(is_mode_debug() and "MDd" or "MD")
-end
+-- Add the ue4ss.core rule to all targets within the UE4SS repository.
+add_rules("ue4ss.core")
 
 -- Restrict the compilation modes/configs.
 -- These restrictions are inherited upstream and downstream.

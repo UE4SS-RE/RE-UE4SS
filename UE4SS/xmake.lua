@@ -1,10 +1,10 @@
 includes("proxy_generator")
 
-add_requires("imgui v1.89", { debug = is_mode_debug(), configs = { win32 = true, dx11 = true, opengl3 = true, glfw_opengl3 = true } } )
-add_requires("ImGuiTextEdit v1.0", { debug = is_mode_debug() })
-add_requires("IconFontCppHeaders v1.0", { debug = is_mode_debug()})
-add_requires("glfw 3.3.9", { debug = is_mode_debug() })
-add_requires("opengl", { debug = is_mode_debug() })
+add_requires("imgui v1.89", { debug = is_mode_debug(), configs = { win32 = true, dx11 = true, opengl3 = true, glfw_opengl3 = true , runtimes = get_mode_runtimes()} } )
+add_requires("ImGuiTextEdit v1.0", { debug = is_mode_debug(), configs = {runtimes = get_mode_runtimes()} })
+add_requires("IconFontCppHeaders v1.0", { debug = is_mode_debug(), configs = {runtimes = get_mode_runtimes()}})
+add_requires("glfw 3.3.9", { debug = is_mode_debug() , configs = {runtimes = get_mode_runtimes()}})
+add_requires("opengl", { debug = is_mode_debug(), configs = {runtimes = get_mode_runtimes()} })
 
 option("ue4ssBetaIsStarted")
     set_default(true)
@@ -46,7 +46,6 @@ target(projectName)
     set_default(true)
     add_rules("ue4ss.defines.exports")
     add_options("ue4ssBetaIsStarted", "ue4ssIsBeta")
-
     add_includedirs("include", { public = true })
     add_includedirs("generated_include", { public = true })
     add_headerfiles("include/**.hpp")
@@ -62,6 +61,7 @@ target(projectName)
         "ScopedTimer", "Profiler", "patternsleuth_bind",
         "glad", { public = true }
     )
+
     add_packages("imgui", "ImGuiTextEdit", "IconFontCppHeaders", "glfw", "opengl", { public = true })
 
     add_packages("glaze", "polyhook_2", { public = true })
