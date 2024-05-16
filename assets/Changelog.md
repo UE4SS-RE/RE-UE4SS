@@ -23,6 +23,8 @@ Added `on_ui_init()`, it fires when the UI is initialized.
 It's intended to use the `UE4SS_ENABLE_IMGUI` macro in this function.  
 Failing to do so will cause a crash when you try to render something with imgui.
 
+BREAKING: Changed `FTransform` constructor to be identical to unreal.
+
 ### BPModLoader
 
 ### Experimental
