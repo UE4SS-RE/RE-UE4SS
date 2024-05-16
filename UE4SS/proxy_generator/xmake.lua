@@ -12,7 +12,7 @@ target(projectName)
 
     after_build(function(target)
         local proxy_exe =  target:targetfile()
-        local output_path = path.join(get_config("ue4ssRoot"), target:autogendir())
+        local output_path = target:autogendir()
         import("core.base.task")
         -- The second arg of task.run is used if we plan on calling `xmake proxy_files`.
         -- The proxy_files task is not exposed to the CLI, so we pass an empty second arg.

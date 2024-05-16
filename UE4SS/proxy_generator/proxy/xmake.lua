@@ -19,7 +19,7 @@ target("proxy")
     set_basename(path.basename(get_config("ue4ssProxyPath")))
 
     after_load(function (target)
-        local output_path = path.join(get_config("ue4ssRoot"), target:dep("proxy_generator"):autogendir())
+        local output_path = path.join(target:dep("proxy_generator"):autogendir())
         local proxy_name = path.basename(target:targetfile())
         target:add("files", path.join(output_path, "dllmain.cpp"), { always_added = true })
         target:add("files", path.join(output_path, proxy_name .. ".asm"), { rule = "asm", always_added = true })
