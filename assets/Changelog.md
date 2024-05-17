@@ -36,6 +36,8 @@ BREAKING: Changed `FTransform` constructor to be identical to unreal.
 ### General
 
 ### Live View
+Fixed the majority of the lag ([UE4SS #512](https://github.com/UE4SS-RE/RE-UE4SS/pull/512))
+
 Added support for watching ArrayProperty and StructProperty ([UE4SS #419](https://github.com/UE4SS-RE/RE-UE4SS/pull/419))
 
 The search filter `ExcludeClassName` can now be found in the `IncludeClassNames` dropdown list. ([UE4SS #472](https://github.com/UE4SS-RE/RE-UE4SS/pull/472)) - Buckminsterfullerene
@@ -107,13 +109,17 @@ Fixes mods not loading when UE4SS initializes too late ([UE4SS #454](https://git
 ## Settings
 
 ### Added
-```
+```ini
 [Hooks]
 HookLoadMap = 1
 HookAActorTick = 1
 ```
 
 ### Removed
+```ini
+[Debug]
+LiveViewObjectsPerGroup = 32768
+```
 
 
 v3.0.1
