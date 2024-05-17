@@ -12,21 +12,14 @@ includes("LuaMadeSimple")
 includes("LuaRaw")
 includes("MProgram")
 includes("ParserBase")
+includes("patternsleuth_bind")
 includes("Profiler")
 includes("ScopedTimer")
 includes("SinglePassSigScanner")
 includes("Unreal")
 
--- Patternsleuth -> START
-
-add_requires("cargo::patternsleuth_bind", { debug = is_mode_debug(), configs = { cargo_toml = path.join(os.scriptdir(), "patternsleuth_bind/Cargo.toml") } })
-
-target("patternsleuth_bind")
+-- The patternsleuth target is managed by the cargo.build rule.
+target("patternsleuth")
     set_kind("static")
-    set_values("rust.cratetype", "staticlib")
-    add_files("patternsleuth_bind/src/lib.rs")
-    add_packages("cargo::patternsleuth_bind")
-
-    add_links("ws2_32", "advapi32", "userenv", "ntdll", "oleaut32", "bcrypt", "ole32", { public = true })
-
--- Patternsleuth -> END
+    add_rules("cargo.build", {project_name = "patternsleuth", is_debug = is_mode_debug(), features= {"process-internal"}})
+    add_files("patternsleuth/Cargo.toml")

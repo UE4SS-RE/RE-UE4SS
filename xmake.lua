@@ -11,8 +11,8 @@ set_config("buildir", "Intermediates")
 -- /modules/rules/my_module.lua     import("rules.my_module")
 add_moduledirs("tools/xmakescripts/modules")
 
--- Load the build_rules file into the global scope.
-includes("tools/xmakescripts/rules/build_rules.lua")
+-- Load our rule files into the global scope.
+includes("tools/xmakescripts/rules/**.lua")
 
 -- Generate the mode rules.
 local modes = generate_compilation_modes()
