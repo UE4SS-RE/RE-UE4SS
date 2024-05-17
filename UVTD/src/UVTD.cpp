@@ -63,6 +63,7 @@ namespace RC::UVTD
                 "PDBs/5_01.pdb",
                 "PDBs/5_02.pdb",
                 "PDBs/5_03.pdb",
+                "PDBs/5_04.pdb",
         };
 
         UnrealVirtualGenerator::output_cleanup();

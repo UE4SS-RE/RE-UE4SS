@@ -25,8 +25,10 @@ Init()
 local function GetActorFromHitResult(HitResult)
     if UnrealVersion:IsBelow(5, 0) then
         return HitResult.Actor:Get()
-    else
+    elseif UnrealVersion:IsBelow(5, 4) then
         return HitResult.HitObjectHandle.Actor:Get()
+    else
+        return HitResult.HitObjectHandle.ReferenceObject:Get()
     end
 end
 
