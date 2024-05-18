@@ -21,5 +21,5 @@ includes("Unreal")
 -- The patternsleuth target is managed by the cargo.build rule.
 target("patternsleuth")
     set_kind("static")
-    add_rules("cargo.build", {project_name = "patternsleuth", is_debug = is_mode_debug(), features= {"process-internal"}})
+    add_rules("cargo.build", {project_name = "patternsleuth", is_debug = is_mode_debug(), features= { "process-internal" }})
     add_files("patternsleuth/Cargo.toml")
