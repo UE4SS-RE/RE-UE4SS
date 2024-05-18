@@ -2877,7 +2877,7 @@ namespace RC::GUI
         auto typed_this = static_cast<LiveView*>(data->UserData);
         if (LiveView::s_apply_search_filters_when_not_searching)
         {
-            static constexpr auto message = std::string_view{"Searching is disabled while 'Apply when not searching' is enabled.'"};
+            static constexpr auto message = std::string_view{"Searching is disabled while 'Apply filters when not searching' is enabled.'"};
             strncpy_s(data->Buf, message.size() + 1, message.data(), message.size() + 1);
             data->BufTextLen = message.size();
             data->BufDirty = true;
@@ -3096,7 +3096,7 @@ namespace RC::GUI
             }
             else
             {
-                ImGui::Text("You can't search with 'Apply when not searching' enabled.");
+                ImGui::Text("You can't search with 'Apply filters when not searching' enabled.");
                 ImGui::Text("Right click to bring up the menu and disable this option.");
             }
             ImGui::EndTooltip();
@@ -3118,7 +3118,7 @@ namespace RC::GUI
             {
                 ImGui::BeginDisabled();
             }
-            ImGui::Checkbox("Apply when not searching", &s_apply_search_filters_when_not_searching);
+            ImGui::Checkbox("Apply filters when not searching", &s_apply_search_filters_when_not_searching);
             if (is_searching_by_name)
             {
                 ImGui::EndDisabled();
