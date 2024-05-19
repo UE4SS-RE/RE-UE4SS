@@ -18,6 +18,11 @@ rule("rust.link")
         -- This allows xmake to detect if we need to rebuild if the native libs reported by rust
         -- have been regenerated/changed.
         local native_libs = path.join(target:dependir(), "native-libs.txt")
+
+        if not os.exists(native_libs) then
+            raise("Cargo target: %s did not export a list of native libs to link against. Try `xmake build --rebuild %s`", target:name(), target:name())
+        end
+
         local dependinfo = depend.load(target:dependfile()) or {}
         table.append(dependinfo.files, native_libs)
         -- There might be a way to avoid manual deduping of the dependency files to achieve
@@ -85,7 +90,7 @@ rule("cargo.build")
         local project_name = target:extraconf("rules", "cargo.build", "project_name")
         local is_debug = target:extraconf("rules", "cargo.build", "is_debug")
         local cargo_dir, cargo_mode_dir, cargo_mode = cargo_helpers.get_cargo_context(target, is_debug)
-        local targetfile = target:targetfile()
+        local targetfile = path.join(cargo_mode_dir, target:filename())
         
         local argv = {
             "rustc",
@@ -112,6 +117,14 @@ rule("cargo.build")
         import("core.base.option")
         local dryrun = option.get("dry-run")
         
+        -- Parse cargo's dependent files list and add to this target's dependent files list.
+        -- This allows us to precisely add any .rs files that should trigger a rebuild.
+        local dependent_files = cargo_helpers.get_dependencies(path.join(cargo_mode_dir, target:basename().. ".d"))
+        -- Detect any changes to Cargo.toml.
+        table.join2(dependent_files, sourcefile)
+        -- Detect any changes to the xxx.rlib target file.
+        table.join2(dependent_files, path.join(cargo_mode_dir, target:filename()))
+
         -- The function in depend.on_changed() runs when xmake detects changes that will require a rebuild.
         -- The conditions that trigger a rebuild are defined in on_changed(function(), { Conditions }).
         depend.on_changed(function ()
@@ -127,19 +140,13 @@ rule("cargo.build")
             
             if not dryrun then
                 os.execv(cargo.program, argv)
-                
-                -- Copy the .rlib to the Binaries dir so any downstream dependencies automatically know where to find it.
-                os.cp(path.join(cargo_mode_dir, target:filename()), target:targetfile())
             end
-        end, {  dependfile = target:dependfile(targetfile),
+        end, {  dependfile = target:dependfile(target:targetfile()),
                 lastmtime = os.mtime(targetfile),
                 changed = target:is_rebuilt(),
                 values = argv,
-                -- Parse cargo's dependent files list and add to this target's dependent files list.
-                -- This allows us to precisely add any .rs files that should trigger a rebuild.
-                files = cargo_helpers.get_dependencies(path.join(cargo_mode_dir, target:basename().. ".d")),
-                dryrun = dryrun})
-               
+                files = dependent_files,
+                dryrun = dryrun})  
    end)
 
    before_clean(function(target)
@@ -165,8 +172,6 @@ rule("cargo.build")
                 "--profile",
                 cargo_mode
             }
-
-            print(argv)
             os.execv(cargo.program, argv)
         end
     end)
