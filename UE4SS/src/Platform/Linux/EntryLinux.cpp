@@ -47,16 +47,23 @@ void UE4SS_Start()
         fprintf(stderr, "%s\n", e.what());
     }
 #endif
-    auto ue4sspath = to_system_string(dl_info.dli_fname);
-    auto program = new UE4SSProgram(ue4sspath, {});
-    UE4SSInited = true;
+
+    auto ue4sspath = new SystemStringType(to_system_string(dl_info.dli_fname));
     // use pthread here
     pthread_create(
             &ue4ss_mainthread,
             nullptr,
             [](void* arg) -> void* {
-                auto program = (UE4SSProgram*)arg;
-                program->init();
+                auto ue4sspathPtr = reinterpret_cast<SystemStringType*>(arg);
+                auto program = new UE4SSProgram(*ue4sspathPtr, {});
+                delete ue4sspathPtr;
+                UE4SSInited = true;
+
+                if (auto e = program->get_error_object(); !e->has_error())
+                {
+                    program->init();
+                }
+
                 if (auto e = program->get_error_object(); e->has_error())
                 {
                     // If the output system errored out then use printf_s as a fallback
@@ -72,7 +79,7 @@ void UE4SS_Start()
                 }
                 return nullptr;
             },
-            program);
+            ue4sspath);
 }
 
 /*

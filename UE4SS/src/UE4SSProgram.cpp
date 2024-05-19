@@ -175,13 +175,20 @@ namespace RC
         {
             setup_paths(moduleFilePath);
 
+            // Setup the log file
+            auto& file_device = Output::set_default_devices<Output::NewFileDevice>();
+            fprintf(stderr, "log dir: %s\n", (m_log_directory / m_log_file_name).c_str());
+            file_device.set_file_name_and_path(to_system(m_log_directory / m_log_file_name));
+
+            create_simple_console();
+
             try
             {
                 settings_manager.deserialize(m_settings_path_and_file);
             }
             catch (std::exception& e)
             {
-                create_emergency_console_for_early_error(std::format(SYSSTR("The IniParser failed to parse: {}"), to_system(e.what())));
+                set_error("The IniParser failed to parse: %s", to_system(e.what()).data());
                 return;
             }
 
@@ -202,11 +209,6 @@ namespace RC
             m_input_handler.init();
 #endif
 
-            // Setup the log file
-            auto& file_device = Output::set_default_devices<Output::NewFileDevice>();
-            file_device.set_file_name_and_path(to_system(m_log_directory / m_log_file_name));
-
-            create_simple_console();
 
 #ifdef HAS_UI
             if (settings_manager.Debug.DebugConsoleEnabled)
