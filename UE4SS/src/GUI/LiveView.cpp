@@ -1577,14 +1577,14 @@ namespace RC::GUI
             std::string search_buffer{m_search_by_name_buffer};
             if (search_buffer.empty() || s_apply_search_filters_when_not_searching)
             {
-                Output::send(STR("Search all chunks\n"));
+                Output::send(SYSSTR("Search all chunks\n"));
                 s_name_to_search_by.clear();
                 m_object_iterator = &LiveView::guobjectarray_iterator;
                 m_is_searching_by_name = false;
             }
             else
             {
-                Output::send(STR("Search for: {}\n"), search_buffer.empty() ? STR("") : to_wstring(search_buffer));
+                Output::send(SYSSTR("Search for: {}\n"), search_buffer.empty() ? STR("") : to_wstring(search_buffer));
                 s_name_to_search_by = search_buffer;
                 m_object_iterator = &LiveView::guobjectarray_by_name_iterator;
                 m_is_searching_by_name = true;

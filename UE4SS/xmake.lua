@@ -1,26 +1,18 @@
+local hasWindows = is_plat("windows")
+local uiMode = get_config("ue4ssUI")
 
-if is_plat("windows") then
-    includes("proxy_generator")
-end
+if uiMode ~= nil and uiMode ~= "None" then
+    local isTUI = uiMode == "TUI"
+    add_requires("ImGuiTextEdit v1.0", { debug = is_mode_debug(), configs = { tui = isTUI, runtimes = get_mode_runtimes() } })
 
-if has_config("GUI") then 
-    if is_plat("windows") then
-        add_requires("imgui v1.89", { debug = is_mode_debug(), configs = { win32 = true, dx11 = true, opengl3 = true, glfw_opengl3 = true, runtimes = get_mode_runtimes() } })
-    else
-        add_requires("imgui v1.89", { debug = is_mode_debug(), configs = { win32 = false, dx11 = false, opengl3 = true, glfw_opengl3 = true, runtimes = get_mode_runtimes() } })
+    if uiMode == "GUI" then
+        add_requires("imgui v1.89", { debug = is_mode_debug(), configs = { win32 = hasWindows, dx11 = hasWindows, opengl3 = true, glfw_opengl3 = true , runtimes = get_mode_runtimes()} } )
+        add_requires("IconFontCppHeaders v1.0", { debug = is_mode_debug(), configs = {runtimes = get_mode_runtimes()}})
+        add_requires("glfw 3.3.9", { debug = is_mode_debug() , configs = {runtimes = get_mode_runtimes()}})
+        add_requires("opengl", { debug = is_mode_debug(), configs = {runtimes = get_mode_runtimes()} })
+    elseif uiMode == "TUI" then
+        add_requires("imtui v1.0.5", { debug = is_mode_debug(), configs = { runtimes = get_mode_runtimes() } })
     end
-elseif has_config("TUI") then
-    add_requires("imtui v1.0.5", { debug = is_mode_debug(), configs = { runtimes = get_mode_runtimes() } })
-end
-
-if has_config("UI") then
-    add_requires("ImGuiTextEdit v1.0", { debug = is_mode_debug(), configs = { runtimes = get_mode_runtimes() } })
-end
-
-if has_config("GUI") then
-    add_requires("IconFontCppHeaders v1.0", { debug = is_mode_debug(), configs = { runtimes = get_mode_runtimes() } })
-    add_requires("glfw 3.3.9", { debug = is_mode_debug(), configs = { runtimes = get_mode_runtimes() } })
-    add_requires("opengl", { debug = is_mode_debug(), configs = { runtimes = get_mode_runtimes() } })
 end
 
 option("ue4ssBetaIsStarted")
@@ -38,6 +30,48 @@ option("ue4ssIsBeta")
     set_values(true, false)
 
     set_description("Is this a beta release")
+
+option("ue4ssUI")
+    set_default("GUI")
+    set_showmenu(true)
+
+    set_values("None", "GUI", "TUI")
+
+    set_description("UE4SS GUI Modes. TUI is not available on windows")
+
+    after_check(function (option)
+        local value = option:value()
+
+        if value == "TUI" and is_plat("windows") then
+            raise("TUI is not available on windows")
+        end
+
+        if value ~= "None" then
+            option:add("defines", "HAS_UI")
+        end
+
+        if value == "GUI" then
+            option:add("defines", "HAS_GUI")
+        elseif value == "TUI" then
+            option:add("defines", "HAS_TUI")
+        end
+    end)
+
+option("ue4ssInput")
+    set_default(true)
+    set_showmenu(true)
+
+    add_deps("ue4ssUI")
+    add_defines("HAS_INPUT")
+
+    set_description("Enable the input system.")
+
+    after_check(function (option)
+        local noUI = option:dep("ue4ssUI"):value() == "None"
+        if noUI and not is_plat("windows") then
+            option:enable(false)
+        end
+    end)
 
 local projectName = "UE4SS"
 
@@ -62,7 +96,7 @@ target(projectName)
     set_exceptions("cxx")
     set_default(true)
     add_rules("ue4ss.defines.exports")
-    add_options("ue4ssBetaIsStarted", "ue4ssIsBeta")
+    add_options("ue4ssBetaIsStarted", "ue4ssIsBeta", "ue4ssUI", "ue4ssInput")
     add_includedirs("include", { public = true })
     add_includedirs("generated_include", { public = true })
     add_headerfiles("include/**.hpp")
@@ -70,22 +104,29 @@ target(projectName)
 
     add_files("src/**.cpp|Platform/**.cpp|GUI/**.cpp")
     
-    if has_config("UI") then
+    if uiMode ~= "None" then
         add_files("src/GUI/*.cpp")
-        if is_plat("windows") then
-            -- we think by deafult windows have everything just for easy... 
-            -- but this maybe not the case
-            add_files("src/GUI/Platform/D3D11/**.cpp")
+
+        add_packages("ImGuiTextEdit", { public = true })
+
+        if uiMode == "GUI" then
             add_files("src/GUI/Platform/GLFW/**.cpp")
             add_files("src/GUI/Platform/GUI/**.cpp")
-            add_files("src/GUI/Platform/Windows/**.cpp")
-        else
-            if has_config("GUI") then
-                add_files("src/GUI/Platform/GLFW/**.cpp")
+
+            add_deps("glad")
+
+            add_packages("ImGui", "IconFontCppHeaders", "glfw", "opengl", { public = true })
+
+            if is_plat("windows") then
+                add_files("src/GUI/Platform/D3D11/**.cpp")
+                add_files("src/GUI/Platform/Windows/**.cpp")
+
+                add_links("d3d11", { public = true })
             end
-            if has_config("TUI") then 
-                add_files("src/GUI/Platform/TUI/**.cpp")
-            end
+        elseif uiMode == "TUI" then
+            add_files("src/GUI/Platform/TUI/**.cpp")
+
+            add_packages("imtui", { public = true })
         end
     end
 
@@ -95,29 +136,11 @@ target(projectName)
         "IniParser", "JSON", 
         "Constructs", "Helpers", "MProgram",
         "ScopedTimer", "Profiler", "patternsleuth_bind",
-        "glad", { public = true }
+        { public = true }
     )
 
-    add_options("UI", "GUI", "TUI", "Input")
-
     add_deps("Input", { public = true })
-    
-    if is_plat("windows") then
-        add_files("src/Platform/Win32/CrashDumper.cpp")
-        add_files("src/Platform/Win32/EntryWin32.cpp")
-        if has_config("GUI") then
-            add_packages("ImGui", "ImGuiTextEdit", "IconFontCppHeaders", "glfw", "opengl", { public = true })
-            add_links("d3d11", { public = true })
-        end
-    elseif is_plat("linux") then
-        add_files("src/Platform/Linux/EntryLinux.cpp")
-        if has_config("GUI") then
-            add_packages("ImGui", "ImGuiTextEdit", "IconFontCppHeaders", "glfw", "opengl", { public = true })
-        elseif has_config("TUI") then
-            add_packages("imtui", "ImGuiTextEdit", { public = true })
-        end
-    end
-    
+
     add_packages("glaze", "polyhook_2", { public = true })
 
     after_load(function (target)

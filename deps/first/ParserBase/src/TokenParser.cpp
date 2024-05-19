@@ -2,6 +2,8 @@
 #include <ParserBase/TokenParser.hpp>
 #include <ParserBase/Tokenizer.hpp>
 
+#include <algorithm>
+
 namespace RC::ParserBase
 {
     TokenParser::TokenParser(const Tokenizer& tokenizer, SystemStringType& input) : m_tokenizer(tokenizer), m_data(input)

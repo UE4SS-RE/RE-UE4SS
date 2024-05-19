@@ -2,20 +2,10 @@ includes("zycore")
 includes("zydis")
 includes("polyhook_2")
 includes("glaze")
-
-if has_config("TUI") then
-    includes("imtui")
-end
-
-if has_config("UI") then
-    includes("imgui")
-end
-
+-- includes("imtui")
+includes("imgui")
 includes("glad")
-
-if is_plat("windows") then
-    includes("raw_pdb")
-end
+includes("raw_pdb")
 
 add_requires("zycore v1.5.0", { debug = is_mode_debug(), configs = { runtimes = get_mode_runtimes() } })
 add_requires("zydis v4.1.0", { debug = is_mode_debug(), configs = { runtimes = get_mode_runtimes() } })

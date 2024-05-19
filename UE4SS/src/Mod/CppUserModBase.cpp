@@ -24,29 +24,30 @@ namespace RC
         }
         GUITabs.clear();
 
-        auto& key_events = UE4SSProgram::get_program().m_input_handler.get_events();
-        std::erase_if(key_events, [&](Input::KeySet& input_event) -> bool {
-            bool were_all_events_registered_from_this_mod = true;
-            for (auto& [key, vector_of_key_data] : input_event.key_data)
-            {
-                std::erase_if(vector_of_key_data, [&](Input::KeyData& key_data) -> bool {
-                    // custom_data == 1: Bind came from Lua, and custom_data2 is nullptr.
-                    // custom_data == 2: Bind came from C++, and custom_data2 is a pointer to KeyDownEventData. Must free it.
-                    auto event_data = static_cast<KeyDownEventData*>(key_data.custom_data2);
-                    if (key_data.custom_data == 2 && event_data && event_data->mod == this)
-                    {
-                        delete event_data;
-                        return true;
-                    }
-                    else
-                    {
-                        were_all_events_registered_from_this_mod = false;
-                        return false;
-                    }
-                });
-            }
+        UE4SSProgram::get_program().m_input_handler.get_events_safe([&](auto& key_events) {
+            std::erase_if(key_events, [&](Input::KeySet& input_event) -> bool {
+                bool were_all_events_registered_from_this_mod = true;
+                for (auto& [key, vector_of_key_data] : input_event.key_data)
+                {
+                    std::erase_if(vector_of_key_data, [&](Input::KeyData& key_data) -> bool {
+                        // custom_data == 1: Bind came from Lua, and custom_data2 is nullptr.
+                        // custom_data == 2: Bind came from C++, and custom_data2 is a pointer to KeyDownEventData. Must free it.
+                        auto event_data = static_cast<KeyDownEventData*>(key_data.custom_data2);
+                        if (key_data.custom_data == 2 && event_data && event_data->mod == this)
+                        {
+                            delete event_data;
+                            return true;
+                        }
+                        else
+                        {
+                            were_all_events_registered_from_this_mod = false;
+                            return false;
+                        }
+                    });
+                }
 
-            return were_all_events_registered_from_this_mod;
+                return were_all_events_registered_from_this_mod;
+            });
         });
         #endif
     }

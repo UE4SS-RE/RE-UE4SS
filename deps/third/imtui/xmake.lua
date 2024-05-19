@@ -1,9 +1,9 @@
 package("imtui")
     add_urls("https://github.com/ggerganov/imtui.git")
 
-    add_versions("v1.0.5-old", "9f39c3e090c9b1e15557eac38a2f4389462f59df")
+    add_versions("v1.0.5", "9f39c3e090c9b1e15557eac38a2f4389462f59df")
     local root = get_config("ue4ssRoot")
-    add_patches("v1.0.5", path.join(root, "deps", "third", "imtui", "fix-size-cjk-and-mouse.patch"))
+    -- add_patches("v1.0.5", path.join(root, "deps", "third", "imtui", "fix-size-cjk-and-mouse.patch"))
 
     -- WARN: xmake cannot distinguish ncursesw and ncurses, this may cause problem on other systems
     add_deps("cmake", "ncurses")

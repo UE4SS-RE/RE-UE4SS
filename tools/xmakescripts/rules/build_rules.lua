@@ -61,7 +61,20 @@ local PLATFORM_TYPES = {
             "UNICODE",
             "_UNICODE"
         },
-
+    },
+    ["Linux"] = {
+        ["defines"] = {
+            "PLATFORM_LINUX",
+            "PLATFORM_UNIX",
+            "LINUX",
+            "OVERRIDE_PLATFORM_HEADER_NAME=Linux",
+            "UBT_COMPILED_PLATFORM=Linux",
+            "printf_s=printf",
+            "DLLEXT=.so"
+        },
+        ["cxflags"] = {
+            "clang::-fno-delete-null-pointer-checks"
+        }
     }
 }
 
@@ -77,7 +90,8 @@ local CLANG_COMPILE_OPTIONS = {
         "-Wno-unknown-pragmas",
         "-Wno-unused-parameter",
         "-fms-extensions",
-        "-Wignored-attributes"
+        "-Wignored-attributes",
+        "-fPIC"
     },
     ["ldflags"] = {
         "-g"
