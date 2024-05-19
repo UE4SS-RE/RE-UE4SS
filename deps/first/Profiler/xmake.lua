@@ -1,7 +1,5 @@
 local projectName = "Profiler"
 
-includes("deps/Tracy")
-
 add_requires("Tracy", { optional = true, debug = is_mode_debug(), configs = {runtimes = get_mode_runtimes()}})
 add_requires("Superluminal", { system = true, optional = true, debug = is_mode_debug(), configs = {runtimes = get_mode_runtimes()} })
 
