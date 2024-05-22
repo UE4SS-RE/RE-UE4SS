@@ -8,9 +8,9 @@ namespace RC::GUI::Filter
     class ClassNamesFilter
     {
       public:
-        static inline StringType s_debug_name{STR("ClassNamesFilter")};
+        static inline UEStringType s_debug_name{STR("ClassNamesFilter")};
         static inline std::string s_internal_class_names{};
-        static inline std::vector<StringType> list_class_names;
+        static inline std::vector<UEStringType> list_class_names;
         static inline bool b_is_exclude{true};
 
         static auto post_eval(UObject* object) -> bool

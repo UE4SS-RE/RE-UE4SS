@@ -6,7 +6,10 @@ if uiMode ~= nil and uiMode ~= "None" then
     add_requires("ImGuiTextEdit v1.0", { debug = is_mode_debug(), configs = { tui = isTUI, runtimes = get_mode_runtimes() } })
 
     if uiMode == "GUI" then
-        add_requires("imgui v1.89", { debug = is_mode_debug(), configs = { win32 = hasWindows, dx11 = hasWindows, opengl3 = true, glfw_opengl3 = true , runtimes = get_mode_runtimes()} } )
+        local imguiConfig = { win32 = hasWindows, dx11 = hasWindows, opengl3 = true, glfw = true , runtimes = get_mode_runtimes()}
+        add_requires("imgui v1.89", { alias = "ue4ssImGui", debug = is_mode_debug(), configs = imguiConfig } )
+        add_requireconfs("ImGuiTextEdit.imgui", { configs = imguiConfig })
+
         add_requires("IconFontCppHeaders v1.0", { debug = is_mode_debug(), configs = {runtimes = get_mode_runtimes()}})
         add_requires("glfw 3.3.9", { debug = is_mode_debug() , configs = {runtimes = get_mode_runtimes()}})
         add_requires("opengl", { debug = is_mode_debug(), configs = {runtimes = get_mode_runtimes()} })
@@ -104,6 +107,12 @@ target(projectName)
 
     add_files("src/**.cpp|Platform/**.cpp|GUI/**.cpp")
     
+    if is_plat("windows") then
+        add_files("src/Platform/Win32/CrashDumper.cpp", "src/Platform/Win32/EntryWin32.cpp")
+    elseif is_plat("linux") then
+        add_files("src/Platform/Linux/EntryLinux.cpp")
+    end
+
     if uiMode ~= "None" then
         add_files("src/GUI/*.cpp")
 
@@ -111,15 +120,18 @@ target(projectName)
 
         if uiMode == "GUI" then
             add_files("src/GUI/Platform/GLFW/**.cpp")
-            add_files("src/GUI/Platform/GUI/**.cpp")
 
-            add_deps("glad")
+            add_defines("HAS_GLFW", { public = true })
 
-            add_packages("ImGui", "IconFontCppHeaders", "glfw", "opengl", { public = true })
+            add_deps("glad", { public = true })
+
+            add_packages("ue4ssImGui", "IconFontCppHeaders", "glfw", "opengl", { public = true })
 
             if is_plat("windows") then
                 add_files("src/GUI/Platform/D3D11/**.cpp")
                 add_files("src/GUI/Platform/Windows/**.cpp")
+
+                add_defines("HAS_D3D11", { public = true })
 
                 add_links("d3d11", { public = true })
             end

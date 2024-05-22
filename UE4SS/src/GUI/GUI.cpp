@@ -547,6 +547,7 @@ namespace RC::GUI
 
     auto DebuggingGUI::set_gfx_backend(GfxBackend backend) -> void
     {
+        Output::send(SYSSTR("Setting gfx backend!\n"));
         switch (backend)
         {
 #ifdef HAS_D3D11

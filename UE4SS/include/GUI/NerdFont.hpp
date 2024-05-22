@@ -6,6 +6,7 @@
 #define ICON_FA_FILE_ALT "\uf15b"
 #define ICON_FA_EYE "\uf06e"
 #define ICON_FA_PUZZLE_PIECE "\uf12e"
+#define ICON_FA_SAVE "\ueb4b"
 
 #define ICON_FA_ANGLE_DOUBLE_LEFT "<<"
 #define ICON_FA_ANGLE_DOUBLE_RIGHT ">>"

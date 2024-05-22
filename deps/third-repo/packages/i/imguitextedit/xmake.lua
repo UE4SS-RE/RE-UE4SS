@@ -6,8 +6,6 @@ package("ImGuiTextEdit")
 
     add_configs("tui", { description = "Enable TUI.", default = false, type = "boolean" })
 
-    add_deps("cmake")
-
     add_includedirs("include", { public = true })
 
     local function _get_imgui_name(isTUI)

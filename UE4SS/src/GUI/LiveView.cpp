@@ -287,28 +287,28 @@ namespace RC::GUI
     };
     FLiveViewDeleteListener FLiveViewDeleteListener::LiveViewDeleteListener{};
 
-    static auto add_bool_filter_to_json(JSON::Array& json_filters, const StringType& filter_name, bool is_enabled) -> void
+    static auto add_bool_filter_to_json(JSON::Array& json_filters, const SystemStringType& filter_name, bool is_enabled) -> void
     {
         auto& json_object = json_filters.new_object();
-        json_object.new_string(STR("FilterName"), filter_name);
-        auto& filter_data = json_object.new_object(STR("FilterData"));
-        filter_data.new_bool(STR("Enabled"), is_enabled);
+        json_object.new_string(SYSSTR("FilterName"), filter_name);
+        auto& filter_data = json_object.new_object(SYSSTR("FilterData"));
+        filter_data.new_bool(SYSSTR("Enabled"), is_enabled);
     }
 
     template <typename ContainerType>
-    static auto add_array_filter_to_json(JSON::Array& json_filters, const StringType& filter_name, const ContainerType& container, const StringType& array_name) -> void
+    static auto add_array_filter_to_json(JSON::Array& json_filters, const SystemStringType& filter_name, const ContainerType& container, const SystemStringType& array_name) -> void
     {
         auto& json_object = json_filters.new_object();
-        json_object.new_string(STR("FilterName"), filter_name);
-        auto& filter_data = json_object.new_object(STR("FilterData"));
+        json_object.new_string(SYSSTR("FilterName"), filter_name);
+        auto& filter_data = json_object.new_object(SYSSTR("FilterData"));
 
-        if (array_name == STR("ClassNames"))
+        if (array_name == SYSSTR("ClassNames"))
         {
-            filter_data.new_bool(STR("IsExclude"), Filter::ClassNamesFilter::b_is_exclude);
+            filter_data.new_bool(SYSSTR("IsExclude"), Filter::ClassNamesFilter::b_is_exclude);
         }
-        else if (array_name == STR("FunctionParamFlags"))
+        else if (array_name == SYSSTR("FunctionParamFlags"))
         {
-            filter_data.new_bool(STR("IncludeReturnProperty"), Filter::FunctionParamFlags::s_include_return_property);
+            filter_data.new_bool(SYSSTR("IncludeReturnProperty"), Filter::FunctionParamFlags::s_include_return_property);
         }
 
         auto& values_array = filter_data.new_array(array_name);
@@ -316,7 +316,7 @@ namespace RC::GUI
         {
             if constexpr (std::is_same_v<typename ContainerType::value_type, FName>)
             {
-                values_array.new_string(value.ToString());
+                values_array.new_string(to_string(value.ToString()));
             }
             else if constexpr (std::is_same_v<typename ContainerType::value_type, bool>)
             {
@@ -324,7 +324,7 @@ namespace RC::GUI
             }
             else
             {
-                values_array.new_string(value);
+                values_array.new_string(to_string(value));
             }
         }
     }
@@ -332,30 +332,30 @@ namespace RC::GUI
     static auto internal_save_filters_to_disk() -> void
     {
         auto json = JSON::Object{};
-        auto& json_filters = json.new_array(STR("Filters"));
+        auto& json_filters = json.new_array(SYSSTR("Filters"));
         {
-            add_bool_filter_to_json(json_filters, STR("IncludeInheritance"), LiveView::s_include_inheritance);
-            add_bool_filter_to_json(json_filters, STR("UseRegexForSearch"), LiveView::s_use_regex_for_search);
-            add_bool_filter_to_json(json_filters, STR("ApplySearchFiltersWhenNotSearching"), LiveView::s_apply_search_filters_when_not_searching);
-            add_bool_filter_to_json(json_filters, Filter::DefaultObjectsOnly::s_debug_name, Filter::DefaultObjectsOnly::s_enabled);
-            add_bool_filter_to_json(json_filters, Filter::IncludeDefaultObjects::s_debug_name, Filter::IncludeDefaultObjects::s_enabled);
-            add_bool_filter_to_json(json_filters, Filter::InstancesOnly::s_debug_name, Filter::InstancesOnly::s_enabled);
-            add_bool_filter_to_json(json_filters, Filter::NonInstancesOnly::s_debug_name, Filter::NonInstancesOnly::s_enabled);
+            add_bool_filter_to_json(json_filters, SYSSTR("IncludeInheritance"), LiveView::s_include_inheritance);
+            add_bool_filter_to_json(json_filters, SYSSTR("UseRegexForSearch"), LiveView::s_use_regex_for_search);
+            add_bool_filter_to_json(json_filters, SYSSTR("ApplySearchFiltersWhenNotSearching"), LiveView::s_apply_search_filters_when_not_searching);
+            add_bool_filter_to_json(json_filters, to_system(Filter::DefaultObjectsOnly::s_debug_name), Filter::DefaultObjectsOnly::s_enabled);
+            add_bool_filter_to_json(json_filters, to_system(Filter::IncludeDefaultObjects::s_debug_name), Filter::IncludeDefaultObjects::s_enabled);
+            add_bool_filter_to_json(json_filters, to_system(Filter::InstancesOnly::s_debug_name), Filter::InstancesOnly::s_enabled);
+            add_bool_filter_to_json(json_filters, to_system(Filter::NonInstancesOnly::s_debug_name), Filter::NonInstancesOnly::s_enabled);
         }
         {
-            add_array_filter_to_json(json_filters, Filter::ClassNamesFilter::s_debug_name, Filter::ClassNamesFilter::list_class_names, STR("ClassNames"));
-            add_array_filter_to_json(json_filters, Filter::HasProperty::s_debug_name, Filter::HasProperty::list_properties, STR("Properties"));
-            add_array_filter_to_json(json_filters, Filter::HasPropertyType::s_debug_name, Filter::HasPropertyType::list_property_types, STR("PropertyTypes"));
-            add_array_filter_to_json(json_filters, Filter::FunctionParamFlags::s_debug_name, Filter::FunctionParamFlags::s_checkboxes, STR("FunctionParamFlags"));
+            add_array_filter_to_json(json_filters, to_system(Filter::ClassNamesFilter::s_debug_name), Filter::ClassNamesFilter::list_class_names, SYSSTR("ClassNames"));
+            add_array_filter_to_json(json_filters, to_system(Filter::HasProperty::s_debug_name), Filter::HasProperty::list_properties, SYSSTR("Properties"));
+            add_array_filter_to_json(json_filters, to_system(Filter::HasPropertyType::s_debug_name), Filter::HasPropertyType::list_property_types, SYSSTR("PropertyTypes"));
+            add_array_filter_to_json(json_filters, to_system(Filter::FunctionParamFlags::s_debug_name), Filter::FunctionParamFlags::s_checkboxes, SYSSTR("FunctionParamFlags"));
         }
 
         auto json_file =
-                File::open(StringType{UE4SSProgram::get_program().get_working_directory()} + std::format(STR("\\liveview\\filters.meta.json")),
+                File::open(std::filesystem::path{UE4SSProgram::get_program().get_working_directory()} / SYSSTR("UE4SS-config") SYSSTR("liveview")SYSSTR("filters.meta.json")),
                            File::OpenFor::Writing,
                            File::OverwriteExistingFile::Yes,
                            File::CreateIfNonExistent::Yes);
         int32_t json_indent_level{};
-        json_file.write_string_to_file(json.serialize(JSON::ShouldFormat::Yes, &json_indent_level));
+        json_file.write_file_string_to_file(json.serialize(JSON::ShouldFormat::Yes, &json_indent_level));
     }
 
     static auto save_filters_to_disk() -> void
@@ -366,7 +366,7 @@ namespace RC::GUI
     }
 
     template <typename T>
-    static auto json_array_to_filters_list(JSON::Array& json_array, std::vector<T>& list, StringType type, std::string& internal_value) -> void
+    static auto json_array_to_filters_list(JSON::Array& json_array, std::vector<T>& list, SystemStringType type, std::string& internal_value) -> void
     {
         list.clear();
         internal_value.clear();
@@ -375,7 +375,20 @@ namespace RC::GUI
             {
                 throw std::runtime_error{std::format("Invalid {} in 'filters.meta.json'", to_string(type))};
             }
-            list.emplace_back(item.as<JSON::String>()->get_view());
+            
+            if constexpr (std::is_same_v<T, SystemStringType>)
+            {
+                list.emplace_back(to_system(item.as<JSON::String>()->get_view()));
+            }
+            else if constexpr(std::is_same_v<T, UEStringType> || std::is_same_v<T, FName>)
+            {
+                list.emplace_back(to_ue(item.as<JSON::String>()->get_view()));   
+            }
+            else
+            {
+                static_assert(false, "Unsupported string type");
+            }
+
             return LoopAction::Continue;
         });
         for (const auto& class_name : list)
@@ -399,7 +412,7 @@ namespace RC::GUI
     static auto internal_load_filters_from_disk() -> void
     {
         const auto json_file =
-                File::open(StringType{UE4SSProgram::get_program().get_working_directory()} + std::format(STR("\\liveview\\filters.meta.json")),
+                File::open(std::filesystem::path{UE4SSProgram::get_program().get_working_directory()} / SYSSTR("UE4SS-config") / SYSSTR("liveview") / SYSSTR("filters.meta.json")),
                            File::OpenFor::Reading,
                            File::OverwriteExistingFile::No,
                            File::CreateIfNonExistent::Yes);
@@ -410,68 +423,68 @@ namespace RC::GUI
         }
 
         const auto json_global_object = JSON::Parser::parse(json_file_contents);
-        const auto& json_filters = json_global_object->get<JSON::Array>(STR("Filters"));
+        const auto& json_filters = json_global_object->get<JSON::Array>(SYSSTR("Filters"));
         json_filters.for_each([&](const JSON::Value& filter) {
             if (!filter.is<JSON::Object>())
             {
                 throw std::runtime_error{"Invalid filter in 'filters.meta.json'"};
             }
             auto& json_object = *filter.as<JSON::Object>();
-            auto filter_name = json_object.get<JSON::String>(STR("FilterName")).get_view();
-            auto& filter_data = json_object.get<JSON::Object>(STR("FilterData"));
+            auto filter_name = json_object.get<JSON::String>(SYSSTR("FilterName")).get_view();
+            auto& filter_data = json_object.get<JSON::Object>(SYSSTR("FilterData"));
 
-            if (filter_name == STR("IncludeInheritance"))
+            if (filter_name == SYSSTR("IncludeInheritance"))
             {
-                LiveView::s_include_inheritance = filter_data.get<JSON::Bool>(STR("Enabled")).get();
+                LiveView::s_include_inheritance = filter_data.get<JSON::Bool>(SYSSTR("Enabled")).get();
             }
-            else if (filter_name == STR("UseRegexForSearch"))
+            else if (filter_name == SYSSTR("UseRegexForSearch"))
             {
-                LiveView::s_use_regex_for_search = filter_data.get<JSON::Bool>(STR("Enabled")).get();
+                LiveView::s_use_regex_for_search = filter_data.get<JSON::Bool>(SYSSTR("Enabled")).get();
             }
-            else if (filter_name == STR("ApplySearchFiltersWhenNotSearching"))
+            else if (filter_name == SYSSTR("ApplySearchFiltersWhenNotSearching"))
             {
-                LiveView::s_apply_search_filters_when_not_searching = filter_data.get<JSON::Bool>(STR("Enabled")).get();
+                LiveView::s_apply_search_filters_when_not_searching = filter_data.get<JSON::Bool>(SYSSTR("Enabled")).get();
             }
-            else if (filter_name == Filter::DefaultObjectsOnly::s_debug_name)
+            else if (filter_name == to_system(Filter::DefaultObjectsOnly::s_debug_name))
             {
-                Filter::DefaultObjectsOnly::s_enabled = filter_data.get<JSON::Bool>(STR("Enabled")).get();
+                Filter::DefaultObjectsOnly::s_enabled = filter_data.get<JSON::Bool>(SYSSTR("Enabled")).get();
             }
-            else if (filter_name == Filter::IncludeDefaultObjects::s_debug_name)
+            else if (filter_name == to_system(Filter::IncludeDefaultObjects::s_debug_name))
             {
-                Filter::IncludeDefaultObjects::s_enabled = filter_data.get<JSON::Bool>(STR("Enabled")).get();
+                Filter::IncludeDefaultObjects::s_enabled = filter_data.get<JSON::Bool>(SYSSTR("Enabled")).get();
             }
-            else if (filter_name == Filter::InstancesOnly::s_debug_name)
+            else if (filter_name == to_system(Filter::InstancesOnly::s_debug_name))
             {
-                Filter::InstancesOnly::s_enabled = filter_data.get<JSON::Bool>(STR("Enabled")).get();
+                Filter::InstancesOnly::s_enabled = filter_data.get<JSON::Bool>(SYSSTR("Enabled")).get();
             }
-            else if (filter_name == Filter::NonInstancesOnly::s_debug_name)
+            else if (filter_name == to_system(Filter::NonInstancesOnly::s_debug_name))
             {
-                Filter::NonInstancesOnly::s_enabled = filter_data.get<JSON::Bool>(STR("Enabled")).get();
+                Filter::NonInstancesOnly::s_enabled = filter_data.get<JSON::Bool>(SYSSTR("Enabled")).get();
             }
-            else if (filter_name == Filter::ClassNamesFilter::s_debug_name)
+            else if (filter_name == to_system(Filter::ClassNamesFilter::s_debug_name))
             {
-                Filter::ClassNamesFilter::b_is_exclude = filter_data.get<JSON::Bool>(STR("IsExclude")).get();
-                auto& class_names = filter_data.get<JSON::Array>(STR("ClassNames"));
-                json_array_to_filters_list(class_names, Filter::ClassNamesFilter::list_class_names, STR("class name"), Filter::ClassNamesFilter::s_internal_class_names);
+                Filter::ClassNamesFilter::b_is_exclude = filter_data.get<JSON::Bool>(SYSSTR("IsExclude")).get();
+                auto& class_names = filter_data.get<JSON::Array>(SYSSTR("ClassNames"));
+                json_array_to_filters_list(class_names, Filter::ClassNamesFilter::list_class_names, SYSSTR("class name"), Filter::ClassNamesFilter::s_internal_class_names);
             }
-            else if (filter_name == Filter::HasProperty::s_debug_name)
+            else if (filter_name == to_system(Filter::HasProperty::s_debug_name))
             {
-                auto& properties = filter_data.get<JSON::Array>(STR("Properties"));
-                json_array_to_filters_list(properties, Filter::HasProperty::list_properties, STR("property"), Filter::HasProperty::s_internal_properties);
+                auto& properties = filter_data.get<JSON::Array>(SYSSTR("Properties"));
+                json_array_to_filters_list(properties, Filter::HasProperty::list_properties, SYSSTR("property"), Filter::HasProperty::s_internal_properties);
             }
-            else if (filter_name == Filter::HasPropertyType::s_debug_name)
+            else if (filter_name == to_system(Filter::HasPropertyType::s_debug_name))
             {
-                auto& property_types = filter_data.get<JSON::Array>(STR("PropertyTypes"));
+                auto& property_types = filter_data.get<JSON::Array>(SYSSTR("PropertyTypes"));
                 json_array_to_filters_list(property_types,
                                            Filter::HasPropertyType::list_property_types,
-                                           STR("property type"),
+                                           SYSSTR("property type"),
                                            Filter::HasPropertyType::s_internal_property_types);
             }
-            else if (filter_name == Filter::FunctionParamFlags::s_debug_name)
+            else if (filter_name == to_system(Filter::FunctionParamFlags::s_debug_name))
             {
-                Filter::FunctionParamFlags::s_include_return_property = filter_data.get<JSON::Bool>(STR("IncludeReturnProperty")).get();
+                Filter::FunctionParamFlags::s_include_return_property = filter_data.get<JSON::Bool>(SYSSTR("IncludeReturnProperty")).get();
                 Filter::FunctionParamFlags::s_checkboxes.fill(false);
-                auto& function_param_flags = filter_data.get<JSON::Array>(STR("FunctionParamFlags"));
+                auto& function_param_flags = filter_data.get<JSON::Array>(SYSSTR("FunctionParamFlags"));
                 if (function_param_flags.get().size() != Filter::FunctionParamFlags::s_checkboxes.size())
                 {
                     throw std::runtime_error{"Invalid number of function param flag entires in 'filters.meta.json'"};
@@ -1584,7 +1597,7 @@ namespace RC::GUI
             }
             else
             {
-                Output::send(SYSSTR("Search for: {}\n"), search_buffer.empty() ? STR("") : to_wstring(search_buffer));
+                Output::send(SYSSTR("Search for: {}\n"), search_buffer.empty() ? SYSSTR("") : to_system(search_buffer));
                 s_name_to_search_by = search_buffer;
                 m_object_iterator = &LiveView::guobjectarray_by_name_iterator;
                 m_is_searching_by_name = true;
@@ -3210,7 +3223,7 @@ namespace RC::GUI
                         while (std::getline(ss, class_name, ','))
                         {
                             std::erase_if(class_name, isspace);
-                            Filter::ClassNamesFilter::list_class_names.emplace_back(to_wstring(class_name));
+                            Filter::ClassNamesFilter::list_class_names.emplace_back(to_ue(class_name));
                         }
                     }
                 }
@@ -3227,7 +3240,7 @@ namespace RC::GUI
                         while (std::getline(ss, class_name, ','))
                         {
                             std::erase_if(class_name, isspace);
-                            Filter::ClassNamesFilter::list_class_names.emplace_back(to_wstring(class_name));
+                            Filter::ClassNamesFilter::list_class_names.emplace_back(to_ue(class_name));
                         }
                     }
                 }
@@ -3248,7 +3261,7 @@ namespace RC::GUI
                         while (std::getline(ss, property_name, ','))
                         {
                             std::erase_if(property_name, isspace);
-                            Filter::HasProperty::list_properties.emplace_back(to_wstring(property_name));
+                            Filter::HasProperty::list_properties.emplace_back(to_ue(property_name));
                         }
                     }
                 }
@@ -3271,7 +3284,7 @@ namespace RC::GUI
                             std::erase_if(property_type_name, isspace);
                             if (!property_type_name.empty())
                             {
-                                Filter::HasPropertyType::list_property_types.emplace_back(FName(to_wstring(property_type_name), FNAME_Add));
+                                Filter::HasPropertyType::list_property_types.emplace_back(FName(to_ue(property_type_name), FNAME_Add));
                             }
                         }
                     }

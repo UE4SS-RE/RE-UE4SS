@@ -61,6 +61,9 @@ local PLATFORM_TYPES = {
             "UNICODE",
             "_UNICODE"
         },
+        ["cxflags"] = {
+            "clang::-gcodeview"
+        }
     },
     ["Linux"] = {
         ["defines"] = {
@@ -73,7 +76,8 @@ local PLATFORM_TYPES = {
             "DLLEXT=.so"
         },
         ["cxflags"] = {
-            "clang::-fno-delete-null-pointer-checks"
+            "clang::-fno-delete-null-pointer-checks",
+            "clang::-gdwarf"
         }
     }
 }
@@ -85,7 +89,6 @@ local PLATFORM_TYPES = {
 local CLANG_COMPILE_OPTIONS = {
     ["cxflags"] = {
         "-g",
-        "-gcodeview",
         "-fcolor-diagnostics",
         "-Wno-unknown-pragmas",
         "-Wno-unused-parameter",
@@ -190,7 +193,7 @@ function get_mode_runtimes()
         return is_mode_debug() and "MDd" or "MD"
     end
 
-    return {}
+    return ""
 end
 
 --- This local function wraps the global get_mode_runtimes() function. We have to locally wrap the function 

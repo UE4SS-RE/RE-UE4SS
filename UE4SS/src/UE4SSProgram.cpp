@@ -232,6 +232,8 @@ namespace RC
             Output::send(SYSSTR("\n\nFound string '{}' at {}\n\n"), SystemStringViewType{str_to_find}, string_address);
             //*/
 
+            Output::send(SYSSTR("dir: {}\n"), (m_log_directory / m_log_file_name));
+
             Output::send(SYSSTR("Console created\n"));
             Output::send(SYSSTR("UE4SS - v{}.{}.{}{}{} - Git SHA #{}\n"),
                          UE4SS_LIB_VERSION_MAJOR,
@@ -335,6 +337,8 @@ namespace RC
     {
         ProfilerSetThreadName("UE4SS-InitThread");
         ProfilerScope();
+
+        Output::send(SYSSTR("Initializing ue4ss program\n"));
 
         try
         {
@@ -541,6 +545,8 @@ namespace RC
     auto UE4SSProgram::setup_unreal() -> void
     {
         ProfilerScope();
+        Output::send(SYSSTR("Setting up unreal\n"));
+
         // Retrieve offsets from the config file
         const SystemStringType offset_overrides_section{SYSSTR("OffsetOverrides")};
 
@@ -1382,10 +1388,11 @@ namespace RC
 
 // Remove key binds that were set from Lua scripts
 #ifdef HAS_INPUT
-        m_input_handler.get_events_safe([&](Input::KeySet& input_event) -> void {
-            for (auto& [key, vector_of_key_data] : input_event.key_data)
-            {
-                std::erase_if(vector_of_key_data, [&](Input::KeyData& key_data) -> bool {
+        m_input_handler.get_events_safe([&](auto& key_set) {
+            std::erase_if(key_set.key_data, [&](auto& item) -> bool {
+                auto& [_, key_data] = item;
+                bool were_all_events_registered_from_lua = true;
+                std::erase_if(key_data, [&](Input::KeyData& key_data) -> bool {
                     // custom_data == 1: Bind came from Lua, and custom_data2 is nullptr.
                     // custom_data == 2: Bind came from C++, and custom_data2 is a pointer to KeyDownEventData. Must free it.
                     if (key_data.custom_data == 1)
@@ -1399,11 +1406,8 @@ namespace RC
                     }
                 });
 
-                if (vector_of_key_data.empty())
-                {
-                    m_input_handler.clear_subscribed_key(key);
-                }
-            }
+                return were_all_events_registered_from_lua;
+            });
         });
 #endif
 
