@@ -62,9 +62,6 @@ namespace RC::GUI
                                               Filter::HasProperty,
                                               Filter::HasPropertyType>{};
 
-    static int s_max_elements_per_chunk{};
-    static int s_chunk_id_start{};
-
     static bool s_live_view_destructed = false;
     static std::unordered_map<const UObject*, std::string> s_object_ptr_to_full_name{};
 
@@ -725,14 +722,6 @@ namespace RC::GUI
     auto LiveView::initialize() -> void
     {
         s_need_to_filter_out_properties = Version::IsBelow(4, 25);
-        if (UE4SSProgram::settings_manager.Debug.LiveViewObjectsPerGroup > std::numeric_limits<int>::max())
-        {
-            Output::send<LogLevel::Warning>(STR("Debug.LiveViewObjectsPerGroup is too large, must be no larger than 4294967295.\n"));
-            Output::send<LogLevel::Warning>(STR("Using default value for Debug.LiveViewObjectsPerGroup.\n"));
-            UE4SSProgram::settings_manager.Debug.LiveViewObjectsPerGroup = 64 * 1024 / 2;
-        }
-        s_max_elements_per_chunk = static_cast<int>(UE4SSProgram::settings_manager.Debug.LiveViewObjectsPerGroup);
-        s_chunk_id_start = -s_max_elements_per_chunk;
         m_is_initialized = true;
     }
 
@@ -1523,13 +1512,18 @@ namespace RC::GUI
         }
     }
 
-    auto LiveView::guobjectarray_by_name_iterator([[maybe_unused]] int32_t int_data_1,
-                                                  [[maybe_unused]] int32_t int_data_2,
-                                                  const std::function<void(UObject*)>& callable) -> void
+    auto LiveView::guobjectarray_by_name_iterator(int32_t int_data_1, int32_t int_data_2, const std::function<void(UObject*)>& callable) -> void
     {
-        for (const auto& object : s_name_search_results)
+        if (int_data_2 > s_name_search_results.size())
         {
-            callable(object);
+            Output::send<LogLevel::Error>(STR("guobjectarray_by_name_iterator: asked to iterate beyond the size of the search result vector ({} > {})\n"),
+                                          int_data_2,
+                                          s_name_search_results.size());
+            return;
+        }
+        for (size_t i = int_data_1; i < int_data_2; i++)
+        {
+            callable(s_name_search_results[i]);
         }
     }
 
@@ -1542,18 +1536,6 @@ namespace RC::GUI
             attempt_to_add_search_result(object);
             return LoopAction::Continue;
         });
-    }
-
-    static auto collapse_all_except(int except_id) -> void
-    {
-        for (int i = 0; i < UObjectArray::GetNumChunks(); ++i)
-        {
-            if (i + s_chunk_id_start == except_id)
-            {
-                continue;
-            }
-            ImGui::GetStateStorage()->SetInt(ImGui_GetID(i + s_chunk_id_start), 0);
-        }
     }
 
     auto LiveView::collapse_all_except(void* except_id) -> void
@@ -1583,7 +1565,7 @@ namespace RC::GUI
         if (are_listeners_allowed())
         {
             std::string search_buffer{m_search_by_name_buffer};
-            if (search_buffer.empty())
+            if (search_buffer.empty() || s_apply_search_filters_when_not_searching)
             {
                 Output::send(STR("Search all chunks\n"));
                 s_name_to_search_by.clear();
@@ -2893,6 +2875,13 @@ namespace RC::GUI
     static auto object_search_field_always_callback(ImGuiInputTextCallbackData* data) -> int
     {
         auto typed_this = static_cast<LiveView*>(data->UserData);
+        if (LiveView::s_apply_search_filters_when_not_searching)
+        {
+            static constexpr auto message = std::string_view{"Searching is disabled while 'Apply filters when not searching' is enabled.'"};
+            strncpy_s(data->Buf, message.size() + 1, message.data(), message.size() + 1);
+            data->BufTextLen = message.size();
+            data->BufDirty = true;
+        }
         if (typed_this->was_search_field_clear_requested() && !typed_this->was_search_field_cleared())
         {
             strncpy_s(data->Buf, 1, "", 1);
@@ -3085,6 +3074,7 @@ namespace RC::GUI
         {
             ImGui::PushStyleColor(ImGuiCol_Text, g_imgui_text_inactive_color.Value);
         }
+        auto apply_search_filters_when_not_searching = s_apply_search_filters_when_not_searching;
         if (ImGui::InputText("##Search by name",
                              m_search_by_name_buffer,
                              m_search_buffer_capacity,
@@ -3092,12 +3082,23 @@ namespace RC::GUI
                              &object_search_field_always_callback,
                              this))
         {
-            search();
+            if (!apply_search_filters_when_not_searching)
+            {
+                search();
+            }
         }
-        if (ImGui::IsItemHovered())
+        if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled))
         {
             ImGui::BeginTooltip();
-            ImGui::Text("Right-click to open search options.");
+            if (!apply_search_filters_when_not_searching)
+            {
+                ImGui::Text("Right-click to open search options.");
+            }
+            else
+            {
+                ImGui::Text("You can't search with 'Apply filters when not searching' enabled.");
+                ImGui::Text("Right click to bring up the menu and disable this option.");
+            }
             ImGui::EndTooltip();
         }
         if (push_inactive_text_color)
@@ -3110,7 +3111,18 @@ namespace RC::GUI
         {
             ImGui::Text("Search options");
             ImGui::SameLine();
-            ImGui::Checkbox("Apply when not searching", &s_apply_search_filters_when_not_searching);
+            // Making sure the user can't enable filters when not searching, if they are currently actually searching.
+            // Otherwise it uses the wrong iterator.
+            auto is_searching_by_name = m_is_searching_by_name;
+            if (is_searching_by_name)
+            {
+                ImGui::BeginDisabled();
+            }
+            ImGui::Checkbox("Apply filters when not searching", &s_apply_search_filters_when_not_searching);
+            if (is_searching_by_name)
+            {
+                ImGui::EndDisabled();
+            }
             if (ImGui::BeginTable("search_options_table", 2))
             {
                 bool instances_only_enabled = !(Filter::NonInstancesOnly::s_enabled || Filter::DefaultObjectsOnly::s_enabled);
@@ -3489,32 +3501,18 @@ namespace RC::GUI
         };
 
         ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, {0.0f, 0.0f});
-        if (m_is_searching_by_name)
+        if (!s_apply_search_filters_when_not_searching)
         {
-            do_iteration();
+            ImGuiListClipper clipper{};
+            clipper.Begin(m_is_searching_by_name ? s_name_search_results.size() : UObjectArray::GetNumElements(), ImGui::GetTextLineHeightWithSpacing());
+            while (clipper.Step())
+            {
+                do_iteration(clipper.DisplayStart, clipper.DisplayEnd);
+            }
         }
         else
         {
-            auto num_elements = UObjectArray::GetNumElements();
-
-            if (!s_apply_search_filters_when_not_searching)
-            {
-                int num_total_chunks = (num_elements / s_max_elements_per_chunk) + (num_elements % s_max_elements_per_chunk == 0 ? 0 : 1);
-                for (int i = 0; i < num_total_chunks; ++i)
-                {
-                    if (ImGui_TreeNodeEx(std::format("Group #{}", i).c_str(), i + s_chunk_id_start, ImGuiTreeNodeFlags_CollapsingHeader))
-                    {
-                        ::RC::GUI::collapse_all_except(i + s_chunk_id_start);
-                        auto start = s_max_elements_per_chunk * i;
-                        auto end = start + s_max_elements_per_chunk;
-                        do_iteration(start, end);
-                    }
-                }
-            }
-            else
-            {
-                do_iteration(0, UObjectArray::GetNumElements());
-            }
+            do_iteration(0, UObjectArray::GetNumElements());
         }
         ImGui::PopStyleVar();
 

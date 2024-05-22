@@ -26,6 +26,9 @@ Failing to do so will cause a crash when you try to render something with imgui.
 
 BREAKING: Changed `FTransform` constructor to be identical to unreal.
 
+Added `OpenFor::ReadWrite`, to be used when calling `File::open`.  
+This can be used when calling `FileHandle::memory_map`, unlike `OpenFor::Writing`.  ([UE4SS #507](https://github.com/UE4SS-RE/RE-UE4SS/pull/507))
+
 ### BPModLoader
 
 ### Experimental
@@ -36,6 +39,8 @@ BREAKING: Changed `FTransform` constructor to be identical to unreal.
 ### General
 
 ### Live View
+Fixed the majority of the lag ([UE4SS #512](https://github.com/UE4SS-RE/RE-UE4SS/pull/512))
+
 Added support for watching ArrayProperty and StructProperty ([UE4SS #419](https://github.com/UE4SS-RE/RE-UE4SS/pull/419))
 
 The search filter `ExcludeClassName` can now be found in the `IncludeClassNames` dropdown list. ([UE4SS #472](https://github.com/UE4SS-RE/RE-UE4SS/pull/472)) - Buckminsterfullerene
@@ -94,6 +99,8 @@ Fixed crash when calling UFunctions that take one or more 'out' params of type T
 ### C++ API
 Fixed a crash caused by a race condition enabled by C++ mods using `UE4SS_ENABLE_IMGUI` in their constructor ([UE4SS #481](https://github.com/UE4SS-RE/RE-UE4SS/pull/481))
 
+Fixed the `std::span` returned by `FileHandle::memory_map` being improperly sized. ([UE4SS #507](https://github.com/UE4SS-RE/RE-UE4SS/pull/507))
+
 ### BPModLoader
 Fixed "bad conversion" errors ([UE4SS #398](https://github.com/UE4SS-RE/RE-UE4SS/pull/398))
 
@@ -107,13 +114,17 @@ Fixes mods not loading when UE4SS initializes too late ([UE4SS #454](https://git
 ## Settings
 
 ### Added
-```
+```ini
 [Hooks]
 HookLoadMap = 1
 HookAActorTick = 1
 ```
 
 ### Removed
+```ini
+[Debug]
+LiveViewObjectsPerGroup = 32768
+```
 
 
 v3.0.1
