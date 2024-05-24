@@ -289,7 +289,7 @@ namespace RC::File
             }
 
             Handle cache_file = open(m_serialization_file_path_and_name);
-            auto bytes_read = read((int)cache_file.get_raw_handle(), &m_cache, cache_size);
+            auto bytes_read = read(reinterpret_cast<int>(cache_file.get_raw_handle()), &m_cache, cache_size);
             if (bytes_read < 0)
             {
                 THROW_INTERNAL_FILE_ERROR(

@@ -7,7 +7,8 @@ package("imtui")
     add_patches("v1.0.5", "fix-size-cjk-and-mouse.patch")
 
     -- WARN: xmake cannot distinguish ncursesw and ncurses, this may cause problem on other systems
-    add_deps("cmake", "ncurses")
+    add_deps("cmake")
+    add_deps("ncurses 6.1")
 
     add_includedirs("include", "include/imgui", "include/imgui-for-imtui/", "include/imgui-for-imtui/imgui", "include/imtui", {public = true})
 
@@ -18,8 +19,10 @@ package("imtui")
         table.insert(configs, "-DIMTUI_STANDALONE=ON")
         table.insert(configs, "-DIMTUI_SUPPORT_NCURSES=ON")
         table.insert(configs, "-DIMTUI_BUILD_EXAMPLES=OFF")
-
-        import("package.tools.cmake").install(package, configs)
+        print(package:dep("ncurses"):installdir("include"))
+        local cxflags = {}
+        table.insert(cxflags, "-I" .. package:dep("ncurses"):installdir("include") .. "/ncursesw")
+        import("package.tools.cmake").install(package, configs, {cxflags = cxflags})
         print(package:cachedir() .. "/source/imtui/")
         print(package:installdir())
         os.cp("third-party/imgui/imgui/misc/cpp/imgui_stdlib.h", package:installdir("include/imgui-for-imtui/imgui/misc/cpp"))

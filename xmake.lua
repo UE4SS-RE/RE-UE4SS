@@ -60,8 +60,40 @@ set_allowedplats("windows", "linux")
 set_allowedarchs("x64", "x86_64")
 set_allowedmodes(modes)
 
+option("zig")
+    set_showmenu(true)
+    set_description("Use the Zig compiler.")
+    set_default(false)
+option_end()
+
+toolchain("zigcross")
+    if is_host("windows") then
+        set_toolset("cc", "$(projectdir)/tools/zig/zig-cc.bat")
+        set_toolset("cxx", "$(projectdir)/tools/zig/zig-c++.bat")
+        set_toolset("ld", "$(projectdir)/tools/zig/zig-c++.bat")
+        set_toolset("sh", "$(projectdir)/tools/zig/zig-c++.bat")
+        set_toolset("ar", "$(projectdir)/tools/zig/zig-ar.bat")
+    else
+        set_toolset("cc", "$(projectdir)/tools/zig/zig-cc")
+        set_toolset("cxx", "$(projectdir)/tools/zig/zig-c++")
+        set_toolset("ld", "$(projectdir)/tools/zig/zig-c++")
+        set_toolset("sh", "$(projectdir)/tools/zig/zig-c++")
+        set_toolset("ar", "$(projectdir)/tools/zig/zig-ar")
+    end
+    add_cxflags("-fexperimental-library")
+    add_cxflags("-fno-delete-null-pointer-checks")
+    add_cxflags("-gdwarf")
+    add_cxflags("-fno-sanitize=undefined") -- can also use O2 to avoid this, but I'd prefer getting clear binary for now
+    add_shflags("-z", "lazy")
+toolchain_end()
+
 if is_plat("linux") then
-    set_toolchains("clang", "rust")
+    if has_config("zig") then
+        set_toolchains("zigcross", "rust")
+    else
+        set_toolchains("clang", "rust")
+    end
+    set_defaultmode("Game__Shipping__Linux")
 end
 
 if is_plat("windows") then

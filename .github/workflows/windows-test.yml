@@ -34,14 +34,18 @@ jobs:
           ssh-key: ${{ secrets.SSHKEY }}
       - name: Setup MSVC
         uses: ilammy/msvc-dev-cmd@v1
+      - name: Setup xmake
+        uses: xmake-io/github-action-setup-xmake@v1
+        with:
+          xmake-version: latest
       - name: Setup Ninja
         uses: seanmiddleditch/gha-setup-ninja@v3
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@1.76.0
       - name: Build
         run: |
-          cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Game__Shipping__Win64
-          cmake --build build
+          xmake f -m "Game__Shipping__Win64" -y
+          xmake build
       - name: Upload Artifacts
         uses: actions/upload-artifact@v3
         with:

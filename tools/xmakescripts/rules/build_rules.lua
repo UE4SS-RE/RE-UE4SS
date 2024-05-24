@@ -104,6 +104,19 @@ local CLANG_COMPILE_OPTIONS = {
     }
 }
 
+-- option to use libc++
+option("libcxx")
+    set_default(false)
+    set_showmenu(true)
+    set_description("Use libc++ instead of libstdc++")
+
+if has_config("libcxx") then
+    table.insert(CLANG_COMPILE_OPTIONS["cxflags"], "-stdlib=libc++")
+    table.insert(CLANG_COMPILE_OPTIONS["cxflags"], "-fexperimental-library")
+    table.insert(CLANG_COMPILE_OPTIONS["ldflags"], "-static-libstdc++")
+    table.insert(CLANG_COMPILE_OPTIONS["ldflags"], "-l:libc++abi.a")
+end
+
 local GNU_COMPILE_OPTIONS = {
     ["cxflags"] = {
         "-fms-extensions"
@@ -215,6 +228,9 @@ rule("ue4ss.base")
         -- Compiler flags are set in this rule since unreal modes currently do not change any compiler flags.
         mode_builder.apply_compiler_options(target, GNU_COMPILE_OPTIONS, {"gcc", "ld"})
         mode_builder.apply_compiler_options(target, CLANG_COMPILE_OPTIONS, {"clang", "lld"})
+        if has_config("zig") then
+            mode_builder.apply_compiler_options_all(target, CLANG_COMPILE_OPTIONS)
+        end
         mode_builder.apply_compiler_options(target, MSVC_COMPILE_OPTIONS, { "clang_cl", "cl", "link" })
     end)
 
