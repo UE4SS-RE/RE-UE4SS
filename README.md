@@ -55,8 +55,7 @@ If you are planning on doing mod development using UE4SS, you can do the same as
   - Visual Studio 2019 (recent versions), and Visual Studio 2022 will work.
   - More compilers will hopefully be supported in the future.
 - Rust toolchain 1.73.0 or greater
-- [xmake](https://xmake.io/#/)
-
+- [xmake >= 2.9.2](https://xmake.io/#/)
 
 ## Build instructions
 
@@ -68,9 +67,18 @@ If you are planning on doing mod development using UE4SS, you can do the same as
 
 There are several different ways you can build UE4SS.
 
-### Building from cli
+## Building from cli
 
-Configure the project using this command: `xmake f -m "<BuildMode>"`
+### Configuration settings
+
+`xmake` allows you to flexibly configure some build options to suit your specific needs. The following is a non-comprehensive list of configuration settings you might find useful.
+
+> [!IMPORTANT]
+> All configuration changes are made by using the `xmake config` command. You can also use `xmake f` as an alias for con**f**ig. 
+
+After configuring `xmake` with any of the following options, you can build the project with `xmake` or `xmake build`.
+
+#### Mode
 
 The build modes are structured as follows: `<Target>__<Config>__<Platform>`
 
@@ -89,8 +97,38 @@ Currently supported options for these are:
 * `Platform`
   * `Win64` - 64-bit windows
 
+> [!TIP]
+> Configure the project using this command: `xmake f -m "<BuildMode>"`. `-m` is an alias for --**m**ode=\<BuildMode>.
 
-Now to build it, just run `xmake`
+#### Patternsleuth (Experimental)
+
+By default, the patternsleuth tool installs itself as an xmake package. If you do not intend on modifying the patternsleuth source code, then you don't have to configure anything special. If you want to be able to modify the patternsleuth source code, you have to supply the `--patternsleuth=local` option to `xmake config` in order to recompile patternsleuth as part of the UE4SS build. 
+
+#### Proxy Path
+
+By default, UE4SS generates a proxy based on `C:\Windows\System32\dwmapi.dll`. If you want to change this for any reason, you can supply the `--ue4ssProxyPath=<path proxy dll>` to the `xmake config` command..
+
+#### Profiler Flavor
+
+By default, UE4SS uses Tracy for profiling. You can pass `--profilerFlavor=<profiler>` to the `xmake config` command to set the profiler flavor. The currently supported flavors are `Tracy`, `Superluminal`, and `None`.
+
+### Helpful `xmake` commands
+
+You may encounter use for the some of the more advanced `xmake` commands. A non-comprehensive list of some useful commands is included below.
+
+| Syntax | Aliases | Uses |
+| --- | --- | --- |
+| `xmake config` | `xmake f` | Configure xmake with any of [these options](#configuration-settings). |
+| `xmake clean --all` | `xmake c --all` | Cleans binaries and intermediate output of all targets. |
+| `xmake clean <target>` | `xmake c <target>` | Cleans binaries and intermediates of a specific target. |
+| `xmake build` | `xmake b` | Incrementally builds UE4SS using input file detection. |
+| `xmake build --rebuild` | `xmake b -r` | Forces a full rebuild of UE4SS. |
+| `xmake build <target>` | `xmake b <target>` | Incrementally builds a specific target. |
+| `xmake show` | | Shows xmake info and current project info. |
+| `xmake show --target=<target>` | `xmake show -t <target>` | Prints lots of information about a target. Useful for debugging scripts, compiler flags, dependency tree, etc. |
+| `xmake require --clean` | `xmake q -c` | Clears all package caches and uninstalls all not-referenced packages. |
+| `xmake require --force` | `xmake q -f` | Force re-installs all dependency packages. |
+| `xmake require --list` | `xmake q -l` | Lists all packages that are needed for the project. |
 
 ### Opening in an IDE
 
@@ -102,11 +140,9 @@ Afterwards open the generated `.sln` file inside of the `vsxmake2022` directory
 
 Note that you should also commit & push the submodules that you've updated if the reason why you updated was not because someone else pushed an update, and you're just catching up to it.
 
-**Note the following about how xmake interacts with VS**
-
+> [!WARNING]
 > The vs. build plugin performs the compile operation by directly calling the xmake command under vs, and also supports intellisense and definition jumps, as well as breakpoint debugging.
-
-This means that modifying the project properties within Visual Studio will not affect which flags are passed to the build when VS executes `xmake`. XMake provides some configurable project settings
+> This means that modifying the project properties within Visual Studio will not affect which flags are passed to the build when VS executes `xmake`. XMake provides some configurable project settings
 which can be found in VS under the `Project Properties -> Configuration Properties -> Xmake` menu.
 
 ## Updating git submodules
