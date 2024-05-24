@@ -37,7 +37,7 @@ set_allowedplats("windows")
 set_allowedarchs("x64")
 set_allowedmodes(modes)
 
-if is_plat("windows") then
+if is_host("windows") then
     set_defaultmode("Game__Shipping__Win64")
 end
 

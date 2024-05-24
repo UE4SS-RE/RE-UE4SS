@@ -5,6 +5,8 @@ target("patternsleuth_bind")
     set_kind("static")
     set_values("rust.cratetype", "staticlib")
     add_files("src/lib.rs")
+    -- Exposes the src/lib.rs files to the Visual Studio project filters.
+    add_extrafiles("src/lib.rs")
 
     -- If patternsleuth is configured to install as a package.
     if is_config("patternsleuth", "package") then

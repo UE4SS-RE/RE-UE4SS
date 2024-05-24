@@ -18,12 +18,14 @@ includes("ScopedTimer")
 includes("SinglePassSigScanner")
 includes("Unreal")
 
-if has_config("patternsleuth", "local") then
+if is_config("patternsleuth", "local") then 
     -- The patternsleuth target is managed by the cargo.build rule.
     target("patternsleuth")
         set_kind("static")
         add_rules("cargo.build", {project_name = "patternsleuth", is_debug = is_mode_debug(), features= { "process-internal" }})
         add_files("patternsleuth/Cargo.toml")
+        -- Exposes the rust *.rs files to the Visual Studio project filters.
+        add_extrafiles("patternsleuth/**.rs")
 end
 
 -- This option allows users to choose if patternsleuth should be installed as a package
