@@ -33,7 +33,11 @@ add_requires("cargo::patternsleuth_bind", { debug = is_mode_debug(), configs = {
 target("patternsleuth_bind")
     set_kind("static")
     set_values("rust.cratetype", "staticlib")
+    set_values("rust.edition", "2021")
     add_files("patternsleuth_bind/src/lib.rs")
+    if is_plat("linux") and is_host("windows") then
+        add_rcflags("--target=x86_64-unknown-linux-gnu", {force = true})
+    end
     add_packages("cargo::patternsleuth_bind")
     if is_plat("windows") then
         add_links("ws2_32", "advapi32", "userenv", "ntdll", "oleaut32", "bcrypt", "ole32", { public = true })
