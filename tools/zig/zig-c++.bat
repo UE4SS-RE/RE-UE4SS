@@ -1,1 +1,1 @@
-zig c++ %*
+zig c++ -target x86_64-linux-gnu %*
