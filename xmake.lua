@@ -57,7 +57,7 @@ add_rules("ue4ss.core")
 -- These restrictions are inherited upstream and downstream.
 -- Any project that `includes("UE4SS")` will inherit these global restrictions.
 set_allowedplats("windows", "linux")
-set_allowedarchs("x64", "x86_64")
+set_allowedarchs("x64", "x86_64", "x86_64-unknown-linux-gnu")
 set_allowedmodes(modes)
 
 option("zig")
@@ -90,6 +90,10 @@ toolchain_end()
 if is_plat("linux") then
     if has_config("zig") then
         set_toolchains("zigcross", "rust")
+        if is_host("windows") then
+            set_arch("x86_64-unknown-linux-gnu")
+            add_rcflags("-C", "linker=$(projectdir)/tools/zig/zig-cc.bat", {force = true})
+        end
     else
         set_toolchains("clang", "rust")
     end
