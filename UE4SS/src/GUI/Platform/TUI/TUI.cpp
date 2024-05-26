@@ -8,7 +8,10 @@
 #include <imtui/imtui-impl-text.h>
 #include <imtui/imtui-impl-ncurses.h>
 
+#include <UE4SSProgram.hpp>
+
 #include <cstdio>
+#include <cstdlib>
 
 namespace RC::GUI
 {
@@ -19,6 +22,11 @@ namespace RC::GUI
     void Backend_TUI::init()
     {
         // fprintf(stderr, "Backend_TUI::init\n");
+        setenv("TERMINFO", UE4SSProgram::settings_manager.TUI.TERMINFO.c_str(), 0);
+        if (!UE4SSProgram::settings_manager.TUI.LCALL.empty())
+        {
+            setenv("LC_ALL", UE4SSProgram::settings_manager.TUI.LCALL.c_str(), 0);
+        }
         g_screen = ImTui_ImplNcurses_Init(true);
         auto source = Input::Handler::get_input_source("Ncurses");
         ncurses_source = std::dynamic_pointer_cast<Input::NcursesInputSource>(source);

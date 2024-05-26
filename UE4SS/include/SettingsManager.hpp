@@ -131,6 +131,9 @@ namespace RC
             SystemStringType BanCode = "f05e";
             SystemStringType CopyCode = "f0c5";
             SystemStringType SearchCode = "f002";*/
+
+            SystemStringType TERMINFO = SYSSTR("/usr/share/terminfo");
+            SystemStringType LCALL = SYSSTR("en_US.UTF-8");
         } TUI;
 #endif
 

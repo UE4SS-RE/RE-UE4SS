@@ -146,6 +146,8 @@ namespace RC
         REGISTER_INT64_SETTING(TUI.WheelUp, section_tui_features, WheelUp)
         REGISTER_INT64_SETTING(TUI.WheelDown, section_tui_features, WheelDown)*/
         REGISTER_BOOL_SETTING(TUI.TUINerdFont, section_tui_features, TUINerdFont)
+        REGISTER_STRING_SETTING(TUI.TERMINFO, section_tui_features, TERMINFO)
+        REGISTER_STRING_SETTING(TUI.LCALL, section_tui_features, LCALL)
         /*
         REGISTER_STRING_SETTING(TUI.TerminalCode, section_tui_features, TerminalCode)
         REGISTER_STRING_SETTING(TUI.ArchiveCode, section_tui_features, ArchiveCode)
