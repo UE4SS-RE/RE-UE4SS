@@ -198,7 +198,7 @@ rule("ue4ss.base")
         -- Compiler flags are set in this rule since unreal modes currently do not change any compiler flags.
         mode_builder.apply_compiler_options(target, GNU_COMPILE_OPTIONS, {"gcc", "ld"})
         mode_builder.apply_compiler_options(target, CLANG_COMPILE_OPTIONS, {"clang", "lld"})
-        mode_builder.apply_compiler_options(target, MSVC_COMPILE_OPTIONS, { "clang_cl", "cl", "link" })
+        mode_builder.apply_compiler_options(target, MSVC_COMPILE_OPTIONS, { "clang_cl", "cl", "link" })     
     end)
 
     after_load(function(target)
@@ -217,15 +217,30 @@ rule("ue4ss.base")
 rule("ue4ss.mod")
     add_deps("ue4ss.base", {order = true})
     after_load(function(target)
-        target:set("kind", "shared")
-        target:set("languages", "cxx20")
-        target:set("exceptions", "cxx")
+        if not target:get("kind") then
+            target:set("kind", "shared")
+        end
+
+        if not target:get("languages") then 
+            target:set("languages", "cxx20")
+        end
+
+        if not target:get("exceptions") then
+            target:set("exceptions", "cxx")
+        end
+        
+        if not target:get("group") then
+            target:set("group", "mods")
+        end
+
         target:add("deps", "UE4SS")
-        target:set("group", "mods")
     end)
 
     on_install(function(target)
-        import("mods.install").install(target)
+        local script = target:script("install")
+        if not script then
+            import("mods.install").install(target)
+        end
     end)
 
 -- This rule is meant to be used by all internal targets within UE4SS.

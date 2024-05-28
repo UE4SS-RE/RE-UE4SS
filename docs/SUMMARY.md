@@ -95,6 +95,7 @@
   - [Fixing missing AOBs](./guides/fixing-compatibility-problems.md)
   - [Generating UHT headers](./guides/generating-uht-compatible-headers.md)
   - [Creating a C++ Mod](./guides/creating-a-c++-mod.md)
+  - [Advanced C++ Mod Handbook](./guides/advanced-c++-modding.md)
   - [Installing a C++ Mod](./guides/installing-a-c++-mod.md)
   - [GUI tabs with a C++ Mod](./guides/creating-gui-tabs-with-c++-mod.md)
   - [Creating a Lua Mod](./guides/creating-a-lua-mod.md)

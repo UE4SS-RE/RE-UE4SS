@@ -88,7 +88,7 @@ xmake
 ```
 or B.
 ```
-xmake project -k vsxmake2022
+xmake project -k vsxmake2022 -m "Game__Shipping__Win64"
 ```
 If you chose option `B`, the VS solution will be in the `vsxmake2022` directory.
 
@@ -130,6 +130,9 @@ Note that `Output::send` doesn't require a `LogLevel` and that we're using `{}` 
 The `Output::send` function uses `std::format` in the back-end so you should do some research around std::format or libfmt if you want to know more about it.
 
 7. Right click your project and hit `Build`.
+
+> [!IMPORTANT] Advanced Configuration
+> By now you'll have built a basic UE4SS C++ mod. You can further customize your mod structure and use advanced features by referencing the [Advanced C++ Modding Handbook](./advanced-c++-modding.md).
 
 ## Part #4
 
