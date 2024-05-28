@@ -19,13 +19,18 @@ jobs:
         uses: actions/setup-python@v4
         with:
           python-version: '3.x'
-
+      - name: Setup mdBook Preprocessors
+        uses: cargo-bins/cargo-binstall@v1.6.8
       - name: Setup mdBook
         run: |
           mkdir mdbook
           curl -sSL https://github.com/rust-lang/mdBook/releases/download/v0.4.14/mdbook-v0.4.14-x86_64-unknown-linux-gnu.tar.gz | tar -xz --directory=./mdbook
           echo `pwd`/mdbook >> $GITHUB_PATH
-
+      - name: Install mdBook Preprocessors
+        run: |
+          cargo binstall mdbook-mermaid
+          mdbook-mermaid install docs-export/book.toml
+          cargo binstall mdbook-alerts
       - name: Build
         run: |
           python docs-export/export.py
