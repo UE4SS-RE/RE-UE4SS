@@ -28,9 +28,9 @@ jobs:
           echo `pwd`/mdbook >> $GITHUB_PATH
       - name: Install mdBook Preprocessors
         run: |
-          cargo binstall mdbook-mermaid
+          cargo binstall --no-confirm mdbook-mermaid
           mdbook-mermaid install docs-export/book.toml
-          cargo binstall mdbook-alerts
+          cargo binstall --no-confirm mdbook-alerts
       - name: Build
         run: |
           python docs-export/export.py
