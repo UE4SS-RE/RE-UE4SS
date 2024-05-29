@@ -68,17 +68,17 @@ option_end()
 
 toolchain("zigcross")
     if is_host("windows") then
-        set_toolset("cc", "$(projectdir)/tools/zig/zig-cc.bat")
-        set_toolset("cxx", "$(projectdir)/tools/zig/zig-c++.bat")
-        set_toolset("ld", "$(projectdir)/tools/zig/zig-c++.bat")
-        set_toolset("sh", "$(projectdir)/tools/zig/zig-c++.bat")
-        set_toolset("ar", "$(projectdir)/tools/zig/zig-ar.bat")
+        set_toolset("cc", "$(scriptdir)/tools/zig/zig-cc.bat")
+        set_toolset("cxx", "$(scriptdir)/tools/zig/zig-c++.bat")
+        set_toolset("ld", "$(scriptdir)/tools/zig/zig-c++.bat")
+        set_toolset("sh", "$(scriptdir)/tools/zig/zig-c++.bat")
+        set_toolset("ar", "$(scriptdir)/tools/zig/zig-ar.bat")
     else
-        set_toolset("cc", "$(projectdir)/tools/zig/zig-cc")
-        set_toolset("cxx", "$(projectdir)/tools/zig/zig-c++")
-        set_toolset("ld", "$(projectdir)/tools/zig/zig-c++")
-        set_toolset("sh", "$(projectdir)/tools/zig/zig-c++")
-        set_toolset("ar", "$(projectdir)/tools/zig/zig-ar")
+        set_toolset("cc", "$(scriptdir)/tools/zig/zig-cc")
+        set_toolset("cxx", "$(scriptdir)/tools/zig/zig-c++")
+        set_toolset("ld", "$(scriptdir)/tools/zig/zig-c++")
+        set_toolset("sh", "$(scriptdir)/tools/zig/zig-c++")
+        set_toolset("ar", "$(scriptdir)/tools/zig/zig-ar")
     end
     add_cxflags("-fexperimental-library")
     add_cxflags("-fno-delete-null-pointer-checks")
@@ -92,7 +92,7 @@ if is_plat("linux") then
         set_toolchains("zigcross", "rust")
         if is_host("windows") then
             set_arch("x86_64-unknown-linux-gnu")
-            add_rcflags("-C", "linker=$(projectdir)/tools/zig/zig-cc.bat", {force = true})
+            add_rcflags("-C", "linker=$(scriptdir)/tools/zig/zig-cc.bat", {force = true})
         end
     else
         set_toolchains("clang", "rust")
