@@ -18,12 +18,12 @@ You can right-click the search bar to show options.
 
 
 
-| Setting                  | Explanation                                                                                                                                                                                                                                                                          |
-|--------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| Refresh search           | Refreshes the search results.                                                                                                                                                                                                                                                        |
-| Save filters             | Saves the current search filters to `Win64/UE4SS-config/liveview/filters.meta.json`. Saved filters are loaded when the game is next launched.                                                                                                                                        |
-| Apply when not searching | Applies the filters while not searching for any objects by name.                                                                                                                                                                                                                     |
-| Include inheritance      | Includes any child objects of any search results.                                                                                                                                                                                                                                    |
+| Setting                  | Explanation                                                                                                                                                                                                                      |
+|--------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| Refresh search           | Refreshes the search results.                                                                                                                                                                                                    |
+| Save filters             | Saves the current search filters to `working directory/liveview/filters.meta.json`. Saved filters are loaded when the game is next launched.                                                                                    |
+| Apply when not searching | Changes the search results automatically, otherwise, you need to press refresh settings.                                                                                                                                         |
+| Include inheritance      | Includes any child objects of any search results.                                                                                                                                                                                |
 | Instances only           | Only includes object instances. These are objects present in the level as part of actors (actors themselves, widgets, components etc.), and their properties are a reflection of the real-time values. Examples include `<package name>_C` or `<package name>_C_<some instance id>`. |
 | Non-instances only       | Only includes the default state of object packages, which are loaded in memory but are not present in the level. You cannot change the values of these properties.                                                                                                                   |
 | CDOs only                | Only includes the class default objects (CDOs), which are the reflected properties inherited by non-instances from a UClass object. Examples include `<full path>_GEN_VARIABLE` or `<package path>.Default__<package name>`.                                                         |
@@ -57,9 +57,9 @@ Click the plus buttons on the left of each watch to expand the values box.
 
 On the left side of the watch, there are two checkboxes:
 - Enable/disable watch
-- Write the watch to a file. If this is enabled, when you close the game, the values from your watche will be saved as a text file in `Win64/watches/`.
+- Write the watch to a file. If this is enabled, when you close the game, the values from your watche will be saved as a text file in `working directory/watches/`.
 
-On the right side of the watch, there is an option to save the watch which will be automatically re-added when you restart the game. This data is stored inside of `Win64/watches/watches.meta.json`
+On the right side of the watch, there is an option to save the watch which will be automatically re-added when you restart the game. This data is stored inside of `working directory/watches/watches.meta.json`
 
 ![save watch](https://github.com/UE4SS-RE/RE-UE4SS/assets/84156063/8b223d1d-a77f-4222-b287-89da12529c89)
 ![method of watch re-aquisition](https://github.com/UE4SS-RE/RE-UE4SS/assets/84156063/6cea33d9-73ae-416c-9943-e71553a6433d)
