@@ -10,11 +10,11 @@ In order to see it, you must make sure that the following configuration settings
 
 Sometimes the font is too small to easily see (particularly on larger resolutions). You can edit the `GuiConsoleFontScaling` setting to change this.
 
-![live-viewer](https://github.com/UE4SS-RE/RE-UE4SS/assets/84156063/221ccc8c-b49f-47a5-81b5-59dbbe85cbd1)
+![live-viewer](../img/liveview.png)
 
 You can right-click the search bar to show options.
 
-![live-viewer search options](https://github.com/UE4SS-RE/RE-UE4SS/assets/84156063/11612a38-0d00-4700-8a41-f6649c8174c0)
+![live-viewer search options](../img/liveviewsearch.png)
 
 
 
@@ -40,20 +40,20 @@ In the property viewer pane at the bottom, there are three sub-controls:
 - `>>` which goes forwards through your history.
 - `Find functions` which opens a window to search for and call any functions associated with this object and any of its children. You can use this to test calling functions in-game without having to write any code.
 
-![property view controls](https://github.com/UE4SS-RE/RE-UE4SS/assets/84156063/551f9efd-5a68-4e7b-b11c-5fa72955768f)
-![find functions](https://github.com/UE4SS-RE/RE-UE4SS/assets/84156063/58ec56ac-d4b9-402b-9f64-9e41c8270bb5)
+![property view controls](../img/liveviewcontrols.png)
+![find functions](../img/liveviewfindfunctions.png)
 
 ## Watches
 
 You can right click most property types, and functions, to add a watch.
 
-![add watch](https://github.com/UE4SS-RE/RE-UE4SS/assets/84156063/ea7d8a0f-4966-44bc-a08d-7a197e4e6195)
+![add watch](../img/liveviewaddwatch.png)
 
 To view your watches, go into the watches tab. 
 
 Click the plus buttons on the left of each watch to expand the values box.
 
-![expand watch values](https://github.com/UE4SS-RE/RE-UE4SS/assets/84156063/992eb214-304c-428a-b173-920511faf4e0)
+![expand watch values](../img/liveviewexpandwatch.png)
 
 On the left side of the watch, there are two checkboxes:
 - Enable/disable watch
@@ -61,5 +61,5 @@ On the left side of the watch, there are two checkboxes:
 
 On the right side of the watch, there is an option to save the watch which will be automatically re-added when you restart the game. This data is stored inside of `Win64/watches/watches.meta.json`
 
-![save watch](https://github.com/UE4SS-RE/RE-UE4SS/assets/84156063/8b223d1d-a77f-4222-b287-89da12529c89)
-![method of watch re-aquisition](https://github.com/UE4SS-RE/RE-UE4SS/assets/84156063/6cea33d9-73ae-416c-9943-e71553a6433d)
+![save watch](../img/liveviewsavewatch.png)
+![method of watch re-aquisition](../img/liveviewacquisitionmethod.png)

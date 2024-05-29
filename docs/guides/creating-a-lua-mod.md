@@ -53,11 +53,11 @@ you can place these DLLs directly inside the same `\scripts\` folder.
 
 It is much easier to write mods if your code editor or IDE is properly configured for Lua development and knows about UE4SS API. 
 
-1) Configure your code editor/IDE to support Lua syntax highlighting and code completion. If you use VSCode, see here in [Using Custom Lua Bindings](./using-custom-lua-bindings).
+1) Configure your code editor/IDE to support Lua syntax highlighting and code completion. If you use VSCode, see here in [Using Custom Lua Bindings](./using-custom-lua-bindings.md).
 
 2) Make sure that your build of UE4SS contains `Mods\shared\Types.lua` (a development build from Github releases contains it). This will load the UE4SS API definitions in your IDE.
 
-3) (Optional) [Dump the Lua Bindings](./using-custom-lua-bindings.md#dumping-custom-lua-bindings) fromm UE4SS Gui console, and [follow the recommendations to load them](./using-custom-lua-bindings.md#to-use-bindings) here.
+3) (Optional) [Dump the Lua Bindings](./using-custom-lua-bindings.md#dumping-custom-lua-bindings.md) fromm UE4SS Gui console, and [follow the recommendations to load them](./using-custom-lua-bindings.md#to-use-bindings) here.
 
 Then open the `Mods/` folder of your UE4SS installation in your IDE, and create or modify your mod inside it.
 
