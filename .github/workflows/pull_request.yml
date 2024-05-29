@@ -11,7 +11,7 @@ jobs:
             contents: write # Permission to write a repository_dispatch requests     
         steps:     
             - name: Create Check
-              run: sleep 10
+              run: exit 1
     success:
         name: Success gate
         if: always()
