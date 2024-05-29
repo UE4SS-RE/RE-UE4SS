@@ -12,21 +12,29 @@ includes("LuaMadeSimple")
 includes("LuaRaw")
 includes("MProgram")
 includes("ParserBase")
+includes("patternsleuth_bind")
 includes("Profiler")
 includes("ScopedTimer")
 includes("SinglePassSigScanner")
 includes("Unreal")
 
--- Patternsleuth -> START
+if is_config("patternsleuth", "local") then 
+    -- The patternsleuth target is managed by the cargo.build rule.
+    target("patternsleuth")
+        set_kind("static")
+        add_rules("cargo.build", {project_name = "patternsleuth", is_debug = is_mode_debug(), features= { "process-internal" }})
+        add_files("patternsleuth/Cargo.toml")
+        -- Exposes the rust *.rs files to the Visual Studio project filters.
+        add_extrafiles("patternsleuth/**.rs")
+end
 
-add_requires("cargo::patternsleuth_bind", { debug = is_mode_debug(), configs = { cargo_toml = path.join(os.scriptdir(), "patternsleuth_bind/Cargo.toml") } })
-
-target("patternsleuth_bind")
-    set_kind("static")
-    set_values("rust.cratetype", "staticlib")
-    add_files("patternsleuth_bind/src/lib.rs")
-    add_packages("cargo::patternsleuth_bind")
-
-    add_links("ws2_32", "advapi32", "userenv", "ntdll", "oleaut32", "bcrypt", "ole32", { public = true })
-
--- Patternsleuth -> END
+-- This option allows users to choose if patternsleuth should be installed as a package
+-- or if patternsleuth should be built as a dependency by xmake. The `package` option
+-- should be used if you don't intend on ever modifying the patternsleuth source.
+-- The `local` option should be used if you want changes in the patternsleuth
+-- submodule to be included as part of the UE4SS build. 
+option("patternsleuth")
+    set_default("package")
+    set_showmenu(true)
+    set_values("package", "local")
+    set_description("Install patternsleuth as a package or build it as a dependency.", "package", "local")
