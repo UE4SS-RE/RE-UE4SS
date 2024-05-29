@@ -21,6 +21,8 @@
 #include <Unreal/UScriptStruct.hpp>
 #include <Unreal/UnrealVersion.hpp>
 
+#include "UE4SSProgram.hpp"
+
 namespace RC::OutTheShade
 {
     using namespace ::RC::Unreal;
@@ -504,7 +506,8 @@ namespace RC::OutTheShade
         UsmapData.resize(UncompressedStream.size());
         memcpy(UsmapData.data(), UncompressedStream.data(), UsmapData.size());
 
-        auto FileOutput = FileWriter("Mappings.usmap");
+        auto filename = to_string(UE4SSProgram::get_program().get_working_directory()) + "//Mappings.usmap";
+        auto FileOutput = FileWriter(filename.c_str());
 
         FileOutput.Write<uint16_t>(0x30C4); // magic
         FileOutput.Write<uint8_t>(0);       // version
