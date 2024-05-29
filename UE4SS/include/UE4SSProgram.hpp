@@ -116,6 +116,7 @@ namespace RC
         std::filesystem::path m_object_dumper_output_directory;
         std::filesystem::path m_default_settings_path_and_file;
         std::filesystem::path m_settings_path_and_file;
+        std::filesystem::path m_legacy_root_directory;
         Output::DebugConsoleDevice* m_debug_console_device{};
         Output::ConsoleDevice* m_console_device{};
         GUI::DebuggingGUI m_debugging_gui{};
@@ -211,8 +212,10 @@ namespace RC
         auto reinstall_mods() -> void;
         auto get_object_dumper_output_directory() -> const File::StringType;
         RC_UE4SS_API auto get_module_directory() -> File::StringViewType;
+        RC_UE4SS_API auto get_game_executable_directory() -> File::StringViewType;
         RC_UE4SS_API auto get_working_directory() -> File::StringViewType;
         RC_UE4SS_API auto get_mods_directory() -> File::StringViewType;
+        RC_UE4SS_API auto get_legacy_root_directory() -> File::StringViewType;
         RC_UE4SS_API auto generate_uht_compatible_headers() -> void;
         RC_UE4SS_API auto generate_cxx_headers(const std::filesystem::path& output_dir) -> void;
         RC_UE4SS_API auto generate_lua_types(const std::filesystem::path& output_dir) -> void;

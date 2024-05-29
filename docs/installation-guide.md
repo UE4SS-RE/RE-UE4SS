@@ -44,7 +44,7 @@ The preferred and most straightforward way to install UE4SS is to choose the `zD
 
 Now all you need to do is start your game and UE4SS will automatically be injected.
 
-## Expirimental Install
+## Experimental Install
 
 If you want the latest and greatest features and don't mind the potential for more bugs than the main release, you can visit the [experimental part of releases](https://github.com/UE4SS-RE/RE-UE4SS/releases/tag/experimental) which is automatically updated for each commit to the main branch.
 
@@ -54,14 +54,23 @@ There are two main packages you need to look for: basic, and dev. They are in a 
 
 > **Note:** If you are using the experimental version for development, you should be using the dev version of the docs, which you can get to by appending docs.ue4ss.com with `/dev` (e.g. this page would be `https://docs.ue4ss.com/dev/installation-guide`).
 
+## Overriding Install Location
+
+This method allows you to override the location of the `root directory` while proxy injection still works. 
+
+In your `game executable directory` alongside the `dwmapi.dll`, create a file called `override.txt` and inside it you can write either an absolute path or a relative path to your new `UE4SS.dll`. 
+
+For an example, possible paths could be:
+- `C:\ue4ss\UE4SS.dll`
+- `..\..\..\..\..\..\UE4SS.dll`
+
 ## Manual Injection
 
-> Using manual injection will mean that the `root directory` and `working directory` are treated as one single directory that happens to also be the same directory as your `game executable directory`,  
-but any directory may be used.
+> Using manual injection will mean that the `root directory` and `working directory` are treated as one single directory that happens to also be the same directory as your `game executable directory`, but any directory may be used.
 
 Following the download of basic or dev methods (stable or experimental) and delete `dwmapi.dll`.  Afterwards, launch the game and manually inject `UE4SS.dll` using your injector of choice.
 
-## Central Install Location
+### Central Install Location via Manual Injection
 
 This method is a way to install UE4SS in one place for all your games. Simply extract the zip file of your choice (basic or dev) in any directory _outside_ the `game directory`, this is what's known as the `root directory`.  
 

@@ -8,6 +8,8 @@ Added support for UE Version 5.4 - ([UE4SS #503](https://github.com/UE4SS-RE/RE-
 ### General
 UE Platform support, which allows for much easier internal implementation of new Unreal classes ([UEPseudo #80](https://github.com/Re-UE4SS/UEPseudo/pull/80)) - narknon, localcc
 
+Added new installation method by allowing overriding of the location of the `UE4SS.dll`, [documentation](https://docs.ue4ss.com/installation-guide.html#overriding-install-location). - ([UE4SS #506](https://github.com/UE4SS-RE/RE-UE4SS/pull/506)) - Buckminsterfullerene 
+
 ### Live View 
 Added search filter: `IncludeClassNames`. ([UE4SS #472](https://github.com/UE4SS-RE/RE-UE4SS/pull/472)) - Buckminsterfullerene
 
@@ -37,6 +39,7 @@ This can be used when calling `FileHandle::memory_map`, unlike `OpenFor::Writing
 ## Changes
 
 ### General
+Changed the default location of the UE4SS release assets to be in `game executable directory/ue4ss/`. ([UE4SS #506](https://github.com/UE4SS-RE/RE-UE4SS/pull/506)) - Buckminsterfullerene
 
 ### Live View
 Fixed the majority of the lag ([UE4SS #512](https://github.com/UE4SS-RE/RE-UE4SS/pull/512))

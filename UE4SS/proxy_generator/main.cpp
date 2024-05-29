@@ -138,16 +138,23 @@ int _tmain(int argc, TCHAR* argv[])
     cpp_file << "#include <File/Macros.hpp>" << endl;
     cpp_file << endl;
     cpp_file << "#include <cstdint>" << endl;
+    cpp_file << "#include <fstream>" << endl;
+    cpp_file << "#include <string>" << endl;
     cpp_file << endl;
     cpp_file << "#define WIN32_LEAN_AND_MEAN" << endl;
     cpp_file << "#include <Windows.h>" << endl;
+    cpp_file << "#include <filesystem>" << endl;
+    cpp_file << endl;
+    cpp_file << "#pragma comment(lib, \"user32.lib\")" << endl;
     cpp_file << endl;
 
     cpp_file << "using namespace RC;" << endl;
+    cpp_file << "namespace fs = std::filesystem;" << endl;
     cpp_file << endl;
 
     cpp_file << "HMODULE SOriginalDll = nullptr;" << endl;
     cpp_file << std::format("extern \"C\" uintptr_t mProcs[{}] = {{0}};", exports.size()) << endl;
+    cpp_file << endl;
 
     cpp_file << "void setup_functions()" << endl;
     cpp_file << "{" << endl;
@@ -171,8 +178,62 @@ int _tmain(int argc, TCHAR* argv[])
     cpp_file << "    SOriginalDll = LoadLibrary(dll_path.c_str());" << endl;
     cpp_file << "    if (!SOriginalDll)" << endl;
     cpp_file << "    {" << endl;
+    cpp_file << "        MessageBox(nullptr, STR(\"Failed to load proxy DLL\"), STR(\"UE4SS Error\"), MB_OK | MB_ICONERROR);" << endl;
     cpp_file << "        ExitProcess(0);" << endl;
     cpp_file << "    }" << endl;
+    cpp_file << "}" << endl;
+    cpp_file << endl;
+
+    cpp_file << "bool is_absolute_path(const std::string& path)" << endl;
+    cpp_file << "{" << endl;
+    cpp_file << "    return fs::path(path).is_absolute();" << endl;
+    cpp_file << "}" << endl;
+    cpp_file << endl;
+
+    cpp_file << "HMODULE load_ue4ss_dll(HMODULE moduleHandle)" << endl;
+    cpp_file << "{" << endl;
+    cpp_file << "    HMODULE hModule = nullptr;" << endl;
+    cpp_file << "    wchar_t moduleFilenameBuffer[1024]{'\\0'};" << endl;
+    cpp_file << "    GetModuleFileNameW(moduleHandle, moduleFilenameBuffer, sizeof(moduleFilenameBuffer) / sizeof(wchar_t));" << endl;
+    cpp_file << "    const auto currentPath = std::filesystem::path(moduleFilenameBuffer).parent_path();" << endl;
+    cpp_file << "    const fs::path ue4ssPath = currentPath / \"ue4ss\" / \"UE4SS.dll\";" << endl;
+    cpp_file << endl;
+
+    cpp_file << "    // Check for override.txt" << endl;
+    cpp_file << "    const fs::path overrideFilePath = currentPath / \"override.txt\";" << endl;
+    cpp_file << "    if (fs::exists(overrideFilePath))" << endl;
+    cpp_file << "    {" << endl;
+    cpp_file << "        std::ifstream overrideFile(overrideFilePath);" << endl;
+    cpp_file << "        std::string overridePath;" << endl;
+    cpp_file << "        if (std::getline(overrideFile, overridePath))" << endl;
+    cpp_file << "        {" << endl;
+    cpp_file << "            fs::path ue4ssOverridePath = overridePath;" << endl;
+    cpp_file << "            if (!is_absolute_path(overridePath))" << endl;
+    cpp_file << "            {" << endl;
+    cpp_file << "                ue4ssOverridePath = currentPath / overridePath;" << endl;
+    cpp_file << "            }" << endl;
+    cpp_file << endl;
+    cpp_file << "            ue4ssOverridePath = ue4ssOverridePath / \"UE4SS.dll\";" << endl;
+    cpp_file << endl;
+    cpp_file << "            // Attempt to load UE4SS.dll from the override path" << endl;
+    cpp_file << "            hModule = LoadLibrary(ue4ssOverridePath.c_str());" << endl;
+    cpp_file << "            if (hModule)" << endl;
+    cpp_file << "            {" << endl;
+    cpp_file << "                return hModule;" << endl;
+    cpp_file << "            }" << endl;
+    cpp_file << "        }" << endl;
+    cpp_file << "    }" << endl;
+    cpp_file << endl;
+
+    cpp_file << "    // Attempt to load UE4SS.dll from ue4ss directory" << endl;
+    cpp_file << "    hModule = LoadLibrary(ue4ssPath.c_str());" << endl;
+    cpp_file << "    if (!hModule)" << endl;
+    cpp_file << "    {" << endl;
+    cpp_file << "        // If loading from ue4ss directory fails, load from the current directory" << endl;
+    cpp_file << "        hModule = LoadLibrary(STR(\"UE4SS.dll\"));" << endl;
+    cpp_file << "    }" << endl;
+    cpp_file << endl;
+    cpp_file << "    return hModule;" << endl;
     cpp_file << "}" << endl;
     cpp_file << endl;
 
@@ -181,8 +242,16 @@ int _tmain(int argc, TCHAR* argv[])
     cpp_file << "    if (fdwReason == DLL_PROCESS_ATTACH)" << endl;
     cpp_file << "    {" << endl;
     cpp_file << "        load_original_dll();" << endl;
-    cpp_file << "        setup_functions();" << endl;
-    cpp_file << "        LoadLibrary(STR(\"UE4SS.dll\"));" << endl;
+    cpp_file << "        HMODULE hUE4SSDll = load_ue4ss_dll(hInstDll);" << endl;
+    cpp_file << "        if (hUE4SSDll)" << endl;
+    cpp_file << "        {" << endl;
+    cpp_file << "            setup_functions();" << endl;
+    cpp_file << "        }" << endl;
+    cpp_file << "        else" << endl;
+    cpp_file << "        {" << endl;
+    cpp_file << "            MessageBox(nullptr, STR(\"Failed to load UE4SS.dll. Please see the docs on correct installation: https://docs.ue4ss.com/installation-guide\"), STR(\"UE4SS Error\"), MB_OK | MB_ICONERROR);" << endl;
+    cpp_file << "            ExitProcess(0);" << endl;
+    cpp_file << "        }" << endl;
     cpp_file << "    }" << endl;
     cpp_file << "    else if (fdwReason == DLL_PROCESS_DETACH)" << endl;
     cpp_file << "    {" << endl;
