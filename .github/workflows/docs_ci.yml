@@ -30,7 +30,7 @@ jobs:
           cargo binstall mdbook-alerts --no-confirm
       - name: Cargo link check install
         run: |
-          cargo binstall mdbook-linkcheck --no-configm
+          cargo binstall mdbook-linkcheck --no-confirm
       - name: Test md book
         run: |
           cd docs-export
