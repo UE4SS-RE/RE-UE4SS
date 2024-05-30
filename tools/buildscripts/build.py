@@ -65,11 +65,23 @@ def package(args):
 
     staging_dev = os.path.join(release_output, 'StagingDev')
     staging_release = os.path.join(release_output, 'StagingRelease')
-    
+
     # List CPP Mods with flags indicating if they need a config folder and if they should be included in release builds
     CPPMods = {
         'KismetDebuggerMod': {'create_config': True, 'include_in_release': False},
     }
+
+    def copy_assets_without_mods(src, dst):
+        # Copy entire directory, excluding Mods folder
+        for item in os.listdir(src):
+            s = os.path.join(src, item)
+            d = os.path.join(dst, item)
+            if os.path.isdir(s) and item == 'Mods':
+                continue
+            if os.path.isdir(s):
+                shutil.copytree(s, d)
+            else:
+                shutil.copy2(s, d)
 
     def make_staging_dirs(is_dev_release: bool):
         # Builds a release version of /assets by copying the directory and then
@@ -103,8 +115,8 @@ def package(args):
 
         staging_dir = staging_dev if is_dev_release else staging_release
 
-        # Copy whole directory
-        shutil.copytree('assets', staging_dir)
+        # Copy whole directory excluding Mods
+        copy_assets_without_mods('assets', staging_dir)
 
         # Include repo README
         shutil.copy('README.md', os.path.join(staging_dir, 'README.md'))
@@ -191,14 +203,19 @@ def package(args):
         ue4ss_dir = os.path.join(staging_dir, 'ue4ss')
         os.makedirs(ue4ss_dir, exist_ok=True)
 
-        # Move all files from assets folder to the ue4ss folder except dwmapi.dll
+        # Move all files from assets folder to the ue4ss folder except dwmapi.dll and Mods folder
         for root, _, files in os.walk('assets'):
             for file in files:
-                if file.lower() != 'dwmapi.dll':
+                if file.lower() != 'dwmapi.dll' and not os.path.join(root, file).startswith(os.path.join('assets', 'Mods')):
                     src_path = os.path.join(root, file)
                     dst_path = os.path.join(ue4ss_dir, os.path.relpath(src_path, 'assets'))
                     os.makedirs(os.path.dirname(dst_path), exist_ok=True)
                     shutil.copy(src_path, dst_path)
+
+        # Copy the Mods folder separately to avoid nesting
+        mods_src = os.path.join('assets', 'Mods')
+        mods_dst = os.path.join(ue4ss_dir, 'Mods')
+        shutil.copytree(mods_src, mods_dst, dirs_exist_ok=True)
 
         # Main dll and pdb
         shutil.copy(ue4ss_dll_path, ue4ss_dir)
