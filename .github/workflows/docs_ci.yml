@@ -31,6 +31,7 @@ jobs:
       - name: Cargo link check install
         run: |
           cargo binstall mdbook-linkcheck --no-confirm
+          echo "::warning file=README.md,line=1,col=5,endColumn=7::Missing semicolon"
       - name: Test md book
         run: |
           cd docs-export
