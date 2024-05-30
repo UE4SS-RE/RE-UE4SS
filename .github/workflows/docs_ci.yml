@@ -27,7 +27,7 @@ jobs:
 
       - name: Build
         run: |
-          cargo binstall mdbook-alerts
+          cargo binstall mdbook-alerts --no-confirm
       - name: Cargo link check install
         run: |
           mkdir -p mdbook-linkcheck && cd "$_" && \
