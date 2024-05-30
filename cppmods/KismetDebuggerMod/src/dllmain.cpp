@@ -18,9 +18,10 @@ public:
         ModDescription = STR("Debugging interface for kismet bytecode");
         ModAuthors = STR("truman");
 
-        UE4SS_ENABLE_IMGUI()
-
-        register_tab(STR("Kismet Debugger"), [](CppUserModBase* mod) { dynamic_cast<KismetDebuggerMod*>(mod)->m_debugger.render(); });
+        register_tab(STR("Kismet Debugger"), [](CppUserModBase* mod) {
+            UE4SS_ENABLE_IMGUI()
+            dynamic_cast<KismetDebuggerMod*>(mod)->m_debugger.render();
+        });
     }
 
     ~KismetDebuggerMod() override = default;
