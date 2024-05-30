@@ -37,7 +37,6 @@ namespace RC::GUI::KismetDebugger
         auto remove_breakpoint(UFunction* fn, size_t index) -> void;
 
     private:
-        std::optional<std::filesystem::path> m_save_path{};
         typedef std::unordered_set<size_t> FunctionBreakpoints;
 
         std::unordered_map<UFunction*, std::shared_ptr<FunctionBreakpoints> > m_breakpoints_by_function{};
@@ -74,6 +73,9 @@ namespace RC::GUI::KismetDebugger
 
         uint8_t* m_last_code{nullptr}; // pointer to last stack instruction, used to know if it's advanced since last frame
         BreakpointStore& m_breakpoints;
+    
+    public:
+        static inline std::filesystem::path m_save_path;
     };
 
     class ScriptRenderContext

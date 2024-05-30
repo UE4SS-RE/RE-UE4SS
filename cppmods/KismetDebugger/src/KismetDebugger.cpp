@@ -24,6 +24,8 @@
 #include <imgui_internal.h>
 #include <misc/cpp/imgui_stdlib.h>
 
+#include "UE4SSProgram.hpp"
+
 namespace RC::GUI::KismetDebugger
 {
 
@@ -86,8 +88,6 @@ namespace RC::GUI::KismetDebugger
     }
     auto BreakpointStore::load(std::filesystem::path& path) -> void
     {
-        m_save_path = path;
-
         JsonBreakpoints breakpoints{};
         auto ec = glz::read_file_json(breakpoints, path.string(), std::string{});
 
@@ -102,14 +102,12 @@ namespace RC::GUI::KismetDebugger
     }
     auto BreakpointStore::save() -> void
     {
-        if (const auto& out_path = m_save_path)
-        {
             JsonBreakpoints breakpoints{};
             for (const auto& [fn, bps] : m_breakpoints_by_name) {
                 if (bps) breakpoints[to_string(fn)] = *bps;
             }
-            auto ec = glz::write_file_json(breakpoints, (*out_path).string(), std::string{});
-        }
+            auto ec = glz::write_file_json(breakpoints, Debugger::m_save_path.string(), std::string{});
+
     }
     
     auto BreakpointStore::has_breakpoint(UFunction* fn, size_t index) -> bool
@@ -217,6 +215,7 @@ namespace RC::GUI::KismetDebugger
 
     Debugger::Debugger() : m_breakpoints(g_breakpoints)
     {
+        m_save_path = StringType{UE4SSProgram::get_program().get_working_directory()} + std::format(STR("\\Mods\\KismetDebugger\\config\\breakpoints.json"));
     }
     Debugger::~Debugger()
     {
@@ -259,8 +258,7 @@ namespace RC::GUI::KismetDebugger
         // hack to delay breakpoint loading because working directory changes at some point during load
         try
         {
-            std::filesystem::path path("breakpoints.json");
-            m_breakpoints.load(path);
+            m_breakpoints.load(m_save_path);
         }
         catch (std::exception& e)
         {
