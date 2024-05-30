@@ -22,7 +22,7 @@ permissions:
 
 jobs:
   make-release:
-    runs-on: ubuntu-24.05
+    runs-on: ubuntu-24.04
     steps:
       - name: Setup github SSH
         uses: shimataro/ssh-key-action@v2
