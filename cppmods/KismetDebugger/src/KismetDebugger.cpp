@@ -1,28 +1,23 @@
 #include <KismetDebugger.hpp>
 
-#include <limits>
 #include <vector>
 #include <unordered_map>
 #include <iostream>
 #include <thread>
 #include <ranges>
+#include "glaze/glaze.hpp"
 
 #include <DynamicOutput/DynamicOutput.hpp>
 #include <Helpers/String.hpp>
 #include <Unreal/UObjectGlobals.hpp>
 #include <Unreal/UClass.hpp>
 #include <Unreal/UFunction.hpp>
-#include <Unreal/AActor.hpp>
 #include <Unreal/FString.hpp>
-#include <Unreal/TArray.hpp>
+#include <Unreal/Core/Containers/Array.hpp>
 #include <Unreal/FFrame.hpp>
 #include <Unreal/ReflectedFunction.hpp>
 #include <Unreal/Signatures.hpp>
 #include <Unreal/Property/FObjectProperty.hpp>
-#include <SigScanner/SinglePassSigScanner.hpp>
-
-#define RC_JSON_BUILD_STATIC
-#include <JSON/Parser/Parser.hpp>
 
 #define IMGUI_DEFINE_MATH_OPERATORS
 #include <imgui.h>
@@ -81,6 +76,8 @@ namespace RC::GUI::KismetDebugger
     }
     template <> void hook_all<0>() {}
 
+    typedef std::unordered_map<std::string, std::unordered_set<size_t>> JsonBreakpoints;
+
     BreakpointStore::BreakpointStore()
     {
     }
@@ -89,69 +86,32 @@ namespace RC::GUI::KismetDebugger
     }
     auto BreakpointStore::load(std::filesystem::path& path) -> void
     {
-        auto file = File::open(path, File::OpenFor::Reading, File::OverwriteExistingFile::No, File::CreateIfNonExistent::Yes);
+        m_save_path = path;
 
-        auto breakpoints = JSON::Parser::parse(file);
+        JsonBreakpoints breakpoints{};
+        auto ec = glz::read_file_json(breakpoints, path.string(), std::string{});
 
-        for (const auto& [fn, bps] : breakpoints->get())
+        for (const auto& [fn, bps] : breakpoints)
         {
-            for (const auto& bp : bps->as<JSON::Array>()->get())
+            auto wfn = to_wstring(fn);
+            for (const auto& bp : bps)
             {
-                auto number = bp->as<JSON::Number>();
-                size_t index;
-                switch (number->m_stored_type)
-                {
-                case JSON::Number::Type::UInt32:
-                    index = (size_t) number->get<uint32_t>();
-                    break;
-                case JSON::Number::Type::UInt64:
-                    index = (size_t) number->get<uint64_t>();
-                    break;
-                case JSON::Number::Type::Int32:
-                    index = (size_t) number->get<int32_t>();
-                    break;
-                case JSON::Number::Type::Int64:
-                    index = (size_t) number->get<int64_t>();
-                    break;
-                case JSON::Number::Type::Float:
-                    index = (size_t) number->get<float>();
-                    break;
-                case JSON::Number::Type::Double:
-                    index = (size_t) number->get<double>();
-                    break;
-                }
-
-                add_breakpoint(fn, index);
+                add_breakpoint(wfn, bp);
             }
         }
-
-        file.close();
-
-        m_save_path = path;
     }
     auto BreakpointStore::save() -> void
     {
         if (const auto& out_path = m_save_path)
         {
-            auto config = JSON::Object{};
-
-            for (const auto& fn : m_breakpoints_by_name) {
-                if (fn.second)
-                {
-                    auto& json_bps = config.new_array(fn.first);
-                    for (const auto& bp : *fn.second) {
-                        json_bps.new_number<int32_t>((int32_t) bp);
-                    }
-                }
+            JsonBreakpoints breakpoints{};
+            for (const auto& [fn, bps] : m_breakpoints_by_name) {
+                if (bps) breakpoints[to_string(fn)] = *bps;
             }
-
-            auto json_file = File::open(*out_path, File::OpenFor::Writing, File::OverwriteExistingFile::Yes, File::CreateIfNonExistent::Yes);
-            int32_t indent_level{};
-            const auto& str = config.serialize(JSON::ShouldFormat::Yes, &indent_level);
-            json_file.write_string_to_file(str);
-            json_file.close();
+            auto ec = glz::write_file_json(breakpoints, (*out_path).string(), std::string{});
         }
     }
+    
     auto BreakpointStore::has_breakpoint(UFunction* fn, size_t index) -> bool
     {
         auto [it_fn, inserted] = m_breakpoints_by_function.emplace(fn, nullptr);

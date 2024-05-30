@@ -1,5 +1,4 @@
-#ifndef UE4SS_BP_KISMET_DEBUGGER_HPP
-#define UE4SS_BP_KISMET_DEBUGGER_HPP
+#pragma once
 
 #include <unordered_map>
 #include <unordered_set>
@@ -126,5 +125,3 @@ namespace RC::GUI::KismetDebugger
         EExprToken m_current_expr{};
     };
 }
-
-#endif // UE4SS_BP_KISMET_DEBUGGER_HPP
