@@ -65,8 +65,13 @@ def package(args):
 
     staging_dev = os.path.join(release_output, 'StagingDev')
     staging_release = os.path.join(release_output, 'StagingRelease')
+    
+    # List CPP Mods with flags indicating if they need a config folder and if they should be included in release builds
+    CPPMods = {
+        'KismetDebuggerMod': {'create_config': True, 'include_in_release': False},
+    }
 
-    def make_staging_dirs():
+    def make_staging_dirs(is_dev_release: bool):
         # Builds a release version of /assets by copying the directory and then
         # removing and disabling dev-only settings and files
         exclude_files = [
@@ -91,24 +96,29 @@ def package(args):
             'LineTraceMod': 0,
         }
 
+        # Disable all dev-only CPP mods by adding to table
+        for mod_name, mod_info in CPPMods.items():
+            if not mod_info['include_in_release']:
+                change_modstxt[mod_name] = 0
+
+        staging_dir = staging_dev if is_dev_release else staging_release
+
         # Copy whole directory
-        shutil.copytree('assets', staging_dev)
-        shutil.copytree('assets', staging_release)
+        shutil.copytree('assets', staging_dir)
 
         # Include repo README
-        shutil.copy('README.md', os.path.join(staging_dev, 'README.md'))
-        shutil.copy('README.md', os.path.join(staging_release, 'README.md'))
+        shutil.copy('README.md', os.path.join(staging_dir, 'README.md'))
 
         # Remove files
         for file in exclude_files:
-            path = os.path.join(staging_release, file)
+            path = os.path.join(staging_dir, file)
             try:
                 os.remove(path)
             except:
                 shutil.rmtree(path)
 
         # Change UE4SS-settings.ini
-        config_path = os.path.join(staging_release, 'UE4SS-settings.ini')
+        config_path = os.path.join(staging_dir, 'UE4SS-settings.ini')
 
         with open(config_path, mode='r', encoding='utf-8-sig') as file:
             content = file.read()
@@ -121,10 +131,14 @@ def package(args):
             file.write(content)
 
         # Change Mods/mods.txt
-        mods_path = os.path.join(staging_release, 'Mods/mods.txt')
+        mods_path = os.path.join(staging_dir, 'Mods/mods.txt')
 
         with open(mods_path, mode='r', encoding='utf-8-sig') as file:
             content = file.read()
+
+        # Add all CPP mods to mods.txt for both release and dev in case someone adds dev mods later
+        cpp_mods_entries = '\n'.join([f'{mod} : 1' for mod in CPPMods])
+        content += '\n' + cpp_mods_entries
 
         for key, value in change_modstxt.items():
             pattern = rf'(^{key}\s*:).*?$'
@@ -132,6 +146,13 @@ def package(args):
 
         with open(mods_path, mode='w', encoding='utf-8-sig') as file:
             file.write(content)
+
+        # Create folders for CPP mods in assets
+        for mod_name, mod_info in CPPMods.items():
+            if is_dev_release or mod_info['include_in_release']:
+                os.makedirs(os.path.join(staging_dir, 'Mods', mod_name, 'dlls'), exist_ok=True)
+                if mod_info['create_config']:
+                    os.makedirs(os.path.join(staging_dir, 'Mods', mod_name, 'config'), exist_ok=True)
 
     def package_release(is_dev_release: bool):
         version = subprocess.check_output(['git', 'describe', '--tags']).decode('utf-8').strip()
@@ -145,6 +166,9 @@ def package(args):
         ue4ss_dll_path = ''
         ue4ss_pdb_path = ''
         dwmapi_dll_path = ''
+        
+        # CPP mods paths
+        cpp_mods_paths = {mod: '' for mod in CPPMods if is_dev_release or CPPMods[mod]['include_in_release']}
 
         scan_start_dir = '.'
         if str(args.d) != 'None':
@@ -158,6 +182,10 @@ def package(args):
                     ue4ss_pdb_path = os.path.join(root, file)
                 if file.lower() == "dwmapi.dll":
                     dwmapi_dll_path = os.path.join(root, file)
+                # Find CPP Mod DLLs
+                for mod_name in cpp_mods_paths:
+                    if file.lower() == mod_name.lower() + '.dll':
+                        cpp_mods_paths[mod_name] = os.path.join(root, file)
 
         # Create the ue4ss folder in staging_dir
         ue4ss_dir = os.path.join(staging_dir, 'ue4ss')
@@ -174,6 +202,17 @@ def package(args):
 
         # Main dll and pdb
         shutil.copy(ue4ss_dll_path, ue4ss_dir)
+        
+        # CPP mods
+        for mod_name, dll_path in cpp_mods_paths.items():
+            mod_dir = os.path.join(ue4ss_dir, 'Mods', mod_name, 'dlls')
+            os.makedirs(mod_dir, exist_ok=True)
+            shutil.copy(dll_path, os.path.join(mod_dir, 'main.dll'))
+
+            # Create config folder if needed
+            if is_dev_release or CPPMods[mod_name]['include_in_release']:
+                if CPPMods[mod_name]['create_config']:
+                    os.makedirs(os.path.join(ue4ss_dir, 'Mods', mod_name, 'config'), exist_ok=True)
 
         # Proxy
         shutil.copy(dwmapi_dll_path, staging_dir)
@@ -196,7 +235,8 @@ def package(args):
         # Clean up staging dir
         shutil.rmtree(staging_dir)
 
-    make_staging_dirs()
+    make_staging_dirs(is_dev_release=True)  # Create staging directories for dev build
+    make_staging_dirs(is_dev_release=False) # Create staging directories for release build
 
     # Package UE4SS Standard
     package_release(is_dev_release=False)
