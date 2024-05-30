@@ -48,7 +48,7 @@ jobs:
       - name: Build
         run: |
           xmake f -y --ue4ssUI=TUI --ue4ssInput=y --ue4ssIsBeta=y --zig=y -v -m "Game__Shipping__Linux"
-          XMAKE_COLORTERM=nocolor xmake build -v -D > build.log
+          xmake build
       - name: Stripping
         run: |
           mkdir prepackage
