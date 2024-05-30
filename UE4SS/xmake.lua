@@ -5,6 +5,7 @@ add_requires("ImGuiTextEdit v1.0", { debug = is_mode_debug(), configs = {runtime
 add_requires("IconFontCppHeaders v1.0", { debug = is_mode_debug(), configs = {runtimes = get_mode_runtimes()}})
 add_requires("glfw 3.3.9", { debug = is_mode_debug() , configs = {runtimes = get_mode_runtimes()}})
 add_requires("opengl", { debug = is_mode_debug(), configs = {runtimes = get_mode_runtimes()} })
+add_requires("glaze", { debug = is_mode_debug(), configs = {runtimes = get_mode_runtimes()} })
 
 option("ue4ssBetaIsStarted")
     set_default(true)
@@ -41,7 +42,7 @@ end
 
 target(projectName)
     set_kind("shared")
-    set_languages("cxx20")
+    set_languages("cxx23")
     set_exceptions("cxx")
     set_default(true)
     add_rules("ue4ss.defines.exports")
