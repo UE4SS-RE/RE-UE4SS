@@ -6,8 +6,7 @@ title = "UE4SS Documentation"
 
 [output.html]
 additional-css = ["css/custom.css"]
-additional-js = ["js/version-header.js"]
-edit-url-template = "https://github.com/UE4SS-RE/RE-UE4SS/edit/main/docs/src/{path}"
+edit-url-template = "https://github.com/UE4SS-RE/RE-UE4SS/edit/main/docs/{path}"
 git-repository-url = "https://github.com/UE4SS-RE/RE-UE4SS"
 git-repository-icon = "fa-github"
 
@@ -16,24 +15,18 @@ enable = true
 level = 1
 
 [output.linkcheck]
-optional = false
-# Should we check links on the internet? Enabling this option adds a
-# non-negligible performance impact
+optional = true
+# This attempts to make web requests to check if URLs in the book are valid.
+# This has a non-negligible performance impact and is not enabled locally.
+# We can override this in CI by setting the MDBOOK_output__linkcheck__follow_web_links env variable.
 follow-web-links = false
 
 # Are we allowed to link to files outside of the book's root directory? This
 # may help prevent linking to sensitive files (e.g. "../../../../etc/shadow")
 traverse-parent-directories = false
 
-# If necessary, you can exclude one or more links from being checked with a
-# list of regular expressions. The regex will be applied to the link href (i.e.
-# the `./index.html` in `[some page](./index.html)`) so it can be used to
-# ignore both web and filesystem links.
-#
-# Hint: you can use TOML's raw strings (single quote) to avoid needing to
-# escape things twice.
 # Ignore validating UEPseudo links since those require authentication.
-exclude = [ 'google\.com' , 'https://github.com/Re-UE4SS/UEPseudo']
+exclude = ['https://github.com/Re-UE4SS/UEPseudo']
 
 # The User-Agent to use when sending web requests
 user-agent = "mdbook-linkcheck-0.4.0"
@@ -41,20 +34,54 @@ user-agent = "mdbook-linkcheck-0.4.0"
 # The number of seconds a cached result is valid for (12 hrs by default)
 cache-timeout = 43200
 
-# How should warnings be treated?
-#
-# - "warn" will emit warning messages
-# - "error" treats all warnings as errors, failing the linkcheck
-# - "ignore" will ignore warnings, suppressing diagnostic messages and allowing
-#   the linkcheck to continuing
+# Treat warnings as ignorable to lessen the amount of false negatives.
 warning-policy = "ignore"
 
 [preprocessor.rewritereadme]
 command = "python rewrite_readme.py"
 
+# This preprocessor optionally adds a warning to each page if the user is viewing non-release documentation.
+# We want users who are accidently using dev/tagged docs to know that they aren't viewing release documentation.
+# These settings are overridden by environment variables in the CI context so we can dynamically generate 
+# any documentation type that we want.
+
+# $ENV:MDBOOK_FOO_bar__baz = "xyz" is equivalent to setting the following in book.toml.
+# [FOO-bar]
+# baz = "xyz"
+# More details at https://rust-lang.github.io/mdBook/format/configuration/environment-variables.html
+
 [preprocessor.versionwarning]
-command = "python version_warning.py"
-version = "tag"
-tag = "v3.0.1"
-redirect-url = "http://google.com/"
+# Run this preprocessor after the rewritereadme so our header isn't overwritten by rewritereadme.
 after = ["rewritereadme"]
+
+command = "python version_warning.py"
+# version: can be "local", "release", "tag", or "branch"
+version = "local"
+# redirect-url: is the base URL of the docs that the warning message provides to the user.
+redirect-url = "http://docs.ue4ss.com"
+
+# Additional settings that are specific to each version type are described below:
+
+### Local Docs ###
+# version = "local"
+
+### Release Docs ###
+# version = "release"
+
+### Tag Docs ###
+# version = "tag"
+# tag = "v3.0.1"
+# redirect-url = "http://docs.ue4ss.com"
+
+### Dev Docs ###
+# version = "branch"
+# branch = "dev"
+# redirect-url = "http://docs.ue4ss.com"
+
+### Arbitrary Branch ###
+# version = "branch"
+# branch = "test-branch"
+# redirect-url = "http://docs.ue4ss.com"
+
+
+
