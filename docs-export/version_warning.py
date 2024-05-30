@@ -40,7 +40,8 @@ if __name__ == '__main__':
     header = generate_warning_message(context['config']['preprocessor']['versionwarning'])
     if header is not None:
         for section in book['sections'] :
-            append_to_chapter(section['Chapter'], header)
+            if 'Chapter' in section: # empty section check
+                append_to_chapter(section['Chapter'], header)
             
 
 
