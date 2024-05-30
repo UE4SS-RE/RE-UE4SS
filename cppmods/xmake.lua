@@ -1,1 +1,1 @@
-includes("KismetDebugger")
+includes("KismetDebuggerMod")

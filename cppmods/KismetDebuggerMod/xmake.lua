@@ -1,4 +1,4 @@
-local projectName = "KismetDebugger"
+local projectName = "KismetDebuggerMod"
 
 target(projectName)
     add_rules("ue4ss.mod")
