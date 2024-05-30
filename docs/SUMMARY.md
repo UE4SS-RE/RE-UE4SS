@@ -1,6 +1,7 @@
 # Unreal Engine 4/5 Scripting System
 
 [Home](./README.md)
+<<<<<<< docs-pipeline-improvements
 - [FeatureOverview]()
   - [Blueprint Modloading](./feature-overview/blueprint-modloader.md)
   - [Live Property Viewer and Editor](./feature-overview/live-view.md)
@@ -9,6 +10,20 @@
   - [Experimental](./feature-overview/experimental.md)
 - [Installation](./installation-guide.md)
 - [Custom Game Configs](./custom-game-configs.md)
+=======
+[Installation](./installation-guide.md)
+[Contributing](./contributing.md)
+
+---
+
+## Feature Overview
+- [Blueprint Modloading](./feature-overview/blueprint-modloader.md)
+- [Live Property Viewer and Editor](./feature-overview/live-view.md)
+- [Dumpers](./feature-overview/dumpers.md)
+
+## APIs
+
+>>>>>>> main
 - [Lua API](./lua-api.md)
   - [Table Definitions]()
     - [Key](./lua-api/table-definitions/key.md)
@@ -93,13 +108,19 @@
   - [Creating a C++ Mod](./guides/creating-a-c++-mod.md)
   - [Installing a C++ Mod](./guides/installing-a-c++-mod.md)
   - [GUI tabs with a C++ Mod](./guides/creating-gui-tabs-with-c++-mod.md)
-- [Guides]()
-  - [Fixing missing AOBs](./guides/fixing-compatibility-problems.md)
-  - [Generating UHT headers](./guides/generating-uht-compatible-headers.md)
-  - [Creating a C++ Mod](./guides/creating-a-c++-mod.md)
-  - [Installing a C++ Mod](./guides/installing-a-c++-mod.md)
-  - [GUI tabs with a C++ Mod](./guides/creating-gui-tabs-with-c++-mod.md)
-  - [Creating a Lua Mod](./guides/creating-a-lua-mod.md)
-  - [Using Custom Lua Bindings](./guides/using-custom-lua-bindings.md)
+
+## Guides
+
+- [Fixing missing AOBs](./guides/fixing-compatibility-problems.md)
+- [Generating UHT headers](./guides/generating-uht-compatible-headers.md)
+- [Creating a C++ Mod](./guides/creating-a-c++-mod.md)
+- [Installing a C++ Mod](./guides/installing-a-c++-mod.md)
+- [GUI tabs with a C++ Mod](./guides/creating-gui-tabs-with-c++-mod.md)
+- [Creating a Lua Mod](./guides/creating-a-lua-mod.md)
+- [Using Custom Lua Bindings](./guides/using-custom-lua-bindings.md)
+
+## Misc
+
+- [Custom Game Configs](./custom-game-configs.md)
 - [Devlogs](./devlogs.md)
   - [DataTables in UE4SS](./devlogs/datatables-in-ue4ss.md)

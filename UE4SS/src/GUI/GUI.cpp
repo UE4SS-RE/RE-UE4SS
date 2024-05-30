@@ -381,6 +381,7 @@ namespace RC::GUI
         ImGui::CreateContext();
         ImGuiIO& io = ImGui::GetIO();
         (void)io;
+        io.IniFilename = nullptr;
 
         gui_setup_style();
         io.Fonts->Clear();

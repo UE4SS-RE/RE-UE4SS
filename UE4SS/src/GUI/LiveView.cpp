@@ -341,7 +341,7 @@ namespace RC::GUI
         }
 
         auto json_file =
-                File::open(StringType{UE4SSProgram::get_program().get_working_directory()} + std::format(STR("\\UE4SS-config\\liveview\\filters.meta.json")),
+                File::open(StringType{UE4SSProgram::get_program().get_working_directory()} + std::format(STR("\\liveview\\filters.meta.json")),
                            File::OpenFor::Writing,
                            File::OverwriteExistingFile::Yes,
                            File::CreateIfNonExistent::Yes);
@@ -390,7 +390,7 @@ namespace RC::GUI
     static auto internal_load_filters_from_disk() -> void
     {
         const auto json_file =
-                File::open(StringType{UE4SSProgram::get_program().get_working_directory()} + std::format(STR("\\UE4SS-config\\liveview\\filters.meta.json")),
+                File::open(StringType{UE4SSProgram::get_program().get_working_directory()} + std::format(STR("\\liveview\\filters.meta.json")),
                            File::OpenFor::Reading,
                            File::OverwriteExistingFile::No,
                            File::CreateIfNonExistent::Yes);
@@ -578,11 +578,13 @@ namespace RC::GUI
 
     static auto internal_load_watches_from_disk() -> void
     {
-        auto json_file = File::open(StringType{UE4SSProgram::get_program().get_working_directory()} + std::format(STR("\\watches\\watches.meta.json")),
-                                    File::OpenFor::Reading,
-                                    File::OverwriteExistingFile::No,
-                                    File::CreateIfNonExistent::Yes);
-        auto json_file_contents = json_file.read_all();
+        auto working_directory_path = StringType{UE4SSProgram::get_program().get_working_directory()} + std::format(STR("\\watches\\watches.meta.json"));
+        auto legacy_root_directory_path = StringType{UE4SSProgram::get_program().get_legacy_root_directory()} + std::format(STR("\\watches\\watches.meta.json"));
+    
+        StringType json_file_contents;
+        bool is_legacy = !std::filesystem::exists(working_directory_path) && std::filesystem::exists(legacy_root_directory_path);
+        auto json_file = File::open(is_legacy ? legacy_root_directory_path : working_directory_path, File::OpenFor::Reading, File::OverwriteExistingFile::No, File::CreateIfNonExistent::Yes);
+        
         if (json_file_contents.empty())
         {
             return;
@@ -3279,7 +3281,7 @@ namespace RC::GUI
                 if (ImGui::IsItemHovered())
                 {
                     ImGui::BeginTooltip();
-                    ImGui::Text("Saves your filters to <UE4SS install location>/UE4SS-config/liveview/filters.meta.json");
+                    ImGui::Text("Saves your filters to <UE4SS.dll install location>/liveview/filters.meta.json");
                     ImGui::EndTooltip();
                 }
 

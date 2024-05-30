@@ -377,19 +377,18 @@ namespace RC
         // At that point, the working directory will be "root/<GameName>"
         m_working_directory = m_root_directory;
 
-        // Default file to open if there is no game specific config
-        m_default_settings_path_and_file = m_root_directory / m_settings_file_name;
-
         wchar_t exe_path_buffer[1024];
         GetModuleFileNameW(GetModuleHandle(nullptr), exe_path_buffer, 1023);
         std::filesystem::path game_exe_path = exe_path_buffer;
         std::filesystem::path game_directory_path = game_exe_path.parent_path();
+        m_legacy_root_directory = game_directory_path;
+        
         m_working_directory = m_root_directory;
         m_mods_directory = m_working_directory / "Mods";
-        m_game_executable_directory = game_directory_path /*game_exe_path.parent_path()*/;
+        m_game_executable_directory = game_directory_path;
         m_settings_path_and_file = m_root_directory;
         m_game_path_and_exe_name = game_exe_path;
-        m_object_dumper_output_directory = m_game_executable_directory;
+        m_object_dumper_output_directory = m_working_directory;
 
         // Allow loading of DLLs from the game directory
         AddDllDirectory(game_exe_path.c_str());
@@ -409,12 +408,23 @@ namespace RC
                 m_settings_path_and_file = std::move(item.path());
                 m_log_directory = m_working_directory;
                 m_object_dumper_output_directory = m_working_directory;
+                m_legacy_root_directory = m_legacy_root_directory / item.path();
                 break;
             }
         }
 
         m_log_directory = m_working_directory;
         m_settings_path_and_file.append(m_settings_file_name);
+
+        // Check for legacy locations and update paths accordingly
+        if (std::filesystem::exists(m_legacy_root_directory / m_settings_file_name) && !std::filesystem::exists(m_settings_path_and_file))
+        {
+            m_settings_path_and_file = m_legacy_root_directory / m_settings_file_name;
+        }
+        if (std::filesystem::exists(m_legacy_root_directory / "Mods") && !std::filesystem::exists(m_mods_directory))
+        {
+            m_mods_directory = m_legacy_root_directory / "Mods";
+        }
     }
 
     auto UE4SSProgram::create_emergency_console_for_early_error(File::StringViewType error_message) -> void
@@ -1344,6 +1354,11 @@ namespace RC
         return m_module_file_path.c_str();
     }
 
+    auto UE4SSProgram::get_game_executable_directory() -> File::StringViewType
+    {
+        return m_game_executable_directory.c_str();
+    }
+
     auto UE4SSProgram::get_working_directory() -> File::StringViewType
     {
         return m_working_directory.c_str();
@@ -1352,6 +1367,11 @@ namespace RC
     auto UE4SSProgram::get_mods_directory() -> File::StringViewType
     {
         return m_mods_directory.c_str();
+    }
+
+    auto UE4SSProgram::get_legacy_root_directory() -> File::StringViewType
+    {
+        return m_legacy_root_directory.c_str();
     }
 
     auto UE4SSProgram::generate_uht_compatible_headers() -> void
