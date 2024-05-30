@@ -5,7 +5,6 @@
 #include <iostream>
 #include <thread>
 #include <ranges>
-#include "glaze/glaze.hpp"
 
 #include <DynamicOutput/DynamicOutput.hpp>
 #include <Helpers/String.hpp>
@@ -23,10 +22,11 @@
 #include <imgui.h>
 #include <imgui_internal.h>
 #include <misc/cpp/imgui_stdlib.h>
+#include <glaze/glaze.hpp>
 
-#include "UE4SSProgram.hpp"
+#include <UE4SSProgram.hpp>
 
-namespace RC::GUI::KismetDebugger
+namespace RC::GUI::KismetDebuggerMod
 {
 
     using namespace RC::Unreal;

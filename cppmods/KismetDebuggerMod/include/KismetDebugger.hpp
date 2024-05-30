@@ -7,7 +7,7 @@
 #include <Unreal/UStruct.hpp>
 #include <Unreal/UObject.hpp>
 
-namespace RC::GUI::KismetDebugger
+namespace RC::GUI::KismetDebuggerMod
 {
     using namespace RC::Unreal;
 
