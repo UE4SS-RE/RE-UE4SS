@@ -30,12 +30,8 @@ jobs:
           cargo binstall mdbook-alerts --no-confirm
       - name: Cargo link check install
         run: |
-          mkdir -p mdbook-linkcheck && cd "$_" && \
-          curl -L https://github.com/Michael-F-Bryan/mdbook-linkcheck/releases/latest/download/mdbook-linkcheck.x86_64-unknown-linux-gnu.zip -o mdbook-linkcheck.zip && \
-          unzip "$_" && \
-          chmod +x mdbook-linkcheck && \
-          export PATH=$PWD:$PATH && \
-          cd ..
+          cargo binstall mdbook-linkcheck --no-confirm
+          echo "::warning file=README.md,line=1,col=5,endColumn=7::Missing semicolon"
       - name: Test md book
         run: |
           cd docs-export
