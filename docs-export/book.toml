@@ -1,7 +1,7 @@
 [book]
 language = "en"
 multilingual = false
-src = "../docs/src"
+src = "../docs/"
 title = "UE4SS Documentation"
 
 [output.html]
