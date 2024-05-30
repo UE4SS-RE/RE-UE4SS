@@ -47,8 +47,8 @@ jobs:
           actions-cache-key: 'linux-test'
       - name: Build
         run: |
-          xmake f -y --ue4ssUI=TUI --ue4ssInput=y --ue4ssIsBeta=y --zig=y -v -m "Game__Shipping__Linux"
-          xmake build
+          xmake f -y --ue4ssUI=TUI --ue4ssInput=y --ue4ssIsBeta=y --zig=y -m "Game__Shipping__Linux"
+          XMAKE_COLORTERM=nocolor xmake build -v -D > build.log
       - name: Stripping
         run: |
           mkdir prepackage
