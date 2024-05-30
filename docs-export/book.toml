@@ -16,7 +16,7 @@ enable = true
 level = 1
 
 [output.linkcheck]
-optional = true
+optional = false
 # Should we check links on the internet? Enabling this option adds a
 # non-negligible performance impact
 follow-web-links = false
