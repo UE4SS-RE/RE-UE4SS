@@ -42,7 +42,7 @@ end
 
 target(projectName)
     set_kind("shared")
-    set_languages("cxx20")
+    set_languages("cxx23")
     set_exceptions("cxx")
     set_default(true)
     add_rules("ue4ss.defines.exports")
