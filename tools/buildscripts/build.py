@@ -132,15 +132,16 @@ def package(args):
         # Change UE4SS-settings.ini
         config_path = os.path.join(staging_dir, 'UE4SS-settings.ini')
 
-        with open(config_path, mode='r', encoding='utf-8-sig') as file:
-            content = file.read()
+        if not is_dev_release:
+            with open(config_path, mode='r', encoding='utf-8-sig') as file:
+                content = file.read()
 
-        for key, value in settings_to_modify_in_release.items():
-            pattern = rf'(^{key}\s*=).*?$'
-            content = re.sub(pattern, rf'\1 {value}', content, flags=re.MULTILINE)
+            for key, value in settings_to_modify_in_release.items():
+                pattern = rf'(^{key}\s*=).*?$'
+                content = re.sub(pattern, rf'\1 {value}', content, flags=re.MULTILINE)
 
-        with open(config_path, mode='w', encoding='utf-8-sig') as file:
-            file.write(content)
+            with open(config_path, mode='w', encoding='utf-8-sig') as file:
+                file.write(content)
 
         # Change Mods/mods.txt
         mods_path = os.path.join(staging_dir, 'Mods/mods.txt')
