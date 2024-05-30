@@ -432,7 +432,7 @@ namespace RC::GUI::KismetDebuggerMod
                 UFunction* node = ctx->stack->Node();
                 size_t index = ctx->stack->Code() - node->GetScript().GetData() - 1;
                 ImGui::Text("paused @ %s", expr_to_string(ctx->expr));
-                ImGui::Text("index @ %i", index);
+                ImGui::Text("index @ %zi", index);
                 ImGui::Text("object context = %s", to_string(ctx->context->GetFullName()).c_str());
 
                 if (ImGui::CollapsingHeader("Call stack", ImGuiTreeNodeFlags_DefaultOpen))
@@ -1119,12 +1119,12 @@ namespace RC::GUI::KismetDebuggerMod
             }
             case EX_Int64Const:
             {
-                ImGui::Text("%d", read<int64_t>());
+                ImGui::Text("%lld", read<int64_t>());
                 break;
             }
             case EX_UInt64Const:
             {
-                ImGui::Text("%u", read<uint64_t>());
+                ImGui::Text("%llu", read<uint64_t>());
                 break;
             }
             case EX_DoubleConst:
