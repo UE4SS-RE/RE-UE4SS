@@ -574,12 +574,11 @@ namespace RC::GUI::KismetDebugger
             if (ImGui::BeginPopup("##popup", ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_ChildWindow))
             {
                 int n = 0;
-                std::wstring_convert<std::codecvt_utf8<wchar_t>> conv;
 
                 UObjectGlobals::ForEachUObject([&](UObject* object, ...) {
                     if (object->IsA<UFunction>())
                     {
-                        std::string full_name = conv.to_bytes(object->GetFullName());
+                        std::string full_name = to_string(object->GetFullName());
 
                         auto it = std::search(
                             full_name.begin(), full_name.end(),
@@ -626,8 +625,7 @@ namespace RC::GUI::KismetDebugger
 
     auto Debugger::nav_to_function(UFunction* fn) -> void
     {
-        std::wstring_convert<std::codecvt_utf8<wchar_t>> conv;
-        std::string full_name = conv.to_bytes(fn->GetFullName());
+        std::string full_name = to_string(fn->GetFullName());
 
         m_function_name_map[full_name] = fn;
 
