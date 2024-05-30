@@ -23,8 +23,7 @@ jobs:
       - name: Setup mdBook
         run: |
           mkdir mdbook
-          curl -sSL https://github.com/rust-lang/mdBook/releases/download/v0.4.14/mdbook-v0.4.40-x86_64-unknown-linux-gnu.tar.gz | tar -xz --directory=./mdbook
-          echo `pwd`/mdbook >> $GITHUB_PATH
+          curl -sSL https://github.com/rust-lang/mdBook/releases/download/v0.4.40/mdbook-v0.4.40-x86_64-unknown-linux-gnu.tar.gz | tar -xz --directory=mdbook
 
       - name: Build
         run: |
@@ -40,4 +39,4 @@ jobs:
       - name: Test md book
         run: |
           cd docs-export
-          mdbook build
+          ../mdbook/mdbook build
