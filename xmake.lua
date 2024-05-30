@@ -89,6 +89,8 @@ toolchain_end()
 
 if is_plat("linux") then
     if has_config("zig") then
+        -- add_requires("zigcc", {system = false})
+        -- set_toolchains("zigcross@zigcc", "rust")
         set_toolchains("zigcross", "rust")
         if is_host("windows") then
             set_arch("x86_64-unknown-linux-gnu")
