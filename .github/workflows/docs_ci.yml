@@ -30,12 +30,7 @@ jobs:
           cargo binstall mdbook-alerts --no-confirm
       - name: Cargo link check install
         run: |
-          mkdir -p mdbook-linkcheck && cd "$_" && \
-          curl -L https://github.com/Michael-F-Bryan/mdbook-linkcheck/releases/latest/download/mdbook-linkcheck.x86_64-unknown-linux-gnu.zip -o mdbook-linkcheck.zip && \
-          unzip "$_" && \
-          chmod +x mdbook-linkcheck && \
-          echo `pwd`/mdbook-linkcheck >> $GITHUB_PATH
-          cd ..
+          cargo binstall mdbook-linkcheck --no-configm
       - name: Test md book
         run: |
           cd docs-export
