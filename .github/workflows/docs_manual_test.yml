@@ -12,4 +12,4 @@ jobs:
         needs: test
         uses: ./.github/workflows/docs_deploy_reusable.yml
         with:
-            docs_config: ${{ fromJson(needs.test.outputs) }}
+            docs_config: ${{ needs.test.outputs }}
