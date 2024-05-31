@@ -61,6 +61,7 @@ class ReleaseHandler:
         self.modify_mods_txt() # can only run this after copy mods just in case we are missing mod dlls
         self.copy_executables(dwmapi_dll_path, ue4ss_dll_path, ue4ss_pdb_path)
         self.copy_docs()
+        self.modify_changelog() # needs to be run inside staging as we don't want to modify the original
 
     def modify_settings(self, settings_to_modify):
         config_path = os.path.join(self.ue4ss_dir, 'UE4SS-settings.ini')
@@ -139,6 +140,10 @@ class ReleaseHandler:
         if self.is_dev_release and os.path.exists('docs'):
             shutil.copytree('docs', os.path.join(self.ue4ss_dir, 'Docs'))
 
+    def modify_changelog(self):
+        changelog_path = self.ue4ss_dir + '/Changelog.md'
+        if os.path.exists(changelog_path): ready_changelog_for_release(changelog_path)
+
     def package_release(self):
         version = subprocess.check_output(['git', 'describe', '--tags']).decode('utf-8').strip()
         main_zip_name = f'zDEV-UE4SS_{version}' if self.is_dev_release else f'UE4SS_{version}'
@@ -179,21 +184,24 @@ class Packager:
         shutil.make_archive(os.path.join(self.release_output, 'zCustomGameConfigs'), 'zip', 'assets/CustomGameConfigs')
         shutil.make_archive(os.path.join(self.release_output, 'zMapGenBP'), 'zip', 'assets/MapGenBP')
 
-        changelog = parse_changelog()
+        changelog = parse_changelog(self.args.changelog_path)
         with open(os.path.join(self.release_output, 'release_notes.md'), 'w') as file:
             file.write(changelog[0]['notes'])
 
         print('Done')
 
-changelog_path = 'assets/Changelog.md'
+def ready_changelog_for_release(changelog_path):
+    with open(changelog_path, 'r') as file:
+        lines = file.readlines()
+    version = lines[0].strip()
+    if lines[2] != 'TBD\n':
+        raise Exception('date is not "TBD"')
+    lines[2] = datetime.today().strftime('%Y-%m-%d') + '\n'
+    with open(changelog_path, 'w') as file:
+        file.writelines(lines)
+    return version
 
-# Outputs to GitHub env if present
-def github_output(name, value):
-    if 'GITHUB_OUTPUT' in os.environ:
-        with open(os.environ['GITHUB_OUTPUT'], 'a') as env:
-            env.write(f'{name}={value}\n')
-
-def parse_changelog():
+def parse_changelog(changelog_path):
     with open(changelog_path, 'r') as file:
         lines = file.readlines()
         delimeters = [index - 1 for index, value in enumerate(lines) if value == '==============\n']
@@ -204,52 +212,44 @@ def parse_changelog():
             'notes': ''.join(lines[index[0] + 3:index[1]]).strip(),
         } for index in zip(delimeters, delimeters[1:])]
 
-def get_release_notes():
-    changelog = parse_changelog()
-    print(changelog[0]['notes'])
+def package(args):
+    packager = Packager(args)
+    packager.run()
 
 def release_commit(args):
-    # TODO perhaps check if index is dirty to avoid clobbering anything
-
-    with open(changelog_path, mode='r') as file:
-        lines = file.readlines()
-    version = lines[0].strip()
-    if lines[2] != 'TBD\n':
-        raise Exception('date is not "TBD"')
-    lines[2] = datetime.today().strftime('%Y-%m-%d') + '\n'
-
-    with open(changelog_path, mode='w') as file:
-        file.writelines(lines)
-
+    version = ready_changelog_for_release(args.changelog_path)
     message = f'Release {version}'
-    subprocess.run(['git', 'add', changelog_path], check=True)
+    subprocess.run(['git', 'add', args.changelog_path], check=True)
     if args.username:
         subprocess.run(['git', '-c', f'user.name="{args.username}"', '-c', f'user.email="{args.username}@users.noreply.github.com"', 'commit', '-m', message], check=True)
     else:
         subprocess.run(['git', 'commit', '-m', message], check=True)
     subprocess.run(['git', 'tag', version], check=True)
 
-    github_output('release_tag', version)
+    # Outputs to GitHub env if present
+    def github_output(name, value):
+        if 'GITHUB_OUTPUT' in os.environ:
+            with open(os.environ['GITHUB_OUTPUT'], 'a') as env:
+                env.write(f'{name}={value}\n')
 
-def package(args):
-    packager = Packager(args)
-    packager.run()
+    github_output('release_tag', version)
 
 if __name__ == "__main__":
     # Change dir to repo root
     os.chdir(os.path.join(os.path.dirname(__file__), '..', '..'))
-    
+
     parser = argparse.ArgumentParser()
+    parser.add_argument('--changelog_path', default='assets/Changelog.md', required=False)
+
     subparsers = parser.add_subparsers(dest='command', required=True)
-    
+
     package_parser = subparsers.add_parser('package')
-    
+
     release_commit_parser = subparsers.add_parser('release_commit')
     release_commit_parser.add_argument('username', nargs='?')
-    
+
     args = parser.parse_args()
     commands = {f.__name__: f for f in [
-        get_release_notes,
         package,
         release_commit,
     ]}
@@ -257,18 +257,25 @@ if __name__ == "__main__":
 
 """
 How to run this script:
-
 1. Running the 'package' command:
     Usage: python release.py package
 
+    --changelog_path : Optional argument to specify the path to the changelog file. Default is 'assets/Changelog.md'
+
+    Examples:
+    - python release.py package
+    - python release.py package --changelog_path custom/Changelog.md
+
 2. Running the 'release_commit' command:
     Usage: python release.py release_commit [username]
-    
+
     username : Optional argument to specify a github username
-    
+    --changelog_path : Optional argument to specify the path to the changelog file. Default is 'assets/Changelog.md'
+
     Examples:
     - python release.py release_commit
     - python release.py release_commit ${{ github.actor }}
+    - python release.py release_commit ${{ github.actor }} custom/Changelog.md
 """
 
 """
