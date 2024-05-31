@@ -1,0 +1,69 @@
+name: Docs Deploy
+permissions:
+    contents: write
+on:
+  workflow_dispatch:
+  push:
+    branches:
+        - 'main'
+    paths:
+        - 'README.md'
+        - 'docs/**'
+        - 'docs-export/**'
+  pull_request:
+    branches:
+      - 'main'
+    paths:
+      - 'README.md'
+      - 'docs/**'
+      - 'docs-export/**'
+
+jobs:
+  build:
+    concurrency: ci-${{ github.ref }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: PR Settings
+        if: ${{startsWith(github.ref, 'refs/pull/')}}
+        run: |
+          echo "MDBOOK_preprocessor__versionwarning__version=local" >> "$GITHUB_ENV"
+      - name: Branch Settings
+        if: ${{github.ref == 'refs/heads/main'}}
+        run: |
+          echo "MDBOOK_preprocessor__versionwarning__version=branch" >> "$GITHUB_ENV"
+          echo "MDBOOK_preprocessor__versionwarning__branch=dev" >> "$GITHUB_ENV"
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0  
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.x'
+      - name: Cargo binstall
+        uses: cargo-bins/cargo-binstall@main
+      - name: Setup mdBook
+        run: |
+          mkdir mdbook
+          curl -sSL https://github.com/rust-lang/mdBook/releases/download/v0.4.40/mdbook-v0.4.40-x86_64-unknown-linux-gnu.tar.gz | tar -xz --directory=mdbook
+          echo `pwd`/mdbook/ >> $GITHUB_PATH
+      - name: Build
+        run: |
+          cargo binstall mdbook-alerts --no-confirm
+      - name: Cargo link check install
+        run: |
+          cargo binstall mdbook-linkcheck --no-confirm
+      - name: Build md book
+        run: |
+          cd docs-export
+          mdbook build
+      - name: Deploy to GitHub Pages
+#        if: ${{github.ref == 'refs/heads/main'}}
+        uses: JamesIves/github-pages-deploy-action@v4.6.1
+        with:
+          folder: docs-export/book/html
+          branch: gh-pages
+          target-folder: dev
+          clean: true
+        
+                    

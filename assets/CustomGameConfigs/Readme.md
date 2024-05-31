@@ -1,0 +1,4 @@
+These settings are for games that have altered the engine in ways that make UE4SS not work out of the box.  
+The folder structure in each game folder is the same as the regular UE4SS structure, meaning that files in the root directory go in the UE4SS root directory.
+
+IMPORTANT: Some of these files may be out of date as the games/UE4ss updates. If you find that a game's custom game config is out of date, please open an issue on the UE4SS-RE/RE-UE4SS repository. Make sure that you first test if the game works without the custom game config, as it may have been fixed in the latest version of UE4SS.
