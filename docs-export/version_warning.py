@@ -26,7 +26,7 @@ def generate_warning_message(version_config):
                     url = version_config['redirect-url'].rstrip('\\'))
     elif version_config['version'] == "tag":
         header += """You are viewing the <strong>{tag}</strong> version of the UE4SS documentation. 
-                If you *are* developing mods for the latest version of UE4SS, you should reference 
+                If you are developing mods for the latest version of UE4SS, you should reference 
                 the <a id="redirect-url" href="{url}/{{path}}">latest release docs</a> instead.""" .format(
                     tag = version_config['tag'],
                     url = version_config['redirect-url'].rstrip('\\'))

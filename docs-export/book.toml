@@ -9,6 +9,7 @@ additional-css = ["css/custom.css"]
 edit-url-template = "https://github.com/UE4SS-RE/RE-UE4SS/edit/main/docs/{path}"
 git-repository-url = "https://github.com/UE4SS-RE/RE-UE4SS"
 git-repository-icon = "fa-github"
+cname = "docs.ue4ss.com"
 
 [output.html.fold]
 enable = true
