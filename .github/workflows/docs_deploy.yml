@@ -46,6 +46,7 @@ jobs:
         run: |
           mkdir mdbook
           curl -sSL https://github.com/rust-lang/mdBook/releases/download/v0.4.40/mdbook-v0.4.40-x86_64-unknown-linux-gnu.tar.gz | tar -xz --directory=mdbook
+          echo `pwd`/mdbook/ >> $GITHUB_PATH
       - name: Build
         run: |
           cargo binstall mdbook-alerts --no-confirm
@@ -55,7 +56,7 @@ jobs:
       - name: Build md book
         run: |
           cd docs-export
-          ../mdbook/mdbook build       
+          mdbook build
       - name: Deploy to GitHub Pages
 #        if: ${{github.ref == 'refs/heads/main'}}
         uses: JamesIves/github-pages-deploy-action@v4.6.1
