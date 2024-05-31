@@ -15,14 +15,9 @@ jobs:
     build:
         runs-on: ubuntu-latest
         steps:
-          - name: Parse docs config
-            run: |
+            - name: Parse docs config
+              run: |
                 echo "${{ join(fromJson(inputs.docs_config), '" >> $GITHUB_ENV &&') }}" >> $GITHUB_ENV
-                echo "test=tester" >> $GITHUB_ENV
-          - name: Echo env vars
-            run: |
-                echo "${{env.MDBOOK_test_env_var}}"
-                echo "${{env.test}}"
 #          - name: Checkout code
 #            uses: actions/checkout@v3
 #            with:

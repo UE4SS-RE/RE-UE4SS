@@ -6,23 +6,32 @@ on:
   push:
     branches:
         - 'main'
-    tags:
-        - 'v**'
     paths:
         - 'README.md'
         - 'docs/**'
         - 'docs-export/**'
+  pull_request:
+    branches:
+      - 'main'
+    paths:
+      - 'README.md'
+      - 'docs/**'
+      - 'docs-export/**'
 
 jobs:
   build:
+    concurrency: ci-${{ github.ref }}
     runs-on: ubuntu-latest
     steps:
-      - name: Repo SemVer
-        if: ${{github.ref_type == 'tag'}}
-        uses: lhstrh/action-repo-semver@v1.1.2
-        id: repo-semver
-        with: 
-            planned: ${{github.ref_name}}
+      - name: PR Settings
+        if: ${{startsWith(github.ref, 'refs/pull/')}}
+        run: |
+          echo "MDBOOK_preprocessor__versionwarning__version=local" >> "$GITHUB_ENV"
+      - name: Branch Settings
+        if: ${{github.ref == 'refs/heads/main'}}
+        run: |
+          echo "MDBOOK_preprocessor__versionwarning__version=branch" >> "$GITHUB_ENV"
+          echo "MDBOOK_preprocessor__versionwarning__branch=dev" >> "$GITHUB_ENV"
       - name: Checkout code
         uses: actions/checkout@v3
         with:
@@ -37,20 +46,23 @@ jobs:
         run: |
           mkdir mdbook
           curl -sSL https://github.com/rust-lang/mdBook/releases/download/v0.4.40/mdbook-v0.4.40-x86_64-unknown-linux-gnu.tar.gz | tar -xz --directory=mdbook
-
       - name: Build
         run: |
           cargo binstall mdbook-alerts --no-confirm
       - name: Cargo link check install
         run: |
           cargo binstall mdbook-linkcheck --no-confirm
-
-
-        
-      - name: Test md book
+      - name: Build md book
         run: |
           cd docs-export
-          ../mdbook/mdbook build
-        if: ${{github.ref_type == 'tag'}}
-        env: 
-            MDBOOK_preprocessor__versionwarning__version: "tag"
+          ../mdbook/mdbook build       
+      - name: Deploy to GitHub Pages
+#        if: ${{github.ref == 'refs/heads/main'}}
+        uses: JamesIves/github-pages-deploy-action@v4.6.1
+        with:
+          folder: book/html
+          branch: gh-pages
+          target-folder: dev
+          clean: true
+        
+                    
