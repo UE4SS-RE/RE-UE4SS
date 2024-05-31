@@ -20,6 +20,8 @@ namespace RC::File
     auto WinFile::invalidate_file() noexcept -> void
     {
         m_file = nullptr;
+        m_map_handle = nullptr;
+        m_memory_map = nullptr;
     }
 
     auto WinFile::delete_file(const std::filesystem::path& file_path_and_name) -> void
