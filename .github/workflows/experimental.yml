@@ -57,9 +57,15 @@ jobs:
           xmake build
 
       - name: Package
+        id: package
         run: python tools/buildscripts/release.py package -e
 
+      - name: Check for Package Step Failure
+        if: ${{ steps.package.outcome == 'failure' }}
+        run: exit 1
+
       - name: Release
+        if: ${{ steps.package.outcome == 'success' }}
         uses: softprops/action-gh-release@v1
         with:
           prerelease: true

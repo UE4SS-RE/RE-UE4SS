@@ -6,6 +6,7 @@ import shutil
 import subprocess
 import argparse
 from datetime import datetime
+import sys
 
 class ReleaseHandler:
     def __init__(self, is_dev_release, is_experimental, release_output='release'):
@@ -15,6 +16,7 @@ class ReleaseHandler:
         self.staging_dir = os.path.join(self.release_output, 'StagingDev') if self.is_dev_release else os.path.join(self.release_output, 'StagingRelease')
         self.ue4ss_dir = os.path.join(self.staging_dir, 'ue4ss')
 
+        # TODO: Move all these hardcoded values into a release config file or similar to pass into the script
         # List of CPP Mods with flags indicating if they need a config folder and if they should be included in release builds
         self.cpp_mods = {
             'KismetDebuggerMod': {'create_config': True, 'include_in_release': False},
@@ -51,10 +53,11 @@ class ReleaseHandler:
         if not self.is_dev_release:
             for file in self.files_to_exclude_from_release:
                 path = os.path.join(self.ue4ss_dir, file)
-                try:
-                    os.remove(path)
-                except:
-                    shutil.rmtree(path)
+                if os.path.exists(path):
+                    if os.path.isfile(path):
+                        os.remove(path)
+                    elif os.path.isdir(path):
+                        shutil.rmtree(path)
             self.modify_settings(self.settings_to_modify_in_release)
 
         ue4ss_dll_path, ue4ss_pdb_path, dwmapi_dll_path, cpp_mods_paths = self.scan_directories()
@@ -108,8 +111,8 @@ class ReleaseHandler:
                 os.makedirs(mod_dir, exist_ok=True)
                 shutil.copy(dll_path, os.path.join(mod_dir, 'main.dll'))
             else:
-                print(f'Warning: {mod_name}.dll not found, skipping')
-                self.cpp_mods.pop(mod_name)
+                print(f'Error: {mod_name}.dll not found, build has failed.')
+                sys.exit(1)
 
         for mod_name, mod_info in self.cpp_mods.items():
             if self.is_dev_release or mod_info['include_in_release']:
@@ -298,7 +301,8 @@ To locally debug this script in vscode, make launch.json in .vscode and add the 
             "program": "${workspaceFolder}/tools/buildscripts/release.py",
             "console": "integratedTerminal",
             "args": [
-                "package"        
+                "package",
+                "-e"        
             ],
             "justMyCode": true
         }

@@ -51,9 +51,15 @@ jobs:
           xmake build
 
       - name: Package
+        id: package
         run: python tools/buildscripts/release.py package
 
+      - name: Check for Package Step Failure
+        if: ${{ steps.package.outcome == 'failure' }}
+        run: exit 1
+
       - name: Push changes
+        if: ${{ steps.package.outcome == 'success' }}
         uses: ad-m/github-push-action@master
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
@@ -61,6 +67,7 @@ jobs:
           tags: true
 
       - name: Release
+        if: ${{ steps.package.outcome == 'success' }}
         uses: softprops/action-gh-release@v1
         with:
           tag_name: ${{ steps.release_commit.outputs.release_tag }}
