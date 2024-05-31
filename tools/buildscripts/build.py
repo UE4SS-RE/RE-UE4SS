@@ -8,8 +8,7 @@ import argparse
 from datetime import datetime
 
 class Packager:
-    def __init__(self, args):
-        self.is_experimental = args.e
+    def __init__(self):
         self.release_output = 'release'
         self.staging_dev = os.path.join(self.release_output, 'StagingDev')
         self.staging_release = os.path.join(self.release_output, 'StagingRelease')
@@ -198,7 +197,7 @@ def parse_changelog():
             'notes': ''.join(lines[index[0] + 3:index[1]]).strip(),
         } for index in zip(delimeters, delimeters[1:])]
 
-def get_release_notes(args):
+def get_release_notes():
     changelog = parse_changelog()
     print(changelog[0]['notes'])
 
@@ -237,8 +236,6 @@ if __name__ == "__main__":
     subparsers = parser.add_subparsers(dest='command', required=True)
     
     package_parser = subparsers.add_parser('package')
-    package_parser.add_argument('-e', action='store_true')
-    package_parser.add_argument('-d', action='store')
     
     release_commit_parser = subparsers.add_parser('release_commit')
     release_commit_parser.add_argument('username', nargs='?')
@@ -250,4 +247,19 @@ if __name__ == "__main__":
         release_commit,
     ]}
     commands[args.command](args)
-    check = 4
+
+"""
+How to run this script:
+
+1. Running the 'package' command:
+    Usage: python release.py package
+
+2. Running the 'release_commit' command:
+    Usage: python /release.py release_commit [username]
+    
+    username : Optional argument to specify a github username
+    
+    Examples:
+    - python release.py release_commit
+    - python release.py release_commit ${{ github.actor }}
+"""
