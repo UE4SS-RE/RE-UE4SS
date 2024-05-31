@@ -179,9 +179,6 @@ class Packager:
         shutil.rmtree(self.staging_dev, ignore_errors=True)
         shutil.rmtree(self.staging_release, ignore_errors=True)
 
-    def __del__(self):
-        shutil.rmtree(self.release_output, ignore_errors=True)
-
 changelog_path = 'assets/Changelog.md'
 
 # Outputs to GitHub env if present
