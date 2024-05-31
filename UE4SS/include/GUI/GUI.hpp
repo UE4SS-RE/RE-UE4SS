@@ -10,6 +10,8 @@
 #include <Helpers/String.hpp>
 #include <imgui.h>
 
+struct ImGuiSettingsHandler;
+
 namespace RC::GUI
 {
     class GUITab; // dunno why forward declaration is necessary
@@ -26,6 +28,12 @@ namespace RC::GUI
     };
 
     struct WindowSize
+    {
+        long x;
+        long y;
+    };
+
+    struct WindowPosition
     {
         long x;
         long y;
@@ -60,6 +68,10 @@ namespace RC::GUI
         {
             return {};
         };
+        virtual auto get_window_position() -> WindowPosition
+        {
+            return {};
+        };
         virtual inline auto exit_requested() -> bool
         {
             return false;
@@ -89,12 +101,13 @@ namespace RC::GUI
       public:
         virtual auto init() -> void = 0;
         virtual auto imgui_backend_newframe() -> void = 0;
-        virtual auto create_window() -> void = 0;
+        virtual auto create_window(int Loc_X = 100, int Loc_Y = 100, int Size_X = 1280, int Size_Y = 800) -> void = 0;
         virtual auto exec_message_loop(bool* exit_requested) -> void = 0;
         virtual auto shutdown() -> void = 0;
         virtual auto cleanup() -> void = 0;
         virtual auto get_window_handle() -> void* = 0;
         virtual auto get_window_size() -> WindowSize = 0;
+        virtual auto get_window_position() -> WindowPosition = 0;
         virtual auto on_gfx_backend_set() -> void = 0;
     };
 
@@ -114,7 +127,7 @@ namespace RC::GUI
         inline auto imgui_backend_newframe() -> void override
         {
         }
-        inline auto create_window() -> void override
+        inline auto create_window(int Loc_X, int Loc_Y, int Size_X, int Size_Y) -> void override
         {
         }
         inline auto exec_message_loop([[maybe_unused]] bool* exit_requested) -> void override
@@ -131,6 +144,10 @@ namespace RC::GUI
             return nullptr;
         }
         inline auto get_window_size() -> WindowSize override
+        {
+            return {};
+        }
+        inline auto get_window_position() -> WindowPosition override
         {
             return {};
         }
@@ -181,6 +198,16 @@ namespace RC::GUI
       public:
         using EndOfFrameCallback = std::function<void()>;
 
+        struct window_settings
+        {
+            int Pos_X = 100;
+            int Pos_Y = 100;
+            int Size_X = 1280;
+            int Size_Y = 800;
+        };
+
+        window_settings backend_window_settings;
+
       private:
         std::unique_ptr<GfxBackendBase> m_gfx_backend{};
         std::unique_ptr<OSBackendBase> m_os_backend{};
@@ -224,6 +251,13 @@ namespace RC::GUI
       private:
         auto on_update() -> void;
         auto main_loop_internal() -> void;
+
+        // TODO: Move ImGui data saves to their own object
+        std::chrono::time_point<std::chrono::steady_clock> ImGui_Last_Save = std::chrono::steady_clock::now();
+        static auto ImGuiUE4SSData_ShouldSave() -> bool;
+        static auto ImGuiUE4SSData_ReadOpen(ImGuiContext*, ImGuiSettingsHandler*, const char* name) -> void*;
+        static auto ImGuiUE4SSData_ReadLine(ImGuiContext*, ImGuiSettingsHandler*, void* entry, const char* line) -> void;
+        static auto ImGuiUE4SSData_WriteAll(ImGuiContext* ctx, ImGuiSettingsHandler* handler, ImGuiTextBuffer* buf) -> void;
 
       public:
         static auto execute_at_end_of_frame(EndOfFrameCallback callback) -> void;

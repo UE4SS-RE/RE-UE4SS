@@ -21,6 +21,7 @@
 #include "FaSolid900.hpp"
 #include <imgui.h>
 #include <IconsFontAwesome5.h>
+#include <imgui_internal.h>
 
 namespace RC::GUI
 {
@@ -52,7 +53,6 @@ namespace RC::GUI
     auto DebuggingGUI::on_update() -> void
     {
         static bool show_window = true;
-        static bool is_console_open = true;
 
         if (!is_valid())
         {
@@ -61,6 +61,11 @@ namespace RC::GUI
 
         if (show_window)
         {
+            if (ImGuiUE4SSData_ShouldSave())
+            {
+                ImGui::SaveIniSettingsToDisk(to_string(StringType{UE4SSProgram::get_program().get_working_directory()} + STR("\\imgui.ini")).c_str());
+            }
+            
             ImGui::SetNextWindowPos({0, 0});
             auto current_window_size = m_os_backend->is_valid() ? m_os_backend->get_window_size() : m_gfx_backend->get_window_size();
             ImGui::SetNextWindowSize({static_cast<float>(current_window_size.x), static_cast<float>(current_window_size.y)});
@@ -306,7 +311,7 @@ namespace RC::GUI
         while (!m_exit_requested && !m_gfx_backend->exit_requested())
         {
             m_os_backend->exec_message_loop(&m_exit_requested);
-
+            
             if (m_exit_requested)
             {
                 break;
@@ -365,6 +370,81 @@ namespace RC::GUI
         s_end_of_frame_callbacks.emplace_back(callback);
     }
 
+    auto DebuggingGUI::ImGuiUE4SSData_ShouldSave() -> bool
+    {
+        auto& debugging_gui = UE4SSProgram::get_program().get_debugging_ui();
+
+        auto now = std::chrono::steady_clock::now();
+        auto duration = std::chrono::duration_cast<std::chrono::seconds>(now - debugging_gui.ImGui_Last_Save).count();
+        if (duration <= 5)
+        {
+            return false;
+        }
+        
+        window_settings& settings = debugging_gui.backend_window_settings;
+        
+        auto const current_window_size = debugging_gui.m_os_backend->is_valid() ? debugging_gui.m_os_backend->get_window_size() : debugging_gui.m_gfx_backend->get_window_size();
+        if (current_window_size.x != settings.Size_X || current_window_size.y != settings.Size_Y)
+        {
+            settings.Size_X = current_window_size.x;
+            settings.Size_Y = current_window_size.y;
+            debugging_gui.ImGui_Last_Save = now;
+            return true;
+        }
+
+        auto const current_window_position = debugging_gui.m_os_backend->is_valid() ? debugging_gui.m_os_backend->get_window_position() : debugging_gui.m_gfx_backend->get_window_position();
+        if (current_window_position.x != settings.Pos_X || current_window_position.y != settings.Pos_Y)
+        {
+            settings.Pos_X = current_window_position.x;
+            settings.Pos_Y = current_window_position.y;
+            debugging_gui.ImGui_Last_Save = now;
+            return true;
+        }
+        
+        return false;
+    }
+
+    auto DebuggingGUI::ImGuiUE4SSData_ReadOpen(ImGuiContext*, ImGuiSettingsHandler*, const char* name) -> void*
+    {
+        // UE4SS ImGui Settings
+        return (void*)name;
+    }
+
+    auto DebuggingGUI::ImGuiUE4SSData_ReadLine(ImGuiContext*, ImGuiSettingsHandler*, void* entry, const char* line) -> void
+    {
+        auto& debugging_gui = UE4SSProgram::get_program().get_debugging_ui();
+        
+        // Read settings for backend window size/position
+        window_settings& settings = debugging_gui.backend_window_settings;
+        if (std::string((const char*)entry) == "Backend_Window")
+        {
+            int x, y;
+            if (sscanf_s(line, "Pos=%i,%i", &x, &y) == 2)         { settings.Pos_X = x; settings.Pos_Y = y; }
+            else if (sscanf_s(line, "Size=%i,%i", &x, &y) == 2)   { settings.Size_X = x; settings.Size_Y = y; }
+        }
+        
+    }
+
+    auto DebuggingGUI::ImGuiUE4SSData_WriteAll(ImGuiContext* ctx, ImGuiSettingsHandler* handler, ImGuiTextBuffer* buf) -> void
+    {
+        /*ImGuiContext& g = *ctx;*/
+        auto& debugging_gui = UE4SSProgram::get_program().get_debugging_ui();
+        
+        // Write settings for backend window size/position
+        auto current_window_size = debugging_gui.m_os_backend->is_valid() ? debugging_gui.m_os_backend->get_window_size() : debugging_gui.m_gfx_backend->get_window_size();
+        auto current_window_position = debugging_gui.m_os_backend->is_valid() ? debugging_gui.m_os_backend->get_window_position() : debugging_gui.m_gfx_backend->get_window_position();
+
+        // Write to text buffer
+        buf->reserve(buf->size() + 15 * 6); // ballpark reserve
+        const char* backend_window_settings_name = "Backend_Window";
+        buf->appendf("[%s][%s]\n", handler->TypeName, backend_window_settings_name);
+        buf->appendf("Pos=%d,%d\n", (int)current_window_position.x, (int)current_window_position.y);
+        buf->appendf("Size=%d,%d\n", (int)current_window_size.x, (int)current_window_size.y);
+        buf->append("\n");
+
+        // Add any additional ImGui UE4SS settings here
+    }
+
     auto DebuggingGUI::setup(std::stop_token&& stop_token) -> void
     {
         if (!is_valid())
@@ -374,14 +454,27 @@ namespace RC::GUI
         m_thread_stop_token = stop_token;
 
         m_live_view.initialize();
-
-        m_os_backend->create_window();
-
+        
         IMGUI_CHECKVERSION();
         ImGui::CreateContext();
         ImGuiIO& io = ImGui::GetIO();
-        (void)io;
-        io.IniFilename = nullptr;
+        io.IniFilename = to_string(StringType{UE4SSProgram::get_program().get_working_directory()} + STR("\\imgui.ini")).c_str();
+
+        // Add .ini handle for UserData type
+        ImGuiSettingsHandler ini_handler;
+        ini_handler.TypeName = "UE4SSData";
+        ini_handler.TypeHash = ImHashStr("UE4SSData");
+        ini_handler.ReadOpenFn = ImGuiUE4SSData_ReadOpen;
+        ini_handler.ReadLineFn = ImGuiUE4SSData_ReadLine;
+        ini_handler.WriteAllFn = ImGuiUE4SSData_WriteAll;
+        ImGui::AddSettingsHandler(&ini_handler);
+        
+        ImGui::LoadIniSettingsFromDisk(to_string(StringType{UE4SSProgram::get_program().get_working_directory()} + STR("\\imgui.ini")).c_str());
+
+        auto& debugging_gui = UE4SSProgram::get_program().get_debugging_ui();
+        window_settings& settings = debugging_gui.backend_window_settings;
+
+        m_os_backend->create_window(settings.Pos_X, settings.Pos_Y, settings.Size_X, settings.Size_Y);
 
         gui_setup_style();
         io.Fonts->Clear();
