@@ -8,8 +8,9 @@ import argparse
 from datetime import datetime
 
 class ReleaseHandler:
-    def __init__(self, is_dev_release, release_output='release'):
+    def __init__(self, is_dev_release, is_experimental, release_output='release'):
         self.is_dev_release = is_dev_release
+        self.is_experimental = is_experimental
         self.release_output = release_output
         self.staging_dir = os.path.join(self.release_output, 'StagingDev') if self.is_dev_release else os.path.join(self.release_output, 'StagingRelease')
         self.ue4ss_dir = os.path.join(self.staging_dir, 'ue4ss')
@@ -57,11 +58,15 @@ class ReleaseHandler:
             self.modify_settings(self.settings_to_modify_in_release)
 
         ue4ss_dll_path, ue4ss_pdb_path, dwmapi_dll_path, cpp_mods_paths = self.scan_directories()
+
         self.copy_cpp_mods(cpp_mods_paths)
         self.modify_mods_txt() # can only run this after copy mods just in case we are missing mod dlls
         self.copy_executables(dwmapi_dll_path, ue4ss_dll_path, ue4ss_pdb_path)
         self.copy_docs()
-        self.modify_changelog() # needs to be run inside staging as we don't want to modify the original
+
+        # needs to be run inside staging as we don't want to modify the original
+        # only run this if we are not doing an experimental release, as we don't want the date to be set in experimental releases
+        if not self.is_experimental: self.modify_changelog() 
 
     def modify_settings(self, settings_to_modify):
         config_path = os.path.join(self.ue4ss_dir, 'UE4SS-settings.ini')
@@ -170,8 +175,8 @@ class Packager:
         os.mkdir(self.release_output)
 
     def run(self):
-        dev_handler = ReleaseHandler(is_dev_release=True, release_output=self.release_output)
-        release_handler = ReleaseHandler(is_dev_release=False, release_output=self.release_output)
+        dev_handler = ReleaseHandler(is_dev_release=True, is_experimental=self.args.e, release_output=self.release_output)
+        release_handler = ReleaseHandler(is_dev_release=False, is_experimental=self.args.e, release_output=self.release_output)
 
         dev_handler.make_staging_dirs()
         dev_handler.package_release()
@@ -244,6 +249,7 @@ if __name__ == "__main__":
     subparsers = parser.add_subparsers(dest='command', required=True)
 
     package_parser = subparsers.add_parser('package')
+    package_parser.add_argument('-e', action='store_true')
 
     release_commit_parser = subparsers.add_parser('release_commit')
     release_commit_parser.add_argument('username', nargs='?')
@@ -261,10 +267,11 @@ How to run this script:
     Usage: python release.py package
 
     --changelog_path : Optional argument to specify the path to the changelog file. Default is 'assets/Changelog.md'
+    -e : Argument used when running the script for experimental release
 
     Examples:
-    - python release.py package
-    - python release.py package --changelog_path custom/Changelog.md
+    - python release.py package 
+    - python release.py package -e --changelog_path custom/Changelog.md
 
 2. Running the 'release_commit' command:
     Usage: python release.py release_commit [username]

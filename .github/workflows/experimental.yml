@@ -57,7 +57,7 @@ jobs:
           xmake build
 
       - name: Package
-        run: python tools/buildscripts/release.py package
+        run: python tools/buildscripts/release.py package -e
 
       - name: Release
         uses: softprops/action-gh-release@v1
