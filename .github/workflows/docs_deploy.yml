@@ -61,7 +61,7 @@ jobs:
 #        if: ${{github.ref == 'refs/heads/main'}}
         uses: JamesIves/github-pages-deploy-action@v4.6.1
         with:
-          folder: book/html
+          folder: /docs-export/book/html
           branch: gh-pages
           target-folder: dev
           clean: true
