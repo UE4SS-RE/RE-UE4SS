@@ -7,6 +7,7 @@ import subprocess
 import argparse
 from datetime import datetime
 import sys
+import json
 
 class ReleaseHandler:
     def __init__(self, is_dev_release, is_experimental, release_output='release'):
@@ -64,6 +65,7 @@ class ReleaseHandler:
 
         self.copy_cpp_mods(cpp_mods_paths)
         self.modify_mods_txt() # can only run this after copy mods just in case we are missing mod dlls
+        self.modify_mods_json()
         self.copy_executables(dwmapi_dll_path, ue4ss_dll_path, ue4ss_pdb_path)
         self.copy_docs()
 
@@ -124,9 +126,10 @@ class ReleaseHandler:
                     os.makedirs(os.path.join(self.ue4ss_dir, 'Mods', mod_name, 'config'), exist_ok=True)
 
     def modify_mods_txt(self):
+        mods_to_disable_in_release = self.mods_to_disable_in_release.copy()
         for mod_name, mod_info in self.cpp_mods.items():
             if not mod_info['include_in_release']:
-                self.mods_to_disable_in_release[mod_name] = 0
+                mods_to_disable_in_release[mod_name] = 0
 
         mods_path = os.path.join(self.ue4ss_dir, 'Mods/mods.txt')
         with open(mods_path, mode='r', encoding='utf-8-sig') as file:
@@ -136,12 +139,32 @@ class ReleaseHandler:
             content = '\n'.join([f'{mod} : 1' for mod in self.cpp_mods]) + '\n' + content
 
         if not self.is_dev_release:
-            for key, value in self.mods_to_disable_in_release.items():
+            for key, value in mods_to_disable_in_release.items():
                 pattern = rf'(^{key}\s*:).*?$'
                 content = re.sub(pattern, rf'\1 {value}', content, flags=re.MULTILINE)
 
         with open(mods_path, mode='w', encoding='utf-8-sig') as file:
             file.write(content)
+
+    def modify_mods_json(self):
+        mods_path = os.path.join(self.ue4ss_dir, 'Mods/mods.json')
+        with open(mods_path, mode='r', encoding='utf-8-sig') as file:
+            content = json.load(file)
+
+        if self.cpp_mods:
+            for mod_name, mod_info in self.cpp_mods.items():
+                if mod_name not in [mod['mod_name'] for mod in content]:
+                    if not self.is_dev_release:
+                        content.append({'mod_name': mod_name, 'mod_enabled': mod_info['include_in_release']})
+                    else:
+                        content.append({'mod_name': mod_name, 'mod_enabled': True})
+
+        for mod in content:
+            if mod['mod_name'] in self.mods_to_disable_in_release:
+                mod['mod_enabled'] = bool(self.mods_to_disable_in_release[mod['mod_name']])
+
+        with open(mods_path, mode='w', encoding='utf-8-sig') as file:
+            json.dump(content, file, indent=4)
 
     def copy_executables(self, dwmapi_dll_path, ue4ss_dll_path, ue4ss_pdb_path):
         shutil.copy(dwmapi_dll_path, self.staging_dir)
