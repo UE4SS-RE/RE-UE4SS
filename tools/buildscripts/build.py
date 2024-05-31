@@ -110,6 +110,10 @@ class ReleaseHandler:
                 mod_dir = os.path.join(self.ue4ss_dir, 'Mods', mod_name, 'dlls')
                 os.makedirs(mod_dir, exist_ok=True)
                 shutil.copy(dll_path, os.path.join(mod_dir, 'main.dll'))
+                if self.is_dev_release: 
+                    pdb_path = dll_path.replace('.dll', '.pdb')
+                    if os.path.exists(pdb_path):
+                        shutil.copy(pdb_path, os.path.join(mod_dir, 'main.pdb'))
             else:
                 print(f'Error: {mod_name}.dll not found, build has failed.')
                 sys.exit(1)
