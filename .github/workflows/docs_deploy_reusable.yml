@@ -20,7 +20,7 @@ jobs:
                 echo '"${{ join(fromJson(inputs.docs_config), '" >> "$GITHUB_ENV" &&') }}" >> "$GITHUB_ENV"'
           - name: Echo env vars
             run: |
-                echo "$MDBOOK_test_env_var"
+                echo "${{env.MDBOOK_test_env_var}}"
 #          - name: Checkout code
 #            uses: actions/checkout@v3
 #            with:
