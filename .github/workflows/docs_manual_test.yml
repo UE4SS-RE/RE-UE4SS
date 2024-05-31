@@ -6,10 +6,14 @@ jobs:
         runs-on: ubuntu-latest
         steps:
           - name: Generate variables
+            id: step1
             run: |
-                echo "[\"MDBOOK_test_env_var=asdf\"]" >> $GITHUB_OUTPUT
+                echo "JSON_ARRAY=[\"MDBOOK_test_env_var=asdf\"]" >> $GITHUB_OUTPUT
+        outputs:
+            JSON_ARRAY: ${{ steps.step1.outputs.JSON_ARRAY }}
+
     job2:
         needs: test
         uses: ./.github/workflows/docs_deploy_reusable.yml
         with:
-            docs_config: ${{ needs.test.outputs }}
+            docs_config: ${{ needs.test.outputs.JSON_ARRAY }}
