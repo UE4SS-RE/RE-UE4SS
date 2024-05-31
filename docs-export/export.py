@@ -20,6 +20,7 @@ shutil.rmtree(out_dir, ignore_errors=True)
 shutil.copytree(template_repo, out_dir)
 os.mkdir(versions_out_dir)
 
+
 def copy_transform(src, dst, transformer):
     with open(src, 'r') as file:
         content = file.read()
