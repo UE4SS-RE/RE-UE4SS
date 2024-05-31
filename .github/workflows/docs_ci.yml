@@ -1,19 +1,17 @@
 name: Docs CI
 on:
   workflow_dispatch:
-  pull_request:
-    branches:
-      - main
+
 
 jobs:
   build:
+    if: ${{ ! startsWith(github.ref, 'refs/tags/') }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
         with:
           fetch-depth: 0
-
       - name: Setup Python
         uses: actions/setup-python@v4
         with:
@@ -24,14 +22,12 @@ jobs:
         run: |
           mkdir mdbook
           curl -sSL https://github.com/rust-lang/mdBook/releases/download/v0.4.40/mdbook-v0.4.40-x86_64-unknown-linux-gnu.tar.gz | tar -xz --directory=mdbook
-
       - name: Build
         run: |
           cargo binstall mdbook-alerts --no-confirm
       - name: Cargo link check install
         run: |
           cargo binstall mdbook-linkcheck --no-confirm
-          echo "::warning file=README.md,line=1,col=5,endColumn=7::Missing semicolon"
       - name: Test md book
         run: |
           cd docs-export
