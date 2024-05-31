@@ -1117,67 +1117,104 @@ namespace RC
         }
     }
 
+    auto UE4SSProgram::read_mods_json(std::string enabled_mods_file, std::vector<ModData>& mod_data_vector) -> void
+    {
+        auto ec = glz::read_file_json(mod_data_vector, enabled_mods_file, std::string{});
+    }
+
+    auto UE4SSProgram::write_mods_json(std::string enabled_mods_file, std::vector<ModData>& mod_data_vector) -> void
+    {
+        std::string mod_data_buffer;
+        glz::write<glz::opts{.prettify = true}>(mod_data_vector, mod_data_buffer);
+        glz::error_code ec = glz::buffer_to_file(mod_data_buffer, enabled_mods_file);
+    }
+
+    auto UE4SSProgram::convert_legacy_mods_file(StringType legacy_enabled_mods_file, std::vector<ModData>& mod_data_vector) -> void
+    {
+        Output::send(STR("Converting legacy mods.txt to mods.json...\n"));
+        
+        // 'mods.txt' exists, lets parse it
+        std::wifstream mods_stream{legacy_enabled_mods_file};
+
+        std::wstring current_line;
+        while (std::getline(mods_stream, current_line))
+        {
+            // Don't parse any lines with ';'
+            if (current_line.find(L";") != current_line.npos)
+            {
+                continue;
+            }
+
+            // Don't parse if the line is impossibly short (empty lines for example)
+            if (current_line.size() <= 4)
+            {
+                continue;
+            }
+
+            // Remove all spaces
+            auto end = std::remove(current_line.begin(), current_line.end(), L' ');
+            current_line.erase(end, current_line.end());
+
+            // Parse the line into something that can be converted into proper data
+            std::wstring mod_name = explode_by_occurrence(current_line, L':', 1);
+            std::wstring mod_enabled = explode_by_occurrence(current_line, L':', ExplodeType::FromEnd);
+            bool mod_enabled_out = !mod_enabled.empty() && mod_enabled[0] == L'1';
+
+            auto it = std::find_if(mod_data_vector.begin(), mod_data_vector.end(),
+                           [&mod_name](const ModData& element) {
+                               return element.mod_name == to_string(mod_name);
+                           });
+
+            if (it == mod_data_vector.end()) {
+                mod_data_vector.push_back({to_string(mod_name), mod_enabled_out});
+            }
+        }
+        
+        Output::send(STR("mods.txt entries converted to mods.json.  Please delete mods.txt if no mod managers rely on it to avoid conflicting with changes to the json...\n"));
+    }
+
+
     template <typename ModType>
     auto start_mods() -> std::string
     {
         ProfilerScope();
-        // Part #1: Start all mods that are enabled in mods.txt.
-        Output::send(STR("Starting mods (from mods.txt load order)...\n"));
-
+        // Part #1: Start all mods that are enabled in mods.json.
         std::filesystem::path mods_directory = UE4SSProgram::get_program().get_mods_directory();
-        std::wstring enabled_mods_file{mods_directory / "mods.txt"};
-        if (!std::filesystem::exists(enabled_mods_file))
+        StringType legacy_enabled_mods_file{mods_directory / "mods.txt"};
+        std::filesystem::path enabled_mods_file{mods_directory / "mods.json"};
+        std::vector<UE4SSProgram::ModData> mod_data_vector{};
+
+        if (std::filesystem::exists(legacy_enabled_mods_file))
         {
-            Output::send(STR("No mods.txt file found...\n"));
+            UE4SSProgram::convert_legacy_mods_file(legacy_enabled_mods_file, mod_data_vector);
         }
-        else
+        if (std::filesystem::exists(enabled_mods_file))
         {
-            // 'mods.txt' exists, lets parse it
-            std::wifstream mods_stream{enabled_mods_file};
+            UE4SSProgram::read_mods_json(enabled_mods_file.string(), mod_data_vector);
+        }
+        
+        UE4SSProgram::write_mods_json(enabled_mods_file.string(), mod_data_vector);
 
-            std::wstring current_line;
-            while (std::getline(mods_stream, current_line))
+        Output::send(STR("Starting mods (from mods.json load order)...\n"));
+        for (auto it = mod_data_vector.begin(); it != mod_data_vector.end(); ++it)
+        {
+            auto mod = UE4SSProgram::find_mod_by_name<ModType>(it->mod_name, UE4SSProgram::IsInstalled::Yes);
+            if (!mod || !dynamic_cast<ModType*>(mod))
             {
-                // Don't parse any lines with ';'
-                if (current_line.find(L";") != current_line.npos)
-                {
-                    continue;
-                }
+                continue;
+            }
 
-                // Don't parse if the line is impossibly short (empty lines for example)
-                if (current_line.size() <= 4)
-                {
-                    continue;
-                }
-
-                // Remove all spaces
-                auto end = std::remove(current_line.begin(), current_line.end(), L' ');
-                current_line.erase(end, current_line.end());
-
-                // Parse the line into something that can be converted into proper data
-                std::wstring mod_name = explode_by_occurrence(current_line, L':', 1);
-                std::wstring mod_enabled = explode_by_occurrence(current_line, L':', ExplodeType::FromEnd);
-
-                auto mod = UE4SSProgram::find_mod_by_name<ModType>(mod_name, UE4SSProgram::IsInstalled::Yes);
-                if (!mod || !dynamic_cast<ModType*>(mod))
-                {
-                    continue;
-                }
-
-                if (!mod_enabled.empty() && mod_enabled[0] == L'1')
-                {
-                    Output::send(STR("Starting {} mod '{}'\n"), std::is_same_v<ModType, LuaMod> ? STR("Lua") : STR("C++"), mod->get_name().data());
-                    mod->start_mod();
-                }
-                else
-                {
-                    Output::send(STR("Mod '{}' disabled in mods.txt.\n"), mod_name);
-                }
+            if (it->mod_enabled)
+            {
+                Output::send(STR("Starting {} mod '{}'\n"), std::is_same_v<ModType, LuaMod> ? STR("Lua") : STR("C++"), mod->get_name().data());
+                mod->start_mod();
+            }
+            else
+            {
+                Output::send(STR("Mod '{}' disabled in mods.json.\n"), to_wstring(it->mod_name));
             }
         }
-
-        // Part #2: Start all mods that have enabled.txt present in the mod directory.
-        Output::send(STR("Starting mods (from enabled.txt, no defined load order)...\n"));
+        
 
         for (const auto& mod_directory : std::filesystem::directory_iterator(mods_directory))
         {

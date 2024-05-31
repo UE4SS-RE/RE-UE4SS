@@ -20,6 +20,8 @@
 #include <SettingsManager.hpp>
 #include <Unreal/Core/Containers/Array.hpp>
 #include <Unreal/UnrealVersion.hpp>
+#include <glaze/glaze.hpp>
+#include <glaze/core/macros.hpp>
 
 // Used to set up ImGui context and allocator in DLL mods
 #define UE4SS_ENABLE_IMGUI()                                                                                                                                   \
@@ -207,8 +209,18 @@ namespace RC
         auto fire_dll_load_for_cpp_mods(std::wstring_view dll_name) -> void;
 
       public:
+        struct ModData {
+            std::string mod_name;
+            bool mod_enabled;
+
+            GLZ_LOCAL_META(ModData, mod_name, mod_enabled);
+        };
+        
         auto init() -> void;
         auto is_program_started() -> bool;
+        static auto read_mods_json(std::string enabled_mods_file, std::vector<ModData>& mod_data_vector) -> void;
+        static auto write_mods_json(std::string enabled_mods_file, std::vector<ModData>& mod_data_vector) -> void;
+        static auto convert_legacy_mods_file(StringType legacy_enabled_mods_file, std::vector<ModData>& mod_data_vector) -> void;
         auto reinstall_mods() -> void;
         auto get_object_dumper_output_directory() -> const File::StringType;
         RC_UE4SS_API auto get_module_directory() -> File::StringViewType;
