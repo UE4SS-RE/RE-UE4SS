@@ -18,7 +18,7 @@ jobs:
           - name: Parse docs config
             run: |
                 echo '"${{ join(fromJson(inputs.docs_config), '" >> "$GITHUB_ENV" &&') }}" >> "$GITHUB_ENV"'
-                echo '"test" >> "$GITHUB_ENV"'
+                echo "test" >> $GITHUB_ENV
           - name: Echo env vars
             run: |
                 echo "${{env.MDBOOK_test_env_var}}"
