@@ -8,6 +8,11 @@ import argparse
 from datetime import datetime
 
 class Packager:
+    """
+    "Release" refers to the zip that is distributed to the end users. It should be in the format UE4SS_<version>.zip and contains only the necessary files.
+    "Dev" refers to the zip that is used for development. It should be in the format zDEV-UE4SS_<version>.zip and contains all the files, pdbs and docs.
+    """
+
     def __init__(self):
         self.release_output = 'release'
         self.staging_dev = os.path.join(self.release_output, 'StagingDev')
@@ -255,11 +260,32 @@ How to run this script:
     Usage: python release.py package
 
 2. Running the 'release_commit' command:
-    Usage: python /release.py release_commit [username]
+    Usage: python release.py release_commit [username]
     
     username : Optional argument to specify a github username
     
     Examples:
     - python release.py release_commit
     - python release.py release_commit ${{ github.actor }}
+"""
+
+"""
+To locally debug this script in vscode, make launch.json in .vscode and add the following configurations:
+
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Python: Debug Release Script",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/tools/buildscripts/release.py",
+            "console": "integratedTerminal",
+            "args": [
+                "package"        
+            ],
+            "justMyCode": true
+        }
+    ]
+}
 """
