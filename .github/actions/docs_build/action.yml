@@ -1,0 +1,49 @@
+name: "Build Docs"
+inputs:
+  doc-ref:
+    description: 'Fully qualified ref to build docs for.'
+    required: true
+outputs:
+  output-dir:
+    description: "Directory where documents are generated."
+    value: ${{ steps.build-docs.outputs.output-dir }}
+runs:
+    using: "composite"
+    steps:
+      - name: PR Environment Logic
+        if: ${{ startsWith(inputs.doc-ref, 'refs/pull/') }}
+        run: |
+          echo "Building docs from a pull request ${{inputs.doc-ref}}" >> $GITHUB_STEP_SUMMARY
+          echo "MDBOOK_preprocessor__versionwarning__version=local" >> "$GITHUB_ENV"
+      - name: Main Branch Environment Logic
+        if: ${{inputs.doc-ref == 'refs/heads/main'}}
+        run: |
+          echo "Building docs from a branch ${{inputs.doc-ref}}" >> $GITHUB_STEP_SUMMARY
+          echo "MDBOOK_preprocessor__versionwarning__version=branch" >> "$GITHUB_ENV"
+          echo "MDBOOK_preprocessor__versionwarning__branch=dev" >> "$GITHUB_ENV"
+      - name: Checkout input ref
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+          ref: ${{ inputs.doc-ref }}
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.x'
+      - name: Install cargo binstall
+        uses: cargo-bins/cargo-binstall@main
+      - name: Install mdbook
+        run: |
+          mkdir mdbook
+          curl -sSL https://github.com/rust-lang/mdBook/releases/download/v0.4.40/mdbook-v0.4.40-x86_64-unknown-linux-gnu.tar.gz | tar -xz --directory=mdbook
+          echo `pwd`/mdbook/ >> $GITHUB_PATH
+      - name: Install mdbook preprocessors
+        run: |
+          cargo binstall mdbook-alerts --no-confirm
+          cargo binstall mdbook-linkcheck --no-confirm
+      - name: Build docs
+        id: build-docs
+        run: |
+          cd docs-export
+          mdbook build
+          echo "output-dir=`pwd`/book/html" >> "$GITHUB_OUTPUT"
