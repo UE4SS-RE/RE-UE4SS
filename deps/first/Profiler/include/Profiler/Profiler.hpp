@@ -34,8 +34,6 @@
 
 #define ProfilerSetThreadName(name) PerformanceAPI::SetCurrentThreadName(name)
 
-#else
-#error "At least one profiler flavor must be selected"
 #endif
 
 #else

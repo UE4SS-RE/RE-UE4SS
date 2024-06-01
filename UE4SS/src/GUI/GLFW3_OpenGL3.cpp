@@ -2,10 +2,7 @@
 
 #include <stdexcept>
 
-#define GLFW_INCLUDE_NONE
 #include <GLFW/glfw3.h>
-#include <glad/glad.h>
-
 #include <backends/imgui_impl_glfw.h>
 #include <backends/imgui_impl_opengl3.h>
 #include <imgui.h>
@@ -42,11 +39,6 @@ namespace RC::GUI
         }
         glfwMakeContextCurrent(m_window);
         glfwSwapInterval(1); // Enable vsync
-
-        if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress))
-        {
-            throw std::runtime_error{"Was unable to initialize glad"};
-        }
 
         int left, top, right, bottom;
         glfwGetWindowFrameSize(m_window, &left, &top, &right, &bottom);
