@@ -21,11 +21,6 @@ runs:
           echo "Building docs from a branch ${{inputs.doc-ref}}" >> $GITHUB_STEP_SUMMARY
           echo "MDBOOK_preprocessor__versionwarning__version=branch" >> "$GITHUB_ENV"
           echo "MDBOOK_preprocessor__versionwarning__branch=dev" >> "$GITHUB_ENV"
-      - name: Checkout input ref
-        uses: actions/checkout@v3
-        with:
-          fetch-depth: 0
-          ref: ${{ inputs.doc-ref }}
       - name: Setup Python
         uses: actions/setup-python@v4
         with:
