@@ -6,9 +6,9 @@
 #include <bit>
 
 #include <UE4SSProgram.hpp>
+#include <Unreal/Core/Windows/WindowsHWrapper.hpp>
 
-#define NOMINMAX
-#include <Windows.h>
+#include <polyhook2/PE/IatHook.hpp>
 #include <dbghelp.h>
 
 namespace fs = std::filesystem;
@@ -19,7 +19,8 @@ using std::chrono::time_point_cast;
 
 namespace RC
 {
-    const int DumpType = MiniDumpNormal | MiniDumpWithThreadInfo | MiniDumpWithIndirectlyReferencedMemory | MiniDumpWithModuleHeaders | MiniDumpWithAvxXStateContext;
+    const int DumpType =
+            MiniDumpNormal | MiniDumpWithThreadInfo | MiniDumpWithIndirectlyReferencedMemory | MiniDumpWithModuleHeaders | MiniDumpWithAvxXStateContext;
 
     static bool FullMemoryDump = false;
 

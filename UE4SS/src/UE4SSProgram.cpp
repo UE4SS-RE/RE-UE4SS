@@ -55,6 +55,8 @@
 #include <Unreal/World.hpp>
 #include <UnrealDef.hpp>
 
+#include <polyhook2/PE/IatHook.hpp>
+
 namespace RC
 {
     // Commented out because this system (turn off hotkeys when in-game console is open) it doesn't work properly.
@@ -382,7 +384,7 @@ namespace RC
         std::filesystem::path game_exe_path = exe_path_buffer;
         std::filesystem::path game_directory_path = game_exe_path.parent_path();
         m_legacy_root_directory = game_directory_path;
-        
+
         m_working_directory = m_root_directory;
         m_mods_directory = m_working_directory / "Mods";
         m_game_executable_directory = game_directory_path;
