@@ -12,11 +12,13 @@ runs:
     steps:
       - name: PR Environment Logic
         if: ${{ startsWith(inputs.doc-ref, 'refs/pull/') }}
+        shell: bash
         run: |
           echo "Building docs from a pull request ${{inputs.doc-ref}}" >> $GITHUB_STEP_SUMMARY
           echo "MDBOOK_preprocessor__versionwarning__version=local" >> "$GITHUB_ENV"
       - name: Main Branch Environment Logic
         if: ${{inputs.doc-ref == 'refs/heads/main'}}
+        shell: bash
         run: |
           echo "Building docs from a branch ${{inputs.doc-ref}}" >> $GITHUB_STEP_SUMMARY
           echo "MDBOOK_preprocessor__versionwarning__version=branch" >> "$GITHUB_ENV"
@@ -28,16 +30,19 @@ runs:
       - name: Install cargo binstall
         uses: cargo-bins/cargo-binstall@main
       - name: Install mdbook
+        shell: bash
         run: |
           mkdir mdbook
           curl -sSL https://github.com/rust-lang/mdBook/releases/download/v0.4.40/mdbook-v0.4.40-x86_64-unknown-linux-gnu.tar.gz | tar -xz --directory=mdbook
           echo `pwd`/mdbook/ >> $GITHUB_PATH
       - name: Install mdbook preprocessors
+        shell: bash
         run: |
           cargo binstall mdbook-alerts --no-confirm
           cargo binstall mdbook-linkcheck --no-confirm
       - name: Build docs
         id: build-docs
+        shell: bash
         run: |
           cd docs-export
           mdbook build
