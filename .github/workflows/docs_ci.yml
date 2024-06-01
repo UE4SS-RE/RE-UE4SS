@@ -19,16 +19,20 @@ jobs:
       - name: Cargo binstall
         uses: cargo-bins/cargo-binstall@main
       - name: Setup mdBook
+        shell: bash
         run: |
           mkdir mdbook
           curl -sSL https://github.com/rust-lang/mdBook/releases/download/v0.4.40/mdbook-v0.4.40-x86_64-unknown-linux-gnu.tar.gz | tar -xz --directory=mdbook
       - name: Build
+        shell: bash
         run: |
           cargo binstall mdbook-alerts --no-confirm
       - name: Cargo link check install
+        shell: bash
         run: |
           cargo binstall mdbook-linkcheck --no-confirm
       - name: Test md book
+        shell: bash
         run: |
           cd docs-export
           ../mdbook/mdbook build
