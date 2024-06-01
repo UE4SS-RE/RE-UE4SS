@@ -2,7 +2,10 @@
 
 #include <memory>
 
-#include <polyhook2/PE/IatHook.hpp>
+namespace PLH
+{
+    class IatHook;
+}
 
 namespace RC
 {
