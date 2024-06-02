@@ -438,8 +438,8 @@ namespace RC::GUI
         buf->reserve(buf->size() + 15 * 6); // ballpark reserve
         const char* backend_window_settings_name = "Backend_Window";
         buf->appendf("[%s][%s]\n", handler->TypeName, backend_window_settings_name);
-        buf->appendf("Pos=%d,%d\n", (int)current_window_position.x, (int)current_window_position.y);
-        buf->appendf("Size=%d,%d\n", (int)current_window_size.x, (int)current_window_size.y);
+        buf->appendf("Pos=%d,%d\n", static_cast<int>(current_window_position.x), static_cast<int>(current_window_position.y));
+        buf->appendf("Size=%d,%d\n", static_cast<int>(current_window_size.x), static_cast<int>(current_window_size.y));
         buf->append("\n");
 
         // Add any additional ImGui UE4SS settings here
