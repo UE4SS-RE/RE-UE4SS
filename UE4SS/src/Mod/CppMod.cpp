@@ -16,7 +16,7 @@ namespace RC
 {
     CppMod::CppMod(UE4SSProgram& program, SystemStringType&& mod_name, SystemStringType&& mod_path) : Mod(program, std::move(mod_name), std::move(mod_path))
     {
-        auto resolved_dlls_path = File::get_path_if_exists(get_name(), SYSSTR("dlls"));
+        auto resolved_dlls_path = File::get_path_if_exists(m_mod_path, SYSSTR("dlls"));
         if (resolved_dlls_path)
         {
             m_dlls_path = to_system_string(*resolved_dlls_path);
