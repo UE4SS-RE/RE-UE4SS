@@ -68,17 +68,17 @@ option_end()
 
 toolchain("zigcross")
     if is_host("windows") then
-        set_toolset("cc", "$(scriptdir)/tools/zig/zig-cc.bat")
-        set_toolset("cxx", "$(scriptdir)/tools/zig/zig-c++.bat")
-        set_toolset("ld", "$(scriptdir)/tools/zig/zig-c++.bat")
-        set_toolset("sh", "$(scriptdir)/tools/zig/zig-c++.bat")
-        set_toolset("ar", "$(scriptdir)/tools/zig/zig-ar.bat")
+        set_toolset("cc", os.scriptdir() .. "/tools/zig/zig-cc.bat")
+        set_toolset("cxx", os.scriptdir() .. "/tools/zig/zig-c++.bat")
+        set_toolset("ld", os.scriptdir() .. "/tools/zig/zig-c++.bat")
+        set_toolset("sh", os.scriptdir() .. "/tools/zig/zig-c++.bat")
+        set_toolset("ar", os.scriptdir() .. "/tools/zig/zig-ar.bat")
     else
-        set_toolset("cc", "$(scriptdir)/tools/zig/zig-cc")
-        set_toolset("cxx", "$(scriptdir)/tools/zig/zig-c++")
-        set_toolset("ld", "$(scriptdir)/tools/zig/zig-c++")
-        set_toolset("sh", "$(scriptdir)/tools/zig/zig-c++")
-        set_toolset("ar", "$(scriptdir)/tools/zig/zig-ar")
+        set_toolset("cc", os.scriptdir() .. "/tools/zig/zig-cc")
+        set_toolset("cxx", os.scriptdir() .. "/tools/zig/zig-c++")
+        set_toolset("ld", os.scriptdir() .. "/tools/zig/zig-c++")
+        set_toolset("sh", os.scriptdir() .. "/tools/zig/zig-c++")
+        set_toolset("ar", os.scriptdir() .. "/tools/zig/zig-ar")
     end
     add_cxflags("-fexperimental-library")
     add_cxflags("-fno-delete-null-pointer-checks")
@@ -86,25 +86,6 @@ toolchain("zigcross")
     add_cxflags("-fno-sanitize=undefined") -- can also use O2 to avoid this, but I'd prefer getting clear binary for now
     add_shflags("-z", "lazy")
 toolchain_end()
-
-if is_plat("linux") then
-    if has_config("zig") then
-        -- add_requires("zigcc", {system = false})
-        -- set_toolchains("zigcross@zigcc", "rust")
-        set_toolchains("zigcross", "rust")
-        if is_host("windows") then
-            set_arch("x86_64-unknown-linux-gnu")
-            add_rcflags("-C", "linker=$(scriptdir)/tools/zig/zig-cc.bat", {force = true})
-        end
-    else
-        set_toolchains("clang", "rust")
-    end
-    set_defaultmode("Game__Shipping__Linux")
-end
-
-if is_plat("windows") then
-    set_defaultmode("Game__Shipping__Win64")
-end
 
 -- Override the `xmake install` behavior for all targets.
 -- Targets can re-override the on_install() function to implement custom installation behavior.
@@ -117,3 +98,27 @@ includes("UE4SS")
 -- TODO: Remove this before the next release. It only exists to maintain backwards compat
 -- warnings for older mod templates.
 set_config("scriptsRoot", path.join(os.scriptdir(), "tools/xmakescripts"))
+
+-- Global initialization for UE4SS, run it in the topmost xmake.lua file.
+function ue4ss_init()
+    if is_plat("linux") then
+        if has_config("zig") then
+            -- add_requires("zigcc", {system = false})
+            -- set_toolchains("zigcross@zigcc", "rust")
+            set_toolchains("zigcross", "rust")
+            if is_host("windows") then
+                set_arch("x86_64-unknown-linux-gnu")
+                add_rcflags("-C", "linker=" .. os.scriptdir() .. "/tools/zig/zig-cc.bat", {force = true})
+            end
+        else
+            set_toolchains("clang", "rust")
+        end
+        set_defaultmode("Game__Shipping__Linux")
+    end
+
+    if is_plat("windows") then
+        set_defaultmode("Game__Shipping__Win64")
+    end
+end
+
+ue4ss_init()
