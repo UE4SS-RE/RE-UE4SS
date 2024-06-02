@@ -68,7 +68,7 @@ namespace RC
 
 #else
         // use RTLD_LOCAL to avoid symbol conflicts
-        m_dl_handle = dlopen(dll_path.c_str(), RTLD_NOW | RTLD_LOCAL);
+        m_dl_handle = dlopen(dll_path.c_str(), RTLD_LAZY | RTLD_LOCAL);
         if (!m_dl_handle)
         {
             Output::send<LogLevel::Warning>(SYSSTR("Failed to load dll <{}> for mod {}, because: {}\n"), to_system_string(dll_path), m_mod_name, dlerror());
