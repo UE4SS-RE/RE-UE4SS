@@ -375,29 +375,29 @@ namespace RC::GUI
         auto& debugging_gui = UE4SSProgram::get_program().get_debugging_ui();
 
         auto now = std::chrono::steady_clock::now();
-        auto duration = std::chrono::duration_cast<std::chrono::seconds>(now - debugging_gui.ImGui_Last_Save).count();
+        auto duration = std::chrono::duration_cast<std::chrono::seconds>(now - debugging_gui.m_imgui_last_save).count();
         if (duration <= 5)
         {
             return false;
         }
         
-        WindowSettings& settings = debugging_gui.backend_window_settings;
+        auto& settings = debugging_gui.m_backend_window_settings;
         
         auto const current_window_size = debugging_gui.m_os_backend->is_valid() ? debugging_gui.m_os_backend->get_window_size() : debugging_gui.m_gfx_backend->get_window_size();
-        if (current_window_size.x != settings.Size_X || current_window_size.y != settings.Size_Y)
+        if (current_window_size.x != settings.size_x || current_window_size.y != settings.size_y)
         {
-            settings.Size_X = current_window_size.x;
-            settings.Size_Y = current_window_size.y;
-            debugging_gui.ImGui_Last_Save = now;
+            settings.size_x = current_window_size.x;
+            settings.size_y = current_window_size.y;
+            debugging_gui.m_imgui_last_save = now;
             return true;
         }
 
         auto const current_window_position = debugging_gui.m_os_backend->is_valid() ? debugging_gui.m_os_backend->get_window_position() : debugging_gui.m_gfx_backend->get_window_position();
-        if (current_window_position.x != settings.Pos_X || current_window_position.y != settings.Pos_Y)
+        if (current_window_position.x != settings.pos_x || current_window_position.y != settings.pos_y)
         {
-            settings.Pos_X = current_window_position.x;
-            settings.Pos_Y = current_window_position.y;
-            debugging_gui.ImGui_Last_Save = now;
+            settings.pos_x = current_window_position.x;
+            settings.pos_y = current_window_position.y;
+            debugging_gui.m_imgui_last_save = now;
             return true;
         }
         
@@ -415,12 +415,12 @@ namespace RC::GUI
         auto& debugging_gui = UE4SSProgram::get_program().get_debugging_ui();
         
         // Read settings for backend window size/position
-        WindowSettings& settings = debugging_gui.backend_window_settings;
+        WindowSettings& settings = debugging_gui.m_backend_window_settings;
         if (std::string((const char*)entry) == "Backend_Window")
         {
             int x, y;
-            if (sscanf_s(line, "Pos=%i,%i", &x, &y) == 2)         { settings.Pos_X = x; settings.Pos_Y = y; }
-            else if (sscanf_s(line, "Size=%i,%i", &x, &y) == 2)   { settings.Size_X = x; settings.Size_Y = y; }
+            if (sscanf_s(line, "Pos=%i,%i", &x, &y) == 2)         { settings.pos_x = x; settings.pos_y = y; }
+            else if (sscanf_s(line, "Size=%i,%i", &x, &y) == 2)   { settings.size_x = x; settings.size_y = y; }
         }
         
     }
@@ -473,9 +473,9 @@ namespace RC::GUI
         ImGui::LoadIniSettingsFromDisk(m_imgui_ini_file.c_str());
 
         auto& debugging_gui = UE4SSProgram::get_program().get_debugging_ui();
-        WindowSettings& settings = debugging_gui.backend_window_settings;
+        WindowSettings& settings = debugging_gui.m_backend_window_settings;
 
-        m_os_backend->create_window(settings.Pos_X, settings.Pos_Y, settings.Size_X, settings.Size_Y);
+        m_os_backend->create_window(settings.pos_x, settings.pos_y, settings.size_x, settings.size_y);
 
         gui_setup_style();
         io.Fonts->Clear();

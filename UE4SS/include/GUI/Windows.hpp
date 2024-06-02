@@ -12,7 +12,7 @@ namespace RC::GUI
       public:
         auto init() -> void override;
         auto imgui_backend_newframe() -> void override;
-        auto create_window(int Loc_X, int Loc_Y, int Size_X, int Size_Y) -> void override;
+        auto create_window(int loc_x, int loc_y, int size_x, int size_y) -> void override;
         auto exec_message_loop(bool* exit_requested) -> void override;
         auto shutdown() -> void override;
         auto cleanup() -> void override;

@@ -29,14 +29,14 @@ namespace RC::GUI
 
     struct WindowSize
     {
-        long x;
-        long y;
+        int32_t x;
+        int32_t y;
     };
 
     struct WindowPosition
     {
-        long x;
-        long y;
+        int32_t x;
+        int32_t y;
     };
 
     class GfxBackendBase
@@ -101,7 +101,7 @@ namespace RC::GUI
       public:
         virtual auto init() -> void = 0;
         virtual auto imgui_backend_newframe() -> void = 0;
-        virtual auto create_window(int Loc_X = 100, int Loc_Y = 100, int Size_X = 1280, int Size_Y = 800) -> void = 0;
+        virtual auto create_window(int loc_x = 100, int loc_y = 100, int size_x = 1280, int size_y = 800) -> void = 0;
         virtual auto exec_message_loop(bool* exit_requested) -> void = 0;
         virtual auto shutdown() -> void = 0;
         virtual auto cleanup() -> void = 0;
@@ -127,7 +127,7 @@ namespace RC::GUI
         inline auto imgui_backend_newframe() -> void override
         {
         }
-        inline auto create_window(int Loc_X, int Loc_Y, int Size_X, int Size_Y) -> void override
+        inline auto create_window(int loc_x, int loc_y, int size_x, int size_y) -> void override
         {
         }
         inline auto exec_message_loop([[maybe_unused]] bool* exit_requested) -> void override
@@ -200,13 +200,11 @@ namespace RC::GUI
 
         struct WindowSettings
         {
-            int Pos_X = 100;
-            int Pos_Y = 100;
-            int Size_X = 1280;
-            int Size_Y = 800;
+            int pos_x = 100;
+            int pos_y = 100;
+            int size_x = 1280;
+            int size_y = 800;
         };
-
-        WindowSettings backend_window_settings;
 
       private:
         std::unique_ptr<GfxBackendBase> m_gfx_backend{};
@@ -219,6 +217,7 @@ namespace RC::GUI
         std::vector<std::shared_ptr<GUITab>> m_tabs;
         std::mutex m_tabs_mutex;
         std::string m_imgui_ini_file{};
+        WindowSettings m_backend_window_settings;
 
       public:
         bool m_event_thread_busy{};
@@ -253,8 +252,9 @@ namespace RC::GUI
         auto on_update() -> void;
         auto main_loop_internal() -> void;
 
+      private:
         // TODO: Move ImGui data saves to their own object
-        std::chrono::time_point<std::chrono::steady_clock> ImGui_Last_Save = std::chrono::steady_clock::now();
+        std::chrono::time_point<std::chrono::steady_clock> m_imgui_last_save = std::chrono::steady_clock::now();
         static auto ImGuiUE4SSData_ShouldSave() -> bool;
         static auto ImGuiUE4SSData_ReadOpen(ImGuiContext*, ImGuiSettingsHandler*, const char* name) -> void*;
         static auto ImGuiUE4SSData_ReadLine(ImGuiContext*, ImGuiSettingsHandler*, void* entry, const char* line) -> void;
