@@ -63,7 +63,7 @@ namespace RC::GUI
         {
             if (ImGuiUE4SSData_ShouldSave())
             {
-                ImGui::SaveIniSettingsToDisk(to_string(StringType{UE4SSProgram::get_program().get_working_directory()} + STR("\\imgui.ini")).c_str());
+                ImGui::SaveIniSettingsToDisk(m_imgui_ini_file.c_str());
             }
             
             ImGui::SetNextWindowPos({0, 0});
@@ -381,7 +381,7 @@ namespace RC::GUI
             return false;
         }
         
-        window_settings& settings = debugging_gui.backend_window_settings;
+        WindowSettings& settings = debugging_gui.backend_window_settings;
         
         auto const current_window_size = debugging_gui.m_os_backend->is_valid() ? debugging_gui.m_os_backend->get_window_size() : debugging_gui.m_gfx_backend->get_window_size();
         if (current_window_size.x != settings.Size_X || current_window_size.y != settings.Size_Y)
@@ -415,7 +415,7 @@ namespace RC::GUI
         auto& debugging_gui = UE4SSProgram::get_program().get_debugging_ui();
         
         // Read settings for backend window size/position
-        window_settings& settings = debugging_gui.backend_window_settings;
+        WindowSettings& settings = debugging_gui.backend_window_settings;
         if (std::string((const char*)entry) == "Backend_Window")
         {
             int x, y;
@@ -458,7 +458,8 @@ namespace RC::GUI
         IMGUI_CHECKVERSION();
         ImGui::CreateContext();
         ImGuiIO& io = ImGui::GetIO();
-        io.IniFilename = to_string(StringType{UE4SSProgram::get_program().get_working_directory()} + STR("\\imgui.ini")).c_str();
+        m_imgui_ini_file = to_string(StringType{UE4SSProgram::get_program().get_working_directory()} + STR("\\imgui.ini"));
+        io.IniFilename = m_imgui_ini_file.c_str();
 
         // Add .ini handle for UserData type
         ImGuiSettingsHandler ini_handler;
@@ -469,10 +470,10 @@ namespace RC::GUI
         ini_handler.WriteAllFn = ImGuiUE4SSData_WriteAll;
         ImGui::AddSettingsHandler(&ini_handler);
         
-        ImGui::LoadIniSettingsFromDisk(to_string(StringType{UE4SSProgram::get_program().get_working_directory()} + STR("\\imgui.ini")).c_str());
+        ImGui::LoadIniSettingsFromDisk(m_imgui_ini_file.c_str());
 
         auto& debugging_gui = UE4SSProgram::get_program().get_debugging_ui();
-        window_settings& settings = debugging_gui.backend_window_settings;
+        WindowSettings& settings = debugging_gui.backend_window_settings;
 
         m_os_backend->create_window(settings.Pos_X, settings.Pos_Y, settings.Size_X, settings.Size_Y);
 

@@ -198,7 +198,7 @@ namespace RC::GUI
       public:
         using EndOfFrameCallback = std::function<void()>;
 
-        struct window_settings
+        struct WindowSettings
         {
             int Pos_X = 100;
             int Pos_Y = 100;
@@ -206,7 +206,7 @@ namespace RC::GUI
             int Size_Y = 800;
         };
 
-        window_settings backend_window_settings;
+        WindowSettings backend_window_settings;
 
       private:
         std::unique_ptr<GfxBackendBase> m_gfx_backend{};
@@ -218,6 +218,7 @@ namespace RC::GUI
         bool m_exit_requested{};
         std::vector<std::shared_ptr<GUITab>> m_tabs;
         std::mutex m_tabs_mutex;
+        std::string m_imgui_ini_file{};
 
       public:
         bool m_event_thread_busy{};
