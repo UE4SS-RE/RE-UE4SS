@@ -111,6 +111,7 @@ target(projectName)
         add_files("src/Platform/Win32/CrashDumper.cpp", "src/Platform/Win32/EntryWin32.cpp")
     elseif is_plat("linux") then
         add_files("src/Platform/Linux/EntryLinux.cpp")
+        add_shflags("-Wl,-soname,libUE4SS.so")
     end
 
     if uiMode ~= "None" then
