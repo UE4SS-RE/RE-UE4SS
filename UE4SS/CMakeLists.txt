@@ -164,7 +164,7 @@ target_link_libraries(${TARGET} PUBLIC
 )
 
 target_link_libraries(${TARGET} PUBLIC
-    ImGui PolyHook_2 d3d11 GLFW opengl32 dbghelp psapi)
+    ImGui PolyHook_2 d3d11 GLFW opengl32 dbghelp psapi ws2_32 ntdll userenv)
 
 
 
