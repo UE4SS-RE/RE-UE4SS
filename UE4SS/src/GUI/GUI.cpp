@@ -61,7 +61,7 @@ namespace RC::GUI
 
         if (show_window)
         {
-            if (ImGuiUE4SSData_ShouldSave())
+            if (imgui_ue4ss_data_should_save())
             {
                 ImGui::SaveIniSettingsToDisk(m_imgui_ini_file.c_str());
             }
@@ -370,7 +370,7 @@ namespace RC::GUI
         s_end_of_frame_callbacks.emplace_back(callback);
     }
 
-    auto DebuggingGUI::ImGuiUE4SSData_ShouldSave() -> bool
+    auto DebuggingGUI::imgui_ue4ss_data_should_save() -> bool
     {
         auto& debugging_gui = UE4SSProgram::get_program().get_debugging_ui();
 
@@ -404,13 +404,13 @@ namespace RC::GUI
         return false;
     }
 
-    auto DebuggingGUI::ImGuiUE4SSData_ReadOpen(ImGuiContext*, ImGuiSettingsHandler*, const char* name) -> void*
+    auto DebuggingGUI::imgui_ue4ss_data_read_open(ImGuiContext*, ImGuiSettingsHandler*, const char* name) -> void*
     {
         // UE4SS ImGui Settings
         return (void*)name;
     }
 
-    auto DebuggingGUI::ImGuiUE4SSData_ReadLine(ImGuiContext*, ImGuiSettingsHandler*, void* entry, const char* line) -> void
+    auto DebuggingGUI::imgui_ue4ss_data_read_line(ImGuiContext*, ImGuiSettingsHandler*, void* entry, const char* line) -> void
     {
         auto& debugging_gui = UE4SSProgram::get_program().get_debugging_ui();
         
@@ -425,7 +425,7 @@ namespace RC::GUI
         
     }
 
-    auto DebuggingGUI::ImGuiUE4SSData_WriteAll(ImGuiContext* ctx, ImGuiSettingsHandler* handler, ImGuiTextBuffer* buf) -> void
+    auto DebuggingGUI::imgui_ue4ss_data_write_all(ImGuiContext* ctx, ImGuiSettingsHandler* handler, ImGuiTextBuffer* buf) -> void
     {
         /*ImGuiContext& g = *ctx;*/
         auto& debugging_gui = UE4SSProgram::get_program().get_debugging_ui();
@@ -465,9 +465,9 @@ namespace RC::GUI
         ImGuiSettingsHandler ini_handler;
         ini_handler.TypeName = "UE4SSData";
         ini_handler.TypeHash = ImHashStr("UE4SSData");
-        ini_handler.ReadOpenFn = ImGuiUE4SSData_ReadOpen;
-        ini_handler.ReadLineFn = ImGuiUE4SSData_ReadLine;
-        ini_handler.WriteAllFn = ImGuiUE4SSData_WriteAll;
+        ini_handler.ReadOpenFn = imgui_ue4ss_data_read_open;
+        ini_handler.ReadLineFn = imgui_ue4ss_data_read_line;
+        ini_handler.WriteAllFn = imgui_ue4ss_data_write_all;
         ImGui::AddSettingsHandler(&ini_handler);
         
         ImGui::LoadIniSettingsFromDisk(m_imgui_ini_file.c_str());

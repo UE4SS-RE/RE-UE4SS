@@ -255,10 +255,10 @@ namespace RC::GUI
       private:
         // TODO: Move ImGui data saves to their own object
         std::chrono::time_point<std::chrono::steady_clock> m_imgui_last_save = std::chrono::steady_clock::now();
-        static auto ImGuiUE4SSData_ShouldSave() -> bool;
-        static auto ImGuiUE4SSData_ReadOpen(ImGuiContext*, ImGuiSettingsHandler*, const char* name) -> void*;
-        static auto ImGuiUE4SSData_ReadLine(ImGuiContext*, ImGuiSettingsHandler*, void* entry, const char* line) -> void;
-        static auto ImGuiUE4SSData_WriteAll(ImGuiContext* ctx, ImGuiSettingsHandler* handler, ImGuiTextBuffer* buf) -> void;
+        static auto imgui_ue4ss_data_should_save() -> bool;
+        static auto imgui_ue4ss_data_read_open(ImGuiContext*, ImGuiSettingsHandler*, const char* name) -> void*;
+        static auto imgui_ue4ss_data_read_line(ImGuiContext*, ImGuiSettingsHandler*, void* entry, const char* line) -> void;
+        static auto imgui_ue4ss_data_write_all(ImGuiContext* ctx, ImGuiSettingsHandler* handler, ImGuiTextBuffer* buf) -> void;
 
       public:
         static auto execute_at_end_of_frame(EndOfFrameCallback callback) -> void;
