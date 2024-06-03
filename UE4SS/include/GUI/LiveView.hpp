@@ -89,6 +89,7 @@ namespace RC::GUI
         UObject* m_currently_opened_tree_node{};
         std::string m_current_property_value_buffer{};
         int64_t m_current_enum_value_buffer{};
+        unsigned char* m_current_dt_row_value_buffer{};
         float m_top_size{300.0f};
         float m_bottom_size{0.0f};
         UFunctionCallerWidget* m_function_caller_widget{};
@@ -161,6 +162,7 @@ namespace RC::GUI
         auto render_info_panel_as_property(FProperty*) -> void;
         auto render_bottom_panel() -> void;
         auto render_enum() -> void;
+        auto render_datatable() -> void;
         auto render_properties() -> void;
         auto render_object_sub_tree_hierarchy(UObject* object) -> void;
         auto render_struct_sub_tree_hierarchy(UStruct* ustruct) -> void;
