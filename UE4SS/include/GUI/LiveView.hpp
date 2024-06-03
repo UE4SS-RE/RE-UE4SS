@@ -163,7 +163,7 @@ namespace RC::GUI
         auto render_bottom_panel() -> void;
         auto render_enum() -> void;
         auto render_datatable() -> void;
-        auto render_properties() -> void;
+        auto render_properties(void* object_data_override = nullptr, UStruct* struct_override = nullptr) -> void;
         auto render_object_sub_tree_hierarchy(UObject* object) -> void;
         auto render_struct_sub_tree_hierarchy(UStruct* ustruct) -> void;
         auto render_class(UClass*) -> void;
