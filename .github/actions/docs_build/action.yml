@@ -3,6 +3,16 @@ inputs:
   doc-ref:
     description: 'Fully qualified ref to build docs for.'
     required: true
+  header-type:
+    description: 'Which version of a header should be generated. Options are branch, empty, or tag.'
+  doc-name:
+    description: 'Name of the ref to be added to the version warning header.'
+    required: true
+  book-dir:
+    description: 'book.toml location'
+    required: true
+  redirect-url:
+    description: 'URL that the version warning header will suggest the user to visit.'
 outputs:
   output-dir:
     description: "Directory where documents are generated."
@@ -14,15 +24,18 @@ runs:
         if: ${{ startsWith(inputs.doc-ref, 'refs/pull/') }}
         shell: bash
         run: |
+          echo export REF = "${{inputs.doc-name}}"
+          echo export REDIRECT = "${{inputs.redirect-url}}"
+          "${{ inputs.book-dir }}/theme/header.hbs" < envsubst < "${{ github.action_path }}/branch/header.hbs"
           echo "Building docs from a pull request ${{inputs.doc-ref}}" >> $GITHUB_STEP_SUMMARY
-          echo "MDBOOK_preprocessor__versionwarning__version=local" >> "$GITHUB_ENV"
       - name: Main Branch Environment Logic
-        if: ${{inputs.doc-ref == 'refs/heads/main'}}
+        if: ${{ startsWith(inputs.doc-ref, 'refs/heads/') }}
         shell: bash
         run: |
+          echo export REF = "${{inputs.doc-name}}"
+          echo export REDIRECT = "${{inputs.redirect-url}}"
+          "${{ inputs.book-dir }}/theme/header.hbs" < envsubst < "${{ github.action_path }}/branch/header.hbs"
           echo "Building docs from a branch ${{inputs.doc-ref}}" >> $GITHUB_STEP_SUMMARY
-          echo "MDBOOK_preprocessor__versionwarning__version=branch" >> "$GITHUB_ENV"
-          echo "MDBOOK_preprocessor__versionwarning__branch=dev" >> "$GITHUB_ENV"
       - name: Setup Python
         uses: actions/setup-python@v4
         with:
@@ -45,5 +58,5 @@ runs:
         shell: bash
         run: |
           cd docs-export
-          mdbook build
+          mdbook build ${{inputs.book-dir}}
           echo "output-dir=`pwd`/book/html" >> "$GITHUB_OUTPUT"
