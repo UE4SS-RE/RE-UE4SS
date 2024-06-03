@@ -51,7 +51,7 @@ command = "python rewrite_readme.py"
 # baz = "xyz"
 # More details at https://rust-lang.github.io/mdBook/format/configuration/environment-variables.html
 
-[preprocessor.versionwarning]
+[oldpreprocessor.versionwarning]
 # Run this preprocessor after the rewritereadme so our header isn't overwritten by rewritereadme.
 after = ["rewritereadme"]
 
