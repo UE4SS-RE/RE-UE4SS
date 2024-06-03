@@ -26,7 +26,7 @@ runs:
         run: |
           echo export REF = "${{inputs.doc-name}}"
           echo export REDIRECT = "${{inputs.redirect-url}}"
-          "${{ inputs.book-dir }}/theme/header.hbs" < envsubst < "${{ github.action_path }}/branch/header.hbs
+          "${{ inputs.book-dir }}/theme/header.hbs" < envsubst < "${{ github.action_path }}/branch/header.hbs"
           echo "Building docs from a pull request ${{inputs.doc-ref}}" >> $GITHUB_STEP_SUMMARY
       - name: Main Branch Environment Logic
         if: ${{ startsWith(inputs.doc-ref, 'refs/heads/') }}
@@ -34,7 +34,7 @@ runs:
         run: |
           echo export REF = "${{inputs.doc-name}}"
           echo export REDIRECT = "${{inputs.redirect-url}}"
-          "${{ inputs.book-dir }}/theme/header.hbs" < envsubst < "${{ github.action_path }}/branch/header.hbs
+          "${{ inputs.book-dir }}/theme/header.hbs" < envsubst < "${{ github.action_path }}/branch/header.hbs"
           echo "Building docs from a branch ${{inputs.doc-ref}}" >> $GITHUB_STEP_SUMMARY
       - name: Setup Python
         uses: actions/setup-python@v4
