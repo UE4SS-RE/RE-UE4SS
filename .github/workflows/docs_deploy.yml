@@ -29,14 +29,18 @@ jobs:
           fetch-depth: 0
           ref: ${{ github.ref }}
       - name: Build md book
+        id: build-docs
         uses: ./.github/actions/docs_build
         with:
           doc-ref: ${{ github.ref }}
+          header-type: "branch"
+          doc-name: "swag"
+          book-dir: "docs-export"
       - name: Deploy to GitHub Pages
         if: ${{github.ref == 'refs/heads/main'}}
         uses: JamesIves/github-pages-deploy-action@v4.6.1
         with:
-          folder: docs-export/book/html
+          folder: ~${{ steps.build-docs.outputs.output-dir }}
           branch: gh-pages
           target-folder: dev
           clean: true
