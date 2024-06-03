@@ -15,6 +15,10 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: experimental-release
+  cancel-in-progress: true
+
 jobs:
   make-release:
     permissions: write-all
@@ -31,7 +35,7 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v4
         with:
-          python-version: '3.x'
+          python-version: '3.9'
 
       - name: Setup MSVC
         uses: ilammy/msvc-dev-cmd@v1
@@ -57,15 +61,9 @@ jobs:
           xmake build
 
       - name: Package
-        id: package
         run: python tools/buildscripts/release.py package -e
 
-      - name: Check for Package Step Failure
-        if: ${{ steps.package.outcome == 'failure' }}
-        run: exit 1
-
       - name: Release
-        if: ${{ steps.package.outcome == 'success' }}
         uses: softprops/action-gh-release@v1
         with:
           prerelease: true

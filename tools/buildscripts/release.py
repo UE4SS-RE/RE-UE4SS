@@ -131,7 +131,7 @@ class ReleaseHandler:
             if not mod_info['include_in_release']:
                 mods_to_disable_in_release[mod_name] = 0
 
-        mods_path = os.path.join(self.ue4ss_dir, 'Mods/mods.txt')
+        mods_path = os.path.join(self.ue4ss_dir, 'Mods', 'mods.txt')
         with open(mods_path, mode='r', encoding='utf-8-sig') as file:
             content = file.read()
 
@@ -147,7 +147,7 @@ class ReleaseHandler:
             file.write(content)
 
     def modify_mods_json(self):
-        mods_path = os.path.join(self.ue4ss_dir, 'Mods/mods.json')
+        mods_path = os.path.join(self.ue4ss_dir, 'Mods', 'mods.json')
         with open(mods_path, mode='r', encoding='utf-8-sig') as file:
             content = json.load(file)
 
@@ -176,18 +176,22 @@ class ReleaseHandler:
             shutil.copytree('docs', os.path.join(self.ue4ss_dir, 'Docs'))
 
     def modify_changelog(self):
-        changelog_path = self.ue4ss_dir + '/Changelog.md'
+        changelog_path = os.path.join(self.ue4ss_dir, 'Changelog.md')
         if os.path.exists(changelog_path): ready_changelog_for_release(changelog_path)
 
     def package_release(self):
-        version = subprocess.check_output(['git', 'describe', '--tags']).decode('utf-8').strip()
+        try:
+            version = subprocess.check_output(['git', 'describe', '--tags']).decode('utf-8').strip()
+        except subprocess.CalledProcessError:
+            print('Error: git describe failed. Make sure the release has been tagged.')
+            sys.exit(1)
         main_zip_name = f'zDEV-UE4SS_{version}' if self.is_dev_release else f'UE4SS_{version}'
         output = os.path.join(self.release_output, main_zip_name)
         shutil.make_archive(output, 'zip', self.staging_dir)
         print(f'Created package {output}.zip')
 
     def cleanup(self):
-        shutil.rmtree(self.staging_dir, ignore_errors=True)
+        shutil.rmtree(self.staging_dir)
 
 class Packager:
     """
@@ -201,7 +205,7 @@ class Packager:
         self.setup()
 
     def setup(self):
-        shutil.rmtree(self.release_output, ignore_errors=True)
+        if os.path.exists(self.release_output): shutil.rmtree(self.release_output)
         os.mkdir(self.release_output)
 
     def run(self):
