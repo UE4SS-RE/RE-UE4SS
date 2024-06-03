@@ -37,6 +37,7 @@
 #include <Unreal/Property/NumericPropertyTypes.hpp>
 #include <Unreal/UClass.hpp>
 #include <Unreal/UEnum.hpp>
+#include <Unreal/UDataTable.hpp>
 #include <Unreal/UFunction.hpp>
 #include <Unreal/UObject.hpp>
 #include <Unreal/UObjectArray.hpp>
@@ -2299,6 +2300,263 @@ namespace RC::GUI
         ImGui::EndTable(); // Enum Table
     }
 
+    auto LiveView::render_datatable() -> void
+    {
+        const auto currently_selected_object = get_selected_object();
+        if (!currently_selected_object.first || !currently_selected_object.second)
+        {
+            return;
+        }
+
+        auto udatatatble = static_cast<UDataTable*>(currently_selected_object.second);
+        auto rowmap = udatatatble->GetRowMap();
+        auto dtstruct = udatatatble->GetRowStruct();
+        std::string plus = "+";
+        std::string minus = "-";
+        int32_t index = -1;
+
+        if (!ImGui::BeginTable("Enum", 4, ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg | ImGuiTableFlags_Resizable))
+        {
+            return;
+        }
+        ImGui::TableSetupColumn("Name");
+        ImGui::TableSetupColumn("Struct");
+        ImGui::TableSetupColumn("Add/Remove");
+        ImGui::TableSetupScrollFreeze(0, 1);
+        ImGui::TableHeadersRow();
+
+        for (const auto row : rowmap)
+        {
+            auto row_name = row.Key.ToString();
+
+            ImGui::TableNextRow();
+            bool open_edit_name_popup{};
+            bool open_edit_value_popup{};
+            bool open_add_name_popup{};
+            ++index;
+
+            ImGui::TableNextColumn();
+            ImGui::Text("%S", row_name.c_str());
+            if (ImGui::BeginPopupContextItem(to_string(std::format(STR("context-menu-{}"), row_name)).c_str()))
+            {
+                if (ImGui::MenuItem("Copy name"))
+                {
+                    ImGui::SetClipboardText(to_string(row_name).c_str());
+                }
+                if (ImGui::MenuItem("Edit name"))
+                {
+                    open_edit_name_popup = true;
+                    m_modal_edit_property_value_is_open = true;
+                }
+                ImGui::EndPopup();
+            }
+
+            ImGui::TableNextColumn();
+            ImGui::Text("%lld", row.Value);
+            if (ImGui::BeginPopupContextItem(to_string(std::format(STR("context-menu-{}"), row_name)).c_str()))
+            {
+                if (ImGui::MenuItem("Copy value"))
+                {
+                    /*ImGui::SetClipboardText(std::to_string(row.Value));*/
+                }
+                if (ImGui::MenuItem("Edit value"))
+                {
+                    open_edit_value_popup = true;
+                    m_modal_edit_property_value_is_open = true;
+                }
+                ImGui::EndPopup();
+            }
+
+            ImGui::TableNextColumn();
+            ImGui::PushID(to_string(std::format(STR("button_add_{}"), row_name)).c_str());
+            if (ImGui::Button("+"))
+            {
+                open_add_name_popup = true;
+                m_modal_edit_property_value_is_open = true;
+            }
+            ImGui::PopID();
+            ImGui::SameLine();
+            ImGui::PushID(to_string(std::format(STR("button_remove_{}"), row_name)).c_str());
+            if (ImGui::Button("-"))
+            {
+                udatatatble->RemoveRow(FName(row_name));
+            }
+            ImGui::PopID();
+
+            std::string edit_dt_row_name = to_string(std::format(STR("Edit DT row name for: {}"), row.Key.ToString()));
+
+            std::string edit_dt_row_struct = to_string(std::format(STR("Edit DT row struct for: {}"), row.Key.ToString()));
+
+            std::string add_dt_row = to_string(std::format(STR("Enter new DT row name after: {}"), row.Key.ToString()));
+
+            if (open_edit_name_popup)
+            {
+                ImGui::OpenPopup(edit_dt_row_name.c_str());
+                if (!m_modal_edit_property_value_opened_this_frame)
+                {
+                    m_modal_edit_property_value_opened_this_frame = true;
+                    m_current_property_value_buffer = to_string(row_name);
+                }
+            }
+
+            if (open_edit_value_popup)
+            {
+                ImGui::OpenPopup(edit_dt_row_struct.c_str());
+                if (!m_modal_edit_property_value_opened_this_frame)
+                {
+                    m_modal_edit_property_value_opened_this_frame = true;
+                    m_current_dt_row_value_buffer = row.Value;
+                }
+            }
+
+            if (open_add_name_popup)
+            {
+                ImGui::OpenPopup(add_dt_row.c_str());
+                if (!m_modal_edit_property_value_opened_this_frame)
+                {
+                    m_modal_edit_property_value_opened_this_frame = true;
+                    m_current_property_value_buffer = to_string(row_name);
+                }
+            }
+
+            /**
+             *
+             * ImGui Popup Modal for editing the names in the UEnum names array.
+             *
+             */
+            if (ImGui::BeginPopupModal(edit_dt_row_name.c_str(), &m_modal_edit_property_value_is_open))
+            {
+                ImGui::Text("Edit the DT row's name.");
+                ImGui::Text("The game could crash if the new name is invalid or if the old name or value is expected to be used elsewhere.");
+                ImGui::Text("The game may not use this value without additional patches.");
+                ImGui::PushItemWidth(-1.0f);
+                ImGui::InputText("##CurrentNameValue", &m_current_property_value_buffer);
+                if (ImGui::Button("Apply"))
+                {
+                    FOutputDevice placeholder_device{};
+                    StringType new_name = to_wstring(m_current_property_value_buffer);
+                    FName new_key = FName(new_name, FNAME_Add);
+                    /*uenum->EditNameAt(index, new_key);
+                    if (uenum->GetEnumNames()[index].Key.ToString() != new_name)
+                    {
+                        m_modal_edit_property_value_error_unable_to_edit = true;
+                        ImGui::OpenPopup("UnableToSetNewEnumNameError");
+                    }
+                    else
+                    {
+                        ImGui::CloseCurrentPopup();
+                    }*/
+                }
+
+                if (ImGui::BeginPopupModal("UnableToSetNewEnumNameError",
+                                           &m_modal_edit_property_value_error_unable_to_edit,
+                                           ImGuiWindowFlags_NoResize | ImGuiWindowFlags_AlwaysAutoResize))
+                {
+                    ImGui::Text("Was unable to set new name.");
+                    ImGui::EndPopup();
+                }
+
+                ImGui::EndPopup();
+            }
+
+            /**
+             *
+             * ImGui Popup Modal for editing the values in the UEnum names array.
+             *
+             */
+            if (ImGui::BeginPopupModal(edit_dt_row_struct.c_str(), &m_modal_edit_property_value_is_open))
+            {
+                ImGui::Text("Edit the enumerator's value.");
+                ImGui::Text("The game could crash if the new value is invalid or if the old name or value is expected to be used elsewhere.");
+                ImGui::Text("The game may not use this value without additional patches.");
+                ImGui::PushItemWidth(-1.0f);
+                ImGuiDataType_ imgui_data_type = Version::IsBelow(4, 15) ? ImGuiDataType_U8 : ImGuiDataType_S64;
+                ImGui::InputScalar("##CurrentNameValue", imgui_data_type, &m_current_enum_value_buffer);
+                if (ImGui::Button("Apply"))
+                {
+                    FOutputDevice placeholder_device{};
+                    unsigned char* new_value = m_current_dt_row_value_buffer;
+                    /*row->EditValueAt(index, new_value);
+
+                    if (uenum->GetEnumNames()[index].Value != new_value)
+                    {
+                        m_modal_edit_property_value_error_unable_to_edit = true;
+                        ImGui::OpenPopup("UnableToSetNewEnumValueError");
+                    }
+                    else
+                    {
+                        ImGui::CloseCurrentPopup();
+                    }*/
+                    m_current_enum_value_buffer = {};
+                }
+
+                if (ImGui::BeginPopupModal("UnableToSetNewEnumValueError",
+                                           &m_modal_edit_property_value_error_unable_to_edit,
+                                           ImGuiWindowFlags_NoResize | ImGuiWindowFlags_AlwaysAutoResize))
+                {
+                    ImGui::Text("Was unable to set new value.");
+                    ImGui::EndPopup();
+                }
+
+                ImGui::EndPopup();
+            }
+
+            /**
+             *
+             * ImGui Popup Modal for adding new enumerators to the UEnum names array.
+             *
+             */
+            if (ImGui::BeginPopupModal(add_dt_row.c_str(), &m_modal_edit_property_value_is_open))
+            {
+
+                ImGui::Text("Enter the name of the new row at the index of the selected row.");
+                ImGui::Text("The game could crash if the new name is invalid or if the old name or value is expected to be used elsewhere.");
+                ImGui::Text("The game may not use this value without additional patches.");
+                ImGui::PushItemWidth(-1.0f);
+                ImGui::InputText("##CurrentNameValue", &m_current_property_value_buffer);
+                if (ImGui::Button("Apply"))
+                {
+                    FOutputDevice placeholder_device{};
+                    StringType new_name = to_wstring(m_current_property_value_buffer);
+                    FName new_key = FName(new_name, FNAME_Add);
+                    unsigned char** value = rowmap.Find(FName(row_name));
+
+                    // NOTE: Explicitly giving specifying template params for TPair because Clang can't handle TPair being a templated using statement.
+                    udatatatble->AddRow(new_key, (FTableRowBase&)value);
+
+                    TArray<FName> OutRowNames{};
+                    udatatatble->GetAllRowNames(OutRowNames);
+                    if (OutRowNames[index].ToString() != new_name)
+                    {
+                        m_modal_edit_property_value_error_unable_to_edit = true;
+                        ImGui::OpenPopup("UnableToAddNewRowError");
+                    }
+                    else
+                    {
+                        ImGui::CloseCurrentPopup();
+                    }
+                    m_current_property_value_buffer.clear();
+                }
+
+                if (ImGui::BeginPopupModal("UnableToAddNewRowError",
+                                           &m_modal_edit_property_value_error_unable_to_edit,
+                                           ImGuiWindowFlags_NoResize | ImGuiWindowFlags_AlwaysAutoResize))
+                {
+                    ImGui::Text("Was unable to insert new row.");
+                    ImGui::EndPopup();
+                }
+
+                ImGui::EndPopup();
+            }
+
+            if (m_modal_edit_property_value_opened_this_frame)
+            {
+                m_modal_edit_property_value_opened_this_frame = false;
+            }
+        }
+        ImGui::EndTable(); // DataTable Table
+    }
+
     auto LiveView::render_bottom_panel() -> void
     {
         const auto currently_selected_object = get_selected_object();
@@ -2310,6 +2568,11 @@ namespace RC::GUI
         if (currently_selected_object.second->IsA<UEnum>())
         {
             render_enum();
+        }
+        else if (currently_selected_object.second->IsA<UDataTable>())
+        {
+            render_properties();
+            render_datatable();
         }
         else
         {
