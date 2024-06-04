@@ -35,9 +35,9 @@ runs:
         uses: cschleiden/replace-tokens@v1.3
         with:
           files: '["${{steps.calc-header-template-loc.outputs.header-template}}"]'
-          env:
-            REF_NAME: ${{inputs.doc-name}}
-            REDIRECT_URL: ${{inputs.redirect-url}}
+        env:
+          REF_NAME: ${{inputs.doc-name}}
+          REDIRECT_URL: ${{inputs.redirect-url}}
       - name: Copy Header Template To Docs Src
         shell: bash
         run: |     
