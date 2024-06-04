@@ -20,6 +20,29 @@ outputs:
 runs:
     using: "composite"
     steps:
+      - name: Calculate Header Template File Location
+        id: calc-header-template-loc
+        shell: bash
+        run: |
+          echo "header-template=${{inputs.book-dir}}/theme/${{inputs.header-type}}/header.hbs" >> $GITHUB_OUTPUT
+      - name: Warn If Header Template Missing
+        id: load-header-template
+        if: ${{ hashFiles(steps.calc-header-template-loc.outputs.header-template) == '' }}
+        shell: bash
+        run: | 
+          echo "> [!WARNING]" >> $GITHUB_STEP_SUMMARY
+          echo "> Could not find a docs header.hbs template for `${{steps.calc-header-template-loc.outputs.header-template}}`." >> $GITHUB_STEP_SUMMARY
+          echo "> Docs will be built with the default `theme/header.hbs` template in the docs repo." >> $GITHUB_STEP_SUMMARY
+          echo 
+      - name: Fail if no header template found
+        if: ${{ failure() && steps.load-header-template.conclusion == 'failure' }}
+        shell: bash
+        run: |
+          echo "> [!WARNING]" >> $GITHUB_STEP_SUMMARY
+          echo "> Could not find a docs header.hbs template for ${{inputs.book-dir}}/theme/${{inputs.header-type}}/header.hbs" >> $GITHUB_STEP_SUMMARY
+      - name: Replace tokens
+        uses: cschleiden/replace-tokens@v1.3
+
       - name: PR Environment Logic
         if: ${{ startsWith(inputs.doc-ref, 'refs/pull/') }}
         shell: bash
