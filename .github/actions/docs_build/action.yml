@@ -1,10 +1,8 @@
 name: "Build Docs"
 inputs:
-  doc-ref:
-    description: 'Fully qualified ref to build docs for.'
-    required: true
   header-type:
     description: 'Which version of a header should be generated. Options are branch, empty, or tag.'
+    required: true
   doc-name:
     description: 'Name of the ref to be added to the version warning header.'
     required: true
@@ -24,41 +22,26 @@ runs:
         id: calc-header-template-loc
         shell: bash
         run: |
-          echo "header-template=${{inputs.book-dir}}/theme/${{inputs.header-type}}/header.hbs" >> $GITHUB_OUTPUT
+          echo "header-template=${{ github.action_path }}/header-templates/${{inputs.header-type}}/header.hbs" >> $GITHUB_OUTPUT
       - name: Warn If Header Template Missing
         id: load-header-template
         if: ${{ hashFiles(steps.calc-header-template-loc.outputs.header-template) == '' }}
         shell: bash
         run: | 
           echo "> [!WARNING]" >> $GITHUB_STEP_SUMMARY
-          echo "> Could not find a docs header.hbs template for `${{steps.calc-header-template-loc.outputs.header-template}}`." >> $GITHUB_STEP_SUMMARY
+          echo "> Could not find a docs header.hbs template for header-template=`${{steps.calc-header-template-loc.outputs.header-template}}`." >> $GITHUB_STEP_SUMMARY
           echo "> Docs will be built with the default `theme/header.hbs` template in the docs repo." >> $GITHUB_STEP_SUMMARY
-          echo 
-      - name: Fail if no header template found
-        if: ${{ failure() && steps.load-header-template.conclusion == 'failure' }}
-        shell: bash
-        run: |
-          echo "> [!WARNING]" >> $GITHUB_STEP_SUMMARY
-          echo "> Could not find a docs header.hbs template for ${{inputs.book-dir}}/theme/${{inputs.header-type}}/header.hbs" >> $GITHUB_STEP_SUMMARY
       - name: Replace tokens
         uses: cschleiden/replace-tokens@v1.3
-
-      - name: PR Environment Logic
-        if: ${{ startsWith(inputs.doc-ref, 'refs/pull/') }}
+        with:
+          files: '["${{steps.calc-header-template-loc.outputs.header-template}}"]'
+          env:
+            REF_NAME: ${{inputs.doc-name}}
+            REDIRECT_URL: ${{inputs.redirect-url}}
+      - name: Copy Header Template To Docs Src
         shell: bash
-        run: |
-          echo export REF = "${{inputs.doc-name}}"
-          echo export REDIRECT = "${{inputs.redirect-url}}"
-          "${{ inputs.book-dir }}/theme/header.hbs" < envsubst < "${{ github.action_path }}/branch/header.hbs"
-          echo "Building docs from a pull request ${{inputs.doc-ref}}" >> $GITHUB_STEP_SUMMARY
-      - name: Main Branch Environment Logic
-        if: ${{ startsWith(inputs.doc-ref, 'refs/heads/') }}
-        shell: bash
-        run: |
-          echo export REF = "${{inputs.doc-name}}"
-          echo export REDIRECT = "${{inputs.redirect-url}}"
-          "${{ inputs.book-dir }}/theme/header.hbs" < envsubst < "${{ github.action_path }}/branch/header.hbs"
-          echo "Building docs from a branch ${{inputs.doc-ref}}" >> $GITHUB_STEP_SUMMARY
+        run: |     
+          cp "${{steps.calc-header-template-loc.outputs.header-template}}" "${{inputs.book-dir}}/theme/header.hbs" -f
       - name: Setup Python
         uses: actions/setup-python@v4
         with:
