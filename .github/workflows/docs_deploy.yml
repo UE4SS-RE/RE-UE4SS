@@ -94,7 +94,7 @@ jobs:
           book-dir: "docs-export"
           redirect-url: "docs.ue4ss.com"
         env:
-          HEADER_TYPE: ${{ startsWith(github.ref, 'refs/pulls/') && github.ref || 'dev}}
+          HEADER_TYPE: ${{ startsWith(github.ref, 'refs/pulls/') && github.ref || 'dev'}}
       - uses: actions/upload-artifact@v4
         if: ${{ startsWith(github.ref, 'refs/pulls/') }}
         with:
