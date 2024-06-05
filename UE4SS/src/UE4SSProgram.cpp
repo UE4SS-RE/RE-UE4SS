@@ -384,7 +384,7 @@ namespace RC
         std::filesystem::path game_exe_path = exe_path_buffer;
         std::filesystem::path game_directory_path = game_exe_path.parent_path();
         m_legacy_root_directory = game_directory_path;
-
+        
         m_working_directory = m_root_directory;
         m_mods_directory = m_working_directory / "Mods";
         m_game_executable_directory = game_directory_path;
@@ -1119,7 +1119,24 @@ namespace RC
 
     auto UE4SSProgram::read_mods_json(std::string enabled_mods_file, std::vector<ModData>& mod_data_vector) -> void
     {
-        auto ec = glz::read_file_json(mod_data_vector, enabled_mods_file, std::string{});
+        std::string buffer{};
+        glz::parse_error pe = glz::read_file_json(mod_data_vector, enabled_mods_file, buffer);
+        if (pe)
+        {
+            std::string descriptive_error = glz::format_error(pe, buffer);
+
+            size_t count = descriptive_error.size() + 1;
+            wchar_t* converted_method_name = new wchar_t[count];
+
+            size_t num_of_char_converted = 0;
+            mbstowcs_s(&num_of_char_converted, converted_method_name, count, descriptive_error.data(), count);
+
+            auto converted = File::StringViewType(converted_method_name);
+
+            delete[] converted_method_name;
+                
+            Output::send<LogLevel::Error>(STR("{}\n\nError parsing mods.json file, please fix the file...\n"), converted);
+        }
     }
 
     auto UE4SSProgram::write_mods_json(std::string enabled_mods_file, std::vector<ModData>& mod_data_vector) -> void
@@ -1128,17 +1145,20 @@ namespace RC
         glz::write<glz::opts{.prettify = true}>(mod_data_vector, mod_data_buffer);
         glz::error_code ec = glz::buffer_to_file(mod_data_buffer, enabled_mods_file);
     }
-
+    
     auto UE4SSProgram::convert_legacy_mods_file(StringType legacy_enabled_mods_file, std::vector<ModData>& mod_data_vector) -> void
     {
         Output::send(STR("Converting legacy mods.txt to mods.json...\n"));
-        
-        // 'mods.txt' exists, lets parse it
-        std::wifstream mods_stream{legacy_enabled_mods_file};
-
+        std::wifstream mods_stream = File::open_file_skip_BOM(legacy_enabled_mods_file);
+        try {
+            mods_stream = File::open_file_skip_BOM(legacy_enabled_mods_file);
+        } catch (const std::exception& e) {
+            std::cerr << e.what() << std::endl;
+        }
         std::wstring current_line;
         while (std::getline(mods_stream, current_line))
         {
+            
             // Don't parse any lines with ';'
             if (current_line.find(L";") != current_line.npos)
             {
@@ -1180,21 +1200,24 @@ namespace RC
         ProfilerScope();
         // Part #1: Start all mods that are enabled in mods.json.
         std::filesystem::path mods_directory = UE4SSProgram::get_program().get_mods_directory();
-        StringType legacy_enabled_mods_file{mods_directory / "mods.txt"};
+        std::filesystem::path legacy_enabled_mods_file{mods_directory / "mods.txt"};
         std::filesystem::path enabled_mods_file{mods_directory / "mods.json"};
         std::vector<UE4SSProgram::ModData> mod_data_vector{};
+        UE4SSProgram& program = UE4SSProgram::get_program();
 
-        if (std::filesystem::exists(legacy_enabled_mods_file))
-        {
-            UE4SSProgram::convert_legacy_mods_file(legacy_enabled_mods_file, mod_data_vector);
-        }
         if (std::filesystem::exists(enabled_mods_file))
         {
             UE4SSProgram::read_mods_json(enabled_mods_file.string(), mod_data_vector);
         }
         
+        if (std::filesystem::exists(legacy_enabled_mods_file))
+        {
+            UE4SSProgram::convert_legacy_mods_file(legacy_enabled_mods_file, mod_data_vector);
+        }
+        
         UE4SSProgram::write_mods_json(enabled_mods_file.string(), mod_data_vector);
 
+        
         Output::send(STR("Starting mods (from mods.json load order)...\n"));
         for (auto it = mod_data_vector.begin(); it != mod_data_vector.end(); ++it)
         {

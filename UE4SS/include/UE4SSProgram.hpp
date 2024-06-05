@@ -215,6 +215,8 @@ namespace RC
 
             GLZ_LOCAL_META(ModData, mod_name, mod_enabled);
         };
+        std::vector<ModData> global_mod_data_vector;
+        
         
         auto init() -> void;
         auto is_program_started() -> bool;
