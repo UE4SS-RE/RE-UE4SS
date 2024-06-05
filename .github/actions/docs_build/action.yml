@@ -31,7 +31,7 @@ runs:
             echo "> Docs will be built with the default `theme/header.hbs` template in the docs repo." >> $GITHUB_STEP_SUMMARY
           else
             \cp -f ${HEADER_PATH} ${{inputs.book-dir}}/theme/header.hbs
-            echo "::notice test123"
+            echo "::notice::test123"
           fi
       - name: Replace tokens
         uses: cschleiden/replace-tokens@v1.3
@@ -61,6 +61,6 @@ runs:
         id: build-docs
         shell: bash
         run: |
-          cd docs-export
           mdbook build ${{inputs.book-dir}}
-          echo "output-dir=`pwd`/book/html" >> "$GITHUB_OUTPUT"
+          echo "output-dir=`pwd`/${{inputs.book-dir}}/book/html" >> "$GITHUB_OUTPUT"
+          ::notice::$GITHUB_OUTPUT
