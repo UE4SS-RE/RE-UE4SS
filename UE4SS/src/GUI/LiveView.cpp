@@ -3093,7 +3093,6 @@ namespace RC::GUI
 
         // Update this text if corresponding button's text changes. Textinput width = Spacing + Window margin + Button padding + Button text width
         ImGui::PushItemWidth(-(8.0f + 16.0f + ImGui::GetStyle().FramePadding.x * 2.0f + ImGui::CalcTextSize(ICON_FA_COPY " Copy search result").x));
-        // TODO: merge conflict, make sure this width is onky for TUI: old value is (-160.0f / XDIV
         bool push_inactive_text_color = !m_search_field_cleared;
         if (push_inactive_text_color)
         {
@@ -3444,20 +3443,24 @@ namespace RC::GUI
             }
             ImGui::SetClipboardText(to_string(result).c_str());
         }
-
+        #ifdef HAS_GUI
+        #define SPLIT_HEIGHT 4.0f
+        #define WINDOW_MARGIN 31.0f + 8.0f + SPLIT_HEIGHT
+        #endif
+        #ifdef HAS_TUI
+        #define SPLIT_HEIGHT 0.5f
+        #define WINDOW_MARGIN 0.0f
+        #endif
         // Y - Windows title bar offset - Bottom window margin - Splitter height
-        auto split_pane_height = ImGui::GetContentRegionAvail().y - 31.0f - 8.0f - 4.0f;
+        auto split_pane_height = ImGui::GetContentRegionAvail().y - WINDOW_MARGIN;
         if (m_bottom_size > 0 && m_bottom_size + m_top_size != split_pane_height)
         {
             // Window height changed, scale panes by ratio
             m_top_size = std::max(ImGui::GetFrameHeight(), std::round(split_pane_height * (m_top_size / (m_top_size + m_bottom_size))));
         }
-        // TODO: check the size for TUI as m_bottom_size = (ImGui::GetContentRegionMaxAbs().y - m_top_size) - 2.0f;
         m_bottom_size = std::max(ImGui::GetFrameHeight(), split_pane_height - m_top_size);
-        // TODO: do we need ImGui_Splitter(false, 4.0f, &m_top_size, &m_bottom_size, 12.0f, 12.0f, XOFFSET); on TUI?
-        // TODO: we need false, 0.5f?
-        // TODO: do we need ImGui_Splitter(false, 0.5f, &m_top_size, &m_bottom_size, 12.0f, 12.0f, ImGui::GetContentRegionMaxAbs().x); for TUI?
-        ImGui_Splitter(false, 4.0f, &m_top_size, &m_bottom_size, ImGui::GetFrameHeight(), ImGui::GetFrameHeight(), -16.0f);
+        float xoffset = (XOFFSET == 0) ? (0.0f) : (XOFFSET - 2);
+        ImGui_Splitter(false, SPLIT_HEIGHT, &m_top_size, &m_bottom_size, ImGui::GetFrameHeight(), ImGui::GetFrameHeight(), xoffset);
 
         ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4{0.156f, 0.156f, 0.156f, 1.0f});
 
@@ -3586,7 +3589,6 @@ namespace RC::GUI
             s_watches_loaded_from_disk = true;
         }
         float xoffset = (XOFFSET == 0) ? (0.0f) : (XOFFSET - 2);
-        // TODO: ensure this / XDIV is okay? the old value is -35/XDIV
         ImGui::BeginChild("watch_render_frame", {xoffset, (-31.0f + -8.0f) / XDIV});
 
         if (ImGui::Button("All Off"))
@@ -3603,14 +3605,13 @@ namespace RC::GUI
 #ifdef HAS_GUI
         ImGui::PushStyleVar(ImGuiStyleVar_CellPadding, {2.0f, 2.0f});
 #endif
-        // TODO: do we need ImGuiTableFlags_NoPadOuterX?
         if (ImGui::BeginTable("watch_table", num_columns, ImGuiTableFlags_Borders | ImGuiTableFlags_NoPadOuterX))
         {
-            // TODO: do we need controls_width = (XDIV == 1) ? (60.0f) : (60.0f / XDIV + 5.0f);?
-            ImGui::TableSetupColumn("Controls", ImGuiTableColumnFlags_WidthFixed, ImGui::GetFrameHeight() * 3.0f + 4.0f);
+            float width_controls = std::max(ImGui::CalcTextSize(ICON_FA_COPY "Controls").x, ImGui::GetFrameHeight() * 3.0f + 4.0f);
+            ImGui::TableSetupColumn("Controls", ImGuiTableColumnFlags_WidthFixed, width_controls);
             ImGui::TableSetupColumn("Watch Identifier", ImGuiTableColumnFlags_WidthStretch);
-            // TODO: why height here?
-            ImGui::TableSetupColumn("Save", ImGuiTableColumnFlags_WidthFixed, ImGui::GetFrameHeight());
+            float width_save = std::max(ImGui::CalcTextSize(ICON_FA_COPY "Save").x, ImGui::GetFrameHeight());
+            ImGui::TableSetupColumn("Save", ImGuiTableColumnFlags_WidthFixed, width_save);
             ImGui::TableHeadersRow();
 
             {
