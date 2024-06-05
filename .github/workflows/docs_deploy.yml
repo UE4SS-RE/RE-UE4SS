@@ -1,13 +1,14 @@
 name: Docs CI
 permissions:
     contents: write
-    pull-requests: write
+    pull-requests: write # For adding lint comments.
 on:
   workflow_dispatch:
   push:
     branches:
         - 'main'
     paths:
+        - '.github/actions/docs_build/**'
         - 'README.md'
         - 'docs/**'
         - 'docs-export/**'
@@ -15,6 +16,7 @@ on:
     branches:
       - 'main'
     paths:
+      - '.github/actions/docs_build/**'
       - 'README.md'
       - 'docs/**'
       - 'docs-export/**'
@@ -87,11 +89,18 @@ jobs:
         id: build-docs
         uses: ./.github/actions/docs_build
         with:
-          doc-ref: ${{ github.ref }}
           header-type: "branch"
-          doc-name: "dev test"
+          doc-name: "${{ env.HEADER_TYPE }}"
           book-dir: "docs-export"
           redirect-url: "docs.ue4ss.com"
+        env:
+          HEADER_TYPE: ${{ startsWith(github.ref, 'refs/pulls/') && github.ref || 'dev}}
+      - uses: actions/upload-artifact@v4
+        if: ${{ startsWith(github.ref, 'refs/pulls/') }}
+        with:
+          name: ${{ github.ref }}
+          path: ${{ steps.build-docs.outputs.output-dir }}
+          compression-level: 5 # no compression
       - name: Deploy to GitHub Pages
         if: ${{github.ref == 'refs/heads/main'}}
         uses: JamesIves/github-pages-deploy-action@v4.6.1
