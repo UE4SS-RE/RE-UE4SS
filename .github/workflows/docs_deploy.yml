@@ -1,6 +1,7 @@
 name: Docs CI
 permissions:
     contents: write
+    pull-requests: write
 on:
   workflow_dispatch:
   push:
@@ -46,10 +47,32 @@ jobs:
         files: '**/*.md'
         separator: ","
     - uses: DavidAnson/markdownlint-cli2-action@v16
+      id: markdown-lint
       if: steps.changed-files.outputs.any_changed == 'true'
       with:
         globs: ${{ steps.changed-files.outputs.all_changed_files }}
         separator: ","
+    - name: Find possible previous comment
+      if: ${{ failure() && steps.markdown-lint.conclusion == 'failure'}}
+      uses: peter-evans/find-comment@3eae4d37986fb5a8592848f6a574fdf654e61f9e
+      id: findComment
+      with:
+        issue-number: ${{ github.event.number }}
+        comment-author: 'github-actions[bot]'
+        body-includes: '<!-- MARKDOWN_LINTER_WARNING -->'
+    - name: Update comment
+      if: ${{ failure() && steps.markdown-lint.conclusion == 'failure'}}
+      uses: peter-evans/create-or-update-comment@71345be0265236311c031f5c7866368bd1eff043
+      with:
+        comment-id: ${{ steps.findComment.outputs.comment-id }}
+        issue-number: ${{ github.event.number }}
+        body: |
+          <!-- MARKDOWN_LINTER_WARNING -->
+          # New Linting Checks
+          We've detected that linting on an edited .md file has failed. We suggest that you fix any linting
+          errors in newly added markdown lines. You may also opt to resolve all linting errors in this file
+          to help us avoid a massive lint commit on the entire repository.
+        edit-mode: replace
   build:
     if: ${{ always() }}
     concurrency: ci-${{ github.ref }}
