@@ -98,7 +98,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: ${{ startsWith(github.ref, 'refs/pull/') }}
         with:
-          name: ${{ github.ref }}
+          name: ${{ github.sha }}
           path: ${{ steps.build-docs.outputs.output-dir }}
           compression-level: 5 # no compression
       - name: Deploy to GitHub Pages
