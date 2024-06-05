@@ -11,6 +11,8 @@ inputs:
     required: true
   redirect-url:
     description: 'URL that the version warning header will suggest the user to visit.'
+    required: false
+    default: "docs.ue4ss.com"
 outputs:
   output-dir:
     description: "Directory where documents are generated."
@@ -22,26 +24,22 @@ runs:
         id: calc-header-template-loc
         shell: bash
         run: |
-          echo "header-template=${{ github.action_path }}/header-templates/${{inputs.header-type}}/header.hbs" >> $GITHUB_OUTPUT
-      - name: Warn If Header Template Missing
-        id: load-header-template
-        if: ${{ hashFiles(steps.calc-header-template-loc.outputs.header-template) == '' }}
-        shell: bash
-        run: | 
-          echo "> [!WARNING]" >> $GITHUB_STEP_SUMMARY
-          echo "> Could not find a docs header.hbs template for header-template=`${{steps.calc-header-template-loc.outputs.header-template}}`." >> $GITHUB_STEP_SUMMARY
-          echo "> Docs will be built with the default `theme/header.hbs` template in the docs repo." >> $GITHUB_STEP_SUMMARY
+          HEADER_PATH="${{ github.action_path }}/header-templates/${{inputs.header-type}}/header.hbs"
+          if [ ! -f ${HEADER_PATH} ]; then
+            echo "> [!WARNING]" >> $GITHUB_STEP_SUMMARY
+            echo "> Could not find a docs header.hbs template at `${HEADER_PATH}}`." >> $GITHUB_STEP_SUMMARY
+            echo "> Docs will be built with the default `theme/header.hbs` template in the docs repo." >> $GITHUB_STEP_SUMMARY
+          else
+            \cp -f ${HEADER_PATH} ${{inputs.book-dir}}/theme/header.hbs
+            echo "::notice::test123"
+          fi
       - name: Replace tokens
         uses: cschleiden/replace-tokens@v1.3
         with:
-          files: '["${{steps.calc-header-template-loc.outputs.header-template}}"]'
+          files: '["${{inputs.book-dir}}/theme/header.hbs"]'
         env:
           REF_NAME: ${{inputs.doc-name}}
           REDIRECT_URL: ${{inputs.redirect-url}}
-      - name: Copy Header Template To Docs Src
-        shell: bash
-        run: |     
-          cp "${{steps.calc-header-template-loc.outputs.header-template}}" "${{inputs.book-dir}}/theme/header.hbs" -f
       - name: Setup Python
         uses: actions/setup-python@v4
         with:
@@ -63,6 +61,6 @@ runs:
         id: build-docs
         shell: bash
         run: |
-          cd docs-export
           mdbook build ${{inputs.book-dir}}
-          echo "output-dir=`pwd`/book/html" >> "$GITHUB_OUTPUT"
+          echo "output-dir=`pwd`/${{inputs.book-dir}}/book/html" >> "$GITHUB_OUTPUT"
+          ::notice::$GITHUB_OUTPUT
