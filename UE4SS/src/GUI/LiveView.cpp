@@ -3459,8 +3459,7 @@ namespace RC::GUI
             m_top_size = std::max(ImGui::GetFrameHeight(), std::round(split_pane_height * (m_top_size / (m_top_size + m_bottom_size))));
         }
         m_bottom_size = std::max(ImGui::GetFrameHeight(), split_pane_height - m_top_size);
-        float xoffset = (XOFFSET == 0) ? (0.0f) : (XOFFSET - 2);
-        ImGui_Splitter(false, SPLIT_HEIGHT, &m_top_size, &m_bottom_size, ImGui::GetFrameHeight(), ImGui::GetFrameHeight(), xoffset);
+        ImGui_Splitter(false, SPLIT_HEIGHT, &m_top_size, &m_bottom_size, ImGui::GetFrameHeight(), ImGui::GetFrameHeight(), -16);
 
         ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4{0.156f, 0.156f, 0.156f, 1.0f});
 
