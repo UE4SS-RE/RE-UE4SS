@@ -61,6 +61,7 @@ runs:
         id: build-docs
         shell: bash
         run: |
-          mdbook build ${{inputs.book-dir}}
-          echo "output-dir=`pwd`/${{inputs.book-dir}}/book/html" >> "$GITHUB_OUTPUT"
+          cd docs-export
+          mdbook build
+          echo "output-dir=`pwd`/book/html" >> "$GITHUB_OUTPUT"
           ::notice::$GITHUB_OUTPUT
