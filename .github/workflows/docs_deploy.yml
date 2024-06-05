@@ -1,7 +1,7 @@
 name: Docs CI
 permissions:
     contents: write
-    pull-requests: write # For adding lint comments.
+    pull-requests: write # For adding comments to PR.
 on:
   workflow_dispatch:
   push:
@@ -37,8 +37,29 @@ jobs:
       # Update output format to enable automatic inline annotations.
       - name: Run Ruff
         run: ruff check --output-format=github .
+  skip-lint:
+    runs-on: ubuntu-latest
+    outputs:
+      should-lint: ${{ steps.nolint-pr-description.outputs.should-lint }}
+    steps:
+    - name: Validate PR Description
+      if: ${{ startsWith(github.ref, 'refs/pull/') }}
+      id: nolint-pr-description
+      run: |
+        # Fetch PR description using jq
+        PR_DESCRIPTION=$(jq -r ".pull_request.body" "$GITHUB_EVENT_PATH")
+        KEYWORD="[nolint]"
+
+        # Check for the required keyword in the PR description
+        if [[ $PR_DESCRIPTION != *"$KEYWORD"* ]]; then
+          echo "should-lint=yes" >> "$GITHUB_OUTPUT"
+        else
+          echo "::notice::Skipping linting due to [nolint] in PR description."
+        fi
   lint:
     runs-on: ubuntu-latest
+    needs: ['skip-lint']
+    if: ${{ needs.skip-lint.outputs.should-lint }}
     steps:
     - uses: actions/checkout@v4
       with:
@@ -64,16 +85,15 @@ jobs:
         body-includes: '<!-- MARKDOWN_LINTER_WARNING -->'
     - name: Update comment
       if: ${{ failure() && steps.markdown-lint.conclusion == 'failure'}}
-      uses: peter-evans/create-or-update-comment@71345be0265236311c031f5c7866368bd1eff043
+      uses:peter-evans/create-or-update-commentcreate-or-update-comment@71345be0265236311c031f5c7866368bd1eff043
       with:
         comment-id: ${{ steps.findComment.outputs.comment-id }}
         issue-number: ${{ github.event.number }}
         body: |
           <!-- MARKDOWN_LINTER_WARNING -->
           # New Linting Checks
-          We've detected that linting on an edited .md file has failed. We suggest that you fix any linting
-          errors in newly added markdown lines. You may also opt to resolve all linting errors in this file
-          to help us avoid a massive lint commit on the entire repository.
+          We've detected that linting on an edited .md file has failed. We suggest that you fix any linting errors in newly added markdown lines.
+          You may also opt to resolve all linting errors in this file to help us avoid a massive lint commit on the entire repository.
         edit-mode: replace
   build:
     if: ${{ always() }}
@@ -100,7 +120,7 @@ jobs:
         with:
           name: ${{ github.sha }}
           path: ${{ steps.build-docs.outputs.output-dir }}
-          compression-level: 5 # no compression
+          compression-level: 5
       - name: Deploy to GitHub Pages
         if: ${{github.ref == 'refs/heads/main'}}
         uses: JamesIves/github-pages-deploy-action@v4.6.1
