@@ -306,9 +306,10 @@ namespace RC::Output
         DefaultTargets::set_default_log_level(log_level);
     }
 
-    template <typename... FmtArgs>
-    auto send(SystemStringViewType content, FmtArgs&&... fmt_args) -> void
+    template <class StringView, typename... FmtArgs>
+    auto send(StringView _content, FmtArgs&&... fmt_args) -> void
     {
+        auto content = to_system(_content);
         auto formated = apply_formatting(content, to_system(std::forward<FmtArgs>(fmt_args))...);
         for (const auto& device : DefaultTargets::get_default_devices_ref())
         {
@@ -325,9 +326,10 @@ namespace RC::Output
         }
     }
 
-    template <EnumType OptionalArg, typename... FmtArgs>
-    auto send(SystemStringViewType content, OptionalArg optional_arg, FmtArgs&&... fmt_args) -> void
+    template <EnumType OptionalArg, class StringView, typename... FmtArgs>
+    auto send(StringView _content, OptionalArg optional_arg, FmtArgs&&... fmt_args) -> void
     {
+        auto content = to_system(_content);
         auto formated = std::vformat(content, RC_STD_MAKE_FORMAT_ARGS(to_system(std::forward<FmtArgs>(fmt_args))...));
         for (const auto& device : DefaultTargets::get_default_devices_ref())
         {
@@ -346,9 +348,10 @@ namespace RC::Output
 
     auto RC_DYNOUT_API send(SystemStringViewType content) -> void;
 
-    template <EnumType OptionalArg>
-    auto send(SystemStringViewType content, OptionalArg optional_arg) -> void
+    template <class StringView, EnumType OptionalArg>
+    auto send(StringView _content, OptionalArg optional_arg) -> void
     {
+        auto content = to_system(_content);
         for (const auto& device : DefaultTargets::get_default_devices_ref())
         {
             ASSERT_DEFAULT_OUTPUT_DEVICE_IS_VALID(device)
@@ -364,9 +367,10 @@ namespace RC::Output
         }
     }
 
-    template <int32_t optional_arg, typename... FmtArgs>
-    auto send(SystemStringViewType content, FmtArgs&&... fmt_args) -> void
+    template <int32_t optional_arg, class StringView, typename... FmtArgs>
+    auto send(StringView _content, FmtArgs&&... fmt_args) -> void
     {
+        auto content = to_system(_content);
         auto formated = apply_formatting(content, to_system(std::forward<FmtArgs>(fmt_args))...);
         for (const auto& device : DefaultTargets::get_default_devices_ref())
         {
@@ -383,9 +387,10 @@ namespace RC::Output
         }
     }
 
-    template <int32_t optional_arg>
-    auto send(SystemStringViewType content) -> void
+    template <int32_t optional_arg, class StringView>
+    auto send(StringView _content) -> void
     {
+        auto content = to_system(_content);
         for (const auto& device : DefaultTargets::get_default_devices_ref())
         {
             ASSERT_DEFAULT_OUTPUT_DEVICE_IS_VALID(device)
