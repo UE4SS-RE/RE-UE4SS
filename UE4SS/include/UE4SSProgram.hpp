@@ -220,9 +220,9 @@ namespace RC
         
         auto init() -> void;
         auto is_program_started() -> bool;
-        static auto read_mods_json(std::string enabled_mods_file, std::vector<ModData>& mod_data_vector) -> void;
-        static auto write_mods_json(std::string enabled_mods_file, std::vector<ModData>& mod_data_vector) -> void;
-        static auto convert_legacy_mods_file(StringType legacy_enabled_mods_file, std::vector<ModData>& mod_data_vector) -> void;
+        static auto read_mods_json(std::string mod_list_file, std::vector<ModData>& mod_data_vector) -> void;
+        static auto write_mods_json(std::string mod_list_file, std::vector<ModData>& mod_data_vector) -> void;
+        static auto convert_legacy_mods_file(StringType legacy_mod_list_file, std::vector<ModData>& mod_data_vector) -> void;
         auto reinstall_mods() -> void;
         auto get_object_dumper_output_directory() -> const File::StringType;
         RC_UE4SS_API auto get_module_directory() -> File::StringViewType;

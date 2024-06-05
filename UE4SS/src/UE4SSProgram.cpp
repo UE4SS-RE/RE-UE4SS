@@ -1117,10 +1117,10 @@ namespace RC
         }
     }
 
-    auto UE4SSProgram::read_mods_json(std::string enabled_mods_file, std::vector<ModData>& mod_data_vector) -> void
+    auto UE4SSProgram::read_mods_json(std::string mod_list_file, std::vector<ModData>& mod_data_vector) -> void
     {
         std::string buffer{};
-        glz::parse_error pe = glz::read_file_json(mod_data_vector, enabled_mods_file, buffer);
+        glz::parse_error pe = glz::read_file_json(mod_data_vector, mod_list_file, buffer);
         if (pe)
         {
             std::string descriptive_error = glz::format_error(pe, buffer);
@@ -1139,19 +1139,19 @@ namespace RC
         }
     }
 
-    auto UE4SSProgram::write_mods_json(std::string enabled_mods_file, std::vector<ModData>& mod_data_vector) -> void
+    auto UE4SSProgram::write_mods_json(std::string mod_list_file, std::vector<ModData>& mod_data_vector) -> void
     {
         std::string mod_data_buffer;
         glz::write<glz::opts{.prettify = true}>(mod_data_vector, mod_data_buffer);
-        glz::error_code ec = glz::buffer_to_file(mod_data_buffer, enabled_mods_file);
+        glz::error_code ec = glz::buffer_to_file(mod_data_buffer, mod_list_file);
     }
     
-    auto UE4SSProgram::convert_legacy_mods_file(StringType legacy_enabled_mods_file, std::vector<ModData>& mod_data_vector) -> void
+    auto UE4SSProgram::convert_legacy_mods_file(StringType legacy_mod_list_file, std::vector<ModData>& mod_data_vector) -> void
     {
         Output::send(STR("Converting legacy mods.txt to mods.json...\n"));
-        std::wifstream mods_stream = File::open_file_skip_BOM(legacy_enabled_mods_file);
+        std::wifstream mods_stream = File::open_file_skip_BOM(legacy_mod_list_file);
         try {
-            mods_stream = File::open_file_skip_BOM(legacy_enabled_mods_file);
+            mods_stream = File::open_file_skip_BOM(legacy_mod_list_file);
         } catch (const std::exception& e) {
             std::cerr << e.what() << std::endl;
         }
@@ -1200,22 +1200,22 @@ namespace RC
         ProfilerScope();
         // Part #1: Start all mods that are enabled in mods.json.
         std::filesystem::path mods_directory = UE4SSProgram::get_program().get_mods_directory();
-        std::filesystem::path legacy_enabled_mods_file{mods_directory / "mods.txt"};
-        std::filesystem::path enabled_mods_file{mods_directory / "mods.json"};
+        std::filesystem::path legacy_mod_list_file{mods_directory / "mods.txt"};
+        std::filesystem::path mod_list_file{mods_directory / "mods.json"};
         std::vector<UE4SSProgram::ModData> mod_data_vector{};
         UE4SSProgram& program = UE4SSProgram::get_program();
 
-        if (std::filesystem::exists(enabled_mods_file))
+        if (std::filesystem::exists(mod_list_file))
         {
-            UE4SSProgram::read_mods_json(enabled_mods_file.string(), mod_data_vector);
+            UE4SSProgram::read_mods_json(mod_list_file.string(), mod_data_vector);
         }
         
-        if (std::filesystem::exists(legacy_enabled_mods_file))
+        if (std::filesystem::exists(legacy_mod_list_file))
         {
-            UE4SSProgram::convert_legacy_mods_file(legacy_enabled_mods_file, mod_data_vector);
+            UE4SSProgram::convert_legacy_mods_file(legacy_mod_list_file, mod_data_vector);
         }
         
-        UE4SSProgram::write_mods_json(enabled_mods_file.string(), mod_data_vector);
+        UE4SSProgram::write_mods_json(mod_list_file.string(), mod_data_vector);
 
         
         Output::send(STR("Starting mods (from mods.json load order)...\n"));
