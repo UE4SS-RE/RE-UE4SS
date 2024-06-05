@@ -1,4 +1,6 @@
 name: "Build Docs"
+permissions:
+  contents: read
 inputs:
   header-type:
     description: 'Which version of a header should be generated. Options are branch, empty, or tag.'
@@ -64,4 +66,4 @@ runs:
           cd docs-export
           mdbook build
           echo "output-dir=`pwd`/book/html" >> "$GITHUB_OUTPUT"
-          ::notice::$GITHUB_OUTPUT
+          echo "::notice::$GITHUB_OUTPUT"
