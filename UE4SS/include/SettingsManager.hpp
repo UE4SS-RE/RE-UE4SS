@@ -111,7 +111,6 @@ namespace RC
             bool GUIUFunctionCaller{false};
         } Experimental;
 
-#ifdef LINUX
         struct TUIFeatures
         {
             /*int ButtonLeft = 1;
@@ -135,7 +134,6 @@ namespace RC
             SystemStringType TERMINFO = SYSSTR("/usr/share/terminfo");
             SystemStringType LCALL = SYSSTR("en_US.UTF-8");
         } TUI;
-#endif
 
       public:
         SettingsManager() = default;

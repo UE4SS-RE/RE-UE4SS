@@ -139,7 +139,6 @@ namespace RC
         constexpr static SystemCharType section_experimental_features[] = SYSSTR("ExperimentalFeatures");
         REGISTER_BOOL_SETTING(Experimental.GUIUFunctionCaller, section_experimental_features, GUIUFunctionCaller)
 
-#ifdef LINUX
         constexpr static SystemCharType section_tui_features[] = SYSSTR("TUI");
         /*REGISTER_INT64_SETTING(TUI.ButtonLeft, section_tui_features, ButtonLeft)
         REGISTER_INT64_SETTING(TUI.ButtonRight, section_tui_features, ButtonRight)
@@ -161,6 +160,5 @@ namespace RC
         REGISTER_STRING_SETTING(TUI.CopyCode, section_tui_features, CopyCode)
         REGISTER_STRING_SETTING(TUI.SearchCode, section_tui_features, SearchCode)
         */
-#endif
     }
 } // namespace RC
