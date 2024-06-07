@@ -35,5 +35,6 @@ namespace RC::GUI
         auto on_os_backend_set() -> void override;
         auto get_window_size() -> WindowSize override;
         auto exit_requested() -> bool override;
+        auto set_backend_properties(BackendProperty &properties) -> void override;
     };
 } // namespace RC::GUI

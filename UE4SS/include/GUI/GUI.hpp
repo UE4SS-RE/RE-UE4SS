@@ -82,6 +82,17 @@ namespace RC::GUI
         int32_t y;
     };
 
+    struct BackendProperty {
+        float x_offset_0;
+        float x_offset_1;
+        float xdiv;
+        float ydiv;
+        float separator_height;
+        bool quirk_tui;
+    };
+
+    extern BackendProperty g_backend_properties;
+
     class GfxBackendBase
     {
       protected:
@@ -118,6 +129,9 @@ namespace RC::GUI
         virtual inline auto exit_requested() -> bool
         {
             return false;
+        };
+        virtual auto set_backend_properties(BackendProperty &properties) -> void
+        {
         };
     };
 
@@ -319,6 +333,10 @@ namespace RC::GUI
         });
     }
 
+    extern bool g_tui_mode;
+    #define ATTACH_ICON(icon, str)  ((icon str) + (g_tui_mode ? (UE4SSProgram::settings_manager.TUI.TUINerdFont ? (0) : (sizeof(icon) - 1)) : 0))
+    #define ICON_ALT(icon, alt) (g_tui_mode ? ((UE4SSProgram::settings_manager.TUI.TUINerdFont) ? (icon) : (alt)) : (icon))
+/*
 #ifdef HAS_GUI
 #define ATTACH_ICON(icon, str) icon str
 #define ICON_ALT(icon, alt) icon
@@ -326,4 +344,5 @@ namespace RC::GUI
 #define ATTACH_ICON(icon, str) ((icon str) + (UE4SSProgram::settings_manager.TUI.TUINerdFont ? (0) : (sizeof(icon) - 1)))
 #define ICON_ALT(icon, alt) (UE4SSProgram::settings_manager.TUI.TUINerdFont) ? (icon) : (alt)
 #endif
+*/
 } // namespace RC::GUI

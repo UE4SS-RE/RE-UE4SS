@@ -168,4 +168,14 @@ namespace RC::GUI
     {
         return tui_shutdown;
     }
+
+    void Backend_GfxTUI::set_backend_properties(BackendProperty& properties)
+    {
+        properties.quirk_tui = true;
+        properties.xdiv = 6.66f;
+        properties.ydiv = 21.1f;
+        properties.separator_height = 0.5f;
+        properties.x_offset_0 = 0;
+        properties.x_offset_1 = 0;
+    }
 }; // namespace RC::GUI

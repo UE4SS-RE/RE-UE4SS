@@ -60,6 +60,16 @@ namespace RC::GUI
     ImColor g_imgui_text_blue_color = ImColor{135, 195, 250, 255};
     ImColor g_imgui_text_purple_color = ImColor{170, 145, 255, 255};
 
+    bool g_tui_mode = false;
+    BackendProperty g_backend_properties = {
+        .quirk_tui = false,
+        .separator_height = 4.0f,
+        .x_offset_0 = -14.0f,
+        .x_offset_1 = -16.0f,
+        .xdiv = 1.0f,
+        .ydiv = 1.0f,
+    };
+
     std::vector<DebuggingGUI::EndOfFrameCallback> DebuggingGUI::s_end_of_frame_callbacks{};
 
     auto DebuggingGUI::is_valid() -> bool
@@ -548,6 +558,7 @@ namespace RC::GUI
     auto DebuggingGUI::set_gfx_backend(GfxBackend backend) -> void
     {
         Output::send(SYSSTR("Setting gfx backend!\n"));
+        g_tui_mode = false;
         switch (backend)
         {
 #ifdef HAS_D3D11
@@ -567,16 +578,17 @@ namespace RC::GUI
             break;
 #elif defined(HAS_TUI)
         case GfxBackend::TUI:
+            g_tui_mode = true;
             m_gfx_backend = std::make_unique<Backend_GfxTUI>();
             m_os_backend = std::make_unique<Backend_TUI>();
 #endif
 #endif
         }
-
         m_gfx_backend->set_os_backend(m_os_backend.get());
         m_os_backend->set_gfx_backend(m_gfx_backend.get());
         m_gfx_backend->on_os_backend_set();
         m_os_backend->on_gfx_backend_set();
+        m_gfx_backend->set_backend_properties(g_backend_properties);
     }
 
     auto DebuggingGUI::add_tab(std::shared_ptr<GUITab> tab) -> void
