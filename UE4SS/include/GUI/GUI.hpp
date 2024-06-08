@@ -8,6 +8,7 @@
 #include <GUI/Console.hpp>
 #include <GUI/GUITab.hpp>
 #include <GUI/LiveView.hpp>
+#include <Common.hpp>
 #include <Helpers/String.hpp>
 #include <imgui.h>
 
