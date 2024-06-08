@@ -56,10 +56,12 @@ local PLATFORM_TYPES = {
         ["defines"] = {
             "PLATFORM_WINDOWS",
             "PLATFORM_MICROSOFT",
+            "WIN32",
             "OVERRIDE_PLATFORM_HEADER_NAME=Windows",
             "UBT_COMPILED_PLATFORM=Win64",
             "UNICODE",
-            "_UNICODE"
+            "_UNICODE",
+            "DLLEXT=.dll"
         },
         ["cxflags"] = {
             "clang::-gcodeview"
