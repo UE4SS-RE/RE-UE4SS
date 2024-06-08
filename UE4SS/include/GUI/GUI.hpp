@@ -18,19 +18,12 @@ struct ImGuiSettingsHandler;
 static_assert(false, "HAS_GUI or HAS_TUI must be defined.");
 #endif
 
-#define XOFFSET (-14.0f)
-#define XDIV 1
-#define YDIV 1
-
 #else
 
 #ifdef HAS_GUI
 static_assert(false, "HAS_GUI and HAS_TUI cannot be defined at the same time at this moment.");
 #endif
 
-#define XOFFSET 0
-#define XDIV (6.66f)
-#define YDIV (21.1f)
 
 namespace ImGui
 {
@@ -91,7 +84,14 @@ namespace RC::GUI
         bool quirk_tui;
     };
 
-    extern BackendProperty g_backend_properties;
+    extern RC_UE4SS_API BackendProperty g_backend_properties;
+
+    #define XOFFSET_0 (g_backend_properties.x_offset_0)
+    #define XOFFSET_1 (g_backend_properties.x_offset_1)
+    #define XDIV (g_backend_properties.xdiv)
+    #define YDIV (g_backend_properties.ydiv)
+    #define SEPARATOR_HEIGHT (g_backend_properties.separator_height)
+    #define IS_TUI (g_backend_properties.quirk_tui)
 
     class GfxBackendBase
     {
@@ -333,9 +333,8 @@ namespace RC::GUI
         });
     }
 
-    extern bool g_tui_mode;
-    #define ATTACH_ICON(icon, str)  ((icon str) + (g_tui_mode ? (UE4SSProgram::settings_manager.TUI.TUINerdFont ? (0) : (sizeof(icon) - 1)) : 0))
-    #define ICON_ALT(icon, alt) (g_tui_mode ? ((UE4SSProgram::settings_manager.TUI.TUINerdFont) ? (icon) : (alt)) : (icon))
+    #define ATTACH_ICON(icon, str)  ((icon str) + (IS_TUI ? (UE4SSProgram::settings_manager.TUI.TUINerdFont ? (0) : (sizeof(icon) - 1)) : 0))
+    #define ICON_ALT(icon, alt) (IS_TUI ? ((UE4SSProgram::settings_manager.TUI.TUINerdFont) ? (icon) : (alt)) : (icon))
 /*
 #ifdef HAS_GUI
 #define ATTACH_ICON(icon, str) icon str

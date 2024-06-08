@@ -2827,7 +2827,7 @@ namespace RC::GUI
 
     auto LiveView::render_info_panel() -> void
     {
-        ImGui::BeginChild("LiveView_InfoPanel", {XOFFSET, m_bottom_size}, true, ImGuiWindowFlags_HorizontalScrollbar);
+        ImGui::BeginChild("LiveView_InfoPanel", {XOFFSET_0, m_bottom_size}, true, ImGuiWindowFlags_HorizontalScrollbar);
 
         size_t next_object_index_to_select{};
 
@@ -3443,31 +3443,22 @@ namespace RC::GUI
             }
             ImGui::SetClipboardText(to_string(result).c_str());
         }
-        #ifdef HAS_GUI
-        #define SPLIT_HEIGHT 4.0f
-        #define WINDOW_MARGIN 31.0f + 8.0f + SPLIT_HEIGHT
-        #endif
-        #ifdef HAS_TUI
-        #define SPLIT_HEIGHT 0.5f
-        #define WINDOW_MARGIN 0.0f
-        #endif
         // Y - Windows title bar offset - Bottom window margin - Splitter height
-        auto split_pane_height = ImGui::GetContentRegionAvail().y - WINDOW_MARGIN;
+        float window_margin = 0.0f;
+        if (!IS_TUI) {
+            window_margin = 31.0f + 8.0f + SEPARATOR_HEIGHT;
+        }
+        auto split_pane_height = ImGui::GetContentRegionAvail().y - window_margin;
         if (m_bottom_size > 0 && m_bottom_size + m_top_size != split_pane_height)
         {
             // Window height changed, scale panes by ratio
             m_top_size = std::max(ImGui::GetFrameHeight(), std::round(split_pane_height * (m_top_size / (m_top_size + m_bottom_size))));
         }
         m_bottom_size = std::max(ImGui::GetFrameHeight(), split_pane_height - m_top_size);
-        ImGui_Splitter(false, SPLIT_HEIGHT, &m_top_size, &m_bottom_size, ImGui::GetFrameHeight(), ImGui::GetFrameHeight(), -16);
+        ImGui_Splitter(false, SEPARATOR_HEIGHT, &m_top_size, &m_bottom_size, ImGui::GetFrameHeight(), ImGui::GetFrameHeight(), -16);
 
         ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4{0.156f, 0.156f, 0.156f, 1.0f});
-
-#ifdef HAS_GUI
-        ImGui::BeginChild("LiveView_TreeView", {-16.0f, m_top_size}, true);
-#else
-        ImGui::BeginChild("LiveView_TreeView", {0, m_top_size}, true);
-#endif
+        ImGui::BeginChild("LiveView_TreeView", {XOFFSET_1, m_top_size}, true);
 
         auto do_iteration = [&](int32_t int_data_1 = 0, int32_t int_data_2 = 0) {
             ((*this).*((*this).m_object_iterator))(int_data_1, int_data_2, [&](UObject* object) {
@@ -3587,8 +3578,7 @@ namespace RC::GUI
             load_watches_from_disk();
             s_watches_loaded_from_disk = true;
         }
-        float xoffset = (XOFFSET == 0) ? (0.0f) : (XOFFSET - 2);
-        ImGui::BeginChild("watch_render_frame", {xoffset, (-31.0f + -8.0f) / XDIV});
+        ImGui::BeginChild("watch_render_frame", {XOFFSET_1, (-31.0f + -8.0f) / XDIV});
 
         if (ImGui::Button("All Off"))
         {

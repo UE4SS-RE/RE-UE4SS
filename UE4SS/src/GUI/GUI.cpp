@@ -60,7 +60,6 @@ namespace RC::GUI
     ImColor g_imgui_text_blue_color = ImColor{135, 195, 250, 255};
     ImColor g_imgui_text_purple_color = ImColor{170, 145, 255, 255};
 
-    bool g_tui_mode = false;
     BackendProperty g_backend_properties = {
         .quirk_tui = false,
         .separator_height = 4.0f,
@@ -558,7 +557,6 @@ namespace RC::GUI
     auto DebuggingGUI::set_gfx_backend(GfxBackend backend) -> void
     {
         Output::send(SYSSTR("Setting gfx backend!\n"));
-        g_tui_mode = false;
         switch (backend)
         {
 #ifdef HAS_D3D11
@@ -578,7 +576,6 @@ namespace RC::GUI
             break;
 #elif defined(HAS_TUI)
         case GfxBackend::TUI:
-            g_tui_mode = true;
             m_gfx_backend = std::make_unique<Backend_GfxTUI>();
             m_os_backend = std::make_unique<Backend_TUI>();
 #endif
