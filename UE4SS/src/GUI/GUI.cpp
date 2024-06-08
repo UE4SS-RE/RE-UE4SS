@@ -61,12 +61,12 @@ namespace RC::GUI
     ImColor g_imgui_text_purple_color = ImColor{170, 145, 255, 255};
 
     BackendProperty g_backend_properties = {
-        .quirk_tui = false,
-        .separator_height = 4.0f,
         .x_offset_0 = -14.0f,
         .x_offset_1 = -16.0f,
         .xdiv = 1.0f,
         .ydiv = 1.0f,
+        .separator_height = 4.0f,
+        .quirk_tui = false,
     };
 
     std::vector<DebuggingGUI::EndOfFrameCallback> DebuggingGUI::s_end_of_frame_callbacks{};
