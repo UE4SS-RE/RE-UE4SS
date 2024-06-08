@@ -109,6 +109,7 @@ target(projectName)
     
     if is_plat("windows") then
         add_files("src/Platform/Win32/CrashDumper.cpp", "src/Platform/Win32/EntryWin32.cpp")
+        add_links("dbghelp", "psapi", { public = true })
     elseif is_plat("linux") then
         add_files("src/Platform/Linux/EntryLinux.cpp")
         add_shflags("-Wl,-soname,libUE4SS.so")
