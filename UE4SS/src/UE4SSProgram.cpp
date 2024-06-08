@@ -177,7 +177,8 @@ namespace RC
 
             // Setup the log file
             auto& file_device = Output::set_default_devices<Output::NewFileDevice>();
-            fprintf(stderr, "log dir: %s\n", (m_log_directory / m_log_file_name).c_str());
+            STR
+            fprintf(stderr, "log dir: "SystemStringPrint"\n", (m_log_directory / m_log_file_name).c_str());
             file_device.set_file_name_and_path(to_system(m_log_directory / m_log_file_name));
 
             create_simple_console();
