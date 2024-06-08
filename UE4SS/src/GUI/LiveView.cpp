@@ -316,7 +316,7 @@ namespace RC::GUI
         {
             if constexpr (std::is_same_v<typename ContainerType::value_type, FName>)
             {
-                values_array.new_string(to_string(value.ToString()));
+                values_array.new_string(to_system(value.ToString()));
             }
             else if constexpr (std::is_same_v<typename ContainerType::value_type, bool>)
             {
@@ -324,7 +324,7 @@ namespace RC::GUI
             }
             else
             {
-                values_array.new_string(to_string(value));
+                values_array.new_string(to_system(value));
             }
         }
     }
@@ -355,7 +355,7 @@ namespace RC::GUI
                            File::OverwriteExistingFile::Yes,
                            File::CreateIfNonExistent::Yes);
         int32_t json_indent_level{};
-        json_file.write_file_string_to_file(json.serialize(JSON::ShouldFormat::Yes, &json_indent_level));
+        json_file.write_file_string_to_file(to_file(json.serialize(JSON::ShouldFormat::Yes, &json_indent_level)));
     }
 
     static auto save_filters_to_disk() -> void
@@ -365,29 +365,26 @@ namespace RC::GUI
         });
     }
 
+    template <typename Dest, typename T>
+    static auto to_dest_string(T&& input) {
+        STRING_DISPATCH_NOERR(std::decay_t<Dest>, to_string, to_wstring, to_u16string)
+        else if constexpr(std::is_same_v<std::decay_t<Dest>, FName>) {
+            return to_ue(input);
+        }
+        STRING_DISPATCH_ERROR(Dest)
+    }
+
     template <typename T>
     static auto json_array_to_filters_list(JSON::Array& json_array, std::vector<T>& list, SystemStringType type, std::string& internal_value) -> void
     {
         list.clear();
-        internal_value.clear();
+        internal_value.clear(); 
         json_array.for_each([&](JSON::Value& item) {
             if (!item.is<JSON::String>())
             {
                 throw std::runtime_error{std::format("Invalid {} in 'filters.meta.json'", to_string(type))};
             }
-            
-            if constexpr (std::is_same_v<T, SystemStringType>)
-            {
-                list.emplace_back(to_system(item.as<JSON::String>()->get_view()));
-            }
-            else if constexpr(std::is_same_v<T, UEStringType> || std::is_same_v<T, FName>)
-            {
-                list.emplace_back(to_ue(item.as<JSON::String>()->get_view()));   
-            }
-            else
-            {
-                static_assert(false, "Unsupported string type");
-            }
+            list.emplace_back(to_dest_string<T>(item.as<JSON::String>()->get_view()));
 
             return LoopAction::Continue;
         });

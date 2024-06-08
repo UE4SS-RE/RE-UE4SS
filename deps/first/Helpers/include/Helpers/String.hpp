@@ -214,7 +214,7 @@ namespace RC
 /* explode_by_occurrence -> END */
 
 // ----------------------------- //
-#define STRING_DISPATCH(STRING_T, ts, tw, tu16)                                                                                                                \
+#define STRING_DISPATCH_NOERR(STRING_T, ts, tw, tu16)                                                                                                                \
     if constexpr (std::is_same_v<STRING_T, std::string>)                                                                                                       \
     {                                                                                                                                                          \
         return ts(std::forward<T>(input));                                                                                                                     \
@@ -226,11 +226,18 @@ namespace RC
     else if constexpr (std::is_same_v<STRING_T, std::u16string>)                                                                                               \
     {                                                                                                                                                          \
         return tu16(std::forward<T>(input));                                                                                                                   \
-    }                                                                                                                                                          \
+    }
+
+#define STRING_DISPATCH_ERROR(STRING_T)                                                                                                                        \
     else                                                                                                                                                       \
     {                                                                                                                                                          \
         static_assert(dependent_false<T>::value, "Unsupported " #STRING_T ".");                                                                                \
     }
+
+#define STRING_DISPATCH(STRING_T, ts, tw, tu16)                                                                                                                \
+    STRING_DISPATCH_NOERR(STRING_T, ts, tw, tu16)                                                                                                              \
+    STRING_DISPATCH_ERROR(STRING_T)
+
 // ----------------------------- //
 #define PATH_QUIRK(STRINGT)                                                                                                                                    \
     if constexpr (std::is_same_v<std::decay_t<T>, std::filesystem::path> || std::is_same_v<std::decay_t<T>, const std::filesystem::path>)                      \
