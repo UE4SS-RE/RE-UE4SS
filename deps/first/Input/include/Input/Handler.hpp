@@ -29,12 +29,9 @@ namespace RC::Input
         ModifierKeys required_modifier_keys{};
         EventCallbackCallable callback{};
         uint8_t custom_data{};
-<<<<<<< HEAD
         void* custom_data2{};
         bool requires_modifier_keys{};
         bool is_down{};
-=======
->>>>>>> 83b273a (Add input source for Linux TUI and update input handler initialization)
     };
 
     struct KeySet

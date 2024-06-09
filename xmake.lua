@@ -1,33 +1,9 @@
-set_xmakever("2.9.2")
 -- We should use `get_config("ue4ssRoot")` instead of `os.projectdir()` or `$(projectdir)`.
 -- This is because os.projectdir() will return a higher parent dir
 -- when UE4SS is sub-moduled/`include("UE4SS")` in another xmake project.
 set_config("ue4ssRoot", os.scriptdir())
 
-includes("tools/xmakescripts/build_configs.lua")
-includes("tools/xmakescripts/configurations.lua")
-
-add_rules(get_unreal_rules())
-
--- Restrict the compilation modes/configs.
-set_allowedplats("windows", "linux")
-if is_plat("windows") then
-    set_allowedarchs("x64")
-elseif is_plat("linux") then
-    set_allowedarchs("x86_64")
-    set_defaultarchs("x86_64")
-    set_toolchains("clang", "rust")
-end
-set_allowedmodes(get_compilation_modes())
-
-if is_plat("windows") then
-    set_defaultmode("Game__Shipping__Win64")
-    set_runtimes(get_mode_runtimes())
-elseif is_plat("linux") then
-    set_defaultmode("Game__Shipping__Linux")
-end
-
--- All non-binary outputs are stored in the Intermediates dir.
+-- All non-binary outputs are written to the Intermediates dir.
 set_config("buildir", "Intermediates")
 
 -- Any lua modules in this directory can be imported in the script scope by using
@@ -35,8 +11,8 @@ set_config("buildir", "Intermediates")
 -- /modules/rules/my_module.lua     import("rules.my_module")
 add_moduledirs("tools/xmakescripts/modules")
 
--- Load our rule files into the global scope.
-includes("tools/xmakescripts/rules/**.lua")
+-- Load the build_rules file into the global scope.
+includes("tools/xmakescripts/rules/build_rules.lua")
 
 -- Generate the mode rules.
 local modes = generate_compilation_modes()

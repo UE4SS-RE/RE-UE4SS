@@ -57,7 +57,10 @@
 #include <Unreal/World.hpp>
 #include <UnrealDef.hpp>
 
+#ifdef WIN32
 #include <polyhook2/PE/IatHook.hpp>
+#endif
+
 #include <Platform.hpp>
 
 namespace RC
@@ -463,10 +466,10 @@ namespace RC
         else
         {
             // Check for legacy locations and update paths accordingly
-            resolaved_settings_file = File::get_path_if_exists(m_legacy_root_directory, m_settings_file_name);
-            if (resolaved_settings_file)
+            auto resolaved_legacy_settings_file = File::get_path_if_exists(m_legacy_root_directory, m_settings_file_name);
+            if (resolaved_legacy_settings_file)
             {
-                m_settings_path_and_file = *resolaved_settings_file;
+                m_settings_path_and_file = *resolaved_legacy_settings_file;
             } else {
                 throw std::runtime_error{"UE4SS-Settings.ini file not found"};
             }
@@ -1442,11 +1445,6 @@ namespace RC
     {
         m_module_file_path_str = to_system_string(m_module_file_path);
         return m_module_file_path_str;
-    }
-
-    auto UE4SSProgram::get_game_executable_directory() -> File::StringViewType
-    {
-        return m_game_executable_directory.c_str();
     }
 
     auto UE4SSProgram::get_working_directory() -> SystemStringViewType

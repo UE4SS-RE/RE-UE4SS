@@ -13,6 +13,8 @@
 #ifdef HAS_D3D11
 #include <GUI/DX11.hpp>
 #endif
+#else
+#define sscanf_s sscanf
 #endif
 
 #ifdef HAS_GLFW
@@ -504,10 +506,11 @@ namespace RC::GUI
         IMGUI_CHECKVERSION();
         ImGui::CreateContext();
         ImGuiIO& io = ImGui::GetIO();
-        m_imgui_ini_file = to_string(StringType{UE4SSProgram::get_program().get_working_directory()} + STR("\\imgui.ini"));
+        m_imgui_ini_file = to_string_path(std::filesystem::path {UE4SSProgram::get_program().get_working_directory()} / SYSSTR("imgui.ini"));
         io.IniFilename = m_imgui_ini_file.c_str();
 
         // Add .ini handle for UserData type
+        #ifdef WIN32
         ImGuiSettingsHandler ini_handler;
         ini_handler.TypeName = "UE4SSData";
         ini_handler.TypeHash = ImHashStr("UE4SSData");
@@ -515,6 +518,7 @@ namespace RC::GUI
         ini_handler.ReadLineFn = imgui_ue4ss_data_read_line;
         ini_handler.WriteAllFn = imgui_ue4ss_data_write_all;
         ImGui::AddSettingsHandler(&ini_handler);
+        #endif
         
         ImGui::LoadIniSettingsFromDisk(m_imgui_ini_file.c_str());
 

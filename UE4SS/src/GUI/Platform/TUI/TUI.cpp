@@ -58,9 +58,14 @@ namespace RC::GUI
         }
     }
 
-    void Backend_TUI::create_window()
+    void Backend_TUI::create_window(int loc_x, int loc_y, int size_x, int size_y)
     {
         // Do nothing
+    }
+
+    WindowPosition Backend_TUI::get_window_position()
+    {
+        return {0, 0};
     }
 
     void Backend_TUI::exec_message_loop(bool* exit_requested)
