@@ -1459,7 +1459,7 @@ namespace RC
         return m_mods_directory_str;
     }
 
-    auto UE4SSProgram::get_legacy_root_directory() -> File::StringViewType
+    auto UE4SSProgram::get_legacy_root_directory() -> SystemStringViewType
     {
         return m_legacy_root_directory.c_str();
     }
