@@ -102,7 +102,7 @@ def package(args):
         # Builds a release version of /assets by copying the directory and then
         # removing and disabling dev-only settings and files
         exclude_files = [
-            'Mods/shared/Types.lua',
+            # 'Mods/shared/Types.lua',
             'UE4SS_Signatures',
             'VTableLayoutTemplates',
             'MemberVarLayoutTemplates',
