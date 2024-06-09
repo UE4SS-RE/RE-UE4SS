@@ -92,6 +92,7 @@ namespace RC::GUI
     #define XDIV (g_backend_properties.xdiv)
     #define YDIV (g_backend_properties.ydiv)
     #define SEPARATOR_HEIGHT (g_backend_properties.separator_height)
+    #define NEGATIVE_MARGIN(x) (IS_TUI ? (-0.01f) : (x))
     #define IS_TUI (g_backend_properties.quirk_tui)
 
     class GfxBackendBase
