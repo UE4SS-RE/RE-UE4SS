@@ -1,11 +1,22 @@
-includes("proxy_generator")
+local hasWindows = is_plat("windows")
+local uiMode = get_config("ue4ssUI")
 
-add_requires("imgui v1.89", { debug = is_mode_debug(), configs = { win32 = true, dx11 = true, opengl3 = true, glfw_opengl3 = true , runtimes = get_mode_runtimes()} } )
-add_requires("ImGuiTextEdit v1.0", { debug = is_mode_debug(), configs = {runtimes = get_mode_runtimes()} })
-add_requires("IconFontCppHeaders v1.0", { debug = is_mode_debug(), configs = {runtimes = get_mode_runtimes()}})
-add_requires("glfw 3.3.9", { debug = is_mode_debug() , configs = {runtimes = get_mode_runtimes()}})
-add_requires("opengl", { debug = is_mode_debug(), configs = {runtimes = get_mode_runtimes()} })
-add_requires("glaze", { debug = is_mode_debug(), configs = {runtimes = get_mode_runtimes()} })
+if uiMode ~= nil and uiMode ~= "None" then
+    local isTUI = uiMode == "TUI"
+    add_requires("ImGuiTextEdit v1.0", { debug = is_mode_debug(), configs = { tui = isTUI, runtimes = get_mode_runtimes() } })
+
+    if uiMode == "GUI" then
+        local imguiConfig = { win32 = hasWindows, dx11 = hasWindows, opengl3 = true, glfw = true , runtimes = get_mode_runtimes()}
+        add_requires("imgui v1.89", { alias = "ue4ssImGui", debug = is_mode_debug(), configs = imguiConfig } )
+        add_requireconfs("ImGuiTextEdit.imgui", { configs = imguiConfig })
+
+        add_requires("IconFontCppHeaders v1.0", { debug = is_mode_debug(), configs = {runtimes = get_mode_runtimes()}})
+        add_requires("glfw 3.3.9", { debug = is_mode_debug() , configs = {runtimes = get_mode_runtimes()}})
+        add_requires("opengl", { debug = is_mode_debug(), configs = {runtimes = get_mode_runtimes()} })
+    elseif uiMode == "TUI" then
+        add_requires("imtui v1.0.5", { debug = is_mode_debug(), configs = { runtimes = get_mode_runtimes() } })
+    end
+end
 
 option("ue4ssBetaIsStarted")
     set_default(true)
@@ -22,6 +33,48 @@ option("ue4ssIsBeta")
     set_values(true, false)
 
     set_description("Is this a beta release")
+
+option("ue4ssUI")
+    set_default("GUI")
+    set_showmenu(true)
+
+    set_values("None", "GUI", "TUI")
+
+    set_description("UE4SS GUI Modes. TUI is not available on windows")
+
+    after_check(function (option)
+        local value = option:value()
+
+        if value == "TUI" and is_plat("windows") then
+            raise("TUI is not available on windows")
+        end
+
+        if value ~= "None" then
+            option:add("defines", "HAS_UI")
+        end
+
+        if value == "GUI" then
+            option:add("defines", "HAS_GUI")
+        elseif value == "TUI" then
+            option:add("defines", "HAS_TUI")
+        end
+    end)
+
+option("ue4ssInput")
+    set_default(true)
+    set_showmenu(true)
+
+    add_deps("ue4ssUI")
+    add_defines("HAS_INPUT")
+
+    set_description("Enable the input system.")
+
+    after_check(function (option)
+        local noUI = option:dep("ue4ssUI"):value() == "None"
+        if noUI and not is_plat("windows") then
+            option:enable(false)
+        end
+    end)
 
 local projectName = "UE4SS"
 
@@ -46,28 +99,63 @@ target(projectName)
     set_exceptions("cxx")
     set_default(true)
     add_rules("ue4ss.defines.exports")
-    add_options("ue4ssBetaIsStarted", "ue4ssIsBeta")
+    add_options("ue4ssBetaIsStarted", "ue4ssIsBeta", "ue4ssUI", "ue4ssInput")
     add_includedirs("include", { public = true })
     add_includedirs("generated_include", { public = true })
     add_headerfiles("include/**.hpp")
     add_headerfiles("generated_include/*.hpp")
 
-    add_files("src/**.cpp")
+    add_files("src/**.cpp|Platform/**.cpp|GUI/**.cpp")
+    
+    if is_plat("windows") then
+        add_files("src/Platform/Win32/CrashDumper.cpp", "src/Platform/Win32/EntryWin32.cpp")
+        add_links("dbghelp", "psapi", { public = true })
+    elseif is_plat("linux") then
+        add_files("src/Platform/Linux/EntryLinux.cpp")
+        add_shflags("-Wl,-soname,libUE4SS.so")
+    end
+
+    if uiMode ~= "None" then
+        add_files("src/GUI/*.cpp")
+
+        add_packages("ImGuiTextEdit", { public = true })
+
+        if uiMode == "GUI" then
+            add_files("src/GUI/Platform/GLFW/**.cpp")
+
+            add_defines("HAS_GLFW", { public = true })
+
+            add_deps("glad", { public = true })
+
+            add_packages("ue4ssImGui", "IconFontCppHeaders", "glfw", "opengl", { public = true })
+
+            if is_plat("windows") then
+                add_files("src/GUI/Platform/D3D11/**.cpp")
+                add_files("src/GUI/Platform/Windows/**.cpp")
+
+                add_defines("HAS_D3D11", { public = true })
+
+                add_links("d3d11", { public = true })
+            end
+        elseif uiMode == "TUI" then
+            add_files("src/GUI/Platform/TUI/**.cpp")
+
+            add_packages("imtui", { public = true })
+        end
+    end
 
     add_deps(
         "File", "DynamicOutput", "Unreal",
         "SinglePassSigScanner", "LuaMadeSimple", "Function",
-        "IniParser", "JSON", "Input",
+        "IniParser", "JSON", 
         "Constructs", "Helpers", "MProgram",
         "ScopedTimer", "Profiler", "patternsleuth_bind",
-        "glad", { public = true }
+        { public = true }
     )
 
-    add_packages("imgui", "ImGuiTextEdit", "IconFontCppHeaders", "glfw", "opengl", { public = true })
+    add_deps("Input", { public = true })
 
     add_packages("glaze", "polyhook_2", { public = true })
-
-    add_links("dbghelp", "psapi", "d3d11", { public = true })
 
     after_load(function (target)
         local projectRoot = get_config("ue4ssRoot")

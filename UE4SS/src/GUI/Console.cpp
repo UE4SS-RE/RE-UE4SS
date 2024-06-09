@@ -107,14 +107,14 @@ namespace RC::GUI
         bool reclaim_focus{};
         ImGuiInputTextFlags input_text_flags = ImGuiInputTextFlags_EnterReturnsTrue | ImGuiInputTextFlags_CallbackCompletion |
         ImGuiInputTextFlags_CallbackHistory; auto text_edit_callback_wrapper = [](ImGuiInputTextCallbackData* data) -> int { Console* console =
-        static_cast<Console*>(data->UserData); Output::send(STR("text_edit_callback_wrapper\n"));
+        static_cast<Console*>(data->UserData); Output::send(SYSSTR("text_edit_callback_wrapper\n"));
             //return console->text_edit_callback(data);
             return 0;
         };
         ImGui::PushItemWidth(-12.0f);
         if (ImGui::InputText("##console_input_buffer", m_input_buffer, IM_ARRAYSIZE(m_input_buffer), input_text_flags, text_edit_callback_wrapper, this))
         {
-            Output::send(STR("ConsoleInput\n"));
+            Output::send(SYSSTR("ConsoleInput\n"));
             reclaim_focus = true;
         }
         ImGui::PopItemWidth();
@@ -130,15 +130,15 @@ namespace RC::GUI
         /**/
 
         std::lock_guard<std::mutex> guard(m_lines_mutex);
-        m_text_editor.Render("TextEditor", {-16.0f, -31.0f + -8.0f});
-
+        m_text_editor.Render("TextEditor", {-16.0f / XDIV, NEGATIVE_MARGIN(-31.0f + -8.0f)});
+        
         ImGui_AutoScroll("TextEditor", &m_previous_max_scroll_y);
         //*/
     }
 
     auto Console::render_search_box() -> void
     {
-        m_filter.Draw("Search log", 200);
+        m_filter.Draw("Search log", 200 / XDIV);
     }
 
     static auto LogLevel_to_ImColor(Color::Color color) -> std::pair<ImColor, ImColor>

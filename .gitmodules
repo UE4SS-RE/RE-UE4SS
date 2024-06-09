@@ -1,6 +1,6 @@
 [submodule "deps/first/Unreal"]
 	path = deps/first/Unreal
-	url = git@github.com:Re-UE4SS/UEPseudo.git
+	url = git@github.com:Yangff/UEPseudo.git
 [submodule "deps/first/patternsleuth"]
 	path = deps/first/patternsleuth
-	url = git@github.com:trumank/patternsleuth.git
+	url = git@github.com:Yangff/patternsleuth.git

@@ -6,10 +6,10 @@ namespace RC::JSON
     {
     }
 
-    auto Bool::serialize(ShouldFormat should_format, int32_t* indent_level) -> StringType
+    auto Bool::serialize(ShouldFormat should_format, int32_t* indent_level) -> SystemStringType
     {
         (void)should_format;
         (void)indent_level;
-        return m_underlying_value ? STR("true") : STR("false");
+        return m_underlying_value ? SYSSTR("true") : SYSSTR("false");
     }
 } // namespace RC::JSON

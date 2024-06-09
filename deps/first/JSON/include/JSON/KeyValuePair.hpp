@@ -5,13 +5,13 @@ namespace RC::JSON
     template <typename T>
     struct TypedKeyValuePair
     {
-        const StringType& key;
+        const SystemStringType& key;
         T* value{};
     };
 
     struct KeyValuePair
     {
-        StringType key{};
+        SystemStringType key{};
         std::unique_ptr<JSON::Value> value{};
 
         template <typename JSONElementType>
@@ -126,13 +126,13 @@ type_to_string(get_type()), type_to_string(JSONElementType::static_type()))};
     template<typename T>
     struct JSONTypedKeyValuePair
     {
-        const StringType& key;
+        const SystemStringType& key;
         T* value{};
     };
 
     struct JSONKeyValuePair
     {
-        StringType key{};
+        SystemStringType key{};
         std::unique_ptr<JSONElementBase> value{};
 
         template<typename JSONElementType>
@@ -191,7 +191,7 @@ type_to_string(get_type()), type_to_string(JSONElementType::static_type()))};
         auto get(StringViewType key) const -> ValueType&
         {
             auto value = find_value_by_key(key);
-            if (!value) { throw std::runtime_error{to_string(std::format(STR("No key in JSON object with name {}"), key))}; }
+            if (!value) { throw std::runtime_error{to_string(std::format(SYSSTR("No key in JSON object with name {}"), key))}; }
             return *static_cast<ValueType*>(value);
         }
 
@@ -199,7 +199,7 @@ type_to_string(get_type()), type_to_string(JSONElementType::static_type()))};
         auto get(StringViewType key) -> ValueType&
         {
             auto value = find_value_by_key(key);
-            if (!value) { throw std::runtime_error{to_string(std::format(STR("No key in JSON object with name {}"), key))}; }
+            if (!value) { throw std::runtime_error{to_string(std::format(SYSSTR("No key in JSON object with name {}"), key))}; }
             return *static_cast<ValueType*>(value);
         }
     };
@@ -222,16 +222,16 @@ type_to_string(get_type()), type_to_string(JSONElementType::static_type()))};
     struct JSONString : JSONElementBase
     {
     private:
-        StringType value{};
+        SystemStringType value{};
 
     public:
         JSONString() = default;
-        JSONString(StringType value) : value(std::move(value)) { }
+        JSONString(SystemStringType value) : value(std::move(value)) { }
 
     public:
         constexpr static auto static_type() -> JSONElementType { return JSONElementType::String; }
-        auto get() -> StringType& { return value; }
-        auto get() const -> const StringType& { return value; }
+        auto get() -> SystemStringType& { return value; }
+        auto get() const -> const SystemStringType& { return value; }
         auto get_view() -> StringViewType { return value; }
         auto get_view() const -> StringViewType { return value; }
         auto get_type() const -> JSONElementType override { return JSONElementType::String; }

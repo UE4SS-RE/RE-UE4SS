@@ -1,6 +1,12 @@
 #pragma once
 
 #include <cstdio>
+#include <cstring>
+
+#ifdef LINUX
+#define sprintf_s snprintf
+#define strncpy_s(dest, destsz, src, count) strncpy((dest), (src), (((count) < (destsz)) ? (count) : (destsz)))
+#endif
 
 namespace RC
 {
@@ -49,7 +55,7 @@ namespace RC
             // The default message will be used which can't be too small since it's calculated at compile-time
             if (msg_len < sizeof(m_message))
             {
-                strncpy_s(m_message, message, msg_len);
+                strncpy_s(m_message, msg_len, message, msg_len);
             }
         }
 

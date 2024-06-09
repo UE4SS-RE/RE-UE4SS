@@ -6,6 +6,7 @@ import shutil
 import subprocess
 import argparse
 from datetime import datetime
+from template import EnhancedTemplate
 
 # Change dir to repo root
 os.chdir(os.path.join(os.path.dirname(__file__), '..', '..'))
@@ -56,6 +57,20 @@ def release_commit(args):
 
     github_output('release_tag', version)
 
+def get_os_files(os):
+    if os == 'win64':
+        return {
+            "dev": ['ue4ss.pdb','ue4ss.dll','dwmapi.dll'],
+            "release": ['ue4ss.dll', 'dwmapi.dll']
+        }
+    elif os == 'linux64':
+        return {
+            "dev": ['libue4ss.so', 'libue4ss.so.debug'],
+            "release": ['libue4ss.so']
+        }
+    else:
+        raise Exception(f'unknown os: {os}')
+
 def package(args):
     is_experimental = args.e
 
@@ -87,7 +102,7 @@ def package(args):
         # Builds a release version of /assets by copying the directory and then
         # removing and disabling dev-only settings and files
         exclude_files = [
-            'Mods/shared/Types.lua',
+            # 'Mods/shared/Types.lua',
             'UE4SS_Signatures',
             'VTableLayoutTemplates',
             'MemberVarLayoutTemplates',
@@ -102,6 +117,15 @@ def package(args):
             'IgnoreEngineAndCoreUObject': 1,
             'MaxMemoryUsageDuringAssetLoading': 80,
             'GUIUFunctionCaller': 0,
+        }
+
+        settings_to_modify_in_dev = {
+            'GuiConsoleVisible': 1,
+            'ConsoleEnabled': 1,
+            'EnableHotReloadSystem': 1,
+            'IgnoreEngineAndCoreUObject': 0,
+            'MaxMemoryUsageDuringAssetLoading': 85,
+            'GUIUFunctionCaller': 1,
         }
 
         change_modstxt = {
@@ -129,19 +153,25 @@ def package(args):
             except:
                 shutil.rmtree(path)
 
-        # Change UE4SS-settings.ini
-        config_path = os.path.join(staging_dir, 'UE4SS-settings.ini')
+        # change UE4SS-settings.ini
+        config_path_dev = os.path.join(staging_dev, 'UE4SS-settings.ini')
+        config_path_release = os.path.join(staging_release, 'UE4SS-settings.ini')
+        
+        with open(config_path_release, mode='r', encoding='utf-8-sig') as file:
+            content_template = EnhancedTemplate(file.read())
+        
+        # apply settings
+        combined_variables = {**settings_to_modify_in_release, "release_type": "release", "os": args.os}
+        content_release = content_template.substitute(combined_variables)
 
-        if not is_dev_release:
-            with open(config_path, mode='r', encoding='utf-8-sig') as file:
-                content = file.read()
+        combined_variables = {**settings_to_modify_in_dev, "release_type": "dev", "os": args.os}
+        content_dev = content_template.substitute(combined_variables)
 
-            for key, value in settings_to_modify_in_release.items():
-                pattern = rf'(^{key}\s*=).*?$'
-                content = re.sub(pattern, rf'\1 {value}', content, flags=re.MULTILINE)
+        with open(config_path_release, mode='w', encoding='utf-8-sig') as file:
+            file.write(content_release)
 
-            with open(config_path, mode='w', encoding='utf-8-sig') as file:
-                file.write(content)
+        with open(config_path_dev, mode='w', encoding='utf-8-sig') as file:
+            file.write(content_dev)
 
         # Change Mods/mods.txt
         mods_path = os.path.join(staging_dir, 'Mods/mods.txt')
@@ -168,83 +198,35 @@ def package(args):
                     os.makedirs(os.path.join(staging_dir, 'Mods', mod_name, 'config'), exist_ok=True)
 
     def package_release(is_dev_release: bool):
-        version = subprocess.check_output(['git', 'describe', '--tags']).decode('utf-8').strip()
+        try:
+            version = subprocess.check_output(['git', 'describe', '--tags']).decode('utf-8').strip()
+        except:
+            version = '0.0.0'
         if is_dev_release:
+            os_files = get_os_files(args.os)['dev']
             main_zip_name = f'zDEV-UE4SS_{version}'
             staging_dir = staging_dev
         else:
+            os_files = get_os_files(args.os)['release']
             main_zip_name = f'UE4SS_{version}'
             staging_dir = staging_release
-
-        ue4ss_dll_path = ''
-        ue4ss_pdb_path = ''
-        dwmapi_dll_path = ''
         
-        # CPP mods paths
-        cpp_mods_paths = {mod: '' for mod in CPPMods if is_dev_release or CPPMods[mod]['include_in_release']}
-
+        target_paths = []
         scan_start_dir = '.'
         if str(args.d) != 'None':
             scan_start_dir = str(args.d)
 
         for root, dirs, files in os.walk(scan_start_dir):
             for file in files:
-                if file.lower() == "ue4ss.dll":
-                    ue4ss_dll_path = os.path.join(root, file)
-                if file.lower() == "ue4ss.pdb":
-                    ue4ss_pdb_path = os.path.join(root, file)
-                if file.lower() == "dwmapi.dll":
-                    dwmapi_dll_path = os.path.join(root, file)
-                # Find CPP Mod DLLs
-                for mod_name in cpp_mods_paths:
-                    if file.lower() == mod_name.lower() + '.dll':
-                        cpp_mods_paths[mod_name] = os.path.join(root, file)
+                if file.lower() in os_files:
+                    target_paths.append(os.path.join(root, file))
 
-        # Create the ue4ss folder in staging_dir
-        ue4ss_dir = os.path.join(staging_dir, 'ue4ss')
-        os.makedirs(ue4ss_dir, exist_ok=True)
-
-        # Move all files from assets folder to the ue4ss folder except dwmapi.dll and Mods folder
-        for root, _, files in os.walk('assets'):
-            for file in files:
-                if file.lower() != 'dwmapi.dll' and not os.path.join(root, file).startswith(os.path.join('assets', 'Mods')):
-                    src_path = os.path.join(root, file)
-                    dst_path = os.path.join(ue4ss_dir, os.path.relpath(src_path, 'assets'))
-                    os.makedirs(os.path.dirname(dst_path), exist_ok=True)
-                    shutil.copy(src_path, dst_path)
-
-        # Copy the Mods folder separately to avoid nesting
-        mods_src = os.path.join('assets', 'Mods')
-        mods_dst = os.path.join(ue4ss_dir, 'Mods')
-        shutil.copytree(mods_src, mods_dst, dirs_exist_ok=True)
-
-        # Main dll and pdb
-        shutil.copy(ue4ss_dll_path, ue4ss_dir)
-        
-        # CPP mods
-        for mod_name, dll_path in cpp_mods_paths.items():
-            mod_dir = os.path.join(ue4ss_dir, 'Mods', mod_name, 'dlls')
-            os.makedirs(mod_dir, exist_ok=True)
-            shutil.copy(dll_path, os.path.join(mod_dir, 'main.dll'))
-
-            # Create config folder if needed
-            if is_dev_release or CPPMods[mod_name]['include_in_release']:
-                if CPPMods[mod_name]['create_config']:
-                    os.makedirs(os.path.join(ue4ss_dir, 'Mods', mod_name, 'config'), exist_ok=True)
-
-        # Proxy
-        shutil.copy(dwmapi_dll_path, staging_dir)
+        for target in target_paths:
+            shutil.copy(target, staging_dir)
 
         if is_dev_release:
-            shutil.copy(ue4ss_pdb_path, ue4ss_dir)
-            if os.path.exists(os.path.join(scan_start_dir, 'docs')):
-                shutil.copytree('docs', os.path.join(ue4ss_dir, 'Docs'))
-
-        # Move remaining files to the ue4ss dir
-        dont_move = ['dwmapi.dll', 'docs', 'ue4ss']
-        for file in os.listdir(staging_dir):
-            if file.lower() not in dont_move:
-                shutil.move(os.path.join(staging_dir, file), os.path.join(ue4ss_dir, file))
+            if os.path.exists(os.path.join(staging_dir, 'docs')):
+                shutil.copytree('docs', os.path.join(staging_dir, 'docs'))
 
         output = os.path.join(release_output, main_zip_name)
         shutil.make_archive(output, 'zip', staging_dir)
@@ -281,16 +263,16 @@ commands = {f.__name__: f for f in [
 def main():
     parser = argparse.ArgumentParser()
     subparsers = parser.add_subparsers(dest='command', required=True)
-    
     package_parser = subparsers.add_parser('package')
     package_parser.add_argument('-e', action='store_true')
     package_parser.add_argument('-d', action='store')
-    
+    # -s for operating system
+    package_parser.add_argument('-s', '--os', action='store', default='win64', choices=['win64', 'linux64'])
     release_commit_parser = subparsers.add_parser('release_commit')
     release_commit_parser.add_argument('username', nargs='?')
-    
     args = parser.parse_args()
     commands[args.command](args)
+
 
 if __name__ == "__main__":
     main()

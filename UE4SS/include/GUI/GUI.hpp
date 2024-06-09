@@ -3,14 +3,39 @@
 #include <functional>
 #include <memory>
 #include <thread>
+#include <stop_token>
 
 #include <GUI/Console.hpp>
 #include <GUI/GUITab.hpp>
 #include <GUI/LiveView.hpp>
+#include <Common.hpp>
 #include <Helpers/String.hpp>
 #include <imgui.h>
 
 struct ImGuiSettingsHandler;
+
+#ifndef HAS_TUI
+#ifndef HAS_GUI
+static_assert(false, "HAS_GUI or HAS_TUI must be defined.");
+#endif
+
+#else
+
+#ifdef HAS_GUI
+static_assert(false, "HAS_GUI and HAS_TUI cannot be defined at the same time at this moment.");
+#endif
+
+
+namespace ImGui
+{
+    static void BeginDisabled(bool disabled = true)
+    {
+    }
+    static void EndDisabled()
+    {
+    }
+} // namespace ImGui
+#endif
 
 namespace RC::GUI
 {
@@ -18,13 +43,25 @@ namespace RC::GUI
 
     enum class GfxBackend
     {
+#ifdef HAS_D3D11
         DX11,
+#endif
+#ifdef HAS_GLFW
         GLFW3_OpenGL3,
+#endif
+#ifdef HAS_TUI
+        TUI
+#endif
     };
 
     enum class OSBackend
     {
+#ifdef WIN32
         Windows,
+#endif
+#ifdef LINUX
+        TUI,
+#endif
     };
 
     struct WindowSize
@@ -38,6 +75,25 @@ namespace RC::GUI
         int32_t x;
         int32_t y;
     };
+
+    struct BackendProperty {
+        float x_offset_0;
+        float x_offset_1;
+        float xdiv;
+        float ydiv;
+        float separator_height;
+        bool quirk_tui;
+    };
+
+    extern RC_UE4SS_API BackendProperty g_backend_properties;
+
+    #define XOFFSET_0 (g_backend_properties.x_offset_0)
+    #define XOFFSET_1 (g_backend_properties.x_offset_1)
+    #define XDIV (g_backend_properties.xdiv)
+    #define YDIV (g_backend_properties.ydiv)
+    #define SEPARATOR_HEIGHT (g_backend_properties.separator_height)
+    #define NEGATIVE_MARGIN(x) (IS_TUI ? (-0.01f) : (x))
+    #define IS_TUI (g_backend_properties.quirk_tui)
 
     class GfxBackendBase
     {
@@ -75,6 +131,9 @@ namespace RC::GUI
         virtual inline auto exit_requested() -> bool
         {
             return false;
+        };
+        virtual auto set_backend_properties(BackendProperty &properties) -> void
+        {
         };
     };
 
@@ -275,4 +334,16 @@ namespace RC::GUI
             code_to_try();
         });
     }
+
+    #define ATTACH_ICON(icon, str)  ((icon str) + (IS_TUI ? (UE4SSProgram::settings_manager.TUI.TUINerdFont ? (0) : (sizeof(icon) - 1)) : 0))
+    #define ICON_ALT(icon, alt) (IS_TUI ? ((UE4SSProgram::settings_manager.TUI.TUINerdFont) ? (icon) : (alt)) : (icon))
+/*
+#ifdef HAS_GUI
+#define ATTACH_ICON(icon, str) icon str
+#define ICON_ALT(icon, alt) icon
+#else
+#define ATTACH_ICON(icon, str) ((icon str) + (UE4SSProgram::settings_manager.TUI.TUINerdFont ? (0) : (sizeof(icon) - 1)))
+#define ICON_ALT(icon, alt) (UE4SSProgram::settings_manager.TUI.TUINerdFont) ? (icon) : (alt)
+#endif
+*/
 } // namespace RC::GUI

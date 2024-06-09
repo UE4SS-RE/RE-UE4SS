@@ -22,12 +22,12 @@ namespace RC::GUI
       private:
         RenderFunctionType render_function{};
         CppUserModBase* owner{};
-        StringType tab_name{};
+        UEStringType tab_name{};
 
       public:
         GUITab() = delete;
-        GUITab(StringViewType name, RenderFunctionType render_function) : tab_name(name), render_function(render_function){};
-        GUITab(StringViewType name, RenderFunctionType render_function, CppUserModBase* owner)
+        GUITab(UEStringViewType name, RenderFunctionType render_function) : tab_name(name), render_function(render_function){};
+        GUITab(UEStringViewType name, RenderFunctionType render_function, CppUserModBase* owner)
             : tab_name(name), render_function(render_function), owner(owner){};
         ~GUITab() = default;
 

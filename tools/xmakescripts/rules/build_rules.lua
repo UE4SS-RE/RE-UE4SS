@@ -56,12 +56,31 @@ local PLATFORM_TYPES = {
         ["defines"] = {
             "PLATFORM_WINDOWS",
             "PLATFORM_MICROSOFT",
+            "WIN32",
             "OVERRIDE_PLATFORM_HEADER_NAME=Windows",
             "UBT_COMPILED_PLATFORM=Win64",
             "UNICODE",
-            "_UNICODE"
+            "_UNICODE",
+            "DLLEXT=.dll"
         },
-
+        ["cxflags"] = {
+            "clang::-gcodeview"
+        }
+    },
+    ["Linux"] = {
+        ["defines"] = {
+            "PLATFORM_LINUX",
+            "PLATFORM_UNIX",
+            "LINUX",
+            "OVERRIDE_PLATFORM_HEADER_NAME=Linux",
+            "UBT_COMPILED_PLATFORM=Linux",
+            "printf_s=printf",
+            "DLLEXT=.so"
+        },
+        ["cxflags"] = {
+            "clang::-fno-delete-null-pointer-checks",
+            "clang::-gdwarf"
+        }
     }
 }
 
@@ -72,12 +91,12 @@ local PLATFORM_TYPES = {
 local CLANG_COMPILE_OPTIONS = {
     ["cxflags"] = {
         "-g",
-        "-gcodeview",
         "-fcolor-diagnostics",
         "-Wno-unknown-pragmas",
         "-Wno-unused-parameter",
         "-fms-extensions",
-        "-Wignored-attributes"
+        "-Wignored-attributes",
+        "-fPIC"
     },
     ["ldflags"] = {
         "-g"
@@ -86,6 +105,19 @@ local CLANG_COMPILE_OPTIONS = {
         "-g"
     }
 }
+
+-- option to use libc++
+option("libcxx")
+    set_default(false)
+    set_showmenu(true)
+    set_description("Use libc++ instead of libstdc++")
+
+if has_config("libcxx") then
+    table.insert(CLANG_COMPILE_OPTIONS["cxflags"], "-stdlib=libc++")
+    table.insert(CLANG_COMPILE_OPTIONS["cxflags"], "-fexperimental-library")
+    table.insert(CLANG_COMPILE_OPTIONS["ldflags"], "-static-libstdc++")
+    table.insert(CLANG_COMPILE_OPTIONS["ldflags"], "-l:libc++abi.a")
+end
 
 local GNU_COMPILE_OPTIONS = {
     ["cxflags"] = {
@@ -176,7 +208,7 @@ function get_mode_runtimes()
         return is_mode_debug() and "MDd" or "MD"
     end
 
-    return {}
+    return ""
 end
 
 --- This local function wraps the global get_mode_runtimes() function. We have to locally wrap the function 
@@ -198,6 +230,9 @@ rule("ue4ss.base")
         -- Compiler flags are set in this rule since unreal modes currently do not change any compiler flags.
         mode_builder.apply_compiler_options(target, GNU_COMPILE_OPTIONS, {"gcc", "ld"})
         mode_builder.apply_compiler_options(target, CLANG_COMPILE_OPTIONS, {"clang", "lld"})
+        if has_config("zig") then
+            mode_builder.apply_compiler_options_all(target, CLANG_COMPILE_OPTIONS)
+        end
         mode_builder.apply_compiler_options(target, MSVC_COMPILE_OPTIONS, { "clang_cl", "cl", "link" })
     end)
 

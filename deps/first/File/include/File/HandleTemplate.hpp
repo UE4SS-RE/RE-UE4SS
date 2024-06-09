@@ -159,14 +159,24 @@ namespace RC::File
             return *data;
         }
 
-        auto write_string_to_file(StringViewType string_to_write) -> void
+        auto write_string_to_file(UEStringViewType string_to_write) -> void
         {
             m_internal_handle.write_string_to_file(string_to_write);
         }
 
-        [[nodiscard]] auto read_all() const -> StringType
+        auto write_file_string_to_file(StringViewType string_to_write) -> void
+        {
+            m_internal_handle.write_file_string_to_file(string_to_write);
+        }
+
+        [[nodiscard]] auto read_all() const -> UEStringType
         {
             return m_internal_handle.read_all();
+        }
+
+        [[nodiscard]] auto read_file_all() const -> StringType
+        {
+            return m_internal_handle.read_file_all();
         }
 
         [[nodiscard]] auto memory_map() -> std::span<uint8_t>

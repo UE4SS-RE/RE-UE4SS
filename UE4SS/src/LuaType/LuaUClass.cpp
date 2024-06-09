@@ -63,7 +63,7 @@ namespace RC::LuaType
             if (!lua_object.get_remote_cpp_object())
             {
                 LuaType::UObject::construct(lua, nullptr);
-                Output::send(STR("[Lua][Error] Tried getting the CDO but the UClass instance is nullptr\n"));
+                Output::send(SYSSTR("[Lua][Error] Tried getting the CDO but the UClass instance is nullptr\n"));
             }
             else
             {

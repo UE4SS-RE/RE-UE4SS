@@ -3,6 +3,9 @@
 #include <format>
 #include <functional>
 #include <optional>
+#include <memory>
+#include <string>
+#include <type_traits>
 
 #include <LuaMadeSimple/Common.hpp>
 #include <lua.hpp>
@@ -26,10 +29,10 @@ namespace RC::LuaMadeSimple
     /**
      * @tparam StackIndex Valid values are -1 for table key and -2 for table value
      */
-    template <int32_t StackIndex>
+    template <int32_t StackIndex, class LuaT>
     struct RC_LMS_API LuaTableData
     {
-        const class Lua* lua{};
+        const LuaT* lua{};
 
         [[nodiscard]] auto is_nil() -> bool
         {
@@ -85,12 +88,14 @@ namespace RC::LuaMadeSimple
     /**
      * Helper for dealing with Lua tables passed from Lua to C++
      */
+    template <class LuaT>
     struct RC_LMS_API LuaTableReference
     {
-        LuaTableData<-1> key;
-        LuaTableData<-2> value;
+        LuaTableData<-1, LuaT> key;
+        LuaTableData<-2, LuaT> value;
     };
 
+    class Lua;
     using PostFunctionProcessCallback = void (*)(const Lua&);
 
     /**
@@ -292,7 +297,7 @@ namespace RC::LuaMadeSimple
                 {
                     lua_pushboolean(get_lua_instance().get_lua_state(), value);
                 }
-                else if constexpr (std::is_same_v<ValueType, int> || std::is_same_v<ValueType, long long>)
+                else if constexpr (std::is_same_v<ValueType, int> || std::is_same_v<ValueType, long long> || std::is_same_v<ValueType, long>)
                 {
                     lua_pushinteger(get_lua_instance().get_lua_state(), value);
                 }
@@ -571,7 +576,7 @@ namespace RC::LuaMadeSimple
         [[nodiscard]] RC_LMS_API auto is_table(int32_t force_index = 1) const -> bool;
         [[nodiscard]] RC_LMS_API auto get_table() const -> Table;
 
-        using ForEachInTableCallable = std::function<bool(LuaTableReference)>;
+        using ForEachInTableCallable = std::function<bool(LuaTableReference<Lua>)>;
 
         // If you use a lambda then make absolutely sure to capture the 'LuaMadeSimple::Lua' object by reference
         // If you don't then it will be improperly copied and things, including nested for_each calls, will break

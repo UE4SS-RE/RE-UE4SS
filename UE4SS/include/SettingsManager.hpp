@@ -5,7 +5,10 @@
 
 #include <Common.hpp>
 #include <File/File.hpp>
+
+#ifdef HAS_UI
 #include <GUI/GUI.hpp>
+#endif
 
 namespace RC
 {
@@ -14,7 +17,7 @@ namespace RC
       public:
         struct SectionOverrides
         {
-            File::StringType ModsFolderPath{};
+            SystemStringType ModsFolderPath{};
         } Overrides;
 
         struct SectionGeneral
@@ -25,6 +28,7 @@ namespace RC
             bool EnableDebugKeyBindings{false};
             int64_t SecondsToScanBeforeGivingUp{30};
             bool UseUObjectArrayCache{true};
+            SystemStringType InputSource{SYSSTR("Default")};
         } General;
 
         struct SectionEngineVersionOverride
@@ -61,7 +65,15 @@ namespace RC
             bool DebugConsoleEnabled{true};
             bool DebugConsoleVisible{true};
             float DebugGUIFontScaling{1.0};
+#ifdef HAS_UI
+#ifdef HAS_GLFW
             GUI::GfxBackend GraphicsAPI{GUI::GfxBackend::GLFW3_OpenGL3};
+#endif
+#ifdef HAS_TUI
+            GUI::GfxBackend GraphicsAPI{GUI::GfxBackend::TUI};
+#endif
+#endif
+            int64_t LiveViewObjectsPerGroup{64 * 1024 / 2};
         } Debug;
 
         struct SectionCrashDump
@@ -98,6 +110,30 @@ namespace RC
         {
             bool GUIUFunctionCaller{false};
         } Experimental;
+
+        struct TUIFeatures
+        {
+            /*int ButtonLeft = 1;
+            int ButtonRight = 3;
+            int WheelUp = 4;
+            int WheelDown = 5;*/
+            bool TUINerdFont = true;
+            /*
+            SystemStringType TerminalCode = "f120";
+            SystemStringType ArchiveCode = "f187";
+            SystemStringType SyncCode = "f46a";
+            SystemStringType FileCode = "f15b";
+            SystemStringType EyeCode = "f06e";
+            SystemStringType PuzzlePieceCode = "f12e";
+            SystemStringType AngleLeftCode = "f100";
+            SystemStringType AngleRightCode = "f101";
+            SystemStringType BanCode = "f05e";
+            SystemStringType CopyCode = "f0c5";
+            SystemStringType SearchCode = "f002";*/
+
+            SystemStringType TERMINFO = SYSSTR("/usr/share/terminfo");
+            SystemStringType LCALL = SYSSTR("en_US.UTF-8");
+        } TUI;
 
       public:
         SettingsManager() = default;

@@ -1,10 +1,10 @@
 #include <format>
 #include <future>
 #include <regex>
+#include <cmath>
+#include <algorithm>
 
-#define NOMINMAX
-#include <Windows.h>
-#include <Psapi.h>
+#include <cstring>
 
 #include <Profiler/Profiler.hpp>
 #include <SigScanner/SinglePassSigScanner.hpp>
@@ -18,19 +18,6 @@ namespace RC
     SinglePassScanner::ScanMethod SinglePassScanner::m_scan_method = ScanMethod::Scalar;
     uint32_t SinglePassScanner::m_multithreading_module_size_threshold = 0x1000000;
     std::mutex SinglePassScanner::m_scanner_mutex{};
-
-    auto WIN_MODULEINFO::operator=(MODULEINFO other) -> WIN_MODULEINFO&
-    {
-        lpBaseOfDll = other.lpBaseOfDll;
-        SizeOfImage = other.SizeOfImage;
-        EntryPoint = other.EntryPoint;
-        return *this;
-    }
-
-    auto ScanTargetArray::operator[](ScanTarget index) -> MODULEINFO&
-    {
-        return *std::bit_cast<MODULEINFO*>(&array[static_cast<size_t>(index)]);
-    }
 
     auto ScanTargetToString(ScanTarget scan_target) -> std::string
     {
@@ -358,56 +345,6 @@ namespace RC
         return vector_of_signatures;
     }
 
-    auto SinglePassScanner::string_scan(std::wstring_view string_to_scan_for, ScanTarget scan_target) -> void*
-    {
-        auto module = SigScannerStaticData::m_modules_info[scan_target];
-
-        auto start_address = static_cast<uint8_t*>(module.lpBaseOfDll);
-        auto end_address = static_cast<uint8_t*>(module.lpBaseOfDll) + module.SizeOfImage;
-
-        MEMORY_BASIC_INFORMATION memory_info{};
-        DWORD protect_flags = PAGE_GUARD | PAGE_NOCACHE | PAGE_NOACCESS;
-
-        void* address_found{};
-
-        for (uint8_t* i = start_address; i < end_address; ++i)
-        {
-            if (VirtualQuery(i, &memory_info, sizeof(memory_info)))
-            {
-                if (memory_info.Protect & protect_flags || !(memory_info.State & MEM_COMMIT))
-                {
-                    i += memory_info.RegionSize;
-                    continue;
-                }
-
-                uint8_t* region_end = static_cast<uint8_t*>(memory_info.BaseAddress) + memory_info.RegionSize;
-
-                for (uint8_t* region_start = static_cast<uint8_t*>(memory_info.BaseAddress); region_start < region_end; ++region_start)
-                {
-                    if (region_start > end_address || region_start + string_to_scan_for.size() > end_address)
-                    {
-                        break;
-                    }
-
-                    std::wstring_view maybe_string = std::wstring_view((const wchar_t*)region_start, string_to_scan_for.size());
-                    if (maybe_string == string_to_scan_for)
-                    {
-                        address_found = region_start;
-                        break;
-                    }
-                }
-
-                if (address_found)
-                {
-                    break;
-                }
-                i = static_cast<uint8_t*>(memory_info.BaseAddress) + memory_info.RegionSize;
-            }
-        }
-
-        return address_found;
-    }
-
     struct PatternData
     {
         std::vector<uint8_t> pattern{};
@@ -487,7 +424,7 @@ namespace RC
         return pattern_data;
     }
 
-    auto SinglePassScanner::scanner_work_thread(uint8_t* start_address, uint8_t* end_address, SYSTEM_INFO& info, std::vector<SignatureContainer>& signature_containers)
+    auto SinglePassScanner::scanner_work_thread(uint8_t* start_address, uint8_t* end_address, SystemInfo* info, std::vector<SignatureContainer>& signature_containers)
             -> void
     {
         ProfilerSetThreadName("UE4SS-ScannerWorkThread");
@@ -501,154 +438,6 @@ namespace RC
         case ScanMethod::StdFind:
             scanner_work_thread_stdfind(start_address, end_address, info, signature_containers);
             break;
-        }
-    }
-
-    auto SinglePassScanner::scanner_work_thread_scalar(uint8_t* start_address,
-                                                       uint8_t* end_address,
-                                                       SYSTEM_INFO& info,
-                                                       std::vector<SignatureContainer>& signature_containers) -> void
-    {
-        ProfilerScope();
-        if (!start_address)
-        {
-            start_address = static_cast<uint8_t*>(info.lpMinimumApplicationAddress);
-        }
-        if (!end_address)
-        {
-            start_address = static_cast<uint8_t*>(info.lpMaximumApplicationAddress);
-        }
-
-        MEMORY_BASIC_INFORMATION memory_info{};
-        DWORD protect_flags = PAGE_GUARD | PAGE_NOCACHE | PAGE_NOACCESS;
-
-        // TODO: Nasty nasty nasty. Come up with a better solution... wtf
-        // It should ideally be able to work with the char* directly instead of converting to to vectors of ints
-        // The reason why working directly with the char* is a problem is that it's expensive to convert a hex char to an int
-        // Also look at the comments below
-        std::vector<std::vector<std::vector<int>>> vector_of_sigs;
-
-        // const std::regex signature_validity_regex(R"(^([0-9A-F\?] )([0-9A-F\?]\/[0-9A-F\?] )*([0-9A-F\?])$)");
-
-        // Making a vector here to be identical to the SignatureContainer vector
-        // The difference is that it stores the sigs converted from char* to std::vector<int>
-        // This makes it easier to work with even if it's wasteful
-        // This should not be done in the nested loops below because this operation is very slow
-        vector_of_sigs.reserve(signature_containers.size());
-        for (const auto& container : signature_containers)
-        {
-            // Only continue if the signature is properly formatted
-            // Bring this code back when both:
-            // A. The regex has been updated to take into consideration.
-            // B. The threads have been synced before the scan to verify that all threads are scanning for valid signatures.
-            // for (const auto& signature_data : container.signatures)
-            //{
-            //    if (!std::regex_search(signature_data.signature, signature_validity_regex))
-            //    {
-            //        throw std::runtime_error{std::format("[SinglePassSigScanner::start_scan] A signature is improperly formatted. Signature: {}", signature_data.signature)};
-            //    }
-            //}
-
-            // Signatures for this container
-            vector_of_sigs.emplace_back(string_to_vector(container.signatures));
-        }
-
-        // Loop everything
-        for (uint8_t* i = start_address; i < end_address; ++i)
-        {
-            // Populate memory_info if VirtualQuery doesn't fail
-            if (VirtualQuery(i, &memory_info, sizeof(memory_info)))
-            {
-                // If the "protect flags" or state are undesired for this region then skip to the next iteration of the loop
-                if (memory_info.Protect & protect_flags || !(memory_info.State & MEM_COMMIT))
-                {
-                    i += memory_info.RegionSize;
-                    continue;
-                }
-
-                uint8_t* region_end = static_cast<uint8_t*>(memory_info.BaseAddress) + memory_info.RegionSize;
-
-                for (uint8_t* region_start = static_cast<uint8_t*>(memory_info.BaseAddress); region_start < region_end; ++region_start)
-                {
-                    if (region_start > end_address)
-                    {
-                        break;
-                    }
-
-                    bool skip_to_next_container{};
-
-                    for (size_t container_index = 0; const auto& int_container : vector_of_sigs)
-                    {
-                        for (size_t signature_index = 0; const auto& sig : int_container)
-                        {
-                            // If the container is refusing more calls then skip to the next container
-                            if (signature_containers[container_index].ignore)
-                            {
-                                break;
-                            }
-
-                            // Skip if we're about to dereference uninitialized memory
-                            if (region_start + sig.size() > region_end)
-                            {
-                                break;
-                            }
-
-                            for (size_t sig_i = 0; sig_i < sig.size(); sig_i += 2)
-                            {
-                                if (sig.at(sig_i) != -1 && sig.at(sig_i) != HI_NIBBLE(*(byte*)(region_start + (sig_i / 2))) ||
-                                    sig.at(sig_i + 1) != -1 && sig.at(sig_i + 1) != LO_NIBBLE(*(byte*)(region_start + (sig_i / 2))))
-                                {
-                                    break;
-                                }
-
-                                if (sig_i + 2 == sig.size())
-                                {
-                                    {
-                                        std::lock_guard<std::mutex> safe_scope(m_scanner_mutex);
-
-                                        // Checking for the second time if the container is refusing more calls
-                                        // This is required when multi-threading is enabled
-                                        if (signature_containers[container_index].ignore)
-                                        {
-                                            skip_to_next_container = true;
-                                            break;
-                                        }
-
-                                        // One of the signatures have found a full match so lets forward the details to the callable
-                                        signature_containers[container_index].index_into_signatures = signature_index;
-                                        signature_containers[container_index].match_address = region_start;
-                                        signature_containers[container_index].match_signature_size = sig.size() / 2;
-
-                                        skip_to_next_container = signature_containers[container_index].on_match_found(signature_containers[container_index]);
-                                        signature_containers[container_index].ignore = skip_to_next_container;
-
-                                        // Store results if the container at the containers request
-                                        if (signature_containers[container_index].store_results)
-                                        {
-                                            signature_containers[container_index].result_store.emplace_back(
-                                                    SignatureContainerLight{.index_into_signatures = signature_index, .match_address = region_start});
-                                        }
-                                    }
-
-                                    break;
-                                }
-                            }
-
-                            if (skip_to_next_container)
-                            {
-                                // A match was found and signaled to skip to the next container
-                                break;
-                            }
-
-                            ++signature_index;
-                        }
-
-                        ++container_index;
-                    }
-                }
-
-                i = static_cast<uint8_t*>(memory_info.BaseAddress) + memory_info.RegionSize;
-            }
         }
     }
 
@@ -686,18 +475,18 @@ namespace RC
 
     auto SinglePassScanner::scanner_work_thread_stdfind(uint8_t* start_address,
                                                         uint8_t* end_address,
-                                                        SYSTEM_INFO& info,
+                                                        SystemInfo* info,
                                                         std::vector<SignatureContainer>& signature_containers) -> void
     {
         ProfilerScope();
 
         if (!start_address)
         {
-            start_address = static_cast<uint8_t*>(info.lpMinimumApplicationAddress);
+            start_address = Platform::get_start_address(info);
         }
         if (!end_address)
         {
-            start_address = static_cast<uint8_t*>(info.lpMaximumApplicationAddress);
+            end_address = Platform::get_end_address(info);
         }
 
         format_aob_strings(signature_containers);
@@ -787,21 +576,21 @@ namespace RC
 
     auto SinglePassScanner::start_scan(SignatureContainerMap& signature_containers) -> void
     {
-        SYSTEM_INFO info{};
-        GetSystemInfo(&info);
+        SystemInfo* info = Platform::get_system_info();
 
         // If not modular then the containers get merged into one scan target
         // That way there are no extra scans
         // If modular then loop the containers and retrieve the scan target for each and pass everything to the do_scan() lambda
-
+        fprintf(stderr, "signature_containers.size() = %d\n", signature_containers.size());
         if (!SigScannerStaticData::m_is_modular)
         {
-            MODULEINFO merged_module_info{};
+            ModuleOS* merged_module_info{};
             std::vector<SignatureContainer> merged_containers;
 
             for (const auto& [scan_target, outer_container] : signature_containers)
             {
-                merged_module_info = *std::bit_cast<MODULEINFO*>(&SigScannerStaticData::m_modules_info[scan_target]);
+                merged_module_info = std::bit_cast<ModuleOS*>(&SigScannerStaticData::m_modules_info[scan_target]);
+                fprintf(stderr, "outer_container len = %d\n", outer_container.size());
                 for (const auto& signature_container : outer_container)
                 {
                     merged_containers.emplace_back(signature_container);
@@ -810,20 +599,22 @@ namespace RC
 
             if (merged_containers.empty())
             {
-                throw std::runtime_error{"[SinglePassScanner::start_scan] Could not merge containers. Either there were not containers to merge or there was "
-                                         "an internal error."};
+                fprintf(stderr, "No containers to merge\n");
+                return;
+                // throw std::runtime_error{"[SinglePassScanner::start_scan] Could not merge containers. Either there were not containers to merge or there was "
+                //                          "an internal error."};
             }
 
-            uint8_t* module_start_address = static_cast<uint8_t*>(merged_module_info.lpBaseOfDll);
+            uint8_t* module_start_address = Platform::get_module_base(merged_module_info);
 
-            if (merged_module_info.SizeOfImage >= m_multithreading_module_size_threshold)
+            if (Platform::get_module_size(merged_module_info) >= m_multithreading_module_size_threshold)
             {
                 // Module is large enough to make it overall faster to scan with multiple threads
                 std::vector<std::future<void>> scan_threads;
 
                 // Higher values are better for debugging
                 // You will get a bigger diminishing returns the faster your computer is (especially in release mode)
-                uint32_t range = merged_module_info.SizeOfImage / m_num_threads;
+                uint32_t range = Platform::get_module_size(merged_module_info) / m_num_threads;
 
                 // Calculating the ranges for each thread to scan and starting the scan
                 uint32_t last_range{};
@@ -833,7 +624,7 @@ namespace RC
                                                          &scanner_work_thread,
                                                          module_start_address + last_range,
                                                          module_start_address + last_range + range,
-                                                         std::ref(info),
+                                                         info,
                                                          std::ref(merged_containers)));
 
                     last_range += range;
@@ -847,7 +638,7 @@ namespace RC
             else
             {
                 // Module is too small to make it overall faster to scan with multiple threads
-                uint8_t* module_end_address = static_cast<uint8_t*>(module_start_address + merged_module_info.SizeOfImage);
+                uint8_t* module_end_address = static_cast<uint8_t*>(module_start_address + Platform::get_module_size(merged_module_info));
                 scanner_work_thread(module_start_address, module_end_address, info, merged_containers);
             }
 
@@ -861,10 +652,12 @@ namespace RC
             // This ranged for loop is performing a copy of unordered_map<ScanTarget, vector<SignatureContainer>>
             // Is this required ? Would it be worth trying to avoid copying here ?
             // Right now it can't be auto& or const auto& because the do_scan function takes a non-const since it needs to mutate the values inside the vector
+            auto info = Platform::get_system_info();
             for (auto& [scan_target, signature_container] : signature_containers)
             {
-                uint8_t* module_start_address = static_cast<uint8_t*>(SigScannerStaticData::m_modules_info[scan_target].lpBaseOfDll);
-                uint8_t* module_end_address = static_cast<uint8_t*>(module_start_address + SigScannerStaticData::m_modules_info[scan_target].SizeOfImage);
+                uint8_t* module_start_address = static_cast<uint8_t*>(Platform::get_module_base(&SigScannerStaticData::m_modules_info[scan_target]));
+                uint8_t* module_end_address =
+                        static_cast<uint8_t*>(module_start_address + Platform::get_module_size(&SigScannerStaticData::m_modules_info[scan_target]));
 
                 scanner_work_thread(module_start_address, module_end_address, info, signature_container);
 
@@ -875,4 +668,4 @@ namespace RC
             }
         }
     }
-} // namespace RC
+}; // namespace RC

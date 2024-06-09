@@ -26,7 +26,7 @@ namespace RC::File
 
     auto WinFile::delete_file(const std::filesystem::path& file_path_and_name) -> void
     {
-        if constexpr (sizeof(CharType) > 1)
+        if constexpr (sizeof(SystemCharType) > 1)
         {
             if (DeleteFileW(file_path_and_name.wstring().c_str()) == 0)
             {
@@ -35,7 +35,7 @@ namespace RC::File
         }
         else
         {
-            if (DeleteFileA(file_path_and_name.string().c_str()) != 0)
+            if (DeleteFileA(file_path_and_name.string().c_str()) == 0)
             {
                 THROW_INTERNAL_FILE_ERROR(std::format("[WinFile::delete_file] Was unable to delete file, error: {}", GetLastError()))
             }
@@ -380,7 +380,7 @@ namespace RC::File
         return m_is_file_open;
     }
 
-    auto WinFile::write_string_to_file(StringViewType string_to_write) -> void
+    auto WinFile::write_string_to_file(UEStringViewType string_to_write) -> void
     {
         int string_size = WideCharToMultiByte(CP_UTF8, 0, string_to_write.data(), static_cast<int>(string_to_write.size()), NULL, 0, NULL, NULL);
         if (string_size == 0)
@@ -397,6 +397,11 @@ namespace RC::File
         }
 
         write_to_file(*this, string_converted_to_utf8.c_str(), string_size);
+    }
+
+    auto WinFile::write_file_string_to_file(StringViewType string_to_write) -> void
+    {
+        write_to_file(*this, string_to_write.data(), string_to_write.length());
     }
 
     auto WinFile::is_same_as(WinFile& other_file) -> bool
@@ -452,38 +457,85 @@ namespace RC::File
         return true;
     }
 
-    auto WinFile::read_all() const -> StringType
+    auto WinFile::read_all() const -> UEStringType
     {
-        StreamType stream{get_file_path(), std::ios::in | std::ios::binary};
-        if (!stream)
+        auto file_contents = read_file_all();
+        int string_size = MultiByteToWideChar(CP_UTF8, 0, (LPCCH)file_contents.c_str(), static_cast<int>(file_contents.size()), NULL, 0);
+        if (string_size == 0)
         {
-            THROW_INTERNAL_FILE_ERROR(std::format("[WinFile::read_all] Tried to read entire file but returned error {}", errno))
+            THROW_INTERNAL_FILE_ERROR(std::format("[WinFile::read_all] Tried reading entire file but could not convert to utf-16. Error: {}", GetLastError()))
         }
-        else
-        {
-            // Strip the BOM if it exists
-            File::StreamType::off_type start{};
-            File::CharType bom[3]{};
-            stream.read(bom, 3);
-            if (bom[0] == 0xEF && bom[1] == 0xBB && bom[2] == 0xBF)
-            {
-                // BOM: UTF-8
-                start = 3;
-            }
 
-            StringType file_contents;
-            stream.seekg(0, std::ios::end);
-            auto size = stream.tellg();
-            if (size == -1)
-            {
-                return {};
-            }
-            file_contents.resize(size);
-            stream.seekg(start, std::ios::beg);
-            stream.read(&file_contents[0], file_contents.size());
-            stream.close();
-            return file_contents;
+        UEStringType string_converted_to_utf16(string_size, 0);
+        if (MultiByteToWideChar(CP_UTF8, 0, (LPCCH)file_contents.c_str(), static_cast<int>(file_contents.size()), &string_converted_to_utf16[0], string_size) == 0)
+        {
+            THROW_INTERNAL_FILE_ERROR(std::format("[WinFile::read_all] Tried reading entire file but could not convert to utf-16. Error: {}", GetLastError()))
         }
+
+        return string_converted_to_utf16;
+    }
+
+    auto WinFile::read_file_all() const -> StringType
+    {
+        // get file handle, const_cast is safe here because we will restore the file pointer
+        auto handle = const_cast<WinFile*>(this)->get_file();
+
+        // backup file pointer
+        auto file_pointer = SetFilePointer(handle, 0, nullptr, FILE_CURRENT);
+
+        LONG file_size{};
+        if (!GetFileSizeEx(handle, (PLARGE_INTEGER)&file_size))
+        {
+            THROW_INTERNAL_FILE_ERROR(std::format("[WinFile::read_file_all] Tried reading entire file but could not get file size. Error: {}", GetLastError()))
+        }
+
+        // move pointer to begin
+        SetFilePointer(handle, 0, nullptr, FILE_BEGIN);
+
+        if (file_size >= 3ul)
+        {
+            // check BOM
+            constexpr size_t bom_size = 3;
+            char bom[bom_size];
+            DWORD bytes_read{};
+
+            if (!ReadFile(handle, bom, bom_size, &bytes_read, nullptr))
+            {
+                // try restoring file pointer
+                SetFilePointer(handle, file_pointer, nullptr, FILE_BEGIN);
+                THROW_INTERNAL_FILE_ERROR(std::format("[WinFile::read_file_all] Tried reading entire file but could not read BOM. Error: {}", GetLastError()))
+            }
+            if (bytes_read != bom_size)
+            {
+                // try restoring file pointer
+                SetFilePointer(handle, file_pointer, nullptr, FILE_BEGIN);
+                THROW_INTERNAL_FILE_ERROR(std::format("[WinFile::read_file_all] Tried reading entire file but could not read BOM. Error: {}", GetLastError()))
+            }
+            if (bom[0] == '\xEF' && bom[1] == '\xBB' && bom[2] == '\xBF')
+            {
+                file_size -= 3;
+            }
+            else
+            {
+                // roll back
+                SetFilePointer(handle, 0, nullptr, FILE_BEGIN);
+            }
+        }
+
+        StringType file_contents(file_size, 0);
+        DWORD bytes_read{};
+        if (!ReadFile(handle, &file_contents[0], file_size, &bytes_read, nullptr))
+        {
+            // try restoring file pointer
+            SetFilePointer(handle, file_pointer, nullptr, FILE_BEGIN);
+            THROW_INTERNAL_FILE_ERROR(std::format("[WinFile::read_file_all] Tried reading entire file but could not read file contents. Error: {}", GetLastError()))
+        }
+
+        file_contents[bytes_read] = 0;
+
+        // restore file pointer
+        SetFilePointer(handle, file_pointer, nullptr, FILE_BEGIN);
+        return file_contents;
     }
 
     auto WinFile::memory_map() -> std::span<uint8_t>
@@ -572,7 +624,7 @@ namespace RC::File
         WinFile file{};
 
         // This very badly named API may create a new file or it may not but it will always open a file (unless there's an error)
-        if constexpr (sizeof(CharType) > 1)
+        if constexpr (sizeof(SystemCharType) > 1)
         {
             file.set_file(CreateFileW(file_name_and_path.wstring().c_str(),
                                       desired_access,

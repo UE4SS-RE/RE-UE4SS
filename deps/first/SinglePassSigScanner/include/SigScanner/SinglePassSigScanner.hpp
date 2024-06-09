@@ -7,27 +7,17 @@
 
 #include <SigScanner/Common.hpp>
 
+#ifdef WIN32
+#include "SinglePassSigScannerWin32.hpp"
+#else
+#include "SinglePassSigScannerLinux.hpp"
+#endif
+
 #define HI_NIBBLE(b) (((b) >> 4) & 0x0F)
 #define LO_NIBBLE(b) ((b)&0x0F)
 
-// Windows.h forward declarations
-struct _SYSTEM_INFO;
-typedef _SYSTEM_INFO SYSTEM_INFO;
-struct _MODULEINFO;
-typedef _MODULEINFO MODULEINFO;
-
 namespace RC
 {
-    // Windows structs, to prevent the need to include Windows.h in this header
-    struct WIN_MODULEINFO
-    {
-        void* lpBaseOfDll;
-        unsigned long SizeOfImage;
-        void* EntryPoint;
-
-        RC_SPSS_API auto operator=(MODULEINFO) -> WIN_MODULEINFO&;
-    };
-
     enum class ScanTarget
     {
         MainExe,
@@ -175,9 +165,9 @@ namespace RC
     class RC_SPSS_API ScanTargetArray
     {
       public:
-        std::array<WIN_MODULEINFO, static_cast<size_t>(ScanTarget::Max)> array{};
+        std::array<ModuleInfo, static_cast<size_t>(ScanTarget::Max)> array{};
 
-        auto operator[](ScanTarget index) -> MODULEINFO&;
+        auto operator[](ScanTarget index) -> ModuleOS&;
     };
 
     // Static storage to be used across all sig scanner types
@@ -322,22 +312,38 @@ namespace RC
         RC_SPSS_API auto static format_aob_strings(std::vector<SignatureContainer>& signature_containers) -> void;
 
       public:
-        RC_SPSS_API auto static scanner_work_thread(uint8_t* start_address,
-                                                    uint8_t* end_address,
-                                                    SYSTEM_INFO& info,
-                                                    std::vector<SignatureContainer>& signature_containers) -> void;
+        RC_SPSS_API auto static scanner_work_thread(uint8_t* start_address, uint8_t* end_address, SystemInfo* info, std::vector<SignatureContainer>& signature_containers)
+                -> void;
         RC_SPSS_API auto static scanner_work_thread_scalar(uint8_t* start_address,
                                                            uint8_t* end_address,
-                                                           SYSTEM_INFO& info,
+                                                           SystemInfo* info,
                                                            std::vector<SignatureContainer>& signature_containers) -> void;
         RC_SPSS_API auto static scanner_work_thread_stdfind(uint8_t* start_address,
                                                             uint8_t* end_address,
-                                                            SYSTEM_INFO& info,
+                                                            SystemInfo* info,
                                                             std::vector<SignatureContainer>& signature_containers) -> void;
 
         using SignatureContainerMap = std::unordered_map<ScanTarget, std::vector<SignatureContainer>>;
         RC_SPSS_API auto static start_scan(SignatureContainerMap& signature_containers) -> void;
-
         RC_SPSS_API auto static string_scan(std::wstring_view string_to_scan_for, ScanTarget = ScanTarget::MainExe) -> void*;
     };
-} // namespace RC
+
+    namespace Platform
+    {
+        // Get the system info
+        auto get_system_info() -> SystemInfo*;
+
+        // Get the start address of the system
+        auto get_start_address(SystemInfo* info) -> uint8_t*;
+
+        // Get the end address of the system
+        auto get_end_address(SystemInfo* info) -> uint8_t*;
+
+        // Get the size of the module
+        auto get_module_size(ModuleOS* info) -> uint32_t;
+
+        // Get the base address of the module
+        auto get_module_base(ModuleOS* info) -> uint8_t*;
+    }; // namespace Platform
+
+}; // namespace RC

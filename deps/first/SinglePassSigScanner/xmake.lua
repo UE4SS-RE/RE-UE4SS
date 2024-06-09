@@ -9,6 +9,24 @@ target(projectName)
     add_includedirs("include", { public = true })
     add_headerfiles("include/**.hpp")
 
-    add_files("src/**.cpp")
+    -- *? is not supported?
+    add_files("src/**.cpp|SinglePassSigScannerWin32.cpp|SinglePassSigScannerLinux.cpp")
     
+    if is_plat("windows") then
+        add_headerfiles("include/SigScanner/SinglePassSigScannerWin32.hpp")
+        add_files("src/SinglePassSigScannerWin32.cpp")
+    elseif is_plat("linux") then
+        add_headerfiles("include/SigScanner/SinglePassSigScannerLinux.hpp")
+        add_files("src/SinglePassSigScannerLinux.cpp")
+    end
+
     add_deps("Profiler")
+
+    on_load(function (target)
+        import("target_helpers", { rootdir = get_config("scriptsRoot") })
+        
+        print("Project: " .. projectName .. " (STATIC)")
+
+        target:add("defines", target_helpers.project_name_to_exports_define(projectName))
+        target:add("defines", target_helpers.project_name_to_build_static_define(projectName))
+    end)

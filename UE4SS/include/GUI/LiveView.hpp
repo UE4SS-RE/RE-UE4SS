@@ -61,9 +61,9 @@ namespace RC::GUI
             Output::Targets<Output::FileDevice> output{};
             FProperty* property{};
             UObject* container{};
-            StringType object_name{};
-            StringType property_name{};
-            StringType property_value{};
+            UEStringType object_name{};
+            UEStringType property_name{};
+            UEStringType property_value{};
             size_t hash{};
             std::string history{};
             float history_previous_max_scroll_y{};
@@ -77,7 +77,7 @@ namespace RC::GUI
             std::pair<int, int> function_hook_ids{};
 
             Watch() = delete;
-            Watch(StringType&& object_name, StringType&& property_name);
+            Watch(UEStringType&& object_name, UEStringType&& property_name);
         };
 
       private:
@@ -89,7 +89,11 @@ namespace RC::GUI
         UObject* m_currently_opened_tree_node{};
         std::string m_current_property_value_buffer{};
         int64_t m_current_enum_value_buffer{};
+#ifdef HAS_GUI
         float m_top_size{300.0f};
+#else
+        float m_top_size{14.0f};
+#endif
         float m_bottom_size{0.0f};
         UFunctionCallerWidget* m_function_caller_widget{};
         bool m_is_searching_by_name{};

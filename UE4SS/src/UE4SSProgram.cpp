@@ -1,6 +1,7 @@
+#ifdef WIN32
 #define NOMINMAX
-
 #include <Windows.h>
+#endif
 
 #ifdef TEXT
 #undef TEXT
@@ -16,11 +17,12 @@
 #include <Profiler/Profiler.hpp>
 #include <DynamicOutput/DynamicOutput.hpp>
 #include <ExceptionHandling.hpp>
+#ifdef HAS_UI
 #include <GUI/ConsoleOutputDevice.hpp>
 #include <GUI/GUI.hpp>
 #include <GUI/LiveView.hpp>
+#endif
 #include <Helpers/ASM.hpp>
-#include <Helpers/Format.hpp>
 #include <Helpers/Integer.hpp>
 #include <Helpers/String.hpp>
 #include <IniParser/Ini.hpp>
@@ -55,7 +57,11 @@
 #include <Unreal/World.hpp>
 #include <UnrealDef.hpp>
 
+#ifdef WIN32
 #include <polyhook2/PE/IatHook.hpp>
+#endif
+
+#include <Platform.hpp>
 
 namespace RC
 {
@@ -94,12 +100,12 @@ namespace RC
 #define OUTPUT_MEMBER_OFFSETS_FOR_STRUCT(StructName)                                                                                                           \
     for (const auto& [name, offset] : Unreal::StructName::MemberOffsets)                                                                                       \
     {                                                                                                                                                          \
-        Output::send(STR(#StructName "::{} = 0x{:X}\n"), name, offset);                                                                                        \
+        Output::send(SYSSTR(#StructName "::{} = 0x{:X}\n"), name, offset);                                                                                     \
     }
 
     auto output_all_member_offsets() -> void
     {
-        Output::send(STR("\n##### MEMBER OFFSETS START #####\n\n"));
+        Output::send(SYSSTR("\n##### MEMBER OFFSETS START #####\n\n"));
         OUTPUT_MEMBER_OFFSETS_FOR_STRUCT(UObjectBase);
         OUTPUT_MEMBER_OFFSETS_FOR_STRUCT(UScriptStruct);
         OUTPUT_MEMBER_OFFSETS_FOR_STRUCT(UScriptStruct::ICppStructOps);
@@ -126,14 +132,15 @@ namespace RC
         OUTPUT_MEMBER_OFFSETS_FOR_STRUCT(FSoftClassProperty);
         OUTPUT_MEMBER_OFFSETS_FOR_STRUCT(FInterfaceProperty);
         OUTPUT_MEMBER_OFFSETS_FOR_STRUCT(FFieldPathProperty);
-        Output::send(STR("\n##### MEMBER OFFSETS END #####\n\n"));
+        Output::send(SYSSTR("\n##### MEMBER OFFSETS END #####\n\n"));
     }
 
+#ifdef WIN32
     void* HookedLoadLibraryA(const char* dll_name)
     {
         UE4SSProgram& program = UE4SSProgram::get_program();
         HMODULE lib = PLH::FnCast(program.m_hook_trampoline_load_library_a, &LoadLibraryA)(dll_name);
-        program.fire_dll_load_for_cpp_mods(to_wstring(dll_name));
+        program.fire_dll_load_for_cpp_mods(to_system(dll_name));
         return lib;
     }
 
@@ -141,7 +148,7 @@ namespace RC
     {
         UE4SSProgram& program = UE4SSProgram::get_program();
         HMODULE lib = PLH::FnCast(program.m_hook_trampoline_load_library_ex_a, &LoadLibraryExA)(dll_name, file, flags);
-        program.fire_dll_load_for_cpp_mods(to_wstring(dll_name));
+        program.fire_dll_load_for_cpp_mods(to_system(dll_name));
         return lib;
     }
 
@@ -160,8 +167,9 @@ namespace RC
         program.fire_dll_load_for_cpp_mods(dll_name);
         return lib;
     }
+#endif
 
-    UE4SSProgram::UE4SSProgram(const std::wstring& moduleFilePath, std::initializer_list<BinaryOptions> options) : MProgram(options)
+    UE4SSProgram::UE4SSProgram(const SystemStringType& moduleFilePath, std::initializer_list<BinaryOptions> options) : MProgram(options)
     {
         ProfilerScope();
         s_program = this;
@@ -170,99 +178,114 @@ namespace RC
         {
             setup_paths(moduleFilePath);
 
+            // Setup the log file
+            auto& file_device = Output::set_default_devices<Output::NewFileDevice>();
+            file_device.set_file_name_and_path(to_system(m_log_directory / m_log_file_name));
+
+            create_simple_console();
+
             try
             {
                 settings_manager.deserialize(m_settings_path_and_file);
             }
             catch (std::exception& e)
             {
-                create_emergency_console_for_early_error(std::format(STR("The IniParser failed to parse: {}"), to_wstring(e.what())));
+                set_error("The IniParser failed to parse: %s", to_system(e.what()).data());
                 return;
             }
 
+#ifdef WIN32
             if (settings_manager.CrashDump.EnableDumping)
             {
                 m_crash_dumper.enable();
             }
 
             m_crash_dumper.set_full_memory_dump(settings_manager.CrashDump.FullMemoryDump);
+#endif
 
+#ifdef HAS_UI
             m_debugging_gui.set_gfx_backend(settings_manager.Debug.GraphicsAPI);
+#endif
 
-            // Setup the log file
-            auto& file_device = Output::set_default_devices<Output::NewFileDevice>();
-            file_device.set_file_name_and_path(m_log_directory / m_log_file_name);
+#ifdef HAS_INPUT
+            m_input_handler.init();
+#endif
 
-            create_simple_console();
 
+#ifdef HAS_UI
             if (settings_manager.Debug.DebugConsoleEnabled)
             {
                 m_console_device = &Output::set_default_devices<Output::ConsoleDevice>();
-                m_console_device->set_formatter([](File::StringViewType string) -> File::StringType {
-                    return std::format(STR("[{}] {}"), std::format(STR("{:%X}"), std::chrono::system_clock::now()), string);
+                m_console_device->set_formatter([](SystemStringViewType string) -> SystemStringType {
+                    return std::format(SYSSTR("[{}] {}"), std::format(SYSSTR("{:%X}"), std::chrono::system_clock::now()), string);
                 });
                 if (settings_manager.Debug.DebugConsoleVisible)
                 {
                     m_render_thread = std::jthread{&GUI::gui_thread, &m_debugging_gui};
                 }
             }
-
+#endif
             // This is experimental code that's here only for future reference
             /*
             Unreal::UnrealInitializer::SetupUnrealModules();
 
             constexpr const wchar_t* str_to_find = STR("Allocator: %s");
             void* string_address = SinglePassScanner::string_scan(str_to_find, ScanTarget::Core);
-            Output::send(STR("\n\nFound string '{}' at {}\n\n"), std::wstring_view{str_to_find}, string_address);
+            Output::send(SYSSTR("\n\nFound string '{}' at {}\n\n"), SystemStringViewType{str_to_find}, string_address);
             //*/
 
-            Output::send(STR("Console created\n"));
-            Output::send(STR("UE4SS - v{}.{}.{}{}{} - Git SHA #{}\n"),
+            Output::send(SYSSTR("dir: {}\n"), (m_log_directory / m_log_file_name));
+
+            Output::send(SYSSTR("Console created\n"));
+            Output::send(SYSSTR("UE4SS - v{}.{}.{}{}{} - Git SHA #{}\n"),
                          UE4SS_LIB_VERSION_MAJOR,
                          UE4SS_LIB_VERSION_MINOR,
                          UE4SS_LIB_VERSION_HOTFIX,
-                         std::format(L"{}", UE4SS_LIB_VERSION_PRERELEASE == 0 ? L"" : std::format(L" PreRelease #{}", UE4SS_LIB_VERSION_PRERELEASE)),
-                         std::format(L"{}",
-                                     UE4SS_LIB_BETA_STARTED == 0 ? L"" : (UE4SS_LIB_IS_BETA == 0 ? L" Beta #?" : std::format(L" Beta #{}", UE4SS_LIB_VERSION_BETA))),
-                         to_wstring(UE4SS_LIB_BUILD_GITSHA));
+                         std::format(SYSSTR("{}"),
+                                     UE4SS_LIB_VERSION_PRERELEASE == 0 ? SYSSTR("") : std::format(SYSSTR(" PreRelease #{}"), UE4SS_LIB_VERSION_PRERELEASE)),
+                         std::format(SYSSTR("{}"),
+                                     UE4SS_LIB_BETA_STARTED == 0
+                                             ? SYSSTR("")
+                                             : (UE4SS_LIB_IS_BETA == 0 ? SYSSTR(" Beta #?") : std::format(SYSSTR(" Beta #{}"), UE4SS_LIB_VERSION_BETA))),
+                         to_system(UE4SS_LIB_BUILD_GITSHA));
 
 #ifdef __clang__
-#define UE4SS_COMPILER L"Clang"
+#define UE4SS_COMPILER SYSSTR("Clang")
 #else
-#define UE4SS_COMPILER L"MSVC"
+#define UE4SS_COMPILER SYSSTR("MSVC")
 #endif
 
-            Output::send(STR("UE4SS Build Configuration: {} ({})\n"), to_wstring(UE4SS_CONFIGURATION), UE4SS_COMPILER);
-
+            Output::send(SYSSTR("UE4SS Build Configuration: {} ({})\n"), to_system(UE4SS_CONFIGURATION), UE4SS_COMPILER);
+#ifdef WIN32
             m_load_library_a_hook = std::make_unique<PLH::IatHook>("kernel32.dll",
                                                                    "LoadLibraryA",
                                                                    std::bit_cast<uint64_t>(&HookedLoadLibraryA),
                                                                    &m_hook_trampoline_load_library_a,
-                                                                   L"");
+                                                                   SYSSTR(""));
             m_load_library_a_hook->hook();
 
             m_load_library_ex_a_hook = std::make_unique<PLH::IatHook>("kernel32.dll",
                                                                       "LoadLibraryExA",
                                                                       std::bit_cast<uint64_t>(&HookedLoadLibraryExA),
                                                                       &m_hook_trampoline_load_library_ex_a,
-                                                                      L"");
+                                                                      SYSSTR(""));
             m_load_library_ex_a_hook->hook();
 
             m_load_library_w_hook = std::make_unique<PLH::IatHook>("kernel32.dll",
                                                                    "LoadLibraryW",
                                                                    std::bit_cast<uint64_t>(&HookedLoadLibraryW),
                                                                    &m_hook_trampoline_load_library_w,
-                                                                   L"");
+                                                                   SYSSTR(""));
             m_load_library_w_hook->hook();
 
             m_load_library_ex_w_hook = std::make_unique<PLH::IatHook>("kernel32.dll",
                                                                       "LoadLibraryExW",
                                                                       std::bit_cast<uint64_t>(&HookedLoadLibraryExW),
                                                                       &m_hook_trampoline_load_library_ex_w,
-                                                                      L"");
+                                                                      SYSSTR(""));
             m_load_library_ex_w_hook->hook();
-
-            Unreal::UnrealInitializer::SetupUnrealModules();
+#endif
+            Unreal::UnrealInitializer::Platform::SetupUnrealModules();
 
             setup_mods();
             install_cpp_mods();
@@ -272,21 +295,21 @@ namespace RC
 
             if (m_has_game_specific_config)
             {
-                Output::send(STR("Found configuration for game: {}\n"), m_mods_directory.parent_path().filename().c_str());
+                Output::send(SYSSTR("Found configuration for game: {}\n"), m_mods_directory.parent_path().filename().c_str());
             }
             else
             {
-                Output::send(STR("No specific game configuration found, using default configuration file\n"));
+                Output::send(SYSSTR("No specific game configuration found, using default configuration file\n"));
             }
 
-            Output::send(STR("Config: {}\n\n"), m_settings_path_and_file.c_str());
-            Output::send(STR("root directory: {}\n"), m_root_directory.c_str());
-            Output::send(STR("working directory: {}\n"), m_working_directory.c_str());
-            Output::send(STR("game executable directory: {}\n"), m_game_executable_directory.c_str());
-            Output::send(STR("game executable: {} ({} bytes)\n\n\n"), m_game_path_and_exe_name.c_str(), std::filesystem::file_size(m_game_path_and_exe_name));
-            Output::send(STR("mods directory: {}\n"), m_mods_directory.c_str());
-            Output::send(STR("log directory: {}\n"), m_log_directory.c_str());
-            Output::send(STR("object dumper directory: {}\n\n\n"), m_object_dumper_output_directory.c_str());
+            Output::send(SYSSTR("Config: {}\n\n"), m_settings_path_and_file.c_str());
+            Output::send(SYSSTR("root directory: {}\n"), m_root_directory.c_str());
+            Output::send(SYSSTR("working directory: {}\n"), m_working_directory.c_str());
+            Output::send(SYSSTR("game executable directory: {}\n"), m_game_executable_directory.c_str());
+            Output::send(SYSSTR("game executable: {} ({} bytes)\n\n\n"), m_game_path_and_exe_name.c_str(), std::filesystem::file_size(m_game_path_and_exe_name));
+            Output::send(SYSSTR("mods directory: {}\n"), m_mods_directory.c_str());
+            Output::send(SYSSTR("log directory: {}\n"), m_log_directory.c_str());
+            Output::send(SYSSTR("object dumper directory: {}\n\n\n"), m_object_dumper_output_directory.c_str());
         }
         catch (std::runtime_error& e)
         {
@@ -317,11 +340,14 @@ namespace RC
         ProfilerSetThreadName("UE4SS-InitThread");
         ProfilerScope();
 
+        Output::send(SYSSTR("Initializing ue4ss program\n"));
+
         try
         {
             setup_unreal();
 
-            Output::send(STR("Unreal Engine modules ({}):\n"), SigScannerStaticData::m_is_modular ? STR("modular") : STR("non-modular"));
+            Output::send(SYSSTR("Unreal Engine modules ({}):\n"), SigScannerStaticData::m_is_modular ? SYSSTR("modular") : SYSSTR("non-modular"));
+#ifdef WIN32
             auto& main_exe_ptr = SigScannerStaticData::m_modules_info.array[static_cast<size_t>(ScanTarget::MainExe)].lpBaseOfDll;
             for (size_t i = 0; i < static_cast<size_t>(ScanTarget::Max); ++i)
             {
@@ -329,11 +355,26 @@ namespace RC
                 // only log modules with unique addresses (non-modular builds have everything in MainExe)
                 if (i == static_cast<size_t>(ScanTarget::MainExe) || main_exe_ptr != module.lpBaseOfDll)
                 {
-                    auto module_name = to_wstring(ScanTargetToString(i));
-                    Output::send(STR("{} @ {} size={:#x}\n"), module_name.c_str(), module.lpBaseOfDll, module.SizeOfImage);
+                    auto module_name = to_system(ScanTargetToString(i));
+                    Output::send(SYSSTR("{} @ {} size={:#x}\n"), module_name.c_str(), module.lpBaseOfDll, module.SizeOfImage);
                 }
             }
+#elif defined(LINUX)
+            auto& main_exe_ptr = SigScannerStaticData::m_modules_info.array[static_cast<size_t>(ScanTarget::MainExe)].base_address;
+            for (size_t i = 0; i < static_cast<size_t>(ScanTarget::Max); ++i)
+            {
+                auto& module = SigScannerStaticData::m_modules_info.array[i];
+                // only log modules with unique addresses (non-modular builds have everything in MainExe)
+                if (i == static_cast<size_t>(ScanTarget::MainExe) || main_exe_ptr != module.base_address)
+                {
+                    auto module_name = to_system(ScanTargetToString(i));
+                    // FIXME: FIX Why this won't WORK?
+                    // Output::send(SYSSTR("{} @ {} size={:#x}\n"), module_name, module.base_address, module.size);
+                }
+            }
+#else
 
+#endif
             fire_unreal_init_for_cpp_mods();
             setup_unreal_properties();
             UAssetRegistry::SetMaxMemoryUsageDuringAssetLoading(settings_manager.Memory.MaxMemoryUsageDuringAssetLoading);
@@ -367,21 +408,22 @@ namespace RC
         }
     }
 
-    auto UE4SSProgram::setup_paths(const std::wstring& moduleFilePathString) -> void
+    auto UE4SSProgram::setup_paths(const SystemStringType& moduleFilePathString) -> void
     {
         ProfilerScope();
         const std::filesystem::path moduleFilePath = std::filesystem::path(moduleFilePathString);
-        m_root_directory = moduleFilePath.parent_path().wstring();
-        m_module_file_path = moduleFilePath.wstring();
+        m_root_directory = to_system(moduleFilePath.parent_path());
+        m_module_file_path = to_system(moduleFilePath);
 
         // The default working directory is the root directory
         // Can be changed by creating a <GameName> directory in the root directory
         // At that point, the working directory will be "root/<GameName>"
         m_working_directory = m_root_directory;
 
-        wchar_t exe_path_buffer[1024];
-        GetModuleFileNameW(GetModuleHandle(nullptr), exe_path_buffer, 1023);
-        std::filesystem::path game_exe_path = exe_path_buffer;
+        // Default file to open if there is no game specific config
+        m_default_settings_path_and_file = m_root_directory / m_settings_file_name;
+
+        std::filesystem::path game_exe_path = get_executable_path();
         std::filesystem::path game_directory_path = game_exe_path.parent_path();
         m_legacy_root_directory = game_directory_path;
 
@@ -392,8 +434,8 @@ namespace RC
         m_game_path_and_exe_name = game_exe_path;
         m_object_dumper_output_directory = m_working_directory;
 
-        // Allow loading of DLLs from the game directory
-        AddDllDirectory(game_exe_path.c_str());
+        // Allow loading of DLLs from mod folders
+        add_dlsearch_folder(game_exe_path);
 
         for (const auto& item : std::filesystem::directory_iterator(m_root_directory))
         {
@@ -406,7 +448,7 @@ namespace RC
             {
                 m_has_game_specific_config = true;
                 m_working_directory = item.path();
-                m_mods_directory = item.path().wstring() + L"\\Mods";
+                m_mods_directory = item.path() / SYSSTR("Mods");
                 m_settings_path_and_file = std::move(item.path());
                 m_log_directory = m_working_directory;
                 m_object_dumper_output_directory = m_working_directory;
@@ -416,24 +458,34 @@ namespace RC
         }
 
         m_log_directory = m_working_directory;
-        m_settings_path_and_file.append(m_settings_file_name);
-
-        // Check for legacy locations and update paths accordingly
-        if (std::filesystem::exists(m_legacy_root_directory / m_settings_file_name) && !std::filesystem::exists(m_settings_path_and_file))
+        auto resolaved_settings_file = File::get_path_if_exists(m_settings_path_and_file, m_settings_file_name);
+        if (resolaved_settings_file)
         {
-            m_settings_path_and_file = m_legacy_root_directory / m_settings_file_name;
+            m_settings_path_and_file = *resolaved_settings_file;
         }
+        else
+        {
+            // Check for legacy locations and update paths accordingly
+            auto resolaved_legacy_settings_file = File::get_path_if_exists(m_legacy_root_directory, m_settings_file_name);
+            if (resolaved_legacy_settings_file)
+            {
+                m_settings_path_and_file = *resolaved_legacy_settings_file;
+            } else {
+                throw std::runtime_error{"UE4SS-Settings.ini file not found"};
+            }
+        }
+
         if (std::filesystem::exists(m_legacy_root_directory / "Mods") && !std::filesystem::exists(m_mods_directory))
         {
             m_mods_directory = m_legacy_root_directory / "Mods";
         }
     }
 
-    auto UE4SSProgram::create_emergency_console_for_early_error(File::StringViewType error_message) -> void
+    auto UE4SSProgram::create_emergency_console_for_early_error(SystemStringViewType error_message) -> void
     {
         settings_manager.Debug.SimpleConsoleEnabled = true;
         create_simple_console();
-        printf_s("%S\n", error_message.data());
+        printf_s(SystemStringPrint "\n", error_message.data());
     }
 
     auto UE4SSProgram::setup_mod_directory_path() -> void
@@ -456,10 +508,10 @@ namespace RC
         {
             m_debug_console_device = &Output::set_default_devices<Output::DebugConsoleDevice>();
             Output::set_default_log_level<LogLevel::Normal>();
-            m_debug_console_device->set_formatter([](File::StringViewType string) -> File::StringType {
-                return std::format(STR("[{}] {}"), std::format(STR("{:%X}"), std::chrono::system_clock::now()), string);
+            m_debug_console_device->set_formatter([](SystemStringViewType string) -> SystemStringType {
+                return std::format(SYSSTR("[{}] {}"), std::format(SYSSTR("{:%X}"), std::chrono::system_clock::now()), string);
             });
-
+#ifdef WIN32
             if (AllocConsole())
             {
                 FILE* stdin_filename;
@@ -469,6 +521,7 @@ namespace RC
                 freopen_s(&stdout_filename, "CONOUT$", "w", stdout);
                 freopen_s(&stderr_filename, "CONOUT$", "w", stderr);
             }
+#endif
         }
     }
 
@@ -478,10 +531,11 @@ namespace RC
         if (std::filesystem::exists(file_path))
         {
             auto file = File::open(file_path);
-            if (auto file_contents = file.read_all(); !file_contents.empty())
+            if (auto file_contents = file.read_file_all(); !file_contents.empty())
             {
                 Ini::Parser parser;
-                parser.parse(file_contents);
+                auto content = to_system_string(file_contents);
+                parser.parse(content);
                 file.close();
 
                 // The following code is auto-generated.
@@ -493,8 +547,10 @@ namespace RC
     auto UE4SSProgram::setup_unreal() -> void
     {
         ProfilerScope();
+        Output::send(SYSSTR("Setting up unreal\n"));
+
         // Retrieve offsets from the config file
-        const std::wstring offset_overrides_section{L"OffsetOverrides"};
+        const SystemStringType offset_overrides_section{SYSSTR("OffsetOverrides")};
 
         load_unreal_offsets_from_file();
 
@@ -562,7 +618,8 @@ namespace RC
         // Virtual function offset overrides
         TRY([&]() {
             ProfilerScopeNamed("loading virtual function offset overrides");
-            static File::StringType virtual_function_offset_override_file{(m_working_directory / STR("VTableLayout.ini")).wstring()};
+            fprintf(stderr, "Loading offset\n");
+            static auto virtual_function_offset_override_file{m_working_directory / SYSSTR("VTableLayout.ini")};
             if (std::filesystem::exists(virtual_function_offset_override_file))
             {
                 auto file =
@@ -570,72 +627,75 @@ namespace RC
                 Ini::Parser parser;
                 parser.parse(file);
 
-                Output::send<Color::Blue>(STR("Getting ordered lists from ini file\n"));
+                Output::send<Color::Blue>(SYSSTR("Getting ordered lists from ini file\n"));
 
                 auto calculate_virtual_function_offset = []<typename... BaseSizes>(uint32_t current_index, BaseSizes... base_sizes) -> uint32_t {
                     return current_index == 0 ? 0 : (current_index + (base_sizes + ...)) * 8;
                 };
 
-                auto retrieve_vtable_layout_from_ini = [&](const File::StringType& section_name, auto callable) -> uint32_t {
+                auto retrieve_vtable_layout_from_ini = [&](const SystemStringType& section_name, auto callable) -> uint32_t {
                     auto list = parser.get_ordered_list(section_name);
                     uint32_t vtable_size = list.size() - 1;
-                    list.for_each([&](uint32_t index, File::StringType& item) {
-                        callable(index, item);
+                    list.for_each([&](uint32_t index, SystemStringType& item) {
+                        auto ue_str = to_ue(item);
+                        callable(index, item, ue_str);
                     });
                     return vtable_size;
                 };
 
-                Output::send<Color::Blue>(STR("UObjectBase\n"));
-                uint32_t uobjectbase_size = retrieve_vtable_layout_from_ini(STR("UObjectBase"), [&](uint32_t index, File::StringType& item) {
-                    uint32_t offset = calculate_virtual_function_offset(index, 0);
-                    Output::send(STR("UObjectBase::{} = 0x{:X}\n"), item, offset);
-                    Unreal::UObjectBase::VTableLayoutMap.emplace(item, offset);
-                });
+                Output::send<Color::Blue>(SYSSTR("UObjectBase\n"));
+                uint32_t uobjectbase_size =
+                        retrieve_vtable_layout_from_ini(SYSSTR("UObjectBase"), [&](uint32_t index, SystemStringType& item, UEStringType& item_ue) {
+                            uint32_t offset = calculate_virtual_function_offset(index, 0);
+                            Output::send(SYSSTR("UObjectBase::{} = 0x{:X}\n"), item, offset);
+                            Unreal::UObjectBase::VTableLayoutMap.emplace(item_ue, offset);
+                        });
 
-                Output::send<Color::Blue>(STR("UObjectBaseUtility\n"));
-                uint32_t uobjectbaseutility_size = retrieve_vtable_layout_from_ini(STR("UObjectBaseUtility"), [&](uint32_t index, File::StringType& item) {
-                    uint32_t offset = calculate_virtual_function_offset(index, uobjectbase_size);
-                    Output::send(STR("UObjectBaseUtility::{} = 0x{:X}\n"), item, offset);
-                    Unreal::UObjectBaseUtility::VTableLayoutMap.emplace(item, offset);
-                });
+                Output::send<Color::Blue>(SYSSTR("UObjectBaseUtility\n"));
+                uint32_t uobjectbaseutility_size =
+                        retrieve_vtable_layout_from_ini(SYSSTR("UObjectBaseUtility"), [&](uint32_t index, SystemStringType& item, UEStringType& item_ue) {
+                            uint32_t offset = calculate_virtual_function_offset(index, uobjectbase_size);
+                            Output::send(SYSSTR("UObjectBaseUtility::{} = 0x{:X}\n"), item, offset);
+                            Unreal::UObjectBaseUtility::VTableLayoutMap.emplace(item_ue, offset);
+                        });
 
-                Output::send<Color::Blue>(STR("UObject\n"));
-                uint32_t uobject_size = retrieve_vtable_layout_from_ini(STR("UObject"), [&](uint32_t index, File::StringType& item) {
+                Output::send<Color::Blue>(SYSSTR("UObject\n"));
+                uint32_t uobject_size = retrieve_vtable_layout_from_ini(SYSSTR("UObject"), [&](uint32_t index, SystemStringType& item, UEStringType& item_ue) {
                     uint32_t offset = calculate_virtual_function_offset(index, uobjectbase_size, uobjectbaseutility_size);
-                    Output::send(STR("UObject::{} = 0x{:X}\n"), item, offset);
-                    Unreal::UObject::VTableLayoutMap.emplace(item, offset);
+                    Output::send(SYSSTR("UObject::{} = 0x{:X}\n"), item, offset);
+                    Unreal::UObject::VTableLayoutMap.emplace(item_ue, offset);
                 });
 
-                Output::send<Color::Blue>(STR("UField\n"));
-                uint32_t ufield_size = retrieve_vtable_layout_from_ini(STR("UField"), [&](uint32_t index, File::StringType& item) {
+                Output::send<Color::Blue>(SYSSTR("UField\n"));
+                uint32_t ufield_size = retrieve_vtable_layout_from_ini(SYSSTR("UField"), [&](uint32_t index, SystemStringType& item, UEStringType& item_ue) {
                     uint32_t offset = calculate_virtual_function_offset(index, uobjectbase_size, uobjectbaseutility_size, uobject_size);
-                    Output::send(STR("UField::{} = 0x{:X}\n"), item, offset);
-                    Unreal::UField::VTableLayoutMap.emplace(item, offset);
+                    Output::send(SYSSTR("UField::{} = 0x{:X}\n"), item, offset);
+                    Unreal::UField::VTableLayoutMap.emplace(item_ue, offset);
                 });
 
-                Output::send<Color::Blue>(STR("UEngine\n"));
-                uint32_t uengine_size = retrieve_vtable_layout_from_ini(STR("UEngine"), [&](uint32_t index, File::StringType& item) {
+                Output::send<Color::Blue>(SYSSTR("UEngine\n"));
+                uint32_t uengine_size = retrieve_vtable_layout_from_ini(SYSSTR("UEngine"), [&](uint32_t index, SystemStringType& item, UEStringType& item_ue) {
                     uint32_t offset = calculate_virtual_function_offset(index, uobjectbase_size, uobjectbaseutility_size, uobject_size);
-                    Output::send(STR("UEngine::{} = 0x{:X}\n"), item, offset);
-                    Unreal::UEngine::VTableLayoutMap.emplace(item, offset);
+                    Output::send(SYSSTR("UEngine::{} = 0x{:X}\n"), item, offset);
+                    Unreal::UEngine::VTableLayoutMap.emplace(item_ue, offset);
                 });
 
-                Output::send<Color::Blue>(STR("UScriptStruct::ICppStructOps\n"));
-                retrieve_vtable_layout_from_ini(STR("UScriptStruct::ICppStructOps"), [&](uint32_t index, File::StringType& item) {
+                Output::send<Color::Blue>(SYSSTR("UScriptStruct::ICppStructOps\n"));
+                retrieve_vtable_layout_from_ini(SYSSTR("UScriptStruct::ICppStructOps"), [&](uint32_t index, SystemStringType& item, UEStringType& item_ue) {
                     uint32_t offset = calculate_virtual_function_offset(index, 0);
-                    Output::send(STR("UScriptStruct::ICppStructOps::{} = 0x{:X}\n"), item, offset);
-                    Unreal::UScriptStruct::ICppStructOps::VTableLayoutMap.emplace(item, offset);
+                    Output::send(SYSSTR("UScriptStruct::ICppStructOps::{} = 0x{:X}\n"), item, offset);
+                    Unreal::UScriptStruct::ICppStructOps::VTableLayoutMap.emplace(item_ue, offset);
                 });
 
-                Output::send<Color::Blue>(STR("FField\n"));
-                uint32_t ffield_size = retrieve_vtable_layout_from_ini(STR("FField"), [&](uint32_t index, File::StringType& item) {
+                Output::send<Color::Blue>(SYSSTR("FField\n"));
+                uint32_t ffield_size = retrieve_vtable_layout_from_ini(SYSSTR("FField"), [&](uint32_t index, SystemStringType& item, UEStringType& item_ue) {
                     uint32_t offset = calculate_virtual_function_offset(index, 0);
-                    Output::send(STR("FField::{} = 0x{:X}\n"), item, offset);
-                    Unreal::FField::VTableLayoutMap.emplace(item, offset);
+                    Output::send(SYSSTR("FField::{} = 0x{:X}\n"), item, offset);
+                    Unreal::FField::VTableLayoutMap.emplace(item_ue, offset);
                 });
 
-                Output::send<Color::Blue>(STR("FProperty\n"));
-                uint32_t fproperty_size = retrieve_vtable_layout_from_ini(STR("FProperty"), [&](uint32_t index, File::StringType& item) {
+                Output::send<Color::Blue>(SYSSTR("FProperty\n"));
+                uint32_t fproperty_size = retrieve_vtable_layout_from_ini(SYSSTR("FProperty"), [&](uint32_t index, SystemStringType& item, UEStringType& item_ue) {
                     uint32_t offset{};
                     if (Unreal::Version::IsBelow(4, 25))
                     {
@@ -645,8 +705,8 @@ namespace RC
                     {
                         offset = calculate_virtual_function_offset(index, ffield_size);
                     }
-                    Output::send(STR("FProperty::{} = 0x{:X}\n"), item, offset);
-                    Unreal::FProperty::VTableLayoutMap.emplace(item, offset);
+                    Output::send(SYSSTR("FProperty::{} = 0x{:X}\n"), item, offset);
+                    Unreal::FProperty::VTableLayoutMap.emplace(item_ue, offset);
                 });
 
                 // If the engine version is <4.25 then the inheritance is different and we must take that into consideration.
@@ -659,66 +719,67 @@ namespace RC
                     fproperty_size = ffield_size + fproperty_size;
                 }
 
-                Output::send<Color::Blue>(STR("FNumericProperty\n"));
-                retrieve_vtable_layout_from_ini(STR("FNumericProperty"), [&](uint32_t index, File::StringType& item) {
+                Output::send<Color::Blue>(SYSSTR("FNumericProperty\n"));
+                retrieve_vtable_layout_from_ini(SYSSTR("FNumericProperty"), [&](uint32_t index, SystemStringType& item, UEStringType& item_ue) {
                     uint32_t offset = calculate_virtual_function_offset(index, fproperty_size);
-                    Output::send(STR("FNumericProperty::{} = 0x{:X}\n"), item, offset);
-                    Unreal::FNumericProperty::VTableLayoutMap.emplace(item, offset);
+                    Output::send(SYSSTR("FNumericProperty::{} = 0x{:X}\n"), item, offset);
+                    Unreal::FNumericProperty::VTableLayoutMap.emplace(item_ue, offset);
                 });
 
-                Output::send<Color::Blue>(STR("FMulticastDelegateProperty\n"));
-                retrieve_vtable_layout_from_ini(STR("FMulticastDelegateProperty"), [&](uint32_t index, File::StringType& item) {
+                Output::send<Color::Blue>(SYSSTR("FMulticastDelegateProperty\n"));
+                retrieve_vtable_layout_from_ini(SYSSTR("FMulticastDelegateProperty"), [&](uint32_t index, SystemStringType& item, UEStringType& item_ue) {
                     uint32_t offset = calculate_virtual_function_offset(index, fproperty_size);
-                    Output::send(STR("FMulticastDelegateProperty::{} = 0x{:X}\n"), item, offset);
-                    Unreal::FMulticastDelegateProperty::VTableLayoutMap.emplace(item, offset);
+                    Output::send(SYSSTR("FMulticastDelegateProperty::{} = 0x{:X}\n"), item, offset);
+                    Unreal::FMulticastDelegateProperty::VTableLayoutMap.emplace(item_ue, offset);
                 });
 
-                Output::send<Color::Blue>(STR("FObjectPropertyBase\n"));
-                retrieve_vtable_layout_from_ini(STR("FObjectPropertyBase"), [&](uint32_t index, File::StringType& item) {
+                Output::send<Color::Blue>(SYSSTR("FObjectPropertyBase\n"));
+                retrieve_vtable_layout_from_ini(SYSSTR("FObjectPropertyBase"), [&](uint32_t index, SystemStringType& item, UEStringType& item_ue) {
                     uint32_t offset = calculate_virtual_function_offset(index, fproperty_size);
-                    Output::send(STR("FObjectPropertyBase::{} = 0x{:X}\n"), item, offset);
-                    Unreal::FObjectPropertyBase::VTableLayoutMap.emplace(item, offset);
+                    Output::send(SYSSTR("FObjectPropertyBase::{} = 0x{:X}\n"), item, offset);
+                    Unreal::FObjectPropertyBase::VTableLayoutMap.emplace(item_ue, offset);
                 });
 
-                Output::send<Color::Blue>(STR("UStruct\n"));
-                retrieve_vtable_layout_from_ini(STR("UStruct"), [&](uint32_t index, File::StringType& item) {
+                Output::send<Color::Blue>(SYSSTR("UStruct\n"));
+                retrieve_vtable_layout_from_ini(SYSSTR("UStruct"), [&](uint32_t index, SystemStringType& item, UEStringType& item_ue) {
                     uint32_t offset = calculate_virtual_function_offset(index, uobjectbase_size, uobjectbaseutility_size, uobject_size, ufield_size);
-                    Output::send(STR("UStruct::{} = 0x{:X}\n"), item, offset);
-                    Unreal::UStruct::VTableLayoutMap.emplace(item, offset);
+                    Output::send(SYSSTR("UStruct::{} = 0x{:X}\n"), item, offset);
+                    Unreal::UStruct::VTableLayoutMap.emplace(item_ue, offset);
                 });
 
-                Output::send<Color::Blue>(STR("FOutputDevice\n"));
-                retrieve_vtable_layout_from_ini(STR("FOutputDevice"), [&](uint32_t index, File::StringType& item) {
+                Output::send<Color::Blue>(SYSSTR("FOutputDevice\n"));
+                retrieve_vtable_layout_from_ini(SYSSTR("FOutputDevice"), [&](uint32_t index, SystemStringType& item, UEStringType& item_ue) {
                     uint32_t offset = calculate_virtual_function_offset(index, 0);
-                    Output::send(STR("FOutputDevice::{} = 0x{:X}\n"), item, offset);
-                    Unreal::FOutputDevice::VTableLayoutMap.emplace(item, offset);
+                    Output::send(SYSSTR("FOutputDevice::{} = 0x{:X}\n"), item, offset);
+                    Unreal::FOutputDevice::VTableLayoutMap.emplace(item_ue, offset);
                 });
 
-                Output::send<Color::Blue>(STR("FMalloc\n"));
-                retrieve_vtable_layout_from_ini(STR("FMalloc"), [&](uint32_t index, File::StringType& item) {
+                Output::send<Color::Blue>(SYSSTR("FMalloc\n"));
+                retrieve_vtable_layout_from_ini(SYSSTR("FMalloc"), [&](uint32_t index, SystemStringType& item, UEStringType& item_ue) {
                     // We don't support FExec, so we're manually telling it the size.
                     static constexpr uint32_t fexec_size = 1;
                     uint32_t offset = calculate_virtual_function_offset(index, fexec_size);
-                    Output::send(STR("FMalloc::{} = 0x{:X}\n"), item, offset);
-                    Unreal::FMalloc::VTableLayoutMap.emplace(item, offset);
+                    Output::send(SYSSTR("FMalloc::{} = 0x{:X}\n"), item, offset);
+                    Unreal::FMalloc::VTableLayoutMap.emplace(item_ue, offset);
                 });
 
-                Output::send<Color::Blue>(STR("AActor\n"));
-                uint32_t aactor_size = retrieve_vtable_layout_from_ini(STR("AActor"), [&](uint32_t index, File::StringType& item) {
+                Output::send<Color::Blue>(SYSSTR("AActor\n"));
+                uint32_t aactor_size = retrieve_vtable_layout_from_ini(SYSSTR("AActor"), [&](uint32_t index, SystemStringType& item, UEStringType& item_ue) {
                     uint32_t offset = calculate_virtual_function_offset(index, uobjectbase_size, uobjectbaseutility_size, uobject_size);
-                    Output::send(STR("AActor::{} = 0x{:X}\n"), item, offset);
-                    Unreal::AActor::VTableLayoutMap.emplace(item, offset);
+                    Output::send(SYSSTR("AActor::{} = 0x{:X}\n"), item, offset);
+                    Unreal::AActor::VTableLayoutMap.emplace(item_ue, offset);
                 });
 
-                Output::send<Color::Blue>(STR("AGameModeBase\n"));
-                uint32_t agamemodebase_size = retrieve_vtable_layout_from_ini(STR("AGameModeBase"), [&](uint32_t index, File::StringType& item) {
-                    uint32_t offset = calculate_virtual_function_offset(index, uobjectbase_size, uobjectbaseutility_size, uobject_size, aactor_size);
-                    Output::send(STR("AGameModeBase::{} = 0x{:X}\n"), item, offset);
-                    Unreal::AGameModeBase::VTableLayoutMap.emplace(item, offset);
-                });
+                Output::send<Color::Blue>(SYSSTR("AGameModeBase\n"));
+                uint32_t agamemodebase_size =
+                        retrieve_vtable_layout_from_ini(SYSSTR("AGameModeBase"), [&](uint32_t index, SystemStringType& item, UEStringType& item_ue) {
+                            uint32_t offset = calculate_virtual_function_offset(index, uobjectbase_size, uobjectbaseutility_size, uobject_size, aactor_size);
+                            Output::send(SYSSTR("AGameModeBase::{} = 0x{:X}\n"), item, offset);
+                            Unreal::AGameModeBase::VTableLayoutMap.emplace(item_ue, offset);
+                        });
 
-                Output::send<Color::Blue>(STR("AGameMode\n"));
-                retrieve_vtable_layout_from_ini(STR("AGameMode"), [&](uint32_t index, File::StringType& item) {
+                Output::send<Color::Blue>(SYSSTR("AGameMode\n"));
+                retrieve_vtable_layout_from_ini(SYSSTR("AGameMode"), [&](uint32_t index, SystemStringType& item, UEStringType& item_ue) {
                     uint32_t offset = calculate_virtual_function_offset(index,
                                                                         Unreal::Version::IsAtLeast(4, 14)
                                                                         ? uobjectbase_size,
@@ -730,28 +791,31 @@ namespace RC
                                                                         uobjectbaseutility_size,
                                                                         uobject_size,
                                                                         aactor_size);
-                    Output::send(STR("AGameMode::{} = 0x{:X}\n"), item, offset);
-                    Unreal::AGameMode::VTableLayoutMap.emplace(item, offset);
+                    Output::send(SYSSTR("AGameMode::{} = 0x{:X}\n"), item, offset);
+                    Unreal::AGameMode::VTableLayoutMap.emplace(item_ue, offset);
                 });
 
-                Output::send<Color::Blue>(STR("UPlayer\n"));
-                uint32_t uplayer_size = retrieve_vtable_layout_from_ini(STR("UPlayer"), [&](uint32_t index, File::StringType& item) {
+                Output::send<Color::Blue>(SYSSTR("UPlayer\n"));
+                uint32_t uplayer_size = retrieve_vtable_layout_from_ini(SYSSTR("UPlayer"), [&](uint32_t index, SystemStringType& item, UEStringType& item_ue) {
                     uint32_t offset = calculate_virtual_function_offset(index, uobjectbase_size, uobjectbaseutility_size, uobject_size);
-                    Output::send(STR("UPlayer::{} = 0x{:X}\n"), item, offset);
-                    Unreal::UPlayer::VTableLayoutMap.emplace(item, offset);
+                    Output::send(SYSSTR("UPlayer::{} = 0x{:X}\n"), item, offset);
+                    Unreal::UPlayer::VTableLayoutMap.emplace(item_ue, offset);
                 });
 
-                Output::send<Color::Blue>(STR("ULocalPlayer\n"));
-                retrieve_vtable_layout_from_ini(STR("ULocalPlayer"), [&](uint32_t index, File::StringType& item) {
+                Output::send<Color::Blue>(SYSSTR("ULocalPlayer\n"));
+                retrieve_vtable_layout_from_ini(SYSSTR("ULocalPlayer"), [&](uint32_t index, SystemStringType& item, UEStringType& item_ue) {
                     uint32_t offset = calculate_virtual_function_offset(index, uobjectbase_size, uobjectbaseutility_size, uobject_size, uplayer_size);
-                    Output::send(STR("ULocalPlayer::{} = 0x{:X}\n"), item, offset);
-                    Unreal::ULocalPlayer::VTableLayoutMap.emplace(item, offset);
+                    Output::send(SYSSTR("ULocalPlayer::{} = 0x{:X}\n"), item, offset);
+                    Unreal::ULocalPlayer::VTableLayoutMap.emplace(item_ue, offset);
                 });
 
                 file.close();
             }
+
+            fprintf(stderr, "Loading offset done\n");
         });
 
+        fprintf(stderr, "Setting hooks\n");
         config.bHookProcessInternal = settings_manager.Hooks.HookProcessInternal;
         config.bHookProcessLocalScriptFunction = settings_manager.Hooks.HookProcessLocalScriptFunction;
         config.bHookLoadMap = settings_manager.Hooks.HookLoadMap;
@@ -761,23 +825,23 @@ namespace RC
         config.bHookLocalPlayerExec = settings_manager.Hooks.HookLocalPlayerExec;
         config.bHookAActorTick = settings_manager.Hooks.HookAActorTick;
         config.FExecVTableOffsetInLocalPlayer = settings_manager.Hooks.FExecVTableOffsetInLocalPlayer;
-
+        fprintf(stderr, "Before UnrealInitializer::Initialize\n");
         Unreal::UnrealInitializer::Initialize(config);
 
         bool can_create_custom_events{true};
         if (!UObject::ProcessLocalScriptFunctionInternal.is_ready() && Unreal::Version::IsAtLeast(4, 22))
         {
             can_create_custom_events = false;
-            Output::send<LogLevel::Warning>(STR("ProcessLocalScriptFunction is not available, the following features will be unavailable:\n"));
+            Output::send<LogLevel::Warning>(SYSSTR("ProcessLocalScriptFunction is not available, the following features will be unavailable:\n"));
         }
         else if (!UObject::ProcessInternalInternal.is_ready() && Unreal::Version::IsBelow(4, 22))
         {
             can_create_custom_events = false;
-            Output::send<LogLevel::Warning>(STR("ProcessInternal is not available, the following features will be unavailable:\n"));
+            Output::send<LogLevel::Warning>(SYSSTR("ProcessInternal is not available, the following features will be unavailable:\n"));
         }
         if (!can_create_custom_events)
         {
-            Output::send<LogLevel::Warning>(STR("<Put function here responsible for creating custom UFunctions or events for BPs>\n"));
+            Output::send<LogLevel::Warning>(SYSSTR("<Put function here responsible for creating custom UFunctions or events for BPs>\n"));
         }
     }
 
@@ -787,7 +851,7 @@ namespace RC
         m_shared_functions.set_script_variable_default_data_function = &LuaLibrary::set_script_variable_default_data;
         m_shared_functions.call_script_function_function = &LuaLibrary::call_script_function;
         m_shared_functions.is_ue4ss_initialized_function = &LuaLibrary::is_ue4ss_initialized;
-        Output::send(STR("m_shared_functions: {}\n"), static_cast<void*>(&m_shared_functions));
+        Output::send(SYSSTR("m_shared_functions: {}\n"), static_cast<void*>(&m_shared_functions));
     }
 
     auto UE4SSProgram::on_program_start() -> void
@@ -799,7 +863,7 @@ namespace RC
         /*
         UObjectArray::AddUObjectCreateListener(&FUEDeathListener::UEDeathListener);
         //*/
-
+#ifdef HAS_UI
         if (settings_manager.Debug.DebugConsoleEnabled)
         {
             if (settings_manager.General.UseUObjectArrayCache)
@@ -810,7 +874,7 @@ namespace RC
             {
                 m_debugging_gui.get_live_view().set_listeners_allowed(false);
             }
-
+#ifdef HAS_INPUT
             m_input_handler.register_keydown_event(Input::Key::O, {Input::ModifierKey::CONTROL}, [&]() {
                 TRY([&] {
                     auto was_gui_open = get_debugging_ui().is_open();
@@ -822,7 +886,9 @@ namespace RC
                     }
                 });
             });
+#endif
         }
+#endif
 
 #ifdef TIME_FUNCTION_MACRO_ENABLED
         m_input_handler.register_keydown_event(Input::Key::Y, {Input::ModifierKey::CONTROL}, [&]() {
@@ -830,19 +896,19 @@ namespace RC
             {
                 FunctionTimerFrame::stop_profiling();
                 FunctionTimerFrame::dump_profile();
-                Output::send(STR("Profiler stopped & dumped\n"));
+                Output::send(SYSSTR("Profiler stopped & dumped\n"));
             }
             else
             {
                 FunctionTimerFrame::start_profiling();
-                Output::send(STR("Profiler started\n"));
+                Output::send(SYSSTR("Profiler started\n"));
             }
         });
 #endif
 
         TRY([&] {
             ObjectDumper::init();
-
+#ifdef HAS_INPUT
             if (settings_manager.General.EnableHotReloadSystem)
             {
                 m_input_handler.register_keydown_event(Input::Key::R, {Input::ModifierKey::CONTROL}, [&]() {
@@ -851,13 +917,27 @@ namespace RC
                     });
                 });
             }
-
+#endif
             if ((settings_manager.ObjectDumper.LoadAllAssetsBeforeDumpingObjects || settings_manager.CXXHeaderGenerator.LoadAllAssetsBeforeGeneratingCXXHeaders) &&
                 Unreal::Version::IsBelow(4, 17))
             {
                 Output::send<LogLevel::Warning>(
-                        STR("FAssetData not available in <4.17, ignoring 'LoadAllAssetsBeforeDumpingObjects' & 'LoadAllAssetsBeforeGeneratingCXXHeaders'."));
+                        SYSSTR("FAssetData not available in <4.17, ignoring 'LoadAllAssetsBeforeDumpingObjects' & 'LoadAllAssetsBeforeGeneratingCXXHeaders'."));
             }
+
+#ifdef HAS_INPUT
+            if (!settings_manager.General.InputSource.empty())
+            {
+                if (m_input_handler.set_input_source(to_string(settings_manager.General.InputSource)))
+                {
+                    Output::send(SYSSTR("Input source set to: {}\n"), m_input_handler.get_current_input_source());
+                }
+                else
+                {
+                    Output::send<LogLevel::Error>(SYSSTR("Failed to set input source to: {}\n"), settings_manager.General.InputSource);
+                }
+            }
+#endif
 
             install_lua_mods();
             LuaMod::on_program_start();
@@ -865,12 +945,14 @@ namespace RC
             start_lua_mods();
         });
 
+#ifdef HAS_INPUT
         if (settings_manager.General.EnableDebugKeyBindings)
         {
             m_input_handler.register_keydown_event(Input::Key::NUM_NINE, {Input::ModifierKey::CONTROL}, [&]() {
                 generate_uht_compatible_headers();
             });
         }
+#endif
     }
 
     auto UE4SSProgram::update() -> void
@@ -879,7 +961,7 @@ namespace RC
 
         on_program_start();
 
-        Output::send(STR("Event loop start\n"));
+        Output::send(SYSSTR("Event loop start\n"));
         for (m_processing_events = true; m_processing_events;)
         {
             if (m_pause_events_processing || UE4SSProgram::unreal_is_shutting_down)
@@ -929,9 +1011,9 @@ namespace RC
                 }
             }
             //*/
-
+#ifdef HAS_INPUT
             m_input_handler.process_event();
-
+#endif
             {
                 ProfilerScopeNamed("mod update processing");
 
@@ -947,40 +1029,40 @@ namespace RC
             std::this_thread::sleep_for(std::chrono::milliseconds(5));
             ProfilerFrameMark();
         }
-        Output::send(STR("Event loop end\n"));
+        Output::send(SYSSTR("Event loop end\n"));
     }
 
     auto UE4SSProgram::setup_unreal_properties() -> void
     {
-        LuaType::StaticState::m_property_value_pushers.emplace(FName(L"ObjectProperty").GetComparisonIndex(), &LuaType::push_objectproperty);
-        LuaType::StaticState::m_property_value_pushers.emplace(FName(L"ClassProperty").GetComparisonIndex(), &LuaType::push_classproperty);
-        LuaType::StaticState::m_property_value_pushers.emplace(FName(L"Int8Property").GetComparisonIndex(), &LuaType::push_int8property);
-        LuaType::StaticState::m_property_value_pushers.emplace(FName(L"Int16Property").GetComparisonIndex(), &LuaType::push_int16property);
-        LuaType::StaticState::m_property_value_pushers.emplace(FName(L"IntProperty").GetComparisonIndex(), &LuaType::push_intproperty);
-        LuaType::StaticState::m_property_value_pushers.emplace(FName(L"Int64Property").GetComparisonIndex(), &LuaType::push_int64property);
-        LuaType::StaticState::m_property_value_pushers.emplace(FName(L"ByteProperty").GetComparisonIndex(), &LuaType::push_byteproperty);
-        LuaType::StaticState::m_property_value_pushers.emplace(FName(L"UInt16Property").GetComparisonIndex(), &LuaType::push_uint16property);
-        LuaType::StaticState::m_property_value_pushers.emplace(FName(L"UInt32Property").GetComparisonIndex(), &LuaType::push_uint32property);
-        LuaType::StaticState::m_property_value_pushers.emplace(FName(L"UInt64Property").GetComparisonIndex(), &LuaType::push_uint64property);
-        LuaType::StaticState::m_property_value_pushers.emplace(FName(L"StructProperty").GetComparisonIndex(), &LuaType::push_structproperty);
-        LuaType::StaticState::m_property_value_pushers.emplace(FName(L"ArrayProperty").GetComparisonIndex(), &LuaType::push_arrayproperty);
-        LuaType::StaticState::m_property_value_pushers.emplace(FName(L"FloatProperty").GetComparisonIndex(), &LuaType::push_floatproperty);
-        LuaType::StaticState::m_property_value_pushers.emplace(FName(L"DoubleProperty").GetComparisonIndex(), &LuaType::push_doubleproperty);
-        LuaType::StaticState::m_property_value_pushers.emplace(FName(L"BoolProperty").GetComparisonIndex(), &LuaType::push_boolproperty);
-        LuaType::StaticState::m_property_value_pushers.emplace(FName(L"EnumProperty").GetComparisonIndex(), &LuaType::push_enumproperty);
-        LuaType::StaticState::m_property_value_pushers.emplace(FName(L"WeakObjectProperty").GetComparisonIndex(), &LuaType::push_weakobjectproperty);
-        LuaType::StaticState::m_property_value_pushers.emplace(FName(L"NameProperty").GetComparisonIndex(), &LuaType::push_nameproperty);
-        LuaType::StaticState::m_property_value_pushers.emplace(FName(L"TextProperty").GetComparisonIndex(), &LuaType::push_textproperty);
-        LuaType::StaticState::m_property_value_pushers.emplace(FName(L"StrProperty").GetComparisonIndex(), &LuaType::push_strproperty);
-        LuaType::StaticState::m_property_value_pushers.emplace(FName(L"SoftClassProperty").GetComparisonIndex(), &LuaType::push_softclassproperty);
-        LuaType::StaticState::m_property_value_pushers.emplace(FName(L"InterfaceProperty").GetComparisonIndex(), &LuaType::push_interfaceproperty);
+        LuaType::StaticState::m_property_value_pushers.emplace(FName(STR("ObjectProperty")).GetComparisonIndex(), &LuaType::push_objectproperty);
+        LuaType::StaticState::m_property_value_pushers.emplace(FName(STR("ClassProperty")).GetComparisonIndex(), &LuaType::push_classproperty);
+        LuaType::StaticState::m_property_value_pushers.emplace(FName(STR("Int8Property")).GetComparisonIndex(), &LuaType::push_int8property);
+        LuaType::StaticState::m_property_value_pushers.emplace(FName(STR("Int16Property")).GetComparisonIndex(), &LuaType::push_int16property);
+        LuaType::StaticState::m_property_value_pushers.emplace(FName(STR("IntProperty")).GetComparisonIndex(), &LuaType::push_intproperty);
+        LuaType::StaticState::m_property_value_pushers.emplace(FName(STR("Int64Property")).GetComparisonIndex(), &LuaType::push_int64property);
+        LuaType::StaticState::m_property_value_pushers.emplace(FName(STR("ByteProperty")).GetComparisonIndex(), &LuaType::push_byteproperty);
+        LuaType::StaticState::m_property_value_pushers.emplace(FName(STR("UInt16Property")).GetComparisonIndex(), &LuaType::push_uint16property);
+        LuaType::StaticState::m_property_value_pushers.emplace(FName(STR("UInt32Property")).GetComparisonIndex(), &LuaType::push_uint32property);
+        LuaType::StaticState::m_property_value_pushers.emplace(FName(STR("UInt64Property")).GetComparisonIndex(), &LuaType::push_uint64property);
+        LuaType::StaticState::m_property_value_pushers.emplace(FName(STR("StructProperty")).GetComparisonIndex(), &LuaType::push_structproperty);
+        LuaType::StaticState::m_property_value_pushers.emplace(FName(STR("ArrayProperty")).GetComparisonIndex(), &LuaType::push_arrayproperty);
+        LuaType::StaticState::m_property_value_pushers.emplace(FName(STR("FloatProperty")).GetComparisonIndex(), &LuaType::push_floatproperty);
+        LuaType::StaticState::m_property_value_pushers.emplace(FName(STR("DoubleProperty")).GetComparisonIndex(), &LuaType::push_doubleproperty);
+        LuaType::StaticState::m_property_value_pushers.emplace(FName(STR("BoolProperty")).GetComparisonIndex(), &LuaType::push_boolproperty);
+        LuaType::StaticState::m_property_value_pushers.emplace(FName(STR("EnumProperty")).GetComparisonIndex(), &LuaType::push_enumproperty);
+        LuaType::StaticState::m_property_value_pushers.emplace(FName(STR("WeakObjectProperty")).GetComparisonIndex(), &LuaType::push_weakobjectproperty);
+        LuaType::StaticState::m_property_value_pushers.emplace(FName(STR("NameProperty")).GetComparisonIndex(), &LuaType::push_nameproperty);
+        LuaType::StaticState::m_property_value_pushers.emplace(FName(STR("TextProperty")).GetComparisonIndex(), &LuaType::push_textproperty);
+        LuaType::StaticState::m_property_value_pushers.emplace(FName(STR("StrProperty")).GetComparisonIndex(), &LuaType::push_strproperty);
+        LuaType::StaticState::m_property_value_pushers.emplace(FName(STR("SoftClassProperty")).GetComparisonIndex(), &LuaType::push_softclassproperty);
+        LuaType::StaticState::m_property_value_pushers.emplace(FName(STR("InterfaceProperty")).GetComparisonIndex(), &LuaType::push_interfaceproperty);
     }
 
     auto UE4SSProgram::setup_mods() -> void
     {
         ProfilerScope();
 
-        Output::send(STR("Setting up mods...\n"));
+        Output::send(SYSSTR("Setting up mods...\n"));
 
         if (!std::filesystem::exists(m_mods_directory))
         {
@@ -1001,20 +1083,26 @@ namespace RC
                 set_error("is_directory ran into error %d", ec.value());
             }
 
-            std::wstring directory_lowercase = sub_directory.path().stem().wstring();
+            SystemStringType directory_lowercase = to_system_string(sub_directory.path().stem());
             std::transform(directory_lowercase.begin(), directory_lowercase.end(), directory_lowercase.begin(), std::towlower);
 
-            if (directory_lowercase == L"shared")
+            if (directory_lowercase == SYSSTR("shared"))
             {
                 // Do stuff when shared libraries have been implemented
             }
             else
             {
                 // Create the mod but don't install it yet
-                if (std::filesystem::exists(sub_directory.path() / "scripts"))
-                    m_mods.emplace_back(std::make_unique<LuaMod>(*this, sub_directory.path().stem().wstring(), sub_directory.path().wstring()));
-                if (std::filesystem::exists(sub_directory.path() / "dlls"))
-                    m_mods.emplace_back(std::make_unique<CppMod>(*this, sub_directory.path().stem().wstring(), sub_directory.path().wstring()));
+                auto scripts_directory = File::get_path_if_exists(sub_directory.path(), "Scripts");
+                auto dlls_directory = File::get_path_if_exists(sub_directory.path(), "dlls");
+                if (scripts_directory)
+                {
+                    m_mods.emplace_back(std::make_unique<LuaMod>(*this, to_system_string(sub_directory.path().stem()), to_system_string(sub_directory.path())));
+                }
+                if (dlls_directory)
+                {
+                    m_mods.emplace_back(std::make_unique<CppMod>(*this, to_system_string(sub_directory.path().stem()), to_system_string(sub_directory.path())));
+                }
             }
         }
     }
@@ -1037,19 +1125,19 @@ namespace RC
             if (mod_name_is_taken)
             {
                 mod->set_installable(false);
-                Output::send(STR("Mod name '{}' is already in use.\n"), mod->get_name());
+                Output::send(SYSSTR("Mod name '{}' is already in use.\n"), mod->get_name());
                 continue;
             }
 
             if (mod->is_installed())
             {
-                Output::send(STR("Tried to install a mod that was already installed, Mod: '{}'\n"), mod->get_name());
+                Output::send(SYSSTR("Tried to install a mod that was already installed, Mod: '{}'\n"), mod->get_name());
                 continue;
             }
 
             if (!mod->is_installable())
             {
-                Output::send(STR("Was unable to install mod '{}' for unknown reasons. Mod is not installable.\n"), mod->get_name());
+                Output::send(SYSSTR("Was unable to install mod '{}' for unknown reasons. Mod is not installable.\n"), mod->get_name());
                 continue;
             }
 
@@ -1059,12 +1147,12 @@ namespace RC
 
     auto UE4SSProgram::install_cpp_mods() -> void
     {
-        install_mods<CppMod>(m_mods);
+        install_mods<CppMod>(get_program().m_mods);
     }
 
     auto UE4SSProgram::install_lua_mods() -> void
     {
-        install_mods<LuaMod>(m_mods);
+        install_mods<LuaMod>(get_program().m_mods);
     }
 
     auto UE4SSProgram::fire_unreal_init_for_cpp_mods() -> void
@@ -1106,7 +1194,7 @@ namespace RC
         }
     }
 
-    auto UE4SSProgram::fire_dll_load_for_cpp_mods(std::wstring_view dll_name) -> void
+    auto UE4SSProgram::fire_dll_load_for_cpp_mods(SystemStringViewType dll_name) -> void
     {
         for (const auto& mod : m_mods)
         {
@@ -1122,24 +1210,24 @@ namespace RC
     {
         ProfilerScope();
         // Part #1: Start all mods that are enabled in mods.txt.
-        Output::send(STR("Starting mods (from mods.txt load order)...\n"));
+        Output::send(SYSSTR("Starting mods (from mods.txt load order)...\n"));
 
         std::filesystem::path mods_directory = UE4SSProgram::get_program().get_mods_directory();
-        std::wstring enabled_mods_file{mods_directory / "mods.txt"};
-        if (!std::filesystem::exists(enabled_mods_file))
+        auto enabled_mods_file = File::get_path_if_exists(mods_directory, "mods.txt");
+        if (!enabled_mods_file.has_value())
         {
-            Output::send(STR("No mods.txt file found...\n"));
+            Output::send(SYSSTR("No mods.txt file found...\n"));
         }
         else
         {
             // 'mods.txt' exists, lets parse it
-            std::wifstream mods_stream{enabled_mods_file};
+            SystemStreamType mods_stream{*enabled_mods_file};
 
-            std::wstring current_line;
+            SystemStringType current_line;
             while (std::getline(mods_stream, current_line))
             {
                 // Don't parse any lines with ';'
-                if (current_line.find(L";") != current_line.npos)
+                if (current_line.find(SYSSTR(";")) != current_line.npos)
                 {
                     continue;
                 }
@@ -1151,12 +1239,12 @@ namespace RC
                 }
 
                 // Remove all spaces
-                auto end = std::remove(current_line.begin(), current_line.end(), L' ');
+                auto end = std::remove(current_line.begin(), current_line.end(), SYSSTR(' '));
                 current_line.erase(end, current_line.end());
 
                 // Parse the line into something that can be converted into proper data
-                std::wstring mod_name = explode_by_occurrence(current_line, L':', 1);
-                std::wstring mod_enabled = explode_by_occurrence(current_line, L':', ExplodeType::FromEnd);
+                SystemStringType mod_name = explode_by_occurrence(current_line, SYSSTR(':'), 1);
+                SystemStringType mod_enabled = explode_by_occurrence(current_line, SYSSTR(':'), ExplodeType::FromEnd);
 
                 auto mod = UE4SSProgram::find_mod_by_name<ModType>(mod_name, UE4SSProgram::IsInstalled::Yes);
                 if (!mod || !dynamic_cast<ModType*>(mod))
@@ -1164,20 +1252,20 @@ namespace RC
                     continue;
                 }
 
-                if (!mod_enabled.empty() && mod_enabled[0] == L'1')
+                if (!mod_enabled.empty() && mod_enabled[0] == SYSSTR('1'))
                 {
-                    Output::send(STR("Starting {} mod '{}'\n"), std::is_same_v<ModType, LuaMod> ? STR("Lua") : STR("C++"), mod->get_name().data());
+                    Output::send(SYSSTR("Starting {} mod '{}'\n"), std::is_same_v<ModType, LuaMod> ? SYSSTR("Lua") : SYSSTR("C++"), mod->get_name().data());
                     mod->start_mod();
                 }
                 else
                 {
-                    Output::send(STR("Mod '{}' disabled in mods.txt.\n"), mod_name);
+                    Output::send(SYSSTR("Mod '{}' disabled in mods.txt.\n"), mod_name);
                 }
             }
         }
 
         // Part #2: Start all mods that have enabled.txt present in the mod directory.
-        Output::send(STR("Starting mods (from enabled.txt, no defined load order)...\n"));
+        Output::send(SYSSTR("Starting mods (from enabled.txt, no defined load order)...\n"));
 
         for (const auto& mod_directory : std::filesystem::directory_iterator(mods_directory))
         {
@@ -1192,23 +1280,21 @@ namespace RC
                 return std::format("is_directory ran into error {}", ec.value());
             }
 
-            if (!std::filesystem::exists(mod_directory.path() / "enabled.txt", ec))
+            auto enabled = File::get_path_if_exists(mod_directory.path(), "enabled.txt");
+
+            if (!enabled.has_value())
             {
                 continue;
             }
-            if (ec.value() != 0)
-            {
-                return std::format("exists ran into error {}", ec.value());
-            }
 
-            auto mod = UE4SSProgram::find_mod_by_name<ModType>(mod_directory.path().stem().c_str(), UE4SSProgram::IsInstalled::Yes);
+            auto mod = UE4SSProgram::find_mod_by_name<ModType>(to_system_string(mod_directory.path().stem()), UE4SSProgram::IsInstalled::Yes);
             if (!dynamic_cast<ModType*>(mod))
             {
                 continue;
             }
             if (!mod)
             {
-                Output::send<LogLevel::Warning>(STR("Found a mod with enabled.txt but mod has not been installed properly.\n"));
+                Output::send<LogLevel::Warning>(SYSSTR("Found a mod with enabled.txt but mod has not been installed properly.\n"));
                 continue;
             }
 
@@ -1217,7 +1303,7 @@ namespace RC
                 continue;
             }
 
-            Output::send(STR("Mod '{}' has enabled.txt, starting mod.\n"), mod->get_name().data());
+            Output::send(SYSSTR("Mod '{}' has enabled.txt, starting mod.\n"), mod->get_name().data());
             mod->start_mod();
         }
 
@@ -1242,6 +1328,8 @@ namespace RC
         {
             set_error(error_message.c_str());
         }
+
+#ifdef HAS_UI
         // If this is the initial startup, notify mods that the UI has initialized.
         // This isn't completely accurate since the UI will usually have started a while ago.
         // However, we can't immediately notify mods of this because no mods have been started at that point.
@@ -1250,11 +1338,13 @@ namespace RC
         {
             fire_ui_init_for_cpp_mods();
         }
+#endif
     }
 
     auto UE4SSProgram::uninstall_mods() -> void
     {
         ProfilerScope();
+
         std::vector<CppMod*> cpp_mods{};
         std::vector<LuaMod*> lua_mods{};
         for (auto& mod : m_mods)
@@ -1279,7 +1369,6 @@ namespace RC
         {
             mod->uninstall();
         }
-
         m_mods.clear();
         LuaMod::global_uninstall();
     }
@@ -1292,20 +1381,20 @@ namespace RC
     auto UE4SSProgram::reinstall_mods() -> void
     {
         ProfilerScope();
-        Output::send(STR("Re-installing all mods\n"));
+        Output::send(SYSSTR("Re-installing all mods\n"));
 
         // Stop processing events while stuff isn't properly setup
         m_pause_events_processing = true;
 
         uninstall_mods();
 
-        // Remove key binds that were set from Lua scripts
-        auto& key_events = m_input_handler.get_events();
-        std::erase_if(key_events, [](Input::KeySet& input_event) -> bool {
-            bool were_all_events_registered_from_lua = true;
-            for (auto& [key, vector_of_key_data] : input_event.key_data)
-            {
-                std::erase_if(vector_of_key_data, [&](Input::KeyData& key_data) -> bool {
+// Remove key binds that were set from Lua scripts
+#ifdef HAS_INPUT
+        m_input_handler.get_events_safe([&](auto& key_set) {
+            std::erase_if(key_set.key_data, [&](auto& item) -> bool {
+                auto& [_, key_data] = item;
+                bool were_all_events_registered_from_lua = true;
+                std::erase_if(key_data, [&](Input::KeyData& key_data) -> bool {
                     // custom_data == 1: Bind came from Lua, and custom_data2 is nullptr.
                     // custom_data == 2: Bind came from C++, and custom_data2 is a pointer to KeyDownEventData. Must free it.
                     if (key_data.custom_data == 1)
@@ -1318,10 +1407,11 @@ namespace RC
                         return false;
                     }
                 });
-            }
 
-            return were_all_events_registered_from_lua;
+                return were_all_events_registered_from_lua;
+            });
         });
+#endif
 
         // Remove all custom properties
         // Uncomment when custom properties are working
@@ -1348,38 +1438,42 @@ namespace RC
             fire_program_start_for_cpp_mods();
         }
 
-        Output::send(STR("All mods re-installed\n"));
+        Output::send(SYSSTR("All mods re-installed\n"));
     }
 
-    auto UE4SSProgram::get_module_directory() -> File::StringViewType
+    auto UE4SSProgram::get_module_directory() -> SystemStringViewType
     {
-        return m_module_file_path.c_str();
+        m_module_file_path_str = to_system_string(m_module_file_path);
+        return m_module_file_path_str;
     }
 
-    auto UE4SSProgram::get_game_executable_directory() -> File::StringViewType
+    auto UE4SSProgram::get_working_directory() -> SystemStringViewType
     {
-        return m_game_executable_directory.c_str();
+        m_working_directory_str = to_system_string(m_working_directory);
+        return m_working_directory_str;
     }
 
-    auto UE4SSProgram::get_working_directory() -> File::StringViewType
+    auto UE4SSProgram::get_mods_directory() -> SystemStringViewType
     {
-        return m_working_directory.c_str();
+        m_mods_directory_str = to_system_string(m_mods_directory);
+        return m_mods_directory_str;
     }
 
-    auto UE4SSProgram::get_mods_directory() -> File::StringViewType
-    {
-        return m_mods_directory.c_str();
-    }
-
-    auto UE4SSProgram::get_legacy_root_directory() -> File::StringViewType
+    auto UE4SSProgram::get_legacy_root_directory() -> SystemStringViewType
     {
         return m_legacy_root_directory.c_str();
+    }
+    
+    auto UE4SSProgram::get_game_directory() -> SystemStringViewType
+    {
+        m_game_executable_str = to_system_string(m_game_executable_directory);
+        return m_game_executable_str;
     }
 
     auto UE4SSProgram::generate_uht_compatible_headers() -> void
     {
         ProfilerScope();
-        Output::send(STR("Generating UHT compatible headers...\n"));
+        Output::send(SYSSTR("Generating UHT compatible headers...\n"));
 
         double generator_duration{};
         {
@@ -1390,7 +1484,7 @@ namespace RC
             HeaderGenerator.dump_native_packages();
         }
 
-        Output::send(STR("Generating UHT compatible headers took {} seconds\n"), generator_duration);
+        Output::send(SYSSTR("Generating UHT compatible headers took {} seconds\n"), generator_duration);
     }
 
     auto UE4SSProgram::generate_cxx_headers(const std::filesystem::path& output_dir) -> void
@@ -1398,7 +1492,7 @@ namespace RC
         ProfilerScope();
         if (settings_manager.CXXHeaderGenerator.LoadAllAssetsBeforeGeneratingCXXHeaders)
         {
-            Output::send(STR("Loading all assets...\n"));
+            Output::send(SYSSTR("Loading all assets...\n"));
             double asset_loading_duration{};
             {
                 ProfilerScopeNamed("loading all assets");
@@ -1406,7 +1500,7 @@ namespace RC
 
                 UAssetRegistry::LoadAllAssets();
             }
-            Output::send(STR("Loading all assets took {} seconds\n"), asset_loading_duration);
+            Output::send(SYSSTR("Loading all assets took {} seconds\n"), asset_loading_duration);
         }
 
         double generator_duration;
@@ -1416,11 +1510,11 @@ namespace RC
 
             UEGenerator::generate_cxx_headers(output_dir);
 
-            Output::send(STR("Unloading all forcefully loaded assets\n"));
+            Output::send(SYSSTR("Unloading all forcefully loaded assets\n"));
         }
 
         UAssetRegistry::FreeAllForcefullyLoadedAssets();
-        Output::send(STR("SDK generated in {} seconds.\n"), generator_duration);
+        Output::send(SYSSTR("SDK generated in {} seconds.\n"), generator_duration);
     }
 
     auto UE4SSProgram::generate_lua_types(const std::filesystem::path& output_dir) -> void
@@ -1428,7 +1522,7 @@ namespace RC
         ProfilerScope();
         if (settings_manager.CXXHeaderGenerator.LoadAllAssetsBeforeGeneratingCXXHeaders)
         {
-            Output::send(STR("Loading all assets...\n"));
+            Output::send(SYSSTR("Loading all assets...\n"));
             double asset_loading_duration{};
             {
                 ProfilerScopeNamed("loading all assets");
@@ -1436,7 +1530,7 @@ namespace RC
 
                 UAssetRegistry::LoadAllAssets();
             }
-            Output::send(STR("Loading all assets took {} seconds\n"), asset_loading_duration);
+            Output::send(SYSSTR("Loading all assets took {} seconds\n"), asset_loading_duration);
         }
 
         double generator_duration;
@@ -1446,13 +1540,13 @@ namespace RC
 
             UEGenerator::generate_lua_types(output_dir);
 
-            Output::send(STR("Unloading all forcefully loaded assets\n"));
+            Output::send(SYSSTR("Unloading all forcefully loaded assets\n"));
         }
 
         UAssetRegistry::FreeAllForcefullyLoadedAssets();
-        Output::send(STR("SDK generated in {} seconds.\n"), generator_duration);
+        Output::send(SYSSTR("SDK generated in {} seconds.\n"), generator_duration);
     }
-
+#ifdef HAS_UI
     auto UE4SSProgram::stop_render_thread() -> void
     {
         if (m_render_thread.joinable())
@@ -1471,6 +1565,7 @@ namespace RC
     {
         m_debugging_gui.remove_tab(tab);
     }
+#endif
 
     auto UE4SSProgram::queue_event(EventCallable callable, void* data) -> void
     {
@@ -1488,6 +1583,7 @@ namespace RC
         return m_queued_events.empty();
     }
 
+#ifdef HAS_INPUT
     auto UE4SSProgram::register_keydown_event(Input::Key key, const Input::EventCallbackCallable& callback, uint8_t custom_data, void* custom_data2) -> void
     {
         m_input_handler.register_keydown_event(key, callback, custom_data, custom_data2);
@@ -1511,11 +1607,11 @@ namespace RC
     {
         return m_input_handler.is_keydown_event_registered(key, modifier_keys);
     }
-
-    auto UE4SSProgram::find_mod_by_name_internal(std::wstring_view mod_name, IsInstalled is_installed, IsStarted is_started, FMBNI_ExtraPredicate extra_predicate)
+#endif
+    auto UE4SSProgram::find_mod_by_name_internal(SystemStringViewType mod_name, IsInstalled is_installed, IsStarted is_started, FMBNI_ExtraPredicate extra_predicate)
             -> Mod*
     {
-        auto mod_exists_with_name = std::find_if(m_mods.begin(), m_mods.end(), [&](auto& elem) -> bool {
+        auto mod_exists_with_name = std::find_if(get_program().m_mods.begin(), get_program().m_mods.end(), [&](auto& elem) -> bool {
             bool found = true;
 
             if (!extra_predicate(elem.get()))
@@ -1539,7 +1635,7 @@ namespace RC
         });
 
         // clang-format off
-        if (mod_exists_with_name == m_mods.end())
+        if (mod_exists_with_name == get_program().m_mods.end())
         {
             return nullptr;
         }
@@ -1550,22 +1646,12 @@ namespace RC
         }
     }
 
-    auto UE4SSProgram::find_lua_mod_by_name(std::string_view mod_name, UE4SSProgram::IsInstalled installed_only, IsStarted is_started) -> LuaMod*
+    auto UE4SSProgram::get_object_dumper_output_directory() -> const SystemStringType
     {
-        return static_cast<LuaMod*>(find_mod_by_name<LuaMod>(mod_name, installed_only, is_started));
+        return to_system_string(m_object_dumper_output_directory);
     }
 
-    auto UE4SSProgram::find_lua_mod_by_name(std::wstring_view mod_name, UE4SSProgram::IsInstalled installed_only, IsStarted is_started) -> LuaMod*
-    {
-        return static_cast<LuaMod*>(find_mod_by_name<LuaMod>(mod_name, installed_only, is_started));
-    }
-
-    auto UE4SSProgram::get_object_dumper_output_directory() -> const File::StringType
-    {
-        return m_object_dumper_output_directory.c_str();
-    }
-
-    auto UE4SSProgram::dump_uobject(UObject* object, std::unordered_set<FField*>* in_dumped_fields, StringType& out_line, bool is_below_425) -> void
+    auto UE4SSProgram::dump_uobject(UObject* object, std::unordered_set<FField*>* in_dumped_fields, SystemStringType& out_line, bool is_below_425) -> void
     {
         bool owns_dumped_fields{};
         auto dumped_fields_ptr = [&] {
@@ -1599,7 +1685,7 @@ namespace RC
 
                 // Dump UObject
                 ObjectDumper::get_to_string(typed_class)(object, out_line);
-                out_line.append(L"\n");
+                out_line.append(SYSSTR("\n"));
 
                 if (!is_below_425 && ObjectDumper::to_string_complex_exists(typed_class))
                 {
@@ -1620,7 +1706,7 @@ namespace RC
             {
                 // A type-specific implementation does not exist so lets call the default implementation for UObjects instead
                 ObjectDumper::object_to_string(object, out_line);
-                out_line.append(L"\n");
+                out_line.append(SYSSTR("\n"));
             }
 
             // If the UClass of the UObject has any properties then dump them
@@ -1649,50 +1735,50 @@ namespace RC
         }
     }
 
-    auto UE4SSProgram::dump_xproperty(FProperty* property, StringType& out_line) -> void
+    auto UE4SSProgram::dump_xproperty(FProperty* property, SystemStringType& out_line) -> void
     {
         auto typed_prop_class = property->GetClass().HashObject();
 
         if (ObjectDumper::to_string_exists(typed_prop_class))
         {
             ObjectDumper::get_to_string(typed_prop_class)(property, out_line);
-            out_line.append(L"\n");
+            out_line.append(SYSSTR("\n"));
 
             if (ObjectDumper::to_string_complex_exists(typed_prop_class))
             {
                 ObjectDumper::get_to_string_complex(typed_prop_class)(property, out_line, [&]([[maybe_unused]] void* prop) {
-                    out_line.append(L"\n");
+                    out_line.append(SYSSTR("\n"));
                 });
             }
         }
         else
         {
             ObjectDumper::property_to_string(property, out_line);
-            out_line.append(L"\n");
+            out_line.append(SYSSTR("\n"));
         }
     }
 
-    auto UE4SSProgram::dump_all_objects_and_properties(const File::StringType& output_path_and_file_name) -> void
+    auto UE4SSProgram::dump_all_objects_and_properties(const SystemStringType& output_path_and_file_name) -> void
     {
         /*
-        Output::send(STR("Test msg with no fmt args, and no optional arg\n"));
-        Output::send(STR("Test msg with no fmt args, and one optional arg [Normal]\n"), LogLevel::Normal);
-        Output::send(STR("Test msg with no fmt args, and one optional arg [Verbose]\n"), LogLevel::Verbose);
-        Output::send(STR("Test msg with one fmt arg [{}], and one optional arg [Warning]\n"), LogLevel::Warning, 33);
-        Output::send(STR("Test msg with two fmt args [{}, {}], and one optional arg [Error]\n"), LogLevel::Error, 33, 44);
+        Output::send(SYSSTR("Test msg with no fmt args, and no optional arg\n"));
+        Output::send(SYSSTR("Test msg with no fmt args, and one optional arg [Normal]\n"), LogLevel::Normal);
+        Output::send(SYSSTR("Test msg with no fmt args, and one optional arg [Verbose]\n"), LogLevel::Verbose);
+        Output::send(SYSSTR("Test msg with one fmt arg [{}], and one optional arg [Warning]\n"), LogLevel::Warning, 33);
+        Output::send(SYSSTR("Test msg with two fmt args [{}, {}], and one optional arg [Error]\n"), LogLevel::Error, 33, 44);
         //*/
 
         // Object & Property Dumper -> START
         if (settings_manager.ObjectDumper.LoadAllAssetsBeforeDumpingObjects)
         {
-            Output::send(STR("Loading all assets...\n"));
+            Output::send(SYSSTR("Loading all assets...\n"));
             double asset_loading_duration{};
             {
                 ScopedTimer loading_timer{&asset_loading_duration};
 
                 UAssetRegistry::LoadAllAssets();
             }
-            Output::send(STR("Loading all assets took {} seconds\n"), asset_loading_duration);
+            Output::send(SYSSTR("Loading all assets took {} seconds\n"), asset_loading_duration);
         }
 
         double dumper_duration{};
@@ -1718,16 +1804,16 @@ namespace RC
             Output::Targets<ObjectDumperOutputDevice> scoped_dumper_out;
             auto& file_device = scoped_dumper_out.get_device<ObjectDumperOutputDevice>();
             file_device.set_file_name_and_path(output_path_and_file_name);
-            file_device.set_formatter([](File::StringViewType string) -> File::StringType {
-                return File::StringType{string};
+            file_device.set_formatter([](SystemStringViewType string) -> SystemStringType {
+                return SystemStringType{string};
             });
 
             // Make string & reserve massive amounts of space to hopefully not reach the end of the string and require more
             // dynamic allocations
-            std::wstring out_line;
+            SystemStringType out_line;
             out_line.reserve(200000000);
 
-            Output::send(STR("Dumping all objects & properties in GUObjectArray\n"));
+            Output::send(SYSSTR("Dumping all objects & properties in GUObjectArray\n"));
             UObjectGlobals::ForEachUObject([&](void* object, [[maybe_unused]] int32_t chunk_index, [[maybe_unused]] int32_t object_index) {
                 dump_uobject(static_cast<UObject*>(object), &dumped_fields, out_line, is_below_425);
                 return LoopAction::Continue;
@@ -1738,11 +1824,11 @@ namespace RC
 
             // Reset the dumped_fields set, otherwise no fields will be dumped in subsequent dumps
             dumped_fields.clear();
-            Output::send(STR("Done iterating GUObjectArray\n"));
+            Output::send(SYSSTR("Done iterating GUObjectArray\n"));
         }
 
         UAssetRegistry::FreeAllForcefullyLoadedAssets();
-        Output::send(STR("Dumping GUObjectArray took {} seconds\n"), dumper_duration);
+        Output::send(SYSSTR("Dumping GUObjectArray took {} seconds\n"), dumper_duration);
         // Object & Property Dumper -> END
     }
 

@@ -25,7 +25,7 @@
 namespace RC::UVTD
 {
     bool processing_events{false};
-    Input::Handler input_handler{L"ConsoleWindowClass", L"UnrealWindow"};
+    Input::Handler input_handler{};
 
     auto static event_loop_update() -> void
     {
@@ -38,6 +38,8 @@ namespace RC::UVTD
 
     auto main(DumpSettings dump_settings) -> void
     {
+        input_handler.init();
+        input_handler.set_input_source("Win32Async");
         static std::vector<std::filesystem::path> pdbs_to_dump{
                 "PDBs/4_10.pdb",
                 "PDBs/4_11.pdb",
@@ -111,13 +113,13 @@ namespace RC::UVTD
                         generator.generate_files();
                     }
 
-                    File::StringType pdb_name = pdb.filename().stem();
+                    SystemStringType pdb_name = pdb.filename().stem();
                     UnrealVirtualGenerator virtual_generator(pdb_name, run_container);
                     virtual_generator.generate_files();
 
                     shared_container.join(run_container);
 
-                    Output::send(STR("Code generated.\n"));
+                    Output::send(SYSSTR("Code generated.\n"));
                 }
             });
         }
@@ -128,9 +130,9 @@ namespace RC::UVTD
             MemberVarsWrapperGenerator wrapper_generator{std::move(shared_container)};
             wrapper_generator.generate_files();
 
-            Output::send(STR("Code generated.\n"));
+            Output::send(SYSSTR("Code generated.\n"));
         }
 
-        Output::send(STR("All done.\n"));
+        Output::send(SYSSTR("All done.\n"));
     }
 } // namespace RC::UVTD

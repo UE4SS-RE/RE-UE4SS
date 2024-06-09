@@ -1,14 +1,33 @@
 #pragma once
 
+#include <locale>
+#include <codecvt>
+#include <string>
+
 // Set this to 1 to use ANSI (char*) instead of wide strings (wchar_t*)
 #ifndef RC_IS_ANSI
 #define RC_IS_ANSI 0
 #endif
 
-#if RC_IS_ANSI == 1
+#ifdef LINUX
+#define SYSSTR(str) str
+#define IOSTR(str) str
 #define STR(str) u##str
 #else
+#if RC_IS_ANSI == 0
+#define SYSSTR(str) L##str
+#define IOSTR(str) str
 #define STR(str) L##str
+#else
+#define SYSSTR(str) str
+#define IOSTR(str) str
+#endif
+#endif
+
+#ifdef S
+static_assert(false, "UE4SS define 'S' is already defined, please solve this");
+#else
+// #define S(str) STR(str)
 #endif
 
 #define THROW_INTERNAL_FILE_ERROR(msg)                                                                                                                         \
@@ -28,34 +47,93 @@ construct a Targets object and supply your own devices.") \
 
 namespace RC::File
 {
-#if RC_IS_ANSI == 1
     using StringType = std::string;
     using StringViewType = std::string_view;
     using CharType = char;
     using StreamType = std::ifstream;
-    using ToString = std::tostring;
-
-    constexpr auto ToString = [](auto&& numeric_value) constexpr -> decltype(auto) {
-        return std::to_string(std::forward<decltype(numeric_value)>(numeric_value));
-    };
-#else
-    using StringType = std::wstring;
-    using StringViewType = std::wstring_view;
-    using CharType = wchar_t;
-    using StreamType = std::wifstream;
-
-    constexpr auto ToString = [](auto&& numeric_value) constexpr -> decltype(auto) {
-        return std::to_wstring(std::forward<decltype(numeric_value)>(numeric_value));
-    };
-#endif
+    using IStreamType = std::ifstream;
+    using OStreamType = std::ofstream;
+    /*
+    #if RC_IS_ANSI == 1
+        using StringType = std::string;
+        using StringViewType = std::string_view;
+        using CharType = char;
+        using StreamType = std::ifstream;
+    #else
+    // System String Types
+    #ifdef WIN32
+        using StringType = std::wstring;
+        using StringViewType = std::wstring_view;
+        using CharType = std::wstring::value_type;
+        using StreamType = std::wifstream;
+    #else
+        // on linux, use utf8
+        using StringType = std::string;
+        using StringViewType = std::string_view;
+        using CharType = char;
+        using StreamType = std::ifstream;
+    #endif // WIN32
+    #endif // RC_IS_ANSI
+    */
 } // namespace RC::File
 
 namespace RC
 {
-    using StringType = File::StringType;
-    using StringViewType = File::StringViewType;
-    using CharType = File::CharType;
-    using StreamType = File::StreamType;
+    // Should find a better place for these definitions
+    // System = C++ String Types
+#if RC_IS_ANSI == 1
+    using SystemStringType = std::string;
+    using SystemStringViewType = std::string_view;
+    using SystemCharType = char;
+    using SystemStreamType = std::ifstream;
+    constexpr auto ToString = [](auto&& numeric_value) constexpr -> decltype(auto) {
+        return std::to_string(std::forward<decltype(numeric_value)>(numeric_value));
+    };
+#define SystemStringPrint "%s"
+#else
+// System String Types
+#ifdef WIN32
+    using SystemStringType = std::wstring;
+    using SystemStringViewType = std::wstring_view;
+    using SystemCharType = std::wstring::value_type;
+    using SystemStreamType = std::wifstream;
+    constexpr auto ToString = [](auto&& numeric_value) constexpr -> decltype(auto) {
+        return std::to_wstring(std::forward<decltype(numeric_value)>(numeric_value));
+    };
+#define SystemStringPrint "%S"
+#else
+    // on linux, use utf8
+    using SystemStringType = std::string;
+    using SystemStringViewType = std::string_view;
+    using SystemCharType = char;
+    using SystemStreamType = std::ifstream;
+    constexpr auto ToString = [](auto&& numeric_value) constexpr -> decltype(auto) {
+        return std::to_string(std::forward<decltype(numeric_value)>(numeric_value));
+    };
+#define SystemStringPrint "%s"
+#endif // WIN32
+#endif
 
-    constexpr auto ToString = File::ToString;
+#if RC_IS_ANSI == 1
+    using UEStringType = std::string;
+    using UEStringViewType = std::string_view;
+    using UECharType = std::string::value_type;
+#define UEStringPrint "%s"
+#else
+#ifdef WIN32
+    using UEStringType = std::wstring;
+    using UEStringViewType = std::wstring_view;
+    using UECharType = std::wstring::value_type;
+    using UEIStreamType = std::wifstream;
+    using UEOStreamType = std::wofstream;
+#else
+    using UEStringType = std::u16string;
+    using UEStringViewType = std::u16string_view;
+    using UECharType = std::u16string::value_type;
+    using UEIStreamType = std::basic_ifstream<std::u16string::value_type>;
+    using UEOStreamType = std::basic_ofstream<std::u16string::value_type>;
+#endif // WIN32
+#define UEStringPrint "%S"
+#endif // RC_IS_ANSI
+
 } // namespace RC

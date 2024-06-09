@@ -14,9 +14,13 @@
 #include <Unreal/UObject.hpp>
 #include <Unreal/UObjectGlobals.hpp>
 #include <Unreal/UScriptStruct.hpp>
+#include <GUI/GUI.hpp>
 
 #include <imgui.h>
 #include <misc/cpp/imgui_stdlib.h>
+
+#undef min
+#undef max
 
 namespace RC::GUI
 {
@@ -139,7 +143,7 @@ namespace RC::GUI
 
     static bool s_do_call{};
     static UObject* s_instance{};
-    static StringType s_cmd{};
+    static SystemStringType s_cmd{};
     static FOutputDevice s_ar{};
     static UFunction* s_function{};
     static UObject* s_executor{};
@@ -150,9 +154,9 @@ namespace RC::GUI
             s_do_call = false;
             auto& function_flags = s_function->GetFunctionFlags();
             function_flags |= FUNC_Exec;
-            Output::send(STR("Processing command: {}\n"), s_cmd);
-            bool call_succeeded = s_instance->ProcessConsoleExec(s_cmd.c_str(), s_ar, s_executor);
-            Output::send(STR("call_succeeded: {}\n"), call_succeeded);
+            Output::send(SYSSTR("Processing command: {}\n"), s_cmd);
+            bool call_succeeded = s_instance->ProcessConsoleExec(to_ue(s_cmd).c_str(), s_ar, s_executor);
+            Output::send(SYSSTR("call_succeeded: {}\n"), call_succeeded);
             function_flags &= ~FUNC_Exec;
         }
     }
@@ -164,13 +168,13 @@ namespace RC::GUI
         }
         auto function = m_currently_selected_function->function;
 
-        auto cmd = std::format(STR("{}"), function->GetName());
+        auto cmd = std::format(SYSSTR("{}"), to_system(function->GetName()));
         for (const auto& param : m_params_for_selected_function)
         {
-            cmd.append(std::format(STR(" {}"), to_wstring(param.value_from_ui)));
+            cmd.append(std::format(SYSSTR(" {}"), to_system(param.value_from_ui)));
         }
 
-        Output::send(STR("Queueing command: {}\n"), cmd);
+        Output::send(SYSSTR("Queueing command: {}\n"), cmd);
 
         s_cmd = cmd;
         s_instance = instance;
@@ -223,41 +227,49 @@ namespace RC::GUI
     {
         if (auto as_struct_property = CastField<FStructProperty>(param.unreal_param); as_struct_property)
         {
-            ImGui::Text("%S (%S)", param.unreal_param->GetClass().GetName().c_str(), as_struct_property->GetStruct()->GetName().c_str());
+            ImGui::Text(SystemStringPrint " (" SystemStringPrint ")",
+                        to_system(param.unreal_param->GetClass().GetName()).c_str(),
+                        to_system(as_struct_property->GetStruct()->GetName()).c_str());
         }
         else if (auto as_array_property = CastField<FArrayProperty>(param.unreal_param); as_array_property)
         {
-            ImGui::Text("%S (%S)", param.unreal_param->GetClass().GetName().c_str(), as_array_property->GetInner()->GetName().c_str());
+            ImGui::Text(SystemStringPrint " (" SystemStringPrint ")",
+                        to_system(param.unreal_param->GetClass().GetName()).c_str(),
+                        to_system(as_array_property->GetInner()->GetName()).c_str());
         }
         else if (auto as_object_property = CastField<FObjectProperty>(param.unreal_param); as_object_property)
         {
-            ImGui::Text("%S (%S)", param.unreal_param->GetClass().GetName().c_str(), as_object_property->GetPropertyClass()->GetName().c_str());
+            ImGui::Text(SystemStringPrint " (" SystemStringPrint ")",
+                        to_system(param.unreal_param->GetClass().GetName()).c_str(),
+                        to_system(as_object_property->GetPropertyClass()->GetName()).c_str());
         }
         else if (auto as_class_property = CastField<FClassProperty>(param.unreal_param); as_class_property)
         {
-            ImGui::Text("%S (%S)", param.unreal_param->GetClass().GetName().c_str(), as_class_property->GetMetaClass()->GetName().c_str());
+            ImGui::Text(SystemStringPrint " (" SystemStringPrint ")",
+                        to_system(param.unreal_param->GetClass().GetName()).c_str(),
+                        to_system(as_class_property->GetMetaClass()->GetName()).c_str());
         }
         else
         {
-            ImGui::Text("%S", param.unreal_param->GetClass().GetName().c_str());
+            ImGui::Text(SystemStringPrint, to_system(param.unreal_param->GetClass().GetName()).c_str());
         }
     }
 
     static auto get_typeless_object_name(UObject* object) -> std::string
     {
-        auto object_name = to_string(object->GetFullName());
-        auto object_name_type_space_location = object_name.find(" ");
+        auto object_name = to_system(object->GetFullName());
+        auto object_name_type_space_location = object_name.find(SYSSTR(" "));
         if (object_name_type_space_location == object_name.npos)
         {
-            Output::send<LogLevel::Warning>(STR("Could not copy name of PlayerController, was unable to find space in full PlayerController name: '{}'."),
-                                            to_wstring(object_name));
+            Output::send<LogLevel::Warning>(SYSSTR("Could not copy name of PlayerController, was unable to find space in full PlayerController name: '{}'."),
+                                            object_name);
             return {};
         }
         else
         {
             if (object_name_type_space_location > static_cast<unsigned long long>(std::numeric_limits<long long>::max()))
             {
-                Output::send<LogLevel::Warning>(STR("integer overflow when converting pc_name_type_space_location to signed"));
+                Output::send<LogLevel::Warning>(SYSSTR("integer overflow when converting pc_name_type_space_location to signed"));
                 return {};
             }
             else
@@ -283,7 +295,7 @@ namespace RC::GUI
         return params.ReturnValue;
     }
 
-    static auto render_other_list(std::string_view menu_name, StringViewType class_name, UFunctionParam& param) -> void
+    static auto render_other_list(std::string_view menu_name, UEStringViewType class_name, UFunctionParam& param) -> void
     {
         if (ImGui::BeginMenu(menu_name.data()))
         {
@@ -313,14 +325,14 @@ namespace RC::GUI
     {
         m_prev_instance = instance;
 
-        auto popup_modal_id = to_string(std::format(STR("##functions-for-{}"), instance->HashObject()));
+        auto popup_modal_id = to_string(std::format(SYSSTR("##functions-for-{}"), instance->HashObject()));
         auto& is_open = is_widget_open();
         if (is_open)
         {
             ImGui::OpenPopup(popup_modal_id.c_str());
         }
 
-        ImGui::PushStyleVar(ImGuiStyleVar_WindowMinSize, {925.0f, 300.0f});
+        ImGui::PushStyleVar(ImGuiStyleVar_WindowMinSize, {925.0f / XDIV, 300.0f / YDIV});
         if (ImGui::BeginPopupModal(popup_modal_id.c_str(), &is_open))
         {
             ImGui::PushItemWidth(-1.0f);

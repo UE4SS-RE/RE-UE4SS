@@ -9,7 +9,6 @@
 
 #include <DynamicOutput/DynamicOutput.hpp>
 #include <ExceptionHandling.hpp>
-#include <Helpers/Format.hpp>
 #include <Helpers/String.hpp>
 #include <Mod/LuaMod.hpp>
 #include <Mod/Mod.hpp>
@@ -48,15 +47,14 @@
 #include <UnrealCustom/CustomProperty.hpp>
 #pragma warning(default : 4005)
 
-
 namespace RC
 {
 
-    Mod::Mod(UE4SSProgram& program, std::wstring&& mod_name, std::wstring&& mod_path) : m_program(program), m_mod_name(mod_name), m_mod_path(mod_path)
+    Mod::Mod(UE4SSProgram& program, SystemStringType&& mod_name, SystemStringType&& mod_path) : m_program(program), m_mod_name(mod_name), m_mod_path(mod_path)
     {
     }
 
-    auto Mod::get_name() const -> std::wstring_view
+    auto Mod::get_name() const -> SystemStringViewType
     {
         return m_mod_name;
     }

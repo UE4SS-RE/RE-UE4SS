@@ -2,24 +2,32 @@
 #define UE4SS_REWRITTEN_OUTPUT_HPP
 
 #include <array>
-#include <format>
 #include <memory>
 #include <source_location>
 #include <stdexcept>
 #include <string>
 #include <tuple>
 #include <typeinfo>
+#include <format>
 #include <vector>
 
 #include <DynamicOutput/Common.hpp>
 #include <DynamicOutput/Macros.hpp>
 #include <DynamicOutput/OutputDevice.hpp>
 #include <File/InternalFile.hpp>
+#include <Helpers/String.hpp>
+
+// #include <fmt/core.h>
+// #include <fmt/format.h>
 
 #if RC_IS_ANSI == 1
 #define RC_STD_MAKE_FORMAT_ARGS std::make_format_args
 #else
+#ifdef WIN32
 #define RC_STD_MAKE_FORMAT_ARGS std::make_wformat_args
+#else
+#define RC_STD_MAKE_FORMAT_ARGS std::make_format_args
+#endif
 #endif
 
 namespace RC::Output
@@ -28,6 +36,20 @@ namespace RC::Output
     concept EnumType = std::is_enum_v<SupposedEnum>;
 
     using OutputDevicesContainerType = std::vector<std::unique_ptr<OutputDevice>>;
+
+    static constexpr auto apply_formatting(auto&& content, auto&&... args)
+    {
+        // Must switch on the 'content' type at compile-time, otherwise std::string formatting
+        // won't work on Windows since RC_STD_MAKE_FORMAT_ARGS is set to std::wstring.
+        if constexpr (not_std_string_like_t<std::decay_t<decltype(content)>>::value)
+        {
+            return std::vformat(content, std::make_wformat_args(args...));
+        }
+        else
+        {
+            return std::vformat(content, std::make_format_args(args...));
+        }
+    }
 
     auto RC_DYNOUT_API has_internal_error() -> bool;
 
@@ -109,7 +131,7 @@ namespace RC::Output
         };
 
         template <EnumType OptionalArg>
-        auto send(File::StringViewType content, OptionalArg optional_arg) -> void
+        auto send(SystemStringViewType content, OptionalArg optional_arg) -> void
         {
             if (m_opened_devices.empty())
             {
@@ -122,22 +144,24 @@ namespace RC::Output
 
                 if (device->has_optional_arg())
                 {
-                    device->receive_with_optional_arg(std::vformat(content), RC_STD_MAKE_FORMAT_ARGS(static_cast<int32_t>(optional_arg)));
+                    device->receive_with_optional_arg(content, static_cast<int32_t>(optional_arg));
                 }
                 else
                 {
-                    device->receive(std::vformat(content));
+                    device->receive(content);
                 }
             }
         }
 
         template <typename... FmtArgs>
-        auto send(File::StringViewType content, FmtArgs... fmt_args) -> void
+        auto send(SystemStringViewType&& content, FmtArgs&&... fmt_args) -> void
         {
             if (m_opened_devices.empty())
             {
                 THROW_INTERNAL_FILE_ERROR("[Output::send] Attempted to send but there were no opened devices.");
             }
+
+            auto formated = apply_formatting(content, to_system(std::forward<FmtArgs>(fmt_args))...);
 
             for (const auto& device : m_opened_devices)
             {
@@ -145,38 +169,40 @@ namespace RC::Output
 
                 if (device->has_optional_arg())
                 {
-                    device->receive_with_optional_arg(std::vformat(content, RC_STD_MAKE_FORMAT_ARGS(fmt_args...)), 0);
+                    device->receive_with_optional_arg(formated, 0);
                 }
                 else
                 {
-                    device->receive(std::vformat(content, RC_STD_MAKE_FORMAT_ARGS(fmt_args...)));
+                    device->receive(formated);
                 }
             }
         }
 
         template <EnumType OptionalArg, typename... FmtArgs>
-        auto send(File::StringViewType content, OptionalArg optional_arg, FmtArgs... fmt_args) -> void
+        auto send(SystemStringViewType content, OptionalArg optional_arg, FmtArgs&&... fmt_args) -> void
         {
             if (m_opened_devices.empty())
             {
                 THROW_INTERNAL_FILE_ERROR("[Output::send] Attempted to send but there were no opened devices.");
             }
 
+            auto formated = apply_formatting(content, to_system(std::forward<FmtArgs>(fmt_args))...);
+
             for (const auto& device : m_opened_devices)
             {
                 ASSERT_OUTPUT_DEVICE_IS_VALID(device)
                 if (device->has_optional_arg())
                 {
-                    device->receive_with_optional_arg(std::vformat(content, fmt_args...), RC_STD_MAKE_FORMAT_ARGS(static_cast<int32_t>(optional_arg)));
+                    device->receive_with_optional_arg(formated, static_cast<int32_t>(optional_arg));
                 }
                 else
                 {
-                    device->receive(std::vformat(content, RC_STD_MAKE_FORMAT_ARGS(fmt_args...)));
+                    device->receive(formated);
                 }
             }
         }
 
-        auto send(const File::StringType& content) -> void
+        auto send(const SystemStringType& content) -> void
         {
             if (m_opened_devices.empty())
             {
@@ -199,29 +225,31 @@ namespace RC::Output
         }
 
         template <int32_t optional_arg, typename FmtArg, typename... FmtArgs>
-        auto send(File::StringViewType content, FmtArg fmt_arg, FmtArgs... fmt_args) -> void
+        auto send(SystemStringViewType content, FmtArg&& fmt_arg, FmtArgs&&... fmt_args) -> void
         {
             if (m_opened_devices.empty())
             {
                 THROW_INTERNAL_FILE_ERROR("[Output::send] Attempted to send but there were no opened devices.");
             }
 
+            auto formated = std::vformat(content, RC_STD_MAKE_FORMAT_ARGS(to_system(std::forward<FmtArgs>(fmt_arg), std::forward<FmtArgs>(fmt_args))...));
+
             for (const auto& device : m_opened_devices)
             {
                 ASSERT_OUTPUT_DEVICE_IS_VALID(device)
                 if (device->has_optional_arg())
                 {
-                    device->receive_with_optional_arg(std::vformat(content, RC_STD_MAKE_FORMAT_ARGS(fmt_arg, fmt_args...)), optional_arg);
+                    device->receive_with_optional_arg(formated, optional_arg);
                 }
                 else
                 {
-                    device->receive(std::vformat(content, RC_STD_MAKE_FORMAT_ARGS(fmt_args...)));
+                    device->receive(formated);
                 }
             }
         }
 
         template <int32_t optional_arg>
-        auto send(const File::StringType& content) -> void
+        auto send(const SystemStringType& content) -> void
         {
             if (m_opened_devices.empty())
             {
@@ -278,47 +306,52 @@ namespace RC::Output
         DefaultTargets::set_default_log_level(log_level);
     }
 
-    template <typename... FmtArgs>
-    auto send(File::StringViewType content, FmtArgs... fmt_args) -> void
+    template <class StringView, typename... FmtArgs>
+    auto send(StringView _content, FmtArgs&&... fmt_args) -> void
     {
+        auto content = to_system(_content);
+        auto formated = apply_formatting(content, to_system(std::forward<FmtArgs>(fmt_args))...);
         for (const auto& device : DefaultTargets::get_default_devices_ref())
         {
             ASSERT_DEFAULT_OUTPUT_DEVICE_IS_VALID(device)
 
             if (device->has_optional_arg())
             {
-                device->receive_with_optional_arg(std::vformat(content, RC_STD_MAKE_FORMAT_ARGS(fmt_args...)), 0);
+                device->receive_with_optional_arg(formated, 0);
             }
             else
             {
-                device->receive(std::vformat(content, RC_STD_MAKE_FORMAT_ARGS(fmt_args...)));
+                device->receive(formated);
             }
         }
     }
 
-    template <EnumType OptionalArg, typename... FmtArgs>
-    auto send(File::StringViewType content, OptionalArg optional_arg, FmtArgs... fmt_args) -> void
+    template <EnumType OptionalArg, class StringView, typename... FmtArgs>
+    auto send(StringView _content, OptionalArg optional_arg, FmtArgs&&... fmt_args) -> void
     {
+        auto content = to_system(_content);
+        auto formated = std::vformat(content, RC_STD_MAKE_FORMAT_ARGS(to_system(std::forward<FmtArgs>(fmt_args))...));
         for (const auto& device : DefaultTargets::get_default_devices_ref())
         {
             ASSERT_DEFAULT_OUTPUT_DEVICE_IS_VALID(device)
 
             if (device->has_optional_arg())
             {
-                device->receive_with_optional_arg(std::vformat(content, RC_STD_MAKE_FORMAT_ARGS(fmt_args...)), static_cast<int32_t>(optional_arg));
+                device->receive_with_optional_arg(formated, static_cast<int32_t>(optional_arg));
             }
             else
             {
-                device->receive(std::vformat(content, RC_STD_MAKE_FORMAT_ARGS(fmt_args...)));
+                device->receive(formated);
             }
         }
     }
 
-    auto RC_DYNOUT_API send(File::StringViewType content) -> void;
+    auto RC_DYNOUT_API send(SystemStringViewType content) -> void;
 
-    template <EnumType OptionalArg>
-    auto send(File::StringViewType content, OptionalArg optional_arg) -> void
+    template <class StringView, EnumType OptionalArg>
+    auto send(StringView _content, OptionalArg optional_arg) -> void
     {
+        auto content = to_system(_content);
         for (const auto& device : DefaultTargets::get_default_devices_ref())
         {
             ASSERT_DEFAULT_OUTPUT_DEVICE_IS_VALID(device)
@@ -334,27 +367,30 @@ namespace RC::Output
         }
     }
 
-    template <int32_t optional_arg, typename... FmtArgs>
-    auto send(File::StringViewType content, FmtArgs... fmt_args) -> void
+    template <int32_t optional_arg, class StringView, typename... FmtArgs>
+    auto send(StringView _content, FmtArgs&&... fmt_args) -> void
     {
+        auto content = to_system(_content);
+        auto formated = apply_formatting(content, to_system(std::forward<FmtArgs>(fmt_args))...);
         for (const auto& device : DefaultTargets::get_default_devices_ref())
         {
             ASSERT_DEFAULT_OUTPUT_DEVICE_IS_VALID(device)
 
             if (device->has_optional_arg())
             {
-                device->receive_with_optional_arg(std::vformat(content, RC_STD_MAKE_FORMAT_ARGS(fmt_args...)), optional_arg);
+                device->receive_with_optional_arg(formated, optional_arg);
             }
             else
             {
-                device->receive(std::vformat(content, RC_STD_MAKE_FORMAT_ARGS(fmt_args...)));
+                device->receive(formated);
             }
         }
     }
 
-    template <int32_t optional_arg>
-    auto send(File::StringViewType content) -> void
+    template <int32_t optional_arg, class StringView>
+    auto send(StringView _content) -> void
     {
+        auto content = to_system(_content);
         for (const auto& device : DefaultTargets::get_default_devices_ref())
         {
             ASSERT_DEFAULT_OUTPUT_DEVICE_IS_VALID(device)

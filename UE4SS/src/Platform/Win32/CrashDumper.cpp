@@ -27,7 +27,7 @@ namespace RC
     LONG WINAPI ExceptionHandler(_EXCEPTION_POINTERS* exception_pointers)
     {
         const auto now = time_point_cast<seconds>(system_clock::now());
-        const std::wstring dump_path = std::format(L"{}\\crash_{:%Y_%m_%d_%H_%M_%S}.dmp", StringType{UE4SSProgram::get_program().get_working_directory()}, now);
+        const std::wstring dump_path = std::format(L"{}\\crash_{:%Y_%m_%d_%H_%M_%S}.dmp", SystemStringType{UE4SSProgram::get_program().get_working_directory()}, now);
 
         const HANDLE file = CreateFileW(dump_path.c_str(), GENERIC_WRITE, FILE_SHARE_WRITE, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
 

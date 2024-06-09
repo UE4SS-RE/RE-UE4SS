@@ -1,0 +1,412 @@
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index 9376c4a..5e24536 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -64,6 +64,8 @@ if (IMTUI_SUPPORT_NCURSES)
+     if (MINGW)
+         set(CURSES_LIBRARIES pdcurses)
+     else()
++        set(CURSES_NEED_NCURSES TRUE)
++        set(CURSES_NEED_WIDE TRUE)
+         find_package(Curses REQUIRED)
+         CHECK_LIBRARY_EXISTS("${CURSES_NCURSES_LIBRARY}"
+             nodelay "" CURSES_NCURSES_HAS_NODELAY)
+diff --git a/include/imtui/imtui-impl-ncurses.h b/include/imtui/imtui-impl-ncurses.h
+index 51e64d3..5a05359 100644
+--- a/include/imtui/imtui-impl-ncurses.h
++++ b/include/imtui/imtui-impl-ncurses.h
+@@ -4,6 +4,8 @@
+ 
+ #pragma once
+ 
++#include <functional>
++
+ namespace ImTui {
+ struct TScreen;
+ }
+@@ -19,7 +21,7 @@ ImTui::TScreen * ImTui_ImplNcurses_Init(bool mouseSupport, float fps_active = 60
+ void ImTui_ImplNcurses_Shutdown();
+ 
+ // returns true if there is any user input from the keyboard/mouse
+-bool ImTui_ImplNcurses_NewFrame();
++bool ImTui_ImplNcurses_NewFrame(std::function<void(int)> inputCallback);
+ 
+ // active - specify which redraw rate to use: fps_active or fps_idle
+ void ImTui_ImplNcurses_DrawScreen(bool active = true);
+diff --git a/include/imtui/imtui.h b/include/imtui/imtui.h
+index b77c342..100a4d8 100644
+--- a/include/imtui/imtui.h
++++ b/include/imtui/imtui.h
+@@ -21,7 +21,12 @@ using TColor = unsigned char;
+ // 0x0000FFFF - char
+ // 0x00FF0000 - foreground color
+ // 0xFF000000 - background color
+-using TCell = uint32_t;
++//using TCell = uint32_t;
++
++// 0x00000000FFFFFFFF - char
++// 0x000000FF00000000 - foreground color
++// 0x0000FF0000000000 - background color
++using TCell = uint64_t;
+ 
+ struct TScreen {
+     int nx = 0;
+diff --git a/src/imtui-impl-ncurses.cpp b/src/imtui-impl-ncurses.cpp
+index 1d454ba..40adeee 100644
+--- a/src/imtui-impl-ncurses.cpp
++++ b/src/imtui-impl-ncurses.cpp
+@@ -27,6 +27,9 @@
+ #include <ncurses.h>
+ #endif
+ 
++#include <termios.h>
++#include <unistd.h>
++
+ #include <array>
+ #include <chrono>
+ #include <map>
+@@ -101,7 +104,8 @@ ImTui::TScreen * ImTui_ImplNcurses_Init(bool mouseSupport, float fps_active, flo
+     }
+     fps_idle = std::min(fps_active, fps_idle);
+     g_vsync = VSync(fps_active, fps_idle);
+-
++    
++    setlocale(LC_ALL,"");
+     initscr();
+     use_default_colors();
+     start_color();
+@@ -150,15 +154,57 @@ ImTui::TScreen * ImTui_ImplNcurses_Init(bool mouseSupport, float fps_active, flo
+ 
+ 	getmaxyx(stdscr, screenSizeY, screenSizeX);
+ 	ImGui::GetIO().DisplaySize = ImVec2(screenSizeX, screenSizeY);
++    static char encoding_table[64];
++    for (int i = 0; i < 26; i++) {
++        encoding_table[i] = 'A' + i;
++        encoding_table[i + 26] = 'a' + i;
++    }
++    for (int i = 0; i < 10; i++) {
++        encoding_table[i + 52] = '0' + i;
++    }
++    encoding_table[62] = '+';
++    encoding_table[63] = '/';
++    ImGui::GetIO().SetClipboardTextFn = [](void* user_data, const char* text) {
++        // ncurses clipboard
++        int length = strlen(text);
++        refresh();
++        printf("\e]52;c;");
++        for (int i = 0; i < length; ) {
++            uint32_t c = 0;
++            for (int j = 0; j < 3; j++) {
++                c = (c << 8) | (i < length ? (uint8_t) text[i++] : 0);
++            }
++            for (int j = 3; j >= 0; j--) {
++                printf("%c", encoding_table[(c >> (6*j)) & 0x3F]);
++            }
++        }
++        int pad = (length + 2) % 3;
++        for (int i = 0; i < pad; i++) {
++            printf("=");
++        }
++        printf("\a");
++        fflush(stdout);
++        refresh();
++    };
+ 
+     return g_screen;
+ }
+ 
++void reset_terminal_modes() {
++    struct termios term;
++    tcgetattr(STDIN_FILENO, &term);
++    term.c_iflag |= (ICRNL | INLCR); // Translate CR to NL on input
++    term.c_oflag |= (ONLCR); // Translate NL to CR-NL on output
++    tcsetattr(STDIN_FILENO, TCSANOW, &term);
++}
++
+ void ImTui_ImplNcurses_Shutdown() {
+     // ref #11 : https://github.com/ggerganov/imtui/issues/11
+     printf("\033[?1003l\n"); // Disable mouse movement events, as l = low
+ 
+     endwin();
++    reset_shell_mode();
++    reset_terminal_modes();
+ 
+     if (g_screen) {
+         delete g_screen;
+@@ -167,7 +213,7 @@ void ImTui_ImplNcurses_Shutdown() {
+     g_screen = nullptr;
+ }
+ 
+-bool ImTui_ImplNcurses_NewFrame() {
++bool ImTui_ImplNcurses_NewFrame(std::function<void(int)> inputCallback) {
+     bool hasInput = false;
+ 
+ 	int screenSizeX = 0;
+@@ -178,8 +224,10 @@ bool ImTui_ImplNcurses_NewFrame() {
+ 
+     static int mx = 0;
+     static int my = 0;
+-    static int lbut = 0;
+-    static int rbut = 0;
++    static int lbutdown = 0;
++    static int rbutdown = 0;
++    static int lbutup = 0;
++    static int rbutup = 0;
+     static unsigned long mstate = 0;
+     static char input[3];
+ 
+@@ -196,8 +244,8 @@ bool ImTui_ImplNcurses_NewFrame() {
+ 
+         if (c == ERR) {
+             if ((mstate & 0xf) == 0x1) {
+-                lbut = 0;
+-                rbut = 0;
++                lbutdown = lbutup = 0;
++                rbutdown = rbutup = 0;
+             }
+             break;
+         } else if (c == KEY_MOUSE) {
+@@ -206,10 +254,14 @@ bool ImTui_ImplNcurses_NewFrame() {
+                 mx = event.x;
+                 my = event.y;
+                 mstate = event.bstate;
+-                if ((mstate & 0x000f) == 0x0002) lbut = 1;
+-                if ((mstate & 0x000f) == 0x0001) lbut = 0;
+-                if ((mstate & 0xf000) == 0x2000) rbut = 1;
+-                if ((mstate & 0xf000) == 0x1000) rbut = 0;
++                if ((mstate & BUTTON1_PRESSED)) {lbutdown = 1; lbutup = 0; }
++                if ((mstate & BUTTON1_RELEASED)) {lbutdown = 0; lbutup = 1; }
++                if ((mstate & BUTTON3_PRESSED)) {rbutdown = 1; rbutup = 0; }
++                if ((mstate & BUTTON3_RELEASED)) {rbutdown = 0; rbutup = 1; }
++                ImGui::GetIO().MouseWheel = 0;
++                if ((mstate & BUTTON4_PRESSED)) {ImGui::GetIO().MouseWheel = 1; }
++                if ((mstate & BUTTON5_PRESSED)) {ImGui::GetIO().MouseWheel = -1; }
++
+                 //printf("mstate = 0x%016lx\n", mstate);
+                 ImGui::GetIO().KeyCtrl |= ((mstate & 0x0F000000) == 0x01000000);
+             }
+@@ -252,8 +304,8 @@ bool ImTui_ImplNcurses_NewFrame() {
+             } else {
+                 keysDown[c] = true;
+             }
++            inputCallback(c);
+         }
+-
+         hasInput = true;
+     }
+ 
+@@ -266,8 +318,12 @@ bool ImTui_ImplNcurses_NewFrame() {
+ 
+     ImGui::GetIO().MousePos.x = mx;
+     ImGui::GetIO().MousePos.y = my;
+-    ImGui::GetIO().MouseDown[0] = lbut;
+-    ImGui::GetIO().MouseDown[1] = rbut;
++
++    ImGui::GetIO().MouseDown[0] = lbutdown;
++    ImGui::GetIO().MouseDown[1] = rbutdown;
++    
++    ImGui::GetIO().MouseReleased[0] = lbutup;
++    ImGui::GetIO().MouseReleased[1] = rbutup;
+ 
+     ImGui::GetIO().DeltaTime = g_vsync.delta_s();
+ 
+@@ -315,8 +371,10 @@ void ImTui_ImplNcurses_DrawScreen(bool active) {
+         move(y, 0);
+         for (int x = 0; x < nx; ++x) {
+             const auto cell = g_screen->data[y*nx + x];
+-            const uint16_t f = (cell & 0x00FF0000) >> 16;
+-            const uint16_t b = (cell & 0xFF000000) >> 24;
++           // const uint16_t f = (cell & 0x00FF0000) >> 16;
++           // const uint16_t b = (cell & 0xFF000000) >> 24;
++            const uint16_t f = ((cell >> 32) & 0xff);
++            const uint16_t b = ((cell >> 40) & 0xff);
+             const uint16_t p = b*256 + f;
+ 
+             if (colPairs[p].first == false) {
+@@ -337,8 +395,25 @@ void ImTui_ImplNcurses_DrawScreen(bool active) {
+                 lastp = p;
+             }
+ 
+-            const uint16_t c = cell & 0x0000FFFF;
+-            curs[ic++] = c > 0 ? c : ' ';
++            const uint32_t c = cell & 0xFFFFFFFF;
++            if (c > 0) {
++                // unicode to utf-8
++                if (c < 0x80) {
++                    curs[ic++] = (char) c;
++                } else if (c < 0x800) {
++                    curs[ic++] = (char) (0xC0 | (c >> 6));
++                    curs[ic++] = (char) (0x80 | (c & 0x3F));
++                } else if (c < 0x10000) {
++                    curs[ic++] = (char) (0xE0 | (c >> 12));
++                    curs[ic++] = (char) (0x80 | ((c >> 6) & 0x3F));
++                    curs[ic++] = (char) (0x80 | (c & 0x3F));
++                } else {
++                    curs[ic++] = (char) (0xF0 | (c >> 18));
++                    curs[ic++] = (char) (0x80 | ((c >> 12) & 0x3F));
++                    curs[ic++] = (char) (0x80 | ((c >> 6) & 0x3F));
++                    curs[ic++] = (char) (0x80 | (c & 0x3F));
++                }
++            } else curs[ic++] = ' ';
+         }
+ 
+         if (curs.size() > 0) {
+diff --git a/src/imtui-impl-text.cpp b/src/imtui-impl-text.cpp
+index 48f0e70..afaa68f 100644
+--- a/src/imtui-impl-text.cpp
++++ b/src/imtui-impl-text.cpp
+@@ -92,9 +92,12 @@ void drawTriangle(ImVec2 p0, ImVec2 p1, ImVec2 p2, unsigned char col, ImTui::TSc
+             while (len--) {
+                 if (x >= 0 && x < screen->nx && y + ymin >= 0 && y + ymin < screen->ny) {
+                     auto & cell = screen->data[(y + ymin)*screen->nx + x];
+-                    cell &= 0x00FF0000;
++                    cell &= ~0x0000ff00fffffffful;
+                     cell |= ' ';
+-                    cell |= ((ImTui::TCell)(col) << 24);
++                    cell |= ((uint64_t)col) << 40;
++                    //cell &= 0x00FF0000;
++                    //cell |= ' ';
++                    //cell |= ((ImTui::TCell)(col) << 24);
+                 }
+                 ++x;
+             }
+@@ -102,7 +105,7 @@ void drawTriangle(ImVec2 p0, ImVec2 p1, ImVec2 p2, unsigned char col, ImTui::TSc
+     }
+ }
+ 
+-inline ImTui::TColor rgbToAnsi256(ImU32 col, bool doAlpha) {
++ImTui::TColor rgbToAnsi256(ImU32 col, bool doAlpha) {
+     ImTui::TColor r = col & 0x000000FF;
+     ImTui::TColor g = (col & 0x0000FF00) >> 8;
+     ImTui::TColor b = (col & 0x00FF0000) >> 16;
+@@ -196,8 +199,8 @@ void ImTui_ImplText_RenderDrawData(ImDrawData * drawData, ImTui::TScreen * scree
+                         auto uv2 = cmd_list->VtxBuffer[vidx2].uv;
+ 
+                         auto col0 = cmd_list->VtxBuffer[vidx0].col;
+-                        //auto col1 = cmd_list->VtxBuffer[vidx1].col;
+-                        //auto col2 = cmd_list->VtxBuffer[vidx2].col;
++                        auto col1 = cmd_list->VtxBuffer[vidx1].col;
++                        auto col2 = cmd_list->VtxBuffer[vidx2].col;
+ 
+                         if (uv0.x != uv1.x || uv0.x != uv2.x || uv1.x != uv2.x ||
+                             uv0.y != uv1.y || uv0.y != uv2.y || uv1.y != uv2.y) {
+@@ -225,9 +228,9 @@ void ImTui_ImplText_RenderDrawData(ImDrawData * drawData, ImTui::TScreen * scree
+                             if (xx < clip_rect.x || xx >= clip_rect.z || yy < clip_rect.y || yy >= clip_rect.w) {
+                             } else {
+                                 auto & cell = screen->data[yy*screen->nx + xx];
+-                                cell &= 0xFF000000;
+-                                cell |= (col0 & 0xff000000) >> 24;
+-                                cell |= ((ImTui::TCell)(rgbToAnsi256(col0, false)) << 16);
++                                cell &= ~0xFFFFFFFFFFul;
++                                cell |= (((uint64_t)rgbToAnsi256(col0, false)) << 32) ; // set color
++                                cell |= (col0 >> 24) | (col1 >> 24 << 8) | (col2 >> 24 << 16); // set character
+                             }
+                             i += 3;
+                         } else {
+diff --git a/third-party/CMakeLists.txt b/third-party/CMakeLists.txt
+index b9c1f67..9d7f201 100644
+--- a/third-party/CMakeLists.txt
++++ b/third-party/CMakeLists.txt
+@@ -18,6 +18,7 @@ add_library(imgui-for-imtui STATIC
+     imgui/imgui/imgui_demo.cpp
+     imgui/imgui/imgui_widgets.cpp
+     imgui/imgui/imgui_tables.cpp
++    imgui/imgui/misc/cpp/imgui_stdlib.cpp
+     )
+ 
+ target_include_directories(imgui-for-imtui INTERFACE
+Submodule third-party/imgui/imgui contains modified content
+diff --git a/third-party/imgui/imgui/imgui.cpp b/third-party/imgui/imgui/imgui.cpp
+index c3f7d376..50c8acaf 100644
+--- a/third-party/imgui/imgui/imgui.cpp
++++ b/third-party/imgui/imgui/imgui.cpp
+@@ -8457,9 +8457,9 @@ ImVec2 ImGui::FindBestWindowPosForPopup(ImGuiWindow* window)
+         ImVec2 ref_pos = NavCalcPreferredRefPos();
+         ImRect r_avoid;
+         if (!g.NavDisableHighlight && g.NavDisableMouseHover && !(g.IO.ConfigFlags & ImGuiConfigFlags_NavEnableSetMousePos))
+-            r_avoid = ImRect(ref_pos.x - 16, ref_pos.y - 8, ref_pos.x + 16, ref_pos.y + 8);
++            r_avoid = ImRect(ref_pos.x - 1, ref_pos.y - 1, ref_pos.x + 1, ref_pos.y + 1);
+         else
+-            r_avoid = ImRect(ref_pos.x - 16, ref_pos.y - 8, ref_pos.x + 24 * sc, ref_pos.y + 24 * sc); // FIXME: Hard-coded based on mouse cursor shape expectation. Exact dimension not very important.
++            r_avoid = ImRect(ref_pos.x - 1, ref_pos.y - 1, ref_pos.x + 1 * sc, ref_pos.y + 1 * sc); // FIXME: Hard-coded based on mouse cursor shape expectation. Exact dimension not very important.
+         return FindBestWindowPosForPopupEx(ref_pos, window->Size, &window->AutoPosLastDirection, r_outer, r_avoid, ImGuiPopupPositionPolicy_Tooltip);
+     }
+     IM_ASSERT(0);
+diff --git a/third-party/imgui/imgui/imgui_draw.cpp b/third-party/imgui/imgui/imgui_draw.cpp
+index dc719e68..295fb2da 100644
+--- a/third-party/imgui/imgui/imgui_draw.cpp
++++ b/third-party/imgui/imgui/imgui_draw.cpp
+@@ -3490,7 +3490,9 @@ void ImFont::RenderText(ImDrawList* draw_list, float size, ImVec2 pos, ImU32 col
+                 }
+ 
+                 col &= 0x00FFFFFF;
+-                col |= (c << 24);
++                ImU32 c0 = (c & 0xFF) << 24;
++                ImU32 c1 = ((c >> 8) & 0xFF)  << 24;
++                ImU32 c2 = ((c >> 16) & 0xFF) << 24;
+                 // Support for untinted glyphs
+                 ImU32 glyph_col = glyph->Colored ? col_untinted : col;
+ 
+@@ -3498,9 +3500,9 @@ void ImFont::RenderText(ImDrawList* draw_list, float size, ImVec2 pos, ImU32 col
+                 {
+                     idx_write[0] = (ImDrawIdx)(vtx_current_idx); idx_write[1] = (ImDrawIdx)(vtx_current_idx+1); idx_write[2] = (ImDrawIdx)(vtx_current_idx+2);
+                     idx_write[3] = (ImDrawIdx)(vtx_current_idx); idx_write[4] = (ImDrawIdx)(vtx_current_idx+2); idx_write[5] = (ImDrawIdx)(vtx_current_idx+3);
+-                    vtx_write[0].pos.x = x1; vtx_write[0].pos.y = y1; vtx_write[0].col = glyph_col; vtx_write[0].uv.x = u1; vtx_write[0].uv.y = v1;
+-                    vtx_write[1].pos.x = x2; vtx_write[1].pos.y = y1; vtx_write[1].col = glyph_col; vtx_write[1].uv.x = u2; vtx_write[1].uv.y = v1;
+-                    vtx_write[2].pos.x = x2; vtx_write[2].pos.y = y2; vtx_write[2].col = glyph_col; vtx_write[2].uv.x = u2; vtx_write[2].uv.y = v2;
++                    vtx_write[0].pos.x = x1; vtx_write[0].pos.y = y1; vtx_write[0].col = glyph_col | c0; vtx_write[0].uv.x = u1; vtx_write[0].uv.y = v1;
++                    vtx_write[1].pos.x = x2; vtx_write[1].pos.y = y1; vtx_write[1].col = glyph_col | c1; vtx_write[1].uv.x = u2; vtx_write[1].uv.y = v1;
++                    vtx_write[2].pos.x = x2; vtx_write[2].pos.y = y2; vtx_write[2].col = glyph_col | c2; vtx_write[2].uv.x = u2; vtx_write[2].uv.y = v2;
+                     vtx_write[3].pos.x = x1; vtx_write[3].pos.y = y2; vtx_write[3].col = glyph_col; vtx_write[3].uv.x = u1; vtx_write[3].uv.y = v2;
+                     vtx_write += 4;
+                     vtx_current_idx += 4;
+diff --git a/third-party/imgui/imgui/imgui_widgets.cpp b/third-party/imgui/imgui/imgui_widgets.cpp
+index 85a1d6bc..f10d9c55 100644
+--- a/third-party/imgui/imgui/imgui_widgets.cpp
++++ b/third-party/imgui/imgui/imgui_widgets.cpp
+@@ -678,7 +678,7 @@ bool ImGui::ButtonEx(const char* label, const ImVec2& size_arg, ImGuiButtonFlags
+         pos.y += window->DC.CurrLineTextBaseOffset - style.FramePadding.y;
+     //ImVec2 size = CalcItemSize(size_arg, label_size.x + style.FramePadding.x * 2.0f, label_size.y + style.FramePadding.y * 2.0f);
+     ImVec2 size = CalcItemSize(size_arg, label_size.x, label_size.y + style.FramePadding.y * 2.0f);
+-
++    size.x += 4;
+     const ImRect bb(pos, pos + size);
+     ItemSize(size, style.FramePadding.y);
+     if (!ItemAdd(bb, id))
+@@ -1073,7 +1073,7 @@ bool ImGui::Checkbox(const char* label, bool* v)
+ 
+     const float square_sz = GetFrameHeight();
+     const ImVec2 pos = window->DC.CursorPos;
+-    const ImRect total_bb(pos, pos + ImVec2(square_sz + (label_size.x > 0.0f ? style.ItemInnerSpacing.x + label_size.x : 0.0f), label_size.y + style.FramePadding.y * 2.0f));
++    const ImRect total_bb(pos, pos + ImVec2(square_sz * 3 + (label_size.x > 0.0f ? style.ItemInnerSpacing.x + label_size.x : 0.0f), label_size.y + style.FramePadding.y * 2.0f));
+     ItemSize(total_bb, style.FramePadding.y);
+     if (!ItemAdd(total_bb, id))
+     {
+@@ -1089,7 +1089,7 @@ bool ImGui::Checkbox(const char* label, bool* v)
+         MarkItemEdited(id);
+     }
+ 
+-    const ImRect check_bb(pos, pos + ImVec2(square_sz, square_sz));
++    const ImRect check_bb(pos, pos + ImVec2(square_sz * 3, square_sz));
+     RenderNavHighlight(total_bb, id);
+     RenderFrame(check_bb.Min, check_bb.Max + ImVec2(0.5f, 0.0f), GetColorU32((held && hovered) ? ImGuiCol_FrameBgActive : hovered ? ImGuiCol_FrameBgHovered : ImGuiCol_FrameBg), true, style.FrameRounding);
+     ImU32 check_col = GetColorU32(ImGuiCol_CheckMark);
+@@ -1101,13 +1101,16 @@ bool ImGui::Checkbox(const char* label, bool* v)
+         //ImVec2 pad(ImMax(1.0f, IM_FLOOR(square_sz / 3.6f)), ImMax(1.0f, IM_FLOOR(square_sz / 3.6f)));
+         //window->DrawList->AddRectFilled(check_bb.Min + pad, check_bb.Max - pad, check_col, style.FrameRounding);
+         const float pad = 0.5f;
+-        RenderCheckMark(window->DrawList, check_bb.Min + ImVec2(pad, pad), check_col, square_sz - pad * 2.0f, "O");
++        RenderCheckMark(window->DrawList, check_bb.Min + ImVec2(pad, pad), check_col, square_sz - pad * 2.0f, "[O]");
+     }
+     else if (*v)
+     {
+         //const float pad = ImMax(1.0f, IM_FLOOR(square_sz / 6.0f));
+         const float pad = 0.5f;
+-        RenderCheckMark(window->DrawList, check_bb.Min + ImVec2(pad, pad), check_col, square_sz - pad * 2.0f);
++        RenderCheckMark(window->DrawList, check_bb.Min + ImVec2(pad, pad), check_col, square_sz - pad * 2.0f, "[X]");
++    } else {
++        const float pad = 0.5f;
++        RenderCheckMark(window->DrawList, check_bb.Min + ImVec2(pad, pad), check_col, square_sz - pad * 2.0f, "[ ]");
+     }
+ 
+     ImVec2 label_pos = ImVec2(check_bb.Max.x + style.ItemInnerSpacing.x, check_bb.Min.y + style.FramePadding.y);

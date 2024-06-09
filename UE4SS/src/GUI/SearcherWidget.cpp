@@ -1,7 +1,7 @@
 #include <GUI/SearcherWidget.hpp>
 
 #include <imgui.h>
-
+#define strncpy_s(dest, destsz, src, count) strncpy((dest), (src), (((count) < (destsz)) ? (count) : (destsz)))
 namespace RC::GUI
 {
     SearcherWidget::SearcherWidget(SearchModeChangedCallback ufunction_caller_search_mode_changed_callback,
@@ -55,7 +55,7 @@ namespace RC::GUI
             std::string search_buffer{m_search_by_name_buffer};
             if (search_buffer.empty())
             {
-                // Output::send(STR("Search all functions\n"));
+                // Output::send(SYSSTR("Search all functions\n"));
                 m_name_to_search_by.clear();
                 m_current_iterator = m_all_iterator;
                 m_is_searching_by_name = false;
@@ -63,7 +63,7 @@ namespace RC::GUI
             }
             else
             {
-                // Output::send(STR("Search for: {}\n"), search_buffer.empty() ? STR("") : to_wstring(search_buffer));
+                // Output::send(SYSSTR("Search for: {}\n"), search_buffer.empty() ? STR("") : to_wstring(search_buffer));
                 m_name_to_search_by = search_buffer;
                 m_current_iterator = m_search_iterator;
                 m_is_searching_by_name = true;

@@ -26,7 +26,7 @@ namespace RC::Ini
         // Always use "m_ref->value" instead of "value"
         // That way it returns properly if this value is a reference to another variable
         // The "m_ref->value" member is set to self if it doesn't refer to another variable
-        File::StringType m_string_value;
+        SystemStringType m_string_value;
         int64_t m_int64_value{};
         float m_float_value{};
         bool m_bool_value{};
@@ -57,14 +57,14 @@ namespace RC::Ini
             return is_valid_type<Type::Bool>();
         }
 
-        RC_INI_PARSER_API auto get_string_value() const -> const File::StringType&;
+        RC_INI_PARSER_API auto get_string_value() const -> const SystemStringType&;
         RC_INI_PARSER_API auto get_int64_value() const -> int64_t;
         RC_INI_PARSER_API auto get_float_value() const -> float;
         RC_INI_PARSER_API auto get_bool_value() const -> bool;
 
-        RC_INI_PARSER_API auto add_string_value(File::StringViewType data) -> void;
-        RC_INI_PARSER_API auto add_int64_value(const File::StringType& data, int base = 10) -> void;
-        RC_INI_PARSER_API auto add_float_value(const File::StringType& data) -> void;
+        RC_INI_PARSER_API auto add_string_value(SystemStringViewType data) -> void;
+        RC_INI_PARSER_API auto add_int64_value(const SystemStringType& data, int base = 10) -> void;
+        RC_INI_PARSER_API auto add_float_value(const SystemStringType& data) -> void;
         RC_INI_PARSER_API auto add_bool_value(bool data) -> void;
 
       private:

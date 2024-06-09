@@ -4,6 +4,8 @@
 #include <DynamicOutput/DynamicOutput.hpp>
 #include <Zydis/Zydis.h>
 
+#include <array>
+
 namespace RC::ASM
 {
     auto get_first_instruction_at_address(void* in_instruction_ptr) -> Instruction
@@ -56,7 +58,7 @@ namespace RC::ASM
             }
             else
             {
-                Output::send<LogLevel::Warning>(STR("Was unable to resolve JMP instruction @ {}\n"), instruction.address);
+                Output::send<LogLevel::Warning>(SYSSTR("Was unable to resolve JMP instruction @ {}\n"), instruction.address);
                 return nullptr;
             }
         }

@@ -6,10 +6,24 @@
 #include <DynamicOutput/DynamicOutput.hpp>
 #include <ExceptionHandling.hpp>
 #include <GUI/BPMods.hpp>
-#include <GUI/DX11.hpp>
 #include <GUI/Dumpers.hpp>
-#include <GUI/GLFW3_OpenGL3.hpp>
+
+#ifdef WIN32
 #include <GUI/Windows.hpp>
+#ifdef HAS_D3D11
+#include <GUI/DX11.hpp>
+#endif
+#else
+#define sscanf_s sscanf
+#endif
+
+#ifdef HAS_GLFW
+#include <GUI/GLFW3_OpenGL3.hpp>
+#endif
+
+#ifdef HAS_TUI
+#include <GUI/TUI.hpp>
+#endif
 
 #include <UE4SSProgram.hpp>
 #include <Unreal/UnrealInitializer.hpp>
@@ -17,12 +31,17 @@
 #undef TEXT
 #endif
 
+#ifdef HAS_GUI
 #include "Roboto.hpp"
 #include "FaSolid900.hpp"
-#include <imgui.h>
 #include <IconsFontAwesome5.h>
-#include <imgui_internal.h>
+#elif defined(HAS_TUI)
+#include <GUI/NerdFont.hpp>
+#endif
 
+
+#include <imgui_internal.h>
+#include <imgui.h>
 namespace RC::GUI
 {
     ImColor g_imgui_bg_color{0.22f, 0.22f, 0.22f, 1.00f};
@@ -42,6 +61,15 @@ namespace RC::GUI
     ImColor g_imgui_text_green_color = ImColor{115, 235, 120, 255};
     ImColor g_imgui_text_blue_color = ImColor{135, 195, 250, 255};
     ImColor g_imgui_text_purple_color = ImColor{170, 145, 255, 255};
+
+    BackendProperty g_backend_properties = {
+        .x_offset_0 = -14.0f,
+        .x_offset_1 = -16.0f,
+        .xdiv = 1.0f,
+        .ydiv = 1.0f,
+        .separator_height = 4.0f,
+        .quirk_tui = false,
+    };
 
     std::vector<DebuggingGUI::EndOfFrameCallback> DebuggingGUI::s_end_of_frame_callbacks{};
 
@@ -76,7 +104,7 @@ namespace RC::GUI
 
             if (ImGui::BeginTabBar("##MainTabBar", ImGuiTabBarFlags_None))
             {
-                if (ImGui::BeginTabItem(ICON_FA_TERMINAL " Console"))
+                if (ImGui::BeginTabItem(ATTACH_ICON(ICON_FA_TERMINAL, " Console")))
                 {
                     get_console().render_search_box();
 
@@ -88,13 +116,14 @@ namespace RC::GUI
                     {
                         ImGui::BeginDisabled(true);
                     }
-                    if (ImGui::Button(ICON_FA_ARCHIVE " Dump Objects & Properties"))
+                    if (ImGui::Button(ATTACH_ICON(ICON_FA_ARCHIVE, " Dump Objects & Properties")))
                     {
                         m_event_thread_busy = true;
                         UE4SSProgram::get_program().queue_event(
                                 [](void* data) {
-                                    UE4SSProgram::dump_all_objects_and_properties(UE4SSProgram::get_program().get_object_dumper_output_directory() + STR("\\") +
-                                                                                  UE4SSProgram::m_object_dumper_file_name);
+                                    UE4SSProgram::dump_all_objects_and_properties(
+                                            to_system(std::filesystem::path{UE4SSProgram::get_program().get_object_dumper_output_directory()} /
+                                                      UE4SSProgram::m_object_dumper_file_name));
                                     static_cast<GUI::DebuggingGUI*>(data)->m_event_thread_busy = false;
                                 },
                                 this);
@@ -109,7 +138,7 @@ namespace RC::GUI
                         ImGui::BeginDisabled(true);
                     }
                     ImGui::SameLine();
-                    if (ImGui::Button(ICON_FA_SYNC " Restart All Mods"))
+                    if (ImGui::Button(ATTACH_ICON(ICON_FA_SYNC, " Restart All Mods")))
                     {
                         m_event_thread_busy = true;
                         UE4SSProgram::get_program().queue_event(
@@ -137,7 +166,7 @@ namespace RC::GUI
                 {
                     ImGui::BeginDisabled(true);
                 }
-                if (ImGui::BeginTabItem(ICON_FA_FILE_ALT " Live View"))
+                if (ImGui::BeginTabItem(ATTACH_ICON(ICON_FA_FILE_ALT, " Live View")))
                 {
                     listeners_are_required = true;
                     m_live_view.set_listeners();
@@ -149,7 +178,7 @@ namespace RC::GUI
                     should_unset_listeners = true;
                 }
 
-                if (ImGui::BeginTabItem(ICON_FA_EYE " Watches"))
+                if (ImGui::BeginTabItem(ATTACH_ICON(ICON_FA_EYE, " Watches")))
                 {
                     listeners_are_required = true;
                     m_live_view.render_watches();
@@ -165,13 +194,13 @@ namespace RC::GUI
                     m_live_view.unset_listeners();
                 }
 
-                if (ImGui::BeginTabItem(ICON_FA_ARCHIVE " Dumpers"))
+                if (ImGui::BeginTabItem(ATTACH_ICON(ICON_FA_ARCHIVE, " Dumpers")))
                 {
                     Dumpers::render();
                     ImGui::EndTabItem();
                 }
 
-                if (ImGui::BeginTabItem(ICON_FA_PUZZLE_PIECE " BP Mods"))
+                if (ImGui::BeginTabItem(ATTACH_ICON(ICON_FA_PUZZLE_PIECE, " BP Mods")))
                 {
                     BPMods::render();
                     ImGui::EndTabItem();
@@ -210,7 +239,11 @@ namespace RC::GUI
         ImGuiStyle& style = ImGui::GetStyle();
 
         style.WindowPadding = ImVec2(8, 8);
+#ifdef HAS_GUI
         style.FramePadding = ImVec2(12, 5);
+#else
+        style.FramePadding = ImVec2(0.5f, 0.5f);
+#endif
         style.CellPadding = ImVec2(3, 3);
         style.ItemSpacing = ImVec2(8, 4);
         style.ItemInnerSpacing = ImVec2(4, 4);
@@ -264,8 +297,13 @@ namespace RC::GUI
         style.Colors[ImGuiCol_SliderGrab] = ImVec4(0.55f, 0.22f, 0.45f, 1.00f);
         style.Colors[ImGuiCol_SliderGrabActive] = ImVec4(0.63f, 0.24f, 0.50f, 1.00f);
         style.Colors[ImGuiCol_Button] = ImVec4(0.51f, 0.23f, 0.42f, 1.00f);
+#ifdef HAS_GUI
         style.Colors[ImGuiCol_ButtonHovered] = ImVec4(0.59f, 0.22f, 0.48f, 1.00f);
         style.Colors[ImGuiCol_ButtonActive] = ImVec4(0.63f, 0.24f, 0.50f, 1.00f);
+#else
+        style.Colors[ImGuiCol_ButtonHovered] = ImVec4(0.4f, 0.5f, 0.8f, 1.00f);
+        style.Colors[ImGuiCol_ButtonActive] = ImVec4(0.65f, 0.4f, 0.50f, 1.00f);
+#endif
         style.Colors[ImGuiCol_Header] = ImVec4(0.20f, 0.20f, 0.20f, 1.00f);
         style.Colors[ImGuiCol_HeaderHovered] = ImVec4(0.27f, 0.27f, 0.27f, 1.00f);
         style.Colors[ImGuiCol_HeaderActive] = ImVec4(0.24f, 0.24f, 0.24f, 1.00f);
@@ -276,8 +314,13 @@ namespace RC::GUI
         style.Colors[ImGuiCol_ResizeGripHovered] = ImVec4(0.92f, 0.24f, 0.84f, 0.67f);
         style.Colors[ImGuiCol_ResizeGripActive] = ImVec4(0.92f, 0.24f, 0.84f, 0.95f);
         style.Colors[ImGuiCol_Tab] = ImVec4(0.51f, 0.23f, 0.42f, 1.00f);
+#ifdef HAS_GUI
         style.Colors[ImGuiCol_TabHovered] = ImVec4(0.59f, 0.22f, 0.48f, 1.00f);
         style.Colors[ImGuiCol_TabActive] = ImVec4(0.63f, 0.24f, 0.50f, 1.00f);
+#else
+        style.Colors[ImGuiCol_TabHovered] = ImVec4(0.4f, 0.5f, 0.8f, 1.00f);
+        style.Colors[ImGuiCol_TabActive] = ImVec4(0.65f, 0.4f, 0.50f, 1.00f);
+#endif
         style.Colors[ImGuiCol_TabUnfocused] = ImVec4(0.07f, 0.10f, 0.15f, 0.97f);
         style.Colors[ImGuiCol_TabUnfocusedActive] = ImVec4(0.14f, 0.26f, 0.42f, 1.00f);
         style.Colors[ImGuiCol_PlotLines] = ImVec4(0.61f, 0.61f, 0.61f, 1.00f);
@@ -333,16 +376,21 @@ namespace RC::GUI
             {
                 if (!Output::has_internal_error())
                 {
-                    Output::send<LogLevel::Error>(STR("Error: {}\n"), to_wstring(e.what()));
+                    Output::send<LogLevel::Error>(SYSSTR("Error: {}\n"), to_system(e.what()));
                 }
                 else
                 {
-                    printf_s("Internal Error: %s\n", e.what());
+                    fprintf(stderr, "Internal Error: %s\n", e.what());
+                    fflush(stderr);
                 }
 
-                // You're not allowed to throw exceptions directly inside a frame!
-                // Use GUI::TRY to move exceptions to the end of the frame.
-                abort();
+// You're not allowed to throw exceptions directly inside a frame!
+// Use GUI::TRY to move exceptions to the end of the frame.
+#ifdef WIN32
+                __debugbreak();
+#else
+                asm("int3");
+#endif
             }
 
             ImGui::Render();
@@ -458,10 +506,11 @@ namespace RC::GUI
         IMGUI_CHECKVERSION();
         ImGui::CreateContext();
         ImGuiIO& io = ImGui::GetIO();
-        m_imgui_ini_file = to_string(StringType{UE4SSProgram::get_program().get_working_directory()} + STR("\\imgui.ini"));
+        m_imgui_ini_file = to_string_path(std::filesystem::path {UE4SSProgram::get_program().get_working_directory()} / SYSSTR("imgui.ini"));
         io.IniFilename = m_imgui_ini_file.c_str();
 
         // Add .ini handle for UserData type
+        #ifdef WIN32
         ImGuiSettingsHandler ini_handler;
         ini_handler.TypeName = "UE4SSData";
         ini_handler.TypeHash = ImHashStr("UE4SSData");
@@ -469,6 +518,7 @@ namespace RC::GUI
         ini_handler.ReadLineFn = imgui_ue4ss_data_read_line;
         ini_handler.WriteAllFn = imgui_ue4ss_data_write_all;
         ImGui::AddSettingsHandler(&ini_handler);
+        #endif
         
         ImGui::LoadIniSettingsFromDisk(m_imgui_ini_file.c_str());
 
@@ -481,7 +531,7 @@ namespace RC::GUI
         io.Fonts->Clear();
 
         float base_font_size = 14 * UE4SSProgram::settings_manager.Debug.DebugGUIFontScaling;
-
+#ifdef HAS_GUI
         ImFontConfig font_cfg;
         font_cfg.FontDataOwnedByAtlas = false; // if true it will try to free memory and fail
         io.Fonts->AddFontFromMemoryTTF(Roboto, sizeof(Roboto), base_font_size, &font_cfg);
@@ -494,7 +544,7 @@ namespace RC::GUI
         icons_cfg.PixelSnapH = true;
         icons_cfg.GlyphMinAdvanceX = icon_font_size;
         io.Fonts->AddFontFromMemoryTTF(FaSolid900, sizeof(FaSolid900), icon_font_size, &icons_cfg, icons_ranges);
-
+#endif
         m_os_backend->init();
         m_gfx_backend->init();
 
@@ -510,8 +560,10 @@ namespace RC::GUI
 
     auto DebuggingGUI::set_gfx_backend(GfxBackend backend) -> void
     {
+        Output::send(SYSSTR("Setting gfx backend!\n"));
         switch (backend)
         {
+#ifdef HAS_D3D11
         case GfxBackend::DX11:
             m_gfx_backend = std::make_unique<Backend_DX11>();
             m_os_backend = std::make_unique<Backend_Windows>();
@@ -520,12 +572,24 @@ namespace RC::GUI
             m_gfx_backend = std::make_unique<Backend_GLFW3_OpenGL3>();
             m_os_backend = std::make_unique<Backend_NoOS>();
             break;
+#else
+#ifdef HAS_GLFW
+        case GfxBackend::GLFW3_OpenGL3:
+            m_gfx_backend = std::make_unique<Backend_GLFW3_OpenGL3>();
+            m_os_backend = std::make_unique<Backend_NoOS>();
+            break;
+#elif defined(HAS_TUI)
+        case GfxBackend::TUI:
+            m_gfx_backend = std::make_unique<Backend_GfxTUI>();
+            m_os_backend = std::make_unique<Backend_TUI>();
+#endif
+#endif
         }
-
         m_gfx_backend->set_os_backend(m_os_backend.get());
         m_os_backend->set_gfx_backend(m_gfx_backend.get());
         m_gfx_backend->on_os_backend_set();
         m_os_backend->on_gfx_backend_set();
+        m_gfx_backend->set_backend_properties(g_backend_properties);
     }
 
     auto DebuggingGUI::add_tab(std::shared_ptr<GUITab> tab) -> void
@@ -550,7 +614,7 @@ namespace RC::GUI
 
         if (!debugging_ui)
         {
-            Output::send<LogLevel::Error>(STR("Could not start GUI render thread because 'debugging_ui' was nullptr."));
+            Output::send<LogLevel::Error>(SYSSTR("Could not start GUI render thread because 'debugging_ui' was nullptr."));
             return;
         }
         debugging_ui->setup(std::move(stop_token));

@@ -9,14 +9,14 @@ namespace RC::UVTD
 {
     struct ParsedTemplateClass
     {
-        File::StringType class_name;
-        std::vector<File::StringType> template_args;
+        UEStringType class_name;
+        std::vector<UEStringType> template_args;
     };
 
     class TemplateClassParser
     {
       public:
-        static ParsedTemplateClass Parse(File::StringViewType input);
+        static ParsedTemplateClass Parse(UEStringViewType input);
     };
 } // namespace RC::UVTD
 

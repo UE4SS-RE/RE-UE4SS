@@ -3,5 +3,8 @@ name = "patternsleuth_bind"
 version = "0.1.0"
 edition = "2021"
 
-[dependencies]
-patternsleuth = { path = "../patternsleuth/patternsleuth", features = ["process-internal"] }
+[target.'cfg( target_os = "linux" )'.dependencies]
+patternsleuth = { path = "../patternsleuth/patternsleuth", features = ["process-internal", "image-elf"] }
+
+[target.'cfg( target_os = "windows" )'.dependencies]
+patternsleuth = { path = "../patternsleuth/patternsleuth", features = ["process-internal", "image-pe"] }

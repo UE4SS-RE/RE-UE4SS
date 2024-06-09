@@ -10,13 +10,13 @@ namespace RC::UVTD
     {
         auto macro_setter_file = std::filesystem::path{STR("MacroSetter.hpp")};
 
-        Output::send(STR("Generating file '{}'\n"), macro_setter_file.wstring());
+        Output::send(SYSSTR("Generating file '{}'\n"), macro_setter_file.wstring());
 
         Output::Targets<Output::NewFileDevice> macro_setter_dumper;
         auto& macro_setter_file_device = macro_setter_dumper.get_device<Output::NewFileDevice>();
         macro_setter_file_device.set_file_name_and_path(macro_setter_file);
-        macro_setter_file_device.set_formatter([](File::StringViewType string) {
-            return File::StringType{string};
+        macro_setter_file_device.set_formatter([](SystemStringViewType string) {
+            return SystemStringType{string};
         });
 
         for (const auto& [class_name, class_entry] : type_container.get_class_entries())
@@ -27,33 +27,33 @@ namespace RC::UVTD
             }
 
             auto wrapper_header_file = member_variable_layouts_gen_output_include_path /
-                                       std::format(STR("MemberVariableLayout_HeaderWrapper_{}.hpp"), class_entry.class_name_clean);
+                                       std::format(SYSSTR("MemberVariableLayout_HeaderWrapper_{}.hpp"), class_entry.class_name_clean);
 
-            Output::send(STR("Generating file '{}'\n"), wrapper_header_file.wstring());
+            Output::send(SYSSTR("Generating file '{}'\n"), wrapper_header_file.wstring());
 
             Output::Targets<Output::NewFileDevice> header_wrapper_dumper;
             auto& wrapper_header_file_device = header_wrapper_dumper.get_device<Output::NewFileDevice>();
             wrapper_header_file_device.set_file_name_and_path(wrapper_header_file);
-            wrapper_header_file_device.set_formatter([](File::StringViewType string) {
-                return File::StringType{string};
+            wrapper_header_file_device.set_formatter([](SystemStringViewType string) {
+                return SystemStringType{string};
             });
 
-            auto wrapper_src_file =
-                    member_variable_layouts_gen_output_include_path / std::format(STR("MemberVariableLayout_SrcWrapper_{}.hpp"), class_entry.class_name_clean);
+            auto wrapper_src_file = member_variable_layouts_gen_output_include_path /
+                                    std::format(SYSSTR("MemberVariableLayout_SrcWrapper_{}.hpp"), class_entry.class_name_clean);
 
-            Output::send(STR("Generating file '{}'\n"), wrapper_src_file.wstring());
+            Output::send(SYSSTR("Generating file '{}'\n"), wrapper_src_file.wstring());
 
             Output::Targets<Output::NewFileDevice> wrapper_src_dumper;
             auto& wrapper_src_file_device = wrapper_src_dumper.get_device<Output::NewFileDevice>();
             wrapper_src_file_device.set_file_name_and_path(wrapper_src_file);
-            wrapper_src_file_device.set_formatter([](File::StringViewType string) {
-                return File::StringType{string};
+            wrapper_src_file_device.set_formatter([](SystemStringViewType string) {
+                return SystemStringType{string};
             });
 
             auto final_class_name = class_entry.class_name;
             unify_uobject_array_if_needed(final_class_name);
-            header_wrapper_dumper.send(STR("static std::unordered_map<File::StringType, int32_t> MemberOffsets;\n\n"));
-            wrapper_src_dumper.send(STR("std::unordered_map<File::StringType, int32_t> {}::MemberOffsets{{}};\n\n"), final_class_name);
+            header_wrapper_dumper.send(STR("static std::unordered_map<UEStringType, int32_t> MemberOffsets;\n\n"));
+            wrapper_src_dumper.send(STR("std::unordered_map<UEStringType, int32_t> {}::MemberOffsets{{}};\n\n"), final_class_name);
 
             auto private_variables_for_class = s_private_variables.find(class_entry.class_name);
 
@@ -83,8 +83,8 @@ namespace RC::UVTD
                 bool is_private{private_variables_for_class != s_private_variables.end() &&
                                 private_variables_for_class->second.find(variable.name) != private_variables_for_class->second.end()};
 
-                File::StringType final_variable_name = variable.name;
-                File::StringType final_type_name = variable.type;
+                UEStringType final_variable_name = variable.name;
+                UEStringType final_type_name = variable.type;
 
                 if (variable.name == STR("EnumFlags"))
                 {
@@ -151,7 +151,7 @@ namespace RC::UVTD
                     wrapper_src_dumper.send(STR("}\n\n"));
                 }
 
-                macro_setter_dumper.send(STR("if (auto val = parser.get_int64(STR(\"{}\"), STR(\"{}\"), -1); val != -1)\n"),
+                macro_setter_dumper.send(STR("if (auto val = parser.get_int64(SYSSTR(\"{}\"), SYSSTR(\"{}\"), -1); val != -1)\n"),
                                          final_class_name,
                                          final_variable_name);
                 macro_setter_dumper.send(STR("    Unreal::{}::MemberOffsets.emplace(STR(\"{}\"), static_cast<int32_t>(val));\n"),
