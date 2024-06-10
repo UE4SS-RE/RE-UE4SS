@@ -634,7 +634,7 @@ namespace RC
     {
         // Verify that there's a 'Scripts' directory
         // Give the full path to the 'Scripts' directory to the mod container
-        m_scripts_path = m_mod_path + L"\\scripts";
+        m_scripts_path = m_mod_path + SYSSTR("\\scripts");
 
         // If the 'Scripts' directory doesn't exist then mark the mod as non-installable and move on to the next mod
         if (!std::filesystem::exists(m_scripts_path))
@@ -3249,8 +3249,8 @@ Overloads:
             {
                 lua.throw_error(error_overload_not_found);
             }
-
-            File::StringType PossiblyLongName = to_wstring(lua.get_string());
+            auto local_str = to_ue(lua.get_string());
+            UEStringViewType PossiblyLongName = local_str;
             lua.set_bool(Unreal::FPackageName::IsShortPackageName(PossiblyLongName));
 
             return 1;
