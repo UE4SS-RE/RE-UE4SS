@@ -292,7 +292,7 @@ namespace RC
             return find_mod_by_name<T>(to_system_string(mod_name), is_installed, is_started);
         };
 
-        RC_UE4SS_API static auto find_lua_mod_by_name_internal(SystemStringType mod_name, IsInstalled is_installed = IsInstalled::No, IsStarted is_started = IsStarted::No) -> LuaMod*;
+        RC_UE4SS_API auto find_lua_mod_by_name_internal(SystemStringType mod_name, IsInstalled is_installed = IsInstalled::No, IsStarted is_started = IsStarted::No) -> LuaMod*;
 
         // no need to mark this as api
         template <typename S>

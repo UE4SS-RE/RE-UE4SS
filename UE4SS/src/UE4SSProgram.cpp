@@ -1125,7 +1125,8 @@ namespace RC
         Output::send(STR("Starting mods (from mods.txt load order)...\n"));
 
         std::filesystem::path mods_directory = UE4SSProgram::get_program().get_mods_directory();
-        std::wstring enabled_mods_file{mods_directory / "mods.txt"};
+        // TODO NEXT COMMIT: auto enabled_mods_file = File::get_path_if_exists(mods_directory, "mods.txt");
+        auto enabled_mods_file{mods_directory / "mods.txt"};
         if (!std::filesystem::exists(enabled_mods_file))
         {
             Output::send(STR("No mods.txt file found...\n"));
@@ -1557,7 +1558,7 @@ namespace RC
     }
 
     auto UE4SSProgram::find_lua_mod_by_name_internal(SystemStringType mod_name, IsInstalled is_installed = IsInstalled::No, IsStarted is_started = IsStarted::No) -> LuaMod* {
-        return static_cast<LuaMod*>(find_mod_by_name<LuaMod>(mod_name_str, is_installed, is_started));
+        return static_cast<LuaMod*>(find_mod_by_name<LuaMod>(mod_name, is_installed, is_started));
     }
 
     auto UE4SSProgram::get_object_dumper_output_directory() -> const SystemStringType
