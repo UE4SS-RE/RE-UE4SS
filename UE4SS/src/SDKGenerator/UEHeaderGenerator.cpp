@@ -4060,7 +4060,7 @@ namespace RC::UEGenerator
                            to_system(fallback_name));
     }
 
-    UEGeneratedFile::UEGeneratedFile(const FFilePath& full_file_path)
+    GeneratedFile::GeneratedFile(const FFilePath& full_file_path)
     {
         this->m_full_file_path = full_file_path;
         // [[keep]]
@@ -4084,12 +4084,12 @@ namespace RC::UEGenerator
         m_file_contents_buffer.append(SYSSTR("\n"));
     }
 
-    auto UEGeneratedFile::begin_indent_level() -> void
+    auto GeneratedFile::begin_indent_level() -> void
     {
         m_current_indent_count++;
     }
 
-    auto UEGeneratedFile::end_indent_level() -> void
+    auto GeneratedFile::end_indent_level() -> void
     {
         m_current_indent_count--;
         if (m_current_indent_count < 0)
@@ -4098,7 +4098,7 @@ namespace RC::UEGenerator
         }
     }
 
-    auto UEGeneratedFile::serialize_file_content_to_disk() -> bool
+    auto GeneratedFile::serialize_file_content_to_disk() -> bool
     {
         if (!has_content_to_save())
         {
@@ -4126,7 +4126,7 @@ namespace RC::UEGenerator
         return m_file_contents_buffer;
     }
 
-    auto UEGeneratedFile::has_content_to_save() const -> bool
+    auto GeneratedFile::has_content_to_save() const -> bool
     {
         return !m_file_contents_buffer.empty();
     }
