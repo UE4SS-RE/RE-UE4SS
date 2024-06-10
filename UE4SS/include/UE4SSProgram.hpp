@@ -284,27 +284,24 @@ namespace RC
             return static_cast<LuaMod*>(find_mod_by_name_internal(mod_name, is_installed, is_started, [](auto elem) -> bool {
                 return dynamic_cast<LuaMod*>(elem);
             }));
-        }
-        template <>
-        auto find_mod_by_name<CppMod>(std::wstring_view mod_name, IsInstalled is_installed, IsStarted is_started) -> CppMod*
-        {
-            return static_cast<CppMod*>(find_mod_by_name_internal(mod_name, is_installed, is_started, [](auto elem) -> bool {
-                return dynamic_cast<CppMod*>(elem);
-            }));
-        }
-        template <>
-        auto find_mod_by_name<LuaMod>(std::string_view mod_name, IsInstalled is_installed, IsStarted is_started) -> LuaMod*
-        {
-            return find_mod_by_name<LuaMod>(to_wstring(mod_name), is_installed, is_started);
-        }
-        template <>
-        auto find_mod_by_name<CppMod>(std::string_view mod_name, IsInstalled is_installed, IsStarted is_started) -> CppMod*
-        {
-            return find_mod_by_name<CppMod>(to_wstring(mod_name), is_installed, is_started);
-        }
+        };
 
-        RC_UE4SS_API static auto find_lua_mod_by_name(std::wstring_view mod_name, IsInstalled = IsInstalled::No, IsStarted = IsStarted::No) -> LuaMod*;
-        RC_UE4SS_API static auto find_lua_mod_by_name(std::string_view mod_name, IsInstalled = IsInstalled::No, IsStarted = IsStarted::No) -> LuaMod*;
+        template <typename T>
+        static auto find_mod_by_name(SystemStringViewType mod_name, IsInstalled is_installed = IsInstalled::No, IsStarted is_started = IsStarted::No) -> T*
+        {
+            return find_mod_by_name<T>(to_system_string(mod_name), is_installed, is_started);
+        };
+
+        RC_UE4SS_API static auto find_lua_mod_by_name_internal(SystemStringType mod_name, IsInstalled is_installed = IsInstalled::No, IsStarted is_started = IsStarted::No) -> LuaMod*;
+
+        // no need to mark this as api
+        template <typename S>
+        static auto find_lua_mod_by_name(S mod_name, IsInstalled is_installed = IsInstalled::No, IsStarted is_started = IsStarted::No) -> LuaMod*
+        {
+            auto mod_name_str = to_system_string(mod_name);
+            return find_lua_mod_by_name_internal(mod_name_str, is_installed, is_started);
+        }
+        
         static auto static_cleanup() -> void;
         RC_UE4SS_API static auto get_program() -> UE4SSProgram&
         {

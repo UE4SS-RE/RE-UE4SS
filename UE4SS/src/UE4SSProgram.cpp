@@ -1556,7 +1556,11 @@ namespace RC
         }
     }
 
-    auto UE4SSProgram::find_lua_mod_by_name(std::string_view mod_name, UE4SSProgram::IsInstalled installed_only, IsStarted is_started) -> LuaMod*
+    auto UE4SSProgram::find_lua_mod_by_name_internal(SystemStringType mod_name, IsInstalled is_installed = IsInstalled::No, IsStarted is_started = IsStarted::No) -> LuaMod* {
+        return static_cast<LuaMod*>(find_mod_by_name<LuaMod>(mod_name_str, is_installed, is_started));
+    }
+
+    auto UE4SSProgram::get_object_dumper_output_directory() -> const SystemStringType
     {
         return static_cast<LuaMod*>(find_mod_by_name<LuaMod>(mod_name, installed_only, is_started));
     }
