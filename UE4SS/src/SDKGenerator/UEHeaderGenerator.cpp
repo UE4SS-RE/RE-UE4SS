@@ -248,7 +248,8 @@ namespace RC::UEGenerator
 
     auto UEHeaderGenerator::generate_module_build_file(const std::wstring& module_name) -> void
     {
-        const FFilePath module_file_path = m_root_directory / module_name / std::format(STR("{}.Build.cs"), module_name);
+        auto module_name_sys = to_system(module_name);
+        const FFilePath module_file_path = m_root_directory / module_name_sys / std::format(SYSSTR("{}.Build.cs"), module_name_sys);
         GeneratedFile module_build_file = GeneratedFile(module_file_path);
 
         module_build_file.append_line(STR("using UnrealBuildTool;"));
@@ -297,7 +298,8 @@ namespace RC::UEGenerator
 
     auto UEHeaderGenerator::generate_module_implementation_file(const std::wstring& module_name) -> void
     {
-        const FFilePath module_file_path = m_root_directory / module_name / STR("Private") / std::format(STR("{}Module.cpp"), module_name);
+        auto module_name_sys = to_system(module_name);
+        const FFilePath module_file_path = m_root_directory / module_name_sys / SYSSTR("Private") / std::format(SYSSTR("{}Module.cpp"), module_name_sys);
         GeneratedFile module_impl_file = GeneratedFile(module_file_path);
 
         module_impl_file.append_line(STR("#include \"Modules/ModuleManager.h\""));
@@ -1160,7 +1162,11 @@ namespace RC::UEGenerator
             }
             else
             {
+#ifdef WIN32
                 result_property_value = std::to_wstring(*byte_property_value);
+#else
+                result_property_value = std::to_string(*byte_property_value);
+#endif
             }
 
             if (!super_and_no_access)
@@ -4034,7 +4040,7 @@ namespace RC::UEGenerator
         this->m_current_indent_count = 0;
     }
 
-    auto GeneratedFile::append_line(const std::wstring& line) -> void
+    auto GeneratedFile::append_line(const SystemStringType& line) -> void
     {
         for (int32_t i = 0; i < m_current_indent_count; i++)
         {
@@ -4044,7 +4050,7 @@ namespace RC::UEGenerator
         m_file_contents_buffer.append(STR("\n"));
     }
 
-    auto GeneratedFile::append_line_no_indent(const std::wstring& line) -> void
+    auto GeneratedFile::append_line_no_indent(const SystemStringType& line) -> void
     {
         m_file_contents_buffer.append(line);
         m_file_contents_buffer.append(STR("\n"));
@@ -4084,7 +4090,7 @@ namespace RC::UEGenerator
         return true;
     }
 
-    auto GeneratedFile::generate_file_contents() -> std::wstring
+    auto GeneratedFile::generate_file_contents() -> SystemStringType
     {
         return m_file_contents_buffer;
     }
@@ -4112,7 +4118,7 @@ namespace RC::UEGenerator
         return GeneratedSourceFile(full_file_path, module_name, is_implementation_file, object);
     }
 
-    GeneratedSourceFile::GeneratedSourceFile(const FFilePath& file_path, const std::wstring& file_module_name, bool is_implementation_file, UObject* object)
+    GeneratedSourceFile::GeneratedSourceFile(const FFilePath& file_path, const SystemStringType& file_module_name, bool is_implementation_file, UObject* object)
         : GeneratedFile(file_path)
     {
         this->m_file_module_name = file_module_name;
