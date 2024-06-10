@@ -1385,7 +1385,7 @@ namespace RC
         return m_legacy_root_directory.c_str();
     }
     
-    auto UE4SSProgram::get_game_directory() -> SystemStringViewType
+    auto UE4SSProgram::get_game_executable_directory() -> SystemStringViewType
     {
         m_game_executable_str = to_system_string(m_game_executable_directory);
         return m_game_executable_str;
