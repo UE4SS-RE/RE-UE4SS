@@ -11,7 +11,7 @@ namespace RC::Parser
         return std::string{in.begin(), in.end()};
     }
 
-    static auto has_only_spaces(const File::StringType& data) -> bool
+    static auto has_only_spaces(const UEStringType& data) -> bool
     {
         if (std::all_of(data.begin(), data.end(), [](File::CharType c) {
                 return std::isspace(c) || c == '\n';
@@ -27,7 +27,7 @@ namespace RC::Parser
         }
     }
 
-    auto JSONInternal::ItemBase::get_name() -> File::StringViewType
+    auto JSONInternal::ItemBase::get_name() -> UEStringViewType
     {
         if (m_is_global_scope)
         {
@@ -39,14 +39,14 @@ namespace RC::Parser
         }
     }
 
-    auto JSONInternal::StringItem::to_string() -> File::StringType
+    auto JSONInternal::StringItem::to_string() -> UEStringType
     {
         return std::format(STR("String = \"{}\""), m_value);
     }
 
-    auto JSONInternal::ObjectScope::to_string() -> File::StringType
+    auto JSONInternal::ObjectScope::to_string() -> UEStringType
     {
-        File::StringType str = std::format(STR("Object = \"{}\""), get_name());
+        UEStringType str = std::format(STR("Object = \"{}\""), get_name());
 
         for (const auto& member : m_members)
         {
@@ -56,14 +56,14 @@ namespace RC::Parser
         return str;
     }
 
-    auto JSONInternal::ArrayScope::to_string() -> File::StringType
+    auto JSONInternal::ArrayScope::to_string() -> UEStringType
     {
         return std::format(STR("Array = \"{}\""), get_name());
     }
 
-    auto JSONInternal::TokenParser::token_to_string(const Token& token) -> File::StringType
+    auto JSONInternal::TokenParser::token_to_string(const Token& token) -> UEStringType
     {
-        File::StringType string{};
+        UEStringType string{};
 
         // TODO: Support manual escaping of double quotes with '\'
         while (peek().get_type() != TokenType::DoubleQuote)
@@ -342,7 +342,7 @@ namespace RC::Parser
         }
     }
 
-    auto JSON::parse_internal(File::StringType& input) -> void
+    auto JSON::parse_internal(UEStringType& input) -> void
     {
         Tokenizer tokenizer;
         TokenContainer tc;
@@ -362,14 +362,14 @@ namespace RC::Parser
         m_token_parser->parse();
     }
 
-    auto JSON::parse(File::StringType& input) -> void
+    auto JSON::parse(SystemStringType& input) -> void
     {
         parse_internal(input);
     }
 
     auto JSON::parse(File::Handle& file) -> void
     {
-        auto input = file.read_all();
+        auto input = file.read_file_all();
         parse_internal(input);
     }
 
@@ -391,7 +391,7 @@ namespace RC::Parser
         */
 
         /**/
-        File::StringType input = LR"(
+        UEStringType input = LR"(
 {
     "my key": "my string, value",
     "my second key": "my other string value",
