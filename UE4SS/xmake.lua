@@ -23,6 +23,14 @@ option("ue4ssIsBeta")
 
     set_description("Is this a beta release")
 
+option("ue4ssInput")
+    set_default(true)
+    set_showmenu(true)
+
+    add_defines("HAS_INPUT")
+
+    set_description("Enable the input system.")
+
 local projectName = "UE4SS"
 
 local function parse_version_string(str)
@@ -46,7 +54,7 @@ target(projectName)
     set_exceptions("cxx")
     set_default(true)
     add_rules("ue4ss.defines.exports")
-    add_options("ue4ssBetaIsStarted", "ue4ssIsBeta")
+    add_options("ue4ssBetaIsStarted", "ue4ssIsBeta", "ue4ssInput")
     add_includedirs("include", { public = true })
     add_includedirs("generated_include", { public = true })
     add_headerfiles("include/**.hpp")
