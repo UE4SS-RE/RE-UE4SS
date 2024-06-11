@@ -34,6 +34,14 @@ option("versionCheck")
 
     set_description("Will xmake check the installed MSVC and Rust versions on configuration step")
 
+option("ue4ssInput")
+    set_default(true)
+    set_showmenu(true)
+
+    add_defines("HAS_INPUT")
+
+    set_description("Enable the input system.")
+
 local projectName = "UE4SS"
 
 local function parse_version_string(str)
@@ -58,7 +66,7 @@ target(projectName)
     set_default(true)
     add_rules("ue4ss.defines.exports")
     add_rules("ue4ss.check.minimum.version")
-    add_options("ue4ssBetaIsStarted", "ue4ssIsBeta", "allowAllVersions")
+    add_options("ue4ssBetaIsStarted", "ue4ssIsBeta", "allowAllVersions", "ue4ssInput")
     add_includedirs("include", { public = true })
     add_includedirs("generated_include", { public = true })
     add_headerfiles("include/**.hpp")
@@ -74,7 +82,7 @@ target(projectName)
         "ScopedTimer", "Profiler", "patternsleuth_bind",
         "glad", { public = true }
     )
-    
+
     add_packages("fmt", { public = true })
 
     add_packages("imgui", "ImGuiTextEdit", "IconFontCppHeaders", "glfw", "opengl", { public = true })
