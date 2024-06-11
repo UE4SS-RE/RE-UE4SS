@@ -1390,12 +1390,6 @@ namespace RC
         m_game_executable_str = to_system_string(m_game_executable_directory);
         return m_game_executable_str;
     }
-    
-    auto UE4SSProgram::get_game_executable_directory() -> SystemStringViewType
-    {
-        m_game_executable_str = to_system_string(m_game_executable_directory);
-        return m_game_executable_str;
-    }
 
     auto UE4SSProgram::generate_uht_compatible_headers() -> void
     {
@@ -1577,7 +1571,7 @@ namespace RC
 
     auto UE4SSProgram::get_object_dumper_output_directory() -> const SystemStringType
     {
-        return static_cast<LuaMod*>(find_mod_by_name<LuaMod>(mod_name, installed_only, is_started));
+        return to_system_string(m_object_dumper_output_directory);
     }
 
     auto UE4SSProgram::find_lua_mod_by_name(std::wstring_view mod_name, UE4SSProgram::IsInstalled installed_only, IsStarted is_started) -> LuaMod*
