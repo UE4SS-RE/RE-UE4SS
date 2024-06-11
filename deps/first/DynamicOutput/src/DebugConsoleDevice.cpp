@@ -57,19 +57,19 @@ namespace RC::Output
         return true;
     }
 
-    auto DebugConsoleDevice::receive(File::StringViewType fmt) const -> void
+    auto DebugConsoleDevice::receive(SystemStringViewType fmt) const -> void
     {
         receive_with_optional_arg(fmt, Color::NoColor);
     }
 
-    auto DebugConsoleDevice::receive_with_optional_arg(File::StringViewType fmt, [[maybe_unused]] int32_t optional_arg) const -> void
+    auto DebugConsoleDevice::receive_with_optional_arg(SystemStringViewType fmt, [[maybe_unused]] int32_t optional_arg) const -> void
     {
         set_windows_console_out_mode_if_needed();
 
 #if ENABLE_OUTPUT_DEVICE_DEBUG_MODE
         printf_s("DebugConsoleDevice received: %S", m_formatter(fmt).c_str());
 #else
-        printf_s("%s%S\033[0m", log_level_to_color(static_cast<Color::Color>(optional_arg)).c_str(), m_formatter(fmt).c_str());
+        printf_s("%s" SystemStringPrint "\033[0m", log_level_to_color(static_cast<Color::Color>(optional_arg)).c_str(), m_formatter(fmt).c_str());
 #endif
     }
 } // namespace RC::Output
