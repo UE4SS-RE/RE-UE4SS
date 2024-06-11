@@ -1134,7 +1134,7 @@ namespace RC
         else
         {
             // 'mods.txt' exists, lets parse it
-            std::wifstream mods_stream{enabled_mods_file};
+            SystemStreamType mods_stream{enabled_mods_file};
 
             std::wstring current_line;
             while (std::getline(mods_stream, current_line))
