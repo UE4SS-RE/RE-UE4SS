@@ -49,9 +49,9 @@ namespace RC::LuaBackCompat
 
     // Backwards compatibility with UE4SS 1.3.
 
-    auto StaticFindObject(UClass* ObjectClass, UObject* InObjectPackage, const wchar_t* OrigInName, bool bExactClass = false) -> UObject*;
-    auto StaticFindObject(const wchar_t* OrigInName) -> UObject*;
-    auto NotifyOnNewObject(const wchar_t* class_name, std::function<void(UObject*)>& callable) -> void;
+    auto StaticFindObject(UClass* ObjectClass, UObject* InObjectPackage, const UECharType* OrigInName, bool bExactClass = false) -> UObject*;
+    auto StaticFindObject(const UECharType* OrigInName) -> UObject*;
+    auto NotifyOnNewObject(const UECharType* class_name, std::function<void(UObject*)>& callable) -> void;
 
     auto lua_RegisterHook_wrapper(lua_State*) -> int;
     auto lua_UObjectBase_IsA_wrapper(lua_State*) -> int;
