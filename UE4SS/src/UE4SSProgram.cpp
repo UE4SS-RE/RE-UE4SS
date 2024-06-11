@@ -1066,12 +1066,12 @@ namespace RC
 
     auto UE4SSProgram::install_cpp_mods() -> void
     {
-        install_mods<CppMod>(m_mods);
+        install_mods<CppMod>(get_program().m_mods);
     }
 
     auto UE4SSProgram::install_lua_mods() -> void
     {
-        install_mods<LuaMod>(m_mods);
+        install_mods<LuaMod>(get_program().m_mods);
     }
 
     auto UE4SSProgram::fire_unreal_init_for_cpp_mods() -> void
@@ -1522,7 +1522,7 @@ namespace RC
     auto UE4SSProgram::find_mod_by_name_internal(std::wstring_view mod_name, IsInstalled is_installed, IsStarted is_started, FMBNI_ExtraPredicate extra_predicate)
             -> Mod*
     {
-        auto mod_exists_with_name = std::find_if(m_mods.begin(), m_mods.end(), [&](auto& elem) -> bool {
+        auto mod_exists_with_name = std::find_if(get_program().m_mods.begin(), get_program().m_mods.end(), [&](auto& elem) -> bool {
             bool found = true;
 
             if (!extra_predicate(elem.get()))
@@ -1546,7 +1546,7 @@ namespace RC
         });
 
         // clang-format off
-        if (mod_exists_with_name == m_mods.end())
+        if (mod_exists_with_name == get_program().m_mods.end())
         {
             return nullptr;
         }
