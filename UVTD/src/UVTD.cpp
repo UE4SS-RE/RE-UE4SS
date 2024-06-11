@@ -27,7 +27,7 @@
 namespace RC::UVTD
 {
     bool processing_events{false};
-    Input::Handler input_handler{STR("ConsoleWindowClass"), STR("UnrealWindow")};
+    Input::Handler input_handler{};
 
     auto static event_loop_update() -> void
     {
@@ -40,6 +40,8 @@ namespace RC::UVTD
 
     auto main(DumpSettings dump_settings) -> void
     {
+        input_handler.init();
+        input_handler.set_input_source("Win32Async");
         static std::vector<std::filesystem::path> pdbs_to_dump{
                 "PDBs/4_10.pdb",
                 "PDBs/4_11.pdb",
