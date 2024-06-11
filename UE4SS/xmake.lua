@@ -34,14 +34,6 @@ option("versionCheck")
 
     set_description("Will xmake check the installed MSVC and Rust versions on configuration step")
 
-option("ue4ssInput")
-    set_default(true)
-    set_showmenu(true)
-
-    add_defines("HAS_INPUT")
-
-    set_description("Enable the input system.")
-
 local projectName = "UE4SS"
 
 local function parse_version_string(str)
