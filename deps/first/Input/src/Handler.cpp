@@ -1,336 +1,127 @@
 #include <array>
+#include <climits>
+#include <cstring>
 
 #include <Input/Handler.hpp>
-
-#define NOMINMAX
-#include <Windows.h>
-
+#include <Input/PlatformInputSource.hpp>
 namespace RC::Input
 {
-    auto is_modifier_key_required(ModifierKey modifier_key, std::vector<ModifierKey> modifier_keys) -> bool
-    {
-        for (const auto& required_modifier_key : modifier_keys)
-        {
-            if (required_modifier_key == ModifierKey::MOD_KEY_START_OF_ENUM)
-            {
-                continue;
-            }
-
-            if (modifier_key == required_modifier_key)
-            {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    auto Handler::are_modifier_keys_down(const std::vector<ModifierKey>& required_modifier_keys) -> bool
-    {
-        bool are_required_modifier_keys_down = true;
-
-        for (const auto& [modifier_key, modifier_key_is_down] : m_modifier_keys_down)
-        {
-            for (const auto& required_modifier_key : required_modifier_keys)
-            {
-                if (modifier_key == required_modifier_key && !modifier_key_is_down)
-                {
-                    are_required_modifier_keys_down = false;
-                }
-
-                if (modifier_key != required_modifier_key && modifier_key_is_down && !is_modifier_key_required(modifier_key, required_modifier_keys))
-                {
-                    return false;
-                }
-            }
-        }
-
-        return are_required_modifier_keys_down;
-    }
-
-    auto Handler::is_program_focused() -> bool
-    {
-        HWND hwnd = GetForegroundWindow();
-        if (!hwnd) return false;
-
-        wchar_t current_window_class_name[MAX_PATH];
-        if (!GetClassNameW(hwnd, current_window_class_name, MAX_PATH)) return false;
-
-        for (const auto& active_window_class : m_active_window_classes)
-        {
-            if (wcscmp(current_window_class_name, active_window_class) == 0)
-            {
-                return true;
-            }
-        }
-
-        return false;
-    }
+    std::unordered_map<std::string, std::shared_ptr<PlatformInputSource>> Handler::m_input_sources_store;
 
     auto Handler::process_event() -> void
     {
-        if (!is_program_focused())
+        if (m_platform_handler == nullptr)
         {
             return;
         }
 
         std::vector<EventCallbackCallable> callbacks_to_call{};
 
-        bool skip_this_frame = !get_allow_input();
-        bool is_any_modifier_keys_down = false;
-        bool any_keys_are_down = false;
+        auto events = m_platform_handler->process_event(this);
 
-        if (m_any_keys_are_down)
         {
-            skip_this_frame = true;
-        }
-
-        // Check if any modifier keys are down
-        for (auto& [modifier_key, key_is_down] : m_modifier_keys_down)
-        {
-            if (GetAsyncKeyState(modifier_key))
+            // Lock the event mutex to access the key_set
+            auto event_update_lock = std::lock_guard(m_event_mutex);
+            for (auto& event : events)
             {
-                is_any_modifier_keys_down = true;
-                key_is_down = true;
-            }
-            else
-            {
-                key_is_down = false;
-            }
-        }
-
-        for (auto& key_set_data : m_key_sets)
-        {
-            for (auto& [key, key_data_array] : key_set_data.key_data)
-            {
-                for (auto& key_data : key_data_array)
+                auto key_set_array = m_key_set.key_data[event.key];
+                for (auto& key_data : key_set_array)
                 {
-                    if (GetAsyncKeyState(key) && !key_data.is_down)
+                    if (key_data.required_modifier_keys == event.modifier_keys)
                     {
-                        any_keys_are_down = true;
-                        bool should_propagate = true;
-
-                        if (key_data.requires_modifier_keys)
-                        {
-                            if (!are_modifier_keys_down(key_data.required_modifier_keys))
-                            {
-                                should_propagate = false;
-                            }
-                        }
-
-                        if (!key_data.requires_modifier_keys && is_any_modifier_keys_down)
-                        {
-                            should_propagate = false;
-                        }
-
-                        if (should_propagate)
-                        {
-                            key_data.is_down = true;
-                            for (const auto& callback : key_data.callbacks)
-                            {
-                                callbacks_to_call.emplace_back(callback);
-                            }
-                        }
-                    }
-                    else if (!GetAsyncKeyState(key) && key_data.is_down)
-                    {
-                        key_data.is_down = false;
+                        callbacks_to_call.emplace_back(key_data.callback);
                     }
                 }
             }
         }
 
-        if (any_keys_are_down)
-        {
-            m_any_keys_are_down = true;
-        }
-        else
-        {
-            m_any_keys_are_down = false;
-        }
-
+        // No need to lock the event mutex to call the callbacks
+        // this avoids key registration inside the callback
         for (const auto& callback : callbacks_to_call)
         {
-            if (skip_this_frame)
-            {
-                return;
-            }
             callback();
         }
     }
 
     auto Handler::register_keydown_event(Input::Key key, EventCallbackCallable callback, uint8_t custom_data, void* custom_data2) -> void
     {
-        KeySet& key_set = [&]() -> KeySet& {
-            for (auto& key_set : m_key_sets)
-            {
-                if (key_set.key_data.contains(key))
-                {
-                    return key_set;
-                }
-            }
-
-            return m_key_sets.emplace_back(KeySet{});
-        }();
-
-        KeyData& key_data = key_set.key_data[key].emplace_back();
-        key_data.callbacks.emplace_back(callback);
+        auto event_update_lock = std::lock_guard(m_event_mutex);
+        KeyData& key_data = m_key_set.key_data[key].emplace_back();
+        key_data.callback = callback;
         key_data.custom_data = custom_data;
         key_data.custom_data2 = custom_data2;
+        m_subscribed_keys[key] = true;
     }
 
     auto Handler::register_keydown_event(
             Input::Key key, const ModifierKeyArray& modifier_keys, const EventCallbackCallable& callback, uint8_t custom_data, void* custom_data2) -> void
     {
-        KeySet& key_set = [&]() -> KeySet& {
-            for (auto& key_set : m_key_sets)
-            {
-                if (key_set.key_data.contains(key))
-                {
-                    return key_set;
-                }
-            }
-
-            return m_key_sets.emplace_back(KeySet{});
-        }();
-
-        KeyData& key_data = key_set.key_data[key].emplace_back();
-        key_data.callbacks.emplace_back(callback);
+        auto event_update_lock = std::lock_guard(m_event_mutex);
+        KeyData& key_data = m_key_set.key_data[key].emplace_back();
+        key_data.callback = callback;
         key_data.custom_data = custom_data;
         key_data.custom_data2 = custom_data2;
         key_data.requires_modifier_keys = true;
-
-        for (const auto& modifier_key : modifier_keys)
-        {
-            if (modifier_key != ModifierKey::MOD_KEY_START_OF_ENUM)
-            {
-                key_data.required_modifier_keys.emplace_back(modifier_key);
-            }
-        }
+        key_data.required_modifier_keys = modifier_keys;
+        m_subscribed_keys[key] = true;
     }
 
     auto Handler::is_keydown_event_registered(Input::Key key) -> bool
     {
-        bool is_key_registered{};
-        bool is_key_registered_with_no_modifier_keys = true;
-        for (const auto& key_set : m_key_sets)
+        auto event_update_lock = std::lock_guard(m_event_mutex);
+        auto key_data = m_key_set.key_data.find(key);
+        if (key_data == m_key_set.key_data.end())
         {
-            for (const auto& [key_registered, key_data_container] : key_set.key_data)
+            return false;
+        }
+        for (const auto& key_data_container : key_data->second)
+        {
+            if (key_data_container.required_modifier_keys.empty())
             {
-                if (key_registered == key)
-                {
-                    is_key_registered = true;
-                }
-                else
-                {
-                    continue;
-                }
-
-                for (const auto& key_data : key_data_container)
-                {
-                    if (key_data.requires_modifier_keys)
-                    {
-                        is_key_registered_with_no_modifier_keys = false;
-                        break;
-                    }
-                }
-
-                if (!is_key_registered_with_no_modifier_keys)
-                {
-                    break;
-                }
-            }
-
-            if (!is_key_registered_with_no_modifier_keys)
-            {
-                break;
+                return true;
             }
         }
-
-        return is_key_registered && is_key_registered_with_no_modifier_keys;
+        return false;
     }
 
-    auto Handler::is_keydown_event_registered(Input::Key key, const ModifierKeyArray& modifier_keys) -> bool
+    auto Handler::is_keydown_event_registered(Input::Key key, const ModifierKeyArray& modifier_keys_array) -> bool
     {
-        bool is_key_registered{};
-        bool all_modifier_keys_match{};
-        for (const auto& key_set : m_key_sets)
+        auto event_update_lock = std::lock_guard(m_event_mutex);
+        auto key_data = m_key_set.key_data.find(key);
+        auto modifier_keys = ModifierKeys(modifier_keys_array);
+        if (key_data == m_key_set.key_data.end())
         {
-            for (const auto& [key_registered, key_data_container] : key_set.key_data)
+            return false;
+        }
+        for (const auto& key_data_container : key_data->second)
+        {
+            if (key_data_container.required_modifier_keys == modifier_keys)
             {
-                if (key_registered == key)
-                {
-                    is_key_registered = true;
-                }
-                else
-                {
-                    continue;
-                }
-
-                all_modifier_keys_match = false;
-                for (const auto& key_data : key_data_container)
-                {
-                    if (!key_data.requires_modifier_keys && !modifier_keys.empty())
-                    {
-                        all_modifier_keys_match = false;
-                        continue;
-                    }
-
-                    if (!key_data.requires_modifier_keys && modifier_keys.empty())
-                    {
-                        all_modifier_keys_match = true;
-                        break;
-                    }
-
-                    for (const auto& modifier_key : key_data.required_modifier_keys)
-                    {
-                        for (const auto modifier_key_to_check : modifier_keys)
-                        {
-                            if (modifier_key_to_check == ModifierKey::MOD_KEY_START_OF_ENUM)
-                            {
-                                continue;
-                            }
-
-                            if (modifier_key_to_check == modifier_key)
-                            {
-                                all_modifier_keys_match = true;
-                            }
-                            else
-                            {
-                                all_modifier_keys_match = false;
-                            }
-                        }
-
-                        if (all_modifier_keys_match)
-                        {
-                            break;
-                        }
-                    }
-
-                    if (all_modifier_keys_match)
-                    {
-                        break;
-                    }
-                }
-
-                if (all_modifier_keys_match)
-                {
-                    break;
-                }
-            }
-
-            if (all_modifier_keys_match)
-            {
-                break;
+                return true;
             }
         }
-
-        return is_key_registered && all_modifier_keys_match;
+        return false;
     }
 
-    auto Handler::get_events() -> std::vector<KeySet>&
+    auto Handler::has_event_on_key(Input::Key key) -> bool
     {
-        return m_key_sets;
+        return m_subscribed_keys[key];
+    }
+
+    auto Handler::get_events_safe(std::function<void(KeySet&)> callback) -> void
+    {
+        auto event_update_lock = std::lock_guard(m_event_mutex);
+        callback(m_key_set);
+    }
+
+    auto Handler::clear_subscribed_keys() -> void
+    {
+        m_subscribed_keys.fill(false);
+    }
+
+    auto Handler::clear_subscribed_key(Key k) -> void
+    {
+        m_subscribed_keys[k] = false;
     }
 
     auto Handler::get_allow_input() -> bool
@@ -341,5 +132,78 @@ namespace RC::Input
     auto Handler::set_allow_input(bool new_value) -> void
     {
         m_allow_input = new_value;
+    }
+
+    /// Set the input source to the given source
+    /// SAFETY: Only call this function from the main thread
+    auto Handler::set_input_source(std::string source) -> bool
+    {
+        auto event_update_lock = std::lock_guard(m_event_mutex);
+        std::shared_ptr<PlatformInputSource> next_input_source = nullptr;
+        if (source == "Default")
+        {
+            // find the highest priority input source
+            int highest_priority = INT_MAX;
+            for (auto& input_source : m_input_sources_store)
+            {
+                if (!input_source.second->is_available())
+                {
+                    continue;
+                }
+                auto priority = input_source.second->source_priority();
+                if (priority < highest_priority)
+                {
+                    next_input_source = input_source.second;
+                    highest_priority = priority;
+                }
+            }
+            if (highest_priority == INT_MAX)
+            {
+                return false;
+            }
+        }
+        else
+        {
+            auto input_source = m_input_sources_store.find(source);
+            if (input_source == m_input_sources_store.end())
+            {
+                return false;
+            }
+            next_input_source = input_source->second;
+            if (!next_input_source->is_available())
+            {
+                return false;
+            }
+        }
+        if (next_input_source != m_platform_handler)
+        {
+            if (m_platform_handler != nullptr)
+            {
+                m_platform_handler->deactivate();
+            }
+            next_input_source->activate();
+            m_platform_handler = next_input_source;
+            return true;
+        }
+        return true;
+    }
+
+    // register the input source to the input source store
+    auto Handler::register_input_source(std::shared_ptr<PlatformInputSource> input_source) -> void
+    {
+        std::string name = input_source->get_name();
+        if (m_input_sources_store.find(name) == m_input_sources_store.end())
+        {
+            m_input_sources_store[name] = input_source;
+        }
+    }
+
+    auto Handler::get_current_input_source() -> std::string
+    {
+        if (m_platform_handler == nullptr)
+        {
+            return "None";
+        }
+        return m_platform_handler->get_name();
     }
 } // namespace RC::Input
