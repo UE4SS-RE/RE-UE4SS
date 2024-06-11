@@ -7,7 +7,7 @@ namespace RC::GUI::Filter
     class DefaultObjectsOnly
     {
       public:
-        static inline StringType s_debug_name{STR("DefaultObjectsOnly")};
+        static inline UEStringType s_debug_name{STR("DefaultObjectsOnly")};
         static inline bool s_enabled{};
 
         static auto pre_eval(UObject* object) -> bool

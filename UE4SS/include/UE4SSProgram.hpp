@@ -84,9 +84,9 @@ namespace RC
         friend class CppUserModBase; // m_input_handler
 
       public:
-        constexpr static wchar_t m_settings_file_name[] = L"UE4SS-settings.ini";
-        constexpr static wchar_t m_log_file_name[] = L"UE4SS.log";
-        constexpr static wchar_t m_object_dumper_file_name[] = L"UE4SS_ObjectDump.txt";
+        constexpr static SystemCharType m_settings_file_name[] = SYSSTR("UE4SS-settings.ini");
+        constexpr static SystemCharType m_log_file_name[] = SYSSTR("UE4SS.log");
+        constexpr static SystemCharType m_object_dumper_file_name[] = SYSSTR("UE4SS_ObjectDump.txt");
 
       public:
         RC_UE4SS_API static SettingsManager settings_manager;
@@ -111,6 +111,12 @@ namespace RC
         std::filesystem::path m_module_file_path;
         std::filesystem::path m_working_directory;
         std::filesystem::path m_mods_directory;
+
+        SystemStringType m_module_file_path_str;
+        SystemStringType m_working_directory_str;
+        SystemStringType m_game_executable_str;
+        SystemStringType m_mods_directory_str;
+
         std::filesystem::path m_game_executable_directory;
         std::filesystem::path m_log_directory;
         std::filesystem::path m_object_dumper_output_directory;
@@ -168,19 +174,19 @@ namespace RC
         };
 
       public:
-        UE4SSProgram(const std::wstring& ModuleFilePath, std::initializer_list<BinaryOptions> options);
+        UE4SSProgram(const SystemStringType& ModuleFilePath, std::initializer_list<BinaryOptions> options);
         ~UE4SSProgram();
         UE4SSProgram(const UE4SSProgram&) = delete;
         UE4SSProgram(UE4SSProgram&&) = delete;
 
       private:
-        auto setup_paths(const std::wstring& moduleFilePath) -> void;
+        auto setup_paths(const SystemStringType& moduleFilePath) -> void;
         enum class FunctionStatus
         {
             Success,
             Failure,
         };
-        auto create_emergency_console_for_early_error(File::StringViewType error_message) -> void;
+        auto create_emergency_console_for_early_error(SystemStringViewType error_message) -> void;
         auto setup_mod_directory_path() -> void;
         auto create_simple_console() -> void;
         auto setup_unreal() -> void;
@@ -204,7 +210,7 @@ namespace RC
         auto fire_unreal_init_for_cpp_mods() -> void;
         auto fire_ui_init_for_cpp_mods() -> void;
         auto fire_program_start_for_cpp_mods() -> void;
-        auto fire_dll_load_for_cpp_mods(std::wstring_view dll_name) -> void;
+        auto fire_dll_load_for_cpp_mods(SystemStringViewType dll_name) -> void;
 
       public:
         auto init() -> void;
@@ -257,32 +263,22 @@ namespace RC
         static auto install_lua_mods() -> void;
 
         using FMBNI_ExtraPredicate = std::function<bool(Mod*)>;
-        static auto find_mod_by_name_internal(std::wstring_view mod_name,
+        static auto find_mod_by_name_internal(SystemStringViewType mod_name,
                                               IsInstalled = IsInstalled::No,
                                               IsStarted = IsStarted::No,
                                               FMBNI_ExtraPredicate extra_predicate = {}) -> Mod*;
 
       public:
-        RC_UE4SS_API static auto dump_uobject(Unreal::UObject* object, std::unordered_set<Unreal::FField*>* dumped_fields, StringType& out_line, bool is_below_425)
+        RC_UE4SS_API static auto dump_uobject(Unreal::UObject* object, std::unordered_set<Unreal::FField*>* dumped_fields, SystemStringType& out_line, bool is_below_425)
                 -> void;
-        RC_UE4SS_API static auto dump_xproperty(Unreal::FProperty* property, StringType& out_line) -> void;
-        RC_UE4SS_API static auto dump_all_objects_and_properties(const File::StringType& output_path_and_file_name) -> void;
+        RC_UE4SS_API static auto dump_xproperty(Unreal::FProperty* property, SystemStringType& out_line) -> void;
+        RC_UE4SS_API static auto dump_all_objects_and_properties(const SystemStringType& output_path_and_file_name) -> void;
 
         template <typename T>
-        static auto find_mod_by_name(std::wstring_view mod_name, IsInstalled = IsInstalled::No, IsStarted = IsStarted::No) -> T*
+        static auto find_mod_by_name(SystemStringType mod_name, IsInstalled is_installed = IsInstalled::No, IsStarted is_started = IsStarted::No) -> T*
         {
-            std::abort();
-        };
-        template <typename T>
-        static auto find_mod_by_name(std::string_view mod_name, IsInstalled = IsInstalled::No, IsStarted = IsStarted::No) -> T*
-        {
-            std::abort();
-        };
-        template <>
-        auto find_mod_by_name<LuaMod>(std::wstring_view mod_name, IsInstalled is_installed, IsStarted is_started) -> LuaMod*
-        {
-            return static_cast<LuaMod*>(find_mod_by_name_internal(mod_name, is_installed, is_started, [](auto elem) -> bool {
-                return dynamic_cast<LuaMod*>(elem);
+            return static_cast<T*>(find_mod_by_name_internal(mod_name, is_installed, is_started, [](auto elem) -> bool {
+                return dynamic_cast<T*>(elem);
             }));
         };
 
