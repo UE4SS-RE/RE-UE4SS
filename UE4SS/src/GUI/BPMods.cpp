@@ -16,6 +16,9 @@
 
 #include <imgui.h>
 
+#undef min
+#undef max
+
 namespace RC::GUI::BPMods
 {
     using namespace RC::Unreal;
@@ -113,7 +116,7 @@ namespace RC::GUI::BPMods
                         const auto& mod_button = mod_info.ModButtons[i2];
                         if (ImGui::Button(std::format("{}", mod_button).c_str()))
                         {
-                            Output::send(STR("Mod button {} hit.\n"), to_wstring(mod_button));
+                            Output::send(SYSSTR("Mod button {} hit.\n"), mod_button);
                             mod_info.ModActor->ModMenuButtonPressed(static_cast<int32_t>(i2));
                         }
                     }
