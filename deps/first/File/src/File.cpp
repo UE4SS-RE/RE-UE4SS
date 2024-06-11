@@ -1,4 +1,7 @@
 #include <File/File.hpp>
+#include <algorithm>
+
+#include <Helpers/String.hpp>
 
 namespace RC::File
 {

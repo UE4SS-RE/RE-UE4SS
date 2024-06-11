@@ -2,13 +2,15 @@
 #include <Mod/CppUserModBase.hpp>
 #include <UE4SSProgram.hpp>
 
+#include <vector>
+
 namespace RC
 {
     CppUserModBase::CppUserModBase()
     {
         if (ModIntendedSDKVersion.empty())
         {
-            ModIntendedSDKVersion = std::format(STR("{}.{}.{}"), UE4SS_LIB_VERSION_MAJOR, UE4SS_LIB_VERSION_MINOR, UE4SS_LIB_VERSION_HOTFIX);
+            ModIntendedSDKVersion = to_ue(std::format(SYSSTR("{}.{}.{}"), UE4SS_LIB_VERSION_MAJOR, UE4SS_LIB_VERSION_MINOR, UE4SS_LIB_VERSION_HOTFIX));
         }
     }
 
@@ -23,12 +25,11 @@ namespace RC
         }
         GUITabs.clear();
 
-        auto& key_events = UE4SSProgram::get_program().m_input_handler.get_events();
-        std::erase_if(key_events, [&](Input::KeySet& input_event) -> bool {
-            bool were_all_events_registered_from_this_mod = true;
-            for (auto& [key, vector_of_key_data] : input_event.key_data)
-            {
-                std::erase_if(vector_of_key_data, [&](Input::KeyData& key_data) -> bool {
+        UE4SSProgram::get_program().m_input_handler.get_events_safe([&](auto& key_set) {
+            std::erase_if(key_set.key_data, [&](auto& item) -> bool {
+                auto& [_, key_data] = item;
+                bool were_all_events_registered_from_this_mod = true;
+                std::erase_if(key_data, [&](Input::KeyData& key_data) -> bool {
                     // custom_data == 1: Bind came from Lua, and custom_data2 is nullptr.
                     // custom_data == 2: Bind came from C++, and custom_data2 is a pointer to KeyDownEventData. Must free it.
                     auto event_data = static_cast<KeyDownEventData*>(key_data.custom_data2);
@@ -43,13 +44,13 @@ namespace RC
                         return false;
                     }
                 });
-            }
 
-            return were_all_events_registered_from_this_mod;
+                return were_all_events_registered_from_this_mod;
+            });
         });
     }
 
-    auto CppUserModBase::register_tab(std::wstring_view tab_name, GUI::GUITab::RenderFunctionType render_function) -> void
+    auto CppUserModBase::register_tab(UEStringViewType tab_name, GUI::GUITab::RenderFunctionType render_function) -> void
     {
         auto& tab = GUITabs.emplace_back(std::make_shared<GUI::GUITab>(tab_name, render_function, this));
         UE4SSProgram::get_program().add_gui_tab(tab);

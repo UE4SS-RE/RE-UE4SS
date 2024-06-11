@@ -43,7 +43,7 @@ namespace RC::ParserBase
       public:
         RC_PB_API auto set_available_tokens(TokenContainer&&) -> void;
         // TODO: Maybe the constructor should take the input instead of 'tokenize'
-        RC_PB_API auto tokenize(const File::StringType& input) -> void;
+        RC_PB_API auto tokenize(const SystemStringType& input) -> void;
         [[nodiscard]] RC_PB_API auto get_tokens() const -> const std::vector<Token>&;
         [[nodiscard]] RC_PB_API auto get_last_token() const -> const Token&;
     };

@@ -7,7 +7,7 @@ namespace RC::GUI::Filter
     class IncludeDefaultObjects
     {
       public:
-        static inline StringType s_debug_name{STR("IncludeDefaultObjects")};
+        static inline UEStringType s_debug_name{STR("IncludeDefaultObjects")};
         static inline bool s_enabled{true};
 
         static auto pre_eval(UObject* object) -> bool

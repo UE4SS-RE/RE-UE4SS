@@ -14,25 +14,25 @@ namespace RC::JSON
         RC_JSON_API constexpr static Type static_type = Type::String;
 
       private:
-        StringType m_data{};
+        SystemStringType m_data{};
 
       public:
         RC_JSON_API String() = default;
-        RC_JSON_API explicit String(StringViewType string);
+        RC_JSON_API explicit String(SystemStringViewType string);
         RC_JSON_API ~String() override = default;
 
       public:
-        RC_JSON_API auto get() -> StringType&
+        RC_JSON_API auto get() -> SystemStringType&
         {
             return m_data;
         }
-        RC_JSON_API auto get_view() const -> StringViewType
+        RC_JSON_API auto get_view() const -> SystemStringViewType
         {
             return m_data;
         }
 
       public:
-        RC_JSON_API auto serialize(ShouldFormat should_format = ShouldFormat::No, int32_t* indent_level = nullptr) -> StringType override;
+        RC_JSON_API auto serialize(ShouldFormat should_format = ShouldFormat::No, int32_t* indent_level = nullptr) -> SystemStringType override;
         RC_JSON_API auto get_type() const -> Type override
         {
             return Type::String;

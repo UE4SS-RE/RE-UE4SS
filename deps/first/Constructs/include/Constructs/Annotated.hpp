@@ -24,7 +24,7 @@ namespace RC
      * Annotated<Strings<"Hi", "Bye">, int> annotated_integer(123);
      *
      * for (const auto& comment : comments) {
-     *   Output::send(STR("{}\n"), comment);
+     *   Output::send(SYSSTR("{}\n"), comment);
      * }
      * @endcode
      */

@@ -61,9 +61,9 @@ namespace RC::GUI
             Output::Targets<Output::FileDevice> output{};
             FProperty* property{};
             UObject* container{};
-            StringType object_name{};
-            StringType property_name{};
-            StringType property_value{};
+            UEStringType object_name{};
+            UEStringType property_name{};
+            UEStringType property_value{};
             size_t hash{};
             std::string history{};
             float history_previous_max_scroll_y{};
@@ -77,7 +77,7 @@ namespace RC::GUI
             std::pair<int, int> function_hook_ids{};
 
             Watch() = delete;
-            Watch(StringType&& object_name, StringType&& property_name);
+            Watch(UEStringType&& object_name, UEStringType&& property_name);
         };
 
       private:
