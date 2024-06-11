@@ -8,13 +8,13 @@ namespace RC::UVTD
     class UnrealVirtualGenerator
     {
       private:
-        File::StringType pdb_name;
+        SystemStringType pdb_name;
         TypeContainer type_container;
 
       public:
         UnrealVirtualGenerator() = delete;
 
-        explicit UnrealVirtualGenerator(File::StringType pdb_name, TypeContainer container)
+        explicit UnrealVirtualGenerator(SystemStringType pdb_name, TypeContainer container)
             : pdb_name(std::move(pdb_name)), type_container(std::move(container))
         {
         }
