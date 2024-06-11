@@ -50,7 +50,7 @@ namespace RC::JSON
         virtual ~Value() = default;
 
       public:
-        virtual auto serialize(ShouldFormat, int32_t* indent_level) -> StringType = 0;
+        virtual auto serialize(ShouldFormat, int32_t* indent_level) -> SystemStringType = 0;
         virtual auto get_type() const -> Type = 0;
 
       public:
