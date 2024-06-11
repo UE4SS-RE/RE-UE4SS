@@ -56,7 +56,7 @@ namespace RC::ASM
             }
             else
             {
-                Output::send<LogLevel::Warning>(STR("Was unable to resolve JMP instruction @ {}\n"), instruction.address);
+                Output::send<LogLevel::Warning>(SYSSTR("Was unable to resolve JMP instruction @ {}\n"), instruction.address);
                 return nullptr;
             }
         }
