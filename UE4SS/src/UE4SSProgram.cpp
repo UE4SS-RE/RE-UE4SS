@@ -1574,11 +1574,6 @@ namespace RC
         return to_system_string(m_object_dumper_output_directory);
     }
 
-    auto UE4SSProgram::find_lua_mod_by_name(std::wstring_view mod_name, UE4SSProgram::IsInstalled installed_only, IsStarted is_started) -> LuaMod*
-    {
-        return static_cast<LuaMod*>(find_mod_by_name<LuaMod>(mod_name, installed_only, is_started));
-    }
-
     auto UE4SSProgram::dump_uobject(UObject* object, std::unordered_set<FField*>* in_dumped_fields, SystemStringType& out_line, bool is_below_425) -> void
     {
         bool owns_dumped_fields{};
