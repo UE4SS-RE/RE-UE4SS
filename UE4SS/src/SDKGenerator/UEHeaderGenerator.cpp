@@ -16,7 +16,7 @@
 #include <DynamicOutput/DynamicOutput.hpp>
 #include <UE4SSProgram.hpp>
 #include <Unreal/AActor.hpp>
-#include <Unreal/FScriptArray.hpp>
+#include <Unreal/Core/Containers/ScriptArray.hpp>
 #include <Unreal/FString.hpp>
 #include <Unreal/FText.hpp>
 #include <Unreal/Property/FArrayProperty.hpp>

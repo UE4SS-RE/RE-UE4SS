@@ -19,7 +19,7 @@
 #include <LuaType/LuaXProperty.hpp>
 #pragma warning(disable : 4005)
 #include <Unreal/AActor.hpp>
-#include <Unreal/FScriptArray.hpp>
+#include <Unreal/Core/Containers/ScriptArray.hpp>
 #include <Unreal/FString.hpp>
 #include <Unreal/FText.hpp>
 #include <Unreal/Property/FArrayProperty.hpp>
