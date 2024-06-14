@@ -113,6 +113,14 @@ namespace RC::GUI
         return {w + left + right, h + top + bottom};
     }
 
+    auto Backend_GLFW3_OpenGL3::get_window_position() -> WindowPosition
+    {
+        int left, top, right, bottom;
+        glfwGetWindowFrameSize(m_window, &left, &top, &right, &bottom);
+
+        return {left, top};
+    }
+
     auto Backend_GLFW3_OpenGL3::exit_requested() -> bool
     {
         return glfwWindowShouldClose(m_window);
