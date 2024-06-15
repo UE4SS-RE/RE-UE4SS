@@ -8,4 +8,8 @@ add_repositories("third-party deps/third-repo", { rootdir = get_config("ue4ssRoo
 
 add_requires("zycore v1.5.0", { debug = is_mode_debug(), configs = {runtimes = get_mode_runtimes()} })
 add_requires("zydis v4.1.0", { debug = is_mode_debug(), configs = {runtimes = get_mode_runtimes()} })
-add_requires("polyhook_2", { debug = is_mode_debug(), configs = {runtimes = get_mode_runtimes()} })
+
+add_requires("polyhook_2 2024.2.07", 
+    { debug = is_mode_debug(), configs = { external_zydis = true, shared_deps = false, shared = false, runtimes = get_mode_runtimes()} })
+
+    
