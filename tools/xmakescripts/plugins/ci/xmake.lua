@@ -1,5 +1,5 @@
 task("ci")
-    set_category("plugins")
+    set_category("plugin")
     on_run("main")
 
     set_menu {
