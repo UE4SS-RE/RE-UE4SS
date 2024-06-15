@@ -333,7 +333,7 @@ namespace RC::GUI
             {
                 if (!Output::has_internal_error())
                 {
-                    Output::send<LogLevel::Error>(STR("Error: {}\n"), to_wstring(e.what()));
+                    Output::send<LogLevel::Error>(SYSSTR("Error: {}\n"), to_system(e.what()));
                 }
                 else
                 {
@@ -458,7 +458,7 @@ namespace RC::GUI
         IMGUI_CHECKVERSION();
         ImGui::CreateContext();
         ImGuiIO& io = ImGui::GetIO();
-        m_imgui_ini_file = to_string(StringType{UE4SSProgram::get_program().get_working_directory()} + STR("\\imgui.ini"));
+        m_imgui_ini_file = to_string_path(std::filesystem::path {UE4SSProgram::get_program().get_working_directory()} / SYSSTR("imgui.ini"));
         io.IniFilename = m_imgui_ini_file.c_str();
 
         // Add .ini handle for UserData type
@@ -550,7 +550,7 @@ namespace RC::GUI
 
         if (!debugging_ui)
         {
-            Output::send<LogLevel::Error>(STR("Could not start GUI render thread because 'debugging_ui' was nullptr."));
+            Output::send<LogLevel::Error>(SYSSTR("Could not start GUI render thread because 'debugging_ui' was nullptr."));
             return;
         }
         debugging_ui->setup(std::move(stop_token));

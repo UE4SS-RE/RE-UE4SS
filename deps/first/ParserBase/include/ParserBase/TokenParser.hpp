@@ -34,7 +34,7 @@ namespace RC::ParserBase
 
       private:
         const class Tokenizer& m_tokenizer;
-        mutable File::StringType m_data;
+        mutable SystemStringType m_data;
 
       protected:
         mutable size_t m_current_token_index_being_parsed{0};
@@ -42,7 +42,7 @@ namespace RC::ParserBase
 
       public:
         // Investigate whether I want to std::move the input here
-        RC_PB_API TokenParser(const class Tokenizer&, File::StringType& input);
+        RC_PB_API TokenParser(const class Tokenizer&, SystemStringType& input);
         RC_PB_API virtual ~TokenParser() = default;
 
       protected:
@@ -61,7 +61,7 @@ namespace RC::ParserBase
 
       protected:
         RC_PB_API auto get_token(size_t index) const -> const class Token&;
-        RC_PB_API auto get_data(const class Token&) const -> const File::StringType;
+        RC_PB_API auto get_data(const class Token&) const -> const SystemStringType;
 
         // auto find_token_with_data(int token_type, File::StringViewType data) const -> std::optional<std::reference_wrapper<const class Token>>;
 

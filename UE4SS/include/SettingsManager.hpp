@@ -14,7 +14,7 @@ namespace RC
       public:
         struct SectionOverrides
         {
-            File::StringType ModsFolderPath{};
+            SystemStringType ModsFolderPath{};
         } Overrides;
 
         struct SectionGeneral
@@ -25,6 +25,7 @@ namespace RC
             bool EnableDebugKeyBindings{false};
             int64_t SecondsToScanBeforeGivingUp{30};
             bool UseUObjectArrayCache{true};
+            SystemStringType InputSource{SYSSTR("Default")};
         } General;
 
         struct SectionEngineVersionOverride

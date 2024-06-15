@@ -8,6 +8,7 @@
 #include <DynamicOutput/Macros.hpp>
 #include <DynamicOutput/OutputDevice.hpp>
 #include <File/File.hpp>
+#include <Helpers/String.hpp>
 
 namespace RC::Output
 {
@@ -72,7 +73,7 @@ namespace RC::Output
     // Due to the design of the Output system the opening of the file is done in receive instead of in the constructor
     // It's opened only once and stays open until the Output object (not the device) leaves scope
     // The destructor is responsible for closing the file
-    auto receive(File::StringViewType fmt) const -> void override
+    auto receive(SystemStringViewType fmt) const -> void override
     {
         if (!m_is_device_ready)
         {
@@ -82,11 +83,11 @@ namespace RC::Output
         // Do file output stuff here
         // File should already be open & be ready for writing (happens in constructor)
 
-        m_file.write_string_to_file(m_formatter(fmt));
+        m_file.write_file_string_to_file(to_file(m_formatter(fmt)));
     }
     // OutputDevice Interface -> END
 
-    auto set_file_name_and_path(const File::StringType& file_name_and_path) -> void
+    auto set_file_name_and_path(const SystemStringType& file_name_and_path) -> void
     {
         m_file_name_and_path = file_name_and_path;
     }

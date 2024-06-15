@@ -2,22 +2,22 @@
 
 namespace RC::UVTD
 {
-    ParsedTemplateClass TemplateClassParser::Parse(File::StringViewType input)
+    ParsedTemplateClass TemplateClassParser::Parse(UEStringViewType input)
     {
         ParsedTemplateClass parsed{};
 
-        for (const File::StringType::value_type character : input)
+        for (const UEStringType::value_type character : input)
         {
             if (character == STR('<')) break;
             parsed.class_name += character;
         }
 
         size_t nesting_level = 0;
-        File::StringType current_param{};
+        UEStringType current_param{};
 
         for (size_t i = parsed.class_name.size(); i < input.size(); i++)
         {
-            const File::StringType::value_type character = input[i];
+            const UEStringType::value_type character = input[i];
             bool is_nesting_character = false;
 
             if (character == STR('>') && nesting_level == 1) break;

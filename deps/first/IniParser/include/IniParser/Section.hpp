@@ -9,13 +9,13 @@ namespace RC::Ini
 {
     struct Section
     {
-        std::unordered_map<File::StringType, Value> key_value_pairs{};
-        std::vector<File::StringType> ordered_list{};
+        std::unordered_map<SystemStringType, Value> key_value_pairs{};
+        std::vector<SystemStringType> ordered_list{};
         bool is_ordered_list{};
     };
 
     template <typename F>
-    concept CallableWithKeyValuePair = std::invocable<F&, StringType, Ini::Value&>;
+    concept CallableWithKeyValuePair = std::invocable<F&, SystemStringType, Ini::Value&>;
 
     class List
     {

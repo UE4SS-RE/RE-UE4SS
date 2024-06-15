@@ -20,7 +20,7 @@ namespace RC::Ini
         m_ref = new_ref;
     }
 
-    auto Value::get_string_value() const -> const File::StringType&
+    auto Value::get_string_value() const -> const SystemStringType&
     {
         return m_string_value;
     }
@@ -40,7 +40,7 @@ namespace RC::Ini
         return m_bool_value;
     }
 
-    auto Value::add_string_value(File::StringViewType data) -> void
+    auto Value::add_string_value(SystemStringViewType data) -> void
     {
         m_string_value = data;
 
@@ -52,7 +52,7 @@ namespace RC::Ini
         add_type<Type::String>();
     }
 
-    auto Value::add_int64_value(const StringType& data, int base) -> void
+    auto Value::add_int64_value(const SystemStringType& data, int base) -> void
     {
         m_int64_value = std::stoi(data, nullptr, base);
 
@@ -64,7 +64,7 @@ namespace RC::Ini
         add_type<Type::Int64>();
     }
 
-    auto Value::add_float_value(const StringType& data) -> void
+    auto Value::add_float_value(const SystemStringType& data) -> void
     {
         m_float_value = std::stof(data, nullptr);
 

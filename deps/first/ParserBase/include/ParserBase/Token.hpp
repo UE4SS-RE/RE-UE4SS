@@ -12,20 +12,20 @@ namespace RC::ParserBase
     class TokenRule
     {
       private:
-        File::StringType m_debug_name;
+        SystemStringType m_debug_name;
 
       public:
-        explicit TokenRule(File::StringViewType rule_name) : m_debug_name(rule_name)
+        explicit TokenRule(SystemStringViewType rule_name) : m_debug_name(rule_name)
         {
         }
         virtual ~TokenRule() = default;
 
       public:
-        RC_PB_API virtual auto exec(const class Token& token, const File::CharType* start_of_token, size_t current_cursor_location, class Tokenizer&) -> int = 0;
+        RC_PB_API virtual auto exec(const class Token& token, const SystemCharType* start_of_token, size_t current_cursor_location, class Tokenizer&) -> int = 0;
 
-        [[nodiscard]] RC_PB_API virtual auto to_string() const -> File::StringType
+        [[nodiscard]] RC_PB_API virtual auto to_string() const -> SystemStringType
         {
-            return STR("BaseTokenRule (invalid)");
+            return SYSSTR("BaseTokenRule (invalid)");
         }
     };
 
@@ -42,8 +42,8 @@ namespace RC::ParserBase
         };
 
       private:
-        File::StringType m_debug_name;
-        File::StringType m_identifier;
+        SystemStringType m_debug_name;
+        SystemStringType m_identifier;
         std::vector<std::shared_ptr<TokenRule>> m_rules;
         int m_type; // To be cast to an enum before use. This is to avoid using a template which forces everything to be in the header file.
         mutable size_t m_start{};
@@ -53,7 +53,7 @@ namespace RC::ParserBase
         HasData m_has_data;
 
       public:
-        RC_PB_API Token(int type, File::StringViewType name, File::StringViewType identifier, HasData has_data = HasData::No);
+        RC_PB_API Token(int type, SystemStringViewType name, SystemStringViewType identifier, HasData has_data = HasData::No);
 
       public:
         RC_PB_API auto get_type() const -> int;
@@ -63,7 +63,7 @@ namespace RC::ParserBase
         RC_PB_API auto get_start() const -> size_t;
         RC_PB_API auto set_end(size_t) -> void;
         RC_PB_API auto get_end() const -> size_t;
-        RC_PB_API auto get_identifier() const -> File::StringViewType;
+        RC_PB_API auto get_identifier() const -> SystemStringViewType;
         RC_PB_API auto get_line() const -> size_t;
         RC_PB_API auto get_column() const -> size_t;
 
@@ -74,7 +74,7 @@ namespace RC::ParserBase
         }
 
         RC_PB_API auto get_rules() const -> const std::vector<std::shared_ptr<TokenRule>>&;
-        [[nodiscard]] RC_PB_API auto to_string() const -> File::StringType;
+        [[nodiscard]] RC_PB_API auto to_string() const -> SystemStringType;
 
       public:
         template <typename TokenRuleType>
@@ -92,10 +92,10 @@ namespace RC::ParserBase
             create_internal<TokenRuleTypeTwo, TokenRuleTypes...>(token);
         }
 
-        RC_PB_API auto static create(int type, File::StringViewType name, File::StringViewType identifier, HasData = HasData::No) -> Token;
+        RC_PB_API auto static create(int type, SystemStringViewType name, SystemStringViewType identifier, HasData = HasData::No) -> Token;
 
         template <typename TokenRuleType>
-        auto static create(int type, File::StringViewType name, File::StringViewType identifier, HasData has_data = HasData::No) -> Token
+        auto static create(int type, SystemStringViewType name, SystemStringViewType identifier, HasData has_data = HasData::No) -> Token
         {
             Token token{type, name, identifier, has_data};
             create_internal<TokenRuleType>(token);
@@ -103,7 +103,7 @@ namespace RC::ParserBase
         }
 
         template <typename TokenRuleTypeOne, typename TokenRuleTypeTwo, typename... TokenRuleTypes>
-        auto static create(int type, File::StringViewType name, File::StringViewType identifier, HasData has_data = HasData::No) -> Token
+        auto static create(int type, SystemStringViewType name, SystemStringViewType identifier, HasData has_data = HasData::No) -> Token
         {
             Token token{type, name, identifier, has_data};
             create_internal<TokenRuleTypeOne, TokenRuleTypeTwo, TokenRuleTypes...>(token);

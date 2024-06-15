@@ -10,7 +10,7 @@ namespace RC::GUI::Filter
     class HasPropertyType
     {
       public:
-        static inline StringType s_debug_name{STR("HasPropertyType")};
+        static inline UEStringType s_debug_name{STR("HasPropertyType")};
         static inline std::string s_internal_property_types{};
         static inline std::vector<FName> list_property_types{};
 

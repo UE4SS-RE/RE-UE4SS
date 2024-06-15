@@ -38,12 +38,12 @@ namespace RC::Output
             return true;
         }
 
-        auto receive(File::StringViewType fmt) const -> void override
+        auto receive(SystemStringViewType fmt) const -> void override
         {
             receive_with_optional_arg(fmt, 0);
         }
 
-        auto receive_with_optional_arg(File::StringViewType fmt, int32_t optional_arg) const -> void override
+        auto receive_with_optional_arg(SystemStringViewType fmt, int32_t optional_arg) const -> void override
         {
             OptionalArgTest typed_optional_arg = static_cast<OptionalArgTest>(optional_arg);
             switch (typed_optional_arg)
@@ -63,9 +63,9 @@ namespace RC::Output
             }
 
 #if ENABLE_OUTPUT_DEVICE_DEBUG_MODE
-            printf_s("TestDevice received: %S", fmt.c_str());
+            printf_s("TestDevice received: " SystemStringPrint, fmt.c_str());
 #else
-            printf_s("%S", fmt.data());
+            printf_s(SystemStringPrint, fmt.data());
 #endif
         }
     };

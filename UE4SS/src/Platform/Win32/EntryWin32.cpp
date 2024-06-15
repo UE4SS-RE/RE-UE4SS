@@ -7,6 +7,8 @@
 #include <tlhelp32.h>
 
 #include "UE4SSProgram.hpp"
+#include "Platform.hpp"
+
 #include <DynamicOutput/DynamicOutput.hpp>
 #include <Helpers/String.hpp>
 
@@ -29,7 +31,7 @@ auto thread_dll_start(UE4SSProgram* program) -> unsigned long
         // Logging will only happen to the debug console but it's something at least
         if (!Output::has_internal_error())
         {
-            Output::send<LogLevel::Error>(STR("Fatal Error: {}\n"), to_wstring(e->get_message()));
+            Output::send<LogLevel::Error>(SYSSTR("Fatal Error: {}\n"), to_wstring(e->get_message()));
         }
         else
         {
@@ -131,4 +133,18 @@ auto WIN_API_FUNCTION_NAME(HMODULE hModule, DWORD ul_reason_for_call, [[maybe_un
         break;
     }
     return TRUE;
+}
+
+std::filesystem::path get_executable_path()
+{
+    wchar_t exe_path_buffer[1024];
+    GetModuleFileNameW(GetModuleHandle(nullptr), exe_path_buffer, 1023);
+    return std::filesystem::path(exe_path_buffer);
+}
+
+void add_dlsearch_folder(std::filesystem::path& path)
+{
+    SetDefaultDllDirectories(LOAD_LIBRARY_SEARCH_DEFAULT_DIRS);
+    // Make sure game directory DLLs are also included
+    AddDllDirectory(path.c_str());
 }
