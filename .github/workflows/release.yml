@@ -32,7 +32,7 @@ jobs:
       - name: Setup xmake
         uses: xmake-io/github-action-setup-xmake@v1
         with:
-          xmake-version: latest
+          xmake-version: branch@dev
 
       - name: Release Commit
         id: release_commit
