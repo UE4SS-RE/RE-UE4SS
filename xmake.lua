@@ -12,6 +12,9 @@ set_config("buildir", "Intermediates")
 -- /modules/rules/my_module.lua     import("rules.my_module")
 add_moduledirs("tools/xmakescripts/modules")
 
+-- Add the plugins dir to support custom xmake <command>.
+add_plugindirs("tools/xmakescripts/plugins")
+
 -- Load our rule files into the global scope.
 includes("tools/xmakescripts/rules/**.lua")
 
