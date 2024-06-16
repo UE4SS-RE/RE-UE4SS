@@ -1,0 +1,46 @@
+# Linting action to run on pull requests.
+# Refer to the .mega-linter.yml file to enable or disable other linters.
+# Refer to .github/linters for linter specific configurations.
+# Refer to .github/problem-matchers for configuration GitHub annotations on linting errors.
+name: MegaLinter
+on:
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ${{ github.ref }}-${{ github.workflow }}
+  cancel-in-progress: true
+
+jobs:
+  megalinter:
+    name: MegaLinter
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read # Read from repository
+      issues: write # Write to PR comments section.
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.UEPSEUDO_PAT }}
+          submodules: recursive
+          fetch-depth: 0
+
+        # Register problem matchers to report issues as annotation on GitHub PRs.
+      - name: Register Problem Matchers
+        run: |
+          echo "::add-matcher::.github/problem-matchers/jsonlint.json"
+          echo "::add-matcher::.github/problem-matchers/actionlint.json"
+
+      - name: MegaLinter
+        id: ml
+        uses: oxsecurity/megalinter@v7
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+        # Unregistering problem matchers isn't strictly necessary but not harmful to include.
+        # It protects us from registering duplicate matchers if we add additional steps to this workflow or retool it as a composite/reusable workflow.
+      - name: Unregister Problem Matchers
+        run: |
+          echo "::remove-matcher owner=jsonlint::"
+          echo "::remove-matcher owner=actionlint::"
