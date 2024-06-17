@@ -10,6 +10,8 @@
 
 #include <File/Macros.hpp>
 
+#include <String/StringType.hpp>
+
 namespace RC
 {
     /* explode_by_occurrence -> START
@@ -156,6 +158,26 @@ namespace RC
 #pragma warning(default : 4996)
     }
 
+    auto inline to_wstring(std::string_view input) -> std::wstring
+    {
+#ifdef PLATFORM_WINDOWS
+#pragma warning(disable : 4996)
+        static std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter{};
+        return converter.from_bytes(input.data(), input.data() + input.length());
+#pragma warning(default : 4996)
+#else
+#if __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+#endif
+        static std::wstring_convert<std::codecvt_utf8<wchar_t>> converter{};
+        return converter.from_bytes(input.data(), input.data() + input.length());
+#endif
+#if __clang__
+#pragma clang diagnostic pop
+#endif
+    }
+
     auto inline to_const_wstring(std::string_view input) -> const std::wstring&
     {
         static std::unordered_map<std::string_view, std::wstring> wstringpool;
@@ -178,23 +200,34 @@ namespace RC
         }
     }
 
-    auto inline to_wstring(std::string_view input) -> std::wstring
+    auto inline to_wstring(std::wstring_view input) -> std::wstring
     {
-        auto temp_input = std::string{input};
-        return to_wstring(temp_input);
+        return std::wstring{input};
+    }
+
+    auto inline to_wstring(std::wstring& input) -> std::wstring
+    {
+        return std::wstring{input};
     }
 
     auto inline to_wstring(std::u16string& input) -> std::wstring
     {
+#ifdef PLATFORM_WINDOWS
         return {input.begin(), input.end()};
+#else
+        throw std::runtime_error{"There is no reason to use this function on non-Windows platforms"};
+#endif
     }
 
     auto inline to_wstring(std::u16string_view input) -> std::wstring
     {
-        auto temp_input = std::u16string{input};
-        return to_wstring(temp_input);
+#ifdef PLATFORM_WINDOWS
+        return {input.begin(), input.end()};
+#else
+        throw std::runtime_error{"There is no reason to use this function on non-Windows platforms"};
+#endif
     }
-
+    
     auto inline to_string(std::wstring& input) -> std::string
     {
 #pragma warning(disable : 4996)
@@ -207,6 +240,21 @@ namespace RC
     {
         auto temp_input = std::wstring{input};
         return to_string(temp_input);
+    }
+
+    auto inline to_string(std::u16string_view input) -> std::string
+    {
+#if __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+#endif
+#pragma warning(disable : 4996)
+        static std::wstring_convert<std::codecvt_utf8_utf16<char16_t>, char16_t> converter{};
+        return converter.to_bytes(input.data(), input.data() + input.length());
+#pragma warning(default : 4996)
+#if __clang__
+#pragma clang diagnostic pop
+#endif
     }
 
     auto inline to_u16string(std::wstring& input) -> std::u16string
@@ -249,6 +297,18 @@ namespace RC
 #else
             return to_wstring(input);
 #endif
+        }
+    }
+
+    auto inline to_ue(std::string_view input)
+    {
+        if constexpr (std::is_same_v<CharType, wchar_t>)
+        {
+            return to_wstring(input);
+        }
+        else
+        {
+            return to_u16string(input);
         }
     }
 
