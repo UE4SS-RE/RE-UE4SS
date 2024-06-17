@@ -8,8 +8,6 @@
 #include <unordered_map>
 #include <vector>
 
-#include <File/Macros.hpp>
-
 #include <String/StringType.hpp>
 
 namespace RC
@@ -138,28 +136,6 @@ namespace RC
 #endif
     }
 
-    auto inline to_const_wstring(std::string_view input) -> const std::wstring&
-    {
-        static std::unordered_map<std::string_view, std::wstring> wstringpool;
-        static std::shared_mutex wstringpool_lock;
-
-        // Allow multiple readers that are stalled when any thread is writing.
-        {
-            std::shared_lock<std::shared_mutex> read_guard(wstringpool_lock);
-            if (wstringpool.contains(input)) return wstringpool[input];
-        }
-
-        auto temp_input = std::string{input};
-        auto new_str = to_wstring(temp_input);
-
-        // Stall the readers to insert a new string.
-        {
-            std::lock_guard<std::shared_mutex> write_guard(wstringpool_lock);
-            const auto& [emplaced_iter, unused] = wstringpool.emplace(input, std::move(new_str));
-            return emplaced_iter->second;
-        }
-    }
-
     auto inline to_wstring(std::wstring_view input) -> std::wstring
     {
         return std::wstring{input};
@@ -239,6 +215,18 @@ namespace RC
         return to_u16string(temp_input);
     }
 
+    auto inline to_ue(std::string_view input)
+    {
+        if constexpr (std::is_same_v<CharType, wchar_t>)
+        {
+            return to_wstring(input);
+        }
+        else
+        {
+            return to_u16string(input);
+        }
+    }
+
     auto inline to_generic_string(const auto& input) -> StringType
     {
         if constexpr (std::is_same_v<std::remove_cvref_t<std::remove_pointer_t<std::remove_cvref_t<decltype(input)>>>, StringViewType>)
@@ -255,57 +243,58 @@ namespace RC
 #if RC_IS_ANSI == 1
             return to_string(input);
 #else
-            return to_wstring(input);
+            return to_ue(input);
 #endif
         }
     }
-
-    auto inline to_ue(std::string_view input)
+    auto inline to_const_ue(std::string_view input) -> const StringType&
     {
-        if constexpr (std::is_same_v<CharType, wchar_t>)
+        static std::unordered_map<std::string_view, StringType> uestringpool;
+        static std::shared_mutex uestringpool_lock;
+
+        // Allow multiple readers that are stalled when any thread is writing.
         {
-            return to_wstring(input);
+            std::shared_lock<std::shared_mutex> read_guard(uestringpool_lock);
+            if (uestringpool.contains(input)) return uestringpool[input];
         }
-        else
+
+        auto temp_input = std::string{input};
+        auto new_str = to_ue(temp_input);
+
+        // Stall the readers to insert a new string.
         {
-            return to_u16string(input);
+            std::lock_guard<std::shared_mutex> write_guard(uestringpool_lock);
+            const auto& [emplaced_iter, unused] = uestringpool.emplace(input, std::move(new_str));
+            return emplaced_iter->second;
         }
     }
-
+    
     namespace String
     {
-        auto inline iequal(std::wstring_view a, std::wstring_view b)
+        template <typename CharT>
+        auto inline iequal(std::basic_string_view<CharT> a, std::basic_string_view<CharT> b)
         {
-            return a.size() == b.size() && std::equal(a.begin(), a.end(), b.begin(), [](const wchar_t a_char, const wchar_t b_char) {
-                       return std::towlower(a_char) == std::towlower(b_char);
+            return a.size() == b.size() && std::equal(a.begin(), a.end(), b.begin(), [](const CharT a_char, const CharT b_char) {
+                       return std::towlower((wchar_t) a_char) == std::towlower((wchar_t) b_char);
                    });
         }
 
-        auto inline iequal(std::wstring& a, const wchar_t* b)
+        template <typename CharT>
+        auto inline iequal(std::basic_string<CharT>& a, const CharT* b)
         {
-            return iequal(a, std::wstring_view{b});
+            return iequal(std::basic_string_view<CharT>{a}, std::basic_string_view<CharT>{b});
         }
 
-        auto inline iequal(const wchar_t* a, std::wstring& b)
+        template <typename CharT>
+        auto inline iequal(const CharT* a, std::basic_string<CharT>& b)
         {
-            return iequal(std::wstring_view{a}, b);
+            return iequal(std::basic_string_view<CharT>{a}, std::basic_string_view<CharT>{b});
         }
 
-        auto inline iequal(std::string_view a, std::string_view b)
+        template <typename CharT>
+        auto inline str_cmp_insensitive(const CharT* a, std::basic_string<CharT>& b)
         {
-            return a.size() == b.size() && std::equal(a.begin(), a.end(), b.begin(), [](const char a_char, const char b_char) {
-                       return (std::tolower(a_char) == std::tolower(b_char));
-                   });
-        }
-
-        auto inline iequal(std::string& a, const char* b)
-        {
-            return iequal(a, std::string_view{b});
-        }
-
-        auto inline str_cmp_insensitive(const char* a, std::string& b)
-        {
-            return iequal(std::string_view{a}, b);
+            return iequal(std::basic_string_view<CharT>{a}, std::basic_string_view<CharT>{b});
         }
     } // namespace String
 } // namespace RC
