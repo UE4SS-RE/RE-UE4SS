@@ -56,7 +56,7 @@ namespace RC::ObjectDumper
         return object_to_string_complex_functions.contains(hash);
     }
 
-    auto object_trivial_dump_to_string(void* p_this, std::wstring& out_line, const wchar_t* post_delimiter) -> void
+    auto object_trivial_dump_to_string(void* p_this, StringType& out_line, const CharType* post_delimiter) -> void
     {
         UObject* p_typed_this = static_cast<UObject*>(p_this);
 
@@ -68,12 +68,12 @@ namespace RC::ObjectDumper
                                     reinterpret_cast<uintptr_t>(p_typed_this->GetOuterPrivate())));
     }
 
-    auto object_to_string(void* p_this, std::wstring& out_line) -> void
+    auto object_to_string(void* p_this, StringType& out_line) -> void
     {
         object_trivial_dump_to_string(p_this, out_line);
     }
 
-    auto property_trivial_dump_to_string(void* p_this, std::wstring& out_line) -> void
+    auto property_trivial_dump_to_string(void* p_this, StringType& out_line) -> void
     {
         FProperty* p_typed_this = static_cast<FProperty*>(p_this);
 
@@ -90,12 +90,12 @@ namespace RC::ObjectDumper
         }
     }
 
-    auto property_to_string(void* p_this, std::wstring& out_line) -> void
+    auto property_to_string(void* p_this, StringType& out_line) -> void
     {
         property_trivial_dump_to_string(p_this, out_line);
     }
 
-    auto arrayproperty_to_string(void* p_this, std::wstring& out_line) -> void
+    auto arrayproperty_to_string(void* p_this, StringType& out_line) -> void
     {
         property_trivial_dump_to_string(p_this, out_line);
 
@@ -103,7 +103,7 @@ namespace RC::ObjectDumper
         out_line.append(fmt::format(STR(" [ai: {:016X}]"), reinterpret_cast<uintptr_t>(p_typed_this->GetInner())));
     }
 
-    auto arrayproperty_to_string_complex(void* p_this, std::wstring& out_line, ObjectToStringComplexDeclCallable callable) -> void
+    auto arrayproperty_to_string_complex(void* p_this, StringType& out_line, ObjectToStringComplexDeclCallable callable) -> void
     {
         FProperty* array_inner = static_cast<FArrayProperty*>(p_this)->GetInner();
         auto array_inner_class = array_inner->GetClass().HashObject();
@@ -132,7 +132,7 @@ namespace RC::ObjectDumper
         }
     }
 
-    auto mapproperty_to_string(void* p_this, std::wstring& out_line) -> void
+    auto mapproperty_to_string(void* p_this, StringType& out_line) -> void
     {
         property_trivial_dump_to_string(p_this, out_line);
 
@@ -142,7 +142,7 @@ namespace RC::ObjectDumper
         out_line.append(fmt::format(STR(" [kp: {:016X}] [vp: {:016X}]"), reinterpret_cast<uintptr_t>(key_property), reinterpret_cast<uintptr_t>(value_property)));
     }
 
-    auto mapproperty_to_string_complex(void* p_this, std::wstring& out_line, ObjectToStringComplexDeclCallable callable) -> void
+    auto mapproperty_to_string_complex(void* p_this, StringType& out_line, ObjectToStringComplexDeclCallable callable) -> void
     {
         FMapProperty* typed_this = static_cast<FMapProperty*>(p_this);
         FProperty* key_property = typed_this->GetKeyProp();
@@ -177,7 +177,7 @@ namespace RC::ObjectDumper
         dump_property(value_property, value_property_class);
     }
 
-    auto classproperty_to_string(void* p_this, std::wstring& out_line) -> void
+    auto classproperty_to_string(void* p_this, StringType& out_line) -> void
     {
         FClassProperty* typed_this = static_cast<FClassProperty*>(p_this);
 
@@ -186,7 +186,7 @@ namespace RC::ObjectDumper
         out_line.append(fmt::format(STR(" [mc: {:016X}]"), reinterpret_cast<uintptr_t>(typed_this->GetMetaClass())));
     }
 
-    auto delegateproperty_to_string(void* p_this, std::wstring& out_line) -> void
+    auto delegateproperty_to_string(void* p_this, StringType& out_line) -> void
     {
         property_trivial_dump_to_string(p_this, out_line);
 
@@ -194,7 +194,7 @@ namespace RC::ObjectDumper
         out_line.append(fmt::format(STR(" [df: {:016X}]"), reinterpret_cast<uintptr_t>(p_typed_this->GetSignatureFunction())));
     }
 
-    auto fieldpathproperty_to_string(void* p_this, std::wstring& out_line) -> void
+    auto fieldpathproperty_to_string(void* p_this, StringType& out_line) -> void
     {
         FFieldPathProperty* typed_this = static_cast<FFieldPathProperty*>(p_this);
 
@@ -202,7 +202,7 @@ namespace RC::ObjectDumper
         out_line.append(fmt::format(STR(" [pc: {:016X}]"), reinterpret_cast<uintptr_t>(typed_this->GetPropertyClass())));
     }
 
-    auto interfaceproperty_to_string(void* p_this, std::wstring& out_line) -> void
+    auto interfaceproperty_to_string(void* p_this, StringType& out_line) -> void
     {
         FInterfaceProperty* typed_this = static_cast<FInterfaceProperty*>(p_this);
 
@@ -210,7 +210,7 @@ namespace RC::ObjectDumper
         out_line.append(fmt::format(STR(" [ic: {:016X}]"), reinterpret_cast<uintptr_t>(typed_this->GetInterfaceClass())));
     }
 
-    auto multicastdelegateproperty_to_string(void* p_this, std::wstring& out_line) -> void
+    auto multicastdelegateproperty_to_string(void* p_this, StringType& out_line) -> void
     {
         property_trivial_dump_to_string(p_this, out_line);
 
@@ -218,7 +218,7 @@ namespace RC::ObjectDumper
         out_line.append(fmt::format(STR(" [df: {:016X}]"), reinterpret_cast<uintptr_t>(p_typed_this->GetSignatureFunction())));
     }
 
-    auto objectproperty_to_string(void* p_this, std::wstring& out_line) -> void
+    auto objectproperty_to_string(void* p_this, StringType& out_line) -> void
     {
         FObjectProperty* typed_this = static_cast<FObjectProperty*>(p_this);
 
@@ -226,7 +226,7 @@ namespace RC::ObjectDumper
         out_line.append(fmt::format(STR(" [pc: {:016X}]"), reinterpret_cast<uintptr_t>(typed_this->GetPropertyClass())));
     }
 
-    auto structproperty_to_string(void* p_this, std::wstring& out_line) -> void
+    auto structproperty_to_string(void* p_this, StringType& out_line) -> void
     {
         FStructProperty* typed_this = static_cast<FStructProperty*>(p_this);
 
@@ -234,7 +234,7 @@ namespace RC::ObjectDumper
         out_line.append(fmt::format(STR(" [ss: {:016X}]"), reinterpret_cast<uintptr_t>(typed_this->GetStruct())));
     }
 
-    auto enumproperty_to_string(void* p_this, std::wstring& out_line) -> void
+    auto enumproperty_to_string(void* p_this, StringType& out_line) -> void
     {
         property_trivial_dump_to_string(p_this, out_line);
 
@@ -242,7 +242,7 @@ namespace RC::ObjectDumper
         out_line.append(fmt::format(STR(" [em: {:016X}]"), reinterpret_cast<uintptr_t>(typed_this->GetEnum())));
     }
 
-    auto boolproperty_to_string(void* p_this, std::wstring& out_line) -> void
+    auto boolproperty_to_string(void* p_this, StringType& out_line) -> void
     {
         property_trivial_dump_to_string(p_this, out_line);
 
@@ -253,7 +253,7 @@ namespace RC::ObjectDumper
         }
     }
 
-    auto enum_to_string(void* p_this, std::wstring& out_line) -> void
+    auto enum_to_string(void* p_this, StringType& out_line) -> void
     {
         object_trivial_dump_to_string(p_this, out_line);
 
@@ -265,7 +265,7 @@ namespace RC::ObjectDumper
         }
     }
 
-    auto struct_to_string(void* p_this, std::wstring& out_line) -> void
+    auto struct_to_string(void* p_this, StringType& out_line) -> void
     {
         UStruct* typed_this = static_cast<UStruct*>(p_this);
 
@@ -273,12 +273,12 @@ namespace RC::ObjectDumper
         out_line.append(fmt::format(STR(" [sps: {:016X}]"), reinterpret_cast<uintptr_t>(typed_this->GetSuperStruct())));
     }
 
-    auto function_to_string(void* p_this, std::wstring& out_line) -> void
+    auto function_to_string(void* p_this, StringType& out_line) -> void
     {
         object_trivial_dump_to_string(p_this, out_line, STR(":"));
     }
 
-    auto scriptstruct_to_string_complex(void* p_this, std::wstring& out_line, ObjectToStringComplexDeclCallable callable) -> void
+    auto scriptstruct_to_string_complex(void* p_this, StringType& out_line, ObjectToStringComplexDeclCallable callable) -> void
     {
         UScriptStruct* script_struct = static_cast<UScriptStruct*>(p_this);
 

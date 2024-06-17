@@ -246,7 +246,7 @@ namespace RC::UEGenerator
             });
         }
 
-        auto get_class_name(const auto& x) -> std::wstring
+        auto get_class_name(const auto& x) -> StringType
         {
             // Using this method instead of regex because it is extremely slow
             auto class_name = x.substr(x.find(STR(' ')) + 1);
@@ -678,7 +678,7 @@ namespace RC::UEGenerator
 
             if (!generated_file.secondary_file_has_no_contents)
             {
-                generated_file.primary_file.write_string_to_file(fmt::format(STR("#include \"{}\"\n\n"), generated_file.secondary_file_name.filename().c_str()));
+                generated_file.primary_file.write_string_to_file(fmt::format(STR("#include \"{}\"\n\n"), to_ue(generated_file.secondary_file_name.filename().string())));
             }
         }
         auto generate_file_footer(GeneratedFile& generated_file) -> void
@@ -783,7 +783,7 @@ namespace RC::UEGenerator
                 }
                 catch (std::exception& e)
                 {
-                    Output::send<LogLevel::Warning>(STR("Could not generate property '{}' because: {}\n"), property->GetFullName(), to_wstring(e.what()));
+                    Output::send<LogLevel::Warning>(STR("Could not generate property '{}' because: {}\n"), property->GetFullName(), to_ue(e.what()));
                     continue;
                 }
 
@@ -959,7 +959,7 @@ namespace RC::UEGenerator
                 {
                     Output::send<LogLevel::Warning>(STR("Could not generate function '{}' because: {}\n"),
                                                     function_info.function->GetFullName(),
-                                                    to_wstring(e.what()));
+                                                    to_ue(e.what()));
                     return;
                 }
 
@@ -994,7 +994,7 @@ namespace RC::UEGenerator
                     {
                         Output::send<LogLevel::Warning>(STR("Could not generate function '{}' because: {}\n"),
                                                         function_info.function->GetFullName(),
-                                                        to_wstring(e.what()));
+                                                        to_ue(e.what()));
                         return;
                     }
 
@@ -1171,7 +1171,7 @@ namespace RC::UEGenerator
                 }
                 catch (std::exception& e)
                 {
-                    Output::send<LogLevel::Warning>(STR("Could not generate property '{}' because: {}\n"), property->GetFullName(), to_wstring(e.what()));
+                    Output::send<LogLevel::Warning>(STR("Could not generate property '{}' because: {}\n"), property->GetFullName(), to_ue(e.what()));
                     continue;
                 }
 
@@ -1248,7 +1248,7 @@ namespace RC::UEGenerator
                     {
                         Output::send<LogLevel::Warning>(STR("Could not generate function '{}' because: {}\n"),
                                                         function_info.function->GetFullName(),
-                                                        to_wstring(e.what()));
+                                                        to_ue(e.what()));
                         return;
                     }
                 }
@@ -1264,7 +1264,7 @@ namespace RC::UEGenerator
                 {
                     Output::send<LogLevel::Warning>(STR("Could not generate function '{}' because: {}\n"),
                                                     function_info.function->GetFullName(),
-                                                    to_wstring(e.what()));
+                                                    to_ue(e.what()));
                     return;
                 }
             }

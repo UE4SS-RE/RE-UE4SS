@@ -64,7 +64,7 @@ namespace RC::LuaLibrary
 
         Output::send(formatted_string);
 
-        if (output_device) output_device->Log(outdevice_string.c_str());
+        if (output_device) output_device->Log((TCHAR*) outdevice_string.c_str());
 
         return 0;
     }
@@ -98,7 +98,7 @@ namespace RC::LuaLibrary
         // Logging will only happen to the debug console but it's something at least
         if (!Output::has_internal_error())
         {
-            Output::send(STR("Error: {}\n"), to_wstring(e));
+            Output::send(STR("Error: {}\n"), to_ue(e));
         }
         else
         {
@@ -106,7 +106,7 @@ namespace RC::LuaLibrary
         }
     }
 
-    static auto exported_function_status_to_string(ExportedFunctionStatus status) -> std::wstring_view
+    static auto exported_function_status_to_string(ExportedFunctionStatus status) -> StringViewType
     {
         switch (status)
         {

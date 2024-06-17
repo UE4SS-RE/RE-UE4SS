@@ -63,7 +63,7 @@ namespace RC::GUI
             }
             else
             {
-                // Output::send(STR("Search for: {}\n"), search_buffer.empty() ? STR("") : to_wstring(search_buffer));
+                // Output::send(STR("Search for: {}\n"), search_buffer.empty() ? STR("") : to_ue(search_buffer));
                 m_name_to_search_by = search_buffer;
                 m_current_iterator = m_search_iterator;
                 m_is_searching_by_name = true;

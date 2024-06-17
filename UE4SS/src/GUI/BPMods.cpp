@@ -31,7 +31,7 @@ namespace RC::GUI::BPMods
       public:
         auto ModMenuButtonPressed(int32_t Index) -> void
         {
-            auto Function = GetFunctionByNameInChain(STR("ModMenuButtonPressed"));
+            auto Function = GetFunctionByNameInChain((TCHAR*) STR("ModMenuButtonPressed"));
             if (!Function)
             {
                 return;
@@ -113,7 +113,7 @@ namespace RC::GUI::BPMods
                         const auto& mod_button = mod_info.ModButtons[i2];
                         if (ImGui::Button(fmt::format("{}", mod_button).c_str()))
                         {
-                            Output::send(STR("Mod button {} hit.\n"), to_wstring(mod_button));
+                            Output::send(STR("Mod button {} hit.\n"), to_ue(mod_button));
                             mod_info.ModActor->ModMenuButtonPressed(static_cast<int32_t>(i2));
                         }
                     }

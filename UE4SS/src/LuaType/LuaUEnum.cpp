@@ -161,7 +161,7 @@ Overloads:
             // P1 (Name), string
             if (lua.is_string())
             {
-                param_name = to_wstring(lua.get_string());
+                param_name = to_ue(lua.get_string());
             }
             else
             {
@@ -242,7 +242,7 @@ Overloads:
                 lua.throw_error("'UEnum.EditNameAt' could not load parameter for \"NewName\"");
             }
 
-            Unreal::FName new_key = Unreal::FName(to_wstring(param_new_name), Unreal::FNAME_Add);
+            Unreal::FName new_key = Unreal::FName(to_ue(param_new_name), Unreal::FNAME_Add);
             lua_object.get_remote_cpp_object()->EditNameAt(param_index, new_key);
 
             return 0;

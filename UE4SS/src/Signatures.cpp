@@ -12,13 +12,15 @@
 #include <Unreal/UnrealInitializer.hpp>
 #include <filesystem>
 
+#include <Helpers/String.hpp>
+
 namespace RC
 {
     auto scan_complete_default_func(DidLuaScanSucceed) -> void
     {
     }
 
-    auto scan_from_lua_script(std::wstring& script_file_path_and_name,
+    auto scan_from_lua_script(std::filesystem::path& script_file_path_and_name,
                               std::vector<SignatureContainer>& signature_containers,
                               LuaScriptMatchFoundFunc& match_found_func,
                               LuaScriptScanCompleteFunc& scan_complete_func) -> void
@@ -31,14 +33,14 @@ namespace RC
         lua.register_function("DerefToInt32", LuaLibrary::deref_to_int32);
         lua.register_function("dereftoint32", LuaLibrary::deref_to_int32);
 
-        lua.execute_file(script_file_path_and_name);
+        lua.execute_file(script_file_path_and_name.string());
 
         constexpr const char* global_register_func_name = "Register";
         constexpr const char* global_on_match_found_func_name = "OnMatchFound";
 
         if (!lua.is_global_function(global_register_func_name) || !lua.is_global_function(global_on_match_found_func_name))
         {
-            Output::send(STR("Lua functions 'Register' and 'OnMatchFound' must be present in {}\n"), script_file_path_and_name);
+            Output::send(STR("Lua functions 'Register' and 'OnMatchFound' must be present in {}\n"), to_ue(script_file_path_and_name.string()));
             throw std::runtime_error{"See error message above"};
         }
 
@@ -91,7 +93,7 @@ namespace RC
 
     auto setup_lua_scan_overrides(std::filesystem::path& working_directory, Unreal::UnrealInitializer::Config& config) -> void
     {
-        std::wstring lua_guobjectarray_scan_script = working_directory / "UE4SS_Signatures/GUObjectArray.lua";
+        auto lua_guobjectarray_scan_script = working_directory / "UE4SS_Signatures/GUObjectArray.lua";
         if (std::filesystem::exists(lua_guobjectarray_scan_script))
         {
             config.ScanOverrides.guobjectarray = [lua_guobjectarray_scan_script](std::vector<SignatureContainer>& signature_containers,
@@ -113,7 +115,7 @@ namespace RC
             };
         }
 
-        std::wstring lua_fts_scan_script = working_directory / "UE4SS_Signatures/FName_ToString.lua";
+        auto lua_fts_scan_script = working_directory / "UE4SS_Signatures/FName_ToString.lua";
         if (std::filesystem::exists(lua_fts_scan_script))
         {
             config.ScanOverrides.fname_to_string = [lua_fts_scan_script](std::vector<SignatureContainer>& signature_containers,
@@ -135,7 +137,7 @@ namespace RC
             };
         }
 
-        std::wstring lua_fnc_scan_script = working_directory / "UE4SS_Signatures/FName_Constructor.lua";
+        auto lua_fnc_scan_script = working_directory / "UE4SS_Signatures/FName_Constructor.lua";
         if (std::filesystem::exists(lua_fnc_scan_script))
         {
             config.ScanOverrides.fname_constructor = [lua_fnc_scan_script](std::vector<SignatureContainer>& signature_containers,
@@ -168,8 +170,8 @@ namespace RC
         }
 
         // For compatibility, we look for 'FMemory_Free.lua' if 'GMalloc.lua' doesn't exist.
-        std::wstring lua_ffree_scan_script_new = working_directory / "UE4SS_Signatures/GMalloc.lua";
-        std::wstring lua_ffree_scan_script_compat = working_directory / "UE4SS_Signatures/FMemory_Free.lua";
+        auto lua_ffree_scan_script_new = working_directory / "UE4SS_Signatures/GMalloc.lua";
+        auto lua_ffree_scan_script_compat = working_directory / "UE4SS_Signatures/FMemory_Free.lua";
         auto lua_ffree_scan_script = std::filesystem::exists(lua_ffree_scan_script_new) ? lua_ffree_scan_script_new : lua_ffree_scan_script_compat;
         if (std::filesystem::exists(lua_ffree_scan_script))
         {
@@ -193,7 +195,7 @@ namespace RC
             };
         }
 
-        std::wstring lua_sco_scan_script = working_directory / "UE4SS_Signatures/StaticConstructObject.lua";
+        auto lua_sco_scan_script = working_directory / "UE4SS_Signatures/StaticConstructObject.lua";
         if (std::filesystem::exists(lua_sco_scan_script))
         {
             config.ScanOverrides.static_construct_object = [lua_sco_scan_script](std::vector<SignatureContainer>& signature_containers,
@@ -215,7 +217,7 @@ namespace RC
             };
         }
 
-        std::wstring lua_ftc_scan_script = working_directory / "UE4SS_Signatures/FText_Constructor.lua";
+        auto lua_ftc_scan_script = working_directory / "UE4SS_Signatures/FText_Constructor.lua";
         if (std::filesystem::exists(lua_ftc_scan_script))
         {
             config.ScanOverrides.ftext_constructor = [lua_ftc_scan_script](std::vector<SignatureContainer>& signature_containers,

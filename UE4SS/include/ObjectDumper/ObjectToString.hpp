@@ -10,7 +10,7 @@
 namespace RC::ObjectDumper
 {
     using ToStringHash = size_t;
-    using ObjectToStringDecl = std::function<void(void*, std::wstring&)>;
+    using ObjectToStringDecl = std::function<void(void*, StringType&)>;
     extern std::unordered_map<ToStringHash, ObjectToStringDecl> object_to_string_functions;
 
     using ObjectToStringComplexDeclCallable = const std::function<void(void*)>&;
@@ -22,33 +22,33 @@ namespace RC::ObjectDumper
     auto to_string_exists(size_t hash) -> bool;
     auto to_string_complex_exists(size_t hash) -> bool;
 
-    auto object_trivial_dump_to_string(void* p_this, std::wstring& out_line, const wchar_t* post_delimiter = STR(".")) -> void;
-    auto object_to_string(void* p_this, std::wstring& out_line) -> void;
+    auto object_trivial_dump_to_string(void* p_this, StringType& out_line, const CharType* post_delimiter = STR(".")) -> void;
+    auto object_to_string(void* p_this, StringType& out_line) -> void;
 
-    auto property_trivial_dump_to_string(void* p_this, std::wstring& out_line) -> void;
-    auto property_to_string(void* p_this, std::wstring& out_line) -> void;
+    auto property_trivial_dump_to_string(void* p_this, StringType& out_line) -> void;
+    auto property_to_string(void* p_this, StringType& out_line) -> void;
 
-    auto arrayproperty_to_string(void* p_this, std::wstring& out_line) -> void;
-    auto arrayproperty_to_string_complex(void* p_this, std::wstring& out_line, ObjectToStringComplexDeclCallable callable) -> void;
+    auto arrayproperty_to_string(void* p_this, StringType& out_line) -> void;
+    auto arrayproperty_to_string_complex(void* p_this, StringType& out_line, ObjectToStringComplexDeclCallable callable) -> void;
 
-    auto mapproperty_to_string(void* p_this, std::wstring& out_line) -> void;
-    auto mapproperty_to_string_complex(void* p_this, std::wstring& out_line, ObjectToStringComplexDeclCallable callable) -> void;
+    auto mapproperty_to_string(void* p_this, StringType& out_line) -> void;
+    auto mapproperty_to_string_complex(void* p_this, StringType& out_line, ObjectToStringComplexDeclCallable callable) -> void;
 
-    auto classproperty_to_string(void* p_this, std::wstring& out_line) -> void;
-    auto delegateproperty_to_string(void* p_this, std::wstring& out_line) -> void;
-    auto fieldpathproperty_to_string(void* p_this, std::wstring& out_line) -> void;
-    auto interfaceproperty_to_string(void* p_this, std::wstring& out_line) -> void;
-    auto multicastdelegateproperty_to_string(void* p_this, std::wstring& out_line) -> void;
-    auto objectproperty_to_string(void* p_this, std::wstring& out_line) -> void;
-    auto structproperty_to_string(void* p_this, std::wstring& out_line) -> void;
-    auto enumproperty_to_string(void* p_this, std::wstring& out_line) -> void;
-    auto boolproperty_to_string(void* p_this, std::wstring& out_line) -> void;
+    auto classproperty_to_string(void* p_this, StringType& out_line) -> void;
+    auto delegateproperty_to_string(void* p_this, StringType& out_line) -> void;
+    auto fieldpathproperty_to_string(void* p_this, StringType& out_line) -> void;
+    auto interfaceproperty_to_string(void* p_this, StringType& out_line) -> void;
+    auto multicastdelegateproperty_to_string(void* p_this, StringType& out_line) -> void;
+    auto objectproperty_to_string(void* p_this, StringType& out_line) -> void;
+    auto structproperty_to_string(void* p_this, StringType& out_line) -> void;
+    auto enumproperty_to_string(void* p_this, StringType& out_line) -> void;
+    auto boolproperty_to_string(void* p_this, StringType& out_line) -> void;
 
-    auto enum_to_string(void* p_this, std::wstring& out_line) -> void;
-    auto struct_to_string(void* p_this, std::wstring& out_line) -> void;
-    auto function_to_string(void* p_this, std::wstring& out_line) -> void;
+    auto enum_to_string(void* p_this, StringType& out_line) -> void;
+    auto struct_to_string(void* p_this, StringType& out_line) -> void;
+    auto function_to_string(void* p_this, StringType& out_line) -> void;
 
-    auto scriptstruct_to_string_complex(void* p_this, std::wstring& out_line, ObjectToStringComplexDeclCallable callable) -> void;
+    auto scriptstruct_to_string_complex(void* p_this, StringType& out_line, ObjectToStringComplexDeclCallable callable) -> void;
 
     auto init() -> void;
 } // namespace RC::ObjectDumper

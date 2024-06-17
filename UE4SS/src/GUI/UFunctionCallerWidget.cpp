@@ -151,7 +151,7 @@ namespace RC::GUI
             auto& function_flags = s_function->GetFunctionFlags();
             function_flags |= FUNC_Exec;
             Output::send(STR("Processing command: {}\n"), s_cmd);
-            bool call_succeeded = s_instance->ProcessConsoleExec(s_cmd.c_str(), s_ar, s_executor);
+            bool call_succeeded = s_instance->ProcessConsoleExec((TCHAR*) s_cmd.c_str(), s_ar, s_executor);
             Output::send(STR("call_succeeded: {}\n"), call_succeeded);
             function_flags &= ~FUNC_Exec;
         }
@@ -167,7 +167,7 @@ namespace RC::GUI
         auto cmd = fmt::format(STR("{}"), function->GetName());
         for (const auto& param : m_params_for_selected_function)
         {
-            cmd.append(fmt::format(STR(" {}"), to_wstring(param.value_from_ui)));
+            cmd.append(fmt::format(STR(" {}"), to_ue(param.value_from_ui)));
         }
 
         Output::send(STR("Queueing command: {}\n"), cmd);
@@ -250,7 +250,7 @@ namespace RC::GUI
         if (object_name_type_space_location == object_name.npos)
         {
             Output::send<LogLevel::Warning>(STR("Could not copy name of PlayerController, was unable to find space in full PlayerController name: '{}'."),
-                                            to_wstring(object_name));
+                                            to_ue(object_name));
             return {};
         }
         else

@@ -1107,7 +1107,7 @@ namespace RC::LuaType
             if (params.lua.is_string())
             {
                 auto lua_string = params.lua.get_string();
-                auto fstring = Unreal::FString{to_wstring(lua_string).c_str()};
+                auto fstring = Unreal::FString{(TCHAR*) to_ue(lua_string).c_str()};
                 *string = fstring;
             }
             else if (params.lua.is_userdata())
@@ -1233,7 +1233,7 @@ Overloads:
         }
         else if (lua.is_string())
         {
-            auto* object_class = Unreal::UObjectGlobals::StaticFindObject<Unreal::UClass*>(nullptr, nullptr, to_wstring(lua.get_string()));
+            auto* object_class = Unreal::UObjectGlobals::StaticFindObject<Unreal::UClass*>(nullptr, nullptr, to_ue(lua.get_string()));
             lua.set_bool(is_a_internal(lua, object, object_class));
         }
         else

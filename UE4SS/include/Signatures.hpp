@@ -23,7 +23,7 @@ namespace RC
 
     using LuaScriptMatchFoundFunc = const std::function<DidLuaScanSucceed(void*)>;
     using LuaScriptScanCompleteFunc = const std::function<void(DidLuaScanSucceed)>;
-    auto scan_from_lua_script(std::wstring& script_file_path_and_name,
+    auto scan_from_lua_script(std::filesystem::path& script_file_path_and_name,
                               std::vector<SignatureContainer>&,
                               LuaScriptMatchFoundFunc& match_found_func,
                               LuaScriptScanCompleteFunc& scan_complete_func = &scan_complete_default_func) -> void;

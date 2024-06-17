@@ -2,7 +2,7 @@
 
 namespace RC::Parser::Experimental
 {
-    auto ExperimentalTokenParser::find_variable_by_name(Section* section, const std::wstring& name) -> std::optional<std::reference_wrapper<Value>>
+    auto ExperimentalTokenParser::find_variable_by_name(Section* section, const StringType& name) -> std::optional<std::reference_wrapper<Value>>
     {
         auto const& var = section->key_value_pairs.find(name);
         if (var != section->key_value_pairs.end())
@@ -15,7 +15,7 @@ namespace RC::Parser::Experimental
         }
     }
 
-    auto ExperimentalTokenParser::find_variable_by_name(SectionContainer& sections, const std::wstring& name) -> std::optional<std::reference_wrapper<Value>>
+    auto ExperimentalTokenParser::find_variable_by_name(SectionContainer& sections, const StringType& name) -> std::optional<std::reference_wrapper<Value>>
     {
         std::optional<std::reference_wrapper<Value>> value_found = [&]() -> std::optional<std::reference_wrapper<Value>> {
             for (auto& [_, section] : sections)
@@ -33,7 +33,7 @@ namespace RC::Parser::Experimental
         return value_found;
     }
 
-    auto ExperimentalTokenParser::find_variable_by_name(const std::wstring& name) -> std::optional<std::reference_wrapper<Value>>
+    auto ExperimentalTokenParser::find_variable_by_name(const StringType& name) -> std::optional<std::reference_wrapper<Value>>
     {
         size_t occurrence_of_dot = name.find_first_of(STR('.'));
         if (occurrence_of_dot == name.npos || occurrence_of_dot + 1 > name.size())
@@ -49,7 +49,7 @@ namespace RC::Parser::Experimental
             }
             else
             {
-                const std::wstring requested_variable_name = name.substr(occurrence_of_dot + 1, name.size());
+                const StringType requested_variable_name = name.substr(occurrence_of_dot + 1, name.size());
                 return find_variable_by_name(&requested_section->second, requested_variable_name);
             }
         }
@@ -65,7 +65,7 @@ namespace RC::Parser::Experimental
         }
         else if (token_type == TokenType::Characters)
         {
-            std::wstring value_data{};
+            StringType value_data{};
             consume_continually([&](const Parser::Token& token) {
                 const auto token_type = token.get_type();
                 if (token_type == TokenType::EndOfFile || token_type == TokenType::NewLine)
@@ -161,7 +161,7 @@ namespace RC::Parser::Experimental
             }
             else if (previous_token.get_type() == TokenType::Characters)
             {
-                std::wstring key_name = get_data(previous_token);
+                StringType key_name = get_data(previous_token);
                 const auto& key_value_pair_iter = m_current_section->key_value_pairs.find(key_name);
                 if (key_value_pair_iter == m_current_section->key_value_pairs.end())
                 {
@@ -188,7 +188,7 @@ namespace RC::Parser::Experimental
                 }
                 else if (characters_token.get_type() == TokenType::Characters)
                 {
-                    const std::wstring key_name = get_data(characters_token);
+                    const StringType key_name = get_data(characters_token);
                     const auto& maybe_variable = find_variable_by_name(key_name);
                     if (maybe_variable.has_value())
                     {
@@ -250,7 +250,7 @@ namespace RC::Parser::Experimental
         // May be a variable or a temporary (Characters token)
         bool lhs_is_variable{};
         bool lhs_is_temporary{};
-        std::wstring lhs = [&]() {
+        StringType lhs = [&]() {
             if (!m_temporary.empty())
             {
                 lhs_is_temporary = true;
@@ -265,7 +265,7 @@ namespace RC::Parser::Experimental
                 }
                 else
                 {
-                    const std::wstring lhs_data = get_data(lhs_token);
+                    const StringType lhs_data = get_data(lhs_token);
                     auto maybe_variable = find_variable_by_name(lhs_data);
                     if (maybe_variable.has_value())
                     {
@@ -306,8 +306,8 @@ namespace RC::Parser::Experimental
         // }
 
         // Find rhs
-        std::wstring rhs = [&]() {
-            std::wstring rhs_temporary{};
+        StringType rhs = [&]() {
+            StringType rhs_temporary{};
             const auto& next_token = peek();
 
             if (next_token.get_type() == TokenType::EndOfFile)
@@ -476,7 +476,7 @@ namespace RC::Parser::Experimental
                 }
             }();
 
-            std::wstring section_name = get_data(section_name_token);
+            StringType section_name = get_data(section_name_token);
             if (auto section = m_output.find(section_name); section != m_output.end())
             {
                 m_current_section = &section->second;
@@ -515,7 +515,7 @@ namespace RC::Parser::Experimental
         }
     }
 
-    ExperimentalParser::ExperimentalParser(const std::wstring& input)
+    ExperimentalParser::ExperimentalParser(const StringType& input)
     {
         // Tokenize -> START
         Parser::Tokenizer tokenizer;
@@ -554,7 +554,7 @@ namespace RC::Parser::Experimental
         return tc;
     }
 
-    auto ExperimentalParser::get_string(const std::wstring& section, const std::wstring& key, const std::wstring& default_value) -> std::wstring
+    auto ExperimentalParser::get_string(const StringType& section, const StringType& key, const StringType& default_value) -> StringType
     {
         auto section_iter = m_sections.find(section);
         if (section_iter == m_sections.end())
@@ -590,7 +590,7 @@ var6 = hello +  + world
 var7 = 1 + 2 + 3 + 4
  */
 
-        std::wstring config_str = LR"(
+        StringType config_str = LR"(
     [ SectionOne]
     ; This is a comment and as such should be ignored by the parser
     var1 = 2
@@ -624,7 +624,7 @@ var5 = a string with spaces
         printf_s("Creating experimental parser\n");
         ExperimentalParser parser{config_str};
 
-        constexpr wchar_t default_value[] = STR("<var_not_found>");
+        constexpr auto default_value[] = STR("<var_not_found>");
         printf_s("SectionOne.var1 = %S\n", parser.get_string(STR("SectionOne"), STR("var1"), default_value).c_str());
         printf_s("SectionOne.var2 = %S\n", parser.get_string(STR("SectionOne"), STR("var2"), default_value).c_str());
         printf_s("SectionOne.var3 = %S\n", parser.get_string(STR("SectionOne"), STR("var3"), default_value).c_str());

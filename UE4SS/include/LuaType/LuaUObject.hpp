@@ -462,7 +462,7 @@ namespace RC::LuaType
                     {
                         lua.throw_error("Function 'GetProperty' requires a string as the first parameter");
                     }
-                    std::wstring property_name = to_wstring(lua.get_string(2));
+                    auto property_name = to_ue(lua.get_string(2));
 
                     auto reflection_table = lua.get_table();
                     const auto& reflected_object = reflection_table.get_userdata_field<SelfType>("ReflectedObject").get_remote_cpp_object();
@@ -586,7 +586,7 @@ Overloads:
                 {
                     lua.throw_error(error_overload_not_found);
                 }
-                auto cmd = to_wstring(lua.get_string());
+                auto cmd = to_ue(lua.get_string());
 
                 if (lua.get_stack_size() < 2)
                 {
@@ -601,7 +601,7 @@ Overloads:
                 auto executor = lua.get_userdata<LuaType::UObject>();
 
                 auto ar = Unreal::FOutputDevice{};
-                auto return_value = lua_object.get_remote_cpp_object()->ProcessConsoleExec(cmd.c_str(), ar, executor.get_remote_cpp_object());
+                auto return_value = lua_object.get_remote_cpp_object()->ProcessConsoleExec((TCHAR*) cmd.c_str(), ar, executor.get_remote_cpp_object());
 
                 lua.set_bool(return_value);
                 return 1;
@@ -641,7 +641,7 @@ Overloads:
         {
             auto& lua_object = lua.get_userdata<SelfType>();
 
-            const std::wstring& member_name = to_const_wstring(lua.get_string());
+            const StringType& member_name = to_const_ue(lua.get_string());
 
             // If nullptr then we assume the UObject wasn't found so lets return an invalid UObject to Lua
             // This allows the safe chaining of "__index" as long as the Lua script checks ":IsValid()" before using the object
@@ -777,7 +777,7 @@ Overloads:
             {
                 // We can either throw an error and kill the execution
                 /**/
-                std::wstring property_type_name = property_type.ToString();
+                StringType property_type_name = property_type.ToString();
                 lua.throw_error(fmt::format(
                         "[LocalUnrealParam::prepare_to_handle] Tried accessing unreal property without a registered handler. Property type '{}' not supported.",
                         to_string(property_type_name)));
