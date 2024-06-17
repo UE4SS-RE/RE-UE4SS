@@ -93,7 +93,7 @@ namespace RC::GUI::KismetDebuggerMod
 
         for (const auto& [fn, bps] : breakpoints)
         {
-            auto wfn = to_wstring(fn);
+            auto wfn = to_ue(fn);
             for (const auto& bp : bps)
             {
                 add_breakpoint(wfn, bp);
@@ -186,7 +186,7 @@ namespace RC::GUI::KismetDebuggerMod
         }
         */
     }
-    auto BreakpointStore::add_breakpoint(const std::wstring& fn, size_t index) -> void
+    auto BreakpointStore::add_breakpoint(const StringType& fn, size_t index) -> void
     {
         std::shared_ptr<FunctionBreakpoints> bps;
         auto [it_name, inserted_name] = m_breakpoints_by_name.emplace(fn, nullptr);
@@ -215,7 +215,7 @@ namespace RC::GUI::KismetDebuggerMod
 
     Debugger::Debugger() : m_breakpoints(g_breakpoints)
     {
-        m_save_path = StringType{UE4SSProgram::get_program().get_working_directory()} + std::format(STR("\\Mods\\KismetDebugger\\config\\breakpoints.json"));
+        m_save_path = StringType{UE4SSProgram::get_program().get_working_directory()} + fmt::format(STR("\\Mods\\KismetDebugger\\config\\breakpoints.json"));
     }
     Debugger::~Debugger()
     {
@@ -262,7 +262,7 @@ namespace RC::GUI::KismetDebuggerMod
         }
         catch (std::exception& e)
         {
-            Output::send<LogLevel::Warning>(STR("[KismetDebugger]: Failed to load breakpoints: {}\n"), to_wstring(e.what()));
+            Output::send<LogLevel::Warning>(STR("[KismetDebugger]: Failed to load breakpoints: {}\n"), to_ue(e.what()));
         }
 
         // scan for GNatives if it hasn't been found yet
@@ -362,12 +362,12 @@ namespace RC::GUI::KismetDebuggerMod
         {
             if (auto data_ptr = get_object_address(property, expr, context); data_ptr)
             {
-                auto popup_context_name = to_string(std::format(STR("{}-{}-{}"), static_cast<void*>(fn), index, static_cast<void*>(property)));
+                auto popup_context_name = to_string(fmt::format(STR("{}-{}-{}"), static_cast<void*>(fn), index, static_cast<void*>(property)));
                 if (ImGui::BeginPopupContextItem(popup_context_name.c_str()))
                 {
                     if (ImGui::MenuItem("Copy address"))
                     {
-                        ImGui::SetClipboardText(std::format("{}", data_ptr).c_str());
+                        ImGui::SetClipboardText(fmt::format("{}", data_ptr).c_str());
                     }
                     ImGui::EndPopup();
                 }
