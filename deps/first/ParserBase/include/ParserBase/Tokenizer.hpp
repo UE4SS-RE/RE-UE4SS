@@ -8,6 +8,7 @@
 #include <File/Macros.hpp>
 #include <ParserBase/Common.hpp>
 
+#include <String/StringType.hpp>
 namespace RC::ParserBase
 {
     class Token;

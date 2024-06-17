@@ -111,26 +111,26 @@ namespace RC::LuaLibrary
         switch (status)
         {
         case ExportedFunctionStatus::NO_ERROR_TO_EXPORT:
-            return L"NO_ERROR_TO_EXPORT | 0";
+            return STR("NO_ERROR_TO_EXPORT | 0");
         case ExportedFunctionStatus::UNKNOWN_ERROR:
-            return L"UNKNOWN_ERROR | 7";
+            return STR("UNKNOWN_ERROR | 7");
         case ExportedFunctionStatus::SUCCESS:
-            return L"SUCCESS | 1";
+            return STR("SUCCESS | 1");
         case ExportedFunctionStatus::VARIABLE_NOT_FOUND:
-            return L"VARIABLE_NOT_FOUND | 2";
+            return STR("VARIABLE_NOT_FOUND | 2");
         case ExportedFunctionStatus::MOD_IS_NULLPTR:
-            return L"MOD_IS_NULLPTR | 3";
+            return STR("MOD_IS_NULLPTR | 3");
         case ExportedFunctionStatus::SCRIPT_FUNCTION_RETURNED_FALSE:
-            return L"SCRIPT_FUNCTION_RETURNED_FALSE | 4";
+            return STR("SCRIPT_FUNCTION_RETURNED_FALSE | 4");
         case ExportedFunctionStatus::UNABLE_TO_CALL_SCRIPT_FUNCTION:
-            return L"UNABLE_TO_CALL_SCRIPT_FUNCTION | 5";
+            return STR("UNABLE_TO_CALL_SCRIPT_FUNCTION | 5");
         case ExportedFunctionStatus::SCRIPT_FUNCTION_NOT_FOUND:
-            return L"SCRIPT_FUNCTION_NOT_FOUND | 6";
+            return STR("SCRIPT_FUNCTION_NOT_FOUND | 6");
         case ExportedFunctionStatus::UE4SS_NOT_INITIALIZED:
-            return L"UE4SS_NOT_INITIALIZED | 8";
+            return STR("UE4SS_NOT_INITIALIZED | 8");
         }
 
-        return L"Missed switch case";
+        return STR("Missed switch case");
     }
 
     auto get_lua_state_by_mod_name(const char* mod_name) -> lua_State*

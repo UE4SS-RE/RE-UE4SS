@@ -12,6 +12,8 @@
 #include <LuaMadeSimple/LuaMadeSimple.hpp>
 #include <Mod/Mod.hpp>
 
+#include <String/StringType.hpp>
+
 namespace RC
 {
     class UE4SSProgram;

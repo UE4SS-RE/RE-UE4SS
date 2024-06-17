@@ -634,7 +634,7 @@ namespace RC
     {
         // Verify that there's a 'Scripts' directory
         // Give the full path to the 'Scripts' directory to the mod container
-        m_scripts_path = m_mod_path + L"\\scripts";
+        m_scripts_path = m_mod_path + STR("\\scripts");
 
         // If the 'Scripts' directory doesn't exist then mark the mod as non-installable and move on to the next mod
         if (!std::filesystem::exists(m_scripts_path))
@@ -1356,7 +1356,7 @@ Overloads:
                 }
 
                 std::wstring function_name = to_wstring(lua.get_string());
-                std::wstring function_name_no_prefix = function_name.substr(function_name.find_first_of(L" ") + 1, function_name.size());
+                std::wstring function_name_no_prefix = function_name.substr(function_name.find_first_of(STR(" ")) + 1, function_name.size());
 
                 Unreal::UFunction* unreal_function = Unreal::UObjectGlobals::StaticFindObject<Unreal::UFunction*>(nullptr, nullptr, function_name_no_prefix);
                 if (!unreal_function)
@@ -2967,7 +2967,7 @@ Overloads:
             }
 
             std::wstring function_name = to_wstring(lua.get_string());
-            std::wstring function_name_no_prefix = function_name.substr(function_name.find_first_of(L"/"), function_name.size());
+            std::wstring function_name_no_prefix = function_name.substr(function_name.find_first_of(STR("/")), function_name.size());
 
             if (!lua.is_function())
             {
@@ -3364,7 +3364,7 @@ Overloads:
         // Don't crash on syntax errors.
         try
         {
-            main_lua()->execute_file(m_scripts_path + L"\\main.lua");
+            main_lua()->execute_file(m_scripts_path + STR("\\main.lua"));
         }
         catch (std::runtime_error& e)
         {

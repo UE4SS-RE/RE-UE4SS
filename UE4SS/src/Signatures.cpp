@@ -144,9 +144,9 @@ namespace RC
                         lua_fnc_scan_script,
                         signature_containers,
                         [&scan_result](void* address) {
-                            Unreal::FName name = Unreal::FName(L"bCanBeDamaged", Unreal::FNAME_Find, address);
+                            Unreal::FName name = Unreal::FName(STR("bCanBeDamaged"), Unreal::FNAME_Find, address);
 
-                            if (name == L"bCanBeDamaged")
+                            if (name == STR("bCanBeDamaged"))
                             {
                                 Output::send(STR("FName::FName address: {} <- Lua Script\n"), address);
                                 Unreal::FName::ConstructorInternal.assign_address(address);
@@ -224,9 +224,9 @@ namespace RC
                         lua_ftc_scan_script,
                         signature_containers,
                         [&scan_result](void* address) {
-                            Unreal::FText text = Unreal::FText(L"bCanBeDamaged", address);
+                            Unreal::FText text = Unreal::FText(STR("bCanBeDamaged"), address);
 
-                            if (text == L"bCanBeDamaged")
+                            if (text == STR("bCanBeDamaged"))
                             {
                                 Output::send(STR("FText::FText address: {} <- Lua Script\n"), address);
                                 Unreal::FText::ConstructorInternal.assign_address(address);

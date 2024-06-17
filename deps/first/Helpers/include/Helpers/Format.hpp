@@ -2,6 +2,8 @@
 
 #include <string>
 
+#include <String/StringType.hpp>
+
 namespace RC
 {
     template <typename... Args>
@@ -40,7 +42,7 @@ namespace RC
         // Attempt to give a hint if the buffer is too small
         if (msg_len > out_string_length)
         {
-            fmt = L"An error occurred but the message was too long for the buffer.";
+            fmt = STR("An error occurred but the message was too long for the buffer.");
             msg_len = wcslen(fmt);
         }
 

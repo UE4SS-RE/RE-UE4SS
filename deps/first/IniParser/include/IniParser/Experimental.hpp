@@ -3,6 +3,7 @@
 #include <ProtoParser/Token.hpp>
 #include <ProtoParser/TokenParser.hpp>
 #include <ProtoParser/Tokenizer.hpp>
+#include <String/StringType.hpp>
 
 namespace RC::Parser::Experimental
 {
@@ -26,14 +27,14 @@ namespace RC::Parser::Experimental
       public:
         [[nodiscard]] auto to_string() const -> std::wstring override
         {
-            return L"RuleOne";
+            return STR("RuleOne");
         }
     };
 
     class TokenMustEndWithOppositeToken : public Parser::TokenRule
     {
       public:
-        TokenMustEndWithOppositeToken() : TokenRule(L"TokenMustEndWithOppositeToken")
+        TokenMustEndWithOppositeToken() : TokenRule(STR("TokenMustEndWithOppositeToken"))
         {
         }
 
@@ -45,14 +46,14 @@ namespace RC::Parser::Experimental
 
         [[nodiscard]] auto to_string() const -> std::wstring override
         {
-            return L"TokenMustEndWithOppositeToken";
+            return STR("TokenMustEndWithOppositeToken");
         }
     };
 
     class TokenMustHaveCharsBeforeEnd : public Parser::TokenRule
     {
       public:
-        TokenMustHaveCharsBeforeEnd() : TokenRule(L"TokenMustHaveCharsBeforeEnd")
+        TokenMustHaveCharsBeforeEnd() : TokenRule(STR("TokenMustHaveCharsBeforeEnd"))
         {
         }
 
@@ -64,7 +65,7 @@ namespace RC::Parser::Experimental
 
         [[nodiscard]] auto to_string() const -> std::wstring override
         {
-            return L"TokenMustHaveCharsBeforeEnd";
+            return STR("TokenMustHaveCharsBeforeEnd");
         }
     };
 

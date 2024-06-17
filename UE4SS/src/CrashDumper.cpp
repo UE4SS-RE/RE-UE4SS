@@ -9,6 +9,8 @@
 #include <polyhook2/PE/IatHook.hpp>
 #include <dbghelp.h>
 
+#include <String/StringType.hpp>
+
 namespace fs = std::filesystem;
 
 using std::chrono::seconds;
@@ -25,14 +27,14 @@ namespace RC
     LONG WINAPI ExceptionHandler(_EXCEPTION_POINTERS* exception_pointers)
     {
         const auto now = time_point_cast<seconds>(system_clock::now());
-        const std::wstring dump_path = fmt::format(L"{}\\crash_{:%Y_%m_%d_%H_%M_%S}.dmp", StringType{UE4SSProgram::get_program().get_working_directory()}, now);
+        const std::wstring dump_path = fmt::format(STR("{}\\crash_{:%Y_%m_%d_%H_%M_%S}.dmp"), StringType{UE4SSProgram::get_program().get_working_directory()}, now);
 
         const HANDLE file = CreateFileW(dump_path.c_str(), GENERIC_WRITE, FILE_SHARE_WRITE, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
 
         if (file == INVALID_HANDLE_VALUE)
         {
-            const std::wstring message = fmt::format(L"Failed to create crashdump file, reason: {:x}", GetLastError());
-            MessageBoxW(NULL, message.c_str(), L"Fatal Error!", MB_OK);
+            const std::wstring message = fmt::format(STR("Failed to create crashdump file, reason: {:x}"), GetLastError());
+            MessageBoxW(NULL, message.c_str(), STR("Fatal Error!"), MB_OK);
             return EXCEPTION_CONTINUE_SEARCH;
         }
 
@@ -53,12 +55,12 @@ namespace RC
 
         if (!ok)
         {
-            const std::wstring message = fmt::format(L"Failed to write crashdump file, reason: {:x}", GetLastError());
-            MessageBoxW(NULL, message.c_str(), L"Fatal Error!", MB_OK);
+            const std::wstring message = fmt::format(STR("Failed to write crashdump file, reason: {:x}"), GetLastError());
+            MessageBoxW(NULL, message.c_str(), STR("Fatal Error!"), MB_OK);
             return EXCEPTION_CONTINUE_SEARCH;
         }
 
-        const std::wstring message = fmt::format(L"Crashdump written to: {}", dump_path);
+        const std::wstring message = fmt::format(STR("Crashdump written to: {}"), dump_path);
         MessageBoxW(NULL, message.c_str(), L"Fatal Error!", MB_OK);
 
         return EXCEPTION_EXECUTE_HANDLER;

@@ -5,6 +5,8 @@
 
 #include <File/File.hpp>
 
+#include <String/StringType.hpp>
+
 namespace RC::ObjectDumper
 {
     using ToStringHash = size_t;
@@ -20,7 +22,7 @@ namespace RC::ObjectDumper
     auto to_string_exists(size_t hash) -> bool;
     auto to_string_complex_exists(size_t hash) -> bool;
 
-    auto object_trivial_dump_to_string(void* p_this, std::wstring& out_line, const wchar_t* post_delimiter = L".") -> void;
+    auto object_trivial_dump_to_string(void* p_this, std::wstring& out_line, const wchar_t* post_delimiter = STR(".")) -> void;
     auto object_to_string(void* p_this, std::wstring& out_line) -> void;
 
     auto property_trivial_dump_to_string(void* p_this, std::wstring& out_line) -> void;

@@ -32,10 +32,10 @@ namespace RC::Ini
     auto static is_int(File::StringViewType data) -> Int
     {
         bool has_0x_prefix = [&]() {
-            return (data.size() > 2 && data[0] == L'0' && (data[1] == L'x' || data[1] == L'X'));
+            return (data.size() > 2 && data[0] == STR('0') && (data[1] == STR('x') || data[1] == STR('X')));
         }();
 
-        if (!has_0x_prefix && data[0] != L'-' && std::iswdigit(data[0]) == 0)
+        if (!has_0x_prefix && data[0] != STR('-') && std::iswdigit(data[0]) == 0)
         {
             return Int{0, 10, false};
         }
@@ -64,7 +64,7 @@ namespace RC::Ini
     auto static is_float(File::StringViewType data) -> Float
     {
         bool has_decimal_or_negative_prefix = [&]() {
-            return data.size() > 1 && data[0] == L'.' || data[0] == L'-';
+            return data.size() > 1 && data[0] == STR('.') || data[0] == STR('-');
         }();
 
         if (!has_decimal_or_negative_prefix && std::iswdigit(data[0]) == 0)
@@ -131,7 +131,7 @@ namespace RC::Ini
 
     auto TokenParser::find_variable_by_name(const StringType& name) -> std::optional<std::reference_wrapper<Value>>
     {
-        size_t occurrence_of_dot = name.find_first_of(L'.');
+        size_t occurrence_of_dot = name.find_first_of(STR('.'));
         if (occurrence_of_dot == name.npos || occurrence_of_dot + 1 > name.size())
         {
             return find_variable_by_name(m_current_section, name);

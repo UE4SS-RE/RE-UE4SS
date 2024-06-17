@@ -8,6 +8,8 @@
 #include <Mod/CppUserModBase.hpp>
 #include <Mod/Mod.hpp>
 
+#include <String/StringType.hpp>
+
 namespace RC
 {
     namespace LuaMadeSimple

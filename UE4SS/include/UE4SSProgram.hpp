@@ -21,6 +21,8 @@
 #include <Unreal/Core/Containers/Array.hpp>
 #include <Unreal/UnrealVersion.hpp>
 
+#include <String/StringType.hpp>
+
 // Used to set up ImGui context and allocator in DLL mods
 #define UE4SS_ENABLE_IMGUI()                                                                                                                                   \
     /* Wait for UE4SS to create the imgui context. */                                                                                                          \
@@ -84,9 +86,9 @@ namespace RC
         friend class CppUserModBase; // m_input_handler
 
       public:
-        constexpr static wchar_t m_settings_file_name[] = L"UE4SS-settings.ini";
-        constexpr static wchar_t m_log_file_name[] = L"UE4SS.log";
-        constexpr static wchar_t m_object_dumper_file_name[] = L"UE4SS_ObjectDump.txt";
+        constexpr static wchar_t m_settings_file_name[] = STR("UE4SS-settings.ini");
+        constexpr static wchar_t m_log_file_name[] = STR("UE4SS.log");
+        constexpr static wchar_t m_object_dumper_file_name[] = STR("UE4SS_ObjectDump.txt");
 
       public:
         RC_UE4SS_API static SettingsManager settings_manager;
@@ -96,7 +98,7 @@ namespace RC
         bool m_is_program_started;
 
       protected:
-        Input::Handler m_input_handler{L"ConsoleWindowClass", L"UnrealWindow"};
+        Input::Handler m_input_handler{STR("ConsoleWindowClass"), STR("UnrealWindow")};
         std::jthread m_event_loop;
 
       public:

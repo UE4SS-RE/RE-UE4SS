@@ -2,6 +2,8 @@
 
 #include <functional>
 
+#include <String/StringType.hpp>
+
 namespace RC::Unreal::UnrealInitializer
 {
     struct Config;
