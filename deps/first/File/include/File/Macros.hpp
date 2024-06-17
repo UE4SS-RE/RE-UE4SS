@@ -1,16 +1,5 @@
 #pragma once
 
-// Set this to 1 to use ANSI (char*) instead of wide strings (wchar_t*)
-#ifndef RC_IS_ANSI
-#define RC_IS_ANSI 0
-#endif
-
-#if RC_IS_ANSI == 1
-#define STR(str) u##str
-#else
-#define STR(str) L##str
-#endif
-
 #define THROW_INTERNAL_FILE_ERROR(msg)                                                                                                                         \
     RC::File::Internal::StaticStorage::internal_error = true;                                                                                                  \
     throw std::runtime_error{msg};
@@ -23,39 +12,3 @@
 construct a Targets object and supply your own devices.") \
                 }
 //*/
-
-#include <string>
-
-namespace RC::File
-{
-#if RC_IS_ANSI == 1
-    using StringType = std::string;
-    using StringViewType = std::string_view;
-    using CharType = char;
-    using StreamType = std::ifstream;
-    using ToString = std::tostring;
-
-    constexpr auto ToString = [](auto&& numeric_value) constexpr -> decltype(auto) {
-        return std::to_string(std::forward<decltype(numeric_value)>(numeric_value));
-    };
-#else
-    using StringType = std::wstring;
-    using StringViewType = std::wstring_view;
-    using CharType = wchar_t;
-    using StreamType = std::wifstream;
-
-    constexpr auto ToString = [](auto&& numeric_value) constexpr -> decltype(auto) {
-        return std::to_wstring(std::forward<decltype(numeric_value)>(numeric_value));
-    };
-#endif
-} // namespace RC::File
-
-namespace RC
-{
-    using StringType = File::StringType;
-    using StringViewType = File::StringViewType;
-    using CharType = File::CharType;
-    using StreamType = File::StreamType;
-
-    constexpr auto ToString = File::ToString;
-} // namespace RC
