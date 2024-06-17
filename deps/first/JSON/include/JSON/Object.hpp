@@ -27,12 +27,10 @@ namespace RC::JSON
             Yes,
             No
         };
-
-#pragma warning(disable : 4251)
+    
       private:
         std::unordered_map<StringType, std::unique_ptr<JSON::Value>> m_members{};
         IsGlobalObject m_is_global_object{IsGlobalObject::No};
-#pragma warning(default : 4251)
 
       public:
         Object() = default;
