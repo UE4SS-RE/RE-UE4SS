@@ -29,14 +29,15 @@ namespace RC
         FromEnd
     };
 
-    auto inline explode_by_occurrence(const std::wstring& in_str_wide, const wchar_t delimiter, ExplodeType start_or_end) -> std::wstring
+    template <typename CharT>
+    auto inline explode_by_occurrence(const std::basic_string<CharT>& in_str_wide, const CharT delimiter, ExplodeType start_or_end) -> std::basic_string<CharT>
     {
         size_t occurrence = (start_or_end == ExplodeType::FromStart ? in_str_wide.find_first_of(delimiter) : in_str_wide.find_last_of(delimiter));
 
-        std::wstring return_value;
-        if (occurrence != std::wstring::npos)
+        std::basic_string<CharT> return_value;
+        if (occurrence != std::basic_string<CharT>::npos)
         {
-            return_value = start_or_end == ExplodeType::FromEnd ? in_str_wide.substr(occurrence + 1, std::wstring::npos) : in_str_wide.substr(0, occurrence);
+            return_value = start_or_end == ExplodeType::FromEnd ? in_str_wide.substr(occurrence + 1, std::basic_string<CharT>::npos) : in_str_wide.substr(0, occurrence);
         }
         else
         {
@@ -46,24 +47,8 @@ namespace RC
         return return_value;
     }
 
-    auto inline explode_by_occurrence(const std::string& in_str, const char delimiter, ExplodeType start_or_end) -> std::string
-    {
-        size_t occurrence = (start_or_end == ExplodeType::FromStart ? in_str.find_first_of(delimiter) : in_str.find_last_of(delimiter));
-
-        std::string return_value;
-        if (occurrence != std::string::npos)
-        {
-            return_value = start_or_end == ExplodeType::FromEnd ? in_str.substr(occurrence + 1, std::string::npos) : in_str.substr(0, occurrence);
-        }
-        else
-        {
-            return_value = in_str;
-        }
-
-        return return_value;
-    }
-
-    auto inline explode_by_occurrence(const std::string& in_str, const char delimiter, const int32_t occurrence) -> std::string
+    template <typename CharT>
+    auto inline explode_by_occurrence(const std::basic_string<CharT>& in_str, const char delimiter, const int32_t occurrence) -> std::basic_string<CharT>
     {
         size_t found_occurrence{};
         for (int64_t i = 0; i < std::count(in_str.begin(), in_str.end(), delimiter); i++)
@@ -79,18 +64,19 @@ namespace RC
         return {};
     }
 
-    auto inline explode_by_occurrence(const std::string& in_str, const char delimiter) -> std::vector<std::string>
+    template <typename CharT>
+    auto inline explode_by_occurrence(const std::basic_string<CharT>& in_str, const char delimiter) -> std::vector<std::basic_string<CharT>>
     {
-        std::vector<std::string> result;
+        std::vector<std::basic_string<CharT>> result;
 
         size_t counter{};
         size_t start_offset{};
 
-        for (const char* current_char = in_str.c_str(); *current_char; ++current_char)
+        for (const CharT* current_char = in_str.c_str(); *current_char; ++current_char)
         {
             if (*current_char == delimiter || counter == in_str.length() - 1)
             {
-                std::string sub_str = in_str.substr(start_offset, counter - start_offset + (counter == in_str.length() - 1 ? 1 : 0));
+                std::basic_string<CharT> sub_str = in_str.substr(start_offset, counter - start_offset + (counter == in_str.length() - 1 ? 1 : 0));
                 if (start_offset > 0)
                 {
                     sub_str.erase(0, 1);
@@ -106,34 +92,8 @@ namespace RC
         return result;
     }
 
-    auto inline explode_by_occurrence(const std::wstring& in_str_wide, const wchar_t delimiter) -> std::vector<std::wstring>
-    {
-        std::vector<std::wstring> result;
-
-        size_t counter{};
-        size_t start_offset{};
-
-        for (const wchar_t* current_char = in_str_wide.c_str(); *current_char; ++current_char)
-        {
-            if (*current_char == delimiter || counter == in_str_wide.length() - 1)
-            {
-                std::wstring sub_str = in_str_wide.substr(start_offset, counter - start_offset + (counter == in_str_wide.length() - 1 ? 1 : 0));
-                if (start_offset > 0)
-                {
-                    sub_str.erase(0, 1);
-                }
-                result.emplace_back(sub_str);
-
-                start_offset = counter;
-            }
-
-            ++counter;
-        }
-
-        return result;
-    }
-
-    auto inline explode_by_occurrence(const std::wstring& in_str, const wchar_t delimiter, const int32_t occurrence) -> std::wstring
+    template <typename CharT>
+    auto inline explode_by_occurrence(const std::basic_string<CharT>& in_str, const CharT delimiter, const int32_t occurrence) -> std::basic_string<CharT>
     {
         size_t found_occurrence{};
         for (int64_t i = 0; i < std::count(in_str.begin(), in_str.end(), delimiter); i++)
