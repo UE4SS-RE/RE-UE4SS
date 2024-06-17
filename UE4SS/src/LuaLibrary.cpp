@@ -150,7 +150,7 @@ namespace RC::LuaLibrary
         auto* mod = UE4SSProgram::find_lua_mod_by_name(mod_name);
         if (!mod || !mod->is_installed() || !mod->is_started())
         {
-            auto error_message = std::format("No mod by name '{}' found.", mod_name);
+            auto error_message = fmt::format("No mod by name '{}' found.", mod_name);
             std::memcpy(output_buffer, error_message.data(), error_message.size());
             return output_buffer;
         }
@@ -159,12 +159,12 @@ namespace RC::LuaLibrary
         {
             if (int status = luaL_loadstring(mod->lua().get_lua_state(), script); status != LUA_OK)
             {
-                mod->lua().throw_error(std::format("luaL_loadstring returned {}", mod->lua().resolve_status_message(status, true)));
+                mod->lua().throw_error(fmt::format("luaL_loadstring returned {}", mod->lua().resolve_status_message(status, true)));
             }
 
             if (int status = lua_pcall(mod->lua().get_lua_state(), 0, LUA_MULTRET, 0); status != LUA_OK)
             {
-                mod->lua().throw_error(std::format("lua_pcall returned {}", mod->lua().resolve_status_message(status, true)));
+                mod->lua().throw_error(fmt::format("lua_pcall returned {}", mod->lua().resolve_status_message(status, true)));
             }
         }
         catch (std::runtime_error& e)

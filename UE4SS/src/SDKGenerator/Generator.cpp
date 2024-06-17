@@ -269,7 +269,7 @@ namespace RC::UEGenerator
         {
             if (UE4SSProgram::settings_manager.CXXHeaderGenerator.DumpOffsetsAndSizes)
             {
-                return std::format(STR("{:85} // 0x{:04X} (size: 0x{:X})"), line, property->GetOffset_Internal(), property->GetSize());
+                return fmt::format(STR("{:85} // 0x{:04X} (size: 0x{:X})"), line, property->GetOffset_Internal(), property->GetSize());
             }
             else
             {
@@ -549,7 +549,7 @@ namespace RC::UEGenerator
                 {
                     // File name collision
                     auto& file_name = m_file_names[package_name_all_lower];
-                    package_name.append(std::format(STR("_DUPL_{}"), ++file_name.num_collisions));
+                    package_name.append(fmt::format(STR("_DUPL_{}"), ++file_name.num_collisions));
                     Output::send(STR("File name collision, renamed to '{}'\n"), package_name);
                 }
                 else
@@ -674,36 +674,36 @@ namespace RC::UEGenerator
         auto generate_file_header(GeneratedFile& generated_file) -> void
         {
             generated_file.primary_file.write_string_to_file(
-                    std::format(STR("#ifndef UE4SS_SDK_{}_HPP\n#define UE4SS_SDK_{}_HPP\n\n"), generated_file.package_name, generated_file.package_name));
+                    fmt::format(STR("#ifndef UE4SS_SDK_{}_HPP\n#define UE4SS_SDK_{}_HPP\n\n"), generated_file.package_name, generated_file.package_name));
 
             if (!generated_file.secondary_file_has_no_contents)
             {
-                generated_file.primary_file.write_string_to_file(std::format(STR("#include \"{}\"\n\n"), generated_file.secondary_file_name.filename().c_str()));
+                generated_file.primary_file.write_string_to_file(fmt::format(STR("#include \"{}\"\n\n"), generated_file.secondary_file_name.filename().c_str()));
             }
         }
         auto generate_file_footer(GeneratedFile& generated_file) -> void
         {
-            generated_file.primary_file.write_string_to_file(std::format(STR("#endif\n")));
+            generated_file.primary_file.write_string_to_file(fmt::format(STR("#endif\n")));
         }
         auto generate_enum_declaration(File::StringType& content_buffer, UEnum* uenum) -> void
         {
             const auto cpp_form = uenum->GetCppForm();
             if (cpp_form == UEnum::ECppForm::Regular)
             {
-                content_buffer.append(std::format(STR("enum {} {{\n"), get_native_enum_name(uenum, false)));
+                content_buffer.append(fmt::format(STR("enum {} {{\n"), get_native_enum_name(uenum, false)));
             }
             else if (cpp_form == UEnum::ECppForm::Namespaced)
             {
-                content_buffer.append(std::format(STR("namespace {} {{\n{}enum Type {{\n"), get_native_enum_name(uenum, false), generate_tab()));
+                content_buffer.append(fmt::format(STR("namespace {} {{\n{}enum Type {{\n"), get_native_enum_name(uenum, false), generate_tab()));
             }
             else if (cpp_form == UEnum::ECppForm::EnumClass)
             {
-                content_buffer.append(std::format(STR("enum class {} {{\n"), get_native_enum_name(uenum, false)));
+                content_buffer.append(fmt::format(STR("enum class {} {{\n"), get_native_enum_name(uenum, false)));
             }
         }
         auto generate_enum_member(File::StringType& content_buffer, UEnum* uenum, const File::StringType& enum_value_name, const Unreal::FEnumNamePair& elem) -> void
         {
-            content_buffer.append(std::format(STR("{}{}{} = {},\n"),
+            content_buffer.append(fmt::format(STR("{}{}{} = {},\n"),
                                               generate_tab(),
                                               uenum->GetCppForm() == UEnum::ECppForm::Namespaced ? generate_tab() : STR(""),
                                               enum_value_name,
@@ -712,7 +712,7 @@ namespace RC::UEGenerator
         auto generate_enum_end(File::StringType& content_buffer, UEnum* uenum) -> void
         {
             const auto cpp_form = uenum->GetCppForm();
-            content_buffer.append(std::format(STR("{}}};"), cpp_form == UEnum::ECppForm::Namespaced ? generate_tab() : STR("")));
+            content_buffer.append(fmt::format(STR("{}}};"), cpp_form == UEnum::ECppForm::Namespaced ? generate_tab() : STR("")));
 
             if (cpp_form == UEnum::ECppForm::Namespaced)
             {
@@ -775,7 +775,7 @@ namespace RC::UEGenerator
                 StringType part_one{};
                 try
                 {
-                    part_one = std::format(STR("{}{}{} {};"),
+                    part_one = fmt::format(STR("{}{}{} {};"),
                                            generate_tab(),
                                            property_info.should_forward_declare ? STR("class ") : STR(""),
                                            generate_property_cxx_name(property, true, native_class, EnableForwardDeclarations::Yes),
@@ -787,7 +787,7 @@ namespace RC::UEGenerator
                     continue;
                 }
 
-                content_buffer.append(std::format(STR("{}\n"), generator->generate_offset_comment(property, part_one)));
+                content_buffer.append(fmt::format(STR("{}\n"), generator->generate_offset_comment(property, part_one)));
 
                 if (property->IsA<FDelegateProperty>())
                 {
@@ -839,12 +839,12 @@ namespace RC::UEGenerator
                             int32_t padding_property_offset = current_property_end_location;
                             int32_t padding_property_size = next_property_offset - padding_property_offset;
 
-                            auto padding_part_one = std::format(STR("{}char {}[0x{:X}];"),
+                            auto padding_part_one = fmt::format(STR("{}char {}[0x{:X}];"),
                                                                 generate_tab(),
-                                                                std::format(STR("padding_{}"), num_padding_elements++),
+                                                                fmt::format(STR("padding_{}"), num_padding_elements++),
                                                                 padding_property_size);
                             content_buffer.append(
-                                    std::format(STR("{:85} // 0x{:04X} (size: 0x{:X})\n"), padding_part_one, padding_property_offset, padding_property_size));
+                                    fmt::format(STR("{:85} // 0x{:04X} (size: 0x{:X})\n"), padding_part_one, padding_property_offset, padding_property_size));
                         }
                     }
                 }
@@ -878,11 +878,11 @@ namespace RC::UEGenerator
             if (inherits_from_class)
             {
                 content_buffer.append(
-                        std::format(STR("{} {} : public {}\n{{\n"), generate_prefix(native_class), class_name, generate_class_name(inherits_from_class)));
+                        fmt::format(STR("{} {} : public {}\n{{\n"), generate_prefix(native_class), class_name, generate_class_name(inherits_from_class)));
             }
             else
             {
-                content_buffer.append(std::format(STR("{} {}\n{{\n"), generate_prefix(native_class), class_name));
+                content_buffer.append(fmt::format(STR("{} {}\n{{\n"), generate_prefix(native_class), class_name));
             }
         }
         auto generate_class_struct_end(File::StringType& content_buffer,
@@ -912,8 +912,8 @@ namespace RC::UEGenerator
                             printf_s("last_property_offset: %X\n", last_property_offset);
                             printf_s("first_property_offset: %X\n", first_property_offset);
 
-                            auto padding_part_one = std::format(STR("{}char {}[0x{:X}];"), generate_tab(), std::format(STR("padding_{}"), num_padding_elements), padding_size);
-                            out.append(std::format(STR("{:85} // 0x{:04X} (size: 0x{:X})\n"), padding_part_one, last_property_offset + last_property_size, padding_size));
+                            auto padding_part_one = fmt::format(STR("{}char {}[0x{:X}];"), generate_tab(), fmt::format(STR("padding_{}"), num_padding_elements), padding_size);
+                            out.append(fmt::format(STR("{:85} // 0x{:04X} (size: 0x{:X})\n"), padding_part_one, last_property_offset + last_property_size, padding_size));
                         }
                     }
                     //*/
@@ -923,8 +923,8 @@ namespace RC::UEGenerator
                     // No reflected member variables exist but there are non-reflected member variables
                     // Add padding for non-reflected member variables, for alignment purposes
                     auto padding_part_one =
-                            std::format(STR("{}char {}[0x{:X}];"), generate_tab(), std::format(STR("padding_{}"), num_padding_elements), class_size);
-                    content_buffer.append(std::format(STR("{:85} // 0x0000 (size: 0x{:X})\n"), padding_part_one, 0x0));
+                            fmt::format(STR("{}char {}[0x{:X}];"), generate_tab(), fmt::format(STR("padding_{}"), num_padding_elements), class_size);
+                    content_buffer.append(fmt::format(STR("{:85} // 0x0000 (size: 0x{:X})\n"), padding_part_one, 0x0));
                 }
             }
         }
@@ -932,7 +932,7 @@ namespace RC::UEGenerator
         {
             if (UE4SSProgram::settings_manager.CXXHeaderGenerator.DumpOffsetsAndSizes)
             {
-                content_buffer.append(std::format(STR("}}; // Size: 0x{:X}"), class_size));
+                content_buffer.append(fmt::format(STR("}}; // Size: 0x{:X}"), class_size));
             }
             else
             {
@@ -973,7 +973,7 @@ namespace RC::UEGenerator
                 function_type_name = STR("void");
             }
 
-            current_class_content.append(std::format(STR("{}{} {}("), generate_tab(), function_type_name, function_name));
+            current_class_content.append(fmt::format(STR("{}{} {}("), generate_tab(), function_type_name, function_name));
 
             for (size_t i = 0; i < function_info.params.size(); ++i)
             {
@@ -983,7 +983,7 @@ namespace RC::UEGenerator
                     try
                     {
                         current_class_content.append(
-                                std::format(STR("{}{}{}{} {}"),
+                                fmt::format(STR("{}{}{}{} {}"),
                                             param_info.property->HasAnyPropertyFlags(Unreal::CPF_ConstParm) ? STR("const ") : STR(""),
                                             param_info.should_forward_declare ? STR("class ") : STR(""),
                                             generate_property_cxx_name(param_info.property, true, function_info.function, EnableForwardDeclarations::Yes),
@@ -1091,11 +1091,11 @@ namespace RC::UEGenerator
         auto generate_enum_declaration(File::StringType& content_buffer, UEnum* uenum) -> void
         {
             auto enum_name = uenum->GetName();
-            content_buffer.append(std::format(STR("---@enum {}\n{} = {{\n"), enum_name, enum_name));
+            content_buffer.append(fmt::format(STR("---@enum {}\n{} = {{\n"), enum_name, enum_name));
         }
         auto generate_enum_member(File::StringType& content_buffer, UEnum* uenum, const File::StringType& enum_value_name, const Unreal::FEnumNamePair& elem) -> void
         {
-            content_buffer.append(std::format(STR("{}{} = {},\n"), generate_tab(), enum_value_name, elem.Value));
+            content_buffer.append(fmt::format(STR("{}{} = {},\n"), generate_tab(), enum_value_name, elem.Value));
         }
         auto generate_enum_end(File::StringType& content_buffer, UEnum* uenum) -> void
         {
@@ -1161,12 +1161,12 @@ namespace RC::UEGenerator
                     const auto& property_name = property->GetName();
                     if (is_valid_lua_symbol(property_name))
                     {
-                        content_buffer.append(std::format(STR("---@field {} {}\n"), property_name, generate_property_lua_name(property, true, native_class)));
+                        content_buffer.append(fmt::format(STR("---@field {} {}\n"), property_name, generate_property_lua_name(property, true, native_class)));
                     }
                     else
                     {
                         content_buffer.append(
-                                std::format(STR("---@field [{}] {}\n"), quote_lua_symbol(property_name), generate_property_lua_name(property, true, native_class)));
+                                fmt::format(STR("---@field [{}] {}\n"), quote_lua_symbol(property_name), generate_property_lua_name(property, true, native_class)));
                     }
                 }
                 catch (std::exception& e)
@@ -1204,11 +1204,11 @@ namespace RC::UEGenerator
             auto class_name = generate_class_name(native_class);
             if (inherits_from_class)
             {
-                content_buffer.append(std::format(STR("---@class {} : {}\n"), class_name, generate_class_name(inherits_from_class)));
+                content_buffer.append(fmt::format(STR("---@class {} : {}\n"), class_name, generate_class_name(inherits_from_class)));
             }
             else
             {
-                content_buffer.append(std::format(STR("---@class {}\n"), class_name));
+                content_buffer.append(fmt::format(STR("---@class {}\n"), class_name));
             }
         }
         auto generate_class_struct_end(File::StringType& content_buffer,
@@ -1217,7 +1217,7 @@ namespace RC::UEGenerator
                                        int32_t num_padding_elements,
                                        XProperty* last_property_in_this_class) -> void
         {
-            content_buffer.append(std::format(STR("{} = {{}}\n"), class_name));
+            content_buffer.append(fmt::format(STR("{} = {{}}\n"), class_name));
         }
         auto generate_class_end(File::StringType& content_buffer, size_t class_size) -> void
         {
@@ -1240,7 +1240,7 @@ namespace RC::UEGenerator
                     {
                         auto param_name = param_info.property->GetName();
                         // TODO disambiguate param renames
-                        current_class_content.append(std::format(STR("---@param {} {}\n"),
+                        current_class_content.append(fmt::format(STR("---@param {} {}\n"),
                                                                  make_valid_symbol(param_name),
                                                                  generate_property_lua_name(param_info.property, true, function_info.function)));
                     }
@@ -1258,7 +1258,7 @@ namespace RC::UEGenerator
             {
                 try
                 {
-                    current_class_content.append(std::format(STR("---@return {}\n"), generate_property_lua_name(return_property, true, function_info.function)));
+                    current_class_content.append(fmt::format(STR("---@return {}\n"), generate_property_lua_name(return_property, true, function_info.function)));
                 }
                 catch (std::exception& e)
                 {
@@ -1273,11 +1273,11 @@ namespace RC::UEGenerator
 
             if (is_valid_lua_symbol(function_name))
             {
-                current_class_content.append(std::format(STR("function {}:{}("), class_name, function_name));
+                current_class_content.append(fmt::format(STR("function {}:{}("), class_name, function_name));
             }
             else
             {
-                current_class_content.append(std::format(STR("{}[{}] = function("), class_name, quote_lua_symbol(function_name)));
+                current_class_content.append(fmt::format(STR("{}[{}] = function("), class_name, quote_lua_symbol(function_name)));
             }
 
             for (size_t i = 0; i < function_info.params.size(); ++i)
@@ -1287,7 +1287,7 @@ namespace RC::UEGenerator
                 {
                     auto param_name = param_info.property->GetName();
                     // TODO disambiguate param renames
-                    current_class_content.append(std::format(STR("{}"), make_valid_symbol(param_name)));
+                    current_class_content.append(fmt::format(STR("{}"), make_valid_symbol(param_name)));
 
                     if (i + 1 < function_info.params.size())
                     {

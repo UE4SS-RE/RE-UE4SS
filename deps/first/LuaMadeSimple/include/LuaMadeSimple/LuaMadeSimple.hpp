@@ -6,6 +6,7 @@
 
 #include <LuaMadeSimple/Common.hpp>
 #include <lua.hpp>
+#include <fmt/core.h>
 
 namespace RC::LuaMadeSimple
 {
@@ -409,7 +410,7 @@ namespace RC::LuaMadeSimple
                     }
                     else
                     {
-                        get_lua_instance().throw_error(std::format("[get_userdata_field] Attempted to get field: '{}' but the type was '{}'",
+                        get_lua_instance().throw_error(fmt::format("[get_userdata_field] Attempted to get field: '{}' but the type was '{}'",
                                                                    field_name,
                                                                    lua_typename(get_lua_instance().get_lua_state(), pushed_type)));
                     }

@@ -5,6 +5,7 @@
 #include <IniParser/TokenParser.hpp>
 #include <IniParser/Tokens.hpp>
 #include <IniParser/Value.hpp>
+#include <fmt/core.h>
 #include <ParserBase/Token.hpp>
 
 namespace RC::Ini
@@ -252,7 +253,7 @@ namespace RC::Ini
 
         if (m_current_state != State::NewLineStarted && m_current_state != State::StartOfFile)
         {
-            throw std::runtime_error{std::format("Syntax error({} : {}): Expected state NewLineStarted or StartOfFile, got {}",
+            throw std::runtime_error{fmt::format("Syntax error({} : {}): Expected state NewLineStarted or StartOfFile, got {}",
                                                  token.get_line(),
                                                  token.get_column(),
                                                  to_string(state_to_string(m_current_state)))};
@@ -273,7 +274,7 @@ namespace RC::Ini
         if (m_current_character_data.empty())
         {
             throw std::runtime_error{
-                    std::format("Syntax error ({} : {}): Expected Characters, got {}", token.get_line(), token.get_column(), to_string(token.to_string()))};
+                    fmt::format("Syntax error ({} : {}): Expected Characters, got {}", token.get_line(), token.get_column(), to_string(token.to_string()))};
         }
 
         if (auto section = m_output.find(m_current_character_data); section != m_output.end())
@@ -339,7 +340,7 @@ namespace RC::Ini
         else
         {
             throw std::runtime_error{
-                    std::format("Syntax error({} : {}): Invalid state {}", token.get_line(), token.get_column(), to_string(state_to_string(m_current_state)))};
+                    fmt::format("Syntax error({} : {}): Invalid state {}", token.get_line(), token.get_column(), to_string(state_to_string(m_current_state)))};
         }
     }
 
@@ -354,7 +355,7 @@ namespace RC::Ini
 
         if (m_current_state != State::CreateSectionKey)
         {
-            throw std::runtime_error{std::format("Syntax error({} : {}): Expected state CreateSectionKey, got {}",
+            throw std::runtime_error{fmt::format("Syntax error({} : {}): Expected state CreateSectionKey, got {}",
                                                  token.get_line(),
                                                  token.get_column(),
                                                  to_string(state_to_string(m_current_state)))};
@@ -362,7 +363,7 @@ namespace RC::Ini
 
         if (!m_current_section)
         {
-            throw std::runtime_error{std::format("Syntax error ({} : {}): No section. Global variables not supported, please create a [Section]",
+            throw std::runtime_error{fmt::format("Syntax error ({} : {}): No section. Global variables not supported, please create a [Section]",
                                                  token.get_line(),
                                                  token.get_column())};
         }
@@ -370,13 +371,13 @@ namespace RC::Ini
         if (m_current_character_data.empty())
         {
             throw std::runtime_error{
-                    std::format("Syntax error ({} : {}): Expected Characters, got {}", token.get_line(), token.get_column(), to_string(token.to_string()))};
+                    fmt::format("Syntax error ({} : {}): Expected Characters, got {}", token.get_line(), token.get_column(), to_string(token.to_string()))};
         }
 
         if (m_current_section->is_ordered_list)
         {
             throw std::runtime_error{
-                    std::format("Syntax error ({} : {}): Previous item is in ordered-list mode, expected another list item, got key/value pair",
+                    fmt::format("Syntax error ({} : {}): Previous item is in ordered-list mode, expected another list item, got key/value pair",
                                 token.get_line(),
                                 token.get_column(),
                                 to_string(token.to_string()))};
@@ -405,7 +406,7 @@ namespace RC::Ini
             if (!m_current_section->key_value_pairs.empty() && !m_current_section->is_ordered_list)
             {
                 throw std::runtime_error{
-                        std::format("Syntax error ({} : {}): Previous item is in key/value mode, expected another key/value item, got ordered-list item",
+                        fmt::format("Syntax error ({} : {}): Previous item is in key/value mode, expected another key/value item, got ordered-list item",
                                     token.get_line(),
                                     token.get_column(),
                                     to_string(token.to_string()))};

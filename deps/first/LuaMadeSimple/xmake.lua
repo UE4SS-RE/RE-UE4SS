@@ -12,3 +12,4 @@ target(projectName)
     add_files("src/**.cpp")
     
     add_deps("LuaRaw", { public = true })
+    add_packages("fmt")

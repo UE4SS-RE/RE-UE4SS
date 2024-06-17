@@ -10,3 +10,4 @@ target(projectName)
     add_headerfiles("include/**.hpp")
 
     add_files("src/**.cpp")
+    add_packages("fmt", { public = true })

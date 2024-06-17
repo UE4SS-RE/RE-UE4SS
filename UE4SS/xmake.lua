@@ -6,6 +6,7 @@ add_requires("IconFontCppHeaders v1.0", { debug = is_mode_debug(), configs = {ru
 add_requires("glfw 3.3.9", { debug = is_mode_debug() , configs = {runtimes = get_mode_runtimes()}})
 add_requires("opengl", { debug = is_mode_debug(), configs = {runtimes = get_mode_runtimes()} })
 add_requires("glaze", { debug = is_mode_debug(), configs = {runtimes = get_mode_runtimes()} })
+add_requires("fmt", { debug = is_mode_debug(), configs = {runtimes = get_mode_runtimes()} })
 
 option("ue4ssBetaIsStarted")
     set_default(true)
@@ -62,6 +63,8 @@ target(projectName)
         "ScopedTimer", "Profiler", "patternsleuth_bind",
         "glad", { public = true }
     )
+    
+    add_packages("fmt", { public = true })
 
     add_packages("imgui", "ImGuiTextEdit", "IconFontCppHeaders", "glfw", "opengl", { public = true })
 
