@@ -20,5 +20,7 @@ namespace RC::File
     using StringType = RC::StringType;
     using StringViewType = RC::StringViewType;
     using CharType = RC::CharType;
-    using StreamType = RC::StreamType;
+    using StreamIType = RC::StreamIType;
+    using StreamOType = RC::StreamOType;
+    using StreamType = StreamIType;
 } // namespace RC::File
