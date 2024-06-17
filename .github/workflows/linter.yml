@@ -17,7 +17,9 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read # Read from repository
-      issues: write # Write to PR comments section.
+      # Read/write to PR comments section.
+      issues: write
+      pull-requests: write
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
