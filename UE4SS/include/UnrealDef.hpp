@@ -24,6 +24,7 @@
 #include <Unreal/Property/FTextProperty.hpp>
 #include <Unreal/Property/FWeakObjectProperty.hpp>
 #include <Unreal/Property/NumericPropertyTypes.hpp>
+#include <Unreal/Property/FMapProperty.hpp>
 #include <Unreal/Core/Containers/Array.hpp>
 #include <Unreal/Core/Containers/Map.hpp>
 #include <Unreal/UClass.hpp>
@@ -71,8 +72,11 @@ namespace RC
     template <typename T>
     using TArray = Unreal::TArray<T>;
     using UFunction = Unreal::UFunction;
-    template <typename T1, typename T2>
-    using TMap = Unreal::TMap<T1, T2>;
+    
+    template <typename T1, typename T2, typename T3, typename T4>
+    using TMap = Unreal::TMap<T1, T2, T3, T4>;
+    using FMapProperty = Unreal::FMapProperty;
+    
 
     using UnrealScriptFunction = Unreal::UnrealScriptFunction;
     using FFrame = Unreal::FFrame;
