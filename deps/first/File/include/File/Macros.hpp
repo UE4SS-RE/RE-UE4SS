@@ -1,5 +1,7 @@
 #pragma once
 
+#include <String/StringType.hpp>
+
 #define THROW_INTERNAL_FILE_ERROR(msg)                                                                                                                         \
     RC::File::Internal::StaticStorage::internal_error = true;                                                                                                  \
     throw std::runtime_error{msg};
@@ -12,3 +14,11 @@
 construct a Targets object and supply your own devices.") \
                 }
 //*/
+
+namespace RC::File
+{
+    using StringType = RC::StringType;
+    using StringViewType = RC::StringViewType;
+    using CharType = RC::CharType;
+    using StreamType = RC::StreamType;
+} // namespace RC::File
