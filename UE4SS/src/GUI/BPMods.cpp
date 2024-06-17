@@ -95,13 +95,13 @@ namespace RC::GUI::BPMods
             auto mod_name_parts = explode_by_occurrence(mod_full_name, STR('/'));
             mod_info.ModName = to_string(mod_name_parts[mod_name_parts.size() - 1 - 1]);
 
-            if (ImGui_TreeNodeEx(std::format("{}", mod_info.ModName).c_str(), std::format("{}_{}", mod_info.ModName, i).c_str(), ImGuiTreeNodeFlags_CollapsingHeader))
+            if (ImGui_TreeNodeEx(fmt::format("{}", mod_info.ModName).c_str(), fmt::format("{}_{}", mod_info.ModName, i).c_str(), ImGuiTreeNodeFlags_CollapsingHeader))
             {
                 ImGui::Indent();
                 ImGui::Text("Author: %s", mod_info.ModAuthor.c_str());
                 ImGui::Text("Description: %s", mod_info.ModDescription.c_str());
                 ImGui::Text("Version: %s", mod_info.ModVersion.c_str());
-                if (ImGui_TreeNodeEx("Mod Buttons", std::format("{}_{}_ModButtons", mod_info.ModName, i).c_str(), ImGuiTreeNodeFlags_CollapsingHeader))
+                if (ImGui_TreeNodeEx("Mod Buttons", fmt::format("{}_{}_ModButtons", mod_info.ModName, i).c_str(), ImGuiTreeNodeFlags_CollapsingHeader))
                 {
                     ImGui::Indent();
                     for (size_t i2 = 0; i2 < mod_info.ModButtons.size(); ++i2)
@@ -111,7 +111,7 @@ namespace RC::GUI::BPMods
                             continue;
                         }
                         const auto& mod_button = mod_info.ModButtons[i2];
-                        if (ImGui::Button(std::format("{}", mod_button).c_str()))
+                        if (ImGui::Button(fmt::format("{}", mod_button).c_str()))
                         {
                             Output::send(STR("Mod button {} hit.\n"), to_wstring(mod_button));
                             mod_info.ModActor->ModMenuButtonPressed(static_cast<int32_t>(i2));

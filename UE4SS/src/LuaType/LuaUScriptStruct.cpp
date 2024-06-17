@@ -169,7 +169,7 @@ namespace RC::LuaType
         auto property = static_cast<Unreal::FStructProperty*>(struct_data.script_struct->FindProperty(property_name));
         if (!property)
         {
-            lua.throw_error(std::format("[handle_unreal_property_value]: Was unable to retrieve property '{}' mapped to '{}'",
+            lua.throw_error(fmt::format("[handle_unreal_property_value]: Was unable to retrieve property '{}' mapped to '{}'",
                                         to_string(property_name.ToString()),
                                         to_string(struct_data.script_struct->GetFullName())));
         }
@@ -187,7 +187,7 @@ namespace RC::LuaType
         else
         {
             std::string property_type_name = to_string(property_type_fname.ToString());
-            lua.throw_error(std::format("Tried accessing unreal property without a registered handler (via StructProperty). Property type '{}' not supported.",
+            lua.throw_error(fmt::format("Tried accessing unreal property without a registered handler (via StructProperty). Property type '{}' not supported.",
                                         property_type_name));
         }
     }

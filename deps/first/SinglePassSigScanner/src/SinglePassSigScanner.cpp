@@ -6,6 +6,7 @@
 #include <Windows.h>
 #include <Psapi.h>
 
+#include <fmt/core.h>
 #include <Profiler/Profiler.hpp>
 #include <SigScanner/SinglePassSigScanner.hpp>
 
@@ -308,7 +309,7 @@ namespace RC
             return {"Max"};
         }
 
-        throw std::runtime_error{std::format("Invalid param for ScanTargetToString, param: {}", static_cast<int32_t>(scan_target))};
+        throw std::runtime_error{fmt::format("Invalid param for ScanTargetToString, param: {}", static_cast<int32_t>(scan_target))};
     }
 
     auto ScanTargetToString(size_t scan_target) -> std::string
@@ -441,7 +442,7 @@ namespace RC
 
         if (pattern.length() < 1 || pattern[0] == '?')
         {
-            throw std::runtime_error{std::format("[make_mask] A pattern cannot start with a wildcard.\nPattern: {}", pattern)};
+            throw std::runtime_error{fmt::format("[make_mask] A pattern cannot start with a wildcard.\nPattern: {}", pattern)};
         }
 
         for (size_t i = 0; i < pattern.length(); i++)
@@ -545,7 +546,7 @@ namespace RC
             //{
             //    if (!std::regex_search(signature_data.signature, signature_validity_regex))
             //    {
-            //        throw std::runtime_error{std::format("[SinglePassSigScanner::start_scan] A signature is improperly formatted. Signature: {}", signature_data.signature)};
+            //        throw std::runtime_error{fmt::format("[SinglePassSigScanner::start_scan] A signature is improperly formatted. Signature: {}", signature_data.signature)};
             //    }
             //}
 

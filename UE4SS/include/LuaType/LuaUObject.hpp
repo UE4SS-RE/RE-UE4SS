@@ -778,7 +778,7 @@ Overloads:
                 // We can either throw an error and kill the execution
                 /**/
                 std::wstring property_type_name = property_type.ToString();
-                lua.throw_error(std::format(
+                lua.throw_error(fmt::format(
                         "[LocalUnrealParam::prepare_to_handle] Tried accessing unreal property without a registered handler. Property type '{}' not supported.",
                         to_string(property_type_name)));
                 //*/
@@ -840,6 +840,6 @@ Overloads:
             break;
         }
 
-        params.lua.throw_error(std::format("[push_integer] Unknown Operation ({}) not supported", static_cast<int32_t>(params.operation)));
+        params.lua.throw_error(fmt::format("[push_integer] Unknown Operation ({}) not supported", static_cast<int32_t>(params.operation)));
     }
 } // namespace RC::LuaType

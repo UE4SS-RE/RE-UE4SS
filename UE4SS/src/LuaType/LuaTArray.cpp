@@ -158,7 +158,7 @@ namespace RC::LuaType
             }
             else
             {
-                lua.throw_error(std::format("[TArray:ForEach] Tried iterating an array but the unreal property has no registered handler (via ArrayProperty). "
+                lua.throw_error(fmt::format("[TArray:ForEach] Tried iterating an array but the unreal property has no registered handler (via ArrayProperty). "
                                             "Property type '{}' not supported.",
                                             to_string(property_type_name.ToString())));
             }
@@ -211,7 +211,7 @@ namespace RC::LuaType
         else
         {
             std::string property_type_name = to_string(property_type_fname.ToString());
-            lua.throw_error(std::format("Tried accessing unreal property without a registered handler (via ArrayProperty). Property type '{}' not supported.",
+            lua.throw_error(fmt::format("Tried accessing unreal property without a registered handler (via ArrayProperty). Property type '{}' not supported.",
                                         property_type_name));
         }
     }

@@ -1,4 +1,3 @@
-#include <format>
 #include <stdexcept>
 #include <vector>
 
@@ -209,7 +208,7 @@ namespace RC::LuaMadeSimple
             }
             else
             {
-                get_lua_instance().throw_error(std::format("[get_string_field] Attempted to get field: '{}' but the type was '{}'",
+                get_lua_instance().throw_error(fmt::format("[get_string_field] Attempted to get field: '{}' but the type was '{}'",
                                                            field_name,
                                                            lua_typename(get_lua_instance().get_lua_state(), pushed_type)));
             }
@@ -232,7 +231,7 @@ namespace RC::LuaMadeSimple
             }
             else
             {
-                get_lua_instance().throw_error(std::format("[get_int_field] Attempted to get field: '{}' but the type was '{}'",
+                get_lua_instance().throw_error(fmt::format("[get_int_field] Attempted to get field: '{}' but the type was '{}'",
                                                            field_name,
                                                            lua_typename(get_lua_instance().get_lua_state(), lua_type(get_lua_instance().get_lua_state(), -1))));
             }
@@ -255,7 +254,7 @@ namespace RC::LuaMadeSimple
             }
             else
             {
-                get_lua_instance().throw_error(std::format("[get_float_field] Attempted to get field: '{}' but the type was '{}'",
+                get_lua_instance().throw_error(fmt::format("[get_float_field] Attempted to get field: '{}' but the type was '{}'",
                                                            field_name,
                                                            lua_typename(get_lua_instance().get_lua_state(), lua_type(get_lua_instance().get_lua_state(), -1))));
             }
@@ -278,7 +277,7 @@ namespace RC::LuaMadeSimple
             }
             else
             {
-                get_lua_instance().throw_error(std::format("[get_table_field] Attempted to get field: '{}' but the type was '{}'",
+                get_lua_instance().throw_error(fmt::format("[get_table_field] Attempted to get field: '{}' but the type was '{}'",
                                                            field_name,
                                                            lua_typename(get_lua_instance().get_lua_state(), pushed_type)));
             }
@@ -338,11 +337,11 @@ namespace RC::LuaMadeSimple
         {
             const char* status_message = lua_tostring(get_lua_state(), -1);
             lua_pop(get_lua_state(), 1);
-            return std::format("{} => {}", status_to_string(status), status_message);
+            return fmt::format("{} => {}", status_to_string(status), status_message);
         }
         else
         {
-            return std::format("{} => No message", status_to_string(status));
+            return fmt::format("{} => No message", status_to_string(status));
         }
     }
 
@@ -425,12 +424,12 @@ namespace RC::LuaMadeSimple
     {
         if (int status = luaL_loadfile(get_lua_state(), file_name_and_path.data()); status != LUA_OK)
         {
-            throw std::runtime_error{std::format("[Lua::execute_file] luaL_loadfile returned {}", resolve_status_message(status))};
+            throw std::runtime_error{fmt::format("[Lua::execute_file] luaL_loadfile returned {}", resolve_status_message(status))};
         }
 
         if (int status = lua_pcall(get_lua_state(), 0, LUA_MULTRET, 0); status != LUA_OK)
         {
-            throw std::runtime_error{std::format("[Lua::execute_file] lua_pcall returned {}", resolve_status_message(status))};
+            throw std::runtime_error{fmt::format("[Lua::execute_file] lua_pcall returned {}", resolve_status_message(status))};
         }
     }
 
@@ -446,12 +445,12 @@ namespace RC::LuaMadeSimple
     {
         if (int status = luaL_loadstring(get_lua_state(), code.data()); status != LUA_OK)
         {
-            throw_error(std::format("[Lua::execute_string] luaL_loadstring returned {}", resolve_status_message(status)));
+            throw_error(fmt::format("[Lua::execute_string] luaL_loadstring returned {}", resolve_status_message(status)));
         }
 
         if (int status = lua_pcall(get_lua_state(), 0, LUA_MULTRET, 0); status != LUA_OK)
         {
-            throw_error(std::format("[Lua::execute_string] lua_pcall returned {}", resolve_status_message(status)));
+            throw_error(fmt::format("[Lua::execute_string] lua_pcall returned {}", resolve_status_message(status)));
         }
     }
 
@@ -716,7 +715,7 @@ namespace RC::LuaMadeSimple
             // Intentionally only cleaning the stack if the type wasn't TFUNCTION
             // This is because the TFUNCTION is needed on the stack later
             lua_pop(get_lua_state(), 1);
-            throw std::runtime_error{std::format("[Lua::prepare_function_call] lua_getglobal returned !LUA_TFUNCTION, type returned: {}",
+            throw std::runtime_error{fmt::format("[Lua::prepare_function_call] lua_getglobal returned !LUA_TFUNCTION, type returned: {}",
                                                  lua_typename(get_lua_state(), status))};
         }
     }
@@ -725,7 +724,7 @@ namespace RC::LuaMadeSimple
     {
         if (int status = lua_pcall(get_lua_state(), num_params, num_return_values, 0); status != LUA_OK)
         {
-            throw std::runtime_error{std::format("[Lua::call_function] lua_pcall returned {}", resolve_status_message(status))};
+            throw std::runtime_error{fmt::format("[Lua::call_function] lua_pcall returned {}", resolve_status_message(status))};
         }
     }
 
@@ -802,7 +801,7 @@ namespace RC::LuaMadeSimple
 
         if (final_message.empty() || final_message == error_message + "\nstack traceback:")
         {
-            final_message = std::format("{}\nNo traceback", error_message);
+            final_message = fmt::format("{}\nNo traceback", error_message);
         }
 
         // Clearing the Lua stack because we're treating errors as non-fatal, but we still need to clean everything up
@@ -866,19 +865,19 @@ namespace RC::LuaMadeSimple
 
         if (func_type == Lua::LuaFunctionType::Local && !lua_isuserdata(lua_state, 1))
         {
-            throw_error(lua_state, std::format("[process_lua_function] A function requiring userdata as param #1 was called without userdata at param #1"));
+            throw_error(lua_state, fmt::format("[process_lua_function] A function requiring userdata as param #1 was called without userdata at param #1"));
         }
 
         if (!lua_instances.contains(lua_state))
         {
-            throw_error(lua_state, std::format("[process_lua_function] The lua state '{}' has no instance inside lua_instances unordered map", (void*)lua_state));
+            throw_error(lua_state, fmt::format("[process_lua_function] The lua state '{}' has no instance inside lua_instances unordered map", (void*)lua_state));
         }
 
         Lua& data_owner = *lua_instances.find(lua_state)->second;
 
         if (func_id > lua_functions.size())
         {
-            throw_error(lua_state, std::format("[process_lua_function] There was no global function with the id '{}' inside the lua_functions vector", func_id));
+            throw_error(lua_state, fmt::format("[process_lua_function] There was no global function with the id '{}' inside the lua_functions vector", func_id));
         }
 
         if (!lua_functions[func_id].has_value())

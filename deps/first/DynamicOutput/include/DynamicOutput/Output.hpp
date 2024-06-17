@@ -10,16 +10,17 @@
 #include <tuple>
 #include <typeinfo>
 #include <vector>
-
+#include <fmt/xchar.h>
+#include <fmt/chrono.h>
 #include <DynamicOutput/Common.hpp>
 #include <DynamicOutput/Macros.hpp>
 #include <DynamicOutput/OutputDevice.hpp>
 #include <File/InternalFile.hpp>
 
 #if RC_IS_ANSI == 1
-#define RC_STD_MAKE_FORMAT_ARGS std::make_format_args
+#define RC_STD_MAKE_FORMAT_ARGS fmt::make_format_args
 #else
-#define RC_STD_MAKE_FORMAT_ARGS std::make_wformat_args
+#define RC_STD_MAKE_FORMAT_ARGS fmt::make_wformat_args
 #endif
 
 namespace RC::Output
@@ -52,7 +53,7 @@ namespace RC::Output
         if (!ret)
         {
             THROW_INTERNAL_FILE_ERROR(
-                    std::format("[Output::get_device_internal] tried to get_device but was unable to find device of type: {}", typeid(DeviceType).name()))
+                    fmt::format("[Output::get_device_internal] tried to get_device but was unable to find device of type: {}", typeid(DeviceType).name()))
         }
         return *ret;
     }
@@ -122,11 +123,11 @@ namespace RC::Output
 
                 if (device->has_optional_arg())
                 {
-                    device->receive_with_optional_arg(std::vformat(content), RC_STD_MAKE_FORMAT_ARGS(static_cast<int32_t>(optional_arg)));
+                    device->receive_with_optional_arg(fmt::vformat(content), RC_STD_MAKE_FORMAT_ARGS(static_cast<int32_t>(optional_arg)));
                 }
                 else
                 {
-                    device->receive(std::vformat(content));
+                    device->receive(fmt::vformat(content));
                 }
             }
         }
@@ -145,11 +146,11 @@ namespace RC::Output
 
                 if (device->has_optional_arg())
                 {
-                    device->receive_with_optional_arg(std::vformat(content, RC_STD_MAKE_FORMAT_ARGS(fmt_args...)), 0);
+                    device->receive_with_optional_arg(fmt::vformat(fmt::detail::to_string_view(content), RC_STD_MAKE_FORMAT_ARGS(fmt_args...)), 0);
                 }
                 else
                 {
-                    device->receive(std::vformat(content, RC_STD_MAKE_FORMAT_ARGS(fmt_args...)));
+                    device->receive(fmt::vformat(fmt::detail::to_string_view(content), RC_STD_MAKE_FORMAT_ARGS(fmt_args...)));
                 }
             }
         }
@@ -167,11 +168,11 @@ namespace RC::Output
                 ASSERT_OUTPUT_DEVICE_IS_VALID(device)
                 if (device->has_optional_arg())
                 {
-                    device->receive_with_optional_arg(std::vformat(content, fmt_args...), RC_STD_MAKE_FORMAT_ARGS(static_cast<int32_t>(optional_arg)));
+                    device->receive_with_optional_arg(fmt::vformat(content, fmt_args...), RC_STD_MAKE_FORMAT_ARGS(static_cast<int32_t>(optional_arg)));
                 }
                 else
                 {
-                    device->receive(std::vformat(content, RC_STD_MAKE_FORMAT_ARGS(fmt_args...)));
+                    device->receive(fmt::vformat(content, RC_STD_MAKE_FORMAT_ARGS(fmt_args...)));
                 }
             }
         }
@@ -211,11 +212,11 @@ namespace RC::Output
                 ASSERT_OUTPUT_DEVICE_IS_VALID(device)
                 if (device->has_optional_arg())
                 {
-                    device->receive_with_optional_arg(std::vformat(content, RC_STD_MAKE_FORMAT_ARGS(fmt_arg, fmt_args...)), optional_arg);
+                    device->receive_with_optional_arg(fmt::vformat(content, RC_STD_MAKE_FORMAT_ARGS(fmt_arg, fmt_args...)), optional_arg);
                 }
                 else
                 {
-                    device->receive(std::vformat(content, RC_STD_MAKE_FORMAT_ARGS(fmt_args...)));
+                    device->receive(fmt::vformat(content, RC_STD_MAKE_FORMAT_ARGS(fmt_args...)));
                 }
             }
         }
@@ -287,11 +288,11 @@ namespace RC::Output
 
             if (device->has_optional_arg())
             {
-                device->receive_with_optional_arg(std::vformat(content, RC_STD_MAKE_FORMAT_ARGS(fmt_args...)), 0);
+                device->receive_with_optional_arg(fmt::vformat(fmt::detail::to_string_view(content), RC_STD_MAKE_FORMAT_ARGS(fmt_args...)), 0);
             }
             else
             {
-                device->receive(std::vformat(content, RC_STD_MAKE_FORMAT_ARGS(fmt_args...)));
+                device->receive(fmt::vformat(fmt::detail::to_string_view(content), RC_STD_MAKE_FORMAT_ARGS(fmt_args...)));
             }
         }
     }
@@ -305,11 +306,11 @@ namespace RC::Output
 
             if (device->has_optional_arg())
             {
-                device->receive_with_optional_arg(std::vformat(content, RC_STD_MAKE_FORMAT_ARGS(fmt_args...)), static_cast<int32_t>(optional_arg));
+                device->receive_with_optional_arg(fmt::vformat(content, RC_STD_MAKE_FORMAT_ARGS(fmt_args...)), static_cast<int32_t>(optional_arg));
             }
             else
             {
-                device->receive(std::vformat(content, RC_STD_MAKE_FORMAT_ARGS(fmt_args...)));
+                device->receive(fmt::vformat(content, RC_STD_MAKE_FORMAT_ARGS(fmt_args...)));
             }
         }
     }
@@ -343,11 +344,11 @@ namespace RC::Output
 
             if (device->has_optional_arg())
             {
-                device->receive_with_optional_arg(std::vformat(content, RC_STD_MAKE_FORMAT_ARGS(fmt_args...)), optional_arg);
+                device->receive_with_optional_arg(fmt::vformat(fmt::detail::to_string_view(content), RC_STD_MAKE_FORMAT_ARGS(fmt_args...)), optional_arg);
             }
             else
             {
-                device->receive(std::vformat(content, RC_STD_MAKE_FORMAT_ARGS(fmt_args...)));
+                device->receive(fmt::vformat(fmt::detail::to_string_view(content), RC_STD_MAKE_FORMAT_ARGS(fmt_args...)));
             }
         }
     }

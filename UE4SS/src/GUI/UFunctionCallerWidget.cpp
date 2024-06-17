@@ -82,7 +82,7 @@ namespace RC::GUI
                 }
             }
 
-            cached_function.cached_name = std::format("{}{}", to_string(function->GetName()), cached_function.has_out_params ? " | CPF_OutParm" : "");
+            cached_function.cached_name = fmt::format("{}{}", to_string(function->GetName()), cached_function.has_out_params ? " | CPF_OutParm" : "");
         }
         m_is_cache_valid = true;
     }
@@ -164,10 +164,10 @@ namespace RC::GUI
         }
         auto function = m_currently_selected_function->function;
 
-        auto cmd = std::format(STR("{}"), function->GetName());
+        auto cmd = fmt::format(STR("{}"), function->GetName());
         for (const auto& param : m_params_for_selected_function)
         {
-            cmd.append(std::format(STR(" {}"), to_wstring(param.value_from_ui)));
+            cmd.append(fmt::format(STR(" {}"), to_wstring(param.value_from_ui)));
         }
 
         Output::send(STR("Queueing command: {}\n"), cmd);
@@ -299,7 +299,7 @@ namespace RC::GUI
                 const auto object_name_typeless = get_typeless_object_name(object);
                 if (!object_name_typeless.empty())
                 {
-                    if (ImGui::MenuItem(std::format("#{}: {}", i, object_name_typeless).c_str()))
+                    if (ImGui::MenuItem(fmt::format("#{}: {}", i, object_name_typeless).c_str()))
                     {
                         param.value_from_ui.insert(param.current_cursor_position_in_ui, object_name_typeless);
                     }
@@ -313,7 +313,7 @@ namespace RC::GUI
     {
         m_prev_instance = instance;
 
-        auto popup_modal_id = to_string(std::format(STR("##functions-for-{}"), instance->HashObject()));
+        auto popup_modal_id = to_string(fmt::format(STR("##functions-for-{}"), instance->HashObject()));
         auto& is_open = is_widget_open();
         if (is_open)
         {
@@ -375,7 +375,7 @@ namespace RC::GUI
                         ImGui::EndTooltip();
                     }
                     ImGui::SetNextItemWidth(-2.0f);
-                    ImGui::InputText(std::format("##param-input-{}", param.cached_name).c_str(),
+                    ImGui::InputText(fmt::format("##param-input-{}", param.cached_name).c_str(),
                                      &param.value_from_ui,
                                      ImGuiInputTextFlags_CallbackAlways,
                                      &value_from_ui_callback,
@@ -393,7 +393,7 @@ namespace RC::GUI
                                 const auto pc_name_typeless = get_typeless_object_name(player_controller);
                                 if (!pc_name_typeless.empty())
                                 {
-                                    if (ImGui::MenuItem(std::format("#{}: {}", i, pc_name_typeless).c_str()))
+                                    if (ImGui::MenuItem(fmt::format("#{}: {}", i, pc_name_typeless).c_str()))
                                     {
                                         param.value_from_ui.insert(param.current_cursor_position_in_ui, pc_name_typeless);
                                     }

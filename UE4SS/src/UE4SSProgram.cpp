@@ -12,7 +12,7 @@
 #include <fstream>
 #include <limits>
 #include <unordered_set>
-
+#include <fmt/chrono.h>
 #include <Profiler/Profiler.hpp>
 #include <DynamicOutput/DynamicOutput.hpp>
 #include <ExceptionHandling.hpp>
@@ -176,7 +176,7 @@ namespace RC
             }
             catch (std::exception& e)
             {
-                create_emergency_console_for_early_error(std::format(STR("The IniParser failed to parse: {}"), to_wstring(e.what())));
+                create_emergency_console_for_early_error(fmt::format(STR("The IniParser failed to parse: {}"), to_wstring(e.what())));
                 return;
             }
 
@@ -199,7 +199,7 @@ namespace RC
             {
                 m_console_device = &Output::set_default_devices<Output::ConsoleDevice>();
                 m_console_device->set_formatter([](File::StringViewType string) -> File::StringType {
-                    return std::format(STR("[{}] {}"), std::format(STR("{:%X}"), std::chrono::system_clock::now()), string);
+                    return fmt::format(STR("[{}] {}"), fmt::format(STR("{:%X}"), std::chrono::system_clock::now()), string);
                 });
                 if (settings_manager.Debug.DebugConsoleVisible)
                 {
@@ -221,9 +221,9 @@ namespace RC
                          UE4SS_LIB_VERSION_MAJOR,
                          UE4SS_LIB_VERSION_MINOR,
                          UE4SS_LIB_VERSION_HOTFIX,
-                         std::format(L"{}", UE4SS_LIB_VERSION_PRERELEASE == 0 ? L"" : std::format(L" PreRelease #{}", UE4SS_LIB_VERSION_PRERELEASE)),
-                         std::format(L"{}",
-                                     UE4SS_LIB_BETA_STARTED == 0 ? L"" : (UE4SS_LIB_IS_BETA == 0 ? L" Beta #?" : std::format(L" Beta #{}", UE4SS_LIB_VERSION_BETA))),
+                         fmt::format(L"{}", UE4SS_LIB_VERSION_PRERELEASE == 0 ? L"" : fmt::format(L" PreRelease #{}", UE4SS_LIB_VERSION_PRERELEASE)),
+                         fmt::format(L"{}",
+                                     UE4SS_LIB_BETA_STARTED == 0 ? L"" : (UE4SS_LIB_IS_BETA == 0 ? L" Beta #?" : fmt::format(L" Beta #{}", UE4SS_LIB_VERSION_BETA))),
                          to_wstring(UE4SS_LIB_BUILD_GITSHA));
 
 #ifdef __clang__
@@ -457,7 +457,7 @@ namespace RC
             m_debug_console_device = &Output::set_default_devices<Output::DebugConsoleDevice>();
             Output::set_default_log_level<LogLevel::Normal>();
             m_debug_console_device->set_formatter([](File::StringViewType string) -> File::StringType {
-                return std::format(STR("[{}] {}"), std::format(STR("{:%X}"), std::chrono::system_clock::now()), string);
+                return fmt::format(STR("[{}] {}"), fmt::format(STR("{:%X}"), std::chrono::system_clock::now()), string);
             });
 
             if (AllocConsole())
@@ -1189,7 +1189,7 @@ namespace RC
             }
             if (ec.value() != 0)
             {
-                return std::format("is_directory ran into error {}", ec.value());
+                return fmt::format("is_directory ran into error {}", ec.value());
             }
 
             if (!std::filesystem::exists(mod_directory.path() / "enabled.txt", ec))
@@ -1198,7 +1198,7 @@ namespace RC
             }
             if (ec.value() != 0)
             {
-                return std::format("exists ran into error {}", ec.value());
+                return fmt::format("exists ran into error {}", ec.value());
             }
 
             auto mod = UE4SSProgram::find_mod_by_name<ModType>(mod_directory.path().stem().c_str(), UE4SSProgram::IsInstalled::Yes);

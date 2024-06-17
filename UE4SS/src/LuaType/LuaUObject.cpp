@@ -136,7 +136,7 @@ namespace RC::LuaType
 
             if (num_supplied_params != num_expected_params_with_return_value)
             {
-                lua.throw_error(std::format("[UFunction::setup_metamethods -> __call] UFunction expected {} parameters, received {}",
+                lua.throw_error(fmt::format("[UFunction::setup_metamethods -> __call] UFunction expected {} parameters, received {}",
                                             num_expected_params,
                                             num_supplied_params));
             }
@@ -219,7 +219,7 @@ namespace RC::LuaType
                         std::string parameter_type_name = to_string(property_type_fname.ToString());
                         std::string parameter_name = to_string(param_next->GetName());
                         lua.throw_error(
-                                std::format("Tried calling UFunction without a registered handler for parameter. Parameter '{}' of type '{}' not supported.",
+                                fmt::format("Tried calling UFunction without a registered handler for parameter. Parameter '{}' of type '{}' not supported.",
                                             parameter_name,
                                             parameter_type_name));
                     }
@@ -272,7 +272,7 @@ namespace RC::LuaType
                 else
                 {
                     std::string param_type_name = to_string(param_type_fname.ToString());
-                    lua.throw_error(std::format("Tried calling UFunction without a registered handler 'Out' param. Type '{}' not supported.", param_type_name));
+                    lua.throw_error(fmt::format("Tried calling UFunction without a registered handler 'Out' param. Type '{}' not supported.", param_type_name));
                 }
 
                 if (!reuse_same_table)
@@ -303,7 +303,7 @@ namespace RC::LuaType
             else
             {
                 std::string return_value_type_name = to_string(return_value_property_type.ToString());
-                lua.throw_error(std::format("Tried calling UFunction without a registered handler for return value. Return value of type '{}' not supported.",
+                lua.throw_error(fmt::format("Tried calling UFunction without a registered handler for return value. Return value of type '{}' not supported.",
                                             return_value_type_name));
             }
 
@@ -563,7 +563,7 @@ namespace RC::LuaType
                 else
                 {
                     std::string field_type_name = to_string(field_type.ToString());
-                    lua.throw_error(std::format("Tried getting without a registered handler. 'StructProperty'.'{}' not supported. Field: '{}'",
+                    lua.throw_error(fmt::format("Tried getting without a registered handler. 'StructProperty'.'{}' not supported. Field: '{}'",
                                                 field_type_name,
                                                 field_name));
                 }
@@ -623,7 +623,7 @@ namespace RC::LuaType
                 else
                 {
                     std::string field_type_name = to_string(field_type_fname.ToString());
-                    params.lua.throw_error(std::format("Tried pushing (Operation::Set) StructProperty without a registered handler for field '{} {}'.",
+                    params.lua.throw_error(fmt::format("Tried pushing (Operation::Set) StructProperty without a registered handler for field '{} {}'.",
                                                        field_type_name,
                                                        field_name));
                 }
@@ -676,7 +676,7 @@ namespace RC::LuaType
             break;
         }
 
-        params.lua.throw_error(std::format("[push_structproperty] Unknown Operation ({}) not supported", static_cast<int32_t>(params.operation)));
+        params.lua.throw_error(fmt::format("[push_structproperty] Unknown Operation ({}) not supported", static_cast<int32_t>(params.operation)));
     }
 
     auto push_arrayproperty(const PusherParams& params) -> void
@@ -726,7 +726,7 @@ namespace RC::LuaType
             {
                 std::string property_type_name = to_string(property_type_fname.ToString());
                 lua.throw_error(
-                        std::format("Tried interacting with an array but the inner property has no registered handler. Property type '{}' not supported.",
+                        fmt::format("Tried interacting with an array but the inner property has no registered handler. Property type '{}' not supported.",
                                     property_type_name));
             }
         };
@@ -740,7 +740,7 @@ namespace RC::LuaType
             if (!StaticState::m_property_value_pushers.contains(name_comparison_index))
             {
                 std::string inner_type_name = to_string(inner_type_fname.ToString());
-                params.lua.throw_error(std::format("Tried pushing (Operation::Set) ArrayProperty with unsupported inner type of '{}'", inner_type_name));
+                params.lua.throw_error(fmt::format("Tried pushing (Operation::Set) ArrayProperty with unsupported inner type of '{}'", inner_type_name));
             }
 
             size_t array_element_size = inner->GetElementSize();
@@ -841,7 +841,7 @@ namespace RC::LuaType
             break;
         }
 
-        params.lua.throw_error(std::format("[push_arrayproperty] Unknown Operation ({}) not supported", static_cast<int32_t>(params.operation)));
+        params.lua.throw_error(fmt::format("[push_arrayproperty] Unknown Operation ({}) not supported", static_cast<int32_t>(params.operation)));
     }
 
     auto push_functionproperty(const FunctionPusherParams& params) -> void
@@ -874,7 +874,7 @@ namespace RC::LuaType
             break;
         }
 
-        params.lua.throw_error(std::format("[push_floatproperty] Unknown Operation ({}) not supported", static_cast<int32_t>(params.operation)));
+        params.lua.throw_error(fmt::format("[push_floatproperty] Unknown Operation ({}) not supported", static_cast<int32_t>(params.operation)));
     }
 
     auto push_doubleproperty(const PusherParams& params) -> void
@@ -902,7 +902,7 @@ namespace RC::LuaType
             break;
         }
 
-        params.lua.throw_error(std::format("[push_doubleproperty] Unknown Operation ({}) not supported", static_cast<int32_t>(params.operation)));
+        params.lua.throw_error(fmt::format("[push_doubleproperty] Unknown Operation ({}) not supported", static_cast<int32_t>(params.operation)));
     }
 
     auto push_boolproperty(const PusherParams& params) -> void
@@ -940,7 +940,7 @@ namespace RC::LuaType
             break;
         }
 
-        params.lua.throw_error(std::format("[push_boolproperty] Unknown Operation ({}) not supported", static_cast<int32_t>(params.operation)));
+        params.lua.throw_error(fmt::format("[push_boolproperty] Unknown Operation ({}) not supported", static_cast<int32_t>(params.operation)));
     }
 
     auto push_enumproperty(const PusherParams& params) -> void
@@ -990,7 +990,7 @@ namespace RC::LuaType
             break;
         }
 
-        params.lua.throw_error(std::format("[push_enumproperty] Unknown Operation ({}) not supported", static_cast<int32_t>(params.operation)));
+        params.lua.throw_error(fmt::format("[push_enumproperty] Unknown Operation ({}) not supported", static_cast<int32_t>(params.operation)));
     }
 
     auto push_weakobjectproperty(const PusherParams& params) -> void
@@ -1026,7 +1026,7 @@ namespace RC::LuaType
             break;
         }
 
-        params.lua.throw_error(std::format("[push_weakobjectproperty] Unknown Operation ({}) not supported", static_cast<int32_t>(params.operation)));
+        params.lua.throw_error(fmt::format("[push_weakobjectproperty] Unknown Operation ({}) not supported", static_cast<int32_t>(params.operation)));
     }
 
     auto push_nameproperty(const PusherParams& params) -> void
@@ -1056,7 +1056,7 @@ namespace RC::LuaType
             break;
         }
 
-        params.lua.throw_error(std::format("[push_nameproperty] Unknown Operation ({}) not supported", static_cast<int32_t>(params.operation)));
+        params.lua.throw_error(fmt::format("[push_nameproperty] Unknown Operation ({}) not supported", static_cast<int32_t>(params.operation)));
     }
 
     auto push_textproperty(const PusherParams& params) -> void
@@ -1086,7 +1086,7 @@ namespace RC::LuaType
             break;
         }
 
-        params.lua.throw_error(std::format("[push_textproperty] Unknown Operation ({}) not supported", static_cast<int32_t>(params.operation)));
+        params.lua.throw_error(fmt::format("[push_textproperty] Unknown Operation ({}) not supported", static_cast<int32_t>(params.operation)));
     }
 
     auto push_strproperty(const PusherParams& params) -> void
@@ -1129,7 +1129,7 @@ namespace RC::LuaType
             break;
         }
 
-        params.lua.throw_error(std::format("[push_strproperty] Unknown Operation ({}) not supported", static_cast<int32_t>(params.operation)));
+        params.lua.throw_error(fmt::format("[push_strproperty] Unknown Operation ({}) not supported", static_cast<int32_t>(params.operation)));
     }
 
     auto push_softclassproperty(const PusherParams& params) -> void
@@ -1159,7 +1159,7 @@ namespace RC::LuaType
             break;
         }
 
-        params.lua.throw_error(std::format("[push_softclassproperty] Unknown Operation ({}) not supported", static_cast<int32_t>(params.operation)));
+        params.lua.throw_error(fmt::format("[push_softclassproperty] Unknown Operation ({}) not supported", static_cast<int32_t>(params.operation)));
     }
 
     auto push_interfaceproperty(const PusherParams& params) -> void
@@ -1298,7 +1298,7 @@ Overloads:
             // We can either throw an error and kill the execution
             /**/
             std::string property_type_name = to_string(property_type.ToString());
-            lua.throw_error(std::format(
+            lua.throw_error(fmt::format(
                     "[handle_unreal_property_value] Tried accessing unreal property without a registered handler. Property type '{}' not supported.",
                     property_type_name));
             //*/
@@ -1423,7 +1423,7 @@ Overloads:
             // We can either throw an error and kill the execution
             /**/
             std::string property_type_name = to_string(lua_object.m_type.ToString());
-            lua.throw_error(std::format(
+            lua.throw_error(fmt::format(
                     "[RemoteUnrealParam::prepare_to_handle] Tried accessing unreal property without a registered handler. Property type '{}' not supported.",
                     property_type_name));
             //*/
