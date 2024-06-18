@@ -7,6 +7,7 @@
 #include <string>
 #include <unordered_map>
 #include <vector>
+#include <filesystem>
 
 #include <String/StringType.hpp>
 
@@ -215,17 +216,134 @@ namespace RC
         return to_u16string(temp_input);
     }
 
-    auto inline to_ue(std::string_view input)
+    // Auto String Conversion
+
+    // All possible char types in this project
+    template <typename T>
+    struct _can_be_string_view_t : std::false_type
     {
-        if constexpr (std::is_same_v<CharType, wchar_t>)
-        {
-            return to_wstring(input);
-        }
-        else
-        {
-            return to_u16string(input);
+    };
+    template <>
+    struct _can_be_string_view_t<wchar_t*> : std::true_type
+    {
+    };
+    template <>
+    struct _can_be_string_view_t<char*> : std::true_type
+    {
+    };
+    template <>
+    struct _can_be_string_view_t<char16_t*> : std::true_type
+    {
+    };
+    template <>
+    struct _can_be_string_view_t<const wchar_t*> : std::true_type
+    {
+    };
+    template <>
+    struct _can_be_string_view_t<const char*> : std::true_type
+    {
+    };
+    template <>
+    struct _can_be_string_view_t<const char16_t*> : std::true_type
+    {
+    };
+
+    template <typename T>
+    struct can_be_string_view_t : _can_be_string_view_t<std::decay_t<T>>
+    {
+    };
+
+    template <typename T>
+    struct is_string_like_t : std::false_type
+    {
+    };
+
+    template <typename CharT>
+    struct is_string_like_t<std::basic_string<CharT>> : std::true_type
+    {
+        // T is a string or string view of CharT
+    };
+
+    template <typename CharT>
+    struct is_string_like_t<std::basic_string_view<CharT>> : std::true_type
+    {
+        // T is a string or string view of CharT
+    };
+
+    template <typename T, typename CharT>
+    struct is_charT_string_type : std::disjunction<std::is_same<T, std::basic_string<CharT>>, std::is_same<T, std::basic_string_view<CharT>>>
+    {
+        // T is a string or string view of CharT
+    };
+
+    template <typename T, typename CharT>
+    struct not_charT_string_like_t : std::conjunction<is_string_like_t<std::decay_t<T>>, std::negation<is_charT_string_type<std::decay_t<T>, CharT>>>
+    {
+        // 1. T is a string or string view
+        // 2. T is not a string or string view of CharT
+    };
+
+    template <typename T>
+    auto stringviewify(T&& tp)
+    {
+        // Convert a char pointer to a string view
+        return std::basic_string_view<std::remove_const_t<std::remove_pointer_t<std::decay_t<T>>>>{tp};
+    }
+
+    template <typename CharT, typename T>
+    auto inline to_charT_string(T&& arg) -> std::basic_string<CharT> {
+        // Dispatch to the correct conversion function based on the CharT type
+        if constexpr (std::is_same_v<CharT, wchar_t>) {
+            return to_wstring(std::forward<T>(arg));
+        } else if constexpr (std::is_same_v<CharT, char16_t>) {
+            return to_u16string(std::forward<T>(arg));
+        } else if constexpr (std::is_same_v<CharT, char>) {
+            return to_string(std::forward<T>(arg));
         }
     }
+
+    template <typename CharT, typename T>
+    auto inline to_charT_string_path(T&& arg) -> std::basic_string<CharT> {
+        // Dispatch to the correct conversion function based on the CharT type
+        if constexpr (std::is_same_v<CharT, wchar_t>) {
+            return arg.wstring();
+        } else if constexpr (std::is_same_v<CharT, char16_t>) {
+            return arg.u16string();
+        } else if constexpr (std::is_same_v<CharT, char>) {
+            return arg.string();
+        }
+    }
+
+    // Convert any string-like to a string of generic CharT
+    // Or pass through if it's already a string(view) of CharType or if we can't convert it
+    template<typename CharT, typename T>
+    auto inline to_charT(T&& arg) {
+        if constexpr (std::is_same_v<std::decay_t<T>, std::filesystem::path> || std::is_same_v<std::decay_t<T>, const std::filesystem::path>) {
+            // std::filesystem::path has its own conversion functions
+            return to_charT_string_path<CharT>(std::forward<T>(arg));
+        } else if constexpr (can_be_string_view_t<T>::value) {
+            // If T is a char pointer, it can be treated as a string view
+            return to_charT<CharT>(stringviewify(std::forward<T>(arg)));
+        } else if constexpr (not_charT_string_like_t<T, CharT>::value) {
+            // If T is a string or string view but not using CharT, convert it
+            return to_charT_string<CharT>(std::forward<T>(arg));
+        } else {
+            // If T is already a string or string view using CharT, pass through
+            // Or if we can't convert it, pass through
+            return std::forward<T>(arg);
+        }
+    }
+
+    // Convert any string-like to a string(view) of CharType that is used in UE
+    // Or pass through if it's already a string(view) of CharType or if we can't convert it
+    template<typename T>
+    auto inline to_ue(T&& arg) {
+        return to_charT<CharType>(std::forward<T>(arg));
+    }
+
+    // You can add more to_* function if needed
+
+    // Auto Type Conversion Done
 
     auto inline to_generic_string(const auto& input) -> StringType
     {
