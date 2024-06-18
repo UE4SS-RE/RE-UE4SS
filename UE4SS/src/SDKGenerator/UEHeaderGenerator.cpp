@@ -4007,7 +4007,7 @@ namespace RC::UEGenerator
 
         // Retrieve the filename from the full path, strip down the extension
         FFilePath root_executable_path((StringType(module_name_buffer)));
-        StringType filename = to_ue(root_executable_path.filename().replace_extension().string());
+        StringType filename = to_ue(root_executable_path.filename().replace_extension());
 
         // Remove the shipping file postfix
         StringType shipping_postfix = STR("-Win64-Shipping");
@@ -4035,7 +4035,7 @@ namespace RC::UEGenerator
     GeneratedFile::GeneratedFile(const FFilePath& full_file_path)
     {
         this->m_full_file_path = full_file_path;
-        this->m_file_base_name = to_ue(full_file_path.filename().replace_extension().string());
+        this->m_file_base_name = to_ue(full_file_path.filename().replace_extension());
         this->m_current_indent_count = 0;
     }
 

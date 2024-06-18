@@ -40,7 +40,7 @@ namespace RC
 
         if (!lua.is_global_function(global_register_func_name) || !lua.is_global_function(global_on_match_found_func_name))
         {
-            Output::send(STR("Lua functions 'Register' and 'OnMatchFound' must be present in {}\n"), to_ue(script_file_path_and_name.string()));
+            Output::send(STR("Lua functions 'Register' and 'OnMatchFound' must be present in {}\n"), to_ue(script_file_path_and_name));
             throw std::runtime_error{"See error message above"};
         }
 

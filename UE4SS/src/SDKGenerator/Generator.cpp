@@ -678,7 +678,7 @@ namespace RC::UEGenerator
 
             if (!generated_file.secondary_file_has_no_contents)
             {
-                generated_file.primary_file.write_string_to_file(fmt::format(STR("#include \"{}\"\n\n"), to_ue(generated_file.secondary_file_name.filename().string())));
+                generated_file.primary_file.write_string_to_file(fmt::format(STR("#include \"{}\"\n\n"), to_ue(generated_file.secondary_file_name.filename())));
             }
         }
         auto generate_file_footer(GeneratedFile& generated_file) -> void
