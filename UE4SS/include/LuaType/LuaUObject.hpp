@@ -601,7 +601,7 @@ Overloads:
                 auto executor = lua.get_userdata<LuaType::UObject>();
 
                 auto ar = Unreal::FOutputDevice{};
-                auto return_value = lua_object.get_remote_cpp_object()->ProcessConsoleExec((TCHAR*) cmd.c_str(), ar, executor.get_remote_cpp_object());
+                auto return_value = lua_object.get_remote_cpp_object()->ProcessConsoleExec(FromCharTypePtr<TCHAR>(cmd.c_str()), ar, executor.get_remote_cpp_object());
 
                 lua.set_bool(return_value);
                 return 1;

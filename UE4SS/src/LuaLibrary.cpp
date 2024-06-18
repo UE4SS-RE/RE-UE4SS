@@ -64,7 +64,7 @@ namespace RC::LuaLibrary
 
         Output::send(formatted_string);
 
-        if (output_device) output_device->Log((TCHAR*) outdevice_string.c_str());
+        if (output_device) output_device->Log(FromCharTypePtr<TCHAR>(outdevice_string.c_str()));
 
         return 0;
     }

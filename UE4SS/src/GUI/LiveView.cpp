@@ -625,7 +625,7 @@ namespace RC::GUI
             LiveView::Watch* watch = [&]() -> LiveView::Watch* {
                 if (watch_type == LiveView::Watch::Type::Property)
                 {
-                    auto property = object->GetPropertyByNameInChain((TCHAR*) property_name.data());
+                    auto property = object->GetPropertyByNameInChain(FromCharTypePtr<TCHAR>(property_name.data()));
                     if (!property)
                     {
                         return nullptr;
@@ -2010,7 +2010,7 @@ namespace RC::GUI
             if (ImGui::Button("Apply"))
             {
                 FOutputDevice placeholder_device{};
-                if (!property->ImportText((TCHAR*) to_ue(m_current_property_value_buffer).c_str(), property->ContainerPtrToValuePtr<void>(container), NULL, obj, &placeholder_device))
+                if (!property->ImportText(FromCharTypePtr<TCHAR>(to_ue(m_current_property_value_buffer).c_str()), property->ContainerPtrToValuePtr<void>(container), NULL, obj, &placeholder_device))
                 {
                     m_modal_edit_property_value_error_unable_to_edit = true;
                     ImGui::OpenPopup("UnableToSetNewPropertyValueError");

@@ -31,7 +31,7 @@ namespace RC::GUI::BPMods
       public:
         auto ModMenuButtonPressed(int32_t Index) -> void
         {
-            auto Function = GetFunctionByNameInChain((TCHAR*) STR("ModMenuButtonPressed"));
+            auto Function = GetFunctionByNameInChain(FromCharTypePtr<TCHAR>(STR("ModMenuButtonPressed")));
             if (!Function)
             {
                 return;

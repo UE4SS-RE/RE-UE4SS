@@ -16,7 +16,7 @@ namespace RC::GUI::Filter
         {
             for (const auto& property : list_properties)
             {
-                if (!property.empty() && !object->GetPropertyByNameInChain((TCHAR*) property.c_str())) return true;
+                if (!property.empty() && !object->GetPropertyByNameInChain(FromCharTypePtr<TCHAR>(property.c_str()))) return true;
             }
             return false;
         }

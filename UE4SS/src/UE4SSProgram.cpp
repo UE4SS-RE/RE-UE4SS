@@ -149,7 +149,7 @@ namespace RC
     {
         UE4SSProgram& program = UE4SSProgram::get_program();
         HMODULE lib = PLH::FnCast(program.m_hook_trampoline_load_library_w, &LoadLibraryW)(dll_name);
-        program.fire_dll_load_for_cpp_mods((CharType*) dll_name);
+        program.fire_dll_load_for_cpp_mods(ToCharTypePtr(dll_name));
         return lib;
     }
 
@@ -157,7 +157,7 @@ namespace RC
     {
         UE4SSProgram& program = UE4SSProgram::get_program();
         HMODULE lib = PLH::FnCast(program.m_hook_trampoline_load_library_ex_w, &LoadLibraryExW)(dll_name, file, flags);
-        program.fire_dll_load_for_cpp_mods((CharType*) dll_name);
+        program.fire_dll_load_for_cpp_mods(ToCharTypePtr(dll_name));
         return lib;
     }
 

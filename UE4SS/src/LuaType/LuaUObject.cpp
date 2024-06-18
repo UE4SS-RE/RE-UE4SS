@@ -1107,7 +1107,7 @@ namespace RC::LuaType
             if (params.lua.is_string())
             {
                 auto lua_string = params.lua.get_string();
-                auto fstring = Unreal::FString{(TCHAR*) to_ue(lua_string).c_str()};
+                auto fstring = Unreal::FString{FromCharTypePtr<TCHAR>(to_ue(lua_string).c_str())};
                 *string = fstring;
             }
             else if (params.lua.is_userdata())

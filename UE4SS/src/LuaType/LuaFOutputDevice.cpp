@@ -65,7 +65,7 @@ Overloads:
             }
             auto message = lua.get_string();
 
-            lua_object.get_remote_cpp_object()->Log((TCHAR*) to_ue(message).c_str());
+            lua_object.get_remote_cpp_object()->Log(FromCharTypePtr<TCHAR>(to_ue(message).c_str()));
 
             return 0;
         });

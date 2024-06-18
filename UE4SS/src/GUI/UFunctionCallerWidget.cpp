@@ -151,7 +151,7 @@ namespace RC::GUI
             auto& function_flags = s_function->GetFunctionFlags();
             function_flags |= FUNC_Exec;
             Output::send(STR("Processing command: {}\n"), s_cmd);
-            bool call_succeeded = s_instance->ProcessConsoleExec((TCHAR*) s_cmd.c_str(), s_ar, s_executor);
+            bool call_succeeded = s_instance->ProcessConsoleExec(FromCharTypePtr<TCHAR>(s_cmd.c_str()), s_ar, s_executor);
             Output::send(STR("call_succeeded: {}\n"), call_succeeded);
             function_flags &= ~FUNC_Exec;
         }

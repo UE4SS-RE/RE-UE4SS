@@ -83,21 +83,21 @@ namespace RC::GUI::Dumpers
     {
         StringType root_actor_buffer{};
 
-        static auto location_property = root_component->GetPropertyByNameInChain((TCHAR*) STR("RelativeLocation"));
-        static auto rotation_property = root_component->GetPropertyByNameInChain((TCHAR*) STR("RelativeRotation"));
-        static auto scale_property = root_component->GetPropertyByNameInChain((TCHAR*) STR("RelativeScale3D"));
+        static auto location_property = root_component->GetPropertyByNameInChain(FromCharTypePtr<TCHAR>(STR("RelativeLocation")));
+        static auto rotation_property = root_component->GetPropertyByNameInChain(FromCharTypePtr<TCHAR>(STR("RelativeRotation")));
+        static auto scale_property = root_component->GetPropertyByNameInChain(FromCharTypePtr<TCHAR>(STR("RelativeScale3D")));
 
-        auto location = root_component->GetValuePtrByPropertyNameInChain<FVector>((TCHAR*) STR("RelativeLocation"));
+        auto location = root_component->GetValuePtrByPropertyNameInChain<FVector>(FromCharTypePtr<TCHAR>(STR("RelativeLocation")));
         FString location_string{};
         location_property->ExportTextItem(location_string, location, nullptr, nullptr, 0);
         root_actor_buffer.append(fmt::format(STR("\"{}\","), location_string.GetCharArray()));
 
-        auto rotation = root_component->GetValuePtrByPropertyNameInChain<FRotator>((TCHAR*) STR("RelativeRotation"));
+        auto rotation = root_component->GetValuePtrByPropertyNameInChain<FRotator>(FromCharTypePtr<TCHAR>(STR("RelativeRotation")));
         FString rotation_string{};
         rotation_property->ExportTextItem(rotation_string, rotation, nullptr, nullptr, 0);
         root_actor_buffer.append(fmt::format(STR("\"{}\","), rotation_string.GetCharArray()));
 
-        auto scale = root_component->GetValuePtrByPropertyNameInChain<FVector>((TCHAR*) STR("RelativeScale3D"));
+        auto scale = root_component->GetValuePtrByPropertyNameInChain<FVector>(FromCharTypePtr<TCHAR>(STR("RelativeScale3D")));
         FString scale_string{};
         scale_property->ExportTextItem(scale_string, scale, nullptr, nullptr, 0);
         root_actor_buffer.append(fmt::format(STR("\"{}\","), scale_string.GetCharArray()));
@@ -120,7 +120,7 @@ namespace RC::GUI::Dumpers
 
             auto actor = static_cast<AActor*>(object);
 
-            auto root_component = actor->GetValuePtrByPropertyNameInChain<UObject*>((TCHAR*) STR("RootComponent"));
+            auto root_component = actor->GetValuePtrByPropertyNameInChain<UObject*>(FromCharTypePtr<TCHAR>(STR("RootComponent")));
             if (!root_component || !*root_component)
             {
                 return LoopAction::Continue;
@@ -131,7 +131,7 @@ namespace RC::GUI::Dumpers
             actor_buffer.append(fmt::format(STR("Row_{},"), actor_count));
 
             static auto game_mode_base = UObjectGlobals::FindFirstOf(STR("GameModeBase"));
-            static auto class_property = game_mode_base->GetPropertyByNameInChain((TCHAR*) STR("GameStateClass"));
+            static auto class_property = game_mode_base->GetPropertyByNameInChain(FromCharTypePtr<TCHAR>(STR("GameStateClass")));
             FString actor_class_string{};
             class_property->ExportTextItem(actor_class_string, &actor->GetClassPrivate(), nullptr, nullptr, 0);
             actor_buffer.append(fmt::format(STR("{},"), actor_class_string.GetCharArray()));
@@ -146,7 +146,7 @@ namespace RC::GUI::Dumpers
                 actor_buffer.append(STR("("));
                 for (auto [static_mesh_component_ptr, static_mesh_component_index] : static_mesh_components | views::enumerate)
                 {
-                    const auto mesh = *static_mesh_component_ptr->GetValuePtrByPropertyNameInChain<UObject*>((TCHAR*) STR("StaticMesh"));
+                    const auto mesh = *static_mesh_component_ptr->GetValuePtrByPropertyNameInChain<UObject*>(FromCharTypePtr<TCHAR>(STR("StaticMesh")));
                     if (!mesh)
                     {
                         Output::send<LogLevel::Warning>(STR("SKIPPING COMPONENT! StaticMeshComponent '{}' has no mesh.\n"),
@@ -154,7 +154,7 @@ namespace RC::GUI::Dumpers
                         continue;
                     }
 
-                    static auto mesh_property = static_mesh_component_ptr->GetPropertyByNameInChain((TCHAR*) STR("StaticMesh"));
+                    static auto mesh_property = static_mesh_component_ptr->GetPropertyByNameInChain(FromCharTypePtr<TCHAR>(STR("StaticMesh")));
                     FString mesh_string{};
                     mesh_property->ExportTextItem(mesh_string, &mesh, nullptr, nullptr, 0);
                     actor_buffer.append(fmt::format(STR("(StaticMesh={}',"), mesh_string.GetCharArray()));
@@ -186,7 +186,7 @@ namespace RC::GUI::Dumpers
 
                     if (Version::IsAtMost(4, 19))
                     {
-                        const auto materials = *mesh->GetValuePtrByPropertyName<TArray<FStaticMaterial_419AndBelow>>((TCHAR*) STR("StaticMaterials"));
+                        const auto materials = *mesh->GetValuePtrByPropertyName<TArray<FStaticMaterial_419AndBelow>>(FromCharTypePtr<TCHAR>(STR("StaticMaterials")));
                         if (materials.GetData())
                         {
                             actor_buffer.append(STR("Materials=("));
@@ -206,7 +206,7 @@ namespace RC::GUI::Dumpers
                     }
                     else
                     {
-                        const auto& materials = *mesh->GetValuePtrByPropertyName<TArray<FStaticMaterial_420AndAbove>>((TCHAR*) STR("StaticMaterials"));
+                        const auto& materials = *mesh->GetValuePtrByPropertyName<TArray<FStaticMaterial_420AndAbove>>(FromCharTypePtr<TCHAR>(STR("StaticMaterials")));
                         if (materials.GetData())
                         {
                             actor_buffer.append(STR("Materials=("));
@@ -256,7 +256,7 @@ namespace RC::GUI::Dumpers
 
             auto actor = static_cast<AActor*>(object);
 
-            auto root_component = actor->GetValuePtrByPropertyNameInChain<UObject*>((TCHAR*) STR("RootComponent"));
+            auto root_component = actor->GetValuePtrByPropertyNameInChain<UObject*>(FromCharTypePtr<TCHAR>(STR("RootComponent")));
             if (!root_component || !*root_component)
             {
                 return LoopAction::Continue;
@@ -267,7 +267,7 @@ namespace RC::GUI::Dumpers
             actor_json_object.new_string(STR("Name"), fmt::format(STR("Row_{}"), actor_count));
 
             static auto game_mode_base = UObjectGlobals::FindFirstOf(STR("GameModeBase"));
-            static auto class_property = game_mode_base->GetPropertyByNameInChain((TCHAR*) STR("GameStateClass"));
+            static auto class_property = game_mode_base->GetPropertyByNameInChain(FromCharTypePtr<TCHAR>(STR("GameStateClass")));
             FString actor_class_string{};
             class_property->ExportTextItem(actor_class_string, &actor->GetClassPrivate(), nullptr, nullptr, 0);
             actor_json_object.new_string(STR("Actor"), fmt::format(STR("{}"), StringViewType{actor_class_string.GetCharArray()}));
@@ -279,19 +279,19 @@ namespace RC::GUI::Dumpers
             root_component_json_object.new_string(STR("SceneComponentClass"), fmt::format(STR("{}"), StringViewType{root_component_class_string.GetCharArray()}));
 
             auto& location_json_object = root_component_json_object.new_object(STR("Location"));
-            auto location = (*root_component)->GetValuePtrByPropertyNameInChain<FVector>((TCHAR*) STR("RelativeLocation"));
+            auto location = (*root_component)->GetValuePtrByPropertyNameInChain<FVector>(FromCharTypePtr<TCHAR>(STR("RelativeLocation")));
             location_json_object.new_number(STR("X"), location->X());
             location_json_object.new_number(STR("Y"), location->Y());
             location_json_object.new_number(STR("Z"), location->Z());
 
             auto& rotation_json_object = root_component_json_object.new_object(STR("Rotation"));
-            auto rotation = (*root_component)->GetValuePtrByPropertyNameInChain<FRotator>((TCHAR*) STR("RelativeRotation"));
+            auto rotation = (*root_component)->GetValuePtrByPropertyNameInChain<FRotator>(FromCharTypePtr<TCHAR>(STR("RelativeRotation")));
             rotation_json_object.new_number(STR("Pitch"), rotation->GetPitch());
             rotation_json_object.new_number(STR("Yaw"), rotation->GetYaw());
             rotation_json_object.new_number(STR("Roll"), rotation->GetRoll());
 
             auto& scale_json_object = root_component_json_object.new_object(STR("Scale"));
-            auto scale = (*root_component)->GetValuePtrByPropertyNameInChain<FVector>((TCHAR*) STR("RelativeScale3D"));
+            auto scale = (*root_component)->GetValuePtrByPropertyNameInChain<FVector>(FromCharTypePtr<TCHAR>(STR("RelativeScale3D")));
             scale_json_object.new_number(STR("X"), scale->X());
             scale_json_object.new_number(STR("Y"), scale->Y());
             scale_json_object.new_number(STR("Z"), scale->Z());

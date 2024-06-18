@@ -261,7 +261,7 @@ Overloads:
             }
             auto* owner_object = lua.get_userdata<UObject>().get_remote_cpp_object();
 
-            lua_object.get_remote_cpp_object()->ImportText((TCHAR*) buffer.c_str(), data, port_flags, owner_object, nullptr);
+            lua_object.get_remote_cpp_object()->ImportText(FromCharTypePtr<TCHAR>(buffer.c_str()), data, port_flags, owner_object, nullptr);
             return 0;
         });
 
