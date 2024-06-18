@@ -1718,7 +1718,7 @@ namespace RC::GUI
         {
             if (ImGui::IsItemClicked())
             {
-                printf_s("Clicked: %S\n", (wchar_t*) ustruct->GetFullName().c_str());
+                printf_s("Clicked: %S\n", FromCharTypePtr<wchar_t>(ustruct->GetFullName().c_str()));
                 select_object(0, ustruct->GetObjectItem(), ustruct, AffectsHistory::Yes);
             }
         }

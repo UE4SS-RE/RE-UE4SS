@@ -4003,7 +4003,7 @@ namespace RC::UEGenerator
     {
         HMODULE primary_executable_module = GetModuleHandleW(NULL);
         CharType module_name_buffer[1024]{'\0'};
-        GetModuleFileNameW(primary_executable_module, (wchar_t*) module_name_buffer, ARRAYSIZE(module_name_buffer));
+        GetModuleFileNameW(primary_executable_module, FromCharTypePtr<wchar_t>(module_name_buffer), ARRAYSIZE(module_name_buffer));
 
         // Retrieve the filename from the full path, strip down the extension
         FFilePath root_executable_path((StringType(module_name_buffer)));

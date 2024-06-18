@@ -36,7 +36,7 @@ namespace RC {
             const CharType,
             CharType
         >*;
-
+        
         return reinterpret_cast<CharPtrType>(ptr);
     }
     

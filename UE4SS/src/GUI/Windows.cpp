@@ -55,10 +55,10 @@ namespace RC::GUI
         // wc.hbrBackground = NULL;
         s_wc.hbrBackground = CreateSolidBrush(RGB(0, 0, 0));
         s_wc.lpszMenuName = NULL;
-        s_wc.lpszClassName = (wchar_t*) title_bar_text.c_str();
+        s_wc.lpszClassName = FromCharTypePtr<wchar_t>(title_bar_text.c_str());
         s_wc.hIconSm = NULL;
         ::RegisterClassEx(&s_wc);
-        s_hwnd = ::CreateWindow(s_wc.lpszClassName, (wchar_t*) title_bar_text.c_str(), WS_OVERLAPPEDWINDOW, loc_x, loc_y, size_x, size_y, NULL, NULL, s_wc.hInstance, NULL);
+        s_hwnd = ::CreateWindow(s_wc.lpszClassName, FromCharTypePtr<wchar_t>(title_bar_text.c_str()), WS_OVERLAPPEDWINDOW, loc_x, loc_y, size_x, size_y, NULL, NULL, s_wc.hInstance, NULL);
 
         if (!m_gfx_backend->create_device())
         {

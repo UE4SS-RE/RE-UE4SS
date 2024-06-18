@@ -65,7 +65,7 @@ namespace RC::Output
 #if ENABLE_OUTPUT_DEVICE_DEBUG_MODE
             printf_s("TestDevice received: %S", fmt.c_str());
 #else
-            printf_s("%S", (wchar_t*)fmt.data());
+            printf_s("%S", FromCharTypePtr<wchar_t>(fmt.data()));
 #endif
         }
     };

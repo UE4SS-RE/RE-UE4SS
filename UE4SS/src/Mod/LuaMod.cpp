@@ -1811,14 +1811,14 @@ Overloads:
 
             printf_s("Registered Custom Property\n");
             printf_s("PropertyInfo {\n");
-            printf_s("\tName: %S\n", (wchar_t*) property_info.name.c_str());
+            printf_s("\tName: %S\n", FromCharTypePtr<wchar_t>(property_info.name.c_str()));
             printf_s("\tType {\n");
             printf_s("\t\tName: %s\n", property_info.type.name.data());
             printf_s("\t\tSize: 0x%X\n", property_info.type.size);
             printf_s("\t\tFFieldClassPointer: 0x%p\n", property_info.type.ffieldclass_pointer);
             printf_s("\t\tStaticPointer: 0x%p\n", property_info.type.static_pointer);
             printf_s("\t}\n");
-            printf_s("\tBelongsToClass: %S\n", (wchar_t*) property_info.belongs_to_class.c_str());
+            printf_s("\tBelongsToClass: %S\n", FromCharTypePtr<wchar_t>(property_info.belongs_to_class.c_str()));
             printf_s("\tOffsetInternal: 0x%X\n", property_info.offset_internal);
 
             if (property_info.is_array_property)

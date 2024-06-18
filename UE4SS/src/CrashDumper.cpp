@@ -29,12 +29,12 @@ namespace RC
         const auto now = time_point_cast<seconds>(system_clock::now());
         const StringType dump_path = fmt::format(STR("{}\\crash_{:%Y_%m_%d_%H_%M_%S}.dmp"), StringType{UE4SSProgram::get_program().get_working_directory()}, now);
 
-        const HANDLE file = CreateFileW((wchar_t*) dump_path.c_str(), GENERIC_WRITE, FILE_SHARE_WRITE, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
+        const HANDLE file = CreateFileW(FromCharTypePtr<wchar_t>(dump_path.c_str()), GENERIC_WRITE, FILE_SHARE_WRITE, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
 
         if (file == INVALID_HANDLE_VALUE)
         {
             const StringType message = fmt::format(STR("Failed to create crashdump file, reason: {:x}"), GetLastError());
-            MessageBoxW(NULL, (wchar_t*) message.c_str(), L"Fatal Error!", MB_OK);
+            MessageBoxW(NULL, FromCharTypePtr<wchar_t>(message.c_str()), L"Fatal Error!", MB_OK);
             return EXCEPTION_CONTINUE_SEARCH;
         }
 
@@ -56,12 +56,12 @@ namespace RC
         if (!ok)
         {
             const StringType message = fmt::format(STR("Failed to write crashdump file, reason: {:x}"), GetLastError());
-            MessageBoxW(NULL, (wchar_t*) message.c_str(), L"Fatal Error!", MB_OK);
+            MessageBoxW(NULL, FromCharTypePtr<wchar_t>(message.c_str()), L"Fatal Error!", MB_OK);
             return EXCEPTION_CONTINUE_SEARCH;
         }
 
         const StringType message = fmt::format(STR("Crashdump written to: {}"), dump_path);
-        MessageBoxW(NULL, (wchar_t*) message.c_str(), L"Fatal Error!", MB_OK);
+        MessageBoxW(NULL, FromCharTypePtr<wchar_t>(message.c_str()), L"Fatal Error!", MB_OK);
 
         return EXCEPTION_EXECUTE_HANDLER;
     }

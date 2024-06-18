@@ -383,14 +383,14 @@ namespace RC::File
 
     auto WinFile::write_string_to_file(StringViewType string_to_write) -> void
     {
-        int string_size = WideCharToMultiByte(CP_UTF8, 0, (wchar_t*) string_to_write.data(), static_cast<int>(string_to_write.size()), NULL, 0, NULL, NULL);
+        int string_size = WideCharToMultiByte(CP_UTF8, 0, FromCharTypePtr<wchar_t>(string_to_write.data()), static_cast<int>(string_to_write.size()), NULL, 0, NULL, NULL);
         if (string_size == 0)
         {
             THROW_INTERNAL_FILE_ERROR(fmt::format("[WinFile::write_string_to_file] Tried writing string to file but string_size was 0. Error: {}", GetLastError()))
         }
 
         std::string string_converted_to_utf8(string_size, 0);
-        if (WideCharToMultiByte(CP_UTF8, 0, (wchar_t*) string_to_write.data(), static_cast<int>(string_to_write.size()), &string_converted_to_utf8[0], string_size, NULL, NULL) ==
+        if (WideCharToMultiByte(CP_UTF8, 0, FromCharTypePtr<wchar_t>(string_to_write.data()), static_cast<int>(string_to_write.size()), &string_converted_to_utf8[0], string_size, NULL, NULL) ==
             0)
         {
             THROW_INTERNAL_FILE_ERROR(
