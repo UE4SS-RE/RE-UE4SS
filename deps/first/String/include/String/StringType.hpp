@@ -1,6 +1,7 @@
 #pragma once
 
 #include <string>
+#include <type_traits>
 
 // We will use this once we solve the circular dependency issue
 //#include <Unreal/Core/HAL/Platform.hpp>
@@ -24,4 +25,30 @@ namespace RC {
     using StringViewType = std::basic_string_view<CharType>;
     using StreamIType = std::basic_ifstream<CharType>;
     using StreamOType = std::basic_ofstream<CharType>;
+
+    // convert a T* pointer to a CharType* pointer and keep the alignment and constness if the size of the types is the same
+    template<class T>
+    auto static ToCharTypePtr(T* ptr) {
+        static_assert(sizeof(T) == sizeof(CharType), "Sizes of T and CharType must be the same");
+
+        using CharPtrType = std::conditional_t<
+            std::is_const_v<T>,
+            const CharType,
+            CharType
+        >*;
+
+        return reinterpret_cast<CharPtrType>(ptr);
+    }
+    
+    template<class T, class CharT>
+    auto static FromCharTypePtr(CharT* ptr) {
+        static_assert(sizeof(T) == sizeof(CharType), "Sizes of T and CharType must be the same");
+        static_assert(std::is_same_v<std::decay_t<CharT>, CharType>, "Must be a CharType");
+        using TargetPtrType = std::conditional_t<
+            std::is_const_v<CharT>,
+            const T,
+            T
+        >*;
+        return reinterpret_cast<TargetPtrType>(ptr);
+    }
 } // namespace RC
