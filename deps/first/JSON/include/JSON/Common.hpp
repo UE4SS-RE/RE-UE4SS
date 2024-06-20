@@ -16,6 +16,8 @@
 #endif
 #endif
 
+#define JSON_DEPRECATED [[deprecated("JSON Module deprecated and may be removed in next release.  Please migrate to Glz.")]]
+
 #include <cstdint>
 
 #include <File/File.hpp>

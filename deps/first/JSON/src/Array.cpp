@@ -16,7 +16,7 @@ namespace RC::JSON
         return static_cast<Array&>(*m_members.emplace_back(std::make_unique<Array>()));
     }
 
-    auto Array::new_string(const StringType& value) -> void
+    JSON_DEPRECATED auto Array::new_string(const StringType& value) -> void
     {
         m_members.emplace_back(std::make_unique<String>(value));
     }

@@ -4,6 +4,10 @@ on: workflow_dispatch
 permissions:
   contents: read
 
+concurrency:
+  group: stable-release
+  cancel-in-progress: true
+
 jobs:
   make-release:
     permissions: write-all
@@ -20,7 +24,7 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v4
         with:
-          python-version: '3.x'
+          python-version: '3.9'
 
       - name: Setup MSVC
         uses: ilammy/msvc-dev-cmd@v1
@@ -28,11 +32,11 @@ jobs:
       - name: Setup xmake
         uses: xmake-io/github-action-setup-xmake@v1
         with:
-          xmake-version: latest
+          xmake-version: branch@dev
 
       - name: Release Commit
         id: release_commit
-        run: python build.py release_commit ${{ github.actor }}
+        run: python release.py release_commit ${{ github.actor }}
         working-directory: ./tools/buildscripts
 
       - name: Cache
@@ -51,7 +55,8 @@ jobs:
           xmake build
 
       - name: Package
-        run: python tools/buildscripts/build.py package
+        id: package
+        run: python tools/buildscripts/release.py package
 
       - name: Push changes
         uses: ad-m/github-push-action@master

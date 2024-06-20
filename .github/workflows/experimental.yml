@@ -15,6 +15,10 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: experimental-release
+  cancel-in-progress: true
+
 jobs:
   make-release:
     permissions: write-all
@@ -31,7 +35,7 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v4
         with:
-          python-version: '3.x'
+          python-version: '3.9'
 
       - name: Setup MSVC
         uses: ilammy/msvc-dev-cmd@v1
@@ -39,7 +43,7 @@ jobs:
       - name: Setup xmake
         uses: xmake-io/github-action-setup-xmake@v1
         with:
-          xmake-version: latest
+          xmake-version: branch@dev
 
       - name: Cache
         uses: actions/cache@v4
@@ -57,7 +61,7 @@ jobs:
           xmake build
 
       - name: Package
-        run: python tools/buildscripts/build.py package -e
+        run: python tools/buildscripts/release.py package -e
 
       - name: Release
         uses: softprops/action-gh-release@v1

@@ -1,0 +1,42 @@
+[
+    {
+        "mod_name": "CheatManagerEnablerMod",
+        "mod_enabled": true
+    },
+    {
+        "mod_name": "ActorDumperMod",
+        "mod_enabled": false
+    },
+    {
+        "mod_name": "ConsoleCommandsMod",
+        "mod_enabled": true
+    },
+    {
+        "mod_name": "ConsoleEnablerMod",
+        "mod_enabled": true
+    },
+    {
+        "mod_name": "SplitScreenMod",
+        "mod_enabled": false
+    },
+    {
+        "mod_name": "LineTraceMod",
+        "mod_enabled": true
+    },
+    {
+        "mod_name": "BPML_GenericFunctions",
+        "mod_enabled": true
+    },
+    {
+        "mod_name": "BPModLoaderMod",
+        "mod_enabled": true
+    },
+    {
+        "mod_name": "jsbLuaProfilerMod",
+        "mod_enabled": false
+    },
+    {
+        "mod_name": "Keybinds",
+        "mod_enabled": true
+    }
+]
