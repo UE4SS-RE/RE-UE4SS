@@ -2522,7 +2522,7 @@ namespace RC::GUI
                     unsigned char** value = rowmap.Find(FName(row_name));
 
                     // NOTE: Explicitly giving specifying template params for TPair because Clang can't handle TPair being a templated using statement.
-                    udatatatble->AddRow(new_key, (FTableRowBase&)value);
+                    udatatatble->AddRow(new_key, (FTableRowBase&)**value);
 
                     TArray<FName> OutRowNames{};
                     udatatatble->GetAllRowNames(OutRowNames);
