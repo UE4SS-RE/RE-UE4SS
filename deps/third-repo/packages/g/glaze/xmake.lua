@@ -1,7 +1,7 @@
 package("glaze")
     set_urls("https://github.com/stephenberry/glaze.git")
 
-    add_versions("v1.5.5", "48051b9964d052c3dec4c88c6e51c948ef592f3b")
+    add_versions("v2.9.0", "53b69c447f98b89f656c0e6bda19833d682bb44b")
 
     add_deps("cmake")
 
