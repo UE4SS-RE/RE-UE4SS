@@ -50,12 +50,17 @@
 #include <Unreal/UnrealFlags.hpp>
 #pragma warning(default : 4005)
 
+#include <fmt/core.h>
+#include <fmt/xchar.h>
+
 namespace RC::UEGenerator
 {
     using namespace RC::Unreal;
 
     std::map<File::StringType, UniqueName> UEHeaderGenerator::m_used_file_names{};
     std::map<UObject*, int32_t> UEHeaderGenerator::m_dependency_object_to_unique_id{};
+
+    #define ToStringFmt(numeric_value) fmt::format(STR("{}"), numeric_value)
 
     auto static is_subtype_struct_valid(UScriptStruct* subtype) -> bool
     {
@@ -939,7 +944,7 @@ namespace RC::UEGenerator
         if (property->GetArrayDim() != 1)
         {
             property_extra_declaration.append(STR("["));
-            property_extra_declaration.append(std::to_wstring(property->GetArrayDim()));
+            property_extra_declaration.append(ToStringFmt(property->GetArrayDim()));
             property_extra_declaration.append(STR("]"));
         }
         else if (is_bitmask_bool)
@@ -1160,7 +1165,7 @@ namespace RC::UEGenerator
             }
             else
             {
-                result_property_value = std::to_wstring(*byte_property_value);
+                result_property_value = ToStringFmt(*byte_property_value);
             }
 
             if (!super_and_no_access)
@@ -1733,7 +1738,7 @@ namespace RC::UEGenerator
             if (!numeric_property->IsFloatingPoint())
             {
                 int64 value = numeric_property->GetSignedIntPropertyValue(numeric_property->ContainerPtrToValuePtr<int64>(object));
-                number_constant_string = std::to_wstring(value);
+                number_constant_string = ToStringFmt(value);
             }
             else
             {
