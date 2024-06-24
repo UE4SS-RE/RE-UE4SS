@@ -4,13 +4,10 @@
 #include <ParserBase/Token.hpp>
 #include <ParserBase/Tokenizer.hpp>
 
+#include <Helpers/String.hpp>
+
 namespace RC::Parser
 {
-    static auto to_string(std::wstring in) -> std::string
-    {
-        return std::string{in.begin(), in.end()};
-    }
-
     static auto has_only_spaces(const File::StringType& data) -> bool
     {
         if (std::all_of(data.begin(), data.end(), [](File::CharType c) {

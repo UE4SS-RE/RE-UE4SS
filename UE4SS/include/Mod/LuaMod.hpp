@@ -6,11 +6,14 @@
 #include <thread>
 #include <unordered_map>
 #include <unordered_set>
+#include <filesystem>
 
 #include <Common.hpp>
 #include <File/File.hpp>
 #include <LuaMadeSimple/LuaMadeSimple.hpp>
 #include <Mod/Mod.hpp>
+
+#include <String/StringType.hpp>
 
 namespace RC
 {
@@ -26,7 +29,7 @@ namespace RC
     class LuaMod : public Mod
     {
       private:
-        std::wstring m_scripts_path;
+        std::filesystem::path m_scripts_path;
         LuaMadeSimple::Lua& m_lua;
 
       public:
@@ -124,7 +127,7 @@ namespace RC
         std::mutex m_actions_lock{};
 
       public:
-        LuaMod(UE4SSProgram&, std::wstring&& mod_name, std::wstring&& mod_path);
+        LuaMod(UE4SSProgram&, StringType&& mod_name, StringType&& mod_path);
         ~LuaMod() override = default;
 
       private:

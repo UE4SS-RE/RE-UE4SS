@@ -10,6 +10,7 @@
 #include <tuple>
 #include <typeinfo>
 #include <vector>
+#include <fmt/core.h>
 #include <fmt/xchar.h>
 #include <fmt/chrono.h>
 #include <DynamicOutput/Common.hpp>
@@ -20,7 +21,7 @@
 #if RC_IS_ANSI == 1
 #define RC_STD_MAKE_FORMAT_ARGS fmt::make_format_args
 #else
-#define RC_STD_MAKE_FORMAT_ARGS fmt::make_wformat_args
+#define RC_STD_MAKE_FORMAT_ARGS fmt::make_format_args<fmt::buffer_context<CharType>>
 #endif
 
 namespace RC::Output
@@ -123,11 +124,11 @@ namespace RC::Output
 
                 if (device->has_optional_arg())
                 {
-                    device->receive_with_optional_arg(fmt::vformat(content), RC_STD_MAKE_FORMAT_ARGS(static_cast<int32_t>(optional_arg)));
+                    device->receive_with_optional_arg(content, static_cast<int32_t>(optional_arg));
                 }
                 else
                 {
-                    device->receive(fmt::vformat(content));
+                    device->receive(content);
                 }
             }
         }

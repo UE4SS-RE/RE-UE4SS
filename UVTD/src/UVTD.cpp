@@ -22,10 +22,12 @@
 #include <Windows.h>
 #include <dbghelp.h>
 
+#include <String/StringType.hpp>
+
 namespace RC::UVTD
 {
     bool processing_events{false};
-    Input::Handler input_handler{L"ConsoleWindowClass", L"UnrealWindow"};
+    Input::Handler input_handler{STR("ConsoleWindowClass"), STR("UnrealWindow")};
 
     auto static event_loop_update() -> void
     {

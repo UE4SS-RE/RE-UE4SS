@@ -25,8 +25,10 @@ namespace RC
         UE4SSProgram& m_program;
 
       protected:
-        std::wstring m_mod_name;
-        std::wstring m_mod_path;
+#pragma warning(disable : 4251)
+        StringType m_mod_name;
+        std::filesystem::path m_mod_path;
+#pragma warning(default : 4251)
 
       protected:
         // Whether the mod can be installed
@@ -43,11 +45,11 @@ namespace RC
         };
 
       public:
-        Mod(UE4SSProgram&, std::wstring&& mod_name, std::wstring&& mod_path);
+        Mod(UE4SSProgram&, StringType&& mod_name, std::filesystem::path&& mod_path);
         virtual ~Mod() = default;
 
       public:
-        auto get_name() const -> std::wstring_view;
+        auto get_name() const -> StringViewType;
 
         virtual auto start_mod() -> void = 0;
         virtual auto uninstall() -> void = 0;
