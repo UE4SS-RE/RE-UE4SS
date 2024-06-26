@@ -6,6 +6,8 @@
 #include <Helpers/String.hpp>
 #include <Mod/CppMod.hpp>
 
+#include <Windows.h>
+
 namespace RC
 {
     CppMod::CppMod(UE4SSProgram& program, std::wstring&& mod_name, std::wstring&& mod_path) : Mod(program, std::move(mod_name), std::move(mod_path))
