@@ -9,6 +9,8 @@
 #include <Unreal/FOutputDevice.hpp>
 #include <Unreal/UnrealInitializer.hpp>
 
+#include <Windows.h>
+
 namespace RC::LuaLibrary
 {
     auto get_outputdevice_ref(const LuaMadeSimple::Lua& lua) -> const Unreal::FOutputDevice*
