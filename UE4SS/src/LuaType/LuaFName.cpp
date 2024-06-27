@@ -64,7 +64,7 @@ Overloads:
             Unreal::EFindName find_type{Unreal::EFindName::FNAME_Add};
             if (lua.is_string())
             {
-                name_string = to_wstring(lua.get_string());
+                name_string = to_ue(lua.get_string());
             }
             else if (lua.is_integer())
             {

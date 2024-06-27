@@ -191,7 +191,7 @@ type_to_string(get_type()), type_to_string(JSONElementType::static_type()))};
         auto get(StringViewType key) const -> ValueType&
         {
             auto value = find_value_by_key(key);
-            if (!value) { throw std::runtime_error{to_string(std::format(STR("No key in JSON object with name {}"), key))}; }
+            if (!value) { throw std::runtime_error{to_string(fmt::format(STR("No key in JSON object with name {}"), key))}; }
             return *static_cast<ValueType*>(value);
         }
 
@@ -199,7 +199,7 @@ type_to_string(get_type()), type_to_string(JSONElementType::static_type()))};
         auto get(StringViewType key) -> ValueType&
         {
             auto value = find_value_by_key(key);
-            if (!value) { throw std::runtime_error{to_string(std::format(STR("No key in JSON object with name {}"), key))}; }
+            if (!value) { throw std::runtime_error{to_string(fmt::format(STR("No key in JSON object with name {}"), key))}; }
             return *static_cast<ValueType*>(value);
         }
     };

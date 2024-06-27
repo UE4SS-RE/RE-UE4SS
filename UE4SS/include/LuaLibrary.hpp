@@ -3,6 +3,8 @@
 #include <Common.hpp>
 #include <cstdint>
 
+#include <String/StringType.hpp>
+
 #define DefaultStructMemberData(member_name)                                                                                                                   \
     union {                                                                                                                                                    \
         const char* as_string{};                                                                                                                               \

@@ -4,6 +4,8 @@
 #include <string>
 #include <vector>
 
+#include <String/StringType.hpp>
+
 namespace RC::Unreal
 {
     class UObject;
@@ -17,11 +19,11 @@ namespace RC::LuaType
     class LuaCustomProperty
     {
       public:
-        std::wstring m_name{};
+        StringType m_name{};
         std::unique_ptr<Unreal::CustomProperty> m_property;
 
       public:
-        LuaCustomProperty(std::wstring name, std::unique_ptr<Unreal::CustomProperty> property);
+        LuaCustomProperty(StringType name, std::unique_ptr<Unreal::CustomProperty> property);
 
       private:
         class PropertyList
@@ -30,9 +32,9 @@ namespace RC::LuaType
             std::vector<LuaCustomProperty> properties;
 
           public:
-            auto add(std::wstring property_name, std::unique_ptr<Unreal::CustomProperty>) -> void;
+            auto add(StringType property_name, std::unique_ptr<Unreal::CustomProperty>) -> void;
             auto clear() -> void;
-            auto find_or_nullptr(Unreal::UObject* base, std::wstring property_name) -> Unreal::FProperty*;
+            auto find_or_nullptr(Unreal::UObject* base, StringType property_name) -> Unreal::FProperty*;
         };
 
       public:

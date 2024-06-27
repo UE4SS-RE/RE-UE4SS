@@ -8,6 +8,8 @@
 #include <Mod/CppUserModBase.hpp>
 #include <Mod/Mod.hpp>
 
+#include <String/StringType.hpp>
+
 namespace RC
 {
     namespace LuaMadeSimple
@@ -22,7 +24,7 @@ namespace RC
         typedef void (*uninstall_type)(CppUserModBase*);
 
       private:
-        std::wstring m_dlls_path;
+        std::filesystem::path m_dlls_path;
 
         HMODULE m_main_dll_module = NULL;
         DLL_DIRECTORY_COOKIE m_dlls_path_cookie = NULL;
@@ -32,7 +34,7 @@ namespace RC
         CppUserModBase* m_mod = nullptr;
 
       public:
-        CppMod(UE4SSProgram&, std::wstring&& mod_name, std::wstring&& mod_path);
+        CppMod(UE4SSProgram&, StringType&& mod_name, StringType&& mod_path);
         CppMod(CppMod&) = delete;
         CppMod(CppMod&&) = delete;
         ~CppMod() override;
@@ -63,6 +65,6 @@ namespace RC
         auto fire_ui_init() -> void override;
         auto fire_program_start() -> void override;
         auto fire_update() -> void override;
-        auto fire_dll_load(std::wstring_view dll_name) -> void;
+        auto fire_dll_load(StringViewType dll_name) -> void;
     };
 } // namespace RC

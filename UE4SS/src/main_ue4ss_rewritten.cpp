@@ -29,7 +29,7 @@ auto thread_dll_start(UE4SSProgram* program) -> unsigned long
         // Logging will only happen to the debug console but it's something at least
         if (!Output::has_internal_error())
         {
-            Output::send<LogLevel::Error>(STR("Fatal Error: {}\n"), to_wstring(e->get_message()));
+            Output::send<LogLevel::Error>(STR("Fatal Error: {}\n"), to_ue(e->get_message()));
         }
         else
         {

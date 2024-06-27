@@ -8,6 +8,8 @@
 #include "Section.hpp"
 #include "Tokens.hpp"
 
+#include <String/StringType.hpp>
+
 namespace RC::Ini
 {
     class Value;

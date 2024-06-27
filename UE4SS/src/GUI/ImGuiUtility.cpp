@@ -98,9 +98,9 @@ namespace RC::GUI
     static auto dump_json_integer_value(const JSON::Number& element) -> void;
 
     static int indent_level{};
-    static auto indent() -> std::wstring
+    static auto indent() -> StringType
     {
-        std::wstring indents{};
+        StringType indents{};
         for (int i = 0; i < indent_level; ++i)
         {
             indents.append(STR("    "));
