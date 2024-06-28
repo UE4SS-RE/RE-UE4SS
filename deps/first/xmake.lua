@@ -17,6 +17,7 @@ includes("Profiler")
 includes("ScopedTimer")
 includes("SinglePassSigScanner")
 includes("Unreal")
+includes("String")
 
 if is_config("patternsleuth", "local") then 
     -- The patternsleuth target is managed by the cargo.build rule.

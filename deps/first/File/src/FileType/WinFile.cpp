@@ -455,7 +455,7 @@ namespace RC::File
 
     auto WinFile::read_all() const -> StringType
     {
-        StreamType stream{get_file_path(), std::ios::in | std::ios::binary};
+        StreamIType stream{get_file_path(), std::ios::in | std::ios::binary};
         if (!stream)
         {
             THROW_INTERNAL_FILE_ERROR(fmt::format("[WinFile::read_all] Tried to read entire file but returned error {}", errno))
@@ -463,7 +463,7 @@ namespace RC::File
         else
         {
             // Strip the BOM if it exists
-            File::StreamType::off_type start{};
+            File::StreamIType::off_type start{};
             File::CharType bom[3]{};
             stream.read(bom, 3);
             if (bom[0] == 0xEF && bom[1] == 0xBB && bom[2] == 0xBF)
