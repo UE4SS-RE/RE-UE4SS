@@ -3,12 +3,6 @@
 #include <bit>
 #include <cstdint>
 
-#ifdef _WIN32
-#define WINDOWS
-#define NOMINMAX
-#include "Windows.h"
-#endif
-
 namespace RC::Helper::Casting
 {
     template <typename To, typename From>
@@ -35,12 +29,13 @@ namespace RC::Helper::Casting
         return ptr_cast_deref<To>(ptr, offset);
     }
 
-#ifdef WINDOWS
+    auto check_readable(void* handle, void* src_ptr) -> bool;
+
     // Adds an offset to a "pointer", checks if it's pointing to valid memory and then dereferences it
     // Returns 0 if the "pointer" is not pointing to valid memory
     // TODO: Figure out some way to deal with the process_handle param... it's annoying to provide it for every call
-    template <typename To, typename From>
-    auto ptr_cast_deref_safe(From ptr, int32_t offset, HANDLE process_handle) -> To
+    template <typename To, typename From, typename Handle>
+    auto ptr_cast_deref_safe(From ptr, int32_t offset, Handle handle) -> To
     {
         static_assert(std::is_pointer_v<From>, "ptr_cast_deref_safe can only cast from pointer types");
 
@@ -48,10 +43,7 @@ namespace RC::Helper::Casting
         // Therefore: To* == UObject**
         To* data_ptr = std::bit_cast<To*>(std::bit_cast<char*>(ptr) + offset);
 
-        size_t bytes_read;
-        uintptr_t is_valid_ptr_buffer;
-
-        if (!ReadProcessMemory(process_handle, data_ptr, &is_valid_ptr_buffer, 0x8, &bytes_read))
+        if (!check_readable(reinterpret_cast<void*>(&handle), data_ptr))
         {
             return 0;
         }
@@ -62,10 +54,9 @@ namespace RC::Helper::Casting
     }
 
     // Compatibility with older code from before 'ptr_cast' existed
-    template <typename To, typename From>
-    static auto offset_deref_safe(From* base_ptr, int32_t offset, HANDLE process_handle) -> To
+    template <typename To, typename From, typename Handle>
+    static auto offset_deref_safe(From* base_ptr, int32_t offset, Handle handle) -> To
     {
-        return ptr_cast_deref_safe<To>(base_ptr, offset, process_handle);
+        return ptr_cast_deref_safe<To>(base_ptr, offset, handle);
     }
-#endif
 } // namespace RC::Helper::Casting

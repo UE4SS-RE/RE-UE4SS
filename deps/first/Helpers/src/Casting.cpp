@@ -10,9 +10,12 @@ namespace RC::Helper::Casting
 {
 
 #ifdef WINDOWS
-    auto read_process_memory(void* process_handle, void* base_address, void* buffer, size_t size, size_t* number_of_bytes_read) -> bool
+    auto check_readable(void* handle, void* src_ptr) -> bool
     {
-        return ReadProcessMemory(process_handle, base_address, buffer, size, number_of_bytes_read);
+        uintptr_t is_valid_ptr_buffer;
+        size_t bytes_read;
+
+        return ReadProcessMemory(*reinterpret_cast<HANDLE*>(handle), src_ptr, &is_valid_ptr_buffer, 0x8, &bytes_read) != 0;
     }
 #endif
 

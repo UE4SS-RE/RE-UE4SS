@@ -2,8 +2,7 @@
 
 #include <vector>
 
-#define NOMINMAX
-#include <Windows.h>
+#include <Unreal/Core/Windows/MinimalWindowsApi.hpp>
 
 #include <Mod/CppUserModBase.hpp>
 #include <Mod/Mod.hpp>
@@ -24,8 +23,8 @@ namespace RC
       private:
         std::wstring m_dlls_path;
 
-        HMODULE m_main_dll_module = NULL;
-        DLL_DIRECTORY_COOKIE m_dlls_path_cookie = NULL;
+        Unreal::Windows::HMODULE m_main_dll_module = NULL;
+        void* m_dlls_path_cookie = NULL;
         start_type m_start_mod_func = nullptr;
         uninstall_type m_uninstall_mod_func = nullptr;
 
