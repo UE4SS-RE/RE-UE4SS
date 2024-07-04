@@ -1,0 +1,126 @@
+name: "Build UE4SS"
+permissions:
+  contents: read
+on:
+  workflow_call:
+    inputs:
+      build-mode:
+        description: 'Which UE4SS Mode to build. This is passed to xmake config -m <build-mode>'
+        type: string
+        required: true
+      commit-sha:
+        description: 'Commit to build'
+        type: string
+        required: true
+      should-upload-artifact:
+        description: 'Should build output be uploaded as an artifact?'
+        type: boolean
+        default: false
+      artifact-list:
+        description: 'Artifaction'
+        type: string
+        default: '{"UE4SS": ["target", "symbol"]}'
+      artifact-retention-days:
+        description: 'How many days to retain artifacts'
+        type: number
+        default: 7
+  
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+        # Store the current week (00-53) to use as part of the xmake cache key.
+        # This saves us from having to detect older caches and delete them.
+      - name: Get current week as package key
+        id: cache_key
+        run: echo "key=$(date +'%W')" >> $GITHUB_OUTPUT
+        shell: bash
+      # Force xmake to a specific folder (for cache)
+      - name: Set xmake env
+        run: echo "XMAKE_GLOBALDIR=${{ runner.tool_cache }}/xmake-global" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+        shell: powershell
+
+      - name: Install VS2022 BuildTools 17.9.7
+        run: choco install -y visualstudio2022buildtools --version=117.9.7.0 --params "--add Microsoft.VisualStudio.Component.VC.Tools.x86.x64 --installChannelUri https://aka.ms/vs/17/release/180911598_-255012421/channel"
+        shell: powershell
+
+      - name: Setup xmake
+        uses: xmake-io/github-action-setup-xmake@v1
+        with:
+          xmake-version: '2.9.2'
+
+      - name: Update xmake repository
+        run: xmake repo --update
+        shell: powershell
+      
+      # Fetch xmake dephash
+      - name: Retrieve dependencies hash
+        id: dep_hash
+        run: echo "hash=$(xmake l utils.ci.packageskey)" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
+        shell: powershell
+
+      # Cache xmake dependencies
+      - name: Restore cached xmake dependencies
+        id: restore-depcache
+        uses: actions/cache/restore@v4
+        with:
+          path: ${{ env.XMAKE_GLOBALDIR }}/.xmake/packages
+          # Example key: MSVC-Game__Shipping__Win64-42d5ac22284a460e96b6cab018d6b7b5-W23
+          key: MSVC-${{ inputs.build-mode }}-${{ steps.dep_hash.outputs.hash }}-W${{ steps.cache_key.outputs.key }}
+
+      # Setup compilation mode and install project dependencies 
+      - name: Configure xmake and install dependencies
+        run: |
+          Import-Module 'C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\Common7\Tools\Microsoft.VisualStudio.DevShell.dll'
+          Enter-VsDevShell -VsInstallPath 'C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools' -DevCmdArguments '-arch=x64 -host_arch=x64'
+
+          xmake config -vD -m "${{inputs.build-mode}}" -y
+        shell: powershell
+
+      - name: Save cached xmake dependencies
+        if: ${{ !steps.restore-depcache.outputs.cache-hit }}
+        uses: actions/cache/save@v4
+        with:
+          path: ${{ env.XMAKE_GLOBALDIR }}/.xmake/packages
+          key: ${{ steps.restore-depcache.outputs.cache-primary-key }}
+
+      - name: Build
+        id: build
+        shell: powershell
+        run: >
+          xmake build -y
+
+      - name: Calculate Files For Artifact Inclusion
+        id: calc-files-artifact
+        shell: powershell
+        run: >
+          $targets = ((xmake ci --dump=targets) | ConvertFrom-Json -AsHashtable)
+
+          $artifacts = (${{inputs.artifact-list}} | ConvertFrom-Json -AsHashtable)
+
+          $files_to_upload = @()
+
+          foreach($i in $artifacts) {
+            foreach($kvp in $i.GetEnumerator()) {
+              $files_to_upload += ($targets[$kvp.Name][$kvp.Value])
+            }
+          }
+
+          $artifact_dir = "${{runner.temp}}/ue4ss_artifacts/"
+
+          foreach ($file in $files_to_upload) {
+            Copy-Item "$file" -Destination "$artifact_dir"
+          }
+          
+          echo "artifact_dir=$artifact_dir" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
+
+      - name: Upload a Build Artifact
+        id: upload-artifact
+        uses: actions/upload-artifact@v4.3.3
+        if: ${{inputs.should-upload-artifact == true}}
+        with:
+          name: MSVC-${{inputs.build-mode}}
+          path: |
+                ${{ steps.calc-files-artifact.outputs.artifact_dir }}
+          retention-days: ${{fromJSON(inputs.artifact-retention-days)}}
+          overwrite: false
