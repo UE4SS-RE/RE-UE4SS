@@ -1,5 +1,8 @@
 #include <JSON/Number.hpp>
 
+#include <fmt/core.h>
+#include <fmt/xchar.h>
+
 namespace RC::JSON
 {
     Number::Number(uint32_t value)
@@ -46,6 +49,8 @@ namespace RC::JSON
     {
         (void)should_format;
         (void)indent_level;
+
+        #define ToString(numeric_value) fmt::format(STR("{}"), numeric_value)
 
         switch (m_stored_type)
         {
