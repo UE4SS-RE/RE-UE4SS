@@ -55,7 +55,7 @@ If you are planning on doing mod development using UE4SS, you can do the same as
   - Visual Studio 2019 (recent versions), and Visual Studio 2022 will work.
   - More compilers will hopefully be supported in the future.
 - Rust toolchain 1.73.0 or greater
-- [xmake >= 2.9.2](https://xmake.io/#/)
+- [xmake >= 2.9.3](https://xmake.io/#/)
 
 ## Build instructions
 
