@@ -43,7 +43,7 @@ jobs:
       - name: Setup xmake
         uses: xmake-io/github-action-setup-xmake@v1
         with:
-          xmake-version: branch@dev
+          xmake-version: '2.9.3'
 
       - name: Cache
         uses: actions/cache@v4

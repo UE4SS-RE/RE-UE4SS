@@ -1,4 +1,4 @@
-set_xmakever("2.9.2")
+set_xmakever("2.9.3")
 -- We should use `get_config("ue4ssRoot")` instead of `os.projectdir()` or `$(projectdir)`.
 -- This is because os.projectdir() will return a higher parent dir
 -- when UE4SS is sub-moduled/`include("UE4SS")` in another xmake project.
