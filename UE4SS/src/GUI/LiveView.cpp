@@ -1577,7 +1577,7 @@ namespace RC::GUI
             }
             else
             {
-                Output::send(STR("Search for: {}\n"), search_buffer.empty() ? STR("") : to_ue(search_buffer));
+                Output::send(STR("Search for: {}\n"), search_buffer.empty() ? STR("") : ensure_str(search_buffer));
                 s_name_to_search_by = search_buffer;
                 m_object_iterator = &LiveView::guobjectarray_by_name_iterator;
                 m_is_searching_by_name = true;
@@ -2010,7 +2010,7 @@ namespace RC::GUI
             if (ImGui::Button("Apply"))
             {
                 FOutputDevice placeholder_device{};
-                if (!property->ImportText(FromCharTypePtr<TCHAR>(to_ue(m_current_property_value_buffer).c_str()), property->ContainerPtrToValuePtr<void>(container), NULL, obj, &placeholder_device))
+                if (!property->ImportText(FromCharTypePtr<TCHAR>(ensure_str(m_current_property_value_buffer).c_str()), property->ContainerPtrToValuePtr<void>(container), NULL, obj, &placeholder_device))
                 {
                     m_modal_edit_property_value_error_unable_to_edit = true;
                     ImGui::OpenPopup("UnableToSetNewPropertyValueError");
@@ -2178,7 +2178,7 @@ namespace RC::GUI
                 if (ImGui::Button("Apply"))
                 {
                     FOutputDevice placeholder_device{};
-                    auto new_name = to_ue(m_current_property_value_buffer);
+                    auto new_name = ensure_str(m_current_property_value_buffer);
                     FName new_key = FName(new_name, FNAME_Add);
                     uenum->EditNameAt(index, new_key);
                     if (uenum->GetEnumNames()[index].Key.ToString() != new_name)
@@ -2262,7 +2262,7 @@ namespace RC::GUI
                 if (ImGui::Button("Apply"))
                 {
                     FOutputDevice placeholder_device{};
-                    auto new_name = to_ue(m_current_property_value_buffer);
+                    auto new_name = ensure_str(m_current_property_value_buffer);
                     FName new_key = FName(new_name, FNAME_Add);
                     int64 value = names[index].Value;
 
@@ -3201,7 +3201,7 @@ namespace RC::GUI
                         while (std::getline(ss, class_name, ','))
                         {
                             std::erase_if(class_name, isspace);
-                            Filter::ClassNamesFilter::list_class_names.emplace_back(to_ue(class_name));
+                            Filter::ClassNamesFilter::list_class_names.emplace_back(ensure_str(class_name));
                         }
                     }
                 }
@@ -3218,7 +3218,7 @@ namespace RC::GUI
                         while (std::getline(ss, class_name, ','))
                         {
                             std::erase_if(class_name, isspace);
-                            Filter::ClassNamesFilter::list_class_names.emplace_back(to_ue(class_name));
+                            Filter::ClassNamesFilter::list_class_names.emplace_back(ensure_str(class_name));
                         }
                     }
                 }
@@ -3239,7 +3239,7 @@ namespace RC::GUI
                         while (std::getline(ss, property_name, ','))
                         {
                             std::erase_if(property_name, isspace);
-                            Filter::HasProperty::list_properties.emplace_back(to_ue(property_name));
+                            Filter::HasProperty::list_properties.emplace_back(ensure_str(property_name));
                         }
                     }
                 }
@@ -3262,7 +3262,7 @@ namespace RC::GUI
                             std::erase_if(property_type_name, isspace);
                             if (!property_type_name.empty())
                             {
-                                Filter::HasPropertyType::list_property_types.emplace_back(FName(to_ue(property_type_name), FNAME_Add));
+                                Filter::HasPropertyType::list_property_types.emplace_back(FName(ensure_str(property_type_name), FNAME_Add));
                             }
                         }
                     }

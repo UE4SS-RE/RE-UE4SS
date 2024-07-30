@@ -93,7 +93,7 @@ namespace RC::GUI::KismetDebuggerMod
 
         for (const auto& [fn, bps] : breakpoints)
         {
-            auto wfn = to_ue(fn);
+            auto wfn = ensure_str(fn);
             for (const auto& bp : bps)
             {
                 add_breakpoint(wfn, bp);
@@ -262,7 +262,7 @@ namespace RC::GUI::KismetDebuggerMod
         }
         catch (std::exception& e)
         {
-            Output::send<LogLevel::Warning>(STR("[KismetDebugger]: Failed to load breakpoints: {}\n"), to_ue(e.what()));
+            Output::send<LogLevel::Warning>(STR("[KismetDebugger]: Failed to load breakpoints: {}\n"), ensure_str(e.what()));
         }
 
         // scan for GNatives if it hasn't been found yet

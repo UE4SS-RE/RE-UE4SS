@@ -133,7 +133,7 @@ namespace RC
     {
         UE4SSProgram& program = UE4SSProgram::get_program();
         HMODULE lib = PLH::FnCast(program.m_hook_trampoline_load_library_a, &LoadLibraryA)(dll_name);
-        program.fire_dll_load_for_cpp_mods(to_ue(dll_name));
+        program.fire_dll_load_for_cpp_mods(ensure_str(dll_name));
         return lib;
     }
 
@@ -141,7 +141,7 @@ namespace RC
     {
         UE4SSProgram& program = UE4SSProgram::get_program();
         HMODULE lib = PLH::FnCast(program.m_hook_trampoline_load_library_ex_a, &LoadLibraryExA)(dll_name, file, flags);
-        program.fire_dll_load_for_cpp_mods(to_ue(dll_name));
+        program.fire_dll_load_for_cpp_mods(ensure_str(dll_name));
         return lib;
     }
 
@@ -176,7 +176,7 @@ namespace RC
             }
             catch (std::exception& e)
             {
-                create_emergency_console_for_early_error(fmt::format(STR("The IniParser failed to parse: {}"), to_ue(e.what())));
+                create_emergency_console_for_early_error(fmt::format(STR("The IniParser failed to parse: {}"), ensure_str(e.what())));
                 return;
             }
 
@@ -191,7 +191,7 @@ namespace RC
 
             // Setup the log file
             auto& file_device = Output::set_default_devices<Output::NewFileDevice>();
-            file_device.set_file_name_and_path(to_ue((m_log_directory / m_log_file_name)));
+            file_device.set_file_name_and_path(ensure_str((m_log_directory / m_log_file_name)));
 
             create_simple_console();
 
@@ -224,7 +224,7 @@ namespace RC
                          fmt::format(STR("{}"), UE4SS_LIB_VERSION_PRERELEASE == 0 ? STR("") : fmt::format(STR(" PreRelease #{}"), UE4SS_LIB_VERSION_PRERELEASE)),
                          fmt::format(STR("{}"),
                                      UE4SS_LIB_BETA_STARTED == 0 ? STR("") : (UE4SS_LIB_IS_BETA == 0 ? STR(" Beta #?") : fmt::format(STR(" Beta #{}"), UE4SS_LIB_VERSION_BETA))),
-                         to_ue(UE4SS_LIB_BUILD_GITSHA));
+                         ensure_str(UE4SS_LIB_BUILD_GITSHA));
 
 #ifdef __clang__
 #define UE4SS_COMPILER STR("Clang")
@@ -232,7 +232,7 @@ namespace RC
 #define UE4SS_COMPILER STR("MSVC")
 #endif
 
-            Output::send(STR("UE4SS Build Configuration: {} ({})\n"), to_ue(UE4SS_CONFIGURATION), UE4SS_COMPILER);
+            Output::send(STR("UE4SS Build Configuration: {} ({})\n"), ensure_str(UE4SS_CONFIGURATION), UE4SS_COMPILER);
 
             m_load_library_a_hook = std::make_unique<PLH::IatHook>("kernel32.dll",
                                                                    "LoadLibraryA",
@@ -272,21 +272,21 @@ namespace RC
 
             if (m_has_game_specific_config)
             {
-                Output::send(STR("Found configuration for game: {}\n"), to_ue(m_mods_directory.parent_path().filename()));
+                Output::send(STR("Found configuration for game: {}\n"), ensure_str(m_mods_directory.parent_path().filename()));
             }
             else
             {
                 Output::send(STR("No specific game configuration found, using default configuration file\n"));
             }
 
-            Output::send(STR("Config: {}\n\n"), to_ue(m_settings_path_and_file));
-            Output::send(STR("root directory: {}\n"), to_ue(m_root_directory));
-            Output::send(STR("working directory: {}\n"), to_ue(m_working_directory));
-            Output::send(STR("game executable directory: {}\n"), to_ue(m_game_executable_directory));
-            Output::send(STR("game executable: {} ({} bytes)\n\n\n"), to_ue(m_game_path_and_exe_name), std::filesystem::file_size(m_game_path_and_exe_name));
-            Output::send(STR("mods directory: {}\n"), to_ue(m_mods_directory));
-            Output::send(STR("log directory: {}\n"), to_ue(m_log_directory));
-            Output::send(STR("object dumper directory: {}\n\n\n"), to_ue(m_object_dumper_output_directory));
+            Output::send(STR("Config: {}\n\n"), ensure_str(m_settings_path_and_file));
+            Output::send(STR("root directory: {}\n"), ensure_str(m_root_directory));
+            Output::send(STR("working directory: {}\n"), ensure_str(m_working_directory));
+            Output::send(STR("game executable directory: {}\n"), ensure_str(m_game_executable_directory));
+            Output::send(STR("game executable: {} ({} bytes)\n\n\n"), ensure_str(m_game_path_and_exe_name), std::filesystem::file_size(m_game_path_and_exe_name));
+            Output::send(STR("mods directory: {}\n"), ensure_str(m_mods_directory));
+            Output::send(STR("log directory: {}\n"), ensure_str(m_log_directory));
+            Output::send(STR("object dumper directory: {}\n\n\n"), ensure_str(m_object_dumper_output_directory));
         }
         catch (std::runtime_error& e)
         {
@@ -329,7 +329,7 @@ namespace RC
                 // only log modules with unique addresses (non-modular builds have everything in MainExe)
                 if (i == static_cast<size_t>(ScanTarget::MainExe) || main_exe_ptr != module.lpBaseOfDll)
                 {
-                    auto module_name = to_ue(ScanTargetToString(i));
+                    auto module_name = ensure_str(ScanTargetToString(i));
                     Output::send(STR("{} @ {} size={:#x}\n"), module_name.c_str(), module.lpBaseOfDll, module.SizeOfImage);
                 }
             }
@@ -561,7 +561,7 @@ namespace RC
         // Virtual function offset overrides
         TRY([&]() {
             ProfilerScopeNamed("loading virtual function offset overrides");
-            static File::StringType virtual_function_offset_override_file{to_ue((m_working_directory / STR("VTableLayout.ini")))};
+            static File::StringType virtual_function_offset_override_file{ensure_str((m_working_directory / STR("VTableLayout.ini")))};
             if (std::filesystem::exists(virtual_function_offset_override_file))
             {
                 auto file =
@@ -1000,7 +1000,7 @@ namespace RC
                 set_error("is_directory ran into error %d", ec.value());
             }
 
-            StringType directory_lowercase = to_ue(sub_directory.path().stem());
+            StringType directory_lowercase = ensure_str(sub_directory.path().stem());
             std::transform(directory_lowercase.begin(), directory_lowercase.end(), directory_lowercase.begin(), std::towlower);
 
             if (directory_lowercase == STR("shared"))
@@ -1011,9 +1011,9 @@ namespace RC
             {
                 // Create the mod but don't install it yet
                 if (std::filesystem::exists(sub_directory.path() / "scripts"))
-                    m_mods.emplace_back(std::make_unique<LuaMod>(*this, to_ue(sub_directory.path().stem()), to_ue(sub_directory.path())));
+                    m_mods.emplace_back(std::make_unique<LuaMod>(*this, ensure_str(sub_directory.path().stem()), ensure_str(sub_directory.path())));
                 if (std::filesystem::exists(sub_directory.path() / "dlls"))
-                    m_mods.emplace_back(std::make_unique<CppMod>(*this, to_ue(sub_directory.path().stem()), to_ue(sub_directory.path())));
+                    m_mods.emplace_back(std::make_unique<CppMod>(*this, ensure_str(sub_directory.path().stem()), ensure_str(sub_directory.path())));
             }
         }
     }
@@ -1200,7 +1200,7 @@ namespace RC
                 return fmt::format("exists ran into error {}", ec.value());
             }
 
-            auto mod = UE4SSProgram::find_mod_by_name<ModType>(to_ue(mod_directory.path().stem()), UE4SSProgram::IsInstalled::Yes);
+            auto mod = UE4SSProgram::find_mod_by_name<ModType>(ensure_str(mod_directory.path().stem()), UE4SSProgram::IsInstalled::Yes);
             if (!dynamic_cast<ModType*>(mod))
             {
                 continue;
@@ -1352,27 +1352,27 @@ namespace RC
 
     auto UE4SSProgram::get_module_directory() -> File::StringViewType
     {
-        return to_ue(m_module_file_path);
+        return ensure_str(m_module_file_path);
     }
 
     auto UE4SSProgram::get_game_executable_directory() -> File::StringViewType
     {
-        return to_ue(m_game_executable_directory);
+        return ensure_str(m_game_executable_directory);
     }
 
     auto UE4SSProgram::get_working_directory() -> File::StringViewType
     {
-        return to_ue(m_working_directory);
+        return ensure_str(m_working_directory);
     }
 
     auto UE4SSProgram::get_mods_directory() -> File::StringViewType
     {
-        return to_ue(m_mods_directory);
+        return ensure_str(m_mods_directory);
     }
 
     auto UE4SSProgram::get_legacy_root_directory() -> File::StringViewType
     {
-        return to_ue(m_legacy_root_directory);
+        return ensure_str(m_legacy_root_directory);
     }
 
     auto UE4SSProgram::generate_uht_compatible_headers() -> void
@@ -1561,7 +1561,7 @@ namespace RC
 
     auto UE4SSProgram::get_object_dumper_output_directory() -> const File::StringType
     {
-        return to_ue(m_object_dumper_output_directory);
+        return ensure_str(m_object_dumper_output_directory);
     }
 
     auto UE4SSProgram::dump_uobject(UObject* object, std::unordered_set<FField*>* in_dumped_fields, StringType& out_line, bool is_below_425) -> void

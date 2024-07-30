@@ -98,7 +98,7 @@ namespace RC::LuaLibrary
         // Logging will only happen to the debug console but it's something at least
         if (!Output::has_internal_error())
         {
-            Output::send(STR("Error: {}\n"), to_ue(e));
+            Output::send(STR("Error: {}\n"), ensure_str(e));
         }
         else
         {

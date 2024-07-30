@@ -462,7 +462,7 @@ namespace RC::LuaType
                     {
                         lua.throw_error("Function 'GetProperty' requires a string as the first parameter");
                     }
-                    auto property_name = to_ue(lua.get_string(2));
+                    auto property_name = ensure_str(lua.get_string(2));
 
                     auto reflection_table = lua.get_table();
                     const auto& reflected_object = reflection_table.get_userdata_field<SelfType>("ReflectedObject").get_remote_cpp_object();
@@ -586,7 +586,7 @@ Overloads:
                 {
                     lua.throw_error(error_overload_not_found);
                 }
-                auto cmd = to_ue(lua.get_string());
+                auto cmd = ensure_str(lua.get_string());
 
                 if (lua.get_stack_size() < 2)
                 {
@@ -641,7 +641,7 @@ Overloads:
         {
             auto& lua_object = lua.get_userdata<SelfType>();
 
-            const StringType& member_name = to_const_ue(lua.get_string());
+            const StringType& member_name = ensure_str_const(lua.get_string());
 
             // If nullptr then we assume the UObject wasn't found so lets return an invalid UObject to Lua
             // This allows the safe chaining of "__index" as long as the Lua script checks ":IsValid()" before using the object

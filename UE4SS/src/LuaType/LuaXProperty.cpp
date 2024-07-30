@@ -227,7 +227,7 @@ Overloads:
             File::StringType buffer;
             if (lua.is_string())
             {
-                buffer = to_ue(lua.get_string());
+                buffer = ensure_str(lua.get_string());
             }
             else
             {

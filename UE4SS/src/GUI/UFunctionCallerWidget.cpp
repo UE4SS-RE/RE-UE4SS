@@ -167,7 +167,7 @@ namespace RC::GUI
         auto cmd = fmt::format(STR("{}"), function->GetName());
         for (const auto& param : m_params_for_selected_function)
         {
-            cmd.append(fmt::format(STR(" {}"), to_ue(param.value_from_ui)));
+            cmd.append(fmt::format(STR(" {}"), ensure_str(param.value_from_ui)));
         }
 
         Output::send(STR("Queueing command: {}\n"), cmd);
@@ -250,7 +250,7 @@ namespace RC::GUI
         if (object_name_type_space_location == object_name.npos)
         {
             Output::send<LogLevel::Warning>(STR("Could not copy name of PlayerController, was unable to find space in full PlayerController name: '{}'."),
-                                            to_ue(object_name));
+                                            ensure_str(object_name));
             return {};
         }
         else

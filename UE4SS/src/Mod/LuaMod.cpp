@@ -859,7 +859,7 @@ Overloads:
             // Ignores any params after P1
             if (lua.is_string())
             {
-                Unreal::UObject* object = Unreal::UObjectGlobals::StaticFindObject(nullptr, nullptr, to_ue(lua.get_string()));
+                Unreal::UObject* object = Unreal::UObjectGlobals::StaticFindObject(nullptr, nullptr, ensure_str(lua.get_string()));
 
                 // Construct a Lua object of type 'UObject'
                 // Auto constructing is nullptr safe
@@ -919,7 +919,7 @@ Overloads:
             // P3 (Name), string
             if (lua.is_string())
             {
-                param_name = to_ue(lua.get_string());
+                param_name = ensure_str(lua.get_string());
             }
             else
             {
@@ -961,7 +961,7 @@ Overloads:
             // Ignores any params after P1
             if (lua.is_string())
             {
-                Unreal::UObject* object = Unreal::UObjectGlobals::FindFirstOf(to_ue(lua.get_string()));
+                Unreal::UObject* object = Unreal::UObjectGlobals::FindFirstOf(ensure_str(lua.get_string()));
 
                 // Construct a Lua object of type 'UObject'
                 // Auto constructing is nullptr safe
@@ -1137,7 +1137,7 @@ Overloads:
                     }
                     catch (std::runtime_error& e)
                     {
-                        Output::send(STR("{}\n"), to_ue(lua.handle_error(e.what())));
+                        Output::send(STR("{}\n"), ensure_str(lua.handle_error(e.what())));
                     }
                 };
 
@@ -1256,7 +1256,7 @@ Overloads:
                     }
                     catch (std::runtime_error& e)
                     {
-                        Output::send(STR("{}\n"), to_ue(lua.handle_error(e.what())));
+                        Output::send(STR("{}\n"), ensure_str(lua.handle_error(e.what())));
                     }
                 };
 
@@ -1355,7 +1355,7 @@ Overloads:
                     lua.throw_error(error_overload_not_found);
                 }
 
-                auto function_name = to_ue(lua.get_string());
+                auto function_name = ensure_str(lua.get_string());
                 auto function_name_no_prefix = function_name.substr(function_name.find_first_of(STR(" ")) + 1, function_name.size());
 
                 Unreal::UFunction* unreal_function = Unreal::UObjectGlobals::StaticFindObject<Unreal::UFunction*>(nullptr, nullptr, function_name_no_prefix);
@@ -1718,12 +1718,12 @@ Overloads:
             };
 
             // Always required, for all property types
-            property_info.name = to_ue(lua_table.get_string_field("Name"));
+            property_info.name = ensure_str(lua_table.get_string_field("Name"));
             property_info.type.name = lua_table.get_table_field("Type").get_string_field("Name");
             property_info.type.size = verify_and_convert_int64_to_int32("Type", "Size");
             property_info.type.ffieldclass_pointer = reinterpret_cast<void*>(lua_table.get_table_field("Type").get_int_field("FFieldClassPointer"));
             property_info.type.static_pointer = reinterpret_cast<void*>(lua_table.get_table_field("Type").get_int_field("StaticPointer"));
-            property_info.belongs_to_class = to_ue(lua_table.get_string_field("BelongsToClass"));
+            property_info.belongs_to_class = ensure_str(lua_table.get_string_field("BelongsToClass"));
 
             std::string oi_property_name;
             int32_t oi_relative_offset{};
@@ -1774,7 +1774,7 @@ Overloads:
 
             if (property_info.offset_internal_is_table)
             {
-                auto name = Unreal::FName(to_ue(oi_property_name));
+                auto name = Unreal::FName(ensure_str(oi_property_name));
                 Unreal::FProperty* oi_property = belongs_to_class->FindProperty(name);
                 if (!oi_property)
                 {
@@ -1870,7 +1870,7 @@ Overloads:
                 lua.throw_error(error_overload_not_found);
             }
 
-            auto class_name = to_ue(lua.get_string());
+            auto class_name = ensure_str(lua.get_string());
 
             if (!lua.is_function())
             {
@@ -1906,7 +1906,7 @@ Overloads:
                 lua.throw_error(error_overload_not_found);
             }
 
-            auto event_name = to_ue(lua.get_string());
+            auto event_name = ensure_str(lua.get_string());
 
             if (!lua.is_function())
             {
@@ -1942,7 +1942,7 @@ Overloads:
             {
                 lua.throw_error(error_overload_not_found);
             }
-            auto custom_event_name = to_ue(lua.get_string());
+            auto custom_event_name = ensure_str(lua.get_string());
 
             LuaMod::m_custom_event_callbacks.erase(custom_event_name);
 
@@ -2486,7 +2486,7 @@ Overloads:
             {
                 throw std::runtime_error{error_overload_not_found};
             }
-            auto command_name = to_ue(lua.get_string());
+            auto command_name = ensure_str(lua.get_string());
 
             if (!lua.is_function())
             {
@@ -2521,7 +2521,7 @@ Overloads:
             {
                 throw std::runtime_error{error_overload_not_found};
             }
-            auto command_name = to_ue(lua.get_string());
+            auto command_name = ensure_str(lua.get_string());
 
             if (!lua.is_function())
             {
@@ -2561,7 +2561,7 @@ Overloads:
             {
                 throw std::runtime_error{error_overload_not_found};
             }
-            auto asset_path_and_name = Unreal::FName(to_ue(lua.get_string()), Unreal::FNAME_Add);
+            auto asset_path_and_name = Unreal::FName(ensure_str(lua.get_string()), Unreal::FNAME_Add);
 
             auto* asset_registry = static_cast<Unreal::UAssetRegistry*>(Unreal::UAssetRegistryHelpers::GetAssetRegistry().ObjectPointer);
             if (!asset_registry)
@@ -2612,7 +2612,7 @@ Overloads:
             bool could_be_in_class{};
             if (lua.is_string())
             {
-                object_class_name = Unreal::FName(to_ue(lua.get_string()), Unreal::FNAME_Add);
+                object_class_name = Unreal::FName(ensure_str(lua.get_string()), Unreal::FNAME_Add);
             }
             else if (lua.is_userdata())
             {
@@ -2655,7 +2655,7 @@ Overloads:
             bool could_be_object_short_name{};
             if (lua.is_string())
             {
-                object_short_name = Unreal::FName(to_ue(lua.get_string()), Unreal::FNAME_Add);
+                object_short_name = Unreal::FName(ensure_str(lua.get_string()), Unreal::FNAME_Add);
                 could_be_object_short_name = true;
             }
             else if (lua.is_userdata())
@@ -2739,7 +2739,7 @@ Overloads:
 
             if (could_be_in_class && could_be_in_outer && could_be_in_name)
             {
-                LuaType::auto_construct_object(lua, Unreal::UObjectGlobals::FindObject(in_class, in_outer, to_ue(in_name), exact_class));
+                LuaType::auto_construct_object(lua, Unreal::UObjectGlobals::FindObject(in_class, in_outer, ensure_str(in_name), exact_class));
             }
             else
             {
@@ -2786,7 +2786,7 @@ Overloads:
             bool object_class_name_supplied{true};
             if (lua.is_string())
             {
-                object_class_name = Unreal::FName(to_ue(lua.get_string()), Unreal::FNAME_Add);
+                object_class_name = Unreal::FName(ensure_str(lua.get_string()), Unreal::FNAME_Add);
             }
             else if (lua.is_userdata())
             {
@@ -2824,7 +2824,7 @@ Overloads:
             Unreal::FName object_short_name{};
             if (lua.is_string())
             {
-                object_short_name = Unreal::FName(to_ue(lua.get_string()), Unreal::FNAME_Add);
+                object_short_name = Unreal::FName(ensure_str(lua.get_string()), Unreal::FNAME_Add);
             }
             else if (lua.is_userdata())
             {
@@ -2966,7 +2966,7 @@ Overloads:
                 lua.throw_error(error_overload_not_found);
             }
 
-            auto function_name = to_ue(lua.get_string());
+            auto function_name = ensure_str(lua.get_string());
             auto function_name_no_prefix = function_name.substr(function_name.find_first_of(STR("/")), function_name.size());
 
             if (!lua.is_function())
@@ -3250,7 +3250,7 @@ Overloads:
                 lua.throw_error(error_overload_not_found);
             }
 
-            File::StringType PossiblyLongName = to_ue(lua.get_string());
+            File::StringType PossiblyLongName = ensure_str(lua.get_string());
             lua.set_bool(Unreal::FPackageName::IsShortPackageName(PossiblyLongName));
 
             return 1;
@@ -3267,7 +3267,7 @@ Overloads:
                 lua.throw_error(error_overload_not_found);
             }
 
-            File::StringType InLongPackageName = to_ue(lua.get_string());
+            File::StringType InLongPackageName = ensure_str(lua.get_string());
             lua.set_bool(Unreal::FPackageName::IsValidLongPackageName(InLongPackageName));
 
             return 1;
@@ -3368,7 +3368,7 @@ Overloads:
         }
         catch (std::runtime_error& e)
         {
-            Output::send<LogLevel::Error>(STR("{}\n"), to_ue(e.what()));
+            Output::send<LogLevel::Error>(STR("{}\n"), ensure_str(e.what()));
         }
     }
 
@@ -3779,7 +3779,7 @@ Overloads:
                         }
                         catch (std::runtime_error& e)
                         {
-                            Output::send(STR("{}\n"), to_ue(e.what()));
+                            Output::send(STR("{}\n"), ensure_str(e.what()));
                         }
 
                         if (cancel)
@@ -4082,7 +4082,7 @@ Overloads:
                 }
                 catch (std::runtime_error& e)
                 {
-                    logln(to_ue(e.what()));
+                    logln(ensure_str(e.what()));
                 }
 
                 // We always return true when the console Lua executor is enabled in order to suppress other handlers
@@ -4396,8 +4396,8 @@ Overloads:
                                                        catch (std::runtime_error& e)
                                                        {
                                                            Output::send(STR("[{}] {}\n"),
-                                                                        to_ue(action.type == LuaMod::ActionType::Loop ? "LoopAsync" : "DelayedAction"),
-                                                                        to_ue(e.what()));
+                                                                        ensure_str(action.type == LuaMod::ActionType::Loop ? "LoopAsync" : "DelayedAction"),
+                                                                        ensure_str(e.what()));
                                                        }
 
                                                        return result;

@@ -113,7 +113,7 @@ namespace RC::GUI::BPMods
                         const auto& mod_button = mod_info.ModButtons[i2];
                         if (ImGui::Button(fmt::format("{}", mod_button).c_str()))
                         {
-                            Output::send(STR("Mod button {} hit.\n"), to_ue(mod_button));
+                            Output::send(STR("Mod button {} hit.\n"), ensure_str(mod_button));
                             mod_info.ModActor->ModMenuButtonPressed(static_cast<int32_t>(i2));
                         }
                     }

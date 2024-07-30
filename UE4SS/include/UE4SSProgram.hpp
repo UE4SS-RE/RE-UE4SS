@@ -297,12 +297,12 @@ namespace RC
         template <>
         auto find_mod_by_name<LuaMod>(std::string_view mod_name, IsInstalled is_installed, IsStarted is_started) -> LuaMod*
         {
-            return find_mod_by_name<LuaMod>(to_ue(mod_name), is_installed, is_started);
+            return find_mod_by_name<LuaMod>(ensure_str(mod_name), is_installed, is_started);
         }
         template <>
         auto find_mod_by_name<CppMod>(std::string_view mod_name, IsInstalled is_installed, IsStarted is_started) -> CppMod*
         {
-            return find_mod_by_name<CppMod>(to_ue(mod_name), is_installed, is_started);
+            return find_mod_by_name<CppMod>(ensure_str(mod_name), is_installed, is_started);
         }
 
         RC_UE4SS_API static auto find_lua_mod_by_name(StringViewType mod_name, IsInstalled = IsInstalled::No, IsStarted = IsStarted::No) -> LuaMod*;

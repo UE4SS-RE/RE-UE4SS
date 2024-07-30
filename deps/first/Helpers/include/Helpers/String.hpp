@@ -334,10 +334,9 @@ namespace RC
         }
     }
 
-    // Convert any string-like to a string(view) of CharType that is used in UE
-    // Or pass through if it's already a string(view) of CharType or if we can't convert it
+    // Ensure that a string is compatible with UE4SS, converting it if neccessary
     template<typename T>
-    auto inline to_ue(T&& arg) {
+    auto inline ensure_str(T&& arg) {
         return to_charT<CharType>(std::forward<T>(arg));
     }
 
@@ -361,11 +360,11 @@ namespace RC
 #if RC_IS_ANSI == 1
             return to_string(input);
 #else
-            return to_ue(input);
+            return ensure_str(input);
 #endif
         }
     }
-    auto inline to_const_ue(std::string_view input) -> const StringType&
+    auto inline ensure_str_const(std::string_view input) -> const StringType&
     {
         static std::unordered_map<std::string_view, StringType> uestringpool;
         static std::shared_mutex uestringpool_lock;
@@ -377,7 +376,7 @@ namespace RC
         }
 
         auto temp_input = std::string{input};
-        auto new_str = to_ue(temp_input);
+        auto new_str = ensure_str(temp_input);
 
         // Stall the readers to insert a new string.
         {

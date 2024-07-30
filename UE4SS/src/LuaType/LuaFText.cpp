@@ -61,7 +61,7 @@ Overloads:
             StringType text_string{};
             if (lua.is_string())
             {
-                text_string = to_ue(lua.get_string());
+                text_string = ensure_str(lua.get_string());
             }
             else
             {
