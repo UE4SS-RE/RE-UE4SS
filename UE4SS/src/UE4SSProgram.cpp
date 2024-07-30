@@ -1350,27 +1350,27 @@ namespace RC
         Output::send(STR("All mods re-installed\n"));
     }
 
-    auto UE4SSProgram::get_module_directory() -> File::StringViewType
+    auto UE4SSProgram::get_module_directory() -> File::StringType
     {
         return ensure_str(m_module_file_path);
     }
 
-    auto UE4SSProgram::get_game_executable_directory() -> File::StringViewType
+    auto UE4SSProgram::get_game_executable_directory() -> File::StringType
     {
         return ensure_str(m_game_executable_directory);
     }
 
-    auto UE4SSProgram::get_working_directory() -> File::StringViewType
+    auto UE4SSProgram::get_working_directory() -> File::StringType
     {
         return ensure_str(m_working_directory);
     }
 
-    auto UE4SSProgram::get_mods_directory() -> File::StringViewType
+    auto UE4SSProgram::get_mods_directory() -> File::StringType
     {
         return ensure_str(m_mods_directory);
     }
 
-    auto UE4SSProgram::get_legacy_root_directory() -> File::StringViewType
+    auto UE4SSProgram::get_legacy_root_directory() -> File::StringType
     {
         return ensure_str(m_legacy_root_directory);
     }
