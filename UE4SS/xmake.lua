@@ -5,8 +5,8 @@ add_requires("ImGuiTextEdit v1.0", { debug = is_mode_debug(), configs = {runtime
 add_requires("IconFontCppHeaders v1.0", { debug = is_mode_debug(), configs = {runtimes = get_mode_runtimes()}})
 add_requires("glfw 3.3.9", { debug = is_mode_debug() , configs = {runtimes = get_mode_runtimes()}})
 add_requires("opengl", { debug = is_mode_debug(), configs = {runtimes = get_mode_runtimes()} })
-add_requires("glaze", { debug = is_mode_debug(), configs = {runtimes = get_mode_runtimes()} })
-add_requires("fmt", { debug = is_mode_debug(), configs = {runtimes = get_mode_runtimes()} })
+add_requires("glaze v2.9.5", { debug = is_mode_debug(), configs = {runtimes = get_mode_runtimes()} })
+add_requires("fmt 10.2.1", { debug = is_mode_debug(), configs = {runtimes = get_mode_runtimes()} })
 
 option("ue4ssBetaIsStarted")
     set_default(true)

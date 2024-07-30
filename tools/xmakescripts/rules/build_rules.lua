@@ -109,6 +109,9 @@ local MSVC_COMPILE_OPTIONS = {
     },
     ["shflags"] = {
         "/DEBUG:FULL"
+    },
+    ["defines"] = {
+        "_DISABLE_CONSTEXPR_MUTEX_CONSTRUCTOR=1"
     }
 }
 
