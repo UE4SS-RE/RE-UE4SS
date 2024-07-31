@@ -8,6 +8,7 @@
 
 #include <File/File.hpp>
 #include <SDKGenerator/Common.hpp>
+#include <Helpers/String.hpp>
 #pragma warning(disable : 4005)
 #include <Unreal/NameTypes.hpp>
 #pragma warning(default : 4005)
@@ -95,7 +96,7 @@ namespace RC::UEGenerator
     {
         auto operator()(const StringType& a, const StringType& b) const -> bool
         {
-            return RC::Unreal::FGenericPlatformStricmp::Stricmp((RC::Unreal::UTF16CHAR*) a.c_str(), (RC::Unreal::UTF16CHAR*)b .c_str()) < 0;
+            return Unreal::FGenericPlatformStricmp::Stricmp(a.c_str(), b.c_str()) < 0;
         }
     };
 
