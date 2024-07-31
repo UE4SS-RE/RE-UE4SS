@@ -94,6 +94,7 @@ Reduced the likelihood of a crash happening on shutdown when at least one watch 
 Fixed constantly searching even if the search field is empty, and even if not on the tab ([UE4SS #475](https://github.com/UE4SS-RE/RE-UE4SS/pull/475))
 
 ### UHT Dumper
+Fix SetupAttachment implementations randomly changing order ([UE4SS #606](https://github.com/UE4SS-RE/RE-UE4SS/pull/606)) - Buckminsterfullerene
 
 ### Lua API
 Fixed FString use after free ([UE4SS #425](https://github.com/UE4SS-RE/RE-UE4SS/pull/425)) - localcc
