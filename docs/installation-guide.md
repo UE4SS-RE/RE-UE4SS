@@ -60,9 +60,9 @@ This method allows you to override the location of the `root directory` while pr
 
 In your `game executable directory` alongside the `dwmapi.dll`, create a file called `override.txt` and inside it you can write either an absolute path or a relative path to your new `UE4SS.dll`. 
 
-For an example, possible paths could be:
-- `C:\ue4ss\UE4SS.dll`
-- `..\..\..\..\..\..\UE4SS.dll`
+For example, possible paths could be:
+- `C:/ue4ss/`
+- `../../Content/Paks`
 
 ## Manual Injection
 
