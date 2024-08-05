@@ -85,7 +85,7 @@ D:\Games\Epic Games\SatisfactoryEarlyAccess\FactoryGame\Binaries\Win64\FactoryGa
 Then the name of your `working directory` should be `SatisfactoryEarlyAccess`.  
 This directory will be automatically found and used by UE4SS if it exists.
 
-As of UE4SS 3.0 (basic install), the following files & folders exist inside the `working directory`:
+The following files & folders exist inside the `working directory`:
 
 - Mods
     - Mod folders
@@ -93,7 +93,9 @@ As of UE4SS 3.0 (basic install), the following files & folders exist inside the 
 - UE4SS-settings.ini
 - UE4SS.log
 - UE4SS.dll
-- dwmapi.dll (Can have a name of any DLL that is loaded by the game engine or by its dependencies)
+- ...and some other auxiliary, optional files that are not required for UE4SS to function.
+
+While `dwmapi.dll` (can have a name of any DLL that is loaded by the game engine or by its dependencies) is in the `game executable directory`.
 
 Now all you need to do is start your game and point your injector of choice to `<root directory>/UE4SS.dll`.
 
