@@ -86,6 +86,8 @@ Fixed a crash that would occur randomly due to accidental execution of Live View
 
 Fixed freeze related to the error "Tried to execute UFunction::FuncPtr hook but there was no function map entry" ([UE4SS #468](https://github.com/UE4SS-RE/RE-UE4SS/pull/468))
 
+Fixed `ModsFolderPath` in `UE4SS-settings.ini` not working ([UE4SS #609](https://github.com/UE4SS-RE/RE-UE4SS/pull/609))
+
 ### Live View
 Fixed the "Write to file" checkbox not working for functions in the `Watches` tab ([UE4SS #419](https://github.com/UE4SS-RE/RE-UE4SS/pull/419))
 
