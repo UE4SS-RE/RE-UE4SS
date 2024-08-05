@@ -446,7 +446,14 @@ namespace RC
         }
         else
         {
-            m_mods_directory = settings_manager.Overrides.ModsFolderPath;
+            if (std::filesystem::path{settings_manager.Overrides.ModsFolderPath}.is_relative())
+            {
+                m_mods_directory = m_working_directory / settings_manager.Overrides.ModsFolderPath;
+            }
+            else
+            {
+                m_mods_directory = settings_manager.Overrides.ModsFolderPath;
+            }
         }
     }
 
