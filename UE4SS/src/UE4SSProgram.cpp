@@ -264,11 +264,11 @@ namespace RC
 
             Unreal::UnrealInitializer::SetupUnrealModules();
 
+            setup_mod_directory_path();
+
             setup_mods();
             install_cpp_mods();
             start_cpp_mods(IsInitialStartup::Yes);
-
-            setup_mod_directory_path();
 
             if (m_has_game_specific_config)
             {
@@ -446,7 +446,14 @@ namespace RC
         }
         else
         {
-            m_mods_directory = settings_manager.Overrides.ModsFolderPath;
+            if (std::filesystem::path{settings_manager.Overrides.ModsFolderPath}.is_relative())
+            {
+                m_mods_directory = m_working_directory / settings_manager.Overrides.ModsFolderPath;
+            }
+            else
+            {
+                m_mods_directory = settings_manager.Overrides.ModsFolderPath;
+            }
         }
     }
 
