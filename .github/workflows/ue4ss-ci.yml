@@ -11,8 +11,13 @@ on:
         - 'main'
     paths-ignore:
         - 'README.md'
+        - '.github/workflows/pushdocs.yml'
+        - '.github/pull_request_template.md'
+        - '.github/ISSUE_TEMPLATE/**'
+        - 'assets/**'
         - 'docs/**'
         - 'docs-export/**'
+        - 'docs-repo-template/**'
 
 # Ensure that rapid pushes to the pull request branch don't trigger this workflow multiple times.
 # We only care about executing this workflow for that 'latest' commit on a PR.
