@@ -814,8 +814,14 @@ namespace RC::UEGenerator
         }
         m_class_subobjects.clear();
 
+        // Sort the attachments alphabetically by the property name
+        std::vector<std::pair<FProperty*, std::tuple<std::wstring, std::wstring, bool>>> sorted_attachments(implementation_file.attachments.begin(), implementation_file.attachments.end());
+        std::sort(sorted_attachments.begin(), sorted_attachments.end(), [](const auto& a, const auto& b) {
+            return a.first->GetName() < b.first->GetName();
+        });
+        
         // Generate component attachments
-        for (auto attachment : implementation_file.attachments)
+        for (auto attachment : sorted_attachments)
         {
             if (get<2>(attachment.second) == false)
             {
