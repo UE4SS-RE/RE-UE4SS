@@ -12,5 +12,7 @@ namespace RC::File
                           OverwriteExistingFile = OverwriteExistingFile::No,
                           CreateIfNonExistent = CreateIfNonExistent::No) -> Handle;
 
+    RC_FILE_API auto open_file_skip_BOM(const std::wstring& filename) -> StreamType;
+
     RC_FILE_API auto delete_file(const std::filesystem::path& file_path_and_name) -> void;
 } // namespace RC::File
