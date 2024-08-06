@@ -44,6 +44,6 @@ namespace RC::GUI
         auto render() -> void;
         auto render_search_box() -> void;
         auto add_line(const std::string&, Color::Color) -> void;
-        auto add_line(const std::wstring&, Color::Color) -> void;
+        auto add_line(const StringType&, Color::Color) -> void;
     };
 } // namespace RC::GUI

@@ -170,15 +170,15 @@ int _tmain(int argc, TCHAR* argv[])
 
     cpp_file << "void load_original_dll()" << endl;
     cpp_file << "{" << endl;
-    cpp_file << "    File::CharType path[MAX_PATH];" << endl;
+    cpp_file << "    wchar_t path[MAX_PATH];" << endl;
     cpp_file << "    GetSystemDirectory(path, MAX_PATH);" << endl;
     cpp_file << endl;
-    cpp_file << std::format("    File::StringType dll_path = File::StringType(path) + STR(\"\\\\{}\");", input_dll_name.string()) << endl;
+    cpp_file << std::format("    std::wstring dll_path = std::wstring(path) + L\"\\\\{}\";", input_dll_name.string()) << endl;
     cpp_file << endl;
     cpp_file << "    SOriginalDll = LoadLibrary(dll_path.c_str());" << endl;
     cpp_file << "    if (!SOriginalDll)" << endl;
     cpp_file << "    {" << endl;
-    cpp_file << "        MessageBox(nullptr, STR(\"Failed to load proxy DLL\"), STR(\"UE4SS Error\"), MB_OK | MB_ICONERROR);" << endl;
+    cpp_file << "        MessageBox(nullptr, L\"Failed to load proxy DLL\", L\"UE4SS Error\", MB_OK | MB_ICONERROR);" << endl;
     cpp_file << "        ExitProcess(0);" << endl;
     cpp_file << "    }" << endl;
     cpp_file << "}" << endl;
@@ -230,7 +230,7 @@ int _tmain(int argc, TCHAR* argv[])
     cpp_file << "    if (!hModule)" << endl;
     cpp_file << "    {" << endl;
     cpp_file << "        // If loading from ue4ss directory fails, load from the current directory" << endl;
-    cpp_file << "        hModule = LoadLibrary(STR(\"UE4SS.dll\"));" << endl;
+    cpp_file << "        hModule = LoadLibrary(L\"UE4SS.dll\");" << endl;
     cpp_file << "    }" << endl;
     cpp_file << endl;
     cpp_file << "    return hModule;" << endl;
@@ -249,7 +249,7 @@ int _tmain(int argc, TCHAR* argv[])
     cpp_file << "        }" << endl;
     cpp_file << "        else" << endl;
     cpp_file << "        {" << endl;
-    cpp_file << "            MessageBox(nullptr, STR(\"Failed to load UE4SS.dll. Please see the docs on correct installation: https://docs.ue4ss.com/installation-guide\"), STR(\"UE4SS Error\"), MB_OK | MB_ICONERROR);" << endl;
+    cpp_file << "            MessageBox(nullptr, L\"Failed to load UE4SS.dll. Please see the docs on correct installation: https://docs.ue4ss.com/installation-guide\", L\"UE4SS Error\", MB_OK | MB_ICONERROR);" << endl;
     cpp_file << "            ExitProcess(0);" << endl;
     cpp_file << "        }" << endl;
     cpp_file << "    }" << endl;

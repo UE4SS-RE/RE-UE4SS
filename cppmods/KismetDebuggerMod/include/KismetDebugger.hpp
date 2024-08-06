@@ -33,14 +33,14 @@ namespace RC::GUI::KismetDebuggerMod
 
         auto has_breakpoint(UFunction* fn, size_t index) -> bool;
         auto add_breakpoint(UFunction* fn, size_t index) -> void;
-        auto add_breakpoint(const std::wstring& fn, size_t index) -> void;
+        auto add_breakpoint(const StringType& fn, size_t index) -> void;
         auto remove_breakpoint(UFunction* fn, size_t index) -> void;
 
     private:
         typedef std::unordered_set<size_t> FunctionBreakpoints;
 
         std::unordered_map<UFunction*, std::shared_ptr<FunctionBreakpoints> > m_breakpoints_by_function{};
-        std::unordered_map<std::wstring, std::shared_ptr<FunctionBreakpoints> > m_breakpoints_by_name{};
+        std::unordered_map<StringType, std::shared_ptr<FunctionBreakpoints> > m_breakpoints_by_name{};
     };
 
     class Debugger

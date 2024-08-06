@@ -4,6 +4,8 @@
 #include <LuaMadeSimple/LuaMadeSimple.hpp>
 #include <LuaMadeSimple/LuaObject.hpp>
 
+#include <Helpers/String.hpp>
+
 namespace RC::LuaMadeSimple
 {
     // All lua instances, lua_State* are stored in the Lua class
@@ -435,10 +437,14 @@ namespace RC::LuaMadeSimple
 
     auto Lua::execute_file(std::wstring_view file_name_and_path) const -> void
     {
-#pragma warning(disable : 4244)
-        std::string file_name_and_path_ansi = std::string(file_name_and_path.begin(), file_name_and_path.end());
-#pragma warning(default : 4244)
-        execute_file(file_name_and_path_ansi);
+        std::string file_name_and_path_utf8 = to_string(file_name_and_path);
+        execute_file(file_name_and_path_utf8);
+    }
+
+    auto Lua::execute_file(std::u16string_view file_name_and_path) const -> void
+    {
+        std::string file_name_and_path_utf8 = to_string(file_name_and_path);
+        execute_file(file_name_and_path_utf8);
     }
 
     auto Lua::execute_string(std::string_view code) const -> void
@@ -456,10 +462,14 @@ namespace RC::LuaMadeSimple
 
     auto Lua::execute_string(std::wstring_view code) const -> void
     {
-#pragma warning(disable : 4244)
-        std::string code_ansi = std::string(code.begin(), code.end());
-#pragma warning(default : 4244)
-        execute_string(code_ansi);
+        std::string code_utf8 = to_string(code);
+        execute_string(code_utf8);
+    }
+
+    auto Lua::execute_string(std::u16string_view code) const -> void
+    {
+        std::string code_utf8 = to_string(code);
+        execute_string(code_utf8);
     }
 
     auto Lua::open_all_libs() const -> void

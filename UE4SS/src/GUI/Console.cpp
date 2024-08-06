@@ -189,9 +189,9 @@ namespace RC::GUI
         m_text_editor.AddTextLine(line);
     }
 
-    auto Console::add_line(const std::wstring& line, Color::Color color) -> void
+    auto Console::add_line(const StringType& line, Color::Color color) -> void
     {
-        auto ansi_string = to_string(line);
+        auto utf8_string = to_string(line);
         std::lock_guard<std::mutex> guard(m_lines_mutex);
         if (m_text_editor.GetTotalLines() < 0)
         {
@@ -209,7 +209,7 @@ namespace RC::GUI
         {
             m_text_editor.GetLineColorMarkers().emplace(m_text_editor.GetTotalLines() + 1, LogLevel_to_ImColor(color));
         }
-        m_lines.emplace_back(ansi_string);
-        m_text_editor.AddTextLine(ansi_string);
+        m_lines.emplace_back(utf8_string);
+        m_text_editor.AddTextLine(utf8_string);
     }
 } // namespace RC::GUI
