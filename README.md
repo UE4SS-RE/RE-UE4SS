@@ -53,6 +53,7 @@ If you are planning on doing mod development using UE4SS, you can do the same as
   - Linux support might happen at some point but not soon.
 - A version of MSVC that supports C++20, including std::format.
   - Visual Studio 2019 (recent versions), and Visual Studio 2022 will work.
+  - MSVC 19.41, As of Visual Studio 2022 Preview (v17.11 Preview 7) has been found to produce compiler errors in UVTD, this should hopefully be fixed in the near future.
   - More compilers will hopefully be supported in the future.
 - Rust toolchain 1.73.0 or greater
 - [xmake >= 2.9.3](https://xmake.io/#/)
