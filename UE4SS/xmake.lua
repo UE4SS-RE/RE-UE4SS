@@ -24,6 +24,14 @@ option("ue4ssIsBeta")
 
     set_description("Is this a beta release")
 
+option("versionCheck")
+    set_default(true)
+    set_showmenu(true)
+    -- Sets the possible options to only be true or false.
+    set_values(true, false)
+
+    set_description("Will xmake check the installed MSVC and Rust versions on configuration step")
+
 local projectName = "UE4SS"
 
 local function parse_version_string(str)
@@ -47,7 +55,8 @@ target(projectName)
     set_exceptions("cxx")
     set_default(true)
     add_rules("ue4ss.defines.exports")
-    add_options("ue4ssBetaIsStarted", "ue4ssIsBeta")
+    add_rules("ue4ss.check.minimum.version")
+    add_options("ue4ssBetaIsStarted", "ue4ssIsBeta", "allowAllVersions")
     add_includedirs("include", { public = true })
     add_includedirs("generated_include", { public = true })
     add_headerfiles("include/**.hpp")

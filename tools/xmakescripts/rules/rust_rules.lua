@@ -147,9 +147,9 @@ rule("cargo.build")
                 values = argv,
                 files = dependent_files,
                 dryrun = dryrun})  
-   end)
+    end)
 
-   before_clean(function(target)
+    before_clean(function(target)
         local is_debug = target:extraconf("rules", "cargo.build", "is_debug")
         local cargo_dir, _, cargo_mode = cargo_helpers.get_cargo_context(target, is_debug)
         local project_name = target:extraconf("rules", "cargo.build", "project_name")

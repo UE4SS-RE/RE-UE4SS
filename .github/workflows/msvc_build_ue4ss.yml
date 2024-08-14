@@ -56,6 +56,9 @@ jobs:
       - name: Install VS2022 BuildTools 17.9.7
         run: choco install -y visualstudio2022buildtools --version=117.9.7.0 --params "--add Microsoft.VisualStudio.Component.VC.Tools.x86.x64 --installChannelUri https://aka.ms/vs/17/release/180911598_-255012421/channel"
 
+      - name: Install JQ
+        run: choco install -y jq
+
       - name: Setup xmake
         uses: xmake-io/github-action-setup-xmake@v1
         with:
@@ -85,7 +88,7 @@ jobs:
           Import-Module 'C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\Common7\Tools\Microsoft.VisualStudio.DevShell.dll'
           Enter-VsDevShell -VsInstallPath 'C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools' -DevCmdArguments '-arch=x64 -host_arch=x64'
 
-          xmake config -vD -m "${{inputs.build-mode}}" -y
+          xmake config -p windows -a x64 -vD -m "${{inputs.build-mode}}" -y
 
       - name: Save cached xmake dependencies
         if: ${{ !steps.restore-depcache.outputs.cache-hit }}
@@ -103,7 +106,7 @@ jobs:
       - name: Calculate Files For Artifact Inclusion
         id: calc-files-artifact
         run: |
-          $files_to_upload = (xmake ci --dump=targets) | jq --raw-output --argjson config '${{inputs.artifact-list}}' '. as $in | $config[] | $in[.] | .[]' 
+          $files_to_upload = (xmake ci --dump=targets) | jq --raw-input --raw-output --argjson config '${{inputs.artifact-list}}' 'fromjson? | . as $in | $config[] | $in[.] | .[]'
 
           $artifact_dir = New-Item -Path '${{runner.temp}}/ue4ss_artifacts/' -ItemType Directory -Force
 
