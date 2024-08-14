@@ -51,10 +51,12 @@ If you are planning on doing mod development using UE4SS, you can do the same as
 
 - A computer running Windows.
   - Linux support might happen at some point but not soon.
-- A version of MSVC that supports C++20, including std::format.
-  - Visual Studio 2019 (recent versions), and Visual Studio 2022 will work.
+- A version of MSVC that supports C++23:
+  - MSVC toolset version >= 14.39.0
+  - MSVC version >= 19.39.0
+  - Visual Studio version >= 17.9
   - More compilers will hopefully be supported in the future.
-- Rust toolchain 1.73.0 or greater
+- [Rust toolchain >= 1.73.0](https://www.rust-lang.org/tools/install)
 - [xmake >= 2.9.3](https://xmake.io/#/)
 
 ## Build instructions
@@ -112,6 +114,14 @@ By default, UE4SS generates a proxy based on `C:\Windows\System32\dwmapi.dll`. I
 
 By default, UE4SS uses Tracy for profiling. You can pass `--profilerFlavor=<profiler>` to the `xmake config` command to set the profiler flavor. The currently supported flavors are `Tracy`, `Superluminal`, and `None`.
 
+#### Version Check
+
+By default, xmake will check if you have the minimum required version of Rust or MSVC installed (if you are using the MSVC toolchain). If you do not, it will throw an error on the configure step. If you want to ignore this check, you can pass `--versionCheck=n` to the `xmake config` command.
+
+Once you set the flag, the option value be set until you specify otherwise.
+
+Therefore, to not check versions when running `xmake project -k vsxmake2022`, you must first run the `xmake config --versionCheck=n` command, then run the `xmake project -k vsxmake2022` command.
+
 ### Helpful `xmake` commands
 
 You may encounter use for the some of the more advanced `xmake` commands. A non-comprehensive list of some useful commands is included below.
@@ -147,8 +157,10 @@ Note that you should also commit & push the submodules that you've updated if th
 
 > [!WARNING]
 > The vs. build plugin performs the compile operation by directly calling the xmake command under vs, and also supports intellisense and definition jumps, as well as breakpoint debugging.
-> This means that modifying the project properties within Visual Studio will not affect which flags are passed to the build when VS executes `xmake`. XMake provides some configurable project settings
-which can be found in VS under the `Project Properties -> Configuration Properties -> Xmake` menu.
+> This means that modifying the project properties within Visual Studio will not affect which flags are passed to the build when VS executes `xmake`. XMake provides some configurable project settings which can be found in VS under the `Project Properties -> Configuration Properties -> Xmake` menu.
+
+> [!CAUTION]
+> If you have multiple Visual Studio versions installed, run `xmake f --vs=2022`, otherwise you may encounter issues with the project generation.
 
 ##### Configuring additional modes
 

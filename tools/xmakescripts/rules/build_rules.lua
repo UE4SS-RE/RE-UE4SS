@@ -102,7 +102,7 @@ local MSVC_COMPILE_OPTIONS = {
         "/wd4068",
         "/Zc:inline",
         "/Zc:strictStrings",
-        "/Zc:preprocessor"
+        "/Zc:preprocessor"  
     },
     ["ldflags"] = {
         "/DEBUG:FULL"
@@ -274,4 +274,3 @@ rule("ue4ss.dependency")
     on_config(function(target)
         target:set("group", "deps")
     end)
-
