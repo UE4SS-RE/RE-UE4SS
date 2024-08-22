@@ -25,6 +25,7 @@ namespace RC
             bool EnableDebugKeyBindings{false};
             int64_t SecondsToScanBeforeGivingUp{30};
             bool UseUObjectArrayCache{true};
+            bool LatestVersionCheck{true};
         } General;
 
         struct SectionEngineVersionOverride

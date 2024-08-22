@@ -56,6 +56,8 @@
 #include <UnrealDef.hpp>
 
 #include <polyhook2/PE/IatHook.hpp>
+#include <curl/curl.h>
+#include <glaze/glaze.hpp>
 
 namespace RC
 {
@@ -225,6 +227,16 @@ namespace RC
                          fmt::format(L"{}",
                                      UE4SS_LIB_BETA_STARTED == 0 ? L"" : (UE4SS_LIB_IS_BETA == 0 ? L" Beta #?" : fmt::format(L" Beta #{}", UE4SS_LIB_VERSION_BETA))),
                          to_wstring(UE4SS_LIB_BUILD_GITSHA));
+
+            if (settings_manager.General.LatestVersionCheck)
+            {
+                StringType latest_version = get_latest_ue4ss_version();
+                if (!is_latest_ue4ss_version(latest_version))
+                {
+                    if (latest_version != L"")
+                        Output::send<LogLevel::Warning>(STR("A newer version ({}) is available, please consider downloading from https://github.com/UE4SS-RE/RE-UE4SS/releases/latest\n"), latest_version);
+                }
+            }
 
 #ifdef __clang__
 #define UE4SS_COMPILER L"Clang"
@@ -1460,6 +1472,126 @@ namespace RC
         Output::send(STR("SDK generated in {} seconds.\n"), generator_duration);
     }
 
+    auto UE4SSProgram::get_latest_version_check_setting() -> bool
+    {
+        return settings_manager.General.LatestVersionCheck;
+    }
+
+    static auto write_callback(void* contents, size_t size, size_t nmemb, void* userp) -> size_t
+    {
+        ((std::string*)userp)->append((char*)contents, size * nmemb);
+        return size * nmemb;
+    }
+
+    auto UE4SSProgram::get_latest_ue4ss_version() -> StringType
+    {
+        CURL* curl;
+        CURLcode response;
+        std::string finalUrl;
+        std::string tag;
+
+        curl = curl_easy_init();
+        if (curl)
+        {
+            // This is a redirect hack to avoid having to use github api,
+            // which would require a user agent such as a github app to be made in UE4SS org,
+            // and is not a good idea to use in a public project
+            // CI version: curl -L -s -o /dev/null -w "%{url_effective}" "https://github.com/UE4SS-RE/RE-UE4SS/releases/latest"
+            curl_easy_setopt(curl, CURLOPT_URL, "https://github.com/UE4SS-RE/RE-UE4SS/releases/latest");
+            curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
+            curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_callback);
+            curl_easy_setopt(curl, CURLOPT_WRITEDATA, &finalUrl);
+
+            response = curl_easy_perform(curl);
+
+            if (response != CURLE_OK)
+            {
+                return L"";
+            }
+            else
+            {
+                char* effectiveUrl = nullptr;
+                curl_easy_getinfo(curl, CURLINFO_EFFECTIVE_URL, &effectiveUrl);
+                if (effectiveUrl)
+                {
+                    finalUrl = std::string(effectiveUrl);
+                }
+                
+                std::size_t lastSlashPos = finalUrl.find_last_of('/');
+                if (lastSlashPos != std::string::npos)
+                {
+                    tag = finalUrl.substr(lastSlashPos + 1);
+                }
+            }
+
+            curl_easy_cleanup(curl);
+        }
+
+        if (tag.empty())
+        {
+            return L"";
+        }
+
+        return to_wstring(tag);
+    }
+
+    static auto split_version(const std::string& version) -> std::vector<int>
+    {
+        std::vector<int> parts;
+        std::stringstream ss(version);
+        std::string item;
+
+        while (std::getline(ss, item, '.'))
+        {
+            parts.push_back(std::stoi(item));
+        }
+
+        return parts;
+    }
+
+    auto UE4SSProgram::is_latest_ue4ss_version(StringType latest_ver) -> bool
+    {
+        std::string current_version = fmt::format("{}.{}.{}", UE4SS_LIB_VERSION_MAJOR, UE4SS_LIB_VERSION_MINOR, UE4SS_LIB_VERSION_HOTFIX);
+        std::string latest_version = to_string(latest_ver);
+        if (latest_version.empty())
+        {
+            // If we can't get the latest version, assume it's not
+            return false;
+        }
+        if (latest_version[0] == 'v')
+        {
+            latest_version = latest_version.substr(1);
+        }
+
+        std::vector<int> current = split_version(current_version);
+        std::vector<int> latest = split_version(latest_version);
+
+        while (current.size() < latest.size())
+        {
+            current.push_back(0);
+        }
+
+        while (latest.size() < current.size())
+        {
+            latest.push_back(0);
+        }
+
+        for (size_t i = 0; i < current.size(); ++i)
+        {
+            if (latest[i] > current[i])
+            {
+                return false;
+            }
+            else if (latest[i] < current[i])
+            {
+                return true;
+            }
+        }
+
+        // If both equal
+        return true;
+    }
+
     auto UE4SSProgram::stop_render_thread() -> void
     {
         if (m_render_thread.joinable())
@@ -1519,8 +1651,7 @@ namespace RC
         return m_input_handler.is_keydown_event_registered(key, modifier_keys);
     }
 
-    auto UE4SSProgram::find_mod_by_name_internal(std::wstring_view mod_name, IsInstalled is_installed, IsStarted is_started, FMBNI_ExtraPredicate extra_predicate)
-            -> Mod*
+    auto UE4SSProgram::find_mod_by_name_internal(std::wstring_view mod_name, IsInstalled is_installed, IsStarted is_started, FMBNI_ExtraPredicate extra_predicate) -> Mod*
     {
         auto mod_exists_with_name = std::find_if(get_program().m_mods.begin(), get_program().m_mods.end(), [&](auto& elem) -> bool {
             bool found = true;

@@ -15,6 +15,8 @@ UE Platform support, which allows for much easier internal implementation of new
 
 Added new installation method by allowing overriding of the location of the `UE4SS.dll`, [documentation](https://docs.ue4ss.com/installation-guide.html#overriding-install-location). - ([UE4SS #506](https://github.com/UE4SS-RE/RE-UE4SS/pull/506)) - Buckminsterfullerene 
 
+Add opt-out checking for the latest version of UE4SS during load or when a crash dump is created. ([UE4SS #617](https://github.com/UE4SS-RE/RE-UE4SS/pull/617)) - Buckminsterfullerene
+
 ### Live View 
 Added search filter: `IncludeClassNames`. ([UE4SS #472](https://github.com/UE4SS-RE/RE-UE4SS/pull/472)) - Buckminsterfullerene
 
@@ -128,6 +130,9 @@ Fixes mods not loading when UE4SS initializes too late ([UE4SS #454](https://git
 
 ### Added
 ```ini
+[General]
+bLatestVersionCheck = 1
+
 [Hooks]
 HookLoadMap = 1
 HookAActorTick = 1
