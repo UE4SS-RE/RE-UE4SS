@@ -745,7 +745,7 @@ namespace RC::LuaType
 
             size_t array_element_size = inner->GetElementSize();
 
-            unsigned char* array{};
+            auto array = new(params.data) Unreal::FScriptArray{};
             size_t table_length = lua_rawlen(params.lua.get_lua_state(), 1);
             bool has_elements = table_length > 0;
 
@@ -753,7 +753,6 @@ namespace RC::LuaType
 
             if (has_elements)
             {
-                array = new unsigned char[array_property->GetElementSize() * table_length];
 
                 params.lua.for_each_in_table([&](LuaMadeSimple::LuaTableReference table) -> bool {
                     // Skip this table entry if the key wasn't numerical, who knows what the user put in their script
@@ -763,10 +762,11 @@ namespace RC::LuaType
                     }
 
                     params.lua.insert_value(-2);
+                    array->AddZeroed(1, inner->GetSize(), inner->GetMinAlignment());
                     const PusherParams pusher_params{.operation = Operation::Set,
                                                      .lua = params.lua,
-                                                     .base = static_cast<Unreal::UObject*>(static_cast<void*>(array)), // Base is the start of the params struct
-                                                     .data = &array[array_element_size * element_index],
+                                                     .base = static_cast<Unreal::UObject*>(array->GetData()), // Base is the start of the params struct
+                                                     .data = &static_cast<uint8_t*>(array->GetData())[array_element_size * element_index],
                                                      .property = inner};
                     StaticState::m_property_value_pushers[name_comparison_index](pusher_params);
 
