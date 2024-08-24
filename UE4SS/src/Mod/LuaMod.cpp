@@ -4179,7 +4179,7 @@ Overloads:
                                 LuaType::FOutputDevice::construct(callback_data.lua, &ar);
                                 LuaType::RemoteUnrealParam::construct(callback_data.lua, &executor, s_object_property_name);
 
-                                callback_data.lua.call_function(4, 1);
+                                callback_data.lua.call_function(5, 1);
 
                                 if (callback_data.lua.is_nil())
                                 {
