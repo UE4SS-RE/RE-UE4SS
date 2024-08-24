@@ -14,6 +14,7 @@ Keybinds = {
     ["ObjectDumper"]                 = {["Key"] = Key.J,             ["ModifierKeys"] = {ModifierKey.CONTROL}},
     ["CXXHeaderGenerator"]           = {["Key"] = Key.H,             ["ModifierKeys"] = {ModifierKey.CONTROL}},
     ["UHTCompatibleHeaderGenerator"] = {["Key"] = Key.NUM_NINE,      ["ModifierKeys"] = {ModifierKey.CONTROL}},
+    ["GenerateLuaTypes"]             = {["Key"] = Key.NUM_ZERO,      ["ModifierKeys"] = {ModifierKey.CONTROL}},
     ["DumpStaticMeshes"]             = {["Key"] = Key.NUM_EIGHT,     ["ModifierKeys"] = {ModifierKey.CONTROL}},
     ["DumpAllActors"]                = {["Key"] = Key.NUM_SEVEN,     ["ModifierKeys"] = {ModifierKey.CONTROL}},
     ["DumpUSMAP"]                    = {["Key"] = Key.NUM_SIX,       ["ModifierKeys"] = {ModifierKey.CONTROL}},
@@ -29,6 +30,7 @@ end
 RegisterKey("ObjectDumper", function() DumpAllObjects() end)
 RegisterKey("CXXHeaderGenerator", function() GenerateSDK() end)
 RegisterKey("UHTCompatibleHeaderGenerator", function() GenerateUHTCompatibleHeaders() end)
+RegisterKey("GenerateLuaTypes", function() GenerateLuaTypes() end)
 RegisterKey("DumpStaticMeshes", function() DumpStaticMeshes() end)
 RegisterKey("DumpAllActors", function() DumpAllActors() end)
 RegisterKey("DumpUSMAP", function() DumpUSMAP() end)

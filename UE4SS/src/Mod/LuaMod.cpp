@@ -1455,6 +1455,13 @@ Overloads:
                 return 0;
             });
 
+            lua.register_function("GenerateLuaTypes", []([[maybe_unused]] const LuaMadeSimple::Lua& lua) -> int {
+                const Mod* mod = get_mod_ref(lua);
+                File::StringType working_dir{mod->m_program.get_working_directory()};
+                mod->m_program.generate_lua_types(working_dir + STR("\\Mods\\shared\\types"));
+                return 0;
+            });
+
             lua.register_function("DumpStaticMeshes", []([[maybe_unused]] const LuaMadeSimple::Lua& lua) -> int {
                 GUI::Dumpers::call_generate_static_mesh_file();
                 return 0;
