@@ -107,6 +107,8 @@ Fixed `FText` not working as a parameter (in `RegisterHook`, etc.) ([UE4SS #422]
 
 Fixed crash when calling UFunctions that take one or more 'out' params of type TArray<T>. ([UE4SS #477](https://github.com/UE4SS-RE/RE-UE4SS/pull/477))
 
+Fixed `RegisterProcessConsoleExecPostHook`. ([UE4SS #631](https://github.com/UE4SS-RE/RE-UE4SS/pull/631))
+
 ### C++ API
 Fixed a crash caused by a race condition enabled by C++ mods using `UE4SS_ENABLE_IMGUI` in their constructor ([UE4SS #481](https://github.com/UE4SS-RE/RE-UE4SS/pull/481))
 
