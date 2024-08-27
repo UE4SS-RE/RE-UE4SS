@@ -185,7 +185,7 @@ namespace RC::JSON::Parser
             {
                 do_comma_verification();
 
-                m_last_value = std::make_unique<JSON::Number>(std::stoll(data_no_spaces, nullptr));
+                m_last_value = std::make_unique<JSON::Number>(std::stoll(to_string(data_no_spaces), nullptr));
             }
             else if (!m_string_started)
             {

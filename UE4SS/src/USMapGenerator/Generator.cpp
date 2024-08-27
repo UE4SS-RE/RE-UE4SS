@@ -299,11 +299,11 @@ namespace RC::OutTheShade
             if (Object->GetClassPrivate() == UClass::StaticClass() || Object->GetClassPrivate() == UScriptStruct::StaticClass() ||
                 Object->GetClassPrivate() == UEnum::StaticClass())
             {
-                std::wstring RawPathName = Object->GetPathName();
-                std::wstring::size_type PathNameStart =
+                StringType RawPathName = Object->GetPathName();
+                StringType::size_type PathNameStart =
                         0; // include first bit (Script/Game) to avoid ambiguity; to drop it, replace with RawPathName.find_first_of('/', 1) + 1;
-                std::wstring::size_type PathNameLength = RawPathName.find_last_of('.') - PathNameStart;
-                std::wstring FinalPathStr = RawPathName.substr(PathNameStart, PathNameLength);
+                StringType::size_type PathNameLength = RawPathName.find_last_of('.') - PathNameStart;
+                StringType FinalPathStr = RawPathName.substr(PathNameStart, PathNameLength);
                 FName FinalPathName = FName(FinalPathStr);
 
                 NameMap.insert_or_assign(FinalPathName, 0);

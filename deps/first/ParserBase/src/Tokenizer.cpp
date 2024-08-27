@@ -122,7 +122,7 @@ namespace RC::ParserBase
         {
             TokenFoundWrapper token_found{};
 
-            if (c && *c == L'\n')
+            if (c && *c == STR('\n'))
             {
                 ++m_current_line;
                 m_current_column = 0;

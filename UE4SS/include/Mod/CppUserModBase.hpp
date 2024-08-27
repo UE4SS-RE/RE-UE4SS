@@ -8,6 +8,8 @@
 #include <GUI/GUITab.hpp>
 #include <Input/Handler.hpp>
 
+#include <String/StringType.hpp>
+
 namespace RC
 {
     struct ModMetadata
@@ -125,14 +127,14 @@ namespace RC
         {
         }
 
-        RC_UE4SS_API virtual auto on_dll_load(std::wstring_view dll_name) -> void
+        RC_UE4SS_API virtual auto on_dll_load(StringViewType dll_name) -> void
         {
         }
 
         RC_UE4SS_API virtual auto render_tab() -> void{};
 
       protected:
-        RC_UE4SS_API auto register_tab(std::wstring_view tab_name, GUI::GUITab::RenderFunctionType) -> void;
+        RC_UE4SS_API auto register_tab(StringViewType tab_name, GUI::GUITab::RenderFunctionType) -> void;
         RC_UE4SS_API auto register_keydown_event(Input::Key, const Input::EventCallbackCallable&, uint8_t custom_data = 0) -> void;
         RC_UE4SS_API auto register_keydown_event(Input::Key, const Input::Handler::ModifierKeyArray&, const Input::EventCallbackCallable&, uint8_t custom_data = 0)
                 -> void;

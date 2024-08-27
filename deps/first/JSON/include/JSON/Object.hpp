@@ -14,6 +14,9 @@
 #include <JSON/Number.hpp>
 #include <JSON/Value.hpp>
 
+#include <fmt/core.h>
+#include <fmt/xchar.h>
+
 namespace RC::JSON
 {
     class RC_JSON_API Object : public Value
@@ -69,7 +72,7 @@ namespace RC::JSON
             auto value = find_value_by_key(key);
             if (!value)
             {
-                throw std::runtime_error{to_string(std::format(STR("No key in JSON object with name {}"), key))};
+                throw std::runtime_error{to_string(fmt::format(STR("No key in JSON object with name {}"), key))};
             }
             return *static_cast<ValueType*>(value);
         }
@@ -80,7 +83,7 @@ namespace RC::JSON
             auto value = find_value_by_key(key);
             if (!value)
             {
-                throw std::runtime_error{to_string(std::format(STR("No key in JSON object with name {}"), key))};
+                throw std::runtime_error{to_string(fmt::format(STR("No key in JSON object with name {}"), key))};
             }
             return *static_cast<ValueType*>(value);
         }
