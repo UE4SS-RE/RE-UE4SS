@@ -123,14 +123,14 @@ namespace RC::UEGenerator
 
     auto generate_delegate_name(FProperty* property, const File::StringType& context_name) -> File::StringType
     {
-        const auto property_name = sanitize_property_name(property->GetName());
+        const StringType property_name = sanitize_property_name(property->GetName());
         return fmt::format(STR("F{}{}"), context_name, property_name);
     }
 
     auto generate_property_cxx_name(FProperty* property, bool is_top_level_declaration, UObject* class_context, EnableForwardDeclarations enable_forward_declarations)
             -> File::StringType
     {
-        const auto field_class_name = property->GetClass().GetName();
+        const StringType field_class_name = property->GetClass().GetName();
 
         // Byte Property
         if (property->IsA<FByteProperty>())
@@ -141,7 +141,7 @@ namespace RC::UEGenerator
             if (enum_value != NULL)
             {
                 // Non-EnumClass enumerations should be wrapped into TEnumAsByte according to UHT
-                const auto enum_type_name = get_native_enum_name(enum_value);
+                const StringType enum_type_name = get_native_enum_name(enum_value);
                 return fmt::format(STR("TEnumAsByte<{}>"), enum_type_name);
             }
             return STR("uint8");
@@ -158,7 +158,7 @@ namespace RC::UEGenerator
                 throw std::runtime_error(RC::fmt("EnumProperty %S does not have a valid Enum value", property->GetName().c_str()));
             }
 
-            const auto enum_type_name = get_native_enum_name(uenum);
+            const StringType enum_type_name = get_native_enum_name(uenum);
             return enum_type_name;
         }
 
@@ -251,7 +251,7 @@ namespace RC::UEGenerator
                 return STR("TSoftClassPtr<UObject>");
             }
             
-            const auto meta_class_name = get_native_class_name(meta_class, false);
+            const StringType meta_class_name = get_native_class_name(meta_class, false);
             return fmt::format(STR("TSoftClassPtr<{}>"), meta_class_name);
         }
 
@@ -268,7 +268,7 @@ namespace RC::UEGenerator
                 return STR("UObject*");
             }
 
-            const auto property_class_name = get_native_class_name(property_class, false);
+            const StringType property_class_name = get_native_class_name(property_class, false);
             return fmt::format(STR("{}*"), property_class_name);
         }
 
@@ -282,7 +282,7 @@ namespace RC::UEGenerator
             }
             else
             {
-                const auto property_class_name = get_native_class_name(property_class, false);
+                const StringType property_class_name = get_native_class_name(property_class, false);
                 return fmt::format(STR("TObjectPtr<{}>"), property_class_name);
             }
         }
@@ -335,7 +335,7 @@ namespace RC::UEGenerator
                 return STR("TSoftObjectPtr<UObject>");
             }
 
-            const auto property_class_name = get_native_class_name(property_class, false);
+            const StringType property_class_name = get_native_class_name(property_class, false);
             return fmt::format(STR("TSoftObjectPtr<{}>"), property_class_name);
         }
 
@@ -370,7 +370,7 @@ namespace RC::UEGenerator
                 throw std::runtime_error(RC::fmt("Struct is NULL for StructProperty %S", property->GetName().c_str()));
             }
 
-            const auto native_struct_name = get_native_struct_name(script_struct);
+            const StringType native_struct_name = get_native_struct_name(script_struct);
             return native_struct_name;
         }
 
@@ -379,7 +379,7 @@ namespace RC::UEGenerator
         {
             FDelegateProperty* delegate_property = static_cast<FDelegateProperty*>(property);
 
-            const auto delegate_type_name = generate_delegate_name(delegate_property, class_context->GetName());
+            const StringType delegate_type_name = generate_delegate_name(delegate_property, class_context->GetName());
             return delegate_type_name;
         }
 
@@ -389,7 +389,7 @@ namespace RC::UEGenerator
         {
             FMulticastInlineDelegateProperty* delegate_property = static_cast<FMulticastInlineDelegateProperty*>(property);
 
-            const auto delegate_type_name = generate_delegate_name(delegate_property, class_context->GetName());
+            const StringType delegate_type_name = generate_delegate_name(delegate_property, class_context->GetName());
             return delegate_type_name;
         }
 
@@ -397,7 +397,7 @@ namespace RC::UEGenerator
         {
             FMulticastSparseDelegateProperty* delegate_property = static_cast<FMulticastSparseDelegateProperty*>(property);
 
-            const auto delegate_type_name = generate_delegate_name(delegate_property, class_context->GetName());
+            const StringType delegate_type_name = generate_delegate_name(delegate_property, class_context->GetName());
             return delegate_type_name;
         }
 
@@ -405,7 +405,7 @@ namespace RC::UEGenerator
         if (property->IsA<FFieldPathProperty>())
         {
             FFieldPathProperty* field_path_property = static_cast<FFieldPathProperty*>(property);
-            const auto property_class_name = field_path_property->GetPropertyClass()->GetName();
+            const StringType property_class_name = field_path_property->GetPropertyClass()->GetName();
             return fmt::format(STR("TFieldPath<F{}>"), property_class_name);
         }
 
@@ -433,7 +433,7 @@ namespace RC::UEGenerator
             FSetProperty* set_property = static_cast<FSetProperty*>(property);
             FProperty* element_prop = set_property->GetElementProp();
 
-            const auto element_property_type = generate_property_cxx_name(element_prop, is_top_level_declaration, class_context);
+            const StringType element_property_type = generate_property_cxx_name(element_prop, is_top_level_declaration, class_context);
             return fmt::format(STR("TSet<{}>"), element_property_type);
         }
 
@@ -482,7 +482,7 @@ namespace RC::UEGenerator
 
     auto generate_property_lua_name(FProperty* property, bool is_top_level_declaration, UObject* class_context) -> File::StringType
     {
-        const auto field_class_name = property->GetClass().GetName();
+        const StringType field_class_name = property->GetClass().GetName();
 
         // Byte Property
         if (field_class_name == STR("ByteProperty"))
@@ -493,7 +493,7 @@ namespace RC::UEGenerator
             if (enum_value != NULL)
             {
                 // Non-EnumClass enumerations should be wrapped into TEnumAsByte according to UHT
-                const auto enum_type_name = get_native_enum_name(enum_value);
+                const StringType enum_type_name = get_native_enum_name(enum_value);
                 return fmt::format(STR("{}"), enum_type_name);
             }
             return STR("uint8");
@@ -510,7 +510,7 @@ namespace RC::UEGenerator
                 throw std::runtime_error(RC::fmt("EnumProperty %S does not have a valid Enum value", property->GetName().c_str()));
             }
 
-            const auto enum_type_name = get_native_enum_name(uenum);
+            const StringType enum_type_name = get_native_enum_name(uenum);
             return enum_type_name;
         }
 
@@ -571,7 +571,7 @@ namespace RC::UEGenerator
                 return STR("UObject");
             }
 
-            const auto property_class_name = get_native_class_name(property_class, false);
+            const StringType property_class_name = get_native_class_name(property_class, false);
             return fmt::format(STR("{}"), property_class_name);
         }
 
@@ -585,7 +585,7 @@ namespace RC::UEGenerator
             }
             else
             {
-                const auto property_class_name = get_native_class_name(property_class, false);
+                const StringType property_class_name = get_native_class_name(property_class, false);
                 return fmt::format(STR("TObjectPtr<{}>"), property_class_name);
             }
         }
@@ -630,7 +630,7 @@ namespace RC::UEGenerator
                 return STR("TSoftObjectPtr<UObject>");
             }
 
-            const auto property_class_name = get_native_class_name(property_class, false);
+            const StringType property_class_name = get_native_class_name(property_class, false);
             return fmt::format(STR("TSoftObjectPtr<{}>"), property_class_name);
         }
 
@@ -666,7 +666,7 @@ namespace RC::UEGenerator
                 return STR("TSoftClassPtr<UObject>");
             }
 
-            const auto meta_class_name = get_native_class_name(meta_class, false);
+            const StringType meta_class_name = get_native_class_name(meta_class, false);
             return fmt::format(STR("TSoftClassPtr<{}>"), meta_class_name);
         }
 
@@ -697,7 +697,7 @@ namespace RC::UEGenerator
                 throw std::runtime_error(RC::fmt("Struct is NULL for StructProperty %S", property->GetName().c_str()));
             }
 
-            const auto native_struct_name = get_native_struct_name(script_struct);
+            const StringType native_struct_name = get_native_struct_name(script_struct);
             return native_struct_name;
         }
 
@@ -706,7 +706,7 @@ namespace RC::UEGenerator
         {
             FDelegateProperty* delegate_property = static_cast<FDelegateProperty*>(property);
 
-            const auto delegate_type_name = generate_delegate_name(delegate_property, class_context->GetName());
+            const StringType delegate_type_name = generate_delegate_name(delegate_property, class_context->GetName());
             return delegate_type_name;
         }
 
@@ -716,7 +716,7 @@ namespace RC::UEGenerator
         {
             FMulticastInlineDelegateProperty* delegate_property = static_cast<FMulticastInlineDelegateProperty*>(property);
 
-            const auto delegate_type_name = generate_delegate_name(delegate_property, class_context->GetName());
+            const StringType delegate_type_name = generate_delegate_name(delegate_property, class_context->GetName());
             return delegate_type_name;
         }
 
@@ -724,7 +724,7 @@ namespace RC::UEGenerator
         {
             FMulticastSparseDelegateProperty* delegate_property = static_cast<FMulticastSparseDelegateProperty*>(property);
 
-            const auto delegate_type_name = generate_delegate_name(delegate_property, class_context->GetName());
+            const StringType delegate_type_name = generate_delegate_name(delegate_property, class_context->GetName());
             return delegate_type_name;
         }
 
@@ -732,7 +732,7 @@ namespace RC::UEGenerator
         if (field_class_name == STR("FieldPathProperty"))
         {
             FFieldPathProperty* field_path_property = static_cast<FFieldPathProperty*>(property);
-            const auto property_class_name = field_path_property->GetPropertyClass()->GetName();
+            const StringType property_class_name = field_path_property->GetPropertyClass()->GetName();
             return fmt::format(STR("TFieldPath<F{}>"), property_class_name);
         }
 
@@ -753,7 +753,7 @@ namespace RC::UEGenerator
             FSetProperty* set_property = static_cast<FSetProperty*>(property);
             FProperty* element_prop = set_property->GetElementProp();
 
-            const auto element_property_type = generate_property_lua_name(element_prop, is_top_level_declaration, class_context);
+            const StringType element_property_type = generate_property_lua_name(element_prop, is_top_level_declaration, class_context);
             return fmt::format(STR("TSet<{}>"), element_property_type);
         }
 
