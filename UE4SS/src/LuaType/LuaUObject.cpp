@@ -1089,6 +1089,41 @@ namespace RC::LuaType
         params.lua.throw_error(fmt::format("[push_textproperty] Unknown Operation ({}) not supported", static_cast<int32_t>(params.operation)));
     }
 
+    static auto get_stack_dump(const LuaMadeSimple::Lua& lua, const char* message = "") -> std::string
+    {
+        auto lua_state = lua.get_lua_state();
+        auto out_message = fmt::format("\n\nLUA Stack dump -> START------------------------------\n{}\n", message);
+        int top = lua_gettop(lua_state);
+        for (int i = 1; i <= top; i++)
+        {
+            out_message.append(fmt::format("{}\t{}\t", i, luaL_typename(lua_state, i)));
+            switch (lua_type(lua_state, i))
+            {
+            case LUA_TNUMBER:
+                out_message.append(fmt::format("{}", lua_tonumber(lua_state, i)));
+                break;
+            case LUA_TSTRING:
+                out_message.append(fmt::format("{}", lua_tostring(lua_state, i)));
+                break;
+            case LUA_TBOOLEAN:
+                out_message.append(fmt::format("{}", (lua_toboolean(lua_state, i) ? "true" : "false")));
+                break;
+            case LUA_TNIL:
+                out_message.append("nil");
+                break;
+            case LUA_TFUNCTION:
+                out_message.append("function");
+                break;
+            default:
+                out_message.append(fmt::format("{}", lua_topointer(lua_state, i)));
+                break;
+            }
+            out_message.append("\n");
+        }
+        out_message.append("\nLUA Stack dump -> END----------------------------\n\n");
+        return out_message;
+    }
+
     auto push_strproperty(const PusherParams& params) -> void
     {
         Unreal::FString* string = static_cast<Unreal::FString*>(params.data);
@@ -1118,6 +1153,7 @@ namespace RC::LuaType
             else
             {
                 auto error = to_string(fmt::format(STR("[push_strproperty] StrProperty ({}) can only be set to a string or FString"), params.property ? params.property->GetFullName() : STR("N/A")));
+                error.append(get_stack_dump(params.lua));
                 params.lua.throw_error(error);
             }
             return;
