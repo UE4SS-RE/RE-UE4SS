@@ -23,7 +23,7 @@ if is_config("patternsleuth", "local") then
     -- The patternsleuth target is managed by the cargo.build rule.
     target("patternsleuth")
         set_kind("static")
-        add_rules("cargo.build", {project_name = "patternsleuth", is_debug = is_mode_debug(), features= { "process-internal" }})
+        add_rules("cargo.build", {project_name = "patternsleuth", is_debug = is_mode_debug(), features = { "process-internal", "image-pe" }})
         add_files("patternsleuth/Cargo.toml")
         -- Exposes the rust *.rs files to the Visual Studio project filters.
         add_extrafiles("patternsleuth/**.rs")
