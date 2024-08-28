@@ -1117,7 +1117,8 @@ namespace RC::LuaType
             }
             else
             {
-                params.lua.throw_error("[push_strproperty] StrProperty can only be set to a string or FString");
+                auto error = to_string(fmt::format(STR("[push_strproperty] StrProperty ({}) can only be set to a string or FString"), params.property ? params.property->GetFullName() : STR("N/A")));
+                params.lua.throw_error(error);
             }
             return;
         }
