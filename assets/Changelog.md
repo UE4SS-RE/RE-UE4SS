@@ -45,6 +45,7 @@ This can be used when calling `FileHandle::memory_map`, unlike `OpenFor::Writing
 
 ### General
 Changed the default location of the UE4SS release assets to be in `game executable directory/ue4ss/`. This change is backwards compatible with the old location. ([UE4SS #506](https://github.com/UE4SS-RE/RE-UE4SS/pull/506)) - Buckminsterfullerene
+Updated PatternSleuth submodule ([UE4SS #638](https://github.com/UE4SS-RE/RE-UE4SS/pull/638))
 
 ### Live View
 Fixed the majority of the lag ([UE4SS #512](https://github.com/UE4SS-RE/RE-UE4SS/pull/512))
