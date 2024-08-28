@@ -4,4 +4,4 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-patternsleuth = { path = "../patternsleuth/patternsleuth", features = ["process-internal"] }
+patternsleuth = { path = "../patternsleuth/patternsleuth", features = ["process-internal", "image-pe"] }
