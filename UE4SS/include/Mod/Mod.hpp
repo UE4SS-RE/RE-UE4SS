@@ -25,10 +25,9 @@ namespace RC
         UE4SSProgram& m_program;
 
       protected:
-#pragma warning(disable : 4251)
         StringType m_mod_name;
         std::filesystem::path m_mod_path;
-#pragma warning(default : 4251)
+
 
       protected:
         // Whether the mod can be installed

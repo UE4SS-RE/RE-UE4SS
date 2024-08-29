@@ -24,11 +24,9 @@ namespace RC::JSON
     {
       public:
         constexpr static Type static_type = Type::Array;
-
-#pragma warning(disable : 4251)
+    
       private:
         std::vector<std::unique_ptr<Value>> m_members{};
-#pragma warning(default : 4251)
 
       public:
         Array() = default;
