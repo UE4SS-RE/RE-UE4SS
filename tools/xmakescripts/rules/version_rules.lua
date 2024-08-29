@@ -49,12 +49,6 @@ rule("check.msvc.ver")
                 cprint("checking for Microsoft C/C++ Compiler Toolset version ... ${color.success}%s", vctools_ver)
             end
 
-            -- TEMPORARY, remove before next release
-            -- if the msvc is in preview, we should warn the user, but not block build
-            if compare_versions(parsed_vcvars_ver, parse_version("14.41.0")) then
-                cprint("${color.warning}your MSVC version may cause error on compile, please consider downgrading to this version or similar: (%s)", MINIMUM_MSVC_TOOLSET_VERSION)
-            end
-
             -- could also do this
             -- local vs_version = msvc:config("vcvars").VSCMD_VER
             -- if vs_version:find("pre") then
