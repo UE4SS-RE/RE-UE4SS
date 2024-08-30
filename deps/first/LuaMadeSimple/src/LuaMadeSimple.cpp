@@ -16,6 +16,118 @@ namespace RC::LuaMadeSimple
     // Current errors for all lua states
     static std::unordered_map<lua_State*, std::string> lua_state_errors;
 
+    template <>
+    auto LuaTableData<-1>::is_nil() -> bool
+    {
+        return lua_isnil(lua->get_lua_state(), -1);
+    }
+    template <>
+    auto LuaTableData<-1>::is_string() const -> bool
+    {
+        return lua_type(lua->get_lua_state(), -1) == LUA_TSTRING;
+    }
+    template <>
+    auto LuaTableData<-1>::get_string() const -> std::string_view
+    {
+        return lua_tostring(lua->get_lua_state(), -1);
+    }
+    template <>
+    auto LuaTableData<-1>::is_number() const -> bool
+    {
+        return lua_isnumber(lua->get_lua_state(), -1);
+    }
+    template <>
+    auto LuaTableData<-1>::get_number() const -> double
+    {
+        return lua_tonumber(lua->get_lua_state(), -1);
+    }
+    template <>
+    auto LuaTableData<-1>::get_float(int32_t force_index) -> float // Safe to use after a call to is_number
+    {
+        return static_cast<float>(lua_tonumber(lua->get_lua_state(), force_index));
+    }
+    template <>
+    auto LuaTableData<-1>::is_integer() const -> bool
+    {
+        return lua_isinteger(lua->get_lua_state(), -1);
+    }
+    template <>
+    auto LuaTableData<-1>::get_integer() const -> int64_t
+    {
+        return lua_tointeger(lua->get_lua_state(), -1);
+    }
+    template <>
+    auto LuaTableData<-1>::is_bool() const -> bool
+    {
+        return lua_isboolean(lua->get_lua_state(), -1);
+    }
+    template <>
+    auto LuaTableData<-1>::get_bool() const -> bool
+    {
+        return lua_toboolean(lua->get_lua_state(), -1);
+    }
+    template <>
+    auto LuaTableData<-1>::is_table() const -> bool
+    {
+        return lua_istable(lua->get_lua_state(), -1);
+    }
+
+    template <>
+    auto LuaTableData<-2>::is_nil() -> bool
+    {
+        return lua_isnil(lua->get_lua_state(), -2);
+    }
+    template <>
+    auto LuaTableData<-2>::is_string() const -> bool
+    {
+        return lua_type(lua->get_lua_state(), -2) == LUA_TSTRING;
+    }
+    template <>
+    auto LuaTableData<-2>::get_string() const -> std::string_view
+    {
+        return lua_tostring(lua->get_lua_state(), -2);
+    }
+    template <>
+    auto LuaTableData<-2>::is_number() const -> bool
+    {
+        return lua_isnumber(lua->get_lua_state(), -2);
+    }
+    template <>
+    auto LuaTableData<-2>::get_number() const -> double
+    {
+        return lua_tonumber(lua->get_lua_state(), -2);
+    }
+    template <>
+    auto LuaTableData<-2>::get_float(int32_t force_index) -> float // Safe to use after a call to is_number
+    {
+        return static_cast<float>(lua_tonumber(lua->get_lua_state(), force_index));
+    }
+    template <>
+    auto LuaTableData<-2>::is_integer() const -> bool
+    {
+        return lua_isinteger(lua->get_lua_state(), -2);
+    }
+    template <>
+    auto LuaTableData<-2>::get_integer() const -> int64_t
+    {
+        return lua_tointeger(lua->get_lua_state(), -2);
+    }
+    template <>
+    auto LuaTableData<-2>::is_bool() const -> bool
+    {
+        return lua_isboolean(lua->get_lua_state(), -2);
+    }
+    template <>
+    auto LuaTableData<-2>::get_bool() const -> bool
+    {
+        return lua_toboolean(lua->get_lua_state(), -2);
+    }
+    template <>
+    auto LuaTableData<-2>::is_table() const -> bool
+    {
+        return lua_istable(lua->get_lua_state(), -2);
+    }
+
     Lua::Lua(lua_State* lua_state) : m_lua_state(lua_state), m_registry(*this)
     {
     }
