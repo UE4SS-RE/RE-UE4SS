@@ -3,11 +3,26 @@ local UEHelpers = {}
 -- local jsb = require "jsbProfi"
 
 -- Version 1 does not exist, we start at version 2 because the original version didn't have a version at all.
-local Version = 2
+local Version = 3
+
+---Class that allows to create a blank RemoteObject
+---@class RemoteObject
+local RemoteObject = {}
+RemoteObject.__index = RemoteObject
+
+---Creates a new instance of RemoteObject
+---@return RemoteObject
+function RemoteObject:new()
+    return setmetatable({}, RemoteObject)
+end
+
+function RemoteObject:IsValid()
+    return false
+end
 
 -- Functions local to this module, do not attempt to use!
 local CacheDefaultObject = function(ObjectFullName, VariableName, ForceInvalidateCache)
-    local DefaultObject
+    local DefaultObject = nil
 
     if not ForceInvalidateCache then
         DefaultObject = ModRef:GetSharedVariable(VariableName)
@@ -28,46 +43,62 @@ function UEHelpers.GetUEHelpersVersion()
     return Version
 end
 
+local PlayerControllerCache = RemoteObject:new() ---@cast PlayerControllerCache APlayerController
 --- Returns the first valid PlayerController that is currently controlled by a player.
 ---@return APlayerController
-local PlayerController = nil
 function UEHelpers.GetPlayerController()
-    if PlayerController and PlayerController:IsValid() then return PlayerController end
+    if PlayerControllerCache:IsValid() then return PlayerControllerCache end
     -- local PlayerControllers = jsb.simpleBench("findallof", FindAllOf, "Controller")
     -- Uncomment line above and comment line below to profile this function
-    local PlayerControllers = FindAllOf("PlayerController") or FindAllOf("Controller")
-    if not PlayerControllers then return Print("No PlayerControllers found\n") end
-    for _, Controller in pairs(PlayerControllers or {}) do
+    local PlayerControllers = FindAllOf("PlayerController") ---@type APlayerController[]?
+    if not PlayerControllers then
+        print("GetPlayerController: No PlayerControllers were found\n")
+        return RemoteObject:new() ---@type APlayerController
+    end
+    for _, Controller in ipairs(PlayerControllers) do
         if Controller.Pawn:IsValid() and Controller.Pawn:IsPlayerControlled() then
-            PlayerController = Controller
+            PlayerControllerCache = Controller
             break
-        -- else
-        --     print("Not valid or not player controlled\n")
         end
     end
-    if PlayerController and PlayerController:IsValid() then
-        return PlayerController
-    end
-    error("No PlayerController found\n")
+    return PlayerControllerCache
 end
 
---- Returns the UWorld that the player is currenlty in.
+local GameEngineCache = RemoteObject:new() ---@cast GameEngineCache UGameEngine
+---Returns first valid instance of UGameEngine
+---@return UGameEngine
+function UEHelpers.GetGameEngine()
+    if GameEngineCache:IsValid() then return GameEngineCache end
+
+    GameEngineCache = FindFirstOf("GameEngine") ---@type UGameEngine
+    return GameEngineCache
+end
+
+--- Returns the main UGameViewportClient
+---@return UGameViewportClient
+function UEHelpers.GetGameViewportClient()
+    local Engine = UEHelpers.GetGameEngine()
+    if Engine:IsValid() then
+        return Engine.GameViewport
+    end
+    return RemoteObject:new() ---@type UGameViewportClient
+end
+
+--- Returns the main UWorld
 ---@return UWorld
 function UEHelpers.GetWorld()
-    return UEHelpers.GetPlayerController():GetWorld()
-end
-
---- Returns the UGameViewportClient for the player.
----@return AActor
-function UEHelpers.GetGameViewportClient()
-    return UEHelpers.GetPlayerController().Player.ViewportClient
+    local GameViewportClient = UEHelpers.GetGameViewportClient()
+    if GameViewportClient:IsValid() then
+        return GameViewportClient.World
+    end
+    return RemoteObject:new() ---@type UWorld
 end
 
 --- Returns an object that's useable with UFunctions that have a WorldContextObject param.
 --- Prefer to use an actor that you already have access to whenever possible over this function.
----@return AActor
+---@return UObject
 function UEHelpers.GetWorldContextObject()
-    return UEHelpers.GetPlayerController()
+    return UEHelpers.GetGameViewportClient()
 end
 
 function UEHelpers.GetGameplayStatics(ForceInvalidateCache)
