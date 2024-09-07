@@ -97,10 +97,10 @@ function UEHelpers.GetWorld()
     end
     local GameViewportClient = UEHelpers.GetGameViewportClient()
     if GameViewportClient:IsValid() then
-        WorldCache =  GameViewportClient.World
+        WorldCache = GameViewportClient.World
         return WorldCache
     end
-    
+
     return RemoteObject:new() ---@type UWorld
 end
 
