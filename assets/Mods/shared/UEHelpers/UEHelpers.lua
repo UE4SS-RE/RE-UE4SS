@@ -101,23 +101,45 @@ function UEHelpers.GetWorldContextObject()
     return UEHelpers.GetGameViewportClient()
 end
 
+---@param ForceInvalidateCache boolean # Force update the cache
+---@return UGameplayStatics
 function UEHelpers.GetGameplayStatics(ForceInvalidateCache)
+    ---@type UGameplayStatics
     return CacheDefaultObject("/Script/Engine.Default__GameplayStatics", "UEHelpers_GameplayStatics", ForceInvalidateCache)
 end
 
+---@param ForceInvalidateCache boolean # Force update the cache
+---@return UKismetSystemLibrary
 function UEHelpers.GetKismetSystemLibrary(ForceInvalidateCache)
+    ---@type UKismetSystemLibrary
     return CacheDefaultObject("/Script/Engine.Default__KismetSystemLibrary", "UEHelpers_KismetSystemLibrary", ForceInvalidateCache)
 end
 
+---@param ForceInvalidateCache boolean # Force update the cache
+---@return UKismetMathLibrary
 function UEHelpers.GetKismetMathLibrary(ForceInvalidateCache)
-    return CacheDefaultObject("/Script/Engine.Default__KismetMathLibrary", "UEHelpers_KismetMathLibrary", ForceInvalidateCache)
+    ---@type UKismetMathLibrary
+    return CacheDefaultObject("/Script/Engine.Default__KismetMathLibrary", "UEHelpers_KismetMathLibrary", ForceInvalidateCache) 
 end
 
-function UEHelpers.GetKismetMathLibrary(ForceInvalidateCache)
-    return CacheDefaultObject("/Script/Engine.Default__KismetMathLibrary", "UEHelpers_KismetMathLibrary", ForceInvalidateCache)
+---@param ForceInvalidateCache boolean # Force update the cache
+---@return UKismetStringLibrary
+function UEHelpers.GetKismetStringLibrary(ForceInvalidateCache)
+    ---@type UKismetStringLibrary
+    return CacheDefaultObject("/Script/Engine.Default__KismetStringLibrary", "UEHelpers_KismetStringLibrary", ForceInvalidateCache)
 end
 
+---@param ForceInvalidateCache boolean # Force update the cache
+---@return UKismetTextLibrary
+function UEHelpers.GetKismetTextLibrary(ForceInvalidateCache)
+    ---@type UKismetTextLibrary
+    return CacheDefaultObject("/Script/Engine.Default__KismetTextLibrary", "UEHelpers_KismetTextLibrary", ForceInvalidateCache)
+end
+
+---@param ForceInvalidateCache boolean # Force update the cache
+---@return UGameMapsSettings
 function UEHelpers.GetGameMapsSettings(ForceInvalidateCache)
+    ---@type UGameMapsSettings
     return CacheDefaultObject("/Script/EngineSettings.Default__GameMapsSettings", "UEHelpers_GameMapsSettings", ForceInvalidateCache)
 end
 
