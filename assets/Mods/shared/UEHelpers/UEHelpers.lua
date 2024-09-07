@@ -92,11 +92,13 @@ function UEHelpers.GetWorld()
 
     local PlayerController = UEHelpers.GetPlayerController()
     if PlayerController:IsValid() then
-        return PlayerController:GetWorld()
+        WorldCache = PlayerController:GetWorld()
+        return WorldCache
     end
     local GameViewportClient = UEHelpers.GetGameViewportClient()
     if GameViewportClient:IsValid() then
-        return GameViewportClient.World
+        WorldCache =  GameViewportClient.World
+        return WorldCache
     end
     
     return RemoteObject:new() ---@type UWorld
