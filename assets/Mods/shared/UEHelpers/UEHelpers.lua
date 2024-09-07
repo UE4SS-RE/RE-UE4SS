@@ -64,33 +64,41 @@ function UEHelpers.GetPlayerController()
     return PlayerControllerCache
 end
 
-local GameEngineCache = RemoteObject:new() ---@cast GameEngineCache UGameEngine
----Returns first valid instance of UGameEngine
----@return UGameEngine
-function UEHelpers.GetGameEngine()
-    if GameEngineCache:IsValid() then return GameEngineCache end
+local EngineCache = RemoteObject:new() ---@cast EngineCache UEngine
+---Returns first valid instance of UEngine
+---@return UEngine
+function UEHelpers.GetEngine()
+    if EngineCache:IsValid() then return EngineCache end
 
-    GameEngineCache = FindFirstOf("GameEngine") ---@type UGameEngine
-    return GameEngineCache
+    EngineCache = FindFirstOf("Engine") ---@type UEngine
+    return EngineCache
 end
 
 --- Returns the main UGameViewportClient
 ---@return UGameViewportClient
 function UEHelpers.GetGameViewportClient()
-    local Engine = UEHelpers.GetGameEngine()
+    local Engine = UEHelpers.GetEngine()
     if Engine:IsValid() then
         return Engine.GameViewport
     end
     return RemoteObject:new() ---@type UGameViewportClient
 end
 
+local WorldCache = RemoteObject:new() ---@cast WorldCache UWorld
 --- Returns the main UWorld
 ---@return UWorld
 function UEHelpers.GetWorld()
+    if WorldCache:IsValid() then return WorldCache end
+
+    local PlayerController = UEHelpers.GetPlayerController()
+    if PlayerController:IsValid() then
+        return PlayerController:GetWorld()
+    end
     local GameViewportClient = UEHelpers.GetGameViewportClient()
     if GameViewportClient:IsValid() then
         return GameViewportClient.World
     end
+    
     return RemoteObject:new() ---@type UWorld
 end
 
@@ -98,7 +106,7 @@ end
 --- Prefer to use an actor that you already have access to whenever possible over this function.
 ---@return UObject
 function UEHelpers.GetWorldContextObject()
-    return UEHelpers.GetGameViewportClient()
+    return UEHelpers.GetWorld()
 end
 
 ---@param ForceInvalidateCache boolean # Force update the cache
