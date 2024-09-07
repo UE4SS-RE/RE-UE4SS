@@ -51,7 +51,7 @@ function UEHelpers.GetPlayerController()
     -- local PlayerControllers = jsb.simpleBench("findallof", FindAllOf, "Controller")
     -- Uncomment line above and comment line below to profile this function
     local PlayerControllers = FindAllOf("PlayerController") ---@type APlayerController[]?
-    if not PlayerControllers then
+    if not PlayerControllers or #PlayerControllers < 1 then
         print("GetPlayerController: No PlayerControllers were found\n")
         return RemoteObject:new() ---@type APlayerController
     end
