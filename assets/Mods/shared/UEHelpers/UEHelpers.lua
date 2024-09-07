@@ -43,35 +43,24 @@ function UEHelpers.GetUEHelpersVersion()
     return Version
 end
 
-local PlayerControllerCache = RemoteObject:new() ---@cast PlayerControllerCache APlayerController
---- Returns the first valid PlayerController that is currently controlled by a player.
----@return APlayerController
-function UEHelpers.GetPlayerController()
-    if PlayerControllerCache:IsValid() then return PlayerControllerCache end
-    -- local PlayerControllers = jsb.simpleBench("findallof", FindAllOf, "Controller")
-    -- Uncomment line above and comment line below to profile this function
-    local PlayerControllers = FindAllOf("PlayerController") ---@type APlayerController[]?
-    if not PlayerControllers or #PlayerControllers < 1 then
-        print("GetPlayerController: No PlayerControllers were found\n")
-        return RemoteObject:new() ---@type APlayerController
-    end
-    for _, Controller in ipairs(PlayerControllers) do
-        if Controller.Pawn:IsValid() and Controller.Pawn:IsPlayerControlled() then
-            PlayerControllerCache = Controller
-            break
-        end
-    end
-    return PlayerControllerCache
-end
-
 local EngineCache = RemoteObject:new() ---@cast EngineCache UEngine
----Returns first valid instance of UEngine
+---Returns instance of UEngine
 ---@return UEngine
 function UEHelpers.GetEngine()
     if EngineCache:IsValid() then return EngineCache end
 
     EngineCache = FindFirstOf("Engine") ---@type UEngine
     return EngineCache
+end
+
+local GameInstanceCache = RemoteObject:new() ---@cast GameInstanceCache UGameInstance
+---Returns instance of UGameInstance
+---@return UGameInstance
+function UEHelpers.GetGameInstance()
+    if GameInstanceCache:IsValid() then return GameInstanceCache end
+
+    GameInstanceCache = FindFirstOf("GameInstance") ---@type UGameInstance
+    return GameInstanceCache
 end
 
 --- Returns the main UGameViewportClient
@@ -82,6 +71,33 @@ function UEHelpers.GetGameViewportClient()
         return Engine.GameViewport
     end
     return RemoteObject:new() ---@type UGameViewportClient
+end
+
+local PlayerControllerCache = RemoteObject:new() ---@cast PlayerControllerCache APlayerController
+---Returns first local player controller
+---@return APlayerController
+function UEHelpers.GetPlayerController()
+    if PlayerControllerCache:IsValid() then return PlayerControllerCache end
+    
+    local GameInstance = UEHelpers.GetGameInstance()
+    if GameInstance:IsValid() and #GameInstance.LocalPlayers > 0 then
+        local localPlayer = GameInstance.LocalPlayers[1]
+        if localPlayer:IsValid() then
+            PlayerControllerCache = localPlayer.PlayerController
+        end
+    end
+
+    return PlayerControllerCache
+end
+
+---Returns local player pawn
+---@return APawn
+function UEHelpers.GetPlayer()
+    local playerController = UEHelpers.GetPlayerController()
+    if playerController:IsValid() then
+        return playerController.Pawn
+    end
+    return RemoteObject:new() ---@type APawn
 end
 
 local WorldCache = RemoteObject:new() ---@cast WorldCache UWorld
@@ -129,7 +145,7 @@ end
 ---@return UKismetMathLibrary
 function UEHelpers.GetKismetMathLibrary(ForceInvalidateCache)
     ---@type UKismetMathLibrary
-    return CacheDefaultObject("/Script/Engine.Default__KismetMathLibrary", "UEHelpers_KismetMathLibrary", ForceInvalidateCache) 
+    return CacheDefaultObject("/Script/Engine.Default__KismetMathLibrary", "UEHelpers_KismetMathLibrary", ForceInvalidateCache)
 end
 
 ---@param ForceInvalidateCache boolean # Force update the cache
