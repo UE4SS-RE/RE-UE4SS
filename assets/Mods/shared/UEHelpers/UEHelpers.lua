@@ -200,6 +200,29 @@ function UEHelpers.GetGameMapsSettings(ForceInvalidateCache)
     return CacheDefaultObject("/Script/EngineSettings.Default__GameMapsSettings", "UEHelpers_GameMapsSettings", ForceInvalidateCache)
 end
 
+---Returns Empty FName aka. "None"
+---@return FName
+function UEHelpers.FName_None()
+    return NAME_None
+end
+
+---Returns found FName or "None" FName if the operation faled
+---@param Name string
+---@return FName
+function UEHelpers.FindFName(Name)
+    return FName(Name, EFindName.FNAME_Find)
+end
+
+---Returns added FName or "None" FName if the operation faled
+---@param Name string
+---@return FName
+function UEHelpers.AddFName(Name)
+    return FName(Name, EFindName.FNAME_Add)
+end
+
+---Tries to find existing FName, if it doesn't exist a new FName will be added to the pool
+---@param Name string
+---@return FName # Returns found or added FName, "None" FName if both operation failed
 function UEHelpers.FindOrAddFName(Name)
     local NameFound = FName(Name, EFindName.FNAME_Find)
     if NameFound == NAME_None then
