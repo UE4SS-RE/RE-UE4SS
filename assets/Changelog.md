@@ -21,6 +21,17 @@ Added search filter: `IncludeClassNames`. ([UE4SS #472](https://github.com/UE4SS
 ### UHT Dumper
 
 ### Lua API
+#### UEHelpers [PR #650](https://github.com/UE4SS-RE/RE-UE4SS/pull/650)
+- Added local class `RemoteObject` with method `IsValid`. A new instance of the class should be used as return value in all UEHelpers functions instead of nil
+- Added function `GetPlayer` which is just a fast way to get player controlled Pawn (the majority of the time it will be the player character)
+- Added functions: `GetEngine`, `GetGameInstance`, `GetGameViewportClient`,  `GetGameModeBase`, `GetGameStateBase`,`GetPersistentLevel` and `GetWorldSettings`
+- Added functions to get static objects: `GetKismetStringLibrary`, `GetKismetTextLibrary`
+- Added function `GetActorFromHitResult` which extracts the hit actor from a `FHitResult` struct based on UE's version
+- Added FName utility functions:
+  - `FName_None`: returns a `None` FName (FName with ComparisonIndex = 0)
+  - `FindFName`: wrapper for `FName(Name, EFindName.FNAME_Find)`
+  - `AddFName`: wrapper for  `FName(Name, EFindName.FNAME_Add)`
+- Added [Lua Server Annotations](https://luals.github.io/wiki/annotations/) to all UEHelpers functions
 
 ### C++ API
 Key binds created with `UE4SSProgram::register_keydown_event` end up being duplicated upon mod hot-reload.  
@@ -62,6 +73,14 @@ The following search filters now allow multiple values, with each value separate
 `print` now behaves like vanilla Lua (can now accept zero, one, or multiple arguments of any type) ([UE4SS #423](https://github.com/UE4SS-RE/RE-UE4SS/pull/423)) - Lyrth
 
 The callback of `NotifyOnNewObject` can now optionally return `true` to unregister itself ([UE4SS #432](https://github.com/UE4SS-RE/RE-UE4SS/pull/432)) - Lyrth
+
+#### UEHelpers [UE4SS #650](https://github.com/UE4SS-RE/RE-UE4SS/pull/650)
+- Increased version to 3
+- Reworked all UEHelpers functions to ensure that they always return an object which can be checked with the function `IsValid` for validation
+- Reworked `UEHelpers.GetPlayerController` to return first valid player controller (It will now return a player controller even if it doesn't control a pawn at the time)
+- Reworked `UEHelpers.GetWorld` function to use UWorld cache (UWorld usually never changes)
+- Change `UEHelpers.GetWorldContextObject` function annotation to return `UObject`. (Any UObject with a GetWorld() function is a valid WorldContext)
+- Removed duplicate function `UEHelpers.GetKismetMathLibrary`
 
 ### C++ API
 
@@ -109,6 +128,8 @@ Fixed `FText` not working as a parameter (in `RegisterHook`, etc.) ([UE4SS #422]
 Fixed crash when calling UFunctions that take one or more 'out' params of type TArray<T>. ([UE4SS #477](https://github.com/UE4SS-RE/RE-UE4SS/pull/477))
 
 Fixed `RegisterProcessConsoleExecPostHook`. ([UE4SS #631](https://github.com/UE4SS-RE/RE-UE4SS/pull/631))
+
+Fixed `FindFirstOf` return type annotation in `Types.lua` to signal that the return value will never be nil. ([UE4SS #650](https://github.com/UE4SS-RE/RE-UE4SS/pull/650))
 
 ### C++ API
 Fixed a crash caused by a race condition enabled by C++ mods using `UE4SS_ENABLE_IMGUI` in their constructor ([UE4SS #481](https://github.com/UE4SS-RE/RE-UE4SS/pull/481))

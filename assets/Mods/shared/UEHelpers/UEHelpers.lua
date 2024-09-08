@@ -21,8 +21,13 @@ function RemoteObject:IsValid()
 end
 
 -- Functions local to this module, do not attempt to use!
-local CacheDefaultObject = function(ObjectFullName, VariableName, ForceInvalidateCache)
-    local DefaultObject = nil
+
+---@param ObjectFullName string
+---@param VariableName string
+---@param ForceInvalidateCache boolean?
+---@return UObject
+local function CacheDefaultObject(ObjectFullName, VariableName, ForceInvalidateCache)
+    local DefaultObject = RemoteObject:new()
 
     if not ForceInvalidateCache then
         DefaultObject = ModRef:GetSharedVariable(VariableName)
@@ -127,6 +132,28 @@ function UEHelpers.GetPersistentLevel()
     return RemoteObject:new() ---@type ULevel
 end
 
+---Returns UWorld->AuthorityGameMode<br>
+---The function doesn't guarantee to be an AGameMode, as many games derive their own game states directly from AGameModeBase!
+---@return AGameModeBase
+function UEHelpers.GetGameModeBase()
+    local World = UEHelpers.GetWorld()
+    if World:IsValid() and World.AuthorityGameMode:IsValid() then
+        return World.AuthorityGameMode
+    end
+    return RemoteObject:new() ---@type AGameModeBase
+end
+
+---Returns UWorld->GameState<br>
+---The function doesn't guarantee to be an AGameState, as many games derive their own game states directly from AGameStateBase!
+---@return AGameStateBase
+function UEHelpers.GetGameStateBase()
+    local World = UEHelpers.GetWorld()
+    if World:IsValid() and World.GameState:IsValid() then
+        return World.GameState
+    end
+    return RemoteObject:new() ---@type AGameStateBase
+end
+
 ---Returns PersistentLevel->WorldSettings
 ---@return AWorldSettings
 function UEHelpers.GetWorldSettings()
@@ -158,42 +185,42 @@ function UEHelpers.GetActorFromHitResult(HitResult)
     return HitResult.HitObjectHandle.Actor:Get()
 end
 
----@param ForceInvalidateCache boolean # Force update the cache
+---@param ForceInvalidateCache boolean? # Force update the cache
 ---@return UGameplayStatics
 function UEHelpers.GetGameplayStatics(ForceInvalidateCache)
     ---@type UGameplayStatics
     return CacheDefaultObject("/Script/Engine.Default__GameplayStatics", "UEHelpers_GameplayStatics", ForceInvalidateCache)
 end
 
----@param ForceInvalidateCache boolean # Force update the cache
+---@param ForceInvalidateCache boolean? # Force update the cache
 ---@return UKismetSystemLibrary
 function UEHelpers.GetKismetSystemLibrary(ForceInvalidateCache)
     ---@type UKismetSystemLibrary
     return CacheDefaultObject("/Script/Engine.Default__KismetSystemLibrary", "UEHelpers_KismetSystemLibrary", ForceInvalidateCache)
 end
 
----@param ForceInvalidateCache boolean # Force update the cache
+---@param ForceInvalidateCache boolean? # Force update the cache
 ---@return UKismetMathLibrary
 function UEHelpers.GetKismetMathLibrary(ForceInvalidateCache)
     ---@type UKismetMathLibrary
     return CacheDefaultObject("/Script/Engine.Default__KismetMathLibrary", "UEHelpers_KismetMathLibrary", ForceInvalidateCache)
 end
 
----@param ForceInvalidateCache boolean # Force update the cache
+---@param ForceInvalidateCache boolean? # Force update the cache
 ---@return UKismetStringLibrary
 function UEHelpers.GetKismetStringLibrary(ForceInvalidateCache)
     ---@type UKismetStringLibrary
     return CacheDefaultObject("/Script/Engine.Default__KismetStringLibrary", "UEHelpers_KismetStringLibrary", ForceInvalidateCache)
 end
 
----@param ForceInvalidateCache boolean # Force update the cache
+---@param ForceInvalidateCache boolean? # Force update the cache
 ---@return UKismetTextLibrary
 function UEHelpers.GetKismetTextLibrary(ForceInvalidateCache)
     ---@type UKismetTextLibrary
     return CacheDefaultObject("/Script/Engine.Default__KismetTextLibrary", "UEHelpers_KismetTextLibrary", ForceInvalidateCache)
 end
 
----@param ForceInvalidateCache boolean # Force update the cache
+---@param ForceInvalidateCache boolean? # Force update the cache
 ---@return UGameMapsSettings
 function UEHelpers.GetGameMapsSettings(ForceInvalidateCache)
     ---@type UGameMapsSettings
