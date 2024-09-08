@@ -79,11 +79,13 @@ local PlayerControllerCache = RemoteObject:new() ---@cast PlayerControllerCache 
 function UEHelpers.GetPlayerController()
     if PlayerControllerCache:IsValid() then return PlayerControllerCache end
     
-    local GameInstance = UEHelpers.GetGameInstance()
-    if GameInstance:IsValid() and #GameInstance.LocalPlayers > 0 then
-        local localPlayer = GameInstance.LocalPlayers[1]
-        if localPlayer:IsValid() then
-            PlayerControllerCache = localPlayer.PlayerController
+    local Controllers = FindAllOf("Controller") ---@type AController[]?
+    if Controllers then
+        for _, Controller in ipairs(Controllers) do
+            if Controller:IsValid() and Controller:IsPlayerController() then
+                PlayerControllerCache = Controller
+                break
+            end
         end
     end
 
@@ -111,13 +113,8 @@ function UEHelpers.GetWorld()
         WorldCache = PlayerController:GetWorld()
         return WorldCache
     end
-    local GameViewportClient = UEHelpers.GetGameViewportClient()
-    if GameViewportClient:IsValid() then
-        WorldCache = GameViewportClient.World
-        return WorldCache
-    end
 
-    return RemoteObject:new() ---@type UWorld
+    return WorldCache
 end
 
 --- Returns an object that's useable with UFunctions that have a WorldContextObject param.
