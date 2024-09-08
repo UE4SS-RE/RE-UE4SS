@@ -119,7 +119,7 @@ end
 
 ---Returns UWorld->PersistentLevel
 ---@return ULevel
-function GetPersistentLevel()
+function UEHelpers.GetPersistentLevel()
     local World = UEHelpers.GetWorld()
     if World:IsValid() and World.PersistentLevel:IsValid() then
         return World.PersistentLevel
@@ -129,7 +129,7 @@ end
 
 ---Returns PersistentLevel->WorldSettings
 ---@return AWorldSettings
-function GetWorldSettings()
+function UEHelpers.GetWorldSettings()
     local PersistentLevel = UEHelpers.GetPersistentLevel()
     if PersistentLevel:IsValid() and PersistentLevel.WorldSettings:IsValid() then
         return PersistentLevel.WorldSettings
