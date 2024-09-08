@@ -117,11 +117,45 @@ function UEHelpers.GetWorld()
     return WorldCache
 end
 
+---Returns UWorld->PersistentLevel
+---@return ULevel
+function GetPersistentLevel()
+    local World = UEHelpers.GetWorld()
+    if World:IsValid() and World.PersistentLevel:IsValid() then
+        return World.PersistentLevel
+    end
+    return RemoteObject:new() ---@type ULevel
+end
+
+---Returns PersistentLevel->WorldSettings
+---@return AWorldSettings
+function GetWorldSettings()
+    local PersistentLevel = UEHelpers.GetPersistentLevel()
+    if PersistentLevel:IsValid() and PersistentLevel.WorldSettings:IsValid() then
+        return PersistentLevel.WorldSettings
+    end
+    return RemoteObject:new() ---@type AWorldSettings
+end
+
 --- Returns an object that's useable with UFunctions that have a WorldContextObject param.
 --- Prefer to use an actor that you already have access to whenever possible over this function.
 ---@return UObject
 function UEHelpers.GetWorldContextObject()
-    return UEHelpers.GetWorld()
+    return UEHelpers.GetPlayerController()
+end
+
+---Returns hit actor from FHitResult, it handles the struct differance between UE4 and UE5
+---@param HitResult FHitResult
+---@return AActor
+function UEHelpers.GetActorFromHitResult(HitResult)
+    if not HitResult or not HitResult:IsValid() then
+        return RemoteObject:new() ---@type AActor
+    end
+    
+    if UnrealVersion:IsBelow(5, 0) then
+        return HitResult.Actor:Get()
+    end
+    return HitResult.HitObjectHandle.Actor:Get()
 end
 
 ---@param ForceInvalidateCache boolean # Force update the cache
