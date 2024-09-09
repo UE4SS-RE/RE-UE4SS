@@ -5,6 +5,8 @@ local UEHelpers = {}
 -- Version 1 does not exist, we start at version 2 because the original version didn't have a version at all.
 local Version = 3
 
+-- Functions and classes local to this module, do not attempt to use!
+
 ---Class that allows to create a blank RemoteObject
 ---@class RemoteObject
 local RemoteObject = {}
@@ -19,8 +21,6 @@ end
 function RemoteObject:IsValid()
     return false
 end
-
--- Functions local to this module, do not attempt to use!
 
 ---@param ObjectFullName string
 ---@param VariableName string
@@ -68,7 +68,7 @@ function UEHelpers.GetGameInstance()
     return GameInstanceCache
 end
 
---- Returns the main UGameViewportClient
+---Returns the main UGameViewportClient
 ---@return UGameViewportClient
 function UEHelpers.GetGameViewportClient()
     local Engine = UEHelpers.GetEngine()
@@ -79,7 +79,7 @@ function UEHelpers.GetGameViewportClient()
 end
 
 local PlayerControllerCache = RemoteObject:new() ---@cast PlayerControllerCache APlayerController
----Returns first local player controller
+---Returns first player controller
 ---@return APlayerController
 function UEHelpers.GetPlayerController()
     if PlayerControllerCache:IsValid() then return PlayerControllerCache end
@@ -133,7 +133,7 @@ function UEHelpers.GetPersistentLevel()
 end
 
 ---Returns UWorld->AuthorityGameMode<br>
----The function doesn't guarantee to be an AGameMode, as many games derive their own game states directly from AGameModeBase!
+---The function doesn't guarantee it to be an AGameMode, as many games derive their own game modes directly from AGameModeBase!
 ---@return AGameModeBase
 function UEHelpers.GetGameModeBase()
     local World = UEHelpers.GetWorld()
@@ -144,7 +144,7 @@ function UEHelpers.GetGameModeBase()
 end
 
 ---Returns UWorld->GameState<br>
----The function doesn't guarantee to be an AGameState, as many games derive their own game states directly from AGameStateBase!
+---The function doesn't guarantee it to be an AGameState, as many games derive their own game states directly from AGameStateBase!
 ---@return AGameStateBase
 function UEHelpers.GetGameStateBase()
     local World = UEHelpers.GetWorld()
@@ -164,14 +164,16 @@ function UEHelpers.GetWorldSettings()
     return RemoteObject:new() ---@type AWorldSettings
 end
 
---- Returns an object that's useable with UFunctions that have a WorldContextObject param.
+--- Returns an object that's useable with UFunctions that have a WorldContext parameter.<br>
 --- Prefer to use an actor that you already have access to whenever possible over this function.
+--- Any UObject that has a GetWorld() function can be used as WorldContext.
 ---@return UObject
 function UEHelpers.GetWorldContextObject()
     return UEHelpers.GetPlayerController()
 end
 
----Returns hit actor from FHitResult, it handles the struct differance between UE4 and UE5
+---Returns hit actor from FHitResult.<br>
+---The function handles the struct differance between UE4 and UE5
 ---@param HitResult FHitResult
 ---@return AActor
 function UEHelpers.GetActorFromHitResult(HitResult)
@@ -249,7 +251,7 @@ end
 
 ---Tries to find existing FName, if it doesn't exist a new FName will be added to the pool
 ---@param Name string
----@return FName # Returns found or added FName, "None" FName if both operation failed
+---@return FName # Returns found or added FName, “None” FName if both operations fail
 function UEHelpers.FindOrAddFName(Name)
     local NameFound = FName(Name, EFindName.FNAME_Find)
     if NameFound == NAME_None then
