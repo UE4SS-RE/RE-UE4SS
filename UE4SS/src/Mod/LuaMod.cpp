@@ -816,20 +816,20 @@ namespace RC
         lua_getglobal(lua_state, "package");
 
         lua_getfield(lua_state, -1, "path");
-        std::string current_paths = lua_tostring(lua_state, -1);
-        current_paths.append(fmt::format(";{}\\{}\\Scripts\\?.lua", to_string(m_program.get_mods_directory()).c_str(), to_string(get_name())));
-        current_paths.append(fmt::format(";{}\\shared\\?.lua", to_string(m_program.get_mods_directory()).c_str()));
-        current_paths.append(fmt::format(";{}\\shared\\?\\?.lua", to_string(m_program.get_mods_directory()).c_str()));
+        std::wstring current_paths = to_wstring(lua_tostring(lua_state, -1));
+        current_paths.append(fmt::format(STR(";{}\\{}\\Scripts\\?.lua"), m_program.get_mods_directory(), get_name()));
+        current_paths.append(fmt::format(STR(";{}\\shared\\?.lua"), m_program.get_mods_directory()));
+        current_paths.append(fmt::format(STR(";{}\\shared\\?\\?.lua"), m_program.get_mods_directory()));
         lua_pop(lua_state, 1);
-        lua_pushstring(lua_state, current_paths.c_str());
+        lua_pushstring(lua_state, to_string(current_paths).c_str());
         lua_setfield(lua_state, -2, "path");
 
         lua_getfield(lua_state, -1, "cpath");
-        std::string current_cpaths = lua_tostring(lua_state, -1);
-        current_cpaths.append(fmt::format(";{}\\{}\\Scripts\\?.dll", to_string(m_program.get_mods_directory()).c_str(), to_string(get_name())));
-        current_cpaths.append(fmt::format(";{}\\{}\\?.dll", to_string(m_program.get_mods_directory()).c_str(), to_string(get_name())));
+        std::wstring current_cpaths = to_wstring(lua_tostring(lua_state, -1));
+        current_cpaths.append(fmt::format(STR(";{}\\{}\\Scripts\\?.dll"), m_program.get_mods_directory(), get_name()));
+        current_cpaths.append(fmt::format(STR(";{}\\{}\\?.dll"), m_program.get_mods_directory(), get_name()));
         lua_pop(lua_state, 1);
-        lua_pushstring(lua_state, current_cpaths.c_str());
+        lua_pushstring(lua_state, to_string(current_cpaths).c_str());
         lua_setfield(lua_state, -2, "cpath");
 
         lua_pop(lua_state, 1);
@@ -2198,7 +2198,7 @@ Overloads:
                                     {
                                         throw std::runtime_error{"Couldn't find '__absolute_path' for directory entry."};
                                     }
-                                    const auto current_path = std::string{lua.get_string()};
+                                    const auto current_path = to_wstring(lua.get_string());
                                     auto files_table = lua.prepare_new_table();
                                     auto index = 1;
                                     for (const auto& item : std::filesystem::directory_iterator(current_path))
@@ -3364,7 +3364,7 @@ Overloads:
         // Don't crash on syntax errors.
         try
         {
-            main_lua()->execute_file((m_scripts_path / STR("main.lua")).string());
+            main_lua()->execute_file((m_scripts_path / STR("main.lua")).wstring());
         }
         catch (std::runtime_error& e)
         {

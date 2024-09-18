@@ -1359,27 +1359,27 @@ namespace RC
 
     auto UE4SSProgram::get_module_directory() -> File::StringType
     {
-        return ensure_str(m_module_file_path);
+        return ensure_str(m_module_file_path.wstring());
     }
 
     auto UE4SSProgram::get_game_executable_directory() -> File::StringType
     {
-        return ensure_str(m_game_executable_directory);
+        return ensure_str(m_game_executable_directory.wstring());
     }
 
     auto UE4SSProgram::get_working_directory() -> File::StringType
     {
-        return ensure_str(m_working_directory);
+        return ensure_str(m_working_directory.wstring());
     }
 
     auto UE4SSProgram::get_mods_directory() -> File::StringType
     {
-        return ensure_str(m_mods_directory);
+        return ensure_str(m_mods_directory.wstring());
     }
 
     auto UE4SSProgram::get_legacy_root_directory() -> File::StringType
     {
-        return ensure_str(m_legacy_root_directory);
+        return ensure_str(m_legacy_root_directory.wstring());
     }
 
     auto UE4SSProgram::generate_uht_compatible_headers() -> void
