@@ -184,7 +184,14 @@ namespace RC
                             Output::send(STR("GMalloc address: {} <- Lua Script\n"), address);
                             Unreal::FMalloc::UnrealStaticGMalloc = static_cast<Unreal::FMalloc**>(address);
                             Unreal::GMalloc = *Unreal::FMalloc::UnrealStaticGMalloc;
-                            return DidLuaScanSucceed::Yes;
+                            if (Unreal::GMalloc)
+                            {
+                                return DidLuaScanSucceed::Yes;
+                            }
+                            else
+                            {
+                                return DidLuaScanSucceed::No;
+                            }
                         },
                         [&](DidLuaScanSucceed did_lua_scan_succeed) {
                             if (did_lua_scan_succeed == DidLuaScanSucceed::No)
