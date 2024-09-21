@@ -21,6 +21,9 @@ Added search filter: `IncludeClassNames`. ([UE4SS #472](https://github.com/UE4SS
 ### UHT Dumper
 
 ### Lua API
+
+Added `NAME_None` as alias in `Types.lua`. ([UE4SS #650](https://github.com/UE4SS-RE/RE-UE4SS/pull/650))
+
 #### UEHelpers [PR #650](https://github.com/UE4SS-RE/RE-UE4SS/pull/650)
 - Added local class `RemoteObject` with method `IsValid`. A new instance of the class should be used as return value in all UEHelpers functions instead of nil
 - Added function `GetPlayer` which is just a fast way to get player controlled Pawn (the majority of the time it will be the player character)
@@ -28,7 +31,6 @@ Added search filter: `IncludeClassNames`. ([UE4SS #472](https://github.com/UE4SS
 - Added functions to get static objects: `GetKismetStringLibrary`, `GetKismetTextLibrary`
 - Added function `GetActorFromHitResult` which extracts the hit actor from a `FHitResult` struct based on UE's version
 - Added FName utility functions:
-  - `FName_None`: returns a `None` FName (FName with ComparisonIndex = 0)
   - `FindFName`: wrapper for `FName(Name, EFindName.FNAME_Find)`
   - `AddFName`: wrapper for  `FName(Name, EFindName.FNAME_Add)`
 - Added [Lua Server Annotations](https://luals.github.io/wiki/annotations/) to all UEHelpers functions
