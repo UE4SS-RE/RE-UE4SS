@@ -277,7 +277,6 @@ EInternalObjectFlags = {
 ---@alias float number
 ---@alias double number
 
-
 -- # Global Functions
 
 ---@param ObjectName string
@@ -345,17 +344,36 @@ function UnregisterHook(UFunctionName, PreId, PostId) end
 ---@param Callback fun()
 function ExecuteInGameThread(Callback) end
 
----@alias NAME_None FName "None" FName
+---FName with "None" as value
+NAME_None = FName(0)
 
----Returns the FName for this string/ComparisonIndex or the FName for "None" if the name doesn't exist
+---@enum EFindName
+EFindName = {
+    FNAME_Find = 0,
+    FNAME_Add = 1
+}
+
+---Returns the FName for this string or the FName for "None" if the name doesn't exist
 ---@param Name string
 ---@return FName
 function FName(Name) end
 
----Returns the FName for this string/ComparisonIndex or the FName for "None" if the name doesn't exist
+---Returns the FName for this ComparisonIndex or the FName for "None" if the name doesn't exist
 ---@param ComparisonIndex integer
 ---@return FName
 function FName(ComparisonIndex) end
+
+---Finds or adds FName for the string, depending on FindType 
+---@param Name string
+---@param FindType EFindName|integer # Find = 0, Add = 1
+---@return FName
+function FName(Name, FindType) end
+
+---Finds or adds FName for the ComparisonIndex, depending on FindType 
+---@param ComparisonIndex integer
+---@param FindType EFindName|integer # Find = 0, Add = 1
+---@return FName
+function FName(ComparisonIndex, FindType) end
 
 ---Attempts to construct a UObject of the passed UClass
 ---(>=4.26) Maps to https://docs.unrealengine.com/4.27/en-US/API/Runtime/CoreUObject/UObject/StaticConstructObject_Internal/1/

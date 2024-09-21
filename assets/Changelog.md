@@ -22,7 +22,10 @@ Added search filter: `IncludeClassNames`. ([UE4SS #472](https://github.com/UE4SS
 
 ### Lua API
 
-Added `NAME_None` as alias in `Types.lua`. ([UE4SS #650](https://github.com/UE4SS-RE/RE-UE4SS/pull/650))
+#### Types.lua [PR #650](https://github.com/UE4SS-RE/RE-UE4SS/pull/650)
+- Added `NAME_None` definition
+- Added `EFindName` enum definition
+- Added `FName` function overloads with FindType parameter
 
 #### UEHelpers [PR #650](https://github.com/UE4SS-RE/RE-UE4SS/pull/650)
 - Added local class `RemoteObject` with method `IsValid`. A new instance of the class should be used as return value in all UEHelpers functions instead of nil
