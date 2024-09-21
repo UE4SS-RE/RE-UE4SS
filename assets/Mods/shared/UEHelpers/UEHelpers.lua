@@ -229,12 +229,6 @@ function UEHelpers.GetGameMapsSettings(ForceInvalidateCache)
     return CacheDefaultObject("/Script/EngineSettings.Default__GameMapsSettings", "UEHelpers_GameMapsSettings", ForceInvalidateCache)
 end
 
----Returns Empty FName aka. "None"
----@return FName
-function UEHelpers.FName_None()
-    return NAME_None
-end
-
 ---Returns found FName or "None" FName if the operation faled
 ---@param Name string
 ---@return FName

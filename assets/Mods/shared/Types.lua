@@ -345,6 +345,8 @@ function UnregisterHook(UFunctionName, PreId, PostId) end
 ---@param Callback fun()
 function ExecuteInGameThread(Callback) end
 
+---@alias NAME_None FName "None" FName
+
 ---Returns the FName for this string/ComparisonIndex or the FName for "None" if the name doesn't exist
 ---@param Name string
 ---@return FName
