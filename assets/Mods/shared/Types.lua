@@ -280,6 +280,28 @@ EInternalObjectFlags = {
 
 -- # Global Functions
 
+---Dumps all objects and properties to UE4SS_ObjectDump.txt file
+function DumpAllObjects() end
+
+---Generates CXX Headers / CXXHeaderDump
+function GenerateSDK() end
+
+---Generates lua types in /Mods/shared/types
+function GenerateLuaTypes() end
+
+---Generates UHT Compatible Headers
+function GenerateUHTCompatibleHeaders() end
+
+---Dumps Static Meshes to *-ue4ss_static_mesh_data.csv file
+function DumpStaticMeshes() end
+
+---Dumps all current existing actors to *-ue4ss_actor_data.csv file
+function DumpAllActors() end
+
+--- Generates .usmap file
+function DumpUSMAP() end
+
+
 ---@param ObjectName string
 ---@return UObject
 function StaticFindObject(ObjectName) end
