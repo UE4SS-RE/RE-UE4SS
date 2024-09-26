@@ -21,6 +21,8 @@ Added search filter: `IncludeClassNames`. ([UE4SS #472](https://github.com/UE4SS
 ### UHT Dumper
 
 ### Lua API
+Added GenerateLuaTypes function. ([UE4SS #664](https://github.com/UE4SS-RE/RE-UE4SS/pull/664))  
+Added global Dumpers functions to Types.lua. ([UE4SS #664](https://github.com/UE4SS-RE/RE-UE4SS/pull/664))
 
 ### C++ API
 Key binds created with `UE4SSProgram::register_keydown_event` end up being duplicated upon mod hot-reload.  
