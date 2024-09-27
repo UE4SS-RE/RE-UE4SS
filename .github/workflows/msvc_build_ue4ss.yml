@@ -38,7 +38,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           submodules: recursive # Clone the submodule so we can query xmake on the entire project.
-          token: ${{ secrets.UEPSEUDO_PAT }}
+          token: ${{ secrets.GITHUB_TOKEN }}
           ref: ${{inputs.commit-sha}}
 
         # Store the current week (00-53) to use as part of the xmake cache key.
