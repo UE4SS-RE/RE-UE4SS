@@ -839,6 +839,11 @@ namespace RC
     {
         lua.register_function("print", LuaLibrary::global_print);
 
+        lua.register_function("CreateInvalidObject", [](const LuaMadeSimple::Lua& lua) -> int {
+            LuaType::auto_construct_object(lua, nullptr);
+            return 1;
+        });
+
         lua.register_function("StaticFindObject", [](const LuaMadeSimple::Lua& lua) -> int {
             // Stack size @ the start of the function is the same as the number of params
             int32_t stack_size = lua.get_stack_size();

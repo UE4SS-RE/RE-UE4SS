@@ -21,6 +21,7 @@ Added search filter: `IncludeClassNames`. ([UE4SS #472](https://github.com/UE4SS
 ### UHT Dumper
 
 ### Lua API
+Added global function `CreateInvalidObject`, which returns an invalid UObject. ([UE4SS #652](https://github.com/UE4SS-RE/RE-UE4SS/issues/652)) 
 
 ### C++ API
 Key binds created with `UE4SSProgram::register_keydown_event` end up being duplicated upon mod hot-reload.  
@@ -109,6 +110,8 @@ Fixed `FText` not working as a parameter (in `RegisterHook`, etc.) ([UE4SS #422]
 Fixed crash when calling UFunctions that take one or more 'out' params of type TArray<T>. ([UE4SS #477](https://github.com/UE4SS-RE/RE-UE4SS/pull/477))
 
 Fixed `RegisterProcessConsoleExecPostHook`. ([UE4SS #631](https://github.com/UE4SS-RE/RE-UE4SS/pull/631))
+
+Fixed `FindFirstOf` return type annotation in `Types.lua` to signal that the return value will never be nil. ([UE4SS #652](https://github.com/UE4SS-RE/RE-UE4SS/issues/652))
 
 ### C++ API
 Fixed a crash caused by a race condition enabled by C++ mods using `UE4SS_ENABLE_IMGUI` in their constructor ([UE4SS #481](https://github.com/UE4SS-RE/RE-UE4SS/pull/481))
