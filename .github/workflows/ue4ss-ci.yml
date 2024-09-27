@@ -2,7 +2,7 @@
 # It dynamically calculates the build matrix based on the modes defined in the project and reports artifacts to the PR comments.
 
 name: Build All Modes
-permissions: write-all
+permissions: read-all
 on:
   pull_request:
     branches:
