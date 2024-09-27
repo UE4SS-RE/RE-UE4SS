@@ -293,7 +293,7 @@ function StaticFindObject(Class, InOuter, ObjectName, ExactClass) end
 
 ---Find the first non-default instance of the supplied class name
 ---@param ShortClassName string Should only contains the class name itself without path info
----@return UObject
+---@return UObject?
 function FindFirstOf(ShortClassName) end
 
 ---Find all non-default instances of the supplied class name
