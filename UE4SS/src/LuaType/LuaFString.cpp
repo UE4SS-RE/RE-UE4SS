@@ -53,9 +53,11 @@ namespace RC::LuaType
 
             std::string name;
 
-            auto* fstring = lua.get_userdata<LuaType::FString>().get_remote_cpp_object();
+            auto& fstring = lua.get_userdata<LuaType::FString>().get_local_cpp_object();
+            auto* string_data = fstring.GetCharArray();
+
             name.append(ClassName::ToString());
-            name.append(std::format(" \"{}\": {:016X}", to_string(fstring->GetCharArray()), reinterpret_cast<uintptr_t>(fstring)));
+            name.append(std::format(" \"{}\": {:016X}", string_data ? to_string(string_data) : "", reinterpret_cast<uintptr_t>(&fstring)));
 
             lua.set_string(name);
 
