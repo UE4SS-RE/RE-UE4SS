@@ -4099,7 +4099,7 @@ Overloads:
                 [](Unreal::UObject* context, const TCHAR* cmd, Unreal::FOutputDevice& ar, Unreal::UObject* executor) -> std::pair<bool, bool> {
                     return TRY([&] {
                         auto command = File::StringType {ToCharTypePtr(cmd)};
-                        auto command_parts = explode_by_occurrence(command, STR(' '));
+                        auto command_parts = explode_by_occurrence_with_quotes(command, STR(' '));
 
                         for (const auto& callback_data : m_process_console_exec_pre_callbacks)
                         {
@@ -4155,7 +4155,7 @@ Overloads:
                 [](Unreal::UObject* context, const TCHAR* cmd, Unreal::FOutputDevice& ar, Unreal::UObject* executor) -> std::pair<bool, bool> {
                     return TRY([&] {
                         auto command = File::StringType {ToCharTypePtr(cmd)};
-                        auto command_parts = explode_by_occurrence(command, STR(' '));
+                        auto command_parts = explode_by_occurrence_with_quotes(command, STR(' '));
 
                         for (const auto& callback_data : m_process_console_exec_post_callbacks)
                         {
@@ -4277,7 +4277,7 @@ Overloads:
 
             return TRY([&] {
                 auto command = File::StringType{ToCharTypePtr(cmd)};
-                auto command_parts = explode_by_occurrence(command, STR(' '));
+                auto command_parts = explode_by_occurrence_with_quotes(command, STR(' '));
                 File::StringType command_name;
                 if (command_parts.size() > 1)
                 {

@@ -33,13 +33,19 @@ If the callback returns true or false, the supplied value will override the orig
 ## Example
 
 ```lua
-local function MyCallback(Context, Command, CommandParts, Ar, Executor)
-    -- Do something with the parameters
-    -- Return nil to use the original return value of ProcessConsoleExec
-    -- Return true or false to override the original return value of ProcessConsoleExec
+RegisterProcessConsoleExecPreHook(function(Context, Command, CommandParts, Ar, Executor)
+    print("RegisterProcessConsoleExecPreHook:\n")
+    print(string.format("Context FullName: %s\n", Context:get():GetFullName()))
+    if Executor:get():IsValid() then
+        print(string.format("Executor FullName: %s\n", Executor:get():GetFullName()))
+    end
+    print(string.format("Command: %s\n", Command))
+    print(string.format("Number of parameters: %i\n", #CommandParts))
+    
+    for ParameterNumber, Parameter in ipairs(CommandParts) do
+        print(string.format("Parameter #%i -> '%s'\n", ParameterNumber, Parameter))
+    end
 
-    return nil
-end
-
-RegisterProcessConsoleExecPreHook(MyCallback)
+    return true
+end)
 ```
