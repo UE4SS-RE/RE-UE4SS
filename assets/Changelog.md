@@ -28,7 +28,6 @@ Added search filter: `IncludeClassNames`. ([UE4SS #472](https://github.com/UE4SS
 - Added `FName` function overloads with FindType parameter
 
 #### UEHelpers [PR #650](https://github.com/UE4SS-RE/RE-UE4SS/pull/650)
-- Added local class `RemoteObject` with method `IsValid`. A new instance of the class should be used as return value in all UEHelpers functions instead of nil
 - Added function `GetPlayer` which is just a fast way to get player controlled Pawn (the majority of the time it will be the player character)
 - Added functions: `GetEngine`, `GetGameInstance`, `GetGameViewportClient`,  `GetGameModeBase`, `GetGameStateBase`,`GetPersistentLevel` and `GetWorldSettings`
 - Added functions to get static objects: `GetKismetStringLibrary`, `GetKismetTextLibrary`
