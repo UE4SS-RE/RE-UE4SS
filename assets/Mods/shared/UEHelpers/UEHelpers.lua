@@ -168,8 +168,10 @@ function UEHelpers.GetActorFromHitResult(HitResult)
     
     if UnrealVersion:IsBelow(5, 0) then
         return HitResult.Actor:Get()
+    elseif UnrealVersion:IsBelow(5, 4) then
+        return HitResult.HitObjectHandle.Actor:Get()
     end
-    return HitResult.HitObjectHandle.Actor:Get()
+    return HitResult.HitObjectHandle.ReferenceObject:Get()
 end
 
 ---@param ForceInvalidateCache boolean? # Force update the cache
