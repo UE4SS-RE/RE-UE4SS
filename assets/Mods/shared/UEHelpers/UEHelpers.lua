@@ -7,27 +7,12 @@ local Version = 3
 
 -- Functions and classes local to this module, do not attempt to use!
 
----Class that allows to create a blank RemoteObject
----@class RemoteObject
-local RemoteObject = {}
-RemoteObject.__index = RemoteObject
-
----Creates a new instance of RemoteObject
----@return RemoteObject
-function RemoteObject:new()
-    return setmetatable({}, RemoteObject)
-end
-
-function RemoteObject:IsValid()
-    return false
-end
-
 ---@param ObjectFullName string
 ---@param VariableName string
 ---@param ForceInvalidateCache boolean?
 ---@return UObject
 local function CacheDefaultObject(ObjectFullName, VariableName, ForceInvalidateCache)
-    local DefaultObject = RemoteObject:new()
+    local DefaultObject = CreateBlankObject()
 
     if not ForceInvalidateCache then
         DefaultObject = ModRef:GetSharedVariable(VariableName)
@@ -48,7 +33,7 @@ function UEHelpers.GetUEHelpersVersion()
     return Version
 end
 
-local EngineCache = RemoteObject:new() ---@cast EngineCache UEngine
+local EngineCache = CreateBlankObject() ---@cast EngineCache UEngine
 ---Returns instance of UEngine
 ---@return UEngine
 function UEHelpers.GetEngine()
@@ -58,7 +43,7 @@ function UEHelpers.GetEngine()
     return EngineCache
 end
 
-local GameInstanceCache = RemoteObject:new() ---@cast GameInstanceCache UGameInstance
+local GameInstanceCache = CreateBlankObject() ---@cast GameInstanceCache UGameInstance
 ---Returns instance of UGameInstance
 ---@return UGameInstance
 function UEHelpers.GetGameInstance()
@@ -75,10 +60,10 @@ function UEHelpers.GetGameViewportClient()
     if Engine:IsValid() then
         return Engine.GameViewport
     end
-    return RemoteObject:new() ---@type UGameViewportClient
+    return CreateBlankObject() ---@type UGameViewportClient
 end
 
-local PlayerControllerCache = RemoteObject:new() ---@cast PlayerControllerCache APlayerController
+local PlayerControllerCache = CreateBlankObject() ---@cast PlayerControllerCache APlayerController
 ---Returns first player controller
 ---@return APlayerController
 function UEHelpers.GetPlayerController()
@@ -104,10 +89,10 @@ function UEHelpers.GetPlayer()
     if playerController:IsValid() then
         return playerController.Pawn
     end
-    return RemoteObject:new() ---@type APawn
+    return CreateBlankObject() ---@type APawn
 end
 
-local WorldCache = RemoteObject:new() ---@cast WorldCache UWorld
+local WorldCache = CreateBlankObject() ---@cast WorldCache UWorld
 --- Returns the main UWorld
 ---@return UWorld
 function UEHelpers.GetWorld()
@@ -129,7 +114,7 @@ function UEHelpers.GetPersistentLevel()
     if World:IsValid() and World.PersistentLevel:IsValid() then
         return World.PersistentLevel
     end
-    return RemoteObject:new() ---@type ULevel
+    return CreateBlankObject() ---@type ULevel
 end
 
 ---Returns UWorld->AuthorityGameMode<br>
@@ -140,7 +125,7 @@ function UEHelpers.GetGameModeBase()
     if World:IsValid() and World.AuthorityGameMode:IsValid() then
         return World.AuthorityGameMode
     end
-    return RemoteObject:new() ---@type AGameModeBase
+    return CreateBlankObject() ---@type AGameModeBase
 end
 
 ---Returns UWorld->GameState<br>
@@ -151,7 +136,7 @@ function UEHelpers.GetGameStateBase()
     if World:IsValid() and World.GameState:IsValid() then
         return World.GameState
     end
-    return RemoteObject:new() ---@type AGameStateBase
+    return CreateBlankObject() ---@type AGameStateBase
 end
 
 ---Returns PersistentLevel->WorldSettings
@@ -161,7 +146,7 @@ function UEHelpers.GetWorldSettings()
     if PersistentLevel:IsValid() and PersistentLevel.WorldSettings:IsValid() then
         return PersistentLevel.WorldSettings
     end
-    return RemoteObject:new() ---@type AWorldSettings
+    return CreateBlankObject() ---@type AWorldSettings
 end
 
 --- Returns an object that's useable with UFunctions that have a WorldContext parameter.<br>
@@ -178,7 +163,7 @@ end
 ---@return AActor
 function UEHelpers.GetActorFromHitResult(HitResult)
     if not HitResult or not HitResult:IsValid() then
-        return RemoteObject:new() ---@type AActor
+        return CreateBlankObject() ---@type AActor
     end
     
     if UnrealVersion:IsBelow(5, 0) then
