@@ -4100,11 +4100,6 @@ Overloads:
                     return TRY([&] {
                         auto command = File::StringType {ToCharTypePtr(cmd)};
                         auto command_parts = explode_by_occurrence_with_quotes(command, STR(' '));
-                        File::StringType command_name = command;
-                        if (command_parts.size() > 1)
-                        {
-                            command_name = command_parts[0];
-                        }
 
                         for (const auto& callback_data : m_process_console_exec_pre_callbacks)
                         {
@@ -4118,12 +4113,12 @@ Overloads:
 
                                 static auto s_object_property_name = Unreal::FName(STR("ObjectProperty"));
                                 LuaType::RemoteUnrealParam::construct(callback_data.lua, &context, s_object_property_name);
-                                callback_data.lua.set_string(to_string(command_name));
+                                callback_data.lua.set_string(to_string(command));
                                 auto params_table = callback_data.lua.prepare_new_table();
-                                for (size_t i = 1; i < command_parts.size(); ++i)
+                                for (size_t i = 0; i < command_parts.size(); ++i)
                                 {
                                     const auto& command_part = command_parts[i];
-                                    params_table.add_pair(i, to_string(command_part).c_str());
+                                    params_table.add_pair(i + 1, to_string(command_part).c_str());
                                 }
                                 LuaType::FOutputDevice::construct(callback_data.lua, &ar);
                                 LuaType::RemoteUnrealParam::construct(callback_data.lua, &executor, s_object_property_name);
@@ -4161,11 +4156,6 @@ Overloads:
                     return TRY([&] {
                         auto command = File::StringType {ToCharTypePtr(cmd)};
                         auto command_parts = explode_by_occurrence_with_quotes(command, STR(' '));
-                        File::StringType command_name = command;
-                        if (command_parts.size() > 1)
-                        {
-                            command_name = command_parts[0];
-                        }
 
                         for (const auto& callback_data : m_process_console_exec_post_callbacks)
                         {
@@ -4179,12 +4169,12 @@ Overloads:
 
                                 static auto s_object_property_name = Unreal::FName(STR("ObjectProperty"));
                                 LuaType::RemoteUnrealParam::construct(callback_data.lua, &context, s_object_property_name);
-                                callback_data.lua.set_string(to_string(command_name));
+                                callback_data.lua.set_string(to_string(command));
                                 auto params_table = callback_data.lua.prepare_new_table();
-                                for (size_t i = 1; i < command_parts.size(); ++i)
+                                for (size_t i = 0; i < command_parts.size(); ++i)
                                 {
                                     const auto& command_part = command_parts[i];
-                                    params_table.add_pair(i, to_string(command_part).c_str());
+                                    params_table.add_pair(i + 1, to_string(command_part).c_str());
                                 }
                                 LuaType::FOutputDevice::construct(callback_data.lua, &ar);
                                 LuaType::RemoteUnrealParam::construct(callback_data.lua, &executor, s_object_property_name);
@@ -4246,7 +4236,7 @@ Overloads:
                     for (const auto& [lua, registry_index] : callback_data.registry_indexes)
                     {
                         callback_data.lua.registry().get_function_ref(registry_index.lua_index);
-                        callback_data.lua.set_string(to_string(command_name));
+                        callback_data.lua.set_string(to_string(command));
 
                         auto params_table = callback_data.lua.prepare_new_table();
                         for (size_t i = 1; i < command_parts.size(); ++i)
@@ -4302,7 +4292,7 @@ Overloads:
                     for (const auto& [lua, registry_index] : callback_data.registry_indexes)
                     {
                         callback_data.lua.registry().get_function_ref(registry_index.lua_index);
-                        callback_data.lua.set_string(to_string(command_name));
+                        callback_data.lua.set_string(to_string(command));
 
                         auto params_table = callback_data.lua.prepare_new_table();
                         for (size_t i = 1; i < command_parts.size(); ++i)
