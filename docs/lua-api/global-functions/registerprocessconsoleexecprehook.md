@@ -40,8 +40,11 @@ RegisterProcessConsoleExecPreHook(function(Context, FullCommand, CommandParts, A
     print(string.format("Command: %s\n", FullCommand))
     print(string.format("Number of command parts: %i\n", #CommandParts))
     
-    for PartNumber, CommandPart in ipairs(CommandParts) do
-        print(string.format("CommandPart: #%i -> '%s'\n", PartNumber, CommandPart))
+    if #CommandParts > 0 then
+        print(string.format("Command Name: %s\n", CommandParts[1]))
+        for PartNumber, CommandPart in ipairs(CommandParts) do
+            print(string.format("CommandPart: #%i -> '%s'\n", PartNumber, CommandPart))
+        end
     end
 
     Ar:Log("Write something to game console")
@@ -53,10 +56,11 @@ end)
 -- Output
 --[[
 RegisterProcessConsoleExecPreHook:
-Context FullName: PlayerCameraManager /Game/Maps/Map_MainMenu.Map_MainMenu:PersistentLevel.PlayerCameraManager_2147479833
-Executor FullName: BP_MainMenuPawn_C /Game/Maps/Map_MainMenu.Map_MainMenu:PersistentLevel.BP_MainMenuPawn_C_2147479050
+Context FullName: GameState /Game/Maps/Map_MainMenu.Map_MainMenu:PersistentLevel.GameState_2147479851
+Executor FullName: BP_MainMenuPawn_C /Game/Maps/Map_MainMenu.Map_MainMenu:PersistentLevel.BP_MainMenuPawn_C_2147479061
 Command: CommandExample param1 "param 2" 3
 Number of command parts: 4
+Command Name: CommandExample
 CommandPart: #1 -> 'CommandExample'
 CommandPart: #2 -> 'param1'
 CommandPart: #3 -> 'param 2'
