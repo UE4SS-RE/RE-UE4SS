@@ -4100,6 +4100,11 @@ Overloads:
                     return TRY([&] {
                         auto command = File::StringType {ToCharTypePtr(cmd)};
                         auto command_parts = explode_by_occurrence_with_quotes(command, STR(' '));
+                        File::StringType command_name = command;
+                        if (command_parts.size() > 1)
+                        {
+                            command_name = command_parts[0];
+                        }
 
                         for (const auto& callback_data : m_process_console_exec_pre_callbacks)
                         {
@@ -4113,7 +4118,7 @@ Overloads:
 
                                 static auto s_object_property_name = Unreal::FName(STR("ObjectProperty"));
                                 LuaType::RemoteUnrealParam::construct(callback_data.lua, &context, s_object_property_name);
-                                callback_data.lua.set_string(to_string(command));
+                                callback_data.lua.set_string(to_string(command_name));
                                 auto params_table = callback_data.lua.prepare_new_table();
                                 for (size_t i = 1; i < command_parts.size(); ++i)
                                 {
@@ -4156,6 +4161,11 @@ Overloads:
                     return TRY([&] {
                         auto command = File::StringType {ToCharTypePtr(cmd)};
                         auto command_parts = explode_by_occurrence_with_quotes(command, STR(' '));
+                        File::StringType command_name = command;
+                        if (command_parts.size() > 1)
+                        {
+                            command_name = command_parts[0];
+                        }
 
                         for (const auto& callback_data : m_process_console_exec_post_callbacks)
                         {
@@ -4169,7 +4179,7 @@ Overloads:
 
                                 static auto s_object_property_name = Unreal::FName(STR("ObjectProperty"));
                                 LuaType::RemoteUnrealParam::construct(callback_data.lua, &context, s_object_property_name);
-                                callback_data.lua.set_string(to_string(command));
+                                callback_data.lua.set_string(to_string(command_name));
                                 auto params_table = callback_data.lua.prepare_new_table();
                                 for (size_t i = 1; i < command_parts.size(); ++i)
                                 {
@@ -4218,14 +4228,10 @@ Overloads:
             return TRY([&] {
                 auto command = File::StringType {ToCharTypePtr(cmd)};
                 auto command_parts = explode_by_occurrence_with_quotes(command, STR(' '));
-                File::StringType command_name;
+                File::StringType command_name = command;
                 if (command_parts.size() > 1)
                 {
                     command_name = command_parts[0];
-                }
-                else
-                {
-                    command_name = command;
                 }
 
                 if (auto it = m_custom_command_lua_pre_callbacks.find(command_name); it != m_custom_command_lua_pre_callbacks.end())
@@ -4240,7 +4246,7 @@ Overloads:
                     for (const auto& [lua, registry_index] : callback_data.registry_indexes)
                     {
                         callback_data.lua.registry().get_function_ref(registry_index.lua_index);
-                        callback_data.lua.set_string(to_string(command));
+                        callback_data.lua.set_string(to_string(command_name));
 
                         auto params_table = callback_data.lua.prepare_new_table();
                         for (size_t i = 1; i < command_parts.size(); ++i)
@@ -4278,14 +4284,10 @@ Overloads:
             return TRY([&] {
                 auto command = File::StringType{ToCharTypePtr(cmd)};
                 auto command_parts = explode_by_occurrence_with_quotes(command, STR(' '));
-                File::StringType command_name;
+                File::StringType command_name = command;
                 if (command_parts.size() > 1)
                 {
                     command_name = command_parts[0];
-                }
-                else
-                {
-                    command_name = command;
                 }
 
                 if (auto it = m_global_command_lua_callbacks.find(command_name); it != m_global_command_lua_callbacks.end())
@@ -4300,7 +4302,7 @@ Overloads:
                     for (const auto& [lua, registry_index] : callback_data.registry_indexes)
                     {
                         callback_data.lua.registry().get_function_ref(registry_index.lua_index);
-                        callback_data.lua.set_string(to_string(command));
+                        callback_data.lua.set_string(to_string(command_name));
 
                         auto params_table = callback_data.lua.prepare_new_table();
                         for (size_t i = 1; i < command_parts.size(); ++i)
