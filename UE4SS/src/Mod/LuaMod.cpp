@@ -4217,7 +4217,7 @@ Overloads:
 
             return TRY([&] {
                 auto command = File::StringType {ToCharTypePtr(cmd)};
-                auto command_parts = explode_by_occurrence(command, STR(' '));
+                auto command_parts = explode_by_occurrence_with_quotes(command, STR(' '));
                 File::StringType command_name;
                 if (command_parts.size() > 1)
                 {

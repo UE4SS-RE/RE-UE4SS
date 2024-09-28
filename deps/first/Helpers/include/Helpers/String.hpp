@@ -8,6 +8,7 @@
 #include <unordered_map>
 #include <vector>
 #include <filesystem>
+#include <cassert>
 
 #include <String/StringType.hpp>
 
@@ -109,33 +110,41 @@ namespace RC
     }
 
     template <typename CharT>
-    auto inline explode_by_occurrence_with_quotes(const std::basic_string<CharT>& in_str, const CharT delimiter) -> std::basic_string<CharT>
+    auto inline explode_by_occurrence_with_quotes(const std::basic_string<CharT>& in_str, const CharT delimiter) -> std::vector<std::basic_string<CharT>>
     {
-        static_assert(delimiter == STR('"'), "Double quote (\") can't be used as delimiter");
+        assert(delimiter != STR('"') && "Double quote (\") can't be used as delimiter");
 
         std::vector<std::basic_string<CharT>> result;
         std::basic_string<CharT> current;
         auto in_quotes = false;
 
+        auto add_current_to_vector = [&result, &current]() {
+            if (!current.empty())
+            {
+                result.push_back(current);
+                current.clear();
+            }
+        };
+
         for (size_t i = 0; i < in_str.size(); i++)
         {
             auto current_char = in_str[i];
-            if (current_char == STR('"') && (i < 1 || in_str[i-1] != STR('\\')))
+            if (current_char == STR('"') && (i < 1 || in_str[i - 1] != STR('\\')))
             {
                 in_quotes = !in_quotes;
                 continue;
             }
-            if ((!in_quotes && current_char == delimiter) || i + 1 >= in_str.size())
+            if ((!in_quotes && current_char == delimiter))
             {
-                if (!current.empty())
-                {
-                    result.push_back(current);
-                    current.clear();
-                }
+                add_current_to_vector();
                 continue;
             }
-            current.push_back(current_char);
+            if (!(current_char == STR('\\') && in_str[i + 1] == STR('"')))
+            {
+                current.push_back(current_char);
+            }
         }
+        add_current_to_vector();
 
         return result;
     }
