@@ -12,7 +12,7 @@ local Version = 3
 ---@param ForceInvalidateCache boolean?
 ---@return UObject
 local function CacheDefaultObject(ObjectFullName, VariableName, ForceInvalidateCache)
-    local DefaultObject = CreateBlankObject()
+    local DefaultObject = CreateInvalidObject()
 
     if not ForceInvalidateCache then
         DefaultObject = ModRef:GetSharedVariable(VariableName)
@@ -33,7 +33,7 @@ function UEHelpers.GetUEHelpersVersion()
     return Version
 end
 
-local EngineCache = CreateBlankObject() ---@cast EngineCache UEngine
+local EngineCache = CreateInvalidObject() ---@cast EngineCache UEngine
 ---Returns instance of UEngine
 ---@return UEngine
 function UEHelpers.GetEngine()
@@ -43,7 +43,7 @@ function UEHelpers.GetEngine()
     return EngineCache
 end
 
-local GameInstanceCache = CreateBlankObject() ---@cast GameInstanceCache UGameInstance
+local GameInstanceCache = CreateInvalidObject() ---@cast GameInstanceCache UGameInstance
 ---Returns instance of UGameInstance
 ---@return UGameInstance
 function UEHelpers.GetGameInstance()
@@ -60,10 +60,10 @@ function UEHelpers.GetGameViewportClient()
     if Engine:IsValid() then
         return Engine.GameViewport
     end
-    return CreateBlankObject() ---@type UGameViewportClient
+    return CreateInvalidObject() ---@type UGameViewportClient
 end
 
-local PlayerControllerCache = CreateBlankObject() ---@cast PlayerControllerCache APlayerController
+local PlayerControllerCache = CreateInvalidObject() ---@cast PlayerControllerCache APlayerController
 ---Returns first player controller
 ---@return APlayerController
 function UEHelpers.GetPlayerController()
@@ -89,10 +89,10 @@ function UEHelpers.GetPlayer()
     if playerController:IsValid() then
         return playerController.Pawn
     end
-    return CreateBlankObject() ---@type APawn
+    return CreateInvalidObject() ---@type APawn
 end
 
-local WorldCache = CreateBlankObject() ---@cast WorldCache UWorld
+local WorldCache = CreateInvalidObject() ---@cast WorldCache UWorld
 --- Returns the main UWorld
 ---@return UWorld
 function UEHelpers.GetWorld()
@@ -114,7 +114,7 @@ function UEHelpers.GetPersistentLevel()
     if World:IsValid() and World.PersistentLevel:IsValid() then
         return World.PersistentLevel
     end
-    return CreateBlankObject() ---@type ULevel
+    return CreateInvalidObject() ---@type ULevel
 end
 
 ---Returns UWorld->AuthorityGameMode<br>
@@ -125,7 +125,7 @@ function UEHelpers.GetGameModeBase()
     if World:IsValid() and World.AuthorityGameMode:IsValid() then
         return World.AuthorityGameMode
     end
-    return CreateBlankObject() ---@type AGameModeBase
+    return CreateInvalidObject() ---@type AGameModeBase
 end
 
 ---Returns UWorld->GameState<br>
@@ -136,7 +136,7 @@ function UEHelpers.GetGameStateBase()
     if World:IsValid() and World.GameState:IsValid() then
         return World.GameState
     end
-    return CreateBlankObject() ---@type AGameStateBase
+    return CreateInvalidObject() ---@type AGameStateBase
 end
 
 ---Returns PersistentLevel->WorldSettings
@@ -146,7 +146,7 @@ function UEHelpers.GetWorldSettings()
     if PersistentLevel:IsValid() and PersistentLevel.WorldSettings:IsValid() then
         return PersistentLevel.WorldSettings
     end
-    return CreateBlankObject() ---@type AWorldSettings
+    return CreateInvalidObject() ---@type AWorldSettings
 end
 
 --- Returns an object that's useable with UFunctions that have a WorldContext parameter.<br>
@@ -163,7 +163,7 @@ end
 ---@return AActor
 function UEHelpers.GetActorFromHitResult(HitResult)
     if not HitResult or not HitResult:IsValid() then
-        return CreateBlankObject() ---@type AActor
+        return CreateInvalidObject() ---@type AActor
     end
     
     if UnrealVersion:IsBelow(5, 0) then
