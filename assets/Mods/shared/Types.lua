@@ -280,6 +280,9 @@ EInternalObjectFlags = {
 
 -- # Global Functions
 
+---Creates an blank UObject whose IsValid function always returns false
+---@return UObject
+function CreateInvalidObject() end
 ---Dumps all objects and properties to UE4SS_ObjectDump.txt file
 function DumpAllObjects() end
 
@@ -301,7 +304,6 @@ function DumpAllActors() end
 --- Generates .usmap file
 function DumpUSMAP() end
 
-
 ---@param ObjectName string
 ---@return UObject
 function StaticFindObject(ObjectName) end
@@ -316,7 +318,7 @@ function StaticFindObject(Class, InOuter, ObjectName, ExactClass) end
 
 ---Find the first non-default instance of the supplied class name
 ---@param ShortClassName string Should only contains the class name itself without path info
----@return UObject?
+---@return UObject
 function FindFirstOf(ShortClassName) end
 
 ---Find all non-default instances of the supplied class name
