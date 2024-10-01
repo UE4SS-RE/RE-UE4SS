@@ -283,6 +283,7 @@ EInternalObjectFlags = {
 ---Creates an blank UObject whose IsValid function always returns false
 ---@return UObject
 function CreateInvalidObject() end
+
 ---Dumps all objects and properties to UE4SS_ObjectDump.txt file
 function DumpAllObjects() end
 
