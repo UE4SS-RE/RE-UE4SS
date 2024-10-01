@@ -110,9 +110,12 @@ namespace RC
     }
 
     template <typename CharT>
-    auto inline explode_by_occurrence_with_quotes(const std::basic_string<CharT>& in_str, const CharT delimiter) -> std::vector<std::basic_string<CharT>>
+    auto inline explode_by_occurrence_with_quotes(const std::basic_string<CharT>& in_str, const CharT delimiter, const CharT escape_character = STR('\\')) -> std::vector<std::basic_string<CharT>>
     {
-        assert(delimiter != STR('"') && "Double quote (\") can't be used as delimiter");
+        constexpr auto quotation_symbol = STR('"');
+        assert(delimiter != quotation_symbol && "Double quote (\") can't be used as delimiter");
+        assert(delimiter != escape_character && "Delimiter can't be the same as the escape character");
+        assert(escape_character != quotation_symbol && "Double quote (\") can't be used as escape character");
 
         std::vector<std::basic_string<CharT>> result;
         std::basic_string<CharT> current;
@@ -126,20 +129,29 @@ namespace RC
             }
         };
 
+        auto is_valid_quote_symbol = [&in_quotes, &in_str, &delimiter, &escape_character](int position) {
+            if (position >= 0 && position < in_str.size() && in_str[position] == quotation_symbol
+                 && (position == 0 || in_str[position - 1] != escape_character))
+            {
+                 return in_quotes ? position + 1 == in_str.size() || in_str[position + 1] == delimiter : position == 0 || in_str[position - 1] == delimiter;
+            }
+            return false;
+        };
+
         for (size_t i = 0; i < in_str.size(); i++)
         {
-            auto current_char = in_str[i];
-            if (current_char == STR('"') && (i < 1 || in_str[i - 1] != STR('\\')))
+            if (is_valid_quote_symbol(i))
             {
                 in_quotes = !in_quotes;
                 continue;
             }
+            const auto current_char = in_str[i];
             if ((!in_quotes && current_char == delimiter))
             {
                 add_current_to_vector();
                 continue;
             }
-            if (!(current_char == STR('\\') && in_str[i + 1] == STR('"')))
+            if (current_char != escape_character || in_str[i + 1] != quotation_symbol)
             {
                 current.push_back(current_char);
             }
