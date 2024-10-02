@@ -26,6 +26,21 @@ Added global function `CreateInvalidObject`, which returns an invalid UObject. (
 Added GenerateLuaTypes function. ([UE4SS #664](https://github.com/UE4SS-RE/RE-UE4SS/pull/664))  
 Added global Dumpers functions to Types.lua. ([UE4SS #664](https://github.com/UE4SS-RE/RE-UE4SS/pull/664))  
 
+#### Types.lua [PR #650](https://github.com/UE4SS-RE/RE-UE4SS/pull/650)
+- Added `NAME_None` definition
+- Added `EFindName` enum definition
+- Added `FName` function overloads with FindType parameter
+
+#### UEHelpers [PR #650](https://github.com/UE4SS-RE/RE-UE4SS/pull/650)
+- Added function `GetPlayer` which is just a fast way to get player controlled Pawn (the majority of the time it will be the player character)
+- Added functions: `GetEngine`, `GetGameInstance`, `GetGameViewportClient`,  `GetGameModeBase`, `GetGameStateBase`,`GetPersistentLevel` and `GetWorldSettings`
+- Added functions to get static objects: `GetKismetStringLibrary`, `GetKismetTextLibrary`
+- Added function `GetActorFromHitResult` which extracts the hit actor from a `FHitResult` struct based on UE's version
+- Added FName utility functions:
+  - `FindFName`: wrapper for `FName(Name, EFindName.FNAME_Find)`
+  - `AddFName`: wrapper for  `FName(Name, EFindName.FNAME_Add)`
+- Added [Lua Server Annotations](https://luals.github.io/wiki/annotations/) to all UEHelpers functions
+
 ### C++ API
 Key binds created with `UE4SSProgram::register_keydown_event` end up being duplicated upon mod hot-reload.  
 To fix this, `CppUserModBase::register_keydown_event` has been introduced.  
@@ -66,6 +81,14 @@ The following search filters now allow multiple values, with each value separate
 `print` now behaves like vanilla Lua (can now accept zero, one, or multiple arguments of any type) ([UE4SS #423](https://github.com/UE4SS-RE/RE-UE4SS/pull/423)) - Lyrth
 
 The callback of `NotifyOnNewObject` can now optionally return `true` to unregister itself ([UE4SS #432](https://github.com/UE4SS-RE/RE-UE4SS/pull/432)) - Lyrth
+
+#### UEHelpers [UE4SS #650](https://github.com/UE4SS-RE/RE-UE4SS/pull/650)
+- Increased version to 3
+- Reworked all UEHelpers functions to ensure that they always return an object which can be checked with the function `IsValid` for validation
+- Reworked `UEHelpers.GetPlayerController` to return first valid player controller (It will now return a player controller even if it doesn't control a pawn at the time)
+- Reworked `UEHelpers.GetWorld` function to use UWorld cache (UWorld usually never changes)
+- Change `UEHelpers.GetWorldContextObject` function annotation to return `UObject`. (Any UObject with a GetWorld() function is a valid WorldContext)
+- Removed duplicate function `UEHelpers.GetKismetMathLibrary`
 
 ### C++ API
 
