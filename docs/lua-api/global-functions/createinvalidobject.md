@@ -16,5 +16,4 @@ function GetEngine()
     EngineCache = FindFirstOf("Engine") ---@type UEngine
     return EngineCache
 end
-
 ```

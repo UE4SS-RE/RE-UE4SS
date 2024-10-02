@@ -321,6 +321,14 @@ This is an overall list of API definitions available in UE4SS. For more readable
         - You can use '.__name' and '.__absolute_path' to retrieve values.
         - You can use '.__files' to retrieve a table containing all files in this directory.
         - You also use '.__name' and '.__absolute_path' for files.
+
+    DumpAllObjects()
+    GenerateSDK()
+    GenerateLuaTypes()
+    GenerateUHTCompatibleHeaders()
+    DumpStaticMeshes()
+    DumpAllActors()
+    DumpUSMAP()
 ```
 
 ### Classes
