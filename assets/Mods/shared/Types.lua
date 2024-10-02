@@ -597,8 +597,99 @@ function LoopAsync(DelayInMilliseconds, Callback) end
 ---You also use `.__name` and `.__absolute_path` for files.
 function IterateGameDirectories() end
 
-
 -- # Classes
+
+---Class for interacting with UE4SS metadata
+---@class UE4SS
+UE4SS = {}
+
+---Returns current version of UE4SS
+---@return integer, integer, integer
+function UE4SS:GetVersion() end
+
+---Returns current version of UE4SS
+---@return integer, integer, integer
+function UE4SS.GetVersion() end
+
+---Contains helper functions for retrieving which version of Unreal Engine that is being used.
+---@class UnrealVersion
+UnrealVersion = {}
+
+---Returns major version of game's Unreal Engine
+---@return integer
+function UnrealVersion:GetMajor() end
+
+---Returns major version of game's Unreal Engine
+---@return integer
+function UnrealVersion.GetMajor() end
+
+---Returns minor version of game's Unreal Engine
+---@return integer
+function UnrealVersion:GetMinor() end
+
+---Returns minor version of game's Unreal Engine
+---@return integer
+function UnrealVersion.GetMinor() end
+
+---Compares game's Unreal Engine version
+---@param MajorVersion integer
+---@param MinorVersion integer
+---@return boolean
+function UnrealVersion:IsEqual(MajorVersion, MinorVersion) end
+
+---Compares game's Unreal Engine version
+---@param MajorVersion integer
+---@param MinorVersion integer
+---@return boolean
+function UnrealVersion.IsEqual(MajorVersion, MinorVersion) end
+
+---Compares game's Unreal Engine version
+---@param MajorVersion integer
+---@param MinorVersion integer
+---@return boolean
+function UnrealVersion:IsAtLeast(MajorVersion, MinorVersion) end
+
+---Compares game's Unreal Engine version
+---@param MajorVersion integer
+---@param MinorVersion integer
+---@return boolean
+function UnrealVersion.IsAtLeast(MajorVersion, MinorVersion) end
+
+---Compares game's Unreal Engine version
+---@param MajorVersion integer
+---@param MinorVersion integer
+---@return boolean
+function UnrealVersion:IsAtMost(MajorVersion, MinorVersion) end
+
+---Compares game's Unreal Engine version
+---@param MajorVersion integer
+---@param MinorVersion integer
+---@return boolean
+function UnrealVersion.IsAtMost(MajorVersion, MinorVersion) end
+
+---Compares game's Unreal Engine version
+---@param MajorVersion integer
+---@param MinorVersion integer
+---@return boolean
+function UnrealVersion:IsBelow(MajorVersion, MinorVersion) end
+
+---Compares game's Unreal Engine version
+---@param MajorVersion integer
+---@param MinorVersion integer
+---@return boolean
+function UnrealVersion.IsBelow(MajorVersion, MinorVersion) end
+
+---Compares game's Unreal Engine version
+---@param MajorVersion integer
+---@param MinorVersion integer
+---@return boolean
+function UnrealVersion:IsAbove(MajorVersion, MinorVersion) end
+
+---Compares game's Unreal Engine version
+---@param MajorVersion integer
+---@param MinorVersion integer
+---@return boolean
+function UnrealVersion.IsAbove(MajorVersion, MinorVersion) end
 
 ---@class UFunction : UObject
 UFunction = {}
