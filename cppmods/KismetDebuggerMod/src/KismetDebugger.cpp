@@ -24,6 +24,8 @@
 #include <misc/cpp/imgui_stdlib.h>
 #include <glaze/glaze.hpp>
 
+#include "Profiler/Profiler.hpp"
+
 #include <UE4SSProgram.hpp>
 
 namespace RC::GUI::KismetDebuggerMod
@@ -42,17 +44,18 @@ namespace RC::GUI::KismetDebuggerMod
 
     BreakpointStore g_breakpoints;
 
-    template <unsigned N>
-    void hook_expr(UObject* Context, FFrame& Stack, void* RESULT_DECL) {
-        static const EExprToken expr = static_cast<EExprToken>(N);
+    void hook_expr_internal(UObject* Context, FFrame& Stack, void* RESULT_DECL, EExprToken N) {
         UFunction* fn = Stack.Node();
+        StringType name = Stack.Node()->GetFullName();
+        ZoneTransientN(scope, to_string(name).c_str(), true);
+            
         size_t index = Stack.Code() - fn->GetScript().GetData() - 1;
         if (should_pause || g_breakpoints.has_breakpoint(fn, index))
         {
             should_pause = true;
             std::unique_lock<std::mutex> lock_a(context_mutex);
             PausedContext ctx{
-                .expr = expr,
+                .expr = N,
                 .context = Context,
                 .stack = &Stack,
             };
@@ -69,6 +72,11 @@ namespace RC::GUI::KismetDebuggerMod
         }
 
         GNativesOriginal[N](Context, Stack, RESULT_DECL);
+    }
+    
+    template <unsigned N>
+    void hook_expr(UObject* Context, FFrame& Stack, void* RESULT_DECL) {
+        hook_expr_internal(Context, Stack, RESULT_DECL, static_cast<EExprToken>(N));
     }
 
     template <unsigned N> void hook_all() {
