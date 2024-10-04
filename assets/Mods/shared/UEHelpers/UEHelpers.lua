@@ -1,6 +1,6 @@
 local UEHelpers = {}
 -- Uncomment the below require to use the Lua VM profiler on these functions
--- local jsb = require "jsbProfi"
+-- local jsb = require("jsbProfiler.jsbProfi")
 
 -- Version 1 does not exist, we start at version 2 because the original version didn't have a version at all.
 local Version = 3
@@ -69,6 +69,8 @@ local PlayerControllerCache = CreateInvalidObject() ---@cast PlayerControllerCac
 function UEHelpers.GetPlayerController()
     if PlayerControllerCache:IsValid() then return PlayerControllerCache end
     
+    -- local Controllers = jsb.simpleBench("FindAllOf: PlayerController", FindAllOf, "PlayerController")
+    -- Controllers = jsb.simpleBench("FindAllOf: Controller", FindAllOf, "Controller")
     local Controllers = FindAllOf("PlayerController") or FindAllOf("Controller") ---@type AController[]?
     if Controllers then
         for _, Controller in ipairs(Controllers) do
