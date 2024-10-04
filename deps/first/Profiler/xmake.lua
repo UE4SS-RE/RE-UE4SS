@@ -11,7 +11,7 @@ option("profilerFlavor")
 target(projectName)
     set_kind("headeronly")
     add_options("profilerFlavor")
-    set_languages("cxx20")
+    set_languages("cxx23")
     set_exceptions("cxx")
     add_rules("ue4ss.dependency")
 
