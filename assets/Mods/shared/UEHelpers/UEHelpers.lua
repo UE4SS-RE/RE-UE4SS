@@ -72,7 +72,7 @@ function UEHelpers.GetPlayerController()
     local Controllers = FindAllOf("PlayerController") or FindAllOf("Controller") ---@type AController[]?
     if Controllers then
         for _, Controller in ipairs(Controllers) do
-            if Controller:IsValid() and Controller:IsPlayerController() then
+            if Controller:IsValid() and (Controller.IsPlayerController and Controller:IsPlayerController() or Controller:IsLocalPlayerController()) then
                 PlayerControllerCache = Controller
                 break
             end
