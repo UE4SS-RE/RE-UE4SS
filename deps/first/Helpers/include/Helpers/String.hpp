@@ -109,8 +109,20 @@ namespace RC
         return {};
     }
 
+    /**
+     * Breaks an input string into a vector of substrings based on a given delimiter.
+     * <br>It treats sections that start with a delimiter character and enclosed in double quotes (`"`) as a single substring, ignoring any delimiters inside the quotes.
+     * <br>It supports an escape character (default `\`) to capture double quotes as part of a string.
+     *
+     * @tparam CharT The character type.
+     * @param in_str  The input string to be split.
+     * @param delimiter (optional) The character used to split the string. Default: ` `.
+     * @param escape_character (optional) The character used for escaping quotes. Default: `\`.
+     * @return A vector of substrings, split by the delimiter, with quoted substrings preserved.
+     */
     template <typename CharT>
-    auto inline explode_by_occurrence_with_quotes(const std::basic_string<CharT>& in_str, const CharT delimiter, const CharT escape_character = STR('\\')) -> std::vector<std::basic_string<CharT>>
+    auto inline explode_by_occurrence_with_quotes(const std::basic_string<CharT>& in_str, const CharT delimiter = STR(' '), const CharT escape_character = STR('\\'))
+            -> std::vector<std::basic_string<CharT>>
     {
         constexpr auto quotation_symbol = STR('"');
         assert(delimiter != quotation_symbol && "Double quote (\") can't be used as delimiter");
