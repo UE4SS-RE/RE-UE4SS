@@ -1440,7 +1440,7 @@ Overloads:
                 const Mod* mod = get_mod_ref(lua);
                 if (!mod)
                 {
-                    lua.throw_error("Could not dump objects and properties because the pointer to 'Mod' was nullptr");
+                    lua.throw_error("Couldn't dump objects and properties because the pointer to 'Mod' was nullptr");
                 }
                 UE4SSProgram::dump_all_objects_and_properties(mod->m_program.get_object_dumper_output_directory() + STR("\\") +
                                                               UE4SSProgram::m_object_dumper_file_name);
@@ -1449,8 +1449,23 @@ Overloads:
 
             lua.register_function("GenerateSDK", []([[maybe_unused]] const LuaMadeSimple::Lua& lua) -> int {
                 const Mod* mod = get_mod_ref(lua);
+                if (!mod)
+                {
+                    lua.throw_error("Couldn't generate SDK because the pointer to 'Mod' was nullptr");
+                }
                 File::StringType working_dir{mod->m_program.get_working_directory()};
                 mod->m_program.generate_cxx_headers(working_dir + STR("\\CXXHeaderDump"));
+                return 0;
+            });
+
+            lua.register_function("GenerateLuaTypes", []([[maybe_unused]] const LuaMadeSimple::Lua& lua) -> int {
+                const Mod* mod = get_mod_ref(lua);
+                if (!mod)
+                {
+                    lua.throw_error("Couldn't generate lua types because the pointer to 'Mod' was nullptr");
+                }
+                File::StringType working_dir{mod->m_program.get_working_directory()};
+                UE4SSProgram::get_program().generate_lua_types(working_dir + STR("\\Mods\\shared\\types"));
                 return 0;
             });
 

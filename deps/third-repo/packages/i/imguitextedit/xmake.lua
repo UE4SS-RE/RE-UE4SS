@@ -23,7 +23,7 @@ package("ImGuiTextEdit")
 
             target("ImGuiTextEdit")
                 set_kind("static")
-                set_languages("cxx20")
+                set_languages("cxx23")
 
                 add_includedirs(".", { public = true })
                 add_headerfiles("*.h")
