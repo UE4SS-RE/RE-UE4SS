@@ -10,6 +10,8 @@ Returns two ids, both of which must be passed to `UnregisterHook` if you want to
 
 > Any `UFunction` that you attempt to register with `RegisterHook` must already exist in memory when you register it.  
 
+> `RegisterHook` doesn't support delegate functions!
+
 ## Parameters
 
 | # | Type     | Information                                                                                                                                                         |
@@ -27,7 +29,18 @@ Returns two ids, both of which must be passed to `UnregisterHook` if you want to
 
 ## Example
 ```lua
-RegisterHook("/Script/Engine.PlayerController:ClientRestart", function()
-    print("PlayerController restarted\n")
+PreId, PostId = RegisterHook("/Script/Engine.PlayerController:ClientRestart", function(Context, NewPawn)
+    local playerController = Context:get()
+    local newPawn = NewPawn:get()
+
+    print("PayerController FullName: " .. playerController:GetFullName())
+    if newPawn:IsValid() then
+        print("NewPawn FullName: " .. newPawn:GetFullName())
+    end
+
+    if PreId then
+        -- Unhook once the function has been called
+        UnregisterHook("/Script/Engine.PlayerController:ClientRestart", PreId, PostId)
+    end
 end)
 ```
