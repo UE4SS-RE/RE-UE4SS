@@ -30,12 +30,12 @@ Returns two ids, both of which must be passed to `UnregisterHook` if you want to
 ## Example
 ```lua
 PreId, PostId = RegisterHook("/Script/Engine.PlayerController:ClientRestart", function(Context, NewPawn)
-    local playerController = Context:get()
-    local newPawn = NewPawn:get()
+    local PlayerController = Context:get()
+    local Pawn = NewPawn:get()
 
-    print("PayerController FullName: " .. playerController:GetFullName())
-    if newPawn:IsValid() then
-        print("NewPawn FullName: " .. newPawn:GetFullName())
+    print("PayerController FullName: " .. PlayerController:GetFullName())
+    if Pawn:IsValid() then
+        print("NewPawn FullName: " .. Pawn:GetFullName())
     end
 
     if PreId then
