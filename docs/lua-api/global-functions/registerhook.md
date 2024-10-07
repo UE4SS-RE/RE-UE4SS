@@ -39,9 +39,9 @@ PreId, PostId = RegisterHook("/Script/Engine.PlayerController:ClientRestart", fu
     local PlayerController = Context:get()
     local Pawn = NewPawn:get()
 
-    print("PayerController FullName: " .. PlayerController:GetFullName() .. "\n")
+    print(string.format("PlayerController FullName: %s\n", PlayerController:GetFullName()))
     if Pawn:IsValid() then
-        print("NewPawn FullName: " .. Pawn:GetFullName() .. "\n")
+        print(string.format("NewPawn FullName: %s\n", Pawn:GetFullName()))
     end
 
     if PreId then
