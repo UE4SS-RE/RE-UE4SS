@@ -12,7 +12,7 @@ Returns two ids, both of which must be passed to `UnregisterHook` if you want to
 
 > `RegisterHook` doesn't support delegate functions!
 
-## Parameters
+## RegisterHook Parameters
 
 | # | Type     | Information                                                                                                                                                         |
 |---|----------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------|
@@ -20,12 +20,18 @@ Returns two ids, both of which must be passed to `UnregisterHook` if you want to
 | 2 | function | If UFunction path starts with `/Script/`: Callback to execute before the UFunction is executed.<br/>Otherwise: Callback to execute after the UFunction is executed. |
 | 3 | function | (optional)<br/>If UFunction path starts with `/Script/`: Callback to execute after the UFunction is executed<br/>Otherwise: Param does nothing.                     |
 
-## Return Values
+## RegisterHook Return Values
 
 | # | Type   | Information |
 |---|--------|-------------|
 | 1 | integer | The PreId of the hook |
 | 2 | integer | The PostId of the hook |
+
+## Callback Parameters
+| # | Type   | Information |
+|---|--------|-------------|
+| 1 | [RemoteUnrealParam](../classes/remoteunrealparam.md) | Object representation of the "this"-pointer ("self" in lua) of the function, also known as "Context". It contains the object wrapped as RemoteUnrealParam that called the function.  |
+| 2..N | RemoteUnrealParam... | All function parameters wrapped as RemoteUnrealParam |
 
 ## Example
 ```lua
@@ -33,9 +39,9 @@ PreId, PostId = RegisterHook("/Script/Engine.PlayerController:ClientRestart", fu
     local PlayerController = Context:get()
     local Pawn = NewPawn:get()
 
-    print("PayerController FullName: " .. PlayerController:GetFullName())
+    print("PayerController FullName: " .. PlayerController:GetFullName() .. "\n")
     if Pawn:IsValid() then
-        print("NewPawn FullName: " .. Pawn:GetFullName())
+        print("NewPawn FullName: " .. Pawn:GetFullName() .. "\n")
     end
 
     if PreId then
