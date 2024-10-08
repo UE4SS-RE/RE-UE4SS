@@ -6,7 +6,6 @@
 #include <UE4SSProgram.hpp>
 #include <Unreal/Core/Windows/WindowsHWrapper.hpp>
 
-#include <polyhook2/PE/IatHook.hpp>
 #include <dbghelp.h>
 
 #include <String/StringType.hpp>
@@ -78,7 +77,7 @@ namespace RC
 
     CrashDumper::~CrashDumper()
     {
-        m_set_unhandled_exception_filter_hook->unHook();
+        m_set_unhandled_exception_filter_hook = {};
         SetUnhandledExceptionFilter(reinterpret_cast<LPTOP_LEVEL_EXCEPTION_FILTER>(m_previous_exception_filter));
     }
 
@@ -86,13 +85,7 @@ namespace RC
     {
         SetErrorMode(SEM_FAILCRITICALERRORS);
         m_previous_exception_filter = SetUnhandledExceptionFilter(ExceptionHandler);
-
-        m_set_unhandled_exception_filter_hook = std::make_unique<PLH::IatHook>("kernel32.dll",
-                                                                               "SetUnhandledExceptionFilter",
-                                                                               std::bit_cast<uint64_t>(&HookedSetUnhandledExceptionFilter),
-                                                                               &m_hook_trampoline_set_unhandled_exception_filter_hook,
-                                                                               L"");
-        m_set_unhandled_exception_filter_hook->hook();
+        m_set_unhandled_exception_filter_hook = safetyhook::create_inline(SetUnhandledExceptionFilter, HookedSetUnhandledExceptionFilter);
         this->enabled = true;
     }
 

@@ -9,7 +9,7 @@ namespace RC::ASM
     {
         void* address{};
         ZydisDecodedInstruction raw{};
-        ZydisDecodedOperand* operands{};
+        ZydisDecodedOperand operands[ZYDIS_MAX_OPERAND_COUNT]{};
     };
 
     RC_ASM_API auto resolve_jmp(void* instruction_ptr) -> void*;

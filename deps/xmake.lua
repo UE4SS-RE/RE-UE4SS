@@ -9,3 +9,4 @@ add_repositories("third-party deps/third-repo", { rootdir = get_config("ue4ssRoo
 add_requires("zycore v1.5.0", { debug = is_mode_debug(), configs = {runtimes = get_mode_runtimes()} })
 add_requires("zydis v4.1.0", { debug = is_mode_debug(), configs = {runtimes = get_mode_runtimes()} })
 add_requires("polyhook_2", { debug = is_mode_debug(), configs = {runtimes = get_mode_runtimes()} })
+add_requires("safetyhook", { debug = is_mode_debug(), configs = {runtimes = get_mode_runtimes()} })
