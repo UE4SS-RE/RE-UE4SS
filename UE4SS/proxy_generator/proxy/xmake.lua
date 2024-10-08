@@ -5,7 +5,7 @@ option("ue4ssProxyPath")
 target("proxy")
     set_kind("shared")
     add_options("ue4ssProxyPath")
-    set_languages("cxx20")
+    set_languages("cxx23")
     set_exceptions("cxx")
     add_rules("c++", "asm")
 
