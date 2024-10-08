@@ -103,9 +103,7 @@ function UEHelpers.GetWorld()
     local PlayerController = UEHelpers.GetPlayerController()
     if PlayerController:IsValid() then
         WorldCache = PlayerController:GetWorld()
-        return WorldCache
     end
-
     return WorldCache
 end
 
