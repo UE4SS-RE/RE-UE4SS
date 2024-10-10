@@ -82,6 +82,11 @@ The following search filters now allow multiple values, with each value separate
 
 The callback of `NotifyOnNewObject` can now optionally return `true` to unregister itself ([UE4SS #432](https://github.com/UE4SS-RE/RE-UE4SS/pull/432)) - Lyrth
 
+`RegisterConsoleCommandHandler`, `RegisterConsoleCommandGlobalHandler`, `RegisterProcessConsoleExecPreHook` and `RegisterProcessConsoleExecPostHook` now support enclosing parameters in double quotes (`"`). This allows spaces within the quotes to be ignored, treating the enclosed string as a single parameter. ([UE4SS #653](https://github.com/UE4SS-RE/RE-UE4SS/pull/653), [UE4SS #669](https://github.com/UE4SS-RE/RE-UE4SS/pull/669))  
+
+**BREAKING:** `RegisterProcessConsoleExecPreHook`,  `RegisterProcessConsoleExecPostHook` callback parameter `CommandParts` now includes the command name at the start of the array (lua array index **1**). ([UE4SS #669](https://github.com/UE4SS-RE/RE-UE4SS/pull/669))
+
+
 #### UEHelpers [UE4SS #650](https://github.com/UE4SS-RE/RE-UE4SS/pull/650)
 - Increased version to 3
 - Reworked all UEHelpers functions to ensure that they always return an object which can be checked with the function `IsValid` for validation

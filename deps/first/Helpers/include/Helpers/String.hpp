@@ -8,6 +8,7 @@
 #include <unordered_map>
 #include <vector>
 #include <filesystem>
+#include <cassert>
 
 #include <String/StringType.hpp>
 
@@ -106,6 +107,70 @@ namespace RC
 
         // No occurrence was found, returning empty string for now
         return {};
+    }
+
+    /**
+     * Breaks an input string into a vector of substrings based on a given delimiter.
+     * <br>It treats sections that start with a delimiter character and enclosed in double quotes (`"`) as a single substring, ignoring any delimiters inside the quotes.
+     * <br>It supports an escape character (default `\`) to capture double quotes as part of a string.
+     *
+     * @tparam CharT The character type.
+     * @param in_str  The input string to be split.
+     * @param delimiter (optional) The character used to split the string. Default: ` `.
+     * @param escape_character (optional) The character used for escaping quotes. Default: `\`.
+     * @return A vector of substrings, split by the delimiter, with quoted substrings preserved.
+     */
+    template <typename CharT>
+    auto inline explode_by_occurrence_with_quotes(const std::basic_string<CharT>& in_str, const CharT delimiter = STR(' '), const CharT escape_character = STR('\\'))
+            -> std::vector<std::basic_string<CharT>>
+    {
+        constexpr auto quotation_symbol = STR('"');
+        assert(delimiter != quotation_symbol && "Double quote (\") can't be used as delimiter");
+        assert(delimiter != escape_character && "Delimiter can't be the same as the escape character");
+        assert(escape_character != quotation_symbol && "Double quote (\") can't be used as escape character");
+
+        std::vector<std::basic_string<CharT>> result;
+        std::basic_string<CharT> current;
+        auto in_quotes = false;
+
+        auto add_current_to_vector = [&result, &current]() {
+            if (!current.empty())
+            {
+                result.push_back(current);
+                current.clear();
+            }
+        };
+
+        auto is_valid_quote_symbol = [&in_quotes, &in_str, &delimiter, &escape_character](int position) {
+            if (position >= 0 && position < in_str.size() && in_str[position] == quotation_symbol
+                 && (position == 0 || in_str[position - 1] != escape_character))
+            {
+                 return in_quotes ? position + 1 == in_str.size() || in_str[position + 1] == delimiter : position == 0 || in_str[position - 1] == delimiter;
+            }
+            return false;
+        };
+
+        for (size_t i = 0; i < in_str.size(); i++)
+        {
+            if (is_valid_quote_symbol(i))
+            {
+                in_quotes = !in_quotes;
+                continue;
+            }
+            const auto current_char = in_str[i];
+            if ((!in_quotes && current_char == delimiter))
+            {
+                add_current_to_vector();
+                continue;
+            }
+            if (current_char != escape_character || in_str[i + 1] != quotation_symbol)
+            {
+                current.push_back(current_char);
+            }
+        }
+        add_current_to_vector();
+
+        return result;
     }
     /* explode_by_occurrence -> END */
 
