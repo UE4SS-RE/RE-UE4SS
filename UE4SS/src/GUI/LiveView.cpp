@@ -1957,13 +1957,13 @@ namespace RC::GUI
             }
             auto value_as_string = Unreal::UKismetNodeHelperLibrary::GetEnumeratorUserFriendlyName(uenum, enum_index);
             ImGui::SameLine();
-            ImGui::Text("%S", value_as_string.c_str());
+            ImGui::Text(fmt::format("{}", to_string(value_as_string)).c_str());
             render_property_value_context_menu();
         }
         else
         {
             ImGui::SameLine();
-            ImGui::Text("%S", property_text.GetCharArray());
+            ImGui::Text(fmt::format("{}", to_string(property_text.GetCharArray())).c_str());
             render_property_value_context_menu();
         }
 
