@@ -1776,10 +1776,10 @@ namespace RC::GUI
         }
 
         FString property_text{};
+        auto property_name = to_string(property->GetName());
         auto container_ptr = property->ContainerPtrToValuePtr<void*>(container);
         property->ExportTextItem(property_text, container_ptr, container_ptr, static_cast<UObject*>(container), NULL);
-        auto property_name = to_string(property->GetName());
-
+        
         bool open_edit_value_popup{};
 
         auto render_property_value_context_menu = [&](std::string_view id_override = "") {
