@@ -1,6 +1,6 @@
 local UEHelpers = {}
 -- Uncomment the below require to use the Lua VM profiler on these functions
--- local jsb = require "jsbProfi"
+-- local jsb = require("jsbProfiler.jsbProfi")
 
 -- Version 1 does not exist, we start at version 2 because the original version didn't have a version at all.
 local Version = 3
@@ -39,7 +39,7 @@ local EngineCache = CreateInvalidObject() ---@cast EngineCache UEngine
 function UEHelpers.GetEngine()
     if EngineCache:IsValid() then return EngineCache end
 
-    EngineCache = FindFirstOf("Engine") ---@type UEngine
+    EngineCache = FindFirstOf("Engine") ---@cast EngineCache UEngine
     return EngineCache
 end
 
@@ -49,7 +49,7 @@ local GameInstanceCache = CreateInvalidObject() ---@cast GameInstanceCache UGame
 function UEHelpers.GetGameInstance()
     if GameInstanceCache:IsValid() then return GameInstanceCache end
 
-    GameInstanceCache = FindFirstOf("GameInstance") ---@type UGameInstance
+    GameInstanceCache = FindFirstOf("GameInstance") ---@cast GameInstanceCache UGameInstance
     return GameInstanceCache
 end
 
@@ -57,7 +57,7 @@ end
 ---@return UGameViewportClient
 function UEHelpers.GetGameViewportClient()
     local Engine = UEHelpers.GetEngine()
-    if Engine:IsValid() then
+    if Engine:IsValid() and Engine.GameViewport then
         return Engine.GameViewport
     end
     return CreateInvalidObject() ---@type UGameViewportClient
@@ -69,10 +69,12 @@ local PlayerControllerCache = CreateInvalidObject() ---@cast PlayerControllerCac
 function UEHelpers.GetPlayerController()
     if PlayerControllerCache:IsValid() then return PlayerControllerCache end
     
-    local Controllers = FindAllOf("Controller") ---@type AController[]?
+    -- local Controllers = jsb.simpleBench("FindAllOf: PlayerController", FindAllOf, "PlayerController")
+    -- Controllers = jsb.simpleBench("FindAllOf: Controller", FindAllOf, "Controller")
+    local Controllers = FindAllOf("PlayerController") or FindAllOf("Controller") ---@type AController[]?
     if Controllers then
         for _, Controller in ipairs(Controllers) do
-            if Controller:IsValid() and Controller:IsPlayerController() then
+            if Controller:IsValid() and (Controller.IsPlayerController and Controller:IsPlayerController() or Controller:IsLocalPlayerController()) then
                 PlayerControllerCache = Controller
                 break
             end
@@ -86,7 +88,7 @@ end
 ---@return APawn
 function UEHelpers.GetPlayer()
     local playerController = UEHelpers.GetPlayerController()
-    if playerController:IsValid() then
+    if playerController:IsValid() and playerController.Pawn then
         return playerController.Pawn
     end
     return CreateInvalidObject() ---@type APawn
@@ -101,9 +103,7 @@ function UEHelpers.GetWorld()
     local PlayerController = UEHelpers.GetPlayerController()
     if PlayerController:IsValid() then
         WorldCache = PlayerController:GetWorld()
-        return WorldCache
     end
-
     return WorldCache
 end
 
@@ -111,7 +111,7 @@ end
 ---@return ULevel
 function UEHelpers.GetPersistentLevel()
     local World = UEHelpers.GetWorld()
-    if World:IsValid() and World.PersistentLevel:IsValid() then
+    if World:IsValid() and World.PersistentLevel then
         return World.PersistentLevel
     end
     return CreateInvalidObject() ---@type ULevel
@@ -122,7 +122,7 @@ end
 ---@return AGameModeBase
 function UEHelpers.GetGameModeBase()
     local World = UEHelpers.GetWorld()
-    if World:IsValid() and World.AuthorityGameMode:IsValid() then
+    if World:IsValid() and World.AuthorityGameMode then
         return World.AuthorityGameMode
     end
     return CreateInvalidObject() ---@type AGameModeBase
@@ -133,7 +133,7 @@ end
 ---@return AGameStateBase
 function UEHelpers.GetGameStateBase()
     local World = UEHelpers.GetWorld()
-    if World:IsValid() and World.GameState:IsValid() then
+    if World:IsValid() and World.GameState then
         return World.GameState
     end
     return CreateInvalidObject() ---@type AGameStateBase
@@ -143,7 +143,7 @@ end
 ---@return AWorldSettings
 function UEHelpers.GetWorldSettings()
     local PersistentLevel = UEHelpers.GetPersistentLevel()
-    if PersistentLevel:IsValid() and PersistentLevel.WorldSettings:IsValid() then
+    if PersistentLevel:IsValid() and PersistentLevel.WorldSettings then
         return PersistentLevel.WorldSettings
     end
     return CreateInvalidObject() ---@type AWorldSettings
