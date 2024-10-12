@@ -2,7 +2,8 @@ package("polyhook_2")
     set_sourcedir(os.scriptdir())
     
     add_deps("cmake", "zydis", "zycore")
-
+    -- Print a deprecation warning
+    print("Warning: The package 'polyhook_2' is deprecated and will be removed in a future release.  If you are using this package please update your code to use 'safetyhook'.")
     on_install(function (package)
         local configs = {}
 
@@ -10,6 +11,7 @@ package("polyhook_2")
         table.insert(configs, "-DBUILD_SHARED_LIBS=OFF")
 
         import("package.tools.cmake").install(package, configs, { packagedeps = { "zycore", "zydis" } })
+        
         
     end)
 package_end()
