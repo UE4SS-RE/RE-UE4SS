@@ -767,7 +767,9 @@ namespace RC
         config.bHookLocalPlayerExec = settings_manager.Hooks.HookLocalPlayerExec;
         config.bHookAActorTick = settings_manager.Hooks.HookAActorTick;
         config.FExecVTableOffsetInLocalPlayer = settings_manager.Hooks.FExecVTableOffsetInLocalPlayer;
-
+        // Apply Debug Build setting from settings file only for now.
+        Unreal::Version::DebugBuild = settings_manager.EngineVersionOverride.DebugBuild;
+        Output::send<LogLevel::Warning>(STR("DebugGame Setting Enabled? {}\n"), Unreal::Version::DebugBuild);
         Unreal::UnrealInitializer::Initialize(config);
 
         bool can_create_custom_events{true};
