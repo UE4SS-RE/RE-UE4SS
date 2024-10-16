@@ -63,6 +63,13 @@ def export_version(ref, name):
     shutil.copy(os.path.join('docs-export', 'book.toml'), version_out_dir)
     shutil.copytree(os.path.join('docs-export', 'css'), os.path.join(version_out_dir, 'css'))
 
+    # github alerts pre-processor template files, if they are not found for whatever reason, just ignore
+    try:
+        shutil.copy(os.path.join('docs-export', 'mermaid.min.js'), version_out_dir)
+        shutil.copy(os.path.join('docs-export', 'mermaid-init.js'), version_out_dir)
+    except FileNotFoundError:
+        pass
+
     return True
 
 export_version('main', 'dev')
