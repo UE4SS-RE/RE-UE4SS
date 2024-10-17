@@ -10,21 +10,21 @@ local function RemapConsoleKeys()
 
     local ConsoleKeys = InputSettings.ConsoleKeys
 
-    local keysToAdd = {
+    local KeysToAdd = {
         UEHelpers.FindFName("Tilde"),
         UEHelpers.FindFName("F10")
     }
 
-    for _, keyName in ipairs(keysToAdd) do
-        if keyName ~= NAME_None then
-            local alreadySet = false
+    for _, KeyName in ipairs(KeysToAdd) do
+        if KeyName ~= NAME_None then
+            local KeyIsAlreadySet = false
             for i = 1, #ConsoleKeys do
-                if ConsoleKeys[i].KeyName == keyName then
-                    alreadySet = true
+                if ConsoleKeys[i].KeyName == KeyName then
+                    KeyIsAlreadySet = true
                 end
             end
-            if not alreadySet then
-                ConsoleKeys[#ConsoleKeys + 1].KeyName = keyName
+            if not KeyIsAlreadySet then
+                ConsoleKeys[#ConsoleKeys + 1].KeyName = KeyName
             end
         end
     end
