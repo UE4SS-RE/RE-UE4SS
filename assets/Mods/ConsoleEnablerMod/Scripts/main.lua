@@ -10,25 +10,27 @@ local function RemapConsoleKeys()
 
     local ConsoleKeys = InputSettings.ConsoleKeys
 
-    local f10Name = UEHelpers.FindFName("F10")
-    if f10Name == NAME_None then
-        print("[RemapConsoleKeys] Was unable to find F10 FName\n")
-        return
+    local keysToAdd = {
+        UEHelpers.FindFName("Tilde"),
+        UEHelpers.FindFName("F10")
+    }
+
+    for _, keyName in ipairs(keysToAdd) do
+        if keyName ~= NAME_None then
+            local alreadySet = false
+            for i = 1, #ConsoleKeys do
+                if ConsoleKeys[i].KeyName == keyName then
+                    alreadySet = true
+                end
+            end
+            if not alreadySet then
+                ConsoleKeys[#ConsoleKeys + 1].KeyName = keyName
+            end
+        end
     end
 
-    local f10AlreadySet = false
     for i = 1, #ConsoleKeys do
-        local consoleKey = ConsoleKeys[i]
-        local keyName = consoleKey.KeyName
-        if keyName == f10Name then
-            f10AlreadySet = true
-        end
-        print(string.format("[ConsoleEnabler] ConsoleKey[%d]: %s\n", i, keyName:ToString()))
-    end
-    if not f10AlreadySet then
-        local newKeyIndex = #ConsoleKeys + 1
-        ConsoleKeys[newKeyIndex].KeyName = f10Name
-        print(string.format("[ConsoleEnabler] ConsoleKey[%d]: %s\n", newKeyIndex, f10Name:ToString()))
+        print(string.format("[ConsoleEnabler] ConsoleKey[%d]: %s\n", i, ConsoleKeys[i].KeyName:ToString()))
     end
 end
 
