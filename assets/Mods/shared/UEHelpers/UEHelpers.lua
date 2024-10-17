@@ -53,7 +53,7 @@ function UEHelpers.GetGameInstance()
     return GameInstanceCache
 end
 
----Returns the main UGameViewportClient
+---Returns the main UGameViewportClient (doesn't exist on a server)
 ---@return UGameViewportClient
 function UEHelpers.GetGameViewportClient()
     local Engine = UEHelpers.GetEngine()
@@ -64,7 +64,9 @@ function UEHelpers.GetGameViewportClient()
 end
 
 local PlayerControllerCache = CreateInvalidObject() ---@cast PlayerControllerCache APlayerController
----Returns first player controller
+---Returns first player controller.<br>
+---In most games, a valid player controller is available from the start.<br>
+---There are no player controllers on the server until a player joins the server.
 ---@return APlayerController
 function UEHelpers.GetPlayerController()
     if PlayerControllerCache:IsValid() then return PlayerControllerCache end
@@ -95,14 +97,19 @@ function UEHelpers.GetPlayer()
 end
 
 local WorldCache = CreateInvalidObject() ---@cast WorldCache UWorld
---- Returns the main UWorld
+---Returns the main UWorld
 ---@return UWorld
 function UEHelpers.GetWorld()
     if WorldCache:IsValid() then return WorldCache end
 
-    local PlayerController = UEHelpers.GetPlayerController()
-    if PlayerController:IsValid() then
-        WorldCache = PlayerController:GetWorld()
+    local GameInstance = UEHelpers.GetGameInstance()
+    if GameInstance:IsValid() then
+        WorldCache = GameInstance:GetWorld()
+    else -- Worst case fallback, usaully should never happen
+        local PlayerController = UEHelpers.GetPlayerController()
+        if PlayerController:IsValid() then
+            WorldCache = PlayerController:GetWorld()
+        end
     end
     return WorldCache
 end
@@ -154,13 +161,13 @@ end
 --- Any UObject that has a GetWorld() function can be used as WorldContext.
 ---@return UObject
 function UEHelpers.GetWorldContextObject()
-    return UEHelpers.GetPlayerController()
+    return UEHelpers.GetWorld()
 end
 
 ---Returns hit actor from FHitResult.<br>
 ---The function handles the struct differance between UE4 and UE5
 ---@param HitResult FHitResult
----@return AActor
+---@return AActor|UObject
 function UEHelpers.GetActorFromHitResult(HitResult)
     if not HitResult or not HitResult:IsValid() then
         return CreateInvalidObject() ---@type AActor
