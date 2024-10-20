@@ -70,7 +70,7 @@ local PlayerControllerCache = CreateInvalidObject() ---@cast PlayerControllerCac
 ---@return APlayerController
 function UEHelpers.GetPlayerController()
     if PlayerControllerCache:IsValid() then return PlayerControllerCache end
-    
+
     -- local Controllers = jsb.simpleBench("FindAllOf: PlayerController", FindAllOf, "PlayerController")
     -- Controllers = jsb.simpleBench("FindAllOf: Controller", FindAllOf, "Controller")
     local Controllers = FindAllOf("PlayerController") or FindAllOf("Controller") ---@type AController[]?
@@ -164,6 +164,36 @@ function UEHelpers.GetWorldContextObject()
     return UEHelpers.GetWorld()
 end
 
+---Returns an array of all players APlayerState
+---@return APlayerState[]
+function UEHelpers.GetAllPlayerStates()
+    local PlayerStates = {}
+    local GameState = UEHelpers.GetGameStateBase()
+    if GameState:IsValid() and GameState.PlayerArray then
+        for i = 1, #GameState.PlayerArray do
+            table.insert(PlayerStates, GameState.PlayerArray[i])
+        end
+    end
+    return PlayerStates
+end
+
+---Returns all players as APawn.<br>
+---You can use `IsA` function to check the type of APawn to make sure it's the player class of the game.
+---@return APawn[]
+function UEHelpers.GetAllPlayers()
+    local PlayerPawns = {}
+    local PlayerStates = UEHelpers.GetAllPlayerStates()
+    if PlayerStates then
+        for i = 1, #PlayerStates do
+            local Pawn = PlayerStates[i].PawnPrivate
+            if Pawn and Pawn:IsValid() then
+                table.insert(PlayerPawns, Pawn)
+            end
+        end
+    end
+    return PlayerPawns
+end
+
 ---Returns hit actor from FHitResult.<br>
 ---The function handles the struct differance between UE4 and UE5
 ---@param HitResult FHitResult
@@ -172,7 +202,7 @@ function UEHelpers.GetActorFromHitResult(HitResult)
     if not HitResult or not HitResult:IsValid() then
         return CreateInvalidObject() ---@type AActor
     end
-    
+
     if UnrealVersion:IsBelow(5, 0) then
         return HitResult.Actor:Get()
     elseif UnrealVersion:IsBelow(5, 4) then
