@@ -37,15 +37,16 @@ Added global Dumpers functions to Types.lua. ([UE4SS #664](https://github.com/UE
 - Added `EFindName` enum definition
 - Added `FName` function overloads with FindType parameter
 
-#### UEHelpers [PR #650](https://github.com/UE4SS-RE/RE-UE4SS/pull/650)
-- Added function `GetPlayer` which is just a fast way to get player controlled Pawn (the majority of the time it will be the player character)
-- Added functions: `GetEngine`, `GetGameInstance`, `GetGameViewportClient`,  `GetGameModeBase`, `GetGameStateBase`,`GetPersistentLevel` and `GetWorldSettings`
-- Added functions to get static objects: `GetKismetStringLibrary`, `GetKismetTextLibrary`
-- Added function `GetActorFromHitResult` which extracts the hit actor from a `FHitResult` struct based on UE's version
-- Added FName utility functions:
+#### UEHelpers
+- Added function `GetPlayer` which is just a fast way to get player controlled Pawn (the majority of the time it will be the player character) [PR #650](https://github.com/UE4SS-RE/RE-UE4SS/pull/650)
+- Added functions: `GetEngine`, `GetGameInstance`, `GetGameViewportClient`,  `GetGameModeBase`, `GetGameStateBase`,`GetPersistentLevel` and `GetWorldSettings` [PR #650](https://github.com/UE4SS-RE/RE-UE4SS/pull/650)
+- Added functions to get static objects: `GetKismetStringLibrary`, `GetKismetTextLibrary` [PR #650](https://github.com/UE4SS-RE/RE-UE4SS/pull/650)
+- Added function `GetActorFromHitResult` which extracts the hit actor from a `FHitResult` struct based on UE's version [PR #650](https://github.com/UE4SS-RE/RE-UE4SS/pull/650)
+- Added FName utility functions [PR #650](https://github.com/UE4SS-RE/RE-UE4SS/pull/650):
   - `FindFName`: wrapper for `FName(Name, EFindName.FNAME_Find)`
   - `AddFName`: wrapper for  `FName(Name, EFindName.FNAME_Add)`
-- Added [Lua Server Annotations](https://luals.github.io/wiki/annotations/) to all UEHelpers functions
+- Added [Lua Server Annotations](https://luals.github.io/wiki/annotations/) to all UEHelpers functions [PR #650](https://github.com/UE4SS-RE/RE-UE4SS/pull/650)
+- Added functions `GetAllPlayerStates` and `GetAllPlayers` [PR #688](https://github.com/UE4SS-RE/RE-UE4SS/pull/688)
 
 ### C++ API
 Key binds created with `UE4SSProgram::register_keydown_event` end up being duplicated upon mod hot-reload.  
