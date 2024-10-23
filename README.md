@@ -45,7 +45,7 @@ If you are planning on doing mod development using UE4SS, you can do the same as
 
   [UE4SS Discord Server Invite](https://discord.gg/7qhRGHF9Tt)
 
-  [Unreal Engine Modding Discord Server Invite](https://discord.gg/zVvsE9mEEa)
+  [Unreal Engine Modding Discord Server Invite](https://discord.gg/unreal-engine-modding-876613187204685934)
 
 ## Build requirements
 
