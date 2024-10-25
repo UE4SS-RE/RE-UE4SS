@@ -1776,10 +1776,10 @@ namespace RC::GUI
         }
 
         FString property_text{};
+        auto property_name = to_string(property->GetName());
         auto container_ptr = property->ContainerPtrToValuePtr<void*>(container);
         property->ExportTextItem(property_text, container_ptr, container_ptr, static_cast<UObject*>(container), NULL);
-        auto property_name = to_string(property->GetName());
-
+        
         bool open_edit_value_popup{};
 
         auto render_property_value_context_menu = [&](std::string_view id_override = "") {
@@ -1957,13 +1957,13 @@ namespace RC::GUI
             }
             auto value_as_string = Unreal::UKismetNodeHelperLibrary::GetEnumeratorUserFriendlyName(uenum, enum_index);
             ImGui::SameLine();
-            ImGui::Text("%S", value_as_string.c_str());
+            ImGui::Text(fmt::format("{}", to_string(value_as_string)).c_str());
             render_property_value_context_menu();
         }
         else
         {
             ImGui::SameLine();
-            ImGui::Text("%S", property_text.GetCharArray());
+            ImGui::Text(fmt::format("{}", to_string(property_text.GetCharArray())).c_str());
             render_property_value_context_menu();
         }
 

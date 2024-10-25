@@ -10,6 +10,7 @@
 #include <GUI/Dumpers.hpp>
 #include <GUI/GLFW3_OpenGL3.hpp>
 #include <GUI/Windows.hpp>
+#include <fonts/droidsansfallback.cpp>
 
 #include <UE4SSProgram.hpp>
 #include <Unreal/UnrealInitializer.hpp>
@@ -482,18 +483,37 @@ namespace RC::GUI
 
         float base_font_size = 14 * UE4SSProgram::settings_manager.Debug.DebugGUIFontScaling;
 
+        // Increase font atlas size (if needed for many characters)
+        io.Fonts->TexDesiredWidth = 2048; // Increase the atlas size to allow more glyphs to fit
+
+        // Load base font (Latin characters)
         ImFontConfig font_cfg;
         font_cfg.FontDataOwnedByAtlas = false; // if true it will try to free memory and fail
-        io.Fonts->AddFontFromMemoryTTF(Roboto, sizeof(Roboto), base_font_size, &font_cfg);
+        io.Fonts->AddFontFromMemoryTTF(Roboto, sizeof(Roboto), base_font_size, &font_cfg, io.Fonts->GetGlyphRangesDefault());
+        font_cfg.FontDataOwnedByAtlas = false;
 
-        float icon_font_size = base_font_size * 2.0f / 3.0f; // FontAwesome fonts need to have their sizes reduced;
+        // Load a comprehensive font for CJK characters
+        ImFontConfig fallback_font_cfg;
+        fallback_font_cfg.MergeMode = true;  // Merge into the previous font
+        fallback_font_cfg.FontDataOwnedByAtlas = true;
+
+        // Load glyph ranges for CJK, including rare characters
+        const ImWchar* custom_ranges = io.Fonts->GetGlyphRangesChineseFull(); // Full CJK coverage
+        io.Fonts->AddFontFromMemoryCompressedTTF(DroidSansFallback_compressed_data, DroidSansFallback_compressed_size, base_font_size, &fallback_font_cfg, custom_ranges);
+
+        // Load icons (FontAwesome or any other icon font)
+        float icon_font_size = base_font_size * 2.0f / 3.0f;
         static const ImWchar icons_ranges[] = {ICON_MIN_FA, ICON_MAX_16_FA, 0};
         ImFontConfig icons_cfg;
-        icons_cfg.FontDataOwnedByAtlas = false; // if true it will try to free memory and fail
+        icons_cfg.FontDataOwnedByAtlas = false;
         icons_cfg.MergeMode = true;
         icons_cfg.PixelSnapH = true;
         icons_cfg.GlyphMinAdvanceX = icon_font_size;
         io.Fonts->AddFontFromMemoryTTF(FaSolid900, sizeof(FaSolid900), icon_font_size, &icons_cfg, icons_ranges);
+
+        // Build font atlas
+        io.Fonts->Build();
+
 
         m_os_backend->init();
         m_gfx_backend->init();
