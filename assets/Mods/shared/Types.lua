@@ -838,7 +838,7 @@ function UObject:GetFullName() end
 
 ---Returns the FName of this object by copy
 ---All FNames returned by `__index` are returned by reference
----@retur FName
+---@return FName
 function UObject:GetFName() end
 
 ---Returns the memory address of this object
