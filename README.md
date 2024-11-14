@@ -87,7 +87,8 @@ The build modes are structured as follows: `<Target>__<Config>__<Platform>`
 Currently supported options for these are:
 
 * `Target`
-  * `Game` - for regular games
+  * `Game` - for regular games on UE versions greater than UE 4.21
+  * `LessEqual421` - for regular games on UE versions less than or equal to UE 4.21
   * `CasePreserving` - for games built with case preserving enabled
 
 * `Config`
