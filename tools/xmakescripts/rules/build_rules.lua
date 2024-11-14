@@ -15,6 +15,12 @@ local TARGET_TYPES = {
             "WITH_CASE_PRESERVING_NAME",
             table.unpack(gameDefines)
         }
+    },
+    ["LessEqual421"] = {
+        ["defines"] = {
+            "FNAME_ALIGN8",
+            table.unpack(gameDefines)
+        }
     }
 }
 
