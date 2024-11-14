@@ -12,6 +12,10 @@ Added support for UE Version 5.4 - ([UE4SS #503](https://github.com/UE4SS-RE/RE-
 Added basic support for Development/Debug/Test built Unreal Engine games ([UE4SS #607](https://github.com/UE4SS-RE/RE-UE4SS/pull/607))
 - To use this functionality, set DebugBuild to true in UE4SS-Settings.ini
 
+Added new build definition "LessEqual421".  Using this definition for games on UE<=4.21 is not mandatory for UE4SS to function, but will ensure the correct alignment is used in containers.
+**BREAKING:** - This also changes the default FName alignment from 8 to 4.
+- To use this functionality, enter LessEqual421 in the <Target> section of the XMake configuration command.
+
 ### General
 UE Platform support, which allows for much easier internal implementation of new Unreal classes ([UEPseudo #80](https://github.com/Re-UE4SS/UEPseudo/pull/80)) - narknon, localcc
 
