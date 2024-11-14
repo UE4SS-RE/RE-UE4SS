@@ -728,10 +728,22 @@ function FieldClass:GetFName() end
 
 
 ---@class FName
+FName = {}
 
+---Returns the content as string
+---@return string
+function FName:ToString() end
+
+---Returns the ComparisonIndex (index in global names array)
+---@return integer
+function FName:GetComparisonIndex() end
 
 ---@class FText
+FText = {}
 
+---Returns the content as string
+---@return string
+function FText:ToString() end
 
 ---@class RemoteObject
 RemoteObject = {}
@@ -922,6 +934,31 @@ function UObject:type() end
 
 ---@class TArray<T> : { [integer]: T }
 TArray = {}
+
+---Return the address in memory where the TArray struct is located
+---@return integer
+function TArray:GetArrayAddress() end
+
+---Return the number of current elements in the array (same as #TArray)
+---@return integer
+function TArray:GetArrayNum() end
+
+---Return the maximum number of elements allowed in this array (array's capacity)
+---@return integer
+function TArray:GetArrayMax() end
+
+---Return the address in memory where the data for this array is stored
+---@return integer
+function TArray:GetArrayDataAddress() end
+
+---Clears the array
+function TArray:Empty() end
+
+---Iterates the entire `TArray` and calls the callback function for each element in the array.<br>
+---The callback params are: `integer index`, `RemoteUnrealParam element` | `LocalUnrealParam element`.<br>
+---Use `element:get()` and `element:set()` to access/mutate an array element.
+---@param Callback fun(index: integer, element: RemoteUnrealParam)
+function TArray:ForEach(Callback) end
 
 ---@class TSet<K> : { [K]: nil }
 
