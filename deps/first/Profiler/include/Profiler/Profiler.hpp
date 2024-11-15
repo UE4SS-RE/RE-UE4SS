@@ -12,6 +12,7 @@
 #define ProfilerFrameMarkNamed(name) FrameMarkNamed(name)
 
 #define ProfilerScope() ZoneScoped
+#define ProfilerTransientScopeNamed(scope, name, active) ZoneTransientN(scope, name, active)
 #define ProfilerScopeNamed(name) ZoneScopedN(name)
 #define ProfilerScopeColor(color) ZoneScopedC(color)
 #define ProfilerScopeNameColor(name, color) ZoneScopedNC(color)
@@ -26,6 +27,7 @@
 #define ProfilerFrameMarkNamed(name) PERFORMANCEAPI_INSTRUMENT_FUNCTION_DATA(name)
 
 #define ProfilerScope() PERFORMANCEAPI_INSTRUMENT_FUNCTION()
+#define ProfilerTransientScopeNamed(scope, name, active)
 #define ProfilerScopeNamed(name) PERFORMANCEAPI_INSTRUMENT_FUNCTION_DATA(name)
 #define ProfilerScopeColor(color) PERFORMANCEAPI_INSTRUMENT_FUNCTION_COLOR(color)
 #define ProfilerScopeNameColor(name, color) PERFORMANCEAPI_INSTRUMENT_FUNCTION_DATA_COLOR(name, color)
@@ -42,6 +44,7 @@
 #define ProfilerFrameMarkNamed(name)
 
 #define ProfilerScope()
+#define ProfilerTransientScopeNamed(scope, name, active)
 #define ProfilerScopeNamed(name)
 #define ProfilerScopeColor(color)
 #define ProfilerScopeNameColor(name, color)

@@ -47,7 +47,7 @@ namespace RC::GUI::KismetDebuggerMod
     void hook_expr_internal(UObject* Context, FFrame& Stack, void* RESULT_DECL, EExprToken N) {
         UFunction* fn = Stack.Node();
         StringType name = Stack.Node()->GetFullName();
-        ZoneTransientN(scope, to_string(name).c_str(), true);
+        ProfilerTransientScopeNamed(scope, to_string(name).c_str(), true);
             
         size_t index = Stack.Code() - fn->GetScript().GetData() - 1;
         if (should_pause || g_breakpoints.has_breakpoint(fn, index))
