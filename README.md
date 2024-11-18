@@ -45,7 +45,7 @@ If you are planning on doing mod development using UE4SS, you can do the same as
 
   [UE4SS Discord Server Invite](https://discord.gg/7qhRGHF9Tt)
 
-  [Unreal Engine Modding Discord Server Invite](https://discord.gg/zVvsE9mEEa)
+  [Unreal Engine Modding Discord Server Invite](https://discord.gg/unreal-engine-modding-876613187204685934)
 
 ## Build requirements
 
@@ -87,7 +87,8 @@ The build modes are structured as follows: `<Target>__<Config>__<Platform>`
 Currently supported options for these are:
 
 * `Target`
-  * `Game` - for regular games
+  * `Game` - for regular games on UE versions greater than UE 4.21
+  * `LessEqual421` - for regular games on UE versions less than or equal to UE 4.21
   * `CasePreserving` - for games built with case preserving enabled
 
 * `Config`
