@@ -102,13 +102,13 @@ local WorldCache = CreateInvalidObject() ---@cast WorldCache UWorld
 function UEHelpers.GetWorld()
     if WorldCache:IsValid() then return WorldCache end
 
-    local GameInstance = UEHelpers.GetGameInstance()
-    if GameInstance:IsValid() then
-        WorldCache = GameInstance:GetWorld()
-    else -- Worst case fallback, usaully should never happen
-        local PlayerController = UEHelpers.GetPlayerController()
-        if PlayerController:IsValid() then
-            WorldCache = PlayerController:GetWorld()
+    local PlayerController = UEHelpers.GetPlayerController()
+    if PlayerController:IsValid() then
+        WorldCache = PlayerController:GetWorld()
+    else
+        local GameInstance = UEHelpers.GetGameInstance()
+        if GameInstance:IsValid() then
+            WorldCache = GameInstance:GetWorld()
         end
     end
     return WorldCache
