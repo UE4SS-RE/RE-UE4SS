@@ -52,6 +52,7 @@
     - [UObjectReflection](./lua-api/classes/uobjectreflection.md)
     - [FOutputDevice](./lua-api/classes/foutputdevice.md)
     - [FWeakObjectPtr](./lua-api/classes/fweakobjectptr.md)
+    - [UWorld](./lua-api/classes/uworld.md)
   - [Global Functions]()
     - [print](./lua-api/global-functions/print.md)
     - [CreateInvalidObject](./lua-api/global-functions/createinvalidobject.md)
