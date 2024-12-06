@@ -39,6 +39,7 @@
 #include <Unreal/Property/FStructProperty.hpp>
 #include <Unreal/Property/FTextProperty.hpp>
 #include <Unreal/Property/FWeakObjectProperty.hpp>
+#include <Unreal/Property/FOptionalProperty.hpp>
 #include <Unreal/Property/NumericPropertyTypes.hpp>
 #include <Unreal/UActorComponent.hpp>
 #include <Unreal/UClass.hpp>
@@ -1143,6 +1144,22 @@ namespace RC::UEGenerator
                 super_property = super->GetPropertyByNameInChain(FromCharTypePtr<TCHAR>(property_name.data()));
             }
         }
+        
+        // TODO: Support collection/map properties initialization later
+        if (property->IsA<FSetProperty>())
+        {
+            return;
+        }
+        if (property->IsA<FMapProperty>())
+        {
+            return;
+        }
+        
+        // TODO: Support optional properties initialization later
+        if (property->IsA<FOptionalProperty>())
+        {
+            return;
+        }
 
         // Byte Property
         if (property->IsA<FByteProperty>())
@@ -1712,16 +1729,6 @@ namespace RC::UEGenerator
                     // TODO
                 }
             }
-            return;
-        }
-
-        // TODO: Support collection/map properties initialization later
-        if (property->IsA<FSetProperty>())
-        {
-            return;
-        }
-        if (property->IsA<FMapProperty>())
-        {
             return;
         }
 
@@ -2661,6 +2668,14 @@ namespace RC::UEGenerator
             return fmt::format(STR("TMap<{}, {}>"), key_type, value_type);
         }
 
+        if (property->IsA<FOptionalProperty>())
+        {
+            FOptionalProperty* optional_property = static_cast<FOptionalProperty*>(property);
+            FProperty* value_property = optional_property->GetValueProperty();
+            StringType value_property_type =  generate_property_type_declaration(value_property, context.inner_context());
+            return fmt::format(STR("TOptional<{}>"), value_property_type);
+        }
+
         // Standard properties that do not have any special attributes
         if (property->IsA<FNameProperty>())
         {
@@ -2674,6 +2689,7 @@ namespace RC::UEGenerator
         {
             return STR("FText");
         }
+        
         throw std::runtime_error(RC::fmt("[generate_property_type_declaration] Unsupported property class '%S', full name: '%S'",
                                          field_class_name.c_str(),
                                          property->GetFullName().c_str()));
@@ -3367,6 +3383,14 @@ namespace RC::UEGenerator
 
             return fmt::format(STR("TMap<{}, {}>()"), key_type, value_type);
         }
+        
+        if (field_class_name == STR("OptionalProperty"))
+        {
+            FOptionalProperty* optional_property = static_cast<FOptionalProperty*>(property);
+            FProperty* value_property = optional_property->GetValueProperty();
+            StringType value_property_type = generate_property_type_declaration(value_property, context);
+            return fmt::format(STR("TOptional<{}>()"), value_property_type);
+        }
 
         // Various string, name and text properties
         if (field_class_name == STR("NameProperty"))
@@ -3381,6 +3405,7 @@ namespace RC::UEGenerator
         {
             return STR("FText::GetEmpty()");
         }
+        
         throw std::runtime_error(RC::fmt("[generate_default_property_value] Unsupported property class '%S', full name: '%S'",
                                          field_class_name.c_str(),
                                          property->GetFullName().c_str()));

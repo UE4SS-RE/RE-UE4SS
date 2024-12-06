@@ -8,6 +8,7 @@ some notes about most important changes such as:
 - linux port
 
 ## New
+Added support for UE Version 5.5 - ([UE4SS #708](https://github.com/UE4SS-RE/RE-UE4SS/pull/708))
 Added support for UE Version 5.4 - ([UE4SS #503](https://github.com/UE4SS-RE/RE-UE4SS/pull/503))
 Added basic support for Development/Debug/Test built Unreal Engine games ([UE4SS #607](https://github.com/UE4SS-RE/RE-UE4SS/pull/607))
 - To use this functionality, set DebugBuild to true in UE4SS-Settings.ini
