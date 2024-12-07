@@ -46,18 +46,48 @@ def export_version(ref, name):
     subprocess.check_output(('tar', 'xvf', '-', '-C', src_dir), stdin=ps.stdout)
     ps.wait()
 
-    # copy README.md to <version>/src/
-    # rewrite absolute URLs to relative mdBook URLs
-    copy_transform('README.md', os.path.join(src_dir, 'README.md'), lambda content: re.sub(r'\(https://docs.ue4ss.com/dev/([^)#]+)\.html(#[^)]*)?\)', r'(\1.md\2)', content))
+    readme_spec = f'{ref}:README.md'
+    readme_out_path = os.path.join(src_dir, 'README.md')
 
-    # insert banner
-    if name != 'release':
-        readme_path = os.path.join(src_dir, 'README.md')
-        with open(readme_path, 'r') as file:
-            lines = file.readlines()
-        lines.insert(2, '\n> WARNING: This is the dev version of the UE4SS docs. The API and features are subject to change at any time. If you are developing mods for UE4SS, you should reference the [latest release](../release) instead.\n\n')
-        with open(readme_path, 'w') as file:
-            file.writelines(lines)
+    # retrieve the README.md file from the specific ref
+    readme_content = subprocess.check_output(['git', 'show', readme_spec], text=True)
+
+    # rewrite absolute URLs to relative mdbook URLs
+    transformed_content = re.sub(r'\(https://docs.ue4ss.com/dev/([^)#]+)\.html(#[^)]*)?\)', r'(\1.md\2)', readme_content)
+
+    with open(readme_out_path, 'w') as file:
+        file.write(transformed_content)
+
+    with open(readme_out_path, 'r') as file:
+        lines = file.readlines()
+    
+    # insert banner depending on version
+    if name == "release":
+        lines.insert(2, f'\n> [!CAUTION]\n> This is the stable release version of the UE4SS docs, which reflects state at release tag [{ref}](https://github.com/UE4SS-RE/RE-UE4SS/releases/tag/{ref}), which is recommended for developing mods on. If you prefer to build against the experimental version (which is the main branch of the repository), you should reference the [dev documentation](../dev) instead.\n\n')
+    elif name == "dev":
+        lines.insert(2, f'\n> [!CAUTION]\n> This is the dev version of the UE4SS docs, which reflects the experimental version (which is the main branch of the repository). The API and features are subject to change at any time. If you are developing mods for UE4SS, you should reference the [latest release](../release) instead.\n\n')
+    else:
+        lines.insert(2, f'\n> [!CAUTION]\n> This is an old version of the UE4SS docs, which reflects the release tag of [{ref}](https://github.com/UE4SS-RE/RE-UE4SS/releases/tag/{ref}). The API and features may have changed in a newer version, so you may want to consider updating. The stable version of the UE4SS docs can be found [here](../release).\n\n')
+
+    # for readmes on non-dev versions, edit the readme to make sure people clone the correct tag of the repo to build against
+    if name != "dev":
+        for i, line in enumerate(lines):
+            if line.strip().startswith("1. Clone the repo."):
+                lines[i] = f"1. Clone the repo from the tag `{ref}` using one of the following methods:\n\n" \
+                        f"   1. Clone the main branch and check out the tag:\n" \
+                        f"     ```\n" \
+                        f"     git clone https://github.com/UE4SS-RE/RE-UE4SS.git\n" \
+                        f"     cd RE-UE4SS\n" \
+                        f"     git checkout {ref}\n" \
+                        f"     ```\n" \
+                        f"   2. Clone the tag directly:\n" \
+                        f"     ```\n" \
+                        f"     git clone --branch {ref} https://github.com/UE4SS-RE/RE-UE4SS.git\n" \
+                        f"     ```\n\n"
+                break
+    
+    with open(readme_out_path, 'w') as file:
+        file.writelines(lines)
 
     # copy template files
     shutil.copy(os.path.join('docs-export', 'book.toml'), version_out_dir)
