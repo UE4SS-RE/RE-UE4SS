@@ -50,7 +50,7 @@ on_install(function(target) end)
 
 includes("deps")
 includes("UE4SS")
-if get_config("ue4ssCross") == "None" then
+if get_config("ue4ssCross") ~= "msvc-wine" then
     includes("UVTD")
 end
 includes("cppmods")
