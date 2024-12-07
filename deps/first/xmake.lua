@@ -12,7 +12,7 @@ includes("LuaMadeSimple")
 includes("LuaRaw")
 includes("MProgram")
 includes("ParserBase")
-if is_config("ue4ssCross", "None") then
+if get_config("ue4ssCross") == "None" then
     includes("patternsleuth_bind")
 end
 includes("Profiler")
@@ -26,7 +26,7 @@ task("manuallyBuildLocalPatternsleuth")
         os.execv("cargo rustc --release --target x86_64-pc-windows-msvc --crate-type=staticlib", {}, {curdir = get_config("ue4ssRoot") .. "/deps/first/patternsleuth_bind"})
     end)
 
-if is_config("ue4ssCross", "None") then
+if get_config("ue4ssCross") == "None" then
     if is_config("patternsleuth", "local") then
         -- The patternsleuth target is managed by the cargo.build rule.
         target("patternsleuth")
@@ -36,7 +36,7 @@ if is_config("ue4ssCross", "None") then
             -- Exposes the rust *.rs files to the Visual Studio project filters.
             add_extrafiles("patternsleuth/**.rs")
     end
-elseif is_config("ue4ssCross", "msvc-wine") then
+elseif get_config("ue4ssCross") == "msvc-wine" then
     target("patternsleuth_bind")
         set_kind("static")
         add_linkdirs(os.scriptdir() .. "/patternsleuth_bind/target/x86_64-pc-windows-msvc/release", {public = true})

@@ -1,4 +1,4 @@
-if is_config("ue4ssCross", "None") then
+if get_config("ue4ssCross") == "None" then
     includes("proxy_generator")
 end
 
