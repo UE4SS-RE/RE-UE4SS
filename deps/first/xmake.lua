@@ -21,6 +21,10 @@ includes("SinglePassSigScanner")
 includes("Unreal")
 includes("String")
 
+task("manuallyBuildLocalPatternsleuth")
+    on_run(function()
+        os.execv("cargo rustc --release --target x86_64-pc-windows-msvc --crate-type=staticlib", {}, {curdir = get_config("ue4ssRoot") .. "/deps/first/patternsleuth_bind"})
+    end)
 
 if is_config("ue4ssCross", "None") then
     if is_config("patternsleuth", "local") then
@@ -38,6 +42,11 @@ elseif is_config("ue4ssCross", "msvc-wine") then
         add_linkdirs(os.scriptdir() .. "/patternsleuth_bind/target/x86_64-pc-windows-msvc/release", {public = true})
         add_links("patternsleuth_bind", "ws2_32", "userenv", {public = true})
         add_links("ntdll", "Ole32", "OleAut32", {public = true})
+
+        before_build(function()
+            import("core.project.task")
+            task.run("manuallyBuildLocalPatternsleuth")
+        end)
 end
 
 -- This option allows users to choose if patternsleuth should be installed as a package
