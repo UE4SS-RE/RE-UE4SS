@@ -177,6 +177,9 @@ Note that you should also commit & push the submodules that you've updated if th
 ### Building Windows binaries on Linux
 
 We only officially support [msvc-wine](https://github.com/mstorsjo/msvc-wine) for cross-compiling.  
+> [!CAUTION]
+> You must use [xmake](https://github.com/xmake-io/xmake) v2.9.7 or later, and as of early December 2024, this version is not yet released which means you must install the dev version of xmake.  
+
 You need to install the `x86_64-pc-windows-msvc` target (not the `windows-gnu` target) with rustup.  
 When invoking `xmake f`, you must set `--plat`, `--arch`, and `--sdk`.  
 You must also use `--ue4ssCross=msvc-wine`, and disable the version check.  
