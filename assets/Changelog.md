@@ -24,6 +24,8 @@ Added new installation method by allowing overriding of the location of the `UE4
 
 Add Github alerts pre-processor support to the documentation system ([UE4SS #611](https://github.com/UE4SS-RE/RE-UE4SS/pull/611)) - Buckminsterfullerene
 
+Add opt-out checking for the latest version of UE4SS during load or when a crash dump is created. ([UE4SS #617](https://github.com/UE4SS-RE/RE-UE4SS/pull/617)) - Buckminsterfullerene
+
 ### Live View 
 Added search filter: `IncludeClassNames`. ([UE4SS #472](https://github.com/UE4SS-RE/RE-UE4SS/pull/472)) - Buckminsterfullerene
 
@@ -179,6 +181,9 @@ Fixes mods not loading when UE4SS initializes too late ([UE4SS #454](https://git
 ; True if the game is built as Debug, Development, or Test.
 ; Default: false
 DebugBuild = 
+
+[General]
+bLatestVersionCheck = 1
 
 [Hooks]
 HookLoadMap = 1

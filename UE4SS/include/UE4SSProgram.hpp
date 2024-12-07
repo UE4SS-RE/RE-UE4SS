@@ -221,6 +221,9 @@ namespace RC
         RC_UE4SS_API auto generate_uht_compatible_headers() -> void;
         RC_UE4SS_API auto generate_cxx_headers(const std::filesystem::path& output_dir) -> void;
         RC_UE4SS_API auto generate_lua_types(const std::filesystem::path& output_dir) -> void;
+        RC_UE4SS_API auto get_latest_version_check_setting() -> bool;
+        RC_UE4SS_API auto get_latest_ue4ss_version() -> StringType;
+        RC_UE4SS_API auto is_latest_ue4ss_version(StringType latest_ver) -> bool;
         auto get_debugging_ui() -> GUI::DebuggingGUI&
         {
             return m_debugging_gui;

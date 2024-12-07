@@ -56,6 +56,8 @@
 #include <UnrealDef.hpp>
 
 #include <polyhook2/PE/IatHook.hpp>
+#include <curl/curl.h>
+#include <glaze/glaze.hpp>
 
 namespace RC
 {
@@ -1459,6 +1461,127 @@ namespace RC
 
         UAssetRegistry::FreeAllForcefullyLoadedAssets();
         Output::send(STR("SDK generated in {} seconds.\n"), generator_duration);
+    }
+
+    auto UE4SSProgram::get_latest_version_check_setting() -> bool
+    {
+        return settings_manager.General.LatestVersionCheck;
+    }
+
+    static auto write_callback(void* contents, size_t size, size_t nmemb, void* userp) -> size_t
+    {
+        ((std::string*)userp)->append((char*)contents, size * nmemb);
+        return size * nmemb;
+    }
+
+    auto UE4SSProgram::get_latest_ue4ss_version() -> StringType
+    {
+        CURL* curl;
+        CURLcode response;
+        std::string finalUrl;
+        std::string tag;
+
+        curl = curl_easy_init();
+        if (curl)
+        {
+            // This is a redirect hack to avoid having to use github api,
+            // which would require a user agent such as a github app to be made in UE4SS org,
+            // and is not a good idea to use in a public project
+            // CI version: curl -L -s -o /dev/null -w "%{url_effective}" "https://github.com/UE4SS-RE/RE-UE4SS/releases/latest"
+            curl_easy_setopt(curl, CURLOPT_URL, "https://github.com/UE4SS-RE/RE-UE4SS/releases/latest");
+            curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
+            curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_callback);
+            curl_easy_setopt(curl, CURLOPT_WRITEDATA, &finalUrl);
+
+            response = curl_easy_perform(curl);
+
+            if (response != CURLE_OK)
+            {
+                curl_easy_cleanup(curl);
+                return L"";
+            }
+            else
+            {
+                char* effectiveUrl = nullptr;
+                curl_easy_getinfo(curl, CURLINFO_EFFECTIVE_URL, &effectiveUrl);
+                if (effectiveUrl)
+                {
+                    finalUrl = std::string(effectiveUrl);
+                }
+                
+                std::size_t lastSlashPos = finalUrl.find_last_of('/');
+                if (lastSlashPos != std::string::npos)
+                {
+                    tag = finalUrl.substr(lastSlashPos + 1);
+                }
+            }
+
+            curl_easy_cleanup(curl);
+        }
+
+        if (tag.empty())
+        {
+            return L"";
+        }
+
+        return to_generic_string(tag);
+    }
+
+    static auto split_version(const std::string& version) -> std::vector<int>
+    {
+        std::vector<int> parts;
+        std::stringstream ss(version);
+        std::string item;
+
+        while (std::getline(ss, item, '.'))
+        {
+            parts.push_back(std::stoi(item));
+        }
+
+        return parts;
+    }
+
+    auto UE4SSProgram::is_latest_ue4ss_version(StringType latest_ver) -> bool
+    {
+        std::string current_version = fmt::format("{}.{}.{}", UE4SS_LIB_VERSION_MAJOR, UE4SS_LIB_VERSION_MINOR, UE4SS_LIB_VERSION_HOTFIX);
+        std::string latest_version = to_string(latest_ver);
+        if (latest_version.empty())
+        {
+            // If we can't get the latest version (due to no internet connection or otherwise), assume it is
+            return true;
+        }
+        if (latest_version[0] == 'v')
+        {
+            latest_version = latest_version.substr(1);
+        }
+
+        std::vector<int> current = split_version(current_version);
+        std::vector<int> latest = split_version(latest_version);
+
+        while (current.size() < latest.size())
+        {
+            current.push_back(0);
+        }
+
+        while (latest.size() < current.size())
+        {
+            latest.push_back(0);
+        }
+
+        for (size_t i = 0; i < current.size(); ++i)
+        {
+            if (latest[i] > current[i])
+            {
+                return false;
+            }
+            else if (latest[i] < current[i])
+            {
+                return true;
+            }
+        }
+
+        // If both equal
+        return true;
     }
 
     auto UE4SSProgram::stop_render_thread() -> void

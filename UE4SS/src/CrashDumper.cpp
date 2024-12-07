@@ -60,8 +60,18 @@ namespace RC
             return EXCEPTION_CONTINUE_SEARCH;
         }
 
-        const StringType message = fmt::format(STR("Crashdump written to: {}"), dump_path);
-        MessageBoxW(NULL, FromCharTypePtr<wchar_t>(message.c_str()), L"Fatal Error!", MB_OK);
+        StringType version_message = L"";
+        if (UE4SSProgram::get_program().get_latest_version_check_setting())
+        {
+            StringType latest_version = UE4SSProgram::get_program().get_latest_ue4ss_version();
+            if (!UE4SSProgram::get_program().is_latest_ue4ss_version(latest_version))
+            {
+                version_message = fmt::format(L"\n\nA newer version ({}) is available. Updating may solve your issue.", latest_version);
+            }
+        }
+
+        const StringType message = fmt::format(L"Crashdump written to: {}{}", dump_path, version_message);
+        MessageBoxW(NULL, message.c_str(), L"Fatal Error!", MB_OK);
 
         return EXCEPTION_EXECUTE_HANDLER;
     }
