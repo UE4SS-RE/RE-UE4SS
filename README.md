@@ -174,6 +174,29 @@ Note that you should also commit & push the submodules that you've updated if th
 > [!CAUTION]
 > If you change your configuration with `xmake config`, you *may* need to regenerate your Visual Studio solution to pick up on changes to your configuration. You can simply re-run the `xmake project -k vsxmake2022 -m "<modes>"` command to regenerate the solution.
 
+### Building Windows binaries on Linux
+
+We only officially support [msvc-wine](https://github.com/mstorsjo/msvc-wine) for cross-compiling.  
+You need to install the `x86_64-pc-windows-msvc` target (not the `windows-gnu` target) with rustup.  
+When invoking `xmake f`, you must set `--plat`, `--arch`, and `--sdk`.  
+You must also use `--ue4ssCross=msvc-wine`, and disable the version check.  
+The following projects are not supported when cross-compiling and are automatically disabled:
+
+```
+proxy
+proxy_generator
+UVTD
+```
+
+When invoking the `xmake` build command, patternsleuth will automatically be built without xmake.  
+The binary files are available in `deps/first/patternsleuth_bind/target/x86_64-pc-windows-msvc`.  
+They are automatically used by xmake when `--ue4ssCross` is set to `msvc-wine`.  
+Here's an example of a full command that will build Windows binaries on a Linux machine:
+
+```
+xmake f -m "Game__Shipping__Win64" -p windows -a x64 --sdk=/home/<username>/my_msvc/opt/msvc --versionCheck=n --ue4ssCross=msvc-wine
+```
+
 ## Updating git submodules
 
 If you want to update git submodules, you do so one of three ways:
