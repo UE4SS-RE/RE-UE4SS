@@ -12,21 +12,32 @@ includes("LuaMadeSimple")
 includes("LuaRaw")
 includes("MProgram")
 includes("ParserBase")
-includes("patternsleuth_bind")
+if is_config("ue4ssCross", "None") then
+    includes("patternsleuth_bind")
+end
 includes("Profiler")
 includes("ScopedTimer")
 includes("SinglePassSigScanner")
 includes("Unreal")
 includes("String")
 
-if is_config("patternsleuth", "local") then 
-    -- The patternsleuth target is managed by the cargo.build rule.
-    target("patternsleuth")
+
+if is_config("ue4ssCross", "None") then
+    if is_config("patternsleuth", "local") then
+        -- The patternsleuth target is managed by the cargo.build rule.
+        target("patternsleuth")
+            set_kind("static")
+            add_rules("cargo.build", {project_name = "patternsleuth", is_debug = is_mode_debug(), features = { "process-internal", "image-pe" }})
+            add_files("patternsleuth/Cargo.toml")
+            -- Exposes the rust *.rs files to the Visual Studio project filters.
+            add_extrafiles("patternsleuth/**.rs")
+    end
+elseif is_config("ue4ssCross", "msvc-wine") then
+    target("patternsleuth_bind")
         set_kind("static")
-        add_rules("cargo.build", {project_name = "patternsleuth", is_debug = is_mode_debug(), features = { "process-internal", "image-pe" }})
-        add_files("patternsleuth/Cargo.toml")
-        -- Exposes the rust *.rs files to the Visual Studio project filters.
-        add_extrafiles("patternsleuth/**.rs")
+        add_linkdirs(os.scriptdir() .. "/patternsleuth_bind/target/x86_64-pc-windows-msvc/release", {public = true})
+        add_links("patternsleuth_bind", "ws2_32", "userenv", {public = true})
+        add_links("ntdll", "Ole32", "OleAut32", {public = true})
 end
 
 -- This option allows users to choose if patternsleuth should be installed as a package
