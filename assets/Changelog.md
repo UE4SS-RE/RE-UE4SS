@@ -8,6 +8,7 @@ some notes about most important changes such as:
 - linux port
 
 ## New
+Added support for UE Version 5.5 - ([UE4SS #708](https://github.com/UE4SS-RE/RE-UE4SS/pull/708))
 Added support for UE Version 5.4 - ([UE4SS #503](https://github.com/UE4SS-RE/RE-UE4SS/pull/503))
 Added basic support for Development/Debug/Test built Unreal Engine games ([UE4SS #607](https://github.com/UE4SS-RE/RE-UE4SS/pull/607))
 - To use this functionality, set DebugBuild to true in UE4SS-Settings.ini
@@ -20,6 +21,8 @@ Added new build definition "LessEqual421".  Using this definition for games on U
 UE Platform support, which allows for much easier internal implementation of new Unreal classes ([UEPseudo #80](https://github.com/Re-UE4SS/UEPseudo/pull/80)) - narknon, localcc
 
 Added new installation method by allowing overriding of the location of the `UE4SS.dll`, [documentation](https://docs.ue4ss.com/installation-guide.html#overriding-install-location). - ([UE4SS #506](https://github.com/UE4SS-RE/RE-UE4SS/pull/506)) - Buckminsterfullerene 
+
+Add Github alerts pre-processor support to the documentation system ([UE4SS #611](https://github.com/UE4SS-RE/RE-UE4SS/pull/611)) - Buckminsterfullerene
 
 Added custom game configurations for Abiotic Factor ([UE4SS #709](https://github.com/UE4SS-RE/RE-UE4SS/pull/709))
 
@@ -108,6 +111,10 @@ The callback of `NotifyOnNewObject` can now optionally return `true` to unregist
 
 ### BPModLoader
 BPModLoader now supports loading mods from subdirectories within the `LogicMods` folder ([UE4SS #412](https://github.com/UE4SS-RE/RE-UE4SS/pull/412)) - Ethan Green
+
+### ConsoleEnablerMod
+Added additional console key **~** (Tilde) ([UE4SS #687](https://github.com/UE4SS-RE/RE-UE4SS/pull/687))  
+The console keys **F10** and **~** are now added by the mod in addition to the existing keys instead of replacing them ([UE4SS #687](https://github.com/UE4SS-RE/RE-UE4SS/pull/687))
 
 ### Repo & Build Process
 Switch to xmake from cmake which makes building much more streamlined ([UE4SS #377](https://github.com/UE4SS-RE/RE-UE4SS/pull/377), [UEPseudo #81](https://github.com/Re-UE4SS/UEPseudo/pull/81)) - localcc

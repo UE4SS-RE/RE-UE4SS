@@ -66,8 +66,9 @@ namespace RC::UVTD
                                                          {STR("FObjectPropertyBase"), ValidForVTable::Yes, ValidForMemberVars::Yes},
                                                          {STR("UObjectPropertyBase"), ValidForVTable::Yes, ValidForMemberVars::Yes},
                                                          {STR("FWorldContext"), ValidForVTable::No, ValidForMemberVars::Yes},
-                                                         /*{STR("FConsoleManager"), ValidForVTable::Yes, ValidForMemberVars::Yes},
                                                          {STR("UDataTable"), ValidForVTable::Yes, ValidForMemberVars::Yes},
+                                                         /*{STR("FConsoleManager"), ValidForVTable::Yes, ValidForMemberVars::Yes},
+                                                         
                                                          {STR("FConsoleVariableBase"), ValidForVTable::Yes, ValidForMemberVars::Yes},
                                                          {STR("FConsoleCommandBase"), ValidForVTable::Yes, ValidForMemberVars::Yes},*/
 
@@ -100,10 +101,10 @@ namespace RC::UVTD
                                                          {STR("FSetProperty"), ValidForVTable::No, ValidForMemberVars::Yes},
                                                          {STR("USetProperty"), ValidForVTable::No, ValidForMemberVars::Yes},
                                                          {STR("ITextData"), ValidForVTable::Yes, ValidForMemberVars::No},
-                                                         {STR("FUObjectArray"), ValidForVTable::No, ValidForMemberVars::Yes},
+                                                         /*{STR("FUObjectArray"), ValidForVTable::No, ValidForMemberVars::Yes},
                                                          {STR("FChunkedFixedUObjectArray"), ValidForVTable::No, ValidForMemberVars::Yes},
                                                          {STR("FFixedUObjectArray"), ValidForVTable::No, ValidForMemberVars::Yes},
-                                                         {STR("FUObjectItem"), ValidForVTable::No, ValidForMemberVars::Yes}};
+                                                         {STR("FUObjectItem"), ValidForVTable::No, ValidForMemberVars::Yes}*/};
 
     static inline std::unordered_map<File::StringType, std::unordered_set<File::StringType>> s_private_variables{
             {STR("FField"),
