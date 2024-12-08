@@ -24,6 +24,8 @@ Added new installation method by allowing overriding of the location of the `UE4
 
 Add Github alerts pre-processor support to the documentation system ([UE4SS #611](https://github.com/UE4SS-RE/RE-UE4SS/pull/611)) - Buckminsterfullerene
 
+Added custom game configurations for Abiotic Factor ([UE4SS #709](https://github.com/UE4SS-RE/RE-UE4SS/pull/709))
+
 ### Live View 
 Added search filter: `IncludeClassNames`. ([UE4SS #472](https://github.com/UE4SS-RE/RE-UE4SS/pull/472)) - Buckminsterfullerene
 
