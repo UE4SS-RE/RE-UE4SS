@@ -110,6 +110,10 @@ The callback of `NotifyOnNewObject` can now optionally return `true` to unregist
 ### BPModLoader
 BPModLoader now supports loading mods from subdirectories within the `LogicMods` folder ([UE4SS #412](https://github.com/UE4SS-RE/RE-UE4SS/pull/412)) - Ethan Green
 
+### ConsoleEnablerMod
+Added additional console key **~** (Tilde) ([UE4SS #687](https://github.com/UE4SS-RE/RE-UE4SS/pull/687))  
+The console keys **F10** and **~** are now added by the mod in addition to the existing keys instead of replacing them ([UE4SS #687](https://github.com/UE4SS-RE/RE-UE4SS/pull/687))
+
 ### Repo & Build Process
 Switch to xmake from cmake which makes building much more streamlined ([UE4SS #377](https://github.com/UE4SS-RE/RE-UE4SS/pull/377), [UEPseudo #81](https://github.com/Re-UE4SS/UEPseudo/pull/81)) - localcc
 
