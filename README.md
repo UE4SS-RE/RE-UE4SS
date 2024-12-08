@@ -177,6 +177,8 @@ Note that you should also commit & push the submodules that you've updated if th
 ### Building Windows binaries on Linux
 
 We only officially support [msvc-wine](https://github.com/mstorsjo/msvc-wine) for cross-compiling.  
+Make sure you have winbind (libwbclient & samba on Arch) installed.
+
 > [!CAUTION]
 > You must use [xmake](https://github.com/xmake-io/xmake) v2.9.7 or later, and as of early December 2024, this version is not yet released which means you must install the dev version of xmake.  
 
