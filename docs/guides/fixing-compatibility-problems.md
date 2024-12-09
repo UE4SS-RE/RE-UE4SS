@@ -30,7 +30,7 @@ In contrast, a `Block of Bytes` is simply a contiguous sequence of raw data or i
 
 `RIP (Instruction Pointer Register)` is a register in x86-64 architecture that holds the address of the next instruction to be executed. It plays a key role in managing program flow, enabling the CPU to keep track of where it is in the program code.
 
-Now for each step in more detail (thnaks for `TimeMaster` for these steps).
+Now for each step in more detail (thanks for `TimeMaster` for these steps).
 
 ### Making a blank shipped game
 
