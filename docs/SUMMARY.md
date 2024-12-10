@@ -2,11 +2,12 @@
 
 [Home](./README.md)
 [Installation](./installation-guide.md)
-[Contributing](./contributing.md)
+<!-- [Contributing](./contributing.md) -->
 
 ---
 
 ## Feature Overview
+
 - [Blueprint Modloading](./feature-overview/blueprint-modloader.md)
 - [Live Property Viewer and Editor](./feature-overview/live-view.md)
 - [Dumpers](./feature-overview/dumpers.md)
@@ -109,13 +110,14 @@
 
 ## Guides
 
-- [Fixing missing AOBs](./guides/fixing-compatibility-problems.md)
-- [Generating UHT headers](./guides/generating-uht-compatible-headers.md)
-- [Creating a C++ Mod](./guides/creating-a-c++-mod.md)
-- [Installing a C++ Mod](./guides/installing-a-c++-mod.md)
-- [GUI tabs with a C++ Mod](./guides/creating-gui-tabs-with-c++-mod.md)
-- [Creating a Lua Mod](./guides/creating-a-lua-mod.md)
-- [Using Custom Lua Bindings](./guides/using-custom-lua-bindings.md)
+- [Guides]()
+  - [Fixing missing AOBs](./guides/fixing-compatibility-problems.md)
+  - [Generating UHT headers](./guides/generating-uht-compatible-headers.md)
+  - [Creating a C++ Mod](./guides/creating-a-c++-mod.md)
+  - [Installing a C++ Mod](./guides/installing-a-c++-mod.md)
+  - [GUI tabs with a C++ Mod](./guides/creating-gui-tabs-with-c++-mod.md)
+  - [Creating a Lua Mod](./guides/creating-a-lua-mod.md)
+  - [Using Custom Lua Bindings](./guides/using-custom-lua-bindings.md)
 
 ## Misc
 
