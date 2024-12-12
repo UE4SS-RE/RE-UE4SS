@@ -109,7 +109,7 @@ namespace RC::Input
         APPS = 0x5D,
         // RESERVED = 0x5E,
         SLEEP = 0x5F,
-        NUM_ZERO = 0x69,
+        NUM_ZERO = 0x60,
         NUM_ONE = 0x61,
         NUM_TWO = 0x62,
         NUM_THREE = 0x63,

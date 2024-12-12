@@ -167,6 +167,8 @@ Fixed the `std::span` returned by `FileHandle::memory_map` being improperly size
 
 Fixed 'File::Handle' unable to be moved if used in conjunction with memory_map. ([UE4SS #544](https://github.com/UE4SS-RE/RE-UE4SS/pull/544))
 
+Fixed `Key::NUM_ZERO` being incorrectly mapped to `Key::NUM_NINE`. ([UE4SS #716](https://github.com/UE4SS-RE/RE-UE4SS/pull/716))
+
 ### BPModLoader
 Fixed "bad conversion" errors ([UE4SS #398](https://github.com/UE4SS-RE/RE-UE4SS/pull/398))
 
