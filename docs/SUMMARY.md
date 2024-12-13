@@ -112,6 +112,7 @@
 
 - [Guides]()
   - [Fixing missing AOBs](./guides/fixing-compatibility-problems.md)
+  - [Fixing missing AOBs (Advanced)](./guides/fixing-compatibility-problems-advanced.md)
   - [Generating UHT headers](./guides/generating-uht-compatible-headers.md)
   - [Creating a C++ Mod](./guides/creating-a-c++-mod.md)
   - [Installing a C++ Mod](./guides/installing-a-c++-mod.md)
