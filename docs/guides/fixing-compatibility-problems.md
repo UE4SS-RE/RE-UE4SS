@@ -20,57 +20,7 @@ Since the process is quite complicated, here will just cover the general steps y
 5. Open your game's memory in x64dbg and search it for the same block of bytes
 6. If you find it, you can use the [swiss army knife](https://github.com/Nukem9/SwissArmyKnife) tool to extract the AOB for it which you can use in a simple script such as example [here](#example-script-simple-direct-scan)
 
-### Context and definitions
-
-Some context and definitions:
-
-In this context, a `Signature` refers to a unique sequence or pattern of bytes used to identify a function or piece of code within a binary, such as specific instructions or constants that are unlikely to appear elsewhere. It serves as a recognizable "fingerprint" to locate a particular routine during reverse engineering or patching.
-
-In contrast, a `Block of Bytes` is simply a contiguous sequence of raw data or instructions without any specific identification purpose. A block of bytes may or may not represent anything meaningful or unique, whereas a signature is carefully chosen to reliably distinguish a particular function or code segment.
-
-`RIP (Instruction Pointer Register)` is a register in x86-64 architecture that holds the address of the next instruction to be executed. It plays a key role in managing program flow, enabling the CPU to keep track of where it is in the program code.
-
-Now for each step in more detail (thanks for `TimeMaster` for these steps).
-
-### Making a blank shipped game
-
-1. Get your game UE version. UE4SS detects it. But it can also be checked by using right-click on the `.exe` in `Binaries`, opening properties and checking on the details tab
-2. In the Epic Games launcher at the left side, go to Unreal Engine -> Library tab at the top and install engine version for the engine version for your game
-3. Once installed launch Unreal Engine. Games tab -> Select Blank -> Uncheck Starter Content (Optional to set a Project Name / change location) -> Create
-4. Press Platforms button on the top bar -> Packaging Settings -> Check `Include Debug Files in Shipping Builds`
-5. Press Platforms button on the top bar -> Windows -> Select `Shipping` (or the one that applies to your game build) -> Package Project and select a folder
-6. Check that the newly packaged blank project contains a `.exe` along with a `.pdb` in `Binaries` in the selected folder
-
-### Reading the game's memory using x64dbg
-
-1. Install [x64dbg](https://x64dbg.com/)
-2. Run the `.exe` at the root folder of the newly packaged blank project (running the `.exe` in `Binaries` might throw an error, running from root works too either way)
-3. Open x64dbg -> File -> Attach -> Select the newly packaged blank project `.exe` (the one with the path at `Binaries`)
-
-### Look for the signature you need
-
-1. (Optional but recommended) Connect Epic Games with Github. Login in the Epic Games Website -> Manage Account -> Apps and Accounts -> Github -> Once done, check email and accept invitation to the UE project
-2. (Optional but recommended) Check the source code for the function that is intended to be found in memory. For example, to find the `FMemory::Free` function in a UE5.3.2 game, you would find [this](https://github.com/EpicGames/UnrealEngine/blob/5.3.2-release/Engine/Source/Runtime/Core/Public/HAL/FMemory.inl#L142)
-3. In x64dbg go to Symbols tab -> In the left window select the `.exe` -> Under the right window search for the function (in this case `FMemory::Free`) -> Double click the found Function in the right window
-4. You should be now back at the CPU tab with the address in memory of the start of the selected function
-
-### Grab a copy of bytes from the function
-
-1. (Optional but recommended) Install [Baymax ToOls](https://github.com/sicaril/BaymaxTools) plugin for x64dbg
-2. Select some (This is where it is not the same for every game and required magic/"knowledge" starts) address lines -> Right Click -> Copy -> Selection or Selection (Bytes only)
-3. If Baymax ToOls installed, while selecting all the addresses lines composing the function -> Right Click -> Baymax ToOls -> Copy Signature.
-4. Might want to copy both selection types and save them in a file for comparison and reference
-
-### Open your game's memory in x64dbg
-
-1. Open the game you want to mod
-2. Attach x64dbg as seen before with the blank project
-3. Search for the saved block of bytes found in the last step
-4. (If nothing found) Search for the pattern from Baymax ToOls
-5. (If nothing found) Try searching parts of the block of bytes (or signature from Baymax ToOls) and compare the addresses block with the one from the blank project
-6. If nothing found, it might be worth to ask for help on the UE4SS discord or Github issues. Make sure you post all your steps and as much detail as you can provide, otherwise no one will be inclined to help you!
-7. If found a good match, create the lua script to retrieve the address of the function/variable required. Put it in `UE4SS_Signatures` folder in the `Binaries` of your game folder where UE4SS is installed
-8. Run the game and UE4SS hopefully works now
+For more in-depth instructions, see the [advanced guide](./fixing-compatibility-problems-advanced.md).
 
 ## How to setup your own AOB and callback
 
