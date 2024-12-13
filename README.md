@@ -15,7 +15,7 @@ Lua scripting system platform, C++ Modding API, SDK generator, blueprint mod loa
 - [UMAP Recreation Dumper](https://docs.ue4ss.com/dev/feature-overview/dumpers.html#umap-recreation-dumper): Dump all loaded actors to file to generate `.umaps` in-editor
 - Other Features, including [Experimental](https://docs.ue4ss.com/dev/feature-overview/experimental.html) features at times
 
-## Targeting UE Versions: From 4.12 To 5.3
+## Targeting UE Versions: From 4.12 To 5.5
 
 The goal of UE4SS is not to be a plug-n-play solution that always works with every game.
 The goal is to have an underlying system that works for most games.
@@ -173,6 +173,34 @@ Note that you should also commit & push the submodules that you've updated if th
 
 > [!CAUTION]
 > If you change your configuration with `xmake config`, you *may* need to regenerate your Visual Studio solution to pick up on changes to your configuration. You can simply re-run the `xmake project -k vsxmake2022 -m "<modes>"` command to regenerate the solution.
+
+### Building Windows binaries on Linux
+
+We only officially support [msvc-wine](https://github.com/mstorsjo/msvc-wine) for cross-compiling.  
+Make sure you have winbind (libwbclient & samba on Arch) installed.
+
+> [!CAUTION]
+> You must use [xmake](https://github.com/xmake-io/xmake) v2.9.7 or later, and as of early December 2024, this version is not yet released which means you must install the dev version of xmake.  
+
+You need to install the `x86_64-pc-windows-msvc` target (not the `windows-gnu` target) with rustup.  
+When invoking `xmake f`, you must set `--plat`, `--arch`, and `--sdk`.  
+You must also use `--ue4ssCross=msvc-wine`, and disable the version check.  
+The following projects are not supported when cross-compiling and are automatically disabled:
+
+```
+proxy
+proxy_generator
+UVTD
+```
+
+When invoking the `xmake` build command, patternsleuth will automatically be built without xmake.  
+The binary files are available in `deps/first/patternsleuth_bind/target/x86_64-pc-windows-msvc`.  
+They are automatically used by xmake when `--ue4ssCross` is set to `msvc-wine`.  
+Here's an example of a full command that will build Windows binaries on a Linux machine:
+
+```
+xmake f -m "Game__Shipping__Win64" -p windows -a x64 --sdk=/home/<username>/my_msvc/opt/msvc --versionCheck=n --ue4ssCross=msvc-wine
+```
 
 ## Updating git submodules
 

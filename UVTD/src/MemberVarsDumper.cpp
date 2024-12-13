@@ -91,7 +91,6 @@ namespace RC::UVTD
             STR("UContentBundleManager"),
             STR("FIrisSystemHolder"),
             STR("TSet"),
-            STR("TOptional"),
             STR("FWorldPartitionInitializedEvent"),
             STR("FWorldPartitionUninitializedEvent"),
             STR("TIntVector3"),

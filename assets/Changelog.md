@@ -8,6 +8,7 @@ some notes about most important changes such as:
 - linux port
 
 ## New
+Added support for UE Version 5.5 - ([UE4SS #708](https://github.com/UE4SS-RE/RE-UE4SS/pull/708))
 Added support for UE Version 5.4 - ([UE4SS #503](https://github.com/UE4SS-RE/RE-UE4SS/pull/503))
 Added basic support for Development/Debug/Test built Unreal Engine games ([UE4SS #607](https://github.com/UE4SS-RE/RE-UE4SS/pull/607))
 - To use this functionality, set DebugBuild to true in UE4SS-Settings.ini
@@ -20,6 +21,10 @@ Added new build definition "LessEqual421".  Using this definition for games on U
 UE Platform support, which allows for much easier internal implementation of new Unreal classes ([UEPseudo #80](https://github.com/Re-UE4SS/UEPseudo/pull/80)) - narknon, localcc
 
 Added new installation method by allowing overriding of the location of the `UE4SS.dll`, [documentation](https://docs.ue4ss.com/installation-guide.html#overriding-install-location). - ([UE4SS #506](https://github.com/UE4SS-RE/RE-UE4SS/pull/506)) - Buckminsterfullerene 
+
+Add Github alerts pre-processor support to the documentation system ([UE4SS #611](https://github.com/UE4SS-RE/RE-UE4SS/pull/611)) - Buckminsterfullerene
+
+Added custom game configurations for Abiotic Factor ([UE4SS #709](https://github.com/UE4SS-RE/RE-UE4SS/pull/709))
 
 ### Live View 
 Added search filter: `IncludeClassNames`. ([UE4SS #472](https://github.com/UE4SS-RE/RE-UE4SS/pull/472)) - Buckminsterfullerene
@@ -37,15 +42,16 @@ Added global Dumpers functions to Types.lua. ([UE4SS #664](https://github.com/UE
 - Added `EFindName` enum definition
 - Added `FName` function overloads with FindType parameter
 
-#### UEHelpers [PR #650](https://github.com/UE4SS-RE/RE-UE4SS/pull/650)
-- Added function `GetPlayer` which is just a fast way to get player controlled Pawn (the majority of the time it will be the player character)
-- Added functions: `GetEngine`, `GetGameInstance`, `GetGameViewportClient`,  `GetGameModeBase`, `GetGameStateBase`,`GetPersistentLevel` and `GetWorldSettings`
-- Added functions to get static objects: `GetKismetStringLibrary`, `GetKismetTextLibrary`
-- Added function `GetActorFromHitResult` which extracts the hit actor from a `FHitResult` struct based on UE's version
-- Added FName utility functions:
+#### UEHelpers
+- Added function `GetPlayer` which is just a fast way to get player controlled Pawn (the majority of the time it will be the player character) [PR #650](https://github.com/UE4SS-RE/RE-UE4SS/pull/650)
+- Added functions: `GetEngine`, `GetGameInstance`, `GetGameViewportClient`,  `GetGameModeBase`, `GetGameStateBase`,`GetPersistentLevel` and `GetWorldSettings` [PR #650](https://github.com/UE4SS-RE/RE-UE4SS/pull/650)
+- Added functions to get static objects: `GetKismetStringLibrary`, `GetKismetTextLibrary` [PR #650](https://github.com/UE4SS-RE/RE-UE4SS/pull/650)
+- Added function `GetActorFromHitResult` which extracts the hit actor from a `FHitResult` struct based on UE's version [PR #650](https://github.com/UE4SS-RE/RE-UE4SS/pull/650)
+- Added FName utility functions [PR #650](https://github.com/UE4SS-RE/RE-UE4SS/pull/650):
   - `FindFName`: wrapper for `FName(Name, EFindName.FNAME_Find)`
   - `AddFName`: wrapper for  `FName(Name, EFindName.FNAME_Add)`
-- Added [Lua Server Annotations](https://luals.github.io/wiki/annotations/) to all UEHelpers functions
+- Added [Lua Server Annotations](https://luals.github.io/wiki/annotations/) to all UEHelpers functions [PR #650](https://github.com/UE4SS-RE/RE-UE4SS/pull/650)
+- Added functions `GetAllPlayerStates` and `GetAllPlayers` [PR #688](https://github.com/UE4SS-RE/RE-UE4SS/pull/688)
 
 ### C++ API
 Key binds created with `UE4SSProgram::register_keydown_event` end up being duplicated upon mod hot-reload.  
@@ -105,6 +111,10 @@ The callback of `NotifyOnNewObject` can now optionally return `true` to unregist
 
 ### BPModLoader
 BPModLoader now supports loading mods from subdirectories within the `LogicMods` folder ([UE4SS #412](https://github.com/UE4SS-RE/RE-UE4SS/pull/412)) - Ethan Green
+
+### ConsoleEnablerMod
+Added additional console key **~** (Tilde) ([UE4SS #687](https://github.com/UE4SS-RE/RE-UE4SS/pull/687))  
+The console keys **F10** and **~** are now added by the mod in addition to the existing keys instead of replacing them ([UE4SS #687](https://github.com/UE4SS-RE/RE-UE4SS/pull/687))
 
 ### Repo & Build Process
 Switch to xmake from cmake which makes building much more streamlined ([UE4SS #377](https://github.com/UE4SS-RE/RE-UE4SS/pull/377), [UEPseudo #81](https://github.com/Re-UE4SS/UEPseudo/pull/81)) - localcc

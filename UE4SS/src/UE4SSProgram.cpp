@@ -866,6 +866,11 @@ namespace RC
                 Output::send<LogLevel::Warning>(
                         STR("FAssetData not available in <4.17, ignoring 'LoadAllAssetsBeforeDumpingObjects' & 'LoadAllAssetsBeforeGeneratingCXXHeaders'."));
             }
+            else if (!bFAssetDataAvailable)
+            {
+                Output::send<LogLevel::Warning>(
+                        STR("FAssetData not available, ignoring 'LoadAllAssetsBeforeDumpingObjects' & 'LoadAllAssetsBeforeGeneratingCXXHeaders'."));
+            }
 
             install_lua_mods();
             LuaMod::on_program_start();

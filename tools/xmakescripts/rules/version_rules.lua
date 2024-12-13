@@ -15,6 +15,7 @@ local function compare_versions(ver1, ver2)
 end
 
 local function parse_version(ver)
+    if not ver then return nil end
     local version_nums = {}
     for num in ver:gmatch("(%d+)") do
         table.insert(version_nums, tonumber(num))
