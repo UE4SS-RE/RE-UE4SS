@@ -1142,7 +1142,7 @@ Overloads:
                     }
                     catch (std::runtime_error& e)
                     {
-                        Output::send(STR("{}\n"), ensure_str(lua.handle_error(e.what())));
+                        Output::send<LogLevel::Error>(STR("{}\n"), ensure_str(lua.handle_error(e.what())));
                     }
                 };
 
@@ -1261,7 +1261,7 @@ Overloads:
                     }
                     catch (std::runtime_error& e)
                     {
-                        Output::send(STR("{}\n"), ensure_str(lua.handle_error(e.what())));
+                        Output::send<LogLevel::Error>(STR("{}\n"), ensure_str(lua.handle_error(e.what())));
                     }
                 };
 
