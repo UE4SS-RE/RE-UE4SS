@@ -1,9 +1,10 @@
 #pragma once
 
-#include <utility>
+#include <GUI/GUI.hpp>
 
 #include <File/Macros.hpp>
-#include <GUI/GUI.hpp>
+
+#include <utility>
 
 namespace RC
 {

@@ -1,10 +1,10 @@
 #pragma once
-#include <concepts>
-#include <type_traits>
+#include <Constructs/CompileTimeString.hpp>
 
 #include <glaze/glaze.hpp>
 
-#include <Constructs/CompileTimeString.hpp>
+#include <concepts>
+#include <type_traits>
 
 namespace RC
 {

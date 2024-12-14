@@ -1,6 +1,8 @@
-#include <DynamicOutput/DynamicOutput.hpp>
 #include <SDKGenerator/Common.hpp>
-#pragma warning(disable : 4005)
+#include <UnrealDef.hpp>
+
+#include <DynamicOutput/DynamicOutput.hpp>
+
 #include <Unreal/AActor.hpp>
 #include <Unreal/Property/FArrayProperty.hpp>
 #include <Unreal/Property/FBoolProperty.hpp>
@@ -13,8 +15,8 @@
 #include <Unreal/Property/FMapProperty.hpp>
 #include <Unreal/Property/FMulticastInlineDelegateProperty.hpp>
 #include <Unreal/Property/FMulticastSparseDelegateProperty.hpp>
-#include <Unreal/Property/FOptionalProperty.hpp>
 #include <Unreal/Property/FObjectProperty.hpp>
+#include <Unreal/Property/FOptionalProperty.hpp>
 #include <Unreal/Property/FSetProperty.hpp>
 #include <Unreal/Property/FSoftClassProperty.hpp>
 #include <Unreal/Property/FSoftObjectProperty.hpp>
@@ -22,13 +24,11 @@
 #include <Unreal/Property/FWeakObjectProperty.hpp>
 #include <Unreal/Property/NumericPropertyTypes.hpp>
 #include <Unreal/UClass.hpp>
-#include <Unreal/UFunction.hpp>
 #include <Unreal/UEnum.hpp>
+#include <Unreal/UFunction.hpp>
 #include <Unreal/UInterface.hpp>
 #include <Unreal/UPackage.hpp>
 #include <Unreal/UScriptStruct.hpp>
-#include <UnrealDef.hpp>
-#pragma warning(default : 4005)
 
 #define DELEGATE_SIGNATURE_POSTFIX STR("__DelegateSignature")
 

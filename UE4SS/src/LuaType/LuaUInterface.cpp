@@ -1,6 +1,8 @@
+#include <LuaType/LuaUInterface.hpp>
+
 #include <DynamicOutput/Output.hpp>
 #include <LuaType/LuaUFunction.hpp>
-#include <LuaType/LuaUInterface.hpp>
+
 #include <Unreal/UFunction.hpp>
 #include <Unreal/UInterface.hpp>
 

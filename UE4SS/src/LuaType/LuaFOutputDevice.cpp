@@ -1,9 +1,8 @@
-#include <Helpers/String.hpp>
 #include <LuaType/LuaFOutputDevice.hpp>
 
-#pragma warning(disable : 4005)
+#include <Helpers/String.hpp>
+
 #include <Unreal/FOutputDevice.hpp>
-#pragma warning(default : 4005)
 
 namespace RC::LuaType
 {

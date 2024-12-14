@@ -1,6 +1,7 @@
 #pragma once
 
 #include <LuaMadeSimple/LuaMadeSimple.hpp>
+
 #include <string>
 
 namespace RC::LuaMadeSimple::Type

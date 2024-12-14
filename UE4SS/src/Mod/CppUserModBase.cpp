@@ -1,6 +1,7 @@
 #include <Mod/CppMod.hpp>
 #include <Mod/CppUserModBase.hpp>
 #include <UE4SSProgram.hpp>
+
 #include <String/StringType.hpp>
 
 namespace RC

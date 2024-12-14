@@ -1,9 +1,8 @@
+#include <GUI/DX11.hpp>
 #include <GUI/Windows.hpp>
 
-#include <GUI/DX11.hpp>
 #include <backends/imgui_impl_win32.h>
 #include <imgui.h>
-#include <tchar.h>
 
 #ifndef WIN32_LEAN_AND_MEAN
 #define WIN32_LEAN_AND_MEAN
@@ -12,6 +11,8 @@
 #define NOMINMAX
 #endif
 #include <Windows.h>
+
+#include <tchar.h>
 
 // Forward declare message handler from imgui_impl_win32.cpp
 extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);

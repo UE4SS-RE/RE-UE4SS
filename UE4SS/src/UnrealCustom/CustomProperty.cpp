@@ -1,6 +1,7 @@
+#include <UnrealCustom/CustomProperty.hpp>
+
 #include <Unreal/Property/FArrayProperty.hpp>
 #include <Unreal/UClass.hpp>
-#include <UnrealCustom/CustomProperty.hpp>
 
 namespace RC::Unreal
 {

@@ -1,12 +1,12 @@
+#include <Helpers/String.hpp>
+#include <JSON/Parser/TokenParser.hpp>
+#include <ParserBase/Token.hpp>
+
 #include <algorithm>
 #include <cwctype>
 #include <format>
 #include <stdexcept>
 #include <string>
-
-#include <Helpers/String.hpp>
-#include <JSON/Parser/TokenParser.hpp>
-#include <ParserBase/Token.hpp>
 
 namespace RC::JSON::Parser
 {

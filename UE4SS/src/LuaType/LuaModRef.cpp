@@ -1,7 +1,7 @@
 #include <LuaType/LuaModRef.hpp>
-#include <stdexcept>
-
 #include <Mod/LuaMod.hpp>
+
+#include <stdexcept>
 
 namespace RC::LuaType
 {

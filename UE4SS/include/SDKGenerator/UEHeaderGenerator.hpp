@@ -1,19 +1,18 @@
 #pragma once
 
+#include <SDKGenerator/Common.hpp>
+
+#include <File/File.hpp>
+#include <Helpers/String.hpp>
+
+#include <Unreal/Core/GenericPlatform/GenericPlatformStricmp.hpp>
+#include <Unreal/NameTypes.hpp>
+
 #include <filesystem>
 #include <map>
 #include <set>
 #include <unordered_map>
 #include <unordered_set>
-
-#include <File/File.hpp>
-#include <SDKGenerator/Common.hpp>
-#include <Helpers/String.hpp>
-#pragma warning(disable : 4005)
-#include <Unreal/NameTypes.hpp>
-#pragma warning(default : 4005)
-
-#include <Unreal/Core/GenericPlatform/GenericPlatformStricmp.hpp>
 
 namespace RC::Unreal
 {

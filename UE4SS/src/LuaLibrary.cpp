@@ -1,13 +1,15 @@
-#include <format>
+#include <LuaLibrary.hpp>
+#include <UE4SSProgram.hpp>
 
 #include <DynamicOutput/DynamicOutput.hpp>
 #include <Helpers/Casting.hpp>
 #include <Helpers/String.hpp>
-#include <LuaLibrary.hpp>
 #include <LuaMadeSimple/LuaMadeSimple.hpp>
-#include <UE4SSProgram.hpp>
+
 #include <Unreal/FOutputDevice.hpp>
 #include <Unreal/UnrealInitializer.hpp>
+
+#include <format>
 
 #include <Windows.h>
 

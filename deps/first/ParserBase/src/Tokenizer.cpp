@@ -1,8 +1,8 @@
-#include <fstream>
-#include <sstream>
-
 #include <ParserBase/Token.hpp>
 #include <ParserBase/Tokenizer.hpp>
+
+#include <fstream>
+#include <sstream>
 
 namespace RC::ParserBase
 {

@@ -1,14 +1,14 @@
 #pragma once
 
+#include <ParserBase/TokenParser.hpp>
+
 #include <array>
 #include <unordered_map>
-
-#include <ParserBase/TokenParser.hpp>
 // NOTE: '#include <IniParser/Section.hpp>' does not work for some reason
+#include <String/StringType.hpp>
+
 #include "Section.hpp"
 #include "Tokens.hpp"
-
-#include <String/StringType.hpp>
 
 namespace RC::Ini
 {

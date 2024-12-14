@@ -1,14 +1,13 @@
 #pragma once
 
+#include <File/Macros.hpp>
+#include <ParserBase/Common.hpp>
+#include <String/StringType.hpp>
+
 #include <memory>
 #include <stdexcept>
 #include <string>
 #include <vector>
-
-#include <File/Macros.hpp>
-#include <ParserBase/Common.hpp>
-
-#include <String/StringType.hpp>
 namespace RC::ParserBase
 {
     class Token;

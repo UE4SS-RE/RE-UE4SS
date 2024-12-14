@@ -1,10 +1,10 @@
 #pragma once
 
-#include <initializer_list>
-#include <memory>
-
 #include <ErrorObject.hpp>
 #include <ProgramFeatures/CanError.hpp>
+
+#include <initializer_list>
+#include <memory>
 
 namespace RC
 {

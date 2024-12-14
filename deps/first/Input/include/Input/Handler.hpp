@@ -3,13 +3,13 @@
 
 // TODO: Abstract more... need to get rid of Windows.h from InputHandler.cpp
 
+#include <Input/Common.hpp>
+#include <Input/KeyDef.hpp>
+
 #include <cstdint>
 #include <functional>
 #include <unordered_map>
 #include <vector>
-
-#include <Input/Common.hpp>
-#include <Input/KeyDef.hpp>
 
 namespace RC::Input
 {

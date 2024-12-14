@@ -1,6 +1,7 @@
 #pragma once
 
 #include <LuaType/LuaUObject.hpp>
+
 #include <Unreal/NameTypes.hpp>
 
 namespace RC::LuaType

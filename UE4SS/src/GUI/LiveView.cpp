@@ -1,54 +1,57 @@
-#include <algorithm>
-#include <format>
-#include <limits>
-#include <memory>
-#include <mutex>
-#include <string>
-#include <unordered_map>
-#include <variant>
-#include <regex>
-
-#include <DynamicOutput/DynamicOutput.hpp>
 #include <ExceptionHandling.hpp>
-#include <Constructs/Views/EnumerateView.hpp>
 #include <GUI/GUI.hpp>
 #include <GUI/ImGuiUtility.hpp>
 #include <GUI/LiveView.hpp>
 #include <GUI/LiveView/Filter/DefaultObjectsOnly.hpp>
-#include "GUI/LiveView/Filter/ClassNamesFilter.hpp"
-#include <GUI/LiveView/Filter/FunctionParamFlags.hpp>
 #include <GUI/LiveView/Filter/HasProperty.hpp>
 #include <GUI/LiveView/Filter/HasPropertyType.hpp>
 #include <GUI/LiveView/Filter/IncludeDefaultObjects.hpp>
 #include <GUI/LiveView/Filter/InstancesOnly.hpp>
 #include <GUI/LiveView/Filter/NonInstancesOnly.hpp>
 #include <GUI/LiveView/Filter/SearchFilter.hpp>
+#include <UE4SSProgram.hpp>
+
+#include <Constructs/Views/EnumerateView.hpp>
+#include <DynamicOutput/DynamicOutput.hpp>
+#include <GUI/LiveView/Filter/FunctionParamFlags.hpp>
 #include <GUI/UFunctionCallerWidget.hpp>
 #include <Helpers/String.hpp>
 #include <JSON/JSON.hpp>
 #include <JSON/Parser/Parser.hpp>
-#include <UE4SSProgram.hpp>
+
 #include <Unreal/AActor.hpp>
 #include <Unreal/FOutputDevice.hpp>
 #include <Unreal/Property/FArrayProperty.hpp>
 #include <Unreal/Property/FBoolProperty.hpp>
-#include <Unreal/Property/FObjectProperty.hpp>
 #include <Unreal/Property/FEnumProperty.hpp>
+#include <Unreal/Property/FObjectProperty.hpp>
 #include <Unreal/Property/NumericPropertyTypes.hpp>
 #include <Unreal/UClass.hpp>
 #include <Unreal/UEnum.hpp>
 #include <Unreal/UFunction.hpp>
+#include <Unreal/UKismetNodeHelperLibrary.hpp>
 #include <Unreal/UObject.hpp>
 #include <Unreal/UObjectArray.hpp>
 #include <Unreal/UPackage.hpp>
 #include <Unreal/UScriptStruct.hpp>
 #include <Unreal/UnrealInitializer.hpp>
-#include <Unreal/UKismetNodeHelperLibrary.hpp>
+
+#include "GUI/LiveView/Filter/ClassNamesFilter.hpp"
+#include <IconsFontAwesome5.h>
+#include <fmt/chrono.h>
 #include <imgui.h>
 #include <imgui_internal.h>
-#include <IconsFontAwesome5.h>
 #include <misc/cpp/imgui_stdlib.h>
-#include <fmt/chrono.h>
+
+#include <algorithm>
+#include <format>
+#include <limits>
+#include <memory>
+#include <mutex>
+#include <regex>
+#include <string>
+#include <unordered_map>
+#include <variant>
 
 namespace RC::GUI
 {

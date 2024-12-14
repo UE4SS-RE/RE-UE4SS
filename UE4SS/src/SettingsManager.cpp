@@ -1,6 +1,7 @@
+#include <SettingsManager.hpp>
+
 #include <Helpers/String.hpp>
 #include <IniParser/Ini.hpp>
-#include <SettingsManager.hpp>
 
 #define REGISTER_STRING_SETTING(member_var, section_name, key)                                                                                                 \
     try                                                                                                                                                        \

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <Unreal/Common.hpp>
+
 #include <bit>
 #include <stdexcept>
 

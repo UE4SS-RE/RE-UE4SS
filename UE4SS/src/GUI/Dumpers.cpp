@@ -1,20 +1,22 @@
-#include <ctime>
-#include <format>
-#include <string>
-#include <utility>
+#include <GUI/Dumpers.hpp>
+#include <USMapGenerator/Generator.hpp>
 
 #include <Constructs/Views/EnumerateView.hpp>
 #include <DynamicOutput/DynamicOutput.hpp>
 #include <File/File.hpp>
 #include <File/Macros.hpp>
-#include <GUI/Dumpers.hpp>
 #include <JSON/JSON.hpp>
-#include <USMapGenerator/Generator.hpp>
+
+#include <ctime>
+#include <format>
+#include <string>
+#include <utility>
 #ifdef TEXT
 #undef TEXT
 #endif
 #include <SDKGenerator/TMapOverrideGen.hpp>
 #include <UE4SSProgram.hpp>
+
 #include <Unreal/AActor.hpp>
 #include <Unreal/NameTypes.hpp>
 #include <Unreal/Searcher/ObjectSearcher.hpp>
@@ -22,8 +24,10 @@
 #include <Unreal/UFunction.hpp>
 #include <Unreal/UScriptStruct.hpp>
 #include <Unreal/UnrealInitializer.hpp>
-#include <chrono>
+
 #include <imgui.h>
+
+#include <chrono>
 
 namespace RC::GUI::Dumpers
 {

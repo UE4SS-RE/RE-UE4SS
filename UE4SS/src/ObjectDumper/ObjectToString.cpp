@@ -1,7 +1,5 @@
-#include <format>
-
 #include <ObjectDumper/ObjectToString.hpp>
-#pragma warning(disable : 4005)
+
 #include <Unreal/FProperty.hpp>
 #include <Unreal/Property/FArrayProperty.hpp>
 #include <Unreal/Property/FBoolProperty.hpp>
@@ -27,7 +25,8 @@
 #include <Unreal/UFunction.hpp>
 #include <Unreal/UObject.hpp>
 #include <Unreal/UScriptStruct.hpp>
-#pragma warning(default : 4005)
+
+#include <format>
 
 namespace RC::ObjectDumper
 {

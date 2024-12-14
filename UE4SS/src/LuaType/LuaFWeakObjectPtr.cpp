@@ -1,6 +1,7 @@
-#include <DynamicOutput/Output.hpp>
 #include <LuaType/LuaFWeakObjectPtr.hpp>
 #include <LuaType/LuaUObject.hpp>
+
+#include <DynamicOutput/Output.hpp>
 
 namespace RC::LuaType
 {

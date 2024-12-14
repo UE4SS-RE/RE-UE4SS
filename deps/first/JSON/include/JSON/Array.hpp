@@ -1,16 +1,16 @@
 #pragma once
 
-#include <concepts>
-#include <memory>
-#include <string>
-#include <utility>
-#include <vector>
-
 #include <Constructs/Loop.hpp>
 #include <File/Macros.hpp>
 #include <JSON/Common.hpp>
 #include <JSON/Number.hpp>
 #include <JSON/Value.hpp>
+
+#include <concepts>
+#include <memory>
+#include <string>
+#include <utility>
+#include <vector>
 
 namespace RC::JSON
 {

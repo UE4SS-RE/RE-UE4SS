@@ -1,9 +1,9 @@
 #pragma once
 
-#include <cstdint>
-
 #include <Unreal/Core/Containers/Array.hpp>
 #include <Unreal/World.hpp>
+
+#include <cstdint>
 
 namespace RC
 {

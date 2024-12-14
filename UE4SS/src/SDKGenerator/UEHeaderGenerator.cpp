@@ -1,20 +1,8 @@
-#define NOMINMAX
-#include <Windows.h>
-#ifdef TEXT
-#undef TEXT
-#endif
-
-#include <algorithm>
-#include <format>
-#include <fstream>
-#include <set>
-#include <unordered_map>
-#include <unordered_set>
-
 #include <SDKGenerator/UEHeaderGenerator.hpp>
-#pragma warning(disable : 4005)
-#include <DynamicOutput/DynamicOutput.hpp>
 #include <UE4SSProgram.hpp>
+
+#include <DynamicOutput/DynamicOutput.hpp>
+
 #include <Unreal/AActor.hpp>
 #include <Unreal/Core/Containers/ScriptArray.hpp>
 #include <Unreal/FString.hpp>
@@ -32,14 +20,14 @@
 #include <Unreal/Property/FMulticastSparseDelegateProperty.hpp>
 #include <Unreal/Property/FNameProperty.hpp>
 #include <Unreal/Property/FObjectProperty.hpp>
+#include <Unreal/Property/FOptionalProperty.hpp>
 #include <Unreal/Property/FSetProperty.hpp>
-#include <Unreal/Property/FStrProperty.hpp>
 #include <Unreal/Property/FSoftClassProperty.hpp>
 #include <Unreal/Property/FSoftObjectProperty.hpp>
+#include <Unreal/Property/FStrProperty.hpp>
 #include <Unreal/Property/FStructProperty.hpp>
 #include <Unreal/Property/FTextProperty.hpp>
 #include <Unreal/Property/FWeakObjectProperty.hpp>
-#include <Unreal/Property/FOptionalProperty.hpp>
 #include <Unreal/Property/NumericPropertyTypes.hpp>
 #include <Unreal/UActorComponent.hpp>
 #include <Unreal/UClass.hpp>
@@ -49,10 +37,22 @@
 #include <Unreal/UPackage.hpp>
 #include <Unreal/UScriptStruct.hpp>
 #include <Unreal/UnrealFlags.hpp>
-#pragma warning(default : 4005)
 
 #include <fmt/core.h>
 #include <fmt/xchar.h>
+
+#include <algorithm>
+#include <format>
+#include <fstream>
+#include <set>
+#include <unordered_map>
+#include <unordered_set>
+
+#define NOMINMAX
+#include <Windows.h>
+#ifdef TEXT
+#undef TEXT
+#endif
 
 namespace RC::UEGenerator
 {

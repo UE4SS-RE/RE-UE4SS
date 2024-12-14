@@ -1,10 +1,9 @@
-#include <stdexcept>
-#include <vector>
-
+#include <Helpers/String.hpp>
 #include <LuaMadeSimple/LuaMadeSimple.hpp>
 #include <LuaMadeSimple/LuaObject.hpp>
 
-#include <Helpers/String.hpp>
+#include <stdexcept>
+#include <vector>
 
 namespace RC::LuaMadeSimple
 {

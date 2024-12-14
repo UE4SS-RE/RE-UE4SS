@@ -1,14 +1,16 @@
 #pragma once
 
-#include <functional>
-#include <memory>
-#include <thread>
-
 #include <GUI/Console.hpp>
 #include <GUI/GUITab.hpp>
 #include <GUI/LiveView.hpp>
+
 #include <Helpers/String.hpp>
+
 #include <imgui.h>
+
+#include <functional>
+#include <memory>
+#include <thread>
 
 struct ImGuiSettingsHandler;
 

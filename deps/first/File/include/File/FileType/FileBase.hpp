@@ -1,11 +1,12 @@
 #pragma once
 
-#include <span>
-#include <type_traits>
-
 #include <File/Enums.hpp>
 #include <File/InternalFile.hpp>
 #include <File/Macros.hpp>
+
+#include <filesystem>
+#include <span>
+#include <type_traits>
 
 namespace RC::File
 {

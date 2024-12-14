@@ -1,15 +1,16 @@
 #pragma once
 
+#include <DynamicOutput/DynamicOutput.hpp>
+
+#include <Unreal/UFunctionStructs.hpp>
+#include <Unreal/UnrealFlags.hpp>
+
 #include <functional>
 #include <memory>
 #include <unordered_map>
 #include <unordered_set>
 #include <variant>
 #include <vector>
-
-#include <DynamicOutput/DynamicOutput.hpp>
-#include <Unreal/UFunctionStructs.hpp>
-#include <Unreal/UnrealFlags.hpp>
 
 namespace RC::Unreal
 {

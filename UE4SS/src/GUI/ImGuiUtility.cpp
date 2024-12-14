@@ -1,8 +1,9 @@
-#include <stdexcept>
-
 #include <GUI/ImGuiUtility.hpp>
+
+#include <stdexcept>
 #undef TEXT
 #include <UE4SSProgram.hpp>
+
 #include <imgui.h>
 #define IMGUI_DEFINE_MATH_OPERATORS
 #include <imgui_internal.h>

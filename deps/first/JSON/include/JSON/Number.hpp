@@ -1,8 +1,8 @@
 #pragma once
 
-#include <bit>
-
 #include <JSON/Value.hpp>
+
+#include <bit>
 
 namespace RC::JSON
 {

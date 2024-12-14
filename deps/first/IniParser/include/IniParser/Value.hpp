@@ -1,10 +1,10 @@
 #pragma once
 
-#include <array>
-#include <cstdint>
-
 #include <File/File.hpp>
 #include <IniParser/Common.hpp>
+
+#include <array>
+#include <cstdint>
 
 namespace RC::Ini
 {

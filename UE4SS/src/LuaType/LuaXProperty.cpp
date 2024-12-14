@@ -7,14 +7,13 @@
 #include <LuaType/LuaXObjectProperty.hpp>
 #include <LuaType/LuaXProperty.hpp>
 #include <LuaType/LuaXStructProperty.hpp>
-#pragma warning(disable : 4005)
+
 #include <Unreal/FProperty.hpp>
 #include <Unreal/Property/FArrayProperty.hpp>
 #include <Unreal/Property/FBoolProperty.hpp>
 #include <Unreal/Property/FEnumProperty.hpp>
 #include <Unreal/Property/FObjectProperty.hpp>
 #include <Unreal/Property/FStructProperty.hpp>
-#pragma warning(default : 4005)
 
 namespace RC::LuaType
 {

@@ -1,7 +1,9 @@
-#include <DynamicOutput/Output.hpp>
-#include <LuaType/LuaUFunction.hpp>
 #include <LuaType/LuaUStruct.hpp>
 #include <LuaType/LuaXProperty.hpp>
+
+#include <DynamicOutput/Output.hpp>
+#include <LuaType/LuaUFunction.hpp>
+
 #include <Unreal/FProperty.hpp>
 #include <Unreal/UFunction.hpp>
 #include <Unreal/UStruct.hpp>

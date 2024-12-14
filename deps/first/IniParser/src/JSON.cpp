@@ -1,10 +1,9 @@
-#include <format>
-
+#include <Helpers/String.hpp>
 #include <IniParser/JSON.hpp>
 #include <ParserBase/Token.hpp>
 #include <ParserBase/Tokenizer.hpp>
 
-#include <Helpers/String.hpp>
+#include <format>
 
 namespace RC::Parser
 {

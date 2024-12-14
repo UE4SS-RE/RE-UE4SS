@@ -1,12 +1,5 @@
 #pragma once
 
-#include <format>
-#include <memory>
-#include <stdexcept>
-#include <unordered_map>
-#include <variant>
-#include <vector>
-
 #include <File/Macros.hpp>
 #include <Helpers/String.hpp>
 #include <JSON/Common.hpp>
@@ -16,6 +9,13 @@
 
 #include <fmt/core.h>
 #include <fmt/xchar.h>
+
+#include <format>
+#include <memory>
+#include <stdexcept>
+#include <unordered_map>
+#include <variant>
+#include <vector>
 
 namespace RC::JSON
 {

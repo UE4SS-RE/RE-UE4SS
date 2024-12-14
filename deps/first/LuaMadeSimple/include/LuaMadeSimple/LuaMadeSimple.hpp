@@ -1,12 +1,13 @@
 #pragma once
 
+#include <LuaMadeSimple/Common.hpp>
+
+#include <fmt/core.h>
+#include <lua.hpp>
+
 #include <format>
 #include <functional>
 #include <optional>
-
-#include <LuaMadeSimple/Common.hpp>
-#include <lua.hpp>
-#include <fmt/core.h>
 
 namespace RC::LuaMadeSimple
 {

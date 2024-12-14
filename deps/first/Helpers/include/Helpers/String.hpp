@@ -1,16 +1,16 @@
 #pragma once
 
+#include <String/StringType.hpp>
+
+#include <cassert>
 #include <codecvt>
 #include <cwctype>
+#include <filesystem>
 #include <locale>
 #include <shared_mutex>
 #include <string>
 #include <unordered_map>
 #include <vector>
-#include <filesystem>
-#include <cassert>
-
-#include <String/StringType.hpp>
 
 namespace RC
 {

@@ -1,8 +1,8 @@
-#include <Helpers/String.hpp>
 #include <LuaType/LuaFString.hpp>
-#pragma warning(disable : 4005)
+
+#include <Helpers/String.hpp>
+
 #include <Unreal/FString.hpp>
-#pragma warning(default : 4005)
 
 namespace RC::LuaType
 {

@@ -1,4 +1,3 @@
-#include <Helpers/Casting.hpp>
 #include <LuaType/LuaAActor.hpp>
 #include <LuaType/LuaCustomProperty.hpp>
 #include <LuaType/LuaFName.hpp>
@@ -9,7 +8,6 @@
 #include <LuaType/LuaTSoftClassPtr.hpp>
 #include <LuaType/LuaUClass.hpp>
 #include <LuaType/LuaUEnum.hpp>
-#include <LuaType/LuaUFunction.hpp>
 #include <LuaType/LuaUInterface.hpp>
 #include <LuaType/LuaUObject.hpp>
 #include <LuaType/LuaUScriptStruct.hpp>
@@ -17,7 +15,12 @@
 #include <LuaType/LuaUWorld.hpp>
 #include <LuaType/LuaXObjectProperty.hpp>
 #include <LuaType/LuaXProperty.hpp>
-#pragma warning(disable : 4005)
+
+#include <DynamicOutput/DynamicOutput.hpp>
+#include <Helpers/Casting.hpp>
+#include <Helpers/Integer.hpp>
+#include <LuaType/LuaUFunction.hpp>
+
 #include <Unreal/AActor.hpp>
 #include <Unreal/Core/Containers/ScriptArray.hpp>
 #include <Unreal/FString.hpp>
@@ -35,9 +38,6 @@
 #include <Unreal/UInterface.hpp>
 #include <Unreal/UScriptStruct.hpp>
 #include <Unreal/World.hpp>
-#pragma warning(default : 4005)
-#include <DynamicOutput/DynamicOutput.hpp>
-#include <Helpers/Integer.hpp>
 
 namespace RC::LuaType
 {

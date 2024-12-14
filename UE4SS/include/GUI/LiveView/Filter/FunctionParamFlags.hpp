@@ -1,6 +1,7 @@
 #pragma once
 
 #include <GUI/LiveView/Filter/SearchFilter.hpp>
+
 #include <Unreal/FProperty.hpp>
 #include <Unreal/UFunction.hpp>
 

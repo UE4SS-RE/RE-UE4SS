@@ -2,16 +2,14 @@
 
 #define NOMINMAX
 
-#include <format>
-#include <functional>
+#include <Common.hpp>
+#include <LuaType/LuaCustomProperty.hpp>
 
 #include <Constructs/Generator.hpp>
 #include <DynamicOutput/DynamicOutput.hpp>
 #include <Helpers/String.hpp>
-#include <Common.hpp>
 #include <LuaMadeSimple/LuaObject.hpp>
-#include <LuaType/LuaCustomProperty.hpp>
-#pragma warning(disable : 4005)
+
 #include <Unreal/FOutputDevice.hpp>
 #include <Unreal/FProperty.hpp>
 #include <Unreal/NameTypes.hpp>
@@ -21,7 +19,9 @@
 #include <Unreal/UStruct.hpp>
 #include <Unreal/VersionedContainer/Container.hpp>
 #include <Unreal/World.hpp>
-#pragma warning(default : 4005)
+
+#include <format>
+#include <functional>
 
 template <typename SupposedIntegralType>
 concept IsConvertableToLuaInteger = std::is_integral_v<SupposedIntegralType>;

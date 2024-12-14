@@ -1,10 +1,11 @@
 #pragma once
 
+#include <Helpers/Casting.hpp>
+
+#include <Unreal/FProperty.hpp>
+
 #include <cstdint>
 #include <memory>
-
-#include <Helpers/Casting.hpp>
-#include <Unreal/FProperty.hpp>
 
 #pragma warning(disable : 4068)
 

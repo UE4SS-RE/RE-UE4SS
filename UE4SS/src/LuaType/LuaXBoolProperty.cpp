@@ -1,9 +1,8 @@
 #include <LuaType/LuaUClass.hpp>
 #include <LuaType/LuaUObject.hpp>
 #include <LuaType/LuaXBoolProperty.hpp>
-#pragma warning(disable : 4005)
+
 #include <Unreal/Property/FBoolProperty.hpp>
-#pragma warning(default : 4005)
 
 namespace RC::LuaType
 {

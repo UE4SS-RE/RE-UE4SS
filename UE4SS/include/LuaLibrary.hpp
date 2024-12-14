@@ -1,9 +1,10 @@
 #pragma once
 
 #include <Common.hpp>
-#include <cstdint>
 
 #include <String/StringType.hpp>
+
+#include <cstdint>
 
 #define DefaultStructMemberData(member_name)                                                                                                                   \
     union {                                                                                                                                                    \

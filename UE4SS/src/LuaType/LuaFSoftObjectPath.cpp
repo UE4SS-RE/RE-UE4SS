@@ -1,8 +1,9 @@
-#include <DynamicOutput/DynamicOutput.hpp>
-#include <Helpers/String.hpp>
 #include <LuaType/LuaFName.hpp>
 #include <LuaType/LuaFSoftObjectPath.hpp>
 #include <LuaType/LuaFString.hpp>
+
+#include <DynamicOutput/DynamicOutput.hpp>
+#include <Helpers/String.hpp>
 
 namespace RC::LuaType
 {

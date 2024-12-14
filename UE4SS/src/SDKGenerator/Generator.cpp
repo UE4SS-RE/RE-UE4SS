@@ -1,13 +1,9 @@
-#include <cwctype>
-#include <format>
-#include <locale>
-#include <set>
-
 #include <SDKGenerator/Common.hpp>
 #include <SDKGenerator/Generator.hpp>
 #include <UE4SSProgram.hpp>
-#pragma warning(disable : 4005)
+
 #include <DynamicOutput/DynamicOutput.hpp>
+
 #include <Unreal/FProperty.hpp>
 #include <Unreal/Property/FArrayProperty.hpp>
 #include <Unreal/Property/FClassProperty.hpp>
@@ -23,7 +19,11 @@
 #include <Unreal/UInterface.hpp>
 #include <Unreal/UObjectGlobals.hpp>
 #include <Unreal/UScriptStruct.hpp>
-#pragma warning(default : 4005)
+
+#include <cwctype>
+#include <format>
+#include <locale>
+#include <set>
 
 namespace RC::UEGenerator
 {

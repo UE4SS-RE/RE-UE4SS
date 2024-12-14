@@ -1,6 +1,7 @@
 #pragma once
 
 #include <LuaType/LuaUObject.hpp>
+
 #include <Unreal/Property/FSoftObjectProperty.hpp>
 
 namespace RC::LuaType

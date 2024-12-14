@@ -1,9 +1,9 @@
 #pragma once
 
+#include <GUI/SearcherWidget.hpp>
+
 #include <string>
 #include <vector>
-
-#include <GUI/SearcherWidget.hpp>
 
 namespace RC::Unreal
 {

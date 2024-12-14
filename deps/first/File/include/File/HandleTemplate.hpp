@@ -1,14 +1,14 @@
 #pragma once
 
-#include <filesystem>
-#include <memory>
-#include <span>
-#include <string>
-
 #include <File/Common.hpp>
 #include <File/Enums.hpp>
 #include <File/Exceptions.hpp>
 #include <File/FileType/FileBase.hpp>
+
+#include <filesystem>
+#include <memory>
+#include <span>
+#include <string>
 
 namespace RC::File
 {

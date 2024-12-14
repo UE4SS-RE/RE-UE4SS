@@ -1,8 +1,8 @@
 #pragma once
 
-#include <string>
-
 #include <String/StringType.hpp>
+
+#include <string>
 
 namespace RC
 {

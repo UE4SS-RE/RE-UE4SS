@@ -1,15 +1,15 @@
+#include <SDKGenerator/Common.hpp>
+#include <UE4SSProgram.hpp>
+
 #include <DynamicOutput/DynamicOutput.hpp>
 #include <JSON/JSON.hpp>
-#include <SDKGenerator/Common.hpp>
 #include <SDKGenerator/JSONDumper.hpp>
 #include <Timer/ScopedTimer.hpp>
-#include <UE4SSProgram.hpp>
-#pragma warning(disable : 4005)
+
 #include <Unreal/FProperty.hpp>
 #include <Unreal/UAssetRegistry.hpp>
 #include <Unreal/UClass.hpp>
 #include <Unreal/UFunction.hpp>
-#pragma warning(default : 4005)
 
 namespace RC::UEGenerator::JSONDumper
 {

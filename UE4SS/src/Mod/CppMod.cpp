@@ -1,10 +1,11 @@
 #define NOMINMAX
 
-#include <filesystem>
+#include <Mod/CppMod.hpp>
 
 #include <DynamicOutput/DynamicOutput.hpp>
 #include <Helpers/String.hpp>
-#include <Mod/CppMod.hpp>
+
+#include <filesystem>
 
 #include <Windows.h>
 

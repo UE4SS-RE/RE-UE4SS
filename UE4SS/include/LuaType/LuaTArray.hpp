@@ -1,9 +1,8 @@
 #pragma once
 
 #include <LuaType/LuaUObject.hpp>
-#pragma warning(disable : 4005)
+
 #include <Unreal/Core/Containers/ScriptArray.hpp>
-#pragma warning(default : 4005)
 
 namespace RC::Unreal
 {
