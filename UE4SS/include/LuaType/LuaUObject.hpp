@@ -234,6 +234,62 @@ namespace RC::LuaType
 
         // Whether to create a new Lua item (example: table) or use an existing one on the top of the stack
         bool create_new_if_get_non_trivial_local{true};
+
+        auto get_operation() const -> const char*
+        {
+            switch (operation)
+            {
+                case Operation::Get:
+                    return "Get";
+                case Operation::GetNonTrivialLocal:
+                    return "GetNonTrivialLocal";
+                case Operation::Set:
+                    return "Set";
+                case Operation::GetParam:
+                    return "GetParam";
+            }
+            return "UnknownOperation";
+        }
+
+        auto throw_error_internal_append_args(std::string&) const -> void
+        {
+        }
+        template <typename K1, typename V1>
+        auto throw_error_internal_append_args(std::string& error_message, K1&& key, V1&& value) const -> void
+        {
+            error_message.append(fmt::format("    {}: {}\n", key, value));
+        }
+        template <typename K1, typename V1, typename... Remaining>
+        auto throw_error_internal_append_args(std::string& error_message, K1&& key, V1&& value, Remaining&&... remaining) const -> void
+        {
+            error_message.append(fmt::format("    {}: {}\n", key, value));
+            throw_error_internal_append_args(error_message, remaining...);
+        }
+        // Helper to throw nicely formatted error messages in property pushers.
+        // You can supply extra data by passing two extra args per data.
+        // The first arg is the name of the data, it must be a string.
+        // The second arg is anything that fmt::format can format.
+        // Example: throw_error("push_objectproperty", "Value must be UObject or nil", "extra_data", 1234)
+        // Output:
+        // [push_objectproperty] Error:
+        // Value must be UObject or nil
+        //     Property: ObjectProperty Children./Script/Engine.Actor:Children
+        //     extra_data: 1234
+        template <typename... Args>
+        auto throw_error(std::string_view handler_name, std::string_view format, Args&&... args) const -> void
+        {
+            std::string error_message{};
+            error_message.append(fmt::format("[{}] Error:\n", handler_name));
+            error_message.append(fmt::format(" {}\n", format));
+            error_message.append(fmt::format("    Operation: {}\n", get_operation()));
+            error_message.append(fmt::format("    Base: {}\n", static_cast<void*>(base)));
+            error_message.append(fmt::format("    Data: {}\n", data));
+            error_message.append(fmt::format("    Property ({}): {}\n", static_cast<void*>(property), property ? to_string(property->GetFullName()) : "null"));
+            error_message.append(fmt::format("    StoredAtIndex: {}\n", stored_at_index));
+            error_message.append(fmt::format("    CreateNewIfGetNonTrivialLocal: {}\n", create_new_if_get_non_trivial_local));
+            throw_error_internal_append_args(error_message, args...);
+            lua.throw_error(error_message);
+        }
     };
 
     struct RC_UE4SS_API FunctionPusherParams
@@ -821,7 +877,7 @@ Overloads:
         IntegerType* integer_ptr = static_cast<IntegerType*>(params.data);
         if (!integer_ptr)
         {
-            params.lua.throw_error("[push_integer] data pointer is nullptr");
+            params.throw_error("push_integer", "data pointer is nullptr");
         }
 
         switch (params.operation)
@@ -837,10 +893,10 @@ Overloads:
             RemoteUnrealParam::construct(params.lua, integer_ptr, params.base, params.property);
             return;
         default:
-            params.lua.throw_error("[push_integer] Unhandled Operation");
+            params.throw_error("push_integer", "Unhandled Operation");
             break;
         }
 
-        params.lua.throw_error(fmt::format("[push_integer] Unknown Operation ({}) not supported", static_cast<int32_t>(params.operation)));
+        params.throw_error("push_integer", "Operation not supported");
     }
 } // namespace RC::LuaType
