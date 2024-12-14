@@ -1366,7 +1366,9 @@ Overloads:
                 Unreal::UFunction* unreal_function = Unreal::UObjectGlobals::StaticFindObject<Unreal::UFunction*>(nullptr, nullptr, function_name_no_prefix);
                 if (!unreal_function)
                 {
-                    lua.throw_error("Tried to unregister a hook with Lua function 'UnregisterHook' but no UFunction with the specified name was found.");
+                    lua.throw_error(std::format("Tried to unregister a hook with Lua function 'UnregisterHook' but no UFunction with the specified name "
+                                                "was found.\n>FunctionName: {}",
+                                                to_string(function_name_no_prefix)));
                 }
 
                 if (!lua.is_integer())
@@ -1383,12 +1385,16 @@ Overloads:
 
                 if (pre_id > std::numeric_limits<int32_t>::max())
                 {
-                    lua.throw_error("Tried to unregister a hook with Lua function 'UnregisterHook' but the PreCallbackId supplied was too large (>int32)");
+                    lua.throw_error(std::format("Tried to unregister a hook with Lua function 'UnregisterHook' but the PreCallbackId supplied was too "
+                                                "large (>int32)\n>FunctionName: {}",
+                                                to_string(function_name_no_prefix)));
                 }
 
                 if (post_id > std::numeric_limits<int32_t>::max())
                 {
-                    lua.throw_error("Tried to unregister a hook with Lua function 'UnregisterHook' but the PostCallbackId supplied was too large (>int32)");
+                    lua.throw_error(std::format("Tried to unregister a hook with Lua function 'UnregisterHook' but the PostCallbackId supplied was too "
+                                                "large (>int32)\n>FunctionName: {}",
+                                                to_string(function_name_no_prefix)));
                 }
 
                 // Hooks on native UFunctions will have both of these IDs.
@@ -1397,9 +1403,9 @@ Overloads:
                 if (native_hook_pre_id_it != LuaMod::m_generic_hook_id_to_native_hook_id.end() &&
                     native_hook_post_id_it != LuaMod::m_generic_hook_id_to_native_hook_id.end())
                 {
-                    Output::send<LogLevel::Verbose>(STR("Unregistering native hook with pre-id: {}\n"), native_hook_pre_id_it->first);
+                    Output::send<LogLevel::Verbose>(STR("Unregistering native pre-hook ({}) for {}\n"), native_hook_pre_id_it->first, function_name_no_prefix);
                     unreal_function->UnregisterHook(static_cast<int32_t>(native_hook_pre_id_it->second));
-                    Output::send<LogLevel::Verbose>(STR("Unregistering native hook with post-id: {}\n"), native_hook_post_id_it->first);
+                    Output::send<LogLevel::Verbose>(STR("Unregistering native post-hook ({}) for {}\n"), native_hook_post_id_it->first, function_name_no_prefix);
                     unreal_function->UnregisterHook(static_cast<int32_t>(native_hook_post_id_it->second));
 
                     // LuaUnrealScriptFunctionData contains the hook's lua registry references, captured in RegisterHook in two different lua states.
@@ -1425,7 +1431,7 @@ Overloads:
                     if (auto callback_data_it = LuaMod::m_script_hook_callbacks.find(unreal_function->GetFullName());
                         callback_data_it != LuaMod::m_script_hook_callbacks.end())
                     {
-                        Output::send<LogLevel::Verbose>(STR("Unregistering script hook with id: {}\n"), post_id);
+                        Output::send<LogLevel::Verbose>(STR("Unregistering script hook with id: {}, FunctionName: {}\n"), post_id, function_name_no_prefix);
                         auto& registry_indexes = callback_data_it->second.registry_indexes;
                         std::erase_if(registry_indexes, [&](const auto& pair) -> bool {
                             return post_id == pair.second.identifier;
@@ -3020,7 +3026,9 @@ Overloads:
             Unreal::UFunction* unreal_function = Unreal::UObjectGlobals::StaticFindObject<Unreal::UFunction*>(nullptr, nullptr, function_name_no_prefix);
             if (!unreal_function)
             {
-                lua.throw_error("Tried to register a hook with Lua function 'RegisterHook' but no UFunction with the specified name was found.");
+                lua.throw_error(std::format(
+                        "Tried to register a hook with Lua function 'RegisterHook' but no UFunction with the specified name was found.\nFunction Name: {}",
+                        to_string(function_name_no_prefix)));
             }
 
             int32_t generic_pre_id{};
@@ -3062,6 +3070,7 @@ Overloads:
             else
             {
                 std::string error_message{"Was unable to register a hook with Lua function 'RegisterHook', information:\n"};
+                error_message.append(fmt::format("FunctionName: {}\n", to_string(function_name_no_prefix)));
                 error_message.append(fmt::format("UFunction::Func: {}\n", std::bit_cast<void*>(func_ptr)));
                 error_message.append(fmt::format("ProcessInternal: {}\n", Unreal::UObject::ProcessInternalInternal.get_function_address()));
                 error_message.append(
