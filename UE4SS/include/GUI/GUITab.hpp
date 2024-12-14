@@ -26,9 +26,9 @@ namespace RC::GUI
 
       public:
         GUITab() = delete;
-        GUITab(StringViewType name, RenderFunctionType render_function) : tab_name(name), render_function(render_function){};
+        GUITab(StringViewType name, RenderFunctionType render_function) : tab_name(name), render_function(render_function) {};
         GUITab(StringViewType name, RenderFunctionType render_function, CppUserModBase* owner)
-            : tab_name(name), render_function(render_function), owner(owner){};
+            : tab_name(name), render_function(render_function), owner(owner) {};
         ~GUITab() = default;
 
       private:

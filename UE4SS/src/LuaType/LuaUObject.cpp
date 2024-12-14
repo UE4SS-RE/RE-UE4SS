@@ -745,7 +745,7 @@ namespace RC::LuaType
 
             size_t array_element_size = inner->GetElementSize();
 
-            auto array = new(params.data) Unreal::FScriptArray{};
+            auto array = new (params.data) Unreal::FScriptArray{};
             size_t table_length = lua_rawlen(params.lua.get_lua_state(), 1);
             bool has_elements = table_length > 0;
 
@@ -1321,8 +1321,7 @@ Overloads:
     {
     }
 
-    auto RemoteUnrealParam::construct(const LuaMadeSimple::Lua& lua, void* param_ptr, Unreal::UObject* base, Unreal::FProperty* property)
-            -> const LuaMadeSimple::Lua::Table
+    auto RemoteUnrealParam::construct(const LuaMadeSimple::Lua& lua, void* param_ptr, Unreal::UObject* base, Unreal::FProperty* property) -> const LuaMadeSimple::Lua::Table
     {
         const Unreal::FName property_type = property->GetClass().GetFName();
         LuaType::RemoteUnrealParam lua_object{param_ptr, base, property, property_type};

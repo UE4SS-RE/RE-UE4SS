@@ -249,7 +249,9 @@ int _tmain(int argc, TCHAR* argv[])
     cpp_file << "        }" << endl;
     cpp_file << "        else" << endl;
     cpp_file << "        {" << endl;
-    cpp_file << "            MessageBox(nullptr, L\"Failed to load UE4SS.dll. Please see the docs on correct installation: https://docs.ue4ss.com/installation-guide\", L\"UE4SS Error\", MB_OK | MB_ICONERROR);" << endl;
+    cpp_file << "            MessageBox(nullptr, L\"Failed to load UE4SS.dll. Please see the docs on correct installation: "
+                "https://docs.ue4ss.com/installation-guide\", L\"UE4SS Error\", MB_OK | MB_ICONERROR);"
+             << endl;
     cpp_file << "            ExitProcess(0);" << endl;
     cpp_file << "        }" << endl;
     cpp_file << "    }" << endl;

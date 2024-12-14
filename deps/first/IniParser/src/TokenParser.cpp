@@ -48,7 +48,7 @@ namespace RC::Ini
             }
             bool is_int = std::ranges::all_of(string.begin(), string.end(), [&](const File::CharType c) {
                 // force the char type to wchar_t as it is always larger or equal to char type
-                return has_0x_prefix ? std::iswxdigit((wchar_t) c) : std::iswdigit((wchar_t) c) != 0;
+                return has_0x_prefix ? std::iswxdigit((wchar_t)c) : std::iswdigit((wchar_t)c) != 0;
             });
 
             return Int{.value = 0, .base = has_0x_prefix ? 16 : 10, .is_int = is_int};
@@ -73,7 +73,7 @@ namespace RC::Ini
                 string = File::StringViewType{string.begin() + 1, string.end()};
             }
             bool is_float = std::ranges::all_of(string.begin(), string.end(), [&](const File::CharType c) {
-                return has_decimal_or_negative_prefix ? std::iswxdigit((wchar_t) c) : std::iswdigit((wchar_t) c) != 0 || c == STR('.');
+                return has_decimal_or_negative_prefix ? std::iswxdigit((wchar_t)c) : std::iswdigit((wchar_t)c) != 0 || c == STR('.');
             });
 
             return Float{.value = 0, .is_float = is_float};
@@ -87,7 +87,7 @@ namespace RC::Ini
         //       A code change would be required if 'File::StringType' is defined as a char instead of a wchar_t
         //       Solution: Make two overloads in the string helper library, one for 'std::string' and one for 'std::wstring'
         std::transform(all_lower_string_data.begin(), all_lower_string_data.end(), all_lower_string_data.begin(), [](CharType c) {
-            return (CharType) std::towlower((wchar_t) c);
+            return (CharType)std::towlower((wchar_t)c);
         });
         if (all_lower_string_data == STR("true") || all_lower_string_data == STR("1"))
         {

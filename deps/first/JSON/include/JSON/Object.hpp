@@ -30,14 +30,14 @@ namespace RC::JSON
             Yes,
             No
         };
-    
+
       private:
         std::unordered_map<StringType, std::unique_ptr<JSON::Value>> m_members{};
         IsGlobalObject m_is_global_object{IsGlobalObject::No};
 
       public:
         Object() = default;
-        explicit Object(IsGlobalObject is_global_object) : m_is_global_object(is_global_object){};
+        explicit Object(IsGlobalObject is_global_object) : m_is_global_object(is_global_object) {};
         ~Object() override = default;
 
         // Explicitly making the class non-copyable to enable dllexport with unique_ptr

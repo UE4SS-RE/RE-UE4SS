@@ -48,8 +48,7 @@ namespace RC
                                LuaMadeSimple::Lua& async_lua,
                                std::vector<LuaMadeSimple::Lua*>& hook_luas) -> void;
 
-        auto fire_on_lua_start(LuaMadeSimple::Lua& lua, LuaMadeSimple::Lua& main_lua, LuaMadeSimple::Lua& async_lua, std::vector<LuaMadeSimple::Lua*>& hook_luas)
-                -> void;
+        auto fire_on_lua_start(LuaMadeSimple::Lua& lua, LuaMadeSimple::Lua& main_lua, LuaMadeSimple::Lua& async_lua, std::vector<LuaMadeSimple::Lua*>& hook_luas) -> void;
 
         auto fire_on_lua_stop(StringViewType mod_name,
                               LuaMadeSimple::Lua& lua,
@@ -57,8 +56,7 @@ namespace RC
                               LuaMadeSimple::Lua& async_lua,
                               std::vector<LuaMadeSimple::Lua*>& hook_luas) -> void;
 
-        auto fire_on_lua_stop(LuaMadeSimple::Lua& lua, LuaMadeSimple::Lua& main_lua, LuaMadeSimple::Lua& async_lua, std::vector<LuaMadeSimple::Lua*>& hook_luas)
-                -> void;
+        auto fire_on_lua_stop(LuaMadeSimple::Lua& lua, LuaMadeSimple::Lua& main_lua, LuaMadeSimple::Lua& async_lua, std::vector<LuaMadeSimple::Lua*>& hook_luas) -> void;
 
         auto fire_unreal_init() -> void override;
         auto fire_ui_init() -> void override;

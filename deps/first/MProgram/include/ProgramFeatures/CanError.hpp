@@ -19,7 +19,7 @@ namespace RC
       public:
         CanError() = default;
 
-        CanError(std::shared_ptr<ErrorObject> error_object) : m_error_object(std::move(error_object)){};
+        CanError(std::shared_ptr<ErrorObject> error_object) : m_error_object(std::move(error_object)) {};
 
       protected:
         auto set_error(const char* message) -> void

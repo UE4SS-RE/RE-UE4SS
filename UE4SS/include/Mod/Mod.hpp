@@ -28,7 +28,6 @@ namespace RC
         StringType m_mod_name;
         std::filesystem::path m_mod_path;
 
-
       protected:
         // Whether the mod can be installed
         // This is true by default and is only false if the state of the mod won't allow for a successful installation
@@ -63,12 +62,12 @@ namespace RC
         // Main update from the program
         virtual auto fire_update() -> void;
 
-        virtual auto fire_unreal_init() -> void{};
+        virtual auto fire_unreal_init() -> void {};
 
-        virtual auto fire_ui_init() -> void{};
+        virtual auto fire_ui_init() -> void {};
 
         // Called once when the program is starting, after mods are setup but before any mods have been started
-        virtual auto fire_program_start() -> void{};
+        virtual auto fire_program_start() -> void {};
 
         // Async update
         // Used when the main update function would block other mods from executing their scripts

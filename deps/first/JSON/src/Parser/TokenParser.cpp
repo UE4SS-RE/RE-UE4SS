@@ -27,7 +27,7 @@ namespace RC::JSON::Parser
                              to_string(err_token.to_string()));                                                                                                \
         if (err_token.get_type() == TokenType::Characters)                                                                                                     \
         {                                                                                                                                                      \
-            e.append(std::format("\nCharacters: '{}'", to_string(get_data(err_token))));                                                                         \
+            e.append(std::format("\nCharacters: '{}'", to_string(get_data(err_token))));                                                                       \
         }                                                                                                                                                      \
         throw std::runtime_error{e};                                                                                                                           \
     }

@@ -50,7 +50,7 @@ namespace RC::JSON
         (void)should_format;
         (void)indent_level;
 
-        #define ToString(numeric_value) fmt::format(STR("{}"), numeric_value)
+#define ToString(numeric_value) fmt::format(STR("{}"), numeric_value)
 
         switch (m_stored_type)
         {
