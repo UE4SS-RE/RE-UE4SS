@@ -251,6 +251,42 @@ namespace RC::LuaType
             return "UnknownOperation";
         }
 
+        // https://stackoverflow.com/questions/59091462/from-c-how-can-i-print-the-contents-of-the-lua-stack/59097940#59097940
+        auto get_stack_dump(const char* message = "") const -> std::string
+        {
+            auto lua_state = lua.get_lua_state();
+            auto out_message = fmt::format("\n\nLUA Stack dump -> START------------------------------\n{}\n", message);
+            int top = lua_gettop(lua_state);
+            for (int i = 1; i <= top; i++)
+            {
+                out_message.append(fmt::format("{}\t{}\t", i, luaL_typename(lua_state, i)));
+                switch (lua_type(lua_state, i))
+                {
+                case LUA_TNUMBER:
+                    out_message.append(fmt::format("{}", lua_tonumber(lua_state, i)));
+                    break;
+                case LUA_TSTRING:
+                    out_message.append(fmt::format("{}", lua_tostring(lua_state, i)));
+                    break;
+                case LUA_TBOOLEAN:
+                    out_message.append(fmt::format("{}", (lua_toboolean(lua_state, i) ? "true" : "false")));
+                    break;
+                case LUA_TNIL:
+                    out_message.append("nil");
+                    break;
+                case LUA_TFUNCTION:
+                    out_message.append("function");
+                    break;
+                default:
+                    out_message.append(fmt::format("{}", lua_topointer(lua_state, i)));
+                    break;
+                }
+                out_message.append("\n");
+            }
+            out_message.append("\nLUA Stack dump -> END----------------------------\n\n");
+            return out_message;
+        }
+
         auto throw_error_internal_append_args(std::string&) const -> void
         {
         }
@@ -288,6 +324,7 @@ namespace RC::LuaType
             error_message.append(fmt::format("    StoredAtIndex: {}\n", stored_at_index));
             error_message.append(fmt::format("    CreateNewIfGetNonTrivialLocal: {}\n", create_new_if_get_non_trivial_local));
             throw_error_internal_append_args(error_message, args...);
+            error_message.append(get_stack_dump());
             lua.throw_error(error_message);
         }
     };
