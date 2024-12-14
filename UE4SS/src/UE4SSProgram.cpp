@@ -1052,19 +1052,19 @@ namespace RC
             if (mod_name_is_taken)
             {
                 mod->set_installable(false);
-                Output::send(STR("Mod name '{}' is already in use.\n"), mod->get_name());
+                Output::send<LogLevel::Warning>(STR("Mod name '{}' is already in use.\n"), mod->get_name());
                 continue;
             }
 
             if (mod->is_installed())
             {
-                Output::send(STR("Tried to install a mod that was already installed, Mod: '{}'\n"), mod->get_name());
+                Output::send<LogLevel::Warning>(STR("Tried to install a mod that was already installed, Mod: '{}'\n"), mod->get_name());
                 continue;
             }
 
             if (!mod->is_installable())
             {
-                Output::send(STR("Was unable to install mod '{}' for unknown reasons. Mod is not installable.\n"), mod->get_name());
+                Output::send<LogLevel::Warning>(STR("Was unable to install mod '{}' for unknown reasons. Mod is not installable.\n"), mod->get_name());
                 continue;
             }
 
