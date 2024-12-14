@@ -8,7 +8,7 @@
 #define UE4SS_ERROR_OUTPUTTER()                                                                                                                                \
     if (!Output::has_internal_error())                                                                                                                         \
     {                                                                                                                                                          \
-        Output::send<LogLevel::Error>(STR("Error: {}\n"), ensure_str(e.what()));                                                                                    \
+        Output::send<LogLevel::Error>(STR("Error: {}\n"), ensure_str(e.what()));                                                                               \
     }                                                                                                                                                          \
     else                                                                                                                                                       \
     {                                                                                                                                                          \

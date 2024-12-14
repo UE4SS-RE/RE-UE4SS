@@ -60,9 +60,9 @@ namespace RC::Output
         // The 'optional_arg' type should be cast to the proper enum by the derived class
         virtual auto receive_with_optional_arg(File::StringViewType fmt, int32_t optional_arg = 0) const -> void;
 
-        virtual auto lock() const -> void{};
+        virtual auto lock() const -> void {};
 
-        virtual auto unlock() const -> void{};
+        virtual auto unlock() const -> void {};
 
       public:
         auto set_formatter(Formatter new_formatter) -> void;

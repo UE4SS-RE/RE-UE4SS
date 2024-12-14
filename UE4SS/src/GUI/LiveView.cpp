@@ -341,11 +341,10 @@ namespace RC::GUI
             add_array_filter_to_json(json_filters, Filter::FunctionParamFlags::s_debug_name, Filter::FunctionParamFlags::s_checkboxes, STR("FunctionParamFlags"));
         }
 
-        auto json_file =
-                File::open(StringType{UE4SSProgram::get_program().get_working_directory()} + fmt::format(STR("\\liveview\\filters.meta.json")),
-                           File::OpenFor::Writing,
-                           File::OverwriteExistingFile::Yes,
-                           File::CreateIfNonExistent::Yes);
+        auto json_file = File::open(StringType{UE4SSProgram::get_program().get_working_directory()} + fmt::format(STR("\\liveview\\filters.meta.json")),
+                                    File::OpenFor::Writing,
+                                    File::OverwriteExistingFile::Yes,
+                                    File::CreateIfNonExistent::Yes);
         int32_t json_indent_level{};
         json_file.write_string_to_file(json.serialize(JSON::ShouldFormat::Yes, &json_indent_level));
     }
@@ -380,7 +379,7 @@ namespace RC::GUI
             {
                 internal_value += to_string(class_name);
             }
-            
+
             if (&class_name != &list.back())
             {
                 internal_value += ", ";
@@ -390,11 +389,10 @@ namespace RC::GUI
 
     static auto internal_load_filters_from_disk() -> void
     {
-        const auto json_file =
-                File::open(StringType{UE4SSProgram::get_program().get_working_directory()} + fmt::format(STR("\\liveview\\filters.meta.json")),
-                           File::OpenFor::Reading,
-                           File::OverwriteExistingFile::No,
-                           File::CreateIfNonExistent::Yes);
+        const auto json_file = File::open(StringType{UE4SSProgram::get_program().get_working_directory()} + fmt::format(STR("\\liveview\\filters.meta.json")),
+                                          File::OpenFor::Reading,
+                                          File::OverwriteExistingFile::No,
+                                          File::CreateIfNonExistent::Yes);
         auto json_file_contents = json_file.read_all();
         if (json_file_contents.empty())
         {
@@ -580,12 +578,16 @@ namespace RC::GUI
     static auto internal_load_watches_from_disk() -> void
     {
         auto working_directory_path = StringType{UE4SSProgram::get_program().get_working_directory()} + fmt::format(STR("\\watches\\watches.meta.json"));
-        auto legacy_root_directory_path = StringType{UE4SSProgram::get_program().get_legacy_root_directory()} + fmt::format(STR("\\watches\\watches.meta.json"));
-    
+        auto legacy_root_directory_path =
+                StringType{UE4SSProgram::get_program().get_legacy_root_directory()} + fmt::format(STR("\\watches\\watches.meta.json"));
+
         StringType json_file_contents;
         bool is_legacy = !std::filesystem::exists(working_directory_path) && std::filesystem::exists(legacy_root_directory_path);
-        auto json_file = File::open(is_legacy ? legacy_root_directory_path : working_directory_path, File::OpenFor::Reading, File::OverwriteExistingFile::No, File::CreateIfNonExistent::Yes);
-        
+        auto json_file = File::open(is_legacy ? legacy_root_directory_path : working_directory_path,
+                                    File::OpenFor::Reading,
+                                    File::OverwriteExistingFile::No,
+                                    File::CreateIfNonExistent::Yes);
+
         if (json_file_contents.empty())
         {
             return;
@@ -1779,7 +1781,7 @@ namespace RC::GUI
         auto property_name = to_string(property->GetName());
         auto container_ptr = property->ContainerPtrToValuePtr<void*>(container);
         property->ExportTextItem(property_text, container_ptr, container_ptr, static_cast<UObject*>(container), NULL);
-        
+
         bool open_edit_value_popup{};
 
         auto render_property_value_context_menu = [&](std::string_view id_override = "") {
@@ -2010,7 +2012,11 @@ namespace RC::GUI
             if (ImGui::Button("Apply"))
             {
                 FOutputDevice placeholder_device{};
-                if (!property->ImportText(FromCharTypePtr<TCHAR>(ensure_str(m_current_property_value_buffer).c_str()), property->ContainerPtrToValuePtr<void>(container), NULL, obj, &placeholder_device))
+                if (!property->ImportText(FromCharTypePtr<TCHAR>(ensure_str(m_current_property_value_buffer).c_str()),
+                                          property->ContainerPtrToValuePtr<void>(container),
+                                          NULL,
+                                          obj,
+                                          &placeholder_device))
                 {
                     m_modal_edit_property_value_error_unable_to_edit = true;
                     ImGui::OpenPopup("UnableToSetNewPropertyValueError");

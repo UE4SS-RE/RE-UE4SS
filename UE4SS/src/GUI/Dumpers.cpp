@@ -186,7 +186,8 @@ namespace RC::GUI::Dumpers
 
                     if (Version::IsAtMost(4, 19))
                     {
-                        const auto materials = *mesh->GetValuePtrByPropertyName<TArray<FStaticMaterial_419AndBelow>>(FromCharTypePtr<TCHAR>(STR("StaticMaterials")));
+                        const auto materials =
+                                *mesh->GetValuePtrByPropertyName<TArray<FStaticMaterial_419AndBelow>>(FromCharTypePtr<TCHAR>(STR("StaticMaterials")));
                         if (materials.GetData())
                         {
                             actor_buffer.append(STR("Materials=("));
@@ -206,7 +207,8 @@ namespace RC::GUI::Dumpers
                     }
                     else
                     {
-                        const auto& materials = *mesh->GetValuePtrByPropertyName<TArray<FStaticMaterial_420AndAbove>>(FromCharTypePtr<TCHAR>(STR("StaticMaterials")));
+                        const auto& materials =
+                                *mesh->GetValuePtrByPropertyName<TArray<FStaticMaterial_420AndAbove>>(FromCharTypePtr<TCHAR>(STR("StaticMaterials")));
                         if (materials.GetData())
                         {
                             actor_buffer.append(STR("Materials=("));

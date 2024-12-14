@@ -92,8 +92,10 @@ namespace RC
         }
     }
 
-    auto CppMod::fire_on_lua_start(LuaMadeSimple::Lua& lua, LuaMadeSimple::Lua& main_lua, LuaMadeSimple::Lua& async_lua, std::vector<LuaMadeSimple::Lua*>& hook_luas)
-            -> void
+    auto CppMod::fire_on_lua_start(LuaMadeSimple::Lua& lua,
+                                   LuaMadeSimple::Lua& main_lua,
+                                   LuaMadeSimple::Lua& async_lua,
+                                   std::vector<LuaMadeSimple::Lua*>& hook_luas) -> void
     {
         if (m_mod)
         {
@@ -113,8 +115,7 @@ namespace RC
         }
     }
 
-    auto CppMod::fire_on_lua_stop(LuaMadeSimple::Lua& lua, LuaMadeSimple::Lua& main_lua, LuaMadeSimple::Lua& async_lua, std::vector<LuaMadeSimple::Lua*>& hook_luas)
-            -> void
+    auto CppMod::fire_on_lua_stop(LuaMadeSimple::Lua& lua, LuaMadeSimple::Lua& main_lua, LuaMadeSimple::Lua& async_lua, std::vector<LuaMadeSimple::Lua*>& hook_luas) -> void
     {
         if (m_mod)
         {

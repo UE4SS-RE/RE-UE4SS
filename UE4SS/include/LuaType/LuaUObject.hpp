@@ -284,8 +284,8 @@ namespace RC::LuaType
     RC_UE4SS_API auto push_functionproperty(const FunctionPusherParams&) -> void;
     // Push to Lua -> END
 
-    auto handle_unreal_property_value(const Operation operation, const LuaMadeSimple::Lua&, Unreal::UObject* base, Unreal::FName property_name, Unreal::FField* field)
-            -> void;
+    auto handle_unreal_property_value(
+            const Operation operation, const LuaMadeSimple::Lua&, Unreal::UObject* base, Unreal::FName property_name, Unreal::FField* field) -> void;
 
     auto is_a_implementation(const LuaMadeSimple::Lua& lua) -> int;
 
@@ -601,7 +601,8 @@ Overloads:
                 auto executor = lua.get_userdata<LuaType::UObject>();
 
                 auto ar = Unreal::FOutputDevice{};
-                auto return_value = lua_object.get_remote_cpp_object()->ProcessConsoleExec(FromCharTypePtr<TCHAR>(cmd.c_str()), ar, executor.get_remote_cpp_object());
+                auto return_value =
+                        lua_object.get_remote_cpp_object()->ProcessConsoleExec(FromCharTypePtr<TCHAR>(cmd.c_str()), ar, executor.get_remote_cpp_object());
 
                 lua.set_bool(return_value);
                 return 1;

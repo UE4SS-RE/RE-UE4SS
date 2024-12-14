@@ -24,7 +24,7 @@ namespace RC::JSON
     {
       public:
         constexpr static Type static_type = Type::Array;
-    
+
       private:
         std::vector<std::unique_ptr<Value>> m_members{};
 

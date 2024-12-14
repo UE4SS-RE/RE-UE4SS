@@ -173,9 +173,7 @@ namespace RC::UnrealRuntimeTypes
 
     template <typename T>
     concept HasStaticClassMemberFunction = requires(T t) {
-        {
-            T::StaticClass()
-        };
+        { T::StaticClass() };
     };
 
     struct ArrayTest

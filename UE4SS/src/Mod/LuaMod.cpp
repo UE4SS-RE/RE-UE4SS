@@ -4041,19 +4041,19 @@ Overloads:
                 ar.Log(FromCharTypePtr<TCHAR>(log_message.c_str()));
             };
 
-            if (!LuaStatics::console_executor_enabled && String::iequal(File::StringViewType{ToCharTypePtr(cmd)}, File::StringViewType {STR("luastart")}))
+            if (!LuaStatics::console_executor_enabled && String::iequal(File::StringViewType{ToCharTypePtr(cmd)}, File::StringViewType{STR("luastart")}))
             {
                 start_console_lua_executor();
                 logln(STR("Console Lua executor started"));
                 return true;
             }
-            else if (LuaStatics::console_executor_enabled && String::iequal(File::StringViewType{ToCharTypePtr(cmd)}, File::StringViewType {STR("luastop")}))
+            else if (LuaStatics::console_executor_enabled && String::iequal(File::StringViewType{ToCharTypePtr(cmd)}, File::StringViewType{STR("luastop")}))
             {
                 stop_console_lua_executor();
                 logln(STR("Console Lua executor stopped"));
                 return true;
             }
-            else if (LuaStatics::console_executor_enabled && String::iequal(File::StringViewType{ToCharTypePtr(cmd)}, File::StringViewType {STR("luarestart")}))
+            else if (LuaStatics::console_executor_enabled && String::iequal(File::StringViewType{ToCharTypePtr(cmd)}, File::StringViewType{STR("luarestart")}))
             {
                 stop_console_lua_executor();
                 start_console_lua_executor();
@@ -4118,7 +4118,7 @@ Overloads:
         Unreal::Hook::RegisterProcessConsoleExecGlobalPreCallback(
                 [](Unreal::UObject* context, const TCHAR* cmd, Unreal::FOutputDevice& ar, Unreal::UObject* executor) -> std::pair<bool, bool> {
                     return TRY([&] {
-                        auto command = File::StringType {ToCharTypePtr(cmd)};
+                        auto command = File::StringType{ToCharTypePtr(cmd)};
                         auto command_parts = explode_by_occurrence_with_quotes(command, STR(' '));
 
                         for (const auto& callback_data : m_process_console_exec_pre_callbacks)
@@ -4174,7 +4174,7 @@ Overloads:
         Unreal::Hook::RegisterProcessConsoleExecGlobalPostCallback(
                 [](Unreal::UObject* context, const TCHAR* cmd, Unreal::FOutputDevice& ar, Unreal::UObject* executor) -> std::pair<bool, bool> {
                     return TRY([&] {
-                        auto command = File::StringType {ToCharTypePtr(cmd)};
+                        auto command = File::StringType{ToCharTypePtr(cmd)};
                         auto command_parts = explode_by_occurrence_with_quotes(command, STR(' '));
 
                         for (const auto& callback_data : m_process_console_exec_post_callbacks)
@@ -4236,7 +4236,7 @@ Overloads:
             }
 
             return TRY([&] {
-                auto command = File::StringType {ToCharTypePtr(cmd)};
+                auto command = File::StringType{ToCharTypePtr(cmd)};
                 auto command_parts = explode_by_occurrence_with_quotes(command, STR(' '));
                 File::StringType command_name = command;
                 if (command_parts.size() > 1)

@@ -53,8 +53,7 @@ namespace RC::ParserBase
         RC_PB_API auto get_start_token_index_ref(PeekDirection peek_direction, Consume consume, size_t& fallback) const -> size_t&;
         // using PeekUntilCallable = bool(*)(const Token&);
         using PeekUntilCallable = std::function<bool(const Token&)>;
-        RC_PB_API auto peek_until_internal(Consume consume, const std::vector<int>& find_types, PeekUntilCallable, PeekDirection = PeekDirection::Forward) const
-                -> void;
+        RC_PB_API auto peek_until_internal(Consume consume, const std::vector<int>& find_types, PeekUntilCallable, PeekDirection = PeekDirection::Forward) const -> void;
         RC_PB_API auto peek_and_ignore_until_internal(Consume consume, const std::vector<int>& find_types, PeekDirection peek_direction) const -> const
                 class Token&;
         RC_PB_API auto peek_continually_internal(Consume consume, PeekUntilCallable) const -> bool;

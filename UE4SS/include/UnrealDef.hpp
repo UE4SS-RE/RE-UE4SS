@@ -72,11 +72,10 @@ namespace RC
     template <typename T>
     using TArray = Unreal::TArray<T>;
     using UFunction = Unreal::UFunction;
-    
+
     template <typename T1, typename T2, typename T3, typename T4>
     using TMap = Unreal::TMap<T1, T2, T3, T4>;
     using FMapProperty = Unreal::FMapProperty;
-    
 
     using UnrealScriptFunction = Unreal::UnrealScriptFunction;
     using FFrame = Unreal::FFrame;

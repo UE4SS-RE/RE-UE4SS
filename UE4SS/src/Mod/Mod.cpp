@@ -48,7 +48,6 @@
 #include <UnrealCustom/CustomProperty.hpp>
 #pragma warning(default : 4005)
 
-
 namespace RC
 {
 

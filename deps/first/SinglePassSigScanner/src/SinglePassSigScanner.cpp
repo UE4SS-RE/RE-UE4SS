@@ -488,8 +488,10 @@ namespace RC
         return pattern_data;
     }
 
-    auto SinglePassScanner::scanner_work_thread(uint8_t* start_address, uint8_t* end_address, SYSTEM_INFO& info, std::vector<SignatureContainer>& signature_containers)
-            -> void
+    auto SinglePassScanner::scanner_work_thread(uint8_t* start_address,
+                                                uint8_t* end_address,
+                                                SYSTEM_INFO& info,
+                                                std::vector<SignatureContainer>& signature_containers) -> void
     {
         ProfilerSetThreadName("UE4SS-ScannerWorkThread");
         ProfilerScope();

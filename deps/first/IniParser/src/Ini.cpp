@@ -41,8 +41,9 @@ namespace RC::Ini
         return tc;
     }
 
-    auto Parser::get_value(const File::StringType& section, const File::StringType& key, CanThrow can_throw) const
-            -> std::optional<std::reference_wrapper<const Value>>
+    auto Parser::get_value(const File::StringType& section,
+                           const File::StringType& key,
+                           CanThrow can_throw) const -> std::optional<std::reference_wrapper<const Value>>
     {
         if (!m_parsing_is_complete)
         {
@@ -106,8 +107,7 @@ namespace RC::Ini
         return get_list(section);
     }
 
-    auto Parser::get_string(const File::StringType& section, const File::StringType& key, const File::StringType& default_value) const noexcept
-            -> const File::StringType&
+    auto Parser::get_string(const File::StringType& section, const File::StringType& key, const File::StringType& default_value) const noexcept -> const File::StringType&
     {
         const auto maybe_value = get_value(section, key, CanThrow::No);
         if (!maybe_value.has_value())

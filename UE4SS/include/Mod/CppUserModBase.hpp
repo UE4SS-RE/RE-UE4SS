@@ -131,12 +131,14 @@ namespace RC
         {
         }
 
-        RC_UE4SS_API virtual auto render_tab() -> void{};
+        RC_UE4SS_API virtual auto render_tab() -> void {};
 
       protected:
         RC_UE4SS_API auto register_tab(StringViewType tab_name, GUI::GUITab::RenderFunctionType) -> void;
         RC_UE4SS_API auto register_keydown_event(Input::Key, const Input::EventCallbackCallable&, uint8_t custom_data = 0) -> void;
-        RC_UE4SS_API auto register_keydown_event(Input::Key, const Input::Handler::ModifierKeyArray&, const Input::EventCallbackCallable&, uint8_t custom_data = 0)
-                -> void;
+        RC_UE4SS_API auto register_keydown_event(Input::Key,
+                                                 const Input::Handler::ModifierKeyArray&,
+                                                 const Input::EventCallbackCallable&,
+                                                 uint8_t custom_data = 0) -> void;
     };
 } // namespace RC

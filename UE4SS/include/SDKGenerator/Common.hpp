@@ -41,8 +41,9 @@ namespace RC
         auto generate_delegate_name(Unreal::FProperty* property, const File::StringType& context_name) -> File::StringType;
         auto get_native_class_name(Unreal::UClass* uclass, bool interface_name = false) -> File::StringType;
         auto get_native_struct_name(Unreal::UScriptStruct* script_struct) -> File::StringType;
-        auto get_native_delegate_type_name(Unreal::UFunction* signature_function, Unreal::UClass* current_class = nullptr, bool strip_outer_name = false)
-                -> File::StringType;
+        auto get_native_delegate_type_name(Unreal::UFunction* signature_function,
+                                           Unreal::UClass* current_class = nullptr,
+                                           bool strip_outer_name = false) -> File::StringType;
         auto is_delegate_signature_function(Unreal::UFunction* signature_function) -> bool;
         auto strip_delegate_signature_postfix(Unreal::UFunction* signature_function) -> File::StringType;
     } // namespace UEGenerator
