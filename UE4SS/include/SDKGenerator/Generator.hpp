@@ -1,11 +1,12 @@
 #pragma once
 
+#include <File/File.hpp>
+
+#include <Unreal/NameTypes.hpp>
+
 #include <filesystem>
 #include <unordered_map>
 #include <unordered_set>
-
-#include <File/File.hpp>
-#include <Unreal/NameTypes.hpp>
 
 namespace RC::Unreal
 {

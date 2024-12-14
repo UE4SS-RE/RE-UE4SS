@@ -1,5 +1,7 @@
 #pragma once
 
+#include <cstdint>
+
 namespace RC::GUI::Dumpers
 {
     struct MapDumpFileName

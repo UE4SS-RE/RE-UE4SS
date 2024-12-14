@@ -1,9 +1,8 @@
 #include <LuaType/LuaUEnum.hpp>
 #include <LuaType/LuaUObject.hpp>
 #include <LuaType/LuaXEnumProperty.hpp>
-#pragma warning(disable : 4005)
+
 #include <Unreal/Property/FEnumProperty.hpp>
-#pragma warning(default : 4005)
 
 namespace RC::LuaType
 {

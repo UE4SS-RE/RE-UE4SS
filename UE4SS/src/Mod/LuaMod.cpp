@@ -1,40 +1,35 @@
 #define NOMINMAX
 
-#include <filesystem>
-#include <format>
-#include <limits>
-#include <memory>
-#include <stdexcept>
-#include <string>
-
-#include <DynamicOutput/DynamicOutput.hpp>
 #include <ExceptionHandling.hpp>
-#include <Helpers/Format.hpp>
-#include <Helpers/String.hpp>
-#include <Input/Handler.hpp>
+#include <GUI/Dumpers.hpp>
 #include <LuaLibrary.hpp>
-#include <LuaMadeSimple/LuaMadeSimple.hpp>
 #include <LuaType/LuaAActor.hpp>
 #include <LuaType/LuaCustomProperty.hpp>
 #include <LuaType/LuaFName.hpp>
-#include <LuaType/LuaFText.hpp>
 #include <LuaType/LuaFOutputDevice.hpp>
+#include <LuaType/LuaFText.hpp>
+#include <LuaType/LuaFURL.hpp>
 #include <LuaType/LuaModRef.hpp>
 #include <LuaType/LuaUClass.hpp>
 #include <LuaType/LuaUObject.hpp>
-#include <LuaType/LuaFURL.hpp>
 #include <Mod/CppMod.hpp>
 #include <Mod/LuaMod.hpp>
-#pragma warning(disable : 4005)
-#include <GUI/Dumpers.hpp>
 #include <UE4SSProgram.hpp>
 #include <USMapGenerator/Generator.hpp>
+#include <UnrealCustom/CustomProperty.hpp>
+
+#include <DynamicOutput/DynamicOutput.hpp>
+#include <Helpers/Format.hpp>
+#include <Helpers/String.hpp>
+#include <Input/Handler.hpp>
+#include <LuaMadeSimple/LuaMadeSimple.hpp>
+
 #include <Unreal/Core/HAL/Platform.hpp>
 #include <Unreal/FFrame.hpp>
-#include <Unreal/FURL.hpp>
-#include <Unreal/FWorldContext.hpp>
 #include <Unreal/FOutputDevice.hpp>
 #include <Unreal/FProperty.hpp>
+#include <Unreal/FURL.hpp>
+#include <Unreal/FWorldContext.hpp>
 #include <Unreal/Hooks.hpp>
 #include <Unreal/PackageName.hpp>
 #include <Unreal/Property/FArrayProperty.hpp>
@@ -59,8 +54,13 @@
 #include <Unreal/UObjectGlobals.hpp>
 #include <Unreal/UPackage.hpp>
 #include <Unreal/UnrealVersion.hpp>
-#include <UnrealCustom/CustomProperty.hpp>
-#pragma warning(default : 4005)
+
+#include <filesystem>
+#include <format>
+#include <limits>
+#include <memory>
+#include <stdexcept>
+#include <string>
 
 namespace RC
 {

@@ -1,11 +1,12 @@
 #pragma once
 
-#include <variant>
-#include <vector>
-
-#include "Tokens.hpp"
 #include <JSON/JSON.hpp>
 #include <ParserBase/TokenParser.hpp>
+
+#include "Tokens.hpp"
+
+#include <variant>
+#include <vector>
 // #include "Types.hpp"
 
 #define RC_JSON_PARSER_SCOPED_ELEMENT_TYPES JSON::Object*, JSON::Array*

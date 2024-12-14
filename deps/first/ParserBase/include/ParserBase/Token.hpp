@@ -1,11 +1,11 @@
 #pragma once
 
+#include <File/Macros.hpp>
+#include <ParserBase/Common.hpp>
+
 #include <memory>
 #include <string>
 #include <vector>
-
-#include <File/Macros.hpp>
-#include <ParserBase/Common.hpp>
 
 namespace RC::ParserBase
 {

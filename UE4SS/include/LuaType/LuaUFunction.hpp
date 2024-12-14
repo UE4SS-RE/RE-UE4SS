@@ -1,9 +1,10 @@
 #pragma once
 
-#include <array>
+#include <LuaType/LuaUObject.hpp>
 
 #include <LuaMadeSimple/LuaMadeSimple.hpp>
-#include <LuaType/LuaUObject.hpp>
+
+#include <array>
 
 namespace RC::Unreal
 {

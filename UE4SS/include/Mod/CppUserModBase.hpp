@@ -1,14 +1,14 @@
 #pragma once
 
+#include <Common.hpp>
+#include <GUI/GUITab.hpp>
+
+#include <File/Macros.hpp>
+#include <Input/Handler.hpp>
+#include <String/StringType.hpp>
+
 #include <memory>
 #include <vector>
-
-#include <Common.hpp>
-#include <File/Macros.hpp>
-#include <GUI/GUITab.hpp>
-#include <Input/Handler.hpp>
-
-#include <String/StringType.hpp>
 
 namespace RC
 {

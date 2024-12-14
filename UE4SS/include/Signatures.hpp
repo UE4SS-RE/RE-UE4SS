@@ -1,8 +1,9 @@
 #pragma once
 
-#include <functional>
-
 #include <String/StringType.hpp>
+
+#include <filesystem>
+#include <functional>
 
 namespace RC::Unreal::UnrealInitializer
 {

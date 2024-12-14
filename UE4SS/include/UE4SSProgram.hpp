@@ -1,27 +1,28 @@
 #pragma once
 
+#include <Common.hpp>
+#include <CrashDumper.hpp>
+#include <GUI/GUI.hpp>
+#include <GUI/GUITab.hpp>
+#include <LuaLibrary.hpp>
+#include <Mod/CppMod.hpp>
+#include <Mod/LuaMod.hpp>
+#include <Mod/Mod.hpp>
+#include <SettingsManager.hpp>
+
+#include <DynamicOutput/DynamicOutput.hpp>
+#include <Input/Handler.hpp>
+#include <MProgram.hpp>
+#include <String/StringType.hpp>
+
+#include <Unreal/Core/Containers/Array.hpp>
+#include <Unreal/UnrealVersion.hpp>
+
 #include <functional>
 #include <mutex>
 #include <string>
 #include <string_view>
 #include <thread>
-
-#include <Common.hpp>
-#include <CrashDumper.hpp>
-#include <DynamicOutput/DynamicOutput.hpp>
-#include <GUI/GUI.hpp>
-#include <GUI/GUITab.hpp>
-#include <Input/Handler.hpp>
-#include <LuaLibrary.hpp>
-#include <MProgram.hpp>
-#include <Mod/CppMod.hpp>
-#include <Mod/LuaMod.hpp>
-#include <Mod/Mod.hpp>
-#include <SettingsManager.hpp>
-#include <Unreal/Core/Containers/Array.hpp>
-#include <Unreal/UnrealVersion.hpp>
-
-#include <String/StringType.hpp>
 
 // Used to set up ImGui context and allocator in DLL mods
 #define UE4SS_ENABLE_IMGUI()                                                                                                                                   \

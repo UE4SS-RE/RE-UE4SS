@@ -1,13 +1,13 @@
 #ifndef UE4SS_REWRITTEN_FILEDEVICE_HPP
 #define UE4SS_REWRITTEN_FILEDEVICE_HPP
 
-#include <filesystem>
-#include <memory>
-
 #include <DynamicOutput/Common.hpp>
 #include <DynamicOutput/Macros.hpp>
 #include <DynamicOutput/OutputDevice.hpp>
 #include <File/File.hpp>
+
+#include <filesystem>
+#include <memory>
 
 namespace RC::Output
 {

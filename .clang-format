@@ -16,5 +16,38 @@ PenaltyBreakBeforeFirstCallParameter: 120
 PenaltyExcessCharacter: 5
 PointerAlignment: Left
 Standard: Latest
-SortIncludes: false
+SortIncludes: CaseSensitive
+# Uncomment MainIncludeChar when clang-format 19 is commonly used.
+#MainIncludeChar: "Any"
+IncludeBlocks: Regroup
+IncludeCategories:
+  # Unreal.
+  - Regex: '^<(Unreal\/)'
+    Priority: 3
+    CaseSensitive: true
+  # First-party dependencies.
+  - Regex: '^<ArgsParser|ASMHelper|Constructs|DynamicOutput|File|Function|Helpers|IniParser|Input|JSON|LuaMadeSimple|LuaRaw|MProgram|ParserBase|Profiler|ScopedTimer|SigScanner|String\/.+>'
+    Priority: 2
+    CaseSensitive: true
+  # UE4SS Project files.
+  - Regex: '^<[A-Z].+.hpp>'
+    Priority: 1
+    CaseSensitive: true
+  # C++ Standard files.
+  - Regex: '^<([^.]+)>$'
+    Priority: 97
+    CaseSensitive: true
+  # Windows.h.
+  - Regex: 'Windows.h'
+    Priority: 98
+    CaseSensitive: false
+  # Windows sub-headers.
+  - Regex: 'Psapi.h|ImageHlp.h|tchar.h|tlhelp32.h'
+    Priority: 99
+    CaseSensitive: false
+  # Everything else, and we use this to ensure Windows includes is actually at the bottom, without this it won't be.
+  # This includes third-party dependencies.
+  - Regex: '.+'
+    Priority: 96
+    CaseSensitive: false
 ...

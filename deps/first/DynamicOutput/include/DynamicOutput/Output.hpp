@@ -1,6 +1,15 @@
 #ifndef UE4SS_REWRITTEN_OUTPUT_HPP
 #define UE4SS_REWRITTEN_OUTPUT_HPP
 
+#include <DynamicOutput/Common.hpp>
+#include <DynamicOutput/Macros.hpp>
+#include <DynamicOutput/OutputDevice.hpp>
+#include <File/InternalFile.hpp>
+
+#include <fmt/chrono.h>
+#include <fmt/core.h>
+#include <fmt/xchar.h>
+
 #include <array>
 #include <format>
 #include <memory>
@@ -10,13 +19,6 @@
 #include <tuple>
 #include <typeinfo>
 #include <vector>
-#include <fmt/core.h>
-#include <fmt/xchar.h>
-#include <fmt/chrono.h>
-#include <DynamicOutput/Common.hpp>
-#include <DynamicOutput/Macros.hpp>
-#include <DynamicOutput/OutputDevice.hpp>
-#include <File/InternalFile.hpp>
 
 #if RC_IS_ANSI == 1
 #define RC_STD_MAKE_FORMAT_ARGS fmt::make_format_args

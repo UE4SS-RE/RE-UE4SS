@@ -3,7 +3,6 @@
 #include <ProtoParser/Token.hpp>
 #include <ProtoParser/TokenParser.hpp>
 #include <ProtoParser/Tokenizer.hpp>
-#include <String/StringType.hpp>
 
 #include <String/StringType.hpp>
 

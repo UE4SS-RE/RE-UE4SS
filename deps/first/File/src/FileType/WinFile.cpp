@@ -1,15 +1,16 @@
-#include <fstream>
-
 #include <File/File.hpp>
 #include <File/FileType/WinFile.hpp>
 #include <File/HandleTemplate.hpp>
+
+#include <fmt/core.h>
+
+#include <fstream>
 
 #define NOMINMAX
 #include <Windows.h>
 #ifdef TEXT
 #undef TEXT
 #endif
-#include <fmt/core.h>
 
 namespace RC::File
 {

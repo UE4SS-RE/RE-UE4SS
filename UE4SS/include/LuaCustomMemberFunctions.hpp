@@ -1,14 +1,15 @@
 #pragma once
 
-#include <unordered_map>
-
-#include <Unreal/Core/HAL/Platform.hpp>
 #include <Unreal/Core/Containers/ScriptArray.hpp>
+#include <Unreal/Core/HAL/Platform.hpp>
 #include <Unreal/Property/FArrayProperty.hpp>
 #include <Unreal/Property/FObjectProperty.hpp>
 #include <Unreal/UObject.hpp>
 #include <Unreal/UScriptStruct.hpp>
+
 #include <lua.hpp>
+
+#include <unordered_map>
 
 namespace RC
 {

@@ -1,12 +1,13 @@
-#include <cwctype>
-#include <format>
-
 #include <Helpers/String.hpp>
 #include <IniParser/TokenParser.hpp>
 #include <IniParser/Tokens.hpp>
 #include <IniParser/Value.hpp>
-#include <fmt/core.h>
 #include <ParserBase/Token.hpp>
+
+#include <fmt/core.h>
+
+#include <cwctype>
+#include <format>
 
 namespace RC::Ini
 {

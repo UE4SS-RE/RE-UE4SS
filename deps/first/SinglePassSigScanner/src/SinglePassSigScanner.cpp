@@ -1,14 +1,16 @@
+#include <Profiler/Profiler.hpp>
+#include <SigScanner/SinglePassSigScanner.hpp>
+
+#include <fmt/core.h>
+
 #include <format>
 #include <future>
 #include <regex>
 
 #define NOMINMAX
 #include <Windows.h>
-#include <Psapi.h>
 
-#include <fmt/core.h>
-#include <Profiler/Profiler.hpp>
-#include <SigScanner/SinglePassSigScanner.hpp>
+#include <Psapi.h>
 
 namespace RC
 {

@@ -1,21 +1,22 @@
-﻿#include <DynamicOutput/DynamicOutput.hpp>
+﻿#include <SDKGenerator/TMapOverrideGen.hpp>
+#include <SDKGenerator/UEHeaderGenerator.hpp>
+#include <UE4SSProgram.hpp>
+
+#include <DynamicOutput/DynamicOutput.hpp>
 #include <DynamicOutput/Output.hpp>
 #include <File/File.hpp>
 #include <File/Macros.hpp>
 #include <JSON/JSON.hpp>
-#include <SDKGenerator/TMapOverrideGen.hpp>
-#include <Unreal/Common.hpp>
-#include <Unreal/UObjectGlobals.hpp>
-#include <unordered_map>
 
-#pragma warning(disable : 4005)
-#include <SDKGenerator/UEHeaderGenerator.hpp>
-#include <UE4SSProgram.hpp>
-#include <USMapGenerator/writer.h>
+#include <Unreal/Common.hpp>
 #include <Unreal/Property/FMapProperty.hpp>
 #include <Unreal/UClass.hpp>
+#include <Unreal/UObjectGlobals.hpp>
 #include <Unreal/UScriptStruct.hpp>
-#pragma warning(default : 4005)
+
+#include <USMapGenerator/writer.h>
+
+#include <unordered_map>
 
 namespace RC::UEGenerator
 {

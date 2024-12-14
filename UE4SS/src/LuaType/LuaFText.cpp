@@ -1,5 +1,7 @@
-#include <DynamicOutput/DynamicOutput.hpp>
 #include <LuaType/LuaFText.hpp>
+
+#include <DynamicOutput/DynamicOutput.hpp>
+
 #include <Unreal/FString.hpp>
 #include <Unreal/FText.hpp>
 

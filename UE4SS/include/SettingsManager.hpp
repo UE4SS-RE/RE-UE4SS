@@ -1,11 +1,12 @@
 #pragma once
 
+#include <Common.hpp>
+#include <GUI/GUI.hpp>
+
+#include <File/File.hpp>
+
 #include <cstdint>
 #include <filesystem>
-
-#include <Common.hpp>
-#include <File/File.hpp>
-#include <GUI/GUI.hpp>
 
 namespace RC
 {

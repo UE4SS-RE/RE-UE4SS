@@ -1,14 +1,17 @@
-#define NOMINMAX
-#include <Windows.h>
+#include <DynamicOutput/DynamicOutput.hpp>
+#include <Helpers/String.hpp>
+
+#include "UE4SSProgram.hpp"
+
 #include <cstdio>
 #include <future>
 #include <iostream>
 #include <memory>
-#include <tlhelp32.h>
 
-#include "UE4SSProgram.hpp"
-#include <DynamicOutput/DynamicOutput.hpp>
-#include <Helpers/String.hpp>
+#define NOMINMAX
+#include <Windows.h>
+
+#include <tlhelp32.h>
 
 #define WIN_API_FUNCTION_NAME DllMain
 

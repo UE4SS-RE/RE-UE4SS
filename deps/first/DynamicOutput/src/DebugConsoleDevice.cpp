@@ -1,8 +1,8 @@
-#include <chrono>
-#include <locale>
-
 #include <DynamicOutput/DebugConsoleDevice.hpp>
 #include <DynamicOutput/Output.hpp>
+
+#include <chrono>
+#include <locale>
 
 #define NOMINMAX
 #include <Windows.h>

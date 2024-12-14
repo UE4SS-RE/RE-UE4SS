@@ -1,22 +1,17 @@
 #define NOMINMAX
 
-#include <filesystem>
-#include <format>
-#include <limits>
-#include <memory>
-#include <stdexcept>
-#include <string>
-
-#include <DynamicOutput/DynamicOutput.hpp>
 #include <ExceptionHandling.hpp>
-#include <Helpers/Format.hpp>
-#include <Helpers/String.hpp>
+#include <GUI/Dumpers.hpp>
 #include <Mod/LuaMod.hpp>
 #include <Mod/Mod.hpp>
-#pragma warning(disable : 4005)
-#include <GUI/Dumpers.hpp>
 #include <UE4SSProgram.hpp>
 #include <USMapGenerator/Generator.hpp>
+#include <UnrealCustom/CustomProperty.hpp>
+
+#include <DynamicOutput/DynamicOutput.hpp>
+#include <Helpers/Format.hpp>
+#include <Helpers/String.hpp>
+
 #include <Unreal/Core/HAL/Platform.hpp>
 #include <Unreal/FFrame.hpp>
 #include <Unreal/FOutputDevice.hpp>
@@ -45,8 +40,13 @@
 #include <Unreal/UObjectGlobals.hpp>
 #include <Unreal/UPackage.hpp>
 #include <Unreal/UnrealVersion.hpp>
-#include <UnrealCustom/CustomProperty.hpp>
-#pragma warning(default : 4005)
+
+#include <filesystem>
+#include <format>
+#include <limits>
+#include <memory>
+#include <stdexcept>
+#include <string>
 
 namespace RC
 {

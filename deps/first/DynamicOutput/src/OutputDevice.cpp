@@ -1,8 +1,10 @@
+#include <DynamicOutput/OutputDevice.hpp>
+
+#include <fmt/chrono.h>
+#include <fmt/xchar.h>
+
 #include <chrono>
 #include <format>
-#include <fmt/xchar.h>
-#include <fmt/chrono.h>
-#include <DynamicOutput/OutputDevice.hpp>
 
 namespace RC::Output
 {

@@ -1,16 +1,16 @@
-#include <format>
-
-#include <Helpers/Casting.hpp>
 #include <LuaType/LuaUObject.hpp>
 #include <LuaType/LuaUScriptStruct.hpp>
 #include <LuaType/LuaUStruct.hpp>
 #include <LuaType/LuaXStructProperty.hpp>
-#pragma warning(disable : 4005)
+
+#include <DynamicOutput/Output.hpp>
+#include <Helpers/Casting.hpp>
+
 #include <Unreal/FProperty.hpp>
 #include <Unreal/Property/FStructProperty.hpp>
 #include <Unreal/UScriptStruct.hpp>
-#pragma warning(default : 4005)
-#include <DynamicOutput/Output.hpp>
+
+#include <format>
 
 namespace RC::LuaType
 {

@@ -3,11 +3,11 @@
 
 // Define MPROGRAM_USE_EXCEPTIONS to enable exceptions
 
+#include <ErrorObject.hpp>
+
 #include <memory>
 #include <stdexcept>
 #include <utility>
-
-#include <ErrorObject.hpp>
 
 namespace RC
 {

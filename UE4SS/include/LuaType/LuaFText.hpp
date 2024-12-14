@@ -1,7 +1,8 @@
 #pragma once
 
-#include <LuaMadeSimple/LuaMadeSimple.hpp>
 #include <LuaType/LuaUObject.hpp>
+
+#include <LuaMadeSimple/LuaMadeSimple.hpp>
 
 namespace RC::Unreal
 {

@@ -1,12 +1,13 @@
 #pragma once
 
+#include <DynamicOutput/OutputDevice.hpp>
+
+#include <TextEditor.h>
+#include <imgui.h>
+
 #include <mutex>
 #include <string>
 #include <vector>
-
-#include <DynamicOutput/OutputDevice.hpp>
-#include <TextEditor.h>
-#include <imgui.h>
 
 using namespace RC;
 

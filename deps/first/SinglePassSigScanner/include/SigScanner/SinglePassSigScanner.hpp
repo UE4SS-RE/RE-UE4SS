@@ -1,11 +1,11 @@
 #pragma once
 
+#include <SigScanner/Common.hpp>
+
 #include <array>
 #include <functional>
 #include <mutex>
 #include <vector>
-
-#include <SigScanner/Common.hpp>
 
 #define HI_NIBBLE(b) (((b) >> 4) & 0x0F)
 #define LO_NIBBLE(b) ((b) & 0x0F)

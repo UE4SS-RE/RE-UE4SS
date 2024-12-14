@@ -1,10 +1,10 @@
 #pragma once
 
-#include <format>
-
 #include <File/Macros.hpp>
 #include <JSON/Common.hpp>
 #include <JSON/Value.hpp>
+
+#include <format>
 
 namespace RC::JSON
 {

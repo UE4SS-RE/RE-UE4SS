@@ -1,10 +1,10 @@
 #pragma once
 
+#include <String/StringType.hpp>
+
 #include <memory>
 #include <string>
 #include <vector>
-
-#include <String/StringType.hpp>
 
 namespace RC::Unreal
 {

@@ -1,8 +1,11 @@
-#include <DynamicOutput/DynamicOutput.hpp>
 #include <LuaLibrary.hpp>
+#include <Signatures.hpp>
+
+#include <DynamicOutput/DynamicOutput.hpp>
+#include <Helpers/String.hpp>
 #include <LuaMadeSimple/LuaMadeSimple.hpp>
 #include <SigScanner/SinglePassSigScanner.hpp>
-#include <Signatures.hpp>
+
 #include <Unreal/FMemory.hpp>
 #include <Unreal/FString.hpp>
 #include <Unreal/FText.hpp>
@@ -10,9 +13,8 @@
 #include <Unreal/UObject.hpp>
 #include <Unreal/UObjectArray.hpp>
 #include <Unreal/UnrealInitializer.hpp>
-#include <filesystem>
 
-#include <Helpers/String.hpp>
+#include <filesystem>
 
 namespace RC
 {

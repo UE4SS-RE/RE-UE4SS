@@ -1,27 +1,28 @@
-#include <GUI/GUI.hpp>
-
-#include <memory>
-
-#include <Profiler/Profiler.hpp>
-#include <DynamicOutput/DynamicOutput.hpp>
 #include <ExceptionHandling.hpp>
 #include <GUI/BPMods.hpp>
 #include <GUI/DX11.hpp>
 #include <GUI/Dumpers.hpp>
 #include <GUI/GLFW3_OpenGL3.hpp>
+#include <GUI/GUI.hpp>
 #include <GUI/Windows.hpp>
+#include <UE4SSProgram.hpp>
+
+#include <DynamicOutput/DynamicOutput.hpp>
+#include <Profiler/Profiler.hpp>
+
+#include <Unreal/UnrealInitializer.hpp>
+
 #include <fonts/droidsansfallback.cpp>
 
-#include <UE4SSProgram.hpp>
-#include <Unreal/UnrealInitializer.hpp>
+#include <memory>
 #ifdef TEXT
 #undef TEXT
 #endif
 
-#include "Roboto.hpp"
 #include "FaSolid900.hpp"
-#include <imgui.h>
+#include "Roboto.hpp"
 #include <IconsFontAwesome5.h>
+#include <imgui.h>
 #include <imgui_internal.h>
 
 namespace RC::GUI

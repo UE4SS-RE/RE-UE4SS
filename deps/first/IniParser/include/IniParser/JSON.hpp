@@ -1,10 +1,11 @@
 #pragma once
 
-#include <memory>
-#include <vector>
+#include <ProtoParser/TokenParser.hpp>
 
 #include <File/File.hpp>
-#include <ProtoParser/TokenParser.hpp>
+
+#include <memory>
+#include <vector>
 
 namespace RC::Parser
 {

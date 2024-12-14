@@ -1,8 +1,10 @@
 #pragma once
 
 #include <GUI/LiveView/Filter/SearchFilter.hpp>
-#include <Unreal/UClass.hpp>
+
 #include <Unreal/NameTypes.hpp>
+#include <Unreal/UClass.hpp>
+
 #include <vector>
 
 namespace RC::GUI::Filter

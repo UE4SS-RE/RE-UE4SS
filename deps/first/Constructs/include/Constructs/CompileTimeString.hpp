@@ -1,7 +1,7 @@
 #pragma once
-#include <cstdint>
 #include <algorithm>
 #include <array>
+#include <cstdint>
 #include <string_view>
 
 namespace RC

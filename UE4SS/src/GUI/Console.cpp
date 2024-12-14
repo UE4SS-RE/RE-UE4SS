@@ -1,13 +1,14 @@
-#include <ctype.h>
-#include <memory>
-
-#include <DynamicOutput/DynamicOutput.hpp>
 #include <GUI/Console.hpp>
 #include <GUI/GUI.hpp>
 #include <GUI/ImGuiUtility.hpp>
 #include <UE4SSProgram.hpp>
 
+#include <DynamicOutput/DynamicOutput.hpp>
+
+#include <ctype.h>
 #include <imgui_internal.h>
+
+#include <memory>
 
 namespace RC::GUI
 {

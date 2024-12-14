@@ -1,9 +1,9 @@
 #pragma once
 
-#include <stdexcept>
-
 #include <DynamicOutput/DynamicOutput.hpp>
 #include <Helpers/String.hpp>
+
+#include <stdexcept>
 
 #define UE4SS_ERROR_OUTPUTTER()                                                                                                                                \
     if (!Output::has_internal_error())                                                                                                                         \

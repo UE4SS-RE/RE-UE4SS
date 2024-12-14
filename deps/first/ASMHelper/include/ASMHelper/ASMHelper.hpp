@@ -1,6 +1,7 @@
 #pragma once
 
 #include <ASMHelper/Common.hpp>
+
 #include <Zydis/Zydis.h>
 
 namespace RC::ASM

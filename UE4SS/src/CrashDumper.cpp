@@ -1,15 +1,17 @@
 #include <CrashDumper.hpp>
-#include <string>
-#include <format>
-#include <bit>
-#include <fmt/chrono.h>
 #include <UE4SSProgram.hpp>
-#include <Unreal/Core/Windows/WindowsHWrapper.hpp>
-
-#include <polyhook2/PE/IatHook.hpp>
-#include <dbghelp.h>
 
 #include <String/StringType.hpp>
+
+#include <Unreal/Core/Windows/WindowsHWrapper.hpp>
+
+#include <dbghelp.h>
+#include <fmt/chrono.h>
+#include <polyhook2/PE/IatHook.hpp>
+
+#include <bit>
+#include <format>
+#include <string>
 
 namespace fs = std::filesystem;
 

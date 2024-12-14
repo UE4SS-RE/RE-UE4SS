@@ -1,18 +1,16 @@
 #include <vector>
 
 // writer.h is missing includes and I'd like to keep it unchanged so I'll include the missing files here instead.
-#include <Unreal/Common.hpp>
-#include <sstream>
-#include <string>
+#include <USMapGenerator/Generator.hpp>
 
 #include <DynamicOutput/DynamicOutput.hpp>
-#include <USMapGenerator/Generator.hpp>
-#include <USMapGenerator/writer.h>
+
+#include <Unreal/Common.hpp>
 #include <Unreal/NameTypes.hpp>
-#include <Unreal/Property/FSetProperty.hpp>
 #include <Unreal/Property/FArrayProperty.hpp>
 #include <Unreal/Property/FEnumProperty.hpp>
 #include <Unreal/Property/FMapProperty.hpp>
+#include <Unreal/Property/FSetProperty.hpp>
 #include <Unreal/Property/NumericPropertyTypes.hpp>
 #include <Unreal/UClass.hpp>
 #include <Unreal/UEnum.hpp>
@@ -22,6 +20,10 @@
 #include <Unreal/UnrealVersion.hpp>
 
 #include "UE4SSProgram.hpp"
+#include <USMapGenerator/writer.h>
+
+#include <sstream>
+#include <string>
 
 namespace RC::OutTheShade
 {

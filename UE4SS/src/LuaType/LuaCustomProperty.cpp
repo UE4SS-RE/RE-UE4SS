@@ -1,12 +1,11 @@
-#include <bit>
-
 #include <LuaType/LuaCustomProperty.hpp>
-#pragma warning(disable : 4005)
+#include <UnrealCustom/CustomProperty.hpp>
+
 #include <Unreal/FProperty.hpp>
 #include <Unreal/UClass.hpp>
 #include <Unreal/UnrealVersion.hpp>
-#include <UnrealCustom/CustomProperty.hpp>
-#pragma warning(default : 4005)
+
+#include <bit>
 
 namespace RC::LuaType
 {

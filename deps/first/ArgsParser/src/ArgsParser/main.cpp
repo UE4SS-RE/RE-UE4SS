@@ -1,6 +1,6 @@
-#include <iostream>
-
 #include <ArgsParser/ArgsParser.hpp>
+
+#include <iostream>
 
 using namespace RC;
 

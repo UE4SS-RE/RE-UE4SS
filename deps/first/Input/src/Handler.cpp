@@ -1,6 +1,6 @@
-#include <array>
-
 #include <Input/Handler.hpp>
+
+#include <array>
 
 #define NOMINMAX
 #include <Windows.h>

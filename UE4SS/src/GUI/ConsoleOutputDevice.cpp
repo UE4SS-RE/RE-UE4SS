@@ -1,8 +1,8 @@
-#include <chrono>
-#include <locale>
-
 #include <GUI/ConsoleOutputDevice.hpp>
 #include <UE4SSProgram.hpp>
+
+#include <chrono>
+#include <locale>
 
 namespace RC::Output
 {

@@ -1,13 +1,13 @@
 #pragma once
 
-#include <vector>
-
-#include <Unreal/Core/Windows/MinimalWindowsApi.hpp>
-
 #include <Mod/CppUserModBase.hpp>
 #include <Mod/Mod.hpp>
 
 #include <String/StringType.hpp>
+
+#include <Unreal/Core/Windows/MinimalWindowsApi.hpp>
+
+#include <vector>
 
 namespace RC
 {

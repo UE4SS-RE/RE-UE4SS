@@ -1,11 +1,10 @@
 #pragma once
 
+#include <File/File.hpp>
+#include <String/StringType.hpp>
+
 #include <functional>
 #include <unordered_map>
-
-#include <File/File.hpp>
-
-#include <String/StringType.hpp>
 
 namespace RC::ObjectDumper
 {

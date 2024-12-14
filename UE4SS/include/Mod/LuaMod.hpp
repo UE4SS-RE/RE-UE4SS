@@ -1,19 +1,19 @@
 #pragma once
 
+#include <Common.hpp>
+#include <Mod/Mod.hpp>
+
+#include <File/File.hpp>
+#include <LuaMadeSimple/LuaMadeSimple.hpp>
+#include <String/StringType.hpp>
+
 #include <chrono>
+#include <filesystem>
 #include <mutex>
 #include <string>
 #include <thread>
 #include <unordered_map>
 #include <unordered_set>
-#include <filesystem>
-
-#include <Common.hpp>
-#include <File/File.hpp>
-#include <LuaMadeSimple/LuaMadeSimple.hpp>
-#include <Mod/Mod.hpp>
-
-#include <String/StringType.hpp>
 
 namespace RC
 {

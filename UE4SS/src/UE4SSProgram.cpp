@@ -1,29 +1,7 @@
-#define NOMINMAX
-
-#include <Windows.h>
-
-#ifdef TEXT
-#undef TEXT
-#endif
-
-#include <algorithm>
-#include <cwctype>
-#include <format>
-#include <fstream>
-#include <limits>
-#include <unordered_set>
-#include <fmt/chrono.h>
-#include <Profiler/Profiler.hpp>
-#include <DynamicOutput/DynamicOutput.hpp>
 #include <ExceptionHandling.hpp>
 #include <GUI/ConsoleOutputDevice.hpp>
 #include <GUI/GUI.hpp>
 #include <GUI/LiveView.hpp>
-#include <Helpers/ASM.hpp>
-#include <Helpers/Format.hpp>
-#include <Helpers/Integer.hpp>
-#include <Helpers/String.hpp>
-#include <IniParser/Ini.hpp>
 #include <LuaLibrary.hpp>
 #include <LuaType/LuaCustomProperty.hpp>
 #include <LuaType/LuaUObject.hpp>
@@ -33,18 +11,28 @@
 #include <ObjectDumper/ObjectToString.hpp>
 #include <SDKGenerator/Generator.hpp>
 #include <SDKGenerator/UEHeaderGenerator.hpp>
-#include <SigScanner/SinglePassSigScanner.hpp>
 #include <Signatures.hpp>
-#include <Timer/ScopedTimer.hpp>
 #include <UE4SSProgram.hpp>
+#include <UnrealDef.hpp>
+
+#include <DynamicOutput/DynamicOutput.hpp>
+#include <Helpers/ASM.hpp>
+#include <Helpers/Format.hpp>
+#include <Helpers/Integer.hpp>
+#include <Helpers/String.hpp>
+#include <IniParser/Ini.hpp>
+#include <Profiler/Profiler.hpp>
+#include <SigScanner/SinglePassSigScanner.hpp>
+#include <Timer/ScopedTimer.hpp>
+
 #include <Unreal/AGameMode.hpp>
 #include <Unreal/AGameModeBase.hpp>
+#include <Unreal/Core/Templates/Tuple.hpp>
 #include <Unreal/GameplayStatics.hpp>
 #include <Unreal/Searcher/ObjectSearcher.hpp>
-#include <Unreal/Core/Templates/Tuple.hpp>
-#include <Unreal/UEngine.hpp>
 #include <Unreal/TypeChecker.hpp>
 #include <Unreal/UActorComponent.hpp>
+#include <Unreal/UEngine.hpp>
 #include <Unreal/UInterface.hpp>
 #include <Unreal/UKismetSystemLibrary.hpp>
 #include <Unreal/ULocalPlayer.hpp>
@@ -53,9 +41,24 @@
 #include <Unreal/UScriptStruct.hpp>
 #include <Unreal/UnrealInitializer.hpp>
 #include <Unreal/World.hpp>
-#include <UnrealDef.hpp>
 
+#include <fmt/chrono.h>
 #include <polyhook2/PE/IatHook.hpp>
+
+#include <algorithm>
+#include <cwctype>
+#include <format>
+#include <fstream>
+#include <limits>
+#include <unordered_set>
+
+#define NOMINMAX
+
+#include <Windows.h>
+
+#ifdef TEXT
+#undef TEXT
+#endif
 
 namespace RC
 {

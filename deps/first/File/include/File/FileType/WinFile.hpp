@@ -1,11 +1,11 @@
 #pragma once
 
-#include <filesystem>
-#include <format>
-
 #include <File/Common.hpp>
 #include <File/FileType/FileBase.hpp>
 #include <File/Macros.hpp>
+
+#include <filesystem>
+#include <format>
 
 namespace RC::File
 {
