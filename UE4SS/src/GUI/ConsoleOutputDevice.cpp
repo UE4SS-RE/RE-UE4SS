@@ -1,5 +1,6 @@
 #include <chrono>
 #include <locale>
+#include <sstream>
 
 #include <GUI/ConsoleOutputDevice.hpp>
 #include <UE4SSProgram.hpp>
@@ -27,7 +28,12 @@ namespace RC::Output
             fmt_copy.pop_back();
         }
         auto color = static_cast<Color::Color>(optional_arg);
-        UE4SSProgram::get_program().get_debugging_ui().get_console().add_line(m_formatter(fmt_copy), color);
+        auto formatted_message = m_formatter(fmt_copy);
+        std::wstringstream stream{formatted_message};
+        for (File::StringType line; std::getline(stream, line);)
+        {
+            UE4SSProgram::get_program().get_debugging_ui().get_console().add_line(line, color);
+        }
 #endif
     }
 } // namespace RC::Output
