@@ -55,8 +55,6 @@
 #include <Unreal/World.hpp>
 #include <UnrealDef.hpp>
 
-#include <polyhook2/PE/IatHook.hpp>
-
 namespace RC
 {
     // Commented out because this system (turn off hotkeys when in-game console is open) it doesn't work properly.
@@ -132,7 +130,7 @@ namespace RC
     void* HookedLoadLibraryA(const char* dll_name)
     {
         UE4SSProgram& program = UE4SSProgram::get_program();
-        HMODULE lib = PLH::FnCast(program.m_hook_trampoline_load_library_a, &LoadLibraryA)(dll_name);
+        HMODULE lib = program.m_load_library_a_hook.call<HMODULE>(dll_name);
         program.fire_dll_load_for_cpp_mods(ensure_str(dll_name));
         return lib;
     }
@@ -140,7 +138,7 @@ namespace RC
     void* HookedLoadLibraryExA(const char* dll_name, void* file, int32_t flags)
     {
         UE4SSProgram& program = UE4SSProgram::get_program();
-        HMODULE lib = PLH::FnCast(program.m_hook_trampoline_load_library_ex_a, &LoadLibraryExA)(dll_name, file, flags);
+        HMODULE lib = program.m_load_library_ex_a_hook.call<HMODULE>(dll_name, file, flags);
         program.fire_dll_load_for_cpp_mods(ensure_str(dll_name));
         return lib;
     }
@@ -148,7 +146,7 @@ namespace RC
     void* HookedLoadLibraryW(const wchar_t* dll_name)
     {
         UE4SSProgram& program = UE4SSProgram::get_program();
-        HMODULE lib = PLH::FnCast(program.m_hook_trampoline_load_library_w, &LoadLibraryW)(dll_name);
+        HMODULE lib = program.m_load_library_w_hook.call<HMODULE>(dll_name);
         program.fire_dll_load_for_cpp_mods(ToCharTypePtr(dll_name));
         return lib;
     }
@@ -156,7 +154,7 @@ namespace RC
     void* HookedLoadLibraryExW(const wchar_t* dll_name, void* file, int32_t flags)
     {
         UE4SSProgram& program = UE4SSProgram::get_program();
-        HMODULE lib = PLH::FnCast(program.m_hook_trampoline_load_library_ex_w, &LoadLibraryExW)(dll_name, file, flags);
+        HMODULE lib = program.m_load_library_ex_w_hook.call<HMODULE>(dll_name, file, flags);
         program.fire_dll_load_for_cpp_mods(ToCharTypePtr(dll_name));
         return lib;
     }
@@ -234,35 +232,10 @@ namespace RC
 #define UE4SS_COMPILER STR("MSVC")
 #endif
 
-            Output::send(STR("UE4SS Build Configuration: {} ({})\n"), ensure_str(UE4SS_CONFIGURATION), UE4SS_COMPILER);
-
-            m_load_library_a_hook = std::make_unique<PLH::IatHook>("kernel32.dll",
-                                                                   "LoadLibraryA",
-                                                                   std::bit_cast<uint64_t>(&HookedLoadLibraryA),
-                                                                   &m_hook_trampoline_load_library_a,
-                                                                   L"");
-            m_load_library_a_hook->hook();
-
-            m_load_library_ex_a_hook = std::make_unique<PLH::IatHook>("kernel32.dll",
-                                                                      "LoadLibraryExA",
-                                                                      std::bit_cast<uint64_t>(&HookedLoadLibraryExA),
-                                                                      &m_hook_trampoline_load_library_ex_a,
-                                                                      L"");
-            m_load_library_ex_a_hook->hook();
-
-            m_load_library_w_hook = std::make_unique<PLH::IatHook>("kernel32.dll",
-                                                                   "LoadLibraryW",
-                                                                   std::bit_cast<uint64_t>(&HookedLoadLibraryW),
-                                                                   &m_hook_trampoline_load_library_w,
-                                                                   L"");
-            m_load_library_w_hook->hook();
-
-            m_load_library_ex_w_hook = std::make_unique<PLH::IatHook>("kernel32.dll",
-                                                                      "LoadLibraryExW",
-                                                                      std::bit_cast<uint64_t>(&HookedLoadLibraryExW),
-                                                                      &m_hook_trampoline_load_library_ex_w,
-                                                                      L"");
-            m_load_library_ex_w_hook->hook();
+            m_load_library_a_hook = safetyhook::create_inline(LoadLibraryA, HookedLoadLibraryA);
+            m_load_library_ex_a_hook = safetyhook::create_inline(LoadLibraryExA, HookedLoadLibraryExA);
+            m_load_library_w_hook = safetyhook::create_inline(LoadLibraryW, HookedLoadLibraryW);
+            m_load_library_ex_w_hook = safetyhook::create_inline(LoadLibraryExW, HookedLoadLibraryExW);
 
             Unreal::UnrealInitializer::SetupUnrealModules();
 
