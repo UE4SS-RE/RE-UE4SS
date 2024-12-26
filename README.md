@@ -202,6 +202,18 @@ Here's an example of a full command that will build Windows binaries on a Linux 
 xmake f -m "Game__Shipping__Win64" -p windows -a x64 --sdk=/home/<username>/my_msvc/opt/msvc --versionCheck=n --ue4ssCross=msvc-wine
 ```
 
+### Debugging under wine
+
+Debugging can be done using `winedbg`.  
+You can also debug minidumps:
+
+```bash
+winedbg crash_2024_12_26_07_39_15.dmp
+```
+
+Keep in mind that debugging symbols are not stored in the dmp file, and you must have the exact same symbol file (PDB) that your UE4SS.dll was built with.  
+The easiest way to make sure that you have the correct symbols is to build the exact commit that the dmp file was generated from.
+
 ## Updating git submodules
 
 If you want to update git submodules, you do so one of three ways:
