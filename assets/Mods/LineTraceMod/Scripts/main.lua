@@ -11,11 +11,11 @@ local IsInitialized = false
 local function Init()
     if not GetKismetSystemLibrary():IsValid() then error("KismetSystemLibrary not valid\n") end
     
-    print(string.format("KismetSystemLibrary: %s\n", GetKismetSystemLibrary():GetFullName()))
+    print(string.format("[LineTraceMod] KismetSystemLibrary: %s\n", GetKismetSystemLibrary():GetFullName()))
     
     if not GetKismetMathLibrary():IsValid() then error("KismetMathLibrary not valid\n") end
     
-    print(string.format("KismetMathLibrary: %s\n", GetKismetMathLibrary():GetFullName()))
+    print(string.format("[LineTraceMod] KismetMathLibrary: %s\n", GetKismetMathLibrary():GetFullName()))
 
     IsInitialized = true
 end
@@ -51,7 +51,7 @@ local function GetObjectName()
     local ETraceTypeQuery_TraceTypeQuery1 = 0
     local ActorsToIgnore = {
     }
-    print("Doing line trace\n")
+    print("[LineTraceMod] Doing line trace\n")
     local HitResult = {}
     local WasHit = GetKismetSystemLibrary():LineTraceSingle(
         PlayerPawn,
@@ -70,9 +70,9 @@ local function GetObjectName()
 
     if WasHit then
         HitActor = GetActorFromHitResult(HitResult)
-        print(string.format("HitActor: %s\n", HitActor:GetFullName()))
+        print(string.format("[LineTraceMod] HitActor: %s\n", HitActor:GetFullName()))
     else
-        return print("Nothing hit.\n")
+        return print("[LineTraceMod] Nothing hit.\n")
     end
 end
 
