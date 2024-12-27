@@ -4,7 +4,7 @@ local VerboseLogging = false
 
 local function Log(Message, OnlyLogIfVerbose)
     if not VerboseLogging and OnlyLogIfVerbose then return end
-    print(Message)
+    print("[BPModLoaderMod] " .. Message)
 end
 
 package.path = '.\\Mods\\ModLoaderMod\\?.lua;' .. package.path
@@ -211,11 +211,11 @@ local function LoadMod(ModName, ModInfo, World)
 			local ObjectPath = AssetData.ObjectPath and AssetData.ObjectPath:ToString() or ""
 			local PackageName = AssetData.PackageName and AssetData.PackageName:ToString() or ""
 			local AssetName = AssetData.AssetName and AssetData.AssetName:ToString() or ""
-			Log(string.format("ModClass for '%s' is not valid\nObjectPath: %s\nPackageName: %s\nAssetName: %s", ModName, ObjectPath,PackageName, AssetName))
+			Log(string.format("ModClass for '%s' is not valid\nObjectPath: %s\nPackageName: %s\nAssetName: %s\n", ModName, ObjectPath,PackageName, AssetName))
 			return
 		end
 
-        if not World:IsValid() then Log(string.format("World is not valid for '%s' to spawn in", ModName)) return end
+        if not World:IsValid() then Log(string.format("World is not valid for '%s' to spawn in\n", ModName)) return end
 
         local Actor = World:SpawnActor(ModClass, {}, {})
         if not Actor:IsValid() then
