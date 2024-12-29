@@ -2624,7 +2624,7 @@ Overloads:
             std::string error_overload_not_found{R"(
 No overload found for function 'FindObject'.
 Overloads:
-#1: FindObject(UClass InClass, UObject InOuter, string Name, bool ExactClass)
+#1: FindObject(UClass InClass, UObject|UClass InOuter, string Name, bool ExactClass)
 #2: FindObject(string|FName|nil ClassName, string|FName|nil ObjectShortName, EObjectFlags RequiredFlags, EObjectFlags BannedFlags)
 #3: FindObject(UClass|nil Class, string|FName|nil ObjectShortName, EObjectFlags RequiredFlags, EObjectFlags BannedFlags))"};
 
@@ -2691,9 +2691,14 @@ Overloads:
                 auto& userdata = lua.get_userdata<LuaType::UE4SSBaseObject>(1, true);
                 std::string_view lua_object_name = userdata.get_object_name();
                 // TODO: Redo when there's a bette way of checking whether a lua object is derived from UObject
-                if (lua_object_name == "UObject" || lua_object_name == "UWorld" || lua_object_name == "AActor")
+                if (lua_object_name == "UObject" || lua_object_name == "UWorld" || lua_object_name == "AActor" || lua_object_name == "UClass")
                 {
-                    in_outer = lua.get_userdata<LuaType::UObject>().get_remote_cpp_object();
+                    if (lua_object_name == "UClass") {
+                        in_outer = lua.get_userdata<LuaType::UClass>().get_remote_cpp_object();
+                    }
+                    else {
+                        in_outer = lua.get_userdata<LuaType::UObject>().get_remote_cpp_object();
+                    }
                     could_be_in_outer = true;
                 }
                 else if (lua_object_name == "FName")
