@@ -1,7 +1,7 @@
 GlobalAr = nil
 
 function Log(Message)
-    print(Message .. "\n")
+    print("[ConsoleCommandsMod] " .. Message .. "\n")
     if type(GlobalAr) == "userdata" and GlobalAr:type() == "FOutputDevice" then
         GlobalAr:Log(Message)
     end

@@ -20,6 +20,6 @@ RegisterHook("/Script/Engine.PlayerController:ClientRestart", function(self, New
         PlayerController.CheatManager = CreatedCheatManager
         print("[CheatManager Creator] Enabled CheatManager\n")
     else
-        print("[CheatManager Creator] Was unable to construct CheatManager, therefor, could not enable Cheat Manager\n")
+        print("[CheatManager Creator] Was unable to construct CheatManager, therefore, could not enable Cheat Manager\n")
     end
 end)
