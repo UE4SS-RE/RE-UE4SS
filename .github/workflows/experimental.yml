@@ -65,11 +65,30 @@ jobs:
       - name: Package
         run: python tools/buildscripts/release.py package -e
 
-      - name: Release
+      - name: Make Archival Experimental Release
         uses: softprops/action-gh-release@v1
         with:
           prerelease: true
           tag_name: experimental
+          body_path: release/release_notes.md
+          files: |
+            release/UE4SS_v*.zip
+            release/zDEV-UE4SS_v*.zip
+            release/zCustomGameConfigs.zip
+            release/zMapGenBP.zip
+
+      - name: Delete old release assets
+        uses: mknejp/delete-release-assets@v1
+        with:
+          token: ${{ github.token }}
+          tag: experimental-latest
+          assets: '*'
+
+      - name: Make Permanent Latest Release
+        uses: softprops/action-gh-release@v1
+        with:
+          prerelease: true
+          tag_name: experimental-latest
           body_path: release/release_notes.md
           files: |
             release/UE4SS_v*.zip
