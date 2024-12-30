@@ -162,7 +162,7 @@ Fixed `RegisterProcessConsoleExecPostHook`. ([UE4SS #631](https://github.com/UE4
 
 Fixed `FindFirstOf` return type annotation in `Types.lua` to signal that the return value will never be nil. ([UE4SS #652](https://github.com/UE4SS-RE/RE-UE4SS/issues/652))
 
-Fixed `FindObject` not accepting UClass as a valid outer parameter.
+Fixed `FindObject` not accepting UClass as a valid outer parameter. ([UE4SS #732](https://github.com/UE4SS-RE/RE-UE4SS/issues/732)) - GhostyPool
 
 ### C++ API
 Fixed a crash caused by a race condition enabled by C++ mods using `UE4SS_ENABLE_IMGUI` in their constructor ([UE4SS #481](https://github.com/UE4SS-RE/RE-UE4SS/pull/481))
