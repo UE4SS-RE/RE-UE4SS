@@ -9,6 +9,7 @@ add_requires("glfw 3.3.9", { debug = is_mode_debug() , configs = {runtimes = get
 add_requires("opengl", { debug = is_mode_debug(), configs = {runtimes = get_mode_runtimes()} })
 add_requires("glaze v2.9.5", { debug = is_mode_debug(), configs = {runtimes = get_mode_runtimes()} })
 add_requires("fmt 10.2.1", { debug = is_mode_debug(), configs = {runtimes = get_mode_runtimes()} })
+add_requires("safetyhook v0.4.1", { debug = is_mode_debug(), configs = {runtimes = get_mode_runtimes()} })
 
 option("ue4ssBetaIsStarted")
     set_default(true)
@@ -79,7 +80,7 @@ target(projectName)
 
     add_packages("imgui", "ImGuiTextEdit", "IconFontCppHeaders", "glfw", "opengl", { public = true })
 
-    add_packages("glaze", "polyhook_2", { public = true })
+    add_packages("glaze", "safetyhook", "polyhook_2", { public = true })
 
     add_links("dbghelp", "psapi", "d3d11", { public = true })
 
