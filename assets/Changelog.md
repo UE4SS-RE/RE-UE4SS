@@ -2,190 +2,215 @@ v3.1.0
 ==============
 TBD
 
-some notes about most important changes such as:
-- changing of default ue4ss install location, overriding and its backwards compatibility
-- new build system
-- linux port
+some notes about most important changes such as: 
+- changing of default ue4ss install location, overriding and its backwards compatibility 
+- new build system 
+- linux port 
 
 ## New
-Added support for UE Version 5.5 - ([UE4SS #708](https://github.com/UE4SS-RE/RE-UE4SS/pull/708))
-Added support for UE Version 5.4 - ([UE4SS #503](https://github.com/UE4SS-RE/RE-UE4SS/pull/503))
-Added basic support for Development/Debug/Test built Unreal Engine games ([UE4SS #607](https://github.com/UE4SS-RE/RE-UE4SS/pull/607))
-- To use this functionality, set DebugBuild to true in UE4SS-Settings.ini
+Added support for UE Version 5.5 - ([UE4SS #708](https://github.com/UE4SS-RE/RE-UE4SS/pull/708)) 
 
-Added new build definition "LessEqual421".  Using this definition for games on UE<=4.21 is not mandatory for UE4SS to function, but will ensure the correct alignment is used in containers.
-**BREAKING:** - This also changes the default FName alignment from 8 to 4.
-- To use this functionality, enter LessEqual421 in the <Target> section of the XMake configuration command.
+Added support for UE Version 5.4 - ([UE4SS #503](https://github.com/UE4SS-RE/RE-UE4SS/pull/503)) 
+
+Added basic support for Development/Debug/Test built Unreal Engine games ([UE4SS #607](https://github.com/UE4SS-RE/RE-UE4SS/pull/607)) 
+- To use this functionality, set DebugBuild to true in UE4SS-Settings.ini 
+
+Added new build definition "LessEqual421".  Using this definition for games on UE<=4.21 is not mandatory for UE4SS to function, but will ensure the correct alignment is used in containers. 
+
+**BREAKING:** - This also changes the default FName alignment from 8 to 4. 
+- To use this functionality, enter LessEqual421 in the <Target> section of the XMake configuration command. 
 
 ### General
-UE Platform support, which allows for much easier internal implementation of new Unreal classes ([UEPseudo #80](https://github.com/Re-UE4SS/UEPseudo/pull/80)) - narknon, localcc
+UE Platform support, which allows for much easier internal implementation of new Unreal classes ([UEPseudo #80](https://github.com/Re-UE4SS/UEPseudo/pull/80)) - narknon, localcc 
 
 Added new installation method by allowing overriding of the location of the `UE4SS.dll`, [documentation](https://docs.ue4ss.com/installation-guide.html#overriding-install-location). - ([UE4SS #506](https://github.com/UE4SS-RE/RE-UE4SS/pull/506)) - Buckminsterfullerene 
 
-Add Github alerts pre-processor support to the documentation system ([UE4SS #611](https://github.com/UE4SS-RE/RE-UE4SS/pull/611)) - Buckminsterfullerene
+Add Github alerts pre-processor support to the documentation system ([UE4SS #611](https://github.com/UE4SS-RE/RE-UE4SS/pull/611)) - Buckminsterfullerene 
 
-Added custom game configurations for Abiotic Factor ([UE4SS #709](https://github.com/UE4SS-RE/RE-UE4SS/pull/709))
+Added custom game configurations for Abiotic Factor ([UE4SS #709](https://github.com/UE4SS-RE/RE-UE4SS/pull/709)) 
 
-Added custom game configurations for Psychonauts 2 ([UE4SS #731](https://github.com/UE4SS-RE/RE-UE4SS/pull/731))
+Added custom game configurations for Psychonauts 2 ([UE4SS #731](https://github.com/UE4SS-RE/RE-UE4SS/pull/731)) 
 
 ### Live View 
-Added search filter: `IncludeClassNames`. ([UE4SS #472](https://github.com/UE4SS-RE/RE-UE4SS/pull/472)) - Buckminsterfullerene
+Added search filter: `IncludeClassNames`. ([UE4SS #472](https://github.com/UE4SS-RE/RE-UE4SS/pull/472)) - Buckminsterfullerene 
 
-### UHT Dumper
+### UHT Dumper 
 
-### Lua API
+### Lua API 
 
 Added global function `CreateInvalidObject`, which returns an invalid UObject. ([UE4SS #652](https://github.com/UE4SS-RE/RE-UE4SS/issues/652))  
+
 Added GenerateLuaTypes function. ([UE4SS #664](https://github.com/UE4SS-RE/RE-UE4SS/pull/664))  
+
 Added global Dumpers functions to Types.lua. ([UE4SS #664](https://github.com/UE4SS-RE/RE-UE4SS/pull/664))  
 
-#### Types.lua [PR #650](https://github.com/UE4SS-RE/RE-UE4SS/pull/650)
-- Added `NAME_None` definition
-- Added `EFindName` enum definition
-- Added `FName` function overloads with FindType parameter
+#### Types.lua [PR #650](https://github.com/UE4SS-RE/RE-UE4SS/pull/650) 
+- Added `NAME_None` definition 
+- Added `EFindName` enum definition 
+- Added `FName` function overloads with FindType parameter 
 
-#### UEHelpers
+#### UEHelpers 
 - Added function `GetPlayer` which is just a fast way to get player controlled Pawn (the majority of the time it will be the player character) [PR #650](https://github.com/UE4SS-RE/RE-UE4SS/pull/650)
+  
 - Added functions: `GetEngine`, `GetGameInstance`, `GetGameViewportClient`,  `GetGameModeBase`, `GetGameStateBase`,`GetPersistentLevel` and `GetWorldSettings` [PR #650](https://github.com/UE4SS-RE/RE-UE4SS/pull/650)
+  
 - Added functions to get static objects: `GetKismetStringLibrary`, `GetKismetTextLibrary` [PR #650](https://github.com/UE4SS-RE/RE-UE4SS/pull/650)
+  
 - Added function `GetActorFromHitResult` which extracts the hit actor from a `FHitResult` struct based on UE's version [PR #650](https://github.com/UE4SS-RE/RE-UE4SS/pull/650)
-- Added FName utility functions [PR #650](https://github.com/UE4SS-RE/RE-UE4SS/pull/650):
-  - `FindFName`: wrapper for `FName(Name, EFindName.FNAME_Find)`
+  
+- Added FName utility functions [PR #650](https://github.com/UE4SS-RE/RE-UE4SS/pull/650): 
+  - `FindFName`: wrapper for `FName(Name, EFindName.FNAME_Find)` 
   - `AddFName`: wrapper for  `FName(Name, EFindName.FNAME_Add)`
+    
 - Added [Lua Server Annotations](https://luals.github.io/wiki/annotations/) to all UEHelpers functions [PR #650](https://github.com/UE4SS-RE/RE-UE4SS/pull/650)
-- Added functions `GetAllPlayerStates` and `GetAllPlayers` [PR #688](https://github.com/UE4SS-RE/RE-UE4SS/pull/688)
+  
+- Added functions `GetAllPlayerStates` and `GetAllPlayers` [PR #688](https://github.com/UE4SS-RE/RE-UE4SS/pull/688) 
 
-### C++ API
+### C++ API 
 Key binds created with `UE4SSProgram::register_keydown_event` end up being duplicated upon mod hot-reload.  
+
 To fix this, `CppUserModBase::register_keydown_event` has been introduced.  
-It's used exactly the same way except without the `UE4SSProgram::` part. ([UE4SS #446](https://github.com/UE4SS-RE/RE-UE4SS/pull/446))
+
+It's used exactly the same way except without the `UE4SSProgram::` part. ([UE4SS #446](https://github.com/UE4SS-RE/RE-UE4SS/pull/446)) 
 
 Added `on_ui_init()`, it fires when the UI is initialized.  
-It's intended to use the `UE4SS_ENABLE_IMGUI` macro in this function.  
-Failing to do so will cause a crash when you try to render something with imgui.
 
-BREAKING: Changed `FTransform` constructor to be identical to unreal.
+It's intended to use the `UE4SS_ENABLE_IMGUI` macro in this function.  
+
+Failing to do so will cause a crash when you try to render something with imgui. 
+
+BREAKING: Changed `FTransform` constructor to be identical to unreal. 
 
 Added `OpenFor::ReadWrite`, to be used when calling `File::open`.  
-This can be used when calling `FileHandle::memory_map`, unlike `OpenFor::Writing`.  ([UE4SS #507](https://github.com/UE4SS-RE/RE-UE4SS/pull/507))
 
-### BPModLoader
+This can be used when calling `FileHandle::memory_map`, unlike `OpenFor::Writing`.  ([UE4SS #507](https://github.com/UE4SS-RE/RE-UE4SS/pull/507)) 
 
-### Experimental
+### BPModLoader 
+
+### Experimental 
 
 
-## Changes
+## Changes 
 
-### General
-Changed the default location of the UE4SS release assets to be in `game executable directory/ue4ss/`. This change is backwards compatible with the old location. ([UE4SS #506](https://github.com/UE4SS-RE/RE-UE4SS/pull/506)) - Buckminsterfullerene
-Updated PatternSleuth submodule ([UE4SS #638](https://github.com/UE4SS-RE/RE-UE4SS/pull/638))
+### General 
+Changed the default location of the UE4SS release assets to be in `game executable directory/ue4ss/`. This change is backwards compatible with the old location. ([UE4SS #506](https://github.com/UE4SS-RE/RE-UE4SS/pull/506)) - Buckminsterfullerene 
 
-### Live View
-Fixed the majority of the lag ([UE4SS #512](https://github.com/UE4SS-RE/RE-UE4SS/pull/512))
+Updated PatternSleuth submodule ([UE4SS #638](https://github.com/UE4SS-RE/RE-UE4SS/pull/638)) 
 
-Added support for watching ArrayProperty and StructProperty ([UE4SS #419](https://github.com/UE4SS-RE/RE-UE4SS/pull/419))
+### Live View 
+Fixed the majority of the lag ([UE4SS #512](https://github.com/UE4SS-RE/RE-UE4SS/pull/512)) 
 
-The search filter `ExcludeClassName` can now be found in the `IncludeClassNames` dropdown list. ([UE4SS #472](https://github.com/UE4SS-RE/RE-UE4SS/pull/472)) - Buckminsterfullerene
+Added support for watching ArrayProperty and StructProperty ([UE4SS #419](https://github.com/UE4SS-RE/RE-UE4SS/pull/419)) 
 
-The following search filters now allow multiple values, with each value separated by a comma: `IncludeClassNames`, `ExcludeClassNames`, `HasProperty`, `HasPropertyType`. ([UE4SS #472](https://github.com/UE4SS-RE/RE-UE4SS/pull/472)) - Buckminsterfullerene
+The search filter `ExcludeClassName` can now be found in the `IncludeClassNames` dropdown list. ([UE4SS #472](https://github.com/UE4SS-RE/RE-UE4SS/pull/472)) - Buckminsterfullerene 
 
-### UHT Dumper
+The following search filters now allow multiple values, with each value separated by a comma: `IncludeClassNames`, `ExcludeClassNames`, `HasProperty`, `HasPropertyType`. ([UE4SS #472](https://github.com/UE4SS-RE/RE-UE4SS/pull/472)) - Buckminsterfullerene 
 
-### Lua API
-`print` now behaves like vanilla Lua (can now accept zero, one, or multiple arguments of any type) ([UE4SS #423](https://github.com/UE4SS-RE/RE-UE4SS/pull/423)) - Lyrth
+### UHT Dumper 
 
-The callback of `NotifyOnNewObject` can now optionally return `true` to unregister itself ([UE4SS #432](https://github.com/UE4SS-RE/RE-UE4SS/pull/432)) - Lyrth
+### Lua API 
+`print` now behaves like vanilla Lua (can now accept zero, one, or multiple arguments of any type) ([UE4SS #423](https://github.com/UE4SS-RE/RE-UE4SS/pull/423)) - Lyrth 
+
+The callback of `NotifyOnNewObject` can now optionally return `true` to unregister itself ([UE4SS #432](https://github.com/UE4SS-RE/RE-UE4SS/pull/432)) - Lyrth 
 
 `RegisterConsoleCommandHandler`, `RegisterConsoleCommandGlobalHandler`, `RegisterProcessConsoleExecPreHook` and `RegisterProcessConsoleExecPostHook` now support enclosing parameters in double quotes (`"`). This allows spaces within the quotes to be ignored, treating the enclosed string as a single parameter. ([UE4SS #653](https://github.com/UE4SS-RE/RE-UE4SS/pull/653), [UE4SS #669](https://github.com/UE4SS-RE/RE-UE4SS/pull/669))  
 
-**BREAKING:** `RegisterProcessConsoleExecPreHook`,  `RegisterProcessConsoleExecPostHook` callback parameter `CommandParts` now includes the command name at the start of the array (lua array index **1**). ([UE4SS #669](https://github.com/UE4SS-RE/RE-UE4SS/pull/669))
+**BREAKING:** `RegisterProcessConsoleExecPreHook`,  `RegisterProcessConsoleExecPostHook` callback parameter `CommandParts` now includes the command name at the start of the array (lua array index **1**). ([UE4SS #669](https://github.com/UE4SS-RE/RE-UE4SS/pull/669)) 
 
 
-#### UEHelpers [UE4SS #650](https://github.com/UE4SS-RE/RE-UE4SS/pull/650)
+#### UEHelpers [UE4SS #650](https://github.com/UE4SS-RE/RE-UE4SS/pull/650) 
 - Increased version to 3
+  
 - Reworked all UEHelpers functions to ensure that they always return an object which can be checked with the function `IsValid` for validation
+  
 - Reworked `UEHelpers.GetPlayerController` to return first valid player controller (It will now return a player controller even if it doesn't control a pawn at the time)
+  
 - Reworked `UEHelpers.GetWorld` function to use UWorld cache (UWorld usually never changes)
+  
 - Change `UEHelpers.GetWorldContextObject` function annotation to return `UObject`. (Any UObject with a GetWorld() function is a valid WorldContext)
-- Removed duplicate function `UEHelpers.GetKismetMathLibrary`
+  
+- Removed duplicate function `UEHelpers.GetKismetMathLibrary` 
 
-### C++ API
+### C++ API 
 
-### BPModLoader
-BPModLoader now supports loading mods from subdirectories within the `LogicMods` folder ([UE4SS #412](https://github.com/UE4SS-RE/RE-UE4SS/pull/412)) - Ethan Green
+### BPModLoader 
+BPModLoader now supports loading mods from subdirectories within the `LogicMods` folder ([UE4SS #412](https://github.com/UE4SS-RE/RE-UE4SS/pull/412)) - Ethan Green 
 
-### ConsoleEnablerMod
+### ConsoleEnablerMod 
 Added additional console key **~** (Tilde) ([UE4SS #687](https://github.com/UE4SS-RE/RE-UE4SS/pull/687))  
-The console keys **F10** and **~** are now added by the mod in addition to the existing keys instead of replacing them ([UE4SS #687](https://github.com/UE4SS-RE/RE-UE4SS/pull/687))
 
-### Repo & Build Process
-Switch to xmake from cmake which makes building much more streamlined ([UE4SS #377](https://github.com/UE4SS-RE/RE-UE4SS/pull/377), [UEPseudo #81](https://github.com/Re-UE4SS/UEPseudo/pull/81)) - localcc
+The console keys **F10** and **~** are now added by the mod in addition to the existing keys instead of replacing them ([UE4SS #687](https://github.com/UE4SS-RE/RE-UE4SS/pull/687)) 
+
+### Repo & Build Process 
+Switch to xmake from cmake which makes building much more streamlined ([UE4SS #377](https://github.com/UE4SS-RE/RE-UE4SS/pull/377), [UEPseudo #81](https://github.com/Re-UE4SS/UEPseudo/pull/81)) - localcc 
 
 
-## Fixes
+## Fixes 
 
-### General
-Fixed BPModLoaderMod not working in games made in UE 5.2+ - ([UE4SS #503](https://github.com/UE4SS-RE/RE-UE4SS/pull/503))
+### General 
+Fixed BPModLoaderMod not working in games made in UE 5.2+ - ([UE4SS #503](https://github.com/UE4SS-RE/RE-UE4SS/pull/503)) 
 
-Fixed adding elements to TArray in Lua incorrectly resizing and zeroing out previous values ([UE4SS #436](https://github.com/UE4SS-RE/RE-UE4SS/pull/436)) - dnchattan
+Fixed adding elements to TArray in Lua incorrectly resizing and zeroing out previous values ([UE4SS #436](https://github.com/UE4SS-RE/RE-UE4SS/pull/436)) - dnchattan 
 
-Fixed some debug GUI layout alignments, especially with different GUI font scaling settings ([UE4SS #429](https://github.com/UE4SS-RE/RE-UE4SS/pull/429)) - Lyrth
+Fixed some debug GUI layout alignments, especially with different GUI font scaling settings ([UE4SS #429](https://github.com/UE4SS-RE/RE-UE4SS/pull/429)) - Lyrth 
 
-Fixed PalServer not accepting connections from players ([UE4SS #453](https://github.com/UE4SS-RE/RE-UE4SS/pull/453))
+Fixed PalServer not accepting connections from players ([UE4SS #453](https://github.com/UE4SS-RE/RE-UE4SS/pull/453)) 
 
-Fixed a crash that would occur randomly due to accidental execution of Live View search code ([UE4SS #475](https://github.com/UE4SS-RE/RE-UE4SS/pull/475))
+Fixed a crash that would occur randomly due to accidental execution of Live View search code ([UE4SS #475](https://github.com/UE4SS-RE/RE-UE4SS/pull/475)) 
 
-Fixed freeze related to the error "Tried to execute UFunction::FuncPtr hook but there was no function map entry" ([UE4SS #468](https://github.com/UE4SS-RE/RE-UE4SS/pull/468))
+Fixed freeze related to the error "Tried to execute UFunction::FuncPtr hook but there was no function map entry" ([UE4SS #468](https://github.com/UE4SS-RE/RE-UE4SS/pull/468)) 
 
-Fixed `ModsFolderPath` in `UE4SS-settings.ini` not working ([UE4SS #609](https://github.com/UE4SS-RE/RE-UE4SS/pull/609))
+Fixed `ModsFolderPath` in `UE4SS-settings.ini` not working ([UE4SS #609](https://github.com/UE4SS-RE/RE-UE4SS/pull/609)) 
 
-### Live View
-Fixed the "Write to file" checkbox not working for functions in the `Watches` tab ([UE4SS #419](https://github.com/UE4SS-RE/RE-UE4SS/pull/419))
+Fixed `attempt to index a nil value (global 'NewController')` error in `SplitScreenMod` ([UE4SS #729](https://github.com/UE4SS-RE/RE-UE4SS/pull/729)) 
 
-Reduced the likelihood of a crash happening on shutdown when at least one watch is enabled ([UE4SS #419](https://github.com/UE4SS-RE/RE-UE4SS/pull/419))
+### Live View 
+Fixed the "Write to file" checkbox not working for functions in the `Watches` tab ([UE4SS #419](https://github.com/UE4SS-RE/RE-UE4SS/pull/419)) 
 
-Fixed constantly searching even if the search field is empty, and even if not on the tab ([UE4SS #475](https://github.com/UE4SS-RE/RE-UE4SS/pull/475))
+Reduced the likelihood of a crash happening on shutdown when at least one watch is enabled ([UE4SS #419](https://github.com/UE4SS-RE/RE-UE4SS/pull/419)) 
 
-### UHT Dumper
-Fix SetupAttachment implementations randomly changing order ([UE4SS #606](https://github.com/UE4SS-RE/RE-UE4SS/pull/606)) - Buckminsterfullerene
+Fixed constantly searching even if the search field is empty, and even if not on the tab ([UE4SS #475](https://github.com/UE4SS-RE/RE-UE4SS/pull/475)) 
 
-### Lua API
-Fixed FString use after free ([UE4SS #425](https://github.com/UE4SS-RE/RE-UE4SS/pull/425)) - localcc
+### UHT Dumper 
+Fix SetupAttachment implementations randomly changing order ([UE4SS #606](https://github.com/UE4SS-RE/RE-UE4SS/pull/606)) - Buckminsterfullerene 
 
-Fixed the "IterateGameDirectories" global function throwing "bad conversion" errors ([UE4SS #398](https://github.com/UE4SS-RE/RE-UE4SS/pull/398))
+### Lua API 
+Fixed FString use after free ([UE4SS #425](https://github.com/UE4SS-RE/RE-UE4SS/pull/425)) - localcc 
 
-Fixed `FText` not working as a parameter (in `RegisterHook`, etc.) ([UE4SS #422](https://github.com/UE4SS-RE/RE-UE4SS/pull/422)) - localcc
+Fixed the "IterateGameDirectories" global function throwing "bad conversion" errors ([UE4SS #398](https://github.com/UE4SS-RE/RE-UE4SS/pull/398)) 
 
-Fixed crash when calling UFunctions that take one or more 'out' params of type TArray<T>. ([UE4SS #477](https://github.com/UE4SS-RE/RE-UE4SS/pull/477))
+Fixed `FText` not working as a parameter (in `RegisterHook`, etc.) ([UE4SS #422](https://github.com/UE4SS-RE/RE-UE4SS/pull/422)) - localcc 
 
-Fixed `RegisterProcessConsoleExecPostHook`. ([UE4SS #631](https://github.com/UE4SS-RE/RE-UE4SS/pull/631))
-
-Fixed `FindFirstOf` return type annotation in `Types.lua` to signal that the return value will never be nil. ([UE4SS #652](https://github.com/UE4SS-RE/RE-UE4SS/issues/652))
+Fixed crash when calling UFunctions that take one or more 'out' params of type TArray<T>. ([UE4SS #477](https://github.com/UE4SS-RE/RE-UE4SS/pull/477)) 
 
 Fixed `FindObject` not accepting UClass as a valid outer parameter. ([UE4SS #732](https://github.com/UE4SS-RE/RE-UE4SS/issues/732)) - GhostyPool
 
-### C++ API
-Fixed a crash caused by a race condition enabled by C++ mods using `UE4SS_ENABLE_IMGUI` in their constructor ([UE4SS #481](https://github.com/UE4SS-RE/RE-UE4SS/pull/481))
+Fixed `RegisterProcessConsoleExecPostHook`. ([UE4SS #631](https://github.com/UE4SS-RE/RE-UE4SS/pull/631)) 
 
-Fixed the `std::span` returned by `FileHandle::memory_map` being improperly sized. ([UE4SS #507](https://github.com/UE4SS-RE/RE-UE4SS/pull/507))
+Fixed `FindFirstOf` return type annotation in `Types.lua` to signal that the return value will never be nil. ([UE4SS #652](https://github.com/UE4SS-RE/RE-UE4SS/issues/652)) 
 
-Fixed 'File::Handle' unable to be moved if used in conjunction with memory_map. ([UE4SS #544](https://github.com/UE4SS-RE/RE-UE4SS/pull/544))
+### C++ API 
+Fixed a crash caused by a race condition enabled by C++ mods using `UE4SS_ENABLE_IMGUI` in their constructor ([UE4SS #481](https://github.com/UE4SS-RE/RE-UE4SS/pull/481)) 
 
-Fixed `Key::NUM_ZERO` being incorrectly mapped to `Key::NUM_NINE`. ([UE4SS #716](https://github.com/UE4SS-RE/RE-UE4SS/pull/716))
+Fixed the `std::span` returned by `FileHandle::memory_map` being improperly sized. ([UE4SS #507](https://github.com/UE4SS-RE/RE-UE4SS/pull/507)) 
 
-### BPModLoader
-Fixed "bad conversion" errors ([UE4SS #398](https://github.com/UE4SS-RE/RE-UE4SS/pull/398))
+Fixed 'File::Handle' unable to be moved if used in conjunction with memory_map. ([UE4SS #544](https://github.com/UE4SS-RE/RE-UE4SS/pull/544)) 
 
-Fixed calling `PostBeginPlay` multiple times for each ModActor ([UE4SS #447](https://github.com/UE4SS-RE/RE-UE4SS/pull/447)) - Okaetsu
+Fixed `Key::NUM_ZERO` being incorrectly mapped to `Key::NUM_NINE`. ([UE4SS #716](https://github.com/UE4SS-RE/RE-UE4SS/pull/716)) 
 
-Fixed displaying 'PostBeginPlay not valid' when VerboseLogging is set to false ([UE4SS #447](https://github.com/UE4SS-RE/RE-UE4SS/pull/447)) - Okaetsu
+### BPModLoader 
+Fixed "bad conversion" errors ([UE4SS #398](https://github.com/UE4SS-RE/RE-UE4SS/pull/398)) 
 
-Fixes mods not loading when UE4SS initializes too late ([UE4SS #454](https://github.com/UE4SS-RE/RE-UE4SS/pull/454)) - localcc
+Fixed calling `PostBeginPlay` multiple times for each ModActor ([UE4SS #447](https://github.com/UE4SS-RE/RE-UE4SS/pull/447)) - Okaetsu 
+
+Fixed displaying 'PostBeginPlay not valid' when VerboseLogging is set to false ([UE4SS #447](https://github.com/UE4SS-RE/RE-UE4SS/pull/447)) - Okaetsu 
+
+Fixes mods not loading when UE4SS initializes too late ([UE4SS #454](https://github.com/UE4SS-RE/RE-UE4SS/pull/454)) - localcc 
 
 
-## Settings
+## Settings 
 
-### Added
+### Added 
 ```ini
 [EngineVersionOverride]
 ; True if the game is built as Debug, Development, or Test.

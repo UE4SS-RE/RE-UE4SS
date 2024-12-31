@@ -181,7 +181,7 @@ class ReleaseHandler:
 
     def package_release(self):
         try:
-            version = subprocess.check_output(['git', 'describe', '--tags']).decode('utf-8').strip()
+            version = subprocess.check_output(['git', 'describe', '--tags', '--exclude', '*experimental*']).decode('utf-8').strip()
         except subprocess.CalledProcessError:
             print('Error: git describe failed. Make sure the release has been tagged.')
             sys.exit(1)

@@ -38,13 +38,14 @@ local function CreatePlayer()
     print(string.format("[SplitScreenMod] GameplayStatics: %s\n", GetGameplayStatics():GetFullName()))
     ExecuteInGameThread(function()
         NewController = GetGameplayStatics():CreatePlayer(PlayerControllerTable[1], #PlayerControllerTable, true)
+
+        if NewController:IsValid() then
+            table.insert(PlayerControllerTable, NewController)
+            print(string.format("Player %s created.\n", #PlayerControllerTable))
+        else
+            print("Player could not be created.\n")
+        end
     end)
-    if NewController:IsValid() then
-        table.insert(PlayerControllerTable, NewController)
-        print(string.format("[SplitScreenMod] Player %s created.\n", #PlayerControllerTable))
-    else
-        print("[SplitScreenMod] Player could not be created.\n")
-    end
     
 end
 
@@ -92,13 +93,13 @@ function TeleportPlayers()
                 DidTeleport = true
             end
         end
-    end)
 
-    if DidTeleport then
-        print("[SplitScreenMod] Players teleport to Player 1.\n")
-    else
-        print("[SplitScreenMod] No players could be teleported\n")
-    end
+        if DidTeleport then
+            print("Players teleport to Player 1.\n")
+        else
+            print("No players could be teleported\n")
+        end
+    end)
 end
 
 
