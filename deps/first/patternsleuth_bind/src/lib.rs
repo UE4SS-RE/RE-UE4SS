@@ -109,6 +109,9 @@ pub fn ps_scan_internal(ctx: &PsCtx, results: &mut PsScanResults) -> Result<(), 
 
     macro_rules! handle {
         ($member:ident, $name:literal, $lua:literal) => {
+            handle!($member, $name, $lua, false);
+        };
+        ($member:ident, $name:literal, $lua:literal, $optional:expr) => {
             if ctx.config.$member {
                 match resolution.$member {
                     Ok(res) => {
@@ -122,7 +125,11 @@ pub fn ps_scan_internal(ctx: &PsCtx, results: &mut PsScanResults) -> Result<(), 
                             "You can supply your own AOB in 'UE4SS_Signatures/{}'",
                             $lua
                         );
-                        errors.0.push(Box::new(err));
+                        results.$member = 0;
+                        // Only add to `errors` if it's not optional:
+                        if !$optional {
+                            errors.0.push(Box::new(err));
+                        }
                     }
                 }
             }
@@ -161,7 +168,8 @@ pub fn ps_scan_internal(ctx: &PsCtx, results: &mut PsScanResults) -> Result<(), 
     handle!(
         ftext_fstring,
         "FText::FText(FString&&)",
-        "FText_Constructor.lua"
+        "FText_Constructor.lua",
+        true
     );
 
     if errors.0.is_empty() {
