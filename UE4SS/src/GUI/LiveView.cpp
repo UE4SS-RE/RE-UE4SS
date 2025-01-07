@@ -288,7 +288,8 @@ namespace RC::GUI
     }
 
     template <typename ContainerType>
-    static auto add_array_filter_to_json(JSON::Array& json_filters, const StringType& filter_name, const ContainerType& container, const StringType& array_name) -> void
+    static auto add_array_filter_to_json(JSON::Array& json_filters, const StringType& filter_name, const ContainerType& container, const StringType& array_name)
+            -> void
     {
         auto& json_object = json_filters.new_object();
         json_object.new_string(STR("FilterName"), filter_name);
@@ -3047,6 +3048,36 @@ namespace RC::GUI
         }
     }
 
+    auto render_context_menu(const std::string& tree_node_name, UObject* object) -> void
+    {
+        if (ImGui::BeginPopupContextItem(tree_node_name.c_str()))
+        {
+            if (ImGui::MenuItem(ICON_FA_COPY " Copy Full Name"))
+            {
+                Output::send(STR("Copy Full Name: {}\n"), object->GetFullName());
+                ImGui::SetClipboardText(tree_node_name.c_str());
+            }
+            if (object->IsA<UFunction>())
+            {
+                auto watch_id = LiveView::WatchIdentifier{object, nullptr};
+                auto function_watcher_it = LiveView::s_watch_map.find(watch_id);
+                if (function_watcher_it == LiveView::s_watch_map.end())
+                {
+                    ImGui::Separator();
+                    if (ImGui::MenuItem(ICON_FA_EYE " Watch value"))
+                    {
+                        add_watch(watch_id, static_cast<UFunction*>(object));
+                    }
+                }
+                else
+                {
+                    ImGui::Checkbox(ICON_FA_EYE " Watch value", &function_watcher_it->second->enabled);
+                }
+            }
+            ImGui::EndPopup();
+        }
+    }
+
     auto LiveView::render() -> void
     {
         if (!UnrealInitializer::StaticStorage::bIsInitialized)
@@ -3444,83 +3475,131 @@ namespace RC::GUI
         ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4{0.156f, 0.156f, 0.156f, 1.0f});
         ImGui::BeginChild("LiveView_TreeView", {-16.0f, m_top_size}, true);
 
-        auto do_iteration = [&](int32_t int_data_1 = 0, int32_t int_data_2 = 0) {
-            ((*this).*((*this).m_object_iterator))(int_data_1, int_data_2, [&](UObject* object) {
-                auto tree_node_name = std::string{get_object_full_name(object)};
+        auto do_iteration = [&](int start, int end, const std::vector<UObject*>* objects_to_draw_ptr = nullptr) {
+            if (!objects_to_draw_ptr || objects_to_draw_ptr->empty())
+            {
+                // 1) If there's no valid pointer or it's empty, do old logic
+                ((*this).*((*this).m_object_iterator))(start, end, [&](UObject* object) {
+                    auto tree_node_name = std::string{get_object_full_name(object)};
 
-                auto render_context_menu = [&] {
-                    if (ImGui::BeginPopupContextItem(tree_node_name.c_str()))
+                    if (ImGui_TreeNodeEx(tree_node_name.c_str(), object))
                     {
-                        if (ImGui::MenuItem(ICON_FA_COPY " Copy Full Name"))
+                        m_currently_opened_tree_node = object;
+                        m_opened_tree_nodes.emplace(object);
+
+                        // The menu must be rendered both if the node is open and if it's closed.
+                        render_context_menu(tree_node_name, object);
+
+                        if (auto as_struct = Cast<UStruct>(object); as_struct)
                         {
-                            Output::send(STR("Copy Full Name: {}\n"), object->GetFullName());
-                            ImGui::SetClipboardText(tree_node_name.c_str());
+                            render_struct_sub_tree_hierarchy(as_struct);
                         }
-                        if (object->IsA<UFunction>())
+                        else
                         {
-                            auto watch_id = WatchIdentifier{object, nullptr};
-                            auto function_watcher_it = s_watch_map.find(watch_id);
-                            if (function_watcher_it == s_watch_map.end())
-                            {
-                                ImGui::Separator();
-                                if (ImGui::MenuItem(ICON_FA_EYE " Watch value"))
-                                {
-                                    add_watch(watch_id, static_cast<UFunction*>(object));
-                                }
-                            }
-                            else
-                            {
-                                ImGui::Checkbox(ICON_FA_EYE " Watch value", &function_watcher_it->second->enabled);
-                            }
+                            render_object_sub_tree_hierarchy(object);
                         }
-                        ImGui::EndPopup();
-                    }
-                };
 
-                if (ImGui_TreeNodeEx(tree_node_name.c_str(), object))
-                {
-                    m_currently_opened_tree_node = object;
-                    m_opened_tree_nodes.emplace(object);
-
-                    // For some reason, the menu has to be rendered both if the node is open and if it's closed.
-                    // Rendering after the 'TreeNodeEx' if-statement only works if the node is closed.
-                    render_context_menu();
-
-                    if (auto as_struct = Cast<UStruct>(object); as_struct)
-                    {
-                        render_struct_sub_tree_hierarchy(as_struct);
+                        ImGui::TreePop();
                     }
                     else
                     {
-                        render_object_sub_tree_hierarchy(object);
+                        // Handle item-click selection
+                        if (ImGui::IsItemClicked())
+                        {
+                            select_object(0, object->GetObjectItem(), object, AffectsHistory::Yes);
+                        }
                     }
-
-                    ImGui::TreePop();
-                }
-                else
+                    collapse_all_except(m_currently_opened_tree_node);
+                    render_context_menu(tree_node_name, object);
+                });
+            }
+            else
+            {
+                // 2) Otherwise, draw the filtered objects directly
+                const auto& objects_to_draw = *objects_to_draw_ptr;
+                for (int i = start; i < end; i++)
                 {
-                    if (ImGui::IsItemClicked())
+                    UObject* object = objects_to_draw[i];
+                    if (!object) continue;
+
+                    auto tree_node_name = std::string{get_object_full_name(object)};
+
+                    if (ImGui_TreeNodeEx(tree_node_name.c_str(), object))
                     {
-                        select_object(0, object->GetObjectItem(), object, AffectsHistory::Yes);
+                        m_currently_opened_tree_node = object;
+                        m_opened_tree_nodes.emplace(object);
+
+                        render_context_menu(tree_node_name, object);
+
+                        if (auto as_struct = Cast<UStruct>(object); as_struct)
+                        {
+                            render_struct_sub_tree_hierarchy(as_struct);
+                        }
+                        else
+                        {
+                            render_object_sub_tree_hierarchy(object);
+                        }
+
+                        ImGui::TreePop();
                     }
+                    else
+                    {
+                        // Handle item-click selection
+                        if (ImGui::IsItemClicked())
+                        {
+                            select_object(0, object->GetObjectItem(), object, AffectsHistory::Yes);
+                        }
+                    }
+                    collapse_all_except(m_currently_opened_tree_node);
+                    render_context_menu(tree_node_name, object);
                 }
-                collapse_all_except(m_currently_opened_tree_node);
-                render_context_menu();
-            });
+            }
         };
 
         ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, {0.0f, 0.0f});
+
+        // If filters-while-not-searching are disabled (i.e. normal clipper behavior)
         if (!s_apply_search_filters_when_not_searching)
         {
+            // 1) Gather objects you actually want to draw
+            std::vector<UObject*> objects_to_draw;
+
+            if (m_is_searching_by_name)
+            {
+                // If we are searching by name, presumably `s_name_search_results`
+                // already holds only valid objects.
+                objects_to_draw = s_name_search_results;
+            }
+            else
+            {
+                // Otherwise, filter the entire UObjectArray
+                objects_to_draw.reserve(UObjectArray::GetNumElements());
+                for (size_t i = 0; i < UObjectArray::GetNumElements(); i++)
+                {
+
+                    if (FUObjectItem* obj = static_cast<FUObjectItem*>(Container::UnrealVC->UObjectArray_index_to_object(i)))
+                    {
+                        // Skip destroyed/invalid objects here
+                        if (!obj->IsUnreachable())
+                        {
+                            objects_to_draw.push_back(obj->GetUObject());
+                        }
+                    }
+                }
+            }
+
+            // 2) Use clipper with the filtered array size
             ImGuiListClipper clipper{};
-            clipper.Begin(m_is_searching_by_name ? s_name_search_results.size() : UObjectArray::GetNumElements(), ImGui::GetTextLineHeightWithSpacing());
+            clipper.Begin(objects_to_draw.size(), ImGui::GetTextLineHeightWithSpacing());
             while (clipper.Step())
             {
-                do_iteration(clipper.DisplayStart, clipper.DisplayEnd);
+
+                do_iteration(clipper.DisplayStart, clipper.DisplayEnd, &objects_to_draw);
             }
         }
         else
         {
+            // "Apply filters when not searching" path
             do_iteration(0, UObjectArray::GetNumElements());
         }
         ImGui::PopStyleVar();
