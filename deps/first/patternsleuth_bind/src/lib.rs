@@ -187,7 +187,7 @@ pub fn ps_scan_internal(ctx: &PsCtx, results: &mut PsScanResults) -> Result<(), 
     handle!(
         fuobject_hash_tables_get,
         "FUObjectHashTables::Get()",
-        "FUObjectHashTables.lua",
+        "GUObjectHashTables.lua",
         true
     );
     

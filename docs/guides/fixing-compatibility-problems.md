@@ -25,14 +25,17 @@ For more in-depth instructions, see the [advanced guide](./fixing-compatibility-
 ## How to setup your own AOB and callback
 
 1. Create the directory `UE4SS_Signatures` if it doesn't already exist in your `working directory`.
-2. Identify which AOBs are broken and needs fixing.
+2. Identify which AOBs are broken and need fixing.
 3. Make the following files inside `UE4SS_Signatures`, depending on which AOBs are broken:
     - GUObjectArray.lua
     - FName_ToString.lua
     - FName_Constructor.lua
-    - FText_Constructor.lua
+    - FText_Constructor.lua (Optional)
     - StaticConstructObject.lua
     - GMalloc.lua
+    - GUObjectHashTables.lua(Optional)
+    - GNatives.lua          (Optional)
+    - ConsoleManager.lua    (Optional)
 4. Inside the `.lua` file you need a global `Register` function with no params
     - Keep in mind that the names of functions in Lua files in the `UE4SS_Signatures` directory are case-senstive.
 5. The `Register` function must return the AOB that you want UE4SS to scan for.
@@ -58,7 +61,7 @@ For more in-depth instructions, see the [advanced guide](./fixing-compatibility-
      This callback is likely to be called many times and we do a check behind the scenes to confirm if we found the right constructor.  
      It doesn't matter if your AOB finds both 'char*' versions and 'wchar_t*' versions.  
      Function signature: `public: cdecl FName::FName(wchar_t const * ptr64,enum EFindName) __ptr64`
-- FText_Constructor
+- FText_Constructor  (Optional)
   - Must return the exact address of the start of the function 'FText::FText'.  
     Function signature: `public: cdecl FText::FText(class FString & ptr64)const __ptr64`
 - StaticConstructObject
@@ -68,6 +71,10 @@ For more in-depth instructions, see the [advanced guide](./fixing-compatibility-
 - GMalloc
      - Must return the exact address of the global variable named 'GMalloc'.  
      In UE4SS, we scan for `FMemory::Free` and then resolve the MOV instruction closest to the first CALL instruction.
+- GNatives (Optional)
+   - Must return the exact address of the global variable named 'GNatives'.
+- GUObjectHashTables (WIP)  (Optional)
+- ConsoleManager (WIP)  (Optional)
 
 ## Example script (Simple, direct scan)
 

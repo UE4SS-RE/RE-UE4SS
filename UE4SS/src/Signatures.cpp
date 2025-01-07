@@ -10,6 +10,7 @@
 #include <Unreal/UObject.hpp>
 #include <Unreal/UObjectArray.hpp>
 #include <Unreal/UnrealInitializer.hpp>
+#include <Unreal/Script.hpp>
 #include <filesystem>
 
 #include <Helpers/String.hpp>
@@ -244,6 +245,72 @@ namespace RC
                             if (!Unreal::FText::ConstructorInternal.get_function_address())
                             {
                                 scan_result.Errors.emplace_back("Lua script 'FText_Constructor.lua' did not return a valid address for FText::FText.");
+                            }
+                        });
+            };
+        }
+
+        auto lua_guhashtables_scan_script = working_directory / "UE4SS_Signatures/GUObjectHashTables.lua";
+        if (std::filesystem::exists(lua_guhashtables_scan_script))
+        {
+            config.ScanOverrides.fuobject_hash_tables_get = [lua_guhashtables_scan_script](std::vector<SignatureContainer>& signature_containers,
+                                                                                 Unreal::Signatures::ScanResult& scan_result) mutable {
+                scan_from_lua_script(
+                        lua_guhashtables_scan_script,
+                        signature_containers,
+                        [](void* address) {
+                            Output::send(STR("GUObjectHashTables_Get address: {} <- Lua Script\n"), address);
+                            
+                            return DidLuaScanSucceed::Yes;
+                        },
+                        [&](DidLuaScanSucceed did_lua_scan_succeed) {
+                            if (did_lua_scan_succeed == DidLuaScanSucceed::No)
+                            {
+                                scan_result.Errors.emplace_back("Was unable to find AOB for 'GUObjectHashTables' via Lua script");
+                            }
+                        });
+            };
+        }
+
+        auto lua_gnatives_scan_script = working_directory / "UE4SS_Signatures/GNatives.lua";
+        if (std::filesystem::exists(lua_gnatives_scan_script))
+        {
+            config.ScanOverrides.gnatives = [lua_gnatives_scan_script](std::vector<SignatureContainer>& signature_containers,
+                                                                                 Unreal::Signatures::ScanResult& scan_result) mutable {
+                scan_from_lua_script(
+                        lua_gnatives_scan_script,
+                        signature_containers,
+                        [](void* address) {
+                            Output::send(STR("GNatives address: {} <- Lua Script\n"), address);
+                            Unreal::GNatives_Internal = reinterpret_cast<Unreal::FNativeFuncPtr*>(address);
+                            return DidLuaScanSucceed::Yes;
+                        },
+                        [&](DidLuaScanSucceed did_lua_scan_succeed) {
+                            if (did_lua_scan_succeed == DidLuaScanSucceed::No)
+                            {
+                                scan_result.Errors.emplace_back("Was unable to find AOB for 'GNatives' via Lua script");
+                            }
+                        });
+            };
+        }
+
+        auto lua_consolemanager_scan_script = working_directory / "UE4SS_Signatures/ConsoleManager.lua";
+        if (std::filesystem::exists(lua_consolemanager_scan_script))
+        {
+            config.ScanOverrides.console_manager_singleton = [lua_consolemanager_scan_script](std::vector<SignatureContainer>& signature_containers,
+                                                                                 Unreal::Signatures::ScanResult& scan_result) mutable {
+                scan_from_lua_script(
+                        lua_consolemanager_scan_script,
+                        signature_containers,
+                        [](void* address) {
+                            Output::send(STR("ConsoleManagerSingleton address: {} <- Lua Script\n"), address);
+                            
+                            return DidLuaScanSucceed::Yes;
+                        },
+                        [&](DidLuaScanSucceed did_lua_scan_succeed) {
+                            if (did_lua_scan_succeed == DidLuaScanSucceed::No)
+                            {
+                                scan_result.Errors.emplace_back("Was unable to find AOB for 'ConsoleManagerSingleton' via Lua script");
                             }
                         });
             };
