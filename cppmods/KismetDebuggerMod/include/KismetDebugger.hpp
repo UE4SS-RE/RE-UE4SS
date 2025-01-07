@@ -10,9 +10,7 @@
 namespace RC::GUI::KismetDebuggerMod
 {
     using namespace RC::Unreal;
-
-    typedef void (*FNativeFuncPtr)(UObject* Context, FFrame& Stack, void* RESULT_DECL);
-
+    
     auto expr_to_string(EExprToken expr) -> const char*;
 
     struct PausedContext
