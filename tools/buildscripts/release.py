@@ -45,6 +45,7 @@ class ReleaseHandler:
             'EnableHotReloadSystem': 0,
             'MaxMemoryUsageDuringAssetLoading': 80,
             'GUIUFunctionCaller': 0,
+            'bUseUObjectArrayCache': "false",
         }
 
     def make_staging_dirs(self):
