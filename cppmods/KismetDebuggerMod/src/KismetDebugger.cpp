@@ -14,6 +14,7 @@
 #include <Unreal/FString.hpp>
 #include <Unreal/Core/Containers/Array.hpp>
 #include <Unreal/FFrame.hpp>
+#include <Unreal/Script.hpp>
 #include <Unreal/ReflectedFunction.hpp>
 #include <Unreal/Signatures.hpp>
 #include <Unreal/Property/FObjectProperty.hpp>
@@ -34,7 +35,6 @@ namespace RC::GUI::KismetDebuggerMod
     using namespace RC::Unreal;
 
     FNativeFuncPtr GNativesOriginal[EExprToken::EX_Max];
-    FNativeFuncPtr* GNatives = nullptr;
     volatile bool is_hooked = false; // cannot hook *immediately* as GNatives is populated at runtime
 
     volatile bool should_pause = false;
@@ -80,8 +80,8 @@ namespace RC::GUI::KismetDebuggerMod
     }
 
     template <unsigned N> void hook_all() {
-        GNativesOriginal[N - 1] = GNatives[N - 1];
-        GNatives[N - 1] = &hook_expr<N - 1>;
+        GNativesOriginal[N - 1] = GNatives_Internal[N - 1];
+        GNatives_Internal[N - 1] = &hook_expr<N - 1>;
         hook_all<N - 1>();
     }
     template <> void hook_all<0>() {}
@@ -231,7 +231,7 @@ namespace RC::GUI::KismetDebuggerMod
         {
             for (int i = 0; i < EExprToken::EX_Max; i++)
             {
-                GNatives[i] = GNativesOriginal[i];
+                GNatives_Internal[i] = GNativesOriginal[i];
             }
             is_hooked = false;
             should_pause = false;
@@ -273,64 +273,19 @@ namespace RC::GUI::KismetDebuggerMod
             Output::send<LogLevel::Warning>(STR("[KismetDebugger]: Failed to load breakpoints: {}\n"), ensure_str(e.what()));
         }
 
-        // scan for GNatives if it hasn't been found yet
-        if (GNatives == nullptr)
-        {
-            SignatureContainer gnatives = [&]() -> SignatureContainer {
-                return {
-                    // UObject::SkipFunction
-                    { { "40 55 41 54 41 55 41 56 41 57 48 83 EC 30 48 8D 6C 24 20 48 89 5D 40 48 89 75 48 48 89 7D 50 48 8B 05 ?? ?? ?? ?? 48 33 C5 48 89 45 00 ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? 4D 8B ?? ?? 8B ?? 85 ?? 75 05 41 8B FC EB ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? 48 ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? 48 ?? E0" } },
-                    [&](SignatureContainer& self) {
-                        uint8_t* data = static_cast<uint8_t*>(self.get_match_address());
-                        for (uint8_t* i : std::views::iota(data) | std::views::take(500))
-                        {
-                            // look for LEA instruction within the function body
-                            if (i[0] == 0x4c && i[1] == 0x8d && ((i[2] & 0xc7) == 5) && i[2] > 0x20)
-                            {
-                                // LEA found, resolve relative jump
-                                int32_t jmp;
-                                memcpy(&jmp, i + 3, sizeof(jmp));
-
-                                GNatives = reinterpret_cast<FNativeFuncPtr*>(i + 3 + 4 + jmp);
-
-                                Output::send(STR("[KismetDebugger]: GNatives address: {}\n"), static_cast<void*>(GNatives));
-
-                                self.get_did_succeed() = true;
-                                return true;
-                            }
-                        }
-                        Output::send(STR("[KismetDebugger]: GNatives: no LEA instruction found\n"));
-
-                        return false;
-                    },
-                    [&](const SignatureContainer& self) {
-                        if (!self.get_did_succeed())
-                        {
-                            Output::send<LogLevel::Warning>(STR("[KismetDebugger]: GNatives not found. Unable to hook.\n"));
-                        }
-                    }
-                };
-            }();
-
-            SinglePassScanner::SignatureContainerMap container_map;
-            std::vector<SignatureContainer> container;
-            container.emplace_back(gnatives);
-            container_map.emplace(ScanTarget::Core, container);
-            SinglePassScanner::start_scan(container_map);
-        }
-
-        if (GNatives != nullptr)
+        if (GNatives_Internal != nullptr)
         {
             // finally actually enable the debugger
             hook_all<EExprToken::EX_Max>();
             is_hooked = true;
+            return;
         }
     }
     auto Debugger::disable() -> void
     {
         for (int i = 0; i < EExprToken::EX_Max; i++)
         {
-            GNatives[i] = GNativesOriginal[i];
+            GNatives_Internal[i] = GNativesOriginal[i];
         }
         is_hooked = false;
         should_pause = false;
