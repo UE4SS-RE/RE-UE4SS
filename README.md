@@ -23,7 +23,7 @@ You may need to update AOBs on your own, and there's a guide for that below.
 
 ## Basic Installation
 
-The easiest installation is via downloading the non-dev version of the latest non-experimental build from [Releases](https://github.com/UE4SS-RE/RE-UE4SS/releases) and extracting the zip content to `/{Gameroot}/GameName/Binaries/Win64/`.
+The easiest installation is via downloading the non-dev version of the latest non-experimental build from [Releases](https://github.com/UE4SS-RE/RE-UE4SS/releases) and extracting the zip content to `{game directory}/GameName/Binaries/Win64/`.
 
 If your game is in the custom config list, extract the contents from the relevant folder to `Win64` as well.
 
