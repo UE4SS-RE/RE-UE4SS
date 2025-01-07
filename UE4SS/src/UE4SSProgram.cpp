@@ -789,6 +789,10 @@ namespace RC
         {
             Output::send<LogLevel::Warning>(STR("<Put function here responsible for creating custom UFunctions or events for BPs>\n"));
         }
+        if (!Unreal::GNatives_Internal)
+        {
+            Output::send<LogLevel::Warning>(STR("GNatives not found, you will experience limited hooking functionality in certain scenarios.\n"));
+        }
     }
 
     auto UE4SSProgram::share_lua_functions() -> void

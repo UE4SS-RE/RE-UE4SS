@@ -8,6 +8,9 @@ some notes about most important changes such as:
 - linux port 
 
 ## New
+
+### General
+
 Added support for UE Version 5.5 - ([UE4SS #708](https://github.com/UE4SS-RE/RE-UE4SS/pull/708)) 
 
 Added support for UE Version 5.4 - ([UE4SS #503](https://github.com/UE4SS-RE/RE-UE4SS/pull/503)) 
@@ -20,7 +23,9 @@ Added new build definition "LessEqual421".  Using this definition for games on U
 **BREAKING:** - This also changes the default FName alignment from 8 to 4. 
 - To use this functionality, enter LessEqual421 in the <Target> section of the XMake configuration command. 
 
-### General
+Added optional scans for GUObjectHashTables, GNatives and ConsoleManagerSingleton; made FText an optional scan; externed the found GNatives for use by mods([UE4SS #744](https://github.com/UE4SS-RE/RE-UE4SS/pull/744)) 
+- GUObjectHashTables and ConsoleManagerSingleton are currently unused and a WIP.
+
 UE Platform support, which allows for much easier internal implementation of new Unreal classes ([UEPseudo #80](https://github.com/Re-UE4SS/UEPseudo/pull/80)) - narknon, localcc 
 
 Added new installation method by allowing overriding of the location of the `UE4SS.dll`, [documentation](https://docs.ue4ss.com/installation-guide.html#overriding-install-location). - ([UE4SS #506](https://github.com/UE4SS-RE/RE-UE4SS/pull/506)) - Buckminsterfullerene 
