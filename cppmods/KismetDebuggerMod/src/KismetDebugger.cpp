@@ -630,8 +630,12 @@ namespace RC::GUI::KismetDebuggerMod
                 return "EX_Assert";
             case EX_Nothing:
                 return "EX_Nothing";
+            case EX_NothingInt32:
+                return "EX_NothingInt32";
             case EX_Let:
                 return "EX_Let";
+            case EX_BitFieldConst:
+                return "EX_BitFieldConst";
             case EX_ClassContext:
                 return "EX_ClassContext";
             case EX_MetaCast:
@@ -668,6 +672,8 @@ namespace RC::GUI::KismetDebuggerMod
                 return "EX_RotationConst";
             case EX_VectorConst:
                 return "EX_VectorConst";
+            case EX_Vector3fConst:
+                return "EX_Vector3fConst";
             case EX_ByteConst:
                 return "EX_ByteConst";
             case EX_IntZero:
@@ -802,6 +808,12 @@ namespace RC::GUI::KismetDebuggerMod
                 return "EX_ClassSparseDataVariable";
             case EX_FieldPathConst:
                 return "EX_FieldPathConst";
+            case EX_AutoRtfmTransact:
+                return "EX_AutoRtfmTransact";
+            case EX_AutoRtfmStopTransact:
+                return "EX_AutoRtfmStopTransact";
+            case EX_AutoRtfmAbortIfNot:
+                return "EX_AutoRtfmAbortIfNot";
             case EX_Max:
                 return "EX_Max";
         }
@@ -971,6 +983,11 @@ namespace RC::GUI::KismetDebuggerMod
                 read<uint32>();
                 break;
             }
+            case EX_NothingInt32:
+            {
+                read<int32>();
+                break;
+            }
             case EX_Nothing:
             case EX_EndOfScript:
             case EX_EndFunctionParms:
@@ -1052,6 +1069,12 @@ namespace RC::GUI::KismetDebuggerMod
             {
                 (UFunction*)read_object();
                 while(render_expr() != EX_EndFunctionParms); // Parms.
+                break;
+            }
+            case EX_BitFieldConst:
+            {
+                (FProperty*)read_object();
+                read<uint8>();
                 break;
             }
             case EX_ClassContext:
@@ -1168,6 +1191,7 @@ namespace RC::GUI::KismetDebuggerMod
                 read<int32>();
                 break;
             }
+            case EX_Vector3fConst:
             case EX_VectorConst:
             {
                 read<float>();
@@ -1314,6 +1338,24 @@ namespace RC::GUI::KismetDebuggerMod
             case EX_ArrayGetByRef:
             {
                 render_expr();
+                render_expr();
+                break;
+            }
+            case EX_AutoRtfmTransact:
+            {
+                read<int32>();
+                read<uint32>();
+                while (render_expr() != EX_AutoRtfmStopTransact);
+                break;
+            }
+            case EX_AutoRtfmStopTransact:
+            {
+                read<int32>();
+                read<uint8>();
+                break;
+            }
+            case EX_AutoRtfmAbortIfNot:
+            {
                 render_expr();
                 break;
             }
