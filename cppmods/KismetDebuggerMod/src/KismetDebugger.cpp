@@ -280,6 +280,7 @@ namespace RC::GUI::KismetDebuggerMod
             is_hooked = true;
             return;
         }
+        Output::send<LogLevel::Error>(STR("[KismetDebugger]: GNatives not found.\n"));
     }
     auto Debugger::disable() -> void
     {
@@ -865,7 +866,7 @@ namespace RC::GUI::KismetDebuggerMod
         bool active = m_index == m_cur;
         size_t expr_index = m_index;
 
-        m_current_expr = static_cast<EExprToken>(read<uint8_t>());
+        m_current_expr = static_cast<EExprToken>(read<uint8>());
 
         //std::cout << "rendering (" << std::hex << unsigned(m_current_expr) << std::dec << ") @ " << (index - 1) << " " << expr_to_string(m_current_expr) << std::endl;
 
@@ -902,7 +903,7 @@ namespace RC::GUI::KismetDebuggerMod
         {
             case EX_Cast:
             {
-                read<uint8_t>();
+                read<uint8>();
                 render_expr();
                 break;
             }
@@ -942,7 +943,7 @@ namespace RC::GUI::KismetDebuggerMod
             }
             case EX_Jump:
             {
-                read<uint32_t>();
+                read<uint32>();
                 break;
             }
             case EX_ComputedJump:
@@ -967,7 +968,7 @@ namespace RC::GUI::KismetDebuggerMod
             }
             case EX_PushExecutionFlow:
             {
-                read<uint32_t>();
+                read<uint32>();
                 break;
             }
             case EX_Nothing:
@@ -1058,7 +1059,7 @@ namespace RC::GUI::KismetDebuggerMod
             case EX_Context_FailSilent:
             {
                 render_expr(); // Object expression.
-                read<uint32_t>();
+                read<uint32>();
                 (FField*)read_object();            // Property corresponding to the r-value data, in case the l-value needs to be mem-zero'd
                 render_expr(); // Context expression.
                 break;
@@ -1077,7 +1078,7 @@ namespace RC::GUI::KismetDebuggerMod
             }
             case EX_IntConst:
             {
-                ImGui::Text("%d", read<int32_t>());
+                ImGui::Text("%d", read<int32>());
                 break;
             }
             case EX_Int64Const:
@@ -1097,7 +1098,7 @@ namespace RC::GUI::KismetDebuggerMod
             }
             case EX_SkipOffsetConst:
             {
-                ImGui::Text("%u", read<uint32_t>()); // TODO jump
+                ImGui::Text("%u", read<uint32>()); // TODO jump
                 break;
             }
             case EX_FloatConst:
@@ -1107,17 +1108,17 @@ namespace RC::GUI::KismetDebuggerMod
             }
             case EX_StringConst:
             {
-                while (read<uint8_t>());
+                while (read<uint8>());
                 break;
             }
             case EX_UnicodeStringConst:
             {
-                while (read<uint16_t>());
+                while (read<uint16>());
                 break;
             }
             case EX_TextConst:
             {
-                switch (read<uint8_t>())
+                switch (read<uint8>())
                 {
                     case 0: // Empty
                         break;
@@ -1162,9 +1163,9 @@ namespace RC::GUI::KismetDebuggerMod
             }
             case EX_RotationConst:
             {
-                read<int32_t>();
-                read<int32_t>();
-                read<int32_t>();
+                read<int32>();
+                read<int32>();
+                read<int32>();
                 break;
             }
             case EX_VectorConst:
@@ -1187,7 +1188,7 @@ namespace RC::GUI::KismetDebuggerMod
             case EX_StructConst:
             {
                 (UScriptStruct*)read_object();    // Struct.
-                read<int32_t>();
+                read<int32>();
                 while(render_expr() != EX_EndStructConst);
                 break;
             }
@@ -1210,25 +1211,25 @@ namespace RC::GUI::KismetDebuggerMod
             }
             case EX_SetSet:
                 render_expr(); // set property
-                read<int32_t>();
+                read<int32>();
                 while (render_expr() != EX_EndSet);
                 break;
             case EX_SetMap:
                 render_expr(); // map property
-                read<int32_t>();
+                read<int32>();
                 while (render_expr() != EX_EndMap);
                 break;
             case EX_ArrayConst:
             {
                 (FProperty*)read_object();    // Inner property
-                read<int32_t>();
+                read<int32>();
                 while (render_expr() != EX_EndArrayConst);
                 break;
             }
             case EX_SetConst:
             {
                 (FProperty*)read_object();    // Inner property
-                read<int32_t>();
+                read<int32>();
                 while (render_expr() != EX_EndSetConst);
                 break;
             }
@@ -1236,14 +1237,14 @@ namespace RC::GUI::KismetDebuggerMod
             {
                 (FProperty*)read_object();    // Key property
                 (FProperty*)read_object();    // Val property
-                read<int32_t>();
+                read<int32>();
                 while (render_expr() != EX_EndMapConst);
                 break;
             }
             case EX_ByteConst:
             case EX_IntConstByte:
             {
-                read<int8_t>();
+                read<int8>();
                 break;
             }
             case EX_MetaCast:
@@ -1260,7 +1261,7 @@ namespace RC::GUI::KismetDebuggerMod
             }
             case EX_JumpIfNot:
             {
-                read<uint32_t>();
+                read<uint32>();
                 render_expr(); // Boolean expr.
                 break;
             }
@@ -1271,14 +1272,14 @@ namespace RC::GUI::KismetDebuggerMod
             }
             case EX_Assert:
             {
-                read<uint16_t>();
-                read<uint8_t>();
+                read<uint16>();
+                read<uint8>();
                 render_expr(); // Assert expr.
                 break;
             }
             case EX_Skip:
             {
-                read<uint32_t>();
+                read<uint32>();
                 render_expr(); // Expression to possibly skip.
                 break;
             }
@@ -1296,14 +1297,14 @@ namespace RC::GUI::KismetDebuggerMod
             }
             case EX_SwitchValue:
             {
-                auto cases = read<uint16_t>(); // number of cases, without default one
-                auto end = read<uint32_t>(); // Code offset, go to it, when done.
+                auto cases = read<uint16>(); // number of cases, without default one
+                auto end = read<uint32>(); // Code offset, go to it, when done.
                 render_expr();   //index term
 
-                for (uint16_t i = 0; i < cases; ++i)
+                for (uint16 i = 0; i < cases; ++i)
                 {
                     render_expr();   // case index value term
-                    auto next_case = read<uint32_t>(); // offset to the next case
+                    auto next_case = read<uint32>(); // offset to the next case
                     render_expr();   // case term
                 }
 
