@@ -27,21 +27,9 @@
 namespace RC::UVTD
 {
     bool processing_events{false};
-    Input::Handler input_handler{};
-
-    auto static event_loop_update() -> void
-    {
-        for (processing_events = true; processing_events;)
-        {
-            input_handler.process_event();
-            std::this_thread::sleep_for(std::chrono::milliseconds(5));
-        }
-    }
 
     auto main(DumpSettings dump_settings) -> void
     {
-        input_handler.init();
-        input_handler.set_input_source("Win32Async");
         static std::vector<std::filesystem::path> pdbs_to_dump{
                 "PDBs/4_10.pdb",
                 "PDBs/4_11.pdb",
