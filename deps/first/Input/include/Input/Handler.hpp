@@ -52,7 +52,7 @@ namespace RC::Input
         std::mutex m_event_mutex;
 
       public:
-        Handler(){};
+        Handler() {};
 
         // Input source and event processing
       public:

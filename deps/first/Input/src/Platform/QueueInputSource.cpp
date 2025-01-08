@@ -10,7 +10,7 @@ namespace RC::Input
         if (m_activated)
         {
             m_input_queue.push(event);
-            Output::send<LogLevel::Default>(SYSSTR("QueueInputSource::push_input_event: {}"), (int)event.key);
+            Output::send<LogLevel::Default>(STR("QueueInputSource::push_input_event: {}"), (int)event.key);
         }
     }
 
@@ -23,7 +23,7 @@ namespace RC::Input
         auto& key_set = handler->get_subscribed_keys();
         while (event)
         {
-            Output::send<LogLevel::Default>(SYSSTR("QueueInputSource::reveive key event: {}"), (int)event->key);
+            Output::send<LogLevel::Default>(STR("QueueInputSource::reveive key event: {}"), (int)event->key);
             if (key_set[event->key])
             {
                 m_input_events.emplace_back(*event);

@@ -951,15 +951,16 @@ namespace RC
             }
 
 #ifdef HAS_INPUT
+            m_input_handler.init();
             if (!settings_manager.General.InputSource.empty())
             {
                 if (m_input_handler.set_input_source(to_string(settings_manager.General.InputSource)))
                 {
-                    Output::send(SYSSTR("Input source set to: {}\n"), m_input_handler.get_current_input_source());
+                    Output::send(STR("Input source set to: {}\n"), to_generic_string(m_input_handler.get_current_input_source()));
                 }
                 else
                 {
-                    Output::send<LogLevel::Error>(SYSSTR("Failed to set input source to: {}\n"), settings_manager.General.InputSource);
+                    Output::send<LogLevel::Error>(STR("Failed to set input source to: {}\n"), settings_manager.General.InputSource);
                 }
             }
 #endif
@@ -1629,6 +1630,7 @@ namespace RC
     {
         return m_input_handler.is_keydown_event_registered(key, modifier_keys);
     }
+#endif
 
     auto UE4SSProgram::find_mod_by_name_internal(StringViewType mod_name, IsInstalled is_installed, IsStarted is_started, FMBNI_ExtraPredicate extra_predicate) -> Mod*
     {
