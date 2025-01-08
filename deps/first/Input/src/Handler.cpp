@@ -4,6 +4,8 @@
 
 #include <Input/Handler.hpp>
 #include <Input/PlatformInputSource.hpp>
+#include <DynamicOutput/DynamicOutput.hpp>
+
 namespace RC::Input
 {
     std::unordered_map<std::string, std::shared_ptr<PlatformInputSource>> Handler::m_input_sources_store;
@@ -159,6 +161,7 @@ namespace RC::Input
             }
             if (highest_priority == INT_MAX)
             {
+                Output::send<LogLevel::Error>(STR("Input source: Source not found\n"));
                 return false;
             }
         }
