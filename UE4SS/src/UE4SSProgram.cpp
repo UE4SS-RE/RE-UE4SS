@@ -884,11 +884,11 @@ namespace RC
             {
                 if (m_input_handler.set_input_source(to_string(settings_manager.General.InputSource)))
                 {
-                    Output::send(SYSSTR("Input source set to: {}\n"), m_input_handler.get_current_input_source());
+                    Output::send(STR("Input source set to: {}\n"), m_input_handler.get_current_input_source());
                 }
                 else
                 {
-                    Output::send<LogLevel::Error>(SYSSTR("Failed to set input source to: {}\n"), settings_manager.General.InputSource);
+                    Output::send<LogLevel::Error>(STR("Failed to set input source to: {}\n"), settings_manager.General.InputSource);
                 }
             }
 #endif
