@@ -102,6 +102,8 @@ Changed the default location of the UE4SS release assets to be in `game executab
 
 Updated PatternSleuth submodule ([UE4SS #638](https://github.com/UE4SS-RE/RE-UE4SS/pull/638)) 
 
+The `bUseUObjectArrayCache` option in UE4SS-settings.ini is now set to false by default in the non-zDev release ([UE4SS #747](https://github.com/UE4SS-RE/RE-UE4SS/pull/747)) 
+
 ### Live View 
 Fixed the majority of the lag ([UE4SS #512](https://github.com/UE4SS-RE/RE-UE4SS/pull/512)) 
 
