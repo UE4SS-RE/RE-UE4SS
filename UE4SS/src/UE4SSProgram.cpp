@@ -824,8 +824,7 @@ namespace RC
             {
                 m_debugging_gui.get_live_view().set_listeners_allowed(false);
             }
-#ifdef HAS_INPUT
-            m_input_handler.register_keydown_event(Input::Key::O, {Input::ModifierKey::CONTROL}, [&]() {
+            register_keydown_event(Input::Key::O, {Input::ModifierKey::CONTROL}, [&]() {
                 TRY([&] {
                     auto was_gui_open = get_debugging_ui().is_open();
                     stop_render_thread();
@@ -836,11 +835,10 @@ namespace RC
                     }
                 });
             });
-#endif
         }
 
 #ifdef TIME_FUNCTION_MACRO_ENABLED
-        m_input_handler.register_keydown_event(Input::Key::Y, {Input::ModifierKey::CONTROL}, [&]() {
+        register_keydown_event(Input::Key::Y, {Input::ModifierKey::CONTROL}, [&]() {
             if (FunctionTimerFrame::s_timer_enabled)
             {
                 FunctionTimerFrame::stop_profiling();
@@ -857,16 +855,14 @@ namespace RC
 
         TRY([&] {
             ObjectDumper::init();
-#ifdef HAS_INPUT
             if (settings_manager.General.EnableHotReloadSystem)
             {
-                m_input_handler.register_keydown_event(Input::Key::R, {Input::ModifierKey::CONTROL}, [&]() {
+                register_keydown_event(Input::Key::R, {Input::ModifierKey::CONTROL}, [&]() {
                     TRY([&] {
                         reinstall_mods();
                     });
                 });
             }
-#endif
             if ((settings_manager.ObjectDumper.LoadAllAssetsBeforeDumpingObjects || settings_manager.CXXHeaderGenerator.LoadAllAssetsBeforeGeneratingCXXHeaders) &&
                 Unreal::Version::IsBelow(4, 17))
             {
@@ -900,14 +896,12 @@ namespace RC
             start_lua_mods();
         });
 
-#ifdef HAS_INPUT
         if (settings_manager.General.EnableDebugKeyBindings)
         {
-            m_input_handler.register_keydown_event(Input::Key::NUM_NINE, {Input::ModifierKey::CONTROL}, [&]() {
+            register_keydown_event(Input::Key::NUM_NINE, {Input::ModifierKey::CONTROL}, [&]() {
                 generate_uht_compatible_headers();
             });
         }
-#endif
     }
 
     auto UE4SSProgram::update() -> void
@@ -1526,10 +1520,11 @@ namespace RC
         return m_queued_events.empty();
     }
 
-#ifdef HAS_INPUT
     auto UE4SSProgram::register_keydown_event(Input::Key key, const Input::EventCallbackCallable& callback, uint8_t custom_data, void* custom_data2) -> void
     {
+#ifdef HAS_INPUT
         m_input_handler.register_keydown_event(key, callback, custom_data, custom_data2);
+#endif
     }
 
     auto UE4SSProgram::register_keydown_event(Input::Key key,
@@ -1538,19 +1533,28 @@ namespace RC
                                               uint8_t custom_data,
                                               void* custom_data2) -> void
     {
+#ifdef HAS_INPUT
         m_input_handler.register_keydown_event(key, modifier_keys, callback, custom_data, custom_data2);
+#endif
     }
 
     auto UE4SSProgram::is_keydown_event_registered(Input::Key key) -> bool
     {
+#ifdef HAS_INPUT
         return m_input_handler.is_keydown_event_registered(key);
+#else
+        return false;
+#endif
     }
 
     auto UE4SSProgram::is_keydown_event_registered(Input::Key key, const Input::Handler::ModifierKeyArray& modifier_keys) -> bool
     {
+#ifdef HAS_INPUT
         return m_input_handler.is_keydown_event_registered(key, modifier_keys);
-    }
+#else
+        return false;
 #endif
+    }
 
     auto UE4SSProgram::find_mod_by_name_internal(StringViewType mod_name, IsInstalled is_installed, IsStarted is_started, FMBNI_ExtraPredicate extra_predicate) -> Mod*
     {

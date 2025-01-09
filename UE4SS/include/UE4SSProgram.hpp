@@ -13,6 +13,8 @@
 #include <GUI/GUITab.hpp>
 #ifdef HAS_INPUT
 #include <Input/Handler.hpp>
+#else
+#include <Input/KeyDef.hpp>
 #endif
 
 #include <LuaLibrary.hpp>
@@ -226,12 +228,6 @@ namespace RC
         RC_UE4SS_API auto generate_uht_compatible_headers() -> void;
         RC_UE4SS_API auto generate_cxx_headers(const std::filesystem::path& output_dir) -> void;
         RC_UE4SS_API auto generate_lua_types(const std::filesystem::path& output_dir) -> void;
-#ifdef HAS_INPUT
-        auto get_input_handler() -> Input::Handler&
-        {
-            return m_input_handler;
-        }
-#endif
         auto get_debugging_ui() -> GUI::DebuggingGUI&
         {
             return m_debugging_gui;
@@ -255,7 +251,6 @@ namespace RC
         }
 
       public:
-#ifdef HAS_INPUT
         // API pass-through for use outside the private scope of UE4SSProgram
         RC_UE4SS_API auto register_keydown_event(Input::Key, const Input::EventCallbackCallable&, uint8_t custom_data = 0, void* custom_data2 = nullptr) -> void;
         RC_UE4SS_API auto register_keydown_event(Input::Key,
@@ -265,7 +260,6 @@ namespace RC
                                                  void* custom_data2 = nullptr) -> void;
         RC_UE4SS_API auto is_keydown_event_registered(Input::Key) -> bool;
         RC_UE4SS_API auto is_keydown_event_registered(Input::Key, const Input::Handler::ModifierKeyArray&) -> bool;
-#endif
 
       private:
         static auto install_cpp_mods() -> void;

@@ -3,6 +3,8 @@
 #include <stdexcept>
 #include <cstdint>
 #include <initializer_list>
+#include <functional>
+
 namespace RC::Input
 {
     static constexpr uint32_t max_callbacks_per_event = 30;
@@ -302,4 +304,27 @@ namespace RC::Input
     auto operator&(const ModifierKeys& keys, const ModifierKeys& key) -> bool;
 
     auto operator++(Input::Key& key) -> Input::Key&;
+
+    using EventCallbackCallable = std::function<void()>;
+
+    struct InputEvent
+    {
+        Key key;
+        ModifierKeys modifier_keys{};
+    };
+
+    struct KeyData
+    {
+        ModifierKeys required_modifier_keys{};
+        EventCallbackCallable callback{};
+        uint8_t custom_data{};
+        void* custom_data2{};
+        bool requires_modifier_keys{};
+        bool is_down{};
+    };
+
+    struct KeySet
+    {
+        std::unordered_map<Key, std::vector<KeyData>> key_data;
+    };
 } // namespace RC::Input
