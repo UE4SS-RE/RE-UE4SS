@@ -1,5 +1,4 @@
-#ifndef IO_INPUT_HANDLER_HPP
-#define IO_INPUT_HANDLER_HPP
+#pragma once
 
 // TODO: Abstract more... need to get rid of Windows.h from InputHandler.cpp
 
@@ -111,5 +110,3 @@ namespace RC::Input
     };
 #endif // HAS_INPUT
 } // namespace RC::Input
-
-#endif // IO_INPUT_HANDLER_HPP
