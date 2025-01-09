@@ -42,14 +42,18 @@ namespace RC::Input
     class PlatformInputSource;
     class RC_INPUT_API Handler
     {
+#ifdef HAS_INPUT
       private:
         // std::vector<KeySet> m_key_sets{};
         KeySet m_key_set{};
+
         bool m_allow_input{true};
+        
         std::array<bool, max_keys> m_subscribed_keys{};
 
         std::shared_ptr<PlatformInputSource> m_platform_handler;
         std::mutex m_event_mutex;
+#endif
 
       public:
         Handler() {};
@@ -78,7 +82,11 @@ namespace RC::Input
         auto has_event_on_key(Input::Key key) -> bool;
         auto get_subscribed_keys() const -> const std::array<bool, max_keys>&
         {
+#ifdef HAS_INPUT
             return m_subscribed_keys;
+#endif
+            static std::array<bool, max_keys> empty{};
+            return empty;
         }
 
         auto get_allow_input() -> bool;
@@ -93,10 +101,12 @@ namespace RC::Input
       public:
         static auto get_input_source(std::string source) -> std::shared_ptr<PlatformInputSource>
         {
+#ifdef HAS_INPUT
             if (m_input_sources_store.find(source) != m_input_sources_store.end())
             {
                 return m_input_sources_store[source];
             }
+#endif
             return nullptr;
         }
     };

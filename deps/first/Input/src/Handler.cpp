@@ -12,6 +12,7 @@ namespace RC::Input
 
     auto Handler::process_event() -> void
     {
+#ifdef HAS_INPUT
         if (m_platform_handler == nullptr)
         {
             return;
@@ -43,21 +44,25 @@ namespace RC::Input
         {
             callback();
         }
+#endif
     }
 
     auto Handler::register_keydown_event(Input::Key key, EventCallbackCallable callback, uint8_t custom_data, void* custom_data2) -> void
     {
+#ifdef HAS_INPUT
         auto event_update_lock = std::lock_guard(m_event_mutex);
         KeyData& key_data = m_key_set.key_data[key].emplace_back();
         key_data.callback = callback;
         key_data.custom_data = custom_data;
         key_data.custom_data2 = custom_data2;
         m_subscribed_keys[key] = true;
+#endif
     }
 
     auto Handler::register_keydown_event(
             Input::Key key, const ModifierKeyArray& modifier_keys, const EventCallbackCallable& callback, uint8_t custom_data, void* custom_data2) -> void
     {
+#ifdef HAS_INPUT
         auto event_update_lock = std::lock_guard(m_event_mutex);
         KeyData& key_data = m_key_set.key_data[key].emplace_back();
         key_data.callback = callback;
@@ -66,10 +71,12 @@ namespace RC::Input
         key_data.requires_modifier_keys = true;
         key_data.required_modifier_keys = modifier_keys;
         m_subscribed_keys[key] = true;
+#endif
     }
 
     auto Handler::is_keydown_event_registered(Input::Key key) -> bool
     {
+#ifdef HAS_INPUT
         auto event_update_lock = std::lock_guard(m_event_mutex);
         auto key_data = m_key_set.key_data.find(key);
         if (key_data == m_key_set.key_data.end())
@@ -83,11 +90,14 @@ namespace RC::Input
                 return true;
             }
         }
+#endif
         return false;
+
     }
 
     auto Handler::is_keydown_event_registered(Input::Key key, const ModifierKeyArray& modifier_keys_array) -> bool
     {
+#ifdef HAS_INPUT
         auto event_update_lock = std::lock_guard(m_event_mutex);
         auto key_data = m_key_set.key_data.find(key);
         auto modifier_keys = ModifierKeys(modifier_keys_array);
@@ -102,44 +112,61 @@ namespace RC::Input
                 return true;
             }
         }
+#endif
         return false;
+
     }
 
     auto Handler::has_event_on_key(Input::Key key) -> bool
     {
+#ifdef HAS_INPUT
         return m_subscribed_keys[key];
+#endif
+        return false;
     }
 
     auto Handler::get_events_safe(std::function<void(KeySet&)> callback) -> void
     {
+#ifdef HAS_INPUT
         auto event_update_lock = std::lock_guard(m_event_mutex);
         callback(m_key_set);
+#endif
     }
 
     auto Handler::clear_subscribed_keys() -> void
     {
+#ifdef HAS_INPUT
         m_subscribed_keys.fill(false);
+#endif
     }
 
     auto Handler::clear_subscribed_key(Key k) -> void
     {
+#ifdef HAS_INPUT
         m_subscribed_keys[k] = false;
+#endif
     }
 
     auto Handler::get_allow_input() -> bool
     {
+#ifdef HAS_INPUT
         return m_allow_input;
+#endif
+        return false;
     }
 
     auto Handler::set_allow_input(bool new_value) -> void
     {
+#ifdef HAS_INPUT
         m_allow_input = new_value;
+#endif
     }
 
     /// Set the input source to the given source
     /// SAFETY: Only call this function from the main thread
     auto Handler::set_input_source(std::string source) -> bool
     {
+#ifdef HAS_INPUT
         auto event_update_lock = std::lock_guard(m_event_mutex);
         std::shared_ptr<PlatformInputSource> next_input_source = nullptr;
         if (source == "Default")
@@ -189,24 +216,31 @@ namespace RC::Input
             return true;
         }
         return true;
+#endif
+        return false;
     }
 
     // register the input source to the input source store
     auto Handler::register_input_source(std::shared_ptr<PlatformInputSource> input_source) -> void
     {
+#ifdef HAS_INPUT
         std::string name = input_source->get_name();
         if (m_input_sources_store.find(name) == m_input_sources_store.end())
         {
             m_input_sources_store[name] = input_source;
         }
+#endif
     }
 
     auto Handler::get_current_input_source() -> std::string
     {
+#ifdef HAS_INPUT
         if (m_platform_handler == nullptr)
         {
             return "None";
         }
         return m_platform_handler->get_name();
+#endif
+        return "None";
     }
 } // namespace RC::Input

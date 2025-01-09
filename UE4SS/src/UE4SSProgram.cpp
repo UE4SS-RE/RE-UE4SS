@@ -824,7 +824,7 @@ namespace RC
             {
                 m_debugging_gui.get_live_view().set_listeners_allowed(false);
             }
-#ifdef HAS_INPUT
+
             m_input_handler.register_keydown_event(Input::Key::O, {Input::ModifierKey::CONTROL}, [&]() {
                 TRY([&] {
                     auto was_gui_open = get_debugging_ui().is_open();
@@ -836,7 +836,7 @@ namespace RC
                     }
                 });
             });
-#endif
+
         }
 
 #ifdef TIME_FUNCTION_MACRO_ENABLED
@@ -857,7 +857,7 @@ namespace RC
 
         TRY([&] {
             ObjectDumper::init();
-#ifdef HAS_INPUT
+
             if (settings_manager.General.EnableHotReloadSystem)
             {
                 m_input_handler.register_keydown_event(Input::Key::R, {Input::ModifierKey::CONTROL}, [&]() {
@@ -866,7 +866,7 @@ namespace RC
                     });
                 });
             }
-#endif
+
             if ((settings_manager.ObjectDumper.LoadAllAssetsBeforeDumpingObjects || settings_manager.CXXHeaderGenerator.LoadAllAssetsBeforeGeneratingCXXHeaders) &&
                 Unreal::Version::IsBelow(4, 17))
             {
@@ -879,7 +879,7 @@ namespace RC
                         STR("FAssetData not available, ignoring 'LoadAllAssetsBeforeDumpingObjects' & 'LoadAllAssetsBeforeGeneratingCXXHeaders'."));
             }
 
-#ifdef HAS_INPUT
+
             m_input_handler.init();
             if (!settings_manager.General.InputSource.empty())
             {
@@ -892,7 +892,7 @@ namespace RC
                     Output::send<LogLevel::Error>(STR("Failed to set input source to: {}\n"), settings_manager.General.InputSource);
                 }
             }
-#endif
+
 
             install_lua_mods();
             LuaMod::on_program_start();
@@ -900,14 +900,14 @@ namespace RC
             start_lua_mods();
         });
 
-#ifdef HAS_INPUT
+
         if (settings_manager.General.EnableDebugKeyBindings)
         {
             m_input_handler.register_keydown_event(Input::Key::NUM_NINE, {Input::ModifierKey::CONTROL}, [&]() {
                 generate_uht_compatible_headers();
             });
         }
-#endif
+
     }
 
     auto UE4SSProgram::update() -> void
@@ -966,9 +966,9 @@ namespace RC
                 }
             }
             //*/
-#ifdef HAS_INPUT
+
             m_input_handler.process_event();
-#endif
+
             {
                 ProfilerScopeNamed("mod update processing");
 
@@ -1337,7 +1337,6 @@ namespace RC
         uninstall_mods();
 
 // Remove key binds that were set from Lua scripts
-#ifdef HAS_INPUT
         m_input_handler.get_events_safe([&](auto& key_set) {
             std::erase_if(key_set.key_data, [&](auto& item) -> bool {
                 auto& [_, key_data] = item;
@@ -1359,7 +1358,6 @@ namespace RC
                 return were_all_events_registered_from_lua;
             });
         });
-#endif
 
         // Remove all custom properties
         // Uncomment when custom properties are working
@@ -1525,8 +1523,7 @@ namespace RC
         // Not locking here because if the worst that could happen as far as I know is that the event loop processes the event slightly late.
         return m_queued_events.empty();
     }
-
-#ifdef HAS_INPUT
+    
     auto UE4SSProgram::register_keydown_event(Input::Key key, const Input::EventCallbackCallable& callback, uint8_t custom_data, void* custom_data2) -> void
     {
         m_input_handler.register_keydown_event(key, callback, custom_data, custom_data2);
@@ -1550,7 +1547,6 @@ namespace RC
     {
         return m_input_handler.is_keydown_event_registered(key, modifier_keys);
     }
-#endif
 
     auto UE4SSProgram::find_mod_by_name_internal(StringViewType mod_name, IsInstalled is_installed, IsStarted is_started, FMBNI_ExtraPredicate extra_predicate) -> Mod*
     {

@@ -12,9 +12,9 @@
 #include <Helpers/Format.hpp>
 #include <Helpers/String.hpp>
 
-#ifdef HAS_INPUT
+
 #include <Input/Handler.hpp>
-#endif
+
 
 #include <LuaLibrary.hpp>
 #include <LuaMadeSimple/LuaMadeSimple.hpp>
@@ -1054,7 +1054,7 @@ Overloads:
 
         if (is_true_mod == Mod::IsTrueMod::Yes)
         {
-#ifdef HAS_INPUT
+
             lua.register_function("IsKeyBindRegistered", [](const LuaMadeSimple::Lua& lua) -> int {
                 std::string error_overload_not_found{R"(
 No overload found for function 'IsKeyBindRegistered'.
@@ -1351,8 +1351,7 @@ Overloads:
 
                 return 0;
             });
-
-#endif
+            
             lua.register_function("UnregisterHook", [](const LuaMadeSimple::Lua& lua) -> int {
                 std::lock_guard<std::recursive_mutex> guard{LuaMod::m_thread_actions_mutex};
 
