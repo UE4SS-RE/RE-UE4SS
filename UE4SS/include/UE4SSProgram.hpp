@@ -11,11 +11,7 @@
 #include <DynamicOutput/DynamicOutput.hpp>
 #include <GUI/GUI.hpp>
 #include <GUI/GUITab.hpp>
-#ifdef HAS_INPUT
 #include <Input/Handler.hpp>
-#else
-#include <Input/KeyDef.hpp>
-#endif
 
 #include <LuaLibrary.hpp>
 #include <MProgram.hpp>

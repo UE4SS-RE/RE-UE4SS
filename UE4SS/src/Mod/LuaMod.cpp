@@ -12,11 +12,7 @@
 #include <Helpers/Format.hpp>
 #include <Helpers/String.hpp>
 
-#ifdef HAS_INPUT
 #include <Input/Handler.hpp>
-#else
-#include <Input/KeyDef.hpp>
-#endif
 
 #include <LuaLibrary.hpp>
 #include <LuaMadeSimple/LuaMadeSimple.hpp>
