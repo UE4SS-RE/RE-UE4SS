@@ -16,7 +16,31 @@
 
 namespace RC::Input
 {
+    using EventCallbackCallable = std::function<void()>;
+
+    struct InputEvent
+    {
+        Key key;
+        ModifierKeys modifier_keys{};
+    };
+
+    struct KeyData
+    {
+        ModifierKeys required_modifier_keys{};
+        EventCallbackCallable callback{};
+        uint8_t custom_data{};
+        void* custom_data2{};
+        bool requires_modifier_keys{};
+        bool is_down{};
+    };
+
+    struct KeySet
+    {
+        std::unordered_map<Key, std::vector<KeyData>> key_data;
+    };
+
     using ModifierKeyArray = std::array<Input::ModifierKey, max_modifier_keys>;
+
 #ifdef HAS_INPUT
     class PlatformInputSource;
     class RC_INPUT_API Handler
