@@ -215,7 +215,7 @@ local function LoadMod(ModName, ModInfo, World)
 			return
 		end
 
-        if not World:IsValid() then Log(string.format("World is not valid for '%s' to spawn in\n", ModName)) return end
+        if not World or not World:IsValid() then Log(string.format("World is not valid for '%s' to spawn in\n", ModName)) return end
 
         local Actor = World:SpawnActor(ModClass, {}, {})
         if not Actor:IsValid() then
