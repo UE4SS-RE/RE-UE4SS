@@ -214,7 +214,11 @@ local function LoadMod(ModName, ModInfo, World)
         return
     end
 
-    if not World:IsValid() then Log(string.format("World is not valid for '%s' to spawn in\n", ModName)) return end
+    if not World then error("A `nil` World parameter was passed to LoadMod function. It's most likely a bug in BPModLoaderMod!") end
+    if not World:IsValid() then
+        Log(string.format("World is not valid for '%s' to spawn in\n", ModName))
+        return
+    end
 
     local Actor = World:SpawnActor(ModClass, {}, {})
     if not Actor:IsValid() then
@@ -249,6 +253,8 @@ local function CacheAssetRegistry()
 end
 
 local function LoadMods(World)
+    if not World then error("A `nil` World parameter was passed to LoadMods function. It's most likely a bug in BPModLoaderMod!") end
+
     CacheAssetRegistry()
     for _, ModInfo in ipairs(OrderedMods) do
         if type(ModInfo) == "table" then
