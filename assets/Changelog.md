@@ -214,6 +214,7 @@ Fixed displaying 'PostBeginPlay not valid' when VerboseLogging is set to false (
 
 Fixes mods not loading when UE4SS initializes too late ([UE4SS #454](https://github.com/UE4SS-RE/RE-UE4SS/pull/454)) - localcc 
 
+Fixed `LoadMod` function issue that variables would go out-of-scope in the `ExecuteInGameThread` callback. Instead, `LoadMods` is now always called in a game thread. ([UE4SS #752](https://github.com/UE4SS-RE/RE-UE4SS/pull/752))
 
 ## Settings 
 
