@@ -59,7 +59,7 @@ RegisterCustomEvent("ConstructPersistentObject", function(ParamContext, ParamCla
     local GarbageCollectionKeepFlags = 0x0E000000
     local PersistentObject = StaticConstructObject(Class, GameInstance, 0, 0, GarbageCollectionKeepFlags, false, false, nil, nil, nil)
     if not PersistentObject:IsValid() then
-        Log(string.format("Was unable to construct persistent object: %s", Class:GetFullName()))
+        Log(string.format("Was unable to construct persistent object: %s\n", Class:GetFullName()))
     end
 
     -- Return Value

@@ -14,6 +14,7 @@
 #include <Unreal/FString.hpp>
 #include <Unreal/Core/Containers/Array.hpp>
 #include <Unreal/FFrame.hpp>
+#include <Unreal/Script.hpp>
 #include <Unreal/ReflectedFunction.hpp>
 #include <Unreal/Signatures.hpp>
 #include <Unreal/Property/FObjectProperty.hpp>
@@ -24,6 +25,8 @@
 #include <misc/cpp/imgui_stdlib.h>
 #include <glaze/glaze.hpp>
 
+#include "Profiler/Profiler.hpp"
+
 #include <UE4SSProgram.hpp>
 
 namespace RC::GUI::KismetDebuggerMod
@@ -32,7 +35,6 @@ namespace RC::GUI::KismetDebuggerMod
     using namespace RC::Unreal;
 
     FNativeFuncPtr GNativesOriginal[EExprToken::EX_Max];
-    FNativeFuncPtr* GNatives = nullptr;
     volatile bool is_hooked = false; // cannot hook *immediately* as GNatives is populated at runtime
 
     volatile bool should_pause = false;
@@ -42,17 +44,18 @@ namespace RC::GUI::KismetDebuggerMod
 
     BreakpointStore g_breakpoints;
 
-    template <unsigned N>
-    void hook_expr(UObject* Context, FFrame& Stack, void* RESULT_DECL) {
-        static const EExprToken expr = static_cast<EExprToken>(N);
+    void hook_expr_internal(UObject* Context, FFrame& Stack, void* RESULT_DECL, EExprToken N) {
         UFunction* fn = Stack.Node();
+        StringType name = Stack.Node()->GetFullName();
+        ProfilerTransientScopeNamed(scope, to_string(name).c_str(), true);
+            
         size_t index = Stack.Code() - fn->GetScript().GetData() - 1;
         if (should_pause || g_breakpoints.has_breakpoint(fn, index))
         {
             should_pause = true;
             std::unique_lock<std::mutex> lock_a(context_mutex);
             PausedContext ctx{
-                .expr = expr,
+                .expr = N,
                 .context = Context,
                 .stack = &Stack,
             };
@@ -70,10 +73,15 @@ namespace RC::GUI::KismetDebuggerMod
 
         GNativesOriginal[N](Context, Stack, RESULT_DECL);
     }
+    
+    template <unsigned N>
+    void hook_expr(UObject* Context, FFrame& Stack, void* RESULT_DECL) {
+        hook_expr_internal(Context, Stack, RESULT_DECL, static_cast<EExprToken>(N));
+    }
 
     template <unsigned N> void hook_all() {
-        GNativesOriginal[N - 1] = GNatives[N - 1];
-        GNatives[N - 1] = &hook_expr<N - 1>;
+        GNativesOriginal[N - 1] = GNatives_Internal[N - 1];
+        GNatives_Internal[N - 1] = &hook_expr<N - 1>;
         hook_all<N - 1>();
     }
     template <> void hook_all<0>() {}
@@ -223,7 +231,7 @@ namespace RC::GUI::KismetDebuggerMod
         {
             for (int i = 0; i < EExprToken::EX_Max; i++)
             {
-                GNatives[i] = GNativesOriginal[i];
+                GNatives_Internal[i] = GNativesOriginal[i];
             }
             is_hooked = false;
             should_pause = false;
@@ -265,64 +273,20 @@ namespace RC::GUI::KismetDebuggerMod
             Output::send<LogLevel::Warning>(STR("[KismetDebugger]: Failed to load breakpoints: {}\n"), ensure_str(e.what()));
         }
 
-        // scan for GNatives if it hasn't been found yet
-        if (GNatives == nullptr)
-        {
-            SignatureContainer gnatives = [&]() -> SignatureContainer {
-                return {
-                    // UObject::SkipFunction
-                    { { "40 55 41 54 41 55 41 56 41 57 48 83 EC 30 48 8D 6C 24 20 48 89 5D 40 48 89 75 48 48 89 7D 50 48 8B 05 ?? ?? ?? ?? 48 33 C5 48 89 45 00 ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? 4D 8B ?? ?? 8B ?? 85 ?? 75 05 41 8B FC EB ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? 48 ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? 48 ?? E0" } },
-                    [&](SignatureContainer& self) {
-                        uint8_t* data = static_cast<uint8_t*>(self.get_match_address());
-                        for (uint8_t* i : std::views::iota(data) | std::views::take(500))
-                        {
-                            // look for LEA instruction within the function body
-                            if (i[0] == 0x4c && i[1] == 0x8d && ((i[2] & 0xc7) == 5) && i[2] > 0x20)
-                            {
-                                // LEA found, resolve relative jump
-                                int32_t jmp;
-                                memcpy(&jmp, i + 3, sizeof(jmp));
-
-                                GNatives = reinterpret_cast<FNativeFuncPtr*>(i + 3 + 4 + jmp);
-
-                                Output::send(STR("[KismetDebugger]: GNatives address: {}\n"), static_cast<void*>(GNatives));
-
-                                self.get_did_succeed() = true;
-                                return true;
-                            }
-                        }
-                        Output::send(STR("[KismetDebugger]: GNatives: no LEA instruction found\n"));
-
-                        return false;
-                    },
-                    [&](const SignatureContainer& self) {
-                        if (!self.get_did_succeed())
-                        {
-                            Output::send<LogLevel::Warning>(STR("[KismetDebugger]: GNatives not found. Unable to hook.\n"));
-                        }
-                    }
-                };
-            }();
-
-            SinglePassScanner::SignatureContainerMap container_map;
-            std::vector<SignatureContainer> container;
-            container.emplace_back(gnatives);
-            container_map.emplace(ScanTarget::Core, container);
-            SinglePassScanner::start_scan(container_map);
-        }
-
-        if (GNatives != nullptr)
+        if (GNatives_Internal != nullptr)
         {
             // finally actually enable the debugger
             hook_all<EExprToken::EX_Max>();
             is_hooked = true;
+            return;
         }
+        Output::send<LogLevel::Error>(STR("[KismetDebugger]: GNatives not found.\n"));
     }
     auto Debugger::disable() -> void
     {
         for (int i = 0; i < EExprToken::EX_Max; i++)
         {
-            GNatives[i] = GNativesOriginal[i];
+            GNatives_Internal[i] = GNativesOriginal[i];
         }
         is_hooked = false;
         should_pause = false;
@@ -666,8 +630,12 @@ namespace RC::GUI::KismetDebuggerMod
                 return "EX_Assert";
             case EX_Nothing:
                 return "EX_Nothing";
+            case EX_NothingInt32:
+                return "EX_NothingInt32";
             case EX_Let:
                 return "EX_Let";
+            case EX_BitFieldConst:
+                return "EX_BitFieldConst";
             case EX_ClassContext:
                 return "EX_ClassContext";
             case EX_MetaCast:
@@ -704,6 +672,8 @@ namespace RC::GUI::KismetDebuggerMod
                 return "EX_RotationConst";
             case EX_VectorConst:
                 return "EX_VectorConst";
+            case EX_Vector3fConst:
+                return "EX_Vector3fConst";
             case EX_ByteConst:
                 return "EX_ByteConst";
             case EX_IntZero:
@@ -838,6 +808,12 @@ namespace RC::GUI::KismetDebuggerMod
                 return "EX_ClassSparseDataVariable";
             case EX_FieldPathConst:
                 return "EX_FieldPathConst";
+            case EX_AutoRtfmTransact:
+                return "EX_AutoRtfmTransact";
+            case EX_AutoRtfmStopTransact:
+                return "EX_AutoRtfmStopTransact";
+            case EX_AutoRtfmAbortIfNot:
+                return "EX_AutoRtfmAbortIfNot";
             case EX_Max:
                 return "EX_Max";
         }
@@ -902,7 +878,7 @@ namespace RC::GUI::KismetDebuggerMod
         bool active = m_index == m_cur;
         size_t expr_index = m_index;
 
-        m_current_expr = static_cast<EExprToken>(read<uint8_t>());
+        m_current_expr = static_cast<EExprToken>(read<uint8>());
 
         //std::cout << "rendering (" << std::hex << unsigned(m_current_expr) << std::dec << ") @ " << (index - 1) << " " << expr_to_string(m_current_expr) << std::endl;
 
@@ -939,7 +915,7 @@ namespace RC::GUI::KismetDebuggerMod
         {
             case EX_Cast:
             {
-                read<uint8_t>();
+                read<uint8>();
                 render_expr();
                 break;
             }
@@ -979,7 +955,7 @@ namespace RC::GUI::KismetDebuggerMod
             }
             case EX_Jump:
             {
-                read<uint32_t>();
+                read<uint32>();
                 break;
             }
             case EX_ComputedJump:
@@ -1004,7 +980,12 @@ namespace RC::GUI::KismetDebuggerMod
             }
             case EX_PushExecutionFlow:
             {
-                read<uint32_t>();
+                read<uint32>();
+                break;
+            }
+            case EX_NothingInt32:
+            {
+                read<int32>();
                 break;
             }
             case EX_Nothing:
@@ -1090,12 +1071,18 @@ namespace RC::GUI::KismetDebuggerMod
                 while(render_expr() != EX_EndFunctionParms); // Parms.
                 break;
             }
+            case EX_BitFieldConst:
+            {
+                (FProperty*)read_object();
+                read<uint8>();
+                break;
+            }
             case EX_ClassContext:
             case EX_Context:
             case EX_Context_FailSilent:
             {
                 render_expr(); // Object expression.
-                read<uint32_t>();
+                read<uint32>();
                 (FField*)read_object();            // Property corresponding to the r-value data, in case the l-value needs to be mem-zero'd
                 render_expr(); // Context expression.
                 break;
@@ -1114,7 +1101,7 @@ namespace RC::GUI::KismetDebuggerMod
             }
             case EX_IntConst:
             {
-                ImGui::Text("%d", read<int32_t>());
+                ImGui::Text("%d", read<int32>());
                 break;
             }
             case EX_Int64Const:
@@ -1134,7 +1121,7 @@ namespace RC::GUI::KismetDebuggerMod
             }
             case EX_SkipOffsetConst:
             {
-                ImGui::Text("%u", read<uint32_t>()); // TODO jump
+                ImGui::Text("%u", read<uint32>()); // TODO jump
                 break;
             }
             case EX_FloatConst:
@@ -1144,17 +1131,17 @@ namespace RC::GUI::KismetDebuggerMod
             }
             case EX_StringConst:
             {
-                while (read<uint8_t>());
+                while (read<uint8>());
                 break;
             }
             case EX_UnicodeStringConst:
             {
-                while (read<uint16_t>());
+                while (read<uint16>());
                 break;
             }
             case EX_TextConst:
             {
-                switch (read<uint8_t>())
+                switch (read<uint8>())
                 {
                     case 0: // Empty
                         break;
@@ -1199,11 +1186,12 @@ namespace RC::GUI::KismetDebuggerMod
             }
             case EX_RotationConst:
             {
-                read<int32_t>();
-                read<int32_t>();
-                read<int32_t>();
+                read<int32>();
+                read<int32>();
+                read<int32>();
                 break;
             }
+            case EX_Vector3fConst:
             case EX_VectorConst:
             {
                 read<float>();
@@ -1224,7 +1212,7 @@ namespace RC::GUI::KismetDebuggerMod
             case EX_StructConst:
             {
                 (UScriptStruct*)read_object();    // Struct.
-                read<int32_t>();
+                read<int32>();
                 while(render_expr() != EX_EndStructConst);
                 break;
             }
@@ -1247,25 +1235,25 @@ namespace RC::GUI::KismetDebuggerMod
             }
             case EX_SetSet:
                 render_expr(); // set property
-                read<int32_t>();
+                read<int32>();
                 while (render_expr() != EX_EndSet);
                 break;
             case EX_SetMap:
                 render_expr(); // map property
-                read<int32_t>();
+                read<int32>();
                 while (render_expr() != EX_EndMap);
                 break;
             case EX_ArrayConst:
             {
                 (FProperty*)read_object();    // Inner property
-                read<int32_t>();
+                read<int32>();
                 while (render_expr() != EX_EndArrayConst);
                 break;
             }
             case EX_SetConst:
             {
                 (FProperty*)read_object();    // Inner property
-                read<int32_t>();
+                read<int32>();
                 while (render_expr() != EX_EndSetConst);
                 break;
             }
@@ -1273,14 +1261,14 @@ namespace RC::GUI::KismetDebuggerMod
             {
                 (FProperty*)read_object();    // Key property
                 (FProperty*)read_object();    // Val property
-                read<int32_t>();
+                read<int32>();
                 while (render_expr() != EX_EndMapConst);
                 break;
             }
             case EX_ByteConst:
             case EX_IntConstByte:
             {
-                read<int8_t>();
+                read<int8>();
                 break;
             }
             case EX_MetaCast:
@@ -1297,7 +1285,7 @@ namespace RC::GUI::KismetDebuggerMod
             }
             case EX_JumpIfNot:
             {
-                read<uint32_t>();
+                read<uint32>();
                 render_expr(); // Boolean expr.
                 break;
             }
@@ -1308,14 +1296,14 @@ namespace RC::GUI::KismetDebuggerMod
             }
             case EX_Assert:
             {
-                read<uint16_t>();
-                read<uint8_t>();
+                read<uint16>();
+                read<uint8>();
                 render_expr(); // Assert expr.
                 break;
             }
             case EX_Skip:
             {
-                read<uint32_t>();
+                read<uint32>();
                 render_expr(); // Expression to possibly skip.
                 break;
             }
@@ -1333,14 +1321,14 @@ namespace RC::GUI::KismetDebuggerMod
             }
             case EX_SwitchValue:
             {
-                auto cases = read<uint16_t>(); // number of cases, without default one
-                auto end = read<uint32_t>(); // Code offset, go to it, when done.
+                auto cases = read<uint16>(); // number of cases, without default one
+                auto end = read<uint32>(); // Code offset, go to it, when done.
                 render_expr();   //index term
 
-                for (uint16_t i = 0; i < cases; ++i)
+                for (uint16 i = 0; i < cases; ++i)
                 {
                     render_expr();   // case index value term
-                    auto next_case = read<uint32_t>(); // offset to the next case
+                    auto next_case = read<uint32>(); // offset to the next case
                     render_expr();   // case term
                 }
 
@@ -1350,6 +1338,24 @@ namespace RC::GUI::KismetDebuggerMod
             case EX_ArrayGetByRef:
             {
                 render_expr();
+                render_expr();
+                break;
+            }
+            case EX_AutoRtfmTransact:
+            {
+                read<int32>();
+                read<uint32>();
+                while (render_expr() != EX_AutoRtfmStopTransact);
+                break;
+            }
+            case EX_AutoRtfmStopTransact:
+            {
+                read<int32>();
+                read<uint8>();
+                break;
+            }
+            case EX_AutoRtfmAbortIfNot:
+            {
                 render_expr();
                 break;
             }

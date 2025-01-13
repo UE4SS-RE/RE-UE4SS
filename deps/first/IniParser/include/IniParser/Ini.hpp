@@ -32,16 +32,18 @@ namespace RC::Ini
       private:
         RC_INI_PARSER_API auto parse_internal(File::StringType& input) -> void;
         RC_INI_PARSER_API auto create_available_tokens_for_tokenizer() -> ParserBase::TokenContainer;
-        RC_INI_PARSER_API auto get_value(const File::StringType& section, const File::StringType& key, CanThrow = CanThrow::Yes) const
-                -> std::optional<std::reference_wrapper<const Value>>;
+        RC_INI_PARSER_API auto get_value(const File::StringType& section,
+                                         const File::StringType& key,
+                                         CanThrow = CanThrow::Yes) const -> std::optional<std::reference_wrapper<const Value>>;
 
       public:
         RC_INI_PARSER_API auto parse(File::StringType& input) -> void;
         RC_INI_PARSER_API auto parse(const File::Handle&) -> void;
         RC_INI_PARSER_API auto get_list(const File::StringType& section) -> List;
         RC_INI_PARSER_API auto get_ordered_list(const File::StringType& section) -> List;
-        RC_INI_PARSER_API auto get_string(const File::StringType& section, const File::StringType& key, const File::StringType& default_value) const noexcept
-                -> const File::StringType&;
+        RC_INI_PARSER_API auto get_string(const File::StringType& section,
+                                          const File::StringType& key,
+                                          const File::StringType& default_value) const noexcept -> const File::StringType&;
         RC_INI_PARSER_API auto get_string(const File::StringType& section, const File::StringType& key) const -> const File::StringType&;
         // Should there be more integer getters ? They'd confirm size and convert explicitly (or throw?), no implicit conversions.
         RC_INI_PARSER_API auto get_int64(const File::StringType& section, const File::StringType& key, int64_t default_value) const noexcept -> int64_t;

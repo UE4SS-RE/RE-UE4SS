@@ -13,6 +13,7 @@
 #include <Unreal/Property/FMapProperty.hpp>
 #include <Unreal/Property/FMulticastInlineDelegateProperty.hpp>
 #include <Unreal/Property/FMulticastSparseDelegateProperty.hpp>
+#include <Unreal/Property/FOptionalProperty.hpp>
 #include <Unreal/Property/FObjectProperty.hpp>
 #include <Unreal/Property/FSetProperty.hpp>
 #include <Unreal/Property/FSoftClassProperty.hpp>
@@ -127,8 +128,10 @@ namespace RC::UEGenerator
         return fmt::format(STR("F{}{}"), context_name, property_name);
     }
 
-    auto generate_property_cxx_name(FProperty* property, bool is_top_level_declaration, UObject* class_context, EnableForwardDeclarations enable_forward_declarations)
-            -> File::StringType
+    auto generate_property_cxx_name(FProperty* property,
+                                    bool is_top_level_declaration,
+                                    UObject* class_context,
+                                    EnableForwardDeclarations enable_forward_declarations) -> File::StringType
     {
         const StringType field_class_name = property->GetClass().GetName();
 
@@ -250,7 +253,7 @@ namespace RC::UEGenerator
             {
                 return STR("TSoftClassPtr<UObject>");
             }
-            
+
             const StringType meta_class_name = get_native_class_name(meta_class, false);
             return fmt::format(STR("TSoftClassPtr<{}>"), meta_class_name);
         }
@@ -464,6 +467,14 @@ namespace RC::UEGenerator
             return fmt::format(STR("TMap<{}, {}>"), key_type, value_type);
         }
 
+        if (property->IsA<FOptionalProperty>())
+        {
+            FOptionalProperty* optional_property = static_cast<FOptionalProperty*>(property);
+            FProperty* value_property = optional_property->GetValueProperty();
+            StringType value_property_type = generate_property_cxx_name(value_property, is_top_level_declaration, class_context);
+            return fmt::format(STR("TOptional<{}>"), value_property_type);
+        }
+
         // Standard properties that do not have any special attributes
         if (property->IsA<FNameProperty>())
         {
@@ -477,6 +488,7 @@ namespace RC::UEGenerator
         {
             return STR("FText");
         }
+
         throw std::runtime_error(RC::fmt("Unsupported property class %S", field_class_name.c_str()));
     }
 
@@ -772,6 +784,14 @@ namespace RC::UEGenerator
             return fmt::format(STR("TMap<{}, {}>"), key_type, value_type);
         }
 
+        if (property->IsA<FOptionalProperty>())
+        {
+            FOptionalProperty* optional_property = static_cast<FOptionalProperty*>(property);
+            FProperty* value_property = optional_property->GetValueProperty();
+            StringType value_property_type = generate_property_lua_name(value_property, is_top_level_declaration, class_context);
+            return fmt::format(STR("TOptional<{}>"), value_property_type);
+        }
+
         // Standard properties that do not have any special attributes
         if (field_class_name == STR("NameProperty"))
         {
@@ -785,6 +805,7 @@ namespace RC::UEGenerator
         {
             return STR("FText");
         }
+
         throw std::runtime_error(RC::fmt("Unsupported property class %S", field_class_name.c_str()));
     }
 

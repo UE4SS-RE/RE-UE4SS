@@ -25,16 +25,12 @@ namespace RC::GUI::Filter
 
     template <typename T>
     concept CanPreEval = requires(T t) {
-        {
-            T::pre_eval(std::declval<UObject*>())
-        };
+        { T::pre_eval(std::declval<UObject*>()) };
     };
 
     template <typename T>
     concept CanPostEval = requires(T t) {
-        {
-            T::post_eval(std::declval<UObject*>())
-        };
+        { T::post_eval(std::declval<UObject*>()) };
     };
 
     template <typename T>

@@ -31,6 +31,7 @@ namespace RC
         {
             int64_t MajorVersion{-1};
             int64_t MinorVersion{-1};
+            bool DebugBuild{false};
         } EngineVersionOverride;
 
         struct SectionObjectDumper

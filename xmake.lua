@@ -50,9 +50,18 @@ on_install(function(target) end)
 
 includes("deps")
 includes("UE4SS")
-includes("UVTD")
+if get_config("ue4ssCross") ~= "msvc-wine" then
+    includes("UVTD")
+end
 includes("cppmods")
 
 -- TODO: Remove this before the next release. It only exists to maintain backwards compat
 -- warnings for older mod templates.
 set_config("scriptsRoot", path.join(os.scriptdir(), "tools/xmakescripts"))
+
+option("ue4ssCross")
+    set_default("None")
+    set_showmenu(true)
+    set_values("msvc-wine", "None")
+
+    set_description("Which cross-compiling toolchain to use", "msvc-wine", "None")

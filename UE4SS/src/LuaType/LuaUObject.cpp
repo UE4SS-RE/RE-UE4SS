@@ -404,7 +404,7 @@ namespace RC::LuaType
             }
             else
             {
-                params.lua.throw_error("[push_objectproperty] Value must be UObject or nil");
+                params.throw_error("push_objectproperty", "Value must be UObject or nil");
             }
             break;
         }
@@ -412,7 +412,7 @@ namespace RC::LuaType
             RemoteUnrealParam::construct(params.lua, params.data, params.base, params.property);
             break;
         default:
-            params.lua.throw_error("[push_objectproperty] Unhandled Operation");
+            params.throw_error("push_objectproperty", "Unhandled Operation");
             break;
         }
     }
@@ -439,7 +439,7 @@ namespace RC::LuaType
             }
             else
             {
-                params.lua.throw_error("[push_classproperty] Value must be UClass or nil");
+                params.throw_error("push_classproperty", "Value must be UClass or nil");
             }
             break;
         }
@@ -447,7 +447,7 @@ namespace RC::LuaType
             RemoteUnrealParam::construct(params.lua, params.data, params.base, params.property);
             break;
         default:
-            params.lua.throw_error("[push_classproperty] Unhandled Operation");
+            params.throw_error("push_classproperty", "Unhandled Operation");
             break;
         }
     }
@@ -563,9 +563,12 @@ namespace RC::LuaType
                 else
                 {
                     std::string field_type_name = to_string(field_type.ToString());
-                    lua.throw_error(fmt::format("Tried getting without a registered handler. 'StructProperty'.'{}' not supported. Field: '{}'",
-                                                field_type_name,
-                                                field_name));
+                    params.throw_error("push_structproperty",
+                                       "Tried getting without a registered handler.",
+                                       "StructProperty field type not supported",
+                                       field_type_name,
+                                       "Field",
+                                       field_name);
                 }
             };
 
@@ -623,9 +626,12 @@ namespace RC::LuaType
                 else
                 {
                     std::string field_type_name = to_string(field_type_fname.ToString());
-                    params.lua.throw_error(fmt::format("Tried pushing (Operation::Set) StructProperty without a registered handler for field '{} {}'.",
-                                                       field_type_name,
-                                                       field_name));
+                    params.throw_error("push_structproperty",
+                                       "Tried pushing StructProperty without a registered handler for field.",
+                                       "Field type",
+                                       field_type_name,
+                                       "Field",
+                                       field_name);
                 }
             };
 
@@ -638,7 +644,7 @@ namespace RC::LuaType
             if (params.lua.is_userdata())
             {
                 // StructData as userdata
-                params.lua.throw_error("[push_structproperty::lua_to_memory] StructData as userdata is not yet implemented but there's userdata on the stack");
+                params.throw_error("push_structproperty::lua_to_memory", "StructData as userdata is not yet implemented but there's userdata on the stack");
             }
             else if (params.lua.is_table())
             {
@@ -651,7 +657,7 @@ namespace RC::LuaType
             }
             else
             {
-                params.lua.throw_error("[push_structproperty::lua_to_memory] Parameter must be of type 'StructProperty' or table");
+                params.throw_error("push_structproperty::lua_to_memory", "Parameter must be of type 'StructProperty' or table");
             }
         };
 
@@ -672,11 +678,11 @@ namespace RC::LuaType
             LocalUnrealParam<ScriptStructWrapper>::construct(params.lua, property_value, params.base, params.property);
             return;
         default:
-            params.lua.throw_error("[push_structproperty] Unhandled Operation");
+            params.throw_error("push_structproperty", "Unhandled Operation");
             break;
         }
 
-        params.lua.throw_error(fmt::format("[push_structproperty] Unknown Operation ({}) not supported", static_cast<int32_t>(params.operation)));
+        params.throw_error("push_structproperty", "Operation not supported");
     }
 
     auto push_arrayproperty(const PusherParams& params) -> void
@@ -725,9 +731,10 @@ namespace RC::LuaType
             else
             {
                 std::string property_type_name = to_string(property_type_fname.ToString());
-                lua.throw_error(
-                        fmt::format("Tried interacting with an array but the inner property has no registered handler. Property type '{}' not supported.",
-                                    property_type_name));
+                params.throw_error("push_arrayproperty",
+                                   "Tried interacting with an array but the inner property has no registered handler.",
+                                   "Inner property type",
+                                   property_type_name);
             }
         };
 
@@ -740,12 +747,12 @@ namespace RC::LuaType
             if (!StaticState::m_property_value_pushers.contains(name_comparison_index))
             {
                 std::string inner_type_name = to_string(inner_type_fname.ToString());
-                params.lua.throw_error(fmt::format("Tried pushing (Operation::Set) ArrayProperty with unsupported inner type of '{}'", inner_type_name));
+                params.throw_error("push_arrayproperty", "Tried pushing ArrayProperty with unsupported inner type", "Inner property type", inner_type_name);
             }
 
             size_t array_element_size = inner->GetElementSize();
 
-            auto array = new(params.data) Unreal::FScriptArray{};
+            auto array = new (params.data) Unreal::FScriptArray{};
             size_t table_length = lua_rawlen(params.lua.get_lua_state(), 1);
             bool has_elements = table_length > 0;
 
@@ -804,7 +811,7 @@ namespace RC::LuaType
             if (params.lua.is_userdata())
             {
                 // TArray as userdata
-                params.lua.throw_error("[push_arrayproperty::lua_to_memory] StructData as userdata is not yet implemented but there's userdata on the stack");
+                params.throw_error("push_arrayproperty::lua_to_memory", "StructData as userdata is not yet implemented but there's userdata on the stack");
             }
             else if (params.lua.is_table())
             {
@@ -817,7 +824,7 @@ namespace RC::LuaType
             }
             else
             {
-                params.lua.throw_error("[push_arrayproperty::lua_to_memory] Parameter must be of type 'StructProperty' or table");
+                params.throw_error("push_arrayproperty::lua_to_memory", "Parameter must be of type 'StructProperty' or table");
             }
         };
 
@@ -837,11 +844,11 @@ namespace RC::LuaType
             RemoteUnrealParam::construct(params.lua, params.data, params.base, params.property);
             return;
         default:
-            params.lua.throw_error("[push_arrayproperty] Unhandled Operation");
+            params.throw_error("push_arrayproperty", "Unhandled Operation");
             break;
         }
 
-        params.lua.throw_error(fmt::format("[push_arrayproperty] Unknown Operation ({}) not supported", static_cast<int32_t>(params.operation)));
+        params.throw_error("push_arrayproperty", "Operation not supported");
     }
 
     auto push_functionproperty(const FunctionPusherParams& params) -> void
@@ -854,7 +861,7 @@ namespace RC::LuaType
         float* float_ptr = static_cast<float*>(params.data);
         if (!float_ptr)
         {
-            params.lua.throw_error("[push_floatproperty] data pointer is nullptr");
+            params.throw_error("push_floatproperty", "data pointer is nullptr");
         }
 
         switch (params.operation)
@@ -870,11 +877,11 @@ namespace RC::LuaType
             RemoteUnrealParam::construct(params.lua, float_ptr, params.base, params.property);
             return;
         default:
-            params.lua.throw_error("[push_floatproperty] Unhandled Operation");
+            params.throw_error("push_floatproperty", "Unhandled Operation");
             break;
         }
 
-        params.lua.throw_error(fmt::format("[push_floatproperty] Unknown Operation ({}) not supported", static_cast<int32_t>(params.operation)));
+        params.throw_error("push_floatproperty", "Operation not supported");
     }
 
     auto push_doubleproperty(const PusherParams& params) -> void
@@ -882,7 +889,7 @@ namespace RC::LuaType
         double* double_ptr = static_cast<double*>(params.data);
         if (!double_ptr)
         {
-            params.lua.throw_error("[push_doubleproperty] data pointer is nullptr");
+            params.throw_error("push_doubleproperty", "data pointer is nullptr");
         }
 
         switch (params.operation)
@@ -898,11 +905,11 @@ namespace RC::LuaType
             RemoteUnrealParam::construct(params.lua, double_ptr, params.base, params.property);
             return;
         default:
-            params.lua.throw_error("[push_doubleproperty] Unhandled Operation");
+            params.throw_error("push_doubleproperty", "Unhandled Operation");
             break;
         }
 
-        params.lua.throw_error(fmt::format("[push_doubleproperty] Unknown Operation ({}) not supported", static_cast<int32_t>(params.operation)));
+        params.throw_error("push_doubleproperty", "Operation not supported");
     }
 
     auto push_boolproperty(const PusherParams& params) -> void
@@ -910,7 +917,7 @@ namespace RC::LuaType
         uint8_t* bitfield_ptr = static_cast<uint8_t*>(params.data);
         if (!bitfield_ptr)
         {
-            params.lua.throw_error("[push_boolproperty] data pointer is nullptr");
+            params.throw_error("push_boolproperty", "data pointer is nullptr");
         }
 
         Unreal::FBoolProperty* bp = static_cast<Unreal::FBoolProperty*>(params.property);
@@ -936,11 +943,11 @@ namespace RC::LuaType
             RemoteUnrealParam::construct(params.lua, bitfield_ptr, params.base, params.property);
             return;
         default:
-            params.lua.throw_error("[push_boolproperty] Unhandled Operation");
+            params.throw_error("push_boolproperty", "Unhandled Operation");
             break;
         }
 
-        params.lua.throw_error(fmt::format("[push_boolproperty] Unknown Operation ({}) not supported", static_cast<int32_t>(params.operation)));
+        params.throw_error("push_boolproperty", "Operation not supported");
     }
 
     auto push_enumproperty(const PusherParams& params) -> void
@@ -948,7 +955,7 @@ namespace RC::LuaType
         Unreal::UEnum* enum_ptr = static_cast<Unreal::FEnumProperty*>(params.property)->GetEnum();
         if (!enum_ptr)
         {
-            params.lua.throw_error("[push_enumproperty] data pointer is nullptr");
+            params.throw_error("push_enumproperty", "data pointer is nullptr");
         }
 
         switch (params.operation)
@@ -986,18 +993,18 @@ namespace RC::LuaType
             RemoteUnrealParam::construct(params.lua, params.data, params.base, params.property);
             return;
         default:
-            params.lua.throw_error("[push_enumproperty] Unhandled Operation");
+            params.throw_error("push_enumproperty", "Unhandled Operation");
             break;
         }
 
-        params.lua.throw_error(fmt::format("[push_enumproperty] Unknown Operation ({}) not supported", static_cast<int32_t>(params.operation)));
+        params.throw_error("push_enumproperty", "Operation not supported");
     }
 
     auto push_weakobjectproperty(const PusherParams& params) -> void
     {
         if (!params.data)
         {
-            params.lua.throw_error("[push_weakobjectproperty] data pointer is nullptr");
+            params.throw_error("push_weakobjectproperty", "data pointer is nullptr");
         }
 
         switch (params.operation)
@@ -1019,14 +1026,14 @@ namespace RC::LuaType
             Output::send(STR("[push_weakobjectproperty] Operation::Set is not supported\n"));
             return;
         case Operation::GetParam:
-            params.lua.throw_error("[push_weakobjectproperty] Operation::GetParam is not supported");
+            params.throw_error("push_weakobjectproperty", "Operation::GetParam is not supported");
             return;
         default:
-            params.lua.throw_error("[push_weakobjectproperty] Unhandled Operation");
+            params.throw_error("push_weakobjectproperty", "Unhandled Operation");
             break;
         }
 
-        params.lua.throw_error(fmt::format("[push_weakobjectproperty] Unknown Operation ({}) not supported", static_cast<int32_t>(params.operation)));
+        params.throw_error("push_weakobjectproperty", "Operation not supported");
     }
 
     auto push_nameproperty(const PusherParams& params) -> void
@@ -1034,7 +1041,7 @@ namespace RC::LuaType
         Unreal::FName* name = static_cast<Unreal::FName*>(params.data);
         if (!name)
         {
-            params.lua.throw_error("[push_nameproperty] data pointer is nullptr");
+            params.throw_error("push_nameproperty", "data pointer is nullptr");
         }
 
         switch (params.operation)
@@ -1052,11 +1059,11 @@ namespace RC::LuaType
             RemoteUnrealParam::construct(params.lua, params.data, params.base, params.property);
             return;
         default:
-            params.lua.throw_error("[push_nameproperty] Unhandled Operation");
+            params.throw_error("push_nameproperty", "Unhandled Operation");
             break;
         }
 
-        params.lua.throw_error(fmt::format("[push_nameproperty] Unknown Operation ({}) not supported", static_cast<int32_t>(params.operation)));
+        params.throw_error("push_nameproperty", "Operation not supported");
     }
 
     auto push_textproperty(const PusherParams& params) -> void
@@ -1064,7 +1071,7 @@ namespace RC::LuaType
         Unreal::FText* text = static_cast<Unreal::FText*>(params.data);
         if (!text)
         {
-            params.lua.throw_error("[push_textproperty] data pointer is nullptr");
+            params.throw_error("push_textproperty", "data pointer is nullptr");
         }
 
         switch (params.operation)
@@ -1082,11 +1089,11 @@ namespace RC::LuaType
             RemoteUnrealParam::construct(params.lua, params.data, params.base, params.property);
             return;
         default:
-            params.lua.throw_error("[push_textproperty] Unhandled Operation");
+            params.throw_error("push_textproperty", "Unhandled Operation");
             break;
         }
 
-        params.lua.throw_error(fmt::format("[push_textproperty] Unknown Operation ({}) not supported", static_cast<int32_t>(params.operation)));
+        params.throw_error("push_textproperty", "Operation not supported");
     }
 
     auto push_strproperty(const PusherParams& params) -> void
@@ -1094,7 +1101,7 @@ namespace RC::LuaType
         Unreal::FString* string = static_cast<Unreal::FString*>(params.data);
         if (!string)
         {
-            params.lua.throw_error("[push_strproperty] data pointer is nullptr");
+            params.throw_error("push_strproperty", "data pointer is nullptr");
         }
 
         switch (params.operation)
@@ -1117,7 +1124,7 @@ namespace RC::LuaType
             }
             else
             {
-                params.lua.throw_error("[push_strproperty] StrProperty can only be set to a string or FString");
+                params.throw_error("push_strproperty", "StrProperty can only be set to a string or FString");
             }
             return;
         }
@@ -1125,11 +1132,11 @@ namespace RC::LuaType
             RemoteUnrealParam::construct(params.lua, params.data, params.base, params.property);
             return;
         default:
-            params.lua.throw_error("[push_strproperty] Unhandled Operation");
+            params.throw_error("push_strproperty", "Unhandled Operation");
             break;
         }
 
-        params.lua.throw_error(fmt::format("[push_strproperty] Unknown Operation ({}) not supported", static_cast<int32_t>(params.operation)));
+        params.throw_error("push_strproperty", "Operation not supported");
     }
 
     auto push_softclassproperty(const PusherParams& params) -> void
@@ -1137,7 +1144,7 @@ namespace RC::LuaType
         auto soft_ptr = static_cast<Unreal::FSoftObjectPtr*>(params.data);
         if (!soft_ptr)
         {
-            params.lua.throw_error("[push_softclassproperty] data pointer is nullptr");
+            params.throw_error("push_softclassproperty", "data pointer is nullptr");
         }
 
         switch (params.operation)
@@ -1155,11 +1162,11 @@ namespace RC::LuaType
             RemoteUnrealParam::construct(params.lua, params.data, params.base, params.property);
             return;
         default:
-            params.lua.throw_error("[push_softclassproperty] Unhandled Operation");
+            params.throw_error("push_softclassproperty", "Unhandled Operation");
             break;
         }
 
-        params.lua.throw_error(fmt::format("[push_softclassproperty] Unknown Operation ({}) not supported", static_cast<int32_t>(params.operation)));
+        params.throw_error("push_softclassproperty", "Operation not supported");
     }
 
     auto push_interfaceproperty(const PusherParams& params) -> void
@@ -1167,7 +1174,7 @@ namespace RC::LuaType
         auto property_value = static_cast<Unreal::UInterface**>(params.data);
         if (!property_value)
         {
-            params.lua.throw_error("[push_interfaceproperty] data pointer is nullptr");
+            params.throw_error("push_interfaceproperty", "data pointer is nullptr");
         }
 
         // Finally construct the Lua object
@@ -1189,7 +1196,7 @@ namespace RC::LuaType
             }
             else
             {
-                params.lua.throw_error("[push_interfaceproperty] Value must be UInterface or nil");
+                params.throw_error("push_interfaceproperty", "Value must be UInterface or nil");
             }
             break;
         }
@@ -1197,7 +1204,7 @@ namespace RC::LuaType
             RemoteUnrealParam::construct(params.lua, params.data, params.base, params.property);
             break;
         default:
-            params.lua.throw_error("[push_interfaceproperty] Unhandled Operation");
+            params.throw_error("push_interfaceproperty", "Operation not supported");
             break;
         }
     }
@@ -1321,8 +1328,7 @@ Overloads:
     {
     }
 
-    auto RemoteUnrealParam::construct(const LuaMadeSimple::Lua& lua, void* param_ptr, Unreal::UObject* base, Unreal::FProperty* property)
-            -> const LuaMadeSimple::Lua::Table
+    auto RemoteUnrealParam::construct(const LuaMadeSimple::Lua& lua, void* param_ptr, Unreal::UObject* base, Unreal::FProperty* property) -> const LuaMadeSimple::Lua::Table
     {
         const Unreal::FName property_type = property->GetClass().GetFName();
         LuaType::RemoteUnrealParam lua_object{param_ptr, base, property, property_type};

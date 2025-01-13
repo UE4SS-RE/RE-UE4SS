@@ -37,7 +37,8 @@ namespace RC
         std::basic_string<CharT> return_value;
         if (occurrence != std::basic_string<CharT>::npos)
         {
-            return_value = start_or_end == ExplodeType::FromEnd ? in_str_wide.substr(occurrence + 1, std::basic_string<CharT>::npos) : in_str_wide.substr(0, occurrence);
+            return_value = start_or_end == ExplodeType::FromEnd ? in_str_wide.substr(occurrence + 1, std::basic_string<CharT>::npos)
+                                                                : in_str_wide.substr(0, occurrence);
         }
         else
         {
@@ -111,8 +112,8 @@ namespace RC
 
     /**
      * Breaks an input string into a vector of substrings based on a given delimiter.
-     * <br>It treats sections that start with a delimiter character and enclosed in double quotes (`"`) as a single substring, ignoring any delimiters inside the quotes.
-     * <br>It supports an escape character (default `\`) to capture double quotes as part of a string.
+     * <br>It treats sections that start with a delimiter character and enclosed in double quotes (`"`) as a single substring, ignoring any delimiters inside
+     * the quotes. <br>It supports an escape character (default `\`) to capture double quotes as part of a string.
      *
      * @tparam CharT The character type.
      * @param in_str  The input string to be split.
@@ -121,8 +122,9 @@ namespace RC
      * @return A vector of substrings, split by the delimiter, with quoted substrings preserved.
      */
     template <typename CharT>
-    auto inline explode_by_occurrence_with_quotes(const std::basic_string<CharT>& in_str, const CharT delimiter = STR(' '), const CharT escape_character = STR('\\'))
-            -> std::vector<std::basic_string<CharT>>
+    auto inline explode_by_occurrence_with_quotes(const std::basic_string<CharT>& in_str,
+                                                  const CharT delimiter = STR(' '),
+                                                  const CharT escape_character = STR('\\')) -> std::vector<std::basic_string<CharT>>
     {
         constexpr auto quotation_symbol = STR('"');
         assert(delimiter != quotation_symbol && "Double quote (\") can't be used as delimiter");
@@ -142,10 +144,9 @@ namespace RC
         };
 
         auto is_valid_quote_symbol = [&in_quotes, &in_str, &delimiter, &escape_character](int position) {
-            if (position >= 0 && position < in_str.size() && in_str[position] == quotation_symbol
-                 && (position == 0 || in_str[position - 1] != escape_character))
+            if (position >= 0 && position < in_str.size() && in_str[position] == quotation_symbol && (position == 0 || in_str[position - 1] != escape_character))
             {
-                 return in_quotes ? position + 1 == in_str.size() || in_str[position + 1] == delimiter : position == 0 || in_str[position - 1] == delimiter;
+                return in_quotes ? position + 1 == in_str.size() || in_str[position + 1] == delimiter : position == 0 || in_str[position - 1] == delimiter;
             }
             return false;
         };
@@ -229,7 +230,7 @@ namespace RC
         throw std::runtime_error{"There is no reason to use this function on non-Windows platforms"};
 #endif
     }
-    
+
     auto inline to_string(std::wstring& input) -> std::string
     {
 #pragma warning(disable : 4996)
@@ -356,43 +357,63 @@ namespace RC
     }
 
     template <typename CharT, typename T>
-    auto inline to_charT_string(T&& arg) -> std::basic_string<CharT> {
+    auto inline to_charT_string(T&& arg) -> std::basic_string<CharT>
+    {
         // Dispatch to the correct conversion function based on the CharT type
-        if constexpr (std::is_same_v<CharT, wchar_t>) {
+        if constexpr (std::is_same_v<CharT, wchar_t>)
+        {
             return to_wstring(std::forward<T>(arg));
-        } else if constexpr (std::is_same_v<CharT, char16_t>) {
+        }
+        else if constexpr (std::is_same_v<CharT, char16_t>)
+        {
             return to_u16string(std::forward<T>(arg));
-        } else if constexpr (std::is_same_v<CharT, char>) {
+        }
+        else if constexpr (std::is_same_v<CharT, char>)
+        {
             return to_string(std::forward<T>(arg));
         }
     }
 
     template <typename CharT, typename T>
-    auto inline to_charT_string_path(T&& arg) -> std::basic_string<CharT> {
+    auto inline to_charT_string_path(T&& arg) -> std::basic_string<CharT>
+    {
         // Dispatch to the correct conversion function based on the CharT type
-        if constexpr (std::is_same_v<CharT, wchar_t>) {
+        if constexpr (std::is_same_v<CharT, wchar_t>)
+        {
             return arg.wstring();
-        } else if constexpr (std::is_same_v<CharT, char16_t>) {
+        }
+        else if constexpr (std::is_same_v<CharT, char16_t>)
+        {
             return arg.u16string();
-        } else if constexpr (std::is_same_v<CharT, char>) {
+        }
+        else if constexpr (std::is_same_v<CharT, char>)
+        {
             return arg.string();
         }
     }
 
     // Convert any string-like to a string of generic CharT
     // Or pass through if it's already a string(view) of CharType or if we can't convert it
-    template<typename CharT, typename T>
-    auto inline to_charT(T&& arg) {
-        if constexpr (std::is_same_v<std::decay_t<T>, std::filesystem::path> || std::is_same_v<std::decay_t<T>, const std::filesystem::path>) {
+    template <typename CharT, typename T>
+    auto inline to_charT(T&& arg)
+    {
+        if constexpr (std::is_same_v<std::decay_t<T>, std::filesystem::path> || std::is_same_v<std::decay_t<T>, const std::filesystem::path>)
+        {
             // std::filesystem::path has its own conversion functions
             return to_charT_string_path<CharT>(std::forward<T>(arg));
-        } else if constexpr (can_be_string_view_t<T>::value) {
+        }
+        else if constexpr (can_be_string_view_t<T>::value)
+        {
             // If T is a char pointer, it can be treated as a string view
             return to_charT<CharT>(stringviewify(std::forward<T>(arg)));
-        } else if constexpr (not_charT_string_like_t<T, CharT>::value) {
+        }
+        else if constexpr (not_charT_string_like_t<T, CharT>::value)
+        {
             // If T is a string or string view but not using CharT, convert it
             return to_charT_string<CharT>(std::forward<T>(arg));
-        } else {
+        }
+        else
+        {
             // If T is already a string or string view using CharT, pass through
             // Or if we can't convert it, pass through
             return std::forward<T>(arg);
@@ -400,8 +421,9 @@ namespace RC
     }
 
     // Ensure that a string is compatible with UE4SS, converting it if neccessary
-    template<typename T>
-    auto inline ensure_str(T&& arg) {
+    template <typename T>
+    auto inline ensure_str(T&& arg)
+    {
         return to_charT<CharType>(std::forward<T>(arg));
     }
 
@@ -450,14 +472,14 @@ namespace RC
             return emplaced_iter->second;
         }
     }
-    
+
     namespace String
     {
         template <typename CharT>
         auto inline iequal(std::basic_string_view<CharT> a, std::basic_string_view<CharT> b)
         {
             return a.size() == b.size() && std::equal(a.begin(), a.end(), b.begin(), [](const CharT a_char, const CharT b_char) {
-                       return std::towlower((wchar_t) a_char) == std::towlower((wchar_t) b_char);
+                       return std::towlower((wchar_t)a_char) == std::towlower((wchar_t)b_char);
                    });
         }
 

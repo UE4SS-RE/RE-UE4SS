@@ -10,3 +10,5 @@ additional-css = ["css/custom.css"]
 [output.html.fold]
 enable = true
 level = 1
+
+[preprocessor.alerts]

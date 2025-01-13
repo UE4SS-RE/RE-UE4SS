@@ -267,8 +267,8 @@ namespace RC::UEGenerator
                                const CaseInsensitiveSet& blacklisted_property_names,
                                bool generate_as_override = false) -> void;
 
-        auto generate_property_value(UStruct* ustruct, FProperty* property, void* object, GeneratedSourceFile& implementation_file, const StringType& property_scope)
-                -> void;
+        auto generate_property_value(
+                UStruct* ustruct, FProperty* property, void* object, GeneratedSourceFile& implementation_file, const StringType& property_scope) -> void;
         auto generate_function_implementation(UClass* uclass,
                                               UFunction* function,
                                               GeneratedSourceFile& implementation_file,
@@ -309,8 +309,7 @@ namespace RC::UEGenerator
         auto static determine_primary_game_module_name() -> StringType;
 
       public:
-        auto add_module_and_sub_module_dependencies(std::set<StringType>& out_module_dependencies, const StringType& module_name, bool add_self_module = true)
-                -> void;
+        auto add_module_and_sub_module_dependencies(std::set<StringType>& out_module_dependencies, const StringType& module_name, bool add_self_module = true) -> void;
         auto static collect_blacklisted_property_names(UObject* property) -> CaseInsensitiveSet;
 
         auto static generate_object_pre_declaration(UObject* object) -> std::vector<std::vector<StringType>>;

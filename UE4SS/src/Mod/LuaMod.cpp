@@ -1142,7 +1142,7 @@ Overloads:
                     }
                     catch (std::runtime_error& e)
                     {
-                        Output::send(STR("{}\n"), ensure_str(lua.handle_error(e.what())));
+                        Output::send<LogLevel::Error>(STR("{}\n"), ensure_str(lua.handle_error(e.what())));
                     }
                 };
 
@@ -1261,7 +1261,7 @@ Overloads:
                     }
                     catch (std::runtime_error& e)
                     {
-                        Output::send(STR("{}\n"), ensure_str(lua.handle_error(e.what())));
+                        Output::send<LogLevel::Error>(STR("{}\n"), ensure_str(lua.handle_error(e.what())));
                     }
                 };
 
@@ -1366,7 +1366,9 @@ Overloads:
                 Unreal::UFunction* unreal_function = Unreal::UObjectGlobals::StaticFindObject<Unreal::UFunction*>(nullptr, nullptr, function_name_no_prefix);
                 if (!unreal_function)
                 {
-                    lua.throw_error("Tried to unregister a hook with Lua function 'UnregisterHook' but no UFunction with the specified name was found.");
+                    lua.throw_error(std::format("Tried to unregister a hook with Lua function 'UnregisterHook' but no UFunction with the specified name "
+                                                "was found.\n>FunctionName: {}",
+                                                to_string(function_name_no_prefix)));
                 }
 
                 if (!lua.is_integer())
@@ -1383,12 +1385,16 @@ Overloads:
 
                 if (pre_id > std::numeric_limits<int32_t>::max())
                 {
-                    lua.throw_error("Tried to unregister a hook with Lua function 'UnregisterHook' but the PreCallbackId supplied was too large (>int32)");
+                    lua.throw_error(std::format("Tried to unregister a hook with Lua function 'UnregisterHook' but the PreCallbackId supplied was too "
+                                                "large (>int32)\n>FunctionName: {}",
+                                                to_string(function_name_no_prefix)));
                 }
 
                 if (post_id > std::numeric_limits<int32_t>::max())
                 {
-                    lua.throw_error("Tried to unregister a hook with Lua function 'UnregisterHook' but the PostCallbackId supplied was too large (>int32)");
+                    lua.throw_error(std::format("Tried to unregister a hook with Lua function 'UnregisterHook' but the PostCallbackId supplied was too "
+                                                "large (>int32)\n>FunctionName: {}",
+                                                to_string(function_name_no_prefix)));
                 }
 
                 // Hooks on native UFunctions will have both of these IDs.
@@ -1397,9 +1403,9 @@ Overloads:
                 if (native_hook_pre_id_it != LuaMod::m_generic_hook_id_to_native_hook_id.end() &&
                     native_hook_post_id_it != LuaMod::m_generic_hook_id_to_native_hook_id.end())
                 {
-                    Output::send<LogLevel::Verbose>(STR("Unregistering native hook with pre-id: {}\n"), native_hook_pre_id_it->first);
+                    Output::send<LogLevel::Verbose>(STR("Unregistering native pre-hook ({}) for {}\n"), native_hook_pre_id_it->first, function_name_no_prefix);
                     unreal_function->UnregisterHook(static_cast<int32_t>(native_hook_pre_id_it->second));
-                    Output::send<LogLevel::Verbose>(STR("Unregistering native hook with post-id: {}\n"), native_hook_post_id_it->first);
+                    Output::send<LogLevel::Verbose>(STR("Unregistering native post-hook ({}) for {}\n"), native_hook_post_id_it->first, function_name_no_prefix);
                     unreal_function->UnregisterHook(static_cast<int32_t>(native_hook_post_id_it->second));
 
                     // LuaUnrealScriptFunctionData contains the hook's lua registry references, captured in RegisterHook in two different lua states.
@@ -1425,7 +1431,7 @@ Overloads:
                     if (auto callback_data_it = LuaMod::m_script_hook_callbacks.find(unreal_function->GetFullName());
                         callback_data_it != LuaMod::m_script_hook_callbacks.end())
                     {
-                        Output::send<LogLevel::Verbose>(STR("Unregistering script hook with id: {}\n"), post_id);
+                        Output::send<LogLevel::Verbose>(STR("Unregistering script hook with id: {}, FunctionName: {}\n"), post_id, function_name_no_prefix);
                         auto& registry_indexes = callback_data_it->second.registry_indexes;
                         std::erase_if(registry_indexes, [&](const auto& pair) -> bool {
                             return post_id == pair.second.identifier;
@@ -2618,7 +2624,7 @@ Overloads:
             std::string error_overload_not_found{R"(
 No overload found for function 'FindObject'.
 Overloads:
-#1: FindObject(UClass InClass, UObject InOuter, string Name, bool ExactClass)
+#1: FindObject(UClass InClass, UObject|UClass InOuter, string Name, bool ExactClass)
 #2: FindObject(string|FName|nil ClassName, string|FName|nil ObjectShortName, EObjectFlags RequiredFlags, EObjectFlags BannedFlags)
 #3: FindObject(UClass|nil Class, string|FName|nil ObjectShortName, EObjectFlags RequiredFlags, EObjectFlags BannedFlags))"};
 
@@ -2685,9 +2691,14 @@ Overloads:
                 auto& userdata = lua.get_userdata<LuaType::UE4SSBaseObject>(1, true);
                 std::string_view lua_object_name = userdata.get_object_name();
                 // TODO: Redo when there's a bette way of checking whether a lua object is derived from UObject
-                if (lua_object_name == "UObject" || lua_object_name == "UWorld" || lua_object_name == "AActor")
+                if (lua_object_name == "UObject" || lua_object_name == "UWorld" || lua_object_name == "AActor" || lua_object_name == "UClass")
                 {
-                    in_outer = lua.get_userdata<LuaType::UObject>().get_remote_cpp_object();
+                    if (lua_object_name == "UClass") {
+                        in_outer = lua.get_userdata<LuaType::UClass>().get_remote_cpp_object();
+                    }
+                    else {
+                        in_outer = lua.get_userdata<LuaType::UObject>().get_remote_cpp_object();
+                    }
                     could_be_in_outer = true;
                 }
                 else if (lua_object_name == "FName")
@@ -3020,7 +3031,9 @@ Overloads:
             Unreal::UFunction* unreal_function = Unreal::UObjectGlobals::StaticFindObject<Unreal::UFunction*>(nullptr, nullptr, function_name_no_prefix);
             if (!unreal_function)
             {
-                lua.throw_error("Tried to register a hook with Lua function 'RegisterHook' but no UFunction with the specified name was found.");
+                lua.throw_error(std::format(
+                        "Tried to register a hook with Lua function 'RegisterHook' but no UFunction with the specified name was found.\nFunction Name: {}",
+                        to_string(function_name_no_prefix)));
             }
 
             int32_t generic_pre_id{};
@@ -3062,6 +3075,7 @@ Overloads:
             else
             {
                 std::string error_message{"Was unable to register a hook with Lua function 'RegisterHook', information:\n"};
+                error_message.append(fmt::format("FunctionName: {}\n", to_string(function_name_no_prefix)));
                 error_message.append(fmt::format("UFunction::Func: {}\n", std::bit_cast<void*>(func_ptr)));
                 error_message.append(fmt::format("ProcessInternal: {}\n", Unreal::UObject::ProcessInternalInternal.get_function_address()));
                 error_message.append(
@@ -4041,19 +4055,19 @@ Overloads:
                 ar.Log(FromCharTypePtr<TCHAR>(log_message.c_str()));
             };
 
-            if (!LuaStatics::console_executor_enabled && String::iequal(File::StringViewType{ToCharTypePtr(cmd)}, File::StringViewType {STR("luastart")}))
+            if (!LuaStatics::console_executor_enabled && String::iequal(File::StringViewType{ToCharTypePtr(cmd)}, File::StringViewType{STR("luastart")}))
             {
                 start_console_lua_executor();
                 logln(STR("Console Lua executor started"));
                 return true;
             }
-            else if (LuaStatics::console_executor_enabled && String::iequal(File::StringViewType{ToCharTypePtr(cmd)}, File::StringViewType {STR("luastop")}))
+            else if (LuaStatics::console_executor_enabled && String::iequal(File::StringViewType{ToCharTypePtr(cmd)}, File::StringViewType{STR("luastop")}))
             {
                 stop_console_lua_executor();
                 logln(STR("Console Lua executor stopped"));
                 return true;
             }
-            else if (LuaStatics::console_executor_enabled && String::iequal(File::StringViewType{ToCharTypePtr(cmd)}, File::StringViewType {STR("luarestart")}))
+            else if (LuaStatics::console_executor_enabled && String::iequal(File::StringViewType{ToCharTypePtr(cmd)}, File::StringViewType{STR("luarestart")}))
             {
                 stop_console_lua_executor();
                 start_console_lua_executor();
@@ -4118,7 +4132,7 @@ Overloads:
         Unreal::Hook::RegisterProcessConsoleExecGlobalPreCallback(
                 [](Unreal::UObject* context, const TCHAR* cmd, Unreal::FOutputDevice& ar, Unreal::UObject* executor) -> std::pair<bool, bool> {
                     return TRY([&] {
-                        auto command = File::StringType {ToCharTypePtr(cmd)};
+                        auto command = File::StringType{ToCharTypePtr(cmd)};
                         auto command_parts = explode_by_occurrence_with_quotes(command, STR(' '));
 
                         for (const auto& callback_data : m_process_console_exec_pre_callbacks)
@@ -4174,7 +4188,7 @@ Overloads:
         Unreal::Hook::RegisterProcessConsoleExecGlobalPostCallback(
                 [](Unreal::UObject* context, const TCHAR* cmd, Unreal::FOutputDevice& ar, Unreal::UObject* executor) -> std::pair<bool, bool> {
                     return TRY([&] {
-                        auto command = File::StringType {ToCharTypePtr(cmd)};
+                        auto command = File::StringType{ToCharTypePtr(cmd)};
                         auto command_parts = explode_by_occurrence_with_quotes(command, STR(' '));
 
                         for (const auto& callback_data : m_process_console_exec_post_callbacks)
@@ -4236,7 +4250,7 @@ Overloads:
             }
 
             return TRY([&] {
-                auto command = File::StringType {ToCharTypePtr(cmd)};
+                auto command = File::StringType{ToCharTypePtr(cmd)};
                 auto command_parts = explode_by_occurrence_with_quotes(command, STR(' '));
                 File::StringType command_name = command;
                 if (command_parts.size() > 1)

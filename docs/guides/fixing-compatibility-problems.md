@@ -8,6 +8,9 @@ A `working directory` is either the directory that contains `ue4ss.dll` OR a gam
 
 ## How to find AOBs
 
+> [!CAUTION]
+> Finding AOBs for a game is no simple task and requires research into basic reverse engineering principles. It's not something for which we can just make an all-encompassing guide.
+
 Since the process is quite complicated, here will just cover the general steps you need to take.
 
 1. Make a blank shipped game in your game's UE version, with PDBs
@@ -17,17 +20,22 @@ Since the process is quite complicated, here will just cover the general steps y
 5. Open your game's memory in x64dbg and search it for the same block of bytes
 6. If you find it, you can use the [swiss army knife](https://github.com/Nukem9/SwissArmyKnife) tool to extract the AOB for it which you can use in a simple script such as example [here](#example-script-simple-direct-scan)
 
+For more in-depth instructions, see the [advanced guide](./fixing-compatibility-problems-advanced.md).
+
 ## How to setup your own AOB and callback
 
 1. Create the directory `UE4SS_Signatures` if it doesn't already exist in your `working directory`.
-2. Identify which AOBs are broken and needs fixing.
+2. Identify which AOBs are broken and need fixing.
 3. Make the following files inside `UE4SS_Signatures`, depending on which AOBs are broken:
     - GUObjectArray.lua
     - FName_ToString.lua
     - FName_Constructor.lua
-    - FText_Constructor.lua
+    - FText_Constructor.lua (Optional)
     - StaticConstructObject.lua
     - GMalloc.lua
+    - GUObjectHashTables.lua(Optional)
+    - GNatives.lua          (Optional)
+    - ConsoleManager.lua    (Optional)
 4. Inside the `.lua` file you need a global `Register` function with no params
     - Keep in mind that the names of functions in Lua files in the `UE4SS_Signatures` directory are case-senstive.
 5. The `Register` function must return the AOB that you want UE4SS to scan for.
@@ -53,7 +61,7 @@ Since the process is quite complicated, here will just cover the general steps y
      This callback is likely to be called many times and we do a check behind the scenes to confirm if we found the right constructor.  
      It doesn't matter if your AOB finds both 'char*' versions and 'wchar_t*' versions.  
      Function signature: `public: cdecl FName::FName(wchar_t const * ptr64,enum EFindName) __ptr64`
-- FText_Constructor
+- FText_Constructor  (Optional)
   - Must return the exact address of the start of the function 'FText::FText'.  
     Function signature: `public: cdecl FText::FText(class FString & ptr64)const __ptr64`
 - StaticConstructObject
@@ -62,7 +70,11 @@ Since the process is quite complicated, here will just cover the general steps y
      Function signature: `class UObject * __ptr64 __cdecl StaticConstructObject_Internal(struct FStaticConstructObjectParameters const & __ptr64)`
 - GMalloc
      - Must return the exact address of the global variable named 'GMalloc'.  
-     In UE4SS, we scan for 'FMemory::Free' and then resolve the MOV instruction closest to the first CALL instruction.
+     In UE4SS, we scan for `FMemory::Free` and then resolve the MOV instruction closest to the first CALL instruction.
+- GNatives (Optional)
+   - Must return the exact address of the global variable named 'GNatives'.
+- GUObjectHashTables (WIP)  (Optional)
+- ConsoleManager (WIP)  (Optional)
 
 ## Example script (Simple, direct scan)
 

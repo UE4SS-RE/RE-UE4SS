@@ -77,8 +77,7 @@ namespace RC::Input
         auto register_keydown_event(Input::Key, EventCallbackCallable, uint8_t custom_data = 0, void* custom_data2 = nullptr) -> void;
 
         using ModifierKeyArray = std::array<Input::ModifierKey, max_modifier_keys>;
-        auto register_keydown_event(Input::Key, const ModifierKeyArray&, const EventCallbackCallable&, uint8_t custom_data = 0, void* custom_data2 = nullptr)
-                -> void;
+        auto register_keydown_event(Input::Key, const ModifierKeyArray&, const EventCallbackCallable&, uint8_t custom_data = 0, void* custom_data2 = nullptr) -> void;
 
         auto is_keydown_event_registered(Input::Key) -> bool;
         auto is_keydown_event_registered(Input::Key, const ModifierKeyArray&) -> bool;

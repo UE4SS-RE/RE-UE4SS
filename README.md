@@ -15,7 +15,7 @@ Lua scripting system platform, C++ Modding API, SDK generator, blueprint mod loa
 - [UMAP Recreation Dumper](https://docs.ue4ss.com/dev/feature-overview/dumpers.html#umap-recreation-dumper): Dump all loaded actors to file to generate `.umaps` in-editor
 - Other Features, including [Experimental](https://docs.ue4ss.com/dev/feature-overview/experimental.html) features at times
 
-## Targeting UE Versions: From 4.12 To 5.3
+## Targeting UE Versions: From 4.12 To 5.5
 
 The goal of UE4SS is not to be a plug-n-play solution that always works with every game.
 The goal is to have an underlying system that works for most games.
@@ -23,7 +23,7 @@ You may need to update AOBs on your own, and there's a guide for that below.
 
 ## Basic Installation
 
-The easiest installation is via downloading the non-dev version of the latest non-experimental build from [Releases](https://github.com/UE4SS-RE/RE-UE4SS/releases) and extracting the zip content to `/{Gameroot}/GameName/Binaries/Win64/`.
+The easiest installation is via downloading the non-dev version of the latest non-experimental build from [Releases](https://github.com/UE4SS-RE/RE-UE4SS/releases) and extracting the zip content to `{game directory}/GameName/Binaries/Win64/`.
 
 If your game is in the custom config list, extract the contents from the relevant folder to `Win64` as well.
 
@@ -45,7 +45,7 @@ If you are planning on doing mod development using UE4SS, you can do the same as
 
   [UE4SS Discord Server Invite](https://discord.gg/7qhRGHF9Tt)
 
-  [Unreal Engine Modding Discord Server Invite](https://discord.gg/zVvsE9mEEa)
+  [Unreal Engine Modding Discord Server Invite](https://discord.gg/unreal-engine-modding-876613187204685934)
 
 ## Build requirements
 
@@ -87,7 +87,8 @@ The build modes are structured as follows: `<Target>__<Config>__<Platform>`
 Currently supported options for these are:
 
 * `Target`
-  * `Game` - for regular games
+  * `Game` - for regular games on UE versions greater than UE 4.21
+  * `LessEqual421` - for regular games on UE versions less than or equal to UE 4.21
   * `CasePreserving` - for games built with case preserving enabled
 
 * `Config`
@@ -172,6 +173,46 @@ Note that you should also commit & push the submodules that you've updated if th
 
 > [!CAUTION]
 > If you change your configuration with `xmake config`, you *may* need to regenerate your Visual Studio solution to pick up on changes to your configuration. You can simply re-run the `xmake project -k vsxmake2022 -m "<modes>"` command to regenerate the solution.
+
+### Building Windows binaries on Linux
+
+We only officially support [msvc-wine](https://github.com/mstorsjo/msvc-wine) for cross-compiling.  
+Make sure you have winbind (libwbclient & samba on Arch) installed.
+
+> [!CAUTION]
+> You must use [xmake](https://github.com/xmake-io/xmake) v2.9.7 or later, and as of early December 2024, this version is not yet released which means you must install the dev version of xmake.  
+
+You need to install the `x86_64-pc-windows-msvc` target (not the `windows-gnu` target) with rustup.  
+When invoking `xmake f`, you must set `--plat`, `--arch`, and `--sdk`.  
+You must also use `--ue4ssCross=msvc-wine`, and disable the version check.  
+The following projects are not supported when cross-compiling and are automatically disabled:
+
+```
+proxy
+proxy_generator
+UVTD
+```
+
+When invoking the `xmake` build command, patternsleuth will automatically be built without xmake.  
+The binary files are available in `deps/first/patternsleuth_bind/target/x86_64-pc-windows-msvc`.  
+They are automatically used by xmake when `--ue4ssCross` is set to `msvc-wine`.  
+Here's an example of a full command that will build Windows binaries on a Linux machine:
+
+```
+xmake f -m "Game__Shipping__Win64" -p windows -a x64 --sdk=/home/<username>/my_msvc/opt/msvc --versionCheck=n --ue4ssCross=msvc-wine
+```
+
+### Debugging under wine
+
+Debugging can be done using `winedbg`.  
+You can also debug minidumps:
+
+```bash
+winedbg crash_2024_12_26_07_39_15.dmp
+```
+
+Keep in mind that debugging symbols are not stored in the dmp file, and you must have the exact same symbol file (PDB) that your UE4SS.dll was built with.  
+The easiest way to make sure that you have the correct symbols is to build the exact commit that the dmp file was generated from.
 
 ## Updating git submodules
 

@@ -10,6 +10,7 @@
 #include <GUI/Dumpers.hpp>
 #include <GUI/GLFW3_OpenGL3.hpp>
 #include <GUI/Windows.hpp>
+#include <fonts/droidsansfallback.cpp>
 
 #include <UE4SSProgram.hpp>
 #include <Unreal/UnrealInitializer.hpp>
@@ -65,7 +66,7 @@ namespace RC::GUI
             {
                 ImGui::SaveIniSettingsToDisk(m_imgui_ini_file.c_str());
             }
-            
+
             ImGui::SetNextWindowPos({0, 0});
             auto current_window_size = m_os_backend->is_valid() ? m_os_backend->get_window_size() : m_gfx_backend->get_window_size();
             ImGui::SetNextWindowSize({static_cast<float>(current_window_size.x), static_cast<float>(current_window_size.y)});
@@ -311,7 +312,7 @@ namespace RC::GUI
         while (!m_exit_requested && !m_gfx_backend->exit_requested())
         {
             m_os_backend->exec_message_loop(&m_exit_requested);
-            
+
             if (m_exit_requested)
             {
                 break;
@@ -380,10 +381,11 @@ namespace RC::GUI
         {
             return false;
         }
-        
+
         auto& settings = debugging_gui.m_backend_window_settings;
-        
-        auto const current_window_size = debugging_gui.m_os_backend->is_valid() ? debugging_gui.m_os_backend->get_window_size() : debugging_gui.m_gfx_backend->get_window_size();
+
+        auto const current_window_size =
+                debugging_gui.m_os_backend->is_valid() ? debugging_gui.m_os_backend->get_window_size() : debugging_gui.m_gfx_backend->get_window_size();
         if (current_window_size.x != settings.size_x || current_window_size.y != settings.size_y)
         {
             settings.size_x = current_window_size.x;
@@ -392,7 +394,8 @@ namespace RC::GUI
             return true;
         }
 
-        auto const current_window_position = debugging_gui.m_os_backend->is_valid() ? debugging_gui.m_os_backend->get_window_position() : debugging_gui.m_gfx_backend->get_window_position();
+        auto const current_window_position =
+                debugging_gui.m_os_backend->is_valid() ? debugging_gui.m_os_backend->get_window_position() : debugging_gui.m_gfx_backend->get_window_position();
         if (current_window_position.x != settings.pos_x || current_window_position.y != settings.pos_y)
         {
             settings.pos_x = current_window_position.x;
@@ -400,7 +403,7 @@ namespace RC::GUI
             debugging_gui.m_imgui_last_save = now;
             return true;
         }
-        
+
         return false;
     }
 
@@ -413,26 +416,35 @@ namespace RC::GUI
     auto DebuggingGUI::imgui_ue4ss_data_read_line(ImGuiContext*, ImGuiSettingsHandler*, void* entry, const char* line) -> void
     {
         auto& debugging_gui = UE4SSProgram::get_program().get_debugging_ui();
-        
+
         // Read settings for backend window size/position
         WindowSettings& settings = debugging_gui.m_backend_window_settings;
         if (std::string((const char*)entry) == "Backend_Window")
         {
             int x, y;
-            if (sscanf_s(line, "Pos=%i,%i", &x, &y) == 2)         { settings.pos_x = x; settings.pos_y = y; }
-            else if (sscanf_s(line, "Size=%i,%i", &x, &y) == 2)   { settings.size_x = x; settings.size_y = y; }
+            if (sscanf_s(line, "Pos=%i,%i", &x, &y) == 2)
+            {
+                settings.pos_x = x;
+                settings.pos_y = y;
+            }
+            else if (sscanf_s(line, "Size=%i,%i", &x, &y) == 2)
+            {
+                settings.size_x = x;
+                settings.size_y = y;
+            }
         }
-        
     }
 
     auto DebuggingGUI::imgui_ue4ss_data_write_all(ImGuiContext* ctx, ImGuiSettingsHandler* handler, ImGuiTextBuffer* buf) -> void
     {
         /*ImGuiContext& g = *ctx;*/
         auto& debugging_gui = UE4SSProgram::get_program().get_debugging_ui();
-        
+
         // Write settings for backend window size/position
-        auto current_window_size = debugging_gui.m_os_backend->is_valid() ? debugging_gui.m_os_backend->get_window_size() : debugging_gui.m_gfx_backend->get_window_size();
-        auto current_window_position = debugging_gui.m_os_backend->is_valid() ? debugging_gui.m_os_backend->get_window_position() : debugging_gui.m_gfx_backend->get_window_position();
+        auto current_window_size =
+                debugging_gui.m_os_backend->is_valid() ? debugging_gui.m_os_backend->get_window_size() : debugging_gui.m_gfx_backend->get_window_size();
+        auto current_window_position =
+                debugging_gui.m_os_backend->is_valid() ? debugging_gui.m_os_backend->get_window_position() : debugging_gui.m_gfx_backend->get_window_position();
 
         // Write to text buffer
         buf->reserve(buf->size() + 15 * 6); // ballpark reserve
@@ -454,7 +466,7 @@ namespace RC::GUI
         m_thread_stop_token = stop_token;
 
         m_live_view.initialize();
-        
+
         IMGUI_CHECKVERSION();
         ImGui::CreateContext();
         ImGuiIO& io = ImGui::GetIO();
@@ -469,7 +481,7 @@ namespace RC::GUI
         ini_handler.ReadLineFn = imgui_ue4ss_data_read_line;
         ini_handler.WriteAllFn = imgui_ue4ss_data_write_all;
         ImGui::AddSettingsHandler(&ini_handler);
-        
+
         ImGui::LoadIniSettingsFromDisk(m_imgui_ini_file.c_str());
 
         auto& debugging_gui = UE4SSProgram::get_program().get_debugging_ui();
@@ -482,18 +494,36 @@ namespace RC::GUI
 
         float base_font_size = 14 * UE4SSProgram::settings_manager.Debug.DebugGUIFontScaling;
 
+        // Increase font atlas size (if needed for many characters)
+        io.Fonts->TexDesiredWidth = 2048; // Increase the atlas size to allow more glyphs to fit
+
+        // Load base font (Latin characters)
         ImFontConfig font_cfg;
         font_cfg.FontDataOwnedByAtlas = false; // if true it will try to free memory and fail
-        io.Fonts->AddFontFromMemoryTTF(Roboto, sizeof(Roboto), base_font_size, &font_cfg);
+        io.Fonts->AddFontFromMemoryTTF(Roboto, sizeof(Roboto), base_font_size, &font_cfg, io.Fonts->GetGlyphRangesDefault());
+        font_cfg.FontDataOwnedByAtlas = false;
 
-        float icon_font_size = base_font_size * 2.0f / 3.0f; // FontAwesome fonts need to have their sizes reduced;
+        // Load a comprehensive font for CJK characters
+        ImFontConfig fallback_font_cfg;
+        fallback_font_cfg.MergeMode = true; // Merge into the previous font
+        fallback_font_cfg.FontDataOwnedByAtlas = true;
+
+        // Load glyph ranges for CJK, including rare characters
+        const ImWchar* custom_ranges = io.Fonts->GetGlyphRangesChineseFull(); // Full CJK coverage
+        io.Fonts->AddFontFromMemoryCompressedTTF(DroidSansFallback_compressed_data, DroidSansFallback_compressed_size, base_font_size, &fallback_font_cfg, custom_ranges);
+
+        // Load icons (FontAwesome or any other icon font)
+        float icon_font_size = base_font_size * 2.0f / 3.0f;
         static const ImWchar icons_ranges[] = {ICON_MIN_FA, ICON_MAX_16_FA, 0};
         ImFontConfig icons_cfg;
-        icons_cfg.FontDataOwnedByAtlas = false; // if true it will try to free memory and fail
+        icons_cfg.FontDataOwnedByAtlas = false;
         icons_cfg.MergeMode = true;
         icons_cfg.PixelSnapH = true;
         icons_cfg.GlyphMinAdvanceX = icon_font_size;
         io.Fonts->AddFontFromMemoryTTF(FaSolid900, sizeof(FaSolid900), icon_font_size, &icons_cfg, icons_ranges);
+
+        // Build font atlas
+        io.Fonts->Build();
 
         m_os_backend->init();
         m_gfx_backend->init();
