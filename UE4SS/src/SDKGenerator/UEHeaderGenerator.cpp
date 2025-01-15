@@ -2970,10 +2970,12 @@ namespace RC::UEGenerator
             if (cpp_form == UEnum::ECppForm::EnumClass)
             {
                 const auto underlying_type = m_underlying_enum_types.find(enum_native_name);
-                if (underlying_type->second == STR("uint8") ||
-                    (underlying_type == m_underlying_enum_types.end() && (get_highest_enum(uenum) <= 255 && get_lowest_enum(uenum) >= 0)))
+                if ((underlying_type != m_underlying_enum_types.end() && 
+                 underlying_type->second == STR("uint8")) ||
+                (underlying_type == m_underlying_enum_types.end() &&
+                 get_highest_enum(uenum) <= 255 && 
+                 get_lowest_enum(uenum) >= 0))
                 {
-                    // Underlying type is implicit or explicitly uint8.
                     flag_format_helper.add_switch(STR("BlueprintType"));
                 }
             }
