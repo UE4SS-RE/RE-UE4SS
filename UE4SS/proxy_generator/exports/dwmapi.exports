@@ -1,0 +1,145 @@
+Path: C:\Windows\System32\dwmapi.dll
+
+12 DllCanUnloadNow
+16 DllGetClassObject
+17 DwmAttachMilContent
+18 DwmDefWindowProc
+19 DwmDetachMilContent
+20 DwmEnableBlurBehindWindow
+3 DwmEnableComposition
+21 DwmEnableMMCSS
+22 DwmExtendFrameIntoClientArea
+23 DwmFlush
+24 DwmGetColorizationColor
+26 DwmGetCompositionTimingInfo
+27 DwmGetGraphicsStreamClient
+30 DwmGetGraphicsStreamTransformHint
+31 DwmGetTransportAttributes
+34 DwmGetUnmetTabRequirements
+35 DwmGetWindowAttribute
+50 DwmInvalidateIconicBitmaps
+85 DwmIsCompositionEnabled
+86 DwmModifyPreviousDxFrameDuration
+87 DwmQueryThumbnailSourceSize
+88 DwmRegisterThumbnail
+89 DwmRenderGesture
+90 DwmSetDxFrameDuration
+91 DwmSetIconicLivePreviewBitmap
+92 DwmSetIconicThumbnail
+93 DwmSetPresentParameters
+94 DwmSetWindowAttribute
+95 DwmShowContact
+96 DwmTetherContact
+57 DwmTetherTextContact
+97 DwmTransitionOwnedWindow
+98 DwmUnregisterThumbnail
+99 DwmUpdateThumbnailProperties
+37 DwmpAllocateSecurityDescriptor
+1 DwmpDxGetWindowSharedSurface
+2 DwmpDxUpdateWindowSharedSurface
+29 DwmpDxgiIsThreadDesktopComposited
+44 DwmpEnableDDASupport
+38 DwmpFreeSecurityDescriptor
+28 DwmpGetColorizationParameters
+36 DwmpRenderFlick
+32 DwmpSetColorizationParameters
+84 DwmpUpdateProxyWindowForCapture
+100 
+101 
+102 
+103 
+104 
+105 
+106 
+107 
+108 
+109 
+110 
+111 
+112 
+113 
+114 
+115 
+116 
+117 
+118 
+119 
+120 
+121 
+122 
+123 
+124 
+125 
+126 
+127 
+128 
+129 
+130 
+131 
+132 
+133 
+134 
+135 
+136 
+137 
+138 
+139 
+140 
+141 
+142 
+143 
+144 
+145 
+146 
+147 
+148 
+149 
+150 
+151 
+152 
+153 
+154 
+155 
+156 
+157 
+158 
+159 
+160 
+161 
+162 
+163 
+164 
+165 
+166 
+167 
+168 
+169 
+170 
+171 
+172 
+173 
+174 
+175 
+176 
+177 
+178 
+179 
+180 
+181 
+182 
+183 
+184 
+185 
+186 
+187 
+188 
+189 
+190 
+191 
+192 
+193 
+194 
+195 
+196 
+197 
+198 
