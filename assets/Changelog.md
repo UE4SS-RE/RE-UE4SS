@@ -196,6 +196,8 @@ Fixed `RegisterProcessConsoleExecPostHook`. ([UE4SS #631](https://github.com/UE4
 
 Fixed `FindFirstOf` return type annotation in `Types.lua` to signal that the return value will never be nil. ([UE4SS #652](https://github.com/UE4SS-RE/RE-UE4SS/issues/652)) 
 
+Fixed non-const TArray outparams being skipped in UFunction property pushers. ([UE4SS #754](https://github.com/UE4SS-RE/RE-UE4SS/pull/754))
+
 ### C++ API 
 Fixed a crash caused by a race condition enabled by C++ mods using `UE4SS_ENABLE_IMGUI` in their constructor ([UE4SS #481](https://github.com/UE4SS-RE/RE-UE4SS/pull/481)) 
 

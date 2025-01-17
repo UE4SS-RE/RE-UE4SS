@@ -195,7 +195,7 @@ namespace RC::LuaType
                         // Take a reference to the Lua function (it also pops it of the stack)
                         dynamic_unreal_function_out_parameters.add({.property = param_next, .lua_ref = lua.registry().make_ref()});
 
-                        if (!param_next->IsA<Unreal::FStructProperty>())
+                        if (!param_next->IsA<Unreal::FStructProperty>() && !param_next->IsA<Unreal::FArrayProperty>())
                         {
                             continue;
                         }
