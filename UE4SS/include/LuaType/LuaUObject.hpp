@@ -363,6 +363,7 @@ namespace RC::LuaType
     RC_UE4SS_API auto push_uint64property(const PusherParams&) -> void;
     RC_UE4SS_API auto push_structproperty(const PusherParams&) -> void;
     RC_UE4SS_API auto push_arrayproperty(const PusherParams&) -> void;
+    RC_UE4SS_API auto push_mapproperty(const PusherParams&) -> void;
     RC_UE4SS_API auto push_floatproperty(const PusherParams&) -> void;
     RC_UE4SS_API auto push_doubleproperty(const PusherParams&) -> void;
     RC_UE4SS_API auto push_boolproperty(const PusherParams&) -> void;

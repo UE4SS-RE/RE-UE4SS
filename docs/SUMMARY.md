@@ -43,6 +43,7 @@
     - [FText](./lua-api/classes/ftext.md)
     - [FieldClass](./lua-api/classes/fieldclass.md)
     - [TArray](./lua-api/classes/tarray.md)
+    - [TMap](./lua-api/classes/tmap.md)
     - [RemoteUnrealParam](./lua-api/classes/remoteunrealparam.md)
     - [LocalUnrealParam](./lua-api/classes/localunrealparam.md)
     - [Property](./lua-api/classes/property.md)
