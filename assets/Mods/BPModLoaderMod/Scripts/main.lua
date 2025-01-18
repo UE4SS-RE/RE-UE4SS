@@ -205,39 +205,41 @@ local function LoadMod(ModName, ModInfo, World)
         }
     end
 
-    ExecuteInGameThread(function()
-        local ModClass = AssetRegistryHelpers:GetAsset(AssetData)
-        if not ModClass:IsValid() then
-			local ObjectPath = AssetData.ObjectPath and AssetData.ObjectPath:ToString() or ""
-			local PackageName = AssetData.PackageName and AssetData.PackageName:ToString() or ""
-			local AssetName = AssetData.AssetName and AssetData.AssetName:ToString() or ""
-			Log(string.format("ModClass for '%s' is not valid\nObjectPath: %s\nPackageName: %s\nAssetName: %s\n", ModName, ObjectPath,PackageName, AssetName))
-			return
-		end
+    local ModClass = AssetRegistryHelpers:GetAsset(AssetData)
+    if not ModClass:IsValid() then
+        local ObjectPath = AssetData.ObjectPath and AssetData.ObjectPath:ToString() or ""
+        local PackageName = AssetData.PackageName and AssetData.PackageName:ToString() or ""
+        local AssetName = AssetData.AssetName and AssetData.AssetName:ToString() or ""
+        Log(string.format("ModClass for '%s' is not valid\nObjectPath: %s\nPackageName: %s\nAssetName: %s\n", ModName, ObjectPath,PackageName, AssetName))
+        return
+    end
 
-        if not World:IsValid() then Log(string.format("World is not valid for '%s' to spawn in\n", ModName)) return end
+    if not World then error("A `nil` World parameter was passed to LoadMod function. It's most likely a bug in BPModLoaderMod!") end
+    if not World:IsValid() then
+        Log(string.format("World is not valid for '%s' to spawn in\n", ModName))
+        return
+    end
 
-        local Actor = World:SpawnActor(ModClass, {}, {})
-        if not Actor:IsValid() then
-            Log(string.format("Actor for mod '%s' is not valid\n", ModName))
+    local Actor = World:SpawnActor(ModClass, {}, {})
+    if not Actor:IsValid() then
+        Log(string.format("Actor for mod '%s' is not valid\n", ModName))
+    else
+        Log(string.format("Actor: %s\n", Actor:GetFullName()))
+        local PreBeginPlay = Actor.PreBeginPlay
+        if PreBeginPlay:IsValid() then
+            Log(string.format("Executing 'PreBeginPlay' for mod '%s', with path: '%s'\n", ModName, Actor:GetFullName()))
+            PreBeginPlay()
         else
-            Log(string.format("Actor: %s\n", Actor:GetFullName()))
-            local PreBeginPlay = Actor.PreBeginPlay
-            if PreBeginPlay:IsValid() then
-                Log(string.format("Executing 'PreBeginPlay' for mod '%s', with path: '%s'\n", ModName, Actor:GetFullName()))
-                PreBeginPlay()
-            else
-                Log(string.format("PreBeginPlay not valid for mod %s\n", ModName), true)
-            end
+            Log(string.format("PreBeginPlay not valid for mod %s\n", ModName), true)
         end
-    end)
+    end
 end
 
 local function CacheAssetRegistry()
     if AssetRegistryHelpers and AssetRegistry then return end
 
     AssetRegistryHelpers = StaticFindObject("/Script/AssetRegistry.Default__AssetRegistryHelpers")
-    if not AssetRegistryHelpers:IsValid() then print("AssetRegistryHelpers is not valid\n") end
+    if not AssetRegistryHelpers:IsValid() then Log("AssetRegistryHelpers is not valid\n") end
 
     if AssetRegistryHelpers then
         AssetRegistry = AssetRegistryHelpers:GetAssetRegistry()
@@ -250,9 +252,9 @@ local function CacheAssetRegistry()
     error("AssetRegistry is not valid\n")
 end
 
-
-
 local function LoadMods(World)
+    if not World then error("A `nil` World parameter was passed to LoadMods function. It's most likely a bug in BPModLoaderMod!") end
+
     CacheAssetRegistry()
     for _, ModInfo in ipairs(OrderedMods) do
         if type(ModInfo) == "table" then
@@ -261,18 +263,11 @@ local function LoadMods(World)
     end
 end
 
-local function LoadModsManual()
-    LoadMods(UEHelpers.GetWorld())
-end
-
-RegisterLoadMapPostHook(function(Engine, World)
-    LoadMods(World:get())
+RegisterKeyBind(Key.INS, function()
+    ExecuteInGameThread(function()
+        LoadMods(UEHelpers.GetWorld())
+    end)
 end)
-
-local ExistingActor = FindFirstOf("Actor")
-if ExistingActor ~= nil and ExistingActor:IsValid() then
-    LoadMods(ExistingActor:GetWorld())
-end
 
 RegisterBeginPlayPostHook(function(ContextParam)
     local Context = ContextParam:get()
@@ -291,4 +286,13 @@ RegisterBeginPlayPostHook(function(ContextParam)
     end
 end)
 
-RegisterKeyBind(Key.INS, LoadModsManual)
+RegisterLoadMapPostHook(function(Engine, World)
+    LoadMods(World:get())
+end)
+
+ExecuteInGameThread(function()
+    local ExistingActor = FindFirstOf("Actor")
+    if ExistingActor:IsValid() then
+        LoadMods(ExistingActor:GetWorld())
+    end
+end)
