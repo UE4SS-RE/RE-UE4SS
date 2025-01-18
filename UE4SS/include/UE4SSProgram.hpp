@@ -12,6 +12,7 @@
 #include <GUI/GUI.hpp>
 #include <GUI/GUITab.hpp>
 #include <Input/Handler.hpp>
+
 #include <LuaLibrary.hpp>
 #include <MProgram.hpp>
 #include <Mod/CppMod.hpp>
@@ -98,7 +99,9 @@ namespace RC
         bool m_is_program_started;
 
       protected:
-        Input::Handler m_input_handler{L"ConsoleWindowClass", L"UnrealWindow"};
+#ifdef HAS_INPUT
+        Input::Handler m_input_handler;
+#endif
         std::jthread m_event_loop;
 
       public:
