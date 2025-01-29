@@ -198,6 +198,9 @@ Fixed `FindFirstOf` return type annotation in `Types.lua` to signal that the ret
 
 Fixed non-const TArray outparams being skipped in UFunction property pushers. ([UE4SS #754](https://github.com/UE4SS-RE/RE-UE4SS/pull/754))
 
+Fixed `Key::NUM_ZERO` being incorrectly mapped to
+`Key::NUM_NINE`. ([UE4SS #762](https://github.com/UE4SS-RE/RE-UE4SS/pull/762))
+
 ### C++ API 
 Fixed a crash caused by a race condition enabled by C++ mods using `UE4SS_ENABLE_IMGUI` in their constructor ([UE4SS #481](https://github.com/UE4SS-RE/RE-UE4SS/pull/481)) 
 
