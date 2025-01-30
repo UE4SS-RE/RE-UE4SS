@@ -963,6 +963,45 @@ function TArray:ForEach(Callback) end
 ---@class TSet<K> : { [K]: nil }
 
 ---@class TMap<K, V> : { [K]: V }
+TMap = {}
+
+---Find the specified key in the map
+---Throws an exception if the key is not found
+---@generic K
+---@generic V
+---@param key K
+---@return V
+function TMap:Find(key) end
+
+---Inserts a key/value pair into the map
+---If the key already exists in the map, replaces the value
+---@generic K
+---@generic V
+---@param key K
+---@param value V
+function TMap:Add(key, value) end
+
+---Checks if a key exists inside of the map
+---@generic K
+---@param key K
+---@return boolean
+function TMap:Contains(key) end
+
+---Removes an element from the map
+---If the element doesn't exist, does nothing
+---@generic K
+---@param key K
+function TMap:Remove(key) end
+
+---Clears the map
+function TMap:Empty() end
+
+--- Iterates the entire `TMap` and calls the callback function for each element in the array
+--- The callback params are: `RemoteUnrealParam key`, `RemoteUnrealParam value` | `LocalUnrealParam value`
+--- Use `elem:get()` and `elem:set()` to access/mutate the value
+--- Mutating the key is undefined behavior
+--- @param callback fun(key: RemoteUnrealParam, value: RemoteUnrealParam)
+function TMap:ForEach(callback) end
 
 ---@class TScriptInterface<K>
 
