@@ -92,6 +92,7 @@ namespace RC
             bool HookBeginPlay{true};
             bool HookLocalPlayerExec{true};
             bool HookAActorTick{true};
+            bool HookGameViewportClientTick{true};
             int64_t FExecVTableOffsetInLocalPlayer{0x28};
         } Hooks;
 

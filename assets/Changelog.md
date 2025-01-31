@@ -90,6 +90,8 @@ Added `OpenFor::ReadWrite`, to be used when calling `File::open`.
 
 This can be used when calling `FileHandle::memory_map`, unlike `OpenFor::Writing`.  ([UE4SS #507](https://github.com/UE4SS-RE/RE-UE4SS/pull/507)) 
 
+Added hook for `UGameViewportClient::Tick`. ([UE4SS #767](https://github.com/UE4SS-RE/RE-UE4SS/pull/767))
+
 ### BPModLoader 
 
 ### Experimental 
@@ -230,6 +232,7 @@ DebugBuild =
 [Hooks]
 HookLoadMap = 1
 HookAActorTick = 1
+HookGameViewportClientTick = 1
 ```
 
 ### Removed

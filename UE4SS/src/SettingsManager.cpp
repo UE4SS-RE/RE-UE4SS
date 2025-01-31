@@ -115,6 +115,7 @@ namespace RC
         REGISTER_BOOL_SETTING(Hooks.HookBeginPlay, section_hooks, HookBeginPlay)
         REGISTER_BOOL_SETTING(Hooks.HookLocalPlayerExec, section_hooks, HookLocalPlayerExec)
         REGISTER_BOOL_SETTING(Hooks.HookAActorTick, section_hooks, HookAActorTick)
+        REGISTER_BOOL_SETTING(Hooks.HookGameViewportClientTick, section_hooks, HookGameViewportClientTick)
         REGISTER_INT64_SETTING(Hooks.FExecVTableOffsetInLocalPlayer, section_hooks, FExecVTableOffsetInLocalPlayer)
 
         constexpr static File::CharType section_experimental_features[] = STR("ExperimentalFeatures");
