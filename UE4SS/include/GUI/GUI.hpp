@@ -22,6 +22,12 @@ namespace RC::GUI
         GLFW3_OpenGL3,
     };
 
+    enum class RenderMode
+    {
+        ExternalThread,
+        GameViewportClientTick,
+    };
+
     enum class OSBackend
     {
         Windows,
@@ -211,7 +217,7 @@ namespace RC::GUI
         std::unique_ptr<OSBackendBase> m_os_backend{};
         Console m_console{};
         LiveView m_live_view{};
-        std::stop_token m_thread_stop_token{};
+        std::stop_token* m_thread_stop_token{};
         bool m_is_open{};
         bool m_exit_requested{};
         std::vector<std::shared_ptr<GUITab>> m_tabs;
@@ -230,12 +236,18 @@ namespace RC::GUI
         ~DebuggingGUI();
 
       public:
-        auto is_valid() -> bool;
-        auto is_open() -> bool
+        [[nodiscard]] auto is_valid() const -> bool;
+        [[nodiscard]] auto is_open() const -> bool
         {
             return m_is_open;
-        };
-        auto setup(std::stop_token&& token) -> void /* override*/;
+        }
+        auto set_open(bool new_open) -> void;
+        [[nodiscard]] auto exit_requested() const -> bool
+        {
+            return m_exit_requested;
+        }
+        auto request_exit() -> void;
+        auto setup(std::stop_token* token) -> void /* override*/;
         auto get_console() -> Console&
         {
             return m_console;
@@ -247,10 +259,11 @@ namespace RC::GUI
         auto set_gfx_backend(GfxBackend) -> void;
         auto add_tab(std::shared_ptr<GUITab> tab) -> void;
         auto remove_tab(std::shared_ptr<GUITab> tab) -> void;
+        auto uninitialize() -> void;
+        auto main_loop_internal() -> void;
 
       private:
         auto on_update() -> void;
-        auto main_loop_internal() -> void;
 
       private:
         // TODO: Move ImGui data saves to their own object
@@ -264,7 +277,7 @@ namespace RC::GUI
         static auto execute_at_end_of_frame(EndOfFrameCallback callback) -> void;
     };
 
-    auto gui_thread(std::stop_token stop_token, DebuggingGUI* debugging_ui) -> void;
+    auto gui_thread(std::optional<std::stop_token> stop_token, DebuggingGUI* debugging_ui) -> void;
 
     // Helper function for executing code that can throw exceptions in the middle of a frame.
     // Moves the exception to the end of the frame so that we can ImGUI errors.
