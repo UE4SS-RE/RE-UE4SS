@@ -775,6 +775,7 @@ namespace RC
         config.bHookInitGameState = settings_manager.Hooks.HookInitGameState;
         config.bHookCallFunctionByNameWithArguments = settings_manager.Hooks.HookCallFunctionByNameWithArguments;
         config.bHookBeginPlay = settings_manager.Hooks.HookBeginPlay;
+        config.bHookEndPlay = settings_manager.Hooks.HookEndPlay;
         config.bHookLocalPlayerExec = settings_manager.Hooks.HookLocalPlayerExec;
         config.bHookAActorTick = settings_manager.Hooks.HookAActorTick;
         config.bHookGameViewportClientTick = settings_manager.Hooks.HookGameViewportClientTick;

@@ -123,6 +123,7 @@ namespace RC
         REGISTER_BOOL_SETTING(Hooks.HookInitGameState, section_hooks, HookInitGameState)
         REGISTER_BOOL_SETTING(Hooks.HookCallFunctionByNameWithArguments, section_hooks, HookCallFunctionByNameWithArguments)
         REGISTER_BOOL_SETTING(Hooks.HookBeginPlay, section_hooks, HookBeginPlay)
+        REGISTER_BOOL_SETTING(Hooks.HookEndPlay, section_hooks, HookEndPlay)
         REGISTER_BOOL_SETTING(Hooks.HookLocalPlayerExec, section_hooks, HookLocalPlayerExec)
         REGISTER_BOOL_SETTING(Hooks.HookAActorTick, section_hooks, HookAActorTick)
         REGISTER_BOOL_SETTING(Hooks.HookGameViewportClientTick, section_hooks, HookGameViewportClientTick)
