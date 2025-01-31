@@ -203,7 +203,16 @@ namespace RC
                 });
                 if (settings_manager.Debug.DebugConsoleVisible)
                 {
-                    m_render_thread = std::jthread{&GUI::gui_thread, &m_debugging_gui};
+                    switch (settings_manager.Debug.RenderMode)
+                    {
+                    case GUI::RenderMode::ExternalThread:
+                        m_render_thread = std::jthread{&GUI::gui_thread, &m_debugging_gui};
+                        break;
+                    case GUI::RenderMode::GameViewportClientTick:
+                        // The hooked game function will pick up on the window being "open", and start rendering.
+                        get_debugging_ui().set_open(true);
+                        break;
+                    }
                 }
             }
 
@@ -805,6 +814,32 @@ namespace RC
         Output::send(STR("m_shared_functions: {}\n"), static_cast<void*>(&m_shared_functions));
     }
 
+    static bool s_gui_initialized_for_game_thread{};
+    auto gui_render_thread_GameViewportClientTick(Unreal::UGameViewportClient*, float) -> void
+    {
+        if (UE4SSProgram::settings_manager.Debug.RenderMode == GUI::RenderMode::ExternalThread)
+        {
+            return;
+        }
+        std::lock_guard guard(UE4SSProgram::get_program().m_render_thread_mutex);
+        if (UE4SSProgram::get_program().get_debugging_ui().exit_requested())
+        {
+            UE4SSProgram::get_program().get_debugging_ui().uninitialize();
+            s_gui_initialized_for_game_thread = false;
+            return;
+        }
+        if (!UE4SSProgram::get_program().get_debugging_ui().is_open())
+        {
+            return;
+        }
+        if (!s_gui_initialized_for_game_thread)
+        {
+            GUI::gui_thread(std::nullopt, &UE4SSProgram::get_program().get_debugging_ui());
+            s_gui_initialized_for_game_thread = true;
+        }
+        UE4SSProgram::get_program().get_debugging_ui().main_loop_internal();
+    }
+
     auto UE4SSProgram::on_program_start() -> void
     {
         ProfilerScope();
@@ -814,6 +849,11 @@ namespace RC
         /*
         UObjectArray::AddUObjectCreateListener(&FUEDeathListener::UEDeathListener);
         //*/
+
+        if (settings_manager.Debug.RenderMode == GUI::RenderMode::GameViewportClientTick)
+        {
+            Hook::RegisterGameViewportClientTickPostCallback(gui_render_thread_GameViewportClientTick);
+        }
 
         if (settings_manager.Debug.DebugConsoleEnabled)
         {
@@ -832,7 +872,17 @@ namespace RC
                     stop_render_thread();
                     if (!was_gui_open)
                     {
-                        m_render_thread = std::jthread{&GUI::gui_thread, &m_debugging_gui};
+                        switch (settings_manager.Debug.RenderMode)
+                        {
+                        case GUI::RenderMode::ExternalThread:
+                            m_render_thread = std::jthread{&GUI::gui_thread, &m_debugging_gui};
+                            break;
+                        case GUI::RenderMode::GameViewportClientTick:
+                            // The hooked game function will pick up on the window being "open", and start rendering.
+                            s_gui_initialized_for_game_thread = false;
+                            get_debugging_ui().set_open(true);
+                            break;
+                        }
                         fire_ui_init_for_cpp_mods();
                     }
                 });
@@ -1475,10 +1525,19 @@ namespace RC
 
     auto UE4SSProgram::stop_render_thread() -> void
     {
-        if (m_render_thread.joinable())
+        std::lock_guard guard(m_render_thread_mutex);
+        if (!get_debugging_ui().is_open())
+        {
+            return;
+        }
+        if (settings_manager.Debug.RenderMode == GUI::RenderMode::ExternalThread && m_render_thread.joinable())
         {
             m_render_thread.request_stop();
             m_render_thread.join();
+        }
+        else
+        {
+            get_debugging_ui().request_exit();
         }
     }
 

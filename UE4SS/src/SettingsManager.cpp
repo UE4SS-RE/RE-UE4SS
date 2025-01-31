@@ -94,6 +94,16 @@ namespace RC
         {
             Debug.GraphicsAPI = GUI::GfxBackend::GLFW3_OpenGL3;
         }
+        StringType render_mode_string{};
+        REGISTER_STRING_SETTING(render_mode_string, section_debug, RenderMode)
+        if (String::iequal(render_mode_string, STR("ExternalThread")))
+        {
+            Debug.RenderMode = GUI::RenderMode::ExternalThread;
+        }
+        else if (String::iequal(render_mode_string, STR("GameViewportClientTick")))
+        {
+            Debug.RenderMode = GUI::RenderMode::GameViewportClientTick;
+        }
 
         constexpr static File::CharType section_crash_dump[] = STR("CrashDump");
         REGISTER_BOOL_SETTING(CrashDump.EnableDumping, section_crash_dump, EnableDumping);
