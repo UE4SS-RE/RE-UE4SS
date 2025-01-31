@@ -50,7 +50,10 @@ Added global function `CreateInvalidObject`, which returns an invalid UObject. (
 
 Added GenerateLuaTypes function. ([UE4SS #664](https://github.com/UE4SS-RE/RE-UE4SS/pull/664))  
 
-Added global Dumpers functions to Types.lua. ([UE4SS #664](https://github.com/UE4SS-RE/RE-UE4SS/pull/664))  
+Added global Dumpers functions to Types.lua. ([UE4SS #664](https://github.com/UE4SS-RE/RE-UE4SS/pull/664))
+
+Added global functions `RegisterEndPlayPreHook` and
+`RegisterEndPlayPostHook`. ([UE4SS #769](https://github.com/UE4SS-RE/RE-UE4SS/pull/769))
 
 #### Types.lua [PR #650](https://github.com/UE4SS-RE/RE-UE4SS/pull/650) 
 - Added `NAME_None` definition 
@@ -94,6 +97,8 @@ Added `OpenFor::ReadWrite`, to be used when calling `File::open`.
 This can be used when calling `FileHandle::memory_map`, unlike `OpenFor::Writing`.  ([UE4SS #507](https://github.com/UE4SS-RE/RE-UE4SS/pull/507)) 
 
 Added hook for `UGameViewportClient::Tick`. ([UE4SS #767](https://github.com/UE4SS-RE/RE-UE4SS/pull/767))
+
+Added hook for `AActor::EndPlay`. ([UE4SS #769](https://github.com/UE4SS-RE/RE-UE4SS/pull/769))
 
 ### BPModLoader 
 
