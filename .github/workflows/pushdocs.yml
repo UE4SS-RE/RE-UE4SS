@@ -40,7 +40,7 @@ jobs:
           python docs-export/export.py
           python docs-repo/build.py
 
-      - uses: actions/upload-pages-artifact@v1
+      - uses: actions/upload-pages-artifact@v3
         with:
           path: docs-repo/docs
   deploy:
