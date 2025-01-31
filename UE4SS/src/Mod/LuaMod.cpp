@@ -2141,6 +2141,62 @@ Overloads:
             return 0;
         });
 
+        lua.register_function("RegisterEndPlayPreHook", [](const LuaMadeSimple::Lua& lua) -> int {
+            std::string error_overload_not_found{R"(
+No overload found for function 'RegisterEndPlayPreHook'.
+Overloads:
+#1: RegisterEndPlayPreHook(LuaFunction Callback))"};
+
+            if (!lua.is_function())
+            {
+                lua.throw_error(error_overload_not_found);
+            }
+
+            auto mod = get_mod_ref(lua);
+            auto hook_lua = make_hook_state(mod);
+
+            lua_xmove(lua.get_lua_state(), hook_lua->get_lua_state(), 1);
+
+            // Take a reference to the Lua function (it also pops it of the stack)
+            const int32_t lua_callback_registry_index = hook_lua->registry().make_ref();
+
+            LuaMod::m_end_play_pre_callbacks.emplace_back(LuaMod::LuaCallbackData{
+                    .lua = lua,
+                    .instance_of_class = nullptr,
+                    .registry_indexes = {std::pair<const LuaMadeSimple::Lua*, LuaMod::LuaCallbackData::RegistryIndex>{&lua, lua_callback_registry_index}},
+            });
+
+            return 0;
+        });
+
+        lua.register_function("RegisterEndPlayPostHook", [](const LuaMadeSimple::Lua& lua) -> int {
+            std::string error_overload_not_found{R"(
+No overload found for function 'RegisterEndPlayPostHook'.
+Overloads:
+#1: RegisterEndPlayPostHook(LuaFunction Callback))"};
+
+            if (!lua.is_function())
+            {
+                lua.throw_error(error_overload_not_found);
+            }
+
+            auto mod = get_mod_ref(lua);
+            auto hook_lua = make_hook_state(mod);
+
+            lua_xmove(lua.get_lua_state(), hook_lua->get_lua_state(), 1);
+
+            // Take a reference to the Lua function (it also pops it of the stack)
+            const int32_t lua_callback_registry_index = hook_lua->registry().make_ref();
+
+            LuaMod::m_end_play_post_callbacks.emplace_back(LuaMod::LuaCallbackData{
+                    .lua = lua,
+                    .instance_of_class = nullptr,
+                    .registry_indexes = {std::pair<const LuaMadeSimple::Lua*, LuaMod::LuaCallbackData::RegistryIndex>{&lua, lua_callback_registry_index}},
+            });
+
+            return 0;
+        });
+
         lua.register_function("IterateGameDirectories", [](const LuaMadeSimple::Lua& lua) -> int {
             std::string error_overload_not_found{R"(
 No overload found for function 'IterateGameDirectories'.
@@ -3788,6 +3844,52 @@ Overloads:
                         static auto s_object_property_name = Unreal::FName(STR("ObjectProperty"));
                         LuaType::RemoteUnrealParam::construct(lua, &Context, s_object_property_name);
                         lua.call_function(1, 0);
+                    }
+
+                    // set_is_in_game_thread(lua, false);
+                }
+            });
+        });
+
+        Unreal::Hook::RegisterEndPlayPreCallback([]([[maybe_unused]] Unreal::AActor* Context, Unreal::EEndPlayReason EndPlayReason) {
+            TRY([&] {
+                for (const auto& callback_data : m_end_play_pre_callbacks)
+                {
+                    // set_is_in_game_thread(lua, true);
+
+                    for (const auto& [lua_ptr, registry_index] : callback_data.registry_indexes)
+                    {
+                        const auto& lua = *lua_ptr;
+
+                        lua.registry().get_function_ref(registry_index.lua_index);
+                        static auto s_object_property_name = Unreal::FName(STR("ObjectProperty"));
+                        LuaType::RemoteUnrealParam::construct(lua, &Context, s_object_property_name);
+                        static auto s_int_property_name = Unreal::FName(STR("IntProperty"));
+                        LuaType::RemoteUnrealParam::construct(lua, &EndPlayReason, s_int_property_name);
+                        lua.call_function(2, 0);
+                    }
+
+                    // set_is_in_game_thread(lua, false);
+                }
+            });
+        });
+
+        Unreal::Hook::RegisterEndPlayPostCallback([]([[maybe_unused]] Unreal::AActor* Context, Unreal::EEndPlayReason EndPlayReason) {
+            TRY([&] {
+                for (const auto& callback_data : m_end_play_post_callbacks)
+                {
+                    // set_is_in_game_thread(lua, true);
+
+                    for (const auto& [lua_ptr, registry_index] : callback_data.registry_indexes)
+                    {
+                        const auto& lua = *lua_ptr;
+
+                        lua.registry().get_function_ref(registry_index.lua_index);
+                        static auto s_object_property_name = Unreal::FName(STR("ObjectProperty"));
+                        LuaType::RemoteUnrealParam::construct(lua, &Context, s_object_property_name);
+                        static auto s_int_property_name = Unreal::FName(STR("IntProperty"));
+                        LuaType::RemoteUnrealParam::construct(lua, &EndPlayReason, s_int_property_name);
+                        lua.call_function(2, 0);
                     }
 
                     // set_is_in_game_thread(lua, false);

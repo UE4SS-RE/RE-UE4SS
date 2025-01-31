@@ -36,6 +36,9 @@ Added custom game configurations for Abiotic Factor ([UE4SS #709](https://github
 
 Added custom game configurations for Psychonauts 2 ([UE4SS #731](https://github.com/UE4SS-RE/RE-UE4SS/pull/731)) 
 
+The GUI can now be rendered in the game thread if `RenderMode` in UE4SS-settings.ini is set to
+`GameViewportClientTick` ([UE4SS #768](https://github.com/UE4SS-RE/RE-UE4SS/pull/768)).
+
 ### Live View 
 Added search filter: `IncludeClassNames`. ([UE4SS #472](https://github.com/UE4SS-RE/RE-UE4SS/pull/472)) - Buckminsterfullerene 
 
@@ -47,7 +50,10 @@ Added global function `CreateInvalidObject`, which returns an invalid UObject. (
 
 Added GenerateLuaTypes function. ([UE4SS #664](https://github.com/UE4SS-RE/RE-UE4SS/pull/664))  
 
-Added global Dumpers functions to Types.lua. ([UE4SS #664](https://github.com/UE4SS-RE/RE-UE4SS/pull/664))  
+Added global Dumpers functions to Types.lua. ([UE4SS #664](https://github.com/UE4SS-RE/RE-UE4SS/pull/664))
+
+Added global functions `RegisterEndPlayPreHook` and
+`RegisterEndPlayPostHook`. ([UE4SS #769](https://github.com/UE4SS-RE/RE-UE4SS/pull/769))
 
 #### Types.lua [PR #650](https://github.com/UE4SS-RE/RE-UE4SS/pull/650) 
 - Added `NAME_None` definition 
@@ -91,6 +97,8 @@ Added `OpenFor::ReadWrite`, to be used when calling `File::open`.
 This can be used when calling `FileHandle::memory_map`, unlike `OpenFor::Writing`.  ([UE4SS #507](https://github.com/UE4SS-RE/RE-UE4SS/pull/507)) 
 
 Added hook for `UGameViewportClient::Tick`. ([UE4SS #767](https://github.com/UE4SS-RE/RE-UE4SS/pull/767))
+
+Added hook for `AActor::EndPlay`. ([UE4SS #769](https://github.com/UE4SS-RE/RE-UE4SS/pull/769))
 
 ### BPModLoader 
 
@@ -230,7 +238,10 @@ Fixed `LoadMod` function issue that variables would go out-of-scope in the `Exec
 [EngineVersionOverride]
 ; True if the game is built as Debug, Development, or Test.
 ; Default: false
-DebugBuild = 
+DebugBuild =
+
+[Debug]
+RenderMode = ExternalThread
 
 [Hooks]
 HookLoadMap = 1

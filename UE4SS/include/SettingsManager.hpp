@@ -63,6 +63,7 @@ namespace RC
             bool DebugConsoleVisible{true};
             float DebugGUIFontScaling{1.0};
             GUI::GfxBackend GraphicsAPI{GUI::GfxBackend::GLFW3_OpenGL3};
+            GUI::RenderMode RenderMode{GUI::RenderMode::ExternalThread};
         } Debug;
 
         struct SectionCrashDump
@@ -90,6 +91,7 @@ namespace RC
             bool HookLoadMap{true};
             bool HookCallFunctionByNameWithArguments{true};
             bool HookBeginPlay{true};
+            bool HookEndPlay{true};
             bool HookLocalPlayerExec{true};
             bool HookAActorTick{true};
             bool HookGameViewportClientTick{true};
