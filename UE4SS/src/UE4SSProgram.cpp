@@ -815,6 +815,7 @@ namespace RC
     }
 
     static bool s_gui_initialized_for_game_thread{};
+    static bool s_gui_initializing_for_game_thread{};
     auto gui_render_thread_GameViewportClientTick(Unreal::UGameViewportClient*, float) -> void
     {
         if (UE4SSProgram::settings_manager.Debug.RenderMode == GUI::RenderMode::ExternalThread)
@@ -836,6 +837,10 @@ namespace RC
         {
             GUI::gui_thread(std::nullopt, &UE4SSProgram::get_program().get_debugging_ui());
             s_gui_initialized_for_game_thread = true;
+        }
+        if (s_gui_initializing_for_game_thread)
+        {
+            s_gui_initializing_for_game_thread = false;
         }
         UE4SSProgram::get_program().get_debugging_ui().main_loop_internal();
     }
@@ -868,6 +873,12 @@ namespace RC
 
             m_input_handler.register_keydown_event(Input::Key::O, {Input::ModifierKey::CONTROL}, [&]() {
                 TRY([&] {
+                    std::lock_guard guard(m_render_thread_mutex);
+                    if (s_gui_initializing_for_game_thread)
+                    {
+                        Output::send<LogLevel::Verbose>(STR("Cancelled GUI toggle during GUI initialization.\n"));
+                        return;
+                    }
                     auto was_gui_open = get_debugging_ui().is_open();
                     stop_render_thread();
                     if (!was_gui_open)
@@ -880,6 +891,7 @@ namespace RC
                         case GUI::RenderMode::GameViewportClientTick:
                             // The hooked game function will pick up on the window being "open", and start rendering.
                             s_gui_initialized_for_game_thread = false;
+                            s_gui_initializing_for_game_thread = true;
                             get_debugging_ui().set_open(true);
                             break;
                         }
@@ -1525,7 +1537,6 @@ namespace RC
 
     auto UE4SSProgram::stop_render_thread() -> void
     {
-        std::lock_guard guard(m_render_thread_mutex);
         if (!get_debugging_ui().is_open())
         {
             return;
