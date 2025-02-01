@@ -188,6 +188,8 @@ Reduced the likelihood of a crash happening on shutdown when at least one watch 
 
 Fixed constantly searching even if the search field is empty, and even if not on the tab ([UE4SS #475](https://github.com/UE4SS-RE/RE-UE4SS/pull/475)) 
 
+Fixed crash caused by using invalid iterator. ([UE4SS #771](https://github.com/UE4SS-RE/RE-UE4SS/pull/771))
+
 ### UHT Dumper 
 Fix SetupAttachment implementations randomly changing order ([UE4SS #606](https://github.com/UE4SS-RE/RE-UE4SS/pull/606)) - Buckminsterfullerene 
 

@@ -250,6 +250,7 @@ namespace RC::GUI
             {
                 if (auto it = LiveView::s_history_object_to_index.find(as_uobject); it != LiveView::s_history_object_to_index.end())
                 {
+                    bool deletion_needed{};
                     for (const auto& history_index : it->second)
                     {
                         auto& selected_object_or_property = LiveView::s_object_view_history[history_index];
@@ -257,8 +258,12 @@ namespace RC::GUI
                         {
                             selected_object_or_property.object_item = nullptr;
                             selected_object_or_property.object = nullptr;
-                            LiveView::s_history_object_to_index.erase(it);
+                            deletion_needed = true;
                         }
+                    }
+                    if (deletion_needed)
+                    {
+                        LiveView::s_history_object_to_index.erase(it);
                     }
                 }
             }
