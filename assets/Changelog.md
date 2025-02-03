@@ -210,6 +210,8 @@ Fixed `FindFirstOf` return type annotation in `Types.lua` to signal that the ret
 
 Fixed non-const TArray outparams being skipped in UFunction property pushers. ([UE4SS #754](https://github.com/UE4SS-RE/RE-UE4SS/pull/754))
 
+Fixed `RegisterLoadMapPreHook` not working at all. ([UE4SS #776](https://github.com/UE4SS-RE/RE-UE4SS/pull/776))
+
 Fixed `Key::NUM_ZERO` being incorrectly mapped to
 `Key::NUM_NINE`. ([UE4SS #762](https://github.com/UE4SS-RE/RE-UE4SS/pull/762))
 
