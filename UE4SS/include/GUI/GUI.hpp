@@ -28,6 +28,18 @@ namespace RC::GUI
         GameViewportClientTick,
     };
 
+    inline auto render_mode_to_string(RenderMode mode) -> std::string
+    {
+        switch (mode)
+        {
+        case RenderMode::ExternalThread:
+            return "ExternalThread";
+        case RenderMode::GameViewportClientTick:
+            return "GameViewportClientTick";
+        }
+        return "UnknownRenderMode";
+    }
+
     enum class OSBackend
     {
         Windows,

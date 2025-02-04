@@ -9,6 +9,7 @@
 #include <backends/imgui_impl_glfw.h>
 #include <backends/imgui_impl_opengl3.h>
 #include <imgui.h>
+#include <UE4SSProgram.hpp>
 
 namespace RC::GUI
 {
@@ -33,7 +34,8 @@ namespace RC::GUI
         glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE); // 3.2+ only
 
         // Create window with graphics context
-        m_window = glfwCreateWindow(1280, 800, "UE4SS Debugging Tools (OpenGL 3)", NULL, NULL);
+        auto window_title = fmt::format("UE4SS Debugging Tools (OpenGL 3) - {}", render_mode_to_string(UE4SSProgram::settings_manager.Debug.RenderMode));
+        m_window = glfwCreateWindow(1280, 800, window_title.c_str(), NULL, NULL);
         if (m_window == NULL)
         {
             throw std::runtime_error{"Was unable to create glfw window"};
