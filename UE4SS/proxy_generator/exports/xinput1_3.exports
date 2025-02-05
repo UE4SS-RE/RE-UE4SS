@@ -1,0 +1,14 @@
+Path: C:\Windows\System32\xinput1_3.dll
+
+1 DllMain
+5 XInputEnable
+7 XInputGetBatteryInformation
+4 XInputGetCapabilities
+6 XInputGetDSoundAudioDeviceGuids
+8 XInputGetKeystroke
+2 XInputGetState
+3 XInputSetState
+100 
+101 
+102 
+103 
