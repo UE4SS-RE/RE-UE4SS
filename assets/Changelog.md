@@ -213,6 +213,9 @@ Fixed non-const TArray outparams being skipped in UFunction property pushers. ([
 Fixed `Key::NUM_ZERO` being incorrectly mapped to
 `Key::NUM_NINE`. ([UE4SS #762](https://github.com/UE4SS-RE/RE-UE4SS/pull/762))
 
+Fixed table-in-table when used as a function param (i.e. FTransform) generating a Lua
+error. ([UE4SS #775](https://github.com/UE4SS-RE/RE-UE4SS/pull/775))
+
 ### C++ API 
 Fixed a crash caused by a race condition enabled by C++ mods using `UE4SS_ENABLE_IMGUI` in their constructor ([UE4SS #481](https://github.com/UE4SS-RE/RE-UE4SS/pull/481)) 
 
