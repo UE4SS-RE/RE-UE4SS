@@ -579,7 +579,6 @@ namespace RC::LuaType
             // At the bottom of the stack now: table that has struct data
 
             // Duplicating the table and putting the duplicate at the top of the stack
-            lua_pushvalue(params.lua.get_lua_state(), 1);
 
             for (Unreal::FProperty* field : script_struct->ForEachPropertyInChain())
             {
@@ -594,7 +593,9 @@ namespace RC::LuaType
                 // At the top of the stack now: key to find in table (string)
 
                 // Pushing on to the stack, the value corresponding to table[key] if it exists
-                auto table_value_type = lua_rawget(params.lua.get_lua_state(), -2);
+                // table exists at index 1 if outermost table, and -2 if nested table
+                auto active_table_index = params.stored_at_index < 0 ? params.stored_at_index - 1 : params.stored_at_index;
+                auto table_value_type = lua_rawget(params.lua.get_lua_state(), active_table_index);
 
                 // At the top of the stack now: the value corresponding to table[key] or nil
 
@@ -635,9 +636,7 @@ namespace RC::LuaType
                 }
             };
 
-            // Discard the original & the duplicated tables
-            params.lua.discard_value(1);  // Original
-            params.lua.discard_value(-1); // Duplicated
+            params.lua.discard_value(params.stored_at_index);
         };
 
         auto lua_to_memory = [&]() {
