@@ -41,6 +41,7 @@ class ReleaseHandler:
         # Settings to change in the release. The default settings in assets/UE4SS-settings.ini are for dev
         self.settings_to_modify_in_release = {
             'GuiConsoleVisible': 0,
+            'GuiConsoleEnabled': 0,
             'ConsoleEnabled': 0,
             'EnableHotReloadSystem': 0,
             'MaxMemoryUsageDuringAssetLoading': 80,
