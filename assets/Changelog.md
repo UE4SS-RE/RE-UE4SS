@@ -184,6 +184,9 @@ Fixed `ModsFolderPath` in `UE4SS-settings.ini` not working ([UE4SS #609](https:/
 
 Fixed `attempt to index a nil value (global 'NewController')` error in `SplitScreenMod` ([UE4SS #729](https://github.com/UE4SS-RE/RE-UE4SS/pull/729)) 
 
+Fixed the GUI not closing properly with CTRL + O when OpenGL is enabled in
+`UE4SS-settings.ini`. ([UE4SS #780](https://github.com/UE4SS-RE/RE-UE4SS/pull/780))
+
 ### Live View 
 Fixed the "Write to file" checkbox not working for functions in the `Watches` tab ([UE4SS #419](https://github.com/UE4SS-RE/RE-UE4SS/pull/419)) 
 
