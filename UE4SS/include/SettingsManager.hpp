@@ -91,6 +91,7 @@ namespace RC
             bool HookLoadMap{true};
             bool HookCallFunctionByNameWithArguments{true};
             bool HookBeginPlay{true};
+            bool HookEndPlay{true};
             bool HookLocalPlayerExec{true};
             bool HookAActorTick{true};
             bool HookGameViewportClientTick{true};
