@@ -114,6 +114,9 @@ Updated PatternSleuth submodule ([UE4SS #638](https://github.com/UE4SS-RE/RE-UE4
 
 The `bUseUObjectArrayCache` option in UE4SS-settings.ini is now set to false by default in the non-zDev release ([UE4SS #747](https://github.com/UE4SS-RE/RE-UE4SS/pull/747)) 
 
+The `GuiConsoleEnabled` option in UE4SS-settings.ini is now set to 0 by default in the non-zDev
+release ([UE4SS #779](https://github.com/UE4SS-RE/RE-UE4SS/pull/779))
+
 ### Live View 
 Fixed the majority of the lag ([UE4SS #512](https://github.com/UE4SS-RE/RE-UE4SS/pull/512)) 
 
