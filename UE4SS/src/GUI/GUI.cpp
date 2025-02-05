@@ -46,7 +46,7 @@ namespace RC::GUI
 
     std::vector<DebuggingGUI::EndOfFrameCallback> DebuggingGUI::s_end_of_frame_callbacks{};
 
-    auto DebuggingGUI::is_valid() -> bool
+    auto DebuggingGUI::is_valid() const -> bool
     {
         return m_os_backend && m_gfx_backend;
     }
@@ -305,11 +305,9 @@ namespace RC::GUI
             return;
         }
 
-        m_is_open = true;
-
         ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
 
-        while (!m_exit_requested && !m_gfx_backend->exit_requested())
+        do
         {
             m_os_backend->exec_message_loop(&m_exit_requested);
 
@@ -317,7 +315,7 @@ namespace RC::GUI
             {
                 break;
             }
-            if (m_thread_stop_token.stop_requested())
+            if (m_thread_stop_token && m_thread_stop_token->stop_requested())
             {
                 break;
             }
@@ -360,10 +358,7 @@ namespace RC::GUI
                                                               return true;
                                                           }),
                                            s_end_of_frame_callbacks.end());
-        }
-
-        m_is_open = false;
-        m_exit_requested = false;
+        } while (m_thread_stop_token && !m_exit_requested && !m_gfx_backend->exit_requested());
     }
 
     auto DebuggingGUI::execute_at_end_of_frame(EndOfFrameCallback callback) -> void
@@ -457,7 +452,17 @@ namespace RC::GUI
         // Add any additional ImGui UE4SS settings here
     }
 
-    auto DebuggingGUI::setup(std::stop_token&& stop_token) -> void
+    auto DebuggingGUI::set_open(bool new_open) -> void
+    {
+        m_is_open = new_open;
+    }
+
+    auto DebuggingGUI::request_exit() -> void
+    {
+        m_exit_requested = true;
+    }
+
+    auto DebuggingGUI::setup(std::stop_token* stop_token) -> void
     {
         if (!is_valid())
         {
@@ -528,14 +533,13 @@ namespace RC::GUI
         m_os_backend->init();
         m_gfx_backend->init();
 
-        main_loop_internal();
+        set_open(true);
 
-        m_gfx_backend->shutdown();
-        m_os_backend->shutdown();
-        ImGui::DestroyContext();
-
-        m_gfx_backend->cleanup();
-        m_os_backend->cleanup();
+        if (m_thread_stop_token)
+        {
+            main_loop_internal();
+            uninitialize();
+        }
     }
 
     auto DebuggingGUI::set_gfx_backend(GfxBackend backend) -> void
@@ -569,12 +573,25 @@ namespace RC::GUI
         m_tabs.erase(std::remove(m_tabs.begin(), m_tabs.end(), tab), m_tabs.end());
     }
 
+    auto DebuggingGUI::uninitialize() -> void
+    {
+        m_gfx_backend->shutdown();
+        m_os_backend->shutdown();
+        ImGui::DestroyContext();
+
+        m_gfx_backend->cleanup();
+        m_os_backend->cleanup();
+
+        set_open(false);
+        m_exit_requested = false;
+    }
+
     DebuggingGUI::~DebuggingGUI()
     {
         UE4SSProgram::get_program().stop_render_thread();
     }
 
-    auto gui_thread(std::stop_token stop_token, DebuggingGUI* debugging_ui) -> void
+    auto gui_thread(std::optional<std::stop_token> stop_token, DebuggingGUI* debugging_ui) -> void
     {
         ProfilerSetThreadName("UE4SS-GuiThread");
 
@@ -583,6 +600,6 @@ namespace RC::GUI
             Output::send<LogLevel::Error>(STR("Could not start GUI render thread because 'debugging_ui' was nullptr."));
             return;
         }
-        debugging_ui->setup(std::move(stop_token));
+        debugging_ui->setup(stop_token.has_value() ? &stop_token.value() : nullptr);
     }
 } // namespace RC::GUI

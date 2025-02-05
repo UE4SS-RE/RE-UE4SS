@@ -1,6 +1,7 @@
 #include <GUI/Windows.hpp>
 
 #include <GUI/DX11.hpp>
+#include <UE4SSProgram.hpp>
 #include <backends/imgui_impl_win32.h>
 #include <imgui.h>
 #include <tchar.h>
@@ -41,6 +42,7 @@ namespace RC::GUI
         {
             title_bar_text.append(STR(" (DX11)"));
         }
+        title_bar_text.append(fmt::format(STR(" - {}"), ensure_str(render_mode_to_string(UE4SSProgram::settings_manager.Debug.RenderMode))));
 
         // ImGui_ImplWin32_EnableDpiAwareness()
         s_wc.cbSize = sizeof(WNDCLASSEX);
