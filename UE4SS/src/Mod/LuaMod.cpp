@@ -3699,11 +3699,11 @@ Overloads:
                             lua.registry().get_function_ref(registry_index.lua_index);
                             static auto s_object_property_name = Unreal::FName(STR("ObjectProperty"));
                             LuaType::RemoteUnrealParam::construct(lua, &Engine, s_object_property_name);
-                            LuaType::RemoteUnrealParam::construct(lua, WorldContext.GetThisCurrentWorld().UnderlyingObjectPointer, s_object_property_name);
+                            LuaType::RemoteUnrealParam::construct(lua, &WorldContext.GetThisCurrentWorld().UnderlyingObjectPointer, s_object_property_name);
                             LuaType::FURL::construct(lua, URL);
-                            LuaType::RemoteUnrealParam::construct(lua, PendingGame, s_object_property_name);
+                            LuaType::RemoteUnrealParam::construct(lua, &PendingGame, s_object_property_name);
                             callback_data.lua.set_string(to_string(Error.GetCharArray()));
-                            lua.call_function(4, 1);
+                            lua.call_function(5, 1);
 
                             if (callback_data.lua.is_nil())
                             {
