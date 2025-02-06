@@ -86,6 +86,8 @@ namespace RC::GUI
 
     auto Backend_GLFW3_OpenGL3::cleanup() -> void
     {
+        glfwDestroyWindow(m_window);
+        glfwTerminate();
     }
 
     auto Backend_GLFW3_OpenGL3::create_device() -> bool
