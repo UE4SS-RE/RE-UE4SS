@@ -922,8 +922,7 @@ namespace RC::LuaType
                                            .lua = params.lua,
                                            .base = static_cast<Unreal::UObject*>(map->GetData(0, info.layout)),
                                            .data = map->GetData(added_index, info.layout),
-                                           .property = nullptr,
-                                           .stored_at_index = 1};
+                                           .property = nullptr};
 
                 Unreal::FMemory::Memzero(pusher_params.data, info.layout.SetLayout.Size);
 
@@ -932,7 +931,6 @@ namespace RC::LuaType
 
                 pusher_params.data = static_cast<uint8_t*>(pusher_params.data) + info.layout.ValueOffset;
                 pusher_params.property = info.value;
-                pusher_params.stored_at_index = 2;
                 StaticState::m_property_value_pushers[static_cast<int32_t>(info.value_fname.GetComparisonIndex())](pusher_params);
 
                 return false;
