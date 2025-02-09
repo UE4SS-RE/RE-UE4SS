@@ -192,6 +192,7 @@ namespace RC
         auto share_lua_functions() -> void;
         auto on_program_start() -> void;
         auto setup_unreal_properties() -> void;
+        auto handle_toggle_gui() -> void;
 
       protected:
         auto update() -> void;
@@ -323,5 +324,6 @@ namespace RC
         friend void* HookedLoadLibraryW(const wchar_t* dll_name);
         friend void* HookedLoadLibraryExW(const wchar_t* dll_name, void* file, int32_t flags);
         friend auto render_gui_from_game_thread() -> void;
+        friend auto process_keybinds_from_game_thread(Unreal::UGameViewportClient*) -> void;
     };
 } // namespace RC

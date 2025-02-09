@@ -839,10 +839,73 @@ namespace RC
 
             UE_RETURN_PROPERTY(bool)
         }
+
+        bool WasInputKeyJustReleased(FKey Key)
+        {
+            using namespace ::RC::Unreal;
+            // TODO: Decide what to do if the UFunction doesn't exist.
+            //       If the UE devs change something in the future, this function might not exist, or be moved elsewhere.
+            //       Right now we're currently crashing if the function doesn't exist, we probably shouldn't do that.
+            UE_BEGIN_NATIVE_FUNCTION_BODY("/Script/Engine.PlayerController:WasInputKeyJustReleased")
+
+            UE_COPY_STRUCT_PROPERTY_BEGIN(Key)
+            UE_COPY_STRUCT_INNER_PROPERTY(Key, KeyName, FName, Key.KeyName)
+
+            UE_CALL_FUNCTION()
+
+            UE_RETURN_PROPERTY(bool)
+        }
+
+        bool IsInputKeyDown(FKey Key)
+        {
+            using namespace ::RC::Unreal;
+            // TODO: Decide what to do if the UFunction doesn't exist.
+            //       If the UE devs change something in the future, this function might not exist, or be moved elsewhere.
+            //       Right now we're currently crashing if the function doesn't exist, we probably shouldn't do that.
+            UE_BEGIN_NATIVE_FUNCTION_BODY("/Script/Engine.PlayerController:IsInputKeyDown")
+
+            UE_COPY_STRUCT_PROPERTY_BEGIN(Key)
+            UE_COPY_STRUCT_INNER_PROPERTY(Key, KeyName, FName, Key.KeyName)
+
+            UE_CALL_FUNCTION()
+
+            UE_RETURN_PROPERTY(bool)
+        }
     };
 
     static bool s_gui_initialized_for_game_thread{};
     static bool s_gui_initializing_for_game_thread{};
+
+    auto UE4SSProgram::handle_toggle_gui() -> void
+    {
+        TRY([&] {
+            std::lock_guard guard(m_render_thread_mutex);
+            if (s_gui_initializing_for_game_thread)
+            {
+                Output::send<LogLevel::Verbose>(STR("Cancelled GUI toggle during GUI initialization.\n"));
+                return;
+            }
+            auto was_gui_open = get_debugging_ui().is_open();
+            stop_render_thread();
+            if (!was_gui_open)
+            {
+                switch (settings_manager.Debug.RenderMode)
+                {
+                case GUI::RenderMode::ExternalThread:
+                    m_render_thread = std::jthread{&GUI::gui_thread, &m_debugging_gui};
+                    break;
+                case GUI::RenderMode::GameViewportClientTick:
+                    // The hooked game function will pick up on the window being "open", and start rendering.
+                    s_gui_initialized_for_game_thread = false;
+                    s_gui_initializing_for_game_thread = true;
+                    get_debugging_ui().set_open(true);
+                    break;
+                }
+                fire_ui_init_for_cpp_mods();
+            }
+        });
+    }
+
     auto render_gui_from_game_thread() -> void
     {
         std::lock_guard guard(UE4SSProgram::get_program().m_render_thread_mutex);
@@ -877,9 +940,12 @@ namespace RC
         auto LocalPlayers = (*GameInstance)->GetValuePtrByPropertyNameInChain<Unreal::TArray<AActor*>>(STR("LocalPlayers"));
         auto LocalPlayer = (*LocalPlayers)[0];
         auto PlayerController = *LocalPlayer->GetValuePtrByPropertyNameInChain<APlayerController*>(STR("PlayerController"));
-        if (PlayerController->WasInputKeyJustPressed(FKey{FName(STR("SpaceBar"))}))
+        // TODO: Cache the keys so that we don't have to keep calling the FKey and FName constructors.
+        auto LeftControl = PlayerController->IsInputKeyDown(FKey{FName(STR("LeftControl"))});
+        if (LeftControl && PlayerController->WasInputKeyJustPressed(FKey{FName(STR("O"))}))
         {
-            Output::send(STR("Space hit\n"));
+            Output::send(STR("CTRL + O\n"));
+            UE4SSProgram::get_program().handle_toggle_gui();
         }
     }
 
@@ -922,34 +988,14 @@ namespace RC
                 m_debugging_gui.get_live_view().set_listeners_allowed(false);
             }
 
-            m_input_handler.register_keydown_event(Input::Key::O, {Input::ModifierKey::CONTROL}, [&]() {
-                TRY([&] {
-                    std::lock_guard guard(m_render_thread_mutex);
-                    if (s_gui_initializing_for_game_thread)
-                    {
-                        Output::send<LogLevel::Verbose>(STR("Cancelled GUI toggle during GUI initialization.\n"));
-                        return;
-                    }
-                    auto was_gui_open = get_debugging_ui().is_open();
-                    stop_render_thread();
-                    if (!was_gui_open)
-                    {
-                        switch (settings_manager.Debug.RenderMode)
-                        {
-                        case GUI::RenderMode::ExternalThread:
-                            m_render_thread = std::jthread{&GUI::gui_thread, &m_debugging_gui};
-                            break;
-                        case GUI::RenderMode::GameViewportClientTick:
-                            // The hooked game function will pick up on the window being "open", and start rendering.
-                            s_gui_initialized_for_game_thread = false;
-                            s_gui_initializing_for_game_thread = true;
-                            get_debugging_ui().set_open(true);
-                            break;
-                        }
-                        fire_ui_init_for_cpp_mods();
-                    }
+            // This check is temporary, and for testing purposes.
+            // Eventually t he 'register_keydown_event' function will forward to either UEs or our own system depending on the ini file.
+            if (UE4SSProgram::settings_manager.General.KeyBindSystem == KeyBindSystem::V1)
+            {
+                m_input_handler.register_keydown_event(Input::Key::O, {Input::ModifierKey::CONTROL}, [&]() {
+                    handle_toggle_gui();
                 });
-            });
+            }
         }
 
 #ifdef TIME_FUNCTION_MACRO_ENABLED
