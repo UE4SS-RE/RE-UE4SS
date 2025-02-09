@@ -53,6 +53,8 @@
 #include <Unreal/UScriptStruct.hpp>
 #include <Unreal/UnrealInitializer.hpp>
 #include <Unreal/World.hpp>
+#include <Unreal/Core/GenericPlatform/GenericPlatform.hpp>
+#include <Unreal/BPMacros.hpp>
 #include <UnrealDef.hpp>
 
 #include <polyhook2/PE/IatHook.hpp>
@@ -815,14 +817,34 @@ namespace RC
         Output::send(STR("m_shared_functions: {}\n"), static_cast<void*>(&m_shared_functions));
     }
 
+    struct FKey
+    {
+        FName KeyName{};
+    };
+    class APlayerController : public UObject
+    {
+      public:
+        bool WasInputKeyJustPressed(FKey Key)
+        {
+            using namespace ::RC::Unreal;
+            // TODO: Decide what to do if the UFunction doesn't exist.
+            //       If the UE devs change something in the future, this function might not exist, or be moved elsewhere.
+            //       Right now we're currently crashing if the function doesn't exist, we probably shouldn't do that.
+            UE_BEGIN_NATIVE_FUNCTION_BODY("/Script/Engine.PlayerController:WasInputKeyJustPressed")
+
+            UE_COPY_STRUCT_PROPERTY_BEGIN(Key)
+            UE_COPY_STRUCT_INNER_PROPERTY(Key, KeyName, FName, Key.KeyName)
+
+            UE_CALL_FUNCTION()
+
+            UE_RETURN_PROPERTY(bool)
+        }
+    };
+
     static bool s_gui_initialized_for_game_thread{};
     static bool s_gui_initializing_for_game_thread{};
-    auto gui_render_thread_GameViewportClientTick(Unreal::UGameViewportClient*, float) -> void
+    auto render_gui_from_game_thread() -> void
     {
-        if (UE4SSProgram::settings_manager.Debug.RenderMode == GUI::RenderMode::ExternalThread)
-        {
-            return;
-        }
         std::lock_guard guard(UE4SSProgram::get_program().m_render_thread_mutex);
         if (UE4SSProgram::get_program().get_debugging_ui().exit_requested())
         {
@@ -846,6 +868,26 @@ namespace RC
         UE4SSProgram::get_program().get_debugging_ui().main_loop_internal();
     }
 
+    auto post_GameViewportClientTick(Unreal::UGameViewportClient* ViewportClient, float) -> void
+    {
+        using namespace ::RC::Unreal;
+        if (UE4SSProgram::settings_manager.Debug.RenderMode == GUI::RenderMode::GameViewportClientTick)
+        {
+            render_gui_from_game_thread();
+        }
+
+        // We're making an assumption here that the following is always valid: GameInstance->LocalPlayers[0]->PlayerController
+        // TODO: Check if the 'LocalPlayers' array has players on servers.
+        auto GameInstance = ViewportClient->GetValuePtrByPropertyNameInChain<UObject*>(STR("GameInstance"));
+        auto LocalPlayers = (*GameInstance)->GetValuePtrByPropertyNameInChain<Unreal::TArray<AActor*>>(STR("LocalPlayers"));
+        auto LocalPlayer = (*LocalPlayers)[0];
+        auto PlayerController = *LocalPlayer->GetValuePtrByPropertyNameInChain<APlayerController*>(STR("PlayerController"));
+        if (PlayerController->WasInputKeyJustPressed(FKey{FName(STR("SpaceBar"))}))
+        {
+            Output::send(STR("Space hit\n"));
+        }
+    }
+
     auto UE4SSProgram::on_program_start() -> void
     {
         ProfilerScope();
@@ -856,9 +898,9 @@ namespace RC
         UObjectArray::AddUObjectCreateListener(&FUEDeathListener::UEDeathListener);
         //*/
 
-        if (settings_manager.Debug.RenderMode == GUI::RenderMode::GameViewportClientTick)
+        if (settings_manager.Hooks.HookGameViewportClientTick)
         {
-            Hook::RegisterGameViewportClientTickPostCallback(gui_render_thread_GameViewportClientTick);
+            Hook::RegisterGameViewportClientTickPostCallback(post_GameViewportClientTick);
         }
 
         if (settings_manager.Debug.DebugConsoleEnabled)
