@@ -868,14 +868,9 @@ namespace RC
         UE4SSProgram::get_program().get_debugging_ui().main_loop_internal();
     }
 
-    auto post_GameViewportClientTick(Unreal::UGameViewportClient* ViewportClient, float) -> void
+    auto process_keybinds_from_game_thread(Unreal::UGameViewportClient* ViewportClient) -> void
     {
         using namespace ::RC::Unreal;
-        if (UE4SSProgram::settings_manager.Debug.RenderMode == GUI::RenderMode::GameViewportClientTick)
-        {
-            render_gui_from_game_thread();
-        }
-
         // We're making an assumption here that the following is always valid: GameInstance->LocalPlayers[0]->PlayerController
         // TODO: Check if the 'LocalPlayers' array has players on servers.
         auto GameInstance = ViewportClient->GetValuePtrByPropertyNameInChain<UObject*>(STR("GameInstance"));
@@ -885,6 +880,19 @@ namespace RC
         if (PlayerController->WasInputKeyJustPressed(FKey{FName(STR("SpaceBar"))}))
         {
             Output::send(STR("Space hit\n"));
+        }
+    }
+
+    auto post_GameViewportClientTick(Unreal::UGameViewportClient* ViewportClient, float) -> void
+    {
+        if (UE4SSProgram::settings_manager.Debug.RenderMode == GUI::RenderMode::GameViewportClientTick)
+        {
+            render_gui_from_game_thread();
+        }
+
+        if (UE4SSProgram::settings_manager.General.KeyBindSystem == KeyBindSystem::V2)
+        {
+            process_keybinds_from_game_thread(ViewportClient);
         }
     }
 

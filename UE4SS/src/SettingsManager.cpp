@@ -57,6 +57,16 @@ namespace RC
         REGISTER_BOOL_SETTING(General.EnableDebugKeyBindings, section_general, EnableDebugKeyBindings)
         REGISTER_INT64_SETTING(General.SecondsToScanBeforeGivingUp, section_general, SecondsToScanBeforeGivingUp)
         REGISTER_BOOL_SETTING(General.UseUObjectArrayCache, section_general, bUseUObjectArrayCache)
+        int64_t KeyBindSystem_as_int64{};
+        REGISTER_INT64_SETTING(KeyBindSystem_as_int64, section_general, KeyBindSystem)
+        if (KeyBindSystem_as_int64 < 0 || KeyBindSystem_as_int64 >= static_cast<std::underlying_type_t<KeyBindSystem>>(KeyBindSystem::Count))
+        {
+            General.KeyBindSystem = KeyBindSystem::V1;
+        }
+        else
+        {
+            General.KeyBindSystem = static_cast<KeyBindSystem>(KeyBindSystem_as_int64);
+        }
 
         constexpr static File::CharType section_engine_version_override[] = STR("EngineVersionOverride");
         REGISTER_INT64_SETTING(EngineVersionOverride.MajorVersion, section_engine_version_override, MajorVersion)
