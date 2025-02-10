@@ -46,6 +46,8 @@ Added search filter: `IncludeClassNames`. ([UE4SS #472](https://github.com/UE4SS
 
 ### Lua API 
 
+Added `TMap` implementation. [UE4SS #755](https://github.com/UE4SS-RE/RE-UE4SS/issues/755)
+
 Added global function `CreateInvalidObject`, which returns an invalid UObject. ([UE4SS #652](https://github.com/UE4SS-RE/RE-UE4SS/issues/652))  
 
 Added GenerateLuaTypes function. ([UE4SS #664](https://github.com/UE4SS-RE/RE-UE4SS/pull/664))  
@@ -59,6 +61,7 @@ Added global functions `RegisterEndPlayPreHook` and
 - Added `NAME_None` definition 
 - Added `EFindName` enum definition 
 - Added `FName` function overloads with FindType parameter 
+- Added `TMap` definitions
 
 #### UEHelpers 
 - Added function `GetPlayer` which is just a fast way to get player controlled Pawn (the majority of the time it will be the player character) [PR #650](https://github.com/UE4SS-RE/RE-UE4SS/pull/650)

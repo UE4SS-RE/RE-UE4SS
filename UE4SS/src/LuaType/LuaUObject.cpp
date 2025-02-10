@@ -6,6 +6,7 @@
 #include <LuaType/LuaFText.hpp>
 #include <LuaType/LuaFWeakObjectPtr.hpp>
 #include <LuaType/LuaTArray.hpp>
+#include <LuaType/LuaTMap.hpp>
 #include <LuaType/LuaTSoftClassPtr.hpp>
 #include <LuaType/LuaUClass.hpp>
 #include <LuaType/LuaUEnum.hpp>
@@ -23,6 +24,7 @@
 #include <Unreal/FString.hpp>
 #include <Unreal/FText.hpp>
 #include <Unreal/Property/FArrayProperty.hpp>
+#include <Unreal/Property/FMapProperty.hpp>
 #include <Unreal/Property/FBoolProperty.hpp>
 #include <Unreal/Property/FEnumProperty.hpp>
 #include <Unreal/Property/FSoftClassProperty.hpp>
@@ -849,6 +851,118 @@ namespace RC::LuaType
 
         params.throw_error("push_arrayproperty", "Operation not supported");
     }
+
+    auto push_mapproperty(const PusherParams& params) -> void
+    {
+        auto map_to_lua_table = [&](const LuaMadeSimple::Lua& lua, Unreal::FProperty* property, void* data_ptr) {
+            Unreal::FMapProperty* map_property = static_cast<Unreal::FMapProperty*>(property);
+
+            FScriptMapInfo info(map_property->GetKeyProp(), map_property->GetValueProp());
+            info.validate_pushers(lua);
+
+            Unreal::FScriptMap* map = static_cast<Unreal::FScriptMap*>(data_ptr);
+
+            LuaMadeSimple::Lua::Table lua_table = [&]() {
+                if (params.create_new_if_get_non_trivial_local)
+                {
+                    return lua.prepare_new_table();
+                }
+                else
+                {
+                    return lua.get_table();
+                }
+            }();
+
+            Unreal::int32 max_index = map->GetMaxIndex();
+            for (Unreal::int32 i = 0; i < max_index; i++)
+            {
+                if (!map->IsValidIndex(i))
+                {
+                    continue;
+                }
+
+                PusherParams pusher_params{.operation = LuaMadeSimple::Type::Operation::GetParam,
+                                           .lua = lua,
+                                           .base = params.base,
+                                           .data = static_cast<uint8_t*>(map->GetData(i, info.layout)),
+                                           .property = nullptr};
+
+                pusher_params.property = info.key;
+                StaticState::m_property_value_pushers[static_cast<int32_t>(info.key_fname.GetComparisonIndex())](pusher_params);
+
+                pusher_params.data = static_cast<uint8_t*>(pusher_params.data) + info.layout.ValueOffset;
+                pusher_params.property = info.value;
+                StaticState::m_property_value_pushers[static_cast<int32_t>(info.value_fname.GetComparisonIndex())](pusher_params);
+
+                lua_table.fuse_pair();
+            }
+
+            lua_table.make_local();
+        };
+
+        auto lua_table_to_map = [&]() {
+            Unreal::FMapProperty* map_property = static_cast<Unreal::FMapProperty*>(params.property);
+
+            FScriptMapInfo info(map_property->GetKeyProp(), map_property->GetValueProp());
+            info.validate_pushers(params.lua);
+
+            auto map = new(params.data) Unreal::FScriptMap{};
+
+            params.lua.for_each_in_table([&](LuaMadeSimple::LuaTableReference table) -> bool {
+                params.lua.insert_value(-2);
+                params.lua.insert_value(-1);
+
+                // be careful with this function, if you add a duplicate entry,
+                // rehashing the map will NOT remove it
+                // if you want identical behavior to TMap::Add use the Add function.
+                Unreal::int32 added_index = map->AddUninitialized(info.layout);
+
+                PusherParams pusher_params{.operation = Operation::Set,
+                                           .lua = params.lua,
+                                           .base = static_cast<Unreal::UObject*>(map->GetData(0, info.layout)),
+                                           .data = map->GetData(added_index, info.layout),
+                                           .property = nullptr};
+
+                Unreal::FMemory::Memzero(pusher_params.data, info.layout.SetLayout.Size);
+
+                pusher_params.property = info.key;
+                StaticState::m_property_value_pushers[static_cast<int32_t>(info.key_fname.GetComparisonIndex())](pusher_params);
+
+                pusher_params.data = static_cast<uint8_t*>(pusher_params.data) + info.layout.ValueOffset;
+                pusher_params.property = info.value;
+                StaticState::m_property_value_pushers[static_cast<int32_t>(info.value_fname.GetComparisonIndex())](pusher_params);
+
+                return false;
+            });
+
+            map->Rehash(info.layout,
+                        [&](const void* src) -> Unreal::uint32 {
+                            return info.key->GetValueTypeHash(src);
+                        });
+        };
+
+        switch (params.operation)
+        {
+        case Operation::Get:
+            TMap::construct(params);
+            return;
+        case Operation::GetNonTrivialLocal:
+            map_to_lua_table(params.lua, params.property, params.data);
+            return;
+        case Operation::Set:
+            lua_table_to_map();
+            return;
+        case Operation::GetParam:
+            RemoteUnrealParam::construct(params.lua, params.data, params.base, params.property);
+            return;
+        default:
+            params.throw_error("push_mapproperty", "Unhandled Operation");
+            break;
+        }
+
+        params.throw_error("push_mapproperty", fmt::format("Unknown Operation ({}) not supported", static_cast<int32_t>(params.operation)));
+    }
+
 
     auto push_functionproperty(const FunctionPusherParams& params) -> void
     {
