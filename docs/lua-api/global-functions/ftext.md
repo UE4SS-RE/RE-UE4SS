@@ -1,6 +1,6 @@
 # FText
 
-The `FText` function is used to create a `FText` object from a `string`.
+The `FText` function is used to create an `FText` object from a `string`.
 
 Useful when you have to interact with `UserWidget`-related classes for the UI of your mods, and call their `SetText(FText("My New Text"))` methods.
 
