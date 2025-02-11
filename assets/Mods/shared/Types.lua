@@ -400,6 +400,11 @@ function FName(Name, FindType) end
 ---@return FName
 function FName(ComparisonIndex, FindType) end
 
+---Returns a new FText object with passed string as content
+---@param Text string
+---@return FText
+function FText(Text) end
+
 ---Attempts to construct a UObject of the passed UClass
 ---(>=4.26) Maps to https://docs.unrealengine.com/4.27/en-US/API/Runtime/CoreUObject/UObject/StaticConstructObject_Internal/1/
 ---(<4.25) Maps to https://docs.unrealengine.com/4.27/en-US/API/Runtime/CoreUObject/UObject/StaticConstructObject_Internal/2/
