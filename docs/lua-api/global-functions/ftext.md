@@ -16,7 +16,7 @@ This overload uses [FText::FText( FString&& InSourceString )](https://docs.unrea
 
  # | Type  | Information 
 ---|-------|-------------
- 1 | FText | FText object that contains the passed `string`|
+ 1 | FText | FText object that contains the passed `string`
 
 ## Example
 Code:
