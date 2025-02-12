@@ -36,6 +36,8 @@ Added custom game configurations for Abiotic Factor ([UE4SS #709](https://github
 
 Added custom game configurations for Psychonauts 2 ([UE4SS #731](https://github.com/UE4SS-RE/RE-UE4SS/pull/731)) 
 
+Added custom game configurations for Lies of P ([UE4SS #787](https://github.com/UE4SS-RE/RE-UE4SS/pull/787))
+
 The GUI can now be rendered in the game thread if `RenderMode` in UE4SS-settings.ini is set to
 `GameViewportClientTick` ([UE4SS #768](https://github.com/UE4SS-RE/RE-UE4SS/pull/768)).
 
