@@ -9,6 +9,13 @@
 
 namespace RC
 {
+    enum class KeyBindSystem
+    {
+        V1,
+        V2,
+        Count,
+    };
+
     class RC_UE4SS_API SettingsManager
     {
       public:
@@ -25,6 +32,7 @@ namespace RC
             bool EnableDebugKeyBindings{false};
             int64_t SecondsToScanBeforeGivingUp{30};
             bool UseUObjectArrayCache{true};
+            KeyBindSystem KeyBindSystem{};
         } General;
 
         struct SectionEngineVersionOverride
