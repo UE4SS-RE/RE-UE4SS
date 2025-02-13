@@ -25,6 +25,7 @@ namespace RC
             bool EnableDebugKeyBindings{false};
             int64_t SecondsToScanBeforeGivingUp{30};
             bool UseUObjectArrayCache{true};
+            StringType InputSource{STR("Default")};
         } General;
 
         struct SectionEngineVersionOverride
