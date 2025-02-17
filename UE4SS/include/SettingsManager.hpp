@@ -94,6 +94,7 @@ namespace RC
             bool HookEndPlay{true};
             bool HookLocalPlayerExec{true};
             bool HookAActorTick{true};
+            bool HookEngineTick{true};
             bool HookGameViewportClientTick{true};
             int64_t FExecVTableOffsetInLocalPlayer{0x28};
         } Hooks;
