@@ -39,7 +39,6 @@ Added custom game configurations for Psychonauts 2 ([UE4SS #731](https://github.
 The GUI can now be rendered in the game thread if `RenderMode` in UE4SS-settings.ini is set to
 `EngineTick` or `GameViewportClientTick` ([UE4SS #768](https://github.com/UE4SS-RE/RE-UE4SS/pull/768), [UE4SS #794](https://github.com/UE4SS-RE/RE-UE4SS/pull/794)).
 
-Added new setting `HookEngineTick` ([UE4SS #794](https://github.com/UE4SS-RE/RE-UE4SS/pull/794)).
 
 ### Live View 
 Added search filter: `IncludeClassNames`. ([UE4SS #472](https://github.com/UE4SS-RE/RE-UE4SS/pull/472)) - Buckminsterfullerene 
