@@ -3632,7 +3632,7 @@ Overloads:
                     lua.call_function(num_unreal_params + 1, 1);
 
                     bool return_value_handled{};
-                    if (has_return_value && RESULT_DECL && lua.get_stack_size() > 0)
+                    if (has_return_value && RESULT_DECL && lua.get_stack_size() > 0 && !lua.is_nil())
                     {
                         auto return_property = node->GetReturnProperty();
                         if (return_property)
