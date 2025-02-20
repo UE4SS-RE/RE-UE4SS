@@ -11,7 +11,9 @@
 #include <ExceptionHandling.hpp>
 #include <Helpers/Format.hpp>
 #include <Helpers/String.hpp>
+
 #include <Input/Handler.hpp>
+
 #include <LuaLibrary.hpp>
 #include <LuaMadeSimple/LuaMadeSimple.hpp>
 #include <LuaType/LuaAActor.hpp>

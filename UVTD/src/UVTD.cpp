@@ -27,16 +27,6 @@
 namespace RC::UVTD
 {
     bool processing_events{false};
-    Input::Handler input_handler{STR("ConsoleWindowClass"), STR("UnrealWindow")};
-
-    auto static event_loop_update() -> void
-    {
-        for (processing_events = true; processing_events;)
-        {
-            input_handler.process_event();
-            std::this_thread::sleep_for(std::chrono::milliseconds(5));
-        }
-    }
 
     auto main(DumpSettings dump_settings) -> void
     {
