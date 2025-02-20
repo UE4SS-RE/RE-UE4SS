@@ -835,6 +835,102 @@ namespace RC
         lua_pop(lua_state, 1);
     }
 
+    auto LuaMod::get_object_names(const Unreal::UObject* object) -> std::vector<Unreal::FName>
+    {
+        std::vector<Unreal::FName> names{};
+        for (auto ptr = object; ptr; ptr = ptr->GetOuterPrivate())
+        {
+            names.emplace_back(ptr->GetNamePrivate());
+        }
+        return names;
+    }
+
+    auto LuaMod::find_function_hook_data(std::vector<FunctionHookData>& container, Unreal::FName in_name) -> FunctionHookData*
+    {
+        for (auto it = container.begin(); it != container.end(); ++it)
+        {
+            if (it->names.size() >= 1 && in_name.Equals(it->names[0]))
+            {
+                return &*it;
+            }
+        }
+        return nullptr;
+    }
+
+    auto LuaMod::find_function_hook_data(std::vector<FunctionHookData>& container, const Unreal::UObject* object) -> FunctionHookData*
+    {
+        return find_function_hook_data(container, get_object_names(object));
+    }
+
+    auto LuaMod::find_function_hook_data(std::vector<FunctionHookData>& container, const std::vector<Unreal::FName>& in_name) -> FunctionHookData*
+    {
+        for (auto it = container.begin(); it != container.end(); ++it)
+        {
+            auto found = true;
+            if (in_name.size() != it->names.size())
+            {
+                continue;
+            }
+            for (const auto& [index, name] : std::ranges::enumerate_view(it->names))
+            {
+                if (!name.Equals(in_name[index]))
+                {
+                    found = false;
+                }
+            }
+            if (found)
+            {
+                return &*it;
+            }
+        }
+        return nullptr;
+    }
+
+    auto LuaMod::remove_function_hook_data(std::vector<FunctionHookData>& container, StringViewType in_name) -> void
+    {
+        remove_function_hook_data(container, Unreal::FName(in_name, Unreal::FNAME_Add));
+    }
+
+    auto LuaMod::remove_function_hook_data(std::vector<FunctionHookData>& container, Unreal::FName in_name) -> void
+    {
+        for (auto it = container.begin(); it != container.end(); ++it)
+        {
+            if (it->names.size() >= 1 && it->names[0] == in_name)
+            {
+                container.erase(it);
+                break;
+            }
+        }
+    }
+
+    auto LuaMod::remove_function_hook_data(std::vector<FunctionHookData>& container, const Unreal::UObject* object) -> void
+    {
+        remove_function_hook_data(container, get_object_names(object));
+    }
+
+    auto LuaMod::remove_function_hook_data(std::vector<FunctionHookData>& container, const std::vector<Unreal::FName>& in_name) -> void
+    {
+        for (auto it = container.begin(); it != container.end(); ++it)
+        {
+            auto found = true;
+            if (in_name.size() != it->names.size())
+            {
+                continue;
+            }
+            for (const auto& [index, name] : std::ranges::enumerate_view(it->names))
+            {
+                if (name != in_name[index])
+                {
+                    found = false;
+                }
+            }
+            if (found)
+            {
+                container.erase(it);
+            }
+        }
+    }
+
     auto static setup_lua_global_functions_internal(const LuaMadeSimple::Lua& lua, Mod::IsTrueMod is_true_mod) -> void
     {
         lua.register_function("print", LuaLibrary::global_print);
@@ -1428,11 +1524,10 @@ Overloads:
                 }
                 else
                 {
-                    if (auto callback_data_it = LuaMod::m_script_hook_callbacks.find(unreal_function->GetFullName());
-                        callback_data_it != LuaMod::m_script_hook_callbacks.end())
+                    if (auto data_ptr = LuaMod::find_function_hook_data(LuaMod::m_script_hook_callbacks, unreal_function); data_ptr)
                     {
                         Output::send<LogLevel::Verbose>(STR("Unregistering script hook with id: {}, FunctionName: {}\n"), post_id, function_name_no_prefix);
-                        auto& registry_indexes = callback_data_it->second.registry_indexes;
+                        auto& registry_indexes = data_ptr->callback_data.registry_indexes;
                         std::erase_if(registry_indexes, [&](const auto& pair) -> bool {
                             return post_id == pair.second.identifier;
                         });
@@ -1947,13 +2042,14 @@ Overloads:
             // Take a reference to the Lua function (it also pops it of the stack)
             const int32_t lua_callback_registry_index = hook_lua->registry().make_ref();
 
-            LuaMod::m_custom_event_callbacks.emplace(
-                    event_name,
-                    LuaMod::LuaCallbackData{
-                            .lua = lua,
+            LuaMod::m_custom_event_callbacks.emplace_back(LuaMod::FunctionHookData{
+                    {Unreal::FName(event_name, Unreal::FNAME_Add)},
+                    LuaMod::LuaCallbackDataNoRef{
+                            .lua = &lua,
                             .instance_of_class = nullptr,
-                            .registry_indexes = {std::pair<const LuaMadeSimple::Lua*, LuaMod::LuaCallbackData::RegistryIndex>{&lua, {lua_callback_registry_index}}},
-                    });
+                            .registry_indexes = {std::pair<const LuaMadeSimple::Lua*, LuaMod::LuaCallbackDataNoRef::RegistryIndex>{&lua,
+                                                                                                                                   {lua_callback_registry_index}}},
+                    }});
 
             return 0;
         });
@@ -1970,7 +2066,7 @@ Overloads:
             }
             auto custom_event_name = ensure_str(lua.get_string());
 
-            LuaMod::m_custom_event_callbacks.erase(custom_event_name);
+            LuaMod::remove_function_hook_data(LuaMod::m_custom_event_callbacks, custom_event_name);
 
             return 0;
         });
@@ -3118,9 +3214,9 @@ Overloads:
                      !unreal_function->HasAnyFunctionFlags(Unreal::EFunctionFlags::FUNC_Native))
             {
                 ++m_last_generic_hook_id;
-                auto [callback_data, _] = LuaMod::m_script_hook_callbacks.emplace(unreal_function->GetFullName(), LuaCallbackData{*hook_lua, nullptr, {}});
-                callback_data->second.registry_indexes.emplace_back(hook_lua,
-                                                                    LuaMod::LuaCallbackData::RegistryIndex{lua_callback_registry_index, m_last_generic_hook_id});
+                auto& callback_data =
+                        m_script_hook_callbacks.emplace_back(get_object_names(unreal_function), LuaCallbackDataNoRef{hook_lua, nullptr, {}}).callback_data;
+                callback_data.registry_indexes.emplace_back(hook_lua, LuaCallbackDataNoRef::RegistryIndex{lua_callback_registry_index, m_last_generic_hook_id});
                 generic_pre_id = m_last_generic_hook_id;
                 generic_post_id = m_last_generic_hook_id;
                 Output::send<LogLevel::Verbose>(STR("[RegisterHook] Registered script hook ({}, {}) for {}\n"),
@@ -3555,14 +3651,16 @@ Overloads:
     {
         std::lock_guard<std::recursive_mutex> guard{LuaMod::m_thread_actions_mutex};
 
-        auto execute_hook = [&](std::unordered_map<StringType, LuaMod::LuaCallbackData>& callback_container, bool precise_name_match) {
+        auto execute_hook = [&](std::vector<LuaMod::FunctionHookData>& callback_container, bool precise_name_match) {
             if (callback_container.empty())
             {
                 return;
             }
-            if (auto it = callback_container.find(precise_name_match ? Stack.Node()->GetFullName() : Stack.Node()->GetName()); it != callback_container.end())
+            auto data = precise_name_match ? LuaMod::find_function_hook_data(callback_container, Stack.Node())
+                                           : LuaMod::find_function_hook_data(callback_container, Stack.Node()->GetNamePrivate());
+            if (data)
             {
-                const auto& callback_data = it->second;
+                const auto& callback_data = data->callback_data;
                 for (const auto& [lua_ptr, registry_index] : callback_data.registry_indexes)
                 {
                     const auto& lua = *lua_ptr;
