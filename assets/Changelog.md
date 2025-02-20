@@ -143,6 +143,8 @@ The callback of `NotifyOnNewObject` can now optionally return `true` to unregist
 
 **BREAKING:** `RegisterProcessConsoleExecPreHook`,  `RegisterProcessConsoleExecPostHook` callback parameter `CommandParts` now includes the command name at the start of the array (lua array index **1**). ([UE4SS #669](https://github.com/UE4SS-RE/RE-UE4SS/pull/669)) 
 
+Improved performance of script hooks created with `RegisterHook`, and
+`RegisterCustomEvent`. ([UE4SS #801](https://github.com/UE4SS-RE/RE-UE4SS/pull/801))
 
 #### UEHelpers [UE4SS #650](https://github.com/UE4SS-RE/RE-UE4SS/pull/650) 
 - Increased version to 3

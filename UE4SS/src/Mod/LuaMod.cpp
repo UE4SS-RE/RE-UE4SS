@@ -2845,10 +2845,12 @@ Overloads:
                 // TODO: Redo when there's a bette way of checking whether a lua object is derived from UObject
                 if (lua_object_name == "UObject" || lua_object_name == "UWorld" || lua_object_name == "AActor" || lua_object_name == "UClass")
                 {
-                    if (lua_object_name == "UClass") {
+                    if (lua_object_name == "UClass")
+                    {
                         in_outer = lua.get_userdata<LuaType::UClass>().get_remote_cpp_object();
                     }
-                    else {
+                    else
+                    {
                         in_outer = lua.get_userdata<LuaType::UObject>().get_remote_cpp_object();
                     }
                     could_be_in_outer = true;
