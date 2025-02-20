@@ -230,6 +230,9 @@ Fixed `Key::NUM_ZERO` being incorrectly mapped to
 Fixed table-in-table when used as a function param (i.e. FTransform) generating a Lua
 error. ([UE4SS #775](https://github.com/UE4SS-RE/RE-UE4SS/pull/775))
 
+Fixed script hooks corrupting the return value of the original
+function. ([UE4SS #800](https://github.com/UE4SS-RE/RE-UE4SS/pull/800))
+
 ### C++ API 
 Fixed a crash caused by a race condition enabled by C++ mods using `UE4SS_ENABLE_IMGUI` in their constructor ([UE4SS #481](https://github.com/UE4SS-RE/RE-UE4SS/pull/481)) 
 
