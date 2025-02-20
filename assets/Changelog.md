@@ -37,7 +37,8 @@ Added custom game configurations for Abiotic Factor ([UE4SS #709](https://github
 Added custom game configurations for Psychonauts 2 ([UE4SS #731](https://github.com/UE4SS-RE/RE-UE4SS/pull/731)) 
 
 The GUI can now be rendered in the game thread if `RenderMode` in UE4SS-settings.ini is set to
-`GameViewportClientTick` ([UE4SS #768](https://github.com/UE4SS-RE/RE-UE4SS/pull/768)).
+`EngineTick` or `GameViewportClientTick` ([UE4SS #768](https://github.com/UE4SS-RE/RE-UE4SS/pull/768), [UE4SS #794](https://github.com/UE4SS-RE/RE-UE4SS/pull/794)).
+
 
 ### Live View 
 Added search filter: `IncludeClassNames`. ([UE4SS #472](https://github.com/UE4SS-RE/RE-UE4SS/pull/472)) - Buckminsterfullerene 
@@ -264,6 +265,7 @@ RenderMode = ExternalThread
 [Hooks]
 HookLoadMap = 1
 HookAActorTick = 1
+HookEngineTick = 1
 HookGameViewportClientTick = 1
 ```
 

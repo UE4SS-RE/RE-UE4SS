@@ -322,6 +322,6 @@ namespace RC
         friend void* HookedLoadLibraryExA(const char* dll_name, void* file, int32_t flags);
         friend void* HookedLoadLibraryW(const wchar_t* dll_name);
         friend void* HookedLoadLibraryExW(const wchar_t* dll_name, void* file, int32_t flags);
-        friend auto gui_render_thread_GameViewportClientTick(Unreal::UGameViewportClient*, float) -> void;
+        friend auto gui_render_thread_tick(Unreal::UObject*, float) -> void;
     };
 } // namespace RC

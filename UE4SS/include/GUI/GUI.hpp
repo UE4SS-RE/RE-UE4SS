@@ -25,7 +25,8 @@ namespace RC::GUI
     enum class RenderMode
     {
         ExternalThread,
-        GameViewportClientTick,
+        EngineTick,
+        GameViewportClientTick
     };
 
     inline auto render_mode_to_string(RenderMode mode) -> std::string
@@ -34,6 +35,8 @@ namespace RC::GUI
         {
         case RenderMode::ExternalThread:
             return "ExternalThread";
+        case RenderMode::EngineTick:
+            return "EngineTick";
         case RenderMode::GameViewportClientTick:
             return "GameViewportClientTick";
         }

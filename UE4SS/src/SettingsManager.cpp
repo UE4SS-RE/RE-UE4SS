@@ -100,6 +100,10 @@ namespace RC
         {
             Debug.RenderMode = GUI::RenderMode::ExternalThread;
         }
+        else if (String::iequal(render_mode_string, STR("EngineTick")))
+        {
+            Debug.RenderMode = GUI::RenderMode::EngineTick;
+        }
         else if (String::iequal(render_mode_string, STR("GameViewportClientTick")))
         {
             Debug.RenderMode = GUI::RenderMode::GameViewportClientTick;
@@ -126,6 +130,7 @@ namespace RC
         REGISTER_BOOL_SETTING(Hooks.HookEndPlay, section_hooks, HookEndPlay)
         REGISTER_BOOL_SETTING(Hooks.HookLocalPlayerExec, section_hooks, HookLocalPlayerExec)
         REGISTER_BOOL_SETTING(Hooks.HookAActorTick, section_hooks, HookAActorTick)
+        REGISTER_BOOL_SETTING(Hooks.HookEngineTick, section_hooks, HookEngineTick)
         REGISTER_BOOL_SETTING(Hooks.HookGameViewportClientTick, section_hooks, HookGameViewportClientTick)
         REGISTER_INT64_SETTING(Hooks.FExecVTableOffsetInLocalPlayer, section_hooks, FExecVTableOffsetInLocalPlayer)
 
