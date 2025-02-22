@@ -2017,6 +2017,7 @@ Overloads:
         });
 
         lua.register_function("RegisterCustomEvent", [](const LuaMadeSimple::Lua& lua) -> int {
+            std::lock_guard<std::recursive_mutex> guard{LuaMod::m_thread_actions_mutex};
             std::string error_overload_not_found{R"(
 No overload found for function 'RegisterCustomEvent'.
 Overloads:
@@ -2055,6 +2056,7 @@ Overloads:
         });
 
         lua.register_function("UnregisterCustomEvent", [](const LuaMadeSimple::Lua& lua) -> int {
+            std::lock_guard<std::recursive_mutex> guard{LuaMod::m_thread_actions_mutex};
             std::string error_overload_not_found{R"(
 No overload found for function 'UnregisterCustomEvent'.
 Overloads:
