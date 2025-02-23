@@ -65,6 +65,30 @@ namespace RC::LuaType
             prepare_to_handle(LuaMadeSimple::Type::Operation::Set, lua);
             return 0;
         });
+
+        base_object.get_metamethods().create(LuaMadeSimple::Lua::MetaMethod::ToString, []([[maybe_unused]] const LuaMadeSimple::Lua& lua) -> int {
+            if (!lua.is_userdata())
+            {
+                lua.throw_error(std::format("{} __tostring metamethod called but there was no userdata", ClassName::ToString()));
+            }
+
+            std::string name;
+
+            auto& scriptstruct = lua.get_userdata<UScriptStruct>().get_local_cpp_object();
+            name.append(ClassName::ToString());
+            if (scriptstruct.script_struct)
+            {
+                name.append(std::format("<{}>: {:016X}", to_string(scriptstruct.script_struct->GetName()), reinterpret_cast<uintptr_t>(&scriptstruct)));
+            }
+            else
+            {
+                name.append(std::format(": {:016X}", reinterpret_cast<uintptr_t>(&scriptstruct)));
+            }
+            
+            lua.set_string(name);
+
+            return 1;
+        });
     }
 
     template <LuaMadeSimple::Type::IsFinal is_final>
