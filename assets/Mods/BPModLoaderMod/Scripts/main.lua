@@ -22,7 +22,7 @@ DefaultModConfig.AssetNameAsFName = UEHelpers.FindOrAddFName("ModActor_C")
 
 -- Checks if the beginning of a string contains a certain pattern.
 local function StartsWith(String, StringToCompare)
-    return string.sub(String,1,string.len(StringToCompare))==StringToCompare
+    return string.sub(String, 1, string.len(StringToCompare)) == StringToCompare
 end
 
 local function FileExists(file)
@@ -31,20 +31,20 @@ local function FileExists(file)
     return f ~= nil
 end
 
--- Reads lines from the specified file and returns a table of lines read. 
+-- Reads lines from the specified file and returns a table of lines read.
 -- Second argument takes a string that can be used to exclude lines starting with that string. Default ;
 local function LinesFrom(file, ignoreLinesStartingWith)
     if not FileExists(file) then return {} end
 
-    if ignoreLinesStartingWith == nil then 
+    if ignoreLinesStartingWith == nil then
         ignoreLinesStartingWith = ";"
     end
 
     local lines = {}
-    for line in io.lines(file) do 
-      if not StartsWith(line, ignoreLinesStartingWith) then
-        lines[#lines + 1] = line
-      end
+    for line in io.lines(file) do
+        if not StartsWith(line, ignoreLinesStartingWith) then
+            lines[#lines + 1] = line
+        end
     end
     return lines
 end
@@ -71,7 +71,7 @@ local function LoadModOrder()
     end
 
     if entriesAdded <= 0 then
-        Log(string.format("Mods/BPModLoaderMod/load_order.txt not present or no matching mods, loading all BP mods in random order."))
+        Log(string.format("Mods/BPModLoaderMod/load_order.txt not present or no matching mods, loading all BP mods in random order.\n"))
     end
 end
 
@@ -124,9 +124,9 @@ local function LoadModConfigs()
         LogicModsDir = Dirs.Game.Content.Paks.LogicMods
         if not LogicModsDir then error("[BPModLoader] Unable to find or create Content/Paks/LogicMods directory. Try creating manually.") end
     end
-    for ModDirectoryName,ModDirectory in pairs(LogicModsDir) do
+    for ModDirectoryName, ModDirectory in pairs(LogicModsDir) do
         Log(string.format("Mod: %s\n", ModDirectoryName))
-        for _,ModFile in pairs(ModDirectory.__files) do
+        for _, ModFile in pairs(ModDirectory.__files) do
             Log(string.format("    ModFile: %s\n", ModFile.__name))
             if ModFile.__name == "config.lua" then
                 dofile(ModFile.__absolute_path)
@@ -169,10 +169,10 @@ end
 
 LoadModConfigs()
 
-for _,v in ipairs(OrderedMods) do
+for _, v in ipairs(OrderedMods) do
     Log(string.format("%s == %s\n", v.Name, v))
     if type(v) == "table" then
-        for k2,v2 in pairs(v) do
+        for k2, v2 in pairs(v) do
             Log(string.format("    %s == %s\n", k2, v2))
         end
     end
@@ -253,7 +253,10 @@ local function CacheAssetRegistry()
 end
 
 local function LoadMods(World)
-    if not World then error("A `nil` World parameter was passed to LoadMods function. It's most likely a bug in BPModLoaderMod!") end
+    if not World or not World:IsValid() then
+        Log("[Warning] Invalid UWorld object was passed to LoadMods.\n")
+        return
+    end
 
     CacheAssetRegistry()
     for _, ModInfo in ipairs(OrderedMods) do
@@ -271,7 +274,7 @@ end)
 
 RegisterBeginPlayPostHook(function(ContextParam)
     local Context = ContextParam:get()
-    for _,ModConfig in ipairs(OrderedMods) do
+    for _, ModConfig in ipairs(OrderedMods) do
         if Context:GetClass():GetFName() ~= ModConfig.AssetNameAsFName then return end
         local AssetPathWithClassPrefix = string.format("BlueprintGeneratedClass %s.%s", ModConfig.AssetPath, ModConfig.AssetName)
         if AssetPathWithClassPrefix == Context:GetClass():GetFullName() then
