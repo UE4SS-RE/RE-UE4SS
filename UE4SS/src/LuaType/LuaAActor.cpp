@@ -53,31 +53,13 @@ namespace RC::LuaType
     {
         table.add_pair("GetWorld", [](const LuaMadeSimple::Lua& lua) -> int {
             const auto& lua_object = lua.get_userdata<AActor>();
-
-            if (Unreal::UWorld* world = lua_object.get_remote_cpp_object()->GetWorld(); world)
-            {
-                auto_construct_object(lua, world);
-            }
-            else
-            {
-                lua.set_nil();
-            }
-
+            auto_construct_object(lua, lua_object.get_remote_cpp_object()->GetWorld());
             return 1;
         });
 
         table.add_pair("GetLevel", [](const LuaMadeSimple::Lua& lua) -> int {
             const auto& lua_object = lua.get_userdata<AActor>();
-
-            if (Unreal::UObject* level = lua_object.get_remote_cpp_object()->GetLevel(); level)
-            {
-                auto_construct_object(lua, level);
-            }
-            else
-            {
-                lua.set_nil();
-            }
-
+            auto_construct_object(lua, lua_object.get_remote_cpp_object()->GetLevel());
             return 1;
         });
 

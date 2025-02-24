@@ -6,9 +6,9 @@
 ## Methods
 
 ### GetWorld()
-- **Return types:** `UObject` | `nil`
-- **Returns:** the `UWorld` that this actor belongs to
+- **Return types:** `UObject`
+- **Returns:** the `UWorld` that this actor belongs to or an invalid `UObject`
 
 ### GetLevel()
-- **Return type:** `UObject` | `nil`
-- **Returns:** the `ULevel` that this actor belongs to
+- **Return type:** `UObject`
+- **Returns:** the `ULevel` that this actor belongs to or an invalid `UObject`
