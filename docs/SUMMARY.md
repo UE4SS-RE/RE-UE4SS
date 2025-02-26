@@ -125,6 +125,6 @@
 ## Misc
 
 - [Custom Game Configs](./custom-game-configs.md)
-- [Games with AOB support](./supported_games.md)
+- [Games with AOB support](./patternsleuth_supported_games.md)
 - [Devlogs](./devlogs.md)
   - [DataTables in UE4SS](./devlogs/datatables-in-ue4ss.md)
