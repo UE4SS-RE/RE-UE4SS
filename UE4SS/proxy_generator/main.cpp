@@ -112,7 +112,7 @@ std::vector<ExportFunction> ReadExportsFile(const fs::path& exp_path, fs::path& 
     {
         std::istringstream s(line);
 
-        uint16_t ordinal;
+        uint16_t ordinal{};
         string export_name;
         s >> ordinal >> export_name;
 
