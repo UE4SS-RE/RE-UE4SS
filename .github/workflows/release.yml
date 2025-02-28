@@ -28,6 +28,8 @@ jobs:
 
       - name: Setup MSVC
         uses: ilammy/msvc-dev-cmd@v1
+        with:
+          toolset: 19.42
 
       - name: Setup xmake
         uses: xmake-io/github-action-setup-xmake@v1
