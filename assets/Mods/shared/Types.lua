@@ -796,34 +796,39 @@ local ObjectProperty = {}
 
 ---Returns the class that this property holds.
 ---@return UClass
-function GetPropertyClass() end
+function ObjectProperty:GetPropertyClass() end
 
 
 ---@class BoolProperty : Property
+local BoolProperty = {}
 
 ---@return integer
-function GetByteMask() end
+function BoolProperty:GetByteMask() end
 
 ---@return integer
-function GetByteOffset() end
+function BoolProperty:GetByteOffset() end
 
 ---@return integer
-function GetFieldMask() end
+function BoolProperty:GetFieldMask() end
 
 ---@return integer
-function GetFieldSize() end
+function BoolProperty:GetFieldSize() end
 
 
 ---@class StructProperty : Property
+local StructProperty = {}
+
 ---Returns the UScriptStruct that's mapped to this property.
 ---@return UScriptStruct
-function GetStruct() end
+function StructProperty:GetStruct() end
 
 
 ---@class ArrayProperty : Property
+local ArrayProperty = {}
+
 ---Returns the inner property of the array.
 ---@return Property
-function GetInner() end
+function ArrayProperty:GetInner() end
 
 
 ---@class UObjectReflection
@@ -1055,7 +1060,7 @@ function UEnum:ForEachName(Callback) end
 
 --- Returns the `FName` and `Integer` value that coresponds the given `Index`.
 ---@param Index integer
-function GetEnumNameByIndex(Index) end
+function UEnum:GetEnumNameByIndex(Index) end
 
 --- Inserts a `FName`/`Value` combination into a a `UEnum` at the given `Index`.
 --- If `ShiftValues = true`, will shift all enum values greater than inserted value by one.
