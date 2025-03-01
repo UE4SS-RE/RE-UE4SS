@@ -266,16 +266,17 @@ EInternalObjectFlags = {
     AllFlags                         = 0x7F800000,
 }
 
----@alias int8 number
----@alias int16 number
----@alias int32 number
----@alias int64 number
----@alias uint8 number
----@alias uint16 number
----@alias uint32 number
----@alias uint64 number
+---@alias int8 integer
+---@alias int16 integer
+---@alias int32 integer
+---@alias int64 integer
+---@alias uint8 integer
+---@alias uint16 integer
+---@alias uint32 integer
+---@alias uint64 integer
 ---@alias float number
 ---@alias double number
+
 
 -- # Global Functions
 
@@ -602,6 +603,7 @@ function LoopAsync(DelayInMilliseconds, Callback) end
 ---You also use `.__name` and `.__absolute_path` for files.
 function IterateGameDirectories() end
 
+
 -- # Classes
 
 ---Class for interacting with UE4SS metadata
@@ -695,6 +697,7 @@ function UnrealVersion:IsAbove(MajorVersion, MinorVersion) end
 ---@param MinorVersion integer
 ---@return boolean
 function UnrealVersion.IsAbove(MajorVersion, MinorVersion) end
+
 
 ---@class UFunction : UObject
 local UFunction = {}
@@ -1045,7 +1048,6 @@ function RemoteUnrealParam:type() end
 
 
 ---@class UEnum
-
 local UEnum = {}
 
 --- Returns the `FName` that corresponds to the specified value.
