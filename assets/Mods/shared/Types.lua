@@ -697,7 +697,7 @@ function UnrealVersion:IsAbove(MajorVersion, MinorVersion) end
 function UnrealVersion.IsAbove(MajorVersion, MinorVersion) end
 
 ---@class UFunction : UObject
-UFunction = {}
+local UFunction = {}
 
 ---Attempts to call the UFunction
 ---@param ... UFunctionParams
@@ -714,7 +714,7 @@ function UFunction:SetFunctionFlags(Flags) end
 
 ---A TArray of characters
 ---@class FString
-FString = {}
+local FString = {}
 
 ---Returns a string that Lua can understand
 ---@return string
@@ -725,7 +725,7 @@ function FString:Clear() end
 
 
 ---@class FieldClass : LocalObject
-FieldClass = {}
+local FieldClass = {}
 
 ---Returns the FName of this class by copy.
 ---@return FName
@@ -751,7 +751,7 @@ FText = {}
 function FText:ToString() end
 
 ---@class RemoteObject
-RemoteObject = {}
+local RemoteObject = {}
 
 ---Returns whether this object is valid or not
 ---@return boolean
@@ -759,7 +759,7 @@ function RemoteObject:IsValid() end
 
 
 ---@class Property : RemoteObject
-Property = {}
+local Property = {}
 ---Returns the full name & path for this property.
 ---@return string
 function Property:GetFullName() end
@@ -792,7 +792,7 @@ function Property:ImportText(Buffer, Data, PortFlags, OwnerObject) end
 
 
 ---@class ObjectProperty : Property
-ObjectProperty = {}
+local ObjectProperty = {}
 
 ---Returns the class that this property holds.
 ---@return UClass
@@ -827,7 +827,7 @@ function GetInner() end
 
 
 ---@class UObjectReflection
-UObjectReflection = {}
+local UObjectReflection = {}
 
 ---Returns a property meta-data object
 ---@param PropertyName string
@@ -836,7 +836,7 @@ function UObjectReflection:GetProperty(PropertyName) end
 
 
 ---@class UObject : RemoteObject
-UObject = {}
+local UObject = {}
 
 ---Attempts to return either a member variable or a callable UFunction
 ---Can return any type, you can use the `type()` function on the returned value to figure out what Lua class it's using (if non-trivial type)
@@ -938,7 +938,7 @@ function UObject:ProcessConsoleExec(Cmd, Reserved, Executor) end
 function UObject:type() end
 
 ---@class TArray<T> : { [integer]: T }
-TArray = {}
+local TArray = {}
 
 ---Return the address in memory where the TArray struct is located
 ---@return integer
@@ -968,7 +968,7 @@ function TArray:ForEach(Callback) end
 ---@class TSet<K> : { [K]: nil }
 
 ---@class TMap<K, V> : { [K]: V }
-TMap = {}
+local TMap = {}
 
 ---Find the specified key in the map
 ---Throws an exception if the key is not found
@@ -1015,7 +1015,7 @@ function TMap:ForEach(callback) end
 ---Whether the Remote or Local variant is used depends on the requirements of the data but the usage is identical with either param types
 ---@generic T
 ---@class RemoteUnrealParam<T> : RemoteObject<T>
-RemoteUnrealParam = {}
+local RemoteUnrealParam = {}
 
 ---Returns the underlying value for this param
 ---@generic T
@@ -1041,7 +1041,7 @@ function RemoteUnrealParam:type() end
 
 ---@class UEnum
 
-UEnum = {}
+local UEnum = {}
 
 --- Returns the `FName` that corresponds to the specified value.
 ---@param Value integer
