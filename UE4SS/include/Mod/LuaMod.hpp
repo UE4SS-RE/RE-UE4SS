@@ -15,6 +15,8 @@
 
 #include <String/StringType.hpp>
 
+#include <Unreal/NameTypes.hpp>
+
 namespace RC
 {
     class UE4SSProgram;
@@ -86,12 +88,30 @@ namespace RC
             Unreal::UClass* instance_of_class;
             std::vector<std::pair<const LuaMadeSimple::Lua*, RegistryIndex>> registry_indexes;
         };
+        // Note: This struct only exists because refactoring LuaCallbackData would be more work than I'm willing to put in right now.
+        //       Refactoring can be done later.
+        struct LuaCallbackDataNoRef
+        {
+            struct RegistryIndex
+            {
+                int32_t lua_index{};
+                int32_t identifier{};
+            };
+            const LuaMadeSimple::Lua* lua;
+            Unreal::UClass* instance_of_class;
+            std::vector<std::pair<const LuaMadeSimple::Lua*, RegistryIndex>> registry_indexes;
+        };
         struct LuaCancellableCallbackData
         {
             const LuaMadeSimple::Lua* lua;
             Unreal::UClass* instance_of_class;
             int32_t lua_callback_function_ref{};
             int32_t lua_callback_thread_ref{};
+        };
+        struct FunctionHookData
+        {
+            std::vector<Unreal::FName> names{};
+            LuaCallbackDataNoRef callback_data{};
         };
         static inline std::vector<LuaCancellableCallbackData> m_static_construct_object_lua_callbacks;
         static inline std::vector<LuaCallbackData> m_process_console_exec_pre_callbacks;
@@ -105,7 +125,7 @@ namespace RC
         static inline std::vector<SimpleLuaAction> m_game_thread_actions{};
         // This is storage that persists through hot-reloads.
         static inline std::unordered_map<std::string, SharedLuaVariable> m_shared_lua_variables{};
-        static inline std::unordered_map<StringType, LuaCallbackData> m_custom_event_callbacks{};
+        static inline std::vector<FunctionHookData> m_custom_event_callbacks{};
         static inline std::vector<LuaCallbackData> m_load_map_pre_callbacks{};
         static inline std::vector<LuaCallbackData> m_load_map_post_callbacks{};
         static inline std::vector<LuaCallbackData> m_init_game_state_pre_callbacks{};
@@ -114,7 +134,7 @@ namespace RC
         static inline std::vector<LuaCallbackData> m_begin_play_post_callbacks{};
         static inline std::vector<LuaCallbackData> m_end_play_pre_callbacks{};
         static inline std::vector<LuaCallbackData> m_end_play_post_callbacks{};
-        static inline std::unordered_map<StringType, LuaCallbackData> m_script_hook_callbacks{};
+        static inline std::vector<FunctionHookData> m_script_hook_callbacks{};
         static inline std::unordered_map<int32_t, int32_t> m_generic_hook_id_to_native_hook_id{};
         // Generic hook ids are generated incrementally so the first one is 0 and the next one is always +1 from the last id.
         static inline int32_t m_last_generic_hook_id{};
@@ -178,6 +198,16 @@ namespace RC
 
         auto process_delayed_actions() -> void;
         auto clear_delayed_actions() -> void;
+
+      public:
+        static auto get_object_names(const Unreal::UObject*) -> std::vector<Unreal::FName>;
+        static auto find_function_hook_data(std::vector<FunctionHookData>&, Unreal::FName) -> FunctionHookData*;
+        static auto find_function_hook_data(std::vector<FunctionHookData>&, const Unreal::UObject*) -> FunctionHookData*;
+        static auto find_function_hook_data(std::vector<FunctionHookData>&, const std::vector<Unreal::FName>&) -> FunctionHookData*;
+        static auto remove_function_hook_data(std::vector<FunctionHookData>&, StringViewType) -> void;
+        static auto remove_function_hook_data(std::vector<FunctionHookData>&, Unreal::FName) -> void;
+        static auto remove_function_hook_data(std::vector<FunctionHookData>&, const Unreal::UObject*) -> void;
+        static auto remove_function_hook_data(std::vector<FunctionHookData>&, const std::vector<Unreal::FName>&) -> void;
     };
 
     struct LuaStatics

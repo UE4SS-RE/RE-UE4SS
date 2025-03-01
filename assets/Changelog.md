@@ -36,8 +36,11 @@ Added custom game configurations for Abiotic Factor ([UE4SS #709](https://github
 
 Added custom game configurations for Psychonauts 2 ([UE4SS #731](https://github.com/UE4SS-RE/RE-UE4SS/pull/731)) 
 
+Added custom game configurations for Lies of P ([UE4SS #787](https://github.com/UE4SS-RE/RE-UE4SS/pull/787))
+
 The GUI can now be rendered in the game thread if `RenderMode` in UE4SS-settings.ini is set to
-`GameViewportClientTick` ([UE4SS #768](https://github.com/UE4SS-RE/RE-UE4SS/pull/768)).
+`EngineTick` or `GameViewportClientTick` ([UE4SS #768](https://github.com/UE4SS-RE/RE-UE4SS/pull/768), [UE4SS #794](https://github.com/UE4SS-RE/RE-UE4SS/pull/794)).
+
 
 ### Live View 
 Added search filter: `IncludeClassNames`. ([UE4SS #472](https://github.com/UE4SS-RE/RE-UE4SS/pull/472)) - Buckminsterfullerene 
@@ -142,6 +145,10 @@ The callback of `NotifyOnNewObject` can now optionally return `true` to unregist
 
 **BREAKING:** `RegisterProcessConsoleExecPreHook`,  `RegisterProcessConsoleExecPostHook` callback parameter `CommandParts` now includes the command name at the start of the array (lua array index **1**). ([UE4SS #669](https://github.com/UE4SS-RE/RE-UE4SS/pull/669)) 
 
+Improved performance of script hooks created with `RegisterHook`, and
+`RegisterCustomEvent`. ([UE4SS #801](https://github.com/UE4SS-RE/RE-UE4SS/pull/801))
+
+**BREAKING:** `AActor:GetWorld()` and `AActor:GetLevel()` functions are now returning an invalid `UObject` instead of `nil`. ([UE4SS #810](https://github.com/UE4SS-RE/RE-UE4SS/pull/810)) 
 
 #### UEHelpers [UE4SS #650](https://github.com/UE4SS-RE/RE-UE4SS/pull/650) 
 - Increased version to 3
@@ -229,6 +236,12 @@ Fixed `Key::NUM_ZERO` being incorrectly mapped to
 Fixed table-in-table when used as a function param (i.e. FTransform) generating a Lua
 error. ([UE4SS #775](https://github.com/UE4SS-RE/RE-UE4SS/pull/775))
 
+Fixed script hooks corrupting the return value of the original
+function. ([UE4SS #800](https://github.com/UE4SS-RE/RE-UE4SS/pull/800))
+
+Fixed race condition when using RegisterCustomEvent or
+UnregisterCustomEvent. ([UE4SS #805](https://github.com/UE4SS-RE/RE-UE4SS/pull/805))
+  
 Fixed frequent `StrProperty can only be set to a string or FString`
 error. ([UE4SS #819](https://github.com/UE4SS-RE/RE-UE4SS/pull/819))
 
@@ -267,6 +280,7 @@ RenderMode = ExternalThread
 [Hooks]
 HookLoadMap = 1
 HookAActorTick = 1
+HookEngineTick = 1
 HookGameViewportClientTick = 1
 ```
 

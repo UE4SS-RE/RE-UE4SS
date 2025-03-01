@@ -33,6 +33,12 @@ Returns two ids, both of which must be passed to `UnregisterHook` if you want to
 | 1 | [RemoteUnrealParam](../classes/remoteunrealparam.md) | Object representation of the "this"-pointer ("self" in lua) of the function, also known as "Context". It contains the object wrapped as RemoteUnrealParam that called the function.  |
 | 2..N | RemoteUnrealParam... | All function parameters wrapped as RemoteUnrealParam |
 
+## Callback Return Values
+
+| # | Type | Information                                                                                                                                                                                                                             |
+|---|------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| 1 | any  | An attempt will be made to automatically convert this value to a UE value, and the value will override the original function return value.<br>A value of `nil` (or no return statement) will leave the original return value unchanged. |
+
 ## Example
 ```lua
 PreId, PostId = RegisterHook("/Script/Engine.PlayerController:ClientRestart", function(Context, NewPawn)
