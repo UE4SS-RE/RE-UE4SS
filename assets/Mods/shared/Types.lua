@@ -266,16 +266,17 @@ EInternalObjectFlags = {
     AllFlags                         = 0x7F800000,
 }
 
----@alias int8 number
----@alias int16 number
----@alias int32 number
----@alias int64 number
----@alias uint8 number
----@alias uint16 number
----@alias uint32 number
----@alias uint64 number
+---@alias int8 integer
+---@alias int16 integer
+---@alias int32 integer
+---@alias int64 integer
+---@alias uint8 integer
+---@alias uint16 integer
+---@alias uint32 integer
+---@alias uint64 integer
 ---@alias float number
 ---@alias double number
+
 
 -- # Global Functions
 
@@ -602,6 +603,7 @@ function LoopAsync(DelayInMilliseconds, Callback) end
 ---You also use `.__name` and `.__absolute_path` for files.
 function IterateGameDirectories() end
 
+
 -- # Classes
 
 ---Class for interacting with UE4SS metadata
@@ -696,8 +698,9 @@ function UnrealVersion:IsAbove(MajorVersion, MinorVersion) end
 ---@return boolean
 function UnrealVersion.IsAbove(MajorVersion, MinorVersion) end
 
+
 ---@class UFunction : UObject
-UFunction = {}
+local UFunction = {}
 
 ---Attempts to call the UFunction
 ---@param ... UFunctionParams
@@ -714,7 +717,7 @@ function UFunction:SetFunctionFlags(Flags) end
 
 ---A TArray of characters
 ---@class FString
-FString = {}
+local FString = {}
 
 ---Returns a string that Lua can understand
 ---@return string
@@ -725,7 +728,7 @@ function FString:Clear() end
 
 
 ---@class FieldClass : LocalObject
-FieldClass = {}
+local FieldClass = {}
 
 ---Returns the FName of this class by copy.
 ---@return FName
@@ -751,7 +754,7 @@ FText = {}
 function FText:ToString() end
 
 ---@class RemoteObject
-RemoteObject = {}
+local RemoteObject = {}
 
 ---Returns whether this object is valid or not
 ---@return boolean
@@ -759,7 +762,7 @@ function RemoteObject:IsValid() end
 
 
 ---@class Property : RemoteObject
-Property = {}
+local Property = {}
 ---Returns the full name & path for this property.
 ---@return string
 function Property:GetFullName() end
@@ -792,42 +795,47 @@ function Property:ImportText(Buffer, Data, PortFlags, OwnerObject) end
 
 
 ---@class ObjectProperty : Property
-ObjectProperty = {}
+local ObjectProperty = {}
 
 ---Returns the class that this property holds.
 ---@return UClass
-function GetPropertyClass() end
+function ObjectProperty:GetPropertyClass() end
 
 
 ---@class BoolProperty : Property
+local BoolProperty = {}
 
 ---@return integer
-function GetByteMask() end
+function BoolProperty:GetByteMask() end
 
 ---@return integer
-function GetByteOffset() end
+function BoolProperty:GetByteOffset() end
 
 ---@return integer
-function GetFieldMask() end
+function BoolProperty:GetFieldMask() end
 
 ---@return integer
-function GetFieldSize() end
+function BoolProperty:GetFieldSize() end
 
 
 ---@class StructProperty : Property
+local StructProperty = {}
+
 ---Returns the UScriptStruct that's mapped to this property.
 ---@return UScriptStruct
-function GetStruct() end
+function StructProperty:GetStruct() end
 
 
 ---@class ArrayProperty : Property
+local ArrayProperty = {}
+
 ---Returns the inner property of the array.
 ---@return Property
-function GetInner() end
+function ArrayProperty:GetInner() end
 
 
 ---@class UObjectReflection
-UObjectReflection = {}
+local UObjectReflection = {}
 
 ---Returns a property meta-data object
 ---@param PropertyName string
@@ -836,7 +844,7 @@ function UObjectReflection:GetProperty(PropertyName) end
 
 
 ---@class UObject : RemoteObject
-UObject = {}
+local UObject = {}
 
 ---Attempts to return either a member variable or a callable UFunction
 ---Can return any type, you can use the `type()` function on the returned value to figure out what Lua class it's using (if non-trivial type)
@@ -938,7 +946,7 @@ function UObject:ProcessConsoleExec(Cmd, Reserved, Executor) end
 function UObject:type() end
 
 ---@class TArray<T> : { [integer]: T }
-TArray = {}
+local TArray = {}
 
 ---Return the address in memory where the TArray struct is located
 ---@return integer
@@ -968,7 +976,7 @@ function TArray:ForEach(Callback) end
 ---@class TSet<K> : { [K]: nil }
 
 ---@class TMap<K, V> : { [K]: V }
-TMap = {}
+local TMap = {}
 
 ---Find the specified key in the map
 ---Throws an exception if the key is not found
@@ -1015,7 +1023,7 @@ function TMap:ForEach(callback) end
 ---Whether the Remote or Local variant is used depends on the requirements of the data but the usage is identical with either param types
 ---@generic T
 ---@class RemoteUnrealParam<T> : RemoteObject<T>
-RemoteUnrealParam = {}
+local RemoteUnrealParam = {}
 
 ---Returns the underlying value for this param
 ---@generic T
@@ -1040,8 +1048,7 @@ function RemoteUnrealParam:type() end
 
 
 ---@class UEnum
-
-UEnum = {}
+local UEnum = {}
 
 --- Returns the `FName` that corresponds to the specified value.
 ---@param Value integer
@@ -1055,7 +1062,7 @@ function UEnum:ForEachName(Callback) end
 
 --- Returns the `FName` and `Integer` value that coresponds the given `Index`.
 ---@param Index integer
-function GetEnumNameByIndex(Index) end
+function UEnum:GetEnumNameByIndex(Index) end
 
 --- Inserts a `FName`/`Value` combination into a a `UEnum` at the given `Index`.
 --- If `ShiftValues = true`, will shift all enum values greater than inserted value by one.

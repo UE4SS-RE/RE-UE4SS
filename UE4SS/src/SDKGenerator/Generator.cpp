@@ -1092,7 +1092,7 @@ namespace RC::UEGenerator
         auto generate_enum_declaration(File::StringType& content_buffer, UEnum* uenum) -> void
         {
             auto enum_name = uenum->GetName();
-            content_buffer.append(fmt::format(STR("---@enum {}\n{} = {{\n"), enum_name, enum_name));
+            content_buffer.append(fmt::format(STR("---@enum {}\nlocal {} = {{\n"), enum_name, enum_name));
         }
         auto generate_enum_member(File::StringType& content_buffer, UEnum* uenum, const File::StringType& enum_value_name, const Unreal::FEnumNamePair& elem) -> void
         {
@@ -1218,7 +1218,7 @@ namespace RC::UEGenerator
                                        int32_t num_padding_elements,
                                        XProperty* last_property_in_this_class) -> void
         {
-            content_buffer.append(fmt::format(STR("{} = {{}}\n"), class_name));
+            content_buffer.append(fmt::format(STR("local {} = {{}}\n"), class_name));
         }
         auto generate_class_end(File::StringType& content_buffer, size_t class_size) -> void
         {
@@ -1278,7 +1278,8 @@ namespace RC::UEGenerator
             }
             else
             {
-                current_class_content.append(fmt::format(STR("{}[{}] = function("), class_name, quote_lua_symbol(function_name)));
+                // `function MyClass:MyMethod(p1, p2)` is syntactical sugar for `function MyClass.MyMethod(self, p1, p2)`
+                current_class_content.append(fmt::format(STR("{}[{}] = function(self, "), class_name, quote_lua_symbol(function_name)));
             }
 
             for (size_t i = 0; i < function_info.params.size(); ++i)
