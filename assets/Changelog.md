@@ -242,6 +242,8 @@ function. ([UE4SS #800](https://github.com/UE4SS-RE/RE-UE4SS/pull/800))
 Fixed race condition when using RegisterCustomEvent or
 UnregisterCustomEvent. ([UE4SS #805](https://github.com/UE4SS-RE/RE-UE4SS/pull/805))
 
+Fixed problems that caused issues for language servers. ([UE4SS #821](https://github.com/UE4SS-RE/RE-UE4SS/pull/821)
+
 ### C++ API 
 Fixed a crash caused by a race condition enabled by C++ mods using `UE4SS_ENABLE_IMGUI` in their constructor ([UE4SS #481](https://github.com/UE4SS-RE/RE-UE4SS/pull/481)) 
 
