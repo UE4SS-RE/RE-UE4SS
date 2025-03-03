@@ -66,6 +66,11 @@ Added global functions `RegisterEndPlayPreHook` and
 - Added `FName` function overloads with FindType parameter 
 - Added `TMap` definitions
 
+#### Types.lua [PR #820](https://github.com/UE4SS-RE/RE-UE4SS/pull/820)
+
+- Added `UStruct` definition
+- Added `UClass` definition
+
 #### UEHelpers 
 - Added function `GetPlayer` which is just a fast way to get player controlled Pawn (the majority of the time it will be the player character) [PR #650](https://github.com/UE4SS-RE/RE-UE4SS/pull/650)
   
