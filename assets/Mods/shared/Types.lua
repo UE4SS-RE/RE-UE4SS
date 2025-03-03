@@ -945,6 +945,40 @@ function UObject:ProcessConsoleExec(Cmd, Reserved, Executor) end
 ---@return string
 function UObject:type() end
 
+
+---@class UStruct : UObject
+local UStruct = {}
+
+---Returns the SuperStruct of this struct (can be invalid).
+---@return UClass
+function UStruct:GetSuperStruct() end
+
+---Iterates every UFunction that belongs to this struct.
+---The callback has one param: UFunction Function.
+---Return true in the callback to stop iterating.
+---@param Callback fun(Function: UFunction): boolean?
+function UStruct:ForEachFunction(Callback) end
+
+---Iterates every Property that belongs to this struct.
+---The callback has one param: Property Property.
+---Return true in the callback to stop iterating.
+---@param Callback fun(Property: Property): boolean?
+function UStruct:ForEachProperty(Callback) end
+
+
+---@class UClass : UStruct
+local UClass = {}
+
+---Returns the ClassDefaultObject of a UClass.
+---@return UClass
+function UClass:GetCDO() end
+
+---Returns whether or not the class is a child of another class.
+---@param Class UClass
+---@return boolean
+function UClass:IsChildOf(Class) end
+
+
 ---@class TArray<T> : { [integer]: T }
 local TArray = {}
 
