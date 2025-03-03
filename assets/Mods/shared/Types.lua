@@ -947,7 +947,7 @@ function UObject:type() end
 
 
 ---@class UStruct : UObject
-UStruct = {}
+local UStruct = {}
 
 ---Returns the SuperStruct of this struct (can be invalid).
 ---@return UClass
@@ -967,7 +967,7 @@ function UStruct:ForEachProperty(Callback) end
 
 
 ---@class UClass : UStruct
-UClass = {}
+local UClass = {}
 
 ---Returns the ClassDefaultObject of a UClass.
 ---@return UClass
