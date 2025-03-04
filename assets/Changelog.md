@@ -213,6 +213,9 @@ Fixed constantly searching even if the search field is empty, and even if not on
 
 Fixed crash caused by using invalid iterator. ([UE4SS #771](https://github.com/UE4SS-RE/RE-UE4SS/pull/771))
 
+Fixed opened object getting clipped too early ([UE4SS #814](https://github.com/UE4SS-RE/RE-UE4SS/pull/814)) -
+Corporalwill123
+
 ### UHT Dumper 
 Fix SetupAttachment implementations randomly changing order ([UE4SS #606](https://github.com/UE4SS-RE/RE-UE4SS/pull/606)) - Buckminsterfullerene 
 
