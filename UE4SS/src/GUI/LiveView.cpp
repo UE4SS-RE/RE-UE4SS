@@ -3596,10 +3596,29 @@ namespace RC::GUI
             // 2) Use clipper with the filtered array size
             ImGuiListClipper clipper{};
             clipper.Begin(objects_to_draw.size(), ImGui::GetTextLineHeightWithSpacing());
+
+            // Forces the current opened node to always be rendered by the clipper
+            for (int i = 0; i < objects_to_draw.size(); i++)
+            {
+                if (objects_to_draw[i] == m_currently_opened_tree_node)
+                {
+                    clipper.ForceDisplayRangeByIndices(i, i + 1);
+                    break;
+                }
+            }
+            int last_display_end = 0;
+            float last_position = ImGui::GetCursorPosY();
             while (clipper.Step())
             {
-
+                if (last_position > ImGui::GetCursorPosY())
+                {
+                    // Makes sure the list is contiguous
+                    ImGui::SetCursorPosY(last_position);
+                    clipper.DisplayStart = last_display_end;
+                }
                 do_iteration(clipper.DisplayStart, clipper.DisplayEnd, &objects_to_draw);
+                last_position = ImGui::GetCursorPosY();
+                last_display_end = clipper.DisplayEnd;
             }
         }
         else
