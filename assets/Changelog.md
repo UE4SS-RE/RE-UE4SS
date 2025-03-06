@@ -249,6 +249,9 @@ function. ([UE4SS #800](https://github.com/UE4SS-RE/RE-UE4SS/pull/800))
 
 Fixed race condition when using RegisterCustomEvent or
 UnregisterCustomEvent. ([UE4SS #805](https://github.com/UE4SS-RE/RE-UE4SS/pull/805))
+  
+Fixed frequent `StrProperty can only be set to a string or FString`
+error. ([UE4SS #819](https://github.com/UE4SS-RE/RE-UE4SS/pull/819))
 
 Fixed problems that caused issues for language servers. ([UE4SS #821](https://github.com/UE4SS-RE/RE-UE4SS/pull/821)
 

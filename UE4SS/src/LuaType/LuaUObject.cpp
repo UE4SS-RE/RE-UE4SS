@@ -1224,15 +1224,15 @@ namespace RC::LuaType
             LuaType::FString::construct(params.lua, string);
             return;
         case Operation::Set: {
-            if (params.lua.is_string())
+            if (params.lua.is_string(params.stored_at_index))
             {
-                auto lua_string = params.lua.get_string();
+                auto lua_string = params.lua.get_string(params.stored_at_index);
                 auto fstring = Unreal::FString{FromCharTypePtr<TCHAR>(ensure_str(lua_string).c_str())};
                 *string = fstring;
             }
-            else if (params.lua.is_userdata())
+            else if (params.lua.is_userdata(params.stored_at_index))
             {
-                auto& rhs = params.lua.get_userdata<LuaType::FString>();
+                auto& rhs = params.lua.get_userdata<LuaType::FString>(params.stored_at_index);
                 string->SetCharArray(rhs.get_local_cpp_object().GetCharTArray());
             }
             else
