@@ -323,7 +323,7 @@ namespace RC
                 scan_from_lua_script(
                         lua_process_local_script_function_scan_script,
                         signature_containers,
-                        [&scan_result](void* address) {
+                        [](void* address) {
                             Output::send(STR("ProcessLocalScriptFunction address: {} <- Lua Script\n"), address);
                             Unreal::UObject::ProcessLocalScriptFunctionInternal.assign_address(address);
                             return DidLuaScanSucceed::Yes;
@@ -335,6 +335,28 @@ namespace RC
                             }
                         });
             };
+        }
+        auto lua_process_internal_scan_script = working_directory / "UE4SS_Signatures/ProcessInternal.lua";
+        if (std::filesystem::exists(lua_process_internal_scan_script))
+        {
+            config.ScanOverrides.process_internal =
+                    [lua_process_internal_scan_script](std::vector<SignatureContainer>& signature_containers,
+                                                                    Unreal::Signatures::ScanResult& scan_result) mutable {
+                        scan_from_lua_script(
+                                lua_process_internal_scan_script,
+                                signature_containers,
+                                [](void* address) {
+                                    Output::send(STR("ProcessInternal address: {} <- Lua Script\n"), address);
+                                    Unreal::UObject::ProcessInternalInternal.assign_address(address);
+                                    return DidLuaScanSucceed::Yes;
+                                },
+                                [&](DidLuaScanSucceed did_lua_scan_succeed) {
+                                    if (did_lua_scan_succeed == DidLuaScanSucceed::No)
+                                    {
+                                        scan_result.Errors.emplace_back("Was unable to find AOB for 'ProcessInternal' via Lua script");
+                                    }
+                                });
+                    };
         }
     }
 } // namespace RC
