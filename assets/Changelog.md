@@ -41,6 +41,9 @@ Added custom game configurations for Lies of P ([UE4SS #787](https://github.com/
 The GUI can now be rendered in the game thread if `RenderMode` in UE4SS-settings.ini is set to
 `EngineTick` or `GameViewportClientTick` ([UE4SS #768](https://github.com/UE4SS-RE/RE-UE4SS/pull/768), [UE4SS #794](https://github.com/UE4SS-RE/RE-UE4SS/pull/794)).
 
+Added override Lua files for ProcessLocalScriptFunction and
+ProcessInternal [UE4SS #823](https://github.com/UE4SS-RE/RE-UE4SS/pull/823) - M3C3I
+
 
 ### Live View 
 Added search filter: `IncludeClassNames`. ([UE4SS #472](https://github.com/UE4SS-RE/RE-UE4SS/pull/472)) - Buckminsterfullerene 
