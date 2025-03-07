@@ -324,7 +324,7 @@ namespace RC
                         lua_process_local_script_function_scan_script,
                         signature_containers,
                         [](void* address) {
-                            // Address logged in UEPseudo (UnrealInitializer.cpp) after final assignment
+                            Output::send(STR("ProcessLocalScriptFunction address: {} <- Lua Script\n"), address);
                             Unreal::UObject::ProcessLocalScriptFunctionInternal.assign_address(address);
                             return DidLuaScanSucceed::Yes;
                         },
@@ -346,7 +346,7 @@ namespace RC
                                 lua_process_internal_scan_script,
                                 signature_containers,
                                 [](void* address) {
-                                    // Address logged in UEPseudo (UnrealInitializer.cpp) after final assignment
+                                    Output::send(STR("ProcessInternal address: {} <- Lua Script\n"), address);
                                     Unreal::UObject::ProcessInternalInternal.assign_address(address);
                                     return DidLuaScanSucceed::Yes;
                                 },
