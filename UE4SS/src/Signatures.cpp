@@ -254,13 +254,13 @@ namespace RC
         if (std::filesystem::exists(lua_guhashtables_scan_script))
         {
             config.ScanOverrides.fuobject_hash_tables_get = [lua_guhashtables_scan_script](std::vector<SignatureContainer>& signature_containers,
-                                                                                 Unreal::Signatures::ScanResult& scan_result) mutable {
+                                                                                           Unreal::Signatures::ScanResult& scan_result) mutable {
                 scan_from_lua_script(
                         lua_guhashtables_scan_script,
                         signature_containers,
                         [](void* address) {
                             Output::send(STR("GUObjectHashTables_Get address: {} <- Lua Script\n"), address);
-                            
+
                             return DidLuaScanSucceed::Yes;
                         },
                         [&](DidLuaScanSucceed did_lua_scan_succeed) {
@@ -276,7 +276,7 @@ namespace RC
         if (std::filesystem::exists(lua_gnatives_scan_script))
         {
             config.ScanOverrides.gnatives = [lua_gnatives_scan_script](std::vector<SignatureContainer>& signature_containers,
-                                                                                 Unreal::Signatures::ScanResult& scan_result) mutable {
+                                                                       Unreal::Signatures::ScanResult& scan_result) mutable {
                 scan_from_lua_script(
                         lua_gnatives_scan_script,
                         signature_containers,
@@ -298,19 +298,62 @@ namespace RC
         if (std::filesystem::exists(lua_consolemanager_scan_script))
         {
             config.ScanOverrides.console_manager_singleton = [lua_consolemanager_scan_script](std::vector<SignatureContainer>& signature_containers,
-                                                                                 Unreal::Signatures::ScanResult& scan_result) mutable {
+                                                                                              Unreal::Signatures::ScanResult& scan_result) mutable {
                 scan_from_lua_script(
                         lua_consolemanager_scan_script,
                         signature_containers,
                         [](void* address) {
                             Output::send(STR("ConsoleManagerSingleton address: {} <- Lua Script\n"), address);
-                            
+
                             return DidLuaScanSucceed::Yes;
                         },
                         [&](DidLuaScanSucceed did_lua_scan_succeed) {
                             if (did_lua_scan_succeed == DidLuaScanSucceed::No)
                             {
                                 scan_result.Errors.emplace_back("Was unable to find AOB for 'ConsoleManagerSingleton' via Lua script");
+                            }
+                        });
+            };
+        }
+        auto lua_process_local_script_function_scan_script = working_directory / "UE4SS_Signatures/ProcessLocalScriptFunction.lua";
+        if (std::filesystem::exists(lua_process_local_script_function_scan_script))
+        {
+            config.ScanOverrides.process_local_script_function =
+                    [lua_process_local_script_function_scan_script](std::vector<SignatureContainer>& signature_containers,
+                                                                    Unreal::Signatures::ScanResult& scan_result) mutable {
+                        scan_from_lua_script(
+                                lua_process_local_script_function_scan_script,
+                                signature_containers,
+                                [](void* address) {
+                                    Output::send(STR("ProcessLocalScriptFunction address: {} <- Lua Script\n"), address);
+                                    Unreal::UObject::ProcessLocalScriptFunctionInternal.assign_address(address);
+                                    return DidLuaScanSucceed::Yes;
+                                },
+                                [&](DidLuaScanSucceed did_lua_scan_succeed) {
+                                    if (did_lua_scan_succeed == DidLuaScanSucceed::No)
+                                    {
+                                        scan_result.Errors.emplace_back("Was unable to find AOB for 'ProcessLocalScriptFunction' via Lua script");
+                                    }
+                                });
+                    };
+        }
+        auto lua_process_internal_scan_script = working_directory / "UE4SS_Signatures/ProcessInternal.lua";
+        if (std::filesystem::exists(lua_process_internal_scan_script))
+        {
+            config.ScanOverrides.process_internal = [lua_process_internal_scan_script](std::vector<SignatureContainer>& signature_containers,
+                                                                                       Unreal::Signatures::ScanResult& scan_result) mutable {
+                scan_from_lua_script(
+                        lua_process_internal_scan_script,
+                        signature_containers,
+                        [](void* address) {
+                            Output::send(STR("ProcessInternal address: {} <- Lua Script\n"), address);
+                            Unreal::UObject::ProcessInternalInternal.assign_address(address);
+                            return DidLuaScanSucceed::Yes;
+                        },
+                        [&](DidLuaScanSucceed did_lua_scan_succeed) {
+                            if (did_lua_scan_succeed == DidLuaScanSucceed::No)
+                            {
+                                scan_result.Errors.emplace_back("Was unable to find AOB for 'ProcessInternal' via Lua script");
                             }
                         });
             };
