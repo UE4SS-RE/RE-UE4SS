@@ -1,9 +1,9 @@
 #pragma once
 
-#include <Input/Handler.hpp>
-
 #include <optional>
 #include <vector>
+
+#include <Input/Handler.hpp>
 
 namespace RC::Input
 {

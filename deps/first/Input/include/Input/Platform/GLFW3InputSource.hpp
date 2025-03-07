@@ -1,7 +1,8 @@
 #pragma once
 
-#include <Input/Platform/QueueInputSource.hpp>
 #include <vector>
+
+#include <Input/Platform/QueueInputSource.hpp>
 
 namespace RC::Input
 {

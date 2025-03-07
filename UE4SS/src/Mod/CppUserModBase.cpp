@@ -1,9 +1,9 @@
+#include <vector>
+
 #include <Mod/CppMod.hpp>
 #include <Mod/CppUserModBase.hpp>
 #include <UE4SSProgram.hpp>
 #include <String/StringType.hpp>
-
-#include <vector>
 
 namespace RC
 {
@@ -26,6 +26,7 @@ namespace RC
         }
         GUITabs.clear();
 
+#ifdef HAS_INPUT
         UE4SSProgram::get_program().m_input_handler.get_events_safe([&](auto& key_set) {
             std::erase_if(key_set.key_data, [&](auto& item) -> bool {
                 auto& [_, key_data] = item;
@@ -49,6 +50,7 @@ namespace RC
                 return were_all_events_registered_from_this_mod;
             });
         });
+#endif
     }
 
     auto CppUserModBase::register_tab(StringViewType tab_name, GUI::GUITab::RenderFunctionType render_function) -> void

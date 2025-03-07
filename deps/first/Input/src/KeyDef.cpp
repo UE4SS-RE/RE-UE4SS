@@ -1,5 +1,6 @@
-#include <Input/KeyDef.hpp>
 #include <cstdint>
+
+#include <Input/KeyDef.hpp>
 
 namespace RC::Input
 {

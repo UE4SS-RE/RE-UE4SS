@@ -2,7 +2,6 @@
 
 #include <Input/PlatformInputSource.hpp>
 #include <Input/KeyDef.hpp>
-
 #include <Input/RingBuffer.hpp>
 
 namespace RC::Input

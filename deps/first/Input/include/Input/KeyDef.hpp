@@ -3,6 +3,7 @@
 #include <stdexcept>
 #include <cstdint>
 #include <initializer_list>
+
 namespace RC::Input
 {
     static constexpr uint32_t max_callbacks_per_event = 30;

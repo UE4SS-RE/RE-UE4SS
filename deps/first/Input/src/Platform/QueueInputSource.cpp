@@ -1,6 +1,5 @@
 #include <Input/PlatformInputSource.hpp>
 #include <Input/Platform/QueueInputSource.hpp>
-
 #include <DynamicOutput/Output.hpp>
 
 namespace RC::Input

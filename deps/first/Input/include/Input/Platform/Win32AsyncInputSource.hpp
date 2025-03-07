@@ -2,9 +2,9 @@
 
 #include <vector>
 #include <unordered_map>
+
 #include <Input/KeyDef.hpp>
 #include <Input/Common.hpp>
-
 #include <Input/PlatformInputSource.hpp>
 
 namespace RC::Input
