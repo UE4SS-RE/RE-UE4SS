@@ -33,9 +33,11 @@ For more in-depth instructions, see the [advanced guide](./fixing-compatibility-
     - FText_Constructor.lua (Optional)
     - StaticConstructObject.lua
     - GMalloc.lua
-    - GUObjectHashTables.lua(Optional)
+   - GUObjectHashTables.lua (Optional)
     - GNatives.lua          (Optional)
     - ConsoleManager.lua    (Optional)
+   - ProcessLocalScriptFunction.lua
+   - ProcessInternal.lua
 4. Inside the `.lua` file you need a global `Register` function with no params
     - Keep in mind that the names of functions in Lua files in the `UE4SS_Signatures` directory are case-senstive.
 5. The `Register` function must return the AOB that you want UE4SS to scan for.
@@ -75,6 +77,12 @@ For more in-depth instructions, see the [advanced guide](./fixing-compatibility-
    - Must return the exact address of the global variable named 'GNatives'.
 - GUObjectHashTables (WIP)  (Optional)
 - ConsoleManager (WIP)  (Optional)
+- ProcessLocalScriptFunction
+    - This is not required 99% of the time.
+    - Must return the exact address of ProcessLocalScriptFunction.
+- ProcessInternal
+    - This is not required 99% of the time.
+    - Must return the exact address of ProcessInternal.
 
 ## Example script (Simple, direct scan)
 
