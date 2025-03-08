@@ -2053,8 +2053,8 @@ Overloads:
                         LuaMod::LuaCallbackDataNoRef{
                                 .lua = &lua,
                                 .instance_of_class = nullptr,
-                                .registry_indexes = {std::pair<const LuaMadeSimple::Lua*, LuaMod::LuaCallbackDataNoRef::RegistryIndex>{&lua,
-                                                                                                                                       {lua_callback_registry_index}}},
+                                .registry_indexes =
+                                        {std::pair<const LuaMadeSimple::Lua*, LuaMod::LuaCallbackDataNoRef::RegistryIndex>{&lua, {lua_callback_registry_index}}},
                         }});
             }
 
