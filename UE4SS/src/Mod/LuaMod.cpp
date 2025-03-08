@@ -1456,8 +1456,12 @@ Overloads:
                     lua.throw_error(error_overload_not_found);
                 }
 
-                auto function_name = ensure_str(lua.get_string());
-                auto function_name_no_prefix = function_name.substr(function_name.find_first_of(STR(" ")) + 1, function_name.size());
+                auto function_name_no_prefix = ensure_str(lua.get_string());
+                static constexpr StringViewType function_prefix{STR("Function ")};
+                if (auto prefix_pos = function_name_no_prefix.find(function_prefix); prefix_pos != function_name_no_prefix.npos)
+                {
+                    function_name_no_prefix = function_name_no_prefix.substr(prefix_pos + function_prefix.size());
+                }
 
                 Unreal::UFunction* unreal_function = Unreal::UObjectGlobals::StaticFindObject<Unreal::UFunction*>(nullptr, nullptr, function_name_no_prefix);
                 if (!unreal_function)
@@ -3153,8 +3157,12 @@ Overloads:
                 lua.throw_error(error_overload_not_found);
             }
 
-            auto function_name = ensure_str(lua.get_string());
-            auto function_name_no_prefix = function_name.substr(function_name.find_first_of(STR("/")), function_name.size());
+            auto function_name_no_prefix = ensure_str(lua.get_string());
+            static constexpr StringViewType function_prefix{STR("Function ")};
+            if (auto prefix_pos = function_name_no_prefix.find(function_prefix); prefix_pos != function_name_no_prefix.npos)
+            {
+                function_name_no_prefix = function_name_no_prefix.substr(prefix_pos + function_prefix.size());
+            }
 
             if (!lua.is_function())
             {
