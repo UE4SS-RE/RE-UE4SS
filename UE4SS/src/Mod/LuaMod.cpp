@@ -2046,15 +2046,17 @@ Overloads:
 
             // Take a reference to the Lua function (it also pops it of the stack)
             const int32_t lua_callback_registry_index = hook_lua->registry().make_ref();
-
-            LuaMod::m_custom_event_callbacks.emplace_back(LuaMod::FunctionHookData{
-                    {Unreal::FName(event_name, Unreal::FNAME_Add)},
-                    LuaMod::LuaCallbackData{
-                            .lua = &lua,
-                            .instance_of_class = nullptr,
-                            .registry_indexes = {std::pair<const LuaMadeSimple::Lua*, LuaMod::LuaCallbackData::RegistryIndex>{&lua,
-                                                                                                                                   {lua_callback_registry_index}}},
-                    }});
+            if (!LuaMod::find_function_hook_data(LuaMod::m_custom_event_callbacks, Unreal::FName(event_name, Unreal::FNAME_Add)))
+            {
+                LuaMod::m_custom_event_callbacks.emplace_back(LuaMod::FunctionHookData{
+                        {Unreal::FName(event_name, Unreal::FNAME_Add)},
+                        LuaMod::LuaCallbackData{
+                                .lua = &lua,
+                                .instance_of_class = nullptr,
+                                .registry_indexes = {std::pair<const LuaMadeSimple::Lua*, LuaMod::LuaCallbackData::RegistryIndex>{&lua,
+                                                                                                                                       {lua_callback_registry_index}}},
+                        }});
+            }
 
             return 0;
         });
@@ -3226,8 +3228,12 @@ Overloads:
                      !unreal_function->HasAnyFunctionFlags(Unreal::EFunctionFlags::FUNC_Native))
             {
                 ++m_last_generic_hook_id;
-                auto& callback_data =
-                        m_script_hook_callbacks.emplace_back(get_object_names(unreal_function), LuaCallbackData{hook_lua, nullptr, {}}).callback_data;
+                auto function_data = find_function_hook_data(m_script_hook_callbacks, unreal_function);
+                if (!function_data)
+                {
+                    function_data = &m_script_hook_callbacks.emplace_back(get_object_names(unreal_function), LuaCallbackData{hook_lua, nullptr, {}});
+                }
+                auto& callback_data = function_data->callback_data;
                 callback_data.registry_indexes.emplace_back(hook_lua, LuaCallbackData::RegistryIndex{lua_callback_registry_index, m_last_generic_hook_id});
                 generic_pre_id = m_last_generic_hook_id;
                 generic_post_id = m_last_generic_hook_id;
