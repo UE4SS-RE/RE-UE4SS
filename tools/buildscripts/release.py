@@ -23,19 +23,23 @@ class ReleaseHandler:
             'KismetDebuggerMod': {'create_config': True, 'include_in_release': False},
         }
 
-        # Disable any dev-only mods
-        self.mods_to_disable_in_release = {
-            'LineTraceMod': 0,
-        }
+        # Lua mods to exclude from the non-dev/release version of the zip
+        # And remove their entries from mods files
+        self.lua_mods_to_exclude_from_release = [
+            'ActorDumperMod',
+            'jsbLuaProfilerMod',
+        ]
 
-        # Files to exclude from the non-dev/release version of the zip 
+        # Files in root/assets to exclude from the non-dev/release version of the zip 
         self.files_to_exclude_from_release = [
             'Mods/shared/Types.lua',
+            'Mods/shared/jsbProfiler',
             'UE4SS_Signatures',
             'VTableLayoutTemplates',
             'MemberVarLayoutTemplates',
             'CustomGameConfigs',
             'MapGenBP',
+            'Changelog.md'
         ]
 
         # Settings to change in the release. The default settings in assets/UE4SS-settings.ini are for dev
@@ -51,7 +55,7 @@ class ReleaseHandler:
 
     def make_staging_dirs(self):
         shutil.copytree('assets', self.ue4ss_dir)
-        shutil.copy('README.md', os.path.join(self.ue4ss_dir, 'README.md'))
+        shutil.copy('LICENSE', os.path.join(self.ue4ss_dir, 'LICENCE'))
 
         if not self.is_dev_release:
             for file in self.files_to_exclude_from_release:
@@ -62,6 +66,18 @@ class ReleaseHandler:
                     elif os.path.isdir(path):
                         shutil.rmtree(path)
             self.modify_settings(self.settings_to_modify_in_release)
+
+            # Remove lua mods from the Mods directory
+            for mod in self.lua_mods_to_exclude_from_release:
+                mod_path = os.path.join(self.ue4ss_dir, 'Mods', mod)
+                if os.path.exists(mod_path):
+                    if os.path.isfile(mod_path):
+                        os.remove(mod_path)
+                    elif os.path.isdir(mod_path):
+                        shutil.rmtree(mod_path)
+        else:
+            # only include README file in dev releases
+            shutil.copy('README.md', os.path.join(self.ue4ss_dir, 'README.md'))
 
         ue4ss_dll_path, ue4ss_pdb_path, dwmapi_dll_path, cpp_mods_paths = self.scan_directories()
 
@@ -128,25 +144,23 @@ class ReleaseHandler:
                     os.makedirs(os.path.join(self.ue4ss_dir, 'Mods', mod_name, 'config'), exist_ok=True)
 
     def modify_mods_txt(self):
-        mods_to_disable_in_release = self.mods_to_disable_in_release.copy()
+        mods_to_remove_from_release = self.lua_mods_to_exclude_from_release.copy()
         for mod_name, mod_info in self.cpp_mods.items():
             if not mod_info['include_in_release']:
-                mods_to_disable_in_release[mod_name] = 0
+                mods_to_remove_from_release.append(mod_name)
 
         mods_path = os.path.join(self.ue4ss_dir, 'Mods', 'mods.txt')
         with open(mods_path, mode='r', encoding='utf-8-sig') as file:
-            content = file.read()
+            content = file.readlines()
 
         if self.cpp_mods:
-            content = '\n'.join([f'{mod} : 1' for mod in self.cpp_mods]) + '\n' + content
+            content = [f'{mod} : 1\n' for mod in self.cpp_mods] + content
 
         if not self.is_dev_release:
-            for key, value in mods_to_disable_in_release.items():
-                pattern = rf'(^{key}\s*:).*?$'
-                content = re.sub(pattern, rf'\1 {value}', content, flags=re.MULTILINE)
+            content = [line for line in content if not any(mod in line for mod in mods_to_remove_from_release)]
 
         with open(mods_path, mode='w', encoding='utf-8-sig') as file:
-            file.write(content)
+            file.writelines(content)
 
     def modify_mods_json(self):
         mods_path = os.path.join(self.ue4ss_dir, 'Mods', 'mods.json')
@@ -161,9 +175,12 @@ class ReleaseHandler:
                     else:
                         content.append({'mod_name': mod_name, 'mod_enabled': True})
 
-        for mod in content:
-            if mod['mod_name'] in self.mods_to_disable_in_release:
-                mod['mod_enabled'] = bool(self.mods_to_disable_in_release[mod['mod_name']])
+        if not self.is_dev_release:
+            content = [
+                mod for mod in content
+                if mod['mod_name'] not in self.lua_mods_to_exclude_from_release
+                and self.cpp_mods.get(mod['mod_name'], {}).get('include_in_release', True)
+            ]
 
         with open(mods_path, mode='w', encoding='utf-8-sig') as file:
             json.dump(content, file, indent=4)
