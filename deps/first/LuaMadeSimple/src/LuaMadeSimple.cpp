@@ -936,7 +936,7 @@ namespace RC::LuaMadeSimple
         auto final_message = handle_error(lua_state, error_message);
 
         lua_state_errors.emplace(lua_state, final_message);
-        throw std::runtime_error{final_message};
+        luaL_error(lua_state, final_message.c_str());
     }
 
     auto new_state() -> Lua&
