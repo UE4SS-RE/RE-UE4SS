@@ -63,6 +63,8 @@ Added global Dumpers functions to Types.lua. ([UE4SS #664](https://github.com/UE
 Added global functions `RegisterEndPlayPreHook` and
 `RegisterEndPlayPostHook`. ([UE4SS #769](https://github.com/UE4SS-RE/RE-UE4SS/pull/769))
 
+Errors can now be caught using `pcall` and `xpcall`. ([UE4SS #833](https://github.com/UE4SS-RE/RE-UE4SS/pull/833))
+
 #### Types.lua [PR #650](https://github.com/UE4SS-RE/RE-UE4SS/pull/650) 
 - Added `NAME_None` definition 
 - Added `EFindName` enum definition 
@@ -257,6 +259,8 @@ Fixed frequent `StrProperty can only be set to a string or FString`
 error. ([UE4SS #819](https://github.com/UE4SS-RE/RE-UE4SS/pull/819))
 
 Fixed problems that caused issues for language servers. ([UE4SS #821](https://github.com/UE4SS-RE/RE-UE4SS/pull/821)
+
+Fixed errors being logged twice. ([UE4SS #833](https://github.com/UE4SS-RE/RE-UE4SS/pull/833))
 
 ### C++ API 
 Fixed a crash caused by a race condition enabled by C++ mods using `UE4SS_ENABLE_IMGUI` in their constructor ([UE4SS #481](https://github.com/UE4SS-RE/RE-UE4SS/pull/481)) 
