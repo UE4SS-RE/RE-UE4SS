@@ -175,16 +175,21 @@ static lua_CFunction lsys_sym (lua_State *L, void *lib, const char *sym) {
 ** of LUA_EXEC_DIR with the executable's path.
 */
 static void setprogdir (lua_State *L) {
+  wchar_t wbuff[MAX_PATH + 1];
   char buff[MAX_PATH + 1];
-  char *lb;
-  DWORD nsize = sizeof(buff)/sizeof(char);
-  DWORD n = GetModuleFileNameA(NULL, buff, nsize);  /* get exec. name */
-  if (n == 0 || n == nsize || (lb = strrchr(buff, '\\')) == NULL)
-    luaL_error(L, "unable to get ModuleFileName");
+  wchar_t *lb;
+  DWORD nsize = sizeof(wbuff)/sizeof(wchar_t);
+  DWORD n = GetModuleFileNameW(NULL, wbuff, nsize);  /* get exec. name */
+  if (n == 0 || n == nsize || (lb = wcsrchr(wbuff, L'\\')) == NULL)
+     luaL_error(L, "unable to get ModuleFileName");
   else {
-    *lb = '\0';  /* cut name on the last '\\' to get the path */
-    luaL_gsub(L, lua_tostring(L, -1), LUA_EXEC_DIR, buff);
-    lua_remove(L, -2);  /* remove original string */
+    *lb = L'\0';  /* cut name on the last '\\' to get the path */
+    if (WideCharToMultiByte(CP_UTF8,0,wbuff,-1,buff,MAX_PATH + 1,NULL,NULL) == 0)
+      luaL_error(L, "unable to get ModuleFileName");
+    else {
+      luaL_gsub(L, lua_tostring(L, -1), LUA_EXEC_DIR, buff);
+      lua_remove(L, -2);  /* remove original string */
+    }
   }
 }
 
@@ -432,7 +437,7 @@ static int ll_loadlib (lua_State *L) {
 
 
 static int readable (const char *filename) {
-  FILE *f = fopen(filename, "r");  /* try to open file */
+  FILE *f = wfopen(filename, "r");  /* try to open file */
   if (f == NULL) return 0;  /* open failed */
   fclose(f);
   return 1;
