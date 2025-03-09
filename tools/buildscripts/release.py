@@ -26,7 +26,6 @@ class ReleaseHandler:
         # Lua mods to exclude from the non-dev/release version of the zip
         # And remove their entries from mods files
         self.lua_mods_to_exclude_from_release = [
-            'LineTraceMod',
             'ActorDumperMod',
             'jsbLuaProfilerMod',
         ]
