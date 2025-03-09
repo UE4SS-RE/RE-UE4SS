@@ -15,7 +15,6 @@
 namespace RC::UVTD
 {
     extern bool processing_events;
-    extern Input::Handler input_handler;
 
     auto main(DumpSettings) -> void;
 } // namespace RC::UVTD
