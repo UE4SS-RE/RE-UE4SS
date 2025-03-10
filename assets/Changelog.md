@@ -135,6 +135,8 @@ The `bUseUObjectArrayCache` option in UE4SS-settings.ini is now set to false by 
 The `GuiConsoleEnabled` option in UE4SS-settings.ini is now set to 0 by default in the non-zDev
 release ([UE4SS #779](https://github.com/UE4SS-RE/RE-UE4SS/pull/779))
 
+Removed some development mods, `README.md` & `Changelog.md` from non-zDev release, added `LICENCE` file to both release types ([UE4SS #830](https://github.com/UE4SS-RE/RE-UE4SS/pull/830))
+
 ### Live View 
 Fixed the majority of the lag ([UE4SS #512](https://github.com/UE4SS-RE/RE-UE4SS/pull/512)) 
 
