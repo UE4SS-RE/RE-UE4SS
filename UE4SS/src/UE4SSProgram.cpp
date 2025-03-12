@@ -877,8 +877,7 @@ namespace RC
             {
                 m_debugging_gui.get_live_view().set_listeners_allowed(false);
             }
-
-            m_input_handler.register_keydown_event(Input::Key::O, {Input::ModifierKey::CONTROL}, [&]() {
+            register_keydown_event(Input::Key::O, {Input::ModifierKey::CONTROL}, [&]() {
                 TRY([&] {
                     std::lock_guard guard(m_render_thread_mutex);
                     if (s_gui_initializing_for_game_thread)
@@ -910,7 +909,7 @@ namespace RC
         }
 
 #ifdef TIME_FUNCTION_MACRO_ENABLED
-        m_input_handler.register_keydown_event(Input::Key::Y, {Input::ModifierKey::CONTROL}, [&]() {
+        register_keydown_event(Input::Key::Y, {Input::ModifierKey::CONTROL}, [&]() {
             if (FunctionTimerFrame::s_timer_enabled)
             {
                 FunctionTimerFrame::stop_profiling();
@@ -927,16 +926,14 @@ namespace RC
 
         TRY([&] {
             ObjectDumper::init();
-
             if (settings_manager.General.EnableHotReloadSystem)
             {
-                m_input_handler.register_keydown_event(Input::Key::R, {Input::ModifierKey::CONTROL}, [&]() {
+                register_keydown_event(Input::Key::R, {Input::ModifierKey::CONTROL}, [&]() {
                     TRY([&] {
                         reinstall_mods();
                     });
                 });
             }
-
             if ((settings_manager.ObjectDumper.LoadAllAssetsBeforeDumpingObjects || settings_manager.CXXHeaderGenerator.LoadAllAssetsBeforeGeneratingCXXHeaders) &&
                 Unreal::Version::IsBelow(4, 17))
             {
@@ -949,6 +946,21 @@ namespace RC
                         STR("FAssetData not available, ignoring 'LoadAllAssetsBeforeDumpingObjects' & 'LoadAllAssetsBeforeGeneratingCXXHeaders'."));
             }
 
+#ifdef HAS_INPUT
+            m_input_handler.init();
+            if (!settings_manager.General.InputSource.empty())
+            {
+                if (m_input_handler.set_input_source(to_string(settings_manager.General.InputSource)))
+                {
+                    Output::send(STR("Input source set to: {}\n"), to_generic_string(m_input_handler.get_current_input_source()));
+                }
+                else
+                {
+                    Output::send<LogLevel::Error>(STR("Failed to set input source to: {}\n"), settings_manager.General.InputSource);
+                }
+            }
+#endif
+
             install_lua_mods();
             LuaMod::on_program_start();
             fire_program_start_for_cpp_mods();
@@ -957,7 +969,7 @@ namespace RC
 
         if (settings_manager.General.EnableDebugKeyBindings)
         {
-            m_input_handler.register_keydown_event(Input::Key::NUM_NINE, {Input::ModifierKey::CONTROL}, [&]() {
+            register_keydown_event(Input::Key::NUM_NINE, {Input::ModifierKey::CONTROL}, [&]() {
                 generate_uht_compatible_headers();
             });
         }
@@ -1019,9 +1031,9 @@ namespace RC
                 }
             }
             //*/
-
+#ifdef HAS_INPUT
             m_input_handler.process_event();
-
+#endif
             {
                 ProfilerScopeNamed("mod update processing");
 
@@ -1390,13 +1402,13 @@ namespace RC
 
         uninstall_mods();
 
-        // Remove key binds that were set from Lua scripts
-        auto& key_events = m_input_handler.get_events();
-        std::erase_if(key_events, [](Input::KeySet& input_event) -> bool {
-            bool were_all_events_registered_from_lua = true;
-            for (auto& [key, vector_of_key_data] : input_event.key_data)
-            {
-                std::erase_if(vector_of_key_data, [&](Input::KeyData& key_data) -> bool {
+// Remove key binds that were set from Lua scripts
+#ifdef HAS_INPUT
+        m_input_handler.get_events_safe([&](auto& key_set) {
+            std::erase_if(key_set.key_data, [&](auto& item) -> bool {
+                auto& [_, key_data] = item;
+                bool were_all_events_registered_from_lua = true;
+                std::erase_if(key_data, [&](Input::KeyData& key_data) -> bool {
                     // custom_data == 1: Bind came from Lua, and custom_data2 is nullptr.
                     // custom_data == 2: Bind came from C++, and custom_data2 is a pointer to KeyDownEventData. Must free it.
                     if (key_data.custom_data == 1)
@@ -1409,10 +1421,11 @@ namespace RC
                         return false;
                     }
                 });
-            }
 
-            return were_all_events_registered_from_lua;
+                return were_all_events_registered_from_lua;
+            });
         });
+#endif
 
         // Remove all custom properties
         // Uncomment when custom properties are working
@@ -1589,7 +1602,9 @@ namespace RC
 
     auto UE4SSProgram::register_keydown_event(Input::Key key, const Input::EventCallbackCallable& callback, uint8_t custom_data, void* custom_data2) -> void
     {
+#ifdef HAS_INPUT
         m_input_handler.register_keydown_event(key, callback, custom_data, custom_data2);
+#endif
     }
 
     auto UE4SSProgram::register_keydown_event(Input::Key key,
@@ -1598,17 +1613,27 @@ namespace RC
                                               uint8_t custom_data,
                                               void* custom_data2) -> void
     {
+#ifdef HAS_INPUT
         m_input_handler.register_keydown_event(key, modifier_keys, callback, custom_data, custom_data2);
+#endif
     }
 
     auto UE4SSProgram::is_keydown_event_registered(Input::Key key) -> bool
     {
+#ifdef HAS_INPUT
         return m_input_handler.is_keydown_event_registered(key);
+#else
+        return false;
+#endif
     }
 
     auto UE4SSProgram::is_keydown_event_registered(Input::Key key, const Input::Handler::ModifierKeyArray& modifier_keys) -> bool
     {
+#ifdef HAS_INPUT
         return m_input_handler.is_keydown_event_registered(key, modifier_keys);
+#else
+        return false;
+#endif
     }
 
     auto UE4SSProgram::find_mod_by_name_internal(StringViewType mod_name, IsInstalled is_installed, IsStarted is_started, FMBNI_ExtraPredicate extra_predicate) -> Mod*

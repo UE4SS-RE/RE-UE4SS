@@ -1,5 +1,4 @@
-#ifndef IO_INPUT_HANDLER_HPP
-#define IO_INPUT_HANDLER_HPP
+#pragma once
 
 // TODO: Abstract more... need to get rid of Windows.h from InputHandler.cpp
 
@@ -7,6 +6,9 @@
 #include <functional>
 #include <unordered_map>
 #include <vector>
+#include <memory>
+#include <array>
+#include <mutex>
 
 #include <Input/Common.hpp>
 #include <Input/KeyDef.hpp>
@@ -15,12 +17,16 @@ namespace RC::Input
 {
     using EventCallbackCallable = std::function<void()>;
 
-    auto is_modifier_key_required(ModifierKey, std::vector<ModifierKey>) -> bool;
+    struct InputEvent
+    {
+        Key key;
+        ModifierKeys modifier_keys{};
+    };
 
     struct KeyData
     {
-        std::vector<ModifierKey> required_modifier_keys{};
-        std::vector<EventCallbackCallable> callbacks{};
+        ModifierKeys required_modifier_keys{};
+        EventCallbackCallable callback{};
         uint8_t custom_data{};
         void* custom_data2{};
         bool requires_modifier_keys{};
@@ -32,60 +38,75 @@ namespace RC::Input
         std::unordered_map<Key, std::vector<KeyData>> key_data;
     };
 
+    using ModifierKeyArray = std::array<Input::ModifierKey, max_modifier_keys>;
+
+#ifdef HAS_INPUT
+    class PlatformInputSource;
     class RC_INPUT_API Handler
     {
       private:
-        std::vector<const wchar_t*> m_active_window_classes{};
-        std::vector<KeySet> m_key_sets{};
-        std::unordered_map<ModifierKey, bool> m_modifier_keys_down{};
-        bool m_any_keys_are_down{};
+        // std::vector<KeySet> m_key_sets{};
+        KeySet m_key_set{};
         bool m_allow_input{true};
+        std::array<bool, max_keys> m_subscribed_keys{};
+
+        std::shared_ptr<PlatformInputSource> m_platform_handler;
+        std::mutex m_event_mutex;
 
       public:
-        Handler() = delete;
-        template <typename... WindowClasses>
-        explicit Handler(WindowClasses... window_classes)
-        {
-            static_assert(std::conjunction<std::is_same<const wchar_t*, WindowClasses>...>::value, "WindowClasses must be of type const wchar_t*");
+        Handler() {};
 
-            m_modifier_keys_down.emplace(ModifierKey::SHIFT, false);
-            m_modifier_keys_down.emplace(ModifierKey::CONTROL, false);
-            m_modifier_keys_down.emplace(ModifierKey::ALT, false);
-
-            register_window_classes(window_classes...);
-        }
-
-      private:
-        template <typename WindowClass>
-        auto register_window_classes(WindowClass window_class) -> void
-        {
-            m_active_window_classes.emplace_back(window_class);
-        }
-
-        template <typename WindowClass, typename... WindowClasses>
-        auto register_window_classes(WindowClass window_class, WindowClasses... window_classes) -> void
-        {
-            m_active_window_classes.emplace_back(window_class);
-            register_window_classes(window_classes...);
-        }
-
-        auto are_modifier_keys_down(const std::vector<ModifierKey>&) -> bool;
-        auto is_program_focused() -> bool;
-
+        // Input source and event processing
       public:
+        auto set_input_source(std::string source) -> bool;
         auto process_event() -> void;
+
+        // Interfaces for UE4SS and ModSystem for event registration
+      public:
+        auto init() -> void;
+
         auto register_keydown_event(Input::Key, EventCallbackCallable, uint8_t custom_data = 0, void* custom_data2 = nullptr) -> void;
 
-        using ModifierKeyArray = std::array<Input::ModifierKey, max_modifier_keys>;
+        using ModifierKeyArray = Input::ModifierKeyArray;
         auto register_keydown_event(Input::Key, const ModifierKeyArray&, const EventCallbackCallable&, uint8_t custom_data = 0, void* custom_data2 = nullptr) -> void;
 
         auto is_keydown_event_registered(Input::Key) -> bool;
         auto is_keydown_event_registered(Input::Key, const ModifierKeyArray&) -> bool;
 
-        auto get_events() -> std::vector<KeySet>&;
+        auto get_events_safe(std::function<void(KeySet&)>) -> void;
+        auto clear_subscribed_keys() -> void;
+        auto clear_subscribed_key(Key k) -> void;
+
+        auto has_event_on_key(Input::Key key) -> bool;
+        auto get_subscribed_keys() const -> const std::array<bool, max_keys>&
+        {
+            return m_subscribed_keys;
+        }
+
         auto get_allow_input() -> bool;
         auto set_allow_input(bool new_value) -> void;
-    };
-} // namespace RC::Input
 
-#endif // IO_INPUT_HANDLER_HPP
+        auto get_current_input_source() -> std::string;
+
+      private:
+        static std::unordered_map<std::string, std::shared_ptr<PlatformInputSource>> m_input_sources_store;
+        static auto register_input_source(std::shared_ptr<PlatformInputSource> input_source) -> void;
+
+      public:
+        static auto get_input_source(std::string source) -> std::shared_ptr<PlatformInputSource>
+        {
+            if (m_input_sources_store.find(source) != m_input_sources_store.end())
+            {
+                return m_input_sources_store[source];
+            }
+            return nullptr;
+        }
+    };
+#else
+    class Handler
+    {
+      public:
+        using ModifierKeyArray = Input::ModifierKeyArray;
+    };
+#endif // HAS_INPUT
+} // namespace RC::Input

@@ -99,7 +99,9 @@ namespace RC
         bool m_is_program_started;
 
       protected:
-        Input::Handler m_input_handler{L"ConsoleWindowClass", L"UnrealWindow"};
+#ifdef HAS_INPUT
+        Input::Handler m_input_handler;
+#endif
         std::jthread m_event_loop;
 
       public:

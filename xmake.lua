@@ -65,3 +65,11 @@ option("ue4ssCross")
     set_values("msvc-wine", "None")
 
     set_description("Which cross-compiling toolchain to use", "msvc-wine", "None")
+
+option("ue4ssInput")
+    set_default(true)
+    set_showmenu(true)
+
+    add_defines("HAS_INPUT")
+
+    set_description("Enable the input system.")
