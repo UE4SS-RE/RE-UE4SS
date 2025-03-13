@@ -525,6 +525,7 @@ namespace RC::LuaMadeSimple
         create("__call", metamethods.call);
         create("__eq", metamethods.equal);
         create("__len", metamethods.length);
+        create("__tostring", metamethods.tostring);
 
         return custom_gc_method;
     };
@@ -894,6 +895,7 @@ namespace RC::LuaMadeSimple
                     metamethods->call,
                     metamethods->equal,
                     metamethods->length,
+                    metamethods->tostring,
             };
             new_metatable<Type::MetaMethodContainer>(metatable_name, std::nullopt);
             transfer_stack_object(std::move(c), metatable_name, std::nullopt, true);
