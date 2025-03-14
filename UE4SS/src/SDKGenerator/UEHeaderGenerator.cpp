@@ -1335,13 +1335,13 @@ namespace RC::UEGenerator
         if (property->IsA<FStrProperty>())
         {
             FString* string_value = property->ContainerPtrToValuePtr<FString>(object);
-            const StringType string_value_string = string_value->GetCharArray();
+            const StringType string_value_string = **string_value;
 
             // Ensure property either does not exist in parent class or is overriden in the CDO for the child class
             if (super_property != nullptr)
             {
                 FString* super_string_value = super_property->ContainerPtrToValuePtr<FString>(super_object);
-                const StringType super_string_value_string = super_string_value->GetCharArray();
+                const StringType super_string_value_string = **super_string_value;
                 if (string_value_string == super_string_value_string)
                 {
                     return;

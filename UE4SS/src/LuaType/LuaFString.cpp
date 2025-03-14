@@ -54,7 +54,7 @@ namespace RC::LuaType
         table.add_pair("ToString", [](const LuaMadeSimple::Lua& lua) -> int {
             auto& lua_object = lua.get_userdata<LuaType::FString>();
 
-            const CharType* string_data = lua_object.get_local_cpp_object().GetCharArray();
+            const CharType* string_data = *lua_object.get_local_cpp_object();
             if (string_data)
             {
                 lua.set_string(to_string(string_data));

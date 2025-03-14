@@ -1233,7 +1233,7 @@ namespace RC::LuaType
             else if (params.lua.is_userdata(params.stored_at_index))
             {
                 auto& rhs = params.lua.get_userdata<LuaType::FString>(params.stored_at_index);
-                string->SetCharArray(rhs.get_local_cpp_object().GetCharTArray());
+                string->SetCharArray(rhs.get_local_cpp_object().GetCharArray());
             }
             else
             {

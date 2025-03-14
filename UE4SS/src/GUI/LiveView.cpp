@@ -1803,7 +1803,7 @@ namespace RC::GUI
                 }
                 if (ImGui::MenuItem("Copy value"))
                 {
-                    ImGui::SetClipboardText(to_string(property_text.GetCharArray()).c_str());
+                    ImGui::SetClipboardText(to_string(*property_text).c_str());
                 }
                 if (container_type == ContainerType::Object || container_type == ContainerType::Struct)
                 {
@@ -1878,7 +1878,7 @@ namespace RC::GUI
         {
             ImGui::SameLine();
             auto tree_node_id = fmt::format("{}{}", static_cast<void*>(container_ptr), property_name);
-            if (ImGui_TreeNodeEx(fmt::format("{}", to_string(property_text.GetCharArray())).c_str(), tree_node_id.c_str(), ImGuiTreeNodeFlags_NoAutoOpenOnLog))
+            if (ImGui_TreeNodeEx(fmt::format("{}", to_string(*property_text)).c_str(), tree_node_id.c_str(), ImGuiTreeNodeFlags_NoAutoOpenOnLog))
             {
                 render_property_value_context_menu(tree_node_id);
 
@@ -1912,7 +1912,7 @@ namespace RC::GUI
         {
             ImGui::SameLine();
             auto tree_node_id = fmt::format("{}{}", static_cast<void*>(container_ptr), property_name);
-            if (ImGui_TreeNodeEx(fmt::format("{}", to_string(property_text.GetCharArray())).c_str(), tree_node_id.c_str(), ImGuiTreeNodeFlags_NoAutoOpenOnLog))
+            if (ImGui_TreeNodeEx(fmt::format("{}", to_string(*property_text)).c_str(), tree_node_id.c_str(), ImGuiTreeNodeFlags_NoAutoOpenOnLog))
             {
                 render_property_value_context_menu(tree_node_id);
 
@@ -1971,7 +1971,7 @@ namespace RC::GUI
         else
         {
             ImGui::SameLine();
-            ImGui::Text(fmt::format("{}", to_string(property_text.GetCharArray())).c_str());
+            ImGui::Text(fmt::format("{}", to_string(*property_text)).c_str());
             render_property_value_context_menu();
         }
 
@@ -2004,7 +2004,7 @@ namespace RC::GUI
             if (!m_modal_edit_property_value_opened_this_frame)
             {
                 m_modal_edit_property_value_opened_this_frame = true;
-                m_current_property_value_buffer = to_string(property_text.GetCharArray());
+                m_current_property_value_buffer = to_string(*property_text);
             }
         }
 
@@ -2911,7 +2911,7 @@ namespace RC::GUI
     {
         FString live_value_fstring{};
         watch.property->ExportTextItem(live_value_fstring, watch.property->ContainerPtrToValuePtr<void>(watch.container), nullptr, nullptr, 0);
-        auto live_value_string = StringType{live_value_fstring.GetCharArray()};
+        auto live_value_string = StringType{*live_value_fstring};
 
         if (watch.property_value == live_value_string)
         {
@@ -2973,7 +2973,7 @@ namespace RC::GUI
             FString param_text{};
             auto container_ptr = param->ContainerPtrToValuePtr<void*>(context.TheStack.Locals());
             param->ExportTextItem(param_text, container_ptr, container_ptr, std::bit_cast<UObject*>(function), NULL);
-            buffer.append(fmt::format(STR("    {} = {}\n"), param->GetName(), param_text.GetCharArray()));
+            buffer.append(fmt::format(STR("    {} = {}\n"), param->GetName(), *param_text));
         }
         if (!has_local_params)
         {
@@ -2996,7 +2996,7 @@ namespace RC::GUI
             FString param_text{};
             auto container_ptr = FindOutParamValueAddress(context.TheStack, param);
             param->ExportTextItem(param_text, container_ptr, container_ptr, std::bit_cast<UObject*>(function), NULL);
-            buffer.append(fmt::format(STR("    {} = {}\n"), param->GetName(), param_text.GetCharArray()));
+            buffer.append(fmt::format(STR("    {} = {}\n"), param->GetName(), *param_text));
         }
         if (!has_out_params)
         {
@@ -3010,7 +3010,7 @@ namespace RC::GUI
             FString return_property_text{};
             auto container_ptr = context.RESULT_DECL;
             return_property->ExportTextItem(return_property_text, container_ptr, container_ptr, std::bit_cast<UObject*>(function), NULL);
-            buffer.append(fmt::format(STR("    {}"), return_property_text.GetCharArray()));
+            buffer.append(fmt::format(STR("    {}"), *return_property_text));
         }
         else
         {

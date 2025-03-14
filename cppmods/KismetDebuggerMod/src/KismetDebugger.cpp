@@ -442,7 +442,7 @@ namespace RC::GUI::KismetDebuggerMod
                         auto container_ptr = property->ContainerPtrToValuePtr<void*>(context->stack->Locals());
                         property->ExportTextItem(text, container_ptr, container_ptr, static_cast<UObject*>(node), NULL);
 
-                        ImGui::Text("%s = %S", to_string(property->GetName()).c_str(), text.GetCharArray());
+                        ImGui::Text("%s = %S", to_string(property->GetName()).c_str(), *text);
                         try_rendering_property_context_menu(node, property_count, property, EX_Nothing, context->stack->Locals());
                         ++property_count;
                     }
@@ -860,7 +860,7 @@ namespace RC::GUI::KismetDebuggerMod
                 auto container_ptr = property->ContainerPtrToValuePtr<void*>(stack->Locals());
                 property->ExportTextItem(text, container_ptr, container_ptr, static_cast<UObject*>(stack->Node()), NULL);
 
-                ImGui::Text("= %S", text.GetCharArray());
+                ImGui::Text("= %S", *text);
 
                 ImGui::EndTooltip();
             }

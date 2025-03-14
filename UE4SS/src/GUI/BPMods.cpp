@@ -69,16 +69,16 @@ namespace RC::GUI::BPMods
 
             static auto mod_author_name = FName(STR("ModAuthor"), FNAME_Add);
             auto mod_author_property = mod_class->FindProperty(mod_author_name);
-            mod_info.ModAuthor = mod_author_property ? to_string(mod_author_property->ContainerPtrToValuePtr<FString>(mod_actor)->GetCharArray()) : "Unknown";
+            mod_info.ModAuthor = mod_author_property ? to_string(**mod_author_property->ContainerPtrToValuePtr<FString>(mod_actor)) : "Unknown";
 
             static auto mod_description_name = FName(STR("ModDescription"), FNAME_Add);
             auto mod_description_property = mod_class->FindProperty(mod_description_name);
             mod_info.ModDescription =
-                    mod_description_property ? to_string(mod_description_property->ContainerPtrToValuePtr<FString>(mod_actor)->GetCharArray()) : "Unknown";
+                    mod_description_property ? to_string(**mod_description_property->ContainerPtrToValuePtr<FString>(mod_actor)) : "Unknown";
 
             static auto mod_version_name = FName(STR("ModVersion"), FNAME_Add);
             auto mod_version_property = mod_class->FindProperty(mod_version_name);
-            mod_info.ModVersion = mod_version_property ? to_string(mod_version_property->ContainerPtrToValuePtr<FString>(mod_actor)->GetCharArray()) : "Unknown";
+            mod_info.ModVersion = mod_version_property ? to_string(**mod_version_property->ContainerPtrToValuePtr<FString>(mod_actor)) : "Unknown";
 
             static auto mod_buttons_name = FName(STR("ModButtons"), FNAME_Add);
             auto mod_buttons_property = mod_class->FindProperty(mod_buttons_name);
@@ -87,7 +87,7 @@ namespace RC::GUI::BPMods
             {
                 for (FString& button_name : *mod_buttons)
                 {
-                    mod_info.ModButtons.emplace_back(to_string(button_name.GetCharArray()));
+                    mod_info.ModButtons.emplace_back(to_string(*button_name));
                 }
             }
 
