@@ -14,6 +14,7 @@
 #include <Unreal/Property/FEnumProperty.hpp>
 #include <Unreal/Property/FMapProperty.hpp>
 #include <Unreal/Property/NumericPropertyTypes.hpp>
+#include <Unreal/Property/FOptionalProperty.hpp>
 #include <Unreal/UClass.hpp>
 #include <Unreal/UEnum.hpp>
 #include <Unreal/UObject.hpp>
@@ -57,7 +58,9 @@ namespace RC::OutTheShade
         SetProperty,
         EnumProperty,
         FieldPathProperty,
-        EnumAsByteProperty,
+        OptionalProperty,
+        Utf8StrProperty,
+        AnsiStrProperty,
 
         Unknown = 0xFF
     };
@@ -72,6 +75,12 @@ namespace RC::OutTheShade
         else if (Class.HasAnyCastFlags(CASTCLASS_FStructProperty))
         {
             return EPropertyType::StructProperty;
+        }
+        else if (Class.HasAnyCastFlags(CASTCLASS_FByteProperty))
+        {
+            FByteProperty* ByteProp = static_cast<FByteProperty*>(Prop);
+            if (ByteProp->GetEnum()) return EPropertyType::EnumProperty;
+            return EPropertyType::ByteProperty;
         }
         else if (Class.HasAnyCastFlags(CASTCLASS_FInt8Property))
         {
@@ -141,12 +150,6 @@ namespace RC::OutTheShade
         {
             return EPropertyType::MapProperty;
         }
-        else if (Class.HasAnyCastFlags(CASTCLASS_FByteProperty))
-        {
-            FByteProperty* ByteProp = static_cast<FByteProperty*>(Prop);
-            if (ByteProp->GetEnum()) return EPropertyType::EnumAsByteProperty;
-            return EPropertyType::ByteProperty;
-        }
         else if (Class.HasAnyCastFlags(CASTCLASS_FMulticastDelegateProperty | CASTCLASS_FMulticastInlineDelegateProperty |
                                        CASTCLASS_FMulticastSparseDelegateProperty))
         {
@@ -175,6 +178,18 @@ namespace RC::OutTheShade
         else if (Class.HasAnyCastFlags(CASTCLASS_FFieldPathProperty))
         {
             return EPropertyType::FieldPathProperty;
+        }
+        else if (Class.HasAnyCastFlags(CASTCLASS_FOptionalProperty))
+        {
+            return EPropertyType::OptionalProperty;
+        }
+        else if (Class.HasAnyCastFlags(CASTCLASS_FUtf8StrProperty))
+        {
+            return EPropertyType::Utf8StrProperty;
+        }
+        else if (Class.HasAnyCastFlags(CASTCLASS_FAnsiStrProperty))
+        {
+            return EPropertyType::AnsiStrProperty;
         }
         else
         {
@@ -211,27 +226,28 @@ namespace RC::OutTheShade
         std::vector<UStruct*> Structs; // TODO: a better way than making this completely dynamic
 
         std::function<void(class FProperty*, EPropertyType)> WriteProperty = [&](FProperty* Prop, EPropertyType Type) {
-            if (Type == EPropertyType::EnumAsByteProperty)
-                Buffer.Write(EPropertyType::EnumProperty);
-            else
-                Buffer.Write(Type);
+            Buffer.Write(Type);
 
             switch (Type)
             {
             case EPropertyType::EnumProperty: {
-                auto EnumProp = static_cast<FEnumProperty*>(Prop);
-
-                auto Inner = EnumProp->GetUnderlyingProp();
-                auto InnerType = GetPropertyType(Inner);
-                WriteProperty(static_cast<FProperty*>(Inner), InnerType);
-                Buffer.Write(NameMap[EnumProp->GetEnum()->GetNamePrivate()]);
-
-                break;
-            }
-            case EPropertyType::EnumAsByteProperty: {
-                Buffer.Write(EPropertyType::ByteProperty);
-                Buffer.Write(NameMap[static_cast<FByteProperty*>(Prop)->GetEnum()->GetNamePrivate()]);
-
+                // For regular EnumProperty
+                if (Prop->GetClass().HasAnyCastFlags(CASTCLASS_FEnumProperty))
+                {
+                    auto EnumProp = static_cast<FEnumProperty*>(Prop);
+                    auto Inner = EnumProp->GetUnderlyingProp();
+                    auto InnerType = GetPropertyType(Inner);
+                    WriteProperty(Inner, InnerType);
+                    Buffer.Write(NameMap[EnumProp->GetEnum()->GetNamePrivate()]);
+                }
+                // For ByteProperty with Enum
+                else if (Prop->GetClass().HasAnyCastFlags(CASTCLASS_FByteProperty))
+                {
+                    // Write ByteProperty as the underlying type
+                    Buffer.Write(EPropertyType::ByteProperty);
+                    // Write the enum name
+                    Buffer.Write(NameMap[static_cast<FByteProperty*>(Prop)->GetEnum()->GetNamePrivate()]);
+                }
                 break;
             }
             case EPropertyType::StructProperty: {
@@ -258,6 +274,13 @@ namespace RC::OutTheShade
                 WriteProperty(Inner, InnerType);
 
                 auto Value = static_cast<FMapProperty*>(Prop)->GetValueProp();
+                auto ValueType = GetPropertyType(Value);
+                WriteProperty(Value, ValueType);
+
+                break;
+            }
+            case EPropertyType::OptionalProperty: {
+                auto Value = static_cast<FOptionalProperty*>(Prop)->GetValueProperty();
                 auto ValueType = GetPropertyType(Value);
                 WriteProperty(Value, ValueType);
 
