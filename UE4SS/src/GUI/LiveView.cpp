@@ -901,7 +901,7 @@ namespace RC::GUI
 
         ClassFlagsStringifier(UClass* uclass)
         {
-            if (uclass->HasAnyClassFlags(CLASS_None))
+            if (get_raw_flags(uclass) == 0)
             {
                 flag_parts.emplace_back("CLASS_None");
             }
@@ -1044,6 +1044,280 @@ namespace RC::GUI
         }
     };
 
+    struct ClassCastFlagsStringifier
+    {
+        std::string flags_string{};
+        std::vector<std::string> flag_parts{};
+
+        static constexpr const char* popup_context_item_id_raw = "class_cast_raw_flags_menu";
+        static constexpr const char* popup_context_item_id = "class_cast_flags_menu";
+
+         static auto get_raw_flags(UClass* object) -> uint64_t
+        {
+            return static_cast<uint64_t>(object->GetClassCastFlags());
+        }
+
+        ClassCastFlagsStringifier(UClass* uclass)
+        {
+            if (get_raw_flags(uclass) == 0)
+            {
+                flag_parts.emplace_back("CASTCLASS_None");
+            }
+            if (uclass->HasAnyCastFlag(CASTCLASS_UField))
+            {
+                flag_parts.emplace_back("CASTCLASS_UField");
+            }
+            if (uclass->HasAnyCastFlag(CASTCLASS_FInt8Property))
+            {
+                flag_parts.emplace_back("CASTCLASS_FInt8Property");
+            }
+            if (uclass->HasAnyCastFlag(CASTCLASS_UEnum))
+            {
+                flag_parts.emplace_back("CASTCLASS_UEnum");
+            }
+            if (uclass->HasAnyCastFlag(CASTCLASS_UStruct))
+            {
+                flag_parts.emplace_back("CASTCLASS_UStruct");
+            }
+            if (uclass->HasAnyCastFlag(CASTCLASS_UScriptStruct))
+            {
+                flag_parts.emplace_back("CASTCLASS_UScriptStruct");
+            }
+            if (uclass->HasAnyCastFlag(CASTCLASS_UClass))
+            {
+                flag_parts.emplace_back("CASTCLASS_UClass");
+            }
+            if (uclass->HasAnyCastFlag(CASTCLASS_FByteProperty))
+            {
+                flag_parts.emplace_back("CASTCLASS_FByteProperty");
+            }
+            if (uclass->HasAnyCastFlag(CASTCLASS_FIntProperty))
+            {
+                flag_parts.emplace_back("CASTCLASS_FIntProperty");
+            }
+            if (uclass->HasAnyCastFlag(CASTCLASS_FFloatProperty))
+            {
+                flag_parts.emplace_back("CASTCLASS_FFloatProperty");
+            }
+            if (uclass->HasAnyCastFlag(CASTCLASS_FUInt64Property))
+            {
+                flag_parts.emplace_back("CASTCLASS_FUInt64Property");
+            }
+            if (uclass->HasAnyCastFlag(CASTCLASS_FClassProperty))
+            {
+                flag_parts.emplace_back("CASTCLASS_FClassProperty");
+            }
+            if (uclass->HasAnyCastFlag(CASTCLASS_FUInt32Property))
+            {
+                flag_parts.emplace_back("CASTCLASS_FUInt32Property");
+            }
+            if (uclass->HasAnyCastFlag(CASTCLASS_FInterfaceProperty))
+            {
+                flag_parts.emplace_back("CASTCLASS_FInterfaceProperty");
+            }
+            if (uclass->HasAnyCastFlag(CASTCLASS_FNameProperty))
+            {
+                flag_parts.emplace_back("CASTCLASS_FNameProperty");
+            }
+            if (uclass->HasAnyCastFlag(CASTCLASS_FStrProperty))
+            {
+                flag_parts.emplace_back("CASTCLASS_FStrProperty");
+            }
+            if (uclass->HasAnyCastFlag(CASTCLASS_FProperty))
+            {
+                flag_parts.emplace_back("CASTCLASS_FProperty");
+            }
+            if (uclass->HasAnyCastFlag(CASTCLASS_FObjectProperty))
+            {
+                flag_parts.emplace_back("CASTCLASS_FObjectProperty");
+            }
+            if (uclass->HasAnyCastFlag(CASTCLASS_FBoolProperty))
+            {
+                flag_parts.emplace_back("CASTCLASS_FBoolProperty");
+            }
+            if (uclass->HasAnyCastFlag(CASTCLASS_FUInt16Property))
+            {
+                flag_parts.emplace_back("CASTCLASS_FUInt16Property");
+            }
+            if (uclass->HasAnyCastFlag(CASTCLASS_UFunction))
+            {
+                flag_parts.emplace_back("CASTCLASS_UFunction");
+            }
+            if (uclass->HasAnyCastFlag(CASTCLASS_FStructProperty))
+            {
+                flag_parts.emplace_back("CASTCLASS_FStructProperty");
+            }
+            if (uclass->HasAnyCastFlag(CASTCLASS_FArrayProperty))
+            {
+                flag_parts.emplace_back("CASTCLASS_FArrayProperty");
+            }
+            if (uclass->HasAnyCastFlag(CASTCLASS_FInt64Property))
+            {
+                flag_parts.emplace_back("CASTCLASS_FInt64Property");
+            }
+            if (uclass->HasAnyCastFlag(CASTCLASS_FDelegateProperty))
+            {
+                flag_parts.emplace_back("CASTCLASS_FDelegateProperty");
+            }
+            if (uclass->HasAnyCastFlag(CASTCLASS_FNumericProperty))
+            {
+                flag_parts.emplace_back("CASTCLASS_FNumericProperty");
+            }
+            if (uclass->HasAnyCastFlag(CASTCLASS_FMulticastDelegateProperty))
+            {
+                flag_parts.emplace_back("CASTCLASS_FMulticastDelegateProperty");
+            }
+            if (uclass->HasAnyCastFlag(CASTCLASS_FObjectPropertyBase))
+            {
+                flag_parts.emplace_back("CASTCLASS_FObjectPropertyBase");
+            }
+            if (uclass->HasAnyCastFlag(CASTCLASS_FWeakObjectProperty))
+            {
+                flag_parts.emplace_back("CASTCLASS_FWeakObjectProperty");
+            }
+            if (uclass->HasAnyCastFlag(CASTCLASS_FLazyObjectProperty))
+            {
+                flag_parts.emplace_back("CASTCLASS_FLazyObjectProperty");
+            }
+            if (uclass->HasAnyCastFlag(CASTCLASS_FSoftObjectProperty))
+            {
+                flag_parts.emplace_back("CASTCLASS_FSoftObjectProperty");
+            }
+            if (uclass->HasAnyCastFlag(CASTCLASS_FTextProperty))
+            {
+                flag_parts.emplace_back("CASTCLASS_FTextProperty");
+            }
+            if (uclass->HasAnyCastFlag(CASTCLASS_FInt16Property))
+            {
+                flag_parts.emplace_back("CASTCLASS_FInt16Property");
+            }
+            if (uclass->HasAnyCastFlag(CASTCLASS_FDoubleProperty))
+            {
+                flag_parts.emplace_back("CASTCLASS_FDoubleProperty");
+            }
+            if (uclass->HasAnyCastFlag(CASTCLASS_FSoftClassProperty))
+            {
+                flag_parts.emplace_back("CASTCLASS_FSoftClassProperty");
+            }
+            if (uclass->HasAnyCastFlag(CASTCLASS_UPackage))
+            {
+                flag_parts.emplace_back("CASTCLASS_UPackage");
+            }
+            if (uclass->HasAnyCastFlag(CASTCLASS_ULevel))
+            {
+                flag_parts.emplace_back("CASTCLASS_ULevel");
+            }
+            if (uclass->HasAnyCastFlag(CASTCLASS_AActor))
+            {
+                flag_parts.emplace_back("CASTCLASS_AActor");
+            }
+            if (uclass->HasAnyCastFlag(CASTCLASS_APlayerController))
+            {
+                flag_parts.emplace_back("CASTCLASS_APlayerController");
+            }
+            if (uclass->HasAnyCastFlag(CASTCLASS_APawn))
+            {
+                flag_parts.emplace_back("CASTCLASS_APawn");
+            }
+            if (uclass->HasAnyCastFlag(CASTCLASS_USceneComponent))
+            {
+                flag_parts.emplace_back("CASTCLASS_USceneComponent");
+            }
+            if (uclass->HasAnyCastFlag(CASTCLASS_UPrimitiveComponent))
+            {
+                flag_parts.emplace_back("CASTCLASS_UPrimitiveComponent");
+            }
+            if (uclass->HasAnyCastFlag(CASTCLASS_USkinnedMeshComponent))
+            {
+                flag_parts.emplace_back("CASTCLASS_USkinnedMeshComponent");
+            }
+            if (uclass->HasAnyCastFlag(CASTCLASS_USkeletalMeshComponent))
+            {
+                flag_parts.emplace_back("CASTCLASS_USkeletalMeshComponent");
+            }
+            if (uclass->HasAnyCastFlag(CASTCLASS_UBlueprint))
+            {
+                flag_parts.emplace_back("CASTCLASS_UBlueprint");
+            }
+            if (uclass->HasAnyCastFlag(CASTCLASS_UDelegateFunction))
+            {
+                flag_parts.emplace_back("CASTCLASS_UDelegateFunction");
+            }
+            if (uclass->HasAnyCastFlag(CASTCLASS_UStaticMeshComponent))
+            {
+                flag_parts.emplace_back("CASTCLASS_UStaticMeshComponent");
+            }
+            if (uclass->HasAnyCastFlag(CASTCLASS_FMapProperty))
+            {
+                flag_parts.emplace_back("CASTCLASS_FMapProperty");
+            }
+            if (uclass->HasAnyCastFlag(CASTCLASS_FSetProperty))
+            {
+                flag_parts.emplace_back("CASTCLASS_FSetProperty");
+            }
+            if (uclass->HasAnyCastFlag(CASTCLASS_FEnumProperty))
+            {
+                flag_parts.emplace_back("CASTCLASS_FEnumProperty");
+            }
+            if (uclass->HasAnyCastFlag(CASTCLASS_USparseDelegateFunction))
+            {
+                flag_parts.emplace_back("CASTCLASS_USparseDelegateFunction");
+            }
+            if (uclass->HasAnyCastFlag(CASTCLASS_FMulticastInlineDelegateProperty))
+            {
+                flag_parts.emplace_back("CASTCLASS_FMulticastInlineDelegateProperty");
+            }
+            if (uclass->HasAnyCastFlag(CASTCLASS_FMulticastSparseDelegateProperty))
+            {
+                flag_parts.emplace_back("CASTCLASS_FMulticastSparseDelegateProperty");
+            }
+            if (uclass->HasAnyCastFlag(CASTCLASS_FFieldPathProperty))
+            {
+                flag_parts.emplace_back("CASTCLASS_FFieldPathProperty");
+            }
+            if (uclass->HasAnyCastFlag(CASTCLASS_FObjectPtrProperty))
+            {
+                flag_parts.emplace_back("CASTCLASS_FObjectPtrProperty");
+            }
+            if (uclass->HasAnyCastFlag(CASTCLASS_FClassPtrProperty))
+            {
+                flag_parts.emplace_back("CASTCLASS_FClassPtrProperty");
+            }
+            if (uclass->HasAnyCastFlag(CASTCLASS_FLargeWorldCoordinatesRealProperty))
+            {
+                flag_parts.emplace_back("CASTCLASS_FLargeWorldCoordinatesRealProperty");
+            }
+            if (uclass->HasAnyCastFlag(CASTCLASS_FOptionalProperty))
+            {
+                flag_parts.emplace_back("CASTCLASS_FOptionalProperty");
+            }
+            if (uclass->HasAnyCastFlag(CASTCLASS_FVValueProperty))
+            {
+                flag_parts.emplace_back("CASTCLASS_FVValueProperty");
+            }
+            if (uclass->HasAnyCastFlag(CASTCLASS_FVRestValueProperty))
+            {
+                flag_parts.emplace_back("CASTCLASS_FVRestValueProperty");
+            }
+            if (uclass->HasAnyCastFlag(CASTCLASS_FUtf8StrProperty))
+            {
+                flag_parts.emplace_back("CASTCLASS_FUtf8StrProperty");
+            }
+            if (uclass->HasAnyCastFlag(CASTCLASS_FAnsiStrProperty))
+            {
+                flag_parts.emplace_back("CASTCLASS_FAnsiStrProperty");
+            }
+
+            std::for_each(flag_parts.begin(), flag_parts.end(), [&](const std::string& flag_part) {
+                if (!flags_string.empty())
+                {
+                    flags_string.append(", ");
+                }
+                flags_string.append(flag_part);
+            });
+        }
+    };
+
     struct FunctionFlagsStringifier
     {
         std::string flags_string{};
@@ -1059,7 +1333,7 @@ namespace RC::GUI
 
         FunctionFlagsStringifier(UFunction* function)
         {
-            if (function->HasAnyFunctionFlags(FUNC_None))
+            if (get_raw_flags(function) == 0)
             {
                 flag_parts.emplace_back("FUNC_None");
             }
@@ -2556,6 +2830,13 @@ namespace RC::GUI
         if (auto as_class = Cast<UClass>(object); as_class)
         {
             render_flags<ClassFlagsStringifier>(as_class, "ClassFlags");
+            // Note: We must check to make sure that ClassCastFlags is not missing entirely because it was not previously dumped from UVTD.
+            // TODO: Potentially remove if we're ever sure all custom configs are updated to include this.
+            static auto offset = as_class->MemberOffsets.find(STR("ClassCastFlags"));
+            if (offset != as_class->MemberOffsets.end())
+            {
+                render_flags<ClassCastFlagsStringifier>(as_class, "ClassCastFlags");
+            }
         }
         else if (auto as_function = Cast<UFunction>(object); as_function)
         {
