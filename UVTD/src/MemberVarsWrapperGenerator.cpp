@@ -160,6 +160,13 @@ namespace RC::UVTD
                 macro_setter_dumper.send(STR("    Unreal::{}::MemberOffsets.emplace(STR(\"{}\"), static_cast<int32_t>(val));\n"),
                                          final_class_name,
                                          final_variable_name);
+                if (final_variable_name == STR("EnumFlags_Internal"))
+                {
+                    macro_setter_dumper.send(STR("if (auto val = parser.get_int64(STR(\"{}\"), STR(\"EnumFlags\"), -1); val != -1)\n"),
+                                             final_class_name);
+                    macro_setter_dumper.send(STR("    Unreal::{}::MemberOffsets.emplace(STR(\"EnumFlags_Internal\"), static_cast<int32_t>(val));\n"),
+                                             final_class_name);
+                }
             }
         }
     }
