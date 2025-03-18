@@ -9,6 +9,8 @@
 
 #include "lprefix.h"
 
+#define WIN32_LEAN_AND_MEAN      // Exclude rarely-used stuff from Windows headers
+#include <windows.h>
 
 #include <errno.h>
 #include <stdarg.h>
@@ -785,7 +787,7 @@ LUALIB_API int luaL_loadfilex (lua_State *L, const char *filename,
   }
   else {
     lua_pushfstring(L, "@%s", filename);
-    lf.f = fopen(filename, "r");
+    lf.f = wfopen(filename, "r");
     if (lf.f == NULL) return errfile(L, "open", fnameindex);
   }
   if (skipcomment(&lf, &c))  /* read initial portion */
@@ -1104,3 +1106,12 @@ LUALIB_API void luaL_checkversion_ (lua_State *L, lua_Number ver, size_t sz) {
                   (LUAI_UACNUMBER)ver, (LUAI_UACNUMBER)v);
 }
 
+FILE* wfopen(const char *filename, const char *mode)
+{
+  wchar_t buff[MAX_PATH+1];
+  wchar_t modeBuff[MAX_PATH+1];
+  if (MultiByteToWideChar(CP_UTF8, 0, filename, -1, buff, MAX_PATH) == 0 || MultiByteToWideChar(CP_UTF8, 0, mode, -1, modeBuff, MAX_PATH) == 0)
+    return fopen(filename, mode);
+
+  return _wfopen(buff, modeBuff);
+}
