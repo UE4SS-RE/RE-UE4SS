@@ -1,5 +1,4 @@
-#ifndef UNREALVTABLEDUMPER_SYMBOLS_HPP
-#define UNREALVTABLEDUMPER_SYMBOLS_HPP
+#pragma once
 
 #include <format>
 #include <map>
@@ -170,5 +169,3 @@ namespace RC::UVTD
         auto setup_symbol_loader() -> void;
     };
 } // namespace RC::UVTD
-
-#endif

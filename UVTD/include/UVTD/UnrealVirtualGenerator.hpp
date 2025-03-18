@@ -1,5 +1,4 @@
-#ifndef UNREALVTABLEDUMPER_UNREALVIRTUALGENERATOR_HPP
-#define UNREALVTABLEDUMPER_UNREALVIRTUALGENERATOR_HPP
+#pragma once
 
 #include <UVTD/TypeContainer.hpp>
 
@@ -26,5 +25,3 @@ namespace RC::UVTD
         static auto output_cleanup() -> void;
     };
 } // namespace RC::UVTD
-
-#endif

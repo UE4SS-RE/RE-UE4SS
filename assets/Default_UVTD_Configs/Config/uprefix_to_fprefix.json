@@ -1,0 +1,17 @@
+[
+  "UProperty",
+  "UMulticastDelegateProperty",
+  "UObjectPropertyBase",
+  "UStructProperty",
+  "UArrayProperty",
+  "UMapProperty",
+  "UBoolProperty",
+  "UByteProperty",
+  "UNumericProperty",
+  "UEnumProperty",
+  "UClassProperty",
+  "USoftClassProperty",
+  "UDelegateProperty",
+  "UInterfaceProperty",
+  "USetProperty"
+]

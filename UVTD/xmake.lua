@@ -14,4 +14,4 @@ target(projectName)
 
     add_deps("File", "Input", "DynamicOutput", "Helpers")
 
-    add_packages("raw_pdb")
+    add_packages("glaze", "raw_pdb")

@@ -1,5 +1,4 @@
-#ifndef UNREALVTABLEDUMPER_EXCEPTIONHANDLING_HPP
-#define UNREALVTABLEDUMPER_EXCEPTIONHANDLING_HPP
+#pragma once
 
 #include <stdexcept>
 
@@ -30,5 +29,3 @@ namespace RC
         }
     }
 } // namespace RC
-
-#endif // UNREALVTABLEDUMPER_EXCEPTIONHANDLING_HPP

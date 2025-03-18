@@ -1,5 +1,4 @@
-#ifndef RC_UVTD_HPP
-#define RC_UVTD_HPP
+#pragma once
 
 #include <filesystem>
 #include <map>
@@ -17,6 +16,4 @@ namespace RC::UVTD
     extern bool processing_events;
 
     auto main(DumpSettings) -> void;
-} // namespace RC::UVTD
-
-#endif // RC_UVTD_HPP
+} // namespace RC::UVTD // RC_UVTD_HPP
