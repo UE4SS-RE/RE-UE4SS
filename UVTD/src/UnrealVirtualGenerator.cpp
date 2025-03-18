@@ -39,8 +39,7 @@ namespace RC::UVTD
 
         if (!is_case_preserving_pdb)
         {
-            virtual_header_dumper.send(STR("#ifndef RC_UNREAL_UNREAL_VIRTUAL{}_HPP\n"), pdb_name_no_underscore);
-            virtual_header_dumper.send(STR("#define RC_UNREAL_UNREAL_VIRTUAL{}_HPP\n"), pdb_name_no_underscore);
+            virtual_header_dumper.send(STR("#pragma once\n\n"), pdb_name_no_underscore);
             virtual_header_dumper.send(STR("#include <Unreal/VersionedContainer/UnrealVirtualImpl/UnrealVirtualBaseVC.hpp>\n\n"));
             virtual_header_dumper.send(STR("namespace RC::Unreal\n"));
             virtual_header_dumper.send(STR("{\n"));
