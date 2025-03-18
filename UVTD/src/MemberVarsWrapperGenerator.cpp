@@ -1,6 +1,7 @@
 #include <format>
 
 #include <DynamicOutput/DynamicOutput.hpp>
+#include <UVTD/ConfigUtil.hpp>
 #include <UVTD/Helpers.hpp>
 #include <UVTD/MemberVarsWrapperGenerator.hpp>
 
@@ -55,7 +56,9 @@ namespace RC::UVTD
             header_wrapper_dumper.send(STR("static std::unordered_map<File::StringType, int32_t> MemberOffsets;\n\n"));
             wrapper_src_dumper.send(STR("std::unordered_map<File::StringType, int32_t> {}::MemberOffsets{{}};\n\n"), final_class_name);
 
-            auto private_variables_for_class = s_private_variables.find(class_entry.class_name);
+            // Use configuration instead of hardcoded values
+            const auto& private_variables_map = ConfigUtil::GetPrivateVariables();
+            auto private_variables_for_class = private_variables_map.find(class_entry.class_name);
 
             for (const auto& [variable_name, variable] : class_entry.variables)
             {
@@ -80,8 +83,8 @@ namespace RC::UVTD
                     continue;
                 }
 
-                bool is_private{private_variables_for_class != s_private_variables.end() &&
-                                private_variables_for_class->second.find(variable.name) != private_variables_for_class->second.end()};
+                bool is_private = private_variables_for_class != private_variables_map.end() &&
+                                  private_variables_for_class->second.find(variable.name) != private_variables_for_class->second.end();
 
                 File::StringType final_variable_name = variable.name;
                 File::StringType final_type_name = variable.type;

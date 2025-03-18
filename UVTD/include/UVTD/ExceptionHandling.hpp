@@ -29,5 +29,3 @@ namespace RC
         }
     }
 } // namespace RC
-
-#endif // UNREALVTABLEDUMPER_EXCEPTIONHANDLING_HPP

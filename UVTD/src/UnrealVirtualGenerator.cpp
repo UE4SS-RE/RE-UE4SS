@@ -1,6 +1,7 @@
 #include <UVTD/UnrealVirtualGenerator.hpp>
 
 #include <DynamicOutput/DynamicOutput.hpp>
+#include <UVTD/ConfigUtil.hpp>
 #include <UVTD/Helpers.hpp>
 
 namespace RC::UVTD
@@ -32,8 +33,9 @@ namespace RC::UVTD
             return File::StringType{string};
         });
 
-        bool is_case_preserving_pdb = !(s_case_preserving_variants.find(pdb_name) == s_case_preserving_variants.end());
-        bool is_non_case_preserving_pdb = !(s_non_case_preserving_variants.find(pdb_name) == s_non_case_preserving_variants.end());
+        // Use ConfigUtil instead of hardcoded values
+        bool is_case_preserving_pdb = ConfigUtil::IsCasePreservingVariant(pdb_name);
+        bool is_non_case_preserving_pdb = ConfigUtil::IsNonCasePreservingVariant(pdb_name);
 
         if (!is_case_preserving_pdb)
         {
