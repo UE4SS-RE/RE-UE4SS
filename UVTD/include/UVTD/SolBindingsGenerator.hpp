@@ -1,5 +1,4 @@
-#ifndef UNREALVTABLEDUMPER_SOLBINDINGSGENERATOR_HPP
-#define UNREALVTABLEDUMPER_SOLBINDINGSGENERATOR_HPP
+#pragma once
 
 #include <unordered_map>
 
@@ -30,5 +29,3 @@ namespace RC::UVTD
         static auto output_cleanup() -> void;
     };
 } // namespace RC::UVTD
-
-#endif

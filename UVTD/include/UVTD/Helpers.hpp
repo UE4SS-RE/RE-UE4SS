@@ -1,5 +1,4 @@
-#ifndef UNREALVTABLEDUMPER_HELPERS_HPP
-#define UNREALVTABLEDUMPER_HELPERS_HPP
+#pragma once
 
 #include <optional>
 #include <unordered_map>
@@ -213,5 +212,3 @@ namespace RC::UVTD
     // Workaround that lets us have a unified 'TUObjectArray' struct regardless if the engine version uses a chunked or non-chunked variant of TUObjectArray.
     auto unify_uobject_array_if_needed(StringType& out_variable_type) -> bool;
 } // namespace RC::UVTD
-
-#endif

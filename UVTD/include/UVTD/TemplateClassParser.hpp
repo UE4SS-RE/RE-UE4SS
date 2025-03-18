@@ -1,5 +1,4 @@
-#ifndef UNREALVTABLEDUMPER_TEMPLATECLASSPARSER_HPP
-#define UNREALVTABLEDUMPER_TEMPLATECLASSPARSER_HPP
+#pragma once
 
 #include <vector>
 
@@ -19,5 +18,3 @@ namespace RC::UVTD
         static ParsedTemplateClass Parse(File::StringViewType input);
     };
 } // namespace RC::UVTD
-
-#endif
