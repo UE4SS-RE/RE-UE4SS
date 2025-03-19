@@ -931,6 +931,19 @@ namespace RC
         }
     }
 
+    static auto get_function_name_without_prefix(const StringType& function_full_name) -> StringType
+    {
+        static constexpr StringViewType function_prefix{STR("Function ")};
+        if (auto prefix_pos = function_full_name.find(function_prefix); prefix_pos != function_full_name.npos)
+        {
+            return function_full_name.substr(prefix_pos + function_prefix.size());
+        }
+        else
+        {
+            return function_full_name;
+        }
+    }
+
     auto static setup_lua_global_functions_internal(const LuaMadeSimple::Lua& lua, Mod::IsTrueMod is_true_mod) -> void
     {
         lua.register_function("print", LuaLibrary::global_print);
@@ -1456,12 +1469,7 @@ Overloads:
                     lua.throw_error(error_overload_not_found);
                 }
 
-                auto function_name_no_prefix = ensure_str(lua.get_string());
-                static constexpr StringViewType function_prefix{STR("Function ")};
-                if (auto prefix_pos = function_name_no_prefix.find(function_prefix); prefix_pos != function_name_no_prefix.npos)
-                {
-                    function_name_no_prefix = function_name_no_prefix.substr(prefix_pos + function_prefix.size());
-                }
+                auto function_name_no_prefix = get_function_name_without_prefix(ensure_str(lua.get_string()));
 
                 Unreal::UFunction* unreal_function = Unreal::UObjectGlobals::StaticFindObject<Unreal::UFunction*>(nullptr, nullptr, function_name_no_prefix);
                 if (!unreal_function)
@@ -3159,12 +3167,7 @@ Overloads:
                 lua.throw_error(error_overload_not_found);
             }
 
-            auto function_name_no_prefix = ensure_str(lua.get_string());
-            static constexpr StringViewType function_prefix{STR("Function ")};
-            if (auto prefix_pos = function_name_no_prefix.find(function_prefix); prefix_pos != function_name_no_prefix.npos)
-            {
-                function_name_no_prefix = function_name_no_prefix.substr(prefix_pos + function_prefix.size());
-            }
+            auto function_name_no_prefix = get_function_name_without_prefix(ensure_str(lua.get_string()));
 
             if (!lua.is_function())
             {
