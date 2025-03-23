@@ -62,6 +62,4 @@ FORCEINLINE const TCHAR* operator*() const { return Data.Num() ? Data.GetData() 
 If you encounter problems while upgrading, please:
 
 1. Check the [open issues](https://github.com/UE4SS-RE/RE-UE4SS/issues) for similar reports
-2. Create a new issue with the tag `upgrade-problem` if your issue hasn't been reported
-3. Include detailed steps to reproduce the problem
-4. Specify both the version you're upgrading from and to
+2. Create a new upgrade problem issue if your issue hasn't been reported

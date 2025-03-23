@@ -6,9 +6,7 @@ All types of contributions are encouraged and valued. This guide outlines the pr
 
 ## Table of Contents
 
-- [Code of Conduct](#code-of-conduct)
-- [I Have a Question](#i-have-a-question)
-- [Reporting Issues](#reporting-issues)
+- [Reporting issues](#reporting-issues)
 - [Pull Request Guidelines](#pull-request-guidelines)
 - [Development Workflow](#development-workflow)
 - [Code Style Guidelines](#code-style-guidelines)
@@ -16,60 +14,14 @@ All types of contributions are encouraged and valued. This guide outlines the pr
 - [Upgrade Guidelines](#upgrade-guidelines)
 - [License](#license)
 
-## Code of Conduct
-
-This project and everyone participating in it is governed by the
-[RE-UE4SS Code of Conduct](https://github.com/UE4SS-RE/RE-UE4SS/blob/main/CODE_OF_CONDUCT.md).
-By participating, you are expected to uphold this code. Please report unacceptable behavior
-to <contact@ue4ss.com>.
-
-## I Have a Question
-
-Before you ask a question, it is best to search for existing [Issues](https://github.com/UE4SS-RE/RE-UE4SS/issues) and read the available [Documentation](https://docs.ue4ss.com/).
-
-If you still need clarification:
-- Open an [Issue](https://github.com/UE4SS-RE/RE-UE4SS/issues/new)
-- Provide as much context as you can about what you're experiencing
-- Provide project and platform versions (OS, compiler, etc.)
-
 ## Reporting Issues
 
-When reporting issues, please follow our issue template:
+Before you ask a question, it is best to search for existing [issues](https://github.com/UE4SS-RE/RE-UE4SS/issues) and read the available [documentation](https://docs.ue4ss.com/).
 
-```
-**Branch or Release**
-[Specify which branch or release version you're using]
-
-**Game and Engine Version**
-[Specify the game and UE version]
-
-**Describe the bug**
-[A clear description of the bug]
-
-**Mods directory**
-[Relevant mods directory structure if applicable]
-
-**To reproduce**
-[Step-by-step reproduction steps]
-
-**Expected behavior**
-[What you expected to happen]
-
-**Screenshots, UE4SS Log, and .dmp file**
-[Attach relevant files]
-
-**Desktop (please complete the following information):**
-* OS: [e.g. Win10, Win11]
-
-**Additional context**
-[Any other relevant information]
-```
-
-For good bug reports:
-- Explain the behavior you expect and the actual behavior
-- Provide clear reproduction steps that someone else can follow
-- Isolate the problem and create a reduced test case if possible
-- Verify if the issue occurs with the latest version of RE-UE4SS
+If you still need clarification:
+- Open an [issue](https://github.com/UE4SS-RE/RE-UE4SS/issues) using the correct template
+- Provide as much context as you can about what you're experiencing
+- Provide project and platform versions (OS, compiler, etc.)
 
 > **Security Issues**: Never report security-related issues, vulnerabilities or bugs including sensitive information to the issue tracker. Instead, please email sensitive bugs to <security@ue4ss.com>.
 
@@ -86,7 +38,7 @@ For good bug reports:
    - Steps to reproduce the issue being fixed (if applicable)
    - Code to reproduce the problem it fixes or feature it adds
    - Any relevant test cases or examples
-   - Updates to the [Changelog.md](/assets/Changelog.md) file
+   - Updates to the [Changelog.md](/assets/Changelog.md) file with relevant changes
 
 3. Code should be well-documented and follow the existing style conventions of the repository.
 
@@ -115,7 +67,7 @@ For good bug reports:
 
 ### Main Repository Code
 
-- All code in the main repository should have `clang-tidy` run against it before submission
+- All code in the main repository should have `clang-format` run against it before submission
 - Follow the existing code style of the repository for consistency
 - Use meaningful variable and function names
 - Include comments for complex logic or non-obvious implementations
@@ -142,7 +94,7 @@ We maintain an upgrade guide to track breaking changes and help users migrate be
 
 When making breaking changes to the API:
 
-1. You must document all breaking changes in `/docs/UpgradeGuide.md`, including:
+1. You must document all breaking changes in `/docs/upgrade-guide.md`, including:
    - A clear description of what changed
    - The reason for the change
    - Code examples showing the old way vs. the new way
@@ -171,10 +123,7 @@ The upgrade guide is organized chronologically with the most recent version at t
 ## License
 
 ### RE-UE4SS License
-By contributing to RE-UE4SS, you agree that:
-- You have authored 100% of the content
-- You have the necessary rights to the content
-- Your contributions will be licensed under the same license as the repository
+By contributing to RE-UE4SS, you agree that your contributions will be licensed under the [MIT licence](https://github.com/UE4SS-RE/RE-UE4SS/blob/main/LICENSE)
 
 ### UEPseudo Code Licensing
 UEPseudo code is subject to Epic Games' licensing terms.
