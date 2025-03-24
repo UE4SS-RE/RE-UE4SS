@@ -84,19 +84,6 @@ namespace RC
                 int32_t lua_index{};
                 int32_t identifier{};
             };
-            const LuaMadeSimple::Lua& lua;
-            Unreal::UClass* instance_of_class;
-            std::vector<std::pair<const LuaMadeSimple::Lua*, RegistryIndex>> registry_indexes;
-        };
-        // Note: This struct only exists because refactoring LuaCallbackData would be more work than I'm willing to put in right now.
-        //       Refactoring can be done later.
-        struct LuaCallbackDataNoRef
-        {
-            struct RegistryIndex
-            {
-                int32_t lua_index{};
-                int32_t identifier{};
-            };
             const LuaMadeSimple::Lua* lua;
             Unreal::UClass* instance_of_class;
             std::vector<std::pair<const LuaMadeSimple::Lua*, RegistryIndex>> registry_indexes;
@@ -111,7 +98,7 @@ namespace RC
         struct FunctionHookData
         {
             std::vector<Unreal::FName> names{};
-            LuaCallbackDataNoRef callback_data{};
+            LuaCallbackData callback_data{};
         };
         static inline std::vector<LuaCancellableCallbackData> m_static_construct_object_lua_callbacks;
         static inline std::vector<LuaCallbackData> m_process_console_exec_pre_callbacks;
