@@ -1387,6 +1387,22 @@ namespace RC
         LuaMod::global_uninstall();
     }
 
+    auto UE4SSProgram::delete_mod(Mod* mod) -> void
+    {
+        for (auto it = m_mods.begin(); it != m_mods.end();)
+        {
+            if (it->get() == mod)
+            {
+                it = m_mods.erase(it);
+                break;
+            }
+            else
+            {
+                ++it;
+            }
+        }
+    }
+
     auto UE4SSProgram::is_program_started() -> bool
     {
         return m_is_program_started;
@@ -1409,7 +1425,7 @@ namespace RC
                 auto& [_, key_data] = item;
                 bool were_all_events_registered_from_lua = true;
                 std::erase_if(key_data, [&](Input::KeyData& key_data) -> bool {
-                    // custom_data == 1: Bind came from Lua, and custom_data2 is nullptr.
+                    // custom_data == 1: Bind came from Lua, and custom_data2 is a pointer to LuaMod.
                     // custom_data == 2: Bind came from C++, and custom_data2 is a pointer to KeyDownEventData. Must free it.
                     if (key_data.custom_data == 1)
                     {
@@ -1633,6 +1649,13 @@ namespace RC
         return m_input_handler.is_keydown_event_registered(key, modifier_keys);
 #else
         return false;
+#endif
+    }
+
+    auto UE4SSProgram::get_all_input_events(std::function<void(Input::KeySet&)> callback) -> void
+    {
+#ifdef HAS_INPUT
+        m_input_handler.get_events_safe(callback);
 #endif
     }
 

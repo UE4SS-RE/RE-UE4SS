@@ -646,23 +646,6 @@ namespace RC
 
     auto LuaMod::global_uninstall() -> void
     {
-        LuaMod::m_static_construct_object_lua_callbacks.clear();
-        LuaMod::m_process_console_exec_pre_callbacks.clear();
-        LuaMod::m_process_console_exec_post_callbacks.clear();
-        LuaMod::m_global_command_lua_callbacks.clear();
-        LuaMod::m_custom_command_lua_pre_callbacks.clear();
-        LuaMod::m_custom_event_callbacks.clear();
-        LuaMod::m_load_map_pre_callbacks.clear();
-        LuaMod::m_load_map_post_callbacks.clear();
-        LuaMod::m_init_game_state_pre_callbacks.clear();
-        LuaMod::m_init_game_state_post_callbacks.clear();
-        LuaMod::m_begin_play_pre_callbacks.clear();
-        LuaMod::m_begin_play_post_callbacks.clear();
-        LuaMod::m_call_function_by_name_with_arguments_pre_callbacks.clear();
-        LuaMod::m_call_function_by_name_with_arguments_post_callbacks.clear();
-        LuaMod::m_local_player_exec_pre_callbacks.clear();
-        LuaMod::m_local_player_exec_post_callbacks.clear();
-        LuaMod::m_script_hook_callbacks.clear();
         LuaMod::m_generic_hook_id_to_native_hook_id.clear();
     }
 
@@ -1215,7 +1198,7 @@ Overloads:
 #1: RegisterKeyBindAsync(integer key)
 #2: RegisterKeyBindAsync(integer key, table modifier_key_integers))"};
 
-                const Mod* mod = get_mod_ref(lua);
+                Mod* mod = get_mod_ref(lua);
 
                 if (!lua.is_integer())
                 {
@@ -1261,7 +1244,7 @@ Overloads:
                             [&lua, lua_callback_registry_index, &lua_keybind_callback_lambda]() {
                                 lua_keybind_callback_lambda(lua, lua_callback_registry_index);
                             },
-                            1);
+                            1, mod);
                 }
                 else if (lua.is_table())
                 {
@@ -1306,7 +1289,7 @@ Overloads:
                                 [&lua, lua_callback_registry_index, &lua_keybind_callback_lambda]() {
                                     lua_keybind_callback_lambda(lua, lua_callback_registry_index);
                                 },
-                                1);
+                                1, mod);
                     }
                     else
                     {
@@ -1315,7 +1298,7 @@ Overloads:
                                 [&lua, lua_callback_registry_index, &lua_keybind_callback_lambda]() {
                                     lua_keybind_callback_lambda(lua, lua_callback_registry_index);
                                 },
-                                1);
+                                1, mod);
                     }
                 }
                 else
@@ -1333,7 +1316,7 @@ Overloads:
 #1: RegisterKeyBind(integer key)
 #2: RegisterKeyBind(integer key, table modifier_key_integers))"};
 
-                const Mod* mod = get_mod_ref(lua);
+                Mod* mod = get_mod_ref(lua);
 
                 if (!lua.is_integer())
                 {
@@ -1380,7 +1363,7 @@ Overloads:
                             [&lua, lua_callback_registry_index, &lua_keybind_callback_lambda]() {
                                 lua_keybind_callback_lambda(lua, lua_callback_registry_index);
                             },
-                            1);
+                            1, mod);
                 }
                 else if (lua.is_table())
                 {
@@ -1423,7 +1406,7 @@ Overloads:
                                 [&lua, lua_callback_registry_index, &lua_keybind_callback_lambda]() {
                                     lua_keybind_callback_lambda(lua, lua_callback_registry_index);
                                 },
-                                1);
+                                1, mod);
                     }
                     else
                     {
@@ -1432,7 +1415,7 @@ Overloads:
                                 [&lua, lua_callback_registry_index, &lua_keybind_callback_lambda]() {
                                     lua_keybind_callback_lambda(lua, lua_callback_registry_index);
                                 },
-                                1);
+                                1, mod);
                     }
                 }
                 else
@@ -3562,6 +3545,44 @@ Overloads:
         }
     }
 
+    template <typename T>
+    concept IsPair = requires(T t) {
+            { t.second };
+    };
+    template <typename T>
+    concept IsDataIndirect = requires(T t) {
+            { t.callback_data };
+    };
+
+    static auto erase_from_container(LuaMod* mod, auto& container) -> void
+    {
+        for (auto it = container.begin(); it != container.end();)
+        {
+            const auto& data = [&] {
+                if constexpr (IsPair<decltype(*it)>)
+                {
+                    return it->second;
+                }
+                else if constexpr (IsDataIndirect<decltype(*it)>)
+                {
+                    return it->callback_data;
+                }
+                else
+                {
+                    return *it;
+                }
+            }();
+            if (get_mod_ref(*data.lua) == mod)
+            {
+                it = container.erase(it);
+            }
+            else
+            {
+                ++it;
+            }
+        }
+    }
+
     auto LuaMod::uninstall() -> void
     {
         // ProcessEvent hook may try to run, and the lua state will not be valid
@@ -3576,6 +3597,44 @@ Overloads:
             m_async_thread.request_stop();
             m_async_thread.join();
         }
+
+        erase_from_container(this, m_static_construct_object_lua_callbacks);
+        erase_from_container(this, m_process_console_exec_pre_callbacks);
+        erase_from_container(this, m_process_console_exec_post_callbacks);
+        erase_from_container(this, m_global_command_lua_callbacks);
+        erase_from_container(this, m_custom_command_lua_pre_callbacks);
+        erase_from_container(this, m_custom_event_callbacks);
+        erase_from_container(this, m_load_map_pre_callbacks);
+        erase_from_container(this, m_load_map_post_callbacks);
+        erase_from_container(this, m_init_game_state_pre_callbacks);
+        erase_from_container(this, m_init_game_state_post_callbacks);
+        erase_from_container(this, m_begin_play_pre_callbacks);
+        erase_from_container(this, m_begin_play_post_callbacks);
+        erase_from_container(this, m_call_function_by_name_with_arguments_pre_callbacks);
+        erase_from_container(this, m_call_function_by_name_with_arguments_post_callbacks);
+        erase_from_container(this, m_local_player_exec_pre_callbacks);
+        erase_from_container(this, m_local_player_exec_post_callbacks);
+        erase_from_container(this, m_script_hook_callbacks);
+
+        UE4SSProgram::get_program().get_all_input_events([&](auto& key_set) {
+            std::erase_if(key_set.key_data, [&](auto& item) -> bool {
+                auto& [_, key_data] = item;
+                std::erase_if(key_data, [&](Input::KeyData& key_data) -> bool {
+                    // custom_data == 1: Bind came from Lua, and custom_data2 is a pointer to LuaMod.
+                    // custom_data == 2: Bind came from C++, and custom_data2 is a pointer to KeyDownEventData. Must free it.
+                    if (key_data.custom_data == 1)
+                    {
+                        return key_data.custom_data2 == this;
+                    }
+                    else
+                    {
+                        return false;
+                    }
+                });
+
+                return key_data.empty();
+            });
+        });
 
         if (m_hook_lua.size() > 0)
         {

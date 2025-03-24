@@ -118,6 +118,10 @@ Added hook for `UGameViewportClient::Tick`. ([UE4SS #767](https://github.com/UE4
 
 Added hook for `AActor::EndPlay`. ([UE4SS #769](https://github.com/UE4SS-RE/RE-UE4SS/pull/769))
 
+Added function 'UE4SSProgram::delete_mod'. ([UE4SS #843](https://github.com/UE4SS-RE/RE-UE4SS/pull/843))
+
+Added function 'UE4SSProgram::get_all_input_events'. ([UE4SS #843](https://github.com/UE4SS-RE/RE-UE4SS/pull/843))
+
 ### BPModLoader 
 
 ### Experimental 
