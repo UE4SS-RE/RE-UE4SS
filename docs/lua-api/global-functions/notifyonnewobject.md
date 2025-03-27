@@ -15,7 +15,7 @@ The callback can return `true` to remove (unregister) that specific `NotifyOnNew
 | 1 | string   | Full name of the class to get instance construction notifications for, without the type prefix |
 | 2 | function | The callback to execute when an instance of the supplied class is constructed |
 
-## Return Value
+## Callback Parameters
 
 | # | Type    | Information |
 |---|---------|-------------|
