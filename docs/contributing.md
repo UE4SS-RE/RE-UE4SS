@@ -21,7 +21,9 @@ Before you ask a question, it is best to search for existing [issues](https://gi
 If you still need clarification:
 - Open an [issue](https://github.com/UE4SS-RE/RE-UE4SS/issues) using the correct template
 - Provide as much context as you can about what you're experiencing
-- Provide project and platform versions (OS, compiler, etc.)
+- Provide project and platform versions (OS, etc.)
+- If the issue is build related, provide toolchain information (compiler version, etc.) 
+- Provide UE4SS.log whenever it's available, even if it doesn't seem useful
 
 > **Security Issues**: Never report security-related issues, vulnerabilities or bugs including sensitive information to the issue tracker. Instead, please email sensitive bugs to <security@ue4ss.com>.
 
