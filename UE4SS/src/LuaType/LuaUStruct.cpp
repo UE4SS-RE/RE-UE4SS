@@ -49,7 +49,22 @@ namespace RC::LuaType
 
     auto UStruct::setup_metamethods([[maybe_unused]] BaseObject& base_object) -> void
     {
-        // UClass has no metamethods
+        base_object.get_metamethods().create(LuaMadeSimple::Lua::MetaMethod::ToString, []([[maybe_unused]] const LuaMadeSimple::Lua& lua) -> int {
+            if (!lua.is_userdata())
+            {
+                lua.throw_error(std::format("{} __tostring metamethod called but there was no userdata", ClassName::ToString()));
+            }
+
+            std::string name;
+
+            auto* ustruct = lua.get_userdata<UStruct>().get_remote_cpp_object();
+            name.append(ClassName::ToString());
+            name.append(std::format("<{}>: {:016X}", to_string(ustruct->GetName()), reinterpret_cast<uintptr_t>(ustruct)));
+
+            lua.set_string(name);
+
+            return 1;
+        });
     }
 
     template <LuaMadeSimple::Type::IsFinal is_final>

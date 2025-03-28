@@ -53,7 +53,22 @@ namespace RC::LuaType
 
     auto UWorld::setup_metamethods([[maybe_unused]] BaseObject& base_object) -> void
     {
-        // UWorld has no metamethods
+        base_object.get_metamethods().create(LuaMadeSimple::Lua::MetaMethod::ToString, []([[maybe_unused]] const LuaMadeSimple::Lua& lua) -> int {
+            if (!lua.is_userdata())
+            {
+                lua.throw_error(std::format("{} __tostring metamethod called but there was no userdata", ClassName::ToString()));
+            }
+
+            std::string name;
+
+            auto& lua_object = lua.get_userdata<UWorld>();
+            name.append(ClassName::ToString());
+            name.append(std::format(": {:016X}", reinterpret_cast<uintptr_t>(lua_object.get_remote_cpp_object())));
+
+            lua.set_string(name);
+
+            return 1;
+        });
     }
 
     template <LuaMadeSimple::Type::IsFinal is_final>
