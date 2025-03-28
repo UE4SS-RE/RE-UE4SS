@@ -296,6 +296,7 @@ typedef struct luaL_Stream {
 
 
 
+FILE* wfopen(const char *filename, const char *mode);
 #endif
 
 
