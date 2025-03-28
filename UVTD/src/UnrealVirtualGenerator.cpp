@@ -39,7 +39,7 @@ namespace RC::UVTD
 
         if (!is_case_preserving_pdb)
         {
-            virtual_header_dumper.send(STR("#pragma once\n\n"), pdb_name_no_underscore);
+            virtual_header_dumper.send(STR("#pragma once\n\n"));
             virtual_header_dumper.send(STR("#include <Unreal/VersionedContainer/UnrealVirtualImpl/UnrealVirtualBaseVC.hpp>\n\n"));
             virtual_header_dumper.send(STR("namespace RC::Unreal\n"));
             virtual_header_dumper.send(STR("{\n"));
@@ -47,8 +47,7 @@ namespace RC::UVTD
             virtual_header_dumper.send(STR("    {\n"));
             virtual_header_dumper.send(STR("        auto set_virtual_offsets() -> void override;\n"));
             virtual_header_dumper.send(STR("    };\n"));
-            virtual_header_dumper.send(STR("}\n\n\n"));
-            virtual_header_dumper.send(STR("#endif //RC_UNREAL_UNREAL_VIRTUAL{}_HPP\n"), pdb_name_no_underscore);
+            virtual_header_dumper.send(STR("}\n"));
 
             virtual_src_dumper.send(STR("#include <Unreal/VersionedContainer/UnrealVirtualImpl/UnrealVirtual{}.hpp>\n\n"), pdb_name_no_underscore);
             virtual_src_dumper.send(STR("#include <functional>\n\n"));
