@@ -32,7 +32,7 @@ If you still need clarification:
 ### General Requirements
 
 1. Before submitting a PR, please ensure your changes have been tested on:
-   - At least one Unreal Engine version between 4.11 and 4.25 (the version where UProperty/FProperty was swapped)
+   - At least one Unreal Engine version between 4.11 and 4.25 (the version where UProperty was replaced by FProperty)
    - At least one version after 4.25, preferably UE 5.1 or newer
 
 2. All PRs must include:
