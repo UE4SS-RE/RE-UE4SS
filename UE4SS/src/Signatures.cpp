@@ -6,11 +6,11 @@
 #include <Unreal/FMemory.hpp>
 #include <Unreal/FString.hpp>
 #include <Unreal/FText.hpp>
+#include <Unreal/Script.hpp>
 #include <Unreal/Signatures.hpp>
 #include <Unreal/UObject.hpp>
 #include <Unreal/UObjectArray.hpp>
 #include <Unreal/UnrealInitializer.hpp>
-#include <Unreal/Script.hpp>
 #include <filesystem>
 
 #include <Helpers/String.hpp>
@@ -41,7 +41,9 @@ namespace RC
 
         if (!lua.is_global_function(global_register_func_name) || !lua.is_global_function(global_on_match_found_func_name))
         {
-            Output::send(STR("Lua functions 'Register' and 'OnMatchFound' must be present in {}\n"), ensure_str(script_file_path_and_name));
+            Output::send(STR("Lua functions 'Register' and 'OnMatchFound' must be "
+                             "present in {}\n"),
+                         ensure_str(script_file_path_and_name));
             throw std::runtime_error{"See error message above"};
         }
 
@@ -49,7 +51,8 @@ namespace RC
 
         if (!lua.is_string())
         {
-            throw std::runtime_error{"Lua function 'Register' must return a string that contains the signature to scan for"};
+            throw std::runtime_error{"Lua function 'Register' must return a string "
+                                     "that contains the signature to scan for"};
         }
 
         signature_containers.emplace_back(SignatureContainer{{
@@ -132,7 +135,8 @@ namespace RC
                         [&](DidLuaScanSucceed did_lua_scan_succeed) {
                             if (did_lua_scan_succeed == DidLuaScanSucceed::No)
                             {
-                                scan_result.Errors.emplace_back("Was unable to find AOB for 'FName::ToString' via Lua script");
+                                scan_result.Errors.emplace_back("Was unable to find AOB for 'FName::ToString' via Lua "
+                                                                "script");
                             }
                         });
             };
@@ -157,20 +161,23 @@ namespace RC
                             }
                             else
                             {
-                                scan_result.Errors.emplace_back("Lua script 'FName_Constructor.lua' did not return a valid address for FName::FName.");
+                                scan_result.Errors.emplace_back("Lua script 'FName_Constructor.lua' did not return a "
+                                                                "valid address for FName::FName.");
                                 return DidLuaScanSucceed::No;
                             }
                         },
                         [&scan_result]([[maybe_unused]] DidLuaScanSucceed did_lua_scan_succeed) {
                             if (!Unreal::FName::ConstructorInternal.get_function_address())
                             {
-                                scan_result.Errors.emplace_back("Lua script 'FName_Constructor.lua' did not return a valid address for FName::FName.");
+                                scan_result.Errors.emplace_back("Lua script 'FName_Constructor.lua' did not return a "
+                                                                "valid address for FName::FName.");
                             }
                         });
             };
         }
 
-        // For compatibility, we look for 'FMemory_Free.lua' if 'GMalloc.lua' doesn't exist.
+        // For compatibility, we look for 'FMemory_Free.lua' if 'GMalloc.lua' doesn't
+        // exist.
         auto lua_ffree_scan_script_new = working_directory / "UE4SS_Signatures/GMalloc.lua";
         auto lua_ffree_scan_script_compat = working_directory / "UE4SS_Signatures/FMemory_Free.lua";
         auto lua_ffree_scan_script = std::filesystem::exists(lua_ffree_scan_script_new) ? lua_ffree_scan_script_new : lua_ffree_scan_script_compat;
@@ -205,14 +212,17 @@ namespace RC
                         lua_sco_scan_script,
                         signature_containers,
                         [](void* address) {
-                            Output::send(STR("StaticConstructObject_Internal address: {} <- Lua Script\n"), address);
+                            Output::send(STR("StaticConstructObject_Internal address: {} "
+                                             "<- Lua Script\n"),
+                                         address);
                             Unreal::UObjectGlobals::SetupStaticConstructObjectInternalAddress(address);
                             return DidLuaScanSucceed::Yes;
                         },
                         [&](DidLuaScanSucceed did_lua_scan_succeed) {
                             if (did_lua_scan_succeed == DidLuaScanSucceed::No)
                             {
-                                scan_result.Errors.emplace_back("Was unable to find AOB for 'StaticConstructObject' via Lua script");
+                                scan_result.Errors.emplace_back("Was unable to find AOB for 'StaticConstructObject' via "
+                                                                "Lua script");
                             }
                         });
             };
@@ -237,14 +247,16 @@ namespace RC
                             }
                             else
                             {
-                                scan_result.Errors.emplace_back("Lua script 'FText_Constructor.lua' did not return a valid address for FText::FText.");
+                                scan_result.Errors.emplace_back("Lua script 'FText_Constructor.lua' did not return a "
+                                                                "valid address for FText::FText.");
                                 return DidLuaScanSucceed::No;
                             }
                         },
                         [&scan_result]([[maybe_unused]] DidLuaScanSucceed did_lua_scan_succeed) {
                             if (!Unreal::FText::ConstructorInternal.get_function_address())
                             {
-                                scan_result.Errors.emplace_back("Lua script 'FText_Constructor.lua' did not return a valid address for FText::FText.");
+                                scan_result.Errors.emplace_back("Lua script 'FText_Constructor.lua' did not return a "
+                                                                "valid address for FText::FText.");
                             }
                         });
             };
@@ -266,7 +278,8 @@ namespace RC
                         [&](DidLuaScanSucceed did_lua_scan_succeed) {
                             if (did_lua_scan_succeed == DidLuaScanSucceed::No)
                             {
-                                scan_result.Errors.emplace_back("Was unable to find AOB for 'GUObjectHashTables' via Lua script");
+                                scan_result.Errors.emplace_back("Was unable to find AOB for 'GUObjectHashTables' via Lua "
+                                                                "script");
                             }
                         });
             };
@@ -310,7 +323,8 @@ namespace RC
                         [&](DidLuaScanSucceed did_lua_scan_succeed) {
                             if (did_lua_scan_succeed == DidLuaScanSucceed::No)
                             {
-                                scan_result.Errors.emplace_back("Was unable to find AOB for 'ConsoleManagerSingleton' via Lua script");
+                                scan_result.Errors.emplace_back("Was unable to find AOB for 'ConsoleManagerSingleton' "
+                                                                "via Lua script");
                             }
                         });
             };
@@ -326,14 +340,17 @@ namespace RC
                                 lua_process_local_script_function_scan_script,
                                 signature_containers,
                                 [](void* address) {
-                                    Output::send(STR("ProcessLocalScriptFunction address: {} <- Lua Script\n"), address);
+                                    Output::send(STR("ProcessLocalScriptFunction address: {} <- "
+                                                     "Lua Script\n"),
+                                                 address);
                                     Unreal::UObject::ProcessLocalScriptFunctionInternal.assign_address(address);
                                     return DidLuaScanSucceed::Yes;
                                 },
                                 [&](DidLuaScanSucceed did_lua_scan_succeed) {
                                     if (did_lua_scan_succeed == DidLuaScanSucceed::No)
                                     {
-                                        scan_result.Errors.emplace_back("Was unable to find AOB for 'ProcessLocalScriptFunction' via Lua script");
+                                        scan_result.Errors.emplace_back("Was unable to find AOB for 'ProcessLocalScriptFunction' "
+                                                                        "via Lua script");
                                     }
                                 });
                     };
@@ -355,7 +372,8 @@ namespace RC
                         [&](DidLuaScanSucceed did_lua_scan_succeed) {
                             if (did_lua_scan_succeed == DidLuaScanSucceed::No)
                             {
-                                scan_result.Errors.emplace_back("Was unable to find AOB for 'ProcessInternal' via Lua script");
+                                scan_result.Errors.emplace_back("Was unable to find AOB for 'ProcessInternal' via Lua "
+                                                                "script");
                             }
                         });
             };
@@ -364,23 +382,27 @@ namespace RC
         auto lua_call_function_by_name_with_arguments_scan_script = working_directory / "UE4SS_Signatures/CallFunctionByNameWithArguments.lua";
         if (std::filesystem::exists(lua_call_function_by_name_with_arguments_scan_script))
         {
-            config.ScanOverrides.call_function_by_name_with_arguments = [lua_call_function_by_name_with_arguments_scan_script](std::vector<SignatureContainer>& signature_containers,
-                                                                                       Unreal::Signatures::ScanResult& scan_result) mutable {
-                scan_from_lua_script(
-                        lua_call_function_by_name_with_arguments_scan_script,
-                        signature_containers,
-                        [](void* address) {
-                            Output::send(STR("CallFunctionByNameWithArguments address: {} <- Lua Script\n"), address);
-                            Unreal::UObject::CallFunctionByNameWithArgumentsInternal.assign_address(address);
-                            return DidLuaScanSucceed::Yes;
-                        },
-                        [&](DidLuaScanSucceed did_lua_scan_succeed) {
-                            if (did_lua_scan_succeed == DidLuaScanSucceed::No)
-                            {
-                                scan_result.Errors.emplace_back("Was unable to find AOB for 'CallFunctionByNameWithArguments' via Lua script");
-                            }
-                        });
-            };
+            config.ScanOverrides.call_function_by_name_with_arguments =
+                    [lua_call_function_by_name_with_arguments_scan_script](std::vector<SignatureContainer>& signature_containers,
+                                                                           Unreal::Signatures::ScanResult& scan_result) mutable {
+                        scan_from_lua_script(
+                                lua_call_function_by_name_with_arguments_scan_script,
+                                signature_containers,
+                                [](void* address) {
+                                    Output::send(STR("CallFunctionByNameWithArguments address: {} "
+                                                     "<- Lua Script\n"),
+                                                 address);
+                                    Unreal::UObject::CallFunctionByNameWithArgumentsInternal.assign_address(address);
+                                    return DidLuaScanSucceed::Yes;
+                                },
+                                [&](DidLuaScanSucceed did_lua_scan_succeed) {
+                                    if (did_lua_scan_succeed == DidLuaScanSucceed::No)
+                                    {
+                                        scan_result.Errors.emplace_back("Was unable to find AOB for "
+                                                                        "'CallFunctionByNameWithArguments' via Lua script");
+                                    }
+                                });
+                    };
         }
     }
 } // namespace RC

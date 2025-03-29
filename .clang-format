@@ -1,5 +1,4 @@
-# Format Style Options - Created with Clang Power Tools
----
+﻿---
 AllowAllArgumentsOnNextLine: false
 AllowShortBlocksOnASingleLine: Empty
 AllowShortLambdasOnASingleLine: Empty
@@ -17,4 +16,3 @@ PenaltyExcessCharacter: 5
 PointerAlignment: Left
 Standard: Latest
 SortIncludes: false
-...
