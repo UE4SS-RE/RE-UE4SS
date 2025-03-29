@@ -43,7 +43,7 @@ The GUI can now be rendered in the game thread if `RenderMode` in UE4SS-settings
 
 Added override Lua files for ProcessLocalScriptFunction and ProcessInternal [UE4SS #823](https://github.com/UE4SS-RE/RE-UE4SS/pull/823) - M3C3I
 
-Added override Lua files for CallFunctionByNameWithArguments [UE4SS #XXX](https://github.com/UE4SS-RE/RE-UE4SS/pull/XXX) - M3C3I
+Added override Lua files for CallFunctionByNameWithArguments [UE4SS #848](https://github.com/UE4SS-RE/RE-UE4SS/pull/848) - M3C3I
 
 ### Live View 
 Added search filter: `IncludeClassNames`. ([UE4SS #472](https://github.com/UE4SS-RE/RE-UE4SS/pull/472)) - Buckminsterfullerene 
