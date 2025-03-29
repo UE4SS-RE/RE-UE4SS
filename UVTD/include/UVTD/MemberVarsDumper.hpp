@@ -1,5 +1,4 @@
-#ifndef UNREALVTABLEDUMPER_MEMBERVARS_HPP
-#define UNREALVTABLEDUMPER_MEMBERVARS_HPP
+#pragma once
 
 #include <unordered_map>
 
@@ -45,5 +44,3 @@ namespace RC::UVTD
         static auto output_cleanup() -> void;
     };
 } // namespace RC::UVTD
-
-#endif

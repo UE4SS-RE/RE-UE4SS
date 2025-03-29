@@ -7,6 +7,7 @@
 
 #include <DynamicOutput/DynamicOutput.hpp>
 #include <Helpers/String.hpp>
+#include <UVTD/ConfigUtil.hpp>
 #include <UVTD/Helpers.hpp>
 #include <UVTD/Symbols.hpp>
 #include <UVTD/VTableDumper.hpp>
@@ -165,7 +166,9 @@ namespace RC::UVTD
     auto VTableDumper::generate_code() -> void
     {
         std::unordered_map<File::StringType, SymbolNameInfo> vtable_names;
-        for (const auto& object_item : s_object_items)
+        
+        // Use config utility instead of hardcoded list
+        for (const auto& object_item : ConfigUtil::GetObjectItems())
         {
             if (object_item.valid_for_vtable != ValidForVTable::Yes) continue;
 

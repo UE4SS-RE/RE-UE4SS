@@ -1,5 +1,4 @@
-#ifndef UNREALVTABLEDUMPER_TYPECONTAINER_HPP
-#define UNREALVTABLEDUMPER_TYPECONTAINER_HPP
+#pragma once
 
 #include <unordered_map>
 
@@ -28,5 +27,3 @@ namespace RC::UVTD
         auto get_or_create_class_entry(const File::StringType& symbol_name, const File::StringType& symbol_name_clean, const SymbolNameInfo& name_info) -> Class&;
     };
 } // namespace RC::UVTD
-
-#endif

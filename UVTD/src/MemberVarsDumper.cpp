@@ -2,111 +2,12 @@
 #include <unordered_map>
 
 #include <DynamicOutput/DynamicOutput.hpp>
+#include <UVTD/ConfigUtil.hpp>
 #include <UVTD/Helpers.hpp>
 #include <UVTD/MemberVarsDumper.hpp>
 
 namespace RC::UVTD
 {
-    static inline std::vector<File::StringType> s_types_to_not_dump{
-            STR("FUnversionedStructSchema"),
-            STR("ELifetimeCondition"),
-            STR("UAISystemBase"),
-            STR("FLevelCollection"),
-            STR("FThreadSafeCounter"),
-            STR("FWorldAsyncTraceState"),
-            STR("FDelegateHandle"),
-            STR("UAvoidanceManager"),
-            STR("FOnBeginTearingDownEvent"),
-            STR("UBlueprint"),
-            STR("UCanvas"),
-            STR("UActorComponent"),
-            STR("AController"),
-            STR("ULevel"),
-            STR("FPhysScene_Chaos"),
-            STR("APhysicsVolume"),
-            STR("UDemoNetDriver"),
-            STR("FEndPhysicsTickFunction"),
-            STR("FFXSystemInterface"),
-            STR("ERHIFeatureLevel"),
-            STR("EFlushLevelStreamingType"),
-            STR("ULineBatchComponent"),
-            STR("AGameState"),
-            STR("FOnGameStateSetEvent"),
-            STR("AAudioVolume"),
-            STR("FLatentActionManager"),
-            STR("FOnLevelsChangedEvent"),
-            STR("AParticleEventManager"),
-            STR("UNavigationSystem"),
-            STR("UNetDriver"),
-            STR("AGameNetworkManager"),
-            STR("ETravelType"),
-            STR("FDefaultDelegateUserPolicy"),
-            STR("TMulticastDelegate"),
-            STR("FActorsInitializedParams"),
-            STR("FOnBeginPostProcessSettings"),
-            STR("FIntVector"),
-            STR("UGameInstance"),
-            STR("FWorldPSCPool"),
-            STR("UMaterialParameterCollectionInstance"),
-            STR("FParticlePerfStats"),
-            STR("FWorldInGamePerformanceTrackers"),
-            STR("UPhysicsCollisionHandler"),
-            STR("UPhysicsFieldComponent"),
-            STR("FPhysScene"),
-            STR("APlayerController"),
-            STR("IInterface_PostProcessVolume"),
-            STR("FOnTickFlushEvent"),
-            STR("FSceneInterface"),
-            STR("FStartAsyncSimulationFunction"),
-            STR("FStartPhysicsTickFunction"),
-            STR("FOnNetTickEvent"),
-            STR("ETickingGroup"),
-            STR("FTickTaskLevel"),
-            STR("FTimerManager"),
-            STR("FURL"),
-            STR("UWorldComposition"),
-            STR("EWorldType"),
-            STR("FSubsystemCollection"),
-            STR("UWorldSubsystem"),
-            STR("FStreamingLevelsToConsider"),
-            STR("APawn"),
-            STR("ACameraActor"),
-            STR("FScriptMapLayout"),
-            STR("ICppClassTypeInfo"),
-            STR("FNativeFunctionLookup"),
-            STR("FGCReferenceTokenStream"),
-            STR("FWindowsCriticalSection"),
-            STR("FWindowsRWLock"),
-            STR("FRepRecord"),
-            STR("EClassCastFlags"),
-            STR("FAudioDeviceHandle"),
-            STR("TVector"),
-            STR("FScriptSetLayout"),
-            STR("FArchiveSerializedPropertyChain"),
-            STR("FArchiveCookData"),
-            STR("FFastPathLoadBuffer"),
-            STR("FTokenStreamOwner"),
-            STR("FUObjectCppClassStaticFunctions"),
-            STR("FWorldCachedViewInfo"),
-            STR("UContentBundleManager"),
-            STR("FIrisSystemHolder"),
-            STR("TSet"),
-            STR("FWorldPartitionInitializedEvent"),
-            STR("FWorldPartitionUninitializedEvent"),
-            STR("TIntVector3"),
-            STR("AServerStreamingLevelsVisibility"),
-            STR("FOnControllerIdChanged"),
-            STR("FOnPlatformUserIdChanged"),
-            STR("FObjectSubsystemCollection"),
-            STR("FSceneViewStateReference"),
-            STR("UPendingNetGame"),
-            STR("FFullyLoadedPackagesInfo"),
-            STR("UObjectReferencer"),
-            STR("FNamedNetDriver"),
-            STR("FSeamlessTravelHandler"),
-            STR("FLevelStreamingStatus"),
-    };
-
     auto MemberVarsDumper::process_class(const PDB::TPIStream& tpi_stream,
                                          const PDB::CodeView::TPI::Record* class_record,
                                          const File::StringType& name,
@@ -141,7 +42,9 @@ namespace RC::UVTD
 
         File::StringType type_name = *changed;
 
-        for (const auto& type_to_not_dump : s_types_to_not_dump)
+        // Use config utility instead of hardcoded list
+        const auto& types_to_not_dump = ConfigUtil::GetTypesNotToDump();
+        for (const auto& type_to_not_dump : types_to_not_dump)
         {
             if (type_name.find(type_to_not_dump) != type_name.npos)
             {
@@ -185,7 +88,8 @@ namespace RC::UVTD
     {
         std::unordered_map<File::StringType, SymbolNameInfo> member_vars_names;
 
-        for (ObjectItem& item : s_object_items)
+        // Use config utility instead of hardcoded list
+        for (const ObjectItem& item : ConfigUtil::GetObjectItems())
         {
             if (item.valid_for_member_vars != ValidForMemberVars::Yes) continue;
             member_vars_names.emplace(item.name, SymbolNameInfo{item.valid_for_vtable, item.valid_for_member_vars});
