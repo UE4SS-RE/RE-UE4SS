@@ -2,6 +2,7 @@
 #include <format>
 
 #include <File/File.hpp>
+#include <UVTD/ConfigUtil.hpp>
 #include <UVTD/Helpers.hpp>
 #include <UVTD/Symbols.hpp>
 #include <UVTD/TemplateClassParser.hpp>
@@ -221,7 +222,9 @@ namespace RC::UVTD
             {
                 name = STR("TMap<") + parsed.template_args[0] + STR(", ") + parsed.template_args[1] + STR(">");
             }
-            if (check_valid && !s_valid_udt_names.contains(name)) return STR("void");
+            
+            // Use ConfigUtil instead of hardcoded list
+            if (check_valid && !ConfigUtil::GetValidUDTNames().contains(name)) return STR("void");
             return name;
         }
         case PDB::CodeView::TPI::TypeRecordKind::LF_ENUM:
@@ -314,7 +317,10 @@ namespace RC::UVTD
     auto Symbols::get_leaf_name(const char* data, PDB::CodeView::TPI::TypeRecordKind kind) -> File::StringType
     {
         auto name = to_string_type(&data[get_leaf_size(kind)]);
-        if (auto it = s_member_rename_map.find(name); it != s_member_rename_map.end())
+        
+        // Use ConfigUtil instead of hardcoded map
+        const auto& rename_map = ConfigUtil::GetMemberRenameMap();
+        if (auto it = rename_map.find(name); it != rename_map.end())
         {
             return it->second;
         }

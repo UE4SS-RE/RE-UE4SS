@@ -1,5 +1,4 @@
-#ifndef UNREALVTABLEDUMPER_VTABLEDUMPER_HPP
-#define UNREALVTABLEDUMPER_VTABLEDUMPER_HPP
+#pragma once
 
 #include <map>
 #include <unordered_map>
@@ -52,5 +51,3 @@ namespace RC::UVTD
         static auto output_cleanup() -> void;
     };
 } // namespace RC::UVTD
-
-#endif

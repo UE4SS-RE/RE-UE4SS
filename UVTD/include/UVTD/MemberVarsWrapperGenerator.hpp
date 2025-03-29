@@ -1,5 +1,4 @@
-#ifndef UNREALVTABLEDUMPER_MEMBERVARSWRAPPERGENERATOR_HPP
-#define UNREALVTABLEDUMPER_MEMBERVARSWRAPPERGENERATOR_HPP
+#pragma once
 
 #include <UVTD/TypeContainer.hpp>
 
@@ -24,5 +23,3 @@ namespace RC::UVTD
         static auto output_cleanup() -> void;
     };
 } // namespace RC::UVTD
-
-#endif

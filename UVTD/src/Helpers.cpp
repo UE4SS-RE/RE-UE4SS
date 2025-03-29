@@ -1,6 +1,7 @@
 #include <format>
 
 #include <Helpers/String.hpp>
+#include <UVTD/ConfigUtil.hpp>
 #include <UVTD/Helpers.hpp>
 
 namespace RC::UVTD
@@ -26,7 +27,8 @@ namespace RC::UVTD
 
     auto change_prefix(File::StringType input, bool is_425_plus) -> std::optional<File::StringType>
     {
-        for (const auto& prefixed : s_uprefix_to_fprefix)
+        // Use ConfigUtil instead of hardcoded list
+        for (const auto& prefixed : ConfigUtil::GetUPrefixToFPrefix())
         {
             for (size_t index = input.find(prefixed); index != input.npos; index = input.find(prefixed))
             {
