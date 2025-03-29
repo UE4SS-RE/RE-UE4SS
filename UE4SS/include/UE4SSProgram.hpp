@@ -246,6 +246,7 @@ namespace RC
         {
             return m_processing_events;
         }
+        RC_UE4SS_API auto delete_mod(Mod*) -> void;
 
       public:
         // API pass-through for use outside the private scope of UE4SSProgram
@@ -257,6 +258,7 @@ namespace RC
                                                  void* custom_data2 = nullptr) -> void;
         RC_UE4SS_API auto is_keydown_event_registered(Input::Key) -> bool;
         RC_UE4SS_API auto is_keydown_event_registered(Input::Key, const Input::Handler::ModifierKeyArray&) -> bool;
+        RC_UE4SS_API auto get_all_input_events(std::function<void(Input::KeySet&)> callback) -> void;
 
       private:
         static auto install_cpp_mods() -> void;
