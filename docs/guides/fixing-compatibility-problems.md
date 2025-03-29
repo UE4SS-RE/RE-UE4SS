@@ -38,6 +38,7 @@ For more in-depth instructions, see the [advanced guide](./fixing-compatibility-
     - ConsoleManager.lua    (Optional)
    - ProcessLocalScriptFunction.lua
    - ProcessInternal.lua
+   - CallFunctionByNameWithArguments.lua
 4. Inside the `.lua` file you need a global `Register` function with no params
     - Keep in mind that the names of functions in Lua files in the `UE4SS_Signatures` directory are case-senstive.
 5. The `Register` function must return the AOB that you want UE4SS to scan for.
@@ -83,6 +84,9 @@ For more in-depth instructions, see the [advanced guide](./fixing-compatibility-
 - ProcessInternal
     - This is not required 99% of the time.
     - Must return the exact address of ProcessInternal.
+- CallFunctionByNameWithArguments
+    - This is not required 99% of the time.
+    - Must return the exact address of CallFunctionByNameWithArguments.
 
 ## Example script (Simple, direct scan)
 
