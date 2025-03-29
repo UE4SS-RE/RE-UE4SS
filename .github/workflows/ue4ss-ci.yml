@@ -11,6 +11,8 @@ on:
         - 'main'
     paths-ignore:
         - 'README.md'
+        - 'LICENSE'
+        - 'CNAME'
         - '.github/workflows/pushdocs.yml'
         - '.github/pull_request_template.md'
         - '.github/ISSUE_TEMPLATE/**'

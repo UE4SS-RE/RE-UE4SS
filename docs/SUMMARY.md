@@ -2,7 +2,8 @@
 
 [Home](./README.md)
 [Installation](./installation-guide.md)
-<!-- [Contributing](./contributing.md) -->
+[Contributing](./contributing.md)
+[Update Migration Guide](./upgrade-guide.md)
 
 ---
 
