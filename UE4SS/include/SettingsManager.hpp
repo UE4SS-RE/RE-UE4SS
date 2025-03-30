@@ -26,7 +26,6 @@ namespace RC
             int64_t SecondsToScanBeforeGivingUp{30};
             bool UseUObjectArrayCache{true};
             StringType InputSource{STR("Default")};
-            bool SearchByAddress{false};
         } General;
 
         struct SectionEngineVersionOverride
