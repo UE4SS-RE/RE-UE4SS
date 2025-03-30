@@ -52,39 +52,14 @@ namespace RC::UVTD
             virtual_src_dumper.send(STR("#include <Unreal/VersionedContainer/UnrealVirtualImpl/UnrealVirtual{}.hpp>\n\n"), pdb_name_no_underscore);
             virtual_src_dumper.send(STR("#include <functional>\n\n"));
             virtual_src_dumper.send(STR("// These are all the structs that have virtuals that need to have their offset set\n"));
-            virtual_src_dumper.send(STR("#include <Unreal/UObject.hpp>\n"));
-            virtual_src_dumper.send(STR("#include <Unreal/UEngine.hpp>\n"));
-            virtual_src_dumper.send(STR("#include <Unreal/UScriptStruct.hpp>\n"));
-            virtual_src_dumper.send(STR("#include <Unreal/FOutputDevice.hpp>\n"));
-            virtual_src_dumper.send(STR("#include <Unreal/FField.hpp>\n"));
-            virtual_src_dumper.send(STR("#include <Unreal/FProperty.hpp>\n"));
-            virtual_src_dumper.send(STR("#include <Unreal/Property/FNumericProperty.hpp>\n"));
-            virtual_src_dumper.send(STR("#include <Unreal/Property/FObjectProperty.hpp>\n"));
-            virtual_src_dumper.send(STR("#include <Unreal/Property/FMulticastDelegateProperty.hpp>\n"));
-            virtual_src_dumper.send(STR("#include <Unreal/Property/FStructProperty.hpp>\n"));
-            virtual_src_dumper.send(STR("#include <Unreal/Property/FArrayProperty.hpp>\n"));
-            virtual_src_dumper.send(STR("#include <Unreal/Property/FMapProperty.hpp>\n"));
-            virtual_src_dumper.send(STR("#include <Unreal/Property/FBoolProperty.hpp>\n"));
-            virtual_src_dumper.send(STR("#include <Unreal/Property/NumericPropertyTypes.hpp>\n"));
-            virtual_src_dumper.send(STR("#include <Unreal/Property/FSetProperty.hpp>\n"));
-            virtual_src_dumper.send(STR("#include <Unreal/Property/FInterfaceProperty.hpp>\n"));
-            virtual_src_dumper.send(STR("#include <Unreal/Property/FClassProperty.hpp>\n"));
-            virtual_src_dumper.send(STR("#include <Unreal/Property/FSoftClassProperty.hpp>\n"));
-            virtual_src_dumper.send(STR("#include <Unreal/Property/FEnumProperty.hpp>\n"));
-            virtual_src_dumper.send(STR("#include <Unreal/Property/FFieldPathProperty.hpp>\n"));
-            virtual_src_dumper.send(STR("#include <Unreal/UFunction.hpp>\n"));
-            virtual_src_dumper.send(STR("#include <Unreal/UClass.hpp>\n"));
-            virtual_src_dumper.send(STR("#include <Unreal/World.hpp>\n"));
-            virtual_src_dumper.send(STR("#include <Unreal/UEnum.hpp>\n"));
-            virtual_src_dumper.send(STR("#include <Unreal/UEngine.hpp>\n"));
-            virtual_src_dumper.send(STR("#include <Unreal/FWorldContext.hpp>\n"));
-            virtual_src_dumper.send(STR("#include <Unreal/FArchive.hpp>\n"));
-            virtual_src_dumper.send(STR("#include <Unreal/AGameModeBase.hpp>\n"));
-            virtual_src_dumper.send(STR("#include <Unreal/AGameMode.hpp>\n"));
-            virtual_src_dumper.send(STR("#include <Unreal/UPlayer.hpp>\n"));
-            virtual_src_dumper.send(STR("#include <Unreal/ULocalPlayer.hpp>\n"));
-            virtual_src_dumper.send(STR("#include <Unreal/ITextData.hpp>\n"));
-            // virtual_src_dumper.send(STR("#include <Unreal/UConsole.hpp>\n"));
+            
+            // Use config utility to get the includes
+            const auto& virtual_generator_includes = ConfigUtil::GetVirtualGeneratorIncludes();
+            for (const auto& include : virtual_generator_includes)
+            {
+                virtual_src_dumper.send(STR("#include <Unreal/{}.hpp>\n"), include);
+            }
+            
             virtual_src_dumper.send(STR("\n"));
             virtual_src_dumper.send(STR("namespace RC::Unreal\n"));
             virtual_src_dumper.send(STR("{\n"));

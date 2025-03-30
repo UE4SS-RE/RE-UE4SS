@@ -63,6 +63,12 @@ namespace RC::UVTD
         {
             return UVTDConfig::Get().pdbs_to_dump;
         }
+        
+        // Virtual generator includes access
+        inline const std::vector<File::StringType>& GetVirtualGeneratorIncludes() 
+        {
+            return UVTDConfig::Get().virtual_generator_includes;
+        }
 
         // Helper methods
         inline bool IsNonCasePreservingVariant(const File::StringType& pdb_name) 
