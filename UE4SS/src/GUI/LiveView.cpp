@@ -3133,23 +3133,20 @@ namespace RC::GUI
 
         auto currently_selected_object = get_selected_object_or_property();
 
-        if (UE4SSProgram::settings_manager.Experimental.GUIUFunctionCaller)
+        ImGui::SameLine();
+        if (!currently_selected_object.is_object)
         {
-            ImGui::SameLine();
-            if (!currently_selected_object.is_object)
-            {
-                ImGui::BeginDisabled();
-            }
-            if (ImGui::Button(ICON_FA_SEARCH " Find functions"))
-            {
-                m_function_caller_widget->open_widget_deferred();
-            }
-            if (!currently_selected_object.is_object)
-            {
-                ImGui::EndDisabled();
-            }
-            ImGui::Separator();
+            ImGui::BeginDisabled();
         }
+        if (ImGui::Button(ICON_FA_SEARCH " Find functions"))
+        {
+            m_function_caller_widget->open_widget_deferred();
+        }
+        if (!currently_selected_object.is_object)
+        {
+            ImGui::EndDisabled();
+        }
+        ImGui::Separator();
 
         if (currently_selected_object.is_object)
         {
@@ -3913,13 +3910,10 @@ namespace RC::GUI
         ImGui::PopStyleColor();
 
         render_info_panel();
-        if (UE4SSProgram::settings_manager.Experimental.GUIUFunctionCaller)
+        const auto& selected_item = get_selected_object_or_property();
+        if (selected_item.is_object)
         {
-            const auto& selected_item = get_selected_object_or_property();
-            if (selected_item.is_object)
-            {
-                m_function_caller_widget->render(selected_item.object);
-            }
+            m_function_caller_widget->render(selected_item.object);
         }
     }
 
