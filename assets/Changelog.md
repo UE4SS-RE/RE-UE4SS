@@ -122,6 +122,22 @@ Added function 'UE4SSProgram::delete_mod'. ([UE4SS #843](https://github.com/UE4S
 
 Added function 'UE4SSProgram::get_all_input_events'. ([UE4SS #843](https://github.com/UE4SS-RE/RE-UE4SS/pull/843))
 
+### C++ API
+
+Enhanced `TObjectPtr<>` implementation to function as a proper smart pointer. ([UE4SS-RE/RE-UE4SS #850](https://github.com/UE4SS-RE/RE-UE4SS/pull/850), [Re-UE4SS/UEPseudo #125](https://github.com/Re-UE4SS/UEPseudo/pull/125))
+
+**BREAKING:** The `TObjectPtr<>` class now uses a proper pointer implementation rather than direct struct member access. Code that directly accessed `UnderlyingObjectPointer` will need to be updated:
+```cpp
+// Old way
+TObjectPtr<UClass> ClassPtr;
+UClass* RawPtr = ClassPtr.UnderlyingObjectPointer;
+
+// New way
+TObjectPtr<UClass> ClassPtr;
+UClass* RawPtr = ClassPtr; // implicit conversion
+// or
+UClass* RawPtr = ClassPtr.Get(); // explicit access
+
 ### BPModLoader 
 
 ### Experimental 
