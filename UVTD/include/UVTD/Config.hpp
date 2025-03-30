@@ -30,6 +30,9 @@ namespace RC::UVTD
         // Initialize config by loading from files
         bool Initialize(const std::filesystem::path& config_dir = DEFAULT_CONFIG_PATH);
 
+        // Reload configuration from files
+        bool Reload(const std::filesystem::path& config_dir = DEFAULT_CONFIG_PATH);
+
         // Configurations loaded from JSON
         std::vector<ObjectItem> object_items;
         std::unordered_map<File::StringType, std::unordered_set<File::StringType>> private_variables;
@@ -40,6 +43,7 @@ namespace RC::UVTD
         std::unordered_set<File::StringType> non_case_preserving_variants;
         std::unordered_set<File::StringType> case_preserving_variants;
         std::vector<std::filesystem::path> pdbs_to_dump;
+        std::vector<File::StringType> virtual_generator_includes;
 
     private:
         UVTDConfig() = default;

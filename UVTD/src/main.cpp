@@ -18,6 +18,7 @@ auto static get_user_selection() -> int32_t
     Output::send(STR("2. Generate class/struct member variable layouts\n"));
     Output::send(STR("3. Generate sol bindings\n"));
     Output::send(STR("4. Everything\n"));
+    Output::send(STR("9. Reload configurations\n"));
     Output::send(STR("0. Exit\n"));
 
     int32_t selection{};
@@ -90,6 +91,19 @@ auto thread_dll_start([[maybe_unused]] LPVOID thread_param) -> unsigned long
                 settings.should_dump_vtable = true;
                 settings.should_dump_member_vars = true;
                 settings.should_dump_sol_bindings = true;
+            }
+            else if (selection == 9)
+            {
+                Output::send(STR("Reloading configuration...\n"));
+                if (UVTD::UVTDConfig::Get().Initialize(config_dir))
+                {
+                    Output::send(STR("Configuration reloaded successfully.\n"));
+                }
+                else
+                {
+                    Output::send(STR("Failed to reload configuration. Please check your config files.\n"));
+                }
+                continue;
             }
 
             UVTD::main(settings);

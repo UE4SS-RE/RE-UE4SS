@@ -291,6 +291,33 @@ namespace RC::UVTD
                 Output::send(STR("pdbs_to_dump.json not found\n"));
             }
             
+            // Load virtual_generator_includes.json
+            std::filesystem::path includes_path = config_dir / "virtual_generator_includes.json";
+            if (std::filesystem::exists(includes_path))
+            {
+                std::ifstream file(includes_path);
+                std::string json_str((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+                
+                auto result = glz::read_json<std::vector<std::string>>(json_str);
+                if (result.has_value())
+                {
+                    virtual_generator_includes.clear();
+                    for (const auto& include : result.value())
+                    {
+                        virtual_generator_includes.push_back(to_wstring(include));
+                    }
+                    Output::send(STR("Loaded {} virtual generator includes\n"), virtual_generator_includes.size());
+                }
+                else
+                {
+                    Output::send(STR("Failed to parse virtual_generator_includes.json\n"));
+                }
+            }
+            else
+            {
+                Output::send(STR("virtual_generator_includes.json not found\n"));
+            }
+            
             return true;
         }
         catch (const std::exception& e)
