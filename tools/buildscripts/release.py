@@ -49,7 +49,6 @@ class ReleaseHandler:
             'ConsoleEnabled': 0,
             'EnableHotReloadSystem': 0,
             'MaxMemoryUsageDuringAssetLoading': 80,
-            'GUIUFunctionCaller': 0,
             'bUseUObjectArrayCache': "false",
         }
 

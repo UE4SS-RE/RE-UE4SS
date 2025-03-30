@@ -102,7 +102,6 @@ namespace RC
 
         struct ExperimentalFeatures
         {
-            bool GUIUFunctionCaller{false};
         } Experimental;
 
       public:
