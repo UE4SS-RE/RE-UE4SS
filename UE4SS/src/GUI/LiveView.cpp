@@ -87,6 +87,7 @@ namespace RC::GUI
     bool LiveView::s_watches_loaded_from_disk{};
     bool LiveView::s_filters_loaded_from_disk{};
     bool LiveView::s_use_regex_for_search{};
+    bool LiveView::s_search_by_address{};
 
     static LiveView* s_live_view{};
 
@@ -212,9 +213,9 @@ namespace RC::GUI
         }
 
         auto uclass = object->IsA<UStruct>() ? static_cast<UClass*>(object) : object->GetClassPrivate();
-        uintptr_t end_addr = object_addr + uclass->GetPropertiesSize();
-        //Output::send<LogLevel::Default>(STR("object_addr {:016X}-{:016X}"), object_addr, end_addr);
-        if (address_to_search_by < end_addr) {
+        uintptr_t object_size = uclass->GetPropertiesSize();
+        if (address_to_search_by < object_addr + object_size)
+        {
             LiveView::s_name_search_results.emplace_back(object);
             LiveView::s_name_search_results_set.emplace(object);
         }
@@ -378,6 +379,7 @@ namespace RC::GUI
             add_bool_filter_to_json(json_filters, STR("IncludeInheritance"), LiveView::s_include_inheritance);
             add_bool_filter_to_json(json_filters, STR("UseRegexForSearch"), LiveView::s_use_regex_for_search);
             add_bool_filter_to_json(json_filters, STR("ApplySearchFiltersWhenNotSearching"), LiveView::s_apply_search_filters_when_not_searching);
+            add_bool_filter_to_json(json_filters, STR("SearchByAddress"), LiveView::s_search_by_address);
             add_bool_filter_to_json(json_filters, Filter::DefaultObjectsOnly::s_debug_name, Filter::DefaultObjectsOnly::s_enabled);
             add_bool_filter_to_json(json_filters, Filter::IncludeDefaultObjects::s_debug_name, Filter::IncludeDefaultObjects::s_enabled);
             add_bool_filter_to_json(json_filters, Filter::InstancesOnly::s_debug_name, Filter::InstancesOnly::s_enabled);
@@ -470,6 +472,10 @@ namespace RC::GUI
             else if (filter_name == STR("ApplySearchFiltersWhenNotSearching"))
             {
                 LiveView::s_apply_search_filters_when_not_searching = filter_data.get<JSON::Bool>(STR("Enabled")).get();
+            }
+            else if (filter_name == STR("SearchByAddress"))
+            {
+                LiveView::s_search_by_address = filter_data.get<JSON::Bool>(STR("Enabled")).get();
             }
             else if (filter_name == Filter::DefaultObjectsOnly::s_debug_name)
             {
@@ -1862,15 +1868,14 @@ namespace RC::GUI
         s_name_search_results_set.clear();
 
         uintptr_t address_to_search_by = 0;
-        if (UE4SSProgram::settings_manager.General.SearchByAddress &&
-           (LiveView::s_name_to_search_by.size() >= 6 && LiveView::s_name_to_search_by.size() <= 16))
+        if (LiveView::s_search_by_address)
         {
             try
             {
                 address_to_search_by = std::stoull(LiveView::s_name_to_search_by, nullptr, 16);
-                Output::send<LogLevel::Default>(STR("Searching for object with address: {:016X}"), address_to_search_by);
             }
-            catch (...) {}
+            catch (std::invalid_argument) {} // query isn't a valid hex number; can't be an address
+            catch (std::out_of_range) {} // is a hex number, but too big, or negative; can't be address
         }
 
         UObjectGlobals::ForEachUObject([&](UObject* object, ...) {
@@ -3698,6 +3703,8 @@ namespace RC::GUI
                 ImGui::TableNextRow();
                 ImGui::TableNextColumn();
                 ImGui::Checkbox("Use Regex for search", &s_use_regex_for_search);
+                ImGui::TableNextColumn();
+                ImGui::Checkbox("Match memory address", &s_search_by_address);
 
                 // Row 5
                 ImGui::TableNextRow();
