@@ -9,6 +9,89 @@ This document provides detailed guidance for upgrading between versions of RE-UE
 
 ### Breaking Changes
 
+#### TObjectPtr Implementation Change
+**What Changed:**  
+The `TObjectPtr<>` class has been enhanced to function as a proper smart pointer instead of a simple wrapper.
+
+**Before (v3.x):**
+```cpp
+// Simple class that makes everything compile.
+template<typename UnderlyingType>
+class TObjectPtr
+{
+public:
+    UnderlyingType* UnderlyingObjectPointer;
+};
+```
+
+**After (v4.x):**
+```cpp
+template<typename T>
+class TObjectPtr
+{
+public:
+    using ElementType = T;
+    // Constructors
+    TObjectPtr() : Ptr(nullptr) {}
+    TObjectPtr(TYPE_OF_NULLPTR) : Ptr(nullptr) {}
+    TObjectPtr(const TObjectPtr& Other) : Ptr(Other.Ptr) {}
+    explicit TObjectPtr(ElementType* InPtr) : Ptr(InPtr) {}
+    
+    // Assignment operators
+    TObjectPtr& operator=(const TObjectPtr& Other) { Ptr = Other.Ptr; return *this; }
+    TObjectPtr& operator=(TYPE_OF_NULLPTR) { Ptr = nullptr; return *this; }
+    TObjectPtr& operator=(ElementType* InPtr) { Ptr = InPtr; return *this; }
+    
+    // Pointer operators
+    ElementType& operator*() const { return *Ptr; }
+    ElementType* operator->() const { return Ptr; }
+    
+    // Conversion operator
+    operator ElementType*() const { return Ptr; }
+    
+    // Comparison operators
+    bool operator==(const TObjectPtr& Other) const { return Ptr == Other.Ptr; }
+    bool operator!=(const TObjectPtr& Other) const { return Ptr != Other.Ptr; }
+    bool operator==(const ElementType* InPtr) const { return Ptr == InPtr; }
+    bool operator!=(const ElementType* InPtr) const { return Ptr != InPtr; }
+    bool operator==(TYPE_OF_NULLPTR) const { return Ptr == nullptr; }
+    bool operator!=(TYPE_OF_NULLPTR) const { return Ptr != nullptr; }
+    
+    // Additional API compatibility
+    bool operator!() const { return Ptr == nullptr; }
+    explicit operator bool() const { return Ptr != nullptr; }
+    ElementType* Get() const { return Ptr; }
+    
+private:
+    ElementType* Ptr;
+};
+```
+
+**Migration Steps:**
+1. For direct pointer access (previously accessed via `UnderlyingObjectPointer`):
+   ```cpp
+   // Old
+   TObjectPtr<UClass> ClassPtr;
+   UClass* RawPtr = ClassPtr.UnderlyingObjectPointer;
+   
+   // New
+   TObjectPtr<UClass> ClassPtr;
+   UClass* RawPtr = ClassPtr; // implicit conversion
+   // or
+   UClass* RawPtr = ClassPtr.Get(); // explicit access
+   ```
+
+2. For address-of operations on TObjectPtr contents:
+   ```cpp
+   // Old
+   &ObjectPtr.UnderlyingObjectPointer
+   
+   // New
+   &ObjectPtr.Get()
+   // or simply
+   &ObjectPtr
+   ```
+
 #### FString API Changes
 
 ##### `GetCharArray()` Behavior Change
