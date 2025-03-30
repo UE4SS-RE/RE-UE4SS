@@ -137,6 +137,7 @@ TObjectPtr<UClass> ClassPtr;
 UClass* RawPtr = ClassPtr; // implicit conversion
 // or
 UClass* RawPtr = ClassPtr.Get(); // explicit access
+```
 
 ### BPModLoader 
 
