@@ -124,6 +124,7 @@ namespace RC::LuaMadeSimple
             Call,
             Equal,
             Length,
+            ToString,
         };
 
         /**
@@ -137,6 +138,7 @@ namespace RC::LuaMadeSimple
             std::optional<LuaFunction> call = std::nullopt;
             std::optional<LuaFunction> equal = std::nullopt;
             std::optional<LuaFunction> length = std::nullopt;
+            std::optional<LuaFunction> tostring = std::nullopt;
 
             template <typename LuaCallable>
             auto create(MetaMethod metamethod, LuaCallable lua_callable) -> void
@@ -160,6 +162,10 @@ namespace RC::LuaMadeSimple
                     return;
                 case MetaMethod::Length:
                     length = lua_callable;
+                    return;
+                case MetaMethod::ToString:
+                    tostring = lua_callable;
+                    return;
                 }
 
                 // TODO: use throw_error() here
