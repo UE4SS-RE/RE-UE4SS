@@ -509,7 +509,7 @@ namespace RC::LuaType
         // params.data = Start of the struct
         // params.property = The corresponding FStructProperty
         auto* struct_property = Unreal::CastField<Unreal::FStructProperty>(params.property);
-        auto* script_struct = struct_property->GetStruct();
+        Unreal::UScriptStruct* script_struct = struct_property->GetStruct();
 
         auto iterate_struct_and_turn_into_lua_table = [&](const LuaMadeSimple::Lua& lua, void* data_ptr) {
             auto* data = static_cast<unsigned char*>(data_ptr);

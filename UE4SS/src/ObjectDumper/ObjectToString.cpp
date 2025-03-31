@@ -183,7 +183,7 @@ namespace RC::ObjectDumper
 
         property_trivial_dump_to_string(p_this, out_line);
         // mc = MetaClass
-        out_line.append(fmt::format(STR(" [mc: {:016X}]"), reinterpret_cast<uintptr_t>(typed_this->GetMetaClass())));
+        out_line.append(fmt::format(STR(" [mc: {:016X}]"), reinterpret_cast<UPTRINT>(ToRawPtr(typed_this->GetMetaClass()))));
     }
 
     auto delegateproperty_to_string(void* p_this, StringType& out_line) -> void
@@ -191,7 +191,7 @@ namespace RC::ObjectDumper
         property_trivial_dump_to_string(p_this, out_line);
 
         FDelegateProperty* p_typed_this = static_cast<FDelegateProperty*>(p_this);
-        out_line.append(fmt::format(STR(" [df: {:016X}]"), reinterpret_cast<uintptr_t>(p_typed_this->GetSignatureFunction())));
+        out_line.append(fmt::format(STR(" [df: {:016X}]"), reinterpret_cast<UPTRINT>(ToRawPtr(p_typed_this->GetSignatureFunction()))));
     }
 
     auto fieldpathproperty_to_string(void* p_this, StringType& out_line) -> void
@@ -199,7 +199,7 @@ namespace RC::ObjectDumper
         FFieldPathProperty* typed_this = static_cast<FFieldPathProperty*>(p_this);
 
         property_trivial_dump_to_string(p_this, out_line);
-        out_line.append(fmt::format(STR(" [pc: {:016X}]"), reinterpret_cast<uintptr_t>(typed_this->GetPropertyClass())));
+        out_line.append(fmt::format(STR(" [pc: {:016X}]"), reinterpret_cast<UPTRINT>(ToRawPtr(typed_this->GetPropertyClass()))));
     }
 
     auto interfaceproperty_to_string(void* p_this, StringType& out_line) -> void
@@ -207,7 +207,7 @@ namespace RC::ObjectDumper
         FInterfaceProperty* typed_this = static_cast<FInterfaceProperty*>(p_this);
 
         property_trivial_dump_to_string(p_this, out_line);
-        out_line.append(fmt::format(STR(" [ic: {:016X}]"), reinterpret_cast<uintptr_t>(typed_this->GetInterfaceClass())));
+        out_line.append(fmt::format(STR(" [ic: {:016X}]"), reinterpret_cast<UPTRINT>(ToRawPtr(typed_this->GetInterfaceClass()))));
     }
 
     auto multicastdelegateproperty_to_string(void* p_this, StringType& out_line) -> void
@@ -215,7 +215,7 @@ namespace RC::ObjectDumper
         property_trivial_dump_to_string(p_this, out_line);
 
         FMulticastDelegateProperty* p_typed_this = static_cast<FMulticastDelegateProperty*>(p_this);
-        out_line.append(fmt::format(STR(" [df: {:016X}]"), reinterpret_cast<uintptr_t>(p_typed_this->GetSignatureFunction())));
+        out_line.append(fmt::format(STR(" [df: {:016X}]"), reinterpret_cast<UPTRINT>(ToRawPtr(p_typed_this->GetSignatureFunction()))));
     }
 
     auto objectproperty_to_string(void* p_this, StringType& out_line) -> void
@@ -223,7 +223,7 @@ namespace RC::ObjectDumper
         FObjectProperty* typed_this = static_cast<FObjectProperty*>(p_this);
 
         property_trivial_dump_to_string(p_this, out_line);
-        out_line.append(fmt::format(STR(" [pc: {:016X}]"), reinterpret_cast<uintptr_t>(typed_this->GetPropertyClass())));
+        out_line.append(fmt::format(STR(" [pc: {:016X}]"), reinterpret_cast<UPTRINT>(ToRawPtr(typed_this->GetPropertyClass()))));
     }
 
     auto structproperty_to_string(void* p_this, StringType& out_line) -> void
@@ -231,7 +231,7 @@ namespace RC::ObjectDumper
         FStructProperty* typed_this = static_cast<FStructProperty*>(p_this);
 
         property_trivial_dump_to_string(p_this, out_line);
-        out_line.append(fmt::format(STR(" [ss: {:016X}]"), reinterpret_cast<uintptr_t>(typed_this->GetStruct())));
+        out_line.append(fmt::format(STR(" [ss: {:016X}]"), reinterpret_cast<UPTRINT>(ToRawPtr(typed_this->GetStruct()))));
     }
 
     auto enumproperty_to_string(void* p_this, StringType& out_line) -> void
@@ -239,7 +239,7 @@ namespace RC::ObjectDumper
         property_trivial_dump_to_string(p_this, out_line);
 
         auto* typed_this = static_cast<FEnumProperty*>(p_this);
-        out_line.append(fmt::format(STR(" [em: {:016X}]"), reinterpret_cast<uintptr_t>(typed_this->GetEnum())));
+        out_line.append(fmt::format(STR(" [em: {:016X}]"), reinterpret_cast<UPTRINT>(ToRawPtr(typed_this->GetEnum()))));
     }
 
     auto boolproperty_to_string(void* p_this, StringType& out_line) -> void
