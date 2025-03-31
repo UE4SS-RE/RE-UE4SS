@@ -260,7 +260,7 @@ static LStream *newfile (lua_State *L) {
 
 static void opencheck (lua_State *L, const char *fname, const char *mode) {
   LStream *p = newfile(L);
-  p->f = fopen(fname, mode);
+  p->f = wfopen(fname, mode);
   if (l_unlikely(p->f == NULL))
     luaL_error(L, "cannot open file '%s' (%s)", fname, strerror(errno));
 }
@@ -272,7 +272,7 @@ static int io_open (lua_State *L) {
   LStream *p = newfile(L);
   const char *md = mode;  /* to traverse/check mode */
   luaL_argcheck(L, l_checkmode(md), 2, "invalid mode");
-  p->f = fopen(filename, mode);
+  p->f = wfopen(filename, mode);
   return (p->f == NULL) ? luaL_fileresult(L, 0, filename) : 1;
 }
 
