@@ -282,7 +282,7 @@ namespace RC::UEGenerator
             if (return_property->IsA<FStructProperty>())
             {
                 // Can StructProperty even be forward declared ? I don't know if it's ever a pointer to a struct
-                auto* script_struct = static_cast<FStructProperty*>(return_property)->GetStruct();
+                UScriptStruct* script_struct = static_cast<FStructProperty*>(return_property)->GetStruct();
                 if (m_classes_dumped.contains(script_struct))
                 {
                     auto& property_class_info = m_classes_dumped[script_struct];
@@ -295,7 +295,7 @@ namespace RC::UEGenerator
             else if (return_property->IsA<FClassProperty>())
             {
                 // Can ClassProperty be forward declared ? Maybe ?
-                auto* meta_class = static_cast<FClassProperty*>(return_property)->GetMetaClass();
+                UClass* meta_class = static_cast<FClassProperty*>(return_property)->GetMetaClass();
                 if (m_classes_dumped.contains(meta_class))
                 {
                     auto& property_class_info = m_classes_dumped[meta_class];
@@ -307,7 +307,7 @@ namespace RC::UEGenerator
             }
             else if (return_property->IsA<FObjectProperty>())
             {
-                auto* property_class = static_cast<FObjectProperty*>(return_property)->GetPropertyClass();
+                UClass* property_class = static_cast<FObjectProperty*>(return_property)->GetPropertyClass();
                 if (m_classes_dumped.contains(property_class))
                 {
                     auto& property_class_info = m_classes_dumped[property_class];

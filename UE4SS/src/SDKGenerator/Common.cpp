@@ -277,7 +277,7 @@ namespace RC::UEGenerator
 
         if (auto* object_property = CastField<FObjectPtrProperty>(property); object_property)
         {
-            auto* property_class = object_property->GetPropertyClass();
+            UClass* property_class = object_property->GetPropertyClass();
 
             if (!property_class)
             {
@@ -589,7 +589,7 @@ namespace RC::UEGenerator
 
         if (auto* object_property = CastField<FObjectPtrProperty>(property); object_property)
         {
-            auto* property_class = object_property->GetPropertyClass();
+            UClass* property_class = object_property->GetPropertyClass();
 
             if (!property_class)
             {

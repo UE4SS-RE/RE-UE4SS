@@ -36,19 +36,21 @@ public:
     TObjectPtr(TYPE_OF_NULLPTR) : Ptr(nullptr) {}
     TObjectPtr(const TObjectPtr& Other) : Ptr(Other.Ptr) {}
     explicit TObjectPtr(ElementType* InPtr) : Ptr(InPtr) {}
-    
+
     // Assignment operators
     TObjectPtr& operator=(const TObjectPtr& Other) { Ptr = Other.Ptr; return *this; }
     TObjectPtr& operator=(TYPE_OF_NULLPTR) { Ptr = nullptr; return *this; }
     TObjectPtr& operator=(ElementType* InPtr) { Ptr = InPtr; return *this; }
-    
-    // Pointer operators
-    ElementType& operator*() const { return *Ptr; }
-    ElementType* operator->() const { return Ptr; }
-    
-    // Conversion operator
-    operator ElementType*() const { return Ptr; }
-    
+        
+    // Conversion operators
+    FORCEINLINE operator T* () const { return Get(); }
+    template <typename U>
+    UE_OBJPTR_DEPRECATED(5.0, "Explicit cast to other raw pointer types is deprecated.  Please use the Cast API or get the raw pointer with ToRawPtr and cast that instead.")
+    explicit FORCEINLINE operator U* () const { return (U*)Get(); }
+    explicit FORCEINLINE operator UPTRINT() const { return (UPTRINT)Get(); }
+    FORCEINLINE T* operator->() const { return Get(); }
+    FORCEINLINE T& operator*() const { return *Get(); }
+
     // Comparison operators
     bool operator==(const TObjectPtr& Other) const { return Ptr == Other.Ptr; }
     bool operator!=(const TObjectPtr& Other) const { return Ptr != Other.Ptr; }
@@ -56,12 +58,12 @@ public:
     bool operator!=(const ElementType* InPtr) const { return Ptr != InPtr; }
     bool operator==(TYPE_OF_NULLPTR) const { return Ptr == nullptr; }
     bool operator!=(TYPE_OF_NULLPTR) const { return Ptr != nullptr; }
-    
-    // Additional API compatibility
+
+    // Additional API compatibility with UE's TObjectPtr
     bool operator!() const { return Ptr == nullptr; }
     explicit operator bool() const { return Ptr != nullptr; }
     ElementType* Get() const { return Ptr; }
-    
+
 private:
     ElementType* Ptr;
 };
@@ -91,6 +93,17 @@ private:
    // or simply
    &ObjectPtr
    ```
+
+3. For pointer-to-integer conversions (e.g., formatting addresses):
+    ```cpp
+    // Old
+    uintptr_t addr = reinterpret_cast<uintptr_t>(ObjectPtr.UnderlyingObjectPointer);
+
+    // New
+    uintptr_t addr = reinterpret_cast<uintptr_t>(ObjectPtr.Get());
+    // or
+    uintptr_t addr = reinterpret_cast<uintptr_t>(ToRawPtr(ObjectPtr)); // using helper to extract a raw pointer from TObjectPtr
+    ```
 
 #### FString API Changes
 

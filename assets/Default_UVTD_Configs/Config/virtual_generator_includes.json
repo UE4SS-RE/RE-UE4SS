@@ -23,12 +23,12 @@
   "UClass",
   "World",
   "UEnum",
-  "UEngine",
   "FWorldContext",
   "FArchive",
   "AGameModeBase",
   "AGameMode",
   "UPlayer",
   "ULocalPlayer",
-  "ITextData"
+  "ITextData",
+  "UGameViewportClient"
 ]

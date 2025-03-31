@@ -90,5 +90,10 @@
   "UObjectReferencer",
   "FNamedNetDriver",
   "FSeamlessTravelHandler",
-  "FLevelStreamingStatus"
+  "FLevelStreamingStatus",
+  "UWorld::FOnAllLevelsChangedEvent",
+  "FEndClothSimulationFunction",
+  "UWorld::FOnBeginPlay",
+  "FStartClothSimulationFunction",
+  "ULocalPlayer::FOnPlayerControllerChanged"
 ]
