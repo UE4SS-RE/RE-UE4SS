@@ -26,6 +26,14 @@ namespace RC::UVTD
         File::StringType description{};
     };
 
+    struct ClassInheritanceInfo
+    {
+        File::StringType parent_class{};
+        int32_t version_major{};
+        int32_t version_minor{};
+        bool inherit_members{true};
+    };
+
     class UVTDConfig
     {
     private:
@@ -55,6 +63,9 @@ namespace RC::UVTD
         std::unordered_set<File::StringType> case_preserving_variants;
         std::vector<std::filesystem::path> pdbs_to_dump;
         std::vector<File::StringType> virtual_generator_includes;
+
+        // Class inheritance relationships
+        std::unordered_map<File::StringType, ClassInheritanceInfo> class_inheritance_map;
 
     private:
         UVTDConfig() = default;
