@@ -120,5 +120,22 @@ namespace RC::UVTD
         {
             return GetCasePreservingVariants().find(pdb_name) != GetCasePreservingVariants().end();
         }
+
+        // Class inheritance relationships access
+        inline const std::unordered_map<File::StringType, ClassInheritanceInfo>& GetClassInheritanceMap() 
+        {
+            return UVTDConfig::Get().class_inheritance_map;
+        }
+
+        // Helper to get class inheritance info
+        inline std::optional<ClassInheritanceInfo> GetClassInheritance(const File::StringType& class_name)
+        {
+            const auto& map = UVTDConfig::Get().class_inheritance_map;
+            auto it = map.find(class_name);
+            if (it != map.end()) {
+                return it->second;
+            }
+            return std::nullopt;
+        }
     }
 }
