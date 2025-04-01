@@ -22,6 +22,13 @@ namespace RC::UVTD
         bool generate_alias_setter{false};
         std::string description;
     };
+
+    struct ClassInheritanceInfoJson {
+        std::string parent_class;
+        int32_t version_major;
+        int32_t version_minor;
+        bool inherit_members{true};
+    };
 }
 
 // Glaze JSON serialization metadata 
@@ -41,6 +48,16 @@ namespace glz {
             "mapped_name", &RC::UVTD::MemberRenameInfoJson::mapped_name,
             "generate_alias_setter", &RC::UVTD::MemberRenameInfoJson::generate_alias_setter,
             "description", &RC::UVTD::MemberRenameInfoJson::description
+        );
+    };
+
+    template <>
+    struct meta<RC::UVTD::ClassInheritanceInfoJson> {
+        static constexpr auto value = glz::object(
+            "parent_class", &RC::UVTD::ClassInheritanceInfoJson::parent_class,
+            "version_major", &RC::UVTD::ClassInheritanceInfoJson::version_major,
+            "version_minor", &RC::UVTD::ClassInheritanceInfoJson::version_minor,
+            "inherit_members", &RC::UVTD::ClassInheritanceInfoJson::inherit_members
         );
     };
 }
@@ -351,6 +368,41 @@ namespace RC::UVTD
             else
             {
                 Output::send(STR("virtual_generator_includes.json not found\n"));
+            }
+
+            // Load class inheritance relationships
+            std::filesystem::path inheritance_path = config_dir / "class_inheritance.json";
+            if (std::filesystem::exists(inheritance_path))
+            {
+                std::ifstream file(inheritance_path);
+                std::string json_str((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+    
+                // Parse the hierarchical structure
+                using InheritanceMap = std::unordered_map<std::string, ClassInheritanceInfoJson>;
+                auto result = glz::read_json<InheritanceMap>(json_str);
+    
+                if (result.has_value())
+                {
+                    class_inheritance_map.clear();
+                    for (const auto& [class_name, info] : result.value())
+                    {
+                        class_inheritance_map[to_wstring(class_name)] = {
+                            to_wstring(info.parent_class),
+                            info.version_major,
+                            info.version_minor,
+                            info.inherit_members
+                        };
+                    }
+                    Output::send(STR("Loaded {} class inheritance relationships\n"), class_inheritance_map.size());
+                }
+                else
+                {
+                    Output::send(STR("Failed to parse class_inheritance.json\n"));
+                }
+            }
+            else
+            {
+                Output::send(STR("class_inheritance.json not found\n"));
             }
             
             return true;

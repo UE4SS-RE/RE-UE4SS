@@ -1,0 +1,8 @@
+{
+  "FArchive": {
+    "parent_class": "FArchiveState",
+    "version_major": 4,
+    "version_minor": 25,
+    "inherit_members": true
+  }
+}
