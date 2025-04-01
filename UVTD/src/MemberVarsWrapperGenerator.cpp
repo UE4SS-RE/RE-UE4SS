@@ -135,37 +135,35 @@ namespace RC::UVTD
                 if (inheritance_info.has_value())
                 {
                     wrapper_src_dumper.send(STR("{\n"));
-                    // First determine which offset map to use based on version
-                    wrapper_src_dumper.send(STR("    static auto& primary_offsets = Version::IsBelow({}, {}) ? {}::MemberOffsets : {}::MemberOffsets;\n"),
+                    wrapper_src_dumper.send(STR("    static const int32_t offset = []() -> int32_t {\n"));
+                    wrapper_src_dumper.send(STR("        static auto& primary_offsets = Version::IsBelow({}, {}) ? {}::MemberOffsets : {}::MemberOffsets;\n"),
                                             inheritance_info->version_major,
                                             inheritance_info->version_minor,
                                             final_class_name,
                                             inheritance_info->parent_class);
-                    wrapper_src_dumper.send(STR("    static auto offset = primary_offsets.find(STR(\"{}\"));\n"), final_variable_name);
-                    wrapper_src_dumper.send(STR("    if (offset == primary_offsets.end()) {\n"));
+                    wrapper_src_dumper.send(STR("        auto offset_it = primary_offsets.find(STR(\"{}\"));\n"), final_variable_name);
+                    wrapper_src_dumper.send(STR("        if (offset_it == primary_offsets.end()) {\n"));
 
                     // Only check other class if we're not already using it and if inheritance is enabled
                     if (inheritance_info->inherit_members)
                     {
-                        wrapper_src_dumper.send(STR("        // Check in the other class if member not found\n"));
+                        wrapper_src_dumper.send(STR("            // Check in the other class if member not found\n"));
                         wrapper_src_dumper.send(
-                                STR("        static auto& fallback_offsets = Version::IsBelow({}, {}) ? {}::MemberOffsets : {}::MemberOffsets;\n"),
+                                STR("            static auto& fallback_offsets = Version::IsBelow({}, {}) ? {}::MemberOffsets : {}::MemberOffsets;\n"),
                                 inheritance_info->version_major,
                                 inheritance_info->version_minor,
                                 inheritance_info->parent_class,
                                 // Swapped these
                                 final_class_name); // Swapped these
-                        wrapper_src_dumper.send(STR("        if (&fallback_offsets != &primary_offsets) { // Only check if different from primary\n"));
-                        wrapper_src_dumper.send(STR("            auto fallback_offset = fallback_offsets.find(STR(\"{}\"));\n"), final_variable_name);
-                        wrapper_src_dumper.send(STR("            if (fallback_offset != fallback_offsets.end()) {\n"));
-                        wrapper_src_dumper.send(
-                                STR("                return *Helper::Casting::ptr_cast<{}*>(this, fallback_offset->second);\n"),
-                                final_type_name);
+                        wrapper_src_dumper.send(STR("            if (&fallback_offsets != &primary_offsets) { // Only check if different from primary\n"));
+                        wrapper_src_dumper.send(STR("                auto fallback_offset = fallback_offsets.find(STR(\"{}\"));\n"), final_variable_name);
+                        wrapper_src_dumper.send(STR("                if (fallback_offset != fallback_offsets.end()) {\n"));
+                        wrapper_src_dumper.send(STR("                    return fallback_offset->second;\n"));
+                        wrapper_src_dumper.send(STR("                }\n"));
                         wrapper_src_dumper.send(STR("            }\n"));
-                        wrapper_src_dumper.send(STR("        }\n"));
                         wrapper_src_dumper.send(
                                 STR(
-                                        "        throw std::runtime_error{{\"Tried getting member variable '{}::{}' that doesn't exist in this engine version or its parent class.\"}};\n"),
+                                        "            throw std::runtime_error{{\"Tried getting member variable '{}::{}' that doesn't exist in this engine version or its parent class.\"}};\n"),
                                 final_class_name,
                                 final_variable_name);
                     }
@@ -173,47 +171,48 @@ namespace RC::UVTD
                     {
                         wrapper_src_dumper.send(
                                 STR(
-                                        "        throw std::runtime_error{{\"Tried getting member variable '{}::{}' that doesn't exist in this engine version.\"}};\n"),
+                                        "            throw std::runtime_error{{\"Tried getting member variable '{}::{}' that doesn't exist in this engine version.\"}};\n"),
                                 final_class_name,
                                 final_variable_name);
                     }
-                    wrapper_src_dumper.send(STR("    }\n"));
-                    wrapper_src_dumper.send(STR("    return *Helper::Casting::ptr_cast<{}*>(this, offset->second);\n"), final_type_name);
+                    wrapper_src_dumper.send(STR("        }\n"));
+                    wrapper_src_dumper.send(STR("        return offset_it->second;\n"));
+                    wrapper_src_dumper.send(STR("    }();\n"));
+                    wrapper_src_dumper.send(STR("    return *Helper::Casting::ptr_cast<{}*>(this, offset);\n"), final_type_name);
                     wrapper_src_dumper.send(STR("}\n"));
 
                     // Now do the same for the const version
                     wrapper_src_dumper.send(STR("const {}& {}::Get{}() const\n"), final_type_name, final_class_name, final_variable_name);
                     wrapper_src_dumper.send(STR("{\n"));
-                    wrapper_src_dumper.send(STR("    static auto& primary_offsets = Version::IsBelow({}, {}) ? {}::MemberOffsets : {}::MemberOffsets;\n"),
+                    wrapper_src_dumper.send(STR("    static const int32_t offset = []() -> int32_t {\n"));
+                    wrapper_src_dumper.send(STR("        static auto& primary_offsets = Version::IsBelow({}, {}) ? {}::MemberOffsets : {}::MemberOffsets;\n"),
                                             inheritance_info->version_major,
                                             inheritance_info->version_minor,
                                             final_class_name,
                                             inheritance_info->parent_class);
-                    wrapper_src_dumper.send(STR("    static auto offset = primary_offsets.find(STR(\"{}\"));\n"), final_variable_name);
-                    wrapper_src_dumper.send(STR("    if (offset == primary_offsets.end()) {\n"));
+                    wrapper_src_dumper.send(STR("        auto offset_it = primary_offsets.find(STR(\"{}\"));\n"), final_variable_name);
+                    wrapper_src_dumper.send(STR("        if (offset_it == primary_offsets.end()) {\n"));
 
                     // Only check other class if we're not already using it and if inheritance is enabled
                     if (inheritance_info->inherit_members)
                     {
-                        wrapper_src_dumper.send(STR("        // Check in the other class if member not found\n"));
+                        wrapper_src_dumper.send(STR("            // Check in the other class if member not found\n"));
                         wrapper_src_dumper.send(
-                                STR("        static auto& fallback_offsets = Version::IsBelow({}, {}) ? {}::MemberOffsets : {}::MemberOffsets;\n"),
+                                STR("            static auto& fallback_offsets = Version::IsBelow({}, {}) ? {}::MemberOffsets : {}::MemberOffsets;\n"),
                                 inheritance_info->version_major,
                                 inheritance_info->version_minor,
                                 inheritance_info->parent_class,
                                 // Swapped these
                                 final_class_name); // Swapped these
-                        wrapper_src_dumper.send(STR("        if (&fallback_offsets != &primary_offsets) { // Only check if different from primary\n"));
-                        wrapper_src_dumper.send(STR("            auto fallback_offset = fallback_offsets.find(STR(\"{}\"));\n"), final_variable_name);
-                        wrapper_src_dumper.send(STR("            if (fallback_offset != fallback_offsets.end()) {\n"));
-                        wrapper_src_dumper.send(
-                                STR("                return *Helper::Casting::ptr_cast<const {}*>(this, fallback_offset->second);\n"),
-                                final_type_name);
+                        wrapper_src_dumper.send(STR("            if (&fallback_offsets != &primary_offsets) { // Only check if different from primary\n"));
+                        wrapper_src_dumper.send(STR("                auto fallback_offset = fallback_offsets.find(STR(\"{}\"));\n"), final_variable_name);
+                        wrapper_src_dumper.send(STR("                if (fallback_offset != fallback_offsets.end()) {\n"));
+                        wrapper_src_dumper.send(STR("                    return fallback_offset->second;\n"));
+                        wrapper_src_dumper.send(STR("                }\n"));
                         wrapper_src_dumper.send(STR("            }\n"));
-                        wrapper_src_dumper.send(STR("        }\n"));
                         wrapper_src_dumper.send(
                                 STR(
-                                        "        throw std::runtime_error{{\"Tried getting member variable '{}::{}' that doesn't exist in this engine version or its parent class.\"}};\n"),
+                                        "            throw std::runtime_error{{\"Tried getting member variable '{}::{}' that doesn't exist in this engine version or its parent class.\"}};\n"),
                                 final_class_name,
                                 final_variable_name);
                     }
@@ -221,33 +220,44 @@ namespace RC::UVTD
                     {
                         wrapper_src_dumper.send(
                                 STR(
-                                        "        throw std::runtime_error{{\"Tried getting member variable '{}::{}' that doesn't exist in this engine version.\"}};\n"),
+                                        "            throw std::runtime_error{{\"Tried getting member variable '{}::{}' that doesn't exist in this engine version.\"}};\n"),
                                 final_class_name,
                                 final_variable_name);
                     }
-                    wrapper_src_dumper.send(STR("    }\n"));
-                    wrapper_src_dumper.send(STR("    return *Helper::Casting::ptr_cast<const {}*>(this, offset->second);\n"), final_type_name);
+                    wrapper_src_dumper.send(STR("        }\n"));
+                    wrapper_src_dumper.send(STR("        return offset_it->second;\n"));
+                    wrapper_src_dumper.send(STR("    }();\n"));
+                    wrapper_src_dumper.send(STR("    return *Helper::Casting::ptr_cast<const {}*>(this, offset);\n"), final_type_name);
                     wrapper_src_dumper.send(STR("}\n\n"));
                 }
                 else
                 {
                     // Standard handling for classes without special inheritance
                     wrapper_src_dumper.send(STR("{\n"));
-                    wrapper_src_dumper.send(STR("    static auto offset = MemberOffsets.find(STR(\"{}\"));\n"), final_variable_name);
-                    wrapper_src_dumper.send(STR("    if (offset == MemberOffsets.end()) {{ throw std::runtime_error{{\"Tried getting member variable '{}::{}' "
+                    wrapper_src_dumper.send(STR("    static const int32_t offset = []() -> int32_t {\n"));
+                    wrapper_src_dumper.send(STR("        auto offset_it = MemberOffsets.find(STR(\"{}\"));\n"), final_variable_name);
+                    wrapper_src_dumper.send(STR(
+                            "        if (offset_it == MemberOffsets.end()) {{ throw std::runtime_error{{\"Tried getting member variable '{}::{}' "
                             "that doesn't exist in this engine version.\"}}; }}\n"),
                                             final_class_name,
                                             final_variable_name);
-                    wrapper_src_dumper.send(STR("    return *Helper::Casting::ptr_cast<{}*>(this, offset->second);\n"), final_type_name);
+                    wrapper_src_dumper.send(STR("        return offset_it->second;\n"));
+                    wrapper_src_dumper.send(STR("    }();\n"));
+                    wrapper_src_dumper.send(STR("    return *Helper::Casting::ptr_cast<{}*>(this, offset);\n"), final_type_name);
                     wrapper_src_dumper.send(STR("}\n"));
+
                     wrapper_src_dumper.send(STR("const {}& {}::Get{}() const\n"), final_type_name, final_class_name, final_variable_name);
                     wrapper_src_dumper.send(STR("{\n"));
-                    wrapper_src_dumper.send(STR("    static auto offset = MemberOffsets.find(STR(\"{}\"));\n"), final_variable_name);
-                    wrapper_src_dumper.send(STR("    if (offset == MemberOffsets.end()) {{ throw std::runtime_error{{\"Tried getting member variable '{}::{}' "
+                    wrapper_src_dumper.send(STR("    static const int32_t offset = []() -> int32_t {\n"));
+                    wrapper_src_dumper.send(STR("        auto offset_it = MemberOffsets.find(STR(\"{}\"));\n"), final_variable_name);
+                    wrapper_src_dumper.send(STR(
+                            "        if (offset_it == MemberOffsets.end()) {{ throw std::runtime_error{{\"Tried getting member variable '{}::{}' "
                             "that doesn't exist in this engine version.\"}}; }}\n"),
                                             final_class_name,
                                             final_variable_name);
-                    wrapper_src_dumper.send(STR("    return *Helper::Casting::ptr_cast<const {}*>(this, offset->second);\n"), final_type_name);
+                    wrapper_src_dumper.send(STR("        return offset_it->second;\n"));
+                    wrapper_src_dumper.send(STR("    }();\n"));
+                    wrapper_src_dumper.send(STR("    return *Helper::Casting::ptr_cast<const {}*>(this, offset);\n"), final_type_name);
                     wrapper_src_dumper.send(STR("}\n\n"));
                 }
 
