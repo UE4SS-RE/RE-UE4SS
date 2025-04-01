@@ -74,23 +74,8 @@ namespace RC::UVTD
 
             for (const auto& [variable_name, variable] : class_entry.variables)
             {
-                if (variable.type.find(STR("TBaseDelegate")) != variable.type.npos)
-                {
-                    continue;
-                }
-                if (variable.type.find(STR("FUniqueNetIdRepl")) != variable.type.npos)
-                {
-                    continue;
-                }
-                if (variable.type.find(STR("FPlatformUserId")) != variable.type.npos)
-                {
-                    continue;
-                }
-                if (variable.type.find(STR("FVector2D")) != variable.type.npos)
-                {
-                    continue;
-                }
-                if (variable.type.find(STR("FReply")) != variable.type.npos)
+                // Check if this type should be excluded from getters based on configuration
+                if (ConfigUtil::ShouldFilterType(variable.type, TypeFilterCategory::ExcludeFromGetters))
                 {
                     continue;
                 }

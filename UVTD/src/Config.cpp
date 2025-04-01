@@ -10,6 +10,31 @@
 
 namespace RC::UVTD
 {
+    // Enum conversion helpers for JSON parsing
+    inline std::string_view TypeFilterCategoryToString(TypeFilterCategory category) {
+        switch (category) {
+            case TypeFilterCategory::CompleteExclusion: return "complete_exclusion";
+            case TypeFilterCategory::ExcludeFromGetters: return "exclude_from_getters";
+            case TypeFilterCategory::ExcludeFromSolBindings: return "exclude_from_sol_bindings";
+            default: return "unknown";
+        }
+    }
+
+    inline TypeFilterCategory StringToTypeFilterCategory(const std::string& str) {
+        if (str == "complete_exclusion") return TypeFilterCategory::CompleteExclusion;
+        if (str == "exclude_from_getters") return TypeFilterCategory::ExcludeFromGetters;
+        if (str == "exclude_from_sol_bindings") return TypeFilterCategory::ExcludeFromSolBindings;
+        return TypeFilterCategory::CompleteExclusion; // Default
+    }
+
+    // Helper function to get a readable name for a filter category
+    inline std::string GetReadableCategoryName(const std::string& category_str) {
+        if (category_str == "complete_exclusion") return "Complete Exclusion";
+        if (category_str == "exclude_from_getters") return "Exclude From Getters";
+        if (category_str == "exclude_from_sol_bindings") return "Exclude From Sol Bindings";
+        return category_str;
+    }
+
     // Helper structs for JSON parsing
     struct ObjectItemJson {
         std::string name;
@@ -29,6 +54,9 @@ namespace RC::UVTD
         int32_t version_minor;
         bool inherit_members{true};
     };
+    
+    // New type for type filtering
+    using TypeFilterMapJson = std::unordered_map<std::string, std::vector<std::string>>;
 }
 
 // Glaze JSON serialization metadata 
@@ -144,31 +172,45 @@ namespace RC::UVTD
                 Output::send(STR("private_variables.json not found\n"));
             }
             
-            // Load types_not_to_dump.json
-            std::filesystem::path types_path = config_dir / "types_not_to_dump.json";
-            if (std::filesystem::exists(types_path))
+            // Load types_filter.json
+            std::filesystem::path types_filter_path = config_dir / "types_filter.json";
+            if (std::filesystem::exists(types_filter_path))
             {
-                std::ifstream file(types_path);
+                std::ifstream file(types_filter_path);
                 std::string json_str((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
                 
-                auto result = glz::read_json<std::vector<std::string>>(json_str);
+                auto result = glz::read_json<TypeFilterMapJson>(json_str);
                 if (result.has_value())
                 {
-                    types_to_not_dump.clear();
-                    for (const auto& type : result.value())
+                    types_to_filter.clear();
+                    
+                    Output::send(STR("Loaded type filters:\n"));
+                    for (const auto& [category_str, type_list] : result.value())
                     {
-                        types_to_not_dump.push_back(to_wstring(type));
+                        auto category = StringToTypeFilterCategory(category_str);
+                        
+                        std::vector<File::StringType> wide_types;
+                        for (const auto& type : type_list)
+                        {
+                            wide_types.push_back(to_wstring(type));
+                        }
+                        
+                        types_to_filter[category] = std::move(wide_types);
+                        
+                        // Print detailed info about each category
+                        Output::send(STR("  {} types in '{}' category\n"), 
+                                     types_to_filter[category].size(), 
+                                     to_wstring(GetReadableCategoryName(category_str)));
                     }
-                    Output::send(STR("Loaded {} types not to dump\n"), types_to_not_dump.size());
                 }
                 else
                 {
-                    Output::send(STR("Failed to parse types_not_to_dump.json\n"));
+                    Output::send(STR("Failed to parse types_filter.json\n"));
                 }
             }
             else
             {
-                Output::send(STR("types_not_to_dump.json not found\n"));
+                Output::send(STR("types_filter.json not found\n"));
             }
             
             // Load valid_udt_names.json
