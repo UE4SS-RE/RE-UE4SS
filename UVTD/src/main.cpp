@@ -90,7 +90,7 @@ auto thread_dll_start([[maybe_unused]] LPVOID thread_param) -> unsigned long
                 Output::send(STR("Generating everything...\n"));
                 settings.should_dump_vtable = true;
                 settings.should_dump_member_vars = true;
-                settings.should_dump_sol_bindings = true;
+                settings.should_dump_sol_bindings = false;
             }
             else if (selection == 9)
             {
