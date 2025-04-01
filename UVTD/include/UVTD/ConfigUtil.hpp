@@ -22,10 +22,28 @@ namespace RC::UVTD
             return UVTDConfig::Get().private_variables;
         }
 
-        // Types not to dump access
-        inline const std::vector<File::StringType>& GetTypesNotToDump() 
+        // Get types to filter by category
+        inline const std::vector<File::StringType>& GetTypesToFilterByCategory(TypeFilterCategory category) 
         {
-            return UVTDConfig::Get().types_to_not_dump;
+            static const std::vector<File::StringType> empty_vector;
+            const auto& filter_map = UVTDConfig::Get().types_to_filter;
+            auto it = filter_map.find(category);
+            if (it != filter_map.end()) {
+                return it->second;
+            }
+            return empty_vector;
+        }
+
+        // Check if type should be filtered out based on category
+        inline bool ShouldFilterType(const File::StringType& type_name, TypeFilterCategory category)
+        {
+            const auto& types_to_filter = GetTypesToFilterByCategory(category);
+            for (const auto& filter : types_to_filter) {
+                if (type_name.find(filter) != type_name.npos) {
+                    return true;
+                }
+            }
+            return false;
         }
 
         // Valid UDT names access

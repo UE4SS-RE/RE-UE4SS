@@ -34,6 +34,14 @@ namespace RC::UVTD
         bool inherit_members{true};
     };
 
+    // Type filtering categories
+    enum class TypeFilterCategory
+    {
+        CompleteExclusion,     // Completely exclude from parsing
+        ExcludeFromGetters,    // Exclude from getter generation
+        ExcludeFromSolBindings // Exclude from Sol bindings
+    };
+
     class UVTDConfig
     {
     private:
@@ -52,7 +60,10 @@ namespace RC::UVTD
         // Configurations loaded from JSON
         std::vector<ObjectItem> object_items;
         std::unordered_map<File::StringType, std::unordered_set<File::StringType>> private_variables;
-        std::vector<File::StringType> types_to_not_dump;
+        
+        // Enhanced type filtering configuration
+        std::unordered_map<TypeFilterCategory, std::vector<File::StringType>> types_to_filter;
+        
         std::unordered_set<File::StringType> valid_udt_names;
         std::vector<File::StringType> uprefix_to_fprefix;
         

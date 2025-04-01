@@ -43,34 +43,15 @@ namespace RC::UVTD
 
             for (const auto& [variable_name, variable] : class_entry.variables)
             {
-                if (variable.type.find(STR("TBaseDelegate")) != variable.type.npos)
-                {
-                    continue;
-                }
-                if (variable.type.find(STR("FUniqueNetIdRepl")) != variable.type.npos)
-                {
-                    continue;
-                }
-                if (variable.type.find(STR("FPlatformUserId")) != variable.type.npos)
-                {
-                    continue;
-                }
-                if (variable.type.find(STR("FVector2D")) != variable.type.npos)
-                {
-                    continue;
-                }
-                if (variable.type.find(STR("FReply")) != variable.type.npos)
-                {
-                    continue;
-                }
-                if (variable.type.find(STR("FUObjectCppClassStaticFunctions")) != variable.type.npos)
+                // Check if this type should be excluded from sol bindings based on configuration
+                if (ConfigUtil::ShouldFilterType(variable.type, TypeFilterCategory::ExcludeFromSolBindings))
                 {
                     continue;
                 }
 
                 File::StringType final_variable_name = variable.name;
                 
-                // *** IMPORTANT: Apply class-specific member renaming ***
+                // Apply class-specific member renaming
                 auto rename_info = ConfigUtil::GetMemberRenameInfo(class_entry.class_name, variable.name);
                 if (rename_info.has_value())
                 {
