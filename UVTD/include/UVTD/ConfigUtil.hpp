@@ -40,10 +40,50 @@ namespace RC::UVTD
             return UVTDConfig::Get().uprefix_to_fprefix;
         }
 
-        // Member rename map access
-        inline const std::unordered_map<File::StringType, File::StringType>& GetMemberRenameMap() 
+        // Enhanced member rename map access
+        inline const std::unordered_map<File::StringType, std::unordered_map<File::StringType, MemberRenameInfo>>& GetMemberRenameMap() 
         {
             return UVTDConfig::Get().member_rename_map;
+        }
+        
+        // Helper to get member renamed info for a variable in a specific class
+        inline std::optional<MemberRenameInfo> GetMemberRenameInfo(
+            const File::StringType& class_name, 
+            const File::StringType& member_name)
+        {
+            const auto& map = UVTDConfig::Get().member_rename_map;
+            
+            // First check class-specific mapping
+            auto class_it = map.find(class_name);
+            if (class_it != map.end()) {
+                auto member_it = class_it->second.find(member_name);
+                if (member_it != class_it->second.end()) {
+                    return member_it->second;
+                }
+            }
+            
+            // Then check global mapping (using "Global" as the class name)
+            auto global_it = map.find(STR("Global"));
+            if (global_it != map.end()) {
+                auto member_it = global_it->second.find(member_name);
+                if (member_it != global_it->second.end()) {
+                    return member_it->second;
+                }
+            }
+            
+            return std::nullopt;
+        }
+        
+        // Helper to get mapped name for a variable
+        inline File::StringType GetMappedName(
+            const File::StringType& class_name,
+            const File::StringType& original_name)
+        {
+            auto info = GetMemberRenameInfo(class_name, original_name);
+            if (info.has_value()) {
+                return info->mapped_name;
+            }
+            return original_name;
         }
 
         // Case preserving variants access
