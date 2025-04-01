@@ -317,17 +317,20 @@ namespace RC::UVTD
     auto Symbols::get_leaf_name(const char* data, PDB::CodeView::TPI::TypeRecordKind kind) -> File::StringType
     {
         auto name = to_string_type(&data[get_leaf_size(kind)]);
-        
-        // Use ConfigUtil instead of hardcoded map
-        const auto& rename_map = ConfigUtil::GetMemberRenameMap();
-        if (auto it = rename_map.find(name); it != rename_map.end())
-        {
-            return it->second;
+        return name;
+    }
+
+    auto Symbols::get_leaf_name(const File::StringType& class_name, const char* data, PDB::CodeView::TPI::TypeRecordKind kind) -> File::StringType
+    {
+        auto original_name = to_string_type(&data[get_leaf_size(kind)]);
+    
+        // Check if there is a special mapping for this member in this class
+        auto info = ConfigUtil::GetMemberRenameInfo(class_name, original_name);
+        if (info.has_value()) {
+            return info->mapped_name;
         }
-        else
-        {
-            return name;
-        }
+    
+        return original_name;
     }
 
     auto Symbols::clean_name(File::StringType name) -> File::StringType

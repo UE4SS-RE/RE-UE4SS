@@ -159,7 +159,11 @@ namespace RC::UVTD
       public:
         auto static get_type_name(const PDB::TPIStream& tpi_stream, uint32_t record_index, bool check_valid = false) -> File::StringType;
         auto static get_method_name(const PDB::CodeView::TPI::FieldList* method_record) -> File::StringType;
+        // Existing method for backward compatibility
         auto static get_leaf_name(const char* data, PDB::CodeView::TPI::TypeRecordKind kind) -> File::StringType;
+
+        // New overload that takes class name for context-aware name mapping
+        auto static get_leaf_name(const File::StringType& class_name, const char* data, PDB::CodeView::TPI::TypeRecordKind kind) -> File::StringType;
 
         auto static clean_name(File::StringType name) -> File::StringType;
 

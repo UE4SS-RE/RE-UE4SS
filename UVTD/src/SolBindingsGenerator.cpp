@@ -2,6 +2,7 @@
 #include <UVTD/MemberVarsDumper.hpp>
 #include <UVTD/SolBindingsGenerator.hpp>
 #include <UVTD/VTableDumper.hpp>
+#include <UVTD/ConfigUtil.hpp>
 
 namespace RC::UVTD
 {
@@ -68,10 +69,13 @@ namespace RC::UVTD
                 }
 
                 File::StringType final_variable_name = variable.name;
-
-                if (variable.name == STR("EnumFlags"))
+                
+                // *** IMPORTANT: Apply class-specific member renaming ***
+                auto rename_info = ConfigUtil::GetMemberRenameInfo(class_entry.class_name, variable.name);
+                if (rename_info.has_value())
                 {
-                    final_variable_name = STR("EnumFlags_Internal");
+                    Output::send(STR("Sol bindings: Renaming member {}.{} to {}\n"), class_entry.class_name, variable.name, rename_info->mapped_name);
+                    final_variable_name = rename_info->mapped_name;
                 }
 
                 header_wrapper_dumper.send(STR(",\n    \"Get{}\", static_cast<{}&({}::*)()>(&{}::Get{})"),

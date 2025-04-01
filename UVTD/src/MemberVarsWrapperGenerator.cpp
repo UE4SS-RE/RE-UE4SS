@@ -20,6 +20,9 @@ namespace RC::UVTD
             return File::StringType{string};
         });
 
+        // Keep track of processed variables to avoid duplicates
+        std::unordered_map<File::StringType, std::unordered_set<File::StringType>> processed_variables;
+
         for (const auto& [class_name, class_entry] : type_container.get_class_entries())
         {
             if (class_entry.variables.empty())
@@ -60,6 +63,11 @@ namespace RC::UVTD
             const auto& private_variables_map = ConfigUtil::GetPrivateVariables();
             auto private_variables_for_class = private_variables_map.find(class_entry.class_name);
 
+            // Initialize processed variables for this class if needed
+            if (processed_variables.find(final_class_name) == processed_variables.end()) {
+                processed_variables[final_class_name] = std::unordered_set<File::StringType>();
+            }
+
             for (const auto& [variable_name, variable] : class_entry.variables)
             {
                 if (variable.type.find(STR("TBaseDelegate")) != variable.type.npos)
@@ -88,14 +96,22 @@ namespace RC::UVTD
 
                 File::StringType final_variable_name = variable.name;
                 File::StringType final_type_name = variable.type;
-
-                if (variable.name == STR("EnumFlags"))
+                
+                // Apply class-specific member renaming
+                auto rename_info = ConfigUtil::GetMemberRenameInfo(class_entry.class_name, variable.name);
+                if (rename_info.has_value())
                 {
-                    final_variable_name = STR("EnumFlags_Internal");
-                    is_private = true;
+                    Output::send(STR("Renaming member {}.{} to {}\n"), class_entry.class_name, variable.name, rename_info->mapped_name);
+                    final_variable_name = rename_info->mapped_name;
                 }
 
                 unify_uobject_array_if_needed(final_type_name);
+
+                // Check if we've already processed this variable name
+                if (processed_variables[final_class_name].find(final_variable_name) != processed_variables[final_class_name].end()) {
+                    continue; // Skip duplicate
+                }
+                processed_variables[final_class_name].insert(final_variable_name);
 
                 if (is_private)
                 {
@@ -154,18 +170,24 @@ namespace RC::UVTD
                     wrapper_src_dumper.send(STR("}\n\n"));
                 }
 
+                // Generate macro setter only for the final variable name
                 macro_setter_dumper.send(STR("if (auto val = parser.get_int64(STR(\"{}\"), STR(\"{}\"), -1); val != -1)\n"),
                                          final_class_name,
-                                         final_variable_name);
+                                         rename_info.has_value() ? variable.name : final_variable_name); // Use original name if it's been renamed
                 macro_setter_dumper.send(STR("    Unreal::{}::MemberOffsets.emplace(STR(\"{}\"), static_cast<int32_t>(val));\n"),
                                          final_class_name,
                                          final_variable_name);
-                if (final_variable_name == STR("EnumFlags_Internal"))
+                
+                // Also check for the renamed version if applicable
+                if (rename_info.has_value() && rename_info->generate_alias_setter && final_variable_name != variable.name)
                 {
-                    macro_setter_dumper.send(STR("if (auto val = parser.get_int64(STR(\"{}\"), STR(\"EnumFlags\"), -1); val != -1)\n"),
-                                             final_class_name);
-                    macro_setter_dumper.send(STR("    Unreal::{}::MemberOffsets.emplace(STR(\"EnumFlags_Internal\"), static_cast<int32_t>(val));\n"),
-                                             final_class_name);
+                    macro_setter_dumper.send(STR("// Also support using the renamed version in the INI file\n"));
+                    macro_setter_dumper.send(STR("if (auto val = parser.get_int64(STR(\"{}\"), STR(\"{}\"), -1); val != -1)\n"),
+                                             final_class_name,
+                                             final_variable_name);  // Renamed version
+                    macro_setter_dumper.send(STR("    Unreal::{}::MemberOffsets.emplace(STR(\"{}\"), static_cast<int32_t>(val));\n"),
+                                             final_class_name,
+                                             final_variable_name);
                 }
             }
         }

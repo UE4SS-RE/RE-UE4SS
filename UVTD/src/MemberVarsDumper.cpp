@@ -36,7 +36,9 @@ namespace RC::UVTD
 
     auto MemberVarsDumper::process_member(const PDB::TPIStream& tpi_stream, const PDB::CodeView::TPI::FieldList* field_record, Class& class_entry) -> void
     {
+        // Get the original member name without renaming - this is important so we capture the true variable name
         File::StringType member_name = Symbols::get_leaf_name(field_record->data.LF_STMEMBER.name, field_record->data.LF_MEMBER.lfEasy.kind);
+        
         auto changed = change_prefix(Symbols::get_type_name(tpi_stream, field_record->data.LF_MEMBER.index), symbols.is_425_plus);
         if (!changed.has_value()) return;
 
@@ -52,6 +54,7 @@ namespace RC::UVTD
             }
         }
 
+        // Store variable with its original name from the PDB - renaming happens during output generation
         auto& variable = class_entry.variables[member_name];
         variable.type = type_name;
         variable.name = member_name;
@@ -149,25 +152,38 @@ namespace RC::UVTD
             ini_dumper.send(STR("[{}]\n"), class_entry.class_name);
             default_ini_dumper.send(STR("[{}]\n"), class_entry.class_name);
 
+            // Track variables we've already processed to avoid duplicates
+            std::unordered_set<File::StringType> processed_variables;
+
             for (const auto& [variable_name, variable] : class_entry.variables)
             {
+                // Write the variable name in the INI templates using original form 
                 ini_dumper.send(STR("{} = 0x{:X}\n"), variable.name, variable.offset);
                 default_ini_dumper.send(STR("{} = -1\n"), variable.name);
 
+                // Check if this is a name that should be renamed
+                auto rename_info = ConfigUtil::GetMemberRenameInfo(class_entry.class_name, variable.name);
                 File::StringType final_variable_name = variable.name;
-                File::StringType final_class_name = class_entry.class_name;
-
-                if (variable.name == STR("EnumFlags"))
+                if (rename_info.has_value())
                 {
-                    final_variable_name = STR("EnumFlags_Internal");
+                    final_variable_name = rename_info->mapped_name;
                 }
 
+                // But for code generation, use the internal variable name
+                File::StringType final_class_name = class_entry.class_name;
                 unify_uobject_array_if_needed(final_class_name);
 
+                // Skip if we've already processed this variable to avoid duplicates
+                if (processed_variables.find(final_variable_name) != processed_variables.end()) {
+                    continue;
+                }
+                processed_variables.insert(final_variable_name);
+
+                // Generate the default setter code
                 default_setter_src_dumper.send(STR("if (auto it = {}::MemberOffsets.find(STR(\"{}\")); it == {}::MemberOffsets.end())\n"),
-                                               final_class_name,
-                                               final_variable_name,
-                                               final_class_name);
+                                              final_class_name,
+                                              final_variable_name,
+                                              final_class_name);
                 default_setter_src_dumper.send(STR("{\n"));
                 default_setter_src_dumper.send(STR("    {}::MemberOffsets.emplace(STR(\"{}\"), 0x{:X});\n"), final_class_name, final_variable_name, variable.offset);
                 default_setter_src_dumper.send(STR("}\n\n"));

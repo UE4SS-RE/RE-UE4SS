@@ -18,6 +18,14 @@ namespace RC::UVTD
         ValidForMemberVars valid_for_member_vars{};
     };
 
+    // Enhanced member rename structure
+    struct MemberRenameInfo
+    {
+        File::StringType mapped_name{};
+        bool generate_alias_setter{false};
+        File::StringType description{};
+    };
+
     class UVTDConfig
     {
     private:
@@ -39,7 +47,10 @@ namespace RC::UVTD
         std::vector<File::StringType> types_to_not_dump;
         std::unordered_set<File::StringType> valid_udt_names;
         std::vector<File::StringType> uprefix_to_fprefix;
-        std::unordered_map<File::StringType, File::StringType> member_rename_map;
+        
+        // Enhanced member rename map - outer key is class name, inner key is member name
+        std::unordered_map<File::StringType, std::unordered_map<File::StringType, MemberRenameInfo>> member_rename_map;
+        
         std::unordered_set<File::StringType> non_case_preserving_variants;
         std::unordered_set<File::StringType> case_preserving_variants;
         std::vector<std::filesystem::path> pdbs_to_dump;
