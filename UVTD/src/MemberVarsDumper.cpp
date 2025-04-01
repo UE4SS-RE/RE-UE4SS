@@ -44,14 +44,10 @@ namespace RC::UVTD
 
         File::StringType type_name = *changed;
 
-        // Use config utility instead of hardcoded list
-        const auto& types_to_not_dump = ConfigUtil::GetTypesNotToDump();
-        for (const auto& type_to_not_dump : types_to_not_dump)
+        // Check if we should completely exclude this type based on configuration
+        if (ConfigUtil::ShouldFilterType(type_name, TypeFilterCategory::CompleteExclusion))
         {
-            if (type_name.find(type_to_not_dump) != type_name.npos)
-            {
-                return;
-            }
+            return;
         }
 
         // Store variable with its original name from the PDB - renaming happens during output generation
