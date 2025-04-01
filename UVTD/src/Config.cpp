@@ -10,11 +10,17 @@
 
 namespace RC::UVTD
 {
-    // Helper struct for JSON parsing
+    // Helper structs for JSON parsing
     struct ObjectItemJson {
         std::string name;
         ValidForVTable valid_for_vtable;
         ValidForMemberVars valid_for_member_vars;
+    };
+    
+    struct MemberRenameInfoJson {
+        std::string mapped_name;
+        bool generate_alias_setter{false};
+        std::string description;
     };
 }
 
@@ -26,6 +32,15 @@ namespace glz {
             "name", &RC::UVTD::ObjectItemJson::name,
             "valid_for_vtable", &RC::UVTD::ObjectItemJson::valid_for_vtable,
             "valid_for_member_vars", &RC::UVTD::ObjectItemJson::valid_for_member_vars
+        );
+    };
+    
+    template <>
+    struct meta<RC::UVTD::MemberRenameInfoJson> {
+        static constexpr auto value = glz::object(
+            "mapped_name", &RC::UVTD::MemberRenameInfoJson::mapped_name,
+            "generate_alias_setter", &RC::UVTD::MemberRenameInfoJson::generate_alias_setter,
+            "description", &RC::UVTD::MemberRenameInfoJson::description
         );
     };
 }
@@ -193,22 +208,42 @@ namespace RC::UVTD
                 Output::send(STR("uprefix_to_fprefix.json not found\n"));
             }
             
-            // Load member_rename_map.json
+            // Load enhanced member_rename_map.json
             std::filesystem::path rename_path = config_dir / "member_rename_map.json";
             if (std::filesystem::exists(rename_path))
             {
                 std::ifstream file(rename_path);
                 std::string json_str((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
                 
-                auto result = glz::read_json<std::unordered_map<std::string, std::string>>(json_str);
+                // Parse the hierarchical structure - outer key is class name, inner key is member name
+                using ClassMemberMap = std::unordered_map<std::string, std::unordered_map<std::string, MemberRenameInfoJson>>;
+                auto result = glz::read_json<ClassMemberMap>(json_str);
+                
                 if (result.has_value())
                 {
                     member_rename_map.clear();
-                    for (const auto& [orig, renamed] : result.value())
+                    size_t total_entries = 0;
+                    
+                    for (const auto& [class_name, members] : result.value())
                     {
-                        member_rename_map[to_wstring(orig)] = to_wstring(renamed);
+                        auto class_name_wide = to_wstring(class_name);
+                        std::unordered_map<File::StringType, MemberRenameInfo> class_members;
+                        
+                        for (const auto& [member_name, info] : members)
+                        {
+                            class_members[to_wstring(member_name)] = {
+                                to_wstring(info.mapped_name),
+                                info.generate_alias_setter,
+                                to_wstring(info.description)
+                            };
+                            total_entries++;
+                        }
+                        
+                        member_rename_map[class_name_wide] = std::move(class_members);
                     }
-                    Output::send(STR("Loaded {} member rename mappings\n"), member_rename_map.size());
+                    
+                    Output::send(STR("Loaded {} member rename mappings across {} classes\n"), 
+                                total_entries, member_rename_map.size());
                 }
                 else
                 {
