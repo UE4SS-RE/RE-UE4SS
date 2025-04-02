@@ -54,9 +54,6 @@ namespace RC::UVTD
         // Initialize config by loading from files
         bool Initialize(const std::filesystem::path& config_dir = DEFAULT_CONFIG_PATH);
 
-        // Reload configuration from files
-        bool Reload(const std::filesystem::path& config_dir = DEFAULT_CONFIG_PATH);
-
         // Configurations loaded from JSON
         std::vector<ObjectItem> object_items;
         std::unordered_map<File::StringType, std::unordered_set<File::StringType>> private_variables;

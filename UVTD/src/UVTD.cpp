@@ -37,6 +37,7 @@ namespace RC::UVTD
         if (dump_settings.should_dump_vtable) VTableDumper::output_cleanup();
         if (dump_settings.should_dump_member_vars) MemberVarsDumper::output_cleanup();
         if (dump_settings.should_dump_sol_bindings) SolBindingsGenerator::output_cleanup();
+        if (dump_settings.should_dump_member_vars) MemberVarsWrapperGenerator::output_cleanup();
 
         TypeContainer shared_container{};
 
@@ -98,7 +99,6 @@ namespace RC::UVTD
 
         if (dump_settings.should_dump_member_vars)
         {
-            MemberVarsWrapperGenerator::output_cleanup();
             MemberVarsWrapperGenerator wrapper_generator{std::move(shared_container)};
             wrapper_generator.generate_files();
 

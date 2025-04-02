@@ -208,22 +208,5 @@ namespace RC::UVTD
                 File::delete_file(item.path());
             }
         }
-
-        if (std::filesystem::exists(member_variable_layouts_gen_output_src_path))
-        {
-            for (const auto& item : std::filesystem::directory_iterator(member_variable_layouts_gen_output_src_path))
-            {
-                if (item.is_directory())
-                {
-                    continue;
-                }
-                if (item.path().extension() != STR(".cpp"))
-                {
-                    continue;
-                }
-
-                File::delete_file(item.path());
-            }
-        }
     }
 } // namespace RC::UVTD

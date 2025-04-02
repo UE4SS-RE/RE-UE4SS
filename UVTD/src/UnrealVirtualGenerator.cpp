@@ -11,7 +11,8 @@ namespace RC::UVTD
         auto pdb_name_no_underscore = pdb_name;
         pdb_name_no_underscore.replace(pdb_name_no_underscore.find(STR('_')), 1, STR(""));
 
-        auto virtual_header_file = virtual_gen_output_include_path / std::format(STR("UnrealVirtual{}.hpp"), pdb_name_no_underscore);
+        auto virtual_header_file = virtual_gen_header_output_path / 
+                                   std::format(STR("UnrealVirtual{}.hpp"), pdb_name_no_underscore);
 
         Output::send(STR("Generating file '{}'\n"), virtual_header_file.wstring());
 
@@ -22,7 +23,8 @@ namespace RC::UVTD
             return File::StringType{string};
         });
 
-        auto virtual_src_file = virtual_gen_function_bodies_path / std::format(STR("UnrealVirtual{}.cpp"), pdb_name_no_underscore);
+        auto virtual_src_file = virtual_gen_source_output_path / 
+                                std::format(STR("UnrealVirtual{}.cpp"), pdb_name_no_underscore);
 
         Output::send(STR("Generating file '{}'\n"), virtual_src_file.wstring());
 
@@ -33,7 +35,7 @@ namespace RC::UVTD
             return File::StringType{string};
         });
 
-        // Use ConfigUtil instead of hardcoded values
+        // Use case-preserving variant check from ConfigUtil
         bool is_case_preserving_pdb = ConfigUtil::IsCasePreservingVariant(pdb_name);
         bool is_non_case_preserving_pdb = ConfigUtil::IsNonCasePreservingVariant(pdb_name);
 
@@ -123,9 +125,11 @@ namespace RC::UVTD
 
     auto UnrealVirtualGenerator::output_cleanup() -> void
     {
-        if (std::filesystem::exists(virtual_gen_output_include_path))
+        // Use the paths from Helpers.hpp
+        // Cleanup header outputs
+        if (std::filesystem::exists(virtual_gen_header_output_path))
         {
-            for (const auto& item : std::filesystem::directory_iterator(virtual_gen_output_include_path))
+            for (const auto& item : std::filesystem::directory_iterator(virtual_gen_header_output_path))
             {
                 if (item.is_directory())
                 {
@@ -140,9 +144,10 @@ namespace RC::UVTD
             }
         }
 
-        if (std::filesystem::exists(virtual_gen_function_bodies_path))
+        // Cleanup source outputs
+        if (std::filesystem::exists(virtual_gen_source_output_path))
         {
-            for (const auto& item : std::filesystem::directory_iterator(virtual_gen_function_bodies_path))
+            for (const auto& item : std::filesystem::directory_iterator(virtual_gen_source_output_path))
             {
                 if (item.is_directory())
                 {
