@@ -34,11 +34,31 @@ namespace RC::UVTD
         bool inherit_members{true};
     };
 
+    // Structure to represent a method overload mapping
+    struct MethodOverloadMapping
+    {
+        File::StringType unique_id;
+        File::StringType return_type;
+        std::vector<File::StringType> param_types;
+        bool is_const{false};
+        File::StringType mapped_name;
+
+        // Check if this mapping matches a given signature
+        bool MatchesSignature(const File::StringType& check_return_type,
+                              const std::vector<File::StringType>& check_params,
+                              bool check_is_const) const
+        {
+            return return_type == check_return_type &&
+                   param_types == check_params &&
+                   is_const == check_is_const;
+        }
+    };
+
     // Type filtering categories
     enum class TypeFilterCategory
     {
-        CompleteExclusion,     // Completely exclude from parsing
-        ExcludeFromGetters,    // Exclude from getter generation
+        CompleteExclusion, // Completely exclude from parsing
+        ExcludeFromGetters, // Exclude from getter generation
         ExcludeFromSolBindings // Exclude from Sol bindings
     };
 
@@ -46,7 +66,7 @@ namespace RC::UVTD
     {
     private:
         static constexpr const char* DEFAULT_CONFIG_PATH = "Config";
-        
+
     public:
         // Static instance for singleton access
         static UVTDConfig& Get();
@@ -57,16 +77,16 @@ namespace RC::UVTD
         // Configurations loaded from JSON
         std::vector<ObjectItem> object_items;
         std::unordered_map<File::StringType, std::unordered_set<File::StringType>> private_variables;
-        
+
         // Enhanced type filtering configuration
         std::unordered_map<TypeFilterCategory, std::vector<File::StringType>> types_to_filter;
-        
+
         std::unordered_set<File::StringType> valid_udt_names;
         std::vector<File::StringType> uprefix_to_fprefix;
-        
+
         // Enhanced member rename map - outer key is class name, inner key is member name
         std::unordered_map<File::StringType, std::unordered_map<File::StringType, MemberRenameInfo>> member_rename_map;
-        
+
         std::unordered_set<File::StringType> non_case_preserving_variants;
         std::unordered_set<File::StringType> case_preserving_variants;
         std::vector<std::filesystem::path> pdbs_to_dump;
@@ -74,6 +94,13 @@ namespace RC::UVTD
 
         // Class inheritance relationships
         std::unordered_map<File::StringType, ClassInheritanceInfo> class_inheritance_map;
+
+        // Method overload mappings
+        // Outer key: class name
+        // Inner key: method name
+        std::unordered_map<File::StringType,
+                           std::unordered_map<File::StringType,
+                                              std::vector<MethodOverloadMapping>>> method_overload_mappings;
 
     private:
         UVTDConfig() = default;

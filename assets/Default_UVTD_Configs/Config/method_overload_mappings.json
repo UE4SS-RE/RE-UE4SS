@@ -1,0 +1,69 @@
+{
+    "FArchive": {
+        "operator<<": [
+            {
+                "unique_id": "weak_object_ptr",
+                "return_type": "FArchive*",
+                "param_types": ["FWeakObjectPtr*"],
+                "is_const": true,
+                "mapped_name": "SerializeWeakObjectPtr"
+            },
+            {
+                "unique_id": "soft_object_path",
+                "return_type": "FArchive*",
+                "param_types": ["FSoftObjectPath*"],
+                "is_const": true,
+                "mapped_name": "SerializeSoftObjectPath"
+            },
+            {
+                "unique_id": "soft_object_ptr",
+                "return_type": "FArchive*",
+                "param_types": ["FSoftObjectPtr*"],
+                "is_const": true,
+                "mapped_name": "SerializeSoftObjectPtr"
+            },
+            {
+                "unique_id": "object_ptr",
+                "return_type": "FArchive*",
+                "param_types": ["FObjectPtr*"],
+                "is_const": true,
+                "mapped_name": "SerializeObjectPtr"
+            },
+            {
+                "unique_id": "lazy_object_ptr",
+                "return_type": "FArchive*",
+                "param_types": ["FLazyObjectPtr*"],
+                "is_const": true,
+                "mapped_name": "SerializeLazyObjectPtr"
+            },
+            {
+                "unique_id": "field_ptr",
+                "return_type": "FArchive*",
+                "param_types": ["FField**"],
+                "is_const": true,
+                "mapped_name": "SerializeFieldPtr"
+            },
+            {
+                "unique_id": "uobject_ptr",
+                "return_type": "FArchive*",
+                "param_types": ["UObject**"],
+                "is_const": true,
+                "mapped_name": "SerializeUObjectPtr"
+            },
+            {
+                "unique_id": "text",
+                "return_type": "FArchive*",
+                "param_types": ["FText*"],
+                "is_const": true,
+                "mapped_name": "SerializeText"
+            },
+            {
+                "unique_id": "name",
+                "return_type": "FArchive*",
+                "param_types": ["FName*"],
+                "is_const": true,
+                "mapped_name": "SerializeName"
+            }
+        ]
+    }
+}

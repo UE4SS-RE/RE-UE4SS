@@ -90,22 +90,70 @@ namespace RC::UVTD
             if (!Symbols::is_virtual(overload_record->METHOD.attributes)) continue;
             if (!function_record || function_record->header.kind != PDB::CodeView::TPI::TypeRecordKind::LF_MFUNCTION) continue;
 
-            File::StringType overload_name = method_name_clean;
-            if (overload_index != 0)
+            // Generate method signature
+            auto signature = symbols.generate_method_signature(tpi_stream, function_record, method_name);
+
+            // Convert parameter types to a vector of strings for overload mapping
+            std::vector<File::StringType> param_types;
+            std::transform(signature.params.begin(),
+                           signature.params.end(),
+                           std::back_inserter(param_types),
+                           [](const FunctionParam& param) {
+                               return param.type;
+                           });
+
+            // Try to get a mapped name from the configuration
+            auto mapped_name = ConfigUtil::GetMethodOverloadName(
+                    class_entry.class_name,
+                    method_name,
+                    signature.return_type,
+                    param_types,
+                    signature.const_qualifier
+                    );
+
+            // Store the current overload index for use in the signature
+            uint32_t current_overload_index = overload_index;
+
+            // Determine the final method name (combine original method name with mapped name)
+            File::StringType final_method_name;
+            if (mapped_name.has_value())
             {
-                overload_name += std::format(STR("_{}"), overload_index);
+                // Format: original_method_name_mapped_name
+                final_method_name = method_name_clean + STR("_") + *mapped_name;
+            }
+            else
+            {
+                // If no mapping exists, just use the cleaned method name with overload index if needed
+                final_method_name = method_name_clean;
+                if (overload_index != 0)
+                {
+                    final_method_name += std::format(STR("_{}"), overload_index);
+                }
             }
             overload_index++;
 
+            // Update the signature with the overload index for comments
+            if (current_overload_index != 0)
+            {
+                // Insert the overload index into the method name in the signature
+                size_t pos = signature.name.find('(');
+                if (pos != File::StringType::npos)
+                {
+                    signature.name.insert(pos, std::format(STR("_{}"), current_overload_index));
+                }
+            }
+
             auto& function = class_entry.functions[vtable_offset];
-            function.name = overload_name;
-            function.signature = symbols.generate_method_signature(tpi_stream, function_record, overload_name);
+            function.name = final_method_name;
+            function.signature = signature;
             function.offset = vtable_offset;
             function.is_overload = true;
         }
     }
 
-    auto VTableDumper::process_onemethod(const PDB::TPIStream& tpi_stream, const PDB::CodeView::TPI::FieldList* method_record, Class& class_entry) -> void
+    auto VTableDumper::process_onemethod(const PDB::TPIStream& tpi_stream,
+                                         const PDB::CodeView::TPI::FieldList* method_record,
+                                         Class& class_entry) -> void
     {
         static std::unordered_map<File::StringType, std::unordered_map<File::StringType, uint32_t>> functions_already_dumped{};
 
@@ -118,23 +166,85 @@ namespace RC::UVTD
         auto function_record = tpi_stream.GetTypeRecord(method_record->data.LF_ONEMETHOD.index);
 
         bool is_overload{};
+        uint32_t overload_index = 0;
 
         if (auto it = functions_already_dumped.find(class_entry.class_name); it != functions_already_dumped.end())
         {
             if (auto it2 = it->second.find(method_name); it2 != it->second.end())
             {
-                method_name.append(std::format(STR("_{}"), ++it2->second));
+                overload_index = ++it2->second;
+                method_name.append(std::format(STR("_{}"), overload_index));
                 is_overload = true;
             }
         }
 
         Output::send(STR("  method {} offset {}\n"), method_name, vtable_offset);
 
+        // Generate method signature
+        auto signature = symbols.generate_method_signature(tpi_stream, function_record, method_name);
+
+        // Convert parameter types to a vector of strings for overload mapping
+        std::vector<File::StringType> param_types;
+        std::transform(signature.params.begin(),
+                       signature.params.end(),
+                       std::back_inserter(param_types),
+                       [](const FunctionParam& param) {
+                           return param.type;
+                       });
+
+        // Try to get a mapped name from the configuration
+        auto mapped_name = ConfigUtil::GetMethodOverloadName(
+                class_entry.class_name,
+                method_name,
+                signature.return_type,
+                param_types,
+                signature.const_qualifier
+                );
+
+        // Determine the final method name (combine original method name with mapped name)
         File::StringType method_name_clean = Symbols::clean_name(method_name);
+        File::StringType final_method_name;
+
+        if (mapped_name.has_value())
+        {
+            // Format: original_method_name_mapped_name
+            if (is_overload)
+            {
+                // For overloads with a mapping, include the original name, underscore, overload index, underscore, and mapped name
+                // Extract the base method name without the appended index
+                File::StringType base_method_name = method_name;
+                size_t underscore_pos = base_method_name.rfind('_');
+                if (underscore_pos != File::StringType::npos)
+                {
+                    base_method_name = base_method_name.substr(0, underscore_pos);
+                }
+                final_method_name = Symbols::clean_name(base_method_name) + STR("_") + *mapped_name;
+            }
+            else
+            {
+                final_method_name = method_name_clean + STR("_") + *mapped_name;
+            }
+        }
+        else
+        {
+            // If no mapping exists, use the method name as is (which already includes the overload index if applicable)
+            final_method_name = method_name_clean;
+        }
+
+        // If this is an overload but we haven't modified the signature yet, update it
+        if (is_overload && signature.name.find('_') == File::StringType::npos)
+        {
+            // Insert the overload index into the method name in the signature
+            size_t pos = signature.name.find('(');
+            if (pos != File::StringType::npos)
+            {
+                signature.name.insert(pos, std::format(STR("_{}"), overload_index));
+            }
+        }
 
         auto& function = class_entry.functions[vtable_offset];
-        function.name = method_name_clean;
-        function.signature = symbols.generate_method_signature(tpi_stream, function_record, method_name);
+        function.name = final_method_name;
+        function.signature = signature;
         function.offset = vtable_offset;
         function.is_overload = is_overload;
         functions_already_dumped.emplace(method_name, 1);
