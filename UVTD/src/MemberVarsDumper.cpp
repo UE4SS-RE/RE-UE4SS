@@ -38,7 +38,7 @@ namespace RC::UVTD
     {
         // Get the original member name without renaming - this is important so we capture the true variable name
         File::StringType member_name = Symbols::get_leaf_name(field_record->data.LF_STMEMBER.name, field_record->data.LF_MEMBER.lfEasy.kind);
-        
+
         auto changed = change_prefix(Symbols::get_type_name(tpi_stream, field_record->data.LF_MEMBER.index), symbols.is_425_plus);
         if (!changed.has_value()) return;
 
@@ -126,8 +126,29 @@ namespace RC::UVTD
         auto pdb_name_no_underscore = pdb_name;
         pdb_name_no_underscore.replace(pdb_name_no_underscore.find(STR('_')), 1, STR(""));
 
-        for (const auto& [class_name, class_entry] : type_container.get_class_entries())
+        // Iterate through object_items first to preserve order
+        for (const auto& object_item : ConfigUtil::GetObjectItems())
         {
+            const auto& class_name = object_item.name;
+
+            // Find the corresponding class entry
+            auto class_it = std::find_if(
+                    type_container.get_class_entries().begin(),
+                    type_container.get_class_entries().end(),
+                    [&class_name](const auto& entry) {
+                        return entry.first == class_name || entry.second.class_name == class_name;
+                    }
+                    );
+
+            // Skip if no class entry or skipping based on config
+            if (class_it == type_container.get_class_entries().end() ||
+                object_item.valid_for_member_vars != ValidForMemberVars::Yes)
+            {
+                continue;
+            }
+
+            const auto& class_entry = class_it->second;
+
             if (class_entry.variables.empty())
             {
                 continue;
@@ -170,18 +191,23 @@ namespace RC::UVTD
                 unify_uobject_array_if_needed(final_class_name);
 
                 // Skip if we've already processed this variable to avoid duplicates
-                if (processed_variables.find(final_variable_name) != processed_variables.end()) {
+                if (processed_variables.find(final_variable_name) != processed_variables.end())
+                {
                     continue;
                 }
                 processed_variables.insert(final_variable_name);
 
                 // Generate the default setter code
                 default_setter_src_dumper.send(STR("if (auto it = {}::MemberOffsets.find(STR(\"{}\")); it == {}::MemberOffsets.end())\n"),
-                                              final_class_name,
-                                              final_variable_name,
-                                              final_class_name);
+                                               final_class_name,
+                                               final_variable_name,
+                                               final_class_name);
                 default_setter_src_dumper.send(STR("{\n"));
-                default_setter_src_dumper.send(STR("    {}::MemberOffsets.emplace(STR(\"{}\"), 0x{:X});\n"), final_class_name, final_variable_name, variable.offset);
+                default_setter_src_dumper.send(
+                        STR("    {}::MemberOffsets.emplace(STR(\"{}\"), 0x{:X});\n"),
+                        final_class_name,
+                        final_variable_name,
+                        variable.offset);
                 default_setter_src_dumper.send(STR("}\n\n"));
             }
 
