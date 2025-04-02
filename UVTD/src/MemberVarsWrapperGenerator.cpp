@@ -23,8 +23,29 @@ namespace RC::UVTD
         // Keep track of processed variables to avoid duplicates
         std::unordered_map<File::StringType, std::unordered_set<File::StringType>> processed_variables;
 
-        for (const auto& [class_name, class_entry] : type_container.get_class_entries())
+        // Iterate through object_items first to preserve order
+        for (const auto& object_item : ConfigUtil::GetObjectItems())
         {
+            const auto& class_name = object_item.name;
+            
+            // Find the corresponding class entry
+            auto class_it = std::find_if(
+                type_container.get_class_entries().begin(), 
+                type_container.get_class_entries().end(),
+                [&class_name](const auto& entry) { 
+                    return entry.first == class_name || entry.second.class_name == class_name; 
+                }
+            );
+
+            // Skip if no class entry or the item is not valid for member variables
+            if (class_it == type_container.get_class_entries().end() || 
+                object_item.valid_for_member_vars != ValidForMemberVars::Yes) 
+            {
+                continue;
+            }
+
+            const auto& class_entry = class_it->second;
+
             if (class_entry.variables.empty())
             {
                 continue;

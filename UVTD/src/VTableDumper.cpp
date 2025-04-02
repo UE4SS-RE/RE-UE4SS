@@ -62,7 +62,9 @@ namespace RC::UVTD
         uint32_t vftable_offset;
     };
 
-    auto VTableDumper::process_method_overload_list(const PDB::TPIStream& tpi_stream, const PDB::CodeView::TPI::FieldList* method_record, Class& class_entry) -> void
+    auto VTableDumper::process_method_overload_list(const PDB::TPIStream& tpi_stream,
+                                                    const PDB::CodeView::TPI::FieldList* method_record,
+                                                    Class& class_entry) -> void
     {
         auto list = tpi_stream.GetTypeRecord(method_record->data.LF_METHOD.mList);
 
@@ -166,7 +168,7 @@ namespace RC::UVTD
     auto VTableDumper::generate_code() -> void
     {
         std::unordered_map<File::StringType, SymbolNameInfo> vtable_names;
-        
+
         // Use config utility instead of hardcoded list
         for (const auto& object_item : ConfigUtil::GetObjectItems())
         {
@@ -182,16 +184,65 @@ namespace RC::UVTD
     {
         File::StringType pdb_name = symbols.pdb_file_path.filename().stem();
 
-        for (const auto& [class_name, class_entry] : type_container.get_class_entries())
+        auto default_template_file = std::filesystem::path{STR("VTableLayout.ini")};
+
+        Output::send(STR("Generating file '{}'\n"), default_template_file.wstring());
+
+        auto template_file = std::format(STR("VTableLayout_{}_Template.ini"), pdb_name);
+
+        Output::send(STR("Generating file '{}'\n"), template_file);
+
+        Output::Targets<Output::NewFileDevice> ini_dumper;
+        auto& ini_file_device = ini_dumper.get_device<Output::NewFileDevice>();
+        ini_file_device.set_file_name_and_path(vtable_templates_output_path / template_file);
+        ini_file_device.set_formatter([](File::StringViewType string) {
+            return File::StringType{string};
+        });
+
+        // Iterate through object_items first to preserve order
+        for (const auto& object_item : ConfigUtil::GetObjectItems())
         {
-            Output::send(STR("Generating file '{}_VTableOffsets_{}_FunctionBody.cpp'\n"), pdb_name, class_entry.class_name_clean);
+            const auto& class_name = object_item.name;
+
+            // Find the corresponding class entry
+            auto class_it = std::find_if(
+                    type_container.get_class_entries().begin(),
+                    type_container.get_class_entries().end(),
+                    [&class_name](const auto& entry) {
+                        return entry.first == class_name || entry.second.class_name == class_name;
+                    }
+                    );
+
+            // Skip if no class entry or skipping based on config
+            if (class_it == type_container.get_class_entries().end() ||
+                object_item.valid_for_vtable != ValidForVTable::Yes)
+            {
+                continue;
+            }
+
+            const auto& class_entry = class_it->second;
+
+            // Skip if no functions
+            if (class_entry.functions.empty())
+            {
+                continue;
+            }
+
+            // Create function body file
+            auto function_body_file = vtable_gen_function_bodies_path /
+                                      std::format(STR("{}_VTableOffsets_{}_FunctionBody.cpp"), pdb_name, class_entry.class_name_clean);
+
+            Output::send(STR("Generating file '{}'\n"), function_body_file.wstring());
+
             Output::Targets<Output::NewFileDevice> function_body_dumper;
             auto& function_body_file_device = function_body_dumper.get_device<Output::NewFileDevice>();
-            function_body_file_device.set_file_name_and_path(vtable_gen_function_bodies_path /
-                                                             std::format(STR("{}_VTableOffsets_{}_FunctionBody.cpp"), pdb_name, class_name));
+            function_body_file_device.set_file_name_and_path(function_body_file);
             function_body_file_device.set_formatter([](File::StringViewType string) {
                 return File::StringType{string};
             });
+
+            // Generate VTable offset entries with object_item order
+            ini_dumper.send(STR("[{}]\n"), class_entry.class_name);
 
             for (const auto& [function_index, function_entry] : class_entry.functions)
             {
@@ -206,26 +257,14 @@ namespace RC::UVTD
                                           function_entry.name,
                                           local_class_name);
                 function_body_dumper.send(STR("{\n"));
-                function_body_dumper.send(STR("    {}::VTableLayoutMap.emplace(STR(\"{}\"), 0x{:X});\n"), local_class_name, function_entry.name, function_entry.offset);
+                function_body_dumper.send(
+                        STR("    {}::VTableLayoutMap.emplace(STR(\"{}\"), 0x{:X});\n"),
+                        local_class_name,
+                        function_entry.name,
+                        function_entry.offset);
                 function_body_dumper.send(STR("}\n\n"));
-            }
-        }
 
-        auto template_file = std::format(STR("VTableLayout_{}_Template.ini"), pdb_name);
-        Output::send(STR("Generating file '{}'\n"), template_file);
-        Output::Targets<Output::NewFileDevice> ini_dumper;
-        auto& ini_file_device = ini_dumper.get_device<Output::NewFileDevice>();
-        ini_file_device.set_file_name_and_path(vtable_templates_output_path / template_file);
-        ini_file_device.set_formatter([](File::StringViewType string) {
-            return File::StringType{string};
-        });
-
-        for (const auto& [class_name, class_entry] : type_container.get_class_entries())
-        {
-            ini_dumper.send(STR("[{}]\n"), class_entry.class_name);
-
-            for (const auto& [function_index, function_entry] : class_entry.functions)
-            {
+                // Handle INI output for function entries
                 if (function_entry.is_overload)
                 {
                     ini_dumper.send(STR("; {}\n"), function_entry.signature.to_string());
