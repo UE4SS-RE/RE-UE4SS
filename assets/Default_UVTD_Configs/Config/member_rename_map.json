@@ -3,24 +3,24 @@
     "Class": {
       "mapped_name": "ClassPrivate",
       "generate_alias_setter": true,
-      "description": "Member for UObject's Class field. Renamed from 'Class' in UE4.12"
+      "description": "Private member for UObject's Class field. Renamed from 'Class' in UE4.12"
     },
     "Name": {
       "mapped_name": "NamePrivate",
       "generate_alias_setter": true,
-      "description": "Member for UObject's Name field. Renamed from 'Name' in UE4.12"
+      "description": "Private member for UObject's Name field. Renamed from 'Name' in UE4.12"
     },
     "Outer": {
       "mapped_name": "OuterPrivate",
       "generate_alias_setter": true,
-      "description": "Member for UObject's Outer field. Renamed from 'Outer' in UE4.12"
+      "description": "Private member for UObject's Outer field. Renamed from 'Outer' in UE4.12"
     }
   },
   "UEnum": {
     "EnumFlags": {
       "mapped_name": "EnumFlags_Internal",
       "generate_alias_setter": true,
-      "description": "Special handling for enum flags. Added to UEnum in UE4.26"
+      "description": "Special handling for enum flags to avoid conflicts"
     }
   }
 }
