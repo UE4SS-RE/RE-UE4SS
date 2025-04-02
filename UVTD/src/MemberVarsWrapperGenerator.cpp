@@ -9,7 +9,7 @@ namespace RC::UVTD
 {
     auto MemberVarsWrapperGenerator::generate_files() -> void
     {
-        auto macro_setter_file = std::filesystem::path{STR("MacroSetter.hpp")};
+        auto macro_setter_file = macro_setter_output_path / std::filesystem::path{STR("MacroSetter.hpp")};
 
         Output::send(STR("Generating file '{}'\n"), macro_setter_file.wstring());
 
@@ -30,7 +30,7 @@ namespace RC::UVTD
                 continue;
             }
 
-            auto wrapper_header_file = member_variable_layouts_gen_output_include_path /
+            auto wrapper_header_file = member_variable_layouts_wrappers_output_path /
                                        std::format(STR("MemberVariableLayout_HeaderWrapper_{}.hpp"), class_entry.class_name_clean);
 
             Output::send(STR("Generating file '{}'\n"), wrapper_header_file.wstring());
@@ -42,8 +42,8 @@ namespace RC::UVTD
                 return File::StringType{string};
             });
 
-            auto wrapper_src_file =
-                    member_variable_layouts_gen_output_include_path / std::format(STR("MemberVariableLayout_SrcWrapper_{}.hpp"), class_entry.class_name_clean);
+            auto wrapper_src_file = member_variable_layouts_wrappers_output_path / 
+                                    std::format(STR("MemberVariableLayout_SrcWrapper_{}.hpp"), class_entry.class_name_clean);
 
             Output::send(STR("Generating file '{}'\n"), wrapper_src_file.wstring());
 
@@ -271,9 +271,10 @@ namespace RC::UVTD
 
     auto MemberVarsWrapperGenerator::output_cleanup() -> void
     {
-        if (std::filesystem::exists(member_variable_layouts_gen_output_include_path))
+        // Cleanup header wrappers
+        if (std::filesystem::exists(member_variable_layouts_wrappers_output_path))
         {
-            for (const auto& item : std::filesystem::directory_iterator(member_variable_layouts_gen_output_include_path))
+            for (const auto& item : std::filesystem::directory_iterator(member_variable_layouts_wrappers_output_path))
             {
                 if (item.is_directory())
                 {

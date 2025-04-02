@@ -187,7 +187,7 @@ namespace RC::UVTD
             Output::send(STR("Generating file '{}_VTableOffsets_{}_FunctionBody.cpp'\n"), pdb_name, class_entry.class_name_clean);
             Output::Targets<Output::NewFileDevice> function_body_dumper;
             auto& function_body_file_device = function_body_dumper.get_device<Output::NewFileDevice>();
-            function_body_file_device.set_file_name_and_path(vtable_gen_output_function_bodies_path /
+            function_body_file_device.set_file_name_and_path(vtable_gen_function_bodies_path /
                                                              std::format(STR("{}_VTableOffsets_{}_FunctionBody.cpp"), pdb_name, class_name));
             function_body_file_device.set_formatter([](File::StringViewType string) {
                 return File::StringType{string};
@@ -239,49 +239,16 @@ namespace RC::UVTD
 
     auto VTableDumper::output_cleanup() -> void
     {
-        if (std::filesystem::exists(vtable_gen_output_include_path))
+        // Using vtable_gen_function_bodies_path from Helpers.hpp
+        if (std::filesystem::exists(vtable_gen_function_bodies_path))
         {
-            for (const auto& item : std::filesystem::directory_iterator(vtable_gen_output_include_path))
+            for (const auto& item : std::filesystem::directory_iterator(vtable_gen_function_bodies_path))
             {
                 if (item.is_directory())
                 {
                     continue;
                 }
-                if (item.path().extension() != STR(".hpp") && item.path().extension() != STR(".cpp"))
-                {
-                    continue;
-                }
-
-                File::delete_file(item.path());
-            }
-        }
-
-        if (std::filesystem::exists(vtable_gen_output_function_bodies_path))
-        {
-            for (const auto& item : std::filesystem::directory_iterator(vtable_gen_output_function_bodies_path))
-            {
-                if (item.is_directory())
-                {
-                    continue;
-                }
-                if (item.path().extension() != STR(".cpp"))
-                {
-                    continue;
-                }
-
-                File::delete_file(item.path());
-            }
-        }
-
-        if (std::filesystem::exists(vtable_gen_output_src_path))
-        {
-            for (const auto& item : std::filesystem::directory_iterator(vtable_gen_output_src_path))
-            {
-                if (item.is_directory())
-                {
-                    continue;
-                }
-                if (item.path().extension() != STR(".cpp"))
+                if (item.path().extension() != STR(".cpp") && item.path().extension() != STR(".hpp"))
                 {
                     continue;
                 }
