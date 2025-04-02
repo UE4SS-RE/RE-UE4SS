@@ -22,13 +22,13 @@ namespace RC::UVTD
 
     enum class ValidForVTable
     {
-        Yes,
-        No
+        No,
+        Yes
     };
     enum class ValidForMemberVars
     {
-        Yes,
-        No
+        No,
+        Yes
     };
 
     struct SymbolNameInfo
