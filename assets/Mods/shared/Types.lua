@@ -618,6 +618,27 @@ function UE4SS:GetVersion() end
 ---@return integer, integer, integer
 function UE4SS.GetVersion() end
 
+--- The 'ModRef' variable is a global variable that's automatically created and is the instance of the current mod.
+---@class ModRef
+ModRef = {}
+
+--- Sets a variable that can be accessed by any mod.
+--- The second parameter `Value` can only be one of the following types: `nil`, `string`, `number`, `bool`, `UObject` (+derivatives), `lightuserdata`.
+---@param VariableName string
+---@param Value any
+function ModRef:SetSharedVariable(VariableName, Value) end
+
+--- Returns a variable that could've been set by another mod.
+--- The return value can only be one of the following types: `nil`, `string`, `number`, `bool`, `UObject`(+derivatives), `lightuserdata`.
+---@param VariableName string
+---@param Value any
+---@return any
+function ModRef:GetSharedVariable(VariableName, Value) end
+
+---Returns the type of the shared variable (if it is valid)
+---@return string
+function ModRef:type() end
+
 ---Contains helper functions for retrieving which version of Unreal Engine that is being used.
 ---@class UnrealVersion
 UnrealVersion = {}
