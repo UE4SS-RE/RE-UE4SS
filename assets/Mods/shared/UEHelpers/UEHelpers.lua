@@ -88,7 +88,18 @@ end
 
 ---Returns local player pawn
 ---@return APawn
+---@deprecated
 function UEHelpers.GetPlayer()
+    local playerController = UEHelpers.GetPlayerController()
+    if playerController:IsValid() and playerController.Pawn then
+        return playerController.Pawn
+    end
+    return CreateInvalidObject() ---@type APawn
+end
+
+---Returns a pawn, if any, controlled/owned by first found PlayerController
+---@return APawn
+function UEHelpers.GetPawn()
     local playerController = UEHelpers.GetPlayerController()
     if playerController:IsValid() and playerController.Pawn then
         return playerController.Pawn
