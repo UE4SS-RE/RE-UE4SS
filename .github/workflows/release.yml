@@ -74,5 +74,5 @@ jobs:
           files: |
             release/UE4SS_v*.zip
             release/zDEV-UE4SS_v*.zip
-            release/zCustomGameConfigs.zip
-            release/zMapGenBP.zip
+            release/zCustomGameConfigs_v*.zip
+            release/zMapGenBP_v*.zip

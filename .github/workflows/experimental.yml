@@ -75,8 +75,8 @@ jobs:
           files: |
             release/UE4SS_v*.zip
             release/zDEV-UE4SS_v*.zip
-            release/zCustomGameConfigs.zip
-            release/zMapGenBP.zip
+            release/zCustomGameConfigs_v*.zip
+            release/zMapGenBP_v*.zip
 
       - name: Delete old release assets
         uses: mknejp/delete-release-assets@v1
@@ -94,5 +94,5 @@ jobs:
           files: |
             release/UE4SS_v*.zip
             release/zDEV-UE4SS_v*.zip
-            release/zCustomGameConfigs.zip
-            release/zMapGenBP.zip
+            release/zCustomGameConfigs_v*.zip
+            release/zMapGenBP_v*.zip
