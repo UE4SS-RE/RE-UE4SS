@@ -618,6 +618,24 @@ function UE4SS:GetVersion() end
 ---@return integer, integer, integer
 function UE4SS.GetVersion() end
 
+--- The 'ModRef' variable is a global variable that's automatically created and is the instance of the current mod.
+---@class ModRef
+ModRef = {}
+
+--- Sets a variable that can be accessed by any mod.
+---@param VariableName string
+---@param Value nil|string|number|bool|UObject
+function ModRef:SetSharedVariable(VariableName, Value) end
+
+--- Returns a variable that could've been set by another mod.
+---@param VariableName string
+---@return nil|string|number|bool|UObject
+function ModRef:GetSharedVariable(VariableName) end
+
+---Returns the type of the shared variable (if it is valid)
+---@return string
+function ModRef:type() end
+
 ---Contains helper functions for retrieving which version of Unreal Engine that is being used.
 ---@class UnrealVersion
 UnrealVersion = {}
@@ -1140,3 +1158,18 @@ function UEnum:RemoveFromNamesAt(Index, Count) end
 ---@param Count integer
 ---@param AllowShrinking boolean
 function UEnum:RemoveFromNamesAt(Index, Count, AllowShrinking) end
+
+--- Registers a callback that will get called before UEngine::LoadMap is called.
+--- The callback params are: UEngine Engine, struct FWorldContext& WorldContext, FURL URL, class UPendingNetGame* PendingGame, FString& Error
+--- Params (except strings & bools & FOutputDevice) must be retrieved via 'Param:Get()' and set via 'Param:Set()'.
+---@param Callback fun(Engine: RemoteUnrealParam<UEngine>, World: RemoteUnrealParam<FWorldContext>, FURL: FURL, PendingGame: RemoteUnrealParam<UPendingNetGame>, Error: FString)
+function RegisterLoadMapPreHook(Callback) end
+
+--- Registers a callback that will get called after UEngine::LoadMap is called.
+--- The callback params are: UEngine Enigne, struct FWorldContext& WorldContext, FURL URL, class UPendingNetGame* PendingGame, FString& Error
+--- Params (except strings & bools & FOutputDevice) must be retrieved via 'Param:Get()' and set via 'Param:Set()'.
+---@param Callback fun(Engine: RemoteUnrealParam<UEngine>, World: RemoteUnrealParam<FWorldContext>, FURL: FURL, PendingGame: RemoteUnrealParam<UPendingNetGame>, Error: FString)
+function RegisterLoadMapPostHook(Callback) end
+
+--- Creates LogicMods/ directory inside app's Paks/ folder
+function CreateLogicModsDirectory() end
