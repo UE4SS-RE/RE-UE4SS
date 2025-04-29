@@ -126,29 +126,32 @@ namespace RC::ObjectDumper
     auto arrayproperty_to_string_complex(void* p_this, StringType& out_line, ObjectToStringComplexDeclCallable callable) -> void
     {
         FProperty* array_inner = static_cast<FArrayProperty*>(p_this)->GetInner();
-        auto array_inner_class = array_inner->GetClass().HashObject();
-
-        if (to_string_exists(array_inner_class))
+        if (array_inner)
         {
-            get_to_string(array_inner_class)(array_inner, out_line);
+            auto array_inner_class = array_inner->GetClass().HashObject();
 
-            if (to_string_complex_exists(array_inner_class))
+            if (to_string_exists(array_inner_class))
             {
-                // If this code is executed then we'll be having another line before we return to the dumper, so we need to explicitly add a new line
-                // If this code is not executed then we'll not be having another line and the dumper will add the new line
-                out_line.append(STR("\n"));
+                get_to_string(array_inner_class)(array_inner, out_line);
 
-                get_to_string_complex(array_inner_class)(array_inner, out_line, [&]([[maybe_unused]] void* prop) {
-                    // It's possible that a new line is supposed to be appended here
-                });
+                if (to_string_complex_exists(array_inner_class))
+                {
+                    // If this code is executed then we'll be having another line before we return to the dumper, so we need to explicitly add a new line
+                    // If this code is not executed then we'll not be having another line and the dumper will add the new line
+                    out_line.append(STR("\n"));
+
+                    get_to_string_complex(array_inner_class)(array_inner, out_line, [&]([[maybe_unused]] void* prop) {
+                        // It's possible that a new line is supposed to be appended here
+                    });
+                }
+
+                callable(array_inner);
             }
-
-            callable(array_inner);
-        }
-        else
-        {
-            out_line.append(array_inner->GetFullName());
-            callable(array_inner);
+            else
+            {
+                out_line.append(array_inner->GetFullName());
+                callable(array_inner);
+            }
         }
     }
 
@@ -167,34 +170,37 @@ namespace RC::ObjectDumper
         FMapProperty* typed_this = static_cast<FMapProperty*>(p_this);
         FProperty* key_property = typed_this->GetKeyProp();
         FProperty* value_property = typed_this->GetValueProp();
-        auto key_property_class = key_property->GetClass().HashObject();
-        auto value_property_class = value_property->GetClass().HashObject();
+        if (key_property && value_property)
+        {
+            auto key_property_class = key_property->GetClass().HashObject();
+            auto value_property_class = value_property->GetClass().HashObject();
 
-        auto dump_property = [&](FProperty* property, ToStringHash property_class) {
-            if (to_string_exists(property_class))
-            {
-                get_to_string(property_class)(property, out_line);
-
-                if (to_string_complex_exists(property_class))
+            auto dump_property = [&](FProperty* property, ToStringHash property_class) {
+                if (to_string_exists(property_class))
                 {
-                    // If this code is executed then we'll be having another line before we return to the dumper, so we need to explicitly add a new line
-                    // If this code is not executed then we'll not be having another line and the dumper will add the new line
-                    out_line.append(STR("\n"));
+                    get_to_string(property_class)(property, out_line);
 
-                    get_to_string_complex(property_class)(property, out_line, [&]([[maybe_unused]] void* prop) {});
+                    if (to_string_complex_exists(property_class))
+                    {
+                        // If this code is executed then we'll be having another line before we return to the dumper, so we need to explicitly add a new line
+                        // If this code is not executed then we'll not be having another line and the dumper will add the new line
+                        out_line.append(STR("\n"));
+
+                        get_to_string_complex(property_class)(property, out_line, [&]([[maybe_unused]] void* prop) {});
+                    }
+
+                    callable(property);
                 }
+                else
+                {
+                    out_line.append(property->GetFullName());
+                    callable(property);
+                }
+            };
 
-                callable(property);
-            }
-            else
-            {
-                out_line.append(property->GetFullName());
-                callable(property);
-            }
-        };
-
-        dump_property(key_property, key_property_class);
-        dump_property(value_property, value_property_class);
+            dump_property(key_property, key_property_class);
+            dump_property(value_property, value_property_class);
+        }
     }
 
     auto classproperty_to_string(void* p_this, StringType& out_line) -> void
