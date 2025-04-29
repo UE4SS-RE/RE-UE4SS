@@ -275,7 +275,10 @@ namespace RC::ObjectDumper
 
     auto function_to_string(void* p_this, StringType& out_line) -> void
     {
+        auto typed_this = static_cast<UFunction*>(p_this);
+
         object_trivial_dump_to_string(p_this, out_line, STR(":"));
+        out_line.append(fmt::format(STR(" [f: {:016X}]"), reinterpret_cast<uintptr_t>(typed_this->GetFuncPtr())));
     }
 
     auto scriptstruct_to_string_complex(void* p_this, StringType& out_line, ObjectToStringComplexDeclCallable callable) -> void
