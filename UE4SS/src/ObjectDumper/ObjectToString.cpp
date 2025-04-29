@@ -273,12 +273,30 @@ namespace RC::ObjectDumper
         out_line.append(fmt::format(STR(" [sps: {:016X}]"), reinterpret_cast<uintptr_t>(typed_this->GetSuperStruct())));
     }
 
-    auto function_to_string(void* p_this, StringType& out_line) -> void
+    auto function_to_string(void* p_this, StringType& out_line, std::unordered_set<UFunction*>* in_dumped_functions) -> void
     {
         auto typed_this = static_cast<UFunction*>(p_this);
 
+        if (in_dumped_functions)
+        {
+            if (in_dumped_functions->contains(typed_this))
+            {
+                return;
+            }
+            else
+            {
+                in_dumped_functions->emplace(typed_this);
+            }
+        }
+
         object_trivial_dump_to_string(p_this, out_line, STR(":"));
         out_line.append(fmt::format(STR(" [f: {:016X}]"), reinterpret_cast<uintptr_t>(typed_this->GetFuncPtr())));
+        out_line.append(STR("\n"));
+
+        for (auto param : typed_this->ForEachProperty())
+        {
+            dump_xproperty(param, out_line);
+        }
     }
 
     auto scriptstruct_to_string_complex(void* p_this, StringType& out_line, ObjectToStringComplexDeclCallable callable) -> void
@@ -291,6 +309,29 @@ namespace RC::ObjectDumper
         }
     }
 
+    auto dump_xproperty(FProperty* property, StringType& out_line) -> void
+    {
+        auto typed_prop_class = property->GetClass().HashObject();
+
+        if (to_string_exists(typed_prop_class))
+        {
+            get_to_string(typed_prop_class)(property, out_line);
+            out_line.append(STR("\n"));
+
+            if (to_string_complex_exists(typed_prop_class))
+            {
+                get_to_string_complex(typed_prop_class)(property, out_line, [&]([[maybe_unused]] void* prop) {
+                    out_line.append(STR("\n"));
+                });
+            }
+        }
+        else
+        {
+            property_to_string(property, out_line);
+            out_line.append(STR("\n"));
+        }
+    }
+
     auto init() -> void
     {
         object_to_string_functions[UEnum::StaticClass()->HashObject()] = &enum_to_string;
@@ -299,7 +340,8 @@ namespace RC::ObjectDumper
         object_to_string_functions[UBlueprintGeneratedClass::StaticClass()->HashObject()] = &struct_to_string;
         object_to_string_functions[UWidgetBlueprintGeneratedClass::StaticClass()->HashObject()] = &struct_to_string;
         object_to_string_functions[UAnimBlueprintGeneratedClass::StaticClass()->HashObject()] = &struct_to_string;
-        object_to_string_functions[UFunction::StaticClass()->HashObject()] = &function_to_string;
+        // The 'function_to_string' function is explicitly called, so it doesn't need to be in this map.
+        // object_to_string_functions[UFunction::StaticClass()->HashObject()] = &function_to_string;
         // object_to_string_functions[UDelegateFunction::StaticClass()->HashObject()] = &function_to_string;
         // object_to_string_functions[USparseDelegateFunction::StaticClass()->HashObject()] = &function_to_string;
         object_to_string_functions[UScriptStruct::StaticClass()->HashObject()] = &struct_to_string;

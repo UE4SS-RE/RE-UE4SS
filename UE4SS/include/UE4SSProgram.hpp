@@ -274,8 +274,8 @@ namespace RC
         RC_UE4SS_API static auto dump_uobject(Unreal::UObject* object,
                                               std::unordered_set<Unreal::FField*>* dumped_fields,
                                               StringType& out_line,
-                                              bool is_below_425) -> void;
-        RC_UE4SS_API static auto dump_xproperty(Unreal::FProperty* property, StringType& out_line) -> void;
+                                              bool is_below_425,
+                                              std::unordered_set<Unreal::UFunction*>* in_dumped_functions = nullptr) -> void;
         RC_UE4SS_API static auto dump_all_objects_and_properties(const File::StringType& output_path_and_file_name) -> void;
 
         template <typename T>
