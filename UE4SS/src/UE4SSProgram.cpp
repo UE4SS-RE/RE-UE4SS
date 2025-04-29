@@ -1738,13 +1738,9 @@ namespace RC
         static auto linker_placeholder_function_class =
                 UObjectGlobals::StaticFindObject<UClass*>(nullptr, nullptr, STR("/Script/CoreUObject.LinkerPlaceholderFunction"));
 
-        if (is_below_425 && Unreal::TypeChecker::is_property(typed_obj) &&
-            !typed_obj->HasAnyFlags(static_cast<EObjectFlags>(EObjectFlags::RF_DefaultSubObject | EObjectFlags::RF_ArchetypeObject)))
-        {
-            // We've verified that we're in <4.25 so this cast is safe but should be abstracted at some point
-            ObjectDumper::dump_xproperty(std::bit_cast<FProperty*>(typed_obj), out_line);
-        }
-        else if (!typed_obj->IsA<UFunction>() || typed_obj->IsA(delegate_function_class) || typed_obj->IsA(linker_placeholder_function_class))
+        bool is_property = is_below_425 && Unreal::TypeChecker::is_property(typed_obj) &&
+                           !typed_obj->HasAnyFlags(static_cast<EObjectFlags>(EObjectFlags::RF_DefaultSubObject | EObjectFlags::RF_ArchetypeObject));
+        if (!is_property && (!typed_obj->IsA<UFunction>() || typed_obj->IsA(delegate_function_class) || typed_obj->IsA(linker_placeholder_function_class)))
         {
             if (in_dumped_functions && typed_obj->IsA<UFunction>())
             {
@@ -1767,10 +1763,9 @@ namespace RC
                 ObjectDumper::get_to_string(typed_class)(object, out_line);
                 out_line.append(STR("\n"));
 
-                if (!is_below_425 && ObjectDumper::to_string_complex_exists(typed_class))
+                if (ObjectDumper::to_string_complex_exists(typed_class))
                 {
                     // Dump all properties that are directly owned by this UObject (not its UClass)
-                    // UE 4.25+ (properties are part of GUObjectArray in earlier versions)
                     ObjectDumper::get_to_string_complex(typed_class)(object, out_line, [&](void* prop) {
                         if (dumped_fields.contains(static_cast<FField*>(prop)))
                         {
@@ -1790,21 +1785,17 @@ namespace RC
             }
 
             // If the UClass of the UObject has any properties then dump them
-            // UE 4.25+ (properties are part of GUObjectArray in earlier versions)
-            if (!is_below_425)
+            if (typed_obj->IsA<UStruct>())
             {
-                if (typed_obj->IsA<UStruct>())
+                for (FProperty* prop : static_cast<UClass*>(typed_obj)->ForEachProperty())
                 {
-                    for (FProperty* prop : static_cast<UClass*>(typed_obj)->ForEachProperty())
+                    if (dumped_fields.contains(prop))
                     {
-                        if (dumped_fields.contains(prop))
-                        {
-                            continue;
-                        }
-
-                        ObjectDumper::dump_xproperty(prop, out_line);
-                        dumped_fields.emplace(prop);
+                        continue;
                     }
+
+                    ObjectDumper::dump_xproperty(prop, out_line);
+                    dumped_fields.emplace(prop);
                 }
             }
 
