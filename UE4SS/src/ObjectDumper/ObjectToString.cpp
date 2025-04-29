@@ -1,6 +1,11 @@
 #include <format>
+#include <utility>
+#include <bit>
 
 #include <ObjectDumper/ObjectToString.hpp>
+#include <SigScanner/SinglePassSigScanner.hpp>
+#include <UE4SSProgram.hpp>
+
 #pragma warning(disable : 4005)
 #include <Unreal/FProperty.hpp>
 #include <Unreal/Property/FArrayProperty.hpp>
@@ -35,6 +40,21 @@ namespace RC::ObjectDumper
 
     std::unordered_map<ToStringHash, ObjectToStringDecl> object_to_string_functions{};
     std::unordered_map<ToStringHash, ObjectToStringComplexDecl> object_to_string_complex_functions{};
+
+    static auto to_address(uintptr_t address) -> uintptr_t
+    {
+        auto out_address = address;
+        if (UE4SSProgram::settings_manager.ObjectDumper.UseModuleOffsets)
+        {
+            out_address -= std::bit_cast<uintptr_t>(SigScannerStaticData::m_modules_info.array[std::to_underlying(ScanTarget::MainExe)].lpBaseOfDll);
+        }
+        return out_address;
+    }
+
+    static auto to_address(void* address) -> uintptr_t
+    {
+        return to_address(std::bit_cast<uintptr_t>(address));
+    }
 
     auto get_to_string(size_t hash) -> ObjectToStringDecl
     {
@@ -290,7 +310,7 @@ namespace RC::ObjectDumper
         }
 
         object_trivial_dump_to_string(p_this, out_line, STR(":"));
-        out_line.append(fmt::format(STR(" [f: {:016X}]"), reinterpret_cast<uintptr_t>(typed_this->GetFuncPtr())));
+        out_line.append(fmt::format(STR(" [f: {:016X}]"), to_address(typed_this->GetFuncPtr())));
         out_line.append(STR("\n"));
 
         for (auto param : typed_this->ForEachProperty())
