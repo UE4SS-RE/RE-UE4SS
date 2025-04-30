@@ -395,7 +395,7 @@ namespace RC::LuaType
             auto_construct_object(params.lua, *property_value);
             break;
         case Operation::Set: {
-            if (params.lua.is_userdata())
+            if (params.lua.is_userdata(params.stored_at_index))
             {
                 const auto& lua_object = params.lua.get_userdata<LuaType::UObject>(params.stored_at_index);
                 *property_value = lua_object.get_remote_cpp_object();
@@ -430,7 +430,7 @@ namespace RC::LuaType
             LuaType::UClass::construct(params.lua, *property_value);
             break;
         case Operation::Set: {
-            if (params.lua.is_userdata())
+            if (params.lua.is_userdata(params.stored_at_index))
             {
                 const auto& lua_object = params.lua.get_userdata<LuaType::UClass>(params.stored_at_index);
                 *property_value = lua_object.get_remote_cpp_object();
