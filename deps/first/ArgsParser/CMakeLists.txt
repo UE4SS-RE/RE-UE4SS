@@ -13,7 +13,7 @@ string(TOUPPER ${MODULE_NAME} MODULE_NAME)
 add_library(${TARGET} INTERFACE)
 target_include_directories(${TARGET} INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/include)
 
-# Enabling c++20 support
+# Enabling c++23 support
 target_compile_features(${TARGET} INTERFACE cxx_std_23)
 
 # First-party dependencies

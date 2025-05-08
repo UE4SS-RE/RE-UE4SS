@@ -21,7 +21,7 @@ else ()
     add_library(${TARGET} ${${TARGET}_Sources})
 endif ()
 
-# Enabling c++20 support
+# Enabling c++23 support
 target_compile_features(${TARGET} PUBLIC cxx_std_23)
 
 target_compile_definitions(${TARGET} PRIVATE

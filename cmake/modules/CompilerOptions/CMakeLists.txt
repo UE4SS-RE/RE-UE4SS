@@ -1,33 +1,32 @@
-# This folder is designed to allow for specifying compiler options
-# depending on the compiler we are currently compiling with
+# Compiler options management
+#
+# This module selects the appropriate compiler options file based on the compiler ID
+# and sets the required variables for the build system.
 
-# Required variables to be set by subdirectory scripts:
-# 
-# `DEFAULT_COMPILER_FLAGS` - cxx/c compiler flags that are common between all triplets
-#
-# `DEFAULT_SHARED_LINKER_FLAGS` - shared linker flags that are common between all triplets
-# `DEFAULT_EXE_LINKER_FLAGS` - exe linker flags that are common between all triplets
-#
-# Optional variables to be set by subdirectory scripts:
-#
-# NOTE: if one of these variables is set for a given compiler, it must be set for all compilers
-# NOTE: currently there is no validation for this, so care must be taken when setting new variables
-#
-# `<TARGET>_FLAGS` - cxx/c compiler flags for this target
-# `<TARGET>_LINKER_FLAGS` - shared/exe linker flags for this target
-#
-# `<CONFIGURATION>_FLAGS` - cxx/c compiler flags for this configuration
-# `<CONFIGURATION>_LINKER_FLAGS` - shared/exe linker flags for this configuration
-#
-# `<PLATFORM>_FLAGS` cxx/c compiler flags for this platform
-# `<PLATFORM>_LINKER_FLAGS` shared/exe linker flags for this platform
+# Required variables set by this module:
+# DEFAULT_COMPILER_FLAGS - Common compiler flags for C/C++
+# DEFAULT_SHARED_LINKER_FLAGS - Common linker flags for shared libraries
+# DEFAULT_EXE_LINKER_FLAGS - Common linker flags for executables
 
-if (${CMAKE_CXX_COMPILER_ID} STREQUAL MSVC)
+if(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
     include("msvc.cmake")
-elseif (${CMAKE_CXX_COMPILER_ID} STREQUAL Clang)
+    
+    # Add LTCG flags for Shipping builds
+    set(CMAKE_STATIC_LINKER_FLAGS_RELEASE "${CMAKE_STATIC_LINKER_FLAGS_RELEASE} /LTCG")
+    set(CMAKE_EXE_LINKER_FLAGS_RELEASE "${CMAKE_EXE_LINKER_FLAGS_RELEASE} /LTCG")
+    set(CMAKE_SHARED_LINKER_FLAGS_RELEASE "${CMAKE_SHARED_LINKER_FLAGS_RELEASE} /LTCG")
+    
+    # Handle the custom Game__Shipping__Win64 configuration
+    set(CMAKE_STATIC_LINKER_FLAGS_GAME__SHIPPING__WIN64 "${CMAKE_STATIC_LINKER_FLAGS_GAME__SHIPPING__WIN64} /LTCG")
+    set(CMAKE_EXE_LINKER_FLAGS_GAME__SHIPPING__WIN64 "${CMAKE_EXE_LINKER_FLAGS_GAME__SHIPPING__WIN64} /LTCG")
+    set(CMAKE_SHARED_LINKER_FLAGS_GAME__SHIPPING__WIN64 "${CMAKE_SHARED_LINKER_FLAGS_GAME__SHIPPING__WIN64} /LTCG")
+elseif(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
     include("clang.cmake")
-elseif (${CMAKE_CXX_COMPILER_ID} STREQUAL GNU)
+elseif(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
     include("gnu.cmake")
-else ()
-    message(FATAL_ERROR "Unsupported compiler id (${CMAKE_CXX_COMPILER_ID})")
-endif ()
+else()
+    message(FATAL_ERROR "Unsupported compiler: ${CMAKE_CXX_COMPILER_ID}")
+endif()
+
+# Note: The build configuration is handled by the triplet system in the main CMakeLists.txt
+# We don't add any additional configuration-specific flags here to preserve compatibility

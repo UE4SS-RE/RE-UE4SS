@@ -36,6 +36,7 @@ Releases/
 Binaries/
 Intermediates/
 VSBuilds/
+VSBuilds-test/
 
 # standard cmake build directory
 /build

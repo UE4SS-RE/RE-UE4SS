@@ -25,7 +25,7 @@ if (NOT UE4SS_NO_CUSTOM_FLAGS)
         target_link_options(${TARGET} PUBLIC "${PRIVATE_LINK_OPTIONS}")
 endif ()
 
-# Enabling c++20 support
+# Enabling c++23 support
 target_compile_features(${TARGET} PUBLIC cxx_std_23)
 
 target_include_directories(${TARGET} PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>)
