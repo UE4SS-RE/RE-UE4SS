@@ -29,9 +29,9 @@ set(ImGui_Sources
 add_library(ImGui ${ImGui_Sources})
 
 # Enabling c++20 support
-target_compile_features(ImGui PUBLIC cxx_std_20)
+target_compile_features(ImGui PUBLIC cxx_std_23)
 
-target_link_libraries(ImGui PUBLIC GLFW)
+target_link_libraries(ImGui PUBLIC glfw)
 
 target_include_directories(ImGui PUBLIC 
     "${ImGui_FETCHED_SOURCE}"

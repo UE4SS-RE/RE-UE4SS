@@ -87,8 +87,6 @@ FetchContent_Declare(
     GIT_PROGRESS ON
 )
 
-set(FMT_HEADER_ONLY OFF CACHE BOOL "Build fmt as a compiled library, not header-only")
-
 FetchContent_MakeAvailable(fmt)
 # fmt end
 

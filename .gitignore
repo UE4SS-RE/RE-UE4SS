@@ -35,6 +35,7 @@ VS_Solution/Dependencies/
 Releases/
 Binaries/
 Intermediates/
+VSBuilds/
 
 # standard cmake build directory
 /build

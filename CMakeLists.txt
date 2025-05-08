@@ -18,6 +18,7 @@ message("IPO - Supported: ${supported}; ${error}")
 # Settings -> START
 option(MAKE_DEPENDENCIES_SHARED "Make dependencies shared" OFF)
 option(UE4SS_CONSOLE_COLORS_ENABLED "Enable console colors" OFF)
+option(UE4SS_INPUT_ENABLED "Enable the input system" ON)
 # Settings -> END
 
 # Projects -> START
@@ -32,6 +33,10 @@ message("CMAKE_CXX_COMPILER_ID: ${CMAKE_CXX_COMPILER_ID}")
 
 if (UE4SS_CONSOLE_COLORS_ENABLED)
     list(APPEND TARGET_COMPILE_DEFINITIONS UE4SS_CONSOLE_COLORS_ENABLED)
+endif ()
+
+if (UE4SS_INPUT_ENABLED)
+    list(APPEND TARGET_COMPILE_DEFINITIONS HAS_INPUT)
 endif ()
 
 # Tell WinAPI macros to map to unicode functions instead of ansi
@@ -93,7 +98,7 @@ set(Win64_VARS CMAKE_SYSTEM_PROCESSOR=x86_64)
 # Vars -> END
 
 # Initializing compiler-specific options
-add_subdirectory("cmake/CompilerOptions")
+add_subdirectory("cmake/modules/CompilerOptions")
 
 # Compiler Options -> START
 add_compile_options("$<$<NOT:$<COMPILE_LANGUAGE:ASM_MASM>>:${DEFAULT_COMPILER_FLAGS}>")

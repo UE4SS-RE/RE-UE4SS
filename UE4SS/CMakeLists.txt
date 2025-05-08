@@ -75,6 +75,7 @@ set(${TARGET}_Sources
     "${CMAKE_CURRENT_SOURCE_DIR}/src/LuaType/LuaFURL.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/LuaType/LuaUScriptStruct.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/LuaType/LuaTArray.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/LuaType/LuaTMap.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/LuaType/LuaUFunction.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/LuaType/LuaCustomProperty.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/LuaType/LuaFText.cpp"
@@ -164,7 +165,7 @@ target_link_libraries(${TARGET} PUBLIC
 )
 
 target_link_libraries(${TARGET} PUBLIC
-    ImGui PolyHook_2 d3d11 GLFW opengl32 dbghelp psapi ws2_32 ntdll userenv)
+    fmt ImGui PolyHook_2 d3d11 glfw opengl32 dbghelp psapi ws2_32 ntdll userenv)
 
 
 

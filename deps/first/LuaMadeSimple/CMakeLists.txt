@@ -22,7 +22,7 @@ else ()
 endif ()
 
 # Enabling c++20 support
-target_compile_features(${TARGET} PUBLIC cxx_std_20)
+target_compile_features(${TARGET} PUBLIC cxx_std_23)
 
 target_compile_definitions(${TARGET} PRIVATE
         RC_${MODULE_NAME}_EXPORTS
@@ -31,4 +31,4 @@ target_compile_definitions(${TARGET} PRIVATE
 
 target_include_directories(${TARGET} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
 
-target_link_libraries(${TARGET} PUBLIC LuaRaw)
+target_link_libraries(${TARGET} PUBLIC fmt Helpers LuaRaw)
