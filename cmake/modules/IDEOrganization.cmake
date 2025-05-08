@@ -4,7 +4,7 @@
 # Enable IDE organization with folders
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
-# Recursive function to get all targets
+# Recursively gets all targets from the given directory and its subdirectories
 function(get_all_targets_recursive targets dir)
     get_property(subdirectories DIRECTORY ${dir} PROPERTY SUBDIRECTORIES)
     foreach(subdir ${subdirectories})
@@ -24,59 +24,115 @@ function(set_folder_for_target target folder)
     endif()
 endfunction()
 
-# Function to organize special targets that might not be captured by automatic assignment
-function(organize_special_targets)
-    # Manually set folders for cargo-related targets
-    set_folder_for_target(_cargo-build_patternsleuth_bind "deps/first/patternsleuth_bind")
-    set_folder_for_target(cargo-build_patternsleuth_bind "deps/first/patternsleuth_bind")
-    set_folder_for_target(cargo-clean "deps/first/patternsleuth_bind")
-    set_folder_for_target(cargo-clean_patternsleuth_bind "deps/first/patternsleuth_bind")
-    set_folder_for_target(cargo-prebuild "deps/first/patternsleuth_bind")
-    set_folder_for_target(cargo-prebuild_patternsleuth_bind "deps/first/patternsleuth_bind")
-
-    # Set folder for proxy_files
-    set_folder_for_target(proxy_files "programs")
-
-    # Third-party special targets
-    set_folder_for_target(asmjit "deps/third")
-    set_folder_for_target(asmtk "deps/third")
-    set_folder_for_target(Examples "deps/third")
-    set_folder_for_target(raw_pdb "deps/third")
+# Sets folder for targets that match a specific pattern
+function(set_folder_for_target_pattern target_pattern folder)
+    # Get all targets in the project
+    set(ALL_TARGETS "")
+    get_all_targets_recursive(ALL_TARGETS ${CMAKE_SOURCE_DIR})
+    
+    foreach(target ${ALL_TARGETS})
+        if(NOT TARGET ${target})
+            continue()
+        endif()
+        
+        if("${target}" MATCHES "${target_pattern}")
+            # Always set the folder property
+            set_target_properties(${target} PROPERTIES FOLDER ${folder})
+            message(STATUS "Set folder for target ${target} to ${folder} (matched pattern: ${target_pattern})")
+        endif()
+    endforeach()
 endfunction()
 
-# Function to organize all targets based on their source directory
+# Sets folder for a list of specific targets
+function(set_folder_for_targets_list targets_list folder)
+    foreach(target ${targets_list})
+        set_folder_for_target(${target} ${folder})
+    endforeach()
+endfunction()
+
+# Generic helper function for organizing targets by pattern
+# This can be called from any CMake file to organize targets
+# 
+# Arguments:
+#   target_pattern - Regex pattern to match target names
+#   folder - Folder to place matching targets in
+#   base_folder - (Optional) Base folder prefix to use if folder doesn't start with deps/
+#
+# Example usage:
+#   organize_targets("^my_lib$|^my_lib_.*" "my_folder")
+#
+function(organize_targets target_pattern folder)
+    # Get optional base_folder parameter
+    if(${ARGC} GREATER 2)
+        set(base_folder ${ARGV2})
+    else()
+        # Default base folder based on source directory
+        string(FIND "${CMAKE_CURRENT_SOURCE_DIR}" "/first/" is_first)
+        string(FIND "${CMAKE_CURRENT_SOURCE_DIR}" "/third/" is_third)
+        
+        if(is_first GREATER -1)
+            set(base_folder "deps/first")
+        elseif(is_third GREATER -1)
+            set(base_folder "deps/third")
+        else()
+            set(base_folder "")
+        endif()
+    endif()
+    
+    # Construct full folder path if needed
+    if(NOT "${folder}" MATCHES "^deps/")
+        if(NOT "${base_folder}" STREQUAL "")
+            set(full_folder "${base_folder}/${folder}")
+        else()
+            set(full_folder "${folder}")
+        endif()
+    else()
+        set(full_folder "${folder}")
+    endif()
+    
+    # Get all targets
+    set(ALL_TARGETS "")
+    # Uses get_all_targets_recursive() defined earlier in this file
+    get_all_targets_recursive(ALL_TARGETS ${CMAKE_SOURCE_DIR})
+    
+    # Find matching targets and set their folders
+    set(found_match FALSE)
+    foreach(target ${ALL_TARGETS})
+        if(NOT TARGET ${target})
+            continue()
+        endif()
+        
+        if("${target}" MATCHES "${target_pattern}")
+            # Skip if the target already has a folder set
+            get_target_property(EXISTING_FOLDER ${target} FOLDER)
+            if(NOT "${EXISTING_FOLDER}" STREQUAL "EXISTING_FOLDER-NOTFOUND")
+                continue()
+            endif()
+            
+            # Set the folder property
+            set_target_properties(${target} PROPERTIES FOLDER "${full_folder}")
+            set(found_match TRUE)
+        endif()
+    endforeach()
+endfunction()
+
+# Organizes all targets based on their source directory
 function(organize_targets_by_source_dir)
     # Get all targets in the project
     set(ALL_TARGETS "")
     get_all_targets_recursive(ALL_TARGETS ${CMAKE_SOURCE_DIR})
     
-    # Lists of special targets
-    set(RUST_CARGO_TARGETS
-        "cargo-build"
-        "_cargo-build"
-        "cargo-build_patternsleuth_bind"
-        "_cargo-build_patternsleuth_bind"
-        "cargo-clean"
-        "cargo-clean_patternsleuth_bind"
-        "cargo-prebuild"
-        "cargo-prebuild_patternsleuth_bind"
-    )
-
-    set(THIRD_PARTY_SPECIAL_TARGETS
-        "asmjit"
-        "asmtk"
-        "Examples" 
-        "raw_pdb"
-    )
-
-    set(PROGRAM_SPECIAL_TARGETS
-        "proxy_files"
-    )
-
     # Organize targets in IDE folders
     foreach(target ${ALL_TARGETS})
         # Skip non-target entries
         if(NOT TARGET ${target})
+            continue()
+        endif()
+
+        # Only set folder if it's not already set
+        # This allows explicit settings to take precedence
+        get_target_property(EXISTING_FOLDER ${target} FOLDER)
+        if(NOT "${EXISTING_FOLDER}" STREQUAL "EXISTING_FOLDER-NOTFOUND")
             continue()
         endif()
 
@@ -85,78 +141,29 @@ function(organize_targets_by_source_dir)
         if(TARGET_TYPE STREQUAL "UTILITY")
             continue()  # Skip utility targets
         endif()
-
-        # Handle special target cases first
-        set(handled FALSE)
-        
-        # Handle Rust Cargo targets
-        foreach(rust_target ${RUST_CARGO_TARGETS})
-            if("${target}" STREQUAL "${rust_target}")
-                set_target_properties(${target} PROPERTIES FOLDER "deps/first/patternsleuth_bind")
-                set(handled TRUE)
-                break()
-            endif()
-        endforeach()
-        
-        if(handled)
-            continue()
-        endif()
-        
-        # Handle other special third-party targets
-        foreach(special_target ${THIRD_PARTY_SPECIAL_TARGETS})
-            if("${target}" STREQUAL "${special_target}")
-                set_target_properties(${target} PROPERTIES FOLDER "deps/third")
-                set(handled TRUE)
-                break()
-            endif()
-        endforeach()
-        
-        if(handled)
-            continue()
-        endif()
-        
-        # Handle special program targets
-        foreach(special_target ${PROGRAM_SPECIAL_TARGETS})
-            if("${target}" STREQUAL "${special_target}")
-                set_target_properties(${target} PROPERTIES FOLDER "programs")
-                set(handled TRUE)
-                break()
-            endif()
-        endforeach()
-        
-        if(handled)
-            continue()
-        endif()
-        
-        # Handle GLFW targets
-        if("${target}" MATCHES "^glfw" OR "${target}" MATCHES "^uninstall")
-            set_target_properties(${target} PROPERTIES FOLDER "deps/third/GLFW")
-            set(handled TRUE)
-            continue()
-        endif()
         
         # Standard organization based on source directory
-        if(NOT handled)
-            get_target_property(TARGET_SOURCE_DIR ${target} SOURCE_DIR)
-            if(TARGET_SOURCE_DIR)
-                string(REPLACE "${CMAKE_SOURCE_DIR}/" "" REL_SOURCE_DIR "${TARGET_SOURCE_DIR}")
-                
-                # Categorize targets
-                if(REL_SOURCE_DIR MATCHES "^deps/first")
-                    set_target_properties(${target} PROPERTIES FOLDER "deps/first")
-                elseif(REL_SOURCE_DIR MATCHES "^deps/third")
-                    set_target_properties(${target} PROPERTIES FOLDER "deps/third")
-                elseif(REL_SOURCE_DIR MATCHES "^cppmods")
-                    set_target_properties(${target} PROPERTIES FOLDER "mods")
-                elseif(REL_SOURCE_DIR MATCHES "^UE4SS|^UVTD")
-                    set_target_properties(${target} PROPERTIES FOLDER "programs")
-                endif()
+        get_target_property(TARGET_SOURCE_DIR ${target} SOURCE_DIR)
+        if(TARGET_SOURCE_DIR)
+            string(REPLACE "${CMAKE_SOURCE_DIR}/" "" REL_SOURCE_DIR "${TARGET_SOURCE_DIR}")
+            
+            # Categorize targets
+            if(REL_SOURCE_DIR MATCHES "^deps/first")
+                set_target_properties(${target} PROPERTIES FOLDER "deps/first")
+            elseif(REL_SOURCE_DIR MATCHES "^deps/third")
+                set_target_properties(${target} PROPERTIES FOLDER "deps/third")
+            elseif(REL_SOURCE_DIR MATCHES "^cppmods")
+                set_target_properties(${target} PROPERTIES FOLDER "Mods")
+            elseif(REL_SOURCE_DIR MATCHES "^UE4SS")
+                set_target_properties(${target} PROPERTIES FOLDER "RE-UE4SS")
+            elseif(REL_SOURCE_DIR MATCHES "^UVTD")
+                set_target_properties(${target} PROPERTIES FOLDER "Programs")
             endif()
         endif()
     endforeach()
 endfunction()
 
-# Function to apply compiler settings to all targets
+# Applies compiler settings to all targets
 function(apply_compiler_settings_to_targets TARGET_COMPILE_OPTIONS TARGET_LINK_OPTIONS TARGET_COMPILE_DEFINITIONS)
     # Get all targets
     set(ALL_TARGETS "")
@@ -184,4 +191,10 @@ function(apply_compiler_settings_to_targets TARGET_COMPILE_OPTIONS TARGET_LINK_O
             LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/Output/$<CONFIG>/${target}/${CMAKE_INSTALL_BINDIR}
             ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/Output/$<CONFIG>/${target}/${CMAKE_INSTALL_BINDIR})
     endforeach()
+endfunction()
+
+# Master function that organizes all targets 
+function(organize_all_targets)
+    # Apply source-based organization for all targets
+    organize_targets_by_source_dir()
 endfunction()

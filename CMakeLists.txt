@@ -12,21 +12,8 @@ include(GNUInstallDirs)
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake" "${CMAKE_CURRENT_SOURCE_DIR}/cmake/modules")
 
 # Include helper modules
-# The following are defined:
-# - From IDEOrganization.cmake:
-#   - get_all_targets_recursive(targets dir)
-#   - set_folder_for_target(target folder)
-#   - organize_special_targets()
-#   - organize_targets_by_source_dir()
-#   - apply_compiler_settings_to_targets(TARGET_COMPILE_OPTIONS TARGET_LINK_OPTIONS TARGET_COMPILE_DEFINITIONS)
-#
-# - From Utilities.cmake:
-#   - listToString(VARNAME VALUE)
-#   - stringToList(VARNAME VALUE)
-#   - generate_build_configurations()
-#   - setup_build_config()
-include(IDEOrganization)
-include(Utilities)
+include(IDEOrganization)  # For organizing targets in the IDE
+include(Utilities)        # For utility functions
 
 # Check IPO/LTO support
 check_ipo_supported(RESULT IPO_SUPPORTED OUTPUT IPO_ERROR)
@@ -140,13 +127,14 @@ foreach(project ${PROJECTS})
     add_subdirectory(${project})
 endforeach()
 
-# Organize special targets that might not be captured by automatic assignment
-# Uses organize_special_targets() from cmake/modules/IDEOrganization.cmake
-organize_special_targets()
+# Organize all targets using the master function
+# Uses organize_all_targets() from cmake/modules/IDEOrganization.cmake
+organize_all_targets()
 
-# Organize all targets based on their source directory
-# Uses organize_targets_by_source_dir() from cmake/modules/IDEOrganization.cmake
-organize_targets_by_source_dir()
+# Explicitly place UE4SS at the root under RE-UE4SS
+if(TARGET UE4SS)
+    set_target_properties(UE4SS PROPERTIES FOLDER "RE-UE4SS")
+endif()
 
 # Apply compiler settings to all targets
 # Uses apply_compiler_settings_to_targets() from cmake/modules/IDEOrganization.cmake
@@ -154,4 +142,3 @@ apply_compiler_settings_to_targets("${TARGET_COMPILE_OPTIONS}" "${TARGET_LINK_OP
 
 # Set default configuration
 # Uses setup_build_config() from cmake/modules/Utilities.cmake
-setup_build_config()

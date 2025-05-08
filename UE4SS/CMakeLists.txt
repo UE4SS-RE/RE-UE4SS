@@ -144,11 +144,8 @@ set_property(TARGET UE4SS PROPERTY MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG
 set_target_properties(UE4SS PROPERTIES 
     OUTPUT_NAME "UE4SS"
     CXX_STANDARD 23
-    FOLDER "programs"
 )
 
-# Organize proxy generator in IDE
-get_property(PROXY_TARGETS DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/proxy_generator PROPERTY BUILDSYSTEM_TARGETS)
-foreach(target ${PROXY_TARGETS})
-    set_target_properties(${target} PROPERTIES FOLDER "programs/proxy_generator")
-endforeach()
+# Use the organize_targets function from IDEOrganization.cmake
+# The organize_special_targets function will also handle this target
+organize_targets("^UE4SS$" "RE-UE4SS")

@@ -44,5 +44,5 @@ target_link_libraries(${TARGET} PRIVATE
 
 target_link_libraries(${TARGET} PRIVATE raw_pdb)
 
-# Set IDE folder
-set_target_properties(${TARGET} PROPERTIES FOLDER "programs")
+# Set IDE folder - make sure to use capital P for Programs
+set_target_properties(${TARGET} PROPERTIES FOLDER "Programs")

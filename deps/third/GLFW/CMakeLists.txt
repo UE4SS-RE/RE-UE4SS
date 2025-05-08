@@ -15,18 +15,23 @@ set(GLFW_BUILD_DOCS OFF CACHE BOOL "" FORCE)
 set(GLFW_BUILD_TESTS OFF CACHE BOOL "" FORCE)
 set(GLFW_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
 
+# Make the content available
 FetchContent_MakeAvailable(glfw)
 
-# Set GLFW targets to be in deps/third/GLFW folder
-# Uses set_folder_for_target() from cmake/modules/IDEOrganization.cmake
+# Set the folder for GLFW targets right after they're created
+# This happens before any other organization attempts
 if(TARGET glfw)
-    set_folder_for_target(glfw "deps/third/GLFW")
+    set_target_properties(glfw PROPERTIES FOLDER "deps/third/GLFW3")
+endif()
+
+if(TARGET glfw3)
+    set_target_properties(glfw3 PROPERTIES FOLDER "deps/third/GLFW3")
 endif()
 
 if(TARGET update_mappings)
-    set_folder_for_target(update_mappings "deps/third/GLFW")
+    set_target_properties(update_mappings PROPERTIES FOLDER "deps/third/GLFW3")
 endif()
 
 if(TARGET uninstall)
-    set_folder_for_target(uninstall "deps/third/GLFW")
+    set_target_properties(uninstall PROPERTIES FOLDER "deps/third/GLFW3")
 endif()

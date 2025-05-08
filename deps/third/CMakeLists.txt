@@ -116,7 +116,7 @@ function(organize_third_party_targets)
         TracyClient
         Zycore Zydis_static Zydis-shared
     )
-
+    
     foreach(target ${THIRD_PARTY_TARGETS})
         if(TARGET ${target})
             # Check if it's an ALIAS target before setting properties
@@ -124,6 +124,12 @@ function(organize_third_party_targets)
             get_target_property(is_alias ${target} ALIASED_TARGET)
             
             if(NOT is_alias AND NOT is_imported)
+                # Skip if the target already has a folder set
+                get_target_property(EXISTING_FOLDER ${target} FOLDER)
+                if(NOT "${EXISTING_FOLDER}" STREQUAL "EXISTING_FOLDER-NOTFOUND")
+                    continue()
+                endif()
+                
                 set_target_properties(${target} PROPERTIES FOLDER "deps/third")
             endif()
         endif()
@@ -131,6 +137,7 @@ function(organize_third_party_targets)
     
     # Look for other targets from FetchContent
     get_property(FETCHCONTENT_TARGETS DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY BUILDSYSTEM_TARGETS)
+    
     foreach(target ${FETCHCONTENT_TARGETS})
         # Check if it's an ALIAS target before setting properties
         if(TARGET ${target})
@@ -138,6 +145,12 @@ function(organize_third_party_targets)
             get_target_property(is_alias ${target} ALIASED_TARGET)
             
             if(NOT is_alias AND NOT is_imported)
+                # Skip if the target already has a folder set
+                get_target_property(EXISTING_FOLDER ${target} FOLDER)
+                if(NOT "${EXISTING_FOLDER}" STREQUAL "EXISTING_FOLDER-NOTFOUND")
+                    continue()
+                endif()
+                
                 set_target_properties(${target} PROPERTIES FOLDER "deps/third")
             endif()
         endif()

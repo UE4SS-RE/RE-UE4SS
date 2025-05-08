@@ -21,8 +21,6 @@ add_subdirectory("Profiler")
 # We don't need to add patternsleuth_bind here as it's handled by Corrosion in the third party deps
 # First party dependencies -> END
 
-# Organize targets in the "deps/first" folder
-get_property(TARGETS DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY BUILDSYSTEM_TARGETS)
-foreach(target ${TARGETS})
-    set_target_properties(${target} PROPERTIES FOLDER "deps/first")
-endforeach()
+# Organize generic Rust targets into deps/rust
+# Uses organize_targets() from cmake/modules/IDEOrganization.cmake
+organize_targets("^cargo-clean$|^cargo-prebuild$" "deps/rust")

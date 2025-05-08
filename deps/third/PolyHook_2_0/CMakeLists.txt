@@ -41,6 +41,10 @@ unset(MSVC)
 
 FetchContent_MakeAvailable(PolyHook2)
 
+# Use the generic helper function to organize asmjit and asmtk targets
+# Uses organize_targets() from cmake/modules/IDEOrganization.cmake
+organize_targets("^asmjit|^asmtk" "deps/third")
+
 # re-enable 'install' and reset 'MSVC' since we're done adding PolyHook
 set(MSVC ${TMP_MSVC})
 set(_DISABLE_INSTALL FALSE)

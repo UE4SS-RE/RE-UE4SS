@@ -34,3 +34,7 @@ add_custom_target(proxy_files DEPENDS
         "${CMAKE_CURRENT_BINARY_DIR}/${PROXY_NAME}.asm"
         "${CMAKE_CURRENT_BINARY_DIR}/${PROXY_NAME}.def")
 add_dependencies(${TARGET} proxy_files)
+
+# Directly set folders for proxy and proxy_files in Programs/proxy
+set_target_properties(${TARGET} PROPERTIES FOLDER "Programs/proxy")
+set_target_properties(proxy_files PROPERTIES FOLDER "Programs/proxy")
