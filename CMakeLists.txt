@@ -11,6 +11,9 @@ include(GNUInstallDirs)
 # CMake Module Path
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 
+# Enable IDE organization with folders
+set_property(GLOBAL PROPERTY USE_FOLDERS ON)
+
 # Check IPO/LTO support
 check_ipo_supported(RESULT IPO_SUPPORTED OUTPUT IPO_ERROR)
 message("IPO/LTO support: ${IPO_SUPPORTED}; ${IPO_ERROR}")
@@ -25,7 +28,7 @@ option(MAKE_DEPENDENCIES_SHARED "Make dependencies shared" OFF)
 option(UE4SS_CONSOLE_COLORS_ENABLED "Enable console colors" OFF)
 option(UE4SS_INPUT_ENABLED "Enable the input system" ON)
 
-# Projects
+# Projects 
 set(PROJECTS "UE4SS" "UVTD")
 
 # Fix for ninja/clang
@@ -191,8 +194,7 @@ foreach(project ${PROJECTS})
 endforeach()
 
 # Recursive function to get all targets
-set(TARGETS "")
-macro(get_all_targets_recursive targets dir)
+function(get_all_targets_recursive targets dir)
     get_property(subdirectories DIRECTORY ${dir} PROPERTY SUBDIRECTORIES)
     foreach(subdir ${subdirectories})
         get_all_targets_recursive(${targets} ${subdir})
@@ -200,44 +202,149 @@ macro(get_all_targets_recursive targets dir)
 
     get_property(dir_targets DIRECTORY ${dir} PROPERTY BUILDSYSTEM_TARGETS)
     list(APPEND ${targets} ${dir_targets})
-endmacro()
+    set(${targets} ${${targets}} PARENT_SCOPE)
+endfunction()
 
 # Get all targets
-foreach(project ${PROJECTS})
-    get_all_targets_recursive(TARGETS ${project})
-endforeach()
+set(ALL_TARGETS "")
+get_all_targets_recursive(ALL_TARGETS ${CMAKE_CURRENT_SOURCE_DIR})
 
-# Set properties for all targets
-foreach(target ${TARGETS})
+# Manually set folders for specific targets that aren't captured by the automatic assignment
+# This needs to be done after all targets are defined and before any other folder assignments
+macro(set_folder_for_target target folder)
+    if(TARGET ${target})
+        set_target_properties(${target} PROPERTIES FOLDER ${folder})
+        message(STATUS "Set folder for target ${target} to ${folder}")
+    endif()
+endmacro()
+
+# Manually set folders for cargo-related targets
+set_folder_for_target(_cargo-build_patternsleuth_bind "deps/first/patternsleuth_bind")
+set_folder_for_target(cargo-build_patternsleuth_bind "deps/first/patternsleuth_bind")
+set_folder_for_target(cargo-clean "deps/first/patternsleuth_bind")
+set_folder_for_target(cargo-clean_patternsleuth_bind "deps/first/patternsleuth_bind")
+set_folder_for_target(cargo-prebuild "deps/first/patternsleuth_bind")
+set_folder_for_target(cargo-prebuild_patternsleuth_bind "deps/first/patternsleuth_bind")
+
+# Set folder for proxy_files
+set_folder_for_target(proxy_files "programs")
+
+# Define specific target mappings for special cases
+set(RUST_CARGO_TARGETS
+    "cargo-build"
+    "_cargo-build"
+    "cargo-build_patternsleuth_bind"
+    "_cargo-build_patternsleuth_bind"
+    "cargo-clean"
+    "cargo-clean_patternsleuth_bind"
+    "cargo-prebuild"
+    "cargo-prebuild_patternsleuth_bind"
+)
+
+set(THIRD_PARTY_SPECIAL_TARGETS
+    "asmjit"
+    "asmtk"
+    "Examples" 
+    "raw_pdb"
+)
+
+set(PROGRAM_SPECIAL_TARGETS
+    "proxy_files"
+)
+
+# Organize targets in IDE folders
+foreach(target ${ALL_TARGETS})
+    # Skip non-target entries
+    if(NOT TARGET ${target})
+        continue()
+    endif()
+
+    # Get target type
+    get_target_property(TARGET_TYPE ${target} TYPE)
+    if(TARGET_TYPE STREQUAL "UTILITY")
+        continue()  # Skip utility targets
+    endif()
+
+    # Handle special target cases first
+    set(handled FALSE)
+    
+    # Handle Rust Cargo targets
+    foreach(rust_target ${RUST_CARGO_TARGETS})
+        if("${target}" STREQUAL "${rust_target}")
+            set_target_properties(${target} PROPERTIES FOLDER "deps/first/patternsleuth_bind")
+            set(handled TRUE)
+            break()
+        endif()
+    endforeach()
+    
+    if(handled)
+        continue()
+    endif()
+    
+    # Handle other special third-party targets
+    foreach(special_target ${THIRD_PARTY_SPECIAL_TARGETS})
+        if("${target}" STREQUAL "${special_target}")
+            set_target_properties(${target} PROPERTIES FOLDER "deps/third")
+            set(handled TRUE)
+            break()
+        endif()
+    endforeach()
+    
+    if(handled)
+        continue()
+    endif()
+    
+    # Handle special program targets
+    foreach(special_target ${PROGRAM_SPECIAL_TARGETS})
+        if("${target}" STREQUAL "${special_target}")
+            set_target_properties(${target} PROPERTIES FOLDER "programs")
+            set(handled TRUE)
+            break()
+        endif()
+    endforeach()
+    
+    if(handled)
+        continue()
+    endif()
+    
+    # Handle GLFW targets
+    if("${target}" MATCHES "^glfw" OR "${target}" MATCHES "^uninstall")
+        set_target_properties(${target} PROPERTIES FOLDER "deps/third/GLFW")
+        set(handled TRUE)
+        continue()
+    endif()
+    
+    # Standard organization based on source directory
+    if(NOT handled)
+        get_target_property(TARGET_SOURCE_DIR ${target} SOURCE_DIR)
+        if(TARGET_SOURCE_DIR)
+            string(REPLACE "${CMAKE_CURRENT_SOURCE_DIR}/" "" REL_SOURCE_DIR "${TARGET_SOURCE_DIR}")
+            
+            # Categorize targets
+            if(REL_SOURCE_DIR MATCHES "^deps/first")
+                set_target_properties(${target} PROPERTIES FOLDER "deps/first")
+            elseif(REL_SOURCE_DIR MATCHES "^deps/third")
+                set_target_properties(${target} PROPERTIES FOLDER "deps/third")
+            elseif(REL_SOURCE_DIR MATCHES "^cppmods")
+                set_target_properties(${target} PROPERTIES FOLDER "mods")
+            elseif(REL_SOURCE_DIR MATCHES "^UE4SS|^UVTD")
+                set_target_properties(${target} PROPERTIES FOLDER "programs")
+            endif()
+        endif()
+    endif()
+
+    # Apply compiler options to non-utility targets if they support them
+    if(NOT ${TARGET_TYPE} STREQUAL "UTILITY" AND NOT ${TARGET_TYPE} STREQUAL "INTERFACE_LIBRARY")
+        target_compile_options(${target} PRIVATE "${TARGET_COMPILE_OPTIONS}")
+        target_link_options(${target} PRIVATE "${TARGET_LINK_OPTIONS}")
+        target_compile_definitions(${target} PRIVATE "${TARGET_COMPILE_DEFINITIONS}")
+    endif()
+
     # Set output directories
     set_target_properties(${target} PROPERTIES
         RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/Output/$<CONFIG>/${target}/${CMAKE_INSTALL_BINDIR}
         LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/Output/$<CONFIG>/${target}/${CMAKE_INSTALL_BINDIR}
         ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/Output/$<CONFIG>/${target}/${CMAKE_INSTALL_BINDIR})
-
-    # Apply compiler options to non-utility targets
-    get_target_property(TARGET_TYPE ${target} TYPE)
-    if(NOT ${TARGET_TYPE} STREQUAL UTILITY)
-        target_compile_options(${target} PUBLIC "${TARGET_COMPILE_OPTIONS}")
-        target_link_options(${target} PUBLIC "${TARGET_LINK_OPTIONS}")
-        target_compile_definitions(${target} PUBLIC "${TARGET_COMPILE_DEFINITIONS}")
-    endif()
-
-    # Apply to dependencies
-    get_target_property(DEPS ${target} LINK_LIBRARIES)
-    if(DEPS)
-        foreach(dep_target ${DEPS})
-            if(TARGET ${dep_target})
-                get_target_property(DEP_IMPORTED ${dep_target} IMPORTED)
-                get_target_property(DEP_TARGET_TYPE ${dep_target} TYPE)
-                if(NOT ${DEP_IMPORTED} AND NOT ${DEP_TARGET_TYPE} STREQUAL INTERFACE_LIBRARY)
-                    target_compile_options(${dep_target} PUBLIC "${TARGET_COMPILE_OPTIONS}")
-                    target_link_options(${dep_target} PUBLIC "${TARGET_LINK_OPTIONS}")
-                    target_compile_definitions(${dep_target} PUBLIC "${TARGET_COMPILE_DEFINITIONS}")
-                endif()
-            endif()
-        endforeach()
-    endif()
 endforeach()
 
 # Set default configuration

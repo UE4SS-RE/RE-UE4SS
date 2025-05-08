@@ -107,3 +107,42 @@ set(TRACY_ENABLE ON CACHE BOOL "Enable Tracy profiler")
 set(TRACY_ON_DEMAND OFF CACHE BOOL "On-demand profiling")
 set(BUILD_SHARED_LIBS OFF CACHE BOOL "Build shared library")
 FetchContent_MakeAvailable(tracy)
+
+# Organize third-party targets
+function(organize_third_party_targets)
+    # List of known third-party targets to organize
+    set(THIRD_PARTY_TARGETS
+        fmt glfw imgui PolyHook_2 Zydis ZydisDecoder ZycoreStatic
+        TracyClient
+        Zycore Zydis_static Zydis-shared
+    )
+
+    foreach(target ${THIRD_PARTY_TARGETS})
+        if(TARGET ${target})
+            # Check if it's an ALIAS target before setting properties
+            get_target_property(is_imported ${target} IMPORTED)
+            get_target_property(is_alias ${target} ALIASED_TARGET)
+            
+            if(NOT is_alias AND NOT is_imported)
+                set_target_properties(${target} PROPERTIES FOLDER "deps/third")
+            endif()
+        endif()
+    endforeach()
+    
+    # Look for other targets from FetchContent
+    get_property(FETCHCONTENT_TARGETS DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY BUILDSYSTEM_TARGETS)
+    foreach(target ${FETCHCONTENT_TARGETS})
+        # Check if it's an ALIAS target before setting properties
+        if(TARGET ${target})
+            get_target_property(is_imported ${target} IMPORTED)
+            get_target_property(is_alias ${target} ALIASED_TARGET)
+            
+            if(NOT is_alias AND NOT is_imported)
+                set_target_properties(${target} PROPERTIES FOLDER "deps/third")
+            endif()
+        endif()
+    endforeach()
+endfunction()
+
+# Call the function after all targets are created
+organize_third_party_targets()

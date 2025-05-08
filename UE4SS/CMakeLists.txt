@@ -140,8 +140,15 @@ set_property(TARGET UE4SS PROPERTY INTERPROCEDURAL_OPTIMIZATION ON)
 # Set runtime library to DLL for C++ mods compatibility
 set_property(TARGET UE4SS PROPERTY MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>DLL")
 
-# Set output name
+# Set output name and standard
 set_target_properties(UE4SS PROPERTIES 
     OUTPUT_NAME "UE4SS"
     CXX_STANDARD 23
+    FOLDER "programs"
 )
+
+# Organize proxy generator in IDE
+get_property(PROXY_TARGETS DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/proxy_generator PROPERTY BUILDSYSTEM_TARGETS)
+foreach(target ${PROXY_TARGETS})
+    set_target_properties(${target} PROPERTIES FOLDER "programs/proxy_generator")
+endforeach()
