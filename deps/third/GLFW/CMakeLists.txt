@@ -10,6 +10,7 @@ FetchContent_Declare(
     GIT_PROGRESS ON
 )
 
+# Disable unnecessary components
 set(GLFW_BUILD_DOCS OFF CACHE BOOL "" FORCE)
 set(GLFW_BUILD_TESTS OFF CACHE BOOL "" FORCE)
 set(GLFW_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
@@ -17,14 +18,15 @@ set(GLFW_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
 FetchContent_MakeAvailable(glfw)
 
 # Set GLFW targets to be in deps/third/GLFW folder
+# Uses set_folder_for_target() from cmake/modules/IDEOrganization.cmake
 if(TARGET glfw)
-    set_target_properties(glfw PROPERTIES FOLDER "deps/third/GLFW")
+    set_folder_for_target(glfw "deps/third/GLFW")
 endif()
 
 if(TARGET update_mappings)
-    set_target_properties(update_mappings PROPERTIES FOLDER "deps/third/GLFW")
+    set_folder_for_target(update_mappings "deps/third/GLFW")
 endif()
 
 if(TARGET uninstall)
-    set_target_properties(uninstall PROPERTIES FOLDER "deps/third/GLFW")
+    set_folder_for_target(uninstall "deps/third/GLFW")
 endif()
