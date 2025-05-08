@@ -21,7 +21,7 @@
 #if RC_IS_ANSI == 1
 #define RC_STD_MAKE_FORMAT_ARGS fmt::make_format_args
 #else
-#define RC_STD_MAKE_FORMAT_ARGS fmt::make_format_args<fmt::buffer_context<CharType>>
+#define RC_STD_MAKE_FORMAT_ARGS fmt::make_format_args<fmt::buffered_context<CharType>>
 #endif
 
 namespace RC::Output

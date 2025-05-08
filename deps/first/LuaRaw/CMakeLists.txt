@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.18)
+cmake_minimum_required(VERSION 3.22)
 
 set(TARGET LuaRaw)
 project(${TARGET})
@@ -58,8 +58,8 @@ else ()
     add_library(${TARGET} ${${TARGET}_Sources})
 endif ()
 
-# Enabling c++20 support
-# target_compile_features(${TARGET} PUBLIC cxx_std_20)
+# Enabling c++23 support
+# target_compile_features(${TARGET} PUBLIC cxx_std_23)
 
 target_include_directories(${TARGET} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
 
@@ -67,6 +67,10 @@ target_compile_definitions(${TARGET} PRIVATE
         RC_${MODULE_NAME}_EXPORTS
         $<$<NOT:$<BOOL:${UE4SS_${TARGET}_BUILD_SHARED}>>:
             RC_${MODULE_NAME}_BUILD_STATIC>)
+            
+# Make headers visible in the IDE
+# Uses make_headers_visible() from cmake/modules/IDEVisibility.cmake
+make_headers_visible(${TARGET} "${CMAKE_CURRENT_SOURCE_DIR}/include")
 
 if (${CMAKE_CXX_COMPILER_ID} STREQUAL MSVC)
     target_compile_options(${TARGET} PRIVATE /W0)

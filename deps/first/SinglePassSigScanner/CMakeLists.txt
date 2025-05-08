@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.18)
+cmake_minimum_required(VERSION 3.22)
 
 set(TARGET SinglePassSigScanner)
 project(${TARGET})
@@ -20,8 +20,8 @@ else ()
     add_library(${TARGET} ${${TARGET}_Sources})
 endif ()
 
-# Enabling c++20 support
-target_compile_features(${TARGET} PUBLIC cxx_std_20)
+# Enabling c++23 support
+target_compile_features(${TARGET} PUBLIC cxx_std_23)
 
 target_compile_definitions(${TARGET} PRIVATE
         RC_${MODULE_NAME}_EXPORTS
@@ -30,4 +30,8 @@ target_compile_definitions(${TARGET} PRIVATE
 
 target_include_directories(${TARGET} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
 
-target_link_libraries(${TARGET} PRIVATE Profiler)
+target_link_libraries(${TARGET} PRIVATE fmt Profiler)
+
+# Make headers visible in the IDE
+# Uses make_headers_visible() from cmake/modules/IDEVisibility.cmake
+make_headers_visible(${TARGET} "${CMAKE_CURRENT_SOURCE_DIR}/include")
