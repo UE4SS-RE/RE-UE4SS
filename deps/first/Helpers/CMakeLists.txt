@@ -7,8 +7,12 @@ message("Project: ${TARGET} (STATIC)")
 add_library(${TARGET} STATIC "${CMAKE_CURRENT_SOURCE_DIR}/src/Casting.cpp")
 
 # Enabling c++23 support
-target_compile_features(${TARGET} PUBLIC cxx_std_20)
+target_compile_features(${TARGET} PUBLIC cxx_std_23)
 
 target_include_directories(${TARGET} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
 
 target_link_libraries(${TARGET} PUBLIC String)
+
+# Make headers visible in the IDE
+# Uses make_headers_visible() from cmake/modules/IDEVisibility.cmake
+make_headers_visible(${TARGET} "${CMAKE_CURRENT_SOURCE_DIR}/include")

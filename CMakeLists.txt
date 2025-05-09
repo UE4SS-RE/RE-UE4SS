@@ -14,6 +14,7 @@ list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake" "${CMAKE_CURRE
 # Include helper modules
 include(IDEOrganization)  # For organizing targets in the IDE
 include(Utilities)        # For utility functions
+include(IDEVisibility)     # For IDE visibility of source files
 
 # Check IPO/LTO support
 check_ipo_supported(RESULT IPO_SUPPORTED OUTPUT IPO_ERROR)
@@ -28,6 +29,7 @@ endif()
 option(MAKE_DEPENDENCIES_SHARED "Make dependencies shared" OFF)
 option(UE4SS_CONSOLE_COLORS_ENABLED "Enable console colors" OFF)
 option(UE4SS_INPUT_ENABLED "Enable the input system" ON)
+option(ENABLE_IDE_SOURCE_VISIBILITY "Enable IDE visibility for source files" ON)
 
 # Projects 
 set(PROJECTS "UE4SS" "UVTD")

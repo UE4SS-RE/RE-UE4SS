@@ -18,7 +18,14 @@ add_subdirectory("ScopedTimer")
 add_subdirectory("SinglePassSigScanner")
 add_subdirectory("Unreal")
 add_subdirectory("Profiler")
-# We don't need to add patternsleuth_bind here as it's handled by Corrosion in the third party deps
+
+# Add our Rust components for IDE visibility
+if(DEFINED ENABLE_IDE_SOURCE_VISIBILITY AND ENABLE_IDE_SOURCE_VISIBILITY)
+    # We only need to include patternsleuth_bind directly for IDE visibility
+    # Both patternsleuth and patternsleuth_bind IDE visibility are handled there
+    # The actual build is still handled by Corrosion
+    add_subdirectory("patternsleuth_bind")
+endif()
 # First party dependencies -> END
 
 # Organize generic Rust targets into deps/rust
