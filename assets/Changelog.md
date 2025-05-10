@@ -183,7 +183,9 @@ The callback of `NotifyOnNewObject` can now optionally return `true` to unregist
 Improved performance of script hooks created with `RegisterHook`, and
 `RegisterCustomEvent`. ([UE4SS #801](https://github.com/UE4SS-RE/RE-UE4SS/pull/801))
 
-**BREAKING:** `AActor:GetWorld()` and `AActor:GetLevel()` functions are now returning an invalid `UObject` instead of `nil`. ([UE4SS #810](https://github.com/UE4SS-RE/RE-UE4SS/pull/810)) 
+**BREAKING:** `AActor:GetWorld()` and `AActor:GetLevel()` functions are now returning an invalid `UObject` instead of `nil`. ([UE4SS #810](https://github.com/UE4SS-RE/RE-UE4SS/pull/810))
+
+Types with `get` or `Get` functions now have both variants. ([UE4SS #877](https://github.com/UE4SS-RE/RE-UE4SS/pull/877))
 
 #### UEHelpers [UE4SS #650](https://github.com/UE4SS-RE/RE-UE4SS/pull/650) 
 - Increased version to 3

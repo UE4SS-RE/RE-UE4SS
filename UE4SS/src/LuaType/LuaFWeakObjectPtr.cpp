@@ -55,6 +55,12 @@ namespace RC::LuaType
             return 1;
         });
 
+        table.add_pair("get", [](const LuaMadeSimple::Lua& lua) -> int {
+            auto& lua_object = lua.get_userdata<FWeakObjectPtr>();
+            LuaType::auto_construct_object(lua, lua_object.get_local_cpp_object().Get());
+            return 1;
+        });
+
         if constexpr (is_final == LuaMadeSimple::Type::IsFinal::Yes)
         {
             table.add_pair("type", [](const LuaMadeSimple::Lua& lua) -> int {

@@ -9,7 +9,7 @@ This is a dynamic wrapper for any and all types & classes.
 
 ## Methods
 
-### get()
+### Get() / get()
 
 - **Return type:** `auto`
 - **Returns:** the underlying value for this param.

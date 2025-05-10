@@ -1501,6 +1501,11 @@ Overloads:
 
     auto RemoteUnrealParam::setup_member_functions(LuaMadeSimple::Lua::Table& table) -> void
     {
+        table.add_pair("Get", [](const LuaMadeSimple::Lua& lua) -> int {
+            prepare_to_handle(Operation::Get, lua);
+            return 1;
+        });
+
         table.add_pair("get", [](const LuaMadeSimple::Lua& lua) -> int {
             prepare_to_handle(Operation::Get, lua);
             return 1;
