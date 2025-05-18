@@ -29,6 +29,7 @@ namespace RC
             bool UseUObjectArrayCache{true};
             StringType InputSource{STR("Default")};
             bool DoEarlyScan{false};
+            bool SearchByAddress{false};
         } General;
 
         struct SectionEngineVersionOverride
