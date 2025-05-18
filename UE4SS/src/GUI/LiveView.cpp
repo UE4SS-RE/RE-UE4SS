@@ -203,6 +203,23 @@ namespace RC::GUI
         }
     }
 
+    static void attempt_to_add_search_by_address_result(uintptr_t address_to_search_by, UObject* object)
+    {
+        auto object_addr = std::bit_cast<uintptr_t>(object);
+        if (address_to_search_by < object_addr)
+        {
+            return;
+        }
+
+        auto uclass = object->IsA<UStruct>() ? static_cast<UClass*>(object) : object->GetClassPrivate();
+        uintptr_t end_addr = object_addr + uclass->GetPropertiesSize();
+        //Output::send<LogLevel::Default>(STR("object_addr {:016X}-{:016X}"), object_addr, end_addr);
+        if (address_to_search_by < end_addr) {
+            LiveView::s_name_search_results.emplace_back(object);
+            LiveView::s_name_search_results_set.emplace(object);
+        }
+    }
+
     static auto remove_search_result(UObject* object) -> void
     {
         LiveView::s_name_search_results.erase(std::remove_if(LiveView::s_name_search_results.begin(),
@@ -1843,8 +1860,25 @@ namespace RC::GUI
         Output::send(STR("Searching by name...\n"));
         s_name_search_results.clear();
         s_name_search_results_set.clear();
+
+        uintptr_t address_to_search_by = 0;
+        if (UE4SSProgram::settings_manager.General.SearchByAddress &&
+           (LiveView::s_name_to_search_by.size() >= 6 && LiveView::s_name_to_search_by.size() <= 16))
+        {
+            try
+            {
+                address_to_search_by = std::stoull(LiveView::s_name_to_search_by, nullptr, 16);
+                Output::send<LogLevel::Default>(STR("Searching for object with address: {:016X}"), address_to_search_by);
+            }
+            catch (...) {}
+        }
+
         UObjectGlobals::ForEachUObject([&](UObject* object, ...) {
             attempt_to_add_search_result(object);
+            if (address_to_search_by)
+            {
+                attempt_to_add_search_by_address_result(address_to_search_by, object);
+            }
             return LoopAction::Continue;
         });
     }
