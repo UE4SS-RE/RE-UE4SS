@@ -146,6 +146,8 @@ namespace RC
         }
 
       private:
+        auto setup_custom_module_loader(const LuaMadeSimple::Lua* lua_state) -> void;
+        auto load_and_execute_script(const std::filesystem::path& script_path) -> bool;
         auto setup_lua_require_paths(const LuaMadeSimple::Lua& lua) const -> void;
         auto setup_lua_global_functions(const LuaMadeSimple::Lua& lua) const -> void;
         auto setup_lua_global_functions_main_state_only() const -> void;
