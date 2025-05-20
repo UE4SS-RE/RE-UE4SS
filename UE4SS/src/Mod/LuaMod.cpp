@@ -41,6 +41,7 @@
 #include <Unreal/Property/FBoolProperty.hpp>
 #include <Unreal/Property/FClassProperty.hpp>
 #include <Unreal/Property/FEnumProperty.hpp>
+#include <Unreal/Property/FSetProperty.hpp>
 #include <Unreal/Property/FMapProperty.hpp>
 #include <Unreal/Property/FNameProperty.hpp>
 #include <Unreal/Property/FObjectProperty.hpp>
@@ -794,6 +795,7 @@ namespace RC
         // add_property_type_table<Unreal::FStrProperty>(lua, property_types_table, "StrProperty");
         add_property_type_table<Unreal::FBoolProperty>(lua, property_types_table, "BoolProperty");
         add_property_type_table<Unreal::FArrayProperty>(lua, property_types_table, "ArrayProperty");
+        add_property_type_table<Unreal::FSetProperty>(lua, property_types_table, "SetProperty");
         add_property_type_table<Unreal::FMapProperty>(lua, property_types_table, "MapProperty");
         add_property_type_table<Unreal::FStructProperty>(lua, property_types_table, "StructProperty");
         add_property_type_table<Unreal::FClassProperty>(lua, property_types_table, "ClassProperty");
