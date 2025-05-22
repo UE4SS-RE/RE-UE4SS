@@ -1173,15 +1173,15 @@ function UEnum:RemoveFromNamesAt(Index, Count) end
 function UEnum:RemoveFromNamesAt(Index, Count, AllowShrinking) end
 
 --- Registers a callback that will get called before UEngine::LoadMap is called.
---- The callback params are: UEngine Engine, struct FWorldContext& WorldContext, FURL URL, class UPendingNetGame* PendingGame, FString& Error
+--- The callback params are: UEngine Engine, struct FWorldContext& WorldContext, FURL URL, class UPendingNetGame* PendingGame, string Error
 --- Params (except strings & bools & FOutputDevice) must be retrieved via 'Param:Get()' and set via 'Param:Set()'.
----@param Callback fun(Engine: RemoteUnrealParam<UEngine>, World: RemoteUnrealParam<FWorldContext>, FURL: FURL, PendingGame: RemoteUnrealParam<UPendingNetGame>, Error: FString)
+---@param Callback fun(Engine: RemoteUnrealParam<UEngine>, World: RemoteUnrealParam<FWorldContext>, FURL: FURL, PendingGame: RemoteUnrealParam<UPendingNetGame>, Error: string)
 function RegisterLoadMapPreHook(Callback) end
 
 --- Registers a callback that will get called after UEngine::LoadMap is called.
---- The callback params are: UEngine Enigne, struct FWorldContext& WorldContext, FURL URL, class UPendingNetGame* PendingGame, FString& Error
+--- The callback params are: UEngine Enigne, struct FWorldContext& WorldContext, FURL URL, class UPendingNetGame* PendingGame, string Error
 --- Params (except strings & bools & FOutputDevice) must be retrieved via 'Param:Get()' and set via 'Param:Set()'.
----@param Callback fun(Engine: RemoteUnrealParam<UEngine>, World: RemoteUnrealParam<FWorldContext>, FURL: FURL, PendingGame: RemoteUnrealParam<UPendingNetGame>, Error: FString)
+---@param Callback fun(Engine: RemoteUnrealParam<UEngine>, World: RemoteUnrealParam<FWorldContext>, FURL: FURL, PendingGame: RemoteUnrealParam<UPendingNetGame>, Error: string)
 function RegisterLoadMapPostHook(Callback) end
 
 --- Creates LogicMods/ directory inside app's Paks/ folder
