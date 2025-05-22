@@ -31,9 +31,24 @@ namespace RC::LuaType
         return table;
     }
 
-    auto LuaModRef::setup_metamethods(BaseObject&) -> void
+    auto LuaModRef::setup_metamethods(BaseObject& base_object) -> void
     {
-        // Mod has no metamethods
+        base_object.get_metamethods().create(LuaMadeSimple::Lua::MetaMethod::ToString, []([[maybe_unused]] const LuaMadeSimple::Lua& lua) -> int {
+            if (!lua.is_userdata())
+            {
+                lua.throw_error(std::format("{} __tostring metamethod called but there was no userdata", ClassName::ToString()));
+            }
+
+            std::string name;
+
+            auto& lua_object = lua.get_userdata<LuaModRef>();
+            name.append(ClassName::ToString());
+            name.append(std::format(": 0x{:012x}", reinterpret_cast<uintptr_t>(&lua_object)));
+
+            lua.set_string(name);
+
+            return 1;
+        });
     }
 
     template <LuaMadeSimple::Type::IsFinal is_final>
