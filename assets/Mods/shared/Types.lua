@@ -340,6 +340,19 @@ function RegisterKeyBind(Key, Callback) end
 ---@param Callback fun()
 function RegisterKeyBind(Key, ModifierKeys, Callback) end
 
+--- Registers a callback for a key-bind, asynchronously
+--- Callbacks can only be triggered while the game or debug console is on focus
+---@param Key Key
+---@param Callback fun()
+function RegisterKeyBindAsync(Key, Callback) end
+
+--- Registers a callback for a key-bind, asynchronously
+--- Callbacks can only be triggered while the game or debug console is on focus
+---@param Key Key
+---@param ModifierKeys ModifierKey[]
+---@param Callback fun()
+function RegisterKeyBindAsync(Key, Modifiers, Callback) end
+
 ---Checks if, at the time of the invocation, the supplied keys have been registered
 ---@param Key integer
 function IsKeyBindRegistered(Key) end
