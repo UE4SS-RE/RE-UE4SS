@@ -16,8 +16,7 @@ target(projectName)
         "src/lmem.c", "src/loadlib.c", "src/lobject.c", "src/lopcodes.c",
         "src/loslib.c", "src/lparser.c", "src/lstate.c", "src/lstring.c",
         "src/lstrlib.c", "src/ltable.c", "src/ltablib.c", "src/ltm.c",
-        "src/luauser.c", "src/lundump.c", "src/lutf8lib.c", "src/lvm.c",
-        "src/lzio.c"
+        "src/lundump.c", "src/lutf8lib.c", "src/lvm.c", "src/lzio.c"
     )
 
     
