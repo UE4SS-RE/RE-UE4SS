@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.18)
+cmake_minimum_required(VERSION 3.22)
 project(UE4SS)
 
 message("Configuring UE4SS")
@@ -126,7 +126,7 @@ target_link_libraries(UE4SS PUBLIC
 # Link third-party dependencies
 target_link_libraries(UE4SS PUBLIC
     fmt ImGui PolyHook_2 
-    d3d11 glfw opengl32 
+    d3d11 glfw glad opengl32 
     dbghelp psapi ws2_32 ntdll userenv
 )
 

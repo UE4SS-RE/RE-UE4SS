@@ -24,7 +24,7 @@ if(DEFINED ENABLE_IDE_SOURCE_VISIBILITY AND ENABLE_IDE_SOURCE_VISIBILITY)
     # We only need to include patternsleuth_bind directly for IDE visibility
     # Both patternsleuth and patternsleuth_bind IDE visibility are handled there
     # The actual build is still handled by Corrosion
-    add_subdirectory("patternsleuth_bind")
+    #add_subdirectory("patternsleuth_bind")
 endif()
 # First party dependencies -> END
 

@@ -18,6 +18,10 @@ set(GLFW_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
 # Make the content available
 FetchContent_MakeAvailable(glfw)
 
+# Suppress warnings from GLFW
+# Uses suppress_third_party_warnings() from cmake/modules/ThirdPartyWarnings.cmake
+suppress_third_party_warnings(glfw)
+
 # Set the folder for GLFW targets right after they're created
 # This happens before any other organization attempts
 if(TARGET glfw)

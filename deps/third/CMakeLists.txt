@@ -14,15 +14,20 @@ FetchContent_Declare(
     GIT_SHALLOW TRUE
 )
 FetchContent_MakeAvailable(glaze)
+# Uses suppress_third_party_warnings() from cmake/modules/ThirdPartyWarnings.cmake
+suppress_third_party_warnings(glaze)
 
 # GLFW
 add_subdirectory("GLFW")
+
+# glad (OpenGL loader)
+add_subdirectory("glad")
 
 # ImGui and related libraries
 FetchContent_Declare(
     ImGui
     GIT_REPOSITORY https://github.com/ocornut/imgui.git
-    GIT_TAG v1.89
+    GIT_TAG v1.92.1
     GIT_SHALLOW TRUE
     GIT_PROGRESS ON
     CONFIGURE_COMMAND ""
@@ -45,7 +50,6 @@ FetchContent_Declare(
     GIT_PROGRESS ON
     CONFIGURE_COMMAND ""
 )
-
 add_subdirectory("imgui")
 
 # Zydis
@@ -79,8 +83,11 @@ add_subdirectory("raw_pdb")
 # Corrosion (Rust integration)
 FetchContent_Declare(
     Corrosion
-    GIT_REPOSITORY https://github.com/corrosion-rs/corrosion.git
-    GIT_TAG fce4fe54328ada11b823f9ae72346b4e97a27844
+    GIT_REPOSITORY https://github.com/UE4SS-RE/corrosion.git
+    #TODO: Go back to main repo once this issue is fixed.
+    GIT_TAG 52844733e14f095c947577627e367ee5f6458af7
+    GIT_SHALLOW TRUE
+    GIT_PROGRESS ON
 )
 add_subdirectory("corrosion")
 
@@ -88,12 +95,14 @@ add_subdirectory("corrosion")
 FetchContent_Declare(
     fmt
     GIT_REPOSITORY https://github.com/fmtlib/fmt.git
-    GIT_TAG 10.2.1
+    GIT_TAG 11.2.0
     GIT_SHALLOW TRUE
     GIT_PROGRESS ON
+    PATCH_COMMAND ${CMAKE_COMMAND} 
+        -DPATCH_SCRIPT_DIR=${CMAKE_CURRENT_SOURCE_DIR}/fmt
+        -P ${CMAKE_CURRENT_SOURCE_DIR}/fmt/patch_fmt.cmake
 )
-set(FMT_HEADER_ONLY OFF CACHE BOOL "Build fmt as a compiled library, not header-only")
-FetchContent_MakeAvailable(fmt)
+add_subdirectory("fmt")
 
 # Tracy profiler
 FetchContent_Declare(
@@ -103,59 +112,75 @@ FetchContent_Declare(
     GIT_SHALLOW TRUE
     GIT_PROGRESS ON
 )
-set(TRACY_ENABLE ON CACHE BOOL "Enable Tracy profiler")
-set(TRACY_ON_DEMAND OFF CACHE BOOL "On-demand profiling")
-set(BUILD_SHARED_LIBS OFF CACHE BOOL "Build shared library")
-FetchContent_MakeAvailable(tracy)
+# Only build Tracy if it's selected as the profiler
+if(RC_PROFILER_FLAVOR STREQUAL "Tracy")
+    add_subdirectory(tracy)
+endif()
 
-# Organize third-party targets
+# Organize third-party targets and make their headers visible
+# This function automatically finds all targets created in this directory tree,
+# places them in the deps/third folder in the IDE, and makes their headers visible
 function(organize_third_party_targets)
-    # List of known third-party targets to organize
-    set(THIRD_PARTY_TARGETS
-        fmt glfw imgui PolyHook_2 Zydis ZydisDecoder ZycoreStatic
-        TracyClient
-        Zycore Zydis_static Zydis-shared
-    )
+    include(IDEVisibility)
     
-    foreach(target ${THIRD_PARTY_TARGETS})
+    # Helper function to recursively get all targets from a directory
+    function(get_all_targets_recursive_local targets dir)
+        get_property(subdirs DIRECTORY ${dir} PROPERTY SUBDIRECTORIES)
+        foreach(subdir ${subdirs})
+            get_all_targets_recursive_local(${targets} ${subdir})
+        endforeach()
+        
+        get_property(current_targets DIRECTORY ${dir} PROPERTY BUILDSYSTEM_TARGETS)
+        list(APPEND ${targets} ${current_targets})
+        set(${targets} ${${targets}} PARENT_SCOPE)
+    endfunction()
+    
+    # Get all targets from this directory and subdirectories
+    set(ALL_THIRD_PARTY_TARGETS "")
+    get_all_targets_recursive_local(ALL_THIRD_PARTY_TARGETS ${CMAKE_CURRENT_SOURCE_DIR})
+    
+    # Process each valid target
+    foreach(target ${ALL_THIRD_PARTY_TARGETS})
         if(TARGET ${target})
-            # Check if it's an ALIAS target before setting properties
+            # Check if it's an ALIAS or IMPORTED target
             get_target_property(is_imported ${target} IMPORTED)
             get_target_property(is_alias ${target} ALIASED_TARGET)
             
             if(NOT is_alias AND NOT is_imported)
-                # Skip if the target already has a folder set
-                get_target_property(EXISTING_FOLDER ${target} FOLDER)
-                if(NOT "${EXISTING_FOLDER}" STREQUAL "EXISTING_FOLDER-NOTFOUND")
-                    continue()
+                # Set folder if not already set
+                get_target_property(existing_folder ${target} FOLDER)
+                if(existing_folder STREQUAL "existing_folder-NOTFOUND")
+                    set_target_properties(${target} PROPERTIES FOLDER "deps/third")
                 endif()
                 
-                set_target_properties(${target} PROPERTIES FOLDER "deps/third")
-            endif()
-        endif()
-    endforeach()
-    
-    # Look for other targets from FetchContent
-    get_property(FETCHCONTENT_TARGETS DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY BUILDSYSTEM_TARGETS)
-    
-    foreach(target ${FETCHCONTENT_TARGETS})
-        # Check if it's an ALIAS target before setting properties
-        if(TARGET ${target})
-            get_target_property(is_imported ${target} IMPORTED)
-            get_target_property(is_alias ${target} ALIASED_TARGET)
-            
-            if(NOT is_alias AND NOT is_imported)
-                # Skip if the target already has a folder set
-                get_target_property(EXISTING_FOLDER ${target} FOLDER)
-                if(NOT "${EXISTING_FOLDER}" STREQUAL "EXISTING_FOLDER-NOTFOUND")
-                    continue()
-                endif()
+                # Try to make headers visible by checking common include directory properties
+                get_target_property(target_type ${target} TYPE)
                 
-                set_target_properties(${target} PROPERTIES FOLDER "deps/third")
+                # Skip UTILITY and OBJECT targets as they typically don't have headers
+                if(NOT target_type STREQUAL "UTILITY" AND NOT target_type STREQUAL "OBJECT_LIBRARY")
+                    # Try to get include directories from the target
+                    get_target_property(include_dirs ${target} INTERFACE_INCLUDE_DIRECTORIES)
+                    
+                    if(include_dirs)
+                        # Find the first valid include directory that exists
+                        foreach(inc_dir ${include_dirs})
+                            # Skip generator expressions and non-existent directories
+                            if(NOT inc_dir MATCHES "^\\$<" AND EXISTS ${inc_dir})
+                                # Check if this looks like a source/include directory (not a build directory)
+                                string(FIND ${inc_dir} "${CMAKE_BINARY_DIR}" is_build_dir)
+                                if(is_build_dir EQUAL -1)
+                                    make_headers_visible(${target} ${inc_dir})
+                                    break()  # Only use the first valid directory
+                                endif()
+                            endif()
+                        endforeach()
+                    endif()
+                endif()
             endif()
         endif()
     endforeach()
 endfunction()
 
 # Call the function after all targets are created
+# This needs to be called at the end to ensure all subdirectories have been processed
 organize_third_party_targets()

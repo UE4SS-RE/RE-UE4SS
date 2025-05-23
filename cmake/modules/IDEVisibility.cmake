@@ -6,6 +6,14 @@
 
 # Helper function to make header files visible in the IDE
 # To be called from individual component CMakeLists.txt files
+#
+# Arguments:
+#   TARGET_NAME - Name of the target to add headers to
+#   INCLUDE_DIR - Directory containing header files
+#
+# Example usage:
+#   make_headers_visible(MyLib "${CMAKE_CURRENT_SOURCE_DIR}/include")
+#
 function(make_headers_visible TARGET_NAME INCLUDE_DIR)
     if(NOT DEFINED ENABLE_IDE_SOURCE_VISIBILITY OR NOT ENABLE_IDE_SOURCE_VISIBILITY)
         return()
@@ -49,6 +57,15 @@ endfunction()
 
 # Helper function to make Rust files visible in the IDE
 # Creates lightweight OBJECT libraries that don't get built
+#
+# Arguments:
+#   TARGET_NAME - Name for the visibility target (must not already exist)
+#   SOURCE_DIR - Directory containing Rust source files
+#   FOLDER_PATH - IDE folder path for organization
+#
+# Example usage:
+#   make_rust_visible(MyRustLib_IDE "${CMAKE_CURRENT_SOURCE_DIR}/src" "deps/first/MyRustLib")
+#
 function(make_rust_visible TARGET_NAME SOURCE_DIR FOLDER_PATH)
     if(NOT DEFINED ENABLE_IDE_SOURCE_VISIBILITY OR NOT ENABLE_IDE_SOURCE_VISIBILITY)
         return()

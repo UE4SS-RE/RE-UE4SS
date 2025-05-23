@@ -1,9 +1,12 @@
-cmake_minimum_required(VERSION 3.18)
+cmake_minimum_required(VERSION 3.22)
+
 project(UE4SSMonorepo)
 
 # Basic setup
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
+
 enable_language(CXX ASM_MASM)
 include(CheckIPOSupported)
 include(GNUInstallDirs)
@@ -12,9 +15,14 @@ include(GNUInstallDirs)
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake" "${CMAKE_CURRENT_SOURCE_DIR}/cmake/modules")
 
 # Include helper modules
-include(IDEOrganization)  # For organizing targets in the IDE
-include(Utilities)        # For utility functions
-include(IDEVisibility)     # For IDE visibility of source files
+include(IDEOrganization)    # For organizing targets in the IDE
+include(Utilities)          # For utility functions
+include(IDEVisibility)      # For IDE visibility of source files
+include(ThirdPartyWarnings) # For suppressing warnings from third-party libraries
+include(CompilerDetection)  # For compiler detection and reporting
+include(IDEFixes)           # For IDE-specific fixes and workarounds
+include(ProjectConfig)      # For centralized project configuration
+include(VersionChecks)      # For compiler and tool version checking
 
 # Check IPO/LTO support
 check_ipo_supported(RESULT IPO_SUPPORTED OUTPUT IPO_ERROR)
@@ -25,74 +33,38 @@ if(MSVC)
     add_compile_options(/Gy)
 endif()
 
-# Project options
-option(MAKE_DEPENDENCIES_SHARED "Make dependencies shared" OFF)
-option(UE4SS_CONSOLE_COLORS_ENABLED "Enable console colors" OFF)
-option(UE4SS_INPUT_ENABLED "Enable the input system" ON)
-option(ENABLE_IDE_SOURCE_VISIBILITY "Enable IDE visibility for source files" ON)
+# Initialize project configuration
+# Uses ue4ss_initialize_project() from cmake/modules/ProjectConfig.cmake
+ue4ss_initialize_project()
 
-# Projects 
-set(PROJECTS "UE4SS" "UVTD")
+# Projects list is now in ProjectConfig.cmake
+set(PROJECTS ${UE4SS_PROJECTS})
 
 # Fix for ninja/clang
 unset(CMAKE_CXX_SIMULATE_ID)
-message("Compiler: ${CMAKE_CXX_COMPILER_ID}")
 
-# Define global compile definitions
-set(TARGET_COMPILE_DEFINITIONS)
+# Detailed compiler detection output
+# Detect and print compiler information
+# Uses detect_and_print_compiler() from cmake/modules/CompilerDetection.cmake
+detect_and_print_compiler()
 
-# Add option-based definitions
-if(UE4SS_CONSOLE_COLORS_ENABLED)
-    list(APPEND TARGET_COMPILE_DEFINITIONS UE4SS_CONSOLE_COLORS_ENABLED)
-endif()
-if(UE4SS_INPUT_ENABLED)
-    list(APPEND TARGET_COMPILE_DEFINITIONS HAS_INPUT)
-endif()
+# Perform version checks
+# Uses perform_version_checks() from cmake/modules/VersionChecks.cmake
+perform_version_checks()
 
-# Unicode support
-list(APPEND TARGET_COMPILE_DEFINITIONS _UNICODE UNICODE)
+# Global compile definitions are now set by ue4ss_initialize_project()
 
-# CLion fixes
-if(DEFINED ENV{CLION_IDE} AND DEFINED UE4SS_ENABLE_CLION_FIXES)
-    list(APPEND TARGET_COMPILE_DEFINITIONS
-        RC_UE4SS_API=
-        RC_UE_API=
-        RC_ASM_API=
-        RC_DYNOUT_API=
-        RC_FILE_API=
-        RC_FNCTMR_API=
-        RC_INI_PARSER_API=
-        RC_INPUT_API=
-        RC_JSON_API=
-        RC_LMS_API=
-        RC_PB_API=
-        RC_SPSS_API=
-    )
-endif()
+# Apply IDE-specific fixes
+# Uses apply_ide_fixes() from cmake/modules/IDEFixes.cmake
+apply_ide_fixes()
 
-# Set output directories
+# Set default output directories
+# These create the structure: ${CMAKE_BINARY_DIR}/Output/$<CONFIG>/${CMAKE_INSTALL_BINDIR}/
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/Output/$<CONFIG>/${CMAKE_INSTALL_BINDIR})
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/Output/$<CONFIG>/${CMAKE_INSTALL_BINDIR})
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/Output/$<CONFIG>/${CMAKE_INSTALL_BINDIR})
 
-# Build configurations
-set(TARGET_TYPES "Game" "CasePreserving")
-set(CONFIGURATION_TYPES "Debug" "Shipping" "Test")
-set(PLATFORM_TYPES "Win64")
-
-# Definitions
-# Target definitions
-set(Game_DEFINITIONS UE_GAME)
-set(CasePreserving_DEFINITIONS ${Game_DEFINITIONS} WITH_CASE_PRESERVING_NAME)
-
-# Configuration definitions
-set(Debug_DEFINITIONS UE_BUILD_DEBUG)
-set(Shipping_DEFINITIONS UE_BUILD_SHIPPING)
-set(Test_DEFINITIONS UE_BUILD_TEST STATS)
-
-# Platform definitions
-set(Win64_DEFINITIONS PLATFORM_WINDOWS PLATFORM_MICROSOFT OVERRIDE_PLATFORM_HEADER_NAME=Windows UBT_COMPILED_PLATFORM=Win64)
-set(Win64_VARS CMAKE_SYSTEM_PROCESSOR=x86_64)
+# Build configurations are now defined in ProjectConfig.cmake
 
 # Initialize compiler options
 add_subdirectory("cmake/modules/CompilerOptions")
@@ -102,20 +74,10 @@ add_compile_options("$<$<NOT:$<COMPILE_LANGUAGE:ASM_MASM>>:${DEFAULT_COMPILER_FL
 add_link_options("${DEFAULT_SHARED_LINKER_FLAGS}" "${DEFAULT_EXE_LINKER_FLAGS}")
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-# Compiler flags setup
+# Compiler flags are now initialized by ue4ss_initialize_project()
 list(APPEND Game_FLAGS "")
 list(APPEND CasePreserving_FLAGS ${Game_FLAGS})
-
-# Convert standard CMake flags to our format
-# Uses stringToList() from cmake/modules/Utilities.cmake
-stringToList(DEBUG_FLAGS_LIST "${CMAKE_CXX_FLAGS_DEBUG}")
-list(APPEND Debug_FLAGS ${DEBUG_FLAGS_LIST})
-
-stringToList(RELEASE_FLAGS_LIST "${CMAKE_CXX_FLAGS_RELEASE}")
-list(APPEND Shipping_FLAGS ${RELEASE_FLAGS_LIST})
-
-stringToList(RELWITHDEBINFO_FLAGS_LIST "${CMAKE_CXX_FLAGS_RELWITHDEBINFO}")
-list(APPEND Test_FLAGS ${RELWITHDEBINFO_FLAGS_LIST})
+list(APPEND LessEqual421_FLAGS ${Game_FLAGS})
 
 # Generate build configurations
 # Uses generate_build_configurations() from cmake/modules/Utilities.cmake
@@ -144,3 +106,4 @@ apply_compiler_settings_to_targets("${TARGET_COMPILE_OPTIONS}" "${TARGET_LINK_OP
 
 # Set default configuration
 # Uses setup_build_config() from cmake/modules/Utilities.cmake
+setup_build_config()

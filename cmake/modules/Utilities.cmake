@@ -2,18 +2,38 @@
 # This module provides utility functions for the build system
 
 # Converts a CMake list to a space-separated string
+#
+# Arguments:
+#   VARNAME - Variable name to store the result in parent scope
+#   VALUE - CMake list to convert
+#
 function(listToString VARNAME VALUE)
     string(REPLACE ";" " " result "${VALUE}")
     set(${VARNAME} "${result}" PARENT_SCOPE)
 endfunction()
 
 # Converts a space-separated string to a CMake list
+#
+# Arguments:
+#   VARNAME - Variable name to store the result in parent scope
+#   VALUE - Space-separated string to convert
+#
 function(stringToList VARNAME VALUE)
     string(REPLACE " " ";" result "${VALUE}")
     set(${VARNAME} "${result}" PARENT_SCOPE)
 endfunction()
 
 # Generates build configurations based on target types, configuration types, and platform types
+#
+# Arguments:
+#   None (uses global variables TARGET_TYPES, CONFIGURATION_TYPES, PLATFORM_TYPES)
+#
+# Sets in parent scope:
+#   BUILD_CONFIGS - List of generated configuration names
+#   TARGET_COMPILE_OPTIONS - Compile options for each configuration
+#   TARGET_LINK_OPTIONS - Link options for each configuration
+#   TARGET_COMPILE_DEFINITIONS - Compile definitions for each configuration
+#
 function(generate_build_configurations)
     # These variables will be set in the parent scope
     set(BUILD_CONFIGS "" PARENT_SCOPE)
@@ -88,6 +108,10 @@ function(generate_build_configurations)
 endfunction()
 
 # Sets up the default build configuration
+#
+# Arguments:
+#   None (uses BUILD_CONFIGS from parent scope)
+#
 function(setup_build_config)
     get_property(is_multi_config GLOBAL PROPERTY GENERATOR_IS_MULTI_CONFIG)
 
