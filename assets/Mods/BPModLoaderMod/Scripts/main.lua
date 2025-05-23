@@ -1,5 +1,5 @@
 ---########################
---- DEFINES
+--- DEFINITIONS
 ---########################
 package.path = '.\\Mods\\ModLoaderMod\\?.lua;' .. package.path
 package.path = '.\\Mods\\ModLoaderMod\\BPMods\\?.lua;' .. package.path
@@ -34,7 +34,7 @@ end
 local function GetModCount(T)
     local c = 0
     for _, ModInfo in ipairs(OrderedMods) do
-        if type(ModInfo) == "table" then c = c +1 end
+        if type(ModInfo) == "table" then c = c + 1 end
     end
     return c
 end
@@ -152,9 +152,8 @@ local function CacheAssetRegistry()
     if not AssetRegistry:IsValid() then
         print("Failed to fetch AssetRegistry via ARHelpers, falling back to SFO search\n")
         AssetRegistry = StaticFindObject("/Script/AssetRegistry.Default__AssetRegistryImpl") --[[@as IAssetRegistry]]
-        if AssetRegistry:IsValid() then return end
     end
-    error("Unable to continue - failed to fetch AssetRegistry!\n")
+    if not AssetRegistry:IsValid() then error("Unable to continue - failed to fetch AssetRegistry!\n") end
 end
 
 ---########################
@@ -163,7 +162,7 @@ end
 local function LoadModConfigs()
     -- Load configurations for mods.
     local Dirs = IterateGameDirectories();
-    if not Dirs then
+    if not Dirs or not Dirs.Game.Content.Paks then
         error("[BPModLoader] UE4SS does not support loading mods for this game.")
     end
     local LogicModsDir = Dirs.Game.Content.Paks.LogicMods
@@ -305,6 +304,7 @@ LogOrderedMods()
 --- It does not matter we can do it manually on a hotkey, PAKs arent mounted
 --- automatially at runtime on LUA reload and we dont need potentially unstable moot hooks
 if (GetModCount(Mods) > 0) then
+
     RegisterKeyBind(Key.INS, function()
         ExecuteInGameThread(function()
             LoadMods(UEHelpers.GetWorld())
