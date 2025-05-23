@@ -316,7 +316,12 @@ namespace RC::ObjectDumper
         }
 
         object_trivial_dump_to_string(p_this, out_line, STR(":"));
-        out_line.append(fmt::format(STR(" [f: {:016X}]"), to_address(typed_this->GetFuncPtr())));
+
+        static auto as_function_class = UObjectGlobals::StaticFindObject<UClass*>(nullptr, nullptr, STR("/Script/AngelscriptCode.ASFunction"));
+        if (!as_function_class || !typed_this->IsA(as_function_class))
+        {
+            out_line.append(fmt::format(STR(" [f: {:016X}]"), to_address(typed_this->GetFuncPtr())));
+        }
         out_line.append(STR("\n"));
 
         for (auto param : typed_this->ForEachProperty())
