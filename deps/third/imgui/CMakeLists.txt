@@ -31,6 +31,15 @@ add_library(ImGui ${ImGui_Sources})
 # Enabling c++23 support
 target_compile_features(ImGui PUBLIC cxx_std_23)
 
+# Fix offsetof macro issue with Windows SDK
+if(CMAKE_SYSTEM_NAME STREQUAL "Windows" AND CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+    # Comment out the problematic static asserts by disabling them
+    target_compile_options(ImGui PRIVATE -Wno-invalid-offsetof)
+    target_compile_definitions(ImGui PRIVATE 
+        _CRT_USE_BUILTIN_OFFSETOF
+    )
+endif()
+
 target_link_libraries(ImGui PUBLIC glfw)
 
 target_include_directories(ImGui PUBLIC 

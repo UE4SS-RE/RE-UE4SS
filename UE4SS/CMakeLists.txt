@@ -4,7 +4,7 @@ project(UE4SS)
 message("Configuring UE4SS")
 
 # Add proxy generator subproject
-add_subdirectory("proxy_generator")
+# add_subdirectory("proxy_generator") # Skipped for xwin build
 
 # Release settings
 option(UE4SS_LIB_BETA_IS_STARTED "Have beta releases started for the current major version" ON)

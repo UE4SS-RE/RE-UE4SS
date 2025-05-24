@@ -42,7 +42,7 @@ target_compile_definitions(${TARGET} PRIVATE
 target_link_libraries(${TARGET} PRIVATE
     File Input DynamicOutput Helpers)
 
-target_link_libraries(${TARGET} PRIVATE raw_pdb)
+target_link_libraries(${TARGET} PRIVATE glaze::glaze raw_pdb)
 
 # Set IDE folder - make sure to use capital P for Programs
 set_target_properties(${TARGET} PROPERTIES FOLDER "Programs")

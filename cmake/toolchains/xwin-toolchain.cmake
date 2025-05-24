@@ -28,7 +28,7 @@ set(XWIN_SDK_LIB "${XWIN_DIR}/sdk/lib")
 
 # Compiler flags
 set(CMAKE_C_FLAGS_INIT "-target x86_64-pc-windows-msvc -fms-compatibility -fms-extensions")
-set(CMAKE_CXX_FLAGS_INIT "-target x86_64-pc-windows-msvc -fms-compatibility -fms-extensions -std=c++20 -D_CRT_SECURE_NO_WARNINGS")
+set(CMAKE_CXX_FLAGS_INIT "-target x86_64-pc-windows-msvc -fms-compatibility -fms-extensions -std=c++23 -D_CRT_SECURE_NO_WARNINGS -Wno-invalid-offsetof")
 
 # Add include directories
 set(CMAKE_C_FLAGS_INIT "${CMAKE_C_FLAGS_INIT} -isystem ${XWIN_CRT_INCLUDE}")
