@@ -2,8 +2,8 @@ if get_config("ue4ssCross") ~= "msvc-wine" then
     includes("proxy_generator")
 end
 
-add_requires("imgui v1.89", { debug = is_mode_debug(), configs = { win32 = true, dx11 = true, opengl3 = true, glfw_opengl3 = true , runtimes = get_mode_runtimes()} } )
-add_requires("ImGuiTextEdit v1.0", { debug = is_mode_debug(), configs = {runtimes = get_mode_runtimes()} })
+add_requires("imgui v1.91.9b", { debug = is_mode_debug(), configs = { win32 = true, dx11 = true, opengl3 = true, glfw_opengl3 = true , runtimes = get_mode_runtimes()} } )
+add_requires("ImGuiTextEdit v1.1.0", { debug = is_mode_debug(), configs = {runtimes = get_mode_runtimes()} })
 add_requires("IconFontCppHeaders v1.0", { debug = is_mode_debug(), configs = {runtimes = get_mode_runtimes()}})
 add_requires("glfw 3.3.9", { debug = is_mode_debug() , configs = {runtimes = get_mode_runtimes()}})
 add_requires("opengl", { debug = is_mode_debug(), configs = {runtimes = get_mode_runtimes()} })

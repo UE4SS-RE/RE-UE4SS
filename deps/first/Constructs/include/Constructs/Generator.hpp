@@ -87,10 +87,10 @@ namespace RC
                 return *this;
             }
 
-            auto operator++(int) -> iterator&
+            auto operator++(int) -> iterator
             {
                 iterator temp = *this;
-                *++this;
+                ++(*this);
                 return temp;
             }
 

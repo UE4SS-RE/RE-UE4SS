@@ -2,9 +2,9 @@ package("ImGuiTextEdit")
     add_urls("git@github.com:UE4SS-RE/ImGuiColorTextEdit.git")
     add_urls("https://github.com/UE4SS-RE/ImGuiColorTextEdit.git")
 
-    add_versions("v1.0", "master")
+    add_versions("v1.1.0", "master")
 
-    add_deps("cmake", "imgui v1.89")
+    add_deps("cmake", "imgui v1.91.9b")
 
     add_includedirs("include", { public = true })
 
