@@ -169,7 +169,7 @@ namespace RC::LuaMadeSimple::Type
             {
                 table.get_metamethods().create(LuaMadeSimple::Lua::MetaMethod::Index, [](const LuaMadeSimple::Lua& lua) -> int {
                     RemoteObject<ObjectType>& lua_object = lua.get_userdata<RemoteObject<ObjectType>>();
-                    lua_object.get_pusher_callable()(lua, lua_object.get_remote_cpp_object());
+                    // lua_object.get_pusher_callable()(lua, lua_object.get_remote_cpp_object()); commented out, not implemented
                     return 1;
                 });
 
