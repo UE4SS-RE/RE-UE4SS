@@ -637,12 +637,12 @@ ModRef = {}
 
 --- Sets a variable that can be accessed by any mod.
 ---@param VariableName string
----@param Value nil|string|number|bool|UObject
+---@param Value nil|string|number|boolean|UObject
 function ModRef:SetSharedVariable(VariableName, Value) end
 
 --- Returns a variable that could've been set by another mod.
 ---@param VariableName string
----@return nil|string|number|bool|UObject
+---@return nil|string|number|boolean|UObject
 function ModRef:GetSharedVariable(VariableName) end
 
 ---Returns the type of the shared variable (if it is valid)
