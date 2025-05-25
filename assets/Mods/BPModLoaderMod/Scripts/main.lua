@@ -1,5 +1,5 @@
 ---########################
---- DEFINITIONS
+--- DEFINES
 ---########################
 package.path = '.\\Mods\\ModLoaderMod\\?.lua;' .. package.path
 package.path = '.\\Mods\\ModLoaderMod\\BPMods\\?.lua;' .. package.path
@@ -144,7 +144,7 @@ local function CacheAssetRegistry()
     ---@cast AssetRegistryHelpers UObject
     if (AssetRegistryHelpers:IsValid() and AssetRegistry:IsValid()) then return end
 
-    local AssetRegistryHelpers = StaticFindObject("/Script/AssetRegistry.Default__AssetRegistryHelpers") --[[@as UObject]]
+    AssetRegistryHelpers = StaticFindObject("/Script/AssetRegistry.Default__AssetRegistryHelpers") --[[@as UObject]]
     if (AssetRegistryHelpers ~= nil and AssetRegistryHelpers:IsValid()) then
         ---@cast AssetRegistryHelpers UAssetRegistryHelpers
         AssetRegistry = AssetRegistryHelpers:GetAssetRegistry() --[[@as IAssetRegistry]]
@@ -153,7 +153,7 @@ local function CacheAssetRegistry()
         print("Failed to fetch AssetRegistry via ARHelpers, falling back to SFO search\n")
         AssetRegistry = StaticFindObject("/Script/AssetRegistry.Default__AssetRegistryImpl") --[[@as IAssetRegistry]]
     end
-    if not AssetRegistry:IsValid() then error("Unable to continue - failed to fetch AssetRegistry!\n") end
+    if not AssetRegistry:IsValid() then error("Unable to continue - failed to validate UE game provides instance of AssetRegistry!\n") end
 end
 
 ---########################
@@ -182,7 +182,6 @@ local function LoadModConfigs()
             Log(string.format("    ModFile: %s\n", ModFile.__name))
             if ModFile.__name == "config.lua" then
                 dofile(ModFile.__absolute_path)
-                -- can someone explain what logic below is supposed to do or under which condition it will ever run
                 if type(Mods[ModDirectoryName]) ~= "table" then break end
                 if not Mods[ModDirectoryName].AssetName then break end
                 Mods[ModDirectoryName].AssetNameAsFName = UEHelpers.FindOrAddFName(Mods[ModDirectoryName].AssetName)
@@ -300,10 +299,13 @@ end
 LoadModConfigs()
 LogOrderedMods()
 
---- Only execute any hooks and all that jazz if we have at least one mod entry
+--- Only execute/add any hooks if we have at least one mod entry
 --- It does not matter we can do it manually on a hotkey, PAKs arent mounted
---- automatially at runtime on LUA reload and we dont need potentially unstable moot hooks
+--- automatially at runtime on LUA reload and we dont need potentially unstable and moot hooks
 if (GetModCount(Mods) > 0) then
+
+    --- future signal to BPML_GenericFunctions we want custom hooks for BP<->lua interaction
+    ModRef:SetSharedVariable("BPModLoaderMod_bIsActive", true)
 
     RegisterKeyBind(Key.INS, function()
         ExecuteInGameThread(function()
