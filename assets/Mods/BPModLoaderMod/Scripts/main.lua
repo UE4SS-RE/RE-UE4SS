@@ -31,7 +31,7 @@ end
 --- get table count, never rely on #t
 --- @param T table
 --- @return integer
-local function GetModCount(T)
+local function GetModCount()
     local c = 0
     for _, ModInfo in ipairs(OrderedMods) do
         if type(ModInfo) == "table" then c = c + 1 end
