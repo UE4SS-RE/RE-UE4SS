@@ -103,14 +103,6 @@ namespace RC::LuaType
                            prepare_to_handle(SetOperation::ForEach, lua);
                            return 1;
                        });
-                       
-        // Add size() function for compatibility with other containers
-        table.add_pair("size",
-                       [](const LuaMadeSimple::Lua& lua) -> int {
-                           auto& lua_object = lua.get_userdata<TSet>();
-                           lua.set_integer(lua_object.get_remote_cpp_object()->Num());
-                           return 1;
-                       });
 
         if constexpr (is_final == LuaMadeSimple::Type::IsFinal::Yes)
         {

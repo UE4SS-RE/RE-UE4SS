@@ -1007,7 +1007,41 @@ function TArray:Empty() end
 ---@param Callback fun(index: integer, element: RemoteUnrealParam)
 function TArray:ForEach(Callback) end
 
----@class TSet<K> : { [K]: nil }
+---@class TSet<T>
+local TSet = {}
+
+---Adds an element to the set
+---@param Element T
+function TSet:Add(Element) end
+
+---Checks if the set contains the specified element
+---@param Element T
+---@return boolean
+function TSet:Contains(Element) end
+
+---Removes an element from the set
+---@param Element T
+function TSet:Remove(Element) end
+
+---Clears all elements from the set
+function TSet:Empty() end
+
+---Iterates the entire `TSet` and calls the callback function for each element in the set.
+---The callback has one param: `T element`
+---@param Callback fun(element: T)
+function TSet:ForEach(Callback) end
+
+---Returns the number of elements in the set (metamethod for # operator)
+---@return integer
+function TSet:__len() end
+
+---Returns whether this TSet is valid
+---@return boolean
+function TSet:IsValid() end
+
+---Returns "TSet"
+---@return 'TSet'
+function TSet:type() end
 
 ---@class TMap<K, V> : { [K]: V }
 local TMap = {}
