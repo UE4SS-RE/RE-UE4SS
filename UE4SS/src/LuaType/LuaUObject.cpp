@@ -812,23 +812,51 @@ namespace RC::LuaType
         };
 
         auto lua_to_memory = [&]() {
-            if (params.lua.is_userdata())
+            if (params.lua.is_userdata(params.stored_at_index))
             {
-                // TArray as userdata
-                params.throw_error("push_arrayproperty::lua_to_memory", "StructData as userdata is not yet implemented but there's userdata on the stack");
+                // Handle TArray userdata
+                auto& lua_tarray = params.lua.get_userdata<TArray>(params.stored_at_index);
+                Unreal::FScriptArray* source_array = lua_tarray.get_remote_cpp_object();
+                
+                Unreal::FArrayProperty* array_property = static_cast<Unreal::FArrayProperty*>(params.property);
+                Unreal::FProperty* inner = array_property->GetInner();
+                
+                auto dest_array = static_cast<Unreal::FScriptArray*>(params.data);
+                
+                // Clear destination array
+                dest_array->Empty(0, inner->GetSize(), inner->GetMinAlignment());
+                
+                // Copy elements from source to destination
+                int32_t num_elements = source_array->Num();
+                if (num_elements > 0)
+                {
+                    dest_array->AddZeroed(num_elements, inner->GetSize(), inner->GetMinAlignment());
+                    
+                    for (int32_t i = 0; i < num_elements; i++)
+                    {
+                        void* src_element = static_cast<uint8_t*>(source_array->GetData()) + (i * inner->GetSize());
+                        void* dest_element = static_cast<uint8_t*>(dest_array->GetData()) + (i * inner->GetSize());
+                        
+                        inner->CopySingleValueToScriptVM(dest_element, src_element);
+                    }
+                }
             }
-            else if (params.lua.is_table())
+            else if (params.lua.is_table(params.stored_at_index))
             {
                 // TArray as table
                 lua_table_to_memory();
             }
-            else if (params.lua.is_nil())
+            else if (params.lua.is_nil(params.stored_at_index))
             {
-                params.lua.discard_value();
+                // Empty array
+                auto array = static_cast<Unreal::FScriptArray*>(params.data);
+                Unreal::FArrayProperty* array_property = static_cast<Unreal::FArrayProperty*>(params.property);
+                Unreal::FProperty* inner = array_property->GetInner();
+                array->Empty(0, inner->GetSize(), inner->GetMinAlignment());
             }
             else
             {
-                params.throw_error("push_arrayproperty::lua_to_memory", "Parameter must be of type 'StructProperty' or table");
+                params.throw_error("push_arrayproperty::lua_to_memory", "Parameter must be of type 'TArray' or table");
             }
         };
 
