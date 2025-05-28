@@ -302,10 +302,7 @@ LogOrderedMods()
 --- Only execute/add any hooks if we have at least one mod entry
 --- It does not matter we can do it manually on a hotkey, PAKs arent mounted
 --- automatially at runtime on LUA reload and we dont need potentially unstable and moot hooks
-if (GetModCount(Mods) > 0) then
-
-    --- future signal to BPML_GenericFunctions we want custom hooks for BP<->lua interaction
-    ModRef:SetSharedVariable("BPModLoaderMod_bIsActive", true)
+if (GetModCount(OrderedMods) > 0) then
 
     RegisterKeyBind(Key.INS, function()
         ExecuteInGameThread(function()
