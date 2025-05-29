@@ -1,8 +1,11 @@
+#include <filesystem>
+
 #include <DynamicOutput/DynamicOutput.hpp>
 #include <LuaLibrary.hpp>
 #include <LuaMadeSimple/LuaMadeSimple.hpp>
 #include <SigScanner/SinglePassSigScanner.hpp>
 #include <Signatures.hpp>
+#include <ExceptionHandling.hpp>
 #include <Unreal/FMemory.hpp>
 #include <Unreal/FString.hpp>
 #include <Unreal/FText.hpp>
@@ -11,9 +14,14 @@
 #include <Unreal/UObject.hpp>
 #include <Unreal/UObjectArray.hpp>
 #include <Unreal/UnrealInitializer.hpp>
-#include <filesystem>
 
 #include <Helpers/String.hpp>
+
+// Required for SEH_TRY and SEH_EXCEPT.
+#ifdef _WIN32
+#define NOMINMAX
+#include <Windows.h>
+#endif
 
 namespace RC
 {
@@ -151,20 +159,27 @@ namespace RC
                         lua_fnc_scan_script,
                         signature_containers,
                         [&scan_result](void* address) {
-                            Unreal::FName name = Unreal::FName(STR("bCanBeDamaged"), Unreal::FNAME_Find, address);
+                            Unreal::FName name{};
+                            SEH_TRY({ name = Unreal::FName(STR("bCanBeDamaged"), Unreal::FNAME_Find, address); })
+                            SEH_EXCEPT({ Output::send<LogLevel::Error>(STR("Error: Crashed calling FName constructor.\n")); });
 
-                            if (name == STR("bCanBeDamaged"))
-                            {
-                                Output::send(STR("FName::FName address: {} <- Lua Script\n"), address);
-                                Unreal::FName::ConstructorInternal.assign_address(address);
-                                return DidLuaScanSucceed::Yes;
-                            }
-                            else
-                            {
-                                scan_result.Errors.emplace_back("Lua script 'FName_Constructor.lua' did not return a "
-                                                                "valid address for FName::FName.");
-                                return DidLuaScanSucceed::No;
-                            }
+                            DidLuaScanSucceed did_succeed{};
+                            SEH_TRY({
+                                if (name == STR("bCanBeDamaged"))
+                                {
+                                    Output::send(STR("FName::FName address: {} <- Lua Script\n"), address);
+                                    Unreal::FName::ConstructorInternal.assign_address(address);
+                                    did_succeed = DidLuaScanSucceed::Yes;
+                                }
+                                else
+                                {
+                                    scan_result.Errors.emplace_back("Lua script 'FName_Constructor.lua' did not return a "
+                                                                    "valid address for FName::FName.");
+                                    did_succeed = DidLuaScanSucceed::No;
+                                }
+                            })
+                            SEH_EXCEPT({ Output::send<LogLevel::Error>(STR("Error: Crashed calling FName::ToString.\n")); })
+                            return did_succeed;
                         },
                         [&scan_result]([[maybe_unused]] DidLuaScanSucceed did_lua_scan_succeed) {
                             if (!Unreal::FName::ConstructorInternal.get_function_address())
@@ -237,20 +252,27 @@ namespace RC
                         lua_ftc_scan_script,
                         signature_containers,
                         [&scan_result](void* address) {
-                            Unreal::FText text = Unreal::FText(STR("bCanBeDamaged"), address);
+                            Unreal::FText text{};
+                            SEH_TRY({ text = Unreal::FText(STR("bCanBeDamaged"), address); })
+                            SEH_EXCEPT({ Output::send<LogLevel::Error>(STR("Error: Crashed calling FText constructor.\n")); });
 
-                            if (text == STR("bCanBeDamaged"))
-                            {
-                                Output::send(STR("FText::FText address: {} <- Lua Script\n"), address);
-                                Unreal::FText::ConstructorInternal.assign_address(address);
-                                return DidLuaScanSucceed::Yes;
-                            }
-                            else
-                            {
-                                scan_result.Errors.emplace_back("Lua script 'FText_Constructor.lua' did not return a "
-                                                                "valid address for FText::FText.");
-                                return DidLuaScanSucceed::No;
-                            }
+                            DidLuaScanSucceed did_succeed{};
+                            SEH_TRY({
+                                if (text == STR("bCanBeDamaged"))
+                                {
+                                    Output::send(STR("FText::FText address: {} <- Lua Script\n"), address);
+                                    Unreal::FText::ConstructorInternal.assign_address(address);
+                                    did_succeed = DidLuaScanSucceed::Yes;
+                                }
+                                else
+                                {
+                                    scan_result.Errors.emplace_back("Lua script 'FText_Constructor.lua' did not return a "
+                                                                    "valid address for FText::FText.");
+                                    did_succeed = DidLuaScanSucceed::No;
+                                }
+                            })
+                            SEH_EXCEPT({ Output::send<LogLevel::Error>(STR("Error: Crashed calling FText::ToString.\n")); })
+                            return did_succeed;
                         },
                         [&scan_result]([[maybe_unused]] DidLuaScanSucceed did_lua_scan_succeed) {
                             if (!Unreal::FText::ConstructorInternal.get_function_address())
