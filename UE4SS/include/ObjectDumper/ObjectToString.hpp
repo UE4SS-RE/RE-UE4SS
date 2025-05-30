@@ -2,10 +2,17 @@
 
 #include <functional>
 #include <unordered_map>
+#include <unordered_set>
 
 #include <File/File.hpp>
 
 #include <String/StringType.hpp>
+
+namespace RC::Unreal
+{
+    class FProperty;
+    class UFunction;
+} // namespace RC::Unreal
 
 namespace RC::ObjectDumper
 {
@@ -46,9 +53,11 @@ namespace RC::ObjectDumper
 
     auto enum_to_string(void* p_this, StringType& out_line) -> void;
     auto struct_to_string(void* p_this, StringType& out_line) -> void;
-    auto function_to_string(void* p_this, StringType& out_line) -> void;
+    auto function_to_string(void* p_this, StringType& out_line, std::unordered_set<Unreal::UFunction*>* in_dumped_functions) -> void;
 
     auto scriptstruct_to_string_complex(void* p_this, StringType& out_line, ObjectToStringComplexDeclCallable callable) -> void;
+
+    auto dump_xproperty(Unreal::FProperty* property, StringType& out_line) -> void;
 
     auto init() -> void;
 } // namespace RC::ObjectDumper

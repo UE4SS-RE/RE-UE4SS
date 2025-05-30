@@ -38,6 +38,7 @@ namespace RC
         struct SectionObjectDumper
         {
             bool LoadAllAssetsBeforeDumpingObjects{};
+            bool UseModuleOffsets{};
         } ObjectDumper;
 
         struct SectionCXXHeaderGenerator
