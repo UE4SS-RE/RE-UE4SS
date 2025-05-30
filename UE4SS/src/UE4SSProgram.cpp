@@ -57,6 +57,14 @@
 
 #include <polyhook2/PE/IatHook.hpp>
 
+// For VersionedContainer2 performance monitoring
+#ifdef USE_VERSIONED_CONTAINER_2
+#include <Unreal/VersionedContainer2/Performance.hpp>
+#endif
+
+#include <random>
+#include <vector>
+
 namespace RC
 {
     // Commented out because this system (turn off hotkeys when in-game console is open) it doesn't work properly.
@@ -554,8 +562,12 @@ namespace RC
             int64_t major_version = settings_manager.EngineVersionOverride.MajorVersion;
             int64_t minor_version = settings_manager.EngineVersionOverride.MinorVersion;
 
+            Output::send<LogLevel::Default>(STR("[VERSION_OVERRIDE] Settings loaded: MajorVersion={}, MinorVersion={}\n"), major_version, minor_version);
+            Output::send<LogLevel::Default>(STR("[VERSION_OVERRIDE] Current Version::Major={}, Version::Minor={}\n"), Unreal::Version::Major, Unreal::Version::Minor);
+
             if (major_version != -1 && minor_version != -1)
             {
+                Output::send<LogLevel::Default>(STR("[VERSION_OVERRIDE] Applying version override from settings...\n"));
                 // clang-format off
                 if (major_version < std::numeric_limits<uint32_t>::min() ||
                     major_version > std::numeric_limits<uint32_t>::max() ||
@@ -569,8 +581,13 @@ namespace RC
 
                 Unreal::Version::Major = static_cast<uint32_t>(major_version);
                 Unreal::Version::Minor = static_cast<uint32_t>(minor_version);
+                Output::send<LogLevel::Default>(STR("[VERSION_OVERRIDE] Version override applied: {}.{}\n"), Unreal::Version::Major, Unreal::Version::Minor);
 
                 config.ScanOverrides.version_finder = [&]([[maybe_unused]] auto&, Unreal::Signatures::ScanResult&) {};
+            }
+            else
+            {
+                Output::send<LogLevel::Default>(STR("[VERSION_OVERRIDE] No version override specified in settings\n"));
             }
         }
 
@@ -980,6 +997,10 @@ namespace RC
         ProfilerSetThreadName("UE4SS-UpdateThread");
 
         on_program_start();
+
+        // Run performance test before event loop
+        Output::send(STR("\nRunning VersionedContainer performance test before event loop...\n"));
+        run_versioned_container_performance_test();
 
         Output::send(STR("Event loop start\n"));
         for (m_processing_events = true; m_processing_events;)
@@ -1890,6 +1911,201 @@ namespace RC
         UAssetRegistry::FreeAllForcefullyLoadedAssets();
         Output::send(STR("Dumping GUObjectArray took {} seconds\n"), dumper_duration);
         // Object & Property Dumper -> END
+    }
+
+    auto UE4SSProgram::run_versioned_container_performance_test() -> void
+    {
+        Output::send(STR("\n==== VersionedContainer Performance Test ====\n"));
+        
+        // Check if we're using VC2
+        bool using_vc2 = false;
+#ifdef USE_VERSIONED_CONTAINER_2
+        using_vc2 = true;
+        Output::send(STR("Currently using: VersionedContainer2\n"));
+#else
+        Output::send(STR("Currently using: Original VersionedContainer\n"));
+#endif
+        
+        // Test configuration
+        constexpr int NUM_ITERATIONS = 5;
+        constexpr int WARMUP_ITERATIONS = 2;
+        
+        // Performance metrics
+        struct TestResult {
+            double min_time = std::numeric_limits<double>::max();
+            double max_time = 0.0;
+            double total_time = 0.0;
+            int count = 0;
+            
+            void add_sample(double time) {
+                min_time = std::min(min_time, time);
+                max_time = std::max(max_time, time);
+                total_time += time;
+                count++;
+            }
+            
+            double avg_time() const { return count > 0 ? total_time / count : 0.0; }
+        };
+        
+        TestResult foreach_test;
+        TestResult index_access_test;
+        TestResult flag_test;
+        
+        // Count total objects for reference
+        int total_objects = 0;
+        int valid_objects = 0;
+        
+        Output::send(STR("\nWarming up...\n"));
+        
+        // Warmup iterations
+        for (int i = 0; i < WARMUP_ITERATIONS; ++i)
+        {
+            UObjectGlobals::ForEachUObject([](void* object, int32_t index) {
+                return LoopAction::Continue;
+            });
+        }
+        
+        Output::send(STR("Running performance tests...\n\n"));
+        
+        // Test 1: ForEachUObject iteration
+        Output::send(STR("Test 1: ForEachUObject iteration\n"));
+        for (int iter = 0; iter < NUM_ITERATIONS; ++iter)
+        {
+            total_objects = 0;
+            valid_objects = 0;
+            
+            double iteration_time = 0.0;
+            {
+                ScopedTimer timer{&iteration_time};
+                
+                UObjectGlobals::ForEachUObject([&](void* object, int32_t index) {
+                    total_objects++;
+                    if (object)
+                    {
+                        valid_objects++;
+                        // Simulate minimal work
+                        volatile auto* uobj = static_cast<UObject*>(object);
+                        volatile auto name_ptr = uobj->GetNamePrivate();
+                    }
+                    return LoopAction::Continue;
+                });
+            }
+            
+            foreach_test.add_sample(iteration_time);
+            Output::send(STR("  Iteration {}: {:.3f}ms ({} objects, {} valid)\n"), 
+                        iter + 1, iteration_time * 1000.0, total_objects, valid_objects);
+        }
+        
+        // Test 2: Random index access
+        Output::send(STR("\nTest 2: Random index access (1000 lookups)\n"));
+        const int num_lookups = 1000;
+        const int max_index = UObjectGlobals::GetGUObjectArray().GetMaxElements();
+        
+        // Generate random indices
+        std::vector<int32_t> random_indices;
+        random_indices.reserve(num_lookups);
+        for (int i = 0; i < num_lookups; ++i)
+        {
+            random_indices.push_back(rand() % max_index);
+        }
+        
+        for (int iter = 0; iter < NUM_ITERATIONS; ++iter)
+        {
+            double lookup_time = 0.0;
+            int valid_lookups = 0;
+            
+            {
+                ScopedTimer timer{&lookup_time};
+                
+                for (int32_t idx : random_indices)
+                {
+                    auto* item = UObjectGlobals::GetGUObjectArray().IndexToObject(idx);
+                    if (item && item->Object)
+                    {
+                        valid_lookups++;
+                        // Simulate work
+                        volatile auto flags = item->GetFlags();
+                    }
+                }
+            }
+            
+            index_access_test.add_sample(lookup_time);
+            Output::send(STR("  Iteration {}: {:.3f}ms ({} valid lookups)\n"), 
+                        iter + 1, lookup_time * 1000.0, valid_lookups);
+        }
+        
+        // Test 3: Flag operations
+        Output::send(STR("\nTest 3: Flag operations (check unreachable on all objects)\n"));
+        for (int iter = 0; iter < NUM_ITERATIONS; ++iter)
+        {
+            double flag_time = 0.0;
+            int unreachable_count = 0;
+            
+            {
+                ScopedTimer timer{&flag_time};
+                
+                UObjectGlobals::ForEachUObject([&](void* object, int32_t index) {
+                    auto* item = UObjectGlobals::GetGUObjectArray().IndexToObject(index);
+                    if (item && item->IsUnreachable())
+                    {
+                        unreachable_count++;
+                    }
+                    return LoopAction::Continue;
+                });
+            }
+            
+            flag_test.add_sample(flag_time);
+            Output::send(STR("  Iteration {}: {:.3f}ms ({} unreachable)\n"), 
+                        iter + 1, flag_time * 1000.0, unreachable_count);
+        }
+        
+        // Print summary
+        Output::send(STR("\n==== Performance Summary ====\n"));
+        Output::send(STR("System: {}\n"), using_vc2 ? STR("VersionedContainer2") : STR("Original VersionedContainer"));
+        Output::send(STR("Total objects: {}\n"), total_objects);
+        Output::send(STR("Valid objects: {}\n\n"), valid_objects);
+        
+        Output::send(STR("ForEachUObject iteration:\n"));
+        Output::send(STR("  Average: {:.3f}ms\n"), foreach_test.avg_time() * 1000.0);
+        Output::send(STR("  Min:     {:.3f}ms\n"), foreach_test.min_time * 1000.0);
+        Output::send(STR("  Max:     {:.3f}ms\n\n"), foreach_test.max_time * 1000.0);
+        
+        Output::send(STR("Random index access ({} lookups):\n"), num_lookups);
+        Output::send(STR("  Average: {:.3f}ms\n"), index_access_test.avg_time() * 1000.0);
+        Output::send(STR("  Min:     {:.3f}ms\n"), index_access_test.min_time * 1000.0);
+        Output::send(STR("  Max:     {:.3f}ms\n\n"), index_access_test.max_time * 1000.0);
+        
+        Output::send(STR("Flag operations:\n"));
+        Output::send(STR("  Average: {:.3f}ms\n"), flag_test.avg_time() * 1000.0);
+        Output::send(STR("  Min:     {:.3f}ms\n"), flag_test.min_time * 1000.0);
+        Output::send(STR("  Max:     {:.3f}ms\n"), flag_test.max_time * 1000.0);
+        
+        // Calculate objects/ms for iteration test
+        double objects_per_ms = valid_objects / (foreach_test.avg_time() * 1000.0);
+        Output::send(STR("\nPerformance: {:.0f} objects/ms\n"), objects_per_ms);
+        
+#ifdef USE_VERSIONED_CONTAINER_2
+        // If using VC2, print additional diagnostics if available
+        if (using_vc2)
+        {
+            Output::send(STR("\n==== VC2 Performance Stats ====\n"));
+            try {
+                auto stats = VC2::PerformanceMonitor::GetStats();
+                for (const auto& [name, stat] : stats)
+                {
+                    Output::send(STR("{}: {} calls, avg {:.2f}μs, total {:.2f}ms\n"),
+                                to_wstring(name), 
+                                stat.call_count,
+                                stat.GetAverageMicroseconds(),
+                                stat.GetTotalMilliseconds());
+                }
+            } catch (...) {
+                Output::send(STR("VC2 performance stats not available\n"));
+            }
+        }
+#endif
+        
+        Output::send(STR("\n==== Test Complete ====\n"));
     }
 
     auto UE4SSProgram::static_cleanup() -> void

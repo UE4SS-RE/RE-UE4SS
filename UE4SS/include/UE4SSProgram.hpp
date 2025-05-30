@@ -316,6 +316,9 @@ namespace RC
         RC_UE4SS_API static auto find_lua_mod_by_name(StringViewType mod_name, IsInstalled = IsInstalled::No, IsStarted = IsStarted::No) -> LuaMod*;
         RC_UE4SS_API static auto find_lua_mod_by_name(std::string_view mod_name, IsInstalled = IsInstalled::No, IsStarted = IsStarted::No) -> LuaMod*;
         static auto static_cleanup() -> void;
+        
+        // Performance testing for VersionedContainer comparison
+        RC_UE4SS_API auto run_versioned_container_performance_test() -> void;
         RC_UE4SS_API static auto get_program() -> UE4SSProgram&
         {
             return *s_program;
