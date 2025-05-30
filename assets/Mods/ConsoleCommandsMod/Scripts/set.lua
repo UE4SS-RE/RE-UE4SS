@@ -1,3 +1,5 @@
+local bit = require 'bit'
+
 RegisterConsoleCommandHandler("set", function(FullCommand, Parameters, Ar)
     -- If we have no parameters then just let someone else handle this command
     if #Parameters < 3 then return false end
@@ -8,7 +10,7 @@ RegisterConsoleCommandHandler("set", function(FullCommand, Parameters, Ar)
     local PropertyName = Parameters[2]
     local NewPropertyValue = Parameters[3]
     
-    local BannedFlags = EObjectFlags.RF_ClassDefaultObject | EObjectFlags.RF_ArchetypeObject
+    local BannedFlags = bit.bor(EObjectFlags.RF_ClassDefaultObject, EObjectFlags.RF_ArchetypeObject)
     
     if not ClassOrObjectName or ClassOrObjectName == "" or ClassOrObjectName == " " then
         Log("No class or object name supplied")
