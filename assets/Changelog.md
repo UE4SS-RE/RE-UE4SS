@@ -54,6 +54,9 @@ Added ability to call UFunctions directly from the GUI. ([UE4SS #851](https://gi
 
 ### Lua API 
 
+**Updated Lua version to 5.4.7** ([UE4SS #887](https://github.com/UE4SS-RE/RE-UE4SS/pull/887))
+- This is necessary to compile with Clang.
+
 Added `TMap` implementation. [UE4SS #755](https://github.com/UE4SS-RE/RE-UE4SS/issues/755)
 
 Added global function `CreateInvalidObject`, which returns an invalid UObject. ([UE4SS #652](https://github.com/UE4SS-RE/RE-UE4SS/issues/652))  
