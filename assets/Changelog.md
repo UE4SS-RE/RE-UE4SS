@@ -99,22 +99,17 @@ Errors can now be caught using `pcall` and `xpcall`. ([UE4SS #833](https://githu
 
 ### C++ API 
 Key binds created with `UE4SSProgram::register_keydown_event` end up being duplicated upon mod hot-reload.  
-
-To fix this, `CppUserModBase::register_keydown_event` has been introduced.  
-
-It's used exactly the same way except without the `UE4SSProgram::` part. ([UE4SS #446](https://github.com/UE4SS-RE/RE-UE4SS/pull/446)) 
+- To fix this, `CppUserModBase::register_keydown_event` has been introduced.  
+- It's used exactly the same way except without the `UE4SSProgram::` part. ([UE4SS #446](https://github.com/UE4SS-RE/RE-UE4SS/pull/446)) 
 
 Added `on_ui_init()`, it fires when the UI is initialized.  
-
-It's intended to use the `UE4SS_ENABLE_IMGUI` macro in this function.  
-
-Failing to do so will cause a crash when you try to render something with imgui. 
+- It's intended to use the `UE4SS_ENABLE_IMGUI` macro in this function.  
+- Failing to do so will cause a crash when you try to render something with imgui. 
 
 BREAKING: Changed `FTransform` constructor to be identical to unreal. 
 
 Added `OpenFor::ReadWrite`, to be used when calling `File::open`.  
-
-This can be used when calling `FileHandle::memory_map`, unlike `OpenFor::Writing`.  ([UE4SS #507](https://github.com/UE4SS-RE/RE-UE4SS/pull/507)) 
+- This can be used when calling `FileHandle::memory_map`, unlike `OpenFor::Writing`.  ([UE4SS #507](https://github.com/UE4SS-RE/RE-UE4SS/pull/507)) 
 
 Added hook for `UGameViewportClient::Tick`. ([UE4SS #767](https://github.com/UE4SS-RE/RE-UE4SS/pull/767))
 
@@ -123,8 +118,6 @@ Added hook for `AActor::EndPlay`. ([UE4SS #769](https://github.com/UE4SS-RE/RE-U
 Added function 'UE4SSProgram::delete_mod'. ([UE4SS #843](https://github.com/UE4SS-RE/RE-UE4SS/pull/843))
 
 Added function 'UE4SSProgram::get_all_input_events'. ([UE4SS #843](https://github.com/UE4SS-RE/RE-UE4SS/pull/843))
-
-### C++ API
 
 Enhanced `TObjectPtr<>` implementation to function as a proper smart pointer. ([UE4SS-RE/RE-UE4SS #850](https://github.com/UE4SS-RE/RE-UE4SS/pull/850), [Re-UE4SS/UEPseudo #125](https://github.com/Re-UE4SS/UEPseudo/pull/125))
 
@@ -149,6 +142,11 @@ UClass* RawPtr = ClassPtr.Get(); // explicit access
 ## Changes 
 
 ### General 
+
+Updated ImGui from v1.89 to v1.91.9b for improved functionality and Clang compatability 
+
+Updated ImGuiTextEdit to support newest ImGui API 
+
 Changed the default location of the UE4SS release assets to be in `game executable directory/ue4ss/`. This change is backwards compatible with the old location. ([UE4SS #506](https://github.com/UE4SS-RE/RE-UE4SS/pull/506)) - Buckminsterfullerene 
 
 Updated PatternSleuth submodule ([UE4SS #638](https://github.com/UE4SS-RE/RE-UE4SS/pull/638)) 
