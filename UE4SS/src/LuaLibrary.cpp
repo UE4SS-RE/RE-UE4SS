@@ -47,18 +47,52 @@ namespace RC::LuaLibrary
         int32_t stack_size = lua.get_stack_size();
         for (int32_t i = 1; i <= stack_size; i++)
         {
-            // lua_tostring (macro of lua_tolstring) is NOT the same as luaL_tolstring
-            // luaL_tolstring provides tostring()-ish conversion for any value
-            auto lua_str = to_generic_string(luaL_tolstring(lua.get_lua_state(), i, nullptr));
-
-            if (i > 1)
+            try
             {
-                // Use double tab, as single tab might make the spacing too thin in the console
-                formatted_string.append(STR("\t\t"));
-                if (output_device) outdevice_string.append(STR("        "));
+                // luaL_tolstring provides tostring()-ish conversion for any value
+                const char* raw_string = luaL_tolstring(lua.get_lua_state(), i, nullptr);
+
+                if (raw_string)
+                {
+                    auto lua_str = to_generic_string(raw_string);
+
+                    if (i > 1)
+                    {
+                        formatted_string.append(STR("\t\t"));
+                        if (output_device) outdevice_string.append(STR("        "));
+                    }
+
+                    formatted_string.append(lua_str);
+                    if (output_device) outdevice_string.append(lua_str);
+                }
+                else
+                {
+                    // Handle nil case
+                    auto nil_str = to_generic_string("nil");
+                    if (i > 1)
+                    {
+                        formatted_string.append(STR("\t\t"));
+                        if (output_device) outdevice_string.append(STR("        "));
+                    }
+
+                    formatted_string.append(nil_str);
+                    if (output_device) outdevice_string.append(nil_str);
+                }
             }
-            formatted_string.append(lua_str);
-            if (output_device) outdevice_string.append(lua_str);
+            catch (const std::exception& e)
+            {
+                // Handle conversion error
+                auto error_msg = to_generic_string(fmt::format("Error converting value: {}", e.what()));
+
+                if (i > 1)
+                {
+                    formatted_string.append(STR("\t\t"));
+                    if (output_device) outdevice_string.append(STR("        "));
+                }
+
+                formatted_string.append(error_msg);
+                if (output_device) outdevice_string.append(error_msg);
+            }
 
             // Remove the stack item produced by luaL_tolstring
             lua.discard_value(-1);
@@ -66,7 +100,10 @@ namespace RC::LuaLibrary
 
         Output::send(formatted_string);
 
-        if (output_device) output_device->Log(FromCharTypePtr<TCHAR>(outdevice_string.c_str()));
+        if (output_device)
+        {
+            output_device->Log(FromCharTypePtr<TCHAR>(outdevice_string.c_str()));
+        }
 
         return 0;
     }

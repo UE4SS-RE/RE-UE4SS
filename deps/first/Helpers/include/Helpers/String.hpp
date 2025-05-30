@@ -374,21 +374,87 @@ namespace RC
         }
     }
 
-    template <typename CharT, typename T>
-    auto inline to_charT_string_path(T&& arg) -> std::basic_string<CharT>
+    template <typename CharT, typename T_Path>
+    auto inline to_charT_string_path(T_Path&& arg) -> std::basic_string<CharT>
     {
-        // Dispatch to the correct conversion function based on the CharT type
-        if constexpr (std::is_same_v<CharT, wchar_t>)
+        static_assert(std::is_same_v<std::decay_t<T_Path>, std::filesystem::path>, "Input must be std::filesystem::path");
+
+        if constexpr (std::is_same_v<CharT, wchar_t>) // Covers WIDECHAR and Windows TCHAR
         {
             return arg.wstring();
         }
-        else if constexpr (std::is_same_v<CharT, char16_t>)
+        else if constexpr (std::is_same_v<CharT, char>) // Covers ANSICHAR, for UTF-8 output
         {
-            return arg.u16string();
+            // For UTF-8 std::string output from path
+            std::u8string u8_s = arg.u8string(); // path.u8string() IS UTF-8
+            return std::basic_string<CharT>(reinterpret_cast<const CharT*>(u8_s.c_str()), u8_s.length());
         }
-        else if constexpr (std::is_same_v<CharT, char>)
+        else if constexpr (std::is_same_v<CharT, uint16_t> || std::is_same_v<CharT, char16_t>) // Covers CHAR16 and standard char16_t
         {
-            return arg.string();
+            // Goal: Convert path to std::basic_string<uint16_t> or std::basic_string<char16_t> (UTF-16)
+
+            // Option 1: If wchar_t is 16-bit (like on Windows) and represents UTF-16
+            if constexpr (sizeof(wchar_t) == sizeof(CharT))
+            {
+                std::wstring temp_ws = arg.wstring(); // Get UTF-16 as std::wstring
+                // If CharT is uint16_t and wchar_t is also 16-bit, this reinterpret_cast is common.
+                // If CharT is char16_t and wchar_t is also 16-bit, also common.
+                return std::basic_string<CharT>(reinterpret_cast<const CharT*>(temp_ws.c_str()), temp_ws.length());
+            }
+            // Option 2: Convert from path's u8string (UTF-8) to UTF-16 (CharT)
+            // This is more portable if wchar_t size varies or isn't guaranteed to be UTF-16.
+            else
+            {
+                std::u8string u8_s = arg.u8string();
+                if (u8_s.empty())
+                {
+                    return std::basic_string<CharT>();
+                }
+
+                try
+                {
+#if defined(_MSC_VER)
+#pragma warning(push)
+#pragma warning(disable : 4996)
+#elif defined(__clang__) || defined(__GNUC__)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+#endif
+
+                    // Ensure CharT for the converter is char16_t if that's what codecvt expects
+                    // If CharT is uint16_t, we might need to cast the result or use a char16_t intermediate.
+                    // For simplicity, let's assume we convert to std::u16string (char16_t based)
+                    // and then construct std::basic_string<CharT> from it.
+
+                    using IntermediateChar16Type = char16_t; // Standard type for codecvt
+                    std::wstring_convert<std::codecvt_utf8_utf16<IntermediateChar16Type, 0x10FFFF, std::little_endian>, IntermediateChar16Type> converter;
+                    std::basic_string<IntermediateChar16Type> u16_intermediate_s =
+                            converter.from_bytes(reinterpret_cast<const char*>(u8_s.data()), reinterpret_cast<const char*>(u8_s.data() + u8_s.length()));
+
+                    // Now construct the final std::basic_string<CharT>
+                    // This assumes CharT (e.g., uint16_t) and IntermediateChar16Type (char16_t)
+                    // have compatible representations for UTF-16 code units.
+                    return std::basic_string<CharT>(reinterpret_cast<const CharT*>(u16_intermediate_s.data()), u16_intermediate_s.length());
+
+#if defined(_MSC_VER)
+#pragma warning(pop)
+#elif defined(__clang__) || defined(__GNUC__)
+#pragma GCC diagnostic pop
+#endif
+                }
+                catch (const std::exception&)
+                {
+                    // Catching std::exception for broader compatibility
+                    throw std::runtime_error("Failed to convert path from UTF-8 to UTF-16");
+                }
+            }
+        }
+        else
+        {
+            // This static_assert will provide a compile-time error for unsupported CharT types.
+            static_assert(std::is_same_v<CharT, wchar_t> || std::is_same_v<CharT, char> || std::is_same_v<CharT, uint16_t> || std::is_same_v<CharT, char16_t>,
+                          "to_charT_string_path: Unsupported target CharT for path conversion");
+            return std::basic_string<CharT>(); // Should be unreachable due to static_assert
         }
     }
 
@@ -422,14 +488,60 @@ namespace RC
 
     // Ensure that a string is compatible with UE4SS, converting it if neccessary
     template <typename T>
-    auto inline ensure_str(T&& arg)
+    auto inline ensure_str(T&& arg) /* -> StringType */
     {
-        return to_charT<CharType>(std::forward<T>(arg));
+        return ensure_str_as<CharType>(std::forward<T>(arg)); // CharType is the project's native char type
+    }
+
+    template <typename TargetCharT, typename T>
+    auto inline ensure_str_as(T&& arg) -> std::basic_string<TargetCharT>
+    {
+        return to_charT<TargetCharT>(std::forward<T>(arg));
+    }
+
+    template <typename T>
+    auto inline to_utf8_string(T&& arg) -> std::string
+    {
+        return ensure_str_as<char>(std::forward<T>(arg));
     }
 
     // You can add more to_* function if needed
 
     // Auto Type Conversion Done
+
+    /**
+     * Normalizes a path for use in Lua, ensuring:
+     * 1. UTF-8 encoding for proper Unicode handling
+     * 2. Forward slashes for consistency across platforms
+     * 
+     * @param path The path to normalize
+     * @return A UTF-8 encoded string with forward slashes
+     * @throws std::runtime_error if conversion fails
+     */
+    auto inline normalize_path_for_lua(const std::filesystem::path& path) -> std::string
+    {
+        std::string utf8_path = to_utf8_string(path);
+        
+        // Replace backslashes with forward slashes for Lua
+        std::replace(utf8_path.begin(), utf8_path.end(), '\\', '/');
+        
+        return utf8_path;
+    }
+    
+    /**
+     * Creates a Windows-compatible wide string from a UTF-8 path string
+     * This is useful when opening files with Windows APIs that expect UTF-16
+     * 
+     * @param utf8_path UTF-8 encoded path string
+     * @return Wide string (UTF-16) for Windows APIs
+     * @throws std::runtime_error if conversion fails
+     */
+    auto inline utf8_to_wpath(const std::string& utf8_path) -> std::wstring
+    {
+        // No fallbacks - if this fails, it should throw since it's a critical error
+        // that indicates invalid UTF-8 input
+        return to_wstring(utf8_path);
+    }
 
     auto inline to_generic_string(const auto& input) -> StringType
     {
