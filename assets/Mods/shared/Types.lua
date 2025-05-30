@@ -340,6 +340,19 @@ function RegisterKeyBind(Key, Callback) end
 ---@param Callback fun()
 function RegisterKeyBind(Key, ModifierKeys, Callback) end
 
+--- Registers a callback for a key-bind, asynchronously
+--- Callbacks can only be triggered while the game or debug console is on focus
+---@param Key Key
+---@param Callback fun()
+function RegisterKeyBindAsync(Key, Callback) end
+
+--- Registers a callback for a key-bind, asynchronously
+--- Callbacks can only be triggered while the game or debug console is on focus
+---@param Key Key
+---@param ModifierKeys ModifierKey[]
+---@param Callback fun()
+function RegisterKeyBindAsync(Key, Modifiers, Callback) end
+
 ---Checks if, at the time of the invocation, the supplied keys have been registered
 ---@param Key integer
 function IsKeyBindRegistered(Key) end
@@ -617,6 +630,24 @@ function UE4SS:GetVersion() end
 ---Returns current version of UE4SS
 ---@return integer, integer, integer
 function UE4SS.GetVersion() end
+
+--- The 'ModRef' variable is a global variable that's automatically created and is the instance of the current mod.
+---@class ModRef
+ModRef = {}
+
+--- Sets a variable that can be accessed by any mod.
+---@param VariableName string
+---@param Value nil|string|number|boolean|UObject
+function ModRef:SetSharedVariable(VariableName, Value) end
+
+--- Returns a variable that could've been set by another mod.
+---@param VariableName string
+---@return nil|string|number|boolean|UObject
+function ModRef:GetSharedVariable(VariableName) end
+
+---Returns the type of the shared variable (if it is valid)
+---@return string
+function ModRef:type() end
 
 ---Contains helper functions for retrieving which version of Unreal Engine that is being used.
 ---@class UnrealVersion
@@ -1140,3 +1171,18 @@ function UEnum:RemoveFromNamesAt(Index, Count) end
 ---@param Count integer
 ---@param AllowShrinking boolean
 function UEnum:RemoveFromNamesAt(Index, Count, AllowShrinking) end
+
+--- Registers a callback that will get called before UEngine::LoadMap is called.
+--- The callback params are: UEngine Engine, struct FWorldContext& WorldContext, FURL URL, class UPendingNetGame* PendingGame, string Error
+--- Params (except strings & bools & FOutputDevice) must be retrieved via 'Param:Get()' and set via 'Param:Set()'.
+---@param Callback fun(Engine: RemoteUnrealParam<UEngine>, World: RemoteUnrealParam<FWorldContext>, FURL: FURL, PendingGame: RemoteUnrealParam<UPendingNetGame>, Error: string)
+function RegisterLoadMapPreHook(Callback) end
+
+--- Registers a callback that will get called after UEngine::LoadMap is called.
+--- The callback params are: UEngine Enigne, struct FWorldContext& WorldContext, FURL URL, class UPendingNetGame* PendingGame, string Error
+--- Params (except strings & bools & FOutputDevice) must be retrieved via 'Param:Get()' and set via 'Param:Set()'.
+---@param Callback fun(Engine: RemoteUnrealParam<UEngine>, World: RemoteUnrealParam<FWorldContext>, FURL: FURL, PendingGame: RemoteUnrealParam<UPendingNetGame>, Error: string)
+function RegisterLoadMapPostHook(Callback) end
+
+--- Creates LogicMods/ directory inside app's Paks/ folder
+function CreateLogicModsDirectory() end
