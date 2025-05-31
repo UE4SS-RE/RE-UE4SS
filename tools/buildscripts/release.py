@@ -54,7 +54,7 @@ class ReleaseHandler:
 
     def make_staging_dirs(self):
         shutil.copytree('assets', self.ue4ss_dir)
-        shutil.copy('LICENSE', os.path.join(self.ue4ss_dir, 'LICENCE'))
+        shutil.copy('LICENSE', os.path.join(self.ue4ss_dir, 'LICENSE'))
 
         if not self.is_dev_release:
             for file in self.files_to_exclude_from_release:
