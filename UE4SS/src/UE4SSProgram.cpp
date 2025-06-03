@@ -53,6 +53,7 @@
 #include <Unreal/UScriptStruct.hpp>
 #include <Unreal/UnrealInitializer.hpp>
 #include <Unreal/World.hpp>
+#include <Unreal/Engine/UDataTable.hpp>
 #include <UnrealDef.hpp>
 
 #include <polyhook2/PE/IatHook.hpp>
@@ -764,6 +765,13 @@ namespace RC
                     uint32_t offset = calculate_virtual_function_offset(index, uobjectbase_size, uobjectbaseutility_size, uobject_size, uplayer_size);
                     Output::send(STR("ULocalPlayer::{} = 0x{:X}\n"), item, offset);
                     Unreal::ULocalPlayer::VTableLayoutMap.emplace(item, offset);
+                });
+
+                Output::send<Color::Blue>(STR("UDataTable\n"));
+                retrieve_vtable_layout_from_ini(STR("UDataTable"), [&](uint32_t index, File::StringType& item) {
+                    uint32_t offset = calculate_virtual_function_offset(index, uobjectbase_size, uobjectbaseutility_size, uobject_size, uplayer_size);
+                    Output::send(STR("UDataTable::{} = 0x{:X}\n"), item, offset);
+                    Unreal::UDataTable::VTableLayoutMap.emplace(item, offset);
                 });
 
                 file.close();
