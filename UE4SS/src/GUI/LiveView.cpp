@@ -2317,7 +2317,7 @@ namespace RC::GUI
             for (int32_t i = 0; i < script_array->Num(); ++i)
             {
                 auto element_offset = inner_property->GetElementSize() * i;
-                auto element_container_ptr = static_cast<uint8_t*>(*container_ptr) + element_offset;
+                auto element_container_ptr = static_cast<uint8_t*>(script_array->GetData()) + element_offset;
                 ImGui::Text("[%i]:", i);
                 ImGui::Indent();
                 ImGui::SameLine();
