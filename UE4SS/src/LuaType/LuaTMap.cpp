@@ -300,7 +300,7 @@ namespace RC::LuaType
                                                          return info.key->Identical(a, b);
                                                      });
 
-            lua.set_bool(index != INDEX_NONE);
+            lua.set_bool(index != Unreal::INDEX_NONE);
 
             break;
         }
@@ -324,7 +324,7 @@ namespace RC::LuaType
                                                          return info.key->Identical(a, b);
                                                      });
 
-            if (index != INDEX_NONE)
+            if (index != Unreal::INDEX_NONE)
             {
                 map->RemoveAt(index, info.layout);
             }
