@@ -181,6 +181,37 @@ namespace RC::GUI
                                    bool is_watchable = true,
                                    int32_t first_offset = -1) -> std::variant<std::monostate, UObject*, FProperty*>;
 
+        // Property type specific renderers
+        auto render_struct_property(FProperty* property,
+                                   ContainerType container_type,
+                                   void* container,
+                                   void* container_ptr,
+                                   const std::string& property_name,
+                                   const std::string& property_text,
+                                   FProperty** last_property_in,
+                                   bool* tried_to_open_nullptr_object,
+                                   int32_t property_offset,
+                                   int32_t first_offset) -> std::variant<std::monostate, UObject*, FProperty*>;
+        
+        auto render_array_property(FProperty* property,
+                                  ContainerType container_type,
+                                  void* container,
+                                  void* container_ptr,
+                                  const std::string& property_name,
+                                  const std::string& property_text,
+                                  bool* tried_to_open_nullptr_object,
+                                  int32_t first_offset) -> std::variant<std::monostate, UObject*, FProperty*>;
+        
+        auto render_enum_property(FProperty* property,
+                                 void* container_ptr,
+                                 const std::string& property_text) -> void;
+        
+        auto render_default_property(FProperty* property,
+                                    const std::string& property_text) -> void;
+        
+        // Type specific renderers
+        auto render_type_specific(UObject* object) -> bool;
+
       private:
         auto collapse_all_except(void* except_id) -> void;
         auto search() -> void;
