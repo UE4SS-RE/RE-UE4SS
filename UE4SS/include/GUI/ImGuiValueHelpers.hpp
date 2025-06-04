@@ -12,6 +12,7 @@
 #include <imgui.h>
 #include <String/StringType.hpp>
 #include <Helpers/String.hpp>
+#include <fmt/format.h>
 
 namespace RC::GUI
 {
@@ -261,7 +262,7 @@ namespace RC::GUI
             }
             else
             {
-                static_assert(std::is_same_v<T, void>, "Unsupported type for get_as_string");
+                // For unsupported types, return empty string - derived classes should override
                 return "";
             }
         }
@@ -293,7 +294,8 @@ namespace RC::GUI
             }
             else
             {
-                static_assert(std::is_same_v<T, void>, "Unsupported type for set_from_string");
+                // For unsupported types, do nothing - derived classes should override
+                // This avoids static_assert failures for complex types like std::array
             }
         }
 
@@ -1407,6 +1409,35 @@ namespace RC::GUI
 
         float& x() { return m_value[0]; }
         float& y() { return m_value[1]; }
+        std::string get_as_string() const override
+        {
+            return fmt::format("({}, {})", m_value[0], m_value[1]);
+        }
+        
+        void set_from_string(const std::string& value) override
+        {
+            // Parse format like "(x, y)" or "x, y"
+            std::string clean = value;
+            clean.erase(std::remove(clean.begin(), clean.end(), '('), clean.end());
+            clean.erase(std::remove(clean.begin(), clean.end(), ')'), clean.end());
+            
+            std::istringstream iss(clean);
+            std::string x_str, y_str;
+            if (std::getline(iss, x_str, ',') && 
+                std::getline(iss, y_str))
+            {
+                try
+                {
+                    float x = std::stof(x_str);
+                    float y = std::stof(y_str);
+                    set_value_internal({x, y});
+                }
+                catch (...)
+                {
+                    // Invalid format, ignore
+                }
+            }
+        }
     };
 
     // Vector3 input
@@ -1466,6 +1497,38 @@ namespace RC::GUI
         void draw_value(const CharType* label = nullptr) override
         {
             draw_value(label ? to_string(label).c_str() : nullptr);
+        }
+
+        std::string get_as_string() const override
+        {
+            return fmt::format("({}, {}, {})", m_value[0], m_value[1], m_value[2]);
+        }
+        
+        void set_from_string(const std::string& value) override
+        {
+            // Parse format like "(x, y, z)" or "x, y, z"
+            std::string clean = value;
+            clean.erase(std::remove(clean.begin(), clean.end(), '('), clean.end());
+            clean.erase(std::remove(clean.begin(), clean.end(), ')'), clean.end());
+            
+            std::istringstream iss(clean);
+            std::string x_str, y_str, z_str;
+            if (std::getline(iss, x_str, ',') && 
+                std::getline(iss, y_str, ',') && 
+                std::getline(iss, z_str))
+            {
+                try
+                {
+                    float x = std::stof(x_str);
+                    float y = std::stof(y_str);
+                    float z = std::stof(z_str);
+                    set_value_internal({x, y, z});
+                }
+                catch (...)
+                {
+                    // Invalid format, ignore
+                }
+            }
         }
 
         float& x() { return m_value[0]; }
@@ -1861,6 +1924,11 @@ namespace RC::GUI
             draw_value(label ? to_string(label).c_str() : nullptr);
         }
         
+        std::string get_as_string() const override
+        {
+            return fmt::format("({}, {})", m_value[0], m_value[1]);
+        }
+        
         void set_from_string(const std::string& value) override
         {
             // Parse format like "(x, y)" or "x, y"
@@ -2018,6 +2086,11 @@ namespace RC::GUI
         void draw_value(const CharType* label = nullptr) override
         {
             draw_value(label ? to_string(label).c_str() : nullptr);
+        }
+        
+        std::string get_as_string() const override
+        {
+            return fmt::format("({}, {}, {})", m_value[0], m_value[1], m_value[2]);
         }
         
         void set_from_string(const std::string& value) override
