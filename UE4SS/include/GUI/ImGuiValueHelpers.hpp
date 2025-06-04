@@ -2136,7 +2136,7 @@ namespace RC::GUI
                 // Check for key press
                 for (int key = ImGuiKey_NamedKey_BEGIN; key < ImGuiKey_NamedKey_END; ++key)
                 {
-                    if (ImGui::IsKeyPressed(static_cast<ImGuiKey>(key)))
+                    if (ImGui::IsKeyPressed(static_cast<::ImGuiKey>(key)))
                     {
                         // Escape or Backspace clears the binding
                         if (key == ImGuiKey_Escape || key == ImGuiKey_Backspace)
@@ -2160,7 +2160,7 @@ namespace RC::GUI
             {
                 if (working_val != UNBOUND_KEY)
                 {
-                    ImGui::Text("%s", ImGui::GetKeyName(static_cast<ImGuiKey>(working_val)));
+                    ImGui::Text("%s", ImGui::GetKeyName(static_cast<::ImGuiKey>(working_val)));
                 }
                 else
                 {
@@ -2183,7 +2183,7 @@ namespace RC::GUI
         {
             if (m_value != UNBOUND_KEY)
             {
-                ImGui::Text("%s: %s", get_display_label(label), ImGui::GetKeyName(static_cast<ImGuiKey>(m_value)));
+                ImGui::Text("%s: %s", get_display_label(label), ImGui::GetKeyName(static_cast<::ImGuiKey>(m_value)));
             }
             else
             {
@@ -2199,13 +2199,13 @@ namespace RC::GUI
         bool is_key_down() const
         {
             if (m_value == UNBOUND_KEY) return false;
-            return ImGui::IsKeyDown(static_cast<ImGuiKey>(m_value));
+            return ImGui::IsKeyDown(static_cast<::ImGuiKey>(m_value));
         }
 
         bool is_key_pressed() const
         {
             if (m_value == UNBOUND_KEY) return false;
-            return ImGui::IsKeyPressed(static_cast<ImGuiKey>(m_value));
+            return ImGui::IsKeyPressed(static_cast<::ImGuiKey>(m_value));
         }
 
     private:
@@ -2451,14 +2451,12 @@ namespace RC::GUI
         return std::make_unique<ImGuiMonitoredValue<float, ImGuiFloat>>(getter, setter, default_value, name);
     }
     
-    template<typename T>
     auto make_monitored_double(std::function<double()> getter, std::function<void(double)> setter, 
                               double default_value = 0.0, const std::string& name = "")
     {
         return std::make_unique<ImGuiMonitoredValue<double, ImGuiDouble>>(getter, setter, default_value, name);
     }
     
-    template<typename T>
     auto make_monitored_bool(std::function<bool()> getter, std::function<void(bool)> setter, 
                             bool default_value = false, const std::string& name = "")
     {
@@ -2589,7 +2587,7 @@ namespace RC::GUI
                     ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 0.8f, 0.0f, 1.0f));
                 }
 
-                if (value->draw())
+                if (value->draw(nullptr))
                 {
                     m_has_changes = true;
                 }
@@ -2743,7 +2741,7 @@ namespace RC::GUI
 
         ImGuiString* add_string(const std::string& id, const std::string& default_value = "", const std::string& label = "", const std::string& tooltip = "")
         {
-            return add_value(id, ImGuiString::create(default_value, label.empty() ? id : label, 256, tooltip));
+            return add_value(id, ImGuiString::create(default_value, label.empty() ? id : label, tooltip, 256));
         }
 
         template<typename EnumType>
