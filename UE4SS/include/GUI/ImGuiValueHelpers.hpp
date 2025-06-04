@@ -47,6 +47,7 @@ namespace RC::GUI
         virtual ~IImGuiValue() = default;
         
         // Draw the control and return true if value changed
+        virtual bool draw() { return draw(static_cast<const char*>(nullptr)); }
         virtual bool draw(const char* label = nullptr) = 0;
         virtual bool draw(const CharType* label = nullptr) = 0;
         
@@ -2587,7 +2588,7 @@ namespace RC::GUI
                     ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 0.8f, 0.0f, 1.0f));
                 }
 
-                if (value->draw(nullptr))
+                if (value->draw())
                 {
                     m_has_changes = true;
                 }

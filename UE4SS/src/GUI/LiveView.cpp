@@ -2385,68 +2385,55 @@ namespace RC::GUI
     {
         auto bool_property = static_cast<FBoolProperty*>(property);
         
-        // Get the current boolean value
-        bool current_value = false;
-        if (bool_property->IsNativeBool())
-        {
-            // Native bool (1 byte)
-            current_value = *static_cast<bool*>(container_ptr);
-        }
-        else
-        {
-            // Bitfield bool
-            uint8_t* byte_value_ptr = static_cast<uint8_t*>(container_ptr);
-            current_value = (*byte_value_ptr & bool_property->GetByteMask()) != 0;
-        }
-        
         // Create a unique ID for this property toggle
         auto toggle_id = fmt::format("##bool_{}_{}", static_cast<void*>(container), property_name);
         
-        // Create a simple ImGuiToggle without monitored value to avoid complexity
-        auto toggle = ImGuiToggle::create(current_value, toggle_id.c_str());
-        
-        // Render the toggle
-        ImGui::SameLine();
-        if (toggle->draw())
-        {
-            // Value changed by user, write it back to the property
-            bool new_value = toggle->value();
-            
-            if (bool_property->IsNativeBool())
-            {
-                *static_cast<bool*>(container_ptr) = new_value;
-            }
-            else
-            {
-                uint8_t* byte_value_ptr = static_cast<uint8_t*>(container_ptr);
-                if (new_value)
+        // Create monitored toggle that syncs with the property
+        auto toggle = make_monitored_bool(
+            [container_ptr, bool_property]() -> bool {
+                // Getter - read current value from property
+                if (bool_property->IsNativeBool())
                 {
-                    *byte_value_ptr |= bool_property->GetByteMask();
+                    return *static_cast<bool*>(container_ptr);
                 }
                 else
                 {
-                    *byte_value_ptr &= ~bool_property->GetByteMask();
+                    uint8_t* byte_value_ptr = static_cast<uint8_t*>(container_ptr);
+                    return (*byte_value_ptr & bool_property->GetByteMask()) != 0;
                 }
-            }
-        }
-        else
+            },
+            [container_ptr, bool_property](bool new_value) {
+                // Setter - write new value to property
+                if (bool_property->IsNativeBool())
+                {
+                    *static_cast<bool*>(container_ptr) = new_value;
+                }
+                else
+                {
+                    uint8_t* byte_value_ptr = static_cast<uint8_t*>(container_ptr);
+                    if (new_value)
+                    {
+                        *byte_value_ptr |= bool_property->GetByteMask();
+                    }
+                    else
+                    {
+                        *byte_value_ptr &= ~bool_property->GetByteMask();
+                    }
+                }
+            },
+            false, // default value
+            toggle_id // name
+        );
+        
+        // Update from game engine
+        toggle->refresh();
+        
+        // Render the toggle
+        ImGui::SameLine();
+        if (toggle->draw(nullptr)) // Need to pass explicit nullptr due to overloads
         {
-            // Update the toggle value if it changed externally
-            bool external_value = false;
-            if (bool_property->IsNativeBool())
-            {
-                external_value = *static_cast<bool*>(container_ptr);
-            }
-            else
-            {
-                uint8_t* byte_value_ptr = static_cast<uint8_t*>(container_ptr);
-                external_value = (*byte_value_ptr & bool_property->GetByteMask()) != 0;
-            }
-            
-            if (external_value != toggle->value())
-            {
-                toggle->set_value(external_value);
-            }
+            // Value changed by user, apply immediately
+            toggle->apply_changes_with_external();
         }
         
         // Show the text representation next to the checkbox
