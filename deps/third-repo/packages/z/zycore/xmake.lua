@@ -2,8 +2,7 @@ package("zycore")
     add_urls("git@github.com:zyantific/zycore-c.git")
     add_urls("https://github.com/zyantific/zycore-c.git")
     
-    add_versions("v1.0.0", "3435866ecaa837376807ce934d2088ae46aa3fa3")
-    add_versions("v1.5.0", "74620eefd233bec20daeb66e78e744ff06e273b7")
+    add_versions("v1.5.1", "53f6d2730d29b7d6399154501bc65c1c89f0b0fd")
 
     add_deps("cmake")
 
