@@ -2430,7 +2430,7 @@ namespace RC::GUI
         
         // Render the toggle
         ImGui::SameLine();
-        if (toggle->draw(nullptr)) // Need to pass explicit nullptr due to overloads
+        if (toggle->draw(property_name.c_str())) // Need to pass explicit nullptr due to overloads
         {
             // Value changed by user, apply immediately
             toggle->apply_changes_with_external();

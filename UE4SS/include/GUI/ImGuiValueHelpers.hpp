@@ -47,9 +47,8 @@ namespace RC::GUI
         virtual ~IImGuiValue() = default;
         
         // Draw the control and return true if value changed
-        virtual bool draw() { return draw(static_cast<const char*>(nullptr)); }
         virtual bool draw(const char* label = nullptr) = 0;
-        virtual bool draw(const CharType* label = nullptr) = 0;
+        virtual bool draw(const CharType* label) = 0;
         
         // Draw just the value as text (read-only)
         virtual void draw_value(const char* label = nullptr) = 0;
