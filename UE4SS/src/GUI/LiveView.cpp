@@ -2403,7 +2403,7 @@ namespace RC::GUI
         auto toggle_id = fmt::format("##bool_{}_{}", static_cast<void*>(container), property_name);
         
         // Create ImGuiToggle with monitored value for external updates
-        auto toggle = make_monitored_toggle(
+        auto toggle = make_monitored_bool(
             [container_ptr, bool_property]() -> bool {
                 // Getter - read current value from property
                 if (bool_property->IsNativeBool())
@@ -2416,7 +2416,7 @@ namespace RC::GUI
                     return (*byte_value_ptr & bool_property->GetByteMask()) != 0;
                 }
             },
-            [container_ptr, bool_property, container, container_type](bool new_value) {
+            [container_ptr, bool_property](bool new_value) {
                 // Setter - write new value to property
                 if (bool_property->IsNativeBool())
                 {
@@ -2432,18 +2432,6 @@ namespace RC::GUI
                     else
                     {
                         *byte_value_ptr &= ~bool_property->GetByteMask();
-                    }
-                }
-                
-                // Call property setter if this is an object property
-                if (container_type == ContainerType::Object)
-                {
-                    auto obj = static_cast<UObject*>(container);
-                    if (obj && bool_property->GetSetterFunction())
-                    {
-                        // Call the setter function
-                        // Note: This is simplified - proper implementation would need to handle parameters
-                        obj->ProcessEvent(bool_property->GetSetterFunction(), &new_value);
                     }
                 }
             },
