@@ -565,6 +565,209 @@ namespace RC::GUI
         }
     };
 
+    // Double input
+    class ImGuiDouble : public ImGuiValue<double>
+    {
+    public:
+        using Ptr = std::unique_ptr<ImGuiDouble>;
+
+        static auto create(double default_value = 0.0, const std::string& name = "", const std::string& tooltip = "")
+        {
+            return std::make_unique<ImGuiDouble>(default_value, name, tooltip);
+        }
+
+        static auto create(double default_value, const StringType& name, const StringType& tooltip = STR(""))
+        {
+            return std::make_unique<ImGuiDouble>(default_value, name, tooltip);
+        }
+
+        ImGuiDouble(double default_value = 0.0, const std::string& name = "", const std::string& tooltip = "")
+            : ImGuiValue<double>(default_value, name)
+        {
+            m_tooltip = tooltip;
+        }
+
+        ImGuiDouble(double default_value, const StringType& name, const StringType& tooltip = STR(""))
+            : ImGuiValue<double>(default_value, name)
+        {
+            m_tooltip = to_string(tooltip);
+        }
+
+        bool draw(const char* label = nullptr) override
+        {
+            // Handle different edit modes
+            if (m_edit_mode == EditMode::ViewOnly)
+            {
+                draw_value(label);
+                return false;
+            }
+            else if (m_edit_mode == EditMode::ReadOnly)
+            {
+                ImGui::PushID(this);
+                double display_val = get_working_value();
+                ImGui::BeginDisabled();
+                ImGui::InputDouble(get_display_label(label), &display_val);
+                ImGui::EndDisabled();
+                render_tooltip();
+                ImGui::PopID();
+                return false;
+            }
+            
+            // Normal editable mode
+            ImGui::PushID(this);
+            double& working_val = get_working_value();
+            bool changed = ImGui::InputDouble(get_display_label(label), &working_val);
+            render_tooltip();
+            if (changed)
+            {
+                m_is_dirty = true;
+                m_last_value_source = ValueSource::User;
+                fire_change_callback();
+            }
+            render_context_menu();
+            ImGui::PopID();
+            return changed;
+        }
+
+        bool draw(const CharType* label = nullptr) override
+        {
+            return draw(label ? to_string(label).c_str() : nullptr);
+        }
+
+        void draw_value(const char* label = nullptr) override
+        {
+            ImGui::Text("%s: %.6f", get_display_label(label), m_value);
+        }
+
+        void draw_value(const CharType* label = nullptr) override
+        {
+            draw_value(label ? to_string(label).c_str() : nullptr);
+        }
+    };
+
+    // Double slider (uses float slider internally but stores as double)
+    class ImGuiSliderDouble : public ImGuiValue<double>
+    {
+    public:
+        using Ptr = std::unique_ptr<ImGuiSliderDouble>;
+
+        static auto create(double min = 0.0, double max = 1.0, double default_value = 0.0, const std::string& name = "", const std::string& tooltip = "", bool show_precision_input = false)
+        {
+            return std::make_unique<ImGuiSliderDouble>(min, max, default_value, name, tooltip, show_precision_input);
+        }
+
+        static auto create(double min, double max, double default_value, const StringType& name, const StringType& tooltip = STR(""), bool show_precision_input = false)
+        {
+            return std::make_unique<ImGuiSliderDouble>(min, max, default_value, name, tooltip, show_precision_input);
+        }
+
+        ImGuiSliderDouble(double min = 0.0, double max = 1.0, double default_value = 0.0, const std::string& name = "", const std::string& tooltip = "", bool show_precision_input = false)
+            : ImGuiValue<double>(default_value, name)
+            , m_min(min)
+            , m_max(max)
+            , m_show_precision_input(show_precision_input)
+        {
+            m_tooltip = tooltip;
+        }
+
+        ImGuiSliderDouble(double min, double max, double default_value, const StringType& name, const StringType& tooltip = STR(""), bool show_precision_input = false)
+            : ImGuiValue<double>(default_value, name)
+            , m_min(min)
+            , m_max(max)
+            , m_show_precision_input(show_precision_input)
+        {
+            m_tooltip = to_string(tooltip);
+        }
+
+        bool draw(const char* label = nullptr) override
+        {
+            // Handle different edit modes
+            if (m_edit_mode == EditMode::ViewOnly)
+            {
+                draw_value(label);
+                return false;
+            }
+            else if (m_edit_mode == EditMode::ReadOnly)
+            {
+                ImGui::PushID(this);
+                float display_val = static_cast<float>(get_working_value());
+                ImGui::BeginDisabled();
+                ImGui::SliderFloat(get_display_label(label), &display_val, static_cast<float>(m_min), static_cast<float>(m_max));
+                if (m_show_precision_input)
+                {
+                    ImGui::SameLine();
+                    double precise_val = get_working_value();
+                    ImGui::InputDouble("##precise", &precise_val);
+                }
+                ImGui::EndDisabled();
+                render_tooltip();
+                ImGui::PopID();
+                return false;
+            }
+            
+            // Normal editable mode - use float slider internally
+            ImGui::PushID(this);
+            bool changed = false;
+            double& working_val = get_working_value();
+            
+            // Slider
+            float float_val = static_cast<float>(working_val);
+            if (ImGui::SliderFloat(get_display_label(label), &float_val, 
+                                  static_cast<float>(m_min), static_cast<float>(m_max)))
+            {
+                working_val = static_cast<double>(float_val);
+                changed = true;
+            }
+            
+            // Optional precision input
+            if (m_show_precision_input)
+            {
+                ImGui::SameLine();
+                if (ImGui::InputDouble("##precise", &working_val))
+                {
+                    working_val = std::clamp(working_val, m_min, m_max);
+                    changed = true;
+                }
+            }
+            
+            if (changed)
+            {
+                m_is_dirty = true;
+                m_last_value_source = ValueSource::User;
+                fire_change_callback();
+            }
+            
+            render_tooltip();
+            render_context_menu();
+            ImGui::PopID();
+            return changed;
+        }
+
+        bool draw(const CharType* label = nullptr) override
+        {
+            return draw(label ? to_string(label).c_str() : nullptr);
+        }
+
+        void draw_value(const char* label = nullptr) override
+        {
+            ImGui::Text("%s: %.6f [%.6f, %.6f]", get_display_label(label), m_value, m_min, m_max);
+        }
+
+        void draw_value(const CharType* label = nullptr) override
+        {
+            draw_value(label ? to_string(label).c_str() : nullptr);
+        }
+
+        double& min() { return m_min; }
+        double& max() { return m_max; }
+        void show_precision_input(bool show) { m_show_precision_input = show; }
+
+    private:
+        double m_min;
+        double m_max;
+        bool m_show_precision_input;
+    };
+
     // Float slider
     class ImGuiSlider : public ImGuiValue<float>
     {
@@ -1344,6 +1547,104 @@ namespace RC::GUI
         float m_max;
     };
 
+    // Drag double (uses float drag internally but stores as double)
+    class ImGuiDragDouble : public ImGuiValue<double>
+    {
+    public:
+        using Ptr = std::unique_ptr<ImGuiDragDouble>;
+
+        static auto create(double default_value = 0.0, const std::string& name = "", const std::string& tooltip = "", float speed = 1.0f, double min = 0.0, double max = 0.0)
+        {
+            return std::make_unique<ImGuiDragDouble>(default_value, name, tooltip, speed, min, max);
+        }
+
+        static auto create(double default_value, const StringType& name, const StringType& tooltip = STR(""), float speed = 1.0f, double min = 0.0, double max = 0.0)
+        {
+            return std::make_unique<ImGuiDragDouble>(default_value, name, tooltip, speed, min, max);
+        }
+
+        ImGuiDragDouble(double default_value = 0.0, const std::string& name = "", const std::string& tooltip = "", float speed = 1.0f, double min = 0.0, double max = 0.0)
+            : ImGuiValue<double>(default_value, name)
+            , m_speed(speed)
+            , m_min(min)
+            , m_max(max)
+        {
+            m_tooltip = tooltip;
+        }
+
+        ImGuiDragDouble(double default_value, const StringType& name, const StringType& tooltip = STR(""), float speed = 1.0f, double min = 0.0, double max = 0.0)
+            : ImGuiValue<double>(default_value, name)
+            , m_speed(speed)
+            , m_min(min)
+            , m_max(max)
+        {
+            m_tooltip = to_string(tooltip);
+        }
+
+        bool draw(const char* label = nullptr) override
+        {
+            // Handle different edit modes
+            if (m_edit_mode == EditMode::ViewOnly)
+            {
+                draw_value(label);
+                return false;
+            }
+            else if (m_edit_mode == EditMode::ReadOnly)
+            {
+                ImGui::PushID(this);
+                float display_val = static_cast<float>(get_working_value());
+                ImGui::BeginDisabled();
+                ImGui::DragFloat(get_display_label(label), &display_val, m_speed, static_cast<float>(m_min), static_cast<float>(m_max));
+                ImGui::EndDisabled();
+                render_tooltip();
+                ImGui::PopID();
+                return false;
+            }
+            
+            // Normal editable mode - use float drag internally
+            ImGui::PushID(this);
+            double& working_val = get_working_value();
+            float float_val = static_cast<float>(working_val);
+            bool changed = ImGui::DragFloat(get_display_label(label), &float_val, m_speed, 
+                                           static_cast<float>(m_min), static_cast<float>(m_max));
+            if (changed)
+            {
+                working_val = static_cast<double>(float_val);
+                m_is_dirty = true;
+                m_last_value_source = ValueSource::User;
+                fire_change_callback();
+            }
+            render_tooltip();
+            render_context_menu();
+            ImGui::PopID();
+            return changed;
+        }
+
+        bool draw(const CharType* label = nullptr) override
+        {
+            return draw(label ? to_string(label).c_str() : nullptr);
+        }
+
+        void draw_value(const char* label = nullptr) override
+        {
+            ImGui::Text("%s: %.6f", get_display_label(label), m_value);
+        }
+
+        void draw_value(const CharType* label = nullptr) override
+        {
+            draw_value(label ? to_string(label).c_str() : nullptr);
+        }
+
+        float& speed() { return m_speed; }
+        double& min() { return m_min; }
+        double& max() { return m_max; }
+
+    private:
+        float m_speed;
+        double m_min;
+        double m_max;
+    };
+
     // Drag int
     class ImGuiDragInt : public ImGuiValue<int32_t>
     {
@@ -1872,6 +2173,13 @@ namespace RC::GUI
     }
     
     template<typename T>
+    auto make_monitored_double(std::function<double()> getter, std::function<void(double)> setter, 
+                              double default_value = 0.0, const std::string& name = "")
+    {
+        return std::make_unique<ImGuiMonitoredValue<double, ImGuiDouble>>(getter, setter, default_value, name);
+    }
+    
+    template<typename T>
     auto make_monitored_bool(std::function<bool()> getter, std::function<void(bool)> setter, 
                             bool default_value = false, const std::string& name = "")
     {
@@ -2137,6 +2445,11 @@ namespace RC::GUI
         ImGuiFloat* add_float(const std::string& id, float default_value = 0.0f, const std::string& label = "", const std::string& tooltip = "")
         {
             return add_value(id, ImGuiFloat::create(default_value, label.empty() ? id : label, tooltip));
+        }
+
+        ImGuiDouble* add_double(const std::string& id, double default_value = 0.0, const std::string& label = "", const std::string& tooltip = "")
+        {
+            return add_value(id, ImGuiDouble::create(default_value, label.empty() ? id : label, tooltip));
         }
 
         ImGuiSlider* add_slider(const std::string& id, float min, float max, float default_value, const std::string& label = "", const std::string& tooltip = "")
