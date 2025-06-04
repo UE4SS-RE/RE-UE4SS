@@ -7,6 +7,7 @@
 #include <variant>
 #include <functional>
 #include <unordered_map>
+#include <sstream>
 
 #include <imgui.h>
 #include <String/StringType.hpp>
@@ -1859,6 +1860,31 @@ namespace RC::GUI
         {
             draw_value(label ? to_string(label).c_str() : nullptr);
         }
+        
+        void set_from_string(const std::string& value) override
+        {
+            // Parse format like "(x, y)" or "x, y"
+            std::string clean = value;
+            clean.erase(std::remove(clean.begin(), clean.end(), '('), clean.end());
+            clean.erase(std::remove(clean.begin(), clean.end(), ')'), clean.end());
+            
+            std::istringstream iss(clean);
+            std::string x_str, y_str;
+            if (std::getline(iss, x_str, ',') && 
+                std::getline(iss, y_str))
+            {
+                try
+                {
+                    double x = std::stod(x_str);
+                    double y = std::stod(y_str);
+                    set_value_internal({x, y});
+                }
+                catch (...)
+                {
+                    // Invalid format, ignore
+                }
+            }
+        }
 
         double& x() { return m_value[0]; }
         double& y() { return m_value[1]; }
@@ -1992,6 +2018,33 @@ namespace RC::GUI
         void draw_value(const CharType* label = nullptr) override
         {
             draw_value(label ? to_string(label).c_str() : nullptr);
+        }
+        
+        void set_from_string(const std::string& value) override
+        {
+            // Parse format like "(x, y, z)" or "x, y, z"
+            std::string clean = value;
+            clean.erase(std::remove(clean.begin(), clean.end(), '('), clean.end());
+            clean.erase(std::remove(clean.begin(), clean.end(), ')'), clean.end());
+            
+            std::istringstream iss(clean);
+            std::string x_str, y_str, z_str;
+            if (std::getline(iss, x_str, ',') && 
+                std::getline(iss, y_str, ',') && 
+                std::getline(iss, z_str))
+            {
+                try
+                {
+                    double x = std::stod(x_str);
+                    double y = std::stod(y_str);
+                    double z = std::stod(z_str);
+                    set_value_internal({x, y, z});
+                }
+                catch (...)
+                {
+                    // Invalid format, ignore
+                }
+            }
         }
 
         double& x() { return m_value[0]; }
