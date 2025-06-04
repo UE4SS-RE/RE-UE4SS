@@ -13,6 +13,7 @@
 #include <Constructs/Views/EnumerateView.hpp>
 #include <GUI/GUI.hpp>
 #include <GUI/ImGuiUtility.hpp>
+#include <GUI/ImGuiValueHelpers.hpp>
 #include <GUI/LiveView.hpp>
 #include <GUI/LiveView/Filter/DefaultObjectsOnly.hpp>
 #include "GUI/LiveView/Filter/ClassNamesFilter.hpp"
@@ -2161,6 +2162,11 @@ namespace RC::GUI
             render_enum_property(property, container_ptr, to_string(property_text.GetCharArray()));
             render_property_value_context_menu();
         }
+        else if (property->IsA<FBoolProperty>())
+        {
+            render_bool_property(property, container_type, container, container_ptr, property_name, to_string(property_text.GetCharArray()));
+            render_property_value_context_menu();
+        }
         else
         {
             render_default_property(property, to_string(property_text.GetCharArray()));
@@ -2368,6 +2374,97 @@ namespace RC::GUI
         ImGui::SameLine();
         ImGui::Text(fmt::format("{}", to_string(value_as_string)).c_str());
         // render_property_value_context_menu();
+    }
+
+    auto LiveView::render_bool_property(FProperty* property,
+                                       ContainerType container_type,
+                                       void* container,
+                                       void* container_ptr,
+                                       const std::string& property_name,
+                                       const std::string& property_text) -> void
+    {
+        auto bool_property = static_cast<FBoolProperty*>(property);
+        
+        // Get the current boolean value
+        bool current_value = false;
+        if (bool_property->IsNativeBool())
+        {
+            // Native bool (1 byte)
+            current_value = *static_cast<bool*>(container_ptr);
+        }
+        else
+        {
+            // Bitfield bool
+            uint8_t* byte_value_ptr = static_cast<uint8_t*>(container_ptr);
+            current_value = (*byte_value_ptr & bool_property->GetByteMask()) != 0;
+        }
+        
+        // Create a unique ID for this property toggle
+        auto toggle_id = fmt::format("##bool_{}_{}", static_cast<void*>(container), property_name);
+        
+        // Create ImGuiToggle with monitored value for external updates
+        auto toggle = make_monitored_toggle(
+            [container_ptr, bool_property]() -> bool {
+                // Getter - read current value from property
+                if (bool_property->IsNativeBool())
+                {
+                    return *static_cast<bool*>(container_ptr);
+                }
+                else
+                {
+                    uint8_t* byte_value_ptr = static_cast<uint8_t*>(container_ptr);
+                    return (*byte_value_ptr & bool_property->GetByteMask()) != 0;
+                }
+            },
+            [container_ptr, bool_property, container, container_type](bool new_value) {
+                // Setter - write new value to property
+                if (bool_property->IsNativeBool())
+                {
+                    *static_cast<bool*>(container_ptr) = new_value;
+                }
+                else
+                {
+                    uint8_t* byte_value_ptr = static_cast<uint8_t*>(container_ptr);
+                    if (new_value)
+                    {
+                        *byte_value_ptr |= bool_property->GetByteMask();
+                    }
+                    else
+                    {
+                        *byte_value_ptr &= ~bool_property->GetByteMask();
+                    }
+                }
+                
+                // Call property setter if this is an object property
+                if (container_type == ContainerType::Object)
+                {
+                    auto obj = static_cast<UObject*>(container);
+                    if (obj && bool_property->GetSetterFunction())
+                    {
+                        // Call the setter function
+                        // Note: This is simplified - proper implementation would need to handle parameters
+                        obj->ProcessEvent(bool_property->GetSetterFunction(), &new_value);
+                    }
+                }
+            },
+            current_value,
+            toggle_id.c_str()
+        );
+        
+        // Update from game engine
+        toggle->refresh();
+        
+        // Render the toggle
+        ImGui::SameLine();
+        if (toggle->draw())
+        {
+            // Value changed by user, apply immediately
+            toggle->apply_changes_with_external();
+        }
+        
+        // Show the text representation next to the checkbox
+        ImGui::SameLine();
+        ImGui::TextDisabled("(%s)", property_text.c_str());
     }
 
     auto LiveView::render_default_property(FProperty* property,
