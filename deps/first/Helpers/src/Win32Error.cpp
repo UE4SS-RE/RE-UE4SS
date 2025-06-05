@@ -31,7 +31,17 @@ namespace RC
         }
         else
         {
-            m_ErrorText = std::format(L"Failed to format the error message for code {:x}: error {:x}\n", errorCode, GetLastError());
+            const auto formatErrorCode = GetLastError();
+
+            if (auto pFormatErrorText = format_error(formatErrorCode, dwLanguageId); pFormatErrorText != nullptr)
+            {
+                m_ErrorText = std::format(L"Failed to format the error message for code 0x{:x}: error {}\n", errorCode, pFormatErrorText);
+                LocalFree(pFormatErrorText);
+            }
+            else
+            {
+                m_ErrorText = std::format(L"Failed to format the error message for code 0x{:x}: error code 0x{:x}\n", errorCode, formatErrorCode);
+            }
         }
     }
 
@@ -43,7 +53,7 @@ namespace RC
         }
         else
         {
-           m_ErrorText = std::format(L"Failed to format the error message: HRESULT 0x%08lX is not a WIN32 error code\n", hResult);
+           m_ErrorText = std::format(L"Failed to format the error message: HRESULT 0x{:x} is not a WIN32 error code\n", hResult);
         }
     }
 
