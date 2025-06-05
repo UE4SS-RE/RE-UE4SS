@@ -1,26 +1,35 @@
+--########################
+-- DEFINITIONS
+--########################
+-- state
 local UEHelpers = require("UEHelpers")
+local pre, post = -1, -1
+local wasConsoleCreated = false
+-- CONFIGURATION
+-- you can edit the key names to your liking, make sure they match UE names
+local isDynamicViewport = false
+local KeysToAdd = {
+    UEHelpers.FindFName("Tilde"),
+    UEHelpers.FindFName("F10")
+}
 
-local PlayerControllerHookActive = false
-local WasFirstConsoleCreated = false
 
+--########################
+-- OWN LOGIC
+--########################
 local function RemapConsoleKeys()
     -- Change console key
     local InputSettings = StaticFindObject("/Script/Engine.Default__InputSettings") ---@cast InputSettings UInputSettings
     if not InputSettings:IsValid() then print("[ConsoleEnabler] InputSettings not found, could not change console key\n") return end
 
     local ConsoleKeys = InputSettings.ConsoleKeys
-
-    local KeysToAdd = {
-        UEHelpers.FindFName("Tilde"),
-        UEHelpers.FindFName("F10")
-    }
-
     for _, KeyName in ipairs(KeysToAdd) do
         if KeyName ~= NAME_None then
             local KeyIsAlreadySet = false
             for i = 1, #ConsoleKeys do
                 if ConsoleKeys[i].KeyName == KeyName then
                     KeyIsAlreadySet = true
+                    break
                 end
             end
             if not KeyIsAlreadySet then
@@ -40,28 +49,37 @@ local function CreateConsole()
 
     local ConsoleClass = Engine.ConsoleClass ---@type UClass
     local GameViewport = Engine.GameViewport
-
-    if GameViewport:IsValid() and GameViewport.ViewportConsole:IsValid() then
+    if (GameViewport:IsValid() and GameViewport.ViewportConsole:IsValid()) then
         -- Console already exists, let's just remap the keys
+        wasConsoleCreated = true
         RemapConsoleKeys()
-    elseif ConsoleClass:IsValid() and GameViewport:IsValid() then
+    elseif (ConsoleClass:IsValid() and GameViewport:IsValid()) then
         local CreatedConsole = StaticConstructObject(ConsoleClass, GameViewport) ---@cast CreatedConsole UConsole
         if not CreatedConsole:IsValid() then print("[CreateConsole] Was unable to construct an UConsole object\n") return end
 
         GameViewport.ViewportConsole = CreatedConsole
-        PlayerControllerHookActive = true
-        WasFirstConsoleCreated = true
-
+        wasConsoleCreated = true
         RemapConsoleKeys()
     else
         print("ConsoleClass, GameViewport, or ViewportConsole is invalid\n")
     end
 end
 
-CreateConsole()
 
-NotifyOnNewObject("/Script/Engine.PlayerController", function()
-    if PlayerControllerHookActive or not WasFirstConsoleCreated then
+--########################
+-- ENTRY POINT
+--########################
+
+ExecuteInGameThread(CreateConsole)
+
+--- We only need to create console once since it is a VP singleton
+pre, post = RegisterHook("/Script/Engine.PlayerController:ClientRestart",
+---@param Context RemoteUnrealParam<APlayerController>
+function(Context)
+    if (not wasConsoleCreated or isDynamicViewport) then
         CreateConsole()
+    end
+    if (wasConsoleCreated and not isDynamicViewport) then
+        UnregisterHook("/Script/Engine.PlayerController:ClientRestart", pre, post)
     end
 end)
