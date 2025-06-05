@@ -358,8 +358,10 @@ namespace RC::File
             {
                 THROW_INTERNAL_FILE_ERROR(fmt::format("[WinFile::close_file] Was unable to close map handle, {}", to_string(Win32Error(GetLastError())).c_str()))
             }
-
-            m_map_handle = nullptr;
+            else
+            {
+                m_map_handle = nullptr;
+            }
         }
 
         if (!is_valid() || !is_file_open())
@@ -371,8 +373,10 @@ namespace RC::File
         {
             THROW_INTERNAL_FILE_ERROR(fmt::format("[WinFile::close_file] Was unable to close file, {}", to_string(Win32Error(GetLastError())).c_str()))
         }
-
-        set_is_file_open(false);
+        else
+        {
+            set_is_file_open(false);
+        }
     }
 
     auto WinFile::is_file_open() const -> bool
