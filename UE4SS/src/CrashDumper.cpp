@@ -33,8 +33,7 @@ namespace RC
 
         if (file == INVALID_HANDLE_VALUE)
         {
-            auto err = GetLastError();
-            const StringType message = fmt::format(STR("Failed to create crashdump file, reason: 0x{:x} {}"), err, win32_error<wchar_t>(err).c_str());
+            const StringType message = fmt::format(STR("Failed to create crashdump file, reason: {}"), Win32Error(GetLastError()).c_str());
             MessageBoxW(NULL, FromCharTypePtr<wchar_t>(message.c_str()), L"Fatal Error!", MB_OK);
             return EXCEPTION_CONTINUE_SEARCH;
         }
@@ -56,8 +55,7 @@ namespace RC
 
         if (!ok)
         {
-            auto err = GetLastError();
-            const StringType message = fmt::format(STR("Failed to write crashdump file, reason: 0x{:x}"), err, win32_error<wchar_t>(err).c_str());
+            const StringType message = fmt::format(STR("Failed to write crashdump file, reason: {}"), Win32Error(GetLastError()).c_str());
             MessageBoxW(NULL, FromCharTypePtr<wchar_t>(message.c_str()), L"Fatal Error!", MB_OK);
             return EXCEPTION_CONTINUE_SEARCH;
         }

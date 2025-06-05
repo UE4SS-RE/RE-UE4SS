@@ -1,13 +1,12 @@
 #define NOMINMAX
 
 #include <filesystem>
+#include <Windows.h>
 
 #include <DynamicOutput/DynamicOutput.hpp>
 #include <Helpers/Win32Error.hpp>
 #include <Helpers/String.hpp>
 #include <Mod/CppMod.hpp>
-
-#include <Windows.h>
 
 namespace RC
 {
@@ -29,9 +28,8 @@ namespace RC
 
         if (!m_main_dll_module)
         {
-            auto err = GetLastError();
-            Output::send<LogLevel::Warning>(STR("Failed to load dll <{}> for mod {}, error code: 0x{:x} {}\n"),
-                                            ensure_str(dll_path), m_mod_name, err, win32_error<wchar_t>(err).c_str());
+            Output::send<LogLevel::Warning>(STR("Failed to load dll <{}> for mod {}, error: {}\n"),
+                                            ensure_str(dll_path), m_mod_name, Win32Error(GetLastError()).c_str());
             set_installable(false);
             return;
         }
