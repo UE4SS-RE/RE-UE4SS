@@ -656,7 +656,17 @@ FPackageName = {}
 ---Checks if the string is a ShortPackageName. A ShortPackageName is the leaf name after the last slash in a LongPackageName
 ---@param PossiblyLongName string
 ---@return boolean
+function FPackageName.IsShortPackageName(PossiblyLongName) end
+
+---Checks if the string is a ShortPackageName. A ShortPackageName is the leaf name after the last slash in a LongPackageName
+---@param PossiblyLongName string
+---@return boolean
 function FPackageName:IsShortPackageName(PossiblyLongName) end
+
+---Returns true if the path starts with a valid root (i.e. /Game/, /Engine/, etc) and contains no illegal characters.
+---@param PathName string
+---@return boolean
+function FPackageName.IsValidLongPackageName(PathName) end
 
 ---Returns true if the path starts with a valid root (i.e. /Game/, /Engine/, etc) and contains no illegal characters.
 ---@param PathName string
