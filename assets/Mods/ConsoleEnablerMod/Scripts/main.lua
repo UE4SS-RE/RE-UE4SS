@@ -3,11 +3,11 @@
 --########################
 -- state
 local UEHelpers = require("UEHelpers")
-local pre, post = -1, -1
-local wasConsoleCreated = false
+local Pre, Post = -1, -1
+local WasConsoleCreated = false
 -- CONFIGURATION
 -- you can edit the key names to your liking, make sure they match UE names
-local isDynamicViewport = false
+local IsDynamicViewport = false
 local KeysToAdd = {
     UEHelpers.FindFName("Tilde"),
     UEHelpers.FindFName("F10")
@@ -51,14 +51,14 @@ local function CreateConsole()
     local GameViewport = Engine.GameViewport
     if (GameViewport:IsValid() and GameViewport.ViewportConsole:IsValid()) then
         -- Console already exists, let's just remap the keys
-        wasConsoleCreated = true
+        WasConsoleCreated = true
         RemapConsoleKeys()
     elseif (ConsoleClass:IsValid() and GameViewport:IsValid()) then
         local CreatedConsole = StaticConstructObject(ConsoleClass, GameViewport) ---@cast CreatedConsole UConsole
         if not CreatedConsole:IsValid() then print("[CreateConsole] Was unable to construct an UConsole object\n") return end
 
         GameViewport.ViewportConsole = CreatedConsole
-        wasConsoleCreated = true
+        WasConsoleCreated = true
         RemapConsoleKeys()
     else
         print("ConsoleClass, GameViewport, or ViewportConsole is invalid\n")
@@ -73,13 +73,13 @@ end
 ExecuteInGameThread(CreateConsole)
 
 --- We only need to create console once since it is a VP singleton
-pre, post = RegisterHook("/Script/Engine.PlayerController:ClientRestart",
+Pre, Post = RegisterHook("/Script/Engine.PlayerController:ClientRestart",
 ---@param Context RemoteUnrealParam<APlayerController>
 function(Context)
-    if (not wasConsoleCreated or isDynamicViewport) then
+    if (not WasConsoleCreated or IsDynamicViewport) then
         CreateConsole()
     end
-    if (wasConsoleCreated and not isDynamicViewport) then
-        UnregisterHook("/Script/Engine.PlayerController:ClientRestart", pre, post)
+    if (WasConsoleCreated and not IsDynamicViewport) then
+        UnregisterHook("/Script/Engine.PlayerController:ClientRestart", Pre, Post)
     end
 end)
