@@ -10,14 +10,14 @@ namespace RC
 {
     Win32Error::Win32Error(DWORD errorCode)
     {
-        constexpr auto dwLanguageId = MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT);
+        static constexpr auto dwLanguageId = MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT);
 
         assign(errorCode, dwLanguageId);
     }
 
     Win32Error::Win32Error(HRESULT hResult)
     {
-        constexpr auto dwLanguageId = MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT);
+        static constexpr auto dwLanguageId = MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT);
 
         assign(hResult, dwLanguageId);
     }
