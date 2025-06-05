@@ -3,6 +3,7 @@
 #include <filesystem>
 
 #include <DynamicOutput/DynamicOutput.hpp>
+#include <Helpers/Win32Error.hpp>
 #include <Helpers/String.hpp>
 #include <Mod/CppMod.hpp>
 
@@ -28,7 +29,9 @@ namespace RC
 
         if (!m_main_dll_module)
         {
-            Output::send<LogLevel::Warning>(STR("Failed to load dll <{}> for mod {}, error code: 0x{:x}\n"), ensure_str(dll_path), m_mod_name, GetLastError());
+            auto err = GetLastError();
+            Output::send<LogLevel::Warning>(STR("Failed to load dll <{}> for mod {}, error code: 0x{:x} {}\n"),
+                                            ensure_str(dll_path), m_mod_name, err, win32_error<wchar_t>(err).c_str());
             set_installable(false);
             return;
         }
