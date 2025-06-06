@@ -45,6 +45,8 @@ Added override Lua files for ProcessLocalScriptFunction and ProcessInternal [UE4
 
 Added override Lua files for CallFunctionByNameWithArguments [UE4SS #848](https://github.com/UE4SS-RE/RE-UE4SS/pull/848) - M3C3I
 
+Add error messages in places where only error codes were previously logged (e.g. load a C++ mod) [UE4SS #902](https://github.com/UE4SS-RE/RE-UE4SS/pull/902) 
+
 ### Live View 
 Added search filter: `IncludeClassNames`. ([UE4SS #472](https://github.com/UE4SS-RE/RE-UE4SS/pull/472)) - Buckminsterfullerene
 

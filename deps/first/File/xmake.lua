@@ -6,7 +6,7 @@ target(projectName)
     set_exceptions("cxx")
     add_rules("ue4ss.dependency")
     
-    add_deps("String")
+    add_deps("String", "Helpers")
 
     add_includedirs("include", { public = true }) 
     add_headerfiles("include/**.hpp")

@@ -175,12 +175,18 @@ namespace RC
     }
     /* explode_by_occurrence -> END */
 
-    auto inline to_wstring(std::string& input) -> std::wstring
+    auto inline to_wstring(const std::string& input) -> std::wstring
     {
 #pragma warning(disable : 4996)
         static std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter{};
         return converter.from_bytes(input);
 #pragma warning(default : 4996)
+    }
+
+    auto inline to_wstring(const char* pInput)
+    {
+        auto temp_input = std::string{pInput};
+        return to_wstring(temp_input);
     }
 
     auto inline to_wstring(std::string_view input) -> std::wstring
@@ -208,12 +214,12 @@ namespace RC
         return std::wstring{input};
     }
 
-    auto inline to_wstring(std::wstring& input) -> std::wstring
+    auto inline to_wstring(const std::wstring& input) -> std::wstring
     {
         return std::wstring{input};
     }
 
-    auto inline to_wstring(std::u16string& input) -> std::wstring
+    auto inline to_wstring(const std::u16string& input) -> std::wstring
     {
 #ifdef PLATFORM_WINDOWS
         return {input.begin(), input.end()};
@@ -231,12 +237,18 @@ namespace RC
 #endif
     }
 
-    auto inline to_string(std::wstring& input) -> std::string
+    auto inline to_string(const std::wstring& input) -> std::string
     {
 #pragma warning(disable : 4996)
         static std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter{};
         return converter.to_bytes(input);
 #pragma warning(default : 4996)
+    }
+
+    auto inline to_string(const wchar_t* pInput)
+    {
+        auto temp_input = std::wstring{pInput};
+        return to_string(temp_input);
     }
 
     auto inline to_string(std::wstring_view input) -> std::string
@@ -260,7 +272,7 @@ namespace RC
 #endif
     }
 
-    auto inline to_u16string(std::wstring& input) -> std::u16string
+    auto inline to_u16string(const std::wstring& input) -> std::u16string
     {
         return {input.begin(), input.end()};
     }
@@ -271,7 +283,7 @@ namespace RC
         return to_u16string(temp_input);
     }
 
-    auto inline to_u16string(std::string& input) -> std::u16string
+    auto inline to_u16string(const std::string& input) -> std::u16string
     {
         return {input.begin(), input.end()};
     }
