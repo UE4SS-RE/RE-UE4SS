@@ -48,6 +48,8 @@ Added override Lua files for CallFunctionByNameWithArguments [UE4SS #848](https:
 ### Live View 
 Added search filter: `IncludeClassNames`. ([UE4SS #472](https://github.com/UE4SS-RE/RE-UE4SS/pull/472)) - Buckminsterfullerene
 
+Added search filter: `Match Memory Address`. ([UE4SS #882](https://github.com/UE4SS-RE/RE-UE4SS/pull/882)) - vitrvvivs
+
 Added ability to call UFunctions directly from the GUI. ([UE4SS #851](https://github.com/UE4SS-RE/RE-UE4SS/pull/851))
 
 ### UHT Dumper 
