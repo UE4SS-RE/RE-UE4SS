@@ -26,11 +26,11 @@ local DefaultModConfig = {
 
 local function Log(Message, OnlyLogIfVerbose)
     if not VerboseLogging and OnlyLogIfVerbose then return end
-    print(string.format("[%s] %s", LogID, Message))
+    print(string.format("[%s] %s\n", LogID, Message))
 end
 
 local function LogError(Message)
-    error(string.format("[%s] %s", LogID, Message))
+    error(string.format("[%s] %s\n", LogID, Message))
 end
 
 --- get table count, never rely on #t
