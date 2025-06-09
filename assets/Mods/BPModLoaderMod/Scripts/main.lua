@@ -304,7 +304,7 @@ LogOrderedMods()
 
 --- Only add any hooks if we have at least one valid mod entry that requires the logic below
 if (GetModCount() > 0) then
-
+    ---ALT+INS to reload mods manually in-game
     RegisterKeyBind(Key.INS, {ModifierKey.ALT}, function()
         ExecuteInGameThread(function()
             LoadMods(UEHelpers.GetWorld())
