@@ -1,9 +1,10 @@
 ---########################
---- DEFINES
+--- DEFINITIONS
 ---########################
 package.path = '.\\Mods\\ModLoaderMod\\?.lua;' .. package.path
 package.path = '.\\Mods\\ModLoaderMod\\BPMods\\?.lua;' .. package.path
 local UEHelpers = require("UEHelpers")
+local LogID = "BPModLoaderMod"
 
 local VerboseLogging = false
 local SpawnModsOnLuaInit = true -- spawn on lua unit exec? common cause of random crashes (game-specific race?)
@@ -25,7 +26,11 @@ local DefaultModConfig = {
 
 local function Log(Message, OnlyLogIfVerbose)
     if not VerboseLogging and OnlyLogIfVerbose then return end
-    print("[BPModLoaderMod] " .. Message)
+    print(string.format("[%s] %s", LogID, Message))
+end
+
+local function LogError(Message)
+    error(string.format("[%s] %s", LogID, Message))
 end
 
 --- get table count, never rely on #t
@@ -153,7 +158,7 @@ local function CacheAssetRegistry()
         print("Failed to fetch AssetRegistry via ARHelpers, falling back to SFO search\n")
         AssetRegistry = StaticFindObject("/Script/AssetRegistry.Default__AssetRegistryImpl") --[[@as IAssetRegistry]]
     end
-    if not AssetRegistry:IsValid() then error("Unable to continue - failed to validate UE game provides instance of AssetRegistry!\n") end
+    if not AssetRegistry:IsValid() then LogError("Unable to continue - failed to validate UE game provides instance of AssetRegistry!\n") end
 end
 
 ---########################
@@ -163,7 +168,7 @@ local function LoadModConfigs()
     -- Load configurations for mods.
     local Dirs = IterateGameDirectories();
     if not Dirs or not Dirs.Game.Content.Paks then
-        error("[BPModLoader] UE4SS does not support loading mods for this game.")
+        LogError("UE4SS does not support loading mods for this game.")
     end
     local LogicModsDir = Dirs.Game.Content.Paks.LogicMods
     if not LogicModsDir then
@@ -171,7 +176,7 @@ local function LoadModConfigs()
         Dirs = IterateGameDirectories(); ---@cast Dirs -nil
         LogicModsDir = Dirs.Game.Content.Paks.LogicMods
         if not LogicModsDir then
-            error("[BPModLoader] Unable to find or create Content/Paks/LogicMods directory. Try creating manually.")
+            LogError("Unable to find or create Content/Paks/LogicMods directory. Try creating manually.")
         end
         return
     end
@@ -243,7 +248,7 @@ local function LoadMod(ModName, ModInfo, World)
     end
     ---@cast AssetRegistryHelpers UObject
     if (not AssetRegistryHelpers:IsValid()) then
-        error("Unable to continue - AssetRegistryHelpers is invalid")
+        LogError("Unable to continue - AssetRegistryHelpers is invalid")
     end
 
     ---@cast AssetRegistryHelpers UAssetRegistryHelpers
@@ -256,7 +261,7 @@ local function LoadMod(ModName, ModInfo, World)
         return
     end
 
-    if not World then error("A `nil` World parameter was passed to LoadMod function. It's most likely a bug in BPModLoaderMod!") end
+    if not World then LogError("A `nil` World parameter was passed to LoadMod function. It's most likely a bug in BPModLoaderMod!") end
     if not World:IsValid() then
         Log(string.format("World is not valid for '%s' to spawn in\n", ModName))
         return
@@ -299,12 +304,10 @@ end
 LoadModConfigs()
 LogOrderedMods()
 
---- Only execute/add any hooks if we have at least one mod entry
---- It does not matter we can do it manually on a hotkey, PAKs arent mounted
---- automatially at runtime on LUA reload and we dont need potentially unstable and moot hooks
+--- Only add any hooks if we have at least one valid mod entry that requires the logic below
 if (GetModCount() > 0) then
 
-    RegisterKeyBind(Key.INS, function()
+    RegisterKeyBind(Key.INS, {ModifierKey.ALT}, function()
         ExecuteInGameThread(function()
             LoadMods(UEHelpers.GetWorld())
         end)
