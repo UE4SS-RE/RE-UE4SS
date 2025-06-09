@@ -33,8 +33,6 @@ local function LogError(Message)
     error(string.format("[%s] %s\n", LogID, Message))
 end
 
---- get table count, never rely on #t
---- @param T table
 --- @return integer
 local function GetModCount()
     local c = 0
