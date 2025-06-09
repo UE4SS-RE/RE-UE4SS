@@ -73,10 +73,10 @@ end
 
 local function LogOrderedMods()
     for _, v in ipairs(OrderedMods) do
-        Log(string.format("%s == %s\n", v.Name, v))
+        Log(string.format("%s == %s", v.Name, v))
         if type(v) == "table" then
             for k2, v2 in pairs(v) do
-                Log(string.format("    %s == %s\n", k2, v2))
+                Log(string.format("    %s == %s", k2, v2))
             end
         end
     end
@@ -104,7 +104,7 @@ local function LoadModOrder()
     end
 
     if entriesAdded <= 0 then
-        Log(string.format("Mods/BPModLoaderMod/load_order.txt not present or no matching mods, loading all BP mods in random order.\n"))
+        Log(string.format("Mods/BPModLoaderMod/load_order.txt not present or no matching mods, loading all BP mods in random order."))
     end
 end
 
@@ -153,10 +153,10 @@ local function CacheAssetRegistry()
         AssetRegistry = AssetRegistryHelpers:GetAssetRegistry() --[[@as IAssetRegistry]]
     end
     if not AssetRegistry:IsValid() then
-        print("Failed to fetch AssetRegistry via ARHelpers, falling back to SFO search\n")
+        print("Failed to fetch AssetRegistry via ARHelpers, falling back to SFO search")
         AssetRegistry = StaticFindObject("/Script/AssetRegistry.Default__AssetRegistryImpl") --[[@as IAssetRegistry]]
     end
-    if not AssetRegistry:IsValid() then LogError("Unable to continue - failed to validate UE game provides instance of AssetRegistry!\n") end
+    if not AssetRegistry:IsValid() then LogError("Unable to continue - failed to validate UE game provides instance of AssetRegistry!") end
 end
 
 ---########################
@@ -180,9 +180,9 @@ local function LoadModConfigs()
     end
 
     for ModDirectoryName, ModDirectory in pairs(LogicModsDir) do
-        Log(string.format("Mod: %s\n", ModDirectoryName))
+        Log(string.format("Mod: %s", ModDirectoryName))
         for _, ModFile in pairs(ModDirectory.__files) do
-            Log(string.format("    ModFile: %s\n", ModFile.__name))
+            Log(string.format("    ModFile: %s", ModFile.__name))
             if ModFile.__name == "config.lua" then
                 dofile(ModFile.__absolute_path)
                 if type(Mods[ModDirectoryName]) ~= "table" then break end
@@ -223,13 +223,13 @@ end
 
 local function LoadMod(ModName, ModInfo, World)
     if ModInfo.Priority ~= nil then
-        Log(string.format("Loading mod [Priority: #%i]: %s\n", ModInfo.Priority, ModName))
+        Log(string.format("Loading mod [Priority: #%i]: %s", ModInfo.Priority, ModName))
     else
-        Log(string.format("Loading mod: %s\n", ModName))
+        Log(string.format("Loading mod: %s", ModName))
     end
 
     if ModInfo.AssetPath == nil or ModInfo.AssetPath == nil then
-        Log(string.format("Could not load mod '%s' because it has no asset path or name.\n", ModName))
+        Log(string.format("Could not load mod '%s' because it has no asset path or name.", ModName))
         return
     end
 
@@ -255,34 +255,34 @@ local function LoadMod(ModName, ModInfo, World)
         local ObjectPath = AssetData.ObjectPath and AssetData.ObjectPath:ToString() or ""
         local PackageName = AssetData.PackageName and AssetData.PackageName:ToString() or ""
         local AssetName = AssetData.AssetName and AssetData.AssetName:ToString() or ""
-        Log(string.format("ModClass for '%s' is not valid\nObjectPath: %s\nPackageName: %s\nAssetName: %s\n", ModName, ObjectPath,PackageName, AssetName))
+        Log(string.format("ModClass for '%s' is not valid\nObjectPath: %s\nPackageName: %s\nAssetName: %s", ModName, ObjectPath,PackageName, AssetName))
         return
     end
 
     if not World then LogError("A `nil` World parameter was passed to LoadMod function. It's most likely a bug in BPModLoaderMod!") end
     if not World:IsValid() then
-        Log(string.format("World is not valid for '%s' to spawn in\n", ModName))
+        Log(string.format("World is not valid for '%s' to spawn in", ModName))
         return
     end
 
     local Actor = World:SpawnActor(ModClass, {}, {})
     if not Actor:IsValid() then
-        Log(string.format("Actor for mod '%s' is not valid\n", ModName))
+        Log(string.format("Actor for mod '%s' is not valid", ModName))
     else
-        Log(string.format("Actor: %s\n", Actor:GetFullName()))
+        Log(string.format("Actor: %s", Actor:GetFullName()))
         local PreBeginPlay = Actor.PreBeginPlay
         if PreBeginPlay:IsValid() then
-            Log(string.format("Executing 'PreBeginPlay' for mod '%s', with path: '%s'\n", ModName, Actor:GetFullName()))
+            Log(string.format("Executing 'PreBeginPlay' for mod '%s', with path: '%s'", ModName, Actor:GetFullName()))
             PreBeginPlay()
         else
-            Log(string.format("PreBeginPlay not valid for mod %s\n", ModName), true)
+            Log(string.format("PreBeginPlay not valid for mod %s", ModName), true)
         end
     end
 end
 
 local function LoadMods(World)
     if not World or not World:IsValid() then
-        Log("[Warning] Invalid UWorld object was passed to LoadMods.\n")
+        Log("Invalid UWorld object was passed to LoadMods.")
         return
     end
 
@@ -319,10 +319,10 @@ if (GetModCount() > 0) then
             if AssetPathWithClassPrefix == Context:GetClass():GetFullName() then
                 local PostBeginPlay = Context.PostBeginPlay
                 if PostBeginPlay:IsValid() then
-                    Log(string.format("Executing 'PostBeginPlay' for mod '%s'\n", Context:GetFullName()))
+                    Log(string.format("Executing 'PostBeginPlay' for mod '%s'", Context:GetFullName()))
                     PostBeginPlay()
                 else
-                    Log(string.format("PostBeginPlay not valid for mod %s\n", Context:GetFullName()), true)
+                    Log(string.format("PostBeginPlay not valid for mod %s", Context:GetFullName()), true)
                 end
             end
         end
@@ -341,5 +341,5 @@ if (GetModCount() > 0) then
         end)
     end
 else
-    Log(string.format("No PAK mod entries found, skipping hooking the events for this run\n"), false)
+    Log(string.format("No PAK mod entries found, skipping hooking the events for this run"), false)
 end
