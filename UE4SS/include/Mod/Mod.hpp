@@ -59,6 +59,8 @@ namespace RC
         auto is_started() const -> bool;
 
       public:
+        auto get_program() -> UE4SSProgram& { return m_program; }
+        auto get_program() const -> const UE4SSProgram& { return m_program; }
         // Main update from the program
         virtual auto fire_update() -> void;
 
