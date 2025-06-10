@@ -47,14 +47,6 @@ Added override Lua files for CallFunctionByNameWithArguments [UE4SS #848](https:
 
 Add error messages in places where only error codes were previously logged (e.g. load a C++ mod) [UE4SS #902](https://github.com/UE4SS-RE/RE-UE4SS/pull/902) 
 
-Added improved string and path conversion utilities with proper UTF-8 support ([UE4SS #913](https://github.com/UE4SS-RE/RE-UE4SS/pull/913))
-- Rewrote `to_charT_string_path()` to properly handle UTF-8 and UTF-16 encodings
-- Added `ensure_str_as<CharT>()` for explicit target character type conversion
-- Added `to_utf8_string()` for convenient UTF-8 string conversion
-- Added `normalize_path_for_lua()` to convert paths to UTF-8 with forward slashes for Lua compatibility
-- Added `utf8_to_wpath()` to convert UTF-8 paths to Windows wide strings
-- **BREAKING:** `to_charT_string_path()` now returns UTF-8 encoded strings for char type instead of locale-dependent encoding
-
 ### Live View 
 Added search filter: `IncludeClassNames`. ([UE4SS #472](https://github.com/UE4SS-RE/RE-UE4SS/pull/472)) - Buckminsterfullerene
 
@@ -79,6 +71,13 @@ Added global functions `RegisterEndPlayPreHook` and
 `RegisterEndPlayPostHook`. ([UE4SS #769](https://github.com/UE4SS-RE/RE-UE4SS/pull/769))
 
 Errors can now be caught using `pcall` and `xpcall`. ([UE4SS #833](https://github.com/UE4SS-RE/RE-UE4SS/pull/833))
+
+Added custom module searcher with UTF-8 path support for Lua `require()` ([UE4SS #884](https://github.com/UE4SS-RE/RE-UE4SS/pull/884))
+- Added support for case-insensitive Scripts/scripts directory detection
+- Improved error messages showing all attempted paths when module loading fails
+- Fixed `IterateGameDirectories` to properly handle UTF-8 paths and Unicode characters
+- Fixed `CreateLogicModsDirectory` to properly create directories with Unicode paths and handle parent directory creation
+- Fixed global Lua `print` function to properly handle UTF-8 string conversion
 
 #### Types.lua [PR #650](https://github.com/UE4SS-RE/RE-UE4SS/pull/650) 
 - Added `NAME_None` definition 
@@ -146,6 +145,14 @@ UClass* RawPtr = ClassPtr; // implicit conversion
 // or
 UClass* RawPtr = ClassPtr.Get(); // explicit access
 ```
+
+Added improved string and path conversion utilities with proper UTF-8 support ([UE4SS #913](https://github.com/UE4SS-RE/RE-UE4SS/pull/913))
+- Rewrote `to_charT_string_path()` to properly handle UTF-8 and UTF-16 encodings
+- Added `ensure_str_as<CharT>()` for explicit target character type conversion
+- Added `to_utf8_string()` for convenient UTF-8 string conversion
+- Added `normalize_path_for_lua()` to convert paths to UTF-8 with forward slashes for Lua compatibility
+- Added `utf8_to_wpath()` to convert UTF-8 paths to Windows wide strings
+- **BREAKING:** `to_charT_string_path()` now returns UTF-8 encoded strings for char type instead of locale-dependent encoding
 
 ### BPModLoader 
 

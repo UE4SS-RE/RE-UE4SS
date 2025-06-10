@@ -146,6 +146,9 @@ namespace RC
         }
 
       private:
+        static auto custom_module_searcher(lua_State* L) -> int;
+        auto setup_custom_module_loader(const LuaMadeSimple::Lua* lua_state) -> void;
+        auto load_and_execute_script(const std::filesystem::path& script_path) -> bool;
         auto setup_lua_require_paths(const LuaMadeSimple::Lua& lua) const -> void;
         auto setup_lua_global_functions(const LuaMadeSimple::Lua& lua) const -> void;
         auto setup_lua_global_functions_main_state_only() const -> void;
@@ -163,6 +166,8 @@ namespace RC
         RC_UE4SS_API auto main_lua() const -> const LuaMadeSimple::Lua*;
         RC_UE4SS_API auto async_lua() const -> const LuaMadeSimple::Lua*;
         RC_UE4SS_API auto get_lua_state() const -> lua_State*;
+
+        RC_UE4SS_API auto get_scripts_path() const -> const std::filesystem::path& { return m_scripts_path; }
 
         RC_UE4SS_API auto actions_lock() -> void
         {

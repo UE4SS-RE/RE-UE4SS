@@ -60,6 +60,10 @@
 #include <Unreal/UPackage.hpp>
 #include <Unreal/UnrealVersion.hpp>
 #include <UnrealCustom/CustomProperty.hpp>
+
+#if PLATFORM_WINDOWS
+#include <Unreal/Core/Windows/AllowWindowsPlatformTypes.hpp>
+#endif
 #pragma warning(default : 4005)
 
 namespace RC
@@ -632,13 +636,24 @@ namespace RC
     LuaMod::LuaMod(UE4SSProgram& program, StringType&& mod_name, StringType&& mod_path)
         : Mod(program, std::move(mod_name), std::move(mod_path)), m_lua(LuaMadeSimple::new_state())
     {
-        // Verify that there's a 'Scripts' directory
-        // Give the full path to the 'Scripts' directory to the mod container
-        m_scripts_path = m_mod_path / STR("scripts");
+        // First check for "Scripts" (capital S)
+        std::filesystem::path scripts_path = m_mod_path / STR("Scripts");
 
-        // If the 'Scripts' directory doesn't exist then mark the mod as non-installable and move on to the next mod
+        // If not found, try with lowercase "scripts"
+        if (!std::filesystem::exists(scripts_path))
+        {
+            std::filesystem::path alt_scripts_path = m_mod_path / STR("scripts");
+            if (std::filesystem::exists(alt_scripts_path))
+            {
+                scripts_path = alt_scripts_path;
+            }
+        }
+
+        m_scripts_path = scripts_path;
+
         if (!std::filesystem::exists(m_scripts_path))
         {
+            Output::send<LogLevel::Error>(STR("Mod path doesn't exist {}\n"), ensure_str(m_scripts_path));
             set_installable(false);
             return;
         }
@@ -793,29 +808,235 @@ namespace RC
         property_types_table.make_global("PropertyTypes");
     }
 
+    auto LuaMod::setup_custom_module_loader(const LuaMadeSimple::Lua* lua_state) -> void
+    {
+        lua_State* L = lua_state->get_lua_state();
+    
+        // Initialize ue4ss_loaded_modules table
+        lua_newtable(L);
+        lua_setglobal(L, "ue4ss_loaded_modules");
+    
+        // Get package.searchers table
+        lua_getglobal(L, "package");
+        if (!lua_istable(L, -1))
+        {
+            Output::send<LogLevel::Error>(STR("package table not found\n"));
+            lua_pop(L, 1);
+            return;
+        }
+    
+        lua_getfield(L, -1, "searchers");
+        if (!lua_istable(L, -1))
+        {
+            Output::send<LogLevel::Error>(STR("package.searchers table not found\n"));
+            lua_pop(L, 2);
+            return;
+        }
+    
+        // Insert our searcher at position 1
+        // First, shift existing searchers up
+        lua_Integer len = luaL_len(L, -1);
+        for (lua_Integer i = len; i >= 1; i--)
+        {
+            lua_geti(L, -1, i);     // Get searchers[i]
+            lua_seti(L, -2, i + 1); // Set searchers[i+1] = searchers[i]
+        }
+    
+        // Push the LuaMod instance as a light userdata (our upvalue)
+        lua_pushlightuserdata(L, this);
+    
+        // Create the C closure with one upvalue
+        lua_pushcclosure(L, custom_module_searcher, 1);
+    
+        // Set searchers[1] = our new closure
+        lua_seti(L, -2, 1);
+    
+        lua_pop(L, 2); // Clean up stack: searchers, package
+    }
+
+    // Static C function for the module searcher
+    int LuaMod::custom_module_searcher(lua_State* L)
+    {
+        const char* module_name = luaL_checkstring(L, 1);
+        if (!module_name)
+        {
+            lua_pushstring(L, "module name is required");
+            return 1;
+        }
+        
+        // Get the LuaMod* from the upvalue at index 1
+        auto* lua_mod = static_cast<LuaMod*>(lua_touserdata(L, lua_upvalueindex(1)));
+        if (!lua_mod)
+        {
+            lua_pushstring(L, "custom searcher is missing its C++ context");
+            return 1;
+        }
+        
+        // Get paths directly from the C++ object and convert to UTF-8 strings for Lua
+        const auto& mods_dir = lua_mod->get_program().get_mods_directory();
+        const auto& mod_name = lua_mod->get_name();
+        const auto& scripts_path = lua_mod->get_scripts_path();
+        
+        std::string mods_path_str = normalize_path_for_lua(mods_dir);
+        std::string mod_name_str = to_utf8_string(mod_name);
+        std::string scripts_path_str = normalize_path_for_lua(scripts_path);
+        
+        // Try different path combinations
+        std::vector<std::string> paths_to_try = {
+            scripts_path_str + "/" + module_name + ".lua",
+            mods_path_str + "/shared/" + module_name + ".lua",
+            mods_path_str + "/shared/" + module_name + "/" + module_name + ".lua"
+        };
+        
+        // Try each path
+        std::string attempted_paths_str;
+        for (const auto& path : paths_to_try)
+        {
+            // Convert to wide string for Windows filesystem operations
+            std::wstring wide_path;
+            try
+            {
+                wide_path = utf8_to_wpath(path);
+            }
+            catch (const std::exception&)
+            {
+                attempted_paths_str += "\n\t" + path + " (encoding error)";
+                continue;
+            }
+            
+            if (!std::filesystem::exists(wide_path))
+            {
+                attempted_paths_str += "\n\t" + path;
+                continue;
+            }
+            
+            // Check if already loaded
+            lua_getglobal(L, "ue4ss_loaded_modules");
+            lua_pushstring(L, path.c_str());
+            lua_gettable(L, -2);
+            
+            if (!lua_isnil(L, -1))
+            {
+                // Already loaded, return the cached function
+                lua_remove(L, -2); // Remove ue4ss_loaded_modules table
+                return 1;
+            }
+            
+            lua_pop(L, 2); // Pop nil and ue4ss_loaded_modules
+            
+            // Try to load the file
+            std::ifstream file(wide_path, std::ios::binary);
+            if (!file.is_open())
+            {
+                attempted_paths_str += "\n\t" + path + " (cannot open)";
+                continue;
+            }
+            
+            // Get file size and read content
+            file.seekg(0, std::ios::end);
+            std::streamsize size = file.tellg();
+            file.seekg(0, std::ios::beg);
+            
+            std::vector<char> buffer(size);
+            if (!file.read(buffer.data(), size))
+            {
+                attempted_paths_str += "\n\t" + path + " (read error)";
+                continue;
+            }
+            file.close();
+            
+            // Create chunk name for debugging
+            std::string chunk_name = "@" + path;
+            
+            // Load the script as a function that returns the module
+            std::string module_wrapper = "return function()\n" + std::string(buffer.data(), buffer.size()) + "\nend";
+            
+            if (luaL_loadbuffer(L, module_wrapper.c_str(), module_wrapper.size(), chunk_name.c_str()) != LUA_OK)
+            {
+                attempted_paths_str += "\n\t" + path + " (syntax error: " + lua_tostring(L, -1) + ")";
+                lua_pop(L, 1); // Pop error message
+                continue;
+            }
+            
+            // Execute to get the loader function
+            if (lua_pcall(L, 0, 1, 0) != LUA_OK)
+            {
+                attempted_paths_str += "\n\t" + path + " (execution error: " + lua_tostring(L, -1) + ")";
+                lua_pop(L, 1); // Pop error message
+                continue;
+            }
+            
+            // Cache the loaded module
+            lua_getglobal(L, "ue4ss_loaded_modules");
+            lua_pushstring(L, path.c_str());
+            lua_pushvalue(L, -3); // Copy the function
+            lua_settable(L, -3);
+            lua_pop(L, 1); // Pop ue4ss_loaded_modules
+            
+            // Return the loader function
+            return 1;
+        }
+        
+        // Module not found
+        std::string error_msg = "module '" + std::string(module_name) + "' not found:" + attempted_paths_str;
+        lua_pushstring(L, error_msg.c_str());
+        return 1;
+    }
+
     auto LuaMod::setup_lua_require_paths(const LuaMadeSimple::Lua& lua) const -> void
     {
-        auto* lua_state = m_lua.get_lua_state();
-        lua_getglobal(lua_state, "package");
+        try
+        {
+            auto* lua_state = m_lua.get_lua_state();
+            lua_getglobal(lua_state, "package");
 
-        lua_getfield(lua_state, -1, "path");
-        std::string current_paths = lua_tostring(lua_state, -1);
-        current_paths.append(fmt::format(";{}\\{}\\Scripts\\?.lua", to_string(m_program.get_mods_directory()).c_str(), to_string(get_name())));
-        current_paths.append(fmt::format(";{}\\shared\\?.lua", to_string(m_program.get_mods_directory()).c_str()));
-        current_paths.append(fmt::format(";{}\\shared\\?\\?.lua", to_string(m_program.get_mods_directory()).c_str()));
-        lua_pop(lua_state, 1);
-        lua_pushstring(lua_state, current_paths.c_str());
-        lua_setfield(lua_state, -2, "path");
+            // Get current paths
+            lua_getfield(lua_state, -1, "path");
+            std::string current_paths = lua_tostring(lua_state, -1);
+            lua_pop(lua_state, 1);
 
-        lua_getfield(lua_state, -1, "cpath");
-        std::string current_cpaths = lua_tostring(lua_state, -1);
-        current_cpaths.append(fmt::format(";{}\\{}\\Scripts\\?.dll", to_string(m_program.get_mods_directory()).c_str(), to_string(get_name())));
-        current_cpaths.append(fmt::format(";{}\\{}\\?.dll", to_string(m_program.get_mods_directory()).c_str(), to_string(get_name())));
-        lua_pop(lua_state, 1);
-        lua_pushstring(lua_state, current_cpaths.c_str());
-        lua_setfield(lua_state, -2, "cpath");
+            auto mods_dir = m_program.get_mods_directory();
+            auto mod_name = get_name();
 
-        lua_pop(lua_state, 1);
+            // Create normalized UTF-8 paths with forward slashes
+            std::string mods_dir_utf8 = normalize_path_for_lua(mods_dir);
+            std::string mod_name_utf8 = to_utf8_string(mod_name);
+            std::string scripts_path_utf8 = normalize_path_for_lua(m_scripts_path);
+
+            // Create path strings with forward slashes for Lua
+            std::string script_path = fmt::format(";{}/{}/?.lua", mods_dir_utf8, mod_name_utf8);
+            std::string shared_path = fmt::format(";{}/shared/?.lua", mods_dir_utf8);
+            std::string shared_nested_path = fmt::format(";{}/shared/?/?.lua", mods_dir_utf8);
+
+            current_paths.append(script_path);
+            current_paths.append(shared_path);
+            current_paths.append(shared_nested_path);
+
+            lua_pushstring(lua_state, current_paths.c_str());
+            lua_setfield(lua_state, -2, "path");
+
+            // Now set up cpath similarly
+            lua_getfield(lua_state, -1, "cpath");
+            std::string current_cpaths = lua_tostring(lua_state, -1);
+            lua_pop(lua_state, 1);
+
+            // Create cpath strings
+            std::string script_dll_path = fmt::format(";{}/{}/?.dll", mods_dir_utf8, mod_name_utf8);
+            std::string mod_dll_path = fmt::format(";{}/{}/?/?.dll", mods_dir_utf8, mod_name_utf8);
+
+            current_cpaths.append(script_dll_path);
+            current_cpaths.append(mod_dll_path);
+
+            lua_pushstring(lua_state, current_cpaths.c_str());
+            lua_setfield(lua_state, -2, "cpath");
+
+            lua_pop(lua_state, 1); // Pop package table
+        }
+        catch (const std::exception& e)
+        {
+            Output::send<LogLevel::Error>(STR("Exception in setup_lua_require_paths: {}\n"), ensure_str(e.what()));
+            throw;
+        }
     }
 
     auto LuaMod::get_object_names(const Unreal::UObject* object) -> std::vector<Unreal::FName>
@@ -2044,8 +2265,7 @@ Overloads:
                         LuaMod::LuaCallbackData{
                                 .lua = &lua,
                                 .instance_of_class = nullptr,
-                                .registry_indexes = {std::pair<const LuaMadeSimple::Lua*, LuaMod::LuaCallbackData::RegistryIndex>{&lua,
-                                                                                                                                       {lua_callback_registry_index}}},
+                                .registry_indexes = {std::pair<const LuaMadeSimple::Lua*, LuaMod::LuaCallbackData::RegistryIndex>{&lua, {lua_callback_registry_index}}},
                         }});
             }
 
@@ -2296,7 +2516,7 @@ Overloads:
             std::string error_overload_not_found{R"(
 No overload found for function 'IterateGameDirectories'.
 Overloads:
-#1: IterateGameDirectories()"};
+#1: IterateGameDirectories())"};
 
             std::filesystem::path game_executable_directory = UE4SSProgram::get_program().get_game_executable_directory();
             auto game_content_dir = game_executable_directory.parent_path().parent_path() / "Content";
@@ -2314,97 +2534,241 @@ Overloads:
 
             std::function<void(const std::filesystem::path&, LuaMadeSimple::Lua::Table&)> iterate_directory =
                     [&](const std::filesystem::path& directory, LuaMadeSimple::Lua::Table& current_directory_table) {
-                        for (const auto& item : std::filesystem::directory_iterator(directory))
+                        try
                         {
-                            if (!item.is_directory())
+                            std::error_code ec;
+                            for (const auto& item : std::filesystem::directory_iterator(directory, ec))
                             {
-                                continue;
+                                try
+                                {
+                                    if (!item.is_directory())
+                                    {
+                                        continue;
+                                    }
+
+                                    auto path = item.path().stem();
+
+                                    // Set key to "Game" if this is the game directory, otherwise use the actual name
+                                    std::string table_key;
+                                    if (path == game_name)
+                                    {
+                                        table_key = "Game";
+                                    }
+                                    else
+                                    {
+                                        // TODO: When UE5 String conversion is implemented, replace with StringCast<ANSICHAR>
+                                        table_key = to_utf8_string(path);
+                                    }
+
+                                    current_directory_table.add_key(table_key.c_str());
+                                    auto next_directory_table = lua.prepare_new_table();
+
+                                    // Recursively iterate the subdirectory
+                                    iterate_directory(item.path(), next_directory_table);
+                                    current_directory_table.fuse_pair();
+                                }
+                                catch (const std::exception& e)
+                                {
+                                    Output::send<LogLevel::Error>(STR("Error processing directory entry: {}\n"), to_wstring(e.what()));
+                                }
                             }
-                            auto path = item.path().stem();
-                            current_directory_table.add_key(path == game_name ? "Game" : to_string(path.wstring()).c_str());
-                            auto next_directory_table = lua.prepare_new_table();
-                            iterate_directory(item.path(), next_directory_table);
-                            current_directory_table.fuse_pair();
-                        }
 
-                        auto meta_table = lua.prepare_new_table();
-                        meta_table.add_pair("__index", [](lua_State* lua_state) -> int {
-                            return TRY([&] {
-                                const auto& lua = LuaMadeSimple::Lua(lua_state);
-                                std::string name{};
-                                if (!lua.is_string(2))
-                                {
-                                    return 0;
-                                }
-                                name = lua.get_string(2);
+                            if (ec)
+                            {
+                                Output::send<LogLevel::Error>(STR("Error iterating directory {}: {}\n"), directory.wstring(), to_wstring(ec.message()));
+                            }
 
-                                if (name == "__name")
-                                {
-                                    lua_getmetatable(lua_state, 1);
-                                    lua_pushliteral(lua_state, "__name");
-                                    lua_rawget(lua_state, 2);
-                                    lua.discard_value();
-                                    lua.discard_value();
-                                    if (!lua.is_string())
+                            auto meta_table = lua.prepare_new_table();
+
+                            lua_pushcfunction(lua.get_lua_state(), [](lua_State* lua_state) -> int {
+                                return TRY([&] {
+                                    const auto& lua = LuaMadeSimple::Lua(lua_state);
+                                    std::string name{};
+                                    if (!lua.is_string(2))
                                     {
-                                        throw std::runtime_error{"Couldn't find '__name' for directory entry."};
+                                        return 0;
                                     }
-                                    return 1;
-                                }
-                                else if (name == "__absolute_path")
-                                {
-                                    lua_getmetatable(lua_state, 1);
-                                    lua_pushliteral(lua_state, "__absolute_path");
-                                    lua_rawget(lua_state, 2);
-                                    lua.discard_value();
-                                    lua.discard_value();
-                                    if (!lua.is_string())
+                                    name = lua.get_string(2);
+
+                                    if (name == "__name")
                                     {
-                                        throw std::runtime_error{"Couldn't find '__absolute_path' for directory entry."};
-                                    }
-                                    return 1;
-                                }
-                                else if (name == "__files")
-                                {
-                                    lua_getmetatable(lua_state, 1);
-                                    lua_pushliteral(lua_state, "__absolute_path");
-                                    lua_rawget(lua_state, 2);
-                                    lua.discard_value();
-                                    lua.discard_value();
-                                    if (!lua.is_string())
-                                    {
-                                        throw std::runtime_error{"Couldn't find '__absolute_path' for directory entry."};
-                                    }
-                                    const auto current_path = std::string{lua.get_string()};
-                                    auto files_table = lua.prepare_new_table();
-                                    auto index = 1;
-                                    for (const auto& item : std::filesystem::directory_iterator(current_path))
-                                    {
-                                        if (!item.is_directory())
+                                        lua_getmetatable(lua_state, 1);
+                                        lua_pushliteral(lua_state, "__name");
+                                        lua_rawget(lua_state, 2);
+                                        lua.discard_value();
+                                        lua.discard_value();
+                                        if (!lua.is_string())
                                         {
-                                            files_table.add_key(index);
-                                            auto file_table = lua.prepare_new_table();
-                                            file_table.add_pair("__name", to_string(item.path().filename().wstring()).c_str());
-                                            file_table.add_pair("__absolute_path", to_string(item.path().wstring()).c_str());
-                                            files_table.fuse_pair();
+                                            throw std::runtime_error{"Couldn't find '__name' for directory entry."};
                                         }
-                                        ++index;
+                                        return 1;
                                     }
-                                    return 1;
-                                }
-                                else
-                                {
-                                    lua.set_nil();
-                                    return 1;
-                                }
+                                    else if (name == "__absolute_path")
+                                    {
+                                        lua_getmetatable(lua_state, 1);
+                                        lua_pushliteral(lua_state, "__absolute_path");
+                                        lua_rawget(lua_state, 2);
+                                        lua.discard_value();
+                                        lua.discard_value();
+                                        if (!lua.is_string())
+                                        {
+                                            throw std::runtime_error{"Couldn't find '__absolute_path' for directory entry."};
+                                        }
+                                        return 1;
+                                    }
+                                    else if (name == "__files")
+                                    {
+                                        lua_getmetatable(lua_state, 1);
+                                        lua_pushliteral(lua_state, "__absolute_path");
+                                        lua_rawget(lua_state, 2);
+                                        lua.discard_value();
+                                        lua.discard_value();
+                                        if (!lua.is_string())
+                                        {
+                                            throw std::runtime_error{"Couldn't find '__absolute_path' for directory entry."};
+                                        }
+
+                                        const auto path_str = lua.get_string();
+                                        std::wstring path_wstr;
+
+                                        // Try to convert the path string to wstring for filesystem operations
+                                        try
+                                        {
+                                            path_wstr = RC::to_wstring(path_str);
+                                        }
+                                        catch (const std::exception&)
+                                        {
+                                            // If conversion fails, reconstruct path as basic conversion
+                                            path_wstr.reserve(path_str.size());
+                                            for (char c : path_str)
+                                            {
+                                                path_wstr.push_back(static_cast<wchar_t>(c));
+                                            }
+
+                                            // Check if the path exists first
+                                            std::error_code path_ec;
+                                            if (!std::filesystem::exists(path_wstr, path_ec))
+                                            {
+                                                // Path doesn't exist, try to reconstruct it
+                                                if (path_str.find("LogicMods") != std::string::npos)
+                                                {
+                                                    // Get the game executable directory
+                                                    std::filesystem::path game_exec_dir = UE4SSProgram::get_program().get_game_executable_directory();
+
+                                                    // Navigate to content directory
+                                                    std::filesystem::path content_dir = game_exec_dir;
+                                                    content_dir = content_dir.parent_path(); // Up to Binaries
+                                                    content_dir = content_dir.parent_path(); // Up to Game
+                                                    content_dir /= "Content";
+
+                                                    if (std::filesystem::exists(content_dir))
+                                                    {
+                                                        auto logic_mods_dir = content_dir / "Paks/LogicMods";
+
+                                                        // Check if it exists or try to create it
+                                                        if (!std::filesystem::exists(logic_mods_dir))
+                                                        {
+                                                            std::error_code dir_ec;
+                                                            auto paks_dir = content_dir / "Paks";
+                                                            if (!std::filesystem::exists(paks_dir))
+                                                            {
+                                                                std::filesystem::create_directory(paks_dir, dir_ec);
+                                                            }
+                                                            std::filesystem::create_directory(logic_mods_dir, dir_ec);
+                                                        }
+
+                                                        if (std::filesystem::exists(logic_mods_dir))
+                                                        {
+                                                            path_wstr = logic_mods_dir.wstring();
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+
+                                        auto files_table = lua.prepare_new_table();
+                                        auto index = 1;
+
+                                        try
+                                        {
+                                            std::error_code ec;
+                                            if (std::filesystem::exists(path_wstr, ec))
+                                            {
+                                                for (const auto& item : std::filesystem::directory_iterator(path_wstr, ec))
+                                                {
+                                                    try
+                                                    {
+                                                        if (!item.is_directory())
+                                                        {
+                                                            files_table.add_key(index);
+                                                            auto file_table = lua.prepare_new_table();
+
+                                                            // Create safe strings for filenames and paths
+                                                            // TODO: When UE5 String conversion is implemented, replace with StringCast<ANSICHAR>
+                                                            std::string safe_filename = to_utf8_string(item.path().filename());
+                                                            std::string safe_path = to_utf8_string(item.path());
+
+                                                            file_table.add_pair("__name", safe_filename.c_str());
+                                                            file_table.add_pair("__absolute_path", safe_path.c_str());
+                                                            files_table.fuse_pair();
+                                                        }
+                                                        ++index;
+                                                    }
+                                                    catch (const std::exception& e)
+                                                    {
+                                                        Output::send<LogLevel::Error>(STR("Error processing file: {}\n"), to_wstring(e.what()));
+                                                    }
+                                                }
+                                            }
+
+                                            if (ec)
+                                            {
+                                                Output::send<LogLevel::Error>(STR("Error iterating files in {}: {}\n"), path_wstr, to_wstring(ec.message()));
+                                            }
+                                        }
+                                        catch (const std::exception& e)
+                                        {
+                                            Output::send<LogLevel::Error>(STR("Error iterating files: {}\n"), to_wstring(e.what()));
+                                        }
+
+                                        return 1;
+                                    }
+                                    else
+                                    {
+                                        lua.set_nil();
+                                        return 1;
+                                    }
+                                });
                             });
-                        });
-                        meta_table.add_pair("__name", to_string(directory.stem().wstring()).c_str());
-                        meta_table.add_pair("__absolute_path", to_string(directory.wstring()).c_str());
-                        lua_setmetatable(lua.get_lua_state(), -2);
+
+                            lua_setfield(lua.get_lua_state(), -2, "__index");
+
+                            // Set metadata using safe string conversion
+                            // TODO: When UE5 String conversion is implemented, replace with StringCast<ANSICHAR>
+                            std::string safe_stem = to_utf8_string(directory.stem());
+                            std::string safe_path = to_utf8_string(directory);
+
+                            meta_table.add_pair("__name", safe_stem.c_str());
+                            meta_table.add_pair("__absolute_path", safe_path.c_str());
+                            lua_setmetatable(lua.get_lua_state(), -2);
+                        }
+                        catch (const std::exception& e)
+                        {
+                            Output::send<LogLevel::Error>(STR("Exception in iterate_directory: {}\n"), to_wstring(e.what()));
+                        }
                     };
 
-            iterate_directory(game_root_directory, directories_table);
+            try
+            {
+                iterate_directory(game_root_directory, directories_table);
+            }
+            catch (const std::exception& e)
+            {
+                Output::send<LogLevel::Error>(STR("Exception in IterateGameDirectories: {}\n"), to_wstring(e.what()));
+                lua.set_nil();
+                return 1;
+            }
+
             return 1;
         });
 
@@ -2412,35 +2776,71 @@ Overloads:
             std::string error_overload_not_found{R"(
 No overload found for function 'CreateLogicModsDirectory'.
 Overloads:
-#1: CreateLogicModsDirectory()"};
+#1: CreateLogicModsDirectory())"};
+            try
+            {
+                std::filesystem::path game_executable_directory = UE4SSProgram::get_program().get_game_executable_directory();
+                auto game_content_dir = game_executable_directory.parent_path().parent_path() / "Content";
+                if (!std::filesystem::exists(game_content_dir))
+                {
+                    lua.throw_error("CreateLogicModsDirectory: Could not locate the \"Content\" directory because the directory structure is unknown (not "
+                                    "<RootGamePath>/Game/Content)\n");
+                }
 
-            std::filesystem::path game_executable_directory = UE4SSProgram::get_program().get_game_executable_directory();
-            auto game_content_dir = game_executable_directory.parent_path().parent_path() / "Content";
-            if (!std::filesystem::exists(game_content_dir))
-            {
-                lua.throw_error("CreateLogicModsDirectory: Could not locate the \"Content\" directory because the directory structure is unknown (not "
-                                "<RootGamePath>/Game/Content)\n");
-            }
-            auto logic_mods_dir = game_content_dir / "Paks/LogicMods";
-            if (std::filesystem::exists(logic_mods_dir))
-            {
-                Output::send<LogLevel::Warning>(
-                        STR("CreateLogicModsDirectory: \"LogicMods\" directory already exists. Cancelling creation of new directory.\n"));
-                lua.set_bool(false);
+                auto logic_mods_dir = game_content_dir / "Paks/LogicMods";
+
+                std::error_code ec;
+                if (std::filesystem::exists(logic_mods_dir, ec))
+                {
+                    Output::send<LogLevel::Warning>(
+                            STR("CreateLogicModsDirectory: \"LogicMods\" directory already exists. Cancelling creation of new directory.\n"));
+                    lua.set_bool(true);
+                    return 1;
+                }
+
+                // Try to create the Paks directory first if it doesn't exist
+                auto paks_dir = game_content_dir / "Paks";
+                if (!std::filesystem::exists(paks_dir, ec))
+                {
+                    ec.clear();
+                    bool paks_created = std::filesystem::create_directory(paks_dir, ec);
+                    if (!paks_created || ec)
+                    {
+                        Output::send<LogLevel::Error>(STR("CreateLogicModsDirectory: Failed to create Paks directory: {}\n"), to_wstring(ec.message()));
+                        // Try to continue anyway
+                    }
+                }
+
+                // Now create the LogicMods directory
+                ec.clear();
+                bool created = std::filesystem::create_directory(logic_mods_dir, ec);
+
+                if (!created || ec)
+                {
+                    Output::send<LogLevel::Error>(STR("CreateLogicModsDirectory: Error creating directory: {}\n"), to_wstring(ec.message()));
+
+                    // Check if the directory exists despite the error (might happen with Unicode paths)
+                    ec.clear();
+                    if (std::filesystem::exists(logic_mods_dir, ec))
+                    {
+                        lua.set_bool(true);
+                        return 1;
+                    }
+
+                    lua.throw_error("CreateLogicModsDirectory: Unable to create \"LogicMods\" directory. Try creating manually.\n");
+                }
+
+                Output::send<LogLevel::Warning>(STR("CreateLogicModsDirectory: LogicMods directory created.\n"));
+
+                lua.set_bool(true);
                 return 1;
             }
-
-            Output::send<LogLevel::Warning>(STR("CreateLogicModsDirectory: LogicMods directory not found. Creating LogicMods directory.\n"));
-            auto new_logic_mods_dir = std::filesystem::create_directory(logic_mods_dir);
-            if (!new_logic_mods_dir)
+            catch (const std::exception& e)
             {
-                lua.throw_error("CreateLogicModsDirectory: Unable to create \"LogicMods\" directory. Try creating manually.\n");
+                Output::send<LogLevel::Error>(STR("Exception in CreateLogicModsDirectory: {}\n"), to_wstring(e.what()));
+                lua.throw_error(e.what());
+                return 0;
             }
-
-            Output::send<LogLevel::Warning>(STR("CreateLogicModsDirectory: LogicMods directory created.\n"));
-
-            lua.set_bool(true);
-            return 1;
         });
 
         lua.register_function("ExecuteAsync", [](const LuaMadeSimple::Lua& lua) -> int {
@@ -3474,27 +3874,38 @@ Overloads:
 
     auto LuaMod::prepare_mod(const LuaMadeSimple::Lua& lua) -> void
     {
-        lua.open_all_libs();
+        try
+        {
+            lua.open_all_libs();
+            setup_lua_require_paths(lua);
+            setup_lua_global_functions(lua);
+            setup_lua_classes(lua);
 
-        setup_lua_require_paths(lua);
+            // Setup a global reference for this mod
+            // It can be accessed later when you otherwise don't have access to the 'Mod' instance
+            LuaType::LuaModRef::construct(lua, this);
+            lua_setglobal(lua.get_lua_state(), "ModRef");
 
-        setup_lua_global_functions(lua);
-        setup_lua_classes(lua);
+            // Setup all the input related globals (keys & modifier keys)
+            register_input_globals(lua);
 
-        // Setup a global reference for this mod
-        // It can be accessed later when you otherwise don't have access to the 'Mod' instance
-        LuaType::LuaModRef::construct(lua, this);
-        lua_setglobal(lua.get_lua_state(), "ModRef");
+            register_all_property_types(lua);
+            register_object_flags(lua);
+            register_efindname(lua);
 
-        // Setup all the input related globals (keys & modifier keys)
-        register_input_globals(lua);
-
-        register_all_property_types(lua);
-        register_object_flags(lua);
-        register_efindname(lua);
-
-        lua.set_nil();
-        lua_setglobal(lua.get_lua_state(), "__OriginalReturnValue");
+            lua.set_nil();
+            lua_setglobal(lua.get_lua_state(), "__OriginalReturnValue");
+        }
+        catch (std::exception& e)
+        {
+            Output::send<LogLevel::Error>(STR("Exception during mod preparation: {}\n"), ensure_str(e.what()));
+            throw; // Re-throw to allow proper error handling upstream
+        }
+        catch (...)
+        {
+            Output::send<LogLevel::Error>(STR("Unknown exception during mod preparation\n"));
+            throw; // Re-throw to allow proper error handling upstream
+        }
     }
 
     auto LuaMod::fire_on_lua_start_for_cpp_mods() -> void
@@ -3537,38 +3948,111 @@ Overloads:
         }
     }
 
-    auto LuaMod::start_mod() -> void
+    auto LuaMod::load_and_execute_script(const std::filesystem::path& script_path) -> bool
     {
-        prepare_mod(lua());
-        make_main_state(this, lua());
-        setup_lua_global_functions_main_state_only();
-
-        make_async_state(this, lua());
-
-        start_async_thread();
-
-        m_is_started = true;
-
-        fire_on_lua_start_for_cpp_mods();
-
-        // Don't crash on syntax errors.
         try
         {
-            main_lua()->execute_file((m_scripts_path / STR("main.lua")).string());
+            if (!std::filesystem::exists(script_path))
+            {
+                return false;
+            }
+
+            // Read the file content
+            std::ifstream file(script_path, std::ios::binary);
+            if (!file.is_open())
+            {
+                throw std::runtime_error(fmt::format("Failed to open script file: {}", to_utf8_string(script_path)));
+            }
+
+            // Get file size and read content
+            file.seekg(0, std::ios::end);
+            std::streamsize size = file.tellg();
+            file.seekg(0, std::ios::beg);
+
+            std::vector<char> buffer(size);
+            if (!file.read(buffer.data(), size))
+            {
+                throw std::runtime_error(fmt::format("Failed to read script file: {}", to_utf8_string(script_path)));
+            }
+            file.close();
+
+            // Generate a UTF-8 chunk name for better error messages
+            std::string chunk_name = "@" + to_utf8_string(script_path);
+
+            // Load the buffer
+            if (int status = luaL_loadbuffer(main_lua()->get_lua_state(), buffer.data(), buffer.size(), chunk_name.c_str()); status != LUA_OK)
+            {
+                std::string error_msg = lua_tostring(main_lua()->get_lua_state(), -1);
+                Output::send<LogLevel::Error>(STR("Error loading script: {}\n"), ensure_str(error_msg));
+                lua_pop(main_lua()->get_lua_state(), 1);
+                return false;
+            }
+
+            // Execute the chunk
+            if (int status = lua_pcall(main_lua()->get_lua_state(), 0, 0, 0); status != LUA_OK)
+            {
+                std::string error_msg = lua_tostring(main_lua()->get_lua_state(), -1);
+                Output::send<LogLevel::Error>(STR("Error executing script: {}\n"), ensure_str(error_msg));
+                lua_pop(main_lua()->get_lua_state(), 1);
+                return false;
+            }
+
+            return true;
         }
-        catch (std::runtime_error& e)
+        catch (const std::exception& e)
         {
-            Output::send<LogLevel::Error>(STR("{}\n"), ensure_str(e.what()));
+            Output::send<LogLevel::Error>(STR("Exception in load_and_execute_script: {}\n"), ensure_str(e.what()));
+            return false;
+        }
+    }
+
+    auto LuaMod::start_mod() -> void
+    {
+        try
+        {
+            prepare_mod(lua());
+            make_main_state(this, lua());
+            setup_lua_global_functions_main_state_only();
+            make_async_state(this, lua());
+            start_async_thread();
+
+            m_is_started = true;
+            fire_on_lua_start_for_cpp_mods();
+
+            // Set up the custom module loader for handling UTF-8 paths
+            setup_custom_module_loader(main_lua());
+
+            // Use the scripts path that was already determined in the constructor
+            std::filesystem::path main_script_path = m_scripts_path / STR("main.lua");
+
+            if (std::filesystem::exists(main_script_path))
+            {
+                if (!load_and_execute_script(main_script_path))
+                {
+                    Output::send<LogLevel::Error>(STR("Failed to execute main script: {}\n"), ensure_str(main_script_path));
+                }
+            }
+            else
+            {
+                // This case implies m_scripts_path itself is valid, but main.lua is missing
+                Output::send<LogLevel::Error>(
+                        STR("Main script 'main.lua' not found in scripts directory: {} -- Ensure your script file uses the correct casing.\n"),
+                        ensure_str(m_scripts_path));
+            }
+        }
+        catch (const std::exception& e)
+        {
+            Output::send<LogLevel::Error>(STR("Exception during mod startup: {}\n"), ensure_str(e.what()));
         }
     }
 
     template <typename T>
     concept IsPair = requires(T t) {
-            { t.second };
+        { t.second };
     };
     template <typename T>
     concept IsDataIndirect = requires(T t) {
-            { t.callback_data };
+        { t.callback_data };
     };
 
     static auto erase_from_container(LuaMod* mod, auto& container) -> void
@@ -4724,3 +5208,7 @@ Overloads:
         actions_unlock();
     }
 } // namespace RC
+
+#if PLATFORM_WINDOWS
+#include <Unreal/Core/Windows/HideWindowsPlatformTypes.hpp>
+#endif
