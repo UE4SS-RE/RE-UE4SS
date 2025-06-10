@@ -142,6 +142,7 @@ UClass* RawPtr = ClassPtr.Get(); // explicit access
 ```
 
 ### BPModLoader 
+BREAKING: default INSERT keybind to manually reload the ModActors was changed to les obtrusive ALT+INSERT
 
 ### Experimental 
 
