@@ -1004,7 +1004,7 @@ namespace RC
             std::string scripts_path_utf8 = normalize_path_for_lua(m_scripts_path);
 
             // Create path strings with forward slashes for Lua
-            std::string script_path = fmt::format(";{}/{}/?.lua", mods_dir_utf8, mod_name_utf8);
+            std::string script_path = fmt::format(";{}/?.lua", scripts_path_utf8);
             std::string shared_path = fmt::format(";{}/shared/?.lua", mods_dir_utf8);
             std::string shared_nested_path = fmt::format(";{}/shared/?/?.lua", mods_dir_utf8);
 
@@ -1021,7 +1021,7 @@ namespace RC
             lua_pop(lua_state, 1);
 
             // Create cpath strings
-            std::string script_dll_path = fmt::format(";{}/{}/?.dll", mods_dir_utf8, mod_name_utf8);
+            std::string script_dll_path = fmt::format(";{}/?.dll", scripts_path_utf8);
             std::string mod_dll_path = fmt::format(";{}/{}/?/?.dll", mods_dir_utf8, mod_name_utf8);
 
             current_cpaths.append(script_dll_path);
