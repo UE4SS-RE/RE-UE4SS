@@ -343,9 +343,12 @@ namespace RC::GUI
                         cache_instance(instance);
                     }
 
-                    for (auto& callable_function : m_callable_functions)
+                    for (size_t i = 0; i < m_callable_functions.size(); ++i)
                     {
-                        if (ImGui::Selectable(callable_function.cached_name.c_str(), callable_function.is_selected))
+                        auto& callable_function = m_callable_functions[i];
+                        // Append index to create unique ID that won't be displayed due to ## separator
+                        auto unique_label = fmt::format("{}##{}", callable_function.cached_name, i);
+                        if (ImGui::Selectable(unique_label.c_str(), callable_function.is_selected))
                         {
                             deselect_all_functions();
                             select_function(callable_function);
