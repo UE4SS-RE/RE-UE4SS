@@ -53,12 +53,12 @@ namespace RC
 
     auto SysError::category() const -> StringType
     {
-        return to_wstring(m_error_category ? m_error_category->name() : DEFAULT_ERROR_CATEGORY.name());
+        return to_wstring(m_error_category->name());
     }
 
     auto SysError::format_error(const int error_code) const -> StringType
     {
-        const std::error_category& error_category = m_error_category ? *m_error_category : DEFAULT_ERROR_CATEGORY;
+        const std::error_category& error_category = *m_error_category;
         const std::error_code ec(error_code, error_category);
         // remove new line(s) and tabs
         auto result = std::regex_replace(to_wstring(std::system_error(ec).what()), std::wregex(STR("(\t|\r?\n)")), STR(" "));
