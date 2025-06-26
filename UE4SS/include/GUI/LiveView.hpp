@@ -155,6 +155,13 @@ namespace RC::GUI
             No
         };
 
+        enum class ContainerType
+        {
+            Object,
+            Array,
+            Struct,
+        };
+
       private:
         auto render_info_panel() -> void;
         auto render_info_panel_as_object(const FUObjectItem*, UObject*) -> void;
@@ -166,13 +173,7 @@ namespace RC::GUI
         auto render_struct_sub_tree_hierarchy(UStruct* ustruct) -> void;
         auto render_class(UClass*) -> void;
         auto render_super_struct(UStruct*) -> void;
-
-        enum class ContainerType
-        {
-            Object,
-            Array,
-            Struct,
-        };
+        
         auto render_property_value(FProperty* property,
                                    ContainerType container_type,
                                    void* container,
