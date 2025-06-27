@@ -47,6 +47,8 @@ Added override Lua files for CallFunctionByNameWithArguments [UE4SS #848](https:
 
 Add error messages in places where only error codes were previously logged (e.g. load a C++ mod) [UE4SS #902](https://github.com/UE4SS-RE/RE-UE4SS/pull/902) 
 
+Added `[f: <address_or_module_offset>` section to UE4SS_ObjectDump.txt [UE4SS #866](https://github.com/UE4SS-RE/RE-UE4SS/pull/866) 
+
 ### Live View 
 Added search filter: `IncludeClassNames`. ([UE4SS #472](https://github.com/UE4SS-RE/RE-UE4SS/pull/472)) - Buckminsterfullerene
 
@@ -340,6 +342,11 @@ Fixed `LoadMod` function issue that variables would go out-of-scope in the `Exec
 ; True if the game is built as Debug, Development, or Test.
 ; Default: false
 DebugBuild =
+
+[ObjectDumper]
+; Whether to display the offset from the main executable for functions instead of the function pointer
+; Default: 0
+UseModuleOffsets = 0
 
 [Debug]
 RenderMode = ExternalThread
