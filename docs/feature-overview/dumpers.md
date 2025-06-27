@@ -74,26 +74,27 @@ Example output:
 There are multiple sets of opening & closing square brackets and each set has a different meaning and the letters in this table explains what they mean.  
 Within the first set of brackets is the location in memory where the object or property is stored.
 
-| Letters | Meaning                                                      | UE Member Variable |
-|---------|--------------------------------------------------------------|--------------------|
-| n       | Name of an object/property                                   | NamePrivate        |
-| c       | Class of the object/property/enum value                      | ClassPrivate       |
-| or      | Outer of the object                                          | OuterPrivate       | 
-| o       | Offset of a property value in an object                      | Offset_Internal    |
-| owr     | Owner of an FField, 4.25+ only                               | Owner              |
-| kp      | Key property of an FMapProperty                              | KeyProp            |
-| vp      | Value property of an FMapProperty                            | ValueProp          |
-| mc      | Class that this FClassProperty refers to                     | MetaClass          |
-| df      | Function that this FDelegateProperty refers to               | FunctionSignature  |
-| pc      | Class that this FObjectProperty/FFieldPathProperty refers to | PropertyClass      |
-| ic      | Class that this FInterfaceProperty refers to                 | InterfaceClass     |
-| ss      | Struct that this FStructProperty refers to                   | Struct             |
-| em      | Enum that this FEnumProperty refers to                       | Enum               |
-| fm      | Field mask that this FBoolProperty refers to                 | FieldMask          |
-| bm      | Byte mask that this FBoolProperty refers to                  | ByteMask           |
-| v       | Value corresponding to this enum key                         | N/A                |
-| sps     | SuperStruct of this UClass                                   | SuperStruct        |
-| ai      | Property that this FArrayProperty stores                     | Inner              |
+| Letters | Meaning                                                                               | UE Member Variable |
+|---------|---------------------------------------------------------------------------------------|--------------------|
+| n       | Name of an object/property                                                            | NamePrivate        |
+| c       | Class of the object/property/enum value                                               | ClassPrivate       |
+| or      | Outer of the object                                                                   | OuterPrivate       | 
+| o       | Offset of a property value in an object                                               | Offset_Internal    |
+| owr     | Owner of an FField, 4.25+ only                                                        | Owner              |
+| kp      | Key property of an FMapProperty                                                       | KeyProp            |
+| vp      | Value property of an FMapProperty                                                     | ValueProp          |
+| mc      | Class that this FClassProperty refers to                                              | MetaClass          |
+| df      | Function that this FDelegateProperty refers to                                        | FunctionSignature  |
+| pc      | Class that this FObjectProperty/FFieldPathProperty refers to                          | PropertyClass      |
+| ic      | Class that this FInterfaceProperty refers to                                          | InterfaceClass     |
+| ss      | Struct that this FStructProperty refers to                                            | Struct             |
+| em      | Enum that this FEnumProperty refers to                                                | Enum               |
+| fm      | Field mask that this FBoolProperty refers to                                          | FieldMask          |
+| bm      | Byte mask that this FBoolProperty refers to                                           | ByteMask           |
+| v       | Value corresponding to this enum key                                                  | N/A                |
+| sps     | SuperStruct of this UClass                                                            | SuperStruct        |
+| ai      | Property that this FArrayProperty stores                                              | Inner              |
+| f       | Refers to the native function wrapper of a UFunction or ProcessInternal if non-native | Func               |
 
 ### Configurations
 

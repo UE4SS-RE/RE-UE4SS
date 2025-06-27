@@ -1,6 +1,11 @@
 #include <format>
+#include <utility>
+#include <bit>
 
 #include <ObjectDumper/ObjectToString.hpp>
+#include <SigScanner/SinglePassSigScanner.hpp>
+#include <UE4SSProgram.hpp>
+
 #pragma warning(disable : 4005)
 #include <Unreal/FProperty.hpp>
 #include <Unreal/Property/FArrayProperty.hpp>
@@ -35,6 +40,21 @@ namespace RC::ObjectDumper
 
     std::unordered_map<ToStringHash, ObjectToStringDecl> object_to_string_functions{};
     std::unordered_map<ToStringHash, ObjectToStringComplexDecl> object_to_string_complex_functions{};
+
+    static auto to_address(uintptr_t address) -> uintptr_t
+    {
+        auto out_address = address;
+        if (UE4SSProgram::settings_manager.ObjectDumper.UseModuleOffsets)
+        {
+            out_address -= std::bit_cast<uintptr_t>(SigScannerStaticData::m_modules_info.array[std::to_underlying(ScanTarget::MainExe)].lpBaseOfDll);
+        }
+        return out_address;
+    }
+
+    static auto to_address(void* address) -> uintptr_t
+    {
+        return to_address(std::bit_cast<uintptr_t>(address));
+    }
 
     auto get_to_string(size_t hash) -> ObjectToStringDecl
     {
@@ -106,29 +126,32 @@ namespace RC::ObjectDumper
     auto arrayproperty_to_string_complex(void* p_this, StringType& out_line, ObjectToStringComplexDeclCallable callable) -> void
     {
         FProperty* array_inner = static_cast<FArrayProperty*>(p_this)->GetInner();
-        auto array_inner_class = array_inner->GetClass().HashObject();
-
-        if (to_string_exists(array_inner_class))
+        if (array_inner)
         {
-            get_to_string(array_inner_class)(array_inner, out_line);
+            auto array_inner_class = array_inner->GetClass().HashObject();
 
-            if (to_string_complex_exists(array_inner_class))
+            if (to_string_exists(array_inner_class))
             {
-                // If this code is executed then we'll be having another line before we return to the dumper, so we need to explicitly add a new line
-                // If this code is not executed then we'll not be having another line and the dumper will add the new line
-                out_line.append(STR("\n"));
+                get_to_string(array_inner_class)(array_inner, out_line);
 
-                get_to_string_complex(array_inner_class)(array_inner, out_line, [&]([[maybe_unused]] void* prop) {
-                    // It's possible that a new line is supposed to be appended here
-                });
+                if (to_string_complex_exists(array_inner_class))
+                {
+                    // If this code is executed then we'll be having another line before we return to the dumper, so we need to explicitly add a new line
+                    // If this code is not executed then we'll not be having another line and the dumper will add the new line
+                    out_line.append(STR("\n"));
+
+                    get_to_string_complex(array_inner_class)(array_inner, out_line, [&]([[maybe_unused]] void* prop) {
+                        // It's possible that a new line is supposed to be appended here
+                    });
+                }
+
+                callable(array_inner);
             }
-
-            callable(array_inner);
-        }
-        else
-        {
-            out_line.append(array_inner->GetFullName());
-            callable(array_inner);
+            else
+            {
+                out_line.append(array_inner->GetFullName());
+                callable(array_inner);
+            }
         }
     }
 
@@ -147,34 +170,37 @@ namespace RC::ObjectDumper
         FMapProperty* typed_this = static_cast<FMapProperty*>(p_this);
         FProperty* key_property = typed_this->GetKeyProp();
         FProperty* value_property = typed_this->GetValueProp();
-        auto key_property_class = key_property->GetClass().HashObject();
-        auto value_property_class = value_property->GetClass().HashObject();
+        if (key_property && value_property)
+        {
+            auto key_property_class = key_property->GetClass().HashObject();
+            auto value_property_class = value_property->GetClass().HashObject();
 
-        auto dump_property = [&](FProperty* property, ToStringHash property_class) {
-            if (to_string_exists(property_class))
-            {
-                get_to_string(property_class)(property, out_line);
-
-                if (to_string_complex_exists(property_class))
+            auto dump_property = [&](FProperty* property, ToStringHash property_class) {
+                if (to_string_exists(property_class))
                 {
-                    // If this code is executed then we'll be having another line before we return to the dumper, so we need to explicitly add a new line
-                    // If this code is not executed then we'll not be having another line and the dumper will add the new line
-                    out_line.append(STR("\n"));
+                    get_to_string(property_class)(property, out_line);
 
-                    get_to_string_complex(property_class)(property, out_line, [&]([[maybe_unused]] void* prop) {});
+                    if (to_string_complex_exists(property_class))
+                    {
+                        // If this code is executed then we'll be having another line before we return to the dumper, so we need to explicitly add a new line
+                        // If this code is not executed then we'll not be having another line and the dumper will add the new line
+                        out_line.append(STR("\n"));
+
+                        get_to_string_complex(property_class)(property, out_line, [&]([[maybe_unused]] void* prop) {});
+                    }
+
+                    callable(property);
                 }
+                else
+                {
+                    out_line.append(property->GetFullName());
+                    callable(property);
+                }
+            };
 
-                callable(property);
-            }
-            else
-            {
-                out_line.append(property->GetFullName());
-                callable(property);
-            }
-        };
-
-        dump_property(key_property, key_property_class);
-        dump_property(value_property, value_property_class);
+            dump_property(key_property, key_property_class);
+            dump_property(value_property, value_property_class);
+        }
     }
 
     auto classproperty_to_string(void* p_this, StringType& out_line) -> void
@@ -273,9 +299,35 @@ namespace RC::ObjectDumper
         out_line.append(fmt::format(STR(" [sps: {:016X}]"), reinterpret_cast<uintptr_t>(typed_this->GetSuperStruct())));
     }
 
-    auto function_to_string(void* p_this, StringType& out_line) -> void
+    auto function_to_string(void* p_this, StringType& out_line, std::unordered_set<UFunction*>* in_dumped_functions) -> void
     {
+        auto typed_this = static_cast<UFunction*>(p_this);
+
+        if (in_dumped_functions)
+        {
+            if (in_dumped_functions->contains(typed_this))
+            {
+                return;
+            }
+            else
+            {
+                in_dumped_functions->emplace(typed_this);
+            }
+        }
+
         object_trivial_dump_to_string(p_this, out_line, STR(":"));
+
+        static auto as_function_class = UObjectGlobals::StaticFindObject<UClass*>(nullptr, nullptr, STR("/Script/AngelscriptCode.ASFunction"));
+        if (!as_function_class || !typed_this->IsA(as_function_class))
+        {
+            out_line.append(fmt::format(STR(" [f: {:016X}]"), to_address(typed_this->GetFuncPtr())));
+        }
+        out_line.append(STR("\n"));
+
+        for (auto param : typed_this->ForEachProperty())
+        {
+            dump_xproperty(param, out_line);
+        }
     }
 
     auto scriptstruct_to_string_complex(void* p_this, StringType& out_line, ObjectToStringComplexDeclCallable callable) -> void
@@ -288,6 +340,29 @@ namespace RC::ObjectDumper
         }
     }
 
+    auto dump_xproperty(FProperty* property, StringType& out_line) -> void
+    {
+        auto typed_prop_class = property->GetClass().HashObject();
+
+        if (to_string_exists(typed_prop_class))
+        {
+            get_to_string(typed_prop_class)(property, out_line);
+            out_line.append(STR("\n"));
+
+            if (to_string_complex_exists(typed_prop_class))
+            {
+                get_to_string_complex(typed_prop_class)(property, out_line, [&]([[maybe_unused]] void* prop) {
+                    out_line.append(STR("\n"));
+                });
+            }
+        }
+        else
+        {
+            property_to_string(property, out_line);
+            out_line.append(STR("\n"));
+        }
+    }
+
     auto init() -> void
     {
         object_to_string_functions[UEnum::StaticClass()->HashObject()] = &enum_to_string;
@@ -296,7 +371,8 @@ namespace RC::ObjectDumper
         object_to_string_functions[UBlueprintGeneratedClass::StaticClass()->HashObject()] = &struct_to_string;
         object_to_string_functions[UWidgetBlueprintGeneratedClass::StaticClass()->HashObject()] = &struct_to_string;
         object_to_string_functions[UAnimBlueprintGeneratedClass::StaticClass()->HashObject()] = &struct_to_string;
-        object_to_string_functions[UFunction::StaticClass()->HashObject()] = &function_to_string;
+        // The 'function_to_string' function is explicitly called, so it doesn't need to be in this map.
+        // object_to_string_functions[UFunction::StaticClass()->HashObject()] = &function_to_string;
         // object_to_string_functions[UDelegateFunction::StaticClass()->HashObject()] = &function_to_string;
         // object_to_string_functions[USparseDelegateFunction::StaticClass()->HashObject()] = &function_to_string;
         object_to_string_functions[UScriptStruct::StaticClass()->HashObject()] = &struct_to_string;
