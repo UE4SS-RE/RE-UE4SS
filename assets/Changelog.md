@@ -310,6 +310,8 @@ Fixed errors being logged twice. ([UE4SS #833](https://github.com/UE4SS-RE/RE-UE
 Fixed `RegisterHook` and `UnregisterHook` not working properly with functions that have spaces in their
 names. ([UE4SS #827](https://github.com/UE4SS-RE/RE-UE4SS/pull/827)
 
+Fixed an error with Object properties causing stack corruption. ([UE4SS #939](https://github.com/UE4SS-RE/RE-UE4SS/pull/939)
+
 ### C++ API 
 Fixed a crash caused by a race condition enabled by C++ mods using `UE4SS_ENABLE_IMGUI` in their constructor ([UE4SS #481](https://github.com/UE4SS-RE/RE-UE4SS/pull/481)) 
 
