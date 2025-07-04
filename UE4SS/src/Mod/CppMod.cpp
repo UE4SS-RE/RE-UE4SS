@@ -4,7 +4,7 @@
 #include <Windows.h>
 
 #include <DynamicOutput/DynamicOutput.hpp>
-#include <Helpers/Win32Error.hpp>
+#include <Helpers/SysError.hpp>
 #include <Helpers/String.hpp>
 #include <Mod/CppMod.hpp>
 
@@ -29,7 +29,7 @@ namespace RC
         if (!m_main_dll_module)
         {
             Output::send<LogLevel::Warning>(STR("Failed to load dll <{}> for mod {}, error: {}\n"),
-                                            ensure_str(dll_path), m_mod_name, Win32Error(GetLastError()).c_str());
+                                            ensure_str(dll_path), m_mod_name, SysError(GetLastError()).c_str());
             set_installable(false);
             return;
         }

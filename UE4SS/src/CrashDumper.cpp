@@ -7,7 +7,7 @@
 
 #include <polyhook2/PE/IatHook.hpp>
 #include <dbghelp.h>
-#include <Helpers/Win32Error.hpp>
+#include <Helpers/SysError.hpp>
 #include <String/StringType.hpp>
 
 namespace fs = std::filesystem;
@@ -33,7 +33,7 @@ namespace RC
 
         if (file == INVALID_HANDLE_VALUE)
         {
-            const StringType message = fmt::format(STR("Failed to create crashdump file, reason: {}"), Win32Error(GetLastError()).c_str());
+            const StringType message = fmt::format(STR("Failed to create crashdump file, reason: {}"), SysError(GetLastError()).c_str());
             MessageBoxW(NULL, FromCharTypePtr<wchar_t>(message.c_str()), L"Fatal Error!", MB_OK);
             return EXCEPTION_CONTINUE_SEARCH;
         }
@@ -55,7 +55,7 @@ namespace RC
 
         if (!ok)
         {
-            const StringType message = fmt::format(STR("Failed to write crashdump file, reason: {}"), Win32Error(GetLastError()).c_str());
+            const StringType message = fmt::format(STR("Failed to write crashdump file, reason: {}"), SysError(GetLastError()).c_str());
             MessageBoxW(NULL, FromCharTypePtr<wchar_t>(message.c_str()), L"Fatal Error!", MB_OK);
             return EXCEPTION_CONTINUE_SEARCH;
         }
