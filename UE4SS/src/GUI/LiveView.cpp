@@ -1987,12 +1987,36 @@ namespace RC::GUI
                         ImGui::Text("Inner");
                         if (auto array_property_inner = CastField<FArrayProperty>(property)->GetInner())
                         {
-                            ImGui::TreeNodeEx(to_string(array_property_inner->GetFullName()).c_str(), ImGuiTreeNodeFlags_Leaf);
-                            if (ImGui::IsItemClicked())
+                            bool is_inner_struct = CastField<FStructProperty>(array_property_inner) != nullptr;
+                            if (ImGui::TreeNodeEx(to_string(array_property_inner->GetFullName()).c_str(), is_inner_struct ? 0 : ImGuiTreeNodeFlags_Leaf) && is_inner_struct)
                             {
-                                select_property(0, array_property_inner, AffectsHistory::Yes);
+                                ImGui::Indent();
+                                ImGui::Text("Struct");
+                                auto inner_struct_property = CastField<FStructProperty>(array_property_inner);
+                                auto inner_struct_property_struct = inner_struct_property->GetStruct();
+                                if (ImGui::TreeNode(get_object_full_name(inner_struct_property_struct)))
+                                {
+                                    render_struct_sub_tree_hierarchy(inner_struct_property_struct);
+                                    ImGui::TreePop();
+                                }
+                                else
+                                {
+                                    if (ImGui::IsItemClicked())
+                                    {
+                                        select_object(0, inner_struct_property_struct->GetObjectItem(), inner_struct_property_struct, AffectsHistory::Yes);
+                                    }
+                                }
+                                ImGui::Unindent();
+                                ImGui::TreePop();
                             }
-                            ImGui::TreePop();
+                            else
+                            {
+                                if (ImGui::IsItemClicked())
+                                {
+                                    select_property(0, array_property_inner, AffectsHistory::Yes);
+                                }
+                            }
+                            if (!is_inner_struct) ImGui::TreePop();
                         }
                     }
                     ImGui::Unindent();
