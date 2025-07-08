@@ -1957,12 +1957,37 @@ namespace RC::GUI
         {
             for (FProperty* property : ustruct->ForEachProperty())
             {
-                ImGui::TreeNodeEx(to_string(property->GetFullName()).c_str(), ImGuiTreeNodeFlags_Leaf);
-                if (ImGui::IsItemClicked())
+                bool is_struct_property = CastField<FStructProperty>(property) != nullptr;
+                if (ImGui::TreeNodeEx(to_string(property->GetFullName()).c_str(), is_struct_property ? 0 : ImGuiTreeNodeFlags_Leaf) && is_struct_property)
                 {
-                    select_property(0, property, AffectsHistory::Yes);
+                    ImGui::Indent();
+                    ImGui::Text("Struct");
+                    if (auto struct_property_struct = CastField<FStructProperty>(property)->GetStruct())
+                    {
+                        if (ImGui::TreeNode(get_object_full_name(struct_property_struct)))
+                        {
+                            render_struct_sub_tree_hierarchy(struct_property_struct);
+                            ImGui::TreePop();
+                        }
+                        else
+                        {
+                            if (ImGui::IsItemClicked())
+                            {
+                                select_object(0, struct_property_struct->GetObjectItem(), struct_property_struct, AffectsHistory::Yes);
+                            }
+                        }
+                    }
+                    ImGui::Unindent();
+                    ImGui::TreePop();
                 }
-                ImGui::TreePop();
+                else
+                {
+                    if (ImGui::IsItemClicked())
+                    {
+                        select_property(0, property, AffectsHistory::Yes);
+                    }
+                }
+                if (!is_struct_property) ImGui::TreePop();
             }
             ImGui::TreePop();
         }
