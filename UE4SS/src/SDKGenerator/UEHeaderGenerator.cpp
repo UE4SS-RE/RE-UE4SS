@@ -768,7 +768,7 @@ namespace RC::UEGenerator
                                                              return_value_declaration,
                                                              delegate_type_name,
                                                              // TODO: Actually get delegate property name.
-                                                             is_sparse ? fmt::format(STR("{}, {}"), owning_class, STR("EnterPropertyName")) : STR(""),
+                                                             is_sparse ? fmt::format(STR(", {}, {}"), owning_class, STR("EnterPropertyName")) : STR(""),
                                                              delegate_parameter_list);
 
         header_data.append_line(delegate_declaration_string);
