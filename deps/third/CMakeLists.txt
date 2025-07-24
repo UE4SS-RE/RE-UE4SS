@@ -18,6 +18,9 @@ FetchContent_MakeAvailable(glaze)
 # GLFW
 add_subdirectory("GLFW")
 
+# glad (OpenGL loader)
+add_subdirectory("glad")
+
 # ImGui and related libraries
 FetchContent_Declare(
     ImGui
