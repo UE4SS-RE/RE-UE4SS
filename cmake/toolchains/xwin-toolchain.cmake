@@ -87,3 +87,14 @@ set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreadedDLL" CACHE STRING "" FORCE)
 # Skip compiler checks if needed
 set(CMAKE_C_COMPILER_WORKS 1)
 set(CMAKE_CXX_COMPILER_WORKS 1)
+
+# Override CMake's default libraries to avoid Unix libraries
+set(CMAKE_C_STANDARD_LIBRARIES "-lkernel32 -luser32 -lgdi32 -lwinspool -lshell32 -lole32 -loleaut32 -luuid -lcomdlg32 -ladvapi32 -loldnames" CACHE STRING "" FORCE)
+set(CMAKE_CXX_STANDARD_LIBRARIES "-lkernel32 -luser32 -lgdi32 -lwinspool -lshell32 -lole32 -loleaut32 -luuid -lcomdlg32 -ladvapi32 -loldnames" CACHE STRING "" FORCE)
+
+# Configure Rust for cross-compilation
+set(Rust_CARGO_TARGET "x86_64-pc-windows-msvc" CACHE STRING "" FORCE)
+
+# Disable platform-specific libraries that don't exist on Windows
+set(CMAKE_DL_LIBS "" CACHE STRING "" FORCE)
+set(CMAKE_THREAD_LIBS_INIT "" CACHE STRING "" FORCE)
