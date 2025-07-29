@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.18)
+cmake_minimum_required(VERSION 3.22)
 
 set(TARGET ArgsParser)
 project(${TARGET})
@@ -13,8 +13,8 @@ string(TOUPPER ${MODULE_NAME} MODULE_NAME)
 add_library(${TARGET} INTERFACE)
 target_include_directories(${TARGET} INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/include)
 
-# Enabling c++20 support
-target_compile_features(${TARGET} INTERFACE cxx_std_20)
+# Enabling c++23 support
+target_compile_features(${TARGET} INTERFACE cxx_std_23)
 
 # First-party dependencies
 target_link_libraries(${TARGET} INTERFACE Helpers)
