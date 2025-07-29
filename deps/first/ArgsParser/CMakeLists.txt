@@ -19,5 +19,9 @@ target_compile_features(${TARGET} INTERFACE cxx_std_23)
 # First-party dependencies
 target_link_libraries(${TARGET} INTERFACE Helpers)
 
+# Make headers visible in the IDE
+# Uses make_headers_visible() from cmake/modules/IDEVisibility.cmake
+make_headers_visible(${TARGET} "${CMAKE_CURRENT_SOURCE_DIR}/include")
+
 add_executable(${TARGET}_DEV_TEST "${CMAKE_CURRENT_SOURCE_DIR}/src/${TARGET}/main.cpp")
 target_link_libraries(${TARGET}_DEV_TEST ArgsParser)
