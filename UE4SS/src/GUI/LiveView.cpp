@@ -3976,7 +3976,7 @@ namespace RC::GUI
             {
                 if (objects_to_draw[i] == m_currently_opened_tree_node)
                 {
-                    clipper.ForceDisplayRangeByIndices(i, i + 1);
+                    clipper.IncludeItemsByIndex(i, i + 1);
                     break;
                 }
             }
