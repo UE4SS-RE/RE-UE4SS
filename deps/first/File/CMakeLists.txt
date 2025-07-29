@@ -30,3 +30,9 @@ target_compile_definitions(${TARGET} PRIVATE
             RC_${MODULE_NAME}_BUILD_STATIC>)
 
 target_include_directories(${TARGET} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
+
+target_link_libraries(${TARGET} PUBLIC fmt Helpers String)
+
+# Make headers visible in the IDE
+# Uses make_headers_visible() from cmake/modules/IDEVisibility.cmake
+make_headers_visible(${TARGET} "${CMAKE_CURRENT_SOURCE_DIR}/include")
