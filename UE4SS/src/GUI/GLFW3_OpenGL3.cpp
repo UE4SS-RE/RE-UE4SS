@@ -42,7 +42,7 @@ namespace RC::GUI
         }
         glfwMakeContextCurrent(m_window);
         glfwSwapInterval(1); // Enable vsync
-
+        
         if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress))
         {
             throw std::runtime_error{"Was unable to initialize glad"};
