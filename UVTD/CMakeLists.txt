@@ -4,21 +4,14 @@ set(TARGET UnrealVTableDumper)
 project(${TARGET})
 message("Project: UnrealVTableDumper")
 
-set(${TARGET}_Sources
-        "${CMAKE_CURRENT_SOURCE_DIR}/src/main.cpp"
-        "${CMAKE_CURRENT_SOURCE_DIR}/src/Helpers.cpp"
-        "${CMAKE_CURRENT_SOURCE_DIR}/src/UVTD.cpp"
-        "${CMAKE_CURRENT_SOURCE_DIR}/src/Symbols.cpp"
-        "${CMAKE_CURRENT_SOURCE_DIR}/src/TypeContainer.cpp"
-        "${CMAKE_CURRENT_SOURCE_DIR}/src/VTableDumper.cpp"
-        "${CMAKE_CURRENT_SOURCE_DIR}/src/UnrealVirtualGenerator.cpp"
-        "${CMAKE_CURRENT_SOURCE_DIR}/src/TemplateClassParser.cpp"
-        "${CMAKE_CURRENT_SOURCE_DIR}/src/MemberVarsDumper.cpp"
-        "${CMAKE_CURRENT_SOURCE_DIR}/src/MemberVarsWrapperGenerator.cpp"
-        "${CMAKE_CURRENT_SOURCE_DIR}/src/SolBindingsGenerator.cpp"
-        )
+# Use glob to find all source files
+file(GLOB_RECURSE ${TARGET}_Sources "${CMAKE_CURRENT_SOURCE_DIR}/src/**.cpp")
+file(GLOB_RECURSE ${TARGET}_Headers "${CMAKE_CURRENT_SOURCE_DIR}/include/**.hpp")
 
-add_executable(${TARGET} ${${TARGET}_Sources})
+add_executable(${TARGET} ${${TARGET}_Sources} ${${TARGET}_Headers})
+
+# Organize sources in IDE
+source_group(TREE "${CMAKE_CURRENT_LIST_DIR}" FILES ${${TARGET}_Sources} ${${TARGET}_Headers})
 
 if (NOT UE4SS_NO_CUSTOM_FLAGS)
         target_compile_options(${TARGET} PUBLIC "${PRIVATE_COMPILE_OPTIONS}")
@@ -49,4 +42,7 @@ target_compile_definitions(${TARGET} PRIVATE
 target_link_libraries(${TARGET} PRIVATE
     File Input DynamicOutput Helpers)
 
-target_link_libraries(${TARGET} PRIVATE raw_pdb)
+target_link_libraries(${TARGET} PRIVATE glaze::glaze raw_pdb)
+
+# Set IDE folder - make sure to use capital P for Programs
+set_target_properties(${TARGET} PROPERTIES FOLDER "Programs")
