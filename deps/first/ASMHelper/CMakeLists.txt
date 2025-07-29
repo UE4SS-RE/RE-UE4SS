@@ -28,6 +28,16 @@ target_compile_definitions(${TARGET} PRIVATE
         $<$<NOT:$<BOOL:${UE4SS_${TARGET}_BUILD_SHARED}>>:
             RC_${MODULE_NAME}_BUILD_STATIC>)
 
+if (NOT ${UE4SS_${TARGET}_BUILD_SHARED})
+    target_compile_definitions(${TARGET} PRIVATE
+            RC_DYNAMIC_OUTPUT_BUILD_STATIC
+    )
+endif ()
+
 target_include_directories(${TARGET} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
 
 target_link_libraries(${TARGET} PUBLIC File DynamicOutput Zydis Constructs)
+
+# Make headers visible in the IDE
+# Uses make_headers_visible() from cmake/modules/IDEVisibility.cmake
+make_headers_visible(${TARGET} "${CMAKE_CURRENT_SOURCE_DIR}/include")

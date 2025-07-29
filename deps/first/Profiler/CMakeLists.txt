@@ -7,11 +7,9 @@ set(TARGET Profiler)
 project(${TARGET})
 message("Project: ${TARGET} (HEADER-ONLY)")
 
-set(ProfilerFlavors Tracy Superluminal)
-set(RC_PROFILER_FLAVOR Tracy CACHE STRING "Profiler flavor")
+set(ProfilerFlavors Tracy Superluminal None)
+set(RC_PROFILER_FLAVOR Tracy CACHE STRING "Profiler flavor (Tracy, Superluminal, or None)")
 set_property(CACHE RC_PROFILER_FLAVOR PROPERTY STRINGS ${ProfilerFlavors})
-
-option(RC_PROFILER_DISABLE "Disable profiling" OFF)
 
 add_library(${TARGET} INTERFACE)
 
@@ -20,11 +18,13 @@ target_compile_features(${TARGET} INTERFACE cxx_std_23)
 
 target_include_directories(${TARGET} INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/include)
 
-if (${RC_PROFILER_DISABLE})
-    target_compile_definitions(${TARGET} INTERFACE DISABLE_PROFILER)
-endif ()
+# Make headers visible in the IDE
+# Uses make_headers_visible() from cmake/modules/IDEVisibility.cmake
+make_headers_visible(${TARGET} "${CMAKE_CURRENT_SOURCE_DIR}/include")
 
-if (${RC_PROFILER_FLAVOR} STREQUAL Tracy)
+if (${RC_PROFILER_FLAVOR} STREQUAL None)
+    target_compile_definitions(${TARGET} INTERFACE DISABLE_PROFILER IS_TRACY=0 IS_SUPERLUMINAL=0)
+elseif (${RC_PROFILER_FLAVOR} STREQUAL Tracy)
     # Tracy start
     FetchContent_Declare(Tracy
         GIT_REPOSITORY git@github.com:wolfpld/tracy.git
