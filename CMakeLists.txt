@@ -56,8 +56,8 @@ perform_version_checks()
 # Set default output directories
 # These create the structure: ${CMAKE_BINARY_DIR}/Output/$<CONFIG>/${CMAKE_INSTALL_BINDIR}/
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/Output/$<CONFIG>/${CMAKE_INSTALL_BINDIR})
-set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/Output/$<CONFIG>/${CMAKE_INSTALL_BINDIR})
-set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/Output/$<CONFIG>/${CMAKE_INSTALL_BINDIR})
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/Output/$<CONFIG>/${CMAKE_INSTALL_LIBDIR})
+set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/Output/$<CONFIG>/${CMAKE_INSTALL_LIBDIR})
 
 # Build configurations are now defined in ProjectConfig.cmake
 
@@ -77,6 +77,10 @@ list(APPEND LessEqual421_FLAGS ${Game_FLAGS})
 # Generate build configurations
 # Uses generate_build_configurations() from cmake/modules/Utilities.cmake
 generate_build_configurations()
+
+# Set default configuration
+# Uses setup_build_config() from cmake/modules/Utilities.cmake
+setup_build_config()
 
 # Add subdirectories for dependencies and projects
 add_subdirectory("deps")
@@ -98,7 +102,3 @@ endif()
 # Apply compiler settings to all targets
 # Uses apply_compiler_settings_to_targets() from cmake/modules/IDEOrganization.cmake
 apply_compiler_settings_to_targets("${TARGET_COMPILE_OPTIONS}" "${TARGET_LINK_OPTIONS}" "${TARGET_COMPILE_DEFINITIONS}")
-
-# Set default configuration
-# Uses setup_build_config() from cmake/modules/Utilities.cmake
-setup_build_config()
