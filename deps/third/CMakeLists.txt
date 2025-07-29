@@ -30,16 +30,14 @@ FetchContent_Declare(
     GIT_TAG v1.92.1
     GIT_SHALLOW TRUE
     GIT_PROGRESS ON
-    CONFIGURE_COMMAND ""
 )
     
 FetchContent_Declare(
     ImGuiTextEdit
     GIT_REPOSITORY https://github.com/UE4SS-RE/ImGuiColorTextEdit.git
-    GIT_TAG master
+    GIT_TAG v1.2.0
     GIT_SHALLOW TRUE
     GIT_PROGRESS ON
-    CONFIGURE_COMMAND ""
 )
     
 FetchContent_Declare(
@@ -48,7 +46,6 @@ FetchContent_Declare(
     GIT_TAG main
     GIT_SHALLOW TRUE
     GIT_PROGRESS ON
-    CONFIGURE_COMMAND ""
 )
 add_subdirectory("imgui")
 
