@@ -38,6 +38,12 @@ function(patch_macro_conflict)
         message(FATAL_ERROR "patch_macro_conflict: GUARD_PREFIX is required")
     endif()
     
+    # Check if file exists
+    if(NOT EXISTS "${PATCH_FILE_PATH}")
+        message(WARNING "Macro patch for '${PATCH_MACRO_NAME}' FAILED: File not found: ${PATCH_FILE_PATH}")
+        return()
+    endif()
+    
     # Set defaults for optional arguments
     if(NOT PATCH_INSERT_AFTER)
         set(PATCH_INSERT_AFTER "#define.*_H_[^\n]*\n|#pragma once[^\n]*\n")
@@ -52,6 +58,13 @@ function(patch_macro_conflict)
     # Create the guard macro name
     set(GUARD_MACRO "${PATCH_GUARD_PREFIX}_HAD_${PATCH_MACRO_NAME}")
     string(TOUPPER "${GUARD_MACRO}" GUARD_MACRO)
+    
+    # Check if patch has already been applied
+    string(FIND "${FILE_CONTENT}" "${GUARD_MACRO}" PATCH_FOUND)
+    if(NOT PATCH_FOUND EQUAL -1)
+        message(STATUS "Macro patch for '${PATCH_MACRO_NAME}' already applied to ${PATCH_FILE_PATH}")
+        return()
+    endif()
     
     # Create the guard code
     set(MACRO_GUARD "
@@ -72,6 +85,9 @@ function(patch_macro_conflict)
 #endif
 ")
     
+    # Track if we successfully applied the patch
+    set(PATCH_SUCCESS TRUE)
+    
     # Find where to insert the guard
     string(REGEX MATCH "${PATCH_INSERT_AFTER}" INSERT_MATCH "${FILE_CONTENT}")
     if(INSERT_MATCH)
@@ -81,6 +97,8 @@ function(patch_macro_conflict)
         message(WARNING "Could not find insertion point '${PATCH_INSERT_AFTER}' in ${PATCH_FILE_PATH}")
         # Try to insert at the beginning as fallback
         set(FILE_CONTENT "${MACRO_GUARD}${FILE_CONTENT}")
+        message(WARNING "Inserted macro guard at beginning of file as fallback")
+        set(PATCH_SUCCESS FALSE)
     endif()
     
     # Find where to restore
@@ -92,10 +110,19 @@ function(patch_macro_conflict)
         message(WARNING "Could not find restore point '${PATCH_RESTORE_BEFORE}' in ${PATCH_FILE_PATH}")
         # Append at the end as fallback
         set(FILE_CONTENT "${FILE_CONTENT}${MACRO_RESTORE}")
+        message(WARNING "Appended macro restore at end of file as fallback")
+        set(PATCH_SUCCESS FALSE)
     endif()
     
     # Write the patched file
     file(WRITE "${PATCH_FILE_PATH}" "${FILE_CONTENT}")
+    
+    # Report completion status
+    if(PATCH_SUCCESS)
+        message(STATUS "Macro patch for '${PATCH_MACRO_NAME}' completed successfully in ${PATCH_FILE_PATH}")
+    else()
+        message(WARNING "Macro patch for '${PATCH_MACRO_NAME}' completed with fallback behavior in ${PATCH_FILE_PATH}")
+    endif()
 endfunction()
 
 # Convenience function to patch multiple macros in the same file

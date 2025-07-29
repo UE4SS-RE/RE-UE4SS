@@ -41,6 +41,34 @@ unset(MSVC)
 
 FetchContent_MakeAvailable(PolyHook2)
 
+# Override PolyHook's C++ standard to match ours
+if(TARGET PolyHook_2)
+    set_target_properties(PolyHook_2 PROPERTIES CXX_STANDARD 23)
+    set_target_properties(PolyHook_2 PROPERTIES CXX_STANDARD_REQUIRED ON)
+endif()
+
+# Suppress warnings from PolyHook and all its dependencies
+# Uses suppress_third_party_warnings() from cmake/modules/ThirdPartyWarnings.cmake
+suppress_third_party_warnings(PolyHook_2)
+
+# Also suppress warnings for asmjit, asmtk, Zydis, and Zycore if they exist
+if(TARGET asmjit)
+    suppress_third_party_warnings(asmjit)
+endif()
+if(TARGET asmtk)
+    suppress_third_party_warnings(asmtk)
+endif()
+if(TARGET Zydis)
+    suppress_third_party_warnings(Zydis)
+endif()
+if(TARGET Zycore)
+    suppress_third_party_warnings(Zycore)
+endif()
+
+# Use the generic helper function to organize asmjit and asmtk targets
+# Uses organize_targets() from cmake/modules/IDEOrganization.cmake
+organize_targets("^asmjit|^asmtk" "deps/third")
+
 # re-enable 'install' and reset 'MSVC' since we're done adding PolyHook
 set(MSVC ${TMP_MSVC})
 set(_DISABLE_INSTALL FALSE)

@@ -17,3 +17,7 @@ set(ASMTK_NO_CUSTOM_FLAGS ON CACHE BOOL "" FORCE)
 set(ASMJIT_NO_CUSTOM_FLAGS ON CACHE BOOL "" FORCE)
 
 FetchContent_MakeAvailable(zydis)
+
+# Suppress warnings from zydis and zycore
+# Uses suppress_third_party_warnings() from cmake/modules/ThirdPartyWarnings.cmake
+suppress_third_party_warnings(Zydis Zycore)
