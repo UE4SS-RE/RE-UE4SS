@@ -53,7 +53,7 @@ add_subdirectory("imgui")
 FetchContent_Declare(
     zydis
     GIT_REPOSITORY https://github.com/zyantific/zydis.git
-    GIT_TAG v4.1.0
+    GIT_TAG v4.1.1
     GIT_SHALLOW TRUE
     GIT_PROGRESS ON
 )
@@ -63,7 +63,7 @@ add_subdirectory("zydis")
 FetchContent_Declare(
     PolyHook2
     GIT_REPOSITORY https://github.com/stevemk14ebr/PolyHook_2_0.git
-    GIT_TAG fd2a88f09c8ae89440858fc52573656141013c7f
+    GIT_TAG 298d56210b9d9e66cde8f96481d6053925c6ae15
     GIT_PROGRESS ON
 )
 add_subdirectory("PolyHook_2_0")
