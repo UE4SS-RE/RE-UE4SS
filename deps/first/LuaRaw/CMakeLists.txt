@@ -67,6 +67,10 @@ target_compile_definitions(${TARGET} PRIVATE
         RC_${MODULE_NAME}_EXPORTS
         $<$<NOT:$<BOOL:${UE4SS_${TARGET}_BUILD_SHARED}>>:
             RC_${MODULE_NAME}_BUILD_STATIC>)
+            
+# Make headers visible in the IDE
+# Uses make_headers_visible() from cmake/modules/IDEVisibility.cmake
+make_headers_visible(${TARGET} "${CMAKE_CURRENT_SOURCE_DIR}/include")
 
 if (${CMAKE_CXX_COMPILER_ID} STREQUAL MSVC)
     target_compile_options(${TARGET} PRIVATE /W0)
