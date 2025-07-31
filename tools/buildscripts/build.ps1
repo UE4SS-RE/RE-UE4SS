@@ -175,6 +175,19 @@ if ($Clean) {
 New-Item -ItemType Directory -Force -Path $BuildDir | Out-Null
 Push-Location $BuildDir
 
+# Create .gitignore to prevent accidental commits of build artifacts
+$GitIgnorePath = Join-Path $BuildDir ".gitignore"
+if (-not (Test-Path $GitIgnorePath)) {
+    @"
+# Automatically generated .gitignore for build directory
+# This prevents accidental commits of build artifacts
+
+# Ignore everything in this directory
+*
+"@ | Out-File -FilePath $GitIgnorePath -Encoding UTF8
+    Write-Info "Created .gitignore in build directory"
+}
+
 try {
     # Configure with CMake
     Write-Info "Configuring with CMake..."

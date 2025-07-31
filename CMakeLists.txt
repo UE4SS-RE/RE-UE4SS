@@ -22,6 +22,7 @@ include(ThirdPartyWarnings) # For suppressing warnings from third-party librarie
 include(CompilerDetection)  # For compiler detection and reporting
 include(ProjectConfig)      # For centralized project configuration
 include(VersionChecks)      # For compiler and tool version checking
+include(ArchitectureDetection) # For CPU architecture and feature detection
 
 # Check IPO/LTO support
 check_ipo_supported(RESULT IPO_SUPPORTED OUTPUT IPO_ERROR)

@@ -256,6 +256,18 @@ fi
 mkdir -p "$BUILD_DIR"
 cd "$BUILD_DIR"
 
+# Create .gitignore to prevent accidental commits of build artifacts
+if [ ! -f ".gitignore" ]; then
+    cat > .gitignore << 'EOF'
+# Automatically generated .gitignore for build directory
+# This prevents accidental commits of build artifacts
+
+# Ignore everything in this directory
+*
+EOF
+    print_info "Created .gitignore in build directory"
+fi
+
 # Configure with CMake
 print_info "Configuring with CMake..."
 if [ $VERBOSE -eq 1 ]; then

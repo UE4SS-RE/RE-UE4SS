@@ -23,56 +23,119 @@ if(NOT iconfontcppheaders_POPULATED)
 endif()
 FetchContent_GetProperties(IconFontCppHeaders SOURCE_DIR IconFontCppHeaders_SOURCE_DIR)
 
-set(ImGui_Sources
+# Backend options - automatically enable based on platform
+option(IMGUI_BACKEND_WIN32 "Enable Win32 backend" ${WIN32})
+option(IMGUI_BACKEND_DX11 "Enable DirectX 11 backend" ${WIN32})
+option(IMGUI_BACKEND_OPENGL3 "Enable OpenGL 3 backend" ON)
+option(IMGUI_BACKEND_GLFW "Enable GLFW backend" ON)
+
+# Core ImGui sources (always included)
+set(ImGui_Core_Sources
     "${ImGui_SOURCE_DIR}/imgui.cpp"
     "${ImGui_SOURCE_DIR}/imgui_draw.cpp"
     "${ImGui_SOURCE_DIR}/imgui_tables.cpp"
     "${ImGui_SOURCE_DIR}/imgui_widgets.cpp"
     "${ImGui_SOURCE_DIR}/imgui_demo.cpp"
     "${ImGui_SOURCE_DIR}/misc/cpp/imgui_stdlib.cpp"
-    "${ImGui_SOURCE_DIR}/backends/imgui_impl_win32.cpp"
-    "${ImGui_SOURCE_DIR}/backends/imgui_impl_dx11.cpp"
-    "${ImGui_SOURCE_DIR}/backends/imgui_impl_opengl3.cpp"
-    "${ImGui_SOURCE_DIR}/backends/imgui_impl_glfw.cpp"
     "${ImGuiTextEdit_SOURCE_DIR}/TextEditor.cpp")
 
-add_library(ImGui ${ImGui_Sources})
+# Platform-specific backend sources
+set(ImGui_Backend_Sources)
+
+# Win32 backend (Windows only)
+if(IMGUI_BACKEND_WIN32 AND WIN32)
+    list(APPEND ImGui_Backend_Sources "${ImGui_SOURCE_DIR}/backends/imgui_impl_win32.cpp")
+    message(STATUS "ImGui: Enabled Win32 backend")
+endif()
+
+# DirectX 11 backend (Windows only)
+if(IMGUI_BACKEND_DX11 AND WIN32)
+    list(APPEND ImGui_Backend_Sources "${ImGui_SOURCE_DIR}/backends/imgui_impl_dx11.cpp")
+    message(STATUS "ImGui: Enabled DirectX 11 backend")
+endif()
+
+# OpenGL 3 backend (cross-platform)
+if(IMGUI_BACKEND_OPENGL3)
+    list(APPEND ImGui_Backend_Sources "${ImGui_SOURCE_DIR}/backends/imgui_impl_opengl3.cpp")
+    message(STATUS "ImGui: Enabled OpenGL 3 backend")
+endif()
+
+# GLFW backend (cross-platform)
+if(IMGUI_BACKEND_GLFW)
+    list(APPEND ImGui_Backend_Sources "${ImGui_SOURCE_DIR}/backends/imgui_impl_glfw.cpp")
+    message(STATUS "ImGui: Enabled GLFW backend")
+endif()
+
+# Create the library with core + selected backends
+add_library(ImGui ${ImGui_Core_Sources} ${ImGui_Backend_Sources})
 
 # Enabling c++23 support
 target_compile_features(ImGui PUBLIC cxx_std_23)
 
-# Fix offsetof macro issue with Windows SDK
-# if(CMAKE_SYSTEM_NAME STREQUAL "Windows" AND CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
-    # # Comment out the problematic static asserts by disabling them
-    # target_compile_options(ImGui PRIVATE -Wno-invalid-offsetof)
-    # target_compile_definitions(ImGui PRIVATE 
-        # _CRT_USE_BUILTIN_OFFSETOF
-    # )
-# endif()
+# Platform-specific compile definitions
+if(WIN32)
+    target_compile_definitions(ImGui PUBLIC IMGUI_IMPL_WIN32_DISABLE_GAMEPAD)
+endif()
 
-target_link_libraries(ImGui PUBLIC glfw)
+# Handle platform-specific linking
+set(ImGui_Link_Libraries)
 
+# GLFW is required only if GLFW backend is enabled
+if(IMGUI_BACKEND_GLFW)
+    if(TARGET glfw)
+        list(APPEND ImGui_Link_Libraries glfw)
+    else()
+        message(WARNING "ImGui: GLFW backend enabled but glfw target not found")
+    endif()
+endif()
+
+# DirectX 11 libraries (Windows only)
+if(IMGUI_BACKEND_DX11 AND WIN32)
+    list(APPEND ImGui_Link_Libraries d3d11 d3dcompiler dxgi)
+endif()
+
+# OpenGL libraries
+if(IMGUI_BACKEND_OPENGL3)
+    if(WIN32)
+        list(APPEND ImGui_Link_Libraries opengl32)
+    elseif(APPLE)
+        find_package(OpenGL REQUIRED)
+        list(APPEND ImGui_Link_Libraries ${OPENGL_LIBRARIES})
+    else()
+        find_package(OpenGL REQUIRED)
+        list(APPEND ImGui_Link_Libraries ${OPENGL_LIBRARIES})
+    endif()
+endif()
+
+# Link the libraries
+if(ImGui_Link_Libraries)
+    target_link_libraries(ImGui PUBLIC ${ImGui_Link_Libraries})
+endif()
+
+# Include directories
 target_include_directories(ImGui PUBLIC 
     "${ImGui_SOURCE_DIR}"
     "${ImGuiTextEdit_SOURCE_DIR}"
     "${IconFontCppHeaders_SOURCE_DIR}")
 
-# Configure ImGui based on target platform and compiler
-# Check if we're cross-compiling from Linux to Windows
-if(CMAKE_SYSTEM_NAME STREQUAL "Windows" AND CMAKE_HOST_SYSTEM_NAME STREQUAL "Linux")
-    # Cross-compiling - disable SSE to avoid intrinsics linking issues
-    message(WARNING "Configuring ImGui without SSE support (cross-compilation from Linux to Windows)")
-    target_compile_definitions(ImGui PRIVATE IMGUI_DISABLE_SSE)
-elseif(CMAKE_SYSTEM_PROCESSOR STREQUAL "x86_64" OR CMAKE_SYSTEM_PROCESSOR STREQUAL "AMD64")
-    # Native builds or other configurations can use SSE
-    message(STATUS "Configuring ImGui with SSE support")
-    target_compile_options(ImGui PRIVATE -msse -msse2)
-else()
-    # Non-x86_64 architectures
-    message(STATUS "Configuring ImGui without SSE support (non-x86_64 architecture)")
-    target_compile_definitions(ImGui PRIVATE IMGUI_DISABLE_SSE)
-endif()
+# Debug: Check cross-compilation status
+message(STATUS "ImGui: CMAKE_CROSSCOMPILING = ${CMAKE_CROSSCOMPILING}")
+message(STATUS "ImGui: CMAKE_SYSTEM_NAME = ${CMAKE_SYSTEM_NAME}")
+message(STATUS "ImGui: CMAKE_SYSTEM_PROCESSOR = ${CMAKE_SYSTEM_PROCESSOR}")
+message(STATUS "ImGui: CMAKE_HOST_SYSTEM_NAME = ${CMAKE_HOST_SYSTEM_NAME}")
+message(STATUS "ImGui: CMAKE_CXX_COMPILER_ID = ${CMAKE_CXX_COMPILER_ID}")
 
-# Suppress warnings from ImGui
-# Uses suppress_current_third_party_warnings() from cmake/modules/ThirdPartyWarnings.cmake
+# Configure SSE2 support for ImGui
+# This properly handles different architectures and compilers
+# Disable SSE2 when cross-compiling to avoid potential issues
+detect_sse2(ImGui 
+    DEFINE_IF_DISABLED IMGUI_DISABLE_SSE
+    DISABLE_ON_CROSS_COMPILE
+)
+
+# Debug: Check what defines were set
+get_target_property(imgui_defines ImGui COMPILE_DEFINITIONS)
+message(STATUS "ImGui: COMPILE_DEFINITIONS = ${imgui_defines}")
+
+# Suppress warnings from ImGui using the project's system
 suppress_current_third_party_warnings()
