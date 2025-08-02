@@ -1518,6 +1518,11 @@ Overloads:
             return 0;
         });
 
+        table.add_pair("Set", [](const LuaMadeSimple::Lua& lua) -> int {
+            prepare_to_handle(Operation::Set, lua);
+            return 0;
+        });
+
         // This class is not overridable so this is always the final class and because of that we always want to set the type & make it global
         table.add_pair("type", [](const LuaMadeSimple::Lua& lua) -> int {
             lua.set_string("RemoteUnrealParam");
