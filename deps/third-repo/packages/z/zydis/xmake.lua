@@ -2,7 +2,7 @@ package("zydis")
     add_urls("git@github.com:zyantific/zydis.git")
     add_urls("https://github.com/zyantific/zydis.git")
 
-    add_versions("v4.1.1", "a2278f1d254e492f6a6b39f6cb5d1f5d515659dc")
+    add_versions("v4.1.0", "v4.1.1", "a2278f1d254e492f6a6b39f6cb5d1f5d515659dc")
 
     add_deps("zycore", "cmake")
 
