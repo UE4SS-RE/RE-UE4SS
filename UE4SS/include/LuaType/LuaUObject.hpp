@@ -841,6 +841,11 @@ Overloads:
                 return 1;
             });
 
+            table.add_pair("Set", [](const LuaMadeSimple::Lua& lua) -> int {
+                prepare_to_handle(Operation::Set, lua);
+                return 0;
+            });
+
             table.add_pair("set", [](const LuaMadeSimple::Lua& lua) -> int {
                 prepare_to_handle(Operation::Set, lua);
                 return 0;
