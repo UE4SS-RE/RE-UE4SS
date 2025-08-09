@@ -268,6 +268,9 @@ Fixed crash caused by using invalid iterator. ([UE4SS #771](https://github.com/U
 Fixed opened object getting clipped too early ([UE4SS #814](https://github.com/UE4SS-RE/RE-UE4SS/pull/814)) -
 Corporalwill123
 
+Made StructProperty and ArrayProperty Expandable, making contained properties directly viewable ([UE4SS #943](https://github.com/UE4SS-RE/RE-UE4SS/pull/943)) -
+Corporalwill123
+
 ### UHT Dumper 
 Fix SetupAttachment implementations randomly changing order ([UE4SS #606](https://github.com/UE4SS-RE/RE-UE4SS/pull/606)) - Buckminsterfullerene 
 
