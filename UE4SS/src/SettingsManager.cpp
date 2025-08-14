@@ -52,6 +52,20 @@ namespace RC
 
         constexpr static File::CharType section_general[] = STR("General");
         REGISTER_BOOL_SETTING(General.EnableHotReloadSystem, section_general, EnableHotReloadSystem)
+        StringType hot_reload_key{};
+        REGISTER_STRING_SETTING(hot_reload_key, section_general, HotReloadKey)
+        if (!hot_reload_key.empty())
+        {
+            try
+            {
+                General.HotReloadKey = Input::string_to_key(hot_reload_key);
+            }
+            catch (...)
+            {
+                // Note that this happens too early to be sent to the log file or the GUI, so it will only appear in the native console on Win32, or the terminal on Linux.
+                throw std::runtime_error{fmt::format("Invalid value for 'General.HotReloadKey': {}\n", to_string(hot_reload_key))};
+            }
+        }
         REGISTER_BOOL_SETTING(General.UseCache, section_general, UseCache)
         REGISTER_BOOL_SETTING(General.InvalidateCacheIfDLLDiffers, section_general, InvalidateCacheIfDLLDiffers)
         REGISTER_BOOL_SETTING(General.EnableDebugKeyBindings, section_general, EnableDebugKeyBindings)

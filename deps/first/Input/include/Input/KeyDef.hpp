@@ -4,6 +4,9 @@
 #include <cstdint>
 #include <initializer_list>
 
+#include <Input/Common.hpp>
+#include <String/StringType.hpp>
+
 namespace RC::Input
 {
     static constexpr uint32_t max_callbacks_per_event = 30;
@@ -233,6 +236,8 @@ namespace RC::Input
         PA1 = 0xFD,
         OEM_CLEAR = 0xFE
     };
+
+    RC_INPUT_API auto string_to_key(const StringType& string) -> Key;
 
     enum ModifierKey : uint8_t
     {
