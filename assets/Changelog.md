@@ -338,6 +338,13 @@ Fixed `LoadMod` function issue that variables would go out-of-scope in the `Exec
 
 ### Added 
 ```ini
+[General]
+; The key that will trigger a reload of all mods.
+; The CTRL key is always required.
+; Valid values (case-insensitive): Anything from Mods/Keybinds/Scripts/main.lua
+; Default: R
+HotReloadKey = R
+
 [EngineVersionOverride]
 ; True if the game is built as Debug, Development, or Test.
 ; Default: false

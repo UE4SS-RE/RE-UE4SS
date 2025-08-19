@@ -928,7 +928,7 @@ namespace RC
             ObjectDumper::init();
             if (settings_manager.General.EnableHotReloadSystem)
             {
-                register_keydown_event(Input::Key::R, {Input::ModifierKey::CONTROL}, [&]() {
+                register_keydown_event(settings_manager.General.HotReloadKey, {Input::ModifierKey::CONTROL}, [&]() {
                     TRY([&] {
                         reinstall_mods();
                     });
