@@ -832,6 +832,8 @@ if (auto val = parser.get_int64(STR("UWorld"), STR("bWorldWasLoadedThisTick"), -
     Unreal::UWorld::MemberOffsets.emplace(STR("bWorldWasLoadedThisTick"), static_cast<int32_t>(val));
 if (auto val = parser.get_int64(STR("FSetProperty"), STR("ElementProp"), -1); val != -1)
     Unreal::FSetProperty::MemberOffsets.emplace(STR("ElementProp"), static_cast<int32_t>(val));
+if (auto val = parser.get_int64(STR("FSetProperty"), STR("SetLayout"), -1); val != -1)
+    Unreal::FSetProperty::MemberOffsets.emplace(STR("SetLayout"), static_cast<int32_t>(val));
 if (auto val = parser.get_int64(STR("UClass"), STR("ClassAddReferencedObjects"), -1); val != -1)
     Unreal::UClass::MemberOffsets.emplace(STR("ClassAddReferencedObjects"), static_cast<int32_t>(val));
 if (auto val = parser.get_int64(STR("UClass"), STR("ClassCastFlags"), -1); val != -1)
