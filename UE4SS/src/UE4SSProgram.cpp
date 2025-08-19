@@ -242,6 +242,7 @@ namespace RC
                                              ? STR("")
                                              : (UE4SS_LIB_IS_BETA == 0 ? STR(" Beta #?") : fmt::format(STR(" Beta #{}"), UE4SS_LIB_VERSION_BETA))),
                          ensure_str(UE4SS_LIB_BUILD_GITSHA));
+            Output::send(STR("Timezone: {}\n"), ensure_str(std::chrono::current_zone()->name()));
 
 #ifdef __clang__
 #define UE4SS_COMPILER STR("Clang")
