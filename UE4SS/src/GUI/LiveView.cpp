@@ -1957,12 +1957,79 @@ namespace RC::GUI
         {
             for (FProperty* property : ustruct->ForEachProperty())
             {
-                ImGui::TreeNodeEx(to_string(property->GetFullName()).c_str(), ImGuiTreeNodeFlags_Leaf);
-                if (ImGui::IsItemClicked())
+                bool is_struct_property = CastField<FStructProperty>(property) != nullptr;
+                bool is_array_property = CastField<FArrayProperty>(property) != nullptr;
+                if (ImGui::TreeNodeEx(to_string(property->GetFullName()).c_str(), is_struct_property || is_array_property ? 0 : ImGuiTreeNodeFlags_Leaf) &&
+                    (is_struct_property || is_array_property))
                 {
-                    select_property(0, property, AffectsHistory::Yes);
+                    ImGui::Indent();
+                    if (is_struct_property)
+                    {
+                        ImGui::Text("Struct");
+                        if (auto struct_property_struct = CastField<FStructProperty>(property)->GetStruct())
+                        {
+                            if (ImGui::TreeNode(get_object_full_name(struct_property_struct)))
+                            {
+                                render_struct_sub_tree_hierarchy(struct_property_struct);
+                                ImGui::TreePop();
+                            }
+                            else
+                            {
+                                if (ImGui::IsItemClicked())
+                                {
+                                    select_object(0, struct_property_struct->GetObjectItem(), struct_property_struct, AffectsHistory::Yes);
+                                }
+                            }
+                        }
+                    }
+                    else if (is_array_property)
+                    {
+                        ImGui::Text("Inner");
+                        if (auto array_property_inner = CastField<FArrayProperty>(property)->GetInner())
+                        {
+                            bool is_inner_struct = CastField<FStructProperty>(array_property_inner) != nullptr;
+                            if (ImGui::TreeNodeEx(to_string(array_property_inner->GetFullName()).c_str(), is_inner_struct ? 0 : ImGuiTreeNodeFlags_Leaf) && is_inner_struct)
+                            {
+                                ImGui::Indent();
+                                ImGui::Text("Struct");
+                                auto inner_struct_property = CastField<FStructProperty>(array_property_inner);
+                                auto inner_struct_property_struct = inner_struct_property->GetStruct();
+                                if (ImGui::TreeNode(get_object_full_name(inner_struct_property_struct)))
+                                {
+                                    render_struct_sub_tree_hierarchy(inner_struct_property_struct);
+                                    ImGui::TreePop();
+                                }
+                                else
+                                {
+                                    if (ImGui::IsItemClicked())
+                                    {
+                                        select_object(0, inner_struct_property_struct->GetObjectItem(), inner_struct_property_struct, AffectsHistory::Yes);
+                                    }
+                                }
+                                ImGui::Unindent();
+                                ImGui::TreePop();
+                            }
+                            else
+                            {
+                                if (ImGui::IsItemClicked())
+                                {
+                                    select_property(0, array_property_inner, AffectsHistory::Yes);
+                                }
+                            }
+                            if (!is_inner_struct) ImGui::TreePop();
+                        }
+                    }
+                    ImGui::Unindent();
+                    ImGui::TreePop();
                 }
-                ImGui::TreePop();
+                else
+                {
+                    if (ImGui::IsItemClicked())
+                    {
+                        select_property(0, property, AffectsHistory::Yes);
+                    }
+                }
+                if (!is_struct_property && !is_array_property) ImGui::TreePop();
             }
             ImGui::TreePop();
         }
