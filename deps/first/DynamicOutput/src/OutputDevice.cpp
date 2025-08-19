@@ -25,7 +25,8 @@ namespace RC::Output
 
     auto OutputDevice::get_now_as_string() -> const File::StringType
     {
-        auto now = std::chrono::current_zone()->to_local(std::chrono::system_clock::now());
+        static const auto timezone = std::chrono::current_zone();
+        auto now = std::chrono::time_point_cast<std::chrono::system_clock::duration>(timezone->to_local(std::chrono::system_clock::now()));
         const File::StringType when_as_string = fmt::format(STR("{:%Y-%m-%d %X}"), now);
         return when_as_string;
     }

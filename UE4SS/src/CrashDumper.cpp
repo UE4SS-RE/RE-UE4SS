@@ -26,7 +26,8 @@ namespace RC
 
     LONG WINAPI ExceptionHandler(_EXCEPTION_POINTERS* exception_pointers)
     {
-        const auto now = time_point_cast<seconds>(system_clock::now());
+        static const auto timezone = std::chrono::current_zone();
+        const auto now = time_point_cast<seconds>(timezone->to_local(system_clock::now()));
         const StringType dump_path = fmt::format(STR("{}\\crash_{:%Y_%m_%d_%H_%M_%S}.dmp"), StringType{UE4SSProgram::get_program().get_working_directory()}, now);
 
         const HANDLE file =
