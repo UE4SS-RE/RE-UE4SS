@@ -29,3 +29,8 @@ set(DEFAULT_EXE_LINKER_FLAGS "${LINKER_FLAGS}" PARENT_SCOPE)
 
 # Shipping configuration flags
 set(Shipping_FLAGS "/Zi" PARENT_SCOPE)
+
+# Compiler-specific definitions
+add_compile_definitions(
+    _DISABLE_CONSTEXPR_MUTEX_CONSTRUCTOR  # Workaround for MSVC constexpr mutex issues
+)
