@@ -4,6 +4,14 @@
 #include <fmt/chrono.h>
 #include <DynamicOutput/OutputDevice.hpp>
 
+#if _WIN32
+#define NOMINMAX
+#include <Windows.h>
+#ifdef TEXT
+#undef TEXT
+#endif
+#endif
+
 namespace RC::Output
 {
     auto OutputDevice::has_optional_arg() const -> bool
@@ -25,9 +33,25 @@ namespace RC::Output
 
     auto OutputDevice::get_now_as_string() -> const File::StringType
     {
-        static const auto timezone = std::chrono::current_zone();
-        auto now = std::chrono::time_point_cast<std::chrono::system_clock::duration>(timezone->to_local(std::chrono::system_clock::now()));
-        const File::StringType when_as_string = fmt::format(STR("{:%Y-%m-%d %X}"), now);
+        File::StringType when_as_string{};
+        bool use_local_time = true;
+#ifdef _WIN32
+        if (auto module = GetModuleHandleW(L"ntdll.dll"); module && GetProcAddress(module, "wine_get_version"))
+        {
+            use_local_time = false;
+        }
+#endif
+        if (use_local_time)
+        {
+            static const auto timezone = std::chrono::current_zone();
+            auto now = std::chrono::time_point_cast<std::chrono::system_clock::duration>(timezone->to_local(std::chrono::system_clock::now()));
+            when_as_string = fmt::format(STR("{:%Y-%m-%d %X}"), now);
+        }
+        else
+        {
+            auto now = std::chrono::system_clock::now();
+            when_as_string = fmt::format(STR("{:%Y-%m-%d %X}"), now);
+        }
         return when_as_string;
     }
 
