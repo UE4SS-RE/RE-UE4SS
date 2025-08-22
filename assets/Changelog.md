@@ -273,6 +273,8 @@ Corporalwill123
 Made StructProperty and ArrayProperty Expandable, making contained properties directly viewable ([UE4SS #943](https://github.com/UE4SS-RE/RE-UE4SS/pull/943)) -
 Corporalwill123
 
+Fixed crash on warning in dumpers and generators ([UE4SS #976](https://github.com/UE4SS-RE/RE-UE4SS/pull/976))
+
 ### UHT Dumper 
 Fix SetupAttachment implementations randomly changing order ([UE4SS #606](https://github.com/UE4SS-RE/RE-UE4SS/pull/606)) - Buckminsterfullerene 
 

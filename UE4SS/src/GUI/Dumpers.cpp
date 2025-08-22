@@ -345,8 +345,9 @@ namespace RC::GUI::Dumpers
 
         if (ImGui::Button("Dump all static actor meshes to file"))
         {
-
-            call_generate_static_mesh_file();
+            TRY([] {
+                call_generate_static_mesh_file();
+            });
 
             /*auto file = File::open(StringType{UE4SSProgram::get_program().get_working_directory()} + STR("\\ue4ss_static_mesh_data.json"), File::OpenFor::Writing,
             File::OverwriteExistingFile::Yes, File::CreateIfNonExistent::Yes); file.write_string_to_file(generate_actors_json_file(dump_actor_class));*/
@@ -354,8 +355,9 @@ namespace RC::GUI::Dumpers
 
         if (ImGui::Button("Dump all actors to file"))
         {
-
-            call_generate_all_actor_file();
+            TRY([] {
+                call_generate_all_actor_file();
+            });
 
             /*auto file = File::open(StringType{UE4SSProgram::get_program().get_working_directory()} + STR("\\ue4ss_actor_data.json"), File::OpenFor::Writing,
             File::OverwriteExistingFile::Yes, File::CreateIfNonExistent::Yes); file.write_string_to_file(generate_actors_json_file(AActor::StaticClass()));*/
@@ -382,29 +384,39 @@ namespace RC::GUI::Dumpers
 
         if (ImGui::Button("Generate .usmap file\nUnrealMappingsDumper by OutTheShade"))
         {
-            OutTheShade::generate_usmap();
+            TRY([] {
+                OutTheShade::generate_usmap();
+            });
         }
 
         if (ImGui::Button("Generate TMapOverride file\n"))
         {
-            UEGenerator::TMapOverrideGenerator::generate_tmapoverride();
+            TRY([] {
+                UEGenerator::TMapOverrideGenerator::generate_tmapoverride();
+            });
         }
 
         if (ImGui::Button("Generate UHT Compatible Headers\n"))
         {
-            UE4SSProgram::get_program().generate_uht_compatible_headers();
+            TRY([] {
+                UE4SSProgram::get_program().generate_uht_compatible_headers();
+            });
         }
 
         if (ImGui::Button("Dump CXX Headers\n"))
         {
-            File::StringType working_dir{UE4SSProgram::get_program().get_working_directory()};
-            UE4SSProgram::get_program().generate_cxx_headers(working_dir + STR("\\CXXHeaderDump"));
+            TRY([] {
+                File::StringType working_dir{UE4SSProgram::get_program().get_working_directory()};
+                UE4SSProgram::get_program().generate_cxx_headers(working_dir + STR("\\CXXHeaderDump"));
+            });
         }
 
         if (ImGui::Button("Generate Lua Types\n"))
         {
-            File::StringType working_dir{UE4SSProgram::get_program().get_working_directory()};
-            UE4SSProgram::get_program().generate_lua_types(working_dir + STR("\\Mods\\shared\\types"));
+            TRY([] {
+                File::StringType working_dir{UE4SSProgram::get_program().get_working_directory()};
+                UE4SSProgram::get_program().generate_lua_types(working_dir + STR("\\Mods\\shared\\types"));
+            });
         }
     }
 } // namespace RC::GUI::Dumpers
