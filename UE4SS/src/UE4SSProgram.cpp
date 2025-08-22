@@ -200,12 +200,26 @@ namespace RC
             {
                 m_console_device = &Output::set_default_devices<Output::ConsoleDevice>();
                 m_console_device->set_formatter([](File::StringViewType string) -> File::StringType {
-                    static const auto timezone = std::chrono::current_zone();
-                    return fmt::format(STR("[{}] {}"),
-                                       fmt::format(STR("{:%X}"),
-                                                   std::chrono::time_point_cast<std::chrono::system_clock::duration>(
-                                                           timezone->to_local(std::chrono::system_clock::now()))),
-                                       string);
+                    bool use_local_time = true;
+#ifdef _WIN32
+                    if (auto module = GetModuleHandleW(L"ntdll.dll"); module && GetProcAddress(module, "wine_get_version"))
+                    {
+                        use_local_time = false;
+                    }
+#endif
+                    if (use_local_time)
+                    {
+                        static const auto timezone = std::chrono::current_zone();
+                        return fmt::format(STR("[{}] {}"),
+                                           fmt::format(STR("{:%X}"),
+                                                       std::chrono::time_point_cast<std::chrono::system_clock::duration>(
+                                                               timezone->to_local(std::chrono::system_clock::now()))),
+                                           string);
+                    }
+                    else
+                    {
+                        return fmt::format(STR("[{}] {}"), fmt::format(STR("{:%X}"), std::chrono::system_clock::now()), string);
+                    }
                 });
                 if (settings_manager.Debug.DebugConsoleVisible)
                 {
@@ -243,7 +257,21 @@ namespace RC
                                              ? STR("")
                                              : (UE4SS_LIB_IS_BETA == 0 ? STR(" Beta #?") : fmt::format(STR(" Beta #{}"), UE4SS_LIB_VERSION_BETA))),
                          ensure_str(UE4SS_LIB_BUILD_GITSHA));
-            Output::send(STR("Timezone: {}\n"), ensure_str(std::chrono::current_zone()->name()));
+            bool use_local_time = true;
+#ifdef _WIN32
+            if (auto module = GetModuleHandleW(L"ntdll.dll"); module && GetProcAddress(module, "wine_get_version"))
+            {
+                use_local_time = false;
+            }
+#endif
+            if (use_local_time)
+            {
+                Output::send(STR("Timezone: {}\n"), ensure_str(std::chrono::current_zone()->name()));
+            }
+            else
+            {
+                Output::send(STR("Timezone: UTC (local disabled due to wine)\n"));
+            }
 
 #ifdef __clang__
 #define UE4SS_COMPILER STR("Clang")
@@ -482,12 +510,26 @@ namespace RC
             m_debug_console_device = &Output::set_default_devices<Output::DebugConsoleDevice>();
             Output::set_default_log_level<LogLevel::Normal>();
             m_debug_console_device->set_formatter([](File::StringViewType string) -> File::StringType {
-                static const auto timezone = std::chrono::current_zone();
-                return fmt::format(STR("[{}] {}"),
-                                   fmt::format(STR("{:%X}"),
-                                               std::chrono::time_point_cast<std::chrono::system_clock::duration>(
-                                                       timezone->to_local(std::chrono::system_clock::now()))),
-                                   string);
+                bool use_local_time = true;
+#ifdef _WIN32
+                if (auto module = GetModuleHandleW(L"ntdll.dll"); module && GetProcAddress(module, "wine_get_version"))
+                {
+                    use_local_time = false;
+                }
+#endif
+                if (use_local_time)
+                {
+                    static const auto timezone = std::chrono::current_zone();
+                    return fmt::format(STR("[{}] {}"),
+                                       fmt::format(STR("{:%X}"),
+                                                   std::chrono::time_point_cast<std::chrono::system_clock::duration>(
+                                                           timezone->to_local(std::chrono::system_clock::now()))),
+                                       string);
+                }
+                else
+                {
+                    return fmt::format(STR("[{}] {}"), fmt::format(STR("{:%X}"), std::chrono::system_clock::now()), string);
+                }
             });
 
             if (AllocConsole())
