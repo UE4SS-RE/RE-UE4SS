@@ -90,6 +90,7 @@ namespace RC
         constexpr static CharType m_settings_file_name[] = STR("UE4SS-settings.ini");
         constexpr static CharType m_log_file_name[] = STR("UE4SS.log");
         constexpr static CharType m_object_dumper_file_name[] = STR("UE4SS_ObjectDump.txt");
+        constexpr static CharType m_func_dumper_file_name[] = STR("UE4SS_FuncDump.json");
 
       public:
         RC_UE4SS_API static SettingsManager settings_manager;
@@ -277,6 +278,7 @@ namespace RC
                                               bool is_below_425,
                                               std::unordered_set<Unreal::UFunction*>* in_dumped_functions = nullptr) -> void;
         RC_UE4SS_API static auto dump_all_objects_and_properties(const File::StringType& output_path_and_file_name) -> void;
+        RC_UE4SS_API static auto dump_all_funcs(const File::StringType& output_path_and_file_name) -> void;
 
         template <typename T>
         static auto find_mod_by_name(StringViewType mod_name, IsInstalled = IsInstalled::No, IsStarted = IsStarted::No) -> T*
