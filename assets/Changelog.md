@@ -11,6 +11,8 @@ some notes about most important changes such as:
 
 ### General
 
+Added support for UE Version 5.6 - ([UE4SS #977](https://github.com/UE4SS-RE/RE-UE4SS/pull/977)) 
+
 Added support for UE Version 5.5 - ([UE4SS #708](https://github.com/UE4SS-RE/RE-UE4SS/pull/708)) 
 
 Added support for UE Version 5.4 - ([UE4SS #503](https://github.com/UE4SS-RE/RE-UE4SS/pull/503)) 
