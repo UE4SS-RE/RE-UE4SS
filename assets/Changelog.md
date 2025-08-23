@@ -321,6 +321,8 @@ names. ([UE4SS #827](https://github.com/UE4SS-RE/RE-UE4SS/pull/827)
 
 Fixed an error with Object properties causing stack corruption. ([UE4SS #939](https://github.com/UE4SS-RE/RE-UE4SS/pull/939)
 
+Fixed a stack corruption issue when calling UFunctions from Lua with `Out` parameters that were not of type Struct or Array. ([UE4SS #942](https://github.com/UE4SS-RE/RE-UE4SS/pull/942))
+
 ### C++ API 
 Fixed a crash caused by a race condition enabled by C++ mods using `UE4SS_ENABLE_IMGUI` in their constructor ([UE4SS #481](https://github.com/UE4SS-RE/RE-UE4SS/pull/481)) 
 
