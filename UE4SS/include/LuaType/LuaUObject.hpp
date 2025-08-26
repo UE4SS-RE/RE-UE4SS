@@ -349,6 +349,17 @@ namespace RC::LuaType
     RC_UE4SS_API auto construct_uclass(const LuaMadeSimple::Lua&) -> void;
     RC_UE4SS_API auto construct_xproperty(const LuaMadeSimple::Lua&, Unreal::FProperty* property) -> void;
 
+    auto convert_lua_table_to_struct(const LuaMadeSimple::Lua& lua,
+                                     Unreal::UScriptStruct* script_struct,
+                                     void* data,
+                                     int table_index,
+                                     Unreal::UObject* base = nullptr) -> void;
+    auto convert_struct_to_lua_table(const LuaMadeSimple::Lua& lua,
+                                     Unreal::UScriptStruct* script_struct,
+                                     void* data,
+                                     bool create_new_table = true,
+                                     Unreal::UObject* base = nullptr) -> void;
+
     // Push to Lua -> START
     RC_UE4SS_API auto push_unhandledproperty(const PusherParams&) -> void;
     RC_UE4SS_API auto push_objectproperty(const PusherParams&) -> void;
