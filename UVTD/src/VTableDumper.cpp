@@ -24,6 +24,128 @@
 
 namespace RC::UVTD
 {
+
+    File::StringType sanitize_type_for_identifier(File::StringType type)
+    {
+        File::StringType result = type;
+
+        // Handle volatile prefix
+        if (result.starts_with(STR("volatile ")))
+        {
+            result = result.substr(9);
+            result = STR("V_") + result;
+        }
+
+        // Handle const volatile prefix
+        if (result.starts_with(STR("const volatile ")) || result.starts_with(STR("volatile const ")))
+        {
+            result = result.substr(15);
+            result = STR("CV_") + result;
+        }
+
+        // Handle const prefix
+        if (result.starts_with(STR("const ")))
+        {
+            result = result.substr(6);
+            result = STR("C_") + result;
+        }
+        
+        // Handle references and pointers
+        while (!result.empty() && (result.back() == '&' || result.back() == '*'))
+        {
+            if (result.back() == '&')
+            {
+                result.pop_back();
+                result = STR("Ref_") + result;
+            }
+            else if (result.back() == '*')
+            {
+                result.pop_back();
+                result = STR("Ptr_") + result;
+            }
+        }
+
+        // Replace characters that are invalid in identifiers
+        std::replace(result.begin(), result.end(), '<', '_');
+        std::replace(result.begin(), result.end(), '>', '_');
+        std::replace(result.begin(), result.end(), ',', '_');
+        std::replace(result.begin(), result.end(), ' ', '_');
+        std::replace(result.begin(), result.end(), ':', '_');
+        std::replace(result.begin(), result.end(), '[', '_');
+        std::replace(result.begin(), result.end(), ']', '_');
+        std::replace(result.begin(), result.end(), '(', '_');
+        std::replace(result.begin(), result.end(), ')', '_');
+
+        // Remove any multiple underscores (not just doubles)
+        File::StringType cleaned;
+        bool last_was_underscore = false;
+        for (auto c : result)
+        {
+            if (c == '_')
+            {
+                if (!last_was_underscore)
+                {
+                    cleaned += c;
+                    last_was_underscore = true;
+                }
+            }
+            else
+            {
+                cleaned += c;
+                last_was_underscore = false;
+            }
+        }
+
+        return cleaned;
+    }
+
+    File::StringType generate_mangled_suffix(const MethodSignature& signature)
+    {
+        File::StringType suffix = STR("");
+        auto quals = signature.qualifiers;
+        // Add qualifiers if any exist
+        bool has_quals = quals.is_const || quals.is_volatile || quals.is_lvalue_ref || quals.is_rvalue_ref;
+
+        if (has_quals)
+        {
+            suffix += STR("_");
+
+            // cv-qualifiers come before ref-qualifiers
+            if (quals.is_const)
+            {
+                suffix += STR("C"); // const
+            }
+            if (quals.is_volatile)
+            {
+                suffix += STR("V"); // volatile
+            }
+
+            // Ref-qualifiers
+            if (quals.is_lvalue_ref)
+            {
+                suffix += STR("L"); // & (lvalue ref)
+            }
+            else if (quals.is_rvalue_ref)
+            {
+                suffix += STR("R"); // && (rvalue ref)
+            }
+        }
+
+        auto params = signature.params;
+        // Add parameters if any
+        if (!params.empty())
+        {
+            suffix += STR("__");
+            for (size_t i = 0; i < params.size(); ++i)
+            {
+                if (i > 0) suffix += STR("__");
+                suffix += sanitize_type_for_identifier(params[i].type);
+            }
+        }
+
+        return suffix;
+    }
+    
     auto VTableDumper::process_class(const PDB::TPIStream& tpi_stream,
                                      const PDB::CodeView::TPI::Record* class_record,
                                      const File::StringType& name,
@@ -68,16 +190,15 @@ namespace RC::UVTD
     {
         auto list = tpi_stream.GetTypeRecord(method_record->data.LF_METHOD.mList);
 
-        File::StringType method_name = Symbols::get_method_name(method_record);
-        File::StringType method_name_clean = Symbols::clean_name(method_name);
+        File::StringType base_method_name = Symbols::get_method_name(method_record);
+        File::StringType base_method_name_clean = Symbols::clean_name(base_method_name);
 
-        // this is required because METHOD struct size is not constant :)
         size_t next_offset = 0;
-        uint32_t overload_index = 0;
 
         for (size_t i = 0; i < method_record->data.LF_METHOD.count; i++)
         {
-            PDB::CodeView::TPI::Record::Data* overload_record = (PDB::CodeView::TPI::Record::Data*)((uint8_t*)&list->data.LF_METHODLIST.mList + next_offset);
+            PDB::CodeView::TPI::Record::Data* overload_record = 
+                (PDB::CodeView::TPI::Record::Data*)((uint8_t*)&list->data.LF_METHODLIST.mList + next_offset);
 
             next_offset += sizeof(PDB::CodeView::TPI::Record::Data::METHOD);
             if (Symbols::is_virtual(overload_record->METHOD.attributes))
@@ -85,21 +206,23 @@ namespace RC::UVTD
                 next_offset += sizeof(uint32_t);
             }
 
-            int32_t vtable_offset = overload_record->METHOD.vbaseoff[0];
-            auto function_record = tpi_stream.GetTypeRecord(overload_record->METHOD.index);
             if (!Symbols::is_virtual(overload_record->METHOD.attributes)) continue;
+        
+            auto function_record = tpi_stream.GetTypeRecord(overload_record->METHOD.index);
             if (!function_record || function_record->header.kind != PDB::CodeView::TPI::TypeRecordKind::LF_MFUNCTION) continue;
 
-            File::StringType overload_name = method_name_clean;
-            if (overload_index != 0)
-            {
-                overload_name += std::format(STR("_{}"), overload_index);
-            }
-            overload_index++;
+            int32_t vtable_offset = overload_record->METHOD.vbaseoff[0];
+
+            // Generate signature for mangling
+            MethodSignature signature = symbols.generate_method_signature(tpi_stream, function_record, base_method_name);
+        
+            // Generate mangled suffix based on parameters
+            File::StringType mangled_suffix = generate_mangled_suffix(signature);
+            File::StringType mangled_name = base_method_name_clean + mangled_suffix;
 
             auto& function = class_entry.functions[vtable_offset];
-            function.name = overload_name;
-            function.signature = symbols.generate_method_signature(tpi_stream, function_record, overload_name);
+            function.name = mangled_name;
+            function.signature = signature;
             function.offset = vtable_offset;
             function.is_overload = true;
         }
@@ -107,8 +230,6 @@ namespace RC::UVTD
 
     auto VTableDumper::process_onemethod(const PDB::TPIStream& tpi_stream, const PDB::CodeView::TPI::FieldList* method_record, Class& class_entry) -> void
     {
-        static std::unordered_map<File::StringType, std::unordered_map<File::StringType, uint32_t>> functions_already_dumped{};
-
         const auto is_virtual = method_record->data.LF_ONEMETHOD.attributes.mprop == (uint16_t)PDB::CodeView::TPI::MethodProperty::Intro ||
                                 method_record->data.LF_ONEMETHOD.attributes.mprop == (uint16_t)PDB::CodeView::TPI::MethodProperty::PureIntro;
         if (!is_virtual) return;
@@ -116,17 +237,6 @@ namespace RC::UVTD
         File::StringType method_name = Symbols::get_method_name(method_record);
         int32_t vtable_offset = method_record->data.LF_ONEMETHOD.vbaseoff[0];
         auto function_record = tpi_stream.GetTypeRecord(method_record->data.LF_ONEMETHOD.index);
-
-        bool is_overload{};
-
-        if (auto it = functions_already_dumped.find(class_entry.class_name); it != functions_already_dumped.end())
-        {
-            if (auto it2 = it->second.find(method_name); it2 != it->second.end())
-            {
-                method_name.append(std::format(STR("_{}"), ++it2->second));
-                is_overload = true;
-            }
-        }
 
         Output::send(STR("  method {} offset {}\n"), method_name, vtable_offset);
 
@@ -136,8 +246,7 @@ namespace RC::UVTD
         function.name = method_name_clean;
         function.signature = symbols.generate_method_signature(tpi_stream, function_record, method_name);
         function.offset = vtable_offset;
-        function.is_overload = is_overload;
-        functions_already_dumped.emplace(method_name, 1);
+        function.is_overload = false;
     }
 
     auto VTableDumper::dump_vtable_for_symbol(std::unordered_map<File::StringType, SymbolNameInfo>& names) -> void
@@ -265,10 +374,7 @@ namespace RC::UVTD
                 function_body_dumper.send(STR("}\n\n"));
 
                 // Handle INI output for function entries
-                if (function_entry.is_overload)
-                {
-                    ini_dumper.send(STR("; {}\n"), function_entry.signature.to_string());
-                }
+                ini_dumper.send(STR("; {}\n"), function_entry.signature.to_string());
                 ini_dumper.send(STR("{}\n"), function_entry.name);
             }
 

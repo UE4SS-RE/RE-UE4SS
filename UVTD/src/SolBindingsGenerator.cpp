@@ -41,7 +41,7 @@ namespace RC::UVTD
 
             header_wrapper_dumper.send(STR("auto sol_class_{} = sol().new_usertype<{}>(\"{}\""), final_class_name, final_class_name, final_class_name);
 
-            for (const auto& [variable_name, variable] : class_entry.variables)
+            for (const auto& variable : class_entry.variables)
             {
                 // Check if this type should be excluded from sol bindings based on configuration
                 if (ConfigUtil::ShouldFilterType(variable.type, TypeFilterCategory::ExcludeFromSolBindings))
