@@ -121,35 +121,36 @@ namespace RC::UVTD
                 {
                     object_items.clear();
         
-                    // Use an unordered_map to track unique entries and their properties
-                    std::unordered_map<std::string, ObjectItemJson> unique_object_items;
-        
+                    std::unordered_set<std::string> seen_names;
+
                     for (const auto& item : result.value())
                     {
-                        auto [it, inserted] = unique_object_items.try_emplace(item.name, item);
-            
-                        if (!inserted)
+                        if (seen_names.insert(item.name).second)
                         {
-                            // If an entry already exists, merge properties
-                            Output::send(STR("Duplicate entry for object item '{}'. Merging properties.\n"), to_wstring(item.name));
-                            
-                            // Prefer 'Yes' for valid_for_vtable and valid_for_member_vars
-                            if (item.valid_for_vtable == ValidForVTable::Yes)
-                                it->second.valid_for_vtable = ValidForVTable::Yes;
-                
-                            if (item.valid_for_member_vars == ValidForMemberVars::Yes)
-                                it->second.valid_for_member_vars = ValidForMemberVars::Yes;
+                            // First time seeing this name, add it
+                            object_items.push_back({
+                                to_wstring(item.name),
+                                item.valid_for_vtable,
+                                item.valid_for_member_vars
+                            });
                         }
-                    }
+                        else
+                        {
+                            // Duplicate - find and update existing entry
+                            Output::send(STR("Duplicate entry for object item '{}'. Merging properties.\n"), to_wstring(item.name));
         
-                    // Convert back to vector, preserving unique entries
-                    for (const auto& [_, item] : unique_object_items)
-                    {
-                        object_items.push_back({
-                            to_wstring(item.name),
-                            item.valid_for_vtable,
-                            item.valid_for_member_vars
-                        });
+                            for (auto& existing : object_items)
+                            {
+                                if (existing.name == to_wstring(item.name))
+                                {
+                                    if (item.valid_for_vtable == ValidForVTable::Yes)
+                                        existing.valid_for_vtable = ValidForVTable::Yes;
+                                    if (item.valid_for_member_vars == ValidForMemberVars::Yes)
+                                        existing.valid_for_member_vars = ValidForMemberVars::Yes;
+                                    break;
+                                }
+                            }
+                        }
                     }
         
                     Output::send(STR("Loaded {} unique object items\n"), object_items.size());

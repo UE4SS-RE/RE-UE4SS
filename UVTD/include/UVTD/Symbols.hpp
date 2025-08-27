@@ -22,13 +22,13 @@ namespace RC::UVTD
 
     enum class ValidForVTable
     {
-        No,
-        Yes
+        No = 0,
+        Yes = 1
     };
     enum class ValidForMemberVars
     {
-        No,
-        Yes
+        No = 0,
+        Yes = 1
     };
 
     struct SymbolNameInfo
@@ -47,6 +47,8 @@ namespace RC::UVTD
         File::StringType type;
         File::StringType name;
         int32_t offset;
+        uint32_t type_index{};
+        uint32_t size{};
     };
 
     struct FunctionParam
@@ -59,12 +61,53 @@ namespace RC::UVTD
         }
     };
 
+    struct MethodQualifiers
+    {
+        bool is_const = false;
+        bool is_volatile = false;
+        bool is_lvalue_ref = false; // &
+        bool is_rvalue_ref = false; // &&
+
+        auto to_string() const -> File::StringType
+        {
+            File::StringType result;
+
+            // CV-qualifiers
+            if (is_const && is_volatile)
+            {
+                result = STR("const volatile");
+            }
+            else if (is_const)
+            {
+                result = STR("const");
+            }
+            else if (is_volatile)
+            {
+                result = STR("volatile");
+            }
+
+            // Ref-qualifiers
+            if (is_lvalue_ref)
+            {
+                if (!result.empty()) result += STR(" ");
+                result += STR("&");
+            }
+            else if (is_rvalue_ref)
+            {
+                if (!result.empty()) result += STR(" ");
+                result += STR("&&");
+            }
+
+            return result;
+        }
+    };
+
     struct MethodSignature
     {
         File::StringType return_type;
         File::StringType name;
         std::vector<FunctionParam> params;
-        bool const_qualifier;
+        MethodQualifiers qualifiers;
 
         auto to_string() const -> File::StringType
         {
@@ -76,7 +119,13 @@ namespace RC::UVTD
                 params_string.append(std::format(STR("{}{}"), params[i].to_string(), should_add_comma ? STR(", ") : STR("")));
             }
 
-            return std::format(STR("{} {}({}){};"), return_type, name, params_string, const_qualifier ? STR("const") : STR(""));
+            File::StringType qual_string = qualifiers.to_string();
+            if (!qual_string.empty())
+            {
+                qual_string = STR(" ") + qual_string;
+            }
+
+            return std::format(STR("{} {}({}){}"), return_type, name, params_string, qual_string);
         }
     };
 
@@ -93,8 +142,8 @@ namespace RC::UVTD
         File::StringType class_name;
         File::StringType class_name_clean;
         std::map<uint32_t, MethodBody> functions;
-        // Key: Variable name
-        std::map<File::StringType, MemberVariable> variables;
+        std::vector<MemberVariable> variables;
+        uint32_t total_size{};  // Track total class size
         uint32_t last_virtual_offset{};
         ValidForVTable valid_for_vtable{ValidForVTable::No};
         ValidForMemberVars valid_for_member_vars{ValidForMemberVars::No};
@@ -102,13 +151,7 @@ namespace RC::UVTD
 
     class Symbols
     {
-      public:
-        struct MemberVariable
-        {
-            File::StringType type;
-            int32_t offset;
-        };
-
+    public:
         struct EnumEntry
         {
             File::StringType name;
@@ -116,16 +159,11 @@ namespace RC::UVTD
             std::map<File::StringType, MemberVariable> variables;
         };
 
-        struct Class
+        enum class ClassInheritanceModel
         {
-            File::StringType class_name;
-            File::StringType class_name_clean;
-            std::map<uint32_t, MethodBody> functions;
-            // Key: Variable name
-            std::map<File::StringType, MemberVariable> variables;
-            uint32_t last_virtual_offset;
-            ValidForVTable valid_for_vtable{ValidForVTable::No};
-            ValidForMemberVars valid_for_member_vars{ValidForMemberVars::No};
+            Single,
+            Multiple,
+            Virtual
         };
 
       public:
@@ -137,10 +175,15 @@ namespace RC::UVTD
         PDB::DBIStream dbi_stream;
         bool is_425_plus;
 
+    private:
+        PDB::CodeView::DBI::CPUType m_machine_type{PDB::CodeView::DBI::CPUType::X64};
+
+    public:
         std::unordered_map<File::StringType, EnumEntry> enum_entries;
         std::unordered_map<File::StringType, Class> class_entries;
+        static inline std::unordered_map<uint32_t, uint32_t> type_size_cache;
 
-      public:
+
         Symbols() = delete;
 
         explicit Symbols(std::filesystem::path pdb_file_path);
@@ -151,14 +194,19 @@ namespace RC::UVTD
 
       public:
         auto get_or_create_enum_entry(const File::StringType& symbol_name, const File::StringType& symbol_name_clean) -> EnumEntry&;
-        auto get_or_create_class_entry(const File::StringType& symbol_name, const File::StringType& symbol_name_clean, const SymbolNameInfo& name_info) -> Class&;
 
         auto generate_method_signature(const PDB::TPIStream& tpi_stream, const PDB::CodeView::TPI::Record* function_record, File::StringType method_name)
                 -> MethodSignature;
 
       public:
-        auto static get_type_name(const PDB::TPIStream& tpi_stream, uint32_t record_index, bool check_valid = false) -> File::StringType;
+        auto static get_type_name(const PDB::TPIStream& tpi_stream, uint32_t record_index, bool check_valid = false, bool is_64bit = true) -> File::StringType;
+        auto static read_numeric(const uint8_t*& data) -> uint64_t;
+        auto static get_numeric_leaf_size(const uint8_t* data) -> uint32_t;
+        auto static get_field_record_size(const PDB::CodeView::TPI::FieldList* field) -> uint32_t;
+        auto static get_type_size_impl(const PDB::TPIStream& tpi_stream, uint32_t record_index, bool is_64bit = true) -> uint32_t;
+        auto static get_type_size(const PDB::TPIStream& tpi_stream, uint32_t record_index, bool is_64bit = true) -> uint32_t;
         auto static get_method_name(const PDB::CodeView::TPI::FieldList* method_record) -> File::StringType;
+        auto static get_class_inheritance_model(const PDB::TPIStream& tpi_stream, uint32_t class_type_index) -> ClassInheritanceModel;
         // Existing method for backward compatibility
         auto static get_leaf_name(const char* data, PDB::CodeView::TPI::TypeRecordKind kind) -> File::StringType;
 
@@ -168,6 +216,8 @@ namespace RC::UVTD
         auto static clean_name(File::StringType name) -> File::StringType;
 
         auto static is_virtual(PDB::CodeView::TPI::MemberAttributes attributes) -> bool;
+        auto is_x64() const -> bool;
+        auto is_x86() const -> bool;
 
       private:
         auto setup_symbol_loader() -> void;

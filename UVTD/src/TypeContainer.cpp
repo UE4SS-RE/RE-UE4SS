@@ -14,9 +14,24 @@ namespace RC::UVTD
                 this_entry.functions[vtable_offset] = function;
             }
 
-            for (const auto& [variable_name, variable] : class_entry.variables)
+            for (const auto& variable : class_entry.variables)
             {
-                this_entry.variables[variable_name] = variable;
+                // Check if this variable already exists (avoid duplicates)
+                auto existing = std::find_if(this_entry.variables.begin(), this_entry.variables.end(),
+                    [&variable](const MemberVariable& var) {
+                        return var.name == variable.name;
+                    });
+                
+                if (existing != this_entry.variables.end())
+                {
+                    // Update existing variable
+                    *existing = variable;
+                }
+                else
+                {
+                    // Add new variable
+                    this_entry.variables.push_back(variable);
+                }
             }
         }
     }

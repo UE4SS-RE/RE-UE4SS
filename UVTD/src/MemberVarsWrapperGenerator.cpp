@@ -93,7 +93,7 @@ namespace RC::UVTD
                 processed_variables[final_class_name] = std::unordered_set<File::StringType>();
             }
 
-            for (const auto& [variable_name, variable] : class_entry.variables)
+            for (const auto& variable : class_entry.variables)
             {
                 // Check if this type should be excluded from getters based on configuration
                 if (ConfigUtil::ShouldFilterType(variable.type, TypeFilterCategory::ExcludeFromGetters))
