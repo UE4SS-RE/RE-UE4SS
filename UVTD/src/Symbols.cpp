@@ -651,27 +651,26 @@ inline uint32_t get_pointer_size(PDB::CodeView::TPI::TypeIndexKind type, bool is
         return forward_decl_index;
     }
     
+    // If it's not a forward declaration, return as-is
+    if (!forward_record->data.LF_CLASS.property.fwdref) {
+        return forward_decl_index;
+    }
+    
     // Get the name of the forward declaration
     const uint8_t* data = reinterpret_cast<const uint8_t*>(forward_record->data.LF_CLASS.data);
     
     // Skip the numeric leaf (size, which is 0 for forward decl)
-    const auto leaf = *reinterpret_cast<const uint16_t*>(data);
-    if (leaf < static_cast<uint16_t>(PDB::CodeView::TPI::TypeRecordKind::LF_NUMERIC)) {
-        data += sizeof(uint16_t);
-    } else {
-        uint8_t* mutable_data = const_cast<uint8_t*>(data);
-        Symbols::read_numeric(mutable_data);
-        data = mutable_data;
-    }
+    const uint8_t* temp_data = data;
+    Symbols::read_numeric(temp_data);  // This advances temp_data
     
-    // Now data points to the name
-    std::string forward_name(reinterpret_cast<const char*>(data));
+    // Now temp_data points to the name
+    std::string forward_name(reinterpret_cast<const char*>(temp_data));
     
-    // Search through all type records for a matching non-forward declaration
+    // Search through all type records
     uint32_t first_index = tpi_stream.GetFirstTypeIndex();
-    uint32_t last_index = first_index + tpi_stream.GetTypeCount();
+    uint32_t last_index = tpi_stream.GetLastTypeIndex();
     
-    for (uint32_t i = first_index; i < last_index; ++i) {
+    for (uint32_t i = first_index; i <= last_index; ++i) {
         // Skip the forward declaration itself
         if (i == forward_decl_index) continue;
         
@@ -688,17 +687,11 @@ inline uint32_t get_pointer_size(PDB::CodeView::TPI::TypeIndexKind type, bool is
         const uint8_t* candidate_data = reinterpret_cast<const uint8_t*>(candidate->data.LF_CLASS.data);
         
         // Skip the size numeric leaf
-        const auto candidate_leaf = *reinterpret_cast<const uint16_t*>(candidate_data);
-        if (candidate_leaf < static_cast<uint16_t>(PDB::CodeView::TPI::TypeRecordKind::LF_NUMERIC)) {
-            candidate_data += sizeof(uint16_t);
-        } else {
-            uint8_t* mutable_candidate_data = const_cast<uint8_t*>(candidate_data);
-            read_numeric(mutable_candidate_data);
-            candidate_data = mutable_candidate_data;
-        }
+        const uint8_t* temp_candidate_data = candidate_data;
+        Symbols::read_numeric(temp_candidate_data);
         
         // Compare names
-        std::string candidate_name(reinterpret_cast<const char*>(candidate_data));
+        std::string candidate_name(reinterpret_cast<const char*>(temp_candidate_data));
         if (candidate_name == forward_name) {
             // Found the complete definition!
             return i;
@@ -809,12 +802,33 @@ auto Symbols::get_type_size(const PDB::TPIStream& tpi_stream, uint32_t record_in
 
     switch (record->header.kind)
     {
-        case PDB::CodeView::TPI::TypeRecordKind::LF_CLASS:
-        case PDB::CodeView::TPI::TypeRecordKind::LF_STRUCTURE:
-        {
-            const uint8_t* data = reinterpret_cast<const uint8_t*>(record->data.LF_CLASS.data);
-            return static_cast<uint32_t>(read_numeric(data));
+    case PDB::CodeView::TPI::TypeRecordKind::LF_CLASS:
+    case PDB::CodeView::TPI::TypeRecordKind::LF_STRUCTURE:
+    {
+        const auto& class_data = record->data.LF_CLASS;
+            
+        // Get the size from the numeric leaf
+        const uint8_t* data = reinterpret_cast<const uint8_t*>(class_data.data);
+        const uint8_t* data_copy = data;
+        uint32_t size = static_cast<uint32_t>(read_numeric(data_copy));
+            
+        // If size is 0 or it's a forward declaration, try to find the complete type
+        if (size == 0 || class_data.property.fwdref) {
+            uint32_t complete_type_index = find_complete_type_definition(tpi_stream, record_index);
+                
+            if (complete_type_index != record_index) {
+                // Found a complete definition, get its size recursively
+                const PDB::CodeView::TPI::Record* complete_record = tpi_stream.GetTypeRecord(complete_type_index);
+                if (complete_record) {
+                    const uint8_t* complete_data = reinterpret_cast<const uint8_t*>(complete_record->data.LF_CLASS.data);
+                    const uint8_t* complete_data_copy = complete_data;
+                    size = static_cast<uint32_t>(read_numeric(complete_data_copy));
+                }
+            }
         }
+            
+        return size;
+    }
 
         case PDB::CodeView::TPI::TypeRecordKind::LF_UNION:
         {
@@ -843,8 +857,9 @@ auto Symbols::get_type_size(const PDB::TPIStream& tpi_stream, uint32_t record_in
 
         case PDB::CodeView::TPI::TypeRecordKind::LF_ARRAY:
         {
-            const uint8_t* data = reinterpret_cast<const uint8_t*>(record->data.LF_ARRAY.data);
-            return static_cast<uint32_t>(read_numeric(data));
+        const uint8_t* data = reinterpret_cast<const uint8_t*>(record->data.LF_ARRAY.data);
+        const uint8_t* data_copy = data;
+        return static_cast<uint32_t>(read_numeric(data_copy));
         }
 
         case PDB::CodeView::TPI::TypeRecordKind::LF_ENUM:
