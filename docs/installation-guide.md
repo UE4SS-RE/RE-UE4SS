@@ -46,7 +46,7 @@ Now all you need to do is start your game and UE4SS will automatically be inject
 
 ## Experimental Install
 
-If you want the latest and greatest features and don't mind the potential for more bugs than the main release, you can visit the [experimental part of releases](https://github.com/UE4SS-RE/RE-UE4SS/releases/tag/experimental) which is automatically updated for each commit to the main branch.
+If you want the latest and greatest features and don't mind the potential for more bugs than the main release, you can visit the [experimental part of releases](https://github.com/UE4SS-RE/RE-UE4SS/releases/tag/experimental-latest) which is automatically updated for each commit to the main branch.
 
 There are a lot of older files in the experimental releases, so you will need to look for the latest downloads. You can tell which are the latest by looking at the date of the release.
 
