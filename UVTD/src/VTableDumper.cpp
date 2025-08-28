@@ -265,10 +265,7 @@ namespace RC::UVTD
                 function_body_dumper.send(STR("}\n\n"));
 
                 // Handle INI output for function entries
-                if (function_entry.is_overload)
-                {
-                    ini_dumper.send(STR("; {}\n"), function_entry.signature.to_string());
-                }
+                ini_dumper.send(STR("; {}\n"), function_entry.signature.to_string());
                 ini_dumper.send(STR("{}\n"), function_entry.name);
             }
 

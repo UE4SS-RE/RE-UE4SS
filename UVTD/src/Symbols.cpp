@@ -10,6 +10,7 @@
 #include <UVTD/TemplateClassParser.hpp>
 
 #include <PDB.h>
+#include <set>
 
 namespace RC::UVTD
 {
@@ -1073,23 +1074,35 @@ auto Symbols::get_type_size_impl(const PDB::TPIStream& tpi_stream, uint32_t reco
     {
         auto underlying_type = get_type_name(tpi_stream, record->data.LF_POINTER.utype, check_valid, is_64bit);
     
-        // Debug output
-        printf("DEBUG: LF_POINTER for underlying type %s\n", to_string(underlying_type).c_str());
-        printf("  islref: %d\n", record->data.LF_POINTER.attr.islref);
-        printf("  isrref: %d\n", record->data.LF_POINTER.attr.isrref);
-        printf("  ptrtype: 0x%X\n", record->data.LF_POINTER.attr.ptrtype);
-        printf("  ptrmode: 0x%X\n", record->data.LF_POINTER.attr.ptrmode);
+        const uint32_t ptr_mode = record->data.LF_POINTER.attr.ptrmode;
     
-        // Check if it's a reference instead of a pointer
-        if (record->data.LF_POINTER.attr.islref) {
-            return underlying_type + STR("&");  // lvalue reference
+        // Check ptrmode first (this is what works in your PDB files)
+        if (ptr_mode == 0x01) {  // CV_PTR_MODE_REF / CV_PTR_MODE_LVREF
+            return underlying_type + STR("&");
         }
-        else if (record->data.LF_POINTER.attr.isrref) {
-            return underlying_type + STR("&&"); // rvalue reference  
+        else if (ptr_mode == 0x04) {  // CV_PTR_MODE_RVREF
+            return underlying_type + STR("&&");
         }
-        else {
-            return underlying_type + STR("*");  // regular pointer
+        else if (ptr_mode == 0x02) {  // CV_PTR_MODE_PMEM
+            return underlying_type + STR("::*");
         }
+        else if (ptr_mode == 0x03) {  // CV_PTR_MODE_PMFUNC
+            return underlying_type + STR("::*");
+        }
+    
+        // Fallback: Check islref/isrref flags (for compatibility with other PDB versions)
+        // Only check these if ptrmode is 0 (CV_PTR_MODE_PTR)
+        if (ptr_mode == 0x00) {
+            if (record->data.LF_POINTER.attr.islref) {
+                return underlying_type + STR("&");
+            }
+            else if (record->data.LF_POINTER.attr.isrref) {
+                return underlying_type + STR("&&");
+            }
+        }
+    
+        // Default to pointer
+        return underlying_type + STR("*");
     }
     case PDB::CodeView::TPI::TypeRecordKind::LF_MFUNCTION:
     case PDB::CodeView::TPI::TypeRecordKind::LF_PROCEDURE: {
@@ -1122,11 +1135,6 @@ auto Symbols::get_type_size_impl(const PDB::TPIStream& tpi_stream, uint32_t reco
     
         // Get the size of a single element
         uint32_t element_size = get_type_size(tpi_stream, record->data.LF_ARRAY.elemtype, is_64bit);
-
-        printf("DEBUG: LF_ARRAY for type %s\n", to_string(element_type).c_str());
-        printf("  Array size in bytes: %llu\n", array_size_bytes);
-        printf("  Element size: %u\n", element_size);
-        printf("  Element type index: 0x%X\n", record->data.LF_ARRAY.elemtype);
     
         // Calculate the number of elements
         if (element_size > 0 && array_size_bytes > 0) {
