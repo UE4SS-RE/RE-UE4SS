@@ -1,5 +1,6 @@
 #pragma once
 
+#include <atomic>
 #include <functional>
 #include <mutex>
 #include <string>
@@ -94,6 +95,7 @@ namespace RC
       public:
         RC_UE4SS_API static SettingsManager settings_manager;
         static inline bool unreal_is_shutting_down{};
+        static inline std::atomic_bool cpp_mods_done_loading{};
 
       public:
         bool m_is_program_started;
