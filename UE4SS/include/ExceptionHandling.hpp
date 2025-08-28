@@ -26,7 +26,10 @@
 #define SEH_EXCEPT(Code)                                                                                                                                       \
     __except (SEH_exception_filter(GetExceptionCode(), GetExceptionInformation()))                                                                             \
     {                                                                                                                                                          \
-        Code std::exit(EXIT_FAILURE);                                                                                                                          \
+        Code if (!Unreal::UnrealInitializer::StaticStorage::GlobalConfig.bIsForcedPreScan)                                                                           \
+        {                                                                                                                                                      \
+            std::exit(EXIT_FAILURE);                                                                                                                           \
+        }                                                                                                                                                      \
     }
 #endif
 #else

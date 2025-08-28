@@ -50,6 +50,8 @@ auto process_initialized(HMODULE moduleHandle) -> void
     {
         CloseHandle(handle);
     }
+
+    UE4SSProgram::cpp_mods_done_loading.wait(false, std::memory_order_relaxed);
 }
 
 auto get_main_thread_id() -> DWORD
