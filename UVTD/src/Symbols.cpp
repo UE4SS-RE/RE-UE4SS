@@ -176,6 +176,7 @@ inline NumericValue read_numeric_safe(const uint8_t* data, const uint8_t* data_e
     }
 }
     
+    
     Symbols::Symbols(std::filesystem::path pdb_file_path)
         : pdb_file_path(pdb_file_path), pdb_file_handle(std::move(File::open(pdb_file_path))), pdb_file_map(std::move(pdb_file_handle.memory_map())),
           pdb_file(pdb_file_map.data())
