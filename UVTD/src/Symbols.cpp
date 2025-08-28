@@ -64,18 +64,6 @@ inline uint32_t safe_strlen(const char* str, size_t max_len = Constants::MAX_STR
     return static_cast<uint32_t>(len + 1); // +1 for null terminator
 }
 
-inline File::StringType safe_to_string_type(const char* str, size_t max_len = Constants::MAX_STRING_LENGTH) {
-    if (!str) return STR("");
-    
-    size_t len = strnlen(str, max_len);
-    if (len >= max_len) {
-        // String is too long, likely corrupted
-        return STR("<TRUNCATED>");
-    }
-    
-    return to_string_type(str);
-}
-
 // ============= Method Property Helpers =============
 inline bool is_virtual_method(uint16_t mprop) {
     return mprop == static_cast<uint16_t>(PDB::CodeView::TPI::MethodProperty::Intro) ||
@@ -98,19 +86,11 @@ inline bool is_pointer_type(PDB::CodeView::TPI::TypeIndexKind type) {
     uint32_t val = static_cast<uint32_t>(type);
     
     // Near pointers (0x100-0x1FF)
-    if (val >= 0x100 && val < 0x200) return true;
-    
-    // Far pointers (0x200-0x2FF)  
-    if (val >= 0x200 && val < 0x300) return true;
-    
+    // Far pointers (0x200-0x2FF)
     // Huge pointers (0x300-0x3FF)
-    if (val >= 0x300 && val < 0x400) return true;
-    
     // 32-bit pointers (0x400-0x4FF)
-    if (val >= 0x400 && val < 0x500) return true;
-    
     // 64-bit pointers (0x600-0x6FF)
-    if (val >= 0x600 && val < 0x700) return true;
+    if (val >= 0x100 && val < 0x700) return true;
     
     return false;
 }
@@ -267,7 +247,18 @@ inline NumericValue read_numeric_safe(const uint8_t* data, const uint8_t* data_e
         auto this_pointer = tpi_stream.GetTypeRecord(function_record->data.LF_MFUNCTION.thistype);
 
         signature.name = method_name;
-        signature.const_qualifier = this_pointer != nullptr ? this_pointer->data.LF_POINTER.attr.isconst : false;
+
+        signature.const_qualifier = false; // Default to non-const
+
+        if (this_pointer != nullptr) {
+            // Check if the underlying type of the pointer has a const modifier
+            auto underlying = tpi_stream.GetTypeRecord(this_pointer->data.LF_POINTER.utype);
+        
+            if (underlying && underlying->header.kind == PDB::CodeView::TPI::TypeRecordKind::LF_MODIFIER) {
+                // The pointer points to a modifier record - check if it's const
+                signature.const_qualifier = underlying->data.LF_MODIFIER.attr.MOD_const;
+            }
+        }
 
         auto arg_list = tpi_stream.GetTypeRecord(function_record->data.LF_MFUNCTION.arglist);
         for (size_t i = 0; i < function_record->data.LF_MFUNCTION.parmcount; i++)
@@ -702,9 +693,9 @@ inline uint32_t get_pointer_size(PDB::CodeView::TPI::TypeIndexKind type, bool is
     return forward_decl_index;
 }
 
-auto Symbols::get_type_size(const PDB::TPIStream& tpi_stream, uint32_t record_index, bool is_64bit) -> uint32_t
+auto Symbols::get_type_size_impl(const PDB::TPIStream& tpi_stream, uint32_t record_index, bool is_64bit) -> uint32_t
 {
-    // Handle built-in types first
+    // Handle built-in types
     if (record_index < tpi_stream.GetFirstTypeIndex())
     {
         auto type = static_cast<PDB::CodeView::TPI::TypeIndexKind>(record_index);
@@ -838,11 +829,14 @@ auto Symbols::get_type_size(const PDB::TPIStream& tpi_stream, uint32_t record_in
 
         case PDB::CodeView::TPI::TypeRecordKind::LF_POINTER:
         {
-            // Handle user-defined pointer types using the attrs
-            const uint32_t ptr_type = record->data.LF_POINTER.attr.ptrtype;
+            // The pointer attributes contain the size
+            uint32_t ptr_size = record->data.LF_POINTER.attr.size;
+        
+            // If size is 0, fall back to type-based detection
+            if (ptr_size == 0) {
+                const uint32_t ptr_type = record->data.LF_POINTER.attr.ptrtype;
             
-            // These values come from the PDB spec
-            switch (ptr_type) {
+                switch (ptr_type) {
                 case 0x00: return 2;  // Near16
                 case 0x01: return 4;  // Far16
                 case 0x02: return 4;  // Huge16
@@ -850,9 +844,11 @@ auto Symbols::get_type_size(const PDB::TPIStream& tpi_stream, uint32_t record_in
                 case 0x0B: return 6;  // Far32
                 case 0x0C: return 8;  // Near64
                 default:
-                    // Unknown pointer type - use architecture default
                     return is_64bit ? 8 : 4;
+                }
             }
+        
+            return ptr_size;
         }
 
         case PDB::CodeView::TPI::TypeRecordKind::LF_ARRAY:
@@ -895,6 +891,21 @@ auto Symbols::get_type_size(const PDB::TPIStream& tpi_stream, uint32_t record_in
             return 0;
     }
 }
+
+    auto Symbols::get_type_size(const PDB::TPIStream& tpi_stream, uint32_t record_index, bool is_64bit) -> uint32_t
+{
+    auto cache_key = (record_index << 1) | (is_64bit ? 1 : 0);
+        
+    auto it = type_size_cache.find(cache_key);
+    if (it != type_size_cache.end()) {
+        return it->second;
+    }
+        
+    uint32_t size = get_type_size_impl(tpi_stream, record_index, is_64bit);
+    type_size_cache[cache_key] = size;
+    return size;
+}
+    
 
     auto Symbols::get_type_name(const PDB::TPIStream& tpi_stream, uint32_t record_index, bool check_valid, bool is_64bit) -> File::StringType
 {
@@ -1047,18 +1058,39 @@ auto Symbols::get_type_size(const PDB::TPIStream& tpi_stream, uint32_t record_in
         const auto modifier_attr = record->data.LF_MODIFIER.attr;
         std::vector<File::StringType> modifiers{};
 
+        if (modifier_attr.MOD_const) modifiers.push_back(STR("const"));
         if (modifier_attr.MOD_volatile) modifiers.push_back(STR("volatile"));
+        // Note: MOD_unaligned is typically not shown in signatures
 
         File::StringType modifier_string{};
-        for (const auto& modifier : modifiers)
-        {
+        for (const auto& modifier : modifiers) {
             modifier_string += modifier + STR(" ");
         }
 
         return modifier_string + get_type_name(tpi_stream, record->data.LF_MODIFIER.type, check_valid, is_64bit);
     }
     case PDB::CodeView::TPI::TypeRecordKind::LF_POINTER:
-        return get_type_name(tpi_stream, record->data.LF_POINTER.utype, check_valid, is_64bit) + STR("*");
+    {
+        auto underlying_type = get_type_name(tpi_stream, record->data.LF_POINTER.utype, check_valid, is_64bit);
+    
+        // Debug output
+        printf("DEBUG: LF_POINTER for underlying type %s\n", to_string(underlying_type).c_str());
+        printf("  islref: %d\n", record->data.LF_POINTER.attr.islref);
+        printf("  isrref: %d\n", record->data.LF_POINTER.attr.isrref);
+        printf("  ptrtype: 0x%X\n", record->data.LF_POINTER.attr.ptrtype);
+        printf("  ptrmode: 0x%X\n", record->data.LF_POINTER.attr.ptrmode);
+    
+        // Check if it's a reference instead of a pointer
+        if (record->data.LF_POINTER.attr.islref) {
+            return underlying_type + STR("&");  // lvalue reference
+        }
+        else if (record->data.LF_POINTER.attr.isrref) {
+            return underlying_type + STR("&&"); // rvalue reference  
+        }
+        else {
+            return underlying_type + STR("*");  // regular pointer
+        }
+    }
     case PDB::CodeView::TPI::TypeRecordKind::LF_MFUNCTION:
     case PDB::CodeView::TPI::TypeRecordKind::LF_PROCEDURE: {
         File::StringType return_type = get_type_name(tpi_stream, record->data.LF_PROCEDURE.rvtype, true, is_64bit);

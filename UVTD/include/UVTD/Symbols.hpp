@@ -47,6 +47,8 @@ namespace RC::UVTD
         File::StringType type;
         File::StringType name;
         int32_t offset;
+        uint32_t type_index{};
+        uint32_t size{};
     };
 
     struct FunctionParam
@@ -93,8 +95,8 @@ namespace RC::UVTD
         File::StringType class_name;
         File::StringType class_name_clean;
         std::map<uint32_t, MethodBody> functions;
-        // Key: Variable name
-        std::map<File::StringType, MemberVariable> variables;
+        std::vector<MemberVariable> variables;
+        uint32_t total_size{};  // Track total class size
         uint32_t last_virtual_offset{};
         ValidForVTable valid_for_vtable{ValidForVTable::No};
         ValidForMemberVars valid_for_member_vars{ValidForMemberVars::No};
@@ -102,30 +104,12 @@ namespace RC::UVTD
 
     class Symbols
     {
-      public:
-        struct MemberVariable
-        {
-            File::StringType type;
-            int32_t offset;
-        };
-
+    public:
         struct EnumEntry
         {
             File::StringType name;
             File::StringType name_clean;
             std::map<File::StringType, MemberVariable> variables;
-        };
-
-        struct Class
-        {
-            File::StringType class_name;
-            File::StringType class_name_clean;
-            std::map<uint32_t, MethodBody> functions;
-            // Key: Variable name
-            std::map<File::StringType, MemberVariable> variables;
-            uint32_t last_virtual_offset;
-            ValidForVTable valid_for_vtable{ValidForVTable::No};
-            ValidForMemberVars valid_for_member_vars{ValidForMemberVars::No};
         };
 
         enum class ClassInheritanceModel
@@ -150,6 +134,7 @@ namespace RC::UVTD
     public:
         std::unordered_map<File::StringType, EnumEntry> enum_entries;
         std::unordered_map<File::StringType, Class> class_entries;
+        static inline std::unordered_map<uint32_t, uint32_t> type_size_cache;
 
 
         Symbols() = delete;
@@ -162,7 +147,6 @@ namespace RC::UVTD
 
       public:
         auto get_or_create_enum_entry(const File::StringType& symbol_name, const File::StringType& symbol_name_clean) -> EnumEntry&;
-        auto get_or_create_class_entry(const File::StringType& symbol_name, const File::StringType& symbol_name_clean, const SymbolNameInfo& name_info) -> Class&;
 
         auto generate_method_signature(const PDB::TPIStream& tpi_stream, const PDB::CodeView::TPI::Record* function_record, File::StringType method_name)
                 -> MethodSignature;
@@ -172,6 +156,7 @@ namespace RC::UVTD
         auto static read_numeric(const uint8_t*& data) -> uint64_t;
         auto static get_numeric_leaf_size(const uint8_t* data) -> uint32_t;
         auto static get_field_record_size(const PDB::CodeView::TPI::FieldList* field) -> uint32_t;
+        auto static get_type_size_impl(const PDB::TPIStream& tpi_stream, uint32_t record_index, bool is_64bit = true) -> uint32_t;
         auto static get_type_size(const PDB::TPIStream& tpi_stream, uint32_t record_index, bool is_64bit = true) -> uint32_t;
         auto static get_method_name(const PDB::CodeView::TPI::FieldList* method_record) -> File::StringType;
         auto static get_class_inheritance_model(const PDB::TPIStream& tpi_stream, uint32_t class_type_index) -> ClassInheritanceModel;

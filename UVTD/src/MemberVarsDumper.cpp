@@ -20,6 +20,12 @@ namespace RC::UVTD
         File::StringType class_name_clean = Symbols::clean_name(class_name);
         auto& class_entry = type_container.get_or_create_class_entry(class_name, class_name_clean, name_info);
 
+        // Get the class size directly from the PDB
+        // The size is stored in the numeric leaf at the beginning of class_record->data.LF_CLASS.data
+        const uint8_t* data = reinterpret_cast<const uint8_t*>(class_record->data.LF_CLASS.data);
+        const uint8_t* data_copy = data;
+        class_entry.total_size = static_cast<uint32_t>(Symbols::read_numeric(data_copy));
+
         auto fields = tpi_stream.GetTypeRecord(class_record->data.LF_CLASS.field);
 
         auto list_size = fields->header.size - sizeof(uint16_t);
@@ -50,11 +56,40 @@ namespace RC::UVTD
             return;
         }
 
-        // Store variable with its original name from the PDB - renaming happens during output generation
-        auto& variable = class_entry.variables[member_name];
-        variable.type = type_name;
-        variable.name = member_name;
-        variable.offset = *(uint16_t*)field_record->data.LF_MEMBER.offset;
+        // Check if this variable already exists (to avoid duplicates)
+        auto existing = std::find_if(class_entry.variables.begin(),
+                                     class_entry.variables.end(),
+                                     [&member_name](const MemberVariable& var) {
+                                         return var.name == member_name;
+                                     });
+
+        if (existing != class_entry.variables.end())
+        {
+            // Update existing variable
+            existing->type = type_name;
+            existing->offset = *(uint16_t*)field_record->data.LF_MEMBER.offset;
+        }
+        else
+        {
+            // Calculate the size of this member
+            uint32_t member_size = Symbols::get_type_size(tpi_stream, field_record->data.LF_MEMBER.index, symbols.is_x64());
+
+            MemberVariable variable;
+            variable.type = type_name;
+            variable.name = member_name;
+            variable.offset = *(uint16_t*)field_record->data.LF_MEMBER.offset;
+            variable.type_index = field_record->data.LF_MEMBER.index;
+            variable.size = member_size;
+
+            class_entry.variables.push_back(variable);
+
+            // Track the highest offset + size to determine total class size
+            uint32_t end_offset = variable.offset + variable.size;
+            if (end_offset > class_entry.total_size)
+            {
+                class_entry.total_size = end_offset;
+            }
+        }
     }
 
     auto MemberVarsDumper::dump_member_variable_layouts(std::unordered_map<File::StringType, SymbolNameInfo>& names) -> void
@@ -79,7 +114,6 @@ namespace RC::UVTD
                 process_class(tpi_stream, type_record, class_name, name_info->second);
             }
         }
-
         return;
     }
 
@@ -100,17 +134,6 @@ namespace RC::UVTD
     auto MemberVarsDumper::generate_files() -> void
     {
         File::StringType pdb_name = symbols.pdb_file_path.filename().stem();
-
-        auto default_template_file = std::filesystem::path{STR("MemberVariableLayout.ini")};
-
-        Output::send(STR("Generating file '{}'\n"), default_template_file.wstring());
-
-        Output::Targets<Output::NewFileDevice> default_ini_dumper;
-        auto& default_ini_file_device = default_ini_dumper.get_device<Output::NewFileDevice>();
-        default_ini_file_device.set_file_name_and_path(member_variable_layouts_templates_output_path / default_template_file);
-        default_ini_file_device.set_formatter([](File::StringViewType string) {
-            return File::StringType{string};
-        });
 
         auto template_file = std::format(STR("MemberVariableLayout_{}_Template.ini"), pdb_name);
 
@@ -167,18 +190,49 @@ namespace RC::UVTD
             });
 
             ini_dumper.send(STR("[{}]\n"), class_entry.class_name);
-            default_ini_dumper.send(STR("[{}]\n"), class_entry.class_name);
+            // Output total size on its own line below the section header
+            ini_dumper.send(STR("; Total Size: 0x{:X}\n"), class_entry.total_size);
 
             // Track variables we've already processed to avoid duplicates
             std::unordered_set<File::StringType> processed_variables;
 
-            for (const auto& [variable_name, variable] : class_entry.variables)
+            // Iterate through sorted variables with formatted type info
+            for (size_t i = 0; i < class_entry.variables.size(); ++i)
             {
-                // Write the variable name in the INI templates using original form 
-                ini_dumper.send(STR("{} = 0x{:X}\n"), variable.name, variable.offset);
-                default_ini_dumper.send(STR("{} = -1\n"), variable.name);
+                const auto& variable = class_entry.variables[i];
 
-                // Check if this is a name that should be renamed
+                // Calculate padding to next member
+                uint32_t padding = 0;
+                if (i + 1 < class_entry.variables.size())
+                {
+                    uint32_t current_end = variable.offset + variable.size;
+                    uint32_t next_start = class_entry.variables[i + 1].offset;
+                    if (next_start > current_end)
+                    {
+                        padding = next_start - current_end;
+                    }
+                }
+
+                // Output type info line with formatted columns
+                // Format: Type (padded to 35 chars) | Size | Padding (if present)
+                if (padding > 0)
+                {
+                    ini_dumper.send(fmt::format(STR("; {:<35} Size: 0x{:04X}  Padding: 0x{:X}\n"),
+                                                variable.type,
+                                                variable.size,
+                                                padding));
+                }
+                else
+                {
+                    ini_dumper.send(fmt::format(STR("; {:<35} Size: 0x{:04X}\n"),
+                                                variable.type,
+                                                variable.size));
+                }
+
+                // Output the actual member assignment
+                ini_dumper.send(fmt::format(STR("{} = 0x{:X}\n"), variable.name, variable.offset));
+
+                // Check if this is a name that should be renamed for code generation
                 auto rename_info = ConfigUtil::GetMemberRenameInfo(class_entry.class_name, variable.name);
                 File::StringType final_variable_name = variable.name;
                 if (rename_info.has_value())
@@ -212,7 +266,6 @@ namespace RC::UVTD
             }
 
             ini_dumper.send(STR("\n"));
-            default_ini_dumper.send(STR("\n"));
         }
     }
 
