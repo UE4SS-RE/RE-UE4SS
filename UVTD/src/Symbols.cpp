@@ -1101,8 +1101,19 @@ auto Symbols::get_type_size_impl(const PDB::TPIStream& tpi_stream, uint32_t reco
             }
         }
     
-        // Default to pointer
-        return underlying_type + STR("*");
+        // Handle regular pointers
+        File::StringType result = underlying_type + STR("*");
+    
+        // Check if the pointer itself is const (T* const)
+        if (record->data.LF_POINTER.attr.isconst) {
+            result += STR(" const");
+        }
+    
+        if (record->data.LF_POINTER.attr.isvolatile) {
+            result += STR(" volatile");
+        }
+
+        return result;
     }
     case PDB::CodeView::TPI::TypeRecordKind::LF_MFUNCTION:
     case PDB::CodeView::TPI::TypeRecordKind::LF_PROCEDURE: {
