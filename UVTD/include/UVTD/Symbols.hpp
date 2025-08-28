@@ -128,6 +128,13 @@ namespace RC::UVTD
             ValidForMemberVars valid_for_member_vars{ValidForMemberVars::No};
         };
 
+        enum class ClassInheritanceModel
+        {
+            Single,
+            Multiple,
+            Virtual
+        };
+
       public:
         std::filesystem::path pdb_file_path;
         File::Handle pdb_file_handle;
@@ -137,10 +144,14 @@ namespace RC::UVTD
         PDB::DBIStream dbi_stream;
         bool is_425_plus;
 
+    private:
+        PDB::CodeView::DBI::CPUType m_machine_type{PDB::CodeView::DBI::CPUType::X64};
+
+    public:
         std::unordered_map<File::StringType, EnumEntry> enum_entries;
         std::unordered_map<File::StringType, Class> class_entries;
 
-      public:
+
         Symbols() = delete;
 
         explicit Symbols(std::filesystem::path pdb_file_path);
@@ -157,8 +168,13 @@ namespace RC::UVTD
                 -> MethodSignature;
 
       public:
-        auto static get_type_name(const PDB::TPIStream& tpi_stream, uint32_t record_index, bool check_valid = false) -> File::StringType;
+        auto static get_type_name(const PDB::TPIStream& tpi_stream, uint32_t record_index, bool check_valid = false, bool is_64bit = true) -> File::StringType;
+        auto static read_numeric(const uint8_t*& data) -> uint64_t;
+        auto static get_numeric_leaf_size(const uint8_t* data) -> uint32_t;
+        auto static get_field_record_size(const PDB::CodeView::TPI::FieldList* field) -> uint32_t;
+        auto static get_type_size(const PDB::TPIStream& tpi_stream, uint32_t record_index, bool is_64bit = true) -> uint32_t;
         auto static get_method_name(const PDB::CodeView::TPI::FieldList* method_record) -> File::StringType;
+        auto static get_class_inheritance_model(const PDB::TPIStream& tpi_stream, uint32_t class_type_index) -> ClassInheritanceModel;
         // Existing method for backward compatibility
         auto static get_leaf_name(const char* data, PDB::CodeView::TPI::TypeRecordKind kind) -> File::StringType;
 
@@ -168,6 +184,8 @@ namespace RC::UVTD
         auto static clean_name(File::StringType name) -> File::StringType;
 
         auto static is_virtual(PDB::CodeView::TPI::MemberAttributes attributes) -> bool;
+        auto is_x64() const -> bool;
+        auto is_x86() const -> bool;
 
       private:
         auto setup_symbol_loader() -> void;

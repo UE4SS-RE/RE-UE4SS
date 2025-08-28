@@ -39,7 +39,7 @@ namespace RC::UVTD
         // Get the original member name without renaming - this is important so we capture the true variable name
         File::StringType member_name = Symbols::get_leaf_name(field_record->data.LF_STMEMBER.name, field_record->data.LF_MEMBER.lfEasy.kind);
 
-        auto changed = change_prefix(Symbols::get_type_name(tpi_stream, field_record->data.LF_MEMBER.index), symbols.is_425_plus);
+        auto changed = change_prefix(Symbols::get_type_name(tpi_stream, field_record->data.LF_MEMBER.index, symbols.is_x64()), symbols.is_425_plus);
         if (!changed.has_value()) return;
 
         File::StringType type_name = *changed;
