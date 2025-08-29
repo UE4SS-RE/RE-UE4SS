@@ -167,9 +167,11 @@ Added improved string and path conversion utilities with proper UTF-8 support ([
 
 ### General 
 
-Updated ImGui from v1.89 to v1.91.9b for improved functionality and Clang compatability 
+Updated ImGui from v1.89 to v1.92.1 for improved functionality and Clang compatability 
 
 Updated ImGuiTextEdit to support newest ImGui API 
+
+Updated fmt library to 11.2.0
 
 Changed the default location of the UE4SS release assets to be in `game executable directory/ue4ss/`. This change is backwards compatible with the old location. ([UE4SS #506](https://github.com/UE4SS-RE/RE-UE4SS/pull/506)) - Buckminsterfullerene 
 
