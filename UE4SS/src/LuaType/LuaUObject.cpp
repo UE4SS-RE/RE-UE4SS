@@ -504,6 +504,165 @@ namespace RC::LuaType
         push_integer<uint64_t>(params);
     }
 
+    /**
+     * Helper function to convert a Lua table to a UScriptStruct in memory
+     * @param lua The Lua state
+     * @param script_struct The struct type to convert to
+     * @param data Pointer to the memory where the struct should be written
+     * @param table_index Stack index where the Lua table is located
+     * @param base Optional UObject base for context
+     */
+    auto convert_lua_table_to_struct(
+            const LuaMadeSimple::Lua& lua,
+            Unreal::UScriptStruct* script_struct,
+            void* data,
+            int table_index,
+            Unreal::UObject* base
+            ) -> void
+    {
+        if (!script_struct || !data)
+        {
+            lua.throw_error("convert_lua_table_to_struct: script_struct or data is null");
+            return;
+        }
+
+        unsigned char* data_bytes = static_cast<unsigned char*>(data);
+
+        for (Unreal::FProperty* field : script_struct->ForEachPropertyInChain())
+        {
+            Unreal::FName field_type_fname = field->GetClass().GetFName();
+            const std::string field_name = to_string(field->GetName());
+
+            // Push the field name (key for the table)
+            lua_pushstring(lua.get_lua_state(), field_name.c_str());
+
+            // Get the value from the table
+            // For lua_rawget, we need the actual stack position of the table
+            // If table_index is positive, it stays the same even after pushing the key
+            // If it's negative, we need to adjust for the key we just pushed
+            
+            // Adjust index for negative values after pushing key
+            int adjusted_index = table_index;
+            if (table_index < 0)
+            {
+                adjusted_index = table_index - 1;
+            }
+
+            auto table_value_type = lua_rawget(lua.get_lua_state(), adjusted_index);
+
+            // If there was nothing in the table for this field, leave default value
+            if (table_value_type == LUA_TNIL || table_value_type == LUA_TNONE)
+            {
+                lua.discard_value(-1);
+                continue;
+            }
+
+            int32_t name_comparison_index = field_type_fname.GetComparisonIndex();
+
+            if (StaticState::m_property_value_pushers.contains(name_comparison_index))
+            {
+                void* field_data = &data_bytes[field->GetOffset_Internal()];
+
+                const PusherParams pusher_params{
+                        .operation = Operation::Set,
+                        .lua = lua,
+                        .base = base ? base : static_cast<Unreal::UObject*>(data),
+                        .data = field_data,
+                        .property = field,
+                        .stored_at_index = -1 // Value is at top of stack
+                };
+
+                StaticState::m_property_value_pushers[name_comparison_index](pusher_params);
+            }
+            else
+            {
+                // Just skip fields without handlers and pop the value
+                lua.discard_value(-1);
+                Output::send<LogLevel::Verbose>(
+                        STR("convert_lua_table_to_struct: Skipping field '{}' of type '{}' (no handler)\n"),
+                        to_wstring(field_name),
+                        field_type_fname.ToString()
+                        );
+            }
+        }
+    }
+
+    /**
+     * Helper function to convert a UScriptStruct to a Lua table
+     * @param lua The Lua state
+     * @param script_struct The struct type to convert from
+     * @param data Pointer to the struct data to read
+     * @param create_new_table Whether to create a new table or use existing one on stack
+     * @param base Optional UObject base for context
+     */
+    auto convert_struct_to_lua_table(
+            const LuaMadeSimple::Lua& lua,
+            Unreal::UScriptStruct* script_struct,
+            void* data,
+            bool create_new_table,
+            Unreal::UObject* base
+            ) -> void
+    {
+        if (!script_struct || !data)
+        {
+            lua.set_nil();
+            return;
+        }
+
+        unsigned char* data_bytes = static_cast<unsigned char*>(data);
+
+        // Get or create table
+        LuaMadeSimple::Lua::Table lua_table = create_new_table
+                                                  ? lua.prepare_new_table()
+                                                  : lua.get_table();
+
+        for (Unreal::FProperty* field : script_struct->ForEachPropertyInChain())
+        {
+            std::string field_name = to_string(field->GetName());
+            Unreal::FName field_type_fname = field->GetClass().GetFName();
+            int32_t name_comparison_index = field_type_fname.GetComparisonIndex();
+
+            // Check if we can handle this field type
+            bool can_handle = StaticState::m_property_value_pushers.contains(name_comparison_index);
+
+            // If it's an array, also check if we can handle the inner type
+            if (can_handle && field->IsA<Unreal::FArrayProperty>())
+            {
+                auto* array_prop = static_cast<Unreal::FArrayProperty*>(field);
+                auto* inner = array_prop->GetInner();
+                int32_t inner_comparison_index = inner->GetClass().GetFName().GetComparisonIndex();
+                can_handle = StaticState::m_property_value_pushers.contains(inner_comparison_index);
+            }
+
+            if (can_handle)
+            {
+                lua_table.add_key(field_name.c_str());
+
+                const PusherParams pusher_params{
+                        .operation = Operation::GetNonTrivialLocal,
+                        .lua = lua,
+                        .base = base ? base : Helper::Casting::ptr_cast<Unreal::UObject*>(data_bytes),
+                        .data = &data_bytes[field->GetOffset_Internal()],
+                        .property = field
+                };
+
+                StaticState::m_property_value_pushers[name_comparison_index](pusher_params);
+                lua_table.fuse_pair();
+            }
+            else
+            {
+                // Skip fields without handlers
+                Output::send<LogLevel::Verbose>(
+                        STR("Skipping field '{}' of type '{}' (no handler)\n"),
+                        to_wstring(field_name),
+                        field_type_fname.ToString()
+                        );
+            }
+        }
+
+        lua_table.make_local();
+    }
+
     auto push_structproperty(const PusherParams& params) -> void
     {
         // params.base = Base of the object that this struct belongs in
@@ -513,132 +672,23 @@ namespace RC::LuaType
         Unreal::UScriptStruct* script_struct = struct_property->GetStruct();
 
         auto iterate_struct_and_turn_into_lua_table = [&](const LuaMadeSimple::Lua& lua, void* data_ptr) {
-            auto* data = static_cast<unsigned char*>(data_ptr);
-
-            // Get the table from the stack or create a new one
-            LuaMadeSimple::Lua::Table lua_table = [&]() {
-                if (params.create_new_if_get_non_trivial_local)
-                {
-                    return lua.prepare_new_table();
-                }
-                else
-                {
-                    return lua.get_table();
-                }
-            }();
-
-            // Put all the script struct properties into the table
-            for (Unreal::FProperty* field : script_struct->ForEachPropertyInChain())
-            {
-                // There can be non-property items in the linked list, like 'ExecuteUbergraph'
-                // We only care about actual properties, so let's ignore anything else
-                // TODO: This may have only been the case before the ForEachProperty abstraction
-                //       The abstraction filters out any non-property types
-                //       Commenting out this code for now, should investigate this later to confirm
-                // if (!Unreal::TypeChecker::is_property(field))
-                //{
-                //    return LoopAction::Continue;
-                //}
-
-                std::string field_name = to_string(field->GetName());
-
-                Unreal::FName field_type = field->GetClass().GetFName();
-                int32_t name_comparison_index = field_type.GetComparisonIndex();
-
-                if (StaticState::m_property_value_pushers.contains(name_comparison_index))
-                {
-                    // This example uses the Vector struct and its "IntProperty Vector:X" property
-                    // Push key (i.e: X)
-                    lua_table.add_key(field_name.c_str());
-
-                    // Push value (i.e: 4.243)
-                    const PusherParams pusher_params{.operation = Operation::GetNonTrivialLocal,
-                                                     .lua = lua,
-                                                     .base = Helper::Casting::ptr_cast<Unreal::UObject*>(data), // Base is the start of the params struct
-                                                     .data = &data[field->GetOffset_Internal()],
-                                                     .property = field,
-                                                     .stored_at_index = params.stored_at_index};
-                    StaticState::m_property_value_pushers[name_comparison_index](pusher_params);
-
-                    // On the top of the stack now: Value for this field in the struct
-                    lua_table.fuse_pair();
-                }
-                else
-                {
-                    std::string field_type_name = to_string(field_type.ToString());
-                    params.throw_error("push_structproperty",
-                                       "Tried getting without a registered handler.",
-                                       "StructProperty field type not supported",
-                                       field_type_name,
-                                       "Field",
-                                       field_name);
-                }
-            };
-
-            lua_table.make_local();
+            convert_struct_to_lua_table(
+                    lua,
+                    script_struct,
+                    data_ptr,
+                    params.create_new_if_get_non_trivial_local,
+                    params.base
+                    );
         };
 
         auto lua_table_to_memory = [&]() {
-            // At the bottom of the stack now: table that has struct data
-
-            // Duplicating the table and putting the duplicate at the top of the stack
-
-            for (Unreal::FProperty* field : script_struct->ForEachPropertyInChain())
-            {
-                Unreal::FName field_type_fname = field->GetClass().GetFName();
-                const std::string field_name = to_string(field->GetName());
-
-                // At the top of the stack now: table that has struct data
-
-                // Pushing the field name (key for the table)
-                lua_pushstring(params.lua.get_lua_state(), field_name.c_str());
-
-                // At the top of the stack now: key to find in table (string)
-
-                // Pushing on to the stack, the value corresponding to table[key] if it exists
-                // table exists at index 1 if outermost table, and -2 if nested table
-                auto active_table_index = params.stored_at_index < 0 ? params.stored_at_index - 1 : params.stored_at_index;
-                auto table_value_type = lua_rawget(params.lua.get_lua_state(), active_table_index);
-
-                // At the top of the stack now: the value corresponding to table[key] or nil
-
-                // If there was nothing in the table for this field, leave default value and move on to the next field
-                if (table_value_type == LUA_TNIL || table_value_type == LUA_TNONE)
-                {
-                    // Remove the 'nil' from the stack
-                    params.lua.discard_value(-1);
-                    continue;
-                }
-
-                int32_t name_comparison_index = field_type_fname.GetComparisonIndex();
-
-                if (StaticState::m_property_value_pushers.contains(name_comparison_index))
-                {
-                    unsigned char* data = static_cast<unsigned char*>(params.data);
-                    data = &data[field->GetOffset_Internal()];
-
-                    const PusherParams pusher_params{
-                            .operation = Operation::Set,
-                            .lua = params.lua,
-                            .base = static_cast<Unreal::UObject*>(params.data), // Base is the start of the params struct
-                            .data = data,
-                            .property = field,
-                            .stored_at_index = -1 // Using -1 here because we know the value is at the top of the stack instead of at the bottom of the stack
-                    };
-                    StaticState::m_property_value_pushers[name_comparison_index](pusher_params);
-                }
-                else
-                {
-                    std::string field_type_name = to_string(field_type_fname.ToString());
-                    params.throw_error("push_structproperty",
-                                       "Tried pushing StructProperty without a registered handler for field.",
-                                       "Field type",
-                                       field_type_name,
-                                       "Field",
-                                       field_name);
-                }
-            };
-
+            convert_lua_table_to_struct(
+                    params.lua,
+                    script_struct,
+                    params.data,
+                    params.stored_at_index,
+                    params.base
+                    );
             params.lua.discard_value(params.stored_at_index);
         };
 
