@@ -3,9 +3,6 @@ name: Update UE Submodule and PR
 on:
   workflow_dispatch:
   
-env:
-  COMMITS_BODY: ''
-  
 jobs:
   update-submodule:
     permissions: write-all
@@ -30,12 +27,28 @@ jobs:
         run: |
           cd ./deps/first/Unreal
           git fetch origin main
-          git log HEAD..main --pretty="tformat:* %s (**%an**) _%h_" >> submodule-commits.txt
-          body=$(cat submodule-commits.txt)
-          body="${body//'%'/'%25'}"
-          body="${body//$'\n'/'%0A'}"
-          body="${body//$'\r'/'%0D'}"
-          echo "COMMITS_BODY=$body" >> $GITHUB_ENV
+          
+          # Get the remote URL to extract owner/repo
+          REMOTE_URL=$(git config --get remote.origin.url)
+          # Extract owner/repo from the URL (works for both HTTPS and SSH)
+          if [[ $REMOTE_URL == git@github.com:* ]]; then
+            REPO_PATH=${REMOTE_URL#git@github.com:}
+            REPO_PATH=${REPO_PATH%.git}
+          else
+            REPO_PATH=${REMOTE_URL#https://github.com/}
+            REPO_PATH=${REPO_PATH%.git}
+          fi
+          
+          # Generate commit list with proper PR links
+          git log HEAD..main --pretty="tformat:* %s (**%an**) _%h_" | \
+          sed "s/#\([0-9]\+\)/[#\1](https:\/\/github.com\/${REPO_PATH}\/pull\/\1)/g" > submodule-commits.txt
+          
+          # Read the file content and save to environment variable
+          {
+            echo 'COMMITS_BODY<<EOF'
+            cat submodule-commits.txt
+            echo EOF
+          } >> $GITHUB_ENV
       
       - name: Update submodule to latest commit on main branch
         run: |
