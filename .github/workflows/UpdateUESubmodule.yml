@@ -39,9 +39,11 @@ jobs:
             REPO_PATH=${REPO_PATH%.git}
           fi
           
+          echo "Submodule repository: $REPO_PATH"
+          
           # Generate commit list with proper PR links
           git log HEAD..main --pretty="tformat:* %s (**%an**) _%h_" | \
-          sed "s/#\([0-9]\+\)/[#\1](https:\/\/github.com\/${REPO_PATH}\/pull\/\1)/g" > submodule-commits.txt
+          sed "s|#\([0-9]\+\)|[#\1](https://github.com/${REPO_PATH}/pull/\1)|g" > submodule-commits.txt
           
           # Read the file content and save to environment variable
           {
