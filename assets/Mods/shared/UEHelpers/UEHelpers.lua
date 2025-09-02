@@ -21,7 +21,6 @@ local function CacheDefaultObject(ObjectFullName, VariableName, ForceInvalidateC
 
     DefaultObject = StaticFindObject(ObjectFullName)
     ModRef:SetSharedVariable(VariableName, DefaultObject)
-    if not DefaultObject:IsValid() then error(string.format("%s not found", ObjectFullName)) end
 
     return DefaultObject
 end
