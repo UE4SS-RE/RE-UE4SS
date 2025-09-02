@@ -500,7 +500,7 @@ namespace RC::GUI
         float base_font_size = 14 * UE4SSProgram::settings_manager.Debug.DebugGUIFontScaling;
 
         // Increase font atlas size (if needed for many characters)
-        io.Fonts->TexDesiredWidth = 2048; // Increase the atlas size to allow more glyphs to fit
+        io.Fonts->TexMinWidth = 2048; // Increase the atlas size to allow more glyphs to fit
 
         // Load base font (Latin characters)
         ImFontConfig font_cfg;
@@ -526,9 +526,6 @@ namespace RC::GUI
         icons_cfg.PixelSnapH = true;
         icons_cfg.GlyphMinAdvanceX = icon_font_size;
         io.Fonts->AddFontFromMemoryTTF(FaSolid900, sizeof(FaSolid900), icon_font_size, &icons_cfg, icons_ranges);
-
-        // Build font atlas
-        io.Fonts->Build();
 
         m_os_backend->init();
         m_gfx_backend->init();

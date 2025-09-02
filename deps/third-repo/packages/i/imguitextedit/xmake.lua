@@ -4,7 +4,7 @@ package("ImGuiTextEdit")
 
     add_versions("v1.1.0", "master")
 
-    add_deps("cmake", "imgui v1.91.9b")
+    add_deps("cmake", "imgui v1.92.1")
 
     add_includedirs("include", { public = true })
 
