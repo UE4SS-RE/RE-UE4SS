@@ -526,12 +526,10 @@ namespace RC::LuaType
             return;
         }
 
-        unsigned char* data_bytes = static_cast<unsigned char*>(data);
-
         for (Unreal::FProperty* field : script_struct->ForEachPropertyInChain())
         {
             Unreal::FName field_type_fname = field->GetClass().GetFName();
-            const std::string field_name = to_string(field->GetName());
+            const std::string field_name = to_utf8_string(field->GetName());
 
             // Push the field name (key for the table)
             lua_pushstring(lua.get_lua_state(), field_name.c_str());
@@ -561,7 +559,7 @@ namespace RC::LuaType
 
             if (StaticState::m_property_value_pushers.contains(name_comparison_index))
             {
-                void* field_data = &data_bytes[field->GetOffset_Internal()];
+                void* field_data = &static_cast<uint8_t*>(data)[field->GetOffset_Internal()];
 
                 const PusherParams pusher_params{
                         .operation = Operation::Set,
@@ -583,6 +581,7 @@ namespace RC::LuaType
                         to_wstring(field_name),
                         field_type_fname.ToString()
                         );
+
             }
         }
     }
@@ -609,29 +608,37 @@ namespace RC::LuaType
             return;
         }
 
-        unsigned char* data_bytes = static_cast<unsigned char*>(data);
-
-        // Get or create table
         LuaMadeSimple::Lua::Table lua_table = create_new_table
                                                   ? lua.prepare_new_table()
                                                   : lua.get_table();
 
         for (Unreal::FProperty* field : script_struct->ForEachPropertyInChain())
         {
-            std::string field_name = to_string(field->GetName());
+            std::string field_name = to_utf8_string(field->GetName());
             Unreal::FName field_type_fname = field->GetClass().GetFName();
             int32_t name_comparison_index = field_type_fname.GetComparisonIndex();
 
             // Check if we can handle this field type
             bool can_handle = StaticState::m_property_value_pushers.contains(name_comparison_index);
 
-            // If it's an array, also check if we can handle the inner type
-            if (can_handle && field->IsA<Unreal::FArrayProperty>())
+            if (can_handle)
             {
-                auto* array_prop = static_cast<Unreal::FArrayProperty*>(field);
-                auto* inner = array_prop->GetInner();
-                int32_t inner_comparison_index = inner->GetClass().GetFName().GetComparisonIndex();
-                can_handle = StaticState::m_property_value_pushers.contains(inner_comparison_index);
+                // If it's a container, also check if we can handle the inner type
+                if (field->IsA<Unreal::FArrayProperty>())
+                {
+                    auto* array_prop = static_cast<Unreal::FArrayProperty*>(field);
+                    auto* inner = array_prop->GetInner();
+                    int32_t inner_comparison_index = inner->GetClass().GetFName().GetComparisonIndex();
+                    can_handle = StaticState::m_property_value_pushers.contains(inner_comparison_index);
+                }
+                else if (field->IsA<Unreal::FMapProperty>())
+                {
+                    auto* map_prop = static_cast<Unreal::FMapProperty*>(field);
+                    int32_t key_index = map_prop->GetKeyProp()->GetClass().GetFName().GetComparisonIndex();
+                    int32_t value_index = map_prop->GetValueProp()->GetClass().GetFName().GetComparisonIndex();
+                    can_handle = StaticState::m_property_value_pushers.contains(key_index) && 
+                                 StaticState::m_property_value_pushers.contains(value_index);
+                }
             }
 
             if (can_handle)
@@ -641,8 +648,8 @@ namespace RC::LuaType
                 const PusherParams pusher_params{
                         .operation = Operation::GetNonTrivialLocal,
                         .lua = lua,
-                        .base = base ? base : Helper::Casting::ptr_cast<Unreal::UObject*>(data_bytes),
-                        .data = &data_bytes[field->GetOffset_Internal()],
+                        .base = base ? base : Helper::Casting::ptr_cast<Unreal::UObject*>(data),
+                        .data = &static_cast<uint8_t*>(data)[field->GetOffset_Internal()],
                         .property = field
                 };
 
@@ -653,7 +660,7 @@ namespace RC::LuaType
             {
                 // Skip fields without handlers
                 Output::send<LogLevel::Verbose>(
-                        STR("Skipping field '{}' of type '{}' (no handler)\n"),
+                        STR("convert_struct_to_lua_table: Skipping field '{}' of type '{}' (no handler)\n"),
                         to_wstring(field_name),
                         field_type_fname.ToString()
                         );
@@ -782,7 +789,7 @@ namespace RC::LuaType
             }
             else
             {
-                std::string property_type_name = to_string(property_type_fname.ToString());
+                std::string property_type_name = to_utf8_string(property_type_fname.ToString());
                 params.throw_error("push_arrayproperty",
                                    "Tried interacting with an array but the inner property has no registered handler.",
                                    "Inner property type",
@@ -798,7 +805,7 @@ namespace RC::LuaType
             int32_t name_comparison_index = inner_type_fname.GetComparisonIndex();
             if (!StaticState::m_property_value_pushers.contains(name_comparison_index))
             {
-                std::string inner_type_name = to_string(inner_type_fname.ToString());
+                std::string inner_type_name = to_utf8_string(inner_type_fname.ToString());
                 params.throw_error("push_arrayproperty", "Tried pushing ArrayProperty with unsupported inner type", "Inner property type", inner_type_name);
             }
 
