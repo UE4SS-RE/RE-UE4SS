@@ -182,6 +182,8 @@ release ([UE4SS #779](https://github.com/UE4SS-RE/RE-UE4SS/pull/779))
 
 Removed some development mods, `README.md` & `Changelog.md` from non-zDev release, added `LICENCE` file to both release types ([UE4SS #830](https://github.com/UE4SS-RE/RE-UE4SS/pull/830))
 
+The execution of the game is now paused durin the first AOB scan, and then resumed to complete potential further scans and initialization. ([UE4SS #985](https://github.com/UE4SS-RE/RE-UE4SS/pull/985))
+
 ### Live View 
 Fixed the majority of the lag ([UE4SS #512](https://github.com/UE4SS-RE/RE-UE4SS/pull/512)) 
 
