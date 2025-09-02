@@ -839,6 +839,19 @@ namespace RC
         // Apply Debug Build setting from settings file only for now.
         Unreal::Version::DebugBuild = settings_manager.EngineVersionOverride.DebugBuild;
         Output::send<LogLevel::Warning>(STR("DebugGame Setting Enabled? {}\n"), Unreal::Version::DebugBuild);
+        // Scan a single time while the game thread is locked after UE4SS is attached.
+        Unreal::UnrealInitializer::PreInitialize(config);
+        try
+        {
+            Unreal::UnrealInitializer::ScanGame();
+        }
+        catch (std::runtime_error&)
+        {
+            // No work to be done here. Error is non-fatal, just let the 'Initialize' function take it from here.
+        }
+        cpp_mods_done_loading.store(true);
+        cpp_mods_done_loading.notify_one();
+        // Continuous scanning, and finish initializing after the game thread is unlocked.
         Unreal::UnrealInitializer::Initialize(config);
 
         bool can_create_custom_events{true};
