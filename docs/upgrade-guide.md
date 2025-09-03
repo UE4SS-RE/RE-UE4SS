@@ -9,6 +9,59 @@ This document provides detailed guidance for upgrading between versions of RE-UE
 
 ### Breaking Changes
 
+#### FName Constructor Default Parameter Change
+
+**What Changed:**  
+The default `EFindName` parameter for FName constructors has changed from `FNAME_Find` to `FNAME_Add`.
+
+**Before (v3.x):**
+```cpp
+// Default was FNAME_Find - only found existing names
+explicit FName(const CharType* StrName, EFindName FindType = FNAME_Find, void* FunctionAddressOverride = nullptr);
+```
+
+**After (v4.x):**
+```cpp
+// Default is now FNAME_Add - creates name if it doesn't exist
+explicit FName(const CharType* StrName, EFindName FindType = FNAME_Add, void* FunctionAddressOverride = nullptr);
+```
+
+**Migration Steps:**
+
+1. If you rely on the old behavior of FName constructors returning NAME_None when a name doesn't exist:
+   ```cpp
+   // Old (implicit FNAME_Find)
+   FName TestName(STR("NonExistentName")); // Would result in NAME_None if name doesn't exist
+   
+   // New (explicit FNAME_Find to maintain old behavior)
+   FName TestName(STR("NonExistentName"), FNAME_Find); // Explicitly specify FNAME_Find
+   ```
+
+2. If you're checking for name validity after construction:
+   ```cpp
+   // Old code that might break
+   FName TestName(STR("PotentiallyNewName"));
+   if (!TestName) { // This check no longer works as expected
+       // Handle invalid name
+   }
+   
+   // New approach
+   FName TestName(STR("PotentiallyNewName"), FNAME_Find); // Use FNAME_Find if you need to check existence
+   if (!TestName) {
+       // Handle non-existent name
+   }
+   ```
+
+3. For code that already explicitly specified the FindType parameter, no changes are needed.
+
+**Important Notes:**
+- This change affects all three FName constructor overloads that accept string parameters
+- The new default behavior (`FNAME_Add`) will create new FName entries in the name table if they don't exist
+- This can have performance implications if you're frequently creating FNames with strings that may not exist
+- When working with Unreal Engine internals, be cautious as creating new names unintentionally could lead to unexpected behavior
+
+
+
 #### TObjectPtr Implementation Change
 **What Changed:**  
 The `TObjectPtr<>` class has been enhanced to function as a proper smart pointer instead of a simple wrapper.
