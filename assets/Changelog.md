@@ -72,6 +72,12 @@ Added `TSet` implementation. [UE4SS #883](https://github.com/UE4SS-RE/RE-UE4SS/p
 
 Added `TMap` implementation. [UE4SS #755](https://github.com/UE4SS-RE/RE-UE4SS/issues/755)
 
+Enhanced TMap support to enable round-trip functionality [UE4SS #933](https://github.com/UE4SS-RE/RE-UE4SS/issues/993)
+- TMap userdata can now be passed as function parameters
+- Improved handling of empty maps and nil values
+- Fixed proper key-value pair copying when passing maps between Lua and C++
+- Added proper rehashing to ensure map integrity after copying
+
 Added global function `CreateInvalidObject`, which returns an invalid UObject. ([UE4SS #652](https://github.com/UE4SS-RE/RE-UE4SS/issues/652))  
 
 Added GenerateLuaTypes function. ([UE4SS #664](https://github.com/UE4SS-RE/RE-UE4SS/pull/664))  

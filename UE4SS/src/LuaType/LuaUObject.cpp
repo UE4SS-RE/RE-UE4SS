@@ -1275,9 +1275,72 @@ namespace RC::LuaType
         case Operation::GetNonTrivialLocal:
             map_to_lua_table(params.lua, params.property, params.data);
             return;
-        case Operation::Set:
-            lua_table_to_map();
+        case Operation::Set: {
+            if (params.lua.is_userdata(params.stored_at_index))
+            {
+                // Handle TMap userdata
+                auto& lua_tmap = params.lua.get_userdata<TMap>(params.stored_at_index);
+                Unreal::FScriptMap* source_map = lua_tmap.get_remote_cpp_object();
+                
+                Unreal::FMapProperty* map_property = static_cast<Unreal::FMapProperty*>(params.property);
+                FScriptMapInfo info(map_property->GetKeyProp(), map_property->GetValueProp());
+                if (!info.key || !info.value)
+                {
+                    params.throw_error("push_mapproperty", "Invalid key or value property");
+                }
+                
+                auto dest_map = new(params.data) Unreal::FScriptMap{};
+                
+                // Copy elements from source to destination
+                Unreal::int32 max_index = source_map->GetMaxIndex();
+                for (Unreal::int32 i = 0; i < max_index; i++)
+                {
+                    if (!source_map->IsValidIndex(i))
+                    {
+                        continue;
+                    }
+                    
+                    // Get source key/value pair
+                    void* src_pair = source_map->GetData(i, info.layout);
+                    
+                    // Add new entry to destination map
+                    Unreal::int32 dest_index = dest_map->AddUninitialized(info.layout);
+                    void* dest_pair = dest_map->GetData(dest_index, info.layout);
+                    
+                    // Initialize the destination memory
+                    Unreal::FMemory::Memzero(dest_pair, info.layout.SetLayout.Size);
+                    
+                    // Copy key
+                    info.key->CopySingleValueToScriptVM(dest_pair, src_pair);
+                    
+                    // Copy value
+                    void* src_value = static_cast<uint8_t*>(src_pair) + info.layout.ValueOffset;
+                    void* dest_value = static_cast<uint8_t*>(dest_pair) + info.layout.ValueOffset;
+                    info.value->CopySingleValueToScriptVM(dest_value, src_value);
+                }
+                
+                // Rehash the destination map
+                dest_map->Rehash(info.layout,
+                                [&](const void* src) -> Unreal::uint32 {
+                                    return info.key->GetValueTypeHash(src);
+                                });
+            }
+            else if (params.lua.is_table(params.stored_at_index))
+            {
+                // TMap as table
+                lua_table_to_map();
+            }
+            else if (params.lua.is_nil(params.stored_at_index))
+            {
+                // Empty map
+                new(params.data) Unreal::FScriptMap{};
+            }
+            else
+            {
+                params.throw_error("push_mapproperty", "Parameter must be of type 'TMap' or table");
+            }
             return;
+        }
         case Operation::GetParam:
             RemoteUnrealParam::construct(params.lua, params.data, params.base, params.property);
             return;
