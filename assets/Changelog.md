@@ -23,7 +23,12 @@ Added basic support for Development/Debug/Test built Unreal Engine games ([UE4SS
 Added new build definition "LessEqual421".  Using this definition for games on UE<=4.21 is not mandatory for UE4SS to function, but will ensure the correct alignment is used in containers. 
 
 **BREAKING:** - This also changes the default FName alignment from 8 to 4. 
-- To use this functionality, enter LessEqual421 in the <Target> section of the XMake configuration command. 
+- To use this functionality, enter LessEqual421 in the <Target> section of the XMake configuration command.
+
+**BREAKING:** Changed default `EFindName` parameter for FName constructors from `FNAME_Find` to `FNAME_Add`. 
+- FName constructors will now create new name table entries by default if the name doesn't exist, rather than returning NAME_None
+- To maintain the old behavior, explicitly pass `FNAME_Find` as the second parameter
+- This affects all string-based FName constructors 
 
 Added optional scans for GUObjectHashTables, GNatives and ConsoleManagerSingleton; made FText an optional scan; externed the found GNatives for use by mods([UE4SS #744](https://github.com/UE4SS-RE/RE-UE4SS/pull/744)) 
 - GUObjectHashTables and ConsoleManagerSingleton are currently unused and a WIP.
