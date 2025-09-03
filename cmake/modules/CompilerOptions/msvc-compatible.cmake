@@ -4,7 +4,7 @@
 # which share the same command-line interface and flags.
 
 # Base flags common to both MSVC and clang-cl
-set(DEFAULT_COMPILER_FLAGS "/W3;/wd4005;/wd4251;/wd4068;/Zc:inline;/Zc:strictStrings;/Gy")
+set(DEFAULT_COMPILER_FLAGS "/W3;/wd4005;/wd4251;/wd4068;/Zc:inline;/Zc:strictStrings;/Gy;/D_DISABLE_CONSTEXPR_MUTEX_CONSTRUCTOR")
 
 # Determine if we're using clang-cl
 get_filename_component(COMPILER_NAME "${CMAKE_CXX_COMPILER}" NAME)
