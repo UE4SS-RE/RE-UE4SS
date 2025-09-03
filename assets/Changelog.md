@@ -63,6 +63,11 @@ Added ability to call UFunctions directly from the GUI. ([UE4SS #851](https://gi
 **Updated Lua version to 5.4.7** ([UE4SS #887](https://github.com/UE4SS-RE/RE-UE4SS/pull/887))
 - This is necessary to compile with Clang.
 
+Enhanced TArray support to enable round-trip functionality ([UE4SS #992](https://github.com/UE4SS-RE/RE-UE4SS/pull/992))
+- TArray userdata can now be passed as function parameters
+- Improved handling of empty arrays and nil values
+- Fixed proper element copying when passing arrays between Lua and C++
+
 Added `TSet` implementation. [UE4SS #883](https://github.com/UE4SS-RE/RE-UE4SS/pull/883)
 
 Added `TMap` implementation. [UE4SS #755](https://github.com/UE4SS-RE/RE-UE4SS/issues/755)
