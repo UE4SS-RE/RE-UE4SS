@@ -250,7 +250,7 @@ namespace RC::LuaType
                 lua.registry().get_table_ref(lua_table_ref);
                 auto lua_table = lua.get_table();
 
-                auto reuse_same_table = param->IsA<Unreal::FArrayProperty>() || param->IsA<Unreal::FStructProperty>();
+                auto reuse_same_table = param->IsA<Unreal::FArrayProperty>() || param->IsA<Unreal::FStructProperty>() || param->IsA<Unreal::FSetProperty>();
                 if (!reuse_same_table)
                 {
                     lua_table.add_key(to_string(param->GetName()).c_str());
