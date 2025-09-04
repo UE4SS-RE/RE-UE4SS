@@ -4,6 +4,7 @@ set(TARGET LuaRaw)
 project(${TARGET})
 
 option(UE4SS_${TARGET}_BUILD_SHARED "Build as a shared lib" OFF)
+option(LUA_COMPILE_AS_CPP "Compile Lua as C++ instead of C" OFF)
 
 set(${TARGET}_Sources
         "${CMAKE_CURRENT_SOURCE_DIR}/src/lapi.c"
@@ -45,8 +46,12 @@ set(${TARGET}_Sources
 
 # This makes the .c files be compiled with the C++ compiler
 # This causes __cplusplus to be defined which is what Lua uses to determine whether it's compiled as C or C++
-# TODO: Decide if we want to compile Lua as C++ rather than C
-# set_source_files_properties(${${TARGET}_Sources} PROPERTIES LANGUAGE CXX)
+if(LUA_COMPILE_AS_CPP)
+    message("Compiling Lua as C++")
+    set_source_files_properties(${${TARGET}_Sources} PROPERTIES LANGUAGE CXX)
+else()
+    message("Compiling Lua as C")
+endif()
 
 string(REGEX REPLACE "(.)([A-Z])" "\\1_\\2" MODULE_NAME ${TARGET})
 string(TOUPPER ${MODULE_NAME} MODULE_NAME)
@@ -64,10 +69,13 @@ target_compile_features(${TARGET} PUBLIC cxx_std_23)
 
 target_include_directories(${TARGET} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
 
-target_compile_definitions(${TARGET} PRIVATE
+target_compile_definitions(${TARGET} 
+    PRIVATE
         RC_${MODULE_NAME}_EXPORTS
+    PUBLIC
         $<$<NOT:$<BOOL:${UE4SS_${TARGET}_BUILD_SHARED}>>:
-            RC_${MODULE_NAME}_BUILD_STATIC>)
+            RC_${MODULE_NAME}_BUILD_STATIC>
+        $<$<BOOL:${LUA_COMPILE_AS_CPP}>:LUA_COMPILED_AS_CPP>)
             
 # Make headers visible in the IDE
 # Uses make_headers_visible() from cmake/modules/IDEVisibility.cmake
@@ -76,5 +84,5 @@ make_headers_visible(${TARGET} "${CMAKE_CURRENT_SOURCE_DIR}/include")
 if (${CMAKE_CXX_COMPILER_ID} STREQUAL MSVC)
     target_compile_options(${TARGET} PRIVATE /W0)
 elseif (${CMAKE_CXX_COMPILER_ID} STREQUAL Clang)
-    target_compile_options(${TARGET} PRIVATE -xc++;-Wno-deprecated-enum-enum-conversion)
+    target_compile_options(${TARGET} PRIVATE -Wno-deprecated-enum-enum-conversion)
 endif ()
