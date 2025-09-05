@@ -71,5 +71,11 @@ _ReSharper*/
 .cache
 .xwin-cache
 
+.clangd
+compile_commands.json
+
 # xmake generated projects
 vsxmake2022
+
+# xwin
+xwin/*

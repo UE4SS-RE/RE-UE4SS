@@ -103,10 +103,6 @@ Currently supported options for these are:
 > [!TIP]
 > Configure the project using this command: `xmake f -m "<BuildMode>"`. `-m` is an alias for --**m**ode=\<BuildMode>.
 
-#### Patternsleuth (Experimental)
-
-By default, the patternsleuth tool installs itself as an xmake package. If you do not intend on modifying the patternsleuth source code, then you don't have to configure anything special. If you want to be able to modify the patternsleuth source code, you have to supply the `--patternsleuth=local` option to `xmake config` in order to recompile patternsleuth as part of the UE4SS build. 
-
 #### Proxy Path
 
 By default, UE4SS generates a proxy based on `C:\Windows\System32\dwmapi.dll`. If you want to change this for any reason, you can supply the `--ue4ssProxyPath=<path proxy dll>` to the `xmake config` command..

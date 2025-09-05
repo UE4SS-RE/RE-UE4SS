@@ -498,17 +498,18 @@ namespace RC
         }
     }
 
+    // Forward declaration for ensure_str_as
+    template <typename TargetCharT, typename T>
+    auto inline ensure_str_as(T&& arg) -> std::basic_string<TargetCharT>
+    {
+        return to_charT<TargetCharT>(std::forward<T>(arg));
+    }
+
     // Ensure that a string is compatible with UE4SS, converting it if neccessary
     template <typename T>
     auto inline ensure_str(T&& arg) /* -> StringType */
     {
         return ensure_str_as<CharType>(std::forward<T>(arg)); // CharType is the project's native char type
-    }
-
-    template <typename TargetCharT, typename T>
-    auto inline ensure_str_as(T&& arg) -> std::basic_string<TargetCharT>
-    {
-        return to_charT<TargetCharT>(std::forward<T>(arg));
     }
 
     template <typename T>
