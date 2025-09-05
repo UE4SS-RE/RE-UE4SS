@@ -1,0 +1,116 @@
+# This workflow automates the build process for all modes of the UE4SS project using CMake whenever a pull request is made.
+# It reports artifacts to the PR comments.
+
+name: CMake Build All Modes
+permissions:
+    contents: write
+    pull-requests: write # For adding comments to PR.
+on:
+  workflow_dispatch:  # Allow manual triggering from GitHub Actions tab
+  pull_request:
+    branches:
+        - 'main'
+    paths-ignore:
+        - 'README.md'
+        - 'LICENSE'
+        - 'CNAME'
+        - '.github/workflows/pushdocs.yml'
+        - '.github/pull_request_template.md'
+        - '.github/ISSUE_TEMPLATE/**'
+        - 'assets/**'
+        - 'docs/**'
+        - 'docs-export/**'
+        - 'docs-repo-template/**'
+
+# Ensure that rapid pushes to the pull request branch don't trigger this workflow multiple times.
+# We only care about executing this workflow for that 'latest' commit on a PR.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # Dynamically calculate which modes to build from CMake configuration
+  calculate-matrix:
+    name: Calculate job matrix
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.calculate-modes.outputs.matrix }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.UEPSEUDO_PAT }}
+          # Note: We don't need submodules for this job - only reading ProjectConfig.cmake
+
+      - name: Extract CMake Build Modes
+        id: extract-modes
+        run: |
+          # Extract target types, configurations, and platforms from ProjectConfig.cmake
+          # The format is: set(VAR_NAME "val1" "val2" "val3" CACHE ...)
+          # Use sed to isolate values before CACHE, remove quotes, and trim whitespace
+          TARGET_TYPES=$(grep 'set(UE4SS_TARGET_TYPES' cmake/modules/ProjectConfig.cmake | sed 's/.*set(UE4SS_TARGET_TYPES//' | sed 's/CACHE.*//' | sed 's/"//g' | xargs)
+          CONFIG_TYPES=$(grep 'set(UE4SS_CONFIGURATION_TYPES' cmake/modules/ProjectConfig.cmake | sed 's/.*set(UE4SS_CONFIGURATION_TYPES//' | sed 's/CACHE.*//' | sed 's/"//g' | xargs)
+          PLATFORM_TYPES=$(grep 'set(UE4SS_PLATFORM_TYPES' cmake/modules/ProjectConfig.cmake | sed 's/.*set(UE4SS_PLATFORM_TYPES//' | sed 's/CACHE.*//' | sed 's/"//g' | xargs)
+
+          # Generate all combinations of Target__Config__Platform
+          MODES=()
+          for target in $TARGET_TYPES; do
+            for config in $CONFIG_TYPES; do
+              for platform in $PLATFORM_TYPES; do
+                MODES+=("${target}__${config}__${platform}")
+              done
+            done
+          done
+
+          # Output as JSON array
+          if [ ${#MODES[@]} -eq 0 ]; then
+            echo "ERROR: No modes extracted from ProjectConfig.cmake" >&2
+            exit 1
+          fi
+          MODES_JSON=$(printf '%s\n' "${MODES[@]}" | jq -R . | jq -sc .)
+          echo "all_modes=$MODES_JSON" >> $GITHUB_OUTPUT
+
+      - name: Finalize Mode Matrix
+        uses: actions/github-script@v7
+        id: calculate-modes
+        env:
+          ALL_MODES: '${{ steps.extract-modes.outputs.all_modes }}'
+          REQUESTED_MODES: '["Game__Shipping__Win64", "Game__Debug__Win64"]'
+        with:
+          result-encoding: string
+          script: |
+            const { ALL_MODES, REQUESTED_MODES } = process.env;
+            const requestedModes = JSON.parse(REQUESTED_MODES);
+            const modeSchema = JSON.parse(ALL_MODES).map(m => ({
+              mode: m,
+              artifact: requestedModes.includes(m)
+            }));
+            core.setOutput('matrix', JSON.stringify(modeSchema));
+
+  # Build UE4SS for each mode we received from the calculate-matrix job
+  build:
+    name: ${{ matrix.mode }}
+    needs: [calculate-matrix]
+    strategy:
+      fail-fast: false # Disable fast failing because we want to see results for all modes
+      matrix:
+        include: ${{ fromJSON(needs.calculate-matrix.outputs.matrix) }}
+    # Run our reusable workflow for each mode in our matrix.
+    uses: ./.github/workflows/cmake_build_ue4ss.yml
+    secrets: inherit # Inherit secrets from this workflow to safely pass `secrets.UEPSEUDO_PAT` to our reusable workflow.
+    with:
+      build-mode: ${{ matrix.mode }}
+      commit-sha: ${{ github.sha }} # This is the SHA of the PR merge result, not the HEAD of the PR branch!
+      should-upload-artifact: ${{ matrix.artifact }}
+      artifact-retention-days: 14
+  
+  # Report artifacts as a pull request comment.
+  report-artifacts:
+    if: ${{ always() && contains(needs.calculate-matrix.result, 'success') }}
+    needs: [calculate-matrix, build]
+    runs-on: ubuntu-latest
+    steps:
+      - name: "Report Artifacts"
+        uses: bitonality/PRtifact@v0.1.0
+        with:
+          comment-mode: 'CreateOrUpdate'

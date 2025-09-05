@@ -1,0 +1,277 @@
+# Summary
+# This reusable workflow handles building UE4SS with CMake, including setup of dependencies and uploading of artifacts.
+# Any future workflows/tasks that require UE4SS to be built should call this reusable workflow to ensure consistency.
+name: "Build UE4SS with CMake"
+permissions:
+  contents: read
+on:
+  workflow_call:
+    inputs:
+      build-mode:
+        description: 'Which UE4SS Mode to build (e.g., Game__Shipping__Win64)'
+        type: string
+        required: true
+      commit-sha:
+        description: 'Commit to build'
+        type: string
+        required: true
+      should-upload-artifact:
+        description: 'Should build output be uploaded as an artifact?'
+        type: boolean
+        default: false
+      artifact-retention-days:
+        description: 'How many days to retain artifacts'
+        type: string
+        default: '7'
+      enable-caching:
+        description: 'Enable build and dependency caching (disable for production releases)'
+        type: boolean
+        default: true
+defaults:
+  run:
+    shell: pwsh
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          token: ${{ secrets.UEPSEUDO_PAT }}
+          ref: ${{inputs.commit-sha}}
+
+      # Calculate cache key based on CMakeLists and submodules
+      - name: Calculate cache key
+        id: cache_key
+        run: |
+          # Get all CMakeLists.txt and .cmake files and create a combined hash
+          $files = Get-ChildItem -Path . -Include "CMakeLists.txt","*.cmake" -Recurse
+          $combinedContent = ""
+          foreach ($file in $files) {
+            # Include file content hash AND path for better cache invalidation
+            $combinedContent += (Get-FileHash $file.FullName).Hash
+            $combinedContent += $file.FullName
+          }
+
+          # Create a hash of the combined content
+          $bytes = [System.Text.Encoding]::UTF8.GetBytes($combinedContent)
+          $hash = [System.Security.Cryptography.SHA256]::Create()
+          $hashBytes = $hash.ComputeHash($bytes)
+          $cmakeHash = [System.BitConverter]::ToString($hashBytes).Replace("-", "")
+
+          # Get submodule commits hash
+          git submodule status > submodule_status.txt
+          $submoduleHash = (Get-FileHash submodule_status.txt).Hash
+
+          # Combine hashes for final cache key (shortened for readability)
+          $combinedHash = "$($cmakeHash.Substring(0, 16))-$($submoduleHash.Substring(0, 16))"
+          echo "hash=$combinedHash" >> $env:GITHUB_OUTPUT
+
+          # Clean up temp file
+          Remove-Item submodule_status.txt
+
+      # Cache for third-party dependencies fetched by CMake
+      # NOTE: This caching approach was carefully designed to avoid PatternSleuth (Rust) cache issues
+      # The cache key includes CMakeLists.txt hashes which should catch most dependency changes
+      # For Rust version changes, the weekly cache invalidation in CI provides a safety net
+      # Caching is disabled for production releases to ensure clean builds
+      - name: Cache CMake Dependencies
+        if: ${{ inputs.enable-caching }}
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cmake/packages
+            ~/AppData/Local/vcpkg/archives
+            ${{ github.workspace }}/build_cmake_${{ inputs.build-mode }}/_deps
+            ${{ github.workspace }}/build_cmake_${{ inputs.build-mode }}/ep_downloads
+          key: cmake-deps-${{ runner.os }}-${{ steps.cache_key.outputs.hash }}
+          restore-keys: |
+            cmake-deps-${{ runner.os }}-
+
+      # Use pre-installed VS instead of downloading
+      - name: Setup MSVC Developer Command Prompt
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: x64
+          vsversion: "2022"
+
+      - name: Setup CMake
+        uses: jwlawson/actions-setup-cmake@v2
+        with:
+          cmake-version: 'latest'
+
+      - name: Setup Ninja
+        uses: seanmiddleditch/gha-setup-ninja@v5
+
+      - name: Create build directory name
+        id: build_dir
+        run: |
+          $mode = "${{inputs.build-mode}}"
+          $buildDir = "build_cmake_$mode"
+          echo "name=$buildDir" >> $env:GITHUB_OUTPUT
+
+      # Cache the build directory for incremental builds
+      # Disabled for production releases to ensure clean builds
+      - name: Cache CMake build directory
+        if: ${{ inputs.enable-caching }}
+        uses: actions/cache@v4
+        id: cache_build
+        with:
+          path: |
+            ${{ steps.build_dir.outputs.name }}
+            !${{ steps.build_dir.outputs.name }}/_deps
+            !${{ steps.build_dir.outputs.name }}/ep_downloads
+          key: cmake-build-${{ inputs.build-mode }}-${{ steps.cache_key.outputs.hash }}-${{ github.run_number }}
+          restore-keys: |
+            cmake-build-${{ inputs.build-mode }}-${{ steps.cache_key.outputs.hash }}-
+
+      - name: Configure CMake
+        run: |
+          $needs_reconfigure = $false
+
+          # Check if caching is enabled
+          if ("${{ inputs.enable-caching }}" -eq "true") {
+            if ("${{ steps.cache_build.outputs.cache-hit }}" -ne "true") {
+              Write-Host "Cache miss - full configure needed"
+              $needs_reconfigure = $true
+            } elseif (-not (Test-Path "${{ steps.build_dir.outputs.name }}/CMakeCache.txt")) {
+              Write-Host "No CMakeCache.txt - full configure needed"
+              $needs_reconfigure = $true
+            }
+          } else {
+            Write-Host "Caching disabled - clean build required"
+            $needs_reconfigure = $true
+          }
+
+          if ($needs_reconfigure) {
+            # Set environment variables for FetchContent to use a persistent location
+            $env:FETCHCONTENT_BASE_DIR = "${{ steps.build_dir.outputs.name }}/_deps"
+
+            # Configure with incremental linking disabled
+            cmake -B ${{ steps.build_dir.outputs.name }} `
+              -G Ninja `
+              -DCMAKE_BUILD_TYPE="${{inputs.build-mode}}" `
+              -DCMAKE_C_COMPILER=cl `
+              -DCMAKE_CXX_COMPILER=cl `
+              -DCMAKE_EXPORT_COMPILE_COMMANDS=ON `
+              -DCMAKE_EXE_LINKER_FLAGS="/INCREMENTAL:NO" `
+              -DCMAKE_MODULE_LINKER_FLAGS="/INCREMENTAL:NO" `
+              -DCMAKE_SHARED_LINKER_FLAGS="/INCREMENTAL:NO" `
+              -DFETCHCONTENT_QUIET=OFF `
+              -DFETCHCONTENT_FULLY_DISCONNECTED=OFF `
+              -DFETCHCONTENT_UPDATES_DISCONNECTED=ON
+          } else {
+            Write-Host "Using cached configuration - incremental build"
+            # Just run cmake to ensure cache is valid
+            cmake ${{ steps.build_dir.outputs.name }}
+          }
+
+      # Build ALL targets with verbose output to see what's happening
+      - name: Build All Targets
+        run: |
+          Write-Host "Building all targets with verbose output..."
+          # Build everything with verbose output to see compile/link flags
+          cmake --build ${{ steps.build_dir.outputs.name }} --verbose
+
+      # Collect all DLLs and PDBs automatically
+      - name: Calculate Files For Artifact Inclusion
+        id: calc-files-artifact
+        if: ${{inputs.should-upload-artifact == true}}
+        run: |
+          $artifact_dir = New-Item -Path '${{runner.temp}}/ue4ss_artifacts/' -ItemType Directory -Force
+          $buildDir = "${{ steps.build_dir.outputs.name }}"
+
+          # System/Windows DLLs to exclude (add more as needed)
+          $excludedDlls = @(
+            "kernel32.dll", "user32.dll", "advapi32.dll", "shell32.dll",
+            "ole32.dll", "oleaut32.dll", "msvcrt.dll", "comctl32.dll",
+            "gdi32.dll", "rpcrt4.dll", "ws2_32.dll", "winmm.dll",
+            "ntdll.dll", "setupapi.dll", "version.dll", "shlwapi.dll"
+          )
+
+          Write-Host "Collecting build artifacts from $buildDir..."
+
+          # Find all DLLs in the build directory
+          $dllFiles = Get-ChildItem -Path $buildDir -Recurse -Filter "*.dll" -ErrorAction SilentlyContinue
+          $pdbFiles = Get-ChildItem -Path $buildDir -Recurse -Filter "*.pdb" -ErrorAction SilentlyContinue
+
+          # Copy DLLs (excluding system DLLs and those in _deps)
+          foreach ($dll in $dllFiles) {
+            # Skip files in _deps (build dependencies) unless they're needed for distribution
+            if ($dll.FullName -like "*\_deps\*") {
+              Write-Host "⊘ Skipping dependency DLL: $($dll.Name)"
+              continue
+            }
+
+            if ($excludedDlls -notcontains $dll.Name.ToLower()) {
+              Write-Host "✓ Found DLL: $($dll.Name) from $($dll.Directory.Name)"
+              Copy-Item $dll.FullName -Destination $artifact_dir -Force
+            } else {
+              Write-Host "⊘ Skipping system DLL: $($dll.Name)"
+            }
+          }
+
+          # Copy all PDBs (debug symbols) - excluding _deps
+          foreach ($pdb in $pdbFiles) {
+            if ($pdb.FullName -notlike "*\_deps\*") {
+              Write-Host "✓ Found PDB: $($pdb.Name)"
+              Copy-Item $pdb.FullName -Destination $artifact_dir -Force
+            }
+          }
+
+          # Also look for any .exe files that might be built
+          $exeFiles = Get-ChildItem -Path $buildDir -Recurse -Filter "*.exe" -ErrorAction SilentlyContinue
+          foreach ($exe in $exeFiles) {
+            if ($exe.FullName -notlike "*\_deps\*") {
+              Write-Host "✓ Found EXE: $($exe.Name)"
+              Copy-Item $exe.FullName -Destination $artifact_dir -Force
+            }
+          }
+
+          # Special handling for specific required files
+          $requiredFiles = @("dwmapi.dll", "UE4SS.dll")
+          $missingFiles = @()
+          foreach ($required in $requiredFiles) {
+            $found = Get-ChildItem -Path $artifact_dir -Filter $required -ErrorAction SilentlyContinue
+            if (-not $found) {
+              # Try to find it in the source tree (for proxy dll)
+              $sourceFile = Get-ChildItem -Path . -Recurse -Filter $required -ErrorAction SilentlyContinue | Select-Object -First 1
+              if ($sourceFile) {
+                Write-Host "✓ Found required file in source: $required"
+                Copy-Item $sourceFile.FullName -Destination $artifact_dir -Force
+              } else {
+                Write-Host "❌ ERROR: Required file $required not found anywhere!"
+                $missingFiles += $required
+              }
+            }
+          }
+
+          # Summary of collected artifacts
+          Write-Host "`n========== Artifact Summary =========="
+          $artifacts = Get-ChildItem -Path $artifact_dir
+          Write-Host "Total files collected: $($artifacts.Count)"
+
+          # Group by extension
+          $artifacts | Group-Object Extension | ForEach-Object {
+            Write-Host "$($_.Name) files: $($_.Count)"
+            $_.Group | ForEach-Object { Write-Host "  - $($_.Name)" }
+          }
+
+          # Fail if critical files are missing
+          if ($missingFiles.Count -gt 0) {
+            Write-Host "`n❌ Build failed: Missing critical artifacts:" -ForegroundColor Red
+            $missingFiles | ForEach-Object { Write-Host "  - $_" -ForegroundColor Red }
+            exit 1
+          }
+
+          echo "artifact_dir=$artifact_dir" >> $env:GITHUB_OUTPUT
+
+      - name: Upload a Build Artifact
+        if: ${{inputs.should-upload-artifact == true}}
+        uses: actions/upload-artifact@v4
+        with:
+          name: CMAKE-${{inputs.build-mode}}
+          path: ${{ steps.calc-files-artifact.outputs.artifact_dir }}
+          retention-days: ${{ inputs.artifact-retention-days }}
+          overwrite: true
