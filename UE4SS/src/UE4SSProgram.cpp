@@ -54,6 +54,7 @@
 #include <Unreal/UnrealInitializer.hpp>
 #include <Unreal/World.hpp>
 #include <Unreal/FWorldContext.hpp>
+#include <Unreal/Engine/UDataTable.hpp>
 #include <UnrealDef.hpp>
 
 #include <polyhook2/PE/IatHook.hpp>
@@ -102,31 +103,43 @@ namespace RC
     {
         Output::send(STR("\n##### MEMBER OFFSETS START #####\n\n"));
         OUTPUT_MEMBER_OFFSETS_FOR_STRUCT(UObjectBase);
-        OUTPUT_MEMBER_OFFSETS_FOR_STRUCT(UScriptStruct);
         OUTPUT_MEMBER_OFFSETS_FOR_STRUCT(UScriptStruct::ICppStructOps);
-        OUTPUT_MEMBER_OFFSETS_FOR_STRUCT(FField);
-        OUTPUT_MEMBER_OFFSETS_FOR_STRUCT(FOutputDevice);
-        OUTPUT_MEMBER_OFFSETS_FOR_STRUCT(FEnumProperty);
         OUTPUT_MEMBER_OFFSETS_FOR_STRUCT(UStruct);
-        OUTPUT_MEMBER_OFFSETS_FOR_STRUCT(UFunction);
-        OUTPUT_MEMBER_OFFSETS_FOR_STRUCT(UField);
-        OUTPUT_MEMBER_OFFSETS_FOR_STRUCT(FProperty);
-        OUTPUT_MEMBER_OFFSETS_FOR_STRUCT(UWorld);
+        OUTPUT_MEMBER_OFFSETS_FOR_STRUCT(UScriptStruct);
         OUTPUT_MEMBER_OFFSETS_FOR_STRUCT(UClass);
         OUTPUT_MEMBER_OFFSETS_FOR_STRUCT(UEnum);
+        OUTPUT_MEMBER_OFFSETS_FOR_STRUCT(UFunction);
+        OUTPUT_MEMBER_OFFSETS_FOR_STRUCT(UField);
+        OUTPUT_MEMBER_OFFSETS_FOR_STRUCT(FField);
+        OUTPUT_MEMBER_OFFSETS_FOR_STRUCT(FProperty);
+        OUTPUT_MEMBER_OFFSETS_FOR_STRUCT(FNumericProperty);
         OUTPUT_MEMBER_OFFSETS_FOR_STRUCT(FObjectPropertyBase);
-        OUTPUT_MEMBER_OFFSETS_FOR_STRUCT(FDelegateProperty);
-        OUTPUT_MEMBER_OFFSETS_FOR_STRUCT(FMulticastDelegateProperty);
-        OUTPUT_MEMBER_OFFSETS_FOR_STRUCT(FSetProperty);
         OUTPUT_MEMBER_OFFSETS_FOR_STRUCT(FStructProperty);
         OUTPUT_MEMBER_OFFSETS_FOR_STRUCT(FArrayProperty);
         OUTPUT_MEMBER_OFFSETS_FOR_STRUCT(FMapProperty);
+        OUTPUT_MEMBER_OFFSETS_FOR_STRUCT(FSetProperty);
         OUTPUT_MEMBER_OFFSETS_FOR_STRUCT(FBoolProperty);
         OUTPUT_MEMBER_OFFSETS_FOR_STRUCT(FByteProperty);
+        OUTPUT_MEMBER_OFFSETS_FOR_STRUCT(FEnumProperty);
         OUTPUT_MEMBER_OFFSETS_FOR_STRUCT(FClassProperty);
         OUTPUT_MEMBER_OFFSETS_FOR_STRUCT(FSoftClassProperty);
+        OUTPUT_MEMBER_OFFSETS_FOR_STRUCT(FDelegateProperty);
+        OUTPUT_MEMBER_OFFSETS_FOR_STRUCT(FMulticastDelegateProperty);
         OUTPUT_MEMBER_OFFSETS_FOR_STRUCT(FInterfaceProperty);
         OUTPUT_MEMBER_OFFSETS_FOR_STRUCT(FFieldPathProperty);
+        OUTPUT_MEMBER_OFFSETS_FOR_STRUCT(FWorldContext);
+        OUTPUT_MEMBER_OFFSETS_FOR_STRUCT(FOutputDevice);
+        OUTPUT_MEMBER_OFFSETS_FOR_STRUCT(FArchiveState);
+        OUTPUT_MEMBER_OFFSETS_FOR_STRUCT(FArchive);
+        OUTPUT_MEMBER_OFFSETS_FOR_STRUCT(AActor);
+        OUTPUT_MEMBER_OFFSETS_FOR_STRUCT(AGameModeBase);
+        OUTPUT_MEMBER_OFFSETS_FOR_STRUCT(AGameMode);
+        OUTPUT_MEMBER_OFFSETS_FOR_STRUCT(UEngine);
+        OUTPUT_MEMBER_OFFSETS_FOR_STRUCT(UGameViewportClient);
+        OUTPUT_MEMBER_OFFSETS_FOR_STRUCT(UPlayer);
+        OUTPUT_MEMBER_OFFSETS_FOR_STRUCT(ULocalPlayer);
+        OUTPUT_MEMBER_OFFSETS_FOR_STRUCT(UWorld);
+        OUTPUT_MEMBER_OFFSETS_FOR_STRUCT(UDataTable);
         Output::send(STR("\n##### MEMBER OFFSETS END #####\n\n"));
     }
 
@@ -818,6 +831,13 @@ namespace RC
                     uint32_t offset = calculate_virtual_function_offset(index, uobjectbase_size, uobjectbaseutility_size, uobject_size, uplayer_size);
                     Output::send(STR("ULocalPlayer::{} = 0x{:X}\n"), item, offset);
                     Unreal::ULocalPlayer::VTableLayoutMap.emplace(item, offset);
+                });
+
+                Output::send<Color::Blue>(STR("UDataTable\n"));
+                retrieve_vtable_layout_from_ini(STR("UDataTable"), [&](uint32_t index, File::StringType& item) {
+                    uint32_t offset = calculate_virtual_function_offset(index, uobjectbase_size, uobjectbaseutility_size, uobject_size, uplayer_size);
+                    Output::send(STR("UDataTable::{} = 0x{:X}\n"), item, offset);
+                    Unreal::UDataTable::VTableLayoutMap.emplace(item, offset);
                 });
 
                 file.close();
