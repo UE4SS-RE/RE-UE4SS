@@ -1,0 +1,145 @@
+# Summary
+# This reusable workflow handles building UE4SS with CMake, including setup of dependencies and uploading of artifacts.
+# Any future workflows/tasks that require UE4SS to be built should call this reusable workflow to ensure consistency.
+name: "Build UE4SS with CMake"
+permissions:
+  contents: read
+on:
+  workflow_call:
+    inputs:
+      build-mode:
+        description: 'Which UE4SS Mode to build (e.g., Game__Shipping__Win64)'
+        type: string
+        required: true
+      commit-sha:
+        description: 'Commit to build'
+        type: string
+        required: true
+      should-upload-artifact:
+        description: 'Should build output be uploaded as an artifact?'
+        type: boolean
+        default: false
+      artifact-list:
+        description: 'List of targets to upload artifacts for'
+        type: string
+        default: '["UE4SS"]'
+      artifact-retention-days:
+        description: 'How many days to retain artifacts'
+        type: number
+        default: 7
+defaults:
+  run:
+    shell: pwsh
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          token: ${{ secrets.UEPSEUDO_PAT }}
+          ref: ${{inputs.commit-sha}}
+
+      # Store the current week (00-53) to use as part of the cache key.
+      # This saves us from having to detect older caches and delete them.
+      - name: Get current week as package key
+        id: cache_key
+        run: echo "key=$(date +'%W')" >> $GITHUB_OUTPUT
+        shell: bash
+
+      # Specifically use MSVC toolset v19.39.33523
+      - name: Install VS2022 BuildTools 17.9.7
+        run: choco install -y visualstudio2022buildtools --version=117.9.7.0 --params "--add Microsoft.VisualStudio.Component.VC.Tools.x86.x64 --installChannelUri https://aka.ms/vs/17/release/180911598_-255012421/channel"
+
+      # Setup CMake and Ninja
+      - name: Setup CMake
+        uses: jwlawson/actions-setup-cmake@v2
+        with:
+          cmake-version: 'latest'
+          
+      - name: Setup Ninja
+        uses: seanmiddleditch/gha-setup-ninja@v5
+
+      # Create build directory name based on mode
+      - name: Create build directory name
+        id: build_dir
+        run: |
+          $mode = "${{inputs.build-mode}}"
+          $buildDir = "build_cmake_$mode"
+          echo "name=$buildDir" >> $env:GITHUB_OUTPUT
+
+      # Configure CMake
+      - name: Configure CMake
+        run: |
+          Import-Module 'C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\Common7\Tools\Microsoft.VisualStudio.DevShell.dll'
+          Enter-VsDevShell -VsInstallPath 'C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools' -DevCmdArguments '-arch=x64 -host_arch=x64'
+          
+          cmake -B ${{ steps.build_dir.outputs.name }} `
+            -G Ninja `
+            -DCMAKE_BUILD_TYPE="${{inputs.build-mode}}" `
+            -DCMAKE_C_COMPILER=cl `
+            -DCMAKE_CXX_COMPILER=cl `
+            -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+
+      # Build
+      - name: Build
+        id: build
+        run: |
+          cmake --build ${{ steps.build_dir.outputs.name }} --target UE4SS
+          
+          # Get the actual output path
+          $outputPath = "${{ steps.build_dir.outputs.name }}/bin"
+          echo "output_path=$outputPath" >> $env:GITHUB_OUTPUT
+
+      # Collect files for artifact
+      - name: Calculate Files For Artifact Inclusion
+        id: calc-files-artifact
+        if: ${{inputs.should-upload-artifact == true}}
+        run: |
+          $artifact_dir = New-Item -Path '${{runner.temp}}/ue4ss_artifacts/' -ItemType Directory -Force
+          
+          # Find all DLL and PDB files in the output directory
+          $outputPath = "${{ steps.build.outputs.output_path }}"
+          
+          # Copy UE4SS.dll and UE4SS.pdb if they exist
+          $dllPath = Join-Path $outputPath "UE4SS.dll"
+          $pdbPath = Join-Path $outputPath "UE4SS.pdb"
+          
+          if (Test-Path $dllPath) {
+            Write-Host "Found: $dllPath"
+            Copy-Item $dllPath -Destination $artifact_dir
+          }
+          
+          if (Test-Path $pdbPath) {
+            Write-Host "Found: $pdbPath"
+            Copy-Item $pdbPath -Destination $artifact_dir
+          }
+          
+          # Also check in the build directory root
+          $buildRoot = "${{ steps.build_dir.outputs.name }}"
+          $dllPathRoot = Join-Path $buildRoot "UE4SS.dll"
+          $pdbPathRoot = Join-Path $buildRoot "UE4SS.pdb"
+          
+          if ((Test-Path $dllPathRoot) -and !(Test-Path (Join-Path $artifact_dir "UE4SS.dll"))) {
+            Write-Host "Found in root: $dllPathRoot"
+            Copy-Item $dllPathRoot -Destination $artifact_dir
+          }
+          
+          if ((Test-Path $pdbPathRoot) -and !(Test-Path (Join-Path $artifact_dir "UE4SS.pdb"))) {
+            Write-Host "Found in root: $pdbPathRoot"
+            Copy-Item $pdbPathRoot -Destination $artifact_dir
+          }
+          
+          echo "artifact_dir=$artifact_dir" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
+
+      - name: Upload a Build Artifact
+        id: upload-artifact
+        uses: actions/upload-artifact@v4.3.3
+        if: ${{inputs.should-upload-artifact == true}}
+        with:
+          name: MSVC-CMAKE-${{inputs.build-mode}}
+          path: |
+                ${{ steps.calc-files-artifact.outputs.artifact_dir }}
+          retention-days: ${{fromJSON(inputs.artifact-retention-days)}}
+          overwrite: true

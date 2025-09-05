@@ -1,0 +1,117 @@
+name: CMake Release (Testing)
+on: workflow_dispatch
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cmake-test-release
+  cancel-in-progress: true
+
+jobs:
+  make-release:
+    permissions: write-all
+    runs-on: windows-2022
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          fetch-depth: 0 # needed to get commits since last tag
+          token: ${{ secrets.UEPSEUDO_PAT }}
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+
+      # Specifically use MSVC toolset v19.39.33523
+      - name: Install VS2022 BuildTools 17.9.7
+        run: choco install -y visualstudio2022buildtools --version=117.9.7.0 --params "--add Microsoft.VisualStudio.Component.VC.Tools.x86.x64 --installChannelUri https://aka.ms/vs/17/release/180911598_-255012421/channel"
+
+      - name: Setup CMake and Ninja
+        run: |
+          choco install cmake --installargs 'ADD_CMAKE_TO_PATH=System'
+          choco install ninja
+
+      - name: Create Test Release Tag
+        id: release_tag
+        run: |
+          $timestamp = Get-Date -Format "yyyyMMdd-HHmmss"
+          $testTag = "cmake-test-$timestamp"
+          echo "release_tag=$testTag" >> $env:GITHUB_OUTPUT
+          echo "Test release tag: $testTag"
+
+      - name: Configure CMake
+        shell: pwsh
+        run: |
+          Import-Module 'C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\Common7\Tools\Microsoft.VisualStudio.DevShell.dll'
+          Enter-VsDevShell -VsInstallPath 'C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools' -DevCmdArguments '-arch=x64 -host_arch=x64'
+          
+          cmake -B build_release `
+            -G Ninja `
+            -DCMAKE_BUILD_TYPE=Game__Shipping__Win64 `
+            -DCMAKE_C_COMPILER=cl `
+            -DCMAKE_CXX_COMPILER=cl
+
+      - name: Build
+        shell: pwsh
+        run: |
+          cmake --build build_release --target UE4SS
+
+      # The release script expects binaries in specific locations
+      # CMake outputs to build_release/bin or build_release/
+      - name: Prepare for packaging
+        shell: pwsh
+        run: |
+          # Create expected directory structure
+          $buildDir = "build_release"
+          
+          # Find UE4SS.dll and UE4SS.pdb
+          $dllPath = Get-ChildItem -Path $buildDir -Recurse -Filter "UE4SS.dll" | Select-Object -First 1
+          $pdbPath = Get-ChildItem -Path $buildDir -Recurse -Filter "UE4SS.pdb" | Select-Object -First 1
+          
+          if ($dllPath) {
+            Write-Host "Found UE4SS.dll at: $($dllPath.FullName)"
+          } else {
+            Write-Error "UE4SS.dll not found!"
+            exit 1
+          }
+          
+          if ($pdbPath) {
+            Write-Host "Found UE4SS.pdb at: $($pdbPath.FullName)"
+          }
+
+      - name: Package
+        id: package
+        run: python tools/buildscripts/release.py package
+
+      - name: Create Test Release Notes
+        run: |
+          @"
+          # CMake Test Release
+          
+          This is a test release built with CMake instead of xmake.
+          
+          **Build Configuration:**
+          - Build Mode: Game__Shipping__Win64
+          - Compiler: MSVC
+          - Generator: Ninja
+          
+          **Note:** This is for testing purposes only and should not be used in production.
+          "@ | Out-File -FilePath release/release_notes.md -Encoding utf8
+
+      - name: Create Test Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ steps.release_tag.outputs.release_tag }}
+          name: "CMake Test Release - ${{ steps.release_tag.outputs.release_tag }}"
+          body_path: release/release_notes.md
+          draft: true
+          prerelease: true
+          files: |
+            release/UE4SS_v*.zip
+            release/zDEV-UE4SS_v*.zip
+            release/zCustomGameConfigs.zip
+            release/zMapGenBP.zip

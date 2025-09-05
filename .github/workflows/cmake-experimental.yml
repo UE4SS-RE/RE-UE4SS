@@ -1,0 +1,121 @@
+name: CMake Experimental Release
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ "main" ]
+    paths:
+      - "UE4SS/src/**"
+      - "UE4SS/include/**"
+      - "UE4SS/generated_src/**"
+      - "UE4SS/generated_include/**"
+      - "deps/**"
+      - "UE4SS/proxy_generator/**"
+      - "assets/Mods/**"
+      - "assets/**.ini"
+      - "CMakeLists.txt"
+      - "cmake/**"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cmake-experimental-release
+  cancel-in-progress: true
+
+jobs:
+  make-release:
+    permissions: write-all
+    runs-on: windows-2022
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          fetch-depth: 0 # needed to get commits since last tag
+          token: ${{ secrets.UEPSEUDO_PAT }}
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+
+      # Specifically use MSVC toolset v19.39.33523
+      - name: Install VS2022 BuildTools 17.9.7
+        run: choco install -y visualstudio2022buildtools --version=117.9.7.0 --params "--add Microsoft.VisualStudio.Component.VC.Tools.x86.x64 --installChannelUri https://aka.ms/vs/17/release/180911598_-255012421/channel"
+
+      - name: Setup CMake and Ninja
+        run: |
+          choco install cmake --installargs 'ADD_CMAKE_TO_PATH=System'
+          choco install ninja
+
+      - name: Configure CMake
+        shell: pwsh
+        run: |
+          Import-Module 'C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\Common7\Tools\Microsoft.VisualStudio.DevShell.dll'
+          Enter-VsDevShell -VsInstallPath 'C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools' -DevCmdArguments '-arch=x64 -host_arch=x64'
+          
+          cmake -B build_experimental `
+            -G Ninja `
+            -DCMAKE_BUILD_TYPE=Game__Shipping__Win64 `
+            -DCMAKE_C_COMPILER=cl `
+            -DCMAKE_CXX_COMPILER=cl
+
+      - name: Build
+        shell: pwsh
+        run: |
+          cmake --build build_experimental --target UE4SS
+
+      # The release script expects binaries in specific locations
+      - name: Prepare for packaging
+        shell: pwsh
+        run: |
+          # Find UE4SS.dll and ensure it's where the release script expects
+          $buildDir = "build_experimental"
+          
+          $dllPath = Get-ChildItem -Path $buildDir -Recurse -Filter "UE4SS.dll" | Select-Object -First 1
+          $pdbPath = Get-ChildItem -Path $buildDir -Recurse -Filter "UE4SS.pdb" | Select-Object -First 1
+          
+          if ($dllPath) {
+            Write-Host "Found UE4SS.dll at: $($dllPath.FullName)"
+          } else {
+            Write-Error "UE4SS.dll not found!"
+            exit 1
+          }
+
+      - name: Package
+        run: python tools/buildscripts/release.py package -e
+
+      - name: Make Archival Experimental Release (CMake)
+        uses: softprops/action-gh-release@v1
+        with:
+          prerelease: true
+          tag_name: cmake-experimental
+          name: "CMake Experimental Build"
+          body_path: release/release_notes.md
+          files: |
+            release/UE4SS_v*.zip
+            release/zDEV-UE4SS_v*.zip
+            release/zCustomGameConfigs.zip
+            release/zMapGenBP.zip
+
+      - name: Delete old release assets (CMake Latest)
+        uses: mknejp/delete-release-assets@v1
+        with:
+          token: ${{ github.token }}
+          tag: cmake-experimental-latest
+          fail-if-no-assets: false
+
+      - name: Make Permanent Latest Release (CMake)
+        uses: softprops/action-gh-release@v1
+        with:
+          prerelease: true
+          tag_name: cmake-experimental-latest
+          name: "CMake Experimental Latest"
+          body_path: release/release_notes.md
+          files: |
+            release/UE4SS_v*.zip
+            release/zDEV-UE4SS_v*.zip
+            release/zCustomGameConfigs.zip
+            release/zMapGenBP.zip

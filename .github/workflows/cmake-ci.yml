@@ -1,0 +1,67 @@
+# This workflow automates the build process for all modes of the UE4SS project using CMake whenever a pull request is made.
+# It reports artifacts to the PR comments.
+
+name: CMake Build All Modes
+permissions:
+    contents: write
+    pull-requests: write # For adding comments to PR.
+on:
+  pull_request:
+    branches:
+        - 'main'
+    paths-ignore:
+        - 'README.md'
+        - 'LICENSE'
+        - 'CNAME'
+        - '.github/workflows/pushdocs.yml'
+        - '.github/pull_request_template.md'
+        - '.github/ISSUE_TEMPLATE/**'
+        - 'assets/**'
+        - 'docs/**'
+        - 'docs-export/**'
+        - 'docs-repo-template/**'
+
+# Ensure that rapid pushes to the pull request branch don't trigger this workflow multiple times.
+# We only care about executing this workflow for that 'latest' commit on a PR.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # Build UE4SS for each mode
+  build:
+    name: ${{ matrix.mode }}
+    strategy:
+      fail-fast: false # Disable fast failing because we want to see results for all modes
+      matrix: 
+        mode: ["Game__Shipping__Win64", "Game__Debug__Win64", "Game__Dev__Win64", "CasePreserving__Shipping__Win64"]
+        include:
+          - mode: "Game__Shipping__Win64"
+            artifact: true
+          - mode: "Game__Debug__Win64"
+            artifact: true
+          - mode: "Game__Dev__Win64"
+            artifact: false
+          - mode: "CasePreserving__Shipping__Win64"
+            artifact: false
+    # Run our reusable workflow for each mode in our matrix.
+    uses: ./.github/workflows/cmake_build_ue4ss.yml
+    secrets: inherit # Inherit secrets from this workflow to safely pass `secrets.UEPSEUDO_PAT` to our reusable workflow.
+    with:
+      build-mode: ${{ matrix.mode }}
+      commit-sha: ${{ github.sha }} # This is the SHA of the PR merge result, not the HEAD of the PR branch!
+      should-upload-artifact: ${{ matrix.artifact }}
+      # List that declares which targets should have their output uploaded as an artifact.
+      artifact-list: '["UE4SS"]'
+      artifact-retention-days: 14
+  
+  # Report artifacts as a pull request comment.
+  report-artifacts:
+    if: ${{ always() }}
+    needs: [build]
+    runs-on: ubuntu-latest
+    steps:
+      - name: "Report Artifacts"
+        uses: bitonality/PRtifact@v0.1.0
+        with:
+          comment-mode: 'CreateOrUpdate'
