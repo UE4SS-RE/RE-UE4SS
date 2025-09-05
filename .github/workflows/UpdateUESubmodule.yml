@@ -61,7 +61,7 @@ jobs:
       - name: Create Pull Request
         uses: peter-evans/create-pull-request@v5
         with:
-          commit-message: Update UE Submodule 
+          commit-message: "chore: update UE submodule" 
           committer: GitHub <noreply@github.com>
           author: ${{ github.actor }} <${{ github.actor }}@users.noreply.github.com>
           title: Update UE Submodule
