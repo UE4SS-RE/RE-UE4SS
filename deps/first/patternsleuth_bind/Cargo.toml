@@ -5,3 +5,6 @@ edition = "2021"
 
 [dependencies]
 patternsleuth = { path = "../patternsleuth/patternsleuth", features = ["process-internal", "image-pe"] }
+
+[lib]
+crate-type = ["staticlib"]
