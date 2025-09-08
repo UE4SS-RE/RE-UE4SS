@@ -1,0 +1,151 @@
+/*
+
+    NOTE THAT THIS FILE IS OUTDATED!!! IT HASN'T BEEN UPDATED TO MATCH THE BEHAVIOR OF THE Windows VERSION!
+    THIS FILE PROBABLY DOESN'T EVEN COMPILE IN ITS CURRENT STATE!
+
+
+*/
+
+#include <bit>
+#include <iostream>
+#include <cstdint>
+#include <cstring>
+#include <sys/inotify.h>
+#include <sys/poll.h>
+#include <unistd.h>
+
+namespace RC
+{
+    auto handle_to_fd(void* handle) -> int32_t
+    {
+        return static_cast<int32_t>(reinterpret_cast<uintptr_t>(handle));
+    }
+
+    auto init_filesystem_watcher(FilesystemWatcher& watcher, const std::filesystem::path& path) -> void
+    {
+        watcher.m_path = path;
+        auto handle = inotify_init1(IN_NONBLOCK);
+        watcher.m_handle = reinterpret_cast<void*>(handle);
+        auto file_descriptor = handle;
+        if (file_descriptor == -1)
+        {
+            Output::send<LogLevel::Error>(STR("Error watching '{}': {}"), path.string(), std::strerror(errno));
+            return;
+        }
+        if (inotify_add_watch(file_descriptor, path.c_str(), IN_CREATE) == -1)
+        {
+            Output::send<LogLevel::Error>(STR("Error watching '{}': {}"), path.string(), std::strerror(errno));
+            return;
+        }
+    }
+
+    FilesystemWatcher::FilesystemWatcher(const std::filesystem::path& path)
+    {
+        init_filesystem_watcher(*this, path);
+    }
+
+    FilesystemWatcher::FilesystemWatcher(const std::filesystem::path& path, std::chrono::milliseconds min_duration_between_notifications)
+        : m_min_duration_between_notifications{min_duration_between_notifications}
+    {
+        init_filesystem_watcher(*this, path);
+    }
+
+    FilesystemWatcher::~FilesystemWatcher()
+    {
+        m_stop_source.request_stop();
+        m_polling_thread.join();
+        if (m_handle)
+        {
+            close(handle_to_fd(m_handle));
+        }
+    }
+
+    auto FilesystemWatcher::poll(std::stop_token stop_token) -> void
+    {
+        while (!stop_token.stop_requested())
+        {
+            pollfd file_descriptors[2]{};
+            file_descriptors[0].fd = STDIN_FILENO;
+            file_descriptors[0].events = POLLIN;
+            file_descriptors[1].fd = handle_to_fd(m_handle);
+            file_descriptors[1].events = POLLIN;
+
+            auto poll_num = ::poll(file_descriptors, 2, s_polling_timeout_ms);
+            if (poll_num == 0 && stop_token.stop_requested())
+            {
+                break;
+            }
+            else if (poll_num == -1)
+            {
+                if (errno == EINTR)
+                {
+                    return;
+                }
+                else
+                {
+                    Output::send<LogLevel::Error>(STR("Error: {}"), std::strerror(errno));
+                    std::exit(EXIT_FAILURE);
+                }
+            }
+            else if (poll_num > 0)
+            {
+                if (file_descriptors[0].revents & POLLIN)
+                {
+                    char buffer{};
+                    while (read(STDIN_FILENO, &buffer, 1) > 0 && buffer != '\n')
+                    {
+                        continue;
+                    }
+                }
+                if (file_descriptors[1].revents & POLLIN)
+                {
+                    while (true)
+                    {
+                        // See https://www.man7.org/linux/man-pages/man7/inotify.7.html#EXAMPLES for why this is aligned like this.
+                        char buffer[4096] __attribute__((aligned(__alignof__(struct inotify_event))));
+                        auto length = read(handle_to_fd(m_handle), buffer, sizeof(buffer));
+                        if (length == -1 && errno != EAGAIN)
+                        {
+                            Output::send<LogLevel::Error>(STR("Error: {}"), std::strerror(errno));
+                            std::exit(EXIT_FAILURE);
+                        }
+                        else if (length <= 0)
+                        {
+                            break;
+                        }
+                        const inotify_event* event{};
+                        for (auto ptr = buffer; ptr < buffer + length; ptr += sizeof(inotify_event) + event->len)
+                        {
+                            event = std::bit_cast<const inotify_event*>(ptr);
+                            if (event->mask & IN_CREATE && event->len > 0)
+                            {
+                                std::string name_string{event->name};
+                                // Attempting to allow non-standard names for libraries on Linux.
+                                // The standard name is lib<Name>.so.
+                                if (name_string.starts_with("lib") && name_string.ends_with(".so"))
+                                {
+                                    name_string.erase(0, 3);
+                                }
+                                auto name = std::filesystem::path{name_string};
+                                name.replace_extension();
+                                for (const auto& watch : m_watches)
+                                {
+                                    if (watch.name == "*" || name == watch.name)
+                                    {
+                                        auto now = std::chrono::high_resolution_clock::now();
+                                        if (now - m_last_notification < m_min_duration_between_notifications)
+                                        {
+                                            continue;
+                                        }
+                                        m_last_notification = now;
+                                        watch.notify(std::filesystem::path{});
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+} // namespace RC

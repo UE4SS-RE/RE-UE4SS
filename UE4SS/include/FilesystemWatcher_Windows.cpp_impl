@@ -1,0 +1,130 @@
+#include <future>
+#include <ranges>
+
+#include <Windows.h>
+
+#include <DynamicOutput/DynamicOutput.hpp>
+#include <Helpers/String.hpp>
+
+namespace RC
+{
+    struct Data
+    {
+        HANDLE handle{};
+        std::vector<uint8_t> buffer{};
+        std::filesystem::path path{};
+        Data()
+        {
+            buffer.resize(1000);
+        }
+    };
+
+    auto init_filesystem_watcher(FilesystemWatcher& watcher, const std::filesystem::path& path) -> void
+    {
+        auto data = new Data{};
+        watcher.m_handle = data;
+        watcher.m_handles.emplace_back(static_cast<void*>(data));
+        data->handle = CreateFileW(path.native().c_str(),
+                                   FILE_LIST_DIRECTORY,
+                                   FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+                                   nullptr,
+                                   OPEN_EXISTING,
+                                   FILE_FLAG_BACKUP_SEMANTICS | FILE_FLAG_OVERLAPPED,
+                                   nullptr);
+        data->path = path;
+    }
+
+    FilesystemWatcher::~FilesystemWatcher()
+    {
+        m_stop_source.request_stop();
+        m_polling_thread.join();
+        auto data = static_cast<Data*>(m_handle);
+        if (data && data->handle)
+        {
+            FindCloseChangeNotification(data->handle);
+            delete data;
+            m_handle = nullptr;
+        }
+    }
+
+    auto FilesystemWatcher::poll(std::stop_token stop_token) -> void
+    {
+        std::vector<HANDLE> handles{};
+        for (const auto& handle_data_raw : m_handles)
+        {
+            auto handle_data = static_cast<Data*>(handle_data_raw);
+            handles.emplace_back(FindFirstChangeNotificationW(handle_data->path.wstring().c_str(), false, FILE_NOTIFY_CHANGE_LAST_WRITE));
+            if (handles.back() == INVALID_HANDLE_VALUE)
+            {
+                Output::send<LogLevel::Error>(STR("ERROR: FindFirstChangeNotification function failed.\n"));
+                return;
+            }
+        }
+
+        std::vector<std::future<void>> futures{};
+        static constexpr int32_t s_max_objects_per_thread = MAXIMUM_WAIT_OBJECTS;
+        const auto use_single_thread = handles.size() <= s_max_objects_per_thread;
+        futures.resize(use_single_thread ? 1 : handles.size() / s_max_objects_per_thread);
+
+        size_t range_start{};
+        for (const auto& [index, future] : std::ranges::enumerate_view(futures))
+        {
+            if (stop_token.stop_requested())
+            {
+                break;
+            }
+            const auto data = &handles[range_start];
+            const auto last_chunk = handles.size() <= s_max_objects_per_thread;
+            const auto size = last_chunk ? handles.size() : s_max_objects_per_thread;
+            Output::send<LogLevel::Verbose>(STR("Creating filesystem watcher {} with range {}-{}, range_start: {}, data: {}\n"), index, range_start, range_start + size, range_start, (void*)data);
+            future = std::async(std::launch::async, [](FilesystemWatcher* watcher, std::vector<HANDLE>* in_handles, const HANDLE* data, const size_t size, const size_t range_start, std::stop_token* stop_token) {
+                while (!stop_token->stop_requested())
+                {
+                    auto status = WaitForMultipleObjects(size, data, false, INFINITE);
+                    if (status == WAIT_TIMEOUT || status == WAIT_ABANDONED_0 || status == WAIT_FAILED)
+                    {
+                        continue;
+                    }
+                    auto index = status + range_start;
+                    auto handle_data = static_cast<Data*>(watcher->m_handles[index]);
+                    for (const auto& watch : watcher->m_watches)
+                    {
+                        // The intent here is to allow notifiers based on the file that was changed.
+                        // But because the FindFirst/NextChangeNotification APIs don't allow you to retrieve any information about what has changed, we can't do that.
+                        // Instead, we allow everything through via the "*" option.
+                        // When/if this code is revamped to use ReadDirectoryChangesW, we can retrieve the file name and stop bypassing with "*".
+                        // For now, if the name of the watcher notifier isn't "*", the watch will never get notified.
+                        bool match_all = watch.name == "*";
+                        if (match_all/* || watch.name == name_no_extension*/)
+                        {
+                            auto now = std::chrono::high_resolution_clock::now();
+                            if (now - watcher->m_last_notification < watcher->m_min_duration_between_notifications)
+                            {
+                                continue;
+                            }
+                            watcher->m_last_notification = now;
+                            // TODO: If 'match_all' is true, we don't have any file information besides what was registered for the watch.
+                            //       It would be useful for the user to have this information.
+                            //       We never actully have this information right now because the FindFirst/NextChangeNotification APIs don't allow you to know what changed.
+                            //       The ReadDirectoryChangesW API does, but it's a more complicated API.
+                            watch.notify(handle_data->path, match_all);
+                        }
+                    }
+                    if (!FindNextChangeNotification((*in_handles)[index]))
+                    {
+                        Output::send<LogLevel::Error>(STR("ERROR: FindNextChangeNotification function failed. Code: {}\n"), GetLastError());
+                    }
+                }
+            }, this, &handles, data, size, range_start, &stop_token);
+            range_start += s_max_objects_per_thread;
+        }
+
+        // Note that we'll only ever execute this code if all the futures have returned.
+        // Futures can be triggered to return via the stop_token passed to this function.
+        // This stop_token is triggered when FilesystemWatcher goes out of scope.
+        for (const auto& [index, future] : std::ranges::enumerate_view(futures))
+        {
+            future.wait();
+        }
+    }
+} // namespace RC
