@@ -68,6 +68,16 @@ Added ability to call UFunctions directly from the GUI. ([UE4SS #851](https://gi
 **Updated Lua version to 5.4.7** ([UE4SS #887](https://github.com/UE4SS-RE/RE-UE4SS/pull/887))
 - This is necessary to compile with Clang.
 
+Added `UDataTable` support to Lua API. ([UE4SS #997](https://github.com/UE4SS-RE/RE-UE4SS/pull/997))
+- Find rows by name with `DataTable:FindRow(RowName)`
+- Get all rows with `DataTable:GetAllRows()` 
+- Iterate rows with `DataTable:ForEachRow(Callback)`
+- Add/remove rows dynamically with `DataTable:AddRow(RowName, RowData)` and `DataTable:RemoveRow(RowName)`
+- Access row names with `DataTable:GetRowNames()`
+- Get the entire row map with `DataTable:GetRowMap()`
+- Clear all rows with `DataTable:EmptyTable()`
+- Get row count with `#DataTable` operator
+
 Enhanced TArray support to enable round-trip functionality ([UE4SS #992](https://github.com/UE4SS-RE/RE-UE4SS/pull/992))
 - TArray userdata can now be passed as function parameters
 - Improved handling of empty arrays and nil values
@@ -132,6 +142,12 @@ Added custom module searcher with UTF-8 path support for Lua `require()` ([UE4SS
 - Added annotation for function `FText` to Types.lua. ([UE4SS #788](https://github.com/UE4SS-RE/RE-UE4SS/pull/788))
 
 ### C++ API 
+
+Added `UDataTable` class to C++ API. ([UE4SS #997](https://github.com/UE4SS-RE/RE-UE4SS/pull/997))
+- Full DataTable row access with `FindRow<T>()`, `GetAllRows<T>()`, and `ForEachRow<T>()`
+- Row manipulation with `AddRow()`, `RemoveRow()`, and `EmptyTable()`
+- Direct implementations that work across all UE versions without relying on virtual functions
+
 Key binds created with `UE4SSProgram::register_keydown_event` end up being duplicated upon mod hot-reload.  
 - To fix this, `CppUserModBase::register_keydown_event` has been introduced.  
 - It's used exactly the same way except without the `UE4SSProgram::` part. ([UE4SS #446](https://github.com/UE4SS-RE/RE-UE4SS/pull/446)) 

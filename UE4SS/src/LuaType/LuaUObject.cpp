@@ -17,6 +17,7 @@
 #include <LuaType/LuaUScriptStruct.hpp>
 #include <LuaType/LuaUStruct.hpp>
 #include <LuaType/LuaUWorld.hpp>
+#include <LuaType/LuaUDataTable.hpp>
 #include <LuaType/LuaXObjectProperty.hpp>
 #include <LuaType/LuaXProperty.hpp>
 #pragma warning(disable : 4005)
@@ -39,6 +40,8 @@
 #include <Unreal/UInterface.hpp>
 #include <Unreal/UScriptStruct.hpp>
 #include <Unreal/World.hpp>
+#include <Unreal/Engine/UDataTable.hpp>
+
 #pragma warning(default : 4005)
 #include <DynamicOutput/DynamicOutput.hpp>
 #include <Helpers/Integer.hpp>
@@ -339,6 +342,10 @@ namespace RC::LuaType
             ScriptStructWrapper script_struct_wrapper{static_cast<Unreal::UScriptStruct*>(object), nullptr, nullptr};
             UScriptStruct::construct(lua, script_struct_wrapper);
         }
+        else if (object->IsA<Unreal::UDataTable>())
+        {
+            UDataTable::construct(lua, static_cast<Unreal::UDataTable*>(object));
+        }
         else if (object->IsA<Unreal::UStruct>())
         {
             UStruct::construct(lua, static_cast<Unreal::UStruct*>(object));
@@ -633,12 +640,19 @@ namespace RC::LuaType
                     int32_t inner_comparison_index = inner->GetClass().GetFName().GetComparisonIndex();
                     can_handle = StaticState::m_property_value_pushers.contains(inner_comparison_index);
                 }
+                else if (field->IsA<Unreal::FSetProperty>())
+                {
+                    auto* set_prop = static_cast<Unreal::FSetProperty*>(field);
+                    auto* element = set_prop->GetElementProp();
+                    int32_t element_comparison_index = element->GetClass().GetFName().GetComparisonIndex();
+                    can_handle = StaticState::m_property_value_pushers.contains(element_comparison_index);
+                }
                 else if (field->IsA<Unreal::FMapProperty>())
                 {
                     auto* map_prop = static_cast<Unreal::FMapProperty*>(field);
                     int32_t key_index = map_prop->GetKeyProp()->GetClass().GetFName().GetComparisonIndex();
                     int32_t value_index = map_prop->GetValueProp()->GetClass().GetFName().GetComparisonIndex();
-                    can_handle = StaticState::m_property_value_pushers.contains(key_index) && 
+                    can_handle = StaticState::m_property_value_pushers.contains(key_index) &&
                                  StaticState::m_property_value_pushers.contains(value_index);
                 }
             }

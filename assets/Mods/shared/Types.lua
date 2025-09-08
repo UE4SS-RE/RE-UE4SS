@@ -1174,3 +1174,53 @@ function UEnum:RemoveFromNamesAt(Index, Count) end
 ---@param Count integer
 ---@param AllowShrinking boolean
 function UEnum:RemoveFromNamesAt(Index, Count, AllowShrinking) end
+
+
+---@class UDataTable : UObject
+local UDataTable = {}
+
+---Returns the row struct type for this DataTable
+---@return UScriptStruct?
+function UDataTable:GetRowStruct() end
+
+---Returns the entire row map as a Lua table with row names as keys
+---@return table<string, any>
+function UDataTable:GetRowMap() end
+
+---Finds a row in the DataTable by name
+---@param RowName string
+---@return any?
+function UDataTable:FindRow(RowName) end
+
+---Adds a new row or replaces an existing row in the DataTable
+---@param RowName string
+---@param RowData table
+function UDataTable:AddRow(RowName, RowData) end
+
+---Removes a row from the DataTable
+---@param RowName string
+function UDataTable:RemoveRow(RowName) end
+
+---Clears all rows from the DataTable
+function UDataTable:EmptyTable() end
+
+---Gets all row names in the DataTable
+---@return string[]
+function UDataTable:GetRowNames() end
+
+---Gets all rows in the DataTable as an array of {Name=string, Data=table} entries
+---@return table[]
+function UDataTable:GetAllRows() end
+
+---Iterates through all rows in the DataTable
+---The callback has two params: string RowName, table RowData
+---@param Callback fun(RowName: string, RowData: any)
+function UDataTable:ForEachRow(Callback) end
+
+---Returns whether this DataTable is valid
+---@return boolean
+function UDataTable:IsValid() end
+
+---Returns the number of rows in the DataTable (metamethod for # operator)
+---@return integer
+function UDataTable:__len() end
