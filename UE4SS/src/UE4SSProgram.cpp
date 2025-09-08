@@ -836,9 +836,16 @@ namespace RC
         config.bHookEngineTick = settings_manager.Hooks.HookEngineTick;
         config.bHookGameViewportClientTick = settings_manager.Hooks.HookGameViewportClientTick;
         config.FExecVTableOffsetInLocalPlayer = settings_manager.Hooks.FExecVTableOffsetInLocalPlayer;
-        // Apply Debug Build setting from settings file only for now.
-        Unreal::Version::DebugBuild = settings_manager.EngineVersionOverride.DebugBuild;
-        Output::send<LogLevel::Warning>(STR("DebugGame Setting Enabled? {}\n"), Unreal::Version::DebugBuild);
+        if (settings_manager.EngineVersionOverride.DebugBuild == SettingsManager::DebugBuildOverride::ForceDebug)
+        {
+            Unreal::Version::DebugBuild = true;
+            Output::send<LogLevel::Normal>(STR("DebugBuild forced to: true (from settings)\n"));
+        }
+        else if (settings_manager.EngineVersionOverride.DebugBuild == SettingsManager::DebugBuildOverride::ForceShipping)  
+        {
+            Unreal::Version::DebugBuild = false;
+            Output::send<LogLevel::Normal>(STR("DebugBuild forced to: false (from settings)\n"));
+        }
         Unreal::UnrealInitializer::Initialize(config);
 
         bool can_create_custom_events{true};

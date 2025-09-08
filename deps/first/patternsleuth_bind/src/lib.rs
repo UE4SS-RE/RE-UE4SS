@@ -6,7 +6,7 @@ use patternsleuth::resolvers::{
     futures::join,
     impl_collector,
     unreal::{
-        engine_version::EngineVersion,
+        engine_version::{EngineVersion, IsNonShippingBuild},
         fname::{FNameCtorWchar, FNameToString},
         ftext::FTextFString,
         gmalloc::GMalloc,
@@ -29,6 +29,7 @@ impl_collector! {
         static_construct_object_internal: StaticConstructObjectInternal,
         ftext_fstring: FTextFString,
         engine_version: EngineVersion,
+        is_non_shipping_build: IsNonShippingBuild,
         fuobject_hash_tables_get: FUObjectHashTablesGet,
         gnatives: GNatives,
         console_manager_singleton: ConsoleManagerSingleton,
@@ -79,6 +80,7 @@ pub struct PsScanConfig {
     static_construct_object_internal: bool,
     ftext_fstring: bool,
     engine_version: bool,
+    build_configuration: bool,
     fuobject_hash_tables_get: bool,
     gnatives: bool,
     console_manager_singleton: bool,
@@ -93,6 +95,7 @@ pub struct PsScanResults {
     static_construct_object_internal: usize,
     ftext_fstring: usize,
     engine_version: PsEngineVersion,
+    build_configuration: PsBuildConfiguration,
     fuobject_hash_tables_get: usize,
     gnatives: usize,
     console_manager_singleton: usize,
@@ -164,6 +167,23 @@ pub fn ps_scan_internal(ctx: &PsCtx, results: &mut PsScanResults) -> Result<(), 
             }
         }
     }
+
+    if ctx.config.build_configuration {
+        match resolution.is_non_shipping_build {
+            Ok(res) => {
+                let config = if res.0 { "Development" } else { "Shipping" };
+                default!(ctx, "Found BuildConfiguration: {}", config);
+                results.build_configuration.is_shipping = !res.0;
+            }
+            Err(err) => {
+                // Build configuration is optional - just warn but don't error
+                warning!(ctx, "Failed to detect BuildConfiguration: {err}");
+                warning!(ctx, "Assuming Shipping build");
+                results.build_configuration.is_shipping = true;
+            }
+        }
+    }
+
     handle!(guobject_array, "GUObjectArray", "GUObjectArray.lua");
     handle!(gmalloc, "GMalloc", "GMalloc.lua");
     handle!(fname_tostring, "FName::ToString", "FName_ToString.lua");

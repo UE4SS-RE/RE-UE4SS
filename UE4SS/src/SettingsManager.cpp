@@ -75,7 +75,31 @@ namespace RC
         constexpr static File::CharType section_engine_version_override[] = STR("EngineVersionOverride");
         REGISTER_INT64_SETTING(EngineVersionOverride.MajorVersion, section_engine_version_override, MajorVersion)
         REGISTER_INT64_SETTING(EngineVersionOverride.MinorVersion, section_engine_version_override, MinorVersion)
-        REGISTER_BOOL_SETTING(EngineVersionOverride.DebugBuild, section_engine_version_override, DebugBuild)
+        try 
+        {
+            auto debug_build_str = parser.get_string(section_engine_version_override, STR("DebugBuild"));
+            if (debug_build_str.empty() || String::iequal(debug_build_str, STR("auto"))) 
+            {
+                EngineVersionOverride.DebugBuild = DebugBuildOverride::Auto;
+            }
+            else if (String::iequal(debug_build_str, STR("true")) || String::iequal(debug_build_str, STR("debug")))
+            {
+                EngineVersionOverride.DebugBuild = DebugBuildOverride::ForceDebug;
+            }
+            else if (String::iequal(debug_build_str, STR("false")) || String::iequal(debug_build_str, STR("shipping")))
+            {
+                EngineVersionOverride.DebugBuild = DebugBuildOverride::ForceShipping;
+            }
+            else
+            {
+                throw std::runtime_error{fmt::format("Invalid value for 'EngineVersionOverride.DebugBuild': {}\n", to_string(debug_build_str))};
+            }
+        }
+        catch (std::exception&)
+        {
+            // Key doesn't exist - default to Auto
+            EngineVersionOverride.DebugBuild = DebugBuildOverride::Auto;
+        }
 
         constexpr static File::CharType section_object_dumper[] = STR("ObjectDumper");
         REGISTER_BOOL_SETTING(ObjectDumper.LoadAllAssetsBeforeDumpingObjects, section_object_dumper, LoadAllAssetsBeforeDumpingObjects)

@@ -241,27 +241,41 @@ inline NumericValue read_numeric_safe(const uint8_t* data, const uint8_t* data_e
         return *this;
     }
 
-    auto Symbols::generate_method_signature(const PDB::TPIStream& tpi_stream, const PDB::CodeView::TPI::Record* function_record, File::StringType method_name)
-            -> MethodSignature
+    MethodQualifiers extract_method_qualifiers(const PDB::TPIStream& tpi_stream,
+                                               const PDB::CodeView::TPI::Record* function_record)
     {
-        MethodSignature signature{};
+        MethodQualifiers quals;
 
         auto this_pointer = tpi_stream.GetTypeRecord(function_record->data.LF_MFUNCTION.thistype);
+        if (!this_pointer) return quals;
 
-        signature.name = method_name;
-
-        signature.const_qualifier = false; // Default to non-const
-
-        if (this_pointer != nullptr) {
-            // Check if the underlying type of the pointer has a const modifier
-            auto underlying = tpi_stream.GetTypeRecord(this_pointer->data.LF_POINTER.utype);
-        
-            if (underlying && underlying->header.kind == PDB::CodeView::TPI::TypeRecordKind::LF_MODIFIER) {
-                // The pointer points to a modifier record - check if it's const
-                signature.const_qualifier = underlying->data.LF_MODIFIER.attr.MOD_const;
-            }
+        // Check if underlying type has modifiers
+        auto underlying = tpi_stream.GetTypeRecord(this_pointer->data.LF_POINTER.utype);
+        if (underlying && underlying->header.kind == PDB::CodeView::TPI::TypeRecordKind::LF_MODIFIER)
+        {
+            quals.is_const = underlying->data.LF_MODIFIER.attr.MOD_const;
+            quals.is_volatile = underlying->data.LF_MODIFIER.attr.MOD_volatile;
         }
 
+        // Check ref-qualifiers on the this pointer
+        quals.is_lvalue_ref = this_pointer->data.LF_POINTER.attr.islref;
+        quals.is_rvalue_ref = this_pointer->data.LF_POINTER.attr.isrref;
+
+        return quals;
+    }
+
+    auto Symbols::generate_method_signature(const PDB::TPIStream& tpi_stream,
+                                            const PDB::CodeView::TPI::Record* function_record,
+                                            File::StringType method_name)
+        -> MethodSignature
+    {
+        MethodSignature signature{};
+        signature.name = method_name;
+
+        // Get all qualifiers
+        signature.qualifiers = extract_method_qualifiers(tpi_stream, function_record);
+
+        // Get parameters
         auto arg_list = tpi_stream.GetTypeRecord(function_record->data.LF_MFUNCTION.arglist);
         for (size_t i = 0; i < function_record->data.LF_MFUNCTION.parmcount; i++)
         {
@@ -269,6 +283,7 @@ inline NumericValue read_numeric_safe(const uint8_t* data, const uint8_t* data_e
             signature.params.push_back(FunctionParam{.type = argument});
         }
 
+        // Get return type
         if (function_record->data.LF_MFUNCTION.rvtype)
         {
             signature.return_type = Symbols::get_type_name(tpi_stream, function_record->data.LF_MFUNCTION.rvtype);

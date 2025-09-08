@@ -61,12 +61,53 @@ namespace RC::UVTD
         }
     };
 
+    struct MethodQualifiers
+    {
+        bool is_const = false;
+        bool is_volatile = false;
+        bool is_lvalue_ref = false; // &
+        bool is_rvalue_ref = false; // &&
+
+        auto to_string() const -> File::StringType
+        {
+            File::StringType result;
+
+            // CV-qualifiers
+            if (is_const && is_volatile)
+            {
+                result = STR("const volatile");
+            }
+            else if (is_const)
+            {
+                result = STR("const");
+            }
+            else if (is_volatile)
+            {
+                result = STR("volatile");
+            }
+
+            // Ref-qualifiers
+            if (is_lvalue_ref)
+            {
+                if (!result.empty()) result += STR(" ");
+                result += STR("&");
+            }
+            else if (is_rvalue_ref)
+            {
+                if (!result.empty()) result += STR(" ");
+                result += STR("&&");
+            }
+
+            return result;
+        }
+    };
+
     struct MethodSignature
     {
         File::StringType return_type;
         File::StringType name;
         std::vector<FunctionParam> params;
-        bool const_qualifier;
+        MethodQualifiers qualifiers;
 
         auto to_string() const -> File::StringType
         {
@@ -78,7 +119,13 @@ namespace RC::UVTD
                 params_string.append(std::format(STR("{}{}"), params[i].to_string(), should_add_comma ? STR(", ") : STR("")));
             }
 
-            return std::format(STR("{} {}({}){};"), return_type, name, params_string, const_qualifier ? STR("const") : STR(""));
+            File::StringType qual_string = qualifiers.to_string();
+            if (!qual_string.empty())
+            {
+                qual_string = STR(" ") + qual_string;
+            }
+
+            return std::format(STR("{} {}({}){}"), return_type, name, params_string, qual_string);
         }
     };
 
