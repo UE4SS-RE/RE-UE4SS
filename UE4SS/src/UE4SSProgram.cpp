@@ -60,6 +60,8 @@
 
 #include <polyhook2/PE/IatHook.hpp>
 
+#include <FilesystemWatcher.hpp>
+
 namespace RC
 {
     // Commented out because this system (turn off hotkeys when in-game console is open) it doesn't work properly.
@@ -1047,6 +1049,68 @@ namespace RC
 
         on_program_start();
 
+        FilesystemWatcher filesystem_watcher{};
+        if (settings_manager.General.EnableAutoReloadingLuaMods)
+        {
+            filesystem_watcher.m_min_duration_between_notifications = std::chrono::milliseconds{100};
+            for (const auto& mod : m_mods)
+            {
+                if (dynamic_cast<CppMod*>(mod.get()))
+                {
+                    filesystem_watcher.add_dir(std::filesystem::path{get_mods_directory()} / mod->get_name() / "dlls");
+                }
+                else if (dynamic_cast<LuaMod*>(mod.get()))
+                {
+                    filesystem_watcher.add_dir(std::filesystem::path{get_mods_directory()} / mod->get_name() / "Scripts");
+                }
+            }
+            filesystem_watcher.start_async_polling([&](const std::filesystem::path& file, bool match_all) {
+                ScopedThreadSynchronizer thread_synchronizer{filesystem_watcher.get_thread_state()};
+                const auto mod_name = file.parent_path().filename();
+                auto dir_name = file.filename().string();
+                const auto is_cpp_mod = String::iequal(dir_name, "dlls");
+                if (is_cpp_mod)
+                {
+                    auto staged_file = file / mod_name;
+                    staged_file.replace_extension(".dll");
+                    if (!std::filesystem::exists(staged_file))
+                    {
+                        return;
+                    }
+                    // TODO: Unload the dll (uninstall).
+                    //       Delete 'main.dll'.
+                    //       Rename 'staged_file' to 'main.dll'.
+                    //       Load 'main.dll' (install & start).
+
+                    // TODO: To reload C++ mods, we need to add a way to unregister hooks, and then C++ mods need to unregister on they get notified that they're getting unloaded.
+                    //       For Lua mods, there's no notification, but we track all the hooks internally, so we can unregister automatically, we just need to
+                    //       call Lua::Uninstall, and We must also remove the keybinds like we do in UE4SSProgram::reinstall_mods.
+                    //       Unsure about loading and starting mods again.
+                }
+                else
+                {
+                    auto mod = find_lua_mod_by_name(ensure_str(mod_name), IsInstalled::Yes, IsStarted::Yes);
+                    if (!mod)
+                    {
+                        return;
+                    }
+                    m_pause_events_processing = true;
+                    mod->uninstall();
+                    auto& mod_ref = *std::ranges::find_if(m_mods, [&](const std::unique_ptr<Mod>& mod_ptr) {
+                        return mod_ptr.get() == mod;
+                    });
+                    if (!mod_ref)
+                    {
+                        return;
+                    }
+                    mod_ref = std::make_unique<LuaMod>(*this, StringType{mod_ref->get_name()}, mod_ref->get_path());
+                    m_pause_events_processing = false;
+                    Output::send(STR("Auto-reloading Lua mod '{}'\n"), mod_ref->get_name());
+                    mod_ref->start_mod();
+                }
+            });
+        }
+
         Output::send(STR("Event loop start\n"));
         for (m_processing_events = true; m_processing_events;)
         {
@@ -1110,6 +1174,12 @@ namespace RC
                         mod->fire_update();
                     }
                 }
+            }
+
+            if (settings_manager.General.EnableAutoReloadingLuaMods)
+            {
+                // Process any mod file changes, and wait until done.
+                process_sync_request(filesystem_watcher.get_thread_state());
             }
 
             std::this_thread::sleep_for(std::chrono::milliseconds(5));
@@ -1298,6 +1368,23 @@ namespace RC
                 cpp_mod->fire_dll_load(dll_name);
             }
         }
+    }
+
+    auto UE4SSProgram::unregister_keydown_events_for_lua_mod(LuaMod* mod, AllMods all_mods) -> void
+    {
+#ifdef HAS_INPUT
+        m_input_handler.get_events_safe([&](auto& key_set) {
+            std::erase_if(key_set.key_data, [&](auto& item) -> bool {
+                auto& [_, key_data] = item;
+                std::erase_if(key_data, [&](Input::KeyData& key_data) -> bool {
+                    // custom_data == 1: Bind came from Lua, and custom_data2 is a pointer to LuaMod.
+                    // custom_data == 2: Bind came from C++, and custom_data2 is a pointer to KeyDownEventData. Must free it.
+                    return key_data.custom_data == 1 && (all_mods == AllMods::Yes || static_cast<LuaMod*>(key_data.custom_data2) == mod);
+                });
+                return key_data.empty();
+            });
+        });
+#endif
     }
 
     template <typename ModType>
@@ -1512,31 +1599,6 @@ namespace RC
         m_pause_events_processing = true;
 
         uninstall_mods();
-
-// Remove key binds that were set from Lua scripts
-#ifdef HAS_INPUT
-        m_input_handler.get_events_safe([&](auto& key_set) {
-            std::erase_if(key_set.key_data, [&](auto& item) -> bool {
-                auto& [_, key_data] = item;
-                bool were_all_events_registered_from_lua = true;
-                std::erase_if(key_data, [&](Input::KeyData& key_data) -> bool {
-                    // custom_data == 1: Bind came from Lua, and custom_data2 is a pointer to LuaMod.
-                    // custom_data == 2: Bind came from C++, and custom_data2 is a pointer to KeyDownEventData. Must free it.
-                    if (key_data.custom_data == 1)
-                    {
-                        return true;
-                    }
-                    else
-                    {
-                        were_all_events_registered_from_lua = false;
-                        return false;
-                    }
-                });
-
-                return were_all_events_registered_from_lua;
-            });
-        });
-#endif
 
         // Remove all custom properties
         // Uncomment when custom properties are working

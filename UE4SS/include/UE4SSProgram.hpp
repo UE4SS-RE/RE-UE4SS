@@ -264,6 +264,13 @@ namespace RC
         RC_UE4SS_API auto is_keydown_event_registered(Input::Key) -> bool;
         RC_UE4SS_API auto is_keydown_event_registered(Input::Key, const Input::Handler::ModifierKeyArray&) -> bool;
         RC_UE4SS_API auto get_all_input_events(std::function<void(Input::KeySet&)> callback) -> void;
+        enum class AllMods
+        {
+            Yes,
+            No,
+        };
+        // If 'AllMods' is 'Yes', then 'mod' can be nullptr.
+        auto unregister_keydown_events_for_lua_mod(LuaMod* mod, AllMods = AllMods::No) -> void;
 
       private:
         static auto install_cpp_mods() -> void;
