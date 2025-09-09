@@ -1,24 +1,24 @@
 #pragma once
 
 #include <LuaType/LuaUObject.hpp>
-#include <Unreal/Property/FSoftClassProperty.hpp>
+#include <Unreal/Property/FSoftObjectProperty.hpp>
 
 namespace RC::LuaType
 {
-    struct TSoftClassPtrName
+    struct TSoftObjectPtrName
     {
         constexpr static const char* ToString()
         {
-            return "TSoftClassPtr";
+            return "TSoftObjectPtr";
         }
     };
-    class TSoftClassPtr : public LocalObjectBase<Unreal::FSoftObjectPtr, TSoftClassPtrName>
+    class TSoftObjectPtr : public LocalObjectBase<Unreal::FSoftObjectPtr, TSoftObjectPtrName>
     {
       private:
-        explicit TSoftClassPtr(Unreal::FSoftObjectPtr object);
+        explicit TSoftObjectPtr(Unreal::FSoftObjectPtr object);
 
       public:
-        TSoftClassPtr() = delete;
+        TSoftObjectPtr() = delete;
         auto static construct(const LuaMadeSimple::Lua&, Unreal::FSoftObjectPtr&) -> const LuaMadeSimple::Lua::Table;
         auto static construct(const LuaMadeSimple::Lua&, BaseObject&) -> const LuaMadeSimple::Lua::Table;
 
