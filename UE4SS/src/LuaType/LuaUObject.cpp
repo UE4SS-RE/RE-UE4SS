@@ -8,7 +8,7 @@
 #include <LuaType/LuaTArray.hpp>
 #include <LuaType/LuaTSet.hpp>
 #include <LuaType/LuaTMap.hpp>
-#include <LuaType/LuaTSoftClassPtr.hpp>
+#include <LuaType/LuaTSoftObjectPtr.hpp>
 #include <LuaType/LuaUClass.hpp>
 #include <LuaType/LuaUEnum.hpp>
 #include <LuaType/LuaUFunction.hpp>
@@ -1655,22 +1655,22 @@ namespace RC::LuaType
         params.throw_error("push_strproperty", "Operation not supported");
     }
 
-    auto push_softclassproperty(const PusherParams& params) -> void
+    auto push_softobjectproperty(const PusherParams& params) -> void
     {
         auto soft_ptr = static_cast<Unreal::FSoftObjectPtr*>(params.data);
         if (!soft_ptr)
         {
-            params.throw_error("push_softclassproperty", "data pointer is nullptr");
+            params.throw_error("push_softobjectproperty", "data pointer is nullptr");
         }
 
         switch (params.operation)
         {
         case Operation::GetNonTrivialLocal:
         case Operation::Get:
-            LuaType::TSoftClassPtr::construct(params.lua, *soft_ptr);
+            LuaType::TSoftObjectPtr::construct(params.lua, *soft_ptr);
             return;
         case Operation::Set: {
-            auto& lua_object = params.lua.get_userdata<LuaType::TSoftClassPtr>(params.stored_at_index);
+            auto& lua_object = params.lua.get_userdata<LuaType::TSoftObjectPtr>(params.stored_at_index);
             *soft_ptr = lua_object.get_local_cpp_object();
             return;
         }
@@ -1678,11 +1678,11 @@ namespace RC::LuaType
             RemoteUnrealParam::construct(params.lua, params.data, params.base, params.property);
             return;
         default:
-            params.throw_error("push_softclassproperty", "Unhandled Operation");
+            params.throw_error("push_softobjectproperty", "Unhandled Operation");
             break;
         }
 
-        params.throw_error("push_softclassproperty", "Operation not supported");
+        params.throw_error("push_softobjectproperty", "Operation not supported");
     }
 
     auto push_interfaceproperty(const PusherParams& params) -> void
