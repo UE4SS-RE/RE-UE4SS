@@ -1324,7 +1324,22 @@ namespace RC
         else
         {
             // 'mods.txt' exists, lets parse it
+
+            // First, check for BOM using a byte stream
+            std::ifstream bom_check(enabled_mods_file, std::ios::binary);
+            char bom[3] = {0};
+            bom_check.read(bom, 3);
+            bool has_bom = (bom[0] == '\xEF' && bom[1] == '\xBB' && bom[2] == '\xBF');
+            bom_check.close();
+
+            // Now open the actual stream
             StreamIType mods_stream{enabled_mods_file};
+
+            // If BOM was detected, skip the first "character" (which will be the BOM interpreted as a wide char)
+            if (has_bom) {
+                wchar_t discard;
+                mods_stream.get(discard);
+            }
 
             StringType current_line;
             while (std::getline(mods_stream, current_line))
