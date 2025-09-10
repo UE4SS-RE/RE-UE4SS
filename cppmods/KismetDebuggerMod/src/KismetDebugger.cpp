@@ -900,7 +900,7 @@ namespace RC::GUI::KismetDebuggerMod
 
         if (active)
         {
-            ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(255,255,0,255));
+            ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(255, 255, 0, 255));
             if (m_scroll_to_active)
                 ImGui::SetScrollHereY();
         }
@@ -909,12 +909,14 @@ namespace RC::GUI::KismetDebuggerMod
             ImGui::PopStyleColor();
 
         m_indent++;
+        // Note: we use the ImGui::Dummy() lines below to avoid a warning related to setting cursor pos without following with an imgui item
         ImGui::SetCursorPosX(50 + m_indent * 20.0f);
 
-        switch(m_current_expr)
+        switch (m_current_expr)
         {
             case EX_Cast:
             {
+                ImGui::Dummy(ImVec2(0, 0));
                 read<uint8>();
                 render_expr();
                 break;
@@ -923,6 +925,7 @@ namespace RC::GUI::KismetDebuggerMod
             case EX_CrossInterfaceCast:
             case EX_InterfaceToObjCast:
             {
+                ImGui::Dummy(ImVec2(0, 0));
                 (UClass*)read_object();
                 render_expr();
                 break;
@@ -937,6 +940,7 @@ namespace RC::GUI::KismetDebuggerMod
             case EX_LetDelegate:
             case EX_LetMulticastDelegate:
             {
+                ImGui::Dummy(ImVec2(0, 0));
                 render_expr();
                 render_expr();
                 break;
@@ -949,17 +953,20 @@ namespace RC::GUI::KismetDebuggerMod
             }
             case EX_StructMemberContext:
             {
-                (FProperty*)read_object();        // struct member expr.
+                ImGui::Dummy(ImVec2(0, 0));
+                (FProperty*)read_object(); // struct member expr.
                 render_expr();
                 break;
             }
             case EX_Jump:
             {
+                ImGui::Dummy(ImVec2(0, 0));
                 read<uint32>();
                 break;
             }
             case EX_ComputedJump:
             {
+                ImGui::Dummy(ImVec2(0, 0));
                 render_expr();
                 break;
             }
@@ -975,16 +982,19 @@ namespace RC::GUI::KismetDebuggerMod
             }
             case EX_InterfaceContext:
             {
+                ImGui::Dummy(ImVec2(0, 0));
                 render_expr();
                 break;
             }
             case EX_PushExecutionFlow:
             {
+                ImGui::Dummy(ImVec2(0, 0));
                 read<uint32>();
                 break;
             }
             case EX_NothingInt32:
             {
+                ImGui::Dummy(ImVec2(0, 0));
                 read<int32>();
                 break;
             }
@@ -1009,15 +1019,18 @@ namespace RC::GUI::KismetDebuggerMod
             case EX_PopExecutionFlow:
             case EX_DeprecatedOp4A:
             {
+                ImGui::Dummy(ImVec2(0, 0));
                 break;
             }
             case EX_WireTracepoint:
             case EX_Tracepoint:
             {
+                ImGui::Dummy(ImVec2(0, 0));
                 break;
             }
             case EX_Breakpoint:
             {
+                ImGui::Dummy(ImVec2(0, 0));
                 break;
             }
             /*
@@ -1033,6 +1046,7 @@ namespace RC::GUI::KismetDebuggerMod
             */
             case EX_Return:
             {
+                ImGui::Dummy(ImVec2(0, 0));
                 render_expr();
                 break;
             }
@@ -1040,8 +1054,9 @@ namespace RC::GUI::KismetDebuggerMod
             case EX_LocalFinalFunction:
             case EX_FinalFunction:
             {
+                ImGui::Dummy(ImVec2(0, 0));
                 (UFunction*)read_object();
-                while(render_expr() != EX_EndFunctionParms);
+                while (render_expr() != EX_EndFunctionParms);
                 break;
             }
             case EX_LocalVirtualFunction:
@@ -1061,18 +1076,21 @@ namespace RC::GUI::KismetDebuggerMod
                 std::cout << std::endl;
                 */
 
+                ImGui::Dummy(ImVec2(0, 0));
                 FName n = read_name();
-                while(render_expr() != EX_EndFunctionParms);    // Parms.
+                while (render_expr() != EX_EndFunctionParms); // Parms.
                 break;
             }
             case EX_CallMulticastDelegate:
             {
+                ImGui::Dummy(ImVec2(0, 0));
                 (UFunction*)read_object();
-                while(render_expr() != EX_EndFunctionParms); // Parms.
+                while (render_expr() != EX_EndFunctionParms); // Parms.
                 break;
             }
             case EX_BitFieldConst:
             {
+                ImGui::Dummy(ImVec2(0, 0));
                 (FProperty*)read_object();
                 read<uint8>();
                 break;
@@ -1081,22 +1099,25 @@ namespace RC::GUI::KismetDebuggerMod
             case EX_Context:
             case EX_Context_FailSilent:
             {
+                ImGui::Dummy(ImVec2(0, 0));
                 render_expr(); // Object expression.
                 read<uint32>();
-                (FField*)read_object();            // Property corresponding to the r-value data, in case the l-value needs to be mem-zero'd
+                (FField*)read_object(); // Property corresponding to the r-value data, in case the l-value needs to be mem-zero'd
                 render_expr(); // Context expression.
                 break;
             }
             case EX_AddMulticastDelegate:
             case EX_RemoveMulticastDelegate:
             {
-                render_expr();    // Delegate property to assign to
+                ImGui::Dummy(ImVec2(0, 0));
+                render_expr(); // Delegate property to assign to
                 render_expr(); // Delegate to add to the MC delegate for broadcast
                 break;
             }
             case EX_ClearMulticastDelegate:
             {
-                render_expr();    // Delegate property to clear
+                ImGui::Dummy(ImVec2(0, 0));
+                render_expr(); // Delegate property to clear
                 break;
             }
             case EX_IntConst:
@@ -1131,16 +1152,19 @@ namespace RC::GUI::KismetDebuggerMod
             }
             case EX_StringConst:
             {
+                ImGui::Dummy(ImVec2(0, 0));
                 while (read<uint8>());
                 break;
             }
             case EX_UnicodeStringConst:
             {
+                ImGui::Dummy(ImVec2(0, 0));
                 while (read<uint16>());
                 break;
             }
             case EX_TextConst:
             {
+                ImGui::Dummy(ImVec2(0, 0));
                 switch (read<uint8>())
                 {
                     case 0: // Empty
@@ -1166,26 +1190,31 @@ namespace RC::GUI::KismetDebuggerMod
             }
             case EX_ObjectConst:
             {
+                ImGui::Dummy(ImVec2(0, 0));
                 read_object();
                 break;
             }
             case EX_SoftObjectConst:
             {
+                ImGui::Dummy(ImVec2(0, 0));
                 render_expr();
                 break;
             }
             case EX_FieldPathConst:
             {
+                ImGui::Dummy(ImVec2(0, 0));
                 render_expr();
                 break;
             }
             case EX_NameConst:
             {
+                ImGui::Dummy(ImVec2(0, 0));
                 FName n = read_name();
                 break;
             }
             case EX_RotationConst:
             {
+                ImGui::Dummy(ImVec2(0, 0));
                 read<int32>();
                 read<int32>();
                 read<int32>();
@@ -1194,6 +1223,7 @@ namespace RC::GUI::KismetDebuggerMod
             case EX_Vector3fConst:
             case EX_VectorConst:
             {
+                ImGui::Dummy(ImVec2(0, 0));
                 read<float>();
                 read<float>();
                 read<float>();
@@ -1201,66 +1231,85 @@ namespace RC::GUI::KismetDebuggerMod
             }
             case EX_TransformConst:
             {
+                ImGui::Dummy(ImVec2(0, 0));
                 // Rotation
-                read<float>(); read<float>(); read<float>(); read<float>();
+                read<float>();
+                read<float>();
+                read<float>();
+                read<float>();
                 // Translation
-                read<float>(); read<float>(); read<float>();
+                read<float>();
+                read<float>();
+                read<float>();
                 // Scale
-                read<float>(); read<float>(); read<float>();
+                read<float>();
+                read<float>();
+                read<float>();
                 break;
             }
             case EX_StructConst:
             {
-                (UScriptStruct*)read_object();    // Struct.
+                ImGui::Dummy(ImVec2(0, 0));
+                (UScriptStruct*)read_object(); // Struct.
                 read<int32>();
-                while(render_expr() != EX_EndStructConst);
+                while (render_expr() != EX_EndStructConst);
                 break;
             }
             case EX_SetArray:
             {
+                ImGui::Dummy(ImVec2(0, 0));
                 // If not loading, or its a newer version
                 //if((!GetLinker()) || !Ar.IsLoading() || (Ar.UE4Ver() >= VER_UE4_CHANGE_SETARRAY_BYTECODE))
                 //{
-                    // Array property to assign to
-                    EExprToken TargetToken = render_expr();
+                // Array property to assign to
+                EExprToken TargetToken = render_expr();
                 //}
                 //else
                 //{
-                    // Array Inner Prop
-                    //(FProperty*)read_object();
+                // Array Inner Prop
+                //(FProperty*)read_object();
                 //}
 
-                while(render_expr() != EX_EndArray);
+                while (render_expr() != EX_EndArray);
                 break;
             }
             case EX_SetSet:
+            {
+                ImGui::Dummy(ImVec2(0, 0));
                 render_expr(); // set property
                 read<int32>();
                 while (render_expr() != EX_EndSet);
                 break;
+            }
             case EX_SetMap:
+            {
+                ImGui::Dummy(ImVec2(0, 0));
                 render_expr(); // map property
                 read<int32>();
                 while (render_expr() != EX_EndMap);
                 break;
+            }
             case EX_ArrayConst:
             {
-                (FProperty*)read_object();    // Inner property
+                ImGui::Dummy(ImVec2(0, 0));
+                (FProperty*)read_object(); // Inner property
                 read<int32>();
                 while (render_expr() != EX_EndArrayConst);
                 break;
             }
             case EX_SetConst:
             {
-                (FProperty*)read_object();    // Inner property
+                ImGui::Dummy(ImVec2(0, 0));
+                (FProperty*)read_object(); // Inner property
                 read<int32>();
                 while (render_expr() != EX_EndSetConst);
                 break;
             }
             case EX_MapConst:
             {
-                (FProperty*)read_object();    // Key property
-                (FProperty*)read_object();    // Val property
+                ImGui::Dummy(ImVec2(0, 0));
+                (FProperty*)read_object(); // Key property
+                (FProperty*)read_object(); // Val property
                 read<int32>();
                 while (render_expr() != EX_EndMapConst);
                 break;
@@ -1268,34 +1317,40 @@ namespace RC::GUI::KismetDebuggerMod
             case EX_ByteConst:
             case EX_IntConstByte:
             {
+                ImGui::Dummy(ImVec2(0, 0));
                 read<int8>();
                 break;
             }
             case EX_MetaCast:
             {
+                ImGui::Dummy(ImVec2(0, 0));
                 (UClass*)read_object();
                 render_expr();
                 break;
             }
             case EX_DynamicCast:
             {
+                ImGui::Dummy(ImVec2(0, 0));
                 (UClass*)read_object();
                 render_expr();
                 break;
             }
             case EX_JumpIfNot:
             {
+                ImGui::Dummy(ImVec2(0, 0));
                 read<uint32>();
                 render_expr(); // Boolean expr.
                 break;
             }
             case EX_PopExecutionFlowIfNot:
             {
+                ImGui::Dummy(ImVec2(0, 0));
                 render_expr(); // Boolean expr.
                 break;
             }
             case EX_Assert:
             {
+                ImGui::Dummy(ImVec2(0, 0));
                 read<uint16>();
                 read<uint8>();
                 render_expr(); // Assert expr.
@@ -1303,46 +1358,52 @@ namespace RC::GUI::KismetDebuggerMod
             }
             case EX_Skip:
             {
+                ImGui::Dummy(ImVec2(0, 0));
                 read<uint32>();
                 render_expr(); // Expression to possibly skip.
                 break;
             }
             case EX_InstanceDelegate:
             {
+                ImGui::Dummy(ImVec2(0, 0));
                 FName n = read_name();
                 break;
             }
             case EX_BindDelegate:
             {
+                ImGui::Dummy(ImVec2(0, 0));
                 FName n = read_name();
-                render_expr();    // Delegate property to assign to
+                render_expr(); // Delegate property to assign to
                 render_expr();
                 break;
             }
             case EX_SwitchValue:
             {
+                ImGui::Dummy(ImVec2(0, 0));
                 auto cases = read<uint16>(); // number of cases, without default one
                 auto end = read<uint32>(); // Code offset, go to it, when done.
-                render_expr();   //index term
+                render_expr(); //index term
 
                 for (uint16 i = 0; i < cases; ++i)
                 {
-                    render_expr();   // case index value term
+                    render_expr(); // case index value term
                     auto next_case = read<uint32>(); // offset to the next case
-                    render_expr();   // case term
+                    render_expr(); // case term
                 }
 
-                render_expr();   //default term
+                render_expr(); //default term
                 break;
             }
             case EX_ArrayGetByRef:
             {
+                ImGui::Dummy(ImVec2(0, 0));
                 render_expr();
                 render_expr();
                 break;
             }
             case EX_AutoRtfmTransact:
             {
+                ImGui::Dummy(ImVec2(0, 0));
                 read<int32>();
                 read<uint32>();
                 while (render_expr() != EX_AutoRtfmStopTransact);
@@ -1350,12 +1411,14 @@ namespace RC::GUI::KismetDebuggerMod
             }
             case EX_AutoRtfmStopTransact:
             {
+                ImGui::Dummy(ImVec2(0, 0));
                 read<int32>();
                 read<uint8>();
                 break;
             }
             case EX_AutoRtfmAbortIfNot:
             {
+                ImGui::Dummy(ImVec2(0, 0));
                 render_expr();
                 break;
             }
