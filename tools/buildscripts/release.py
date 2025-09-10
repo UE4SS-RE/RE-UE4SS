@@ -92,14 +92,14 @@ class ReleaseHandler:
 
     def modify_settings(self, settings_to_modify):
         config_path = os.path.join(self.ue4ss_dir, 'UE4SS-settings.ini')
-        with open(config_path, mode='r', encoding='utf-8-sig') as file:
+        with open(config_path, mode='r', encoding='utf-8') as file:
             content = file.read()
 
         for key, value in settings_to_modify.items():
             pattern = rf'(^{key}\s*=).*?$'
             content = re.sub(pattern, rf'\1 {value}', content, flags=re.MULTILINE)
 
-        with open(config_path, mode='w', encoding='utf-8-sig') as file:
+        with open(config_path, mode='w', encoding='utf-8') as file:
             file.write(content)
 
     def scan_directories(self):
@@ -149,7 +149,7 @@ class ReleaseHandler:
                 mods_to_remove_from_release.append(mod_name)
 
         mods_path = os.path.join(self.ue4ss_dir, 'Mods', 'mods.txt')
-        with open(mods_path, mode='r', encoding='utf-8-sig') as file:
+        with open(mods_path, mode='r', encoding='utf-8') as file:
             content = file.readlines()
 
         if self.cpp_mods:
@@ -158,12 +158,12 @@ class ReleaseHandler:
         if not self.is_dev_release:
             content = [line for line in content if not any(mod in line for mod in mods_to_remove_from_release)]
 
-        with open(mods_path, mode='w', encoding='utf-8-sig') as file:
+        with open(mods_path, mode='w', encoding='utf-8') as file:
             file.writelines(content)
 
     def modify_mods_json(self):
         mods_path = os.path.join(self.ue4ss_dir, 'Mods', 'mods.json')
-        with open(mods_path, mode='r', encoding='utf-8-sig') as file:
+        with open(mods_path, mode='r', encoding='utf-8') as file:
             content = json.load(file)
 
         if self.cpp_mods:
@@ -181,7 +181,7 @@ class ReleaseHandler:
                 and self.cpp_mods.get(mod['mod_name'], {}).get('include_in_release', True)
             ]
 
-        with open(mods_path, mode='w', encoding='utf-8-sig') as file:
+        with open(mods_path, mode='w', encoding='utf-8') as file:
             json.dump(content, file, indent=4)
 
     def copy_executables(self, dwmapi_dll_path, ue4ss_dll_path, ue4ss_pdb_path):
