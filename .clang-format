@@ -6,6 +6,8 @@ AllowShortLambdasOnASingleLine: Empty
 AllowShortIfStatementsOnASingleLine: WithoutElse
 AlwaysBreakTemplateDeclarations: Yes
 BasedOnStyle: Microsoft
+BreakBeforeBraces: Allman
+IndentCaseLabels: true
 BinPackArguments: false
 BinPackParameters: false
 ColumnLimit: 160
