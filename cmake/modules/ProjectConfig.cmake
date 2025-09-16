@@ -30,6 +30,11 @@ set(UE4SS_Game_DEFINITIONS UE_GAME)
 set(UE4SS_CasePreserving_DEFINITIONS ${UE4SS_Game_DEFINITIONS} WITH_CASE_PRESERVING_NAME)
 set(UE4SS_LessEqual421_DEFINITIONS ${UE4SS_Game_DEFINITIONS} FNAME_ALIGN8)
 
+# Target type flags (can be customized per target)
+set(UE4SS_Game_FLAGS "")
+set(UE4SS_CasePreserving_FLAGS ${UE4SS_Game_FLAGS})
+set(UE4SS_LessEqual421_FLAGS ${UE4SS_Game_FLAGS})
+
 # Configuration type definitions (UE4-style)
 set(UE4SS_Debug_DEFINITIONS UE_BUILD_DEBUG)
 set(UE4SS_Dev_DEFINITIONS UE_BUILD_DEVELOPMENT STATS)
@@ -75,9 +80,10 @@ function(ue4ss_initialize_project)
     set(CONFIGURATION_TYPES ${UE4SS_CONFIGURATION_TYPES} PARENT_SCOPE)
     set(PLATFORM_TYPES ${UE4SS_PLATFORM_TYPES} PARENT_SCOPE)
     
-    # Set up definitions for each type
+    # Set up definitions and flags for each type
     foreach(target_type ${UE4SS_TARGET_TYPES})
         set(${target_type}_DEFINITIONS ${UE4SS_${target_type}_DEFINITIONS} PARENT_SCOPE)
+        set(${target_type}_FLAGS ${UE4SS_${target_type}_FLAGS} PARENT_SCOPE)
     endforeach()
     
     foreach(config_type ${UE4SS_CONFIGURATION_TYPES})
@@ -90,9 +96,6 @@ function(ue4ss_initialize_project)
             set(${platform_type}_VARS ${UE4SS_${platform_type}_VARS} PARENT_SCOPE)
         endif()
     endforeach()
-    
-    # Initialize compiler flags
-    ue4ss_initialize_compiler_flags()
 endfunction()
 
 # Initializes compiler flags based on configuration
