@@ -63,10 +63,9 @@ add_compile_options("$<$<NOT:$<COMPILE_LANGUAGE:ASM_MASM>>:${DEFAULT_COMPILER_FL
 add_link_options("${DEFAULT_SHARED_LINKER_FLAGS}" "${DEFAULT_EXE_LINKER_FLAGS}")
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-# Compiler flags are now initialized by ue4ss_initialize_project()
-list(APPEND Game_FLAGS "")
-list(APPEND CasePreserving_FLAGS ${Game_FLAGS})
-list(APPEND LessEqual421_FLAGS ${Game_FLAGS})
+# Initialize Compiler flags after compiler detection.
+# Uses ue4ss_initialize_compiler_flags() from cmake/modules/Utilities.cmake
+ue4ss_initialize_compiler_flags()
 
 # Build configurations are now defined in ProjectConfig.cmake
 # Generate build configurations
