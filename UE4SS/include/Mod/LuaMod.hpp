@@ -87,6 +87,7 @@ namespace RC
             const LuaMadeSimple::Lua* lua;
             Unreal::UClass* instance_of_class;
             std::vector<std::pair<const LuaMadeSimple::Lua*, RegistryIndex>> registry_indexes;
+            bool scheduled_for_removal{};
         };
         struct LuaCancellableCallbackData
         {
