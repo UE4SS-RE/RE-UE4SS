@@ -39,7 +39,8 @@ class ReleaseHandler:
             'MemberVarLayoutTemplates',
             'CustomGameConfigs',
             'MapGenBP',
-            'Changelog.md'
+            'Changelog.md',
+            'Default_UVTD_Configs'
         ]
 
         # Settings to change in the release. The default settings in assets/UE4SS-settings.ini are for dev
