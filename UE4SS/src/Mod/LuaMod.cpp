@@ -4367,7 +4367,7 @@ Overloads:
                                 LuaType::RemoteUnrealParam::construct(lua, &WorldContext.GetThisCurrentWorld(), s_object_property_name);
                                 LuaType::FURL::construct(lua, URL);
                                 LuaType::RemoteUnrealParam::construct(lua, &PendingGame, s_object_property_name);
-                                callback_data.lua->set_string(to_string(Error.GetCharArray()));
+                                callback_data.lua->set_string(to_string(*Error));
                                 lua.call_function(5, 1);
 
                                 if (callback_data.lua->is_nil())
@@ -4410,7 +4410,7 @@ Overloads:
                                 LuaType::RemoteUnrealParam::construct(lua, &WorldContext.GetThisCurrentWorld(), s_object_property_name);
                                 LuaType::FURL::construct(lua, URL);
                                 LuaType::RemoteUnrealParam::construct(lua, &PendingGame, s_object_property_name);
-                                callback_data.lua->set_string(to_string(Error.GetCharArray()));
+                                callback_data.lua->set_string(to_string(*Error));
                                 lua.call_function(5, 1);
 
                                 if (callback_data.lua->is_nil())

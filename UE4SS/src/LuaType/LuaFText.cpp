@@ -93,7 +93,7 @@ Overloads:
             auto& lua_object = lua.get_userdata<FText>();
 
             const auto& fstring = lua_object.get_local_cpp_object().ToFString();
-            lua.set_string(to_string(fstring.GetCharArray()));
+            lua.set_string(to_string(*fstring));
 
             return 1;
         });
