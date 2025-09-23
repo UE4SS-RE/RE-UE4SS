@@ -45,11 +45,12 @@
 #include <Unreal/Property/FMapProperty.hpp>
 #include <Unreal/Property/FNameProperty.hpp>
 #include <Unreal/Property/FObjectProperty.hpp>
-#include <Unreal/Property/FStrProperty.hpp>
+#include <Unreal/CoreUObject/UObject/FStrProperty.hpp>
 #include <Unreal/Property/FStructProperty.hpp>
 #include <Unreal/Property/FTextProperty.hpp>
 #include <Unreal/Property/FWeakObjectProperty.hpp>
 #include <Unreal/Property/NumericPropertyTypes.hpp>
+#include <Unreal/CoreUObject/UObject/FUtf8StrProperty.hpp>
 #include <Unreal/TypeChecker.hpp>
 #include <Unreal/UAssetRegistry.hpp>
 #include <Unreal/UAssetRegistryHelpers.hpp>
@@ -869,6 +870,10 @@ namespace RC
         }
         add_property_type_table<Unreal::FTextProperty>(lua, property_types_table, "TextProperty");
         add_property_type_table<Unreal::FStrProperty>(lua, property_types_table, "StrProperty");
+        if (Unreal::Version::IsAtLeast(5, 06))
+        {
+            add_property_type_table<Unreal::FUtf8StrProperty>(lua, property_types_table, "Utf8StrProperty");
+        }
 
         property_types_table.make_global("PropertyTypes");
     }
