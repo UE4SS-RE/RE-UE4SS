@@ -17,12 +17,6 @@
 
 namespace RC
 {
-    enum class FilesystemWatcherThreadType
-    {
-        Main = 0,
-        Loader = 1,
-    };
-
     struct FilesystemWatch
     {
       public:
