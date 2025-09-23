@@ -34,19 +34,6 @@ namespace RC
         }
     };
 
-    // clang-format off
-    enum class LibReloaderState
-    {
-        Idle = -1,                          // Main thread is executing, loader thread is waiting for notification from the OS.
-        ReloadRequested_WaitForMain = 0,    // Loader got notification from OS, and is now paused until main thread replies it's safe to reload the .dll/.so file.
-                                            // This allows the main thread to finish executing its current frame before the .dll/.so file is unloaded.
-                                            // Without this, the .dll/.so file could be unloaded at the same time that it's being used which would cause a SIGSEGV or SIGBUS error.
-        ReloadCanStart_WaitForLoader = 1,   // Main thread received notification from loader, and is now in a safe state to reload, and is now paused until loader replies it's safe to continue executing.
-        ReloadCompleted = 2,                // Loader thread has finished reloading the .dll/.so file, and now notifies main of such and then immediately goes into idle state.
-                                            // When the main thread receives the notification from the loader, it also go into idle state.
-    };
-    // clang-format on
-
     class FilesystemWatcher
     {
       public:
