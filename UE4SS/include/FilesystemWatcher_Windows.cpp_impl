@@ -17,6 +17,15 @@ namespace RC
         {
             buffer.resize(1000);
         }
+        ~Data()
+        {
+            if (handle)
+            {
+                FindCloseChangeNotification(handle);
+                CloseHandle(handle);
+                handle = nullptr;
+            }
+        }
     };
 
     auto init_filesystem_watcher(FilesystemWatcher& watcher, const std::filesystem::path& path) -> void
@@ -36,14 +45,21 @@ namespace RC
 
     FilesystemWatcher::~FilesystemWatcher()
     {
-        m_stop_source.request_stop();
-        m_polling_thread.join();
-        auto data = static_cast<Data*>(m_handle);
-        if (data && data->handle)
+        if (m_stop_source.stop_possible())
         {
-            FindCloseChangeNotification(data->handle);
-            delete data;
-            m_handle = nullptr;
+            m_stop_source.request_stop();
+        }
+        if (m_polling_thread.joinable())
+        {
+            m_polling_thread.join();
+        }
+        for (auto& handle : m_handles)
+        {
+            auto data = static_cast<Data*>(handle);
+            if (data)
+            {
+                delete data;
+            }
         }
     }
 
