@@ -90,17 +90,17 @@ namespace RC::GUI::Dumpers
         auto location = root_component->GetValuePtrByPropertyNameInChain<FVector>(FromCharTypePtr<TCHAR>(STR("RelativeLocation")));
         FString location_string{};
         location_property->ExportTextItem(location_string, location, nullptr, nullptr, 0);
-        root_actor_buffer.append(fmt::format(STR("\"{}\","), location_string.GetCharArray()));
+        root_actor_buffer.append(fmt::format(STR("\"{}\","), *location_string));
 
         auto rotation = root_component->GetValuePtrByPropertyNameInChain<FRotator>(FromCharTypePtr<TCHAR>(STR("RelativeRotation")));
         FString rotation_string{};
         rotation_property->ExportTextItem(rotation_string, rotation, nullptr, nullptr, 0);
-        root_actor_buffer.append(fmt::format(STR("\"{}\","), rotation_string.GetCharArray()));
+        root_actor_buffer.append(fmt::format(STR("\"{}\","), *rotation_string));
 
         auto scale = root_component->GetValuePtrByPropertyNameInChain<FVector>(FromCharTypePtr<TCHAR>(STR("RelativeScale3D")));
         FString scale_string{};
         scale_property->ExportTextItem(scale_string, scale, nullptr, nullptr, 0);
-        root_actor_buffer.append(fmt::format(STR("\"{}\","), scale_string.GetCharArray()));
+        root_actor_buffer.append(fmt::format(STR("\"{}\","), *scale_string));
 
         return root_actor_buffer;
     }
@@ -134,7 +134,7 @@ namespace RC::GUI::Dumpers
             static auto class_property = game_mode_base->GetPropertyByNameInChain(FromCharTypePtr<TCHAR>(STR("GameStateClass")));
             FString actor_class_string{};
             class_property->ExportTextItem(actor_class_string, &actor->GetClassPrivate(), nullptr, nullptr, 0);
-            actor_buffer.append(fmt::format(STR("{},"), actor_class_string.GetCharArray()));
+            actor_buffer.append(fmt::format(STR("{},"), *actor_class_string));
 
             // TODO: build system to handle other types of components - possibly including a way to specify which components to dump and which properties are important via a config file
             actor_buffer.append(generate_root_component_csv(*root_component));
@@ -157,7 +157,7 @@ namespace RC::GUI::Dumpers
                     static auto mesh_property = static_mesh_component_ptr->GetPropertyByNameInChain(FromCharTypePtr<TCHAR>(STR("StaticMesh")));
                     FString mesh_string{};
                     mesh_property->ExportTextItem(mesh_string, &mesh, nullptr, nullptr, 0);
-                    actor_buffer.append(fmt::format(STR("(StaticMesh={}',"), mesh_string.GetCharArray()));
+                    actor_buffer.append(fmt::format(STR("(StaticMesh={}',"), *mesh_string));
 
                     auto materials_for_each_body = [&](const UObject* material_interface) {
                         if (material_interface)
@@ -272,13 +272,13 @@ namespace RC::GUI::Dumpers
             static auto class_property = game_mode_base->GetPropertyByNameInChain(FromCharTypePtr<TCHAR>(STR("GameStateClass")));
             FString actor_class_string{};
             class_property->ExportTextItem(actor_class_string, &actor->GetClassPrivate(), nullptr, nullptr, 0);
-            actor_json_object.new_string(STR("Actor"), fmt::format(STR("{}"), StringViewType{actor_class_string.GetCharArray()}));
+            actor_json_object.new_string(STR("Actor"), fmt::format(STR("{}"), StringViewType{*actor_class_string}));
 
             auto& root_component_json_object = actor_json_object.new_object(STR("RootComponent"));
 
             FString root_component_class_string{};
             class_property->ExportTextItem(root_component_class_string, &(*root_component)->GetClassPrivate(), nullptr, nullptr, 0);
-            root_component_json_object.new_string(STR("SceneComponentClass"), fmt::format(STR("{}"), StringViewType{root_component_class_string.GetCharArray()}));
+            root_component_json_object.new_string(STR("SceneComponentClass"), fmt::format(STR("{}"), StringViewType{*root_component_class_string}));
 
             auto& location_json_object = root_component_json_object.new_object(STR("Location"));
             auto location = (*root_component)->GetValuePtrByPropertyNameInChain<FVector>(FromCharTypePtr<TCHAR>(STR("RelativeLocation")));
