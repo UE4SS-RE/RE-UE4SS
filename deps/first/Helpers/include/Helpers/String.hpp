@@ -191,16 +191,16 @@ namespace RC
 
     auto inline to_wstring(std::string_view input) -> std::wstring
     {
+#if __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+#endif
 #ifdef PLATFORM_WINDOWS
 #pragma warning(disable : 4996)
         static std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter{};
         return converter.from_bytes(input.data(), input.data() + input.length());
 #pragma warning(default : 4996)
 #else
-#if __clang__
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wdeprecated-declarations"
-#endif
         static std::wstring_convert<std::codecvt_utf8<wchar_t>> converter{};
         return converter.from_bytes(input.data(), input.data() + input.length());
 #endif
