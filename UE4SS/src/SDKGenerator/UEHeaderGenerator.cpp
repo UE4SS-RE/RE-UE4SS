@@ -33,7 +33,9 @@
 #include <Unreal/Property/FNameProperty.hpp>
 #include <Unreal/Property/FObjectProperty.hpp>
 #include <Unreal/Property/FSetProperty.hpp>
-#include <Unreal/Property/FStrProperty.hpp>
+#include <Unreal/CoreUObject/UObject/FStrProperty.hpp>
+#include <Unreal/CoreUObject/UObject/FUtf8StrProperty.hpp>
+#include <Unreal/CoreUObject/UObject/FAnsiStrProperty.hpp>
 #include <Unreal/Property/FSoftClassProperty.hpp>
 #include <Unreal/Property/FSoftObjectProperty.hpp>
 #include <Unreal/Property/FStructProperty.hpp>
@@ -1364,6 +1366,78 @@ namespace RC::UEGenerator
             return;
         }
 
+        // UTF8 String properties
+        if (property->IsA<FUtf8StrProperty>())
+        {
+            FUtf8String* string_value = property->ContainerPtrToValuePtr<FUtf8String>(object);
+            // Convert UTF8 to native string type for comparison and generation
+            const char* utf8_cstr = reinterpret_cast<const char*>(**string_value);
+            const StringType string_value_string = to_generic_string(utf8_cstr);
+
+            // Ensure property either does not exist in parent class or is overriden in the CDO for the child class
+            if (super_property != nullptr)
+            {
+                FUtf8String* super_string_value = super_property->ContainerPtrToValuePtr<FUtf8String>(super_object);
+                const char* super_utf8_cstr = reinterpret_cast<const char*>(**super_string_value);
+                const StringType super_string_value_string = to_generic_string(super_utf8_cstr);
+                if (string_value_string == super_string_value_string)
+                {
+                    return;
+                }
+                super_and_no_access = private_access_modifier;
+            }
+
+            if (string_value_string != STR(""))
+            {
+                // Create UTF8TEXT literal for UTF8 strings
+                const StringType result_value = create_utf8_string_literal(string_value_string);
+                if (!super_and_no_access)
+                {
+                    generate_simple_assignment_expression(property, result_value, implementation_file, property_scope);
+                }
+                else
+                {
+                    generate_advanced_assignment_expression(property, result_value, implementation_file, property_scope, property_type);
+                }
+            }
+            return;
+        }
+
+        // ANSI String properties
+        if (property->IsA<FAnsiStrProperty>())
+        {
+            FAnsiString* string_value = property->ContainerPtrToValuePtr<FAnsiString>(object);
+            // Convert ANSI to native string type for comparison and generation
+            const StringType string_value_string = to_generic_string(**string_value);
+
+            // Ensure property either does not exist in parent class or is overriden in the CDO for the child class
+            if (super_property != nullptr)
+            {
+                FAnsiString* super_string_value = super_property->ContainerPtrToValuePtr<FAnsiString>(super_object);
+                const StringType super_string_value_string = to_generic_string(**super_string_value);
+                if (string_value_string == super_string_value_string)
+                {
+                    return;
+                }
+                super_and_no_access = private_access_modifier;
+            }
+
+            if (string_value_string != STR(""))
+            {
+                // ANSI strings use plain string literals (no TEXT macro)
+                const StringType result_value = create_ansi_string_literal(string_value_string);
+                if (!super_and_no_access)
+                {
+                    generate_simple_assignment_expression(property, result_value, implementation_file, property_scope);
+                }
+                else
+                {
+                    generate_advanced_assignment_expression(property, result_value, implementation_file, property_scope, property_type);
+                }
+            }
+            return;
+        }
+
         // Text properties are treated as FText::FromString, although it's not ideal
         if (property->IsA<FTextProperty>())
         {
@@ -1959,56 +2033,93 @@ namespace RC::UEGenerator
 
     auto UEHeaderGenerator::create_string_literal(const StringType& string) -> StringType
     {
+        return create_string_literal_with_macro(string, STR("TEXT"));
+    }
+
+    auto UEHeaderGenerator::create_utf8_string_literal(const StringType& string) -> StringType
+    {
+        return create_string_literal_with_macro(string, STR("UTF8TEXT"));
+    }
+
+    auto UEHeaderGenerator::create_ansi_string_literal(const StringType& string) -> StringType
+    {
+        // ANSI strings don't use a macro, just quotes
+        return create_string_literal_with_macro(string, STR(""));
+    }
+
+    auto UEHeaderGenerator::create_string_literal_with_macro(const StringType& string, const StringType& macro_name) -> StringType
+    {
         StringType result;
-        result.append(STR("TEXT(\""));
+        
+        // Open the literal
+        if (!macro_name.empty())
+        {
+            result.append(macro_name);
+            result.append(STR("(\""));
+        }
+        else
+        {
+            result.append(STR("\""));
+        }
 
         bool previous_character_was_hex = false;
-
         const CharType* ptr = string.c_str();
+        
         while (CharType ch = *ptr++)
         {
             switch (ch)
             {
-            case STR('\r'): {
+            case STR('\r'):
                 continue;
-            }
-            case STR('\n'): {
+            case STR('\n'):
                 result.append(STR("\\n"));
                 previous_character_was_hex = false;
                 break;
-            }
-            case STR('\\'): {
+            case STR('\t'):
+                result.append(STR("\\t"));
+                previous_character_was_hex = false;
+                break;
+            case STR('\\'):
                 result.append(STR("\\\\"));
                 previous_character_was_hex = false;
                 break;
-            }
-            case STR('\"'): {
+            case STR('\"'):
                 result.append(STR("\\\""));
                 previous_character_was_hex = false;
                 break;
-            }
-            default: {
-                if (ch < 31 || ch >= 128)
+            default:
+                // Only escape control characters (< 32)
+                // For ANSI (no macro), also escape > 127
+                if (ch < 32 || (macro_name.empty() && ch > 127))
                 {
-                    result.append(fmt::format(STR("\\x{:04X}"), ch));
+                    result.append(fmt::format(STR("\\x{:02X}"), static_cast<unsigned char>(ch)));
                     previous_character_was_hex = true;
                 }
                 else
                 {
-                    // We close and open the literal (with TEXT) here in order to ensure that successive hex characters aren't
-                    // appended to the hex sequence, causing a different number
+                    // Handle hex digit continuation
                     if (previous_character_was_hex && iswxdigit(ch) != 0)
                     {
-                        result.append(STR("\")TEXT(\""));
+                        if (!macro_name.empty())
+                        {
+                            result.append(STR("\")"));
+                            result.append(macro_name);
+                            result.append(STR("(\""));
+                        }
+                        else
+                        {
+                            result.append(STR("\"\""));  // String concatenation for ANSI
+                        }
                     }
                     previous_character_was_hex = false;
                     result.push_back(ch);
                 }
                 break;
             }
-            }
         }
-        result.append(STR("\")"));
+        
+        // Close the literal
+        result.append(!macro_name.empty() ? STR("\")") : STR("\""));
         return result;
     }
 
@@ -2701,6 +2812,14 @@ namespace RC::UEGenerator
         {
             return STR("FString");
         }
+        else if (property->IsA<FUtf8StrProperty>())
+        {
+            return STR("FUtf8String");
+        }
+        else if (property->IsA<FAnsiStrProperty>())
+        {
+            return STR("FAnsiString");
+        }
         else if (property->IsA<FTextProperty>())
         {
             return STR("FText");
@@ -3221,8 +3340,12 @@ namespace RC::UEGenerator
 
                 // Force const reference when we're dealing with strings, and they are not passed by reference
                 // UHT for whatever reason completely strips const and reference flags from string properties, but happily generates them in boilerplate code
+                const StringType property_class_name = property->GetClass().GetName();
                 const bool should_force_const_ref =
-                        ((property_flags & (CPF_ReferenceParm | CPF_OutParm)) == 0) && (property->GetClass().GetName() == STR("StrProperty"));
+                        ((property_flags & (CPF_ReferenceParm | CPF_OutParm)) == 0) &&
+                        (property_class_name == STR("StrProperty") ||
+                         property_class_name == STR("Utf8StrProperty") ||
+                         property_class_name == STR("AnsiStrProperty"));
 
                 // Append const keyword to the parameter declaration if it is marked as const parameter
                 if ((property_flags & CPF_ConstParm) != 0 || should_force_const_ref)
@@ -3416,6 +3539,14 @@ namespace RC::UEGenerator
         if (field_class_name == STR("StrProperty"))
         {
             return STR("TEXT(\"\")");
+        }
+        if (field_class_name == STR("Utf8StrProperty"))
+        {
+            return STR("UTF8TEXT(\"\")");
+        }
+        if (field_class_name == STR("AnsiStrProperty"))
+        {
+            return STR("\"\"");
         }
         if (field_class_name == STR("TextProperty"))
         {
