@@ -2,7 +2,7 @@
 #include <LuaType/LuaAActor.hpp>
 #include <LuaType/LuaCustomProperty.hpp>
 #include <LuaType/LuaFName.hpp>
-#include <LuaType/LuaFString.hpp>
+#include <LuaType/LuaUnrealString.hpp>
 #include <LuaType/LuaFText.hpp>
 #include <LuaType/LuaFWeakObjectPtr.hpp>
 #include <LuaType/LuaTArray.hpp>
