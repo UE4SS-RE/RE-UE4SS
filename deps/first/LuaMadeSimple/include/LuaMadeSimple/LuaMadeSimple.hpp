@@ -516,12 +516,27 @@ namespace RC::LuaMadeSimple
         // Copy value from from_index to force_index, shifting values on stack to top
         RC_LMS_API auto insert_value(int32_t from_index = -1, int32_t force_index = 1) const -> void;
 
+        RC_LMS_API auto push_value(int32_t index) const -> void;
+
         [[nodiscard]] RC_LMS_API auto is_nil(int32_t force_index = 1) const -> bool;
         RC_LMS_API auto set_nil() const -> void;
 
         [[nodiscard]] RC_LMS_API auto is_string(int32_t force_index = 1) const -> bool;
         [[nodiscard]] RC_LMS_API auto get_string(int32_t force_index = 1) const -> std::string_view;
         RC_LMS_API auto set_string(std::string_view) const -> void;
+        RC_LMS_API auto push_string(const char* str, size_t len) const -> void;
+        RC_LMS_API auto push_string(const uint8_t* str, size_t len) const -> void;
+        RC_LMS_API auto push_string(std::string_view str) const -> void;
+
+        // Get string with length (removes from stack)
+        [[nodiscard]] RC_LMS_API auto get_string(int32_t force_index, size_t* out_len) const -> const char*;
+
+        // Peek string without removing from stack
+        [[nodiscard]] RC_LMS_API auto peek_string(int32_t index) const -> std::string_view;
+        [[nodiscard]] RC_LMS_API auto peek_string(int32_t index, size_t* out_len) const -> const char*;
+
+        // Check if value can be converted to string
+        [[nodiscard]] RC_LMS_API auto can_be_string(int32_t index = 1) const -> bool;
 
         // is_number == lua_isnumber, which returns true if the value is a number or a string convertible to a number
         [[nodiscard]] RC_LMS_API auto is_number(int32_t force_index = 1) const -> bool;
