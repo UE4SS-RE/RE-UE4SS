@@ -60,7 +60,7 @@ jobs:
 
       - name: Build
         run: |
-          xmake f -m "Game__Shipping__Win64" -y
+          xmake f -m "Game__Shipping__Win64" -y --ue4ssProxyPath="C:\Windows\System32\version.dll"
           xmake build
 
       - name: Package
