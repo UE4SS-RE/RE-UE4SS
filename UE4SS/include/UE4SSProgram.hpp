@@ -217,7 +217,7 @@ namespace RC
       public:
         auto init() -> void;
         auto is_program_started() -> bool;
-        auto reinstall_mods() -> void;
+        RC_UE4SS_API auto reinstall_mods() -> void;
         auto get_object_dumper_output_directory() -> const File::StringType;
         RC_UE4SS_API auto get_module_directory() -> File::StringType;
         RC_UE4SS_API auto get_game_executable_directory() -> File::StringType;
