@@ -52,7 +52,7 @@ jobs:
 
       - name: Build
         run: |
-          xmake f -m "Game__Shipping__Win64" -y
+          xmake f -m "Game__Shipping__Win64" -y --ue4ssProxyPath="C:\Windows\System32\version.dll"
           xmake build
 
       - name: Package
@@ -72,7 +72,7 @@ jobs:
           tag_name: ${{ steps.release_commit.outputs.release_tag }}
           body_path: release/release_notes.md
           files: |
-            release/UE4SS_v*.zip
-            release/zDEV-UE4SS_v*.zip
+            release/UE4SS_*.zip
+            release/zDEV-UE4SS_*.zip
             release/zCustomGameConfigs.zip
             release/zMapGenBP.zip

@@ -73,8 +73,8 @@ jobs:
           tag_name: experimental
           body_path: release/release_notes.md
           files: |
-            release/UE4SS_v*.zip
-            release/zDEV-UE4SS_v*.zip
+            release/UE4SS_*.zip
+            release/zDEV-UE4SS_*.zip
             release/zCustomGameConfigs.zip
             release/zMapGenBP.zip
 
@@ -92,7 +92,7 @@ jobs:
           tag_name: experimental-latest
           body_path: release/release_notes.md
           files: |
-            release/UE4SS_v*.zip
-            release/zDEV-UE4SS_v*.zip
+            release/UE4SS_*.zip
+            release/zDEV-UE4SS_*.zip
             release/zCustomGameConfigs.zip
             release/zMapGenBP.zip
