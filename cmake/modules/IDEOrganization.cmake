@@ -180,14 +180,15 @@ function(apply_compiler_settings_to_targets TARGET_COMPILE_OPTIONS TARGET_LINK_O
         
         # Apply compiler options to non-utility and non-interface targets
         if(NOT ${TARGET_TYPE} STREQUAL "UTILITY" AND NOT ${TARGET_TYPE} STREQUAL "INTERFACE_LIBRARY")
-            target_compile_options(${target} PRIVATE "${TARGET_COMPILE_OPTIONS}")
-            target_link_options(${target} PRIVATE "${TARGET_LINK_OPTIONS}")
-            
-            # For UE4SS library, export definitions publicly so dependent mods inherit them
+            # For UE4SS library, export settings publicly so dependent mods inherit them
             if(${target} STREQUAL "UE4SS")
+                target_compile_options(${target} PUBLIC "${TARGET_COMPILE_OPTIONS}")
+                target_link_options(${target} PUBLIC "${TARGET_LINK_OPTIONS}")
                 target_compile_definitions(${target} PUBLIC "${TARGET_COMPILE_DEFINITIONS}")
                 target_compile_options(${target} PUBLIC "${TARGET_COMPILE_OPTIONS}")
             else()
+                target_compile_options(${target} PRIVATE "${TARGET_COMPILE_OPTIONS}")
+                target_link_options(${target} PRIVATE "${TARGET_LINK_OPTIONS}")
                 target_compile_definitions(${target} PRIVATE "${TARGET_COMPILE_DEFINITIONS}")
                 target_compile_options(${target} PRIVATE "${TARGET_COMPILE_OPTIONS}")
             endif()
