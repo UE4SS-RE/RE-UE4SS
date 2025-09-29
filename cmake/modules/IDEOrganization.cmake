@@ -186,8 +186,10 @@ function(apply_compiler_settings_to_targets TARGET_COMPILE_OPTIONS TARGET_LINK_O
             # For UE4SS library, export definitions publicly so dependent mods inherit them
             if(${target} STREQUAL "UE4SS")
                 target_compile_definitions(${target} PUBLIC "${TARGET_COMPILE_DEFINITIONS}")
+                target_compile_options(${target} PUBLIC "${TARGET_COMPILE_OPTIONS}")
             else()
                 target_compile_definitions(${target} PRIVATE "${TARGET_COMPILE_DEFINITIONS}")
+                target_compile_options(${target} PRIVATE "${TARGET_COMPILE_OPTIONS}")
             endif()
         endif()
         
