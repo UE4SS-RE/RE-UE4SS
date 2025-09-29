@@ -73,9 +73,10 @@ function(generate_build_configurations)
                     ${${platform_type}_FLAGS})
 
                 # Convert lists to strings for CMake variables
+                # Append to preserve any flags set by toolchain files or CMake initialization
                 listToString(final_compiler_flags "${DEFAULT_COMPILER_FLAGS}" "${compiler_flags}")
-                set(CMAKE_CXX_FLAGS_${triplet_upper} "${final_compiler_flags}" CACHE STRING "" FORCE)
-                set(CMAKE_C_FLAGS_${triplet_upper} "${final_compiler_flags}" CACHE STRING "" FORCE)
+                set(CMAKE_CXX_FLAGS_${triplet_upper} "${CMAKE_CXX_FLAGS_${triplet_upper}} ${final_compiler_flags}" CACHE STRING "" FORCE)
+                set(CMAKE_C_FLAGS_${triplet_upper} "${CMAKE_C_FLAGS_${triplet_upper}} ${final_compiler_flags}" CACHE STRING "" FORCE)
 
                 list(APPEND TARGET_COMPILE_OPTIONS_LOCAL "$<$<NOT:$<COMPILE_LANGUAGE:ASM_MASM>>:$<$<STREQUAL:$<CONFIG>,${triplet}>:${compiler_flags}>>")
 
@@ -92,13 +93,15 @@ function(generate_build_configurations)
                 # and add to TARGET_LINK_OPTIONS for per-config generator expressions
                 # For single-config generators (Ninja), only set the base CMAKE flags for the active config
                 if(is_multi_config)
-                    set(CMAKE_EXE_LINKER_FLAGS_${triplet_upper} "${exe_linker_flags}" CACHE STRING "" FORCE)
-                    set(CMAKE_SHARED_LINKER_FLAGS_${triplet_upper} "${shared_linker_flags}" CACHE STRING "" FORCE)
+                    # Append to existing flags to preserve CMake's defaults (including standard libraries)
+                    set(CMAKE_EXE_LINKER_FLAGS_${triplet_upper} "${CMAKE_EXE_LINKER_FLAGS_${triplet_upper}} ${exe_linker_flags}" CACHE STRING "" FORCE)
+                    set(CMAKE_SHARED_LINKER_FLAGS_${triplet_upper} "${CMAKE_SHARED_LINKER_FLAGS_${triplet_upper}} ${shared_linker_flags}" CACHE STRING "" FORCE)
                     list(APPEND TARGET_LINK_OPTIONS_LOCAL "$<$<STREQUAL:$<CONFIG>,${triplet}>:${linker_flags}>")
                 elseif("${CMAKE_BUILD_TYPE}" STREQUAL "${triplet}")
-                    # For single-config, set base flags directly (don't use TARGET_LINK_OPTIONS to avoid duplication)
-                    set(CMAKE_EXE_LINKER_FLAGS "${exe_linker_flags}" CACHE STRING "" FORCE)
-                    set(CMAKE_SHARED_LINKER_FLAGS "${shared_linker_flags}" CACHE STRING "" FORCE)
+                    # For single-config, append to base flags (don't use TARGET_LINK_OPTIONS to avoid duplication)
+                    # Preserve CMake's defaults including standard libraries
+                    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${exe_linker_flags}" CACHE STRING "" FORCE)
+                    set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} ${shared_linker_flags}" CACHE STRING "" FORCE)
                     message(STATUS "Single-config: Applied ${triplet} linker flags to base CMAKE linker flags")
                 endif()
 
