@@ -22,10 +22,25 @@ endif()
 
 set(DEFAULT_COMPILER_FLAGS ${DEFAULT_COMPILER_FLAGS} PARENT_SCOPE)
 
-# Linker flags
-set(LINKER_FLAGS "/DEBUG:FULL")
-set(DEFAULT_SHARED_LINKER_FLAGS "${LINKER_FLAGS}" PARENT_SCOPE)
-set(DEFAULT_EXE_LINKER_FLAGS "${LINKER_FLAGS}" PARENT_SCOPE)
+# Default linker flags - always include debug info for all configs
+set(DEFAULT_SHARED_LINKER_FLAGS "" PARENT_SCOPE)
+set(DEFAULT_EXE_LINKER_FLAGS "/DEBUG:FULL" PARENT_SCOPE)
 
-# Shipping configuration flags
-set(Shipping_FLAGS "/Zi" PARENT_SCOPE)
+# Configuration-specific compiler flags
+set(Debug_FLAGS "" PARENT_SCOPE)  # Will use defaults from CMAKE_CXX_FLAGS_DEBUG
+set(Dev_FLAGS "" PARENT_SCOPE)    # Will use defaults from CMAKE_CXX_FLAGS_DEBUG
+set(Test_FLAGS "" PARENT_SCOPE)   # Will use defaults from CMAKE_CXX_FLAGS_RELWITHDEBINFO
+set(Shipping_FLAGS "/Zi" PARENT_SCOPE)  # Add debug symbols to release
+
+# Configuration-specific linker flags
+# Debug/Dev: Keep incremental linking for faster iteration
+set(Debug_LINKER_FLAGS "" PARENT_SCOPE)
+set(Dev_LINKER_FLAGS "" PARENT_SCOPE)
+
+# Test: Keep incremental but include additional optimizations
+set(Test_LINKER_FLAGS "/OPT:REF;/OPT:ICF" PARENT_SCOPE)
+
+# Shipping: Disable incremental linking, enable optimizations
+# Note: /OPT:REF and /OPT:ICF are disabled by default when /DEBUG is used,
+# so we must explicitly enable them for release builds
+set(Shipping_LINKER_FLAGS "/LTCG;/INCREMENTAL:NO;/OPT:REF;/OPT:ICF" PARENT_SCOPE)

@@ -1,14 +1,17 @@
 # CMake utility functions
 # This module provides utility functions for the build system
 
-# Converts a CMake list to a space-separated string
+# Converts CMake list(s) to a space-separated string
 #
 # Arguments:
 #   VARNAME - Variable name to store the result in parent scope
-#   VALUE - CMake list to convert
+#   ... - One or more CMake lists to convert and concatenate
 #
-function(listToString VARNAME VALUE)
-    string(REPLACE ";" " " result "${VALUE}")
+function(listToString VARNAME)
+    # Combine all arguments after VARNAME into a single list
+    set(combined_list ${ARGN})
+    # Convert the combined list to a space-separated string
+    string(REPLACE ";" " " result "${combined_list}")
     set(${VARNAME} "${result}" PARENT_SCOPE)
 endfunction()
 
@@ -83,12 +86,21 @@ function(generate_build_configurations)
                     ${${platform_type}_LINKER_FLAGS})
 
                 listToString(exe_linker_flags "${DEFAULT_EXE_LINKER_FLAGS}" "${linker_flags}")
-                set(CMAKE_EXE_LINKER_FLAGS_${triplet_upper} "${exe_linker_flags}" CACHE STRING "" FORCE)
-
                 listToString(shared_linker_flags "${DEFAULT_SHARED_LINKER_FLAGS}" "${linker_flags}")
-                set(CMAKE_SHARED_LINKER_FLAGS_${triplet_upper} "${shared_linker_flags}" CACHE STRING "" FORCE)
 
-                list(APPEND TARGET_LINK_OPTIONS_LOCAL "$<$<STREQUAL:$<CONFIG>,${triplet}>:${linker_flags}>")
+                # For multi-config generators (Visual Studio), set config-specific cache variables
+                # and add to TARGET_LINK_OPTIONS for per-config generator expressions
+                # For single-config generators (Ninja), only set the base CMAKE flags for the active config
+                if(is_multi_config)
+                    set(CMAKE_EXE_LINKER_FLAGS_${triplet_upper} "${exe_linker_flags}" CACHE STRING "" FORCE)
+                    set(CMAKE_SHARED_LINKER_FLAGS_${triplet_upper} "${shared_linker_flags}" CACHE STRING "" FORCE)
+                    list(APPEND TARGET_LINK_OPTIONS_LOCAL "$<$<STREQUAL:$<CONFIG>,${triplet}>:${linker_flags}>")
+                elseif("${CMAKE_BUILD_TYPE}" STREQUAL "${triplet}")
+                    # For single-config, set base flags directly (don't use TARGET_LINK_OPTIONS to avoid duplication)
+                    set(CMAKE_EXE_LINKER_FLAGS "${exe_linker_flags}" CACHE STRING "" FORCE)
+                    set(CMAKE_SHARED_LINKER_FLAGS "${shared_linker_flags}" CACHE STRING "" FORCE)
+                    message(STATUS "Single-config: Applied ${triplet} linker flags to base CMAKE linker flags")
+                endif()
 
                 # Set platform-specific variables
                 foreach(variable ${${platform_type}_VARS})
