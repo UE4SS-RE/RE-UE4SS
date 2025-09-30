@@ -813,8 +813,9 @@ namespace RC
 
             if (merged_containers.empty())
             {
-                throw std::runtime_error{"[SinglePassScanner::start_scan] Could not merge containers. Either there were not containers to merge or there was "
-                                         "an internal error."};
+                // No containers means no scanning was actually done.
+                // We can return safely to the caller.
+                return;
             }
 
             uint8_t* module_start_address = static_cast<uint8_t*>(merged_module_info.lpBaseOfDll);
