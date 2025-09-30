@@ -100,6 +100,7 @@
     - [DumpStaticMeshes](./lua-api/global-functions/dumpstaticmeshes.md)
     - [DumpAllActors](./lua-api/global-functions/dumpallactors.md)
     - [DumpUSMAP](./lua-api/global-functions/dumpusmap.md)
+    - [LoadExport](./lua-api/global-functions/loadexport.md)
   - [Examples](./lua-api/examples.md)
   - [Creating a Lua Mod](./guides/creating-a-lua-mod.md)
   - [Using Custom Lua Bindings](./guides/using-custom-lua-bindings.md)
