@@ -46,6 +46,13 @@ namespace RC
 
         lua.execute_file(script_file_path_and_name.string());
 
+        if (lua.get_stack_size() > 0 && lua.is_integer())
+        {
+            auto found_address = reinterpret_cast<void*>(lua.get_integer());
+            match_found_func(found_address);
+            return;
+        }
+
         constexpr const char* global_register_func_name = "Register";
         constexpr const char* global_on_match_found_func_name = "OnMatchFound";
 
