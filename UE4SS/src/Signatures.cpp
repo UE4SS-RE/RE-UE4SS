@@ -46,11 +46,18 @@ namespace RC
 
         lua.execute_file(script_file_path_and_name.string());
 
-        if (lua.get_stack_size() > 0 && lua.is_integer())
+        if (lua.get_stack_size() > 0)
         {
-            auto found_address = reinterpret_cast<void*>(lua.get_integer());
-            match_found_func(found_address);
-            return;
+            if (lua.is_integer())
+            {
+                auto found_address = reinterpret_cast<void*>(lua.get_integer());
+                match_found_func(found_address);
+                return;
+            }
+            else if (lua.is_nil())
+            {
+                throw std::runtime_error{fmt::format("Lua file returned nil (symbol not found): {}", to_string(script_file_path_and_name))};
+            }
         }
 
         constexpr const char* global_register_func_name = "Register";
