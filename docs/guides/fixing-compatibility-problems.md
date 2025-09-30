@@ -39,8 +39,9 @@ For more in-depth instructions, see the [advanced guide](./fixing-compatibility-
    - ProcessLocalScriptFunction.lua
    - ProcessInternal.lua
    - CallFunctionByNameWithArguments.lua
-4. Inside the `.lua` file you need a global `Register` function with no params
-    - Keep in mind that the names of functions in Lua files in the `UE4SS_Signatures` directory are case-senstive.
+4. Inside the `.lua` file, you need to either return the address of the symbol at file-scope, or you need a `Register` and `OnMatchFound` function to perform an AOB scan.
+    - Keep in mind that the names of functions in Lua files in the `UE4SS_Signatures` directory are case-sensitive.
+    - If you choose to return the symbol address at file-scope, the `LoadExport` function may be useful, but usually only if the game is built modularly.
 5. The `Register` function must return the AOB that you want UE4SS to scan for.
     - The format is a list of nibbles, and every two forms a byte.  
     - I like putting a space between each byte just for clarity but this is not a requirement. 
