@@ -142,17 +142,7 @@ namespace RC::LuaLibrary
 
         const auto symbol_name = std::string{lua.get_string()};
 
-        intptr_t symbol_address{};
-        for (const auto& module_info : SigScannerStaticData::m_modules_info.array)
-        {
-            symbol_address = std::bit_cast<intptr_t>(GetProcAddress(static_cast<HMODULE>(module_info.lpBaseOfDll), symbol_name.data()));
-            if (symbol_address)
-            {
-                break;
-            }
-        }
-
-        lua.set_integer(symbol_address);
+        lua.set_integer(std::bit_cast<intptr_t>(Unreal::UnrealInitializer::LoadExport(symbol_name)));
         return 1;
     }
 
