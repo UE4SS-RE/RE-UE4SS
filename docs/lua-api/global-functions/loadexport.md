@@ -13,6 +13,6 @@ The `LoadExport` function is used to load a symbol that's been exported by the g
 
 ## Example
 ```lua
--- If the game exports GUObjectArray, like it does when UE is build modularly, this retrieves its address.
+-- If the game exports GUObjectArray, like it does when UE is built modularly, this retrieves its address.
 local GUObjectArray = LoadExport("?GUObjectArray@@3VFUObjectArray@@A")
 ```
