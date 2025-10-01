@@ -71,6 +71,7 @@ namespace RC
         REGISTER_BOOL_SETTING(General.EnableDebugKeyBindings, section_general, EnableDebugKeyBindings)
         REGISTER_INT64_SETTING(General.SecondsToScanBeforeGivingUp, section_general, SecondsToScanBeforeGivingUp)
         REGISTER_BOOL_SETTING(General.UseUObjectArrayCache, section_general, bUseUObjectArrayCache)
+        REGISTER_BOOL_SETTING(General.DoEarlyScan, section_general, DoEarlyScan)
 
         constexpr static File::CharType section_engine_version_override[] = STR("EngineVersionOverride");
         REGISTER_INT64_SETTING(EngineVersionOverride.MajorVersion, section_engine_version_override, MajorVersion)
