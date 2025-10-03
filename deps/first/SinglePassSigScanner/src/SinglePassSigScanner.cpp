@@ -700,7 +700,7 @@ namespace RC
         }
         if (!end_address)
         {
-            start_address = static_cast<uint8_t*>(info.lpMaximumApplicationAddress);
+            end_address = static_cast<uint8_t*>(info.lpMaximumApplicationAddress);
         }
 
         format_aob_strings(signature_containers);
@@ -715,76 +715,102 @@ namespace RC
             }
         }
 
-        // Loop everything
-        for (size_t container_index = 0; const auto& patterns : pattern_datas)
+        MEMORY_BASIC_INFORMATION memory_info{};
+        DWORD protect_flags = PAGE_GUARD | PAGE_NOCACHE | PAGE_NOACCESS;
+
+
+        for (uint8_t* i = start_address; i < end_address; ++i)
         {
-            for (size_t signature_index = 0; const auto& pattern_data : patterns)
+            if (!VirtualQuery(i, &memory_info, sizeof(memory_info)))
             {
-                // If the container is refusing more calls then skip to the next container
-                if (pattern_data.signature_container->ignore)
-                {
-                    break;
-                }
+                continue;
+            }
 
-                auto it = start_address;
-                auto end = it + (end_address - start_address) - (pattern_data.pattern.size()) + 1;
-                uint8_t needle = pattern_data.pattern[0];
+            if (memory_info.Protect & protect_flags || !(memory_info.State & MEM_COMMIT))
+            {
+                i += memory_info.RegionSize - 1;
+                continue;
+            }
 
-                bool skip_to_next_container{};
-                while (end != (it = std::find(it, end, needle)))
+            uint8_t* region_start = static_cast<uint8_t*>(memory_info.BaseAddress);
+            uint8_t* region_end = region_start + memory_info.RegionSize;
+        
+            // CHANGE: Use region boundaries instead of full range
+            auto scan_start = (region_start > start_address) ? region_start : start_address;
+            auto scan_end = (region_end < end_address) ? region_end : end_address;
+        
+            // Loop everything
+            for (size_t container_index = 0; const auto& patterns : pattern_datas)
+            {
+                for (size_t signature_index = 0; const auto& pattern_data : patterns)
                 {
-                    bool found = true;
-                    for (size_t pattern_offset = 0; pattern_offset < pattern_data.pattern.size(); ++pattern_offset)
+                    // If the container is refusing more calls then skip to the next container
+                    if (pattern_data.signature_container->ignore)
                     {
-                        if ((it[pattern_offset] & pattern_data.mask[pattern_offset]) != pattern_data.pattern[pattern_offset])
-                        {
-                            found = false;
-                            break;
-                        }
+                        break;
                     }
 
-                    if (found)
-                    {
-                        {
-                            std::lock_guard<std::mutex> safe_scope(m_scanner_mutex);
+                    auto it = scan_start;
+                    auto end = scan_end - pattern_data.pattern.size() + 1;
+                    uint8_t needle = pattern_data.pattern[0];
 
-                            // Checking for the second time if the container is refusing more calls
-                            // This is required when multi-threading is enabled
-                            if (pattern_data.signature_container->ignore)
+                    bool skip_to_next_container{};
+                    while (end != (it = std::find(it, end, needle)))
+                    {
+                        bool found = true;
+                        for (size_t pattern_offset = 0; pattern_offset < pattern_data.pattern.size(); ++pattern_offset)
+                        {
+                            if ((it[pattern_offset] & pattern_data.mask[pattern_offset]) != pattern_data.pattern[pattern_offset])
                             {
-                                skip_to_next_container = true;
+                                found = false;
                                 break;
                             }
+                        }
 
-                            // One of the signatures have found a full match so lets forward the details to the callable
-                            pattern_data.signature_container->index_into_signatures = signature_index;
-                            pattern_data.signature_container->match_address = it;
-                            pattern_data.signature_container->match_signature_size = pattern_data.pattern.size();
-
-                            skip_to_next_container = pattern_data.signature_container->on_match_found(*pattern_data.signature_container);
-                            pattern_data.signature_container->ignore = skip_to_next_container;
-
-                            // Store results if the container at the containers request
-                            if (pattern_data.signature_container->store_results)
+                        if (found)
+                        {
                             {
-                                pattern_data.signature_container->result_store.emplace_back(
-                                        SignatureContainerLight{.index_into_signatures = signature_index, .match_address = it});
+                                std::lock_guard<std::mutex> safe_scope(m_scanner_mutex);
+
+                                // Checking for the second time if the container is refusing more calls
+                                // This is required when multi-threading is enabled
+                                if (pattern_data.signature_container->ignore)
+                                {
+                                    skip_to_next_container = true;
+                                    break;
+                                }
+
+                                // One of the signatures have found a full match so lets forward the details to the callable
+                                pattern_data.signature_container->index_into_signatures = signature_index;
+                                pattern_data.signature_container->match_address = it;
+                                pattern_data.signature_container->match_signature_size = pattern_data.pattern.size();
+
+                                skip_to_next_container = pattern_data.signature_container->on_match_found(*pattern_data.signature_container);
+                                pattern_data.signature_container->ignore = skip_to_next_container;
+
+                                // Store results if the container at the containers request
+                                if (pattern_data.signature_container->store_results)
+                                {
+                                    pattern_data.signature_container->result_store.emplace_back(
+                                            SignatureContainerLight{.index_into_signatures = signature_index, .match_address = it});
+                                }
                             }
                         }
+
+                        it++;
                     }
 
-                    it++;
-                }
+                    if (skip_to_next_container)
+                    {
+                        // A match was found and signaled to skip to the next container
+                        break;
+                    }
 
-                if (skip_to_next_container)
-                {
-                    // A match was found and signaled to skip to the next container
-                    break;
+                    ++signature_index;
                 }
-
-                ++signature_index;
+                ++container_index;
             }
-            ++container_index;
+            i = region_end - 1;
         }
     }
 
