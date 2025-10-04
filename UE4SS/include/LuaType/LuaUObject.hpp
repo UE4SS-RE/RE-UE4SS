@@ -716,8 +716,8 @@ Overloads:
 
             table.add_pair("IsValid", [](const LuaMadeSimple::Lua& lua) -> int {
                 const auto& lua_object = lua.get_userdata<SelfType>();
-                if (lua_object.get_remote_cpp_object() && !lua_object.get_remote_cpp_object()->IsUnreachable() &&
-                    is_object_in_global_unreal_object_map(lua_object.get_remote_cpp_object()))
+                if (lua_object.get_remote_cpp_object() && is_object_in_global_unreal_object_map(lua_object.get_remote_cpp_object()) &&
+                    !lua_object.get_remote_cpp_object()->IsUnreachable())
                 {
                     lua.set_bool(true);
                 }
