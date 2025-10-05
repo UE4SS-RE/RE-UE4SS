@@ -28,7 +28,7 @@ namespace RC
             int64_t SecondsToScanBeforeGivingUp{30};
             bool UseUObjectArrayCache{true};
             StringType InputSource{STR("Default")};
-            bool DoEarlyScan{true};
+            bool DoEarlyScan{false};
         } General;
 
         struct SectionEngineVersionOverride
