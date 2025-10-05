@@ -944,16 +944,6 @@ namespace RC::UEGenerator
             error_string = ensure_str(e.what());
         }
 
-        if (!type_is_valid)
-        {
-            Output::send<LogLevel::Warning>(STR("Warning: {}\n"), error_string);
-            header_data.append_line(fmt::format(STR("// UPROPERTY({})"), property_flags_string));
-            header_data.append_line(fmt::format(STR("// Missed Property: {}"), property->GetName()));
-            header_data.append_line(fmt::format(STR("// {}"), error_string));
-            header_data.append_line(STR(""));
-            return;
-        }
-
         StringType property_extra_declaration;
         if (property->GetArrayDim() != 1)
         {
@@ -964,6 +954,30 @@ namespace RC::UEGenerator
         else if (is_bitmask_bool)
         {
             property_extra_declaration.append(STR(": 1"));
+        }
+        
+        // This shouldn't ever really be hit as the type name is guessed already during the generate_property_type_declaration call
+        if (!type_is_valid)
+        {
+            // Generate guessed type from property class name
+            StringType field_class = property->GetClass().GetName();
+            StringType guessed_type = field_class;
+            if (guessed_type.ends_with(STR("Property")))
+            {
+                guessed_type.erase(guessed_type.length() - 8);
+            }
+            if (!guessed_type.starts_with(STR("F")))
+            {
+                guessed_type.insert(0, STR("F"));
+            }
+            
+            Output::send<LogLevel::Error>(STR("Error generating property '{}': {}\n"), property->GetName(), error_string);
+        
+            header_data.append_line(fmt::format(STR("// UPROPERTY({})"), property_flags_string));
+            header_data.append_line(fmt::format(STR("// Missed Property: {}"), property->GetName()));
+            header_data.append_line(fmt::format(STR("// {} {}{}; // Guessed type"), guessed_type, property->GetName(), property_extra_declaration));
+            header_data.append_line(STR(""));
+            return;
         }
 
         header_data.append_line(fmt::format(STR("UPROPERTY({})"), property_flags_string));
@@ -1020,7 +1034,14 @@ namespace RC::UEGenerator
             if (return_property != NULL)
             {
                 const StringType default_property_value = generate_default_property_value(return_property, header_data, context_name);
-                return_statement_string = fmt::format(STR(" return {};"), default_property_value);
+                if (!default_property_value.empty())
+                {
+                    return_statement_string = fmt::format(STR(" return {};"), default_property_value);
+                }
+                else
+                {
+                    return_statement_string = STR(""); // Empty - let PURE_VIRTUAL handle it
+                }
             }
 
             if (generate_as_override)
@@ -1850,7 +1871,14 @@ namespace RC::UEGenerator
             if (return_value_property != NULL)
             {
                 const StringType default_value = generate_default_property_value(return_value_property, implementation_file, context.context_name);
-                implementation_file.append_line(fmt::format(STR("return {};"), default_value));
+                if (!default_value.empty())
+                {
+                    implementation_file.append_line(fmt::format(STR("return {};"), default_value));
+                }
+                else
+                {
+                    implementation_file.append_line(STR("// TODO: Return value for unsupported property type"));
+                }
             }
 
             implementation_file.end_indent_level();
@@ -2706,9 +2734,24 @@ namespace RC::UEGenerator
             return STR("FText");
         }
 
-        throw std::runtime_error(RC::fmt("[generate_property_type_declaration] Unsupported property class '%S', full name: '%S'",
-                                         field_class_name.c_str(),
-                                         property->GetFullName().c_str()));
+        StringType guessed_type = field_class_name;
+        if (guessed_type.ends_with(STR("Property")))
+        {
+            guessed_type.erase(guessed_type.length() - 8); // Remove "Property" suffix
+        }
+        if (!guessed_type.starts_with(STR("F")))
+        {
+            guessed_type.insert(0, STR("F"));
+        }
+
+        Output::send<LogLevel::Error>(
+                STR("Unsupported property class '{}', full name: '{}'. Guessing type as: {}\n"),
+                field_class_name,
+                property->GetFullName(),
+                guessed_type
+                );
+
+        return guessed_type;
     }
     //*/
 
@@ -3422,9 +3465,12 @@ namespace RC::UEGenerator
             return STR("FText::GetEmpty()");
         }
 
-        throw std::runtime_error(RC::fmt("[generate_default_property_value] Unsupported property class '%S', full name: '%S'",
-                                         field_class_name.c_str(),
-                                         property->GetFullName().c_str()));
+        Output::send<LogLevel::Error>(
+                STR("Cannot generate default value for unsupported property class '{}', full name: '{}'. Skipping initialization.\n"),
+                field_class_name,
+                property->GetFullName());
+
+        return STR("");
     }
 
     auto UEHeaderGenerator::get_class_blueprint_info(UClass* uclass) -> ClassBlueprintInfo

@@ -489,7 +489,23 @@ namespace RC::UEGenerator
             return STR("FText");
         }
 
-        throw std::runtime_error(RC::fmt("Unsupported property class %S", field_class_name.c_str()));
+        StringType guessed_type = field_class_name;
+        if (guessed_type.ends_with(STR("Property")))
+        {
+            guessed_type.erase(guessed_type.length() - 8); // Remove "Property" suffix
+        }
+        if (!guessed_type.starts_with(STR("F")))
+        {
+            guessed_type.insert(0, STR("F"));
+        }
+        Output::send<LogLevel::Error>(
+                STR("Unsupported property class '{}' for property '{}'. Guessing type as: {}\n"),
+                field_class_name,
+                property->GetName(),
+                guessed_type
+                );
+
+        return guessed_type;
     }
 
     auto generate_property_lua_name(FProperty* property, bool is_top_level_declaration, UObject* class_context) -> File::StringType
@@ -806,7 +822,25 @@ namespace RC::UEGenerator
             return STR("FText");
         }
 
-        throw std::runtime_error(RC::fmt("Unsupported property class %S", field_class_name.c_str()));
+        // Generate a guessed type name
+        StringType guessed_type = field_class_name;
+        if (guessed_type.ends_with(STR("Property")))
+        {
+            guessed_type.erase(guessed_type.length() - 8); // Remove "Property" suffix
+        }
+        if (!guessed_type.starts_with(STR("F")))
+        {
+            guessed_type.insert(0, STR("F"));
+        }
+
+        Output::send<LogLevel::Error>(
+                STR("Unsupported property class '{}' for property '{}'. Guessing type as: {}\n"),
+                field_class_name,
+                property->GetName(),
+                guessed_type
+                );
+
+        return guessed_type;
     }
 
     auto get_native_delegate_type_name(Unreal::UFunction* signature_function, Unreal::UClass* current_class, bool strip_outer_name) -> File::StringType
