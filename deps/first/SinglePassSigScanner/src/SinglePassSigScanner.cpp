@@ -329,7 +329,7 @@ namespace RC
     {
         std::vector<int> bytes;
         char* const start = const_cast<char*>(signature.data());
-        char* const end = const_cast<char*>(signature.data()) + strlen(signature.data());
+        char* const end = const_cast<char*>(signature.data()) + signature.size();
 
         for (char* current = start; current < end; current++)
         {
@@ -367,11 +367,11 @@ namespace RC
         auto end_address = static_cast<uint8_t*>(module.lpBaseOfDll) + module.SizeOfImage;
 
         MEMORY_BASIC_INFORMATION memory_info{};
-        DWORD protect_flags = PAGE_GUARD | PAGE_NOCACHE | PAGE_NOACCESS;
+        DWORD protect_flags = PAGE_GUARD | PAGE_NOACCESS;
 
         void* address_found{};
 
-        for (uint8_t* i = start_address; i < end_address; ++i)
+        for (uint8_t* i = start_address; i < end_address;)
         {
             if (VirtualQuery(i, &memory_info, sizeof(memory_info)))
             {
@@ -385,12 +385,16 @@ namespace RC
 
                 for (uint8_t* region_start = static_cast<uint8_t*>(memory_info.BaseAddress); region_start < region_end; ++region_start)
                 {
-                    if (region_start > end_address || region_start + string_to_scan_for.size() > end_address)
+                    // Check boundaries - string_to_scan_for.size() is character count, need to multiply by sizeof(wchar_t) for bytes
+                    size_t string_size_bytes = string_to_scan_for.size() * sizeof(wchar_t);
+                    if (region_start > end_address || 
+                        region_start + string_size_bytes > end_address ||
+                        region_start + string_size_bytes > region_end)
                     {
                         break;
                     }
 
-                    std::wstring_view maybe_string = std::wstring_view((const wchar_t*)region_start, string_to_scan_for.size());
+                    std::wstring_view maybe_string = std::wstring_view(reinterpret_cast<const wchar_t*>(region_start), string_to_scan_for.size());
                     if (maybe_string == string_to_scan_for)
                     {
                         address_found = region_start;
@@ -403,6 +407,10 @@ namespace RC
                     break;
                 }
                 i = static_cast<uint8_t*>(memory_info.BaseAddress) + memory_info.RegionSize;
+            }
+            else
+            {
+                ++i;
             }
         }
 
@@ -436,7 +444,7 @@ namespace RC
         }
     }
 
-    static auto make_mask(std::string_view pattern, SignatureContainer& signature_container, const size_t data_size) -> PatternData
+    static auto make_mask(std::string_view pattern, SignatureContainer& signature_container) -> PatternData
     {
         PatternData pattern_data{};
 
@@ -474,16 +482,6 @@ namespace RC
             ++i;
         }
 
-        static constexpr size_t Alignment = 32;
-        size_t count = (size_t)std::ceil((float)data_size / Alignment);
-        size_t padding_size = count * Alignment - data_size;
-
-        for (size_t i = 0; i < padding_size; i++)
-        {
-            pattern_data.pattern.push_back(0x00);
-            pattern_data.mask.push_back(0x00);
-        }
-
         pattern_data.signature_container = &signature_container;
         return pattern_data;
     }
@@ -519,11 +517,11 @@ namespace RC
         }
         if (!end_address)
         {
-            start_address = static_cast<uint8_t*>(info.lpMaximumApplicationAddress);
+            end_address = static_cast<uint8_t*>(info.lpMaximumApplicationAddress);
         }
 
         MEMORY_BASIC_INFORMATION memory_info{};
-        DWORD protect_flags = PAGE_GUARD | PAGE_NOCACHE | PAGE_NOACCESS;
+        DWORD protect_flags = PAGE_GUARD | PAGE_NOACCESS;
 
         // TODO: Nasty nasty nasty. Come up with a better solution... wtf
         // It should ideally be able to work with the char* directly instead of converting to to vectors of ints
@@ -557,7 +555,7 @@ namespace RC
         }
 
         // Loop everything
-        for (uint8_t* i = start_address; i < end_address; ++i)
+        for (uint8_t* i = start_address; i < end_address;)
         {
             // Populate memory_info if VirtualQuery doesn't fail
             if (VirtualQuery(i, &memory_info, sizeof(memory_info)))
@@ -591,7 +589,13 @@ namespace RC
                             }
 
                             // Skip if we're about to dereference uninitialized memory
-                            if (region_start + sig.size() > region_end)
+                            if (region_start >= end_address)
+                            {
+                                break;
+                            }
+
+                            // Skip if signature would extend past boundaries
+                            if (region_start + (sig.size() / 2) > region_end || region_start + (sig.size() / 2) > end_address)
                             {
                                 break;
                             }
@@ -652,6 +656,10 @@ namespace RC
 
                 i = static_cast<uint8_t*>(memory_info.BaseAddress) + memory_info.RegionSize;
             }
+            else
+            {
+                ++i;
+            }
         }
     }
 
@@ -700,10 +708,8 @@ namespace RC
         }
         if (!end_address)
         {
-            start_address = static_cast<uint8_t*>(info.lpMaximumApplicationAddress);
+            end_address = static_cast<uint8_t*>(info.lpMaximumApplicationAddress);
         }
-
-        format_aob_strings(signature_containers);
 
         std::vector<std::vector<PatternData>> pattern_datas{};
         for (auto& signature_container : signature_containers)
@@ -711,80 +717,110 @@ namespace RC
             auto& pattern_data = pattern_datas.emplace_back();
             for (auto& signature : signature_container.signatures)
             {
-                pattern_data.emplace_back(make_mask(signature.signature, signature_container, end_address - start_address));
+                pattern_data.emplace_back(make_mask(signature.signature, signature_container));
             }
         }
 
-        // Loop everything
-        for (size_t container_index = 0; const auto& patterns : pattern_datas)
+        MEMORY_BASIC_INFORMATION memory_info{};
+        DWORD readable_flags = PAGE_READONLY | PAGE_READWRITE | PAGE_WRITECOPY |
+                               PAGE_EXECUTE_READ | PAGE_EXECUTE_READWRITE | PAGE_EXECUTE_WRITECOPY;
+
+        for (uint8_t* i = start_address; i < end_address;)
         {
-            for (size_t signature_index = 0; const auto& pattern_data : patterns)
+            if (!VirtualQuery(i, &memory_info, sizeof(memory_info)))
             {
-                // If the container is refusing more calls then skip to the next container
-                if (pattern_data.signature_container->ignore)
-                {
-                    break;
-                }
+                ++i;
+                continue;
+            }
 
-                auto it = start_address;
-                auto end = it + (end_address - start_address) - (pattern_data.pattern.size()) + 1;
-                uint8_t needle = pattern_data.pattern[0];
+            if (!(memory_info.Protect & readable_flags) || !(memory_info.State & MEM_COMMIT) || (memory_info.Protect & PAGE_GUARD))
+            {
+                i += memory_info.RegionSize;
+                continue;
+            }
 
-                bool skip_to_next_container{};
-                while (end != (it = std::find(it, end, needle)))
+            uint8_t* region_start = static_cast<uint8_t*>(memory_info.BaseAddress);
+            uint8_t* region_end = region_start + memory_info.RegionSize;
+            
+            auto scan_start = (region_start > start_address) ? region_start : start_address;
+            auto scan_end = (region_end < end_address) ? region_end : end_address;
+        
+            // Loop everything
+            for (size_t container_index = 0; const auto& patterns : pattern_datas)
+            {
+                for (size_t signature_index = 0; const auto& pattern_data : patterns)
                 {
-                    bool found = true;
-                    for (size_t pattern_offset = 0; pattern_offset < pattern_data.pattern.size(); ++pattern_offset)
+                    // If the container is refusing more calls then skip to the next container
+                    if (pattern_data.signature_container->ignore)
                     {
-                        if ((it[pattern_offset] & pattern_data.mask[pattern_offset]) != pattern_data.pattern[pattern_offset])
-                        {
-                            found = false;
-                            break;
-                        }
+                        break;
                     }
 
-                    if (found)
+                    auto it = scan_start;
+                    if (static_cast<size_t>(scan_end - scan_start) < pattern_data.pattern.size())
                     {
-                        {
-                            std::lock_guard<std::mutex> safe_scope(m_scanner_mutex);
+                        continue; // Skip if pattern is larger than region
+                    }
+                    auto end = scan_end - pattern_data.pattern.size() + 1;
+                    uint8_t needle = pattern_data.pattern[0];
 
-                            // Checking for the second time if the container is refusing more calls
-                            // This is required when multi-threading is enabled
-                            if (pattern_data.signature_container->ignore)
+                    bool skip_to_next_container{};
+                    while (end != (it = std::find(it, end, needle)))
+                    {
+                        bool found = true;
+                        for (size_t pattern_offset = 0; pattern_offset < pattern_data.pattern.size(); ++pattern_offset)
+                        {
+                            if ((it[pattern_offset] & pattern_data.mask[pattern_offset]) != pattern_data.pattern[pattern_offset])
                             {
-                                skip_to_next_container = true;
+                                found = false;
                                 break;
                             }
+                        }
 
-                            // One of the signatures have found a full match so lets forward the details to the callable
-                            pattern_data.signature_container->index_into_signatures = signature_index;
-                            pattern_data.signature_container->match_address = it;
-                            pattern_data.signature_container->match_signature_size = pattern_data.pattern.size();
-
-                            skip_to_next_container = pattern_data.signature_container->on_match_found(*pattern_data.signature_container);
-                            pattern_data.signature_container->ignore = skip_to_next_container;
-
-                            // Store results if the container at the containers request
-                            if (pattern_data.signature_container->store_results)
+                        if (found)
+                        {
                             {
-                                pattern_data.signature_container->result_store.emplace_back(
-                                        SignatureContainerLight{.index_into_signatures = signature_index, .match_address = it});
+                                std::lock_guard<std::mutex> safe_scope(m_scanner_mutex);
+
+                                // Checking for the second time if the container is refusing more calls
+                                // This is required when multi-threading is enabled
+                                if (pattern_data.signature_container->ignore)
+                                {
+                                    skip_to_next_container = true;
+                                    break;
+                                }
+
+                                // One of the signatures have found a full match so lets forward the details to the callable
+                                pattern_data.signature_container->index_into_signatures = signature_index;
+                                pattern_data.signature_container->match_address = it;
+                                pattern_data.signature_container->match_signature_size = pattern_data.pattern.size();
+
+                                skip_to_next_container = pattern_data.signature_container->on_match_found(*pattern_data.signature_container);
+                                pattern_data.signature_container->ignore = skip_to_next_container;
+
+                                // Store results if the container at the containers request
+                                if (pattern_data.signature_container->store_results)
+                                {
+                                    pattern_data.signature_container->result_store.emplace_back(
+                                            SignatureContainerLight{.index_into_signatures = signature_index, .match_address = it});
+                                }
                             }
                         }
+
+                        it++;
                     }
 
-                    it++;
-                }
+                    if (skip_to_next_container)
+                    {
+                        // A match was found and signaled to skip to the next container
+                        break;
+                    }
 
-                if (skip_to_next_container)
-                {
-                    // A match was found and signaled to skip to the next container
-                    break;
+                    ++signature_index;
                 }
-
-                ++signature_index;
+                ++container_index;
             }
-            ++container_index;
+            i = region_end;
         }
     }
 
@@ -816,6 +852,11 @@ namespace RC
                 // No containers means no scanning was actually done.
                 // We can return safely to the caller.
                 return;
+            }
+
+            if (m_scan_method == ScanMethod::StdFind)
+            {
+                format_aob_strings(merged_containers);
             }
 
             uint8_t* module_start_address = static_cast<uint8_t*>(merged_module_info.lpBaseOfDll);
@@ -867,6 +908,11 @@ namespace RC
             // Right now it can't be auto& or const auto& because the do_scan function takes a non-const since it needs to mutate the values inside the vector
             for (auto& [scan_target, signature_container] : signature_containers)
             {
+                if (m_scan_method == ScanMethod::StdFind)
+                {
+                    format_aob_strings(signature_container);
+                }
+                
                 uint8_t* module_start_address = static_cast<uint8_t*>(SigScannerStaticData::m_modules_info[scan_target].lpBaseOfDll);
                 uint8_t* module_end_address = static_cast<uint8_t*>(module_start_address + SigScannerStaticData::m_modules_info[scan_target].SizeOfImage);
 
