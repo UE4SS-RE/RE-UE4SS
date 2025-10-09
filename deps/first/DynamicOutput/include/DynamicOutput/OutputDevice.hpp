@@ -68,7 +68,6 @@ namespace RC::Output
         auto set_formatter(Formatter new_formatter) -> void;
 
       protected:
-        auto static get_now_as_string() -> const File::StringType;
         auto static default_format_string(File::StringViewType) -> File::StringType;
     };
 } // namespace RC::Output

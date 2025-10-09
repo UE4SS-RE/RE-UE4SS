@@ -7,6 +7,7 @@ option(UE4SS_${TARGET}_BUILD_SHARED "Build as a shared lib" OFF)
 set(${TARGET}_Sources
         "${CMAKE_CURRENT_SOURCE_DIR}/src/Casting.cpp"
         "${CMAKE_CURRENT_SOURCE_DIR}/src/SysError.cpp"
+        "${CMAKE_CURRENT_SOURCE_DIR}/src/Time.cpp"
         )
 
 string(REGEX REPLACE "(.)([A-Z])" "\\1_\\2" MODULE_NAME ${TARGET})
@@ -29,7 +30,7 @@ target_compile_definitions(${TARGET} PRIVATE
             RC_${MODULE_NAME}_BUILD_STATIC>)
 
 target_include_directories(${TARGET} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
-target_link_libraries(${TARGET} PUBLIC String)
+target_link_libraries(${TARGET} PUBLIC String fmt)
 
 # Make headers visible in the IDE
 # Uses make_headers_visible() from cmake/modules/IDEVisibility.cmake

@@ -7,6 +7,7 @@ target(projectName)
     add_rules("ue4ss.dependency")
 
     add_deps("String")
+    add_packages("fmt")
     
     add_includedirs("include", { public = true })
     add_headerfiles("include/**.hpp")

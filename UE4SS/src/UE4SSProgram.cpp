@@ -23,6 +23,7 @@
 #include <Helpers/Format.hpp>
 #include <Helpers/Integer.hpp>
 #include <Helpers/String.hpp>
+#include <Helpers/Time.hpp>
 #include <IniParser/Ini.hpp>
 #include <LuaLibrary.hpp>
 #include <LuaType/LuaCustomProperty.hpp>
@@ -213,26 +214,7 @@ namespace RC
             {
                 m_console_device = &Output::set_default_devices<Output::ConsoleDevice>();
                 m_console_device->set_formatter([](File::StringViewType string) -> File::StringType {
-                    bool use_local_time = true;
-#ifdef _WIN32
-                    if (auto module = GetModuleHandleW(L"ntdll.dll"); module && GetProcAddress(module, "wine_get_version"))
-                    {
-                        use_local_time = false;
-                    }
-#endif
-                    if (use_local_time)
-                    {
-                        static const auto timezone = std::chrono::current_zone();
-                        return fmt::format(STR("[{}] {}"),
-                                           fmt::format(STR("{:%X}"),
-                                                       std::chrono::time_point_cast<std::chrono::system_clock::duration>(
-                                                               timezone->to_local(std::chrono::system_clock::now()))),
-                                           string);
-                    }
-                    else
-                    {
-                        return fmt::format(STR("[{}] {}"), fmt::format(STR("{:%X}"), std::chrono::system_clock::now()), string);
-                    }
+                    return fmt::format(STR("[{}] {}"), get_now_as_string(STR("{:%X}")), string);
                 });
                 if (settings_manager.Debug.DebugConsoleVisible)
                 {
@@ -279,7 +261,14 @@ namespace RC
 #endif
             if (use_local_time)
             {
-                Output::send(STR("Timezone: {}\n"), ensure_str(std::chrono::current_zone()->name()));
+                try
+                {
+                    Output::send(STR("Timezone: {}\n"), ensure_str(std::chrono::current_zone()->name()));
+                }
+                catch (std::runtime_error&)
+                {
+                    Output::send(STR("Timezone: UTC (local disabled due to lack of support (chrono::current_zone() failed))\n"));
+                }
             }
             else
             {
@@ -523,26 +512,7 @@ namespace RC
             m_debug_console_device = &Output::set_default_devices<Output::DebugConsoleDevice>();
             Output::set_default_log_level<LogLevel::Normal>();
             m_debug_console_device->set_formatter([](File::StringViewType string) -> File::StringType {
-                bool use_local_time = true;
-#ifdef _WIN32
-                if (auto module = GetModuleHandleW(L"ntdll.dll"); module && GetProcAddress(module, "wine_get_version"))
-                {
-                    use_local_time = false;
-                }
-#endif
-                if (use_local_time)
-                {
-                    static const auto timezone = std::chrono::current_zone();
-                    return fmt::format(STR("[{}] {}"),
-                                       fmt::format(STR("{:%X}"),
-                                                   std::chrono::time_point_cast<std::chrono::system_clock::duration>(
-                                                           timezone->to_local(std::chrono::system_clock::now()))),
-                                       string);
-                }
-                else
-                {
-                    return fmt::format(STR("[{}] {}"), fmt::format(STR("{:%X}"), std::chrono::system_clock::now()), string);
-                }
+                return fmt::format(STR("[{}] {}"), get_now_as_string(STR("{:%X}")), string);
             });
 
             if (AllocConsole())
