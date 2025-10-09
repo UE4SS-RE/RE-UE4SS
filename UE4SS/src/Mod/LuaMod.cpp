@@ -231,6 +231,7 @@ namespace RC
 
         if (lua_data.scheduled_for_removal)
         {
+            std::lock_guard<std::recursive_mutex> guard{LuaMod::m_thread_actions_mutex};
             auto native_hook_pre_id_it = LuaMod::m_generic_hook_id_to_native_hook_id.find(lua_data.pre_callback_id);
             auto function_name_no_prefix = get_function_name_without_prefix(lua_data.unreal_function->GetFullName());
             Output::send<LogLevel::Verbose>(STR("Unregistering native pre-hook ({}) for {}\n"), native_hook_pre_id_it->first, function_name_no_prefix);
@@ -395,6 +396,7 @@ namespace RC
 
         if (lua_data.scheduled_for_removal)
         {
+            std::lock_guard<std::recursive_mutex> guard{LuaMod::m_thread_actions_mutex};
             auto native_hook_post_id_it = LuaMod::m_generic_hook_id_to_native_hook_id.find(lua_data.post_callback_id);
             auto function_name_no_prefix = get_function_name_without_prefix(lua_data.unreal_function->GetFullName());
             Output::send<LogLevel::Verbose>(STR("Unregistering native post-hook ({}) for {}\n"), native_hook_post_id_it->first, function_name_no_prefix);
@@ -703,6 +705,7 @@ namespace RC
 
     auto LuaMod::global_uninstall() -> void
     {
+        std::lock_guard<std::recursive_mutex> guard{LuaMod::m_thread_actions_mutex};
         LuaMod::m_generic_hook_id_to_native_hook_id.clear();
     }
 
@@ -2245,7 +2248,10 @@ Overloads:
 
             Unreal::UClass* instance_of_class = Unreal::UObjectGlobals::StaticFindObject<Unreal::UClass*>(nullptr, nullptr, class_name);
 
-            LuaMod::m_static_construct_object_lua_callbacks.emplace_back(LuaMod::LuaCancellableCallbackData{hook_lua, instance_of_class, func_ref, thread_ref});
+            {
+                std::lock_guard<std::recursive_mutex> guard{LuaMod::m_thread_actions_mutex};
+                LuaMod::m_static_construct_object_lua_callbacks.emplace_back(LuaMod::LuaCancellableCallbackData{hook_lua, instance_of_class, func_ref, thread_ref});
+            }
 
             return 0;
         });
@@ -2327,10 +2333,13 @@ Overloads:
             // Take a reference to the lua function (it also pops it off the stack)
             const int32_t lua_callback_registry_index = hook_lua->registry().make_ref();
 
-            LuaMod::m_load_map_pre_callbacks.emplace_back(LuaMod::LuaCallbackData{
-                    .lua = &lua,
-                    .instance_of_class = nullptr,
-                    .registry_indexes = {std::pair<const LuaMadeSimple::Lua*, LuaMod::LuaCallbackData::RegistryIndex>{&lua, lua_callback_registry_index}}});
+            {
+                std::lock_guard<std::recursive_mutex> guard{LuaMod::m_thread_actions_mutex};
+                LuaMod::m_load_map_pre_callbacks.emplace_back(LuaMod::LuaCallbackData{
+                        .lua = &lua,
+                        .instance_of_class = nullptr,
+                        .registry_indexes = {std::pair<const LuaMadeSimple::Lua*, LuaMod::LuaCallbackData::RegistryIndex>{&lua, lua_callback_registry_index}}});
+            }
 
             return 0;
         });
@@ -2354,10 +2363,13 @@ Overloads:
             // Take a reference to the lua function (it also pops it off the stack)
             const int32_t lua_callback_registry_index = hook_lua->registry().make_ref();
 
-            LuaMod::m_load_map_post_callbacks.emplace_back(LuaMod::LuaCallbackData{
-                    .lua = &lua,
-                    .instance_of_class = nullptr,
-                    .registry_indexes = {std::pair<const LuaMadeSimple::Lua*, LuaMod::LuaCallbackData::RegistryIndex>{&lua, lua_callback_registry_index}}});
+            {
+                std::lock_guard<std::recursive_mutex> guard{LuaMod::m_thread_actions_mutex};
+                LuaMod::m_load_map_post_callbacks.emplace_back(LuaMod::LuaCallbackData{
+                        .lua = &lua,
+                        .instance_of_class = nullptr,
+                        .registry_indexes = {std::pair<const LuaMadeSimple::Lua*, LuaMod::LuaCallbackData::RegistryIndex>{&lua, lua_callback_registry_index}}});
+            }
 
             return 0;
         });
@@ -2381,11 +2393,14 @@ Overloads:
             // Take a reference to the Lua function (it also pops it of the stack)
             const int32_t lua_callback_registry_index = hook_lua->registry().make_ref();
 
-            LuaMod::m_init_game_state_pre_callbacks.emplace_back(LuaMod::LuaCallbackData{
-                    .lua = &lua,
-                    .instance_of_class = nullptr,
-                    .registry_indexes = {std::pair<const LuaMadeSimple::Lua*, LuaMod::LuaCallbackData::RegistryIndex>{&lua, lua_callback_registry_index}},
-            });
+            {
+                std::lock_guard<std::recursive_mutex> guard{LuaMod::m_thread_actions_mutex};
+                LuaMod::m_init_game_state_pre_callbacks.emplace_back(LuaMod::LuaCallbackData{
+                        .lua = &lua,
+                        .instance_of_class = nullptr,
+                        .registry_indexes = {std::pair<const LuaMadeSimple::Lua*, LuaMod::LuaCallbackData::RegistryIndex>{&lua, lua_callback_registry_index}},
+                });
+            }
 
             return 0;
         });
@@ -2409,11 +2424,14 @@ Overloads:
             // Take a reference to the Lua function (it also pops it of the stack)
             const int32_t lua_callback_registry_index = hook_lua->registry().make_ref();
 
-            LuaMod::m_init_game_state_post_callbacks.emplace_back(LuaMod::LuaCallbackData{
-                    .lua = &lua,
-                    .instance_of_class = nullptr,
-                    .registry_indexes = {std::pair<const LuaMadeSimple::Lua*, LuaMod::LuaCallbackData::RegistryIndex>{&lua, lua_callback_registry_index}},
-            });
+            {
+                std::lock_guard<std::recursive_mutex> guard{LuaMod::m_thread_actions_mutex};
+                LuaMod::m_init_game_state_post_callbacks.emplace_back(LuaMod::LuaCallbackData{
+                        .lua = &lua,
+                        .instance_of_class = nullptr,
+                        .registry_indexes = {std::pair<const LuaMadeSimple::Lua*, LuaMod::LuaCallbackData::RegistryIndex>{&lua, lua_callback_registry_index}},
+                });
+            }
 
             return 0;
         });
@@ -2437,11 +2455,14 @@ Overloads:
             // Take a reference to the Lua function (it also pops it of the stack)
             const int32_t lua_callback_registry_index = hook_lua->registry().make_ref();
 
-            LuaMod::m_begin_play_pre_callbacks.emplace_back(LuaMod::LuaCallbackData{
-                    .lua = &lua,
-                    .instance_of_class = nullptr,
-                    .registry_indexes = {std::pair<const LuaMadeSimple::Lua*, LuaMod::LuaCallbackData::RegistryIndex>{&lua, lua_callback_registry_index}},
-            });
+            {
+                std::lock_guard<std::recursive_mutex> guard{LuaMod::m_thread_actions_mutex};
+                LuaMod::m_begin_play_pre_callbacks.emplace_back(LuaMod::LuaCallbackData{
+                        .lua = &lua,
+                        .instance_of_class = nullptr,
+                        .registry_indexes = {std::pair<const LuaMadeSimple::Lua*, LuaMod::LuaCallbackData::RegistryIndex>{&lua, lua_callback_registry_index}},
+                });
+            }
 
             return 0;
         });
@@ -2465,11 +2486,14 @@ Overloads:
             // Take a reference to the Lua function (it also pops it of the stack)
             const int32_t lua_callback_registry_index = hook_lua->registry().make_ref();
 
-            LuaMod::m_begin_play_post_callbacks.emplace_back(LuaMod::LuaCallbackData{
-                    .lua = &lua,
-                    .instance_of_class = nullptr,
-                    .registry_indexes = {std::pair<const LuaMadeSimple::Lua*, LuaMod::LuaCallbackData::RegistryIndex>{&lua, lua_callback_registry_index}},
-            });
+            {
+                std::lock_guard<std::recursive_mutex> guard{LuaMod::m_thread_actions_mutex};
+                LuaMod::m_begin_play_post_callbacks.emplace_back(LuaMod::LuaCallbackData{
+                        .lua = &lua,
+                        .instance_of_class = nullptr,
+                        .registry_indexes = {std::pair<const LuaMadeSimple::Lua*, LuaMod::LuaCallbackData::RegistryIndex>{&lua, lua_callback_registry_index}},
+                });
+            }
 
             return 0;
         });
@@ -2493,11 +2517,14 @@ Overloads:
             // Take a reference to the Lua function (it also pops it of the stack)
             const int32_t lua_callback_registry_index = hook_lua->registry().make_ref();
 
-            LuaMod::m_end_play_pre_callbacks.emplace_back(LuaMod::LuaCallbackData{
-                    .lua = &lua,
-                    .instance_of_class = nullptr,
-                    .registry_indexes = {std::pair<const LuaMadeSimple::Lua*, LuaMod::LuaCallbackData::RegistryIndex>{&lua, lua_callback_registry_index}},
-            });
+            {
+                std::lock_guard<std::recursive_mutex> guard{LuaMod::m_thread_actions_mutex};
+                LuaMod::m_end_play_pre_callbacks.emplace_back(LuaMod::LuaCallbackData{
+                        .lua = &lua,
+                        .instance_of_class = nullptr,
+                        .registry_indexes = {std::pair<const LuaMadeSimple::Lua*, LuaMod::LuaCallbackData::RegistryIndex>{&lua, lua_callback_registry_index}},
+                });
+            }
 
             return 0;
         });
@@ -2521,11 +2548,14 @@ Overloads:
             // Take a reference to the Lua function (it also pops it of the stack)
             const int32_t lua_callback_registry_index = hook_lua->registry().make_ref();
 
-            LuaMod::m_end_play_post_callbacks.emplace_back(LuaMod::LuaCallbackData{
-                    .lua = &lua,
-                    .instance_of_class = nullptr,
-                    .registry_indexes = {std::pair<const LuaMadeSimple::Lua*, LuaMod::LuaCallbackData::RegistryIndex>{&lua, lua_callback_registry_index}},
-            });
+            {
+                std::lock_guard<std::recursive_mutex> guard{LuaMod::m_thread_actions_mutex};
+                LuaMod::m_end_play_post_callbacks.emplace_back(LuaMod::LuaCallbackData{
+                        .lua = &lua,
+                        .instance_of_class = nullptr,
+                        .registry_indexes = {std::pair<const LuaMadeSimple::Lua*, LuaMod::LuaCallbackData::RegistryIndex>{&lua, lua_callback_registry_index}},
+                });
+            }
 
             return 0;
         });
@@ -2959,10 +2989,13 @@ Overloads:
             LuaMod::LuaCallbackData* callback = nullptr;
             auto mod = get_mod_ref(lua);
             auto hook_lua = make_hook_state(mod);
-            callback = &LuaMod::m_process_console_exec_pre_callbacks.emplace_back(LuaMod::LuaCallbackData{hook_lua, nullptr, {}});
-            lua_xmove(lua.get_lua_state(), callback->lua->get_lua_state(), 1);
-            const int32_t lua_function_ref = callback->lua->registry().make_ref();
-            callback->registry_indexes.emplace_back(hook_lua, LuaMod::LuaCallbackData::RegistryIndex{lua_function_ref});
+            {
+                std::lock_guard<std::recursive_mutex> guard{LuaMod::m_thread_actions_mutex};
+                callback = &LuaMod::m_process_console_exec_pre_callbacks.emplace_back(LuaMod::LuaCallbackData{hook_lua, nullptr, {}});
+                lua_xmove(lua.get_lua_state(), callback->lua->get_lua_state(), 1);
+                const int32_t lua_function_ref = callback->lua->registry().make_ref();
+                callback->registry_indexes.emplace_back(hook_lua, LuaMod::LuaCallbackData::RegistryIndex{lua_function_ref});
+            }
             return 0;
         });
 
@@ -2980,10 +3013,13 @@ Overloads:
             LuaMod::LuaCallbackData* callback = nullptr;
             auto mod = get_mod_ref(lua);
             auto hook_lua = make_hook_state(mod);
-            callback = &LuaMod::m_process_console_exec_post_callbacks.emplace_back(LuaMod::LuaCallbackData{hook_lua, nullptr, {}});
-            lua_xmove(lua.get_lua_state(), callback->lua->get_lua_state(), 1);
-            const int32_t lua_function_ref = callback->lua->registry().make_ref();
-            callback->registry_indexes.emplace_back(hook_lua, LuaMod::LuaCallbackData::RegistryIndex{lua_function_ref});
+            {
+                std::lock_guard<std::recursive_mutex> guard{LuaMod::m_thread_actions_mutex};
+                callback = &LuaMod::m_process_console_exec_post_callbacks.emplace_back(LuaMod::LuaCallbackData{hook_lua, nullptr, {}});
+                lua_xmove(lua.get_lua_state(), callback->lua->get_lua_state(), 1);
+                const int32_t lua_function_ref = callback->lua->registry().make_ref();
+                callback->registry_indexes.emplace_back(hook_lua, LuaMod::LuaCallbackData::RegistryIndex{lua_function_ref});
+            }
             return 0;
         });
 
@@ -3001,10 +3037,13 @@ Overloads:
             LuaMod::LuaCallbackData* callback = nullptr;
             auto mod = get_mod_ref(lua);
             auto hook_lua = make_hook_state(mod);
-            callback = &LuaMod::m_call_function_by_name_with_arguments_pre_callbacks.emplace_back(LuaMod::LuaCallbackData{hook_lua, nullptr, {}});
-            lua_xmove(lua.get_lua_state(), callback->lua->get_lua_state(), 1);
-            const int32_t lua_function_ref = callback->lua->registry().make_ref();
-            callback->registry_indexes.emplace_back(hook_lua, LuaMod::LuaCallbackData::RegistryIndex{lua_function_ref});
+            {
+                std::lock_guard<std::recursive_mutex> guard{LuaMod::m_thread_actions_mutex};
+                callback = &LuaMod::m_call_function_by_name_with_arguments_pre_callbacks.emplace_back(LuaMod::LuaCallbackData{hook_lua, nullptr, {}});
+                lua_xmove(lua.get_lua_state(), callback->lua->get_lua_state(), 1);
+                const int32_t lua_function_ref = callback->lua->registry().make_ref();
+                callback->registry_indexes.emplace_back(hook_lua, LuaMod::LuaCallbackData::RegistryIndex{lua_function_ref});
+            }
             return 0;
         });
 
@@ -3022,10 +3061,13 @@ Overloads:
             LuaMod::LuaCallbackData* callback = nullptr;
             auto mod = get_mod_ref(lua);
             auto hook_lua = make_hook_state(mod);
-            callback = &LuaMod::m_call_function_by_name_with_arguments_post_callbacks.emplace_back(LuaMod::LuaCallbackData{hook_lua, nullptr, {}});
-            lua_xmove(lua.get_lua_state(), callback->lua->get_lua_state(), 1);
-            const int32_t lua_function_ref = callback->lua->registry().make_ref();
-            callback->registry_indexes.emplace_back(hook_lua, LuaMod::LuaCallbackData::RegistryIndex{lua_function_ref});
+            {
+                std::lock_guard<std::recursive_mutex> guard{LuaMod::m_thread_actions_mutex};
+                callback = &LuaMod::m_call_function_by_name_with_arguments_post_callbacks.emplace_back(LuaMod::LuaCallbackData{hook_lua, nullptr, {}});
+                lua_xmove(lua.get_lua_state(), callback->lua->get_lua_state(), 1);
+                const int32_t lua_function_ref = callback->lua->registry().make_ref();
+                callback->registry_indexes.emplace_back(hook_lua, LuaMod::LuaCallbackData::RegistryIndex{lua_function_ref});
+            }
             return 0;
         });
 
@@ -3043,10 +3085,13 @@ Overloads:
             LuaMod::LuaCallbackData* callback = nullptr;
             auto mod = get_mod_ref(lua);
             auto hook_lua = make_hook_state(mod);
-            callback = &LuaMod::m_local_player_exec_pre_callbacks.emplace_back(LuaMod::LuaCallbackData{hook_lua, nullptr, {}});
-            lua_xmove(lua.get_lua_state(), callback->lua->get_lua_state(), 1);
-            const int32_t lua_function_ref = callback->lua->registry().make_ref();
-            callback->registry_indexes.emplace_back(hook_lua, LuaMod::LuaCallbackData::RegistryIndex{lua_function_ref});
+            {
+                std::lock_guard<std::recursive_mutex> guard{LuaMod::m_thread_actions_mutex};
+                callback = &LuaMod::m_local_player_exec_pre_callbacks.emplace_back(LuaMod::LuaCallbackData{hook_lua, nullptr, {}});
+                lua_xmove(lua.get_lua_state(), callback->lua->get_lua_state(), 1);
+                const int32_t lua_function_ref = callback->lua->registry().make_ref();
+                callback->registry_indexes.emplace_back(hook_lua, LuaMod::LuaCallbackData::RegistryIndex{lua_function_ref});
+            }
             return 0;
         });
 
@@ -3064,10 +3109,13 @@ Overloads:
             LuaMod::LuaCallbackData* callback = nullptr;
             auto mod = get_mod_ref(lua);
             auto hook_lua = make_hook_state(mod);
-            callback = &LuaMod::m_local_player_exec_post_callbacks.emplace_back(LuaMod::LuaCallbackData{hook_lua, nullptr, {}});
-            lua_xmove(lua.get_lua_state(), callback->lua->get_lua_state(), 1);
-            const int32_t lua_function_ref = callback->lua->registry().make_ref();
-            callback->registry_indexes.emplace_back(hook_lua, LuaMod::LuaCallbackData::RegistryIndex{lua_function_ref});
+            {
+                std::lock_guard<std::recursive_mutex> guard{LuaMod::m_thread_actions_mutex};
+                callback = &LuaMod::m_local_player_exec_post_callbacks.emplace_back(LuaMod::LuaCallbackData{hook_lua, nullptr, {}});
+                lua_xmove(lua.get_lua_state(), callback->lua->get_lua_state(), 1);
+                const int32_t lua_function_ref = callback->lua->registry().make_ref();
+                callback->registry_indexes.emplace_back(hook_lua, LuaMod::LuaCallbackData::RegistryIndex{lua_function_ref});
+            }
             return 0;
         });
 
@@ -3089,20 +3137,23 @@ Overloads:
             }
 
             LuaMod::LuaCallbackData* callback = nullptr;
-            auto iter = LuaMod::m_global_command_lua_callbacks.find(command_name);
-            if (iter == LuaMod::m_global_command_lua_callbacks.end())
             {
-                auto mod = get_mod_ref(lua);
-                auto hook_lua = make_hook_state(mod);
-                callback = &LuaMod::m_global_command_lua_callbacks.emplace(command_name, LuaMod::LuaCallbackData{hook_lua, nullptr, {}}).first->second;
+                std::lock_guard<std::recursive_mutex> guard{LuaMod::m_thread_actions_mutex};
+                auto iter = LuaMod::m_global_command_lua_callbacks.find(command_name);
+                if (iter == LuaMod::m_global_command_lua_callbacks.end())
+                {
+                    auto mod = get_mod_ref(lua);
+                    auto hook_lua = make_hook_state(mod);
+                    callback = &LuaMod::m_global_command_lua_callbacks.emplace(command_name, LuaMod::LuaCallbackData{hook_lua, nullptr, {}}).first->second;
+                }
+                else
+                {
+                    callback = &iter->second;
+                }
+                lua_xmove(lua.get_lua_state(), callback->lua->get_lua_state(), 1);
+                const int32_t lua_function_ref = callback->lua->registry().make_ref();
+                callback->registry_indexes.emplace_back(&lua, LuaMod::LuaCallbackData::RegistryIndex{lua_function_ref});
             }
-            else
-            {
-                callback = &iter->second;
-            }
-            lua_xmove(lua.get_lua_state(), callback->lua->get_lua_state(), 1);
-            const int32_t lua_function_ref = callback->lua->registry().make_ref();
-            callback->registry_indexes.emplace_back(&lua, LuaMod::LuaCallbackData::RegistryIndex{lua_function_ref});
             return 0;
         });
 
@@ -3124,20 +3175,23 @@ Overloads:
             }
 
             LuaMod::LuaCallbackData* callback = nullptr;
-            auto iter = LuaMod::m_custom_command_lua_pre_callbacks.find(command_name);
-            if (iter == LuaMod::m_custom_command_lua_pre_callbacks.end())
             {
-                auto mod = get_mod_ref(lua);
-                auto hook_lua = make_hook_state(mod);
-                callback = &LuaMod::m_custom_command_lua_pre_callbacks.emplace(command_name, LuaMod::LuaCallbackData{hook_lua, nullptr, {}}).first->second;
+                std::lock_guard<std::recursive_mutex> guard{LuaMod::m_thread_actions_mutex};
+                auto iter = LuaMod::m_custom_command_lua_pre_callbacks.find(command_name);
+                if (iter == LuaMod::m_custom_command_lua_pre_callbacks.end())
+                {
+                    auto mod = get_mod_ref(lua);
+                    auto hook_lua = make_hook_state(mod);
+                    callback = &LuaMod::m_custom_command_lua_pre_callbacks.emplace(command_name, LuaMod::LuaCallbackData{hook_lua, nullptr, {}}).first->second;
+                }
+                else
+                {
+                    callback = &iter->second;
+                }
+                lua_xmove(lua.get_lua_state(), callback->lua->get_lua_state(), 1);
+                const int32_t lua_function_ref = callback->lua->registry().make_ref();
+                callback->registry_indexes.emplace_back(&lua, LuaMod::LuaCallbackData::RegistryIndex{lua_function_ref});
             }
-            else
-            {
-                callback = &iter->second;
-            }
-            lua_xmove(lua.get_lua_state(), callback->lua->get_lua_state(), 1);
-            const int32_t lua_function_ref = callback->lua->registry().make_ref();
-            callback->registry_indexes.emplace_back(&lua, LuaMod::LuaCallbackData::RegistryIndex{lua_function_ref});
             return 0;
         });
 
@@ -4375,6 +4429,7 @@ Overloads:
                 [](Unreal::UEngine* Engine, Unreal::FWorldContext& WorldContext, Unreal::FURL URL, Unreal::UPendingNetGame* PendingGame, Unreal::FString& Error)
                         -> std::pair<bool, bool> {
                     return TRY([&] {
+                        std::lock_guard<std::recursive_mutex> guard{LuaMod::m_thread_actions_mutex};
                         for (const auto& callback_data : m_load_map_pre_callbacks)
                         {
                             std::pair<bool, bool> return_value{};
@@ -4418,6 +4473,7 @@ Overloads:
                 [](Unreal::UEngine* Engine, Unreal::FWorldContext& WorldContext, Unreal::FURL URL, Unreal::UPendingNetGame* PendingGame, Unreal::FString& Error)
                         -> std::pair<bool, bool> {
                     return TRY([&] {
+                        std::lock_guard<std::recursive_mutex> guard{LuaMod::m_thread_actions_mutex};
                         for (const auto& callback_data : m_load_map_post_callbacks)
                         {
                             std::pair<bool, bool> return_value{};
@@ -4459,6 +4515,7 @@ Overloads:
 
         Unreal::Hook::RegisterInitGameStatePreCallback([]([[maybe_unused]] Unreal::AGameModeBase* Context) {
             TRY([&] {
+                std::lock_guard<std::recursive_mutex> guard{LuaMod::m_thread_actions_mutex};
                 for (const auto& callback_data : m_init_game_state_pre_callbacks)
                 {
                     // set_is_in_game_thread(lua, true);
@@ -4480,6 +4537,7 @@ Overloads:
 
         Unreal::Hook::RegisterInitGameStatePostCallback([]([[maybe_unused]] Unreal::AGameModeBase* Context) {
             TRY([&] {
+                std::lock_guard<std::recursive_mutex> guard{LuaMod::m_thread_actions_mutex};
                 for (const auto& callback_data : m_init_game_state_post_callbacks)
                 {
                     // set_is_in_game_thread(lua, true);
@@ -4501,6 +4559,7 @@ Overloads:
 
         Unreal::Hook::RegisterBeginPlayPreCallback([]([[maybe_unused]] Unreal::AActor* Context) {
             TRY([&] {
+                std::lock_guard<std::recursive_mutex> guard{LuaMod::m_thread_actions_mutex};
                 for (const auto& callback_data : m_begin_play_pre_callbacks)
                 {
                     // set_is_in_game_thread(lua, true);
@@ -4522,6 +4581,7 @@ Overloads:
 
         Unreal::Hook::RegisterBeginPlayPostCallback([]([[maybe_unused]] Unreal::AActor* Context) {
             TRY([&] {
+                std::lock_guard<std::recursive_mutex> guard{LuaMod::m_thread_actions_mutex};
                 for (const auto& callback_data : m_begin_play_post_callbacks)
                 {
                     // set_is_in_game_thread(lua, true);
@@ -4543,6 +4603,7 @@ Overloads:
 
         Unreal::Hook::RegisterEndPlayPreCallback([]([[maybe_unused]] Unreal::AActor* Context, Unreal::EEndPlayReason EndPlayReason) {
             TRY([&] {
+                std::lock_guard<std::recursive_mutex> guard{LuaMod::m_thread_actions_mutex};
                 for (const auto& callback_data : m_end_play_pre_callbacks)
                 {
                     // set_is_in_game_thread(lua, true);
@@ -4566,6 +4627,7 @@ Overloads:
 
         Unreal::Hook::RegisterEndPlayPostCallback([]([[maybe_unused]] Unreal::AActor* Context, Unreal::EEndPlayReason EndPlayReason) {
             TRY([&] {
+                std::lock_guard<std::recursive_mutex> guard{LuaMod::m_thread_actions_mutex};
                 for (const auto& callback_data : m_end_play_post_callbacks)
                 {
                     // set_is_in_game_thread(lua, true);
@@ -4592,6 +4654,7 @@ Overloads:
                 Unreal::UStruct* object_class = constructed_object->GetClassPrivate();
                 while (object_class)
                 {
+                    std::lock_guard<std::recursive_mutex> guard{LuaMod::m_thread_actions_mutex};
                     std::erase_if(m_static_construct_object_lua_callbacks, [&](auto& callback_data) -> bool {
                         bool cancel = false;
                         if (callback_data.instance_of_class == object_class)
@@ -4622,6 +4685,7 @@ Overloads:
         Unreal::Hook::RegisterULocalPlayerExecPreCallback([](Unreal::ULocalPlayer* context, Unreal::UWorld* in_world, const TCHAR* cmd, Unreal::FOutputDevice& ar)
                                                                   -> Unreal::Hook::ULocalPlayerExecCallbackReturnValue {
             return TRY([&] {
+                std::lock_guard<std::recursive_mutex> guard{LuaMod::m_thread_actions_mutex};
                 for (const auto& callback_data : m_local_player_exec_pre_callbacks)
                 {
                     set_is_in_game_thread(*callback_data.lua, true);
@@ -4682,6 +4746,7 @@ Overloads:
         Unreal::Hook::RegisterULocalPlayerExecPostCallback([](Unreal::ULocalPlayer* context, Unreal::UWorld* in_world, const TCHAR* cmd, Unreal::FOutputDevice& ar)
                                                                    -> Unreal::Hook::ULocalPlayerExecCallbackReturnValue {
             return TRY([&] {
+                std::lock_guard<std::recursive_mutex> guard{LuaMod::m_thread_actions_mutex};
                 for (const auto& callback_data : m_local_player_exec_post_callbacks)
                 {
                     set_is_in_game_thread(*callback_data.lua, true);
@@ -4743,6 +4808,7 @@ Overloads:
                 [](Unreal::UObject* context, const TCHAR* str, Unreal::FOutputDevice& ar, Unreal::UObject* executor, bool b_force_call_with_non_exec)
                         -> std::pair<bool, bool> {
                     return TRY([&] {
+                        std::lock_guard<std::recursive_mutex> guard{LuaMod::m_thread_actions_mutex};
                         for (const auto& callback_data : m_call_function_by_name_with_arguments_pre_callbacks)
                         {
                             set_is_in_game_thread(*callback_data.lua, true);
@@ -4791,6 +4857,7 @@ Overloads:
                 [](Unreal::UObject* context, const TCHAR* str, Unreal::FOutputDevice& ar, Unreal::UObject* executor, bool b_force_call_with_non_exec)
                         -> std::pair<bool, bool> {
                     return TRY([&] {
+                        std::lock_guard<std::recursive_mutex> guard{LuaMod::m_thread_actions_mutex};
                         for (const auto& callback_data : m_call_function_by_name_with_arguments_post_callbacks)
                         {
                             set_is_in_game_thread(*callback_data.lua, true);
@@ -4922,6 +4989,7 @@ Overloads:
                         auto command = File::StringType{ToCharTypePtr(cmd)};
                         auto command_parts = explode_by_occurrence_with_quotes(command, STR(' '));
 
+                        std::lock_guard<std::recursive_mutex> guard{LuaMod::m_thread_actions_mutex};
                         for (const auto& callback_data : m_process_console_exec_pre_callbacks)
                         {
                             set_is_in_game_thread(*callback_data.lua, true);
@@ -4978,6 +5046,7 @@ Overloads:
                         auto command = File::StringType{ToCharTypePtr(cmd)};
                         auto command_parts = explode_by_occurrence_with_quotes(command, STR(' '));
 
+                        std::lock_guard<std::recursive_mutex> guard{LuaMod::m_thread_actions_mutex};
                         for (const auto& callback_data : m_process_console_exec_post_callbacks)
                         {
                             set_is_in_game_thread(*callback_data.lua, true);
@@ -5045,6 +5114,7 @@ Overloads:
                     command_name = command_parts[0];
                 }
 
+                std::lock_guard<std::recursive_mutex> guard{LuaMod::m_thread_actions_mutex};
                 if (auto it = m_custom_command_lua_pre_callbacks.find(command_name); it != m_custom_command_lua_pre_callbacks.end())
                 {
                     const auto& callback_data = it->second;
@@ -5101,6 +5171,7 @@ Overloads:
                     command_name = command_parts[0];
                 }
 
+                std::lock_guard<std::recursive_mutex> guard{LuaMod::m_thread_actions_mutex};
                 if (auto it = m_global_command_lua_callbacks.find(command_name); it != m_global_command_lua_callbacks.end())
                 {
                     const auto& callback_data = it->second;
