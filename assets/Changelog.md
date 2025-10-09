@@ -111,6 +111,8 @@ Added custom module searcher with UTF-8 path support for Lua `require()` ([UE4SS
 - Fixed `CreateLogicModsDirectory` to properly create directories with Unicode paths and handle parent directory creation
 - Fixed global Lua `print` function to properly handle UTF-8 string conversion
 
+Added support for `UScriptStruct` when using `RegisterCustomProprety` ([UE4SS #1036](https://github.com/UE4SS-RE/RE-UE4SS/pull/1036))
+
 #### Types.lua [PR #650](https://github.com/UE4SS-RE/RE-UE4SS/pull/650) 
 - Added `NAME_None` definition 
 - Added `EFindName` enum definition 

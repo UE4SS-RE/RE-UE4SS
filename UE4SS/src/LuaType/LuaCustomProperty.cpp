@@ -43,7 +43,15 @@ namespace RC::LuaType
                 owner_or_outer = owner.ToField();
             }
 
-            Unreal::UStruct* ptr = base->GetClassPrivate();
+            Unreal::UStruct* ptr{};
+            if (base->IsA<Unreal::UStruct>())
+            {
+                ptr = static_cast<Unreal::UStruct*>(base);
+            }
+            else
+            {
+                ptr = base->GetClassPrivate();
+            }
             bool class_matches = ptr == owner_or_outer;
 
             if (!class_matches)
