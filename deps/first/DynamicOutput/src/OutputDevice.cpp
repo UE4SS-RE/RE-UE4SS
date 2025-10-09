@@ -3,6 +3,7 @@
 #include <fmt/xchar.h>
 #include <fmt/chrono.h>
 #include <DynamicOutput/OutputDevice.hpp>
+#include <Helpers/Time.hpp>
 
 #if _WIN32
 #define NOMINMAX
@@ -31,32 +32,8 @@ namespace RC::Output
         m_formatter = new_formatter;
     }
 
-    auto OutputDevice::get_now_as_string() -> const File::StringType
-    {
-        File::StringType when_as_string{};
-        bool use_local_time = true;
-#ifdef _WIN32
-        if (auto module = GetModuleHandleW(L"ntdll.dll"); module && GetProcAddress(module, "wine_get_version"))
-        {
-            use_local_time = false;
-        }
-#endif
-        if (use_local_time)
-        {
-            static const auto timezone = std::chrono::current_zone();
-            auto now = std::chrono::time_point_cast<std::chrono::system_clock::duration>(timezone->to_local(std::chrono::system_clock::now()));
-            when_as_string = fmt::format(STR("{:%Y-%m-%d %X}"), now);
-        }
-        else
-        {
-            auto now = std::chrono::system_clock::now();
-            when_as_string = fmt::format(STR("{:%Y-%m-%d %X}"), now);
-        }
-        return when_as_string;
-    }
-
     auto OutputDevice::default_format_string(File::StringViewType string_to_format) -> File::StringType
     {
-        return fmt::format(STR("[{}] {}"), get_now_as_string(), string_to_format);
+        return fmt::format(STR("[{}] {}"), get_now_as_string(STR("{:%Y-%m-%d %X}")), string_to_format);
     }
 } // namespace RC::Output
