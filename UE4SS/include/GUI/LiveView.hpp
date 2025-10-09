@@ -140,6 +140,7 @@ namespace RC::GUI
         static bool s_watches_loaded_from_disk;
         static bool s_filters_loaded_from_disk;
         static bool s_use_regex_for_search;
+        static bool s_search_by_address;
 
       private:
         enum class AffectsHistory
