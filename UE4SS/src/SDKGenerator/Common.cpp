@@ -21,6 +21,7 @@
 #include <Unreal/Property/FStructProperty.hpp>
 #include <Unreal/Property/FWeakObjectProperty.hpp>
 #include <Unreal/Property/NumericPropertyTypes.hpp>
+#include <Unreal/CoreUObject/UObject/FUtf8StrProperty.hpp>
 #include <Unreal/UClass.hpp>
 #include <Unreal/UFunction.hpp>
 #include <Unreal/UEnum.hpp>
@@ -484,6 +485,10 @@ namespace RC::UEGenerator
         {
             return STR("FString");
         }
+        else if (property->IsA<FUtf8StrProperty>())
+        {
+            return STR("FUtf8String");
+        }
         else if (property->IsA<FTextProperty>())
         {
             return STR("FText");
@@ -800,6 +805,10 @@ namespace RC::UEGenerator
         else if (field_class_name == STR("StrProperty"))
         {
             return STR("FString");
+        }
+        else if (field_class_name == STR("Utf8StrProperty"))
+        {
+            return STR("FUtf8String");
         }
         else if (field_class_name == STR("TextProperty"))
         {
