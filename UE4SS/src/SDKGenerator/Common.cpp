@@ -20,6 +20,7 @@
 #include <Unreal/Property/FSoftObjectProperty.hpp>
 #include <Unreal/Property/FStructProperty.hpp>
 #include <Unreal/Property/FWeakObjectProperty.hpp>
+#include <Unreal/Property/FUtf8StrProperty.hpp>
 #include <Unreal/Property/NumericPropertyTypes.hpp>
 #include <Unreal/UClass.hpp>
 #include <Unreal/UFunction.hpp>
@@ -488,6 +489,10 @@ namespace RC::UEGenerator
         {
             return STR("FText");
         }
+        else if (property->IsA<FUtf8StrProperty>())
+        {
+            return STR("FUtf8String");
+        }        
 
         throw std::runtime_error(RC::fmt("Unsupported property class %S", field_class_name.c_str()));
     }
@@ -804,6 +809,10 @@ namespace RC::UEGenerator
         else if (field_class_name == STR("TextProperty"))
         {
             return STR("FText");
+        }
+        if (field_class_name == STR("Utf8StrProperty"))
+        {
+            return STR("FUtf8String");
         }
 
         throw std::runtime_error(RC::fmt("Unsupported property class %S", field_class_name.c_str()));
