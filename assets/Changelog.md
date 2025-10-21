@@ -143,6 +143,8 @@ Added support for `UScriptStruct` when using `RegisterCustomProprety` ([UE4SS #1
 
 - Added annotation for function `FText` to Types.lua. ([UE4SS #788](https://github.com/UE4SS-RE/RE-UE4SS/pull/788))
 
+- Removed cache for `GetPlayerController` and `GetWorld` [PR #1047](https://github.com/UE4SS-RE/RE-UE4SS/pull/1047)
+
 ### C++ API 
 
 Added `UDataTable` class to C++ API. ([UE4SS #997](https://github.com/UE4SS-RE/RE-UE4SS/pull/997))

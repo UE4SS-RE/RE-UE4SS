@@ -62,27 +62,23 @@ function UEHelpers.GetGameViewportClient()
     return CreateInvalidObject() ---@type UGameViewportClient
 end
 
-local PlayerControllerCache = CreateInvalidObject() ---@cast PlayerControllerCache APlayerController
 ---Returns first player controller.<br>
 ---In most games, a valid player controller is available from the start.<br>
 ---There are no player controllers on the server until a player joins the server.
 ---@return APlayerController
 function UEHelpers.GetPlayerController()
-    if PlayerControllerCache:IsValid() then return PlayerControllerCache end
-
     -- local Controllers = jsb.simpleBench("FindAllOf: PlayerController", FindAllOf, "PlayerController")
     -- Controllers = jsb.simpleBench("FindAllOf: Controller", FindAllOf, "Controller")
     local Controllers = FindAllOf("PlayerController") or FindAllOf("Controller") ---@type AController[]?
     if Controllers then
         for _, Controller in ipairs(Controllers) do
             if Controller:IsValid() and (Controller.IsPlayerController and Controller:IsPlayerController() or Controller:IsLocalPlayerController()) then
-                PlayerControllerCache = Controller
-                break
+                return Controller
             end
         end
     end
 
-    return PlayerControllerCache
+    return CreateInvalidObject() ---@type APlayerController
 end
 
 ---Returns local player pawn
@@ -95,22 +91,19 @@ function UEHelpers.GetPlayer()
     return CreateInvalidObject() ---@type APawn
 end
 
-local WorldCache = CreateInvalidObject() ---@cast WorldCache UWorld
 ---Returns the main UWorld
 ---@return UWorld
 function UEHelpers.GetWorld()
-    if WorldCache:IsValid() then return WorldCache end
-
     local PlayerController = UEHelpers.GetPlayerController()
     if PlayerController:IsValid() then
-        WorldCache = PlayerController:GetWorld()
+        return PlayerController:GetWorld()
     else
         local GameInstance = UEHelpers.GetGameInstance()
         if GameInstance:IsValid() then
-            WorldCache = GameInstance:GetWorld()
+            return GameInstance:GetWorld()
         end
     end
-    return WorldCache
+    return CreateInvalidObject() ---@type UWorld
 end
 
 ---Returns UWorld->PersistentLevel
