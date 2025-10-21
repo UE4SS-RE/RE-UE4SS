@@ -35,7 +35,7 @@ namespace RC
         LuaMadeSimple::Lua& m_lua;
 
       public:
-        std::vector<LuaMadeSimple::Lua*> m_hook_lua{};
+        LuaMadeSimple::Lua* m_hook_lua = nullptr;
         LuaMadeSimple::Lua* m_main_lua{};
         LuaMadeSimple::Lua* m_async_lua{};
 

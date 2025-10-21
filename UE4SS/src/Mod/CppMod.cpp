@@ -85,22 +85,22 @@ namespace RC
                                    LuaMadeSimple::Lua& lua,
                                    LuaMadeSimple::Lua& main_lua,
                                    LuaMadeSimple::Lua& async_lua,
-                                   std::vector<LuaMadeSimple::Lua*>& hook_luas) -> void
+                                   LuaMadeSimple::Lua* hook_lua) -> void
     {
         if (m_mod)
         {
-            m_mod->on_lua_start(mod_name, lua, main_lua, async_lua, hook_luas);
+            m_mod->on_lua_start(mod_name, lua, main_lua, async_lua, hook_lua);
         }
     }
 
     auto CppMod::fire_on_lua_start(LuaMadeSimple::Lua& lua,
                                    LuaMadeSimple::Lua& main_lua,
                                    LuaMadeSimple::Lua& async_lua,
-                                   std::vector<LuaMadeSimple::Lua*>& hook_luas) -> void
+                                   LuaMadeSimple::Lua* hook_lua) -> void
     {
         if (m_mod)
         {
-            m_mod->on_lua_start(lua, main_lua, async_lua, hook_luas);
+            m_mod->on_lua_start(lua, main_lua, async_lua, hook_lua);
         }
     }
 
@@ -108,19 +108,19 @@ namespace RC
                                   LuaMadeSimple::Lua& lua,
                                   LuaMadeSimple::Lua& main_lua,
                                   LuaMadeSimple::Lua& async_lua,
-                                  std::vector<LuaMadeSimple::Lua*>& hook_luas) -> void
+                                  LuaMadeSimple::Lua* hook_lua) -> void
     {
         if (m_mod)
         {
-            m_mod->on_lua_stop(mod_name, lua, main_lua, async_lua, hook_luas);
+            m_mod->on_lua_stop(mod_name, lua, main_lua, async_lua, hook_lua);
         }
     }
 
-    auto CppMod::fire_on_lua_stop(LuaMadeSimple::Lua& lua, LuaMadeSimple::Lua& main_lua, LuaMadeSimple::Lua& async_lua, std::vector<LuaMadeSimple::Lua*>& hook_luas) -> void
+    auto CppMod::fire_on_lua_stop(LuaMadeSimple::Lua& lua, LuaMadeSimple::Lua& main_lua, LuaMadeSimple::Lua& async_lua, LuaMadeSimple::Lua* hook_lua) -> void
     {
         if (m_mod)
         {
-            m_mod->on_lua_stop(lua, main_lua, async_lua, hook_luas);
+            m_mod->on_lua_stop(lua, main_lua, async_lua, hook_lua);
         }
     }
 
