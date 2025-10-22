@@ -38,10 +38,9 @@ endfunction()
 #   TARGET_COMPILE_DEFINITIONS - Compile definitions for each configuration
 #
 function(generate_build_configurations)
-    # These variables will be set in the parent scope
-    set(BUILD_CONFIGS "" PARENT_SCOPE)
-    set(TARGET_COMPILE_OPTIONS "$<$<NOT:$<COMPILE_LANGUAGE:ASM_MASM>>:${DEFAULT_COMPILER_FLAGS}>" PARENT_SCOPE)
-    set(TARGET_LINK_OPTIONS "${DEFAULT_EXE_LINKER_FLAGS}" "${DEFAULT_SHARED_LINKER_FLAGS}" PARENT_SCOPE)
+    # These variables will be built up in _LOCAL variants and set in parent scope at the end
+    set(TARGET_COMPILE_OPTIONS_LOCAL "")
+    set(TARGET_LINK_OPTIONS_LOCAL "")
     set(TARGET_COMPILE_DEFINITIONS_LOCAL ${TARGET_COMPILE_DEFINITIONS})
 
     # Build configs to return
@@ -78,7 +77,9 @@ function(generate_build_configurations)
                 set(CMAKE_CXX_FLAGS_${triplet_upper} "${CMAKE_CXX_FLAGS_${triplet_upper}} ${final_compiler_flags}" CACHE STRING "" FORCE)
                 set(CMAKE_C_FLAGS_${triplet_upper} "${CMAKE_C_FLAGS_${triplet_upper}} ${final_compiler_flags}" CACHE STRING "" FORCE)
 
-                list(APPEND TARGET_COMPILE_OPTIONS_LOCAL "$<$<NOT:$<COMPILE_LANGUAGE:ASM_MASM>>:$<$<STREQUAL:$<CONFIG>,${triplet}>:${compiler_flags}>>")
+                # Combine DEFAULT_COMPILER_FLAGS with per-config flags for propagation to external consumers
+                # This ensures both base flags (like /W3, /Zc:inline) and config-specific flags (like /O2) propagate
+                list(APPEND TARGET_COMPILE_OPTIONS_LOCAL "$<$<NOT:$<COMPILE_LANGUAGE:ASM_MASM>>:$<$<STREQUAL:$<CONFIG>,${triplet}>:${DEFAULT_COMPILER_FLAGS};${compiler_flags}>>")
 
                 # Set up linker flags
                 set(linker_flags

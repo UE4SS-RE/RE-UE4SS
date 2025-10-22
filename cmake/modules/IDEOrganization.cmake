@@ -185,12 +185,10 @@ function(apply_compiler_settings_to_targets TARGET_COMPILE_OPTIONS TARGET_LINK_O
                 target_compile_options(${target} PUBLIC "${TARGET_COMPILE_OPTIONS}")
                 target_link_options(${target} PUBLIC "${TARGET_LINK_OPTIONS}")
                 target_compile_definitions(${target} PUBLIC "${TARGET_COMPILE_DEFINITIONS}")
-                target_compile_options(${target} PUBLIC "${TARGET_COMPILE_OPTIONS}")
             else()
                 target_compile_options(${target} PRIVATE "${TARGET_COMPILE_OPTIONS}")
                 target_link_options(${target} PRIVATE "${TARGET_LINK_OPTIONS}")
                 target_compile_definitions(${target} PRIVATE "${TARGET_COMPILE_DEFINITIONS}")
-                target_compile_options(${target} PRIVATE "${TARGET_COMPILE_OPTIONS}")
             endif()
         endif()
         
