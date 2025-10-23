@@ -589,7 +589,7 @@ namespace RC::LuaType
                     {
                         obj_as_struct = reflected_object->GetClassPrivate();
                     }
-                    auto* property = obj_as_struct->FindProperty(Unreal::FName(property_name));
+                    auto* property = obj_as_struct->FindProperty(Unreal::FName(property_name, Unreal::FNAME_Find));
 
                     construct_xproperty(lua, property);
                     return 1;
@@ -778,7 +778,7 @@ Overloads:
                 return;
             }
 
-            Unreal::FName property_name = Unreal::FName(member_name);
+            Unreal::FName property_name = Unreal::FName(member_name, Unreal::FNAME_Find);
             Unreal::FField* field = LuaCustomProperty::StaticStorage::property_list.find_or_nullptr(lua_object.get_remote_cpp_object(), member_name);
 
             if (!field)
