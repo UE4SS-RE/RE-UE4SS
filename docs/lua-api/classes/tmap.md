@@ -33,7 +33,8 @@
 - Clears the map.
 
 ### ForEach(function Callback)
-- Iterates the entire `TMap` and calls the callback function for each element in the array.
+- Iterates the entire `TMap` and calls the callback function for each element in the map.
 - The callback params are: `RemoteUnrealParam key`, `RemoteUnrealParam value` | `LocalUnrealParam value`.
 - Use `elem:get()` and `elem:set()` to access/mutate the value.
 - Mutating the key is undefined behavior.
+- The callback can optionally return `true` to break out of the loop early.

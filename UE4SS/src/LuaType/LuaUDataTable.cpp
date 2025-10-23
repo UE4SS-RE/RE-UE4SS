@@ -226,8 +226,22 @@ namespace RC::LuaType
                                    convert_struct_to_lua_table(lua, info.row_struct, Pair.Value, true, nullptr);
                                }
 
-                               // Call function with row name and row data
-                               lua.call_function(2, 0);
+                               // Call function with row name and row data, expecting 1 return value
+                               lua.call_function(2, 1);
+
+                               // We explicitly specify index 2 because we duplicated the function earlier and that's located at index 1.
+                               if (lua.is_bool(2) && lua.get_bool(2))
+                               {
+                                   break;
+                               }
+                               else
+                               {
+                                   // There's a 'nil' on the stack because we told Lua that we expect a return value.
+                                   // Lua will put 'nil' on the stack if the Lua function doesn't explicitly return anything.
+                                   // We discard the 'nil' here, otherwise the Lua stack is corrupted on the next iteration of the 'ForEachRow' loop.
+                                   // We explicitly specify index 2 because we duplicated the function earlier and that's located at index 1.
+                                   lua.discard_value(2);
+                               }
                            }
 
                            return 0;
