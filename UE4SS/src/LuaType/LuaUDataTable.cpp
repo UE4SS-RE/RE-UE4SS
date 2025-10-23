@@ -6,48 +6,38 @@
 
 namespace RC::LuaType
 {
-    UDataTable::UDataTable(const PusherParams& params)
-        : RemoteObjectBase<Unreal::UDataTable, UDataTableName>(static_cast<Unreal::UDataTable*>(params.base))
+    UDataTable::UDataTable(Unreal::UDataTable* object)
+        : UObjectBase<Unreal::UDataTable, UDataTableName>(object)
     {
-    }
-
-    auto UDataTable::construct(const PusherParams& params) -> const LuaMadeSimple::Lua::Table
-    {
-        LuaType::UDataTable lua_object{params};
-
-        auto metatable_name = ClassName::ToString();
-
-        LuaMadeSimple::Lua::Table table = params.lua.get_metatable(metatable_name);
-        if (params.lua.is_nil(-1))
-        {
-            params.lua.discard_value(-1);
-            LuaMadeSimple::Type::RemoteObject<Unreal::UDataTable>::construct(params.lua, lua_object);
-            setup_metamethods(lua_object);
-            setup_member_functions<LuaMadeSimple::Type::IsFinal::Yes>(table);
-            params.lua.new_metatable<LuaType::UDataTable>(metatable_name, lua_object.get_metamethods());
-        }
-
-        // Create object & surrender ownership to lua
-        params.lua.transfer_stack_object(std::move(lua_object), metatable_name, lua_object.get_metamethods());
-
-        return table;
     }
 
     auto UDataTable::construct(const LuaMadeSimple::Lua& lua, Unreal::UDataTable* unreal_object) -> const LuaMadeSimple::Lua::Table
     {
-        PusherParams params{
-                .operation = Operation::GetParam,
-                .lua = lua,
-                .base = unreal_object,
-                .data = nullptr,
-                .property = nullptr
-        };
-        return construct(params);
+        add_to_global_unreal_objects_map(unreal_object);
+
+        LuaType::UDataTable lua_object{unreal_object};
+
+        auto metatable_name = ClassName::ToString();
+
+        LuaMadeSimple::Lua::Table table = lua.get_metatable(metatable_name);
+        if (lua.is_nil(-1))
+        {
+            lua.discard_value(-1);
+            LuaType::UObject::construct(lua, lua_object);
+            setup_metamethods(lua_object);
+            setup_member_functions<LuaMadeSimple::Type::IsFinal::Yes>(table);
+            lua.new_metatable<LuaType::UDataTable>(metatable_name, lua_object.get_metamethods());
+        }
+
+        // Create object & surrender ownership to lua
+        lua.transfer_stack_object(std::move(lua_object), metatable_name, lua_object.get_metamethods());
+
+        return table;
     }
 
     auto UDataTable::construct(const LuaMadeSimple::Lua& lua, BaseObject& construct_to) -> const LuaMadeSimple::Lua::Table
     {
-        LuaMadeSimple::Lua::Table table = LuaMadeSimple::Type::RemoteObject<Unreal::UDataTable>::construct(lua, construct_to);
+        LuaMadeSimple::Lua::Table table = UObject::construct(lua, construct_to);
 
         setup_member_functions<LuaMadeSimple::Type::IsFinal::No>(table);
 
