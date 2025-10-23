@@ -19,7 +19,8 @@ option(UE4SS_SUPPRESS_THIRD_PARTY_WARNINGS "Suppress warnings from third-party l
 option(UE4SS_VERSION_CHECK "Enable compiler version checking" ON)
 
 # Profiler configuration
-set(RC_PROFILER_FLAVOR "Tracy" CACHE STRING "Select profiler: Tracy, Superluminal, or None")
+# Default to None - users can opt-in to Tracy or Superluminal if needed
+set(RC_PROFILER_FLAVOR "None" CACHE STRING "Select profiler: Tracy, Superluminal, or None")
 set_property(CACHE RC_PROFILER_FLAVOR PROPERTY STRINGS Tracy Superluminal None)
 
 # Proxy configuration
