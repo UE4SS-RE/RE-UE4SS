@@ -68,6 +68,10 @@ Added ability to call UFunctions directly from the GUI. ([UE4SS #851](https://gi
 **Updated Lua version to 5.4.7** ([UE4SS #887](https://github.com/UE4SS-RE/RE-UE4SS/pull/887))
 - This is necessary to compile with Clang.
 
+ForEach loops now support early termination by returning `true` from callbacks ([UE4SS #1058](https://github.com/UE4SS-RE/RE-UE4SS/pull/1058))
+- Applies to `TArray:ForEach`, `TMap:ForEach`, `TSet:ForEach`, and `UDataTable:ForEachRow`
+- Fully backward compatible - existing callbacks without return values continue to work
+
 Added `UDataTable` support to Lua API. ([UE4SS #997](https://github.com/UE4SS-RE/RE-UE4SS/pull/997))
 - Find rows by name with `DataTable:FindRow(RowName)`
 - Get all rows with `DataTable:GetAllRows()` 
