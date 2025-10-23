@@ -48,7 +48,26 @@ namespace RC
                                LuaMadeSimple::Lua& async_lua,
                                LuaMadeSimple::Lua* hook_lua) -> void;
 
+        [[deprecated(
+                "The hook_luas vector parameter is deprecated. Use the single hook_lua pointer overload instead. This overload may be removed in the next release"
+            )]
+        ]
+        auto fire_on_lua_start(StringViewType mod_name,
+                               LuaMadeSimple::Lua& lua,
+                               LuaMadeSimple::Lua& main_lua,
+                               LuaMadeSimple::Lua& async_lua,
+                               std::vector<LuaMadeSimple::Lua*>& hook_luas) -> void;
+
         auto fire_on_lua_start(LuaMadeSimple::Lua& lua, LuaMadeSimple::Lua& main_lua, LuaMadeSimple::Lua& async_lua, LuaMadeSimple::Lua* hook_lua) -> void;
+
+        [[deprecated(
+                "The hook_luas vector parameter is deprecated. Use the single hook_lua pointer overload instead. This overload may be removed in the next release"
+            )]
+        ]
+        auto fire_on_lua_start(LuaMadeSimple::Lua& lua,
+                               LuaMadeSimple::Lua& main_lua,
+                               LuaMadeSimple::Lua& async_lua,
+                               std::vector<LuaMadeSimple::Lua*>& hook_luas) -> void;
 
         auto fire_on_lua_stop(StringViewType mod_name,
                               LuaMadeSimple::Lua& lua,
@@ -56,7 +75,26 @@ namespace RC
                               LuaMadeSimple::Lua& async_lua,
                               LuaMadeSimple::Lua* hook_lua) -> void;
 
+        [[deprecated(
+                "The hook_luas vector parameter is deprecated. Use the single hook_lua pointer overload instead. This overload may be removed in the next release"
+            )]
+        ]
+        auto fire_on_lua_stop(StringViewType mod_name,
+                              LuaMadeSimple::Lua& lua,
+                              LuaMadeSimple::Lua& main_lua,
+                              LuaMadeSimple::Lua& async_lua,
+                              std::vector<LuaMadeSimple::Lua*>& hook_luas) -> void;
+
         auto fire_on_lua_stop(LuaMadeSimple::Lua& lua, LuaMadeSimple::Lua& main_lua, LuaMadeSimple::Lua& async_lua, LuaMadeSimple::Lua* hook_lua) -> void;
+
+        [[deprecated(
+                "The hook_luas vector parameter is deprecated. Use the single hook_lua pointer overload instead. This overload may be removed in the next release"
+            )]
+        ]
+        auto fire_on_lua_stop(LuaMadeSimple::Lua& lua,
+                              LuaMadeSimple::Lua& main_lua,
+                              LuaMadeSimple::Lua& async_lua,
+                              std::vector<LuaMadeSimple::Lua*>& hook_luas) -> void;
 
         auto fire_unreal_init() -> void override;
         auto fire_ui_init() -> void override;

@@ -83,6 +83,29 @@ namespace RC
         }
 
         /**
+         * Executes after a Lua mod is started (DEPRECATED).
+         * @deprecated Use the overload with LuaMadeSimple::Lua* hook_lua instead. This overload may be removed in the next release.
+         * @param mod_name This is the name of the Lua mod that was started.
+         * @param lua This is the main Lua instance.
+         * @param main_lua This is the main Lua thread instance.
+         * @param async_lua This is the Lua instance for asynchronous things like ExecuteAsync and ExecuteWithDelay.
+         * @param hook_luas DEPRECATED: This container previously held multiple hook Lua instances. Now only one hook instance is used.
+         */
+        [[deprecated(
+                "The hook_luas vector parameter is deprecated. Use the single hook_lua pointer overload instead. This overload may be removed in the next release"
+            )]
+        ]
+        RC_UE4SS_API virtual auto on_lua_start(StringViewType mod_name,
+                                               LuaMadeSimple::Lua& lua,
+                                               LuaMadeSimple::Lua& main_lua,
+                                               LuaMadeSimple::Lua& async_lua,
+                                               std::vector<LuaMadeSimple::Lua*>& hook_luas) -> void
+        {
+            LuaMadeSimple::Lua* hook_lua = hook_luas.empty() ? nullptr : hook_luas[0];
+            on_lua_start(mod_name, lua, main_lua, async_lua, hook_lua);
+        }
+
+        /**
          * Executes after a Lua mod of the same name is started.
          * @param lua This is the main Lua instance.
          * @param main_lua This is the main Lua thread instance.
@@ -94,6 +117,27 @@ namespace RC
                                                LuaMadeSimple::Lua& async_lua,
                                                LuaMadeSimple::Lua* hook_lua) -> void
         {
+        }
+
+        /**
+         * Executes after a Lua mod of the same name is started (DEPRECATED).
+         * @deprecated Use the overload with LuaMadeSimple::Lua* hook_lua instead. This overload may be removed in the next release.
+         * @param lua This is the main Lua instance.
+         * @param main_lua This is the main Lua thread instance.
+         * @param async_lua This is the Lua instance for asynchronous things like ExecuteAsync and ExecuteWithDelay.
+         * @param hook_luas DEPRECATED: This container previously held multiple hook Lua instances. Now only one hook instance is used.
+         */
+        [[deprecated(
+                "The hook_luas vector parameter is deprecated. Use the single hook_lua pointer overload instead. This overload may be removed in the next release"
+            )]
+        ]
+        RC_UE4SS_API virtual auto on_lua_start(LuaMadeSimple::Lua& lua,
+                                               LuaMadeSimple::Lua& main_lua,
+                                               LuaMadeSimple::Lua& async_lua,
+                                               std::vector<LuaMadeSimple::Lua*>& hook_luas) -> void
+        {
+            LuaMadeSimple::Lua* hook_lua = hook_luas.empty() ? nullptr : hook_luas[0];
+            on_lua_start(lua, main_lua, async_lua, hook_lua);
         }
 
         /**
@@ -114,6 +158,29 @@ namespace RC
         }
 
         /**
+         * Executes before a Lua mod is about to be stopped (DEPRECATED).
+         * @deprecated Use the overload with LuaMadeSimple::Lua* hook_lua instead. This overload may be removed in the next release.
+         * @param mod_name This is the name of the Lua mod that is about to be stopped.
+         * @param lua This is the main Lua instance.
+         * @param main_lua This is the main Lua thread instance.
+         * @param async_lua This is the Lua instance for asynchronous things like ExecuteAsync and ExecuteWithDelay.
+         * @param hook_luas DEPRECATED: This container previously held multiple hook Lua instances. Now only one hook instance is used.
+         */
+        [[deprecated(
+                "The hook_luas vector parameter is deprecated. Use the single hook_lua pointer overload instead. This overload may be removed in the next release"
+            )]
+        ]
+        RC_UE4SS_API virtual auto on_lua_stop(StringViewType mod_name,
+                                              LuaMadeSimple::Lua& lua,
+                                              LuaMadeSimple::Lua& main_lua,
+                                              LuaMadeSimple::Lua& async_lua,
+                                              std::vector<LuaMadeSimple::Lua*>& hook_luas) -> void
+        {
+            LuaMadeSimple::Lua* hook_lua = hook_luas.empty() ? nullptr : hook_luas[0];
+            on_lua_stop(mod_name, lua, main_lua, async_lua, hook_lua);
+        }
+
+        /**
          * Executes before a Lua mod of the same name is about to be stopped.
          * @param lua This is the main Lua instance.
          * @param main_lua This is the main Lua thread instance.
@@ -125,6 +192,27 @@ namespace RC
                                               LuaMadeSimple::Lua& async_lua,
                                               LuaMadeSimple::Lua* hook_lua) -> void
         {
+        }
+
+        /**
+         * Executes before a Lua mod of the same name is about to be stopped (DEPRECATED).
+         * @deprecated Use the overload with LuaMadeSimple::Lua* hook_lua instead. This overload may be removed in the next release.
+         * @param lua This is the main Lua instance.
+         * @param main_lua This is the main Lua thread instance.
+         * @param async_lua This is the Lua instance for asynchronous things like ExecuteAsync and ExecuteWithDelay.
+         * @param hook_luas DEPRECATED: This container previously held multiple hook Lua instances. Now only one hook instance is used.
+         */
+        [[deprecated(
+                "The hook_luas vector parameter is deprecated. Use the single hook_lua pointer overload instead. This overload may be removed in the next release"
+            )]
+        ]
+        RC_UE4SS_API virtual auto on_lua_stop(LuaMadeSimple::Lua& lua,
+                                              LuaMadeSimple::Lua& main_lua,
+                                              LuaMadeSimple::Lua& async_lua,
+                                              std::vector<LuaMadeSimple::Lua*>& hook_luas) -> void
+        {
+            LuaMadeSimple::Lua* hook_lua = hook_luas.empty() ? nullptr : hook_luas[0];
+            on_lua_stop(lua, main_lua, async_lua, hook_lua);
         }
 
         RC_UE4SS_API virtual auto on_dll_load(StringViewType dll_name) -> void
