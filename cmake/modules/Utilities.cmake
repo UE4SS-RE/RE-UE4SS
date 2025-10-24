@@ -105,11 +105,14 @@ function(generate_build_configurations)
                     # But also include DEFAULT_EXE_LINKER_FLAGS (/DEBUG:FULL) for completeness
                     list(APPEND TARGET_LINK_OPTIONS_LOCAL "$<$<STREQUAL:$<CONFIG>,${triplet}>:${DEFAULT_EXE_LINKER_FLAGS};${linker_flags}>")
                 elseif("${CMAKE_BUILD_TYPE}" STREQUAL "${triplet}")
-                    # For single-config, append to base flags (don't use TARGET_LINK_OPTIONS to avoid duplication)
+                    # For single-config, append to base flags including DEFAULT_EXE_LINKER_FLAGS
                     # Preserve CMake's defaults including standard libraries
-                    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${exe_linker_flags}" CACHE STRING "" FORCE)
-                    set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} ${shared_linker_flags}" CACHE STRING "" FORCE)
+                    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${DEFAULT_EXE_LINKER_FLAGS} ${exe_linker_flags}" CACHE STRING "" FORCE)
+                    set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} ${DEFAULT_SHARED_LINKER_FLAGS} ${shared_linker_flags}" CACHE STRING "" FORCE)
                     message(STATUS "Single-config: Applied ${triplet} linker flags to base CMAKE linker flags")
+                    # Also add to TARGET_LINK_OPTIONS for propagation to external consumers
+                    list(APPEND TARGET_LINK_OPTIONS_LOCAL "${DEFAULT_EXE_LINKER_FLAGS}")
+                    list(APPEND TARGET_LINK_OPTIONS_LOCAL "${linker_flags}")
                 endif()
 
                 # Set platform-specific variables
