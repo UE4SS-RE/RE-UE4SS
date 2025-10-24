@@ -26,14 +26,19 @@
 - Each value is either a struct wrapper or a Lua table depending on whether a custom pusher exists for the row type.
 
 ### FindRow(string RowName)
-- **Return type:** `table` | `nil`
-- **Returns:** the row data as a Lua table if found, or nil if the row doesn't exist.
-- Note: Currently returns a copy of the row data. Modifications to the returned table do not affect the data table.
+- **Return type:** `UScriptStruct` | `nil`
+- **Returns:** the row data as a UScriptStruct wrapper if found, or nil if the row doesn't exist.
+- The returned struct provides reference-based access - modifications directly affect the DataTable.
+- Example: `local row = dt:FindRow("Player"); row.Health = 200` modifies the actual DataTable.
 
-### AddRow(string RowName, table RowData)
+### AddRow(string RowName, table|UScriptStruct RowData)
 - Adds a new row to the data table with the specified name and data.
 - If a row with the same name already exists, it will be replaced.
-- The RowData table should contain fields matching the row struct definition.
+- Accepts either a Lua table or a UScriptStruct:
+  - **Table:** Fields should match the row struct definition
+  - **UScriptStruct:** Data is copied from the struct (useful for cloning rows)
+- Example: `dt:AddRow("NewPlayer", {Health = 100, MaxHealth = 100})`
+- Example: `dt:AddRow("Clone", dt:FindRow("Original"))` -- Copy a row
 
 ### RemoveRow(string RowName)
 - Removes the row with the specified name from the data table.
@@ -55,12 +60,15 @@
 
 ### ForEachRow(function Callback)
 - Iterates through all rows in the data table and calls the callback function for each row.
-- The callback params are: `string rowName`, `table rowData` | `RemoteUnrealParam rowData`.
+- The callback params are: `string rowName`, `UScriptStruct rowData`.
+- The rowData parameter provides reference-based access - modifications directly affect the DataTable.
 - The callback can optionally return `true` to break out of the loop early.
 - Example:
 ```lua
 dataTable:ForEachRow(function(rowName, rowData)
-    print(string.format("Row: %s", rowName))
+    print(string.format("Row: %s, Health: %d", rowName, rowData.Health))
+    -- Modify the row directly
+    rowData.Health = rowData.Health + 10
     -- Return true to stop iterating
     if rowName == "TargetRow" then
         return true

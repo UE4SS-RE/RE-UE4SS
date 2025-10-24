@@ -1191,13 +1191,16 @@ function UDataTable:GetRowStruct() end
 function UDataTable:GetRowMap() end
 
 ---Finds a row in the DataTable by name
+---Returns a UScriptStruct wrapper that provides reference-based access to the row
+---Modifications to the returned struct directly affect the DataTable
 ---@param RowName string
----@return any?
+---@return UScriptStruct?
 function UDataTable:FindRow(RowName) end
 
 ---Adds a new row or replaces an existing row in the DataTable
+---Accepts either a Lua table or a UScriptStruct
 ---@param RowName string
----@param RowData table
+---@param RowData table|UScriptStruct
 function UDataTable:AddRow(RowName, RowData) end
 
 ---Removes a row from the DataTable
@@ -1216,9 +1219,10 @@ function UDataTable:GetRowNames() end
 function UDataTable:GetAllRows() end
 
 ---Iterates through all rows in the DataTable
----The callback has two params: string RowName, table RowData
+---The callback has two params: string RowName, UScriptStruct RowData
+---The RowData parameter provides reference-based access - modifications directly affect the DataTable
 ---Return `true` in the callback to stop iterating
----@param Callback fun(RowName: string, RowData: any): boolean?
+---@param Callback fun(RowName: string, RowData: UScriptStruct): boolean?
 function UDataTable:ForEachRow(Callback) end
 
 ---Returns whether this DataTable is valid
