@@ -333,8 +333,13 @@ namespace RC::LuaType
                 }
             }
 
-            // Add row to table
+            // Add row to table (this copies the data into DataTable's internal storage)
             data_table->AddRow(row_name, new_row_data, info.row_struct);
+
+            // Free our temporary allocation since AddRow copied the data
+            info.row_struct->DestroyStruct(new_row_data);
+            Unreal::FMemory::Free(new_row_data);
+
             break;
         }
         case DataTableOperation::RemoveRow: {
