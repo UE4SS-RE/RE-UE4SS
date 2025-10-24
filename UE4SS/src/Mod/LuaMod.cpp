@@ -739,19 +739,40 @@ namespace RC
         property_type_table.make_local();
     }
 
-    // auto static make_hook_state(Mod* mod, const LuaMadeSimple::Lua& lua)->std::shared_ptr<LuaMadeSimple::Lua>
-    auto static make_hook_state(LuaMod* mod) -> std::pair<LuaMadeSimple::Lua*, int>
+    // Private helper: Ensures hook thread exists and optionally returns the registry reference
+    static void ensure_hook_thread_exists(LuaMod* mod, int* out_thread_ref = nullptr)
     {
         if (mod->m_hook_lua == nullptr)
         {
             // First use - create new thread and anchor it in the registry
             mod->m_hook_lua = &mod->lua().new_thread();
             int thread_ref = luaL_ref(mod->lua().get_lua_state(), LUA_REGISTRYINDEX);
-            return {mod->m_hook_lua, thread_ref};
+            if (out_thread_ref)
+            {
+                *out_thread_ref = thread_ref;
+            }
         }
+        else if (out_thread_ref)
+        {
+            // Thread already exists and is already anchored
+            *out_thread_ref = LUA_REFNIL;
+        }
+    }
 
-        // Reusing existing thread, already anchored
-        return {mod->m_hook_lua, LUA_REFNIL};
+    // Returns the hook lua thread for immediate use (doesn't need registry reference management)
+    auto static get_hook_lua(LuaMod* mod) -> LuaMadeSimple::Lua*
+    {
+        ensure_hook_thread_exists(mod);
+        return mod->m_hook_lua;
+    }
+
+    // Returns hook state with registry reference (for persistent hooks that need cleanup)
+    // auto static make_hook_state(Mod* mod, const LuaMadeSimple::Lua& lua)->std::shared_ptr<LuaMadeSimple::Lua>
+    auto static make_hook_state(LuaMod* mod) -> std::pair<LuaMadeSimple::Lua*, int>
+    {
+        int thread_ref = LUA_REFNIL;
+        ensure_hook_thread_exists(mod, &thread_ref);
+        return {mod->m_hook_lua, thread_ref};
 
         // Make the hook thread (which is just a separate Lua stack) be a global in its parent.
         // This is needed because otherwise it will be GCd when we don't want it to.
@@ -2240,7 +2261,7 @@ Overloads:
             }
 
             auto mod = get_mod_ref(lua);
-            auto [hook_lua, lua_thread_registry_index] = make_hook_state(mod);
+            auto hook_lua = get_hook_lua(mod);
 
             // Duplicate the Lua function to the top of the stack for lua_xmove and luaL_ref
             lua_pushvalue(lua.get_lua_state(), 1);
@@ -2277,7 +2298,7 @@ Overloads:
             }
 
             auto mod = get_mod_ref(lua);
-            auto [hook_lua, lua_thread_registry_index] = make_hook_state(mod);
+            auto hook_lua = get_hook_lua(mod);
 
             lua_xmove(lua.get_lua_state(), hook_lua->get_lua_state(), 1);
 
@@ -2327,7 +2348,7 @@ Overloads:
             }
 
             auto mod = get_mod_ref(lua);
-            auto [hook_lua, lua_thread_registry_index] = make_hook_state(mod);
+            auto hook_lua = get_hook_lua(mod);
 
             lua_xmove(lua.get_lua_state(), hook_lua->get_lua_state(), 1);
 
@@ -2354,7 +2375,7 @@ Overloads:
             }
 
             auto mod = get_mod_ref(lua);
-            auto [hook_lua, lua_thread_registry_index] = make_hook_state(mod);
+            auto hook_lua = get_hook_lua(mod);
 
             lua_xmove(lua.get_lua_state(), hook_lua->get_lua_state(), 1);
 
@@ -2381,7 +2402,7 @@ Overloads:
             }
 
             auto mod = get_mod_ref(lua);
-            auto [hook_lua, lua_thread_registry_index] = make_hook_state(mod);
+            auto hook_lua = get_hook_lua(mod);
 
             lua_xmove(lua.get_lua_state(), hook_lua->get_lua_state(), 1);
 
@@ -2409,7 +2430,7 @@ Overloads:
             }
 
             auto mod = get_mod_ref(lua);
-            auto [hook_lua, lua_thread_registry_index] = make_hook_state(mod);
+            auto hook_lua = get_hook_lua(mod);
 
             lua_xmove(lua.get_lua_state(), hook_lua->get_lua_state(), 1);
 
@@ -2437,7 +2458,7 @@ Overloads:
             }
 
             auto mod = get_mod_ref(lua);
-            auto [hook_lua, lua_thread_registry_index] = make_hook_state(mod);
+            auto hook_lua = get_hook_lua(mod);
 
             lua_xmove(lua.get_lua_state(), hook_lua->get_lua_state(), 1);
 
@@ -2465,7 +2486,7 @@ Overloads:
             }
 
             auto mod = get_mod_ref(lua);
-            auto [hook_lua, lua_thread_registry_index] = make_hook_state(mod);
+            auto hook_lua = get_hook_lua(mod);
 
             lua_xmove(lua.get_lua_state(), hook_lua->get_lua_state(), 1);
 
@@ -2493,7 +2514,7 @@ Overloads:
             }
 
             auto mod = get_mod_ref(lua);
-            auto [hook_lua, lua_thread_registry_index] = make_hook_state(mod);
+            auto hook_lua = get_hook_lua(mod);
 
             lua_xmove(lua.get_lua_state(), hook_lua->get_lua_state(), 1);
 
@@ -2521,7 +2542,7 @@ Overloads:
             }
 
             auto mod = get_mod_ref(lua);
-            auto [hook_lua, lua_thread_registry_index] = make_hook_state(mod);
+            auto hook_lua = get_hook_lua(mod);
 
             lua_xmove(lua.get_lua_state(), hook_lua->get_lua_state(), 1);
 
@@ -2965,7 +2986,7 @@ Overloads:
 
             LuaMod::LuaCallbackData* callback = nullptr;
             auto mod = get_mod_ref(lua);
-            auto [hook_lua, lua_thread_registry_index] = make_hook_state(mod);
+            auto hook_lua = get_hook_lua(mod);
             callback = &LuaMod::m_process_console_exec_pre_callbacks.emplace_back(LuaMod::LuaCallbackData{hook_lua, nullptr, {}});
             lua_xmove(lua.get_lua_state(), callback->lua->get_lua_state(), 1);
             const int32_t lua_function_ref = callback->lua->registry().make_ref();
@@ -2986,7 +3007,7 @@ Overloads:
 
             LuaMod::LuaCallbackData* callback = nullptr;
             auto mod = get_mod_ref(lua);
-            auto [hook_lua, lua_thread_registry_index] = make_hook_state(mod);
+            auto hook_lua = get_hook_lua(mod);
             callback = &LuaMod::m_process_console_exec_post_callbacks.emplace_back(LuaMod::LuaCallbackData{hook_lua, nullptr, {}});
             lua_xmove(lua.get_lua_state(), callback->lua->get_lua_state(), 1);
             const int32_t lua_function_ref = callback->lua->registry().make_ref();
@@ -3007,7 +3028,7 @@ Overloads:
 
             LuaMod::LuaCallbackData* callback = nullptr;
             auto mod = get_mod_ref(lua);
-            auto [hook_lua, lua_thread_registry_index] = make_hook_state(mod);
+            auto hook_lua = get_hook_lua(mod);
             callback = &LuaMod::m_call_function_by_name_with_arguments_pre_callbacks.emplace_back(LuaMod::LuaCallbackData{hook_lua, nullptr, {}});
             lua_xmove(lua.get_lua_state(), callback->lua->get_lua_state(), 1);
             const int32_t lua_function_ref = callback->lua->registry().make_ref();
@@ -3028,7 +3049,7 @@ Overloads:
 
             LuaMod::LuaCallbackData* callback = nullptr;
             auto mod = get_mod_ref(lua);
-            auto [hook_lua, lua_thread_registry_index] = make_hook_state(mod);
+            auto hook_lua = get_hook_lua(mod);
             callback = &LuaMod::m_call_function_by_name_with_arguments_post_callbacks.emplace_back(LuaMod::LuaCallbackData{hook_lua, nullptr, {}});
             lua_xmove(lua.get_lua_state(), callback->lua->get_lua_state(), 1);
             const int32_t lua_function_ref = callback->lua->registry().make_ref();
@@ -3049,7 +3070,7 @@ Overloads:
 
             LuaMod::LuaCallbackData* callback = nullptr;
             auto mod = get_mod_ref(lua);
-            auto [hook_lua, lua_thread_registry_index] = make_hook_state(mod);
+            auto hook_lua = get_hook_lua(mod);
             callback = &LuaMod::m_local_player_exec_pre_callbacks.emplace_back(LuaMod::LuaCallbackData{hook_lua, nullptr, {}});
             lua_xmove(lua.get_lua_state(), callback->lua->get_lua_state(), 1);
             const int32_t lua_function_ref = callback->lua->registry().make_ref();
@@ -3070,7 +3091,7 @@ Overloads:
 
             LuaMod::LuaCallbackData* callback = nullptr;
             auto mod = get_mod_ref(lua);
-            auto [hook_lua, lua_thread_registry_index] = make_hook_state(mod);
+            auto hook_lua = get_hook_lua(mod);
             callback = &LuaMod::m_local_player_exec_post_callbacks.emplace_back(LuaMod::LuaCallbackData{hook_lua, nullptr, {}});
             lua_xmove(lua.get_lua_state(), callback->lua->get_lua_state(), 1);
             const int32_t lua_function_ref = callback->lua->registry().make_ref();
@@ -3100,7 +3121,7 @@ Overloads:
             if (iter == LuaMod::m_global_command_lua_callbacks.end())
             {
                 auto mod = get_mod_ref(lua);
-                auto [hook_lua, lua_thread_registry_index] = make_hook_state(mod);
+                auto hook_lua = get_hook_lua(mod);
                 callback = &LuaMod::m_global_command_lua_callbacks.emplace(command_name, LuaMod::LuaCallbackData{hook_lua, nullptr, {}}).first->second;
             }
             else
@@ -3135,7 +3156,7 @@ Overloads:
             if (iter == LuaMod::m_custom_command_lua_pre_callbacks.end())
             {
                 auto mod = get_mod_ref(lua);
-                auto [hook_lua, lua_thread_registry_index] = make_hook_state(mod);
+                auto hook_lua = get_hook_lua(mod);
                 callback = &LuaMod::m_custom_command_lua_pre_callbacks.emplace(command_name, LuaMod::LuaCallbackData{hook_lua, nullptr, {}}).first->second;
             }
             else
