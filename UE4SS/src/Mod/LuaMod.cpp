@@ -739,24 +739,19 @@ namespace RC
         property_type_table.make_local();
     }
 
-    // Private helper: Ensures hook thread exists and optionally returns the registry reference
-    static void ensure_hook_thread_exists(LuaMod* mod, int* out_thread_ref = nullptr)
+    // Private helper: Ensures hook thread exists and returns the registry reference (or LUA_REFNIL if already exists)
+    static int ensure_hook_thread_exists(LuaMod* mod)
     {
         if (mod->m_hook_lua == nullptr)
         {
             // First use - create new thread and anchor it in the registry
             mod->m_hook_lua = &mod->lua().new_thread();
             int thread_ref = luaL_ref(mod->lua().get_lua_state(), LUA_REGISTRYINDEX);
-            if (out_thread_ref)
-            {
-                *out_thread_ref = thread_ref;
-            }
+            return thread_ref;
         }
-        else if (out_thread_ref)
-        {
-            // Thread already exists and is already anchored
-            *out_thread_ref = LUA_REFNIL;
-        }
+
+        // Thread already exists and is already anchored
+        return LUA_REFNIL;
     }
 
     // Returns the hook lua thread for immediate use (doesn't need registry reference management)
@@ -770,8 +765,7 @@ namespace RC
     // auto static make_hook_state(Mod* mod, const LuaMadeSimple::Lua& lua)->std::shared_ptr<LuaMadeSimple::Lua>
     auto static make_hook_state(LuaMod* mod) -> std::pair<LuaMadeSimple::Lua*, int>
     {
-        int thread_ref = LUA_REFNIL;
-        ensure_hook_thread_exists(mod, &thread_ref);
+        int thread_ref = ensure_hook_thread_exists(mod);
         return {mod->m_hook_lua, thread_ref};
 
         // Make the hook thread (which is just a separate Lua stack) be a global in its parent.
