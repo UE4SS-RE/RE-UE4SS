@@ -45,6 +45,8 @@
     - [FieldClass](./lua-api/classes/fieldclass.md)
     - [TArray](./lua-api/classes/tarray.md)
     - [TMap](./lua-api/classes/tmap.md)
+    - [TSet](./lua-api/classes/tset.md)
+    - [UDataTable](./lua-api/classes/udatatable.md)
     - [RemoteUnrealParam](./lua-api/classes/remoteunrealparam.md)
     - [LocalUnrealParam](./lua-api/classes/localunrealparam.md)
     - [Property](./lua-api/classes/property.md)

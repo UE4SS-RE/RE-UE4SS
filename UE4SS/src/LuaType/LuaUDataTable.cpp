@@ -1,4 +1,5 @@
 #include <LuaType/LuaUDataTable.hpp>
+#include <LuaType/LuaUScriptStruct.hpp>
 #include <Unreal/Engine/UDataTable.hpp>
 #include <Unreal/UObject.hpp>
 #include <Unreal/UClass.hpp>
@@ -6,48 +7,38 @@
 
 namespace RC::LuaType
 {
-    UDataTable::UDataTable(const PusherParams& params)
-        : RemoteObjectBase<Unreal::UDataTable, UDataTableName>(static_cast<Unreal::UDataTable*>(params.base))
+    UDataTable::UDataTable(Unreal::UDataTable* object)
+        : UObjectBase<Unreal::UDataTable, UDataTableName>(object)
     {
-    }
-
-    auto UDataTable::construct(const PusherParams& params) -> const LuaMadeSimple::Lua::Table
-    {
-        LuaType::UDataTable lua_object{params};
-
-        auto metatable_name = ClassName::ToString();
-
-        LuaMadeSimple::Lua::Table table = params.lua.get_metatable(metatable_name);
-        if (params.lua.is_nil(-1))
-        {
-            params.lua.discard_value(-1);
-            LuaMadeSimple::Type::RemoteObject<Unreal::UDataTable>::construct(params.lua, lua_object);
-            setup_metamethods(lua_object);
-            setup_member_functions<LuaMadeSimple::Type::IsFinal::Yes>(table);
-            params.lua.new_metatable<LuaType::UDataTable>(metatable_name, lua_object.get_metamethods());
-        }
-
-        // Create object & surrender ownership to lua
-        params.lua.transfer_stack_object(std::move(lua_object), metatable_name, lua_object.get_metamethods());
-
-        return table;
     }
 
     auto UDataTable::construct(const LuaMadeSimple::Lua& lua, Unreal::UDataTable* unreal_object) -> const LuaMadeSimple::Lua::Table
     {
-        PusherParams params{
-                .operation = Operation::GetParam,
-                .lua = lua,
-                .base = unreal_object,
-                .data = nullptr,
-                .property = nullptr
-        };
-        return construct(params);
+        add_to_global_unreal_objects_map(unreal_object);
+
+        LuaType::UDataTable lua_object{unreal_object};
+
+        auto metatable_name = ClassName::ToString();
+
+        LuaMadeSimple::Lua::Table table = lua.get_metatable(metatable_name);
+        if (lua.is_nil(-1))
+        {
+            lua.discard_value(-1);
+            LuaType::UObject::construct(lua, lua_object);
+            setup_metamethods(lua_object);
+            setup_member_functions<LuaMadeSimple::Type::IsFinal::Yes>(table);
+            lua.new_metatable<LuaType::UDataTable>(metatable_name, lua_object.get_metamethods());
+        }
+
+        // Create object & surrender ownership to lua
+        lua.transfer_stack_object(std::move(lua_object), metatable_name, lua_object.get_metamethods());
+
+        return table;
     }
 
     auto UDataTable::construct(const LuaMadeSimple::Lua& lua, BaseObject& construct_to) -> const LuaMadeSimple::Lua::Table
     {
-        LuaMadeSimple::Lua::Table table = LuaMadeSimple::Type::RemoteObject<Unreal::UDataTable>::construct(lua, construct_to);
+        LuaMadeSimple::Lua::Table table = UObject::construct(lua, construct_to);
 
         setup_member_functions<LuaMadeSimple::Type::IsFinal::No>(table);
 
@@ -128,26 +119,13 @@ namespace RC::LuaType
                                // Use row name as key
                                lua_table.add_key(to_string(Pair.Key.ToString()).c_str());
 
-                               // Convert row data to Lua table
-                               Unreal::int32 comparison_index = static_cast<Unreal::int32>(
-                                   row_struct->GetNamePrivate().GetComparisonIndex());
-
-                               if (StaticState::m_property_value_pushers.contains(comparison_index))
-                               {
-                                   PusherParams pusher_params{
-                                           .operation = LuaMadeSimple::Type::Operation::GetParam,
-                                           .lua = lua,
-                                           .base = nullptr,
-                                           .data = Pair.Value,
-                                           .property = nullptr
-                                   };
-                                   StaticState::m_property_value_pushers[comparison_index](pusher_params);
-                               }
-                               else
-                               {
-                                   // Use the helper function for struct conversion
-                                   convert_struct_to_lua_table(lua, row_struct, Pair.Value, true, nullptr);
-                               }
+                               // Create UScriptStruct wrapper for reference-based access
+                               ScriptStructWrapper row_wrapper{
+                                       .script_struct = row_struct,
+                                       .start_of_struct = Pair.Value,
+                                       .property = nullptr
+                               };
+                               UScriptStruct::construct(lua, row_wrapper);
 
                                lua_table.fuse_pair();
                            }
@@ -215,29 +193,30 @@ namespace RC::LuaType
                                // Push row name as first parameter
                                lua.set_string(to_string(Pair.Key.ToString()));
 
-                               // Push row data as second parameter
-                               PusherParams pusher_params{
-                                       .operation = LuaMadeSimple::Type::Operation::GetParam,
-                                       .lua = lua,
-                                       .base = nullptr,
-                                       .data = Pair.Value,
+                               // Push row data as second parameter (as UScriptStruct for reference-based access)
+                               ScriptStructWrapper row_wrapper{
+                                       .script_struct = info.row_struct,
+                                       .start_of_struct = Pair.Value,
                                        .property = nullptr
                                };
+                               UScriptStruct::construct(lua, row_wrapper);
 
-                               // Check if we have a pusher for the row struct type
-                               Unreal::int32 comparison_index = static_cast<Unreal::int32>(info.row_struct_fname.GetComparisonIndex());
-                               if (StaticState::m_property_value_pushers.contains(comparison_index))
+                               // Call function with row name and row data, expecting 1 return value
+                               lua.call_function(2, 1);
+
+                               // We explicitly specify index 2 because we duplicated the function earlier and that's located at index 1.
+                               if (lua.is_bool(2) && lua.get_bool(2))
                                {
-                                   StaticState::m_property_value_pushers[comparison_index](pusher_params);
+                                   break;
                                }
                                else
                                {
-                                   // Use the helper function for struct conversion
-                                   convert_struct_to_lua_table(lua, info.row_struct, Pair.Value, true, nullptr);
+                                   // There's a 'nil' on the stack because we told Lua that we expect a return value.
+                                   // Lua will put 'nil' on the stack if the Lua function doesn't explicitly return anything.
+                                   // We discard the 'nil' here, otherwise the Lua stack is corrupted on the next iteration of the 'ForEachRow' loop.
+                                   // We explicitly specify index 2 because we duplicated the function earlier and that's located at index 1.
+                                   lua.discard_value(2);
                                }
-
-                               // Call function with row name and row data
-                               lua.call_function(2, 0);
                            }
 
                            return 0;
@@ -280,25 +259,15 @@ namespace RC::LuaType
                 return;
             }
 
-            // Push row data
-            PusherParams pusher_params{
-                    .operation = LuaMadeSimple::Type::Operation::GetParam,
-                    .lua = lua,
-                    .base = nullptr,
-                    .data = row_data,
+            // Return a UScriptStruct wrapper that provides reference-based access to the row data
+            // This matches C++ behavior where FindRow returns a pointer to the actual row memory
+            ScriptStructWrapper row_wrapper{
+                    .script_struct = info.row_struct,
+                    .start_of_struct = row_data,
                     .property = nullptr
             };
 
-            Unreal::int32 comparison_index = static_cast<Unreal::int32>(info.row_struct_fname.GetComparisonIndex());
-            if (StaticState::m_property_value_pushers.contains(comparison_index))
-            {
-                StaticState::m_property_value_pushers[comparison_index](pusher_params);
-            }
-            else
-            {
-                // Use the helper function for struct conversion
-                convert_struct_to_lua_table(lua, info.row_struct, row_data, true, nullptr);
-            }
+            UScriptStruct::construct(lua, row_wrapper);
             break;
         }
         case DataTableOperation::AddRow: {
@@ -311,41 +280,66 @@ namespace RC::LuaType
             }
             Unreal::FName row_name(ensure_str(lua.get_string(1)).c_str(), Unreal::FNAME_Add);
 
-            // After get_string(1), the table is now at position 1 (not 2!)
-            if (!lua.is_table(1))
+            // After get_string(1), the second parameter is now at position 1
+            // Check if it's a UScriptStruct (reference) or a table (copy)
+            bool is_struct = lua.is_userdata(1);
+            bool is_table = lua.is_table(1);
+
+            if (!is_struct && !is_table)
             {
-                lua.throw_error("AddRow expects a table as the second parameter");
+                lua.throw_error("AddRow expects a table or UScriptStruct as the second parameter");
             }
 
-            // Allocate memory for new row
-            Unreal::uint8* new_row_data = (Unreal::uint8*)Unreal::FMemory::Malloc(info.row_size);
-            info.row_struct->InitializeStruct(new_row_data);
+            Unreal::uint8* new_row_data = nullptr;
 
-            // Get row data from Lua - now at position 1
-            Unreal::int32 comparison_index = static_cast<Unreal::int32>(info.row_struct_fname.GetComparisonIndex());
-            if (StaticState::m_property_value_pushers.contains(comparison_index))
+            if (is_struct)
             {
-                // Use specific pusher if available
-                PusherParams pusher_params{
-                        .operation = LuaMadeSimple::Type::Operation::Set,
-                        .lua = lua,
-                        .base = nullptr,
-                        .data = new_row_data,
-                        .property = nullptr
-                };
+                // Handle UScriptStruct - copy data from the struct
+                auto& struct_wrapper = lua.get_userdata<UScriptStruct>();
+                auto& wrapper_data = struct_wrapper.get_local_cpp_object();
 
-                lua_pushvalue(lua.get_lua_state(), 1); // Table is at position 1 now
-                StaticState::m_property_value_pushers[comparison_index](pusher_params);
-                lua.discard_value(-1);
+                // Allocate new memory and copy from source
+                new_row_data = (Unreal::uint8*)Unreal::FMemory::Malloc(info.row_size);
+                info.row_struct->InitializeStruct(new_row_data);
+                info.row_struct->CopyScriptStruct(new_row_data, wrapper_data.start_of_struct);
             }
-            else
+            else  // is_table
             {
-                // Use the helper function - table is at position 1
-                convert_lua_table_to_struct(lua, info.row_struct, new_row_data, 1, nullptr);
+                // Handle Lua table - convert table to struct
+                new_row_data = (Unreal::uint8*)Unreal::FMemory::Malloc(info.row_size);
+                info.row_struct->InitializeStruct(new_row_data);
+
+                // Get row data from Lua table at position 1
+                Unreal::int32 comparison_index = static_cast<Unreal::int32>(info.row_struct_fname.GetComparisonIndex());
+                if (StaticState::m_property_value_pushers.contains(comparison_index))
+                {
+                    // Use specific pusher if available
+                    PusherParams pusher_params{
+                            .operation = LuaMadeSimple::Type::Operation::Set,
+                            .lua = lua,
+                            .base = nullptr,
+                            .data = new_row_data,
+                            .property = nullptr
+                    };
+
+                    lua_pushvalue(lua.get_lua_state(), 1); // Table is at position 1 now
+                    StaticState::m_property_value_pushers[comparison_index](pusher_params);
+                    lua.discard_value(-1);
+                }
+                else
+                {
+                    // Use the helper function - table is at position 1
+                    convert_lua_table_to_struct(lua, info.row_struct, new_row_data, 1, nullptr);
+                }
             }
 
-            // Add row to table
+            // Add row to table (this copies the data into DataTable's internal storage)
             data_table->AddRow(row_name, new_row_data, info.row_struct);
+
+            // Free our temporary allocation since AddRow copied the data
+            info.row_struct->DestroyStruct(new_row_data);
+            Unreal::FMemory::Free(new_row_data);
+
             break;
         }
         case DataTableOperation::RemoveRow: {
@@ -395,22 +389,13 @@ namespace RC::LuaType
                 row_table.add_key("Data");
 
                 Unreal::int32 comparison_index = static_cast<Unreal::int32>(info.row_struct_fname.GetComparisonIndex());
-                if (StaticState::m_property_value_pushers.contains(comparison_index))
-                {
-                    PusherParams pusher_params{
-                            .operation = LuaMadeSimple::Type::Operation::GetParam,
-                            .lua = lua,
-                            .base = nullptr,
-                            .data = Pair.Value,
-                            .property = nullptr
-                    };
-                    StaticState::m_property_value_pushers[comparison_index](pusher_params);
-                }
-                else
-                {
-                    // Use the helper function for struct conversion
-                    convert_struct_to_lua_table(lua, info.row_struct, Pair.Value, true, nullptr);
-                }
+                // Create UScriptStruct wrapper for reference-based access
+                ScriptStructWrapper row_wrapper{
+                        .script_struct = info.row_struct,
+                        .start_of_struct = Pair.Value,
+                        .property = nullptr
+                };
+                UScriptStruct::construct(lua, row_wrapper);
                 row_table.fuse_pair();
 
                 // Now make row_table local and fuse it into main table

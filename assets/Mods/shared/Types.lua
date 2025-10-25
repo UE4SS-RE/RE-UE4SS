@@ -1003,8 +1003,9 @@ function TArray:Empty() end
 
 ---Iterates the entire `TArray` and calls the callback function for each element in the array.<br>
 ---The callback params are: `integer index`, `RemoteUnrealParam element` | `LocalUnrealParam element`.<br>
----Use `element:get()` and `element:set()` to access/mutate an array element.
----@param Callback fun(index: integer, element: RemoteUnrealParam)
+---Use `element:get()` and `element:set()` to access/mutate an array element.<br>
+---Return `true` in the callback to stop iterating.
+---@param Callback fun(index: integer, element: RemoteUnrealParam): boolean?
 function TArray:ForEach(Callback) end
 
 ---@class TSet<T>
@@ -1027,8 +1028,9 @@ function TSet:Remove(Element) end
 function TSet:Empty() end
 
 ---Iterates the entire `TSet` and calls the callback function for each element in the set.
----The callback has one param: `T element`
----@param Callback fun(element: T)
+---The callback has one param: `T element`.<br>
+---Return `true` in the callback to stop iterating.
+---@param Callback fun(element: T): boolean?
 function TSet:ForEach(Callback) end
 
 ---Returns the number of elements in the set (metamethod for # operator)
@@ -1077,11 +1079,12 @@ function TMap:Remove(key) end
 ---Clears the map
 function TMap:Empty() end
 
---- Iterates the entire `TMap` and calls the callback function for each element in the array
+--- Iterates the entire `TMap` and calls the callback function for each element in the map
 --- The callback params are: `RemoteUnrealParam key`, `RemoteUnrealParam value` | `LocalUnrealParam value`
 --- Use `elem:get()` and `elem:set()` to access/mutate the value
 --- Mutating the key is undefined behavior
---- @param callback fun(key: RemoteUnrealParam, value: RemoteUnrealParam)
+--- Return `true` in the callback to stop iterating
+--- @param callback fun(key: RemoteUnrealParam, value: RemoteUnrealParam): boolean?
 function TMap:ForEach(callback) end
 
 ---@class TScriptInterface<K>
@@ -1188,13 +1191,16 @@ function UDataTable:GetRowStruct() end
 function UDataTable:GetRowMap() end
 
 ---Finds a row in the DataTable by name
+---Returns a UScriptStruct that provides reference-based access to the row
+---Modifications to the returned struct directly affect the DataTable
 ---@param RowName string
----@return any?
+---@return UScriptStruct?
 function UDataTable:FindRow(RowName) end
 
 ---Adds a new row or replaces an existing row in the DataTable
+---Accepts either a Lua table or a UScriptStruct
 ---@param RowName string
----@param RowData table
+---@param RowData table|UScriptStruct
 function UDataTable:AddRow(RowName, RowData) end
 
 ---Removes a row from the DataTable
@@ -1213,8 +1219,10 @@ function UDataTable:GetRowNames() end
 function UDataTable:GetAllRows() end
 
 ---Iterates through all rows in the DataTable
----The callback has two params: string RowName, table RowData
----@param Callback fun(RowName: string, RowData: any)
+---The callback has two params: string RowName, UScriptStruct RowData
+---The RowData parameter provides reference-based access - modifications directly affect the DataTable
+---Return `true` in the callback to stop iterating
+---@param Callback fun(RowName: string, RowData: UScriptStruct): boolean?
 function UDataTable:ForEachRow(Callback) end
 
 ---Returns whether this DataTable is valid

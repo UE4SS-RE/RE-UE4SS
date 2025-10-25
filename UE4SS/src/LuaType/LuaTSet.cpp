@@ -248,8 +248,22 @@ namespace RC::LuaType
 
                 StaticState::m_property_value_pushers[static_cast<int32_t>(info.element_fname.GetComparisonIndex())](pusher_params);
 
-                // Call function passing element
-                lua.call_function(1, 0);
+                // Call function passing element, expecting 1 return value
+                lua.call_function(1, 1);
+
+                // We explicitly specify index 2 because we duplicated the function earlier and that's located at index 1.
+                if (lua.is_bool(2) && lua.get_bool(2))
+                {
+                    break;
+                }
+                else
+                {
+                    // There's a 'nil' on the stack because we told Lua that we expect a return value.
+                    // Lua will put 'nil' on the stack if the Lua function doesn't explicitly return anything.
+                    // We discard the 'nil' here, otherwise the Lua stack is corrupted on the next iteration of the 'ForEach' loop.
+                    // We explicitly specify index 2 because we duplicated the function earlier and that's located at index 1.
+                    lua.discard_value(2);
+                }
             }
             break;
         }
