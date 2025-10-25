@@ -101,6 +101,9 @@ namespace RC
             bool HookAActorTick{true};
             bool HookEngineTick{true};
             bool HookGameViewportClientTick{true};
+            bool HookUObjectProcessEvent{true};
+            bool HookProcessConsoleExec{true};
+            bool HookUStructLink{true};
             int64_t FExecVTableOffsetInLocalPlayer{0x28};
         } Hooks;
 

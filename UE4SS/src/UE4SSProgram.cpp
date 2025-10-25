@@ -825,6 +825,9 @@ namespace RC
         config.bHookAActorTick = settings_manager.Hooks.HookAActorTick;
         config.bHookEngineTick = settings_manager.Hooks.HookEngineTick;
         config.bHookGameViewportClientTick = settings_manager.Hooks.HookGameViewportClientTick;
+        config.bHookUObjectProcessEvent = settings_manager.Hooks.HookUObjectProcessEvent;
+        config.bHookProcessConsoleExec = settings_manager.Hooks.HookProcessConsoleExec;
+        config.bHookUStructLink = settings_manager.Hooks.HookUStructLink;
         config.FExecVTableOffsetInLocalPlayer = settings_manager.Hooks.FExecVTableOffsetInLocalPlayer;
         // Apply Debug Build setting from settings file only for now.
         Unreal::Version::DebugBuild = settings_manager.EngineVersionOverride.DebugBuild;
