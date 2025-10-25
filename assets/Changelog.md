@@ -418,6 +418,9 @@ HookLoadMap = 1
 HookAActorTick = 1
 HookEngineTick = 1
 HookGameViewportClientTick = 1
+HookUObjectProcessEvent = 1
+HookProcessConsoleExec = 1
+HookUStructLink = 1
 ```
 
 ### Removed
