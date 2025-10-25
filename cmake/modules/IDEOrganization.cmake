@@ -121,7 +121,17 @@ function(organize_targets_by_source_dir)
     # Get all targets in the project
     set(ALL_TARGETS "")
     get_all_targets_recursive(ALL_TARGETS ${CMAKE_SOURCE_DIR})
-    
+
+    # Determine the base directory to use for path matching
+    # When used as a subdirectory, use PROJECT_SOURCE_DIR instead of CMAKE_SOURCE_DIR
+    if(CMAKE_SOURCE_DIR STREQUAL PROJECT_SOURCE_DIR)
+        # We are the root project
+        set(BASE_SOURCE_DIR "${CMAKE_SOURCE_DIR}")
+    else()
+        # We are a subdirectory of another project
+        set(BASE_SOURCE_DIR "${PROJECT_SOURCE_DIR}")
+    endif()
+
     # Organize targets in IDE folders
     foreach(target ${ALL_TARGETS})
         # Skip non-target entries
@@ -141,12 +151,12 @@ function(organize_targets_by_source_dir)
         if(TARGET_TYPE STREQUAL "UTILITY")
             continue()  # Skip utility targets
         endif()
-        
+
         # Standard organization based on source directory
         get_target_property(TARGET_SOURCE_DIR ${target} SOURCE_DIR)
         if(TARGET_SOURCE_DIR)
-            string(REPLACE "${CMAKE_SOURCE_DIR}/" "" REL_SOURCE_DIR "${TARGET_SOURCE_DIR}")
-            
+            string(REPLACE "${BASE_SOURCE_DIR}/" "" REL_SOURCE_DIR "${TARGET_SOURCE_DIR}")
+
             # Categorize targets
             if(REL_SOURCE_DIR MATCHES "^deps/first")
                 set_target_properties(${target} PROPERTIES FOLDER "deps/first")
@@ -185,12 +195,10 @@ function(apply_compiler_settings_to_targets TARGET_COMPILE_OPTIONS TARGET_LINK_O
                 target_compile_options(${target} PUBLIC "${TARGET_COMPILE_OPTIONS}")
                 target_link_options(${target} PUBLIC "${TARGET_LINK_OPTIONS}")
                 target_compile_definitions(${target} PUBLIC "${TARGET_COMPILE_DEFINITIONS}")
-                target_compile_options(${target} PUBLIC "${TARGET_COMPILE_OPTIONS}")
             else()
                 target_compile_options(${target} PRIVATE "${TARGET_COMPILE_OPTIONS}")
                 target_link_options(${target} PRIVATE "${TARGET_LINK_OPTIONS}")
                 target_compile_definitions(${target} PRIVATE "${TARGET_COMPILE_DEFINITIONS}")
-                target_compile_options(${target} PRIVATE "${TARGET_COMPILE_OPTIONS}")
             endif()
         endif()
         

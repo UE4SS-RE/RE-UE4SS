@@ -45,19 +45,6 @@ else()
     set(UE4SS_LIB_BUILD_GITSHA "no-git")
 endif()
 
-# Add version definitions
-add_compile_definitions(
-    UE4SS_LIB_VERSION_MAJOR=${UE4SS_LIB_VERSION_MAJOR}
-    UE4SS_LIB_VERSION_MINOR=${UE4SS_LIB_VERSION_MINOR}
-    UE4SS_LIB_VERSION_HOTFIX=${UE4SS_LIB_VERSION_HOTFIX}
-    UE4SS_LIB_VERSION_PRERELEASE=${UE4SS_LIB_VERSION_PRERELEASE}
-    UE4SS_LIB_VERSION_BETA=${UE4SS_LIB_VERSION_BETA}
-    UE4SS_LIB_BETA_STARTED=$<BOOL:${UE4SS_LIB_BETA_IS_STARTED}>
-    UE4SS_LIB_IS_BETA=$<BOOL:${UE4SS_LIB_IS_BETA}>
-    UE4SS_LIB_BUILD_GITSHA="${UE4SS_LIB_BUILD_GITSHA}"
-    UE4SS_CONFIGURATION="$<CONFIG>"
-)
-
 message("UE4SS Version: ${UE4SS_LIB_VERSION_MAJOR}.${UE4SS_LIB_VERSION_MINOR}.${UE4SS_LIB_VERSION_HOTFIX}.${UE4SS_LIB_VERSION_PRERELEASE}.${UE4SS_LIB_VERSION_BETA} (${UE4SS_LIB_BUILD_GITSHA})")
 
 # ---------------------------------------------------------------------------
@@ -75,9 +62,22 @@ add_library(UE4SS SHARED ${UE4SS_SOURCES})
 target_compile_features(UE4SS PUBLIC cxx_std_23)
 
 # Add include directories
-target_include_directories(UE4SS PUBLIC 
+target_include_directories(UE4SS PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/generated_include>
+)
+
+# Add version definitions with PUBLIC visibility so external consumers get them
+target_compile_definitions(UE4SS PUBLIC
+    UE4SS_LIB_VERSION_MAJOR=${UE4SS_LIB_VERSION_MAJOR}
+    UE4SS_LIB_VERSION_MINOR=${UE4SS_LIB_VERSION_MINOR}
+    UE4SS_LIB_VERSION_HOTFIX=${UE4SS_LIB_VERSION_HOTFIX}
+    UE4SS_LIB_VERSION_PRERELEASE=${UE4SS_LIB_VERSION_PRERELEASE}
+    UE4SS_LIB_VERSION_BETA=${UE4SS_LIB_VERSION_BETA}
+    UE4SS_LIB_BETA_STARTED=$<BOOL:${UE4SS_LIB_BETA_IS_STARTED}>
+    UE4SS_LIB_IS_BETA=$<BOOL:${UE4SS_LIB_IS_BETA}>
+    UE4SS_LIB_BUILD_GITSHA="${UE4SS_LIB_BUILD_GITSHA}"
+    UE4SS_CONFIGURATION="$<CONFIG>"
 )
 
 # Add headers as sources for IDE integration
@@ -137,7 +137,8 @@ target_link_libraries(UE4SS PUBLIC
 # Enable link-time optimization
 set_property(TARGET UE4SS PROPERTY INTERPROCEDURAL_OPTIMIZATION ON)
 
-# Set runtime library to DLL for C++ mods compatibility
+# Set runtime library to dynamic CRT (/MD, /MDd)
+# This matches Visual Studio's default, so external mods don't need to set it explicitly.
 set_property(TARGET UE4SS PROPERTY MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>DLL")
 
 # Set output name and standard

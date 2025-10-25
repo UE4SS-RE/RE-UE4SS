@@ -59,8 +59,11 @@ set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/$<CONFIG>/${CMAKE_INSTALL
 add_subdirectory("cmake/modules/CompilerOptions")
 
 # Set compiler options
-add_compile_options("$<$<NOT:$<COMPILE_LANGUAGE:ASM_MASM>>:${DEFAULT_COMPILER_FLAGS}>")
-add_link_options("${DEFAULT_SHARED_LINKER_FLAGS}" "${DEFAULT_EXE_LINKER_FLAGS}")
+# NOTE: Do NOT use add_compile_options/add_link_options here as they won't propagate to external consumers
+# Instead, these are applied via apply_compiler_settings_to_targets() which uses target_*_options with PUBLIC
+# visibility on the UE4SS target, ensuring proper propagation to downstream projects
+# add_compile_options("$<$<NOT:$<COMPILE_LANGUAGE:ASM_MASM>>:${DEFAULT_COMPILER_FLAGS}>")
+# add_link_options("${DEFAULT_SHARED_LINKER_FLAGS}" "${DEFAULT_EXE_LINKER_FLAGS}")
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 # Initialize Compiler flags after compiler detection.

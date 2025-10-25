@@ -30,18 +30,45 @@ function(make_headers_visible TARGET_NAME INCLUDE_DIR)
         "${INCLUDE_DIR}/*.hxx"
         "${INCLUDE_DIR}/*.inl"
     )
-    
+
     if(HEADER_FILES)
         # Check if it's an INTERFACE library or not
         get_target_property(target_type ${TARGET_NAME} TYPE)
-        
+
         if(target_type STREQUAL "INTERFACE_LIBRARY")
-            # For INTERFACE libraries
+            # For INTERFACE libraries, add FILE_SET for actual usage
             target_sources(${TARGET_NAME} INTERFACE
                 FILE_SET headers TYPE HEADERS
                 BASE_DIRS ${INCLUDE_DIR}
                 FILES ${HEADER_FILES}
             )
+
+            # Create a companion OBJECT library for IDE visibility
+            # This makes the headers appear in the solution explorer
+            set(VISIBILITY_TARGET "${TARGET_NAME}_IDE")
+            if(NOT TARGET ${VISIBILITY_TARGET})
+                add_library(${VISIBILITY_TARGET} OBJECT EXCLUDE_FROM_ALL)
+                target_sources(${VISIBILITY_TARGET} PRIVATE ${HEADER_FILES})
+
+                # Organize headers using source_group
+                source_group(TREE "${INCLUDE_DIR}" PREFIX "Header Files" FILES ${HEADER_FILES})
+
+                # Set folder properties for IDE organization
+                get_target_property(target_folder ${TARGET_NAME} FOLDER)
+                if(target_folder)
+                    set_target_properties(${VISIBILITY_TARGET} PROPERTIES
+                        FOLDER "${target_folder}"
+                        VS_FOLDER "${target_folder}")
+                endif()
+
+                # Prevent this target from being built
+                set_target_properties(${VISIBILITY_TARGET} PROPERTIES
+                    LINKER_LANGUAGE CXX
+                    EXCLUDE_FROM_ALL TRUE
+                    EXCLUDE_FROM_DEFAULT_BUILD TRUE)
+
+                message(STATUS "Created ${VISIBILITY_TARGET} for IDE visibility")
+            endif()
         else()
             # For normal libraries
             target_sources(${TARGET_NAME} PUBLIC
