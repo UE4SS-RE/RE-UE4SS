@@ -142,7 +142,7 @@ namespace RC
 
         // Set up the first param (context / this-ptr)
         // TODO: Check what happens if a static UFunction is hooked since they don't have any context
-        static auto s_object_property_name = Unreal::FName(STR("ObjectProperty"));
+        static auto s_object_property_name = Unreal::FName(STR("ObjectProperty"), Unreal::FNAME_Find);
         LuaType::RemoteUnrealParam::construct(lua_data.lua, &context.Context, s_object_property_name);
 
         // Attempt at dynamically fetching the params
@@ -300,7 +300,7 @@ namespace RC
             lua_data.lua.registry().get_function_ref(lua_data.lua_post_callback_ref);
 
             // Set up the first param (context / this-ptr)
-            static auto s_object_property_name = Unreal::FName(STR("ObjectProperty"));
+            static auto s_object_property_name = Unreal::FName(STR("ObjectProperty"), Unreal::FNAME_Find);
             LuaType::RemoteUnrealParam::construct(lua_data.lua, &context.Context, s_object_property_name);
 
             // Attempt at dynamically fetching the params
@@ -4278,7 +4278,7 @@ Overloads:
 
                     lua.registry().get_function_ref(registry_index.lua_index);
 
-                    static auto s_object_property_name = Unreal::FName(STR("ObjectProperty"));
+                    static auto s_object_property_name = Unreal::FName(STR("ObjectProperty"), Unreal::FNAME_Find);
                     LuaType::RemoteUnrealParam::construct(lua, &Context, s_object_property_name);
 
                     auto node = Stack.Node();
@@ -4405,7 +4405,7 @@ Overloads:
                                 const auto& lua = *lua_ptr;
 
                                 lua.registry().get_function_ref(registry_index.lua_index);
-                                static auto s_object_property_name = Unreal::FName(STR("ObjectProperty"));
+                                static auto s_object_property_name = Unreal::FName(STR("ObjectProperty"), Unreal::FNAME_Find);
                                 LuaType::RemoteUnrealParam::construct(lua, &Engine, s_object_property_name);
                                 LuaType::RemoteUnrealParam::construct(lua, &WorldContext.GetThisCurrentWorld(), s_object_property_name);
                                 LuaType::FURL::construct(lua, URL);
@@ -4448,7 +4448,7 @@ Overloads:
                                 const auto& lua = *lua_ptr;
 
                                 lua.registry().get_function_ref(registry_index.lua_index);
-                                static auto s_object_property_name = Unreal::FName(STR("ObjectProperty"));
+                                static auto s_object_property_name = Unreal::FName(STR("ObjectProperty"), Unreal::FNAME_Find);
                                 LuaType::RemoteUnrealParam::construct(lua, &Engine, s_object_property_name);
                                 LuaType::RemoteUnrealParam::construct(lua, &WorldContext.GetThisCurrentWorld(), s_object_property_name);
                                 LuaType::FURL::construct(lua, URL);
@@ -4489,7 +4489,7 @@ Overloads:
                         const auto& lua = *lua_ptr;
 
                         lua.registry().get_function_ref(registry_index.lua_index);
-                        static auto s_object_property_name = Unreal::FName(STR("ObjectProperty"));
+                        static auto s_object_property_name = Unreal::FName(STR("ObjectProperty"), Unreal::FNAME_Find);
                         LuaType::RemoteUnrealParam::construct(lua, &Context, s_object_property_name);
                         lua.call_function(1, 0);
                     }
@@ -4510,7 +4510,7 @@ Overloads:
                         const auto& lua = *lua_ptr;
 
                         lua.registry().get_function_ref(registry_index.lua_index);
-                        static auto s_object_property_name = Unreal::FName(STR("ObjectProperty"));
+                        static auto s_object_property_name = Unreal::FName(STR("ObjectProperty"), Unreal::FNAME_Find);
                         LuaType::RemoteUnrealParam::construct(lua, &Context, s_object_property_name);
                         lua.call_function(1, 0);
                     }
@@ -4531,7 +4531,7 @@ Overloads:
                         const auto& lua = *lua_ptr;
 
                         lua.registry().get_function_ref(registry_index.lua_index);
-                        static auto s_object_property_name = Unreal::FName(STR("ObjectProperty"));
+                        static auto s_object_property_name = Unreal::FName(STR("ObjectProperty"), Unreal::FNAME_Find);
                         LuaType::RemoteUnrealParam::construct(lua, &Context, s_object_property_name);
                         lua.call_function(1, 0);
                     }
@@ -4552,7 +4552,7 @@ Overloads:
                         const auto& lua = *lua_ptr;
 
                         lua.registry().get_function_ref(registry_index.lua_index);
-                        static auto s_object_property_name = Unreal::FName(STR("ObjectProperty"));
+                        static auto s_object_property_name = Unreal::FName(STR("ObjectProperty"), Unreal::FNAME_Find);
                         LuaType::RemoteUnrealParam::construct(lua, &Context, s_object_property_name);
                         lua.call_function(1, 0);
                     }
@@ -4573,9 +4573,9 @@ Overloads:
                         const auto& lua = *lua_ptr;
 
                         lua.registry().get_function_ref(registry_index.lua_index);
-                        static auto s_object_property_name = Unreal::FName(STR("ObjectProperty"));
+                        static auto s_object_property_name = Unreal::FName(STR("ObjectProperty"), Unreal::FNAME_Find);
                         LuaType::RemoteUnrealParam::construct(lua, &Context, s_object_property_name);
-                        static auto s_int_property_name = Unreal::FName(STR("IntProperty"));
+                        static auto s_int_property_name = Unreal::FName(STR("IntProperty"), Unreal::FNAME_Find);
                         LuaType::RemoteUnrealParam::construct(lua, &EndPlayReason, s_int_property_name);
                         lua.call_function(2, 0);
                     }
@@ -4596,9 +4596,9 @@ Overloads:
                         const auto& lua = *lua_ptr;
 
                         lua.registry().get_function_ref(registry_index.lua_index);
-                        static auto s_object_property_name = Unreal::FName(STR("ObjectProperty"));
+                        static auto s_object_property_name = Unreal::FName(STR("ObjectProperty"), Unreal::FNAME_Find);
                         LuaType::RemoteUnrealParam::construct(lua, &Context, s_object_property_name);
-                        static auto s_int_property_name = Unreal::FName(STR("IntProperty"));
+                        static auto s_int_property_name = Unreal::FName(STR("IntProperty"), Unreal::FNAME_Find);
                         LuaType::RemoteUnrealParam::construct(lua, &EndPlayReason, s_int_property_name);
                         lua.call_function(2, 0);
                     }
@@ -4653,7 +4653,7 @@ Overloads:
                     {
                         callback_data.lua->registry().get_function_ref(registry_index.lua_index);
 
-                        static auto s_object_property_name = Unreal::FName(STR("ObjectProperty"));
+                        static auto s_object_property_name = Unreal::FName(STR("ObjectProperty"), Unreal::FNAME_Find);
                         LuaType::RemoteUnrealParam::construct(*callback_data.lua, &context, s_object_property_name);
                         LuaType::RemoteUnrealParam::construct(*callback_data.lua, &in_world, s_object_property_name);
                         callback_data.lua->set_string(to_string(cmd));
@@ -4713,7 +4713,7 @@ Overloads:
                     {
                         callback_data.lua->registry().get_function_ref(registry_index.lua_index);
 
-                        static auto s_object_property_name = Unreal::FName(STR("ObjectProperty"));
+                        static auto s_object_property_name = Unreal::FName(STR("ObjectProperty"), Unreal::FNAME_Find);
                         LuaType::RemoteUnrealParam::construct(*callback_data.lua, &context, s_object_property_name);
                         LuaType::RemoteUnrealParam::construct(*callback_data.lua, &in_world, s_object_property_name);
                         callback_data.lua->set_string(to_string(cmd));
@@ -4774,7 +4774,7 @@ Overloads:
                             {
                                 callback_data.lua->registry().get_function_ref(registry_index.lua_index);
 
-                                static auto s_object_property_name = Unreal::FName(STR("ObjectProperty"));
+                                static auto s_object_property_name = Unreal::FName(STR("ObjectProperty"), Unreal::FNAME_Find);
                                 LuaType::RemoteUnrealParam::construct(*callback_data.lua, &context, s_object_property_name);
                                 callback_data.lua->set_string(to_string(str));
                                 LuaType::FOutputDevice::construct(*callback_data.lua, &ar);
@@ -4822,7 +4822,7 @@ Overloads:
                             {
                                 callback_data.lua->registry().get_function_ref(registry_index.lua_index);
 
-                                static auto s_object_property_name = Unreal::FName(STR("ObjectProperty"));
+                                static auto s_object_property_name = Unreal::FName(STR("ObjectProperty"), Unreal::FNAME_Find);
                                 LuaType::RemoteUnrealParam::construct(*callback_data.lua, &context, s_object_property_name);
                                 callback_data.lua->set_string(to_string(str));
                                 LuaType::FOutputDevice::construct(*callback_data.lua, &ar);
@@ -4953,7 +4953,7 @@ Overloads:
                             {
                                 callback_data.lua->registry().get_function_ref(registry_index.lua_index);
 
-                                static auto s_object_property_name = Unreal::FName(STR("ObjectProperty"));
+                                static auto s_object_property_name = Unreal::FName(STR("ObjectProperty"), Unreal::FNAME_Find);
                                 LuaType::RemoteUnrealParam::construct(*callback_data.lua, &context, s_object_property_name);
                                 callback_data.lua->set_string(to_string(command));
                                 auto params_table = callback_data.lua->prepare_new_table();
@@ -5009,7 +5009,7 @@ Overloads:
                             {
                                 callback_data.lua->registry().get_function_ref(registry_index.lua_index);
 
-                                static auto s_object_property_name = Unreal::FName(STR("ObjectProperty"));
+                                static auto s_object_property_name = Unreal::FName(STR("ObjectProperty"), Unreal::FNAME_Find);
                                 LuaType::RemoteUnrealParam::construct(*callback_data.lua, &context, s_object_property_name);
                                 callback_data.lua->set_string(to_string(command));
                                 auto params_table = callback_data.lua->prepare_new_table();
