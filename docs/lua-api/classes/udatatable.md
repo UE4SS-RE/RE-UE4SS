@@ -23,11 +23,11 @@
 ### GetRowMap()
 - **Return type:** `table`
 - **Returns:** a Lua table containing all rows, with row names as keys and row data as values.
-- Each value is either a struct wrapper or a Lua table depending on whether a custom pusher exists for the row type.
+- Each value is either a UScriptStruct or a Lua table depending on whether a custom pusher exists for the row type.
 
 ### FindRow(string RowName)
 - **Return type:** `UScriptStruct` | `nil`
-- **Returns:** the row data as a UScriptStruct wrapper if found, or nil if the row doesn't exist.
+- **Returns:** the row data as a UScriptStruct if found, or nil if the row doesn't exist.
 - The returned struct provides reference-based access - modifications directly affect the DataTable.
 - Example: `local row = dt:FindRow("Player"); row.Health = 200` modifies the actual DataTable.
 
@@ -56,7 +56,7 @@
 - **Return type:** `table`
 - **Returns:** an array (1-indexed table) where each element is a table with two fields:
   - `Name`: the row name (string)
-  - `Data`: the row data (table or struct wrapper)
+  - `Data`: the row data (table or UScriptStruct)
 
 ### ForEachRow(function Callback)
 - Iterates through all rows in the data table and calls the callback function for each row.

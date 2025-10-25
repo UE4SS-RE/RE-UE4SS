@@ -1191,7 +1191,7 @@ function UDataTable:GetRowStruct() end
 function UDataTable:GetRowMap() end
 
 ---Finds a row in the DataTable by name
----Returns a UScriptStruct wrapper that provides reference-based access to the row
+---Returns a UScriptStruct that provides reference-based access to the row
 ---Modifications to the returned struct directly affect the DataTable
 ---@param RowName string
 ---@return UScriptStruct?
