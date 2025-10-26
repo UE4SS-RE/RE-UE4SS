@@ -2255,7 +2255,7 @@ Overloads:
             }
 
             auto mod = get_mod_ref(lua);
-            auto hook_lua = get_hook_lua(mod);
+            auto [hook_lua, thread_ref] = make_hook_state(mod);
 
             // Duplicate the Lua function to the top of the stack for lua_xmove and luaL_ref
             lua_pushvalue(lua.get_lua_state(), 1);
@@ -2263,7 +2263,6 @@ Overloads:
             lua_xmove(lua.get_lua_state(), hook_lua->get_lua_state(), 1);
 
             const auto func_ref = hook_lua->registry().make_ref();
-            const auto thread_ref = mod->lua().registry().make_ref();
 
             Unreal::UClass* instance_of_class = Unreal::UObjectGlobals::StaticFindObject<Unreal::UClass*>(nullptr, nullptr, class_name);
 
