@@ -61,9 +61,15 @@ Added search filter: `IncludeClassNames`. ([UE4SS #472](https://github.com/UE4SS
 
 Added ability to call UFunctions directly from the GUI. ([UE4SS #851](https://github.com/UE4SS-RE/RE-UE4SS/pull/851))
 
-### UHT Dumper 
+### UHT Dumper
 
-### Lua API 
+Added support for generating `FUtf8String` and `FAnsiString` properties in UHT-compatible headers ([UE4SS #1015](https://github.com/UE4SS-RE/RE-UE4SS/pull/1015))
+
+### Lua API
+
+Added support for `FUtf8String` and `FAnsiString` Unreal string types with string manipulation API ([UE4SS #1015](https://github.com/UE4SS-RE/RE-UE4SS/pull/1015))
+- Refactored FString implementation to use unified `TLuaStringBase` template for code reuse and consistency
+
 
 **Updated Lua version to 5.4.7** ([UE4SS #887](https://github.com/UE4SS-RE/RE-UE4SS/pull/887))
 - This is necessary to compile with Clang.
