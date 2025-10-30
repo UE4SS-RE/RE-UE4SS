@@ -77,6 +77,12 @@ namespace RC::LuaType
                 return 0;
             });
 
+            table.add_pair("Clear", [](const LuaMadeSimple::Lua& lua) -> int {
+                auto& lua_object = lua.get_userdata<TLuaStringBase>();
+                lua_object.get_local_cpp_object().Empty();
+                return 0;
+            });
+
             table.add_pair("Len", [](const LuaMadeSimple::Lua& lua) -> int {
                 auto& lua_object = lua.get_userdata<TLuaStringBase>();
                 lua.set_integer(lua_object.get_local_cpp_object().Len());
