@@ -40,6 +40,7 @@
 #include <Unreal/Property/FTextProperty.hpp>
 #include <Unreal/Property/FWeakObjectProperty.hpp>
 #include <Unreal/Property/FOptionalProperty.hpp>
+#include <Unreal/Property/FUtf8StrProperty.hpp>
 #include <Unreal/Property/NumericPropertyTypes.hpp>
 #include <Unreal/UActorComponent.hpp>
 #include <Unreal/UClass.hpp>
@@ -1168,6 +1169,10 @@ namespace RC::UEGenerator
 
         // TODO: Support optional properties initialization later
         if (property->IsA<FOptionalProperty>())
+        {
+            return;
+        }
+        if (property->IsA<FUtf8StrProperty>())
         {
             return;
         }
@@ -2705,6 +2710,10 @@ namespace RC::UEGenerator
         {
             return STR("FText");
         }
+        else if (property->IsA<FUtf8StrProperty>())
+        {
+            return STR("FUtf8String");
+        }
 
         throw std::runtime_error(RC::fmt("[generate_property_type_declaration] Unsupported property class '%S', full name: '%S'",
                                          field_class_name.c_str(),
@@ -3420,6 +3429,10 @@ namespace RC::UEGenerator
         if (field_class_name == STR("TextProperty"))
         {
             return STR("FText::GetEmpty()");
+        }
+        if (field_class_name == STR("Utf8StrProperty"))
+        {
+            return STR("UTF8TEXT(\"\")");
         }
 
         throw std::runtime_error(RC::fmt("[generate_default_property_value] Unsupported property class '%S', full name: '%S'",
