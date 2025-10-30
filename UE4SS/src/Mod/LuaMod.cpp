@@ -870,7 +870,7 @@ namespace RC
         }
         add_property_type_table<Unreal::FTextProperty>(lua, property_types_table, "TextProperty");
         add_property_type_table<Unreal::FStrProperty>(lua, property_types_table, "StrProperty");
-        if (Unreal::Version::IsAtLeast(5, 06))
+        if (Unreal::Version::IsAtLeast(5, 6))
         {
             add_property_type_table<Unreal::FUtf8StrProperty>(lua, property_types_table, "Utf8StrProperty");
         }

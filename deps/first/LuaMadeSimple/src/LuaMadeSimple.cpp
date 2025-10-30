@@ -642,11 +642,6 @@ namespace RC::LuaMadeSimple
         lua_insert(get_lua_state(), force_index);
     }
 
-    auto Lua::push_value(int32_t index) const -> void
-    {
-        lua_pushvalue(get_lua_state(), index);
-    }
-
     auto Lua::is_nil(int32_t force_index) const -> bool
     {
         return lua_isnil(get_lua_state(), force_index);
@@ -685,13 +680,6 @@ namespace RC::LuaMadeSimple
         lua_pushlstring(get_lua_state(), str.data(), str.length());
     }
 
-    auto Lua::get_string(int32_t force_index, size_t* out_len) const -> const char*
-    {
-        const char* str = lua_tolstring(get_lua_state(), force_index, out_len);
-        lua_remove(get_lua_state(), force_index);
-        return str;
-    }
-
     auto Lua::peek_string(int32_t index) const -> std::string_view
     {
         size_t len = 0;
@@ -702,18 +690,6 @@ namespace RC::LuaMadeSimple
         return std::string_view{str, len};
     }
 
-    auto Lua::peek_string(int32_t index, size_t* out_len) const -> const char*
-    {
-        return lua_tolstring(get_lua_state(), index, out_len);
-    }
-
-    auto Lua::can_be_string(int32_t index) const -> bool
-    {
-        // This returns true if the value can be converted to a string
-        // (numbers can be converted to strings in Lua)
-        return lua_isstring(get_lua_state(), index);
-    }
-    
     auto Lua::set_string(std::string_view string) const -> void
     {
         push_string(string);  // Now uses lua_pushlstring internally
