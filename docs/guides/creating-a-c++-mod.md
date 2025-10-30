@@ -7,7 +7,7 @@ Part two goes over creating the most basic C++ mod possible.
 Part three will show you how to interact with UE4SS and UE itself (via UE4SS).  
 Part four will cover installation of the mod.
 
-> The guide requires having a working C++ development environment with `xmake` and `git`, preferably similar to the one required to build UE4SS itself from sources.
+> The guide requires having a working C++ development environment with `CMake` and `git`, preferably similar to the one required to build UE4SS itself from sources.
 
 ## Part 1
 **Make sure you have downloaded all the [build requirements mentioned in the README](https://docs.ue4ss.com/#build-requirements) before following these steps!**
@@ -20,21 +20,31 @@ Part four will cover installation of the mod.
 6. Open CMD and cd into `RE-UE4SS` and execute: `git submodule update --init --recursive`
 7. Go back to the `MyMods` directory and create a new directory, this directory will contain your mod source files.
 I named mine `MyAwesomeMod`.
-8. Create a file called `xmake.lua` inside `MyMods` and put this inside it:
-```lua
-includes("RE-UE4SS")
-includes("MyAwesomeMod")
+8. Create a file called `CMakeLists.txt` inside `MyMods` and put this inside it:
+```cmake
+cmake_minimum_required(VERSION 3.22)
+project(MyMods)
+
+add_subdirectory(RE-UE4SS)
+add_subdirectory(MyAwesomeMod)
 ```
 
 ## Part #2
-1. Create a file called `xmake.lua` inside `MyMods/MyAwesomeMod` and put this inside it:
-```lua
-local projectName = "MyAwesomeMod"
+1. Create a file called `CMakeLists.txt` inside `MyMods/MyAwesomeMod` and put this inside it:
+```cmake
+set(TARGET MyAwesomeMod)
 
-target(projectName)
-    add_rules("ue4ss.mod")
-    add_includedirs(".")
-    add_files("dllmain.cpp")
+add_library(${TARGET} SHARED
+    dllmain.cpp
+)
+
+target_include_directories(${TARGET} PRIVATE .)
+target_link_libraries(${TARGET} PUBLIC UE4SS)
+
+# Copy the DLL to the game's mod directory after building (optional, adjust path as needed)
+# add_custom_command(TARGET ${TARGET} POST_BUILD
+#     COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:${TARGET}> "path/to/game/Binaries/Win64/Mods/${TARGET}/dlls/"
+# )
 ```
 2. Make a file called `dllmain.cpp` in `MyMods/MyAwesomeMod` and put this inside it:
 ```c++
@@ -81,19 +91,22 @@ extern "C"
 }
 ```
 3. In the command prompt, in the `MyMods` directory, execute either:
-A.
-```
-xmake f -m "Game__Shipping__Win64"
-xmake
-```
-or B.
-```
-xmake project -k vsxmake2022
-```
-If you chose option `B`, the VS solution will be in the `vsxmake2022` directory.
+A. Build from command line:
+```bash
+# Configure
+cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Game__Shipping__Win64
 
-4. Open `MyMods/vsxmake2022/MyMods.sln`
-5. Make sure that you're set to the `Game___Shipping__Win64` configuration unless you want to debug.
+# Build
+cmake --build build --config Game__Shipping__Win64
+```
+or B. Generate Visual Studio solution:
+```bash
+cmake -B build -G "Visual Studio 17 2022"
+```
+If you chose option `B`, the VS solution will be in the `build` directory.
+
+4. Open `MyMods/build/MyMods.sln` in Visual Studio
+5. Make sure that you're set to the `Game__Shipping__Win64` configuration unless you want to debug.
 6. Find your project (in my case: MyAwesomeMod) in the solution explorer and right click it and hit `Build`.
 
 ## Part #3

@@ -64,7 +64,8 @@ If RE-UE4SS is installed via proxy DLL, the following command line options are a
   - Visual Studio version >= 17.9
   - More compilers will hopefully be supported in the future.
 - [Rust toolchain >= 1.73.0](https://www.rust-lang.org/tools/install)
-- [xmake >= 2.9.3](https://xmake.io/#/)
+- [CMake >= 3.22](https://cmake.org/download/)
+- A build system: either [Ninja](https://ninja-build.org/) or MSVC (included with Visual Studio)
 
 ## Build instructions
 
@@ -76,18 +77,9 @@ If RE-UE4SS is installed via proxy DLL, the following command line options are a
 
 There are several different ways you can build UE4SS.
 
-## Building from cli
+## Building from CLI
 
-### Configuration settings
-
-`xmake` allows you to flexibly configure some build options to suit your specific needs. The following is a non-comprehensive list of configuration settings you might find useful.
-
-> [!IMPORTANT]
-> All configuration changes are made by using the `xmake config` command. You can also use `xmake f` as an alias for con**f**ig. 
-
-After configuring `xmake` with any of the following options, you can build the project with `xmake` or `xmake build`.
-
-#### Mode
+### Build Modes
 
 The build modes are structured as follows: `<Target>__<Config>__<Platform>`
 
@@ -107,115 +99,77 @@ Currently supported options for these are:
 * `Platform`
   * `Win64` - 64-bit windows
 
-> [!TIP]
-> Configure the project using this command: `xmake f -m "<BuildMode>"`. `-m` is an alias for --**m**ode=\<BuildMode>.
+### Basic Build Commands
+
+To build UE4SS with CMake, use the following commands:
+
+```bash
+# Configure with Ninja (recommended for faster builds)
+cmake -B build_cmake_Game__Shipping__Win64 -G Ninja -DCMAKE_BUILD_TYPE=Game__Shipping__Win64
+
+# Or configure with MSVC
+cmake -B build_cmake_Game__Shipping__Win64 -G "Visual Studio 17 2022" -DCMAKE_BUILD_TYPE=Game__Shipping__Win64
+
+# Build
+cmake --build build_cmake_Game__Shipping__Win64 --config Game__Shipping__Win64
+```
+
+### Configuration Options
+
+CMake allows you to configure various build options. Here are some useful options:
 
 #### Proxy Path
 
-By default, UE4SS generates a proxy based on `C:\Windows\System32\dwmapi.dll`. If you want to change this for any reason, you can supply the `--ue4ssProxyPath=<path proxy dll>` to the `xmake config` command..
+By default, UE4SS generates a proxy based on `C:\Windows\System32\dwmapi.dll`. To change this, set the CMake variable:
+
+```bash
+cmake -B build -DUE4SS_PROXY_PATH="<path to proxy dll>" -DCMAKE_BUILD_TYPE=Game__Shipping__Win64
+```
 
 #### Profiler Flavor
 
-By default, UE4SS uses Tracy for profiling. You can pass `--profilerFlavor=<profiler>` to the `xmake config` command to set the profiler flavor. The currently supported flavors are `Tracy`, `Superluminal`, and `None`.
+By default, UE4SS has profiling disabled (`None`). To enable profiling, you need both a profiler flavor AND a build configuration that includes STATS:
 
-#### Version Check
+```bash
+# STATS are enabled by default in Dev and Test builds
+cmake -B build -DPROFILER_FLAVOR=<Tracy|Superluminal|None> -DCMAKE_BUILD_TYPE=Game__Dev__Win64
+```
 
-By default, xmake will check if you have the minimum required version of Rust or MSVC installed (if you are using the MSVC toolchain). If you do not, it will throw an error on the configure step. If you want to ignore this check, you can pass `--versionCheck=n` to the `xmake config` command.
+> [!NOTE]
+> Profiling requires STATS support. By default, `Dev` and `Test` configurations include STATS, while `Shipping` and `Debug` do not. You can manually enable STATS for any configuration by adding compile definitions:
+> ```bash
+> cmake -B build -DPROFILER_FLAVOR=Tracy -DCMAKE_BUILD_TYPE=Game__Shipping__Win64 -DCMAKE_CXX_FLAGS="-DSTATS"
+> ```
 
-Once you set the flag, the option value be set until you specify otherwise.
+### Helpful CMake Commands
 
-Therefore, to not check versions when running `xmake project -k vsxmake2022`, you must first run the `xmake config --versionCheck=n` command, then run the `xmake project -k vsxmake2022` command.
-
-### Helpful `xmake` commands
-
-You may encounter use for the some of the more advanced `xmake` commands. A non-comprehensive list of some useful commands is included below.
-
-| Syntax | Aliases | Uses |
-| --- | --- | --- |
-| `xmake <command> --yes` | `xmake <command> -y` | Automatically confirm any user prompts. |
-| `xmake --verbose <command>` | `xmake -v <command>` | Enable verbose level logging. |
-| `xmake --Diagnostic <command>` | `xmake -D <command>` | Enable diagnostic level logging. |
-| `xmake --verbose --Diagnostic --yes <command>` | `xmake -vDy <command>` | You can combine most flags into a single `-flagCombo`. |
-| `xmake config` | `xmake f` | Configure xmake with any of [these options](#configuration-settings). |
-| `xmake clean --all` | `xmake c --all` | Cleans binaries and intermediate output of all targets. |
-| `xmake clean <target>` | `xmake c <target>` | Cleans binaries and intermediates of a specific target. |
-| `xmake build` | `xmake b` | Incrementally builds UE4SS using input file detection. |
-| `xmake build --rebuild` | `xmake b -r` | Forces a full rebuild of UE4SS. |
-| `xmake build <target>` | `xmake b <target>` | Incrementally builds a specific target. |
-| `xmake show` | | Shows xmake info and current project info. |
-| `xmake show --target=<target>` | `xmake show -t <target>` | Prints lots of information about a target. Useful for debugging scripts, compiler flags, dependency tree, etc. |
-| `xmake require --clean` | `xmake q -c` | Clears all package caches and uninstalls all not-referenced packages. |
-| `xmake require --force` | `xmake q -f` | Force re-installs all dependency packages. |
-| `xmake require --list` | `xmake q -l` | Lists all packages that are needed for the project. |
-| `xmake project --kind=vsxmake2022 --modes="Game__Shipping__Win64"` | `xmake project -k vsxmake2022 -m "Game__Shipping__Win64"` | Generates a [Visual Studio project](#visual-studio--rider) based on your current `xmake config`uration. You can specify multiple modes to generate by supplying `-m "Comma,Separated,Modes"`. If you do not supply any modes, the VS project will generate all [permutations of modes](#mode). |
+| Command | Description |
+| --- | --- |
+| `cmake -B <build_dir> -G <generator>` | Configure the project with a specific generator (Ninja or "Visual Studio 17 2022") |
+| `cmake --build <build_dir> --config <mode>` | Build the project |
+| `cmake --build <build_dir> --config <mode> --clean-first` | Clean and rebuild |
+| `cmake --build <build_dir> --config <mode> --target <target>` | Build a specific target |
+| `cmake --build <build_dir> --config <mode> --verbose` | Build with verbose output |
 
 ### Opening in an IDE
 
-#### Visual Studio / Rider
+#### Visual Studio
 
-To generate Visual Studio project files, run the `xmake project -k vsxmake2022 -m "Game__Shipping__Win64"` command.
-
-Afterwards open the generated `.sln` file inside of the `vsxmake2022` directory
-
-Note that you should also commit & push the submodules that you've updated if the reason why you updated was not because someone else pushed an update, and you're just catching up to it.
-
-> [!WARNING]
-> The vs. build plugin performs the compile operation by directly calling the xmake command under vs, and also supports intellisense and definition jumps, as well as breakpoint debugging.
-> This means that modifying the project properties within Visual Studio will not affect which flags are passed to the build when VS executes `xmake`. XMake provides some configurable project settings which can be found in VS under the `Project Properties -> Configuration Properties -> Xmake` menu.
-
-> [!CAUTION]
-> If you have multiple Visual Studio versions installed, run `xmake f --vs=2022`, otherwise you may encounter issues with the project generation.
-
-##### Configuring additional modes
-
-> [!TIP]
-> Additional modes can be generated by running `xmake project -k vsxmake2022 -m "Game__Shipping__Win64,Game__Debug__Win64"`.
-> [Further explanation can be found in the `xmake` command table](#helpful-xmake-commands).
-
-##### Regenerating solution best practices
-
-> [!CAUTION]
-> If you change your configuration with `xmake config`, you *may* need to regenerate your Visual Studio solution to pick up on changes to your configuration. You can simply re-run the `xmake project -k vsxmake2022 -m "<modes>"` command to regenerate the solution.
-
-### Building Windows binaries on Linux
-
-We only officially support [msvc-wine](https://github.com/mstorsjo/msvc-wine) for cross-compiling.  
-Make sure you have winbind (libwbclient & samba on Arch) installed.
-
-> [!CAUTION]
-> You must use [xmake](https://github.com/xmake-io/xmake) v2.9.7 or later, and as of early December 2024, this version is not yet released which means you must install the dev version of xmake.  
-
-You need to install the `x86_64-pc-windows-msvc` target (not the `windows-gnu` target) with rustup.  
-When invoking `xmake f`, you must set `--plat`, `--arch`, and `--sdk`.  
-You must also use `--ue4ssCross=msvc-wine`, and disable the version check.  
-The following projects are not supported when cross-compiling and are automatically disabled:
-
-```
-proxy
-proxy_generator
-UVTD
-```
-
-When invoking the `xmake` build command, patternsleuth will automatically be built without xmake.  
-The binary files are available in `deps/first/patternsleuth_bind/target/x86_64-pc-windows-msvc`.  
-They are automatically used by xmake when `--ue4ssCross` is set to `msvc-wine`.  
-Here's an example of a full command that will build Windows binaries on a Linux machine:
-
-```
-xmake f -m "Game__Shipping__Win64" -p windows -a x64 --sdk=/home/<username>/my_msvc/opt/msvc --versionCheck=n --ue4ssCross=msvc-wine
-```
-
-### Debugging under wine
-
-Debugging can be done using `winedbg`.  
-You can also debug minidumps:
+CMake has built-in support for generating Visual Studio solutions:
 
 ```bash
-winedbg crash_2024_12_26_07_39_15.dmp
+cmake -B build -G "Visual Studio 17 2022"
 ```
 
-Keep in mind that debugging symbols are not stored in the dmp file, and you must have the exact same symbol file (PDB) that your UE4SS.dll was built with.  
-The easiest way to make sure that you have the correct symbols is to build the exact commit that the dmp file was generated from.
+Then open the generated `.sln` file in the `build` directory.
+
+Alternatively, Visual Studio 2022 has native CMake support - you can open the folder directly in Visual Studio and it will automatically detect the CMakeLists.txt file.
+
+#### CLion / Other CMake IDEs
+
+Most modern IDEs (CLion, Visual Studio Code with CMake Tools, etc.) have native CMake support. Simply open the project folder and the IDE will automatically detect and configure the CMake project.
+
+Note that you should also commit & push the submodules that you've updated if the reason why you updated was not because someone else pushed an update, and you're just catching up to it.
 
 ## Updating git submodules
 
