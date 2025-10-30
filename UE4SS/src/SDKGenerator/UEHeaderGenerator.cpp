@@ -1351,7 +1351,7 @@ namespace RC::UEGenerator
                 super_and_no_access = private_access_modifier;
             }
 
-            if (string_value_string != STR(""))
+            if (!string_value_string.empty())
             {
                 const StringType result_value = create_string_literal(string_value_string);
                 if (!super_and_no_access)
@@ -1387,7 +1387,7 @@ namespace RC::UEGenerator
                 super_and_no_access = private_access_modifier;
             }
 
-            if (string_value_string != STR(""))
+            if (!string_value_string.empty())
             {
                 // Create UTF8TEXT literal for UTF8 strings
                 const StringType result_value = create_utf8_string_literal(string_value_string);
@@ -1422,7 +1422,7 @@ namespace RC::UEGenerator
                 super_and_no_access = private_access_modifier;
             }
 
-            if (string_value_string != STR(""))
+            if (!string_value_string.empty())
             {
                 // ANSI strings use plain string literals (no TEXT macro)
                 const StringType result_value = create_ansi_string_literal(string_value_string);
@@ -2044,7 +2044,7 @@ namespace RC::UEGenerator
     auto UEHeaderGenerator::create_ansi_string_literal(const StringType& string) -> StringType
     {
         // ANSI strings don't use a macro, just quotes
-        return create_string_literal_with_macro(string, STR(""));
+        return create_string_literal_with_macro(string, {});
     }
 
     auto UEHeaderGenerator::create_string_literal_with_macro(const StringType& string, const StringType& macro_name) -> StringType
@@ -3340,12 +3340,16 @@ namespace RC::UEGenerator
 
                 // Force const reference when we're dealing with strings, and they are not passed by reference
                 // UHT for whatever reason completely strips const and reference flags from string properties, but happily generates them in boilerplate code
-                const StringType property_class_name = property->GetClass().GetName();
+                static const FName StrPropertyFName(STR("StrProperty"));
+                static const FName Utf8StrPropertyFName(STR("Utf8StrProperty"));
+                static const FName AnsiStrPropertyFName(STR("AnsiStrProperty"));
+
+                const FName property_class_fname = property->GetClass().GetFName();
                 const bool should_force_const_ref =
                         ((property_flags & (CPF_ReferenceParm | CPF_OutParm)) == 0) &&
-                        (property_class_name == STR("StrProperty") ||
-                         property_class_name == STR("Utf8StrProperty") ||
-                         property_class_name == STR("AnsiStrProperty"));
+                        (property_class_fname == StrPropertyFName ||
+                         property_class_fname == Utf8StrPropertyFName ||
+                         property_class_fname == AnsiStrPropertyFName);
 
                 // Append const keyword to the parameter declaration if it is marked as const parameter
                 if ((property_flags & CPF_ConstParm) != 0 || should_force_const_ref)
