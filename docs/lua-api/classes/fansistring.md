@@ -20,10 +20,14 @@
 
 - Empties the string by removing all characters.
 
+### Clear()
+
+- Empties the string by removing all characters (identical to Empty).
+
 ### Len()
 
 - **Return type:** `integer`
-- **Returns:** the length of the string in characters.
+- **Returns:** the length of the string in characters (each ANSI character is 1 byte).
 
 ### IsEmpty()
 

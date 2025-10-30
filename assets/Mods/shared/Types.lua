@@ -726,8 +726,7 @@ function FString:ToString() end
 ---Empties the string by removing all characters
 function FString:Empty() end
 
----@deprecated Use FString:Empty() instead
----Clears the string by setting the number of elements in the TArray to 0
+---Empties the string by removing all characters (identical to Empty)
 function FString:Clear() end
 
 ---Returns the length of the string in characters
@@ -777,7 +776,11 @@ function FUtf8String:ToString() end
 ---Empties the string by removing all characters
 function FUtf8String:Empty() end
 
----Returns the length of the string in bytes (UTF-8 encoded)
+---Empties the string by removing all characters (identical to Empty)
+function FUtf8String:Clear() end
+
+---Returns the number of UTF-8 code units (bytes), not Unicode code points
+---For "Hello 你好", returns 14 (bytes), not 8 (characters)
 ---@return integer
 function FUtf8String:Len() end
 
@@ -824,7 +827,10 @@ function FAnsiString:ToString() end
 ---Empties the string by removing all characters
 function FAnsiString:Empty() end
 
----Returns the length of the string in characters
+---Empties the string by removing all characters (identical to Empty)
+function FAnsiString:Clear() end
+
+---Returns the length of the string in characters (each ANSI character is 1 byte)
 ---@return integer
 function FAnsiString:Len() end
 

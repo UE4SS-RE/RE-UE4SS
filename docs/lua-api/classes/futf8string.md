@@ -20,10 +20,14 @@
 
 - Empties the string by removing all characters.
 
+### Clear()
+
+- Empties the string by removing all characters (identical to Empty).
+
 ### Len()
 
 - **Return type:** `integer`
-- **Returns:** the length of the string in bytes (UTF-8 encoded).
+- **Returns:** the number of UTF-8 code units (bytes), not Unicode code points. For example, "Hello 你好" returns 14 (bytes), not 8 (characters).
 
 ### IsEmpty()
 

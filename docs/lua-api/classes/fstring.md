@@ -20,6 +20,10 @@
 
 - Empties the string by removing all characters.
 
+### Clear()
+
+- Empties the string by removing all characters (identical to Empty).
+
 ### Len()
 
 - **Return type:** `integer`
