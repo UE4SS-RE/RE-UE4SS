@@ -118,8 +118,9 @@ jobs:
       use-clang: true
 
   # Report artifacts as a pull request comment.
+  # Only run for pull_request events, not workflow_dispatch
   report-artifacts:
-    if: ${{ always() && contains(needs.calculate-matrix.result, 'success') }}
+    if: ${{ always() && contains(needs.calculate-matrix.result, 'success') && github.event_name == 'pull_request' }}
     needs: [calculate-matrix, build, build-clang]
     runs-on: ubuntu-latest
     steps:
