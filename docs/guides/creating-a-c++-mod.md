@@ -91,17 +91,21 @@ extern "C"
 }
 ```
 3. In the command prompt, in the `MyMods` directory, execute either:
-A. Build from command line:
+A. Build from command line with Ninja:
 ```bash
-# Configure
+# Configure (Ninja is single-configuration)
 cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Game__Shipping__Win64
 
-# Build
-cmake --build build --config Game__Shipping__Win64
+# Build (no --config needed for Ninja)
+cmake --build build
 ```
 or B. Generate Visual Studio solution:
 ```bash
+# Configure (MSVC is multi-configuration)
 cmake -B build -G "Visual Studio 17 2022"
+
+# Build from command line (MSVC requires --config)
+cmake --build build --config Game__Shipping__Win64
 ```
 If you chose option `B`, the VS solution will be in the `build` directory.
 
