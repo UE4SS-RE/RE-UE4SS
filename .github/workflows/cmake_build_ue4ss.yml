@@ -132,7 +132,8 @@ jobs:
         id: build_dir
         run: |
           $mode = "${{inputs.build-mode}}"
-          $buildDir = "build_cmake_$mode"
+          $compiler = if ("${{ inputs.use-clang }}" -eq "true") { "clang" } else { "msvc" }
+          $buildDir = "build_cmake_${compiler}_$mode"
           echo "name=$buildDir" >> $env:GITHUB_OUTPUT
 
       # Cache the build directory for incremental builds
@@ -154,8 +155,17 @@ jobs:
         run: |
           $needs_reconfigure = $false
 
+          # Clang-CL builds always need a clean configuration due to compiler change
+          if ("${{ inputs.use-clang }}" -eq "true") {
+            Write-Host "Clang-CL build - forcing clean configuration"
+            if (Test-Path "${{ steps.build_dir.outputs.name }}/CMakeCache.txt") {
+              Remove-Item "${{ steps.build_dir.outputs.name }}/CMakeCache.txt" -Force
+              Write-Host "Removed CMakeCache.txt to avoid compiler conflicts"
+            }
+            $needs_reconfigure = $true
+          }
           # Check if caching is enabled
-          if ("${{ inputs.enable-caching }}" -eq "true") {
+          elseif ("${{ inputs.enable-caching }}" -eq "true") {
             if ("${{ steps.cache_build.outputs.cache-hit }}" -ne "true") {
               Write-Host "Cache miss - full configure needed"
               $needs_reconfigure = $true
@@ -184,15 +194,13 @@ jobs:
             }
 
             # Configure with incremental linking disabled
-            cmake -B ${{ steps.build_dir.outputs.name }} `
+            # Note: Must use double quotes for variables to expand properly
+            cmake -B "${{ steps.build_dir.outputs.name }}" `
               -G Ninja `
               -DCMAKE_BUILD_TYPE="${{inputs.build-mode}}" `
-              -DCMAKE_C_COMPILER=$c_compiler `
-              -DCMAKE_CXX_COMPILER=$cxx_compiler `
+              -DCMAKE_C_COMPILER="$c_compiler" `
+              -DCMAKE_CXX_COMPILER="$cxx_compiler" `
               -DCMAKE_EXPORT_COMPILE_COMMANDS=ON `
-              -DCMAKE_EXE_LINKER_FLAGS="/INCREMENTAL:NO" `
-              -DCMAKE_MODULE_LINKER_FLAGS="/INCREMENTAL:NO" `
-              -DCMAKE_SHARED_LINKER_FLAGS="/INCREMENTAL:NO" `
               -DFETCHCONTENT_QUIET=OFF `
               -DFETCHCONTENT_FULLY_DISCONNECTED=OFF `
               -DFETCHCONTENT_UPDATES_DISCONNECTED=ON
@@ -202,12 +210,86 @@ jobs:
             cmake ${{ steps.build_dir.outputs.name }}
           }
 
-      # Build ALL targets with verbose output to see what's happening
-      - name: Build All Targets
+      # Determine which targets to build based on changed files
+      - name: Determine Build Targets
+        id: build-targets
+        shell: bash
         run: |
-          Write-Host "Building all targets with verbose output..."
-          # Build everything with verbose output to see compile/link flags
-          cmake --build ${{ steps.build_dir.outputs.name }} --verbose
+          # For workflow_dispatch (manual), build everything
+          # For PR/push, be selective based on changed files
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+            echo "Manual run - building all targets"
+            echo "build_ue4ss=true" >> $GITHUB_OUTPUT
+            echo "build_uvtd=true" >> $GITHUB_OUTPUT
+          else
+            # Get changed files
+            if [ -n "${{ github.event.pull_request.base.sha }}" ]; then
+              CHANGED_FILES=$(git diff --name-only ${{ github.event.pull_request.base.sha }} ${{ inputs.commit-sha }})
+            else
+              CHANGED_FILES=$(git diff --name-only HEAD^ HEAD)
+            fi
+
+            echo "Changed files:"
+            echo "$CHANGED_FILES"
+
+            # Check if UVTD or its dependencies changed
+            # UVTD depends on: deps/, cmake modules, and its own folder
+            if echo "$CHANGED_FILES" | grep -qE "^(UVTD|deps|cmake/modules)"; then
+              echo "build_uvtd=true" >> $GITHUB_OUTPUT
+            else
+              echo "build_uvtd=false" >> $GITHUB_OUTPUT
+            fi
+
+            # Check if UE4SS or its dependencies changed
+            # UE4SS is affected by anything except UVTD-only changes
+            if echo "$CHANGED_FILES" | grep -qvE "^(UVTD|docs|assets|README|LICENSE|\.github)/"; then
+              echo "build_ue4ss=true" >> $GITHUB_OUTPUT
+            else
+              echo "build_ue4ss=false" >> $GITHUB_OUTPUT
+            fi
+          fi
+
+      # Build targets based on what changed
+      - name: Build Targets
+        run: |
+          Write-Host "Building targets with verbose output..."
+          $buildMode = "${{inputs.build-mode}}"
+          $buildUE4SS = "${{ steps.build-targets.outputs.build_ue4ss }}" -eq "true"
+          $buildUVTD = "${{ steps.build-targets.outputs.build_uvtd }}" -eq "true"
+          $buildProxy = $false
+
+          Write-Host "Build UE4SS: $buildUE4SS"
+          Write-Host "Build UVTD: $buildUVTD (only for Game__Shipping__Win64)"
+
+          # Proxy (dwmapi.dll) should only be built for Game__Shipping__Win64 and Game__Debug__Win64
+          if ($buildMode -eq "Game__Shipping__Win64" -or $buildMode -eq "Game__Debug__Win64") {
+            $buildProxy = $true
+            Write-Host "Build Proxy: True (dwmapi.dll for $buildMode)"
+          } else {
+            Write-Host "Build Proxy: False (not needed for $buildMode)"
+          }
+
+          # UVTD should only be built for Game__Shipping__Win64
+          if ($buildMode -ne "Game__Shipping__Win64") {
+            $buildUVTD = $false
+            Write-Host "Disabling UVTD build - only built for Game__Shipping__Win64"
+          }
+
+          # Determine targets to build
+          $targets = @()
+          if ($buildUE4SS) { $targets += "UE4SS" }
+          if ($buildProxy) { $targets += "proxy" }
+          if ($buildUVTD) { $targets += "UnrealVTableDumper" }
+
+          if ($targets.Count -eq 0) {
+            Write-Host "No targets to build based on changed files"
+            exit 0
+          }
+
+          Write-Host "Building targets: $($targets -join ', ')"
+          foreach ($target in $targets) {
+            cmake --build ${{ steps.build_dir.outputs.name }} --target $target --verbose
+          }
 
       # Detect changed files to determine what artifacts to collect
       - name: Detect Changed Files
@@ -215,29 +297,39 @@ jobs:
         if: ${{inputs.should-upload-artifact == true}}
         shell: bash
         run: |
-          # Get list of changed files (for PRs, compare against base branch)
-          if [ -n "${{ github.event.pull_request.base.sha }}" ]; then
-            CHANGED_FILES=$(git diff --name-only ${{ github.event.pull_request.base.sha }} ${{ inputs.commit-sha }})
-          else
-            # For non-PR runs, just include everything
-            CHANGED_FILES=$(git ls-files)
-          fi
-
-          echo "Changed files:"
-          echo "$CHANGED_FILES"
-
-          # Check if UVTD folder was affected
-          if echo "$CHANGED_FILES" | grep -q "^UVTD/"; then
+          # Only workflow_dispatch (manual) runs should include everything
+          # PRs and pushes should be selective based on changed files
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+            echo "Manual workflow_dispatch - including all artifacts"
             echo "include_uvtd=true" >> $GITHUB_OUTPUT
-          else
-            echo "include_uvtd=false" >> $GITHUB_OUTPUT
-          fi
-
-          # Check if UE4SS code was affected (excluding docs/assets)
-          if echo "$CHANGED_FILES" | grep -qv -E "^(docs|assets|README|LICENSE|\.github)/"; then
             echo "include_ue4ss=true" >> $GITHUB_OUTPUT
           else
-            echo "include_ue4ss=false" >> $GITHUB_OUTPUT
+            echo "Selective artifact collection based on changed files"
+
+            # Get changed files (PR or push)
+            if [ -n "${{ github.event.pull_request.base.sha }}" ]; then
+              CHANGED_FILES=$(git diff --name-only ${{ github.event.pull_request.base.sha }} ${{ inputs.commit-sha }})
+            else
+              # For push events, compare with previous commit
+              CHANGED_FILES=$(git diff --name-only HEAD^ HEAD)
+            fi
+
+            echo "Changed files:"
+            echo "$CHANGED_FILES"
+
+            # Check if UVTD folder was affected
+            if echo "$CHANGED_FILES" | grep -q "^UVTD/"; then
+              echo "include_uvtd=true" >> $GITHUB_OUTPUT
+            else
+              echo "include_uvtd=false" >> $GITHUB_OUTPUT
+            fi
+
+            # Check if UE4SS code was affected (excluding docs/assets/UVTD)
+            if echo "$CHANGED_FILES" | grep -qv -E "^(UVTD|docs|assets|README|LICENSE|\.github)/"; then
+              echo "include_ue4ss=true" >> $GITHUB_OUTPUT
+            else
+              echo "include_ue4ss=false" >> $GITHUB_OUTPUT
+            fi
           fi
 
       # Collect selective artifacts based on what changed
@@ -247,17 +339,31 @@ jobs:
         run: |
           $artifact_dir = New-Item -Path '${{runner.temp}}/ue4ss_artifacts/' -ItemType Directory -Force
           $buildDir = "${{ steps.build_dir.outputs.name }}"
+          $buildMode = "${{inputs.build-mode}}"
 
           $includeUE4SS = "${{ steps.detect-changes.outputs.include_ue4ss }}" -eq "true"
           $includeUVTD = "${{ steps.detect-changes.outputs.include_uvtd }}" -eq "true"
 
+          # Determine if we should have proxy (dwmapi.dll) for this build mode
+          $shouldHaveProxy = ($buildMode -eq "Game__Shipping__Win64") -or ($buildMode -eq "Game__Debug__Win64")
+
+          # Determine if we should have UVTD for this build mode
+          $shouldHaveUVTD = ($buildMode -eq "Game__Shipping__Win64")
+
           Write-Host "Collecting selective artifacts from $buildDir..."
+          Write-Host "Build Mode: $buildMode"
           Write-Host "Include UE4SS: $includeUE4SS"
           Write-Host "Include UVTD: $includeUVTD"
+          Write-Host "Should have proxy: $shouldHaveProxy"
+          Write-Host "Should have UVTD: $shouldHaveUVTD"
 
-          # Collect UE4SS.dll and dwmapi.dll (proxy)
+          # Collect UE4SS.dll and dwmapi.dll (proxy) if needed
           if ($includeUE4SS) {
-            $ue4ssFiles = Get-ChildItem -Path $buildDir -Recurse -Include "UE4SS.dll","UE4SS.pdb","dwmapi.dll" -ErrorAction SilentlyContinue
+            if ($shouldHaveProxy) {
+              $ue4ssFiles = Get-ChildItem -Path $buildDir -Recurse -Include "UE4SS.dll","UE4SS.pdb","dwmapi.dll" -ErrorAction SilentlyContinue
+            } else {
+              $ue4ssFiles = Get-ChildItem -Path $buildDir -Recurse -Include "UE4SS.dll","UE4SS.pdb" -ErrorAction SilentlyContinue
+            }
             foreach ($file in $ue4ssFiles) {
               if ($file.FullName -notlike "*\_deps\*") {
                 Write-Host "✓ Found UE4SS file: $($file.Name)"
@@ -266,13 +372,20 @@ jobs:
             }
           }
 
-          # Collect UVTD files
-          if ($includeUVTD) {
-            $uvtdFiles = Get-ChildItem -Path $buildDir -Recurse -Include "UVTD.exe","UVTD.pdb" -ErrorAction SilentlyContinue
+          # Collect UVTD files (only for Game__Shipping__Win64)
+          # CMake target is UnrealVTableDumper, so look for both possible names
+          if ($includeUVTD -and $shouldHaveUVTD) {
+            $uvtdFiles = Get-ChildItem -Path $buildDir -Recurse -Include "UVTD.exe","UVTD.pdb","UnrealVTableDumper.exe","UnrealVTableDumper.pdb" -ErrorAction SilentlyContinue
             foreach ($file in $uvtdFiles) {
               if ($file.FullName -notlike "*\_deps\*") {
                 Write-Host "✓ Found UVTD file: $($file.Name)"
-                Copy-Item $file.FullName -Destination $artifact_dir -Force
+                # Rename UnrealVTableDumper to UVTD for consistency
+                if ($file.Name -like "UnrealVTableDumper.*") {
+                  $newName = $file.Name -replace "UnrealVTableDumper", "UVTD"
+                  Copy-Item $file.FullName -Destination "$artifact_dir\$newName" -Force
+                } else {
+                  Copy-Item $file.FullName -Destination $artifact_dir -Force
+                }
               }
             }
           }
@@ -281,24 +394,23 @@ jobs:
           $missingFiles = @()
 
           if ($includeUE4SS) {
-            $requiredUE4SS = @("dwmapi.dll", "UE4SS.dll")
-            foreach ($required in $requiredUE4SS) {
-              $found = Get-ChildItem -Path $artifact_dir -Filter $required -ErrorAction SilentlyContinue
-              if (-not $found) {
-                # Try to find it in the source tree (for proxy dll)
-                $sourceFile = Get-ChildItem -Path . -Recurse -Filter $required -ErrorAction SilentlyContinue | Select-Object -First 1
-                if ($sourceFile) {
-                  Write-Host "✓ Found required file in source: $required"
-                  Copy-Item $sourceFile.FullName -Destination $artifact_dir -Force
-                } else {
-                  Write-Host "❌ ERROR: Required UE4SS file $required not found!"
-                  $missingFiles += $required
-                }
+            # Always require UE4SS.dll
+            if (-not (Test-Path "$artifact_dir\UE4SS.dll")) {
+              Write-Host "❌ ERROR: Required UE4SS.dll not found!"
+              $missingFiles += "UE4SS.dll"
+            }
+
+            # Only require dwmapi.dll for Shipping and Debug configs
+            if ($shouldHaveProxy) {
+              if (-not (Test-Path "$artifact_dir\dwmapi.dll")) {
+                Write-Host "❌ ERROR: Required dwmapi.dll not found for $buildMode!"
+                $missingFiles += "dwmapi.dll"
               }
             }
           }
 
-          if ($includeUVTD) {
+          # Only require UVTD.exe for Game__Shipping__Win64
+          if ($includeUVTD -and $shouldHaveUVTD) {
             if (-not (Test-Path "$artifact_dir\UVTD.exe")) {
               Write-Host "❌ ERROR: Required UVTD.exe not found!"
               $missingFiles += "UVTD.exe"
