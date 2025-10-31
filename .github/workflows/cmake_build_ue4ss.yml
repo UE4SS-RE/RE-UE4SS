@@ -80,6 +80,7 @@ jobs:
       # The cache key includes CMakeLists.txt hashes which should catch most dependency changes
       # For Rust version changes, the weekly cache invalidation in CI provides a safety net
       # Caching is disabled for production releases to ensure clean builds
+      # Dependencies are shared between MSVC and Clang-CL builds since most are compiler-agnostic
       - name: Cache CMake Dependencies
         if: ${{ inputs.enable-caching }}
         uses: actions/cache@v4
@@ -87,8 +88,8 @@ jobs:
           path: |
             ~/.cmake/packages
             ~/AppData/Local/vcpkg/archives
-            ${{ github.workspace }}/build_cmake_${{ inputs.build-mode }}/_deps
-            ${{ github.workspace }}/build_cmake_${{ inputs.build-mode }}/ep_downloads
+            ${{ github.workspace }}/build_cmake_shared_deps/_deps
+            ${{ github.workspace }}/build_cmake_shared_deps/ep_downloads
           key: cmake-deps-${{ runner.os }}-${{ steps.cache_key.outputs.hash }}
           restore-keys: |
             cmake-deps-${{ runner.os }}-
@@ -138,6 +139,7 @@ jobs:
 
       # Cache the build directory for incremental builds
       # Disabled for production releases to ensure clean builds
+      # Build cache is compiler-specific since object files differ between MSVC and Clang
       - name: Cache CMake build directory
         if: ${{ inputs.enable-caching }}
         uses: actions/cache@v4
@@ -147,9 +149,9 @@ jobs:
             ${{ steps.build_dir.outputs.name }}
             !${{ steps.build_dir.outputs.name }}/_deps
             !${{ steps.build_dir.outputs.name }}/ep_downloads
-          key: cmake-build-${{ inputs.build-mode }}-${{ steps.cache_key.outputs.hash }}-${{ github.run_number }}
+          key: cmake-build-${{ inputs.use-clang && 'clang' || 'msvc' }}-${{ inputs.build-mode }}-${{ steps.cache_key.outputs.hash }}-${{ github.run_number }}
           restore-keys: |
-            cmake-build-${{ inputs.build-mode }}-${{ steps.cache_key.outputs.hash }}-
+            cmake-build-${{ inputs.use-clang && 'clang' || 'msvc' }}-${{ inputs.build-mode }}-${{ steps.cache_key.outputs.hash }}-
 
       - name: Configure CMake
         run: |
@@ -170,8 +172,9 @@ jobs:
           }
 
           if ($needs_reconfigure) {
-            # Set environment variables for FetchContent to use a persistent location
-            $env:FETCHCONTENT_BASE_DIR = "${{ steps.build_dir.outputs.name }}/_deps"
+            # Set environment variables for FetchContent to use a shared location
+            # This allows MSVC and Clang-CL builds to share dependencies
+            $env:FETCHCONTENT_BASE_DIR = "${{ github.workspace }}/build_cmake_shared_deps/_deps"
 
             # Select compiler based on use-clang parameter
             if ("${{ inputs.use-clang }}" -eq "true") {
