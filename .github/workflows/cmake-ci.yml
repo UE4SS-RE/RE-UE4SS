@@ -87,9 +87,9 @@ jobs:
             }));
             core.setOutput('matrix', JSON.stringify(modeSchema));
 
-  # Build UE4SS for each mode we received from the calculate-matrix job
+  # Build UE4SS for each mode with MSVC
   build:
-    name: ${{ matrix.mode }}
+    name: MSVC ${{ matrix.mode }}
     needs: [calculate-matrix]
     strategy:
       fail-fast: false # Disable fast failing because we want to see results for all modes
@@ -103,11 +103,24 @@ jobs:
       commit-sha: ${{ github.sha }} # This is the SHA of the PR merge result, not the HEAD of the PR branch!
       should-upload-artifact: ${{ matrix.artifact }}
       artifact-retention-days: 14
-  
+
+  # Build one mode with Clang-CL to verify compiler compatibility
+  build-clang:
+    name: Clang-CL Game__Debug__Win64
+    needs: [calculate-matrix]
+    uses: ./.github/workflows/cmake_build_ue4ss.yml
+    secrets: inherit
+    with:
+      build-mode: Game__Debug__Win64
+      commit-sha: ${{ github.sha }}
+      should-upload-artifact: false
+      artifact-retention-days: 1
+      use-clang: true
+
   # Report artifacts as a pull request comment.
   report-artifacts:
     if: ${{ always() && contains(needs.calculate-matrix.result, 'success') }}
-    needs: [calculate-matrix, build]
+    needs: [calculate-matrix, build, build-clang]
     runs-on: ubuntu-latest
     steps:
       - name: "Report Artifacts"

@@ -27,6 +27,10 @@ on:
         description: 'Enable build and dependency caching (disable for production releases)'
         type: boolean
         default: true
+      use-clang:
+        description: 'Use Clang-CL compiler instead of MSVC'
+        type: boolean
+        default: false
 defaults:
   run:
     shell: pwsh
@@ -96,6 +100,26 @@ jobs:
           arch: x64
           vsversion: "2022"
 
+      # Setup Clang-CL if requested
+      - name: Setup Clang-CL
+        if: ${{ inputs.use-clang == true }}
+        run: |
+          # LLVM is pre-installed on windows-latest, just need to ensure clang-cl is in PATH
+          $llvmPath = "C:\Program Files\LLVM\bin"
+          if (Test-Path $llvmPath) {
+            Write-Host "Found LLVM at $llvmPath"
+            echo "$llvmPath" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+          } else {
+            Write-Host "LLVM not found at expected location, checking if clang-cl is already available..."
+            $clangcl = Get-Command clang-cl -ErrorAction SilentlyContinue
+            if ($clangcl) {
+              Write-Host "clang-cl found at: $($clangcl.Path)"
+            } else {
+              Write-Host "##[error]clang-cl not found. Please install LLVM or use MSVC."
+              exit 1
+            }
+          }
+
       - name: Setup CMake
         uses: jwlawson/actions-setup-cmake@v2
         with:
@@ -148,12 +172,23 @@ jobs:
             # Set environment variables for FetchContent to use a persistent location
             $env:FETCHCONTENT_BASE_DIR = "${{ steps.build_dir.outputs.name }}/_deps"
 
+            # Select compiler based on use-clang parameter
+            if ("${{ inputs.use-clang }}" -eq "true") {
+              Write-Host "Configuring with Clang-CL compiler"
+              $c_compiler = "clang-cl"
+              $cxx_compiler = "clang-cl"
+            } else {
+              Write-Host "Configuring with MSVC compiler"
+              $c_compiler = "cl"
+              $cxx_compiler = "cl"
+            }
+
             # Configure with incremental linking disabled
             cmake -B ${{ steps.build_dir.outputs.name }} `
               -G Ninja `
               -DCMAKE_BUILD_TYPE="${{inputs.build-mode}}" `
-              -DCMAKE_C_COMPILER=cl `
-              -DCMAKE_CXX_COMPILER=cl `
+              -DCMAKE_C_COMPILER=$c_compiler `
+              -DCMAKE_CXX_COMPILER=$cxx_compiler `
               -DCMAKE_EXPORT_COMPILE_COMMANDS=ON `
               -DCMAKE_EXE_LINKER_FLAGS="/INCREMENTAL:NO" `
               -DCMAKE_MODULE_LINKER_FLAGS="/INCREMENTAL:NO" `
