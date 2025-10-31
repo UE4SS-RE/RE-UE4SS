@@ -11,6 +11,11 @@ some notes about most important changes such as:
 
 ### General
 
+Added CMake build system alongside Xmake - ([UE4SS #1067](https://github.com/UE4SS-RE/RE-UE4SS/pull/1067))
+- CMake >= 3.22 is now supported as the default build system
+- Documentation updated to reference CMake build instructions
+- xmake may be deprecated in the future. Meanwhile, we cannot guarantee ABI compatability
+
 Added support for UE Version 5.6 - ([UE4SS #977](https://github.com/UE4SS-RE/RE-UE4SS/pull/977)) 
 
 Added support for UE Version 5.5 - ([UE4SS #708](https://github.com/UE4SS-RE/RE-UE4SS/pull/708)) 

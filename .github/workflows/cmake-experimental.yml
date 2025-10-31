@@ -1,0 +1,113 @@
+name: CMake Experimental Release
+
+# NOTE: This workflow creates CMake-specific experimental releases (cmake-experimental, cmake-experimental-latest)
+# These are separate from the xmake experimental releases to allow parallel testing
+# This is intentional during the CMake transition period
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ "main" ]
+    paths:
+      - "UE4SS/src/**"
+      - "UE4SS/include/**"
+      - "UE4SS/generated_src/**"
+      - "UE4SS/generated_include/**"
+      - "deps/**"
+      - "UE4SS/proxy_generator/**"
+      - "assets/Mods/**"
+      - "assets/**.ini"
+      - "CMakeLists.txt"
+      - "cmake/**"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cmake-experimental-release
+  cancel-in-progress: true
+
+jobs:
+  build:
+    uses: ./.github/workflows/cmake_build_ue4ss.yml
+    secrets: inherit
+    with:
+      build-mode: "Game__Shipping__Win64"
+      commit-sha: ${{ github.sha }}
+      should-upload-artifact: true
+      artifact-retention-days: 1
+
+  make-release:
+    needs: build
+    permissions:
+      contents: write  # Required for creating releases
+    runs-on: windows-2022
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          fetch-depth: 0
+          token: ${{ secrets.UEPSEUDO_PAT }}
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+
+      - name: Download Build Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: CMAKE-Game__Shipping__Win64
+          path: build_output/
+
+      - name: Verify downloaded files
+        shell: pwsh
+        run: |
+          Write-Host "Contents of build_output:"
+          Get-ChildItem -Path "build_output" -Recurse | ForEach-Object { Write-Host $_.FullName }
+
+          $requiredFiles = @("UE4SS.dll", "dwmapi.dll")
+          foreach ($file in $requiredFiles) {
+            $filePath = Get-ChildItem -Path "build_output" -Recurse -Filter $file -ErrorAction SilentlyContinue | Select-Object -First 1
+            if (-not $filePath) {
+              Write-Error "$file not found in downloaded artifacts!"
+              exit 1
+            }
+          }
+
+      - name: Package
+        run: python tools/buildscripts/release.py package -e
+
+      - name: Make Archival Experimental Release (CMake)
+        uses: softprops/action-gh-release@v1
+        with:
+          prerelease: true
+          tag_name: cmake-experimental
+          name: "CMake Experimental Build"
+          body_path: release/release_notes.md
+          files: |
+            release/UE4SS_v*.zip
+            release/zDEV-UE4SS_v*.zip
+            release/zCustomGameConfigs.zip
+            release/zMapGenBP.zip
+
+      - name: Delete old release assets (CMake Latest)
+        uses: mknejp/delete-release-assets@v1
+        with:
+          token: ${{ github.token }}
+          tag: cmake-experimental-latest
+          fail-if-no-assets: false
+
+      - name: Make Permanent Latest Release (CMake)
+        uses: softprops/action-gh-release@v1
+        with:
+          prerelease: true
+          tag_name: cmake-experimental-latest
+          name: "CMake Experimental Latest"
+          body_path: release/release_notes.md
+          files: |
+            release/UE4SS_v*.zip
+            release/zDEV-UE4SS_v*.zip
+            release/zCustomGameConfigs.zip
+            release/zMapGenBP.zip
