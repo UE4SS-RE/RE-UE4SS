@@ -104,13 +104,16 @@ Currently supported options for these are:
 To build UE4SS with CMake, use the following commands:
 
 ```bash
-# Configure with Ninja (recommended for faster builds)
+# Configure with Ninja (recommended for faster builds, single-configuration)
 cmake -B build_cmake_Game__Shipping__Win64 -G Ninja -DCMAKE_BUILD_TYPE=Game__Shipping__Win64
 
-# Or configure with MSVC
-cmake -B build_cmake_Game__Shipping__Win64 -G "Visual Studio 17 2022" -DCMAKE_BUILD_TYPE=Game__Shipping__Win64
+# Build with Ninja
+cmake --build build_cmake_Game__Shipping__Win64
 
-# Build
+# Or configure with MSVC (multi-configuration, allows switching configs without reconfiguring)
+cmake -B build_cmake_Game__Shipping__Win64 -G "Visual Studio 17 2022"
+
+# Build with MSVC (requires --config flag)
 cmake --build build_cmake_Game__Shipping__Win64 --config Game__Shipping__Win64
 ```
 
@@ -146,10 +149,11 @@ cmake -B build -DPROFILER_FLAVOR=<Tracy|Superluminal|None> -DCMAKE_BUILD_TYPE=Ga
 | Command | Description |
 | --- | --- |
 | `cmake -B <build_dir> -G <generator>` | Configure the project with a specific generator (Ninja or "Visual Studio 17 2022") |
-| `cmake --build <build_dir> --config <mode>` | Build the project |
-| `cmake --build <build_dir> --config <mode> --clean-first` | Clean and rebuild |
-| `cmake --build <build_dir> --config <mode> --target <target>` | Build a specific target |
-| `cmake --build <build_dir> --config <mode> --verbose` | Build with verbose output |
+| `cmake --build <build_dir>` | Build with Ninja (single-config generator) |
+| `cmake --build <build_dir> --config <mode>` | Build with MSVC (multi-config generator, `--config` required) |
+| `cmake --build <build_dir> --clean-first` | Clean and rebuild (add `--config <mode>` for MSVC) |
+| `cmake --build <build_dir> --target <target>` | Build a specific target (add `--config <mode>` for MSVC) |
+| `cmake --build <build_dir> --verbose` | Build with verbose output (add `--config <mode>` for MSVC) |
 
 ### Opening in an IDE
 
