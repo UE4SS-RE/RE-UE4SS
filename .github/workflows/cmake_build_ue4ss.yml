@@ -44,6 +44,7 @@ jobs:
           submodules: recursive
           token: ${{ secrets.UEPSEUDO_PAT }}
           ref: ${{inputs.commit-sha}}
+          fetch-depth: 0  # Need full history for git diff to work with PR base SHA
 
       # Calculate cache key based on CMakeLists and submodules
       - name: Calculate cache key
