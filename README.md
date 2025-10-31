@@ -236,7 +236,7 @@ XWIN_DIR=~/.xwin cmake -B build_xwin \
   -DCMAKE_TOOLCHAIN_FILE=cmake/toolchains/xwin-clang-toolchain.cmake
 
 # Build
-cmake --build build_xwin --config Game__Shipping__Win64
+cmake --build build_xwin
 ```
 
 ##### Building with build.sh Script
@@ -306,7 +306,7 @@ cmake -B build_wine \
   -DCMAKE_TOOLCHAIN_FILE=cmake/toolchains/wine-msvc-toolchain.cmake
 
 # Build
-cmake --build build_wine --config Game__Shipping__Win64
+cmake --build build_wine
 ```
 
 ##### Building with build.sh Script
