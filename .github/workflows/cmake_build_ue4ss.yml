@@ -174,7 +174,38 @@ jobs:
           # Build everything with verbose output to see compile/link flags
           cmake --build ${{ steps.build_dir.outputs.name }} --verbose
 
-      # Collect all DLLs and PDBs automatically
+      # Detect changed files to determine what artifacts to collect
+      - name: Detect Changed Files
+        id: detect-changes
+        if: ${{inputs.should-upload-artifact == true}}
+        shell: bash
+        run: |
+          # Get list of changed files (for PRs, compare against base branch)
+          if [ -n "${{ github.event.pull_request.base.sha }}" ]; then
+            CHANGED_FILES=$(git diff --name-only ${{ github.event.pull_request.base.sha }} ${{ inputs.commit-sha }})
+          else
+            # For non-PR runs, just include everything
+            CHANGED_FILES=$(git ls-files)
+          fi
+
+          echo "Changed files:"
+          echo "$CHANGED_FILES"
+
+          # Check if UVTD folder was affected
+          if echo "$CHANGED_FILES" | grep -q "^UVTD/"; then
+            echo "include_uvtd=true" >> $GITHUB_OUTPUT
+          else
+            echo "include_uvtd=false" >> $GITHUB_OUTPUT
+          fi
+
+          # Check if UE4SS code was affected (excluding docs/assets)
+          if echo "$CHANGED_FILES" | grep -qv -E "^(docs|assets|README|LICENSE|\.github)/"; then
+            echo "include_ue4ss=true" >> $GITHUB_OUTPUT
+          else
+            echo "include_ue4ss=false" >> $GITHUB_OUTPUT
+          fi
+
+      # Collect selective artifacts based on what changed
       - name: Calculate Files For Artifact Inclusion
         id: calc-files-artifact
         if: ${{inputs.should-upload-artifact == true}}
@@ -182,86 +213,87 @@ jobs:
           $artifact_dir = New-Item -Path '${{runner.temp}}/ue4ss_artifacts/' -ItemType Directory -Force
           $buildDir = "${{ steps.build_dir.outputs.name }}"
 
-          # System/Windows DLLs to exclude (add more as needed)
-          $excludedDlls = @(
-            "kernel32.dll", "user32.dll", "advapi32.dll", "shell32.dll",
-            "ole32.dll", "oleaut32.dll", "msvcrt.dll", "comctl32.dll",
-            "gdi32.dll", "rpcrt4.dll", "ws2_32.dll", "winmm.dll",
-            "ntdll.dll", "setupapi.dll", "version.dll", "shlwapi.dll"
-          )
+          $includeUE4SS = "${{ steps.detect-changes.outputs.include_ue4ss }}" -eq "true"
+          $includeUVTD = "${{ steps.detect-changes.outputs.include_uvtd }}" -eq "true"
 
-          Write-Host "Collecting build artifacts from $buildDir..."
+          Write-Host "Collecting selective artifacts from $buildDir..."
+          Write-Host "Include UE4SS: $includeUE4SS"
+          Write-Host "Include UVTD: $includeUVTD"
 
-          # Find all DLLs in the build directory
-          $dllFiles = Get-ChildItem -Path $buildDir -Recurse -Filter "*.dll" -ErrorAction SilentlyContinue
-          $pdbFiles = Get-ChildItem -Path $buildDir -Recurse -Filter "*.pdb" -ErrorAction SilentlyContinue
-
-          # Copy DLLs (excluding system DLLs and those in _deps)
-          foreach ($dll in $dllFiles) {
-            # Skip files in _deps (build dependencies) unless they're needed for distribution
-            if ($dll.FullName -like "*\_deps\*") {
-              Write-Host "⊘ Skipping dependency DLL: $($dll.Name)"
-              continue
-            }
-
-            if ($excludedDlls -notcontains $dll.Name.ToLower()) {
-              Write-Host "✓ Found DLL: $($dll.Name) from $($dll.Directory.Name)"
-              Copy-Item $dll.FullName -Destination $artifact_dir -Force
-            } else {
-              Write-Host "⊘ Skipping system DLL: $($dll.Name)"
-            }
-          }
-
-          # Copy all PDBs (debug symbols) - excluding _deps
-          foreach ($pdb in $pdbFiles) {
-            if ($pdb.FullName -notlike "*\_deps\*") {
-              Write-Host "✓ Found PDB: $($pdb.Name)"
-              Copy-Item $pdb.FullName -Destination $artifact_dir -Force
-            }
-          }
-
-          # Also look for any .exe files that might be built
-          $exeFiles = Get-ChildItem -Path $buildDir -Recurse -Filter "*.exe" -ErrorAction SilentlyContinue
-          foreach ($exe in $exeFiles) {
-            if ($exe.FullName -notlike "*\_deps\*") {
-              Write-Host "✓ Found EXE: $($exe.Name)"
-              Copy-Item $exe.FullName -Destination $artifact_dir -Force
-            }
-          }
-
-          # Special handling for specific required files
-          $requiredFiles = @("dwmapi.dll", "UE4SS.dll")
-          $missingFiles = @()
-          foreach ($required in $requiredFiles) {
-            $found = Get-ChildItem -Path $artifact_dir -Filter $required -ErrorAction SilentlyContinue
-            if (-not $found) {
-              # Try to find it in the source tree (for proxy dll)
-              $sourceFile = Get-ChildItem -Path . -Recurse -Filter $required -ErrorAction SilentlyContinue | Select-Object -First 1
-              if ($sourceFile) {
-                Write-Host "✓ Found required file in source: $required"
-                Copy-Item $sourceFile.FullName -Destination $artifact_dir -Force
-              } else {
-                Write-Host "❌ ERROR: Required file $required not found anywhere!"
-                $missingFiles += $required
+          # Collect UE4SS.dll and dwmapi.dll (proxy)
+          if ($includeUE4SS) {
+            $ue4ssFiles = Get-ChildItem -Path $buildDir -Recurse -Include "UE4SS.dll","UE4SS.pdb","dwmapi.dll" -ErrorAction SilentlyContinue
+            foreach ($file in $ue4ssFiles) {
+              if ($file.FullName -notlike "*\_deps\*") {
+                Write-Host "✓ Found UE4SS file: $($file.Name)"
+                Copy-Item $file.FullName -Destination $artifact_dir -Force
               }
+            }
+          }
+
+          # Collect UVTD files
+          if ($includeUVTD) {
+            $uvtdFiles = Get-ChildItem -Path $buildDir -Recurse -Include "UVTD.exe","UVTD.pdb" -ErrorAction SilentlyContinue
+            foreach ($file in $uvtdFiles) {
+              if ($file.FullName -notlike "*\_deps\*") {
+                Write-Host "✓ Found UVTD file: $($file.Name)"
+                Copy-Item $file.FullName -Destination $artifact_dir -Force
+              }
+            }
+          }
+
+          # Validate that required files were collected (only check files we expect)
+          $missingFiles = @()
+
+          if ($includeUE4SS) {
+            $requiredUE4SS = @("dwmapi.dll", "UE4SS.dll")
+            foreach ($required in $requiredUE4SS) {
+              $found = Get-ChildItem -Path $artifact_dir -Filter $required -ErrorAction SilentlyContinue
+              if (-not $found) {
+                # Try to find it in the source tree (for proxy dll)
+                $sourceFile = Get-ChildItem -Path . -Recurse -Filter $required -ErrorAction SilentlyContinue | Select-Object -First 1
+                if ($sourceFile) {
+                  Write-Host "✓ Found required file in source: $required"
+                  Copy-Item $sourceFile.FullName -Destination $artifact_dir -Force
+                } else {
+                  Write-Host "❌ ERROR: Required UE4SS file $required not found!"
+                  $missingFiles += $required
+                }
+              }
+            }
+          }
+
+          if ($includeUVTD) {
+            if (-not (Test-Path "$artifact_dir\UVTD.exe")) {
+              Write-Host "❌ ERROR: Required UVTD.exe not found!"
+              $missingFiles += "UVTD.exe"
             }
           }
 
           # Summary of collected artifacts
           Write-Host "`n========== Artifact Summary =========="
-          $artifacts = Get-ChildItem -Path $artifact_dir
+          $artifacts = Get-ChildItem -Path $artifact_dir -ErrorAction SilentlyContinue
           Write-Host "Total files collected: $($artifacts.Count)"
 
-          # Group by extension
-          $artifacts | Group-Object Extension | ForEach-Object {
-            Write-Host "$($_.Name) files: $($_.Count)"
-            $_.Group | ForEach-Object { Write-Host "  - $($_.Name)" }
+          if ($artifacts.Count -gt 0) {
+            # Group by extension
+            $artifacts | Group-Object Extension | ForEach-Object {
+              Write-Host "$($_.Name) files: $($_.Count)"
+              $_.Group | ForEach-Object { Write-Host "  - $($_.Name)" }
+            }
           }
 
           # Fail if critical files are missing
           if ($missingFiles.Count -gt 0) {
             Write-Host "`n❌ Build failed: Missing critical artifacts:" -ForegroundColor Red
             $missingFiles | ForEach-Object { Write-Host "  - $_" -ForegroundColor Red }
+            exit 1
+          }
+
+          # Fail if no artifacts were collected at all
+          if ($artifacts.Count -eq 0) {
+            Write-Host "`n❌ Build failed: No artifacts were collected!" -ForegroundColor Red
+            Write-Host "This may indicate a build failure or incorrect artifact paths." -ForegroundColor Red
             exit 1
           }
 
