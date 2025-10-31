@@ -155,17 +155,8 @@ jobs:
         run: |
           $needs_reconfigure = $false
 
-          # Clang-CL builds always need a clean configuration due to compiler change
-          if ("${{ inputs.use-clang }}" -eq "true") {
-            Write-Host "Clang-CL build - forcing clean configuration"
-            if (Test-Path "${{ steps.build_dir.outputs.name }}/CMakeCache.txt") {
-              Remove-Item "${{ steps.build_dir.outputs.name }}/CMakeCache.txt" -Force
-              Write-Host "Removed CMakeCache.txt to avoid compiler conflicts"
-            }
-            $needs_reconfigure = $true
-          }
           # Check if caching is enabled
-          elseif ("${{ inputs.enable-caching }}" -eq "true") {
+          if ("${{ inputs.enable-caching }}" -eq "true") {
             if ("${{ steps.cache_build.outputs.cache-hit }}" -ne "true") {
               Write-Host "Cache miss - full configure needed"
               $needs_reconfigure = $true
