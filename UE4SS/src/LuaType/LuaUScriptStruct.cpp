@@ -201,7 +201,7 @@ namespace RC::LuaType
     {
         auto& lua_object = lua.get_userdata<UScriptStruct>();
 
-        Unreal::FName property_name = Unreal::FName(ensure_str(lua.get_string()));
+        Unreal::FName property_name = Unreal::FName(ensure_str(lua.get_string()), Unreal::FNAME_Find);
 
         // Check if property_name is 'NONE'
         if (property_name.GetComparisonIndex() == 0)

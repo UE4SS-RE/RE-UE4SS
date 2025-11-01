@@ -75,8 +75,8 @@ namespace RC::UEGenerator::JSONDumper
 
     auto static should_skip_property(FProperty* property) -> bool
     {
-        static FName uber_graph_frame_name = FName(STR("UberGraphFrame"));
-        static FName default_scene_root_name = FName(STR("DefaultSceneRoot"));
+        static FName uber_graph_frame_name = FName(STR("UberGraphFrame"), FNAME_Find);
+        static FName default_scene_root_name = FName(STR("DefaultSceneRoot"), FNAME_Find);
 
         if (property->HasAnyPropertyFlags(Unreal::EPropertyFlags::CPF_ReturnParm))
         {
@@ -104,12 +104,12 @@ namespace RC::UEGenerator::JSONDumper
 
     auto static should_skip_general_function(UFunction* function) -> bool
     {
-        static FName receive_name = FName(STR("Receive"));
-        static FName receive_typo_name = FName(STR("Recieve"));
-        static FName receive_begin_play_name = FName(STR("ReceiveBeginPlay"));
-        static FName receive_destroyed_name = FName(STR("ReceiveDestroyedPlay"));
-        static FName receive_tick_name = FName(STR("ReceiveTick"));
-        static FName user_construction_script_name = FName(STR("UserConstructionScript"));
+        static FName receive_name = FName(STR("Receive"), FNAME_Find);
+        static FName receive_typo_name = FName(STR("Recieve"), FNAME_Find);
+        static FName receive_begin_play_name = FName(STR("ReceiveBeginPlay"), FNAME_Find);
+        static FName receive_destroyed_name = FName(STR("ReceiveDestroyedPlay"), FNAME_Find);
+        static FName receive_tick_name = FName(STR("ReceiveTick"), FNAME_Find);
+        static FName user_construction_script_name = FName(STR("UserConstructionScript"), FNAME_Find);
 
         FName function_fname = function->GetNamePrivate();
         if (function_fname.Equals(receive_name))
