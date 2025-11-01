@@ -24,6 +24,13 @@ namespace RC::Ini
         SetSectionValue,
     };
 
+    enum class ArrayOperation
+    {
+        None,
+        Add,
+        Remove,
+    };
+
     auto state_to_string(State) -> File::StringType;
 
     class TokenParser : public ParserBase::TokenParser
@@ -35,6 +42,7 @@ namespace RC::Ini
         Value* m_current_value{};
         File::StringType m_current_character_data{};
         State m_current_state{State::StartOfFile};
+        ArrayOperation m_array_operation{ArrayOperation::None};
 
       public:
         TokenParser(const ParserBase::Tokenizer& tokenizer, File::StringType& input, std::unordered_map<File::StringType, Section>& output)
@@ -55,6 +63,8 @@ namespace RC::Ini
         RC_INI_PARSER_API auto handle_equals_token(const ParserBase::Token& token) -> void;
         RC_INI_PARSER_API auto handle_new_line_token(const ParserBase::Token& token) -> void;
         RC_INI_PARSER_API auto handle_semi_colon_token(const ParserBase::Token& token) -> void;
+        RC_INI_PARSER_API auto handle_plus_token(const ParserBase::Token& token) -> void;
+        RC_INI_PARSER_API auto handle_minus_token(const ParserBase::Token& token) -> void;
 
       protected:
         RC_INI_PARSER_API auto parse_token(const ParserBase::Token& token) -> void override;

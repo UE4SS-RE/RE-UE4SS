@@ -321,7 +321,7 @@ namespace RC
 
             if (m_has_game_specific_config)
             {
-                Output::send(STR("Found configuration for game: {}\n"), ensure_str(m_mods_directory.parent_path().filename()));
+                Output::send(STR("Found configuration for game: {}\n"), ensure_str(m_working_directory.filename()));
             }
             else
             {
@@ -333,7 +333,16 @@ namespace RC
             Output::send(STR("working directory: {}\n"), ensure_str(m_working_directory));
             Output::send(STR("game executable directory: {}\n"), ensure_str(m_game_executable_directory));
             Output::send(STR("game executable: {} ({} bytes)\n\n\n"), ensure_str(m_game_path_and_exe_name), std::filesystem::file_size(m_game_path_and_exe_name));
-            Output::send(STR("mods directory: {}\n"), ensure_str(m_mods_directory));
+            Output::send(STR("mods directories: "));
+            for (size_t i = 0; i < m_mods_directories.size(); ++i)
+            {
+                Output::send(STR("{}"), ensure_str(m_mods_directories[i]));
+                if (i < m_mods_directories.size() - 1)
+                {
+                    Output::send(STR(", "));
+                }
+            }
+            Output::send(STR("\n"));
             Output::send(STR("log directory: {}\n"), ensure_str(m_log_directory));
             Output::send(STR("object dumper directory: {}\n\n\n"), ensure_str(m_object_dumper_output_directory));
         }
@@ -434,7 +443,6 @@ namespace RC
         m_legacy_root_directory = game_directory_path;
 
         m_working_directory = m_root_directory;
-        m_mods_directory = m_working_directory / "Mods";
         m_game_executable_directory = game_directory_path;
         m_settings_path_and_file = m_root_directory;
         m_game_path_and_exe_name = game_exe_path;
@@ -454,7 +462,6 @@ namespace RC
             {
                 m_has_game_specific_config = true;
                 m_working_directory = item.path();
-                m_mods_directory = item.path() / STR("Mods");
                 m_settings_path_and_file = std::move(item.path());
                 m_log_directory = m_working_directory;
                 m_object_dumper_output_directory = m_working_directory;
@@ -471,10 +478,6 @@ namespace RC
         {
             m_settings_path_and_file = m_legacy_root_directory / m_settings_file_name;
         }
-        if (std::filesystem::exists(m_legacy_root_directory / "Mods") && !std::filesystem::exists(m_mods_directory))
-        {
-            m_mods_directory = m_legacy_root_directory / "Mods";
-        }
     }
 
     auto UE4SSProgram::create_emergency_console_for_early_error(File::StringViewType error_message) -> void
@@ -486,22 +489,42 @@ namespace RC
 
     auto UE4SSProgram::setup_mod_directory_path() -> void
     {
-        // Mods folder path, typically '<m_working_directory>\Mods'
-        // Can be customized via UE4SS-settings.ini
-        if (settings_manager.Overrides.ModsFolderPath.empty())
+        m_mods_directories.clear();
+
+        // Process all paths from ModsFolderPaths array
+        // Note: ModsFolderPath (if set) has already been added to the front of this array in SettingsManager
+        for (const auto& path_entry : settings_manager.Overrides.ModsFolderPaths)
         {
-            m_mods_directory = m_mods_directory.empty() ? m_working_directory / "Mods" : m_mods_directory;
-        }
-        else
-        {
-            if (std::filesystem::path{settings_manager.Overrides.ModsFolderPath}.is_relative())
+            std::filesystem::path temp_path{path_entry};
+            std::filesystem::path resolved_path;
+
+            if (temp_path.is_relative())
             {
-                m_mods_directory = m_working_directory / settings_manager.Overrides.ModsFolderPath;
+                resolved_path = m_working_directory / temp_path;
             }
             else
             {
-                m_mods_directory = settings_manager.Overrides.ModsFolderPath;
+                resolved_path = temp_path;
             }
+            resolved_path = resolved_path.lexically_normal().make_preferred();
+            
+            if (std::find(m_mods_directories.begin(), m_mods_directories.end(), resolved_path) == m_mods_directories.end())
+            {
+                m_mods_directories.push_back(resolved_path);
+            }
+        }
+
+        // If no paths were added, check legacy location for fallback
+        if (m_mods_directories.empty())
+        {
+            std::filesystem::path default_mods_path = m_working_directory / "Mods";
+            
+            if (std::filesystem::exists(m_legacy_root_directory / "Mods") && !std::filesystem::exists(default_mods_path))
+            {
+                default_mods_path = m_legacy_root_directory / "Mods";
+            }
+
+            m_mods_directories.push_back(default_mods_path);
         }
     }
 
@@ -1150,39 +1173,45 @@ namespace RC
 
         Output::send(STR("Setting up mods...\n"));
 
-        if (!std::filesystem::exists(m_mods_directory))
+        for (const auto& mods_directory : m_mods_directories)
         {
-            set_error("Mods directory doesn't exist, please create it: <%S>", m_mods_directory.c_str());
-        }
-
-        for (const auto& sub_directory : std::filesystem::directory_iterator(m_mods_directory))
-        {
-            std::error_code ec;
-
-            // Ignore all non-directories
-            if (!sub_directory.is_directory())
+            if (!std::filesystem::exists(mods_directory))
             {
+                Output::send<LogLevel::Warning>(STR("Mods directory doesn't exist, skipping: {}\n"), ensure_str(mods_directory));
                 continue;
             }
-            if (ec.value() != 0)
-            {
-                set_error("is_directory ran into error %d", ec.value());
-            }
 
-            StringType directory_lowercase = ensure_str(sub_directory.path().stem());
-            std::transform(directory_lowercase.begin(), directory_lowercase.end(), directory_lowercase.begin(), std::towlower);
+            Output::send(STR("Loading mods from: {}\n"), ensure_str(mods_directory));
 
-            if (directory_lowercase == STR("shared"))
+            for (const auto& sub_directory : std::filesystem::directory_iterator(mods_directory))
             {
-                // Do stuff when shared libraries have been implemented
-            }
-            else
-            {
-                // Create the mod but don't install it yet
-                if (std::filesystem::exists(sub_directory.path() / "scripts"))
-                    m_mods.emplace_back(std::make_unique<LuaMod>(*this, ensure_str(sub_directory.path().stem()), ensure_str(sub_directory.path())));
-                if (std::filesystem::exists(sub_directory.path() / "dlls"))
-                    m_mods.emplace_back(std::make_unique<CppMod>(*this, ensure_str(sub_directory.path().stem()), ensure_str(sub_directory.path())));
+                std::error_code ec;
+
+                // Ignore all non-directories
+                if (!sub_directory.is_directory())
+                {
+                    continue;
+                }
+                if (ec.value() != 0)
+                {
+                    set_error("is_directory ran into error %d", ec.value());
+                }
+
+                StringType directory_lowercase = ensure_str(sub_directory.path().stem());
+                std::transform(directory_lowercase.begin(), directory_lowercase.end(), directory_lowercase.begin(), std::towlower);
+
+                if (directory_lowercase == STR("shared"))
+                {
+                    // Do stuff when shared libraries have been implemented
+                }
+                else
+                {
+                    // Create the mod but don't install it yet
+                    if (std::filesystem::exists(sub_directory.path() / "scripts"))
+                        m_mods.emplace_back(std::make_unique<LuaMod>(*this, ensure_str(sub_directory.path().stem()), ensure_str(sub_directory.path())));
+                    if (std::filesystem::exists(sub_directory.path() / "dlls"))
+                        m_mods.emplace_back(std::make_unique<CppMod>(*this, ensure_str(sub_directory.path().stem()), ensure_str(sub_directory.path())));
+                }
             }
         }
     }
@@ -1191,6 +1220,19 @@ namespace RC
     auto install_mods(std::vector<std::unique_ptr<Mod>>& mods) -> void
     {
         ProfilerScope();
+
+        // First pass: find the last occurrence of each mod name
+        std::unordered_map<StringType, Mod*> last_occurrence;
+        for (auto& mod : mods)
+        {
+            if (!dynamic_cast<ModType*>(mod.get()))
+            {
+                continue;
+            }
+            last_occurrence[StringType(mod->get_name())] = mod.get();
+        }
+
+        // Second pass: install mods
         for (auto& mod : mods)
         {
             if (!dynamic_cast<ModType*>(mod.get()))
@@ -1198,15 +1240,29 @@ namespace RC
                 continue;
             }
 
-            bool mod_name_is_taken = std::find_if(mods.begin(), mods.end(), [&](auto& elem) {
-                                         return elem->get_name() == mod->get_name();
-                                     }) == mods.end();
+            // Check if this is the last occurrence of this mod name
+            bool is_last_occurrence = (last_occurrence[StringType(mod->get_name())] == mod.get());
 
-            if (mod_name_is_taken)
+            if (!is_last_occurrence)
             {
                 mod->set_installable(false);
-                Output::send<LogLevel::Warning>(STR("Mod name '{}' is already in use.\n"), mod->get_name());
+                mod->set_installed(false);
                 continue;
+            }
+
+            // Check if there are duplicates
+            size_t count = 0;
+            for (auto& other_mod : mods)
+            {
+                if (dynamic_cast<ModType*>(other_mod.get()) && other_mod->get_name() == mod->get_name())
+                {
+                    count++;
+                }
+            }
+
+            if (count > 1)
+            {
+                Output::send<LogLevel::Warning>(STR("Mod name '{}' is duplicated, using the last occurrence.\n"), mod->get_name());
             }
 
             if (mod->is_installed())
@@ -1568,7 +1624,8 @@ namespace RC
 
     auto UE4SSProgram::get_mods_directory() -> File::StringType
     {
-        return ensure_str(m_mods_directory);
+        // Return the first (primary) mods directory for backwards compatibility
+        return m_mods_directories.empty() ? STR("") : ensure_str(m_mods_directories[0]);
     }
 
     auto UE4SSProgram::get_legacy_root_directory() -> File::StringType

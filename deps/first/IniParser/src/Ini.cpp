@@ -4,6 +4,12 @@
 
 namespace RC::Ini
 {
+    auto Parser::set_array_base(const File::StringType& section, const File::StringType& key, const std::vector<File::StringType>& base_values) -> void
+    {
+        auto& section_obj = m_sections[section];
+        section_obj.arrays[key] = base_values;
+    }
+
     auto Parser::parse_internal(File::StringType& input) -> void
     {
         // Tokenize -> START
@@ -35,6 +41,8 @@ namespace RC::Ini
         tc.add(ParserBase::Token::create(IniTokenType::ClosingSquareBracket, STR("CloseSquareBracket"), STR("]")));
         tc.add(ParserBase::Token::create(IniTokenType::OpeningSquareBracket, STR("OpenSquareBracket"), STR("[")));
         tc.add(ParserBase::Token::create(IniTokenType::SemiColon, STR("SemiColon"), STR(";")));
+        tc.add(ParserBase::Token::create(IniTokenType::Plus, STR("Plus"), STR("+")));
+        tc.add(ParserBase::Token::create(IniTokenType::Minus, STR("Minus"), STR("-")));
 
         tc.set_eof_token(IniTokenType::EndOfFile);
 
@@ -273,5 +281,53 @@ namespace RC::Ini
                 return value.get_ref()->get_bool_value();
             }
         }
+    }
+
+    auto Parser::get_string_array(const File::StringType& section, const File::StringType& key, const std::vector<File::StringType>& default_value) const noexcept -> const std::vector<File::StringType>&
+    {
+        if (!m_parsing_is_complete)
+        {
+            return default_value;
+        }
+
+        const auto& section_iter = m_sections.find(section);
+        if (section_iter == m_sections.end())
+        {
+            return default_value;
+        }
+
+        const auto& arrays = section_iter->second.arrays;
+        const auto& array_iter = arrays.find(key);
+        if (array_iter == arrays.end())
+        {
+            return default_value;
+        }
+
+        return array_iter->second;
+    }
+
+    auto Parser::get_string_array(const File::StringType& section, const File::StringType& key) const -> const std::vector<File::StringType>&
+    {
+        static const std::vector<File::StringType> empty_array{};
+
+        if (!m_parsing_is_complete)
+        {
+            throw std::runtime_error{"Call to Ini::get_string_array before parsing completed"};
+        }
+
+        const auto& section_iter = m_sections.find(section);
+        if (section_iter == m_sections.end())
+        {
+            throw std::runtime_error{"[Ini::get_string_array] Tried getting array but the section didn't exist."};
+        }
+
+        const auto& arrays = section_iter->second.arrays;
+        const auto& array_iter = arrays.find(key);
+        if (array_iter == arrays.end())
+        {
+            return empty_array;
+        }
+
+        return array_iter->second;
     }
 } // namespace RC::Ini
