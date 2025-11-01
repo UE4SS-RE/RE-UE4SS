@@ -117,7 +117,7 @@ namespace RC
         std::filesystem::path m_root_directory;
         std::filesystem::path m_module_file_path;
         std::filesystem::path m_working_directory;
-        std::filesystem::path m_mods_directory;
+        std::vector<std::filesystem::path> m_mods_directories;
         std::filesystem::path m_game_executable_directory;
         std::filesystem::path m_log_directory;
         std::filesystem::path m_object_dumper_output_directory;

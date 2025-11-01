@@ -44,11 +44,35 @@ namespace RC
     {
         auto file = File::open(file_name, File::OpenFor::Reading, File::OverwriteExistingFile::No, File::CreateIfNonExistent::Yes);
         Ini::Parser parser;
-        parser.parse(file);
-        file.close();
 
         constexpr static File::CharType section_overrides[] = STR("Overrides");
         REGISTER_STRING_SETTING(Overrides.ModsFolderPath, section_overrides, ModsFolderPath)
+
+        if (!Overrides.ModsFolderPath.empty())
+        {
+            parser.set_array_base(section_overrides, STR("ModsFolderPaths"), {Overrides.ModsFolderPath});
+            Overrides.ModsFolderPath.clear();
+        }
+        else
+        {
+            parser.set_array_base(section_overrides, STR("ModsFolderPaths"), {STR("./Mods")});
+        }
+
+        parser.parse(file);
+        file.close();
+
+        try
+        {
+            auto parsed_array = parser.get_string_array(section_overrides, STR("ModsFolderPaths"));
+            Overrides.ModsFolderPaths.insert(Overrides.ModsFolderPaths.end(), parsed_array.begin(), parsed_array.end());
+        }
+        catch (std::exception&)
+        {
+            if (Overrides.ModsFolderPaths.empty())
+            {
+                Overrides.ModsFolderPaths.push_back(STR("./Mods"));
+            }
+        }
 
         constexpr static File::CharType section_general[] = STR("General");
         REGISTER_BOOL_SETTING(General.EnableHotReloadSystem, section_general, EnableHotReloadSystem)

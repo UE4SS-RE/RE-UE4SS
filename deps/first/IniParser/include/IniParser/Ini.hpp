@@ -37,6 +37,8 @@ namespace RC::Ini
                                          CanThrow = CanThrow::Yes) const -> std::optional<std::reference_wrapper<const Value>>;
 
       public:
+        RC_INI_PARSER_API auto set_array_base(const File::StringType& section, const File::StringType& key, const std::vector<File::StringType>& base_values) -> void;
+
         RC_INI_PARSER_API auto parse(File::StringType& input) -> void;
         RC_INI_PARSER_API auto parse(const File::Handle&) -> void;
         RC_INI_PARSER_API auto get_list(const File::StringType& section) -> List;
@@ -52,5 +54,7 @@ namespace RC::Ini
         RC_INI_PARSER_API auto get_float(const File::StringType& section, const File::StringType& key) const -> float;
         RC_INI_PARSER_API auto get_bool(const File::StringType& section, const File::StringType& key, bool default_value) const noexcept -> bool;
         RC_INI_PARSER_API auto get_bool(const File::StringType& section, const File::StringType& key) const -> bool;
+        RC_INI_PARSER_API auto get_string_array(const File::StringType& section, const File::StringType& key, const std::vector<File::StringType>& default_value) const noexcept -> const std::vector<File::StringType>&;
+        RC_INI_PARSER_API auto get_string_array(const File::StringType& section, const File::StringType& key) const -> const std::vector<File::StringType>&;
     };
 } // namespace RC::Ini
