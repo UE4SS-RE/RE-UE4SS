@@ -141,6 +141,7 @@ jobs:
       # Cache the build directory for incremental builds
       # Disabled for production releases to ensure clean builds
       # Build cache is compiler-specific since object files differ between MSVC and Clang
+      # Cache key includes hash of CMakeLists/code - when code changes, cache is invalidated
       - name: Cache CMake build directory
         if: ${{ inputs.enable-caching }}
         uses: actions/cache@v4
@@ -150,9 +151,9 @@ jobs:
             ${{ steps.build_dir.outputs.name }}
             !${{ steps.build_dir.outputs.name }}/_deps
             !${{ steps.build_dir.outputs.name }}/ep_downloads
-          key: cmake-build-${{ inputs.use-clang && 'clang' || 'msvc' }}-${{ inputs.build-mode }}-${{ steps.cache_key.outputs.hash }}-${{ github.run_number }}
+          key: cmake-build-${{ inputs.use-clang && 'clang' || 'msvc' }}-${{ inputs.build-mode }}-${{ steps.cache_key.outputs.hash }}
           restore-keys: |
-            cmake-build-${{ inputs.use-clang && 'clang' || 'msvc' }}-${{ inputs.build-mode }}-${{ steps.cache_key.outputs.hash }}-
+            cmake-build-${{ inputs.use-clang && 'clang' || 'msvc' }}-${{ inputs.build-mode }}-
 
       - name: Configure CMake
         run: |
