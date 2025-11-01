@@ -2,7 +2,7 @@
 #include <Helpers/String.hpp>
 #include <LuaType/LuaFName.hpp>
 #include <LuaType/LuaFSoftObjectPath.hpp>
-#include <LuaType/LuaFString.hpp>
+#include <LuaType/LuaUnrealString.hpp>
 
 namespace RC::LuaType
 {
