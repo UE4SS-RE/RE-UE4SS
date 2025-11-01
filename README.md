@@ -27,7 +27,11 @@ The easiest installation is via downloading the non-dev version of the latest no
 
 If your game is in the custom config list, extract the contents from the relevant folder to `Win64` as well.
 
-If you are planning on doing mod development using UE4SS, you can do the same as above but download the zDEV version instead. 
+If you are planning on doing mod development using UE4SS, you can do the same as above but download the zDEV version instead.
+
+### Disabling UE4SS Temporarily
+
+If RE-UE4SS is installed via proxy DLL, you can temporarily disable it without uninstalling by launching the game with the `--disable-ue4ss` command line argument. 
 
 ## Links
 
