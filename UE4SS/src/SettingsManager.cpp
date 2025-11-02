@@ -56,17 +56,16 @@ namespace RC
             mods_directories.insert(mods_directories.begin(), std::filesystem::path{Overrides.ModsFolderPath});
         }
 
-        auto mods_paths_add_list = parser.get_ordered_list(STR("Overrides.ModsFolderPaths.Add"));
-        mods_paths_add_list.for_each([](uint32_t i, const StringType& item) {
-            // Add if not already in the list.
-            // Moves to the bottom of the list if it already exists.
-            UE4SSProgram::get_program().add_mods_directory(item);
-        });
-
-        auto mods_paths_remove_list = parser.get_ordered_list(STR("Overrides.ModsFolderPaths.Remove"));
-        mods_paths_remove_list.for_each([](uint32_t i, const StringType& item) {
-            // Removes if it exists in the list.
-            UE4SSProgram::get_program().remove_mods_directory(item);
+        auto mods_paths_list = parser.get_list(section_overrides);
+        mods_paths_list.for_each(STR("ModsFolderPaths"), [](const StringType& key, const Ini::Value& value) {
+            if (key.starts_with(STR('+')))
+            {
+                UE4SSProgram::get_program().add_mods_directory(value.get_string_value());
+            }
+            else if (key.starts_with(STR('-')))
+            {
+                UE4SSProgram::get_program().remove_mods_directory(value.get_string_value());
+            }
         });
 
         constexpr static File::CharType section_general[] = STR("General");
