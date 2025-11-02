@@ -1,4 +1,3 @@
-#include <algorithm>
 #include <cwctype>
 #include <format>
 
@@ -203,14 +202,6 @@ namespace RC::Ini
             {
                 full_value.append(STR(";"));
             }
-            else if (token_type == IniTokenType::Plus)
-            {
-                full_value.append(STR("+"));
-            }
-            else if (token_type == IniTokenType::Minus)
-            {
-                full_value.append(STR("-"));
-            }
 
             // Exit early and let the state machine deal with the new line
             const auto next_token_type = peek().get_type();
@@ -308,32 +299,6 @@ namespace RC::Ini
         else if (m_current_state == State::SetSectionValue)
         {
             const auto value = characters_to_string(token);
-
-            // Handle array operations
-            if (m_array_operation != ArrayOperation::None)
-            {
-                auto& array = m_current_section->arrays[m_current_character_data];
-
-                if (m_array_operation == ArrayOperation::Add)
-                {
-                    if (!value.empty())
-                    {
-                        array.push_back(value);
-                    }
-                }
-                else if (m_array_operation == ArrayOperation::Remove)
-                {
-                    if (!value.empty())
-                    {
-                        array.erase(std::remove(array.begin(), array.end(), value), array.end());
-                    }
-                }
-
-                m_array_operation = ArrayOperation::None;
-                m_current_character_data.clear();
-                return;
-            }
-
             const auto maybe_other_variable = find_variable_by_name(value);
             if (maybe_other_variable.has_value())
             {
@@ -405,14 +370,6 @@ namespace RC::Ini
                                 to_string(token.to_string()))};
         }
 
-        // Handle array operations if + or - was specified
-        if (m_array_operation != ArrayOperation::None)
-        {
-            // We need to get the value first, then handle array operation
-            m_current_state = State::SetSectionValue;
-            return;
-        }
-
         // Create the value with the correct key and an empty value and store a pointer to it so that the value can be set later
         m_current_value = &m_current_section->key_value_pairs.emplace(m_current_character_data, Value{}).first->second;
         m_current_value->add_string_value(STR(""));
@@ -424,15 +381,6 @@ namespace RC::Ini
 
     auto TokenParser::handle_new_line_token([[maybe_unused]] const ParserBase::Token& token) -> void
     {
-        if (m_array_operation != ArrayOperation::None)
-        {
-            m_array_operation = ArrayOperation::None;
-            m_current_character_data.clear();
-            m_current_value = nullptr;
-            m_current_state = State::NewLineStarted;
-            return;
-        }
-
         if (m_current_section && !m_current_character_data.empty())
         {
             // If the Equals token hasn't set 'is_ordered_list' then we set it here if there aren't any items in the section yet.
@@ -481,46 +429,6 @@ namespace RC::Ini
         }
     }
 
-    auto TokenParser::handle_plus_token([[maybe_unused]] const ParserBase::Token& token) -> void
-    {
-        // Handling a special case for our unquoted strings
-        if (m_current_state == State::SetSectionValue)
-        {
-            handle_characters_token(token);
-            return;
-        }
-
-        // Only treat as array operation if at start of line, otherwise treat as regular character
-        if (m_current_state == State::NewLineStarted || m_current_state == State::StoreSectionKey)
-        {
-            m_array_operation = ArrayOperation::Add;
-        }
-        else
-        {
-            handle_characters_token(token);
-        }
-    }
-
-    auto TokenParser::handle_minus_token([[maybe_unused]] const ParserBase::Token& token) -> void
-    {
-        // Handling a special case for our unquoted strings
-        if (m_current_state == State::SetSectionValue)
-        {
-            handle_characters_token(token);
-            return;
-        }
-
-        // Only treat as array operation if at start of line, otherwise treat as regular character
-        if (m_current_state == State::NewLineStarted || m_current_state == State::StoreSectionKey)
-        {
-            m_array_operation = ArrayOperation::Remove;
-        }
-        else
-        {
-            handle_characters_token(token);
-        }
-    }
-
     auto TokenParser::parse_token(const ParserBase::Token& token) -> void
     {
         switch (token.get_type())
@@ -548,20 +456,7 @@ namespace RC::Ini
         case SemiColon:
             handle_semi_colon_token(token);
             break;
-        case Plus:
-            handle_plus_token(token);
-            break;
-        case Minus:
-            handle_minus_token(token);
-            break;
         case EndOfFile:
-            if (m_array_operation != ArrayOperation::None)
-            {
-                m_array_operation = ArrayOperation::None;
-                m_current_character_data.clear();
-                m_current_value = nullptr;
-            }
-            break;
         default:
             // No other tokens need handling for this particular ini parser
             break;

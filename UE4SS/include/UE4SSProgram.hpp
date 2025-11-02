@@ -223,6 +223,9 @@ namespace RC
         RC_UE4SS_API auto get_game_executable_directory() -> File::StringType;
         RC_UE4SS_API auto get_working_directory() -> File::StringType;
         RC_UE4SS_API auto get_mods_directory() -> File::StringType;
+        RC_UE4SS_API auto get_mods_directories() -> std::vector<std::filesystem::path>&;
+        RC_UE4SS_API auto add_mods_directory(std::filesystem::path) -> void;
+        RC_UE4SS_API auto remove_mods_directory(std::filesystem::path) -> void;
         RC_UE4SS_API auto get_legacy_root_directory() -> File::StringType;
         RC_UE4SS_API auto generate_uht_compatible_headers() -> void;
         RC_UE4SS_API auto generate_cxx_headers(const std::filesystem::path& output_dir) -> void;

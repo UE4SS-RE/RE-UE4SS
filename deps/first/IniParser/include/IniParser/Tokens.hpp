@@ -10,8 +10,6 @@ enum TokenType : int
     ClosingSquareBracket,
     OpeningSquareBracket,
     SemiColon,
-    Plus,
-    Minus,
     EndOfFile,
 };
 using IniTokenType = TokenType;

@@ -10,7 +10,6 @@ namespace RC::Ini
     struct Section
     {
         std::unordered_map<File::StringType, Value> key_value_pairs{};
-        std::unordered_map<File::StringType, std::vector<File::StringType>> arrays{};
         std::vector<File::StringType> ordered_list{};
         bool is_ordered_list{};
     };
@@ -20,15 +19,15 @@ namespace RC::Ini
 
     class List
     {
-      private:
+    private:
         Section* m_section{};
 
-      public:
+    public:
         List(Section* section) : m_section(section)
         {
         }
 
-      public:
+    public:
         auto size() -> size_t
         {
             if (!m_section)

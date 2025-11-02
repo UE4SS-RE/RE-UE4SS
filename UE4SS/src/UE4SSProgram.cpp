@@ -334,14 +334,10 @@ namespace RC
             Output::send(STR("working directory: {}\n"), ensure_str(m_working_directory));
             Output::send(STR("game executable directory: {}\n"), ensure_str(m_game_executable_directory));
             Output::send(STR("game executable: {} ({} bytes)\n\n\n"), ensure_str(m_game_path_and_exe_name), std::filesystem::file_size(m_game_path_and_exe_name));
-            Output::send(STR("mods directories: "));
-            for (size_t i = 0; i < m_mods_directories.size(); ++i)
+            Output::send(STR("mods directories: \n"));
+            for (const auto& [index, mod_directory] : std::ranges::enumerate_view(m_mods_directories))
             {
-                Output::send(STR("{}"), ensure_str(m_mods_directories[i]));
-                if (i < m_mods_directories.size() - 1)
-                {
-                    Output::send(STR(", "));
-                }
+                Output::send(STR("[{}] {}\n"), index, ensure_str(mod_directory));
             }
             Output::send(STR("\n"));
             Output::send(STR("log directory: {}\n"), ensure_str(m_log_directory));
@@ -490,43 +486,15 @@ namespace RC
 
     auto UE4SSProgram::setup_mod_directory_path() -> void
     {
-        m_mods_directories.clear();
-
-        // Process all paths from ModsFolderPaths array
-        // Note: ModsFolderPath (if set) has already been added to the front of this array in SettingsManager
-        for (const auto& path_entry : settings_manager.Overrides.ModsFolderPaths)
-        {
-            std::filesystem::path temp_path{path_entry};
-            std::filesystem::path resolved_path;
-
-            if (temp_path.is_relative())
-            {
-                resolved_path = m_working_directory / temp_path;
-            }
-            else
-            {
-                resolved_path = temp_path;
-            }
-            resolved_path = resolved_path.lexically_normal().make_preferred();
-            
-            if (std::find(m_mods_directories.begin(), m_mods_directories.end(), resolved_path) == m_mods_directories.end())
-            {
-                m_mods_directories.push_back(resolved_path);
-            }
-        }
+        std::filesystem::path default_mods_path = m_working_directory / "Mods";
 
         // If no paths were added, check legacy location for fallback
-        if (m_mods_directories.empty())
+        if (std::filesystem::exists(m_legacy_root_directory / "Mods") && !std::filesystem::exists(default_mods_path))
         {
-            std::filesystem::path default_mods_path = m_working_directory / "Mods";
-            
-            if (std::filesystem::exists(m_legacy_root_directory / "Mods") && !std::filesystem::exists(default_mods_path))
-            {
-                default_mods_path = m_legacy_root_directory / "Mods";
-            }
-
-            m_mods_directories.push_back(default_mods_path);
+            default_mods_path = m_legacy_root_directory / "Mods";
         }
+
+        m_mods_directories.insert(m_mods_directories.begin(), default_mods_path);
     }
 
     auto UE4SSProgram::create_simple_console() -> void
@@ -1180,7 +1148,7 @@ namespace RC
 
         Output::send(STR("Setting up mods...\n"));
 
-        for (const auto& mods_directory : m_mods_directories)
+        for (const auto& mods_directory : std::ranges::reverse_view(m_mods_directories))
         {
             if (!std::filesystem::exists(mods_directory))
             {
@@ -1213,11 +1181,12 @@ namespace RC
                 }
                 else
                 {
+                    auto mod_name = ensure_str(sub_directory.path().stem());
                     // Create the mod but don't install it yet
-                    if (std::filesystem::exists(sub_directory.path() / "scripts"))
-                        m_mods.emplace_back(std::make_unique<LuaMod>(*this, ensure_str(sub_directory.path().stem()), ensure_str(sub_directory.path())));
-                    if (std::filesystem::exists(sub_directory.path() / "dlls"))
-                        m_mods.emplace_back(std::make_unique<CppMod>(*this, ensure_str(sub_directory.path().stem()), ensure_str(sub_directory.path())));
+                    if (!find_mod_by_name<LuaMod>(mod_name) && std::filesystem::exists(sub_directory.path() / "scripts"))
+                        m_mods.emplace_back(std::make_unique<LuaMod>(*this, std::move(mod_name), ensure_str(sub_directory.path())));
+                    if (!find_mod_by_name<CppMod>(mod_name) && std::filesystem::exists(sub_directory.path() / "dlls"))
+                        m_mods.emplace_back(std::make_unique<CppMod>(*this, std::move(mod_name), ensure_str(sub_directory.path())));
                 }
             }
         }
@@ -1255,21 +1224,6 @@ namespace RC
                 mod->set_installable(false);
                 mod->set_installed(false);
                 continue;
-            }
-
-            // Check if there are duplicates
-            size_t count = 0;
-            for (auto& other_mod : mods)
-            {
-                if (dynamic_cast<ModType*>(other_mod.get()) && other_mod->get_name() == mod->get_name())
-                {
-                    count++;
-                }
-            }
-
-            if (count > 1)
-            {
-                Output::send<LogLevel::Warning>(STR("Mod name '{}' is duplicated, using the last occurrence.\n"), mod->get_name());
             }
 
             if (mod->is_installed())
@@ -1633,6 +1587,37 @@ namespace RC
     {
         // Return the first (primary) mods directory for backwards compatibility
         return m_mods_directories.empty() ? STR("") : ensure_str(m_mods_directories[0]);
+    }
+
+    auto UE4SSProgram::get_mods_directories() -> std::vector<std::filesystem::path>&
+    {
+        return m_mods_directories;
+    }
+
+    auto UE4SSProgram::add_mods_directory(std::filesystem::path path) -> void
+    {
+        auto orig_path = path;
+        if (path.is_relative())
+        {
+            path = m_working_directory / path;
+        }
+        path = path.lexically_normal().make_preferred();
+        if (const auto it = std::ranges::find(m_mods_directories, path); it != m_mods_directories.end())
+        {
+            m_mods_directories.erase(it);
+        }
+        m_mods_directories.emplace_back(std::forward<decltype(path)>(path));
+    }
+
+    auto UE4SSProgram::remove_mods_directory(std::filesystem::path path) -> void
+    {
+        auto orig_path = path;
+        if (path.is_relative())
+        {
+            path = m_working_directory / path;
+        }
+        path = path.lexically_normal().make_preferred();
+        std::erase(m_mods_directories, path);
     }
 
     auto UE4SSProgram::get_legacy_root_directory() -> File::StringType

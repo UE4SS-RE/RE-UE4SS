@@ -1,6 +1,7 @@
 #include <Helpers/String.hpp>
 #include <IniParser/Ini.hpp>
 #include <SettingsManager.hpp>
+#include <UE4SSProgram.hpp>
 
 #define REGISTER_STRING_SETTING(member_var, section_name, key)                                                                                                 \
     try                                                                                                                                                        \
@@ -44,35 +45,29 @@ namespace RC
     {
         auto file = File::open(file_name, File::OpenFor::Reading, File::OverwriteExistingFile::No, File::CreateIfNonExistent::Yes);
         Ini::Parser parser;
-
-        constexpr static File::CharType section_overrides[] = STR("Overrides");
-        REGISTER_STRING_SETTING(Overrides.ModsFolderPath, section_overrides, ModsFolderPath)
-
-        if (!Overrides.ModsFolderPath.empty())
-        {
-            parser.set_array_base(section_overrides, STR("ModsFolderPaths"), {Overrides.ModsFolderPath});
-            Overrides.ModsFolderPath.clear();
-        }
-        else
-        {
-            parser.set_array_base(section_overrides, STR("ModsFolderPaths"), {STR("./Mods")});
-        }
-
         parser.parse(file);
         file.close();
 
-        try
+        constexpr static File::CharType section_overrides[] = STR("Overrides");
+        REGISTER_STRING_SETTING(Overrides.ModsFolderPath, section_overrides, ModsFolderPath)
+        if (!Overrides.ModsFolderPath.empty())
         {
-            auto parsed_array = parser.get_string_array(section_overrides, STR("ModsFolderPaths"));
-            Overrides.ModsFolderPaths.insert(Overrides.ModsFolderPaths.end(), parsed_array.begin(), parsed_array.end());
+            auto& mods_directories = UE4SSProgram::get_program().get_mods_directories();
+            mods_directories.insert(mods_directories.begin(), std::filesystem::path{Overrides.ModsFolderPath});
         }
-        catch (std::exception&)
-        {
-            if (Overrides.ModsFolderPaths.empty())
-            {
-                Overrides.ModsFolderPaths.push_back(STR("./Mods"));
-            }
-        }
+
+        auto mods_paths_add_list = parser.get_ordered_list(STR("Overrides.ModsFolderPaths.Add"));
+        mods_paths_add_list.for_each([](uint32_t i, const StringType& item) {
+            // Add if not already in the list.
+            // Moves to the bottom of the list if it already exists.
+            UE4SSProgram::get_program().add_mods_directory(item);
+        });
+
+        auto mods_paths_remove_list = parser.get_ordered_list(STR("Overrides.ModsFolderPaths.Remove"));
+        mods_paths_remove_list.for_each([](uint32_t i, const StringType& item) {
+            // Removes if it exists in the list.
+            UE4SSProgram::get_program().remove_mods_directory(item);
+        });
 
         constexpr static File::CharType section_general[] = STR("General");
         REGISTER_BOOL_SETTING(General.EnableHotReloadSystem, section_general, EnableHotReloadSystem)
