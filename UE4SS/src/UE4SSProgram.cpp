@@ -1197,18 +1197,6 @@ namespace RC
     {
         ProfilerScope();
 
-        // First pass: find the last occurrence of each mod name
-        std::unordered_map<StringType, Mod*> last_occurrence;
-        for (auto& mod : mods)
-        {
-            if (!dynamic_cast<ModType*>(mod.get()))
-            {
-                continue;
-            }
-            last_occurrence[StringType(mod->get_name())] = mod.get();
-        }
-
-        // Second pass: install mods
         for (auto& mod : mods)
         {
             if (!dynamic_cast<ModType*>(mod.get()))
@@ -1216,13 +1204,14 @@ namespace RC
                 continue;
             }
 
-            // Check if this is the last occurrence of this mod name
-            bool is_last_occurrence = (last_occurrence[StringType(mod->get_name())] == mod.get());
+            bool mod_name_is_taken = std::find_if(mods.begin(), mods.end(), [&](auto& elem) {
+                                         return elem->get_name() == mod->get_name();
+                                     }) == mods.end();
 
-            if (!is_last_occurrence)
+            if (mod_name_is_taken)
             {
                 mod->set_installable(false);
-                mod->set_installed(false);
+                Output::send<LogLevel::Warning>(STR("Mod name '{}' is already in use.\n"), mod->get_name());
                 continue;
             }
 
