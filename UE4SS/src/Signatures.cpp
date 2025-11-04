@@ -444,7 +444,7 @@ namespace RC
                     };
         }
 
-        auto lua_gameengine_tick_scan_script = working_directory / "UE4SS_Signatures/CallFunctionByNameWithArguments.lua";
+        auto lua_gameengine_tick_scan_script = working_directory / "UE4SS_Signatures/GameEngineTick.lua";
         if (std::filesystem::exists(lua_gameengine_tick_scan_script))
         {
             config.ScanOverrides.gameengine_tick =
