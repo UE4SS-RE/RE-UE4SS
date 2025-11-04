@@ -386,6 +386,9 @@ namespace RC::LuaType
     RC_UE4SS_API auto push_strproperty(const PusherParams&) -> void;
     RC_UE4SS_API auto push_softobjectproperty(const PusherParams&) -> void;
     RC_UE4SS_API auto push_interfaceproperty(const PusherParams&) -> void;
+    RC_UE4SS_API auto push_delegateproperty(const PusherParams&) -> void;
+    RC_UE4SS_API auto push_multicastdelegateproperty(const PusherParams&) -> void;
+    RC_UE4SS_API auto push_multicastsparsedelegateproperty(const PusherParams&) -> void;
 
     RC_UE4SS_API auto push_functionproperty(const FunctionPusherParams&) -> void;
     // Push to Lua -> END
