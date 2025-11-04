@@ -15,6 +15,7 @@ use patternsleuth::resolvers::{
         fuobject_hash_tables::FUObjectHashTablesGet,
         kismet::GNatives,
         ConsoleManagerSingleton,
+        game_loop::UGameEngineTick,
     },
     ResolveError,
 };
@@ -32,6 +33,7 @@ impl_collector! {
         fuobject_hash_tables_get: FUObjectHashTablesGet,
         gnatives: GNatives,
         console_manager_singleton: ConsoleManagerSingleton,
+        gameengine_tick: UGameEngineTick,
     }
 }
 
@@ -82,20 +84,22 @@ pub struct PsScanConfig {
     fuobject_hash_tables_get: bool,
     gnatives: bool,
     console_manager_singleton: bool,
+    gameengine_tick: bool,
 }
 
 #[repr(C)]
 pub struct PsScanResults {
-    guobject_array: usize,
-    fname_tostring: usize,
-    fname_ctor_wchar: usize,
-    gmalloc: usize,
-    static_construct_object_internal: usize,
-    ftext_fstring: usize,
+    guobject_array: u64,
+    fname_tostring: u64,
+    fname_ctor_wchar: u64,
+    gmalloc: u64,
+    static_construct_object_internal: u64,
+    ftext_fstring: u64,
     engine_version: PsEngineVersion,
-    fuobject_hash_tables_get: usize,
-    gnatives: usize,
-    console_manager_singleton: usize,
+    fuobject_hash_tables_get: u64,
+    gnatives: u64,
+    console_manager_singleton: u64,
+    gameengine_tick: u64,
 }
 
 #[derive(Debug, Default)]
@@ -202,6 +206,13 @@ pub fn ps_scan_internal(ctx: &PsCtx, results: &mut PsScanResults) -> Result<(), 
         console_manager_singleton,
         "ConsoleManagerSingleton",
         "ConsoleManager.lua",
+        true
+    );
+
+    handle!(
+        gameengine_tick,
+        "GameEngineTick",
+        "GameEngineTick.lua",
         true
     );
 
