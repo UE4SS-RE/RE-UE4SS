@@ -40,6 +40,8 @@
     - [UEnum](./lua-api/classes/uenum.md)
     - [AActor](./lua-api/classes/aactor.md)
     - [FString](./lua-api/classes/fstring.md)
+    - [FAnsiString](./lua-api/classes/fansistring.md)
+    - [FUtf8String](./lua-api/classes/futf8string.md)
     - [FName](./lua-api/classes/fname.md)
     - [FText](./lua-api/classes/ftext.md)
     - [FieldClass](./lua-api/classes/fieldclass.md)
