@@ -60,12 +60,15 @@
 ### ToUpper()
 
 - **Return type:** `FUtf8String`
-- **Returns:** a new FUtf8String with all characters converted to uppercase.
+- **Returns:** a new FUtf8String with ASCII characters (a-z) converted to uppercase.
+- **⚠️ Note:** Only ASCII characters are converted, matching Unreal Engine behavior. Multibyte UTF-8 characters (accented characters, Cyrillic, Chinese, etc.) are left unchanged. For example, `"café"` becomes `"cafÉ"`, not `"CAFÉ"`.
 
 ### ToLower()
 
 - **Return type:** `FUtf8String`
-- **Returns:** a new FUtf8String with all characters converted to lowercase.
+- **Returns:** a new FUtf8String with ASCII characters (A-Z) converted to lowercase.
+- **⚠️ Note:** Only ASCII characters are converted, matching Unreal Engine behavior. Multibyte UTF-8 characters (accented characters, Cyrillic, Chinese, etc.) are left unchanged. For example, `"CAFÉ"` becomes `"cafÉ"`, not `"café"`.
+
 
 ## Example Usage
 
@@ -93,5 +96,25 @@ end
 ## Notes
 
 - `FUtf8String` is particularly useful when working with international text or when you need to ensure UTF-8 encoding.
-- The `Len()` method returns the byte length, not character count, as UTF-8 uses variable-length encoding.
-- All string operations maintain proper UTF-8 encoding.
+- The `Len()` method returns the **byte length**, not character count, as UTF-8 uses variable-length encoding (1-4 bytes per character).
+- `Find()`, `StartsWith()`, and `EndsWith()` work correctly with multibyte UTF-8 characters.
+- `ToUpper()` and `ToLower()` only convert ASCII characters (a-z, A-Z), matching Unreal Engine's documented behavior. This is a performance optimization and matches how Epic Games implements these functions across all string types.
+
+## Workarounds for Full UTF-8 Case Conversion
+
+If you need case conversion for non-ASCII characters, consider these alternatives:
+
+```lua
+-- Option 1: Use Lua's string library (if available and UTF-8 aware)
+local text = "Café"
+local upper = text:upper()  -- May work depending on Lua locale settings
+
+-- Option 2: Convert through FString (Windows TCHAR has better Unicode support)
+local utf8str = FUtf8String("Café")
+local fstr = FString(utf8str:ToString())
+local upper = fstr:ToUpper()  -- Works for most common accented characters
+local result = FUtf8String(upper:ToString())
+
+-- Option 3: Implement custom case conversion in Lua
+-- Use UTF-8 aware libraries or Unicode case mapping tables
+```
