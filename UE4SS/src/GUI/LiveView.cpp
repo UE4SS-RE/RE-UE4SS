@@ -1874,8 +1874,14 @@ namespace RC::GUI
             {
                 address_to_search_by = std::stoull(LiveView::s_name_to_search_by, nullptr, 16);
             }
-            catch (std::invalid_argument) {} // query isn't a valid hex number; can't be an address
-            catch (std::out_of_range) {} // is a hex number, but too big, or negative; can't be address
+            catch (std::invalid_argument)
+            {
+                m_modal_search_by_address_error_not_hex = true;
+            }
+            catch (std::out_of_range)
+            {
+                m_modal_search_by_address_error_out_of_range = true;
+            }
         }
 
         UObjectGlobals::ForEachUObject([&](UObject* object, ...) {
@@ -3590,6 +3596,33 @@ namespace RC::GUI
         if (!listeners_allowed)
         {
             ImGui::BeginDisabled();
+        }
+
+        // Render search by address error modals
+        if (m_modal_search_by_address_error_not_hex)
+        {
+            ImGui::OpenPopup("UnableToSearchByAddressNotHexError");
+        }
+
+        if (ImGui::BeginPopupModal("UnableToSearchByAddressNotHexError",
+                                   &m_modal_search_by_address_error_not_hex,
+                                   ImGuiWindowFlags_NoResize | ImGuiWindowFlags_AlwaysAutoResize))
+        {
+            ImGui::Text("Query isn't a valid hex number.");
+            ImGui::EndPopup();
+        }
+
+        if (m_modal_search_by_address_error_out_of_range)
+        {
+            ImGui::OpenPopup("UnableToSearchByAddressOutOfRangeError");
+        }
+
+        if (ImGui::BeginPopupModal("UnableToSearchByAddressOutOfRangeError",
+                                   &m_modal_search_by_address_error_out_of_range,
+                                   ImGuiWindowFlags_NoResize | ImGuiWindowFlags_AlwaysAutoResize))
+        {
+            ImGui::Text("Query is a hex number, but is either too big or negative.");
+            ImGui::EndPopup();
         }
 
         // Update this text if corresponding button's text changes. Textinput width = Spacing + Window margin + Button padding + Button text width
