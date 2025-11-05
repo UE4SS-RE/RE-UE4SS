@@ -209,9 +209,11 @@ int _tmain(int argc, TCHAR* argv[])
     cpp_file << endl;
     cpp_file << "#define WIN32_LEAN_AND_MEAN" << endl;
     cpp_file << "#include <Windows.h>" << endl;
+    cpp_file << "#include <shellapi.h>" << endl;
     cpp_file << "#include <filesystem>" << endl;
     cpp_file << endl;
     cpp_file << "#pragma comment(lib, \"user32.lib\")" << endl;
+    cpp_file << "#pragma comment(lib, \"shell32.lib\")" << endl;
     cpp_file << endl;
 
     cpp_file << "using namespace RC;" << endl;
@@ -253,6 +255,30 @@ int _tmain(int argc, TCHAR* argv[])
     cpp_file << "bool is_absolute_path(const std::string& path)" << endl;
     cpp_file << "{" << endl;
     cpp_file << "    return fs::path(path).is_absolute();" << endl;
+    cpp_file << "}" << endl;
+    cpp_file << endl;
+
+    cpp_file << "bool should_disable_ue4ss()" << endl;
+    cpp_file << "{" << endl;
+    cpp_file << "    int argc = 0;" << endl;
+    cpp_file << "    LPWSTR* argv = CommandLineToArgvW(GetCommandLineW(), &argc);" << endl;
+    cpp_file << "    if (!argv)" << endl;
+    cpp_file << "    {" << endl;
+    cpp_file << "        return false;" << endl;
+    cpp_file << "    }" << endl;
+    cpp_file << endl;
+    cpp_file << "    bool disable = false;" << endl;
+    cpp_file << "    for (int i = 0; i < argc; i++)" << endl;
+    cpp_file << "    {" << endl;
+    cpp_file << "        if (wcscmp(argv[i], L\"--disable-ue4ss\") == 0)" << endl;
+    cpp_file << "        {" << endl;
+    cpp_file << "            disable = true;" << endl;
+    cpp_file << "            break;" << endl;
+    cpp_file << "        }" << endl;
+    cpp_file << "    }" << endl;
+    cpp_file << endl;
+    cpp_file << "    LocalFree(argv);" << endl;
+    cpp_file << "    return disable;" << endl;
     cpp_file << "}" << endl;
     cpp_file << endl;
 
@@ -308,12 +334,17 @@ int _tmain(int argc, TCHAR* argv[])
     cpp_file << "    if (fdwReason == DLL_PROCESS_ATTACH)" << endl;
     cpp_file << "    {" << endl;
     cpp_file << "        load_original_dll();" << endl;
-    cpp_file << "        HMODULE hUE4SSDll = load_ue4ss_dll(hInstDll);" << endl;
-    cpp_file << "        if (hUE4SSDll)" << endl;
+    cpp_file << "        setup_functions();" << endl;
+    cpp_file << endl;
+    cpp_file << "        // Check if UE4SS should be disabled via command line argument" << endl;
+    cpp_file << "        if (should_disable_ue4ss())" << endl;
     cpp_file << "        {" << endl;
-    cpp_file << "            setup_functions();" << endl;
+    cpp_file << "            // UE4SS is disabled, proxy will still forward calls to original DLL" << endl;
+    cpp_file << "            return TRUE;" << endl;
     cpp_file << "        }" << endl;
-    cpp_file << "        else" << endl;
+    cpp_file << endl;
+    cpp_file << "        HMODULE hUE4SSDll = load_ue4ss_dll(hInstDll);" << endl;
+    cpp_file << "        if (!hUE4SSDll)" << endl;
     cpp_file << "        {" << endl;
     cpp_file << "            MessageBox(nullptr, L\"Failed to load UE4SS.dll. Please see the docs on correct installation: "
                 "https://docs.ue4ss.com/installation-guide\", L\"UE4SS Error\", MB_OK | MB_ICONERROR);"
