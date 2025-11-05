@@ -384,6 +384,8 @@ namespace RC::LuaType
     RC_UE4SS_API auto push_nameproperty(const PusherParams&) -> void;
     RC_UE4SS_API auto push_textproperty(const PusherParams&) -> void;
     RC_UE4SS_API auto push_strproperty(const PusherParams&) -> void;
+    RC_UE4SS_API auto push_utf8strproperty(const PusherParams&) -> void;
+    RC_UE4SS_API auto push_ansistrproperty(const PusherParams&) -> void;
     RC_UE4SS_API auto push_softobjectproperty(const PusherParams&) -> void;
     RC_UE4SS_API auto push_interfaceproperty(const PusherParams&) -> void;
 
