@@ -525,9 +525,6 @@ namespace RC::LuaMadeSimple
         RC_LMS_API auto set_string(const char* str, size_t len) const -> void;
         RC_LMS_API auto set_string(const uint8_t* str, size_t len) const -> void;
 
-        // Peek string without removing from stack
-        [[nodiscard]] RC_LMS_API auto peek_string(int32_t index) const -> std::string_view;
-
         // is_number == lua_isnumber, which returns true if the value is a number or a string convertible to a number
         [[nodiscard]] RC_LMS_API auto is_number(int32_t force_index = 1) const -> bool;
         [[nodiscard]] RC_LMS_API auto get_number(int32_t force_index = 1) const -> double;

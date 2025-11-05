@@ -680,16 +680,6 @@ namespace RC::LuaMadeSimple
         lua_pushlstring(get_lua_state(), str.data(), str.length());
     }
 
-    auto Lua::peek_string(int32_t index) const -> std::string_view
-    {
-        size_t len = 0;
-        const char* str = lua_tolstring(get_lua_state(), index, &len);
-        if (!str) {
-            return std::string_view{};
-        }
-        return std::string_view{str, len};
-    }
-
     auto Lua::is_number(int32_t force_index) const -> bool
     {
         return lua_isnumber(get_lua_state(), force_index);
