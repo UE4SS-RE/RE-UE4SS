@@ -86,7 +86,7 @@ if bindings then
         print(string.format("[%d] %s::%s",
             i,
             binding.Object:GetFullName(),
-            tostring(binding.FunctionName)))
+            binding.FunctionName:ToString()))
     end
 end
 ```
