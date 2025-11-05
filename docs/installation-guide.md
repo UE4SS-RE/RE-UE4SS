@@ -64,6 +64,33 @@ For example, possible paths could be:
 - `C:/ue4ss/`
 - `../../Content/Paks`
 
+### Command Line Path Override
+
+You can also specify a custom path to `UE4SS.dll` via a command line argument. This takes priority over the `override.txt` file.
+
+Use the `--ue4ss-path` argument when launching your game:
+
+```
+game.exe --ue4ss-path "C:\custom\path\to\UE4SS.dll"
+```
+
+Both absolute and relative paths are supported. Relative paths are resolved from the `game executable directory`:
+
+```
+game.exe --ue4ss-path "dev\builds\UE4SS.dll"
+```
+
+This is particularly useful for:
+- Developers testing different UE4SS builds without modifying files
+- Quick switching between UE4SS versions
+- Automated testing with different configurations
+
+**Load Priority Order:**
+1. `--ue4ss-path` command line argument (highest priority)
+2. `override.txt` file
+3. `<game executable directory>/ue4ss/UE4SS.dll`
+4. `<game executable directory>/UE4SS.dll` (lowest priority)
+
 ## Manual Injection
 
 > Using manual injection will mean that the `root directory` and `working directory` are treated as one single directory that happens to also be the same directory as your `game executable directory`, but any directory may be used.
