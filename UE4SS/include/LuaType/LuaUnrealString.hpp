@@ -96,37 +96,37 @@ namespace RC::LuaType
             });
 
             table.add_pair("Append", [](const LuaMadeSimple::Lua& lua) -> int {
-                auto& lua_object = lua.get_userdata<TLuaStringBase>();
-                
+                auto& lua_object = lua.get_userdata<TLuaStringBase>(1, true); // preserve_stack = true
+
                 if (lua.is_string(2))
                 {
-                    std::string_view str_view = lua.peek_string(2);
+                    std::string_view str_view = lua.get_string(2);
                     append_string(lua_object.get_local_cpp_object(), str_view);
                 }
                 else if (lua.is_userdata(2))
                 {
-                    auto& other = lua.get_userdata<TLuaStringBase>(2);
+                    auto& other = lua.get_userdata<TLuaStringBase>(2, true); // preserve_stack = true
                     append_from_object(lua_object.get_local_cpp_object(), other.get_local_cpp_object());
                 }
                 else
                 {
                     lua.throw_error("Append requires a string argument");
                 }
-                
+
                 return 0;
             });
 
             table.add_pair("Find", [](const LuaMadeSimple::Lua& lua) -> int {
-                auto& lua_object = lua.get_userdata<TLuaStringBase>();
-                
+                auto& lua_object = lua.get_userdata<TLuaStringBase>(1, true); // preserve_stack = true
+
                 if (!lua.is_string(2))
                 {
                     lua.throw_error("Find requires a string argument");
                 }
-                
-                std::string_view search = lua.peek_string(2);
+
+                std::string_view search = lua.get_string(2);
                 int32_t result = find_substring(lua_object.get_local_cpp_object(), search);
-                
+
                 if (result == Unreal::INDEX_NONE)
                 {
                     lua.set_nil();
@@ -135,37 +135,37 @@ namespace RC::LuaType
                 {
                     lua.set_integer(result + 1); // Convert to 1-based Lua indexing
                 }
-                
+
                 return 1;
             });
 
             table.add_pair("StartsWith", [](const LuaMadeSimple::Lua& lua) -> int {
-                auto& lua_object = lua.get_userdata<TLuaStringBase>();
-                
+                auto& lua_object = lua.get_userdata<TLuaStringBase>(1, true); // preserve_stack = true
+
                 if (!lua.is_string(2))
                 {
                     lua.throw_error("StartsWith requires a string argument");
                 }
-                
-                std::string_view prefix = lua.peek_string(2);
+
+                std::string_view prefix = lua.get_string(2);
                 bool result = starts_with(lua_object.get_local_cpp_object(), prefix);
                 lua.set_bool(result);
-                
+
                 return 1;
             });
 
             table.add_pair("EndsWith", [](const LuaMadeSimple::Lua& lua) -> int {
-                auto& lua_object = lua.get_userdata<TLuaStringBase>();
-                
+                auto& lua_object = lua.get_userdata<TLuaStringBase>(1, true); // preserve_stack = true
+
                 if (!lua.is_string(2))
                 {
                     lua.throw_error("EndsWith requires a string argument");
                 }
-                
-                std::string_view suffix = lua.peek_string(2);
+
+                std::string_view suffix = lua.get_string(2);
                 bool result = ends_with(lua_object.get_local_cpp_object(), suffix);
                 lua.set_bool(result);
-                
+
                 return 1;
             });
 
