@@ -201,11 +201,11 @@ namespace RC::LuaType
             if (string_data)
             {
                 std::string utf8_string = to_utf8_string(string_data);
-                lua.push_string(utf8_string.data(), utf8_string.length());
+                lua.set_string(utf8_string.data(), utf8_string.length());
             }
             else
             {
-                lua.push_string("", 0);
+                lua.set_string("", 0);
             }
         }
 
@@ -259,11 +259,11 @@ namespace RC::LuaType
             const Unreal::UTF8CHAR* string_data = *str;
             if (string_data)
             {
-                lua.push_string(reinterpret_cast<const char*>(string_data), str.Len());
+                lua.set_string(reinterpret_cast<const char*>(string_data), str.Len());
             }
             else
             {
-                lua.push_string("", 0);
+                lua.set_string("", 0);
             }
         }
 
@@ -317,11 +317,11 @@ namespace RC::LuaType
             const Unreal::ANSICHAR* string_data = *str;
             if (string_data)
             {
-                lua.push_string(string_data, str.Len());
+                lua.set_string(string_data, str.Len());
             }
             else
             {
-                lua.push_string("", 0);
+                lua.set_string("", 0);
             }
         }
 
