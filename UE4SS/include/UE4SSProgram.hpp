@@ -325,6 +325,7 @@ namespace RC
         {
             return *s_program;
         }
+        RC_UE4SS_API static auto parse_colon_separated_string(const StringType& string) -> std::vector<StringType>;
 
       private:
         friend void* HookedLoadLibraryA(const char* dll_name);

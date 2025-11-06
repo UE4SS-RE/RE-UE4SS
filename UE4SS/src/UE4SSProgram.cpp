@@ -209,6 +209,16 @@ namespace RC
             auto& file_device = Output::set_default_devices<Output::NewFileDevice>();
             file_device.set_file_name_and_path(ensure_str((m_log_directory / m_log_file_name)));
 
+            if (StringType ue4ss_mods_paths_var = ensure_str(std::getenv("UE4SS_MODS_PATHS")); !ue4ss_mods_paths_var.empty())
+            {
+                Output::send(STR("Environment variable 'UE4SS_MODS_PATHS' present, adding 'Mods' path overrides: {}\n"), ue4ss_mods_paths_var);
+                const auto paths = parse_colon_separated_string(ue4ss_mods_paths_var);
+                for (const auto& path : std::ranges::reverse_view(paths))
+                {
+                    add_mods_directory(std::filesystem::weakly_canonical(path));
+                }
+            }
+
             create_simple_console();
 
             if (settings_manager.Debug.DebugConsoleEnabled)
@@ -2021,5 +2031,31 @@ namespace RC
         // Do cleanup of static objects here
         // This function is called right before the DLL detaches from the game
         // Including when the player hits the 'X' button to exit the game
+    }
+
+    auto UE4SSProgram::parse_colon_separated_string(const StringType& string) -> std::vector<StringType>
+    {
+        std::vector<StringType> strings{};
+        if (auto end = string.find(STR(':')); end == string.npos)
+        {
+            // No colon, but we still have content in the variable, so we'll assume this a single path.
+            strings.emplace_back(string);
+        }
+        else
+        {
+            size_t start = 0;
+            while (end != string.npos)
+            {
+                strings.emplace_back(string.substr(start, end - start));
+                start = end + 1; // Adding 1 to skip the colon.
+                end = string.find(STR(':'), start);
+                if (end == string.npos)
+                {
+                    // No more colons, but we still content so let's assume that's another path.
+                    strings.emplace_back(string.substr(start));
+                }
+            }
+        }
+        return strings;
     }
 } // namespace RC
