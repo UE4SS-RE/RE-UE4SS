@@ -715,16 +715,155 @@ function UFunction:GetFunctionFlags() end
 function UFunction:SetFunctionFlags(Flags) end
 
 
----A TArray of characters
+---Unreal Engine's standard wide-character string type (TCHAR-based)
 ---@class FString
 local FString = {}
 
----Returns a string that Lua can understand
+---Returns a UTF-8 encoded Lua string
 ---@return string
 function FString:ToString() end
 
----Clears the string by setting the number of elements in the TArray to 0
+---Empties the string by removing all characters
+function FString:Empty() end
+
+---Empties the string by removing all characters (identical to Empty)
 function FString:Clear() end
+
+---Returns the length of the string in characters
+---@return integer
+function FString:Len() end
+
+---Returns true if the string is empty
+---@return boolean
+function FString:IsEmpty() end
+
+---Appends the given string to the end of this string
+---@param str string|FString A Lua string or another FString to append
+function FString:Append(str) end
+
+---Finds the first occurrence of the search string
+---@param search string A Lua string to search for
+---@return integer|nil 1-based index of first occurrence, or nil if not found
+function FString:Find(search) end
+
+---Checks if the string starts with the given prefix
+---@param prefix string A Lua string to check
+---@return boolean
+function FString:StartsWith(prefix) end
+
+---Checks if the string ends with the given suffix
+---@param suffix string A Lua string to check
+---@return boolean
+function FString:EndsWith(suffix) end
+
+---Returns a new FString with all characters converted to uppercase
+---@return FString
+function FString:ToUpper() end
+
+---Returns a new FString with all characters converted to lowercase
+---@return FString
+function FString:ToLower() end
+
+
+---Unreal Engine's UTF-8 encoded string type
+---@class FUtf8String
+local FUtf8String = {}
+
+---Returns a UTF-8 encoded Lua string
+---@return string
+function FUtf8String:ToString() end
+
+---Empties the string by removing all characters
+function FUtf8String:Empty() end
+
+---Empties the string by removing all characters (identical to Empty)
+function FUtf8String:Clear() end
+
+---Returns the number of UTF-8 code units (bytes), not Unicode code points
+---For "Hello 你好", returns 14 (bytes), not 8 (characters)
+---@return integer
+function FUtf8String:Len() end
+
+---Returns true if the string is empty
+---@return boolean
+function FUtf8String:IsEmpty() end
+
+---Appends the given string to the end of this string
+---@param str string|FUtf8String A Lua string or another FUtf8String to append
+function FUtf8String:Append(str) end
+
+---Finds the first occurrence of the search string
+---@param search string A Lua string to search for
+---@return integer|nil 1-based index of first occurrence, or nil if not found
+function FUtf8String:Find(search) end
+
+---Checks if the string starts with the given prefix
+---@param prefix string A Lua string to check
+---@return boolean
+function FUtf8String:StartsWith(prefix) end
+
+---Checks if the string ends with the given suffix
+---@param suffix string A Lua string to check
+---@return boolean
+function FUtf8String:EndsWith(suffix) end
+
+---Returns a new FUtf8String with all characters converted to uppercase
+---@return FUtf8String
+function FUtf8String:ToUpper() end
+
+---Returns a new FUtf8String with all characters converted to lowercase
+---@return FUtf8String
+function FUtf8String:ToLower() end
+
+
+---Unreal Engine's ANSI-encoded string type
+---@class FAnsiString
+local FAnsiString = {}
+
+---Returns an ANSI encoded Lua string
+---@return string
+function FAnsiString:ToString() end
+
+---Empties the string by removing all characters
+function FAnsiString:Empty() end
+
+---Empties the string by removing all characters (identical to Empty)
+function FAnsiString:Clear() end
+
+---Returns the length of the string in characters (each ANSI character is 1 byte)
+---@return integer
+function FAnsiString:Len() end
+
+---Returns true if the string is empty
+---@return boolean
+function FAnsiString:IsEmpty() end
+
+---Appends the given string to the end of this string
+---@param str string|FAnsiString A Lua string or another FAnsiString to append
+function FAnsiString:Append(str) end
+
+---Finds the first occurrence of the search string
+---@param search string A Lua string to search for
+---@return integer|nil 1-based index of first occurrence, or nil if not found
+function FAnsiString:Find(search) end
+
+---Checks if the string starts with the given prefix
+---@param prefix string A Lua string to check
+---@return boolean
+function FAnsiString:StartsWith(prefix) end
+
+---Checks if the string ends with the given suffix
+---@param suffix string A Lua string to check
+---@return boolean
+function FAnsiString:EndsWith(suffix) end
+
+---Returns a new FAnsiString with all characters converted to uppercase
+---@return FAnsiString
+function FAnsiString:ToUpper() end
+
+---Returns a new FAnsiString with all characters converted to lowercase
+---@return FAnsiString
+function FAnsiString:ToLower() end
 
 
 ---@class FieldClass : LocalObject

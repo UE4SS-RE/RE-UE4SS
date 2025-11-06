@@ -18,6 +18,7 @@
 #include <LuaType/LuaCustomProperty.hpp>
 #include <LuaType/LuaFName.hpp>
 #include <LuaType/LuaFText.hpp>
+#include <LuaType/LuaUnrealString.hpp>
 #include <LuaType/LuaFOutputDevice.hpp>
 #include <LuaType/LuaModRef.hpp>
 #include <LuaType/LuaUClass.hpp>
@@ -45,11 +46,14 @@
 #include <Unreal/Property/FMapProperty.hpp>
 #include <Unreal/Property/FNameProperty.hpp>
 #include <Unreal/Property/FObjectProperty.hpp>
-#include <Unreal/Property/FStrProperty.hpp>
+#include <Unreal/CoreUObject/UObject/FStrProperty.hpp>
+#include <Unreal/Core/Containers/FUtf8String.hpp>
+#include <Unreal/Core/Containers/FAnsiString.hpp>
 #include <Unreal/Property/FStructProperty.hpp>
 #include <Unreal/Property/FTextProperty.hpp>
 #include <Unreal/Property/FWeakObjectProperty.hpp>
 #include <Unreal/Property/NumericPropertyTypes.hpp>
+#include <Unreal/CoreUObject/UObject/FUtf8StrProperty.hpp>
 #include <Unreal/TypeChecker.hpp>
 #include <Unreal/UAssetRegistry.hpp>
 #include <Unreal/UAssetRegistryHelpers.hpp>
@@ -869,6 +873,10 @@ namespace RC
         }
         add_property_type_table<Unreal::FTextProperty>(lua, property_types_table, "TextProperty");
         add_property_type_table<Unreal::FStrProperty>(lua, property_types_table, "StrProperty");
+        if (Unreal::Version::IsAtLeast(5, 6))
+        {
+            add_property_type_table<Unreal::FUtf8StrProperty>(lua, property_types_table, "Utf8StrProperty");
+        }
 
         property_types_table.make_global("PropertyTypes");
     }
@@ -3862,6 +3870,51 @@ Overloads:
         LuaType::FText::construct(lua, Unreal::FText());
         lua_setglobal(lua.get_lua_state(), "FText");
         // FText Class -> END
+
+        // FString Class -> START
+        // Pre-load the global FString constructor
+        lua.register_function("FString",
+                              [](const LuaMadeSimple::Lua& lua) -> int {
+                                  if (lua.get_stack_size() < 1 || !lua.is_string())
+                                  {
+                                      lua.throw_error("FString constructor requires a string argument");
+                                  }
+                                  std::string_view str = lua.get_string();
+                                  auto fstring = Unreal::FString(ensure_str(std::string(str)).c_str());
+                                  LuaType::FString::construct(lua, &fstring);
+                                  return 1;
+                              });
+        // FString Class -> END
+
+        // FUtf8String Class -> START
+        // Pre-load the global FUtf8String constructor
+        lua.register_function("FUtf8String",
+                              [](const LuaMadeSimple::Lua& lua) -> int {
+                                  if (lua.get_stack_size() < 1 || !lua.is_string())
+                                  {
+                                      lua.throw_error("FUtf8String constructor requires a string argument");
+                                  }
+                                  std::string_view str = lua.get_string();
+                                  auto utf8string = Unreal::FUtf8String(reinterpret_cast<const Unreal::UTF8CHAR*>(str.data()));
+                                  LuaType::FUtf8String::construct(lua, &utf8string);
+                                  return 1;
+                              });
+        // FUtf8String Class -> END
+
+        // FAnsiString Class -> START
+        // Pre-load the global FAnsiString constructor
+        lua.register_function("FAnsiString",
+                              [](const LuaMadeSimple::Lua& lua) -> int {
+                                  if (lua.get_stack_size() < 1 || !lua.is_string())
+                                  {
+                                      lua.throw_error("FAnsiString constructor requires a string argument");
+                                  }
+                                  std::string_view str = lua.get_string();
+                                  auto ansistring = Unreal::FAnsiString(str.data());
+                                  LuaType::FAnsiString::construct(lua, &ansistring);
+                                  return 1;
+                              });
+        // FAnsiString Class -> END
 
         // FPackageName -> START
         auto package_name = lua.prepare_new_table();

@@ -665,9 +665,19 @@ namespace RC::LuaMadeSimple
         return string;
     }
 
-    auto Lua::set_string(std::string_view string) const -> void
+    auto Lua::set_string(const char* str, size_t len) const -> void
     {
-        lua_pushstring(get_lua_state(), string.data());
+        lua_pushlstring(get_lua_state(), str, len);
+    }
+
+    auto Lua::set_string(const uint8_t* str, size_t len) const -> void
+    {
+        lua_pushlstring(get_lua_state(), reinterpret_cast<const char*>(str), len);
+    }
+
+    auto Lua::set_string(std::string_view str) const -> void
+    {
+        lua_pushlstring(get_lua_state(), str.data(), str.length());
     }
 
     auto Lua::is_number(int32_t force_index) const -> bool

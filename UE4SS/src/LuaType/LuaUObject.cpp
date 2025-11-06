@@ -2,7 +2,7 @@
 #include <LuaType/LuaAActor.hpp>
 #include <LuaType/LuaCustomProperty.hpp>
 #include <LuaType/LuaFName.hpp>
-#include <LuaType/LuaFString.hpp>
+#include <LuaType/LuaUnrealString.hpp>
 #include <LuaType/LuaFText.hpp>
 #include <LuaType/LuaFWeakObjectPtr.hpp>
 #include <LuaType/LuaTArray.hpp>
@@ -1665,6 +1665,90 @@ namespace RC::LuaType
         }
 
         params.throw_error("push_strproperty", "Operation not supported");
+    }
+
+    auto push_utf8strproperty(const PusherParams& params) -> void
+    {
+        Unreal::FUtf8String* string = static_cast<Unreal::FUtf8String*>(params.data);
+        if (!string)
+        {
+            params.throw_error("push_utf8strproperty", "data pointer is nullptr");
+        }
+
+        switch (params.operation)
+        {
+        case Operation::GetNonTrivialLocal:
+        case Operation::Get:
+            LuaType::FUtf8String::construct(params.lua, string);
+            return;
+        case Operation::Set: {
+            if (params.lua.is_string(params.stored_at_index))
+            {
+                auto lua_string = params.lua.get_string(params.stored_at_index);
+                *string = Unreal::FUtf8String(reinterpret_cast<const Unreal::UTF8CHAR*>(lua_string.data()));
+            }
+            else if (params.lua.is_userdata(params.stored_at_index))
+            {
+                auto& rhs = params.lua.get_userdata<LuaType::FUtf8String>(params.stored_at_index);
+                *string = rhs.get_local_cpp_object();
+            }
+            else
+            {
+                params.throw_error("push_utf8strproperty", "Utf8StrProperty can only be set to a string or FUtf8String");
+            }
+            return;
+        }
+        case Operation::GetParam:
+            RemoteUnrealParam::construct(params.lua, params.data, params.base, params.property);
+            return;
+        default:
+            params.throw_error("push_utf8strproperty", "Unhandled Operation");
+            break;
+        }
+
+        params.throw_error("push_utf8strproperty", "Operation not supported");
+    }
+
+    auto push_ansistrproperty(const PusherParams& params) -> void
+    {
+        Unreal::FAnsiString* string = static_cast<Unreal::FAnsiString*>(params.data);
+        if (!string)
+        {
+            params.throw_error("push_ansistrproperty", "data pointer is nullptr");
+        }
+
+        switch (params.operation)
+        {
+        case Operation::GetNonTrivialLocal:
+        case Operation::Get:
+            LuaType::FAnsiString::construct(params.lua, string);
+            return;
+        case Operation::Set: {
+            if (params.lua.is_string(params.stored_at_index))
+            {
+                auto lua_string = params.lua.get_string(params.stored_at_index);
+                *string = Unreal::FAnsiString(lua_string.data());
+            }
+            else if (params.lua.is_userdata(params.stored_at_index))
+            {
+                auto& rhs = params.lua.get_userdata<LuaType::FAnsiString>(params.stored_at_index);
+                *string = rhs.get_local_cpp_object();
+            }
+            else
+            {
+                params.throw_error("push_ansistrproperty", "AnsiStrProperty can only be set to a string or FAnsiString");
+            }
+            return;
+        }
+        case Operation::GetParam:
+            RemoteUnrealParam::construct(params.lua, params.data, params.base, params.property);
+            return;
+        default:
+            params.throw_error("push_ansistrproperty", "Unhandled Operation");
+            break;
+        }
+
+        params.throw_error("push_ansistrproperty", "Operation not supported");
     }
 
     auto push_softobjectproperty(const PusherParams& params) -> void
