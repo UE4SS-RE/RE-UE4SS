@@ -22,6 +22,8 @@ Added basic support for Development/Debug/Test built Unreal Engine games ([UE4SS
 
 Added command line option to disable RE-UE4SS loading via proxy DLL. Use `--disable-ue4ss` to launch game without UE4SS while keeping the proxy DLL installed. ([UE4SS #1069](https://github.com/UE4SS-RE/RE-UE4SS/pull/1069))
 
+Added command line option to specify custom UE4SS.dll path via proxy DLL. Use `--ue4ss-path <path>` to load UE4SS.dll from a custom location, supporting both absolute and relative paths. This allows developers to easily test different UE4SS builds without modifying files. ([UE4SS #1074](https://github.com/UE4SS-RE/RE-UE4SS/pull/1074))
+
 Added new build definition "LessEqual421".  Using this definition for games on UE<=4.21 is not mandatory for UE4SS to function, but will ensure the correct alignment is used in containers. 
 
 **BREAKING:** - This also changes the default FName alignment from 8 to 4. 

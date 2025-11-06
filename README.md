@@ -29,9 +29,12 @@ If your game is in the custom config list, extract the contents from the relevan
 
 If you are planning on doing mod development using UE4SS, you can do the same as above but download the zDEV version instead.
 
-### Disabling UE4SS Temporarily
+### Command Line Options
 
-If RE-UE4SS is installed via proxy DLL, you can temporarily disable it without uninstalling by launching the game with the `--disable-ue4ss` command line argument. 
+If RE-UE4SS is installed via proxy DLL, the following command line options are available:
+
+- `--disable-ue4ss` - Temporarily disable UE4SS without uninstalling by launching the game with this argument.
+- `--ue4ss-path <path>` - Specify a custom path to UE4SS.dll. Supports both absolute paths (e.g., `C:\custom\UE4SS.dll`) and relative paths (e.g., `dev\builds\UE4SS.dll` relative to the game executable directory). Useful for testing different UE4SS builds without modifying installation files. 
 
 ## Links
 

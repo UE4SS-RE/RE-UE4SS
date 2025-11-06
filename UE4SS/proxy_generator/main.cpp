@@ -282,6 +282,30 @@ int _tmain(int argc, TCHAR* argv[])
     cpp_file << "}" << endl;
     cpp_file << endl;
 
+    cpp_file << "std::wstring get_ue4ss_path_from_args()" << endl;
+    cpp_file << "{" << endl;
+    cpp_file << "    int argc = 0;" << endl;
+    cpp_file << "    LPWSTR* argv = CommandLineToArgvW(GetCommandLineW(), &argc);" << endl;
+    cpp_file << "    if (!argv)" << endl;
+    cpp_file << "    {" << endl;
+    cpp_file << "        return L\"\";" << endl;
+    cpp_file << "    }" << endl;
+    cpp_file << endl;
+    cpp_file << "    std::wstring ue4ss_path;" << endl;
+    cpp_file << "    for (int i = 0; i < argc - 1; i++)" << endl;
+    cpp_file << "    {" << endl;
+    cpp_file << "        if (wcscmp(argv[i], L\"--ue4ss-path\") == 0)" << endl;
+    cpp_file << "        {" << endl;
+    cpp_file << "            ue4ss_path = argv[i + 1];" << endl;
+    cpp_file << "            break;" << endl;
+    cpp_file << "        }" << endl;
+    cpp_file << "    }" << endl;
+    cpp_file << endl;
+    cpp_file << "    LocalFree(argv);" << endl;
+    cpp_file << "    return ue4ss_path;" << endl;
+    cpp_file << "}" << endl;
+    cpp_file << endl;
+
     cpp_file << "HMODULE load_ue4ss_dll(HMODULE moduleHandle)" << endl;
     cpp_file << "{" << endl;
     cpp_file << "    HMODULE hModule = nullptr;" << endl;
@@ -289,6 +313,25 @@ int _tmain(int argc, TCHAR* argv[])
     cpp_file << "    GetModuleFileNameW(moduleHandle, moduleFilenameBuffer, sizeof(moduleFilenameBuffer) / sizeof(wchar_t));" << endl;
     cpp_file << "    const auto currentPath = std::filesystem::path(moduleFilenameBuffer).parent_path();" << endl;
     cpp_file << "    const fs::path ue4ssPath = currentPath / \"ue4ss\" / \"UE4SS.dll\";" << endl;
+    cpp_file << endl;
+
+    cpp_file << "    // Check for --ue4ss-path command line argument" << endl;
+    cpp_file << "    std::wstring cmdLineUe4ssPath = get_ue4ss_path_from_args();" << endl;
+    cpp_file << "    if (!cmdLineUe4ssPath.empty())" << endl;
+    cpp_file << "    {" << endl;
+    cpp_file << "        fs::path ue4ssArgPath = cmdLineUe4ssPath;" << endl;
+    cpp_file << "        if (!ue4ssArgPath.is_absolute())" << endl;
+    cpp_file << "        {" << endl;
+    cpp_file << "            ue4ssArgPath = currentPath / ue4ssArgPath;" << endl;
+    cpp_file << "        }" << endl;
+    cpp_file << endl;
+    cpp_file << "        // Attempt to load UE4SS.dll from the command line path" << endl;
+    cpp_file << "        hModule = LoadLibrary(ue4ssArgPath.c_str());" << endl;
+    cpp_file << "        if (hModule)" << endl;
+    cpp_file << "        {" << endl;
+    cpp_file << "            return hModule;" << endl;
+    cpp_file << "        }" << endl;
+    cpp_file << "    }" << endl;
     cpp_file << endl;
 
     cpp_file << "    // Check for override.txt" << endl;
