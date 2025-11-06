@@ -215,7 +215,7 @@ namespace RC
                 const auto paths = parse_colon_separated_string(ue4ss_mods_paths_var);
                 for (const auto& path : std::ranges::reverse_view(paths))
                 {
-                    add_mods_directory(std::filesystem::weakly_canonical(path));
+                    add_mods_directory(path);
                 }
             }
 
@@ -1601,6 +1601,7 @@ namespace RC
             path = m_working_directory / path;
         }
         path = path.lexically_normal().make_preferred();
+        path = std::filesystem::weakly_canonical(path);
         if (const auto it = std::ranges::find(m_mods_directories, path); it != m_mods_directories.end())
         {
             m_mods_directories.erase(it);
