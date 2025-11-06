@@ -1617,6 +1617,7 @@ namespace RC
             path = m_working_directory / path;
         }
         path = path.lexically_normal().make_preferred();
+        path = std::filesystem::weakly_canonical(path);
         std::erase(m_mods_directories, path);
     }
 
