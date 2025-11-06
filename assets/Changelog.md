@@ -109,6 +109,8 @@ Enhanced TMap support to enable round-trip functionality [UE4SS #933](https://gi
 - Fixed proper key-value pair copying when passing maps between Lua and C++
 - Added proper rehashing to ensure map integrity after copying
 
+Added Lua delegate property support with Add/Remove/Clear/GetBindings/Broadcast methods. See [DelegateProperty](https://docs.ue4ss.com/lua-api/classes/delegateproperty.html), [MulticastDelegateProperty](https://docs.ue4ss.com/lua-api/classes/multicastdelegateproperty.html), and [MulticastSparseDelegateProperty](https://docs.ue4ss.com/lua-api/classes/multicastsparsedelegateproperty.html). [#1073](https://github.com/UE4SS-RE/RE-UE4SS/pull/1073)
+
 Added global function `CreateInvalidObject`, which returns an invalid UObject. ([UE4SS #652](https://github.com/UE4SS-RE/RE-UE4SS/issues/652))  
 
 Added GenerateLuaTypes function. ([UE4SS #664](https://github.com/UE4SS-RE/RE-UE4SS/pull/664))  

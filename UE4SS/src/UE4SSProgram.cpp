@@ -110,6 +110,7 @@ namespace RC
         OUTPUT_MEMBER_OFFSETS_FOR_STRUCT(UClass);
         OUTPUT_MEMBER_OFFSETS_FOR_STRUCT(UEnum);
         OUTPUT_MEMBER_OFFSETS_FOR_STRUCT(UFunction);
+        OUTPUT_MEMBER_OFFSETS_FOR_STRUCT(USparseDelegateFunction);
         OUTPUT_MEMBER_OFFSETS_FOR_STRUCT(UField);
         OUTPUT_MEMBER_OFFSETS_FOR_STRUCT(FField);
         OUTPUT_MEMBER_OFFSETS_FOR_STRUCT(FProperty);
@@ -1144,6 +1145,10 @@ namespace RC
         LuaType::StaticState::m_property_value_pushers.emplace(FName(STR("SoftObjectProperty")).GetComparisonIndex(), &LuaType::push_softobjectproperty);
         LuaType::StaticState::m_property_value_pushers.emplace(FName(STR("SoftClassProperty")).GetComparisonIndex(), &LuaType::push_softobjectproperty);
         LuaType::StaticState::m_property_value_pushers.emplace(FName(STR("InterfaceProperty")).GetComparisonIndex(), &LuaType::push_interfaceproperty);
+        LuaType::StaticState::m_property_value_pushers.emplace(FName(STR("DelegateProperty")).GetComparisonIndex(), &LuaType::push_delegateproperty);
+        LuaType::StaticState::m_property_value_pushers.emplace(FName(STR("MulticastDelegateProperty")).GetComparisonIndex(), &LuaType::push_multicastdelegateproperty);
+        LuaType::StaticState::m_property_value_pushers.emplace(FName(STR("MulticastInlineDelegateProperty")).GetComparisonIndex(), &LuaType::push_multicastdelegateproperty);
+        LuaType::StaticState::m_property_value_pushers.emplace(FName(STR("MulticastSparseDelegateProperty")).GetComparisonIndex(), &LuaType::push_multicastsparsedelegateproperty);
     }
 
     auto UE4SSProgram::setup_mods() -> void
