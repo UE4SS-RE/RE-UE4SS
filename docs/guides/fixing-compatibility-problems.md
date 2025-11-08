@@ -68,6 +68,7 @@ For more in-depth instructions, see the [advanced guide](./fixing-compatibility-
 - FText_Constructor  (Optional)
   - Must return the exact address of the start of the function 'FText::FText'.  
     Function signature: `public: cdecl FText::FText(class FString & ptr64)const __ptr64`
+    If on UE5 and the above signature is not found, try `public: __cdecl FText::FromString(class FString const & ptr64)` instead.
 - StaticConstructObject
    - Must return the exact address of the start of the global function 'StaticConstructObject_Internal'.  
      In UE4SS, we scan for a call in the middle of 'UUserWidget::InitializeInputComponent' and then resolve the call location.  
