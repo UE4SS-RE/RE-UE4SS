@@ -51,6 +51,8 @@ Added custom game configurations for Lies of P ([UE4SS #787](https://github.com/
 
 Added custom game configurations for Project Silverfish ([UE4SS #1066](https://github.com/UE4SS-RE/RE-UE4SS/pull/1066))
 
+Added custom game configurations for Whiskerwood ([UE4SS #1079](https://github.com/UE4SS-RE/RE-UE4SS/pull/1079))
+
 The GUI can now be rendered in the game thread if `RenderMode` in UE4SS-settings.ini is set to
 `EngineTick` or `GameViewportClientTick` ([UE4SS #768](https://github.com/UE4SS-RE/RE-UE4SS/pull/768), [UE4SS #794](https://github.com/UE4SS-RE/RE-UE4SS/pull/794)).
 
