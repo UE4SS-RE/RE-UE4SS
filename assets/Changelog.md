@@ -257,6 +257,8 @@ The search filter `ExcludeClassName` can now be found in the `IncludeClassNames`
 
 The following search filters now allow multiple values, with each value separated by a comma: `IncludeClassNames`, `ExcludeClassNames`, `HasProperty`, `HasPropertyType`. ([UE4SS #472](https://github.com/UE4SS-RE/RE-UE4SS/pull/472)) - Buckminsterfullerene 
 
+Large structs that cause FPS problems no longer render, but you can still click on the struct to render each individual property of the struct. ([UE4SS #1080](https://github.com/UE4SS-RE/RE-UE4SS/pull/1080)) 
+
 ### UHT Dumper 
 
 ### Lua API 

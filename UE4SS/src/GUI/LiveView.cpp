@@ -35,6 +35,7 @@
 #include <Unreal/Property/FObjectProperty.hpp>
 #include <Unreal/Property/FEnumProperty.hpp>
 #include <Unreal/Property/NumericPropertyTypes.hpp>
+#include <Unreal/Property/FMapProperty.hpp>
 #include <Unreal/UClass.hpp>
 #include <Unreal/UEnum.hpp>
 #include <Unreal/UFunction.hpp>
@@ -101,6 +102,7 @@ namespace RC::GUI
         void* container = nullptr;
         UObject* obj = nullptr;
         LiveView::ContainerType container_type = LiveView::ContainerType::Object;
+        bool editable = true;
     };
     static DeferredPropertyEditPopup s_deferred_property_edit_popup{};
 
@@ -2198,7 +2200,39 @@ namespace RC::GUI
         FString property_text{};
         auto property_name = to_string(property->GetName());
         auto container_ptr = property->ContainerPtrToValuePtr<void*>(container);
-        property->ExportTextItem(property_text, container_ptr, container_ptr, static_cast<UObject*>(container), NULL);
+        static constexpr int32 s_max_structure_size = 500;
+        auto as_struct_property = CastField<FStructProperty>(property);
+        static constexpr auto s_error_too_large = STR("Too large to display!");
+        bool editable = true;
+        if (auto as_map_property = CastField<FMapProperty>(property))
+        {
+            auto map = std::bit_cast<FScriptMap*>(container_ptr);
+            if (auto value_as_struct_property = CastField<FStructProperty>(as_map_property->GetValueProp());
+                value_as_struct_property && value_as_struct_property->GetStruct()->GetStructureSize() * map->Num() > s_max_structure_size)
+            {
+                editable = false;
+                property_text = FString{s_error_too_large};
+            }
+            else
+            {
+                property->ExportTextItem(property_text, container_ptr, container_ptr, static_cast<UObject*>(container), NULL);
+            }
+        }
+        else if (auto as_array_property = CastField<FArrayProperty>(property);
+                 as_array_property && as_array_property->GetSize() * std::bit_cast<FScriptArray*>(container_ptr)->Num() > s_max_structure_size)
+        {
+            editable = false;
+            property_text = FString{s_error_too_large};
+        }
+        else if (as_struct_property && as_struct_property->GetStruct()->GetStructureSize() > s_max_structure_size)
+        {
+            editable = false;
+            property_text = FString{s_error_too_large};
+        }
+        else
+        {
+            property->ExportTextItem(property_text, container_ptr, container_ptr, static_cast<UObject*>(container), NULL);
+        }
 
         bool open_edit_value_popup{};
 
@@ -2286,7 +2320,7 @@ namespace RC::GUI
                         container_type == ContainerType::Array ? fmt::format("").c_str() : fmt::format(" (0x{:X})", property_offset).c_str(),
                         property_name.c_str());
         }
-        if (auto struct_property = CastField<FStructProperty>(property); struct_property && struct_property->GetStruct()->GetFirstProperty())
+        if (as_struct_property && as_struct_property->GetStruct()->GetFirstProperty())
         {
             ImGui::SameLine();
             auto tree_node_id = fmt::format("{}{}", static_cast<void*>(container_ptr), property_name);
@@ -2294,12 +2328,8 @@ namespace RC::GUI
             {
                 render_property_value_context_menu(tree_node_id);
 
-                for (FProperty* inner_property : struct_property->GetStruct()->ForEachProperty())
+                for (FProperty* inner_property : as_struct_property->GetStruct()->ForEachProperty())
                 {
-                    FString struct_prop_text_item{};
-                    auto struct_prop_container_ptr = inner_property->ContainerPtrToValuePtr<void*>(container_ptr);
-                    inner_property->ExportTextItem(struct_prop_text_item, struct_prop_container_ptr, struct_prop_container_ptr, nullptr, NULL);
-
                     ImGui::Indent();
                     FProperty* last_struct_prop{};
                     next_item_to_render = render_property_value(inner_property,
@@ -2412,10 +2442,25 @@ namespace RC::GUI
 
         if (open_edit_value_popup)
         {
+            // Re-snapshot the value, because it may not be set due to it being too large of a type to export quickly.
+            // Why is this an empty string ? Wtf ?
+            // It seems it's not empty, but imgui isn't rendering the text properly for some reason, it's rendered as spaces.
+            // When you copy the text, it does copy the actual text, not spaces.
+            //FString snapshotted_property_text{};
+            //property->ExportTextItem(snapshotted_property_text, container_ptr, container_ptr, static_cast<UObject*>(container), NULL);
             // Defer the popup opening - store all necessary context
             s_deferred_property_edit_popup.pending = true;
             s_deferred_property_edit_popup.modal_name = edit_property_value_modal_name;
-            s_deferred_property_edit_popup.initial_value = to_string(*property_text);
+            if (!editable)
+            {
+                s_deferred_property_edit_popup.editable = false;
+                s_deferred_property_edit_popup.initial_value = "Too large to edit!";
+            }
+            else
+            {
+                s_deferred_property_edit_popup.editable = true;
+                s_deferred_property_edit_popup.initial_value = to_string(*property_text);
+            }
             s_deferred_property_edit_popup.property = property;
             s_deferred_property_edit_popup.container = container;
             s_deferred_property_edit_popup.obj = obj;
@@ -3397,6 +3442,10 @@ namespace RC::GUI
             ImGui::Text("The game could crash if the new value is invalid.");
             ImGui::Text("The game can override the new value immediately.");
             ImGui::PushItemWidth(-1.0f);
+            if (!s_deferred_property_edit_popup.editable)
+            {
+                ImGui::BeginDisabled();
+            }
             ImGui::InputText("##CurrentPropertyValue", &m_current_property_value_buffer);
             if (ImGui::Button("Apply"))
             {
@@ -3417,6 +3466,10 @@ namespace RC::GUI
                     s_deferred_property_edit_popup.property = nullptr; // Clear the deferred state
                 }
             }
+            if (!s_deferred_property_edit_popup.editable)
+            {
+                ImGui::EndDisabled();
+            }
 
             if (ImGui::BeginPopupModal("UnableToSetNewPropertyValueError",
                                        &m_modal_edit_property_value_error_unable_to_edit,
@@ -3435,6 +3488,7 @@ namespace RC::GUI
         if (!m_modal_edit_property_value_is_open)
         {
             s_deferred_property_edit_popup.property = nullptr;
+            s_deferred_property_edit_popup.editable = true;
         }
 
         // Handle deferred enum edit popup
