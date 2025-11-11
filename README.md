@@ -36,6 +36,12 @@ If RE-UE4SS is installed via proxy DLL, the following command line options are a
 - `--disable-ue4ss` - Temporarily disable UE4SS without uninstalling by launching the game with this argument.
 - `--ue4ss-path <path>` - Specify a custom path to UE4SS.dll. Supports both absolute paths (e.g., `C:\custom\UE4SS.dll`) and relative paths (e.g., `dev\builds\UE4SS.dll` relative to the game executable directory). Useful for testing different UE4SS builds without modifying installation files. 
 
+### Environment Variables
+
+RE-UE4SS supports the following environment variables:
+
+- `UE4SS_MODS_PATHS` - Semicolon-separated list of additional mods directories to load. Paths are processed in reverse order (first entry has highest priority), similar to the `PATH` variable. Example: `C:\SharedMods;D:\GameMods;E:\TestMods`.
+
 ## Links
 
   [Full installation guide](https://docs.ue4ss.com/dev/installation-guide.html)
