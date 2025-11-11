@@ -213,7 +213,7 @@ namespace RC
             {
                 const auto ue4ss_mods_paths_var = ensure_str(ue4ss_mods_paths_var_raw);
                 Output::send(STR("Environment variable 'UE4SS_MODS_PATHS' present, adding 'Mods' path overrides: {}\n"), ue4ss_mods_paths_var);
-                const auto paths = parse_colon_separated_string(ue4ss_mods_paths_var);
+                const auto paths = parse_semicolon_separated_string(ue4ss_mods_paths_var);
                 for (const auto& path : std::ranges::reverse_view(paths))
                 {
                     add_mods_directory(std::filesystem::weakly_canonical(path));
@@ -2036,10 +2036,10 @@ namespace RC
         // Including when the player hits the 'X' button to exit the game
     }
 
-    auto UE4SSProgram::parse_colon_separated_string(const StringType& string) -> std::vector<StringType>
+    auto UE4SSProgram::parse_semicolon_separated_string(const StringType& string) -> std::vector<StringType>
     {
         std::vector<StringType> strings{};
-        if (auto end = string.find(STR(':')); end == string.npos)
+        if (auto end = string.find(STR(';')); end == string.npos)
         {
             // No colon, but we still have content in the variable, so we'll assume this a single path.
             strings.emplace_back(string);
@@ -2051,7 +2051,7 @@ namespace RC
             {
                 strings.emplace_back(string.substr(start, end - start));
                 start = end + 1; // Adding 1 to skip the colon.
-                end = string.find(STR(':'), start);
+                end = string.find(STR(';'), start);
                 if (end == string.npos)
                 {
                     // No more colons, but we still content so let's assume that's another path.
