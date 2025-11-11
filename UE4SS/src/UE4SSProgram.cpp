@@ -209,13 +209,14 @@ namespace RC
             auto& file_device = Output::set_default_devices<Output::NewFileDevice>();
             file_device.set_file_name_and_path(ensure_str((m_log_directory / m_log_file_name)));
 
-            if (StringType ue4ss_mods_paths_var = ensure_str(std::getenv("UE4SS_MODS_PATHS")); !ue4ss_mods_paths_var.empty())
+            if (const auto ue4ss_mods_paths_var_raw = std::getenv("UE4SS_MODS_PATHS"); ue4ss_mods_paths_var_raw)
             {
+                const auto ue4ss_mods_paths_var = ensure_str(ue4ss_mods_paths_var_raw);
                 Output::send(STR("Environment variable 'UE4SS_MODS_PATHS' present, adding 'Mods' path overrides: {}\n"), ue4ss_mods_paths_var);
                 const auto paths = parse_colon_separated_string(ue4ss_mods_paths_var);
                 for (const auto& path : std::ranges::reverse_view(paths))
                 {
-                    add_mods_directory(path);
+                    add_mods_directory(std::filesystem::weakly_canonical(path));
                 }
             }
 
