@@ -3929,6 +3929,7 @@ namespace RC::GUI
                     {
                         new_value = Filter::MaxValueSize::s_value;
                     }
+                    Filter::MaxValueSize::s_value = new_value;
                     Filter::MaxValueSize::s_value_buffer = fmt::format("{}", Filter::MaxValueSize::s_value);
                 }
 
