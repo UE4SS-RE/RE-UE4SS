@@ -2223,7 +2223,7 @@ namespace RC::GUI
         auto property_name = to_string(property->GetName());
         auto container_ptr = property->ContainerPtrToValuePtr<void*>(container);
         auto as_struct_property = CastField<FStructProperty>(property);
-        static constexpr auto s_error_too_large = STR("Too large to display!");
+        static constexpr auto s_error_too_large = STR("Too large to display on one line! Click to view individual members.");
         bool editable = true;
         if (auto as_map_property = CastField<FMapProperty>(property))
         {
