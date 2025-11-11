@@ -77,8 +77,13 @@ function(generate_build_configurations)
                 # Convert lists to strings for CMake variables
                 # Append to preserve any flags set by toolchain files or CMake initialization
                 listToString(final_compiler_flags "${DEFAULT_COMPILER_FLAGS}" "${compiler_flags}")
-                set(CMAKE_CXX_FLAGS_${triplet_upper} "${CMAKE_CXX_FLAGS_${triplet_upper}} ${final_compiler_flags}" CACHE STRING "" FORCE)
-                set(CMAKE_C_FLAGS_${triplet_upper} "${CMAKE_C_FLAGS_${triplet_upper}} ${final_compiler_flags}" CACHE STRING "" FORCE)
+                # Only set if not already in cache to avoid triggering rebuilds
+                if(NOT DEFINED CMAKE_CXX_FLAGS_${triplet_upper})
+                    set(CMAKE_CXX_FLAGS_${triplet_upper} "${final_compiler_flags}" CACHE STRING "")
+                endif()
+                if(NOT DEFINED CMAKE_C_FLAGS_${triplet_upper})
+                    set(CMAKE_C_FLAGS_${triplet_upper} "${final_compiler_flags}" CACHE STRING "")
+                endif()
 
                 # Combine DEFAULT_COMPILER_FLAGS with per-config flags for propagation to external consumers
                 # This ensures both base flags (like /W3, /Zc:inline) and config-specific flags (like /O2) propagate
@@ -97,18 +102,25 @@ function(generate_build_configurations)
                 # and add to TARGET_LINK_OPTIONS for per-config generator expressions
                 # For single-config generators (Ninja), only set the base CMAKE flags for the active config
                 if(is_multi_config)
-                    # Append to existing flags to preserve CMake's defaults (including standard libraries)
-                    set(CMAKE_EXE_LINKER_FLAGS_${triplet_upper} "${CMAKE_EXE_LINKER_FLAGS_${triplet_upper}} ${exe_linker_flags}" CACHE STRING "" FORCE)
-                    set(CMAKE_SHARED_LINKER_FLAGS_${triplet_upper} "${CMAKE_SHARED_LINKER_FLAGS_${triplet_upper}} ${shared_linker_flags}" CACHE STRING "" FORCE)
+                    # Only set if not already in cache to avoid triggering rebuilds
+                    if(NOT DEFINED CMAKE_EXE_LINKER_FLAGS_${triplet_upper})
+                        set(CMAKE_EXE_LINKER_FLAGS_${triplet_upper} "${exe_linker_flags}" CACHE STRING "")
+                    endif()
+                    if(NOT DEFINED CMAKE_SHARED_LINKER_FLAGS_${triplet_upper})
+                        set(CMAKE_SHARED_LINKER_FLAGS_${triplet_upper} "${shared_linker_flags}" CACHE STRING "")
+                    endif()
                     # Include default linker flags for propagation to external consumers
                     # UE4SS is a SHARED library, so use DEFAULT_SHARED_LINKER_FLAGS (which is currently empty)
                     # But also include DEFAULT_EXE_LINKER_FLAGS (/DEBUG:FULL) for completeness
                     list(APPEND TARGET_LINK_OPTIONS_LOCAL "$<$<STREQUAL:$<CONFIG>,${triplet}>:${DEFAULT_EXE_LINKER_FLAGS};${linker_flags}>")
                 elseif("${CMAKE_BUILD_TYPE}" STREQUAL "${triplet}")
-                    # For single-config, append to base flags including DEFAULT_EXE_LINKER_FLAGS
-                    # Preserve CMake's defaults including standard libraries
-                    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${DEFAULT_EXE_LINKER_FLAGS} ${exe_linker_flags}" CACHE STRING "" FORCE)
-                    set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} ${DEFAULT_SHARED_LINKER_FLAGS} ${shared_linker_flags}" CACHE STRING "" FORCE)
+                    # For single-config, only set if not already in cache to avoid triggering rebuilds
+                    if(NOT DEFINED CMAKE_EXE_LINKER_FLAGS)
+                        set(CMAKE_EXE_LINKER_FLAGS "${DEFAULT_EXE_LINKER_FLAGS} ${exe_linker_flags}" CACHE STRING "")
+                    endif()
+                    if(NOT DEFINED CMAKE_SHARED_LINKER_FLAGS)
+                        set(CMAKE_SHARED_LINKER_FLAGS "${DEFAULT_SHARED_LINKER_FLAGS} ${shared_linker_flags}" CACHE STRING "")
+                    endif()
                     message(STATUS "Single-config: Applied ${triplet} linker flags to base CMAKE linker flags")
                     # Also add to TARGET_LINK_OPTIONS for propagation to external consumers
                     list(APPEND TARGET_LINK_OPTIONS_LOCAL "${DEFAULT_EXE_LINKER_FLAGS}")
@@ -141,11 +153,14 @@ function(setup_build_configuration)
     get_property(is_multi_config GLOBAL PROPERTY GENERATOR_IS_MULTI_CONFIG)
 
     if(is_multi_config)
-        set(CMAKE_CONFIGURATION_TYPES ${BUILD_CONFIGS} CACHE STRING "" FORCE)
+        # Only set if not already defined to avoid unnecessary cache modifications
+        if(NOT DEFINED CMAKE_CONFIGURATION_TYPES)
+            set(CMAKE_CONFIGURATION_TYPES ${BUILD_CONFIGS} CACHE STRING "")
+        endif()
     else()
         if(NOT CMAKE_BUILD_TYPE)
             message("Defaulting to Game__Shipping__Win64")
-            set(CMAKE_BUILD_TYPE Game__Shipping__Win64 CACHE STRING "" FORCE)
+            set(CMAKE_BUILD_TYPE Game__Shipping__Win64 CACHE STRING "")
         endif()
 
         set_property(CACHE CMAKE_BUILD_TYPE PROPERTY HELPSTRING "Choose build type")
