@@ -23,6 +23,7 @@
 #include <GUI/LiveView/Filter/InstancesOnly.hpp>
 #include <GUI/LiveView/Filter/NonInstancesOnly.hpp>
 #include <GUI/LiveView/Filter/SearchFilter.hpp>
+#include <GUI/LiveView/Filter/MaxValueSize.hpp>
 #include <GUI/UFunctionCallerWidget.hpp>
 #include <Helpers/String.hpp>
 #include <JSON/JSON.hpp>
@@ -338,6 +339,14 @@ namespace RC::GUI
         filter_data.new_bool(STR("Enabled"), is_enabled);
     }
 
+    static auto add_int32_filter_to_json(JSON::Array& json_filters, const StringType& filter_name, int32_t value) -> void
+    {
+        auto& json_object = json_filters.new_object();
+        json_object.new_string(STR("FilterName"), filter_name);
+        auto& filter_data = json_object.new_object(STR("FilterData"));
+        filter_data.new_number(STR("Value"), value);
+    }
+
     template <typename ContainerType>
     static auto add_array_filter_to_json(JSON::Array& json_filters, const StringType& filter_name, const ContainerType& container, const StringType& array_name)
             -> void
@@ -392,6 +401,9 @@ namespace RC::GUI
             add_array_filter_to_json(json_filters, Filter::HasProperty::s_debug_name, Filter::HasProperty::list_properties, STR("Properties"));
             add_array_filter_to_json(json_filters, Filter::HasPropertyType::s_debug_name, Filter::HasPropertyType::list_property_types, STR("PropertyTypes"));
             add_array_filter_to_json(json_filters, Filter::FunctionParamFlags::s_debug_name, Filter::FunctionParamFlags::s_checkboxes, STR("FunctionParamFlags"));
+        }
+        {
+            add_int32_filter_to_json(json_filters, Filter::MaxValueSize::s_debug_name, Filter::MaxValueSize::s_value);
         }
 
         auto json_file = File::open(StringType{UE4SSProgram::get_program().get_working_directory()} + fmt::format(STR("\\liveview\\filters.meta.json")),
@@ -531,6 +543,16 @@ namespace RC::GUI
                     Filter::FunctionParamFlags::s_checkboxes[index] = flag.as<JSON::Bool>()->get();
                     return LoopAction::Continue;
                 });
+            }
+            else if (filter_name == Filter::MaxValueSize::s_debug_name)
+            {
+                auto number = filter_data.get<JSON::Number>(STR("Value")).get<int64_t>();
+                if (number > std::numeric_limits<int32_t>::max())
+                {
+                    number = std::numeric_limits<int32_t>::max();
+                }
+                Filter::MaxValueSize::s_value = static_cast<int32_t>(number);
+                Filter::MaxValueSize::s_value_buffer = fmt::format("{}", Filter::MaxValueSize::s_value);
             }
 
             return LoopAction::Continue;
@@ -2200,7 +2222,6 @@ namespace RC::GUI
         FString property_text{};
         auto property_name = to_string(property->GetName());
         auto container_ptr = property->ContainerPtrToValuePtr<void*>(container);
-        static constexpr int32 s_max_structure_size = 500;
         auto as_struct_property = CastField<FStructProperty>(property);
         static constexpr auto s_error_too_large = STR("Too large to display!");
         bool editable = true;
@@ -2208,7 +2229,7 @@ namespace RC::GUI
         {
             auto map = std::bit_cast<FScriptMap*>(container_ptr);
             if (auto value_as_struct_property = CastField<FStructProperty>(as_map_property->GetValueProp());
-                value_as_struct_property && value_as_struct_property->GetStruct()->GetStructureSize() * map->Num() > s_max_structure_size)
+                value_as_struct_property && value_as_struct_property->GetStruct()->GetStructureSize() * map->Num() > Filter::MaxValueSize::s_value)
             {
                 editable = false;
                 property_text = FString{s_error_too_large};
@@ -2219,12 +2240,12 @@ namespace RC::GUI
             }
         }
         else if (auto as_array_property = CastField<FArrayProperty>(property);
-                 as_array_property && as_array_property->GetSize() * std::bit_cast<FScriptArray*>(container_ptr)->Num() > s_max_structure_size)
+                 as_array_property && as_array_property->GetSize() * std::bit_cast<FScriptArray*>(container_ptr)->Num() > Filter::MaxValueSize::s_value)
         {
             editable = false;
             property_text = FString{s_error_too_large};
         }
-        else if (as_struct_property && as_struct_property->GetStruct()->GetStructureSize() > s_max_structure_size)
+        else if (as_struct_property && as_struct_property->GetStruct()->GetStructureSize() > Filter::MaxValueSize::s_value)
         {
             editable = false;
             property_text = FString{s_error_too_large};
@@ -3877,6 +3898,36 @@ namespace RC::GUI
                             }
                         }
                     }
+                }
+                // Row 8
+                ImGui::TableNextRow();
+                ImGui::TableNextColumn();
+                ImGui::Text("Maximum Value Size");
+                ImGui::TableNextColumn();
+                ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
+                if (ImGui::InputText("##MaxValueSize", &Filter::MaxValueSize::s_value_buffer))
+                {
+                    int32_t new_value{-1};
+                    try
+                    {
+                        new_value = std::stoi(Filter::MaxValueSize::s_value_buffer);
+                    }
+                    catch (...)
+                    {
+                        if (Filter::MaxValueSize::s_value > 0)
+                        {
+                            new_value = std::numeric_limits<int32_t>::max();
+                        }
+                        else
+                        {
+                            new_value = 0;
+                        }
+                    }
+                    if (new_value < 0)
+                    {
+                        new_value = Filter::MaxValueSize::s_value;
+                    }
+                    Filter::MaxValueSize::s_value_buffer = fmt::format("{}", Filter::MaxValueSize::s_value);
                 }
 
                 ImGui::TableNextRow();
