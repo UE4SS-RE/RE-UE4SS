@@ -2270,7 +2270,9 @@ namespace RC::GUI
                 }
                 if (ImGui::MenuItem("Copy value"))
                 {
-                    ImGui::SetClipboardText(to_string(*property_text).c_str());
+                    FString snapshotted_value{};
+                    property->ExportTextItem(snapshotted_value, container_ptr, container_ptr, static_cast<UObject*>(container), NULL);
+                    ImGui::SetClipboardText(to_string(*snapshotted_value).c_str());
                 }
                 if (container_type == ContainerType::Object || container_type == ContainerType::Struct)
                 {
