@@ -66,14 +66,15 @@ namespace RC
         }
 
         /**
-         * Executes after a Lua mod is started.
-         * Executes for every Lua mod that is starting.
+         * Executes after a Lua mod is started (DEPRECATED).
+         * @deprecated Use the overload with LuaMadeSimple::Lua* hook_lua instead. This overload may be removed in the next release.
          * @param mod_name This is the name of the Lua mod that was started.
          * @param lua This is the main Lua instance.
          * @param main_lua This is the main Lua thread instance.
          * @param async_lua This is the Lua instance for asynchronous things like ExecuteAsync and ExecuteWithDelay.
-         * @param hook_luas This is a container of Lua instances that are used for game-thread hooks like ExecuteInGameThread.
+         * @param hook_luas DEPRECATED: This container previously held multiple hook Lua instances. Now only one hook instance is used.
          */
+        [[deprecated("The hook_luas vector parameter is deprecated. Use the single hook_lua pointer overload instead. This overload may be removed in the next release")]]
         RC_UE4SS_API virtual auto on_lua_start(StringViewType mod_name,
                                                LuaMadeSimple::Lua& lua,
                                                LuaMadeSimple::Lua& main_lua,
@@ -83,12 +84,14 @@ namespace RC
         }
 
         /**
-         * Executes after a Lua mod of the same name is started.
+         * Executes after a Lua mod of the same name is started (DEPRECATED).
+         * @deprecated Use the overload with LuaMadeSimple::Lua* hook_lua instead. This overload may be removed in the next release.
          * @param lua This is the main Lua instance.
          * @param main_lua This is the main Lua thread instance.
          * @param async_lua This is the Lua instance for asynchronous things like ExecuteAsync and ExecuteWithDelay.
-         * @param hook_luas This is a container of Lua instances that are used for game-thread hooks like ExecuteInGameThread.
+         * @param hook_luas DEPRECATED: This container previously held multiple hook Lua instances. Now only one hook instance is used.
          */
+        [[deprecated("The hook_luas vector parameter is deprecated. Use the single hook_lua pointer overload instead. This overload may be removed in the next release")]]
         RC_UE4SS_API virtual auto on_lua_start(LuaMadeSimple::Lua& lua,
                                                LuaMadeSimple::Lua& main_lua,
                                                LuaMadeSimple::Lua& async_lua,
@@ -97,14 +100,15 @@ namespace RC
         }
 
         /**
-         * Executes before a Lua mod is about to be stopped.
-         * Executes for every Lua mod that is stopping.
+         * Executes before a Lua mod is about to be stopped (DEPRECATED).
+         * @deprecated Use the overload with LuaMadeSimple::Lua* hook_lua instead. This overload may be removed in the next release.
          * @param mod_name This is the name of the Lua mod that is about to be stopped.
          * @param lua This is the main Lua instance.
          * @param main_lua This is the main Lua thread instance.
          * @param async_lua This is the Lua instance for asynchronous things like ExecuteAsync and ExecuteWithDelay.
-         * @param hook_luas This is a container of Lua instances that are used for game-thread hooks like ExecuteInGameThread.
+         * @param hook_luas DEPRECATED: This container previously held multiple hook Lua instances. Now only one hook instance is used.
          */
+        [[deprecated("The hook_luas vector parameter is deprecated. Use the single hook_lua pointer overload instead. This overload may be removed in the next release")]]
         RC_UE4SS_API virtual auto on_lua_stop(StringViewType mod_name,
                                               LuaMadeSimple::Lua& lua,
                                               LuaMadeSimple::Lua& main_lua,
@@ -114,12 +118,14 @@ namespace RC
         }
 
         /**
-         * Executes before a Lua mod of the same name is about to be stopped.
+         * Executes before a Lua mod of the same name is about to be stopped (DEPRECATED).
+         * @deprecated Use the overload with LuaMadeSimple::Lua* hook_lua instead. This overload may be removed in the next release.
          * @param lua This is the main Lua instance.
          * @param main_lua This is the main Lua thread instance.
          * @param async_lua This is the Lua instance for asynchronous things like ExecuteAsync and ExecuteWithDelay.
-         * @param hook_luas This is a container of Lua instances that are used for game-thread hooks like ExecuteInGameThread.
+         * @param hook_luas DEPRECATED: This container previously held multiple hook Lua instances. Now only one hook instance is used.
          */
+        [[deprecated("The hook_luas vector parameter is deprecated. Use the single hook_lua pointer overload instead. This overload may be removed in the next release")]]
         RC_UE4SS_API virtual auto on_lua_stop(LuaMadeSimple::Lua& lua,
                                               LuaMadeSimple::Lua& main_lua,
                                               LuaMadeSimple::Lua& async_lua,
@@ -132,6 +138,68 @@ namespace RC
         }
 
         RC_UE4SS_API virtual auto render_tab() -> void {};
+
+        /**
+         * Executes after a Lua mod is started.
+         * Executes for every Lua mod that is starting.
+         * @param mod_name This is the name of the Lua mod that was started.
+         * @param lua This is the main Lua instance.
+         * @param main_lua This is the main Lua thread instance.
+         * @param async_lua This is the Lua instance for asynchronous things like ExecuteAsync and ExecuteWithDelay.
+         * @param hook_lua This is the Lua instance that is used for game-thread hooks like ExecuteInGameThread.
+         */
+        RC_UE4SS_API virtual auto on_lua_start(StringViewType mod_name,
+                                               LuaMadeSimple::Lua& lua,
+                                               LuaMadeSimple::Lua& main_lua,
+                                               LuaMadeSimple::Lua& async_lua,
+                                               LuaMadeSimple::Lua* hook_lua) -> void
+        {
+        }
+
+        /**
+         * Executes after a Lua mod of the same name is started.
+         * @param lua This is the main Lua instance.
+         * @param main_lua This is the main Lua thread instance.
+         * @param async_lua This is the Lua instance for asynchronous things like ExecuteAsync and ExecuteWithDelay.
+         * @param hook_lua This is the Lua instance that is used for game-thread hooks like ExecuteInGameThread.
+         */
+        RC_UE4SS_API virtual auto on_lua_start(LuaMadeSimple::Lua& lua,
+                                               LuaMadeSimple::Lua& main_lua,
+                                               LuaMadeSimple::Lua& async_lua,
+                                               LuaMadeSimple::Lua* hook_lua) -> void
+        {
+        }
+
+        /**
+         * Executes before a Lua mod is about to be stopped.
+         * Executes for every Lua mod that is stopping.
+         * @param mod_name This is the name of the Lua mod that is about to be stopped.
+         * @param lua This is the main Lua instance.
+         * @param main_lua This is the main Lua thread instance.
+         * @param async_lua This is the Lua instance for asynchronous things like ExecuteAsync and ExecuteWithDelay.
+         * @param hook_lua This is the Lua instance that is used for game-thread hooks like ExecuteInGameThread.
+         */
+        RC_UE4SS_API virtual auto on_lua_stop(StringViewType mod_name,
+                                              LuaMadeSimple::Lua& lua,
+                                              LuaMadeSimple::Lua& main_lua,
+                                              LuaMadeSimple::Lua& async_lua,
+                                              LuaMadeSimple::Lua* hook_lua) -> void
+        {
+        }
+
+        /**
+         * Executes before a Lua mod of the same name is about to be stopped.
+         * @param lua This is the main Lua instance.
+         * @param main_lua This is the main Lua thread instance.
+         * @param async_lua This is the Lua instance for asynchronous things like ExecuteAsync and ExecuteWithDelay.
+         * @param hook_lua This is the Lua instance that is used for game-thread hooks like ExecuteInGameThread.
+         */
+        RC_UE4SS_API virtual auto on_lua_stop(LuaMadeSimple::Lua& lua,
+                                              LuaMadeSimple::Lua& main_lua,
+                                              LuaMadeSimple::Lua& async_lua,
+                                              LuaMadeSimple::Lua* hook_lua) -> void
+        {
+        }
 
       protected:
         RC_UE4SS_API auto register_tab(StringViewType tab_name, GUI::GUITab::RenderFunctionType) -> void;

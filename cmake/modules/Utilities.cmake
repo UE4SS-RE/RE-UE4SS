@@ -1,14 +1,17 @@
 # CMake utility functions
 # This module provides utility functions for the build system
 
-# Converts a CMake list to a space-separated string
+# Converts CMake list(s) to a space-separated string
 #
 # Arguments:
 #   VARNAME - Variable name to store the result in parent scope
-#   VALUE - CMake list to convert
+#   ... - One or more CMake lists to convert and concatenate
 #
-function(listToString VARNAME VALUE)
-    string(REPLACE ";" " " result "${VALUE}")
+function(listToString VARNAME)
+    # Combine all arguments after VARNAME into a single list
+    set(combined_list ${ARGN})
+    # Convert the combined list to a space-separated string
+    string(REPLACE ";" " " result "${combined_list}")
     set(${VARNAME} "${result}" PARENT_SCOPE)
 endfunction()
 
@@ -35,10 +38,12 @@ endfunction()
 #   TARGET_COMPILE_DEFINITIONS - Compile definitions for each configuration
 #
 function(generate_build_configurations)
-    # These variables will be set in the parent scope
-    set(BUILD_CONFIGS "" PARENT_SCOPE)
-    set(TARGET_COMPILE_OPTIONS "$<$<NOT:$<COMPILE_LANGUAGE:ASM_MASM>>:${DEFAULT_COMPILER_FLAGS}>" PARENT_SCOPE)
-    set(TARGET_LINK_OPTIONS "${DEFAULT_EXE_LINKER_FLAGS}" "${DEFAULT_SHARED_LINKER_FLAGS}" PARENT_SCOPE)
+    # Determine if we're using a multi-config generator (Visual Studio, Xcode) or single-config (Ninja, Makefiles)
+    get_property(is_multi_config GLOBAL PROPERTY GENERATOR_IS_MULTI_CONFIG)
+
+    # These variables will be built up in _LOCAL variants and set in parent scope at the end
+    set(TARGET_COMPILE_OPTIONS_LOCAL "")
+    set(TARGET_LINK_OPTIONS_LOCAL "")
     set(TARGET_COMPILE_DEFINITIONS_LOCAL ${TARGET_COMPILE_DEFINITIONS})
 
     # Build configs to return
@@ -70,11 +75,19 @@ function(generate_build_configurations)
                     ${${platform_type}_FLAGS})
 
                 # Convert lists to strings for CMake variables
+                # Append to preserve any flags set by toolchain files or CMake initialization
                 listToString(final_compiler_flags "${DEFAULT_COMPILER_FLAGS}" "${compiler_flags}")
-                set(CMAKE_CXX_FLAGS_${triplet_upper} "${final_compiler_flags}" CACHE STRING "" FORCE)
-                set(CMAKE_C_FLAGS_${triplet_upper} "${final_compiler_flags}" CACHE STRING "" FORCE)
+                # Only set if not already in cache to avoid triggering rebuilds
+                if(NOT DEFINED CMAKE_CXX_FLAGS_${triplet_upper})
+                    set(CMAKE_CXX_FLAGS_${triplet_upper} "${final_compiler_flags}" CACHE STRING "")
+                endif()
+                if(NOT DEFINED CMAKE_C_FLAGS_${triplet_upper})
+                    set(CMAKE_C_FLAGS_${triplet_upper} "${final_compiler_flags}" CACHE STRING "")
+                endif()
 
-                list(APPEND TARGET_COMPILE_OPTIONS_LOCAL "$<$<NOT:$<COMPILE_LANGUAGE:ASM_MASM>>:$<$<STREQUAL:$<CONFIG>,${triplet}>:${compiler_flags}>>")
+                # Combine DEFAULT_COMPILER_FLAGS with per-config flags for propagation to external consumers
+                # This ensures both base flags (like /W3, /Zc:inline) and config-specific flags (like /O2) propagate
+                list(APPEND TARGET_COMPILE_OPTIONS_LOCAL "$<$<NOT:$<COMPILE_LANGUAGE:ASM_MASM>>:$<$<STREQUAL:$<CONFIG>,${triplet}>:${DEFAULT_COMPILER_FLAGS};${compiler_flags}>>")
 
                 # Set up linker flags
                 set(linker_flags
@@ -83,12 +96,36 @@ function(generate_build_configurations)
                     ${${platform_type}_LINKER_FLAGS})
 
                 listToString(exe_linker_flags "${DEFAULT_EXE_LINKER_FLAGS}" "${linker_flags}")
-                set(CMAKE_EXE_LINKER_FLAGS_${triplet_upper} "${exe_linker_flags}" CACHE STRING "" FORCE)
-
                 listToString(shared_linker_flags "${DEFAULT_SHARED_LINKER_FLAGS}" "${linker_flags}")
-                set(CMAKE_SHARED_LINKER_FLAGS_${triplet_upper} "${shared_linker_flags}" CACHE STRING "" FORCE)
 
-                list(APPEND TARGET_LINK_OPTIONS_LOCAL "$<$<STREQUAL:$<CONFIG>,${triplet}>:${linker_flags}>")
+                # For multi-config generators (Visual Studio), set config-specific cache variables
+                # and add to TARGET_LINK_OPTIONS for per-config generator expressions
+                # For single-config generators (Ninja), only set the base CMAKE flags for the active config
+                if(is_multi_config)
+                    # Only set if not already in cache to avoid triggering rebuilds
+                    if(NOT DEFINED CMAKE_EXE_LINKER_FLAGS_${triplet_upper})
+                        set(CMAKE_EXE_LINKER_FLAGS_${triplet_upper} "${exe_linker_flags}" CACHE STRING "")
+                    endif()
+                    if(NOT DEFINED CMAKE_SHARED_LINKER_FLAGS_${triplet_upper})
+                        set(CMAKE_SHARED_LINKER_FLAGS_${triplet_upper} "${shared_linker_flags}" CACHE STRING "")
+                    endif()
+                    # Include default linker flags for propagation to external consumers
+                    # UE4SS is a SHARED library, so use DEFAULT_SHARED_LINKER_FLAGS (which is currently empty)
+                    # But also include DEFAULT_EXE_LINKER_FLAGS (/DEBUG:FULL) for completeness
+                    list(APPEND TARGET_LINK_OPTIONS_LOCAL "$<$<STREQUAL:$<CONFIG>,${triplet}>:${DEFAULT_EXE_LINKER_FLAGS};${linker_flags}>")
+                elseif("${CMAKE_BUILD_TYPE}" STREQUAL "${triplet}")
+                    # For single-config, only set if not already in cache to avoid triggering rebuilds
+                    if(NOT DEFINED CMAKE_EXE_LINKER_FLAGS)
+                        set(CMAKE_EXE_LINKER_FLAGS "${DEFAULT_EXE_LINKER_FLAGS} ${exe_linker_flags}" CACHE STRING "")
+                    endif()
+                    if(NOT DEFINED CMAKE_SHARED_LINKER_FLAGS)
+                        set(CMAKE_SHARED_LINKER_FLAGS "${DEFAULT_SHARED_LINKER_FLAGS} ${shared_linker_flags}" CACHE STRING "")
+                    endif()
+                    message(STATUS "Single-config: Applied ${triplet} linker flags to base CMAKE linker flags")
+                    # Also add to TARGET_LINK_OPTIONS for propagation to external consumers
+                    list(APPEND TARGET_LINK_OPTIONS_LOCAL "${DEFAULT_EXE_LINKER_FLAGS}")
+                    list(APPEND TARGET_LINK_OPTIONS_LOCAL "${linker_flags}")
+                endif()
 
                 # Set platform-specific variables
                 foreach(variable ${${platform_type}_VARS})
@@ -116,11 +153,14 @@ function(setup_build_configuration)
     get_property(is_multi_config GLOBAL PROPERTY GENERATOR_IS_MULTI_CONFIG)
 
     if(is_multi_config)
-        set(CMAKE_CONFIGURATION_TYPES ${BUILD_CONFIGS} CACHE STRING "" FORCE)
+        # Only set if not already defined to avoid unnecessary cache modifications
+        if(NOT DEFINED CMAKE_CONFIGURATION_TYPES)
+            set(CMAKE_CONFIGURATION_TYPES ${BUILD_CONFIGS} CACHE STRING "")
+        endif()
     else()
         if(NOT CMAKE_BUILD_TYPE)
             message("Defaulting to Game__Shipping__Win64")
-            set(CMAKE_BUILD_TYPE Game__Shipping__Win64 CACHE STRING "" FORCE)
+            set(CMAKE_BUILD_TYPE Game__Shipping__Win64 CACHE STRING "")
         endif()
 
         set_property(CACHE CMAKE_BUILD_TYPE PROPERTY HELPSTRING "Choose build type")

@@ -69,6 +69,8 @@ namespace RC
     using FNameProperty = Unreal::FNameProperty;
     using FTextProperty = Unreal::FTextProperty;
     using FStrProperty = Unreal::FStrProperty;
+    using FUtf8StrProperty = Unreal::FUtf8StrProperty;
+    using FAnsiStrProperty = Unreal::FAnsiStrProperty;
     template <typename T>
     using TArray = Unreal::TArray<T>;
     using UFunction = Unreal::UFunction;

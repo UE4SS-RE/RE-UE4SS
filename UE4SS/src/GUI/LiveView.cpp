@@ -23,6 +23,7 @@
 #include <GUI/LiveView/Filter/InstancesOnly.hpp>
 #include <GUI/LiveView/Filter/NonInstancesOnly.hpp>
 #include <GUI/LiveView/Filter/SearchFilter.hpp>
+#include <GUI/LiveView/Filter/MaxValueSize.hpp>
 #include <GUI/UFunctionCallerWidget.hpp>
 #include <Helpers/String.hpp>
 #include <JSON/JSON.hpp>
@@ -35,6 +36,7 @@
 #include <Unreal/Property/FObjectProperty.hpp>
 #include <Unreal/Property/FEnumProperty.hpp>
 #include <Unreal/Property/NumericPropertyTypes.hpp>
+#include <Unreal/Property/FMapProperty.hpp>
 #include <Unreal/UClass.hpp>
 #include <Unreal/UEnum.hpp>
 #include <Unreal/UFunction.hpp>
@@ -87,6 +89,7 @@ namespace RC::GUI
     bool LiveView::s_watches_loaded_from_disk{};
     bool LiveView::s_filters_loaded_from_disk{};
     bool LiveView::s_use_regex_for_search{};
+    bool LiveView::s_search_by_address{};
 
     static LiveView* s_live_view{};
 
@@ -100,6 +103,7 @@ namespace RC::GUI
         void* container = nullptr;
         UObject* obj = nullptr;
         LiveView::ContainerType container_type = LiveView::ContainerType::Object;
+        bool editable = true;
     };
     static DeferredPropertyEditPopup s_deferred_property_edit_popup{};
 
@@ -197,6 +201,23 @@ namespace RC::GUI
         }
 
         if (object_full_name.find(name_to_search_by) != object_full_name.npos)
+        {
+            LiveView::s_name_search_results.emplace_back(object);
+            LiveView::s_name_search_results_set.emplace(object);
+        }
+    }
+
+    static void attempt_to_add_search_by_address_result(uintptr_t address_to_search_by, UObject* object)
+    {
+        auto object_addr = std::bit_cast<uintptr_t>(object);
+        if (address_to_search_by < object_addr)
+        {
+            return;
+        }
+
+        auto uclass = object->IsA<UStruct>() ? static_cast<UClass*>(object) : object->GetClassPrivate();
+        uintptr_t object_size = uclass->GetPropertiesSize();
+        if (address_to_search_by < object_addr + object_size)
         {
             LiveView::s_name_search_results.emplace_back(object);
             LiveView::s_name_search_results_set.emplace(object);
@@ -318,6 +339,14 @@ namespace RC::GUI
         filter_data.new_bool(STR("Enabled"), is_enabled);
     }
 
+    static auto add_int32_filter_to_json(JSON::Array& json_filters, const StringType& filter_name, int32_t value) -> void
+    {
+        auto& json_object = json_filters.new_object();
+        json_object.new_string(STR("FilterName"), filter_name);
+        auto& filter_data = json_object.new_object(STR("FilterData"));
+        filter_data.new_number(STR("Value"), value);
+    }
+
     template <typename ContainerType>
     static auto add_array_filter_to_json(JSON::Array& json_filters, const StringType& filter_name, const ContainerType& container, const StringType& array_name)
             -> void
@@ -361,6 +390,7 @@ namespace RC::GUI
             add_bool_filter_to_json(json_filters, STR("IncludeInheritance"), LiveView::s_include_inheritance);
             add_bool_filter_to_json(json_filters, STR("UseRegexForSearch"), LiveView::s_use_regex_for_search);
             add_bool_filter_to_json(json_filters, STR("ApplySearchFiltersWhenNotSearching"), LiveView::s_apply_search_filters_when_not_searching);
+            add_bool_filter_to_json(json_filters, STR("SearchByAddress"), LiveView::s_search_by_address);
             add_bool_filter_to_json(json_filters, Filter::DefaultObjectsOnly::s_debug_name, Filter::DefaultObjectsOnly::s_enabled);
             add_bool_filter_to_json(json_filters, Filter::IncludeDefaultObjects::s_debug_name, Filter::IncludeDefaultObjects::s_enabled);
             add_bool_filter_to_json(json_filters, Filter::InstancesOnly::s_debug_name, Filter::InstancesOnly::s_enabled);
@@ -371,6 +401,9 @@ namespace RC::GUI
             add_array_filter_to_json(json_filters, Filter::HasProperty::s_debug_name, Filter::HasProperty::list_properties, STR("Properties"));
             add_array_filter_to_json(json_filters, Filter::HasPropertyType::s_debug_name, Filter::HasPropertyType::list_property_types, STR("PropertyTypes"));
             add_array_filter_to_json(json_filters, Filter::FunctionParamFlags::s_debug_name, Filter::FunctionParamFlags::s_checkboxes, STR("FunctionParamFlags"));
+        }
+        {
+            add_int32_filter_to_json(json_filters, Filter::MaxValueSize::s_debug_name, Filter::MaxValueSize::s_value);
         }
 
         auto json_file = File::open(StringType{UE4SSProgram::get_program().get_working_directory()} + fmt::format(STR("\\liveview\\filters.meta.json")),
@@ -454,6 +487,10 @@ namespace RC::GUI
             {
                 LiveView::s_apply_search_filters_when_not_searching = filter_data.get<JSON::Bool>(STR("Enabled")).get();
             }
+            else if (filter_name == STR("SearchByAddress"))
+            {
+                LiveView::s_search_by_address = filter_data.get<JSON::Bool>(STR("Enabled")).get();
+            }
             else if (filter_name == Filter::DefaultObjectsOnly::s_debug_name)
             {
                 Filter::DefaultObjectsOnly::s_enabled = filter_data.get<JSON::Bool>(STR("Enabled")).get();
@@ -506,6 +543,16 @@ namespace RC::GUI
                     Filter::FunctionParamFlags::s_checkboxes[index] = flag.as<JSON::Bool>()->get();
                     return LoopAction::Continue;
                 });
+            }
+            else if (filter_name == Filter::MaxValueSize::s_debug_name)
+            {
+                auto number = filter_data.get<JSON::Number>(STR("Value")).get<int64_t>();
+                if (number > std::numeric_limits<int32_t>::max())
+                {
+                    number = std::numeric_limits<int32_t>::max();
+                }
+                Filter::MaxValueSize::s_value = static_cast<int32_t>(number);
+                Filter::MaxValueSize::s_value_buffer = fmt::format("{}", Filter::MaxValueSize::s_value);
             }
 
             return LoopAction::Continue;
@@ -1843,8 +1890,30 @@ namespace RC::GUI
         Output::send(STR("Searching by name...\n"));
         s_name_search_results.clear();
         s_name_search_results_set.clear();
+
+        uintptr_t address_to_search_by = 0;
+        if (LiveView::s_search_by_address)
+        {
+            try
+            {
+                address_to_search_by = std::stoull(LiveView::s_name_to_search_by, nullptr, 16);
+            }
+            catch (std::invalid_argument)
+            {
+                m_modal_search_by_address_error_not_hex = true;
+            }
+            catch (std::out_of_range)
+            {
+                m_modal_search_by_address_error_out_of_range = true;
+            }
+        }
+
         UObjectGlobals::ForEachUObject([&](UObject* object, ...) {
             attempt_to_add_search_result(object);
+            if (address_to_search_by)
+            {
+                attempt_to_add_search_by_address_result(address_to_search_by, object);
+            }
             return LoopAction::Continue;
         });
     }
@@ -2153,7 +2222,38 @@ namespace RC::GUI
         FString property_text{};
         auto property_name = to_string(property->GetName());
         auto container_ptr = property->ContainerPtrToValuePtr<void*>(container);
-        property->ExportTextItem(property_text, container_ptr, container_ptr, static_cast<UObject*>(container), NULL);
+        auto as_struct_property = CastField<FStructProperty>(property);
+        static constexpr auto s_error_too_large = STR("Too large to display on one line! Click to view individual members.");
+        bool editable = true;
+        if (auto as_map_property = CastField<FMapProperty>(property))
+        {
+            auto map = std::bit_cast<FScriptMap*>(container_ptr);
+            if (auto value_as_struct_property = CastField<FStructProperty>(as_map_property->GetValueProp());
+                value_as_struct_property && value_as_struct_property->GetStruct()->GetStructureSize() * map->Num() > Filter::MaxValueSize::s_value)
+            {
+                editable = false;
+                property_text = FString{s_error_too_large};
+            }
+            else
+            {
+                property->ExportTextItem(property_text, container_ptr, container_ptr, static_cast<UObject*>(container), NULL);
+            }
+        }
+        else if (auto as_array_property = CastField<FArrayProperty>(property);
+                 as_array_property && as_array_property->GetSize() * std::bit_cast<FScriptArray*>(container_ptr)->Num() > Filter::MaxValueSize::s_value)
+        {
+            editable = false;
+            property_text = FString{s_error_too_large};
+        }
+        else if (as_struct_property && as_struct_property->GetStruct()->GetStructureSize() > Filter::MaxValueSize::s_value)
+        {
+            editable = false;
+            property_text = FString{s_error_too_large};
+        }
+        else
+        {
+            property->ExportTextItem(property_text, container_ptr, container_ptr, static_cast<UObject*>(container), NULL);
+        }
 
         bool open_edit_value_popup{};
 
@@ -2170,7 +2270,9 @@ namespace RC::GUI
                 }
                 if (ImGui::MenuItem("Copy value"))
                 {
-                    ImGui::SetClipboardText(to_string(property_text.GetCharArray()).c_str());
+                    FString snapshotted_value{};
+                    property->ExportTextItem(snapshotted_value, container_ptr, container_ptr, static_cast<UObject*>(container), NULL);
+                    ImGui::SetClipboardText(to_string(*snapshotted_value).c_str());
                 }
                 if (container_type == ContainerType::Object || container_type == ContainerType::Struct)
                 {
@@ -2241,20 +2343,16 @@ namespace RC::GUI
                         container_type == ContainerType::Array ? fmt::format("").c_str() : fmt::format(" (0x{:X})", property_offset).c_str(),
                         property_name.c_str());
         }
-        if (auto struct_property = CastField<FStructProperty>(property); struct_property && struct_property->GetStruct()->GetFirstProperty())
+        if (as_struct_property && as_struct_property->GetStruct()->GetFirstProperty())
         {
             ImGui::SameLine();
             auto tree_node_id = fmt::format("{}{}", static_cast<void*>(container_ptr), property_name);
-            if (ImGui_TreeNodeEx(fmt::format("{}", to_string(property_text.GetCharArray())).c_str(), tree_node_id.c_str(), ImGuiTreeNodeFlags_NoAutoOpenOnLog))
+            if (ImGui_TreeNodeEx(fmt::format("{}", to_string(*property_text)).c_str(), tree_node_id.c_str(), ImGuiTreeNodeFlags_NoAutoOpenOnLog))
             {
                 render_property_value_context_menu(tree_node_id);
 
-                for (FProperty* inner_property : struct_property->GetStruct()->ForEachProperty())
+                for (FProperty* inner_property : as_struct_property->GetStruct()->ForEachProperty())
                 {
-                    FString struct_prop_text_item{};
-                    auto struct_prop_container_ptr = inner_property->ContainerPtrToValuePtr<void*>(container_ptr);
-                    inner_property->ExportTextItem(struct_prop_text_item, struct_prop_container_ptr, struct_prop_container_ptr, nullptr, NULL);
-
                     ImGui::Indent();
                     FProperty* last_struct_prop{};
                     next_item_to_render = render_property_value(inner_property,
@@ -2279,7 +2377,7 @@ namespace RC::GUI
         {
             ImGui::SameLine();
             auto tree_node_id = fmt::format("{}{}", static_cast<void*>(container_ptr), property_name);
-            if (ImGui_TreeNodeEx(fmt::format("{}", to_string(property_text.GetCharArray())).c_str(), tree_node_id.c_str(), ImGuiTreeNodeFlags_NoAutoOpenOnLog))
+            if (ImGui_TreeNodeEx(fmt::format("{}", to_string(*property_text)).c_str(), tree_node_id.c_str(), ImGuiTreeNodeFlags_NoAutoOpenOnLog))
             {
                 render_property_value_context_menu(tree_node_id);
 
@@ -2338,7 +2436,7 @@ namespace RC::GUI
         else
         {
             ImGui::SameLine();
-            ImGui::Text(fmt::format("{}", to_string(property_text.GetCharArray())).c_str());
+            ImGui::Text(fmt::format("{}", to_string(*property_text)).c_str());
             render_property_value_context_menu();
         }
 
@@ -2367,10 +2465,25 @@ namespace RC::GUI
 
         if (open_edit_value_popup)
         {
+            // Re-snapshot the value, because it may not be set due to it being too large of a type to export quickly.
+            // Why is this an empty string ? Wtf ?
+            // It seems it's not empty, but imgui isn't rendering the text properly for some reason, it's rendered as spaces.
+            // When you copy the text, it does copy the actual text, not spaces.
+            //FString snapshotted_property_text{};
+            //property->ExportTextItem(snapshotted_property_text, container_ptr, container_ptr, static_cast<UObject*>(container), NULL);
             // Defer the popup opening - store all necessary context
             s_deferred_property_edit_popup.pending = true;
             s_deferred_property_edit_popup.modal_name = edit_property_value_modal_name;
-            s_deferred_property_edit_popup.initial_value = to_string(property_text.GetCharArray());
+            if (!editable)
+            {
+                s_deferred_property_edit_popup.editable = false;
+                s_deferred_property_edit_popup.initial_value = "Too large to edit!";
+            }
+            else
+            {
+                s_deferred_property_edit_popup.editable = true;
+                s_deferred_property_edit_popup.initial_value = to_string(*property_text);
+            }
             s_deferred_property_edit_popup.property = property;
             s_deferred_property_edit_popup.container = container;
             s_deferred_property_edit_popup.obj = obj;
@@ -3140,7 +3253,7 @@ namespace RC::GUI
     {
         FString live_value_fstring{};
         watch.property->ExportTextItem(live_value_fstring, watch.property->ContainerPtrToValuePtr<void>(watch.container), nullptr, nullptr, 0);
-        auto live_value_string = StringType{live_value_fstring.GetCharArray()};
+        auto live_value_string = StringType{*live_value_fstring};
 
         if (watch.property_value == live_value_string)
         {
@@ -3202,7 +3315,7 @@ namespace RC::GUI
             FString param_text{};
             auto container_ptr = param->ContainerPtrToValuePtr<void*>(context.TheStack.Locals());
             param->ExportTextItem(param_text, container_ptr, container_ptr, std::bit_cast<UObject*>(function), NULL);
-            buffer.append(fmt::format(STR("    {} = {}\n"), param->GetName(), param_text.GetCharArray()));
+            buffer.append(fmt::format(STR("    {} = {}\n"), param->GetName(), *param_text));
         }
         if (!has_local_params)
         {
@@ -3225,7 +3338,7 @@ namespace RC::GUI
             FString param_text{};
             auto container_ptr = FindOutParamValueAddress(context.TheStack, param);
             param->ExportTextItem(param_text, container_ptr, container_ptr, std::bit_cast<UObject*>(function), NULL);
-            buffer.append(fmt::format(STR("    {} = {}\n"), param->GetName(), param_text.GetCharArray()));
+            buffer.append(fmt::format(STR("    {} = {}\n"), param->GetName(), *param_text));
         }
         if (!has_out_params)
         {
@@ -3239,7 +3352,7 @@ namespace RC::GUI
             FString return_property_text{};
             auto container_ptr = context.RESULT_DECL;
             return_property->ExportTextItem(return_property_text, container_ptr, container_ptr, std::bit_cast<UObject*>(function), NULL);
-            buffer.append(fmt::format(STR("    {}"), return_property_text.GetCharArray()));
+            buffer.append(fmt::format(STR("    {}"), *return_property_text));
         }
         else
         {
@@ -3352,6 +3465,10 @@ namespace RC::GUI
             ImGui::Text("The game could crash if the new value is invalid.");
             ImGui::Text("The game can override the new value immediately.");
             ImGui::PushItemWidth(-1.0f);
+            if (!s_deferred_property_edit_popup.editable)
+            {
+                ImGui::BeginDisabled();
+            }
             ImGui::InputText("##CurrentPropertyValue", &m_current_property_value_buffer);
             if (ImGui::Button("Apply"))
             {
@@ -3372,6 +3489,10 @@ namespace RC::GUI
                     s_deferred_property_edit_popup.property = nullptr; // Clear the deferred state
                 }
             }
+            if (!s_deferred_property_edit_popup.editable)
+            {
+                ImGui::EndDisabled();
+            }
 
             if (ImGui::BeginPopupModal("UnableToSetNewPropertyValueError",
                                        &m_modal_edit_property_value_error_unable_to_edit,
@@ -3390,6 +3511,7 @@ namespace RC::GUI
         if (!m_modal_edit_property_value_is_open)
         {
             s_deferred_property_edit_popup.property = nullptr;
+            s_deferred_property_edit_popup.editable = true;
         }
 
         // Handle deferred enum edit popup
@@ -3553,6 +3675,33 @@ namespace RC::GUI
             ImGui::BeginDisabled();
         }
 
+        // Render search by address error modals
+        if (m_modal_search_by_address_error_not_hex)
+        {
+            ImGui::OpenPopup("UnableToSearchByAddressNotHexError");
+        }
+
+        if (ImGui::BeginPopupModal("UnableToSearchByAddressNotHexError",
+                                   &m_modal_search_by_address_error_not_hex,
+                                   ImGuiWindowFlags_NoResize | ImGuiWindowFlags_AlwaysAutoResize))
+        {
+            ImGui::Text("Query isn't a valid hex number.");
+            ImGui::EndPopup();
+        }
+
+        if (m_modal_search_by_address_error_out_of_range)
+        {
+            ImGui::OpenPopup("UnableToSearchByAddressOutOfRangeError");
+        }
+
+        if (ImGui::BeginPopupModal("UnableToSearchByAddressOutOfRangeError",
+                                   &m_modal_search_by_address_error_out_of_range,
+                                   ImGuiWindowFlags_NoResize | ImGuiWindowFlags_AlwaysAutoResize))
+        {
+            ImGui::Text("Query is a hex number, but is either too big or negative.");
+            ImGui::EndPopup();
+        }
+
         // Update this text if corresponding button's text changes. Textinput width = Spacing + Window margin + Button padding + Button text width
         ImGui::PushItemWidth(-(8.0f + 16.0f + ImGui::GetStyle().FramePadding.x * 2.0f + ImGui::CalcTextSize(ICON_FA_COPY " Copy search result").x));
         bool push_inactive_text_color = !m_search_field_cleared;
@@ -3664,6 +3813,8 @@ namespace RC::GUI
                 ImGui::TableNextRow();
                 ImGui::TableNextColumn();
                 ImGui::Checkbox("Use Regex for search", &s_use_regex_for_search);
+                ImGui::TableNextColumn();
+                ImGui::Checkbox("Match memory address", &s_search_by_address);
 
                 // Row 5
                 ImGui::TableNextRow();
@@ -3749,6 +3900,37 @@ namespace RC::GUI
                             }
                         }
                     }
+                }
+                // Row 8
+                ImGui::TableNextRow();
+                ImGui::TableNextColumn();
+                ImGui::Text("Maximum Value Size");
+                ImGui::TableNextColumn();
+                ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
+                if (ImGui::InputText("##MaxValueSize", &Filter::MaxValueSize::s_value_buffer))
+                {
+                    int32_t new_value{-1};
+                    try
+                    {
+                        new_value = std::stoi(Filter::MaxValueSize::s_value_buffer);
+                    }
+                    catch (...)
+                    {
+                        if (Filter::MaxValueSize::s_value > 0)
+                        {
+                            new_value = std::numeric_limits<int32_t>::max();
+                        }
+                        else
+                        {
+                            new_value = 0;
+                        }
+                    }
+                    if (new_value < 0)
+                    {
+                        new_value = Filter::MaxValueSize::s_value;
+                    }
+                    Filter::MaxValueSize::s_value = new_value;
+                    Filter::MaxValueSize::s_value_buffer = fmt::format("{}", Filter::MaxValueSize::s_value);
                 }
 
                 ImGui::TableNextRow();

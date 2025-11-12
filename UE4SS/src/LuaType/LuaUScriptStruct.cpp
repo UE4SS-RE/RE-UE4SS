@@ -166,7 +166,12 @@ namespace RC::LuaType
     {
         // Access the given property in the given UScriptStruct
 
-        auto property = static_cast<Unreal::FStructProperty*>(struct_data.script_struct->FindProperty(property_name));
+        auto property_name_str = property_name.ToString();
+        auto property = LuaCustomProperty::StaticStorage::property_list.find_or_nullptr(struct_data.script_struct, property_name_str);
+        if (!property)
+        {
+            property = static_cast<Unreal::FStructProperty*>(struct_data.script_struct->FindProperty(property_name));
+        }
         if (!property)
         {
             lua.throw_error(fmt::format("[handle_unreal_property_value]: Was unable to retrieve property '{}' mapped to '{}'",
@@ -196,7 +201,7 @@ namespace RC::LuaType
     {
         auto& lua_object = lua.get_userdata<UScriptStruct>();
 
-        Unreal::FName property_name = Unreal::FName(ensure_str(lua.get_string()));
+        Unreal::FName property_name = Unreal::FName(ensure_str(lua.get_string()), Unreal::FNAME_Find);
 
         // Check if property_name is 'NONE'
         if (property_name.GetComparisonIndex() == 0)

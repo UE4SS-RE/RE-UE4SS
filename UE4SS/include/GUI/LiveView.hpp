@@ -99,6 +99,8 @@ namespace RC::GUI
         bool m_modal_edit_property_value_is_open{};
         bool m_modal_edit_property_value_opened_this_frame{};
         bool m_modal_edit_property_value_error_unable_to_edit{};
+        bool m_modal_search_by_address_error_not_hex{};
+        bool m_modal_search_by_address_error_out_of_range{};
         bool m_listeners_set{};
         bool m_listeners_allowed{};
         bool m_is_initialized{};
@@ -140,6 +142,7 @@ namespace RC::GUI
         static bool s_watches_loaded_from_disk;
         static bool s_filters_loaded_from_disk;
         static bool s_use_regex_for_search;
+        static bool s_search_by_address;
 
       private:
         enum class AffectsHistory

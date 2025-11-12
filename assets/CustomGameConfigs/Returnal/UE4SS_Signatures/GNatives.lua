@@ -1,0 +1,1 @@
+return LoadExport("?GNatives@@3PAP6AXPEAVUObject@@AEAUFFrame@@QEAX@ZA")

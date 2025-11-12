@@ -146,6 +146,10 @@ if (auto val = parser.get_int64(STR("UFunction"), STR("EventGraphCallOffset"), -
     Unreal::UFunction::MemberOffsets.emplace(STR("EventGraphCallOffset"), static_cast<int32_t>(val));
 if (auto val = parser.get_int64(STR("UFunction"), STR("Func"), -1); val != -1)
     Unreal::UFunction::MemberOffsets.emplace(STR("Func"), static_cast<int32_t>(val));
+if (auto val = parser.get_int64(STR("USparseDelegateFunction"), STR("OwningClassName"), -1); val != -1)
+    Unreal::USparseDelegateFunction::MemberOffsets.emplace(STR("OwningClassName"), static_cast<int32_t>(val));
+if (auto val = parser.get_int64(STR("USparseDelegateFunction"), STR("DelegateName"), -1); val != -1)
+    Unreal::USparseDelegateFunction::MemberOffsets.emplace(STR("DelegateName"), static_cast<int32_t>(val));
 if (auto val = parser.get_int64(STR("UField"), STR("Next"), -1); val != -1)
     Unreal::UField::MemberOffsets.emplace(STR("Next"), static_cast<int32_t>(val));
 if (auto val = parser.get_int64(STR("FField"), STR("ClassPrivate"), -1); val != -1)

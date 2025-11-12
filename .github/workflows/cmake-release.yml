@@ -1,0 +1,150 @@
+name: CMake Release (Testing)
+on: workflow_dispatch
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cmake-test-release
+  cancel-in-progress: true
+
+jobs:
+  prepare-release:
+    permissions:
+      contents: write  # Required for creating releases
+    runs-on: ubuntu-latest
+    outputs:
+      release_tag: ${{ steps.release_tag.outputs.release_tag }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.UEPSEUDO_PAT }}
+
+      # NOTE: We intentionally do NOT call `release.py release_commit` here
+      # This is a TEST workflow for validating CMake builds, not for production releases
+      # Production releases should continue using the xmake-based release.yml workflow
+      # This creates timestamped test tags (cmake-test-YYYYMMDD-HHMMSS) instead of version tags
+      #
+      # When ready for production, replace the "Create Test Release Tag" step below with:
+      # - name: Setup Python
+      #   uses: actions/setup-python@v4
+      #   with:
+      #     python-version: '3.9'
+      #
+      # - name: Release Commit
+      #   id: release_commit
+      #   run: python release.py release_commit ${{ github.actor }}
+      #   working-directory: ./tools/buildscripts
+      #
+      # And replace the "Create Test Release" step with:
+      # - name: Release
+      #   uses: softprops/action-gh-release@v1
+      #   with:
+      #     tag_name: ${{ steps.release_commit.outputs.release_tag }}
+      #     body_path: release/release_notes.md
+      #     files: |
+      #       release/UE4SS_v*.zip
+      #       release/zDEV-UE4SS_v*.zip
+      #       release/zCustomGameConfigs.zip
+      #       release/zMapGenBP.zip
+      #
+      # And add a git push step:
+      # - name: Push changes
+      #   uses: ad-m/github-push-action@master
+      #   with:
+      #     github_token: ${{ secrets.GITHUB_TOKEN }}
+      #     branch: ${{ github.ref }}
+      #     tags: true
+
+      - name: Create Test Release Tag
+        id: release_tag
+        run: |
+          timestamp=$(date +'%Y%m%d-%H%M%S')
+          testTag="cmake-test-$timestamp"
+          echo "release_tag=$testTag" >> $GITHUB_OUTPUT
+          echo "Test release tag: $testTag"
+
+  build:
+    needs: prepare-release
+    uses: ./.github/workflows/cmake_build_ue4ss.yml
+    secrets: inherit
+    with:
+      build-mode: "Game__Shipping__Win64"
+      commit-sha: ${{ github.sha }}
+      should-upload-artifact: true
+      artifact-retention-days: 1
+      enable-caching: false  # Disable caching for production test releases
+
+  make-release:
+    needs: [prepare-release, build]
+    permissions:
+      contents: write  # Required for creating releases
+    runs-on: windows-2022
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          fetch-depth: 0
+          token: ${{ secrets.UEPSEUDO_PAT }}
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+
+      - name: Download Build Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: CMAKE-Game__Shipping__Win64
+          path: build_output/
+
+      - name: Verify downloaded files
+        shell: pwsh
+        run: |
+          Write-Host "Contents of build_output:"
+          Get-ChildItem -Path "build_output" -Recurse | ForEach-Object { Write-Host $_.FullName }
+
+          $requiredFiles = @("UE4SS.dll", "dwmapi.dll")
+          foreach ($file in $requiredFiles) {
+            $filePath = Get-ChildItem -Path "build_output" -Recurse -Filter $file -ErrorAction SilentlyContinue | Select-Object -First 1
+            if (-not $filePath) {
+              Write-Error "$file not found in downloaded artifacts!"
+              exit 1
+            }
+          }
+
+      - name: Package
+        id: package
+        run: python tools/buildscripts/release.py package
+
+      - name: Create Test Release Notes
+        run: |
+          @"
+          # CMake Test Release
+
+          This is a test release built with CMake instead of xmake.
+
+          **Build Configuration:**
+          - Build Mode: Game__Shipping__Win64
+          - Compiler: MSVC
+          - Generator: Ninja
+
+          **Note:** This is for testing purposes only and should not be used in production.
+          "@ | Out-File -FilePath release/release_notes.md -Encoding utf8
+
+      - name: Create Test Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ needs.prepare-release.outputs.release_tag }}
+          name: "CMake Test Release - ${{ needs.prepare-release.outputs.release_tag }}"
+          body_path: release/release_notes.md
+          draft: true
+          prerelease: true
+          files: |
+            release/UE4SS_v*.zip
+            release/zDEV-UE4SS_v*.zip
+            release/zCustomGameConfigs.zip
+            release/zMapGenBP.zip

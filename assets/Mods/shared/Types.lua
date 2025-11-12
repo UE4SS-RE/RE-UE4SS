@@ -715,16 +715,155 @@ function UFunction:GetFunctionFlags() end
 function UFunction:SetFunctionFlags(Flags) end
 
 
----A TArray of characters
+---Unreal Engine's standard wide-character string type (TCHAR-based)
 ---@class FString
 local FString = {}
 
----Returns a string that Lua can understand
+---Returns a UTF-8 encoded Lua string
 ---@return string
 function FString:ToString() end
 
----Clears the string by setting the number of elements in the TArray to 0
+---Empties the string by removing all characters
+function FString:Empty() end
+
+---Empties the string by removing all characters (identical to Empty)
 function FString:Clear() end
+
+---Returns the length of the string in characters
+---@return integer
+function FString:Len() end
+
+---Returns true if the string is empty
+---@return boolean
+function FString:IsEmpty() end
+
+---Appends the given string to the end of this string
+---@param str string|FString A Lua string or another FString to append
+function FString:Append(str) end
+
+---Finds the first occurrence of the search string
+---@param search string A Lua string to search for
+---@return integer|nil 1-based index of first occurrence, or nil if not found
+function FString:Find(search) end
+
+---Checks if the string starts with the given prefix
+---@param prefix string A Lua string to check
+---@return boolean
+function FString:StartsWith(prefix) end
+
+---Checks if the string ends with the given suffix
+---@param suffix string A Lua string to check
+---@return boolean
+function FString:EndsWith(suffix) end
+
+---Returns a new FString with all characters converted to uppercase
+---@return FString
+function FString:ToUpper() end
+
+---Returns a new FString with all characters converted to lowercase
+---@return FString
+function FString:ToLower() end
+
+
+---Unreal Engine's UTF-8 encoded string type
+---@class FUtf8String
+local FUtf8String = {}
+
+---Returns a UTF-8 encoded Lua string
+---@return string
+function FUtf8String:ToString() end
+
+---Empties the string by removing all characters
+function FUtf8String:Empty() end
+
+---Empties the string by removing all characters (identical to Empty)
+function FUtf8String:Clear() end
+
+---Returns the number of UTF-8 code units (bytes), not Unicode code points
+---For "Hello 你好", returns 14 (bytes), not 8 (characters)
+---@return integer
+function FUtf8String:Len() end
+
+---Returns true if the string is empty
+---@return boolean
+function FUtf8String:IsEmpty() end
+
+---Appends the given string to the end of this string
+---@param str string|FUtf8String A Lua string or another FUtf8String to append
+function FUtf8String:Append(str) end
+
+---Finds the first occurrence of the search string
+---@param search string A Lua string to search for
+---@return integer|nil 1-based index of first occurrence, or nil if not found
+function FUtf8String:Find(search) end
+
+---Checks if the string starts with the given prefix
+---@param prefix string A Lua string to check
+---@return boolean
+function FUtf8String:StartsWith(prefix) end
+
+---Checks if the string ends with the given suffix
+---@param suffix string A Lua string to check
+---@return boolean
+function FUtf8String:EndsWith(suffix) end
+
+---Returns a new FUtf8String with all characters converted to uppercase
+---@return FUtf8String
+function FUtf8String:ToUpper() end
+
+---Returns a new FUtf8String with all characters converted to lowercase
+---@return FUtf8String
+function FUtf8String:ToLower() end
+
+
+---Unreal Engine's ANSI-encoded string type
+---@class FAnsiString
+local FAnsiString = {}
+
+---Returns an ANSI encoded Lua string
+---@return string
+function FAnsiString:ToString() end
+
+---Empties the string by removing all characters
+function FAnsiString:Empty() end
+
+---Empties the string by removing all characters (identical to Empty)
+function FAnsiString:Clear() end
+
+---Returns the length of the string in characters (each ANSI character is 1 byte)
+---@return integer
+function FAnsiString:Len() end
+
+---Returns true if the string is empty
+---@return boolean
+function FAnsiString:IsEmpty() end
+
+---Appends the given string to the end of this string
+---@param str string|FAnsiString A Lua string or another FAnsiString to append
+function FAnsiString:Append(str) end
+
+---Finds the first occurrence of the search string
+---@param search string A Lua string to search for
+---@return integer|nil 1-based index of first occurrence, or nil if not found
+function FAnsiString:Find(search) end
+
+---Checks if the string starts with the given prefix
+---@param prefix string A Lua string to check
+---@return boolean
+function FAnsiString:StartsWith(prefix) end
+
+---Checks if the string ends with the given suffix
+---@param suffix string A Lua string to check
+---@return boolean
+function FAnsiString:EndsWith(suffix) end
+
+---Returns a new FAnsiString with all characters converted to uppercase
+---@return FAnsiString
+function FAnsiString:ToUpper() end
+
+---Returns a new FAnsiString with all characters converted to lowercase
+---@return FAnsiString
+function FAnsiString:ToLower() end
 
 
 ---@class FieldClass : LocalObject
@@ -1003,8 +1142,9 @@ function TArray:Empty() end
 
 ---Iterates the entire `TArray` and calls the callback function for each element in the array.<br>
 ---The callback params are: `integer index`, `RemoteUnrealParam element` | `LocalUnrealParam element`.<br>
----Use `element:get()` and `element:set()` to access/mutate an array element.
----@param Callback fun(index: integer, element: RemoteUnrealParam)
+---Use `element:get()` and `element:set()` to access/mutate an array element.<br>
+---Return `true` in the callback to stop iterating.
+---@param Callback fun(index: integer, element: RemoteUnrealParam): boolean?
 function TArray:ForEach(Callback) end
 
 ---@class TSet<T>
@@ -1027,8 +1167,9 @@ function TSet:Remove(Element) end
 function TSet:Empty() end
 
 ---Iterates the entire `TSet` and calls the callback function for each element in the set.
----The callback has one param: `T element`
----@param Callback fun(element: T)
+---The callback has one param: `T element`.<br>
+---Return `true` in the callback to stop iterating.
+---@param Callback fun(element: T): boolean?
 function TSet:ForEach(Callback) end
 
 ---Returns the number of elements in the set (metamethod for # operator)
@@ -1077,11 +1218,12 @@ function TMap:Remove(key) end
 ---Clears the map
 function TMap:Empty() end
 
---- Iterates the entire `TMap` and calls the callback function for each element in the array
+--- Iterates the entire `TMap` and calls the callback function for each element in the map
 --- The callback params are: `RemoteUnrealParam key`, `RemoteUnrealParam value` | `LocalUnrealParam value`
 --- Use `elem:get()` and `elem:set()` to access/mutate the value
 --- Mutating the key is undefined behavior
---- @param callback fun(key: RemoteUnrealParam, value: RemoteUnrealParam)
+--- Return `true` in the callback to stop iterating
+--- @param callback fun(key: RemoteUnrealParam, value: RemoteUnrealParam): boolean?
 function TMap:ForEach(callback) end
 
 ---@class TScriptInterface<K>
@@ -1188,13 +1330,16 @@ function UDataTable:GetRowStruct() end
 function UDataTable:GetRowMap() end
 
 ---Finds a row in the DataTable by name
+---Returns a UScriptStruct that provides reference-based access to the row
+---Modifications to the returned struct directly affect the DataTable
 ---@param RowName string
----@return any?
+---@return UScriptStruct?
 function UDataTable:FindRow(RowName) end
 
 ---Adds a new row or replaces an existing row in the DataTable
+---Accepts either a Lua table or a UScriptStruct
 ---@param RowName string
----@param RowData table
+---@param RowData table|UScriptStruct
 function UDataTable:AddRow(RowName, RowData) end
 
 ---Removes a row from the DataTable
@@ -1213,8 +1358,10 @@ function UDataTable:GetRowNames() end
 function UDataTable:GetAllRows() end
 
 ---Iterates through all rows in the DataTable
----The callback has two params: string RowName, table RowData
----@param Callback fun(RowName: string, RowData: any)
+---The callback has two params: string RowName, UScriptStruct RowData
+---The RowData parameter provides reference-based access - modifications directly affect the DataTable
+---Return `true` in the callback to stop iterating
+---@param Callback fun(RowName: string, RowData: UScriptStruct): boolean?
 function UDataTable:ForEachRow(Callback) end
 
 ---Returns whether this DataTable is valid

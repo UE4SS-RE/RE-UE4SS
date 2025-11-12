@@ -11,6 +11,11 @@ some notes about most important changes such as:
 
 ### General
 
+Added CMake build system alongside Xmake - ([UE4SS #1067](https://github.com/UE4SS-RE/RE-UE4SS/pull/1067))
+- CMake >= 3.22 is now supported as the default build system
+- Documentation updated to reference CMake build instructions
+- xmake may be deprecated in the future. Meanwhile, we cannot guarantee ABI compatability
+
 Added support for UE Version 5.6 - ([UE4SS #977](https://github.com/UE4SS-RE/RE-UE4SS/pull/977)) 
 
 Added support for UE Version 5.5 - ([UE4SS #708](https://github.com/UE4SS-RE/RE-UE4SS/pull/708)) 
@@ -19,6 +24,12 @@ Added support for UE Version 5.4 - ([UE4SS #503](https://github.com/UE4SS-RE/RE-
 
 Added basic support for Development/Debug/Test built Unreal Engine games ([UE4SS #607](https://github.com/UE4SS-RE/RE-UE4SS/pull/607)) 
 - To use this functionality, set DebugBuild to true in UE4SS-Settings.ini 
+
+Added command line option to disable RE-UE4SS loading via proxy DLL. Use `--disable-ue4ss` to launch game without UE4SS while keeping the proxy DLL installed. ([UE4SS #1069](https://github.com/UE4SS-RE/RE-UE4SS/pull/1069))
+
+Added command line option to specify custom UE4SS.dll path via proxy DLL. Use `--ue4ss-path <path>` to load UE4SS.dll from a custom location, supporting both absolute and relative paths. This allows developers to easily test different UE4SS builds without modifying files. ([UE4SS #1074](https://github.com/UE4SS-RE/RE-UE4SS/pull/1074))
+
+Added environment variable `UE4SS_MODS_PATHS`. This is a colon separated list of additional directories to load Lua and C++ mods from. ([UE4SS #1069](https://github.com/UE4SS-RE/RE-UE4SS/pull/1070))
 
 Added new build definition "LessEqual421".  Using this definition for games on UE<=4.21 is not mandatory for UE4SS to function, but will ensure the correct alignment is used in containers. 
 
@@ -45,6 +56,10 @@ Added custom game configurations for Psychonauts 2 ([UE4SS #731](https://github.
 
 Added custom game configurations for Lies of P ([UE4SS #787](https://github.com/UE4SS-RE/RE-UE4SS/pull/787))
 
+Added custom game configurations for Project Silverfish ([UE4SS #1066](https://github.com/UE4SS-RE/RE-UE4SS/pull/1066))
+
+Added custom game configurations for Whiskerwood ([UE4SS #1079](https://github.com/UE4SS-RE/RE-UE4SS/pull/1079))
+
 The GUI can now be rendered in the game thread if `RenderMode` in UE4SS-settings.ini is set to
 `EngineTick` or `GameViewportClientTick` ([UE4SS #768](https://github.com/UE4SS-RE/RE-UE4SS/pull/768), [UE4SS #794](https://github.com/UE4SS-RE/RE-UE4SS/pull/794)).
 
@@ -56,17 +71,31 @@ Add error messages in places where only error codes were previously logged (e.g.
 
 Added `[f: <address_or_module_offset>` section to UE4SS_ObjectDump.txt [UE4SS #866](https://github.com/UE4SS-RE/RE-UE4SS/pull/866) 
 
+Added line in the [docs](https://docs.ue4ss.com/dev/guides/fixing-compatibility-problems.html) to add `FText::FromString(FString&)` as an alternative to `FText::FText(FString&)` for UE5 games - ([UE4SS #1078](https://github.com/UE4SS-RE/RE-UE4SS/pull/1078))
+
 ### Live View 
 Added search filter: `IncludeClassNames`. ([UE4SS #472](https://github.com/UE4SS-RE/RE-UE4SS/pull/472)) - Buckminsterfullerene
 
+Added search filter: `Match Memory Address`. ([UE4SS #882](https://github.com/UE4SS-RE/RE-UE4SS/pull/882)) - vitrvvivs
+
 Added ability to call UFunctions directly from the GUI. ([UE4SS #851](https://github.com/UE4SS-RE/RE-UE4SS/pull/851))
 
-### UHT Dumper 
+### UHT Dumper
 
-### Lua API 
+Added support for generating `FUtf8String` and `FAnsiString` properties in UHT-compatible headers ([UE4SS #1015](https://github.com/UE4SS-RE/RE-UE4SS/pull/1015))
+
+### Lua API
+
+Added support for `FUtf8String` and `FAnsiString` Unreal string types with string manipulation API ([UE4SS #1015](https://github.com/UE4SS-RE/RE-UE4SS/pull/1015))
+- Refactored FString implementation to use unified `TLuaStringBase` template for code reuse and consistency
+
 
 **Updated Lua version to 5.4.7** ([UE4SS #887](https://github.com/UE4SS-RE/RE-UE4SS/pull/887))
 - This is necessary to compile with Clang.
+
+ForEach loops now support early termination by returning `true` from callbacks ([UE4SS #1058](https://github.com/UE4SS-RE/RE-UE4SS/pull/1058))
+- Applies to `TArray:ForEach`, `TMap:ForEach`, `TSet:ForEach`, and `UDataTable:ForEachRow`
+- Fully backward compatible - existing callbacks without return values continue to work
 
 Added `UDataTable` support to Lua API. ([UE4SS #997](https://github.com/UE4SS-RE/RE-UE4SS/pull/997))
 - Find rows by name with `DataTable:FindRow(RowName)`
@@ -93,6 +122,8 @@ Enhanced TMap support to enable round-trip functionality [UE4SS #933](https://gi
 - Fixed proper key-value pair copying when passing maps between Lua and C++
 - Added proper rehashing to ensure map integrity after copying
 
+Added Lua delegate property support with Add/Remove/Clear/GetBindings/Broadcast methods. See [DelegateProperty](https://docs.ue4ss.com/lua-api/classes/delegateproperty.html), [MulticastDelegateProperty](https://docs.ue4ss.com/lua-api/classes/multicastdelegateproperty.html), and [MulticastSparseDelegateProperty](https://docs.ue4ss.com/lua-api/classes/multicastsparsedelegateproperty.html). [#1073](https://github.com/UE4SS-RE/RE-UE4SS/pull/1073)
+
 Added global function `CreateInvalidObject`, which returns an invalid UObject. ([UE4SS #652](https://github.com/UE4SS-RE/RE-UE4SS/issues/652))  
 
 Added GenerateLuaTypes function. ([UE4SS #664](https://github.com/UE4SS-RE/RE-UE4SS/pull/664))  
@@ -110,6 +141,8 @@ Added custom module searcher with UTF-8 path support for Lua `require()` ([UE4SS
 - Fixed `IterateGameDirectories` to properly handle UTF-8 paths and Unicode characters
 - Fixed `CreateLogicModsDirectory` to properly create directories with Unicode paths and handle parent directory creation
 - Fixed global Lua `print` function to properly handle UTF-8 string conversion
+
+Added support for `UScriptStruct` when using `RegisterCustomProprety` ([UE4SS #1036](https://github.com/UE4SS-RE/RE-UE4SS/pull/1036))
 
 #### Types.lua [PR #650](https://github.com/UE4SS-RE/RE-UE4SS/pull/650) 
 - Added `NAME_None` definition 
@@ -140,6 +173,8 @@ Added custom module searcher with UTF-8 path support for Lua `require()` ([UE4SS
 - Added functions `GetAllPlayerStates` and `GetAllPlayers` [PR #688](https://github.com/UE4SS-RE/RE-UE4SS/pull/688) 
 
 - Added annotation for function `FText` to Types.lua. ([UE4SS #788](https://github.com/UE4SS-RE/RE-UE4SS/pull/788))
+
+- Removed cache for `GetPlayerController` and `GetWorld` [PR #1047](https://github.com/UE4SS-RE/RE-UE4SS/pull/1047)
 
 ### C++ API 
 
@@ -228,6 +263,8 @@ Added support for watching ArrayProperty and StructProperty ([UE4SS #419](https:
 The search filter `ExcludeClassName` can now be found in the `IncludeClassNames` dropdown list. ([UE4SS #472](https://github.com/UE4SS-RE/RE-UE4SS/pull/472)) - Buckminsterfullerene 
 
 The following search filters now allow multiple values, with each value separated by a comma: `IncludeClassNames`, `ExcludeClassNames`, `HasProperty`, `HasPropertyType`. ([UE4SS #472](https://github.com/UE4SS-RE/RE-UE4SS/pull/472)) - Buckminsterfullerene 
+
+Large structs that cause FPS problems no longer render, but you can still click on the struct to render each individual property of the struct. ([UE4SS #1080](https://github.com/UE4SS-RE/RE-UE4SS/pull/1080)) 
 
 ### UHT Dumper 
 
@@ -385,6 +422,16 @@ Fixed `LoadMod` function issue that variables would go out-of-scope in the `Exec
 
 ### Added 
 ```ini
+[Overrides]
+; Additional mods directories to load mods from
+; Use + prefix to add a directory, - prefix to remove
+; Can be relative to working directory or absolute paths
+; Example:
+;   +ModsFolderPaths = ../SharedMods
+;   +ModsFolderPaths = C:/MyMods
+;   -ModsFolderPaths = ../SharedMods
+; Default: none
+
 [General]
 ; The key that will trigger a reload of all mods.
 ; The CTRL key is always required.
@@ -410,6 +457,9 @@ HookLoadMap = 1
 HookAActorTick = 1
 HookEngineTick = 1
 HookGameViewportClientTick = 1
+HookUObjectProcessEvent = 1
+HookProcessConsoleExec = 1
+HookUStructLink = 1
 ```
 
 ### Removed

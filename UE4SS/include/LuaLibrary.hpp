@@ -31,6 +31,7 @@ namespace RC::LuaLibrary
 
     // Global Lua functions are meant to be called with intact Lua stack
     auto global_print(const LuaMadeSimple::Lua&) -> int;
+    auto load_export(const LuaMadeSimple::Lua&) -> int;
 
     // Used exclusively for the scripts inside the 'UE4SS_Signatures' folder
     auto deref_to_int32(const LuaMadeSimple::Lua&) -> int;

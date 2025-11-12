@@ -131,6 +131,21 @@ namespace RC::LuaLibrary
         return 1;
     }
 
+    auto load_export(const LuaMadeSimple::Lua& lua) -> int
+    {
+        if (lua.get_stack_size() != 1 || !lua.is_string())
+        {
+            Output::send(STR("[Fatal] Lua function 'LoadExport' must have only 1 parameter and it must be of type 'string'.\n"));
+            lua.set_nil();
+            return 1;
+        }
+
+        const auto symbol_name = std::string{lua.get_string()};
+
+        lua.set_integer(std::bit_cast<intptr_t>(Unreal::UnrealInitializer::LoadExport(symbol_name)));
+        return 1;
+    }
+
     static auto error_handler_for_exported_functions(std::string_view e) -> void
     {
         // If the output system errored out then use printf_s as a fallback

@@ -8,6 +8,7 @@
 #include <polyhook2/PE/IatHook.hpp>
 #include <dbghelp.h>
 #include <Helpers/SysError.hpp>
+#include <Helpers/Time.hpp>
 #include <String/StringType.hpp>
 
 namespace fs = std::filesystem;
@@ -25,25 +26,7 @@ namespace RC
 
     LONG WINAPI ExceptionHandler(_EXCEPTION_POINTERS* exception_pointers)
     {
-        StringType dump_path{};
-        bool use_local_time = true;
-#ifdef _WIN32
-        if (auto module = GetModuleHandleW(L"ntdll.dll"); module && GetProcAddress(module, "wine_get_version"))
-        {
-            use_local_time = false;
-        }
-#endif
-        if (use_local_time)
-        {
-            static const auto timezone = std::chrono::current_zone();
-            const auto now = time_point_cast<seconds>(timezone->to_local(system_clock::now()));
-            dump_path = fmt::format(STR("{}\\crash_{:%Y_%m_%d_%H_%M_%S}.dmp"), StringType{UE4SSProgram::get_program().get_working_directory()}, now);
-        }
-        else
-        {
-            const auto now = time_point_cast<seconds>(system_clock::now());
-            dump_path = fmt::format(STR("{}\\crash_{:%Y_%m_%d_%H_%M_%S}.dmp"), StringType{UE4SSProgram::get_program().get_working_directory()}, now);
-        }
+        StringType dump_path = fmt::format(STR("{}\\crash_{}.dmp"), StringType{UE4SSProgram::get_program().get_working_directory()}, get_now_as_string(STR("{:%Y_%m_%d_%H_%M_%S}")));
 
         const HANDLE file =
                 CreateFileW(FromCharTypePtr<wchar_t>(dump_path.c_str()), GENERIC_WRITE, FILE_SHARE_WRITE, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);

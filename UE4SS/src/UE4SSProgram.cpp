@@ -23,6 +23,7 @@
 #include <Helpers/Format.hpp>
 #include <Helpers/Integer.hpp>
 #include <Helpers/String.hpp>
+#include <Helpers/Time.hpp>
 #include <IniParser/Ini.hpp>
 #include <LuaLibrary.hpp>
 #include <LuaType/LuaCustomProperty.hpp>
@@ -109,6 +110,7 @@ namespace RC
         OUTPUT_MEMBER_OFFSETS_FOR_STRUCT(UClass);
         OUTPUT_MEMBER_OFFSETS_FOR_STRUCT(UEnum);
         OUTPUT_MEMBER_OFFSETS_FOR_STRUCT(UFunction);
+        OUTPUT_MEMBER_OFFSETS_FOR_STRUCT(USparseDelegateFunction);
         OUTPUT_MEMBER_OFFSETS_FOR_STRUCT(UField);
         OUTPUT_MEMBER_OFFSETS_FOR_STRUCT(FField);
         OUTPUT_MEMBER_OFFSETS_FOR_STRUCT(FProperty);
@@ -207,32 +209,24 @@ namespace RC
             auto& file_device = Output::set_default_devices<Output::NewFileDevice>();
             file_device.set_file_name_and_path(ensure_str((m_log_directory / m_log_file_name)));
 
+            if (const auto ue4ss_mods_paths_var_raw = std::getenv("UE4SS_MODS_PATHS"); ue4ss_mods_paths_var_raw)
+            {
+                const auto ue4ss_mods_paths_var = ensure_str(ue4ss_mods_paths_var_raw);
+                Output::send(STR("Environment variable 'UE4SS_MODS_PATHS' present, adding 'Mods' path overrides: {}\n"), ue4ss_mods_paths_var);
+                const auto paths = parse_semicolon_separated_string(ue4ss_mods_paths_var);
+                for (const auto& path : std::ranges::reverse_view(paths))
+                {
+                    add_mods_directory(std::filesystem::weakly_canonical(path));
+                }
+            }
+
             create_simple_console();
 
             if (settings_manager.Debug.DebugConsoleEnabled)
             {
                 m_console_device = &Output::set_default_devices<Output::ConsoleDevice>();
                 m_console_device->set_formatter([](File::StringViewType string) -> File::StringType {
-                    bool use_local_time = true;
-#ifdef _WIN32
-                    if (auto module = GetModuleHandleW(L"ntdll.dll"); module && GetProcAddress(module, "wine_get_version"))
-                    {
-                        use_local_time = false;
-                    }
-#endif
-                    if (use_local_time)
-                    {
-                        static const auto timezone = std::chrono::current_zone();
-                        return fmt::format(STR("[{}] {}"),
-                                           fmt::format(STR("{:%X}"),
-                                                       std::chrono::time_point_cast<std::chrono::system_clock::duration>(
-                                                               timezone->to_local(std::chrono::system_clock::now()))),
-                                           string);
-                    }
-                    else
-                    {
-                        return fmt::format(STR("[{}] {}"), fmt::format(STR("{:%X}"), std::chrono::system_clock::now()), string);
-                    }
+                    return fmt::format(STR("[{}] {}"), get_now_as_string(STR("{:%X}")), string);
                 });
                 if (settings_manager.Debug.DebugConsoleVisible)
                 {
@@ -279,7 +273,14 @@ namespace RC
 #endif
             if (use_local_time)
             {
-                Output::send(STR("Timezone: {}\n"), ensure_str(std::chrono::current_zone()->name()));
+                try
+                {
+                    Output::send(STR("Timezone: {}\n"), ensure_str(std::chrono::current_zone()->name()));
+                }
+                catch (std::runtime_error&)
+                {
+                    Output::send(STR("Timezone: UTC (local disabled due to lack of support (chrono::current_zone() failed))\n"));
+                }
             }
             else
             {
@@ -332,7 +333,7 @@ namespace RC
 
             if (m_has_game_specific_config)
             {
-                Output::send(STR("Found configuration for game: {}\n"), ensure_str(m_mods_directory.parent_path().filename()));
+                Output::send(STR("Found configuration for game: {}\n"), ensure_str(m_working_directory.filename()));
             }
             else
             {
@@ -344,7 +345,12 @@ namespace RC
             Output::send(STR("working directory: {}\n"), ensure_str(m_working_directory));
             Output::send(STR("game executable directory: {}\n"), ensure_str(m_game_executable_directory));
             Output::send(STR("game executable: {} ({} bytes)\n\n\n"), ensure_str(m_game_path_and_exe_name), std::filesystem::file_size(m_game_path_and_exe_name));
-            Output::send(STR("mods directory: {}\n"), ensure_str(m_mods_directory));
+            Output::send(STR("mods directories: \n"));
+            for (const auto& [index, mod_directory] : std::ranges::enumerate_view(m_mods_directories))
+            {
+                Output::send(STR("[{}] {}\n"), index, ensure_str(mod_directory));
+            }
+            Output::send(STR("\n"));
             Output::send(STR("log directory: {}\n"), ensure_str(m_log_directory));
             Output::send(STR("object dumper directory: {}\n\n\n"), ensure_str(m_object_dumper_output_directory));
         }
@@ -445,7 +451,6 @@ namespace RC
         m_legacy_root_directory = game_directory_path;
 
         m_working_directory = m_root_directory;
-        m_mods_directory = m_working_directory / "Mods";
         m_game_executable_directory = game_directory_path;
         m_settings_path_and_file = m_root_directory;
         m_game_path_and_exe_name = game_exe_path;
@@ -465,7 +470,6 @@ namespace RC
             {
                 m_has_game_specific_config = true;
                 m_working_directory = item.path();
-                m_mods_directory = item.path() / STR("Mods");
                 m_settings_path_and_file = std::move(item.path());
                 m_log_directory = m_working_directory;
                 m_object_dumper_output_directory = m_working_directory;
@@ -482,10 +486,6 @@ namespace RC
         {
             m_settings_path_and_file = m_legacy_root_directory / m_settings_file_name;
         }
-        if (std::filesystem::exists(m_legacy_root_directory / "Mods") && !std::filesystem::exists(m_mods_directory))
-        {
-            m_mods_directory = m_legacy_root_directory / "Mods";
-        }
     }
 
     auto UE4SSProgram::create_emergency_console_for_early_error(File::StringViewType error_message) -> void
@@ -497,23 +497,15 @@ namespace RC
 
     auto UE4SSProgram::setup_mod_directory_path() -> void
     {
-        // Mods folder path, typically '<m_working_directory>\Mods'
-        // Can be customized via UE4SS-settings.ini
-        if (settings_manager.Overrides.ModsFolderPath.empty())
+        std::filesystem::path default_mods_path = m_working_directory / "Mods";
+
+        // If no paths were added, check legacy location for fallback
+        if (std::filesystem::exists(m_legacy_root_directory / "Mods") && !std::filesystem::exists(default_mods_path))
         {
-            m_mods_directory = m_mods_directory.empty() ? m_working_directory / "Mods" : m_mods_directory;
+            default_mods_path = m_legacy_root_directory / "Mods";
         }
-        else
-        {
-            if (std::filesystem::path{settings_manager.Overrides.ModsFolderPath}.is_relative())
-            {
-                m_mods_directory = m_working_directory / settings_manager.Overrides.ModsFolderPath;
-            }
-            else
-            {
-                m_mods_directory = settings_manager.Overrides.ModsFolderPath;
-            }
-        }
+
+        m_mods_directories.insert(m_mods_directories.begin(), default_mods_path);
     }
 
     auto UE4SSProgram::create_simple_console() -> void
@@ -523,26 +515,7 @@ namespace RC
             m_debug_console_device = &Output::set_default_devices<Output::DebugConsoleDevice>();
             Output::set_default_log_level<LogLevel::Normal>();
             m_debug_console_device->set_formatter([](File::StringViewType string) -> File::StringType {
-                bool use_local_time = true;
-#ifdef _WIN32
-                if (auto module = GetModuleHandleW(L"ntdll.dll"); module && GetProcAddress(module, "wine_get_version"))
-                {
-                    use_local_time = false;
-                }
-#endif
-                if (use_local_time)
-                {
-                    static const auto timezone = std::chrono::current_zone();
-                    return fmt::format(STR("[{}] {}"),
-                                       fmt::format(STR("{:%X}"),
-                                                   std::chrono::time_point_cast<std::chrono::system_clock::duration>(
-                                                           timezone->to_local(std::chrono::system_clock::now()))),
-                                       string);
-                }
-                else
-                {
-                    return fmt::format(STR("[{}] {}"), fmt::format(STR("{:%X}"), std::chrono::system_clock::now()), string);
-                }
+                return fmt::format(STR("[{}] {}"), get_now_as_string(STR("{:%X}")), string);
             });
 
             if (AllocConsole())
@@ -855,19 +828,25 @@ namespace RC
         config.bHookAActorTick = settings_manager.Hooks.HookAActorTick;
         config.bHookEngineTick = settings_manager.Hooks.HookEngineTick;
         config.bHookGameViewportClientTick = settings_manager.Hooks.HookGameViewportClientTick;
+        config.bHookUObjectProcessEvent = settings_manager.Hooks.HookUObjectProcessEvent;
+        config.bHookProcessConsoleExec = settings_manager.Hooks.HookProcessConsoleExec;
+        config.bHookUStructLink = settings_manager.Hooks.HookUStructLink;
         config.FExecVTableOffsetInLocalPlayer = settings_manager.Hooks.FExecVTableOffsetInLocalPlayer;
         // Apply Debug Build setting from settings file only for now.
         Unreal::Version::DebugBuild = settings_manager.EngineVersionOverride.DebugBuild;
         Output::send<LogLevel::Warning>(STR("DebugGame Setting Enabled? {}\n"), Unreal::Version::DebugBuild);
-        // Scan a single time while the game thread is locked after UE4SS is attached.
-        Unreal::UnrealInitializer::PreInitialize(config);
-        try
+        if (settings_manager.General.DoEarlyScan)
         {
-            Unreal::UnrealInitializer::ScanGame();
-        }
-        catch (std::runtime_error&)
-        {
-            // No work to be done here. Error is non-fatal, just let the 'Initialize' function take it from here.
+            // Scan a single time while the game thread is locked after UE4SS is attached.
+            Unreal::UnrealInitializer::PreInitialize(config);
+            try
+            {
+                Unreal::UnrealInitializer::ScanGame();
+            }
+            catch (std::runtime_error&)
+            {
+                // No work to be done here. Error is non-fatal, just let the 'Initialize' function take it from here.
+            }
         }
         cpp_mods_done_loading.store(true);
         cpp_mods_done_loading.notify_one();
@@ -1141,31 +1120,35 @@ namespace RC
 
     auto UE4SSProgram::setup_unreal_properties() -> void
     {
-        LuaType::StaticState::m_property_value_pushers.emplace(FName(STR("ObjectProperty")).GetComparisonIndex(), &LuaType::push_objectproperty);
-        LuaType::StaticState::m_property_value_pushers.emplace(FName(STR("ClassProperty")).GetComparisonIndex(), &LuaType::push_classproperty);
-        LuaType::StaticState::m_property_value_pushers.emplace(FName(STR("Int8Property")).GetComparisonIndex(), &LuaType::push_int8property);
-        LuaType::StaticState::m_property_value_pushers.emplace(FName(STR("Int16Property")).GetComparisonIndex(), &LuaType::push_int16property);
-        LuaType::StaticState::m_property_value_pushers.emplace(FName(STR("IntProperty")).GetComparisonIndex(), &LuaType::push_intproperty);
-        LuaType::StaticState::m_property_value_pushers.emplace(FName(STR("Int64Property")).GetComparisonIndex(), &LuaType::push_int64property);
-        LuaType::StaticState::m_property_value_pushers.emplace(FName(STR("ByteProperty")).GetComparisonIndex(), &LuaType::push_byteproperty);
-        LuaType::StaticState::m_property_value_pushers.emplace(FName(STR("UInt16Property")).GetComparisonIndex(), &LuaType::push_uint16property);
-        LuaType::StaticState::m_property_value_pushers.emplace(FName(STR("UInt32Property")).GetComparisonIndex(), &LuaType::push_uint32property);
-        LuaType::StaticState::m_property_value_pushers.emplace(FName(STR("UInt64Property")).GetComparisonIndex(), &LuaType::push_uint64property);
-        LuaType::StaticState::m_property_value_pushers.emplace(FName(STR("StructProperty")).GetComparisonIndex(), &LuaType::push_structproperty);
-        LuaType::StaticState::m_property_value_pushers.emplace(FName(STR("ArrayProperty")).GetComparisonIndex(), &LuaType::push_arrayproperty);
-        LuaType::StaticState::m_property_value_pushers.emplace(FName(STR("SetProperty")).GetComparisonIndex(), &LuaType::push_setproperty);
-        LuaType::StaticState::m_property_value_pushers.emplace(FName(STR("MapProperty")).GetComparisonIndex(), &LuaType::push_mapproperty);
-        LuaType::StaticState::m_property_value_pushers.emplace(FName(STR("FloatProperty")).GetComparisonIndex(), &LuaType::push_floatproperty);
-        LuaType::StaticState::m_property_value_pushers.emplace(FName(STR("DoubleProperty")).GetComparisonIndex(), &LuaType::push_doubleproperty);
-        LuaType::StaticState::m_property_value_pushers.emplace(FName(STR("BoolProperty")).GetComparisonIndex(), &LuaType::push_boolproperty);
-        LuaType::StaticState::m_property_value_pushers.emplace(FName(STR("EnumProperty")).GetComparisonIndex(), &LuaType::push_enumproperty);
-        LuaType::StaticState::m_property_value_pushers.emplace(FName(STR("WeakObjectProperty")).GetComparisonIndex(), &LuaType::push_weakobjectproperty);
-        LuaType::StaticState::m_property_value_pushers.emplace(FName(STR("NameProperty")).GetComparisonIndex(), &LuaType::push_nameproperty);
-        LuaType::StaticState::m_property_value_pushers.emplace(FName(STR("TextProperty")).GetComparisonIndex(), &LuaType::push_textproperty);
-        LuaType::StaticState::m_property_value_pushers.emplace(FName(STR("StrProperty")).GetComparisonIndex(), &LuaType::push_strproperty);
-        LuaType::StaticState::m_property_value_pushers.emplace(FName(STR("SoftObjectProperty")).GetComparisonIndex(), &LuaType::push_softobjectproperty);
-        LuaType::StaticState::m_property_value_pushers.emplace(FName(STR("SoftClassProperty")).GetComparisonIndex(), &LuaType::push_softobjectproperty);
-        LuaType::StaticState::m_property_value_pushers.emplace(FName(STR("InterfaceProperty")).GetComparisonIndex(), &LuaType::push_interfaceproperty);
+        LuaType::StaticState::m_property_value_pushers.emplace(FName(STR("ObjectProperty"), Unreal::FNAME_Find).GetComparisonIndex(), &LuaType::push_objectproperty);
+        LuaType::StaticState::m_property_value_pushers.emplace(FName(STR("ClassProperty"), Unreal::FNAME_Find).GetComparisonIndex(), &LuaType::push_classproperty);
+        LuaType::StaticState::m_property_value_pushers.emplace(FName(STR("Int8Property"), Unreal::FNAME_Find).GetComparisonIndex(), &LuaType::push_int8property);
+        LuaType::StaticState::m_property_value_pushers.emplace(FName(STR("Int16Property"), Unreal::FNAME_Find).GetComparisonIndex(), &LuaType::push_int16property);
+        LuaType::StaticState::m_property_value_pushers.emplace(FName(STR("IntProperty"), Unreal::FNAME_Find).GetComparisonIndex(), &LuaType::push_intproperty);
+        LuaType::StaticState::m_property_value_pushers.emplace(FName(STR("Int64Property"), Unreal::FNAME_Find).GetComparisonIndex(), &LuaType::push_int64property);
+        LuaType::StaticState::m_property_value_pushers.emplace(FName(STR("ByteProperty"), Unreal::FNAME_Find).GetComparisonIndex(), &LuaType::push_byteproperty);
+        LuaType::StaticState::m_property_value_pushers.emplace(FName(STR("UInt16Property"), Unreal::FNAME_Find).GetComparisonIndex(), &LuaType::push_uint16property);
+        LuaType::StaticState::m_property_value_pushers.emplace(FName(STR("UInt32Property"), Unreal::FNAME_Find).GetComparisonIndex(), &LuaType::push_uint32property);
+        LuaType::StaticState::m_property_value_pushers.emplace(FName(STR("UInt64Property"), Unreal::FNAME_Find).GetComparisonIndex(), &LuaType::push_uint64property);
+        LuaType::StaticState::m_property_value_pushers.emplace(FName(STR("StructProperty"), Unreal::FNAME_Find).GetComparisonIndex(), &LuaType::push_structproperty);
+        LuaType::StaticState::m_property_value_pushers.emplace(FName(STR("ArrayProperty"), Unreal::FNAME_Find).GetComparisonIndex(), &LuaType::push_arrayproperty);
+        LuaType::StaticState::m_property_value_pushers.emplace(FName(STR("SetProperty"), Unreal::FNAME_Find).GetComparisonIndex(), &LuaType::push_setproperty);
+        LuaType::StaticState::m_property_value_pushers.emplace(FName(STR("MapProperty"), Unreal::FNAME_Find).GetComparisonIndex(), &LuaType::push_mapproperty);
+        LuaType::StaticState::m_property_value_pushers.emplace(FName(STR("FloatProperty"), Unreal::FNAME_Find).GetComparisonIndex(), &LuaType::push_floatproperty);
+        LuaType::StaticState::m_property_value_pushers.emplace(FName(STR("DoubleProperty"), Unreal::FNAME_Find).GetComparisonIndex(), &LuaType::push_doubleproperty);
+        LuaType::StaticState::m_property_value_pushers.emplace(FName(STR("BoolProperty"), Unreal::FNAME_Find).GetComparisonIndex(), &LuaType::push_boolproperty);
+        LuaType::StaticState::m_property_value_pushers.emplace(FName(STR("EnumProperty"), Unreal::FNAME_Find).GetComparisonIndex(), &LuaType::push_enumproperty);
+        LuaType::StaticState::m_property_value_pushers.emplace(FName(STR("WeakObjectProperty"), Unreal::FNAME_Find).GetComparisonIndex(), &LuaType::push_weakobjectproperty);
+        LuaType::StaticState::m_property_value_pushers.emplace(FName(STR("NameProperty"), Unreal::FNAME_Find).GetComparisonIndex(), &LuaType::push_nameproperty);
+        LuaType::StaticState::m_property_value_pushers.emplace(FName(STR("TextProperty"), Unreal::FNAME_Find).GetComparisonIndex(), &LuaType::push_textproperty);
+        LuaType::StaticState::m_property_value_pushers.emplace(FName(STR("StrProperty"), Unreal::FNAME_Find).GetComparisonIndex(), &LuaType::push_strproperty);
+        LuaType::StaticState::m_property_value_pushers.emplace(FName(STR("SoftObjectProperty"), Unreal::FNAME_Find).GetComparisonIndex(), &LuaType::push_softobjectproperty);
+        LuaType::StaticState::m_property_value_pushers.emplace(FName(STR("SoftClassProperty"), Unreal::FNAME_Find).GetComparisonIndex(), &LuaType::push_softobjectproperty);
+        LuaType::StaticState::m_property_value_pushers.emplace(FName(STR("InterfaceProperty"), Unreal::FNAME_Find).GetComparisonIndex(), &LuaType::push_interfaceproperty);
+        LuaType::StaticState::m_property_value_pushers.emplace(FName(STR("DelegateProperty"), Unreal::FNAME_Find).GetComparisonIndex(), &LuaType::push_delegateproperty);
+        LuaType::StaticState::m_property_value_pushers.emplace(FName(STR("MulticastDelegateProperty"), Unreal::FNAME_Find).GetComparisonIndex(), &LuaType::push_multicastdelegateproperty);
+        LuaType::StaticState::m_property_value_pushers.emplace(FName(STR("MulticastInlineDelegateProperty"), Unreal::FNAME_Find).GetComparisonIndex(), &LuaType::push_multicastdelegateproperty);
+        LuaType::StaticState::m_property_value_pushers.emplace(FName(STR("MulticastSparseDelegateProperty"), Unreal::FNAME_Find).GetComparisonIndex(), &LuaType::push_multicastsparsedelegateproperty);
     }
 
     auto UE4SSProgram::setup_mods() -> void
@@ -1174,39 +1157,46 @@ namespace RC
 
         Output::send(STR("Setting up mods...\n"));
 
-        if (!std::filesystem::exists(m_mods_directory))
+        for (const auto& mods_directory : std::ranges::reverse_view(m_mods_directories))
         {
-            set_error("Mods directory doesn't exist, please create it: <%S>", m_mods_directory.c_str());
-        }
-
-        for (const auto& sub_directory : std::filesystem::directory_iterator(m_mods_directory))
-        {
-            std::error_code ec;
-
-            // Ignore all non-directories
-            if (!sub_directory.is_directory())
+            if (!std::filesystem::exists(mods_directory))
             {
+                Output::send<LogLevel::Warning>(STR("Mods directory doesn't exist, skipping: {}\n"), ensure_str(mods_directory));
                 continue;
             }
-            if (ec.value() != 0)
-            {
-                set_error("is_directory ran into error %d", ec.value());
-            }
 
-            StringType directory_lowercase = ensure_str(sub_directory.path().stem());
-            std::transform(directory_lowercase.begin(), directory_lowercase.end(), directory_lowercase.begin(), std::towlower);
+            Output::send(STR("Loading mods from: {}\n"), ensure_str(mods_directory));
 
-            if (directory_lowercase == STR("shared"))
+            for (const auto& sub_directory : std::filesystem::directory_iterator(mods_directory))
             {
-                // Do stuff when shared libraries have been implemented
-            }
-            else
-            {
-                // Create the mod but don't install it yet
-                if (std::filesystem::exists(sub_directory.path() / "scripts"))
-                    m_mods.emplace_back(std::make_unique<LuaMod>(*this, ensure_str(sub_directory.path().stem()), ensure_str(sub_directory.path())));
-                if (std::filesystem::exists(sub_directory.path() / "dlls"))
-                    m_mods.emplace_back(std::make_unique<CppMod>(*this, ensure_str(sub_directory.path().stem()), ensure_str(sub_directory.path())));
+                std::error_code ec;
+
+                // Ignore all non-directories
+                if (!sub_directory.is_directory())
+                {
+                    continue;
+                }
+                if (ec.value() != 0)
+                {
+                    set_error("is_directory ran into error %d", ec.value());
+                }
+
+                StringType directory_lowercase = ensure_str(sub_directory.path().stem());
+                std::transform(directory_lowercase.begin(), directory_lowercase.end(), directory_lowercase.begin(), std::towlower);
+
+                if (directory_lowercase == STR("shared"))
+                {
+                    // Do stuff when shared libraries have been implemented
+                }
+                else
+                {
+                    auto mod_name = ensure_str(sub_directory.path().stem());
+                    // Create the mod but don't install it yet
+                    if (!find_mod_by_name<LuaMod>(mod_name) && std::filesystem::exists(sub_directory.path() / "scripts"))
+                        m_mods.emplace_back(std::make_unique<LuaMod>(*this, std::move(mod_name), ensure_str(sub_directory.path())));
+                    if (!find_mod_by_name<CppMod>(mod_name) && std::filesystem::exists(sub_directory.path() / "dlls"))
+                        m_mods.emplace_back(std::make_unique<CppMod>(*this, std::move(mod_name), ensure_str(sub_directory.path())));
+                }
             }
         }
     }
@@ -1215,6 +1205,7 @@ namespace RC
     auto install_mods(std::vector<std::unique_ptr<Mod>>& mods) -> void
     {
         ProfilerScope();
+
         for (auto& mod : mods)
         {
             if (!dynamic_cast<ModType*>(mod.get()))
@@ -1592,7 +1583,41 @@ namespace RC
 
     auto UE4SSProgram::get_mods_directory() -> File::StringType
     {
-        return ensure_str(m_mods_directory);
+        // Return the first (primary) mods directory for backwards compatibility
+        return m_mods_directories.empty() ? STR("") : ensure_str(m_mods_directories[0]);
+    }
+
+    auto UE4SSProgram::get_mods_directories() -> std::vector<std::filesystem::path>&
+    {
+        return m_mods_directories;
+    }
+
+    auto UE4SSProgram::add_mods_directory(std::filesystem::path path) -> void
+    {
+        auto orig_path = path;
+        if (path.is_relative())
+        {
+            path = m_working_directory / path;
+        }
+        path = path.lexically_normal().make_preferred();
+        path = std::filesystem::weakly_canonical(path);
+        if (const auto it = std::ranges::find(m_mods_directories, path); it != m_mods_directories.end())
+        {
+            m_mods_directories.erase(it);
+        }
+        m_mods_directories.emplace_back(std::forward<decltype(path)>(path));
+    }
+
+    auto UE4SSProgram::remove_mods_directory(std::filesystem::path path) -> void
+    {
+        auto orig_path = path;
+        if (path.is_relative())
+        {
+            path = m_working_directory / path;
+        }
+        path = path.lexically_normal().make_preferred();
+        path = std::filesystem::weakly_canonical(path);
+        std::erase(m_mods_directories, path);
     }
 
     auto UE4SSProgram::get_legacy_root_directory() -> File::StringType
@@ -2007,5 +2032,31 @@ namespace RC
         // Do cleanup of static objects here
         // This function is called right before the DLL detaches from the game
         // Including when the player hits the 'X' button to exit the game
+    }
+
+    auto UE4SSProgram::parse_semicolon_separated_string(const StringType& string) -> std::vector<StringType>
+    {
+        std::vector<StringType> strings{};
+        if (auto end = string.find(STR(';')); end == string.npos)
+        {
+            // No colon, but we still have content in the variable, so we'll assume this a single path.
+            strings.emplace_back(string);
+        }
+        else
+        {
+            size_t start = 0;
+            while (end != string.npos)
+            {
+                strings.emplace_back(string.substr(start, end - start));
+                start = end + 1; // Adding 1 to skip the colon.
+                end = string.find(STR(';'), start);
+                if (end == string.npos)
+                {
+                    // No more colons, but we still content so let's assume that's another path.
+                    strings.emplace_back(string.substr(start));
+                }
+            }
+        }
+        return strings;
     }
 } // namespace RC

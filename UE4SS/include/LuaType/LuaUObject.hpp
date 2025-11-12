@@ -384,8 +384,13 @@ namespace RC::LuaType
     RC_UE4SS_API auto push_nameproperty(const PusherParams&) -> void;
     RC_UE4SS_API auto push_textproperty(const PusherParams&) -> void;
     RC_UE4SS_API auto push_strproperty(const PusherParams&) -> void;
+    RC_UE4SS_API auto push_utf8strproperty(const PusherParams&) -> void;
+    RC_UE4SS_API auto push_ansistrproperty(const PusherParams&) -> void;
     RC_UE4SS_API auto push_softobjectproperty(const PusherParams&) -> void;
     RC_UE4SS_API auto push_interfaceproperty(const PusherParams&) -> void;
+    RC_UE4SS_API auto push_delegateproperty(const PusherParams&) -> void;
+    RC_UE4SS_API auto push_multicastdelegateproperty(const PusherParams&) -> void;
+    RC_UE4SS_API auto push_multicastsparsedelegateproperty(const PusherParams&) -> void;
 
     RC_UE4SS_API auto push_functionproperty(const FunctionPusherParams&) -> void;
     // Push to Lua -> END
@@ -584,7 +589,7 @@ namespace RC::LuaType
                     {
                         obj_as_struct = reflected_object->GetClassPrivate();
                     }
-                    auto* property = obj_as_struct->FindProperty(Unreal::FName(property_name));
+                    auto* property = obj_as_struct->FindProperty(Unreal::FName(property_name, Unreal::FNAME_Find));
 
                     construct_xproperty(lua, property);
                     return 1;
@@ -716,8 +721,8 @@ Overloads:
 
             table.add_pair("IsValid", [](const LuaMadeSimple::Lua& lua) -> int {
                 const auto& lua_object = lua.get_userdata<SelfType>();
-                if (lua_object.get_remote_cpp_object() && !lua_object.get_remote_cpp_object()->IsUnreachable() &&
-                    is_object_in_global_unreal_object_map(lua_object.get_remote_cpp_object()))
+                if (lua_object.get_remote_cpp_object() && is_object_in_global_unreal_object_map(lua_object.get_remote_cpp_object()) &&
+                    !lua_object.get_remote_cpp_object()->IsUnreachable())
                 {
                     lua.set_bool(true);
                 }
@@ -773,7 +778,7 @@ Overloads:
                 return;
             }
 
-            Unreal::FName property_name = Unreal::FName(member_name);
+            Unreal::FName property_name = Unreal::FName(member_name, Unreal::FNAME_Find);
             Unreal::FField* field = LuaCustomProperty::StaticStorage::property_list.find_or_nullptr(lua_object.get_remote_cpp_object(), member_name);
 
             if (!field)

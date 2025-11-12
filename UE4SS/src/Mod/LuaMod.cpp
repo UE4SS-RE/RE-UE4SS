@@ -18,6 +18,7 @@
 #include <LuaType/LuaCustomProperty.hpp>
 #include <LuaType/LuaFName.hpp>
 #include <LuaType/LuaFText.hpp>
+#include <LuaType/LuaUnrealString.hpp>
 #include <LuaType/LuaFOutputDevice.hpp>
 #include <LuaType/LuaModRef.hpp>
 #include <LuaType/LuaUClass.hpp>
@@ -45,11 +46,14 @@
 #include <Unreal/Property/FMapProperty.hpp>
 #include <Unreal/Property/FNameProperty.hpp>
 #include <Unreal/Property/FObjectProperty.hpp>
-#include <Unreal/Property/FStrProperty.hpp>
+#include <Unreal/CoreUObject/UObject/FStrProperty.hpp>
+#include <Unreal/Core/Containers/FUtf8String.hpp>
+#include <Unreal/Core/Containers/FAnsiString.hpp>
 #include <Unreal/Property/FStructProperty.hpp>
 #include <Unreal/Property/FTextProperty.hpp>
 #include <Unreal/Property/FWeakObjectProperty.hpp>
 #include <Unreal/Property/NumericPropertyTypes.hpp>
+#include <Unreal/CoreUObject/UObject/FUtf8StrProperty.hpp>
 #include <Unreal/TypeChecker.hpp>
 #include <Unreal/UAssetRegistry.hpp>
 #include <Unreal/UAssetRegistryHelpers.hpp>
@@ -142,7 +146,7 @@ namespace RC
 
         // Set up the first param (context / this-ptr)
         // TODO: Check what happens if a static UFunction is hooked since they don't have any context
-        static auto s_object_property_name = Unreal::FName(STR("ObjectProperty"));
+        static auto s_object_property_name = Unreal::FName(STR("ObjectProperty"), Unreal::FNAME_Find);
         LuaType::RemoteUnrealParam::construct(lua_data.lua, &context.Context, s_object_property_name);
 
         // Attempt at dynamically fetching the params
@@ -300,7 +304,7 @@ namespace RC
             lua_data.lua.registry().get_function_ref(lua_data.lua_post_callback_ref);
 
             // Set up the first param (context / this-ptr)
-            static auto s_object_property_name = Unreal::FName(STR("ObjectProperty"));
+            static auto s_object_property_name = Unreal::FName(STR("ObjectProperty"), Unreal::FNAME_Find);
             LuaType::RemoteUnrealParam::construct(lua_data.lua, &context.Context, s_object_property_name);
 
             // Attempt at dynamically fetching the params
@@ -739,12 +743,34 @@ namespace RC
         property_type_table.make_local();
     }
 
-    // auto static make_hook_state(Mod* mod, const LuaMadeSimple::Lua& lua)->std::shared_ptr<LuaMadeSimple::Lua>
-    auto static make_hook_state(LuaMod* mod) -> LuaMadeSimple::Lua*
+    // Private helper: Ensures hook thread exists and returns the registry reference (or LUA_REFNIL if already exists)
+    static int ensure_hook_thread_exists(LuaMod* mod)
     {
-        // if (!mod->m_hook_lua)
-        //{
-        return mod->m_hook_lua.emplace_back(&mod->lua().new_thread());
+        if (mod->m_hook_lua == nullptr)
+        {
+            // First use - create new thread and anchor it in the registry
+            mod->m_hook_lua = &mod->lua().new_thread();
+            int thread_ref = luaL_ref(mod->lua().get_lua_state(), LUA_REGISTRYINDEX);
+            return thread_ref;
+        }
+
+        // Thread already exists and is already anchored
+        return LUA_REFNIL;
+    }
+
+    // Returns the hook lua thread for immediate use (doesn't need registry reference management)
+    auto static get_hook_lua(LuaMod* mod) -> LuaMadeSimple::Lua*
+    {
+        ensure_hook_thread_exists(mod);
+        return mod->m_hook_lua;
+    }
+
+    // Returns hook state with registry reference (for persistent hooks that need cleanup)
+    // auto static make_hook_state(Mod* mod, const LuaMadeSimple::Lua& lua)->std::shared_ptr<LuaMadeSimple::Lua>
+    auto static make_hook_state(LuaMod* mod) -> std::pair<LuaMadeSimple::Lua*, int>
+    {
+        int thread_ref = ensure_hook_thread_exists(mod);
+        return {mod->m_hook_lua, thread_ref};
 
         // Make the hook thread (which is just a separate Lua stack) be a global in its parent.
         // This is needed because otherwise it will be GCd when we don't want it to.
@@ -847,6 +873,10 @@ namespace RC
         }
         add_property_type_table<Unreal::FTextProperty>(lua, property_types_table, "TextProperty");
         add_property_type_table<Unreal::FStrProperty>(lua, property_types_table, "StrProperty");
+        if (Unreal::Version::IsAtLeast(5, 6))
+        {
+            add_property_type_table<Unreal::FUtf8StrProperty>(lua, property_types_table, "Utf8StrProperty");
+        }
 
         property_types_table.make_global("PropertyTypes");
     }
@@ -1181,6 +1211,7 @@ namespace RC
     auto static setup_lua_global_functions_internal(const LuaMadeSimple::Lua& lua, Mod::IsTrueMod is_true_mod) -> void
     {
         lua.register_function("print", LuaLibrary::global_print);
+        lua.register_function("LoadExport", LuaLibrary::load_export);
 
         lua.register_function("CreateInvalidObject", [](const LuaMadeSimple::Lua& lua) -> int {
             LuaType::auto_construct_object(lua, nullptr);
@@ -2232,7 +2263,7 @@ Overloads:
             }
 
             auto mod = get_mod_ref(lua);
-            auto hook_lua = make_hook_state(mod);
+            auto [hook_lua, thread_ref] = make_hook_state(mod);
 
             // Duplicate the Lua function to the top of the stack for lua_xmove and luaL_ref
             lua_pushvalue(lua.get_lua_state(), 1);
@@ -2240,7 +2271,6 @@ Overloads:
             lua_xmove(lua.get_lua_state(), hook_lua->get_lua_state(), 1);
 
             const auto func_ref = hook_lua->registry().make_ref();
-            const auto thread_ref = mod->lua().registry().make_ref();
 
             Unreal::UClass* instance_of_class = Unreal::UObjectGlobals::StaticFindObject<Unreal::UClass*>(nullptr, nullptr, class_name);
 
@@ -2269,7 +2299,7 @@ Overloads:
             }
 
             auto mod = get_mod_ref(lua);
-            auto hook_lua = make_hook_state(mod);
+            auto hook_lua = get_hook_lua(mod);
 
             lua_xmove(lua.get_lua_state(), hook_lua->get_lua_state(), 1);
 
@@ -2319,7 +2349,7 @@ Overloads:
             }
 
             auto mod = get_mod_ref(lua);
-            auto hook_lua = make_hook_state(mod);
+            auto hook_lua = get_hook_lua(mod);
 
             lua_xmove(lua.get_lua_state(), hook_lua->get_lua_state(), 1);
 
@@ -2346,7 +2376,7 @@ Overloads:
             }
 
             auto mod = get_mod_ref(lua);
-            auto hook_lua = make_hook_state(mod);
+            auto hook_lua = get_hook_lua(mod);
 
             lua_xmove(lua.get_lua_state(), hook_lua->get_lua_state(), 1);
 
@@ -2373,7 +2403,7 @@ Overloads:
             }
 
             auto mod = get_mod_ref(lua);
-            auto hook_lua = make_hook_state(mod);
+            auto hook_lua = get_hook_lua(mod);
 
             lua_xmove(lua.get_lua_state(), hook_lua->get_lua_state(), 1);
 
@@ -2401,7 +2431,7 @@ Overloads:
             }
 
             auto mod = get_mod_ref(lua);
-            auto hook_lua = make_hook_state(mod);
+            auto hook_lua = get_hook_lua(mod);
 
             lua_xmove(lua.get_lua_state(), hook_lua->get_lua_state(), 1);
 
@@ -2429,7 +2459,7 @@ Overloads:
             }
 
             auto mod = get_mod_ref(lua);
-            auto hook_lua = make_hook_state(mod);
+            auto hook_lua = get_hook_lua(mod);
 
             lua_xmove(lua.get_lua_state(), hook_lua->get_lua_state(), 1);
 
@@ -2457,7 +2487,7 @@ Overloads:
             }
 
             auto mod = get_mod_ref(lua);
-            auto hook_lua = make_hook_state(mod);
+            auto hook_lua = get_hook_lua(mod);
 
             lua_xmove(lua.get_lua_state(), hook_lua->get_lua_state(), 1);
 
@@ -2485,7 +2515,7 @@ Overloads:
             }
 
             auto mod = get_mod_ref(lua);
-            auto hook_lua = make_hook_state(mod);
+            auto hook_lua = get_hook_lua(mod);
 
             lua_xmove(lua.get_lua_state(), hook_lua->get_lua_state(), 1);
 
@@ -2513,7 +2543,7 @@ Overloads:
             }
 
             auto mod = get_mod_ref(lua);
-            auto hook_lua = make_hook_state(mod);
+            auto hook_lua = get_hook_lua(mod);
 
             lua_xmove(lua.get_lua_state(), hook_lua->get_lua_state(), 1);
 
@@ -2957,7 +2987,7 @@ Overloads:
 
             LuaMod::LuaCallbackData* callback = nullptr;
             auto mod = get_mod_ref(lua);
-            auto hook_lua = make_hook_state(mod);
+            auto hook_lua = get_hook_lua(mod);
             callback = &LuaMod::m_process_console_exec_pre_callbacks.emplace_back(LuaMod::LuaCallbackData{hook_lua, nullptr, {}});
             lua_xmove(lua.get_lua_state(), callback->lua->get_lua_state(), 1);
             const int32_t lua_function_ref = callback->lua->registry().make_ref();
@@ -2978,7 +3008,7 @@ Overloads:
 
             LuaMod::LuaCallbackData* callback = nullptr;
             auto mod = get_mod_ref(lua);
-            auto hook_lua = make_hook_state(mod);
+            auto hook_lua = get_hook_lua(mod);
             callback = &LuaMod::m_process_console_exec_post_callbacks.emplace_back(LuaMod::LuaCallbackData{hook_lua, nullptr, {}});
             lua_xmove(lua.get_lua_state(), callback->lua->get_lua_state(), 1);
             const int32_t lua_function_ref = callback->lua->registry().make_ref();
@@ -2999,7 +3029,7 @@ Overloads:
 
             LuaMod::LuaCallbackData* callback = nullptr;
             auto mod = get_mod_ref(lua);
-            auto hook_lua = make_hook_state(mod);
+            auto hook_lua = get_hook_lua(mod);
             callback = &LuaMod::m_call_function_by_name_with_arguments_pre_callbacks.emplace_back(LuaMod::LuaCallbackData{hook_lua, nullptr, {}});
             lua_xmove(lua.get_lua_state(), callback->lua->get_lua_state(), 1);
             const int32_t lua_function_ref = callback->lua->registry().make_ref();
@@ -3020,7 +3050,7 @@ Overloads:
 
             LuaMod::LuaCallbackData* callback = nullptr;
             auto mod = get_mod_ref(lua);
-            auto hook_lua = make_hook_state(mod);
+            auto hook_lua = get_hook_lua(mod);
             callback = &LuaMod::m_call_function_by_name_with_arguments_post_callbacks.emplace_back(LuaMod::LuaCallbackData{hook_lua, nullptr, {}});
             lua_xmove(lua.get_lua_state(), callback->lua->get_lua_state(), 1);
             const int32_t lua_function_ref = callback->lua->registry().make_ref();
@@ -3041,7 +3071,7 @@ Overloads:
 
             LuaMod::LuaCallbackData* callback = nullptr;
             auto mod = get_mod_ref(lua);
-            auto hook_lua = make_hook_state(mod);
+            auto hook_lua = get_hook_lua(mod);
             callback = &LuaMod::m_local_player_exec_pre_callbacks.emplace_back(LuaMod::LuaCallbackData{hook_lua, nullptr, {}});
             lua_xmove(lua.get_lua_state(), callback->lua->get_lua_state(), 1);
             const int32_t lua_function_ref = callback->lua->registry().make_ref();
@@ -3062,7 +3092,7 @@ Overloads:
 
             LuaMod::LuaCallbackData* callback = nullptr;
             auto mod = get_mod_ref(lua);
-            auto hook_lua = make_hook_state(mod);
+            auto hook_lua = get_hook_lua(mod);
             callback = &LuaMod::m_local_player_exec_post_callbacks.emplace_back(LuaMod::LuaCallbackData{hook_lua, nullptr, {}});
             lua_xmove(lua.get_lua_state(), callback->lua->get_lua_state(), 1);
             const int32_t lua_function_ref = callback->lua->registry().make_ref();
@@ -3092,7 +3122,7 @@ Overloads:
             if (iter == LuaMod::m_global_command_lua_callbacks.end())
             {
                 auto mod = get_mod_ref(lua);
-                auto hook_lua = make_hook_state(mod);
+                auto hook_lua = get_hook_lua(mod);
                 callback = &LuaMod::m_global_command_lua_callbacks.emplace(command_name, LuaMod::LuaCallbackData{hook_lua, nullptr, {}}).first->second;
             }
             else
@@ -3127,7 +3157,7 @@ Overloads:
             if (iter == LuaMod::m_custom_command_lua_pre_callbacks.end())
             {
                 auto mod = get_mod_ref(lua);
-                auto hook_lua = make_hook_state(mod);
+                auto hook_lua = get_hook_lua(mod);
                 callback = &LuaMod::m_custom_command_lua_pre_callbacks.emplace(command_name, LuaMod::LuaCallbackData{hook_lua, nullptr, {}}).first->second;
             }
             else
@@ -3575,7 +3605,7 @@ Overloads:
             }
 
             auto mod = get_mod_ref(lua);
-            auto hook_lua = make_hook_state(mod); // operates on LuaMod::m_lua incrementing its stack via lua_newthread
+            auto [hook_lua, lua_thread_registry_index] = make_hook_state(mod); // operates on LuaMod::m_lua incrementing its stack via lua_newthread
 
             // Duplicate the Lua function to the top of the stack for lua_xmove and luaL_ref
             lua_pushvalue(lua.get_lua_state(), 1); // operates on LuaMadeSimple::Lua::m_lua_state
@@ -3583,7 +3613,6 @@ Overloads:
 
             // Take a reference to the Lua function (it also pops it of the stack)
             const auto lua_callback_registry_index = luaL_ref(hook_lua->get_lua_state(), LUA_REGISTRYINDEX);
-            const auto lua_thread_registry_index = luaL_ref(mod->lua().get_lua_state(), LUA_REGISTRYINDEX);
 
             bool has_post_callback{};
             int lua_post_callback_registry_index = -1;
@@ -3674,7 +3703,7 @@ Overloads:
             }
 
             auto mod = get_mod_ref(lua);
-            auto hook_lua = make_hook_state(mod);
+            auto [hook_lua, lua_thread_registry_index] = make_hook_state(mod);
 
             // Duplicate the Lua function to the top of the stack for lua_xmove and luaL_ref
             lua_pushvalue(lua.get_lua_state(), 1);
@@ -3682,8 +3711,8 @@ Overloads:
             lua_xmove(lua.get_lua_state(), hook_lua->get_lua_state(), 1);
 
             const auto func_ref = luaL_ref(hook_lua->get_lua_state(), LUA_REGISTRYINDEX);
-            const auto thread_ref = luaL_ref(mod->lua().get_lua_state(), LUA_REGISTRYINDEX);
-            SimpleLuaAction simpleAction{hook_lua, func_ref, thread_ref};
+
+            SimpleLuaAction simpleAction{hook_lua, func_ref, lua_thread_registry_index};
             {
                 std::lock_guard<std::recursive_mutex> guard{LuaMod::m_thread_actions_mutex};
                 mod->m_game_thread_actions.emplace_back(simpleAction);
@@ -3841,6 +3870,51 @@ Overloads:
         LuaType::FText::construct(lua, Unreal::FText());
         lua_setglobal(lua.get_lua_state(), "FText");
         // FText Class -> END
+
+        // FString Class -> START
+        // Pre-load the global FString constructor
+        lua.register_function("FString",
+                              [](const LuaMadeSimple::Lua& lua) -> int {
+                                  if (lua.get_stack_size() < 1 || !lua.is_string())
+                                  {
+                                      lua.throw_error("FString constructor requires a string argument");
+                                  }
+                                  std::string_view str = lua.get_string();
+                                  auto fstring = Unreal::FString(ensure_str(std::string(str)).c_str());
+                                  LuaType::FString::construct(lua, &fstring);
+                                  return 1;
+                              });
+        // FString Class -> END
+
+        // FUtf8String Class -> START
+        // Pre-load the global FUtf8String constructor
+        lua.register_function("FUtf8String",
+                              [](const LuaMadeSimple::Lua& lua) -> int {
+                                  if (lua.get_stack_size() < 1 || !lua.is_string())
+                                  {
+                                      lua.throw_error("FUtf8String constructor requires a string argument");
+                                  }
+                                  std::string_view str = lua.get_string();
+                                  auto utf8string = Unreal::FUtf8String(reinterpret_cast<const Unreal::UTF8CHAR*>(str.data()));
+                                  LuaType::FUtf8String::construct(lua, &utf8string);
+                                  return 1;
+                              });
+        // FUtf8String Class -> END
+
+        // FAnsiString Class -> START
+        // Pre-load the global FAnsiString constructor
+        lua.register_function("FAnsiString",
+                              [](const LuaMadeSimple::Lua& lua) -> int {
+                                  if (lua.get_stack_size() < 1 || !lua.is_string())
+                                  {
+                                      lua.throw_error("FAnsiString constructor requires a string argument");
+                                  }
+                                  std::string_view str = lua.get_string();
+                                  auto ansistring = Unreal::FAnsiString(str.data());
+                                  LuaType::FAnsiString::construct(lua, &ansistring);
+                                  return 1;
+                              });
+        // FAnsiString Class -> END
 
         // FPackageName -> START
         auto package_name = lua.prepare_new_table();
@@ -4154,9 +4228,9 @@ Overloads:
             });
         });
 
-        if (m_hook_lua.size() > 0)
+        if (m_hook_lua != nullptr)
         {
-            m_hook_lua.clear(); // lua_newthread results are handled by lua GC
+            m_hook_lua = nullptr; // lua_newthread results are handled by lua GC
         }
 
         if (m_async_lua && m_async_lua->get_lua_state())
@@ -4256,7 +4330,7 @@ Overloads:
 
                     lua.registry().get_function_ref(registry_index.lua_index);
 
-                    static auto s_object_property_name = Unreal::FName(STR("ObjectProperty"));
+                    static auto s_object_property_name = Unreal::FName(STR("ObjectProperty"), Unreal::FNAME_Find);
                     LuaType::RemoteUnrealParam::construct(lua, &Context, s_object_property_name);
 
                     auto node = Stack.Node();
@@ -4383,12 +4457,12 @@ Overloads:
                                 const auto& lua = *lua_ptr;
 
                                 lua.registry().get_function_ref(registry_index.lua_index);
-                                static auto s_object_property_name = Unreal::FName(STR("ObjectProperty"));
+                                static auto s_object_property_name = Unreal::FName(STR("ObjectProperty"), Unreal::FNAME_Find);
                                 LuaType::RemoteUnrealParam::construct(lua, &Engine, s_object_property_name);
                                 LuaType::RemoteUnrealParam::construct(lua, &WorldContext.GetThisCurrentWorld(), s_object_property_name);
                                 LuaType::FURL::construct(lua, URL);
                                 LuaType::RemoteUnrealParam::construct(lua, &PendingGame, s_object_property_name);
-                                callback_data.lua->set_string(to_string(Error.GetCharArray()));
+                                callback_data.lua->set_string(to_string(*Error));
                                 lua.call_function(5, 1);
 
                                 if (callback_data.lua->is_nil())
@@ -4426,12 +4500,12 @@ Overloads:
                                 const auto& lua = *lua_ptr;
 
                                 lua.registry().get_function_ref(registry_index.lua_index);
-                                static auto s_object_property_name = Unreal::FName(STR("ObjectProperty"));
+                                static auto s_object_property_name = Unreal::FName(STR("ObjectProperty"), Unreal::FNAME_Find);
                                 LuaType::RemoteUnrealParam::construct(lua, &Engine, s_object_property_name);
                                 LuaType::RemoteUnrealParam::construct(lua, &WorldContext.GetThisCurrentWorld(), s_object_property_name);
                                 LuaType::FURL::construct(lua, URL);
                                 LuaType::RemoteUnrealParam::construct(lua, &PendingGame, s_object_property_name);
-                                callback_data.lua->set_string(to_string(Error.GetCharArray()));
+                                callback_data.lua->set_string(to_string(*Error));
                                 lua.call_function(5, 1);
 
                                 if (callback_data.lua->is_nil())
@@ -4467,7 +4541,7 @@ Overloads:
                         const auto& lua = *lua_ptr;
 
                         lua.registry().get_function_ref(registry_index.lua_index);
-                        static auto s_object_property_name = Unreal::FName(STR("ObjectProperty"));
+                        static auto s_object_property_name = Unreal::FName(STR("ObjectProperty"), Unreal::FNAME_Find);
                         LuaType::RemoteUnrealParam::construct(lua, &Context, s_object_property_name);
                         lua.call_function(1, 0);
                     }
@@ -4488,7 +4562,7 @@ Overloads:
                         const auto& lua = *lua_ptr;
 
                         lua.registry().get_function_ref(registry_index.lua_index);
-                        static auto s_object_property_name = Unreal::FName(STR("ObjectProperty"));
+                        static auto s_object_property_name = Unreal::FName(STR("ObjectProperty"), Unreal::FNAME_Find);
                         LuaType::RemoteUnrealParam::construct(lua, &Context, s_object_property_name);
                         lua.call_function(1, 0);
                     }
@@ -4509,7 +4583,7 @@ Overloads:
                         const auto& lua = *lua_ptr;
 
                         lua.registry().get_function_ref(registry_index.lua_index);
-                        static auto s_object_property_name = Unreal::FName(STR("ObjectProperty"));
+                        static auto s_object_property_name = Unreal::FName(STR("ObjectProperty"), Unreal::FNAME_Find);
                         LuaType::RemoteUnrealParam::construct(lua, &Context, s_object_property_name);
                         lua.call_function(1, 0);
                     }
@@ -4530,7 +4604,7 @@ Overloads:
                         const auto& lua = *lua_ptr;
 
                         lua.registry().get_function_ref(registry_index.lua_index);
-                        static auto s_object_property_name = Unreal::FName(STR("ObjectProperty"));
+                        static auto s_object_property_name = Unreal::FName(STR("ObjectProperty"), Unreal::FNAME_Find);
                         LuaType::RemoteUnrealParam::construct(lua, &Context, s_object_property_name);
                         lua.call_function(1, 0);
                     }
@@ -4551,9 +4625,9 @@ Overloads:
                         const auto& lua = *lua_ptr;
 
                         lua.registry().get_function_ref(registry_index.lua_index);
-                        static auto s_object_property_name = Unreal::FName(STR("ObjectProperty"));
+                        static auto s_object_property_name = Unreal::FName(STR("ObjectProperty"), Unreal::FNAME_Find);
                         LuaType::RemoteUnrealParam::construct(lua, &Context, s_object_property_name);
-                        static auto s_int_property_name = Unreal::FName(STR("IntProperty"));
+                        static auto s_int_property_name = Unreal::FName(STR("IntProperty"), Unreal::FNAME_Find);
                         LuaType::RemoteUnrealParam::construct(lua, &EndPlayReason, s_int_property_name);
                         lua.call_function(2, 0);
                     }
@@ -4574,9 +4648,9 @@ Overloads:
                         const auto& lua = *lua_ptr;
 
                         lua.registry().get_function_ref(registry_index.lua_index);
-                        static auto s_object_property_name = Unreal::FName(STR("ObjectProperty"));
+                        static auto s_object_property_name = Unreal::FName(STR("ObjectProperty"), Unreal::FNAME_Find);
                         LuaType::RemoteUnrealParam::construct(lua, &Context, s_object_property_name);
-                        static auto s_int_property_name = Unreal::FName(STR("IntProperty"));
+                        static auto s_int_property_name = Unreal::FName(STR("IntProperty"), Unreal::FNAME_Find);
                         LuaType::RemoteUnrealParam::construct(lua, &EndPlayReason, s_int_property_name);
                         lua.call_function(2, 0);
                     }
@@ -4631,7 +4705,7 @@ Overloads:
                     {
                         callback_data.lua->registry().get_function_ref(registry_index.lua_index);
 
-                        static auto s_object_property_name = Unreal::FName(STR("ObjectProperty"));
+                        static auto s_object_property_name = Unreal::FName(STR("ObjectProperty"), Unreal::FNAME_Find);
                         LuaType::RemoteUnrealParam::construct(*callback_data.lua, &context, s_object_property_name);
                         LuaType::RemoteUnrealParam::construct(*callback_data.lua, &in_world, s_object_property_name);
                         callback_data.lua->set_string(to_string(cmd));
@@ -4691,7 +4765,7 @@ Overloads:
                     {
                         callback_data.lua->registry().get_function_ref(registry_index.lua_index);
 
-                        static auto s_object_property_name = Unreal::FName(STR("ObjectProperty"));
+                        static auto s_object_property_name = Unreal::FName(STR("ObjectProperty"), Unreal::FNAME_Find);
                         LuaType::RemoteUnrealParam::construct(*callback_data.lua, &context, s_object_property_name);
                         LuaType::RemoteUnrealParam::construct(*callback_data.lua, &in_world, s_object_property_name);
                         callback_data.lua->set_string(to_string(cmd));
@@ -4752,7 +4826,7 @@ Overloads:
                             {
                                 callback_data.lua->registry().get_function_ref(registry_index.lua_index);
 
-                                static auto s_object_property_name = Unreal::FName(STR("ObjectProperty"));
+                                static auto s_object_property_name = Unreal::FName(STR("ObjectProperty"), Unreal::FNAME_Find);
                                 LuaType::RemoteUnrealParam::construct(*callback_data.lua, &context, s_object_property_name);
                                 callback_data.lua->set_string(to_string(str));
                                 LuaType::FOutputDevice::construct(*callback_data.lua, &ar);
@@ -4800,7 +4874,7 @@ Overloads:
                             {
                                 callback_data.lua->registry().get_function_ref(registry_index.lua_index);
 
-                                static auto s_object_property_name = Unreal::FName(STR("ObjectProperty"));
+                                static auto s_object_property_name = Unreal::FName(STR("ObjectProperty"), Unreal::FNAME_Find);
                                 LuaType::RemoteUnrealParam::construct(*callback_data.lua, &context, s_object_property_name);
                                 callback_data.lua->set_string(to_string(str));
                                 LuaType::FOutputDevice::construct(*callback_data.lua, &ar);
@@ -4931,7 +5005,7 @@ Overloads:
                             {
                                 callback_data.lua->registry().get_function_ref(registry_index.lua_index);
 
-                                static auto s_object_property_name = Unreal::FName(STR("ObjectProperty"));
+                                static auto s_object_property_name = Unreal::FName(STR("ObjectProperty"), Unreal::FNAME_Find);
                                 LuaType::RemoteUnrealParam::construct(*callback_data.lua, &context, s_object_property_name);
                                 callback_data.lua->set_string(to_string(command));
                                 auto params_table = callback_data.lua->prepare_new_table();
@@ -4987,7 +5061,7 @@ Overloads:
                             {
                                 callback_data.lua->registry().get_function_ref(registry_index.lua_index);
 
-                                static auto s_object_property_name = Unreal::FName(STR("ObjectProperty"));
+                                static auto s_object_property_name = Unreal::FName(STR("ObjectProperty"), Unreal::FNAME_Find);
                                 LuaType::RemoteUnrealParam::construct(*callback_data.lua, &context, s_object_property_name);
                                 callback_data.lua->set_string(to_string(command));
                                 auto params_table = callback_data.lua->prepare_new_table();

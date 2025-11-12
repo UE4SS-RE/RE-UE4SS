@@ -2,7 +2,7 @@
 #include <LuaType/LuaAActor.hpp>
 #include <LuaType/LuaCustomProperty.hpp>
 #include <LuaType/LuaFName.hpp>
-#include <LuaType/LuaFString.hpp>
+#include <LuaType/LuaUnrealString.hpp>
 #include <LuaType/LuaFText.hpp>
 #include <LuaType/LuaFWeakObjectPtr.hpp>
 #include <LuaType/LuaTArray.hpp>
@@ -18,6 +18,7 @@
 #include <LuaType/LuaUStruct.hpp>
 #include <LuaType/LuaUWorld.hpp>
 #include <LuaType/LuaUDataTable.hpp>
+#include <LuaType/LuaXDelegateProperty.hpp>
 #include <LuaType/LuaXObjectProperty.hpp>
 #include <LuaType/LuaXProperty.hpp>
 #pragma warning(disable : 4005)
@@ -33,6 +34,9 @@
 #include <Unreal/Property/FSoftClassProperty.hpp>
 #include <Unreal/Property/FStructProperty.hpp>
 #include <Unreal/Property/FWeakObjectProperty.hpp>
+#include <Unreal/Property/FDelegateProperty.hpp>
+#include <Unreal/Property/FMulticastDelegateProperty.hpp>
+#include <Unreal/Property/FMulticastSparseDelegateProperty.hpp>
 #include <Unreal/Property/NumericPropertyTypes.hpp>
 #include <Unreal/UClass.hpp>
 #include <Unreal/UEnum.hpp>
@@ -49,27 +53,39 @@
 namespace RC::LuaType
 {
     std::unordered_set<size_t> s_lua_unreal_objects{};
+    std::mutex s_lua_unreal_objects_map_mutex{};
 
     auto add_to_global_unreal_objects_map(Unreal::UObject* object) -> void
     {
         if (object)
         {
+            std::lock_guard lock{s_lua_unreal_objects_map_mutex};
             s_lua_unreal_objects.emplace(object->HashObject());
+        }
+    }
+
+    auto remove_from_global_unreal_objects_map(const Unreal::UObject* object) -> void
+    {
+        if (object)
+        {
+            std::lock_guard lock{s_lua_unreal_objects_map_mutex};
+            if (const auto it = s_lua_unreal_objects.find(object->HashObject()); it != s_lua_unreal_objects.end())
+            {
+                s_lua_unreal_objects.erase(it);
+            }
         }
     }
 
     auto is_object_in_global_unreal_object_map(Unreal::UObject* object) -> bool
     {
+        std::lock_guard lock{s_lua_unreal_objects_map_mutex};
         return object && s_lua_unreal_objects.contains(object->HashObject());
     }
 
     FLuaObjectDeleteListener FLuaObjectDeleteListener::s_lua_object_delete_listener{};
     void FLuaObjectDeleteListener::NotifyUObjectDeleted(const Unreal::UObjectBase* object, [[maybe_unused]] int32_t index)
     {
-        if (auto it = s_lua_unreal_objects.find(static_cast<const Unreal::UObject*>(object)->HashObject()); it != s_lua_unreal_objects.end())
-        {
-            s_lua_unreal_objects.erase(it);
-        }
+        remove_from_global_unreal_objects_map(static_cast<const Unreal::UObject*>(object));
     }
 
     auto call_ufunction_from_lua(const LuaMadeSimple::Lua& lua) -> int
@@ -1636,7 +1652,7 @@ namespace RC::LuaType
             else if (params.lua.is_userdata(params.stored_at_index))
             {
                 auto& rhs = params.lua.get_userdata<LuaType::FString>(params.stored_at_index);
-                string->SetCharArray(rhs.get_local_cpp_object().GetCharTArray());
+                string->SetCharArray(rhs.get_local_cpp_object().GetCharArray());
             }
             else
             {
@@ -1653,6 +1669,90 @@ namespace RC::LuaType
         }
 
         params.throw_error("push_strproperty", "Operation not supported");
+    }
+
+    auto push_utf8strproperty(const PusherParams& params) -> void
+    {
+        Unreal::FUtf8String* string = static_cast<Unreal::FUtf8String*>(params.data);
+        if (!string)
+        {
+            params.throw_error("push_utf8strproperty", "data pointer is nullptr");
+        }
+
+        switch (params.operation)
+        {
+        case Operation::GetNonTrivialLocal:
+        case Operation::Get:
+            LuaType::FUtf8String::construct(params.lua, string);
+            return;
+        case Operation::Set: {
+            if (params.lua.is_string(params.stored_at_index))
+            {
+                auto lua_string = params.lua.get_string(params.stored_at_index);
+                *string = Unreal::FUtf8String(reinterpret_cast<const Unreal::UTF8CHAR*>(lua_string.data()));
+            }
+            else if (params.lua.is_userdata(params.stored_at_index))
+            {
+                auto& rhs = params.lua.get_userdata<LuaType::FUtf8String>(params.stored_at_index);
+                *string = rhs.get_local_cpp_object();
+            }
+            else
+            {
+                params.throw_error("push_utf8strproperty", "Utf8StrProperty can only be set to a string or FUtf8String");
+            }
+            return;
+        }
+        case Operation::GetParam:
+            RemoteUnrealParam::construct(params.lua, params.data, params.base, params.property);
+            return;
+        default:
+            params.throw_error("push_utf8strproperty", "Unhandled Operation");
+            break;
+        }
+
+        params.throw_error("push_utf8strproperty", "Operation not supported");
+    }
+
+    auto push_ansistrproperty(const PusherParams& params) -> void
+    {
+        Unreal::FAnsiString* string = static_cast<Unreal::FAnsiString*>(params.data);
+        if (!string)
+        {
+            params.throw_error("push_ansistrproperty", "data pointer is nullptr");
+        }
+
+        switch (params.operation)
+        {
+        case Operation::GetNonTrivialLocal:
+        case Operation::Get:
+            LuaType::FAnsiString::construct(params.lua, string);
+            return;
+        case Operation::Set: {
+            if (params.lua.is_string(params.stored_at_index))
+            {
+                auto lua_string = params.lua.get_string(params.stored_at_index);
+                *string = Unreal::FAnsiString(lua_string.data());
+            }
+            else if (params.lua.is_userdata(params.stored_at_index))
+            {
+                auto& rhs = params.lua.get_userdata<LuaType::FAnsiString>(params.stored_at_index);
+                *string = rhs.get_local_cpp_object();
+            }
+            else
+            {
+                params.throw_error("push_ansistrproperty", "AnsiStrProperty can only be set to a string or FAnsiString");
+            }
+            return;
+        }
+        case Operation::GetParam:
+            RemoteUnrealParam::construct(params.lua, params.data, params.base, params.property);
+            return;
+        default:
+            params.throw_error("push_ansistrproperty", "Unhandled Operation");
+            break;
+        }
+
+        params.throw_error("push_ansistrproperty", "Operation not supported");
     }
 
     auto push_softobjectproperty(const PusherParams& params) -> void
@@ -1722,6 +1822,220 @@ namespace RC::LuaType
             break;
         default:
             params.throw_error("push_interfaceproperty", "Operation not supported");
+            break;
+        }
+    }
+
+    auto push_delegateproperty(const PusherParams& params) -> void
+    {
+        using namespace Unreal;
+        auto* delegate_value = static_cast<FScriptDelegate*>(params.data);
+        if (!delegate_value)
+        {
+            params.throw_error("push_delegateproperty", "data pointer is nullptr");
+        }
+
+        switch (params.operation)
+        {
+        case Operation::GetNonTrivialLocal:
+        case Operation::Get: {
+            // Return a table with {Object = UObject, FunctionName = FName}
+            LuaMadeSimple::Lua::Table lua_table = params.lua.prepare_new_table();
+
+            lua_table.add_key("Object");
+            auto_construct_object(params.lua, delegate_value->GetUObject());
+            lua_table.fuse_pair();
+
+            lua_table.add_key("FunctionName");
+            FName::construct(params.lua, delegate_value->GetFunctionName());
+            lua_table.fuse_pair();
+
+            lua_table.make_local();
+            break;
+        }
+        case Operation::Set: {
+            if (params.lua.is_table())
+            {
+                lua_pushstring(params.lua.get_lua_state(), "Object");
+                int adjusted_index = params.stored_at_index;
+                if (params.stored_at_index < 0)
+                {
+                    adjusted_index = params.stored_at_index - 1;
+                }
+                lua_rawget(params.lua.get_lua_state(), adjusted_index);
+
+                Unreal::UObject* obj = nullptr;
+                if (params.lua.is_userdata())
+                {
+                    const auto& lua_object = params.lua.get_userdata<LuaType::UObject>();
+                    obj = lua_object.get_remote_cpp_object();
+                }
+                params.lua.discard_value();
+
+                lua_pushstring(params.lua.get_lua_state(), "FunctionName");
+                lua_rawget(params.lua.get_lua_state(), adjusted_index);
+
+                Unreal::FName fname = NAME_None;
+                if (params.lua.is_userdata())
+                {
+                    auto& lua_fname = params.lua.get_userdata<LuaType::FName>();
+                    fname = lua_fname.get_local_cpp_object();
+                }
+                params.lua.discard_value();
+
+                // Bind the delegate - this modifies the existing FWeakObjectPtr which calls
+                // the engine's assignment operator that will allocate serial numbers
+                delegate_value->BindUFunction(obj, fname);
+                params.lua.discard_value(params.stored_at_index);
+            }
+            else if (params.lua.is_nil())
+            {
+                delegate_value->Clear();
+                params.lua.discard_value(params.stored_at_index);
+            }
+            else
+            {
+                params.throw_error("push_delegateproperty", "Value must be a table {Object = UObject, FunctionName = FName} or nil");
+            }
+            break;
+        }
+        case Operation::GetParam:
+            RemoteUnrealParam::construct(params.lua, params.data, params.base, params.property);
+            break;
+        default:
+            params.throw_error("push_delegateproperty", "Operation not supported");
+            break;
+        }
+    }
+
+    auto push_multicastdelegateproperty(const PusherParams& params) -> void
+    {
+        using namespace Unreal;
+
+        auto* delegate_property = static_cast<FMulticastDelegateProperty*>(params.property);
+        if (!delegate_property)
+        {
+            params.throw_error("push_multicastdelegateproperty", "property is not FMulticastDelegateProperty");
+        }
+
+        switch (params.operation)
+        {
+        case Operation::Get:
+            XMulticastDelegateProperty::construct(params);
+            break;
+        case Operation::GetNonTrivialLocal: {
+            const FMulticastScriptDelegate* delegate_value = delegate_property->GetMulticastDelegate(params.data);
+            if (!delegate_value)
+            {
+                params.lua.set_nil();
+                break;
+            }
+
+            LuaMadeSimple::Lua::Table lua_table = params.lua.prepare_new_table();
+
+            int32 count = delegate_value->Num();
+            for (int32 i = 0; i < count; ++i)
+            {
+                lua_table.add_key(i + 1); // Lua is 1-indexed
+
+                LuaMadeSimple::Lua::Table delegate_entry = params.lua.prepare_new_table();
+
+                delegate_entry.add_key("Object");
+                auto_construct_object(params.lua, delegate_value->InvocationList[i].GetUObject());
+                delegate_entry.fuse_pair();
+
+                delegate_entry.add_key("FunctionName");
+                FName::construct(params.lua, delegate_value->InvocationList[i].GetFunctionName());
+                delegate_entry.fuse_pair();
+
+                delegate_entry.make_local();
+                lua_table.fuse_pair(); // Set array element
+            }
+
+            lua_table.make_local();
+            break;
+        }
+        case Operation::Set:
+            // Multicast delegates cannot be set directly. Use the property wrapper methods instead:
+            // local prop = obj.OnSomething
+            // prop:Add(targetObj, FName("FunctionName"))
+            // prop:Remove(targetObj, FName("FunctionName"))
+            // prop:Clear()
+            params.throw_error("push_multicastdelegateproperty",
+                               "Multicast delegate values are read-only. Use property methods: GetPropertyByName():Add/Remove/Clear");
+            break;
+        case Operation::GetParam:
+            RemoteUnrealParam::construct(params.lua, params.data, params.base, params.property);
+            break;
+        default:
+            params.throw_error("push_multicastdelegateproperty", "Operation not supported");
+            break;
+        }
+    }
+
+    auto push_multicastsparsedelegateproperty(const PusherParams& params) -> void
+    {
+        using namespace Unreal;
+
+        // Sparse delegates work similarly to regular multicast delegates
+        // The main difference is they use 1 byte + global storage instead of inline InvocationList
+        auto* delegate_property = static_cast<FMulticastSparseDelegateProperty*>(params.property);
+        if (!delegate_property)
+        {
+            params.throw_error("push_multicastsparsedelegateproperty", "property is not FMulticastSparseDelegateProperty");
+        }
+
+        switch (params.operation)
+        {
+        case Operation::Get:
+            XMulticastSparseDelegateProperty::construct(params);
+            break;
+        case Operation::GetNonTrivialLocal: {
+            const FMulticastScriptDelegate* delegate_value = delegate_property->GetMulticastDelegate(params.data);
+            if (!delegate_value)
+            {
+                params.lua.set_nil();
+                break;
+            }
+
+            LuaMadeSimple::Lua::Table lua_table = params.lua.prepare_new_table();
+
+            int32 count = delegate_value->Num();
+            for (int32 i = 0; i < count; ++i)
+            {
+                lua_table.add_key(i + 1); // Lua is 1-indexed
+
+                LuaMadeSimple::Lua::Table delegate_entry = params.lua.prepare_new_table();
+
+                delegate_entry.add_key("Object");
+                auto_construct_object(params.lua, delegate_value->InvocationList[i].GetUObject());
+                delegate_entry.fuse_pair();
+
+                delegate_entry.add_key("FunctionName");
+                FName::construct(params.lua, delegate_value->InvocationList[i].GetFunctionName());
+                delegate_entry.fuse_pair();
+
+                delegate_entry.make_local();
+                lua_table.fuse_pair();
+            }
+
+            lua_table.make_local();
+            break;
+        }
+        case Operation::Set:
+            // Multicast delegates cannot be set directly. Use the property wrapper methods instead:
+            // local prop = obj.OnSomething
+            // prop:Add(targetObj, FName("FunctionName"))
+            // prop:Remove(targetObj, FName("FunctionName"))
+            // prop:Clear() 
+            params.throw_error("push_multicastsparsedelegateproperty",
+                               "Sparse multicast delegate values are read-only. Use property methods: GetPropertyByName():Add/Remove/Clear");
+            break;
+        case Operation::GetParam:
+            RemoteUnrealParam::construct(params.lua, params.data, params.base, params.property);
+            break;
+        default:
+            params.throw_error("push_multicastsparsedelegateproperty", "Operation not supported");
             break;
         }
     }

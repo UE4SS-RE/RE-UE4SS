@@ -371,7 +371,15 @@ namespace RC::Ini
         }
 
         // Create the value with the correct key and an empty value and store a pointer to it so that the value can be set later
-        m_current_value = &m_current_section->key_value_pairs.emplace(m_current_character_data, Value{}).first->second;
+        if (!m_current_character_data.empty() && (m_current_character_data.starts_with(STR('+')) || m_current_character_data.starts_with(STR('-'))))
+        {
+            // Retaining '+' and '-' for the user to process later.
+            m_current_value = &m_current_section->key_value_array.emplace_back(m_current_character_data, Value{}).second;
+        }
+        else
+        {
+            m_current_value = &m_current_section->key_value_pairs.emplace(m_current_character_data, Value{}).first->second;
+        }
         m_current_value->add_string_value(STR(""));
         m_current_value->set_ref(m_current_value);
         m_current_character_data.clear();

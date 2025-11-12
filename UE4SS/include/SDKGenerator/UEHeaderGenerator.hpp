@@ -328,7 +328,11 @@ namespace RC::UEGenerator
         auto static get_property_access_modifier(FProperty* property) -> AccessModifier;
         auto static get_function_access_modifier(UFunction* function) -> AccessModifier;
         auto static create_string_literal(const StringType& string) -> StringType;
+        auto static create_utf8_string_literal(const StringType& string) -> StringType;
+        auto static create_ansi_string_literal(const StringType& string) -> StringType;
         auto static get_header_name_for_object(UObject* object, bool get_existing_header = false) -> StringType;
         auto static generate_cross_module_include(UObject* object, const StringType& module_name, const StringType& fallback_name) -> StringType;
+    private:
+        auto static create_string_literal_with_macro(const StringType& string, const StringType& macro_name) -> StringType;
     };
 } // namespace RC::UEGenerator

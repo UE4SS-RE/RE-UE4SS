@@ -8,7 +8,9 @@ project(${TARGET})
 message("Project: ${TARGET} (HEADER-ONLY)")
 
 set(ProfilerFlavors Tracy Superluminal None)
-set(RC_PROFILER_FLAVOR Tracy CACHE STRING "Profiler flavor (Tracy, Superluminal, or None)")
+# Default to None - users can opt-in to Tracy or Superluminal if needed
+# This is also set in ProjectConfig.cmake - whichever is evaluated last takes precedence
+set(RC_PROFILER_FLAVOR "None" CACHE STRING "Profiler flavor (Tracy, Superluminal, or None)")
 set_property(CACHE RC_PROFILER_FLAVOR PROPERTY STRINGS ${ProfilerFlavors})
 
 add_library(${TARGET} INTERFACE)
@@ -23,8 +25,10 @@ target_include_directories(${TARGET} INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/inclu
 make_headers_visible(${TARGET} "${CMAKE_CURRENT_SOURCE_DIR}/include")
 
 if (${RC_PROFILER_FLAVOR} STREQUAL None)
+    message(STATUS "Profiler: Disabled (set RC_PROFILER_FLAVOR=Tracy to enable)")
     target_compile_definitions(${TARGET} INTERFACE DISABLE_PROFILER IS_TRACY=0 IS_SUPERLUMINAL=0)
 elseif (${RC_PROFILER_FLAVOR} STREQUAL Tracy)
+    message(STATUS "Profiler: Tracy (fetching from GitHub)")
     # Tracy start
     FetchContent_Declare(Tracy
         GIT_REPOSITORY git@github.com:wolfpld/tracy.git
@@ -37,6 +41,7 @@ elseif (${RC_PROFILER_FLAVOR} STREQUAL Tracy)
     target_compile_definitions(${TARGET} INTERFACE IS_TRACY=1 IS_SUPERLUMINAL=0)
     target_link_libraries(${TARGET} INTERFACE TracyClient)
 elseif (${RC_PROFILER_FLAVOR} STREQUAL Superluminal)
+    message(STATUS "Profiler: Superluminal")
     find_package(SuperluminalAPI REQUIRED)
 
     target_compile_definitions(${TARGET} INTERFACE IS_TRACY=0 IS_SUPERLUMINAL=1)
