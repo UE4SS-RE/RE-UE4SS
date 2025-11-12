@@ -4217,7 +4217,28 @@ Overloads:
         erase_from_container(this, m_local_player_exec_post_callbacks);
         erase_from_container(this, m_script_hook_callbacks);
 
-        UE4SSProgram::get_program().unregister_keydown_events_for_lua_mod(this);
+        UE4SSProgram::get_program().get_all_input_events([&](auto& key_set) {
+            std::erase_if(key_set.key_data,
+                          [&](auto& item) -> bool {
+                              auto& [_, key_data] = item;
+                              std::erase_if(key_data,
+                                            [&](Input::KeyData& key_data) -> bool {
+                                                // custom_data == 1: Bind came from Lua, and custom_data2 is a pointer to LuaMod.
+                                                // custom_data == 2: Bind came from C++, and custom_data2 is a pointer to KeyDownEventData. Must free it.
+                                                if (key_data.custom_data == 1)
+                                                {
+                                                    return key_data.custom_data2 == this;
+                                                }
+                                                else
+                                                {
+                                                    return false;
+                                                }
+                                            });
+
+                              return key_data.empty();
+                          });
+        });
+
 
         if (m_hook_lua != nullptr)
         {
