@@ -360,8 +360,17 @@ namespace RC
                     if (LuaType::StaticState::m_property_value_pushers.contains(name_comparison_index))
                     {
                         // Non-typed pointer to the current parameter value
-                        // void* data = &context.TheStack.Locals[current_param_offset];
-                        void* data = func_prop->ContainerPtrToValuePtr<void>(context.TheStack.Locals());
+                        void* data{};
+                        if (func_prop->HasAnyPropertyFlags(Unreal::EPropertyFlags::CPF_OutParm))
+                        {
+                            // For out params (including ref params), get the modified value from OutParms
+                            data = Unreal::FindOutParamValueAddress(context.TheStack, func_prop);
+                        }
+                        else
+                        {
+                            // For regular input params, read from Locals
+                            data = func_prop->ContainerPtrToValuePtr<void>(context.TheStack.Locals());
+                        }
 
                         // Keeping track of where in the 'Locals' array the next property is
                         // current_param_offset += func_prop->GetSize();
@@ -4208,25 +4217,7 @@ Overloads:
         erase_from_container(this, m_local_player_exec_post_callbacks);
         erase_from_container(this, m_script_hook_callbacks);
 
-        UE4SSProgram::get_program().get_all_input_events([&](auto& key_set) {
-            std::erase_if(key_set.key_data, [&](auto& item) -> bool {
-                auto& [_, key_data] = item;
-                std::erase_if(key_data, [&](Input::KeyData& key_data) -> bool {
-                    // custom_data == 1: Bind came from Lua, and custom_data2 is a pointer to LuaMod.
-                    // custom_data == 2: Bind came from C++, and custom_data2 is a pointer to KeyDownEventData. Must free it.
-                    if (key_data.custom_data == 1)
-                    {
-                        return key_data.custom_data2 == this;
-                    }
-                    else
-                    {
-                        return false;
-                    }
-                });
-
-                return key_data.empty();
-            });
-        });
+        UE4SSProgram::get_program().unregister_keydown_events_for_lua_mod(this);
 
         if (m_hook_lua != nullptr)
         {
