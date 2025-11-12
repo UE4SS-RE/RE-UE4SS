@@ -48,6 +48,7 @@ namespace RC
 
       public:
         auto get_name() const -> StringViewType;
+        auto get_path() const -> const std::filesystem::path&;
 
         virtual auto start_mod() -> void = 0;
         virtual auto uninstall() -> void = 0;

@@ -84,6 +84,7 @@ namespace RC
                 throw std::runtime_error{fmt::format("Invalid value for 'General.HotReloadKey': {}\n", to_string(hot_reload_key))};
             }
         }
+        REGISTER_BOOL_SETTING(General.EnableAutoReloadingLuaMods, section_general, EnableAutoReloadingLuaMods)
         REGISTER_BOOL_SETTING(General.UseCache, section_general, UseCache)
         REGISTER_BOOL_SETTING(General.InvalidateCacheIfDLLDiffers, section_general, InvalidateCacheIfDLLDiffers)
         REGISTER_BOOL_SETTING(General.EnableDebugKeyBindings, section_general, EnableDebugKeyBindings)

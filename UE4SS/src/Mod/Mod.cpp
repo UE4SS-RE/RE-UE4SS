@@ -60,6 +60,11 @@ namespace RC
         return m_mod_name;
     }
 
+    auto Mod::get_path() const -> const std::filesystem::path&
+    {
+        return m_mod_path;
+    }
+
     auto Mod::set_installable(bool is_installable) -> void
     {
         m_installable = is_installable;
