@@ -125,7 +125,7 @@ namespace RC::GUI
     static auto filter_out_objects(UObject* object) -> bool
     {
         APPLY_PRE_SEARCH_FILTERS(SearchFilters)
-        if (LiveView::s_name_search_results_set.contains(object))
+        if (!LiveView::s_name_to_search_by.empty() && LiveView::s_name_search_results_set.contains(object))
         {
             return true;
         }
