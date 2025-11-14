@@ -1,9 +1,10 @@
 #pragma once
 
+#include <vector>
+
 #include <GUI/LiveView/Filter/SearchFilter.hpp>
 #include <Unreal/UClass.hpp>
 #include <Unreal/NameTypes.hpp>
-#include <vector>
 
 namespace RC::GUI::Filter
 {
@@ -28,15 +29,28 @@ namespace RC::GUI::Filter
             }
 
             bool should_filter_object_out = true;
-            for (const auto& property : as_struct->ForEachPropertyInChain())
-            {
+
+            auto should_filter = [&](FProperty* property) {
                 for (const auto& property_type : list_property_types)
                 {
                     if (property->GetClass().GetFName() == property_type)
                     {
+                        highlight(property);
                         should_filter_object_out = false;
                         break;
                     }
+                }
+            };
+
+            for (FProperty* property : as_struct->ForEachProperty())
+            {
+                should_filter(property);
+            }
+            for (UStruct* super_struct : as_struct->ForEachSuperStruct())
+            {
+                for (FProperty* property : super_struct->ForEachProperty())
+                {
+                    should_filter(property);
                 }
             }
             return should_filter_object_out;
