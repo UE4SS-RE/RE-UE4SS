@@ -140,9 +140,9 @@ namespace RC::GUI::Filter
         return true;                                                                                                                                           \
     }
 
-    static auto is_instance(UObject* object) -> bool
+    static auto is_instance(UObject* object, bool care_about_cdo = true) -> bool
     {
-        return !object->HasAnyFlags(static_cast<EObjectFlags>(RF_ClassDefaultObject | RF_ArchetypeObject)) && !object->IsA<UStruct>() &&
-               !object->IsA<UField>() && !object->IsA<UPackage>();
+        const auto cdo = care_about_cdo ? !object->HasAnyFlags(static_cast<EObjectFlags>(RF_ClassDefaultObject | RF_ArchetypeObject)) : true;
+        return cdo && !object->IsA<UStruct>() && !object->IsA<UField>() && !object->IsA<UPackage>();
     }
 } // namespace RC::GUI::Filter
