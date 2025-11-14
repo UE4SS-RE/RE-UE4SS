@@ -1947,7 +1947,7 @@ namespace RC::GUI
         if (are_listeners_allowed())
         {
             std::string search_buffer{m_search_by_name_buffer};
-            if (search_buffer.empty() || s_apply_search_filters_when_not_searching)
+            if (search_buffer.empty() || search_buffer == m_default_search_buffer || s_apply_search_filters_when_not_searching)
             {
                 Output::send(STR("Search all chunks\n"));
                 s_name_to_search_by.clear();
