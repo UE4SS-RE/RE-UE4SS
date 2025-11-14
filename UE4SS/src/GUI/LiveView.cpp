@@ -148,6 +148,11 @@ namespace RC::GUI
             return std::tolower(c);
         });
 
+        if (filter_out_objects(object))
+        {
+            return;
+        }
+
         if (LiveView::s_include_inheritance)
         {
             for (UStruct* super : object->GetClassPrivate()->ForEachSuperStruct())
@@ -163,11 +168,6 @@ namespace RC::GUI
                     break;
                 }
             }
-        }
-
-        if (filter_out_objects(object))
-        {
-            return;
         }
 
         if (LiveView::s_include_inheritance && LiveView::s_name_search_results_set.contains(object))
