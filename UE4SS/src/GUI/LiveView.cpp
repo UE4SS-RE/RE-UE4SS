@@ -2236,7 +2236,7 @@ namespace RC::GUI
             }
             else
             {
-                property->ExportTextItem(property_text, container_ptr, container_ptr, static_cast<UObject*>(container), NULL);
+                property->ExportTextItem(property_text, container_ptr, container_ptr, container_type == ContainerType::Array ? nullptr : static_cast<UObject*>(container), NULL);
             }
         }
         else if (auto as_array_property = CastField<FArrayProperty>(property);
@@ -2252,7 +2252,7 @@ namespace RC::GUI
         }
         else
         {
-            property->ExportTextItem(property_text, container_ptr, container_ptr, static_cast<UObject*>(container), NULL);
+            property->ExportTextItem(property_text, container_ptr, container_ptr, container_type == ContainerType::Array ? nullptr : static_cast<UObject*>(container), NULL);
         }
 
         bool open_edit_value_popup{};
