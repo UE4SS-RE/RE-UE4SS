@@ -1,6 +1,7 @@
 #pragma once
 
 #include <GUI/LiveView/Filter/SearchFilter.hpp>
+#include <GUI/LiveView/Filter/DefaultObjectsOnly.hpp>
 
 namespace RC::GUI::Filter
 {
@@ -12,7 +13,7 @@ namespace RC::GUI::Filter
 
         static auto pre_eval(UObject* object) -> bool
         {
-            return !s_enabled && object->HasAnyFlags(static_cast<EObjectFlags>(RF_ClassDefaultObject | RF_ArchetypeObject));
+            return !s_enabled && !DefaultObjectsOnly::s_enabled && object->HasAnyFlags(static_cast<EObjectFlags>(RF_ClassDefaultObject | RF_ArchetypeObject));
         }
     };
 } // namespace RC::GUI::Filter
