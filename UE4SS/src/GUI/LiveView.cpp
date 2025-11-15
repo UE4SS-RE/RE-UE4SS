@@ -122,38 +122,48 @@ namespace RC::GUI
 
     static auto get_object_full_name_cxx_string(UObject* object) -> std::string;
 
-    static auto filter_out_objects(UObject* object) -> bool
+    static auto filter_out_objects(UObject* object) -> Filter::FilterResult
     {
-        APPLY_PRE_SEARCH_FILTERS(SearchFilters)
+        if (const auto result = eval_pre_search_filters(SearchFilters, object); RC_LIVE_VIEW_WAS_FILTERED(result))
+        {
+            return result;
+        }
         if (!LiveView::s_name_to_search_by.empty() && LiveView::s_name_search_results_set.contains(object))
         {
-            return true;
+            return RC_LIVE_VIEW_MAKE_FILTER_RETURN_VALUE(true, STR("No name to search for, and object not in result set"));
         }
-        APPLY_POST_SEARCH_FILTERS(SearchFilters)
-        return false;
+        if (const auto result = eval_post_search_filters(SearchFilters, object); RC_LIVE_VIEW_WAS_FILTERED(result))
+        {
+            return result;
+        }
+        return RC_LIVE_VIEW_MAKE_FILTER_RETURN_VALUE(false, {});
     }
 
-    static auto attempt_to_add_search_result(UObject* object) -> void
+    static auto attempt_to_add_search_result(UObject* object, bool ignore_name = false) -> Filter::FilterResult
     {
         // TODO: Stop using the 'HashObject' function when needing the address of an FFieldClassVariant because it's not designed to return an address.
         //       Maybe make the ToFieldClass/ToUClass functions public (append 'Unsafe' to the function names).
-        if (LiveView::s_name_to_search_by.empty() ||
-            LiveView::s_need_to_filter_out_properties && object->IsA(std::bit_cast<UClass*>(FProperty::StaticClass().HashObject())))
+        if (!ignore_name && (LiveView::s_name_to_search_by.empty() ||
+                             LiveView::s_need_to_filter_out_properties && object->IsA(std::bit_cast<UClass*>(FProperty::StaticClass().HashObject()))))
         {
-            return;
+            return RC_LIVE_VIEW_MAKE_FILTER_RETURN_VALUE(true, STR("Searched by name, but no name supplied"));
         }
 
-        auto name_to_search_by = LiveView::s_name_to_search_by;
-        std::transform(name_to_search_by.begin(), name_to_search_by.end(), name_to_search_by.begin(), [](char c) {
-            return std::tolower(c);
-        });
-
-        if (filter_out_objects(object))
+        std::string name_to_search_by{};
+        if (!ignore_name)
         {
-            return;
+            name_to_search_by = LiveView::s_name_to_search_by;
+            std::transform(name_to_search_by.begin(), name_to_search_by.end(), name_to_search_by.begin(), [](char c) {
+                return std::tolower(c);
+            });
         }
 
-        if (LiveView::s_include_inheritance)
+        if (const auto result = filter_out_objects(object); RC_LIVE_VIEW_WAS_FILTERED(result))
+        {
+            return result;
+        }
+
+        if (LiveView::s_include_inheritance && !ignore_name)
         {
             for (UStruct* super : object->GetClassPrivate()->ForEachSuperStruct())
             {
@@ -172,7 +182,7 @@ namespace RC::GUI
 
         if (LiveView::s_include_inheritance && LiveView::s_name_search_results_set.contains(object))
         {
-            return;
+            return RC_LIVE_VIEW_MAKE_FILTER_RETURN_VALUE(true, STR("Include inheritance, but object not inside result set"));
         }
 
         auto object_full_name = get_object_full_name_cxx_string(object);
@@ -180,7 +190,7 @@ namespace RC::GUI
             return std::tolower(c);
         });
 
-        if (LiveView::s_use_regex_for_search)
+        if (LiveView::s_use_regex_for_search && !ignore_name)
         {
             try
             {
@@ -197,14 +207,16 @@ namespace RC::GUI
                 s_live_view->set_is_searching_by_name(false);
                 s_live_view->set_search_field_clear_requested(true);
             }
-            return;
+            return RC_LIVE_VIEW_MAKE_FILTER_RETURN_VALUE(false, STR("regex"));
         }
 
-        if (object_full_name.find(name_to_search_by) != object_full_name.npos)
+        if (ignore_name || object_full_name.find(name_to_search_by) != object_full_name.npos)
         {
             LiveView::s_name_search_results.emplace_back(object);
             LiveView::s_name_search_results_set.emplace(object);
         }
+
+        return RC_LIVE_VIEW_MAKE_FILTER_RETURN_VALUE(false, STR("not regex"));
     }
 
     static void attempt_to_add_search_by_address_result(uintptr_t address_to_search_by, UObject* object)
@@ -270,7 +282,7 @@ namespace RC::GUI
             {
                 return;
             }
-            attempt_to_add_search_result(std::bit_cast<UObject*>(object));
+            attempt_to_add_search_result(std::bit_cast<UObject*>(object), LiveView::s_apply_search_filters_when_not_searching);
         }
 
         void OnUObjectArrayShutdown() override
@@ -1801,7 +1813,7 @@ namespace RC::GUI
             {
                 return LoopAction::Continue;
             }
-            if (s_apply_search_filters_when_not_searching && filter_out_objects(object))
+            if (s_apply_search_filters_when_not_searching && RC_LIVE_VIEW_WAS_FILTERED(filter_out_objects(object)))
             {
                 return LoopAction::Continue;
             }
@@ -1886,15 +1898,18 @@ namespace RC::GUI
         }
     }
 
-    auto LiveView::search_by_name() -> void
+    auto LiveView::make_filtered_set(bool ignore_name) -> void
     {
-        Output::send(STR("Searching by name...\n"));
+        if (!ignore_name)
+        {
+            Output::send(STR("Searching by name...\n"));
+        }
         s_name_search_results.clear();
         s_name_search_results_set.clear();
         Filter::s_highlighted_properties.clear();
 
         uintptr_t address_to_search_by = 0;
-        if (LiveView::s_search_by_address)
+        if (LiveView::s_search_by_address && !ignore_name)
         {
             try
             {
@@ -1911,8 +1926,21 @@ namespace RC::GUI
         }
 
         UObjectGlobals::ForEachUObject([&](UObject* object, ...) {
-            attempt_to_add_search_result(object);
-            if (address_to_search_by)
+            const auto was_added = attempt_to_add_search_result(object, ignore_name);
+#if RC_LIVE_VIEW_DEBUG_FILTER_RESULTS
+            if (ignore_name)
+            {
+                if (was_added.was_filtered)
+                {
+                    // Note: Feel free to change the code here to output only the object you're interested in using for debugging.
+                    if (object->GetClassPrivate()->GetName() == STR("GCObjectReferencer"))
+                    {
+                        Output::send(STR("FILTERED BY '{}': '{}'\n"), was_added.reason, object->GetFullName());
+                    }
+                }
+            }
+#endif
+            if (address_to_search_by && !ignore_name)
             {
                 attempt_to_add_search_by_address_result(address_to_search_by, object);
             }
@@ -1942,12 +1970,14 @@ namespace RC::GUI
         }
     }
 
-    auto LiveView::search() -> void
+    auto LiveView::search(bool apply_filters_when_not_searching) -> void
     {
         if (are_listeners_allowed())
         {
             std::string search_buffer{m_search_by_name_buffer};
-            if (search_buffer.empty() || search_buffer == m_default_search_buffer || s_apply_search_filters_when_not_searching)
+            if ((search_buffer.empty() || search_buffer == m_default_search_buffer) &&
+                ((apply_filters_when_not_searching && !s_apply_search_filters_when_not_searching) ||
+                 (!apply_filters_when_not_searching && !s_apply_search_filters_when_not_searching)))
             {
                 Output::send(STR("Search all chunks\n"));
                 s_name_to_search_by.clear();
@@ -1956,11 +1986,20 @@ namespace RC::GUI
             }
             else
             {
-                Output::send(STR("Search for: {}\n"), search_buffer.empty() ? STR("") : ensure_str(search_buffer));
-                s_name_to_search_by = search_buffer;
-                m_object_iterator = &LiveView::guobjectarray_by_name_iterator;
-                m_is_searching_by_name = true;
-                search_by_name();
+                if (apply_filters_when_not_searching && s_apply_search_filters_when_not_searching)
+                {
+                    Output::send(STR("Search all chunks (filters applied)\n"));
+                    m_object_iterator = &LiveView::guobjectarray_by_name_iterator;
+                    m_is_searching_by_name = true;
+                }
+                else
+                {
+                    Output::send(STR("Search for: {}\n"), search_buffer.empty() ? STR("") : ensure_str(search_buffer));
+                    s_name_to_search_by = search_buffer;
+                    m_object_iterator = &LiveView::guobjectarray_by_name_iterator;
+                    m_is_searching_by_name = true;
+                }
+                make_filtered_set(apply_filters_when_not_searching && s_apply_search_filters_when_not_searching);
             }
         }
     }
@@ -3759,12 +3798,15 @@ namespace RC::GUI
             ImGui::SameLine();
             // Making sure the user can't enable filters when not searching, if they are currently actually searching.
             // Otherwise it uses the wrong iterator.
-            auto is_searching_by_name = m_is_searching_by_name;
+            auto is_searching_by_name = m_is_searching_by_name && !s_apply_search_filters_when_not_searching;
             if (is_searching_by_name)
             {
                 ImGui::BeginDisabled();
             }
-            ImGui::Checkbox("Apply filters when not searching", &s_apply_search_filters_when_not_searching);
+            if (ImGui::Checkbox("Apply filters when not searching", &s_apply_search_filters_when_not_searching))
+            {
+                search(true);
+            }
             if (is_searching_by_name)
             {
                 ImGui::EndDisabled();
@@ -3774,17 +3816,24 @@ namespace RC::GUI
                 bool instances_only_enabled = !(Filter::NonInstancesOnly::s_enabled || Filter::DefaultObjectsOnly::s_enabled);
                 bool non_instances_only_enabled = !(Filter::InstancesOnly::s_enabled || Filter::DefaultObjectsOnly::s_enabled);
                 bool default_objects_only_enabled = !(Filter::NonInstancesOnly::s_enabled || Filter::InstancesOnly::s_enabled);
+                bool filters_changed{};
 
                 //  Row 1
                 ImGui::TableNextRow();
                 ImGui::TableNextColumn();
-                ImGui::Checkbox("Include inheritance", &s_include_inheritance);
+                if (ImGui::Checkbox("Include inheritance", &s_include_inheritance))
+                {
+                    filters_changed = true;
+                }
                 ImGui::TableNextColumn();
                 if (!instances_only_enabled)
                 {
                     ImGui::BeginDisabled();
                 }
-                ImGui::Checkbox("Instances only", &Filter::InstancesOnly::s_enabled);
+                if (ImGui::Checkbox("Instances only", &Filter::InstancesOnly::s_enabled))
+                {
+                    filters_changed = true;
+                }
                 if (!instances_only_enabled)
                 {
                     ImGui::EndDisabled();
@@ -3793,13 +3842,19 @@ namespace RC::GUI
                 // Row 2
                 ImGui::TableNextRow();
                 ImGui::TableNextColumn();
-                ImGui::Checkbox("Function parameter flags", &Filter::FunctionParamFlags::s_enabled);
+                if (ImGui::Checkbox("Function parameter flags", &Filter::FunctionParamFlags::s_enabled))
+                {
+                    filters_changed = true;
+                }
                 ImGui::TableNextColumn();
                 if (!non_instances_only_enabled)
                 {
                     ImGui::BeginDisabled();
                 }
-                ImGui::Checkbox("Non-instances only", &Filter::NonInstancesOnly::s_enabled);
+                if (ImGui::Checkbox("Non-instances only", &Filter::NonInstancesOnly::s_enabled))
+                {
+                    filters_changed = true;
+                }
                 if (!non_instances_only_enabled)
                 {
                     ImGui::EndDisabled();
@@ -3808,13 +3863,19 @@ namespace RC::GUI
                 // Row 3
                 ImGui::TableNextRow();
                 ImGui::TableNextColumn();
-                ImGui::Checkbox("Include CDOs", &Filter::IncludeDefaultObjects::s_enabled);
+                if (ImGui::Checkbox("Include CDOs", &Filter::IncludeDefaultObjects::s_enabled))
+                {
+                    filters_changed = true;
+                }
                 ImGui::TableNextColumn();
                 if (!default_objects_only_enabled)
                 {
                     ImGui::BeginDisabled();
                 }
-                ImGui::Checkbox("CDOs only", &Filter::DefaultObjectsOnly::s_enabled);
+                if (ImGui::Checkbox("CDOs only", &Filter::DefaultObjectsOnly::s_enabled))
+                {
+                    filters_changed = true;
+                }
                 if (!default_objects_only_enabled)
                 {
                     ImGui::EndDisabled();
@@ -3823,9 +3884,15 @@ namespace RC::GUI
                 // Row 4
                 ImGui::TableNextRow();
                 ImGui::TableNextColumn();
-                ImGui::Checkbox("Use Regex for search", &s_use_regex_for_search);
+                if (ImGui::Checkbox("Use Regex for search", &s_use_regex_for_search))
+                {
+                    filters_changed = true;
+                }
                 ImGui::TableNextColumn();
-                ImGui::Checkbox("Match memory address", &s_search_by_address);
+                if (ImGui::Checkbox("Match memory address", &s_search_by_address))
+                {
+                    filters_changed = true;
+                }
 
                 // Row 5
                 ImGui::TableNextRow();
@@ -3849,6 +3916,7 @@ namespace RC::GUI
                             Filter::ClassNamesFilter::list_class_names.emplace_back(ensure_str(class_name));
                         }
                     }
+                    filters_changed = true;
                 }
 
                 ImGui::TableNextColumn();
@@ -3866,6 +3934,7 @@ namespace RC::GUI
                             Filter::ClassNamesFilter::list_class_names.emplace_back(ensure_str(class_name));
                         }
                     }
+                    filters_changed = true;
                 }
 
                 // Row 6
@@ -3887,6 +3956,7 @@ namespace RC::GUI
                             Filter::HasProperty::list_properties.emplace_back(ensure_str(property_name));
                         }
                     }
+                    filters_changed = true;
                 }
 
                 // Row 7
@@ -3911,6 +3981,7 @@ namespace RC::GUI
                             }
                         }
                     }
+                    filters_changed = true;
                 }
                 // Row 8
                 ImGui::TableNextRow();
@@ -3942,13 +4013,14 @@ namespace RC::GUI
                     }
                     Filter::MaxValueSize::s_value = new_value;
                     Filter::MaxValueSize::s_value_buffer = fmt::format("{}", Filter::MaxValueSize::s_value);
+                    filters_changed = true;
                 }
 
                 ImGui::TableNextRow();
                 ImGui::TableNextColumn();
                 if (ImGui::Button(ICON_FA_SEARCH " Refresh search"))
                 {
-                    search();
+                    search(s_apply_search_filters_when_not_searching);
                 }
                 ImGui::TableNextColumn();
                 if (ImGui::Button(ICON_FA_SAVE " Save filters"))
@@ -3960,6 +4032,12 @@ namespace RC::GUI
                     ImGui::BeginTooltip();
                     ImGui::Text("Saves your filters to <UE4SS.dll install location>/liveview/filters.meta.json");
                     ImGui::EndTooltip();
+                }
+
+                if (filters_changed && s_apply_search_filters_when_not_searching)
+                {
+                    // Re-iterating the entire GUObjectArray with new filters if 'Apply filters when not searching' is enabled.
+                    search(true);
                 }
 
                 ImGui::EndTable();
@@ -4197,68 +4275,59 @@ namespace RC::GUI
 
         ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, {0.0f, 0.0f});
 
-        // If filters-while-not-searching are disabled (i.e. normal clipper behavior)
-        if (!s_apply_search_filters_when_not_searching)
+        // 1) Gather objects you actually want to draw
+        std::vector<UObject*> objects_to_draw;
+
+        if (m_is_searching_by_name)
         {
-            // 1) Gather objects you actually want to draw
-            std::vector<UObject*> objects_to_draw;
-
-            if (m_is_searching_by_name)
-            {
-                // If we are searching by name, presumably `s_name_search_results`
-                // already holds only valid objects.
-                objects_to_draw = s_name_search_results;
-            }
-            else
-            {
-                // Otherwise, filter the entire UObjectArray
-                objects_to_draw.reserve(UObjectArray::GetNumElements());
-                for (size_t i = 0; i < UObjectArray::GetNumElements(); i++)
-                {
-
-                    if (FUObjectItem* obj = static_cast<FUObjectItem*>(Container::UnrealVC->UObjectArray_index_to_object(i)))
-                    {
-                        // Skip destroyed/invalid objects here
-                        if (!obj->IsUnreachable())
-                        {
-                            objects_to_draw.push_back(obj->GetUObject());
-                        }
-                    }
-                }
-            }
-
-            // 2) Use clipper with the filtered array size
-            ImGuiListClipper clipper{};
-            clipper.Begin(objects_to_draw.size(), ImGui::GetTextLineHeightWithSpacing());
-
-            // Forces the current opened node to always be rendered by the clipper
-            for (int i = 0; i < objects_to_draw.size(); i++)
-            {
-                if (objects_to_draw[i] == m_currently_opened_tree_node)
-                {
-                    clipper.IncludeItemsByIndex(i, i + 1);
-                    break;
-                }
-            }
-            int last_display_end = 0;
-            float last_position = ImGui::GetCursorPosY();
-            while (clipper.Step())
-            {
-                if (last_position > ImGui::GetCursorPosY())
-                {
-                    // Makes sure the list is contiguous
-                    ImGui::SetCursorPosY(last_position);
-                    clipper.DisplayStart = last_display_end;
-                }
-                do_iteration(clipper.DisplayStart, clipper.DisplayEnd, &objects_to_draw);
-                last_position = ImGui::GetCursorPosY();
-                last_display_end = clipper.DisplayEnd;
-            }
+            // If we are searching by name, presumably `s_name_search_results`
+            // already holds only valid objects.
+            objects_to_draw = s_name_search_results;
         }
         else
         {
-            // "Apply filters when not searching" path
-            do_iteration(0, UObjectArray::GetNumElements());
+            // Otherwise, filter the entire UObjectArray
+            objects_to_draw.reserve(UObjectArray::GetNumElements());
+            for (size_t i = 0; i < UObjectArray::GetNumElements(); i++)
+            {
+
+                if (FUObjectItem* obj = static_cast<FUObjectItem*>(Container::UnrealVC->UObjectArray_index_to_object(i)))
+                {
+                    // Skip destroyed/invalid objects here
+                    if (!obj->IsUnreachable())
+                    {
+                        objects_to_draw.push_back(obj->GetUObject());
+                    }
+                }
+            }
+        }
+
+        // 2) Use clipper with the filtered array size
+        ImGuiListClipper clipper{};
+        clipper.Begin(objects_to_draw.size(), ImGui::GetTextLineHeightWithSpacing());
+
+        // Forces the current opened node to always be rendered by the clipper
+        for (int i = 0; i < objects_to_draw.size(); i++)
+        {
+            if (objects_to_draw[i] == m_currently_opened_tree_node)
+            {
+                clipper.IncludeItemsByIndex(i, i + 1);
+                break;
+            }
+        }
+        int last_display_end = 0;
+        float last_position = ImGui::GetCursorPosY();
+        while (clipper.Step())
+        {
+            if (last_position > ImGui::GetCursorPosY())
+            {
+                // Makes sure the list is contiguous
+                ImGui::SetCursorPosY(last_position);
+                clipper.DisplayStart = last_display_end;
+            }
+            do_iteration(clipper.DisplayStart, clipper.DisplayEnd, &objects_to_draw);
+            last_position = ImGui::GetCursorPosY();
+            last_display_end = clipper.DisplayEnd;
         }
         ImGui::PopStyleVar();
 
