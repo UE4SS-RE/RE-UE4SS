@@ -17,6 +17,27 @@
 // 5. In the same file, find the 'LiveView::render' function and find the 'if (ImGui::BeginPopupContextItem("##search-options"))' if-statement.
 // 6. Add a checkbox (or whatever) to control your search filter inside the if-statement.
 
+// Whether to track the reason why objects get filtered out.
+#ifndef RC_LIVE_VIEW_DEBUG_FILTER_RESULTS
+#define RC_LIVE_VIEW_DEBUG_FILTER_RESULTS 1
+#endif
+
+#ifndef RC_LIVE_VIEW_MAKE_FILTER_RETURN_VALUE
+#if RC_LIVE_VIEW_DEBUG_FILTER_RESULTS
+#define RC_LIVE_VIEW_MAKE_FILTER_RETURN_VALUE(FilteredOut, Reason) {Reason, FilteredOut}
+#else
+#define RC_LIVE_VIEW_MAKE_FILTER_RETURN_VALUE(FilteredOut, ...) FilteredOut
+#endif
+#endif
+
+#ifndef RC_LIVE_VIEW_WAS_FILTERED
+#if RC_LIVE_VIEW_DEBUG_FILTER_RESULTS
+#define RC_LIVE_VIEW_WAS_FILTERED(Result) Result.was_filtered
+#else
+#define RC_LIVE_VIEW_WAS_FILTERED(Result) Result
+#endif
+#endif
+
 namespace RC::GUI::Filter
 {
     using namespace Unreal;
@@ -37,6 +58,16 @@ namespace RC::GUI::Filter
         s_highlighted_properties.emplace(property);
     }
 
+#if RC_LIVE_VIEW_DEBUG_FILTER_RESULTS
+    struct FilterResult
+    {
+        StringType reason{};
+        bool was_filtered{true};
+    };
+#else
+    using FilterResult = bool;
+#endif
+
     template <typename...>
     struct Types
     {
@@ -53,7 +84,7 @@ namespace RC::GUI::Filter
     };
 
     template <typename T>
-    auto eval_pre_search_filters(T&, UObject* object) -> bool
+    auto eval_pre_search_filters(T&, UObject* object) -> FilterResult
     {
         if constexpr (CanPreEval<T>)
         {
@@ -61,12 +92,12 @@ namespace RC::GUI::Filter
         }
         else
         {
-            return false;
+            return RC_LIVE_VIEW_MAKE_FILTER_RETURN_VALUE(false, {});
         }
     }
 
     template <typename T, typename... Ts>
-    auto eval_pre_search_filters(Types<T, Ts...>&, UObject* object) -> bool
+    auto eval_pre_search_filters(Types<T, Ts...>&, UObject* object) -> FilterResult
     {
         auto eval_next_filters = [&] {
             Types<Ts...> next_filters{};
@@ -77,7 +108,7 @@ namespace RC::GUI::Filter
         {
             if (T::pre_eval(object))
             {
-                return true;
+                return RC_LIVE_VIEW_MAKE_FILTER_RETURN_VALUE(true, fmt::format(STR("{}"), T::s_debug_name));
             }
             else
             {
@@ -91,7 +122,7 @@ namespace RC::GUI::Filter
     }
 
     template <typename T>
-    auto eval_post_search_filters(T&, UObject* object) -> bool
+    auto eval_post_search_filters(T&, UObject* object) -> FilterResult
     {
         if constexpr (CanPostEval<T>)
         {
@@ -99,12 +130,12 @@ namespace RC::GUI::Filter
         }
         else
         {
-            return false;
+            return RC_LIVE_VIEW_MAKE_FILTER_RETURN_VALUE(false, {});
         }
     }
 
     template <typename T, typename... Ts>
-    auto eval_post_search_filters(Types<T, Ts...>&, UObject* object) -> bool
+    auto eval_post_search_filters(Types<T, Ts...>&, UObject* object) -> FilterResult
     {
         auto eval_next_filters = [&] {
             Types<Ts...> next_filters{};
@@ -115,7 +146,7 @@ namespace RC::GUI::Filter
         {
             if (T::post_eval(object))
             {
-                return true;
+                return RC_LIVE_VIEW_MAKE_FILTER_RETURN_VALUE(true, fmt::format(STR("{}"), T::s_debug_name));
             }
             else
             {
@@ -126,18 +157,6 @@ namespace RC::GUI::Filter
         {
             return eval_next_filters();
         }
-    }
-
-#define APPLY_PRE_SEARCH_FILTERS(Filters)                                                                                                                      \
-    if (eval_pre_search_filters(Filters, object))                                                                                                              \
-    {                                                                                                                                                          \
-        return true;                                                                                                                                           \
-    }
-
-#define APPLY_POST_SEARCH_FILTERS(Filters)                                                                                                                     \
-    if (eval_post_search_filters(Filters, object))                                                                                                             \
-    {                                                                                                                                                          \
-        return true;                                                                                                                                           \
     }
 
     static auto is_instance(UObject* object, bool care_about_cdo = true) -> bool
