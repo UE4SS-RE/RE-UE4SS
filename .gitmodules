@@ -3,4 +3,4 @@
 	url = git@github.com:Re-UE4SS/UEPseudo.git
 [submodule "deps/first/patternsleuth"]
 	path = deps/first/patternsleuth
-	url = git@github.com:trumank/patternsleuth.git
+	url = git@github.com:UE4SS-RE/patternsleuth.git
