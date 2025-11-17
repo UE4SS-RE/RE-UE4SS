@@ -350,6 +350,8 @@ Corporalwill123
 
 Fixed crash on warning in dumpers and generators ([UE4SS #976](https://github.com/UE4SS-RE/RE-UE4SS/pull/976))
 
+Fixed crash on expanding arrays ([UE4SS #1082](https://github.com/UE4SS-RE/RE-UE4SS/pull/1082))
+
 ### UHT Dumper 
 Fix SetupAttachment implementations randomly changing order ([UE4SS #606](https://github.com/UE4SS-RE/RE-UE4SS/pull/606)) - Buckminsterfullerene 
 
