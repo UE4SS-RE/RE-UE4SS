@@ -3618,7 +3618,7 @@ namespace RC::UEGenerator
     auto UEHeaderGenerator::is_function_parameter_shadowing(UClass* uclass, FProperty* function_parameter) -> bool
     {
         bool is_shadowing = false;
-        for (FProperty* property : uclass->ForEachPropertyInChain())
+        for (FProperty* property : TFieldRange<FProperty>(uclass, EFieldIterationFlags::IncludeSuper | EFieldIterationFlags::IncludeDeprecated))
         {
             if (property->GetFName().Equals(function_parameter->GetFName()))
             {
