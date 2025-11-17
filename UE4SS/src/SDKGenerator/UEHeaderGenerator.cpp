@@ -345,7 +345,7 @@ namespace RC::UEGenerator
 
         // Generate delegate type declarations for the current class
         int32_t NumDelegatesGenerated = 0;
-        for (UFunction* function : uclass->ForEachFunction())
+        for (UFunction* function : TFieldRange<UFunction>(uclass, EFieldIterationFlags::None))
         {
             if (is_delegate_signature_function(function))
             {
@@ -359,7 +359,7 @@ namespace RC::UEGenerator
         }
 
         // Generate interface functions
-        for (UFunction* function : uclass->ForEachFunction())
+        for (UFunction* function : TFieldRange<UFunction>(uclass, EFieldIterationFlags::None))
         {
             if (!is_delegate_signature_function(function))
             {
@@ -426,7 +426,7 @@ namespace RC::UEGenerator
 
         // Generate delegate type declarations for the current class
         int32_t NumDelegatesGenerated = 0;
-        for (UFunction* function : uclass->ForEachFunction())
+        for (UFunction* function : TFieldRange<UFunction>(uclass, EFieldIterationFlags::None))
         {
             if (is_delegate_signature_function(function))
             {
@@ -477,7 +477,7 @@ namespace RC::UEGenerator
 
         // Generate functions
         std::unordered_set<FName> implemented_functions;
-        for (UFunction* function : uclass->ForEachFunction())
+        for (UFunction* function : TFieldRange<UFunction>(uclass, EFieldIterationFlags::None))
         {
             if (!is_delegate_signature_function(function))
             {
@@ -495,7 +495,7 @@ namespace RC::UEGenerator
         }
         for (const RC::Unreal::FImplementedInterface& uinterface : implemented_interfaces)
         {
-            for (UFunction* interface_function : uinterface.Class->ForEachFunction())
+            for (UFunction* interface_function : TFieldRange<UFunction>(uinterface.Class, EFieldIterationFlags::None))
             {
                 bool should_skip = (interface_function->GetFunctionFlags() & FUNC_BlueprintEvent);
 
@@ -793,7 +793,7 @@ namespace RC::UEGenerator
 
         if (class_default_object != nullptr)
         {
-            for (FProperty* property : uclass->OrderedForEachPropertyInChain())
+            for (FProperty* property : TReverseFieldRange<FProperty>(uclass, EFieldIterationFlags::IncludeDeprecated))
             {
                 generate_property_value(uclass, property, class_default_object, implementation_file, STR("this->"));
             }
@@ -839,7 +839,7 @@ namespace RC::UEGenerator
         CaseInsensitiveSet blacklisted_property_names = collect_blacklisted_property_names(uclass);
 
         // Generate functions
-        for (UFunction* function : uclass->ForEachFunction())
+        for (UFunction* function : TFieldRange<UFunction>(uclass, EFieldIterationFlags::None))
         {
             if (!is_delegate_signature_function(function))
             {
@@ -895,7 +895,7 @@ namespace RC::UEGenerator
         // TODO: ScriptStruct->InitializeStruct(StructDefaultObject);
         memset(struct_default_object, 0, script_struct->GetPropertiesSize());
 
-        for (FProperty* property : script_struct->OrderedForEachPropertyInChain())
+        for (FProperty* property : TReverseFieldRange<FProperty>(script_struct, EFieldIterationFlags::IncludeDeprecated))
         {
             generate_property_value(script_struct, property, struct_default_object, implementation_file, STR("this->"));
         }
@@ -1567,7 +1567,7 @@ namespace RC::UEGenerator
                 // we are not creating the subobject in a child class unnecessarily.
                 if (super_object && !super_property)
                 {
-                    for (FProperty* check_super_property : super->OrderedForEachPropertyInChain())
+                    for (FProperty* check_super_property : TReverseFieldRange<FProperty>(super, EFieldIterationFlags::IncludeDeprecated))
                     {
                         if (check_super_property->IsA<FObjectProperty>())
                         {
@@ -1664,7 +1664,7 @@ namespace RC::UEGenerator
                     }
                     else if (as_class)
                     {
-                        for (FProperty* check_property : as_class->OrderedForEachPropertyInChain())
+                        for (FProperty* check_property : TReverseFieldRange<FProperty>(as_class, EFieldIterationFlags::IncludeDeprecated))
                         {
                             if (check_property->IsA<FObjectProperty>())
                             {
@@ -2148,7 +2148,7 @@ namespace RC::UEGenerator
                 result_set.insert(property->GetName());
             }
 
-            for (UFunction* function : class_object->ForEachFunction())
+            for (UFunction* function : TFieldRange<UFunction>(class_object, EFieldIterationFlags::None))
             {
                 result_set.insert(function->GetName());
             }
@@ -3571,7 +3571,7 @@ namespace RC::UEGenerator
             }
         }
 
-        for (UFunction* function : uclass->ForEachFunction())
+        for (UFunction* function : TFieldRange<UFunction>(uclass, EFieldIterationFlags::None))
         {
             auto function_flags = function->GetFunctionFlags();
 

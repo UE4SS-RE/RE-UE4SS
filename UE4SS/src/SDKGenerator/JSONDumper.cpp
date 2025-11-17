@@ -221,7 +221,7 @@ namespace RC::UEGenerator::JSONDumper
             }
 
             auto& events = bp_class.new_array(STR("events"));
-            for (UFunction* event_function : object_as_class->ForEachFunction())
+            for (UFunction* event_function : TFieldRange<UFunction>(object_as_class, EFieldIterationFlags::None))
             {
                 if (should_skip_general_function(event_function))
                 {
@@ -259,7 +259,7 @@ namespace RC::UEGenerator::JSONDumper
             }
 
             auto& functions = bp_class.new_array(STR("functions"));
-            for (UFunction* function : object_as_class->ForEachFunction())
+            for (UFunction* function : TFieldRange<UFunction>(object_as_class, EFieldIterationFlags::None))
             {
                 if (should_skip_function(function))
                 {
@@ -300,7 +300,7 @@ namespace RC::UEGenerator::JSONDumper
             }
 
             auto& delegates = bp_class.new_array(STR("delegates"));
-            for (UFunction* delegate_function : object_as_class->ForEachFunction())
+            for (UFunction* delegate_function : TFieldRange<UFunction>(object_as_class, EFieldIterationFlags::None))
             {
                 if (should_skip_general_function(delegate_function))
                 {

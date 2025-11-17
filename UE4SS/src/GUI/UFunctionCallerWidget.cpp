@@ -32,7 +32,7 @@ namespace RC::GUI
         {
             return;
         }
-        for (UFunction* function : instance->GetClassPrivate()->ForEachFunctionInChain())
+        for (UFunction* function : TFieldRange<UFunction>(instance->GetClassPrivate(), EFieldIterationFlags::IncludeAll))
         {
             bool should_cache_function{};
             if (m_searcher.was_search_requested())
