@@ -296,7 +296,7 @@ namespace RC::OutTheShade
                 if (Struct->GetSuperStruct() && !NameMap.contains(Struct->GetSuperStruct()->GetNamePrivate()))
                     NameMap.insert_or_assign(Struct->GetSuperStruct()->GetNamePrivate(), 0);
 
-                for (FProperty* Prop : Struct->ForEachProperty())
+                for (FProperty* Prop : TFieldRange<FProperty>(Struct, EFieldIterationFlags::IncludeDeprecated))
                 {
                     NameMap.insert_or_assign(Prop->GetFName(), 0);
                 }
@@ -393,7 +393,7 @@ namespace RC::OutTheShade
             uint16_t PropCount = 0;
             uint16_t SerializablePropCount = 0;
 
-            for (FProperty* Props : Struct->ForEachProperty())
+            for (FProperty* Props : TFieldRange<FProperty>(Struct, EFieldIterationFlags::IncludeDeprecated))
             {
                 FPropertyData Data(Props, PropCount);
 
@@ -477,7 +477,7 @@ namespace RC::OutTheShade
             }
 
             std::vector<uint64_t> propFlags;
-            for (FProperty* Props : Struct->ForEachProperty())
+            for (FProperty* Props : TFieldRange<FProperty>(Struct, EFieldIterationFlags::IncludeDeprecated))
                 propFlags.push_back(static_cast<uint64_t>(Props->GetPropertyFlags()));
             Buffer.Write<uint32_t>(static_cast<uint32_t>(propFlags.size()));
             for (uint64_t propFlag : propFlags)

@@ -123,7 +123,7 @@ namespace RC::GUI
     {
         selectable_function.is_selected = true;
         m_currently_selected_function = &selectable_function;
-        for (FProperty* param : m_currently_selected_function->function->ForEachProperty())
+        for (FProperty* param : TFieldRange<FProperty>(m_currently_selected_function->function, EFieldIterationFlags::IncludeDeprecated))
         {
             if (param->HasAllPropertyFlags(CPF_ReturnParm)) continue;
             m_params_for_selected_function.emplace_back(UFunctionParam{{}, to_string(param->GetName()).c_str(), param});

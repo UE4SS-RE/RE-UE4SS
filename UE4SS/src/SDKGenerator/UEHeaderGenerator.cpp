@@ -440,7 +440,7 @@ namespace RC::UEGenerator
         }
 
         // Generate properties
-        for (FProperty* property : uclass->ForEachProperty())
+        for (FProperty* property : TFieldRange<FProperty>(uclass, EFieldIterationFlags::IncludeDeprecated))
         {
             encountered_replicated_properties |= (property->GetPropertyFlags() & CPF_Net) != 0;
             append_access_modifier(header_data, get_property_access_modifier(property), current_access_modifier);
@@ -540,7 +540,7 @@ namespace RC::UEGenerator
         append_access_modifier(header_data, AccessModifier::Public, current_access_modifier);
 
         // Generate struct properties
-        for (FProperty* property : script_struct->ForEachProperty())
+        for (FProperty* property : TFieldRange<FProperty>(script_struct, EFieldIterationFlags::IncludeDeprecated))
         {
             append_access_modifier(header_data, get_property_access_modifier(property), current_access_modifier);
             generate_property(script_struct, property, header_data);
@@ -850,7 +850,7 @@ namespace RC::UEGenerator
 
         bool encountered_replicated_properties = false;
 
-        for (FProperty* property : uclass->ForEachProperty())
+        for (FProperty* property : TFieldRange<FProperty>(uclass, EFieldIterationFlags::IncludeDeprecated))
         {
             encountered_replicated_properties |= (property->GetPropertyFlags() & CPF_Net) != 0;
         }
@@ -867,7 +867,7 @@ namespace RC::UEGenerator
             implementation_file.append_line(STR("Super::GetLifetimeReplicatedProps(OutLifetimeProps);"));
             implementation_file.append_line(STR(""));
 
-            for (FProperty* property : uclass->ForEachProperty())
+            for (FProperty* property : TFieldRange<FProperty>(uclass, EFieldIterationFlags::IncludeDeprecated))
             {
                 if ((property->GetPropertyFlags() & CPF_Net) != 0)
                 {
@@ -2143,7 +2143,7 @@ namespace RC::UEGenerator
         {
             UClass* class_object = static_cast<UClass*>(uclass);
 
-            for (FProperty* property : class_object->ForEachProperty())
+            for (FProperty* property : TFieldRange<FProperty>(class_object, EFieldIterationFlags::IncludeDeprecated))
             {
                 result_set.insert(property->GetName());
             }
@@ -2157,7 +2157,7 @@ namespace RC::UEGenerator
         {
             UScriptStruct* script_struct = static_cast<UScriptStruct*>(uclass);
 
-            for (FProperty* property : script_struct->ForEachProperty())
+            for (FProperty* property : TFieldRange<FProperty>(script_struct, EFieldIterationFlags::IncludeDeprecated))
             {
                 result_set.insert(property->GetName());
             }
@@ -2330,7 +2330,7 @@ namespace RC::UEGenerator
             add_config_name = true;
         }
 
-        for (FProperty* property : uclass->ForEachProperty())
+        for (FProperty* property : TFieldRange<FProperty>(uclass, EFieldIterationFlags::IncludeDeprecated))
         {
             if ((property->GetPropertyFlags() & CPF_Config) != 0 || (property->GetPropertyFlags() & CPF_GlobalConfig) != 0)
             {
@@ -3182,7 +3182,7 @@ namespace RC::UEGenerator
         if (!blueprint_callable_added && UE4SSProgram::settings_manager.UHTHeaderGenerator.MakeAllFunctionsBlueprintCallable && !is_function_pure_virtual)
         {
             bool has_invalid_param{};
-            for (FProperty* param : function->ForEachProperty())
+            for (FProperty* param : TFieldRange<FProperty>(function, EFieldIterationFlags::IncludeDeprecated))
             {
                 if (!is_subtype_valid(param))
                 {
@@ -3262,7 +3262,7 @@ namespace RC::UEGenerator
         static auto latent_action_info = UObjectGlobals::StaticFindObject<UClass*>(nullptr, nullptr, STR("/Script/Engine.LatentActionInfo"));
         bool bWCFound = false;
         bool bLAFound = false;
-        for (FProperty* param : function->ForEachProperty())
+        for (FProperty* param : TFieldRange<FProperty>(function, EFieldIterationFlags::IncludeDeprecated))
         {
             auto param_name = param->GetName();
             auto param_uc_name = string_to_uppercase(param_name);
@@ -3300,7 +3300,7 @@ namespace RC::UEGenerator
     {
         StringType function_arguments_string;
 
-        for (FProperty* property : function->ForEachProperty())
+        for (FProperty* property : TFieldRange<FProperty>(function, EFieldIterationFlags::IncludeDeprecated))
         {
             auto property_flags = property->GetPropertyFlags();
             if ((property_flags & CPF_Parm) != 0 && (property_flags & CPF_ReturnParm) == 0)
@@ -3560,7 +3560,7 @@ namespace RC::UEGenerator
             blueprint_info = get_class_blueprint_info(super_class);
         }
 
-        for (FProperty* property : uclass->ForEachProperty())
+        for (FProperty* property : TFieldRange<FProperty>(uclass, EFieldIterationFlags::IncludeDeprecated))
         {
             auto property_flags = property->GetPropertyFlags();
 
@@ -3602,7 +3602,7 @@ namespace RC::UEGenerator
         }
         bool is_blueprint_type = false;
 
-        for (FProperty* property : script_struct->ForEachProperty())
+        for (FProperty* property : TFieldRange<FProperty>(script_struct, EFieldIterationFlags::IncludeDeprecated))
         {
             auto property_flags = property->GetPropertyFlags();
 
