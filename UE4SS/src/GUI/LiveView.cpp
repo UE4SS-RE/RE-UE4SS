@@ -31,12 +31,8 @@
 #include <UE4SSProgram.hpp>
 #include <Unreal/AActor.hpp>
 #include <Unreal/FOutputDevice.hpp>
-#include <Unreal/Property/FArrayProperty.hpp>
-#include <Unreal/Property/FBoolProperty.hpp>
-#include <Unreal/Property/FObjectProperty.hpp>
+#include <Unreal/CoreUObject/UObject/UnrealType.hpp>
 #include <Unreal/Property/FEnumProperty.hpp>
-#include <Unreal/Property/NumericPropertyTypes.hpp>
-#include <Unreal/Property/FMapProperty.hpp>
 #include <Unreal/UClass.hpp>
 #include <Unreal/UEnum.hpp>
 #include <Unreal/UFunction.hpp>

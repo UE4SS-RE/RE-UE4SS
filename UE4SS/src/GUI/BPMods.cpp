@@ -13,6 +13,7 @@
 #include <Unreal/Core/Containers/Array.hpp>
 #include <Unreal/UClass.hpp>
 #include <Unreal/UObjectGlobals.hpp>
+#include <Unreal/CoreUObject/UObject/UnrealType.hpp>
 
 #include <imgui.h>
 

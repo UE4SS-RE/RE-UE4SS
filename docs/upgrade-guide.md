@@ -206,6 +206,207 @@ FORCEINLINE const TCHAR* operator*() const { return Data.Num() ? Data.GetData() 
 - `GetCharTArray()` is now deprecated but still available for compatibility.
   It forwards to `GetCharArray()` and will be removed in a future version.
 
+#### Property Header Consolidation
+
+**What Changed:**
+Individual property header files (`Unreal/Property/*.hpp` and `Unreal/FProperty.hpp`) are deprecated. Nearly all property types are now consolidated in `Unreal/CoreUObject/UObject/UnrealType.hpp`.
+
+**Before (v3.x):**
+```cpp
+#include <Unreal/FProperty.hpp>
+#include <Unreal/Property/FArrayProperty.hpp>
+#include <Unreal/Property/FObjectProperty.hpp>
+#include <Unreal/Property/FStructProperty.hpp>
+// etc.
+```
+
+**After (v4.x):**
+```cpp
+// Single include for all property types
+#include <Unreal/CoreUObject/UObject/UnrealType.hpp>
+```
+
+**Migration Steps:**
+
+1. Replace any of the below property-related includes with `Unreal/CoreUObject/UObject/UnrealType.hpp`:
+   ```cpp
+   // Remove these deprecated includes:
+   // #include <Unreal/FProperty.hpp>
+   // #include <Unreal/Property/FArrayProperty.hpp>
+   // #include <Unreal/Property/FBoolProperty.hpp>
+   // #include <Unreal/Property/FClassProperty.hpp>
+   // #include <Unreal/Property/FDelegateProperty.hpp>
+   // #include <Unreal/Property/FInterfaceProperty.hpp>
+   // #include <Unreal/Property/FLazyObjectProperty.hpp>
+   // #include <Unreal/Property/FMapProperty.hpp>
+   // #include <Unreal/Property/FMulticastDelegateProperty.hpp>
+   // #include <Unreal/Property/FMulticastInlineDelegateProperty.hpp>
+   // #include <Unreal/Property/FMulticastSparseDelegateProperty.hpp>
+   // #include <Unreal/Property/FNameProperty.hpp>
+   // #include <Unreal/Property/FNumericProperty.hpp>
+   // #include <Unreal/Property/FObjectProperty.hpp>
+   // #include <Unreal/Property/FSetProperty.hpp>
+   // #include <Unreal/Property/FSoftClassProperty.hpp>
+   // #include <Unreal/Property/FSoftObjectProperty.hpp>
+   // #include <Unreal/Property/FStructProperty.hpp>
+   // #include <Unreal/Property/FWeakObjectProperty.hpp>
+   // #include <Unreal/Property/NumericPropertyTypes.hpp>
+
+   // Replace with:
+   #include <Unreal/CoreUObject/UObject/UnrealType.hpp>
+   ```
+
+2. No code changes are required - all property types are still available with the same names and APIs.
+
+**Why This Change:**
+- Simplifies include dependencies
+- Reduces compilation times
+- Matches Unreal Engine's own header organization where nearly all property types are defined in `UnrealType.h`
+- Eliminates include ordering issues
+
+#### Property Iteration API Improvements
+
+**What Changed:**
+While the existing `ForEachProperty()` and `ForEachPropertyInChain()` methods are still available and fully supported, we now recommend using Epic's `TFieldIterator<>` and `TFieldRange<>` patterns directly for consistency with Unreal Engine code and clearer iteration control.
+
+**Existing API (still supported):**
+```cpp
+// Iterator-based iteration (still works)
+for (FProperty* Property : MyStruct->ForEachProperty())
+{
+    // Process property
+}
+
+for (FProperty* Property : MyStruct->ForEachPropertyInChain())
+{
+    // Process property including super classes
+}
+```
+
+**Recommended API (new in v4.x):**
+```cpp
+// TFieldIterator - Epic's pattern for child->parent iteration
+#include <Unreal/UnrealType.hpp>
+
+// Iterate properties in this class only (excludes super classes)
+for (FProperty* Property : TFieldRange<FProperty>(MyStruct, EFieldIterationFlags::None))
+{
+    // Process property
+}
+
+// Iterate all properties including super classes (child->parent order)
+for (FProperty* Property : TFieldRange<FProperty>(MyStruct, EFieldIterationFlags::IncludeSuper))
+{
+    // Process property including inheritance chain
+}
+
+// Include deprecated properties
+for (FProperty* Property : TFieldRange<FProperty>(MyStruct, EFieldIterationFlags::IncludeDeprecated))
+{
+    // Process all properties including deprecated ones
+}
+
+// Combined flags
+for (FProperty* Property : TFieldRange<FProperty>(MyStruct, EFieldIterationFlags::IncludeSuper | EFieldIterationFlags::IncludeDeprecated))
+{
+    // Process all properties in chain including deprecated
+}
+
+// Iterate in parent->child order (reverse)
+for (FProperty* Property : TReverseFieldRange<FProperty>(MyStruct, EFieldIterationFlags::None))
+{
+    // Process properties from parent to child
+}
+
+// You can also iterate other field types
+for (UFunction* Function : TFieldRange<UFunction>(MyClass, EFieldIterationFlags::IncludeSuper))
+{
+    // Process functions
+}
+```
+
+**EFieldIterationFlags Options:**
+```cpp
+enum EFieldIterationFlags : uint8
+{
+    None                 = 0,      // Only iterate fields in this struct/class
+    IncludeSuper        = 1 << 0,  // Include inherited fields from super classes
+    IncludeDeprecated   = 1 << 1,  // Include deprecated properties
+    IncludeInterfaces   = 1 << 2,  // Include interface properties (classes only)
+
+    // Convenience aliases
+    Default = IncludeSuper,        // Default Epic behavior
+};
+```
+
+**Migration Examples:**
+
+1. Simple property iteration:
+   ```cpp
+   // Old (still works)
+   for (FProperty* Prop : MyStruct->ForEachProperty())
+   {
+       Output::send(STR("{}\n"), Prop->GetName());
+   }
+
+   // New (recommended)
+   for (FProperty* Prop : TFieldRange<FProperty>(MyStruct, EFieldIterationFlags::None))
+   {
+       Output::send(STR("{}\n"), Prop->GetName());
+   }
+   ```
+
+2. Iteration with inheritance:
+   ```cpp
+   // Old (still works)
+   for (FProperty* Prop : MyStruct->ForEachPropertyInChain())
+   {
+       Output::send(STR("{}\n"), Prop->GetName());
+   }
+
+   // New (recommended)
+   for (FProperty* Prop : TFieldRange<FProperty>(MyStruct, EFieldIterationFlags::IncludeSuper))
+   {
+       Output::send(STR("{}\n"), Prop->GetName());
+   }
+   ```
+
+3. Parent-to-child iteration order:
+   ```cpp
+   // Old (still works)
+   for (FProperty* Prop : OrderedForEachPropertyInChain(MyStruct))
+   {
+       Output::send(STR("{}\n"), Prop->GetName());
+   }
+
+   // New (recommended)
+   for (FProperty* Prop : TReverseFieldRange<FProperty>(MyStruct, EFieldIterationFlags::None))
+   {
+       Output::send(STR("{}\n"), Prop->GetName());
+   }
+   ```
+
+4. Using the iterator directly:
+   ```cpp
+   // More control with explicit iterator
+   for (TFieldIterator<FProperty> It(MyStruct, EFieldIterationFlags::IncludeSuper); It; ++It)
+   {
+       FProperty* Prop = *It;
+       Output::send(STR("{}\n"), Prop->GetName());
+   }
+   ```
+
+**Why Consider The New API:**
+- **Consistency:** Matches Epic's UE4/UE5 codebase patterns exactly
+- **Flexibility:** Fine-grained control over what to include (super classes, deprecated properties, interfaces)
+- **Type-safe:** Can iterate any field type (`FProperty`, `UFunction`, `UEnum`, etc.)
+- **Familiarity:** If you know Epic's API, you already know this pattern
+- **Explicitness:** Makes iteration behavior clear at the call site
+
+**Important Notes:**
+- The old `ForEachProperty()` methods are **deprecated** and may be removed in the future
+- Use `TFieldIterator`/`TFieldRange` for better performance and when matching Epic's patterns
+
 ## Reporting Migration Issues
 
 If you encounter problems while upgrading, please:

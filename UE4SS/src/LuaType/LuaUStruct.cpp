@@ -2,7 +2,7 @@
 #include <LuaType/LuaUFunction.hpp>
 #include <LuaType/LuaUStruct.hpp>
 #include <LuaType/LuaXProperty.hpp>
-#include <Unreal/FProperty.hpp>
+#include <Unreal/CoreUObject/UObject/UnrealType.hpp>
 #include <Unreal/UFunction.hpp>
 #include <Unreal/UStruct.hpp>
 

@@ -17,7 +17,7 @@
 #include <Unreal/Script.hpp>
 #include <Unreal/ReflectedFunction.hpp>
 #include <Unreal/Signatures.hpp>
-#include <Unreal/Property/FObjectProperty.hpp>
+#include <Unreal/CoreUObject/UObject/UnrealType.hpp>
 
 #define IMGUI_DEFINE_MATH_OPERATORS
 #include <imgui.h>
