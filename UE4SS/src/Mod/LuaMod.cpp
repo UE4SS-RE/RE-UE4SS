@@ -47,8 +47,7 @@
 #include <Unreal/TypeChecker.hpp>
 #include <Unreal/UAssetRegistry.hpp>
 #include <Unreal/UAssetRegistryHelpers.hpp>
-#include <Unreal/UClass.hpp>
-#include <Unreal/UFunction.hpp>
+#include <Unreal/CoreUObject/UObject/Class.hpp>
 #include <Unreal/UGameViewportClient.hpp>
 #include <Unreal/UKismetSystemLibrary.hpp>
 #include <Unreal/UObjectGlobals.hpp>

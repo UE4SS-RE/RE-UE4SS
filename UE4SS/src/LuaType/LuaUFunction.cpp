@@ -5,7 +5,7 @@
 #include <stdexcept>
 #pragma warning(disable : 4005)
 #include <Unreal/CoreUObject/UObject/UnrealType.hpp>
-#include <Unreal/UFunction.hpp>
+#include <Unreal/CoreUObject/UObject/Class.hpp>
 #pragma warning(default : 4005)
 
 namespace RC::LuaType

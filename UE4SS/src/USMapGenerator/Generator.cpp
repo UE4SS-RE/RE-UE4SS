@@ -12,11 +12,9 @@
 #include <Unreal/CoreUObject/UObject/UnrealType.hpp>
 #include <Unreal/Property/FEnumProperty.hpp>
 #include <Unreal/Property/FOptionalProperty.hpp>
-#include <Unreal/UClass.hpp>
-#include <Unreal/UEnum.hpp>
+#include <Unreal/CoreUObject/UObject/Class.hpp>
 #include <Unreal/UObject.hpp>
 #include <Unreal/UObjectGlobals.hpp>
-#include <Unreal/UScriptStruct.hpp>
 #include <Unreal/UnrealVersion.hpp>
 
 #include "UE4SSProgram.hpp"

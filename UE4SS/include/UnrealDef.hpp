@@ -13,12 +13,9 @@
 #include <Unreal/Property/FTextProperty.hpp>
 #include <Unreal/Core/Containers/Array.hpp>
 #include <Unreal/Core/Containers/Map.hpp>
-#include <Unreal/UClass.hpp>
-#include <Unreal/UEnum.hpp>
-#include <Unreal/UFunction.hpp>
+#include <Unreal/CoreUObject/UObject/Class.hpp>
 #include <Unreal/UObject.hpp>
 #include <Unreal/UObjectGlobals.hpp>
-#include <Unreal/UStruct.hpp>
 #include <Unreal/UnrealFlags.hpp>
 // #include <Unreal/CustomType.hpp>
 #include <Unreal/FAssetData.hpp>

@@ -3,7 +3,7 @@
 #include <vector>
 
 #include <GUI/LiveView/Filter/SearchFilter.hpp>
-#include <Unreal/UClass.hpp>
+#include <Unreal/CoreUObject/UObject/Class.hpp>
 #include <Unreal/NameTypes.hpp>
 
 namespace RC::GUI::Filter

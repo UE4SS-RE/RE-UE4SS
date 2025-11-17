@@ -10,12 +10,9 @@
 #include <DynamicOutput/DynamicOutput.hpp>
 #include <Unreal/CoreUObject/UObject/UnrealType.hpp>
 #include <Unreal/TypeChecker.hpp>
-#include <Unreal/UClass.hpp>
-#include <Unreal/UEnum.hpp>
-#include <Unreal/UFunction.hpp>
+#include <Unreal/CoreUObject/UObject/Class.hpp>
 #include <Unreal/UInterface.hpp>
 #include <Unreal/UObjectGlobals.hpp>
-#include <Unreal/UScriptStruct.hpp>
 #pragma warning(default : 4005)
 
 namespace RC::UEGenerator

@@ -13,8 +13,7 @@
 #include <UE4SSProgram.hpp>
 #include <USMapGenerator/writer.h>
 #include <Unreal/CoreUObject/UObject/UnrealType.hpp>
-#include <Unreal/UClass.hpp>
-#include <Unreal/UScriptStruct.hpp>
+#include <Unreal/CoreUObject/UObject/Class.hpp>
 #pragma warning(default : 4005)
 
 namespace RC::UEGenerator
