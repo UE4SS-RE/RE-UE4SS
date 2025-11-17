@@ -56,7 +56,7 @@ namespace RC::LuaType
 
             if (!class_matches)
             {
-                for (Unreal::UStruct* super_struct : ptr->ForEachSuperStruct())
+                for (Unreal::UStruct* super_struct : Unreal::TSuperStructRange(ptr))
                 {
                     if (super_struct == owner_or_outer)
                     {
