@@ -5,7 +5,7 @@
 #include <Timer/ScopedTimer.hpp>
 #include <UE4SSProgram.hpp>
 #pragma warning(disable : 4005)
-#include <Unreal/FProperty.hpp>
+#include <Unreal/CoreUObject/UObject/UnrealType.hpp>
 #include <Unreal/UAssetRegistry.hpp>
 #include <Unreal/UClass.hpp>
 #include <Unreal/UFunction.hpp>

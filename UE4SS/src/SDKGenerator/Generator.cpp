@@ -8,14 +8,7 @@
 #include <UE4SSProgram.hpp>
 #pragma warning(disable : 4005)
 #include <DynamicOutput/DynamicOutput.hpp>
-#include <Unreal/FProperty.hpp>
-#include <Unreal/Property/FArrayProperty.hpp>
-#include <Unreal/Property/FClassProperty.hpp>
-#include <Unreal/Property/FDelegateProperty.hpp>
-#include <Unreal/Property/FMapProperty.hpp>
-#include <Unreal/Property/FMulticastInlineDelegateProperty.hpp>
-#include <Unreal/Property/FMulticastSparseDelegateProperty.hpp>
-#include <Unreal/Property/FStructProperty.hpp>
+#include <Unreal/CoreUObject/UObject/UnrealType.hpp>
 #include <Unreal/TypeChecker.hpp>
 #include <Unreal/UClass.hpp>
 #include <Unreal/UEnum.hpp>

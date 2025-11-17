@@ -4,7 +4,7 @@
 #include <LuaType/LuaUFunction.hpp>
 #include <stdexcept>
 #pragma warning(disable : 4005)
-#include <Unreal/FProperty.hpp>
+#include <Unreal/CoreUObject/UObject/UnrealType.hpp>
 #include <Unreal/UFunction.hpp>
 #pragma warning(default : 4005)
 

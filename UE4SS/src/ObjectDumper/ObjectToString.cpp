@@ -7,26 +7,11 @@
 #include <UE4SSProgram.hpp>
 
 #pragma warning(disable : 4005)
-#include <Unreal/FProperty.hpp>
-#include <Unreal/Property/FArrayProperty.hpp>
-#include <Unreal/Property/FBoolProperty.hpp>
-#include <Unreal/Property/FClassProperty.hpp>
-#include <Unreal/Property/FDelegateProperty.hpp>
+#include <Unreal/CoreUObject/UObject/UnrealType.hpp>
 #include <Unreal/Property/FEnumProperty.hpp>
 #include <Unreal/Property/FFieldPathProperty.hpp>
-#include <Unreal/Property/FInterfaceProperty.hpp>
-#include <Unreal/Property/FLazyObjectProperty.hpp>
-#include <Unreal/Property/FMapProperty.hpp>
-#include <Unreal/Property/FMulticastDelegateProperty.hpp>
-#include <Unreal/Property/FMulticastInlineDelegateProperty.hpp>
-#include <Unreal/Property/FMulticastSparseDelegateProperty.hpp>
-#include <Unreal/Property/FNameProperty.hpp>
-#include <Unreal/Property/FSoftClassProperty.hpp>
 #include <Unreal/Property/FStrProperty.hpp>
-#include <Unreal/Property/FStructProperty.hpp>
 #include <Unreal/Property/FTextProperty.hpp>
-#include <Unreal/Property/FWeakObjectProperty.hpp>
-#include <Unreal/Property/NumericPropertyTypes.hpp>
 #include <Unreal/UClass.hpp>
 #include <Unreal/UEnum.hpp>
 #include <Unreal/UFunction.hpp>

@@ -13,7 +13,7 @@
 #include <LuaType/LuaCustomProperty.hpp>
 #pragma warning(disable : 4005)
 #include <Unreal/FOutputDevice.hpp>
-#include <Unreal/FProperty.hpp>
+#include <Unreal/CoreUObject/UObject/UnrealType.hpp>
 #include <Unreal/NameTypes.hpp>
 #include <Unreal/UClass.hpp>
 #include <Unreal/UObject.hpp>

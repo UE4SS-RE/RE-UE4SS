@@ -2,9 +2,7 @@
 #include <LuaType/LuaUObject.hpp>
 #include <LuaType/LuaXDelegateProperty.hpp>
 #pragma warning(disable : 4005)
-#include <Unreal/Property/FDelegateProperty.hpp>
-#include <Unreal/Property/FMulticastDelegateProperty.hpp>
-#include <Unreal/Property/FMulticastSparseDelegateProperty.hpp>
+#include <Unreal/CoreUObject/UObject/UnrealType.hpp>
 #include <Unreal/UFunction.hpp>
 #pragma warning(default : 4005)
 

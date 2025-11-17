@@ -2,13 +2,8 @@
 #include <GUI/UFunctionCallerWidget.hpp>
 #include <Helpers/String.hpp>
 #include <Unreal/FOutputDevice.hpp>
-#include <Unreal/FProperty.hpp>
+#include <Unreal/CoreUObject/UObject/UnrealType.hpp>
 #include <Unreal/Hooks.hpp>
-#include <Unreal/Property/FArrayProperty.hpp>
-#include <Unreal/Property/FBoolProperty.hpp>
-#include <Unreal/Property/FClassProperty.hpp>
-#include <Unreal/Property/FObjectProperty.hpp>
-#include <Unreal/Property/FStructProperty.hpp>
 #include <Unreal/UClass.hpp>
 #include <Unreal/UFunction.hpp>
 #include <Unreal/UObject.hpp>
