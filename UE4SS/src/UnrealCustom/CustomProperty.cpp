@@ -1,5 +1,5 @@
 #include <Unreal/CoreUObject/UObject/UnrealType.hpp>
-#include <Unreal/UClass.hpp>
+#include <Unreal/CoreUObject/UObject/Class.hpp>
 #include <UnrealCustom/CustomProperty.hpp>
 
 namespace RC::Unreal

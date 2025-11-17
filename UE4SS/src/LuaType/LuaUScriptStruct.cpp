@@ -7,7 +7,7 @@
 #include <LuaType/LuaXStructProperty.hpp>
 #pragma warning(disable : 4005)
 #include <Unreal/CoreUObject/UObject/UnrealType.hpp>
-#include <Unreal/UScriptStruct.hpp>
+#include <Unreal/CoreUObject/UObject/Class.hpp>
 #pragma warning(default : 4005)
 #include <DynamicOutput/Output.hpp>
 

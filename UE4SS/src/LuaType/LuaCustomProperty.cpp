@@ -3,7 +3,7 @@
 #include <LuaType/LuaCustomProperty.hpp>
 #pragma warning(disable : 4005)
 #include <Unreal/CoreUObject/UObject/UnrealType.hpp>
-#include <Unreal/UClass.hpp>
+#include <Unreal/CoreUObject/UObject/Class.hpp>
 #include <Unreal/UnrealVersion.hpp>
 #include <UnrealCustom/CustomProperty.hpp>
 #pragma warning(default : 4005)

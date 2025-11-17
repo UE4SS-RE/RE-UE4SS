@@ -12,11 +12,8 @@
 #include <Unreal/Property/FFieldPathProperty.hpp>
 #include <Unreal/Property/FStrProperty.hpp>
 #include <Unreal/Property/FTextProperty.hpp>
-#include <Unreal/UClass.hpp>
-#include <Unreal/UEnum.hpp>
-#include <Unreal/UFunction.hpp>
+#include <Unreal/CoreUObject/UObject/Class.hpp>
 #include <Unreal/UObject.hpp>
-#include <Unreal/UScriptStruct.hpp>
 #pragma warning(default : 4005)
 
 namespace RC::ObjectDumper

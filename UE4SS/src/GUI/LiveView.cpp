@@ -33,13 +33,10 @@
 #include <Unreal/FOutputDevice.hpp>
 #include <Unreal/CoreUObject/UObject/UnrealType.hpp>
 #include <Unreal/Property/FEnumProperty.hpp>
-#include <Unreal/UClass.hpp>
-#include <Unreal/UEnum.hpp>
-#include <Unreal/UFunction.hpp>
+#include <Unreal/CoreUObject/UObject/Class.hpp>
 #include <Unreal/UObject.hpp>
 #include <Unreal/UObjectArray.hpp>
 #include <Unreal/UPackage.hpp>
-#include <Unreal/UScriptStruct.hpp>
 #include <Unreal/UnrealInitializer.hpp>
 #include <Unreal/UKismetNodeHelperLibrary.hpp>
 #include <imgui.h>

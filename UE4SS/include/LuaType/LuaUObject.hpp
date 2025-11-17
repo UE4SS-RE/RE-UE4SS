@@ -15,10 +15,9 @@
 #include <Unreal/FOutputDevice.hpp>
 #include <Unreal/CoreUObject/UObject/UnrealType.hpp>
 #include <Unreal/NameTypes.hpp>
-#include <Unreal/UClass.hpp>
+#include <Unreal/CoreUObject/UObject/Class.hpp>
 #include <Unreal/UObject.hpp>
 #include <Unreal/UObjectArray.hpp>
-#include <Unreal/UStruct.hpp>
 #include <Unreal/VersionedContainer/Container.hpp>
 #include <Unreal/World.hpp>
 #pragma warning(default : 4005)

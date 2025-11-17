@@ -6,7 +6,7 @@
 #include <Unreal/GameplayStatics.hpp>
 #include <Unreal/Rotator.hpp>
 #include <Unreal/Transform.hpp>
-#include <Unreal/UClass.hpp>
+#include <Unreal/CoreUObject/UObject/Class.hpp>
 #include <Unreal/UnrealCoreStructs.hpp>
 #include <Unreal/World.hpp>
 

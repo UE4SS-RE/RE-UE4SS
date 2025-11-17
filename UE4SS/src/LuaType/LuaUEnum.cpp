@@ -1,6 +1,6 @@
 #include <LuaType/LuaFName.hpp>
 #include <LuaType/LuaUEnum.hpp>
-#include <Unreal/UEnum.hpp>
+#include <Unreal/CoreUObject/UObject/Class.hpp>
 
 namespace RC::LuaType
 {

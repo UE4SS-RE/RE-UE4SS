@@ -28,11 +28,8 @@
 #include <Unreal/FText.hpp>
 #include <Unreal/CoreUObject/UObject/UnrealType.hpp>
 #include <Unreal/Property/FEnumProperty.hpp>
-#include <Unreal/UClass.hpp>
-#include <Unreal/UEnum.hpp>
-#include <Unreal/UFunction.hpp>
+#include <Unreal/CoreUObject/UObject/Class.hpp>
 #include <Unreal/UInterface.hpp>
-#include <Unreal/UScriptStruct.hpp>
 #include <Unreal/World.hpp>
 #include <Unreal/Engine/UDataTable.hpp>
 

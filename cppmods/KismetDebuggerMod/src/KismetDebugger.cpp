@@ -9,8 +9,7 @@
 #include <DynamicOutput/DynamicOutput.hpp>
 #include <Helpers/String.hpp>
 #include <Unreal/UObjectGlobals.hpp>
-#include <Unreal/UClass.hpp>
-#include <Unreal/UFunction.hpp>
+#include <Unreal/CoreUObject/UObject/Class.hpp>
 #include <Unreal/FString.hpp>
 #include <Unreal/Core/Containers/Array.hpp>
 #include <Unreal/FFrame.hpp>

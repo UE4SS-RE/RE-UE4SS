@@ -3,8 +3,7 @@
 #include <LuaType/LuaUStruct.hpp>
 #include <LuaType/LuaXProperty.hpp>
 #include <Unreal/CoreUObject/UObject/UnrealType.hpp>
-#include <Unreal/UFunction.hpp>
-#include <Unreal/UStruct.hpp>
+#include <Unreal/CoreUObject/UObject/Class.hpp>
 
 namespace RC::LuaType
 {
