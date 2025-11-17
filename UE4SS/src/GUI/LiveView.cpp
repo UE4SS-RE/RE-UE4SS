@@ -148,7 +148,7 @@ namespace RC::GUI
 
         if (LiveView::s_include_inheritance)
         {
-            for (UStruct* super : object->GetClassPrivate()->ForEachSuperStruct())
+            for (UStruct* super : TSuperStructRange(object->GetClassPrivate()))
             {
                 auto super_full_name = get_object_full_name_cxx_string(super);
                 std::transform(super_full_name.begin(), super_full_name.end(), super_full_name.begin(), [](char c) {
@@ -2720,7 +2720,7 @@ namespace RC::GUI
                 all_properties.emplace_back(OrderedProperty{property->GetOffset_Internal(), uclass, property});
             }
 
-            for (UStruct* super_struct : uclass->ForEachSuperStruct())
+            for (UStruct* super_struct : TSuperStructRange(uclass))
             {
                 for (FProperty* property : TFieldRange<FProperty>(super_struct, EFieldIterationFlags::IncludeDeprecated))
                 {

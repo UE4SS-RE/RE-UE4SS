@@ -1930,7 +1930,7 @@ namespace RC
 
             if (typed_obj->IsA<UStruct>())
             {
-                for (auto func : static_cast<UStruct*>(typed_obj)->ForEachFunction())
+                for (auto func : TFieldRange<UFunction>(static_cast<UStruct*>(typed_obj), EFieldIterationFlags::None))
                 {
                     ObjectDumper::function_to_string(func, out_line, in_dumped_functions);
                 }

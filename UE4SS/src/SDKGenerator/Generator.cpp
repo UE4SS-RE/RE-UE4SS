@@ -735,7 +735,7 @@ namespace RC::UEGenerator
             }
 
             std::vector<FunctionInfo> functions_to_generate{};
-            for (UFunction* function : native_class->ForEachFunction())
+            for (UFunction* function : Unreal::TFieldRange<UFunction>(native_class, EFieldIterationFlags::None))
             {
                 auto& function_info = functions_to_generate.emplace_back(FunctionInfo{function, object_info});
 
@@ -1119,7 +1119,7 @@ namespace RC::UEGenerator
             }
 
             std::vector<FunctionInfo> functions_to_generate{};
-            for (UFunction* function : native_class->ForEachFunction())
+            for (UFunction* function : Unreal::TFieldRange<UFunction>(native_class, EFieldIterationFlags::None))
             {
                 auto& function_info = functions_to_generate.emplace_back(FunctionInfo{function, object_info});
 
