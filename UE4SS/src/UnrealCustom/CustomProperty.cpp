@@ -1,4 +1,4 @@
-#include <Unreal/Property/FArrayProperty.hpp>
+#include <Unreal/CoreUObject/UObject/UnrealType.hpp>
 #include <Unreal/UClass.hpp>
 #include <UnrealCustom/CustomProperty.hpp>
 

@@ -2,7 +2,7 @@
 #include <LuaType/LuaUScriptStruct.hpp>
 #include <LuaType/LuaXStructProperty.hpp>
 #pragma warning(disable : 4005)
-#include <Unreal/Property/FStructProperty.hpp>
+#include <Unreal/CoreUObject/UObject/UnrealType.hpp>
 #pragma warning(default : 4005)
 
 namespace RC::LuaType

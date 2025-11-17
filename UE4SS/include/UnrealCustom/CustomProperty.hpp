@@ -4,7 +4,7 @@
 #include <memory>
 
 #include <Helpers/Casting.hpp>
-#include <Unreal/FProperty.hpp>
+#include <Unreal/CoreUObject/UObject/UnrealType.hpp>
 
 #pragma warning(disable : 4068)
 

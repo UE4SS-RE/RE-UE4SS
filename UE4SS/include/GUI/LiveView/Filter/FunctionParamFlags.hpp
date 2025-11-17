@@ -1,7 +1,7 @@
 #pragma once
 
 #include <GUI/LiveView/Filter/SearchFilter.hpp>
-#include <Unreal/FProperty.hpp>
+#include <Unreal/CoreUObject/UObject/UnrealType.hpp>
 #include <Unreal/UFunction.hpp>
 
 namespace RC::GUI::Filter
