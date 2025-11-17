@@ -3650,6 +3650,10 @@ namespace RC::UEGenerator
         this->m_root_directory = root_directory;
         this->m_primary_module_name = determine_primary_game_module_name();
 
+        // Clear static maps to avoid stale data from previous generator runs
+        m_used_file_names.clear();
+        m_dependency_object_to_unique_id.clear();
+
         // Force inclusion of Core and CoreUObject into all the generated module build files
         this->m_forced_module_dependencies.insert(STR("Core"));
         this->m_forced_module_dependencies.insert(STR("CoreUObject"));
