@@ -43,7 +43,7 @@ namespace RC::UEGenerator
                 }
                 if ((as_class && as_class->HasAnyClassFlags(CLASS_Native)) || (as_script_struct && as_script_struct->HasAnyStructFlags(STRUCT_Native)))
                 {
-                    for (FProperty* property : casted_object->ForEachProperty())
+                    for (FProperty* property : TFieldRange<FProperty>(casted_object, EFieldIterationFlags::IncludeDeprecated))
                     {
                         if (!property->IsA<FMapProperty>() || MapProperties.contains(property->GetFName()))
                         {

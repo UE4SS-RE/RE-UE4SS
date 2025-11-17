@@ -435,7 +435,7 @@ namespace RC::GUI::KismetDebuggerMod
                 {
                     UFunction* node = context->stack->Node();
                     int property_count{};
-                    for (FProperty* property : current_fn->ForEachProperty())
+                    for (FProperty* property : TFieldRange<FProperty>(current_fn, EFieldIterationFlags::IncludeDeprecated))
                     {
                         FString text{};
                         auto container_ptr = property->ContainerPtrToValuePtr<void*>(context->stack->Locals());
@@ -448,7 +448,7 @@ namespace RC::GUI::KismetDebuggerMod
                 }
                 else
                 {
-                    for (FProperty* property : current_fn->ForEachProperty())
+                    for (FProperty* property : TFieldRange<FProperty>(current_fn, EFieldIterationFlags::IncludeDeprecated))
                     {
                         ImGui::Text("%s", to_string(property->GetName()).c_str());
                     }

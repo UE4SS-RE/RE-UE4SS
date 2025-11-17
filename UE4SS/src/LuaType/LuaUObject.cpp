@@ -153,7 +153,7 @@ namespace RC::LuaType
 
             // for (uint8_t i = 0; i < num_expected_params; ++i)
             // uint8_t i = 0;
-            for (Unreal::FProperty* param_next : func->ForEachProperty())
+            for (Unreal::FProperty* param_next : Unreal::TFieldRange<Unreal::FProperty>(func, Unreal::EFieldIterationFlags::IncludeDeprecated))
             {
                 // if (i > 0)
                 //{

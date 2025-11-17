@@ -306,7 +306,7 @@ namespace RC::ObjectDumper
         }
         out_line.append(STR("\n"));
 
-        for (auto param : typed_this->ForEachProperty())
+        for (auto param : TFieldRange<FProperty>(typed_this, EFieldIterationFlags::IncludeDeprecated))
         {
             dump_xproperty(param, out_line);
         }
@@ -316,7 +316,7 @@ namespace RC::ObjectDumper
     {
         UScriptStruct* script_struct = static_cast<UScriptStruct*>(p_this);
 
-        for (FProperty* prop : script_struct->ForEachProperty())
+        for (FProperty* prop : TFieldRange<FProperty>(script_struct, EFieldIterationFlags::IncludeDeprecated))
         {
             callable(prop);
         }

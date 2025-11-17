@@ -242,7 +242,7 @@ namespace RC::UEGenerator::JSONDumper
                 bp_events.new_string(STR("name"), event_name);
 
                 auto& bp_event_args = bp_events.new_array(STR("args"));
-                for (FProperty* param : event_function->ForEachProperty())
+                for (FProperty* param : TFieldRange<FProperty>(event_function, EFieldIterationFlags::IncludeDeprecated))
                 {
                     if (should_skip_property(param))
                     {
@@ -270,7 +270,7 @@ namespace RC::UEGenerator::JSONDumper
                 bp_function.new_string(STR("name"), function->GetName());
 
                 auto& bp_function_args = bp_function.new_array(STR("args"));
-                for (FProperty* param : function->ForEachProperty())
+                for (FProperty* param : TFieldRange<FProperty>(function, EFieldIterationFlags::IncludeDeprecated))
                 {
                     if (should_skip_property(param))
                     {
@@ -287,7 +287,7 @@ namespace RC::UEGenerator::JSONDumper
             }
 
             auto& properties = bp_class.new_array(STR("properties"));
-            for (FProperty* property : object_as_class->ForEachProperty())
+            for (FProperty* property : TFieldRange<FProperty>(object_as_class, EFieldIterationFlags::IncludeDeprecated))
             {
                 if (should_skip_property(property))
                 {
@@ -315,7 +315,7 @@ namespace RC::UEGenerator::JSONDumper
                 bp_delegate.new_string(STR("name"), delegate_function->GetName());
 
                 auto& bp_delegate_args = bp_delegate.new_array(STR("args"));
-                for (FProperty* param : delegate_function->ForEachProperty())
+                for (FProperty* param : TFieldRange<FProperty>(delegate_function, EFieldIterationFlags::IncludeDeprecated))
                 {
                     if (should_skip_property(param))
                     {

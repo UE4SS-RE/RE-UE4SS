@@ -37,6 +37,7 @@ namespace RC::UEGenerator
     using FDelegateProperty = RC::Unreal::FDelegateProperty;
     using FMulticastInlineDelegateProperty = RC::Unreal::FMulticastInlineDelegateProperty;
     using FMulticastSparseDelegateProperty = RC::Unreal::FMulticastSparseDelegateProperty;
+    using EFieldIterationFlags = RC::Unreal::EFieldIterationFlags;
 
     struct ObjectInfo
     {
@@ -438,7 +439,7 @@ namespace RC::UEGenerator
                     .owner = owner,
             };
 
-            for (XProperty* param : function->ForEachProperty())
+            for (XProperty* param : Unreal::TFieldRange<XProperty>(function, EFieldIterationFlags::IncludeDeprecated))
             {
                 if (!param->HasAnyPropertyFlags(Unreal::CPF_Parm | Unreal::CPF_ReturnParm))
                 {
@@ -727,7 +728,7 @@ namespace RC::UEGenerator
             // If any properties have dependencies, make sure that they are defined
             // This makes sure that we don't have member variables with undefined types (if the types are local, otherwise we need to include the file that the struct exists in)
             std::vector<PropertyInfo> properties_to_generate{};
-            for (XProperty* property : native_class->ForEachProperty())
+            for (XProperty* property : Unreal::TFieldRange<XProperty>(native_class, EFieldIterationFlags::IncludeDeprecated))
             {
                 properties_to_generate.emplace_back(
                         PropertyInfo{property, generator->generate_class_dependency_from_property(object_info, property, current_class_content)});
@@ -738,7 +739,7 @@ namespace RC::UEGenerator
             {
                 auto& function_info = functions_to_generate.emplace_back(FunctionInfo{function, object_info});
 
-                for (XProperty* param : function->ForEachProperty())
+                for (XProperty* param : Unreal::TFieldRange<XProperty>(function, EFieldIterationFlags::IncludeDeprecated))
                 {
                     if (!param->HasAnyPropertyFlags(Unreal::CPF_Parm | Unreal::CPF_ReturnParm))
                     {
@@ -1111,7 +1112,7 @@ namespace RC::UEGenerator
             // If any properties have dependencies, make sure that they are defined
             // This makes sure that we don't have member variables with undefined types (if the types are local, otherwise we need to include the file that the struct exists in)
             std::vector<PropertyInfo> properties_to_generate{};
-            for (XProperty* property : native_class->ForEachProperty())
+            for (XProperty* property : Unreal::TFieldRange<XProperty>(native_class, EFieldIterationFlags::IncludeDeprecated))
             {
                 properties_to_generate.emplace_back(
                         PropertyInfo{property, generator->generate_class_dependency_from_property(object_info, property, current_class_content)});
@@ -1122,7 +1123,7 @@ namespace RC::UEGenerator
             {
                 auto& function_info = functions_to_generate.emplace_back(FunctionInfo{function, object_info});
 
-                for (XProperty* param : function->ForEachProperty())
+                for (XProperty* param : Unreal::TFieldRange<XProperty>(function, EFieldIterationFlags::IncludeDeprecated))
                 {
                     if (!param->HasAnyPropertyFlags(Unreal::CPF_Parm | Unreal::CPF_ReturnParm))
                     {
