@@ -2584,7 +2584,7 @@ Overloads:
                 return 1;
             }
 
-            auto game_name = game_executable_directory.parent_path().parent_path().stem();
+            auto game_name = game_executable_directory.parent_path().parent_path().filename();
             auto game_root_directory = game_executable_directory.parent_path().parent_path().parent_path();
             auto directories_table = lua.prepare_new_table();
 
@@ -2602,7 +2602,7 @@ Overloads:
                                         continue;
                                     }
 
-                                    auto path = item.path().stem();
+                                    auto path = item.path().filename();
 
                                     // Set key to "Game" if this is the game directory, otherwise use the actual name
                                     std::string table_key;
