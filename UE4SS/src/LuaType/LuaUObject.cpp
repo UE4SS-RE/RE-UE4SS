@@ -538,7 +538,7 @@ namespace RC::LuaType
             return;
         }
 
-        for (Unreal::FProperty* field : script_struct->ForEachPropertyInChain())
+        for (Unreal::FProperty* field : Unreal::TFieldRange<Unreal::FProperty>(script_struct, Unreal::EFieldIterationFlags::IncludeSuper | Unreal::EFieldIterationFlags::IncludeDeprecated))
         {
             Unreal::FName field_type_fname = field->GetClass().GetFName();
             const std::string field_name = to_utf8_string(field->GetName());
@@ -624,7 +624,7 @@ namespace RC::LuaType
                                                   ? lua.prepare_new_table()
                                                   : lua.get_table();
 
-        for (Unreal::FProperty* field : script_struct->ForEachPropertyInChain())
+        for (Unreal::FProperty* field : Unreal::TFieldRange<Unreal::FProperty>(script_struct, Unreal::EFieldIterationFlags::IncludeSuper | Unreal::EFieldIterationFlags::IncludeDeprecated))
         {
             std::string field_name = to_utf8_string(field->GetName());
             Unreal::FName field_type_fname = field->GetClass().GetFName();
