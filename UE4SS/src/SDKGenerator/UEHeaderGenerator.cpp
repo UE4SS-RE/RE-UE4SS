@@ -28,12 +28,9 @@
 #include <Unreal/Property/FTextProperty.hpp>
 #include <Unreal/Property/FOptionalProperty.hpp>
 #include <Unreal/UActorComponent.hpp>
-#include <Unreal/UClass.hpp>
-#include <Unreal/UEnum.hpp>
-#include <Unreal/UFunction.hpp>
+#include <Unreal/CoreUObject/UObject/Class.hpp>
 #include <Unreal/UInterface.hpp>
 #include <Unreal/UPackage.hpp>
-#include <Unreal/UScriptStruct.hpp>
 #include <Unreal/UnrealFlags.hpp>
 #pragma warning(default : 4005)
 

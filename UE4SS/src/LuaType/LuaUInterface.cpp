@@ -1,7 +1,7 @@
 #include <DynamicOutput/Output.hpp>
 #include <LuaType/LuaUFunction.hpp>
 #include <LuaType/LuaUInterface.hpp>
-#include <Unreal/UFunction.hpp>
+#include <Unreal/CoreUObject/UObject/Class.hpp>
 #include <Unreal/UInterface.hpp>
 
 namespace RC::LuaType

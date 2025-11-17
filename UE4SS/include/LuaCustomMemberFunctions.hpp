@@ -6,7 +6,7 @@
 #include <Unreal/Core/Containers/ScriptArray.hpp>
 #include <Unreal/CoreUObject/UObject/UnrealType.hpp>
 #include <Unreal/UObject.hpp>
-#include <Unreal/UScriptStruct.hpp>
+#include <Unreal/CoreUObject/UObject/Class.hpp>
 #include <lua.hpp>
 
 namespace RC

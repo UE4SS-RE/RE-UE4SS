@@ -7,12 +7,9 @@
 #include <Unreal/Property/FFieldPathProperty.hpp>
 #include <Unreal/Property/FOptionalProperty.hpp>
 #include <Unreal/CoreUObject/UObject/FUtf8StrProperty.hpp>
-#include <Unreal/UClass.hpp>
-#include <Unreal/UFunction.hpp>
-#include <Unreal/UEnum.hpp>
+#include <Unreal/CoreUObject/UObject/Class.hpp>
 #include <Unreal/UInterface.hpp>
 #include <Unreal/UPackage.hpp>
-#include <Unreal/UScriptStruct.hpp>
 #include <UnrealDef.hpp>
 #pragma warning(default : 4005)
 

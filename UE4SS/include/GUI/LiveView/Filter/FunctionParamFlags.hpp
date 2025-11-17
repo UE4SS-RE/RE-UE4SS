@@ -2,7 +2,7 @@
 
 #include <GUI/LiveView/Filter/SearchFilter.hpp>
 #include <Unreal/CoreUObject/UObject/UnrealType.hpp>
-#include <Unreal/UFunction.hpp>
+#include <Unreal/CoreUObject/UObject/Class.hpp>
 
 namespace RC::GUI::Filter
 {

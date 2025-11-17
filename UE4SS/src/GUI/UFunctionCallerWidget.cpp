@@ -4,11 +4,9 @@
 #include <Unreal/FOutputDevice.hpp>
 #include <Unreal/CoreUObject/UObject/UnrealType.hpp>
 #include <Unreal/Hooks.hpp>
-#include <Unreal/UClass.hpp>
-#include <Unreal/UFunction.hpp>
+#include <Unreal/CoreUObject/UObject/Class.hpp>
 #include <Unreal/UObject.hpp>
 #include <Unreal/UObjectGlobals.hpp>
-#include <Unreal/UScriptStruct.hpp>
 
 #include <imgui.h>
 #include <misc/cpp/imgui_stdlib.h>

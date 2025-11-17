@@ -51,7 +51,7 @@
 #include <Unreal/ULocalPlayer.hpp>
 #include <Unreal/UObjectArray.hpp>
 #include <Unreal/UPackage.hpp>
-#include <Unreal/UScriptStruct.hpp>
+#include <Unreal/CoreUObject/UObject/Class.hpp>
 #include <Unreal/UnrealInitializer.hpp>
 #include <Unreal/World.hpp>
 #include <Unreal/FWorldContext.hpp>
