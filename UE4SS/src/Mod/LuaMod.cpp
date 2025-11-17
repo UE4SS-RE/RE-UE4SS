@@ -158,7 +158,7 @@ namespace RC
         {
             // int32_t current_param_offset{};
 
-            for (Unreal::FProperty* func_prop : FunctionBeingExecuted->ForEachProperty())
+            for (Unreal::FProperty* func_prop : Unreal::TFieldRange<Unreal::FProperty>(FunctionBeingExecuted, Unreal::EFieldIterationFlags::IncludeDeprecated))
             {
                 // Skip this property if it's not a parameter
                 if (!func_prop->HasAnyPropertyFlags(Unreal::EPropertyFlags::CPF_Parm))
@@ -328,7 +328,7 @@ namespace RC
             bool has_properties_to_process = lua_data.has_return_value || num_unreal_params > 0;
             if (has_properties_to_process && context.TheStack.Locals())
             {
-                for (Unreal::FProperty* func_prop : FunctionBeingExecuted->ForEachProperty())
+                for (Unreal::FProperty* func_prop : Unreal::TFieldRange<Unreal::FProperty>(FunctionBeingExecuted, Unreal::EFieldIterationFlags::IncludeDeprecated))
                 {
                     // Skip this property if it's not a parameter
                     if (!func_prop->HasAnyPropertyFlags(Unreal::EPropertyFlags::CPF_Parm))
@@ -4345,7 +4345,7 @@ Overloads:
 
                     if (has_return_value || num_unreal_params > 0)
                     {
-                        for (Unreal::FProperty* param : node->ForEachProperty())
+                        for (Unreal::FProperty* param : Unreal::TFieldRange<Unreal::FProperty>(node, Unreal::EFieldIterationFlags::IncludeDeprecated))
                         {
                             if (!param->HasAnyPropertyFlags(Unreal::EPropertyFlags::CPF_Parm))
                             {

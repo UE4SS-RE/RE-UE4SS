@@ -241,7 +241,7 @@ namespace RC::LuaType
 
                            // Process parameters from Lua stack (parameters start at position 1 after self is consumed)
                            int lua_param_index = 1;
-                           for (Unreal::FProperty* param : signature_function->ForEachProperty())
+                           for (Unreal::FProperty* param : Unreal::TFieldRange<Unreal::FProperty>(signature_function, Unreal::EFieldIterationFlags::IncludeDeprecated))
                            {
                                if (!param->HasAnyPropertyFlags(Unreal::CPF_Parm) || param->HasAnyPropertyFlags(Unreal::CPF_ReturnParm))
                                {
@@ -516,7 +516,7 @@ namespace RC::LuaType
 
                            // Process parameters from Lua stack (parameters start at position 1 after self is consumed)
                            int lua_param_index = 1;
-                           for (Unreal::FProperty* param : signature_function->ForEachProperty())
+                           for (Unreal::FProperty* param : Unreal::TFieldRange<Unreal::FProperty>(signature_function, Unreal::EFieldIterationFlags::IncludeDeprecated))
                            {
                                if (!param->HasAnyPropertyFlags(Unreal::CPF_Parm) || param->HasAnyPropertyFlags(Unreal::CPF_ReturnParm))
                                {
