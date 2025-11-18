@@ -80,6 +80,8 @@ Added search filter: `Match Memory Address`. ([UE4SS #882](https://github.com/UE
 
 Added ability to call UFunctions directly from the GUI. ([UE4SS #851](https://github.com/UE4SS-RE/RE-UE4SS/pull/851))
 
+Added highlights for properties matching the `Has property` and `Has property of type` filters ([UE4SS #1089](https://github.com/UE4SS-RE/RE-UE4SS/pull/1089))
+
 ### UHT Dumper
 
 Added support for generating `FUtf8String` and `FAnsiString` properties in UHT-compatible headers ([UE4SS #1015](https://github.com/UE4SS-RE/RE-UE4SS/pull/1015))
@@ -351,6 +353,14 @@ Corporalwill123
 Fixed crash on warning in dumpers and generators ([UE4SS #976](https://github.com/UE4SS-RE/RE-UE4SS/pull/976))
 
 Fixed crash on expanding arrays ([UE4SS #1082](https://github.com/UE4SS-RE/RE-UE4SS/pull/1082))
+
+Fixed broken filters: `Include CDOs` & `CDOs only` ([UE4SS #1089](https://github.com/UE4SS-RE/RE-UE4SS/pull/1089))
+
+Fixed the `Include inheritance` filter taking precedence over other filters, causing them to not apply ([UE4SS #1089](https://github.com/UE4SS-RE/RE-UE4SS/pull/1089))
+
+Fixed the `Refresh search` button sometimes not working correctly ([UE4SS #1089](https://github.com/UE4SS-RE/RE-UE4SS/pull/1089))
+
+Fixed filters incorrectly being applied when not searching ([UE4SS #1089](https://github.com/UE4SS-RE/RE-UE4SS/pull/1089))
 
 ### UHT Dumper 
 Fix SetupAttachment implementations randomly changing order ([UE4SS #606](https://github.com/UE4SS-RE/RE-UE4SS/pull/606)) - Buckminsterfullerene 
