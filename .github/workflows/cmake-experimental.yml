@@ -98,6 +98,11 @@ jobs:
           token: ${{ github.token }}
           tag: cmake-experimental-latest
           fail-if-no-assets: false
+          assets: |
+            UE4SS_v*.zip
+            zDEV-UE4SS_v*.zip
+            zCustomGameConfigs.zip
+            zMapGenBP.zip
 
       - name: Make Permanent Latest Release (CMake)
         uses: softprops/action-gh-release@v1
