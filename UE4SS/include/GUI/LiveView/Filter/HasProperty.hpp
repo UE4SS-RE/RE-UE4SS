@@ -23,7 +23,7 @@ namespace RC::GUI::Filter
                 const auto property_name = FName(FromCharTypePtr<TCHAR>(property_string.c_str()));
                 const auto as_struct = object->IsA<UStruct>() ? static_cast<UStruct*>(object) : object->GetClassPrivate();
                 FProperty* found_property{};
-                for (FProperty* property : as_struct->ForEachProperty())
+                for (FProperty* property : TFieldRange<FProperty>(as_struct, EFieldIterationFlags::IncludeDeprecated))
                 {
                     if (property->GetFName().Equals(property_name))
                     {
@@ -31,9 +31,9 @@ namespace RC::GUI::Filter
                         break;
                     }
                 }
-                for (UStruct* super_struct : as_struct->ForEachSuperStruct())
+                for (UStruct* super_struct : TSuperStructRange(as_struct))
                 {
-                    for (FProperty* property : super_struct->ForEachProperty())
+                    for (FProperty* property : TFieldRange<FProperty>(super_struct, EFieldIterationFlags::IncludeDeprecated))
                     {
                         if (property->GetFName().Equals(property_name))
                         {
