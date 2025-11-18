@@ -97,6 +97,7 @@ jobs:
         with:
           token: ${{ github.token }}
           tag: cmake-experimental-latest
+          fail-if-no-release: false
           fail-if-no-assets: false
           assets: |
             UE4SS_v*.zip
