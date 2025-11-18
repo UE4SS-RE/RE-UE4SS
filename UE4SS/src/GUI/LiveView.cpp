@@ -2346,7 +2346,7 @@ namespace RC::GUI
             {
                 render_property_value_context_menu(tree_node_id);
 
-                for (FProperty* inner_property : as_struct_property->GetStruct()->ForEachProperty())
+                for (FProperty* inner_property : TFieldRange<FProperty>(as_struct_property->GetStruct(), EFieldIterationFlags::IncludeDeprecated))
                 {
                     ImGui::Indent();
                     FProperty* last_struct_prop{};
