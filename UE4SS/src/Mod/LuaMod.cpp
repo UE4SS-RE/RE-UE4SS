@@ -2584,7 +2584,7 @@ Overloads:
                 return 1;
             }
 
-            auto game_name = game_executable_directory.parent_path().parent_path().stem();
+            auto game_name = game_executable_directory.parent_path().parent_path().filename();
             auto game_root_directory = game_executable_directory.parent_path().parent_path().parent_path();
             auto directories_table = lua.prepare_new_table();
 
@@ -2602,7 +2602,7 @@ Overloads:
                                         continue;
                                     }
 
-                                    auto path = item.path().stem();
+                                    auto path = item.path().filename();
 
                                     // Set key to "Game" if this is the game directory, otherwise use the actual name
                                     std::string table_key;
@@ -2801,10 +2801,10 @@ Overloads:
 
                             // Set metadata using safe string conversion
                             // TODO: When UE5 String conversion is implemented, replace with StringCast<ANSICHAR>
-                            std::string safe_stem = to_utf8_string(directory.stem());
+                            std::string safe_filename = to_utf8_string(directory.filename());
                             std::string safe_path = to_utf8_string(directory);
 
-                            meta_table.add_pair("__name", safe_stem.c_str());
+                            meta_table.add_pair("__name", safe_filename.c_str());
                             meta_table.add_pair("__absolute_path", safe_path.c_str());
                             lua_setmetatable(lua.get_lua_state(), -2);
                         }
