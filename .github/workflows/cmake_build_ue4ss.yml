@@ -277,6 +277,19 @@ jobs:
           if ($buildProxy) { $targets += "proxy" }
           if ($buildUVTD) { $targets += "UnrealVTableDumper" }
 
+          # Dynamically discover and add all C++ mod targets
+          # Look for all subdirectories in cppmods that have a CMakeLists.txt
+          if (Test-Path "cppmods") {
+            $modDirs = Get-ChildItem -Path "cppmods" -Directory | Where-Object {
+              Test-Path (Join-Path $_.FullName "CMakeLists.txt")
+            }
+            foreach ($modDir in $modDirs) {
+              $modName = $modDir.Name
+              Write-Host "Discovered C++ mod: $modName"
+              $targets += $modName
+            }
+          }
+
           if ($targets.Count -eq 0) {
             Write-Host "No targets to build based on changed files"
             exit 0
@@ -364,6 +377,37 @@ jobs:
               if ($file.FullName -notlike "*\_deps\*") {
                 Write-Host "✓ Found UE4SS file: $($file.Name)"
                 Copy-Item $file.FullName -Destination $artifact_dir -Force
+              }
+            }
+          }
+
+          # Dynamically collect all C++ mod DLLs
+          # Discover mod names from cppmods directory structure
+          if (Test-Path "cppmods") {
+            $modDirs = Get-ChildItem -Path "cppmods" -Directory | Where-Object {
+              Test-Path (Join-Path $_.FullName "CMakeLists.txt")
+            }
+            foreach ($modDir in $modDirs) {
+              $modName = $modDir.Name
+              Write-Host "Looking for C++ mod: $modName"
+
+              # Search for the mod DLL (and PDB if dev build)
+              $modDll = Get-ChildItem -Path $buildDir -Recurse -Filter "$modName.dll" -ErrorAction SilentlyContinue | Where-Object {
+                $_.FullName -notlike "*\_deps\*"
+              } | Select-Object -First 1
+
+              if ($modDll) {
+                Write-Host "✓ Found C++ mod DLL: $($modDll.Name)"
+                Copy-Item $modDll.FullName -Destination $artifact_dir -Force
+
+                # Also collect PDB if it exists
+                $modPdb = $modDll.FullName -replace '\.dll$', '.pdb'
+                if (Test-Path $modPdb) {
+                  Write-Host "✓ Found C++ mod PDB: $(Split-Path $modPdb -Leaf)"
+                  Copy-Item $modPdb -Destination $artifact_dir -Force
+                }
+              } else {
+                Write-Host "⚠ Warning: $modName.dll not found in build output"
               }
             }
           }
