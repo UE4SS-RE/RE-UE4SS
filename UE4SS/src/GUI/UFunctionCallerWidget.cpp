@@ -63,7 +63,7 @@ namespace RC::GUI
             }
             auto& cached_function = m_callable_functions.emplace_back(CallableUFunction{function});
 
-            for (FProperty* param : cached_function.function->ForEachProperty())
+            for (FProperty* param : TFieldRange<FProperty>(cached_function.function, EFieldIterationFlags::IncludeDeprecated))
             {
                 if (param->HasAllPropertyFlags(CPF_ReturnParm))
                 {

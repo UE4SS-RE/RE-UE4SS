@@ -75,6 +75,11 @@ namespace RC
     using FEnumProperty = Unreal::FEnumProperty;
     using FFieldPathProperty = Unreal::FFieldPathProperty;
 
+    template <class T>
+    using TFieldIterator = Unreal::TFieldIterator<T>;
+    template <typename T>
+    using TFieldRange = Unreal::TFieldRange<T>;
+
     // using CustomArrayProperty = Unreal::CustomArrayProperty;
     // using CustomStructProperty = Unreal::CustomStructProperty;
     using FAssetData = Unreal::FAssetData;
