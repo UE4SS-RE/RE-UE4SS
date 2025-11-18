@@ -125,7 +125,7 @@ namespace RC::GUI
     static auto filter_out_objects(UObject* object) -> bool
     {
         APPLY_PRE_SEARCH_FILTERS(SearchFilters)
-        if (LiveView::s_name_search_results_set.contains(object))
+        if (!LiveView::s_name_to_search_by.empty() && LiveView::s_name_search_results_set.contains(object))
         {
             return true;
         }
@@ -148,6 +148,11 @@ namespace RC::GUI
             return std::tolower(c);
         });
 
+        if (filter_out_objects(object))
+        {
+            return;
+        }
+
         if (LiveView::s_include_inheritance)
         {
             for (UStruct* super : object->GetClassPrivate()->ForEachSuperStruct())
@@ -163,11 +168,6 @@ namespace RC::GUI
                     break;
                 }
             }
-        }
-
-        if (filter_out_objects(object))
-        {
-            return;
         }
 
         if (LiveView::s_include_inheritance && LiveView::s_name_search_results_set.contains(object))
@@ -1793,6 +1793,7 @@ namespace RC::GUI
 
     auto LiveView::guobjectarray_iterator(int32_t int_data_1, int32_t int_data_2, const std::function<void(UObject*)>& callable) -> void
     {
+        Filter::s_highlighted_properties.clear();
         UObjectGlobals::ForEachUObjectInRange(int_data_1, int_data_2, [&](UObject* object, ...) {
             // TODO: Stop using the 'HashObject' function when needing the address of an FFieldClassVariant because it's not designed to return an address.
             //       Maybe make the ToFieldClass/ToUClass functions public (append 'Unsafe' to the function names).
@@ -1890,6 +1891,7 @@ namespace RC::GUI
         Output::send(STR("Searching by name...\n"));
         s_name_search_results.clear();
         s_name_search_results_set.clear();
+        Filter::s_highlighted_properties.clear();
 
         uintptr_t address_to_search_by = 0;
         if (LiveView::s_search_by_address)
@@ -1945,7 +1947,7 @@ namespace RC::GUI
         if (are_listeners_allowed())
         {
             std::string search_buffer{m_search_by_name_buffer};
-            if (search_buffer.empty() || s_apply_search_filters_when_not_searching)
+            if (search_buffer.empty() || search_buffer == m_default_search_buffer || s_apply_search_filters_when_not_searching)
             {
                 Output::send(STR("Search all chunks\n"));
                 s_name_to_search_by.clear();
@@ -2739,7 +2741,16 @@ namespace RC::GUI
 
             for (const auto& ordered_property : all_properties)
             {
+                const auto should_highlight = Filter::is_highlighted(ordered_property.property);
+                if (should_highlight)
+                {
+                    ImGui::PushStyleColor(ImGuiCol_Text, {1.0f, 0.5f, 0.5f, 1.0f});
+                }
                 render_property_text(static_cast<UClass*>(ordered_property.owner), ordered_property.property);
+                if (should_highlight)
+                {
+                    ImGui::PopStyleColor();
+                }
             }
 
             if (tried_to_open_nullptr_object)
