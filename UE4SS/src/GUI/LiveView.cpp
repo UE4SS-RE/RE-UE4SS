@@ -1933,7 +1933,7 @@ namespace RC::GUI
                 if (was_added.was_filtered)
                 {
                     // Note: Feel free to change the code here to output only the object you're interested in using for debugging.
-                    if (object->GetClassPrivate()->GetName() == STR("GCObjectReferencer"))
+                    // if (object->GetClassPrivate()->GetName() == STR("GCObjectReferencer"))
                     {
                         Output::send(STR("FILTERED BY '{}': '{}'\n"), was_added.reason, object->GetFullName());
                     }
