@@ -140,11 +140,11 @@ namespace RC::LuaType
                                                           .property = nullptr};
 
                                pusher_params.property = info.key;
-                               StaticState::m_property_value_pushers[static_cast<int32_t>(info.key_fname.GetComparisonIndex())](pusher_params);
+                               StaticState::m_property_value_pushers[static_cast<int32_t>(info.key_fname.GetComparisonIndex().ToUnstableInt())](pusher_params);
 
                                pusher_params.data = static_cast<uint8_t*>(pusher_params.data) + info.layout.ValueOffset;
                                pusher_params.property = info.value;
-                               StaticState::m_property_value_pushers[static_cast<int32_t>(info.value_fname.GetComparisonIndex())](pusher_params);
+                               StaticState::m_property_value_pushers[static_cast<int32_t>(info.value_fname.GetComparisonIndex().ToUnstableInt())](pusher_params);
 
                                // Call function passing key & value, expecting 1 return value
                                // Mutating the key is undefined behavior
@@ -203,7 +203,7 @@ namespace RC::LuaType
                                                  .base = lua_object.m_base,
                                                  .data = key_data.GetData(),
                                                  .property = info.key};
-                StaticState::m_property_value_pushers[static_cast<int32_t>(info.key_fname.GetComparisonIndex())](pusher_params);
+                StaticState::m_property_value_pushers[static_cast<int32_t>(info.key_fname.GetComparisonIndex().ToUnstableInt())](pusher_params);
             }
 
             Unreal::uint8* value_ptr = map->FindValue(key_data.GetData(),
@@ -224,7 +224,7 @@ namespace RC::LuaType
                                              .base = lua_object.m_base,
                                              .data = value_ptr,
                                              .property = info.value};
-            StaticState::m_property_value_pushers[static_cast<int32_t>(info.value_fname.GetComparisonIndex())](pusher_params);
+            StaticState::m_property_value_pushers[static_cast<int32_t>(info.value_fname.GetComparisonIndex().ToUnstableInt())](pusher_params);
             break;
         }
         case MapOperation::Add: {
@@ -237,11 +237,11 @@ namespace RC::LuaType
                                        .data = pair_data.GetData(),
                                        .property = info.key};
 
-            StaticState::m_property_value_pushers[static_cast<int32_t>(info.key_fname.GetComparisonIndex())](pusher_params);
+            StaticState::m_property_value_pushers[static_cast<int32_t>(info.key_fname.GetComparisonIndex().ToUnstableInt())](pusher_params);
 
             pusher_params.property = info.value;
             pusher_params.data = static_cast<uint8_t*>(pusher_params.data) + info.layout.ValueOffset;
-            StaticState::m_property_value_pushers[static_cast<int32_t>(info.value_fname.GetComparisonIndex())](pusher_params);
+            StaticState::m_property_value_pushers[static_cast<int32_t>(info.value_fname.GetComparisonIndex().ToUnstableInt())](pusher_params);
 
             void* key_ptr = pair_data.GetData();
             void* value_ptr = pair_data.GetData() + info.layout.ValueOffset;
@@ -303,7 +303,7 @@ namespace RC::LuaType
                                        .base = lua_object.m_base,
                                        .data = key_data.GetData(),
                                        .property = info.key};
-            StaticState::m_property_value_pushers[static_cast<int32_t>(info.key_fname.GetComparisonIndex())](pusher_params);
+            StaticState::m_property_value_pushers[static_cast<int32_t>(info.key_fname.GetComparisonIndex().ToUnstableInt())](pusher_params);
 
             Unreal::int32 index = map->FindPairIndex(key_data.GetData(),
                                                      info.layout,
@@ -327,7 +327,7 @@ namespace RC::LuaType
                                        .base = lua_object.m_base,
                                        .data = key_data.GetData(),
                                        .property = info.key};
-            StaticState::m_property_value_pushers[static_cast<int32_t>(info.key_fname.GetComparisonIndex())](pusher_params);
+            StaticState::m_property_value_pushers[static_cast<int32_t>(info.key_fname.GetComparisonIndex().ToUnstableInt())](pusher_params);
 
             Unreal::int32 index = map->FindPairIndex(key_data.GetData(),
                                                      info.layout,
@@ -365,14 +365,14 @@ namespace RC::LuaType
 
     void FScriptMapInfo::validate_pushers(const LuaMadeSimple::Lua& lua)
     {
-        int32_t key_comparison_index = static_cast<int32_t>(key_fname.GetComparisonIndex());
+        int32_t key_comparison_index = static_cast<int32_t>(key_fname.GetComparisonIndex().ToUnstableInt());
         if (!StaticState::m_property_value_pushers.contains(key_comparison_index))
         {
             std::string inner_type_name = to_string(key_fname.ToString());
             lua.throw_error(fmt::format("Tried interacting with a map with an unsupported key type {}", inner_type_name));
         }
 
-        int32_t value_comparison_index = static_cast<int32_t>(value_fname.GetComparisonIndex());
+        int32_t value_comparison_index = static_cast<int32_t>(value_fname.GetComparisonIndex().ToUnstableInt());
         if (!StaticState::m_property_value_pushers.contains(value_comparison_index))
         {
             std::string inner_type_name = to_string(key_fname.ToString());

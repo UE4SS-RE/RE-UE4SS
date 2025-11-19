@@ -127,7 +127,7 @@ Overloads:
         table.add_pair("GetComparisonIndex", [](const LuaMadeSimple::Lua& lua) -> int {
             auto& lua_object = lua.get_userdata<FName>();
 
-            lua.set_integer(lua_object.get_local_cpp_object().GetComparisonIndex());
+            lua.set_integer(lua_object.get_local_cpp_object().GetComparisonIndex().ToUnstableInt());
 
             return 1;
         });

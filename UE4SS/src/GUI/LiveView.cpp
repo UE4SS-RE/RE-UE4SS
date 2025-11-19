@@ -2955,9 +2955,9 @@ namespace RC::GUI
 
     static auto render_fname(FName name) -> void
     {
-        ImGui::Text("ComparisonIndex: 0x%X", name.GetComparisonIndex());
+        ImGui::Text("ComparisonIndex: 0x%X", name.GetComparisonIndex().ToUnstableInt());
 #ifdef WITH_CASE_PRESERVING_NAME
-        ImGui::Text("DisplayIndex: 0x%X", name.GetDisplayIndex());
+        ImGui::Text("DisplayIndex: 0x%X", name.GetDisplayIndex().ToUnstableInt());
 #endif
         ImGui::Text("Number: 0x%X", name.GetNumber());
     }

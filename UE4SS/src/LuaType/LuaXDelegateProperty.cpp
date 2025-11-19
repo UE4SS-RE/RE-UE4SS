@@ -251,7 +251,7 @@ namespace RC::LuaType
                                int32_t offset = param->GetOffset_Internal();
                                void* param_data = &params_buffer[offset];
 
-                               int32_t name_comparison_index = param->GetClass().GetFName().GetComparisonIndex();
+                               int32_t name_comparison_index = param->GetClass().GetFName().GetComparisonIndex().ToUnstableInt();
 
                                if (StaticState::m_property_value_pushers.contains(name_comparison_index))
                                {
@@ -526,7 +526,7 @@ namespace RC::LuaType
                                int32_t offset = param->GetOffset_Internal();
                                void* param_data = &params_buffer[offset];
 
-                               int32_t name_comparison_index = param->GetClass().GetFName().GetComparisonIndex();
+                               int32_t name_comparison_index = param->GetClass().GetFName().GetComparisonIndex().ToUnstableInt();
 
                                if (StaticState::m_property_value_pushers.contains(name_comparison_index))
                                {

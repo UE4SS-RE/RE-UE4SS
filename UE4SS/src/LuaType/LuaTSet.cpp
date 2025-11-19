@@ -134,7 +134,7 @@ namespace RC::LuaType
                                         .base = lua_object.m_base,
                                         .data = element_data.GetData(),
                                         .property = info.element};
-            StaticState::m_property_value_pushers[static_cast<int32_t>(info.element_fname.GetComparisonIndex())](pusher_params);
+            StaticState::m_property_value_pushers[static_cast<int32_t>(info.element_fname.GetComparisonIndex().ToUnstableInt())](pusher_params);
 
             void* element_ptr = element_data.GetData();
 
@@ -185,7 +185,7 @@ namespace RC::LuaType
                                        .base = lua_object.m_base,
                                        .data = element_data.GetData(),
                                        .property = info.element};
-            StaticState::m_property_value_pushers[static_cast<int32_t>(info.element_fname.GetComparisonIndex())](pusher_params);
+            StaticState::m_property_value_pushers[static_cast<int32_t>(info.element_fname.GetComparisonIndex().ToUnstableInt())](pusher_params);
 
             // Create a SetHelper with the set data
             Unreal::FScriptSetHelper SetHelper(lua_object.m_property, set);
@@ -206,7 +206,7 @@ namespace RC::LuaType
                                        .base = lua_object.m_base,
                                        .data = element_data.GetData(),
                                        .property = info.element};
-            StaticState::m_property_value_pushers[static_cast<int32_t>(info.element_fname.GetComparisonIndex())](pusher_params);
+            StaticState::m_property_value_pushers[static_cast<int32_t>(info.element_fname.GetComparisonIndex().ToUnstableInt())](pusher_params);
 
             // Create a SetHelper with the set data
             Unreal::FScriptSetHelper SetHelper(lua_object.m_property, set);
@@ -246,7 +246,7 @@ namespace RC::LuaType
                                            .data = element_data,
                                            .property = info.element};
 
-                StaticState::m_property_value_pushers[static_cast<int32_t>(info.element_fname.GetComparisonIndex())](pusher_params);
+                StaticState::m_property_value_pushers[static_cast<int32_t>(info.element_fname.GetComparisonIndex().ToUnstableInt())](pusher_params);
 
                 // Call function passing element, expecting 1 return value
                 lua.call_function(1, 1);
@@ -280,7 +280,7 @@ namespace RC::LuaType
 
     void FScriptSetInfo::validate_pushers(const LuaMadeSimple::Lua& lua)
     {
-        int32_t element_comparison_index = static_cast<int32_t>(element_fname.GetComparisonIndex());
+        int32_t element_comparison_index = static_cast<int32_t>(element_fname.GetComparisonIndex().ToUnstableInt());
         if (!StaticState::m_property_value_pushers.contains(element_comparison_index))
         {
             std::string element_type_name = to_string(element_fname.ToString());

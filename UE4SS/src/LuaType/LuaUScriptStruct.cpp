@@ -179,7 +179,7 @@ namespace RC::LuaType
         }
 
         auto property_type_fname = property->GetClass().GetFName();
-        int32_t name_comparison_index = property_type_fname.GetComparisonIndex();
+        int32_t name_comparison_index = property_type_fname.GetComparisonIndex().ToUnstableInt();
 
         if (StaticState::m_property_value_pushers.contains(name_comparison_index))
         {
@@ -203,7 +203,7 @@ namespace RC::LuaType
         Unreal::FName property_name = Unreal::FName(ensure_str(lua.get_string()), Unreal::FNAME_Find);
 
         // Check if property_name is 'NONE'
-        if (property_name.GetComparisonIndex() == 0)
+        if (property_name.IsNone())
         {
             // No property was found so lets return nil and let the Lua script handle this failure
             lua.set_nil();

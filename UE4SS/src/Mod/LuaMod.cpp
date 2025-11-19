@@ -174,7 +174,7 @@ namespace RC
                 }
 
                 Unreal::FName property_type = func_prop->GetClass().GetFName();
-                int32_t name_comparison_index = property_type.GetComparisonIndex();
+                int32_t name_comparison_index = property_type.GetComparisonIndex().ToUnstableInt();
 
                 if (LuaType::StaticState::m_property_value_pushers.contains(name_comparison_index))
                 {
@@ -258,7 +258,7 @@ namespace RC
                 // If this was a native UFunction then changing the return value here will have the desired effect
 
                 Unreal::FName property_type_name = lua_data.return_property->GetClass().GetFName();
-                int32_t name_comparison_index = property_type_name.GetComparisonIndex();
+                int32_t name_comparison_index = property_type_name.GetComparisonIndex().ToUnstableInt();
 
                 if (LuaType::StaticState::m_property_value_pushers.contains(name_comparison_index))
                 {
@@ -313,7 +313,7 @@ namespace RC
                 // Set up the return value param so that Lua can access the original return value
                 auto return_property = FunctionBeingExecuted->GetReturnProperty();
                 auto return_property_type = return_property->GetClass().GetFName();
-                int32_t name_comparison_index = return_property_type.GetComparisonIndex();
+                int32_t name_comparison_index = return_property_type.GetComparisonIndex().ToUnstableInt();
                 if (LuaType::StaticState::m_property_value_pushers.contains(name_comparison_index))
                 {
                     const LuaType::PusherParams pusher_params{.operation = LuaType::Operation::GetParam,
@@ -344,7 +344,7 @@ namespace RC
                     }
 
                     Unreal::FName property_type = func_prop->GetClass().GetFName();
-                    int32_t name_comparison_index = property_type.GetComparisonIndex();
+                    int32_t name_comparison_index = property_type.GetComparisonIndex().ToUnstableInt();
 
                     if (LuaType::StaticState::m_property_value_pushers.contains(name_comparison_index))
                     {
@@ -4357,7 +4357,7 @@ Overloads:
                             }
 
                             auto param_type = param->GetClass().GetFName();
-                            auto param_type_comparison_index = param_type.GetComparisonIndex();
+                            auto param_type_comparison_index = param_type.GetComparisonIndex().ToUnstableInt();
                             if (auto it = LuaType::StaticState::m_property_value_pushers.find(param_type_comparison_index);
                                 it != LuaType::StaticState::m_property_value_pushers.end())
                             {
@@ -4398,7 +4398,7 @@ Overloads:
                         if (return_property)
                         {
                             auto return_property_type = return_property->GetClass().GetFName();
-                            auto return_property_type_comparison_index = return_property_type.GetComparisonIndex();
+                            auto return_property_type_comparison_index = return_property_type.GetComparisonIndex().ToUnstableInt();
 
                             if (auto it = LuaType::StaticState::m_property_value_pushers.find(return_property_type_comparison_index);
                                 it != LuaType::StaticState::m_property_value_pushers.end())

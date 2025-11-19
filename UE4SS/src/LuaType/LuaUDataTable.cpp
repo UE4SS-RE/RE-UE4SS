@@ -308,7 +308,7 @@ namespace RC::LuaType
                 info.row_struct->InitializeStruct(new_row_data);
 
                 // Get row data from Lua table at position 1
-                Unreal::int32 comparison_index = static_cast<Unreal::int32>(info.row_struct_fname.GetComparisonIndex());
+                Unreal::int32 comparison_index = static_cast<Unreal::int32>(info.row_struct_fname.GetComparisonIndex().ToUnstableInt());
                 if (StaticState::m_property_value_pushers.contains(comparison_index))
                 {
                     // Use specific pusher if available
@@ -386,7 +386,7 @@ namespace RC::LuaType
                 // Add row data
                 row_table.add_key("Data");
 
-                Unreal::int32 comparison_index = static_cast<Unreal::int32>(info.row_struct_fname.GetComparisonIndex());
+                Unreal::int32 comparison_index = static_cast<Unreal::int32>(info.row_struct_fname.GetComparisonIndex().ToUnstableInt());
                 // Create UScriptStruct wrapper for reference-based access
                 ScriptStructWrapper row_wrapper{
                         .script_struct = info.row_struct,

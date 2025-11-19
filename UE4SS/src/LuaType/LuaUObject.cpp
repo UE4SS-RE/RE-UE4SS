@@ -211,7 +211,7 @@ namespace RC::LuaType
                         }
                     }
 
-                    int32_t name_comparison_index = property_type_fname.GetComparisonIndex();
+                    int32_t name_comparison_index = property_type_fname.GetComparisonIndex().ToUnstableInt();
 
                     if (StaticState::m_property_value_pushers.contains(name_comparison_index))
                     {
@@ -263,7 +263,7 @@ namespace RC::LuaType
                 }
 
                 Unreal::FName param_type_fname = param->GetClass().GetFName();
-                int32_t name_comparison_index = param_type_fname.GetComparisonIndex();
+                int32_t name_comparison_index = param_type_fname.GetComparisonIndex().ToUnstableInt();
 
                 if (StaticState::m_property_value_pushers.contains(name_comparison_index))
                 {
@@ -295,7 +295,7 @@ namespace RC::LuaType
         // If there's a return value, then forward it to the Lua script
         if (return_value_property)
         {
-            int32_t name_comparison_index = return_value_property_type.GetComparisonIndex();
+            int32_t name_comparison_index = return_value_property_type.GetComparisonIndex().ToUnstableInt();
 
             if (StaticState::m_property_value_pushers.contains(name_comparison_index))
             {
@@ -567,7 +567,7 @@ namespace RC::LuaType
                 continue;
             }
 
-            int32_t name_comparison_index = field_type_fname.GetComparisonIndex();
+            int32_t name_comparison_index = field_type_fname.GetComparisonIndex().ToUnstableInt();
 
             if (StaticState::m_property_value_pushers.contains(name_comparison_index))
             {
@@ -628,7 +628,7 @@ namespace RC::LuaType
         {
             std::string field_name = to_utf8_string(field->GetName());
             Unreal::FName field_type_fname = field->GetClass().GetFName();
-            int32_t name_comparison_index = field_type_fname.GetComparisonIndex();
+            int32_t name_comparison_index = field_type_fname.GetComparisonIndex().ToUnstableInt();
 
             // Check if we can handle this field type
             bool can_handle = StaticState::m_property_value_pushers.contains(name_comparison_index);
@@ -640,21 +640,21 @@ namespace RC::LuaType
                 {
                     auto* array_prop = static_cast<Unreal::FArrayProperty*>(field);
                     auto* inner = array_prop->GetInner();
-                    int32_t inner_comparison_index = inner->GetClass().GetFName().GetComparisonIndex();
+                    int32_t inner_comparison_index = inner->GetClass().GetFName().GetComparisonIndex().ToUnstableInt();
                     can_handle = StaticState::m_property_value_pushers.contains(inner_comparison_index);
                 }
                 else if (field->IsA<Unreal::FSetProperty>())
                 {
                     auto* set_prop = static_cast<Unreal::FSetProperty*>(field);
                     auto* element = set_prop->GetElementProp();
-                    int32_t element_comparison_index = element->GetClass().GetFName().GetComparisonIndex();
+                    int32_t element_comparison_index = element->GetClass().GetFName().GetComparisonIndex().ToUnstableInt();
                     can_handle = StaticState::m_property_value_pushers.contains(element_comparison_index);
                 }
                 else if (field->IsA<Unreal::FMapProperty>())
                 {
                     auto* map_prop = static_cast<Unreal::FMapProperty*>(field);
-                    int32_t key_index = map_prop->GetKeyProp()->GetClass().GetFName().GetComparisonIndex();
-                    int32_t value_index = map_prop->GetValueProp()->GetClass().GetFName().GetComparisonIndex();
+                    int32_t key_index = map_prop->GetKeyProp()->GetClass().GetFName().GetComparisonIndex().ToUnstableInt();
+                    int32_t value_index = map_prop->GetValueProp()->GetClass().GetFName().GetComparisonIndex().ToUnstableInt();
                     can_handle = StaticState::m_property_value_pushers.contains(key_index) &&
                                  StaticState::m_property_value_pushers.contains(value_index);
                 }
@@ -768,7 +768,7 @@ namespace RC::LuaType
         auto iterate_array_and_turn_into_lua_table = [&](const LuaMadeSimple::Lua& lua, Unreal::FProperty* array_property, void* data_ptr) {
             auto array_inner = static_cast<Unreal::FArrayProperty*>(array_property)->GetInner();
             Unreal::FName property_type_fname = array_inner->GetClass().GetFName();
-            int32_t name_comparison_index = property_type_fname.GetComparisonIndex();
+            int32_t name_comparison_index = property_type_fname.GetComparisonIndex().ToUnstableInt();
 
             if (StaticState::m_property_value_pushers.contains(name_comparison_index))
             {
@@ -821,7 +821,7 @@ namespace RC::LuaType
             Unreal::FProperty* inner = array_property->GetInner();
             Unreal::FName inner_type_fname = inner->GetClass().GetFName();
 
-            int32_t name_comparison_index = inner_type_fname.GetComparisonIndex();
+            int32_t name_comparison_index = inner_type_fname.GetComparisonIndex().ToUnstableInt();
             if (!StaticState::m_property_value_pushers.contains(name_comparison_index))
             {
                 std::string inner_type_name = to_utf8_string(inner_type_fname.ToString());
@@ -1001,7 +1001,7 @@ namespace RC::LuaType
                                           .data = element_data,
                                           .property = info.element};
                                           
-                StaticState::m_property_value_pushers[static_cast<int32_t>(info.element_fname.GetComparisonIndex())](pusher_params);
+                StaticState::m_property_value_pushers[static_cast<int32_t>(info.element_fname.GetComparisonIndex().ToUnstableInt())](pusher_params);
                 
                 // Combine key and value in the table
                 lua_table.fuse_pair();
@@ -1060,7 +1060,7 @@ namespace RC::LuaType
                                           .data = element_data.GetData(),
                                           .property = info.element};
                                           
-                StaticState::m_property_value_pushers[static_cast<int32_t>(info.element_fname.GetComparisonIndex())](pusher_params);
+                StaticState::m_property_value_pushers[static_cast<int32_t>(info.element_fname.GetComparisonIndex().ToUnstableInt())](pusher_params);
                 
                 // Add element to the set
                 void* element_ptr = element_data.GetData();
@@ -1231,11 +1231,11 @@ namespace RC::LuaType
                                            .property = nullptr};
 
                 pusher_params.property = info.key;
-                StaticState::m_property_value_pushers[static_cast<int32_t>(info.key_fname.GetComparisonIndex())](pusher_params);
+                StaticState::m_property_value_pushers[static_cast<int32_t>(info.key_fname.GetComparisonIndex().ToUnstableInt())](pusher_params);
 
                 pusher_params.data = static_cast<uint8_t*>(pusher_params.data) + info.layout.ValueOffset;
                 pusher_params.property = info.value;
-                StaticState::m_property_value_pushers[static_cast<int32_t>(info.value_fname.GetComparisonIndex())](pusher_params);
+                StaticState::m_property_value_pushers[static_cast<int32_t>(info.value_fname.GetComparisonIndex().ToUnstableInt())](pusher_params);
 
                 lua_table.fuse_pair();
             }
@@ -1269,11 +1269,11 @@ namespace RC::LuaType
                 Unreal::FMemory::Memzero(pusher_params.data, info.layout.SetLayout.Size);
 
                 pusher_params.property = info.key;
-                StaticState::m_property_value_pushers[static_cast<int32_t>(info.key_fname.GetComparisonIndex())](pusher_params);
+                StaticState::m_property_value_pushers[static_cast<int32_t>(info.key_fname.GetComparisonIndex().ToUnstableInt())](pusher_params);
 
                 pusher_params.data = static_cast<uint8_t*>(pusher_params.data) + info.layout.ValueOffset;
                 pusher_params.property = info.value;
-                StaticState::m_property_value_pushers[static_cast<int32_t>(info.value_fname.GetComparisonIndex())](pusher_params);
+                StaticState::m_property_value_pushers[static_cast<int32_t>(info.value_fname.GetComparisonIndex().ToUnstableInt())](pusher_params);
 
                 return false;
             });
@@ -2109,7 +2109,7 @@ Overloads:
         Unreal::FProperty* property = static_cast<Unreal::FProperty*>(field);
 
         Unreal::FName property_type = property->GetClass().GetFName();
-        int32_t name_comparison_index = property_type.GetComparisonIndex();
+        int32_t name_comparison_index = property_type.GetComparisonIndex().ToUnstableInt();
 
         if (StaticState::m_property_value_pushers.contains(name_comparison_index))
         {
@@ -2241,7 +2241,7 @@ Overloads:
     {
         auto& lua_object = lua.get_userdata<LuaType::RemoteUnrealParam>();
 
-        int32_t type_name_comparison_index = lua_object.m_type.GetComparisonIndex();
+        int32_t type_name_comparison_index = lua_object.m_type.GetComparisonIndex().ToUnstableInt();
 
         if (StaticState::m_property_value_pushers.contains(type_name_comparison_index))
         {

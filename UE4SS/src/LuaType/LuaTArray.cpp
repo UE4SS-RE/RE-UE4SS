@@ -122,7 +122,7 @@ namespace RC::LuaType
             auto& lua_object = lua.get_userdata<TArray>();
 
             Unreal::FName property_type_name = lua_object.m_inner_property->GetClass().GetFName();
-            int32_t name_comparison_index = property_type_name.GetComparisonIndex();
+            int32_t name_comparison_index = property_type_name.GetComparisonIndex().ToUnstableInt();
 
             if (StaticState::m_property_value_pushers.contains(name_comparison_index))
             {
@@ -207,7 +207,7 @@ namespace RC::LuaType
                                               const TArray& lua_object) -> void
     {
         Unreal::FName property_type_fname = lua_object.m_inner_property->GetClass().GetFName();
-        int32_t name_comparison_index = property_type_fname.GetComparisonIndex();
+        int32_t name_comparison_index = property_type_fname.GetComparisonIndex().ToUnstableInt();
 
         if (StaticState::m_property_value_pushers.contains(name_comparison_index))
         {

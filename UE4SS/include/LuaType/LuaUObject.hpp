@@ -883,7 +883,7 @@ Overloads:
             auto& lua_object = lua.get_userdata<LuaType::LocalUnrealParam<ParamType>>();
 
             Unreal::FName property_type = lua_object.m_property->GetClass().GetFName();
-            int32_t type_name_comparison_index = property_type.GetComparisonIndex();
+            int32_t type_name_comparison_index = property_type.GetComparisonIndex().ToUnstableInt();
 
             if (StaticState::m_property_value_pushers.contains(type_name_comparison_index))
             {
