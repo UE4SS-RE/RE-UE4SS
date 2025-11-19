@@ -19,7 +19,7 @@
 
 // Whether to track the reason why objects get filtered out.
 #ifndef RC_LIVE_VIEW_DEBUG_FILTER_RESULTS
-#define RC_LIVE_VIEW_DEBUG_FILTER_RESULTS 1
+#define RC_LIVE_VIEW_DEBUG_FILTER_RESULTS 0
 #endif
 
 #ifndef RC_LIVE_VIEW_MAKE_FILTER_RETURN_VALUE
