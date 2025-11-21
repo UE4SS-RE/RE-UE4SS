@@ -71,6 +71,8 @@ Add error messages in places where only error codes were previously logged (e.g.
 
 Added `[f: <address_or_module_offset>` section to UE4SS_ObjectDump.txt [UE4SS #866](https://github.com/UE4SS-RE/RE-UE4SS/pull/866) 
 
+Added option `EnableAutoReloadingLuaMods` in the `General` section of UE4SS-settings.ini [UE4SS #1004](https://github.com/UE4SS-RE/RE-UE4SS/pull/1004) 
+
 Added line in the [docs](https://docs.ue4ss.com/dev/guides/fixing-compatibility-problems.html) to add `FText::FromString(FString&)` as an alternative to `FText::FText(FString&)` for UE5 games - ([UE4SS #1078](https://github.com/UE4SS-RE/RE-UE4SS/pull/1078))
 
 ### Live View 
@@ -450,6 +452,11 @@ Fixed `LoadMod` function issue that variables would go out-of-scope in the `Exec
 ; Valid values (case-insensitive): Anything from Mods/Keybinds/Scripts/main.lua
 ; Default: R
 HotReloadKey = R
+
+; Whether to automatically reload mods when a change is detected.
+; The reload triggers when any file is edited or a new file is added to the 'Scripts' directory.
+; Default: 0
+EnableAutoReloadingLuaMods = 0
 
 [EngineVersionOverride]
 ; True if the game is built as Debug, Development, or Test.
