@@ -2,7 +2,7 @@
 #include <LuaType/LuaXArrayProperty.hpp>
 #include <LuaType/LuaXProperty.hpp>
 #pragma warning(disable : 4005)
-#include <Unreal/Property/FArrayProperty.hpp>
+#include <Unreal/CoreUObject/UObject/UnrealType.hpp>
 #pragma warning(default : 4005)
 
 namespace RC::LuaType

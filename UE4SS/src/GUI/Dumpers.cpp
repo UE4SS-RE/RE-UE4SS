@@ -18,9 +18,8 @@
 #include <Unreal/AActor.hpp>
 #include <Unreal/NameTypes.hpp>
 #include <Unreal/Searcher/ObjectSearcher.hpp>
-#include <Unreal/UClass.hpp>
-#include <Unreal/UFunction.hpp>
-#include <Unreal/UScriptStruct.hpp>
+#include <Unreal/CoreUObject/UObject/UnrealType.hpp>
+#include <Unreal/CoreUObject/UObject/Class.hpp>
 #include <Unreal/UnrealInitializer.hpp>
 #include <chrono>
 #include <imgui.h>

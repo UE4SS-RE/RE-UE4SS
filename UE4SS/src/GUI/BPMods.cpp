@@ -11,8 +11,9 @@
 #include <Unreal/FString.hpp>
 #include <Unreal/ReflectedFunction.hpp>
 #include <Unreal/Core/Containers/Array.hpp>
-#include <Unreal/UClass.hpp>
+#include <Unreal/CoreUObject/UObject/Class.hpp>
 #include <Unreal/UObjectGlobals.hpp>
+#include <Unreal/CoreUObject/UObject/UnrealType.hpp>
 
 #include <imgui.h>
 

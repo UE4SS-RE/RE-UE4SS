@@ -2,9 +2,7 @@
 #include <LuaType/LuaUScriptStruct.hpp>
 #include <Unreal/Engine/UDataTable.hpp>
 #include <Unreal/UObject.hpp>
-#include <Unreal/UClass.hpp>
-#include <Unreal/UScriptStruct.hpp>
-
+#include <Unreal/CoreUObject/UObject/Class.hpp>
 namespace RC::LuaType
 {
     UDataTable::UDataTable(Unreal::UDataTable* object)

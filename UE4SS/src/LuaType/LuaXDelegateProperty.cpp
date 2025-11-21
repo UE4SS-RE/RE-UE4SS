@@ -2,10 +2,8 @@
 #include <LuaType/LuaUObject.hpp>
 #include <LuaType/LuaXDelegateProperty.hpp>
 #pragma warning(disable : 4005)
-#include <Unreal/Property/FDelegateProperty.hpp>
-#include <Unreal/Property/FMulticastDelegateProperty.hpp>
-#include <Unreal/Property/FMulticastSparseDelegateProperty.hpp>
-#include <Unreal/UFunction.hpp>
+#include <Unreal/CoreUObject/UObject/UnrealType.hpp>
+#include <Unreal/CoreUObject/UObject/Class.hpp>
 #pragma warning(default : 4005)
 
 namespace RC::LuaType
@@ -243,7 +241,7 @@ namespace RC::LuaType
 
                            // Process parameters from Lua stack (parameters start at position 1 after self is consumed)
                            int lua_param_index = 1;
-                           for (Unreal::FProperty* param : signature_function->ForEachProperty())
+                           for (Unreal::FProperty* param : Unreal::TFieldRange<Unreal::FProperty>(signature_function, Unreal::EFieldIterationFlags::IncludeDeprecated))
                            {
                                if (!param->HasAnyPropertyFlags(Unreal::CPF_Parm) || param->HasAnyPropertyFlags(Unreal::CPF_ReturnParm))
                                {
@@ -518,7 +516,7 @@ namespace RC::LuaType
 
                            // Process parameters from Lua stack (parameters start at position 1 after self is consumed)
                            int lua_param_index = 1;
-                           for (Unreal::FProperty* param : signature_function->ForEachProperty())
+                           for (Unreal::FProperty* param : Unreal::TFieldRange<Unreal::FProperty>(signature_function, Unreal::EFieldIterationFlags::IncludeDeprecated))
                            {
                                if (!param->HasAnyPropertyFlags(Unreal::CPF_Parm) || param->HasAnyPropertyFlags(Unreal::CPF_ReturnParm))
                                {

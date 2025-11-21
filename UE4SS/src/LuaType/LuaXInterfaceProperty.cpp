@@ -2,7 +2,7 @@
 #include <LuaType/LuaUObject.hpp>
 #include <LuaType/LuaXInterfaceProperty.hpp>
 #pragma warning(disable : 4005)
-#include <Unreal/Property/FInterfaceProperty.hpp>
+#include <Unreal/CoreUObject/UObject/UnrealType.hpp>
 #pragma warning(default : 4005)
 
 namespace RC::LuaType

@@ -26,23 +26,10 @@
 #include <Unreal/Core/Containers/ScriptArray.hpp>
 #include <Unreal/FString.hpp>
 #include <Unreal/FText.hpp>
-#include <Unreal/Property/FArrayProperty.hpp>
-#include <Unreal/Property/FSetProperty.hpp>
-#include <Unreal/Property/FMapProperty.hpp>
-#include <Unreal/Property/FBoolProperty.hpp>
+#include <Unreal/CoreUObject/UObject/UnrealType.hpp>
 #include <Unreal/Property/FEnumProperty.hpp>
-#include <Unreal/Property/FSoftClassProperty.hpp>
-#include <Unreal/Property/FStructProperty.hpp>
-#include <Unreal/Property/FWeakObjectProperty.hpp>
-#include <Unreal/Property/FDelegateProperty.hpp>
-#include <Unreal/Property/FMulticastDelegateProperty.hpp>
-#include <Unreal/Property/FMulticastSparseDelegateProperty.hpp>
-#include <Unreal/Property/NumericPropertyTypes.hpp>
-#include <Unreal/UClass.hpp>
-#include <Unreal/UEnum.hpp>
-#include <Unreal/UFunction.hpp>
+#include <Unreal/CoreUObject/UObject/Class.hpp>
 #include <Unreal/UInterface.hpp>
-#include <Unreal/UScriptStruct.hpp>
 #include <Unreal/World.hpp>
 #include <Unreal/Engine/UDataTable.hpp>
 
@@ -166,7 +153,7 @@ namespace RC::LuaType
 
             // for (uint8_t i = 0; i < num_expected_params; ++i)
             // uint8_t i = 0;
-            for (Unreal::FProperty* param_next : func->ForEachProperty())
+            for (Unreal::FProperty* param_next : Unreal::TFieldRange<Unreal::FProperty>(func, Unreal::EFieldIterationFlags::IncludeDeprecated))
             {
                 // if (i > 0)
                 //{
@@ -551,7 +538,7 @@ namespace RC::LuaType
             return;
         }
 
-        for (Unreal::FProperty* field : script_struct->ForEachPropertyInChain())
+        for (Unreal::FProperty* field : Unreal::TFieldRange<Unreal::FProperty>(script_struct, Unreal::EFieldIterationFlags::IncludeSuper | Unreal::EFieldIterationFlags::IncludeDeprecated))
         {
             Unreal::FName field_type_fname = field->GetClass().GetFName();
             const std::string field_name = to_utf8_string(field->GetName());
@@ -637,7 +624,7 @@ namespace RC::LuaType
                                                   ? lua.prepare_new_table()
                                                   : lua.get_table();
 
-        for (Unreal::FProperty* field : script_struct->ForEachPropertyInChain())
+        for (Unreal::FProperty* field : Unreal::TFieldRange<Unreal::FProperty>(script_struct, Unreal::EFieldIterationFlags::IncludeSuper | Unreal::EFieldIterationFlags::IncludeDeprecated))
         {
             std::string field_name = to_utf8_string(field->GetName());
             Unreal::FName field_type_fname = field->GetClass().GetFName();

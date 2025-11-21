@@ -4,8 +4,7 @@
 
 #include <Unreal/UObject.hpp>
 #include <Unreal/UPackage.hpp>
-#include <Unreal/UStruct.hpp>
-#include <Unreal/FProperty.hpp>
+#include <Unreal/CoreUObject/UObject/Class.hpp>
 
 // To create a new filter:
 // 1. Create <FilterName>.hpp in the same directory as this file.
