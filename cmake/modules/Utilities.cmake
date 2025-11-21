@@ -153,10 +153,7 @@ function(setup_build_configuration)
     get_property(is_multi_config GLOBAL PROPERTY GENERATOR_IS_MULTI_CONFIG)
 
     if(is_multi_config)
-        # Only set if not already defined to avoid unnecessary cache modifications
-        if(NOT DEFINED CMAKE_CONFIGURATION_TYPES)
-            set(CMAKE_CONFIGURATION_TYPES ${BUILD_CONFIGS} CACHE STRING "")
-        endif()
+        set(CMAKE_CONFIGURATION_TYPES ${BUILD_CONFIGS} CACHE STRING "" FORCE)
     else()
         if(NOT CMAKE_BUILD_TYPE)
             message("Defaulting to Game__Shipping__Win64")
