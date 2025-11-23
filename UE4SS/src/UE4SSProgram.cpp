@@ -497,6 +497,9 @@ namespace RC
 
     auto UE4SSProgram::setup_mod_directory_path() -> void
     {
+        // don't add a new path if we already specified one in the config
+        if (m_mods_directories.size() > 0) return;
+
         std::filesystem::path default_mods_path = m_working_directory / "Mods";
 
         // If no paths were added, check legacy location for fallback
