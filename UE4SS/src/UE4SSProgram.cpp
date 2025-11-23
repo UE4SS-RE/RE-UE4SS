@@ -505,7 +505,12 @@ namespace RC
             default_mods_path = m_legacy_root_directory / "Mods";
         }
 
-        m_mods_directories.insert(m_mods_directories.begin(), default_mods_path);
+        insert_mods_directory(default_mods_path, 0);
+
+        for (const auto& path : m_mods_directories_to_remove)
+        {
+            std::erase(m_mods_directories, path);
+        }
     }
 
     auto UE4SSProgram::create_simple_console() -> void
@@ -1605,15 +1610,26 @@ namespace RC
         return m_mods_directories;
     }
 
-    auto UE4SSProgram::add_mods_directory(std::filesystem::path path) -> void
+    auto UE4SSProgram::make_compatible_path(const std::filesystem::path& in_path) const -> std::filesystem::path
     {
-        auto orig_path = path;
+        auto path = in_path;
         if (path.is_relative())
         {
             path = m_working_directory / path;
         }
         path = path.lexically_normal().make_preferred();
         path = std::filesystem::weakly_canonical(path);
+        return path;
+    }
+
+    auto UE4SSProgram::insert_mods_directory(const std::filesystem::path& path, int64_t index) -> void
+    {
+        m_mods_directories.insert(m_mods_directories.begin() + index, path);
+    }
+
+    auto UE4SSProgram::add_mods_directory(const std::filesystem::path& in_path) -> void
+    {
+        auto path = make_compatible_path(in_path);
         if (const auto it = std::ranges::find(m_mods_directories, path); it != m_mods_directories.end())
         {
             m_mods_directories.erase(it);
@@ -1621,16 +1637,10 @@ namespace RC
         m_mods_directories.emplace_back(std::forward<decltype(path)>(path));
     }
 
-    auto UE4SSProgram::remove_mods_directory(std::filesystem::path path) -> void
+    auto UE4SSProgram::remove_mods_directory(const std::filesystem::path& in_path) -> void
     {
-        auto orig_path = path;
-        if (path.is_relative())
-        {
-            path = m_working_directory / path;
-        }
-        path = path.lexically_normal().make_preferred();
-        path = std::filesystem::weakly_canonical(path);
-        std::erase(m_mods_directories, path);
+        auto path = make_compatible_path(in_path);
+        m_mods_directories_to_remove.emplace_back(std::forward<decltype(path)>(path));
     }
 
     auto UE4SSProgram::get_legacy_root_directory() -> File::StringType

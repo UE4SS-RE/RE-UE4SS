@@ -118,6 +118,7 @@ namespace RC
         std::filesystem::path m_module_file_path;
         std::filesystem::path m_working_directory;
         std::vector<std::filesystem::path> m_mods_directories;
+        std::vector<std::filesystem::path> m_mods_directories_to_remove;
         std::filesystem::path m_game_executable_directory;
         std::filesystem::path m_log_directory;
         std::filesystem::path m_object_dumper_output_directory;
@@ -224,8 +225,10 @@ namespace RC
         RC_UE4SS_API auto get_working_directory() -> File::StringType;
         RC_UE4SS_API auto get_mods_directory() -> File::StringType;
         RC_UE4SS_API auto get_mods_directories() -> std::vector<std::filesystem::path>&;
-        RC_UE4SS_API auto add_mods_directory(std::filesystem::path) -> void;
-        RC_UE4SS_API auto remove_mods_directory(std::filesystem::path) -> void;
+        [[nodiscard]] RC_UE4SS_API auto make_compatible_path(const std::filesystem::path&) const -> std::filesystem::path;
+        RC_UE4SS_API auto insert_mods_directory(const std::filesystem::path&, int64_t index) -> void;
+        RC_UE4SS_API auto add_mods_directory(const std::filesystem::path&) -> void;
+        RC_UE4SS_API auto remove_mods_directory(const std::filesystem::path&) -> void;
         RC_UE4SS_API auto get_legacy_root_directory() -> File::StringType;
         RC_UE4SS_API auto generate_uht_compatible_headers() -> void;
         RC_UE4SS_API auto generate_cxx_headers(const std::filesystem::path& output_dir) -> void;
