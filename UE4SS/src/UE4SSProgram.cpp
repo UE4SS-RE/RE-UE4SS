@@ -497,7 +497,15 @@ namespace RC
 
     auto UE4SSProgram::setup_mod_directory_path() -> void
     {
-        std::filesystem::path default_mods_path = m_working_directory / "Mods";
+        std::filesystem::path default_mods_path{};
+        if (!settings_manager.Overrides.ModsFolderPath.empty())
+        {
+            default_mods_path = settings_manager.Overrides.ModsFolderPath;
+        }
+        else
+        {
+            default_mods_path = m_working_directory / "Mods";
+        }
 
         // If no paths were added, check legacy location for fallback
         if (std::filesystem::exists(m_legacy_root_directory / "Mods") && !std::filesystem::exists(default_mods_path))
