@@ -14,7 +14,10 @@
 - [Dumpers](./feature-overview/dumpers.md)
 
 ## APIs
-
+- [Blueprint API]()
+  - [UE4SS Functions]()
+    - [RegisterHookFromBP](./blueprint-api/ue4ss-functions/registerhookfrombp.md)
+    - [UnregisterHookFromBP](./blueprint-api/ue4ss-functions/unregisterhookfrombp.md)
 - [Lua API](./lua-api.md)
   - [Table Definitions]()
     - [Key](./lua-api/table-definitions/key.md)
