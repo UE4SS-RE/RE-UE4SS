@@ -444,6 +444,10 @@ Fixed `LoadMod` function issue that variables would go out-of-scope in the `Exec
 ;   -ModsFolderPaths = ../SharedMods
 ; Default: none
 
+; Whether to parse 'mods.txt' from the additional paths set by 'ModsFolderPath', and 'ModsFolderPaths' options.
+; Default: 1
+ParseModsFromAdditionalPaths =
+
 [General]
 ; The key that will trigger a reload of all mods.
 ; The CTRL key is always required.

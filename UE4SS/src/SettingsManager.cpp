@@ -68,6 +68,8 @@ namespace RC
             }
         });
 
+        REGISTER_BOOL_SETTING(Overrides.ParseModsFromAdditionalPaths, section_overrides, ParseModsFromAdditionalPaths)
+
         constexpr static File::CharType section_general[] = STR("General");
         REGISTER_BOOL_SETTING(General.EnableHotReloadSystem, section_general, EnableHotReloadSystem)
         StringType hot_reload_key{};
