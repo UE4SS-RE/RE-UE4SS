@@ -84,7 +84,7 @@ Key = {
     RIGHT_WIN = 0x5C,
     APPS = 0x5D,
     SLEEP = 0x5F,
-    NUM_ZERO = 0x69,
+    NUM_ZERO = 0x60,
     NUM_ONE = 0x61,
     NUM_TWO = 0x62,
     NUM_THREE = 0x63,
@@ -321,19 +321,44 @@ EInternalObjectFlags = {
     AllFlags                         = 0x7F800000,
 }
 
----@alias int8 number
----@alias int16 number
----@alias int32 number
----@alias int64 number
----@alias uint8 number
----@alias uint16 number
----@alias uint32 number
----@alias uint64 number
+---@alias int8 integer
+---@alias int16 integer
+---@alias int32 integer
+---@alias int64 integer
+---@alias uint8 integer
+---@alias uint16 integer
+---@alias uint32 integer
+---@alias uint64 integer
 ---@alias float number
 ---@alias double number
 
 
 -- # Global Functions
+
+---Creates an blank UObject whose IsValid function always returns false
+---@return UObject
+function CreateInvalidObject() end
+
+---Dumps all objects and properties to UE4SS_ObjectDump.txt file
+function DumpAllObjects() end
+
+---Generates CXX Headers / CXXHeaderDump
+function GenerateSDK() end
+
+---Generates lua types in /Mods/shared/types
+function GenerateLuaTypes() end
+
+---Generates UHT Compatible Headers
+function GenerateUHTCompatibleHeaders() end
+
+---Dumps Static Meshes to *-ue4ss_static_mesh_data.csv file
+function DumpStaticMeshes() end
+
+---Dumps all current existing actors to *-ue4ss_actor_data.csv file
+function DumpAllActors() end
+
+--- Generates .usmap file
+function DumpUSMAP() end
 
 ---@param ObjectName string
 ---@return UObject
@@ -349,7 +374,7 @@ function StaticFindObject(Class, InOuter, ObjectName, ExactClass) end
 
 ---Find the first non-default instance of the supplied class name
 ---@param ShortClassName string Should only contains the class name itself without path info
----@return UObject?
+---@return UObject
 function FindFirstOf(ShortClassName) end
 
 ---Find all non-default instances of the supplied class name
@@ -400,15 +425,41 @@ function UnregisterHook(UFunctionName, PreId, PostId) end
 ---@param Callback fun()
 function ExecuteInGameThread(Callback) end
 
----Returns the FName for this string/ComparisonIndex or the FName for "None" if the name doesn't exist
+---FName with "None" as value
+NAME_None = FName(0)
+
+---@enum EFindName
+EFindName = {
+    FNAME_Find = 0,
+    FNAME_Add = 1
+}
+
+---Returns the FName for this string or the FName for "None" if the name doesn't exist
 ---@param Name string
 ---@return FName
 function FName(Name) end
 
----Returns the FName for this string/ComparisonIndex or the FName for "None" if the name doesn't exist
+---Returns the FName for this ComparisonIndex or the FName for "None" if the name doesn't exist
 ---@param ComparisonIndex integer
 ---@return FName
 function FName(ComparisonIndex) end
+
+---Finds or adds FName for the string, depending on FindType 
+---@param Name string
+---@param FindType EFindName|integer # Find = 0, Add = 1
+---@return FName
+function FName(Name, FindType) end
+
+---Finds or adds FName for the ComparisonIndex, depending on FindType 
+---@param ComparisonIndex integer
+---@param FindType EFindName|integer # Find = 0, Add = 1
+---@return FName
+function FName(ComparisonIndex, FindType) end
+
+---Returns a new FText object with passed string as content
+---@param Text string
+---@return FText
+function FText(Text) end
 
 ---Attempts to construct a UObject of the passed UClass
 ---(>=4.26) Maps to https://docs.unrealengine.com/4.27/en-US/API/Runtime/CoreUObject/UObject/StaticConstructObject_Internal/1/
@@ -610,8 +661,101 @@ function IterateGameDirectories() end
 
 -- # Classes
 
+---Class for interacting with UE4SS metadata
+---@class UE4SS
+UE4SS = {}
+
+---Returns current version of UE4SS
+---@return integer, integer, integer
+function UE4SS:GetVersion() end
+
+---Returns current version of UE4SS
+---@return integer, integer, integer
+function UE4SS.GetVersion() end
+
+---Contains helper functions for retrieving which version of Unreal Engine that is being used.
+---@class UnrealVersion
+UnrealVersion = {}
+
+---Returns major version of game's Unreal Engine
+---@return integer
+function UnrealVersion:GetMajor() end
+
+---Returns major version of game's Unreal Engine
+---@return integer
+function UnrealVersion.GetMajor() end
+
+---Returns minor version of game's Unreal Engine
+---@return integer
+function UnrealVersion:GetMinor() end
+
+---Returns minor version of game's Unreal Engine
+---@return integer
+function UnrealVersion.GetMinor() end
+
+---Compares game's Unreal Engine version
+---@param MajorVersion integer
+---@param MinorVersion integer
+---@return boolean
+function UnrealVersion:IsEqual(MajorVersion, MinorVersion) end
+
+---Compares game's Unreal Engine version
+---@param MajorVersion integer
+---@param MinorVersion integer
+---@return boolean
+function UnrealVersion.IsEqual(MajorVersion, MinorVersion) end
+
+---Compares game's Unreal Engine version
+---@param MajorVersion integer
+---@param MinorVersion integer
+---@return boolean
+function UnrealVersion:IsAtLeast(MajorVersion, MinorVersion) end
+
+---Compares game's Unreal Engine version
+---@param MajorVersion integer
+---@param MinorVersion integer
+---@return boolean
+function UnrealVersion.IsAtLeast(MajorVersion, MinorVersion) end
+
+---Compares game's Unreal Engine version
+---@param MajorVersion integer
+---@param MinorVersion integer
+---@return boolean
+function UnrealVersion:IsAtMost(MajorVersion, MinorVersion) end
+
+---Compares game's Unreal Engine version
+---@param MajorVersion integer
+---@param MinorVersion integer
+---@return boolean
+function UnrealVersion.IsAtMost(MajorVersion, MinorVersion) end
+
+---Compares game's Unreal Engine version
+---@param MajorVersion integer
+---@param MinorVersion integer
+---@return boolean
+function UnrealVersion:IsBelow(MajorVersion, MinorVersion) end
+
+---Compares game's Unreal Engine version
+---@param MajorVersion integer
+---@param MinorVersion integer
+---@return boolean
+function UnrealVersion.IsBelow(MajorVersion, MinorVersion) end
+
+---Compares game's Unreal Engine version
+---@param MajorVersion integer
+---@param MinorVersion integer
+---@return boolean
+function UnrealVersion:IsAbove(MajorVersion, MinorVersion) end
+
+---Compares game's Unreal Engine version
+---@param MajorVersion integer
+---@param MinorVersion integer
+---@return boolean
+function UnrealVersion.IsAbove(MajorVersion, MinorVersion) end
+
+
 ---@class UFunction : UObject
-UFunction = {}
+local UFunction = {}
 
 ---Attempts to call the UFunction
 ---@param ... UFunctionParams
@@ -626,20 +770,159 @@ function UFunction:GetFunctionFlags() end
 function UFunction:SetFunctionFlags(Flags) end
 
 
----A TArray of characters
+---Unreal Engine's standard wide-character string type (TCHAR-based)
 ---@class FString
-FString = {}
+local FString = {}
 
----Returns a string that Lua can understand
+---Returns a UTF-8 encoded Lua string
 ---@return string
 function FString:ToString() end
 
----Clears the string by setting the number of elements in the TArray to 0
+---Empties the string by removing all characters
+function FString:Empty() end
+
+---Empties the string by removing all characters (identical to Empty)
 function FString:Clear() end
+
+---Returns the length of the string in characters
+---@return integer
+function FString:Len() end
+
+---Returns true if the string is empty
+---@return boolean
+function FString:IsEmpty() end
+
+---Appends the given string to the end of this string
+---@param str string|FString A Lua string or another FString to append
+function FString:Append(str) end
+
+---Finds the first occurrence of the search string
+---@param search string A Lua string to search for
+---@return integer|nil 1-based index of first occurrence, or nil if not found
+function FString:Find(search) end
+
+---Checks if the string starts with the given prefix
+---@param prefix string A Lua string to check
+---@return boolean
+function FString:StartsWith(prefix) end
+
+---Checks if the string ends with the given suffix
+---@param suffix string A Lua string to check
+---@return boolean
+function FString:EndsWith(suffix) end
+
+---Returns a new FString with all characters converted to uppercase
+---@return FString
+function FString:ToUpper() end
+
+---Returns a new FString with all characters converted to lowercase
+---@return FString
+function FString:ToLower() end
+
+
+---Unreal Engine's UTF-8 encoded string type
+---@class FUtf8String
+local FUtf8String = {}
+
+---Returns a UTF-8 encoded Lua string
+---@return string
+function FUtf8String:ToString() end
+
+---Empties the string by removing all characters
+function FUtf8String:Empty() end
+
+---Empties the string by removing all characters (identical to Empty)
+function FUtf8String:Clear() end
+
+---Returns the number of UTF-8 code units (bytes), not Unicode code points
+---For "Hello 你好", returns 14 (bytes), not 8 (characters)
+---@return integer
+function FUtf8String:Len() end
+
+---Returns true if the string is empty
+---@return boolean
+function FUtf8String:IsEmpty() end
+
+---Appends the given string to the end of this string
+---@param str string|FUtf8String A Lua string or another FUtf8String to append
+function FUtf8String:Append(str) end
+
+---Finds the first occurrence of the search string
+---@param search string A Lua string to search for
+---@return integer|nil 1-based index of first occurrence, or nil if not found
+function FUtf8String:Find(search) end
+
+---Checks if the string starts with the given prefix
+---@param prefix string A Lua string to check
+---@return boolean
+function FUtf8String:StartsWith(prefix) end
+
+---Checks if the string ends with the given suffix
+---@param suffix string A Lua string to check
+---@return boolean
+function FUtf8String:EndsWith(suffix) end
+
+---Returns a new FUtf8String with all characters converted to uppercase
+---@return FUtf8String
+function FUtf8String:ToUpper() end
+
+---Returns a new FUtf8String with all characters converted to lowercase
+---@return FUtf8String
+function FUtf8String:ToLower() end
+
+
+---Unreal Engine's ANSI-encoded string type
+---@class FAnsiString
+local FAnsiString = {}
+
+---Returns an ANSI encoded Lua string
+---@return string
+function FAnsiString:ToString() end
+
+---Empties the string by removing all characters
+function FAnsiString:Empty() end
+
+---Empties the string by removing all characters (identical to Empty)
+function FAnsiString:Clear() end
+
+---Returns the length of the string in characters (each ANSI character is 1 byte)
+---@return integer
+function FAnsiString:Len() end
+
+---Returns true if the string is empty
+---@return boolean
+function FAnsiString:IsEmpty() end
+
+---Appends the given string to the end of this string
+---@param str string|FAnsiString A Lua string or another FAnsiString to append
+function FAnsiString:Append(str) end
+
+---Finds the first occurrence of the search string
+---@param search string A Lua string to search for
+---@return integer|nil 1-based index of first occurrence, or nil if not found
+function FAnsiString:Find(search) end
+
+---Checks if the string starts with the given prefix
+---@param prefix string A Lua string to check
+---@return boolean
+function FAnsiString:StartsWith(prefix) end
+
+---Checks if the string ends with the given suffix
+---@param suffix string A Lua string to check
+---@return boolean
+function FAnsiString:EndsWith(suffix) end
+
+---Returns a new FAnsiString with all characters converted to uppercase
+---@return FAnsiString
+function FAnsiString:ToUpper() end
+
+---Returns a new FAnsiString with all characters converted to lowercase
+---@return FAnsiString
+function FAnsiString:ToLower() end
 
 
 ---@class FieldClass : LocalObject
-FieldClass = {}
+local FieldClass = {}
 
 ---Returns the FName of this class by copy.
 ---@return FName
@@ -647,13 +930,25 @@ function FieldClass:GetFName() end
 
 
 ---@class FName
+FName = {}
 
+---Returns the content as string
+---@return string
+function FName:ToString() end
+
+---Returns the ComparisonIndex (index in global names array)
+---@return integer
+function FName:GetComparisonIndex() end
 
 ---@class FText
+FText = {}
 
+---Returns the content as string
+---@return string
+function FText:ToString() end
 
 ---@class RemoteObject
-RemoteObject = {}
+local RemoteObject = {}
 
 ---Returns whether this object is valid or not
 ---@return boolean
@@ -661,7 +956,7 @@ function RemoteObject:IsValid() end
 
 
 ---@class Property : RemoteObject
-Property = {}
+local Property = {}
 ---Returns the full name & path for this property.
 ---@return string
 function Property:GetFullName() end
@@ -694,42 +989,47 @@ function Property:ImportText(Buffer, Data, PortFlags, OwnerObject) end
 
 
 ---@class ObjectProperty : Property
-ObjectProperty = {}
+local ObjectProperty = {}
 
 ---Returns the class that this property holds.
 ---@return UClass
-function GetPropertyClass() end
+function ObjectProperty:GetPropertyClass() end
 
 
 ---@class BoolProperty : Property
+local BoolProperty = {}
 
 ---@return integer
-function GetByteMask() end
+function BoolProperty:GetByteMask() end
 
 ---@return integer
-function GetByteOffset() end
+function BoolProperty:GetByteOffset() end
 
 ---@return integer
-function GetFieldMask() end
+function BoolProperty:GetFieldMask() end
 
 ---@return integer
-function GetFieldSize() end
+function BoolProperty:GetFieldSize() end
 
 
 ---@class StructProperty : Property
+local StructProperty = {}
+
 ---Returns the UScriptStruct that's mapped to this property.
 ---@return UScriptStruct
-function GetStruct() end
+function StructProperty:GetStruct() end
 
 
 ---@class ArrayProperty : Property
+local ArrayProperty = {}
+
 ---Returns the inner property of the array.
 ---@return Property
-function GetInner() end
+function ArrayProperty:GetInner() end
 
 
 ---@class UObjectReflection
-UObjectReflection = {}
+local UObjectReflection = {}
 
 ---Returns a property meta-data object
 ---@param PropertyName string
@@ -738,7 +1038,7 @@ function UObjectReflection:GetProperty(PropertyName) end
 
 
 ---@class UObject : RemoteObject
-UObject = {}
+local UObject = {}
 
 ---Attempts to return either a member variable or a callable UFunction
 ---Can return any type, you can use the `type()` function on the returned value to figure out what Lua class it's using (if non-trivial type)
@@ -757,7 +1057,7 @@ function UObject:GetFullName() end
 
 ---Returns the FName of this object by copy
 ---All FNames returned by `__index` are returned by reference
----@retur FName
+---@return FName
 function UObject:GetFName() end
 
 ---Returns the memory address of this object
@@ -839,12 +1139,147 @@ function UObject:ProcessConsoleExec(Cmd, Reserved, Executor) end
 ---@return string
 function UObject:type() end
 
----@class TArray<T> : { [integer]: T }
-TArray = {}
 
----@class TSet<K> : { [K]: nil }
+---@class UStruct : UObject
+local UStruct = {}
+
+---Returns the SuperStruct of this struct (can be invalid).
+---@return UClass
+function UStruct:GetSuperStruct() end
+
+---Iterates every UFunction that belongs to this struct.
+---The callback has one param: UFunction Function.
+---Return true in the callback to stop iterating.
+---@param Callback fun(Function: UFunction): boolean?
+function UStruct:ForEachFunction(Callback) end
+
+---Iterates every Property that belongs to this struct.
+---The callback has one param: Property Property.
+---Return true in the callback to stop iterating.
+---@param Callback fun(Property: Property): boolean?
+function UStruct:ForEachProperty(Callback) end
+
+
+---@class UClass : UStruct
+local UClass = {}
+
+---Returns the ClassDefaultObject of a UClass.
+---@return UClass
+function UClass:GetCDO() end
+
+---Returns whether or not the class is a child of another class.
+---@param Class UClass
+---@return boolean
+function UClass:IsChildOf(Class) end
+
+
+---@class TArray<T> : { [integer]: T }
+local TArray = {}
+
+---Return the address in memory where the TArray struct is located
+---@return integer
+function TArray:GetArrayAddress() end
+
+---Return the number of current elements in the array (same as #TArray)
+---@return integer
+function TArray:GetArrayNum() end
+
+---Return the maximum number of elements allowed in this array (array's capacity)
+---@return integer
+function TArray:GetArrayMax() end
+
+---Return the address in memory where the data for this array is stored
+---@return integer
+function TArray:GetArrayDataAddress() end
+
+---Clears the array
+function TArray:Empty() end
+
+---Iterates the entire `TArray` and calls the callback function for each element in the array.<br>
+---The callback params are: `integer index`, `RemoteUnrealParam element` | `LocalUnrealParam element`.<br>
+---Use `element:get()` and `element:set()` to access/mutate an array element.<br>
+---Return `true` in the callback to stop iterating.
+---@param Callback fun(index: integer, element: RemoteUnrealParam): boolean?
+function TArray:ForEach(Callback) end
+
+---@class TSet<T>
+local TSet = {}
+
+---Adds an element to the set
+---@param Element T
+function TSet:Add(Element) end
+
+---Checks if the set contains the specified element
+---@param Element T
+---@return boolean
+function TSet:Contains(Element) end
+
+---Removes an element from the set
+---@param Element T
+function TSet:Remove(Element) end
+
+---Clears all elements from the set
+function TSet:Empty() end
+
+---Iterates the entire `TSet` and calls the callback function for each element in the set.
+---The callback has one param: `T element`.<br>
+---Return `true` in the callback to stop iterating.
+---@param Callback fun(element: T): boolean?
+function TSet:ForEach(Callback) end
+
+---Returns the number of elements in the set (metamethod for # operator)
+---@return integer
+function TSet:__len() end
+
+---Returns whether this TSet is valid
+---@return boolean
+function TSet:IsValid() end
+
+---Returns "TSet"
+---@return 'TSet'
+function TSet:type() end
 
 ---@class TMap<K, V> : { [K]: V }
+local TMap = {}
+
+---Find the specified key in the map
+---Throws an exception if the key is not found
+---@generic K
+---@generic V
+---@param key K
+---@return V
+function TMap:Find(key) end
+
+---Inserts a key/value pair into the map
+---If the key already exists in the map, replaces the value
+---@generic K
+---@generic V
+---@param key K
+---@param value V
+function TMap:Add(key, value) end
+
+---Checks if a key exists inside of the map
+---@generic K
+---@param key K
+---@return boolean
+function TMap:Contains(key) end
+
+---Removes an element from the map
+---If the element doesn't exist, does nothing
+---@generic K
+---@param key K
+function TMap:Remove(key) end
+
+---Clears the map
+function TMap:Empty() end
+
+--- Iterates the entire `TMap` and calls the callback function for each element in the map
+--- The callback params are: `RemoteUnrealParam key`, `RemoteUnrealParam value` | `LocalUnrealParam value`
+--- Use `elem:get()` and `elem:set()` to access/mutate the value
+--- Mutating the key is undefined behavior
+--- Return `true` in the callback to stop iterating
+--- @param callback fun(key: RemoteUnrealParam, value: RemoteUnrealParam): boolean?
+function TMap:ForEach(callback) end
 
 ---@class TScriptInterface<K>
 
@@ -853,7 +1288,7 @@ TArray = {}
 ---Whether the Remote or Local variant is used depends on the requirements of the data but the usage is identical with either param types
 ---@generic T
 ---@class RemoteUnrealParam<T> : RemoteObject<T>
-RemoteUnrealParam = {}
+local RemoteUnrealParam = {}
 
 ---Returns the underlying value for this param
 ---@generic T
@@ -878,8 +1313,7 @@ function RemoteUnrealParam:type() end
 
 
 ---@class UEnum
-
-UEnum = {}
+local UEnum = {}
 
 --- Returns the `FName` that corresponds to the specified value.
 ---@param Value integer
@@ -893,7 +1327,7 @@ function UEnum:ForEachName(Callback) end
 
 --- Returns the `FName` and `Integer` value that coresponds the given `Index`.
 ---@param Index integer
-function GetEnumNameByIndex(Index) end
+function UEnum:GetEnumNameByIndex(Index) end
 
 --- Inserts a `FName`/`Value` combination into a a `UEnum` at the given `Index`.
 --- If `ShiftValues = true`, will shift all enum values greater than inserted value by one.
@@ -937,3 +1371,58 @@ function UEnum:RemoveFromNamesAt(Index, Count) end
 ---@param Count integer
 ---@param AllowShrinking boolean
 function UEnum:RemoveFromNamesAt(Index, Count, AllowShrinking) end
+
+
+---@class UDataTable : UObject
+local UDataTable = {}
+
+---Returns the row struct type for this DataTable
+---@return UScriptStruct?
+function UDataTable:GetRowStruct() end
+
+---Returns the entire row map as a Lua table with row names as keys
+---@return table<string, any>
+function UDataTable:GetRowMap() end
+
+---Finds a row in the DataTable by name
+---Returns a UScriptStruct that provides reference-based access to the row
+---Modifications to the returned struct directly affect the DataTable
+---@param RowName string
+---@return UScriptStruct?
+function UDataTable:FindRow(RowName) end
+
+---Adds a new row or replaces an existing row in the DataTable
+---Accepts either a Lua table or a UScriptStruct
+---@param RowName string
+---@param RowData table|UScriptStruct
+function UDataTable:AddRow(RowName, RowData) end
+
+---Removes a row from the DataTable
+---@param RowName string
+function UDataTable:RemoveRow(RowName) end
+
+---Clears all rows from the DataTable
+function UDataTable:EmptyTable() end
+
+---Gets all row names in the DataTable
+---@return string[]
+function UDataTable:GetRowNames() end
+
+---Gets all rows in the DataTable as an array of {Name=string, Data=table} entries
+---@return table[]
+function UDataTable:GetAllRows() end
+
+---Iterates through all rows in the DataTable
+---The callback has two params: string RowName, UScriptStruct RowData
+---The RowData parameter provides reference-based access - modifications directly affect the DataTable
+---Return `true` in the callback to stop iterating
+---@param Callback fun(RowName: string, RowData: UScriptStruct): boolean?
+function UDataTable:ForEachRow(Callback) end
+
+---Returns whether this DataTable is valid
+---@return boolean
+function UDataTable:IsValid() end
+
+---Returns the number of rows in the DataTable (metamethod for # operator)
+---@return integer
+function UDataTable:__len() end

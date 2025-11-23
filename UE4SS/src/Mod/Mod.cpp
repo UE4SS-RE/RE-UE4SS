@@ -48,15 +48,14 @@
 #include <UnrealCustom/CustomProperty.hpp>
 #pragma warning(default : 4005)
 
-
 namespace RC
 {
 
-    Mod::Mod(UE4SSProgram& program, std::wstring&& mod_name, std::wstring&& mod_path) : m_program(program), m_mod_name(mod_name), m_mod_path(mod_path)
+    Mod::Mod(UE4SSProgram& program, StringType&& mod_name, std::filesystem::path&& mod_path) : m_program(program), m_mod_name(mod_name), m_mod_path(mod_path)
     {
     }
 
-    auto Mod::get_name() const -> std::wstring_view
+    auto Mod::get_name() const -> StringViewType
     {
         return m_mod_name;
     }

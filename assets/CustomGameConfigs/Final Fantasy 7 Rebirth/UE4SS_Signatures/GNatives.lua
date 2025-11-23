@@ -1,0 +1,11 @@
+function Register()
+    return "80 3d ?? ?? ?? ?? 00 48 8d 15 ?? ?? ?? ?? 75 ?? c6 05 ?? ?? ?? ?? 01 48 8d 05 ?? ?? ?? ?? b9"
+end
+
+function OnMatchFound(matchAddress)
+    local nextInstr = matchAddress + 30
+    local offset = matchAddress + 26
+    local dataMoved = nextInstr + DerefToInt32(offset)
+    
+    return dataMoved
+end

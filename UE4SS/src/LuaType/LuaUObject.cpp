@@ -2,11 +2,13 @@
 #include <LuaType/LuaAActor.hpp>
 #include <LuaType/LuaCustomProperty.hpp>
 #include <LuaType/LuaFName.hpp>
-#include <LuaType/LuaFString.hpp>
+#include <LuaType/LuaUnrealString.hpp>
 #include <LuaType/LuaFText.hpp>
 #include <LuaType/LuaFWeakObjectPtr.hpp>
 #include <LuaType/LuaTArray.hpp>
-#include <LuaType/LuaTSoftClassPtr.hpp>
+#include <LuaType/LuaTSet.hpp>
+#include <LuaType/LuaTMap.hpp>
+#include <LuaType/LuaTSoftObjectPtr.hpp>
 #include <LuaType/LuaUClass.hpp>
 #include <LuaType/LuaUEnum.hpp>
 #include <LuaType/LuaUFunction.hpp>
@@ -15,19 +17,26 @@
 #include <LuaType/LuaUScriptStruct.hpp>
 #include <LuaType/LuaUStruct.hpp>
 #include <LuaType/LuaUWorld.hpp>
+#include <LuaType/LuaUDataTable.hpp>
+#include <LuaType/LuaXDelegateProperty.hpp>
 #include <LuaType/LuaXObjectProperty.hpp>
 #include <LuaType/LuaXProperty.hpp>
 #pragma warning(disable : 4005)
 #include <Unreal/AActor.hpp>
-#include <Unreal/FScriptArray.hpp>
+#include <Unreal/Core/Containers/ScriptArray.hpp>
 #include <Unreal/FString.hpp>
 #include <Unreal/FText.hpp>
 #include <Unreal/Property/FArrayProperty.hpp>
+#include <Unreal/Property/FSetProperty.hpp>
+#include <Unreal/Property/FMapProperty.hpp>
 #include <Unreal/Property/FBoolProperty.hpp>
 #include <Unreal/Property/FEnumProperty.hpp>
 #include <Unreal/Property/FSoftClassProperty.hpp>
 #include <Unreal/Property/FStructProperty.hpp>
 #include <Unreal/Property/FWeakObjectProperty.hpp>
+#include <Unreal/Property/FDelegateProperty.hpp>
+#include <Unreal/Property/FMulticastDelegateProperty.hpp>
+#include <Unreal/Property/FMulticastSparseDelegateProperty.hpp>
 #include <Unreal/Property/NumericPropertyTypes.hpp>
 #include <Unreal/UClass.hpp>
 #include <Unreal/UEnum.hpp>
@@ -35,6 +44,8 @@
 #include <Unreal/UInterface.hpp>
 #include <Unreal/UScriptStruct.hpp>
 #include <Unreal/World.hpp>
+#include <Unreal/Engine/UDataTable.hpp>
+
 #pragma warning(default : 4005)
 #include <DynamicOutput/DynamicOutput.hpp>
 #include <Helpers/Integer.hpp>
@@ -42,27 +53,39 @@
 namespace RC::LuaType
 {
     std::unordered_set<size_t> s_lua_unreal_objects{};
+    std::mutex s_lua_unreal_objects_map_mutex{};
 
     auto add_to_global_unreal_objects_map(Unreal::UObject* object) -> void
     {
         if (object)
         {
+            std::lock_guard lock{s_lua_unreal_objects_map_mutex};
             s_lua_unreal_objects.emplace(object->HashObject());
+        }
+    }
+
+    auto remove_from_global_unreal_objects_map(const Unreal::UObject* object) -> void
+    {
+        if (object)
+        {
+            std::lock_guard lock{s_lua_unreal_objects_map_mutex};
+            if (const auto it = s_lua_unreal_objects.find(object->HashObject()); it != s_lua_unreal_objects.end())
+            {
+                s_lua_unreal_objects.erase(it);
+            }
         }
     }
 
     auto is_object_in_global_unreal_object_map(Unreal::UObject* object) -> bool
     {
+        std::lock_guard lock{s_lua_unreal_objects_map_mutex};
         return object && s_lua_unreal_objects.contains(object->HashObject());
     }
 
     FLuaObjectDeleteListener FLuaObjectDeleteListener::s_lua_object_delete_listener{};
     void FLuaObjectDeleteListener::NotifyUObjectDeleted(const Unreal::UObjectBase* object, [[maybe_unused]] int32_t index)
     {
-        if (auto it = s_lua_unreal_objects.find(static_cast<const Unreal::UObject*>(object)->HashObject()); it != s_lua_unreal_objects.end())
-        {
-            s_lua_unreal_objects.erase(it);
-        }
+        remove_from_global_unreal_objects_map(static_cast<const Unreal::UObject*>(object));
     }
 
     auto call_ufunction_from_lua(const LuaMadeSimple::Lua& lua) -> int
@@ -136,7 +159,7 @@ namespace RC::LuaType
 
             if (num_supplied_params != num_expected_params_with_return_value)
             {
-                lua.throw_error(std::format("[UFunction::setup_metamethods -> __call] UFunction expected {} parameters, received {}",
+                lua.throw_error(fmt::format("[UFunction::setup_metamethods -> __call] UFunction expected {} parameters, received {}",
                                             num_expected_params,
                                             num_supplied_params));
             }
@@ -195,7 +218,7 @@ namespace RC::LuaType
                         // Take a reference to the Lua function (it also pops it of the stack)
                         dynamic_unreal_function_out_parameters.add({.property = param_next, .lua_ref = lua.registry().make_ref()});
 
-                        if (!param_next->IsA<Unreal::FStructProperty>())
+                        if (!param_next->IsA<Unreal::FStructProperty>() && !param_next->IsA<Unreal::FArrayProperty>())
                         {
                             continue;
                         }
@@ -219,7 +242,7 @@ namespace RC::LuaType
                         std::string parameter_type_name = to_string(property_type_fname.ToString());
                         std::string parameter_name = to_string(param_next->GetName());
                         lua.throw_error(
-                                std::format("Tried calling UFunction without a registered handler for parameter. Parameter '{}' of type '{}' not supported.",
+                                fmt::format("Tried calling UFunction without a registered handler for parameter. Parameter '{}' of type '{}' not supported.",
                                             parameter_name,
                                             parameter_type_name));
                     }
@@ -246,7 +269,8 @@ namespace RC::LuaType
                 lua.registry().get_table_ref(lua_table_ref);
                 auto lua_table = lua.get_table();
 
-                if (!param->IsA<Unreal::FStructProperty>())
+                auto reuse_same_table = param->IsA<Unreal::FArrayProperty>() || param->IsA<Unreal::FStructProperty>() || param->IsA<Unreal::FSetProperty>();
+                if (!reuse_same_table)
                 {
                     lua_table.add_key(to_string(param->GetName()).c_str());
                 }
@@ -264,17 +288,17 @@ namespace RC::LuaType
                             .base = static_cast<Unreal::UObject*>(static_cast<void*>(dynamic_unreal_function_data.data)),
                             .data = data,
                             .property = param,
-                            .create_new_if_get_non_trivial_local = false,
+                            .create_new_if_get_non_trivial_local = !reuse_same_table,
                     };
                     StaticState::m_property_value_pushers[name_comparison_index](pusher_params);
                 }
                 else
                 {
                     std::string param_type_name = to_string(param_type_fname.ToString());
-                    lua.throw_error(std::format("Tried calling UFunction without a registered handler 'Out' param. Type '{}' not supported.", param_type_name));
+                    lua.throw_error(fmt::format("Tried calling UFunction without a registered handler 'Out' param. Type '{}' not supported.", param_type_name));
                 }
 
-                if (!param->IsA<Unreal::FStructProperty>())
+                if (!reuse_same_table)
                 {
                     lua_table.fuse_pair();
                 }
@@ -302,7 +326,7 @@ namespace RC::LuaType
             else
             {
                 std::string return_value_type_name = to_string(return_value_property_type.ToString());
-                lua.throw_error(std::format("Tried calling UFunction without a registered handler for return value. Return value of type '{}' not supported.",
+                lua.throw_error(fmt::format("Tried calling UFunction without a registered handler for return value. Return value of type '{}' not supported.",
                                             return_value_type_name));
             }
 
@@ -333,6 +357,10 @@ namespace RC::LuaType
         {
             ScriptStructWrapper script_struct_wrapper{static_cast<Unreal::UScriptStruct*>(object), nullptr, nullptr};
             UScriptStruct::construct(lua, script_struct_wrapper);
+        }
+        else if (object->IsA<Unreal::UDataTable>())
+        {
+            UDataTable::construct(lua, static_cast<Unreal::UDataTable*>(object));
         }
         else if (object->IsA<Unreal::UStruct>())
         {
@@ -399,11 +427,12 @@ namespace RC::LuaType
             }
             else if (params.lua.is_nil())
             {
+                params.lua.discard_value(params.stored_at_index);
                 *property_value = nullptr;
             }
             else
             {
-                params.lua.throw_error("[push_objectproperty] Value must be UObject or nil");
+                params.throw_error("push_objectproperty", "Value must be UObject or nil");
             }
             break;
         }
@@ -411,7 +440,7 @@ namespace RC::LuaType
             RemoteUnrealParam::construct(params.lua, params.data, params.base, params.property);
             break;
         default:
-            params.lua.throw_error("[push_objectproperty] Unhandled Operation");
+            params.throw_error("push_objectproperty", "Unhandled Operation");
             break;
         }
     }
@@ -434,11 +463,11 @@ namespace RC::LuaType
             }
             else if (params.lua.is_nil())
             {
-                params.lua.discard_value();
+                params.lua.discard_value(params.stored_at_index);
             }
             else
             {
-                params.lua.throw_error("[push_classproperty] Value must be UClass or nil");
+                params.throw_error("push_classproperty", "Value must be UClass or nil");
             }
             break;
         }
@@ -446,7 +475,7 @@ namespace RC::LuaType
             RemoteUnrealParam::construct(params.lua, params.data, params.base, params.property);
             break;
         default:
-            params.lua.throw_error("[push_classproperty] Unhandled Operation");
+            params.throw_error("push_classproperty", "Unhandled Operation");
             break;
         }
     }
@@ -500,144 +529,213 @@ namespace RC::LuaType
         push_integer<uint64_t>(params);
     }
 
+    /**
+     * Helper function to convert a Lua table to a UScriptStruct in memory
+     * @param lua The Lua state
+     * @param script_struct The struct type to convert to
+     * @param data Pointer to the memory where the struct should be written
+     * @param table_index Stack index where the Lua table is located
+     * @param base Optional UObject base for context
+     */
+    auto convert_lua_table_to_struct(
+            const LuaMadeSimple::Lua& lua,
+            Unreal::UScriptStruct* script_struct,
+            void* data,
+            int table_index,
+            Unreal::UObject* base
+            ) -> void
+    {
+        if (!script_struct || !data)
+        {
+            lua.throw_error("convert_lua_table_to_struct: script_struct or data is null");
+            return;
+        }
+
+        for (Unreal::FProperty* field : script_struct->ForEachPropertyInChain())
+        {
+            Unreal::FName field_type_fname = field->GetClass().GetFName();
+            const std::string field_name = to_utf8_string(field->GetName());
+
+            // Push the field name (key for the table)
+            lua_pushstring(lua.get_lua_state(), field_name.c_str());
+
+            // Get the value from the table
+            // For lua_rawget, we need the actual stack position of the table
+            // If table_index is positive, it stays the same even after pushing the key
+            // If it's negative, we need to adjust for the key we just pushed
+            
+            // Adjust index for negative values after pushing key
+            int adjusted_index = table_index;
+            if (table_index < 0)
+            {
+                adjusted_index = table_index - 1;
+            }
+
+            auto table_value_type = lua_rawget(lua.get_lua_state(), adjusted_index);
+
+            // If there was nothing in the table for this field, leave default value
+            if (table_value_type == LUA_TNIL || table_value_type == LUA_TNONE)
+            {
+                lua.discard_value(-1);
+                continue;
+            }
+
+            int32_t name_comparison_index = field_type_fname.GetComparisonIndex();
+
+            if (StaticState::m_property_value_pushers.contains(name_comparison_index))
+            {
+                void* field_data = &static_cast<uint8_t*>(data)[field->GetOffset_Internal()];
+
+                const PusherParams pusher_params{
+                        .operation = Operation::Set,
+                        .lua = lua,
+                        .base = base ? base : static_cast<Unreal::UObject*>(data),
+                        .data = field_data,
+                        .property = field,
+                        .stored_at_index = -1 // Value is at top of stack
+                };
+
+                StaticState::m_property_value_pushers[name_comparison_index](pusher_params);
+            }
+            else
+            {
+                // Just skip fields without handlers and pop the value
+                lua.discard_value(-1);
+                Output::send<LogLevel::Verbose>(
+                        STR("convert_lua_table_to_struct: Skipping field '{}' of type '{}' (no handler)\n"),
+                        to_wstring(field_name),
+                        field_type_fname.ToString()
+                        );
+
+            }
+        }
+    }
+
+    /**
+     * Helper function to convert a UScriptStruct to a Lua table
+     * @param lua The Lua state
+     * @param script_struct The struct type to convert from
+     * @param data Pointer to the struct data to read
+     * @param create_new_table Whether to create a new table or use existing one on stack
+     * @param base Optional UObject base for context
+     */
+    auto convert_struct_to_lua_table(
+            const LuaMadeSimple::Lua& lua,
+            Unreal::UScriptStruct* script_struct,
+            void* data,
+            bool create_new_table,
+            Unreal::UObject* base
+            ) -> void
+    {
+        if (!script_struct || !data)
+        {
+            lua.set_nil();
+            return;
+        }
+
+        LuaMadeSimple::Lua::Table lua_table = create_new_table
+                                                  ? lua.prepare_new_table()
+                                                  : lua.get_table();
+
+        for (Unreal::FProperty* field : script_struct->ForEachPropertyInChain())
+        {
+            std::string field_name = to_utf8_string(field->GetName());
+            Unreal::FName field_type_fname = field->GetClass().GetFName();
+            int32_t name_comparison_index = field_type_fname.GetComparisonIndex();
+
+            // Check if we can handle this field type
+            bool can_handle = StaticState::m_property_value_pushers.contains(name_comparison_index);
+
+            if (can_handle)
+            {
+                // If it's a container, also check if we can handle the inner type
+                if (field->IsA<Unreal::FArrayProperty>())
+                {
+                    auto* array_prop = static_cast<Unreal::FArrayProperty*>(field);
+                    auto* inner = array_prop->GetInner();
+                    int32_t inner_comparison_index = inner->GetClass().GetFName().GetComparisonIndex();
+                    can_handle = StaticState::m_property_value_pushers.contains(inner_comparison_index);
+                }
+                else if (field->IsA<Unreal::FSetProperty>())
+                {
+                    auto* set_prop = static_cast<Unreal::FSetProperty*>(field);
+                    auto* element = set_prop->GetElementProp();
+                    int32_t element_comparison_index = element->GetClass().GetFName().GetComparisonIndex();
+                    can_handle = StaticState::m_property_value_pushers.contains(element_comparison_index);
+                }
+                else if (field->IsA<Unreal::FMapProperty>())
+                {
+                    auto* map_prop = static_cast<Unreal::FMapProperty*>(field);
+                    int32_t key_index = map_prop->GetKeyProp()->GetClass().GetFName().GetComparisonIndex();
+                    int32_t value_index = map_prop->GetValueProp()->GetClass().GetFName().GetComparisonIndex();
+                    can_handle = StaticState::m_property_value_pushers.contains(key_index) &&
+                                 StaticState::m_property_value_pushers.contains(value_index);
+                }
+            }
+
+            if (can_handle)
+            {
+                lua_table.add_key(field_name.c_str());
+
+                const PusherParams pusher_params{
+                        .operation = Operation::GetNonTrivialLocal,
+                        .lua = lua,
+                        .base = base ? base : Helper::Casting::ptr_cast<Unreal::UObject*>(data),
+                        .data = &static_cast<uint8_t*>(data)[field->GetOffset_Internal()],
+                        .property = field
+                };
+
+                StaticState::m_property_value_pushers[name_comparison_index](pusher_params);
+                lua_table.fuse_pair();
+            }
+            else
+            {
+                // Skip fields without handlers
+                Output::send<LogLevel::Verbose>(
+                        STR("convert_struct_to_lua_table: Skipping field '{}' of type '{}' (no handler)\n"),
+                        to_wstring(field_name),
+                        field_type_fname.ToString()
+                        );
+            }
+        }
+
+        lua_table.make_local();
+    }
+
     auto push_structproperty(const PusherParams& params) -> void
     {
         // params.base = Base of the object that this struct belongs in
         // params.data = Start of the struct
         // params.property = The corresponding FStructProperty
         auto* struct_property = Unreal::CastField<Unreal::FStructProperty>(params.property);
-        auto* script_struct = struct_property->GetStruct();
+        Unreal::UScriptStruct* script_struct = struct_property->GetStruct();
 
         auto iterate_struct_and_turn_into_lua_table = [&](const LuaMadeSimple::Lua& lua, void* data_ptr) {
-            auto* data = static_cast<unsigned char*>(data_ptr);
-
-            // Get the table from the stack or create a new one
-            LuaMadeSimple::Lua::Table lua_table = [&]() {
-                if (params.create_new_if_get_non_trivial_local)
-                {
-                    return lua.prepare_new_table();
-                }
-                else
-                {
-                    return lua.get_table();
-                }
-            }();
-
-            // Put all the script struct properties into the table
-            for (Unreal::FProperty* field : script_struct->ForEachPropertyInChain())
-            {
-                // There can be non-property items in the linked list, like 'ExecuteUbergraph'
-                // We only care about actual properties, so let's ignore anything else
-                // TODO: This may have only been the case before the ForEachProperty abstraction
-                //       The abstraction filters out any non-property types
-                //       Commenting out this code for now, should investigate this later to confirm
-                // if (!Unreal::TypeChecker::is_property(field))
-                //{
-                //    return LoopAction::Continue;
-                //}
-
-                std::string field_name = to_string(field->GetName());
-
-                Unreal::FName field_type = field->GetClass().GetFName();
-                int32_t name_comparison_index = field_type.GetComparisonIndex();
-
-                if (StaticState::m_property_value_pushers.contains(name_comparison_index))
-                {
-                    // This example uses the Vector struct and its "IntProperty Vector:X" property
-                    // Push key (i.e: X)
-                    lua_table.add_key(field_name.c_str());
-
-                    // Push value (i.e: 4.243)
-                    const PusherParams pusher_params{.operation = Operation::GetNonTrivialLocal,
-                                                     .lua = lua,
-                                                     .base = Helper::Casting::ptr_cast<Unreal::UObject*>(data), // Base is the start of the params struct
-                                                     .data = &data[field->GetOffset_Internal()],
-                                                     .property = field,
-                                                     .stored_at_index = params.stored_at_index};
-                    StaticState::m_property_value_pushers[name_comparison_index](pusher_params);
-
-                    // On the top of the stack now: Value for this field in the struct
-                    lua_table.fuse_pair();
-                }
-                else
-                {
-                    std::string field_type_name = to_string(field_type.ToString());
-                    lua.throw_error(std::format("Tried getting without a registered handler. 'StructProperty'.'{}' not supported. Field: '{}'",
-                                                field_type_name,
-                                                field_name));
-                }
-            };
-
-            lua_table.make_local();
+            convert_struct_to_lua_table(
+                    lua,
+                    script_struct,
+                    data_ptr,
+                    params.create_new_if_get_non_trivial_local,
+                    params.base
+                    );
         };
 
         auto lua_table_to_memory = [&]() {
-            // At the bottom of the stack now: table that has struct data
-
-            // Duplicating the table and putting the duplicate at the top of the stack
-            lua_pushvalue(params.lua.get_lua_state(), 1);
-
-            for (Unreal::FProperty* field : script_struct->ForEachPropertyInChain())
-            {
-                Unreal::FName field_type_fname = field->GetClass().GetFName();
-                const std::string field_name = to_string(field->GetName());
-
-                // At the top of the stack now: table that has struct data
-
-                // Pushing the field name (key for the table)
-                lua_pushstring(params.lua.get_lua_state(), field_name.c_str());
-
-                // At the top of the stack now: key to find in table (string)
-
-                // Pushing on to the stack, the value corresponding to table[key] if it exists
-                auto table_value_type = lua_rawget(params.lua.get_lua_state(), -2);
-
-                // At the top of the stack now: the value corresponding to table[key] or nil
-
-                // If there was nothing in the table for this field, leave default value and move on to the next field
-                if (table_value_type == LUA_TNIL || table_value_type == LUA_TNONE)
-                {
-                    // Remove the 'nil' from the stack
-                    params.lua.discard_value(-1);
-                    continue;
-                }
-
-                int32_t name_comparison_index = field_type_fname.GetComparisonIndex();
-
-                if (StaticState::m_property_value_pushers.contains(name_comparison_index))
-                {
-                    unsigned char* data = static_cast<unsigned char*>(params.data);
-                    data = &data[field->GetOffset_Internal()];
-
-                    const PusherParams pusher_params{
-                            .operation = Operation::Set,
-                            .lua = params.lua,
-                            .base = static_cast<Unreal::UObject*>(params.data), // Base is the start of the params struct
-                            .data = data,
-                            .property = field,
-                            .stored_at_index = -1 // Using -1 here because we know the value is at the top of the stack instead of at the bottom of the stack
-                    };
-                    StaticState::m_property_value_pushers[name_comparison_index](pusher_params);
-                }
-                else
-                {
-                    std::string field_type_name = to_string(field_type_fname.ToString());
-                    params.lua.throw_error(std::format("Tried pushing (Operation::Set) StructProperty without a registered handler for field '{} {}'.",
-                                                       field_type_name,
-                                                       field_name));
-                }
-            };
-
-            // Discard the original & the duplicated tables
-            params.lua.discard_value(1);  // Original
-            params.lua.discard_value(-1); // Duplicated
+            convert_lua_table_to_struct(
+                    params.lua,
+                    script_struct,
+                    params.data,
+                    params.stored_at_index,
+                    params.base
+                    );
+            params.lua.discard_value(params.stored_at_index);
         };
 
         auto lua_to_memory = [&]() {
             if (params.lua.is_userdata())
             {
                 // StructData as userdata
-                params.lua.throw_error("[push_structproperty::lua_to_memory] StructData as userdata is not yet implemented but there's userdata on the stack");
+                params.throw_error("push_structproperty::lua_to_memory", "StructData as userdata is not yet implemented but there's userdata on the stack");
             }
             else if (params.lua.is_table())
             {
@@ -650,7 +748,7 @@ namespace RC::LuaType
             }
             else
             {
-                params.lua.throw_error("[push_structproperty::lua_to_memory] Parameter must be of type 'StructProperty' or table");
+                params.throw_error("push_structproperty::lua_to_memory", "Parameter must be of type 'StructProperty' or table");
             }
         };
 
@@ -671,11 +769,11 @@ namespace RC::LuaType
             LocalUnrealParam<ScriptStructWrapper>::construct(params.lua, property_value, params.base, params.property);
             return;
         default:
-            params.lua.throw_error("[push_structproperty] Unhandled Operation");
+            params.throw_error("push_structproperty", "Unhandled Operation");
             break;
         }
 
-        params.lua.throw_error(std::format("[push_structproperty] Unknown Operation ({}) not supported", static_cast<int32_t>(params.operation)));
+        params.throw_error("push_structproperty", "Operation not supported");
     }
 
     auto push_arrayproperty(const PusherParams& params) -> void
@@ -723,10 +821,11 @@ namespace RC::LuaType
             }
             else
             {
-                std::string property_type_name = to_string(property_type_fname.ToString());
-                lua.throw_error(
-                        std::format("Tried interacting with an array but the inner property has no registered handler. Property type '{}' not supported.",
-                                    property_type_name));
+                std::string property_type_name = to_utf8_string(property_type_fname.ToString());
+                params.throw_error("push_arrayproperty",
+                                   "Tried interacting with an array but the inner property has no registered handler.",
+                                   "Inner property type",
+                                   property_type_name);
             }
         };
 
@@ -738,13 +837,13 @@ namespace RC::LuaType
             int32_t name_comparison_index = inner_type_fname.GetComparisonIndex();
             if (!StaticState::m_property_value_pushers.contains(name_comparison_index))
             {
-                std::string inner_type_name = to_string(inner_type_fname.ToString());
-                params.lua.throw_error(std::format("Tried pushing (Operation::Set) ArrayProperty with unsupported inner type of '{}'", inner_type_name));
+                std::string inner_type_name = to_utf8_string(inner_type_fname.ToString());
+                params.throw_error("push_arrayproperty", "Tried pushing ArrayProperty with unsupported inner type", "Inner property type", inner_type_name);
             }
 
             size_t array_element_size = inner->GetElementSize();
 
-            unsigned char* array{};
+            auto array = new (params.data) Unreal::FScriptArray{};
             size_t table_length = lua_rawlen(params.lua.get_lua_state(), 1);
             bool has_elements = table_length > 0;
 
@@ -752,7 +851,6 @@ namespace RC::LuaType
 
             if (has_elements)
             {
-                array = new unsigned char[array_property->GetElementSize() * table_length];
 
                 params.lua.for_each_in_table([&](LuaMadeSimple::LuaTableReference table) -> bool {
                     // Skip this table entry if the key wasn't numerical, who knows what the user put in their script
@@ -762,10 +860,11 @@ namespace RC::LuaType
                     }
 
                     params.lua.insert_value(-2);
+                    array->AddZeroed(1, inner->GetSize(), inner->GetMinAlignment());
                     const PusherParams pusher_params{.operation = Operation::Set,
                                                      .lua = params.lua,
-                                                     .base = static_cast<Unreal::UObject*>(static_cast<void*>(array)), // Base is the start of the params struct
-                                                     .data = &array[array_element_size * element_index],
+                                                     .base = static_cast<Unreal::UObject*>(array->GetData()), // Base is the start of the params struct
+                                                     .data = &static_cast<uint8_t*>(array->GetData())[array_element_size * element_index],
                                                      .property = inner};
                     StaticState::m_property_value_pushers[name_comparison_index](pusher_params);
 
@@ -800,23 +899,51 @@ namespace RC::LuaType
         };
 
         auto lua_to_memory = [&]() {
-            if (params.lua.is_userdata())
+            if (params.lua.is_userdata(params.stored_at_index))
             {
-                // TArray as userdata
-                params.lua.throw_error("[push_arrayproperty::lua_to_memory] StructData as userdata is not yet implemented but there's userdata on the stack");
+                // Handle TArray userdata
+                auto& lua_tarray = params.lua.get_userdata<TArray>(params.stored_at_index);
+                Unreal::FScriptArray* source_array = lua_tarray.get_remote_cpp_object();
+                
+                Unreal::FArrayProperty* array_property = static_cast<Unreal::FArrayProperty*>(params.property);
+                Unreal::FProperty* inner = array_property->GetInner();
+                
+                auto dest_array = static_cast<Unreal::FScriptArray*>(params.data);
+                
+                // Clear destination array
+                dest_array->Empty(0, inner->GetSize(), inner->GetMinAlignment());
+                
+                // Copy elements from source to destination
+                int32_t num_elements = source_array->Num();
+                if (num_elements > 0)
+                {
+                    dest_array->AddZeroed(num_elements, inner->GetSize(), inner->GetMinAlignment());
+                    
+                    for (int32_t i = 0; i < num_elements; i++)
+                    {
+                        void* src_element = static_cast<uint8_t*>(source_array->GetData()) + (i * inner->GetSize());
+                        void* dest_element = static_cast<uint8_t*>(dest_array->GetData()) + (i * inner->GetSize());
+                        
+                        inner->CopySingleValueToScriptVM(dest_element, src_element);
+                    }
+                }
             }
-            else if (params.lua.is_table())
+            else if (params.lua.is_table(params.stored_at_index))
             {
                 // TArray as table
                 lua_table_to_memory();
             }
-            else if (params.lua.is_nil())
+            else if (params.lua.is_nil(params.stored_at_index))
             {
-                params.lua.discard_value();
+                // Empty array
+                auto array = static_cast<Unreal::FScriptArray*>(params.data);
+                Unreal::FArrayProperty* array_property = static_cast<Unreal::FArrayProperty*>(params.property);
+                Unreal::FProperty* inner = array_property->GetInner();
+                array->Empty(0, inner->GetSize(), inner->GetMinAlignment());
             }
             else
             {
-                params.lua.throw_error("[push_arrayproperty::lua_to_memory] Parameter must be of type 'StructProperty' or table");
+                params.throw_error("push_arrayproperty::lua_to_memory", "Parameter must be of type 'TArray' or table");
             }
         };
 
@@ -836,12 +963,425 @@ namespace RC::LuaType
             RemoteUnrealParam::construct(params.lua, params.data, params.base, params.property);
             return;
         default:
-            params.lua.throw_error("[push_arrayproperty] Unhandled Operation");
+            params.throw_error("push_arrayproperty", "Unhandled Operation");
             break;
         }
 
-        params.lua.throw_error(std::format("[push_arrayproperty] Unknown Operation ({}) not supported", static_cast<int32_t>(params.operation)));
+        params.throw_error("push_arrayproperty", "Operation not supported");
     }
+
+    auto push_setproperty(const PusherParams& params) -> void
+    {
+        auto set_to_lua_table = [&](const LuaMadeSimple::Lua& lua, Unreal::FProperty* property, void* data_ptr) {
+            Unreal::FSetProperty* set_property = static_cast<Unreal::FSetProperty*>(property);
+            
+            FScriptSetInfo info(set_property->GetElementProp());
+            info.validate_pushers(lua);
+            
+            Unreal::FScriptSet* set = static_cast<Unreal::FScriptSet*>(data_ptr);
+            
+            LuaMadeSimple::Lua::Table lua_table = [&]() {
+                if (params.create_new_if_get_non_trivial_local)
+                {
+                    return lua.prepare_new_table();
+                }
+                else
+                {
+                    return lua.get_table();
+                }
+            }();
+            
+            // Create a standard Lua table with integer indices that can be iterated with ipairs
+            int index = 1; // Start at 1 for Lua-style indexing
+            Unreal::int32 max_index = set->GetMaxIndex();
+            for (Unreal::int32 i = 0; i < max_index; i++)
+            {
+                if (!set->IsValidIndex(i))
+                {
+                    continue;
+                }
+                
+                // Set the numeric key for the table entry (using sequential indices for easy iteration)
+                lua_table.add_key(index++);
+                
+                // Get the element data at this index
+                void* element_data = set->GetData(i, info.layout);
+                
+                // Push the element value to Lua
+                PusherParams pusher_params{.operation = LuaMadeSimple::Type::Operation::GetParam,
+                                          .lua = lua,
+                                          .base = params.base,
+                                          .data = element_data,
+                                          .property = info.element};
+                                          
+                StaticState::m_property_value_pushers[static_cast<int32_t>(info.element_fname.GetComparisonIndex())](pusher_params);
+                
+                // Combine key and value in the table
+                lua_table.fuse_pair();
+            }
+            
+            lua_table.make_local();
+        };
+        
+        auto lua_table_to_set = [&]() {
+            Unreal::FSetProperty* set_property = static_cast<Unreal::FSetProperty*>(params.property);
+            
+            FScriptSetInfo info(set_property->GetElementProp());
+            info.validate_pushers(params.lua);
+            
+            auto set = new(params.data) Unreal::FScriptSet{};
+            
+            // Define construct and destruct functions first
+            auto construct_fn = [&](Unreal::FProperty* property, const void* ptr, void* new_element) {
+                if (property->HasAnyPropertyFlags(Unreal::EPropertyFlags::CPF_ZeroConstructor))
+                {
+                    Unreal::FMemory::Memzero(new_element, property->GetSize());
+                }
+                else
+                {
+                    property->InitializeValue(new_element);
+                }
+                
+                property->CopySingleValueToScriptVM(new_element, ptr);
+            };
+            
+            auto destruct_fn = [&](Unreal::FProperty* property, void* element) {
+                if (!property->HasAnyPropertyFlags(
+                        Unreal::EPropertyFlags::CPF_IsPlainOldData |
+                        Unreal::EPropertyFlags::CPF_NoDestructor))
+                {
+                    property->DestroyValue(element);
+                }
+            };
+            
+            // The table is at params.stored_at_index
+            // We need to ensure it's accessible for iteration
+            
+            params.lua.for_each_in_table([&](LuaMadeSimple::LuaTableReference table) -> bool {
+                // Prepare temporary storage for the element
+                Unreal::TArray<Unreal::uint8> element_data{};
+                element_data.Init(0, info.layout.Size);
+                
+                // For sets, we want to use the value, not the key
+                // The for_each_in_table callback provides key and value
+                // We need to push the value onto the stack for the pusher
+                params.lua.insert_value(-2);  // Push the value onto the stack
+                
+                PusherParams pusher_params{.operation = Operation::Set,
+                                          .lua = params.lua,
+                                          .base = params.base,
+                                          .data = element_data.GetData(),
+                                          .property = info.element};
+                                          
+                StaticState::m_property_value_pushers[static_cast<int32_t>(info.element_fname.GetComparisonIndex())](pusher_params);
+                
+                // Add element to the set
+                void* element_ptr = element_data.GetData();
+                
+                set->Add(element_ptr,
+                        info.layout,
+                        [&](const void* src) -> Unreal::uint32 {
+                            return info.element->GetValueTypeHash(src);
+                        },
+                        [&](const void* a, const void* b) -> bool {
+                            return info.element->Identical(a, b);
+                        },
+                        [&](void* new_element) {
+                            construct_fn(info.element, element_ptr, new_element);
+                        },
+                        [&](void* element) {
+                            destruct_fn(info.element, element);
+                        });
+                        
+                return false;
+            });
+            
+            // Rehash the set for better performance
+            set->Rehash(info.layout,
+                       [&](const void* src) -> Unreal::uint32 {
+                           return info.element->GetValueTypeHash(src);
+                       });
+        };
+        
+        auto lua_to_memory = [&]() {
+            if (params.lua.is_userdata(params.stored_at_index))
+            {
+                // Handle TSet userdata
+                auto& lua_tset = params.lua.get_userdata<TSet>(params.stored_at_index);
+                Unreal::FScriptSet* source_set = lua_tset.get_remote_cpp_object();
+                
+                Unreal::FSetProperty* set_property = static_cast<Unreal::FSetProperty*>(params.property);
+                FScriptSetInfo info(set_property->GetElementProp());
+                
+                auto set = new(params.data) Unreal::FScriptSet{};
+                
+                // Define construct and destruct functions for copying
+                auto construct_fn = [&](Unreal::FProperty* property, const void* ptr, void* new_element) {
+                    if (property->HasAnyPropertyFlags(Unreal::EPropertyFlags::CPF_ZeroConstructor))
+                    {
+                        Unreal::FMemory::Memzero(new_element, property->GetSize());
+                    }
+                    else
+                    {
+                        property->InitializeValue(new_element);
+                    }
+                    
+                    property->CopySingleValueToScriptVM(new_element, ptr);
+                };
+                
+                auto destruct_fn = [&](Unreal::FProperty* property, void* element) {
+                    if (!property->HasAnyPropertyFlags(
+                            Unreal::EPropertyFlags::CPF_IsPlainOldData |
+                            Unreal::EPropertyFlags::CPF_NoDestructor))
+                    {
+                        property->DestroyValue(element);
+                    }
+                };
+                
+                // Copy elements from source set to destination set
+                Unreal::int32 max_index = source_set->GetMaxIndex();
+                for (Unreal::int32 i = 0; i < max_index; i++)
+                {
+                    if (!source_set->IsValidIndex(i))
+                    {
+                        continue;
+                    }
+                    
+                    void* element_ptr = source_set->GetData(i, info.layout);
+                    
+                    set->Add(element_ptr,
+                            info.layout,
+                            [&](const void* src) -> Unreal::uint32 {
+                                return info.element->GetValueTypeHash(src);
+                            },
+                            [&](const void* a, const void* b) -> bool {
+                                return info.element->Identical(a, b);
+                            },
+                            [&](void* new_element) {
+                                construct_fn(info.element, element_ptr, new_element);
+                            },
+                            [&](void* element) {
+                                destruct_fn(info.element, element);
+                            });
+                }
+                
+                set->Rehash(info.layout,
+                           [&](const void* src) -> Unreal::uint32 {
+                               return info.element->GetValueTypeHash(src);
+                           });
+            }
+            else if (params.lua.is_table(params.stored_at_index))
+            {
+                // TSet as table
+                lua_table_to_set();
+            }
+            else if (params.lua.is_nil(params.stored_at_index))
+            {
+                // Empty set
+                new(params.data) Unreal::FScriptSet{};
+            }
+            else
+            {
+                params.throw_error("push_setproperty::lua_to_memory", "Parameter must be of type 'TSet' or table");
+            }
+        };
+        
+        switch (params.operation)
+        {
+        case Operation::Get:
+            TSet::construct(params);
+            return;
+        case Operation::GetNonTrivialLocal:
+            set_to_lua_table(params.lua, params.property, params.data);
+            return;
+        case Operation::Set:
+            lua_to_memory();
+            return;
+        case Operation::GetParam:
+            RemoteUnrealParam::construct(params.lua, params.data, params.base, params.property);
+            return;
+        default:
+            params.throw_error("push_setproperty", "Unhandled Operation");
+            break;
+        }
+        
+        params.throw_error("push_setproperty", fmt::format("Unknown Operation ({}) not supported", static_cast<int32_t>(params.operation)));
+    }
+
+    auto push_mapproperty(const PusherParams& params) -> void
+    {
+        auto map_to_lua_table = [&](const LuaMadeSimple::Lua& lua, Unreal::FProperty* property, void* data_ptr) {
+            Unreal::FMapProperty* map_property = static_cast<Unreal::FMapProperty*>(property);
+
+            FScriptMapInfo info(map_property->GetKeyProp(), map_property->GetValueProp());
+            info.validate_pushers(lua);
+
+            Unreal::FScriptMap* map = static_cast<Unreal::FScriptMap*>(data_ptr);
+
+            LuaMadeSimple::Lua::Table lua_table = [&]() {
+                if (params.create_new_if_get_non_trivial_local)
+                {
+                    return lua.prepare_new_table();
+                }
+                else
+                {
+                    return lua.get_table();
+                }
+            }();
+
+            Unreal::int32 max_index = map->GetMaxIndex();
+            for (Unreal::int32 i = 0; i < max_index; i++)
+            {
+                if (!map->IsValidIndex(i))
+                {
+                    continue;
+                }
+
+                PusherParams pusher_params{.operation = LuaMadeSimple::Type::Operation::GetParam,
+                                           .lua = lua,
+                                           .base = params.base,
+                                           .data = static_cast<uint8_t*>(map->GetData(i, info.layout)),
+                                           .property = nullptr};
+
+                pusher_params.property = info.key;
+                StaticState::m_property_value_pushers[static_cast<int32_t>(info.key_fname.GetComparisonIndex())](pusher_params);
+
+                pusher_params.data = static_cast<uint8_t*>(pusher_params.data) + info.layout.ValueOffset;
+                pusher_params.property = info.value;
+                StaticState::m_property_value_pushers[static_cast<int32_t>(info.value_fname.GetComparisonIndex())](pusher_params);
+
+                lua_table.fuse_pair();
+            }
+
+            lua_table.make_local();
+        };
+
+        auto lua_table_to_map = [&]() {
+            Unreal::FMapProperty* map_property = static_cast<Unreal::FMapProperty*>(params.property);
+
+            FScriptMapInfo info(map_property->GetKeyProp(), map_property->GetValueProp());
+            info.validate_pushers(params.lua);
+
+            auto map = new(params.data) Unreal::FScriptMap{};
+
+            params.lua.for_each_in_table([&](LuaMadeSimple::LuaTableReference table) -> bool {
+                params.lua.insert_value(-2);
+                params.lua.insert_value(-1);
+
+                // be careful with this function, if you add a duplicate entry,
+                // rehashing the map will NOT remove it
+                // if you want identical behavior to TMap::Add use the Add function.
+                Unreal::int32 added_index = map->AddUninitialized(info.layout);
+
+                PusherParams pusher_params{.operation = Operation::Set,
+                                           .lua = params.lua,
+                                           .base = static_cast<Unreal::UObject*>(map->GetData(0, info.layout)),
+                                           .data = map->GetData(added_index, info.layout),
+                                           .property = nullptr};
+
+                Unreal::FMemory::Memzero(pusher_params.data, info.layout.SetLayout.Size);
+
+                pusher_params.property = info.key;
+                StaticState::m_property_value_pushers[static_cast<int32_t>(info.key_fname.GetComparisonIndex())](pusher_params);
+
+                pusher_params.data = static_cast<uint8_t*>(pusher_params.data) + info.layout.ValueOffset;
+                pusher_params.property = info.value;
+                StaticState::m_property_value_pushers[static_cast<int32_t>(info.value_fname.GetComparisonIndex())](pusher_params);
+
+                return false;
+            });
+
+            map->Rehash(info.layout,
+                        [&](const void* src) -> Unreal::uint32 {
+                            return info.key->GetValueTypeHash(src);
+                        });
+        };
+
+        switch (params.operation)
+        {
+        case Operation::Get:
+            TMap::construct(params);
+            return;
+        case Operation::GetNonTrivialLocal:
+            map_to_lua_table(params.lua, params.property, params.data);
+            return;
+        case Operation::Set: {
+            if (params.lua.is_userdata(params.stored_at_index))
+            {
+                // Handle TMap userdata
+                auto& lua_tmap = params.lua.get_userdata<TMap>(params.stored_at_index);
+                Unreal::FScriptMap* source_map = lua_tmap.get_remote_cpp_object();
+                
+                Unreal::FMapProperty* map_property = static_cast<Unreal::FMapProperty*>(params.property);
+                FScriptMapInfo info(map_property->GetKeyProp(), map_property->GetValueProp());
+                if (!info.key || !info.value)
+                {
+                    params.throw_error("push_mapproperty", "Invalid key or value property");
+                }
+                
+                auto dest_map = new(params.data) Unreal::FScriptMap{};
+                
+                // Copy elements from source to destination
+                Unreal::int32 max_index = source_map->GetMaxIndex();
+                for (Unreal::int32 i = 0; i < max_index; i++)
+                {
+                    if (!source_map->IsValidIndex(i))
+                    {
+                        continue;
+                    }
+                    
+                    // Get source key/value pair
+                    void* src_pair = source_map->GetData(i, info.layout);
+                    
+                    // Add new entry to destination map
+                    Unreal::int32 dest_index = dest_map->AddUninitialized(info.layout);
+                    void* dest_pair = dest_map->GetData(dest_index, info.layout);
+                    
+                    // Initialize the destination memory
+                    Unreal::FMemory::Memzero(dest_pair, info.layout.SetLayout.Size);
+                    
+                    // Copy key
+                    info.key->CopySingleValueToScriptVM(dest_pair, src_pair);
+                    
+                    // Copy value
+                    void* src_value = static_cast<uint8_t*>(src_pair) + info.layout.ValueOffset;
+                    void* dest_value = static_cast<uint8_t*>(dest_pair) + info.layout.ValueOffset;
+                    info.value->CopySingleValueToScriptVM(dest_value, src_value);
+                }
+                
+                // Rehash the destination map
+                dest_map->Rehash(info.layout,
+                                [&](const void* src) -> Unreal::uint32 {
+                                    return info.key->GetValueTypeHash(src);
+                                });
+            }
+            else if (params.lua.is_table(params.stored_at_index))
+            {
+                // TMap as table
+                lua_table_to_map();
+            }
+            else if (params.lua.is_nil(params.stored_at_index))
+            {
+                // Empty map
+                new(params.data) Unreal::FScriptMap{};
+            }
+            else
+            {
+                params.throw_error("push_mapproperty", "Parameter must be of type 'TMap' or table");
+            }
+            return;
+        }
+        case Operation::GetParam:
+            RemoteUnrealParam::construct(params.lua, params.data, params.base, params.property);
+            return;
+        default:
+            params.throw_error("push_mapproperty", "Unhandled Operation");
+            break;
+        }
+
+        params.throw_error("push_mapproperty", fmt::format("Unknown Operation ({}) not supported", static_cast<int32_t>(params.operation)));
+    }
+
 
     auto push_functionproperty(const FunctionPusherParams& params) -> void
     {
@@ -853,7 +1393,7 @@ namespace RC::LuaType
         float* float_ptr = static_cast<float*>(params.data);
         if (!float_ptr)
         {
-            params.lua.throw_error("[push_floatproperty] data pointer is nullptr");
+            params.throw_error("push_floatproperty", "data pointer is nullptr");
         }
 
         switch (params.operation)
@@ -869,11 +1409,11 @@ namespace RC::LuaType
             RemoteUnrealParam::construct(params.lua, float_ptr, params.base, params.property);
             return;
         default:
-            params.lua.throw_error("[push_floatproperty] Unhandled Operation");
+            params.throw_error("push_floatproperty", "Unhandled Operation");
             break;
         }
 
-        params.lua.throw_error(std::format("[push_floatproperty] Unknown Operation ({}) not supported", static_cast<int32_t>(params.operation)));
+        params.throw_error("push_floatproperty", "Operation not supported");
     }
 
     auto push_doubleproperty(const PusherParams& params) -> void
@@ -881,7 +1421,7 @@ namespace RC::LuaType
         double* double_ptr = static_cast<double*>(params.data);
         if (!double_ptr)
         {
-            params.lua.throw_error("[push_doubleproperty] data pointer is nullptr");
+            params.throw_error("push_doubleproperty", "data pointer is nullptr");
         }
 
         switch (params.operation)
@@ -897,11 +1437,11 @@ namespace RC::LuaType
             RemoteUnrealParam::construct(params.lua, double_ptr, params.base, params.property);
             return;
         default:
-            params.lua.throw_error("[push_doubleproperty] Unhandled Operation");
+            params.throw_error("push_doubleproperty", "Unhandled Operation");
             break;
         }
 
-        params.lua.throw_error(std::format("[push_doubleproperty] Unknown Operation ({}) not supported", static_cast<int32_t>(params.operation)));
+        params.throw_error("push_doubleproperty", "Operation not supported");
     }
 
     auto push_boolproperty(const PusherParams& params) -> void
@@ -909,7 +1449,7 @@ namespace RC::LuaType
         uint8_t* bitfield_ptr = static_cast<uint8_t*>(params.data);
         if (!bitfield_ptr)
         {
-            params.lua.throw_error("[push_boolproperty] data pointer is nullptr");
+            params.throw_error("push_boolproperty", "data pointer is nullptr");
         }
 
         Unreal::FBoolProperty* bp = static_cast<Unreal::FBoolProperty*>(params.property);
@@ -935,11 +1475,11 @@ namespace RC::LuaType
             RemoteUnrealParam::construct(params.lua, bitfield_ptr, params.base, params.property);
             return;
         default:
-            params.lua.throw_error("[push_boolproperty] Unhandled Operation");
+            params.throw_error("push_boolproperty", "Unhandled Operation");
             break;
         }
 
-        params.lua.throw_error(std::format("[push_boolproperty] Unknown Operation ({}) not supported", static_cast<int32_t>(params.operation)));
+        params.throw_error("push_boolproperty", "Operation not supported");
     }
 
     auto push_enumproperty(const PusherParams& params) -> void
@@ -947,7 +1487,7 @@ namespace RC::LuaType
         Unreal::UEnum* enum_ptr = static_cast<Unreal::FEnumProperty*>(params.property)->GetEnum();
         if (!enum_ptr)
         {
-            params.lua.throw_error("[push_enumproperty] data pointer is nullptr");
+            params.throw_error("push_enumproperty", "data pointer is nullptr");
         }
 
         switch (params.operation)
@@ -985,18 +1525,18 @@ namespace RC::LuaType
             RemoteUnrealParam::construct(params.lua, params.data, params.base, params.property);
             return;
         default:
-            params.lua.throw_error("[push_enumproperty] Unhandled Operation");
+            params.throw_error("push_enumproperty", "Unhandled Operation");
             break;
         }
 
-        params.lua.throw_error(std::format("[push_enumproperty] Unknown Operation ({}) not supported", static_cast<int32_t>(params.operation)));
+        params.throw_error("push_enumproperty", "Operation not supported");
     }
 
     auto push_weakobjectproperty(const PusherParams& params) -> void
     {
         if (!params.data)
         {
-            params.lua.throw_error("[push_weakobjectproperty] data pointer is nullptr");
+            params.throw_error("push_weakobjectproperty", "data pointer is nullptr");
         }
 
         switch (params.operation)
@@ -1018,14 +1558,14 @@ namespace RC::LuaType
             Output::send(STR("[push_weakobjectproperty] Operation::Set is not supported\n"));
             return;
         case Operation::GetParam:
-            params.lua.throw_error("[push_weakobjectproperty] Operation::GetParam is not supported");
+            params.throw_error("push_weakobjectproperty", "Operation::GetParam is not supported");
             return;
         default:
-            params.lua.throw_error("[push_weakobjectproperty] Unhandled Operation");
+            params.throw_error("push_weakobjectproperty", "Unhandled Operation");
             break;
         }
 
-        params.lua.throw_error(std::format("[push_weakobjectproperty] Unknown Operation ({}) not supported", static_cast<int32_t>(params.operation)));
+        params.throw_error("push_weakobjectproperty", "Operation not supported");
     }
 
     auto push_nameproperty(const PusherParams& params) -> void
@@ -1033,7 +1573,7 @@ namespace RC::LuaType
         Unreal::FName* name = static_cast<Unreal::FName*>(params.data);
         if (!name)
         {
-            params.lua.throw_error("[push_nameproperty] data pointer is nullptr");
+            params.throw_error("push_nameproperty", "data pointer is nullptr");
         }
 
         switch (params.operation)
@@ -1051,11 +1591,11 @@ namespace RC::LuaType
             RemoteUnrealParam::construct(params.lua, params.data, params.base, params.property);
             return;
         default:
-            params.lua.throw_error("[push_nameproperty] Unhandled Operation");
+            params.throw_error("push_nameproperty", "Unhandled Operation");
             break;
         }
 
-        params.lua.throw_error(std::format("[push_nameproperty] Unknown Operation ({}) not supported", static_cast<int32_t>(params.operation)));
+        params.throw_error("push_nameproperty", "Operation not supported");
     }
 
     auto push_textproperty(const PusherParams& params) -> void
@@ -1063,7 +1603,7 @@ namespace RC::LuaType
         Unreal::FText* text = static_cast<Unreal::FText*>(params.data);
         if (!text)
         {
-            params.lua.throw_error("[push_textproperty] data pointer is nullptr");
+            params.throw_error("push_textproperty", "data pointer is nullptr");
         }
 
         switch (params.operation)
@@ -1081,11 +1621,11 @@ namespace RC::LuaType
             RemoteUnrealParam::construct(params.lua, params.data, params.base, params.property);
             return;
         default:
-            params.lua.throw_error("[push_textproperty] Unhandled Operation");
+            params.throw_error("push_textproperty", "Unhandled Operation");
             break;
         }
 
-        params.lua.throw_error(std::format("[push_textproperty] Unknown Operation ({}) not supported", static_cast<int32_t>(params.operation)));
+        params.throw_error("push_textproperty", "Operation not supported");
     }
 
     auto push_strproperty(const PusherParams& params) -> void
@@ -1093,7 +1633,7 @@ namespace RC::LuaType
         Unreal::FString* string = static_cast<Unreal::FString*>(params.data);
         if (!string)
         {
-            params.lua.throw_error("[push_strproperty] data pointer is nullptr");
+            params.throw_error("push_strproperty", "data pointer is nullptr");
         }
 
         switch (params.operation)
@@ -1103,20 +1643,20 @@ namespace RC::LuaType
             LuaType::FString::construct(params.lua, string);
             return;
         case Operation::Set: {
-            if (params.lua.is_string())
+            if (params.lua.is_string(params.stored_at_index))
             {
-                auto lua_string = params.lua.get_string();
-                auto fstring = Unreal::FString{to_wstring(lua_string).c_str()};
+                auto lua_string = params.lua.get_string(params.stored_at_index);
+                auto fstring = Unreal::FString{FromCharTypePtr<TCHAR>(ensure_str(lua_string).c_str())};
                 *string = fstring;
             }
-            else if (params.lua.is_userdata())
+            else if (params.lua.is_userdata(params.stored_at_index))
             {
-                auto& rhs = params.lua.get_userdata<LuaType::FString>();
-                string->SetCharArray(rhs.get_local_cpp_object().GetCharTArray());
+                auto& rhs = params.lua.get_userdata<LuaType::FString>(params.stored_at_index);
+                string->SetCharArray(rhs.get_local_cpp_object().GetCharArray());
             }
             else
             {
-                params.lua.throw_error("[push_strproperty] StrProperty can only be set to a string or FString");
+                params.throw_error("push_strproperty", "StrProperty can only be set to a string or FString");
             }
             return;
         }
@@ -1124,29 +1664,113 @@ namespace RC::LuaType
             RemoteUnrealParam::construct(params.lua, params.data, params.base, params.property);
             return;
         default:
-            params.lua.throw_error("[push_strproperty] Unhandled Operation");
+            params.throw_error("push_strproperty", "Unhandled Operation");
             break;
         }
 
-        params.lua.throw_error(std::format("[push_strproperty] Unknown Operation ({}) not supported", static_cast<int32_t>(params.operation)));
+        params.throw_error("push_strproperty", "Operation not supported");
     }
 
-    auto push_softclassproperty(const PusherParams& params) -> void
+    auto push_utf8strproperty(const PusherParams& params) -> void
     {
-        auto soft_ptr = static_cast<Unreal::FSoftObjectPtr*>(params.data);
-        if (!soft_ptr)
+        Unreal::FUtf8String* string = static_cast<Unreal::FUtf8String*>(params.data);
+        if (!string)
         {
-            params.lua.throw_error("[push_softclassproperty] data pointer is nullptr");
+            params.throw_error("push_utf8strproperty", "data pointer is nullptr");
         }
 
         switch (params.operation)
         {
         case Operation::GetNonTrivialLocal:
         case Operation::Get:
-            LuaType::TSoftClassPtr::construct(params.lua, *soft_ptr);
+            LuaType::FUtf8String::construct(params.lua, string);
             return;
         case Operation::Set: {
-            auto& lua_object = params.lua.get_userdata<LuaType::TSoftClassPtr>(params.stored_at_index);
+            if (params.lua.is_string(params.stored_at_index))
+            {
+                auto lua_string = params.lua.get_string(params.stored_at_index);
+                *string = Unreal::FUtf8String(reinterpret_cast<const Unreal::UTF8CHAR*>(lua_string.data()));
+            }
+            else if (params.lua.is_userdata(params.stored_at_index))
+            {
+                auto& rhs = params.lua.get_userdata<LuaType::FUtf8String>(params.stored_at_index);
+                *string = rhs.get_local_cpp_object();
+            }
+            else
+            {
+                params.throw_error("push_utf8strproperty", "Utf8StrProperty can only be set to a string or FUtf8String");
+            }
+            return;
+        }
+        case Operation::GetParam:
+            RemoteUnrealParam::construct(params.lua, params.data, params.base, params.property);
+            return;
+        default:
+            params.throw_error("push_utf8strproperty", "Unhandled Operation");
+            break;
+        }
+
+        params.throw_error("push_utf8strproperty", "Operation not supported");
+    }
+
+    auto push_ansistrproperty(const PusherParams& params) -> void
+    {
+        Unreal::FAnsiString* string = static_cast<Unreal::FAnsiString*>(params.data);
+        if (!string)
+        {
+            params.throw_error("push_ansistrproperty", "data pointer is nullptr");
+        }
+
+        switch (params.operation)
+        {
+        case Operation::GetNonTrivialLocal:
+        case Operation::Get:
+            LuaType::FAnsiString::construct(params.lua, string);
+            return;
+        case Operation::Set: {
+            if (params.lua.is_string(params.stored_at_index))
+            {
+                auto lua_string = params.lua.get_string(params.stored_at_index);
+                *string = Unreal::FAnsiString(lua_string.data());
+            }
+            else if (params.lua.is_userdata(params.stored_at_index))
+            {
+                auto& rhs = params.lua.get_userdata<LuaType::FAnsiString>(params.stored_at_index);
+                *string = rhs.get_local_cpp_object();
+            }
+            else
+            {
+                params.throw_error("push_ansistrproperty", "AnsiStrProperty can only be set to a string or FAnsiString");
+            }
+            return;
+        }
+        case Operation::GetParam:
+            RemoteUnrealParam::construct(params.lua, params.data, params.base, params.property);
+            return;
+        default:
+            params.throw_error("push_ansistrproperty", "Unhandled Operation");
+            break;
+        }
+
+        params.throw_error("push_ansistrproperty", "Operation not supported");
+    }
+
+    auto push_softobjectproperty(const PusherParams& params) -> void
+    {
+        auto soft_ptr = static_cast<Unreal::FSoftObjectPtr*>(params.data);
+        if (!soft_ptr)
+        {
+            params.throw_error("push_softobjectproperty", "data pointer is nullptr");
+        }
+
+        switch (params.operation)
+        {
+        case Operation::GetNonTrivialLocal:
+        case Operation::Get:
+            LuaType::TSoftObjectPtr::construct(params.lua, *soft_ptr);
+            return;
+        case Operation::Set: {
+            auto& lua_object = params.lua.get_userdata<LuaType::TSoftObjectPtr>(params.stored_at_index);
             *soft_ptr = lua_object.get_local_cpp_object();
             return;
         }
@@ -1154,11 +1778,11 @@ namespace RC::LuaType
             RemoteUnrealParam::construct(params.lua, params.data, params.base, params.property);
             return;
         default:
-            params.lua.throw_error("[push_softclassproperty] Unhandled Operation");
+            params.throw_error("push_softobjectproperty", "Unhandled Operation");
             break;
         }
 
-        params.lua.throw_error(std::format("[push_softclassproperty] Unknown Operation ({}) not supported", static_cast<int32_t>(params.operation)));
+        params.throw_error("push_softobjectproperty", "Operation not supported");
     }
 
     auto push_interfaceproperty(const PusherParams& params) -> void
@@ -1166,7 +1790,7 @@ namespace RC::LuaType
         auto property_value = static_cast<Unreal::UInterface**>(params.data);
         if (!property_value)
         {
-            params.lua.throw_error("[push_interfaceproperty] data pointer is nullptr");
+            params.throw_error("push_interfaceproperty", "data pointer is nullptr");
         }
 
         // Finally construct the Lua object
@@ -1184,11 +1808,12 @@ namespace RC::LuaType
             }
             else if (params.lua.is_nil())
             {
+                params.lua.discard_value(params.stored_at_index);
                 *property_value = nullptr;
             }
             else
             {
-                params.lua.throw_error("[push_interfaceproperty] Value must be UInterface or nil");
+                params.throw_error("push_interfaceproperty", "Value must be UInterface or nil");
             }
             break;
         }
@@ -1196,7 +1821,221 @@ namespace RC::LuaType
             RemoteUnrealParam::construct(params.lua, params.data, params.base, params.property);
             break;
         default:
-            params.lua.throw_error("[push_interfaceproperty] Unhandled Operation");
+            params.throw_error("push_interfaceproperty", "Operation not supported");
+            break;
+        }
+    }
+
+    auto push_delegateproperty(const PusherParams& params) -> void
+    {
+        using namespace Unreal;
+        auto* delegate_value = static_cast<FScriptDelegate*>(params.data);
+        if (!delegate_value)
+        {
+            params.throw_error("push_delegateproperty", "data pointer is nullptr");
+        }
+
+        switch (params.operation)
+        {
+        case Operation::GetNonTrivialLocal:
+        case Operation::Get: {
+            // Return a table with {Object = UObject, FunctionName = FName}
+            LuaMadeSimple::Lua::Table lua_table = params.lua.prepare_new_table();
+
+            lua_table.add_key("Object");
+            auto_construct_object(params.lua, delegate_value->GetUObject());
+            lua_table.fuse_pair();
+
+            lua_table.add_key("FunctionName");
+            FName::construct(params.lua, delegate_value->GetFunctionName());
+            lua_table.fuse_pair();
+
+            lua_table.make_local();
+            break;
+        }
+        case Operation::Set: {
+            if (params.lua.is_table())
+            {
+                lua_pushstring(params.lua.get_lua_state(), "Object");
+                int adjusted_index = params.stored_at_index;
+                if (params.stored_at_index < 0)
+                {
+                    adjusted_index = params.stored_at_index - 1;
+                }
+                lua_rawget(params.lua.get_lua_state(), adjusted_index);
+
+                Unreal::UObject* obj = nullptr;
+                if (params.lua.is_userdata())
+                {
+                    const auto& lua_object = params.lua.get_userdata<LuaType::UObject>();
+                    obj = lua_object.get_remote_cpp_object();
+                }
+                params.lua.discard_value();
+
+                lua_pushstring(params.lua.get_lua_state(), "FunctionName");
+                lua_rawget(params.lua.get_lua_state(), adjusted_index);
+
+                Unreal::FName fname = NAME_None;
+                if (params.lua.is_userdata())
+                {
+                    auto& lua_fname = params.lua.get_userdata<LuaType::FName>();
+                    fname = lua_fname.get_local_cpp_object();
+                }
+                params.lua.discard_value();
+
+                // Bind the delegate - this modifies the existing FWeakObjectPtr which calls
+                // the engine's assignment operator that will allocate serial numbers
+                delegate_value->BindUFunction(obj, fname);
+                params.lua.discard_value(params.stored_at_index);
+            }
+            else if (params.lua.is_nil())
+            {
+                delegate_value->Clear();
+                params.lua.discard_value(params.stored_at_index);
+            }
+            else
+            {
+                params.throw_error("push_delegateproperty", "Value must be a table {Object = UObject, FunctionName = FName} or nil");
+            }
+            break;
+        }
+        case Operation::GetParam:
+            RemoteUnrealParam::construct(params.lua, params.data, params.base, params.property);
+            break;
+        default:
+            params.throw_error("push_delegateproperty", "Operation not supported");
+            break;
+        }
+    }
+
+    auto push_multicastdelegateproperty(const PusherParams& params) -> void
+    {
+        using namespace Unreal;
+
+        auto* delegate_property = static_cast<FMulticastDelegateProperty*>(params.property);
+        if (!delegate_property)
+        {
+            params.throw_error("push_multicastdelegateproperty", "property is not FMulticastDelegateProperty");
+        }
+
+        switch (params.operation)
+        {
+        case Operation::Get:
+            XMulticastDelegateProperty::construct(params);
+            break;
+        case Operation::GetNonTrivialLocal: {
+            const FMulticastScriptDelegate* delegate_value = delegate_property->GetMulticastDelegate(params.data);
+            if (!delegate_value)
+            {
+                params.lua.set_nil();
+                break;
+            }
+
+            LuaMadeSimple::Lua::Table lua_table = params.lua.prepare_new_table();
+
+            int32 count = delegate_value->Num();
+            for (int32 i = 0; i < count; ++i)
+            {
+                lua_table.add_key(i + 1); // Lua is 1-indexed
+
+                LuaMadeSimple::Lua::Table delegate_entry = params.lua.prepare_new_table();
+
+                delegate_entry.add_key("Object");
+                auto_construct_object(params.lua, delegate_value->InvocationList[i].GetUObject());
+                delegate_entry.fuse_pair();
+
+                delegate_entry.add_key("FunctionName");
+                FName::construct(params.lua, delegate_value->InvocationList[i].GetFunctionName());
+                delegate_entry.fuse_pair();
+
+                delegate_entry.make_local();
+                lua_table.fuse_pair(); // Set array element
+            }
+
+            lua_table.make_local();
+            break;
+        }
+        case Operation::Set:
+            // Multicast delegates cannot be set directly. Use the property wrapper methods instead:
+            // local prop = obj.OnSomething
+            // prop:Add(targetObj, FName("FunctionName"))
+            // prop:Remove(targetObj, FName("FunctionName"))
+            // prop:Clear()
+            params.throw_error("push_multicastdelegateproperty",
+                               "Multicast delegate values are read-only. Use property methods: GetPropertyByName():Add/Remove/Clear");
+            break;
+        case Operation::GetParam:
+            RemoteUnrealParam::construct(params.lua, params.data, params.base, params.property);
+            break;
+        default:
+            params.throw_error("push_multicastdelegateproperty", "Operation not supported");
+            break;
+        }
+    }
+
+    auto push_multicastsparsedelegateproperty(const PusherParams& params) -> void
+    {
+        using namespace Unreal;
+
+        // Sparse delegates work similarly to regular multicast delegates
+        // The main difference is they use 1 byte + global storage instead of inline InvocationList
+        auto* delegate_property = static_cast<FMulticastSparseDelegateProperty*>(params.property);
+        if (!delegate_property)
+        {
+            params.throw_error("push_multicastsparsedelegateproperty", "property is not FMulticastSparseDelegateProperty");
+        }
+
+        switch (params.operation)
+        {
+        case Operation::Get:
+            XMulticastSparseDelegateProperty::construct(params);
+            break;
+        case Operation::GetNonTrivialLocal: {
+            const FMulticastScriptDelegate* delegate_value = delegate_property->GetMulticastDelegate(params.data);
+            if (!delegate_value)
+            {
+                params.lua.set_nil();
+                break;
+            }
+
+            LuaMadeSimple::Lua::Table lua_table = params.lua.prepare_new_table();
+
+            int32 count = delegate_value->Num();
+            for (int32 i = 0; i < count; ++i)
+            {
+                lua_table.add_key(i + 1); // Lua is 1-indexed
+
+                LuaMadeSimple::Lua::Table delegate_entry = params.lua.prepare_new_table();
+
+                delegate_entry.add_key("Object");
+                auto_construct_object(params.lua, delegate_value->InvocationList[i].GetUObject());
+                delegate_entry.fuse_pair();
+
+                delegate_entry.add_key("FunctionName");
+                FName::construct(params.lua, delegate_value->InvocationList[i].GetFunctionName());
+                delegate_entry.fuse_pair();
+
+                delegate_entry.make_local();
+                lua_table.fuse_pair();
+            }
+
+            lua_table.make_local();
+            break;
+        }
+        case Operation::Set:
+            // Multicast delegates cannot be set directly. Use the property wrapper methods instead:
+            // local prop = obj.OnSomething
+            // prop:Add(targetObj, FName("FunctionName"))
+            // prop:Remove(targetObj, FName("FunctionName"))
+            // prop:Clear() 
+            params.throw_error("push_multicastsparsedelegateproperty",
+                               "Sparse multicast delegate values are read-only. Use property methods: GetPropertyByName():Add/Remove/Clear");
+            break;
+        case Operation::GetParam:
+            RemoteUnrealParam::construct(params.lua, params.data, params.base, params.property);
+            break;
+        default:
+            params.throw_error("push_multicastsparsedelegateproperty", "Operation not supported");
             break;
         }
     }
@@ -1232,7 +2071,7 @@ Overloads:
         }
         else if (lua.is_string())
         {
-            auto* object_class = Unreal::UObjectGlobals::StaticFindObject<Unreal::UClass*>(nullptr, nullptr, to_wstring(lua.get_string()));
+            auto* object_class = Unreal::UObjectGlobals::StaticFindObject<Unreal::UClass*>(nullptr, nullptr, ensure_str(lua.get_string()));
             lua.set_bool(is_a_internal(lua, object, object_class));
         }
         else
@@ -1297,7 +2136,7 @@ Overloads:
             // We can either throw an error and kill the execution
             /**/
             std::string property_type_name = to_string(property_type.ToString());
-            lua.throw_error(std::format(
+            lua.throw_error(fmt::format(
                     "[handle_unreal_property_value] Tried accessing unreal property without a registered handler. Property type '{}' not supported.",
                     property_type_name));
             //*/
@@ -1320,8 +2159,7 @@ Overloads:
     {
     }
 
-    auto RemoteUnrealParam::construct(const LuaMadeSimple::Lua& lua, void* param_ptr, Unreal::UObject* base, Unreal::FProperty* property)
-            -> const LuaMadeSimple::Lua::Table
+    auto RemoteUnrealParam::construct(const LuaMadeSimple::Lua& lua, void* param_ptr, Unreal::UObject* base, Unreal::FProperty* property) -> const LuaMadeSimple::Lua::Table
     {
         const Unreal::FName property_type = property->GetClass().GetFName();
         LuaType::RemoteUnrealParam lua_object{param_ptr, base, property, property_type};
@@ -1381,12 +2219,22 @@ Overloads:
 
     auto RemoteUnrealParam::setup_member_functions(LuaMadeSimple::Lua::Table& table) -> void
     {
+        table.add_pair("Get", [](const LuaMadeSimple::Lua& lua) -> int {
+            prepare_to_handle(Operation::Get, lua);
+            return 1;
+        });
+
         table.add_pair("get", [](const LuaMadeSimple::Lua& lua) -> int {
             prepare_to_handle(Operation::Get, lua);
             return 1;
         });
 
         table.add_pair("set", [](const LuaMadeSimple::Lua& lua) -> int {
+            prepare_to_handle(Operation::Set, lua);
+            return 0;
+        });
+
+        table.add_pair("Set", [](const LuaMadeSimple::Lua& lua) -> int {
             prepare_to_handle(Operation::Set, lua);
             return 0;
         });
@@ -1422,7 +2270,7 @@ Overloads:
             // We can either throw an error and kill the execution
             /**/
             std::string property_type_name = to_string(lua_object.m_type.ToString());
-            lua.throw_error(std::format(
+            lua.throw_error(fmt::format(
                     "[RemoteUnrealParam::prepare_to_handle] Tried accessing unreal property without a registered handler. Property type '{}' not supported.",
                     property_type_name));
             //*/

@@ -1,9 +1,7 @@
 local projectName = "Profiler"
 
-includes("deps/Tracy")
-
-add_requires("Tracy", { optional = true, debug = is_mode_debug(), configs = { runtimes = get_mode_runtimes() } })
-add_requires("Superluminal", { system = true, optional = true, debug = is_mode_debug(), configs = { runtimes = get_mode_runtimes() } })
+add_requires("Tracy", { optional = true, debug = is_mode_debug(), configs = {runtimes = get_mode_runtimes()}})
+add_requires("Superluminal", { system = true, optional = true, debug = is_mode_debug(), configs = {runtimes = get_mode_runtimes()} })
 
 option("profilerFlavor")
     set_default("Tracy")
@@ -13,21 +11,14 @@ option("profilerFlavor")
 target(projectName)
     set_kind("headeronly")
     add_options("profilerFlavor")
-    set_languages("cxx20")
+    set_languages("cxx23")
     set_exceptions("cxx")
-    set_values("ue4ssDep", true)
+    add_rules("ue4ss.dependency")
 
     add_includedirs("include", { public = true })
     add_headerfiles("include/**.hpp")
 
     on_load(function (target)
-        import("target_helpers", { rootdir = get_config("scriptsRoot") })
-        
-        print("Project: " .. projectName .. " (HEADER-ONLY)")
-
-        target:add("defines", target_helpers.project_name_to_exports_define(projectName))
-        target:add("defines", target_helpers.project_name_to_build_static_define(projectName))
-
         local flavor = get_config("profilerFlavor")
 
         if flavor == "Tracy" then

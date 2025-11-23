@@ -32,8 +32,8 @@ namespace RC::JSON
         }
 
       public:
-        RC_JSON_API auto serialize(ShouldFormat should_format = ShouldFormat::No, int32_t* indent_level = nullptr) -> StringType override;
-        RC_JSON_API auto get_type() const -> Type override
+        JSON_DEPRECATED RC_JSON_API auto serialize(ShouldFormat should_format = ShouldFormat::No, int32_t* indent_level = nullptr) -> StringType override;
+        JSON_DEPRECATED RC_JSON_API auto get_type() const -> Type override
         {
             return Type::String;
         }

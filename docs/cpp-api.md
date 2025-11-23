@@ -6,6 +6,6 @@ You are expected to have a basic understanding of C++ and Unreal Engine's C++ AP
 
 You may need to read code in the [UEPsuedo](https://github.com/Re-UE4SS/UEPseudo) repository (more specifically, the `include/Unreal` directory) to understand how to use these functions.
 
-For version: **3.0.0**.
+For version: **3.1.0**
 
-Current status: **incomplete**.
+Current status: **incomplete**

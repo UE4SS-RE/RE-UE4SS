@@ -1,9 +1,10 @@
-#include <format>
 #include <stdexcept>
 #include <vector>
 
 #include <LuaMadeSimple/LuaMadeSimple.hpp>
 #include <LuaMadeSimple/LuaObject.hpp>
+
+#include <Helpers/String.hpp>
 
 namespace RC::LuaMadeSimple
 {
@@ -14,6 +15,118 @@ namespace RC::LuaMadeSimple
 
     // Current errors for all lua states
     static std::unordered_map<lua_State*, std::string> lua_state_errors;
+
+    template <>
+    auto LuaTableData<-1>::is_nil() -> bool
+    {
+        return lua_isnil(lua->get_lua_state(), -1);
+    }
+    template <>
+    auto LuaTableData<-1>::is_string() const -> bool
+    {
+        return lua_type(lua->get_lua_state(), -1) == LUA_TSTRING;
+    }
+    template <>
+    auto LuaTableData<-1>::get_string() const -> std::string_view
+    {
+        return lua_tostring(lua->get_lua_state(), -1);
+    }
+    template <>
+    auto LuaTableData<-1>::is_number() const -> bool
+    {
+        return lua_isnumber(lua->get_lua_state(), -1);
+    }
+    template <>
+    auto LuaTableData<-1>::get_number() const -> double
+    {
+        return lua_tonumber(lua->get_lua_state(), -1);
+    }
+    template <>
+    auto LuaTableData<-1>::get_float(int32_t force_index) -> float // Safe to use after a call to is_number
+    {
+        return static_cast<float>(lua_tonumber(lua->get_lua_state(), force_index));
+    }
+    template <>
+    auto LuaTableData<-1>::is_integer() const -> bool
+    {
+        return lua_isinteger(lua->get_lua_state(), -1);
+    }
+    template <>
+    auto LuaTableData<-1>::get_integer() const -> int64_t
+    {
+        return lua_tointeger(lua->get_lua_state(), -1);
+    }
+    template <>
+    auto LuaTableData<-1>::is_bool() const -> bool
+    {
+        return lua_isboolean(lua->get_lua_state(), -1);
+    }
+    template <>
+    auto LuaTableData<-1>::get_bool() const -> bool
+    {
+        return lua_toboolean(lua->get_lua_state(), -1);
+    }
+    template <>
+    auto LuaTableData<-1>::is_table() const -> bool
+    {
+        return lua_istable(lua->get_lua_state(), -1);
+    }
+
+    template <>
+    auto LuaTableData<-2>::is_nil() -> bool
+    {
+        return lua_isnil(lua->get_lua_state(), -2);
+    }
+    template <>
+    auto LuaTableData<-2>::is_string() const -> bool
+    {
+        return lua_type(lua->get_lua_state(), -2) == LUA_TSTRING;
+    }
+    template <>
+    auto LuaTableData<-2>::get_string() const -> std::string_view
+    {
+        return lua_tostring(lua->get_lua_state(), -2);
+    }
+    template <>
+    auto LuaTableData<-2>::is_number() const -> bool
+    {
+        return lua_isnumber(lua->get_lua_state(), -2);
+    }
+    template <>
+    auto LuaTableData<-2>::get_number() const -> double
+    {
+        return lua_tonumber(lua->get_lua_state(), -2);
+    }
+    template <>
+    auto LuaTableData<-2>::get_float(int32_t force_index) -> float // Safe to use after a call to is_number
+    {
+        return static_cast<float>(lua_tonumber(lua->get_lua_state(), force_index));
+    }
+    template <>
+    auto LuaTableData<-2>::is_integer() const -> bool
+    {
+        return lua_isinteger(lua->get_lua_state(), -2);
+    }
+    template <>
+    auto LuaTableData<-2>::get_integer() const -> int64_t
+    {
+        return lua_tointeger(lua->get_lua_state(), -2);
+    }
+    template <>
+    auto LuaTableData<-2>::is_bool() const -> bool
+    {
+        return lua_isboolean(lua->get_lua_state(), -2);
+    }
+    template <>
+    auto LuaTableData<-2>::get_bool() const -> bool
+    {
+        return lua_toboolean(lua->get_lua_state(), -2);
+    }
+    template <>
+    auto LuaTableData<-2>::is_table() const -> bool
+    {
+        return lua_istable(lua->get_lua_state(), -2);
+    }
 
     Lua::Lua(lua_State* lua_state) : m_lua_state(lua_state), m_registry(*this)
     {
@@ -209,7 +322,7 @@ namespace RC::LuaMadeSimple
             }
             else
             {
-                get_lua_instance().throw_error(std::format("[get_string_field] Attempted to get field: '{}' but the type was '{}'",
+                get_lua_instance().throw_error(fmt::format("[get_string_field] Attempted to get field: '{}' but the type was '{}'",
                                                            field_name,
                                                            lua_typename(get_lua_instance().get_lua_state(), pushed_type)));
             }
@@ -232,7 +345,7 @@ namespace RC::LuaMadeSimple
             }
             else
             {
-                get_lua_instance().throw_error(std::format("[get_int_field] Attempted to get field: '{}' but the type was '{}'",
+                get_lua_instance().throw_error(fmt::format("[get_int_field] Attempted to get field: '{}' but the type was '{}'",
                                                            field_name,
                                                            lua_typename(get_lua_instance().get_lua_state(), lua_type(get_lua_instance().get_lua_state(), -1))));
             }
@@ -255,7 +368,7 @@ namespace RC::LuaMadeSimple
             }
             else
             {
-                get_lua_instance().throw_error(std::format("[get_float_field] Attempted to get field: '{}' but the type was '{}'",
+                get_lua_instance().throw_error(fmt::format("[get_float_field] Attempted to get field: '{}' but the type was '{}'",
                                                            field_name,
                                                            lua_typename(get_lua_instance().get_lua_state(), lua_type(get_lua_instance().get_lua_state(), -1))));
             }
@@ -278,7 +391,7 @@ namespace RC::LuaMadeSimple
             }
             else
             {
-                get_lua_instance().throw_error(std::format("[get_table_field] Attempted to get field: '{}' but the type was '{}'",
+                get_lua_instance().throw_error(fmt::format("[get_table_field] Attempted to get field: '{}' but the type was '{}'",
                                                            field_name,
                                                            lua_typename(get_lua_instance().get_lua_state(), pushed_type)));
             }
@@ -338,11 +451,11 @@ namespace RC::LuaMadeSimple
         {
             const char* status_message = lua_tostring(get_lua_state(), -1);
             lua_pop(get_lua_state(), 1);
-            return std::format("{} => {}", status_to_string(status), status_message);
+            return fmt::format("{} => {}", status_to_string(status), status_message);
         }
         else
         {
-            return std::format("{} => No message", status_to_string(status));
+            return fmt::format("{} => No message", status_to_string(status));
         }
     }
 
@@ -427,42 +540,50 @@ namespace RC::LuaMadeSimple
     {
         if (int status = luaL_loadfile(get_lua_state(), file_name_and_path.data()); status != LUA_OK)
         {
-            throw std::runtime_error{std::format("[Lua::execute_file] luaL_loadfile returned {}", resolve_status_message(status))};
+            throw std::runtime_error{fmt::format("[Lua::execute_file] luaL_loadfile returned {}", resolve_status_message(status))};
         }
 
         if (int status = lua_pcall(get_lua_state(), 0, LUA_MULTRET, 0); status != LUA_OK)
         {
-            throw std::runtime_error{std::format("[Lua::execute_file] lua_pcall returned {}", resolve_status_message(status))};
+            throw std::runtime_error{fmt::format("[Lua::execute_file] lua_pcall returned {}", resolve_status_message(status))};
         }
     }
 
     auto Lua::execute_file(std::wstring_view file_name_and_path) const -> void
     {
-#pragma warning(disable : 4244)
-        std::string file_name_and_path_ansi = std::string(file_name_and_path.begin(), file_name_and_path.end());
-#pragma warning(default : 4244)
-        execute_file(file_name_and_path_ansi);
+        std::string file_name_and_path_utf8 = to_string(file_name_and_path);
+        execute_file(file_name_and_path_utf8);
+    }
+
+    auto Lua::execute_file(std::u16string_view file_name_and_path) const -> void
+    {
+        std::string file_name_and_path_utf8 = to_string(file_name_and_path);
+        execute_file(file_name_and_path_utf8);
     }
 
     auto Lua::execute_string(std::string_view code) const -> void
     {
         if (int status = luaL_loadstring(get_lua_state(), code.data()); status != LUA_OK)
         {
-            throw_error(std::format("[Lua::execute_string] luaL_loadstring returned {}", resolve_status_message(status)));
+            throw_error(fmt::format("[Lua::execute_string] luaL_loadstring returned {}", resolve_status_message(status)));
         }
 
         if (int status = lua_pcall(get_lua_state(), 0, LUA_MULTRET, 0); status != LUA_OK)
         {
-            throw_error(std::format("[Lua::execute_string] lua_pcall returned {}", resolve_status_message(status)));
+            throw_error(fmt::format("[Lua::execute_string] lua_pcall returned {}", resolve_status_message(status)));
         }
     }
 
     auto Lua::execute_string(std::wstring_view code) const -> void
     {
-#pragma warning(disable : 4244)
-        std::string code_ansi = std::string(code.begin(), code.end());
-#pragma warning(default : 4244)
-        execute_string(code_ansi);
+        std::string code_utf8 = to_string(code);
+        execute_string(code_utf8);
+    }
+
+    auto Lua::execute_string(std::u16string_view code) const -> void
+    {
+        std::string code_utf8 = to_string(code);
+        execute_string(code_utf8);
     }
 
     auto Lua::open_all_libs() const -> void
@@ -546,9 +667,19 @@ namespace RC::LuaMadeSimple
         return string;
     }
 
-    auto Lua::set_string(std::string_view string) const -> void
+    auto Lua::set_string(const char* str, size_t len) const -> void
     {
-        lua_pushstring(get_lua_state(), string.data());
+        lua_pushlstring(get_lua_state(), str, len);
+    }
+
+    auto Lua::set_string(const uint8_t* str, size_t len) const -> void
+    {
+        lua_pushlstring(get_lua_state(), reinterpret_cast<const char*>(str), len);
+    }
+
+    auto Lua::set_string(std::string_view str) const -> void
+    {
+        lua_pushlstring(get_lua_state(), str.data(), str.length());
     }
 
     auto Lua::is_number(int32_t force_index) const -> bool
@@ -718,7 +849,7 @@ namespace RC::LuaMadeSimple
             // Intentionally only cleaning the stack if the type wasn't TFUNCTION
             // This is because the TFUNCTION is needed on the stack later
             lua_pop(get_lua_state(), 1);
-            throw std::runtime_error{std::format("[Lua::prepare_function_call] lua_getglobal returned !LUA_TFUNCTION, type returned: {}",
+            throw std::runtime_error{fmt::format("[Lua::prepare_function_call] lua_getglobal returned !LUA_TFUNCTION, type returned: {}",
                                                  lua_typename(get_lua_state(), status))};
         }
     }
@@ -727,7 +858,7 @@ namespace RC::LuaMadeSimple
     {
         if (int status = lua_pcall(get_lua_state(), num_params, num_return_values, 0); status != LUA_OK)
         {
-            throw std::runtime_error{std::format("[Lua::call_function] lua_pcall returned {}", resolve_status_message(status))};
+            throw std::runtime_error{fmt::format("[Lua::call_function] lua_pcall returned {}", resolve_status_message(status))};
         }
     }
 
@@ -804,7 +935,7 @@ namespace RC::LuaMadeSimple
 
         if (final_message.empty() || final_message == error_message + "\nstack traceback:")
         {
-            final_message = std::format("{}\nNo traceback", error_message);
+            final_message = fmt::format("{}\nNo traceback", error_message);
         }
 
         // Clearing the Lua stack because we're treating errors as non-fatal, but we still need to clean everything up
@@ -817,7 +948,7 @@ namespace RC::LuaMadeSimple
         auto final_message = handle_error(lua_state, error_message);
 
         lua_state_errors.emplace(lua_state, final_message);
-        throw std::runtime_error{final_message};
+        luaL_error(lua_state, final_message.c_str());
     }
 
     auto new_state() -> Lua&
@@ -868,19 +999,19 @@ namespace RC::LuaMadeSimple
 
         if (func_type == Lua::LuaFunctionType::Local && !lua_isuserdata(lua_state, 1))
         {
-            throw_error(lua_state, std::format("[process_lua_function] A function requiring userdata as param #1 was called without userdata at param #1"));
+            throw_error(lua_state, fmt::format("[process_lua_function] A function requiring userdata as param #1 was called without userdata at param #1"));
         }
 
         if (!lua_instances.contains(lua_state))
         {
-            throw_error(lua_state, std::format("[process_lua_function] The lua state '{}' has no instance inside lua_instances unordered map", (void*)lua_state));
+            throw_error(lua_state, fmt::format("[process_lua_function] The lua state '{}' has no instance inside lua_instances unordered map", (void*)lua_state));
         }
 
         Lua& data_owner = *lua_instances.find(lua_state)->second;
 
         if (func_id > lua_functions.size())
         {
-            throw_error(lua_state, std::format("[process_lua_function] There was no global function with the id '{}' inside the lua_functions vector", func_id));
+            throw_error(lua_state, fmt::format("[process_lua_function] There was no global function with the id '{}' inside the lua_functions vector", func_id));
         }
 
         if (!lua_functions[func_id].has_value())

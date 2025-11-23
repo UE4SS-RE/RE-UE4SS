@@ -17,7 +17,7 @@ namespace RC::JSON
         Bool,
     };
 
-    inline auto type_to_string(Type type) -> std::string
+    JSON_DEPRECATED inline auto type_to_string(Type type) -> std::string
     {
         switch (type)
         {

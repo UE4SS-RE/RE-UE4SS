@@ -5,7 +5,7 @@
 
 ## Methods
 
-### Get()
+### Get() / get()
 
 - **Return type:** `UObjectDerivative`
 - **Returns:** the pointed to `UObject` or `UObject` derivative.

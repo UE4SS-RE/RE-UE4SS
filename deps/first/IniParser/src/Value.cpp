@@ -1,4 +1,5 @@
 #include <IniParser/Value.hpp>
+#include <Helpers/String.hpp>
 
 namespace RC::Ini
 {
@@ -54,7 +55,7 @@ namespace RC::Ini
 
     auto Value::add_int64_value(const StringType& data, int base) -> void
     {
-        m_int64_value = std::stoi(data, nullptr, base);
+        m_int64_value = std::stoi(to_string(data), nullptr, base);
 
         if (!m_ref)
         {
@@ -66,7 +67,7 @@ namespace RC::Ini
 
     auto Value::add_float_value(const StringType& data) -> void
     {
-        m_float_value = std::stof(data, nullptr);
+        m_float_value = std::stof(to_string(data), nullptr);
 
         if (!m_ref)
         {

@@ -6,6 +6,7 @@
 #include <Common.hpp>
 #include <File/File.hpp>
 #include <GUI/GUI.hpp>
+#include <Input/KeyDef.hpp>
 
 namespace RC
 {
@@ -15,27 +16,34 @@ namespace RC
         struct SectionOverrides
         {
             File::StringType ModsFolderPath{};
+            std::vector<File::StringType> ModsFolderPaths{};
         } Overrides;
 
         struct SectionGeneral
         {
             bool EnableHotReloadSystem{};
+            Input::Key HotReloadKey{Input::Key::R};
             bool UseCache{true};
             bool InvalidateCacheIfDLLDiffers{true};
             bool EnableDebugKeyBindings{false};
             int64_t SecondsToScanBeforeGivingUp{30};
             bool UseUObjectArrayCache{true};
+            StringType InputSource{STR("Default")};
+            bool DoEarlyScan{false};
+            bool SearchByAddress{false};
         } General;
 
         struct SectionEngineVersionOverride
         {
             int64_t MajorVersion{-1};
             int64_t MinorVersion{-1};
+            bool DebugBuild{false};
         } EngineVersionOverride;
 
         struct SectionObjectDumper
         {
             bool LoadAllAssetsBeforeDumpingObjects{};
+            bool UseModuleOffsets{};
         } ObjectDumper;
 
         struct SectionCXXHeaderGenerator
@@ -62,7 +70,7 @@ namespace RC
             bool DebugConsoleVisible{true};
             float DebugGUIFontScaling{1.0};
             GUI::GfxBackend GraphicsAPI{GUI::GfxBackend::GLFW3_OpenGL3};
-            int64_t LiveViewObjectsPerGroup{64 * 1024 / 2};
+            GUI::RenderMode RenderMode{GUI::RenderMode::ExternalThread};
         } Debug;
 
         struct SectionCrashDump
@@ -90,14 +98,19 @@ namespace RC
             bool HookLoadMap{true};
             bool HookCallFunctionByNameWithArguments{true};
             bool HookBeginPlay{true};
+            bool HookEndPlay{true};
             bool HookLocalPlayerExec{true};
             bool HookAActorTick{true};
+            bool HookEngineTick{true};
+            bool HookGameViewportClientTick{true};
+            bool HookUObjectProcessEvent{true};
+            bool HookProcessConsoleExec{true};
+            bool HookUStructLink{true};
             int64_t FExecVTableOffsetInLocalPlayer{0x28};
         } Hooks;
 
         struct ExperimentalFeatures
         {
-            bool GUIUFunctionCaller{false};
         } Experimental;
 
       public:

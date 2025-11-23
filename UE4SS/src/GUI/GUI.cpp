@@ -10,6 +10,7 @@
 #include <GUI/Dumpers.hpp>
 #include <GUI/GLFW3_OpenGL3.hpp>
 #include <GUI/Windows.hpp>
+#include <fonts/droidsansfallback.cpp>
 
 #include <UE4SSProgram.hpp>
 #include <Unreal/UnrealInitializer.hpp>
@@ -21,6 +22,7 @@
 #include "FaSolid900.hpp"
 #include <imgui.h>
 #include <IconsFontAwesome5.h>
+#include <imgui_internal.h>
 
 namespace RC::GUI
 {
@@ -44,7 +46,7 @@ namespace RC::GUI
 
     std::vector<DebuggingGUI::EndOfFrameCallback> DebuggingGUI::s_end_of_frame_callbacks{};
 
-    auto DebuggingGUI::is_valid() -> bool
+    auto DebuggingGUI::is_valid() const -> bool
     {
         return m_os_backend && m_gfx_backend;
     }
@@ -52,7 +54,6 @@ namespace RC::GUI
     auto DebuggingGUI::on_update() -> void
     {
         static bool show_window = true;
-        static bool is_console_open = true;
 
         if (!is_valid())
         {
@@ -61,6 +62,11 @@ namespace RC::GUI
 
         if (show_window)
         {
+            if (imgui_ue4ss_data_should_save())
+            {
+                ImGui::SaveIniSettingsToDisk(m_imgui_ini_file.c_str());
+            }
+
             ImGui::SetNextWindowPos({0, 0});
             auto current_window_size = m_os_backend->is_valid() ? m_os_backend->get_window_size() : m_gfx_backend->get_window_size();
             ImGui::SetNextWindowSize({static_cast<float>(current_window_size.x), static_cast<float>(current_window_size.y)});
@@ -299,11 +305,9 @@ namespace RC::GUI
             return;
         }
 
-        m_is_open = true;
-
         ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
 
-        while (!m_exit_requested && !m_gfx_backend->exit_requested())
+        do
         {
             m_os_backend->exec_message_loop(&m_exit_requested);
 
@@ -311,7 +315,7 @@ namespace RC::GUI
             {
                 break;
             }
-            if (m_thread_stop_token.stop_requested())
+            if (m_thread_stop_token && m_thread_stop_token->stop_requested())
             {
                 break;
             }
@@ -328,7 +332,7 @@ namespace RC::GUI
             {
                 if (!Output::has_internal_error())
                 {
-                    Output::send<LogLevel::Error>(STR("Error: {}\n"), to_wstring(e.what()));
+                    Output::send<LogLevel::Error>(STR("Error: {}\n"), ensure_str(e.what()));
                 }
                 else
                 {
@@ -354,10 +358,7 @@ namespace RC::GUI
                                                               return true;
                                                           }),
                                            s_end_of_frame_callbacks.end());
-        }
-
-        m_is_open = false;
-        m_exit_requested = false;
+        } while (m_thread_stop_token && !m_exit_requested && !m_gfx_backend->exit_requested());
     }
 
     auto DebuggingGUI::execute_at_end_of_frame(EndOfFrameCallback callback) -> void
@@ -365,7 +366,103 @@ namespace RC::GUI
         s_end_of_frame_callbacks.emplace_back(callback);
     }
 
-    auto DebuggingGUI::setup(std::stop_token&& stop_token) -> void
+    auto DebuggingGUI::imgui_ue4ss_data_should_save() -> bool
+    {
+        auto& debugging_gui = UE4SSProgram::get_program().get_debugging_ui();
+
+        auto now = std::chrono::steady_clock::now();
+        auto duration = std::chrono::duration_cast<std::chrono::seconds>(now - debugging_gui.m_imgui_last_save).count();
+        if (duration <= 5)
+        {
+            return false;
+        }
+
+        auto& settings = debugging_gui.m_backend_window_settings;
+
+        auto const current_window_size =
+                debugging_gui.m_os_backend->is_valid() ? debugging_gui.m_os_backend->get_window_size() : debugging_gui.m_gfx_backend->get_window_size();
+        if (current_window_size.x != settings.size_x || current_window_size.y != settings.size_y)
+        {
+            settings.size_x = current_window_size.x;
+            settings.size_y = current_window_size.y;
+            debugging_gui.m_imgui_last_save = now;
+            return true;
+        }
+
+        auto const current_window_position =
+                debugging_gui.m_os_backend->is_valid() ? debugging_gui.m_os_backend->get_window_position() : debugging_gui.m_gfx_backend->get_window_position();
+        if (current_window_position.x != settings.pos_x || current_window_position.y != settings.pos_y)
+        {
+            settings.pos_x = current_window_position.x;
+            settings.pos_y = current_window_position.y;
+            debugging_gui.m_imgui_last_save = now;
+            return true;
+        }
+
+        return false;
+    }
+
+    auto DebuggingGUI::imgui_ue4ss_data_read_open(ImGuiContext*, ImGuiSettingsHandler*, const char* name) -> void*
+    {
+        // UE4SS ImGui Settings
+        return (void*)name;
+    }
+
+    auto DebuggingGUI::imgui_ue4ss_data_read_line(ImGuiContext*, ImGuiSettingsHandler*, void* entry, const char* line) -> void
+    {
+        auto& debugging_gui = UE4SSProgram::get_program().get_debugging_ui();
+
+        // Read settings for backend window size/position
+        WindowSettings& settings = debugging_gui.m_backend_window_settings;
+        if (std::string((const char*)entry) == "Backend_Window")
+        {
+            int x, y;
+            if (sscanf_s(line, "Pos=%i,%i", &x, &y) == 2)
+            {
+                settings.pos_x = x;
+                settings.pos_y = y;
+            }
+            else if (sscanf_s(line, "Size=%i,%i", &x, &y) == 2)
+            {
+                settings.size_x = x;
+                settings.size_y = y;
+            }
+        }
+    }
+
+    auto DebuggingGUI::imgui_ue4ss_data_write_all(ImGuiContext* ctx, ImGuiSettingsHandler* handler, ImGuiTextBuffer* buf) -> void
+    {
+        /*ImGuiContext& g = *ctx;*/
+        auto& debugging_gui = UE4SSProgram::get_program().get_debugging_ui();
+
+        // Write settings for backend window size/position
+        auto current_window_size =
+                debugging_gui.m_os_backend->is_valid() ? debugging_gui.m_os_backend->get_window_size() : debugging_gui.m_gfx_backend->get_window_size();
+        auto current_window_position =
+                debugging_gui.m_os_backend->is_valid() ? debugging_gui.m_os_backend->get_window_position() : debugging_gui.m_gfx_backend->get_window_position();
+
+        // Write to text buffer
+        buf->reserve(buf->size() + 15 * 6); // ballpark reserve
+        const char* backend_window_settings_name = "Backend_Window";
+        buf->appendf("[%s][%s]\n", handler->TypeName, backend_window_settings_name);
+        buf->appendf("Pos=%d,%d\n", static_cast<int>(current_window_position.x), static_cast<int>(current_window_position.y));
+        buf->appendf("Size=%d,%d\n", static_cast<int>(current_window_size.x), static_cast<int>(current_window_size.y));
+        buf->append("\n");
+
+        // Add any additional ImGui UE4SS settings here
+    }
+
+    auto DebuggingGUI::set_open(bool new_open) -> void
+    {
+        m_is_open = new_open;
+    }
+
+    auto DebuggingGUI::request_exit() -> void
+    {
+        m_exit_requested = true;
+    }
+
+    auto DebuggingGUI::setup(std::stop_token* stop_token) -> void
     {
         if (!is_valid())
         {
@@ -375,26 +472,56 @@ namespace RC::GUI
 
         m_live_view.initialize();
 
-        m_os_backend->create_window();
-
         IMGUI_CHECKVERSION();
         ImGui::CreateContext();
         ImGuiIO& io = ImGui::GetIO();
-        (void)io;
+        m_imgui_ini_file = to_string(StringType{UE4SSProgram::get_program().get_working_directory()} + STR("\\imgui.ini"));
+        io.IniFilename = m_imgui_ini_file.c_str();
+
+        // Add .ini handle for UserData type
+        ImGuiSettingsHandler ini_handler;
+        ini_handler.TypeName = "UE4SSData";
+        ini_handler.TypeHash = ImHashStr("UE4SSData");
+        ini_handler.ReadOpenFn = imgui_ue4ss_data_read_open;
+        ini_handler.ReadLineFn = imgui_ue4ss_data_read_line;
+        ini_handler.WriteAllFn = imgui_ue4ss_data_write_all;
+        ImGui::AddSettingsHandler(&ini_handler);
+
+        ImGui::LoadIniSettingsFromDisk(m_imgui_ini_file.c_str());
+
+        auto& debugging_gui = UE4SSProgram::get_program().get_debugging_ui();
+        WindowSettings& settings = debugging_gui.m_backend_window_settings;
+
+        m_os_backend->create_window(settings.pos_x, settings.pos_y, settings.size_x, settings.size_y);
 
         gui_setup_style();
         io.Fonts->Clear();
 
         float base_font_size = 14 * UE4SSProgram::settings_manager.Debug.DebugGUIFontScaling;
 
+        // Increase font atlas size (if needed for many characters)
+        io.Fonts->TexMinWidth = 2048; // Increase the atlas size to allow more glyphs to fit
+
+        // Load base font (Latin characters)
         ImFontConfig font_cfg;
         font_cfg.FontDataOwnedByAtlas = false; // if true it will try to free memory and fail
-        io.Fonts->AddFontFromMemoryTTF(Roboto, sizeof(Roboto), base_font_size, &font_cfg);
+        io.Fonts->AddFontFromMemoryTTF(Roboto, sizeof(Roboto), base_font_size, &font_cfg, io.Fonts->GetGlyphRangesDefault());
+        font_cfg.FontDataOwnedByAtlas = false;
 
-        float icon_font_size = base_font_size * 2.0f / 3.0f; // FontAwesome fonts need to have their sizes reduced;
+        // Load a comprehensive font for CJK characters
+        ImFontConfig fallback_font_cfg;
+        fallback_font_cfg.MergeMode = true; // Merge into the previous font
+        fallback_font_cfg.FontDataOwnedByAtlas = true;
+
+        // Load glyph ranges for CJK, including rare characters
+        const ImWchar* custom_ranges = io.Fonts->GetGlyphRangesChineseFull(); // Full CJK coverage
+        io.Fonts->AddFontFromMemoryCompressedTTF(DroidSansFallback_compressed_data, DroidSansFallback_compressed_size, base_font_size, &fallback_font_cfg, custom_ranges);
+
+        // Load icons (FontAwesome or any other icon font)
+        float icon_font_size = base_font_size * 2.0f / 3.0f;
         static const ImWchar icons_ranges[] = {ICON_MIN_FA, ICON_MAX_16_FA, 0};
         ImFontConfig icons_cfg;
-        icons_cfg.FontDataOwnedByAtlas = false; // if true it will try to free memory and fail
+        icons_cfg.FontDataOwnedByAtlas = false;
         icons_cfg.MergeMode = true;
         icons_cfg.PixelSnapH = true;
         icons_cfg.GlyphMinAdvanceX = icon_font_size;
@@ -403,14 +530,13 @@ namespace RC::GUI
         m_os_backend->init();
         m_gfx_backend->init();
 
-        main_loop_internal();
+        set_open(true);
 
-        m_gfx_backend->shutdown();
-        m_os_backend->shutdown();
-        ImGui::DestroyContext();
-
-        m_gfx_backend->cleanup();
-        m_os_backend->cleanup();
+        if (m_thread_stop_token)
+        {
+            main_loop_internal();
+            uninitialize();
+        }
     }
 
     auto DebuggingGUI::set_gfx_backend(GfxBackend backend) -> void
@@ -444,12 +570,25 @@ namespace RC::GUI
         m_tabs.erase(std::remove(m_tabs.begin(), m_tabs.end(), tab), m_tabs.end());
     }
 
+    auto DebuggingGUI::uninitialize() -> void
+    {
+        m_gfx_backend->shutdown();
+        m_os_backend->shutdown();
+        ImGui::DestroyContext();
+
+        m_gfx_backend->cleanup();
+        m_os_backend->cleanup();
+
+        set_open(false);
+        m_exit_requested = false;
+    }
+
     DebuggingGUI::~DebuggingGUI()
     {
         UE4SSProgram::get_program().stop_render_thread();
     }
 
-    auto gui_thread(std::stop_token stop_token, DebuggingGUI* debugging_ui) -> void
+    auto gui_thread(std::optional<std::stop_token> stop_token, DebuggingGUI* debugging_ui) -> void
     {
         ProfilerSetThreadName("UE4SS-GuiThread");
 
@@ -458,6 +597,6 @@ namespace RC::GUI
             Output::send<LogLevel::Error>(STR("Could not start GUI render thread because 'debugging_ui' was nullptr."));
             return;
         }
-        debugging_ui->setup(std::move(stop_token));
+        debugging_ui->setup(stop_token.has_value() ? &stop_token.value() : nullptr);
     }
 } // namespace RC::GUI

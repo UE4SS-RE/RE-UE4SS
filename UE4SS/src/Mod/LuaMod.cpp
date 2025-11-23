@@ -18,6 +18,7 @@
 #include <LuaType/LuaCustomProperty.hpp>
 #include <LuaType/LuaFName.hpp>
 #include <LuaType/LuaFText.hpp>
+#include <LuaType/LuaUnrealString.hpp>
 #include <LuaType/LuaFOutputDevice.hpp>
 #include <LuaType/LuaModRef.hpp>
 #include <LuaType/LuaUClass.hpp>
@@ -42,14 +43,18 @@
 #include <Unreal/Property/FBoolProperty.hpp>
 #include <Unreal/Property/FClassProperty.hpp>
 #include <Unreal/Property/FEnumProperty.hpp>
+#include <Unreal/Property/FSetProperty.hpp>
 #include <Unreal/Property/FMapProperty.hpp>
 #include <Unreal/Property/FNameProperty.hpp>
 #include <Unreal/Property/FObjectProperty.hpp>
-#include <Unreal/Property/FStrProperty.hpp>
+#include <Unreal/CoreUObject/UObject/FStrProperty.hpp>
+#include <Unreal/Core/Containers/FUtf8String.hpp>
+#include <Unreal/Core/Containers/FAnsiString.hpp>
 #include <Unreal/Property/FStructProperty.hpp>
 #include <Unreal/Property/FTextProperty.hpp>
 #include <Unreal/Property/FWeakObjectProperty.hpp>
 #include <Unreal/Property/NumericPropertyTypes.hpp>
+#include <Unreal/CoreUObject/UObject/FUtf8StrProperty.hpp>
 #include <Unreal/TypeChecker.hpp>
 #include <Unreal/UAssetRegistry.hpp>
 #include <Unreal/UAssetRegistryHelpers.hpp>
@@ -61,6 +66,10 @@
 #include <Unreal/UPackage.hpp>
 #include <Unreal/UnrealVersion.hpp>
 #include <UnrealCustom/CustomProperty.hpp>
+
+#if PLATFORM_WINDOWS
+#include <Unreal/Core/Windows/AllowWindowsPlatformTypes.hpp>
+#endif
 #pragma warning(default : 4005)
 
 namespace RC
@@ -92,6 +101,19 @@ namespace RC
         return lua.get_bool(-1);
     }
 
+    static auto get_function_name_without_prefix(const StringType& function_full_name) -> StringType
+    {
+        static constexpr StringViewType function_prefix{STR("Function ")};
+        if (auto prefix_pos = function_full_name.find(function_prefix); prefix_pos != function_full_name.npos)
+        {
+            return function_full_name.substr(prefix_pos + function_prefix.size());
+        }
+        else
+        {
+            return function_full_name;
+        }
+    }
+
     struct LuaUnrealScriptFunctionData
     {
         Unreal::CallbackId pre_callback_id;
@@ -106,6 +128,7 @@ namespace RC
         bool has_return_value{};
         // Will be non-nullptr if the UFunction has a return value
         Unreal::FProperty* return_property{};
+        bool scheduled_for_removal{};
     };
     static std::vector<std::unique_ptr<LuaUnrealScriptFunctionData>> g_hooked_script_function_data{};
 
@@ -124,16 +147,17 @@ namespace RC
 
         // Set up the first param (context / this-ptr)
         // TODO: Check what happens if a static UFunction is hooked since they don't have any context
-        static auto s_object_property_name = Unreal::FName(STR("ObjectProperty"));
+        static auto s_object_property_name = Unreal::FName(STR("ObjectProperty"), Unreal::FNAME_Find);
         LuaType::RemoteUnrealParam::construct(lua_data.lua, &context.Context, s_object_property_name);
 
         // Attempt at dynamically fetching the params
-        uint16_t return_value_offset = context.TheStack.CurrentNativeFunction()->GetReturnValueOffset();
+        const auto FunctionBeingExecuted = lua_data.unreal_function;
+        uint16_t return_value_offset = FunctionBeingExecuted->GetReturnValueOffset();
 
         // 'ReturnValueOffset' is 0xFFFF if the UFunction return type is void
         lua_data.has_return_value = return_value_offset != 0xFFFF;
 
-        uint8_t num_unreal_params = context.TheStack.CurrentNativeFunction()->GetNumParms();
+        uint8_t num_unreal_params = FunctionBeingExecuted->GetNumParms();
         if (lua_data.has_return_value)
         {
             // Subtract one from the number of params if there's a return value
@@ -146,7 +170,7 @@ namespace RC
         {
             // int32_t current_param_offset{};
 
-            for (Unreal::FProperty* func_prop : context.TheStack.CurrentNativeFunction()->ForEachProperty())
+            for (Unreal::FProperty* func_prop : FunctionBeingExecuted->ForEachProperty())
             {
                 // Skip this property if it's not a parameter
                 if (!func_prop->HasAnyPropertyFlags(Unreal::EPropertyFlags::CPF_Parm))
@@ -191,7 +215,7 @@ namespace RC
                 }
                 else
                 {
-                    lua_data.lua.throw_error(std::format(
+                    lua_data.lua.throw_error(fmt::format(
                             "[unreal_script_function_hook] Tried accessing unreal property without a registered handler. Property type '{}' not supported.",
                             to_string(property_type.ToString())));
                 }
@@ -209,6 +233,14 @@ namespace RC
         // This will execute any internal UE4 scripting functions & native functions depending on the type of UFunction
         // The API will automatically call the original function
         // This function continues in 'lua_unreal_script_function_hook_post' which executes immediately after the original function gets called
+
+        if (lua_data.scheduled_for_removal)
+        {
+            auto native_hook_pre_id_it = LuaMod::m_generic_hook_id_to_native_hook_id.find(lua_data.pre_callback_id);
+            auto function_name_no_prefix = get_function_name_without_prefix(lua_data.unreal_function->GetFullName());
+            Output::send<LogLevel::Verbose>(STR("Unregistering native pre-hook ({}) for {}\n"), native_hook_pre_id_it->first, function_name_no_prefix);
+            lua_data.unreal_function->UnregisterHook(native_hook_pre_id_it->second);
+        }
 
         // No longer promising to be in the game thread
         set_is_in_game_thread(lua_data.lua, false);
@@ -254,8 +286,8 @@ namespace RC
                     // If the type wasn't supported then we simply clean the Lua stack, output a warning and then do nothing
                     lua_data.lua.discard_value();
 
-                    std::wstring parameter_type_name = property_type_name.ToString();
-                    std::wstring parameter_name = lua_data.return_property->GetName();
+                    auto parameter_type_name = property_type_name.ToString();
+                    auto parameter_name = lua_data.return_property->GetName();
 
                     Output::send(
                             STR("Tried altering return value of a hooked UFunction without a registered handler for return type Return property '{}' of type "
@@ -273,16 +305,17 @@ namespace RC
             lua_data.lua.registry().get_function_ref(lua_data.lua_post_callback_ref);
 
             // Set up the first param (context / this-ptr)
-            static auto s_object_property_name = Unreal::FName(STR("ObjectProperty"));
+            static auto s_object_property_name = Unreal::FName(STR("ObjectProperty"), Unreal::FNAME_Find);
             LuaType::RemoteUnrealParam::construct(lua_data.lua, &context.Context, s_object_property_name);
 
             // Attempt at dynamically fetching the params
-            uint16_t return_value_offset = context.TheStack.CurrentNativeFunction()->GetReturnValueOffset();
+            const auto FunctionBeingExecuted = lua_data.unreal_function;
+            uint16_t return_value_offset = FunctionBeingExecuted->GetReturnValueOffset();
 
             // 'ReturnValueOffset' is 0xFFFF if the UFunction return type is void
             lua_data.has_return_value = return_value_offset != 0xFFFF;
 
-            uint8_t num_unreal_params = context.TheStack.CurrentNativeFunction()->GetNumParms();
+            uint8_t num_unreal_params = FunctionBeingExecuted->GetNumParms();
             if (lua_data.has_return_value)
             {
                 // Subtract one from the number of params if there's a return value
@@ -290,7 +323,7 @@ namespace RC
                 --num_unreal_params;
 
                 // Set up the return value param so that Lua can access the original return value
-                auto return_property = context.TheStack.CurrentNativeFunction()->GetReturnProperty();
+                auto return_property = FunctionBeingExecuted->GetReturnProperty();
                 auto return_property_type = return_property->GetClass().GetFName();
                 int32_t name_comparison_index = return_property_type.GetComparisonIndex();
                 if (LuaType::StaticState::m_property_value_pushers.contains(name_comparison_index))
@@ -307,7 +340,7 @@ namespace RC
             bool has_properties_to_process = lua_data.has_return_value || num_unreal_params > 0;
             if (has_properties_to_process && context.TheStack.Locals())
             {
-                for (Unreal::FProperty* func_prop : context.TheStack.CurrentNativeFunction()->ForEachProperty())
+                for (Unreal::FProperty* func_prop : FunctionBeingExecuted->ForEachProperty())
                 {
                     // Skip this property if it's not a parameter
                     if (!func_prop->HasAnyPropertyFlags(Unreal::EPropertyFlags::CPF_Parm))
@@ -328,8 +361,17 @@ namespace RC
                     if (LuaType::StaticState::m_property_value_pushers.contains(name_comparison_index))
                     {
                         // Non-typed pointer to the current parameter value
-                        // void* data = &context.TheStack.Locals[current_param_offset];
-                        void* data = func_prop->ContainerPtrToValuePtr<void>(context.TheStack.Locals());
+                        void* data{};
+                        if (func_prop->HasAnyPropertyFlags(Unreal::EPropertyFlags::CPF_OutParm))
+                        {
+                            // For out params (including ref params), get the modified value from OutParms
+                            data = Unreal::FindOutParamValueAddress(context.TheStack, func_prop);
+                        }
+                        else
+                        {
+                            // For regular input params, read from Locals
+                            data = func_prop->ContainerPtrToValuePtr<void>(context.TheStack.Locals());
+                        }
 
                         // Keeping track of where in the 'Locals' array the next property is
                         // current_param_offset += func_prop->GetSize();
@@ -345,7 +387,7 @@ namespace RC
                     }
                     else
                     {
-                        lua_data.lua.throw_error(std::format(
+                        lua_data.lua.throw_error(fmt::format(
                                 "[unreal_script_function_hook] Tried accessing unreal property without a registered handler. Property type '{}' not supported.",
                                 to_string(property_type.ToString())));
                     }
@@ -365,6 +407,25 @@ namespace RC
         process_return_value();
         process_return_value();
 
+        if (lua_data.scheduled_for_removal)
+        {
+            auto native_hook_post_id_it = LuaMod::m_generic_hook_id_to_native_hook_id.find(lua_data.post_callback_id);
+            auto function_name_no_prefix = get_function_name_without_prefix(lua_data.unreal_function->GetFullName());
+            Output::send<LogLevel::Verbose>(STR("Unregistering native post-hook ({}) for {}\n"), native_hook_post_id_it->first, function_name_no_prefix);
+            lua_data.unreal_function->UnregisterHook(native_hook_post_id_it->second);
+
+            auto mod = get_mod_ref(lua_data.lua);
+            luaL_unref(lua_data.lua.get_lua_state(), LUA_REGISTRYINDEX, lua_data.lua_callback_ref);
+            if (lua_data.lua_post_callback_ref != -1)
+            {
+                luaL_unref(lua_data.lua.get_lua_state(), LUA_REGISTRYINDEX, lua_data.lua_post_callback_ref);
+            }
+            luaL_unref(mod->lua().get_lua_state(), LUA_REGISTRYINDEX, lua_data.lua_thread_ref);
+            std::erase_if(g_hooked_script_function_data, [&](const std::unique_ptr<LuaUnrealScriptFunctionData>& elem) {
+                return elem.get() == &lua_data;
+            });
+        }
+
         // No longer promising to be in the game thread
         set_is_in_game_thread(lua_data.lua, false);
     }
@@ -372,171 +433,171 @@ namespace RC
     static auto register_input_globals(const LuaMadeSimple::Lua& lua) -> void
     {
         LuaMadeSimple::Lua::Table key_table = lua.prepare_new_table();
-        key_table.add_pair("LEFT_MOUSE_BUTTON", 0x1);
-        key_table.add_pair("RIGHT_MOUSE_BUTTON", 0x2);
-        key_table.add_pair("CANCEL", 0x3);
-        key_table.add_pair("MIDDLE_MOUSE_BUTTON", 0x4);
-        key_table.add_pair("XBUTTON_ONE", 0x5);
-        key_table.add_pair("XBUTTON_TWO", 0x6);
-        key_table.add_pair("BACKSPACE", 0x8);
-        key_table.add_pair("TAB", 0x9);
-        key_table.add_pair("CLEAR", 0x0C);
-        key_table.add_pair("RETURN", 0x0D);
-        key_table.add_pair("PAUSE", 0x13);
-        key_table.add_pair("CAPS_LOCK", 0x14);
-        key_table.add_pair("IME_KANA", 0x15);
-        key_table.add_pair("IME_HANGUEL", 0x15);
-        key_table.add_pair("IME_HANGUL", 0x15);
-        key_table.add_pair("IME_ON", 0x16);
-        key_table.add_pair("IME_JUNJA", 0x17);
-        key_table.add_pair("IME_FINAL", 0x18);
-        key_table.add_pair("IME_HANJA", 0x19);
-        key_table.add_pair("IME_KANJI", 0x19);
-        key_table.add_pair("IME_OFF", 0x1A);
-        key_table.add_pair("ESCAPE", 0x1B);
-        key_table.add_pair("IME_CONVERT", 0x1C);
-        key_table.add_pair("IME_NONCONVERT", 0x1D);
-        key_table.add_pair("IME_ACCEPT", 0x1E);
-        key_table.add_pair("IME_MODECHANGE", 0x1F);
-        key_table.add_pair("SPACE", 0x20);
-        key_table.add_pair("PAGE_UP", 0x21);
-        key_table.add_pair("PAGE_DOWN", 0x22);
-        key_table.add_pair("END", 0x23);
-        key_table.add_pair("HOME", 0x24);
-        key_table.add_pair("LEFT_ARROW", 0x25);
-        key_table.add_pair("UP_ARROW", 0x26);
-        key_table.add_pair("RIGHT_ARROW", 0x27);
-        key_table.add_pair("DOWN_ARROW", 0x28);
-        key_table.add_pair("SELECT", 0x29);
-        key_table.add_pair("PRINT", 0x2A);
-        key_table.add_pair("EXECUTE", 0x2B);
-        key_table.add_pair("PRINT_SCREEN", 0x2C);
-        key_table.add_pair("INS", 0x2D);
-        key_table.add_pair("DEL", 0x2E);
-        key_table.add_pair("HELP", 0x2F);
-        key_table.add_pair("ZERO", 0x30);
-        key_table.add_pair("ONE", 0x31);
-        key_table.add_pair("TWO", 0x32);
-        key_table.add_pair("THREE", 0x33);
-        key_table.add_pair("FOUR", 0x34);
-        key_table.add_pair("FIVE", 0x35);
-        key_table.add_pair("SIX", 0x36);
-        key_table.add_pair("SEVEN", 0x37);
-        key_table.add_pair("EIGHT", 0x38);
-        key_table.add_pair("NINE", 0x39);
-        key_table.add_pair("A", 0x41);
-        key_table.add_pair("B", 0x42);
-        key_table.add_pair("C", 0x43);
-        key_table.add_pair("D", 0x44);
-        key_table.add_pair("E", 0x45);
-        key_table.add_pair("F", 0x46);
-        key_table.add_pair("G", 0x47);
-        key_table.add_pair("H", 0x48);
-        key_table.add_pair("I", 0x49);
-        key_table.add_pair("J", 0x4A);
-        key_table.add_pair("K", 0x4B);
-        key_table.add_pair("L", 0x4C);
-        key_table.add_pair("M", 0x4D);
-        key_table.add_pair("N", 0x4E);
-        key_table.add_pair("O", 0x4F);
-        key_table.add_pair("P", 0x50);
-        key_table.add_pair("Q", 0x51);
-        key_table.add_pair("R", 0x52);
-        key_table.add_pair("S", 0x53);
-        key_table.add_pair("T", 0x54);
-        key_table.add_pair("U", 0x55);
-        key_table.add_pair("V", 0x56);
-        key_table.add_pair("W", 0x57);
-        key_table.add_pair("X", 0x58);
-        key_table.add_pair("Y", 0x59);
-        key_table.add_pair("Z", 0x5A);
-        key_table.add_pair("LEFT_WIN", 0x5B);
-        key_table.add_pair("RIGHT_WIN", 0x5C);
-        key_table.add_pair("APPS", 0x5D);
-        key_table.add_pair("SLEEP", 0x5F);
-        key_table.add_pair("NUM_ZERO", 0x69);
-        key_table.add_pair("NUM_ONE", 0x61);
-        key_table.add_pair("NUM_TWO", 0x62);
-        key_table.add_pair("NUM_THREE", 0x63);
-        key_table.add_pair("NUM_FOUR", 0x64);
-        key_table.add_pair("NUM_FIVE", 0x65);
-        key_table.add_pair("NUM_SIX", 0x66);
-        key_table.add_pair("NUM_SEVEN", 0x67);
-        key_table.add_pair("NUM_EIGHT", 0x68);
-        key_table.add_pair("NUM_NINE", 0x69);
-        key_table.add_pair("MULTIPLY", 0x6A);
-        key_table.add_pair("ADD", 0x6B);
-        key_table.add_pair("SEPARATOR", 0x6C);
-        key_table.add_pair("SUBTRACT", 0x6D);
-        key_table.add_pair("DECIMAL", 0x6E);
-        key_table.add_pair("DIVIDE", 0x6F);
-        key_table.add_pair("F1", 0x70);
-        key_table.add_pair("F2", 0x71);
-        key_table.add_pair("F3", 0x72);
-        key_table.add_pair("F4", 0x73);
-        key_table.add_pair("F5", 0x74);
-        key_table.add_pair("F6", 0x75);
-        key_table.add_pair("F7", 0x76);
-        key_table.add_pair("F8", 0x77);
-        key_table.add_pair("F9", 0x78);
-        key_table.add_pair("F10", 0x79);
-        key_table.add_pair("F11", 0x7A);
-        key_table.add_pair("F12", 0x7B);
-        key_table.add_pair("F13", 0x7C);
-        key_table.add_pair("F14", 0x7D);
-        key_table.add_pair("F15", 0x7E);
-        key_table.add_pair("F16", 0x7F);
-        key_table.add_pair("F17", 0x80);
-        key_table.add_pair("F18", 0x81);
-        key_table.add_pair("F19", 0x82);
-        key_table.add_pair("F20", 0x83);
-        key_table.add_pair("F21", 0x84);
-        key_table.add_pair("F22", 0x85);
-        key_table.add_pair("F23", 0x86);
-        key_table.add_pair("F24", 0x87);
-        key_table.add_pair("NUM_LOCK", 0x90);
-        key_table.add_pair("SCROLL_LOCK", 0x91);
-        key_table.add_pair("BROWSER_BACK", 0xA6);
-        key_table.add_pair("BROWSER_FORWARD", 0xA7);
-        key_table.add_pair("BROWSER_REFRESH", 0xA8);
-        key_table.add_pair("BROWSER_STOP", 0xA9);
-        key_table.add_pair("BROWSER_SEARCH", 0xAA);
-        key_table.add_pair("BROWSER_FAVORITES", 0xAB);
-        key_table.add_pair("BROWSER_HOME", 0xAC);
-        key_table.add_pair("VOLUME_MUTE", 0xAD);
-        key_table.add_pair("VOLUME_DOWN", 0xAE);
-        key_table.add_pair("VOLUME_UP", 0xAF);
-        key_table.add_pair("MEDIA_NEXT_TRACK", 0xB0);
-        key_table.add_pair("MEDIA_PREV_TRACK", 0xB1);
-        key_table.add_pair("MEDIA_STOP", 0xB2);
-        key_table.add_pair("MEDIA_PLAY_PAUSE", 0xB3);
-        key_table.add_pair("LAUNCH_MAIL", 0xB4);
-        key_table.add_pair("LAUNCH_MEDIA_SELECT", 0xB5);
-        key_table.add_pair("LAUNCH_APP1", 0xB6);
-        key_table.add_pair("LAUNCH_APP2", 0xB7);
-        key_table.add_pair("OEM_ONE", 0xBA);
-        key_table.add_pair("OEM_PLUS", 0xBB);
-        key_table.add_pair("OEM_COMMA", 0xBC);
-        key_table.add_pair("OEM_MINUS", 0xBD);
-        key_table.add_pair("OEM_PERIOD", 0xBE);
-        key_table.add_pair("OEM_TWO", 0xBF);
-        key_table.add_pair("OEM_THREE", 0xC0);
-        key_table.add_pair("OEM_FOUR", 0xDB);
-        key_table.add_pair("OEM_FIVE", 0xDC);
-        key_table.add_pair("OEM_SIX", 0xDD);
-        key_table.add_pair("OEM_SEVEN", 0xDE);
-        key_table.add_pair("OEM_EIGHT", 0xDF);
-        key_table.add_pair("OEM_102", 0xE2);
-        key_table.add_pair("IME_PROCESS", 0xE5);
-        key_table.add_pair("PACKET", 0xE7);
-        key_table.add_pair("ATTN", 0xF6);
-        key_table.add_pair("CRSEL", 0xF7);
-        key_table.add_pair("EXSEL", 0xF8);
-        key_table.add_pair("EREOF", 0xF9);
-        key_table.add_pair("PLAY", 0xFA);
-        key_table.add_pair("ZOOM", 0xFB);
-        key_table.add_pair("PA1", 0xFD);
-        key_table.add_pair("OEM_CLEAR", 0xFE);
+        key_table.add_pair("LEFT_MOUSE_BUTTON", static_cast<uint32_t>(Input::Key::LEFT_MOUSE_BUTTON));
+        key_table.add_pair("RIGHT_MOUSE_BUTTON", static_cast<uint32_t>(Input::Key::RIGHT_MOUSE_BUTTON));
+        key_table.add_pair("CANCEL", static_cast<uint32_t>(Input::Key::CANCEL));
+        key_table.add_pair("MIDDLE_MOUSE_BUTTON", static_cast<uint32_t>(Input::Key::MIDDLE_MOUSE_BUTTON));
+        key_table.add_pair("XBUTTON_ONE", static_cast<uint32_t>(Input::Key::XBUTTON_ONE));
+        key_table.add_pair("XBUTTON_TWO", static_cast<uint32_t>(Input::Key::XBUTTON_TWO));
+        key_table.add_pair("BACKSPACE", static_cast<uint32_t>(Input::Key::BACKSPACE));
+        key_table.add_pair("TAB", static_cast<uint32_t>(Input::Key::TAB));
+        key_table.add_pair("CLEAR", static_cast<uint32_t>(Input::Key::CLEAR));
+        key_table.add_pair("RETURN", static_cast<uint32_t>(Input::Key::RETURN));
+        key_table.add_pair("PAUSE", static_cast<uint32_t>(Input::Key::PAUSE));
+        key_table.add_pair("CAPS_LOCK", static_cast<uint32_t>(Input::Key::CAPS_LOCK));
+        key_table.add_pair("IME_KANA", static_cast<uint32_t>(Input::Key::IME_KANA));
+        key_table.add_pair("IME_HANGUEL", static_cast<uint32_t>(Input::Key::IME_HANGUEL));
+        key_table.add_pair("IME_HANGUL", static_cast<uint32_t>(Input::Key::IME_HANGUL));
+        key_table.add_pair("IME_ON", static_cast<uint32_t>(Input::Key::IME_ON));
+        key_table.add_pair("IME_JUNJA", static_cast<uint32_t>(Input::Key::IME_JUNJA));
+        key_table.add_pair("IME_FINAL", static_cast<uint32_t>(Input::Key::IME_FINAL));
+        key_table.add_pair("IME_HANJA", static_cast<uint32_t>(Input::Key::IME_HANJA));
+        key_table.add_pair("IME_KANJI", static_cast<uint32_t>(Input::Key::IME_KANJI));
+        key_table.add_pair("IME_OFF", static_cast<uint32_t>(Input::Key::IME_OFF));
+        key_table.add_pair("ESCAPE", static_cast<uint32_t>(Input::Key::ESCAPE));
+        key_table.add_pair("IME_CONVERT", static_cast<uint32_t>(Input::Key::IME_CONVERT));
+        key_table.add_pair("IME_NONCONVERT", static_cast<uint32_t>(Input::Key::IME_NONCONVERT));
+        key_table.add_pair("IME_ACCEPT", static_cast<uint32_t>(Input::Key::IME_ACCEPT));
+        key_table.add_pair("IME_MODECHANGE", static_cast<uint32_t>(Input::Key::IME_MODECHANGE));
+        key_table.add_pair("SPACE", static_cast<uint32_t>(Input::Key::SPACE));
+        key_table.add_pair("PAGE_UP", static_cast<uint32_t>(Input::Key::PAGE_UP));
+        key_table.add_pair("PAGE_DOWN", static_cast<uint32_t>(Input::Key::PAGE_DOWN));
+        key_table.add_pair("END", static_cast<uint32_t>(Input::Key::END));
+        key_table.add_pair("HOME", static_cast<uint32_t>(Input::Key::HOME));
+        key_table.add_pair("LEFT_ARROW", static_cast<uint32_t>(Input::Key::LEFT_ARROW));
+        key_table.add_pair("UP_ARROW", static_cast<uint32_t>(Input::Key::UP_ARROW));
+        key_table.add_pair("RIGHT_ARROW", static_cast<uint32_t>(Input::Key::RIGHT_ARROW));
+        key_table.add_pair("DOWN_ARROW", static_cast<uint32_t>(Input::Key::DOWN_ARROW));
+        key_table.add_pair("SELECT", static_cast<uint32_t>(Input::Key::SELECT));
+        key_table.add_pair("PRINT", static_cast<uint32_t>(Input::Key::PRINT));
+        key_table.add_pair("EXECUTE", static_cast<uint32_t>(Input::Key::EXECUTE));
+        key_table.add_pair("PRINT_SCREEN", static_cast<uint32_t>(Input::Key::PRINT_SCREEN));
+        key_table.add_pair("INS", static_cast<uint32_t>(Input::Key::INS));
+        key_table.add_pair("DEL", static_cast<uint32_t>(Input::Key::DEL));
+        key_table.add_pair("HELP", static_cast<uint32_t>(Input::Key::HELP));
+        key_table.add_pair("ZERO", static_cast<uint32_t>(Input::Key::ZERO));
+        key_table.add_pair("ONE", static_cast<uint32_t>(Input::Key::ONE));
+        key_table.add_pair("TWO", static_cast<uint32_t>(Input::Key::TWO));
+        key_table.add_pair("THREE", static_cast<uint32_t>(Input::Key::THREE));
+        key_table.add_pair("FOUR", static_cast<uint32_t>(Input::Key::FOUR));
+        key_table.add_pair("FIVE", static_cast<uint32_t>(Input::Key::FIVE));
+        key_table.add_pair("SIX", static_cast<uint32_t>(Input::Key::SIX));
+        key_table.add_pair("SEVEN", static_cast<uint32_t>(Input::Key::SEVEN));
+        key_table.add_pair("EIGHT", static_cast<uint32_t>(Input::Key::EIGHT));
+        key_table.add_pair("NINE", static_cast<uint32_t>(Input::Key::NINE));
+        key_table.add_pair("A", static_cast<uint32_t>(Input::Key::A));
+        key_table.add_pair("B", static_cast<uint32_t>(Input::Key::B));
+        key_table.add_pair("C", static_cast<uint32_t>(Input::Key::C));
+        key_table.add_pair("D", static_cast<uint32_t>(Input::Key::D));
+        key_table.add_pair("E", static_cast<uint32_t>(Input::Key::E));
+        key_table.add_pair("F", static_cast<uint32_t>(Input::Key::F));
+        key_table.add_pair("G", static_cast<uint32_t>(Input::Key::G));
+        key_table.add_pair("H", static_cast<uint32_t>(Input::Key::H));
+        key_table.add_pair("I", static_cast<uint32_t>(Input::Key::I));
+        key_table.add_pair("J", static_cast<uint32_t>(Input::Key::J));
+        key_table.add_pair("K", static_cast<uint32_t>(Input::Key::K));
+        key_table.add_pair("L", static_cast<uint32_t>(Input::Key::L));
+        key_table.add_pair("M", static_cast<uint32_t>(Input::Key::M));
+        key_table.add_pair("N", static_cast<uint32_t>(Input::Key::N));
+        key_table.add_pair("O", static_cast<uint32_t>(Input::Key::O));
+        key_table.add_pair("P", static_cast<uint32_t>(Input::Key::P));
+        key_table.add_pair("Q", static_cast<uint32_t>(Input::Key::Q));
+        key_table.add_pair("R", static_cast<uint32_t>(Input::Key::R));
+        key_table.add_pair("S", static_cast<uint32_t>(Input::Key::S));
+        key_table.add_pair("T", static_cast<uint32_t>(Input::Key::T));
+        key_table.add_pair("U", static_cast<uint32_t>(Input::Key::U));
+        key_table.add_pair("V", static_cast<uint32_t>(Input::Key::V));
+        key_table.add_pair("W", static_cast<uint32_t>(Input::Key::W));
+        key_table.add_pair("X", static_cast<uint32_t>(Input::Key::X));
+        key_table.add_pair("Y", static_cast<uint32_t>(Input::Key::Y));
+        key_table.add_pair("Z", static_cast<uint32_t>(Input::Key::Z));
+        key_table.add_pair("LEFT_WIN", static_cast<uint32_t>(Input::Key::LEFT_WIN));
+        key_table.add_pair("RIGHT_WIN", static_cast<uint32_t>(Input::Key::RIGHT_WIN));
+        key_table.add_pair("APPS", static_cast<uint32_t>(Input::Key::APPS));
+        key_table.add_pair("SLEEP", static_cast<uint32_t>(Input::Key::SLEEP));
+        key_table.add_pair("NUM_ZERO", static_cast<uint32_t>(Input::Key::NUM_ZERO));
+        key_table.add_pair("NUM_ONE", static_cast<uint32_t>(Input::Key::NUM_ONE));
+        key_table.add_pair("NUM_TWO", static_cast<uint32_t>(Input::Key::NUM_TWO));
+        key_table.add_pair("NUM_THREE", static_cast<uint32_t>(Input::Key::NUM_THREE));
+        key_table.add_pair("NUM_FOUR", static_cast<uint32_t>(Input::Key::NUM_FOUR));
+        key_table.add_pair("NUM_FIVE", static_cast<uint32_t>(Input::Key::NUM_FIVE));
+        key_table.add_pair("NUM_SIX", static_cast<uint32_t>(Input::Key::NUM_SIX));
+        key_table.add_pair("NUM_SEVEN", static_cast<uint32_t>(Input::Key::NUM_SEVEN));
+        key_table.add_pair("NUM_EIGHT", static_cast<uint32_t>(Input::Key::NUM_EIGHT));
+        key_table.add_pair("NUM_NINE", static_cast<uint32_t>(Input::Key::NUM_NINE));
+        key_table.add_pair("MULTIPLY", static_cast<uint32_t>(Input::Key::MULTIPLY));
+        key_table.add_pair("ADD", static_cast<uint32_t>(Input::Key::ADD));
+        key_table.add_pair("SEPARATOR", static_cast<uint32_t>(Input::Key::SEPARATOR));
+        key_table.add_pair("SUBTRACT", static_cast<uint32_t>(Input::Key::SUBTRACT));
+        key_table.add_pair("DECIMAL", static_cast<uint32_t>(Input::Key::DECIMAL));
+        key_table.add_pair("DIVIDE", static_cast<uint32_t>(Input::Key::DIVIDE));
+        key_table.add_pair("F1", static_cast<uint32_t>(Input::Key::F1));
+        key_table.add_pair("F2", static_cast<uint32_t>(Input::Key::F2));
+        key_table.add_pair("F3", static_cast<uint32_t>(Input::Key::F3));
+        key_table.add_pair("F4", static_cast<uint32_t>(Input::Key::F4));
+        key_table.add_pair("F5", static_cast<uint32_t>(Input::Key::F5));
+        key_table.add_pair("F6", static_cast<uint32_t>(Input::Key::F6));
+        key_table.add_pair("F7", static_cast<uint32_t>(Input::Key::F7));
+        key_table.add_pair("F8", static_cast<uint32_t>(Input::Key::F8));
+        key_table.add_pair("F9", static_cast<uint32_t>(Input::Key::F9));
+        key_table.add_pair("F10", static_cast<uint32_t>(Input::Key::F10));
+        key_table.add_pair("F11", static_cast<uint32_t>(Input::Key::F11));
+        key_table.add_pair("F12", static_cast<uint32_t>(Input::Key::F12));
+        key_table.add_pair("F13", static_cast<uint32_t>(Input::Key::F13));
+        key_table.add_pair("F14", static_cast<uint32_t>(Input::Key::F14));
+        key_table.add_pair("F15", static_cast<uint32_t>(Input::Key::F15));
+        key_table.add_pair("F16", static_cast<uint32_t>(Input::Key::F16));
+        key_table.add_pair("F17", static_cast<uint32_t>(Input::Key::F17));
+        key_table.add_pair("F18", static_cast<uint32_t>(Input::Key::F18));
+        key_table.add_pair("F19", static_cast<uint32_t>(Input::Key::F19));
+        key_table.add_pair("F20", static_cast<uint32_t>(Input::Key::F20));
+        key_table.add_pair("F21", static_cast<uint32_t>(Input::Key::F21));
+        key_table.add_pair("F22", static_cast<uint32_t>(Input::Key::F22));
+        key_table.add_pair("F23", static_cast<uint32_t>(Input::Key::F23));
+        key_table.add_pair("F24", static_cast<uint32_t>(Input::Key::F24));
+        key_table.add_pair("NUM_LOCK", static_cast<uint32_t>(Input::Key::NUM_LOCK));
+        key_table.add_pair("SCROLL_LOCK", static_cast<uint32_t>(Input::Key::SCROLL_LOCK));
+        key_table.add_pair("BROWSER_BACK", static_cast<uint32_t>(Input::Key::BROWSER_BACK));
+        key_table.add_pair("BROWSER_FORWARD", static_cast<uint32_t>(Input::Key::BROWSER_FORWARD));
+        key_table.add_pair("BROWSER_REFRESH", static_cast<uint32_t>(Input::Key::BROWSER_REFRESH));
+        key_table.add_pair("BROWSER_STOP", static_cast<uint32_t>(Input::Key::BROWSER_STOP));
+        key_table.add_pair("BROWSER_SEARCH", static_cast<uint32_t>(Input::Key::BROWSER_SEARCH));
+        key_table.add_pair("BROWSER_FAVORITES", static_cast<uint32_t>(Input::Key::BROWSER_FAVORITES));
+        key_table.add_pair("BROWSER_HOME", static_cast<uint32_t>(Input::Key::BROWSER_HOME));
+        key_table.add_pair("VOLUME_MUTE", static_cast<uint32_t>(Input::Key::VOLUME_MUTE));
+        key_table.add_pair("VOLUME_DOWN", static_cast<uint32_t>(Input::Key::VOLUME_DOWN));
+        key_table.add_pair("VOLUME_UP", static_cast<uint32_t>(Input::Key::VOLUME_UP));
+        key_table.add_pair("MEDIA_NEXT_TRACK", static_cast<uint32_t>(Input::Key::MEDIA_NEXT_TRACK));
+        key_table.add_pair("MEDIA_PREV_TRACK", static_cast<uint32_t>(Input::Key::MEDIA_PREV_TRACK));
+        key_table.add_pair("MEDIA_STOP", static_cast<uint32_t>(Input::Key::MEDIA_STOP));
+        key_table.add_pair("MEDIA_PLAY_PAUSE", static_cast<uint32_t>(Input::Key::MEDIA_PLAY_PAUSE));
+        key_table.add_pair("LAUNCH_MAIL", static_cast<uint32_t>(Input::Key::LAUNCH_MAIL));
+        key_table.add_pair("LAUNCH_MEDIA_SELECT", static_cast<uint32_t>(Input::Key::LAUNCH_MEDIA_SELECT));
+        key_table.add_pair("LAUNCH_APP1", static_cast<uint32_t>(Input::Key::LAUNCH_APP1));
+        key_table.add_pair("LAUNCH_APP2", static_cast<uint32_t>(Input::Key::LAUNCH_APP2));
+        key_table.add_pair("OEM_ONE", static_cast<uint32_t>(Input::Key::OEM_ONE));
+        key_table.add_pair("OEM_PLUS", static_cast<uint32_t>(Input::Key::OEM_PLUS));
+        key_table.add_pair("OEM_COMMA", static_cast<uint32_t>(Input::Key::OEM_COMMA));
+        key_table.add_pair("OEM_MINUS", static_cast<uint32_t>(Input::Key::OEM_MINUS));
+        key_table.add_pair("OEM_PERIOD", static_cast<uint32_t>(Input::Key::OEM_PERIOD));
+        key_table.add_pair("OEM_TWO", static_cast<uint32_t>(Input::Key::OEM_TWO));
+        key_table.add_pair("OEM_THREE", static_cast<uint32_t>(Input::Key::OEM_THREE));
+        key_table.add_pair("OEM_FOUR", static_cast<uint32_t>(Input::Key::OEM_FOUR));
+        key_table.add_pair("OEM_FIVE", static_cast<uint32_t>(Input::Key::OEM_FIVE));
+        key_table.add_pair("OEM_SIX", static_cast<uint32_t>(Input::Key::OEM_SIX));
+        key_table.add_pair("OEM_SEVEN", static_cast<uint32_t>(Input::Key::OEM_SEVEN));
+        key_table.add_pair("OEM_EIGHT", static_cast<uint32_t>(Input::Key::OEM_EIGHT));
+        key_table.add_pair("OEM_102", static_cast<uint32_t>(Input::Key::OEM_102));
+        key_table.add_pair("IME_PROCESS", static_cast<uint32_t>(Input::Key::IME_PROCESS));
+        key_table.add_pair("PACKET", static_cast<uint32_t>(Input::Key::PACKET));
+        key_table.add_pair("ATTN", static_cast<uint32_t>(Input::Key::ATTN));
+        key_table.add_pair("CRSEL", static_cast<uint32_t>(Input::Key::CRSEL));
+        key_table.add_pair("EXSEL", static_cast<uint32_t>(Input::Key::EXSEL));
+        key_table.add_pair("EREOF", static_cast<uint32_t>(Input::Key::EREOF));
+        key_table.add_pair("PLAY", static_cast<uint32_t>(Input::Key::PLAY));
+        key_table.add_pair("ZOOM", static_cast<uint32_t>(Input::Key::ZOOM));
+        key_table.add_pair("PA1", static_cast<uint32_t>(Input::Key::PA1));
+        key_table.add_pair("OEM_CLEAR", static_cast<uint32_t>(Input::Key::OEM_CLEAR));
         key_table.make_global("Key");
 
         LuaMadeSimple::Lua::Table modifier_key_table = lua.prepare_new_table();
@@ -690,16 +751,27 @@ namespace RC
         efindname_table.make_global("EFindName");
     }
 
-    LuaMod::LuaMod(UE4SSProgram& program, std::wstring&& mod_name, std::wstring&& mod_path)
+    LuaMod::LuaMod(UE4SSProgram& program, StringType&& mod_name, StringType&& mod_path)
         : Mod(program, std::move(mod_name), std::move(mod_path)), m_lua(LuaMadeSimple::new_state())
     {
-        // Verify that there's a 'Scripts' directory
-        // Give the full path to the 'Scripts' directory to the mod container
-        m_scripts_path = m_mod_path + L"\\scripts";
+        // First check for "Scripts" (capital S)
+        std::filesystem::path scripts_path = m_mod_path / STR("Scripts");
 
-        // If the 'Scripts' directory doesn't exist then mark the mod as non-installable and move on to the next mod
+        // If not found, try with lowercase "scripts"
+        if (!std::filesystem::exists(scripts_path))
+        {
+            std::filesystem::path alt_scripts_path = m_mod_path / STR("scripts");
+            if (std::filesystem::exists(alt_scripts_path))
+            {
+                scripts_path = alt_scripts_path;
+            }
+        }
+
+        m_scripts_path = scripts_path;
+
         if (!std::filesystem::exists(m_scripts_path))
         {
+            Output::send<LogLevel::Error>(STR("Mod path doesn't exist {}\n"), ensure_str(m_scripts_path));
             set_installable(false);
             return;
         }
@@ -707,23 +779,6 @@ namespace RC
 
     auto LuaMod::global_uninstall() -> void
     {
-        LuaMod::m_static_construct_object_lua_callbacks.clear();
-        LuaMod::m_process_console_exec_pre_callbacks.clear();
-        LuaMod::m_process_console_exec_post_callbacks.clear();
-        LuaMod::m_global_command_lua_callbacks.clear();
-        LuaMod::m_custom_command_lua_pre_callbacks.clear();
-        LuaMod::m_custom_event_callbacks.clear();
-        LuaMod::m_load_map_pre_callbacks.clear();
-        LuaMod::m_load_map_post_callbacks.clear();
-        LuaMod::m_init_game_state_pre_callbacks.clear();
-        LuaMod::m_init_game_state_post_callbacks.clear();
-        LuaMod::m_begin_play_pre_callbacks.clear();
-        LuaMod::m_begin_play_post_callbacks.clear();
-        LuaMod::m_call_function_by_name_with_arguments_pre_callbacks.clear();
-        LuaMod::m_call_function_by_name_with_arguments_post_callbacks.clear();
-        LuaMod::m_local_player_exec_pre_callbacks.clear();
-        LuaMod::m_local_player_exec_post_callbacks.clear();
-        LuaMod::m_script_hook_callbacks.clear();
         LuaMod::m_generic_hook_id_to_native_hook_id.clear();
     }
 
@@ -760,12 +815,34 @@ namespace RC
         property_type_table.make_local();
     }
 
-    // auto static make_hook_state(Mod* mod, const LuaMadeSimple::Lua& lua)->std::shared_ptr<LuaMadeSimple::Lua>
-    auto static make_hook_state(LuaMod* mod) -> LuaMadeSimple::Lua*
+    // Private helper: Ensures hook thread exists and returns the registry reference (or LUA_REFNIL if already exists)
+    static int ensure_hook_thread_exists(LuaMod* mod)
     {
-        // if (!mod->m_hook_lua)
-        //{
-        return mod->m_hook_lua.emplace_back(&mod->lua().new_thread());
+        if (mod->m_hook_lua == nullptr)
+        {
+            // First use - create new thread and anchor it in the registry
+            mod->m_hook_lua = &mod->lua().new_thread();
+            int thread_ref = luaL_ref(mod->lua().get_lua_state(), LUA_REGISTRYINDEX);
+            return thread_ref;
+        }
+
+        // Thread already exists and is already anchored
+        return LUA_REFNIL;
+    }
+
+    // Returns the hook lua thread for immediate use (doesn't need registry reference management)
+    auto static get_hook_lua(LuaMod* mod) -> LuaMadeSimple::Lua*
+    {
+        ensure_hook_thread_exists(mod);
+        return mod->m_hook_lua;
+    }
+
+    // Returns hook state with registry reference (for persistent hooks that need cleanup)
+    // auto static make_hook_state(Mod* mod, const LuaMadeSimple::Lua& lua)->std::shared_ptr<LuaMadeSimple::Lua>
+    auto static make_hook_state(LuaMod* mod) -> std::pair<LuaMadeSimple::Lua*, int>
+    {
+        int thread_ref = ensure_hook_thread_exists(mod);
+        return {mod->m_hook_lua, thread_ref};
 
         // Make the hook thread (which is just a separate Lua stack) be a global in its parent.
         // This is needed because otherwise it will be GCd when we don't want it to.
@@ -857,6 +934,7 @@ namespace RC
         // add_property_type_table<Unreal::FStrProperty>(lua, property_types_table, "StrProperty");
         add_property_type_table<Unreal::FBoolProperty>(lua, property_types_table, "BoolProperty");
         add_property_type_table<Unreal::FArrayProperty>(lua, property_types_table, "ArrayProperty");
+        add_property_type_table<Unreal::FSetProperty>(lua, property_types_table, "SetProperty");
         add_property_type_table<Unreal::FMapProperty>(lua, property_types_table, "MapProperty");
         add_property_type_table<Unreal::FStructProperty>(lua, property_types_table, "StructProperty");
         add_property_type_table<Unreal::FClassProperty>(lua, property_types_table, "ClassProperty");
@@ -867,38 +945,350 @@ namespace RC
         }
         add_property_type_table<Unreal::FTextProperty>(lua, property_types_table, "TextProperty");
         add_property_type_table<Unreal::FStrProperty>(lua, property_types_table, "StrProperty");
+        if (Unreal::Version::IsAtLeast(5, 6))
+        {
+            add_property_type_table<Unreal::FUtf8StrProperty>(lua, property_types_table, "Utf8StrProperty");
+        }
 
         property_types_table.make_global("PropertyTypes");
     }
 
+    auto LuaMod::setup_custom_module_loader(const LuaMadeSimple::Lua* lua_state) -> void
+    {
+        lua_State* L = lua_state->get_lua_state();
+    
+        // Initialize ue4ss_loaded_modules table
+        lua_newtable(L);
+        lua_setglobal(L, "ue4ss_loaded_modules");
+    
+        // Get package.searchers table
+        lua_getglobal(L, "package");
+        if (!lua_istable(L, -1))
+        {
+            Output::send<LogLevel::Error>(STR("package table not found\n"));
+            lua_pop(L, 1);
+            return;
+        }
+    
+        lua_getfield(L, -1, "searchers");
+        if (!lua_istable(L, -1))
+        {
+            Output::send<LogLevel::Error>(STR("package.searchers table not found\n"));
+            lua_pop(L, 2);
+            return;
+        }
+    
+        // Insert our searcher at position 1
+        // First, shift existing searchers up
+        lua_Integer len = luaL_len(L, -1);
+        for (lua_Integer i = len; i >= 1; i--)
+        {
+            lua_geti(L, -1, i);     // Get searchers[i]
+            lua_seti(L, -2, i + 1); // Set searchers[i+1] = searchers[i]
+        }
+    
+        // Push the LuaMod instance as a light userdata (our upvalue)
+        lua_pushlightuserdata(L, this);
+    
+        // Create the C closure with one upvalue
+        lua_pushcclosure(L, custom_module_searcher, 1);
+    
+        // Set searchers[1] = our new closure
+        lua_seti(L, -2, 1);
+    
+        lua_pop(L, 2); // Clean up stack: searchers, package
+    }
+
+    // Static C function for the module searcher
+    int LuaMod::custom_module_searcher(lua_State* L)
+    {
+        const char* module_name = luaL_checkstring(L, 1);
+        if (!module_name)
+        {
+            lua_pushstring(L, "module name is required");
+            return 1;
+        }
+        
+        // Get the LuaMod* from the upvalue at index 1
+        auto* lua_mod = static_cast<LuaMod*>(lua_touserdata(L, lua_upvalueindex(1)));
+        if (!lua_mod)
+        {
+            lua_pushstring(L, "custom searcher is missing its C++ context");
+            return 1;
+        }
+        
+        // Get paths directly from the C++ object and convert to UTF-8 strings for Lua
+        const auto& mods_dir = lua_mod->get_program().get_mods_directory();
+        const auto& mod_name = lua_mod->get_name();
+        const auto& scripts_path = lua_mod->get_scripts_path();
+        
+        std::string mods_path_str = normalize_path_for_lua(mods_dir);
+        std::string mod_name_str = to_utf8_string(mod_name);
+        std::string scripts_path_str = normalize_path_for_lua(scripts_path);
+        
+        // Try different path combinations
+        std::vector<std::string> paths_to_try = {
+            scripts_path_str + "/" + module_name + ".lua",
+            mods_path_str + "/shared/" + module_name + ".lua",
+            mods_path_str + "/shared/" + module_name + "/" + module_name + ".lua"
+        };
+        
+        // Try each path
+        std::string attempted_paths_str;
+        for (const auto& path : paths_to_try)
+        {
+            // Convert to wide string for Windows filesystem operations
+            std::wstring wide_path;
+            try
+            {
+                wide_path = utf8_to_wpath(path);
+            }
+            catch (const std::exception&)
+            {
+                attempted_paths_str += "\n\t" + path + " (encoding error)";
+                continue;
+            }
+            
+            if (!std::filesystem::exists(wide_path))
+            {
+                attempted_paths_str += "\n\t" + path;
+                continue;
+            }
+            
+            // Check if already loaded
+            lua_getglobal(L, "ue4ss_loaded_modules");
+            lua_pushstring(L, path.c_str());
+            lua_gettable(L, -2);
+            
+            if (!lua_isnil(L, -1))
+            {
+                // Already loaded, return the cached function
+                lua_remove(L, -2); // Remove ue4ss_loaded_modules table
+                return 1;
+            }
+            
+            lua_pop(L, 2); // Pop nil and ue4ss_loaded_modules
+            
+            // Try to load the file
+            std::ifstream file(wide_path, std::ios::binary);
+            if (!file.is_open())
+            {
+                attempted_paths_str += "\n\t" + path + " (cannot open)";
+                continue;
+            }
+            
+            // Get file size and read content
+            file.seekg(0, std::ios::end);
+            std::streamsize size = file.tellg();
+            file.seekg(0, std::ios::beg);
+            
+            std::vector<char> buffer(size);
+            if (!file.read(buffer.data(), size))
+            {
+                attempted_paths_str += "\n\t" + path + " (read error)";
+                continue;
+            }
+            file.close();
+            
+            // Create chunk name for debugging
+            std::string chunk_name = "@" + path;
+            
+            // Load the script as a function that returns the module
+            std::string module_wrapper = "return function()\n" + std::string(buffer.data(), buffer.size()) + "\nend";
+            
+            if (luaL_loadbuffer(L, module_wrapper.c_str(), module_wrapper.size(), chunk_name.c_str()) != LUA_OK)
+            {
+                attempted_paths_str += "\n\t" + path + " (syntax error: " + lua_tostring(L, -1) + ")";
+                lua_pop(L, 1); // Pop error message
+                continue;
+            }
+            
+            // Execute to get the loader function
+            if (lua_pcall(L, 0, 1, 0) != LUA_OK)
+            {
+                attempted_paths_str += "\n\t" + path + " (execution error: " + lua_tostring(L, -1) + ")";
+                lua_pop(L, 1); // Pop error message
+                continue;
+            }
+            
+            // Cache the loaded module
+            lua_getglobal(L, "ue4ss_loaded_modules");
+            lua_pushstring(L, path.c_str());
+            lua_pushvalue(L, -3); // Copy the function
+            lua_settable(L, -3);
+            lua_pop(L, 1); // Pop ue4ss_loaded_modules
+            
+            // Return the loader function
+            return 1;
+        }
+        
+        // Module not found
+        std::string error_msg = "module '" + std::string(module_name) + "' not found:" + attempted_paths_str;
+        lua_pushstring(L, error_msg.c_str());
+        return 1;
+    }
+
     auto LuaMod::setup_lua_require_paths(const LuaMadeSimple::Lua& lua) const -> void
     {
-        auto* lua_state = m_lua.get_lua_state();
-        lua_getglobal(lua_state, "package");
+        try
+        {
+            auto* lua_state = m_lua.get_lua_state();
+            lua_getglobal(lua_state, "package");
 
-        lua_getfield(lua_state, -1, "path");
-        std::string current_paths = lua_tostring(lua_state, -1);
-        current_paths.append(std::format(";{}\\{}\\Scripts\\?.lua", to_string(m_program.get_mods_directory()).c_str(), to_string(get_name())));
-        current_paths.append(std::format(";{}\\shared\\?.lua", to_string(m_program.get_mods_directory()).c_str()));
-        current_paths.append(std::format(";{}\\shared\\?\\?.lua", to_string(m_program.get_mods_directory()).c_str()));
-        lua_pop(lua_state, 1);
-        lua_pushstring(lua_state, current_paths.c_str());
-        lua_setfield(lua_state, -2, "path");
+            // Get current paths
+            lua_getfield(lua_state, -1, "path");
+            std::string current_paths = lua_tostring(lua_state, -1);
+            lua_pop(lua_state, 1);
 
-        lua_getfield(lua_state, -1, "cpath");
-        std::string current_cpaths = lua_tostring(lua_state, -1);
-        current_cpaths.append(std::format(";{}\\{}\\Scripts\\?.dll", to_string(m_program.get_mods_directory()).c_str(), to_string(get_name())));
-        current_cpaths.append(std::format(";{}\\{}\\?.dll", to_string(m_program.get_mods_directory()).c_str(), to_string(get_name())));
-        lua_pop(lua_state, 1);
-        lua_pushstring(lua_state, current_cpaths.c_str());
-        lua_setfield(lua_state, -2, "cpath");
+            auto mods_dir = m_program.get_mods_directory();
+            auto mod_name = get_name();
 
-        lua_pop(lua_state, 1);
+            // Create normalized UTF-8 paths with forward slashes
+            std::string mods_dir_utf8 = normalize_path_for_lua(mods_dir);
+            std::string mod_name_utf8 = to_utf8_string(mod_name);
+            std::string scripts_path_utf8 = normalize_path_for_lua(m_scripts_path);
+
+            // Create path strings with forward slashes for Lua
+            std::string script_path = fmt::format(";{}/?.lua", scripts_path_utf8);
+            std::string shared_path = fmt::format(";{}/shared/?.lua", mods_dir_utf8);
+            std::string shared_nested_path = fmt::format(";{}/shared/?/?.lua", mods_dir_utf8);
+
+            current_paths.append(script_path);
+            current_paths.append(shared_path);
+            current_paths.append(shared_nested_path);
+
+            lua_pushstring(lua_state, current_paths.c_str());
+            lua_setfield(lua_state, -2, "path");
+
+            // Now set up cpath similarly
+            lua_getfield(lua_state, -1, "cpath");
+            std::string current_cpaths = lua_tostring(lua_state, -1);
+            lua_pop(lua_state, 1);
+
+            // Create cpath strings
+            std::string script_dll_path = fmt::format(";{}/?.dll", scripts_path_utf8);
+            std::string mod_dll_path = fmt::format(";{}/{}/?/?.dll", mods_dir_utf8, mod_name_utf8);
+
+            current_cpaths.append(script_dll_path);
+            current_cpaths.append(mod_dll_path);
+
+            lua_pushstring(lua_state, current_cpaths.c_str());
+            lua_setfield(lua_state, -2, "cpath");
+
+            lua_pop(lua_state, 1); // Pop package table
+        }
+        catch (const std::exception& e)
+        {
+            Output::send<LogLevel::Error>(STR("Exception in setup_lua_require_paths: {}\n"), ensure_str(e.what()));
+            throw;
+        }
+    }
+
+    auto LuaMod::get_object_names(const Unreal::UObject* object) -> std::vector<Unreal::FName>
+    {
+        std::vector<Unreal::FName> names{};
+        for (auto ptr = object; ptr; ptr = ptr->GetOuterPrivate())
+        {
+            names.emplace_back(ptr->GetNamePrivate());
+        }
+        return names;
+    }
+
+    auto LuaMod::find_function_hook_data(std::vector<FunctionHookData>& container, Unreal::FName in_name) -> FunctionHookData*
+    {
+        for (auto it = container.begin(); it != container.end(); ++it)
+        {
+            if (it->names.size() >= 1 && in_name.Equals(it->names[0]))
+            {
+                return &*it;
+            }
+        }
+        return nullptr;
+    }
+
+    auto LuaMod::find_function_hook_data(std::vector<FunctionHookData>& container, const Unreal::UObject* object) -> FunctionHookData*
+    {
+        return find_function_hook_data(container, get_object_names(object));
+    }
+
+    auto LuaMod::find_function_hook_data(std::vector<FunctionHookData>& container, const std::vector<Unreal::FName>& in_name) -> FunctionHookData*
+    {
+        for (auto it = container.begin(); it != container.end(); ++it)
+        {
+            auto found = true;
+            if (in_name.size() != it->names.size())
+            {
+                continue;
+            }
+            for (const auto& [index, name] : std::ranges::enumerate_view(it->names))
+            {
+                if (!name.Equals(in_name[index]))
+                {
+                    found = false;
+                }
+            }
+            if (found)
+            {
+                return &*it;
+            }
+        }
+        return nullptr;
+    }
+
+    auto LuaMod::remove_function_hook_data(std::vector<FunctionHookData>& container, StringViewType in_name) -> void
+    {
+        remove_function_hook_data(container, Unreal::FName(in_name, Unreal::FNAME_Add));
+    }
+
+    auto LuaMod::remove_function_hook_data(std::vector<FunctionHookData>& container, Unreal::FName in_name) -> void
+    {
+        for (auto it = container.begin(); it != container.end(); ++it)
+        {
+            if (it->names.size() >= 1 && it->names[0] == in_name)
+            {
+                container.erase(it);
+                break;
+            }
+        }
+    }
+
+    auto LuaMod::remove_function_hook_data(std::vector<FunctionHookData>& container, const Unreal::UObject* object) -> void
+    {
+        remove_function_hook_data(container, get_object_names(object));
+    }
+
+    auto LuaMod::remove_function_hook_data(std::vector<FunctionHookData>& container, const std::vector<Unreal::FName>& in_name) -> void
+    {
+        for (auto it = container.begin(); it != container.end(); ++it)
+        {
+            auto found = true;
+            if (in_name.size() != it->names.size())
+            {
+                continue;
+            }
+            for (const auto& [index, name] : std::ranges::enumerate_view(it->names))
+            {
+                if (name != in_name[index])
+                {
+                    found = false;
+                }
+            }
+            if (found)
+            {
+                container.erase(it);
+            }
+        }
     }
 
     auto static setup_lua_global_functions_internal(const LuaMadeSimple::Lua& lua, Mod::IsTrueMod is_true_mod) -> void
     {
         lua.register_function("print", LuaLibrary::global_print);
+        lua.register_function("LoadExport", LuaLibrary::load_export);
+
+        lua.register_function("CreateInvalidObject", [](const LuaMadeSimple::Lua& lua) -> int {
+            LuaType::auto_construct_object(lua, nullptr);
+            return 1;
+        });
 
         lua.register_function("StaticFindObject", [](const LuaMadeSimple::Lua& lua) -> int {
             // Stack size @ the start of the function is the same as the number of params
@@ -920,7 +1310,7 @@ Overloads:
             // Ignores any params after P1
             if (lua.is_string())
             {
-                Unreal::UObject* object = Unreal::UObjectGlobals::StaticFindObject(nullptr, nullptr, to_wstring(lua.get_string()));
+                Unreal::UObject* object = Unreal::UObjectGlobals::StaticFindObject(nullptr, nullptr, ensure_str(lua.get_string()));
 
                 // Construct a Lua object of type 'UObject'
                 // Auto constructing is nullptr safe
@@ -944,7 +1334,7 @@ Overloads:
 
             Unreal::UClass* param_class{};
             Unreal::UObject* param_in_outer{};
-            std::wstring param_name{};
+            StringType param_name{};
             bool param_exact_class{};
 
             // P1 (Class), userdata
@@ -980,7 +1370,7 @@ Overloads:
             // P3 (Name), string
             if (lua.is_string())
             {
-                param_name = to_wstring(lua.get_string());
+                param_name = ensure_str(lua.get_string());
             }
             else
             {
@@ -1022,7 +1412,7 @@ Overloads:
             // Ignores any params after P1
             if (lua.is_string())
             {
-                Unreal::UObject* object = Unreal::UObjectGlobals::FindFirstOf(to_wstring(lua.get_string()));
+                Unreal::UObject* object = Unreal::UObjectGlobals::FindFirstOf(ensure_str(lua.get_string()));
 
                 // Construct a Lua object of type 'UObject'
                 // Auto constructing is nullptr safe
@@ -1175,7 +1565,7 @@ Overloads:
 #1: RegisterKeyBindAsync(integer key)
 #2: RegisterKeyBindAsync(integer key, table modifier_key_integers))"};
 
-                const Mod* mod = get_mod_ref(lua);
+                Mod* mod = get_mod_ref(lua);
 
                 if (!lua.is_integer())
                 {
@@ -1198,7 +1588,7 @@ Overloads:
                     }
                     catch (std::runtime_error& e)
                     {
-                        Output::send(STR("{}\n"), to_wstring(lua.handle_error(e.what())));
+                        Output::send<LogLevel::Error>(STR("{}\n"), ensure_str(lua.handle_error(e.what())));
                     }
                 };
 
@@ -1221,7 +1611,7 @@ Overloads:
                             [&lua, lua_callback_registry_index, &lua_keybind_callback_lambda]() {
                                 lua_keybind_callback_lambda(lua, lua_callback_registry_index);
                             },
-                            1);
+                            1, mod);
                 }
                 else if (lua.is_table())
                 {
@@ -1266,7 +1656,7 @@ Overloads:
                                 [&lua, lua_callback_registry_index, &lua_keybind_callback_lambda]() {
                                     lua_keybind_callback_lambda(lua, lua_callback_registry_index);
                                 },
-                                1);
+                                1, mod);
                     }
                     else
                     {
@@ -1275,7 +1665,7 @@ Overloads:
                                 [&lua, lua_callback_registry_index, &lua_keybind_callback_lambda]() {
                                     lua_keybind_callback_lambda(lua, lua_callback_registry_index);
                                 },
-                                1);
+                                1, mod);
                     }
                 }
                 else
@@ -1293,7 +1683,7 @@ Overloads:
 #1: RegisterKeyBind(integer key)
 #2: RegisterKeyBind(integer key, table modifier_key_integers))"};
 
-                const Mod* mod = get_mod_ref(lua);
+                Mod* mod = get_mod_ref(lua);
 
                 if (!lua.is_integer())
                 {
@@ -1317,7 +1707,7 @@ Overloads:
                     }
                     catch (std::runtime_error& e)
                     {
-                        Output::send(STR("{}\n"), to_wstring(lua.handle_error(e.what())));
+                        Output::send<LogLevel::Error>(STR("{}\n"), ensure_str(lua.handle_error(e.what())));
                     }
                 };
 
@@ -1340,7 +1730,7 @@ Overloads:
                             [&lua, lua_callback_registry_index, &lua_keybind_callback_lambda]() {
                                 lua_keybind_callback_lambda(lua, lua_callback_registry_index);
                             },
-                            1);
+                            1, mod);
                 }
                 else if (lua.is_table())
                 {
@@ -1383,7 +1773,7 @@ Overloads:
                                 [&lua, lua_callback_registry_index, &lua_keybind_callback_lambda]() {
                                     lua_keybind_callback_lambda(lua, lua_callback_registry_index);
                                 },
-                                1);
+                                1, mod);
                     }
                     else
                     {
@@ -1392,7 +1782,7 @@ Overloads:
                                 [&lua, lua_callback_registry_index, &lua_keybind_callback_lambda]() {
                                     lua_keybind_callback_lambda(lua, lua_callback_registry_index);
                                 },
-                                1);
+                                1, mod);
                     }
                 }
                 else
@@ -1416,13 +1806,14 @@ Overloads:
                     lua.throw_error(error_overload_not_found);
                 }
 
-                std::wstring function_name = to_wstring(lua.get_string());
-                std::wstring function_name_no_prefix = function_name.substr(function_name.find_first_of(L" ") + 1, function_name.size());
+                auto function_name_no_prefix = get_function_name_without_prefix(ensure_str(lua.get_string()));
 
                 Unreal::UFunction* unreal_function = Unreal::UObjectGlobals::StaticFindObject<Unreal::UFunction*>(nullptr, nullptr, function_name_no_prefix);
                 if (!unreal_function)
                 {
-                    lua.throw_error("Tried to unregister a hook with Lua function 'UnregisterHook' but no UFunction with the specified name was found.");
+                    lua.throw_error(std::format("Tried to unregister a hook with Lua function 'UnregisterHook' but no UFunction with the specified name "
+                                                "was found.\n>FunctionName: {}",
+                                                to_string(function_name_no_prefix)));
                 }
 
                 if (!lua.is_integer())
@@ -1439,12 +1830,16 @@ Overloads:
 
                 if (pre_id > std::numeric_limits<int32_t>::max())
                 {
-                    lua.throw_error("Tried to unregister a hook with Lua function 'UnregisterHook' but the PreCallbackId supplied was too large (>int32)");
+                    lua.throw_error(std::format("Tried to unregister a hook with Lua function 'UnregisterHook' but the PreCallbackId supplied was too "
+                                                "large (>int32)\n>FunctionName: {}",
+                                                to_string(function_name_no_prefix)));
                 }
 
                 if (post_id > std::numeric_limits<int32_t>::max())
                 {
-                    lua.throw_error("Tried to unregister a hook with Lua function 'UnregisterHook' but the PostCallbackId supplied was too large (>int32)");
+                    lua.throw_error(std::format("Tried to unregister a hook with Lua function 'UnregisterHook' but the PostCallbackId supplied was too "
+                                                "large (>int32)\n>FunctionName: {}",
+                                                to_string(function_name_no_prefix)));
                 }
 
                 // Hooks on native UFunctions will have both of these IDs.
@@ -1453,39 +1848,25 @@ Overloads:
                 if (native_hook_pre_id_it != LuaMod::m_generic_hook_id_to_native_hook_id.end() &&
                     native_hook_post_id_it != LuaMod::m_generic_hook_id_to_native_hook_id.end())
                 {
-                    Output::send<LogLevel::Verbose>(STR("Unregistering native hook with pre-id: {}\n"), native_hook_pre_id_it->first);
-                    unreal_function->UnregisterHook(static_cast<int32_t>(native_hook_pre_id_it->second));
-                    Output::send<LogLevel::Verbose>(STR("Unregistering native hook with post-id: {}\n"), native_hook_post_id_it->first);
-                    unreal_function->UnregisterHook(static_cast<int32_t>(native_hook_post_id_it->second));
-
-                    // LuaUnrealScriptFunctionData contains the hook's lua registry references, captured in RegisterHook in two different lua states.
-                    for (auto hook_iter = g_hooked_script_function_data.begin(); hook_iter != g_hooked_script_function_data.end(); hook_iter++)
-                    {
-                        RC::LuaUnrealScriptFunctionData* hook_data = (*hook_iter).get();
-                        if (hook_data->post_callback_id == post_id && hook_data->pre_callback_id == pre_id)
-                        {
-                            auto mod = get_mod_ref(lua);
-                            luaL_unref(hook_data->lua.get_lua_state(), LUA_REGISTRYINDEX, hook_data->lua_callback_ref);
-                            if (hook_data->lua_post_callback_ref != -1)
-                            {
-                                luaL_unref(hook_data->lua.get_lua_state(), LUA_REGISTRYINDEX, hook_data->lua_post_callback_ref);
-                            }
-                            luaL_unref(mod->lua().get_lua_state(), LUA_REGISTRYINDEX, hook_data->lua_thread_ref);
-                            g_hooked_script_function_data.erase(hook_iter);
-                            break;
-                        }
-                    }
+                    const auto hook_data = std::ranges::find_if(g_hooked_script_function_data, [&](const std::unique_ptr<LuaUnrealScriptFunctionData>& elem) {
+                        return elem->post_callback_id == post_id && elem->pre_callback_id == pre_id;
+                    });
+                    hook_data->get()->scheduled_for_removal = true;
                 }
                 else
                 {
-                    if (auto callback_data_it = LuaMod::m_script_hook_callbacks.find(unreal_function->GetFullName());
-                        callback_data_it != LuaMod::m_script_hook_callbacks.end())
+                    if (auto data_ptr = LuaMod::find_function_hook_data(LuaMod::m_script_hook_callbacks, unreal_function); data_ptr)
                     {
-                        Output::send<LogLevel::Verbose>(STR("Unregistering script hook with id: {}\n"), post_id);
-                        auto& registry_indexes = callback_data_it->second.registry_indexes;
-                        std::erase_if(registry_indexes, [&](const auto& pair) -> bool {
-                            return post_id == pair.second.identifier;
-                        });
+                        Output::send<LogLevel::Verbose>(STR("Unregistering script hook with id: {}, FunctionName: {}\n"), post_id, function_name_no_prefix);
+                        auto& registry_indexes = data_ptr->callback_data.registry_indexes;
+                        for (auto& registry_index : registry_indexes)
+                        {
+                            if (post_id == registry_index.second.identifier)
+                            {
+                                registry_index.second.lua_index = -1;
+                                break;
+                            }
+                        }
                     }
                 }
 
@@ -1496,7 +1877,7 @@ Overloads:
                 const Mod* mod = get_mod_ref(lua);
                 if (!mod)
                 {
-                    lua.throw_error("Could not dump objects and properties because the pointer to 'Mod' was nullptr");
+                    lua.throw_error("Couldn't dump objects and properties because the pointer to 'Mod' was nullptr");
                 }
                 UE4SSProgram::dump_all_objects_and_properties(mod->m_program.get_object_dumper_output_directory() + STR("\\") +
                                                               UE4SSProgram::m_object_dumper_file_name);
@@ -1505,8 +1886,23 @@ Overloads:
 
             lua.register_function("GenerateSDK", []([[maybe_unused]] const LuaMadeSimple::Lua& lua) -> int {
                 const Mod* mod = get_mod_ref(lua);
+                if (!mod)
+                {
+                    lua.throw_error("Couldn't generate SDK because the pointer to 'Mod' was nullptr");
+                }
                 File::StringType working_dir{mod->m_program.get_working_directory()};
                 mod->m_program.generate_cxx_headers(working_dir + STR("\\CXXHeaderDump"));
+                return 0;
+            });
+
+            lua.register_function("GenerateLuaTypes", []([[maybe_unused]] const LuaMadeSimple::Lua& lua) -> int {
+                const Mod* mod = get_mod_ref(lua);
+                if (!mod)
+                {
+                    lua.throw_error("Couldn't generate lua types because the pointer to 'Mod' was nullptr");
+                }
+                File::StringType working_dir{mod->m_program.get_working_directory()};
+                UE4SSProgram::get_program().generate_lua_types(working_dir + STR("\\Mods\\shared\\types"));
                 return 0;
             });
 
@@ -1678,9 +2074,9 @@ Overloads:
 
             struct PropertyInfo
             {
-                std::wstring name{};
+                StringType name{};
                 PropertyTypeInfo type{}; // Figure out what to do here, it shouldn't be just a string
-                std::wstring belongs_to_class{};
+                StringType belongs_to_class{};
                 int32_t offset_internal{-1};
                 int32_t element_size{-1}; // Is this required for trivial types like integers and floats ?
 
@@ -1759,18 +2155,18 @@ Overloads:
 
                     if (second_field_name.empty())
                     {
-                        error_field_names = std::format("{}", field_name);
+                        error_field_names = fmt::format("{}", field_name);
                     }
                     else if (third_field_name.empty())
                     {
-                        error_field_names = std::format("{}.{}", field_name, second_field_name);
+                        error_field_names = fmt::format("{}.{}", field_name, second_field_name);
                     }
                     else
                     {
-                        error_field_names = std::format("{}.{}.{}", field_name, second_field_name, third_field_name);
+                        error_field_names = fmt::format("{}.{}.{}", field_name, second_field_name, third_field_name);
                     }
 
-                    lua.throw_error(std::format(
+                    lua.throw_error(fmt::format(
                             "Parameter #1 for function 'RegisterCustomProperty'. The table value for key '{}' is outside the range of a 32-bit integer",
                             error_field_names));
                 }
@@ -1779,12 +2175,12 @@ Overloads:
             };
 
             // Always required, for all property types
-            property_info.name = to_wstring(lua_table.get_string_field("Name"));
+            property_info.name = ensure_str(lua_table.get_string_field("Name"));
             property_info.type.name = lua_table.get_table_field("Type").get_string_field("Name");
             property_info.type.size = verify_and_convert_int64_to_int32("Type", "Size");
             property_info.type.ffieldclass_pointer = reinterpret_cast<void*>(lua_table.get_table_field("Type").get_int_field("FFieldClassPointer"));
             property_info.type.static_pointer = reinterpret_cast<void*>(lua_table.get_table_field("Type").get_int_field("StaticPointer"));
-            property_info.belongs_to_class = to_wstring(lua_table.get_string_field("BelongsToClass"));
+            property_info.belongs_to_class = ensure_str(lua_table.get_string_field("BelongsToClass"));
 
             std::string oi_property_name;
             int32_t oi_relative_offset{};
@@ -1835,11 +2231,11 @@ Overloads:
 
             if (property_info.offset_internal_is_table)
             {
-                auto name = Unreal::FName(to_wstring(oi_property_name));
+                auto name = Unreal::FName(ensure_str(oi_property_name));
                 Unreal::FProperty* oi_property = belongs_to_class->FindProperty(name);
                 if (!oi_property)
                 {
-                    lua.throw_error(std::format("Was unable to find property '{}' in class '{}' for use for relative Offset_Internal",
+                    lua.throw_error(fmt::format("Was unable to find property '{}' in class '{}' for use for relative Offset_Internal",
                                                 oi_property_name,
                                                 to_string(property_info.belongs_to_class)));
                 }
@@ -1849,14 +2245,14 @@ Overloads:
 
             if (property_info.type.size == 0)
             {
-                lua.throw_error(std::format("The size for property '{}' was unknown. Custom sizes are unsupported but will likely be supported in the future.",
+                lua.throw_error(fmt::format("The size for property '{}' was unknown. Custom sizes are unsupported but will likely be supported in the future.",
                                             property_info.type.name));
             }
 
             if (property_info.is_array_property && property_info.array_inner.size == 0)
             {
                 lua.throw_error(
-                        std::format("The size for inner property '{}' was unknown. Custom sizes are unsupported but will likely be supported in the future.",
+                        fmt::format("The size for inner property '{}' was unknown. Custom sizes are unsupported but will likely be supported in the future.",
                                     property_info.array_inner.name));
             }
 
@@ -1872,14 +2268,14 @@ Overloads:
 
             printf_s("Registered Custom Property\n");
             printf_s("PropertyInfo {\n");
-            printf_s("\tName: %S\n", property_info.name.c_str());
+            printf_s("\tName: %S\n", FromCharTypePtr<wchar_t>(property_info.name.c_str()));
             printf_s("\tType {\n");
             printf_s("\t\tName: %s\n", property_info.type.name.data());
             printf_s("\t\tSize: 0x%X\n", property_info.type.size);
             printf_s("\t\tFFieldClassPointer: 0x%p\n", property_info.type.ffieldclass_pointer);
             printf_s("\t\tStaticPointer: 0x%p\n", property_info.type.static_pointer);
             printf_s("\t}\n");
-            printf_s("\tBelongsToClass: %S\n", property_info.belongs_to_class.c_str());
+            printf_s("\tBelongsToClass: %S\n", FromCharTypePtr<wchar_t>(property_info.belongs_to_class.c_str()));
             printf_s("\tOffsetInternal: 0x%X\n", property_info.offset_internal);
 
             if (property_info.is_array_property)
@@ -1931,7 +2327,7 @@ Overloads:
                 lua.throw_error(error_overload_not_found);
             }
 
-            std::wstring class_name = to_wstring(lua.get_string());
+            auto class_name = ensure_str(lua.get_string());
 
             if (!lua.is_function())
             {
@@ -1939,7 +2335,7 @@ Overloads:
             }
 
             auto mod = get_mod_ref(lua);
-            auto hook_lua = make_hook_state(mod);
+            auto [hook_lua, thread_ref] = make_hook_state(mod);
 
             // Duplicate the Lua function to the top of the stack for lua_xmove and luaL_ref
             lua_pushvalue(lua.get_lua_state(), 1);
@@ -1947,17 +2343,16 @@ Overloads:
             lua_xmove(lua.get_lua_state(), hook_lua->get_lua_state(), 1);
 
             const auto func_ref = hook_lua->registry().make_ref();
-            const auto thread_ref = mod->lua().registry().make_ref();
 
             Unreal::UClass* instance_of_class = Unreal::UObjectGlobals::StaticFindObject<Unreal::UClass*>(nullptr, nullptr, class_name);
 
-            LuaMod::m_static_construct_object_lua_callbacks.emplace_back(
-                    LuaMod::LuaCancellableCallbackData{hook_lua, instance_of_class, func_ref, thread_ref});
+            LuaMod::m_static_construct_object_lua_callbacks.emplace_back(LuaMod::LuaCancellableCallbackData{hook_lua, instance_of_class, func_ref, thread_ref});
 
             return 0;
         });
 
         lua.register_function("RegisterCustomEvent", [](const LuaMadeSimple::Lua& lua) -> int {
+            std::lock_guard<std::recursive_mutex> guard{LuaMod::m_thread_actions_mutex};
             std::string error_overload_not_found{R"(
 No overload found for function 'RegisterCustomEvent'.
 Overloads:
@@ -1968,7 +2363,7 @@ Overloads:
                 lua.throw_error(error_overload_not_found);
             }
 
-            std::wstring event_name = to_wstring(lua.get_string());
+            auto event_name = ensure_str(lua.get_string());
 
             if (!lua.is_function())
             {
@@ -1976,25 +2371,28 @@ Overloads:
             }
 
             auto mod = get_mod_ref(lua);
-            auto hook_lua = make_hook_state(mod);
+            auto hook_lua = get_hook_lua(mod);
 
             lua_xmove(lua.get_lua_state(), hook_lua->get_lua_state(), 1);
 
             // Take a reference to the Lua function (it also pops it of the stack)
             const int32_t lua_callback_registry_index = hook_lua->registry().make_ref();
-
-            LuaMod::m_custom_event_callbacks.emplace(
-                    event_name,
-                    LuaMod::LuaCallbackData{
-                            .lua = lua,
-                            .instance_of_class = nullptr,
-                            .registry_indexes = {std::pair<const LuaMadeSimple::Lua*, LuaMod::LuaCallbackData::RegistryIndex>{&lua, {lua_callback_registry_index}}},
-                    });
+            if (!LuaMod::find_function_hook_data(LuaMod::m_custom_event_callbacks, Unreal::FName(event_name, Unreal::FNAME_Add)))
+            {
+                LuaMod::m_custom_event_callbacks.emplace_back(LuaMod::FunctionHookData{
+                        {Unreal::FName(event_name, Unreal::FNAME_Add)},
+                        LuaMod::LuaCallbackData{
+                                .lua = &lua,
+                                .instance_of_class = nullptr,
+                                .registry_indexes = {std::pair<const LuaMadeSimple::Lua*, LuaMod::LuaCallbackData::RegistryIndex>{&lua, {lua_callback_registry_index}}},
+                        }});
+            }
 
             return 0;
         });
 
         lua.register_function("UnregisterCustomEvent", [](const LuaMadeSimple::Lua& lua) -> int {
+            std::lock_guard<std::recursive_mutex> guard{LuaMod::m_thread_actions_mutex};
             std::string error_overload_not_found{R"(
 No overload found for function 'UnregisterCustomEvent'.
 Overloads:
@@ -2004,9 +2402,9 @@ Overloads:
             {
                 lua.throw_error(error_overload_not_found);
             }
-            auto custom_event_name = to_wstring(lua.get_string());
+            auto custom_event_name = ensure_str(lua.get_string());
 
-            LuaMod::m_custom_event_callbacks.erase(custom_event_name);
+            LuaMod::remove_function_hook_data(LuaMod::m_custom_event_callbacks, custom_event_name);
 
             return 0;
         });
@@ -2023,7 +2421,7 @@ Overloads:
             }
 
             auto mod = get_mod_ref(lua);
-            auto hook_lua = make_hook_state(mod);
+            auto hook_lua = get_hook_lua(mod);
 
             lua_xmove(lua.get_lua_state(), hook_lua->get_lua_state(), 1);
 
@@ -2031,7 +2429,7 @@ Overloads:
             const int32_t lua_callback_registry_index = hook_lua->registry().make_ref();
 
             LuaMod::m_load_map_pre_callbacks.emplace_back(LuaMod::LuaCallbackData{
-                    .lua = lua,
+                    .lua = &lua,
                     .instance_of_class = nullptr,
                     .registry_indexes = {std::pair<const LuaMadeSimple::Lua*, LuaMod::LuaCallbackData::RegistryIndex>{&lua, lua_callback_registry_index}}});
 
@@ -2050,7 +2448,7 @@ Overloads:
             }
 
             auto mod = get_mod_ref(lua);
-            auto hook_lua = make_hook_state(mod);
+            auto hook_lua = get_hook_lua(mod);
 
             lua_xmove(lua.get_lua_state(), hook_lua->get_lua_state(), 1);
 
@@ -2058,7 +2456,7 @@ Overloads:
             const int32_t lua_callback_registry_index = hook_lua->registry().make_ref();
 
             LuaMod::m_load_map_post_callbacks.emplace_back(LuaMod::LuaCallbackData{
-                    .lua = lua,
+                    .lua = &lua,
                     .instance_of_class = nullptr,
                     .registry_indexes = {std::pair<const LuaMadeSimple::Lua*, LuaMod::LuaCallbackData::RegistryIndex>{&lua, lua_callback_registry_index}}});
 
@@ -2077,7 +2475,7 @@ Overloads:
             }
 
             auto mod = get_mod_ref(lua);
-            auto hook_lua = make_hook_state(mod);
+            auto hook_lua = get_hook_lua(mod);
 
             lua_xmove(lua.get_lua_state(), hook_lua->get_lua_state(), 1);
 
@@ -2085,7 +2483,7 @@ Overloads:
             const int32_t lua_callback_registry_index = hook_lua->registry().make_ref();
 
             LuaMod::m_init_game_state_pre_callbacks.emplace_back(LuaMod::LuaCallbackData{
-                    .lua = lua,
+                    .lua = &lua,
                     .instance_of_class = nullptr,
                     .registry_indexes = {std::pair<const LuaMadeSimple::Lua*, LuaMod::LuaCallbackData::RegistryIndex>{&lua, lua_callback_registry_index}},
             });
@@ -2105,7 +2503,7 @@ Overloads:
             }
 
             auto mod = get_mod_ref(lua);
-            auto hook_lua = make_hook_state(mod);
+            auto hook_lua = get_hook_lua(mod);
 
             lua_xmove(lua.get_lua_state(), hook_lua->get_lua_state(), 1);
 
@@ -2113,7 +2511,7 @@ Overloads:
             const int32_t lua_callback_registry_index = hook_lua->registry().make_ref();
 
             LuaMod::m_init_game_state_post_callbacks.emplace_back(LuaMod::LuaCallbackData{
-                    .lua = lua,
+                    .lua = &lua,
                     .instance_of_class = nullptr,
                     .registry_indexes = {std::pair<const LuaMadeSimple::Lua*, LuaMod::LuaCallbackData::RegistryIndex>{&lua, lua_callback_registry_index}},
             });
@@ -2133,7 +2531,7 @@ Overloads:
             }
 
             auto mod = get_mod_ref(lua);
-            auto hook_lua = make_hook_state(mod);
+            auto hook_lua = get_hook_lua(mod);
 
             lua_xmove(lua.get_lua_state(), hook_lua->get_lua_state(), 1);
 
@@ -2141,7 +2539,7 @@ Overloads:
             const int32_t lua_callback_registry_index = hook_lua->registry().make_ref();
 
             LuaMod::m_begin_play_pre_callbacks.emplace_back(LuaMod::LuaCallbackData{
-                    .lua = lua,
+                    .lua = &lua,
                     .instance_of_class = nullptr,
                     .registry_indexes = {std::pair<const LuaMadeSimple::Lua*, LuaMod::LuaCallbackData::RegistryIndex>{&lua, lua_callback_registry_index}},
             });
@@ -2161,7 +2559,7 @@ Overloads:
             }
 
             auto mod = get_mod_ref(lua);
-            auto hook_lua = make_hook_state(mod);
+            auto hook_lua = get_hook_lua(mod);
 
             lua_xmove(lua.get_lua_state(), hook_lua->get_lua_state(), 1);
 
@@ -2169,7 +2567,63 @@ Overloads:
             const int32_t lua_callback_registry_index = hook_lua->registry().make_ref();
 
             LuaMod::m_begin_play_post_callbacks.emplace_back(LuaMod::LuaCallbackData{
-                    .lua = lua,
+                    .lua = &lua,
+                    .instance_of_class = nullptr,
+                    .registry_indexes = {std::pair<const LuaMadeSimple::Lua*, LuaMod::LuaCallbackData::RegistryIndex>{&lua, lua_callback_registry_index}},
+            });
+
+            return 0;
+        });
+
+        lua.register_function("RegisterEndPlayPreHook", [](const LuaMadeSimple::Lua& lua) -> int {
+            std::string error_overload_not_found{R"(
+No overload found for function 'RegisterEndPlayPreHook'.
+Overloads:
+#1: RegisterEndPlayPreHook(LuaFunction Callback))"};
+
+            if (!lua.is_function())
+            {
+                lua.throw_error(error_overload_not_found);
+            }
+
+            auto mod = get_mod_ref(lua);
+            auto hook_lua = get_hook_lua(mod);
+
+            lua_xmove(lua.get_lua_state(), hook_lua->get_lua_state(), 1);
+
+            // Take a reference to the Lua function (it also pops it of the stack)
+            const int32_t lua_callback_registry_index = hook_lua->registry().make_ref();
+
+            LuaMod::m_end_play_pre_callbacks.emplace_back(LuaMod::LuaCallbackData{
+                    .lua = &lua,
+                    .instance_of_class = nullptr,
+                    .registry_indexes = {std::pair<const LuaMadeSimple::Lua*, LuaMod::LuaCallbackData::RegistryIndex>{&lua, lua_callback_registry_index}},
+            });
+
+            return 0;
+        });
+
+        lua.register_function("RegisterEndPlayPostHook", [](const LuaMadeSimple::Lua& lua) -> int {
+            std::string error_overload_not_found{R"(
+No overload found for function 'RegisterEndPlayPostHook'.
+Overloads:
+#1: RegisterEndPlayPostHook(LuaFunction Callback))"};
+
+            if (!lua.is_function())
+            {
+                lua.throw_error(error_overload_not_found);
+            }
+
+            auto mod = get_mod_ref(lua);
+            auto hook_lua = get_hook_lua(mod);
+
+            lua_xmove(lua.get_lua_state(), hook_lua->get_lua_state(), 1);
+
+            // Take a reference to the Lua function (it also pops it of the stack)
+            const int32_t lua_callback_registry_index = hook_lua->registry().make_ref();
+
+            LuaMod::m_end_play_post_callbacks.emplace_back(LuaMod::LuaCallbackData{
+                    .lua = &lua,
                     .instance_of_class = nullptr,
                     .registry_indexes = {std::pair<const LuaMadeSimple::Lua*, LuaMod::LuaCallbackData::RegistryIndex>{&lua, lua_callback_registry_index}},
             });
@@ -2181,10 +2635,10 @@ Overloads:
             std::string error_overload_not_found{R"(
 No overload found for function 'IterateGameDirectories'.
 Overloads:
-#1: IterateGameDirectories()"};
+#1: IterateGameDirectories())"};
 
-            std::filesystem::path module_directory = UE4SSProgram::get_program().get_module_directory();
-            auto game_content_dir = module_directory.parent_path().parent_path().parent_path() / "Content";
+            std::filesystem::path game_executable_directory = UE4SSProgram::get_program().get_game_executable_directory();
+            auto game_content_dir = game_executable_directory.parent_path().parent_path() / "Content";
             if (!std::filesystem::exists(game_content_dir))
             {
                 Output::send<LogLevel::Warning>(STR("IterateGameDirectories: Could not locate the root directory because the directory structure is unknown "
@@ -2193,103 +2647,247 @@ Overloads:
                 return 1;
             }
 
-            auto game_name = module_directory.parent_path().parent_path().parent_path().stem();
-            auto game_root_directory = module_directory.parent_path().parent_path().parent_path().parent_path();
+            auto game_name = game_executable_directory.parent_path().parent_path().filename();
+            auto game_root_directory = game_executable_directory.parent_path().parent_path().parent_path();
             auto directories_table = lua.prepare_new_table();
 
             std::function<void(const std::filesystem::path&, LuaMadeSimple::Lua::Table&)> iterate_directory =
                     [&](const std::filesystem::path& directory, LuaMadeSimple::Lua::Table& current_directory_table) {
-                        for (const auto& item : std::filesystem::directory_iterator(directory))
+                        try
                         {
-                            if (!item.is_directory())
+                            std::error_code ec;
+                            for (const auto& item : std::filesystem::directory_iterator(directory, ec))
                             {
-                                continue;
+                                try
+                                {
+                                    if (!item.is_directory())
+                                    {
+                                        continue;
+                                    }
+
+                                    auto path = item.path().filename();
+
+                                    // Set key to "Game" if this is the game directory, otherwise use the actual name
+                                    std::string table_key;
+                                    if (path == game_name)
+                                    {
+                                        table_key = "Game";
+                                    }
+                                    else
+                                    {
+                                        // TODO: When UE5 String conversion is implemented, replace with StringCast<ANSICHAR>
+                                        table_key = to_utf8_string(path);
+                                    }
+
+                                    current_directory_table.add_key(table_key.c_str());
+                                    auto next_directory_table = lua.prepare_new_table();
+
+                                    // Recursively iterate the subdirectory
+                                    iterate_directory(item.path(), next_directory_table);
+                                    current_directory_table.fuse_pair();
+                                }
+                                catch (const std::exception& e)
+                                {
+                                    Output::send<LogLevel::Error>(STR("Error processing directory entry: {}\n"), to_wstring(e.what()));
+                                }
                             }
-                            auto path = item.path().stem();
-                            current_directory_table.add_key(path == game_name ? "Game" : to_string(path.wstring()).c_str());
-                            auto next_directory_table = lua.prepare_new_table();
-                            iterate_directory(item.path(), next_directory_table);
-                            current_directory_table.fuse_pair();
-                        }
 
-                        auto meta_table = lua.prepare_new_table();
-                        meta_table.add_pair("__index", [](lua_State* lua_state) -> int {
-                            return TRY([&] {
-                                const auto& lua = LuaMadeSimple::Lua(lua_state);
-                                std::string name{};
-                                if (!lua.is_string(2))
-                                {
-                                    return 0;
-                                }
-                                name = lua.get_string(2);
+                            if (ec)
+                            {
+                                Output::send<LogLevel::Error>(STR("Error iterating directory {}: {}\n"), directory.wstring(), to_wstring(ec.message()));
+                            }
 
-                                if (name == "__name")
-                                {
-                                    lua_getmetatable(lua_state, 1);
-                                    lua_pushliteral(lua_state, "__name");
-                                    lua_rawget(lua_state, 2);
-                                    lua.discard_value();
-                                    lua.discard_value();
-                                    if (!lua.is_string())
+                            auto meta_table = lua.prepare_new_table();
+
+                            lua_pushcfunction(lua.get_lua_state(), [](lua_State* lua_state) -> int {
+                                return TRY([&] {
+                                    const auto& lua = LuaMadeSimple::Lua(lua_state);
+                                    std::string name{};
+                                    if (!lua.is_string(2))
                                     {
-                                        throw std::runtime_error{"Couldn't find '__name' for directory entry."};
+                                        return 0;
                                     }
-                                    return 1;
-                                }
-                                else if (name == "__absolute_path")
-                                {
-                                    lua_getmetatable(lua_state, 1);
-                                    lua_pushliteral(lua_state, "__absolute_path");
-                                    lua_rawget(lua_state, 2);
-                                    lua.discard_value();
-                                    lua.discard_value();
-                                    if (!lua.is_string())
+                                    name = lua.get_string(2);
+
+                                    if (name == "__name")
                                     {
-                                        throw std::runtime_error{"Couldn't find '__absolute_path' for directory entry."};
-                                    }
-                                    return 1;
-                                }
-                                else if (name == "__files")
-                                {
-                                    lua_getmetatable(lua_state, 1);
-                                    lua_pushliteral(lua_state, "__absolute_path");
-                                    lua_rawget(lua_state, 2);
-                                    lua.discard_value();
-                                    lua.discard_value();
-                                    if (!lua.is_string())
-                                    {
-                                        throw std::runtime_error{"Couldn't find '__absolute_path' for directory entry."};
-                                    }
-                                    const auto current_path = std::string{lua.get_string()};
-                                    auto files_table = lua.prepare_new_table();
-                                    auto index = 1;
-                                    for (const auto& item : std::filesystem::directory_iterator(current_path))
-                                    {
-                                        if (!item.is_directory())
+                                        lua_getmetatable(lua_state, 1);
+                                        lua_pushliteral(lua_state, "__name");
+                                        lua_rawget(lua_state, 2);
+                                        lua.discard_value();
+                                        lua.discard_value();
+                                        if (!lua.is_string())
                                         {
-                                            files_table.add_key(index);
-                                            auto file_table = lua.prepare_new_table();
-                                            file_table.add_pair("__name", to_string(item.path().filename().wstring()).c_str());
-                                            file_table.add_pair("__absolute_path", to_string(item.path().wstring()).c_str());
-                                            files_table.fuse_pair();
+                                            throw std::runtime_error{"Couldn't find '__name' for directory entry."};
                                         }
-                                        ++index;
+                                        return 1;
                                     }
-                                    return 1;
-                                }
-                                else
-                                {
-                                    lua.set_nil();
-                                    return 1;
-                                }
+                                    else if (name == "__absolute_path")
+                                    {
+                                        lua_getmetatable(lua_state, 1);
+                                        lua_pushliteral(lua_state, "__absolute_path");
+                                        lua_rawget(lua_state, 2);
+                                        lua.discard_value();
+                                        lua.discard_value();
+                                        if (!lua.is_string())
+                                        {
+                                            throw std::runtime_error{"Couldn't find '__absolute_path' for directory entry."};
+                                        }
+                                        return 1;
+                                    }
+                                    else if (name == "__files")
+                                    {
+                                        lua_getmetatable(lua_state, 1);
+                                        lua_pushliteral(lua_state, "__absolute_path");
+                                        lua_rawget(lua_state, 2);
+                                        lua.discard_value();
+                                        lua.discard_value();
+                                        if (!lua.is_string())
+                                        {
+                                            throw std::runtime_error{"Couldn't find '__absolute_path' for directory entry."};
+                                        }
+
+                                        const auto path_str = lua.get_string();
+                                        std::wstring path_wstr;
+
+                                        // Try to convert the path string to wstring for filesystem operations
+                                        try
+                                        {
+                                            path_wstr = RC::to_wstring(path_str);
+                                        }
+                                        catch (const std::exception&)
+                                        {
+                                            // If conversion fails, reconstruct path as basic conversion
+                                            path_wstr.reserve(path_str.size());
+                                            for (char c : path_str)
+                                            {
+                                                path_wstr.push_back(static_cast<wchar_t>(c));
+                                            }
+
+                                            // Check if the path exists first
+                                            std::error_code path_ec;
+                                            if (!std::filesystem::exists(path_wstr, path_ec))
+                                            {
+                                                // Path doesn't exist, try to reconstruct it
+                                                if (path_str.find("LogicMods") != std::string::npos)
+                                                {
+                                                    // Get the game executable directory
+                                                    std::filesystem::path game_exec_dir = UE4SSProgram::get_program().get_game_executable_directory();
+
+                                                    // Navigate to content directory
+                                                    std::filesystem::path content_dir = game_exec_dir;
+                                                    content_dir = content_dir.parent_path(); // Up to Binaries
+                                                    content_dir = content_dir.parent_path(); // Up to Game
+                                                    content_dir /= "Content";
+
+                                                    if (std::filesystem::exists(content_dir))
+                                                    {
+                                                        auto logic_mods_dir = content_dir / "Paks/LogicMods";
+
+                                                        // Check if it exists or try to create it
+                                                        if (!std::filesystem::exists(logic_mods_dir))
+                                                        {
+                                                            std::error_code dir_ec;
+                                                            auto paks_dir = content_dir / "Paks";
+                                                            if (!std::filesystem::exists(paks_dir))
+                                                            {
+                                                                std::filesystem::create_directory(paks_dir, dir_ec);
+                                                            }
+                                                            std::filesystem::create_directory(logic_mods_dir, dir_ec);
+                                                        }
+
+                                                        if (std::filesystem::exists(logic_mods_dir))
+                                                        {
+                                                            path_wstr = logic_mods_dir.wstring();
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+
+                                        auto files_table = lua.prepare_new_table();
+                                        auto index = 1;
+
+                                        try
+                                        {
+                                            std::error_code ec;
+                                            if (std::filesystem::exists(path_wstr, ec))
+                                            {
+                                                for (const auto& item : std::filesystem::directory_iterator(path_wstr, ec))
+                                                {
+                                                    try
+                                                    {
+                                                        if (!item.is_directory())
+                                                        {
+                                                            files_table.add_key(index);
+                                                            auto file_table = lua.prepare_new_table();
+
+                                                            // Create safe strings for filenames and paths
+                                                            // TODO: When UE5 String conversion is implemented, replace with StringCast<ANSICHAR>
+                                                            std::string safe_filename = to_utf8_string(item.path().filename());
+                                                            std::string safe_path = to_utf8_string(item.path());
+
+                                                            file_table.add_pair("__name", safe_filename.c_str());
+                                                            file_table.add_pair("__absolute_path", safe_path.c_str());
+                                                            files_table.fuse_pair();
+                                                        }
+                                                        ++index;
+                                                    }
+                                                    catch (const std::exception& e)
+                                                    {
+                                                        Output::send<LogLevel::Error>(STR("Error processing file: {}\n"), to_wstring(e.what()));
+                                                    }
+                                                }
+                                            }
+
+                                            if (ec)
+                                            {
+                                                Output::send<LogLevel::Error>(STR("Error iterating files in {}: {}\n"), path_wstr, to_wstring(ec.message()));
+                                            }
+                                        }
+                                        catch (const std::exception& e)
+                                        {
+                                            Output::send<LogLevel::Error>(STR("Error iterating files: {}\n"), to_wstring(e.what()));
+                                        }
+
+                                        return 1;
+                                    }
+                                    else
+                                    {
+                                        lua.set_nil();
+                                        return 1;
+                                    }
+                                });
                             });
-                        });
-                        meta_table.add_pair("__name", to_string(directory.stem().wstring()).c_str());
-                        meta_table.add_pair("__absolute_path", to_string(directory.wstring()).c_str());
-                        lua_setmetatable(lua.get_lua_state(), -2);
+
+                            lua_setfield(lua.get_lua_state(), -2, "__index");
+
+                            // Set metadata using safe string conversion
+                            // TODO: When UE5 String conversion is implemented, replace with StringCast<ANSICHAR>
+                            std::string safe_filename = to_utf8_string(directory.filename());
+                            std::string safe_path = to_utf8_string(directory);
+
+                            meta_table.add_pair("__name", safe_filename.c_str());
+                            meta_table.add_pair("__absolute_path", safe_path.c_str());
+                            lua_setmetatable(lua.get_lua_state(), -2);
+                        }
+                        catch (const std::exception& e)
+                        {
+                            Output::send<LogLevel::Error>(STR("Exception in iterate_directory: {}\n"), to_wstring(e.what()));
+                        }
                     };
 
-            iterate_directory(game_root_directory, directories_table);
+            try
+            {
+                iterate_directory(game_root_directory, directories_table);
+            }
+            catch (const std::exception& e)
+            {
+                Output::send<LogLevel::Error>(STR("Exception in IterateGameDirectories: {}\n"), to_wstring(e.what()));
+                lua.set_nil();
+                return 1;
+            }
+
             return 1;
         });
 
@@ -2297,35 +2895,71 @@ Overloads:
             std::string error_overload_not_found{R"(
 No overload found for function 'CreateLogicModsDirectory'.
 Overloads:
-#1: CreateLogicModsDirectory()"};
+#1: CreateLogicModsDirectory())"};
+            try
+            {
+                std::filesystem::path game_executable_directory = UE4SSProgram::get_program().get_game_executable_directory();
+                auto game_content_dir = game_executable_directory.parent_path().parent_path() / "Content";
+                if (!std::filesystem::exists(game_content_dir))
+                {
+                    lua.throw_error("CreateLogicModsDirectory: Could not locate the \"Content\" directory because the directory structure is unknown (not "
+                                    "<RootGamePath>/Game/Content)\n");
+                }
 
-            std::filesystem::path module_directory = UE4SSProgram::get_program().get_module_directory();
-            auto game_content_dir = module_directory.parent_path().parent_path().parent_path() / "Content";
-            if (!std::filesystem::exists(game_content_dir))
-            {
-                lua.throw_error("CreateLogicModsDirectory: Could not locate the \"Content\" directory because the directory structure is unknown (not "
-                                "<RootGamePath>/Game/Content)\n");
-            }
-            auto logic_mods_dir = game_content_dir / "Paks/LogicMods";
-            if (std::filesystem::exists(logic_mods_dir))
-            {
-                Output::send<LogLevel::Warning>(
-                        STR("CreateLogicModsDirectory: \"LogicMods\" directory already exists. Cancelling creation of new directory.\n"));
-                lua.set_bool(false);
+                auto logic_mods_dir = game_content_dir / "Paks/LogicMods";
+
+                std::error_code ec;
+                if (std::filesystem::exists(logic_mods_dir, ec))
+                {
+                    Output::send<LogLevel::Warning>(
+                            STR("CreateLogicModsDirectory: \"LogicMods\" directory already exists. Cancelling creation of new directory.\n"));
+                    lua.set_bool(true);
+                    return 1;
+                }
+
+                // Try to create the Paks directory first if it doesn't exist
+                auto paks_dir = game_content_dir / "Paks";
+                if (!std::filesystem::exists(paks_dir, ec))
+                {
+                    ec.clear();
+                    bool paks_created = std::filesystem::create_directory(paks_dir, ec);
+                    if (!paks_created || ec)
+                    {
+                        Output::send<LogLevel::Error>(STR("CreateLogicModsDirectory: Failed to create Paks directory: {}\n"), to_wstring(ec.message()));
+                        // Try to continue anyway
+                    }
+                }
+
+                // Now create the LogicMods directory
+                ec.clear();
+                bool created = std::filesystem::create_directory(logic_mods_dir, ec);
+
+                if (!created || ec)
+                {
+                    Output::send<LogLevel::Error>(STR("CreateLogicModsDirectory: Error creating directory: {}\n"), to_wstring(ec.message()));
+
+                    // Check if the directory exists despite the error (might happen with Unicode paths)
+                    ec.clear();
+                    if (std::filesystem::exists(logic_mods_dir, ec))
+                    {
+                        lua.set_bool(true);
+                        return 1;
+                    }
+
+                    lua.throw_error("CreateLogicModsDirectory: Unable to create \"LogicMods\" directory. Try creating manually.\n");
+                }
+
+                Output::send<LogLevel::Warning>(STR("CreateLogicModsDirectory: LogicMods directory created.\n"));
+
+                lua.set_bool(true);
                 return 1;
             }
-
-            Output::send<LogLevel::Warning>(STR("CreateLogicModsDirectory: LogicMods directory not found. Creating LogicMods directory.\n"));
-            auto new_logic_mods_dir = std::filesystem::create_directory(logic_mods_dir);
-            if (!new_logic_mods_dir)
+            catch (const std::exception& e)
             {
-                lua.throw_error("CreateLogicModsDirectory: Unable to create \"LogicMods\" directory. Try creating manually.\n");
+                Output::send<LogLevel::Error>(STR("Exception in CreateLogicModsDirectory: {}\n"), to_wstring(e.what()));
+                lua.throw_error(e.what());
+                return 0;
             }
-
-            Output::send<LogLevel::Warning>(STR("CreateLogicModsDirectory: LogicMods directory created.\n"));
-
-            lua.set_bool(true);
-            return 1;
         });
 
         lua.register_function("ExecuteAsync", [](const LuaMadeSimple::Lua& lua) -> int {
@@ -2425,10 +3059,10 @@ Overloads:
 
             LuaMod::LuaCallbackData* callback = nullptr;
             auto mod = get_mod_ref(lua);
-            auto hook_lua = make_hook_state(mod);
-            callback = &LuaMod::m_process_console_exec_pre_callbacks.emplace_back(LuaMod::LuaCallbackData{*hook_lua, nullptr, {}});
-            lua_xmove(lua.get_lua_state(), callback->lua.get_lua_state(), 1);
-            const int32_t lua_function_ref = callback->lua.registry().make_ref();
+            auto hook_lua = get_hook_lua(mod);
+            callback = &LuaMod::m_process_console_exec_pre_callbacks.emplace_back(LuaMod::LuaCallbackData{hook_lua, nullptr, {}});
+            lua_xmove(lua.get_lua_state(), callback->lua->get_lua_state(), 1);
+            const int32_t lua_function_ref = callback->lua->registry().make_ref();
             callback->registry_indexes.emplace_back(hook_lua, LuaMod::LuaCallbackData::RegistryIndex{lua_function_ref});
             return 0;
         });
@@ -2446,10 +3080,10 @@ Overloads:
 
             LuaMod::LuaCallbackData* callback = nullptr;
             auto mod = get_mod_ref(lua);
-            auto hook_lua = make_hook_state(mod);
-            callback = &LuaMod::m_process_console_exec_post_callbacks.emplace_back(LuaMod::LuaCallbackData{*hook_lua, nullptr, {}});
-            lua_xmove(lua.get_lua_state(), callback->lua.get_lua_state(), 1);
-            const int32_t lua_function_ref = callback->lua.registry().make_ref();
+            auto hook_lua = get_hook_lua(mod);
+            callback = &LuaMod::m_process_console_exec_post_callbacks.emplace_back(LuaMod::LuaCallbackData{hook_lua, nullptr, {}});
+            lua_xmove(lua.get_lua_state(), callback->lua->get_lua_state(), 1);
+            const int32_t lua_function_ref = callback->lua->registry().make_ref();
             callback->registry_indexes.emplace_back(hook_lua, LuaMod::LuaCallbackData::RegistryIndex{lua_function_ref});
             return 0;
         });
@@ -2467,10 +3101,10 @@ Overloads:
 
             LuaMod::LuaCallbackData* callback = nullptr;
             auto mod = get_mod_ref(lua);
-            auto hook_lua = make_hook_state(mod);
-            callback = &LuaMod::m_call_function_by_name_with_arguments_pre_callbacks.emplace_back(LuaMod::LuaCallbackData{*hook_lua, nullptr, {}});
-            lua_xmove(lua.get_lua_state(), callback->lua.get_lua_state(), 1);
-            const int32_t lua_function_ref = callback->lua.registry().make_ref();
+            auto hook_lua = get_hook_lua(mod);
+            callback = &LuaMod::m_call_function_by_name_with_arguments_pre_callbacks.emplace_back(LuaMod::LuaCallbackData{hook_lua, nullptr, {}});
+            lua_xmove(lua.get_lua_state(), callback->lua->get_lua_state(), 1);
+            const int32_t lua_function_ref = callback->lua->registry().make_ref();
             callback->registry_indexes.emplace_back(hook_lua, LuaMod::LuaCallbackData::RegistryIndex{lua_function_ref});
             return 0;
         });
@@ -2488,10 +3122,10 @@ Overloads:
 
             LuaMod::LuaCallbackData* callback = nullptr;
             auto mod = get_mod_ref(lua);
-            auto hook_lua = make_hook_state(mod);
-            callback = &LuaMod::m_call_function_by_name_with_arguments_post_callbacks.emplace_back(LuaMod::LuaCallbackData{*hook_lua, nullptr, {}});
-            lua_xmove(lua.get_lua_state(), callback->lua.get_lua_state(), 1);
-            const int32_t lua_function_ref = callback->lua.registry().make_ref();
+            auto hook_lua = get_hook_lua(mod);
+            callback = &LuaMod::m_call_function_by_name_with_arguments_post_callbacks.emplace_back(LuaMod::LuaCallbackData{hook_lua, nullptr, {}});
+            lua_xmove(lua.get_lua_state(), callback->lua->get_lua_state(), 1);
+            const int32_t lua_function_ref = callback->lua->registry().make_ref();
             callback->registry_indexes.emplace_back(hook_lua, LuaMod::LuaCallbackData::RegistryIndex{lua_function_ref});
             return 0;
         });
@@ -2509,10 +3143,10 @@ Overloads:
 
             LuaMod::LuaCallbackData* callback = nullptr;
             auto mod = get_mod_ref(lua);
-            auto hook_lua = make_hook_state(mod);
-            callback = &LuaMod::m_local_player_exec_pre_callbacks.emplace_back(LuaMod::LuaCallbackData{*hook_lua, nullptr, {}});
-            lua_xmove(lua.get_lua_state(), callback->lua.get_lua_state(), 1);
-            const int32_t lua_function_ref = callback->lua.registry().make_ref();
+            auto hook_lua = get_hook_lua(mod);
+            callback = &LuaMod::m_local_player_exec_pre_callbacks.emplace_back(LuaMod::LuaCallbackData{hook_lua, nullptr, {}});
+            lua_xmove(lua.get_lua_state(), callback->lua->get_lua_state(), 1);
+            const int32_t lua_function_ref = callback->lua->registry().make_ref();
             callback->registry_indexes.emplace_back(hook_lua, LuaMod::LuaCallbackData::RegistryIndex{lua_function_ref});
             return 0;
         });
@@ -2530,10 +3164,10 @@ Overloads:
 
             LuaMod::LuaCallbackData* callback = nullptr;
             auto mod = get_mod_ref(lua);
-            auto hook_lua = make_hook_state(mod);
-            callback = &LuaMod::m_local_player_exec_post_callbacks.emplace_back(LuaMod::LuaCallbackData{*hook_lua, nullptr, {}});
-            lua_xmove(lua.get_lua_state(), callback->lua.get_lua_state(), 1);
-            const int32_t lua_function_ref = callback->lua.registry().make_ref();
+            auto hook_lua = get_hook_lua(mod);
+            callback = &LuaMod::m_local_player_exec_post_callbacks.emplace_back(LuaMod::LuaCallbackData{hook_lua, nullptr, {}});
+            lua_xmove(lua.get_lua_state(), callback->lua->get_lua_state(), 1);
+            const int32_t lua_function_ref = callback->lua->registry().make_ref();
             callback->registry_indexes.emplace_back(hook_lua, LuaMod::LuaCallbackData::RegistryIndex{lua_function_ref});
             return 0;
         });
@@ -2548,7 +3182,7 @@ Overloads:
             {
                 throw std::runtime_error{error_overload_not_found};
             }
-            auto command_name = to_wstring(lua.get_string());
+            auto command_name = ensure_str(lua.get_string());
 
             if (!lua.is_function())
             {
@@ -2560,15 +3194,15 @@ Overloads:
             if (iter == LuaMod::m_global_command_lua_callbacks.end())
             {
                 auto mod = get_mod_ref(lua);
-                auto hook_lua = make_hook_state(mod);
-                callback = &LuaMod::m_global_command_lua_callbacks.emplace(command_name, LuaMod::LuaCallbackData{*hook_lua, nullptr, {}}).first->second;
+                auto hook_lua = get_hook_lua(mod);
+                callback = &LuaMod::m_global_command_lua_callbacks.emplace(command_name, LuaMod::LuaCallbackData{hook_lua, nullptr, {}}).first->second;
             }
             else
             {
                 callback = &iter->second;
             }
-            lua_xmove(lua.get_lua_state(), callback->lua.get_lua_state(), 1);
-            const int32_t lua_function_ref = callback->lua.registry().make_ref();
+            lua_xmove(lua.get_lua_state(), callback->lua->get_lua_state(), 1);
+            const int32_t lua_function_ref = callback->lua->registry().make_ref();
             callback->registry_indexes.emplace_back(&lua, LuaMod::LuaCallbackData::RegistryIndex{lua_function_ref});
             return 0;
         });
@@ -2583,7 +3217,7 @@ Overloads:
             {
                 throw std::runtime_error{error_overload_not_found};
             }
-            auto command_name = to_wstring(lua.get_string());
+            auto command_name = ensure_str(lua.get_string());
 
             if (!lua.is_function())
             {
@@ -2595,15 +3229,15 @@ Overloads:
             if (iter == LuaMod::m_custom_command_lua_pre_callbacks.end())
             {
                 auto mod = get_mod_ref(lua);
-                auto hook_lua = make_hook_state(mod);
-                callback = &LuaMod::m_custom_command_lua_pre_callbacks.emplace(command_name, LuaMod::LuaCallbackData{*hook_lua, nullptr, {}}).first->second;
+                auto hook_lua = get_hook_lua(mod);
+                callback = &LuaMod::m_custom_command_lua_pre_callbacks.emplace(command_name, LuaMod::LuaCallbackData{hook_lua, nullptr, {}}).first->second;
             }
             else
             {
                 callback = &iter->second;
             }
-            lua_xmove(lua.get_lua_state(), callback->lua.get_lua_state(), 1);
-            const int32_t lua_function_ref = callback->lua.registry().make_ref();
+            lua_xmove(lua.get_lua_state(), callback->lua->get_lua_state(), 1);
+            const int32_t lua_function_ref = callback->lua->registry().make_ref();
             callback->registry_indexes.emplace_back(&lua, LuaMod::LuaCallbackData::RegistryIndex{lua_function_ref});
             return 0;
         });
@@ -2623,7 +3257,7 @@ Overloads:
             {
                 throw std::runtime_error{error_overload_not_found};
             }
-            auto asset_path_and_name = Unreal::FName(to_wstring(lua.get_string()), Unreal::FNAME_Add);
+            auto asset_path_and_name = Unreal::FName(ensure_str(lua.get_string()), Unreal::FNAME_Add);
 
             auto* asset_registry = static_cast<Unreal::UAssetRegistry*>(Unreal::UAssetRegistryHelpers::GetAssetRegistry().ObjectPointer);
             if (!asset_registry)
@@ -2660,7 +3294,7 @@ Overloads:
             std::string error_overload_not_found{R"(
 No overload found for function 'FindObject'.
 Overloads:
-#1: FindObject(UClass InClass, UObject InOuter, string Name, bool ExactClass)
+#1: FindObject(UClass InClass, UObject|UClass InOuter, string Name, bool ExactClass)
 #2: FindObject(string|FName|nil ClassName, string|FName|nil ObjectShortName, EObjectFlags RequiredFlags, EObjectFlags BannedFlags)
 #3: FindObject(UClass|nil Class, string|FName|nil ObjectShortName, EObjectFlags RequiredFlags, EObjectFlags BannedFlags))"};
 
@@ -2674,7 +3308,7 @@ Overloads:
             bool could_be_in_class{};
             if (lua.is_string())
             {
-                object_class_name = Unreal::FName(to_wstring(lua.get_string()), Unreal::FNAME_Add);
+                object_class_name = Unreal::FName(ensure_str(lua.get_string()), Unreal::FNAME_Add);
             }
             else if (lua.is_userdata())
             {
@@ -2717,7 +3351,7 @@ Overloads:
             bool could_be_object_short_name{};
             if (lua.is_string())
             {
-                object_short_name = Unreal::FName(to_wstring(lua.get_string()), Unreal::FNAME_Add);
+                object_short_name = Unreal::FName(ensure_str(lua.get_string()), Unreal::FNAME_Add);
                 could_be_object_short_name = true;
             }
             else if (lua.is_userdata())
@@ -2727,9 +3361,16 @@ Overloads:
                 auto& userdata = lua.get_userdata<LuaType::UE4SSBaseObject>(1, true);
                 std::string_view lua_object_name = userdata.get_object_name();
                 // TODO: Redo when there's a bette way of checking whether a lua object is derived from UObject
-                if (lua_object_name == "UObject" || lua_object_name == "UWorld" || lua_object_name == "AActor")
+                if (lua_object_name == "UObject" || lua_object_name == "UWorld" || lua_object_name == "AActor" || lua_object_name == "UClass")
                 {
-                    in_outer = lua.get_userdata<LuaType::UObject>().get_remote_cpp_object();
+                    if (lua_object_name == "UClass")
+                    {
+                        in_outer = lua.get_userdata<LuaType::UClass>().get_remote_cpp_object();
+                    }
+                    else
+                    {
+                        in_outer = lua.get_userdata<LuaType::UObject>().get_remote_cpp_object();
+                    }
                     could_be_in_outer = true;
                 }
                 else if (lua_object_name == "FName")
@@ -2801,7 +3442,7 @@ Overloads:
 
             if (could_be_in_class && could_be_in_outer && could_be_in_name)
             {
-                LuaType::auto_construct_object(lua, Unreal::UObjectGlobals::FindObject(in_class, in_outer, to_wstring(in_name), exact_class));
+                LuaType::auto_construct_object(lua, Unreal::UObjectGlobals::FindObject(in_class, in_outer, ensure_str(in_name), exact_class));
             }
             else
             {
@@ -2848,7 +3489,7 @@ Overloads:
             bool object_class_name_supplied{true};
             if (lua.is_string())
             {
-                object_class_name = Unreal::FName(to_wstring(lua.get_string()), Unreal::FNAME_Add);
+                object_class_name = Unreal::FName(ensure_str(lua.get_string()), Unreal::FNAME_Add);
             }
             else if (lua.is_userdata())
             {
@@ -2886,7 +3527,7 @@ Overloads:
             Unreal::FName object_short_name{};
             if (lua.is_string())
             {
-                object_short_name = Unreal::FName(to_wstring(lua.get_string()), Unreal::FNAME_Add);
+                object_short_name = Unreal::FName(ensure_str(lua.get_string()), Unreal::FNAME_Add);
             }
             else if (lua.is_userdata())
             {
@@ -3028,8 +3669,7 @@ Overloads:
                 lua.throw_error(error_overload_not_found);
             }
 
-            std::wstring function_name = to_wstring(lua.get_string());
-            std::wstring function_name_no_prefix = function_name.substr(function_name.find_first_of(L"/"), function_name.size());
+            auto function_name_no_prefix = get_function_name_without_prefix(ensure_str(lua.get_string()));
 
             if (!lua.is_function())
             {
@@ -3037,7 +3677,7 @@ Overloads:
             }
 
             auto mod = get_mod_ref(lua);
-            auto hook_lua = make_hook_state(mod); // operates on LuaMod::m_lua incrementing its stack via lua_newthread
+            auto [hook_lua, lua_thread_registry_index] = make_hook_state(mod); // operates on LuaMod::m_lua incrementing its stack via lua_newthread
 
             // Duplicate the Lua function to the top of the stack for lua_xmove and luaL_ref
             lua_pushvalue(lua.get_lua_state(), 1); // operates on LuaMadeSimple::Lua::m_lua_state
@@ -3045,7 +3685,6 @@ Overloads:
 
             // Take a reference to the Lua function (it also pops it of the stack)
             const auto lua_callback_registry_index = luaL_ref(hook_lua->get_lua_state(), LUA_REGISTRYINDEX);
-            const auto lua_thread_registry_index = luaL_ref(mod->lua().get_lua_state(), LUA_REGISTRYINDEX);
 
             bool has_post_callback{};
             int lua_post_callback_registry_index = -1;
@@ -3062,7 +3701,9 @@ Overloads:
             Unreal::UFunction* unreal_function = Unreal::UObjectGlobals::StaticFindObject<Unreal::UFunction*>(nullptr, nullptr, function_name_no_prefix);
             if (!unreal_function)
             {
-                lua.throw_error("Tried to register a hook with Lua function 'RegisterHook' but no UFunction with the specified name was found.");
+                lua.throw_error(std::format(
+                        "Tried to register a hook with Lua function 'RegisterHook' but no UFunction with the specified name was found.\nFunction Name: {}",
+                        to_string(function_name_no_prefix)));
             }
 
             int32_t generic_pre_id{};
@@ -3091,9 +3732,13 @@ Overloads:
                      !unreal_function->HasAnyFunctionFlags(Unreal::EFunctionFlags::FUNC_Native))
             {
                 ++m_last_generic_hook_id;
-                auto [callback_data, _] = LuaMod::m_script_hook_callbacks.emplace(unreal_function->GetFullName(), LuaCallbackData{*hook_lua, nullptr, {}});
-                callback_data->second.registry_indexes.emplace_back(hook_lua,
-                                                                    LuaMod::LuaCallbackData::RegistryIndex{lua_callback_registry_index, m_last_generic_hook_id});
+                auto function_data = find_function_hook_data(m_script_hook_callbacks, unreal_function);
+                if (!function_data)
+                {
+                    function_data = &m_script_hook_callbacks.emplace_back(get_object_names(unreal_function), LuaCallbackData{hook_lua, nullptr, {}});
+                }
+                auto& callback_data = function_data->callback_data;
+                callback_data.registry_indexes.emplace_back(hook_lua, LuaCallbackData::RegistryIndex{lua_callback_registry_index, m_last_generic_hook_id});
                 generic_pre_id = m_last_generic_hook_id;
                 generic_post_id = m_last_generic_hook_id;
                 Output::send<LogLevel::Verbose>(STR("[RegisterHook] Registered script hook ({}, {}) for {}\n"),
@@ -3104,10 +3749,11 @@ Overloads:
             else
             {
                 std::string error_message{"Was unable to register a hook with Lua function 'RegisterHook', information:\n"};
-                error_message.append(std::format("UFunction::Func: {}\n", std::bit_cast<void*>(func_ptr)));
-                error_message.append(std::format("ProcessInternal: {}\n", Unreal::UObject::ProcessInternalInternal.get_function_address()));
+                error_message.append(fmt::format("FunctionName: {}\n", to_string(function_name_no_prefix)));
+                error_message.append(fmt::format("UFunction::Func: {}\n", std::bit_cast<void*>(func_ptr)));
+                error_message.append(fmt::format("ProcessInternal: {}\n", Unreal::UObject::ProcessInternalInternal.get_function_address()));
                 error_message.append(
-                        std::format("FUNC_Native: {}\n", static_cast<uint32_t>(unreal_function->HasAnyFunctionFlags(Unreal::EFunctionFlags::FUNC_Native))));
+                        fmt::format("FUNC_Native: {}\n", static_cast<uint32_t>(unreal_function->HasAnyFunctionFlags(Unreal::EFunctionFlags::FUNC_Native))));
                 lua.throw_error(error_message);
             }
 
@@ -3129,7 +3775,7 @@ Overloads:
             }
 
             auto mod = get_mod_ref(lua);
-            auto hook_lua = make_hook_state(mod);
+            auto [hook_lua, lua_thread_registry_index] = make_hook_state(mod);
 
             // Duplicate the Lua function to the top of the stack for lua_xmove and luaL_ref
             lua_pushvalue(lua.get_lua_state(), 1);
@@ -3137,8 +3783,8 @@ Overloads:
             lua_xmove(lua.get_lua_state(), hook_lua->get_lua_state(), 1);
 
             const auto func_ref = luaL_ref(hook_lua->get_lua_state(), LUA_REGISTRYINDEX);
-            const auto thread_ref = luaL_ref(mod->lua().get_lua_state(), LUA_REGISTRYINDEX);
-            SimpleLuaAction simpleAction{hook_lua, func_ref, thread_ref};
+
+            SimpleLuaAction simpleAction{hook_lua, func_ref, lua_thread_registry_index};
             {
                 std::lock_guard<std::recursive_mutex> guard{LuaMod::m_thread_actions_mutex};
                 mod->m_game_thread_actions.emplace_back(simpleAction);
@@ -3297,6 +3943,51 @@ Overloads:
         lua_setglobal(lua.get_lua_state(), "FText");
         // FText Class -> END
 
+        // FString Class -> START
+        // Pre-load the global FString constructor
+        lua.register_function("FString",
+                              [](const LuaMadeSimple::Lua& lua) -> int {
+                                  if (lua.get_stack_size() < 1 || !lua.is_string())
+                                  {
+                                      lua.throw_error("FString constructor requires a string argument");
+                                  }
+                                  std::string_view str = lua.get_string();
+                                  auto fstring = Unreal::FString(ensure_str(std::string(str)).c_str());
+                                  LuaType::FString::construct(lua, &fstring);
+                                  return 1;
+                              });
+        // FString Class -> END
+
+        // FUtf8String Class -> START
+        // Pre-load the global FUtf8String constructor
+        lua.register_function("FUtf8String",
+                              [](const LuaMadeSimple::Lua& lua) -> int {
+                                  if (lua.get_stack_size() < 1 || !lua.is_string())
+                                  {
+                                      lua.throw_error("FUtf8String constructor requires a string argument");
+                                  }
+                                  std::string_view str = lua.get_string();
+                                  auto utf8string = Unreal::FUtf8String(reinterpret_cast<const Unreal::UTF8CHAR*>(str.data()));
+                                  LuaType::FUtf8String::construct(lua, &utf8string);
+                                  return 1;
+                              });
+        // FUtf8String Class -> END
+
+        // FAnsiString Class -> START
+        // Pre-load the global FAnsiString constructor
+        lua.register_function("FAnsiString",
+                              [](const LuaMadeSimple::Lua& lua) -> int {
+                                  if (lua.get_stack_size() < 1 || !lua.is_string())
+                                  {
+                                      lua.throw_error("FAnsiString constructor requires a string argument");
+                                  }
+                                  std::string_view str = lua.get_string();
+                                  auto ansistring = Unreal::FAnsiString(str.data());
+                                  LuaType::FAnsiString::construct(lua, &ansistring);
+                                  return 1;
+                              });
+        // FAnsiString Class -> END
+
         // FPackageName -> START
         auto package_name = lua.prepare_new_table();
         package_name.set_has_userdata(false);
@@ -3312,7 +4003,7 @@ Overloads:
                 lua.throw_error(error_overload_not_found);
             }
 
-            File::StringType PossiblyLongName = to_wstring(lua.get_string());
+            File::StringType PossiblyLongName = ensure_str(lua.get_string());
             lua.set_bool(Unreal::FPackageName::IsShortPackageName(PossiblyLongName));
 
             return 1;
@@ -3329,7 +4020,7 @@ Overloads:
                 lua.throw_error(error_overload_not_found);
             }
 
-            File::StringType InLongPackageName = to_wstring(lua.get_string());
+            File::StringType InLongPackageName = ensure_str(lua.get_string());
             lua.set_bool(Unreal::FPackageName::IsValidLongPackageName(InLongPackageName));
 
             return 1;
@@ -3346,28 +4037,39 @@ Overloads:
 
     auto LuaMod::prepare_mod(const LuaMadeSimple::Lua& lua) -> void
     {
-        lua.open_all_libs();
+        try
+        {
+            lua.open_all_libs();
+            setup_lua_require_paths(lua);
+            setup_lua_global_functions(lua);
+            setup_lua_classes(lua);
 
-        setup_lua_require_paths(lua);
+            // Setup a global reference for this mod
+            // It can be accessed later when you otherwise don't have access to the 'Mod' instance
+            LuaType::LuaModRef::construct(lua, this);
+            lua_setglobal(lua.get_lua_state(), "ModRef");
 
-        setup_lua_global_functions(lua);
-        setup_lua_classes(lua);
+            // Setup all the input related globals (keys & modifier keys)
+            register_input_globals(lua);
 
-        // Setup a global reference for this mod
-        // It can be accessed later when you otherwise don't have access to the 'Mod' instance
-        LuaType::LuaModRef::construct(lua, this);
-        lua_setglobal(lua.get_lua_state(), "ModRef");
+            register_all_property_types(lua);
+            register_object_flags(lua);
+            register_property_flags(lua);
+            register_efindname(lua);
 
-        // Setup all the input related globals (keys & modifier keys)
-        register_input_globals(lua);
-
-        register_all_property_types(lua);
-        register_object_flags(lua);
-        register_property_flags(lua);
-        register_efindname(lua);
-
-        lua.set_nil();
-        lua_setglobal(lua.get_lua_state(), "__OriginalReturnValue");
+            lua.set_nil();
+            lua_setglobal(lua.get_lua_state(), "__OriginalReturnValue");
+        }
+        catch (std::exception& e)
+        {
+            Output::send<LogLevel::Error>(STR("Exception during mod preparation: {}\n"), ensure_str(e.what()));
+            throw; // Re-throw to allow proper error handling upstream
+        }
+        catch (...)
+        {
+            Output::send<LogLevel::Error>(STR("Unknown exception during mod preparation\n"));
+            throw; // Re-throw to allow proper error handling upstream
+        }
     }
 
     auto LuaMod::fire_on_lua_start_for_cpp_mods() -> void
@@ -3377,7 +4079,7 @@ Overloads:
             return;
         }
 
-        for (const auto& mod : UE4SSProgram::m_mods)
+        for (const auto& mod : UE4SSProgram::get_program().m_mods)
         {
             if (auto cpp_mod = dynamic_cast<CppMod*>(mod.get()); cpp_mod && mod->is_started())
             {
@@ -3397,7 +4099,7 @@ Overloads:
             return;
         }
 
-        for (const auto& mod : UE4SSProgram::m_mods)
+        for (const auto& mod : UE4SSProgram::get_program().m_mods)
         {
             if (auto cpp_mod = dynamic_cast<CppMod*>(mod.get()); cpp_mod && mod->is_started())
             {
@@ -3410,28 +4112,139 @@ Overloads:
         }
     }
 
-    auto LuaMod::start_mod() -> void
+    auto LuaMod::load_and_execute_script(const std::filesystem::path& script_path) -> bool
     {
-        prepare_mod(lua());
-        make_main_state(this, lua());
-        setup_lua_global_functions_main_state_only();
-
-        make_async_state(this, lua());
-
-        start_async_thread();
-
-        m_is_started = true;
-
-        fire_on_lua_start_for_cpp_mods();
-
-        // Don't crash on syntax errors.
         try
         {
-            main_lua()->execute_file(m_scripts_path + L"\\main.lua");
+            if (!std::filesystem::exists(script_path))
+            {
+                return false;
+            }
+
+            // Read the file content
+            std::ifstream file(script_path, std::ios::binary);
+            if (!file.is_open())
+            {
+                throw std::runtime_error(fmt::format("Failed to open script file: {}", to_utf8_string(script_path)));
+            }
+
+            // Get file size and read content
+            file.seekg(0, std::ios::end);
+            std::streamsize size = file.tellg();
+            file.seekg(0, std::ios::beg);
+
+            std::vector<char> buffer(size);
+            if (!file.read(buffer.data(), size))
+            {
+                throw std::runtime_error(fmt::format("Failed to read script file: {}", to_utf8_string(script_path)));
+            }
+            file.close();
+
+            // Generate a UTF-8 chunk name for better error messages
+            std::string chunk_name = "@" + to_utf8_string(script_path);
+
+            // Load the buffer
+            if (int status = luaL_loadbuffer(main_lua()->get_lua_state(), buffer.data(), buffer.size(), chunk_name.c_str()); status != LUA_OK)
+            {
+                std::string error_msg = lua_tostring(main_lua()->get_lua_state(), -1);
+                Output::send<LogLevel::Error>(STR("Error loading script: {}\n"), ensure_str(error_msg));
+                lua_pop(main_lua()->get_lua_state(), 1);
+                return false;
+            }
+
+            // Execute the chunk
+            if (int status = lua_pcall(main_lua()->get_lua_state(), 0, 0, 0); status != LUA_OK)
+            {
+                std::string error_msg = lua_tostring(main_lua()->get_lua_state(), -1);
+                Output::send<LogLevel::Error>(STR("Error executing script: {}\n"), ensure_str(error_msg));
+                lua_pop(main_lua()->get_lua_state(), 1);
+                return false;
+            }
+
+            return true;
         }
-        catch (std::runtime_error& e)
+        catch (const std::exception& e)
         {
-            Output::send<LogLevel::Error>(STR("{}\n"), to_wstring(e.what()));
+            Output::send<LogLevel::Error>(STR("Exception in load_and_execute_script: {}\n"), ensure_str(e.what()));
+            return false;
+        }
+    }
+
+    auto LuaMod::start_mod() -> void
+    {
+        try
+        {
+            prepare_mod(lua());
+            make_main_state(this, lua());
+            setup_lua_global_functions_main_state_only();
+            make_async_state(this, lua());
+            start_async_thread();
+
+            m_is_started = true;
+            fire_on_lua_start_for_cpp_mods();
+
+            // Set up the custom module loader for handling UTF-8 paths
+            setup_custom_module_loader(main_lua());
+
+            // Use the scripts path that was already determined in the constructor
+            std::filesystem::path main_script_path = m_scripts_path / STR("main.lua");
+
+            if (std::filesystem::exists(main_script_path))
+            {
+                if (!load_and_execute_script(main_script_path))
+                {
+                    Output::send<LogLevel::Error>(STR("Failed to execute main script: {}\n"), ensure_str(main_script_path));
+                }
+            }
+            else
+            {
+                // This case implies m_scripts_path itself is valid, but main.lua is missing
+                Output::send<LogLevel::Error>(
+                        STR("Main script 'main.lua' not found in scripts directory: {} -- Ensure your script file uses the correct casing.\n"),
+                        ensure_str(m_scripts_path));
+            }
+        }
+        catch (const std::exception& e)
+        {
+            Output::send<LogLevel::Error>(STR("Exception during mod startup: {}\n"), ensure_str(e.what()));
+        }
+    }
+
+    template <typename T>
+    concept IsPair = requires(T t) {
+        { t.second };
+    };
+    template <typename T>
+    concept IsDataIndirect = requires(T t) {
+        { t.callback_data };
+    };
+
+    static auto erase_from_container(LuaMod* mod, auto& container) -> void
+    {
+        for (auto it = container.begin(); it != container.end();)
+        {
+            const auto& data = [&] {
+                if constexpr (IsPair<decltype(*it)>)
+                {
+                    return it->second;
+                }
+                else if constexpr (IsDataIndirect<decltype(*it)>)
+                {
+                    return it->callback_data;
+                }
+                else
+                {
+                    return *it;
+                }
+            }();
+            if (get_mod_ref(*data.lua) == mod)
+            {
+                it = container.erase(it);
+            }
+            else
+            {
+                ++it;
+            }
         }
     }
 
@@ -3450,9 +4263,50 @@ Overloads:
             m_async_thread.join();
         }
 
-        if (m_hook_lua.size() > 0)
+        erase_from_container(this, m_static_construct_object_lua_callbacks);
+        erase_from_container(this, m_process_console_exec_pre_callbacks);
+        erase_from_container(this, m_process_console_exec_post_callbacks);
+        erase_from_container(this, m_global_command_lua_callbacks);
+        erase_from_container(this, m_custom_command_lua_pre_callbacks);
+        erase_from_container(this, m_custom_event_callbacks);
+        erase_from_container(this, m_load_map_pre_callbacks);
+        erase_from_container(this, m_load_map_post_callbacks);
+        erase_from_container(this, m_init_game_state_pre_callbacks);
+        erase_from_container(this, m_init_game_state_post_callbacks);
+        erase_from_container(this, m_begin_play_pre_callbacks);
+        erase_from_container(this, m_begin_play_post_callbacks);
+        erase_from_container(this, m_call_function_by_name_with_arguments_pre_callbacks);
+        erase_from_container(this, m_call_function_by_name_with_arguments_post_callbacks);
+        erase_from_container(this, m_local_player_exec_pre_callbacks);
+        erase_from_container(this, m_local_player_exec_post_callbacks);
+        erase_from_container(this, m_script_hook_callbacks);
+
+        UE4SSProgram::get_program().get_all_input_events([&](auto& key_set) {
+            std::erase_if(key_set.key_data,
+                          [&](auto& item) -> bool {
+                              auto& [_, key_data] = item;
+                              std::erase_if(key_data,
+                                            [&](Input::KeyData& key_data) -> bool {
+                                                // custom_data == 1: Bind came from Lua, and custom_data2 is a pointer to LuaMod.
+                                                // custom_data == 2: Bind came from C++, and custom_data2 is a pointer to KeyDownEventData. Must free it.
+                                                if (key_data.custom_data == 1)
+                                                {
+                                                    return key_data.custom_data2 == this;
+                                                }
+                                                else
+                                                {
+                                                    return false;
+                                                }
+                                            });
+
+                              return key_data.empty();
+                          });
+        });
+
+
+        if (m_hook_lua != nullptr)
         {
-            m_hook_lua.clear(); // lua_newthread results are handled by lua GC
+            m_hook_lua = nullptr; // lua_newthread results are handled by lua GC
         }
 
         if (m_async_lua && m_async_lua->get_lua_state())
@@ -3529,23 +4383,31 @@ Overloads:
     {
         std::lock_guard<std::recursive_mutex> guard{LuaMod::m_thread_actions_mutex};
 
-        auto execute_hook = [&](std::unordered_map<StringType, LuaMod::LuaCallbackData>& callback_container, bool precise_name_match) {
+        auto execute_hook = [&](std::vector<LuaMod::FunctionHookData>& callback_container, bool precise_name_match) {
             if (callback_container.empty())
             {
                 return;
             }
-            if (auto it = callback_container.find(precise_name_match ? Stack.Node()->GetFullName() : Stack.Node()->GetName()); it != callback_container.end())
+            auto data = precise_name_match ? LuaMod::find_function_hook_data(callback_container, Stack.Node())
+                                           : LuaMod::find_function_hook_data(callback_container, Stack.Node()->GetNamePrivate());
+            if (data)
             {
-                const auto& callback_data = it->second;
+                const auto& callback_data = data->callback_data;
                 for (const auto& [lua_ptr, registry_index] : callback_data.registry_indexes)
                 {
                     const auto& lua = *lua_ptr;
+
+                    // -1 is a special value that signifies that the hook has been unregistered.
+                    if (registry_index.lua_index == -1)
+                    {
+                        continue;
+                    }
 
                     set_is_in_game_thread(lua, true);
 
                     lua.registry().get_function_ref(registry_index.lua_index);
 
-                    static auto s_object_property_name = Unreal::FName(STR("ObjectProperty"));
+                    static auto s_object_property_name = Unreal::FName(STR("ObjectProperty"), Unreal::FNAME_Find);
                     LuaType::RemoteUnrealParam::construct(lua, &Context, s_object_property_name);
 
                     auto node = Stack.Node();
@@ -3596,7 +4458,7 @@ Overloads:
                             }
                             else
                             {
-                                lua.throw_error(std::format(
+                                lua.throw_error(fmt::format(
                                         "[script_hook] Tried accessing unreal property without a registered handler. Property type '{}' not supported.",
                                         to_string(param_type.ToString())));
                             }
@@ -3606,7 +4468,7 @@ Overloads:
                     lua.call_function(num_unreal_params + 1, 1);
 
                     bool return_value_handled{};
-                    if (has_return_value && RESULT_DECL && lua.get_stack_size() > 0)
+                    if (has_return_value && RESULT_DECL && lua.get_stack_size() > 0 && !lua.is_nil())
                     {
                         auto return_property = node->GetReturnProperty();
                         if (return_property)
@@ -3628,8 +4490,8 @@ Overloads:
                             }
                             else
                             {
-                                std::wstring return_property_type_name = return_property_type.ToString();
-                                std::wstring return_property_name = return_property->GetName();
+                                auto return_property_type_name = return_property_type.ToString();
+                                auto return_property_name = return_property->GetName();
 
                                 Output::send(STR("Tried altering return value of a custom BP function without a registered handler for return type Return "
                                                  "property '{}' of type '{}' not supported."),
@@ -3662,83 +4524,87 @@ Overloads:
         Unreal::Hook::RegisterLoadMapPreCallback(
                 [](Unreal::UEngine* Engine, Unreal::FWorldContext& WorldContext, Unreal::FURL URL, Unreal::UPendingNetGame* PendingGame, Unreal::FString& Error)
                         -> std::pair<bool, bool> {
-                    for (const auto& callback_data : m_load_map_pre_callbacks)
-                    {
-                        std::pair<bool, bool> return_value{};
-
-                        for (const auto& [lua_ptr, registry_index] : callback_data.registry_indexes)
+                    return TRY([&] {
+                        for (const auto& callback_data : m_load_map_pre_callbacks)
                         {
-                            const auto& lua = *lua_ptr;
+                            std::pair<bool, bool> return_value{};
 
-                            lua.registry().get_function_ref(registry_index.lua_index);
-                            static auto s_object_property_name = Unreal::FName(STR("ObjectProperty"));
-                            LuaType::RemoteUnrealParam::construct(lua, &Engine, s_object_property_name);
-                            LuaType::RemoteUnrealParam::construct(lua, WorldContext.GetThisCurrentWorld().UnderlyingObjectPointer, s_object_property_name);
-                            LuaType::FURL::construct(lua, URL);
-                            LuaType::RemoteUnrealParam::construct(lua, PendingGame, s_object_property_name);
-                            callback_data.lua.set_string(to_string(Error.GetCharArray()));
-                            lua.call_function(4, 1);
+                            for (const auto& [lua_ptr, registry_index] : callback_data.registry_indexes)
+                            {
+                                const auto& lua = *lua_ptr;
 
-                            if (callback_data.lua.is_nil())
-                            {
-                                return_value.first = false;
-                                callback_data.lua.discard_value();
+                                lua.registry().get_function_ref(registry_index.lua_index);
+                                static auto s_object_property_name = Unreal::FName(STR("ObjectProperty"), Unreal::FNAME_Find);
+                                LuaType::RemoteUnrealParam::construct(lua, &Engine, s_object_property_name);
+                                LuaType::RemoteUnrealParam::construct(lua, &WorldContext.GetThisCurrentWorld(), s_object_property_name);
+                                LuaType::FURL::construct(lua, URL);
+                                LuaType::RemoteUnrealParam::construct(lua, &PendingGame, s_object_property_name);
+                                callback_data.lua->set_string(to_string(*Error));
+                                lua.call_function(5, 1);
+
+                                if (callback_data.lua->is_nil())
+                                {
+                                    return_value.first = false;
+                                    callback_data.lua->discard_value();
+                                }
+                                else if (!callback_data.lua->is_bool())
+                                {
+                                    throw std::runtime_error{"A callback for 'LoadMap' must return bool or nil"};
+                                }
+                                else
+                                {
+                                    return_value.first = true;
+                                    return_value.second = callback_data.lua->get_bool();
+                                }
                             }
-                            else if (!callback_data.lua.is_bool())
-                            {
-                                throw std::runtime_error{"A callback for 'LoadMap' must return bool or nil"};
-                            }
-                            else
-                            {
-                                return_value.first = true;
-                                return_value.second = callback_data.lua.get_bool();
-                            }
+
+                            return return_value;
                         }
-
-                        return return_value;
-                    }
-                    return std::pair<bool, bool>{false, false};
+                        return std::pair<bool, bool>{false, false};
+                    });
                 });
 
         Unreal::Hook::RegisterLoadMapPostCallback(
                 [](Unreal::UEngine* Engine, Unreal::FWorldContext& WorldContext, Unreal::FURL URL, Unreal::UPendingNetGame* PendingGame, Unreal::FString& Error)
                         -> std::pair<bool, bool> {
-                    for (const auto& callback_data : m_load_map_post_callbacks)
-                    {
-                        std::pair<bool, bool> return_value{};
-
-                        for (const auto& [lua_ptr, registry_index] : callback_data.registry_indexes)
+                    return TRY([&] {
+                        for (const auto& callback_data : m_load_map_post_callbacks)
                         {
-                            const auto& lua = *lua_ptr;
+                            std::pair<bool, bool> return_value{};
 
-                            lua.registry().get_function_ref(registry_index.lua_index);
-                            static auto s_object_property_name = Unreal::FName(STR("ObjectProperty"));
-                            LuaType::RemoteUnrealParam::construct(lua, &Engine, s_object_property_name);
-                            LuaType::RemoteUnrealParam::construct(lua, &WorldContext.GetThisCurrentWorld().UnderlyingObjectPointer, s_object_property_name);
-                            LuaType::FURL::construct(lua, URL);
-                            LuaType::RemoteUnrealParam::construct(lua, &PendingGame, s_object_property_name);
-                            callback_data.lua.set_string(to_string(Error.GetCharArray()));
-                            lua.call_function(5, 1);
+                            for (const auto& [lua_ptr, registry_index] : callback_data.registry_indexes)
+                            {
+                                const auto& lua = *lua_ptr;
 
-                            if (callback_data.lua.is_nil())
-                            {
-                                return_value.first = false;
-                                callback_data.lua.discard_value();
+                                lua.registry().get_function_ref(registry_index.lua_index);
+                                static auto s_object_property_name = Unreal::FName(STR("ObjectProperty"), Unreal::FNAME_Find);
+                                LuaType::RemoteUnrealParam::construct(lua, &Engine, s_object_property_name);
+                                LuaType::RemoteUnrealParam::construct(lua, &WorldContext.GetThisCurrentWorld(), s_object_property_name);
+                                LuaType::FURL::construct(lua, URL);
+                                LuaType::RemoteUnrealParam::construct(lua, &PendingGame, s_object_property_name);
+                                callback_data.lua->set_string(to_string(*Error));
+                                lua.call_function(5, 1);
+
+                                if (callback_data.lua->is_nil())
+                                {
+                                    return_value.first = false;
+                                    callback_data.lua->discard_value();
+                                }
+                                else if (!callback_data.lua->is_bool())
+                                {
+                                    throw std::runtime_error{"A callback for 'LoadMap' must return bool or nil"};
+                                }
+                                else
+                                {
+                                    return_value.first = true;
+                                    return_value.second = callback_data.lua->get_bool();
+                                }
                             }
-                            else if (!callback_data.lua.is_bool())
-                            {
-                                throw std::runtime_error{"A callback for 'LoadMap' must return bool or nil"};
-                            }
-                            else
-                            {
-                                return_value.first = true;
-                                return_value.second = callback_data.lua.get_bool();
-                            }
+
+                            return return_value;
                         }
-
-                        return return_value;
-                    }
-                    return std::pair<bool, bool>{false, false};
+                        return std::pair<bool, bool>{false, false};
+                    });
                 });
 
         Unreal::Hook::RegisterInitGameStatePreCallback([]([[maybe_unused]] Unreal::AGameModeBase* Context) {
@@ -3752,7 +4618,7 @@ Overloads:
                         const auto& lua = *lua_ptr;
 
                         lua.registry().get_function_ref(registry_index.lua_index);
-                        static auto s_object_property_name = Unreal::FName(STR("ObjectProperty"));
+                        static auto s_object_property_name = Unreal::FName(STR("ObjectProperty"), Unreal::FNAME_Find);
                         LuaType::RemoteUnrealParam::construct(lua, &Context, s_object_property_name);
                         lua.call_function(1, 0);
                     }
@@ -3773,7 +4639,7 @@ Overloads:
                         const auto& lua = *lua_ptr;
 
                         lua.registry().get_function_ref(registry_index.lua_index);
-                        static auto s_object_property_name = Unreal::FName(STR("ObjectProperty"));
+                        static auto s_object_property_name = Unreal::FName(STR("ObjectProperty"), Unreal::FNAME_Find);
                         LuaType::RemoteUnrealParam::construct(lua, &Context, s_object_property_name);
                         lua.call_function(1, 0);
                     }
@@ -3794,7 +4660,7 @@ Overloads:
                         const auto& lua = *lua_ptr;
 
                         lua.registry().get_function_ref(registry_index.lua_index);
-                        static auto s_object_property_name = Unreal::FName(STR("ObjectProperty"));
+                        static auto s_object_property_name = Unreal::FName(STR("ObjectProperty"), Unreal::FNAME_Find);
                         LuaType::RemoteUnrealParam::construct(lua, &Context, s_object_property_name);
                         lua.call_function(1, 0);
                     }
@@ -3815,7 +4681,7 @@ Overloads:
                         const auto& lua = *lua_ptr;
 
                         lua.registry().get_function_ref(registry_index.lua_index);
-                        static auto s_object_property_name = Unreal::FName(STR("ObjectProperty"));
+                        static auto s_object_property_name = Unreal::FName(STR("ObjectProperty"), Unreal::FNAME_Find);
                         LuaType::RemoteUnrealParam::construct(lua, &Context, s_object_property_name);
                         lua.call_function(1, 0);
                     }
@@ -3825,41 +4691,82 @@ Overloads:
             });
         });
 
-        Unreal::Hook::RegisterStaticConstructObjectPostCallback([](const Unreal::FStaticConstructObjectParameters&, Unreal::UObject* constructed_object) {
-            Unreal::UStruct* object_class = constructed_object->GetClassPrivate();
-            while (object_class)
-            {
-                std::erase_if(m_static_construct_object_lua_callbacks, [&](auto& callback_data) -> bool {
-                    bool cancel = false;
-                    if (callback_data.instance_of_class == object_class)
+        Unreal::Hook::RegisterEndPlayPreCallback([]([[maybe_unused]] Unreal::AActor* Context, Unreal::EEndPlayReason EndPlayReason) {
+            TRY([&] {
+                for (const auto& callback_data : m_end_play_pre_callbacks)
+                {
+                    // set_is_in_game_thread(lua, true);
+
+                    for (const auto& [lua_ptr, registry_index] : callback_data.registry_indexes)
                     {
-                        try
+                        const auto& lua = *lua_ptr;
+
+                        lua.registry().get_function_ref(registry_index.lua_index);
+                        static auto s_object_property_name = Unreal::FName(STR("ObjectProperty"), Unreal::FNAME_Find);
+                        LuaType::RemoteUnrealParam::construct(lua, &Context, s_object_property_name);
+                        static auto s_int_property_name = Unreal::FName(STR("IntProperty"), Unreal::FNAME_Find);
+                        LuaType::RemoteUnrealParam::construct(lua, &EndPlayReason, s_int_property_name);
+                        lua.call_function(2, 0);
+                    }
+
+                    // set_is_in_game_thread(lua, false);
+                }
+            });
+        });
+
+        Unreal::Hook::RegisterEndPlayPostCallback([]([[maybe_unused]] Unreal::AActor* Context, Unreal::EEndPlayReason EndPlayReason) {
+            TRY([&] {
+                for (const auto& callback_data : m_end_play_post_callbacks)
+                {
+                    // set_is_in_game_thread(lua, true);
+
+                    for (const auto& [lua_ptr, registry_index] : callback_data.registry_indexes)
+                    {
+                        const auto& lua = *lua_ptr;
+
+                        lua.registry().get_function_ref(registry_index.lua_index);
+                        static auto s_object_property_name = Unreal::FName(STR("ObjectProperty"), Unreal::FNAME_Find);
+                        LuaType::RemoteUnrealParam::construct(lua, &Context, s_object_property_name);
+                        static auto s_int_property_name = Unreal::FName(STR("IntProperty"), Unreal::FNAME_Find);
+                        LuaType::RemoteUnrealParam::construct(lua, &EndPlayReason, s_int_property_name);
+                        lua.call_function(2, 0);
+                    }
+
+                    // set_is_in_game_thread(lua, false);
+                }
+            });
+        });
+
+        Unreal::Hook::RegisterStaticConstructObjectPostCallback([](const Unreal::FStaticConstructObjectParameters&, Unreal::UObject* constructed_object) {
+            return TRY([&] {
+                Unreal::UStruct* object_class = constructed_object->GetClassPrivate();
+                while (object_class)
+                {
+                    std::erase_if(m_static_construct_object_lua_callbacks, [&](auto& callback_data) -> bool {
+                        bool cancel = false;
+                        if (callback_data.instance_of_class == object_class)
                         {
                             callback_data.lua->registry().get_function_ref(callback_data.lua_callback_function_ref);
                             LuaType::auto_construct_object(*callback_data.lua, constructed_object);
                             callback_data.lua->call_function(1, 1);
 
                             cancel = callback_data.lua->is_bool(-1) && callback_data.lua->get_bool(-1);
+
+                            if (cancel)
+                            {
+                                // Release the thread_ref to GC.
+                                luaL_unref(callback_data.lua->get_lua_state(), LUA_REGISTRYINDEX, callback_data.lua_callback_thread_ref);
+                            }
                         }
-                        catch (std::runtime_error& e)
-                        {
-                            Output::send(STR("{}\n"), to_wstring(e.what()));
-                        }
 
-                        if (cancel)
-                        {
-                            // Release the thread_ref to GC.
-                            luaL_unref(callback_data.lua->get_lua_state(), LUA_REGISTRYINDEX, callback_data.lua_callback_thread_ref);
-                        }
-                    }
+                        return cancel;
+                    });
 
-                    return cancel;
-                });
+                    object_class = object_class->GetSuperStruct();
+                }
 
-                object_class = object_class->GetSuperStruct();
-            }
-
-            return constructed_object;
+                return constructed_object;
+            });
         });
 
         Unreal::Hook::RegisterULocalPlayerExecPreCallback([](Unreal::ULocalPlayer* context, Unreal::UWorld* in_world, const TCHAR* cmd, Unreal::FOutputDevice& ar)
@@ -3867,53 +4774,53 @@ Overloads:
             return TRY([&] {
                 for (const auto& callback_data : m_local_player_exec_pre_callbacks)
                 {
-                    set_is_in_game_thread(callback_data.lua, true);
+                    set_is_in_game_thread(*callback_data.lua, true);
 
                     Unreal::Hook::ULocalPlayerExecCallbackReturnValue return_value{};
 
                     for (const auto& [lua, registry_index] : callback_data.registry_indexes)
                     {
-                        callback_data.lua.registry().get_function_ref(registry_index.lua_index);
+                        callback_data.lua->registry().get_function_ref(registry_index.lua_index);
 
-                        static auto s_object_property_name = Unreal::FName(STR("ObjectProperty"));
-                        LuaType::RemoteUnrealParam::construct(callback_data.lua, &context, s_object_property_name);
-                        LuaType::RemoteUnrealParam::construct(callback_data.lua, &in_world, s_object_property_name);
-                        callback_data.lua.set_string(to_string(cmd));
-                        LuaType::FOutputDevice::construct(callback_data.lua, &ar);
+                        static auto s_object_property_name = Unreal::FName(STR("ObjectProperty"), Unreal::FNAME_Find);
+                        LuaType::RemoteUnrealParam::construct(*callback_data.lua, &context, s_object_property_name);
+                        LuaType::RemoteUnrealParam::construct(*callback_data.lua, &in_world, s_object_property_name);
+                        callback_data.lua->set_string(to_string(cmd));
+                        LuaType::FOutputDevice::construct(*callback_data.lua, &ar);
 
-                        callback_data.lua.call_function(4, 2);
+                        callback_data.lua->call_function(4, 2);
 
-                        if (callback_data.lua.is_nil())
+                        if (callback_data.lua->is_nil())
                         {
                             return_value.UseOriginalReturnValue = true;
-                            callback_data.lua.discard_value();
+                            callback_data.lua->discard_value();
                         }
-                        else if (!callback_data.lua.is_bool())
+                        else if (!callback_data.lua->is_bool())
                         {
                             throw std::runtime_error{"The first return value for 'RegisterULocalPlayerExecPreHook' must return bool or nil"};
                         }
                         else
                         {
                             return_value.UseOriginalReturnValue = false;
-                            return_value.NewReturnValue = callback_data.lua.get_bool();
+                            return_value.NewReturnValue = callback_data.lua->get_bool();
                         }
 
-                        if (callback_data.lua.is_nil())
+                        if (callback_data.lua->is_nil())
                         {
                             return_value.ExecuteOriginalFunction = true;
-                            callback_data.lua.discard_value();
+                            callback_data.lua->discard_value();
                         }
-                        else if (!callback_data.lua.is_bool())
+                        else if (!callback_data.lua->is_bool())
                         {
                             throw std::runtime_error{"The second return value for callback 'RegisterULocalPlayerExecPreHook' must return bool or nil"};
                         }
                         else
                         {
-                            return_value.ExecuteOriginalFunction = callback_data.lua.get_bool();
+                            return_value.ExecuteOriginalFunction = callback_data.lua->get_bool();
                         }
                     }
 
-                    set_is_in_game_thread(callback_data.lua, false);
+                    set_is_in_game_thread(*callback_data.lua, false);
 
                     return return_value;
                 }
@@ -3927,53 +4834,53 @@ Overloads:
             return TRY([&] {
                 for (const auto& callback_data : m_local_player_exec_post_callbacks)
                 {
-                    set_is_in_game_thread(callback_data.lua, true);
+                    set_is_in_game_thread(*callback_data.lua, true);
 
                     Unreal::Hook::ULocalPlayerExecCallbackReturnValue return_value{};
 
                     for (const auto& [lua, registry_index] : callback_data.registry_indexes)
                     {
-                        callback_data.lua.registry().get_function_ref(registry_index.lua_index);
+                        callback_data.lua->registry().get_function_ref(registry_index.lua_index);
 
-                        static auto s_object_property_name = Unreal::FName(STR("ObjectProperty"));
-                        LuaType::RemoteUnrealParam::construct(callback_data.lua, &context, s_object_property_name);
-                        LuaType::RemoteUnrealParam::construct(callback_data.lua, &in_world, s_object_property_name);
-                        callback_data.lua.set_string(to_string(cmd));
-                        LuaType::FOutputDevice::construct(callback_data.lua, &ar);
+                        static auto s_object_property_name = Unreal::FName(STR("ObjectProperty"), Unreal::FNAME_Find);
+                        LuaType::RemoteUnrealParam::construct(*callback_data.lua, &context, s_object_property_name);
+                        LuaType::RemoteUnrealParam::construct(*callback_data.lua, &in_world, s_object_property_name);
+                        callback_data.lua->set_string(to_string(cmd));
+                        LuaType::FOutputDevice::construct(*callback_data.lua, &ar);
 
-                        callback_data.lua.call_function(4, 2);
+                        callback_data.lua->call_function(4, 2);
 
-                        if (callback_data.lua.is_nil())
+                        if (callback_data.lua->is_nil())
                         {
                             return_value.UseOriginalReturnValue = true;
-                            callback_data.lua.discard_value();
+                            callback_data.lua->discard_value();
                         }
-                        else if (!callback_data.lua.is_bool())
+                        else if (!callback_data.lua->is_bool())
                         {
                             throw std::runtime_error{"A callback for 'RegisterULocalPlayerExecPreHook' must return bool or nil"};
                         }
                         else
                         {
                             return_value.UseOriginalReturnValue = false;
-                            return_value.NewReturnValue = callback_data.lua.get_bool();
+                            return_value.NewReturnValue = callback_data.lua->get_bool();
                         }
 
-                        if (callback_data.lua.is_nil())
+                        if (callback_data.lua->is_nil())
                         {
                             return_value.ExecuteOriginalFunction = true;
-                            callback_data.lua.discard_value();
+                            callback_data.lua->discard_value();
                         }
-                        else if (!callback_data.lua.is_bool())
+                        else if (!callback_data.lua->is_bool())
                         {
                             throw std::runtime_error{"The second return value for callback 'RegisterULocalPlayerExecPreHook' must return bool or nil"};
                         }
                         else
                         {
-                            return_value.ExecuteOriginalFunction = callback_data.lua.get_bool();
+                            return_value.ExecuteOriginalFunction = callback_data.lua->get_bool();
                         }
                     }
 
-                    set_is_in_game_thread(callback_data.lua, false);
+                    set_is_in_game_thread(*callback_data.lua, false);
 
                     return return_value;
                 }
@@ -3988,40 +4895,40 @@ Overloads:
                     return TRY([&] {
                         for (const auto& callback_data : m_call_function_by_name_with_arguments_pre_callbacks)
                         {
-                            set_is_in_game_thread(callback_data.lua, true);
+                            set_is_in_game_thread(*callback_data.lua, true);
 
                             std::pair<bool, bool> return_value{};
 
                             for (const auto& [lua, registry_index] : callback_data.registry_indexes)
                             {
-                                callback_data.lua.registry().get_function_ref(registry_index.lua_index);
+                                callback_data.lua->registry().get_function_ref(registry_index.lua_index);
 
-                                static auto s_object_property_name = Unreal::FName(STR("ObjectProperty"));
-                                LuaType::RemoteUnrealParam::construct(callback_data.lua, &context, s_object_property_name);
-                                callback_data.lua.set_string(to_string(str));
-                                LuaType::FOutputDevice::construct(callback_data.lua, &ar);
-                                LuaType::RemoteUnrealParam::construct(callback_data.lua, &executor, s_object_property_name);
-                                callback_data.lua.set_bool(b_force_call_with_non_exec);
+                                static auto s_object_property_name = Unreal::FName(STR("ObjectProperty"), Unreal::FNAME_Find);
+                                LuaType::RemoteUnrealParam::construct(*callback_data.lua, &context, s_object_property_name);
+                                callback_data.lua->set_string(to_string(str));
+                                LuaType::FOutputDevice::construct(*callback_data.lua, &ar);
+                                LuaType::RemoteUnrealParam::construct(*callback_data.lua, &executor, s_object_property_name);
+                                callback_data.lua->set_bool(b_force_call_with_non_exec);
 
-                                callback_data.lua.call_function(5, 1);
+                                callback_data.lua->call_function(5, 1);
 
-                                if (callback_data.lua.is_nil())
+                                if (callback_data.lua->is_nil())
                                 {
                                     return_value.first = false;
-                                    callback_data.lua.discard_value();
+                                    callback_data.lua->discard_value();
                                 }
-                                else if (!callback_data.lua.is_bool())
+                                else if (!callback_data.lua->is_bool())
                                 {
                                     throw std::runtime_error{"A callback for 'RegisterCallFunctionByNameWithArgumentsPreHook' must return bool or nil"};
                                 }
                                 else
                                 {
                                     return_value.first = true;
-                                    return_value.second = callback_data.lua.get_bool();
+                                    return_value.second = callback_data.lua->get_bool();
                                 }
                             }
 
-                            set_is_in_game_thread(callback_data.lua, false);
+                            set_is_in_game_thread(*callback_data.lua, false);
 
                             return return_value;
                         }
@@ -4036,40 +4943,40 @@ Overloads:
                     return TRY([&] {
                         for (const auto& callback_data : m_call_function_by_name_with_arguments_post_callbacks)
                         {
-                            set_is_in_game_thread(callback_data.lua, true);
+                            set_is_in_game_thread(*callback_data.lua, true);
 
                             std::pair<bool, bool> return_value{};
 
                             for (const auto& [lua, registry_index] : callback_data.registry_indexes)
                             {
-                                callback_data.lua.registry().get_function_ref(registry_index.lua_index);
+                                callback_data.lua->registry().get_function_ref(registry_index.lua_index);
 
-                                static auto s_object_property_name = Unreal::FName(STR("ObjectProperty"));
-                                LuaType::RemoteUnrealParam::construct(callback_data.lua, &context, s_object_property_name);
-                                callback_data.lua.set_string(to_string(str));
-                                LuaType::FOutputDevice::construct(callback_data.lua, &ar);
-                                LuaType::RemoteUnrealParam::construct(callback_data.lua, &executor, s_object_property_name);
-                                callback_data.lua.set_bool(b_force_call_with_non_exec);
+                                static auto s_object_property_name = Unreal::FName(STR("ObjectProperty"), Unreal::FNAME_Find);
+                                LuaType::RemoteUnrealParam::construct(*callback_data.lua, &context, s_object_property_name);
+                                callback_data.lua->set_string(to_string(str));
+                                LuaType::FOutputDevice::construct(*callback_data.lua, &ar);
+                                LuaType::RemoteUnrealParam::construct(*callback_data.lua, &executor, s_object_property_name);
+                                callback_data.lua->set_bool(b_force_call_with_non_exec);
 
-                                callback_data.lua.call_function(5, 1);
+                                callback_data.lua->call_function(5, 1);
 
-                                if (callback_data.lua.is_nil())
+                                if (callback_data.lua->is_nil())
                                 {
                                     return_value.first = false;
-                                    callback_data.lua.discard_value();
+                                    callback_data.lua->discard_value();
                                 }
-                                else if (!callback_data.lua.is_bool())
+                                else if (!callback_data.lua->is_bool())
                                 {
                                     throw std::runtime_error{"A callback for 'RegisterCallFunctionByNameWithArgumentsPreHook' must return bool or nil"};
                                 }
                                 else
                                 {
                                     return_value.first = true;
-                                    return_value.second = callback_data.lua.get_bool();
+                                    return_value.second = callback_data.lua->get_bool();
                                 }
                             }
 
-                            set_is_in_game_thread(callback_data.lua, false);
+                            set_is_in_game_thread(*callback_data.lua, false);
 
                             return return_value;
                         }
@@ -4081,37 +4988,37 @@ Overloads:
         // Lua from the in-game console.
         Unreal::Hook::RegisterProcessConsoleExecCallback([](Unreal::UObject* context, const TCHAR* cmd, Unreal::FOutputDevice& ar, Unreal::UObject* executor) -> bool {
             auto logln = [&ar](const File::StringType& log_message) {
-                Output::send(std::format(STR("{}\n"), log_message));
-                ar.Log(log_message.c_str());
+                Output::send(fmt::format(STR("{}\n"), log_message));
+                ar.Log(FromCharTypePtr<TCHAR>(log_message.c_str()));
             };
 
-            if (!LuaStatics::console_executor_enabled && String::iequal(File::StringViewType{cmd}, STR("luastart")))
+            if (!LuaStatics::console_executor_enabled && String::iequal(File::StringViewType{ToCharTypePtr(cmd)}, File::StringViewType{STR("luastart")}))
             {
                 start_console_lua_executor();
                 logln(STR("Console Lua executor started"));
                 return true;
             }
-            else if (LuaStatics::console_executor_enabled && String::iequal(File::StringViewType{cmd}, STR("luastop")))
+            else if (LuaStatics::console_executor_enabled && String::iequal(File::StringViewType{ToCharTypePtr(cmd)}, File::StringViewType{STR("luastop")}))
             {
                 stop_console_lua_executor();
                 logln(STR("Console Lua executor stopped"));
                 return true;
             }
-            else if (LuaStatics::console_executor_enabled && String::iequal(File::StringViewType{cmd}, STR("luarestart")))
+            else if (LuaStatics::console_executor_enabled && String::iequal(File::StringViewType{ToCharTypePtr(cmd)}, File::StringViewType{STR("luarestart")}))
             {
                 stop_console_lua_executor();
                 start_console_lua_executor();
                 logln(STR("Console Lua executor restarted"));
                 return true;
             }
-            else if (String::iequal(File::StringViewType{cmd}, STR("clear")))
+            else if (String::iequal(File::StringViewType{ToCharTypePtr(cmd)}, File::StringViewType{STR("clear")}))
             {
                 // TODO: Replace with proper implementation when we have UGameViewportClient and UConsole.
                 //       This should be fairly cross-game & cross-engine-version compatible even without the proper implementation.
                 //       This is because I don't think they've changed the layout here and we have a reflected property right before the unreflected one that we're looking for.
-                Unreal::UObject** console = static_cast<Unreal::UObject**>(context->GetValuePtrByPropertyName(STR("ViewportConsole")));
+                Unreal::UObject** console = static_cast<Unreal::UObject**>(context->GetValuePtrByPropertyName(FromCharTypePtr<TCHAR>(STR("ViewportConsole"))));
                 auto* default_texture_white = std::bit_cast<Unreal::TArray<Unreal::FString>*>(
-                        static_cast<uint8_t*>((*console)->GetValuePtrByPropertyNameInChain(STR("DefaultTexture_White"))) + 0x8);
+                        static_cast<uint8_t*>((*console)->GetValuePtrByPropertyNameInChain(FromCharTypePtr<TCHAR>(STR("DefaultTexture_White")))) + 0x8);
                 auto* scrollback = std::bit_cast<int32_t*>(std::bit_cast<uint8_t*>(default_texture_white) + 0x10);
                 default_texture_white->SetNum(0);
                 default_texture_white->SetMax(0);
@@ -4128,25 +5035,25 @@ Overloads:
 
                 LuaLibrary::set_outputdevice_ref(*LuaStatics::console_executor, &ar);
 
-                // logln(std::format(STR("Executing '{}' as Lua"), cmd));
+                // logln(fmt::format(STR("Executing '{}' as Lua"), cmd));
 
                 try
                 {
                     if (int status = luaL_loadstring(LuaStatics::console_executor->get_lua_state(), to_string(cmd).c_str()); status != LUA_OK)
                     {
                         LuaStatics::console_executor->throw_error(
-                                std::format("luaL_loadstring returned {}", LuaStatics::console_executor->resolve_status_message(status, true)));
+                                fmt::format("luaL_loadstring returned {}", LuaStatics::console_executor->resolve_status_message(status, true)));
                     }
 
                     if (int status = lua_pcall(LuaStatics::console_executor->get_lua_state(), 0, LUA_MULTRET, 0); status != LUA_OK)
                     {
                         LuaStatics::console_executor->throw_error(
-                                std::format("lua_pcall returned {}", LuaStatics::console_executor->resolve_status_message(status, true)));
+                                fmt::format("lua_pcall returned {}", LuaStatics::console_executor->resolve_status_message(status, true)));
                     }
                 }
                 catch (std::runtime_error& e)
                 {
-                    logln(to_wstring(e.what()));
+                    logln(ensure_str(e.what()));
                 }
 
                 // We always return true when the console Lua executor is enabled in order to suppress other handlers
@@ -4162,42 +5069,42 @@ Overloads:
         Unreal::Hook::RegisterProcessConsoleExecGlobalPreCallback(
                 [](Unreal::UObject* context, const TCHAR* cmd, Unreal::FOutputDevice& ar, Unreal::UObject* executor) -> std::pair<bool, bool> {
                     return TRY([&] {
-                        auto command = File::StringViewType{cmd};
-                        auto command_parts = explode_by_occurrence(cmd, ' ');
+                        auto command = File::StringType{ToCharTypePtr(cmd)};
+                        auto command_parts = explode_by_occurrence_with_quotes(command, STR(' '));
 
                         for (const auto& callback_data : m_process_console_exec_pre_callbacks)
                         {
-                            set_is_in_game_thread(callback_data.lua, true);
+                            set_is_in_game_thread(*callback_data.lua, true);
 
                             std::pair<bool, bool> return_value{};
 
                             for (const auto& [lua, registry_index] : callback_data.registry_indexes)
                             {
-                                callback_data.lua.registry().get_function_ref(registry_index.lua_index);
+                                callback_data.lua->registry().get_function_ref(registry_index.lua_index);
 
-                                static auto s_object_property_name = Unreal::FName(STR("ObjectProperty"));
-                                LuaType::RemoteUnrealParam::construct(callback_data.lua, &context, s_object_property_name);
-                                callback_data.lua.set_string(to_string(command));
-                                auto params_table = callback_data.lua.prepare_new_table();
-                                for (size_t i = 1; i < command_parts.size(); ++i)
+                                static auto s_object_property_name = Unreal::FName(STR("ObjectProperty"), Unreal::FNAME_Find);
+                                LuaType::RemoteUnrealParam::construct(*callback_data.lua, &context, s_object_property_name);
+                                callback_data.lua->set_string(to_string(command));
+                                auto params_table = callback_data.lua->prepare_new_table();
+                                for (size_t i = 0; i < command_parts.size(); ++i)
                                 {
                                     const auto& command_part = command_parts[i];
-                                    params_table.add_pair(i, to_string(command_part).c_str());
+                                    params_table.add_pair(i + 1, to_string(command_part).c_str());
                                 }
-                                LuaType::FOutputDevice::construct(callback_data.lua, &ar);
-                                LuaType::RemoteUnrealParam::construct(callback_data.lua, &executor, s_object_property_name);
+                                LuaType::FOutputDevice::construct(*callback_data.lua, &ar);
+                                LuaType::RemoteUnrealParam::construct(*callback_data.lua, &executor, s_object_property_name);
 
-                                callback_data.lua.call_function(5, 1);
+                                callback_data.lua->call_function(5, 1);
 
-                                if (callback_data.lua.is_nil())
+                                if (callback_data.lua->is_nil())
                                 {
                                     return_value.first = false;
-                                    callback_data.lua.discard_value();
+                                    callback_data.lua->discard_value();
                                 }
-                                else if (callback_data.lua.is_bool())
+                                else if (callback_data.lua->is_bool())
                                 {
                                     return_value.first = true;
-                                    return_value.second = callback_data.lua.get_bool();
+                                    return_value.second = callback_data.lua->get_bool();
                                 }
                                 else
                                 {
@@ -4205,7 +5112,7 @@ Overloads:
                                 }
                             }
 
-                            set_is_in_game_thread(callback_data.lua, false);
+                            set_is_in_game_thread(*callback_data.lua, false);
 
                             return return_value;
                         }
@@ -4218,42 +5125,42 @@ Overloads:
         Unreal::Hook::RegisterProcessConsoleExecGlobalPostCallback(
                 [](Unreal::UObject* context, const TCHAR* cmd, Unreal::FOutputDevice& ar, Unreal::UObject* executor) -> std::pair<bool, bool> {
                     return TRY([&] {
-                        auto command = File::StringViewType{cmd};
-                        auto command_parts = explode_by_occurrence(cmd, ' ');
+                        auto command = File::StringType{ToCharTypePtr(cmd)};
+                        auto command_parts = explode_by_occurrence_with_quotes(command, STR(' '));
 
                         for (const auto& callback_data : m_process_console_exec_post_callbacks)
                         {
-                            set_is_in_game_thread(callback_data.lua, true);
+                            set_is_in_game_thread(*callback_data.lua, true);
 
                             std::pair<bool, bool> return_value{};
 
                             for (const auto& [lua, registry_index] : callback_data.registry_indexes)
                             {
-                                callback_data.lua.registry().get_function_ref(registry_index.lua_index);
+                                callback_data.lua->registry().get_function_ref(registry_index.lua_index);
 
-                                static auto s_object_property_name = Unreal::FName(STR("ObjectProperty"));
-                                LuaType::RemoteUnrealParam::construct(callback_data.lua, &context, s_object_property_name);
-                                callback_data.lua.set_string(to_string(command));
-                                auto params_table = callback_data.lua.prepare_new_table();
-                                for (size_t i = 1; i < command_parts.size(); ++i)
+                                static auto s_object_property_name = Unreal::FName(STR("ObjectProperty"), Unreal::FNAME_Find);
+                                LuaType::RemoteUnrealParam::construct(*callback_data.lua, &context, s_object_property_name);
+                                callback_data.lua->set_string(to_string(command));
+                                auto params_table = callback_data.lua->prepare_new_table();
+                                for (size_t i = 0; i < command_parts.size(); ++i)
                                 {
                                     const auto& command_part = command_parts[i];
-                                    params_table.add_pair(i, to_string(command_part).c_str());
+                                    params_table.add_pair(i + 1, to_string(command_part).c_str());
                                 }
-                                LuaType::FOutputDevice::construct(callback_data.lua, &ar);
-                                LuaType::RemoteUnrealParam::construct(callback_data.lua, &executor, s_object_property_name);
+                                LuaType::FOutputDevice::construct(*callback_data.lua, &ar);
+                                LuaType::RemoteUnrealParam::construct(*callback_data.lua, &executor, s_object_property_name);
 
-                                callback_data.lua.call_function(4, 1);
+                                callback_data.lua->call_function(5, 1);
 
-                                if (callback_data.lua.is_nil())
+                                if (callback_data.lua->is_nil())
                                 {
                                     return_value.first = false;
-                                    callback_data.lua.discard_value();
+                                    callback_data.lua->discard_value();
                                 }
-                                else if (callback_data.lua.is_bool())
+                                else if (callback_data.lua->is_bool())
                                 {
                                     return_value.first = true;
-                                    return_value.second = callback_data.lua.get_bool();
+                                    return_value.second = callback_data.lua->get_bool();
                                 }
                                 else
                                 {
@@ -4261,7 +5168,7 @@ Overloads:
                                 }
                             }
 
-                            set_is_in_game_thread(callback_data.lua, false);
+                            set_is_in_game_thread(*callback_data.lua, false);
 
                             return return_value;
                         }
@@ -4280,16 +5187,12 @@ Overloads:
             }
 
             return TRY([&] {
-                auto command = File::StringViewType{cmd};
-                auto command_parts = explode_by_occurrence(cmd, ' ');
-                File::StringType command_name;
+                auto command = File::StringType{ToCharTypePtr(cmd)};
+                auto command_parts = explode_by_occurrence_with_quotes(command, STR(' '));
+                File::StringType command_name = command;
                 if (command_parts.size() > 1)
                 {
                     command_name = command_parts[0];
-                }
-                else
-                {
-                    command_name = command;
                 }
 
                 if (auto it = m_custom_command_lua_pre_callbacks.find(command_name); it != m_custom_command_lua_pre_callbacks.end())
@@ -4297,35 +5200,35 @@ Overloads:
                     const auto& callback_data = it->second;
 
                     // This is a promise that we're in the game thread, used by other functions to ensure that we don't execute when unsafe
-                    set_is_in_game_thread(callback_data.lua, true);
+                    set_is_in_game_thread(*callback_data.lua, true);
 
                     bool return_value{};
 
                     for (const auto& [lua, registry_index] : callback_data.registry_indexes)
                     {
-                        callback_data.lua.registry().get_function_ref(registry_index.lua_index);
-                        callback_data.lua.set_string(to_string(command));
+                        callback_data.lua->registry().get_function_ref(registry_index.lua_index);
+                        callback_data.lua->set_string(to_string(command));
 
-                        auto params_table = callback_data.lua.prepare_new_table();
+                        auto params_table = callback_data.lua->prepare_new_table();
                         for (size_t i = 1; i < command_parts.size(); ++i)
                         {
                             const auto& command_part = command_parts[i];
                             params_table.add_pair(i, to_string(command_part).c_str());
                         }
 
-                        LuaType::FOutputDevice::construct(callback_data.lua, &ar);
+                        LuaType::FOutputDevice::construct(*callback_data.lua, &ar);
 
-                        callback_data.lua.call_function(3, 1);
+                        callback_data.lua->call_function(3, 1);
 
-                        if (!callback_data.lua.is_bool())
+                        if (!callback_data.lua->is_bool())
                         {
                             throw std::runtime_error{"A custom console command handle must return true or false"};
                         }
 
-                        return_value = callback_data.lua.get_bool();
+                        return_value = callback_data.lua->get_bool();
                     }
                     // No longer promising to be in the game thread
-                    set_is_in_game_thread(callback_data.lua, false);
+                    set_is_in_game_thread(*callback_data.lua, false);
 
                     return return_value;
                 }
@@ -4340,16 +5243,12 @@ Overloads:
             (void)executor;
 
             return TRY([&] {
-                auto command = File::StringViewType{cmd};
-                auto command_parts = explode_by_occurrence(cmd, ' ');
-                File::StringType command_name;
+                auto command = File::StringType{ToCharTypePtr(cmd)};
+                auto command_parts = explode_by_occurrence_with_quotes(command, STR(' '));
+                File::StringType command_name = command;
                 if (command_parts.size() > 1)
                 {
                     command_name = command_parts[0];
-                }
-                else
-                {
-                    command_name = command;
                 }
 
                 if (auto it = m_global_command_lua_callbacks.find(command_name); it != m_global_command_lua_callbacks.end())
@@ -4357,36 +5256,36 @@ Overloads:
                     const auto& callback_data = it->second;
 
                     // This is a promise that we're in the game thread, used by other functions to ensure that we don't execute when unsafe
-                    set_is_in_game_thread(callback_data.lua, true);
+                    set_is_in_game_thread(*callback_data.lua, true);
 
                     bool return_value{};
 
                     for (const auto& [lua, registry_index] : callback_data.registry_indexes)
                     {
-                        callback_data.lua.registry().get_function_ref(registry_index.lua_index);
-                        callback_data.lua.set_string(to_string(command));
+                        callback_data.lua->registry().get_function_ref(registry_index.lua_index);
+                        callback_data.lua->set_string(to_string(command));
 
-                        auto params_table = callback_data.lua.prepare_new_table();
+                        auto params_table = callback_data.lua->prepare_new_table();
                         for (size_t i = 1; i < command_parts.size(); ++i)
                         {
                             const auto& command_part = command_parts[i];
                             params_table.add_pair(i, to_string(command_part).c_str());
                         }
 
-                        LuaType::FOutputDevice::construct(callback_data.lua, &ar);
+                        LuaType::FOutputDevice::construct(*callback_data.lua, &ar);
 
-                        callback_data.lua.call_function(3, 1);
+                        callback_data.lua->call_function(3, 1);
 
-                        if (!callback_data.lua.is_bool())
+                        if (!callback_data.lua->is_bool())
                         {
                             throw std::runtime_error{"A custom console command handle must return true or false"};
                         }
 
-                        return_value = callback_data.lua.get_bool();
+                        return_value = callback_data.lua->get_bool();
                     }
 
                     // No longer promising to be in the game thread
-                    set_is_in_game_thread(callback_data.lua, false);
+                    set_is_in_game_thread(*callback_data.lua, false);
 
                     return return_value;
                 }
@@ -4460,8 +5359,8 @@ Overloads:
                                                        catch (std::runtime_error& e)
                                                        {
                                                            Output::send(STR("[{}] {}\n"),
-                                                                        to_wstring(action.type == LuaMod::ActionType::Loop ? "LoopAsync" : "DelayedAction"),
-                                                                        to_wstring(e.what()));
+                                                                        ensure_str(action.type == LuaMod::ActionType::Loop ? "LoopAsync" : "DelayedAction"),
+                                                                        ensure_str(e.what()));
                                                        }
 
                                                        return result;
@@ -4482,3 +5381,7 @@ Overloads:
         actions_unlock();
     }
 } // namespace RC
+
+#if PLATFORM_WINDOWS
+#include <Unreal/Core/Windows/HideWindowsPlatformTypes.hpp>
+#endif

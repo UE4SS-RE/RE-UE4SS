@@ -12,11 +12,11 @@ namespace RC::LuaType
 {
     LuaCustomProperty::PropertyList LuaCustomProperty::StaticStorage::property_list;
 
-    LuaCustomProperty::LuaCustomProperty(std::wstring name, std::unique_ptr<Unreal::CustomProperty> property) : m_name(name), m_property(std::move(property))
+    LuaCustomProperty::LuaCustomProperty(StringType name, std::unique_ptr<Unreal::CustomProperty> property) : m_name(name), m_property(std::move(property))
     {
     }
 
-    auto LuaCustomProperty::PropertyList::add(std::wstring property_name, std::unique_ptr<Unreal::CustomProperty> property) -> void
+    auto LuaCustomProperty::PropertyList::add(StringType property_name, std::unique_ptr<Unreal::CustomProperty> property) -> void
     {
         (void)properties.emplace_back(LuaCustomProperty{property_name, std::move(property)}).m_property.get();
     }
@@ -26,7 +26,7 @@ namespace RC::LuaType
         properties.clear();
     }
 
-    auto LuaCustomProperty::PropertyList::find_or_nullptr(Unreal::UObject* base, std::wstring property_name) -> Unreal::FProperty*
+    auto LuaCustomProperty::PropertyList::find_or_nullptr(Unreal::UObject* base, StringType property_name) -> Unreal::FProperty*
     {
         Unreal::FProperty* custom_property_found{};
 
@@ -43,7 +43,15 @@ namespace RC::LuaType
                 owner_or_outer = owner.ToField();
             }
 
-            Unreal::UStruct* ptr = base->GetClassPrivate();
+            Unreal::UStruct* ptr{};
+            if (base->IsA<Unreal::UStruct>())
+            {
+                ptr = static_cast<Unreal::UStruct*>(base);
+            }
+            else
+            {
+                ptr = base->GetClassPrivate();
+            }
             bool class_matches = ptr == owner_or_outer;
 
             if (!class_matches)

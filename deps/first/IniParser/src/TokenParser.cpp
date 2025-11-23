@@ -5,6 +5,7 @@
 #include <IniParser/TokenParser.hpp>
 #include <IniParser/Tokens.hpp>
 #include <IniParser/Value.hpp>
+#include <fmt/core.h>
 #include <ParserBase/Token.hpp>
 
 namespace RC::Ini
@@ -31,10 +32,10 @@ namespace RC::Ini
     auto static is_int(File::StringViewType data) -> Int
     {
         bool has_0x_prefix = [&]() {
-            return (data.size() > 2 && data[0] == L'0' && (data[1] == L'x' || data[1] == L'X'));
+            return (data.size() > 2 && data[0] == STR('0') && (data[1] == STR('x') || data[1] == STR('X')));
         }();
 
-        if (!has_0x_prefix && data[0] != L'-' && std::iswdigit(data[0]) == 0)
+        if (!has_0x_prefix && data[0] != STR('-') && std::iswdigit(data[0]) == 0)
         {
             return Int{0, 10, false};
         }
@@ -46,14 +47,8 @@ namespace RC::Ini
                 string = File::StringViewType{string.begin() + 1, string.end()};
             }
             bool is_int = std::ranges::all_of(string.begin(), string.end(), [&](const File::CharType c) {
-                if constexpr (std::is_same_v<File::CharType, wchar_t>)
-                {
-                    return has_0x_prefix ? std::iswxdigit(c) : std::iswdigit(c) != 0;
-                }
-                else
-                {
-                    return has_0x_prefix ? std::isxdigit(c) : std::isdigit(c) != 0;
-                }
+                // force the char type to wchar_t as it is always larger or equal to char type
+                return has_0x_prefix ? std::iswxdigit((wchar_t)c) : std::iswdigit((wchar_t)c) != 0;
             });
 
             return Int{.value = 0, .base = has_0x_prefix ? 16 : 10, .is_int = is_int};
@@ -63,7 +58,7 @@ namespace RC::Ini
     auto static is_float(File::StringViewType data) -> Float
     {
         bool has_decimal_or_negative_prefix = [&]() {
-            return data.size() > 1 && data[0] == L'.' || data[0] == L'-';
+            return data.size() > 1 && data[0] == STR('.') || data[0] == STR('-');
         }();
 
         if (!has_decimal_or_negative_prefix && std::iswdigit(data[0]) == 0)
@@ -78,14 +73,7 @@ namespace RC::Ini
                 string = File::StringViewType{string.begin() + 1, string.end()};
             }
             bool is_float = std::ranges::all_of(string.begin(), string.end(), [&](const File::CharType c) {
-                if constexpr (std::is_same_v<File::CharType, wchar_t>)
-                {
-                    return has_decimal_or_negative_prefix ? std::iswxdigit(c) : std::iswdigit(c) != 0 || c == STR('.');
-                }
-                else
-                {
-                    return has_decimal_or_negative_prefix ? std::isxdigit(c) : std::isdigit(c) != 0 || c == STR('.');
-                }
+                return has_decimal_or_negative_prefix ? std::iswxdigit((wchar_t)c) : std::iswdigit((wchar_t)c) != 0 || c == STR('.');
             });
 
             return Float{.value = 0, .is_float = is_float};
@@ -98,8 +86,8 @@ namespace RC::Ini
         // TODO: This to_lower implementation is not string-type agnostic
         //       A code change would be required if 'File::StringType' is defined as a char instead of a wchar_t
         //       Solution: Make two overloads in the string helper library, one for 'std::string' and one for 'std::wstring'
-        std::transform(all_lower_string_data.begin(), all_lower_string_data.end(), all_lower_string_data.begin(), [](wchar_t c) {
-            return std::towlower(c);
+        std::transform(all_lower_string_data.begin(), all_lower_string_data.end(), all_lower_string_data.begin(), [](CharType c) {
+            return (CharType)std::towlower((wchar_t)c);
         });
         if (all_lower_string_data == STR("true") || all_lower_string_data == STR("1"))
         {
@@ -130,7 +118,7 @@ namespace RC::Ini
 
     auto TokenParser::find_variable_by_name(const StringType& name) -> std::optional<std::reference_wrapper<Value>>
     {
-        size_t occurrence_of_dot = name.find_first_of(L'.');
+        size_t occurrence_of_dot = name.find_first_of(STR('.'));
         if (occurrence_of_dot == name.npos || occurrence_of_dot + 1 > name.size())
         {
             return find_variable_by_name(m_current_section, name);
@@ -252,7 +240,7 @@ namespace RC::Ini
 
         if (m_current_state != State::NewLineStarted && m_current_state != State::StartOfFile)
         {
-            throw std::runtime_error{std::format("Syntax error({} : {}): Expected state NewLineStarted or StartOfFile, got {}",
+            throw std::runtime_error{fmt::format("Syntax error({} : {}): Expected state NewLineStarted or StartOfFile, got {}",
                                                  token.get_line(),
                                                  token.get_column(),
                                                  to_string(state_to_string(m_current_state)))};
@@ -273,7 +261,7 @@ namespace RC::Ini
         if (m_current_character_data.empty())
         {
             throw std::runtime_error{
-                    std::format("Syntax error ({} : {}): Expected Characters, got {}", token.get_line(), token.get_column(), to_string(token.to_string()))};
+                    fmt::format("Syntax error ({} : {}): Expected Characters, got {}", token.get_line(), token.get_column(), to_string(token.to_string()))};
         }
 
         if (auto section = m_output.find(m_current_character_data); section != m_output.end())
@@ -339,7 +327,7 @@ namespace RC::Ini
         else
         {
             throw std::runtime_error{
-                    std::format("Syntax error({} : {}): Invalid state {}", token.get_line(), token.get_column(), to_string(state_to_string(m_current_state)))};
+                    fmt::format("Syntax error({} : {}): Invalid state {}", token.get_line(), token.get_column(), to_string(state_to_string(m_current_state)))};
         }
     }
 
@@ -354,7 +342,7 @@ namespace RC::Ini
 
         if (m_current_state != State::CreateSectionKey)
         {
-            throw std::runtime_error{std::format("Syntax error({} : {}): Expected state CreateSectionKey, got {}",
+            throw std::runtime_error{fmt::format("Syntax error({} : {}): Expected state CreateSectionKey, got {}",
                                                  token.get_line(),
                                                  token.get_column(),
                                                  to_string(state_to_string(m_current_state)))};
@@ -362,7 +350,7 @@ namespace RC::Ini
 
         if (!m_current_section)
         {
-            throw std::runtime_error{std::format("Syntax error ({} : {}): No section. Global variables not supported, please create a [Section]",
+            throw std::runtime_error{fmt::format("Syntax error ({} : {}): No section. Global variables not supported, please create a [Section]",
                                                  token.get_line(),
                                                  token.get_column())};
         }
@@ -370,20 +358,28 @@ namespace RC::Ini
         if (m_current_character_data.empty())
         {
             throw std::runtime_error{
-                    std::format("Syntax error ({} : {}): Expected Characters, got {}", token.get_line(), token.get_column(), to_string(token.to_string()))};
+                    fmt::format("Syntax error ({} : {}): Expected Characters, got {}", token.get_line(), token.get_column(), to_string(token.to_string()))};
         }
 
         if (m_current_section->is_ordered_list)
         {
             throw std::runtime_error{
-                    std::format("Syntax error ({} : {}): Previous item is in ordered-list mode, expected another list item, got key/value pair",
+                    fmt::format("Syntax error ({} : {}): Previous item is in ordered-list mode, expected another list item, got key/value pair",
                                 token.get_line(),
                                 token.get_column(),
                                 to_string(token.to_string()))};
         }
 
         // Create the value with the correct key and an empty value and store a pointer to it so that the value can be set later
-        m_current_value = &m_current_section->key_value_pairs.emplace(m_current_character_data, Value{}).first->second;
+        if (!m_current_character_data.empty() && (m_current_character_data.starts_with(STR('+')) || m_current_character_data.starts_with(STR('-'))))
+        {
+            // Retaining '+' and '-' for the user to process later.
+            m_current_value = &m_current_section->key_value_array.emplace_back(m_current_character_data, Value{}).second;
+        }
+        else
+        {
+            m_current_value = &m_current_section->key_value_pairs.emplace(m_current_character_data, Value{}).first->second;
+        }
         m_current_value->add_string_value(STR(""));
         m_current_value->set_ref(m_current_value);
         m_current_character_data.clear();
@@ -405,7 +401,7 @@ namespace RC::Ini
             if (!m_current_section->key_value_pairs.empty() && !m_current_section->is_ordered_list)
             {
                 throw std::runtime_error{
-                        std::format("Syntax error ({} : {}): Previous item is in key/value mode, expected another key/value item, got ordered-list item",
+                        fmt::format("Syntax error ({} : {}): Previous item is in key/value mode, expected another key/value item, got ordered-list item",
                                     token.get_line(),
                                     token.get_column(),
                                     to_string(token.to_string()))};

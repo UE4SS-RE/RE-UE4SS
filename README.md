@@ -15,7 +15,7 @@ Lua scripting system platform, C++ Modding API, SDK generator, blueprint mod loa
 - [UMAP Recreation Dumper](https://docs.ue4ss.com/dev/feature-overview/dumpers.html#umap-recreation-dumper): Dump all loaded actors to file to generate `.umaps` in-editor
 - Other Features, including [Experimental](https://docs.ue4ss.com/dev/feature-overview/experimental.html) features at times
 
-## Targeting UE Versions: From 4.12 To 5.3
+## Targeting UE Versions: From 4.12 To 5.5
 
 The goal of UE4SS is not to be a plug-n-play solution that always works with every game.
 The goal is to have an underlying system that works for most games.
@@ -23,11 +23,24 @@ You may need to update AOBs on your own, and there's a guide for that below.
 
 ## Basic Installation
 
-The easiest installation is via downloading the non-dev version of the latest non-experimental build from [Releases](https://github.com/UE4SS-RE/RE-UE4SS/releases) and extracting the zip content to `/{Gameroot}/GameName/Binaries/Win64/`.
+The easiest installation is via downloading the non-dev version of the latest non-experimental build from [Releases](https://github.com/UE4SS-RE/RE-UE4SS/releases/latest) and extracting the zip content to `{game directory}/GameName/Binaries/Win64/`.
 
 If your game is in the custom config list, extract the contents from the relevant folder to `Win64` as well.
 
-If you are planning on doing mod development using UE4SS, you can do the same as above but download the zDEV version instead. 
+If you are planning on doing mod development using UE4SS, you can do the same as above but download the zDEV version instead.
+
+### Command Line Options
+
+If RE-UE4SS is installed via proxy DLL, the following command line options are available:
+
+- `--disable-ue4ss` - Temporarily disable UE4SS without uninstalling by launching the game with this argument.
+- `--ue4ss-path <path>` - Specify a custom path to UE4SS.dll. Supports both absolute paths (e.g., `C:\custom\UE4SS.dll`) and relative paths (e.g., `dev\builds\UE4SS.dll` relative to the game executable directory). Useful for testing different UE4SS builds without modifying installation files. 
+
+### Environment Variables
+
+RE-UE4SS supports the following environment variables:
+
+- `UE4SS_MODS_PATHS` - Semicolon-separated list of additional mods directories to load. Paths are processed in reverse order (first entry has highest priority), similar to the `PATH` variable. Example: `C:\SharedMods;D:\GameMods;E:\TestMods`.
 
 ## Links
 
@@ -45,18 +58,20 @@ If you are planning on doing mod development using UE4SS, you can do the same as
 
   [UE4SS Discord Server Invite](https://discord.gg/7qhRGHF9Tt)
 
-  [Unreal Engine Modding Discord Server Invite](https://discord.gg/zVvsE9mEEa)
+  [Unreal Engine Modding Discord Server Invite](https://discord.gg/unreal-engine-modding-876613187204685934)
 
 ## Build requirements
 
 - A computer running Windows.
   - Linux support might happen at some point but not soon.
-- A version of MSVC that supports C++20, including std::format.
-  - Visual Studio 2019 (recent versions), and Visual Studio 2022 will work.
+- A version of MSVC that supports C++23:
+  - MSVC toolset version >= 14.39.0
+  - MSVC version >= 19.39.0
+  - Visual Studio version >= 17.9
   - More compilers will hopefully be supported in the future.
-- Rust toolchain 1.73.0 or greater
-- [xmake](https://xmake.io/#/)
-
+- [Rust toolchain >= 1.73.0](https://www.rust-lang.org/tools/install)
+- [CMake >= 3.22](https://cmake.org/download/)
+- A build system: either [Ninja](https://ninja-build.org/) or MSVC (included with Visual Studio)
 
 ## Build instructions
 
@@ -68,16 +83,17 @@ If you are planning on doing mod development using UE4SS, you can do the same as
 
 There are several different ways you can build UE4SS.
 
-### Building from cli
+## Building from CLI
 
-Configure the project using this command: `xmake f -m "<BuildMode>"`
+### Build Modes
 
 The build modes are structured as follows: `<Target>__<Config>__<Platform>`
 
 Currently supported options for these are:
 
 * `Target`
-  * `Game` - for regular games
+  * `Game` - for regular games on UE versions greater than UE 4.21
+  * `LessEqual421` - for regular games on UE versions less than or equal to UE 4.21
   * `CasePreserving` - for games built with case preserving enabled
 
 * `Config`
@@ -89,25 +105,270 @@ Currently supported options for these are:
 * `Platform`
   * `Win64` - 64-bit windows
 
+### Basic Build Commands
 
-Now to build it, just run `xmake`
+To build UE4SS with CMake, use the following commands:
+
+```bash
+# Configure with Ninja (recommended for faster builds, single-configuration)
+cmake -B build_cmake_Game__Shipping__Win64 -G Ninja -DCMAKE_BUILD_TYPE=Game__Shipping__Win64
+
+# Build with Ninja
+cmake --build build_cmake_Game__Shipping__Win64
+
+# Or configure with MSVC (multi-configuration, allows switching configs without reconfiguring)
+cmake -B build_cmake_Game__Shipping__Win64 -G "Visual Studio 17 2022"
+
+# Build with MSVC (requires --config flag)
+cmake --build build_cmake_Game__Shipping__Win64 --config Game__Shipping__Win64
+```
+
+### Configuration Options
+
+CMake allows you to configure various build options. Here are some useful options:
+
+#### Proxy Path
+
+By default, UE4SS generates a proxy based on `C:\Windows\System32\dwmapi.dll`. To change this, set the CMake variable:
+
+```bash
+cmake -B build -DUE4SS_PROXY_PATH="<path to proxy dll>" -DCMAKE_BUILD_TYPE=Game__Shipping__Win64
+```
+
+#### Profiler Flavor
+
+By default, UE4SS has profiling disabled (`None`). To enable profiling, you need both a profiler flavor AND a build configuration that includes STATS:
+
+```bash
+# STATS are enabled by default in Dev and Test builds
+cmake -B build -DPROFILER_FLAVOR=<Tracy|Superluminal|None> -DCMAKE_BUILD_TYPE=Game__Dev__Win64
+```
+
+> [!NOTE]
+> Profiling requires STATS support. By default, `Dev` and `Test` configurations include STATS, while `Shipping` and `Debug` do not. You can manually enable STATS for any configuration by adding compile definitions:
+> ```bash
+> cmake -B build -DPROFILER_FLAVOR=Tracy -DCMAKE_BUILD_TYPE=Game__Shipping__Win64 -DCMAKE_CXX_FLAGS="-DSTATS"
+> ```
+
+### Helpful CMake Commands
+
+| Command | Description |
+| --- | --- |
+| `cmake -B <build_dir> -G <generator>` | Configure the project with a specific generator (Ninja or "Visual Studio 17 2022") |
+| `cmake --build <build_dir>` | Build with Ninja (single-config generator) |
+| `cmake --build <build_dir> --config <mode>` | Build with MSVC (multi-config generator, `--config` required) |
+| `cmake --build <build_dir> --clean-first` | Clean and rebuild (add `--config <mode>` for MSVC) |
+| `cmake --build <build_dir> --target <target>` | Build a specific target (add `--config <mode>` for MSVC) |
+| `cmake --build <build_dir> --verbose` | Build with verbose output (add `--config <mode>` for MSVC) |
 
 ### Opening in an IDE
 
-#### Visual Studio / Rider
+#### Visual Studio
 
-To generate Visual Studio project files, run the `xmake project -k vsxmake2022` command.
+CMake has built-in support for generating Visual Studio solutions:
 
-Afterwards open the generated `.sln` file inside of the `vsxmake2022` directory
+```bash
+cmake -B build -G "Visual Studio 17 2022"
+```
+
+Then open the generated `.sln` file in the `build` directory.
+
+Alternatively, Visual Studio 2022 has native CMake support - you can open the folder directly in Visual Studio and it will automatically detect the CMakeLists.txt file.
+
+#### CLion / Other CMake IDEs
+
+Most modern IDEs (CLion, Visual Studio Code with CMake Tools, etc.) have native CMake support. Simply open the project folder and the IDE will automatically detect and configure the CMake project.
 
 Note that you should also commit & push the submodules that you've updated if the reason why you updated was not because someone else pushed an update, and you're just catching up to it.
 
-**Note the following about how xmake interacts with VS**
+### Cross-Compiling Windows Binaries on Linux
 
-> The vs. build plugin performs the compile operation by directly calling the xmake command under vs, and also supports intellisense and definition jumps, as well as breakpoint debugging.
+UE4SS supports cross-compilation from Linux to Windows using two approaches: **xwin** (recommended) or **msvc-wine**.
 
-This means that modifying the project properties within Visual Studio will not affect which flags are passed to the build when VS executes `xmake`. XMake provides some configurable project settings
-which can be found in VS under the `Project Properties -> Configuration Properties -> Xmake` menu.
+#### Prerequisites for All Cross-Compilation
+
+- [Rust toolchain >= 1.73.0](https://www.rust-lang.org/tools/install) with the `x86_64-pc-windows-msvc` target:
+  ```bash
+  rustup target add x86_64-pc-windows-msvc
+  ```
+- [CMake >= 3.22](https://cmake.org/download/)
+- [Ninja build system](https://ninja-build.org/)
+
+#### Option 1: Cross-Compiling with xwin (Recommended)
+
+**xwin** downloads and packages the Microsoft CRT headers/libraries and Windows SDK headers/libraries needed for cross-compilation, without requiring a Windows installation.
+
+##### Prerequisites
+
+- LLVM/Clang with Windows target support:
+  ```bash
+  # On Ubuntu/Debian
+  sudo apt install clang lld llvm
+
+  # On Arch Linux
+  sudo pacman -S clang lld llvm
+  ```
+- [xwin](https://github.com/Jake-Shadle/xwin):
+  ```bash
+  cargo install xwin
+  ```
+
+##### Setup
+
+1. Download the Microsoft tools and SDK using xwin (this only needs to be done once):
+   ```bash
+   xwin --accept-license splat --output ~/.xwin
+   ```
+   This will download approximately 300MB and can take a few minutes.
+
+2. Set the XWIN_DIR environment variable:
+   ```bash
+   export XWIN_DIR=~/.xwin
+   ```
+
+##### Building Manually with CMake
+
+```bash
+# Configure with xwin-clang-cl toolchain (uses clang with MSVC-compatible flags)
+XWIN_DIR=~/.xwin cmake -B build_xwin \
+  -G Ninja \
+  -DCMAKE_BUILD_TYPE=Game__Shipping__Win64 \
+  -DCMAKE_TOOLCHAIN_FILE=cmake/toolchains/xwin-clang-cl-toolchain.cmake
+
+# Or use xwin-clang toolchain (uses clang with GNU-style flags)
+XWIN_DIR=~/.xwin cmake -B build_xwin \
+  -G Ninja \
+  -DCMAKE_BUILD_TYPE=Game__Shipping__Win64 \
+  -DCMAKE_TOOLCHAIN_FILE=cmake/toolchains/xwin-clang-toolchain.cmake
+
+# Build
+cmake --build build_xwin
+```
+
+##### Building with build.sh Script
+
+```bash
+# Set XWIN_DIR
+export XWIN_DIR=~/.xwin
+
+# Build with xwin-clang-cl
+./tools/buildscripts/build.sh --toolchain xwin-clang-cl
+
+# Or build with xwin-clang
+./tools/buildscripts/build.sh --toolchain xwin-clang
+
+# Build specific configuration
+./tools/buildscripts/build.sh --toolchain xwin-clang-cl --build-config Game__Debug__Win64
+
+# Clean build with verbose output
+./tools/buildscripts/build.sh --toolchain xwin-clang-cl --clean --verbose
+```
+
+#### Option 2: Cross-Compiling with msvc-wine
+
+**msvc-wine** uses actual MSVC tools running under Wine. This provides maximum compatibility but requires more setup.
+
+##### Prerequisites
+
+- Wine:
+  ```bash
+  # On Ubuntu/Debian
+  sudo apt install wine wine64 winbind
+
+  # On Arch Linux
+  sudo pacman -S wine samba
+  ```
+- [msvc-wine](https://github.com/mstorsjo/msvc-wine) - Follow their installation guide to install MSVC tools
+- Clang (for wine-clang-cl mode) or use MSVC's cl.exe (for wine-msvc mode)
+
+##### Setup
+
+1. Install msvc-wine following the [official instructions](https://github.com/mstorsjo/msvc-wine#installation).
+   By default, this installs to `~/my_msvc/opt/msvc`.
+
+2. Make sure the msvc-wine tools are in your PATH:
+   ```bash
+   export PATH="$HOME/my_msvc/opt/msvc/bin/x64:$PATH"
+   ```
+
+3. Set the Wine prefix (optional):
+   ```bash
+   export WINE_PREFIX=~/.wine
+   ```
+
+##### Building Manually with CMake
+
+```bash
+# Configure with wine-clang-cl toolchain (clang-cl under wine)
+cmake -B build_wine \
+  -G Ninja \
+  -DCMAKE_BUILD_TYPE=Game__Shipping__Win64 \
+  -DCMAKE_TOOLCHAIN_FILE=cmake/toolchains/wine-clang-cl-toolchain.cmake
+
+# Or use wine-msvc toolchain (MSVC cl.exe under wine)
+cmake -B build_wine \
+  -G Ninja \
+  -DCMAKE_BUILD_TYPE=Game__Shipping__Win64 \
+  -DCMAKE_TOOLCHAIN_FILE=cmake/toolchains/wine-msvc-toolchain.cmake
+
+# Build
+cmake --build build_wine
+```
+
+##### Building with build.sh Script
+
+```bash
+# Build with wine-clang-cl
+./tools/buildscripts/build.sh --toolchain wine-clang-cl
+
+# Or build with wine-msvc
+./tools/buildscripts/build.sh --toolchain wine-msvc
+
+# Build specific configuration
+./tools/buildscripts/build.sh --toolchain wine-clang-cl --build-config Game__Debug__Win64
+```
+
+#### Build Output
+
+Cross-compiled binaries will be in the build directory under `<BuildMode>/bin/`:
+```
+build_xwin_Game__Shipping__Win64/
+└── Game__Shipping__Win64/
+    └── bin/
+        ├── UE4SS.dll
+        ├── dwmapi.dll  (proxy DLL)
+        └── ... (other files)
+```
+
+### Debugging Under Wine
+
+When using wine-based toolchains, you can debug crashes and issues using Wine's debugger.
+
+#### Using winedbg
+
+```bash
+# Debug a running program
+winedbg ./path/to/game.exe
+
+# Debug a crash dump
+winedbg crash_2024_12_26_07_39_15.dmp
+```
+
+#### Important Notes for Debugging
+
+- Debug symbols (.pdb files) are **not** stored in minidump files
+- You **must** have the exact same .pdb file that corresponds to the .dll that crashed
+- The easiest way to ensure matching symbols:
+  1. Note the git commit hash when you built UE4SS
+  2. When debugging a crash, checkout that exact commit
+  3. Rebuild to generate matching .pdb files
+  4. Then debug the minidump
+
+#### Tips
+
+- Set `WINEDEBUG=-all` to reduce Wine's debug output during builds (already done by build.sh)
+- If you encounter "access denied" errors, ensure you have `winbind` or `samba` installed
+- PDB files are generated in the same directory as the DLL files
 
 ## Updating git submodules
 

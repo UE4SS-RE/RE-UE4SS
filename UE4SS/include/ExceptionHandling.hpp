@@ -8,15 +8,60 @@
 #define UE4SS_ERROR_OUTPUTTER()                                                                                                                                \
     if (!Output::has_internal_error())                                                                                                                         \
     {                                                                                                                                                          \
-        Output::send<LogLevel::Error>(STR("Error: {}\n"), to_wstring(e.what()));                                                                               \
+        Output::send<LogLevel::Error>(STR("Error: {}\n"), ensure_str(e.what()));                                                                               \
     }                                                                                                                                                          \
     else                                                                                                                                                       \
     {                                                                                                                                                          \
         printf_s("Internal Error: %s\n", e.what());                                                                                                            \
     }
 
+// Defining empty TRY/EXCEPT to disable the system.
+// This is because people have reported instability with it enabled.
+#define SEH_TRY(Code) Code
+#define SEH_EXCEPT(...)
+
+// These macros should never be used in header files because you are required to include Windows.h.
+#ifdef _WIN32
+#ifndef SEH_TRY
+#define SEH_TRY(Code)                                                                                                                                          \
+    __try                                                                                                                                                      \
+    Code
+#endif
+#ifndef SEH_EXCEPT
+#define SEH_EXCEPT(Code)                                                                                                                                       \
+    __except (SEH_exception_filter(GetExceptionCode(), GetExceptionInformation()))                                                                             \
+    {                                                                                                                                                          \
+        Code if (!Unreal::UnrealInitializer::StaticStorage::GlobalConfig.bIsForcedPreScan)                                                                           \
+        {                                                                                                                                                      \
+            std::exit(EXIT_FAILURE);                                                                                                                           \
+        }                                                                                                                                                      \
+    }
+#endif
+#else
+#ifndef SEH_TRY
+#define SEH_TRY(Code) Code
+#endif
+#ifndef SEH_EXCEPT
+#define SEH_EXCEPT(...)
+#endif
+#endif
+
 namespace RC
 {
+#ifdef _WIN32
+    enum SEH_FILTER_RESULT
+    {
+        EXECUTE_HANDLER = 1,
+        CONTINUE_SEARCH = 0,
+        CONTINUE_EXECUTION = -1,
+    };
+
+    inline int SEH_exception_filter(unsigned int code, struct _EXCEPTION_POINTERS* ep)
+    {
+        return EXECUTE_HANDLER;
+    }
+#endif
+
     // Will try some code and properly propagate any exceptions
     // This is a simple helper function to avoid having 15 extra lines of code everywhere
     template <typename CodeToTry>

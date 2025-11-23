@@ -12,8 +12,8 @@ local PlayerControllerTable = {}
 local function Init()
     GetGameMapsSettings().bUseSplitscreen = true
     GetGameMapsSettings().bOffsetPlayerGamepadIds = bOffsetGamepad
-    print(string.format("UseSplitScreen: %s\n", GetGameMapsSettings().bUseSplitscreen))
-    print(string.format("OffsetPlayerGamepadIds: %s\n", GetGameMapsSettings().bOffsetPlayerGamepadIds))
+    print(string.format("[SplitScreenMod] UseSplitScreen: %s\n", GetGameMapsSettings().bUseSplitscreen))
+    print(string.format("[SplitScreenMod] OffsetPlayerGamepadIds: %s\n", GetGameMapsSettings().bOffsetPlayerGamepadIds))
 
     IsInitialized = true
 end
@@ -32,19 +32,20 @@ Init()
 
 local function CreatePlayer()
 
-    print("Creating player..\n")
+    print("[SplitScreenMod] Creating player..\n")
     CachePlayerControllers()
 
-    print(string.format("GameplayStatics: %s\n", GetGameplayStatics():GetFullName()))
+    print(string.format("[SplitScreenMod] GameplayStatics: %s\n", GetGameplayStatics():GetFullName()))
     ExecuteInGameThread(function()
         NewController = GetGameplayStatics():CreatePlayer(PlayerControllerTable[1], #PlayerControllerTable, true)
+
+        if NewController:IsValid() then
+            table.insert(PlayerControllerTable, NewController)
+            print(string.format("Player %s created.\n", #PlayerControllerTable))
+        else
+            print("Player could not be created.\n")
+        end
     end)
-    if NewController:IsValid() then
-        table.insert(PlayerControllerTable, NewController)
-        print(string.format("Player %s created.\n", #PlayerControllerTable))
-    else
-        print("Player could not be created.\n")
-    end
     
 end
 
@@ -54,14 +55,14 @@ function DestroyPlayer()
     CachePlayerControllers()
     
     if #PlayerControllerTable == 1 then
-        print("Player could not be destroyed, only 1 player exists.\n")
+        print("[SplitScreenMod] Player could not be destroyed, only 1 player exists.\n")
         return
     end
-    print(string.format("GameplayStatics: %s\n", GetGameplayStatics():GetFullName()))
+    print(string.format("[SplitScreenMod] GameplayStatics: %s\n", GetGameplayStatics():GetFullName()))
 
     local ControllerToRemove = PlayerControllerTable[#PlayerControllerTable]
-    print(string.format("Removing %s\n", ControllerToRemove:GetFullName()))
-    if not ControllerToRemove:IsValid() then print("PlayerController to be removed is not valid.\nPlayerController could not be destroyed.\n") return end
+    print(string.format("[SplitScreenMod] Removing %s\n", ControllerToRemove:GetFullName()))
+    if not ControllerToRemove:IsValid() then print("[SplitScreenMod] PlayerController to be removed is not valid.\nPlayerController could not be destroyed.\n") return end
     
     ExecuteInGameThread(function()
         GetGameplayStatics():RemovePlayer(ControllerToRemove, true)
@@ -73,13 +74,13 @@ function TeleportPlayers()
     CachePlayerControllers()
 
     if #PlayerControllerTable == 1 then
-        print("Players could not be teleported, only 1 player exists.\n")
+        print("[SplitScreenMod] Players could not be teleported, only 1 player exists.\n")
         return
     end
 
     local DidTeleport = false
     
-    print(string.format("Attempting to Teleport to Player 1..\n"))
+    print(string.format("[SplitScreenMod] Attempting to Teleport to Player 1..\n"))
     
     ExecuteInGameThread(function()
         PlayerPawn = PlayerControllerTable[1].Pawn
@@ -92,13 +93,13 @@ function TeleportPlayers()
                 DidTeleport = true
             end
         end
-    end)
 
-    if DidTeleport then
-        print("Players teleport to Player 1.\n")
-    else
-        print("No players could be teleported\n")
-    end
+        if DidTeleport then
+            print("Players teleport to Player 1.\n")
+        else
+            print("No players could be teleported\n")
+        end
+    end)
 end
 
 

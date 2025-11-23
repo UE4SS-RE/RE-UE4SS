@@ -45,3 +45,4 @@
 - Iterates the entire `TArray` and calls the callback function for each element in the array.
 - The callback params are: `integer index`, `RemoteUnrealParam elem` | `LocalUnrealParam elem`.
 - Use `elem:get()` and `elem:set()` to access/mutate an array element.
+- The callback can optionally return `true` to break out of the loop early.

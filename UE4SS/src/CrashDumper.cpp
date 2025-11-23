@@ -1,14 +1,15 @@
 #include <CrashDumper.hpp>
-
-#include <chrono>
 #include <string>
 #include <format>
-#include <filesystem>
 #include <bit>
+#include <UE4SSProgram.hpp>
+#include <Unreal/Core/Windows/WindowsHWrapper.hpp>
 
-#define NOMINMAX
-#include <Windows.h>
+#include <polyhook2/PE/IatHook.hpp>
 #include <dbghelp.h>
+#include <Helpers/SysError.hpp>
+#include <Helpers/Time.hpp>
+#include <String/StringType.hpp>
 
 namespace fs = std::filesystem;
 
@@ -18,21 +19,22 @@ using std::chrono::time_point_cast;
 
 namespace RC
 {
-    const int DumpType = MiniDumpNormal | MiniDumpWithThreadInfo | MiniDumpWithIndirectlyReferencedMemory | MiniDumpWithModuleHeaders | MiniDumpWithAvxXStateContext;
+    const int DumpType =
+            MiniDumpNormal | MiniDumpWithThreadInfo | MiniDumpWithIndirectlyReferencedMemory | MiniDumpWithModuleHeaders | MiniDumpWithAvxXStateContext;
 
     static bool FullMemoryDump = false;
 
     LONG WINAPI ExceptionHandler(_EXCEPTION_POINTERS* exception_pointers)
     {
-        const auto now = time_point_cast<seconds>(system_clock::now());
-        const std::wstring dump_path = (fs::current_path() / std::format("crash_{:%Y_%m_%d_%H_%M_%S}.dmp", now)).wstring();
+        StringType dump_path = fmt::format(STR("{}\\crash_{}.dmp"), StringType{UE4SSProgram::get_program().get_working_directory()}, get_now_as_string(STR("{:%Y_%m_%d_%H_%M_%S}")));
 
-        const HANDLE file = CreateFileW(dump_path.c_str(), GENERIC_WRITE, FILE_SHARE_WRITE, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
+        const HANDLE file =
+                CreateFileW(FromCharTypePtr<wchar_t>(dump_path.c_str()), GENERIC_WRITE, FILE_SHARE_WRITE, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
 
         if (file == INVALID_HANDLE_VALUE)
         {
-            const std::wstring message = std::format(L"Failed to create crashdump file, reason: {:x}", GetLastError());
-            MessageBoxW(NULL, message.c_str(), L"Fatal Error!", MB_OK);
+            const StringType message = fmt::format(STR("Failed to create crashdump file, reason: {}"), SysError(GetLastError()).c_str());
+            MessageBoxW(NULL, FromCharTypePtr<wchar_t>(message.c_str()), L"Fatal Error!", MB_OK);
             return EXCEPTION_CONTINUE_SEARCH;
         }
 
@@ -53,13 +55,13 @@ namespace RC
 
         if (!ok)
         {
-            const std::wstring message = std::format(L"Failed to write crashdump file, reason: {:x}", GetLastError());
-            MessageBoxW(NULL, message.c_str(), L"Fatal Error!", MB_OK);
+            const StringType message = fmt::format(STR("Failed to write crashdump file, reason: {}"), SysError(GetLastError()).c_str());
+            MessageBoxW(NULL, FromCharTypePtr<wchar_t>(message.c_str()), L"Fatal Error!", MB_OK);
             return EXCEPTION_CONTINUE_SEARCH;
         }
 
-        const std::wstring message = std::format(L"Crashdump written to: {}", dump_path);
-        MessageBoxW(NULL, message.c_str(), L"Fatal Error!", MB_OK);
+        const StringType message = fmt::format(STR("Crashdump written to: {}"), dump_path);
+        MessageBoxW(NULL, FromCharTypePtr<wchar_t>(message.c_str()), L"Fatal Error!", MB_OK);
 
         return EXCEPTION_EXECUTE_HANDLER;
     }

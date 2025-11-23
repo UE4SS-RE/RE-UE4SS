@@ -99,6 +99,8 @@ namespace RC::GUI
         bool m_modal_edit_property_value_is_open{};
         bool m_modal_edit_property_value_opened_this_frame{};
         bool m_modal_edit_property_value_error_unable_to_edit{};
+        bool m_modal_search_by_address_error_not_hex{};
+        bool m_modal_search_by_address_error_out_of_range{};
         bool m_listeners_set{};
         bool m_listeners_allowed{};
         bool m_is_initialized{};
@@ -138,7 +140,9 @@ namespace RC::GUI
         static bool s_selected_item_deleted;
         static bool s_need_to_filter_out_properties;
         static bool s_watches_loaded_from_disk;
+        static bool s_filters_loaded_from_disk;
         static bool s_use_regex_for_search;
+        static bool s_search_by_address;
 
       private:
         enum class AffectsHistory
@@ -154,6 +158,13 @@ namespace RC::GUI
             No
         };
 
+        enum class ContainerType
+        {
+            Object,
+            Array,
+            Struct,
+        };
+
       private:
         auto render_info_panel() -> void;
         auto render_info_panel_as_object(const FUObjectItem*, UObject*) -> void;
@@ -165,13 +176,7 @@ namespace RC::GUI
         auto render_struct_sub_tree_hierarchy(UStruct* ustruct) -> void;
         auto render_class(UClass*) -> void;
         auto render_super_struct(UStruct*) -> void;
-
-        enum class ContainerType
-        {
-            Object,
-            Array,
-            Struct,
-        };
+        
         auto render_property_value(FProperty* property,
                                    ContainerType container_type,
                                    void* container,
@@ -182,6 +187,7 @@ namespace RC::GUI
 
       private:
         auto collapse_all_except(void* except_id) -> void;
+        auto search() -> void;
         auto search_by_name() -> void;
         auto select_object(size_t index, const FUObjectItem* object_item, UObject* object, AffectsHistory = AffectsHistory::Yes) -> void;
         auto select_property(size_t index, FProperty* property, AffectsHistory affects_history) -> void;
@@ -191,8 +197,9 @@ namespace RC::GUI
 
       private:
         auto guobjectarray_iterator(int32_t int_data_1, int32_t int_data_2, const std::function<void(UObject*)>& callable) -> void;
-        auto guobjectarray_by_name_iterator([[maybe_unused]] int32_t int_data_1, [[maybe_unused]] int32_t int_data_2, const std::function<void(UObject*)>& callable)
-                -> void;
+        auto guobjectarray_by_name_iterator([[maybe_unused]] int32_t int_data_1,
+                                            [[maybe_unused]] int32_t int_data_2,
+                                            const std::function<void(UObject*)>& callable) -> void;
 
       public:
         auto set_is_searching_by_name(bool new_value) -> void

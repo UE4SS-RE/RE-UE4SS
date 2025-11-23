@@ -25,10 +25,8 @@ namespace RC
         UE4SSProgram& m_program;
 
       protected:
-#pragma warning(disable : 4251)
-        std::wstring m_mod_name;
-        std::wstring m_mod_path;
-#pragma warning(default : 4251)
+        StringType m_mod_name;
+        std::filesystem::path m_mod_path;
 
       protected:
         // Whether the mod can be installed
@@ -45,11 +43,11 @@ namespace RC
         };
 
       public:
-        Mod(UE4SSProgram&, std::wstring&& mod_name, std::wstring&& mod_path);
+        Mod(UE4SSProgram&, StringType&& mod_name, std::filesystem::path&& mod_path);
         virtual ~Mod() = default;
 
       public:
-        auto get_name() const -> std::wstring_view;
+        auto get_name() const -> StringViewType;
 
         virtual auto start_mod() -> void = 0;
         virtual auto uninstall() -> void = 0;
@@ -61,13 +59,17 @@ namespace RC
         auto is_started() const -> bool;
 
       public:
+        auto get_program() -> UE4SSProgram& { return m_program; }
+        auto get_program() const -> const UE4SSProgram& { return m_program; }
         // Main update from the program
         virtual auto fire_update() -> void;
 
-        virtual auto fire_unreal_init() -> void{};
+        virtual auto fire_unreal_init() -> void {};
+
+        virtual auto fire_ui_init() -> void {};
 
         // Called once when the program is starting, after mods are setup but before any mods have been started
-        virtual auto fire_program_start() -> void{};
+        virtual auto fire_program_start() -> void {};
 
         // Async update
         // Used when the main update function would block other mods from executing their scripts

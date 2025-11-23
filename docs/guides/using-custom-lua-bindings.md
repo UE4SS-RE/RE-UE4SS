@@ -28,8 +28,22 @@ When developing your Lua mods, the language server should automatically parse al
 }
 ```
 
-To get context sensitive information about the custom game types, you need to [annotate your code](https://emmylua.github.io/annotation.html). This is done by adding a comment above the function/class/object that you want to annotate. 
+### How to use your mod's directory as workspace
+As alternative you can open just your mod's root directory as workspace.  
+In this case you need to add a `.luarc.json` with `"workspace.library"` entries  containing a path to the "shared" folder and the "Scripts" directory of your mod.  
+Both paths can be relative.  
+**Example .luarc.json:**  
+```json
+{
+    "$schema": "https://raw.githubusercontent.com/sumneko/vscode-lua/master/setting/schema.json",
+    "workspace.maxPreload": 50000,
+    "workspace.preloadFileSize": 5000,
+    "workspace.library": ["../shared", "Scripts"]
+}
+```
 
+## Annotating
+To get context sensitive information about the custom game types, you need to [annotate your code](https://emmylua.github.io/annotation.html) ([alternative documentation](https://luals.github.io/wiki/annotations/)). This is done by adding a comment above the function/class/object that you want to annotate. 
 ## Example
 
 ```lua

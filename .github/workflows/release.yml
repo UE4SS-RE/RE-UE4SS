@@ -4,42 +4,51 @@ on: workflow_dispatch
 permissions:
   contents: read
 
+concurrency:
+  group: stable-release
+  cancel-in-progress: true
+
 jobs:
   make-release:
     permissions: write-all
     runs-on: windows-2022
 
     steps:
-      - name: Setup github SSH
-        uses: shimataro/ssh-key-action@v2
-        with:
-          key: ${{ secrets.UEPSEUDO_SSH_KEY }}
-          known_hosts: unnecessary
-
       - name: Checkout
         uses: actions/checkout@v4
         with:
           submodules: recursive
           fetch-depth: 0 # needed to get commits since last tag
-          ssh-key: ${{ secrets.UEPSEUDO_SSH_KEY }}
+          token: ${{ secrets.UEPSEUDO_PAT }}
 
       - name: Setup Python
         uses: actions/setup-python@v4
         with:
-          python-version: '3.x'
+          python-version: '3.9'
 
-      - name: Setup MSVC
-        uses: ilammy/msvc-dev-cmd@v1
+      # Specifically use MSVC toolset v19.39.33523
+      - name: Install VS2022 BuildTools 17.9.7
+        run: choco install -y visualstudio2022buildtools --version=117.9.7.0 --params "--add Microsoft.VisualStudio.Component.VC.Tools.x86.x64 --installChannelUri https://aka.ms/vs/17/release/180911598_-255012421/channel"
 
       - name: Setup xmake
         uses: xmake-io/github-action-setup-xmake@v1
         with:
-          xmake-version: latest
+          xmake-version: '2.9.3'
 
       - name: Release Commit
         id: release_commit
-        run: python build.py release_commit ${{ github.actor }}
+        run: python release.py release_commit ${{ github.actor }}
         working-directory: ./tools/buildscripts
+
+      - name: Cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            .xmake
+            Binaries
+            Intermediates
+            C:/Users/runneradmin/AppData/Local/.xmake
+          key: ${{ runner.os }}-xmake-${{ hashFiles('**/xmake.lua') }}
 
       - name: Build
         run: |
@@ -47,7 +56,8 @@ jobs:
           xmake build
 
       - name: Package
-        run: python tools/buildscripts/build.py package
+        id: package
+        run: python tools/buildscripts/release.py package
 
       - name: Push changes
         uses: ad-m/github-push-action@master

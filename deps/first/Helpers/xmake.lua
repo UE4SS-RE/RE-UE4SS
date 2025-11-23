@@ -1,14 +1,15 @@
 local projectName = "Helpers"
 
 target(projectName)
-    set_kind("headeronly")
-    set_languages("cxx20")
+    set_kind("static")
+    set_languages("cxx23")
     set_exceptions("cxx")
-    set_values("ue4ssDep", true)
+    add_rules("ue4ss.dependency")
 
+    add_deps("String")
+    add_packages("fmt")
+    
     add_includedirs("include", { public = true })
     add_headerfiles("include/**.hpp")
 
-    on_load(function (target)
-        print("Project: " .. projectName .. " (HEADER-ONLY)")
-    end)
+    add_files("src/**.cpp")

@@ -6,9 +6,12 @@
 
 #define NOMINMAX
 #include <Windows.h>
+#include <Helpers/String.hpp>
+#include <Helpers/SysError.hpp>
 #ifdef TEXT
 #undef TEXT
 #endif
+#include <fmt/core.h>
 
 namespace RC::File
 {
@@ -20,6 +23,8 @@ namespace RC::File
     auto WinFile::invalidate_file() noexcept -> void
     {
         m_file = nullptr;
+        m_map_handle = nullptr;
+        m_memory_map = nullptr;
     }
 
     auto WinFile::delete_file(const std::filesystem::path& file_path_and_name) -> void
@@ -28,14 +33,16 @@ namespace RC::File
         {
             if (DeleteFileW(file_path_and_name.wstring().c_str()) == 0)
             {
-                THROW_INTERNAL_FILE_ERROR(std::format("[WinFile::delete_file] Was unable to delete file, error: {}", GetLastError()))
+                THROW_INTERNAL_FILE_ERROR(fmt::format("[WinFile::delete_file] Was unable to delete file, error: {}",
+                                                      to_string(SysError(GetLastError())).c_str()))
             }
         }
         else
         {
-            if (DeleteFileA(file_path_and_name.string().c_str()) != 0)
+            if (DeleteFileA(file_path_and_name.string().c_str()) == 0)
             {
-                THROW_INTERNAL_FILE_ERROR(std::format("[WinFile::delete_file] Was unable to delete file, error: {}", GetLastError()))
+                THROW_INTERNAL_FILE_ERROR(fmt::format("[WinFile::delete_file] Was unable to delete file, error: {}",
+                                                      to_string(SysError(GetLastError())).c_str()))
             }
         }
     }
@@ -67,7 +74,7 @@ namespace RC::File
 
     auto WinFile::get_raw_handle() noexcept -> void*
     {
-        return static_cast<void*>(m_file);
+        return m_file;
     }
 
     auto WinFile::get_file_path() const noexcept -> const std::filesystem::path&
@@ -96,7 +103,8 @@ namespace RC::File
         DWORD bytes_written{};
         if (!WriteFile(file.get_file(), data, num_bytes_to_write, &bytes_written, nullptr))
         {
-            THROW_INTERNAL_FILE_ERROR(std::format("[WinFile::write_to_file] Tried writing to file but was unable to complete operation. Error: {}", GetLastError()))
+            THROW_INTERNAL_FILE_ERROR(fmt::format("[WinFile::write_to_file] Tried writing to file but was unable to complete operation. error: {}",
+                                                  to_string(SysError(GetLastError())).c_str()))
         }
     }
 
@@ -165,10 +173,8 @@ namespace RC::File
             {
                 return false;
             }
-            else
-            {
-                deserialize_identifying_properties();
-            }
+
+            deserialize_identifying_properties();
         }
 
         BY_HANDLE_FILE_INFORMATION live_info{};
@@ -289,8 +295,8 @@ namespace RC::File
             auto res = ReadFile(cache_file.get_raw_handle(), &m_cache, cache_size, &bytes_read, nullptr);
             if (res == 0)
             {
-                THROW_INTERNAL_FILE_ERROR(
-                        std::format("[WinFile::get_serialized_item] Tried deserializing file but was unable to complete operation. Error: {}", GetLastError()))
+                THROW_INTERNAL_FILE_ERROR(fmt::format("[WinFile::get_serialized_item] Tried deserializing file but was unable to complete operation. error: {}",
+                                                      to_string(SysError(GetLastError())).c_str()))
             }
 
             cache_file.close();
@@ -326,7 +332,7 @@ namespace RC::File
         }
         catch (const std::filesystem::filesystem_error& e)
         {
-            THROW_INTERNAL_FILE_ERROR(std::format("[WinFile::create_all_directories] Tried creating directories '{}' but encountered an error. Error: {}",
+            THROW_INTERNAL_FILE_ERROR(fmt::format("[WinFile::create_all_directories] Tried creating directories '{}' but encountered an error. error: {}",
                                                   file_name_and_path.string(),
                                                   e.what()))
         }
@@ -338,7 +344,7 @@ namespace RC::File
         {
             if (UnmapViewOfFile(m_memory_map) == 0)
             {
-                THROW_INTERNAL_FILE_ERROR(std::format("[WinFile::close_file] Was unable to unmap file, error: {}", GetLastError()))
+                THROW_INTERNAL_FILE_ERROR(fmt::format("[WinFile::close_file] Was unable to unmap file, error: {}", to_string(SysError(GetLastError())).c_str()))
             }
             else
             {
@@ -350,7 +356,7 @@ namespace RC::File
         {
             if (CloseHandle(m_map_handle) == 0)
             {
-                THROW_INTERNAL_FILE_ERROR(std::format("[WinFile::close_file] Was unable to close map handle, error: {}", GetLastError()))
+                THROW_INTERNAL_FILE_ERROR(fmt::format("[WinFile::close_file] Was unable to close map handle, {}", to_string(SysError(GetLastError())).c_str()))
             }
             else
             {
@@ -365,7 +371,7 @@ namespace RC::File
 
         if (CloseHandle(m_file) == 0)
         {
-            THROW_INTERNAL_FILE_ERROR(std::format("[WinFile::close_file] Was unable to close file, error: {}", GetLastError()))
+            THROW_INTERNAL_FILE_ERROR(fmt::format("[WinFile::close_file] Was unable to close file, {}", to_string(SysError(GetLastError())).c_str()))
         }
         else
         {
@@ -380,18 +386,27 @@ namespace RC::File
 
     auto WinFile::write_string_to_file(StringViewType string_to_write) -> void
     {
-        int string_size = WideCharToMultiByte(CP_UTF8, 0, string_to_write.data(), static_cast<int>(string_to_write.size()), NULL, 0, NULL, NULL);
+        int string_size =
+                WideCharToMultiByte(CP_UTF8, 0, FromCharTypePtr<wchar_t>(string_to_write.data()), static_cast<int>(string_to_write.size()), NULL, 0, NULL, NULL);
         if (string_size == 0)
         {
-            THROW_INTERNAL_FILE_ERROR(std::format("[WinFile::write_string_to_file] Tried writing string to file but string_size was 0. Error: {}", GetLastError()))
+            THROW_INTERNAL_FILE_ERROR(fmt::format("[WinFile::write_string_to_file] Tried writing string to file but string_size was 0. {}",
+                                                  to_string(SysError(GetLastError())).c_str()))
         }
 
         std::string string_converted_to_utf8(string_size, 0);
-        if (WideCharToMultiByte(CP_UTF8, 0, string_to_write.data(), static_cast<int>(string_to_write.size()), &string_converted_to_utf8[0], string_size, NULL, NULL) ==
-            0)
+        if (WideCharToMultiByte(CP_UTF8,
+                                0,
+                                FromCharTypePtr<wchar_t>(string_to_write.data()),
+                                static_cast<int>(string_to_write.size()),
+                                &string_converted_to_utf8[0],
+                                string_size,
+                                NULL,
+                                NULL) == 0)
         {
             THROW_INTERNAL_FILE_ERROR(
-                    std::format("[WinFile::write_string_to_file] Tried writing string to file but could not convert to utf-8. Error: {}", GetLastError()))
+                    fmt::format("[WinFile::write_string_to_file] Tried writing string to file but could not convert to utf-8. {}",
+                                to_string(SysError(GetLastError())).c_str()))
         }
 
         write_to_file(*this, string_converted_to_utf8.c_str(), string_size);
@@ -402,13 +417,13 @@ namespace RC::File
         BY_HANDLE_FILE_INFORMATION file_info{};
         if (GetFileInformationByHandle(m_file, &file_info) == 0)
         {
-            THROW_INTERNAL_FILE_ERROR(std::format("[WinFile::is_same_as] Tried retrieving file information by handle. Error: {}", GetLastError()))
+            THROW_INTERNAL_FILE_ERROR(fmt::format("[WinFile::is_same_as] Tried retrieving file information by handle. {}", to_string(SysError(GetLastError())).c_str()))
         }
 
         BY_HANDLE_FILE_INFORMATION other_file_info{};
         if (GetFileInformationByHandle(other_file.get_file(), &other_file_info) == 0)
         {
-            THROW_INTERNAL_FILE_ERROR(std::format("[WinFile::is_same_as] Tried retrieving file information by handle. Error: {}", GetLastError()))
+            THROW_INTERNAL_FILE_ERROR(fmt::format("[WinFile::is_same_as] Tried retrieving file information by handle. {}", to_string(SysError(GetLastError())).c_str()))
         }
 
         if (file_info.dwVolumeSerialNumber != other_file_info.dwVolumeSerialNumber)
@@ -452,15 +467,15 @@ namespace RC::File
 
     auto WinFile::read_all() const -> StringType
     {
-        StreamType stream{get_file_path(), std::ios::in | std::ios::binary};
+        StreamIType stream{get_file_path(), std::ios::in | std::ios::binary};
         if (!stream)
         {
-            THROW_INTERNAL_FILE_ERROR(std::format("[WinFile::read_all] Tried to read entire file but returned error {}", errno))
+            THROW_INTERNAL_FILE_ERROR(fmt::format("[WinFile::read_all] Tried to read entire file but returned error {}", errno))
         }
         else
         {
             // Strip the BOM if it exists
-            File::StreamType::off_type start{};
+            File::StreamIType::off_type start{};
             File::CharType bom[3]{};
             stream.read(bom, 3);
             if (bom[0] == 0xEF && bom[1] == 0xBB && bom[2] == 0xBF)
@@ -486,12 +501,13 @@ namespace RC::File
 
     auto WinFile::memory_map() -> std::span<uint8_t>
     {
-        DWORD handle_desired_access{};
-        DWORD mapping_desired_access{};
+        DWORD handle_desired_access, mapping_desired_access;
+
         switch (m_open_properties.open_for)
         {
         case OpenFor::Writing:
         case OpenFor::Appending:
+        case OpenFor::ReadWrite:
             handle_desired_access = PAGE_READWRITE;
             mapping_desired_access = FILE_MAP_WRITE;
             break;
@@ -506,18 +522,20 @@ namespace RC::File
         m_map_handle = CreateFileMapping(get_raw_handle(), nullptr, handle_desired_access, 0, 0, nullptr);
         if (!m_map_handle)
         {
-            THROW_INTERNAL_FILE_ERROR(std::format("[WinFile::memory_map] Tried to memory map file but 'CreateFileMapping' returned error: {}", GetLastError()))
+            THROW_INTERNAL_FILE_ERROR(fmt::format("[WinFile::memory_map] Tried to memory map file but 'CreateFileMapping' returned {}",
+                                      to_string(SysError(GetLastError())).c_str()))
         }
 
         m_memory_map = static_cast<uint8_t*>(MapViewOfFile(m_map_handle, mapping_desired_access, 0, 0, 0));
         if (!m_memory_map)
         {
-            THROW_INTERNAL_FILE_ERROR(std::format("[WinFile::memory_map] Tried to memory map file but 'MapViewOfFile' returned error: {}", GetLastError()))
+            THROW_INTERNAL_FILE_ERROR(fmt::format("[WinFile::memory_map] Tried to memory map file but 'MapViewOfFile' returned {}",
+                                      to_string(SysError(GetLastError())).c_str()))
         }
 
         MEMORY_BASIC_INFORMATION buffer{};
-        auto size = VirtualQuery(m_memory_map, &buffer, sizeof(decltype(buffer)));
-        return std::span(m_memory_map, size);
+        VirtualQuery(m_memory_map, &buffer, sizeof(decltype(buffer)));
+        return std::span(m_memory_map, buffer.RegionSize);
     }
 
     auto WinFile::open_file(const std::filesystem::path& file_name_and_path, const OpenProperties& open_properties) -> WinFile
@@ -542,6 +560,9 @@ namespace RC::File
             break;
         case OpenFor::Reading:
             desired_access = GENERIC_READ;
+            break;
+        case OpenFor::ReadWrite:
+            desired_access = GENERIC_READ | GENERIC_WRITE;
             break;
         default:
             THROW_INTERNAL_FILE_ERROR("[WinFile::open_file] Tried to open file but received invalid data for the 'OpenFor' parameter.")
@@ -591,23 +612,8 @@ namespace RC::File
         {
             std::string_view open_type = open_properties.open_for == OpenFor::Writing || open_properties.open_for == OpenFor::Appending ? "writing" : "reading";
 
-            DWORD error = GetLastError();
-            if (error == 2)
-            {
-                throw FileNotFoundException{std::format("File not found: {}", file_name_and_path.filename().string())};
-            }
-            else if (error == 3)
-            {
-                throw FileNotFoundException{std::format("Path not found: {}", file_name_and_path.filename().string())};
-            }
-            else
-            {
-                THROW_INTERNAL_FILE_ERROR(
-                        std::format("[WinFile::open_file] Tried opening file for {} but encountered an error. Path & File: {} | GetLastError() = {}\n",
-                                    open_type,
-                                    file_name_and_path.string(),
-                                    error))
-            }
+            THROW_INTERNAL_FILE_ERROR(fmt::format("[WinFile::open_file] Tried opening file for {} but encountered an error. Path & File: {} | error: {}\n",
+                                                  open_type, file_name_and_path.string(), to_string(SysError(GetLastError())).c_str()))
         }
 
         file.m_file_path_and_name = file_name_and_path;

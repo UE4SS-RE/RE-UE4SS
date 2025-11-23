@@ -1,7 +1,17 @@
 #include <chrono>
 #include <format>
-
+#include <fmt/xchar.h>
+#include <fmt/chrono.h>
 #include <DynamicOutput/OutputDevice.hpp>
+#include <Helpers/Time.hpp>
+
+#if _WIN32
+#define NOMINMAX
+#include <Windows.h>
+#ifdef TEXT
+#undef TEXT
+#endif
+#endif
 
 namespace RC::Output
 {
@@ -22,15 +32,8 @@ namespace RC::Output
         m_formatter = new_formatter;
     }
 
-    auto OutputDevice::get_now_as_string() -> const File::StringType
-    {
-        auto now = std::chrono::system_clock::now();
-        const File::StringType when_as_string = std::format(STR("{:%Y-%m-%d %X}"), now);
-        return when_as_string;
-    }
-
     auto OutputDevice::default_format_string(File::StringViewType string_to_format) -> File::StringType
     {
-        return std::format(STR("[{}] {}"), get_now_as_string(), string_to_format);
+        return fmt::format(STR("[{}] {}"), get_now_as_string(STR("{:%Y-%m-%d %X}")), string_to_format);
     }
 } // namespace RC::Output

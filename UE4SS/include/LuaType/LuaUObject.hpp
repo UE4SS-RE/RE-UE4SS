@@ -234,6 +234,99 @@ namespace RC::LuaType
 
         // Whether to create a new Lua item (example: table) or use an existing one on the top of the stack
         bool create_new_if_get_non_trivial_local{true};
+
+        auto get_operation() const -> const char*
+        {
+            switch (operation)
+            {
+                case Operation::Get:
+                    return "Get";
+                case Operation::GetNonTrivialLocal:
+                    return "GetNonTrivialLocal";
+                case Operation::Set:
+                    return "Set";
+                case Operation::GetParam:
+                    return "GetParam";
+            }
+            return "UnknownOperation";
+        }
+
+        // https://stackoverflow.com/questions/59091462/from-c-how-can-i-print-the-contents-of-the-lua-stack/59097940#59097940
+        auto get_stack_dump(const char* message = "") const -> std::string
+        {
+            auto lua_state = lua.get_lua_state();
+            auto out_message = fmt::format("\n\nLUA Stack dump -> START------------------------------\n{}\n", message);
+            int top = lua_gettop(lua_state);
+            for (int i = 1; i <= top; i++)
+            {
+                out_message.append(fmt::format("{}\t{}\t", i, luaL_typename(lua_state, i)));
+                switch (lua_type(lua_state, i))
+                {
+                case LUA_TNUMBER:
+                    out_message.append(fmt::format("{}", lua_tonumber(lua_state, i)));
+                    break;
+                case LUA_TSTRING:
+                    out_message.append(fmt::format("{}", lua_tostring(lua_state, i)));
+                    break;
+                case LUA_TBOOLEAN:
+                    out_message.append(fmt::format("{}", (lua_toboolean(lua_state, i) ? "true" : "false")));
+                    break;
+                case LUA_TNIL:
+                    out_message.append("nil");
+                    break;
+                case LUA_TFUNCTION:
+                    out_message.append("function");
+                    break;
+                default:
+                    out_message.append(fmt::format("{}", lua_topointer(lua_state, i)));
+                    break;
+                }
+                out_message.append("\n");
+            }
+            out_message.append("\nLUA Stack dump -> END----------------------------\n\n");
+            return out_message;
+        }
+
+        auto throw_error_internal_append_args(std::string&) const -> void
+        {
+        }
+        template <typename K1, typename V1>
+        auto throw_error_internal_append_args(std::string& error_message, K1&& key, V1&& value) const -> void
+        {
+            error_message.append(fmt::format("    {}: {}\n", key, value));
+        }
+        template <typename K1, typename V1, typename... Remaining>
+        auto throw_error_internal_append_args(std::string& error_message, K1&& key, V1&& value, Remaining&&... remaining) const -> void
+        {
+            error_message.append(fmt::format("    {}: {}\n", key, value));
+            throw_error_internal_append_args(error_message, remaining...);
+        }
+        // Helper to throw nicely formatted error messages in property pushers.
+        // You can supply extra data by passing two extra args per data.
+        // The first arg is the name of the data, it must be a string.
+        // The second arg is anything that fmt::format can format.
+        // Example: throw_error("push_objectproperty", "Value must be UObject or nil", "extra_data", 1234)
+        // Output:
+        // [push_objectproperty] Error:
+        // Value must be UObject or nil
+        //     Property: ObjectProperty Children./Script/Engine.Actor:Children
+        //     extra_data: 1234
+        template <typename... Args>
+        auto throw_error(std::string_view handler_name, std::string_view format, Args&&... args) const -> void
+        {
+            std::string error_message{};
+            error_message.append(fmt::format("[{}] Error:\n", handler_name));
+            error_message.append(fmt::format(" {}\n", format));
+            error_message.append(fmt::format("    Operation: {}\n", get_operation()));
+            error_message.append(fmt::format("    Base: {}\n", static_cast<void*>(base)));
+            error_message.append(fmt::format("    Data: {}\n", data));
+            error_message.append(fmt::format("    Property ({}): {}\n", static_cast<void*>(property), property ? to_string(property->GetFullName()) : "null"));
+            error_message.append(fmt::format("    StoredAtIndex: {}\n", stored_at_index));
+            error_message.append(fmt::format("    CreateNewIfGetNonTrivialLocal: {}\n", create_new_if_get_non_trivial_local));
+            throw_error_internal_append_args(error_message, args...);
+            error_message.append(get_stack_dump());
+            lua.throw_error(error_message);
+        }
     };
 
     struct RC_UE4SS_API FunctionPusherParams
@@ -256,6 +349,17 @@ namespace RC::LuaType
     RC_UE4SS_API auto construct_uclass(const LuaMadeSimple::Lua&) -> void;
     RC_UE4SS_API auto construct_xproperty(const LuaMadeSimple::Lua&, Unreal::FProperty* property) -> void;
 
+    auto convert_lua_table_to_struct(const LuaMadeSimple::Lua& lua,
+                                     Unreal::UScriptStruct* script_struct,
+                                     void* data,
+                                     int table_index,
+                                     Unreal::UObject* base = nullptr) -> void;
+    auto convert_struct_to_lua_table(const LuaMadeSimple::Lua& lua,
+                                     Unreal::UScriptStruct* script_struct,
+                                     void* data,
+                                     bool create_new_table = true,
+                                     Unreal::UObject* base = nullptr) -> void;
+
     // Push to Lua -> START
     RC_UE4SS_API auto push_unhandledproperty(const PusherParams&) -> void;
     RC_UE4SS_API auto push_objectproperty(const PusherParams&) -> void;
@@ -270,6 +374,8 @@ namespace RC::LuaType
     RC_UE4SS_API auto push_uint64property(const PusherParams&) -> void;
     RC_UE4SS_API auto push_structproperty(const PusherParams&) -> void;
     RC_UE4SS_API auto push_arrayproperty(const PusherParams&) -> void;
+    RC_UE4SS_API auto push_setproperty(const PusherParams&) -> void;
+    RC_UE4SS_API auto push_mapproperty(const PusherParams&) -> void;
     RC_UE4SS_API auto push_floatproperty(const PusherParams&) -> void;
     RC_UE4SS_API auto push_doubleproperty(const PusherParams&) -> void;
     RC_UE4SS_API auto push_boolproperty(const PusherParams&) -> void;
@@ -278,14 +384,19 @@ namespace RC::LuaType
     RC_UE4SS_API auto push_nameproperty(const PusherParams&) -> void;
     RC_UE4SS_API auto push_textproperty(const PusherParams&) -> void;
     RC_UE4SS_API auto push_strproperty(const PusherParams&) -> void;
-    RC_UE4SS_API auto push_softclassproperty(const PusherParams&) -> void;
+    RC_UE4SS_API auto push_utf8strproperty(const PusherParams&) -> void;
+    RC_UE4SS_API auto push_ansistrproperty(const PusherParams&) -> void;
+    RC_UE4SS_API auto push_softobjectproperty(const PusherParams&) -> void;
     RC_UE4SS_API auto push_interfaceproperty(const PusherParams&) -> void;
+    RC_UE4SS_API auto push_delegateproperty(const PusherParams&) -> void;
+    RC_UE4SS_API auto push_multicastdelegateproperty(const PusherParams&) -> void;
+    RC_UE4SS_API auto push_multicastsparsedelegateproperty(const PusherParams&) -> void;
 
     RC_UE4SS_API auto push_functionproperty(const FunctionPusherParams&) -> void;
     // Push to Lua -> END
 
-    auto handle_unreal_property_value(const Operation operation, const LuaMadeSimple::Lua&, Unreal::UObject* base, Unreal::FName property_name, Unreal::FField* field)
-            -> void;
+    auto handle_unreal_property_value(
+            const Operation operation, const LuaMadeSimple::Lua&, Unreal::UObject* base, Unreal::FName property_name, Unreal::FField* field) -> void;
 
     auto is_a_implementation(const LuaMadeSimple::Lua& lua) -> int;
 
@@ -462,7 +573,7 @@ namespace RC::LuaType
                     {
                         lua.throw_error("Function 'GetProperty' requires a string as the first parameter");
                     }
-                    std::wstring property_name = to_wstring(lua.get_string(2));
+                    auto property_name = ensure_str(lua.get_string(2));
 
                     auto reflection_table = lua.get_table();
                     const auto& reflected_object = reflection_table.get_userdata_field<SelfType>("ReflectedObject").get_remote_cpp_object();
@@ -478,7 +589,7 @@ namespace RC::LuaType
                     {
                         obj_as_struct = reflected_object->GetClassPrivate();
                     }
-                    auto* property = obj_as_struct->FindProperty(Unreal::FName(property_name));
+                    auto* property = obj_as_struct->FindProperty(Unreal::FName(property_name, Unreal::FNAME_Find));
 
                     construct_xproperty(lua, property);
                     return 1;
@@ -586,7 +697,7 @@ Overloads:
                 {
                     lua.throw_error(error_overload_not_found);
                 }
-                auto cmd = to_wstring(lua.get_string());
+                auto cmd = ensure_str(lua.get_string());
 
                 if (lua.get_stack_size() < 2)
                 {
@@ -601,7 +712,8 @@ Overloads:
                 auto executor = lua.get_userdata<LuaType::UObject>();
 
                 auto ar = Unreal::FOutputDevice{};
-                auto return_value = lua_object.get_remote_cpp_object()->ProcessConsoleExec(cmd.c_str(), ar, executor.get_remote_cpp_object());
+                auto return_value =
+                        lua_object.get_remote_cpp_object()->ProcessConsoleExec(FromCharTypePtr<TCHAR>(cmd.c_str()), ar, executor.get_remote_cpp_object());
 
                 lua.set_bool(return_value);
                 return 1;
@@ -609,8 +721,8 @@ Overloads:
 
             table.add_pair("IsValid", [](const LuaMadeSimple::Lua& lua) -> int {
                 const auto& lua_object = lua.get_userdata<SelfType>();
-                if (lua_object.get_remote_cpp_object() && !lua_object.get_remote_cpp_object()->IsUnreachable() &&
-                    is_object_in_global_unreal_object_map(lua_object.get_remote_cpp_object()))
+                if (lua_object.get_remote_cpp_object() && is_object_in_global_unreal_object_map(lua_object.get_remote_cpp_object()) &&
+                    !lua_object.get_remote_cpp_object()->IsUnreachable())
                 {
                     lua.set_bool(true);
                 }
@@ -641,7 +753,7 @@ Overloads:
         {
             auto& lua_object = lua.get_userdata<SelfType>();
 
-            const std::wstring& member_name = to_const_wstring(lua.get_string());
+            const StringType& member_name = ensure_str_const(lua.get_string());
 
             // If nullptr then we assume the UObject wasn't found so lets return an invalid UObject to Lua
             // This allows the safe chaining of "__index" as long as the Lua script checks ":IsValid()" before using the object
@@ -666,7 +778,7 @@ Overloads:
                 return;
             }
 
-            Unreal::FName property_name = Unreal::FName(member_name);
+            Unreal::FName property_name = Unreal::FName(member_name, Unreal::FNAME_Find);
             Unreal::FField* field = LuaCustomProperty::StaticStorage::property_list.find_or_nullptr(lua_object.get_remote_cpp_object(), member_name);
 
             if (!field)
@@ -736,9 +848,19 @@ Overloads:
 
         auto static setup_member_functions(LuaMadeSimple::Lua::Table& table) -> void
         {
+            table.add_pair("Get", [](const LuaMadeSimple::Lua& lua) -> int {
+                prepare_to_handle(Operation::Get, lua);
+                return 1;
+            });
+
             table.add_pair("get", [](const LuaMadeSimple::Lua& lua) -> int {
                 prepare_to_handle(Operation::Get, lua);
                 return 1;
+            });
+
+            table.add_pair("Set", [](const LuaMadeSimple::Lua& lua) -> int {
+                prepare_to_handle(Operation::Set, lua);
+                return 0;
             });
 
             table.add_pair("set", [](const LuaMadeSimple::Lua& lua) -> int {
@@ -777,8 +899,8 @@ Overloads:
             {
                 // We can either throw an error and kill the execution
                 /**/
-                std::wstring property_type_name = property_type.ToString();
-                lua.throw_error(std::format(
+                StringType property_type_name = property_type.ToString();
+                lua.throw_error(fmt::format(
                         "[LocalUnrealParam::prepare_to_handle] Tried accessing unreal property without a registered handler. Property type '{}' not supported.",
                         to_string(property_type_name)));
                 //*/
@@ -820,7 +942,7 @@ Overloads:
         IntegerType* integer_ptr = static_cast<IntegerType*>(params.data);
         if (!integer_ptr)
         {
-            params.lua.throw_error("[push_integer] data pointer is nullptr");
+            params.throw_error("push_integer", "data pointer is nullptr");
         }
 
         switch (params.operation)
@@ -836,10 +958,10 @@ Overloads:
             RemoteUnrealParam::construct(params.lua, integer_ptr, params.base, params.property);
             return;
         default:
-            params.lua.throw_error("[push_integer] Unhandled Operation");
+            params.throw_error("push_integer", "Unhandled Operation");
             break;
         }
 
-        params.lua.throw_error(std::format("[push_integer] Unknown Operation ({}) not supported", static_cast<int32_t>(params.operation)));
+        params.throw_error("push_integer", "Operation not supported");
     }
 } // namespace RC::LuaType

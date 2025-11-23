@@ -15,7 +15,7 @@
 #include <GUI/ImGuiUtility.hpp>
 #include <GUI/LiveView.hpp>
 #include <GUI/LiveView/Filter/DefaultObjectsOnly.hpp>
-#include <GUI/LiveView/Filter/ExcludeClassName.hpp>
+#include "GUI/LiveView/Filter/ClassNamesFilter.hpp"
 #include <GUI/LiveView/Filter/FunctionParamFlags.hpp>
 #include <GUI/LiveView/Filter/HasProperty.hpp>
 #include <GUI/LiveView/Filter/HasPropertyType.hpp>
@@ -23,6 +23,7 @@
 #include <GUI/LiveView/Filter/InstancesOnly.hpp>
 #include <GUI/LiveView/Filter/NonInstancesOnly.hpp>
 #include <GUI/LiveView/Filter/SearchFilter.hpp>
+#include <GUI/LiveView/Filter/MaxValueSize.hpp>
 #include <GUI/UFunctionCallerWidget.hpp>
 #include <Helpers/String.hpp>
 #include <JSON/JSON.hpp>
@@ -35,6 +36,7 @@
 #include <Unreal/Property/FObjectProperty.hpp>
 #include <Unreal/Property/FEnumProperty.hpp>
 #include <Unreal/Property/NumericPropertyTypes.hpp>
+#include <Unreal/Property/FMapProperty.hpp>
 #include <Unreal/UClass.hpp>
 #include <Unreal/UEnum.hpp>
 #include <Unreal/UFunction.hpp>
@@ -48,6 +50,7 @@
 #include <imgui_internal.h>
 #include <IconsFontAwesome5.h>
 #include <misc/cpp/imgui_stdlib.h>
+#include <fmt/chrono.h>
 
 namespace RC::GUI
 {
@@ -58,12 +61,9 @@ namespace RC::GUI
                                               Filter::IncludeDefaultObjects,
                                               Filter::DefaultObjectsOnly,
                                               Filter::FunctionParamFlags,
-                                              Filter::ExcludeClassName,
+                                              Filter::ClassNamesFilter,
                                               Filter::HasProperty,
                                               Filter::HasPropertyType>{};
-
-    static int s_max_elements_per_chunk{};
-    static int s_chunk_id_start{};
 
     static bool s_live_view_destructed = false;
     static std::unordered_map<const UObject*, std::string> s_object_ptr_to_full_name{};
@@ -87,16 +87,45 @@ namespace RC::GUI
     bool LiveView::s_selected_item_deleted{};
     bool LiveView::s_need_to_filter_out_properties{};
     bool LiveView::s_watches_loaded_from_disk{};
+    bool LiveView::s_filters_loaded_from_disk{};
     bool LiveView::s_use_regex_for_search{};
+    bool LiveView::s_search_by_address{};
 
     static LiveView* s_live_view{};
+
+    // Deferred popup state for property value editing
+    struct DeferredPropertyEditPopup
+    {
+        bool pending = false;
+        std::string modal_name;
+        std::string initial_value;
+        FProperty* property = nullptr;
+        void* container = nullptr;
+        UObject* obj = nullptr;
+        LiveView::ContainerType container_type = LiveView::ContainerType::Object;
+        bool editable = true;
+    };
+    static DeferredPropertyEditPopup s_deferred_property_edit_popup{};
+
+    struct DeferredEnumEditPopup
+    {
+        bool pending = false;
+        std::string modal_name;
+        std::string initial_value;
+        int64_t initial_enum_value = 0;
+        UEnum* uenum = nullptr;
+        int index = -1;
+
+        enum Type { EditName, EditValue, AddName } type;
+    };
+    static DeferredEnumEditPopup s_deferred_enum_edit_popup{};
 
     static auto get_object_full_name_cxx_string(UObject* object) -> std::string;
 
     static auto filter_out_objects(UObject* object) -> bool
     {
         APPLY_PRE_SEARCH_FILTERS(SearchFilters)
-        if (LiveView::s_name_search_results_set.contains(object))
+        if (!LiveView::s_name_to_search_by.empty() && LiveView::s_name_search_results_set.contains(object))
         {
             return true;
         }
@@ -108,7 +137,8 @@ namespace RC::GUI
     {
         // TODO: Stop using the 'HashObject' function when needing the address of an FFieldClassVariant because it's not designed to return an address.
         //       Maybe make the ToFieldClass/ToUClass functions public (append 'Unsafe' to the function names).
-        if (LiveView::s_need_to_filter_out_properties && object->IsA(std::bit_cast<UClass*>(FProperty::StaticClass().HashObject())))
+        if (LiveView::s_name_to_search_by.empty() ||
+            LiveView::s_need_to_filter_out_properties && object->IsA(std::bit_cast<UClass*>(FProperty::StaticClass().HashObject())))
         {
             return;
         }
@@ -117,6 +147,11 @@ namespace RC::GUI
         std::transform(name_to_search_by.begin(), name_to_search_by.end(), name_to_search_by.begin(), [](char c) {
             return std::tolower(c);
         });
+
+        if (filter_out_objects(object))
+        {
+            return;
+        }
 
         if (LiveView::s_include_inheritance)
         {
@@ -133,11 +168,6 @@ namespace RC::GUI
                     break;
                 }
             }
-        }
-
-        if (filter_out_objects(object))
-        {
-            return;
         }
 
         if (LiveView::s_include_inheritance && LiveView::s_name_search_results_set.contains(object))
@@ -171,6 +201,23 @@ namespace RC::GUI
         }
 
         if (object_full_name.find(name_to_search_by) != object_full_name.npos)
+        {
+            LiveView::s_name_search_results.emplace_back(object);
+            LiveView::s_name_search_results_set.emplace(object);
+        }
+    }
+
+    static void attempt_to_add_search_by_address_result(uintptr_t address_to_search_by, UObject* object)
+    {
+        auto object_addr = std::bit_cast<uintptr_t>(object);
+        if (address_to_search_by < object_addr)
+        {
+            return;
+        }
+
+        auto uclass = object->IsA<UStruct>() ? static_cast<UClass*>(object) : object->GetClassPrivate();
+        uintptr_t object_size = uclass->GetPropertiesSize();
+        if (address_to_search_by < object_addr + object_size)
         {
             LiveView::s_name_search_results.emplace_back(object);
             LiveView::s_name_search_results_set.emplace(object);
@@ -250,6 +297,7 @@ namespace RC::GUI
             {
                 if (auto it = LiveView::s_history_object_to_index.find(as_uobject); it != LiveView::s_history_object_to_index.end())
                 {
+                    bool deletion_needed{};
                     for (const auto& history_index : it->second)
                     {
                         auto& selected_object_or_property = LiveView::s_object_view_history[history_index];
@@ -257,8 +305,12 @@ namespace RC::GUI
                         {
                             selected_object_or_property.object_item = nullptr;
                             selected_object_or_property.object = nullptr;
-                            LiveView::s_history_object_to_index.erase(it);
+                            deletion_needed = true;
                         }
+                    }
+                    if (deletion_needed)
+                    {
+                        LiveView::s_history_object_to_index.erase(it);
                     }
                 }
             }
@@ -278,6 +330,241 @@ namespace RC::GUI
         }
     };
     FLiveViewDeleteListener FLiveViewDeleteListener::LiveViewDeleteListener{};
+
+    static auto add_bool_filter_to_json(JSON::Array& json_filters, const StringType& filter_name, bool is_enabled) -> void
+    {
+        auto& json_object = json_filters.new_object();
+        json_object.new_string(STR("FilterName"), filter_name);
+        auto& filter_data = json_object.new_object(STR("FilterData"));
+        filter_data.new_bool(STR("Enabled"), is_enabled);
+    }
+
+    static auto add_int32_filter_to_json(JSON::Array& json_filters, const StringType& filter_name, int32_t value) -> void
+    {
+        auto& json_object = json_filters.new_object();
+        json_object.new_string(STR("FilterName"), filter_name);
+        auto& filter_data = json_object.new_object(STR("FilterData"));
+        filter_data.new_number(STR("Value"), value);
+    }
+
+    template <typename ContainerType>
+    static auto add_array_filter_to_json(JSON::Array& json_filters, const StringType& filter_name, const ContainerType& container, const StringType& array_name)
+            -> void
+    {
+        auto& json_object = json_filters.new_object();
+        json_object.new_string(STR("FilterName"), filter_name);
+        auto& filter_data = json_object.new_object(STR("FilterData"));
+
+        if (array_name == STR("ClassNames"))
+        {
+            filter_data.new_bool(STR("IsExclude"), Filter::ClassNamesFilter::b_is_exclude);
+        }
+        else if (array_name == STR("FunctionParamFlags"))
+        {
+            filter_data.new_bool(STR("IncludeReturnProperty"), Filter::FunctionParamFlags::s_include_return_property);
+        }
+
+        auto& values_array = filter_data.new_array(array_name);
+        for (const auto& value : container)
+        {
+            if constexpr (std::is_same_v<typename ContainerType::value_type, FName>)
+            {
+                values_array.new_string(value.ToString());
+            }
+            else if constexpr (std::is_same_v<typename ContainerType::value_type, bool>)
+            {
+                values_array.new_bool(value);
+            }
+            else
+            {
+                values_array.new_string(value);
+            }
+        }
+    }
+
+    static auto internal_save_filters_to_disk() -> void
+    {
+        auto json = JSON::Object{};
+        auto& json_filters = json.new_array(STR("Filters"));
+        {
+            add_bool_filter_to_json(json_filters, STR("IncludeInheritance"), LiveView::s_include_inheritance);
+            add_bool_filter_to_json(json_filters, STR("UseRegexForSearch"), LiveView::s_use_regex_for_search);
+            add_bool_filter_to_json(json_filters, STR("ApplySearchFiltersWhenNotSearching"), LiveView::s_apply_search_filters_when_not_searching);
+            add_bool_filter_to_json(json_filters, STR("SearchByAddress"), LiveView::s_search_by_address);
+            add_bool_filter_to_json(json_filters, Filter::DefaultObjectsOnly::s_debug_name, Filter::DefaultObjectsOnly::s_enabled);
+            add_bool_filter_to_json(json_filters, Filter::IncludeDefaultObjects::s_debug_name, Filter::IncludeDefaultObjects::s_enabled);
+            add_bool_filter_to_json(json_filters, Filter::InstancesOnly::s_debug_name, Filter::InstancesOnly::s_enabled);
+            add_bool_filter_to_json(json_filters, Filter::NonInstancesOnly::s_debug_name, Filter::NonInstancesOnly::s_enabled);
+        }
+        {
+            add_array_filter_to_json(json_filters, Filter::ClassNamesFilter::s_debug_name, Filter::ClassNamesFilter::list_class_names, STR("ClassNames"));
+            add_array_filter_to_json(json_filters, Filter::HasProperty::s_debug_name, Filter::HasProperty::list_properties, STR("Properties"));
+            add_array_filter_to_json(json_filters, Filter::HasPropertyType::s_debug_name, Filter::HasPropertyType::list_property_types, STR("PropertyTypes"));
+            add_array_filter_to_json(json_filters, Filter::FunctionParamFlags::s_debug_name, Filter::FunctionParamFlags::s_checkboxes, STR("FunctionParamFlags"));
+        }
+        {
+            add_int32_filter_to_json(json_filters, Filter::MaxValueSize::s_debug_name, Filter::MaxValueSize::s_value);
+        }
+
+        auto json_file = File::open(StringType{UE4SSProgram::get_program().get_working_directory()} + fmt::format(STR("\\liveview\\filters.meta.json")),
+                                    File::OpenFor::Writing,
+                                    File::OverwriteExistingFile::Yes,
+                                    File::CreateIfNonExistent::Yes);
+        int32_t json_indent_level{};
+        json_file.write_string_to_file(json.serialize(JSON::ShouldFormat::Yes, &json_indent_level));
+    }
+
+    static auto save_filters_to_disk() -> void
+    {
+        TRY([] {
+            internal_save_filters_to_disk();
+        });
+    }
+
+    template <typename T>
+    static auto json_array_to_filters_list(JSON::Array& json_array, std::vector<T>& list, StringType type, std::string& internal_value) -> void
+    {
+        list.clear();
+        internal_value.clear();
+        json_array.for_each([&](JSON::Value& item) {
+            if (!item.is<JSON::String>())
+            {
+                throw std::runtime_error{fmt::format("Invalid {} in 'filters.meta.json'", to_string(type))};
+            }
+            list.emplace_back(item.as<JSON::String>()->get_view());
+            return LoopAction::Continue;
+        });
+        for (const auto& class_name : list)
+        {
+            if constexpr (std::is_same_v<T, FName>)
+            {
+                internal_value += to_string(class_name.ToString());
+            }
+            else
+            {
+                internal_value += to_string(class_name);
+            }
+
+            if (&class_name != &list.back())
+            {
+                internal_value += ", ";
+            }
+        }
+    }
+
+    static auto internal_load_filters_from_disk() -> void
+    {
+        const auto json_file = File::open(StringType{UE4SSProgram::get_program().get_working_directory()} + fmt::format(STR("\\liveview\\filters.meta.json")),
+                                          File::OpenFor::Reading,
+                                          File::OverwriteExistingFile::No,
+                                          File::CreateIfNonExistent::Yes);
+        auto json_file_contents = json_file.read_all();
+        if (json_file_contents.empty())
+        {
+            return;
+        }
+
+        const auto json_global_object = JSON::Parser::parse(json_file_contents);
+        const auto& json_filters = json_global_object->get<JSON::Array>(STR("Filters"));
+        json_filters.for_each([&](const JSON::Value& filter) {
+            if (!filter.is<JSON::Object>())
+            {
+                throw std::runtime_error{"Invalid filter in 'filters.meta.json'"};
+            }
+            auto& json_object = *filter.as<JSON::Object>();
+            auto filter_name = json_object.get<JSON::String>(STR("FilterName")).get_view();
+            auto& filter_data = json_object.get<JSON::Object>(STR("FilterData"));
+
+            if (filter_name == STR("IncludeInheritance"))
+            {
+                LiveView::s_include_inheritance = filter_data.get<JSON::Bool>(STR("Enabled")).get();
+            }
+            else if (filter_name == STR("UseRegexForSearch"))
+            {
+                LiveView::s_use_regex_for_search = filter_data.get<JSON::Bool>(STR("Enabled")).get();
+            }
+            else if (filter_name == STR("ApplySearchFiltersWhenNotSearching"))
+            {
+                LiveView::s_apply_search_filters_when_not_searching = filter_data.get<JSON::Bool>(STR("Enabled")).get();
+            }
+            else if (filter_name == STR("SearchByAddress"))
+            {
+                LiveView::s_search_by_address = filter_data.get<JSON::Bool>(STR("Enabled")).get();
+            }
+            else if (filter_name == Filter::DefaultObjectsOnly::s_debug_name)
+            {
+                Filter::DefaultObjectsOnly::s_enabled = filter_data.get<JSON::Bool>(STR("Enabled")).get();
+            }
+            else if (filter_name == Filter::IncludeDefaultObjects::s_debug_name)
+            {
+                Filter::IncludeDefaultObjects::s_enabled = filter_data.get<JSON::Bool>(STR("Enabled")).get();
+            }
+            else if (filter_name == Filter::InstancesOnly::s_debug_name)
+            {
+                Filter::InstancesOnly::s_enabled = filter_data.get<JSON::Bool>(STR("Enabled")).get();
+            }
+            else if (filter_name == Filter::NonInstancesOnly::s_debug_name)
+            {
+                Filter::NonInstancesOnly::s_enabled = filter_data.get<JSON::Bool>(STR("Enabled")).get();
+            }
+            else if (filter_name == Filter::ClassNamesFilter::s_debug_name)
+            {
+                Filter::ClassNamesFilter::b_is_exclude = filter_data.get<JSON::Bool>(STR("IsExclude")).get();
+                auto& class_names = filter_data.get<JSON::Array>(STR("ClassNames"));
+                json_array_to_filters_list(class_names, Filter::ClassNamesFilter::list_class_names, STR("class name"), Filter::ClassNamesFilter::s_internal_class_names);
+            }
+            else if (filter_name == Filter::HasProperty::s_debug_name)
+            {
+                auto& properties = filter_data.get<JSON::Array>(STR("Properties"));
+                json_array_to_filters_list(properties, Filter::HasProperty::list_properties, STR("property"), Filter::HasProperty::s_internal_properties);
+            }
+            else if (filter_name == Filter::HasPropertyType::s_debug_name)
+            {
+                auto& property_types = filter_data.get<JSON::Array>(STR("PropertyTypes"));
+                json_array_to_filters_list(property_types,
+                                           Filter::HasPropertyType::list_property_types,
+                                           STR("property type"),
+                                           Filter::HasPropertyType::s_internal_property_types);
+            }
+            else if (filter_name == Filter::FunctionParamFlags::s_debug_name)
+            {
+                Filter::FunctionParamFlags::s_include_return_property = filter_data.get<JSON::Bool>(STR("IncludeReturnProperty")).get();
+                Filter::FunctionParamFlags::s_checkboxes.fill(false);
+                auto& function_param_flags = filter_data.get<JSON::Array>(STR("FunctionParamFlags"));
+                if (function_param_flags.get().size() != Filter::FunctionParamFlags::s_checkboxes.size())
+                {
+                    throw std::runtime_error{"Invalid number of function param flag entires in 'filters.meta.json'"};
+                }
+                function_param_flags.for_each([](auto index, JSON::Value& flag) {
+                    if (!flag.is<JSON::Bool>())
+                    {
+                        throw std::runtime_error{"Invalid flag in 'filters.meta.json'"};
+                    }
+                    Filter::FunctionParamFlags::s_checkboxes[index] = flag.as<JSON::Bool>()->get();
+                    return LoopAction::Continue;
+                });
+            }
+            else if (filter_name == Filter::MaxValueSize::s_debug_name)
+            {
+                auto number = filter_data.get<JSON::Number>(STR("Value")).get<int64_t>();
+                if (number > std::numeric_limits<int32_t>::max())
+                {
+                    number = std::numeric_limits<int32_t>::max();
+                }
+                Filter::MaxValueSize::s_value = static_cast<int32_t>(number);
+                Filter::MaxValueSize::s_value_buffer = fmt::format("{}", Filter::MaxValueSize::s_value);
+            }
+
+            return LoopAction::Continue;
+        });
+    }
+
+    static auto load_filters_from_disk() -> void
+    {
+        TRY([] {
+            internal_load_filters_from_disk();
+        });
+    }
 
     static auto toggle_function_watch(LiveView::Watch& watch, bool new_value) -> void
     {
@@ -369,11 +656,17 @@ namespace RC::GUI
 
     static auto internal_load_watches_from_disk() -> void
     {
-        auto json_file = File::open(StringType{UE4SSProgram::get_program().get_working_directory()} + std::format(STR("\\watches\\watches.meta.json")),
+        auto working_directory_path = StringType{UE4SSProgram::get_program().get_working_directory()} + fmt::format(STR("\\watches\\watches.meta.json"));
+        auto legacy_root_directory_path =
+                StringType{UE4SSProgram::get_program().get_legacy_root_directory()} + fmt::format(STR("\\watches\\watches.meta.json"));
+
+        StringType json_file_contents;
+        bool is_legacy = !std::filesystem::exists(working_directory_path) && std::filesystem::exists(legacy_root_directory_path);
+        auto json_file = File::open(is_legacy ? legacy_root_directory_path : working_directory_path,
                                     File::OpenFor::Reading,
                                     File::OverwriteExistingFile::No,
                                     File::CreateIfNonExistent::Yes);
-        auto json_file_contents = json_file.read_all();
+
         if (json_file_contents.empty())
         {
             return;
@@ -382,6 +675,10 @@ namespace RC::GUI
         auto json_global_object = JSON::Parser::parse(json_file_contents);
         const auto& elements = json_global_object->get<JSON::Array>(STR("Watches"));
         elements.for_each([](JSON::Value& element) {
+            if (!element.is<JSON::Object>())
+            {
+                throw std::runtime_error{"Invalid watch in 'watches.meta.json'"};
+            }
             auto& json_watch_object = *element.as<JSON::Object>();
             auto acquisition_id = json_watch_object.get<JSON::String>(STR("AcquisitionID")).get_view();
             auto property_name = json_watch_object.get<JSON::String>(STR("PropertyName")).get_view();
@@ -409,7 +706,7 @@ namespace RC::GUI
             LiveView::Watch* watch = [&]() -> LiveView::Watch* {
                 if (watch_type == LiveView::Watch::Type::Property)
                 {
-                    auto property = object->GetPropertyByNameInChain(property_name.data());
+                    auto property = object->GetPropertyByNameInChain(FromCharTypePtr<TCHAR>(property_name.data()));
                     if (!property)
                     {
                         return nullptr;
@@ -458,7 +755,7 @@ namespace RC::GUI
             }
         }
 
-        auto json_file = File::open(StringType{UE4SSProgram::get_program().get_working_directory()} + std::format(STR("\\watches\\watches.meta.json")),
+        auto json_file = File::open(StringType{UE4SSProgram::get_program().get_working_directory()} + fmt::format(STR("\\watches\\watches.meta.json")),
                                     File::OpenFor::Writing,
                                     File::OverwriteExistingFile::Yes,
                                     File::CreateIfNonExistent::Yes);
@@ -499,24 +796,16 @@ namespace RC::GUI
     {
         auto& file_device = output.get_device<Output::FileDevice>();
         file_device.set_file_name_and_path(StringType{UE4SSProgram::get_program().get_working_directory()} +
-                                           std::format(STR("\\watches\\ue4ss_watch_{}_{}.txt"), object_name, property_name));
+                                           fmt::format(STR("\\watches\\ue4ss_watch_{}_{}.txt"), object_name, property_name));
         file_device.set_formatter([](File::StringViewType string) -> File::StringType {
-            const auto when_as_string = std::format(STR("{:%Y-%m-%d %H:%M:%S}"), std::chrono::system_clock::now());
-            return std::format(STR("[{}] {}"), when_as_string, string);
+            const auto when_as_string = fmt::format(STR("{:%Y-%m-%d %H:%M:%S}"), std::chrono::system_clock::now());
+            return fmt::format(STR("[{}] {}"), when_as_string, string);
         });
     }
 
     auto LiveView::initialize() -> void
     {
         s_need_to_filter_out_properties = Version::IsBelow(4, 25);
-        if (UE4SSProgram::settings_manager.Debug.LiveViewObjectsPerGroup > std::numeric_limits<int>::max())
-        {
-            Output::send<LogLevel::Warning>(STR("Debug.LiveViewObjectsPerGroup is too large, must be no larger than 4294967295.\n"));
-            Output::send<LogLevel::Warning>(STR("Using default value for Debug.LiveViewObjectsPerGroup.\n"));
-            UE4SSProgram::settings_manager.Debug.LiveViewObjectsPerGroup = 64 * 1024 / 2;
-        }
-        s_max_elements_per_chunk = static_cast<int>(UE4SSProgram::settings_manager.Debug.LiveViewObjectsPerGroup);
-        s_chunk_id_start = -s_max_elements_per_chunk;
         m_is_initialized = true;
     }
 
@@ -685,7 +974,7 @@ namespace RC::GUI
 
         ClassFlagsStringifier(UClass* uclass)
         {
-            if (uclass->HasAnyClassFlags(CLASS_None))
+            if (get_raw_flags(uclass) == 0)
             {
                 flag_parts.emplace_back("CLASS_None");
             }
@@ -828,6 +1117,280 @@ namespace RC::GUI
         }
     };
 
+    struct ClassCastFlagsStringifier
+    {
+        std::string flags_string{};
+        std::vector<std::string> flag_parts{};
+
+        static constexpr const char* popup_context_item_id_raw = "class_cast_raw_flags_menu";
+        static constexpr const char* popup_context_item_id = "class_cast_flags_menu";
+
+         static auto get_raw_flags(UClass* object) -> uint64_t
+        {
+            return static_cast<uint64_t>(object->GetClassCastFlags());
+        }
+
+        ClassCastFlagsStringifier(UClass* uclass)
+        {
+            if (get_raw_flags(uclass) == 0)
+            {
+                flag_parts.emplace_back("CASTCLASS_None");
+            }
+            if (uclass->HasAnyCastFlag(CASTCLASS_UField))
+            {
+                flag_parts.emplace_back("CASTCLASS_UField");
+            }
+            if (uclass->HasAnyCastFlag(CASTCLASS_FInt8Property))
+            {
+                flag_parts.emplace_back("CASTCLASS_FInt8Property");
+            }
+            if (uclass->HasAnyCastFlag(CASTCLASS_UEnum))
+            {
+                flag_parts.emplace_back("CASTCLASS_UEnum");
+            }
+            if (uclass->HasAnyCastFlag(CASTCLASS_UStruct))
+            {
+                flag_parts.emplace_back("CASTCLASS_UStruct");
+            }
+            if (uclass->HasAnyCastFlag(CASTCLASS_UScriptStruct))
+            {
+                flag_parts.emplace_back("CASTCLASS_UScriptStruct");
+            }
+            if (uclass->HasAnyCastFlag(CASTCLASS_UClass))
+            {
+                flag_parts.emplace_back("CASTCLASS_UClass");
+            }
+            if (uclass->HasAnyCastFlag(CASTCLASS_FByteProperty))
+            {
+                flag_parts.emplace_back("CASTCLASS_FByteProperty");
+            }
+            if (uclass->HasAnyCastFlag(CASTCLASS_FIntProperty))
+            {
+                flag_parts.emplace_back("CASTCLASS_FIntProperty");
+            }
+            if (uclass->HasAnyCastFlag(CASTCLASS_FFloatProperty))
+            {
+                flag_parts.emplace_back("CASTCLASS_FFloatProperty");
+            }
+            if (uclass->HasAnyCastFlag(CASTCLASS_FUInt64Property))
+            {
+                flag_parts.emplace_back("CASTCLASS_FUInt64Property");
+            }
+            if (uclass->HasAnyCastFlag(CASTCLASS_FClassProperty))
+            {
+                flag_parts.emplace_back("CASTCLASS_FClassProperty");
+            }
+            if (uclass->HasAnyCastFlag(CASTCLASS_FUInt32Property))
+            {
+                flag_parts.emplace_back("CASTCLASS_FUInt32Property");
+            }
+            if (uclass->HasAnyCastFlag(CASTCLASS_FInterfaceProperty))
+            {
+                flag_parts.emplace_back("CASTCLASS_FInterfaceProperty");
+            }
+            if (uclass->HasAnyCastFlag(CASTCLASS_FNameProperty))
+            {
+                flag_parts.emplace_back("CASTCLASS_FNameProperty");
+            }
+            if (uclass->HasAnyCastFlag(CASTCLASS_FStrProperty))
+            {
+                flag_parts.emplace_back("CASTCLASS_FStrProperty");
+            }
+            if (uclass->HasAnyCastFlag(CASTCLASS_FProperty))
+            {
+                flag_parts.emplace_back("CASTCLASS_FProperty");
+            }
+            if (uclass->HasAnyCastFlag(CASTCLASS_FObjectProperty))
+            {
+                flag_parts.emplace_back("CASTCLASS_FObjectProperty");
+            }
+            if (uclass->HasAnyCastFlag(CASTCLASS_FBoolProperty))
+            {
+                flag_parts.emplace_back("CASTCLASS_FBoolProperty");
+            }
+            if (uclass->HasAnyCastFlag(CASTCLASS_FUInt16Property))
+            {
+                flag_parts.emplace_back("CASTCLASS_FUInt16Property");
+            }
+            if (uclass->HasAnyCastFlag(CASTCLASS_UFunction))
+            {
+                flag_parts.emplace_back("CASTCLASS_UFunction");
+            }
+            if (uclass->HasAnyCastFlag(CASTCLASS_FStructProperty))
+            {
+                flag_parts.emplace_back("CASTCLASS_FStructProperty");
+            }
+            if (uclass->HasAnyCastFlag(CASTCLASS_FArrayProperty))
+            {
+                flag_parts.emplace_back("CASTCLASS_FArrayProperty");
+            }
+            if (uclass->HasAnyCastFlag(CASTCLASS_FInt64Property))
+            {
+                flag_parts.emplace_back("CASTCLASS_FInt64Property");
+            }
+            if (uclass->HasAnyCastFlag(CASTCLASS_FDelegateProperty))
+            {
+                flag_parts.emplace_back("CASTCLASS_FDelegateProperty");
+            }
+            if (uclass->HasAnyCastFlag(CASTCLASS_FNumericProperty))
+            {
+                flag_parts.emplace_back("CASTCLASS_FNumericProperty");
+            }
+            if (uclass->HasAnyCastFlag(CASTCLASS_FMulticastDelegateProperty))
+            {
+                flag_parts.emplace_back("CASTCLASS_FMulticastDelegateProperty");
+            }
+            if (uclass->HasAnyCastFlag(CASTCLASS_FObjectPropertyBase))
+            {
+                flag_parts.emplace_back("CASTCLASS_FObjectPropertyBase");
+            }
+            if (uclass->HasAnyCastFlag(CASTCLASS_FWeakObjectProperty))
+            {
+                flag_parts.emplace_back("CASTCLASS_FWeakObjectProperty");
+            }
+            if (uclass->HasAnyCastFlag(CASTCLASS_FLazyObjectProperty))
+            {
+                flag_parts.emplace_back("CASTCLASS_FLazyObjectProperty");
+            }
+            if (uclass->HasAnyCastFlag(CASTCLASS_FSoftObjectProperty))
+            {
+                flag_parts.emplace_back("CASTCLASS_FSoftObjectProperty");
+            }
+            if (uclass->HasAnyCastFlag(CASTCLASS_FTextProperty))
+            {
+                flag_parts.emplace_back("CASTCLASS_FTextProperty");
+            }
+            if (uclass->HasAnyCastFlag(CASTCLASS_FInt16Property))
+            {
+                flag_parts.emplace_back("CASTCLASS_FInt16Property");
+            }
+            if (uclass->HasAnyCastFlag(CASTCLASS_FDoubleProperty))
+            {
+                flag_parts.emplace_back("CASTCLASS_FDoubleProperty");
+            }
+            if (uclass->HasAnyCastFlag(CASTCLASS_FSoftClassProperty))
+            {
+                flag_parts.emplace_back("CASTCLASS_FSoftClassProperty");
+            }
+            if (uclass->HasAnyCastFlag(CASTCLASS_UPackage))
+            {
+                flag_parts.emplace_back("CASTCLASS_UPackage");
+            }
+            if (uclass->HasAnyCastFlag(CASTCLASS_ULevel))
+            {
+                flag_parts.emplace_back("CASTCLASS_ULevel");
+            }
+            if (uclass->HasAnyCastFlag(CASTCLASS_AActor))
+            {
+                flag_parts.emplace_back("CASTCLASS_AActor");
+            }
+            if (uclass->HasAnyCastFlag(CASTCLASS_APlayerController))
+            {
+                flag_parts.emplace_back("CASTCLASS_APlayerController");
+            }
+            if (uclass->HasAnyCastFlag(CASTCLASS_APawn))
+            {
+                flag_parts.emplace_back("CASTCLASS_APawn");
+            }
+            if (uclass->HasAnyCastFlag(CASTCLASS_USceneComponent))
+            {
+                flag_parts.emplace_back("CASTCLASS_USceneComponent");
+            }
+            if (uclass->HasAnyCastFlag(CASTCLASS_UPrimitiveComponent))
+            {
+                flag_parts.emplace_back("CASTCLASS_UPrimitiveComponent");
+            }
+            if (uclass->HasAnyCastFlag(CASTCLASS_USkinnedMeshComponent))
+            {
+                flag_parts.emplace_back("CASTCLASS_USkinnedMeshComponent");
+            }
+            if (uclass->HasAnyCastFlag(CASTCLASS_USkeletalMeshComponent))
+            {
+                flag_parts.emplace_back("CASTCLASS_USkeletalMeshComponent");
+            }
+            if (uclass->HasAnyCastFlag(CASTCLASS_UBlueprint))
+            {
+                flag_parts.emplace_back("CASTCLASS_UBlueprint");
+            }
+            if (uclass->HasAnyCastFlag(CASTCLASS_UDelegateFunction))
+            {
+                flag_parts.emplace_back("CASTCLASS_UDelegateFunction");
+            }
+            if (uclass->HasAnyCastFlag(CASTCLASS_UStaticMeshComponent))
+            {
+                flag_parts.emplace_back("CASTCLASS_UStaticMeshComponent");
+            }
+            if (uclass->HasAnyCastFlag(CASTCLASS_FMapProperty))
+            {
+                flag_parts.emplace_back("CASTCLASS_FMapProperty");
+            }
+            if (uclass->HasAnyCastFlag(CASTCLASS_FSetProperty))
+            {
+                flag_parts.emplace_back("CASTCLASS_FSetProperty");
+            }
+            if (uclass->HasAnyCastFlag(CASTCLASS_FEnumProperty))
+            {
+                flag_parts.emplace_back("CASTCLASS_FEnumProperty");
+            }
+            if (uclass->HasAnyCastFlag(CASTCLASS_USparseDelegateFunction))
+            {
+                flag_parts.emplace_back("CASTCLASS_USparseDelegateFunction");
+            }
+            if (uclass->HasAnyCastFlag(CASTCLASS_FMulticastInlineDelegateProperty))
+            {
+                flag_parts.emplace_back("CASTCLASS_FMulticastInlineDelegateProperty");
+            }
+            if (uclass->HasAnyCastFlag(CASTCLASS_FMulticastSparseDelegateProperty))
+            {
+                flag_parts.emplace_back("CASTCLASS_FMulticastSparseDelegateProperty");
+            }
+            if (uclass->HasAnyCastFlag(CASTCLASS_FFieldPathProperty))
+            {
+                flag_parts.emplace_back("CASTCLASS_FFieldPathProperty");
+            }
+            if (uclass->HasAnyCastFlag(CASTCLASS_FObjectPtrProperty))
+            {
+                flag_parts.emplace_back("CASTCLASS_FObjectPtrProperty");
+            }
+            if (uclass->HasAnyCastFlag(CASTCLASS_FClassPtrProperty))
+            {
+                flag_parts.emplace_back("CASTCLASS_FClassPtrProperty");
+            }
+            if (uclass->HasAnyCastFlag(CASTCLASS_FLargeWorldCoordinatesRealProperty))
+            {
+                flag_parts.emplace_back("CASTCLASS_FLargeWorldCoordinatesRealProperty");
+            }
+            if (uclass->HasAnyCastFlag(CASTCLASS_FOptionalProperty))
+            {
+                flag_parts.emplace_back("CASTCLASS_FOptionalProperty");
+            }
+            if (uclass->HasAnyCastFlag(CASTCLASS_FVValueProperty))
+            {
+                flag_parts.emplace_back("CASTCLASS_FVValueProperty");
+            }
+            if (uclass->HasAnyCastFlag(CASTCLASS_FVRestValueProperty))
+            {
+                flag_parts.emplace_back("CASTCLASS_FVRestValueProperty");
+            }
+            if (uclass->HasAnyCastFlag(CASTCLASS_FUtf8StrProperty))
+            {
+                flag_parts.emplace_back("CASTCLASS_FUtf8StrProperty");
+            }
+            if (uclass->HasAnyCastFlag(CASTCLASS_FAnsiStrProperty))
+            {
+                flag_parts.emplace_back("CASTCLASS_FAnsiStrProperty");
+            }
+
+            std::for_each(flag_parts.begin(), flag_parts.end(), [&](const std::string& flag_part) {
+                if (!flags_string.empty())
+                {
+                    flags_string.append(", ");
+                }
+                flags_string.append(flag_part);
+            });
+        }
+    };
+
     struct FunctionFlagsStringifier
     {
         std::string flags_string{};
@@ -843,7 +1406,7 @@ namespace RC::GUI
 
         FunctionFlagsStringifier(UFunction* function)
         {
-            if (function->HasAnyFunctionFlags(FUNC_None))
+            if (get_raw_flags(function) == 0)
             {
                 flag_parts.emplace_back("FUNC_None");
             }
@@ -1230,6 +1793,7 @@ namespace RC::GUI
 
     auto LiveView::guobjectarray_iterator(int32_t int_data_1, int32_t int_data_2, const std::function<void(UObject*)>& callable) -> void
     {
+        Filter::s_highlighted_properties.clear();
         UObjectGlobals::ForEachUObjectInRange(int_data_1, int_data_2, [&](UObject* object, ...) {
             // TODO: Stop using the 'HashObject' function when needing the address of an FFieldClassVariant because it's not designed to return an address.
             //       Maybe make the ToFieldClass/ToUClass functions public (append 'Unsafe' to the function names).
@@ -1307,13 +1871,18 @@ namespace RC::GUI
         }
     }
 
-    auto LiveView::guobjectarray_by_name_iterator([[maybe_unused]] int32_t int_data_1,
-                                                  [[maybe_unused]] int32_t int_data_2,
-                                                  const std::function<void(UObject*)>& callable) -> void
+    auto LiveView::guobjectarray_by_name_iterator(int32_t int_data_1, int32_t int_data_2, const std::function<void(UObject*)>& callable) -> void
     {
-        for (const auto& object : s_name_search_results)
+        if (int_data_2 > s_name_search_results.size())
         {
-            callable(object);
+            Output::send<LogLevel::Error>(STR("guobjectarray_by_name_iterator: asked to iterate beyond the size of the search result vector ({} > {})\n"),
+                                          int_data_2,
+                                          s_name_search_results.size());
+            return;
+        }
+        for (size_t i = int_data_1; i < int_data_2; i++)
+        {
+            callable(s_name_search_results[i]);
         }
     }
 
@@ -1322,22 +1891,33 @@ namespace RC::GUI
         Output::send(STR("Searching by name...\n"));
         s_name_search_results.clear();
         s_name_search_results_set.clear();
+        Filter::s_highlighted_properties.clear();
+
+        uintptr_t address_to_search_by = 0;
+        if (LiveView::s_search_by_address)
+        {
+            try
+            {
+                address_to_search_by = std::stoull(LiveView::s_name_to_search_by, nullptr, 16);
+            }
+            catch (std::invalid_argument)
+            {
+                m_modal_search_by_address_error_not_hex = true;
+            }
+            catch (std::out_of_range)
+            {
+                m_modal_search_by_address_error_out_of_range = true;
+            }
+        }
+
         UObjectGlobals::ForEachUObject([&](UObject* object, ...) {
             attempt_to_add_search_result(object);
+            if (address_to_search_by)
+            {
+                attempt_to_add_search_by_address_result(address_to_search_by, object);
+            }
             return LoopAction::Continue;
         });
-    }
-
-    static auto collapse_all_except(int except_id) -> void
-    {
-        for (int i = 0; i < UObjectArray::GetNumChunks(); ++i)
-        {
-            if (i + s_chunk_id_start == except_id)
-            {
-                continue;
-            }
-            ImGui::GetStateStorage()->SetInt(ImGui_GetID(i + s_chunk_id_start), 0);
-        }
     }
 
     auto LiveView::collapse_all_except(void* except_id) -> void
@@ -1358,6 +1938,29 @@ namespace RC::GUI
             else
             {
                 ++tree_node;
+            }
+        }
+    }
+
+    auto LiveView::search() -> void
+    {
+        if (are_listeners_allowed())
+        {
+            std::string search_buffer{m_search_by_name_buffer};
+            if (search_buffer.empty() || search_buffer == m_default_search_buffer || s_apply_search_filters_when_not_searching)
+            {
+                Output::send(STR("Search all chunks\n"));
+                s_name_to_search_by.clear();
+                m_object_iterator = &LiveView::guobjectarray_iterator;
+                m_is_searching_by_name = false;
+            }
+            else
+            {
+                Output::send(STR("Search for: {}\n"), search_buffer.empty() ? STR("") : ensure_str(search_buffer));
+                s_name_to_search_by = search_buffer;
+                m_object_iterator = &LiveView::guobjectarray_by_name_iterator;
+                m_is_searching_by_name = true;
+                search_by_name();
             }
         }
     }
@@ -1425,12 +2028,79 @@ namespace RC::GUI
         {
             for (FProperty* property : ustruct->ForEachProperty())
             {
-                ImGui::TreeNodeEx(to_string(property->GetFullName()).c_str(), ImGuiTreeNodeFlags_Leaf);
-                if (ImGui::IsItemClicked())
+                bool is_struct_property = CastField<FStructProperty>(property) != nullptr;
+                bool is_array_property = CastField<FArrayProperty>(property) != nullptr;
+                if (ImGui::TreeNodeEx(to_string(property->GetFullName()).c_str(), is_struct_property || is_array_property ? 0 : ImGuiTreeNodeFlags_Leaf) &&
+                    (is_struct_property || is_array_property))
                 {
-                    select_property(0, property, AffectsHistory::Yes);
+                    ImGui::Indent();
+                    if (is_struct_property)
+                    {
+                        ImGui::Text("Struct");
+                        if (auto struct_property_struct = CastField<FStructProperty>(property)->GetStruct())
+                        {
+                            if (ImGui::TreeNode(get_object_full_name(struct_property_struct)))
+                            {
+                                render_struct_sub_tree_hierarchy(struct_property_struct);
+                                ImGui::TreePop();
+                            }
+                            else
+                            {
+                                if (ImGui::IsItemClicked())
+                                {
+                                    select_object(0, struct_property_struct->GetObjectItem(), struct_property_struct, AffectsHistory::Yes);
+                                }
+                            }
+                        }
+                    }
+                    else if (is_array_property)
+                    {
+                        ImGui::Text("Inner");
+                        if (auto array_property_inner = CastField<FArrayProperty>(property)->GetInner())
+                        {
+                            bool is_inner_struct = CastField<FStructProperty>(array_property_inner) != nullptr;
+                            if (ImGui::TreeNodeEx(to_string(array_property_inner->GetFullName()).c_str(), is_inner_struct ? 0 : ImGuiTreeNodeFlags_Leaf) && is_inner_struct)
+                            {
+                                ImGui::Indent();
+                                ImGui::Text("Struct");
+                                auto inner_struct_property = CastField<FStructProperty>(array_property_inner);
+                                auto inner_struct_property_struct = inner_struct_property->GetStruct();
+                                if (ImGui::TreeNode(get_object_full_name(inner_struct_property_struct)))
+                                {
+                                    render_struct_sub_tree_hierarchy(inner_struct_property_struct);
+                                    ImGui::TreePop();
+                                }
+                                else
+                                {
+                                    if (ImGui::IsItemClicked())
+                                    {
+                                        select_object(0, inner_struct_property_struct->GetObjectItem(), inner_struct_property_struct, AffectsHistory::Yes);
+                                    }
+                                }
+                                ImGui::Unindent();
+                                ImGui::TreePop();
+                            }
+                            else
+                            {
+                                if (ImGui::IsItemClicked())
+                                {
+                                    select_property(0, array_property_inner, AffectsHistory::Yes);
+                                }
+                            }
+                            if (!is_inner_struct) ImGui::TreePop();
+                        }
+                    }
+                    ImGui::Unindent();
+                    ImGui::TreePop();
                 }
-                ImGui::TreePop();
+                else
+                {
+                    if (ImGui::IsItemClicked())
+                    {
+                        select_property(0, property, AffectsHistory::Yes);
+                    }
+                }
+                if (!is_struct_property && !is_array_property) ImGui::TreePop();
             }
             ImGui::TreePop();
         }
@@ -1494,7 +2164,7 @@ namespace RC::GUI
         {
             if (ImGui::IsItemClicked())
             {
-                printf_s("Clicked: %S\n", ustruct->GetFullName().c_str());
+                printf_s("Clicked: %S\n", FromCharTypePtr<wchar_t>(ustruct->GetFullName().c_str()));
                 select_object(0, ustruct->GetObjectItem(), ustruct, AffectsHistory::Yes);
             }
         }
@@ -1552,14 +2222,45 @@ namespace RC::GUI
         }
 
         FString property_text{};
-        auto container_ptr = property->ContainerPtrToValuePtr<void*>(container);
-        property->ExportTextItem(property_text, container_ptr, container_ptr, static_cast<UObject*>(container), NULL);
         auto property_name = to_string(property->GetName());
+        auto container_ptr = property->ContainerPtrToValuePtr<void*>(container);
+        auto as_struct_property = CastField<FStructProperty>(property);
+        static constexpr auto s_error_too_large = STR("Too large to display on one line! Click to view individual members.");
+        bool editable = true;
+        if (auto as_map_property = CastField<FMapProperty>(property))
+        {
+            auto map = std::bit_cast<FScriptMap*>(container_ptr);
+            if (auto value_as_struct_property = CastField<FStructProperty>(as_map_property->GetValueProp());
+                value_as_struct_property && value_as_struct_property->GetStruct()->GetStructureSize() * map->Num() > Filter::MaxValueSize::s_value)
+            {
+                editable = false;
+                property_text = FString{s_error_too_large};
+            }
+            else
+            {
+                property->ExportTextItem(property_text, container_ptr, container_ptr, container_type == ContainerType::Array ? nullptr : static_cast<UObject*>(container), NULL);
+            }
+        }
+        else if (auto as_array_property = CastField<FArrayProperty>(property);
+                 as_array_property && as_array_property->GetSize() * std::bit_cast<FScriptArray*>(container_ptr)->Num() > Filter::MaxValueSize::s_value)
+        {
+            editable = false;
+            property_text = FString{s_error_too_large};
+        }
+        else if (as_struct_property && as_struct_property->GetStruct()->GetStructureSize() > Filter::MaxValueSize::s_value)
+        {
+            editable = false;
+            property_text = FString{s_error_too_large};
+        }
+        else
+        {
+            property->ExportTextItem(property_text, container_ptr, container_ptr, container_type == ContainerType::Array ? nullptr : static_cast<UObject*>(container), NULL);
+        }
 
         bool open_edit_value_popup{};
 
         auto render_property_value_context_menu = [&](std::string_view id_override = "") {
-            if (ImGui::BeginPopupContextItem(id_override.empty() ? property_name.c_str() : std::format("context-menu-{}", id_override).c_str()))
+            if (ImGui::BeginPopupContextItem(id_override.empty() ? property_name.c_str() : fmt::format("context-menu-{}", id_override).c_str()))
             {
                 if (ImGui::MenuItem("Copy name"))
                 {
@@ -1571,7 +2272,9 @@ namespace RC::GUI
                 }
                 if (ImGui::MenuItem("Copy value"))
                 {
-                    ImGui::SetClipboardText(to_string(property_text.GetCharArray()).c_str());
+                    FString snapshotted_value{};
+                    property->ExportTextItem(snapshotted_value, container_ptr, container_ptr, static_cast<UObject*>(container), NULL);
+                    ImGui::SetClipboardText(to_string(*snapshotted_value).c_str());
                 }
                 if (container_type == ContainerType::Object || container_type == ContainerType::Struct)
                 {
@@ -1639,23 +2342,19 @@ namespace RC::GUI
         {
             ImGui::Text("0x%X%s %s:",
                         first_offset,
-                        container_type == ContainerType::Array ? std::format("").c_str() : std::format(" (0x{:X})", property_offset).c_str(),
+                        container_type == ContainerType::Array ? fmt::format("").c_str() : fmt::format(" (0x{:X})", property_offset).c_str(),
                         property_name.c_str());
         }
-        if (auto struct_property = CastField<FStructProperty>(property); struct_property && struct_property->GetStruct()->GetFirstProperty())
+        if (as_struct_property && as_struct_property->GetStruct()->GetFirstProperty())
         {
             ImGui::SameLine();
-            auto tree_node_id = std::format("{}{}", static_cast<void*>(container_ptr), property_name);
-            if (ImGui_TreeNodeEx(std::format("{}", to_string(property_text.GetCharArray())).c_str(), tree_node_id.c_str(), ImGuiTreeNodeFlags_NoAutoOpenOnLog))
+            auto tree_node_id = fmt::format("{}{}", static_cast<void*>(container_ptr), property_name);
+            if (ImGui_TreeNodeEx(fmt::format("{}", to_string(*property_text)).c_str(), tree_node_id.c_str(), ImGuiTreeNodeFlags_NoAutoOpenOnLog))
             {
                 render_property_value_context_menu(tree_node_id);
 
-                for (FProperty* inner_property : struct_property->GetStruct()->ForEachProperty())
+                for (FProperty* inner_property : as_struct_property->GetStruct()->ForEachProperty())
                 {
-                    FString struct_prop_text_item{};
-                    auto struct_prop_container_ptr = inner_property->ContainerPtrToValuePtr<void*>(container_ptr);
-                    inner_property->ExportTextItem(struct_prop_text_item, struct_prop_container_ptr, struct_prop_container_ptr, nullptr, NULL);
-
                     ImGui::Indent();
                     FProperty* last_struct_prop{};
                     next_item_to_render = render_property_value(inner_property,
@@ -1679,8 +2378,8 @@ namespace RC::GUI
         else if (auto array_property = CastField<FArrayProperty>(property); array_property)
         {
             ImGui::SameLine();
-            auto tree_node_id = std::format("{}{}", static_cast<void*>(container_ptr), property_name);
-            if (ImGui_TreeNodeEx(std::format("{}", to_string(property_text.GetCharArray())).c_str(), tree_node_id.c_str(), ImGuiTreeNodeFlags_NoAutoOpenOnLog))
+            auto tree_node_id = fmt::format("{}{}", static_cast<void*>(container_ptr), property_name);
+            if (ImGui_TreeNodeEx(fmt::format("{}", to_string(*property_text)).c_str(), tree_node_id.c_str(), ImGuiTreeNodeFlags_NoAutoOpenOnLog))
             {
                 render_property_value_context_menu(tree_node_id);
 
@@ -1733,13 +2432,13 @@ namespace RC::GUI
             }
             auto value_as_string = Unreal::UKismetNodeHelperLibrary::GetEnumeratorUserFriendlyName(uenum, enum_index);
             ImGui::SameLine();
-            ImGui::Text("%S", value_as_string.c_str());
+            ImGui::Text(fmt::format("{}", to_string(value_as_string)).c_str());
             render_property_value_context_menu();
         }
         else
         {
             ImGui::SameLine();
-            ImGui::Text("%S", property_text.GetCharArray());
+            ImGui::Text(fmt::format("{}", to_string(*property_text)).c_str());
             render_property_value_context_menu();
         }
 
@@ -1764,50 +2463,33 @@ namespace RC::GUI
         {
             parent_name = obj ? obj->GetName() : STR("None");
         }
-        auto edit_property_value_modal_name = to_string(std::format(STR("Edit value of property: {}->{}"), parent_name, property->GetName()));
+        auto edit_property_value_modal_name = to_string(fmt::format(STR("Edit value of property: {}->{}"), parent_name, property->GetName()));
 
         if (open_edit_value_popup)
         {
-            ImGui::OpenPopup(edit_property_value_modal_name.c_str());
-            if (!m_modal_edit_property_value_opened_this_frame)
+            // Re-snapshot the value, because it may not be set due to it being too large of a type to export quickly.
+            // Why is this an empty string ? Wtf ?
+            // It seems it's not empty, but imgui isn't rendering the text properly for some reason, it's rendered as spaces.
+            // When you copy the text, it does copy the actual text, not spaces.
+            //FString snapshotted_property_text{};
+            //property->ExportTextItem(snapshotted_property_text, container_ptr, container_ptr, static_cast<UObject*>(container), NULL);
+            // Defer the popup opening - store all necessary context
+            s_deferred_property_edit_popup.pending = true;
+            s_deferred_property_edit_popup.modal_name = edit_property_value_modal_name;
+            if (!editable)
             {
-                m_modal_edit_property_value_opened_this_frame = true;
-                m_current_property_value_buffer = to_string(property_text.GetCharArray());
+                s_deferred_property_edit_popup.editable = false;
+                s_deferred_property_edit_popup.initial_value = "Too large to edit!";
             }
-        }
-
-        if (ImGui::BeginPopupModal(edit_property_value_modal_name.c_str(), &m_modal_edit_property_value_is_open))
-        {
-            ImGui::Text("Uses the same format as the 'set' UE4 console command.");
-            ImGui::Text("The game could crash if the new value is invalid.");
-            ImGui::Text("The game can override the new value immediately.");
-            ImGui::PushItemWidth(-1.0f);
-            ImGui::InputText("##CurrentPropertyValue", &m_current_property_value_buffer);
-            if (ImGui::Button("Apply"))
+            else
             {
-                FOutputDevice placeholder_device{};
-                if (!property->ImportText(to_wstring(m_current_property_value_buffer).c_str(), property->ContainerPtrToValuePtr<void>(container), NULL, obj, &placeholder_device))
-                {
-                    m_modal_edit_property_value_error_unable_to_edit = true;
-                    ImGui::OpenPopup("UnableToSetNewPropertyValueError");
-                }
-                else
-                {
-                    ImGui::CloseCurrentPopup();
-                }
+                s_deferred_property_edit_popup.editable = true;
+                s_deferred_property_edit_popup.initial_value = to_string(*property_text);
             }
-
-            if (ImGui::BeginPopupModal("UnableToSetNewPropertyValueError",
-                                       &m_modal_edit_property_value_error_unable_to_edit,
-                                       ImGuiWindowFlags_NoResize | ImGuiWindowFlags_AlwaysAutoResize))
-            {
-                ImGui::Text("Was unable to set new value, please make sure you're using the correct format.");
-                ImGui::NewLine();
-                ImGui::Text("Technical details:");
-                ImGui::Text("FProperty::ImportText returned NULL.");
-                ImGui::EndPopup();
-            }
-            ImGui::EndPopup();
+            s_deferred_property_edit_popup.property = property;
+            s_deferred_property_edit_popup.container = container;
+            s_deferred_property_edit_popup.obj = obj;
+            s_deferred_property_edit_popup.container_type = container_type;
         }
 
         if (m_modal_edit_property_value_opened_this_frame)
@@ -1854,7 +2536,7 @@ namespace RC::GUI
 
             ImGui::TableNextColumn();
             ImGui::Text("%S", enum_name.c_str());
-            if (ImGui::BeginPopupContextItem(to_string(std::format(STR("context-menu-{}"), enum_name)).c_str()))
+            if (ImGui::BeginPopupContextItem(to_string(fmt::format(STR("context-menu-{}"), enum_name)).c_str()))
             {
                 if (ImGui::MenuItem("Copy name"))
                 {
@@ -1873,7 +2555,7 @@ namespace RC::GUI
 
             ImGui::TableNextColumn();
             ImGui::Text("%lld", name.Value);
-            if (ImGui::BeginPopupContextItem(to_string(std::format(STR("context-menu-{}-{}"), enum_name, name.Value)).c_str()))
+            if (ImGui::BeginPopupContextItem(to_string(fmt::format(STR("context-menu-{}-{}"), enum_name, name.Value)).c_str()))
             {
                 if (ImGui::MenuItem("Copy value"))
                 {
@@ -1888,7 +2570,7 @@ namespace RC::GUI
             }
 
             ImGui::TableNextColumn();
-            ImGui::PushID(to_string(std::format(STR("button_add_{}"), enum_name)).c_str());
+            ImGui::PushID(to_string(fmt::format(STR("button_add_{}"), enum_name)).c_str());
             if (ImGui::Button("+"))
             {
                 open_add_name_popup = true;
@@ -1896,18 +2578,46 @@ namespace RC::GUI
             }
             ImGui::PopID();
             ImGui::SameLine();
-            ImGui::PushID(to_string(std::format(STR("button_remove_{}"), enum_name)).c_str());
+            ImGui::PushID(to_string(fmt::format(STR("button_remove_{}"), enum_name)).c_str());
             if (ImGui::Button("-"))
             {
                 uenum->RemoveFromNamesAt(index, 1);
             }
             ImGui::PopID();
 
-            std::string edit_enum_name_modal_name = to_string(std::format(STR("Edit enum name for: {}"), name.Key.ToString()));
+            std::string edit_enum_name_modal_name = to_string(fmt::format(STR("Edit enum name for: {}"), name.Key.ToString()));
 
-            std::string edit_enum_value_modal_name = to_string(std::format(STR("Edit enum value for: {}"), name.Key.ToString()));
+            std::string edit_enum_value_modal_name = to_string(fmt::format(STR("Edit enum value for: {}"), name.Key.ToString()));
 
-            std::string add_enum_name_modal_name = to_string(std::format(STR("Enter new enum name after: {}"), name.Key.ToString()));
+            std::string add_enum_name_modal_name = to_string(fmt::format(STR("Enter new enum name after: {}"), name.Key.ToString()));
+
+            if (open_edit_name_popup)
+            {
+                s_deferred_enum_edit_popup.pending = true;
+                s_deferred_enum_edit_popup.type = DeferredEnumEditPopup::EditName;
+                s_deferred_enum_edit_popup.modal_name = edit_enum_name_modal_name;
+                s_deferred_enum_edit_popup.initial_value = to_string(enum_name);
+                s_deferred_enum_edit_popup.uenum = uenum;
+                s_deferred_enum_edit_popup.index = index;
+            }
+            if (open_edit_value_popup)
+            {
+                s_deferred_enum_edit_popup.pending = true;
+                s_deferred_enum_edit_popup.type = DeferredEnumEditPopup::EditValue;
+                s_deferred_enum_edit_popup.modal_name = edit_enum_name_modal_name;
+                s_deferred_enum_edit_popup.initial_value = to_string(enum_name);
+                s_deferred_enum_edit_popup.uenum = uenum;
+                s_deferred_enum_edit_popup.index = index;
+            }
+            if (open_add_name_popup)
+            {
+                s_deferred_enum_edit_popup.pending = true;
+                s_deferred_enum_edit_popup.type = DeferredEnumEditPopup::AddName;
+                s_deferred_enum_edit_popup.modal_name = edit_enum_name_modal_name;
+                s_deferred_enum_edit_popup.initial_value = to_string(enum_name);
+                s_deferred_enum_edit_popup.uenum = uenum;
+                s_deferred_enum_edit_popup.index = index;
+            }
 
             if (open_edit_name_popup)
             {
@@ -1937,140 +2647,6 @@ namespace RC::GUI
                     m_modal_edit_property_value_opened_this_frame = true;
                     m_current_property_value_buffer = to_string(enum_name);
                 }
-            }
-
-            /**
-             *
-             * ImGui Popup Modal for editing the names in the UEnum names array.
-             *
-             */
-            if (ImGui::BeginPopupModal(edit_enum_name_modal_name.c_str(), &m_modal_edit_property_value_is_open))
-            {
-                ImGui::Text("Edit the enumerator's name.");
-                ImGui::Text("The game could crash if the new name is invalid or if the old name or value is expected to be used elsewhere.");
-                ImGui::Text("The game may not use this value without additional patches.");
-                ImGui::PushItemWidth(-1.0f);
-                ImGui::InputText("##CurrentNameValue", &m_current_property_value_buffer);
-                if (ImGui::Button("Apply"))
-                {
-                    FOutputDevice placeholder_device{};
-                    StringType new_name = to_wstring(m_current_property_value_buffer);
-                    FName new_key = FName(new_name, FNAME_Add);
-                    uenum->EditNameAt(index, new_key);
-                    if (uenum->GetEnumNames()[index].Key.ToString() != new_name)
-                    {
-                        m_modal_edit_property_value_error_unable_to_edit = true;
-                        ImGui::OpenPopup("UnableToSetNewEnumNameError");
-                    }
-                    else
-                    {
-                        ImGui::CloseCurrentPopup();
-                    }
-                }
-
-                if (ImGui::BeginPopupModal("UnableToSetNewEnumNameError",
-                                           &m_modal_edit_property_value_error_unable_to_edit,
-                                           ImGuiWindowFlags_NoResize | ImGuiWindowFlags_AlwaysAutoResize))
-                {
-                    ImGui::Text("Was unable to set new name.");
-                    ImGui::EndPopup();
-                }
-
-                ImGui::EndPopup();
-            }
-
-            /**
-             *
-             * ImGui Popup Modal for editing the values in the UEnum names array.
-             *
-             */
-            if (ImGui::BeginPopupModal(edit_enum_value_modal_name.c_str(), &m_modal_edit_property_value_is_open))
-            {
-                ImGui::Text("Edit the enumerator's value.");
-                ImGui::Text("The game could crash if the new value is invalid or if the old name or value is expected to be used elsewhere.");
-                ImGui::Text("The game may not use this value without additional patches.");
-                ImGui::PushItemWidth(-1.0f);
-                ImGuiDataType_ imgui_data_type = Version::IsBelow(4, 15) ? ImGuiDataType_U8 : ImGuiDataType_S64;
-                ImGui::InputScalar("##CurrentNameValue", imgui_data_type, &m_current_enum_value_buffer);
-                if (ImGui::Button("Apply"))
-                {
-                    FOutputDevice placeholder_device{};
-                    int64_t new_value = m_current_enum_value_buffer;
-                    uenum->EditValueAt(index, new_value);
-
-                    if (uenum->GetEnumNames()[index].Value != new_value)
-                    {
-                        m_modal_edit_property_value_error_unable_to_edit = true;
-                        ImGui::OpenPopup("UnableToSetNewEnumValueError");
-                    }
-                    else
-                    {
-                        ImGui::CloseCurrentPopup();
-                    }
-                    m_current_enum_value_buffer = {};
-                }
-
-                if (ImGui::BeginPopupModal("UnableToSetNewEnumValueError",
-                                           &m_modal_edit_property_value_error_unable_to_edit,
-                                           ImGuiWindowFlags_NoResize | ImGuiWindowFlags_AlwaysAutoResize))
-                {
-                    ImGui::Text("Was unable to set new value.");
-                    ImGui::EndPopup();
-                }
-
-                ImGui::EndPopup();
-            }
-
-            /**
-             *
-             * ImGui Popup Modal for adding new enumerators to the UEnum names array.
-             *
-             */
-            if (ImGui::BeginPopupModal(add_enum_name_modal_name.c_str(), &m_modal_edit_property_value_is_open))
-            {
-
-                ImGui::Text("Enter the name of the new enumerator at the index of the selected enumerator.");
-                ImGui::Text("This shifts all enumerators with a value greater than the current enumerators value up by one.");
-                ImGui::Text("The game could crash if the new name is invalid or if the old name or value is expected to be used elsewhere.");
-                ImGui::Text("The game may not use this value without additional patches.");
-                ImGui::PushItemWidth(-1.0f);
-                ImGui::InputText("##CurrentNameValue", &m_current_property_value_buffer);
-                if (ImGui::Button("Apply"))
-                {
-                    FOutputDevice placeholder_device{};
-                    StringType new_name = to_wstring(m_current_property_value_buffer);
-                    FName new_key = FName(new_name, FNAME_Add);
-                    int64 value = names[index].Value;
-
-                    // NOTE: Explicitly giving specifying template params for TPair because Clang can't handle TPair being a templated using statement.
-                    uenum->InsertIntoNames(TPair<decltype(new_key), decltype(value)>{new_key, value}, index, true);
-
-                    if (uenum->GetEnumNames()[index].Key.ToString() != new_name)
-                    {
-                        m_modal_edit_property_value_error_unable_to_edit = true;
-                        ImGui::OpenPopup("UnableToAddNewEnumNameError");
-                    }
-                    else
-                    {
-                        ImGui::CloseCurrentPopup();
-                    }
-                    m_current_property_value_buffer.clear();
-                }
-
-                if (ImGui::BeginPopupModal("UnableToAddNewEnumNameError",
-                                           &m_modal_edit_property_value_error_unable_to_edit,
-                                           ImGuiWindowFlags_NoResize | ImGuiWindowFlags_AlwaysAutoResize))
-                {
-                    ImGui::Text("Was unable to insert new name.");
-                    ImGui::EndPopup();
-                }
-
-                ImGui::EndPopup();
-            }
-
-            if (m_modal_edit_property_value_opened_this_frame)
-            {
-                m_modal_edit_property_value_opened_this_frame = false;
             }
         }
         ImGui::EndTable(); // Enum Table
@@ -2165,7 +2741,16 @@ namespace RC::GUI
 
             for (const auto& ordered_property : all_properties)
             {
+                const auto should_highlight = Filter::is_highlighted(ordered_property.property);
+                if (should_highlight)
+                {
+                    ImGui::PushStyleColor(ImGuiCol_Text, {1.0f, 0.5f, 0.5f, 1.0f});
+                }
                 render_property_text(static_cast<UClass*>(ordered_property.owner), ordered_property.property);
+                if (should_highlight)
+                {
+                    ImGui::PopStyleColor();
+                }
             }
 
             if (tried_to_open_nullptr_object)
@@ -2242,7 +2827,7 @@ namespace RC::GUI
         {
             if (ImGui::MenuItem("Copy raw flags"))
             {
-                ImGui::SetClipboardText(std::format("0x{:X}", static_cast<uint32_t>(raw_unsafe_object_flags)).c_str());
+                ImGui::SetClipboardText(fmt::format("0x{:X}", static_cast<uint32_t>(raw_unsafe_object_flags)).c_str());
             }
             ImGui::EndPopup();
         }
@@ -2251,7 +2836,7 @@ namespace RC::GUI
         std::string current_flag_line{};
         std::string all_flags{};
         auto create_menu_for_copy_flags = [&](size_t menu_index) {
-            if (ImGui::BeginPopupContextItem(std::format("{}_{}", Stringifier::popup_context_item_id, menu_index).c_str()))
+            if (ImGui::BeginPopupContextItem(fmt::format("{}_{}", Stringifier::popup_context_item_id, menu_index).c_str()))
             {
                 if (ImGui::MenuItem("Copy flags"))
                 {
@@ -2310,7 +2895,7 @@ namespace RC::GUI
         {
             if (ImGui::MenuItem("Copy address"))
             {
-                ImGui::SetClipboardText(std::format("{:016X}", std::bit_cast<uintptr_t>(object)).c_str());
+                ImGui::SetClipboardText(fmt::format("{:016X}", std::bit_cast<uintptr_t>(object)).c_str());
             }
             ImGui::EndPopup();
         }
@@ -2320,6 +2905,13 @@ namespace RC::GUI
         if (auto as_class = Cast<UClass>(object); as_class)
         {
             render_flags<ClassFlagsStringifier>(as_class, "ClassFlags");
+            // Note: We must check to make sure that ClassCastFlags is not missing entirely because it was not previously dumped from UVTD.
+            // TODO: Potentially remove if we're ever sure all custom configs are updated to include this.
+            static auto offset = as_class->MemberOffsets.find(STR("ClassCastFlags"));
+            if (offset != as_class->MemberOffsets.end())
+            {
+                render_flags<ClassCastFlagsStringifier>(as_class, "ClassCastFlags");
+            }
         }
         else if (auto as_function = Cast<UFunction>(object); as_function)
         {
@@ -2395,7 +2987,7 @@ namespace RC::GUI
         {
             if (ImGui::MenuItem("Copy address"))
             {
-                ImGui::SetClipboardText(std::format("{:016X}", std::bit_cast<uintptr_t>(property)).c_str());
+                ImGui::SetClipboardText(fmt::format("{:016X}", std::bit_cast<uintptr_t>(property)).c_str());
             }
             ImGui::EndPopup();
         }
@@ -2412,7 +3004,7 @@ namespace RC::GUI
         {
             if (ImGui::MenuItem("Copy raw flags"))
             {
-                ImGui::SetClipboardText(std::format("0x{:X}", static_cast<uint64_t>(property_flags)).c_str());
+                ImGui::SetClipboardText(fmt::format("0x{:X}", static_cast<uint64_t>(property_flags)).c_str());
             }
             ImGui::EndPopup();
         }
@@ -2421,7 +3013,7 @@ namespace RC::GUI
         std::string current_flag_line{};
         std::string all_flags{};
         auto create_menu_for_copy_flags = [&](size_t menu_index) {
-            if (ImGui::BeginPopupContextItem(std::format("property_flags_menu_{}", menu_index).c_str()))
+            if (ImGui::BeginPopupContextItem(fmt::format("property_flags_menu_{}", menu_index).c_str()))
             {
                 if (ImGui::MenuItem("Copy flags"))
                 {
@@ -2478,7 +3070,7 @@ namespace RC::GUI
         };
         int go_to_property_menu_count{};
         auto create_go_to_property_menu = [&](FProperty* goto_to_property) {
-            if (ImGui::BeginPopupContextItem(std::format("property_link_next_menu_{}", go_to_property_menu_count++).c_str()))
+            if (ImGui::BeginPopupContextItem(fmt::format("property_link_next_menu_{}", go_to_property_menu_count++).c_str()))
             {
                 if (ImGui::MenuItem("Go to property"))
                 {
@@ -2562,7 +3154,7 @@ namespace RC::GUI
                 }
                 else
                 {
-                    if (ImGui::MenuItem(std::format("{}. {}", item_index, item.GetFullName()).c_str()))
+                    if (ImGui::MenuItem(fmt::format("{}. {}", item_index, item.GetFullName()).c_str()))
                     {
                         next_item_index = item_index;
                         selected_an_item = true;
@@ -2616,23 +3208,20 @@ namespace RC::GUI
 
         auto currently_selected_object = get_selected_object_or_property();
 
-        if (UE4SSProgram::settings_manager.Experimental.GUIUFunctionCaller)
+        ImGui::SameLine();
+        if (!currently_selected_object.is_object)
         {
-            ImGui::SameLine();
-            if (!currently_selected_object.is_object)
-            {
-                ImGui::BeginDisabled();
-            }
-            if (ImGui::Button(ICON_FA_SEARCH " Find functions"))
-            {
-                m_function_caller_widget->open_widget_deferred();
-            }
-            if (!currently_selected_object.is_object)
-            {
-                ImGui::EndDisabled();
-            }
-            ImGui::Separator();
+            ImGui::BeginDisabled();
         }
+        if (ImGui::Button(ICON_FA_SEARCH " Find functions"))
+        {
+            m_function_caller_widget->open_widget_deferred();
+        }
+        if (!currently_selected_object.is_object)
+        {
+            ImGui::EndDisabled();
+        }
+        ImGui::Separator();
 
         if (currently_selected_object.is_object)
         {
@@ -2654,6 +3243,13 @@ namespace RC::GUI
     static auto object_search_field_always_callback(ImGuiInputTextCallbackData* data) -> int
     {
         auto typed_this = static_cast<LiveView*>(data->UserData);
+        if (LiveView::s_apply_search_filters_when_not_searching)
+        {
+            static constexpr auto message = std::string_view{"Searching is disabled while 'Apply filters when not searching' is enabled.'"};
+            strncpy_s(data->Buf, message.size() + 1, message.data(), message.size() + 1);
+            data->BufTextLen = message.size();
+            data->BufDirty = true;
+        }
         if (typed_this->was_search_field_clear_requested() && !typed_this->was_search_field_cleared())
         {
             strncpy_s(data->Buf, 1, "", 1);
@@ -2668,7 +3264,7 @@ namespace RC::GUI
     {
         FString live_value_fstring{};
         watch.property->ExportTextItem(live_value_fstring, watch.property->ContainerPtrToValuePtr<void>(watch.container), nullptr, nullptr, 0);
-        auto live_value_string = StringType{live_value_fstring.GetCharArray()};
+        auto live_value_string = StringType{*live_value_fstring};
 
         if (watch.property_value == live_value_string)
         {
@@ -2677,7 +3273,7 @@ namespace RC::GUI
 
         watch.property_value = std::move(live_value_string);
 
-        const auto when_as_string = std::format(STR("{:%H:%M:%S}"), std::chrono::system_clock::now());
+        const auto when_as_string = fmt::format(STR("{:%H:%M:%S}"), std::chrono::system_clock::now());
         watch.history.append(to_string(when_as_string + STR(" ") + watch.property_value + STR("\n")));
 
         if (watch.write_to_file)
@@ -2713,10 +3309,10 @@ namespace RC::GUI
 
         auto num_params = function->GetNumParms();
 
-        const auto when_as_string = std::format(STR("{:%H:%M:%S}"), std::chrono::system_clock::now());
-        StringType buffer{std::format(STR("Received call @ {}.\n"), when_as_string)};
+        const auto when_as_string = fmt::format(STR("{:%H:%M:%S}"), std::chrono::system_clock::now());
+        StringType buffer{fmt::format(STR("Received call @ {}.\n"), when_as_string)};
 
-        buffer.append(std::format(STR("  Context:\n    {}\n"), context.Context->GetFullName()));
+        buffer.append(fmt::format(STR("  Context:\n    {}\n"), context.Context->GetFullName()));
 
         buffer.append(STR("  Locals:\n"));
         bool has_local_params{};
@@ -2730,7 +3326,7 @@ namespace RC::GUI
             FString param_text{};
             auto container_ptr = param->ContainerPtrToValuePtr<void*>(context.TheStack.Locals());
             param->ExportTextItem(param_text, container_ptr, container_ptr, std::bit_cast<UObject*>(function), NULL);
-            buffer.append(std::format(STR("    {} = {}\n"), param->GetName(), param_text.GetCharArray()));
+            buffer.append(fmt::format(STR("    {} = {}\n"), param->GetName(), *param_text));
         }
         if (!has_local_params)
         {
@@ -2753,7 +3349,7 @@ namespace RC::GUI
             FString param_text{};
             auto container_ptr = FindOutParamValueAddress(context.TheStack, param);
             param->ExportTextItem(param_text, container_ptr, container_ptr, std::bit_cast<UObject*>(function), NULL);
-            buffer.append(std::format(STR("    {} = {}\n"), param->GetName(), param_text.GetCharArray()));
+            buffer.append(fmt::format(STR("    {} = {}\n"), param->GetName(), *param_text));
         }
         if (!has_out_params)
         {
@@ -2767,7 +3363,7 @@ namespace RC::GUI
             FString return_property_text{};
             auto container_ptr = context.RESULT_DECL;
             return_property->ExportTextItem(return_property_text, container_ptr, container_ptr, std::bit_cast<UObject*>(function), NULL);
-            buffer.append(std::format(STR("    {}"), return_property_text.GetCharArray()));
+            buffer.append(fmt::format(STR("    {}"), *return_property_text));
         }
         else
         {
@@ -2810,6 +3406,36 @@ namespace RC::GUI
         }
     }
 
+    auto render_context_menu(const std::string& tree_node_name, UObject* object) -> void
+    {
+        if (ImGui::BeginPopupContextItem(tree_node_name.c_str()))
+        {
+            if (ImGui::MenuItem(ICON_FA_COPY " Copy Full Name"))
+            {
+                Output::send(STR("Copy Full Name: {}\n"), object->GetFullName());
+                ImGui::SetClipboardText(tree_node_name.c_str());
+            }
+            if (object->IsA<UFunction>())
+            {
+                auto watch_id = LiveView::WatchIdentifier{object, nullptr};
+                auto function_watcher_it = LiveView::s_watch_map.find(watch_id);
+                if (function_watcher_it == LiveView::s_watch_map.end())
+                {
+                    ImGui::Separator();
+                    if (ImGui::MenuItem(ICON_FA_EYE " Watch value"))
+                    {
+                        add_watch(watch_id, static_cast<UFunction*>(object));
+                    }
+                }
+                else
+                {
+                    ImGui::Checkbox(ICON_FA_EYE " Watch value", &function_watcher_it->second->enabled);
+                }
+            }
+            ImGui::EndPopup();
+        }
+    }
+
     auto LiveView::render() -> void
     {
         if (!UnrealInitializer::StaticStorage::bIsInitialized)
@@ -2827,10 +3453,264 @@ namespace RC::GUI
             s_watches_loaded_from_disk = true;
         }
 
+        if (!s_filters_loaded_from_disk)
+        {
+            load_filters_from_disk();
+            s_filters_loaded_from_disk = true;
+        }
+
+        // Handle deferred property edit popup
+        if (s_deferred_property_edit_popup.pending)
+        {
+            ImGui::OpenPopup(s_deferred_property_edit_popup.modal_name.c_str());
+            s_deferred_property_edit_popup.pending = false;
+            m_modal_edit_property_value_opened_this_frame = true;
+            m_current_property_value_buffer = s_deferred_property_edit_popup.initial_value;
+        }
+
+        // Render the deferred property edit modal if it was opened
+        if (s_deferred_property_edit_popup.property && ImGui::BeginPopupModal(s_deferred_property_edit_popup.modal_name.c_str(),
+                                                                              &m_modal_edit_property_value_is_open))
+        {
+            ImGui::Text("Uses the same format as the 'set' UE4 console command.");
+            ImGui::Text("The game could crash if the new value is invalid.");
+            ImGui::Text("The game can override the new value immediately.");
+            ImGui::PushItemWidth(-1.0f);
+            if (!s_deferred_property_edit_popup.editable)
+            {
+                ImGui::BeginDisabled();
+            }
+            ImGui::InputText("##CurrentPropertyValue", &m_current_property_value_buffer);
+            if (ImGui::Button("Apply"))
+            {
+                FOutputDevice placeholder_device{};
+                if (!s_deferred_property_edit_popup.property->ImportText(
+                        FromCharTypePtr<TCHAR>(ensure_str(m_current_property_value_buffer).c_str()),
+                        s_deferred_property_edit_popup.property->ContainerPtrToValuePtr<void>(s_deferred_property_edit_popup.container),
+                        NULL,
+                        s_deferred_property_edit_popup.obj,
+                        &placeholder_device))
+                {
+                    m_modal_edit_property_value_error_unable_to_edit = true;
+                    ImGui::OpenPopup("UnableToSetNewPropertyValueError");
+                }
+                else
+                {
+                    ImGui::CloseCurrentPopup();
+                    s_deferred_property_edit_popup.property = nullptr; // Clear the deferred state
+                }
+            }
+            if (!s_deferred_property_edit_popup.editable)
+            {
+                ImGui::EndDisabled();
+            }
+
+            if (ImGui::BeginPopupModal("UnableToSetNewPropertyValueError",
+                                       &m_modal_edit_property_value_error_unable_to_edit,
+                                       ImGuiWindowFlags_NoResize | ImGuiWindowFlags_AlwaysAutoResize))
+            {
+                ImGui::Text("Was unable to set new value, please make sure you're using the correct format.");
+                ImGui::NewLine();
+                ImGui::Text("Technical details:");
+                ImGui::Text("FProperty::ImportText returned NULL.");
+                ImGui::EndPopup();
+            }
+            ImGui::EndPopup();
+        }
+
+        // Clear deferred state if modal was closed
+        if (!m_modal_edit_property_value_is_open)
+        {
+            s_deferred_property_edit_popup.property = nullptr;
+            s_deferred_property_edit_popup.editable = true;
+        }
+
+        // Handle deferred enum edit popup
+        if (s_deferred_enum_edit_popup.pending)
+        {
+            ImGui::OpenPopup(s_deferred_enum_edit_popup.modal_name.c_str());
+            s_deferred_enum_edit_popup.pending = false;
+            m_modal_edit_property_value_opened_this_frame = true;
+
+            switch (s_deferred_enum_edit_popup.type)
+            {
+            case DeferredEnumEditPopup::EditName:
+            case DeferredEnumEditPopup::AddName:
+                m_current_property_value_buffer = s_deferred_enum_edit_popup.initial_value;
+                break;
+            case DeferredEnumEditPopup::EditValue:
+                m_current_enum_value_buffer = s_deferred_enum_edit_popup.initial_enum_value;
+                break;
+            }
+        }
+        // Render enum edit modals
+        if (s_deferred_enum_edit_popup.uenum)
+        {
+            auto uenum = s_deferred_enum_edit_popup.uenum;
+            auto index = s_deferred_enum_edit_popup.index;
+
+            // Edit enum name modal
+            if (s_deferred_enum_edit_popup.type == DeferredEnumEditPopup::EditName &&
+                ImGui::BeginPopupModal(s_deferred_enum_edit_popup.modal_name.c_str(), &m_modal_edit_property_value_is_open))
+            {
+                ImGui::Text("Edit the enumerator's name.");
+                ImGui::Text("The game could crash if the new name is invalid or if the old name or value is expected to be used elsewhere.");
+                ImGui::Text("The game may not use this value without additional patches.");
+                ImGui::PushItemWidth(-1.0f);
+                ImGui::InputText("##CurrentNameValue", &m_current_property_value_buffer);
+                if (ImGui::Button("Apply"))
+                {
+                    FOutputDevice placeholder_device{};
+                    auto new_name = ensure_str(m_current_property_value_buffer);
+                    FName new_key = FName(new_name, FNAME_Add);
+                    uenum->EditNameAt(index, new_key);
+                    if (uenum->GetEnumNames()[index].Key.ToString() != new_name)
+                    {
+                        m_modal_edit_property_value_error_unable_to_edit = true;
+                        ImGui::OpenPopup("UnableToSetNewEnumNameError");
+                    }
+                    else
+                    {
+                        ImGui::CloseCurrentPopup();
+                        s_deferred_enum_edit_popup.uenum = nullptr;
+                    }
+                }
+
+                if (ImGui::BeginPopupModal("UnableToSetNewEnumNameError",
+                                           &m_modal_edit_property_value_error_unable_to_edit,
+                                           ImGuiWindowFlags_NoResize | ImGuiWindowFlags_AlwaysAutoResize))
+                {
+                    ImGui::Text("Was unable to set new name.");
+                    ImGui::EndPopup();
+                }
+                ImGui::EndPopup();
+            }
+
+            // Edit enum value modal
+            if (s_deferred_enum_edit_popup.type == DeferredEnumEditPopup::EditValue &&
+                ImGui::BeginPopupModal(s_deferred_enum_edit_popup.modal_name.c_str(), &m_modal_edit_property_value_is_open))
+            {
+                ImGui::Text("Edit the enumerator's value.");
+                ImGui::Text("The game could crash if the new value is invalid or if the old name or value is expected to be used elsewhere.");
+                ImGui::Text("The game may not use this value without additional patches.");
+                ImGui::PushItemWidth(-1.0f);
+                ImGuiDataType_ imgui_data_type = Version::IsBelow(4, 15) ? ImGuiDataType_U8 : ImGuiDataType_S64;
+                ImGui::InputScalar("##CurrentNameValue", imgui_data_type, &m_current_enum_value_buffer);
+                if (ImGui::Button("Apply"))
+                {
+                    FOutputDevice placeholder_device{};
+                    int64_t new_value = m_current_enum_value_buffer;
+                    uenum->EditValueAt(index, new_value);
+
+                    if (uenum->GetEnumNames()[index].Value != new_value)
+                    {
+                        m_modal_edit_property_value_error_unable_to_edit = true;
+                        ImGui::OpenPopup("UnableToSetNewEnumValueError");
+                    }
+                    else
+                    {
+                        ImGui::CloseCurrentPopup();
+                        s_deferred_enum_edit_popup.uenum = nullptr;
+                    }
+                    m_current_enum_value_buffer = {};
+                }
+
+                if (ImGui::BeginPopupModal("UnableToSetNewEnumValueError",
+                                           &m_modal_edit_property_value_error_unable_to_edit,
+                                           ImGuiWindowFlags_NoResize | ImGuiWindowFlags_AlwaysAutoResize))
+                {
+                    ImGui::Text("Was unable to set new value.");
+                    ImGui::EndPopup();
+                }
+                ImGui::EndPopup();
+            }
+
+            // Add enum name modal
+            if (s_deferred_enum_edit_popup.type == DeferredEnumEditPopup::AddName &&
+                ImGui::BeginPopupModal(s_deferred_enum_edit_popup.modal_name.c_str(), &m_modal_edit_property_value_is_open))
+            {
+                ImGui::Text("Enter the name of the new enumerator at the index of the selected enumerator.");
+                ImGui::Text("This shifts all enumerators with a value greater than the current enumerators value up by one.");
+                ImGui::Text("The game could crash if the new name is invalid or if the old name or value is expected to be used elsewhere.");
+                ImGui::Text("The game may not use this value without additional patches.");
+                ImGui::PushItemWidth(-1.0f);
+                ImGui::InputText("##CurrentNameValue", &m_current_property_value_buffer);
+                if (ImGui::Button("Apply"))
+                {
+                    FOutputDevice placeholder_device{};
+                    auto new_name = ensure_str(m_current_property_value_buffer);
+                    FName new_key = FName(new_name, FNAME_Add);
+                    int64 value = uenum->GetEnumNames()[index].Value;
+
+                    // NOTE: Explicitly giving specifying template params for TPair because Clang can't handle TPair being a templated using statement.
+                    uenum->InsertIntoNames(TPair<decltype(new_key), decltype(value)>{new_key, value}, index, true);
+
+                    if (uenum->GetEnumNames()[index].Key.ToString() != new_name)
+                    {
+                        m_modal_edit_property_value_error_unable_to_edit = true;
+                        ImGui::OpenPopup("UnableToAddNewEnumNameError");
+                    }
+                    else
+                    {
+                        ImGui::CloseCurrentPopup();
+                        s_deferred_enum_edit_popup.uenum = nullptr;
+                    }
+                    m_current_property_value_buffer.clear();
+                }
+
+                if (ImGui::BeginPopupModal("UnableToAddNewEnumNameError",
+                                           &m_modal_edit_property_value_error_unable_to_edit,
+                                           ImGuiWindowFlags_NoResize | ImGuiWindowFlags_AlwaysAutoResize))
+                {
+                    ImGui::Text("Was unable to insert new name.");
+                    ImGui::EndPopup();
+                }
+                ImGui::EndPopup();
+            }
+        }
+
+        // Clear deferred enum state if modal was closed
+        if (!m_modal_edit_property_value_is_open)
+        {
+            s_deferred_enum_edit_popup.uenum = nullptr;
+        }
+
+        if (m_modal_edit_property_value_opened_this_frame)
+        {
+            m_modal_edit_property_value_opened_this_frame = false;
+        }
+
         bool listeners_allowed = are_listeners_allowed();
         if (!listeners_allowed)
         {
             ImGui::BeginDisabled();
+        }
+
+        // Render search by address error modals
+        if (m_modal_search_by_address_error_not_hex)
+        {
+            ImGui::OpenPopup("UnableToSearchByAddressNotHexError");
+        }
+
+        if (ImGui::BeginPopupModal("UnableToSearchByAddressNotHexError",
+                                   &m_modal_search_by_address_error_not_hex,
+                                   ImGuiWindowFlags_NoResize | ImGuiWindowFlags_AlwaysAutoResize))
+        {
+            ImGui::Text("Query isn't a valid hex number.");
+            ImGui::EndPopup();
+        }
+
+        if (m_modal_search_by_address_error_out_of_range)
+        {
+            ImGui::OpenPopup("UnableToSearchByAddressOutOfRangeError");
+        }
+
+        if (ImGui::BeginPopupModal("UnableToSearchByAddressOutOfRangeError",
+                                   &m_modal_search_by_address_error_out_of_range,
+                                   ImGuiWindowFlags_NoResize | ImGuiWindowFlags_AlwaysAutoResize))
+        {
+            ImGui::Text("Query is a hex number, but is either too big or negative.");
+            ImGui::EndPopup();
         }
 
         // Update this text if corresponding button's text changes. Textinput width = Spacing + Window margin + Button padding + Button text width
@@ -2840,6 +3720,7 @@ namespace RC::GUI
         {
             ImGui::PushStyleColor(ImGuiCol_Text, g_imgui_text_inactive_color.Value);
         }
+        auto apply_search_filters_when_not_searching = s_apply_search_filters_when_not_searching;
         if (ImGui::InputText("##Search by name",
                              m_search_by_name_buffer,
                              m_search_buffer_capacity,
@@ -2847,30 +3728,23 @@ namespace RC::GUI
                              &object_search_field_always_callback,
                              this))
         {
-            if (listeners_allowed)
+            if (!apply_search_filters_when_not_searching)
             {
-                std::string search_buffer{m_search_by_name_buffer};
-                if (search_buffer.empty())
-                {
-                    Output::send(STR("Search all chunks\n"));
-                    s_name_to_search_by.clear();
-                    m_object_iterator = &LiveView::guobjectarray_iterator;
-                    m_is_searching_by_name = false;
-                }
-                else
-                {
-                    Output::send(STR("Search for: {}\n"), search_buffer.empty() ? STR("") : to_wstring(search_buffer));
-                    s_name_to_search_by = search_buffer;
-                    m_object_iterator = &LiveView::guobjectarray_by_name_iterator;
-                    m_is_searching_by_name = true;
-                    search_by_name();
-                }
+                search();
             }
         }
-        if (ImGui::IsItemHovered())
+        if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled))
         {
             ImGui::BeginTooltip();
-            ImGui::Text("Right-click to open search options.");
+            if (!apply_search_filters_when_not_searching)
+            {
+                ImGui::Text("Right-click to open search options.");
+            }
+            else
+            {
+                ImGui::Text("You can't search with 'Apply filters when not searching' enabled.");
+                ImGui::Text("Right click to bring up the menu and disable this option.");
+            }
             ImGui::EndTooltip();
         }
         if (push_inactive_text_color)
@@ -2883,14 +3757,25 @@ namespace RC::GUI
         {
             ImGui::Text("Search options");
             ImGui::SameLine();
-            ImGui::Checkbox("Apply when not searching", &s_apply_search_filters_when_not_searching);
+            // Making sure the user can't enable filters when not searching, if they are currently actually searching.
+            // Otherwise it uses the wrong iterator.
+            auto is_searching_by_name = m_is_searching_by_name;
+            if (is_searching_by_name)
+            {
+                ImGui::BeginDisabled();
+            }
+            ImGui::Checkbox("Apply filters when not searching", &s_apply_search_filters_when_not_searching);
+            if (is_searching_by_name)
+            {
+                ImGui::EndDisabled();
+            }
             if (ImGui::BeginTable("search_options_table", 2))
             {
                 bool instances_only_enabled = !(Filter::NonInstancesOnly::s_enabled || Filter::DefaultObjectsOnly::s_enabled);
                 bool non_instances_only_enabled = !(Filter::InstancesOnly::s_enabled || Filter::DefaultObjectsOnly::s_enabled);
                 bool default_objects_only_enabled = !(Filter::NonInstancesOnly::s_enabled || Filter::InstancesOnly::s_enabled);
 
-                //  Row #1
+                //  Row 1
                 ImGui::TableNextRow();
                 ImGui::TableNextColumn();
                 ImGui::Checkbox("Include inheritance", &s_include_inheritance);
@@ -2905,17 +3790,10 @@ namespace RC::GUI
                     ImGui::EndDisabled();
                 }
 
-                // Row #2
+                // Row 2
                 ImGui::TableNextRow();
                 ImGui::TableNextColumn();
                 ImGui::Checkbox("Function parameter flags", &Filter::FunctionParamFlags::s_enabled);
-                if (ImGui::IsItemHovered())
-                {
-                    ImGui::BeginTooltip();
-                    ImGui::Text("You must manually refresh the search after selecting flags.");
-                    ImGui::Text("Manually refreshing the search can be done by clicking the search bar and hitting enter.");
-                    ImGui::EndTooltip();
-                }
                 ImGui::TableNextColumn();
                 if (!non_instances_only_enabled)
                 {
@@ -2927,7 +3805,7 @@ namespace RC::GUI
                     ImGui::EndDisabled();
                 }
 
-                // Row #3
+                // Row 3
                 ImGui::TableNextRow();
                 ImGui::TableNextColumn();
                 ImGui::Checkbox("Include CDOs", &Filter::IncludeDefaultObjects::s_enabled);
@@ -2946,15 +3824,48 @@ namespace RC::GUI
                 ImGui::TableNextRow();
                 ImGui::TableNextColumn();
                 ImGui::Checkbox("Use Regex for search", &s_use_regex_for_search);
+                ImGui::TableNextColumn();
+                ImGui::Checkbox("Match memory address", &s_search_by_address);
 
                 // Row 5
                 ImGui::TableNextRow();
                 ImGui::TableNextColumn();
-                ImGui::Text("Exclude class name");
-                ImGui::TableNextColumn();
-                if (ImGui::InputText("##ExcludeClassName", &Filter::ExcludeClassName::s_internal_value))
+                ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
+                const char* filter_modes[] = {"Exclude class names", "Include class names"};
+                int current_filter_mode = Filter::ClassNamesFilter::b_is_exclude ? 0 : 1;
+                if (ImGui::Combo("##FilterMode", &current_filter_mode, filter_modes, IM_ARRAYSIZE(filter_modes)))
                 {
-                    Filter::ExcludeClassName::s_value = to_wstring(Filter::ExcludeClassName::s_internal_value);
+                    Filter::ClassNamesFilter::b_is_exclude = current_filter_mode == 0;
+
+                    // Since the filter mode changed, reparse the class names list, reparse s_internal_class_names into list_class_names using new filter mode
+                    Filter::ClassNamesFilter::list_class_names.clear();
+                    if (!Filter::ClassNamesFilter::s_internal_class_names.empty())
+                    {
+                        std::istringstream ss(Filter::ClassNamesFilter::s_internal_class_names);
+                        std::string class_name;
+                        while (std::getline(ss, class_name, ','))
+                        {
+                            std::erase_if(class_name, isspace);
+                            Filter::ClassNamesFilter::list_class_names.emplace_back(ensure_str(class_name));
+                        }
+                    }
+                }
+
+                ImGui::TableNextColumn();
+                ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
+                if (ImGui::InputText("##ClassNamesFilter", &Filter::ClassNamesFilter::s_internal_class_names))
+                {
+                    Filter::ClassNamesFilter::list_class_names.clear();
+                    if (!Filter::ClassNamesFilter::s_internal_class_names.empty())
+                    {
+                        std::istringstream ss(Filter::ClassNamesFilter::s_internal_class_names);
+                        std::string class_name;
+                        while (std::getline(ss, class_name, ','))
+                        {
+                            std::erase_if(class_name, isspace);
+                            Filter::ClassNamesFilter::list_class_names.emplace_back(ensure_str(class_name));
+                        }
+                    }
                 }
 
                 // Row 6
@@ -2962,9 +3873,20 @@ namespace RC::GUI
                 ImGui::TableNextColumn();
                 ImGui::Text("Has property");
                 ImGui::TableNextColumn();
-                if (ImGui::InputText("##HasProperty", &Filter::HasProperty::s_internal_value))
+                ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
+                if (ImGui::InputText("##HasProperty", &Filter::HasProperty::s_internal_properties))
                 {
-                    Filter::HasProperty::s_value = to_wstring(Filter::HasProperty::s_internal_value);
+                    Filter::HasProperty::list_properties.clear();
+                    if (!Filter::HasProperty::s_internal_properties.empty())
+                    {
+                        std::istringstream ss(Filter::HasProperty::s_internal_properties);
+                        std::string property_name;
+                        while (std::getline(ss, property_name, ','))
+                        {
+                            std::erase_if(property_name, isspace);
+                            Filter::HasProperty::list_properties.emplace_back(ensure_str(property_name));
+                        }
+                    }
                 }
 
                 // Row 7
@@ -2972,9 +3894,72 @@ namespace RC::GUI
                 ImGui::TableNextColumn();
                 ImGui::Text("Has property of type");
                 ImGui::TableNextColumn();
-                if (ImGui::InputText("##HasPropertyType", &Filter::HasPropertyType::s_internal_value))
+                ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
+                if (ImGui::InputText("##HasPropertyType", &Filter::HasPropertyType::s_internal_property_types))
                 {
-                    Filter::HasPropertyType::s_value = FName(to_wstring(Filter::HasPropertyType::s_internal_value), FNAME_Add);
+                    Filter::HasPropertyType::list_property_types.clear();
+                    if (!Filter::HasPropertyType::s_internal_property_types.empty())
+                    {
+                        std::istringstream ss(Filter::HasPropertyType::s_internal_property_types);
+                        std::string property_type_name;
+                        while (std::getline(ss, property_type_name, ','))
+                        {
+                            std::erase_if(property_type_name, isspace);
+                            if (!property_type_name.empty())
+                            {
+                                Filter::HasPropertyType::list_property_types.emplace_back(FName(ensure_str(property_type_name), FNAME_Add));
+                            }
+                        }
+                    }
+                }
+                // Row 8
+                ImGui::TableNextRow();
+                ImGui::TableNextColumn();
+                ImGui::Text("Maximum Value Size");
+                ImGui::TableNextColumn();
+                ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
+                if (ImGui::InputText("##MaxValueSize", &Filter::MaxValueSize::s_value_buffer))
+                {
+                    int32_t new_value{-1};
+                    try
+                    {
+                        new_value = std::stoi(Filter::MaxValueSize::s_value_buffer);
+                    }
+                    catch (...)
+                    {
+                        if (Filter::MaxValueSize::s_value > 0)
+                        {
+                            new_value = std::numeric_limits<int32_t>::max();
+                        }
+                        else
+                        {
+                            new_value = 0;
+                        }
+                    }
+                    if (new_value < 0)
+                    {
+                        new_value = Filter::MaxValueSize::s_value;
+                    }
+                    Filter::MaxValueSize::s_value = new_value;
+                    Filter::MaxValueSize::s_value_buffer = fmt::format("{}", Filter::MaxValueSize::s_value);
+                }
+
+                ImGui::TableNextRow();
+                ImGui::TableNextColumn();
+                if (ImGui::Button(ICON_FA_SEARCH " Refresh search"))
+                {
+                    search();
+                }
+                ImGui::TableNextColumn();
+                if (ImGui::Button(ICON_FA_SAVE " Save filters"))
+                {
+                    save_filters_to_disk();
+                }
+                if (ImGui::IsItemHovered())
+                {
+                    ImGui::BeginTooltip();
+                    ImGui::Text("Saves your filters to <UE4SS.dll install location>/liveview/filters.meta.json");
+                    ImGui::EndTooltip();
                 }
 
                 ImGui::EndTable();
@@ -3129,98 +4114,151 @@ namespace RC::GUI
         ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4{0.156f, 0.156f, 0.156f, 1.0f});
         ImGui::BeginChild("LiveView_TreeView", {-16.0f, m_top_size}, true);
 
-        auto do_iteration = [&](int32_t int_data_1 = 0, int32_t int_data_2 = 0) {
-            ((*this).*((*this).m_object_iterator))(int_data_1, int_data_2, [&](UObject* object) {
-                auto tree_node_name = std::string{get_object_full_name(object)};
+        auto do_iteration = [&](int start, int end, const std::vector<UObject*>* objects_to_draw_ptr = nullptr) {
+            if (!objects_to_draw_ptr || objects_to_draw_ptr->empty())
+            {
+                // 1) If there's no valid pointer or it's empty, do old logic
+                ((*this).*((*this).m_object_iterator))(start, end, [&](UObject* object) {
+                    auto tree_node_name = std::string{get_object_full_name(object)};
 
-                auto render_context_menu = [&] {
-                    if (ImGui::BeginPopupContextItem(tree_node_name.c_str()))
+                    if (ImGui_TreeNodeEx(tree_node_name.c_str(), object))
                     {
-                        if (ImGui::MenuItem(ICON_FA_COPY " Copy Full Name"))
+                        m_currently_opened_tree_node = object;
+                        m_opened_tree_nodes.emplace(object);
+
+                        // The menu must be rendered both if the node is open and if it's closed.
+                        render_context_menu(tree_node_name, object);
+
+                        if (auto as_struct = Cast<UStruct>(object); as_struct)
                         {
-                            Output::send(STR("Copy Full Name: {}\n"), object->GetFullName());
-                            ImGui::SetClipboardText(tree_node_name.c_str());
+                            render_struct_sub_tree_hierarchy(as_struct);
                         }
-                        if (object->IsA<UFunction>())
+                        else
                         {
-                            auto watch_id = WatchIdentifier{object, nullptr};
-                            auto function_watcher_it = s_watch_map.find(watch_id);
-                            if (function_watcher_it == s_watch_map.end())
-                            {
-                                ImGui::Separator();
-                                if (ImGui::MenuItem(ICON_FA_EYE " Watch value"))
-                                {
-                                    add_watch(watch_id, static_cast<UFunction*>(object));
-                                }
-                            }
-                            else
-                            {
-                                ImGui::Checkbox(ICON_FA_EYE " Watch value", &function_watcher_it->second->enabled);
-                            }
+                            render_object_sub_tree_hierarchy(object);
                         }
-                        ImGui::EndPopup();
-                    }
-                };
 
-                if (ImGui_TreeNodeEx(tree_node_name.c_str(), object))
-                {
-                    m_currently_opened_tree_node = object;
-                    m_opened_tree_nodes.emplace(object);
-
-                    // For some reason, the menu has to be rendered both if the node is open and if it's closed.
-                    // Rendering after the 'TreeNodeEx' if-statement only works if the node is closed.
-                    render_context_menu();
-
-                    if (auto as_struct = Cast<UStruct>(object); as_struct)
-                    {
-                        render_struct_sub_tree_hierarchy(as_struct);
+                        ImGui::TreePop();
                     }
                     else
                     {
-                        render_object_sub_tree_hierarchy(object);
+                        // Handle item-click selection
+                        if (ImGui::IsItemClicked())
+                        {
+                            select_object(0, object->GetObjectItem(), object, AffectsHistory::Yes);
+                        }
                     }
-
-                    ImGui::TreePop();
-                }
-                else
-                {
-                    if (ImGui::IsItemClicked())
-                    {
-                        select_object(0, object->GetObjectItem(), object, AffectsHistory::Yes);
-                    }
-                }
-                collapse_all_except(m_currently_opened_tree_node);
-                render_context_menu();
-            });
-        };
-
-        ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, {0.0f, 0.0f});
-        if (m_is_searching_by_name)
-        {
-            do_iteration();
-        }
-        else
-        {
-            auto num_elements = UObjectArray::GetNumElements();
-
-            if (!s_apply_search_filters_when_not_searching)
-            {
-                int num_total_chunks = (num_elements / s_max_elements_per_chunk) + (num_elements % s_max_elements_per_chunk == 0 ? 0 : 1);
-                for (int i = 0; i < num_total_chunks; ++i)
-                {
-                    if (ImGui_TreeNodeEx(std::format("Group #{}", i).c_str(), i + s_chunk_id_start, ImGuiTreeNodeFlags_CollapsingHeader))
-                    {
-                        ::RC::GUI::collapse_all_except(i + s_chunk_id_start);
-                        auto start = s_max_elements_per_chunk * i;
-                        auto end = start + s_max_elements_per_chunk;
-                        do_iteration(start, end);
-                    }
-                }
+                    collapse_all_except(m_currently_opened_tree_node);
+                    render_context_menu(tree_node_name, object);
+                });
             }
             else
             {
-                do_iteration(0, UObjectArray::GetNumElements());
+                // 2) Otherwise, draw the filtered objects directly
+                const auto& objects_to_draw = *objects_to_draw_ptr;
+                for (int i = start; i < end; i++)
+                {
+                    UObject* object = objects_to_draw[i];
+                    if (!object) continue;
+
+                    auto tree_node_name = std::string{get_object_full_name(object)};
+
+                    if (ImGui_TreeNodeEx(tree_node_name.c_str(), object))
+                    {
+                        m_currently_opened_tree_node = object;
+                        m_opened_tree_nodes.emplace(object);
+
+                        render_context_menu(tree_node_name, object);
+
+                        if (auto as_struct = Cast<UStruct>(object); as_struct)
+                        {
+                            render_struct_sub_tree_hierarchy(as_struct);
+                        }
+                        else
+                        {
+                            render_object_sub_tree_hierarchy(object);
+                        }
+
+                        ImGui::TreePop();
+                    }
+                    else
+                    {
+                        // Handle item-click selection
+                        if (ImGui::IsItemClicked())
+                        {
+                            select_object(0, object->GetObjectItem(), object, AffectsHistory::Yes);
+                        }
+                    }
+                    collapse_all_except(m_currently_opened_tree_node);
+                    render_context_menu(tree_node_name, object);
+                }
             }
+        };
+
+        ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, {0.0f, 0.0f});
+
+        // If filters-while-not-searching are disabled (i.e. normal clipper behavior)
+        if (!s_apply_search_filters_when_not_searching)
+        {
+            // 1) Gather objects you actually want to draw
+            std::vector<UObject*> objects_to_draw;
+
+            if (m_is_searching_by_name)
+            {
+                // If we are searching by name, presumably `s_name_search_results`
+                // already holds only valid objects.
+                objects_to_draw = s_name_search_results;
+            }
+            else
+            {
+                // Otherwise, filter the entire UObjectArray
+                objects_to_draw.reserve(UObjectArray::GetNumElements());
+                for (size_t i = 0; i < UObjectArray::GetNumElements(); i++)
+                {
+
+                    if (FUObjectItem* obj = static_cast<FUObjectItem*>(Container::UnrealVC->UObjectArray_index_to_object(i)))
+                    {
+                        // Skip destroyed/invalid objects here
+                        if (!obj->IsUnreachable())
+                        {
+                            objects_to_draw.push_back(obj->GetUObject());
+                        }
+                    }
+                }
+            }
+
+            // 2) Use clipper with the filtered array size
+            ImGuiListClipper clipper{};
+            clipper.Begin(objects_to_draw.size(), ImGui::GetTextLineHeightWithSpacing());
+
+            // Forces the current opened node to always be rendered by the clipper
+            for (int i = 0; i < objects_to_draw.size(); i++)
+            {
+                if (objects_to_draw[i] == m_currently_opened_tree_node)
+                {
+                    clipper.IncludeItemsByIndex(i, i + 1);
+                    break;
+                }
+            }
+            int last_display_end = 0;
+            float last_position = ImGui::GetCursorPosY();
+            while (clipper.Step())
+            {
+                if (last_position > ImGui::GetCursorPosY())
+                {
+                    // Makes sure the list is contiguous
+                    ImGui::SetCursorPosY(last_position);
+                    clipper.DisplayStart = last_display_end;
+                }
+                do_iteration(clipper.DisplayStart, clipper.DisplayEnd, &objects_to_draw);
+                last_position = ImGui::GetCursorPosY();
+                last_display_end = clipper.DisplayEnd;
+            }
+        }
+        else
+        {
+            // "Apply filters when not searching" path
+            do_iteration(0, UObjectArray::GetNumElements());
         }
         ImGui::PopStyleVar();
 
@@ -3228,13 +4266,10 @@ namespace RC::GUI
         ImGui::PopStyleColor();
 
         render_info_panel();
-        if (UE4SSProgram::settings_manager.Experimental.GUIUFunctionCaller)
+        const auto& selected_item = get_selected_object_or_property();
+        if (selected_item.is_object)
         {
-            const auto& selected_item = get_selected_object_or_property();
-            if (selected_item.is_object)
-            {
-                m_function_caller_widget->render(selected_item.object);
-            }
+            m_function_caller_widget->render(selected_item.object);
         }
     }
 
@@ -3290,7 +4325,7 @@ namespace RC::GUI
                     auto& watch = *watch_ptr;
                     ImGui::TableNextRow();
                     ImGui::TableNextColumn();
-                    if (ImGui::Checkbox(to_string(std::format(STR("##watch-on-off-{}"), watch.hash)).c_str(), &watch.enabled))
+                    if (ImGui::Checkbox(to_string(fmt::format(STR("##watch-on-off-{}"), watch.hash)).c_str(), &watch.enabled))
                     {
                         if (watch.container->IsA<UFunction>())
                         {
@@ -3304,7 +4339,7 @@ namespace RC::GUI
                         ImGui::EndTooltip();
                     }
                     ImGui::SameLine(0.0f, 2.0f);
-                    ImGui::Checkbox(to_string(std::format(STR("##watch-write-to-file-{}"), watch.hash)).c_str(), &watch.write_to_file);
+                    ImGui::Checkbox(to_string(fmt::format(STR("##watch-write-to-file-{}"), watch.hash)).c_str(), &watch.write_to_file);
                     if (ImGui::IsItemHovered())
                     {
                         ImGui::BeginTooltip();
@@ -3313,7 +4348,7 @@ namespace RC::GUI
                     }
                     ImGui::SameLine(0.0f, 2.0f);
                     ImGui::PushStyleVar(ImGuiStyleVar_SelectableTextAlign, ImVec2(0.5f, 0.5f));
-                    ImGui::PushID(std::format("collapse_history_{}", watch.hash).c_str());
+                    ImGui::PushID(fmt::format("collapse_history_{}", watch.hash).c_str());
                     ImGui::Selectable(watch.show_history ? ICON_FA_MINUS : ICON_FA_PLUS, &watch.show_history, ImGuiSelectableFlags_NoPadWithHalfSpacing);
                     ImGui::PopID();
                     ImGui::PopStyleVar();
@@ -3322,18 +4357,21 @@ namespace RC::GUI
                     ImGui::Text("%S.%S", watch.object_name.c_str(), watch.property_name.c_str());
                     if (watch.show_history)
                     {
-                        ImGui::PushID(std::format("history_{}", watch.hash).c_str());
-                        ImGui::InputTextMultiline("##history", &watch.history, {-2.0f, ImGui::GetTextLineHeight() * 10.0f + ImGui::GetStyle().FramePadding.y * 2.0f}, ImGuiInputTextFlags_ReadOnly);
+                        ImGui::PushID(fmt::format("history_{}", watch.hash).c_str());
+                        ImGui::InputTextMultiline("##history",
+                                                  &watch.history,
+                                                  {-2.0f, ImGui::GetTextLineHeight() * 10.0f + ImGui::GetStyle().FramePadding.y * 2.0f},
+                                                  ImGuiInputTextFlags_ReadOnly);
                         ImGui_AutoScroll("##history", &watch.history_previous_max_scroll_y);
                         ImGui::PopID();
                     }
                     ImGui::TableNextColumn();
-                    if (ImGui::Checkbox(to_string(std::format(STR("##watch-from-disk-{}"), watch.hash)).c_str(), &watch.load_on_startup))
+                    if (ImGui::Checkbox(to_string(fmt::format(STR("##watch-from-disk-{}"), watch.hash)).c_str(), &watch.load_on_startup))
                     {
                         save_watches_to_disk();
                     }
                     ImGui::SetNextWindowSize({690.0f, 0.0f});
-                    if (ImGui::BeginPopupContextItem(to_string(std::format(STR("##watch-from-disk-settings-popup-{}"), watch.hash)).c_str()))
+                    if (ImGui::BeginPopupContextItem(to_string(fmt::format(STR("##watch-from-disk-settings-popup-{}"), watch.hash)).c_str()))
                     {
                         ImGui::Text("Acquisition Method");
                         ImGui::Text("This determines how the watch will be reacquired.");

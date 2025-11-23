@@ -1,8 +1,11 @@
 #pragma once
 
+#include <unordered_set>
+
 #include <Unreal/UObject.hpp>
 #include <Unreal/UPackage.hpp>
 #include <Unreal/UStruct.hpp>
+#include <Unreal/FProperty.hpp>
 
 // To create a new filter:
 // 1. Create <FilterName>.hpp in the same directory as this file.
@@ -18,6 +21,22 @@ namespace RC::GUI::Filter
 {
     using namespace Unreal;
 
+    // Does not need to be deduplicated because properties in UE are already unique.
+    // Note that std::vector is faster when adding new properties to be highlighted, and unordered_set is faster when checking if a property should be highlighted.
+    // This container covers the entire search-set of objects, so it won't contain just properties for the one object, so it may contain 50k+ elements.
+    // We could speed vector lookup by somehow making this a per-object vector.
+    // We can't really do that without running the filters when you click on an object instead of just when you search or apply all filters for all objects.
+    // For now, let's just use an unordered_set.
+    static inline std::unordered_set<FProperty*> s_highlighted_properties{};
+    static auto is_highlighted(FProperty* property) -> bool
+    {
+        return s_highlighted_properties.contains(property);
+    }
+    static auto highlight(FProperty* property) -> void
+    {
+        s_highlighted_properties.emplace(property);
+    }
+
     template <typename...>
     struct Types
     {
@@ -25,16 +44,12 @@ namespace RC::GUI::Filter
 
     template <typename T>
     concept CanPreEval = requires(T t) {
-        {
-            T::pre_eval(std::declval<UObject*>())
-        };
+        { T::pre_eval(std::declval<UObject*>()) };
     };
 
     template <typename T>
     concept CanPostEval = requires(T t) {
-        {
-            T::post_eval(std::declval<UObject*>())
-        };
+        { T::post_eval(std::declval<UObject*>()) };
     };
 
     template <typename T>
@@ -125,9 +140,9 @@ namespace RC::GUI::Filter
         return true;                                                                                                                                           \
     }
 
-    static auto is_instance(UObject* object) -> bool
+    static auto is_instance(UObject* object, bool care_about_cdo = true) -> bool
     {
-        return !object->HasAnyFlags(static_cast<EObjectFlags>(RF_ClassDefaultObject | RF_ArchetypeObject)) && !object->IsA<UStruct>() &&
-               !object->IsA<UField>() && !object->IsA<UPackage>();
+        const auto cdo = care_about_cdo ? !object->HasAnyFlags(static_cast<EObjectFlags>(RF_ClassDefaultObject | RF_ArchetypeObject)) : true;
+        return cdo && !object->IsA<UStruct>() && !object->IsA<UField>() && !object->IsA<UPackage>();
     }
 } // namespace RC::GUI::Filter

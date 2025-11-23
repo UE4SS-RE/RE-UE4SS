@@ -2,20 +2,24 @@ local projectName = "Input"
 
 target(projectName)
     set_kind("static")
-    set_languages("cxx20")
+    set_languages("cxx23")
     set_exceptions("cxx")
-    set_values("ue4ssDep", true)
+    add_rules("ue4ss.dependency")
+    add_options("ue4ssInput")
 
     add_includedirs("include", { public = true })
     add_headerfiles("include/**.hpp")
 
-    add_files("src/**.cpp")
-    
-    on_load(function (target)
-        import("target_helpers", { rootdir = get_config("scriptsRoot") })
-        
-        print("Project: " .. projectName .. " (STATIC)")
+    if get_config("ue4ssInput") then
+        add_files("src/**.cpp|Platform/**.cpp")
+    end
 
-        target:add("defines", target_helpers.project_name_to_exports_define(projectName))
-        target:add("defines", target_helpers.project_name_to_build_static_define(projectName))
-    end)
+    add_deps("DynamicOutput")
+
+    if is_plat("windows") then
+        if get_config("ue4ssInput") then
+            add_files("src/Platform/Win32AsyncInputSource.cpp")
+            add_files("src/Platform/GLFW3InputSource.cpp")
+            add_files("src/Platform/QueueInputSource.cpp")
+        end
+    end

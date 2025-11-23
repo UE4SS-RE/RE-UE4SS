@@ -1,6 +1,7 @@
 #include <GUI/Windows.hpp>
 
 #include <GUI/DX11.hpp>
+#include <UE4SSProgram.hpp>
 #include <backends/imgui_impl_win32.h>
 #include <imgui.h>
 #include <tchar.h>
@@ -34,13 +35,14 @@ namespace RC::GUI
         ImGui_ImplWin32_NewFrame();
     }
 
-    auto Backend_Windows::create_window() -> void
+    auto Backend_Windows::create_window(int loc_x, int loc_y, int size_x, int size_y) -> void
     {
         StringType title_bar_text{STR("UE4SS Debugging Tools")};
         if (dynamic_cast<Backend_DX11*>(m_gfx_backend))
         {
             title_bar_text.append(STR(" (DX11)"));
         }
+        title_bar_text.append(fmt::format(STR(" - {}"), ensure_str(render_mode_to_string(UE4SSProgram::settings_manager.Debug.RenderMode))));
 
         // ImGui_ImplWin32_EnableDpiAwareness()
         s_wc.cbSize = sizeof(WNDCLASSEX);
@@ -55,10 +57,20 @@ namespace RC::GUI
         // wc.hbrBackground = NULL;
         s_wc.hbrBackground = CreateSolidBrush(RGB(0, 0, 0));
         s_wc.lpszMenuName = NULL;
-        s_wc.lpszClassName = title_bar_text.c_str();
+        s_wc.lpszClassName = FromCharTypePtr<wchar_t>(title_bar_text.c_str());
         s_wc.hIconSm = NULL;
         ::RegisterClassEx(&s_wc);
-        s_hwnd = ::CreateWindow(s_wc.lpszClassName, title_bar_text.c_str(), WS_OVERLAPPEDWINDOW, 100, 100, 1280, 800, NULL, NULL, s_wc.hInstance, NULL);
+        s_hwnd = ::CreateWindow(s_wc.lpszClassName,
+                                FromCharTypePtr<wchar_t>(title_bar_text.c_str()),
+                                WS_OVERLAPPEDWINDOW,
+                                loc_x,
+                                loc_y,
+                                size_x,
+                                size_y,
+                                NULL,
+                                NULL,
+                                s_wc.hInstance,
+                                NULL);
 
         if (!m_gfx_backend->create_device())
         {
@@ -105,7 +117,15 @@ namespace RC::GUI
     {
         RECT current_window_rect{};
         GetWindowRect(s_hwnd, &current_window_rect);
-        return {current_window_rect.right - current_window_rect.left, current_window_rect.bottom - current_window_rect.top};
+        return {static_cast<int32_t>(current_window_rect.right - current_window_rect.left),
+                static_cast<int32_t>(current_window_rect.bottom - current_window_rect.top)};
+    }
+
+    auto Backend_Windows::get_window_position() -> WindowPosition
+    {
+        RECT current_window_rect{};
+        GetWindowRect(s_hwnd, &current_window_rect);
+        return {static_cast<int32_t>(current_window_rect.left), static_cast<int32_t>(current_window_rect.top)};
     }
 
     auto Backend_Windows::on_gfx_backend_set() -> void

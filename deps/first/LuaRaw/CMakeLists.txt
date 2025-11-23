@@ -1,0 +1,88 @@
+cmake_minimum_required(VERSION 3.22)
+
+set(TARGET LuaRaw)
+project(${TARGET})
+
+option(UE4SS_${TARGET}_BUILD_SHARED "Build as a shared lib" OFF)
+option(LUA_COMPILE_AS_CPP "Compile Lua as C++ instead of C" OFF)
+
+set(${TARGET}_Sources
+        "${CMAKE_CURRENT_SOURCE_DIR}/src/lapi.c"
+        "${CMAKE_CURRENT_SOURCE_DIR}/src/lauxlib.c"
+        "${CMAKE_CURRENT_SOURCE_DIR}/src/lbaselib.c"
+        "${CMAKE_CURRENT_SOURCE_DIR}/src/lcode.c"
+        "${CMAKE_CURRENT_SOURCE_DIR}/src/lcorolib.c"
+        "${CMAKE_CURRENT_SOURCE_DIR}/src/lctype.c"
+        "${CMAKE_CURRENT_SOURCE_DIR}/src/ldblib.c"
+        "${CMAKE_CURRENT_SOURCE_DIR}/src/ldebug.c"
+        "${CMAKE_CURRENT_SOURCE_DIR}/src/ldo.c"
+        "${CMAKE_CURRENT_SOURCE_DIR}/src/ldump.c"
+        "${CMAKE_CURRENT_SOURCE_DIR}/src/lfunc.c"
+        "${CMAKE_CURRENT_SOURCE_DIR}/src/lgc.c"
+        "${CMAKE_CURRENT_SOURCE_DIR}/src/linit.c"
+        "${CMAKE_CURRENT_SOURCE_DIR}/src/liolib.c"
+        "${CMAKE_CURRENT_SOURCE_DIR}/src/llex.c"
+        "${CMAKE_CURRENT_SOURCE_DIR}/src/lmathlib.c"
+        "${CMAKE_CURRENT_SOURCE_DIR}/src/lmem.c"
+        "${CMAKE_CURRENT_SOURCE_DIR}/src/loadlib.c"
+        "${CMAKE_CURRENT_SOURCE_DIR}/src/lobject.c"
+        "${CMAKE_CURRENT_SOURCE_DIR}/src/lopcodes.c"
+        "${CMAKE_CURRENT_SOURCE_DIR}/src/loslib.c"
+        "${CMAKE_CURRENT_SOURCE_DIR}/src/lparser.c"
+        "${CMAKE_CURRENT_SOURCE_DIR}/src/lstate.c"
+        "${CMAKE_CURRENT_SOURCE_DIR}/src/lstring.c"
+        "${CMAKE_CURRENT_SOURCE_DIR}/src/lstrlib.c"
+        "${CMAKE_CURRENT_SOURCE_DIR}/src/ltable.c"
+        "${CMAKE_CURRENT_SOURCE_DIR}/src/ltablib.c"
+        "${CMAKE_CURRENT_SOURCE_DIR}/src/ltm.c"
+        #${CMAKE_CURRENT_SOURCE_DIR}/"src/lua.c"
+        #${CMAKE_CURRENT_SOURCE_DIR}/"src/luac.c"
+        "${CMAKE_CURRENT_SOURCE_DIR}/src/luauser.c"
+        "${CMAKE_CURRENT_SOURCE_DIR}/src/lundump.c"
+        "${CMAKE_CURRENT_SOURCE_DIR}/src/lutf8lib.c"
+        "${CMAKE_CURRENT_SOURCE_DIR}/src/lvm.c"
+        "${CMAKE_CURRENT_SOURCE_DIR}/src/lzio.c"
+        )
+
+# This makes the .c files be compiled with the C++ compiler
+# This causes __cplusplus to be defined which is what Lua uses to determine whether it's compiled as C or C++
+if(LUA_COMPILE_AS_CPP)
+    message("Compiling Lua as C++")
+    set_source_files_properties(${${TARGET}_Sources} PROPERTIES LANGUAGE CXX)
+else()
+    message("Compiling Lua as C")
+endif()
+
+string(REGEX REPLACE "(.)([A-Z])" "\\1_\\2" MODULE_NAME ${TARGET})
+string(TOUPPER ${MODULE_NAME} MODULE_NAME)
+
+if (UE4SS_${TARGET}_BUILD_SHARED)
+    message("Project: ${TARGET} (SHARED)")
+    add_library(${TARGET} SHARED ${${TARGET}_Sources})
+else ()
+    message("Project: ${TARGET} (STATIC)")
+    add_library(${TARGET} ${${TARGET}_Sources})
+endif ()
+
+# Enabling c++23 support
+target_compile_features(${TARGET} PUBLIC cxx_std_23)
+
+target_include_directories(${TARGET} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
+
+target_compile_definitions(${TARGET} 
+    PRIVATE
+        RC_${MODULE_NAME}_EXPORTS
+    PUBLIC
+        $<$<NOT:$<BOOL:${UE4SS_${TARGET}_BUILD_SHARED}>>:
+            RC_${MODULE_NAME}_BUILD_STATIC>
+        $<$<BOOL:${LUA_COMPILE_AS_CPP}>:LUA_COMPILED_AS_CPP>)
+            
+# Make headers visible in the IDE
+# Uses make_headers_visible() from cmake/modules/IDEVisibility.cmake
+make_headers_visible(${TARGET} "${CMAKE_CURRENT_SOURCE_DIR}/include")
+
+if (${CMAKE_CXX_COMPILER_ID} STREQUAL MSVC)
+    target_compile_options(${TARGET} PRIVATE /W0)
+elseif (${CMAKE_CXX_COMPILER_ID} STREQUAL Clang)
+    target_compile_options(${TARGET} PRIVATE -Wno-deprecated-enum-enum-conversion)
+endif ()

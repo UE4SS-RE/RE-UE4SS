@@ -10,6 +10,8 @@
 #include <Helpers/String.hpp>
 #include <imgui.h>
 
+struct ImGuiSettingsHandler;
+
 namespace RC::GUI
 {
     class GUITab; // dunno why forward declaration is necessary
@@ -20,6 +22,27 @@ namespace RC::GUI
         GLFW3_OpenGL3,
     };
 
+    enum class RenderMode
+    {
+        ExternalThread,
+        EngineTick,
+        GameViewportClientTick
+    };
+
+    inline auto render_mode_to_string(RenderMode mode) -> std::string
+    {
+        switch (mode)
+        {
+        case RenderMode::ExternalThread:
+            return "ExternalThread";
+        case RenderMode::EngineTick:
+            return "EngineTick";
+        case RenderMode::GameViewportClientTick:
+            return "GameViewportClientTick";
+        }
+        return "UnknownRenderMode";
+    }
+
     enum class OSBackend
     {
         Windows,
@@ -27,8 +50,14 @@ namespace RC::GUI
 
     struct WindowSize
     {
-        long x;
-        long y;
+        int32_t x;
+        int32_t y;
+    };
+
+    struct WindowPosition
+    {
+        int32_t x;
+        int32_t y;
     };
 
     class GfxBackendBase
@@ -57,6 +86,10 @@ namespace RC::GUI
         virtual auto handle_window_resize(int64_t param_1, int64_t param_2) -> void = 0;
         virtual auto on_os_backend_set() -> void = 0;
         virtual auto get_window_size() -> WindowSize
+        {
+            return {};
+        };
+        virtual auto get_window_position() -> WindowPosition
         {
             return {};
         };
@@ -89,12 +122,13 @@ namespace RC::GUI
       public:
         virtual auto init() -> void = 0;
         virtual auto imgui_backend_newframe() -> void = 0;
-        virtual auto create_window() -> void = 0;
+        virtual auto create_window(int loc_x = 100, int loc_y = 100, int size_x = 1280, int size_y = 800) -> void = 0;
         virtual auto exec_message_loop(bool* exit_requested) -> void = 0;
         virtual auto shutdown() -> void = 0;
         virtual auto cleanup() -> void = 0;
         virtual auto get_window_handle() -> void* = 0;
         virtual auto get_window_size() -> WindowSize = 0;
+        virtual auto get_window_position() -> WindowPosition = 0;
         virtual auto on_gfx_backend_set() -> void = 0;
     };
 
@@ -114,7 +148,7 @@ namespace RC::GUI
         inline auto imgui_backend_newframe() -> void override
         {
         }
-        inline auto create_window() -> void override
+        inline auto create_window(int loc_x, int loc_y, int size_x, int size_y) -> void override
         {
         }
         inline auto exec_message_loop([[maybe_unused]] bool* exit_requested) -> void override
@@ -131,6 +165,10 @@ namespace RC::GUI
             return nullptr;
         }
         inline auto get_window_size() -> WindowSize override
+        {
+            return {};
+        }
+        inline auto get_window_position() -> WindowPosition override
         {
             return {};
         }
@@ -181,16 +219,26 @@ namespace RC::GUI
       public:
         using EndOfFrameCallback = std::function<void()>;
 
+        struct WindowSettings
+        {
+            int pos_x = 100;
+            int pos_y = 100;
+            int size_x = 1280;
+            int size_y = 800;
+        };
+
       private:
         std::unique_ptr<GfxBackendBase> m_gfx_backend{};
         std::unique_ptr<OSBackendBase> m_os_backend{};
         Console m_console{};
         LiveView m_live_view{};
-        std::stop_token m_thread_stop_token{};
+        std::stop_token* m_thread_stop_token{};
         bool m_is_open{};
         bool m_exit_requested{};
         std::vector<std::shared_ptr<GUITab>> m_tabs;
         std::mutex m_tabs_mutex;
+        std::string m_imgui_ini_file{};
+        WindowSettings m_backend_window_settings;
 
       public:
         bool m_event_thread_busy{};
@@ -203,12 +251,18 @@ namespace RC::GUI
         ~DebuggingGUI();
 
       public:
-        auto is_valid() -> bool;
-        auto is_open() -> bool
+        [[nodiscard]] auto is_valid() const -> bool;
+        [[nodiscard]] auto is_open() const -> bool
         {
             return m_is_open;
-        };
-        auto setup(std::stop_token&& token) -> void /* override*/;
+        }
+        auto set_open(bool new_open) -> void;
+        [[nodiscard]] auto exit_requested() const -> bool
+        {
+            return m_exit_requested;
+        }
+        auto request_exit() -> void;
+        auto setup(std::stop_token* token) -> void /* override*/;
         auto get_console() -> Console&
         {
             return m_console;
@@ -220,16 +274,25 @@ namespace RC::GUI
         auto set_gfx_backend(GfxBackend) -> void;
         auto add_tab(std::shared_ptr<GUITab> tab) -> void;
         auto remove_tab(std::shared_ptr<GUITab> tab) -> void;
+        auto uninitialize() -> void;
+        auto main_loop_internal() -> void;
 
       private:
         auto on_update() -> void;
-        auto main_loop_internal() -> void;
+
+      private:
+        // TODO: Move ImGui data saves to their own object
+        std::chrono::time_point<std::chrono::steady_clock> m_imgui_last_save = std::chrono::steady_clock::now();
+        static auto imgui_ue4ss_data_should_save() -> bool;
+        static auto imgui_ue4ss_data_read_open(ImGuiContext*, ImGuiSettingsHandler*, const char* name) -> void*;
+        static auto imgui_ue4ss_data_read_line(ImGuiContext*, ImGuiSettingsHandler*, void* entry, const char* line) -> void;
+        static auto imgui_ue4ss_data_write_all(ImGuiContext* ctx, ImGuiSettingsHandler* handler, ImGuiTextBuffer* buf) -> void;
 
       public:
         static auto execute_at_end_of_frame(EndOfFrameCallback callback) -> void;
     };
 
-    auto gui_thread(std::stop_token stop_token, DebuggingGUI* debugging_ui) -> void;
+    auto gui_thread(std::optional<std::stop_token> stop_token, DebuggingGUI* debugging_ui) -> void;
 
     // Helper function for executing code that can throw exceptions in the middle of a frame.
     // Moves the exception to the end of the frame so that we can ImGUI errors.

@@ -1,16 +1,18 @@
 #define NOMINMAX
 
 #include <filesystem>
+#include <Windows.h>
 
 #include <DynamicOutput/DynamicOutput.hpp>
+#include <Helpers/SysError.hpp>
 #include <Helpers/String.hpp>
 #include <Mod/CppMod.hpp>
 
 namespace RC
 {
-    CppMod::CppMod(UE4SSProgram& program, std::wstring&& mod_name, std::wstring&& mod_path) : Mod(program, std::move(mod_name), std::move(mod_path))
+    CppMod::CppMod(UE4SSProgram& program, StringType&& mod_name, StringType&& mod_path) : Mod(program, std::move(mod_name), std::move(mod_path))
     {
-        m_dlls_path = m_mod_path + L"\\dlls";
+        m_dlls_path = m_mod_path / STR("dlls");
 
         if (!std::filesystem::exists(m_dlls_path))
         {
@@ -19,14 +21,15 @@ namespace RC
             return;
         }
 
-        auto dll_path = m_dlls_path + L"\\main.dll";
+        auto dll_path = m_dlls_path / STR("main.dll");
         // Add mods dlls directory to search path for dynamic/shared linked libraries in mods
         m_dlls_path_cookie = AddDllDirectory(m_dlls_path.c_str());
         m_main_dll_module = LoadLibraryExW(dll_path.c_str(), NULL, LOAD_LIBRARY_SEARCH_DLL_LOAD_DIR | LOAD_LIBRARY_SEARCH_DEFAULT_DIRS);
 
         if (!m_main_dll_module)
         {
-            Output::send<LogLevel::Warning>(STR("Failed to load dll <{}> for mod {}, error code: 0x{:x}\n"), dll_path, m_mod_name, GetLastError());
+            Output::send<LogLevel::Warning>(STR("Failed to load dll <{}> for mod {}, error: {}\n"),
+                                            ensure_str(dll_path), m_mod_name, SysError(GetLastError()).c_str());
             set_installable(false);
             return;
         }
@@ -58,9 +61,9 @@ namespace RC
             if (!Output::has_internal_error())
             {
                 Output::send<LogLevel::Warning>(STR("Failed to load dll <{}> for mod {}, because: {}\n"),
-                                                m_dlls_path + L"\\main.dll\n",
+                                                ensure_str((m_dlls_path / STR("main.dll"))),
                                                 m_mod_name,
-                                                to_wstring(e.what()));
+                                                ensure_str(e.what()));
             }
             else
             {
@@ -82,19 +85,39 @@ namespace RC
                                    LuaMadeSimple::Lua& lua,
                                    LuaMadeSimple::Lua& main_lua,
                                    LuaMadeSimple::Lua& async_lua,
-                                   std::vector<LuaMadeSimple::Lua*>& hook_luas) -> void
+                                   LuaMadeSimple::Lua* hook_lua) -> void
     {
         if (m_mod)
         {
+            // Call new API
+            m_mod->on_lua_start(mod_name, lua, main_lua, async_lua, hook_lua);
+
+            // Call old deprecated API for backwards compatibility
+            std::vector<LuaMadeSimple::Lua*> hook_luas;
+            if (hook_lua)
+            {
+                hook_luas.push_back(hook_lua);
+            }
             m_mod->on_lua_start(mod_name, lua, main_lua, async_lua, hook_luas);
         }
     }
 
-    auto CppMod::fire_on_lua_start(LuaMadeSimple::Lua& lua, LuaMadeSimple::Lua& main_lua, LuaMadeSimple::Lua& async_lua, std::vector<LuaMadeSimple::Lua*>& hook_luas)
-            -> void
+    auto CppMod::fire_on_lua_start(LuaMadeSimple::Lua& lua,
+                                   LuaMadeSimple::Lua& main_lua,
+                                   LuaMadeSimple::Lua& async_lua,
+                                   LuaMadeSimple::Lua* hook_lua) -> void
     {
         if (m_mod)
         {
+            // Call new API
+            m_mod->on_lua_start(lua, main_lua, async_lua, hook_lua);
+
+            // Call old deprecated API for backwards compatibility
+            std::vector<LuaMadeSimple::Lua*> hook_luas;
+            if (hook_lua)
+            {
+                hook_luas.push_back(hook_lua);
+            }
             m_mod->on_lua_start(lua, main_lua, async_lua, hook_luas);
         }
     }
@@ -103,19 +126,36 @@ namespace RC
                                   LuaMadeSimple::Lua& lua,
                                   LuaMadeSimple::Lua& main_lua,
                                   LuaMadeSimple::Lua& async_lua,
-                                  std::vector<LuaMadeSimple::Lua*>& hook_luas) -> void
+                                  LuaMadeSimple::Lua* hook_lua) -> void
     {
         if (m_mod)
         {
+            // Call new API
+            m_mod->on_lua_stop(mod_name, lua, main_lua, async_lua, hook_lua);
+
+            // Call old deprecated API for backwards compatibility
+            std::vector<LuaMadeSimple::Lua*> hook_luas;
+            if (hook_lua)
+            {
+                hook_luas.push_back(hook_lua);
+            }
             m_mod->on_lua_stop(mod_name, lua, main_lua, async_lua, hook_luas);
         }
     }
 
-    auto CppMod::fire_on_lua_stop(LuaMadeSimple::Lua& lua, LuaMadeSimple::Lua& main_lua, LuaMadeSimple::Lua& async_lua, std::vector<LuaMadeSimple::Lua*>& hook_luas)
-            -> void
+    auto CppMod::fire_on_lua_stop(LuaMadeSimple::Lua& lua, LuaMadeSimple::Lua& main_lua, LuaMadeSimple::Lua& async_lua, LuaMadeSimple::Lua* hook_lua) -> void
     {
         if (m_mod)
         {
+            // Call new API
+            m_mod->on_lua_stop(lua, main_lua, async_lua, hook_lua);
+
+            // Call old deprecated API for backwards compatibility
+            std::vector<LuaMadeSimple::Lua*> hook_luas;
+            if (hook_lua)
+            {
+                hook_luas.push_back(hook_lua);
+            }
             m_mod->on_lua_stop(lua, main_lua, async_lua, hook_luas);
         }
     }
@@ -125,6 +165,14 @@ namespace RC
         if (m_mod)
         {
             m_mod->on_unreal_init();
+        }
+    }
+
+    auto CppMod::fire_ui_init() -> void
+    {
+        if (m_mod)
+        {
+            m_mod->on_ui_init();
         }
     }
 
@@ -144,7 +192,7 @@ namespace RC
         }
     }
 
-    auto CppMod::fire_dll_load(std::wstring_view dll_name) -> void
+    auto CppMod::fire_dll_load(StringViewType dll_name) -> void
     {
         if (m_mod)
         {

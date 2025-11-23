@@ -12,21 +12,39 @@ includes("LuaMadeSimple")
 includes("LuaRaw")
 includes("MProgram")
 includes("ParserBase")
+if get_config("ue4ssCross") ~= "msvc-wine" then
+    includes("patternsleuth_bind")
+end
 includes("Profiler")
 includes("ScopedTimer")
 includes("SinglePassSigScanner")
 includes("Unreal")
+includes("String")
 
--- Patternsleuth -> START
+task("manuallyBuildLocalPatternsleuth")
+    on_run(function()
+        os.execv("cargo rustc --release --target x86_64-pc-windows-msvc --crate-type=staticlib", {}, {curdir = get_config("ue4ssRoot") .. "/deps/first/patternsleuth_bind"})
+    end)
 
-add_requires("cargo::patternsleuth_bind", { debug = is_mode_debug(), configs = { cargo_toml = path.join(os.scriptdir(), "patternsleuth_bind/Cargo.toml"), runtimes = get_mode_runtimes() } })
+if get_config("ue4ssCross") ~= "msvc-wine" then
 
-target("patternsleuth_bind")
-    set_kind("static")
-    set_values("rust.cratetype", "staticlib")
-    add_files("patternsleuth_bind/src/lib.rs")
-    add_packages("cargo::patternsleuth_bind")
+    -- The patternsleuth target is managed by the cargo.build rule.
+    target("patternsleuth")
+        set_kind("static")
+        add_rules("cargo.build", {project_name = "patternsleuth", is_debug = is_mode_debug(), features = { "process-internal", "image-pe" }})
+        add_files("patternsleuth/Cargo.toml")
+        -- Exposes the rust *.rs files to the Visual Studio project filters.
+        add_extrafiles("patternsleuth/**.rs")
 
-    add_links("ws2_32", "advapi32", "userenv", "ntdll", "oleaut32", "bcrypt", "ole32", { public = true })
+else
+    target("patternsleuth_bind")
+        set_kind("static")
+        add_linkdirs(os.scriptdir() .. "/patternsleuth_bind/target/x86_64-pc-windows-msvc/release", {public = true})
+        add_links("patternsleuth_bind", "ws2_32", "userenv", {public = true})
+        add_links("ntdll", "Ole32", "OleAut32", {public = true})
 
--- Patternsleuth -> END
+        before_build(function()
+            import("core.project.task")
+            task.run("manuallyBuildLocalPatternsleuth")
+        end)
+end

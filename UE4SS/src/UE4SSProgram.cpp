@@ -12,7 +12,7 @@
 #include <fstream>
 #include <limits>
 #include <unordered_set>
-
+#include <fmt/chrono.h>
 #include <Profiler/Profiler.hpp>
 #include <DynamicOutput/DynamicOutput.hpp>
 #include <ExceptionHandling.hpp>
@@ -23,6 +23,7 @@
 #include <Helpers/Format.hpp>
 #include <Helpers/Integer.hpp>
 #include <Helpers/String.hpp>
+#include <Helpers/Time.hpp>
 #include <IniParser/Ini.hpp>
 #include <LuaLibrary.hpp>
 #include <LuaType/LuaCustomProperty.hpp>
@@ -53,7 +54,11 @@
 #include <Unreal/UScriptStruct.hpp>
 #include <Unreal/UnrealInitializer.hpp>
 #include <Unreal/World.hpp>
+#include <Unreal/FWorldContext.hpp>
+#include <Unreal/Engine/UDataTable.hpp>
 #include <UnrealDef.hpp>
+
+#include <polyhook2/PE/IatHook.hpp>
 
 namespace RC
 {
@@ -99,31 +104,44 @@ namespace RC
     {
         Output::send(STR("\n##### MEMBER OFFSETS START #####\n\n"));
         OUTPUT_MEMBER_OFFSETS_FOR_STRUCT(UObjectBase);
-        OUTPUT_MEMBER_OFFSETS_FOR_STRUCT(UScriptStruct);
         OUTPUT_MEMBER_OFFSETS_FOR_STRUCT(UScriptStruct::ICppStructOps);
-        OUTPUT_MEMBER_OFFSETS_FOR_STRUCT(FField);
-        OUTPUT_MEMBER_OFFSETS_FOR_STRUCT(FOutputDevice);
-        OUTPUT_MEMBER_OFFSETS_FOR_STRUCT(FEnumProperty);
         OUTPUT_MEMBER_OFFSETS_FOR_STRUCT(UStruct);
-        OUTPUT_MEMBER_OFFSETS_FOR_STRUCT(UFunction);
-        OUTPUT_MEMBER_OFFSETS_FOR_STRUCT(UField);
-        OUTPUT_MEMBER_OFFSETS_FOR_STRUCT(FProperty);
-        OUTPUT_MEMBER_OFFSETS_FOR_STRUCT(UWorld);
+        OUTPUT_MEMBER_OFFSETS_FOR_STRUCT(UScriptStruct);
         OUTPUT_MEMBER_OFFSETS_FOR_STRUCT(UClass);
         OUTPUT_MEMBER_OFFSETS_FOR_STRUCT(UEnum);
+        OUTPUT_MEMBER_OFFSETS_FOR_STRUCT(UFunction);
+        OUTPUT_MEMBER_OFFSETS_FOR_STRUCT(USparseDelegateFunction);
+        OUTPUT_MEMBER_OFFSETS_FOR_STRUCT(UField);
+        OUTPUT_MEMBER_OFFSETS_FOR_STRUCT(FField);
+        OUTPUT_MEMBER_OFFSETS_FOR_STRUCT(FProperty);
+        OUTPUT_MEMBER_OFFSETS_FOR_STRUCT(FNumericProperty);
         OUTPUT_MEMBER_OFFSETS_FOR_STRUCT(FObjectPropertyBase);
-        OUTPUT_MEMBER_OFFSETS_FOR_STRUCT(FDelegateProperty);
-        OUTPUT_MEMBER_OFFSETS_FOR_STRUCT(FMulticastDelegateProperty);
-        OUTPUT_MEMBER_OFFSETS_FOR_STRUCT(FSetProperty);
         OUTPUT_MEMBER_OFFSETS_FOR_STRUCT(FStructProperty);
         OUTPUT_MEMBER_OFFSETS_FOR_STRUCT(FArrayProperty);
         OUTPUT_MEMBER_OFFSETS_FOR_STRUCT(FMapProperty);
+        OUTPUT_MEMBER_OFFSETS_FOR_STRUCT(FSetProperty);
         OUTPUT_MEMBER_OFFSETS_FOR_STRUCT(FBoolProperty);
         OUTPUT_MEMBER_OFFSETS_FOR_STRUCT(FByteProperty);
+        OUTPUT_MEMBER_OFFSETS_FOR_STRUCT(FEnumProperty);
         OUTPUT_MEMBER_OFFSETS_FOR_STRUCT(FClassProperty);
         OUTPUT_MEMBER_OFFSETS_FOR_STRUCT(FSoftClassProperty);
+        OUTPUT_MEMBER_OFFSETS_FOR_STRUCT(FDelegateProperty);
+        OUTPUT_MEMBER_OFFSETS_FOR_STRUCT(FMulticastDelegateProperty);
         OUTPUT_MEMBER_OFFSETS_FOR_STRUCT(FInterfaceProperty);
         OUTPUT_MEMBER_OFFSETS_FOR_STRUCT(FFieldPathProperty);
+        OUTPUT_MEMBER_OFFSETS_FOR_STRUCT(FWorldContext);
+        OUTPUT_MEMBER_OFFSETS_FOR_STRUCT(FOutputDevice);
+        OUTPUT_MEMBER_OFFSETS_FOR_STRUCT(FArchiveState);
+        OUTPUT_MEMBER_OFFSETS_FOR_STRUCT(FArchive);
+        OUTPUT_MEMBER_OFFSETS_FOR_STRUCT(AActor);
+        OUTPUT_MEMBER_OFFSETS_FOR_STRUCT(AGameModeBase);
+        OUTPUT_MEMBER_OFFSETS_FOR_STRUCT(AGameMode);
+        OUTPUT_MEMBER_OFFSETS_FOR_STRUCT(UEngine);
+        OUTPUT_MEMBER_OFFSETS_FOR_STRUCT(UGameViewportClient);
+        OUTPUT_MEMBER_OFFSETS_FOR_STRUCT(UPlayer);
+        OUTPUT_MEMBER_OFFSETS_FOR_STRUCT(ULocalPlayer);
+        OUTPUT_MEMBER_OFFSETS_FOR_STRUCT(UWorld);
+        OUTPUT_MEMBER_OFFSETS_FOR_STRUCT(UDataTable);
         Output::send(STR("\n##### MEMBER OFFSETS END #####\n\n"));
     }
 
@@ -131,7 +149,7 @@ namespace RC
     {
         UE4SSProgram& program = UE4SSProgram::get_program();
         HMODULE lib = PLH::FnCast(program.m_hook_trampoline_load_library_a, &LoadLibraryA)(dll_name);
-        program.fire_dll_load_for_cpp_mods(to_wstring(dll_name));
+        program.fire_dll_load_for_cpp_mods(ensure_str(dll_name));
         return lib;
     }
 
@@ -139,7 +157,7 @@ namespace RC
     {
         UE4SSProgram& program = UE4SSProgram::get_program();
         HMODULE lib = PLH::FnCast(program.m_hook_trampoline_load_library_ex_a, &LoadLibraryExA)(dll_name, file, flags);
-        program.fire_dll_load_for_cpp_mods(to_wstring(dll_name));
+        program.fire_dll_load_for_cpp_mods(ensure_str(dll_name));
         return lib;
     }
 
@@ -147,7 +165,7 @@ namespace RC
     {
         UE4SSProgram& program = UE4SSProgram::get_program();
         HMODULE lib = PLH::FnCast(program.m_hook_trampoline_load_library_w, &LoadLibraryW)(dll_name);
-        program.fire_dll_load_for_cpp_mods(dll_name);
+        program.fire_dll_load_for_cpp_mods(ToCharTypePtr(dll_name));
         return lib;
     }
 
@@ -155,11 +173,11 @@ namespace RC
     {
         UE4SSProgram& program = UE4SSProgram::get_program();
         HMODULE lib = PLH::FnCast(program.m_hook_trampoline_load_library_ex_w, &LoadLibraryExW)(dll_name, file, flags);
-        program.fire_dll_load_for_cpp_mods(dll_name);
+        program.fire_dll_load_for_cpp_mods(ToCharTypePtr(dll_name));
         return lib;
     }
 
-    UE4SSProgram::UE4SSProgram(const std::wstring& moduleFilePath, std::initializer_list<BinaryOptions> options) : MProgram(options)
+    UE4SSProgram::UE4SSProgram(const std::filesystem::path& moduleFilePath, std::initializer_list<BinaryOptions> options) : MProgram(options)
     {
         ProfilerScope();
         s_program = this;
@@ -174,7 +192,7 @@ namespace RC
             }
             catch (std::exception& e)
             {
-                create_emergency_console_for_early_error(std::format(STR("The IniParser failed to parse: {}"), to_wstring(e.what())));
+                create_emergency_console_for_early_error(fmt::format(STR("The IniParser failed to parse: {}"), ensure_str(e.what())));
                 return;
             }
 
@@ -189,7 +207,18 @@ namespace RC
 
             // Setup the log file
             auto& file_device = Output::set_default_devices<Output::NewFileDevice>();
-            file_device.set_file_name_and_path(m_log_directory / m_log_file_name);
+            file_device.set_file_name_and_path(ensure_str((m_log_directory / m_log_file_name)));
+
+            if (const auto ue4ss_mods_paths_var_raw = std::getenv("UE4SS_MODS_PATHS"); ue4ss_mods_paths_var_raw)
+            {
+                const auto ue4ss_mods_paths_var = ensure_str(ue4ss_mods_paths_var_raw);
+                Output::send(STR("Environment variable 'UE4SS_MODS_PATHS' present, adding 'Mods' path overrides: {}\n"), ue4ss_mods_paths_var);
+                const auto paths = parse_semicolon_separated_string(ue4ss_mods_paths_var);
+                for (const auto& path : std::ranges::reverse_view(paths))
+                {
+                    add_mods_directory(std::filesystem::weakly_canonical(path));
+                }
+            }
 
             create_simple_console();
 
@@ -197,11 +226,21 @@ namespace RC
             {
                 m_console_device = &Output::set_default_devices<Output::ConsoleDevice>();
                 m_console_device->set_formatter([](File::StringViewType string) -> File::StringType {
-                    return std::format(STR("[{}] {}"), std::format(STR("{:%X}"), std::chrono::system_clock::now()), string);
+                    return fmt::format(STR("[{}] {}"), get_now_as_string(STR("{:%X}")), string);
                 });
                 if (settings_manager.Debug.DebugConsoleVisible)
                 {
-                    m_render_thread = std::jthread{&GUI::gui_thread, &m_debugging_gui};
+                    switch (settings_manager.Debug.RenderMode)
+                    {
+                    case GUI::RenderMode::ExternalThread:
+                        m_render_thread = std::jthread{&GUI::gui_thread, &m_debugging_gui};
+                        break;
+                    case GUI::RenderMode::EngineTick:
+                    case GUI::RenderMode::GameViewportClientTick:
+                        // The hooked game function will pick up on the window being "open", and start rendering.
+                        get_debugging_ui().set_open(true);
+                        break;
+                    }
                 }
             }
 
@@ -219,18 +258,42 @@ namespace RC
                          UE4SS_LIB_VERSION_MAJOR,
                          UE4SS_LIB_VERSION_MINOR,
                          UE4SS_LIB_VERSION_HOTFIX,
-                         std::format(L"{}", UE4SS_LIB_VERSION_PRERELEASE == 0 ? L"" : std::format(L" PreRelease #{}", UE4SS_LIB_VERSION_PRERELEASE)),
-                         std::format(L"{}",
-                                     UE4SS_LIB_BETA_STARTED == 0 ? L"" : (UE4SS_LIB_IS_BETA == 0 ? L" Beta #?" : std::format(L" Beta #{}", UE4SS_LIB_VERSION_BETA))),
-                         to_wstring(UE4SS_LIB_BUILD_GITSHA));
+                         fmt::format(STR("{}"), UE4SS_LIB_VERSION_PRERELEASE == 0 ? STR("") : fmt::format(STR(" PreRelease #{}"), UE4SS_LIB_VERSION_PRERELEASE)),
+                         fmt::format(STR("{}"),
+                                     UE4SS_LIB_BETA_STARTED == 0
+                                             ? STR("")
+                                             : (UE4SS_LIB_IS_BETA == 0 ? STR(" Beta #?") : fmt::format(STR(" Beta #{}"), UE4SS_LIB_VERSION_BETA))),
+                         ensure_str(UE4SS_LIB_BUILD_GITSHA));
+            bool use_local_time = true;
+#ifdef _WIN32
+            if (auto module = GetModuleHandleW(L"ntdll.dll"); module && GetProcAddress(module, "wine_get_version"))
+            {
+                use_local_time = false;
+            }
+#endif
+            if (use_local_time)
+            {
+                try
+                {
+                    Output::send(STR("Timezone: {}\n"), ensure_str(std::chrono::current_zone()->name()));
+                }
+                catch (std::runtime_error&)
+                {
+                    Output::send(STR("Timezone: UTC (local disabled due to lack of support (chrono::current_zone() failed))\n"));
+                }
+            }
+            else
+            {
+                Output::send(STR("Timezone: UTC (local disabled due to wine)\n"));
+            }
 
 #ifdef __clang__
-#define UE4SS_COMPILER L"Clang"
+#define UE4SS_COMPILER STR("Clang")
 #else
-#define UE4SS_COMPILER L"MSVC"
+#define UE4SS_COMPILER STR("MSVC")
 #endif
 
-            Output::send(STR("UE4SS Build Configuration: {} ({})\n"), to_wstring(UE4SS_CONFIGURATION), UE4SS_COMPILER);
+            Output::send(STR("UE4SS Build Configuration: {} ({})\n"), ensure_str(UE4SS_CONFIGURATION), UE4SS_COMPILER);
 
             m_load_library_a_hook = std::make_unique<PLH::IatHook>("kernel32.dll",
                                                                    "LoadLibraryA",
@@ -262,29 +325,34 @@ namespace RC
 
             Unreal::UnrealInitializer::SetupUnrealModules();
 
+            setup_mod_directory_path();
+
             setup_mods();
             install_cpp_mods();
-            start_cpp_mods();
-
-            setup_mod_directory_path();
+            start_cpp_mods(IsInitialStartup::Yes);
 
             if (m_has_game_specific_config)
             {
-                Output::send(STR("Found configuration for game: {}\n"), m_mods_directory.parent_path().filename().c_str());
+                Output::send(STR("Found configuration for game: {}\n"), ensure_str(m_working_directory.filename()));
             }
             else
             {
                 Output::send(STR("No specific game configuration found, using default configuration file\n"));
             }
 
-            Output::send(STR("Config: {}\n\n"), m_settings_path_and_file.c_str());
-            Output::send(STR("root directory: {}\n"), m_root_directory.c_str());
-            Output::send(STR("working directory: {}\n"), m_working_directory.c_str());
-            Output::send(STR("game executable directory: {}\n"), m_game_executable_directory.c_str());
-            Output::send(STR("game executable: {} ({} bytes)\n\n\n"), m_game_path_and_exe_name.c_str(), std::filesystem::file_size(m_game_path_and_exe_name));
-            Output::send(STR("mods directory: {}\n"), m_mods_directory.c_str());
-            Output::send(STR("log directory: {}\n"), m_log_directory.c_str());
-            Output::send(STR("object dumper directory: {}\n\n\n"), m_object_dumper_output_directory.c_str());
+            Output::send(STR("Config: {}\n\n"), ensure_str(m_settings_path_and_file));
+            Output::send(STR("root directory: {}\n"), ensure_str(m_root_directory));
+            Output::send(STR("working directory: {}\n"), ensure_str(m_working_directory));
+            Output::send(STR("game executable directory: {}\n"), ensure_str(m_game_executable_directory));
+            Output::send(STR("game executable: {} ({} bytes)\n\n\n"), ensure_str(m_game_path_and_exe_name), std::filesystem::file_size(m_game_path_and_exe_name));
+            Output::send(STR("mods directories: \n"));
+            for (const auto& [index, mod_directory] : std::ranges::enumerate_view(m_mods_directories))
+            {
+                Output::send(STR("[{}] {}\n"), index, ensure_str(mod_directory));
+            }
+            Output::send(STR("\n"));
+            Output::send(STR("log directory: {}\n"), ensure_str(m_log_directory));
+            Output::send(STR("object dumper directory: {}\n\n\n"), ensure_str(m_object_dumper_output_directory));
         }
         catch (std::runtime_error& e)
         {
@@ -327,7 +395,7 @@ namespace RC
                 // only log modules with unique addresses (non-modular builds have everything in MainExe)
                 if (i == static_cast<size_t>(ScanTarget::MainExe) || main_exe_ptr != module.lpBaseOfDll)
                 {
-                    auto module_name = to_wstring(ScanTargetToString(i));
+                    auto module_name = ensure_str(ScanTargetToString(i));
                     Output::send(STR("{} @ {} size={:#x}\n"), module_name.c_str(), module.lpBaseOfDll, module.SizeOfImage);
                 }
             }
@@ -365,31 +433,28 @@ namespace RC
         }
     }
 
-    auto UE4SSProgram::setup_paths(const std::wstring& moduleFilePathString) -> void
+    auto UE4SSProgram::setup_paths(const std::filesystem::path& moduleFilePath) -> void
     {
         ProfilerScope();
-        const std::filesystem::path moduleFilePath = std::filesystem::path(moduleFilePathString);
-        m_root_directory = moduleFilePath.parent_path().wstring();
-        m_module_file_path = moduleFilePath.wstring();
+        m_root_directory = moduleFilePath.parent_path();
+        m_module_file_path = moduleFilePath;
 
         // The default working directory is the root directory
         // Can be changed by creating a <GameName> directory in the root directory
         // At that point, the working directory will be "root/<GameName>"
         m_working_directory = m_root_directory;
 
-        // Default file to open if there is no game specific config
-        m_default_settings_path_and_file = m_root_directory / m_settings_file_name;
-
         wchar_t exe_path_buffer[1024];
         GetModuleFileNameW(GetModuleHandle(nullptr), exe_path_buffer, 1023);
         std::filesystem::path game_exe_path = exe_path_buffer;
         std::filesystem::path game_directory_path = game_exe_path.parent_path();
+        m_legacy_root_directory = game_directory_path;
+
         m_working_directory = m_root_directory;
-        m_mods_directory = m_working_directory / "Mods";
-        m_game_executable_directory = game_directory_path /*game_exe_path.parent_path()*/;
+        m_game_executable_directory = game_directory_path;
         m_settings_path_and_file = m_root_directory;
         m_game_path_and_exe_name = game_exe_path;
-        m_object_dumper_output_directory = m_game_executable_directory;
+        m_object_dumper_output_directory = m_working_directory;
 
         // Allow loading of DLLs from the game directory
         AddDllDirectory(game_exe_path.c_str());
@@ -405,37 +470,42 @@ namespace RC
             {
                 m_has_game_specific_config = true;
                 m_working_directory = item.path();
-                m_mods_directory = item.path().wstring() + L"\\Mods";
                 m_settings_path_and_file = std::move(item.path());
                 m_log_directory = m_working_directory;
                 m_object_dumper_output_directory = m_working_directory;
+                m_legacy_root_directory = m_legacy_root_directory / item.path();
                 break;
             }
         }
 
         m_log_directory = m_working_directory;
         m_settings_path_and_file.append(m_settings_file_name);
+
+        // Check for legacy locations and update paths accordingly
+        if (std::filesystem::exists(m_legacy_root_directory / m_settings_file_name) && !std::filesystem::exists(m_settings_path_and_file))
+        {
+            m_settings_path_and_file = m_legacy_root_directory / m_settings_file_name;
+        }
     }
 
     auto UE4SSProgram::create_emergency_console_for_early_error(File::StringViewType error_message) -> void
     {
         settings_manager.Debug.SimpleConsoleEnabled = true;
         create_simple_console();
-        printf_s("%S\n", error_message.data());
+        printf_s("%S\n", FromCharTypePtr<wchar_t>(error_message.data()));
     }
 
     auto UE4SSProgram::setup_mod_directory_path() -> void
     {
-        // Mods folder path, typically '<m_working_directory>\Mods'
-        // Can be customized via UE4SS-settings.ini
-        if (settings_manager.Overrides.ModsFolderPath.empty())
+        std::filesystem::path default_mods_path = m_working_directory / "Mods";
+
+        // If no paths were added, check legacy location for fallback
+        if (std::filesystem::exists(m_legacy_root_directory / "Mods") && !std::filesystem::exists(default_mods_path))
         {
-            m_mods_directory = m_mods_directory.empty() ? m_working_directory / "Mods" : m_mods_directory;
+            default_mods_path = m_legacy_root_directory / "Mods";
         }
-        else
-        {
-            m_mods_directory = settings_manager.Overrides.ModsFolderPath;
-        }
+
+        m_mods_directories.insert(m_mods_directories.begin(), default_mods_path);
     }
 
     auto UE4SSProgram::create_simple_console() -> void
@@ -445,7 +515,7 @@ namespace RC
             m_debug_console_device = &Output::set_default_devices<Output::DebugConsoleDevice>();
             Output::set_default_log_level<LogLevel::Normal>();
             m_debug_console_device->set_formatter([](File::StringViewType string) -> File::StringType {
-                return std::format(STR("[{}] {}"), std::format(STR("{:%X}"), std::chrono::system_clock::now()), string);
+                return fmt::format(STR("[{}] {}"), get_now_as_string(STR("{:%X}")), string);
             });
 
             if (AllocConsole())
@@ -482,7 +552,7 @@ namespace RC
     {
         ProfilerScope();
         // Retrieve offsets from the config file
-        const std::wstring offset_overrides_section{L"OffsetOverrides"};
+        const StringType offset_overrides_section{STR("OffsetOverrides")};
 
         load_unreal_offsets_from_file();
 
@@ -550,7 +620,7 @@ namespace RC
         // Virtual function offset overrides
         TRY([&]() {
             ProfilerScopeNamed("loading virtual function offset overrides");
-            static File::StringType virtual_function_offset_override_file{(m_working_directory / STR("VTableLayout.ini")).wstring()};
+            static File::StringType virtual_function_offset_override_file{ensure_str((m_working_directory / STR("VTableLayout.ini")))};
             if (std::filesystem::exists(virtual_function_offset_override_file))
             {
                 auto file =
@@ -736,6 +806,13 @@ namespace RC
                     Unreal::ULocalPlayer::VTableLayoutMap.emplace(item, offset);
                 });
 
+                Output::send<Color::Blue>(STR("UDataTable\n"));
+                retrieve_vtable_layout_from_ini(STR("UDataTable"), [&](uint32_t index, File::StringType& item) {
+                    uint32_t offset = calculate_virtual_function_offset(index, uobjectbase_size, uobjectbaseutility_size, uobject_size, uplayer_size);
+                    Output::send(STR("UDataTable::{} = 0x{:X}\n"), item, offset);
+                    Unreal::UDataTable::VTableLayoutMap.emplace(item, offset);
+                });
+
                 file.close();
             }
         });
@@ -746,10 +823,34 @@ namespace RC
         config.bHookInitGameState = settings_manager.Hooks.HookInitGameState;
         config.bHookCallFunctionByNameWithArguments = settings_manager.Hooks.HookCallFunctionByNameWithArguments;
         config.bHookBeginPlay = settings_manager.Hooks.HookBeginPlay;
+        config.bHookEndPlay = settings_manager.Hooks.HookEndPlay;
         config.bHookLocalPlayerExec = settings_manager.Hooks.HookLocalPlayerExec;
         config.bHookAActorTick = settings_manager.Hooks.HookAActorTick;
+        config.bHookEngineTick = settings_manager.Hooks.HookEngineTick;
+        config.bHookGameViewportClientTick = settings_manager.Hooks.HookGameViewportClientTick;
+        config.bHookUObjectProcessEvent = settings_manager.Hooks.HookUObjectProcessEvent;
+        config.bHookProcessConsoleExec = settings_manager.Hooks.HookProcessConsoleExec;
+        config.bHookUStructLink = settings_manager.Hooks.HookUStructLink;
         config.FExecVTableOffsetInLocalPlayer = settings_manager.Hooks.FExecVTableOffsetInLocalPlayer;
-
+        // Apply Debug Build setting from settings file only for now.
+        Unreal::Version::DebugBuild = settings_manager.EngineVersionOverride.DebugBuild;
+        Output::send<LogLevel::Warning>(STR("DebugGame Setting Enabled? {}\n"), Unreal::Version::DebugBuild);
+        if (settings_manager.General.DoEarlyScan)
+        {
+            // Scan a single time while the game thread is locked after UE4SS is attached.
+            Unreal::UnrealInitializer::PreInitialize(config);
+            try
+            {
+                Unreal::UnrealInitializer::ScanGame();
+            }
+            catch (std::runtime_error&)
+            {
+                // No work to be done here. Error is non-fatal, just let the 'Initialize' function take it from here.
+            }
+        }
+        cpp_mods_done_loading.store(true);
+        cpp_mods_done_loading.notify_one();
+        // Continuous scanning, and finish initializing after the game thread is unlocked.
         Unreal::UnrealInitializer::Initialize(config);
 
         bool can_create_custom_events{true};
@@ -767,6 +868,10 @@ namespace RC
         {
             Output::send<LogLevel::Warning>(STR("<Put function here responsible for creating custom UFunctions or events for BPs>\n"));
         }
+        if (!Unreal::GNatives_Internal)
+        {
+            Output::send<LogLevel::Warning>(STR("GNatives not found, you will experience limited hooking functionality in certain scenarios.\n"));
+        }
     }
 
     auto UE4SSProgram::share_lua_functions() -> void
@@ -776,6 +881,37 @@ namespace RC
         m_shared_functions.call_script_function_function = &LuaLibrary::call_script_function;
         m_shared_functions.is_ue4ss_initialized_function = &LuaLibrary::is_ue4ss_initialized;
         Output::send(STR("m_shared_functions: {}\n"), static_cast<void*>(&m_shared_functions));
+    }
+
+    static bool s_gui_initialized_for_game_thread{};
+    static bool s_gui_initializing_for_game_thread{};
+    auto gui_render_thread_tick(Unreal::UObject*, float) -> void
+    {
+        if (UE4SSProgram::settings_manager.Debug.RenderMode == GUI::RenderMode::ExternalThread)
+        {
+            return;
+        }
+        std::lock_guard guard(UE4SSProgram::get_program().m_render_thread_mutex);
+        if (UE4SSProgram::get_program().get_debugging_ui().exit_requested())
+        {
+            UE4SSProgram::get_program().get_debugging_ui().uninitialize();
+            s_gui_initialized_for_game_thread = false;
+            return;
+        }
+        if (!UE4SSProgram::get_program().get_debugging_ui().is_open())
+        {
+            return;
+        }
+        if (!s_gui_initialized_for_game_thread)
+        {
+            GUI::gui_thread(std::nullopt, &UE4SSProgram::get_program().get_debugging_ui());
+            s_gui_initialized_for_game_thread = true;
+        }
+        if (s_gui_initializing_for_game_thread)
+        {
+            s_gui_initializing_for_game_thread = false;
+        }
+        UE4SSProgram::get_program().get_debugging_ui().main_loop_internal();
     }
 
     auto UE4SSProgram::on_program_start() -> void
@@ -788,32 +924,58 @@ namespace RC
         UObjectArray::AddUObjectCreateListener(&FUEDeathListener::UEDeathListener);
         //*/
 
+        if (settings_manager.Debug.RenderMode == GUI::RenderMode::EngineTick)
+        {
+            Hook::RegisterEngineTickPostCallback(gui_render_thread_tick);
+        }
+        else if (settings_manager.Debug.RenderMode == GUI::RenderMode::GameViewportClientTick)
+        {
+            Hook::RegisterGameViewportClientTickPostCallback(gui_render_thread_tick);
+        }
+
         if (settings_manager.Debug.DebugConsoleEnabled)
         {
             if (settings_manager.General.UseUObjectArrayCache)
             {
                 m_debugging_gui.get_live_view().set_listeners_allowed(true);
-                m_debugging_gui.get_live_view().set_listeners();
             }
             else
             {
                 m_debugging_gui.get_live_view().set_listeners_allowed(false);
             }
-
-            m_input_handler.register_keydown_event(Input::Key::O, {Input::ModifierKey::CONTROL}, [&]() {
+            register_keydown_event(Input::Key::O, {Input::ModifierKey::CONTROL}, [&]() {
                 TRY([&] {
+                    std::lock_guard guard(m_render_thread_mutex);
+                    if (s_gui_initializing_for_game_thread)
+                    {
+                        Output::send<LogLevel::Verbose>(STR("Cancelled GUI toggle during GUI initialization.\n"));
+                        return;
+                    }
                     auto was_gui_open = get_debugging_ui().is_open();
                     stop_render_thread();
                     if (!was_gui_open)
                     {
-                        m_render_thread = std::jthread{&GUI::gui_thread, &m_debugging_gui};
+                        switch (settings_manager.Debug.RenderMode)
+                        {
+                        case GUI::RenderMode::ExternalThread:
+                            m_render_thread = std::jthread{&GUI::gui_thread, &m_debugging_gui};
+                            break;
+                        case GUI::RenderMode::EngineTick:
+                        case GUI::RenderMode::GameViewportClientTick:
+                            // The hooked game function will pick up on the window being "open", and start rendering.
+                            s_gui_initialized_for_game_thread = false;
+                            s_gui_initializing_for_game_thread = true;
+                            get_debugging_ui().set_open(true);
+                            break;
+                        }
+                        fire_ui_init_for_cpp_mods();
                     }
                 });
             });
         }
 
 #ifdef TIME_FUNCTION_MACRO_ENABLED
-        m_input_handler.register_keydown_event(Input::Key::Y, {Input::ModifierKey::CONTROL}, [&]() {
+        register_keydown_event(Input::Key::Y, {Input::ModifierKey::CONTROL}, [&]() {
             if (FunctionTimerFrame::s_timer_enabled)
             {
                 FunctionTimerFrame::stop_profiling();
@@ -830,22 +992,40 @@ namespace RC
 
         TRY([&] {
             ObjectDumper::init();
-
             if (settings_manager.General.EnableHotReloadSystem)
             {
-                m_input_handler.register_keydown_event(Input::Key::R, {Input::ModifierKey::CONTROL}, [&]() {
+                register_keydown_event(settings_manager.General.HotReloadKey, {Input::ModifierKey::CONTROL}, [&]() {
                     TRY([&] {
                         reinstall_mods();
                     });
                 });
             }
-
             if ((settings_manager.ObjectDumper.LoadAllAssetsBeforeDumpingObjects || settings_manager.CXXHeaderGenerator.LoadAllAssetsBeforeGeneratingCXXHeaders) &&
                 Unreal::Version::IsBelow(4, 17))
             {
                 Output::send<LogLevel::Warning>(
                         STR("FAssetData not available in <4.17, ignoring 'LoadAllAssetsBeforeDumpingObjects' & 'LoadAllAssetsBeforeGeneratingCXXHeaders'."));
             }
+            else if (!bFAssetDataAvailable)
+            {
+                Output::send<LogLevel::Warning>(
+                        STR("FAssetData not available, ignoring 'LoadAllAssetsBeforeDumpingObjects' & 'LoadAllAssetsBeforeGeneratingCXXHeaders'."));
+            }
+
+#ifdef HAS_INPUT
+            m_input_handler.init();
+            if (!settings_manager.General.InputSource.empty())
+            {
+                if (m_input_handler.set_input_source(to_string(settings_manager.General.InputSource)))
+                {
+                    Output::send(STR("Input source set to: {}\n"), to_generic_string(m_input_handler.get_current_input_source()));
+                }
+                else
+                {
+                    Output::send<LogLevel::Error>(STR("Failed to set input source to: {}\n"), settings_manager.General.InputSource);
+                }
+            }
+#endif
 
             install_lua_mods();
             LuaMod::on_program_start();
@@ -855,7 +1035,7 @@ namespace RC
 
         if (settings_manager.General.EnableDebugKeyBindings)
         {
-            m_input_handler.register_keydown_event(Input::Key::NUM_NINE, {Input::ModifierKey::CONTROL}, [&]() {
+            register_keydown_event(Input::Key::NUM_NINE, {Input::ModifierKey::CONTROL}, [&]() {
                 generate_uht_compatible_headers();
             });
         }
@@ -917,9 +1097,9 @@ namespace RC
                 }
             }
             //*/
-
+#ifdef HAS_INPUT
             m_input_handler.process_event();
-
+#endif
             {
                 ProfilerScopeNamed("mod update processing");
 
@@ -940,28 +1120,35 @@ namespace RC
 
     auto UE4SSProgram::setup_unreal_properties() -> void
     {
-        LuaType::StaticState::m_property_value_pushers.emplace(FName(L"ObjectProperty").GetComparisonIndex(), &LuaType::push_objectproperty);
-        LuaType::StaticState::m_property_value_pushers.emplace(FName(L"ClassProperty").GetComparisonIndex(), &LuaType::push_classproperty);
-        LuaType::StaticState::m_property_value_pushers.emplace(FName(L"Int8Property").GetComparisonIndex(), &LuaType::push_int8property);
-        LuaType::StaticState::m_property_value_pushers.emplace(FName(L"Int16Property").GetComparisonIndex(), &LuaType::push_int16property);
-        LuaType::StaticState::m_property_value_pushers.emplace(FName(L"IntProperty").GetComparisonIndex(), &LuaType::push_intproperty);
-        LuaType::StaticState::m_property_value_pushers.emplace(FName(L"Int64Property").GetComparisonIndex(), &LuaType::push_int64property);
-        LuaType::StaticState::m_property_value_pushers.emplace(FName(L"ByteProperty").GetComparisonIndex(), &LuaType::push_byteproperty);
-        LuaType::StaticState::m_property_value_pushers.emplace(FName(L"UInt16Property").GetComparisonIndex(), &LuaType::push_uint16property);
-        LuaType::StaticState::m_property_value_pushers.emplace(FName(L"UInt32Property").GetComparisonIndex(), &LuaType::push_uint32property);
-        LuaType::StaticState::m_property_value_pushers.emplace(FName(L"UInt64Property").GetComparisonIndex(), &LuaType::push_uint64property);
-        LuaType::StaticState::m_property_value_pushers.emplace(FName(L"StructProperty").GetComparisonIndex(), &LuaType::push_structproperty);
-        LuaType::StaticState::m_property_value_pushers.emplace(FName(L"ArrayProperty").GetComparisonIndex(), &LuaType::push_arrayproperty);
-        LuaType::StaticState::m_property_value_pushers.emplace(FName(L"FloatProperty").GetComparisonIndex(), &LuaType::push_floatproperty);
-        LuaType::StaticState::m_property_value_pushers.emplace(FName(L"DoubleProperty").GetComparisonIndex(), &LuaType::push_doubleproperty);
-        LuaType::StaticState::m_property_value_pushers.emplace(FName(L"BoolProperty").GetComparisonIndex(), &LuaType::push_boolproperty);
-        LuaType::StaticState::m_property_value_pushers.emplace(FName(L"EnumProperty").GetComparisonIndex(), &LuaType::push_enumproperty);
-        LuaType::StaticState::m_property_value_pushers.emplace(FName(L"WeakObjectProperty").GetComparisonIndex(), &LuaType::push_weakobjectproperty);
-        LuaType::StaticState::m_property_value_pushers.emplace(FName(L"NameProperty").GetComparisonIndex(), &LuaType::push_nameproperty);
-        LuaType::StaticState::m_property_value_pushers.emplace(FName(L"TextProperty").GetComparisonIndex(), &LuaType::push_textproperty);
-        LuaType::StaticState::m_property_value_pushers.emplace(FName(L"StrProperty").GetComparisonIndex(), &LuaType::push_strproperty);
-        LuaType::StaticState::m_property_value_pushers.emplace(FName(L"SoftClassProperty").GetComparisonIndex(), &LuaType::push_softclassproperty);
-        LuaType::StaticState::m_property_value_pushers.emplace(FName(L"InterfaceProperty").GetComparisonIndex(), &LuaType::push_interfaceproperty);
+        LuaType::StaticState::m_property_value_pushers.emplace(FName(STR("ObjectProperty"), Unreal::FNAME_Find).GetComparisonIndex(), &LuaType::push_objectproperty);
+        LuaType::StaticState::m_property_value_pushers.emplace(FName(STR("ClassProperty"), Unreal::FNAME_Find).GetComparisonIndex(), &LuaType::push_classproperty);
+        LuaType::StaticState::m_property_value_pushers.emplace(FName(STR("Int8Property"), Unreal::FNAME_Find).GetComparisonIndex(), &LuaType::push_int8property);
+        LuaType::StaticState::m_property_value_pushers.emplace(FName(STR("Int16Property"), Unreal::FNAME_Find).GetComparisonIndex(), &LuaType::push_int16property);
+        LuaType::StaticState::m_property_value_pushers.emplace(FName(STR("IntProperty"), Unreal::FNAME_Find).GetComparisonIndex(), &LuaType::push_intproperty);
+        LuaType::StaticState::m_property_value_pushers.emplace(FName(STR("Int64Property"), Unreal::FNAME_Find).GetComparisonIndex(), &LuaType::push_int64property);
+        LuaType::StaticState::m_property_value_pushers.emplace(FName(STR("ByteProperty"), Unreal::FNAME_Find).GetComparisonIndex(), &LuaType::push_byteproperty);
+        LuaType::StaticState::m_property_value_pushers.emplace(FName(STR("UInt16Property"), Unreal::FNAME_Find).GetComparisonIndex(), &LuaType::push_uint16property);
+        LuaType::StaticState::m_property_value_pushers.emplace(FName(STR("UInt32Property"), Unreal::FNAME_Find).GetComparisonIndex(), &LuaType::push_uint32property);
+        LuaType::StaticState::m_property_value_pushers.emplace(FName(STR("UInt64Property"), Unreal::FNAME_Find).GetComparisonIndex(), &LuaType::push_uint64property);
+        LuaType::StaticState::m_property_value_pushers.emplace(FName(STR("StructProperty"), Unreal::FNAME_Find).GetComparisonIndex(), &LuaType::push_structproperty);
+        LuaType::StaticState::m_property_value_pushers.emplace(FName(STR("ArrayProperty"), Unreal::FNAME_Find).GetComparisonIndex(), &LuaType::push_arrayproperty);
+        LuaType::StaticState::m_property_value_pushers.emplace(FName(STR("SetProperty"), Unreal::FNAME_Find).GetComparisonIndex(), &LuaType::push_setproperty);
+        LuaType::StaticState::m_property_value_pushers.emplace(FName(STR("MapProperty"), Unreal::FNAME_Find).GetComparisonIndex(), &LuaType::push_mapproperty);
+        LuaType::StaticState::m_property_value_pushers.emplace(FName(STR("FloatProperty"), Unreal::FNAME_Find).GetComparisonIndex(), &LuaType::push_floatproperty);
+        LuaType::StaticState::m_property_value_pushers.emplace(FName(STR("DoubleProperty"), Unreal::FNAME_Find).GetComparisonIndex(), &LuaType::push_doubleproperty);
+        LuaType::StaticState::m_property_value_pushers.emplace(FName(STR("BoolProperty"), Unreal::FNAME_Find).GetComparisonIndex(), &LuaType::push_boolproperty);
+        LuaType::StaticState::m_property_value_pushers.emplace(FName(STR("EnumProperty"), Unreal::FNAME_Find).GetComparisonIndex(), &LuaType::push_enumproperty);
+        LuaType::StaticState::m_property_value_pushers.emplace(FName(STR("WeakObjectProperty"), Unreal::FNAME_Find).GetComparisonIndex(), &LuaType::push_weakobjectproperty);
+        LuaType::StaticState::m_property_value_pushers.emplace(FName(STR("NameProperty"), Unreal::FNAME_Find).GetComparisonIndex(), &LuaType::push_nameproperty);
+        LuaType::StaticState::m_property_value_pushers.emplace(FName(STR("TextProperty"), Unreal::FNAME_Find).GetComparisonIndex(), &LuaType::push_textproperty);
+        LuaType::StaticState::m_property_value_pushers.emplace(FName(STR("StrProperty"), Unreal::FNAME_Find).GetComparisonIndex(), &LuaType::push_strproperty);
+        LuaType::StaticState::m_property_value_pushers.emplace(FName(STR("SoftObjectProperty"), Unreal::FNAME_Find).GetComparisonIndex(), &LuaType::push_softobjectproperty);
+        LuaType::StaticState::m_property_value_pushers.emplace(FName(STR("SoftClassProperty"), Unreal::FNAME_Find).GetComparisonIndex(), &LuaType::push_softobjectproperty);
+        LuaType::StaticState::m_property_value_pushers.emplace(FName(STR("InterfaceProperty"), Unreal::FNAME_Find).GetComparisonIndex(), &LuaType::push_interfaceproperty);
+        LuaType::StaticState::m_property_value_pushers.emplace(FName(STR("DelegateProperty"), Unreal::FNAME_Find).GetComparisonIndex(), &LuaType::push_delegateproperty);
+        LuaType::StaticState::m_property_value_pushers.emplace(FName(STR("MulticastDelegateProperty"), Unreal::FNAME_Find).GetComparisonIndex(), &LuaType::push_multicastdelegateproperty);
+        LuaType::StaticState::m_property_value_pushers.emplace(FName(STR("MulticastInlineDelegateProperty"), Unreal::FNAME_Find).GetComparisonIndex(), &LuaType::push_multicastdelegateproperty);
+        LuaType::StaticState::m_property_value_pushers.emplace(FName(STR("MulticastSparseDelegateProperty"), Unreal::FNAME_Find).GetComparisonIndex(), &LuaType::push_multicastsparsedelegateproperty);
     }
 
     auto UE4SSProgram::setup_mods() -> void
@@ -970,39 +1157,46 @@ namespace RC
 
         Output::send(STR("Setting up mods...\n"));
 
-        if (!std::filesystem::exists(m_mods_directory))
+        for (const auto& mods_directory : std::ranges::reverse_view(m_mods_directories))
         {
-            set_error("Mods directory doesn't exist, please create it: <%S>", m_mods_directory.c_str());
-        }
-
-        for (const auto& sub_directory : std::filesystem::directory_iterator(m_mods_directory))
-        {
-            std::error_code ec;
-
-            // Ignore all non-directories
-            if (!sub_directory.is_directory())
+            if (!std::filesystem::exists(mods_directory))
             {
+                Output::send<LogLevel::Warning>(STR("Mods directory doesn't exist, skipping: {}\n"), ensure_str(mods_directory));
                 continue;
             }
-            if (ec.value() != 0)
-            {
-                set_error("is_directory ran into error %d", ec.value());
-            }
 
-            std::wstring directory_lowercase = sub_directory.path().stem().wstring();
-            std::transform(directory_lowercase.begin(), directory_lowercase.end(), directory_lowercase.begin(), std::towlower);
+            Output::send(STR("Loading mods from: {}\n"), ensure_str(mods_directory));
 
-            if (directory_lowercase == L"shared")
+            for (const auto& sub_directory : std::filesystem::directory_iterator(mods_directory))
             {
-                // Do stuff when shared libraries have been implemented
-            }
-            else
-            {
-                // Create the mod but don't install it yet
-                if (std::filesystem::exists(sub_directory.path() / "scripts"))
-                    m_mods.emplace_back(std::make_unique<LuaMod>(*this, sub_directory.path().stem().wstring(), sub_directory.path().wstring()));
-                if (std::filesystem::exists(sub_directory.path() / "dlls"))
-                    m_mods.emplace_back(std::make_unique<CppMod>(*this, sub_directory.path().stem().wstring(), sub_directory.path().wstring()));
+                std::error_code ec;
+
+                // Ignore all non-directories
+                if (!sub_directory.is_directory())
+                {
+                    continue;
+                }
+                if (ec.value() != 0)
+                {
+                    set_error("is_directory ran into error %d", ec.value());
+                }
+
+                StringType directory_lowercase = ensure_str(sub_directory.path().stem());
+                std::transform(directory_lowercase.begin(), directory_lowercase.end(), directory_lowercase.begin(), std::towlower);
+
+                if (directory_lowercase == STR("shared"))
+                {
+                    // Do stuff when shared libraries have been implemented
+                }
+                else
+                {
+                    auto mod_name = ensure_str(sub_directory.path().stem());
+                    // Create the mod but don't install it yet
+                    if (!find_mod_by_name<LuaMod>(mod_name) && std::filesystem::exists(sub_directory.path() / "scripts"))
+                        m_mods.emplace_back(std::make_unique<LuaMod>(*this, std::move(mod_name), ensure_str(sub_directory.path())));
+                    if (!find_mod_by_name<CppMod>(mod_name) && std::filesystem::exists(sub_directory.path() / "dlls"))
+                        m_mods.emplace_back(std::make_unique<CppMod>(*this, std::move(mod_name), ensure_str(sub_directory.path())));
+                }
             }
         }
     }
@@ -1011,6 +1205,7 @@ namespace RC
     auto install_mods(std::vector<std::unique_ptr<Mod>>& mods) -> void
     {
         ProfilerScope();
+
         for (auto& mod : mods)
         {
             if (!dynamic_cast<ModType*>(mod.get()))
@@ -1025,19 +1220,19 @@ namespace RC
             if (mod_name_is_taken)
             {
                 mod->set_installable(false);
-                Output::send(STR("Mod name '{}' is already in use.\n"), mod->get_name());
+                Output::send<LogLevel::Warning>(STR("Mod name '{}' is already in use.\n"), mod->get_name());
                 continue;
             }
 
             if (mod->is_installed())
             {
-                Output::send(STR("Tried to install a mod that was already installed, Mod: '{}'\n"), mod->get_name());
+                Output::send<LogLevel::Warning>(STR("Tried to install a mod that was already installed, Mod: '{}'\n"), mod->get_name());
                 continue;
             }
 
             if (!mod->is_installable())
             {
-                Output::send(STR("Was unable to install mod '{}' for unknown reasons. Mod is not installable.\n"), mod->get_name());
+                Output::send<LogLevel::Warning>(STR("Was unable to install mod '{}' for unknown reasons. Mod is not installable.\n"), mod->get_name());
                 continue;
             }
 
@@ -1047,12 +1242,12 @@ namespace RC
 
     auto UE4SSProgram::install_cpp_mods() -> void
     {
-        install_mods<CppMod>(m_mods);
+        install_mods<CppMod>(get_program().m_mods);
     }
 
     auto UE4SSProgram::install_lua_mods() -> void
     {
-        install_mods<LuaMod>(m_mods);
+        install_mods<LuaMod>(get_program().m_mods);
     }
 
     auto UE4SSProgram::fire_unreal_init_for_cpp_mods() -> void
@@ -1065,6 +1260,19 @@ namespace RC
                 continue;
             }
             mod->fire_unreal_init();
+        }
+    }
+
+    auto UE4SSProgram::fire_ui_init_for_cpp_mods() -> void
+    {
+        ProfilerScope();
+        for (const auto& mod : m_mods)
+        {
+            if (!dynamic_cast<CppMod*>(mod.get()))
+            {
+                continue;
+            }
+            mod->fire_ui_init();
         }
     }
 
@@ -1081,7 +1289,7 @@ namespace RC
         }
     }
 
-    auto UE4SSProgram::fire_dll_load_for_cpp_mods(std::wstring_view dll_name) -> void
+    auto UE4SSProgram::fire_dll_load_for_cpp_mods(StringViewType dll_name) -> void
     {
         for (const auto& mod : m_mods)
         {
@@ -1108,13 +1316,28 @@ namespace RC
         else
         {
             // 'mods.txt' exists, lets parse it
-            std::wifstream mods_stream{enabled_mods_file};
 
-            std::wstring current_line;
+            // First, check for BOM using a byte stream
+            std::ifstream bom_check(enabled_mods_file, std::ios::binary);
+            char bom[3] = {0};
+            bom_check.read(bom, 3);
+            bool has_bom = (bom[0] == '\xEF' && bom[1] == '\xBB' && bom[2] == '\xBF');
+            bom_check.close();
+
+            // Now open the actual stream
+            StreamIType mods_stream{enabled_mods_file};
+
+            // If BOM was detected, skip the first "character" (which will be the BOM interpreted as a wide char)
+            if (has_bom) {
+                wchar_t discard;
+                mods_stream.get(discard);
+            }
+
+            StringType current_line;
             while (std::getline(mods_stream, current_line))
             {
                 // Don't parse any lines with ';'
-                if (current_line.find(L";") != current_line.npos)
+                if (current_line.find(STR(";")) != current_line.npos)
                 {
                     continue;
                 }
@@ -1126,12 +1349,12 @@ namespace RC
                 }
 
                 // Remove all spaces
-                auto end = std::remove(current_line.begin(), current_line.end(), L' ');
+                auto end = std::remove(current_line.begin(), current_line.end(), STR(' '));
                 current_line.erase(end, current_line.end());
 
                 // Parse the line into something that can be converted into proper data
-                std::wstring mod_name = explode_by_occurrence(current_line, L':', 1);
-                std::wstring mod_enabled = explode_by_occurrence(current_line, L':', ExplodeType::FromEnd);
+                StringType mod_name = explode_by_occurrence(current_line, STR(':'), 1);
+                StringType mod_enabled = explode_by_occurrence(current_line, STR(':'), ExplodeType::FromEnd);
 
                 auto mod = UE4SSProgram::find_mod_by_name<ModType>(mod_name, UE4SSProgram::IsInstalled::Yes);
                 if (!mod || !dynamic_cast<ModType*>(mod))
@@ -1139,7 +1362,7 @@ namespace RC
                     continue;
                 }
 
-                if (!mod_enabled.empty() && mod_enabled[0] == L'1')
+                if (!mod_enabled.empty() && mod_enabled[0] == STR('1'))
                 {
                     Output::send(STR("Starting {} mod '{}'\n"), std::is_same_v<ModType, LuaMod> ? STR("Lua") : STR("C++"), mod->get_name().data());
                     mod->start_mod();
@@ -1164,7 +1387,7 @@ namespace RC
             }
             if (ec.value() != 0)
             {
-                return std::format("is_directory ran into error {}", ec.value());
+                return fmt::format("is_directory ran into error {}", ec.value());
             }
 
             if (!std::filesystem::exists(mod_directory.path() / "enabled.txt", ec))
@@ -1173,10 +1396,10 @@ namespace RC
             }
             if (ec.value() != 0)
             {
-                return std::format("exists ran into error {}", ec.value());
+                return fmt::format("exists ran into error {}", ec.value());
             }
 
-            auto mod = UE4SSProgram::find_mod_by_name<ModType>(mod_directory.path().stem().c_str(), UE4SSProgram::IsInstalled::Yes);
+            auto mod = UE4SSProgram::find_mod_by_name<ModType>(ensure_str(mod_directory.path().stem()), UE4SSProgram::IsInstalled::Yes);
             if (!dynamic_cast<ModType*>(mod))
             {
                 continue;
@@ -1209,13 +1432,21 @@ namespace RC
         }
     }
 
-    auto UE4SSProgram::start_cpp_mods() -> void
+    auto UE4SSProgram::start_cpp_mods(IsInitialStartup is_initial_startup) -> void
     {
         ProfilerScope();
         auto error_message = start_mods<CppMod>();
         if (!error_message.empty())
         {
             set_error(error_message.c_str());
+        }
+        // If this is the initial startup, notify mods that the UI has initialized.
+        // This isn't completely accurate since the UI will usually have started a while ago.
+        // However, we can't immediately notify mods of this because no mods have been started at that point.
+        // We only need to do this for the initial start of UE4SS because after that, more accurate notifications will happen when the UI is closed an reopened.
+        if (is_initial_startup == IsInitialStartup::Yes && m_render_thread.get_id() != std::this_thread::get_id())
+        {
+            fire_ui_init_for_cpp_mods();
         }
     }
 
@@ -1251,6 +1482,22 @@ namespace RC
         LuaMod::global_uninstall();
     }
 
+    auto UE4SSProgram::delete_mod(Mod* mod) -> void
+    {
+        for (auto it = m_mods.begin(); it != m_mods.end();)
+        {
+            if (it->get() == mod)
+            {
+                it = m_mods.erase(it);
+                break;
+            }
+            else
+            {
+                ++it;
+            }
+        }
+    }
+
     auto UE4SSProgram::is_program_started() -> bool
     {
         return m_is_program_started;
@@ -1266,13 +1513,15 @@ namespace RC
 
         uninstall_mods();
 
-        // Remove key binds that were set from Lua scripts
-        auto& key_events = m_input_handler.get_events();
-        std::erase_if(key_events, [](Input::KeySet& input_event) -> bool {
-            bool were_all_events_registered_from_lua = true;
-            for (auto& [key, vector_of_key_data] : input_event.key_data)
-            {
-                std::erase_if(vector_of_key_data, [&](Input::KeyData& key_data) -> bool {
+// Remove key binds that were set from Lua scripts
+#ifdef HAS_INPUT
+        m_input_handler.get_events_safe([&](auto& key_set) {
+            std::erase_if(key_set.key_data, [&](auto& item) -> bool {
+                auto& [_, key_data] = item;
+                bool were_all_events_registered_from_lua = true;
+                std::erase_if(key_data, [&](Input::KeyData& key_data) -> bool {
+                    // custom_data == 1: Bind came from Lua, and custom_data2 is a pointer to LuaMod.
+                    // custom_data == 2: Bind came from C++, and custom_data2 is a pointer to KeyDownEventData. Must free it.
                     if (key_data.custom_data == 1)
                     {
                         return true;
@@ -1283,10 +1532,11 @@ namespace RC
                         return false;
                     }
                 });
-            }
 
-            return were_all_events_registered_from_lua;
+                return were_all_events_registered_from_lua;
+            });
         });
+#endif
 
         // Remove all custom properties
         // Uncomment when custom properties are working
@@ -1316,19 +1566,63 @@ namespace RC
         Output::send(STR("All mods re-installed\n"));
     }
 
-    auto UE4SSProgram::get_module_directory() -> File::StringViewType
+    auto UE4SSProgram::get_module_directory() -> File::StringType
     {
-        return m_module_file_path.c_str();
+        return ensure_str(m_module_file_path);
     }
 
-    auto UE4SSProgram::get_working_directory() -> File::StringViewType
+    auto UE4SSProgram::get_game_executable_directory() -> File::StringType
     {
-        return m_working_directory.c_str();
+        return ensure_str(m_game_executable_directory);
     }
 
-    auto UE4SSProgram::get_mods_directory() -> File::StringViewType
+    auto UE4SSProgram::get_working_directory() -> File::StringType
     {
-        return m_mods_directory.c_str();
+        return ensure_str(m_working_directory);
+    }
+
+    auto UE4SSProgram::get_mods_directory() -> File::StringType
+    {
+        // Return the first (primary) mods directory for backwards compatibility
+        return m_mods_directories.empty() ? STR("") : ensure_str(m_mods_directories[0]);
+    }
+
+    auto UE4SSProgram::get_mods_directories() -> std::vector<std::filesystem::path>&
+    {
+        return m_mods_directories;
+    }
+
+    auto UE4SSProgram::add_mods_directory(std::filesystem::path path) -> void
+    {
+        auto orig_path = path;
+        if (path.is_relative())
+        {
+            path = m_working_directory / path;
+        }
+        path = path.lexically_normal().make_preferred();
+        path = std::filesystem::weakly_canonical(path);
+        if (const auto it = std::ranges::find(m_mods_directories, path); it != m_mods_directories.end())
+        {
+            m_mods_directories.erase(it);
+        }
+        m_mods_directories.emplace_back(std::forward<decltype(path)>(path));
+    }
+
+    auto UE4SSProgram::remove_mods_directory(std::filesystem::path path) -> void
+    {
+        auto orig_path = path;
+        if (path.is_relative())
+        {
+            path = m_working_directory / path;
+        }
+        path = path.lexically_normal().make_preferred();
+        path = std::filesystem::weakly_canonical(path);
+        std::erase(m_mods_directories, path);
+    }
+
+    auto UE4SSProgram::get_legacy_root_directory() -> File::StringType
+    {
+        return ensure_str(m_legacy_root_directory);
     }
 
     auto UE4SSProgram::generate_uht_compatible_headers() -> void
@@ -1410,10 +1704,18 @@ namespace RC
 
     auto UE4SSProgram::stop_render_thread() -> void
     {
-        if (m_render_thread.joinable())
+        if (!get_debugging_ui().is_open())
+        {
+            return;
+        }
+        if (settings_manager.Debug.RenderMode == GUI::RenderMode::ExternalThread && m_render_thread.joinable())
         {
             m_render_thread.request_stop();
             m_render_thread.join();
+        }
+        else
+        {
+            get_debugging_ui().request_exit();
         }
     }
 
@@ -1443,33 +1745,53 @@ namespace RC
         return m_queued_events.empty();
     }
 
-    auto UE4SSProgram::register_keydown_event(Input::Key key, const Input::EventCallbackCallable& callback, uint8_t custom_data) -> void
+    auto UE4SSProgram::register_keydown_event(Input::Key key, const Input::EventCallbackCallable& callback, uint8_t custom_data, void* custom_data2) -> void
     {
-        m_input_handler.register_keydown_event(key, callback, custom_data);
+#ifdef HAS_INPUT
+        m_input_handler.register_keydown_event(key, callback, custom_data, custom_data2);
+#endif
     }
 
     auto UE4SSProgram::register_keydown_event(Input::Key key,
                                               const Input::Handler::ModifierKeyArray& modifier_keys,
                                               const Input::EventCallbackCallable& callback,
-                                              uint8_t custom_data) -> void
+                                              uint8_t custom_data,
+                                              void* custom_data2) -> void
     {
-        m_input_handler.register_keydown_event(key, modifier_keys, callback, custom_data);
+#ifdef HAS_INPUT
+        m_input_handler.register_keydown_event(key, modifier_keys, callback, custom_data, custom_data2);
+#endif
     }
 
     auto UE4SSProgram::is_keydown_event_registered(Input::Key key) -> bool
     {
+#ifdef HAS_INPUT
         return m_input_handler.is_keydown_event_registered(key);
+#else
+        return false;
+#endif
     }
 
     auto UE4SSProgram::is_keydown_event_registered(Input::Key key, const Input::Handler::ModifierKeyArray& modifier_keys) -> bool
     {
+#ifdef HAS_INPUT
         return m_input_handler.is_keydown_event_registered(key, modifier_keys);
+#else
+        return false;
+#endif
     }
 
-    auto UE4SSProgram::find_mod_by_name_internal(std::wstring_view mod_name, IsInstalled is_installed, IsStarted is_started, FMBNI_ExtraPredicate extra_predicate)
+    auto UE4SSProgram::get_all_input_events(std::function<void(Input::KeySet&)> callback) -> void
+    {
+#ifdef HAS_INPUT
+        m_input_handler.get_events_safe(callback);
+#endif
+    }
+
+    auto UE4SSProgram::find_mod_by_name_internal(StringViewType mod_name, IsInstalled is_installed, IsStarted is_started, FMBNI_ExtraPredicate extra_predicate)
             -> Mod*
     {
-        auto mod_exists_with_name = std::find_if(m_mods.begin(), m_mods.end(), [&](auto& elem) -> bool {
+        auto mod_exists_with_name = std::find_if(get_program().m_mods.begin(), get_program().m_mods.end(), [&](auto& elem) -> bool {
             bool found = true;
 
             if (!extra_predicate(elem.get()))
@@ -1493,7 +1815,7 @@ namespace RC
         });
 
         // clang-format off
-        if (mod_exists_with_name == m_mods.end())
+        if (mod_exists_with_name == get_program().m_mods.end())
         {
             return nullptr;
         }
@@ -1509,17 +1831,21 @@ namespace RC
         return static_cast<LuaMod*>(find_mod_by_name<LuaMod>(mod_name, installed_only, is_started));
     }
 
-    auto UE4SSProgram::find_lua_mod_by_name(std::wstring_view mod_name, UE4SSProgram::IsInstalled installed_only, IsStarted is_started) -> LuaMod*
+    auto UE4SSProgram::find_lua_mod_by_name(StringViewType mod_name, UE4SSProgram::IsInstalled installed_only, IsStarted is_started) -> LuaMod*
     {
         return static_cast<LuaMod*>(find_mod_by_name<LuaMod>(mod_name, installed_only, is_started));
     }
 
     auto UE4SSProgram::get_object_dumper_output_directory() -> const File::StringType
     {
-        return m_object_dumper_output_directory.c_str();
+        return ensure_str(m_object_dumper_output_directory);
     }
 
-    auto UE4SSProgram::dump_uobject(UObject* object, std::unordered_set<FField*>* in_dumped_fields, StringType& out_line, bool is_below_425) -> void
+    auto UE4SSProgram::dump_uobject(UObject* object,
+                                    std::unordered_set<FField*>* in_dumped_fields,
+                                    StringType& out_line,
+                                    bool is_below_425,
+                                    std::unordered_set<UFunction*>* in_dumped_functions) -> void
     {
         bool owns_dumped_fields{};
         auto dumped_fields_ptr = [&] {
@@ -1537,14 +1863,25 @@ namespace RC
 
         UObject* typed_obj = static_cast<UObject*>(object);
 
-        if (is_below_425 && Unreal::TypeChecker::is_property(typed_obj) &&
-            !typed_obj->HasAnyFlags(static_cast<EObjectFlags>(EObjectFlags::RF_DefaultSubObject | EObjectFlags::RF_ArchetypeObject)))
+        static auto delegate_function_class = UObjectGlobals::StaticFindObject<UClass*>(nullptr, nullptr, STR("/Script/CoreUObject.DelegateFunction"));
+        static auto linker_placeholder_function_class =
+                UObjectGlobals::StaticFindObject<UClass*>(nullptr, nullptr, STR("/Script/CoreUObject.LinkerPlaceholderFunction"));
+
+        bool is_property = is_below_425 && Unreal::TypeChecker::is_property(typed_obj) &&
+                           !typed_obj->HasAnyFlags(static_cast<EObjectFlags>(EObjectFlags::RF_DefaultSubObject | EObjectFlags::RF_ArchetypeObject));
+        if (!is_property && (!typed_obj->IsA<UFunction>() || typed_obj->IsA(delegate_function_class) || typed_obj->IsA(linker_placeholder_function_class)))
         {
-            // We've verified that we're in <4.25 so this cast is safe but should be abstracted at some point
-            dump_xproperty(std::bit_cast<FProperty*>(typed_obj), out_line);
-        }
-        else
-        {
+            if (in_dumped_functions && typed_obj->IsA<UFunction>())
+            {
+                if (in_dumped_functions->contains(static_cast<UFunction*>(typed_obj)))
+                {
+                    return;
+                }
+                else
+                {
+                    in_dumped_functions->emplace(static_cast<UFunction*>(typed_obj));
+                }
+            }
             auto typed_class = typed_obj->GetClassPrivate()->HashObject();
             if (ObjectDumper::to_string_exists(typed_class))
             {
@@ -1553,19 +1890,18 @@ namespace RC
 
                 // Dump UObject
                 ObjectDumper::get_to_string(typed_class)(object, out_line);
-                out_line.append(L"\n");
+                out_line.append(STR("\n"));
 
-                if (!is_below_425 && ObjectDumper::to_string_complex_exists(typed_class))
+                if (ObjectDumper::to_string_complex_exists(typed_class))
                 {
                     // Dump all properties that are directly owned by this UObject (not its UClass)
-                    // UE 4.25+ (properties are part of GUObjectArray in earlier versions)
                     ObjectDumper::get_to_string_complex(typed_class)(object, out_line, [&](void* prop) {
                         if (dumped_fields.contains(static_cast<FField*>(prop)))
                         {
                             return;
                         }
 
-                        dump_xproperty(static_cast<FProperty*>(prop), out_line);
+                        ObjectDumper::dump_xproperty(static_cast<FProperty*>(prop), out_line);
                         dumped_fields.emplace(static_cast<FField*>(prop));
                     });
                 }
@@ -1574,25 +1910,29 @@ namespace RC
             {
                 // A type-specific implementation does not exist so lets call the default implementation for UObjects instead
                 ObjectDumper::object_to_string(object, out_line);
-                out_line.append(L"\n");
+                out_line.append(STR("\n"));
             }
 
             // If the UClass of the UObject has any properties then dump them
-            // UE 4.25+ (properties are part of GUObjectArray in earlier versions)
-            if (!is_below_425)
+            if (typed_obj->IsA<UStruct>())
             {
-                if (typed_obj->IsA<UStruct>())
+                for (FProperty* prop : static_cast<UClass*>(typed_obj)->ForEachProperty())
                 {
-                    for (FProperty* prop : static_cast<UClass*>(typed_obj)->ForEachProperty())
+                    if (dumped_fields.contains(prop))
                     {
-                        if (dumped_fields.contains(prop))
-                        {
-                            continue;
-                        }
-
-                        dump_xproperty(prop, out_line);
-                        dumped_fields.emplace(prop);
+                        continue;
                     }
+
+                    ObjectDumper::dump_xproperty(prop, out_line);
+                    dumped_fields.emplace(prop);
+                }
+            }
+
+            if (typed_obj->IsA<UStruct>())
+            {
+                for (auto func : static_cast<UStruct*>(typed_obj)->ForEachFunction())
+                {
+                    ObjectDumper::function_to_string(func, out_line, in_dumped_functions);
                 }
             }
         }
@@ -1600,29 +1940,6 @@ namespace RC
         if (owns_dumped_fields)
         {
             delete dumped_fields_ptr;
-        }
-    }
-
-    auto UE4SSProgram::dump_xproperty(FProperty* property, StringType& out_line) -> void
-    {
-        auto typed_prop_class = property->GetClass().HashObject();
-
-        if (ObjectDumper::to_string_exists(typed_prop_class))
-        {
-            ObjectDumper::get_to_string(typed_prop_class)(property, out_line);
-            out_line.append(L"\n");
-
-            if (ObjectDumper::to_string_complex_exists(typed_prop_class))
-            {
-                ObjectDumper::get_to_string_complex(typed_prop_class)(property, out_line, [&]([[maybe_unused]] void* prop) {
-                    out_line.append(L"\n");
-                });
-            }
-        }
-        else
-        {
-            ObjectDumper::property_to_string(property, out_line);
-            out_line.append(L"\n");
         }
     }
 
@@ -1657,6 +1974,14 @@ namespace RC
             // There will be tons of dumped fields so lets just reserve tons in order to speed things up a bit
             dumped_fields.reserve(100000);
 
+            // Some delegate functions belong to a class, and are dumped as part of the class.
+            // Others are not, and must be dumped as part of GUObjectArray.
+            // Both are part of GUObjectArray.
+            // We must maintain a list of already dumped functions to avoid dumping the same function multiple times.
+            // We can't just use GUObjectArray even though they all exist in there because that would destroy the order in which objects get dumped.
+            std::unordered_set<UFunction*> dumped_functions;
+            dumped_fields.reserve(10000);
+
             bool is_below_425 = Unreal::Version::IsBelow(4, 25);
 
             // The final outputted string shouldn't need be reformatted just to put a new line at the end
@@ -1678,12 +2003,12 @@ namespace RC
 
             // Make string & reserve massive amounts of space to hopefully not reach the end of the string and require more
             // dynamic allocations
-            std::wstring out_line;
+            StringType out_line;
             out_line.reserve(200000000);
 
             Output::send(STR("Dumping all objects & properties in GUObjectArray\n"));
             UObjectGlobals::ForEachUObject([&](void* object, [[maybe_unused]] int32_t chunk_index, [[maybe_unused]] int32_t object_index) {
-                dump_uobject(static_cast<UObject*>(object), &dumped_fields, out_line, is_below_425);
+                dump_uobject(static_cast<UObject*>(object), &dumped_fields, out_line, is_below_425, &dumped_functions);
                 return LoopAction::Continue;
             });
 
@@ -1707,5 +2032,31 @@ namespace RC
         // Do cleanup of static objects here
         // This function is called right before the DLL detaches from the game
         // Including when the player hits the 'X' button to exit the game
+    }
+
+    auto UE4SSProgram::parse_semicolon_separated_string(const StringType& string) -> std::vector<StringType>
+    {
+        std::vector<StringType> strings{};
+        if (auto end = string.find(STR(';')); end == string.npos)
+        {
+            // No colon, but we still have content in the variable, so we'll assume this a single path.
+            strings.emplace_back(string);
+        }
+        else
+        {
+            size_t start = 0;
+            while (end != string.npos)
+            {
+                strings.emplace_back(string.substr(start, end - start));
+                start = end + 1; // Adding 1 to skip the colon.
+                end = string.find(STR(';'), start);
+                if (end == string.npos)
+                {
+                    // No more colons, but we still content so let's assume that's another path.
+                    strings.emplace_back(string.substr(start));
+                }
+            }
+        }
+        return strings;
     }
 } // namespace RC

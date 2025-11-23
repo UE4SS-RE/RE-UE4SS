@@ -4,13 +4,10 @@
 #include <ParserBase/Token.hpp>
 #include <ParserBase/Tokenizer.hpp>
 
+#include <Helpers/String.hpp>
+
 namespace RC::Parser
 {
-    static auto to_string(std::wstring in) -> std::string
-    {
-        return std::string{in.begin(), in.end()};
-    }
-
     static auto has_only_spaces(const File::StringType& data) -> bool
     {
         if (std::all_of(data.begin(), data.end(), [](File::CharType c) {
@@ -41,16 +38,16 @@ namespace RC::Parser
 
     auto JSONInternal::StringItem::to_string() -> File::StringType
     {
-        return std::format(STR("String = \"{}\""), m_value);
+        return fmt::format(STR("String = \"{}\""), m_value);
     }
 
     auto JSONInternal::ObjectScope::to_string() -> File::StringType
     {
-        File::StringType str = std::format(STR("Object = \"{}\""), get_name());
+        File::StringType str = fmt::format(STR("Object = \"{}\""), get_name());
 
         for (const auto& member : m_members)
         {
-            str.append(std::format(STR("\n\"{}\" = {}"), member->get_name(), member->to_string()));
+            str.append(fmt::format(STR("\n\"{}\" = {}"), member->get_name(), member->to_string()));
         }
 
         return str;
@@ -58,7 +55,7 @@ namespace RC::Parser
 
     auto JSONInternal::ArrayScope::to_string() -> File::StringType
     {
-        return std::format(STR("Array = \"{}\""), get_name());
+        return fmt::format(STR("Array = \"{}\""), get_name());
     }
 
     auto JSONInternal::TokenParser::token_to_string(const Token& token) -> File::StringType
@@ -123,7 +120,7 @@ namespace RC::Parser
             if (static_cast<ObjectScope*>(m_current_item)->m_previous_line_without_comma == 0)
             {
                 throw std::runtime_error{
-                        std::format("Syntax error ({} : {}): Unexpected 'Comma' token, expected 'CloseCurlyBrace'.", token.get_line(), token.get_column())};
+                        fmt::format("Syntax error ({} : {}): Unexpected 'Comma' token, expected 'CloseCurlyBrace'.", token.get_line(), token.get_column())};
             }
         }
         else if (m_current_item->get_type() == ItemType::Array)
@@ -155,7 +152,7 @@ namespace RC::Parser
                 // Enforce 'Comma' token, if this isn't the first item
                 if (!typed_current_item.m_members.empty() && typed_current_item.m_previous_line_without_comma != 0)
                 {
-                    throw std::runtime_error{std::format("Syntax error ({} : {}): Expected 'Comma' token before new item.",
+                    throw std::runtime_error{fmt::format("Syntax error ({} : {}): Expected 'Comma' token before new item.",
                                                          typed_current_item.m_previous_line_without_comma,
                                                          typed_current_item.m_previous_column_without_comma)};
                 }
@@ -181,7 +178,7 @@ namespace RC::Parser
             // Consume the closing 'DoubleQuote' token
             if (peek().get_type() != TokenType::DoubleQuote)
             {
-                throw std::runtime_error{std::format("Syntax error ({} : {}): Expected 'DoubleQuote' token, got '{}'.",
+                throw std::runtime_error{fmt::format("Syntax error ({} : {}): Expected 'DoubleQuote' token, got '{}'.",
                                                      token.get_line(),
                                                      token.get_column(),
                                                      to_string(token.to_string()))};
@@ -229,7 +226,7 @@ namespace RC::Parser
         }
         else
         {
-            throw std::runtime_error{std::format("Syntax error ({} : {}): Unexpected 'Comma' token.", token.get_line(), token.get_column())};
+            throw std::runtime_error{fmt::format("Syntax error ({} : {}): Unexpected 'Comma' token.", token.get_line(), token.get_column())};
         }
 
         m_processed_token_types += TokenType::Comma;
@@ -256,7 +253,7 @@ namespace RC::Parser
                 auto& peeked_token = peek();
                 if (peeked_token.get_type() != TokenType::Colon)
                 {
-                    throw std::runtime_error{std::format("Syntax error ({} : {}): Expected 'Colon' token, got '{}'.",
+                    throw std::runtime_error{fmt::format("Syntax error ({} : {}): Expected 'Colon' token, got '{}'.",
                                                          peeked_token.get_line(),
                                                          peeked_token.get_column(),
                                                          to_string(peeked_token.to_string()))};
@@ -308,7 +305,7 @@ namespace RC::Parser
         if (m_next_token_expected != TokenType::Default && token_type != TokenType::Characters && token_type != m_next_token_expected)
         {
             throw std::runtime_error{
-                    std::format("Syntax error ({} : {}): Expected 'Colon' token, got '{}'.", token.get_line(), token.get_column(), to_string(token.to_string()))};
+                    fmt::format("Syntax error ({} : {}): Expected 'Colon' token, got '{}'.", token.get_line(), token.get_column(), to_string(token.to_string()))};
         }
 
         switch (token_type)

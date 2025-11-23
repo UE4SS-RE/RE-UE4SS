@@ -1,10 +1,10 @@
 #include <stdexcept>
 
+#define IMGUI_DEFINE_MATH_OPERATORS
 #include <GUI/ImGuiUtility.hpp>
 #undef TEXT
 #include <UE4SSProgram.hpp>
 #include <imgui.h>
-#define IMGUI_DEFINE_MATH_OPERATORS
 #include <imgui_internal.h>
 
 namespace RC::GUI
@@ -53,8 +53,8 @@ namespace RC::GUI
         ImGuiWindow* window = g.CurrentWindow;
         ImGuiID id = window->GetID("##Splitter");
         ImRect bb;
-        bb.Min = window->DC.CursorPos + (split_vertically ? ImVec2(*size1, 0.0f) : ImVec2(0.0f, *size1));
-        bb.Max = bb.Min + CalcItemSize(split_vertically ? ImVec2(thickness, splitter_long_axis_size) : ImVec2(splitter_long_axis_size, thickness), 0.0f, 0.0f);
+        bb.Min = ImVec2(window->DC.CursorPos.x, window->DC.CursorPos.y) + (split_vertically ? ImVec2(*size1, 0.0f) : ImVec2(0.0f, *size1));
+        bb.Max = ImVec2(bb.Min.x, bb.Min.y) + CalcItemSize(split_vertically ? ImVec2(thickness, splitter_long_axis_size) : ImVec2(splitter_long_axis_size, thickness), 0.0f, 0.0f);
         return SplitterBehavior(bb, id, split_vertically ? ImGuiAxis_X : ImGuiAxis_Y, size1, size2, min_size1, min_size2, 0.0f);
     }
 
@@ -98,9 +98,9 @@ namespace RC::GUI
     static auto dump_json_integer_value(const JSON::Number& element) -> void;
 
     static int indent_level{};
-    static auto indent() -> std::wstring
+    static auto indent() -> StringType
     {
-        std::wstring indents{};
+        StringType indents{};
         for (int i = 0; i < indent_level; ++i)
         {
             indents.append(STR("    "));

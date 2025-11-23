@@ -4,6 +4,9 @@
 #include <JSON/Object.hpp>
 #include <JSON/String.hpp>
 
+#include <fmt/core.h>
+#include <fmt/xchar.h>
+
 namespace RC::JSON
 {
     auto Object::find_value_by_key(const StringType& look_for_key) const -> Value*
@@ -87,7 +90,7 @@ namespace RC::JSON
                 indent(indent_level, object_as_string);
             }
 
-            object_as_string.append(std::format(STR("\"{}\":"), key));
+            object_as_string.append(fmt::format(STR("\"{}\":"), key));
             object_as_string.append(value->serialize(should_format, indent_level));
 
             if (member_count + 1 < m_members.size())

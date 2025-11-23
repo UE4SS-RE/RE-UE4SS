@@ -88,7 +88,7 @@ end
 -- simple bench
   -- 2 simple func that can stand inline of a call (former a single call and the latter can be made to run the call n times)
   -- will output the call performance to log file as time to execute in seconds
-  -- see example UEHelpers line 33 
+  -- see example UEHelpers line 72 
   function jsb.simpleBench(name, func, ...)
     if not name or type(name) ~= "string" then return print("Error in bench args!") end
     local data_return

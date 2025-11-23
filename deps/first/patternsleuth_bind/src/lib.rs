@@ -12,6 +12,9 @@ use patternsleuth::resolvers::{
         gmalloc::GMalloc,
         guobject_array::GUObjectArray,
         static_construct_object::StaticConstructObjectInternal,
+        fuobject_hash_tables::FUObjectHashTablesGet,
+        kismet::GNatives,
+        ConsoleManagerSingleton,
     },
     ResolveError,
 };
@@ -26,6 +29,9 @@ impl_collector! {
         static_construct_object_internal: StaticConstructObjectInternal,
         ftext_fstring: FTextFString,
         engine_version: EngineVersion,
+        fuobject_hash_tables_get: FUObjectHashTablesGet,
+        gnatives: GNatives,
+        console_manager_singleton: ConsoleManagerSingleton,
     }
 }
 
@@ -73,6 +79,9 @@ pub struct PsScanConfig {
     static_construct_object_internal: bool,
     ftext_fstring: bool,
     engine_version: bool,
+    fuobject_hash_tables_get: bool,
+    gnatives: bool,
+    console_manager_singleton: bool,
 }
 
 #[repr(C)]
@@ -84,6 +93,9 @@ pub struct PsScanResults {
     static_construct_object_internal: usize,
     ftext_fstring: usize,
     engine_version: PsEngineVersion,
+    fuobject_hash_tables_get: usize,
+    gnatives: usize,
+    console_manager_singleton: usize,
 }
 
 #[derive(Debug, Default)]
@@ -109,6 +121,9 @@ pub fn ps_scan_internal(ctx: &PsCtx, results: &mut PsScanResults) -> Result<(), 
 
     macro_rules! handle {
         ($member:ident, $name:literal, $lua:literal) => {
+            handle!($member, $name, $lua, false);
+        };
+        ($member:ident, $name:literal, $lua:literal, $optional:expr) => {
             if ctx.config.$member {
                 match resolution.$member {
                     Ok(res) => {
@@ -122,7 +137,11 @@ pub fn ps_scan_internal(ctx: &PsCtx, results: &mut PsScanResults) -> Result<(), 
                             "You can supply your own AOB in 'UE4SS_Signatures/{}'",
                             $lua
                         );
-                        errors.0.push(Box::new(err));
+                        results.$member = 0;
+                        // Only add to `errors` if it's not optional:
+                        if !$optional {
+                            errors.0.push(Box::new(err));
+                        }
                     }
                 }
             }
@@ -161,7 +180,29 @@ pub fn ps_scan_internal(ctx: &PsCtx, results: &mut PsScanResults) -> Result<(), 
     handle!(
         ftext_fstring,
         "FText::FText(FString&&)",
-        "FText_Constructor.lua"
+        "FText_Constructor.lua",
+        true
+    );
+    
+    handle!(
+        fuobject_hash_tables_get,
+        "FUObjectHashTables::Get()",
+        "GUObjectHashTables.lua",
+        true
+    );
+    
+    handle!(
+        gnatives,
+        "GNatives",
+        "GNatives.lua",
+        true
+    );
+    
+    handle!(
+        console_manager_singleton,
+        "ConsoleManagerSingleton",
+        "ConsoleManager.lua",
+        true
     );
 
     if errors.0.is_empty() {

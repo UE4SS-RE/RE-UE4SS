@@ -25,6 +25,7 @@ namespace RC::GUI
         auto handle_window_resize(int64_t param_1, int64_t param_2) -> void override;
         auto on_os_backend_set() -> void override;
         auto get_window_size() -> WindowSize override;
+        auto get_window_position() -> WindowPosition override;
         auto exit_requested() -> bool override;
     };
 } // namespace RC::GUI

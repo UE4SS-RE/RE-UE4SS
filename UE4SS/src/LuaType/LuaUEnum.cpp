@@ -161,7 +161,7 @@ Overloads:
             // P1 (Name), string
             if (lua.is_string())
             {
-                param_name = to_wstring(lua.get_string());
+                param_name = ensure_str(lua.get_string());
             }
             else
             {
@@ -242,7 +242,7 @@ Overloads:
                 lua.throw_error("'UEnum.EditNameAt' could not load parameter for \"NewName\"");
             }
 
-            Unreal::FName new_key = Unreal::FName(to_wstring(param_new_name), Unreal::FNAME_Add);
+            Unreal::FName new_key = Unreal::FName(ensure_str(param_new_name), Unreal::FNAME_Add);
             lua_object.get_remote_cpp_object()->EditNameAt(param_index, new_key);
 
             return 0;
@@ -294,15 +294,15 @@ Overloads:
         });
 
         table.add_pair("RemoveFromNamesAt", [](const LuaMadeSimple::Lua& lua) -> int {
-            // Function: InsertIntoNames
+            // Function: RemoveFromNamesAt
             // Param #1: Enum index
             // (Optional) Param #2: Enum entry count
             // (Optional) Param #3: Allow shrinking after removal
             std::string error_overload_not_found{R"(
 No overload found for function 'UEnum.RemoveFromNamesAt'.
 Overloads:
-#1: RemoveFromNamesAt(integer Index) // Count = 1, AllowShrinking = true
-#2: RemoveFromNamesAt(integer Index, integer Count) // AllowShrinking = true
+#1: RemoveFromNamesAt(integer Index) // Count = 1, AllowShrinking = Default
+#2: RemoveFromNamesAt(integer Index, integer Count) // AllowShrinking = Default
 #3: RemoveFromNamesAt(integer Index, integer Count, bool AllowShrinking))"};
 
             auto& lua_object = lua.get_userdata<UEnum>();
@@ -316,7 +316,7 @@ Overloads:
 
             int32_t param_index = 0;
             int32_t param_count = 1;
-            bool param_allow_shrinking = true;
+            Unreal::EAllowShrinking param_allow_shrinking = Unreal::EAllowShrinking::Default;
 
             // P1 (Index), integer
             if (lua.is_integer())
@@ -328,16 +328,17 @@ Overloads:
                 lua.throw_error("'UEnum.RemoveFromNamesAt' Could not load parameter for \"Index\"");
             }
 
-            // P2 (Count), integer
-            if (lua.is_integer())
+            // P2 (Count), integer - optional
+            if (stack_size >= 2 && lua.is_integer())
             {
                 param_count = lua.get_integer();
             }
 
-            // P3 (AllowShrinking), boolean
-            if (lua.is_bool())
+            // P3 (AllowShrinking), boolean - optional
+            if (stack_size >= 3 && lua.is_bool())
             {
-                param_allow_shrinking = lua.get_bool();
+                bool allow_shrinking = lua.get_bool();
+                param_allow_shrinking = allow_shrinking ? Unreal::EAllowShrinking::Yes : Unreal::EAllowShrinking::No;
             }
 
             lua_object.get_remote_cpp_object()->RemoveFromNamesAt(param_index, param_count, param_allow_shrinking);

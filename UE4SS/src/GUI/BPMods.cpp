@@ -31,7 +31,7 @@ namespace RC::GUI::BPMods
       public:
         auto ModMenuButtonPressed(int32_t Index) -> void
         {
-            auto Function = GetFunctionByNameInChain(STR("ModMenuButtonPressed"));
+            auto Function = GetFunctionByNameInChain(FromCharTypePtr<TCHAR>(STR("ModMenuButtonPressed")));
             if (!Function)
             {
                 return;
@@ -69,16 +69,16 @@ namespace RC::GUI::BPMods
 
             static auto mod_author_name = FName(STR("ModAuthor"), FNAME_Add);
             auto mod_author_property = mod_class->FindProperty(mod_author_name);
-            mod_info.ModAuthor = mod_author_property ? to_string(mod_author_property->ContainerPtrToValuePtr<FString>(mod_actor)->GetCharArray()) : "Unknown";
+            mod_info.ModAuthor = mod_author_property ? to_string(**mod_author_property->ContainerPtrToValuePtr<FString>(mod_actor)) : "Unknown";
 
             static auto mod_description_name = FName(STR("ModDescription"), FNAME_Add);
             auto mod_description_property = mod_class->FindProperty(mod_description_name);
             mod_info.ModDescription =
-                    mod_description_property ? to_string(mod_description_property->ContainerPtrToValuePtr<FString>(mod_actor)->GetCharArray()) : "Unknown";
+                    mod_description_property ? to_string(**mod_description_property->ContainerPtrToValuePtr<FString>(mod_actor)) : "Unknown";
 
             static auto mod_version_name = FName(STR("ModVersion"), FNAME_Add);
             auto mod_version_property = mod_class->FindProperty(mod_version_name);
-            mod_info.ModVersion = mod_version_property ? to_string(mod_version_property->ContainerPtrToValuePtr<FString>(mod_actor)->GetCharArray()) : "Unknown";
+            mod_info.ModVersion = mod_version_property ? to_string(**mod_version_property->ContainerPtrToValuePtr<FString>(mod_actor)) : "Unknown";
 
             static auto mod_buttons_name = FName(STR("ModButtons"), FNAME_Add);
             auto mod_buttons_property = mod_class->FindProperty(mod_buttons_name);
@@ -87,7 +87,7 @@ namespace RC::GUI::BPMods
             {
                 for (FString& button_name : *mod_buttons)
                 {
-                    mod_info.ModButtons.emplace_back(to_string(button_name.GetCharArray()));
+                    mod_info.ModButtons.emplace_back(to_string(*button_name));
                 }
             }
 
@@ -95,13 +95,13 @@ namespace RC::GUI::BPMods
             auto mod_name_parts = explode_by_occurrence(mod_full_name, STR('/'));
             mod_info.ModName = to_string(mod_name_parts[mod_name_parts.size() - 1 - 1]);
 
-            if (ImGui_TreeNodeEx(std::format("{}", mod_info.ModName).c_str(), std::format("{}_{}", mod_info.ModName, i).c_str(), ImGuiTreeNodeFlags_CollapsingHeader))
+            if (ImGui_TreeNodeEx(fmt::format("{}", mod_info.ModName).c_str(), fmt::format("{}_{}", mod_info.ModName, i).c_str(), ImGuiTreeNodeFlags_CollapsingHeader))
             {
                 ImGui::Indent();
                 ImGui::Text("Author: %s", mod_info.ModAuthor.c_str());
                 ImGui::Text("Description: %s", mod_info.ModDescription.c_str());
                 ImGui::Text("Version: %s", mod_info.ModVersion.c_str());
-                if (ImGui_TreeNodeEx("Mod Buttons", std::format("{}_{}_ModButtons", mod_info.ModName, i).c_str(), ImGuiTreeNodeFlags_CollapsingHeader))
+                if (ImGui_TreeNodeEx("Mod Buttons", fmt::format("{}_{}_ModButtons", mod_info.ModName, i).c_str(), ImGuiTreeNodeFlags_CollapsingHeader))
                 {
                     ImGui::Indent();
                     for (size_t i2 = 0; i2 < mod_info.ModButtons.size(); ++i2)
@@ -111,9 +111,9 @@ namespace RC::GUI::BPMods
                             continue;
                         }
                         const auto& mod_button = mod_info.ModButtons[i2];
-                        if (ImGui::Button(std::format("{}", mod_button).c_str()))
+                        if (ImGui::Button(fmt::format("{}", mod_button).c_str()))
                         {
-                            Output::send(STR("Mod button {} hit.\n"), to_wstring(mod_button));
+                            Output::send(STR("Mod button {} hit.\n"), ensure_str(mod_button));
                             mod_info.ModActor->ModMenuButtonPressed(static_cast<int32_t>(i2));
                         }
                     }

@@ -6,6 +6,7 @@
 
 #include <LuaMadeSimple/Common.hpp>
 #include <lua.hpp>
+#include <fmt/core.h>
 
 namespace RC::LuaMadeSimple
 {
@@ -31,55 +32,22 @@ namespace RC::LuaMadeSimple
     {
         const class Lua* lua{};
 
-        [[nodiscard]] auto is_nil() -> bool
-        {
-            return lua_isnil(lua->get_lua_state(), StackIndex);
-        }
+        [[nodiscard]] auto is_nil() -> bool;
 
-        [[nodiscard]] auto is_string() const -> bool
-        {
-            return lua_type(lua->get_lua_state(), StackIndex) == LUA_TSTRING;
-        }
-        [[nodiscard]] auto get_string() const -> std::string_view
-        {
-            return lua_tostring(lua->get_lua_state(), StackIndex);
-        }
+        [[nodiscard]] auto is_string() const -> bool;
+        [[nodiscard]] auto get_string() const -> std::string_view;
 
-        [[nodiscard]] auto is_number() const -> bool
-        {
-            return lua_isnumber(lua->get_lua_state(), StackIndex);
-        }
-        [[nodiscard]] auto get_number() const -> double
-        {
-            return lua_tonumber(lua->get_lua_state(), StackIndex);
-        }
-        [[nodiscard]] auto get_float(int32_t force_index = 1) -> float // Safe to use after a call to is_number
-        {
-            return static_cast<float>(lua_tonumber(lua->get_lua_state(), force_index));
-        }
+        [[nodiscard]] auto is_number() const -> bool;
+        [[nodiscard]] auto get_number() const -> double;
+        [[nodiscard]] auto get_float(int32_t force_index = 1) -> float; // Safe to use after a call to is_number
 
-        [[nodiscard]] auto is_integer() const -> bool
-        {
-            return lua_isinteger(lua->get_lua_state(), StackIndex);
-        }
-        [[nodiscard]] auto get_integer() const -> int64_t
-        {
-            return lua_tointeger(lua->get_lua_state(), StackIndex);
-        }
+        [[nodiscard]] auto is_integer() const -> bool;
+        [[nodiscard]] auto get_integer() const -> int64_t;
 
-        [[nodiscard]] auto is_bool() const -> bool
-        {
-            return lua_isboolean(lua->get_lua_state(), StackIndex);
-        }
-        [[nodiscard]] auto get_bool() const -> bool
-        {
-            return lua_toboolean(lua->get_lua_state(), StackIndex);
-        }
+        [[nodiscard]] auto is_bool() const -> bool;
+        [[nodiscard]] auto get_bool() const -> bool;
 
-        [[nodiscard]] auto is_table() const -> bool
-        {
-            return lua_istable(lua->get_lua_state(), StackIndex);
-        }
+        [[nodiscard]] auto is_table() const -> bool;
     };
 
     /**
@@ -417,7 +385,7 @@ namespace RC::LuaMadeSimple
                     }
                     else
                     {
-                        get_lua_instance().throw_error(std::format("[get_userdata_field] Attempted to get field: '{}' but the type was '{}'",
+                        get_lua_instance().throw_error(fmt::format("[get_userdata_field] Attempted to get field: '{}' but the type was '{}'",
                                                                    field_name,
                                                                    lua_typename(get_lua_instance().get_lua_state(), pushed_type)));
                     }
@@ -526,8 +494,10 @@ namespace RC::LuaMadeSimple
 
         RC_LMS_API auto execute_file(std::string_view) const -> void;
         RC_LMS_API auto execute_file(std::wstring_view) const -> void;
+        RC_LMS_API auto execute_file(std::u16string_view) const -> void;
         RC_LMS_API auto execute_string(std::string_view) const -> void;
         RC_LMS_API auto execute_string(std::wstring_view) const -> void;
+        RC_LMS_API auto execute_string(std::u16string_view) const -> void;
         RC_LMS_API auto open_all_libs() const -> void;
         RC_LMS_API auto set_hook(lua_Hook, int32_t mask, int32_t count) const -> void;
 
@@ -559,7 +529,9 @@ namespace RC::LuaMadeSimple
 
         [[nodiscard]] RC_LMS_API auto is_string(int32_t force_index = 1) const -> bool;
         [[nodiscard]] RC_LMS_API auto get_string(int32_t force_index = 1) const -> std::string_view;
-        RC_LMS_API auto set_string(std::string_view) const -> void;
+        RC_LMS_API auto set_string(std::string_view str) const -> void;
+        RC_LMS_API auto set_string(const char* str, size_t len) const -> void;
+        RC_LMS_API auto set_string(const uint8_t* str, size_t len) const -> void;
 
         // is_number == lua_isnumber, which returns true if the value is a number or a string convertible to a number
         [[nodiscard]] RC_LMS_API auto is_number(int32_t force_index = 1) const -> bool;

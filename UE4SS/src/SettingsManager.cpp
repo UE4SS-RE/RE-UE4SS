@@ -1,6 +1,7 @@
 #include <Helpers/String.hpp>
 #include <IniParser/Ini.hpp>
 #include <SettingsManager.hpp>
+#include <UE4SSProgram.hpp>
 
 #define REGISTER_STRING_SETTING(member_var, section_name, key)                                                                                                 \
     try                                                                                                                                                        \
@@ -49,21 +50,56 @@ namespace RC
 
         constexpr static File::CharType section_overrides[] = STR("Overrides");
         REGISTER_STRING_SETTING(Overrides.ModsFolderPath, section_overrides, ModsFolderPath)
+        if (!Overrides.ModsFolderPath.empty())
+        {
+            auto& mods_directories = UE4SSProgram::get_program().get_mods_directories();
+            mods_directories.insert(mods_directories.begin(), std::filesystem::path{Overrides.ModsFolderPath});
+        }
+
+        auto mods_paths_list = parser.get_list(section_overrides);
+        mods_paths_list.for_each(STR("ModsFolderPaths"), [](const StringType& key, const Ini::Value& value) {
+            if (key.starts_with(STR('+')))
+            {
+                UE4SSProgram::get_program().add_mods_directory(value.get_string_value());
+            }
+            else if (key.starts_with(STR('-')))
+            {
+                UE4SSProgram::get_program().remove_mods_directory(value.get_string_value());
+            }
+        });
 
         constexpr static File::CharType section_general[] = STR("General");
         REGISTER_BOOL_SETTING(General.EnableHotReloadSystem, section_general, EnableHotReloadSystem)
+        StringType hot_reload_key{};
+        REGISTER_STRING_SETTING(hot_reload_key, section_general, HotReloadKey)
+        if (!hot_reload_key.empty())
+        {
+            try
+            {
+                General.HotReloadKey = Input::string_to_key(hot_reload_key);
+            }
+            catch (...)
+            {
+                // Note that this happens too early to be sent to the log file or the GUI, so it will only appear in the native console on Win32, or the terminal on Linux.
+                throw std::runtime_error{fmt::format("Invalid value for 'General.HotReloadKey': {}\n", to_string(hot_reload_key))};
+            }
+        }
         REGISTER_BOOL_SETTING(General.UseCache, section_general, UseCache)
         REGISTER_BOOL_SETTING(General.InvalidateCacheIfDLLDiffers, section_general, InvalidateCacheIfDLLDiffers)
         REGISTER_BOOL_SETTING(General.EnableDebugKeyBindings, section_general, EnableDebugKeyBindings)
         REGISTER_INT64_SETTING(General.SecondsToScanBeforeGivingUp, section_general, SecondsToScanBeforeGivingUp)
         REGISTER_BOOL_SETTING(General.UseUObjectArrayCache, section_general, bUseUObjectArrayCache)
+        REGISTER_BOOL_SETTING(General.DoEarlyScan, section_general, DoEarlyScan)
+        REGISTER_BOOL_SETTING(General.SearchByAddress, section_general, bEnableSeachByMemoryAddress)
 
         constexpr static File::CharType section_engine_version_override[] = STR("EngineVersionOverride");
         REGISTER_INT64_SETTING(EngineVersionOverride.MajorVersion, section_engine_version_override, MajorVersion)
         REGISTER_INT64_SETTING(EngineVersionOverride.MinorVersion, section_engine_version_override, MinorVersion)
+        REGISTER_BOOL_SETTING(EngineVersionOverride.DebugBuild, section_engine_version_override, DebugBuild)
 
         constexpr static File::CharType section_object_dumper[] = STR("ObjectDumper");
         REGISTER_BOOL_SETTING(ObjectDumper.LoadAllAssetsBeforeDumpingObjects, section_object_dumper, LoadAllAssetsBeforeDumpingObjects)
+        REGISTER_BOOL_SETTING(ObjectDumper.UseModuleOffsets, section_object_dumper, UseModuleOffsets)
 
         constexpr static File::CharType section_cxx_header_generator[] = STR("CXXHeaderGenerator");
         REGISTER_BOOL_SETTING(CXXHeaderGenerator.DumpOffsetsAndSizes, section_cxx_header_generator, DumpOffsetsAndSizes)
@@ -93,7 +129,20 @@ namespace RC
         {
             Debug.GraphicsAPI = GUI::GfxBackend::GLFW3_OpenGL3;
         }
-        REGISTER_INT64_SETTING(Debug.LiveViewObjectsPerGroup, section_debug, LiveViewObjectsPerGroup);
+        StringType render_mode_string{};
+        REGISTER_STRING_SETTING(render_mode_string, section_debug, RenderMode)
+        if (String::iequal(render_mode_string, STR("ExternalThread")))
+        {
+            Debug.RenderMode = GUI::RenderMode::ExternalThread;
+        }
+        else if (String::iequal(render_mode_string, STR("EngineTick")))
+        {
+            Debug.RenderMode = GUI::RenderMode::EngineTick;
+        }
+        else if (String::iequal(render_mode_string, STR("GameViewportClientTick")))
+        {
+            Debug.RenderMode = GUI::RenderMode::GameViewportClientTick;
+        }
 
         constexpr static File::CharType section_crash_dump[] = STR("CrashDump");
         REGISTER_BOOL_SETTING(CrashDump.EnableDumping, section_crash_dump, EnableDumping);
@@ -113,11 +162,16 @@ namespace RC
         REGISTER_BOOL_SETTING(Hooks.HookInitGameState, section_hooks, HookInitGameState)
         REGISTER_BOOL_SETTING(Hooks.HookCallFunctionByNameWithArguments, section_hooks, HookCallFunctionByNameWithArguments)
         REGISTER_BOOL_SETTING(Hooks.HookBeginPlay, section_hooks, HookBeginPlay)
+        REGISTER_BOOL_SETTING(Hooks.HookEndPlay, section_hooks, HookEndPlay)
         REGISTER_BOOL_SETTING(Hooks.HookLocalPlayerExec, section_hooks, HookLocalPlayerExec)
         REGISTER_BOOL_SETTING(Hooks.HookAActorTick, section_hooks, HookAActorTick)
+        REGISTER_BOOL_SETTING(Hooks.HookEngineTick, section_hooks, HookEngineTick)
+        REGISTER_BOOL_SETTING(Hooks.HookGameViewportClientTick, section_hooks, HookGameViewportClientTick)
+        REGISTER_BOOL_SETTING(Hooks.HookUObjectProcessEvent, section_hooks, HookUObjectProcessEvent)
+        REGISTER_BOOL_SETTING(Hooks.HookProcessConsoleExec, section_hooks, HookProcessConsoleExec)
+        REGISTER_BOOL_SETTING(Hooks.HookUStructLink, section_hooks, HookUStructLink)
         REGISTER_INT64_SETTING(Hooks.FExecVTableOffsetInLocalPlayer, section_hooks, FExecVTableOffsetInLocalPlayer)
 
         constexpr static File::CharType section_experimental_features[] = STR("ExperimentalFeatures");
-        REGISTER_BOOL_SETTING(Experimental.GUIUFunctionCaller, section_experimental_features, GUIUFunctionCaller)
     }
 } // namespace RC

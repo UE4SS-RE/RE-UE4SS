@@ -2,15 +2,15 @@
 
 These are the Lua API functions available in UE4SS, on top of the standard libraries that Lua comes with by defualt.
 
-For version: **3.0.0**.
+For version: **3.1.0**
 
-Current status: **incomplete**.
+Current status: **mostly complete**
 
 ## Full API Overview
 
 This is an overall list of API definitions available in UE4SS. For more readable information, see the individual API definition pages in the collapsible sections 4.1, 4.2 and 4.3.
 
-> Warning: This API list is not updated as often as the individual API definition pages. It may be out of date.
+> **Warning: This API list is not updated since 2.5.2, so it out of date. Please refer to the individual API definition pages for the most up-to-date information.**
 
 ### Table Definitions
 - The definitions appear as: FieldName | FieldValueType
@@ -110,6 +110,9 @@ This is an overall list of API definitions available in UE4SS. For more readable
     print(any... Message)
         - Does not have the capability to format. Use 'string.format' if you require formatting.
     
+    CreateInvalidObject() -> UObject
+        - Creates an object with an IsValid function that always returns false
+
     StaticFindObject(string ObjectName) -> { UObject | AActor | nil }
     StaticFindObject(UClass Class=nil, UObject InOuter=nil, string ObjectName, bool ExactClass=false)
         - Maps to https://docs.unrealengine.com/4.26/en-US/API/Runtime/CoreUObject/UObject/StaticFindObject/
@@ -318,6 +321,14 @@ This is an overall list of API definitions available in UE4SS. For more readable
         - You can use '.__name' and '.__absolute_path' to retrieve values.
         - You can use '.__files' to retrieve a table containing all files in this directory.
         - You also use '.__name' and '.__absolute_path' for files.
+
+    DumpAllObjects()
+    GenerateSDK()
+    GenerateLuaTypes()
+    GenerateUHTCompatibleHeaders()
+    DumpStaticMeshes()
+    DumpAllActors()
+    DumpUSMAP()
 ```
 
 ### Classes

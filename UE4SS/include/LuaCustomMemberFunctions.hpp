@@ -3,7 +3,7 @@
 #include <unordered_map>
 
 #include <Unreal/Core/HAL/Platform.hpp>
-#include <Unreal/FScriptArray.hpp>
+#include <Unreal/Core/Containers/ScriptArray.hpp>
 #include <Unreal/Property/FArrayProperty.hpp>
 #include <Unreal/Property/FObjectProperty.hpp>
 #include <Unreal/UObject.hpp>
@@ -173,9 +173,7 @@ namespace RC::UnrealRuntimeTypes
 
     template <typename T>
     concept HasStaticClassMemberFunction = requires(T t) {
-        {
-            T::StaticClass()
-        };
+        { T::StaticClass() };
     };
 
     struct ArrayTest

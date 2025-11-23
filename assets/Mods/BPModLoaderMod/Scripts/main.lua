@@ -4,7 +4,7 @@ local VerboseLogging = false
 
 local function Log(Message, OnlyLogIfVerbose)
     if not VerboseLogging and OnlyLogIfVerbose then return end
-    print(Message)
+    print("[BPModLoaderMod] " .. Message)
 end
 
 package.path = '.\\Mods\\ModLoaderMod\\?.lua;' .. package.path
@@ -22,7 +22,7 @@ DefaultModConfig.AssetNameAsFName = UEHelpers.FindOrAddFName("ModActor_C")
 
 -- Checks if the beginning of a string contains a certain pattern.
 local function StartsWith(String, StringToCompare)
-    return string.sub(String,1,string.len(StringToCompare))==StringToCompare
+    return string.sub(String, 1, string.len(StringToCompare)) == StringToCompare
 end
 
 local function FileExists(file)
@@ -31,20 +31,20 @@ local function FileExists(file)
     return f ~= nil
 end
 
--- Reads lines from the specified file and returns a table of lines read. 
+-- Reads lines from the specified file and returns a table of lines read.
 -- Second argument takes a string that can be used to exclude lines starting with that string. Default ;
 local function LinesFrom(file, ignoreLinesStartingWith)
     if not FileExists(file) then return {} end
 
-    if ignoreLinesStartingWith == nil then 
+    if ignoreLinesStartingWith == nil then
         ignoreLinesStartingWith = ";"
     end
 
     local lines = {}
-    for line in io.lines(file) do 
-      if not StartsWith(line, ignoreLinesStartingWith) then
-        lines[#lines + 1] = line
-      end
+    for line in io.lines(file) do
+        if not StartsWith(line, ignoreLinesStartingWith) then
+            lines[#lines + 1] = line
+        end
     end
     return lines
 end
@@ -71,7 +71,7 @@ local function LoadModOrder()
     end
 
     if entriesAdded <= 0 then
-        Log(string.format("Mods/BPModLoaderMod/load_order.txt not present or no matching mods, loading all BP mods in random order."))
+        Log(string.format("Mods/BPModLoaderMod/load_order.txt not present or no matching mods, loading all BP mods in random order.\n"))
     end
 end
 
@@ -124,9 +124,9 @@ local function LoadModConfigs()
         LogicModsDir = Dirs.Game.Content.Paks.LogicMods
         if not LogicModsDir then error("[BPModLoader] Unable to find or create Content/Paks/LogicMods directory. Try creating manually.") end
     end
-    for ModDirectoryName,ModDirectory in pairs(LogicModsDir) do
+    for ModDirectoryName, ModDirectory in pairs(LogicModsDir) do
         Log(string.format("Mod: %s\n", ModDirectoryName))
-        for _,ModFile in pairs(ModDirectory.__files) do
+        for _, ModFile in pairs(ModDirectory.__files) do
             Log(string.format("    ModFile: %s\n", ModFile.__name))
             if ModFile.__name == "config.lua" then
                 dofile(ModFile.__absolute_path)
@@ -169,10 +169,10 @@ end
 
 LoadModConfigs()
 
-for _,v in ipairs(OrderedMods) do
+for _, v in ipairs(OrderedMods) do
     Log(string.format("%s == %s\n", v.Name, v))
     if type(v) == "table" then
-        for k2,v2 in pairs(v) do
+        for k2, v2 in pairs(v) do
             Log(string.format("    %s == %s\n", k2, v2))
         end
     end
@@ -205,39 +205,41 @@ local function LoadMod(ModName, ModInfo, World)
         }
     end
 
-    ExecuteInGameThread(function()
-        local ModClass = AssetRegistryHelpers:GetAsset(AssetData)
-        if not ModClass:IsValid() then
-			local ObjectPath = AssetData.ObjectPath and AssetData.ObjectPath:ToString() or ""
-			local PackageName = AssetData.PackageName and AssetData.PackageName:ToString() or ""
-			local AssetName = AssetData.AssetName and AssetData.AssetName:ToString() or ""
-			Log(string.format("ModClass for '%s' is not valid\nObjectPath: %s\nPackageName: %s\nAssetName: %s", ModName, ObjectPath,PackageName, AssetName))
-			return
-		end
+    local ModClass = AssetRegistryHelpers:GetAsset(AssetData)
+    if not ModClass:IsValid() then
+        local ObjectPath = AssetData.ObjectPath and AssetData.ObjectPath:ToString() or ""
+        local PackageName = AssetData.PackageName and AssetData.PackageName:ToString() or ""
+        local AssetName = AssetData.AssetName and AssetData.AssetName:ToString() or ""
+        Log(string.format("ModClass for '%s' is not valid\nObjectPath: %s\nPackageName: %s\nAssetName: %s\n", ModName, ObjectPath,PackageName, AssetName))
+        return
+    end
 
-        if not World:IsValid() then Log(string.format("World is not valid for '%s' to spawn in", ModName)) return end
+    if not World then error("A `nil` World parameter was passed to LoadMod function. It's most likely a bug in BPModLoaderMod!") end
+    if not World:IsValid() then
+        Log(string.format("World is not valid for '%s' to spawn in\n", ModName))
+        return
+    end
 
-        local Actor = World:SpawnActor(ModClass, {}, {})
-        if not Actor:IsValid() then
-            Log(string.format("Actor for mod '%s' is not valid\n", ModName))
+    local Actor = World:SpawnActor(ModClass, {}, {})
+    if not Actor:IsValid() then
+        Log(string.format("Actor for mod '%s' is not valid\n", ModName))
+    else
+        Log(string.format("Actor: %s\n", Actor:GetFullName()))
+        local PreBeginPlay = Actor.PreBeginPlay
+        if PreBeginPlay:IsValid() then
+            Log(string.format("Executing 'PreBeginPlay' for mod '%s', with path: '%s'\n", ModName, Actor:GetFullName()))
+            PreBeginPlay()
         else
-            Log(string.format("Actor: %s\n", Actor:GetFullName()))
-            local PreBeginPlay = Actor.PreBeginPlay
-            if PreBeginPlay:IsValid() then
-                Log(string.format("Executing 'PreBeginPlay' for mod '%s', with path: '%s'\n", ModName, Actor:GetFullName()))
-                PreBeginPlay()
-            else
-                Log(string.format("PreBeginPlay not valid for mod %s\n", ModName), true)
-            end
+            Log(string.format("PreBeginPlay not valid for mod %s\n", ModName), true)
         end
-    end)
+    end
 end
 
 local function CacheAssetRegistry()
     if AssetRegistryHelpers and AssetRegistry then return end
 
     AssetRegistryHelpers = StaticFindObject("/Script/AssetRegistry.Default__AssetRegistryHelpers")
-    if not AssetRegistryHelpers:IsValid() then print("AssetRegistryHelpers is not valid\n") end
+    if not AssetRegistryHelpers:IsValid() then Log("AssetRegistryHelpers is not valid\n") end
 
     if AssetRegistryHelpers then
         AssetRegistry = AssetRegistryHelpers:GetAssetRegistry()
@@ -250,9 +252,12 @@ local function CacheAssetRegistry()
     error("AssetRegistry is not valid\n")
 end
 
-
-
 local function LoadMods(World)
+    if not World or not World:IsValid() then
+        Log("[Warning] Invalid UWorld object was passed to LoadMods.\n")
+        return
+    end
+
     CacheAssetRegistry()
     for _, ModInfo in ipairs(OrderedMods) do
         if type(ModInfo) == "table" then
@@ -261,22 +266,15 @@ local function LoadMods(World)
     end
 end
 
-local function LoadModsManual()
-    LoadMods(UEHelpers.GetWorld())
-end
-
-RegisterLoadMapPostHook(function(Engine, World)
-    LoadMods(World:get())
+RegisterKeyBind(Key.INS, function()
+    ExecuteInGameThread(function()
+        LoadMods(UEHelpers.GetWorld())
+    end)
 end)
-
-local ExistingActor = FindFirstOf("Actor")
-if ExistingActor ~= nil and ExistingActor:IsValid() then
-    LoadMods(ExistingActor:GetWorld())
-end
 
 RegisterBeginPlayPostHook(function(ContextParam)
     local Context = ContextParam:get()
-    for _,ModConfig in ipairs(OrderedMods) do
+    for _, ModConfig in ipairs(OrderedMods) do
         if Context:GetClass():GetFName() ~= ModConfig.AssetNameAsFName then return end
         local AssetPathWithClassPrefix = string.format("BlueprintGeneratedClass %s.%s", ModConfig.AssetPath, ModConfig.AssetName)
         if AssetPathWithClassPrefix == Context:GetClass():GetFullName() then
@@ -291,4 +289,13 @@ RegisterBeginPlayPostHook(function(ContextParam)
     end
 end)
 
-RegisterKeyBind(Key.INS, LoadModsManual)
+RegisterLoadMapPostHook(function(Engine, World)
+    LoadMods(World:get())
+end)
+
+ExecuteInGameThread(function()
+    local ExistingActor = FindFirstOf("Actor")
+    if ExistingActor:IsValid() then
+        LoadMods(ExistingActor:GetWorld())
+    end
+end)

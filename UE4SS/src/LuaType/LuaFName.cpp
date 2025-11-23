@@ -50,8 +50,8 @@ namespace RC::LuaType
             std::string error_overload_not_found{R"(
 No overload found for function 'FName'.
 Overloads:
-#1: FName(string Name, EFindName = FName_Add)
-#2: FName(integer ComparisonIndex, EFindName = FName_Add))"};
+#1: FName(string Name, EFindName = FNAME_Add)
+#2: FName(integer ComparisonIndex, EFindName = FNAME_Add))"};
 
             if (lua.is_userdata())
             {
@@ -64,7 +64,7 @@ Overloads:
             Unreal::EFindName find_type{Unreal::EFindName::FNAME_Add};
             if (lua.is_string())
             {
-                name_string = to_wstring(lua.get_string());
+                name_string = ensure_str(lua.get_string());
             }
             else if (lua.is_integer())
             {

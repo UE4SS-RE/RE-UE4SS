@@ -8,7 +8,7 @@
 #include <SigScanner/Common.hpp>
 
 #define HI_NIBBLE(b) (((b) >> 4) & 0x0F)
-#define LO_NIBBLE(b) ((b)&0x0F)
+#define LO_NIBBLE(b) ((b) & 0x0F)
 
 // Windows.h forward declarations
 struct _SYSTEM_INFO;

@@ -9,6 +9,8 @@
 #include <DynamicOutput/DynamicOutput.hpp>
 #include <Helpers/String.hpp>
 #include <Input/Handler.hpp>
+#include <UVTD/Config.hpp>
+#include <UVTD/ConfigUtil.hpp>
 #include <UVTD/ExceptionHandling.hpp>
 #include <UVTD/Helpers.hpp>
 #include <UVTD/MemberVarsDumper.hpp>
@@ -22,49 +24,14 @@
 #include <Windows.h>
 #include <dbghelp.h>
 
+#include <String/StringType.hpp>
+
 namespace RC::UVTD
 {
     bool processing_events{false};
-    Input::Handler input_handler{L"ConsoleWindowClass", L"UnrealWindow"};
-
-    auto static event_loop_update() -> void
-    {
-        for (processing_events = true; processing_events;)
-        {
-            input_handler.process_event();
-            std::this_thread::sleep_for(std::chrono::milliseconds(5));
-        }
-    }
 
     auto main(DumpSettings dump_settings) -> void
     {
-        static std::vector<std::filesystem::path> pdbs_to_dump{
-                "PDBs/4_10.pdb",
-                "PDBs/4_11.pdb",
-                "PDBs/4_12.pdb",
-                "PDBs/4_13.pdb",
-                "PDBs/4_14.pdb",
-                "PDBs/4_15.pdb",
-                "PDBs/4_16.pdb",
-                "PDBs/4_17.pdb",
-                "PDBs/4_18.pdb",
-                "PDBs/4_19.pdb",
-                "PDBs/4_20.pdb",
-                "PDBs/4_21.pdb",
-                "PDBs/4_22.pdb",
-                "PDBs/4_23.pdb",
-                "PDBs/4_24.pdb",
-                "PDBs/4_25.pdb",
-                "PDBs/4_26.pdb",
-                "PDBs/4_27.pdb",
-                // WITH_CASE_PRESERVING_NAMES
-                "PDBs/4_27_CasePreserving.pdb",
-                "PDBs/5_00.pdb",
-                "PDBs/5_01.pdb",
-                "PDBs/5_02.pdb",
-                "PDBs/5_03.pdb",
-        };
-
         UnrealVirtualGenerator::output_cleanup();
 
         if (dump_settings.should_dump_vtable) VTableDumper::output_cleanup();
@@ -72,6 +39,14 @@ namespace RC::UVTD
         if (dump_settings.should_dump_sol_bindings) SolBindingsGenerator::output_cleanup();
 
         TypeContainer shared_container{};
+
+        // Use ConfigUtil instead of hardcoded list
+        const auto& pdbs_to_dump = ConfigUtil::GetPDBsToDump();
+        if (pdbs_to_dump.empty()) 
+        {
+            Output::send(STR("No PDBs configured to dump. Please check your pdbs_to_dump.json configuration.\n"));
+            return;
+        }
 
         for (const std::filesystem::path& pdb : pdbs_to_dump)
         {

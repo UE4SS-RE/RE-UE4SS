@@ -7,6 +7,7 @@ namespace RC::File
         Writing,
         Appending,
         Reading,
+        ReadWrite,
     };
 
     enum class OverwriteExistingFile

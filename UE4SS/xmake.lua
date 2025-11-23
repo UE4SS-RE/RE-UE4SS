@@ -1,14 +1,19 @@
-includes("proxy_generator")
+if get_config("ue4ssCross") ~= "msvc-wine" then
+    includes("proxy_generator")
+end
 
-add_requires("imgui v1.89", { debug = is_mode_debug(), configs = { win32 = true, dx11 = true, opengl3 = true, glfw_opengl3 = true, runtimes = get_mode_runtimes() } })
-add_requires("ImGuiTextEdit v1.0", { debug = is_mode_debug(), configs = { runtimes = get_mode_runtimes() } })
-add_requires("IconFontCppHeaders v1.0", { debug = is_mode_debug(), configs = { runtimes = get_mode_runtimes() } })
-add_requires("glfw 3.3.9", { debug = is_mode_debug(), configs = { runtimes = get_mode_runtimes() } })
-add_requires("opengl", { debug = is_mode_debug(), configs = { runtimes = get_mode_runtimes() } })
+add_requires("imgui v1.92.1", { debug = is_mode_debug(), configs = { win32 = true, dx11 = true, opengl3 = true, glfw_opengl3 = true , runtimes = get_mode_runtimes()} } )
+add_requires("ImGuiTextEdit v1.2.0", { debug = is_mode_debug(), configs = {runtimes = get_mode_runtimes()} })
+add_requires("IconFontCppHeaders v1.0", { debug = is_mode_debug(), configs = {runtimes = get_mode_runtimes()}})
+add_requires("glfw 3.3.9", { debug = is_mode_debug() , configs = {runtimes = get_mode_runtimes()}})
+add_requires("opengl", { debug = is_mode_debug(), configs = {runtimes = get_mode_runtimes()} })
+add_requires("glaze v2.9.5", { debug = is_mode_debug(), configs = {runtimes = get_mode_runtimes()} })
+add_requires("fmt 11.2.0", { debug = is_mode_debug(), configs = {runtimes = get_mode_runtimes()} })
 
 option("ue4ssBetaIsStarted")
     set_default(true)
     set_showmenu(true)
+    -- Sets the possible options to only be true or false.
     set_values(true, false)
 
     set_description("Have beta releases started for the current major version")
@@ -16,9 +21,18 @@ option("ue4ssBetaIsStarted")
 option("ue4ssIsBeta")
     set_default(true)
     set_showmenu(true)
+    -- Sets the possible options to only be true or false.
     set_values(true, false)
 
     set_description("Is this a beta release")
+
+option("versionCheck")
+    set_default(true)
+    set_showmenu(true)
+    -- Sets the possible options to only be true or false.
+    set_values(true, false)
+
+    set_description("Will xmake check the installed MSVC and Rust versions on configuration step")
 
 local projectName = "UE4SS"
 
@@ -39,12 +53,12 @@ end
 
 target(projectName)
     set_kind("shared")
-    set_languages("cxx20")
+    set_languages("cxx23")
     set_exceptions("cxx")
     set_default(true)
-
-    add_options("ue4ssBetaIsStarted", "ue4ssIsBeta")
-
+    add_rules("ue4ss.defines.exports")
+    add_rules("ue4ss.check.minimum.version")
+    add_options("ue4ssBetaIsStarted", "ue4ssIsBeta", "allowAllVersions", "ue4ssInput")
     add_includedirs("include", { public = true })
     add_includedirs("generated_include", { public = true })
     add_headerfiles("include/**.hpp")
@@ -60,6 +74,9 @@ target(projectName)
         "ScopedTimer", "Profiler", "patternsleuth_bind",
         "glad", { public = true }
     )
+
+    add_packages("fmt", { public = true })
+
     add_packages("imgui", "ImGuiTextEdit", "IconFontCppHeaders", "glfw", "opengl", { public = true })
 
     add_packages("glaze", "polyhook_2", { public = true })
@@ -68,18 +85,6 @@ target(projectName)
 
     after_load(function (target)
         local projectRoot = get_config("ue4ssRoot")
-
-        local scriptsRoot = get_config("scriptsRoot")
-        import("build_configs", { rootdir = scriptsRoot })
-        import("target_helpers", { rootdir = scriptsRoot })
-        
-        print("Project: " .. projectName .. " (SHARED)")
-
-        build_configs:set_output_dir(target)
-        build_configs:export_deps(target)
-
-        target:add("defines", target_helpers.project_name_to_exports_define(projectName))
-        
         local version_string = io.readfile(path.join(target:scriptdir(), "generated_src/version.cache"))
         local version = parse_version_string(version_string)
 
@@ -92,11 +97,28 @@ target(projectName)
         target:add("defines", "UE4SS_LIB_BETA_STARTED=" .. (get_config("ue4ssBetaIsStarted") and "1" or "0"), { public = true })
         target:add("defines", "UE4SS_LIB_IS_BETA=" .. (get_config("ue4ssIsBeta") and "1" or "0"), { public = true })
 
-        local git_dir = path.join(projectRoot, ".git")
-        local outdata, _ = os.iorunv("git", {"--git-dir=" .. git_dir, "--work-tree=" .. projectRoot, "rev-parse", "--short", "HEAD"})
-        local commit_hash = outdata:gsub("%s+$", "")
-        target:add("defines", "UE4SS_LIB_BUILD_GITSHA=\"" .. commit_hash .. "\"", { public = true })
-        
+        -- Attempt to get the latest git commit from the UE4SS root directory.
+        -- We have to be explicit about running it in the root UE4SS directory
+        -- in the case where RE-UE4SS is submoduled in another git repo.
+
+        import("lib.detect.find_tool")
+        local git = assert(find_tool("git"), "git not found!")
+
+        -- init arguments
+        local argv = {"rev-parse", "--short", "HEAD"}
+        local lastcommit = os.iorunv(git.program, argv, {curdir = get_config("ue4ssRoot")})
+        if lastcommit then
+            lastcommit = lastcommit:trim()
+        end
+
+        target:add("defines", "UE4SS_LIB_BUILD_GITSHA=\"" .. lastcommit .. "\"", { public = true })
         target:add("defines", "UE4SS_CONFIGURATION=\"" .. get_config("mode") .. "\"", { public = true })
     end)
 
+    on_install(function(target)
+        os.mkdir(target:installdir())
+        os.cp(target:targetfile(), target:installdir())
+        if target:symbolfile() then
+            os.cp(target:symbolfile(), target:installdir())
+        end
+    end)

@@ -3,6 +3,8 @@
 #include <Common.hpp>
 #include <cstdint>
 
+#include <String/StringType.hpp>
+
 #define DefaultStructMemberData(member_name)                                                                                                                   \
     union {                                                                                                                                                    \
         const char* as_string{};                                                                                                                               \
@@ -29,6 +31,7 @@ namespace RC::LuaLibrary
 
     // Global Lua functions are meant to be called with intact Lua stack
     auto global_print(const LuaMadeSimple::Lua&) -> int;
+    auto load_export(const LuaMadeSimple::Lua&) -> int;
 
     // Used exclusively for the scripts inside the 'UE4SS_Signatures' folder
     auto deref_to_int32(const LuaMadeSimple::Lua&) -> int;
@@ -85,8 +88,10 @@ namespace RC::LuaLibrary
         __declspec(dllexport) auto set_script_variable_int32(const char* mod_name, const char* variable_name, int32_t new_value, ReturnValue&) -> void;
 
         using SetScriptVariableDefaultDataSignature = void (*)(const char*, const char*, DefaultDataStruct&, ReturnValue&);
-        __declspec(dllexport) auto set_script_variable_default_data(const char* mod_name, const char* variable_name, DefaultDataStruct& external_data, ReturnValue&)
-                -> void;
+        __declspec(dllexport) auto set_script_variable_default_data(const char* mod_name,
+                                                                    const char* variable_name,
+                                                                    DefaultDataStruct& external_data,
+                                                                    ReturnValue&) -> void;
 
         using CallScriptFunctionSignature = void (*)(const char*, const char*, ReturnValue&, ScriptFuncReturnValue&);
         __declspec(dllexport) auto call_script_function(const char* mod_name, const char* function_name, ReturnValue&, ScriptFuncReturnValue&) -> void;

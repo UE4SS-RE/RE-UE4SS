@@ -1,2 +1,5 @@
 # add .clang-format
 c3eaefbd993dd0f3c8b9d440b7d5b9cc7528732c
+
+# Ran clang-format before sort-include update
+5462e5d96ad2e409f90bb21d33c22e5580ba3260
