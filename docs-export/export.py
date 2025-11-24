@@ -27,6 +27,39 @@ def copy_transform(src, dst, transformer):
     with open(dst, 'w') as file:
         file.write(content)
 
+def deduplicate_summary(summary_path):
+    """Remove duplicate file references from SUMMARY.md"""
+    if not os.path.exists(summary_path):
+        return
+
+    with open(summary_path, 'r', encoding='utf-8') as f:
+        lines = f.readlines()
+
+    seen_paths = set()
+    new_lines = []
+    link_pattern = re.compile(r'\[([^\]]+)\]\(([^)]+)\)')
+
+    for line in lines:
+        matches = link_pattern.findall(line)
+        is_duplicate = False
+
+        if matches:
+            for text, path in matches:
+                clean_path = path.split('#')[0]
+                if clean_path in seen_paths:
+                    # Skip this line entirely instead of commenting it out
+                    is_duplicate = True
+                    break
+                else:
+                    seen_paths.add(clean_path)
+
+        # Only add the line if it's not a duplicate
+        if not is_duplicate:
+            new_lines.append(line)
+
+    with open(summary_path, 'w', encoding='utf-8') as f:
+        f.writelines(new_lines)
+
 def export_version(ref, name):
     docs_spec = f'{ref}:docs'
 
@@ -45,6 +78,12 @@ def export_version(ref, name):
     ps = subprocess.Popen(('git', 'archive', docs_spec), stdout=subprocess.PIPE)
     subprocess.check_output(('tar', 'xvf', '-', '-C', src_dir), stdin=ps.stdout)
     ps.wait()
+
+    # Deduplicate SUMMARY.md for old versions with duplicate paths
+    # mdBook v0.5+ enforces unique paths, but old release tags may have duplicates
+    # This preprocessing step removes duplicate entries before mdBook sees them
+    summary_path = os.path.join(src_dir, 'SUMMARY.md')
+    deduplicate_summary(summary_path)
 
     # copy README.md to <version>/src/
     # rewrite absolute URLs to relative mdBook URLs
