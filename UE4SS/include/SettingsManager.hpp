@@ -16,7 +16,7 @@ namespace RC
         struct SectionOverrides
         {
             File::StringType ModsFolderPath{};
-            bool ParseModsFromAdditionalPaths{true};
+            File::StringType ControllingModsTxt{};
         } Overrides;
 
         struct SectionGeneral

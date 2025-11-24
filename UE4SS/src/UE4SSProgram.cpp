@@ -1318,88 +1318,121 @@ namespace RC
     {
         ProfilerScope();
 
-        const auto& main_mods_directory = UE4SSProgram::get_program().get_mods_directory();
-        for (const auto& mods_directory : std::ranges::reverse_view(UE4SSProgram::get_program().get_mods_directories()))
+        // Determine which mods.txt file(s) to parse
+        std::vector<std::filesystem::path> mods_txt_files_to_parse;
+
+        if (!UE4SSProgram::settings_manager.Overrides.ControllingModsTxt.empty())
+        {
+            // If a controlling mods.txt is specified, only use that one
+            auto controlling_path = UE4SSProgram::get_program().make_compatible_path(UE4SSProgram::settings_manager.Overrides.ControllingModsTxt);
+            if (std::filesystem::exists(controlling_path))
+            {
+                mods_txt_files_to_parse.push_back(controlling_path);
+                Output::send(STR("Using controlling mods.txt from: {}\n"), ensure_str(controlling_path));
+            }
+            else
+            {
+                Output::send(STR("Warning: Controlling mods.txt not found at: {}\n"), ensure_str(controlling_path));
+            }
+        }
+        else
+        {
+            // Parse mods.txt from all directories
+            for (const auto& mods_directory : std::ranges::reverse_view(UE4SSProgram::get_program().get_mods_directories()))
+            {
+                if (!std::filesystem::exists(mods_directory))
+                {
+                    continue;
+                }
+
+                auto mods_txt_path = mods_directory / "mods.txt";
+                if (std::filesystem::exists(mods_txt_path))
+                {
+                    mods_txt_files_to_parse.push_back(mods_txt_path);
+                }
+            }
+        }
+
+        // Process each mods.txt file
+        for (const auto& enabled_mods_file : mods_txt_files_to_parse)
+        {
+            // Part #1: Start all mods that are enabled in mods.txt.
+            if (!std::filesystem::exists(enabled_mods_file))
+            {
+                Output::send(STR("No mods.txt file found...\n"));
+            }
+            else
+            {
+                // 'mods.txt' exists, lets parse it
+                Output::send(STR("Starting mods (from mods.txt ({}) load order)...\n"), ensure_str(enabled_mods_file));
+
+                // First, check for BOM using a byte stream
+                std::ifstream bom_check(enabled_mods_file, std::ios::binary);
+                char bom[3] = {0};
+                bom_check.read(bom, 3);
+                bool has_bom = (bom[0] == '\xEF' && bom[1] == '\xBB' && bom[2] == '\xBF');
+                bom_check.close();
+
+                // Now open the actual stream
+                StreamIType mods_stream{enabled_mods_file};
+
+                // If BOM was detected, skip the first "character" (which will be the BOM interpreted as a wide char)
+                if (has_bom)
+                {
+                    wchar_t discard;
+                    mods_stream.get(discard);
+                }
+
+                StringType current_line;
+                while (std::getline(mods_stream, current_line))
+                {
+                    // Don't parse any lines with ';'
+                    if (current_line.find(STR(";")) != current_line.npos)
+                    {
+                        continue;
+                    }
+
+                    // Don't parse if the line is impossibly short (empty lines for example)
+                    if (current_line.size() <= 4)
+                    {
+                        continue;
+                    }
+
+                    // Remove all spaces
+                    auto end = std::remove(current_line.begin(), current_line.end(), STR(' '));
+                    current_line.erase(end, current_line.end());
+
+                    // Parse the line into something that can be converted into proper data
+                    StringType mod_name = explode_by_occurrence(current_line, STR(':'), 1);
+                    StringType mod_enabled = explode_by_occurrence(current_line, STR(':'), ExplodeType::FromEnd);
+
+                    auto mod = UE4SSProgram::find_mod_by_name<ModType>(mod_name, UE4SSProgram::IsInstalled::Yes);
+                    if (!mod || !dynamic_cast<ModType*>(mod) || mod->is_started())
+                    {
+                        continue;
+                    }
+
+                    if (!mod_enabled.empty() && mod_enabled[0] == STR('1'))
+                    {
+                        Output::send(STR("Starting {} mod '{}'\n"), std::is_same_v<ModType, LuaMod> ? STR("Lua") : STR("C++"), mod->get_name().data());
+                        mod->start_mod();
+                    }
+                    else
+                    {
+                        Output::send(STR("Mod '{}' disabled in mods.txt.\n"), mod_name);
+                    }
+                }
+            }
+        }
+
+        // Part #2: Start all mods that have enabled.txt present in the mod directory.
+        for (const auto& mods_directory : UE4SSProgram::get_program().get_mods_directories())
         {
             if (!std::filesystem::exists(mods_directory))
             {
                 continue;
             }
 
-            // Only parse mods.txt from allowed directories.
-            if (UE4SSProgram::settings_manager.Overrides.ParseModsFromAdditionalPaths || mods_directory == main_mods_directory)
-            {
-                // Part #1: Start all mods that are enabled in mods.txt.
-                std::wstring enabled_mods_file{mods_directory / "mods.txt"};
-                if (!std::filesystem::exists(enabled_mods_file))
-                {
-                    Output::send(STR("No mods.txt file found...\n"));
-                }
-                else
-                {
-                    // 'mods.txt' exists, lets parse it
-                    Output::send(STR("Starting mods (from mods.txt ({}) load order)...\n"), ensure_str(enabled_mods_file));
-
-                    // First, check for BOM using a byte stream
-                    std::ifstream bom_check(enabled_mods_file, std::ios::binary);
-                    char bom[3] = {0};
-                    bom_check.read(bom, 3);
-                    bool has_bom = (bom[0] == '\xEF' && bom[1] == '\xBB' && bom[2] == '\xBF');
-                    bom_check.close();
-
-                    // Now open the actual stream
-                    StreamIType mods_stream{enabled_mods_file};
-
-                    // If BOM was detected, skip the first "character" (which will be the BOM interpreted as a wide char)
-                    if (has_bom)
-                    {
-                        wchar_t discard;
-                        mods_stream.get(discard);
-                    }
-
-                    StringType current_line;
-                    while (std::getline(mods_stream, current_line))
-                    {
-                        // Don't parse any lines with ';'
-                        if (current_line.find(STR(";")) != current_line.npos)
-                        {
-                            continue;
-                        }
-
-                        // Don't parse if the line is impossibly short (empty lines for example)
-                        if (current_line.size() <= 4)
-                        {
-                            continue;
-                        }
-
-                        // Remove all spaces
-                        auto end = std::remove(current_line.begin(), current_line.end(), STR(' '));
-                        current_line.erase(end, current_line.end());
-
-                        // Parse the line into something that can be converted into proper data
-                        StringType mod_name = explode_by_occurrence(current_line, STR(':'), 1);
-                        StringType mod_enabled = explode_by_occurrence(current_line, STR(':'), ExplodeType::FromEnd);
-
-                        auto mod = UE4SSProgram::find_mod_by_name<ModType>(mod_name, UE4SSProgram::IsInstalled::Yes);
-                        if (!mod || !dynamic_cast<ModType*>(mod) || mod->is_started())
-                        {
-                            continue;
-                        }
-
-                        if (!mod_enabled.empty() && mod_enabled[0] == STR('1'))
-                        {
-                            Output::send(STR("Starting {} mod '{}'\n"), std::is_same_v<ModType, LuaMod> ? STR("Lua") : STR("C++"), mod->get_name().data());
-                            mod->start_mod();
-                        }
-                        else
-                        {
-                            Output::send(STR("Mod '{}' disabled in mods.txt.\n"), mod_name);
-                        }
-                    }
-                }
-            }
-
-            // Part #2: Start all mods that have enabled.txt present in the mod directory.
             Output::send(STR("Starting mods (from enabled.txt ({}), no defined load order)...\n"), ensure_str(mods_directory));
 
             for (const auto& mod_directory : std::filesystem::directory_iterator(mods_directory))
