@@ -4079,24 +4079,33 @@ Overloads:
             // Generate a UTF-8 chunk name for better error messages
             std::string chunk_name = "@" + to_utf8_string(script_path);
 
+            lua_State* L = main_lua()->get_lua_state();
+
+            // Push error handler first so we capture the stack before it unwinds
+            int err_handler_idx = LuaMadeSimple::push_pcall_error_handler(L);
+
             // Load the buffer
-            if (int status = luaL_loadbuffer(main_lua()->get_lua_state(), buffer.data(), buffer.size(), chunk_name.c_str()); status != LUA_OK)
+            if (int status = luaL_loadbuffer(L, buffer.data(), buffer.size(), chunk_name.c_str()); status != LUA_OK)
             {
-                std::string error_msg = lua_tostring(main_lua()->get_lua_state(), -1);
+                std::string error_msg = lua_tostring(L, -1);
                 Output::send<LogLevel::Error>(STR("Error loading script: {}\n"), ensure_str(error_msg));
-                lua_pop(main_lua()->get_lua_state(), 1);
+                lua_pop(L, 1);
+                lua_remove(L, err_handler_idx); // Clean up error handler
                 return false;
             }
 
-            // Execute the chunk
-            if (int status = lua_pcall(main_lua()->get_lua_state(), 0, 0, 0); status != LUA_OK)
+            // Execute the chunk with our error handler
+            if (int status = lua_pcall(L, 0, 0, err_handler_idx); status != LUA_OK)
             {
-                std::string error_msg = lua_tostring(main_lua()->get_lua_state(), -1);
+                // Error handler already captured the stack and notified debugger
+                std::string error_msg = lua_tostring(L, -1);
                 Output::send<LogLevel::Error>(STR("Error executing script: {}\n"), ensure_str(error_msg));
-                lua_pop(main_lua()->get_lua_state(), 1);
+                lua_pop(L, 1);
+                lua_remove(L, err_handler_idx); // Clean up error handler
                 return false;
             }
 
+            lua_remove(L, err_handler_idx); // Clean up error handler
             return true;
         }
         catch (const std::exception& e)
@@ -4974,17 +4983,27 @@ Overloads:
 
                 try
                 {
-                    if (int status = luaL_loadstring(LuaStatics::console_executor->get_lua_state(), to_string(cmd).c_str()); status != LUA_OK)
+                    lua_State* L = LuaStatics::console_executor->get_lua_state();
+
+                    // Push error handler to capture stack before it unwinds
+                    int err_handler_idx = LuaMadeSimple::push_pcall_error_handler(L);
+
+                    if (int status = luaL_loadstring(L, to_string(cmd).c_str()); status != LUA_OK)
                     {
+                        lua_remove(L, err_handler_idx);
                         LuaStatics::console_executor->throw_error(
                                 fmt::format("luaL_loadstring returned {}", LuaStatics::console_executor->resolve_status_message(status, true)));
                     }
 
-                    if (int status = lua_pcall(LuaStatics::console_executor->get_lua_state(), 0, LUA_MULTRET, 0); status != LUA_OK)
+                    if (int status = lua_pcall(L, 0, LUA_MULTRET, err_handler_idx); status != LUA_OK)
                     {
+                        lua_pop(L, 1); // Pop error message
+                        lua_remove(L, err_handler_idx);
                         LuaStatics::console_executor->throw_error(
                                 fmt::format("lua_pcall returned {}", LuaStatics::console_executor->resolve_status_message(status, true)));
                     }
+
+                    lua_remove(L, err_handler_idx);
                 }
                 catch (std::runtime_error& e)
                 {
