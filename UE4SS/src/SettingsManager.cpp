@@ -50,11 +50,6 @@ namespace RC
 
         constexpr static File::CharType section_overrides[] = STR("Overrides");
         REGISTER_STRING_SETTING(Overrides.ModsFolderPath, section_overrides, ModsFolderPath)
-        if (!Overrides.ModsFolderPath.empty())
-        {
-            auto& mods_directories = UE4SSProgram::get_program().get_mods_directories();
-            mods_directories.insert(mods_directories.begin(), std::filesystem::path{Overrides.ModsFolderPath});
-        }
 
         auto mods_paths_list = parser.get_list(section_overrides);
         mods_paths_list.for_each(STR("ModsFolderPaths"), [](const StringType& key, const Ini::Value& value) {
@@ -67,6 +62,8 @@ namespace RC
                 UE4SSProgram::get_program().remove_mods_directory(value.get_string_value());
             }
         });
+
+        REGISTER_STRING_SETTING(Overrides.ControllingModsTxt, section_overrides, ControllingModsTxt)
 
         constexpr static File::CharType section_general[] = STR("General");
         REGISTER_BOOL_SETTING(General.EnableHotReloadSystem, section_general, EnableHotReloadSystem)

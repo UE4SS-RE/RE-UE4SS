@@ -170,3 +170,22 @@ set UE4SS_MODS_PATHS=C:\SharedMods;D:\GameMods;E:\TestMods
 ```
 
 Environment variable paths are processed in reverse order (first entry has highest priority). Both INI and environment variable paths support relative and absolute paths, including symlinks.
+
+### Controlling Mods List
+
+By default, UE4SS parses the `mods.txt` file from each mods directory. You can override this to use a single controlling `mods.txt` file:
+
+```ini
+[Overrides]
+; Path to a specific mods.txt file to use as the controlling mod list.
+; If set, ONLY this mods.txt will be parsed instead of mods.txt from all mod directories.
+; Can be relative to working directory or an absolute path.
+ControllingModsTxt = ../MyModsList/mods.txt
+```
+
+This is useful when:
+- Managing mod load order centrally across multiple mod directories
+- Using a shared configuration for multiple game installations
+- Keeping mod lists in version control separate from mod files
+
+When `ControllingModsTxt` is empty (default), UE4SS will parse `mods.txt` from all configured mod directories.

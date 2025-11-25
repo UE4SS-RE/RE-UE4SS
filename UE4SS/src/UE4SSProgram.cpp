@@ -497,7 +497,15 @@ namespace RC
 
     auto UE4SSProgram::setup_mod_directory_path() -> void
     {
-        std::filesystem::path default_mods_path = m_working_directory / "Mods";
+        std::filesystem::path default_mods_path{};
+        if (!settings_manager.Overrides.ModsFolderPath.empty())
+        {
+            default_mods_path = settings_manager.Overrides.ModsFolderPath;
+        }
+        else
+        {
+            default_mods_path = m_working_directory / "Mods";
+        }
 
         // If no paths were added, check legacy location for fallback
         if (std::filesystem::exists(m_legacy_root_directory / "Mods") && !std::filesystem::exists(default_mods_path))
@@ -505,7 +513,12 @@ namespace RC
             default_mods_path = m_legacy_root_directory / "Mods";
         }
 
-        m_mods_directories.insert(m_mods_directories.begin(), default_mods_path);
+        insert_mods_directory(default_mods_path, 0);
+
+        for (const auto& path : m_mods_directories_to_remove)
+        {
+            std::erase(m_mods_directories, path);
+        }
     }
 
     auto UE4SSProgram::create_simple_console() -> void
@@ -1304,119 +1317,165 @@ namespace RC
     auto start_mods() -> std::string
     {
         ProfilerScope();
-        // Part #1: Start all mods that are enabled in mods.txt.
-        Output::send(STR("Starting mods (from mods.txt load order)...\n"));
 
-        std::filesystem::path mods_directory = UE4SSProgram::get_program().get_mods_directory();
-        std::wstring enabled_mods_file{mods_directory / "mods.txt"};
-        if (!std::filesystem::exists(enabled_mods_file))
+        // Determine which mods.txt file(s) to parse
+        std::vector<std::filesystem::path> mods_txt_files_to_parse;
+
+        if (!UE4SSProgram::settings_manager.Overrides.ControllingModsTxt.empty())
         {
-            Output::send(STR("No mods.txt file found...\n"));
+            // If a controlling mods.txt is specified, only use that one
+            auto controlling_path = UE4SSProgram::get_program().make_compatible_path(UE4SSProgram::settings_manager.Overrides.ControllingModsTxt);
+            if (std::filesystem::exists(controlling_path))
+            {
+                mods_txt_files_to_parse.push_back(controlling_path);
+                Output::send(STR("Using controlling mods.txt from: {}\n"), ensure_str(controlling_path));
+            }
+            else
+            {
+                Output::send(STR("Warning: Controlling mods.txt not found at: {}\n"), ensure_str(controlling_path));
+            }
         }
         else
         {
-            // 'mods.txt' exists, lets parse it
-
-            // First, check for BOM using a byte stream
-            std::ifstream bom_check(enabled_mods_file, std::ios::binary);
-            char bom[3] = {0};
-            bom_check.read(bom, 3);
-            bool has_bom = (bom[0] == '\xEF' && bom[1] == '\xBB' && bom[2] == '\xBF');
-            bom_check.close();
-
-            // Now open the actual stream
-            StreamIType mods_stream{enabled_mods_file};
-
-            // If BOM was detected, skip the first "character" (which will be the BOM interpreted as a wide char)
-            if (has_bom) {
-                wchar_t discard;
-                mods_stream.get(discard);
-            }
-
-            StringType current_line;
-            while (std::getline(mods_stream, current_line))
+            // Parse mods.txt from all directories
+            for (const auto& mods_directory : std::ranges::reverse_view(UE4SSProgram::get_program().get_mods_directories()))
             {
-                // Don't parse any lines with ';'
-                if (current_line.find(STR(";")) != current_line.npos)
+                if (!std::filesystem::exists(mods_directory))
                 {
                     continue;
                 }
 
-                // Don't parse if the line is impossibly short (empty lines for example)
-                if (current_line.size() <= 4)
+                auto mods_txt_path = mods_directory / "mods.txt";
+                if (std::filesystem::exists(mods_txt_path))
                 {
-                    continue;
+                    mods_txt_files_to_parse.push_back(mods_txt_path);
+                }
+            }
+        }
+
+        // Process each mods.txt file
+        for (const auto& enabled_mods_file : mods_txt_files_to_parse)
+        {
+            // Part #1: Start all mods that are enabled in mods.txt.
+            if (!std::filesystem::exists(enabled_mods_file))
+            {
+                Output::send(STR("No mods.txt file found...\n"));
+            }
+            else
+            {
+                // 'mods.txt' exists, lets parse it
+                Output::send(STR("Starting mods (from mods.txt ({}) load order)...\n"), ensure_str(enabled_mods_file));
+
+                // First, check for BOM using a byte stream
+                std::ifstream bom_check(enabled_mods_file, std::ios::binary);
+                char bom[3] = {0};
+                bom_check.read(bom, 3);
+                bool has_bom = (bom[0] == '\xEF' && bom[1] == '\xBB' && bom[2] == '\xBF');
+                bom_check.close();
+
+                // Now open the actual stream
+                StreamIType mods_stream{enabled_mods_file};
+
+                // If BOM was detected, skip the first "character" (which will be the BOM interpreted as a wide char)
+                if (has_bom)
+                {
+                    wchar_t discard;
+                    mods_stream.get(discard);
                 }
 
-                // Remove all spaces
-                auto end = std::remove(current_line.begin(), current_line.end(), STR(' '));
-                current_line.erase(end, current_line.end());
-
-                // Parse the line into something that can be converted into proper data
-                StringType mod_name = explode_by_occurrence(current_line, STR(':'), 1);
-                StringType mod_enabled = explode_by_occurrence(current_line, STR(':'), ExplodeType::FromEnd);
-
-                auto mod = UE4SSProgram::find_mod_by_name<ModType>(mod_name, UE4SSProgram::IsInstalled::Yes);
-                if (!mod || !dynamic_cast<ModType*>(mod))
+                StringType current_line;
+                while (std::getline(mods_stream, current_line))
                 {
-                    continue;
-                }
+                    // Don't parse any lines with ';'
+                    if (current_line.find(STR(";")) != current_line.npos)
+                    {
+                        continue;
+                    }
 
-                if (!mod_enabled.empty() && mod_enabled[0] == STR('1'))
-                {
-                    Output::send(STR("Starting {} mod '{}'\n"), std::is_same_v<ModType, LuaMod> ? STR("Lua") : STR("C++"), mod->get_name().data());
-                    mod->start_mod();
-                }
-                else
-                {
-                    Output::send(STR("Mod '{}' disabled in mods.txt.\n"), mod_name);
+                    // Don't parse if the line is impossibly short (empty lines for example)
+                    if (current_line.size() <= 4)
+                    {
+                        continue;
+                    }
+
+                    // Remove all spaces
+                    auto end = std::remove(current_line.begin(), current_line.end(), STR(' '));
+                    current_line.erase(end, current_line.end());
+
+                    // Parse the line into something that can be converted into proper data
+                    StringType mod_name = explode_by_occurrence(current_line, STR(':'), 1);
+                    StringType mod_enabled = explode_by_occurrence(current_line, STR(':'), ExplodeType::FromEnd);
+
+                    auto mod = UE4SSProgram::find_mod_by_name<ModType>(mod_name, UE4SSProgram::IsInstalled::Yes);
+                    if (!mod || !dynamic_cast<ModType*>(mod) || mod->is_started())
+                    {
+                        continue;
+                    }
+
+                    if (!mod_enabled.empty() && mod_enabled[0] == STR('1'))
+                    {
+                        Output::send(STR("Starting {} mod '{}'\n"), std::is_same_v<ModType, LuaMod> ? STR("Lua") : STR("C++"), mod->get_name().data());
+                        mod->start_mod();
+                    }
+                    else
+                    {
+                        Output::send(STR("Mod '{}' disabled in mods.txt.\n"), mod_name);
+                    }
                 }
             }
         }
 
         // Part #2: Start all mods that have enabled.txt present in the mod directory.
-        Output::send(STR("Starting mods (from enabled.txt, no defined load order)...\n"));
-
-        for (const auto& mod_directory : std::filesystem::directory_iterator(mods_directory))
+        for (const auto& mods_directory : UE4SSProgram::get_program().get_mods_directories())
         {
-            std::error_code ec{};
-
-            if (!mod_directory.is_directory(ec))
-            {
-                continue;
-            }
-            if (ec.value() != 0)
-            {
-                return fmt::format("is_directory ran into error {}", ec.value());
-            }
-
-            if (!std::filesystem::exists(mod_directory.path() / "enabled.txt", ec))
-            {
-                continue;
-            }
-            if (ec.value() != 0)
-            {
-                return fmt::format("exists ran into error {}", ec.value());
-            }
-
-            auto mod = UE4SSProgram::find_mod_by_name<ModType>(ensure_str(mod_directory.path().stem()), UE4SSProgram::IsInstalled::Yes);
-            if (!dynamic_cast<ModType*>(mod))
-            {
-                continue;
-            }
-            if (!mod)
-            {
-                Output::send<LogLevel::Warning>(STR("Found a mod with enabled.txt but mod has not been installed properly.\n"));
-                continue;
-            }
-
-            if (mod->is_started())
+            if (!std::filesystem::exists(mods_directory))
             {
                 continue;
             }
 
-            Output::send(STR("Mod '{}' has enabled.txt, starting mod.\n"), mod->get_name().data());
-            mod->start_mod();
+            Output::send(STR("Starting mods (from enabled.txt ({}), no defined load order)...\n"), ensure_str(mods_directory));
+
+            for (const auto& mod_directory : std::filesystem::directory_iterator(mods_directory))
+            {
+                std::error_code ec{};
+
+                if (!mod_directory.is_directory(ec))
+                {
+                    continue;
+                }
+                if (ec.value() != 0)
+                {
+                    return fmt::format("is_directory ran into error {}", ec.value());
+                }
+
+                if (!std::filesystem::exists(mod_directory.path() / "enabled.txt", ec))
+                {
+                    continue;
+                }
+                if (ec.value() != 0)
+                {
+                    return fmt::format("exists ran into error {}", ec.value());
+                }
+
+                auto mod = UE4SSProgram::find_mod_by_name<ModType>(ensure_str(mod_directory.path().stem()), UE4SSProgram::IsInstalled::Yes);
+                if (!dynamic_cast<ModType*>(mod))
+                {
+                    continue;
+                }
+                if (!mod)
+                {
+                    Output::send<LogLevel::Warning>(STR("Found a mod with enabled.txt but mod has not been installed properly.\n"));
+                    continue;
+                }
+
+                if (mod->is_started())
+                {
+                    continue;
+                }
+
+                Output::send(STR("Mod '{}' has enabled.txt, starting mod.\n"), mod->get_name().data());
+                mod->start_mod();
+            }
         }
 
         return {};
@@ -1592,15 +1651,26 @@ namespace RC
         return m_mods_directories;
     }
 
-    auto UE4SSProgram::add_mods_directory(std::filesystem::path path) -> void
+    auto UE4SSProgram::make_compatible_path(const std::filesystem::path& in_path) const -> std::filesystem::path
     {
-        auto orig_path = path;
+        auto path = in_path;
         if (path.is_relative())
         {
             path = m_working_directory / path;
         }
         path = path.lexically_normal().make_preferred();
         path = std::filesystem::weakly_canonical(path);
+        return path;
+    }
+
+    auto UE4SSProgram::insert_mods_directory(const std::filesystem::path& path, int64_t index) -> void
+    {
+        m_mods_directories.insert(m_mods_directories.begin() + index, path);
+    }
+
+    auto UE4SSProgram::add_mods_directory(const std::filesystem::path& in_path) -> void
+    {
+        auto path = make_compatible_path(in_path);
         if (const auto it = std::ranges::find(m_mods_directories, path); it != m_mods_directories.end())
         {
             m_mods_directories.erase(it);
@@ -1608,16 +1678,10 @@ namespace RC
         m_mods_directories.emplace_back(std::forward<decltype(path)>(path));
     }
 
-    auto UE4SSProgram::remove_mods_directory(std::filesystem::path path) -> void
+    auto UE4SSProgram::remove_mods_directory(const std::filesystem::path& in_path) -> void
     {
-        auto orig_path = path;
-        if (path.is_relative())
-        {
-            path = m_working_directory / path;
-        }
-        path = path.lexically_normal().make_preferred();
-        path = std::filesystem::weakly_canonical(path);
-        std::erase(m_mods_directories, path);
+        auto path = make_compatible_path(in_path);
+        m_mods_directories_to_remove.emplace_back(std::forward<decltype(path)>(path));
     }
 
     auto UE4SSProgram::get_legacy_root_directory() -> File::StringType
