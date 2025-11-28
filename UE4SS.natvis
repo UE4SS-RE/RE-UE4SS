@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="utf-8"?>
+<AutoVisualizer xmlns="http://schemas.microsoft.com/vstudio/debugger/natvis/2010">
+
+  <!-- UE4SS Debug Visualizers -->
+  <!-- For RC::Unreal types, see deps/first/Unreal/UEPseudo.natvis -->
+
+  <!--
+    Notes:
+    - VS will load multiple natvis files and merge them
+    - This file contains UE4SS-specific types (RC::File, RC::Mod, etc.)
+    - Set "Tools / Options / Debugging / Output Windows / Natvis Diagnostics messages" to Warning for debugging
+  -->
+
+  <!-- ==================== RC::File Types ==================== -->
+
+  <!-- RC::File::Handle -->
+  <Type Name="RC::File::HandleTemplate&lt;*&gt;">
+    <DisplayString>{m_internal_handle}</DisplayString>
+    <Expand>
+      <ExpandedItem>m_internal_handle</ExpandedItem>
+    </Expand>
+  </Type>
+
+  <!-- ==================== Mod Types ==================== -->
+
+  <!-- RC::Mod -->
+  <Type Name="RC::Mod">
+    <DisplayString>{m_mod_name}</DisplayString>
+    <Expand>
+      <Item Name="[Name]">m_mod_name</Item>
+      <Item Name="[Path]">m_mod_path</Item>
+      <Item Name="[Installed]">m_installed</Item>
+      <Item Name="[Started]">m_is_started</Item>
+      <Item Name="[Installable]">m_installable</Item>
+    </Expand>
+  </Type>
+
+  <!-- RC::LuaMod -->
+  <Type Name="RC::LuaMod">
+    <DisplayString>{m_mod_name} (Lua)</DisplayString>
+    <Expand>
+      <Item Name="[Name]">m_mod_name</Item>
+      <Item Name="[Path]">m_mod_path</Item>
+      <Item Name="[ScriptsPath]">m_scripts_path</Item>
+      <Item Name="[Installed]">m_installed</Item>
+      <Item Name="[Started]">m_is_started</Item>
+      <Item Name="[MainLua]">m_main_lua</Item>
+      <Item Name="[AsyncLua]">m_async_lua</Item>
+    </Expand>
+  </Type>
+
+  <!-- RC::CppMod -->
+  <Type Name="RC::CppMod">
+    <DisplayString>{m_mod_name} (C++)</DisplayString>
+    <Expand>
+      <Item Name="[Name]">m_mod_name</Item>
+      <Item Name="[Path]">m_mod_path</Item>
+      <Item Name="[Installed]">m_installed</Item>
+      <Item Name="[Started]">m_is_started</Item>
+    </Expand>
+  </Type>
+
+  <!-- ==================== LuaMadeSimple Types ==================== -->
+
+  <!-- LuaMadeSimple::Lua -->
+  <Type Name="RC::LuaMadeSimple::Lua">
+    <DisplayString>Lua (state={m_lua_state})</DisplayString>
+    <Expand>
+      <Item Name="[State]">m_lua_state</Item>
+    </Expand>
+  </Type>
+
+</AutoVisualizer>

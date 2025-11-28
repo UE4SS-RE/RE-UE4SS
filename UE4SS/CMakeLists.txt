@@ -90,6 +90,13 @@ target_sources(UE4SS PUBLIC
 # Organize in IDE
 source_group(TREE "${CMAKE_CURRENT_LIST_DIR}" FILES ${UE4SS_SOURCES} ${UE4SS_HEADERS})
 
+# Add natvis file for Visual Studio debugging (works with MSVC and clang-cl)
+if(MSVC OR CMAKE_CXX_SIMULATE_ID STREQUAL "MSVC")
+    target_sources(UE4SS PRIVATE
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/../UE4SS.natvis>
+    )
+endif()
+
 # First party static build definitions
 target_compile_definitions(UE4SS PRIVATE
     RC_UE4SS_EXPORTS
