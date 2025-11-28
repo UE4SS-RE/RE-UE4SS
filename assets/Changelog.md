@@ -82,6 +82,19 @@ Added ability to call UFunctions directly from the GUI. ([UE4SS #851](https://gi
 
 Added highlights for properties matching the `Has property` and `Has property of type` filters ([UE4SS #1089](https://github.com/UE4SS-RE/RE-UE4SS/pull/1089))
 
+### Lua Debugger
+
+Added new Lua Debugger GUI tab with debugging tools for Lua mod development  ([UE4SS #1099](https://github.com/UE4SS-RE/RE-UE4SS/pull/1099))
+- Breakpoint management with hit counts
+- Step debugging (Step Into, Step Over, Step Out, Continue)
+- Call stack viewer with clickable frames
+- Locals and upvalues inspection
+- Global variables browser with search and tree navigation
+- REPL console with command history
+- Script editor
+- Loaded modules viewer
+- Mods management tab to view, enable/disable, and create Lua mods
+
 ### UHT Dumper
 
 Added support for generating `FUtf8String` and `FAnsiString` properties in UHT-compatible headers ([UE4SS #1015](https://github.com/UE4SS-RE/RE-UE4SS/pull/1015))
