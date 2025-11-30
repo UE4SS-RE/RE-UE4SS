@@ -124,6 +124,8 @@ namespace RC::LuaMadeSimple
             Call,
             Equal,
             Length,
+            BinaryAnd,
+            BinaryOr,
         };
 
         /**
@@ -137,6 +139,8 @@ namespace RC::LuaMadeSimple
             std::optional<LuaFunction> call = std::nullopt;
             std::optional<LuaFunction> equal = std::nullopt;
             std::optional<LuaFunction> length = std::nullopt;
+            std::optional<LuaFunction> binary_and = std::nullopt;
+            std::optional<LuaFunction> binary_or = std::nullopt;
 
             template <typename LuaCallable>
             auto create(MetaMethod metamethod, LuaCallable lua_callable) -> void
@@ -160,6 +164,10 @@ namespace RC::LuaMadeSimple
                     return;
                 case MetaMethod::Length:
                     length = lua_callable;
+                case MetaMethod::BinaryAnd:
+                    binary_and = lua_callable;
+                case MetaMethod::BinaryOr:
+                    binary_or = lua_callable;
                 }
 
                 // TODO: use throw_error() here

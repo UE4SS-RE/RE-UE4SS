@@ -24,6 +24,7 @@
 #include <LuaType/LuaUClass.hpp>
 #include <LuaType/LuaUObject.hpp>
 #include <LuaType/LuaFURL.hpp>
+#include <LuaType/LuaUInt64.hpp>
 #include <Mod/CppMod.hpp>
 #include <Mod/LuaMod.hpp>
 #pragma warning(disable : 4005)
@@ -676,6 +677,68 @@ namespace RC
                                                      Unreal::EInternalObjectFlags::GarbageCollectionKeepFlags));
         object_internal_flags_table.add_pair("AllFlags", static_cast<std::underlying_type_t<Unreal::EInternalObjectFlags>>(Unreal::EInternalObjectFlags::AllFlags));
         object_internal_flags_table.make_global("EInternalObjectFlags");
+    }
+
+    static auto register_property_flags(const LuaMadeSimple::Lua& lua) -> void
+    {
+#define ADD_PROPERTY_FLAGS_PAIR(Key)                                                                                                                           \
+    property_flags_table.add_key(#Key);                                                                                                                        \
+    LuaType::UInt64::construct(lua, static_cast<std::underlying_type_t<Unreal::EPropertyFlags>>(Unreal::EPropertyFlags::Key));                                 \
+    property_flags_table.fuse_pair();
+
+        LuaMadeSimple::Lua::Table property_flags_table = lua.prepare_new_table();
+        ADD_PROPERTY_FLAGS_PAIR(CPF_None)
+        ADD_PROPERTY_FLAGS_PAIR(CPF_Edit)
+        ADD_PROPERTY_FLAGS_PAIR(CPF_ConstParm)
+        ADD_PROPERTY_FLAGS_PAIR(CPF_BlueprintVisible)
+        ADD_PROPERTY_FLAGS_PAIR(CPF_ExportObject)
+        ADD_PROPERTY_FLAGS_PAIR(CPF_BlueprintReadOnly)
+        ADD_PROPERTY_FLAGS_PAIR(CPF_Net)
+        ADD_PROPERTY_FLAGS_PAIR(CPF_EditFixedSize)
+        ADD_PROPERTY_FLAGS_PAIR(CPF_Parm)
+        ADD_PROPERTY_FLAGS_PAIR(CPF_OutParm)
+        ADD_PROPERTY_FLAGS_PAIR(CPF_ZeroConstructor)
+        ADD_PROPERTY_FLAGS_PAIR(CPF_ReturnParm)
+        ADD_PROPERTY_FLAGS_PAIR(CPF_DisableEditOnTemplate)
+        ADD_PROPERTY_FLAGS_PAIR(CPF_Transient)
+        ADD_PROPERTY_FLAGS_PAIR(CPF_Config)
+        ADD_PROPERTY_FLAGS_PAIR(CPF_DisableEditOnInstance)
+        ADD_PROPERTY_FLAGS_PAIR(CPF_EditConst)
+        ADD_PROPERTY_FLAGS_PAIR(CPF_GlobalConfig)
+        ADD_PROPERTY_FLAGS_PAIR(CPF_InstancedReference)
+        ADD_PROPERTY_FLAGS_PAIR(CPF_DuplicateTransient)
+        ADD_PROPERTY_FLAGS_PAIR(CPF_SaveGame)
+        ADD_PROPERTY_FLAGS_PAIR(CPF_NoClear)
+        ADD_PROPERTY_FLAGS_PAIR(CPF_ReferenceParm)
+        ADD_PROPERTY_FLAGS_PAIR(CPF_BlueprintAssignable)
+        ADD_PROPERTY_FLAGS_PAIR(CPF_Deprecated)
+        ADD_PROPERTY_FLAGS_PAIR(CPF_IsPlainOldData)
+        ADD_PROPERTY_FLAGS_PAIR(CPF_RepSkip)
+        ADD_PROPERTY_FLAGS_PAIR(CPF_RepNotify)
+        ADD_PROPERTY_FLAGS_PAIR(CPF_Interp)
+        ADD_PROPERTY_FLAGS_PAIR(CPF_NonTransactional)
+        ADD_PROPERTY_FLAGS_PAIR(CPF_EditorOnly)
+        ADD_PROPERTY_FLAGS_PAIR(CPF_NoDestructor)
+        ADD_PROPERTY_FLAGS_PAIR(CPF_AutoWeak)
+        ADD_PROPERTY_FLAGS_PAIR(CPF_ContainsInstancedReference)
+        ADD_PROPERTY_FLAGS_PAIR(CPF_AssetRegistrySearchable)
+        ADD_PROPERTY_FLAGS_PAIR(CPF_SimpleDisplay)
+        ADD_PROPERTY_FLAGS_PAIR(CPF_AdvancedDisplay)
+        ADD_PROPERTY_FLAGS_PAIR(CPF_Protected)
+        ADD_PROPERTY_FLAGS_PAIR(CPF_BlueprintCallable)
+        ADD_PROPERTY_FLAGS_PAIR(CPF_BlueprintAuthorityOnly)
+        ADD_PROPERTY_FLAGS_PAIR(CPF_TextExportTransient)
+        ADD_PROPERTY_FLAGS_PAIR(CPF_NonPIEDuplicateTransient)
+        ADD_PROPERTY_FLAGS_PAIR(CPF_ExposeOnSpawn)
+        ADD_PROPERTY_FLAGS_PAIR(CPF_PersistentInstance)
+        ADD_PROPERTY_FLAGS_PAIR(CPF_UObjectWrapper)
+        ADD_PROPERTY_FLAGS_PAIR(CPF_HasGetValueTypeHash)
+        ADD_PROPERTY_FLAGS_PAIR(CPF_NativeAccessSpecifierPublic)
+        ADD_PROPERTY_FLAGS_PAIR(CPF_NativeAccessSpecifierProtected)
+        ADD_PROPERTY_FLAGS_PAIR(CPF_NativeAccessSpecifierPrivate)
+        ADD_PROPERTY_FLAGS_PAIR(CPF_SkipSerialization)
+        property_flags_table.make_global("EPropertyFlags");
+#undef ADD_PROPERTY_FLAGS_PAIR
     }
 
     static auto register_efindname(const LuaMadeSimple::Lua& lua) -> void
@@ -3991,6 +4054,7 @@ Overloads:
 
             register_all_property_types(lua);
             register_object_flags(lua);
+            register_property_flags(lua);
             register_efindname(lua);
 
             lua.set_nil();
@@ -4303,6 +4367,7 @@ Overloads:
         register_input_globals(*LuaStatics::console_executor);
         register_all_property_types(*LuaStatics::console_executor);
         register_object_flags(*LuaStatics::console_executor);
+        register_property_flags(*LuaStatics::console_executor);
         LuaStatics::console_executor_enabled = true;
     };
 

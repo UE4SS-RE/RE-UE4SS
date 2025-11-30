@@ -14,7 +14,10 @@
 - [Dumpers](./feature-overview/dumpers.md)
 
 ## APIs
-
+- [Blueprint API]()
+  - [UE4SS Functions]()
+    - [RegisterHookFromBP](./blueprint-api/ue4ss-functions/registerhookfrombp.md)
+    - [UnregisterHookFromBP](./blueprint-api/ue4ss-functions/unregisterhookfrombp.md)
 - [Lua API](./lua-api.md)
   - [Table Definitions]()
     - [Key](./lua-api/table-definitions/key.md)
@@ -59,6 +62,7 @@
     - [StructProperty](./lua-api/classes/structproperty.md)
     - [BoolProperty](./lua-api/classes/boolproperty.md)
     - [ArrayProperty](./lua-api/classes/arrayproperty.md)
+    - [NumericProperty](./lua-api/classes/numericproperty.md)
     - [UObjectReflection](./lua-api/classes/uobjectreflection.md)
     - [FOutputDevice](./lua-api/classes/foutputdevice.md)
     - [FWeakObjectPtr](./lua-api/classes/fweakobjectptr.md)

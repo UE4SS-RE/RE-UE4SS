@@ -7,6 +7,8 @@
 #include <LuaType/LuaXObjectProperty.hpp>
 #include <LuaType/LuaXProperty.hpp>
 #include <LuaType/LuaXStructProperty.hpp>
+#include <LuaType/LuaXNumericProperty.hpp>
+#include <LuaType/LuaUInt64.hpp>
 #pragma warning(disable : 4005)
 #include <Unreal/FProperty.hpp>
 #include <Unreal/Property/FArrayProperty.hpp>
@@ -14,6 +16,7 @@
 #include <Unreal/Property/FEnumProperty.hpp>
 #include <Unreal/Property/FObjectProperty.hpp>
 #include <Unreal/Property/FStructProperty.hpp>
+#include <Unreal/Property/FNumericProperty.hpp>
 #pragma warning(default : 4005)
 
 namespace RC::LuaType
@@ -44,6 +47,10 @@ namespace RC::LuaType
         else if (auto* as_array_property = Unreal::CastField<Unreal::FArrayProperty>(property); as_array_property)
         {
             XArrayProperty::construct(lua, as_array_property);
+        }
+        else if (auto* as_numeric_property = Unreal::CastField<Unreal::FNumericProperty>(property); as_numeric_property)
+        {
+            XNumericProperty::construct(lua, as_numeric_property);
         }
         else
         {
@@ -137,6 +144,44 @@ namespace RC::LuaType
             return 1;
         });
 
+        table.add_pair("HasAnyPropertyFlags", [](const LuaMadeSimple::Lua& lua) -> int {
+            std::string error_overload_not_found{R"(
+No overload found for function 'Property.HasAnyPropertyFlags'.
+Overloads:
+#1: HasAnyPropertyFlags(EPropertyFlags PropertyFlags))"};
+
+            const auto& lua_object = lua.get_userdata<SelfType>();
+
+            if (!lua.is_userdata())
+            {
+                lua.throw_error(error_overload_not_found);
+            }
+
+            auto& lua_uint64 = lua.get_userdata<LuaType::UInt64>();
+            auto object_flags = static_cast<Unreal::EPropertyFlags>(lua_uint64.get_local_cpp_object());
+            lua.set_bool(lua_object.get_remote_cpp_object()->HasAnyPropertyFlags(object_flags));
+            return 1;
+        });
+
+        table.add_pair("HasAllPropertyFlags", [](const LuaMadeSimple::Lua& lua) -> int {
+            std::string error_overload_not_found{R"(
+No overload found for function 'Property.HasAllPropertyFlags'.
+Overloads:
+#1: HasAllPropertyFlags(EPropertyFlags PropertyFlags))"};
+
+            const auto& lua_object = lua.get_userdata<SelfType>();
+
+            if (!lua.is_userdata())
+            {
+                lua.throw_error(error_overload_not_found);
+            }
+
+            auto& lua_uint64 = lua.get_userdata<LuaType::UInt64>();
+            auto object_flags = static_cast<Unreal::EPropertyFlags>(lua_uint64.get_local_cpp_object());
+            lua.set_bool(lua_object.get_remote_cpp_object()->HasAllPropertyFlags(object_flags));
+            return 1;
+        });
+
         table.add_pair("IsA", [](const LuaMadeSimple::Lua& lua) -> int {
             std::string error_overload_not_found{R"(
 No overload found for function 'IsA'.
@@ -176,6 +221,12 @@ Overloads:
                     auto* ffield_class = std::bit_cast<Unreal::UClass*>(ffield_class_pointer);
                     lua.set_bool(lua_object.get_remote_cpp_object()->IsA(ffield_class));
                 }
+                return 1;
+            }
+            else if (lua.is_userdata()) // FFieldClass, returned from Property:GetClass()
+            {
+                auto ffield_class = lua.get_userdata<LuaType::XFieldClass>();
+                lua.set_bool(lua_object.get_remote_cpp_object()->IsA(ffield_class.get_local_cpp_object()));
                 return 1;
             }
             else

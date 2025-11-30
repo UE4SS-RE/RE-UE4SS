@@ -87,6 +87,11 @@ Added highlights for properties matching the `Has property` and `Has property of
 Added support for generating `FUtf8String` and `FAnsiString` properties in UHT-compatible headers ([UE4SS #1015](https://github.com/UE4SS-RE/RE-UE4SS/pull/1015))
 
 ### Lua API
+Implemented `NumericProperty`, and its `IsFloatingPoint` member function.
+
+Implemented member functions `HasAnyPropertyFlags` and `HasAllPropertyFlags` for Property.
+
+Implemented `RegisterHookFromBP` and `UnregisterHookFromBP` for Blueprint Mods.
 
 Added support for `FUtf8String` and `FAnsiString` Unreal string types with string manipulation API ([UE4SS #1015](https://github.com/UE4SS-RE/RE-UE4SS/pull/1015))
 - Refactored FString implementation to use unified `TLuaStringBase` template for code reuse and consistency
@@ -409,6 +414,9 @@ names. ([UE4SS #827](https://github.com/UE4SS-RE/RE-UE4SS/pull/827)
 Fixed an error with Object properties causing stack corruption. ([UE4SS #939](https://github.com/UE4SS-RE/RE-UE4SS/pull/939)
 
 Fixed UEHelpers sometimes causing a runtime error. ([UE4SS #987](https://github.com/UE4SS-RE/RE-UE4SS/pull/987)
+Fixed `FText` not working as a parameter (in `RegisterHook`, etc.) ([UE4SS #422](https://github.com/UE4SS-RE/RE-UE4SS/pull/422)) - localcc
+
+Fixed `BoolProperty` having the same metatable as `ObjectProperty` causing their member functions to occasionally not be found  
 
 ### C++ API 
 Fixed a crash caused by a race condition enabled by C++ mods using `UE4SS_ENABLE_IMGUI` in their constructor ([UE4SS #481](https://github.com/UE4SS-RE/RE-UE4SS/pull/481)) 
