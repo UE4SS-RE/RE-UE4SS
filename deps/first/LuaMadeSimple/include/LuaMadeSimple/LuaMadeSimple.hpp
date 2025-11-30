@@ -61,6 +61,16 @@ namespace RC::LuaMadeSimple
 
     using PostFunctionProcessCallback = void (*)(const Lua&);
 
+    // Error callback type for external error handling/logging
+    // Parameters: lua_State*, error_message, traceback
+    using LuaErrorCallback = void (*)(lua_State*, const std::string&, const std::string&);
+
+    // Register a callback to be called when Lua errors occur
+    RC_LMS_API auto register_error_callback(LuaErrorCallback callback) -> void;
+
+    // Unregister an error callback
+    RC_LMS_API auto unregister_error_callback(LuaErrorCallback callback) -> void;
+
     /**
      * Main helper for Lua
      * Use new_state() to start using the LuaMadeSimple system
@@ -775,6 +785,10 @@ namespace RC::LuaMadeSimple
     RC_LMS_API auto handle_error(lua_State*, const std::string&) -> const std::string;
     RC_LMS_API auto throw_error(lua_State*, const std::string&) -> void;
     [[nodiscard]] RC_LMS_API auto new_state() -> Lua&;
+
+    // Push the error handler function onto the stack and return its stack index
+    // Use this with lua_pcall to capture callstack before it unwinds
+    RC_LMS_API auto push_pcall_error_handler(lua_State* L) -> int;
 
     template <typename CodeToTry>
     auto constexpr TRY(lua_State* lua_state, CodeToTry code_to_try) -> int

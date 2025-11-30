@@ -225,6 +225,7 @@ namespace RC
         RC_UE4SS_API auto get_working_directory() -> File::StringType;
         RC_UE4SS_API auto get_mods_directory() -> File::StringType;
         RC_UE4SS_API auto get_mods_directories() -> std::vector<std::filesystem::path>&;
+        RC_UE4SS_API auto get_mods_txt_entries() -> std::unordered_map<std::string, bool>;
         [[nodiscard]] RC_UE4SS_API auto make_compatible_path(const std::filesystem::path&) const -> std::filesystem::path;
         RC_UE4SS_API auto insert_mods_directory(const std::filesystem::path&, int64_t index) -> void;
         RC_UE4SS_API auto add_mods_directory(const std::filesystem::path&) -> void;
