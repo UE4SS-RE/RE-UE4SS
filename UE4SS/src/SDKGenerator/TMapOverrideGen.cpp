@@ -12,9 +12,8 @@
 #include <SDKGenerator/UEHeaderGenerator.hpp>
 #include <UE4SSProgram.hpp>
 #include <USMapGenerator/writer.h>
-#include <Unreal/Property/FMapProperty.hpp>
-#include <Unreal/UClass.hpp>
-#include <Unreal/UScriptStruct.hpp>
+#include <Unreal/CoreUObject/UObject/UnrealType.hpp>
+#include <Unreal/CoreUObject/UObject/Class.hpp>
 #pragma warning(default : 4005)
 
 namespace RC::UEGenerator
@@ -44,7 +43,7 @@ namespace RC::UEGenerator
                 }
                 if ((as_class && as_class->HasAnyClassFlags(CLASS_Native)) || (as_script_struct && as_script_struct->HasAnyStructFlags(STRUCT_Native)))
                 {
-                    for (FProperty* property : casted_object->ForEachProperty())
+                    for (FProperty* property : TFieldRange<FProperty>(casted_object, EFieldIterationFlags::IncludeDeprecated))
                     {
                         if (!property->IsA<FMapProperty>() || MapProperties.contains(property->GetFName()))
                         {

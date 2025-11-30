@@ -75,7 +75,12 @@ function(ue4ss_initialize_project)
     
     # Unicode support
     list(APPEND TARGET_COMPILE_DEFINITIONS _UNICODE UNICODE)
-    
+
+    # Windows version targeting (Windows 10 and above)
+    if(WIN32)
+        list(APPEND TARGET_COMPILE_DEFINITIONS _WIN32_WINNT=0x0A00 WINVER=0x0A00)
+    endif()
+
     # Export to parent scope
     set(TARGET_COMPILE_DEFINITIONS ${TARGET_COMPILE_DEFINITIONS} PARENT_SCOPE)
     

@@ -1,9 +1,7 @@
 #include <DynamicOutput/Output.hpp>
 #include <LuaType/LuaUClass.hpp>
 #include <LuaType/LuaUFunction.hpp>
-#include <Unreal/UClass.hpp>
-#include <Unreal/UFunction.hpp>
-
+#include <Unreal/CoreUObject/UObject/Class.hpp>
 namespace RC::LuaType
 {
     UClass::UClass(Unreal::UClass* object)

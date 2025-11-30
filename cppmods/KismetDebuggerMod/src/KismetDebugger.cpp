@@ -9,15 +9,14 @@
 #include <DynamicOutput/DynamicOutput.hpp>
 #include <Helpers/String.hpp>
 #include <Unreal/UObjectGlobals.hpp>
-#include <Unreal/UClass.hpp>
-#include <Unreal/UFunction.hpp>
+#include <Unreal/CoreUObject/UObject/Class.hpp>
 #include <Unreal/FString.hpp>
 #include <Unreal/Core/Containers/Array.hpp>
 #include <Unreal/FFrame.hpp>
 #include <Unreal/Script.hpp>
 #include <Unreal/ReflectedFunction.hpp>
 #include <Unreal/Signatures.hpp>
-#include <Unreal/Property/FObjectProperty.hpp>
+#include <Unreal/CoreUObject/UObject/UnrealType.hpp>
 
 #define IMGUI_DEFINE_MATH_OPERATORS
 #include <imgui.h>
@@ -436,7 +435,7 @@ namespace RC::GUI::KismetDebuggerMod
                 {
                     UFunction* node = context->stack->Node();
                     int property_count{};
-                    for (FProperty* property : current_fn->ForEachProperty())
+                    for (FProperty* property : TFieldRange<FProperty>(current_fn, EFieldIterationFlags::IncludeDeprecated))
                     {
                         FString text{};
                         auto container_ptr = property->ContainerPtrToValuePtr<void*>(context->stack->Locals());
@@ -449,7 +448,7 @@ namespace RC::GUI::KismetDebuggerMod
                 }
                 else
                 {
-                    for (FProperty* property : current_fn->ForEachProperty())
+                    for (FProperty* property : TFieldRange<FProperty>(current_fn, EFieldIterationFlags::IncludeDeprecated))
                     {
                         ImGui::Text("%s", to_string(property->GetName()).c_str());
                     }

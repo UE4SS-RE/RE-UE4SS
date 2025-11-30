@@ -4,8 +4,7 @@
 #include <LuaType/LuaUObject.hpp>
 #pragma warning(disable : 4005)
 #include <DynamicOutput/DynamicOutput.hpp>
-#include <Unreal/Property/FArrayProperty.hpp>
-#include <Unreal/Property/NumericPropertyTypes.hpp>
+#include <Unreal/CoreUObject/UObject/UnrealType.hpp>
 #pragma warning(default : 4005)
 
 namespace RC::LuaType

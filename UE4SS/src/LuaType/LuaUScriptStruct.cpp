@@ -6,9 +6,8 @@
 #include <LuaType/LuaUStruct.hpp>
 #include <LuaType/LuaXStructProperty.hpp>
 #pragma warning(disable : 4005)
-#include <Unreal/FProperty.hpp>
-#include <Unreal/Property/FStructProperty.hpp>
-#include <Unreal/UScriptStruct.hpp>
+#include <Unreal/CoreUObject/UObject/UnrealType.hpp>
+#include <Unreal/CoreUObject/UObject/Class.hpp>
 #pragma warning(default : 4005)
 #include <DynamicOutput/Output.hpp>
 

@@ -2,18 +2,11 @@
 #include <GUI/UFunctionCallerWidget.hpp>
 #include <Helpers/String.hpp>
 #include <Unreal/FOutputDevice.hpp>
-#include <Unreal/FProperty.hpp>
+#include <Unreal/CoreUObject/UObject/UnrealType.hpp>
 #include <Unreal/Hooks.hpp>
-#include <Unreal/Property/FArrayProperty.hpp>
-#include <Unreal/Property/FBoolProperty.hpp>
-#include <Unreal/Property/FClassProperty.hpp>
-#include <Unreal/Property/FObjectProperty.hpp>
-#include <Unreal/Property/FStructProperty.hpp>
-#include <Unreal/UClass.hpp>
-#include <Unreal/UFunction.hpp>
+#include <Unreal/CoreUObject/UObject/Class.hpp>
 #include <Unreal/UObject.hpp>
 #include <Unreal/UObjectGlobals.hpp>
-#include <Unreal/UScriptStruct.hpp>
 
 #include <imgui.h>
 #include <misc/cpp/imgui_stdlib.h>
@@ -39,7 +32,7 @@ namespace RC::GUI
         {
             return;
         }
-        for (UFunction* function : instance->GetClassPrivate()->ForEachFunctionInChain())
+        for (UFunction* function : TFieldRange<UFunction>(instance->GetClassPrivate(), EFieldIterationFlags::IncludeAll))
         {
             bool should_cache_function{};
             if (m_searcher.was_search_requested())
@@ -70,7 +63,7 @@ namespace RC::GUI
             }
             auto& cached_function = m_callable_functions.emplace_back(CallableUFunction{function});
 
-            for (FProperty* param : cached_function.function->ForEachProperty())
+            for (FProperty* param : TFieldRange<FProperty>(cached_function.function, EFieldIterationFlags::IncludeDeprecated))
             {
                 if (param->HasAllPropertyFlags(CPF_ReturnParm))
                 {
@@ -130,7 +123,7 @@ namespace RC::GUI
     {
         selectable_function.is_selected = true;
         m_currently_selected_function = &selectable_function;
-        for (FProperty* param : m_currently_selected_function->function->ForEachProperty())
+        for (FProperty* param : TFieldRange<FProperty>(m_currently_selected_function->function, EFieldIterationFlags::IncludeDeprecated))
         {
             if (param->HasAllPropertyFlags(CPF_ReturnParm)) continue;
             m_params_for_selected_function.emplace_back(UFunctionParam{{}, to_string(param->GetName()).c_str(), param});
