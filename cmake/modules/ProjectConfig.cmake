@@ -32,7 +32,7 @@ set(UE4SS_PROXY_PATH "" CACHE FILEPATH "Path to DLL for proxy generation (empty 
 # Target type definitions (UE4-style)
 set(UE4SS_Game_DEFINITIONS UE_GAME)
 set(UE4SS_CasePreserving_DEFINITIONS ${UE4SS_Game_DEFINITIONS} WITH_CASE_PRESERVING_NAME)
-set(UE4SS_LessEqual421_DEFINITIONS ${UE4SS_Game_DEFINITIONS} FNAME_ALIGN8)
+set(UE4SS_LessEqual421_DEFINITIONS ${UE4SS_Game_DEFINITIONS} FNAME_ALIGN8 LESSEQUAL421)
 
 # Target type flags (can be customized per target)
 set(UE4SS_Game_FLAGS "")
