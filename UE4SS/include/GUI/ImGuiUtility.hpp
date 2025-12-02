@@ -3,10 +3,18 @@
 #include <JSON/JSON.hpp>
 // #include <JSONParser/JSON.hpp>
 #include <JSON/Parser/Parser.hpp>
+#include <UE4SSProgram.hpp>
+#include <SettingsManager.hpp>
 #include <imgui.h>
 
 namespace RC::GUI
 {
+    // Scale a pixel value by the GUI font scaling factor
+    inline auto scaled(float value) -> float
+    {
+        return value * UE4SSProgram::settings_manager.Debug.DebugGUIFontScaling;
+    }
+
     auto ImGui_AutoScroll(const char* label, float* previous_max_scroll_y) -> void;
     auto ImGui_InputTextMultiline_WithAutoScroll(const char* label,
                                                  char* buf,

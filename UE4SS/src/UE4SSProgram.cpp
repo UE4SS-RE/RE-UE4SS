@@ -1652,6 +1652,85 @@ namespace RC
         return m_mods_directories;
     }
 
+    auto UE4SSProgram::get_mods_txt_entries() -> std::unordered_map<std::string, bool>
+    {
+        std::unordered_map<std::string, bool> result;
+
+        std::vector<std::filesystem::path> mods_txt_files;
+
+        if (!settings_manager.Overrides.ControllingModsTxt.empty())
+        {
+            auto controlling_path = make_compatible_path(settings_manager.Overrides.ControllingModsTxt);
+            if (std::filesystem::exists(controlling_path))
+            {
+                mods_txt_files.push_back(controlling_path);
+            }
+        }
+        else
+        {
+            for (const auto& mods_directory : std::ranges::reverse_view(m_mods_directories))
+            {
+                if (!std::filesystem::exists(mods_directory))
+                {
+                    continue;
+                }
+
+                auto mods_txt_path = mods_directory / "mods.txt";
+                if (std::filesystem::exists(mods_txt_path))
+                {
+                    mods_txt_files.push_back(mods_txt_path);
+                }
+            }
+        }
+
+        for (const auto& mods_txt_path : mods_txt_files)
+        {
+            std::ifstream bom_check(mods_txt_path, std::ios::binary);
+            char bom[3] = {0};
+            bom_check.read(bom, 3);
+            bool has_bom = (bom[0] == '\xEF' && bom[1] == '\xBB' && bom[2] == '\xBF');
+            bom_check.close();
+
+            StreamIType mods_stream{mods_txt_path};
+
+            if (has_bom)
+            {
+                wchar_t discard;
+                mods_stream.get(discard);
+            }
+
+            StringType current_line;
+            while (std::getline(mods_stream, current_line))
+            {
+                if (current_line.find(STR(";")) != current_line.npos)
+                {
+                    continue;
+                }
+
+                if (current_line.size() <= 4)
+                {
+                    continue;
+                }
+
+                auto end = std::remove(current_line.begin(), current_line.end(), STR(' '));
+                current_line.erase(end, current_line.end());
+
+                StringType mod_name = explode_by_occurrence(current_line, STR(':'), 1);
+                StringType mod_enabled = explode_by_occurrence(current_line, STR(':'), ExplodeType::FromEnd);
+
+                std::string mod_name_str = to_string(mod_name);
+                bool enabled = !mod_enabled.empty() && mod_enabled[0] == STR('1');
+
+                if (result.find(mod_name_str) == result.end())
+                {
+                    result[mod_name_str] = enabled;
+                }
+            }
+        }
+
+        return result;
+    }
+
     auto UE4SSProgram::make_compatible_path(const std::filesystem::path& in_path) const -> std::filesystem::path
     {
         auto path = in_path;

@@ -9,6 +9,7 @@
 #include <GUI/DX11.hpp>
 #include <GUI/Dumpers.hpp>
 #include <GUI/GLFW3_OpenGL3.hpp>
+#include <GUI/LuaDebugger.hpp>
 #include <GUI/Windows.hpp>
 #include <fonts/droidsansfallback.cpp>
 
@@ -175,6 +176,12 @@ namespace RC::GUI
                 if (ImGui::BeginTabItem(ICON_FA_PUZZLE_PIECE " BP Mods"))
                 {
                     BPMods::render();
+                    ImGui::EndTabItem();
+                }
+
+                if (ImGui::BeginTabItem(ICON_FA_BUG " Lua Debugger"))
+                {
+                    LuaDebugger::get().render();
                     ImGui::EndTabItem();
                 }
 
