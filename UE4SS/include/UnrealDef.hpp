@@ -4,35 +4,18 @@
 #include <Unreal/AActor.hpp>
 #include <Unreal/FField.hpp>
 #include <Unreal/FFrame.hpp>
-#include <Unreal/FProperty.hpp>
+#include <Unreal/CoreUObject/UObject/UnrealType.hpp>
 #include <Unreal/FWeakObjectPtr.hpp>
 #include <Unreal/NameTypes.hpp>
-#include <Unreal/Property/FArrayProperty.hpp>
-#include <Unreal/Property/FBoolProperty.hpp>
-#include <Unreal/Property/FClassProperty.hpp>
-#include <Unreal/Property/FDelegateProperty.hpp>
 #include <Unreal/Property/FEnumProperty.hpp>
 #include <Unreal/Property/FFieldPathProperty.hpp>
-#include <Unreal/Property/FMulticastInlineDelegateProperty.hpp>
-#include <Unreal/Property/FMulticastSparseDelegateProperty.hpp>
-#include <Unreal/Property/FNameProperty.hpp>
-#include <Unreal/Property/FObjectProperty.hpp>
-#include <Unreal/Property/FSetProperty.hpp>
-#include <Unreal/Property/FSoftClassProperty.hpp>
-#include <Unreal/Property/FStrProperty.hpp>
-#include <Unreal/Property/FStructProperty.hpp>
+#include <Unreal/CoreUObject/UObject/FStrProperty.hpp>
 #include <Unreal/Property/FTextProperty.hpp>
-#include <Unreal/Property/FWeakObjectProperty.hpp>
-#include <Unreal/Property/NumericPropertyTypes.hpp>
-#include <Unreal/Property/FMapProperty.hpp>
 #include <Unreal/Core/Containers/Array.hpp>
 #include <Unreal/Core/Containers/Map.hpp>
-#include <Unreal/UClass.hpp>
-#include <Unreal/UEnum.hpp>
-#include <Unreal/UFunction.hpp>
+#include <Unreal/CoreUObject/UObject/Class.hpp>
 #include <Unreal/UObject.hpp>
 #include <Unreal/UObjectGlobals.hpp>
-#include <Unreal/UStruct.hpp>
 #include <Unreal/UnrealFlags.hpp>
 // #include <Unreal/CustomType.hpp>
 #include <Unreal/FAssetData.hpp>
@@ -91,6 +74,11 @@ namespace RC
     using FSoftClassProperty = Unreal::FSoftClassProperty;
     using FEnumProperty = Unreal::FEnumProperty;
     using FFieldPathProperty = Unreal::FFieldPathProperty;
+
+    template <class T>
+    using TFieldIterator = Unreal::TFieldIterator<T>;
+    template <typename T>
+    using TFieldRange = Unreal::TFieldRange<T>;
 
     // using CustomArrayProperty = Unreal::CustomArrayProperty;
     // using CustomStructProperty = Unreal::CustomStructProperty;

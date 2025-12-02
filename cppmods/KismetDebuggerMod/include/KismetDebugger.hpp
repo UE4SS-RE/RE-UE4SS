@@ -4,7 +4,7 @@
 #include <unordered_set>
 
 #include <Unreal/FFrame.hpp>
-#include <Unreal/UStruct.hpp>
+#include <Unreal/CoreUObject/UObject/Class.hpp>
 #include <Unreal/UObject.hpp>
 
 namespace RC::GUI::KismetDebuggerMod

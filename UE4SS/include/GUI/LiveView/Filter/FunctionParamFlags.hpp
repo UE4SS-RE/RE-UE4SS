@@ -1,8 +1,8 @@
 #pragma once
 
 #include <GUI/LiveView/Filter/SearchFilter.hpp>
-#include <Unreal/FProperty.hpp>
-#include <Unreal/UFunction.hpp>
+#include <Unreal/CoreUObject/UObject/UnrealType.hpp>
+#include <Unreal/CoreUObject/UObject/Class.hpp>
 
 namespace RC::GUI::Filter
 {
@@ -30,7 +30,7 @@ namespace RC::GUI::Filter
                     return true;
                 }
                 bool has_all_required_flags{true};
-                for (const auto& param : as_function->ForEachProperty())
+                for (const auto& param : TFieldRange<FProperty>(as_function, EFieldIterationFlags::IncludeDeprecated))
                 {
                     if (param->HasAnyPropertyFlags(CPF_ReturnParm) && !s_include_return_property)
                     {

@@ -2,9 +2,8 @@
 #include <LuaType/LuaUFunction.hpp>
 #include <LuaType/LuaUStruct.hpp>
 #include <LuaType/LuaXProperty.hpp>
-#include <Unreal/FProperty.hpp>
-#include <Unreal/UFunction.hpp>
-#include <Unreal/UStruct.hpp>
+#include <Unreal/CoreUObject/UObject/UnrealType.hpp>
+#include <Unreal/CoreUObject/UObject/Class.hpp>
 
 namespace RC::LuaType
 {
@@ -68,7 +67,7 @@ namespace RC::LuaType
         table.add_pair("ForEachFunction", [](const LuaMadeSimple::Lua& lua) -> int {
             const auto& lua_object = lua.get_userdata<UStruct>();
 
-            for (Unreal::UFunction* function : lua_object.get_remote_cpp_object()->ForEachFunction())
+            for (Unreal::UFunction* function : Unreal::TFieldRange<Unreal::UFunction>(lua_object.get_remote_cpp_object(), Unreal::EFieldIterationFlags::None))
             {
                 // Duplicate the Lua function so that we can use it in subsequent iterations of this loop (call_function pops the function from the stack)
                 lua_pushvalue(lua.get_lua_state(), 1);
@@ -99,7 +98,7 @@ namespace RC::LuaType
         table.add_pair("ForEachProperty", [](const LuaMadeSimple::Lua& lua) -> int {
             const auto& lua_object = lua.get_userdata<UStruct>();
 
-            for (Unreal::FProperty* property : lua_object.get_remote_cpp_object()->ForEachProperty())
+            for (Unreal::FProperty* property : Unreal::TFieldRange<Unreal::FProperty>(lua_object.get_remote_cpp_object(), Unreal::EFieldIterationFlags::IncludeDeprecated))
             {
                 // Duplicate the Lua function so that we can use it in subsequent iterations of this loop (call_function pops the function from the stack)
                 lua_pushvalue(lua.get_lua_state(), 1);

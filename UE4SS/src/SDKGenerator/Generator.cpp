@@ -8,21 +8,11 @@
 #include <UE4SSProgram.hpp>
 #pragma warning(disable : 4005)
 #include <DynamicOutput/DynamicOutput.hpp>
-#include <Unreal/FProperty.hpp>
-#include <Unreal/Property/FArrayProperty.hpp>
-#include <Unreal/Property/FClassProperty.hpp>
-#include <Unreal/Property/FDelegateProperty.hpp>
-#include <Unreal/Property/FMapProperty.hpp>
-#include <Unreal/Property/FMulticastInlineDelegateProperty.hpp>
-#include <Unreal/Property/FMulticastSparseDelegateProperty.hpp>
-#include <Unreal/Property/FStructProperty.hpp>
+#include <Unreal/CoreUObject/UObject/UnrealType.hpp>
 #include <Unreal/TypeChecker.hpp>
-#include <Unreal/UClass.hpp>
-#include <Unreal/UEnum.hpp>
-#include <Unreal/UFunction.hpp>
+#include <Unreal/CoreUObject/UObject/Class.hpp>
 #include <Unreal/UInterface.hpp>
 #include <Unreal/UObjectGlobals.hpp>
-#include <Unreal/UScriptStruct.hpp>
 #pragma warning(default : 4005)
 
 namespace RC::UEGenerator
@@ -47,6 +37,7 @@ namespace RC::UEGenerator
     using FDelegateProperty = RC::Unreal::FDelegateProperty;
     using FMulticastInlineDelegateProperty = RC::Unreal::FMulticastInlineDelegateProperty;
     using FMulticastSparseDelegateProperty = RC::Unreal::FMulticastSparseDelegateProperty;
+    using EFieldIterationFlags = RC::Unreal::EFieldIterationFlags;
 
     struct ObjectInfo
     {
@@ -448,7 +439,7 @@ namespace RC::UEGenerator
                     .owner = owner,
             };
 
-            for (XProperty* param : function->ForEachProperty())
+            for (XProperty* param : Unreal::TFieldRange<XProperty>(function, EFieldIterationFlags::IncludeDeprecated))
             {
                 if (!param->HasAnyPropertyFlags(Unreal::CPF_Parm | Unreal::CPF_ReturnParm))
                 {
@@ -737,18 +728,18 @@ namespace RC::UEGenerator
             // If any properties have dependencies, make sure that they are defined
             // This makes sure that we don't have member variables with undefined types (if the types are local, otherwise we need to include the file that the struct exists in)
             std::vector<PropertyInfo> properties_to_generate{};
-            for (XProperty* property : native_class->ForEachProperty())
+            for (XProperty* property : Unreal::TFieldRange<XProperty>(native_class, EFieldIterationFlags::IncludeDeprecated))
             {
                 properties_to_generate.emplace_back(
                         PropertyInfo{property, generator->generate_class_dependency_from_property(object_info, property, current_class_content)});
             }
 
             std::vector<FunctionInfo> functions_to_generate{};
-            for (UFunction* function : native_class->ForEachFunction())
+            for (UFunction* function : Unreal::TFieldRange<UFunction>(native_class, EFieldIterationFlags::None))
             {
                 auto& function_info = functions_to_generate.emplace_back(FunctionInfo{function, object_info});
 
-                for (XProperty* param : function->ForEachProperty())
+                for (XProperty* param : Unreal::TFieldRange<XProperty>(function, EFieldIterationFlags::IncludeDeprecated))
                 {
                     if (!param->HasAnyPropertyFlags(Unreal::CPF_Parm | Unreal::CPF_ReturnParm))
                     {
@@ -1121,18 +1112,18 @@ namespace RC::UEGenerator
             // If any properties have dependencies, make sure that they are defined
             // This makes sure that we don't have member variables with undefined types (if the types are local, otherwise we need to include the file that the struct exists in)
             std::vector<PropertyInfo> properties_to_generate{};
-            for (XProperty* property : native_class->ForEachProperty())
+            for (XProperty* property : Unreal::TFieldRange<XProperty>(native_class, EFieldIterationFlags::IncludeDeprecated))
             {
                 properties_to_generate.emplace_back(
                         PropertyInfo{property, generator->generate_class_dependency_from_property(object_info, property, current_class_content)});
             }
 
             std::vector<FunctionInfo> functions_to_generate{};
-            for (UFunction* function : native_class->ForEachFunction())
+            for (UFunction* function : Unreal::TFieldRange<UFunction>(native_class, EFieldIterationFlags::None))
             {
                 auto& function_info = functions_to_generate.emplace_back(FunctionInfo{function, object_info});
 
-                for (XProperty* param : function->ForEachProperty())
+                for (XProperty* param : Unreal::TFieldRange<XProperty>(function, EFieldIterationFlags::IncludeDeprecated))
                 {
                     if (!param->HasAnyPropertyFlags(Unreal::CPF_Parm | Unreal::CPF_ReturnParm))
                     {

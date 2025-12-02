@@ -2,7 +2,7 @@
 
 #include <DynamicOutput/DynamicOutput.hpp>
 
-#include <Unreal/Property/FMapProperty.hpp>
+#include <Unreal/CoreUObject/UObject/UnrealType.hpp>
 
 
 namespace RC::LuaType

@@ -3,7 +3,7 @@
 #include <vector>
 
 #include <GUI/LiveView/Filter/SearchFilter.hpp>
-#include <Unreal/UClass.hpp>
+#include <Unreal/CoreUObject/UObject/Class.hpp>
 #include <Unreal/NameTypes.hpp>
 
 namespace RC::GUI::Filter
@@ -42,13 +42,13 @@ namespace RC::GUI::Filter
                 }
             };
 
-            for (FProperty* property : as_struct->ForEachProperty())
+            for (FProperty* property : TFieldRange<FProperty>(as_struct, EFieldIterationFlags::IncludeDeprecated))
             {
                 should_filter(property);
             }
-            for (UStruct* super_struct : as_struct->ForEachSuperStruct())
+            for (UStruct* super_struct : TSuperStructRange(as_struct))
             {
-                for (FProperty* property : super_struct->ForEachProperty())
+                for (FProperty* property : TFieldRange<FProperty>(super_struct, EFieldIterationFlags::IncludeDeprecated))
                 {
                     should_filter(property);
                 }

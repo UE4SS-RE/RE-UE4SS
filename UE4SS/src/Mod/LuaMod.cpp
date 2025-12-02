@@ -35,30 +35,19 @@
 #include <Unreal/FURL.hpp>
 #include <Unreal/FWorldContext.hpp>
 #include <Unreal/FOutputDevice.hpp>
-#include <Unreal/FProperty.hpp>
+#include <Unreal/CoreUObject/UObject/UnrealType.hpp>
 #include <Unreal/Hooks.hpp>
 #include <Unreal/PackageName.hpp>
-#include <Unreal/Property/FArrayProperty.hpp>
-#include <Unreal/Property/FBoolProperty.hpp>
-#include <Unreal/Property/FClassProperty.hpp>
 #include <Unreal/Property/FEnumProperty.hpp>
-#include <Unreal/Property/FSetProperty.hpp>
-#include <Unreal/Property/FMapProperty.hpp>
-#include <Unreal/Property/FNameProperty.hpp>
-#include <Unreal/Property/FObjectProperty.hpp>
 #include <Unreal/CoreUObject/UObject/FStrProperty.hpp>
 #include <Unreal/Core/Containers/FUtf8String.hpp>
 #include <Unreal/Core/Containers/FAnsiString.hpp>
-#include <Unreal/Property/FStructProperty.hpp>
 #include <Unreal/Property/FTextProperty.hpp>
-#include <Unreal/Property/FWeakObjectProperty.hpp>
-#include <Unreal/Property/NumericPropertyTypes.hpp>
 #include <Unreal/CoreUObject/UObject/FUtf8StrProperty.hpp>
 #include <Unreal/TypeChecker.hpp>
 #include <Unreal/UAssetRegistry.hpp>
 #include <Unreal/UAssetRegistryHelpers.hpp>
-#include <Unreal/UClass.hpp>
-#include <Unreal/UFunction.hpp>
+#include <Unreal/CoreUObject/UObject/Class.hpp>
 #include <Unreal/UGameViewportClient.hpp>
 #include <Unreal/UKismetSystemLibrary.hpp>
 #include <Unreal/UObjectGlobals.hpp>
@@ -169,7 +158,7 @@ namespace RC
         {
             // int32_t current_param_offset{};
 
-            for (Unreal::FProperty* func_prop : FunctionBeingExecuted->ForEachProperty())
+            for (Unreal::FProperty* func_prop : Unreal::TFieldRange<Unreal::FProperty>(FunctionBeingExecuted, Unreal::EFieldIterationFlags::IncludeDeprecated))
             {
                 // Skip this property if it's not a parameter
                 if (!func_prop->HasAnyPropertyFlags(Unreal::EPropertyFlags::CPF_Parm))
@@ -339,7 +328,7 @@ namespace RC
             bool has_properties_to_process = lua_data.has_return_value || num_unreal_params > 0;
             if (has_properties_to_process && context.TheStack.Locals())
             {
-                for (Unreal::FProperty* func_prop : FunctionBeingExecuted->ForEachProperty())
+                for (Unreal::FProperty* func_prop : Unreal::TFieldRange<Unreal::FProperty>(FunctionBeingExecuted, Unreal::EFieldIterationFlags::IncludeDeprecated))
                 {
                     // Skip this property if it's not a parameter
                     if (!func_prop->HasAnyPropertyFlags(Unreal::EPropertyFlags::CPF_Parm))
@@ -4356,7 +4345,7 @@ Overloads:
 
                     if (has_return_value || num_unreal_params > 0)
                     {
-                        for (Unreal::FProperty* param : node->ForEachProperty())
+                        for (Unreal::FProperty* param : Unreal::TFieldRange<Unreal::FProperty>(node, Unreal::EFieldIterationFlags::IncludeDeprecated))
                         {
                             if (!param->HasAnyPropertyFlags(Unreal::EPropertyFlags::CPF_Parm))
                             {

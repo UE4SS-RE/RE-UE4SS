@@ -5,10 +5,9 @@
 #include <Timer/ScopedTimer.hpp>
 #include <UE4SSProgram.hpp>
 #pragma warning(disable : 4005)
-#include <Unreal/FProperty.hpp>
+#include <Unreal/CoreUObject/UObject/UnrealType.hpp>
 #include <Unreal/UAssetRegistry.hpp>
-#include <Unreal/UClass.hpp>
-#include <Unreal/UFunction.hpp>
+#include <Unreal/CoreUObject/UObject/Class.hpp>
 #pragma warning(default : 4005)
 
 namespace RC::UEGenerator::JSONDumper
@@ -222,7 +221,7 @@ namespace RC::UEGenerator::JSONDumper
             }
 
             auto& events = bp_class.new_array(STR("events"));
-            for (UFunction* event_function : object_as_class->ForEachFunction())
+            for (UFunction* event_function : TFieldRange<UFunction>(object_as_class, EFieldIterationFlags::None))
             {
                 if (should_skip_general_function(event_function))
                 {
@@ -243,7 +242,7 @@ namespace RC::UEGenerator::JSONDumper
                 bp_events.new_string(STR("name"), event_name);
 
                 auto& bp_event_args = bp_events.new_array(STR("args"));
-                for (FProperty* param : event_function->ForEachProperty())
+                for (FProperty* param : TFieldRange<FProperty>(event_function, EFieldIterationFlags::IncludeDeprecated))
                 {
                     if (should_skip_property(param))
                     {
@@ -260,7 +259,7 @@ namespace RC::UEGenerator::JSONDumper
             }
 
             auto& functions = bp_class.new_array(STR("functions"));
-            for (UFunction* function : object_as_class->ForEachFunction())
+            for (UFunction* function : TFieldRange<UFunction>(object_as_class, EFieldIterationFlags::None))
             {
                 if (should_skip_function(function))
                 {
@@ -271,7 +270,7 @@ namespace RC::UEGenerator::JSONDumper
                 bp_function.new_string(STR("name"), function->GetName());
 
                 auto& bp_function_args = bp_function.new_array(STR("args"));
-                for (FProperty* param : function->ForEachProperty())
+                for (FProperty* param : TFieldRange<FProperty>(function, EFieldIterationFlags::IncludeDeprecated))
                 {
                     if (should_skip_property(param))
                     {
@@ -288,7 +287,7 @@ namespace RC::UEGenerator::JSONDumper
             }
 
             auto& properties = bp_class.new_array(STR("properties"));
-            for (FProperty* property : object_as_class->ForEachProperty())
+            for (FProperty* property : TFieldRange<FProperty>(object_as_class, EFieldIterationFlags::IncludeDeprecated))
             {
                 if (should_skip_property(property))
                 {
@@ -301,7 +300,7 @@ namespace RC::UEGenerator::JSONDumper
             }
 
             auto& delegates = bp_class.new_array(STR("delegates"));
-            for (UFunction* delegate_function : object_as_class->ForEachFunction())
+            for (UFunction* delegate_function : TFieldRange<UFunction>(object_as_class, EFieldIterationFlags::None))
             {
                 if (should_skip_general_function(delegate_function))
                 {
@@ -316,7 +315,7 @@ namespace RC::UEGenerator::JSONDumper
                 bp_delegate.new_string(STR("name"), delegate_function->GetName());
 
                 auto& bp_delegate_args = bp_delegate.new_array(STR("args"));
-                for (FProperty* param : delegate_function->ForEachProperty())
+                for (FProperty* param : TFieldRange<FProperty>(delegate_function, EFieldIterationFlags::IncludeDeprecated))
                 {
                     if (should_skip_property(param))
                     {

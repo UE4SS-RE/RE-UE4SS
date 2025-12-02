@@ -2,8 +2,8 @@
 
 #include <LuaType/LuaCustomProperty.hpp>
 #pragma warning(disable : 4005)
-#include <Unreal/FProperty.hpp>
-#include <Unreal/UClass.hpp>
+#include <Unreal/CoreUObject/UObject/UnrealType.hpp>
+#include <Unreal/CoreUObject/UObject/Class.hpp>
 #include <Unreal/UnrealVersion.hpp>
 #include <UnrealCustom/CustomProperty.hpp>
 #pragma warning(default : 4005)
@@ -56,7 +56,7 @@ namespace RC::LuaType
 
             if (!class_matches)
             {
-                for (Unreal::UStruct* super_struct : ptr->ForEachSuperStruct())
+                for (Unreal::UStruct* super_struct : Unreal::TSuperStructRange(ptr))
                 {
                     if (super_struct == owner_or_outer)
                     {

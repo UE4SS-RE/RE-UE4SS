@@ -31,19 +31,12 @@
 #include <UE4SSProgram.hpp>
 #include <Unreal/AActor.hpp>
 #include <Unreal/FOutputDevice.hpp>
-#include <Unreal/Property/FArrayProperty.hpp>
-#include <Unreal/Property/FBoolProperty.hpp>
-#include <Unreal/Property/FObjectProperty.hpp>
+#include <Unreal/CoreUObject/UObject/UnrealType.hpp>
 #include <Unreal/Property/FEnumProperty.hpp>
-#include <Unreal/Property/NumericPropertyTypes.hpp>
-#include <Unreal/Property/FMapProperty.hpp>
-#include <Unreal/UClass.hpp>
-#include <Unreal/UEnum.hpp>
-#include <Unreal/UFunction.hpp>
+#include <Unreal/CoreUObject/UObject/Class.hpp>
 #include <Unreal/UObject.hpp>
 #include <Unreal/UObjectArray.hpp>
 #include <Unreal/UPackage.hpp>
-#include <Unreal/UScriptStruct.hpp>
 #include <Unreal/UnrealInitializer.hpp>
 #include <Unreal/UKismetNodeHelperLibrary.hpp>
 #include <imgui.h>
@@ -155,7 +148,7 @@ namespace RC::GUI
 
         if (LiveView::s_include_inheritance)
         {
-            for (UStruct* super : object->GetClassPrivate()->ForEachSuperStruct())
+            for (UStruct* super : TSuperStructRange(object->GetClassPrivate()))
             {
                 auto super_full_name = get_object_full_name_cxx_string(super);
                 std::transform(super_full_name.begin(), super_full_name.end(), super_full_name.begin(), [](char c) {
@@ -2026,7 +2019,7 @@ namespace RC::GUI
         ImGui::Text("Properties");
         if (ImGui::TreeNodeEx("Show", ImGuiTreeNodeFlags_SpanFullWidth))
         {
-            for (FProperty* property : ustruct->ForEachProperty())
+            for (FProperty* property : TFieldRange<FProperty>(ustruct, EFieldIterationFlags::IncludeDeprecated))
             {
                 bool is_struct_property = CastField<FStructProperty>(property) != nullptr;
                 bool is_array_property = CastField<FArrayProperty>(property) != nullptr;
@@ -2135,7 +2128,7 @@ namespace RC::GUI
         Output::send(STR("{}\n"), uclass->GetFullName());
 
         ImGui::Text("Properties");
-        for (FProperty* property : uclass->ForEachProperty())
+        for (FProperty* property : TFieldRange<FProperty>(uclass, EFieldIterationFlags::IncludeDeprecated))
         {
             if (ImGui::TreeNode(to_string(property->GetFullName()).c_str()))
             {
@@ -2353,7 +2346,7 @@ namespace RC::GUI
             {
                 render_property_value_context_menu(tree_node_id);
 
-                for (FProperty* inner_property : as_struct_property->GetStruct()->ForEachProperty())
+                for (FProperty* inner_property : TFieldRange<FProperty>(as_struct_property->GetStruct(), EFieldIterationFlags::IncludeDeprecated))
                 {
                     ImGui::Indent();
                     FProperty* last_struct_prop{};
@@ -2722,14 +2715,14 @@ namespace RC::GUI
         else
         {
             ImGui::Separator();
-            for (FProperty* property : uclass->ForEachProperty())
+            for (FProperty* property : TFieldRange<FProperty>(uclass, EFieldIterationFlags::IncludeDeprecated))
             {
                 all_properties.emplace_back(OrderedProperty{property->GetOffset_Internal(), uclass, property});
             }
 
-            for (UStruct* super_struct : uclass->ForEachSuperStruct())
+            for (UStruct* super_struct : TSuperStructRange(uclass))
             {
-                for (FProperty* property : super_struct->ForEachProperty())
+                for (FProperty* property : TFieldRange<FProperty>(super_struct, EFieldIterationFlags::IncludeDeprecated))
                 {
                     all_properties.emplace_back(OrderedProperty{property->GetOffset_Internal(), super_struct, property});
                 }
@@ -3316,7 +3309,7 @@ namespace RC::GUI
 
         buffer.append(STR("  Locals:\n"));
         bool has_local_params{};
-        for (const auto& param : function->ForEachProperty())
+        for (const auto& param : TFieldRange<FProperty>(function, EFieldIterationFlags::IncludeDeprecated))
         {
             if (param->HasAnyPropertyFlags(CPF_OutParm | CPF_ReturnParm))
             {
@@ -3335,7 +3328,7 @@ namespace RC::GUI
 
         bool has_out_params{};
         buffer.append(STR("  Out:\n"));
-        for (const auto& param : function->ForEachProperty())
+        for (const auto& param : TFieldRange<FProperty>(function, EFieldIterationFlags::IncludeDeprecated))
         {
             if (param->HasAnyPropertyFlags(CPF_ReturnParm))
             {

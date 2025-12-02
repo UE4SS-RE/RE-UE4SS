@@ -51,7 +51,8 @@
 #include <Unreal/ULocalPlayer.hpp>
 #include <Unreal/UObjectArray.hpp>
 #include <Unreal/UPackage.hpp>
-#include <Unreal/UScriptStruct.hpp>
+#include <Unreal/CoreUObject/UObject/Class.hpp>
+#include <Unreal/CoreUObject/UObject/UnrealType.hpp>
 #include <Unreal/UnrealInitializer.hpp>
 #include <Unreal/World.hpp>
 #include <Unreal/FWorldContext.hpp>
@@ -1980,7 +1981,7 @@ namespace RC
             // If the UClass of the UObject has any properties then dump them
             if (typed_obj->IsA<UStruct>())
             {
-                for (FProperty* prop : static_cast<UClass*>(typed_obj)->ForEachProperty())
+                for (FProperty* prop : TFieldRange<FProperty>(static_cast<UClass*>(typed_obj), Unreal::EFieldIterationFlags::IncludeDeprecated))
                 {
                     if (dumped_fields.contains(prop))
                     {
@@ -1994,7 +1995,7 @@ namespace RC
 
             if (typed_obj->IsA<UStruct>())
             {
-                for (auto func : static_cast<UStruct*>(typed_obj)->ForEachFunction())
+                for (UFunction* func : TFieldRange<UFunction>(static_cast<UStruct*>(typed_obj), Unreal::EFieldIterationFlags::None))
                 {
                     ObjectDumper::function_to_string(func, out_line, in_dumped_functions);
                 }
