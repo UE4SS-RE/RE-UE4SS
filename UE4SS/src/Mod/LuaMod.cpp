@@ -122,9 +122,11 @@ namespace RC
 
     static auto lua_unreal_script_function_hook_pre(Unreal::UnrealScriptFunctionCallableContext context, void* custom_data) -> void
     {
-
         // Fetch the data corresponding to this UFunction
         auto& lua_data = *static_cast<LuaUnrealScriptFunctionData*>(custom_data);
+
+        // Check if this hook has been scheduled for removal (Lua state may be invalid)
+        if (lua_data.scheduled_for_removal) return;
 
         // This is a promise that we're in the game thread, used by other functions to ensure that we don't execute when unsafe
         set_is_in_game_thread(lua_data.lua, true);
@@ -238,6 +240,9 @@ namespace RC
     {
         // Fetch the data corresponding to this UFunction
         auto& lua_data = *static_cast<LuaUnrealScriptFunctionData*>(custom_data);
+
+        // Check if this hook has been scheduled for removal (Lua state may be invalid)
+        if (lua_data.scheduled_for_removal) return;
 
         // This is a promise that we're in the game thread, used by other functions to ensure that we don't execute when unsafe
         set_is_in_game_thread(lua_data.lua, true);
