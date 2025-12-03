@@ -117,7 +117,20 @@ namespace RC
         bool has_return_value{};
         // Will be non-nullptr if the UFunction has a return value
         Unreal::FProperty* return_property{};
-        std::atomic<bool> scheduled_for_removal{};
+        std::atomic<bool> scheduled_for_removal{false};
+
+        LuaUnrealScriptFunctionData(Unreal::CallbackId pre_id,
+                                    Unreal::CallbackId post_id,
+                                    Unreal::UFunction* func,
+                                    const Mod* m,
+                                    const LuaMadeSimple::Lua& l,
+                                    int cb_ref,
+                                    int post_cb_ref,
+                                    int thread_ref)
+            : pre_callback_id(pre_id), post_callback_id(post_id), unreal_function(func), mod(m), lua(l),
+              lua_callback_ref(cb_ref), lua_post_callback_ref(post_cb_ref), lua_thread_ref(thread_ref)
+        {
+        }
     };
     static std::vector<std::unique_ptr<LuaUnrealScriptFunctionData>> g_hooked_script_function_data{};
 
@@ -3650,7 +3663,7 @@ Overloads:
                 unreal_function->HasAnyFunctionFlags(Unreal::EFunctionFlags::FUNC_Native))
             {
                 auto& custom_data = g_hooked_script_function_data.emplace_back(std::make_unique<LuaUnrealScriptFunctionData>(
-                        LuaUnrealScriptFunctionData{0, 0, unreal_function, mod, *hook_lua, lua_callback_registry_index, lua_post_callback_registry_index, lua_thread_registry_index}));
+                        0, 0, unreal_function, mod, *hook_lua, lua_callback_registry_index, lua_post_callback_registry_index, lua_thread_registry_index));
                 auto pre_id = unreal_function->RegisterPreHook(&lua_unreal_script_function_hook_pre, custom_data.get());
                 auto post_id = unreal_function->RegisterPostHook(&lua_unreal_script_function_hook_post, custom_data.get());
                 custom_data->pre_callback_id = pre_id;
