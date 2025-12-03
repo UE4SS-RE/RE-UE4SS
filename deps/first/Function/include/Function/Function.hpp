@@ -47,7 +47,7 @@ namespace RC
             m_active_func = func_ptr;
             m_function_address = std::bit_cast<void*>(func_ptr);
             m_stored_original_func = m_active_func;
-            m_is_ready = true;
+            m_is_ready = m_function_address;
         }
 
         // Assign a void* to this Function object as the function address
@@ -57,7 +57,7 @@ namespace RC
             m_active_func = std::bit_cast<FunctionSignature>(func_address);
             m_stored_original_func = m_active_func;
             m_function_address = func_address;
-            m_is_ready = true;
+            m_is_ready = func_address;
         }
 
         // Assign a new function pointer (same type) to this Function object and store the old one
@@ -65,7 +65,7 @@ namespace RC
         {
             m_active_func = func_ptr;
             m_function_address = std::bit_cast<void*>(func_ptr);
-            m_is_ready = true;
+            m_is_ready = m_function_address;
         }
 
         // Assign a new void* to this Function object and store the old function pointer
@@ -78,7 +78,7 @@ namespace RC
             }
             m_active_func = std::bit_cast<FunctionSignature>(address);
             m_function_address = address;
-            m_is_ready = true;
+            m_is_ready = address;
         }
 
         // Reset the function pointer back to the original one
