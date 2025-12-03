@@ -1789,13 +1789,17 @@ Overloads:
                 }
 
                 // Hooks on native UFunctions will have both of these IDs.
+                // pre_id and post_id are generic IDs returned to Lua, we need to map them to native IDs
                 auto native_hook_pre_id_it = LuaMod::m_generic_hook_id_to_native_hook_id.find(static_cast<int32_t>(pre_id));
                 auto native_hook_post_id_it = LuaMod::m_generic_hook_id_to_native_hook_id.find(static_cast<int32_t>(post_id));
                 if (native_hook_pre_id_it != LuaMod::m_generic_hook_id_to_native_hook_id.end() &&
                     native_hook_post_id_it != LuaMod::m_generic_hook_id_to_native_hook_id.end())
                 {
+                    // Use the native IDs for comparison, not the generic IDs
+                    auto native_pre_id = native_hook_pre_id_it->second;
+                    auto native_post_id = native_hook_post_id_it->second;
                     const auto hook_data = std::ranges::find_if(g_hooked_script_function_data, [&](const std::unique_ptr<LuaUnrealScriptFunctionData>& elem) {
-                        return elem->post_callback_id == post_id && elem->pre_callback_id == pre_id;
+                        return elem->post_callback_id == native_post_id && elem->pre_callback_id == native_pre_id;
                     });
                     if (hook_data != g_hooked_script_function_data.end())
                     {
