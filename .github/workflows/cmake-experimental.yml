@@ -15,10 +15,10 @@ on:
       - "UE4SS/generated_include/**"
       - "deps/**"
       - "UE4SS/proxy_generator/**"
-      - "assets/Mods/**"
-      - "assets/**.ini"
+      - "assets/**"
       - "CMakeLists.txt"
       - "cmake/**"
+      - "cppmods/**"
 
 permissions:
   contents: read
@@ -28,7 +28,80 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # Determine what changed to decide what to build
+  check-changes:
+    runs-on: ubuntu-latest
+    outputs:
+      build-ue4ss: ${{ steps.check.outputs.build-ue4ss }}
+      build-cppmods: ${{ steps.check.outputs.build-cppmods }}
+      assets-only: ${{ steps.check.outputs.assets-only }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 2  # Need previous commit for diff
+
+      - name: Check what changed
+        id: check
+        run: |
+          # For workflow_dispatch, always build everything
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+            echo "Manual trigger - full build"
+            echo "build-ue4ss=true" >> $GITHUB_OUTPUT
+            echo "build-cppmods=true" >> $GITHUB_OUTPUT
+            echo "assets-only=false" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          # Get changed files compared to previous commit
+          CHANGED_FILES=$(git diff --name-only HEAD^ HEAD 2>/dev/null || echo "")
+
+          if [ -z "$CHANGED_FILES" ]; then
+            echo "No changed files detected - full build"
+            echo "build-ue4ss=true" >> $GITHUB_OUTPUT
+            echo "build-cppmods=true" >> $GITHUB_OUTPUT
+            echo "assets-only=false" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          echo "Changed files:"
+          echo "$CHANGED_FILES"
+
+          # Check for UE4SS code changes
+          UE4SS_CHANGES=$(echo "$CHANGED_FILES" | grep -E "^(UE4SS/|deps/|CMakeLists\.txt|cmake/)" || true)
+
+          # Check for C++ mod changes
+          CPPMOD_CHANGES=$(echo "$CHANGED_FILES" | grep -E "^cppmods/" || true)
+
+          # Check for asset-only changes (no code changes)
+          CODE_CHANGES=$(echo "$CHANGED_FILES" | grep -E "^(UE4SS/|deps/|CMakeLists\.txt|cmake/|cppmods/)" || true)
+
+          if [ -n "$UE4SS_CHANGES" ]; then
+            echo "UE4SS code changes detected"
+            echo "build-ue4ss=true" >> $GITHUB_OUTPUT
+            echo "build-cppmods=true" >> $GITHUB_OUTPUT  # C++ mods depend on UE4SS
+            echo "assets-only=false" >> $GITHUB_OUTPUT
+          elif [ -n "$CPPMOD_CHANGES" ]; then
+            echo "C++ mod changes detected (no UE4SS changes)"
+            echo "build-ue4ss=true" >> $GITHUB_OUTPUT  # Need UE4SS to build mods
+            echo "build-cppmods=true" >> $GITHUB_OUTPUT
+            echo "assets-only=false" >> $GITHUB_OUTPUT
+          elif [ -z "$CODE_CHANGES" ]; then
+            echo "Only asset changes detected - reusing last build"
+            echo "build-ue4ss=false" >> $GITHUB_OUTPUT
+            echo "build-cppmods=false" >> $GITHUB_OUTPUT
+            echo "assets-only=true" >> $GITHUB_OUTPUT
+          else
+            echo "Other changes - full build"
+            echo "build-ue4ss=true" >> $GITHUB_OUTPUT
+            echo "build-cppmods=true" >> $GITHUB_OUTPUT
+            echo "assets-only=false" >> $GITHUB_OUTPUT
+          fi
+
+  # Build UE4SS if code changed
   build:
+    needs: check-changes
+    if: needs.check-changes.outputs.assets-only != 'true'
     uses: ./.github/workflows/cmake_build_ue4ss.yml
     secrets: inherit
     with:
@@ -36,9 +109,70 @@ jobs:
       commit-sha: ${{ github.sha }}
       should-upload-artifact: true
       artifact-retention-days: 1
+      build-ue4ss: ${{ needs.check-changes.outputs.build-ue4ss == 'true' }}
+      build-cppmods: ${{ needs.check-changes.outputs.build-cppmods == 'true' }}
+
+  # Download from last release if only assets changed
+  download-existing:
+    needs: check-changes
+    if: needs.check-changes.outputs.assets-only == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download UE4SS from latest experimental release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p build_output
+
+          # Download the dev zip from cmake-experimental-latest release
+          echo "Downloading from cmake-experimental-latest release..."
+          gh release download cmake-experimental-latest \
+            --repo ${{ github.repository }} \
+            --pattern "zDEV-UE4SS_*.zip" \
+            --dir ./temp_download || {
+              echo "Failed to download from release"
+              exit 1
+            }
+
+          # Extract the zip to get UE4SS.dll, dwmapi.dll, and mod DLLs
+          cd temp_download
+          unzip -o zDEV-UE4SS_*.zip
+
+          # Copy required files to build_output
+          # UE4SS.dll is inside ue4ss folder
+          cp ue4ss/UE4SS.dll ../build_output/ || exit 1
+          cp ue4ss/UE4SS.pdb ../build_output/ 2>/dev/null || true
+
+          # dwmapi.dll is at root of extracted content
+          cp dwmapi.dll ../build_output/ || exit 1
+
+          # Copy C++ mod DLLs (they're in Mods/<ModName>/dlls/main.dll)
+          for mod_dir in ue4ss/Mods/*/dlls; do
+            if [ -f "$mod_dir/main.dll" ]; then
+              mod_name=$(basename $(dirname "$mod_dir"))
+              cp "$mod_dir/main.dll" "../build_output/${mod_name}.dll"
+              if [ -f "$mod_dir/main.pdb" ]; then
+                cp "$mod_dir/main.pdb" "../build_output/${mod_name}.pdb"
+              fi
+              echo "Extracted $mod_name mod"
+            fi
+          done
+
+          echo "Downloaded artifacts:"
+          ls -la ../build_output/
+
+      - name: Upload reused artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: CMAKE-Game__Shipping__Win64
+          path: build_output/
+          retention-days: 1
+          overwrite: true
 
   make-release:
-    needs: build
+    needs: [check-changes, build, download-existing]
+    # Run if either build or download-existing succeeded
+    if: always() && (needs.build.result == 'success' || needs.download-existing.result == 'success')
     permissions:
       contents: write  # Required for creating releases
     runs-on: windows-2022

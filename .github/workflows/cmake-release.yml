@@ -75,7 +75,10 @@ jobs:
       commit-sha: ${{ github.sha }}
       should-upload-artifact: true
       artifact-retention-days: 1
-      enable-caching: false  # Disable caching for production test releases
+      enable-caching: false  # Disable caching for production releases
+      build-ue4ss: true
+      build-cppmods: true
+      build-uvtd: false
 
   make-release:
     needs: [prepare-release, build]
