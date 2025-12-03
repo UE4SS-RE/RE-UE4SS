@@ -30,6 +30,11 @@ class ReleaseHandler:
             'jsbLuaProfilerMod',
         ]
 
+        # Lua mods to disable (but keep) in the non-dev/release version
+        self.lua_mods_to_disable_in_release = [
+            'LineTraceMod',
+        ]
+
         # Files in root/assets to exclude from the non-dev/release version of the zip 
         self.files_to_exclude_from_release = [
             'Mods/shared/Types.lua',
@@ -158,6 +163,18 @@ class ReleaseHandler:
 
         if not self.is_dev_release:
             content = [line for line in content if not any(mod in line for mod in mods_to_remove_from_release)]
+            # Disable mods that should be kept but disabled in release
+            new_content = []
+            for line in content:
+                disabled = False
+                for mod in self.lua_mods_to_disable_in_release:
+                    if mod in line:
+                        new_content.append(f'{mod} : 0\n')
+                        disabled = True
+                        break
+                if not disabled:
+                    new_content.append(line)
+            content = new_content
 
         with open(mods_path, mode='w', encoding='utf-8') as file:
             file.writelines(content)
@@ -181,6 +198,10 @@ class ReleaseHandler:
                 if mod['mod_name'] not in self.lua_mods_to_exclude_from_release
                 and self.cpp_mods.get(mod['mod_name'], {}).get('include_in_release', True)
             ]
+            # Disable mods that should be kept but disabled in release
+            for mod in content:
+                if mod['mod_name'] in self.lua_mods_to_disable_in_release:
+                    mod['mod_enabled'] = False
 
         with open(mods_path, mode='w', encoding='utf-8') as file:
             json.dump(content, file, indent=4)
