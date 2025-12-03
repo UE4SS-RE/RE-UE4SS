@@ -187,8 +187,8 @@ namespace RC::GUI
 
       private:
         auto collapse_all_except(void* except_id) -> void;
-        auto search() -> void;
-        auto search_by_name() -> void;
+        auto search(bool apply_filters_when_not_searching = false) -> void;
+        auto make_filtered_set(bool ignore_name = false) -> void;
         auto select_object(size_t index, const FUObjectItem* object_item, UObject* object, AffectsHistory = AffectsHistory::Yes) -> void;
         auto select_property(size_t index, FProperty* property, AffectsHistory affects_history) -> void;
         auto get_selected_object_or_property() -> const ObjectOrProperty&;

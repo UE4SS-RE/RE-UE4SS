@@ -281,6 +281,8 @@ The following search filters now allow multiple values, with each value separate
 
 Large structs that cause FPS problems no longer render, but you can still click on the struct to render each individual property of the struct. ([UE4SS #1080](https://github.com/UE4SS-RE/RE-UE4SS/pull/1080)) 
 
+Large performance increase when `Apply filters when not searching` is enabled ([UE4SS #1090](https://github.com/UE4SS-RE/RE-UE4SS/pull/1090)) 
+
 ### UHT Dumper 
 
 ### Lua API 
