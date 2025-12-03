@@ -8,6 +8,10 @@
 #include <variant>
 #include <regex>
 
+#ifdef _WIN32
+#include <Unreal/Core/Windows/MinWindows.hpp>
+#endif
+
 #include <DynamicOutput/DynamicOutput.hpp>
 #include <ExceptionHandling.hpp>
 #include <Constructs/Views/EnumerateView.hpp>
@@ -62,7 +66,7 @@ namespace RC::GUI
     static std::unordered_map<const UObject*, std::string> s_object_ptr_to_full_name{};
 
     static std::mutex s_object_ptr_to_full_name_mutex{};
-    std::mutex LiveView::Watch::s_watch_lock{};
+    std::recursive_mutex LiveView::Watch::s_watch_lock{};
 
     std::vector<LiveView::ObjectOrProperty> LiveView::s_object_view_history{{nullptr, nullptr, false}};
     size_t LiveView::s_currently_selected_object_index{};
@@ -83,6 +87,14 @@ namespace RC::GUI
     bool LiveView::s_filters_loaded_from_disk{};
     bool LiveView::s_use_regex_for_search{};
     bool LiveView::s_search_by_address{};
+
+    // Instance function browser for native watch with specific vtable
+    UObject* LiveView::s_instance_function_browser_object{};
+    bool LiveView::s_instance_function_browser_open{};
+    std::string LiveView::s_instance_function_browser_search{};
+    bool LiveView::s_instance_function_browser_show_all{};
+    UFunction* LiveView::s_instance_function_browser_selected_func{};
+    std::vector<std::string> LiveView::s_instance_function_browser_params{};
 
     static LiveView* s_live_view{};
 
@@ -572,10 +584,58 @@ namespace RC::GUI
                                                                    &LiveView::process_function_pre_watch,
                                                                    &LiveView::process_function_post_watch,
                                                                    nullptr);
+            watch.function_is_hooked = true;
         }
         else
         {
             UObjectGlobals::UnregisterHook(static_cast<UFunction*>(watch.container), watch.function_hook_ids);
+            watch.function_is_hooked = false;
+        }
+    }
+
+    static auto toggle_native_function_watch(LiveView::Watch& watch, bool new_value) -> void
+    {
+        auto* function = static_cast<UFunction*>(watch.container);
+
+        // Only attempt native hooking for native functions
+        if (!function->HasAnyFunctionFlags(EFunctionFlags::FUNC_Native))
+        {
+            return;
+        }
+
+        if (new_value)
+        {
+            // Run verbose thunk analysis to help debug hook target selection
+            Output::send<LogLevel::Default>(STR("[NativeWatch] Running verbose thunk analysis for: {}\n"), function->GetPathName());
+            function->GetNativeFunctionFromThunkVerbose();
+
+            if (watch.native_function_is_hooked)
+            {
+                if (watch.native_hook_ids.first != -1) function->UnregisterNativeHook(watch.native_hook_ids.first);
+                if (watch.native_hook_ids.second != -1) function->UnregisterNativeHook(watch.native_hook_ids.second);
+            }
+            watch.native_hook_ids.first = function->RegisterNativePreHook(&LiveView::process_native_function_pre_watch, nullptr);
+            watch.native_hook_ids.second = function->RegisterNativePostHook(&LiveView::process_native_function_post_watch, nullptr);
+            watch.native_function_is_hooked = (watch.native_hook_ids.first != -1 || watch.native_hook_ids.second != -1);
+
+            // If native hook failed (low confidence or analysis error), fall back to thunk hook
+            if (!watch.native_function_is_hooked)
+            {
+                Output::send<LogLevel::Default>(STR("[NativeWatch] Native hook failed for {}, falling back to thunk hook\n"), function->GetPathName());
+                toggle_function_watch(watch, true);
+            }
+        }
+        else
+        {
+            if (watch.native_hook_ids.first != -1) function->UnregisterNativeHook(watch.native_hook_ids.first);
+            if (watch.native_hook_ids.second != -1) function->UnregisterNativeHook(watch.native_hook_ids.second);
+            watch.native_function_is_hooked = false;
+            watch.native_hook_ids = {-1, -1};
+            // Also remove the thunk hook if we had fallen back to it
+            if (watch.function_is_hooked)
+            {
+                toggle_function_watch(watch, false);
+            }
         }
     }
 
@@ -610,7 +670,18 @@ namespace RC::GUI
         watch.property = nullptr;
         watch.container = function;
         watch.hash = std::hash<LiveView::WatchIdentifier>()(watch_id);
-        toggle_function_watch(watch, true);
+        watch.native_hook_ids = {-1, -1};
+
+        // For native functions, only use the native hook (catches ALL calls including C++ calls)
+        // For non-native functions, only use the script hook (native hook doesn't apply)
+        if (function->HasAnyFunctionFlags(EFunctionFlags::FUNC_Native))
+        {
+            toggle_native_function_watch(watch, true);
+        }
+        else
+        {
+            toggle_function_watch(watch, true);
+        }
 
         LiveView::s_watch_map.emplace(watch_id, &watch);
 
@@ -3372,6 +3443,370 @@ namespace RC::GUI
         }
     }
 
+#ifdef _WIN32
+    // SEH helper functions to safely call potentially crashing operations
+    // These MUST NOT have any C++ objects with destructors - only raw pointers and primitives
+    // The actual C++ object operations are done via function pointers to avoid unwinding issues
+
+    // Function pointer types for the actual operations
+    typedef void (*ExportTextItemFunc)(FProperty*, FString*, void*, UObject*);
+    typedef void (*GetFullNameFunc)(UObject*, StringType*);
+
+    // The actual export operation - called via pointer
+    static void DoExportTextItem(FProperty* prop, FString* out_text, void* container_ptr, UObject* parent)
+    {
+        prop->ExportTextItem(*out_text, container_ptr, container_ptr, parent, NULL);
+    }
+
+    // The actual GetFullName operation - called via pointer
+    static void DoGetFullName(UObject* obj, StringType* out_name)
+    {
+        *out_name = obj->GetFullName();
+    }
+
+    // SEH wrapper that calls via function pointer - no C++ objects here
+    static bool SafeExportTextItemSEH(ExportTextItemFunc func, FProperty* prop, FString* out_text, void* container_ptr, UObject* parent)
+    {
+        __try
+        {
+            func(prop, out_text, container_ptr, parent);
+            return true;
+        }
+        __except(EXCEPTION_EXECUTE_HANDLER)
+        {
+            return false;
+        }
+    }
+
+    static bool SafeGetFullNameSEH(GetFullNameFunc func, UObject* obj, StringType* out_name)
+    {
+        __try
+        {
+            func(obj, out_name);
+            return true;
+        }
+        __except(EXCEPTION_EXECUTE_HANDLER)
+        {
+            return false;
+        }
+    }
+
+    // IsValid check function pointer type
+    typedef bool (*IsValidFunc)(UObject*);
+
+    static bool DoIsValid(UObject* obj)
+    {
+        return !obj->IsUnreachable();
+    }
+
+    static bool SafeIsValidSEH(IsValidFunc func, UObject* obj)
+    {
+        __try
+        {
+            return func(obj);
+        }
+        __except(EXCEPTION_EXECUTE_HANDLER)
+        {
+            return false;
+        }
+    }
+
+    // Public wrappers that set up the call
+    static bool SafeExportTextItem(FProperty* prop, FString& out_text, void* container_ptr, UObject* parent)
+    {
+        return SafeExportTextItemSEH(&DoExportTextItem, prop, &out_text, container_ptr, parent);
+    }
+
+    static bool SafeGetFullName(UObject* obj, StringType& out_name)
+    {
+        return SafeGetFullNameSEH(&DoGetFullName, obj, &out_name);
+    }
+
+    static bool SafeIsValid(UObject* obj)
+    {
+        return SafeIsValidSEH(&DoIsValid, obj);
+    }
+#endif
+
+    auto LiveView::process_native_function_pre_watch(Unreal::NativeFunctionCallableContext& context, void*) -> void
+    {
+    }
+
+    auto LiveView::process_native_function_post_watch(Unreal::NativeFunctionCallableContext& context, void*) -> void
+    {
+        // Fast early-out checks without any logging to minimize overhead for high-frequency functions
+        if (!UnrealInitializer::StaticStorage::bIsInitialized)
+        {
+            return;
+        }
+
+        auto* function = context.Function;
+        if (!function)
+        {
+            return;
+        }
+
+        // Validate registers pointer
+        if (!context.Registers)
+        {
+            return;
+        }
+
+        // Use recursive_mutex to handle re-entrant calls from multiple threads
+        std::lock_guard<decltype(LiveView::Watch::s_watch_lock)> lock{LiveView::Watch::s_watch_lock};
+
+        auto it = s_watch_containers.find(function);
+        if (it == s_watch_containers.end() || it->second.empty())
+        {
+            return;
+        }
+        auto& watch = *it->second[0];
+
+        const auto when_as_string = fmt::format(STR("{:%H:%M:%S}"), std::chrono::system_clock::now());
+        StringType buffer{fmt::format(STR("[NATIVE] Received call @ {}.\n"), when_as_string)};
+
+        // Safely get context name with validation
+        if (context.Context)
+        {
+#ifdef _WIN32
+            // Validate the context pointer is readable
+            MEMORY_BASIC_INFORMATION mbi;
+            if (VirtualQuery(context.Context, &mbi, sizeof(mbi)) != 0 &&
+                mbi.State == MEM_COMMIT &&
+                !(mbi.Protect & (PAGE_NOACCESS | PAGE_GUARD)) &&
+                (mbi.Protect & (PAGE_READONLY | PAGE_READWRITE | PAGE_EXECUTE_READ | PAGE_EXECUTE_READWRITE)))
+            {
+                // Try to check if it's a valid UObject before calling GetFullName
+                if (SafeIsValid(context.Context))
+                {
+                    StringType context_name;
+                    if (SafeGetFullName(context.Context, context_name))
+                    {
+                        buffer.append(fmt::format(STR("  Context:\n    {}\n"), context_name));
+                    }
+                    else
+                    {
+                        buffer.append(fmt::format(STR("  Context:\n    <access violation reading 0x{:X}>\n"), reinterpret_cast<uint64_t>(context.Context)));
+                    }
+                }
+                else
+                {
+                    // Not a valid UObject - just show the raw pointer
+                    buffer.append(fmt::format(STR("  Context:\n    0x{:X} (not a valid UObject)\n"), reinterpret_cast<uint64_t>(context.Context)));
+                }
+            }
+            else
+            {
+                buffer.append(fmt::format(STR("  Context:\n    <invalid pointer 0x{:X}>\n"), reinterpret_cast<uint64_t>(context.Context)));
+            }
+#else
+            try
+            {
+                buffer.append(fmt::format(STR("  Context:\n    {}\n"), context.Context->GetFullName()));
+            }
+            catch (...)
+            {
+                buffer.append(fmt::format(STR("  Context:\n    <error reading 0x{:X}>\n"), reinterpret_cast<uint64_t>(context.Context)));
+            }
+#endif
+        }
+        else
+        {
+            buffer.append(STR("  Context:\n    <null>\n"));
+        }
+
+        buffer.append(STR("  Params:\n"));
+        bool has_params{};
+        int param_index = 0;
+        for (const auto& param : TFieldRange<FProperty>(function, EFieldIterationFlags::IncludeDeprecated))
+        {
+            // Skip non-parameter properties and return values
+            if (!param->HasAnyPropertyFlags(CPF_Parm) || param->HasAnyPropertyFlags(CPF_ReturnParm))
+            {
+                continue;
+            }
+            has_params = true;
+
+            try
+            {
+                void* container_ptr = nullptr;
+                int prop_size = param->GetSize();
+                bool is_pointer_to_data = false;
+
+                // Check if this is a floating-point type (float or double)
+                bool is_float_type = param->IsA<FFloatProperty>() || param->IsA<FDoubleProperty>();
+
+                if (context.Registers)
+                {
+                    if (param_index < 3)
+                    {
+                        if (is_float_type)
+                        {
+                            // Float/double parameters use XMM registers
+                            // XMM1, XMM2, XMM3 for param indices 0, 1, 2 (XMM0 reserved for return)
+                            switch (param_index)
+                            {
+                                case 0: container_ptr = &context.Registers->xmm1[0]; break;
+                                case 1: container_ptr = &context.Registers->xmm2[0]; break;
+                                case 2: container_ptr = &context.Registers->xmm3[0]; break;
+                                default: break;
+                            }
+                        }
+                        else
+                        {
+                            // Integer/pointer parameters use general-purpose registers
+                            uint64_t reg_value;
+                            switch (param_index)
+                            {
+                                case 0: reg_value = context.Registers->rdx; break;
+                                case 1: reg_value = context.Registers->r8; break;
+                                case 2: reg_value = context.Registers->r9; break;
+                                default: reg_value = 0; break;
+                            }
+
+                            if (prop_size > 8)
+                            {
+                                // Large struct - register contains pointer to data
+                                // Validate the pointer before using it
+                                if (reg_value != 0 && reg_value != 0xFFFFFFFFFFFFFFFF && reg_value > 0x10000)
+                                {
+                                    container_ptr = reinterpret_cast<void*>(reg_value);
+                                    is_pointer_to_data = true;
+                                }
+                            }
+                            else
+                            {
+                                // Small type - data is directly in register
+                                switch (param_index)
+                                {
+                                    case 0: container_ptr = &context.Registers->rdx; break;
+                                    case 1: container_ptr = &context.Registers->r8; break;
+                                    case 2: container_ptr = &context.Registers->r9; break;
+                                    default: break;
+                                }
+                            }
+                        }
+                    }
+                    else if (context.Registers->StackArgs)
+                    {
+                        container_ptr = static_cast<uint8_t*>(context.Registers->StackArgs) + (param_index - 3) * 8;
+                    }
+                }
+
+                if (container_ptr)
+                {
+                    // Extra validation for pointer types - check if readable
+                    if (is_pointer_to_data)
+                    {
+#ifdef _WIN32
+                        // On Windows, verify memory is readable before accessing
+                        MEMORY_BASIC_INFORMATION mbi;
+                        if (VirtualQuery(container_ptr, &mbi, sizeof(mbi)) == 0 ||
+                            mbi.State != MEM_COMMIT ||
+                            (mbi.Protect & (PAGE_NOACCESS | PAGE_GUARD)) ||
+                            !(mbi.Protect & (PAGE_READONLY | PAGE_READWRITE | PAGE_EXECUTE_READ | PAGE_EXECUTE_READWRITE)))
+                        {
+                            buffer.append(fmt::format(STR("    {} = <invalid pointer 0x{:X}>\n"), param->GetName(), reinterpret_cast<uint64_t>(container_ptr)));
+                            param_index++;
+                            continue;
+                        }
+#endif
+                    }
+
+                    // Use SEH helper to safely call ExportTextItem
+#ifdef _WIN32
+                    FString param_text{};
+                    if (SafeExportTextItem(param, param_text, container_ptr, std::bit_cast<UObject*>(function)))
+                    {
+                        buffer.append(fmt::format(STR("    {} = {}\n"), param->GetName(), *param_text));
+                    }
+                    else
+                    {
+                        buffer.append(fmt::format(STR("    {} = <access violation reading 0x{:X}>\n"), param->GetName(), reinterpret_cast<uint64_t>(container_ptr)));
+                    }
+#else
+                    FString param_text{};
+                    param->ExportTextItem(param_text, container_ptr, container_ptr, std::bit_cast<UObject*>(function), NULL);
+                    buffer.append(fmt::format(STR("    {} = {}\n"), param->GetName(), *param_text));
+#endif
+                }
+                else
+                {
+                    buffer.append(fmt::format(STR("    {} = <unable to resolve>\n"), param->GetName()));
+                }
+            }
+            catch (...)
+            {
+                buffer.append(fmt::format(STR("    {} = <error reading>\n"), param->GetName()));
+            }
+            param_index++;
+        }
+        if (!has_params)
+        {
+            buffer.append(STR("    <No Params>\n"));
+        }
+
+        buffer.append(STR("  ReturnValue:\n"));
+        auto return_property = function->GetReturnProperty();
+        if (return_property && context.Registers)
+        {
+            // Check if return type is float/double - they use XMM0
+            bool is_float_return = return_property->IsA<FFloatProperty>() || return_property->IsA<FDoubleProperty>();
+            void* return_ptr = is_float_return
+                ? static_cast<void*>(&context.Registers->XmmReturnValue[0])
+                : static_cast<void*>(&context.Registers->ReturnValue);
+
+#ifdef _WIN32
+            FString return_text{};
+            if (SafeExportTextItem(return_property, return_text, return_ptr, std::bit_cast<UObject*>(function)))
+            {
+                buffer.append(fmt::format(STR("    {}\n"), *return_text));
+            }
+            else
+            {
+                if (is_float_return)
+                {
+                    buffer.append(fmt::format(STR("    XMM0 = {} (access violation)\n"), context.Registers->XmmReturnValue[0]));
+                }
+                else
+                {
+                    buffer.append(fmt::format(STR("    RAX = 0x{:016X} (access violation)\n"), context.Registers->ReturnValue));
+                }
+            }
+#else
+            try
+            {
+                FString return_text{};
+                return_property->ExportTextItem(return_text, return_ptr, return_ptr, std::bit_cast<UObject*>(function), NULL);
+                buffer.append(fmt::format(STR("    {}\n"), *return_text));
+            }
+            catch (...)
+            {
+                if (is_float_return)
+                {
+                    buffer.append(fmt::format(STR("    XMM0 = {}\n"), context.Registers->XmmReturnValue[0]));
+                }
+                else
+                {
+                    buffer.append(fmt::format(STR("    RAX = 0x{:016X}\n"), context.Registers->ReturnValue));
+                }
+            }
+#endif
+        }
+        else
+        {
+            buffer.append(STR("    <No Return Value>\n"));
+        }
+
+        buffer.append(STR("\n"));
+        watch.history.append(to_string(buffer));
+
+        if (watch.write_to_file)
+        {
+            watch.output.send(STR("{}"), buffer);
+        }
+    }
+
     auto LiveView::process_watches() -> void
     {
         if (!UnrealInitializer::StaticStorage::bIsInitialized)
@@ -3423,6 +3858,22 @@ namespace RC::GUI
                 else
                 {
                     ImGui::Checkbox(ICON_FA_EYE " Watch value", &function_watcher_it->second->enabled);
+                }
+            }
+
+            // Add option to browse functions for this object's specific class vtable
+            // This is useful for native hooks on derived classes
+            if (!object->IsA<UStruct>())
+            {
+                ImGui::Separator();
+                if (ImGui::MenuItem(ICON_FA_CODE " Browse Functions (Instance VTable)"))
+                {
+                    LiveView::s_instance_function_browser_object = object;
+                    LiveView::s_instance_function_browser_open = true;
+                    LiveView::s_instance_function_browser_search.clear();
+                    Output::send(STR("Opening function browser for {} (class: {})\n"),
+                                 object->GetName(),
+                                 object->GetClassPrivate()->GetName());
                 }
             }
             ImGui::EndPopup();
@@ -4264,6 +4715,341 @@ namespace RC::GUI
         {
             m_function_caller_widget->render(selected_item.object);
         }
+
+        // Render instance function browser popup
+        if (s_instance_function_browser_open && s_instance_function_browser_object)
+        {
+            auto obj_name = to_string(s_instance_function_browser_object->GetName());
+            auto class_name = to_string(s_instance_function_browser_object->GetClassPrivate()->GetName());
+            auto popup_title = fmt::format("Functions for {} ({})##InstanceFunctionBrowser", obj_name, class_name);
+
+            ImGui::SetNextWindowSize(ImVec2(800, 500), ImGuiCond_FirstUseEver);
+            if (ImGui::Begin(popup_title.c_str(), &s_instance_function_browser_open))
+            {
+                ImGui::Text("Browse all functions. Double-click or right-click to call.");
+                ImGui::Text("Click to toggle native watch (uses this instance's vtable).");
+                ImGui::Separator();
+
+                // Search box and filter checkbox
+                ImGui::PushItemWidth(ImGui::GetContentRegionAvail().x - 150);
+                ImGui::InputTextWithHint("##FunctionSearch", "Search functions...", &s_instance_function_browser_search);
+                ImGui::PopItemWidth();
+                ImGui::SameLine();
+                ImGui::Checkbox("Show All", &s_instance_function_browser_show_all);
+                if (ImGui::IsItemHovered())
+                {
+                    ImGui::BeginTooltip();
+                    ImGui::Text("When unchecked, only native functions are shown.");
+                    ImGui::Text("Native functions can be hooked using the instance's vtable.");
+                    ImGui::EndTooltip();
+                }
+
+                ImGui::Separator();
+
+                // Calculate heights for split view
+                float available_height = ImGui::GetContentRegionAvail().y;
+                float param_panel_height = s_instance_function_browser_selected_func ? 150.0f : 0.0f;
+                float func_list_height = available_height - param_panel_height;
+
+                // Function list
+                if (ImGui::BeginChild("FunctionList", ImVec2(0, func_list_height), true))
+                {
+                    UClass* obj_class = s_instance_function_browser_object->GetClassPrivate();
+                    if (obj_class)
+                    {
+                        // Iterate all functions including inherited ones
+                        for (UFunction* function : TFieldRange<UFunction>(obj_class, EFieldIterationFlags::IncludeAll))
+                        {
+                            bool is_native = function->HasAnyFunctionFlags(EFunctionFlags::FUNC_Native);
+
+                            // Filter by native if not showing all
+                            if (!s_instance_function_browser_show_all && !is_native)
+                            {
+                                continue;
+                            }
+
+                            auto func_name = to_string(function->GetName());
+
+                            // Apply search filter
+                            if (!s_instance_function_browser_search.empty())
+                            {
+                                std::string func_name_lower = func_name;
+                                std::string search_lower = s_instance_function_browser_search;
+                                std::transform(func_name_lower.begin(), func_name_lower.end(), func_name_lower.begin(), ::tolower);
+                                std::transform(search_lower.begin(), search_lower.end(), search_lower.begin(), ::tolower);
+                                if (func_name_lower.find(search_lower) == std::string::npos)
+                                {
+                                    continue;
+                                }
+                            }
+
+                            // Get owning class name for display
+                            auto* outer = function->GetOuterPrivate();
+                            auto owner_class_name = outer ? to_string(static_cast<UClass*>(outer)->GetName()) : std::string("Unknown");
+
+                            // Create unique ID for context menu
+                            auto item_id = fmt::format("{}##{}", func_name, reinterpret_cast<uintptr_t>(function));
+
+                            // Check if this function is already being watched with this instance's vtable
+                            auto watch_id = WatchIdentifier{function, nullptr};
+                            auto* existing_watch = s_watch_map.count(watch_id) ? s_watch_map[watch_id] : nullptr;
+
+                            bool is_watched = existing_watch && existing_watch->native_function_is_hooked;
+                            bool is_selected = (s_instance_function_browser_selected_func == function);
+
+                            // Color coding: green = watched, blue = selected for calling
+                            if (is_watched)
+                            {
+                                ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.0f, 1.0f, 0.0f, 1.0f));
+                            }
+                            else if (!is_native)
+                            {
+                                // Blueprint functions shown in a different color
+                                ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.7f, 0.7f, 1.0f, 1.0f));
+                            }
+
+                            // Display with owner class
+                            auto display_text = fmt::format("{} ({}){}", func_name, owner_class_name, is_native ? "" : " [BP]");
+
+                            if (ImGui::Selectable(fmt::format("{}##{}", display_text, reinterpret_cast<uintptr_t>(function)).c_str(), is_selected, ImGuiSelectableFlags_AllowDoubleClick))
+                            {
+                                if (ImGui::IsMouseDoubleClicked(0))
+                                {
+                                    // Double-click: select function for calling
+                                    s_instance_function_browser_selected_func = function;
+                                    s_instance_function_browser_params.clear();
+                                    // Initialize parameter list
+                                    for (FProperty* param : TFieldRange<FProperty>(function, EFieldIterationFlags::IncludeDeprecated))
+                                    {
+                                        if (!param->HasAllPropertyFlags(CPF_ReturnParm))
+                                        {
+                                            s_instance_function_browser_params.emplace_back("");
+                                        }
+                                    }
+                                }
+                                else if (is_native)
+                                {
+                                    // Single click on native: toggle watch
+                                    if (!existing_watch)
+                                    {
+                                        add_watch(watch_id, function);
+                                        existing_watch = s_watch_map[watch_id];
+                                    }
+
+                                    if (existing_watch)
+                                    {
+                                        Output::send(STR("[InstanceFunctionBrowser] Setting up native watch for {} using {}'s vtable\n"),
+                                                     function->GetPathName(),
+                                                     s_instance_function_browser_object->GetClassPrivate()->GetName());
+
+                                        if (!existing_watch->native_function_is_hooked)
+                                        {
+                                            function->GetNativeFunctionFromThunkVerbose();
+                                            existing_watch->native_hook_ids.first = Hook::RegisterNativeFunctionPreHookForObject(
+                                                function, s_instance_function_browser_object, &LiveView::process_native_function_pre_watch, nullptr);
+                                            existing_watch->native_hook_ids.second = Hook::RegisterNativeFunctionPostHookForObject(
+                                                function, s_instance_function_browser_object, &LiveView::process_native_function_post_watch, nullptr);
+                                            existing_watch->native_function_is_hooked = (existing_watch->native_hook_ids.first != -1 ||
+                                                                                         existing_watch->native_hook_ids.second != -1);
+                                            Output::send(STR("[InstanceFunctionBrowser] Hook registered: pre={}, post={}\n"),
+                                                         existing_watch->native_hook_ids.first,
+                                                         existing_watch->native_hook_ids.second);
+                                        }
+                                        else
+                                        {
+                                            if (existing_watch->native_hook_ids.first != -1)
+                                                function->UnregisterNativeHook(existing_watch->native_hook_ids.first);
+                                            if (existing_watch->native_hook_ids.second != -1)
+                                                function->UnregisterNativeHook(existing_watch->native_hook_ids.second);
+                                            existing_watch->native_function_is_hooked = false;
+                                            existing_watch->native_hook_ids = {-1, -1};
+                                            Output::send(STR("[InstanceFunctionBrowser] Hook removed\n"));
+                                        }
+                                    }
+                                }
+                            }
+
+                            if (is_watched || !is_native)
+                            {
+                                ImGui::PopStyleColor();
+                            }
+
+                            // Right-click context menu
+                            if (ImGui::BeginPopupContextItem(fmt::format("ctx##{}", reinterpret_cast<uintptr_t>(function)).c_str()))
+                            {
+                                if (ImGui::MenuItem(ICON_FA_PLAY " Call Function"))
+                                {
+                                    s_instance_function_browser_selected_func = function;
+                                    s_instance_function_browser_params.clear();
+                                    for (FProperty* param : TFieldRange<FProperty>(function, EFieldIterationFlags::IncludeDeprecated))
+                                    {
+                                        if (!param->HasAllPropertyFlags(CPF_ReturnParm))
+                                        {
+                                            s_instance_function_browser_params.emplace_back("");
+                                        }
+                                    }
+                                }
+
+                                if (is_native)
+                                {
+                                    ImGui::Separator();
+                                    if (is_watched)
+                                    {
+                                        if (ImGui::MenuItem(ICON_FA_EYE_SLASH " Remove Native Watch"))
+                                        {
+                                            if (existing_watch)
+                                            {
+                                                if (existing_watch->native_hook_ids.first != -1)
+                                                    function->UnregisterNativeHook(existing_watch->native_hook_ids.first);
+                                                if (existing_watch->native_hook_ids.second != -1)
+                                                    function->UnregisterNativeHook(existing_watch->native_hook_ids.second);
+                                                existing_watch->native_function_is_hooked = false;
+                                                existing_watch->native_hook_ids = {-1, -1};
+                                            }
+                                        }
+                                    }
+                                    else
+                                    {
+                                        if (ImGui::MenuItem(ICON_FA_EYE " Add Native Watch"))
+                                        {
+                                            if (!existing_watch)
+                                            {
+                                                add_watch(watch_id, function);
+                                                existing_watch = s_watch_map[watch_id];
+                                            }
+                                            if (existing_watch && !existing_watch->native_function_is_hooked)
+                                            {
+                                                function->GetNativeFunctionFromThunkVerbose();
+                                                existing_watch->native_hook_ids.first = Hook::RegisterNativeFunctionPreHookForObject(
+                                                    function, s_instance_function_browser_object, &LiveView::process_native_function_pre_watch, nullptr);
+                                                existing_watch->native_hook_ids.second = Hook::RegisterNativeFunctionPostHookForObject(
+                                                    function, s_instance_function_browser_object, &LiveView::process_native_function_post_watch, nullptr);
+                                                existing_watch->native_function_is_hooked = (existing_watch->native_hook_ids.first != -1 ||
+                                                                                             existing_watch->native_hook_ids.second != -1);
+                                            }
+                                        }
+                                    }
+
+                                    if (ImGui::MenuItem(ICON_FA_BUG " Verbose Thunk Analysis"))
+                                    {
+                                        function->GetNativeFunctionFromThunkVerbose();
+                                    }
+                                }
+
+                                ImGui::Separator();
+                                if (ImGui::MenuItem(ICON_FA_COPY " Copy Path"))
+                                {
+                                    auto path = to_string(function->GetPathName());
+                                    ImGui::SetClipboardText(path.c_str());
+                                }
+
+                                ImGui::EndPopup();
+                            }
+
+                            // Tooltip with full path
+                            if (ImGui::IsItemHovered())
+                            {
+                                ImGui::BeginTooltip();
+                                ImGui::Text("%s", to_string(function->GetPathName()).c_str());
+                                ImGui::Text("Owner: %s", owner_class_name.c_str());
+                                if (is_native)
+                                {
+                                    ImGui::Text("Click: toggle native watch | Double-click: call function");
+                                }
+                                else
+                                {
+                                    ImGui::Text("Double-click or right-click to call function");
+                                }
+                                ImGui::EndTooltip();
+                            }
+                        }
+                    }
+                }
+                ImGui::EndChild();
+
+                // Parameter panel for selected function
+                if (s_instance_function_browser_selected_func)
+                {
+                    ImGui::Separator();
+                    auto selected_func_name = to_string(s_instance_function_browser_selected_func->GetName());
+                    ImGui::Text("Call: %s", selected_func_name.c_str());
+
+                    if (ImGui::BeginChild("ParamPanel", ImVec2(0, 0), true))
+                    {
+                        // Collect parameters
+                        std::vector<FProperty*> params;
+                        for (FProperty* param : TFieldRange<FProperty>(s_instance_function_browser_selected_func, EFieldIterationFlags::IncludeDeprecated))
+                        {
+                            if (!param->HasAllPropertyFlags(CPF_ReturnParm))
+                            {
+                                params.push_back(param);
+                            }
+                        }
+
+                        // Ensure params vector matches
+                        while (s_instance_function_browser_params.size() < params.size())
+                        {
+                            s_instance_function_browser_params.emplace_back("");
+                        }
+
+                        // Render parameter inputs
+                        for (size_t i = 0; i < params.size(); ++i)
+                        {
+                            auto param_name = to_string(params[i]->GetName());
+                            auto param_type = to_string(params[i]->GetClass().GetName());
+                            ImGui::Text("%s (%s):", param_name.c_str(), param_type.c_str());
+                            ImGui::SameLine();
+                            ImGui::PushItemWidth(-1);
+                            ImGui::InputText(fmt::format("##param{}", i).c_str(), &s_instance_function_browser_params[i]);
+                            ImGui::PopItemWidth();
+                        }
+
+                        // Call button
+                        if (ImGui::Button(ICON_FA_PLAY " Call"))
+                        {
+                            // Build command string: FunctionName Param1 Param2 ...
+                            auto cmd = fmt::format(STR("{}"), s_instance_function_browser_selected_func->GetName());
+                            for (const auto& param_val : s_instance_function_browser_params)
+                            {
+                                cmd.append(fmt::format(STR(" {}"), ensure_str(param_val)));
+                            }
+
+                            Output::send(STR("[InstanceFunctionBrowser] Calling: {}\n"), cmd);
+
+                            // Use ProcessConsoleExec to call the function
+                            auto& function_flags = s_instance_function_browser_selected_func->GetFunctionFlags();
+                            auto original_flags = function_flags;
+                            function_flags |= FUNC_Exec;  // Temporarily make it exec-callable
+
+                            FOutputDevice ar{};
+                            bool success = s_instance_function_browser_object->ProcessConsoleExec(
+                                FromCharTypePtr<TCHAR>(cmd.c_str()), ar, s_instance_function_browser_object);
+
+                            function_flags = original_flags;  // Restore original flags
+
+                            Output::send(STR("[InstanceFunctionBrowser] Call result: {}\n"), success ? STR("success") : STR("failed"));
+                        }
+
+                        ImGui::SameLine();
+                        if (ImGui::Button(ICON_FA_TIMES " Cancel"))
+                        {
+                            s_instance_function_browser_selected_func = nullptr;
+                            s_instance_function_browser_params.clear();
+                        }
+                    }
+                    ImGui::EndChild();
+                }
+            }
+            ImGui::End();
+
+            // Clear state if window was closed
+            if (!s_instance_function_browser_open)
+            {
+                s_instance_function_browser_object = nullptr;
+                s_instance_function_browser_selected_func = nullptr;
+                s_instance_function_browser_params.clear();
+            }
+        }
     }
 
     static auto toggle_all_watches(bool check) -> void
@@ -4273,7 +5059,17 @@ namespace RC::GUI
         {
             if (watch->container->IsA<UFunction>())
             {
-                toggle_function_watch(*watch, check);
+                auto* function = static_cast<UFunction*>(watch->container);
+                // For native functions, only use the native hook
+                // For non-native functions, only use the script hook
+                if (function->HasAnyFunctionFlags(EFunctionFlags::FUNC_Native))
+                {
+                    toggle_native_function_watch(*watch, check);
+                }
+                else
+                {
+                    toggle_function_watch(*watch, check);
+                }
             }
             else
             {
@@ -4322,7 +5118,17 @@ namespace RC::GUI
                     {
                         if (watch.container->IsA<UFunction>())
                         {
-                            toggle_function_watch(watch, watch.enabled);
+                            auto* function = static_cast<UFunction*>(watch.container);
+                            // For native functions, only use the native hook
+                            // For non-native functions, only use the script hook
+                            if (function->HasAnyFunctionFlags(EFunctionFlags::FUNC_Native))
+                            {
+                                toggle_native_function_watch(watch, watch.enabled);
+                            }
+                            else
+                            {
+                                toggle_function_watch(watch, watch.enabled);
+                            }
                         }
                     }
                     if (ImGui::IsItemHovered())

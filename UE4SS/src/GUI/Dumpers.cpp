@@ -1,6 +1,8 @@
 #include <ctime>
 #include <format>
+#include <fstream>
 #include <string>
+#include <unordered_map>
 #include <utility>
 
 #include <Constructs/Views/EnumerateView.hpp>
@@ -8,6 +10,7 @@
 #include <File/File.hpp>
 #include <File/Macros.hpp>
 #include <GUI/Dumpers.hpp>
+#include <Helpers/String.hpp>
 #include <JSON/JSON.hpp>
 #include <USMapGenerator/Generator.hpp>
 #ifdef TEXT
@@ -20,6 +23,9 @@
 #include <Unreal/Searcher/ObjectSearcher.hpp>
 #include <Unreal/CoreUObject/UObject/UnrealType.hpp>
 #include <Unreal/CoreUObject/UObject/Class.hpp>
+#include <Unreal/ThunkAnalyzer.hpp>
+#include <Unreal/UFunction.hpp>
+#include <Unreal/UObjectGlobals.hpp>
 #include <Unreal/UnrealInitializer.hpp>
 #include <chrono>
 #include <imgui.h>
@@ -335,6 +341,179 @@ namespace RC::GUI::Dumpers
         Output::send(STR("Finished dumping CSV of all loaded actor types, positions and mesh properties\n"));
     }
 
+    void call_dump_native_function_thunks()
+    {
+        Output::send(STR("Dumping native function thunk analysis...\n"));
+
+        // Clear any existing blocklist
+        ThunkAnalyzer::ClearBlocklist();
+
+        // ============================================
+        // PASS 1: Collect all call targets and build global frequency map
+        // ============================================
+        Output::send(STR("Pass 1: Building global call target frequency map...\n"));
+
+        std::unordered_map<void*, size_t> GlobalTargetCounts;
+        std::vector<void*> AllThunkPtrs;
+
+        UObjectGlobals::ForEachUObject([&](void* object, [[maybe_unused]] int32_t chunk_index, [[maybe_unused]] int32_t object_index) {
+            auto* uobj = static_cast<UObject*>(object);
+
+            if (!uobj->IsA<UFunction>())
+            {
+                return LoopAction::Continue;
+            }
+
+            auto* func = static_cast<UFunction*>(uobj);
+
+            if (!func->HasAnyFunctionFlags(EFunctionFlags::FUNC_Native))
+            {
+                return LoopAction::Continue;
+            }
+
+            void* func_ptr = func->GetFuncPtr();
+            if (!func_ptr)
+            {
+                return LoopAction::Continue;
+            }
+
+            AllThunkPtrs.push_back(func_ptr);
+
+            // Collect call targets from this thunk
+            std::vector<void*> Targets;
+            ThunkAnalyzer::CollectCallTargets(func_ptr, Targets);
+
+            for (void* Target : Targets)
+            {
+                GlobalTargetCounts[Target]++;
+            }
+
+            return LoopAction::Continue;
+        });
+
+        Output::send(STR("Found {} native functions, {} unique call targets\n"), AllThunkPtrs.size(), GlobalTargetCounts.size());
+
+        // Build blocklist: any target appearing in >100 thunks is a helper function
+        // (FFrame::Step variants, destructors, memory helpers, etc.)
+        const size_t BLOCKLIST_THRESHOLD = 100;
+        size_t BlocklistedCount = 0;
+
+        for (const auto& [Target, Count] : GlobalTargetCounts)
+        {
+            if (Count > BLOCKLIST_THRESHOLD)
+            {
+                ThunkAnalyzer::AddToBlocklist(Target);
+                BlocklistedCount++;
+            }
+        }
+
+        Output::send(STR("Blocklisted {} helper functions (appearing in >{} thunks)\n"), BlocklistedCount, BLOCKLIST_THRESHOLD);
+
+        // ============================================
+        // PASS 2: Analyze each thunk with blocklist populated
+        // ============================================
+        Output::send(STR("Pass 2: Analyzing thunks with blocklist...\n"));
+
+        auto timestamp = long(std::time(nullptr));
+        auto output_path = fmt::format(STR("{}\\{}-thunk_analysis.txt"),
+                                       UE4SSProgram::get_program().get_working_directory(), timestamp);
+
+        std::string narrow_path = to_string(output_path);
+        std::ofstream outfile(narrow_path, std::ios::out | std::ios::trunc);
+
+        if (!outfile.is_open())
+        {
+            Output::send<LogLevel::Error>(STR("Failed to open output file for thunk analysis\n"));
+            return;
+        }
+
+        outfile << "Native Function Thunk Analysis\n";
+        outfile << "==============================\n\n";
+        outfile << fmt::format("Blocklist: {} helper functions (threshold: >{})\n\n", BlocklistedCount, BLOCKLIST_THRESHOLD);
+
+        size_t native_count = 0;
+        size_t total_functions = 0;
+
+        UObjectGlobals::ForEachUObject([&](void* object, [[maybe_unused]] int32_t chunk_index, [[maybe_unused]] int32_t object_index) {
+            auto* uobj = static_cast<UObject*>(object);
+
+            if (!uobj->IsA<UFunction>())
+            {
+                return LoopAction::Continue;
+            }
+
+            auto* func = static_cast<UFunction*>(uobj);
+            total_functions++;
+
+            if (!func->HasAnyFunctionFlags(EFunctionFlags::FUNC_Native))
+            {
+                return LoopAction::Continue;
+            }
+
+            void* func_ptr = func->GetFuncPtr();
+            if (!func_ptr)
+            {
+                return LoopAction::Continue;
+            }
+
+            native_count++;
+
+            std::string func_name = to_string(func->GetFullName());
+
+            std::string signature;
+            bool first_param = true;
+            for (FProperty* param : TFieldRange<FProperty>(func, EFieldIterationFlags::IncludeDeprecated))
+            {
+                if (!param->HasAnyPropertyFlags(CPF_Parm))
+                {
+                    continue;
+                }
+
+                if (!first_param)
+                {
+                    signature += ", ";
+                }
+                first_param = false;
+
+                if (param->HasAnyPropertyFlags(CPF_ReturnParm))
+                {
+                    signature += "ret:";
+                }
+                else if (param->HasAnyPropertyFlags(CPF_OutParm))
+                {
+                    signature += "out:";
+                }
+
+                signature += to_string(param->GetClass().GetName());
+                signature += " ";
+                signature += to_string(param->GetName());
+            }
+
+            if (signature.empty())
+            {
+                signature = "void";
+            }
+
+            std::string analysis = ThunkAnalyzer::AnalyzeToString(func_ptr, func_name.c_str(), signature.c_str());
+            outfile << analysis;
+
+            if (native_count % 100 == 0)
+            {
+                Output::send(STR("Analyzed {} native functions...\n"), native_count);
+            }
+
+            return LoopAction::Continue;
+        });
+
+        outfile << "\n==============================\n";
+        outfile << fmt::format("Total UFunctions: {}\n", total_functions);
+        outfile << fmt::format("Native UFunctions analyzed: {}\n", native_count);
+        outfile << fmt::format("Blocklisted helpers: {}\n", BlocklistedCount);
+        outfile.close();
+
+        Output::send(STR("Finished dumping {} native function thunks to {}\n"), native_count, output_path);
+    }
+
     auto render() -> void
     {
         if (!UnrealInitializer::StaticStorage::bIsInitialized)
@@ -415,6 +594,13 @@ namespace RC::GUI::Dumpers
             TRY([] {
                 File::StringType working_dir{UE4SSProgram::get_program().get_working_directory()};
                 UE4SSProgram::get_program().generate_lua_types(working_dir + STR("\\Mods\\shared\\types"));
+            });
+        }
+
+        if (ImGui::Button("Dump Native Function Thunks\n"))
+        {
+            TRY([] {
+                call_dump_native_function_thunks();
             });
         }
     }

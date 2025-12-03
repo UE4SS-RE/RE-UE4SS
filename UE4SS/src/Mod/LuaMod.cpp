@@ -53,6 +53,7 @@
 #include <Unreal/UObjectGlobals.hpp>
 #include <Unreal/UPackage.hpp>
 #include <Unreal/UnrealVersion.hpp>
+#include <Unreal/UFunctionStructs.hpp>
 #include <UnrealCustom/CustomProperty.hpp>
 
 #if PLATFORM_WINDOWS
@@ -418,6 +419,280 @@ namespace RC
         set_is_in_game_thread(lua_data.lua, false);
     }
 
+    // Native function hook data - for hooking the actual C++ native function (not the exec thunk)
+    struct LuaNativeFunctionHookData
+    {
+        Unreal::CallbackId pre_callback_id;
+        Unreal::CallbackId post_callback_id;
+        Unreal::UFunction* unreal_function;
+        const Mod* mod;
+        const LuaMadeSimple::Lua& lua;
+        const int lua_callback_ref;
+        const int lua_post_callback_ref;
+        const int lua_thread_ref;
+        bool scheduled_for_removal{};
+    };
+    static std::vector<std::unique_ptr<LuaNativeFunctionHookData>> g_hooked_native_function_data{};
+
+    // Helper to extract a parameter value from the register state based on Windows x64 calling convention
+    // Param indices: 0=RDX (first arg after 'this'), 1=R8, 2=R9, 3+=stack
+    static auto get_native_param_ptr(Unreal::NativeFunctionCallableContext& context, int param_index, Unreal::FProperty* prop) -> void*
+    {
+        // For x64 Windows calling convention:
+        // - RCX = 'this' pointer (context.Context)
+        // - Integer/pointer args: RDX, R8, R9 = first 3 args (param_index 0, 1, 2)
+        // - Float/double args: XMM1, XMM2, XMM3 = first 3 args (param_index 0, 1, 2)
+        // - Stack = args 4+ (param_index 3+)
+        // Large structs (>8 bytes) are passed by pointer
+
+        int property_size = prop->GetSize();
+        bool is_float = prop->GetClass().GetFName().ToString().find(STR("Float")) != std::wstring::npos ||
+                        prop->GetClass().GetFName().ToString().find(STR("Double")) != std::wstring::npos;
+
+        // Stack args (param_index >= 3)
+        if (param_index >= 3)
+        {
+            return static_cast<uint8_t*>(context.Registers->StackArgs) + (param_index - 3) * 8;
+        }
+
+        // For float/double types, use XMM registers
+        if (is_float)
+        {
+            // XMM1, XMM2, XMM3 for slots 0, 1, 2 (XMM0 is reserved for return value)
+            switch (param_index)
+            {
+                case 0: return &context.Registers->xmm1[0];
+                case 1: return &context.Registers->xmm2[0];
+                case 2: return &context.Registers->xmm3[0];
+                default: return nullptr;
+            }
+        }
+
+        // For struct types that are passed by pointer (FVector, FRotator, etc.)
+        // Return the pointer from the register
+        uint64_t reg_value;
+        switch (param_index)
+        {
+            case 0: reg_value = context.Registers->rdx; break;
+            case 1: reg_value = context.Registers->r8; break;
+            case 2: reg_value = context.Registers->r9; break;
+            default: return nullptr;
+        }
+
+        if (property_size > 8)
+        {
+            return reinterpret_cast<void*>(reg_value);
+        }
+
+        // For primitive types stored directly in registers, we need to return a pointer to the register
+        switch (param_index)
+        {
+            case 0: return &context.Registers->rdx;
+            case 1: return &context.Registers->r8;
+            case 2: return &context.Registers->r9;
+            default: return nullptr;
+        }
+    }
+
+    static auto lua_native_function_hook_pre(Unreal::NativeFunctionCallableContext& context, void* custom_data) -> void
+    {
+        auto& lua_data = *static_cast<LuaNativeFunctionHookData*>(custom_data);
+
+        set_is_in_game_thread(lua_data.lua, true);
+
+        // Get the Lua callback function from registry
+        lua_data.lua.registry().get_function_ref(lua_data.lua_callback_ref);
+
+        // Push the context/this pointer as first argument
+        static auto s_object_property_name = Unreal::FName(STR("ObjectProperty"), Unreal::FNAME_Find);
+        LuaType::RemoteUnrealParam::construct(lua_data.lua, &context.Context, s_object_property_name);
+
+        // Extract parameters using UFunction metadata - similar to script hook
+        const auto FunctionBeingExecuted = lua_data.unreal_function;
+        uint16_t return_value_offset = FunctionBeingExecuted->GetReturnValueOffset();
+        bool has_return_value = return_value_offset != 0xFFFF;
+
+        uint8_t num_unreal_params = FunctionBeingExecuted->GetNumParms();
+        if (has_return_value)
+        {
+            --num_unreal_params;
+        }
+
+        // Push each parameter to Lua using property metadata
+        int param_index = 0;
+        for (Unreal::FProperty* func_prop : Unreal::TFieldRange<Unreal::FProperty>(FunctionBeingExecuted, Unreal::EFieldIterationFlags::IncludeDeprecated))
+        {
+            // Skip if not a parameter
+            if (!func_prop->HasAnyPropertyFlags(Unreal::EPropertyFlags::CPF_Parm))
+            {
+                continue;
+            }
+
+            // Skip return value
+            if (has_return_value && func_prop->GetOffset_Internal() == return_value_offset)
+            {
+                continue;
+            }
+
+            Unreal::FName property_type = func_prop->GetClass().GetFName();
+            int32_t name_comparison_index = property_type.GetComparisonIndex();
+
+            if (LuaType::StaticState::m_property_value_pushers.contains(name_comparison_index))
+            {
+                // Get the parameter data from register state
+                void* data = get_native_param_ptr(context, param_index, func_prop);
+
+                const LuaType::PusherParams pusher_params{.operation = LuaType::Operation::GetParam,
+                                                          .lua = lua_data.lua,
+                                                          .base = nullptr,
+                                                          .data = data,
+                                                          .property = func_prop};
+                LuaType::StaticState::m_property_value_pushers[name_comparison_index](pusher_params);
+            }
+            else
+            {
+                // Unsupported type - push nil as placeholder
+                lua_data.lua.set_nil();
+                Output::send<LogLevel::Warning>(STR("[NativeHook] Unsupported parameter type '{}' for native hook\n"),
+                                                property_type.ToString());
+            }
+
+            param_index++;
+        }
+
+        // Call Lua callback with: Context + params
+        lua_data.lua.call_function(num_unreal_params + 1, 0);
+
+        if (lua_data.scheduled_for_removal)
+        {
+            auto function_name_no_prefix = get_function_name_without_prefix(lua_data.unreal_function->GetFullName());
+            Output::send<LogLevel::Verbose>(STR("Unregistering native function pre-hook for {}\n"), function_name_no_prefix);
+            lua_data.unreal_function->UnregisterNativeHook(lua_data.pre_callback_id);
+        }
+
+        set_is_in_game_thread(lua_data.lua, false);
+    }
+
+    static auto lua_native_function_hook_post(Unreal::NativeFunctionCallableContext& context, void* custom_data) -> void
+    {
+        auto& lua_data = *static_cast<LuaNativeFunctionHookData*>(custom_data);
+
+        set_is_in_game_thread(lua_data.lua, true);
+
+        if (lua_data.lua_post_callback_ref != -1)
+        {
+            // Get the post-callback Lua function from registry
+            lua_data.lua.registry().get_function_ref(lua_data.lua_post_callback_ref);
+
+            // Push the context/this pointer
+            static auto s_object_property_name = Unreal::FName(STR("ObjectProperty"), Unreal::FNAME_Find);
+            LuaType::RemoteUnrealParam::construct(lua_data.lua, &context.Context, s_object_property_name);
+
+            // Extract parameters and return value using UFunction metadata
+            const auto FunctionBeingExecuted = lua_data.unreal_function;
+            uint16_t return_value_offset = FunctionBeingExecuted->GetReturnValueOffset();
+            bool has_return_value = return_value_offset != 0xFFFF;
+
+            uint8_t num_unreal_params = FunctionBeingExecuted->GetNumParms();
+            Unreal::FProperty* return_property = nullptr;
+            if (has_return_value)
+            {
+                --num_unreal_params;
+                return_property = FunctionBeingExecuted->GetReturnProperty();
+
+                // Push return value first (in post-callback)
+                if (return_property)
+                {
+                    Unreal::FName return_type = return_property->GetClass().GetFName();
+                    int32_t name_comparison_index = return_type.GetComparisonIndex();
+
+                    if (LuaType::StaticState::m_property_value_pushers.contains(name_comparison_index))
+                    {
+                        // Return value is in RAX (integer/pointer) or XMM0 (float/double)
+                        void* return_data = &context.Registers->ReturnValue;
+                        auto type_name = return_type.ToString();
+                        if (type_name.find(STR("Float")) != std::wstring::npos ||
+                            type_name.find(STR("Double")) != std::wstring::npos)
+                        {
+                            return_data = &context.Registers->XmmReturnValue;
+                        }
+
+                        const LuaType::PusherParams pusher_params{.operation = LuaType::Operation::GetParam,
+                                                                  .lua = lua_data.lua,
+                                                                  .base = nullptr,
+                                                                  .data = return_data,
+                                                                  .property = return_property};
+                        LuaType::StaticState::m_property_value_pushers[name_comparison_index](pusher_params);
+                    }
+                    else
+                    {
+                        lua_data.lua.set_nil();
+                    }
+                }
+            }
+
+            // Push parameters
+            int param_index = 0;
+            for (Unreal::FProperty* func_prop : Unreal::TFieldRange<Unreal::FProperty>(FunctionBeingExecuted, Unreal::EFieldIterationFlags::IncludeDeprecated))
+            {
+                if (!func_prop->HasAnyPropertyFlags(Unreal::EPropertyFlags::CPF_Parm))
+                {
+                    continue;
+                }
+
+                if (has_return_value && func_prop->GetOffset_Internal() == return_value_offset)
+                {
+                    continue;
+                }
+
+                Unreal::FName property_type = func_prop->GetClass().GetFName();
+                int32_t name_comparison_index = property_type.GetComparisonIndex();
+
+                if (LuaType::StaticState::m_property_value_pushers.contains(name_comparison_index))
+                {
+                    void* data = get_native_param_ptr(context, param_index, func_prop);
+
+                    const LuaType::PusherParams pusher_params{.operation = LuaType::Operation::GetParam,
+                                                              .lua = lua_data.lua,
+                                                              .base = nullptr,
+                                                              .data = data,
+                                                              .property = func_prop};
+                    LuaType::StaticState::m_property_value_pushers[name_comparison_index](pusher_params);
+                }
+                else
+                {
+                    lua_data.lua.set_nil();
+                }
+
+                param_index++;
+            }
+
+            // Call with: Context + ReturnValue (if any) + params
+            int num_args = num_unreal_params + 1 + (has_return_value ? 1 : 0);
+            lua_data.lua.call_function(num_args, 0);
+        }
+
+        if (lua_data.scheduled_for_removal)
+        {
+            auto function_name_no_prefix = get_function_name_without_prefix(lua_data.unreal_function->GetFullName());
+            Output::send<LogLevel::Verbose>(STR("Unregistering native function post-hook for {}\n"), function_name_no_prefix);
+            lua_data.unreal_function->UnregisterNativeHook(lua_data.post_callback_id);
+
+            auto mod = get_mod_ref(lua_data.lua);
+            luaL_unref(lua_data.lua.get_lua_state(), LUA_REGISTRYINDEX, lua_data.lua_callback_ref);
+            if (lua_data.lua_post_callback_ref != -1)
+            {
+                luaL_unref(lua_data.lua.get_lua_state(), LUA_REGISTRYINDEX, lua_data.lua_post_callback_ref);
+            }
+            luaL_unref(mod->lua().get_lua_state(), LUA_REGISTRYINDEX, lua_data.lua_thread_ref);
+            std::erase_if(g_hooked_native_function_data, [&](const std::unique_ptr<LuaNativeFunctionHookData>& elem) {
+                return elem.get() == &lua_data;
+            });
+        }
+
+        set_is_in_game_thread(lua_data.lua, false);
+    }
+
     static auto register_input_globals(const LuaMadeSimple::Lua& lua) -> void
     {
         LuaMadeSimple::Lua::Table key_table = lua.prepare_new_table();
@@ -706,6 +981,7 @@ namespace RC
     auto LuaMod::global_uninstall() -> void
     {
         LuaMod::m_generic_hook_id_to_native_hook_id.clear();
+        LuaMod::m_generic_hook_id_to_script_hook_id.clear();
     }
 
     template <typename PropertyType>
@@ -1774,14 +2050,35 @@ Overloads:
                 if (native_hook_pre_id_it != LuaMod::m_generic_hook_id_to_native_hook_id.end() &&
                     native_hook_post_id_it != LuaMod::m_generic_hook_id_to_native_hook_id.end())
                 {
-                    const auto hook_data = std::ranges::find_if(g_hooked_script_function_data, [&](const std::unique_ptr<LuaUnrealScriptFunctionData>& elem) {
-                        return elem->post_callback_id == post_id && elem->pre_callback_id == pre_id;
+                    // Search in native function hook data, not script function hook data
+                    const auto hook_data = std::ranges::find_if(g_hooked_native_function_data, [&](const std::unique_ptr<LuaNativeFunctionHookData>& elem) {
+                        return elem->post_callback_id == native_hook_post_id_it->second && elem->pre_callback_id == native_hook_pre_id_it->second;
                     });
-                    hook_data->get()->scheduled_for_removal = true;
+                    if (hook_data != g_hooked_native_function_data.end())
+                    {
+                        hook_data->get()->scheduled_for_removal = true;
+                    }
                 }
                 else
                 {
-                    if (auto data_ptr = LuaMod::find_function_hook_data(LuaMod::m_script_hook_callbacks, unreal_function); data_ptr)
+                    // Check if this is a thunk fallback hook (native function that fell back to thunk hooking)
+                    auto script_hook_pre_id_it = LuaMod::m_generic_hook_id_to_script_hook_id.find(static_cast<int32_t>(pre_id));
+                    auto script_hook_post_id_it = LuaMod::m_generic_hook_id_to_script_hook_id.find(static_cast<int32_t>(post_id));
+                    if (script_hook_pre_id_it != LuaMod::m_generic_hook_id_to_script_hook_id.end())
+                    {
+                        // This is a thunk fallback hook - find and schedule for removal
+                        const auto hook_data = std::ranges::find_if(g_hooked_script_function_data, [&](const std::unique_ptr<LuaUnrealScriptFunctionData>& elem) {
+                            return elem->pre_callback_id == script_hook_pre_id_it->second &&
+                                   (script_hook_post_id_it == LuaMod::m_generic_hook_id_to_script_hook_id.end() ||
+                                    elem->post_callback_id == script_hook_post_id_it->second);
+                        });
+                        if (hook_data != g_hooked_script_function_data.end())
+                        {
+                            Output::send<LogLevel::Verbose>(STR("Unregistering thunk fallback hook with id: {}, FunctionName: {}\n"), post_id, function_name_no_prefix);
+                            hook_data->get()->scheduled_for_removal = true;
+                        }
+                    }
+                    else if (auto data_ptr = LuaMod::find_function_hook_data(LuaMod::m_script_hook_callbacks, unreal_function); data_ptr)
                     {
                         Output::send<LogLevel::Verbose>(STR("Unregistering script hook with id: {}, FunctionName: {}\n"), post_id, function_name_no_prefix);
                         auto& registry_indexes = data_ptr->callback_data.registry_indexes;
@@ -3639,20 +3936,72 @@ Overloads:
             if (func_ptr && func_ptr != Unreal::UObject::ProcessInternalInternal.get_function_address() &&
                 unreal_function->HasAnyFunctionFlags(Unreal::EFunctionFlags::FUNC_Native))
             {
-                auto& custom_data = g_hooked_script_function_data.emplace_back(std::make_unique<LuaUnrealScriptFunctionData>(
-                        LuaUnrealScriptFunctionData{0, 0, unreal_function, mod, *hook_lua, lua_callback_registry_index, lua_post_callback_registry_index, lua_thread_registry_index}));
-                auto pre_id = unreal_function->RegisterPreHook(&lua_unreal_script_function_hook_pre, custom_data.get());
-                auto post_id = unreal_function->RegisterPostHook(&lua_unreal_script_function_hook_post, custom_data.get());
-                custom_data->pre_callback_id = pre_id;
-                custom_data->post_callback_id = post_id;
-                m_generic_hook_id_to_native_hook_id.emplace(++m_last_generic_hook_id, pre_id);
-                generic_pre_id = m_last_generic_hook_id;
-                m_generic_hook_id_to_native_hook_id.emplace(++m_last_generic_hook_id, post_id);
-                generic_post_id = m_last_generic_hook_id;
-                Output::send<LogLevel::Verbose>(STR("[RegisterHook] Registered native hook ({}, {}) for {}\n"),
-                                                generic_pre_id,
-                                                generic_post_id,
-                                                unreal_function->GetFullName());
+                // Native function with thunk - try to hook the actual native C++ function first
+                // This catches ALL calls (both C++ and Blueprint) instead of just thunk calls
+                auto& custom_data = g_hooked_native_function_data.emplace_back(std::make_unique<LuaNativeFunctionHookData>(
+                        LuaNativeFunctionHookData{0, 0, unreal_function, mod, *hook_lua, lua_callback_registry_index, lua_post_callback_registry_index, lua_thread_registry_index}));
+
+                auto pre_id = unreal_function->RegisterNativePreHook(&lua_native_function_hook_pre, custom_data.get());
+
+                if (pre_id != -1)
+                {
+                    // Native hook succeeded
+                    custom_data->pre_callback_id = pre_id;
+                    m_generic_hook_id_to_native_hook_id.emplace(++m_last_generic_hook_id, pre_id);
+                    generic_pre_id = m_last_generic_hook_id;
+
+                    if (has_post_callback)
+                    {
+                        auto post_id = unreal_function->RegisterNativePostHook(&lua_native_function_hook_post, custom_data.get());
+                        custom_data->post_callback_id = post_id;
+                        m_generic_hook_id_to_native_hook_id.emplace(++m_last_generic_hook_id, post_id);
+                        generic_post_id = m_last_generic_hook_id;
+                    }
+                    else
+                    {
+                        generic_post_id = generic_pre_id;  // Return same ID if no post callback
+                    }
+
+                    Output::send<LogLevel::Verbose>(STR("[RegisterHook] Registered native function hook ({}, {}) for {}\n"),
+                                                    generic_pre_id,
+                                                    generic_post_id,
+                                                    unreal_function->GetFullName());
+                }
+                else
+                {
+                    // Native hook failed (low confidence or analysis error) - fall back to thunk hooking
+                    // Remove the unused native hook data we just added
+                    g_hooked_native_function_data.pop_back();
+
+                    // Use thunk hooking instead - this hooks UFunction::Func directly
+                    // Only catches calls that go through the UE4 thunk, but is always reliable
+                    // Create thunk hook data for the Lua callbacks
+                    auto& thunk_data = g_hooked_script_function_data.emplace_back(std::make_unique<LuaUnrealScriptFunctionData>(
+                            LuaUnrealScriptFunctionData{0, 0, unreal_function, mod, *hook_lua, lua_callback_registry_index, lua_post_callback_registry_index, lua_thread_registry_index}));
+
+                    auto thunk_pre_id = unreal_function->RegisterPreHook(&lua_unreal_script_function_hook_pre, thunk_data.get());
+                    thunk_data->pre_callback_id = thunk_pre_id;
+
+                    m_generic_hook_id_to_script_hook_id.emplace(++m_last_generic_hook_id, thunk_pre_id);
+                    generic_pre_id = m_last_generic_hook_id;
+
+                    if (has_post_callback)
+                    {
+                        auto thunk_post_id = unreal_function->RegisterPostHook(&lua_unreal_script_function_hook_post, thunk_data.get());
+                        thunk_data->post_callback_id = thunk_post_id;
+                        m_generic_hook_id_to_script_hook_id.emplace(++m_last_generic_hook_id, thunk_post_id);
+                        generic_post_id = m_last_generic_hook_id;
+                    }
+                    else
+                    {
+                        generic_post_id = generic_pre_id;
+                    }
+
+                    Output::send<LogLevel::Verbose>(STR("[RegisterHook] Native hook failed, using thunk fallback ({}, {}) for {}\n"),
+                                                    generic_pre_id,
+                                                    generic_post_id,
+                                                    unreal_function->GetFullName());
+                }
             }
             else if (func_ptr && func_ptr == Unreal::UObject::ProcessInternalInternal.get_function_address() &&
                      !unreal_function->HasAnyFunctionFlags(Unreal::EFunctionFlags::FUNC_Native))
@@ -3685,6 +4034,90 @@ Overloads:
 
             lua.set_integer(generic_pre_id);
             lua.set_integer(generic_post_id);
+
+            return 2;
+        });
+
+        // RegisterNativeHook - hooks the actual C++ native function, not the exec thunk
+        // This allows intercepting calls that bypass the UFunction system (direct C++ calls)
+        m_lua.register_function("RegisterNativeHook", [](const LuaMadeSimple::Lua& lua) -> int {
+            std::lock_guard<std::recursive_mutex> guard{LuaMod::m_thread_actions_mutex};
+
+            std::string error_overload_not_found{R"(
+No overload found for function 'RegisterNativeHook'.
+Overloads:
+#1: RegisterNativeHook(string UFunction_Name, LuaFunction PreCallback, LuaFunction PostCallback)
+#2: RegisterNativeHook(string UFunction_Name, LuaFunction PreCallback))"};
+
+            if (!lua.is_string())
+            {
+                lua.throw_error(error_overload_not_found);
+            }
+
+            auto function_name_no_prefix = get_function_name_without_prefix(ensure_str(lua.get_string()));
+
+            if (!lua.is_function())
+            {
+                lua.throw_error(error_overload_not_found);
+            }
+
+            auto mod = get_mod_ref(lua);
+            auto [hook_lua, lua_thread_registry_index] = make_hook_state(mod);
+
+            // Duplicate the Lua function to the top of the stack for lua_xmove and luaL_ref
+            lua_pushvalue(lua.get_lua_state(), 1);
+            lua_xmove(lua.get_lua_state(), hook_lua->get_lua_state(), 1);
+            const auto lua_callback_registry_index = luaL_ref(hook_lua->get_lua_state(), LUA_REGISTRYINDEX);
+
+            bool has_post_callback{};
+            int lua_post_callback_registry_index = -1;
+            if (lua.is_function())
+            {
+                lua.discard_value();
+                lua_pushvalue(lua.get_lua_state(), 1);
+                lua_xmove(lua.get_lua_state(), hook_lua->get_lua_state(), 1);
+                lua_post_callback_registry_index = luaL_ref(hook_lua->get_lua_state(), LUA_REGISTRYINDEX);
+                has_post_callback = true;
+            }
+
+            Unreal::UFunction* unreal_function = Unreal::UObjectGlobals::StaticFindObject<Unreal::UFunction*>(nullptr, nullptr, function_name_no_prefix);
+            if (!unreal_function)
+            {
+                lua.throw_error(std::format(
+                        "Tried to register a native hook with Lua function 'RegisterNativeHook' but no UFunction with the specified name was found.\nFunction Name: {}",
+                        to_string(function_name_no_prefix)));
+            }
+
+            // Check if this is a native function
+            if (!unreal_function->HasAnyFunctionFlags(Unreal::EFunctionFlags::FUNC_Native))
+            {
+                lua.throw_error(std::format(
+                        "RegisterNativeHook can only be used with native UFunctions. '{}' is not native.",
+                        to_string(function_name_no_prefix)));
+            }
+
+            // Create the hook data
+            auto& custom_data = g_hooked_native_function_data.emplace_back(std::make_unique<LuaNativeFunctionHookData>(
+                    LuaNativeFunctionHookData{0, 0, unreal_function, mod, *hook_lua, lua_callback_registry_index, lua_post_callback_registry_index, lua_thread_registry_index}));
+
+            // Register the native hooks
+            auto pre_id = unreal_function->RegisterNativePreHook(&lua_native_function_hook_pre, custom_data.get());
+            custom_data->pre_callback_id = pre_id;
+
+            Unreal::CallbackId post_id = 0;
+            if (has_post_callback)
+            {
+                post_id = unreal_function->RegisterNativePostHook(&lua_native_function_hook_post, custom_data.get());
+                custom_data->post_callback_id = post_id;
+            }
+
+            Output::send<LogLevel::Verbose>(STR("[RegisterNativeHook] Registered native function hook ({}, {}) for {}\n"),
+                                            pre_id,
+                                            post_id,
+                                            unreal_function->GetFullName());
+
+            lua.set_integer(pre_id);
+            lua.set_integer(post_id);
 
             return 2;
         });

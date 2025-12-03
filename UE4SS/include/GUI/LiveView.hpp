@@ -56,7 +56,7 @@ namespace RC::GUI
                 Function,
             };
 
-            static std::mutex s_watch_lock;
+            static std::recursive_mutex s_watch_lock;
 
             Output::Targets<Output::FileDevice> output{};
             FProperty* property{};
@@ -75,6 +75,8 @@ namespace RC::GUI
             bool enabled{};
             bool function_is_hooked{};
             std::pair<int, int> function_hook_ids{};
+            bool native_function_is_hooked{};
+            std::pair<int, int> native_hook_ids{};
 
             Watch() = delete;
             Watch(StringType&& object_name, StringType&& property_name);
@@ -143,6 +145,14 @@ namespace RC::GUI
         static bool s_filters_loaded_from_disk;
         static bool s_use_regex_for_search;
         static bool s_search_by_address;
+
+        // Instance function browser for native watch with specific vtable
+        static UObject* s_instance_function_browser_object;
+        static bool s_instance_function_browser_open;
+        static std::string s_instance_function_browser_search;
+        static bool s_instance_function_browser_show_all;  // false = native only, true = all functions
+        static UFunction* s_instance_function_browser_selected_func;  // Function selected for calling
+        static std::vector<std::string> s_instance_function_browser_params;  // Parameter values for calling
 
       private:
         enum class AffectsHistory
@@ -243,6 +253,8 @@ namespace RC::GUI
         static auto process_property_watch(Watch& watch) -> void;
         static auto process_function_pre_watch(Unreal::UnrealScriptFunctionCallableContext& context, void*) -> void;
         static auto process_function_post_watch(Unreal::UnrealScriptFunctionCallableContext& context, void*) -> void;
+        static auto process_native_function_pre_watch(Unreal::NativeFunctionCallableContext& context, void*) -> void;
+        static auto process_native_function_post_watch(Unreal::NativeFunctionCallableContext& context, void*) -> void;
     };
 } // namespace RC::GUI
 

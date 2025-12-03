@@ -12,5 +12,6 @@ namespace RC::GUI::Dumpers
 
     void call_generate_static_mesh_file();
     void call_generate_all_actor_file();
+    void call_dump_native_function_thunks();
 
 } // namespace RC::GUI::Dumpers
