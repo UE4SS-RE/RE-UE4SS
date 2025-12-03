@@ -400,6 +400,10 @@ namespace RC
         process_return_value();
         process_return_value();
 
+        // No longer promising to be in the game thread
+        // Must be done before cleanup since cleanup deletes lua_data
+        set_is_in_game_thread(lua_data.lua, false);
+
         if (lua_data.scheduled_for_removal)
         {
             auto native_hook_post_id_it = LuaMod::m_generic_hook_id_to_native_hook_id.find(lua_data.post_callback_id);
@@ -418,9 +422,6 @@ namespace RC
                 return elem.get() == &lua_data;
             });
         }
-
-        // No longer promising to be in the game thread
-        set_is_in_game_thread(lua_data.lua, false);
     }
 
     static auto register_input_globals(const LuaMadeSimple::Lua& lua) -> void
