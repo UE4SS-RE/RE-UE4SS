@@ -19,6 +19,7 @@ on:
       - "CMakeLists.txt"
       - "cmake/**"
       - "cppmods/**"
+      - ".github/workflows/**"
 
 permissions:
   contents: read
@@ -67,8 +68,8 @@ jobs:
           echo "Changed files:"
           echo "$CHANGED_FILES"
 
-          # Check for UE4SS code changes
-          UE4SS_CHANGES=$(echo "$CHANGED_FILES" | grep -E "^(UE4SS/|deps/|CMakeLists\.txt|cmake/)" || true)
+          # Check for UE4SS code changes (including workflow changes which should trigger full build)
+          UE4SS_CHANGES=$(echo "$CHANGED_FILES" | grep -E "^(UE4SS/|deps/|CMakeLists\.txt|cmake/|\.github/workflows/)" || true)
 
           # Check for C++ mod changes
           CPPMOD_CHANGES=$(echo "$CHANGED_FILES" | grep -E "^cppmods/" || true)
