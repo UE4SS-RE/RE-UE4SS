@@ -1,5 +1,6 @@
 #define NOMINMAX
 
+#include <atomic>
 #include <filesystem>
 #include <format>
 #include <limits>
@@ -116,7 +117,7 @@ namespace RC
         bool has_return_value{};
         // Will be non-nullptr if the UFunction has a return value
         Unreal::FProperty* return_property{};
-        bool scheduled_for_removal{};
+        std::atomic<bool> scheduled_for_removal{};
     };
     static std::vector<std::unique_ptr<LuaUnrealScriptFunctionData>> g_hooked_script_function_data{};
 
@@ -1783,7 +1784,10 @@ Overloads:
                     const auto hook_data = std::ranges::find_if(g_hooked_script_function_data, [&](const std::unique_ptr<LuaUnrealScriptFunctionData>& elem) {
                         return elem->post_callback_id == post_id && elem->pre_callback_id == pre_id;
                     });
-                    hook_data->get()->scheduled_for_removal = true;
+                    if (hook_data != g_hooked_script_function_data.end())
+                    {
+                        hook_data->get()->scheduled_for_removal = true;
+                    }
                 }
                 else
                 {
@@ -4257,6 +4261,17 @@ Overloads:
         if (m_main_lua && m_main_lua->get_lua_state())
         {
             lua_resetthread(m_main_lua->get_lua_state());
+        }
+
+        // Mark all hooks for this mod as scheduled_for_removal BEFORE closing Lua state
+        // This prevents hooks from firing with an invalid Lua state during the window between
+        // lua_close and the actual hook unregistration
+        for (auto& item : g_hooked_script_function_data)
+        {
+            if (item->mod == this)
+            {
+                item->scheduled_for_removal = true;
+            }
         }
 
         lua_close(lua().get_lua_state());
