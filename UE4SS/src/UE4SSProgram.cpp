@@ -1535,6 +1535,10 @@ namespace RC
 
         for (auto& mod : cpp_mods)
         {
+            if (!mod->is_installable())
+            {
+                continue;
+            }
             mod->uninstall();
         }
 

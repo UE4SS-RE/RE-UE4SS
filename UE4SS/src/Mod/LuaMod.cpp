@@ -4261,6 +4261,25 @@ Overloads:
         });
 
 
+        // Mark all hooks for this mod as scheduled_for_removal BEFORE closing Lua state
+        // This prevents hooks from firing with an invalid Lua state during the window between
+        // lua_close and the actual hook unregistration
+        for (auto& item : g_hooked_script_function_data)
+        {
+            if (item->mod == this)
+            {
+                item->scheduled_for_removal = true;
+            }
+        }
+
+        // Remove any pending game thread actions for this mod BEFORE closing Lua state
+        // Otherwise process_event_hook may try to execute actions with an invalid Lua state
+        // Note: action.lua points to m_hook_lua (a thread), so compare against that
+        // Must be done BEFORE m_hook_lua is set to nullptr
+        std::erase_if(m_game_thread_actions, [&](const SimpleLuaAction& action) {
+            return action.lua == m_hook_lua;
+        });
+
         if (m_hook_lua != nullptr)
         {
             m_hook_lua = nullptr; // lua_newthread results are handled by lua GC
@@ -4274,17 +4293,6 @@ Overloads:
         if (m_main_lua && m_main_lua->get_lua_state())
         {
             lua_resetthread(m_main_lua->get_lua_state());
-        }
-
-        // Mark all hooks for this mod as scheduled_for_removal BEFORE closing Lua state
-        // This prevents hooks from firing with an invalid Lua state during the window between
-        // lua_close and the actual hook unregistration
-        for (auto& item : g_hooked_script_function_data)
-        {
-            if (item->mod == this)
-            {
-                item->scheduled_for_removal = true;
-            }
         }
 
         lua_close(lua().get_lua_state());
