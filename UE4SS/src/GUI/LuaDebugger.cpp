@@ -24,11 +24,9 @@
 #include <LuaType/LuaTArray.hpp>
 #include <Mod/LuaMod.hpp>
 #include <UE4SSProgram.hpp>
-#include <Unreal/FProperty.hpp>
+#include <Unreal/CoreUObject/UObject/UnrealType.hpp>
 #include <Unreal/UObject.hpp>
-#include <Unreal/FString.hpp>
 #include <Unreal/FText.hpp>
-#include <Unreal/Property/FArrayProperty.hpp>
 
 #include <lua.hpp>
 
