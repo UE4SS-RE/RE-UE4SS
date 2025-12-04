@@ -1357,7 +1357,23 @@ namespace RC::GUI
     auto LuaDebugger::get_mod_scripts(lua_State* L) -> std::vector<std::string>
     {
         std::vector<std::string> scripts;
-        std::set<std::string> seen_paths; // Avoid duplicates
+        std::set<std::string> seen_paths; // Avoid duplicates (uses canonical paths)
+
+        // Helper to normalize path for comparison
+        auto normalize_path = [](const std::filesystem::path& p) -> std::string {
+            try
+            {
+                // Use canonical path for consistent comparison
+                if (std::filesystem::exists(p))
+                {
+                    return std::filesystem::canonical(p).string();
+                }
+            }
+            catch (...)
+            {
+            }
+            return p.string();
+        };
 
         // Find the mod for this state
         for (const auto& mod : UE4SSProgram::get_program().m_mods)
@@ -1386,7 +1402,8 @@ namespace RC::GUI
                                 if (entry.is_regular_file() && entry.path().extension() == ".lua")
                                 {
                                     std::string path_str = entry.path().string();
-                                    if (seen_paths.insert(path_str).second)
+                                    std::string canonical_str = normalize_path(entry.path());
+                                    if (seen_paths.insert(canonical_str).second)
                                     {
                                         scripts.push_back(path_str);
                                     }
@@ -1407,7 +1424,8 @@ namespace RC::GUI
                         {
                             for (const auto& path : it->second)
                             {
-                                if (seen_paths.insert(path).second)
+                                std::string canonical_str = normalize_path(path);
+                                if (seen_paths.insert(canonical_str).second)
                                 {
                                     scripts.push_back(path);
                                 }
