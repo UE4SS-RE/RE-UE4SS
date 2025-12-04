@@ -3361,6 +3361,49 @@ namespace RC::GUI
             ImGui::TextColored(ImVec4(1.0f, 0.8f, 0.0f, 1.0f), ICON_FA_EXCLAMATION_TRIANGLE " Unsaved");
         }
 
+        // Restart/Start mod button
+        if (!m_script_edit_path.empty())
+        {
+            std::filesystem::path script_path(m_script_edit_path);
+            std::filesystem::path mod_path = script_path.parent_path().parent_path();
+            std::string mod_name = mod_path.stem().string();
+
+            bool mod_is_running = false;
+            for (const auto& mod : UE4SSProgram::get_program().m_mods)
+            {
+                auto* lua_mod = dynamic_cast<LuaMod*>(mod.get());
+                if (lua_mod && to_string(lua_mod->get_name()) == mod_name && lua_mod->is_started())
+                {
+                    mod_is_running = true;
+                    break;
+                }
+            }
+
+            ImGui::SameLine();
+            if (mod_is_running)
+            {
+                if (ImGui::Button(ICON_FA_SYNC " Restart"))
+                {
+                    restart_mod_by_name(mod_name);
+                }
+                if (ImGui::IsItemHovered())
+                {
+                    ImGui::SetTooltip("Restart %s", mod_name.c_str());
+                }
+            }
+            else
+            {
+                if (ImGui::Button(ICON_FA_PLAY " Start"))
+                {
+                    start_mod_by_path(mod_path);
+                }
+                if (ImGui::IsItemHovered())
+                {
+                    ImGui::SetTooltip("Start %s", mod_name.c_str());
+                }
+            }
+        }
+
         ImGui::Separator();
 
         if (!m_script_edit_path.empty())
