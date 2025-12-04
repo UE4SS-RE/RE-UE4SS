@@ -3255,14 +3255,23 @@ namespace RC::GUI
 
     auto LuaDebugger::render_script_editor() -> void
     {
-        if (!m_selected_state)
+        // Get scripts list if we have a selected state
+        std::vector<std::string> scripts;
+        if (m_selected_state)
         {
-            ImGui::TextDisabled("Select a Lua state to edit scripts");
+            scripts = get_mod_scripts(m_selected_state);
+        }
+
+        // Allow editing if we have a file loaded, even without a selected state
+        bool has_loaded_file = !m_script_edit_path.empty() && !m_script_original_content.empty();
+
+        if (!m_selected_state && !has_loaded_file)
+        {
+            ImGui::TextDisabled("Select a Lua state or open a script from the Mods tab");
             return;
         }
 
-        auto scripts = get_mod_scripts(m_selected_state);
-        if (scripts.empty())
+        if (m_selected_state && scripts.empty() && !has_loaded_file)
         {
             ImGui::TextDisabled("No scripts found for this mod");
             return;
@@ -3275,6 +3284,24 @@ namespace RC::GUI
             size_t last_slash = current_display.find_last_of("\\/");
             if (last_slash != std::string::npos)
                 current_display = current_display.substr(last_slash + 1);
+        }
+
+        // If no state selected but we have a loaded file, scan for other scripts in the same mod folder
+        if (scripts.empty() && has_loaded_file)
+        {
+            std::filesystem::path loaded_path(m_script_edit_path);
+            std::filesystem::path scripts_dir = loaded_path.parent_path();
+            if (std::filesystem::exists(scripts_dir))
+            {
+                for (const auto& entry : std::filesystem::recursive_directory_iterator(scripts_dir))
+                {
+                    if (entry.is_regular_file() && entry.path().extension() == ".lua")
+                    {
+                        scripts.push_back(entry.path().string());
+                    }
+                }
+                std::sort(scripts.begin(), scripts.end());
+            }
         }
 
         ImGui::SetNextItemWidth(scaled(300.0f));
@@ -3762,6 +3789,9 @@ namespace RC::GUI
 
         m_mods_list_dirty = true;
 
+        // New mod is not running, clear selected state so dropdown uses filesystem scan
+        m_selected_state = nullptr;
+
         m_script_edit_path = main_lua_path.string();
         const LuaScriptFile* script = load_script(m_script_edit_path);
         if (script && script->loaded)
@@ -3933,6 +3963,11 @@ namespace RC::GUI
                 std::filesystem::path main_lua = scripts_path / "main.lua";
                 if (std::filesystem::exists(main_lua))
                 {
+                    // Clear selected state if mod isn't running so dropdown uses filesystem scan
+                    if (!mod.is_running)
+                    {
+                        m_selected_state = nullptr;
+                    }
                     m_script_edit_path = main_lua.string();
                     const LuaScriptFile* script = load_script(m_script_edit_path);
                     if (script && script->loaded)
