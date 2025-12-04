@@ -1,5 +1,11 @@
 name: Make Release
-on: workflow_dispatch
+on:
+  workflow_dispatch:
+    inputs:
+      prerelease:
+        description: 'Mark as pre-release (e.g., for beta/RC releases)'
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -100,6 +106,7 @@ jobs:
         uses: softprops/action-gh-release@v1
         with:
           tag_name: ${{ needs.prepare-release.outputs.release_tag }}
+          prerelease: ${{ inputs.prerelease }}
           body_path: release/release_notes.md
           files: |
             release/UE4SS_v*.zip

@@ -2,7 +2,7 @@
 
 These are the Lua API functions available in UE4SS, on top of the standard libraries that Lua comes with by defualt.
 
-For version: **3.1.0**
+For version: **4.0.0**
 
 Current status: **mostly complete**
 
