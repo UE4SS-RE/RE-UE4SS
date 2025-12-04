@@ -137,8 +137,6 @@ namespace RC
         {
         }
 
-        RC_UE4SS_API virtual auto render_tab() -> void {};
-
         /**
          * Executes after a Lua mod is started.
          * Executes for every Lua mod that is starting.

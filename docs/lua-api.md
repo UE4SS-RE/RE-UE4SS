@@ -10,7 +10,8 @@ Current status: **mostly complete**
 
 This is an overall list of API definitions available in UE4SS. For more readable information, see the individual API definition pages in the collapsible sections 4.1, 4.2 and 4.3.
 
-> **Warning: This API list is not updated since 2.5.2, so it out of date. Please refer to the individual API definition pages for the most up-to-date information.**
+> [!WARNING]
+> **This API list is not updated since 2.5.2, so it out of date. Please refer to the individual API definition pages for the most up-to-date information.**
 
 ### Table Definitions
 - The definitions appear as: FieldName | FieldValueType
