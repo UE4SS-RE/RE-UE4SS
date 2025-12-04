@@ -3648,6 +3648,69 @@ namespace RC::GUI
         m_mods_list_dirty = true;
     }
 
+    auto LuaDebugger::restart_mod_by_name(const std::string& mod_name) -> void
+    {
+        auto& program = UE4SSProgram::get_program();
+
+        // Pass mod name string to the event, not a pointer (which could become stale)
+        auto name_copy = std::make_shared<std::string>(mod_name);
+
+        program.queue_event(
+                [](void* data) {
+                    auto* name_ptr = static_cast<std::shared_ptr<std::string>*>(data);
+                    UE4SSProgram::get_program().reinstall_mod_by_name(**name_ptr);
+                    delete name_ptr;
+                    // Mark the mods list as dirty after the operation completes
+                    if (LuaDebugger::has_instance())
+                    {
+                        LuaDebugger::get().m_mods_list_dirty = true;
+                    }
+                },
+                new std::shared_ptr<std::string>(name_copy));
+    }
+
+    auto LuaDebugger::uninstall_mod_by_name(const std::string& mod_name) -> void
+    {
+        auto& program = UE4SSProgram::get_program();
+
+        // Pass mod name string to the event, not a pointer (which could become stale)
+        auto name_copy = std::make_shared<std::string>(mod_name);
+
+        program.queue_event(
+                [](void* data) {
+                    auto* name_ptr = static_cast<std::shared_ptr<std::string>*>(data);
+                    UE4SSProgram::get_program().uninstall_mod_by_name(**name_ptr);
+                    delete name_ptr;
+                    // Mark the mods list as dirty after the operation completes
+                    if (LuaDebugger::has_instance())
+                    {
+                        LuaDebugger::get().m_mods_list_dirty = true;
+                    }
+                },
+                new std::shared_ptr<std::string>(name_copy));
+    }
+
+    auto LuaDebugger::start_mod_by_path(const std::filesystem::path& mod_path) -> void
+    {
+        auto& program = UE4SSProgram::get_program();
+
+        // Create a copy of the path for the lambda capture
+        auto path_copy = std::make_shared<std::filesystem::path>(mod_path);
+
+        program.queue_event(
+                [](void* data) {
+                    auto* path_ptr = static_cast<std::shared_ptr<std::filesystem::path>*>(data);
+                    UE4SSProgram::get_program().start_lua_mod_by_path(**path_ptr);
+                    delete path_ptr;
+                    // Mark the mods list as dirty after the mod is started
+                    if (LuaDebugger::has_instance())
+                    {
+                        LuaDebugger::get().m_mods_list_dirty = true;
+                    }
+                },
+                new std::shared_ptr<std::filesystem::path>(path_copy));
+    }
+
     auto LuaDebugger::create_new_mod(const std::string& name) -> bool
     {
         if (name.empty())
@@ -3860,7 +3923,9 @@ namespace RC::GUI
                 ImGui::Text("%s", mod.name.c_str());
             }
 
-            ImGui::SameLine(ImGui::GetContentRegionAvail().x - scaled(100.0f));
+            // Use consistent button width for alignment (widest case: Open + New + Restart + Uninstall)
+            float button_width = scaled(320.0f);
+            ImGui::SameLine(ImGui::GetContentRegionAvail().x - button_width);
 
             if (ImGui::SmallButton(ICON_FA_FOLDER_OPEN " Open"))
             {
@@ -3886,7 +3951,68 @@ namespace RC::GUI
             {
                 m_show_create_file_popup = true;
                 m_new_file_name.clear();
+                m_add_require_to_main = true;
                 m_create_file_mod_path = mod.path;
+            }
+
+            // Show different buttons based on whether mod is running
+            if (mod.is_running)
+            {
+                ImGui::SameLine();
+
+                if (event_busy)
+                {
+                    ImGui::BeginDisabled(true);
+                }
+
+                if (ImGui::SmallButton(ICON_FA_SYNC " Restart"))
+                {
+                    restart_mod_by_name(mod.name);
+                }
+                if (ImGui::IsItemHovered())
+                {
+                    ImGui::SetTooltip("Uninstall and reinstall this mod");
+                }
+
+                ImGui::SameLine();
+
+                if (ImGui::SmallButton(ICON_FA_STOP " Uninstall"))
+                {
+                    uninstall_mod_by_name(mod.name);
+                }
+                if (ImGui::IsItemHovered())
+                {
+                    ImGui::SetTooltip("Uninstall this mod (will not run until next full reload)");
+                }
+
+                if (event_busy)
+                {
+                    ImGui::EndDisabled();
+                }
+            }
+            else
+            {
+                // Show Start button for mods that are not running
+                ImGui::SameLine();
+
+                if (event_busy)
+                {
+                    ImGui::BeginDisabled(true);
+                }
+
+                if (ImGui::SmallButton(ICON_FA_PLAY " Start"))
+                {
+                    start_mod_by_path(mod.path);
+                }
+                if (ImGui::IsItemHovered())
+                {
+                    ImGui::SetTooltip("Start this mod without reloading all mods");
+                }
+
+                if (event_busy)
+                {
+                    ImGui::EndDisabled();
+                }
             }
 
             if (ImGui::IsItemHovered())
