@@ -10,7 +10,7 @@ end
 package.path = '.\\Mods\\ModLoaderMod\\?.lua;' .. package.path
 package.path = '.\\Mods\\ModLoaderMod\\BPMods\\?.lua;' .. package.path
 
-local Mods = {}
+Mods = {}
 local OrderedMods = {}
 
 -- Contains mod names from Mods/BPModLoaderMod/load_order.txt and is used to determine the load order of BP mods.
