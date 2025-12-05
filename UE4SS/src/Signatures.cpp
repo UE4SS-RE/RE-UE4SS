@@ -13,6 +13,7 @@
 #include <Unreal/Signatures.hpp>
 #include <Unreal/UObject.hpp>
 #include <Unreal/UObjectArray.hpp>
+#include <Unreal/UEngine.hpp>
 #include <Unreal/UnrealInitializer.hpp>
 
 #include <Helpers/String.hpp>
@@ -438,6 +439,32 @@ namespace RC
                                     {
                                         scan_result.Errors.emplace_back("Was unable to find AOB for "
                                                                         "'CallFunctionByNameWithArguments' via Lua script");
+                                    }
+                                });
+                    };
+        }
+
+        auto lua_gameengine_tick_scan_script = working_directory / "UE4SS_Signatures/GameEngineTick.lua";
+        if (std::filesystem::exists(lua_gameengine_tick_scan_script))
+        {
+            config.ScanOverrides.gameengine_tick =
+                    [lua_gameengine_tick_scan_script](std::vector<SignatureContainer>& signature_containers,
+                                                                           Unreal::Signatures::ScanResult& scan_result) mutable {
+                        scan_from_lua_script(
+                                lua_gameengine_tick_scan_script,
+                                signature_containers,
+                                [](void* address) {
+                                    Output::send(STR("GameEngine::Tick address: {} "
+                                                     "<- Lua Script\n"),
+                                                 address);
+                                    Unreal::UEngine::TickInternal.assign_address(address);
+                                    return DidLuaScanSucceed::Yes;
+                                },
+                                [&](DidLuaScanSucceed did_lua_scan_succeed) {
+                                    if (did_lua_scan_succeed == DidLuaScanSucceed::No)
+                                    {
+                                        scan_result.Errors.emplace_back("Was unable to find AOB for "
+                                                                        "'GameEngine::Tick' via Lua script");
                                     }
                                 });
                     };
