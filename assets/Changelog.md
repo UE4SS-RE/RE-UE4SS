@@ -1,11 +1,8 @@
-v3.1.0
+v4.0.0-rc1
 ==============
 TBD
 
-some notes about most important changes such as: 
-- changing of default ue4ss install location, overriding and its backwards compatibility 
-- new build system 
-- linux port 
+**Important:** The default installation layout has changed. All UE4SS files (including UE4SS.dll, settings, and mods) now reside in a `ue4ss` subfolder next to your game executable. Only the proxy DLL (dwmapi.dll) remains in the game's Win64 directory. This keeps your game folder cleaner and makes it easier to manage UE4SS installations. Existing installations in the old location will continue to work for backwards compatibility if the UE4SS dll is replaced directly.
 
 ## New
 

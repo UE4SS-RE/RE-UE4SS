@@ -1,8 +1,4 @@
-name: CMake Experimental Release
-
-# NOTE: This workflow creates CMake-specific experimental releases (cmake-experimental, cmake-experimental-latest)
-# These are separate from the xmake experimental releases to allow parallel testing
-# This is intentional during the CMake transition period
+name: Make Experimental Release
 
 on:
   workflow_dispatch:
@@ -25,7 +21,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: cmake-experimental-release
+  group: experimental-release
   cancel-in-progress: true
 
 jobs:
@@ -124,9 +120,9 @@ jobs:
         run: |
           mkdir -p build_output
 
-          # Download the dev zip from cmake-experimental-latest release
-          echo "Downloading from cmake-experimental-latest release..."
-          gh release download cmake-experimental-latest \
+          # Download the dev zip from experimental-latest release
+          echo "Downloading from experimental-latest release..."
+          gh release download experimental-latest \
             --repo ${{ github.repository }} \
             --pattern "zDEV-UE4SS_*.zip" \
             --dir ./temp_download || {
@@ -213,12 +209,11 @@ jobs:
       - name: Package
         run: python tools/buildscripts/release.py package -e
 
-      - name: Make Archival Experimental Release (CMake)
+      - name: Make Archival Experimental Release
         uses: softprops/action-gh-release@v1
         with:
           prerelease: true
-          tag_name: cmake-experimental
-          name: "CMake Experimental Build"
+          tag_name: experimental
           body_path: release/release_notes.md
           files: |
             release/UE4SS_v*.zip
@@ -226,25 +221,20 @@ jobs:
             release/zCustomGameConfigs.zip
             release/zMapGenBP.zip
 
-      - name: Delete old release assets (CMake Latest)
+      - name: Delete old release assets
         uses: mknejp/delete-release-assets@v1
         with:
           token: ${{ github.token }}
-          tag: cmake-experimental-latest
+          tag: experimental-latest
           fail-if-no-release: false
           fail-if-no-assets: false
-          assets: |
-            UE4SS_v*.zip
-            zDEV-UE4SS_v*.zip
-            zCustomGameConfigs.zip
-            zMapGenBP.zip
+          assets: '*'
 
-      - name: Make Permanent Latest Release (CMake)
+      - name: Make Permanent Latest Release
         uses: softprops/action-gh-release@v1
         with:
           prerelease: true
-          tag_name: cmake-experimental-latest
-          name: "CMake Experimental Latest"
+          tag_name: experimental-latest
           body_path: release/release_notes.md
           files: |
             release/UE4SS_v*.zip

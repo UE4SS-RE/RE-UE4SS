@@ -1,7 +1,7 @@
-# This workflow automates the build process for all modes of the UE4SS project using CMake whenever a pull request is made.
+# This workflow automates the build process for all modes of the UE4SS project whenever a pull request is made.
 # It reports artifacts to the PR comments.
 
-name: CMake Build All Modes
+name: Build All Modes
 permissions:
     contents: write
     pull-requests: write # For adding comments to PR.
