@@ -219,6 +219,11 @@ namespace RC
         auto init() -> void;
         auto is_program_started() -> bool;
         auto reinstall_mods() -> void;
+        auto reinstall_mod(LuaMod* mod) -> void;
+        auto uninstall_mod(LuaMod* mod) -> void;
+        auto reinstall_mod_by_name(const std::string& mod_name) -> void;
+        auto uninstall_mod_by_name(const std::string& mod_name) -> void;
+        auto start_lua_mod_by_path(const std::filesystem::path& mod_path) -> LuaMod*;
         auto get_object_dumper_output_directory() -> const File::StringType;
         RC_UE4SS_API auto get_module_directory() -> File::StringType;
         RC_UE4SS_API auto get_game_executable_directory() -> File::StringType;

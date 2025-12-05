@@ -92,6 +92,12 @@ Added new Lua Debugger GUI tab with debugging tools for Lua mod development  ([U
 - Loaded modules viewer
 - Mods management tab to view, enable/disable, and create Lua mods
 
+Added individual mod restart/uninstall/start functionality to Lua Debugger ([UE4SS #1105](https://github.com/UE4SS-RE/RE-UE4SS/pull/1105))
+- Restart and Uninstall buttons for running mods in the Mods tab
+- Start button for non-running mods without requiring a full hot reload
+- Restart/Start button in Script Editor tab for quick mod iteration
+- New file creation dialog with optional auto-require in main.lua
+
 ### UHT Dumper
 
 Added support for generating `FUtf8String` and `FAnsiString` properties in UHT-compatible headers ([UE4SS #1015](https://github.com/UE4SS-RE/RE-UE4SS/pull/1015))
@@ -101,6 +107,11 @@ Added support for generating `FUtf8String` and `FAnsiString` properties in UHT-c
 Added support for `FUtf8String` and `FAnsiString` Unreal string types with string manipulation API ([UE4SS #1015](https://github.com/UE4SS-RE/RE-UE4SS/pull/1015))
 - Refactored FString implementation to use unified `TLuaStringBase` template for code reuse and consistency
 
+Added global functions for mod management ([UE4SS #1105](https://github.com/UE4SS-RE/RE-UE4SS/pull/1105))
+- `RestartCurrentMod()` - Restart the currently running mod
+- `UninstallCurrentMod()` - Uninstall the currently running mod
+- `RestartMod(ModName)` - Restart another mod by name
+- `UninstallMod(ModName)` - Uninstall another mod by name
 
 **Updated Lua version to 5.4.7** ([UE4SS #887](https://github.com/UE4SS-RE/RE-UE4SS/pull/887))
 - This is necessary to compile with Clang.

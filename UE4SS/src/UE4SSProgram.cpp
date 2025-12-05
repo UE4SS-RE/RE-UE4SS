@@ -1630,6 +1630,170 @@ namespace RC
         Output::send(STR("All mods re-installed\n"));
     }
 
+    auto UE4SSProgram::reinstall_mod(LuaMod* mod) -> void
+    {
+        if (!mod)
+        {
+            return;
+        }
+
+        // Save mod info before uninstalling
+        StringType mod_name = StringType(mod->get_name());
+        std::filesystem::path mod_path = mod->get_path();
+
+        Output::send(STR("Reinstalling mod: {}\n"), mod_name);
+
+        // Pause event processing for safety
+        m_pause_events_processing = true;
+
+        mod->uninstall();
+
+        // Remove key binds registered by this specific mod
+#ifdef HAS_INPUT
+        m_input_handler.get_events_safe([&](auto& key_set) {
+            std::erase_if(key_set.key_data, [&](auto& item) -> bool {
+                auto& [_, key_data] = item;
+                std::erase_if(key_data, [&](Input::KeyData& kd) -> bool {
+                    // custom_data == 1: Bind came from Lua, custom_data2 is pointer to LuaMod
+                    return kd.custom_data == 1 && kd.custom_data2 == mod;
+                });
+                return key_data.empty();
+            });
+        });
+#endif
+
+        // Remove the old mod from the list
+        delete_mod(mod);
+        mod = nullptr;
+
+        // Resume event processing before starting the new mod
+        m_pause_events_processing = false;
+
+        // Create a new LuaMod for this mod (same as setup_mods does)
+        auto new_mod = std::make_unique<LuaMod>(*this, std::move(mod_name), std::move(mod_path));
+        LuaMod* new_mod_ptr = new_mod.get();
+        m_mods.emplace_back(std::move(new_mod));
+
+        new_mod_ptr->start_mod();
+
+        Output::send(STR("Mod '{}' reinstalled\n"), new_mod_ptr->get_name());
+    }
+
+    auto UE4SSProgram::uninstall_mod(LuaMod* mod) -> void
+    {
+        if (!mod)
+        {
+            return;
+        }
+
+        StringType mod_name = StringType(mod->get_name());
+        Output::send(STR("Uninstalling mod: {}\n"), mod_name);
+
+        // Pause event processing for safety
+        m_pause_events_processing = true;
+
+        mod->uninstall();
+
+        // Remove key binds registered by this specific mod
+#ifdef HAS_INPUT
+        m_input_handler.get_events_safe([&](auto& key_set) {
+            std::erase_if(key_set.key_data, [&](auto& item) -> bool {
+                auto& [_, key_data] = item;
+                std::erase_if(key_data, [&](Input::KeyData& kd) -> bool {
+                    // custom_data == 1: Bind came from Lua, custom_data2 is pointer to LuaMod
+                    return kd.custom_data == 1 && kd.custom_data2 == mod;
+                });
+                return key_data.empty();
+            });
+        });
+#endif
+
+        delete_mod(mod);
+
+        // Resume event processing
+        m_pause_events_processing = false;
+
+        Output::send(STR("Mod '{}' uninstalled\n"), mod_name);
+    }
+
+    auto UE4SSProgram::reinstall_mod_by_name(const std::string& mod_name) -> void
+    {
+        // Find the mod by name at execution time (safe for queued events)
+        for (auto& mod : m_mods)
+        {
+            auto* lua_mod = dynamic_cast<LuaMod*>(mod.get());
+            if (lua_mod && to_string(lua_mod->get_name()) == mod_name)
+            {
+                reinstall_mod(lua_mod);
+                return;
+            }
+        }
+        Output::send<LogLevel::Warning>(STR("Could not find mod to reinstall: {}\n"), ensure_str(mod_name));
+    }
+
+    auto UE4SSProgram::uninstall_mod_by_name(const std::string& mod_name) -> void
+    {
+        // Find the mod by name at execution time (safe for queued events)
+        for (auto& mod : m_mods)
+        {
+            auto* lua_mod = dynamic_cast<LuaMod*>(mod.get());
+            if (lua_mod && to_string(lua_mod->get_name()) == mod_name)
+            {
+                uninstall_mod(lua_mod);
+                return;
+            }
+        }
+        Output::send<LogLevel::Warning>(STR("Could not find mod to uninstall: {}\n"), ensure_str(mod_name));
+    }
+
+    auto UE4SSProgram::start_lua_mod_by_path(const std::filesystem::path& mod_path) -> LuaMod*
+    {
+        std::string mod_name_str = mod_path.stem().string();
+
+        // Check if mod already exists in m_mods
+        for (auto& mod : m_mods)
+        {
+            auto* lua_mod = dynamic_cast<LuaMod*>(mod.get());
+            if (lua_mod && to_string(lua_mod->get_name()) == mod_name_str)
+            {
+                if (lua_mod->is_started())
+                {
+                    Output::send<LogLevel::Warning>(STR("Mod '{}' is already running\n"), ensure_str(mod_name_str));
+                    return lua_mod;
+                }
+                else
+                {
+                    // Mod exists but is not started - remove it first (its Lua state is invalid)
+                    // Then we'll create a fresh one below
+                    delete_mod(lua_mod);
+                    break;
+                }
+            }
+        }
+
+        // Verify the mod path exists and has a main.lua
+        std::filesystem::path scripts_path = mod_path / STR("Scripts");
+        std::filesystem::path main_lua = scripts_path / STR("main.lua");
+        if (!std::filesystem::exists(main_lua))
+        {
+            Output::send<LogLevel::Error>(STR("Cannot start mod '{}': main.lua not found\n"), ensure_str(mod_name_str));
+            return nullptr;
+        }
+
+        Output::send(STR("Starting mod: {}\n"), ensure_str(mod_name_str));
+
+        StringType mod_name = ensure_str(mod_name_str);
+
+        auto new_mod = std::make_unique<LuaMod>(*this, std::move(mod_name), std::filesystem::path(mod_path));
+        LuaMod* new_mod_ptr = new_mod.get();
+        m_mods.emplace_back(std::move(new_mod));
+
+        new_mod_ptr->start_mod();
+
+        Output::send(STR("Mod '{}' started\n"), new_mod_ptr->get_name());
+        return new_mod_ptr;
+    }
+
     auto UE4SSProgram::get_module_directory() -> File::StringType
     {
         return ensure_str(m_module_file_path);
