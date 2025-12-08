@@ -1,5 +1,6 @@
 #pragma once
 
+#include <atomic>
 #include <chrono>
 #include <mutex>
 #include <string>
@@ -19,12 +20,20 @@ namespace RC
         class UClass;
     }
 
+    // Unique identifier for mods, used for safe cross-thread references
+    using ModId = size_t;
+    constexpr ModId InvalidModId = 0;
+
     class RC_UE4SS_API Mod
     {
+      private:
+        static inline std::atomic<ModId> s_next_mod_id{1};
+
       public:
         UE4SSProgram& m_program;
 
       protected:
+        ModId m_mod_id{InvalidModId};
         StringType m_mod_name;
         std::filesystem::path m_mod_path;
 
@@ -47,6 +56,7 @@ namespace RC
         virtual ~Mod() = default;
 
       public:
+        auto get_id() const -> ModId { return m_mod_id; }
         auto get_name() const -> StringViewType;
         auto get_path() const -> const std::filesystem::path& { return m_mod_path; }
 
