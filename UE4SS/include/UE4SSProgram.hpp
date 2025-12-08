@@ -129,15 +129,18 @@ namespace RC
         Output::ConsoleDevice* m_console_device{};
         GUI::DebuggingGUI m_debugging_gui{};
 
-        using EventCallable = void (*)(void* data);
+        using EventCallable = std::function<void()>;
+        // Legacy types for backward compatibility with C++ mods
+        using LegacyEventCallable = void (*)(void* data);
         struct Event
         {
-            EventCallable callable{};
+            LegacyEventCallable callable{};
             void* data{};
         };
-        std::vector<Event> m_queued_events{};
+        std::vector<EventCallable> m_queued_events{};
         std::mutex m_event_queue_mutex{};
         std::mutex m_render_thread_mutex{};
+        std::thread::id m_event_loop_thread_id{};
 
       private:
         std::unique_ptr<PLH::IatHook> m_load_library_a_hook;
@@ -254,11 +257,17 @@ namespace RC
         {
             return ImGui::GetAllocatorFunctions(alloc_func, free_func, user_data);
         }
-        RC_UE4SS_API auto queue_event(EventCallable callable, void* data) -> void;
+        RC_UE4SS_API auto queue_event(EventCallable callable) -> void;
+        // Legacy overload for backward compatibility with C++ mods
+        RC_UE4SS_API auto queue_event(LegacyEventCallable callable, void* data) -> void;
         RC_UE4SS_API auto is_queue_empty() -> bool;
         RC_UE4SS_API auto can_process_events() -> bool
         {
             return m_processing_events;
+        }
+        RC_UE4SS_API auto is_event_loop_thread() -> bool
+        {
+            return std::this_thread::get_id() == m_event_loop_thread_id;
         }
         RC_UE4SS_API auto delete_mod(Mod*) -> void;
 

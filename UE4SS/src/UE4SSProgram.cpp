@@ -1058,6 +1058,7 @@ namespace RC
     auto UE4SSProgram::update() -> void
     {
         ProfilerSetThreadName("UE4SS-UpdateThread");
+        m_event_loop_thread_id = std::this_thread::get_id();
 
         on_program_start();
 
@@ -1078,13 +1079,13 @@ namespace RC
                 std::lock_guard<std::mutex> guard(m_event_queue_mutex);
                 m_queued_events.erase(std::remove_if(m_queued_events.begin(),
                                                      m_queued_events.end(),
-                                                     [&](Event& event) -> bool {
+                                                     [&](EventCallable& event) -> bool {
                                                          if (num_events_executed >= max_events_executed_per_frame)
                                                          {
                                                              return false;
                                                          }
                                                          ++num_events_executed;
-                                                         event.callable(event.data);
+                                                         event();
                                                          return true;
                                                      }),
                                       m_queued_events.end());
@@ -2041,14 +2042,19 @@ namespace RC
         m_debugging_gui.remove_tab(tab);
     }
 
-    auto UE4SSProgram::queue_event(EventCallable callable, void* data) -> void
+    auto UE4SSProgram::queue_event(EventCallable callable) -> void
     {
         if (!can_process_events())
         {
             return;
         }
         std::lock_guard<std::mutex> guard(m_event_queue_mutex);
-        m_queued_events.emplace_back(Event{callable, data});
+        m_queued_events.emplace_back(std::move(callable));
+    }
+
+    auto UE4SSProgram::queue_event(LegacyEventCallable callable, void* data) -> void
+    {
+        queue_event([callable, data]() { callable(data); });
     }
 
     auto UE4SSProgram::is_queue_empty() -> bool
