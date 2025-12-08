@@ -129,15 +129,18 @@ namespace RC
         Output::ConsoleDevice* m_console_device{};
         GUI::DebuggingGUI m_debugging_gui{};
 
-        using EventCallable = void (*)(void* data);
+        using EventCallable = std::function<void()>;
+        // Legacy types for backward compatibility with C++ mods
+        using LegacyEventCallable = void (*)(void* data);
         struct Event
         {
-            EventCallable callable{};
+            LegacyEventCallable callable{};
             void* data{};
         };
-        std::vector<Event> m_queued_events{};
+        std::vector<EventCallable> m_queued_events{};
         std::mutex m_event_queue_mutex{};
         std::mutex m_render_thread_mutex{};
+        std::thread::id m_event_loop_thread_id{};
 
       private:
         std::unique_ptr<PLH::IatHook> m_load_library_a_hook;
@@ -218,7 +221,18 @@ namespace RC
       public:
         auto init() -> void;
         auto is_program_started() -> bool;
-        auto reinstall_mods() -> void;
+        auto find_mod_by_id(ModId mod_id) -> Mod*;
+        auto find_lua_mod_by_id(ModId mod_id) -> LuaMod*;
+        auto queue_reinstall_mods() -> void;
+        auto queue_reinstall_mod(LuaMod* mod) -> void;
+        auto queue_reinstall_mod(ModId mod_id) -> void;
+        auto queue_uninstall_mod(LuaMod* mod) -> void;
+        auto queue_uninstall_mod(ModId mod_id) -> void;
+        auto queue_reinstall_mod_by_name(const std::string& mod_name) -> void;
+        auto queue_reinstall_mod_by_name(std::string_view mod_name) -> void;
+        auto queue_uninstall_mod_by_name(const std::string& mod_name) -> void;
+        auto queue_uninstall_mod_by_name(std::string_view mod_name) -> void;
+        auto queue_start_lua_mod_by_path(const std::filesystem::path& mod_path) -> void;
         auto get_object_dumper_output_directory() -> const File::StringType;
         RC_UE4SS_API auto get_module_directory() -> File::StringType;
         RC_UE4SS_API auto get_game_executable_directory() -> File::StringType;
@@ -249,11 +263,17 @@ namespace RC
         {
             return ImGui::GetAllocatorFunctions(alloc_func, free_func, user_data);
         }
-        RC_UE4SS_API auto queue_event(EventCallable callable, void* data) -> void;
+        RC_UE4SS_API auto queue_event(EventCallable callable) -> void;
+        // Legacy overload for backward compatibility with C++ mods
+        RC_UE4SS_API auto queue_event(LegacyEventCallable callable, void* data) -> void;
         RC_UE4SS_API auto is_queue_empty() -> bool;
         RC_UE4SS_API auto can_process_events() -> bool
         {
             return m_processing_events;
+        }
+        RC_UE4SS_API auto is_event_loop_thread() -> bool
+        {
+            return std::this_thread::get_id() == m_event_loop_thread_id;
         }
         RC_UE4SS_API auto delete_mod(Mod*) -> void;
 

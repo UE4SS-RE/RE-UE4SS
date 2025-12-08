@@ -349,6 +349,24 @@ function IsKeyBindRegistered(Key) end
 ---@param ModifierKeys ModifierKey[]
 function IsKeyBindRegistered(Key, ModifierKeys) end
 
+---Restarts the currently running mod
+---Queues the mod for restart on the next update cycle
+function RestartCurrentMod() end
+
+---Uninstalls the currently running mod
+---Queues the mod for uninstallation on the next update cycle
+function UninstallCurrentMod() end
+
+---Restarts another mod by name
+---Queues the specified mod for restart on the next update cycle
+---@param ModName string The name of the mod to restart
+function RestartMod(ModName) end
+
+---Uninstalls another mod by name
+---Queues the specified mod for uninstallation on the next update cycle
+---@param ModName string The name of the mod to uninstall
+function UninstallMod(ModName) end
+
 --- Registers a callback for a UFunction
 --- Callbacks are triggered when a UFunction is executed
 --- The callback params are: UObject self, UFunctionParams...

@@ -3751,6 +3751,68 @@ Overloads:
 
             return 0;
         });
+
+        m_lua.register_function("RestartCurrentMod", [](const LuaMadeSimple::Lua& lua) -> int {
+            auto mod = get_mod_ref(lua);
+            if (!mod)
+            {
+                lua.throw_error("RestartCurrentMod: Could not get mod reference");
+            }
+
+            // Use mod ID for safe cross-thread reference
+            ModId mod_id = mod->get_id();
+            UE4SSProgram::get_program().queue_reinstall_mod(mod_id);
+
+            return 0;
+        });
+
+        m_lua.register_function("UninstallCurrentMod", [](const LuaMadeSimple::Lua& lua) -> int {
+            auto mod = get_mod_ref(lua);
+            if (!mod)
+            {
+                lua.throw_error("UninstallCurrentMod: Could not get mod reference");
+            }
+
+            // Use mod ID for safe cross-thread reference
+            ModId mod_id = mod->get_id();
+            UE4SSProgram::get_program().queue_uninstall_mod(mod_id);
+
+            return 0;
+        });
+
+        // P1: string mod_name - Name of the mod to restart
+        m_lua.register_function("RestartMod", [](const LuaMadeSimple::Lua& lua) -> int {
+            std::string error_overload_not_found{R"(
+No overload found for function 'RestartMod'.
+Overloads:
+#1: RestartMod(string mod_name))"};
+
+            if (!lua.is_string())
+            {
+                lua.throw_error(error_overload_not_found);
+            }
+                        
+            UE4SSProgram::get_program().queue_reinstall_mod_by_name(lua.get_string());
+
+            return 0;
+        });
+
+        // P1: string mod_name - Name of the mod to uninstall
+        m_lua.register_function("UninstallMod", [](const LuaMadeSimple::Lua& lua) -> int {
+            std::string error_overload_not_found{R"(
+No overload found for function 'UninstallMod'.
+Overloads:
+#1: UninstallMod(string mod_name))"};
+
+            if (!lua.is_string())
+            {
+                lua.throw_error(error_overload_not_found);
+            }
+            
+            UE4SSProgram::get_program().queue_uninstall_mod_by_name(lua.get_string());
+
+            return 0;
+        });
     }
 
     auto static is_unreal_version_out_of_bounds_from_64bit(int64_t major_version, int64_t minor_version) -> bool

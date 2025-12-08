@@ -24,11 +24,9 @@
 #include <LuaType/LuaTArray.hpp>
 #include <Mod/LuaMod.hpp>
 #include <UE4SSProgram.hpp>
-#include <Unreal/FProperty.hpp>
+#include <Unreal/CoreUObject/UObject/UnrealType.hpp>
 #include <Unreal/UObject.hpp>
-#include <Unreal/FString.hpp>
 #include <Unreal/FText.hpp>
-#include <Unreal/Property/FArrayProperty.hpp>
 
 #include <lua.hpp>
 
@@ -1359,7 +1357,23 @@ namespace RC::GUI
     auto LuaDebugger::get_mod_scripts(lua_State* L) -> std::vector<std::string>
     {
         std::vector<std::string> scripts;
-        std::set<std::string> seen_paths; // Avoid duplicates
+        std::set<std::string> seen_paths; // Avoid duplicates (uses canonical paths)
+
+        // Helper to normalize path for comparison
+        auto normalize_path = [](const std::filesystem::path& p) -> std::string {
+            try
+            {
+                // Use canonical path for consistent comparison
+                if (std::filesystem::exists(p))
+                {
+                    return std::filesystem::canonical(p).string();
+                }
+            }
+            catch (...)
+            {
+            }
+            return p.string();
+        };
 
         // Find the mod for this state
         for (const auto& mod : UE4SSProgram::get_program().m_mods)
@@ -1388,7 +1402,8 @@ namespace RC::GUI
                                 if (entry.is_regular_file() && entry.path().extension() == ".lua")
                                 {
                                     std::string path_str = entry.path().string();
-                                    if (seen_paths.insert(path_str).second)
+                                    std::string canonical_str = normalize_path(entry.path());
+                                    if (seen_paths.insert(canonical_str).second)
                                     {
                                         scripts.push_back(path_str);
                                     }
@@ -1409,7 +1424,8 @@ namespace RC::GUI
                         {
                             for (const auto& path : it->second)
                             {
-                                if (seen_paths.insert(path).second)
+                                std::string canonical_str = normalize_path(path);
+                                if (seen_paths.insert(canonical_str).second)
                                 {
                                     scripts.push_back(path);
                                 }
@@ -1482,12 +1498,10 @@ namespace RC::GUI
 
                     // Uninstall and reinstall the mod
                     // Queue this on the game thread to be safe
-                    UE4SSProgram::get_program().queue_event([](void* data) {
-                                                                auto* mod = static_cast<LuaMod*>(data);
-                                                                mod->uninstall();
-                                                                mod->start_mod();
-                                                            },
-                                                            lua_mod);
+                    UE4SSProgram::get_program().queue_event([lua_mod]() {
+                        lua_mod->uninstall();
+                        lua_mod->start_mod();
+                    });
                     break;
                 }
             }
@@ -1501,97 +1515,79 @@ namespace RC::GUI
             return;
         }
 
-        // Queue execution on game thread
-        struct ReplData
-        {
-            LuaDebugger* debugger;
-            lua_State* L;
-            std::string code;
-        };
+        // Queue execution on main thread
+        UE4SSProgram::get_program().queue_event([this, L, code]() {
+            std::string result;
+            bool is_error = false;
 
-        auto* data = new ReplData{this, L, code};
+            int original_top = lua_gettop(L);
 
-        UE4SSProgram::get_program().queue_event(
-                [](void* userdata) {
-                    auto* repl_data = static_cast<ReplData*>(userdata);
-                    auto* debugger = repl_data->debugger;
-                    lua_State* L = repl_data->L;
-                    const std::string& code = repl_data->code;
+            // Try to execute as expression first (return value)
+            std::string expr_code = "return " + code;
+            int load_result = luaL_loadstring(L, expr_code.c_str());
 
-                    std::string result;
-                    bool is_error = false;
+            if (load_result != LUA_OK)
+            {
+                lua_pop(L, 1); // Pop error message
+                // Try as statement
+                load_result = luaL_loadstring(L, code.c_str());
+            }
 
-                    int original_top = lua_gettop(L);
-
-                    // Try to execute as expression first (return value)
-                    std::string expr_code = "return " + code;
-                    int load_result = luaL_loadstring(L, expr_code.c_str());
-
-                    if (load_result != LUA_OK)
+            if (load_result == LUA_OK)
+            {
+                int call_result = lua_pcall(L, 0, LUA_MULTRET, 0);
+                if (call_result == LUA_OK)
+                {
+                    // Collect return values
+                    int num_results = lua_gettop(L) - original_top;
+                    if (num_results > 0)
                     {
-                        lua_pop(L, 1); // Pop error message
-                        // Try as statement
-                        load_result = luaL_loadstring(L, code.c_str());
-                    }
-
-                    if (load_result == LUA_OK)
-                    {
-                        int call_result = lua_pcall(L, 0, LUA_MULTRET, 0);
-                        if (call_result == LUA_OK)
+                        std::ostringstream oss;
+                        for (int i = 1; i <= num_results; ++i)
                         {
-                            // Collect return values
-                            int num_results = lua_gettop(L) - original_top;
-                            if (num_results > 0)
-                            {
-                                std::ostringstream oss;
-                                for (int i = 1; i <= num_results; ++i)
-                                {
-                                    if (i > 1)
-                                        oss << ", ";
-                                    oss << format_stack_value(L, original_top + i, 256);
-                                }
-                                result = oss.str();
-                            }
-                            else
-                            {
-                                result = "(no return value)";
-                            }
+                            if (i > 1)
+                                oss << ", ";
+                            oss << format_stack_value(L, original_top + i, 256);
                         }
-                        else
-                        {
-                            result = lua_tostring(L, -1);
-                            is_error = true;
-                        }
+                        result = oss.str();
                     }
                     else
                     {
-                        result = lua_tostring(L, -1);
-                        is_error = true;
+                        result = "(no return value)";
                     }
+                }
+                else
+                {
+                    result = lua_tostring(L, -1);
+                    is_error = true;
+                }
+            }
+            else
+            {
+                result = lua_tostring(L, -1);
+                is_error = true;
+            }
 
-                    lua_settop(L, original_top);
+            lua_settop(L, original_top);
 
-                    // Store result
-                    {
-                        std::lock_guard<std::mutex> lock(debugger->m_repl_mutex);
-                        ReplHistoryEntry entry;
-                        entry.input = code;
-                        entry.output = result;
-                        entry.is_error = is_error;
-                        entry.timestamp = std::chrono::system_clock::now();
-                        debugger->m_repl_history.push_back(std::move(entry));
+            // Store result
+            {
+                std::lock_guard<std::mutex> lock(m_repl_mutex);
+                ReplHistoryEntry entry;
+                entry.input = code;
+                entry.output = result;
+                entry.is_error = is_error;
+                entry.timestamp = std::chrono::system_clock::now();
+                m_repl_history.push_back(std::move(entry));
 
-                        while (debugger->m_repl_history.size() > MAX_REPL_HISTORY)
-                        {
-                            debugger->m_repl_history.pop_front();
-                        }
+                while (m_repl_history.size() > MAX_REPL_HISTORY)
+                {
+                    m_repl_history.pop_front();
+                }
 
-                        debugger->m_repl_pending = false;
-                    }
-
-                    delete repl_data;
-                },
-                data);
+                m_repl_pending = false;
+            }
+        });
 
         m_repl_pending = true;
     }
@@ -2087,37 +2083,34 @@ namespace RC::GUI
         }
 
         // Queue the globals fetch on the game thread
-        UE4SSProgram::get_program().queue_event(
-                [](void* data) {
-                    auto* debugger = static_cast<LuaDebugger*>(data);
-                    lua_State* L = debugger->m_selected_state;
+        UE4SSProgram::get_program().queue_event([this]() {
+            lua_State* L = m_selected_state;
 
-                    if (!L)
-                    {
-                        return;
-                    }
+            if (!L)
+            {
+                return;
+            }
 
-                    auto globals = get_globals(L, 500);
+            auto globals = get_globals(L, 500);
 
-                    // Fetch table children for expanded paths
-                    std::unordered_map<std::string, std::vector<std::pair<std::string, LuaStackSlot>>> children_cache;
+            // Fetch table children for expanded paths
+            std::unordered_map<std::string, std::vector<std::pair<std::string, LuaStackSlot>>> children_cache;
 
-                    // Fetch children for all expanded paths (cache even if empty)
-                    for (const auto& path : debugger->m_expanded_paths)
-                    {
-                        auto children = get_table_entries_at_path(L, path);
-                        children_cache[path] = std::move(children);
-                    }
+            // Fetch children for all expanded paths (cache even if empty)
+            for (const auto& path : m_expanded_paths)
+            {
+                auto children = get_table_entries_at_path(L, path);
+                children_cache[path] = std::move(children);
+            }
 
-                    {
-                        std::lock_guard<std::mutex> lock(debugger->m_globals_mutex);
-                        debugger->m_cached_globals = std::move(globals);
-                        debugger->m_cached_globals_state = L;
-                        debugger->m_globals_children_cache = std::move(children_cache);
-                        debugger->m_globals_refresh_requested = false;
-                    }
-                },
-                this);
+            {
+                std::lock_guard<std::mutex> lock(m_globals_mutex);
+                m_cached_globals = std::move(globals);
+                m_cached_globals_state = L;
+                m_globals_children_cache = std::move(children_cache);
+                m_globals_refresh_requested = false;
+            }
+        });
 
         m_globals_refresh_requested = true;
     }
@@ -2131,44 +2124,37 @@ namespace RC::GUI
 
         lua_State* L = m_selected_state;
 
-        UE4SSProgram::get_program().queue_event(
-                [](void* data) {
-                    auto* params = static_cast<std::pair<LuaDebugger*, lua_State*>*>(data);
-                    auto* debugger = params->first;
-                    lua_State* L = params->second;
-                    delete params;
+        UE4SSProgram::get_program().queue_event([this, L]() {
+            if (!L)
+            {
+                return;
+            }
 
-                    if (!L)
+            std::vector<std::string> loaded_modules;
+            lua_getglobal(L, "ue4ss_loaded_modules");
+            if (lua_istable(L, -1))
+            {
+                lua_pushnil(L);
+                while (lua_next(L, -2) != 0)
+                {
+                    if (lua_isstring(L, -2))
                     {
-                        return;
-                    }
-
-                    std::vector<std::string> loaded_modules;
-                    lua_getglobal(L, "ue4ss_loaded_modules");
-                    if (lua_istable(L, -1))
-                    {
-                        lua_pushnil(L);
-                        while (lua_next(L, -2) != 0)
+                        const char* path = lua_tostring(L, -2);
+                        if (path && std::filesystem::exists(path))
                         {
-                            if (lua_isstring(L, -2))
-                            {
-                                const char* path = lua_tostring(L, -2);
-                                if (path && std::filesystem::exists(path))
-                                {
-                                    loaded_modules.push_back(path);
-                                }
-                            }
-                            lua_pop(L, 1);
+                            loaded_modules.push_back(path);
                         }
                     }
                     lua_pop(L, 1);
+                }
+            }
+            lua_pop(L, 1);
 
-                    {
-                        std::lock_guard<std::mutex> lock(debugger->m_loaded_modules_mutex);
-                        debugger->m_loaded_modules_cache[L] = std::move(loaded_modules);
-                    }
-                },
-                new std::pair<LuaDebugger*, lua_State*>(this, L));
+            {
+                std::lock_guard<std::mutex> lock(m_loaded_modules_mutex);
+                m_loaded_modules_cache[L] = std::move(loaded_modules);
+            }
+        });
     }
 
     // Helper to get table entries at a given path (e.g., "myTable.subTable")
@@ -3255,14 +3241,23 @@ namespace RC::GUI
 
     auto LuaDebugger::render_script_editor() -> void
     {
-        if (!m_selected_state)
+        // Get scripts list if we have a selected state
+        std::vector<std::string> scripts;
+        if (m_selected_state)
         {
-            ImGui::TextDisabled("Select a Lua state to edit scripts");
+            scripts = get_mod_scripts(m_selected_state);
+        }
+
+        // Allow editing if we have a file loaded, even without a selected state
+        bool has_loaded_file = !m_script_edit_path.empty() && !m_script_original_content.empty();
+
+        if (!m_selected_state && !has_loaded_file)
+        {
+            ImGui::TextDisabled("Select a Lua state or open a script from the Mods tab");
             return;
         }
 
-        auto scripts = get_mod_scripts(m_selected_state);
-        if (scripts.empty())
+        if (m_selected_state && scripts.empty() && !has_loaded_file)
         {
             ImGui::TextDisabled("No scripts found for this mod");
             return;
@@ -3275,6 +3270,24 @@ namespace RC::GUI
             size_t last_slash = current_display.find_last_of("\\/");
             if (last_slash != std::string::npos)
                 current_display = current_display.substr(last_slash + 1);
+        }
+
+        // If no state selected but we have a loaded file, scan for other scripts in the same mod folder
+        if (scripts.empty() && has_loaded_file)
+        {
+            std::filesystem::path loaded_path(m_script_edit_path);
+            std::filesystem::path scripts_dir = loaded_path.parent_path();
+            if (std::filesystem::exists(scripts_dir))
+            {
+                for (const auto& entry : std::filesystem::recursive_directory_iterator(scripts_dir))
+                {
+                    if (entry.is_regular_file() && entry.path().extension() == ".lua")
+                    {
+                        scripts.push_back(entry.path().string());
+                    }
+                }
+                std::sort(scripts.begin(), scripts.end());
+            }
         }
 
         ImGui::SetNextItemWidth(scaled(300.0f));
@@ -3334,6 +3347,49 @@ namespace RC::GUI
         {
             ImGui::SameLine();
             ImGui::TextColored(ImVec4(1.0f, 0.8f, 0.0f, 1.0f), ICON_FA_EXCLAMATION_TRIANGLE " Unsaved");
+        }
+
+        // Restart/Start mod button
+        if (!m_script_edit_path.empty())
+        {
+            std::filesystem::path script_path(m_script_edit_path);
+            std::filesystem::path mod_path = script_path.parent_path().parent_path();
+            std::string mod_name = mod_path.stem().string();
+
+            bool mod_is_running = false;
+            for (const auto& mod : UE4SSProgram::get_program().m_mods)
+            {
+                auto* lua_mod = dynamic_cast<LuaMod*>(mod.get());
+                if (lua_mod && to_string(lua_mod->get_name()) == mod_name && lua_mod->is_started())
+                {
+                    mod_is_running = true;
+                    break;
+                }
+            }
+
+            ImGui::SameLine();
+            if (mod_is_running)
+            {
+                if (ImGui::Button(ICON_FA_SYNC " Restart"))
+                {
+                    restart_mod_by_name(mod_name);
+                }
+                if (ImGui::IsItemHovered())
+                {
+                    ImGui::SetTooltip("Restart %s", mod_name.c_str());
+                }
+            }
+            else
+            {
+                if (ImGui::Button(ICON_FA_PLAY " Start"))
+                {
+                    start_mod_by_path(mod_path);
+                }
+                if (ImGui::IsItemHovered())
+                {
+                    ImGui::SetTooltip("Start %s", mod_name.c_str());
+                }
+            }
         }
 
         ImGui::Separator();
@@ -3648,6 +3704,39 @@ namespace RC::GUI
         m_mods_list_dirty = true;
     }
 
+    auto LuaDebugger::restart_mod_by_name(const std::string& mod_name) -> void
+    {
+        UE4SSProgram::get_program().queue_event([mod_name]() {
+            UE4SSProgram::get_program().queue_reinstall_mod_by_name(mod_name);
+            if (LuaDebugger::has_instance())
+            {
+                LuaDebugger::get().m_mods_list_dirty = true;
+            }
+        });
+    }
+
+    auto LuaDebugger::uninstall_mod_by_name(const std::string& mod_name) -> void
+    {
+        UE4SSProgram::get_program().queue_event([mod_name]() {
+            UE4SSProgram::get_program().queue_uninstall_mod_by_name(mod_name);
+            if (LuaDebugger::has_instance())
+            {
+                LuaDebugger::get().m_mods_list_dirty = true;
+            }
+        });
+    }
+
+    auto LuaDebugger::start_mod_by_path(const std::filesystem::path& mod_path) -> void
+    {
+        UE4SSProgram::get_program().queue_event([mod_path]() {
+            UE4SSProgram::get_program().queue_start_lua_mod_by_path(mod_path);
+            if (LuaDebugger::has_instance())
+            {
+                LuaDebugger::get().m_mods_list_dirty = true;
+            }
+        });
+    }
+
     auto LuaDebugger::create_new_mod(const std::string& name) -> bool
     {
         if (name.empty())
@@ -3699,6 +3788,9 @@ namespace RC::GUI
 
         m_mods_list_dirty = true;
 
+        // New mod is not running, clear selected state so dropdown uses filesystem scan
+        m_selected_state = nullptr;
+
         m_script_edit_path = main_lua_path.string();
         const LuaScriptFile* script = load_script(m_script_edit_path);
         if (script && script->loaded)
@@ -3714,7 +3806,7 @@ namespace RC::GUI
         return true;
     }
 
-    auto LuaDebugger::create_new_file(const std::string& mod_path, const std::string& filename) -> bool
+    auto LuaDebugger::create_new_file(const std::string& mod_path, const std::string& filename, bool add_require_to_main) -> bool
     {
         if (filename.empty() || mod_path.empty())
         {
@@ -3749,9 +3841,97 @@ namespace RC::GUI
         file << "return M\n";
         file.close();
 
+        // Add require() to main.lua if requested
+        if (add_require_to_main)
+        {
+            std::filesystem::path main_lua_path = scripts_path / "main.lua";
+            if (std::filesystem::exists(main_lua_path))
+            {
+                std::ifstream main_file_read(main_lua_path);
+                std::string main_content((std::istreambuf_iterator<char>(main_file_read)), std::istreambuf_iterator<char>());
+                main_file_read.close();
+
+                std::string require_line = "local " + module_name + " = require(\"" + module_name + "\")\n";
+
+                // Check if require already exists
+                if (main_content.find("require(\"" + module_name + "\")") == std::string::npos)
+                {
+                    // Find the best place to insert - after existing requires or at the top
+                    size_t insert_pos = 0;
+                    size_t last_require_pos = main_content.rfind("require(");
+                    if (last_require_pos != std::string::npos)
+                    {
+                        // Find end of line after last require
+                        size_t newline_pos = main_content.find('\n', last_require_pos);
+                        if (newline_pos != std::string::npos)
+                        {
+                            insert_pos = newline_pos + 1;
+                        }
+                    }
+                    else
+                    {
+                        // No existing requires, find end of any initial comments
+                        size_t pos = 0;
+                        while (pos < main_content.size())
+                        {
+                            // Skip whitespace
+                            while (pos < main_content.size() && (main_content[pos] == ' ' || main_content[pos] == '\t' || main_content[pos] == '\n' || main_content[pos] == '\r'))
+                                pos++;
+
+                            if (pos < main_content.size() && main_content[pos] == '-' && pos + 1 < main_content.size() && main_content[pos + 1] == '-')
+                            {
+                                // Skip comment line
+                                size_t newline = main_content.find('\n', pos);
+                                if (newline != std::string::npos)
+                                    pos = newline + 1;
+                                else
+                                    break;
+                            }
+                            else
+                            {
+                                break;
+                            }
+                        }
+                        insert_pos = pos;
+                    }
+
+                    main_content.insert(insert_pos, require_line);
+
+                    std::ofstream main_file_write(main_lua_path);
+                    main_file_write << main_content;
+                    main_file_write.close();
+
+                    // Clear cache for main.lua so it reloads
+                    {
+                        std::lock_guard<std::mutex> lock(m_scripts_mutex);
+                        m_script_cache.erase(main_lua_path.string());
+                    }
+
+                    Output::send(STR("Added require() for '{}' to main.lua\n"), to_generic_string(module_name));
+                }
+            }
+        }
+
         {
             std::lock_guard<std::mutex> lock(m_scripts_mutex);
             m_script_cache.erase(file_path.string());
+        }
+
+        // Check if mod is running; if not, clear selected state so dropdown uses filesystem scan
+        bool mod_is_running = false;
+        std::string mod_name = std::filesystem::path(mod_path).stem().string();
+        for (const auto& mod : UE4SSProgram::get_program().m_mods)
+        {
+            auto* lua_mod = dynamic_cast<LuaMod*>(mod.get());
+            if (lua_mod && to_string(lua_mod->get_name()) == mod_name && lua_mod->is_started())
+            {
+                mod_is_running = true;
+                break;
+            }
+        }
+        if (!mod_is_running)
+        {
+            m_selected_state = nullptr;
         }
 
         m_script_edit_path = file_path.string();
@@ -3800,13 +3980,11 @@ namespace RC::GUI
         if (ImGui::Button(ICON_FA_REDO " Restart All Mods"))
         {
             gui.m_event_thread_busy = true;
-            UE4SSProgram::get_program().queue_event(
-                    [](void* data) {
-                        UE4SSProgram::get_program().reinstall_mods();
-                        static_cast<GUI::DebuggingGUI*>(data)->m_event_thread_busy = false;
-                    },
-                    &gui);
-            m_mods_list_dirty = true;
+            UE4SSProgram::get_program().queue_event([&gui, this]() {
+                UE4SSProgram::get_program().queue_reinstall_mods();
+                gui.m_event_thread_busy = false;
+                m_mods_list_dirty = true;
+            });
         }
         if (event_busy)
         {
@@ -3860,7 +4038,9 @@ namespace RC::GUI
                 ImGui::Text("%s", mod.name.c_str());
             }
 
-            ImGui::SameLine(ImGui::GetContentRegionAvail().x - scaled(100.0f));
+            // Use consistent button width for alignment (widest case: Open + New + Restart + Uninstall)
+            float button_width = scaled(320.0f);
+            ImGui::SameLine(ImGui::GetContentRegionAvail().x - button_width);
 
             if (ImGui::SmallButton(ICON_FA_FOLDER_OPEN " Open"))
             {
@@ -3868,6 +4048,11 @@ namespace RC::GUI
                 std::filesystem::path main_lua = scripts_path / "main.lua";
                 if (std::filesystem::exists(main_lua))
                 {
+                    // Clear selected state if mod isn't running so dropdown uses filesystem scan
+                    if (!mod.is_running)
+                    {
+                        m_selected_state = nullptr;
+                    }
                     m_script_edit_path = main_lua.string();
                     const LuaScriptFile* script = load_script(m_script_edit_path);
                     if (script && script->loaded)
@@ -3886,7 +4071,68 @@ namespace RC::GUI
             {
                 m_show_create_file_popup = true;
                 m_new_file_name.clear();
+                m_add_require_to_main = true;
                 m_create_file_mod_path = mod.path;
+            }
+
+            // Show different buttons based on whether mod is running
+            if (mod.is_running)
+            {
+                ImGui::SameLine();
+
+                if (event_busy)
+                {
+                    ImGui::BeginDisabled(true);
+                }
+
+                if (ImGui::SmallButton(ICON_FA_SYNC " Restart"))
+                {
+                    restart_mod_by_name(mod.name);
+                }
+                if (ImGui::IsItemHovered())
+                {
+                    ImGui::SetTooltip("Uninstall and reinstall this mod");
+                }
+
+                ImGui::SameLine();
+
+                if (ImGui::SmallButton(ICON_FA_STOP " Uninstall"))
+                {
+                    uninstall_mod_by_name(mod.name);
+                }
+                if (ImGui::IsItemHovered())
+                {
+                    ImGui::SetTooltip("Uninstall this mod (will not run until next full reload)");
+                }
+
+                if (event_busy)
+                {
+                    ImGui::EndDisabled();
+                }
+            }
+            else
+            {
+                // Show Start button for mods that are not running
+                ImGui::SameLine();
+
+                if (event_busy)
+                {
+                    ImGui::BeginDisabled(true);
+                }
+
+                if (ImGui::SmallButton(ICON_FA_PLAY " Start"))
+                {
+                    start_mod_by_path(mod.path);
+                }
+                if (ImGui::IsItemHovered())
+                {
+                    ImGui::SetTooltip("Start this mod without reloading all mods");
+                }
+
+                if (event_busy)
+                {
+                    ImGui::EndDisabled();
+                }
             }
 
             if (ImGui::IsItemHovered())
@@ -3954,9 +4200,11 @@ namespace RC::GUI
                 ImGui::TextDisabled(".lua");
             }
 
+            ImGui::Checkbox("Add require() to main.lua", &m_add_require_to_main);
+
             if ((ImGui::Button("Create", ImVec2(scaled(120.0f), 0)) || enter_pressed) && !m_new_file_name.empty())
             {
-                if (create_new_file(m_create_file_mod_path.string(), m_new_file_name))
+                if (create_new_file(m_create_file_mod_path.string(), m_new_file_name, m_add_require_to_main))
                 {
                     ImGui::CloseCurrentPopup();
                 }

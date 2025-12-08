@@ -1010,7 +1010,7 @@ namespace RC
             {
                 register_keydown_event(settings_manager.General.HotReloadKey, {Input::ModifierKey::CONTROL}, [&]() {
                     TRY([&] {
-                        reinstall_mods();
+                        queue_reinstall_mods();
                     });
                 });
             }
@@ -1058,6 +1058,7 @@ namespace RC
     auto UE4SSProgram::update() -> void
     {
         ProfilerSetThreadName("UE4SS-UpdateThread");
+        m_event_loop_thread_id = std::this_thread::get_id();
 
         on_program_start();
 
@@ -1078,13 +1079,13 @@ namespace RC
                 std::lock_guard<std::mutex> guard(m_event_queue_mutex);
                 m_queued_events.erase(std::remove_if(m_queued_events.begin(),
                                                      m_queued_events.end(),
-                                                     [&](Event& event) -> bool {
+                                                     [&](EventCallable& event) -> bool {
                                                          if (num_events_executed >= max_events_executed_per_frame)
                                                          {
                                                              return false;
                                                          }
                                                          ++num_events_executed;
-                                                         event.callable(event.data);
+                                                         event();
                                                          return true;
                                                      }),
                                       m_queued_events.end());
@@ -1567,8 +1568,35 @@ namespace RC
         return m_is_program_started;
     }
 
-    auto UE4SSProgram::reinstall_mods() -> void
+    auto UE4SSProgram::find_mod_by_id(ModId mod_id) -> Mod*
     {
+        if (mod_id == InvalidModId)
+        {
+            return nullptr;
+        }
+        for (auto& mod : m_mods)
+        {
+            if (mod->get_id() == mod_id)
+            {
+                return mod.get();
+            }
+        }
+        return nullptr;
+    }
+
+    auto UE4SSProgram::find_lua_mod_by_id(ModId mod_id) -> LuaMod*
+    {
+        return dynamic_cast<LuaMod*>(find_mod_by_id(mod_id));
+    }
+
+    auto UE4SSProgram::queue_reinstall_mods() -> void
+    {
+        if (!is_event_loop_thread())
+        {
+            queue_event([this]() { queue_reinstall_mods(); });
+            return;
+        }
+
         ProfilerScope();
         Output::send(STR("Re-installing all mods\n"));
 
@@ -1628,6 +1656,257 @@ namespace RC
         }
 
         Output::send(STR("All mods re-installed\n"));
+    }
+
+    auto UE4SSProgram::queue_reinstall_mod(LuaMod* mod) -> void
+    {
+        if (!mod)
+        {
+            return;
+        }
+
+        if (!is_event_loop_thread())
+        {
+            queue_event([this, mod]() { queue_reinstall_mod(mod); });
+            return;
+        }
+
+        // Save mod info before uninstalling
+        StringType mod_name = StringType(mod->get_name());
+        std::filesystem::path mod_path = mod->get_path();
+
+        Output::send(STR("Reinstalling mod: {}\n"), mod_name);
+
+        // Pause event processing for safety
+        m_pause_events_processing = true;
+
+        mod->uninstall();
+
+        // Remove key binds registered by this specific mod
+#ifdef HAS_INPUT
+        m_input_handler.get_events_safe([&](auto& key_set) {
+            std::erase_if(key_set.key_data, [&](auto& item) -> bool {
+                auto& [_, key_data] = item;
+                std::erase_if(key_data, [&](Input::KeyData& kd) -> bool {
+                    // custom_data == 1: Bind came from Lua, custom_data2 is pointer to LuaMod
+                    return kd.custom_data == 1 && kd.custom_data2 == mod;
+                });
+                return key_data.empty();
+            });
+        });
+#endif
+
+        // Remove the old mod from the list
+        delete_mod(mod);
+        mod = nullptr;
+
+        // Resume event processing before starting the new mod
+        m_pause_events_processing = false;
+
+        // Create a new LuaMod for this mod (same as setup_mods does)
+        auto new_mod = std::make_unique<LuaMod>(*this, std::move(mod_name), std::move(mod_path));
+        LuaMod* new_mod_ptr = new_mod.get();
+        m_mods.emplace_back(std::move(new_mod));
+
+        new_mod_ptr->start_mod();
+
+        Output::send(STR("Mod '{}' reinstalled\n"), new_mod_ptr->get_name());
+    }
+
+    auto UE4SSProgram::queue_uninstall_mod(LuaMod* mod) -> void
+    {
+        if (!mod)
+        {
+            return;
+        }
+
+        if (!is_event_loop_thread())
+        {
+            queue_event([this, mod]() { queue_uninstall_mod(mod); });
+            return;
+        }
+
+        StringType mod_name = StringType(mod->get_name());
+        Output::send(STR("Uninstalling mod: {}\n"), mod_name);
+
+        // Pause event processing for safety
+        m_pause_events_processing = true;
+
+        mod->uninstall();
+
+        // Remove key binds registered by this specific mod
+#ifdef HAS_INPUT
+        m_input_handler.get_events_safe([&](auto& key_set) {
+            std::erase_if(key_set.key_data, [&](auto& item) -> bool {
+                auto& [_, key_data] = item;
+                std::erase_if(key_data, [&](Input::KeyData& kd) -> bool {
+                    // custom_data == 1: Bind came from Lua, custom_data2 is pointer to LuaMod
+                    return kd.custom_data == 1 && kd.custom_data2 == mod;
+                });
+                return key_data.empty();
+            });
+        });
+#endif
+
+        delete_mod(mod);
+
+        // Resume event processing
+        m_pause_events_processing = false;
+
+        Output::send(STR("Mod '{}' uninstalled\n"), mod_name);
+    }
+
+    auto UE4SSProgram::queue_reinstall_mod(ModId mod_id) -> void
+    {
+        if (mod_id == InvalidModId)
+        {
+            return;
+        }
+
+        if (!is_event_loop_thread())
+        {
+            queue_event([this, mod_id]() { queue_reinstall_mod(mod_id); });
+            return;
+        }
+
+        // Look up the mod by ID at execution time (safe for queued events)
+        if (auto* lua_mod = find_lua_mod_by_id(mod_id))
+        {
+            queue_reinstall_mod(lua_mod);
+        }
+        else
+        {
+            Output::send<LogLevel::Warning>(STR("Could not find mod to reinstall with ID: {}\n"), mod_id);
+        }
+    }
+
+    auto UE4SSProgram::queue_uninstall_mod(ModId mod_id) -> void
+    {
+        if (mod_id == InvalidModId)
+        {
+            return;
+        }
+
+        if (!is_event_loop_thread())
+        {
+            queue_event([this, mod_id]() { queue_uninstall_mod(mod_id); });
+            return;
+        }
+
+        // Look up the mod by ID at execution time (safe for queued events)
+        if (auto* lua_mod = find_lua_mod_by_id(mod_id))
+        {
+            queue_uninstall_mod(lua_mod);
+        }
+        else
+        {
+            Output::send<LogLevel::Warning>(STR("Could not find mod to uninstall with ID: {}\n"), mod_id);
+        }
+    }
+
+    auto UE4SSProgram::queue_reinstall_mod_by_name(const std::string& mod_name) -> void
+    {
+        if (!is_event_loop_thread())
+        {
+            queue_event([this, mod_name]() { queue_reinstall_mod_by_name(mod_name); });
+            return;
+        }
+
+        // Find the mod by name at execution time (safe for queued events)
+        for (auto& mod : m_mods)
+        {
+            auto* lua_mod = dynamic_cast<LuaMod*>(mod.get());
+            if (lua_mod && to_string(lua_mod->get_name()) == mod_name)
+            {
+                queue_reinstall_mod(lua_mod);
+                return;
+            }
+        }
+        Output::send<LogLevel::Warning>(STR("Could not find mod to reinstall: {}\n"), ensure_str(mod_name));
+    }
+
+    auto UE4SSProgram::queue_reinstall_mod_by_name(std::string_view mod_name) -> void
+    {
+        queue_reinstall_mod_by_name(std::string{mod_name});
+    }
+
+    auto UE4SSProgram::queue_uninstall_mod_by_name(const std::string& mod_name) -> void
+    {
+        if (!is_event_loop_thread())
+        {
+            queue_event([this, mod_name]() { queue_uninstall_mod_by_name(mod_name); });
+            return;
+        }
+
+        // Find the mod by name at execution time (safe for queued events)
+        for (auto& mod : m_mods)
+        {
+            auto* lua_mod = dynamic_cast<LuaMod*>(mod.get());
+            if (lua_mod && to_string(lua_mod->get_name()) == mod_name)
+            {
+                queue_uninstall_mod(lua_mod);
+                return;
+            }
+        }
+        Output::send<LogLevel::Warning>(STR("Could not find mod to uninstall: {}\n"), ensure_str(mod_name));
+    }
+
+    auto UE4SSProgram::queue_uninstall_mod_by_name(std::string_view mod_name) -> void
+    {
+        queue_uninstall_mod_by_name(std::string{mod_name});
+    }
+
+    auto UE4SSProgram::queue_start_lua_mod_by_path(const std::filesystem::path& mod_path) -> void
+    {
+        if (!is_event_loop_thread())
+        {
+            queue_event([this, mod_path]() { queue_start_lua_mod_by_path(mod_path); });
+            return;
+        }
+
+        std::string mod_name_str = mod_path.stem().string();
+
+        // Check if mod already exists in m_mods
+        for (auto& mod : m_mods)
+        {
+            auto* lua_mod = dynamic_cast<LuaMod*>(mod.get());
+            if (lua_mod && to_string(lua_mod->get_name()) == mod_name_str)
+            {
+                if (lua_mod->is_started())
+                {
+                    Output::send<LogLevel::Warning>(STR("Mod '{}' is already running\n"), ensure_str(mod_name_str));
+                    return;
+                }
+                else
+                {
+                    // Mod exists but is not started - remove it first (its Lua state is invalid)
+                    // Then we'll create a fresh one below
+                    delete_mod(lua_mod);
+                    break;
+                }
+            }
+        }
+
+        // Verify the mod path exists and has a main.lua
+        std::filesystem::path scripts_path = mod_path / STR("Scripts");
+        std::filesystem::path main_lua = scripts_path / STR("main.lua");
+        if (!std::filesystem::exists(main_lua))
+        {
+            Output::send<LogLevel::Error>(STR("Cannot start mod '{}': main.lua not found\n"), ensure_str(mod_name_str));
+            return;
+        }
+
+        Output::send(STR("Starting mod: {}\n"), ensure_str(mod_name_str));
+
+        StringType mod_name = ensure_str(mod_name_str);
+
+        auto new_mod = std::make_unique<LuaMod>(*this, std::move(mod_name), std::filesystem::path(mod_path));
+        LuaMod* new_mod_ptr = new_mod.get();
+        m_mods.emplace_back(std::move(new_mod));
+
+        new_mod_ptr->start_mod();
+
+        Output::send(STR("Mod '{}' started\n"), new_mod_ptr->get_name());
     }
 
     auto UE4SSProgram::get_module_directory() -> File::StringType
@@ -1877,14 +2156,19 @@ namespace RC
         m_debugging_gui.remove_tab(tab);
     }
 
-    auto UE4SSProgram::queue_event(EventCallable callable, void* data) -> void
+    auto UE4SSProgram::queue_event(EventCallable callable) -> void
     {
         if (!can_process_events())
         {
             return;
         }
         std::lock_guard<std::mutex> guard(m_event_queue_mutex);
-        m_queued_events.emplace_back(Event{callable, data});
+        m_queued_events.emplace_back(std::move(callable));
+    }
+
+    auto UE4SSProgram::queue_event(LegacyEventCallable callable, void* data) -> void
+    {
+        queue_event([callable, data]() { callable(data); });
     }
 
     auto UE4SSProgram::is_queue_empty() -> bool
