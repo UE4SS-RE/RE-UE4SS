@@ -221,12 +221,18 @@ namespace RC
       public:
         auto init() -> void;
         auto is_program_started() -> bool;
-        auto reinstall_mods() -> void;
-        auto reinstall_mod(LuaMod* mod) -> void;
-        auto uninstall_mod(LuaMod* mod) -> void;
-        auto reinstall_mod_by_name(const std::string& mod_name) -> void;
-        auto uninstall_mod_by_name(const std::string& mod_name) -> void;
-        auto start_lua_mod_by_path(const std::filesystem::path& mod_path) -> LuaMod*;
+        auto find_mod_by_id(ModId mod_id) -> Mod*;
+        auto find_lua_mod_by_id(ModId mod_id) -> LuaMod*;
+        auto queue_reinstall_mods() -> void;
+        auto queue_reinstall_mod(LuaMod* mod) -> void;
+        auto queue_reinstall_mod(ModId mod_id) -> void;
+        auto queue_uninstall_mod(LuaMod* mod) -> void;
+        auto queue_uninstall_mod(ModId mod_id) -> void;
+        auto queue_reinstall_mod_by_name(const std::string& mod_name) -> void;
+        auto queue_reinstall_mod_by_name(std::string_view mod_name) -> void;
+        auto queue_uninstall_mod_by_name(const std::string& mod_name) -> void;
+        auto queue_uninstall_mod_by_name(std::string_view mod_name) -> void;
+        auto queue_start_lua_mod_by_path(const std::filesystem::path& mod_path) -> void;
         auto get_object_dumper_output_directory() -> const File::StringType;
         RC_UE4SS_API auto get_module_directory() -> File::StringType;
         RC_UE4SS_API auto get_game_executable_directory() -> File::StringType;
