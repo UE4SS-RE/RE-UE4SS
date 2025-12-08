@@ -93,13 +93,11 @@ namespace RC::GUI
                     if (ImGui::Button(ICON_FA_ARCHIVE " Dump Objects & Properties"))
                     {
                         m_event_thread_busy = true;
-                        UE4SSProgram::get_program().queue_event(
-                                [](void* data) {
-                                    UE4SSProgram::dump_all_objects_and_properties(UE4SSProgram::get_program().get_object_dumper_output_directory() + STR("\\") +
-                                                                                  UE4SSProgram::m_object_dumper_file_name);
-                                    static_cast<GUI::DebuggingGUI*>(data)->m_event_thread_busy = false;
-                                },
-                                this);
+                        UE4SSProgram::get_program().queue_event([this]() {
+                            UE4SSProgram::dump_all_objects_and_properties(UE4SSProgram::get_program().get_object_dumper_output_directory() + STR("\\") +
+                                                                          UE4SSProgram::m_object_dumper_file_name);
+                            m_event_thread_busy = false;
+                        });
                     }
                     if (event_thread_busy)
                     {
@@ -114,12 +112,10 @@ namespace RC::GUI
                     if (ImGui::Button(ICON_FA_SYNC " Restart All Mods"))
                     {
                         m_event_thread_busy = true;
-                        UE4SSProgram::get_program().queue_event(
-                                [](void* data) {
-                                    UE4SSProgram::get_program().reinstall_mods();
-                                    static_cast<GUI::DebuggingGUI*>(data)->m_event_thread_busy = false;
-                                },
-                                this);
+                        UE4SSProgram::get_program().queue_event([this]() {
+                            UE4SSProgram::get_program().queue_reinstall_mods();
+                            m_event_thread_busy = false;
+                        });
                     }
                     if (event_thread_busy)
                     {

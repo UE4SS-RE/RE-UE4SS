@@ -3759,14 +3759,9 @@ Overloads:
                 lua.throw_error("RestartCurrentMod: Could not get mod reference");
             }
 
-            // Queue the reinstall on the game thread
-            // We use queue_event because this might be called from within the mod itself
-            UE4SSProgram::get_program().queue_event(
-                    [](void* data) {
-                        auto* lua_mod = static_cast<LuaMod*>(data);
-                        UE4SSProgram::get_program().reinstall_mod(lua_mod);
-                    },
-                    mod);
+            // Use mod ID for safe cross-thread reference
+            ModId mod_id = mod->get_id();
+            UE4SSProgram::get_program().queue_reinstall_mod(mod_id);
 
             return 0;
         });
@@ -3778,13 +3773,9 @@ Overloads:
                 lua.throw_error("UninstallCurrentMod: Could not get mod reference");
             }
 
-            // Queue the uninstall on the game thread
-            UE4SSProgram::get_program().queue_event(
-                    [](void* data) {
-                        auto* lua_mod = static_cast<LuaMod*>(data);
-                        UE4SSProgram::get_program().uninstall_mod(lua_mod);
-                    },
-                    mod);
+            // Use mod ID for safe cross-thread reference
+            ModId mod_id = mod->get_id();
+            UE4SSProgram::get_program().queue_uninstall_mod(mod_id);
 
             return 0;
         });
@@ -3800,16 +3791,8 @@ Overloads:
             {
                 lua.throw_error(error_overload_not_found);
             }
-
-            auto mod_name = std::make_shared<std::string>(lua.get_string());
-
-            UE4SSProgram::get_program().queue_event(
-                    [](void* data) {
-                        auto* name_ptr = static_cast<std::shared_ptr<std::string>*>(data);
-                        UE4SSProgram::get_program().reinstall_mod_by_name(**name_ptr);
-                        delete name_ptr;
-                    },
-                    new std::shared_ptr<std::string>(mod_name));
+                        
+            UE4SSProgram::get_program().queue_reinstall_mod_by_name(lua.get_string());
 
             return 0;
         });
@@ -3825,16 +3808,8 @@ Overloads:
             {
                 lua.throw_error(error_overload_not_found);
             }
-
-            auto mod_name = std::make_shared<std::string>(lua.get_string());
-
-            UE4SSProgram::get_program().queue_event(
-                    [](void* data) {
-                        auto* name_ptr = static_cast<std::shared_ptr<std::string>*>(data);
-                        UE4SSProgram::get_program().uninstall_mod_by_name(**name_ptr);
-                        delete name_ptr;
-                    },
-                    new std::shared_ptr<std::string>(mod_name));
+            
+            UE4SSProgram::get_program().queue_uninstall_mod_by_name(lua.get_string());
 
             return 0;
         });
