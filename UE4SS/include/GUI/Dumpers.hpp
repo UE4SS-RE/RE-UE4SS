@@ -1,7 +1,14 @@
 #pragma once
 
+namespace RC::Unreal
+{
+    class UObject;
+}
+
 namespace RC::GUI::Dumpers
 {
+    using namespace Unreal;
+
     struct MapDumpFileName
     {
         int8_t currentSMdumpnum{0};
@@ -10,7 +17,8 @@ namespace RC::GUI::Dumpers
 
     auto render() -> void;
 
-    void call_generate_static_mesh_file();
-    void call_generate_all_actor_file();
+    auto call_generate_static_mesh_file() -> void;
+    auto call_generate_all_actor_file() -> void;
+    auto call_generate_object_as_json(UObject*) -> void;
 
 } // namespace RC::GUI::Dumpers
