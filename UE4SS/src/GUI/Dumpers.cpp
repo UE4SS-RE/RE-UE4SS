@@ -10,6 +10,7 @@
 #include <GUI/Dumpers.hpp>
 #include <JSON/JSON.hpp>
 #include <USMapGenerator/Generator.hpp>
+#include <FlagsStringifier.hpp>
 #ifdef TEXT
 #undef TEXT
 #endif
@@ -23,6 +24,7 @@
 #include <Unreal/UnrealInitializer.hpp>
 #include <chrono>
 #include <imgui.h>
+#include <glaze/glaze.hpp>
 
 namespace RC::GUI::Dumpers
 {
@@ -305,9 +307,125 @@ namespace RC::GUI::Dumpers
         return global_json_array.serialize(JSON::ShouldFormat::Yes, &indent_level);
     }
 
+    auto generate_object_as_json(UObject* object) -> StringType
+    {
+        glz::json_t json{};
+        auto& meta = json["Meta"];
+        auto& values = json["Values"];
+        if (!object)
+        {
+            Output::send<LogLevel::Error>(STR("Unable to dump object as JSON, object was invalid\n"));
+            return {};
+        }
+        // Non-instance data.
+        {
+            auto& name_json = meta["NamePrivate"] = {};
+            const auto name = object->GetNamePrivate();
+            name_json["String"] = to_string(name.ToString());
+            auto& name_components = name_json["Components"];
+            name_components["ComparisonIndex"] = name.GetComparisonIndex();
+#ifdef WITH_CASE_PRESERVING_NAME
+            name_components["DisplayIndex"] = name.GetDisplayIndex();
+#else
+            name_components["DisplayIndex"] = nullptr;
+#endif
+            name_components["Number"] = name.GetNumber();
+        }
+        meta["Address"] = fmt::format("{:016X}", std::bit_cast<uintptr_t>(object));
+        {
+            auto& class_private = meta["ClassPrivate"] = {};
+            class_private["Address"] = fmt::format("{:016X}", std::bit_cast<uintptr_t>(object->GetClassPrivate()));
+            class_private["Name"] = fmt::format("{}", to_string(object->GetClassPrivate()->GetName()));
+        }
+        meta["Path"] = fmt::format("{}", to_string(object->GetPathName()));
+        {
+            auto& object_flags = meta["ObjectFlags"];
+            const auto raw_unsafe_object_flags = ObjectFlagsStringifier::get_raw_flags(object);
+            object_flags["Raw"] = raw_unsafe_object_flags;
+            auto& object_flags_array = object_flags["Flags"];
+            auto& array = object_flags_array.data.emplace<glz::json_t::array_t>();
+            const ObjectFlagsStringifier flags_stringifier{object};
+            for (int32_t i = 0; i < flags_stringifier.flag_parts.size(); ++i)
+            {
+                array.emplace_back(flags_stringifier.flag_parts[i]);
+            }
+        }
+        meta["PlayerControlled"] = is_player_controlled(object);
+        {
+            auto& size = meta["Size"] = {};
+            auto& size_excl = size["Exclusive"] = {};
+            auto& size_incl = size["Inclusive"] = {};
+            std::vector<UClass*> all_super_structs{};
+            auto uclass = object->IsA<UStruct>() ? static_cast<UClass*>(object) : object->GetClassPrivate();
+            size["Total"] = uclass->GetPropertiesSize();
+            while (uclass)
+            {
+                all_super_structs.emplace_back(uclass);
+                auto current_class = uclass;
+                uclass = uclass->GetSuperClass();
+                if (uclass == current_class)
+                {
+                    break;
+                }
+            }
+            for (auto it = all_super_structs.begin(); it != all_super_structs.end(); ++it)
+            {
+                auto super = *it;
+                auto super_size = super->GetPropertiesSize();
+                auto supers_super_it = it;
+                ++supers_super_it;
+                if (supers_super_it != all_super_structs.end())
+                {
+                    auto supers_super = *supers_super_it;
+                    super_size -= supers_super->GetPropertiesSize();
+                }
+                size_excl[fmt::format("{}", to_string(super->GetName()))] = super_size;
+                size_incl[fmt::format("{}", to_string(super->GetName()))] = super->GetPropertiesSize();
+            }
+        }
+        // Property values.
+        if (!object->IsA<UStruct>())
+        {
+            auto add_property_value = [&](FProperty* property) {
+                const auto value_container = property->ContainerPtrToValuePtr<void>(object);
+                if (property->IsA<FObjectProperty>())
+                {
+                    const auto object_ptr = *static_cast<UObject**>(value_container);
+                    values[to_string(property->GetName())] = to_string(object_ptr ? object_ptr->GetFullName() : STR("None"));
+                }
+                else
+                {
+                    FString property_text{};
+                    property->ExportTextItem(property_text, value_container, value_container, object, NULL);
+                    values[to_string(property->GetName())] = to_string(*property_text);
+                }
+            };
+            for (const auto property : TFieldRange<FProperty>(object->GetClassPrivate(), EFieldIterationFlags::IncludeDeprecated))
+            {
+                add_property_value(property);
+            }
+            for (UStruct* super_struct : TSuperStructRange(object->GetClassPrivate()))
+            {
+                for (FProperty* property : TFieldRange<FProperty>(super_struct, EFieldIterationFlags::IncludeDeprecated))
+                {
+                    add_property_value(property);
+                }
+            }
+        }
+        if (const auto written = glz::write<glz::opts{.prettify = true}>(json); written.has_value())
+        {
+            return ensure_str(written.value());
+        }
+        else
+        {
+            Output::send<LogLevel::Error>(STR("Error creating JSON: {}\n"), ensure_str(written.error().includer_error));
+            return {};
+        }
+    }
+
     auto CurrentDumpNums = MapDumpFileName{};
 
-    void call_generate_static_mesh_file()
+    auto call_generate_static_mesh_file() -> void
     {
         Output::send(STR("Dumping CSV of all loaded static mesh actors, positions and mesh properties\n"));
         static auto dump_actor_class = UObjectGlobals::StaticFindObject<UClass*>(nullptr, nullptr, STR("/Script/Engine.StaticMeshActor"));
@@ -322,7 +440,7 @@ namespace RC::GUI::Dumpers
         Output::send(STR("Finished dumping CSV of all loaded static mesh actors, positions and mesh properties\n"));
     }
 
-    void call_generate_all_actor_file()
+    auto call_generate_all_actor_file() -> void
     {
         Output::send(STR("Dumping CSV of all loaded actor types, positions and mesh properties\n"));
         StringType file_buffer{};
@@ -333,6 +451,23 @@ namespace RC::GUI::Dumpers
                                File::CreateIfNonExistent::Yes);
         file.write_string_to_file(file_buffer);
         Output::send(STR("Finished dumping CSV of all loaded actor types, positions and mesh properties\n"));
+    }
+
+    auto call_generate_object_as_json(UObject* object) -> void
+    {
+        Output::send(STR("Dumping object ({}) as JSON...\n"), object ? object->GetName() : STR("None"));
+        const StringType file_buffer = generate_object_as_json(object);
+        if (!object || file_buffer.empty())
+        {
+            Output::send<LogLevel::Error>(STR("Was unable to dump object as JSON\n"));
+            return;
+        }
+        auto file = File::open(fmt::format(STR("{}\\IndividualObjectDumps\\{}.json"), UE4SSProgram::get_program().get_working_directory(), object->GetName()),
+                               File::OpenFor::Writing,
+                               File::OverwriteExistingFile::Yes,
+                               File::CreateIfNonExistent::Yes);
+        file.write_string_to_file(file_buffer);
+        Output::send(STR("Finished dumping object as JSON\n"));
     }
 
     auto render() -> void
