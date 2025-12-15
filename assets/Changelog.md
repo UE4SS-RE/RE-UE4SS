@@ -79,6 +79,8 @@ Added ability to call UFunctions directly from the GUI. ([UE4SS #851](https://gi
 
 Added highlights for properties matching the `Has property` and `Has property of type` filters ([UE4SS #1089](https://github.com/UE4SS-RE/RE-UE4SS/pull/1089))
 
+Added a `Dump as JSON` button for individual objects, located next to the `Find functions` button ([UE4SS #1112](https://github.com/UE4SS-RE/RE-UE4SS/pull/1112))
+
 ### Lua Debugger
 
 Added new Lua Debugger GUI tab with debugging tools for Lua mod development  ([UE4SS #1099](https://github.com/UE4SS-RE/RE-UE4SS/pull/1099))
