@@ -2298,7 +2298,7 @@ namespace RC::GUI
             m_function_caller_widget->open_widget_deferred();
         }
         ImGui::SameLine();
-        if (ImGui::Button(ICON_FA_COPY " Copy as JSON"))
+        if (ImGui::Button(ICON_FA_COPY " Dump as JSON"))
         {
             TRY([currently_selected_object] {
                 Dumpers::call_generate_object_as_json(currently_selected_object.object);
