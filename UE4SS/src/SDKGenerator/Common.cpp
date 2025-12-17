@@ -7,6 +7,7 @@
 #include <Unreal/Property/FFieldPathProperty.hpp>
 #include <Unreal/Property/FOptionalProperty.hpp>
 #include <Unreal/CoreUObject/UObject/FUtf8StrProperty.hpp>
+#include <Unreal/CoreUObject/UObject/FAnsiStrProperty.hpp>
 #include <Unreal/CoreUObject/UObject/Class.hpp>
 #include <Unreal/UInterface.hpp>
 #include <Unreal/UPackage.hpp>
@@ -471,6 +472,10 @@ namespace RC::UEGenerator
         {
             return STR("FUtf8String");
         }
+        else if (property->IsA<FAnsiStrProperty>())
+        {
+            return STR("FAnsiString");
+        }
         else if (property->IsA<FTextProperty>())
         {
             return STR("FText");
@@ -791,6 +796,10 @@ namespace RC::UEGenerator
         else if (field_class_name == STR("Utf8StrProperty"))
         {
             return STR("FUtf8String");
+        }
+        else if (field_class_name == STR("AnsiStrProperty"))
+        {
+            return STR("FAnsiString");
         }
         else if (field_class_name == STR("TextProperty"))
         {
