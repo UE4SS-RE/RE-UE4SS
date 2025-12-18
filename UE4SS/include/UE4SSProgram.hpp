@@ -318,26 +318,26 @@ namespace RC
             std::abort();
         };
         template <>
-        RC_UE4SS_API static auto find_mod_by_name<LuaMod>(StringViewType mod_name, IsInstalled is_installed, IsStarted is_started) -> LuaMod*
+        RC_UE4SS_API auto find_mod_by_name<LuaMod>(StringViewType mod_name, IsInstalled is_installed, IsStarted is_started) -> LuaMod*
         {
             return static_cast<LuaMod*>(find_mod_by_name_internal(mod_name, is_installed, is_started, [](auto elem) -> bool {
                 return dynamic_cast<LuaMod*>(elem);
             }));
         }
         template <>
-        RC_UE4SS_API static auto find_mod_by_name<CppMod>(StringViewType mod_name, IsInstalled is_installed, IsStarted is_started) -> CppMod*
+        RC_UE4SS_API auto find_mod_by_name<CppMod>(StringViewType mod_name, IsInstalled is_installed, IsStarted is_started) -> CppMod*
         {
             return static_cast<CppMod*>(find_mod_by_name_internal(mod_name, is_installed, is_started, [](auto elem) -> bool {
                 return dynamic_cast<CppMod*>(elem);
             }));
         }
         template <>
-        RC_UE4SS_API static auto find_mod_by_name<LuaMod>(std::string_view mod_name, IsInstalled is_installed, IsStarted is_started) -> LuaMod*
+        RC_UE4SS_API auto find_mod_by_name<LuaMod>(std::string_view mod_name, IsInstalled is_installed, IsStarted is_started) -> LuaMod*
         {
             return find_mod_by_name<LuaMod>(ensure_str(mod_name), is_installed, is_started);
         }
         template <>
-        RC_UE4SS_API static auto find_mod_by_name<CppMod>(std::string_view mod_name, IsInstalled is_installed, IsStarted is_started) -> CppMod*
+        RC_UE4SS_API auto find_mod_by_name<CppMod>(std::string_view mod_name, IsInstalled is_installed, IsStarted is_started) -> CppMod*
         {
             return find_mod_by_name<CppMod>(ensure_str(mod_name), is_installed, is_started);
         }
