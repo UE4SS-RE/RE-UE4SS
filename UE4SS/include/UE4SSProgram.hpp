@@ -217,6 +217,7 @@ namespace RC
         auto fire_ui_init_for_cpp_mods() -> void;
         auto fire_program_start_for_cpp_mods() -> void;
         auto fire_dll_load_for_cpp_mods(StringViewType dll_name) -> void;
+        auto fire_on_cpp_mods_loaded_for_cpp_mods() -> void;
 
       public:
         auto init() -> void;

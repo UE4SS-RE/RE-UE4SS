@@ -63,5 +63,6 @@ namespace RC
         auto fire_program_start() -> void override;
         auto fire_update() -> void override;
         auto fire_dll_load(StringViewType dll_name) -> void;
+        auto fire_on_cpp_mods_loaded() -> void;
     };
 } // namespace RC
