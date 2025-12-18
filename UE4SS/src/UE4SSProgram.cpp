@@ -1315,6 +1315,17 @@ namespace RC
         }
     }
 
+    auto UE4SSProgram::fire_on_cpp_mods_loaded_for_cpp_mods() -> void
+    {
+        for (const auto& mod : m_mods)
+        {
+            if (auto cpp_mod = dynamic_cast<CppMod*>(mod.get()); cpp_mod)
+            {
+                cpp_mod->fire_on_cpp_mods_loaded();
+            }
+        }
+    }
+
     template <typename ModType>
     auto start_mods() -> std::string
     {
@@ -1509,6 +1520,7 @@ namespace RC
         {
             fire_ui_init_for_cpp_mods();
         }
+        fire_on_cpp_mods_loaded_for_cpp_mods();
     }
 
     auto UE4SSProgram::uninstall_mods() -> void

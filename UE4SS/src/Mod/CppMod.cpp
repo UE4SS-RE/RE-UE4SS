@@ -200,6 +200,14 @@ namespace RC
         }
     }
 
+    auto CppMod::fire_on_cpp_mods_loaded() -> void
+    {
+        if (m_mod)
+        {
+            m_mod->on_cpp_mods_loaded();
+        }
+    }
+
     CppMod::~CppMod()
     {
         if (m_main_dll_module)
