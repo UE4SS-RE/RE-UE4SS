@@ -5075,6 +5075,16 @@ Overloads:
             return action.lua == m_hook_lua;
         });
 
+        // Remove any pending engine tick actions for this mod
+        std::erase_if(m_engine_tick_actions, [&](const SimpleLuaAction& action) {
+            return action.lua == m_hook_lua;
+        });
+
+        // Remove any delayed game thread actions for this mod
+        std::erase_if(m_delayed_game_thread_actions, [&](const DelayedGameThreadAction& action) {
+            return action.lua == m_hook_lua;
+        });
+
         if (m_hook_lua != nullptr)
         {
             m_hook_lua = nullptr; // lua_newthread results are handled by lua GC
