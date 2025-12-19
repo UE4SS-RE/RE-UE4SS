@@ -3632,6 +3632,123 @@ Overloads:
         setup_lua_global_functions_internal(lua, IsTrueMod::Yes);
     }
 
+    static auto process_simple_actions(std::vector<LuaMod::SimpleLuaAction>& actions) -> void
+    {
+        std::erase_if(actions, [&](const LuaMod::SimpleLuaAction& lua_data) -> bool {
+            if (LuaMod::m_is_currently_executing_game_action)
+            {
+                // We can only execute one action per frame so we'll have to wait until the next frame.
+                return false;
+            }
+
+            // Used by other functions to ensure that we don't execute when unsafe
+            LuaMod::m_is_currently_executing_game_action = true;
+
+            lua_data.lua->registry().get_function_ref(lua_data.lua_action_function_ref);
+
+            TRY([&]() {
+                lua_data.lua->call_function(0, 0);
+            });
+
+            // thread_ref came from lua_newthread, we can let it GC now.
+            luaL_unref(lua_data.lua->get_lua_state(), LUA_REGISTRYINDEX, lua_data.lua_action_thread_ref);
+
+            LuaMod::m_is_currently_executing_game_action = false;
+            return true;
+        });
+    }
+
+    template <GameThreadExecutionMethod Executor>
+    static auto process_delayed_actions(std::vector<LuaMod::DelayedGameThreadAction>& actions) -> void
+    {
+        const auto now = std::chrono::steady_clock::now();
+        std::erase_if(actions, [&](LuaMod::DelayedGameThreadAction& action) -> bool {
+            // Only handle ProcessEvent method actions if the executor is ProcessEvent
+            if constexpr (Executor == GameThreadExecutionMethod::ProcessEvent)
+            {
+                if (action.method != GameThreadExecutionMethod::ProcessEvent)
+                {
+                    return false;
+                }
+            }
+
+            // Check if cancelled
+            if (action.cancelled)
+            {
+                luaL_unref(action.lua->get_lua_state(), LUA_REGISTRYINDEX, action.lua_action_thread_ref);
+                return true;
+            }
+
+            // Skip paused actions
+            if (action.paused)
+            {
+                return false;
+            }
+
+            // Check if ready to execute
+            bool ready = false;
+            if (action.method == GameThreadExecutionMethod::EngineTick && action.delay_frames > 0)
+            {
+                // Frame-based delay
+                action.frames_remaining--;
+                ready = action.frames_remaining <= 0;
+            }
+            else if (action.method != GameThreadExecutionMethod::EngineTick && action.delay_frames > 0)
+            {
+                // Skip frame-based delays - they can only be processed by EngineTick
+                // This should never happen since frame-based functions error if EngineTick unavailable
+                if (action.delay_frames > 0)
+                {
+                    Output::send<LogLevel::Warning>(STR("ProcessEvent hook received frame-based delayed action - this should not happen\n"));
+                    return false;
+                }
+            }
+            else
+            {
+                // Time-based delay
+                ready = now >= action.execute_at;
+            }
+
+            if (!ready)
+            {
+                return false;
+            }
+
+            if (LuaMod::m_is_currently_executing_game_action)
+            {
+                return false;
+            }
+
+            LuaMod::m_is_currently_executing_game_action = true;
+
+            action.lua->registry().get_function_ref(action.lua_action_function_ref);
+
+            TRY([&]() {
+                action.lua->call_function(0, 0);
+            });
+
+            LuaMod::m_is_currently_executing_game_action = false;
+
+            // Handle looping
+            if (action.is_looping && !action.cancelled)
+            {
+                // Reset the timer/frame counter
+                if (action.method == GameThreadExecutionMethod::EngineTick && action.delay_frames > 0)
+                {
+                    action.frames_remaining = action.delay_frames;
+                }
+                else
+                {
+                    action.execute_at = std::chrono::steady_clock::now() + std::chrono::milliseconds(action.delay_ms);
+                }
+                return false; // Keep in list
+            }
+
+            luaL_unref(action.lua->get_lua_state(), LUA_REGISTRYINDEX, action.lua_action_thread_ref);
+            return true;
+        });
+    }
+
     auto static process_event_hook([[maybe_unused]] Unreal::UObject* Context,
                                    [[maybe_unused]] Unreal::UFunction* Function,
                                    [[maybe_unused]] void* Parms) -> void
@@ -3640,98 +3757,11 @@ Overloads:
         // NOTE: This will break horribly if UFunctions ever execute asynchronously.
 
         // Process immediate actions
-        LuaMod::m_game_thread_actions.erase(std::remove_if(LuaMod::m_game_thread_actions.begin(),
-                                                           LuaMod::m_game_thread_actions.end(),
-                                                           [&](LuaMod::SimpleLuaAction& lua_data) -> bool {
-                                                               if (LuaMod::m_is_currently_executing_game_action)
-                                                               {
-                                                                   // We can only execute one action per frame so we'll have to wait until the next frame.
-                                                                   return false;
-                                                               }
-
-                                                               // Used by other functions to ensure that we don't execute when unsafe
-                                                               LuaMod::m_is_currently_executing_game_action = true;
-
-                                                               lua_data.lua->registry().get_function_ref(lua_data.lua_action_function_ref);
-
-                                                               TRY([&]() {
-                                                                   lua_data.lua->call_function(0, 0);
-                                                               });
-
-                                                               // thread_ref came from lua_newthread, we can let it GC now.
-                                                               luaL_unref(lua_data.lua->get_lua_state(), LUA_REGISTRYINDEX, lua_data.lua_action_thread_ref);
-
-                                                               LuaMod::m_is_currently_executing_game_action = false;
-                                                               return true;
-                                                           }),
-                                            LuaMod::m_game_thread_actions.end());
+        process_simple_actions(LuaMod::m_game_thread_actions);
 
         // Process time-based delayed actions that use ProcessEvent method
         // Note: Frame-based delays cannot be handled here since we can't count frames in ProcessEvent
-        auto now = std::chrono::steady_clock::now();
-        LuaMod::m_delayed_game_thread_actions.erase(
-                std::remove_if(LuaMod::m_delayed_game_thread_actions.begin(),
-                               LuaMod::m_delayed_game_thread_actions.end(),
-                               [&](LuaMod::DelayedGameThreadAction& action) -> bool {
-                                   // Only handle ProcessEvent method actions in this hook
-                                   if (action.method != GameThreadExecutionMethod::ProcessEvent)
-                                   {
-                                       return false;
-                                   }
-
-                                   // Skip frame-based delays - they can only be processed by EngineTick
-                                   // This should never happen since frame-based functions error if EngineTick unavailable
-                                   if (action.delay_frames > 0)
-                                   {
-                                       Output::send<LogLevel::Warning>(STR("ProcessEvent hook received frame-based delayed action - this should not happen\n"));
-                                       return false;
-                                   }
-
-                                   // Check if cancelled
-                                   if (action.cancelled)
-                                   {
-                                       luaL_unref(action.lua->get_lua_state(), LUA_REGISTRYINDEX, action.lua_action_thread_ref);
-                                       return true;
-                                   }
-
-                                   // Skip paused actions
-                                   if (action.paused)
-                                   {
-                                       return false;
-                                   }
-
-                                   // Check if time-based delay is ready
-                                   if (now < action.execute_at)
-                                   {
-                                       return false;
-                                   }
-
-                                   if (LuaMod::m_is_currently_executing_game_action)
-                                   {
-                                       return false;
-                                   }
-
-                                   LuaMod::m_is_currently_executing_game_action = true;
-
-                                   action.lua->registry().get_function_ref(action.lua_action_function_ref);
-
-                                   TRY([&]() {
-                                       action.lua->call_function(0, 0);
-                                   });
-
-                                   LuaMod::m_is_currently_executing_game_action = false;
-
-                                   // Handle looping
-                                   if (action.is_looping && !action.cancelled)
-                                   {
-                                       action.execute_at = std::chrono::steady_clock::now() + std::chrono::milliseconds(action.delay_ms);
-                                       return false; // Keep in list
-                                   }
-
-                                   luaL_unref(action.lua->get_lua_state(), LUA_REGISTRYINDEX, action.lua_action_thread_ref);
-                                   return true;
-                               }),
-                LuaMod::m_delayed_game_thread_actions.end());
+        process_delayed_actions<GameThreadExecutionMethod::ProcessEvent>(LuaMod::m_delayed_game_thread_actions);
     }
 
     auto static engine_tick_hook([[maybe_unused]] Unreal::UEngine* Context, [[maybe_unused]] float DeltaSeconds) -> void
@@ -3739,101 +3769,10 @@ Overloads:
         std::lock_guard<std::recursive_mutex> guard{LuaMod::m_thread_actions_mutex};
 
         // Process immediate engine tick actions
-        LuaMod::m_engine_tick_actions.erase(std::remove_if(LuaMod::m_engine_tick_actions.begin(),
-                                                           LuaMod::m_engine_tick_actions.end(),
-                                                           [&](LuaMod::SimpleLuaAction& lua_data) -> bool {
-                                                               if (LuaMod::m_is_currently_executing_game_action)
-                                                               {
-                                                                   return false;
-                                                               }
-
-                                                               LuaMod::m_is_currently_executing_game_action = true;
-
-                                                               lua_data.lua->registry().get_function_ref(lua_data.lua_action_function_ref);
-
-                                                               TRY([&]() {
-                                                                   lua_data.lua->call_function(0, 0);
-                                                               });
-
-                                                               luaL_unref(lua_data.lua->get_lua_state(), LUA_REGISTRYINDEX, lua_data.lua_action_thread_ref);
-
-                                                               LuaMod::m_is_currently_executing_game_action = false;
-                                                               return true;
-                                                           }),
-                                            LuaMod::m_engine_tick_actions.end());
+        process_simple_actions(LuaMod::m_engine_tick_actions);
 
         // Process delayed actions (time-based and frame-based)
-        auto now = std::chrono::steady_clock::now();
-        LuaMod::m_delayed_game_thread_actions.erase(
-                std::remove_if(LuaMod::m_delayed_game_thread_actions.begin(),
-                               LuaMod::m_delayed_game_thread_actions.end(),
-                               [&](LuaMod::DelayedGameThreadAction& action) -> bool {
-                                   // Check if cancelled
-                                   if (action.cancelled)
-                                   {
-                                       luaL_unref(action.lua->get_lua_state(), LUA_REGISTRYINDEX, action.lua_action_thread_ref);
-                                       return true;
-                                   }
-
-                                   // Skip paused actions
-                                   if (action.paused)
-                                   {
-                                       return false;
-                                   }
-
-                                   // Check if ready to execute
-                                   bool ready = false;
-                                   if (action.delay_frames > 0)
-                                   {
-                                       // Frame-based delay
-                                       action.frames_remaining--;
-                                       ready = (action.frames_remaining <= 0);
-                                   }
-                                   else
-                                   {
-                                       // Time-based delay
-                                       ready = (now >= action.execute_at);
-                                   }
-
-                                   if (!ready)
-                                   {
-                                       return false;
-                                   }
-
-                                   if (LuaMod::m_is_currently_executing_game_action)
-                                   {
-                                       return false;
-                                   }
-
-                                   LuaMod::m_is_currently_executing_game_action = true;
-
-                                   action.lua->registry().get_function_ref(action.lua_action_function_ref);
-
-                                   TRY([&]() {
-                                       action.lua->call_function(0, 0);
-                                   });
-
-                                   LuaMod::m_is_currently_executing_game_action = false;
-
-                                   // Handle looping
-                                   if (action.is_looping && !action.cancelled)
-                                   {
-                                       // Reset the timer/frame counter
-                                       if (action.delay_frames > 0)
-                                       {
-                                           action.frames_remaining = action.delay_frames;
-                                       }
-                                       else
-                                       {
-                                           action.execute_at = std::chrono::steady_clock::now() + std::chrono::milliseconds(action.delay_ms);
-                                       }
-                                       return false; // Keep in list
-                                   }
-
-                                   luaL_unref(action.lua->get_lua_state(), LUA_REGISTRYINDEX, action.lua_action_thread_ref);
-                                   return true;
-                               }),
-                LuaMod::m_delayed_game_thread_actions.end());
+        process_delayed_actions<GameThreadExecutionMethod::EngineTick>(LuaMod::m_delayed_game_thread_actions);
     }
 
     // Local convenience wrappers for Capabilities functions
