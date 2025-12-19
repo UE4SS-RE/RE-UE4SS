@@ -23,6 +23,18 @@ namespace RC::OutTheShade
 {
     using namespace ::RC::Unreal;
 
+    enum class EUsmapVersion : uint8_t
+    {
+        Initial = 0,
+        PackageVersioning = 1,
+        LongFName = 2,
+        LargeEnums = 3,
+        ExplicitEnumValues = 4,
+
+        Latest = ExplicitEnumValues,
+        LatestPlusOne
+    };
+
     enum class EPropertyType : uint8_t
     {
         ByteProperty,
@@ -349,8 +361,8 @@ namespace RC::OutTheShade
                 NameView = NameView.substr(Find + 2);
             }
 
-            // Warning: Converting size_t (uint64) to uint8_t.
-            Buffer.Write<uint8_t>(static_cast<uint8_t>(NameView.length()));
+            // LongFName support (version >= 2): use uint16 for name lengths
+            Buffer.Write<uint16_t>(static_cast<uint16_t>(NameView.length()));
             Buffer.WriteString(NameView);
 
             CurrentNameIndex++;
@@ -363,20 +375,19 @@ namespace RC::OutTheShade
         {
             Buffer.Write(NameMap[Enum->GetNamePrivate()]);
 
-            // limit to 255 entries; why is this a byte in the first place?
-            uint8_t EnumNameCount{};
+            // LargeEnums support (version >= 3): use uint16 for enum member counts
+            uint16_t EnumNameCount{};
             for (auto _ : Enum->ForEachName())
             {
                 ++EnumNameCount;
-                if (EnumNameCount >= std::numeric_limits<uint8_t>::max()) break;
             }
-            Buffer.Write<uint8_t>(EnumNameCount);
+            Buffer.Write<uint16_t>(EnumNameCount);
 
-            int numSoFar = 0;
-            for (auto& [Key, _] : Enum->ForEachName())
+            // ExplicitEnumValues (version >= 4): write value then name index
+            for (auto& [Key, Value] : Enum->ForEachName())
             {
-                Buffer.Write<uint32_t>(NameMap[Key]);
-                if (++numSoFar >= EnumNameCount) break;
+                Buffer.Write<int64_t>(Value);           // explicit enum value
+                Buffer.Write<int32_t>(NameMap[Key]);    // name index
             }
         }
 
@@ -421,7 +432,7 @@ namespace RC::OutTheShade
         Buffer.Write<uint32_t>(0x54584543); // "CEXT"; magic
         Buffer.Write<uint8_t>(0);           // extensions layout version; 0 (Initial)
 
-        Buffer.Write<uint32_t>(3); // number of extensions, 3 right now
+        Buffer.Write<uint32_t>(2); // number of extensions (ENVP removed - now redundant with ExplicitEnumValues)
 
         // extension 1: PPTH (object paths)
         Buffer.Write<uint32_t>(0x48545050); // ext id
@@ -490,32 +501,7 @@ namespace RC::OutTheShade
         Buffer.Write<uint32_t>(extEndPos - extStartPos);
         Buffer.GetBuffer().seekp(extEndPos);
 
-        // extension 3: ENVP (enum name/value pairs)
-        Buffer.Write<uint32_t>(0x50564E45); // ext id
-        Buffer.Write<uint32_t>(0);          // size; unknown for now
-
-        extStartPos = Buffer.GetBuffer().tellp();
-        Buffer.Write<uint8_t>(0); // ENVP version; 0
-        Buffer.Write<uint32_t>(static_cast<uint32_t>(Enums.size()));
-        for (auto Enum : Enums)
-        {
-            uint32_t EnumNameCount = 0;
-            for (auto _ : Enum->ForEachName())
-                ++EnumNameCount;
-            Buffer.Write<uint32_t>(EnumNameCount);
-
-            for (auto& [Key, val] : Enum->ForEachName())
-            {
-                Buffer.Write<uint32_t>(NameMap[Key]);
-                Buffer.Write<int64_t>(val);
-            }
-        }
-        extEndPos = Buffer.GetBuffer().tellp();
-
-        Buffer.GetBuffer().seekp(extStartPos);
-        Buffer.GetBuffer().seekp(-(int32)sizeof(uint32), std::ios_base::cur);
-        Buffer.Write<uint32_t>(extEndPos - extStartPos);
-        Buffer.GetBuffer().seekp(extEndPos);
+        // ENVP extension removed - enum values are now written explicitly in the main format (version 4)
 
         // end of extensions //
 
@@ -528,7 +514,8 @@ namespace RC::OutTheShade
         auto FileOutput = FileWriter(filename.c_str());
 
         FileOutput.Write<uint16_t>(0x30C4); // magic
-        FileOutput.Write<uint8_t>(0);       // version
+        FileOutput.Write<uint8_t>(static_cast<uint8_t>(EUsmapVersion::Latest)); // version
+        FileOutput.Write<int32_t>(0);       // bHasVersionInfo (false, no UE4/UE5 version info)
         FileOutput.Write<uint8_t>(0);       // compression
         // Warning: Converting size_t (uint64) to int.
         FileOutput.Write<uint32_t>(static_cast<uint32_t>(UsmapData.size())); // compressed size
