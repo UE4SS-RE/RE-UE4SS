@@ -222,8 +222,7 @@ namespace RC
                         signature_containers,
                         [](void* address) {
                             Output::send(STR("GMalloc address: {} <- Lua Script\n"), address);
-                            Unreal::FMalloc::UnrealStaticGMalloc = static_cast<Unreal::FMalloc**>(address);
-                            Unreal::GMalloc = *Unreal::FMalloc::UnrealStaticGMalloc;
+                            Unreal::GMalloc = static_cast<Unreal::FMalloc**>(address);
                             return DidLuaScanSucceed::Yes;
                         },
                         [&](DidLuaScanSucceed did_lua_scan_succeed) {
@@ -269,6 +268,11 @@ namespace RC
                         lua_ftc_scan_script,
                         signature_containers,
                         [&scan_result](void* address) {
+                            if (!Unreal::GMalloc || !*Unreal::GMalloc)
+                            {
+                                    scan_result.Errors.emplace_back("Lua script 'FText_Constructor.lua' cannot be tried; GMalloc nullptr.");
+                                    return DidLuaScanSucceed::No;
+                            }
                             Unreal::FText text{};
                             SEH_TRY({ text = Unreal::FText(STR("bCanBeDamaged"), address); })
                             SEH_EXCEPT({ Output::send<LogLevel::Error>(STR("Error: Crashed calling FText constructor.\n")); });
