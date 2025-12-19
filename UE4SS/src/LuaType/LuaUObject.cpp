@@ -407,12 +407,12 @@ namespace RC::LuaType
             auto_construct_object(params.lua, *property_value);
             break;
         case Operation::Set: {
-            if (params.lua.is_userdata())
+            if (params.lua.is_userdata(params.stored_at_index))
             {
                 const auto& lua_object = params.lua.get_userdata<LuaType::UObject>(params.stored_at_index);
                 *property_value = lua_object.get_remote_cpp_object();
             }
-            else if (params.lua.is_nil())
+            else if (params.lua.is_nil(params.stored_at_index))
             {
                 params.lua.discard_value(params.stored_at_index);
                 *property_value = nullptr;
@@ -443,12 +443,12 @@ namespace RC::LuaType
             LuaType::UClass::construct(params.lua, *property_value);
             break;
         case Operation::Set: {
-            if (params.lua.is_userdata())
+            if (params.lua.is_userdata(params.stored_at_index))
             {
                 const auto& lua_object = params.lua.get_userdata<LuaType::UClass>(params.stored_at_index);
                 *property_value = lua_object.get_remote_cpp_object();
             }
-            else if (params.lua.is_nil())
+            else if (params.lua.is_nil(params.stored_at_index))
             {
                 params.lua.discard_value(params.stored_at_index);
             }
@@ -719,19 +719,19 @@ namespace RC::LuaType
         };
 
         auto lua_to_memory = [&]() {
-            if (params.lua.is_userdata())
+            if (params.lua.is_userdata(params.stored_at_index))
             {
                 // StructData as userdata
                 params.throw_error("push_structproperty::lua_to_memory", "StructData as userdata is not yet implemented but there's userdata on the stack");
             }
-            else if (params.lua.is_table())
+            else if (params.lua.is_table(params.stored_at_index))
             {
                 // StructData as table
                 lua_table_to_memory();
             }
-            else if (params.lua.is_nil())
+            else if (params.lua.is_nil(params.stored_at_index))
             {
-                params.lua.discard_value();
+                params.lua.discard_value(params.stored_at_index);
             }
             else
             {
@@ -1788,12 +1788,12 @@ namespace RC::LuaType
             auto_construct_object(params.lua, *property_value);
             break;
         case Operation::Set: {
-            if (params.lua.is_userdata())
+            if (params.lua.is_userdata(params.stored_at_index))
             {
                 const auto& lua_object = params.lua.get_userdata<LuaType::UInterface>(params.stored_at_index);
                 *property_value = lua_object.get_remote_cpp_object();
             }
-            else if (params.lua.is_nil())
+            else if (params.lua.is_nil(params.stored_at_index))
             {
                 params.lua.discard_value(params.stored_at_index);
                 *property_value = nullptr;
@@ -1841,7 +1841,7 @@ namespace RC::LuaType
             break;
         }
         case Operation::Set: {
-            if (params.lua.is_table())
+            if (params.lua.is_table(params.stored_at_index))
             {
                 lua_pushstring(params.lua.get_lua_state(), "Object");
                 int adjusted_index = params.stored_at_index;
@@ -1852,9 +1852,9 @@ namespace RC::LuaType
                 lua_rawget(params.lua.get_lua_state(), adjusted_index);
 
                 Unreal::UObject* obj = nullptr;
-                if (params.lua.is_userdata())
+                if (params.lua.is_userdata(-1))
                 {
-                    const auto& lua_object = params.lua.get_userdata<LuaType::UObject>();
+                    const auto& lua_object = params.lua.get_userdata<LuaType::UObject>(-1);
                     obj = lua_object.get_remote_cpp_object();
                 }
                 params.lua.discard_value();
@@ -1863,9 +1863,9 @@ namespace RC::LuaType
                 lua_rawget(params.lua.get_lua_state(), adjusted_index);
 
                 Unreal::FName fname = NAME_None;
-                if (params.lua.is_userdata())
+                if (params.lua.is_userdata(-1))
                 {
-                    auto& lua_fname = params.lua.get_userdata<LuaType::FName>();
+                    auto& lua_fname = params.lua.get_userdata<LuaType::FName>(-1);
                     fname = lua_fname.get_local_cpp_object();
                 }
                 params.lua.discard_value();
@@ -1875,7 +1875,7 @@ namespace RC::LuaType
                 delegate_value->BindUFunction(obj, fname);
                 params.lua.discard_value(params.stored_at_index);
             }
-            else if (params.lua.is_nil())
+            else if (params.lua.is_nil(params.stored_at_index))
             {
                 delegate_value->Clear();
                 params.lua.discard_value(params.stored_at_index);
