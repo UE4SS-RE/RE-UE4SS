@@ -4020,17 +4020,26 @@ Overloads:
                 lua.throw_error(error_overload_not_found);
             }
 
+            const auto mod = get_mod_ref(lua);
+
             // Check hook availability
-            if (method == GameThreadExecutionMethod::EngineTick && !is_engine_tick_hook_available())
+            if (method == GameThreadExecutionMethod::EngineTick)
             {
-                lua.throw_error("ExecuteInGameThread: EngineTick method requested but EngineTick hook is not available (AOB scan failed)");
+                LuaMod::ensure_engine_tick_hooked();
+                if (!is_engine_tick_hook_available())
+                {
+                    lua.throw_error("ExecuteInGameThread: EngineTick method requested but EngineTick hook is not available (AOB scan failed)");
+                }
             }
-            if (method == GameThreadExecutionMethod::ProcessEvent && !is_process_event_hook_available())
+            else if (method == GameThreadExecutionMethod::ProcessEvent)
             {
-                lua.throw_error("ExecuteInGameThread: ProcessEvent method requested but ProcessEvent hook is not available (AOB scan failed)");
+                LuaMod::ensure_process_event_hooked(mod);
+                if (!is_process_event_hook_available())
+                {
+                    lua.throw_error("ExecuteInGameThread: ProcessEvent method requested but ProcessEvent hook is not available (AOB scan failed)");
+                }
             }
 
-            auto mod = get_mod_ref(lua);
             auto [hook_lua, lua_thread_registry_index] = make_hook_state(mod);
 
             lua_pushvalue(L, callback_idx);
@@ -4043,12 +4052,10 @@ Overloads:
                 if (method == GameThreadExecutionMethod::EngineTick)
                 {
                     LuaMod::m_engine_tick_actions.emplace_back(simpleAction);
-                    LuaMod::ensure_engine_tick_hooked();
                 }
                 else
                 {
                     mod->m_game_thread_actions.emplace_back(simpleAction);
-                    LuaMod::ensure_process_event_hooked(mod);
                 }
             }
 
@@ -4069,27 +4076,38 @@ Overloads:
                 lua.throw_error(error_overload_not_found);
             }
 
+            const auto mod = get_mod_ref(lua);
+
             // Use default method from config, fall back to the other if unavailable
             GameThreadExecutionMethod method = LuaMod::m_default_game_thread_method;
-            if (method == GameThreadExecutionMethod::EngineTick && !is_engine_tick_hook_available())
+            if (method == GameThreadExecutionMethod::EngineTick)
             {
-                if (!is_process_event_hook_available())
-                {
-                    lua.throw_error("ExecuteInGameThreadWithDelay: Neither EngineTick nor ProcessEvent hooks are available (AOB scans failed)");
-                }
-                method = GameThreadExecutionMethod::ProcessEvent;
-            }
-            else if (method == GameThreadExecutionMethod::ProcessEvent && !is_process_event_hook_available())
-            {
+                LuaMod::ensure_engine_tick_hooked();
                 if (!is_engine_tick_hook_available())
                 {
-                    lua.throw_error("ExecuteInGameThreadWithDelay: Neither EngineTick nor ProcessEvent hooks are available (AOB scans failed)");
+                    LuaMod::ensure_process_event_hooked(mod);
+                    if (!is_process_event_hook_available())
+                    {
+                        lua.throw_error("ExecuteInGameThreadWithDelay: Neither EngineTick nor ProcessEvent hooks are available (AOB scans failed)");
+                    }
+                    method = GameThreadExecutionMethod::ProcessEvent;
                 }
-                method = GameThreadExecutionMethod::EngineTick;
+            }
+            else if (method == GameThreadExecutionMethod::ProcessEvent)
+            {
+                LuaMod::ensure_process_event_hooked(mod);
+                if (!is_process_event_hook_available())
+                {
+                    LuaMod::ensure_engine_tick_hooked();
+                    if (!is_engine_tick_hook_available())
+                    {
+                        lua.throw_error("ExecuteInGameThreadWithDelay: Neither EngineTick nor ProcessEvent hooks are available (AOB scans failed)");
+                    }
+                    method = GameThreadExecutionMethod::EngineTick;
+                }
             }
 
             auto delay_ms = lua_tointeger(L, 1);
-            auto mod = get_mod_ref(lua);
             auto [hook_lua, lua_thread_registry_index] = make_hook_state(mod);
 
             lua_pushvalue(L, 2);
@@ -4108,14 +4126,6 @@ Overloads:
             {
                 std::lock_guard<std::recursive_mutex> guard{LuaMod::m_thread_actions_mutex};
                 LuaMod::m_delayed_game_thread_actions.emplace_back(action);
-                if (method == GameThreadExecutionMethod::EngineTick)
-                {
-                    LuaMod::ensure_engine_tick_hooked();
-                }
-                else
-                {
-                    LuaMod::ensure_process_event_hooked(mod);
-                }
             }
 
             lua.set_integer(action.handle);
@@ -4136,23 +4146,35 @@ Overloads:
                 lua.throw_error(error_overload_not_found);
             }
 
+            const auto mod = get_mod_ref(lua);
+
             // Use default method from config, fall back to the other if unavailable
             GameThreadExecutionMethod method = LuaMod::m_default_game_thread_method;
-            if (method == GameThreadExecutionMethod::EngineTick && !is_engine_tick_hook_available())
+            if (method == GameThreadExecutionMethod::EngineTick)
             {
-                if (!is_process_event_hook_available())
-                {
-                    lua.throw_error("RetriggerableExecuteInGameThreadWithDelay: Neither EngineTick nor ProcessEvent hooks are available (AOB scans failed)");
-                }
-                method = GameThreadExecutionMethod::ProcessEvent;
-            }
-            else if (method == GameThreadExecutionMethod::ProcessEvent && !is_process_event_hook_available())
-            {
+                LuaMod::ensure_engine_tick_hooked();
                 if (!is_engine_tick_hook_available())
                 {
-                    lua.throw_error("RetriggerableExecuteInGameThreadWithDelay: Neither EngineTick nor ProcessEvent hooks are available (AOB scans failed)");
+                    LuaMod::ensure_process_event_hooked(mod);
+                    if (!is_process_event_hook_available())
+                    {
+                        lua.throw_error("RetriggerableExecuteInGameThreadWithDelay: Neither EngineTick nor ProcessEvent hooks are available (AOB scans failed)");
+                    }
+                    method = GameThreadExecutionMethod::ProcessEvent;
                 }
-                method = GameThreadExecutionMethod::EngineTick;
+            }
+            else if (method == GameThreadExecutionMethod::ProcessEvent)
+            {
+                LuaMod::ensure_process_event_hooked(mod);
+                if (!is_process_event_hook_available())
+                {
+                    LuaMod::ensure_engine_tick_hooked();
+                    if (!is_engine_tick_hook_available())
+                    {
+                        lua.throw_error("RetriggerableExecuteInGameThreadWithDelay: Neither EngineTick nor ProcessEvent hooks are available (AOB scans failed)");
+                    }
+                    method = GameThreadExecutionMethod::EngineTick;
+                }
             }
 
             auto handle = lua_tointeger(L, 1);
@@ -4176,7 +4198,6 @@ Overloads:
             }
 
             // No existing action, create a new one
-            auto mod = get_mod_ref(lua);
             auto [hook_lua, lua_thread_registry_index] = make_hook_state(mod);
 
             lua_pushvalue(L, 3);
@@ -4196,14 +4217,6 @@ Overloads:
             {
                 std::lock_guard<std::recursive_mutex> guard{LuaMod::m_thread_actions_mutex};
                 LuaMod::m_delayed_game_thread_actions.emplace_back(action);
-                if (method == GameThreadExecutionMethod::EngineTick)
-                {
-                    LuaMod::ensure_engine_tick_hooked();
-                }
-                else
-                {
-                    LuaMod::ensure_process_event_hooked(mod);
-                }
             }
 
             lua.set_integer(handle);
@@ -4270,27 +4283,38 @@ Overloads:
                 lua.throw_error(error_overload_not_found);
             }
 
+            const auto mod = get_mod_ref(lua);
+
             // Use default method from config, fall back to the other if unavailable
             GameThreadExecutionMethod method = LuaMod::m_default_game_thread_method;
-            if (method == GameThreadExecutionMethod::EngineTick && !is_engine_tick_hook_available())
+            if (method == GameThreadExecutionMethod::EngineTick)
             {
-                if (!is_process_event_hook_available())
-                {
-                    lua.throw_error("LoopInGameThreadWithDelay: Neither EngineTick nor ProcessEvent hooks are available (AOB scans failed)");
-                }
-                method = GameThreadExecutionMethod::ProcessEvent;
-            }
-            else if (method == GameThreadExecutionMethod::ProcessEvent && !is_process_event_hook_available())
-            {
+                LuaMod::ensure_engine_tick_hooked();
                 if (!is_engine_tick_hook_available())
                 {
-                    lua.throw_error("LoopInGameThreadWithDelay: Neither EngineTick nor ProcessEvent hooks are available (AOB scans failed)");
+                    LuaMod::ensure_process_event_hooked(mod);
+                    if (!is_process_event_hook_available())
+                    {
+                        lua.throw_error("LoopInGameThreadWithDelay: Neither EngineTick nor ProcessEvent hooks are available (AOB scans failed)");
+                    }
+                    method = GameThreadExecutionMethod::ProcessEvent;
                 }
-                method = GameThreadExecutionMethod::EngineTick;
+            }
+            else if (method == GameThreadExecutionMethod::ProcessEvent)
+            {
+                LuaMod::ensure_process_event_hooked(mod);
+                if (!is_process_event_hook_available())
+                {
+                    LuaMod::ensure_engine_tick_hooked();
+                    if (!is_engine_tick_hook_available())
+                    {
+                        lua.throw_error("LoopInGameThreadWithDelay: Neither EngineTick nor ProcessEvent hooks are available (AOB scans failed)");
+                    }
+                    method = GameThreadExecutionMethod::EngineTick;
+                }
             }
 
             auto delay_ms = lua.get_integer();
-            auto mod = get_mod_ref(lua);
             auto [hook_lua, lua_thread_registry_index] = make_hook_state(mod);
 
             lua_pushvalue(L, 2);
@@ -4310,14 +4334,6 @@ Overloads:
             {
                 std::lock_guard<std::recursive_mutex> guard{LuaMod::m_thread_actions_mutex};
                 LuaMod::m_delayed_game_thread_actions.emplace_back(action);
-                if (method == GameThreadExecutionMethod::EngineTick)
-                {
-                    LuaMod::ensure_engine_tick_hooked();
-                }
-                else
-                {
-                    LuaMod::ensure_process_event_hooked(mod);
-                }
             }
 
             lua.set_integer(action.handle);
