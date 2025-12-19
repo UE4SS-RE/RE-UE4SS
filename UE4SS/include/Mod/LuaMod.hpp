@@ -155,6 +155,7 @@ namespace RC
 
       private:
         std::jthread m_async_thread;
+        std::thread::id m_main_thread_id{};
         bool m_processing_events{};
         bool m_pause_events_processing{};
         bool m_is_process_event_hooked{};
@@ -205,6 +206,16 @@ namespace RC
         RC_UE4SS_API auto actions_unlock() -> void
         {
             m_actions_lock.unlock();
+        }
+
+        [[nodiscard]] RC_UE4SS_API auto get_async_thread_id() const -> std::thread::id
+        {
+            return m_async_thread.get_id();
+        }
+
+        [[nodiscard]] RC_UE4SS_API auto get_main_thread_id() const -> std::thread::id
+        {
+            return m_main_thread_id;
         }
 
       public:

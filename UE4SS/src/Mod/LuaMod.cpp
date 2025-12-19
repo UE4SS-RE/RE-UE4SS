@@ -25,6 +25,7 @@
 #include <LuaType/LuaUClass.hpp>
 #include <LuaType/LuaUObject.hpp>
 #include <LuaType/LuaFURL.hpp>
+#include <LuaType/LuaThreadId.hpp>
 #include <Mod/CppMod.hpp>
 #include <Mod/LuaMod.hpp>
 #pragma warning(disable : 4005)
@@ -56,6 +57,7 @@
 #include <Unreal/UnrealVersion.hpp>
 #include <UnrealCustom/CustomProperty.hpp>
 #include <UE4SSRuntime.hpp>
+#include <Unreal/UnrealInitializer.hpp>
 
 #if PLATFORM_WINDOWS
 #include <Unreal/Core/Windows/AllowWindowsPlatformTypes.hpp>
@@ -77,18 +79,6 @@ namespace RC
         // Explicitly using the top of the stack (-1) since that's where 'getglobal' puts stuff
         auto& lua_object = lua.get_userdata<LuaType::LuaModRef>(-1);
         return lua_object.get_remote_cpp_object();
-    }
-
-    static auto set_is_in_game_thread(const LuaMadeSimple::Lua& lua, bool new_value)
-    {
-        lua.set_bool(new_value);
-        lua_setfield(lua.get_lua_state(), LUA_REGISTRYINDEX, "IsInGameThread");
-    }
-
-    static auto is_in_game_thread(const LuaMadeSimple::Lua& lua) -> bool
-    {
-        lua_getfield(lua.get_lua_state(), LUA_REGISTRYINDEX, "IsInGameThread");
-        return lua.get_bool(-1);
     }
 
     static auto get_function_name_without_prefix(const StringType& function_full_name) -> StringType
@@ -142,9 +132,6 @@ namespace RC
 
         // Check if this hook has been scheduled for removal (Lua state may be invalid)
         if (lua_data.scheduled_for_removal) return;
-
-        // This is a promise that we're in the game thread, used by other functions to ensure that we don't execute when unsafe
-        set_is_in_game_thread(lua_data.lua, true);
 
         // Use the stored registry index to put a Lua function on the Lua stack
         // This is the function that was provided by the Lua call to "RegisterHook"
@@ -246,9 +233,6 @@ namespace RC
             Output::send<LogLevel::Verbose>(STR("Unregistering native pre-hook ({}) for {}\n"), native_hook_pre_id_it->first, function_name_no_prefix);
             lua_data.unreal_function->UnregisterHook(native_hook_pre_id_it->second);
         }
-
-        // No longer promising to be in the game thread
-        set_is_in_game_thread(lua_data.lua, false);
     }
 
     static auto lua_unreal_script_function_hook_post(Unreal::UnrealScriptFunctionCallableContext context, void* custom_data) -> void
@@ -258,9 +242,6 @@ namespace RC
 
         // Check if this hook has been scheduled for removal (Lua state may be invalid)
         if (lua_data.scheduled_for_removal) return;
-
-        // This is a promise that we're in the game thread, used by other functions to ensure that we don't execute when unsafe
-        set_is_in_game_thread(lua_data.lua, true);
 
         auto process_return_value = [&]() {
             // If 'nil' exists on the Lua stack, that means that the UFunction expected a return value but the Lua script didn't return anything
@@ -414,10 +395,6 @@ namespace RC
         // We will always have at leaste two return values, either one can be nil, and we need to process both in case one isn't nil.
         process_return_value();
         process_return_value();
-
-        // No longer promising to be in the game thread
-        // Must be done before cleanup since cleanup deletes lua_data
-        set_is_in_game_thread(lua_data.lua, false);
 
         if (lua_data.scheduled_for_removal)
         {
@@ -3202,7 +3179,7 @@ No overload found for function 'LoadAsset'.
 Overloads:
 #1: LoadAsset(string AssetPathAndName))"};
 
-            if (!is_in_game_thread(lua))
+            if (!Unreal::IsInGameThread())
             {
                 throw std::runtime_error{"Function 'LoadAsset' can only be called from within the game thread"};
             }
@@ -3567,6 +3544,87 @@ Overloads:
 
             return 1;
         });
+
+        lua.register_function("GetCurrentThreadId", [](const LuaMadeSimple::Lua& lua) -> int {
+            std::string error_overload_not_found{R"(
+No overload found for function 'GetCurrentThreadId'.
+Overloads:
+#1: GetCurrentThreadId())"};
+
+            LuaType::ThreadId::construct(lua, std::this_thread::get_id());
+
+            return 1;
+        });
+
+        lua.register_function("GetMainModThreadId", [](const LuaMadeSimple::Lua& lua) -> int {
+            std::string error_overload_not_found{R"(
+No overload found for function 'GetMainModThreadId'.
+Overloads:
+#1: GetMainModThreadId())"};
+
+            const auto mod = get_mod_ref(lua);
+            LuaType::ThreadId::construct(lua, mod->get_main_thread_id());
+
+            return 1;
+        });
+
+        lua.register_function("GetAsyncThreadId", [](const LuaMadeSimple::Lua& lua) -> int {
+            std::string error_overload_not_found{R"(
+No overload found for function 'GetAsyncThreadId'.
+Overloads:
+#1: GetAsyncThreadId())"};
+
+            const auto mod = get_mod_ref(lua);
+            LuaType::ThreadId::construct(lua, mod->get_async_thread_id());
+
+            return 1;
+        });
+
+        lua.register_function("GetGameThreadId", [](const LuaMadeSimple::Lua& lua) -> int {
+            std::string error_overload_not_found{R"(
+No overload found for function 'GetGameThreadId'.
+Overloads:
+#1: GetGameThreadId())"};
+
+            LuaType::ThreadId::construct(lua, Unreal::GetGameThreadId());
+
+            return 1;
+        });
+
+        lua.register_function("IsInMainModThread", [](const LuaMadeSimple::Lua& lua) -> int {
+            std::string error_overload_not_found{R"(
+No overload found for function 'IsInMainModThread'.
+Overloads:
+#1: IsInMainModThread())"};
+
+            const auto mod = get_mod_ref(lua);
+            lua.set_bool(std::this_thread::get_id() == mod->get_main_thread_id());
+
+            return 1;
+        });
+
+        lua.register_function("IsInAsyncThread", [](const LuaMadeSimple::Lua& lua) -> int {
+            std::string error_overload_not_found{R"(
+No overload found for function 'IsInAsyncThread'.
+Overloads:
+#1: IsInAsyncThread())"};
+
+            const auto mod = get_mod_ref(lua);
+            lua.set_bool(std::this_thread::get_id() == mod->get_async_thread_id());
+
+            return 1;
+        });
+
+        lua.register_function("IsInGameThread", [](const LuaMadeSimple::Lua& lua) -> int {
+            std::string error_overload_not_found{R"(
+No overload found for function 'IsInGameThread'.
+Overloads:
+#1: IsInGameThread())"};
+
+            lua.set_bool(std::this_thread::get_id() == Unreal::GetGameThreadId());
+
+            return 1;
+        });
     }
 
     auto LuaMod::setup_lua_global_functions(const LuaMadeSimple::Lua& lua) const -> void
@@ -3591,8 +3649,7 @@ Overloads:
                                                                    return false;
                                                                }
 
-                                                               // This is a promise that we're in the game thread, used by other functions to ensure that we don't execute when unsafe
-                                                               set_is_in_game_thread(*lua_data.lua, true);
+                                                               // Used by other functions to ensure that we don't execute when unsafe
                                                                LuaMod::m_is_currently_executing_game_action = true;
 
                                                                lua_data.lua->registry().get_function_ref(lua_data.lua_action_function_ref);
@@ -3604,8 +3661,6 @@ Overloads:
                                                                // thread_ref came from lua_newthread, we can let it GC now.
                                                                luaL_unref(lua_data.lua->get_lua_state(), LUA_REGISTRYINDEX, lua_data.lua_action_thread_ref);
 
-                                                               // No longer promising to be in the game thread
-                                                               set_is_in_game_thread(*lua_data.lua, false);
                                                                LuaMod::m_is_currently_executing_game_action = false;
                                                                return true;
                                                            }),
@@ -4926,6 +4981,8 @@ Overloads:
     {
         try
         {
+            m_main_thread_id = std::this_thread::get_id();
+
             prepare_mod(lua());
             make_main_state(this, lua());
             setup_lua_global_functions_main_state_only();
@@ -5183,8 +5240,6 @@ Overloads:
                         continue;
                     }
 
-                    set_is_in_game_thread(lua, true);
-
                     lua.registry().get_function_ref(registry_index.lua_index);
 
                     static auto s_object_property_name = Unreal::FName(STR("ObjectProperty"), Unreal::FNAME_Find);
@@ -5285,8 +5340,6 @@ Overloads:
                     {
                         lua.discard_value();
                     }
-
-                    set_is_in_game_thread(lua, false);
                 }
             }
         };
@@ -5391,8 +5444,6 @@ Overloads:
             TRY([&] {
                 for (const auto& callback_data : m_init_game_state_pre_callbacks)
                 {
-                    // set_is_in_game_thread(lua, true);
-
                     for (const auto& [lua_ptr, registry_index] : callback_data.registry_indexes)
                     {
                         const auto& lua = *lua_ptr;
@@ -5402,8 +5453,6 @@ Overloads:
                         LuaType::RemoteUnrealParam::construct(lua, &Context, s_object_property_name);
                         lua.call_function(1, 0);
                     }
-
-                    // set_is_in_game_thread(lua, false);
                 }
             });
         });
@@ -5412,8 +5461,6 @@ Overloads:
             TRY([&] {
                 for (const auto& callback_data : m_init_game_state_post_callbacks)
                 {
-                    // set_is_in_game_thread(lua, true);
-
                     for (const auto& [lua_ptr, registry_index] : callback_data.registry_indexes)
                     {
                         const auto& lua = *lua_ptr;
@@ -5423,8 +5470,6 @@ Overloads:
                         LuaType::RemoteUnrealParam::construct(lua, &Context, s_object_property_name);
                         lua.call_function(1, 0);
                     }
-
-                    // set_is_in_game_thread(lua, false);
                 }
             });
         });
@@ -5433,8 +5478,6 @@ Overloads:
             TRY([&] {
                 for (const auto& callback_data : m_begin_play_pre_callbacks)
                 {
-                    // set_is_in_game_thread(lua, true);
-
                     for (const auto& [lua_ptr, registry_index] : callback_data.registry_indexes)
                     {
                         const auto& lua = *lua_ptr;
@@ -5444,8 +5487,6 @@ Overloads:
                         LuaType::RemoteUnrealParam::construct(lua, &Context, s_object_property_name);
                         lua.call_function(1, 0);
                     }
-
-                    // set_is_in_game_thread(lua, false);
                 }
             });
         });
@@ -5454,8 +5495,6 @@ Overloads:
             TRY([&] {
                 for (const auto& callback_data : m_begin_play_post_callbacks)
                 {
-                    // set_is_in_game_thread(lua, true);
-
                     for (const auto& [lua_ptr, registry_index] : callback_data.registry_indexes)
                     {
                         const auto& lua = *lua_ptr;
@@ -5465,8 +5504,6 @@ Overloads:
                         LuaType::RemoteUnrealParam::construct(lua, &Context, s_object_property_name);
                         lua.call_function(1, 0);
                     }
-
-                    // set_is_in_game_thread(lua, false);
                 }
             });
         });
@@ -5475,8 +5512,6 @@ Overloads:
             TRY([&] {
                 for (const auto& callback_data : m_end_play_pre_callbacks)
                 {
-                    // set_is_in_game_thread(lua, true);
-
                     for (const auto& [lua_ptr, registry_index] : callback_data.registry_indexes)
                     {
                         const auto& lua = *lua_ptr;
@@ -5488,8 +5523,6 @@ Overloads:
                         LuaType::RemoteUnrealParam::construct(lua, &EndPlayReason, s_int_property_name);
                         lua.call_function(2, 0);
                     }
-
-                    // set_is_in_game_thread(lua, false);
                 }
             });
         });
@@ -5498,8 +5531,6 @@ Overloads:
             TRY([&] {
                 for (const auto& callback_data : m_end_play_post_callbacks)
                 {
-                    // set_is_in_game_thread(lua, true);
-
                     for (const auto& [lua_ptr, registry_index] : callback_data.registry_indexes)
                     {
                         const auto& lua = *lua_ptr;
@@ -5511,8 +5542,6 @@ Overloads:
                         LuaType::RemoteUnrealParam::construct(lua, &EndPlayReason, s_int_property_name);
                         lua.call_function(2, 0);
                     }
-
-                    // set_is_in_game_thread(lua, false);
                 }
             });
         });
@@ -5554,8 +5583,6 @@ Overloads:
             return TRY([&] {
                 for (const auto& callback_data : m_local_player_exec_pre_callbacks)
                 {
-                    set_is_in_game_thread(*callback_data.lua, true);
-
                     Unreal::Hook::ULocalPlayerExecCallbackReturnValue return_value{};
 
                     for (const auto& [lua, registry_index] : callback_data.registry_indexes)
@@ -5600,8 +5627,6 @@ Overloads:
                         }
                     }
 
-                    set_is_in_game_thread(*callback_data.lua, false);
-
                     return return_value;
                 }
 
@@ -5614,8 +5639,6 @@ Overloads:
             return TRY([&] {
                 for (const auto& callback_data : m_local_player_exec_post_callbacks)
                 {
-                    set_is_in_game_thread(*callback_data.lua, true);
-
                     Unreal::Hook::ULocalPlayerExecCallbackReturnValue return_value{};
 
                     for (const auto& [lua, registry_index] : callback_data.registry_indexes)
@@ -5660,8 +5683,6 @@ Overloads:
                         }
                     }
 
-                    set_is_in_game_thread(*callback_data.lua, false);
-
                     return return_value;
                 }
 
@@ -5675,8 +5696,6 @@ Overloads:
                     return TRY([&] {
                         for (const auto& callback_data : m_call_function_by_name_with_arguments_pre_callbacks)
                         {
-                            set_is_in_game_thread(*callback_data.lua, true);
-
                             std::pair<bool, bool> return_value{};
 
                             for (const auto& [lua, registry_index] : callback_data.registry_indexes)
@@ -5707,8 +5726,6 @@ Overloads:
                                     return_value.second = callback_data.lua->get_bool();
                                 }
                             }
-
-                            set_is_in_game_thread(*callback_data.lua, false);
 
                             return return_value;
                         }
@@ -5723,8 +5740,6 @@ Overloads:
                     return TRY([&] {
                         for (const auto& callback_data : m_call_function_by_name_with_arguments_post_callbacks)
                         {
-                            set_is_in_game_thread(*callback_data.lua, true);
-
                             std::pair<bool, bool> return_value{};
 
                             for (const auto& [lua, registry_index] : callback_data.registry_indexes)
@@ -5755,8 +5770,6 @@ Overloads:
                                     return_value.second = callback_data.lua->get_bool();
                                 }
                             }
-
-                            set_is_in_game_thread(*callback_data.lua, false);
 
                             return return_value;
                         }
@@ -5864,8 +5877,6 @@ Overloads:
 
                         for (const auto& callback_data : m_process_console_exec_pre_callbacks)
                         {
-                            set_is_in_game_thread(*callback_data.lua, true);
-
                             std::pair<bool, bool> return_value{};
 
                             for (const auto& [lua, registry_index] : callback_data.registry_indexes)
@@ -5901,8 +5912,6 @@ Overloads:
                                     throw std::runtime_error{"A callback for 'RegisterProcessConsoleExecHook' must return bool or nil"};
                                 }
                             }
-
-                            set_is_in_game_thread(*callback_data.lua, false);
 
                             return return_value;
                         }
@@ -5920,8 +5929,6 @@ Overloads:
 
                         for (const auto& callback_data : m_process_console_exec_post_callbacks)
                         {
-                            set_is_in_game_thread(*callback_data.lua, true);
-
                             std::pair<bool, bool> return_value{};
 
                             for (const auto& [lua, registry_index] : callback_data.registry_indexes)
@@ -5957,8 +5964,6 @@ Overloads:
                                     throw std::runtime_error{"A callback for 'RegisterProcessConsoleExecHook' must return bool or nil"};
                                 }
                             }
-
-                            set_is_in_game_thread(*callback_data.lua, false);
 
                             return return_value;
                         }
@@ -5989,9 +5994,6 @@ Overloads:
                 {
                     const auto& callback_data = it->second;
 
-                    // This is a promise that we're in the game thread, used by other functions to ensure that we don't execute when unsafe
-                    set_is_in_game_thread(*callback_data.lua, true);
-
                     bool return_value{};
 
                     for (const auto& [lua, registry_index] : callback_data.registry_indexes)
@@ -6017,8 +6019,6 @@ Overloads:
 
                         return_value = callback_data.lua->get_bool();
                     }
-                    // No longer promising to be in the game thread
-                    set_is_in_game_thread(*callback_data.lua, false);
 
                     return return_value;
                 }
@@ -6045,9 +6045,6 @@ Overloads:
                 {
                     const auto& callback_data = it->second;
 
-                    // This is a promise that we're in the game thread, used by other functions to ensure that we don't execute when unsafe
-                    set_is_in_game_thread(*callback_data.lua, true);
-
                     bool return_value{};
 
                     for (const auto& [lua, registry_index] : callback_data.registry_indexes)
@@ -6073,9 +6070,6 @@ Overloads:
 
                         return_value = callback_data.lua->get_bool();
                     }
-
-                    // No longer promising to be in the game thread
-                    set_is_in_game_thread(*callback_data.lua, false);
 
                     return return_value;
                 }

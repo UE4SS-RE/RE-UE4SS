@@ -388,6 +388,34 @@ function UnregisterHook(UFunctionName, PreId, PostId) end
 ---@param Callback fun()
 function ExecuteInGameThread(Callback) end
 
+---Returns a ThreadId object representing the id of the current thread.
+---@return ThreadId
+function GetCurrentThreadId() end
+
+---Returns a ThreadId object representing the id of the main thread for the Lua mod, i.e. where main.lua is executed.
+---@return ThreadId
+function GetMainModThreadId() end
+
+---Returns a ThreadId object representing the id of the async thread for the Lua mod, i.e. where callbacks registered via ExecuteAsync, LoopAsync, etc is executed.
+---@return ThreadId
+function GetAsyncThreadId() end
+
+---Returns a ThreadId object representing the id of the game thread, i.e. where the game normally executes game logic, and usually where callbacks registered via RegisterHook, and other hooks is executed.
+---@return ThreadId
+function GetGameThreadId() end
+
+---Returns whether the current execution context is within the main Lua thread.
+---@return boolean
+function IsInMainModThread() end
+
+---Returns whether the current execution context is within the async Lua thread.
+---@return boolean
+function IsInAsyncThread() end
+
+---Returns whether the current execution context is within the game thread.
+---@return boolean
+function IsInGameThread() end
+
 ---FName with "None" as value
 NAME_None = FName(0)
 
@@ -1389,3 +1417,10 @@ function UDataTable:IsValid() end
 ---Returns the number of rows in the DataTable (metamethod for # operator)
 ---@return integer
 function UDataTable:__len() end
+
+---@class ThreadId
+ThreadId = {}
+
+---Returns the thread id as a string
+---@return string
+function ThreadId:ToString() end
