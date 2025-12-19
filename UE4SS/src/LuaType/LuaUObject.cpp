@@ -1497,15 +1497,43 @@ namespace RC::LuaType
             table.make_global(prop_name);
             // Make global table to store enum name/value pairs -> END
 
-            // Push the actual enum value to the Lua stack
-            params.lua.set_integer(*static_cast<uint8_t*>(params.data));
+            // Push the actual enum value to the Lua stack using the underlying property
+            auto enum_property = static_cast<Unreal::FEnumProperty*>(params.property);
+            auto underlying_property = enum_property->GetUnderlyingProperty();
+            int64_t value = underlying_property->GetSignedIntPropertyValue(enum_property->ContainerPtrToValuePtr<int64_t>(params.data));
+            params.lua.set_integer(value);
 
             return;
         }
         case Operation::Set:
-            // TODO: Verify that this works
-            // TODO: Bounds checking to make sure we don't set an invalid uint8_t because Lua can send us up to 64 bits
-            *static_cast<uint8_t*>(params.data) = static_cast<uint8_t>(params.lua.get_integer(params.stored_at_index));
+            // Get the enum value from Lua
+            int64_t lua_value = params.lua.get_integer(params.stored_at_index);
+            
+            // Get the underlying property type and set the value accordingly
+            auto enum_property = static_cast<Unreal::FEnumProperty*>(params.property);
+            auto underlying_property = enum_property->GetUnderlyingProperty();
+            
+            // Set the value based on the underlying property type
+            if (underlying_property->IsA<Unreal::FInt8Property>()) {
+                *static_cast<int8_t*>(params.data) = static_cast<int8_t>(lua_value);
+            } else if (underlying_property->IsA<Unreal::FUInt8Property>()) {
+                *static_cast<uint8_t*>(params.data) = static_cast<uint8_t>(lua_value);
+            } else if (underlying_property->IsA<Unreal::FInt16Property>()) {
+                *static_cast<int16_t*>(params.data) = static_cast<int16_t>(lua_value);
+            } else if (underlying_property->IsA<Unreal::FUInt16Property>()) {
+                *static_cast<uint16_t*>(params.data) = static_cast<uint16_t>(lua_value);
+            } else if (underlying_property->IsA<Unreal::FIntProperty>()) {
+                *static_cast<int32_t*>(params.data) = static_cast<int32_t>(lua_value);
+            } else if (underlying_property->IsA<Unreal::FUInt32Property>()) {
+                *static_cast<uint32_t*>(params.data) = static_cast<uint32_t>(lua_value);
+            } else if (underlying_property->IsA<Unreal::FInt64Property>()) {
+                *static_cast<int64_t*>(params.data) = lua_value;
+            } else if (underlying_property->IsA<Unreal::FUInt64Property>()) {
+                *static_cast<uint64_t*>(params.data) = static_cast<uint64_t>(lua_value);
+            } else {
+                // Fallback to uint8_t if we don't recognize the underlying type (shouldn't happen)
+                *static_cast<uint8_t*>(params.data) = static_cast<uint8_t>(lua_value);
+            }
             return;
         case Operation::GetParam:
             // TODO: Verify that this works
