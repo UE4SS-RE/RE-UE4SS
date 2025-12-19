@@ -4077,7 +4077,7 @@ Overloads:
             std::string error_overload_not_found{R"(
 No overload found for function 'RetriggerableExecuteInGameThreadWithDelay'.
 Overloads:
-#1: RetriggerableExecuteInGameThreadWithDelay(integer handle, integer delayMs, LuaFunction callback) -> integer handle)"};
+#1: RetriggerableExecuteInGameThreadWithDelay(integer handle, integer delayMs, LuaFunction callback))"};
 
             lua_State* L = lua.get_lua_state();
             if (!lua_isinteger(L, 1) || !lua_isinteger(L, 2) || !lua_isfunction(L, 3))
@@ -4158,8 +4158,7 @@ Overloads:
                 LuaMod::m_delayed_game_thread_actions.emplace_back(action);
             }
 
-            lua.set_integer(handle);
-            return 1;
+            return 0;
         });
 
         // ExecuteInGameThreadAfterFrames - executes callback after a frame delay
