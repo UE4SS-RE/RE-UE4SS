@@ -4484,6 +4484,18 @@ Overloads:
             return 1;
         });
 
+        // MakeHandle - returns a unique action handle
+        m_lua.register_function("MakeActionHandle", [](const LuaMadeSimple::Lua& lua) -> int {
+            std::string error_overload_not_found{R"(
+No overload found for function 'MakeActionHandle'.
+Overloads:
+#1: MakeActionHandle() -> integer Handle)"};
+
+            lua.set_integer(m_next_delayed_action_handle++);
+
+            return 1;
+        });
+
         m_lua.register_function("RestartCurrentMod", [](const LuaMadeSimple::Lua& lua) -> int {
             auto mod = get_mod_ref(lua);
             if (!mod)
