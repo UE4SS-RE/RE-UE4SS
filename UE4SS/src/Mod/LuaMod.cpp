@@ -4186,7 +4186,7 @@ Overloads:
             auto mod = get_mod_ref(lua);
             auto [hook_lua, lua_thread_registry_index] = make_hook_state(mod);
 
-            lua_pushvalue(L, 2);
+            lua_pushvalue(L, 1);
             lua_xmove(L, hook_lua->get_lua_state(), 1);
             const auto func_ref = luaL_ref(hook_lua->get_lua_state(), LUA_REGISTRYINDEX);
 
