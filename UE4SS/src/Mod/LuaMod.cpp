@@ -3927,40 +3927,558 @@ Overloads:
             return 2;
         });
 
+
+        // Register EGameThreadMethod enum table
+        {
+            lua_State* L = m_lua.get_lua_state();
+            lua_newtable(L);
+            lua_pushinteger(L, static_cast<int>(GameThreadExecutionMethod::EngineTick));
+            lua_setfield(L, -2, "EngineTick");
+            lua_pushinteger(L, static_cast<int>(GameThreadExecutionMethod::ProcessEvent));
+            lua_setfield(L, -2, "ProcessEvent");
+            lua_setglobal(L, "EGameThreadMethod");
+        }
+
+        // Register capability globals
+        // These indicate whether certain hooks are available (scan succeeded)
+        {
+            lua_State* L = m_lua.get_lua_state();
+            lua_pushboolean(L, UE4SSRuntime::IsEngineTickAvailable());
+            lua_setglobal(L, "EngineTickAvailable");
+            lua_pushboolean(L, UE4SSRuntime::IsProcessEventAvailable());
+            lua_setglobal(L, "ProcessEventAvailable");
+        }
+
         m_lua.register_function("ExecuteInGameThread", [](const LuaMadeSimple::Lua& lua) -> int {
             std::string error_overload_not_found{R"(
 No overload found for function 'ExecuteInGameThread'.
 Overloads:
-#1: ExecuteInGameThread(LuaFunction callback))"};
+#1: ExecuteInGameThread(LuaFunction callback)
+#2: ExecuteInGameThread(LuaFunction callback, EGameThreadMethod method)
+    method: EGameThreadMethod.EngineTick or EGameThreadMethod.ProcessEvent)"};
 
-            if (!lua.is_function())
+            lua_State* L = lua.get_lua_state();
+            GameThreadExecutionMethod method = LuaMod::m_default_game_thread_method;
+            int callback_idx = 1;
+
+            if (lua_isfunction(L, 1) && lua_isinteger(L, 2))
+            {
+                // Overload #2: callback, method
+                method = static_cast<GameThreadExecutionMethod>(lua_tointeger(L, 2));
+            }
+            else if (!lua_isfunction(L, 1))
             {
                 lua.throw_error(error_overload_not_found);
+            }
+
+            // Check hook availability
+            if (method == GameThreadExecutionMethod::EngineTick && !is_engine_tick_hook_available())
+            {
+                lua.throw_error("ExecuteInGameThread: EngineTick method requested but EngineTick hook is not available (AOB scan failed)");
+            }
+            if (method == GameThreadExecutionMethod::ProcessEvent && !is_process_event_hook_available())
+            {
+                lua.throw_error("ExecuteInGameThread: ProcessEvent method requested but ProcessEvent hook is not available (AOB scan failed)");
             }
 
             auto mod = get_mod_ref(lua);
             auto [hook_lua, lua_thread_registry_index] = make_hook_state(mod);
 
-            // Duplicate the Lua function to the top of the stack for lua_xmove and luaL_ref
-            lua_pushvalue(lua.get_lua_state(), 1);
-
-            lua_xmove(lua.get_lua_state(), hook_lua->get_lua_state(), 1);
-
+            lua_pushvalue(L, callback_idx);
+            lua_xmove(L, hook_lua->get_lua_state(), 1);
             const auto func_ref = luaL_ref(hook_lua->get_lua_state(), LUA_REGISTRYINDEX);
 
             SimpleLuaAction simpleAction{hook_lua, func_ref, lua_thread_registry_index};
             {
                 std::lock_guard<std::recursive_mutex> guard{LuaMod::m_thread_actions_mutex};
-                mod->m_game_thread_actions.emplace_back(simpleAction);
-            }
-
-            if (!mod->m_is_process_event_hooked)
-            {
-                mod->m_is_process_event_hooked = true; // below can't fail, we don't want infinite processevent hooks.
-                Unreal::Hook::RegisterProcessEventPreCallback(&process_event_hook);
+                if (method == GameThreadExecutionMethod::EngineTick)
+                {
+                    LuaMod::m_engine_tick_actions.emplace_back(simpleAction);
+                    LuaMod::ensure_engine_tick_hooked();
+                }
+                else
+                {
+                    mod->m_game_thread_actions.emplace_back(simpleAction);
+                    LuaMod::ensure_process_event_hooked(mod);
+                }
             }
 
             return 0;
+        });
+
+        // ExecuteInGameThreadWithDelay - executes callback after a time delay
+        // Uses default method from config, falls back to the other if unavailable
+        m_lua.register_function("ExecuteInGameThreadWithDelay", [](const LuaMadeSimple::Lua& lua) -> int {
+            std::string error_overload_not_found{R"(
+No overload found for function 'ExecuteInGameThreadWithDelay'.
+Overloads:
+#1: ExecuteInGameThreadWithDelay(integer delayMs, LuaFunction callback) -> integer handle)"};
+
+            lua_State* L = lua.get_lua_state();
+            if (!lua_isinteger(L, 1) || !lua_isfunction(L, 2))
+            {
+                lua.throw_error(error_overload_not_found);
+            }
+
+            // Use default method from config, fall back to the other if unavailable
+            GameThreadExecutionMethod method = LuaMod::m_default_game_thread_method;
+            if (method == GameThreadExecutionMethod::EngineTick && !is_engine_tick_hook_available())
+            {
+                if (!is_process_event_hook_available())
+                {
+                    lua.throw_error("ExecuteInGameThreadWithDelay: Neither EngineTick nor ProcessEvent hooks are available (AOB scans failed)");
+                }
+                method = GameThreadExecutionMethod::ProcessEvent;
+            }
+            else if (method == GameThreadExecutionMethod::ProcessEvent && !is_process_event_hook_available())
+            {
+                if (!is_engine_tick_hook_available())
+                {
+                    lua.throw_error("ExecuteInGameThreadWithDelay: Neither EngineTick nor ProcessEvent hooks are available (AOB scans failed)");
+                }
+                method = GameThreadExecutionMethod::EngineTick;
+            }
+
+            auto delay_ms = lua_tointeger(L, 1);
+            auto mod = get_mod_ref(lua);
+            auto [hook_lua, lua_thread_registry_index] = make_hook_state(mod);
+
+            lua_pushvalue(L, 2);
+            lua_xmove(L, hook_lua->get_lua_state(), 1);
+            const auto func_ref = luaL_ref(hook_lua->get_lua_state(), LUA_REGISTRYINDEX);
+
+            DelayedGameThreadAction action{};
+            action.lua = hook_lua;
+            action.lua_action_function_ref = func_ref;
+            action.lua_action_thread_ref = lua_thread_registry_index;
+            action.method = method;
+            action.delay_ms = delay_ms;
+            action.execute_at = std::chrono::steady_clock::now() + std::chrono::milliseconds(delay_ms);
+            action.handle = LuaMod::m_next_delayed_action_handle++;
+
+            {
+                std::lock_guard<std::recursive_mutex> guard{LuaMod::m_thread_actions_mutex};
+                LuaMod::m_delayed_game_thread_actions.emplace_back(action);
+                if (method == GameThreadExecutionMethod::EngineTick)
+                {
+                    LuaMod::ensure_engine_tick_hooked();
+                }
+                else
+                {
+                    LuaMod::ensure_process_event_hooked(mod);
+                }
+            }
+
+            lua.set_integer(action.handle);
+            return 1;
+        });
+
+        // RetriggerableExecuteInGameThreadWithDelay - executes callback after a time delay, resets timer if called again with same handle
+        // Uses default method from config, falls back to the other if unavailable
+        m_lua.register_function("RetriggerableExecuteInGameThreadWithDelay", [](const LuaMadeSimple::Lua& lua) -> int {
+            std::string error_overload_not_found{R"(
+No overload found for function 'RetriggerableExecuteInGameThreadWithDelay'.
+Overloads:
+#1: RetriggerableExecuteInGameThreadWithDelay(integer handle, integer delayMs, LuaFunction callback) -> integer handle)"};
+
+            lua_State* L = lua.get_lua_state();
+            if (!lua_isinteger(L, 1) || !lua_isinteger(L, 2) || !lua_isfunction(L, 3))
+            {
+                lua.throw_error(error_overload_not_found);
+            }
+
+            // Use default method from config, fall back to the other if unavailable
+            GameThreadExecutionMethod method = LuaMod::m_default_game_thread_method;
+            if (method == GameThreadExecutionMethod::EngineTick && !is_engine_tick_hook_available())
+            {
+                if (!is_process_event_hook_available())
+                {
+                    lua.throw_error("RetriggerableExecuteInGameThreadWithDelay: Neither EngineTick nor ProcessEvent hooks are available (AOB scans failed)");
+                }
+                method = GameThreadExecutionMethod::ProcessEvent;
+            }
+            else if (method == GameThreadExecutionMethod::ProcessEvent && !is_process_event_hook_available())
+            {
+                if (!is_engine_tick_hook_available())
+                {
+                    lua.throw_error("RetriggerableExecuteInGameThreadWithDelay: Neither EngineTick nor ProcessEvent hooks are available (AOB scans failed)");
+                }
+                method = GameThreadExecutionMethod::EngineTick;
+            }
+
+            auto handle = lua_tointeger(L, 1);
+            auto delay_ms = lua_tointeger(L, 2);
+
+            // Check if an action with this handle already exists
+            {
+                std::lock_guard<std::recursive_mutex> guard{LuaMod::m_thread_actions_mutex};
+                for (auto& action : LuaMod::m_delayed_game_thread_actions)
+                {
+                    if (action.handle == handle && !action.cancelled)
+                    {
+                        // Reset the timer for the existing action
+                        action.delay_ms = delay_ms;
+                        action.execute_at = std::chrono::steady_clock::now() + std::chrono::milliseconds(delay_ms);
+                        action.paused = false;  // Unpause if paused
+                        lua.set_integer(handle);
+                        return 1;
+                    }
+                }
+            }
+
+            // No existing action, create a new one
+            auto mod = get_mod_ref(lua);
+            auto [hook_lua, lua_thread_registry_index] = make_hook_state(mod);
+
+            lua_pushvalue(L, 3);
+            lua_xmove(L, hook_lua->get_lua_state(), 1);
+            const auto func_ref = luaL_ref(hook_lua->get_lua_state(), LUA_REGISTRYINDEX);
+
+            DelayedGameThreadAction action{};
+            action.lua = hook_lua;
+            action.lua_action_function_ref = func_ref;
+            action.lua_action_thread_ref = lua_thread_registry_index;
+            action.method = method;
+            action.delay_ms = delay_ms;
+            action.execute_at = std::chrono::steady_clock::now() + std::chrono::milliseconds(delay_ms);
+            action.is_retriggerable = true;
+            action.handle = handle;
+
+            {
+                std::lock_guard<std::recursive_mutex> guard{LuaMod::m_thread_actions_mutex};
+                LuaMod::m_delayed_game_thread_actions.emplace_back(action);
+                if (method == GameThreadExecutionMethod::EngineTick)
+                {
+                    LuaMod::ensure_engine_tick_hooked();
+                }
+                else
+                {
+                    LuaMod::ensure_process_event_hooked(mod);
+                }
+            }
+
+            lua.set_integer(handle);
+            return 1;
+        });
+
+        // ExecuteInGameThreadAfterFrames - executes callback after a frame delay
+        // Requires EngineTick hook - cannot fall back to ProcessEvent since frames cannot be counted there
+        m_lua.register_function("ExecuteInGameThreadAfterFrames", [](const LuaMadeSimple::Lua& lua) -> int {
+            std::string error_overload_not_found{R"(
+No overload found for function 'ExecuteInGameThreadAfterFrames'.
+Overloads:
+#1: ExecuteInGameThreadAfterFrames(integer frames, LuaFunction callback) -> integer handle)"};
+
+            lua_State* L = lua.get_lua_state();
+            if (!lua.is_integer() || !lua_isfunction(L, 2))
+            {
+                lua.throw_error(error_overload_not_found);
+            }
+
+            // Frame-based delays require EngineTick - cannot use ProcessEvent
+            if (!is_engine_tick_hook_available())
+            {
+                lua.throw_error("ExecuteInGameThreadAfterFrames: EngineTick hook is not available (AOB scan failed). Frame-based delays require EngineTick.");
+            }
+
+            auto frames = lua.get_integer();
+            auto mod = get_mod_ref(lua);
+            auto [hook_lua, lua_thread_registry_index] = make_hook_state(mod);
+
+            lua_pushvalue(L, 2);
+            lua_xmove(L, hook_lua->get_lua_state(), 1);
+            const auto func_ref = luaL_ref(hook_lua->get_lua_state(), LUA_REGISTRYINDEX);
+
+            DelayedGameThreadAction action{};
+            action.lua = hook_lua;
+            action.lua_action_function_ref = func_ref;
+            action.lua_action_thread_ref = lua_thread_registry_index;
+            action.delay_frames = frames;
+            action.frames_remaining = frames;
+            action.handle = LuaMod::m_next_delayed_action_handle++;
+
+            {
+                std::lock_guard<std::recursive_mutex> guard{LuaMod::m_thread_actions_mutex};
+                LuaMod::m_delayed_game_thread_actions.emplace_back(action);
+                LuaMod::ensure_engine_tick_hooked();
+            }
+
+            lua.set_integer(action.handle);
+            return 1;
+        });
+
+        // LoopInGameThreadWithDelay - executes callback repeatedly with a time delay
+        // Uses default method from config, falls back to the other if unavailable
+        m_lua.register_function("LoopInGameThreadWithDelay", [](const LuaMadeSimple::Lua& lua) -> int {
+            std::string error_overload_not_found{R"(
+No overload found for function 'LoopInGameThreadWithDelay'.
+Overloads:
+#1: LoopInGameThreadWithDelay(integer delayMs, LuaFunction callback) -> integer handle)"};
+
+            lua_State* L = lua.get_lua_state();
+            if (!lua.is_integer() || !lua_isfunction(L, 2))
+            {
+                lua.throw_error(error_overload_not_found);
+            }
+
+            // Use default method from config, fall back to the other if unavailable
+            GameThreadExecutionMethod method = LuaMod::m_default_game_thread_method;
+            if (method == GameThreadExecutionMethod::EngineTick && !is_engine_tick_hook_available())
+            {
+                if (!is_process_event_hook_available())
+                {
+                    lua.throw_error("LoopInGameThreadWithDelay: Neither EngineTick nor ProcessEvent hooks are available (AOB scans failed)");
+                }
+                method = GameThreadExecutionMethod::ProcessEvent;
+            }
+            else if (method == GameThreadExecutionMethod::ProcessEvent && !is_process_event_hook_available())
+            {
+                if (!is_engine_tick_hook_available())
+                {
+                    lua.throw_error("LoopInGameThreadWithDelay: Neither EngineTick nor ProcessEvent hooks are available (AOB scans failed)");
+                }
+                method = GameThreadExecutionMethod::EngineTick;
+            }
+
+            auto delay_ms = lua.get_integer();
+            auto mod = get_mod_ref(lua);
+            auto [hook_lua, lua_thread_registry_index] = make_hook_state(mod);
+
+            lua_pushvalue(L, 2);
+            lua_xmove(L, hook_lua->get_lua_state(), 1);
+            const auto func_ref = luaL_ref(hook_lua->get_lua_state(), LUA_REGISTRYINDEX);
+
+            DelayedGameThreadAction action{};
+            action.lua = hook_lua;
+            action.lua_action_function_ref = func_ref;
+            action.lua_action_thread_ref = lua_thread_registry_index;
+            action.method = method;
+            action.delay_ms = delay_ms;
+            action.execute_at = std::chrono::steady_clock::now() + std::chrono::milliseconds(delay_ms);
+            action.is_looping = true;
+            action.handle = LuaMod::m_next_delayed_action_handle++;
+
+            {
+                std::lock_guard<std::recursive_mutex> guard{LuaMod::m_thread_actions_mutex};
+                LuaMod::m_delayed_game_thread_actions.emplace_back(action);
+                if (method == GameThreadExecutionMethod::EngineTick)
+                {
+                    LuaMod::ensure_engine_tick_hooked();
+                }
+                else
+                {
+                    LuaMod::ensure_process_event_hooked(mod);
+                }
+            }
+
+            lua.set_integer(action.handle);
+            return 1;
+        });
+
+        // LoopInGameThreadAfterFrames - executes callback repeatedly with a frame delay
+        // Requires EngineTick hook - cannot fall back to ProcessEvent since frames cannot be counted there
+        m_lua.register_function("LoopInGameThreadAfterFrames", [](const LuaMadeSimple::Lua& lua) -> int {
+            std::string error_overload_not_found{R"(
+No overload found for function 'LoopInGameThreadAfterFrames'.
+Overloads:
+#1: LoopInGameThreadAfterFrames(integer frames, LuaFunction callback) -> integer handle)"};
+
+            lua_State* L = lua.get_lua_state();
+            if (!lua.is_integer() || !lua_isfunction(L, 2))
+            {
+                lua.throw_error(error_overload_not_found);
+            }
+
+            // Frame-based delays require EngineTick - cannot use ProcessEvent
+            if (!is_engine_tick_hook_available())
+            {
+                lua.throw_error("LoopInGameThreadAfterFrames: EngineTick hook is not available (AOB scan failed). Frame-based delays require EngineTick.");
+            }
+
+            auto frames = lua.get_integer();
+            auto mod = get_mod_ref(lua);
+            auto [hook_lua, lua_thread_registry_index] = make_hook_state(mod);
+
+            lua_pushvalue(L, 2);
+            lua_xmove(L, hook_lua->get_lua_state(), 1);
+            const auto func_ref = luaL_ref(hook_lua->get_lua_state(), LUA_REGISTRYINDEX);
+
+            DelayedGameThreadAction action{};
+            action.lua = hook_lua;
+            action.lua_action_function_ref = func_ref;
+            action.lua_action_thread_ref = lua_thread_registry_index;
+            action.delay_frames = frames;
+            action.frames_remaining = frames;
+            action.is_looping = true;
+            action.handle = LuaMod::m_next_delayed_action_handle++;
+
+            {
+                std::lock_guard<std::recursive_mutex> guard{LuaMod::m_thread_actions_mutex};
+                LuaMod::m_delayed_game_thread_actions.emplace_back(action);
+                LuaMod::ensure_engine_tick_hooked();
+            }
+
+            lua.set_integer(action.handle);
+            return 1;
+        });
+
+        // ResetDelayedActionTimer - resets the timer for any delayed action
+        m_lua.register_function("ResetDelayedActionTimer", [](const LuaMadeSimple::Lua& lua) -> int {
+            std::string error_overload_not_found{R"(
+No overload found for function 'ResetDelayedActionTimer'.
+Overloads:
+#1: ResetDelayedActionTimer(integer handle) -> boolean success
+#2: ResetDelayedActionTimer(integer handle, integer newDelayMs) -> boolean success
+#3: ResetDelayedActionTimer(integer handle, integer newDelayFrames) -> boolean success)"};
+
+            if (!lua.is_integer())
+            {
+                lua.throw_error(error_overload_not_found);
+            }
+
+            auto handle = lua.get_integer();
+            int64_t new_delay = -1;
+            if (lua.is_integer(2))
+            {
+                new_delay = lua.get_integer(2);
+            }
+
+            bool found = false;
+
+            {
+                std::lock_guard<std::recursive_mutex> guard{LuaMod::m_thread_actions_mutex};
+                for (auto& action : LuaMod::m_delayed_game_thread_actions)
+                {
+                    if (action.handle == handle && !action.cancelled)
+                    {
+                        // Reset the timer based on whether it's time-based or frame-based
+                        if (action.delay_frames > 0)
+                        {
+                            // Frame-based delay
+                            if (new_delay >= 0)
+                            {
+                                action.delay_frames = new_delay;
+                            }
+                            action.frames_remaining = action.delay_frames;
+                        }
+                        else
+                        {
+                            // Time-based delay
+                            if (new_delay >= 0)
+                            {
+                                action.delay_ms = new_delay;
+                            }
+                            action.execute_at = std::chrono::steady_clock::now() + std::chrono::milliseconds(action.delay_ms);
+                        }
+                        action.paused = false;  // Unpause if paused
+                        found = true;
+                        break;
+                    }
+                }
+            }
+
+            lua.set_bool(found);
+            return 1;
+        });
+
+        // PauseDelayedAction - pauses a delayed action timer
+        m_lua.register_function("PauseDelayedAction", [](const LuaMadeSimple::Lua& lua) -> int {
+            std::string error_overload_not_found{R"(
+No overload found for function 'PauseDelayedAction'.
+Overloads:
+#1: PauseDelayedAction(integer handle) -> boolean success)"};
+
+            if (!lua.is_integer())
+            {
+                lua.throw_error(error_overload_not_found);
+            }
+
+            auto handle = lua.get_integer();
+            bool found = false;
+
+            {
+                std::lock_guard<std::recursive_mutex> guard{LuaMod::m_thread_actions_mutex};
+                for (auto& action : LuaMod::m_delayed_game_thread_actions)
+                {
+                    if (action.handle == handle && !action.cancelled && !action.paused)
+                    {
+                        action.paused = true;
+                        action.paused_at = std::chrono::steady_clock::now();
+                        found = true;
+                        break;
+                    }
+                }
+            }
+
+            lua.set_bool(found);
+            return 1;
+        });
+
+        // UnpauseDelayedAction - resumes a paused delayed action timer
+        m_lua.register_function("UnpauseDelayedAction", [](const LuaMadeSimple::Lua& lua) -> int {
+            std::string error_overload_not_found{R"(
+No overload found for function 'UnpauseDelayedAction'.
+Overloads:
+#1: UnpauseDelayedAction(integer handle) -> boolean success)"};
+
+            if (!lua.is_integer())
+            {
+                lua.throw_error(error_overload_not_found);
+            }
+
+            auto handle = lua.get_integer();
+            bool found = false;
+
+            {
+                std::lock_guard<std::recursive_mutex> guard{LuaMod::m_thread_actions_mutex};
+                for (auto& action : LuaMod::m_delayed_game_thread_actions)
+                {
+                    if (action.handle == handle && !action.cancelled && action.paused)
+                    {
+                        // Adjust execute_at by the time spent paused
+                        auto pause_duration = std::chrono::steady_clock::now() - action.paused_at;
+                        action.execute_at += pause_duration;
+                        action.paused = false;
+                        found = true;
+                        break;
+                    }
+                }
+            }
+
+            lua.set_bool(found);
+            return 1;
+        });
+
+        // CancelDelayedAction - cancels a delayed action
+        m_lua.register_function("CancelDelayedAction", [](const LuaMadeSimple::Lua& lua) -> int {
+            std::string error_overload_not_found{R"(
+No overload found for function 'CancelDelayedAction'.
+Overloads:
+#1: CancelDelayedAction(integer handle) -> boolean success)"};
+
+            if (!lua.is_integer())
+            {
+                lua.throw_error(error_overload_not_found);
+            }
+
+            auto handle = lua.get_integer();
+            bool found = false;
+
+            {
+                std::lock_guard<std::recursive_mutex> guard{LuaMod::m_thread_actions_mutex};
+                for (auto& action : LuaMod::m_delayed_game_thread_actions)
+                {
+                    if (action.handle == handle)
+                    {
+                        action.cancelled = true;
+                        found = true;
+                        break;
+                    }
+                }
+            }
+
+            lua.set_bool(found);
+            return 1;
         });
 
         m_lua.register_function("RestartCurrentMod", [](const LuaMadeSimple::Lua& lua) -> int {
