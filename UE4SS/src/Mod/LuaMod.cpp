@@ -4341,9 +4341,9 @@ Overloads:
 
             auto handle = lua.get_integer();
             int64_t new_delay = -1;
-            if (lua.is_integer(2))
+            if (lua.is_integer())
             {
-                new_delay = lua.get_integer(2);
+                new_delay = lua.get_integer();
             }
 
             bool found = false;
