@@ -12,6 +12,7 @@
 #include <File/File.hpp>
 #include <LuaMadeSimple/LuaMadeSimple.hpp>
 #include <Mod/Mod.hpp>
+#include <SettingsManager.hpp>
 
 #include <String/StringType.hpp>
 
@@ -53,6 +54,26 @@ namespace RC
             int32_t lua_action_function_ref{};
             int32_t lua_action_thread_ref{};
         };
+
+        struct DelayedGameThreadAction
+        {
+            const LuaMadeSimple::Lua* lua;
+            int32_t lua_action_function_ref{};
+            int32_t lua_action_thread_ref{};
+            GameThreadExecutionMethod method{GameThreadExecutionMethod::EngineTick};
+            std::chrono::steady_clock::time_point execute_at{};  // For time-based delay
+            std::chrono::steady_clock::time_point paused_at{};  // When action was paused (for calculating remaining time)
+            int64_t frames_remaining{0};  // Countdown for frame-based delays
+            int64_t delay_ms{0};  // Original delay in milliseconds (for retriggerable/loop)
+            int64_t delay_frames{0};  // Original delay in frames (0 means use time-based delay)
+            int64_t handle{0};  // Unique handle for retriggerable/cancellable actions
+            bool is_retriggerable{false};  // If true, can be reset by calling with same handle
+            bool is_looping{false};  // If true, re-schedule after each execution
+            bool cancelled{false};  // If true, will be removed without execution
+            bool paused{false};  // If true, timer is paused
+        };
+
+        static inline int64_t m_next_delayed_action_handle{1};
 
         struct AsyncAction
         {
@@ -111,6 +132,9 @@ namespace RC
         static inline std::unordered_map<File::StringType, LuaCallbackData> m_global_command_lua_callbacks;
         static inline std::unordered_map<File::StringType, LuaCallbackData> m_custom_command_lua_pre_callbacks;
         static inline std::vector<SimpleLuaAction> m_game_thread_actions{};
+        static inline std::vector<SimpleLuaAction> m_engine_tick_actions{};
+        static inline std::vector<DelayedGameThreadAction> m_delayed_game_thread_actions{};
+        static inline GameThreadExecutionMethod m_default_game_thread_method{GameThreadExecutionMethod::EngineTick};
         // This is storage that persists through hot-reloads.
         static inline std::unordered_map<std::string, SharedLuaVariable> m_shared_lua_variables{};
         static inline std::vector<FunctionHookData> m_custom_event_callbacks{};
@@ -134,6 +158,7 @@ namespace RC
         bool m_processing_events{};
         bool m_pause_events_processing{};
         bool m_is_process_event_hooked{};
+        static inline bool m_is_engine_tick_hooked{};
         std::mutex m_actions_lock{};
 
       public:
@@ -147,6 +172,9 @@ namespace RC
         }
 
       private:
+        static auto ensure_engine_tick_hooked() -> void;
+        static auto ensure_process_event_hooked(LuaMod* mod) -> void;
+
         static auto custom_module_searcher(lua_State* L) -> int;
         auto setup_custom_module_loader(const LuaMadeSimple::Lua* lua_state) -> void;
         auto load_and_execute_script(const std::filesystem::path& script_path) -> bool;
