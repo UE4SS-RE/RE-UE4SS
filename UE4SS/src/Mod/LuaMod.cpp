@@ -55,6 +55,7 @@
 #include <Unreal/UPackage.hpp>
 #include <Unreal/UnrealVersion.hpp>
 #include <UnrealCustom/CustomProperty.hpp>
+#include <UE4SSRuntime.hpp>
 
 #if PLATFORM_WINDOWS
 #include <Unreal/Core/Windows/AllowWindowsPlatformTypes.hpp>
