@@ -1497,16 +1497,61 @@ namespace RC::LuaType
             table.make_global(prop_name);
             // Make global table to store enum name/value pairs -> END
 
-            // Push the actual enum value to the Lua stack
-            params.lua.set_integer(*static_cast<uint8_t*>(params.data));
+            // Push the enum value to the Lua stack based on underlying type size and signedness
+            auto underlying_prop = static_cast<Unreal::FEnumProperty*>(params.property)->GetUnderlyingProperty();
+            auto cast_flags = underlying_prop->GetClass().GetClassCastFlags();
+            constexpr auto unsigned_flags = Unreal::CASTCLASS_FByteProperty | Unreal::CASTCLASS_FUInt16Property |
+                                            Unreal::CASTCLASS_FUInt32Property | Unreal::CASTCLASS_FUInt64Property;
+            bool is_unsigned = (cast_flags & unsigned_flags) != 0;
+
+            switch (underlying_prop->GetElementSize())
+            {
+            case 1:
+                params.lua.set_integer(is_unsigned ? static_cast<int64_t>(*static_cast<uint8_t*>(params.data))
+                                                   : static_cast<int64_t>(*static_cast<int8_t*>(params.data)));
+                break;
+            case 2:
+                params.lua.set_integer(is_unsigned ? static_cast<int64_t>(*static_cast<uint16_t*>(params.data))
+                                                   : static_cast<int64_t>(*static_cast<int16_t*>(params.data)));
+                break;
+            case 4:
+                params.lua.set_integer(is_unsigned ? static_cast<int64_t>(*static_cast<uint32_t*>(params.data))
+                                                   : static_cast<int64_t>(*static_cast<int32_t*>(params.data)));
+                break;
+            case 8:
+                params.lua.set_integer(*static_cast<int64_t*>(params.data));
+                break;
+            default:
+                params.throw_error("push_enumproperty", "Unsupported enum underlying type size");
+                break;
+            }
 
             return;
         }
-        case Operation::Set:
-            // TODO: Verify that this works
-            // TODO: Bounds checking to make sure we don't set an invalid uint8_t because Lua can send us up to 64 bits
-            *static_cast<uint8_t*>(params.data) = static_cast<uint8_t>(params.lua.get_integer(params.stored_at_index));
+        case Operation::Set: {
+            // For Set, signedness doesn't matter - bit pattern is preserved
+            auto underlying_prop = static_cast<Unreal::FEnumProperty*>(params.property)->GetUnderlyingProperty();
+            int64_t value = params.lua.get_integer(params.stored_at_index);
+            switch (underlying_prop->GetElementSize())
+            {
+            case 1:
+                *static_cast<uint8_t*>(params.data) = static_cast<uint8_t>(value);
+                break;
+            case 2:
+                *static_cast<uint16_t*>(params.data) = static_cast<uint16_t>(value);
+                break;
+            case 4:
+                *static_cast<uint32_t*>(params.data) = static_cast<uint32_t>(value);
+                break;
+            case 8:
+                *static_cast<uint64_t*>(params.data) = static_cast<uint64_t>(value);
+                break;
+            default:
+                params.throw_error("push_enumproperty", "Unsupported enum underlying type size");
+                break;
+            }
             return;
+        }
         case Operation::GetParam:
             // TODO: Verify that this works
             RemoteUnrealParam::construct(params.lua, params.data, params.base, params.property);
