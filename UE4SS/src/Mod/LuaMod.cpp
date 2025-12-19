@@ -3711,7 +3711,6 @@ Overloads:
                                        return false;
                                    }
 
-                                   set_is_in_game_thread(*action.lua, true);
                                    LuaMod::m_is_currently_executing_game_action = true;
 
                                    action.lua->registry().get_function_ref(action.lua_action_function_ref);
@@ -3720,7 +3719,6 @@ Overloads:
                                        action.lua->call_function(0, 0);
                                    });
 
-                                   set_is_in_game_thread(*action.lua, false);
                                    LuaMod::m_is_currently_executing_game_action = false;
 
                                    // Handle looping
@@ -3749,7 +3747,6 @@ Overloads:
                                                                    return false;
                                                                }
 
-                                                               set_is_in_game_thread(*lua_data.lua, true);
                                                                LuaMod::m_is_currently_executing_game_action = true;
 
                                                                lua_data.lua->registry().get_function_ref(lua_data.lua_action_function_ref);
@@ -3760,7 +3757,6 @@ Overloads:
 
                                                                luaL_unref(lua_data.lua->get_lua_state(), LUA_REGISTRYINDEX, lua_data.lua_action_thread_ref);
 
-                                                               set_is_in_game_thread(*lua_data.lua, false);
                                                                LuaMod::m_is_currently_executing_game_action = false;
                                                                return true;
                                                            }),
@@ -3809,7 +3805,6 @@ Overloads:
                                        return false;
                                    }
 
-                                   set_is_in_game_thread(*action.lua, true);
                                    LuaMod::m_is_currently_executing_game_action = true;
 
                                    action.lua->registry().get_function_ref(action.lua_action_function_ref);
@@ -3818,7 +3813,6 @@ Overloads:
                                        action.lua->call_function(0, 0);
                                    });
 
-                                   set_is_in_game_thread(*action.lua, false);
                                    LuaMod::m_is_currently_executing_game_action = false;
 
                                    // Handle looping
