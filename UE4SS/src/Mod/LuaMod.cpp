@@ -4360,18 +4360,24 @@ Overloads:
                             // Frame-based delay
                             if (new_delay >= 0)
                             {
-                                action.delay_frames = new_delay;
+                                action.frames_remaining = new_delay;
                             }
-                            action.frames_remaining = action.delay_frames;
+                            else
+                            {
+                                action.frames_remaining = action.delay_frames;
+                            }
                         }
                         else
                         {
                             // Time-based delay
                             if (new_delay >= 0)
                             {
-                                action.delay_ms = new_delay;
+                                action.execute_at = std::chrono::steady_clock::now() + std::chrono::milliseconds(new_delay);
                             }
-                            action.execute_at = std::chrono::steady_clock::now() + std::chrono::milliseconds(action.delay_ms);
+                            else
+                            {
+                                action.execute_at = std::chrono::steady_clock::now() + std::chrono::milliseconds(action.delay_ms);
+                            }
                         }
                         action.paused = false;  // Unpause if paused
                         found = true;
