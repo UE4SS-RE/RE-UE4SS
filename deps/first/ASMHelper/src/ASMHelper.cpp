@@ -13,12 +13,12 @@ namespace RC::ASM
         ZydisDecoderInit(&decoder, ZYDIS_MACHINE_MODE_LONG_64, ZYDIS_STACK_WIDTH_64);
         ZyanUSize offset = 0;
         ZydisDecodedInstruction instruction{};
-        ZydisDecodedOperand operands[10]{};
-        while (ZYAN_SUCCESS(ZydisDecoderDecodeFull(&decoder, instruction_ptr + offset, 16 - offset, &instruction, operands)))
+        std::vector<ZydisDecodedOperand> operands{10};
+        while (ZYAN_SUCCESS(ZydisDecoderDecodeFull(&decoder, instruction_ptr + offset, 16 - offset, &instruction, operands.data())))
         {
             break;
         }
-        return {in_instruction_ptr, instruction, operands};
+        return {in_instruction_ptr, instruction, std::move(operands)};
     }
 
     auto resolve_absolute_address(void* in_instruction_ptr) -> void*

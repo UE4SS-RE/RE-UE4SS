@@ -1,5 +1,7 @@
 #pragma once
 
+#include <vector>
+
 #include <ASMHelper/Common.hpp>
 #include <Zydis/Zydis.h>
 
@@ -9,7 +11,7 @@ namespace RC::ASM
     {
         void* address{};
         ZydisDecodedInstruction raw{};
-        ZydisDecodedOperand* operands{};
+        std::vector<ZydisDecodedOperand> operands{};
     };
 
     RC_ASM_API auto resolve_jmp(void* instruction_ptr) -> void*;

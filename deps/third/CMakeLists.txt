@@ -92,7 +92,7 @@ add_subdirectory("corrosion")
 FetchContent_Declare(
     fmt
     GIT_REPOSITORY https://github.com/fmtlib/fmt.git
-    GIT_TAG 11.2.0
+    GIT_TAG 12.1.0
     GIT_SHALLOW TRUE
     GIT_PROGRESS ON
     PATCH_COMMAND ${CMAKE_COMMAND} 
