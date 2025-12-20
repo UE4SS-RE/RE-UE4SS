@@ -468,6 +468,11 @@ namespace RC::LuaMadeSimple
         ::RC::LuaMadeSimple::dump_stack(get_lua_state(), message);
     }
 
+    auto Lua::get_stack_dump(const char* message) const -> std::string
+    {
+        return ::RC::LuaMadeSimple::get_stack_dump(get_lua_state(), message);
+    }
+
     auto Lua::handle_error(const std::string& error_message) const -> const std::string
     {
         return ::RC::LuaMadeSimple::handle_error(get_lua_state(), error_message);
@@ -1105,6 +1110,41 @@ namespace RC::LuaMadeSimple
             printf_s("\n");
         }
         printf_s("\nLUA Stack dump -> END----------------------------\n\n");
+    }
+
+    // https://stackoverflow.com/questions/59091462/from-c-how-can-i-print-the-contents-of-the-lua-stack/59097940#59097940
+    auto get_stack_dump(lua_State* lua_state, const char* message) -> std::string
+    {
+        auto out_message = fmt::format("\n\nLUA Stack dump -> START------------------------------\n{}\n", message);
+        int top = lua_gettop(lua_state);
+        for (int i = 1; i <= top; i++)
+        {
+            out_message.append(fmt::format("{}\t{}\t", i, luaL_typename(lua_state, i)));
+            switch (lua_type(lua_state, i))
+            {
+            case LUA_TNUMBER:
+                out_message.append(fmt::format("{}", lua_tonumber(lua_state, i)));
+                break;
+            case LUA_TSTRING:
+                out_message.append(fmt::format("{}", lua_tostring(lua_state, i)));
+                break;
+            case LUA_TBOOLEAN:
+                out_message.append(fmt::format("{}", (lua_toboolean(lua_state, i) ? "true" : "false")));
+                break;
+            case LUA_TNIL:
+                out_message.append("nil");
+                break;
+            case LUA_TFUNCTION:
+                out_message.append("function");
+                break;
+            default:
+                out_message.append(fmt::format("{}", lua_topointer(lua_state, i)));
+                break;
+            }
+            out_message.append("\n");
+        }
+        out_message.append("\nLUA Stack dump -> END----------------------------\n\n");
+        return out_message;
     }
 
     auto process_lua_function(lua_State* lua_state) -> int
