@@ -233,6 +233,9 @@ namespace RC
             Output::send<LogLevel::Verbose>(STR("Unregistering native pre-hook ({}) for {}\n"), native_hook_pre_id_it->first, function_name_no_prefix);
             lua_data.unreal_function->UnregisterHook(native_hook_pre_id_it->second);
         }
+
+        // No longer promising to be in the game thread
+        set_is_in_game_thread(lua_data.lua, false);
     }
 
     static auto lua_unreal_script_function_hook_post(Unreal::UnrealScriptFunctionCallableContext context, void* custom_data) -> void
@@ -240,8 +243,13 @@ namespace RC
         // Fetch the data corresponding to this UFunction
         auto& lua_data = *static_cast<LuaUnrealScriptFunctionData*>(custom_data);
 
-        // Check if this hook has been scheduled for removal (Lua state may be invalid)
-        if (lua_data.scheduled_for_removal) return;
+        if (lua_data.scheduled_for_removal)
+        {
+            const auto function_name_no_prefix = get_function_name_without_prefix(lua_data.unreal_function->GetFullName());
+            Output::send<LogLevel::Verbose>(STR("Unregistering native pre-hook ({}) for {}\n"), lua_data.pre_callback_id, function_name_no_prefix);
+            lua_data.unreal_function->UnregisterHook(lua_data.pre_callback_id);
+            luaL_unref(lua_data.lua.get_lua_state(), LUA_REGISTRYINDEX, lua_data.lua_callback_ref);
+        }
 
         auto process_return_value = [&]() {
             // If 'nil' exists on the Lua stack, that means that the UFunction expected a return value but the Lua script didn't return anything
@@ -398,17 +406,14 @@ namespace RC
 
         if (lua_data.scheduled_for_removal)
         {
-            auto native_hook_post_id_it = LuaMod::m_generic_hook_id_to_native_hook_id.find(lua_data.post_callback_id);
-            auto function_name_no_prefix = get_function_name_without_prefix(lua_data.unreal_function->GetFullName());
-            Output::send<LogLevel::Verbose>(STR("Unregistering native post-hook ({}) for {}\n"), native_hook_post_id_it->first, function_name_no_prefix);
-            lua_data.unreal_function->UnregisterHook(native_hook_post_id_it->second);
-
-            auto mod = get_mod_ref(lua_data.lua);
-            luaL_unref(lua_data.lua.get_lua_state(), LUA_REGISTRYINDEX, lua_data.lua_callback_ref);
+            const auto function_name_no_prefix = get_function_name_without_prefix(lua_data.unreal_function->GetFullName());
+            Output::send<LogLevel::Verbose>(STR("Unregistering native post-hook ({}) for {}\n"), lua_data.post_callback_id, function_name_no_prefix);
+            lua_data.unreal_function->UnregisterHook(lua_data.post_callback_id);
             if (lua_data.lua_post_callback_ref != -1)
             {
                 luaL_unref(lua_data.lua.get_lua_state(), LUA_REGISTRYINDEX, lua_data.lua_post_callback_ref);
             }
+            const auto mod = get_mod_ref(lua_data.lua);
             luaL_unref(mod->lua().get_lua_state(), LUA_REGISTRYINDEX, lua_data.lua_thread_ref);
             std::erase_if(g_hooked_script_function_data, [&](const std::unique_ptr<LuaUnrealScriptFunctionData>& elem) {
                 return elem.get() == &lua_data;
@@ -703,7 +708,6 @@ namespace RC
 
     auto LuaMod::global_uninstall() -> void
     {
-        LuaMod::m_generic_hook_id_to_native_hook_id.clear();
     }
 
     template <typename PropertyType>
@@ -1766,25 +1770,21 @@ Overloads:
                                                 to_string(function_name_no_prefix)));
                 }
 
-                // Hooks on native UFunctions will have both of these IDs.
-                // pre_id and post_id are generic IDs returned to Lua, we need to map them to native IDs
-                auto native_hook_pre_id_it = LuaMod::m_generic_hook_id_to_native_hook_id.find(static_cast<int32_t>(pre_id));
-                auto native_hook_post_id_it = LuaMod::m_generic_hook_id_to_native_hook_id.find(static_cast<int32_t>(post_id));
-                if (native_hook_pre_id_it != LuaMod::m_generic_hook_id_to_native_hook_id.end() &&
-                    native_hook_post_id_it != LuaMod::m_generic_hook_id_to_native_hook_id.end())
+
+                auto func_ptr = unreal_function->GetFunc();
+                if (func_ptr && func_ptr != Unreal::UObject::ProcessInternalInternal.get_function_address() &&
+                    unreal_function->HasAnyFunctionFlags(Unreal::EFunctionFlags::FUNC_Native))
                 {
-                    // Use the native IDs for comparison, not the generic IDs
-                    auto native_pre_id = native_hook_pre_id_it->second;
-                    auto native_post_id = native_hook_post_id_it->second;
                     const auto hook_data = std::ranges::find_if(g_hooked_script_function_data, [&](const std::unique_ptr<LuaUnrealScriptFunctionData>& elem) {
-                        return elem->post_callback_id == native_post_id && elem->pre_callback_id == native_pre_id;
+                        return elem->post_callback_id == post_id && elem->pre_callback_id == pre_id;
                     });
                     if (hook_data != g_hooked_script_function_data.end())
                     {
                         hook_data->get()->scheduled_for_removal = true;
                     }
                 }
-                else
+                else if (func_ptr && func_ptr == Unreal::UObject::ProcessInternalInternal.get_function_address() &&
+                         !unreal_function->HasAnyFunctionFlags(Unreal::EFunctionFlags::FUNC_Native))
                 {
                     if (auto data_ptr = LuaMod::find_function_hook_data(LuaMod::m_script_hook_callbacks, unreal_function); data_ptr)
                     {
@@ -1799,6 +1799,16 @@ Overloads:
                             }
                         }
                     }
+                }
+                else
+                {
+                    std::string error_message{"Was unable to unregister a hook with Lua function 'UnregisterHook', information:\n"};
+                    error_message.append(fmt::format("FunctionName: {}\n", to_string(function_name_no_prefix)));
+                    error_message.append(fmt::format("UFunction::Func: {}\n", std::bit_cast<void*>(func_ptr)));
+                    error_message.append(fmt::format("ProcessInternal: {}\n", Unreal::UObject::ProcessInternalInternal.get_function_address()));
+                    error_message.append(
+                            fmt::format("FUNC_Native: {}\n", static_cast<uint32_t>(unreal_function->HasAnyFunctionFlags(Unreal::EFunctionFlags::FUNC_Native))));
+                    lua.throw_error(error_message);
                 }
 
                 return 0;
@@ -3859,8 +3869,8 @@ Overloads:
                         to_string(function_name_no_prefix)));
             }
 
-            int32_t generic_pre_id{};
-            int32_t generic_post_id{};
+            int32_t pre_id{};
+            int32_t post_id{};
 
             auto func_ptr = unreal_function->GetFunc();
             if (func_ptr && func_ptr != Unreal::UObject::ProcessInternalInternal.get_function_address() &&
@@ -3868,35 +3878,31 @@ Overloads:
             {
                 auto& custom_data = g_hooked_script_function_data.emplace_back(std::make_unique<LuaUnrealScriptFunctionData>(
                         0, 0, unreal_function, mod, *hook_lua, lua_callback_registry_index, lua_post_callback_registry_index, lua_thread_registry_index));
-                auto pre_id = unreal_function->RegisterPreHook(&lua_unreal_script_function_hook_pre, custom_data.get());
-                auto post_id = unreal_function->RegisterPostHook(&lua_unreal_script_function_hook_post, custom_data.get());
+                pre_id = unreal_function->RegisterPreHook(&lua_unreal_script_function_hook_pre, custom_data.get());
+                post_id = unreal_function->RegisterPostHook(&lua_unreal_script_function_hook_post, custom_data.get());
                 custom_data->pre_callback_id = pre_id;
                 custom_data->post_callback_id = post_id;
-                m_generic_hook_id_to_native_hook_id.emplace(++m_last_generic_hook_id, pre_id);
-                generic_pre_id = m_last_generic_hook_id;
-                m_generic_hook_id_to_native_hook_id.emplace(++m_last_generic_hook_id, post_id);
-                generic_post_id = m_last_generic_hook_id;
                 Output::send<LogLevel::Verbose>(STR("[RegisterHook] Registered native hook ({}, {}) for {}\n"),
-                                                generic_pre_id,
-                                                generic_post_id,
+                                                custom_data->pre_callback_id,
+                                                custom_data->post_callback_id,
                                                 unreal_function->GetFullName());
             }
             else if (func_ptr && func_ptr == Unreal::UObject::ProcessInternalInternal.get_function_address() &&
                      !unreal_function->HasAnyFunctionFlags(Unreal::EFunctionFlags::FUNC_Native))
             {
-                ++m_last_generic_hook_id;
                 auto function_data = find_function_hook_data(m_script_hook_callbacks, unreal_function);
                 if (!function_data)
                 {
                     function_data = &m_script_hook_callbacks.emplace_back(get_object_names(unreal_function), LuaCallbackData{hook_lua, nullptr, {}});
                 }
                 auto& callback_data = function_data->callback_data;
-                callback_data.registry_indexes.emplace_back(hook_lua, LuaCallbackData::RegistryIndex{lua_callback_registry_index, m_last_generic_hook_id});
-                generic_pre_id = m_last_generic_hook_id;
-                generic_post_id = m_last_generic_hook_id;
+                // Note that non-native hooks don't have a different id for the post-callback.
+                pre_id = Unreal::UnrealScriptFunctionData::MakeNewId();
+                post_id = pre_id;
+                callback_data.registry_indexes.emplace_back(hook_lua, LuaCallbackData::RegistryIndex{lua_callback_registry_index, pre_id});
                 Output::send<LogLevel::Verbose>(STR("[RegisterHook] Registered script hook ({}, {}) for {}\n"),
-                                                generic_pre_id,
-                                                generic_post_id,
+                                                pre_id,
+                                                post_id,
                                                 unreal_function->GetFullName());
             }
             else
@@ -3910,8 +3916,8 @@ Overloads:
                 lua.throw_error(error_message);
             }
 
-            lua.set_integer(generic_pre_id);
-            lua.set_integer(generic_post_id);
+            lua.set_integer(pre_id);
+            lua.set_integer(post_id);
 
             return 2;
         });
