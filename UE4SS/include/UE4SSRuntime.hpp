@@ -19,23 +19,26 @@ namespace RC
     struct RC_UE4SS_API UE4SSRuntime
     {
         // ========== Hook Availability ==========
-        // These check if the underlying hooks were successfully installed.
+        // These check if the underlying functions were found during AOB scan.
+        // The actual detours are created lazily when callbacks are registered.
 
         /**
-         * Check if the EngineTick hook is available.
-         * This is required for:
+         * Check if the EngineTick function is available for hooking.
+         * This checks if the AOB scan found UEngine::Tick.
+         * Required for:
          * - Frame-based delays (ExecuteInGameThreadAfterFrames, LoopInGameThreadAfterFrames)
          * - ExecuteInGameThread with EGameThreadMethod.EngineTick
-         * @return true if EngineTick hook was successfully installed
+         * @return true if EngineTick function was found and can be hooked
          */
         static auto IsEngineTickAvailable() -> bool;
 
         /**
-         * Check if the ProcessEvent hook is available.
-         * This is required for:
+         * Check if the ProcessEvent function is available for hooking.
+         * This checks if the AOB scan found UObject::ProcessEvent.
+         * Required for:
          * - ExecuteInGameThread with EGameThreadMethod.ProcessEvent
          * - RegisterHook functionality
-         * @return true if ProcessEvent hook was successfully installed
+         * @return true if ProcessEvent function was found and can be hooked
          */
         static auto IsProcessEventAvailable() -> bool;
 

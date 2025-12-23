@@ -55,22 +55,31 @@ namespace RC
             int32_t lua_action_thread_ref{};
         };
 
+        // Status of a delayed action (mirrors UE's ETimerStatus)
+        enum class DelayedActionStatus : uint8_t
+        {
+            Pending,        // Created but not yet started
+            Active,         // Running, waiting for delay to expire
+            Paused,         // Timer paused, will resume when unpaused
+            Executing,      // Currently executing callback
+            PendingRemoval  // Marked for removal, will be cleaned up
+        };
+
         struct DelayedGameThreadAction
         {
             const LuaMadeSimple::Lua* lua;
             int32_t lua_action_function_ref{};
             int32_t lua_action_thread_ref{};
             GameThreadExecutionMethod method{GameThreadExecutionMethod::EngineTick};
-            std::chrono::steady_clock::time_point execute_at{};  // For time-based delay
-            std::chrono::steady_clock::time_point paused_at{};  // When action was paused (for calculating remaining time)
+            DelayedActionStatus status{DelayedActionStatus::Active};
+            std::chrono::steady_clock::time_point execute_at{};  // Absolute time when action should execute
+            int64_t time_remaining_ms{0};  // Time remaining when paused (milliseconds)
             int64_t frames_remaining{0};  // Countdown for frame-based delays
-            int64_t delay_ms{0};  // Original delay in milliseconds (for retriggerable/loop)
+            int64_t delay_ms{0};  // Original delay in milliseconds (for loop/reset)
             int64_t delay_frames{0};  // Original delay in frames (0 means use time-based delay)
-            int64_t handle{0};  // Unique handle for retriggerable/cancellable actions
+            int64_t handle{0};  // Unique handle for this action
             bool is_retriggerable{false};  // If true, can be reset by calling with same handle
             bool is_looping{false};  // If true, re-schedule after each execution
-            bool cancelled{false};  // If true, will be removed without execution
-            bool paused{false};  // If true, timer is paused
         };
 
         static inline int64_t m_next_delayed_action_handle{1};
