@@ -258,7 +258,7 @@ namespace RC
             }
         };
 
-        // Removes pre & post-hook callbacks if UnregisterHook was called in the pre-callback hook.
+        // Removes pre & post-hook callbacks if UnregisterHook was called in the pre-callback.
         remove_if_scheduled();
 
         auto process_return_value = [&]() {
