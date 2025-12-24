@@ -5054,6 +5054,88 @@ Overloads:
             return 1;
         });
 
+        // AsyncComputeLua - runs a Lua function on a worker thread with an isolated Lua state
+        // P1: string luaSource - Lua code that returns a function: "return function(input) ... end"
+        // P2: any input - Input data (serialized to worker)
+        // P3: function callback - Called with result: { success = bool, error = string?, result = any? }
+        // P4: table options? - Optional settings: { json = bool }
+        // Return: integer handle - Can be used with CancelAsyncCompute
+        m_lua.register_function("AsyncComputeLua", [](const LuaMadeSimple::Lua& lua) -> int {
+            std::string error_overload_not_found{R"(
+No overload found for function 'AsyncComputeLua'.
+Overloads:
+#1: AsyncComputeLua(string luaSource, any input, function callback, table? options) -> integer handle
+
+AsyncComputeLua runs Lua code in an isolated worker thread. The worker has:
+- Standard Lua libraries (math, string, table, io, os, coroutine)
+- Optional json.encode/json.decode (set options.json = true)
+- NO UE4SS bindings, NO debug library, NO require/load/loadfile/dofile
+
+The luaSource must return a function that takes input and returns output:
+  "return function(input) return input.x * 2 end")"};
+
+            lua_State* L = lua.get_lua_state();
+
+            // P1: string luaSource
+            if (!lua.is_string())
+            {
+                lua.throw_error(error_overload_not_found);
+            }
+            std::string lua_source{lua.get_string()};
+
+            // After get_string(), stack indices shift down by 1:
+            // P2: any input (now at index 1)
+            LuaType::LuaValue input;
+            try
+            {
+                input = LuaType::serialize_lua_value(L, 1);
+            }
+            catch (const std::exception& e)
+            {
+                lua.throw_error(std::string("AsyncComputeLua: Failed to serialize input: ") + e.what());
+            }
+
+            // P3: function callback (now at index 2)
+            if (!lua_isfunction(L, 2))
+            {
+                lua.throw_error(error_overload_not_found);
+            }
+
+            // P4: table options? (now at index 3) - optional
+            AsyncComputeManager::LuaWorkerOptions options{};
+            if (lua_gettop(L) >= 3 && lua_istable(L, 3))
+            {
+                lua_getfield(L, 3, "json");
+                if (lua_isboolean(L, -1))
+                {
+                    options.include_json = lua_toboolean(L, -1);
+                }
+                lua_pop(L, 1);
+            }
+
+            auto mod = get_mod_ref(lua);
+
+            // Create a thread for the callback (so it can be stored in registry safely)
+            auto [callback_lua, lua_thread_registry_index] = make_hook_state(mod);
+
+            // Copy the callback function to the hook state and store in registry
+            lua_pushvalue(L, 2);
+            lua_xmove(L, callback_lua->get_lua_state(), 1);
+            const auto callback_ref = luaL_ref(callback_lua->get_lua_state(), LUA_REGISTRYINDEX);
+
+            uint64_t handle = AsyncComputeManager::get().submit_lua_task(
+                mod,
+                lua_source,
+                std::move(input),
+                callback_ref,
+                lua_thread_registry_index,
+                options
+            );
+
+            lua.set_integer(static_cast<int64_t>(handle));
+            return 1;
+        });
+
         // Create 'json' table with encode/decode functions
         auto json_table = m_lua.prepare_new_table();
         json_table.set_has_userdata(false);
