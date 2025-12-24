@@ -225,17 +225,6 @@ namespace RC
         // This will execute any internal UE4 scripting functions & native functions depending on the type of UFunction
         // The API will automatically call the original function
         // This function continues in 'lua_unreal_script_function_hook_post' which executes immediately after the original function gets called
-
-        if (lua_data.scheduled_for_removal)
-        {
-            auto native_hook_pre_id_it = LuaMod::m_generic_hook_id_to_native_hook_id.find(lua_data.pre_callback_id);
-            auto function_name_no_prefix = get_function_name_without_prefix(lua_data.unreal_function->GetFullName());
-            Output::send<LogLevel::Verbose>(STR("Unregistering native pre-hook ({}) for {}\n"), native_hook_pre_id_it->first, function_name_no_prefix);
-            lua_data.unreal_function->UnregisterHook(native_hook_pre_id_it->second);
-        }
-
-        // No longer promising to be in the game thread
-        set_is_in_game_thread(lua_data.lua, false);
     }
 
     static auto lua_unreal_script_function_hook_post(Unreal::UnrealScriptFunctionCallableContext context, void* custom_data) -> void
@@ -243,29 +232,34 @@ namespace RC
         // Fetch the data corresponding to this UFunction
         auto& lua_data = *static_cast<LuaUnrealScriptFunctionData*>(custom_data);
 
-        if (lua_data.scheduled_for_removal)
-        {
-            const auto function_name_no_prefix = get_function_name_without_prefix(lua_data.unreal_function->GetFullName());
-
-            Output::send<LogLevel::Verbose>(STR("Unregistering native pre-hook ({}) for {}\n"), lua_data.pre_callback_id, function_name_no_prefix);
-            lua_data.unreal_function->UnregisterHook(lua_data.pre_callback_id);
-            luaL_unref(lua_data.lua.get_lua_state(), LUA_REGISTRYINDEX, lua_data.lua_callback_ref);
-
-            Output::send<LogLevel::Verbose>(STR("Unregistering native post-hook ({}) for {}\n"), lua_data.post_callback_id, function_name_no_prefix);
-            lua_data.unreal_function->UnregisterHook(lua_data.post_callback_id);
-            if (lua_data.lua_post_callback_ref != -1)
+        auto remove_if_scheduled = [&] {
+            if (lua_data.scheduled_for_removal)
             {
-                luaL_unref(lua_data.lua.get_lua_state(), LUA_REGISTRYINDEX, lua_data.lua_post_callback_ref);
+                const auto function_name_no_prefix = get_function_name_without_prefix(lua_data.unreal_function->GetFullName());
+
+                Output::send<LogLevel::Verbose>(STR("Unregistering native pre-hook ({}) for {}\n"), lua_data.pre_callback_id, function_name_no_prefix);
+                lua_data.unreal_function->UnregisterHook(lua_data.pre_callback_id);
+                luaL_unref(lua_data.lua.get_lua_state(), LUA_REGISTRYINDEX, lua_data.lua_callback_ref);
+
+                Output::send<LogLevel::Verbose>(STR("Unregistering native post-hook ({}) for {}\n"), lua_data.post_callback_id, function_name_no_prefix);
+                lua_data.unreal_function->UnregisterHook(lua_data.post_callback_id);
+                if (lua_data.lua_post_callback_ref != -1)
+                {
+                    luaL_unref(lua_data.lua.get_lua_state(), LUA_REGISTRYINDEX, lua_data.lua_post_callback_ref);
+                }
+
+                const auto mod = get_mod_ref(lua_data.lua);
+                luaL_unref(mod->lua().get_lua_state(), LUA_REGISTRYINDEX, lua_data.lua_thread_ref);
+                std::erase_if(g_hooked_script_function_data, [&](const std::unique_ptr<LuaUnrealScriptFunctionData>& elem) {
+                    return elem.get() == &lua_data;
+                });
+
+                return;
             }
+        };
 
-            const auto mod = get_mod_ref(lua_data.lua);
-            luaL_unref(mod->lua().get_lua_state(), LUA_REGISTRYINDEX, lua_data.lua_thread_ref);
-            std::erase_if(g_hooked_script_function_data, [&](const std::unique_ptr<LuaUnrealScriptFunctionData>& elem) {
-                return elem.get() == &lua_data;
-            });
-
-            return;
-        }
+        // Removes pre & post-hook callbacks if UnregisterHook was called in the pre-callback hook.
+        remove_if_scheduled();
 
         auto process_return_value = [&]() {
             // If 'nil' exists on the Lua stack, that means that the UFunction expected a return value but the Lua script didn't return anything
@@ -420,24 +414,8 @@ namespace RC
         process_return_value();
         process_return_value();
 
-        if (lua_data.scheduled_for_removal)
-        {
-            const auto function_name_no_prefix = get_function_name_without_prefix(lua_data.unreal_function->GetFullName());
-            Output::send<LogLevel::Verbose>(STR("Unregistering native post-hook ({}) for {}\n"), lua_data.post_callback_id, function_name_no_prefix);
-            lua_data.unreal_function->UnregisterHook(lua_data.post_callback_id);
-            if (lua_data.lua_post_callback_ref != -1)
-            {
-                luaL_unref(lua_data.lua.get_lua_state(), LUA_REGISTRYINDEX, lua_data.lua_post_callback_ref);
-            }
-            const auto mod = get_mod_ref(lua_data.lua);
-            luaL_unref(mod->lua().get_lua_state(), LUA_REGISTRYINDEX, lua_data.lua_thread_ref);
-            std::erase_if(g_hooked_script_function_data, [&](const std::unique_ptr<LuaUnrealScriptFunctionData>& elem) {
-                return elem.get() == &lua_data;
-            });
-        }
-        // No longer promising to be in the game thread
-        // Must be done before cleanup since cleanup deletes lua_data
-        set_is_in_game_thread(lua_data.lua, false);
+        // Removes pre & post-hook callbacks if UnregisterHook was called in the post-hook callback.
+        remove_if_scheduled();
     }
 
     static auto register_input_globals(const LuaMadeSimple::Lua& lua) -> void
