@@ -115,7 +115,7 @@ Added global functions for mod management ([UE4SS #1105](https://github.com/UE4S
 - `RestartMod(ModName)` - Restart another mod by name
 - `UninstallMod(ModName)` - Uninstall another mod by name
 
-Added comprehensive Delayed Action System for game-thread timer management ([UE4SS #XXXX](https://github.com/UE4SS-RE/RE-UE4SS/pull/XXXX))
+Added comprehensive Delayed Action System for game-thread timer management ([UE4SS #1128](https://github.com/UE4SS-RE/RE-UE4SS/pull/1128))
 - New execution functions:
   - `ExecuteInGameThreadWithDelay(delayMs, callback)` - Execute after delay, returns handle
   - `ExecuteInGameThreadWithDelay(handle, delayMs, callback)` - UE Delay-style (only executes if handle not active)
