@@ -232,7 +232,8 @@ namespace RC
         // Fetch the data corresponding to this UFunction
         auto& lua_data = *static_cast<LuaUnrealScriptFunctionData*>(custom_data);
 
-        auto remove_if_scheduled = [&] {
+        // Returns true if a hooks were removed.
+        auto remove_if_scheduled = [&] -> bool {
             if (lua_data.scheduled_for_removal)
             {
                 const auto function_name_no_prefix = get_function_name_without_prefix(lua_data.unreal_function->GetFullName());
@@ -254,12 +255,19 @@ namespace RC
                     return elem.get() == &lua_data;
                 });
 
-                return;
+                return true;
+            }
+            else
+            {
+                return false;
             }
         };
 
         // Removes pre & post-hook callbacks if UnregisterHook was called in the pre-callback.
-        remove_if_scheduled();
+        if (remove_if_scheduled())
+        {
+            return;
+        }
 
         auto process_return_value = [&]() {
             // If 'nil' exists on the Lua stack, that means that the UFunction expected a return value but the Lua script didn't return anything
