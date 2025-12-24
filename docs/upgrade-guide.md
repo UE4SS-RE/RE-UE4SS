@@ -407,6 +407,146 @@ enum EFieldIterationFlags : uint8
 - The old `ForEachProperty()` methods are **deprecated** and may be removed in the future
 - Use `TFieldIterator`/`TFieldRange` for better performance and when matching Epic's patterns
 
+### Deprecations
+
+#### ExecuteAsync and LoopAsync
+
+**What Changed:**
+`ExecuteAsync` and `LoopAsync` are now deprecated in favor of the new Delayed Action System. While these functions still work, they lack the control and safety features of the new system.
+
+**Why Migrate:**
+- **Cancellation:** Old functions cannot be cancelled once started
+- **Pause/Resume:** No way to pause async loops
+- **Query State:** Cannot check if an action is pending or get remaining time
+- **Mod Isolation:** Old functions don't have ownership tracking
+- **Thread Safety:** New system has better thread safety, particularly when interacting with game objects
+
+**Migration Guide:**
+
+| Old Function | New Function |
+|--------------|--------------|
+| `ExecuteAsync(delayMs, callback)` | `ExecuteInGameThreadWithDelay(delayMs, callback)` |
+| `LoopAsync(delayMs, callback)` | `LoopInGameThreadWithDelay(delayMs, callback)` |
+
+```lua
+-- OLD (deprecated)
+ExecuteAsync(1000, function()
+    print("After 1 second\n")
+end)
+
+LoopAsync(1000, function()
+    print("Every second\n")
+    return false  -- return true to stop
+end)
+
+-- NEW (recommended)
+ExecuteInGameThreadWithDelay(1000, function()
+    print("After 1 second\n")
+end)
+
+local loopHandle
+loopHandle = LoopInGameThreadWithDelay(1000, function()
+    print("Every second\n")
+    if shouldStop then
+        CancelDelayedAction(loopHandle)
+    end
+end)
+```
+
+**Benefits of Migration:**
+- Cancel loops anytime with `CancelDelayedAction(handle)`
+- Pause/resume with `PauseDelayedAction(handle)` and `UnpauseDelayedAction(handle)`
+- Query state with `IsDelayedActionActive(handle)`, `GetDelayedActionTimeRemaining(handle)`, etc.
+- Use `ClearAllDelayedActions()` to clean up all your mod's timers at once
+
+### New Features
+
+#### Delayed Action System
+
+**What's New:**
+A comprehensive timer/delayed action system has been added to the Lua API. This provides UE-style delayed execution with full control over timing, pausing, cancellation, and looping. **This is the recommended replacement for `ExecuteAsync` and `LoopAsync`.**
+
+**New Functions:**
+- `ExecuteInGameThreadWithDelay(delayMs, callback)` - Execute callback after delay, returns handle
+- `ExecuteInGameThreadWithDelay(handle, delayMs, callback)` - Execute only if handle not active (UE Delay-style)
+- `RetriggerableExecuteInGameThreadWithDelay(handle, delayMs, callback)` - Resets timer if called again
+- `LoopInGameThreadWithDelay(delayMs, callback)` - Repeating timer
+- `ExecuteInGameThreadAfterFrames(frames, callback)` - Frame-based delay
+- `LoopInGameThreadAfterFrames(frames, callback)` - Frame-based repeating timer
+- `MakeActionHandle()` - Generate unique handle for use with delay functions
+
+**Timer Control Functions:**
+- `CancelDelayedAction(handle)` - Cancel a pending action
+- `PauseDelayedAction(handle)` - Pause a timer
+- `UnpauseDelayedAction(handle)` - Resume a paused timer
+- `ResetDelayedActionTimer(handle)` - Restart with original delay
+- `SetDelayedActionTimer(handle, newDelayMs)` - Change delay and restart
+- `ClearAllDelayedActions()` - Cancel all actions for current mod
+
+**Query Functions:**
+- `IsValidDelayedActionHandle(handle)` - Check if handle exists
+- `IsDelayedActionActive(handle)` - Check if timer is running
+- `IsDelayedActionPaused(handle)` - Check if timer is paused
+- `GetDelayedActionRate(handle)` - Get configured delay
+- `GetDelayedActionTimeRemaining(handle)` - Get remaining time
+- `GetDelayedActionTimeElapsed(handle)` - Get elapsed time
+
+**New Global Variables:**
+- `EngineTickAvailable` - Boolean indicating if EngineTick hook is available
+- `ProcessEventAvailable` - Boolean indicating if ProcessEvent hook is available
+
+**New Enums:**
+- `EGameThreadMethod.ProcessEvent` - Use ProcessEvent hook
+- `EGameThreadMethod.EngineTick` - Use EngineTick hook (once per frame)
+
+**ExecuteInGameThread Enhancement:**
+`ExecuteInGameThread` now accepts an optional second parameter to specify the execution method:
+```lua
+-- Default behavior (uses config setting)
+ExecuteInGameThread(function() print("Hello\n") end)
+
+-- Explicit method selection
+ExecuteInGameThread(function() print("Hello\n") end, EGameThreadMethod.EngineTick)
+ExecuteInGameThread(function() print("Hello\n") end, EGameThreadMethod.ProcessEvent)
+```
+
+**Example Usage:**
+```lua
+-- Simple delay
+local handle = ExecuteInGameThreadWithDelay(1000, function()
+    print("Fired after 1 second\n")
+end)
+
+-- Retriggerable timer (resets each call)
+local debounceHandle = MakeActionHandle()
+RegisterKeyBind(Key.F, function()
+    RetriggerableExecuteInGameThreadWithDelay(debounceHandle, 500, function()
+        print("Debounced action\n")
+    end)
+end)
+
+-- Self-cancelling loop
+local loopHandle
+loopHandle = LoopInGameThreadWithDelay(1000, function()
+    print("Tick!\n")
+    if someCondition then
+        CancelDelayedAction(loopHandle)
+    end
+end)
+```
+
+**Important Notes:**
+- Handle-based ownership prevents mods from interfering with each other's timers
+- `ClearAllDelayedActions()` only clears actions belonging to the calling mod
+- Frame-based delays require EngineTick hook (check `EngineTickAvailable`)
+- When capturing loop handles in closures, declare the variable before assignment:
+  ```lua
+  local loopHandle  -- Declare first
+  loopHandle = LoopInGameThreadWithDelay(1000, function()
+      CancelDelayedAction(loopHandle)  -- Now correctly captured
+  end)
+  ```
+
 ## Reporting Migration Issues
 
 If you encounter problems while upgrading, please:
