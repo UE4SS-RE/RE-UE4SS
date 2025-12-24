@@ -2,13 +2,226 @@
 #include <Mod/LuaMod.hpp>
 
 #include <cmath>
-#include <UE4SSProgram.hpp>
 #include <DynamicOutput/DynamicOutput.hpp>
 
 #include <LuaMadeSimple/LuaMadeSimple.hpp>
+#include <lua.hpp>
 
 namespace RC
 {
+    IsolatedLuaState::IsolatedLuaState()
+    {
+        m_state = luaL_newstate();
+        if (m_state)
+        {
+            setup_safe_environment();
+        }
+    }
+
+    IsolatedLuaState::~IsolatedLuaState()
+    {
+        if (m_state)
+        {
+            lua_close(m_state);
+            m_state = nullptr;
+        }
+    }
+
+    IsolatedLuaState::IsolatedLuaState(IsolatedLuaState&& other) noexcept
+        : m_state(other.m_state)
+    {
+        other.m_state = nullptr;
+    }
+
+    IsolatedLuaState& IsolatedLuaState::operator=(IsolatedLuaState&& other) noexcept
+    {
+        if (this != &other)
+        {
+            if (m_state)
+            {
+                lua_close(m_state);
+            }
+            m_state = other.m_state;
+            other.m_state = nullptr;
+        }
+        return *this;
+    }
+
+    auto IsolatedLuaState::setup_safe_environment() -> void
+    {
+        // Open standard libraries
+        luaL_openlibs(m_state);
+
+        // Remove unsafe functions
+        remove_unsafe_functions();
+    }
+
+    auto IsolatedLuaState::remove_unsafe_functions() -> void
+    {
+        // Remove debug library entirely
+        lua_pushnil(m_state);
+        lua_setglobal(m_state, "debug");
+
+        // Remove dynamic code loading functions
+        lua_pushnil(m_state);
+        lua_setglobal(m_state, "load");
+
+        lua_pushnil(m_state);
+        lua_setglobal(m_state, "loadfile");
+
+        lua_pushnil(m_state);
+        lua_setglobal(m_state, "dofile");
+
+        // Remove module system
+        lua_pushnil(m_state);
+        lua_setglobal(m_state, "require");
+
+        lua_pushnil(m_state);
+        lua_setglobal(m_state, "package");
+    }
+
+    auto IsolatedLuaState::load_function(const std::string& source) -> std::string
+    {
+        if (!m_state)
+        {
+            return "Lua state is not initialized";
+        }
+
+        // Load the source code
+        int load_result = luaL_loadstring(m_state, source.c_str());
+        if (load_result != LUA_OK)
+        {
+            std::string error = lua_tostring(m_state, -1);
+            lua_pop(m_state, 1);
+            return "Failed to load source: " + error;
+        }
+
+        // Execute to get the function
+        int call_result = lua_pcall(m_state, 0, 1, 0);
+        if (call_result != LUA_OK)
+        {
+            std::string error = lua_tostring(m_state, -1);
+            lua_pop(m_state, 1);
+            return "Failed to execute source: " + error;
+        }
+
+        // Verify we got a function
+        if (!lua_isfunction(m_state, -1))
+        {
+            lua_pop(m_state, 1);
+            return "Source did not return a function";
+        }
+
+        // Function is now on the stack, ready to be called
+        return "";
+    }
+
+    auto IsolatedLuaState::execute(const LuaType::LuaValue& input) -> AsyncComputeResult
+    {
+        if (!m_state)
+        {
+            return AsyncComputeResult::Error("Lua state is not initialized");
+        }
+
+        // Function should be on top of stack from load_function
+        if (!lua_isfunction(m_state, -1))
+        {
+            return AsyncComputeResult::Error("No function loaded");
+        }
+
+        // Push the input
+        LuaType::push_lua_value(m_state, input);
+
+        // Call the function
+        int call_result = lua_pcall(m_state, 1, 1, 0);
+        if (call_result != LUA_OK)
+        {
+            std::string error = lua_tostring(m_state, -1);
+            lua_pop(m_state, 1);
+            return AsyncComputeResult::Error(error);
+        }
+
+        // Serialize the result
+        try
+        {
+            LuaType::LuaValue result = LuaType::serialize_lua_value(m_state, -1);
+            lua_pop(m_state, 1);
+            return AsyncComputeResult::Success(std::move(result));
+        }
+        catch (const std::exception& e)
+        {
+            lua_pop(m_state, 1);
+            return AsyncComputeResult::Error(std::string("Failed to serialize result: ") + e.what());
+        }
+    }
+
+    auto IsolatedLuaState::add_json_library() -> void
+    {
+        if (!m_state) return;
+
+        // Create json table
+        lua_newtable(m_state);
+
+        // json.encode
+        lua_pushcfunction(m_state, [](lua_State* L) -> int {
+            if (lua_gettop(L) < 1)
+            {
+                lua_pushnil(L);
+                lua_pushstring(L, "json.encode requires at least 1 argument");
+                return 2;
+            }
+
+            bool pretty = false;
+            if (lua_gettop(L) >= 2 && lua_isboolean(L, 2))
+            {
+                pretty = lua_toboolean(L, 2);
+            }
+
+            try
+            {
+                LuaType::LuaValue value = LuaType::serialize_lua_value(L, 1);
+                std::string json_str = LuaType::lua_value_to_json(value, pretty);
+                lua_pushstring(L, json_str.c_str());
+                return 1;
+            }
+            catch (const std::exception& e)
+            {
+                lua_pushnil(L);
+                lua_pushstring(L, e.what());
+                return 2;
+            }
+        });
+        lua_setfield(m_state, -2, "encode");
+
+        // json.decode
+        lua_pushcfunction(m_state, [](lua_State* L) -> int {
+            if (lua_gettop(L) < 1 || !lua_isstring(L, 1))
+            {
+                lua_pushnil(L);
+                lua_pushstring(L, "json.decode requires a string argument");
+                return 2;
+            }
+
+            const char* json_str = lua_tostring(L, 1);
+
+            try
+            {
+                LuaType::LuaValue value = LuaType::json_to_lua_value(json_str);
+                LuaType::push_lua_value(L, value);
+                return 1;
+            }
+            catch (const std::exception& e)
+            {
+                lua_pushnil(L);
+                lua_pushstring(L, e.what());
+                return 2;
+            }
+        });
+        lua_setfield(m_state, -2, "decode");
+
+        lua_setglobal(m_state, "json");
+    }
+
     // Singleton instance
     static std::unique_ptr<AsyncComputeManager> s_instance;
 
