@@ -383,10 +383,165 @@ function RegisterHook(UFunctionName, Callback) end
 ---@param PostId integer
 function UnregisterHook(UFunctionName, PreId, PostId) end
 
----Execute code inside the game thread using ProcessEvent.
+---Specifies which hook to use for game thread execution
+---@enum EGameThreadMethod
+EGameThreadMethod = {
+    ---Execute via the ProcessEvent hook. Called frequently (multiple times per frame).
+    ProcessEvent = 0,
+    ---Execute via the EngineTick hook. Called once per frame.
+    EngineTick = 1,
+}
+
+---True if EngineTick hook is available for frame-based delays
+---@type boolean
+EngineTickAvailable = false
+
+---True if ProcessEvent hook is available
+---@type boolean
+ProcessEventAvailable = false
+
+---Execute code inside the game thread.
 ---Will execute as soon as the game has time to execute.
 ---@param Callback fun()
 function ExecuteInGameThread(Callback) end
+
+---Execute code inside the game thread using a specific method.
+---@param Callback fun()
+---@param Method EGameThreadMethod
+function ExecuteInGameThread(Callback, Method) end
+
+---Execute callback after a delay in milliseconds. Returns a handle for control.
+---@param DelayMs integer Delay in milliseconds
+---@param Callback fun() Function to execute
+---@return integer handle Handle to control the action
+function ExecuteInGameThreadWithDelay(DelayMs, Callback) end
+
+---Execute callback after a delay, but only if the handle is not already active (UE Delay-style).
+---If the handle is already active, does nothing and returns the same handle.
+---@param Handle integer Existing handle to check/reuse
+---@param DelayMs integer Delay in milliseconds
+---@param Callback fun() Function to execute
+---@return integer handle The provided handle
+function ExecuteInGameThreadWithDelay(Handle, DelayMs, Callback) end
+
+---Execute callback after delay, resetting the timer if called again with the same handle.
+---Useful for debouncing.
+---@param Handle integer Handle to reset if active
+---@param DelayMs integer Delay in milliseconds
+---@param Callback fun() Function to execute
+---@return integer handle The provided handle
+function RetriggerableExecuteInGameThreadWithDelay(Handle, DelayMs, Callback) end
+
+---Execute callback repeatedly with a delay between each execution.
+---Returns a handle that can be used to cancel the loop.
+---@param DelayMs integer Delay in milliseconds between executions
+---@param Callback fun() Function to execute repeatedly
+---@return integer handle Handle to control the loop
+function LoopInGameThreadWithDelay(DelayMs, Callback) end
+
+---Execute callback after a number of frames (requires EngineTick hook).
+---@param Frames integer Number of frames to wait
+---@param Callback fun() Function to execute
+---@return integer handle Handle to control the action
+function ExecuteInGameThreadAfterFrames(Frames, Callback) end
+
+---Execute callback repeatedly after a number of frames (requires EngineTick hook).
+---@param Frames integer Number of frames between executions
+---@param Callback fun() Function to execute repeatedly
+---@return integer handle Handle to control the loop
+function LoopInGameThreadAfterFrames(Frames, Callback) end
+
+---Generate a unique action handle for use with delay functions.
+---@return integer handle A unique handle
+function MakeActionHandle() end
+
+---Cancel a pending delayed action.
+---@param Handle integer Handle returned from a delay function
+---@return boolean success True if the action was cancelled
+function CancelDelayedAction(Handle) end
+
+---Pause a delayed action, preserving remaining time.
+---@param Handle integer Handle returned from a delay function
+---@return boolean success True if the action was paused
+function PauseDelayedAction(Handle) end
+
+---Resume a paused delayed action.
+---@param Handle integer Handle returned from a delay function
+---@return boolean success True if the action was resumed
+function UnpauseDelayedAction(Handle) end
+
+---Reset a delayed action's timer to its original delay. Also unpauses if paused.
+---@param Handle integer Handle returned from a delay function
+---@return boolean success True if the timer was reset
+function ResetDelayedActionTimer(Handle) end
+
+---Set a new delay for a delayed action and restart the timer. Also unpauses if paused.
+---@param Handle integer Handle returned from a delay function
+---@param NewDelayMs integer New delay in milliseconds
+---@return boolean success True if the timer was updated
+function SetDelayedActionTimer(Handle, NewDelayMs) end
+
+---Cancel all delayed actions belonging to the current mod.
+---@return integer count Number of actions that were cancelled
+function ClearAllDelayedActions() end
+
+---Check if a handle refers to a valid delayed action.
+---@param Handle integer Handle to check
+---@return boolean valid True if the handle exists
+function IsValidDelayedActionHandle(Handle) end
+
+---Check if a delayed action is currently active (not paused, not cancelled).
+---@param Handle integer Handle to check
+---@return boolean active True if the action is active
+function IsDelayedActionActive(Handle) end
+
+---Check if a delayed action is currently paused.
+---@param Handle integer Handle to check
+---@return boolean paused True if the action is paused
+function IsDelayedActionPaused(Handle) end
+
+---Get the configured delay for a delayed action.
+---@param Handle integer Handle to check
+---@return integer delayMs Configured delay in milliseconds (or frames for frame-based), -1 if invalid
+function GetDelayedActionRate(Handle) end
+
+---Get the remaining time until a delayed action fires.
+---@param Handle integer Handle to check
+---@return integer remainingMs Remaining time in milliseconds (or frames for frame-based), -1 if invalid
+function GetDelayedActionTimeRemaining(Handle) end
+
+---Get the elapsed time since a delayed action was started/reset.
+---@param Handle integer Handle to check
+---@return integer elapsedMs Elapsed time in milliseconds (or frames for frame-based), -1 if invalid
+function GetDelayedActionTimeElapsed(Handle) end
+
+---Returns a ThreadId object representing the id of the current thread.
+---@return ThreadId
+function GetCurrentThreadId() end
+
+---Returns a ThreadId object representing the id of the main thread for the Lua mod, i.e. where main.lua is executed.
+---@return ThreadId
+function GetMainModThreadId() end
+
+---Returns a ThreadId object representing the id of the async thread for the Lua mod, i.e. where callbacks registered via ExecuteAsync, LoopAsync, etc is executed.
+---@return ThreadId
+function GetAsyncThreadId() end
+
+---Returns a ThreadId object representing the id of the game thread, i.e. where the game normally executes game logic, and usually where callbacks registered via RegisterHook, and other hooks is executed.
+---@return ThreadId
+function GetGameThreadId() end
+
+---Returns whether the current execution context is within the main Lua thread.
+---@return boolean
+function IsInMainModThread() end
+
+---Returns whether the current execution context is within the async Lua thread.
+---@return boolean
+function IsInAsyncThread() end
+
+---Returns whether the current execution context is within the game thread.
+---@return boolean
+function IsInGameThread() end
 
 ---FName with "None" as value
 NAME_None = FName(0)
@@ -1389,3 +1544,10 @@ function UDataTable:IsValid() end
 ---Returns the number of rows in the DataTable (metamethod for # operator)
 ---@return integer
 function UDataTable:__len() end
+
+---@class ThreadId
+ThreadId = {}
+
+---Returns the thread id as a string
+---@return string
+function ThreadId:ToString() end

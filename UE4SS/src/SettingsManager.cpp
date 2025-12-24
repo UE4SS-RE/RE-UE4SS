@@ -88,6 +88,16 @@ namespace RC
         REGISTER_BOOL_SETTING(General.UseUObjectArrayCache, section_general, bUseUObjectArrayCache)
         REGISTER_BOOL_SETTING(General.DoEarlyScan, section_general, DoEarlyScan)
         REGISTER_BOOL_SETTING(General.SearchByAddress, section_general, bEnableSeachByMemoryAddress)
+        StringType default_exec_method_string{};
+        REGISTER_STRING_SETTING(default_exec_method_string, section_general, DefaultExecuteInGameThreadMethod)
+        if (String::iequal(default_exec_method_string, STR("ProcessEvent")))
+        {
+            General.DefaultExecuteInGameThreadMethod = GameThreadExecutionMethod::ProcessEvent;
+        }
+        else if (String::iequal(default_exec_method_string, STR("EngineTick")))
+        {
+            General.DefaultExecuteInGameThreadMethod = GameThreadExecutionMethod::EngineTick;
+        }
 
         constexpr static File::CharType section_engine_version_override[] = STR("EngineVersionOverride");
         REGISTER_INT64_SETTING(EngineVersionOverride.MajorVersion, section_engine_version_override, MajorVersion)
@@ -163,6 +173,16 @@ namespace RC
         REGISTER_BOOL_SETTING(Hooks.HookLocalPlayerExec, section_hooks, HookLocalPlayerExec)
         REGISTER_BOOL_SETTING(Hooks.HookAActorTick, section_hooks, HookAActorTick)
         REGISTER_BOOL_SETTING(Hooks.HookEngineTick, section_hooks, HookEngineTick)
+        StringType engine_tick_resolve_method_string{};
+        REGISTER_STRING_SETTING(engine_tick_resolve_method_string, section_hooks, EngineTickResolveMethod)
+        if (String::iequal(engine_tick_resolve_method_string, STR("VTable")))
+        {
+            Hooks.EngineTickResolveMethod = Unreal::UnrealInitializer::FunctionResolveMethod::VTable;
+        }
+        else if (String::iequal(engine_tick_resolve_method_string, STR("Scan")))
+        {
+            Hooks.EngineTickResolveMethod = Unreal::UnrealInitializer::FunctionResolveMethod::Scan;
+        }
         REGISTER_BOOL_SETTING(Hooks.HookGameViewportClientTick, section_hooks, HookGameViewportClientTick)
         REGISTER_BOOL_SETTING(Hooks.HookUObjectProcessEvent, section_hooks, HookUObjectProcessEvent)
         REGISTER_BOOL_SETTING(Hooks.HookProcessConsoleExec, section_hooks, HookProcessConsoleExec)

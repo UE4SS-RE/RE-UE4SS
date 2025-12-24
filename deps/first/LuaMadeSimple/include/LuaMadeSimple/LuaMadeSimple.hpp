@@ -20,6 +20,8 @@ namespace RC::LuaMadeSimple
     // Dump the current state of the Lua stack
     auto RC_LMS_API dump_stack(lua_State*, const char* message = "") -> void;
 
+    auto RC_LMS_API get_stack_dump(lua_State* lua_state, const char* message = "") -> std::string;
+
     // Internal functions
     // All Lua <-> C++ calls go through these two C++ functions
     auto RC_LMS_API process_lua_function(lua_State* lua_state) -> int;
@@ -471,6 +473,7 @@ namespace RC::LuaMadeSimple
       public:
         // Debug function
         RC_LMS_API auto dump_stack(const char* message = "") const -> void;
+        RC_LMS_API auto get_stack_dump(const char* message = "") const -> std::string;
 
         RC_LMS_API auto handle_error(const std::string&) const -> const std::string;
         RC_LMS_API auto throw_error(const std::string&) const -> void;

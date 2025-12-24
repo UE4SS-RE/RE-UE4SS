@@ -115,6 +115,35 @@ Added global functions for mod management ([UE4SS #1105](https://github.com/UE4S
 - `RestartMod(ModName)` - Restart another mod by name
 - `UninstallMod(ModName)` - Uninstall another mod by name
 
+Added comprehensive Delayed Action System for game-thread timer management ([UE4SS #1128](https://github.com/UE4SS-RE/RE-UE4SS/pull/1128))
+- New execution functions:
+  - `ExecuteInGameThreadWithDelay(delayMs, callback)` - Execute after delay, returns handle
+  - `ExecuteInGameThreadWithDelay(handle, delayMs, callback)` - UE Delay-style (only executes if handle not active)
+  - `RetriggerableExecuteInGameThreadWithDelay(handle, delayMs, callback)` - Resets timer if called again (debouncing)
+  - `LoopInGameThreadWithDelay(delayMs, callback)` - Repeating timer with handle
+  - `ExecuteInGameThreadAfterFrames(frames, callback)` - Frame-based delay (requires EngineTick)
+  - `LoopInGameThreadAfterFrames(frames, callback)` - Frame-based repeating timer
+  - `MakeActionHandle()` - Generate unique handle for use with delay functions
+- Timer control functions:
+  - `CancelDelayedAction(handle)` - Cancel a pending action
+  - `PauseDelayedAction(handle)` - Pause a timer
+  - `UnpauseDelayedAction(handle)` - Resume a paused timer
+  - `ResetDelayedActionTimer(handle)` - Restart with original delay
+  - `SetDelayedActionTimer(handle, newDelayMs)` - Change delay and restart
+  - `ClearAllDelayedActions()` - Cancel all actions for current mod
+- Query functions:
+  - `IsValidDelayedActionHandle(handle)` - Check if handle exists
+  - `IsDelayedActionActive(handle)` - Check if timer is running
+  - `IsDelayedActionPaused(handle)` - Check if timer is paused
+  - `GetDelayedActionRate(handle)` - Get configured delay
+  - `GetDelayedActionTimeRemaining(handle)` - Get remaining time
+  - `GetDelayedActionTimeElapsed(handle)` - Get elapsed time
+- New global variables: `EngineTickAvailable`, `ProcessEventAvailable`
+- New enum: `EGameThreadMethod` with `ProcessEvent` and `EngineTick` values
+- `ExecuteInGameThread` now accepts optional second parameter for execution method
+- Per-mod action ownership ensures mods can only control their own timers
+- **Deprecates:** `ExecuteAsync` and `LoopAsync` (still work but lack control features)
+
 **Updated Lua version to 5.4.7** ([UE4SS #887](https://github.com/UE4SS-RE/RE-UE4SS/pull/887))
 - This is necessary to compile with Clang.
 

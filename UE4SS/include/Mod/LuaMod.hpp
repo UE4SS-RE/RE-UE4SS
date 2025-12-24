@@ -12,6 +12,7 @@
 #include <File/File.hpp>
 #include <LuaMadeSimple/LuaMadeSimple.hpp>
 #include <Mod/Mod.hpp>
+#include <SettingsManager.hpp>
 
 #include <String/StringType.hpp>
 
@@ -53,6 +54,35 @@ namespace RC
             int32_t lua_action_function_ref{};
             int32_t lua_action_thread_ref{};
         };
+
+        // Status of a delayed action (mirrors UE's ETimerStatus)
+        enum class DelayedActionStatus : uint8_t
+        {
+            Pending,        // Created but not yet started
+            Active,         // Running, waiting for delay to expire
+            Paused,         // Timer paused, will resume when unpaused
+            Executing,      // Currently executing callback
+            PendingRemoval  // Marked for removal, will be cleaned up
+        };
+
+        struct DelayedGameThreadAction
+        {
+            const LuaMadeSimple::Lua* lua;
+            int32_t lua_action_function_ref{};
+            int32_t lua_action_thread_ref{};
+            GameThreadExecutionMethod method{GameThreadExecutionMethod::EngineTick};
+            DelayedActionStatus status{DelayedActionStatus::Active};
+            std::chrono::steady_clock::time_point execute_at{};  // Absolute time when action should execute
+            int64_t time_remaining_ms{0};  // Time remaining when paused (milliseconds)
+            int64_t frames_remaining{0};  // Countdown for frame-based delays
+            int64_t delay_ms{0};  // Original delay in milliseconds (for loop/reset)
+            int64_t delay_frames{0};  // Original delay in frames (0 means use time-based delay)
+            int64_t handle{0};  // Unique handle for this action
+            bool is_retriggerable{false};  // If true, can be reset by calling with same handle
+            bool is_looping{false};  // If true, re-schedule after each execution
+        };
+
+        static inline int64_t m_next_delayed_action_handle{1};
 
         struct AsyncAction
         {
@@ -111,6 +141,9 @@ namespace RC
         static inline std::unordered_map<File::StringType, LuaCallbackData> m_global_command_lua_callbacks;
         static inline std::unordered_map<File::StringType, LuaCallbackData> m_custom_command_lua_pre_callbacks;
         static inline std::vector<SimpleLuaAction> m_game_thread_actions{};
+        static inline std::vector<SimpleLuaAction> m_engine_tick_actions{};
+        static inline std::vector<DelayedGameThreadAction> m_delayed_game_thread_actions{};
+        static inline GameThreadExecutionMethod m_default_game_thread_method{GameThreadExecutionMethod::EngineTick};
         // This is storage that persists through hot-reloads.
         static inline std::unordered_map<std::string, SharedLuaVariable> m_shared_lua_variables{};
         static inline std::vector<FunctionHookData> m_custom_event_callbacks{};
@@ -131,9 +164,11 @@ namespace RC
 
       private:
         std::jthread m_async_thread;
+        std::thread::id m_main_thread_id{};
         bool m_processing_events{};
         bool m_pause_events_processing{};
         bool m_is_process_event_hooked{};
+        static inline bool m_is_engine_tick_hooked{};
         std::mutex m_actions_lock{};
 
       public:
@@ -147,6 +182,9 @@ namespace RC
         }
 
       private:
+        static auto ensure_engine_tick_hooked() -> void;
+        static auto ensure_process_event_hooked(LuaMod* mod) -> void;
+
         static auto custom_module_searcher(lua_State* L) -> int;
         auto setup_custom_module_loader(const LuaMadeSimple::Lua* lua_state) -> void;
         auto load_and_execute_script(const std::filesystem::path& script_path) -> bool;
@@ -177,6 +215,16 @@ namespace RC
         RC_UE4SS_API auto actions_unlock() -> void
         {
             m_actions_lock.unlock();
+        }
+
+        [[nodiscard]] RC_UE4SS_API auto get_async_thread_id() const -> std::thread::id
+        {
+            return m_async_thread.get_id();
+        }
+
+        [[nodiscard]] RC_UE4SS_API auto get_main_thread_id() const -> std::thread::id
+        {
+            return m_main_thread_id;
         }
 
       public:

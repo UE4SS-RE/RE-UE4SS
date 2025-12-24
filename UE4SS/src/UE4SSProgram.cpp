@@ -841,6 +841,7 @@ namespace RC
         config.bHookLocalPlayerExec = settings_manager.Hooks.HookLocalPlayerExec;
         config.bHookAActorTick = settings_manager.Hooks.HookAActorTick;
         config.bHookEngineTick = settings_manager.Hooks.HookEngineTick;
+        config.EngineTickResolveMethod = settings_manager.Hooks.EngineTickResolveMethod;
         config.bHookGameViewportClientTick = settings_manager.Hooks.HookGameViewportClientTick;
         config.bHookUObjectProcessEvent = settings_manager.Hooks.HookUObjectProcessEvent;
         config.bHookProcessConsoleExec = settings_manager.Hooks.HookProcessConsoleExec;
@@ -1040,6 +1041,9 @@ namespace RC
                 }
             }
 #endif
+
+            // Set default ExecuteInGameThread method from settings
+            LuaMod::m_default_game_thread_method = settings_manager.General.DefaultExecuteInGameThreadMethod;
 
             install_lua_mods();
             LuaMod::on_program_start();

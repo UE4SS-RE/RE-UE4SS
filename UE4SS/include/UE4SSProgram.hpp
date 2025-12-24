@@ -272,6 +272,10 @@ namespace RC
         {
             return m_processing_events;
         }
+        [[nodiscard]] RC_UE4SS_API auto get_event_loop_thread_id() const -> std::thread::id
+        {
+            return m_event_loop_thread_id;
+        }
         RC_UE4SS_API auto is_event_loop_thread() -> bool
         {
             return std::this_thread::get_id() == m_event_loop_thread_id;

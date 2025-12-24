@@ -7,9 +7,17 @@
 #include <File/File.hpp>
 #include <GUI/GUI.hpp>
 #include <Input/KeyDef.hpp>
+#include <Unreal/UnrealInitializer.hpp>
 
 namespace RC
 {
+    // Method for executing callbacks in game thread
+    enum class GameThreadExecutionMethod
+    {
+        ProcessEvent, // Use ProcessEvent hook
+        EngineTick    // Use Engine Tick hook (once per frame)
+    };
+
     class RC_UE4SS_API SettingsManager
     {
       public:
@@ -31,6 +39,7 @@ namespace RC
             StringType InputSource{STR("Default")};
             bool DoEarlyScan{false};
             bool SearchByAddress{false};
+            GameThreadExecutionMethod DefaultExecuteInGameThreadMethod{GameThreadExecutionMethod::EngineTick};
         } General;
 
         struct SectionEngineVersionOverride
@@ -102,6 +111,7 @@ namespace RC
             bool HookLocalPlayerExec{true};
             bool HookAActorTick{true};
             bool HookEngineTick{true};
+            Unreal::UnrealInitializer::FunctionResolveMethod EngineTickResolveMethod{Unreal::UnrealInitializer::FunctionResolveMethod::Scan};
             bool HookGameViewportClientTick{true};
             bool HookUObjectProcessEvent{true};
             bool HookProcessConsoleExec{true};
