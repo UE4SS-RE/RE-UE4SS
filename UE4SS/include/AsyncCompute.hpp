@@ -170,7 +170,7 @@ namespace RC
         auto has_task_handler(const std::string& task_name) const -> bool;
 
         /**
-         * @brief Submit an async computation task
+         * @brief Submit an async computation task (C++ handler)
          *
          * @param mod The mod submitting the task (for callback context)
          * @param task_name Name of the registered task handler
@@ -185,6 +185,39 @@ namespace RC
             LuaType::LuaValue input,
             int32_t callback_ref,
             int32_t callback_thread_ref
+        ) -> uint64_t;
+
+        /**
+         * @brief Options for Lua worker tasks
+         */
+        struct LuaWorkerOptions
+        {
+            int64_t timeout_ms{0};       // 0 = no timeout
+            int64_t memory_limit_kb{0};  // 0 = no limit (not yet implemented)
+            bool include_json{false};    // Add json.encode/decode to worker
+        };
+
+        /**
+         * @brief Submit a pure Lua computation task
+         *
+         * The source code should return a function that takes input and returns output:
+         *   "return function(input) ... return result end"
+         *
+         * @param mod The mod submitting the task (for callback context)
+         * @param lua_source Lua source code that returns a function
+         * @param input Input data (serialized from Lua)
+         * @param callback_ref Lua registry reference for the callback function
+         * @param callback_thread_ref Lua registry reference for the callback thread
+         * @param options Worker options (timeout, memory limit, etc.)
+         * @return Handle that can be used to cancel the task
+         */
+        auto submit_lua_task(
+            LuaMod* mod,
+            const std::string& lua_source,
+            LuaType::LuaValue input,
+            int32_t callback_ref,
+            int32_t callback_thread_ref,
+            const LuaWorkerOptions& options = {}
         ) -> uint64_t;
 
         /**
