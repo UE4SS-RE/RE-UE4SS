@@ -37,6 +37,90 @@ The callback receives a result table with the following structure:
 }
 ```
 
+## AsyncComputeLua
+
+Runs pure Lua code on a worker thread in an isolated Lua state. Unlike `AsyncCompute`, this allows you to write custom computation logic in Lua without needing C++ task handlers.
+
+```lua
+local handle = AsyncComputeLua(sourceCode, input, callback, options?)
+```
+
+| # | Type | Information |
+|---|------|-------------|
+| 1 | string | Lua source code that returns a function |
+| 2 | any | Input data (serializable primitives and tables only) |
+| 3 | function | Callback to receive result |
+| 4 | table? | Optional options table (see below) |
+| Return | integer | Handle to track/cancel the task |
+
+**Options table:**
+```lua
+{
+    json = boolean  -- Add json.encode/decode to worker (default: false)
+}
+```
+
+The source code must return a function that takes input and returns output:
+
+```lua
+local handle = AsyncComputeLua([[
+    return function(input)
+        -- Computation runs in isolated Lua state
+        local result = 0
+        for i = 1, input.iterations do
+            result = result + math.sqrt(i)
+        end
+        return { sum = result }
+    end
+]], { iterations = 1000000 }, function(result)
+    if result.success then
+        print("Sum: " .. result.result.sum .. "\n")
+    else
+        print("Error: " .. result.error .. "\n")
+    end
+end)
+```
+
+### Isolated Environment
+
+The worker runs in a completely independent Lua state with:
+
+**Available:**
+- `math.*` - All math functions
+- `string.*` - String manipulation
+- `table.*` - Table utilities
+- `utf8.*` - UTF-8 support
+- `io.*` - File I/O (use with care for threading)
+- `os.*` - OS functions (time, clock, execute, etc.)
+- `coroutine.*` - Coroutines within the worker
+- Basic functions: `tonumber`, `tostring`, `type`, `pairs`, `ipairs`, `next`, `select`, `pcall`, `xpcall`, `error`, `assert`, `rawget`, `rawset`, `rawequal`, `rawlen`, `setmetatable`, `getmetatable`, `unpack`/`table.unpack`
+
+**NOT available (for isolation):**
+- `debug.*` - Could break isolation
+- `load`, `loadfile`, `dofile` - Dynamic code loading
+- `require`, `package.*` - Module system
+- All UE4SS bindings - No `FindFirstOf`, `RegisterHook`, etc.
+- Main state globals - Worker is completely independent
+
+### JSON Support in Workers
+
+Enable JSON with `{ json = true }`:
+
+```lua
+AsyncComputeLua([[
+    return function(input)
+        -- Parse incoming JSON
+        local data = json.decode(input.json_string)
+
+        -- Process...
+        data.processed = true
+
+        -- Return as JSON
+        return { result_json = json.encode(data) }
+    end
+]], { json_string = '{"value": 42}' }, callback, { json = true })
+```
+
 ## CancelAsyncCompute
 
 Cancels a pending async computation.
@@ -144,6 +228,83 @@ AsyncCompute("compute", { iterations = 1000000 }, function(result)
 end)
 ```
 
+### Lua Worker - Custom Computation
+
+```lua
+-- Run custom Lua code without a C++ handler
+AsyncComputeLua([[
+    return function(input)
+        local sum = 0
+        for i = 1, input.count do
+            sum = sum + math.sqrt(i)
+        end
+        return { sum = sum, count = input.count }
+    end
+]], { count = 1000000 }, function(result)
+    if result.success then
+        print(string.format("Sum of %d square roots: %f\n",
+            result.result.count, result.result.sum))
+    end
+end)
+```
+
+### Lua Worker - Data Processing with JSON
+
+```lua
+-- Parse and transform JSON data off the main thread
+local jsonData = '{"users": [{"name": "Alice", "age": 30}, {"name": "Bob", "age": 25}]}'
+
+AsyncComputeLua([[
+    return function(input)
+        local data = json.decode(input.json)
+
+        -- Process users
+        local adults = {}
+        for _, user in ipairs(data.users) do
+            if user.age >= 18 then
+                table.insert(adults, user.name)
+            end
+        end
+
+        return {
+            adult_names = adults,
+            count = #adults
+        }
+    end
+]], { json = jsonData }, function(result)
+    if result.success then
+        print("Adults: " .. table.concat(result.result.adult_names, ", ") .. "\n")
+    end
+end, { json = true })
+```
+
+### Lua Worker - String Processing
+
+```lua
+-- Heavy string processing without blocking
+AsyncComputeLua([[
+    return function(input)
+        local text = input.text
+        local words = {}
+
+        for word in text:gmatch("%S+") do
+            table.insert(words, word:lower())
+        end
+
+        table.sort(words)
+
+        return {
+            word_count = #words,
+            sorted = table.concat(words, " ")
+        }
+    end
+]], { text = "The quick brown fox jumps over the lazy dog" }, function(result)
+    if result.success then
+        print(result.result.word_count .. " words: " .. result.result.sorted .. "\n")
+    end
+end)
+```
+
 ## Input Serialization
 
 AsyncCompute serializes your input data before passing it to the worker thread. Only these types are supported:
@@ -208,9 +369,16 @@ end)
 |----------|--------|----------|
 | `ExecuteAsync` (deprecated) | Async thread | Simple delays (unsafe, deprecated) |
 | `ExecuteInGameThreadWithDelay` | Game thread | Delayed game logic, UObject access |
-| `AsyncCompute` | Worker pool | CPU-intensive computation |
+| `AsyncCompute` | Worker pool | CPU-intensive computation (C++ handlers) |
+| `AsyncComputeLua` | Worker pool | Custom Lua computation (no C++ needed) |
 
-Use `AsyncCompute` when you have work that:
-- Takes significant CPU time
-- Doesn't need UObject access during computation
-- Can have its result serialized as primitives/tables
+**When to use `AsyncCompute`:**
+- You need a built-in task (sleep, compute)
+- A C++ mod provides custom task handlers you want to use
+- Maximum performance for frequently-used operations
+
+**When to use `AsyncComputeLua`:**
+- You want to write custom computation logic in Lua
+- You don't want to write or depend on C++ code
+- You need JSON parsing/generation in the worker
+- One-off computations that don't justify a C++ handler
