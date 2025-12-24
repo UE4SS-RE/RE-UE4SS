@@ -246,9 +246,25 @@ namespace RC
         if (lua_data.scheduled_for_removal)
         {
             const auto function_name_no_prefix = get_function_name_without_prefix(lua_data.unreal_function->GetFullName());
+
             Output::send<LogLevel::Verbose>(STR("Unregistering native pre-hook ({}) for {}\n"), lua_data.pre_callback_id, function_name_no_prefix);
             lua_data.unreal_function->UnregisterHook(lua_data.pre_callback_id);
             luaL_unref(lua_data.lua.get_lua_state(), LUA_REGISTRYINDEX, lua_data.lua_callback_ref);
+
+            Output::send<LogLevel::Verbose>(STR("Unregistering native post-hook ({}) for {}\n"), lua_data.post_callback_id, function_name_no_prefix);
+            lua_data.unreal_function->UnregisterHook(lua_data.post_callback_id);
+            if (lua_data.lua_post_callback_ref != -1)
+            {
+                luaL_unref(lua_data.lua.get_lua_state(), LUA_REGISTRYINDEX, lua_data.lua_post_callback_ref);
+            }
+
+            const auto mod = get_mod_ref(lua_data.lua);
+            luaL_unref(mod->lua().get_lua_state(), LUA_REGISTRYINDEX, lua_data.lua_thread_ref);
+            std::erase_if(g_hooked_script_function_data, [&](const std::unique_ptr<LuaUnrealScriptFunctionData>& elem) {
+                return elem.get() == &lua_data;
+            });
+
+            return;
         }
 
         auto process_return_value = [&]() {
@@ -419,6 +435,9 @@ namespace RC
                 return elem.get() == &lua_data;
             });
         }
+        // No longer promising to be in the game thread
+        // Must be done before cleanup since cleanup deletes lua_data
+        set_is_in_game_thread(lua_data.lua, false);
     }
 
     static auto register_input_globals(const LuaMadeSimple::Lua& lua) -> void
