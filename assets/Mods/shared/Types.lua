@@ -1,5 +1,33 @@
 ---@meta
 
+---JSON encoding/decoding library (powered by glaze).
+---Supports: nil, boolean, number, string, and tables (nested).
+---Does NOT support: functions, userdata, threads.
+---Tables with sequential integer keys starting at 1 become JSON arrays.
+---Other tables become JSON objects (keys converted to strings).
+---@class json
+json = {}
+
+---Encode a Lua value to a JSON string.
+---@param value any The value to encode (nil, boolean, number, string, or table)
+---@param pretty? boolean If true, format with indentation (default: false)
+---@return string? jsonString The JSON string on success, or nil on failure
+---@return string? error Error message on failure, or nil on success
+---@usage local str = json.encode({ name = "test", values = {1, 2, 3} })
+---@usage local str = json.encode(myTable, true)  -- pretty print
+---@usage local str, err = json.encode(value); if not str then print(err) end
+function json.encode(value, pretty) end
+
+---Decode a JSON string to a Lua value.
+---JSON arrays become Lua tables with integer keys starting at 1.
+---JSON objects become Lua tables with string keys.
+---@param jsonString string The JSON string to decode
+---@return any value The decoded Lua value on success, or nil on failure
+---@return string? error Error message on failure, or nil on success
+---@usage local data = json.decode('{"foo": "bar"}')
+---@usage local data, err = json.decode(str); if not data then print(err) end
+function json.decode(jsonString) end
+
 ---@enum Key
 Key = {
     LEFT_MOUSE_BUTTON = 0x1,
@@ -514,6 +542,26 @@ function GetDelayedActionTimeRemaining(Handle) end
 ---@param Handle integer Handle to check
 ---@return integer elapsedMs Elapsed time in milliseconds (or frames for frame-based), -1 if invalid
 function GetDelayedActionTimeElapsed(Handle) end
+
+---Result table passed to AsyncCompute callbacks.
+---@class AsyncComputeResult
+---@field success boolean True if the computation succeeded
+---@field error string? Error message if success is false
+---@field result any? The computed result value if success is true
+
+---Run computation on a worker thread and receive the result on the main thread.
+---The worker function runs in isolation - no UE4SS bindings, no UObject access.
+---Input must be serializable (primitives and tables only, no userdata/functions).
+---@param taskName string Name of a registered C++ task handler (e.g., "sleep", "compute")
+---@param input table|nil Input data for the task
+---@param callback fun(result: AsyncComputeResult) Called on main thread with the result
+---@return integer handle Handle to track/cancel the task (0 if taskName not found)
+function AsyncCompute(taskName, input, callback) end
+
+---Cancel a pending async computation.
+---@param handle integer Handle returned from AsyncCompute
+---@return boolean success True if cancelled, false if already completed or invalid
+function CancelAsyncCompute(handle) end
 
 ---Returns a ThreadId object representing the id of the current thread.
 ---@return ThreadId
