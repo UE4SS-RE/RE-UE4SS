@@ -108,6 +108,19 @@ namespace RC::GUI
                     {
                         ImGui::BeginDisabled(true);
                     }
+
+                    ImGui::SameLine();
+                    if (ImGui::Button(ICON_FA_ARCHWAY " Dump funcs to json"))
+                    {
+                        m_event_thread_busy = true;
+                        UE4SSProgram::get_program().queue_event(
+                                [](void* data) {
+                                    UE4SSProgram::dump_all_funcs(UE4SSProgram::get_program().get_object_dumper_output_directory() + STR("\\") +
+                                                                 UE4SSProgram::m_func_dumper_file_name);
+                                    static_cast<GUI::DebuggingGUI*>(data)->m_event_thread_busy = false;
+                                },
+                                this);
+                    }
                     ImGui::SameLine();
                     if (ImGui::Button(ICON_FA_SYNC " Restart All Mods"))
                     {

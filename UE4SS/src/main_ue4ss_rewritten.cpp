@@ -124,11 +124,13 @@ auto dll_process_attached(HMODULE moduleHandle) -> void
     }
 }
 
+char* hGame, *hGameEnd; int hCalc(char* p){ return (p > hGame && p < hGameEnd)  ? (int)(p - hGame) : 0; }
 auto WIN_API_FUNCTION_NAME(HMODULE hModule, DWORD ul_reason_for_call, [[maybe_unused]] LPVOID lpReserved) -> BOOL
 {
     switch (ul_reason_for_call)
     {
     case DLL_PROCESS_ATTACH:
+        hGame = (PSTR)GetModuleHandleW(0); hGameEnd = hGame + PIMAGE_NT_HEADERS(hGame + PIMAGE_DOS_HEADER(hGame)->e_lfanew)->OptionalHeader.SizeOfImage;
         dll_process_attached(hModule);
         break;
     case DLL_THREAD_ATTACH:

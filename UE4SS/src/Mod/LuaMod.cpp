@@ -3876,10 +3876,11 @@ Overloads:
                 generic_pre_id = m_last_generic_hook_id;
                 m_generic_hook_id_to_native_hook_id.emplace(++m_last_generic_hook_id, post_id);
                 generic_post_id = m_last_generic_hook_id;
-                Output::send<LogLevel::Verbose>(STR("[RegisterHook] Registered native hook ({}, {}) for {}\n"),
+                Output::send<LogLevel::Verbose>(STR("[RegisterHook] Registered native hook ({}, {}) for {} {}\n"),
                                                 generic_pre_id,
                                                 generic_post_id,
-                                                unreal_function->GetFullName());
+                                                unreal_function->GetFullName(),
+                                                std::bit_cast<void*>(func_ptr));
             }
             else if (func_ptr && func_ptr == Unreal::UObject::ProcessInternalInternal.get_function_address() &&
                      !unreal_function->HasAnyFunctionFlags(Unreal::EFunctionFlags::FUNC_Native))
@@ -3894,10 +3895,11 @@ Overloads:
                 callback_data.registry_indexes.emplace_back(hook_lua, LuaCallbackData::RegistryIndex{lua_callback_registry_index, m_last_generic_hook_id});
                 generic_pre_id = m_last_generic_hook_id;
                 generic_post_id = m_last_generic_hook_id;
-                Output::send<LogLevel::Verbose>(STR("[RegisterHook] Registered script hook ({}, {}) for {}\n"),
+                Output::send<LogLevel::Verbose>(STR("[RegisterHook] Registered script hook ({}, {}) for {} {}\n"),
                                                 generic_pre_id,
                                                 generic_post_id,
-                                                unreal_function->GetFullName());
+                                                unreal_function->GetFullName(),
+                                                std::bit_cast<void*>(func_ptr));
             }
             else
             {

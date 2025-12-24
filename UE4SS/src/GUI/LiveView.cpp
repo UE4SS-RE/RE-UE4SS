@@ -1342,6 +1342,12 @@ namespace RC::GUI
         auto render_property_value_context_menu = [&](std::string_view id_override = "") {
             if (ImGui::BeginPopupContextItem(id_override.empty() ? property_name.c_str() : fmt::format("context-menu-{}", id_override).c_str()))
             {
+                if (ImGui::MenuItem("Copy##Obj"))
+                {
+                    auto _ = to_string(property_text.GetCharArray());
+                    _ = _.substr(_.find_first_of("'") + 1); _.resize(_.size() - 1);
+                    ImGui::SetClipboardText(_.c_str());
+                }
                 if (ImGui::MenuItem("Copy name"))
                 {
                     ImGui::SetClipboardText(property_name.c_str());
@@ -2518,6 +2524,18 @@ namespace RC::GUI
                 {
                     ImGui::Checkbox(ICON_FA_EYE " Watch value", &function_watcher_it->second->enabled);
                 }
+
+                if (ImGui::MenuItem(ICON_FA_COPY " Copy Address"))
+                {
+                    if (UFunction* func = Cast<UFunction>(object))
+                    {
+                        auto func_ptr = func->GetFuncPtr();
+                        std::string s = (fmt::format("{}", std::bit_cast<void*>(func_ptr)));
+
+                        Output::send(STR("Copy Address: {}\n"), object->GetFullName());
+                        ImGui::SetClipboardText(s.c_str());
+                    }
+                }
             }
             ImGui::EndPopup();
         }
@@ -3276,6 +3294,18 @@ namespace RC::GUI
                     }
                     collapse_all_except(m_currently_opened_tree_node);
                     render_context_menu(tree_node_name, object);
+
+                    if (UFunction* func = Cast<UFunction>(object))
+                    {
+                        auto func_ptr = func->GetFuncPtr();
+
+                        if (func_ptr != Unreal::UObject::ProcessInternalInternal.get_function_address() &&
+                            func->HasAnyFunctionFlags(Unreal::EFunctionFlags::FUNC_Native))
+                        {
+                            tree_node_name.append(fmt::format(" {}", std::bit_cast<void*>(func_ptr)));
+                        }
+                        object->GetName();
+                    }
                 });
             }
             else
