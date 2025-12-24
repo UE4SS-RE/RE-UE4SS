@@ -329,6 +329,7 @@ namespace RC
             }
 
             // Queue the completed callback
+            // The main event loop will call process_completed_tasks() to invoke these
             {
                 std::lock_guard<std::mutex> lock(m_callbacks_mutex);
                 m_completed_callbacks.push(PendingCallback{
@@ -338,13 +339,110 @@ namespace RC
                     std::move(result)
                 });
             }
+        });
 
-            // Notify the main event loop that there's work to do
-            // This triggers process_completed_tasks to be called
-            if (auto* program = &UE4SSProgram::get_program())
+        // Store the future to keep the task alive
+        {
+            std::lock_guard<std::mutex> lock(m_tasks_mutex);
+            // Clean up completed futures first
+            m_active_tasks.erase(
+                std::remove_if(m_active_tasks.begin(), m_active_tasks.end(), [](std::future<void>& f) {
+                    return f.valid() && f.wait_for(std::chrono::seconds(0)) == std::future_status::ready;
+                }),
+                m_active_tasks.end()
+            );
+            m_active_tasks.push_back(std::move(future));
+        }
+
+        return handle;
+    }
+
+    auto AsyncComputeManager::submit_lua_task(
+        LuaMod* mod,
+        const std::string& lua_source,
+        LuaType::LuaValue input,
+        int32_t callback_ref,
+        int32_t callback_thread_ref,
+        const LuaWorkerOptions& options
+    ) -> uint64_t
+    {
+        if (m_shutdown.load())
+        {
+            return 0;
+        }
+
+        uint64_t handle = m_next_handle.fetch_add(1);
+
+        // Launch async task with isolated Lua state
+        auto future = std::async(std::launch::async, [this, mod, lua_source, input = std::move(input), callback_ref, callback_thread_ref, options, handle]() {
+            // Check if cancelled before starting
             {
-                program->queue_event([this]() {
-                    process_completed_tasks(1);
+                std::lock_guard<std::mutex> lock(m_cancelled_mutex);
+                if (m_cancelled_tasks.count(handle) > 0)
+                {
+                    m_cancelled_tasks.erase(handle);
+                    return;
+                }
+            }
+
+            AsyncComputeResult result;
+            try
+            {
+                // Create isolated Lua state on worker thread
+                IsolatedLuaState worker_state;
+                if (!worker_state.valid())
+                {
+                    result = AsyncComputeResult::Error("Failed to create isolated Lua state");
+                }
+                else
+                {
+                    // Add JSON library if requested
+                    if (options.include_json)
+                    {
+                        worker_state.add_json_library();
+                    }
+
+                    // Load the function from source
+                    std::string load_error = worker_state.load_function(lua_source);
+                    if (!load_error.empty())
+                    {
+                        result = AsyncComputeResult::Error(load_error);
+                    }
+                    else
+                    {
+                        // Execute the function with input
+                        result = worker_state.execute(input);
+                    }
+                }
+            }
+            catch (const std::exception& e)
+            {
+                result = AsyncComputeResult::Error(std::string("Exception in Lua worker: ") + e.what());
+            }
+            catch (...)
+            {
+                result = AsyncComputeResult::Error("Unknown exception in Lua worker");
+            }
+
+            // Check if cancelled after completion (don't queue callback)
+            {
+                std::lock_guard<std::mutex> lock(m_cancelled_mutex);
+                if (m_cancelled_tasks.count(handle) > 0)
+                {
+                    m_cancelled_tasks.erase(handle);
+                    return;
+                }
+            }
+
+            // Queue the completed callback
+            // The main event loop will call process_completed_tasks() to invoke these
+            {
+                std::lock_guard<std::mutex> lock(m_callbacks_mutex);
+                m_completed_callbacks.push(PendingCallback{
+                    mod,
+                    callback_ref,
+                    callback_thread_ref,
+                    std::move(result)
                 });
             }
         });
