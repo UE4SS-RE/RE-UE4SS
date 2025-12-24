@@ -15,8 +15,11 @@
 #include <Common.hpp>
 #include <LuaType/LuaValue.hpp>
 
+struct lua_State;
+
 namespace RC
 {
+    struct AsyncComputeResult;
     class LuaMod;
 
     /**
@@ -28,9 +31,81 @@ namespace RC
      * - Results are serialized and queued back to the main thread
      * - Callbacks run on the main thread where it's safe to access Lua state
      *
-     * Phase 1: C++ task handlers only (tasks registered by name)
-     * Phase 2: Isolated Lua state workers (pure Lua computation)
+     * Supports two modes:
+     * - C++ task handlers: Tasks registered by name, implemented in C++
+     * - Lua workers: Pure Lua code runs in isolated Lua state
      */
+
+    /**
+     * @brief An isolated Lua state for running pure Lua computations on worker threads.
+     *
+     * This creates a completely independent Lua state (not a coroutine/thread of the main state)
+     * that has no access to UE4SS bindings or the main state's globals.
+     *
+     * Only safe, standard Lua libraries are loaded:
+     * - math, string, table, utf8
+     * - io, os (mod authors already have system access)
+     * - coroutine (within worker only)
+     * - Basic functions: tonumber, tostring, type, pairs, ipairs, next, etc.
+     *
+     * Excluded for isolation:
+     * - debug.* (could break isolation)
+     * - load, loadfile, dofile (dynamic code loading)
+     * - require, package.* (module system)
+     * - All UE4SS bindings
+     */
+    class RC_UE4SS_API IsolatedLuaState
+    {
+    public:
+        IsolatedLuaState();
+        ~IsolatedLuaState();
+
+        // Non-copyable, but movable
+        IsolatedLuaState(const IsolatedLuaState&) = delete;
+        IsolatedLuaState& operator=(const IsolatedLuaState&) = delete;
+        IsolatedLuaState(IsolatedLuaState&& other) noexcept;
+        IsolatedLuaState& operator=(IsolatedLuaState&& other) noexcept;
+
+        /**
+         * @brief Get the raw Lua state pointer
+         */
+        auto get() const -> lua_State* { return m_state; }
+
+        /**
+         * @brief Check if the state is valid
+         */
+        auto valid() const -> bool { return m_state != nullptr; }
+
+        /**
+         * @brief Load and execute Lua source code that returns a function
+         *
+         * The source should be something like:
+         *   "return function(input) ... return result end"
+         *
+         * @param source Lua source code
+         * @return Error message if failed, empty string on success
+         */
+        auto load_function(const std::string& source) -> std::string;
+
+        /**
+         * @brief Execute the loaded function with the given input
+         *
+         * @param input The input value to pass to the function
+         * @return The result of the computation
+         */
+        auto execute(const LuaType::LuaValue& input) -> AsyncComputeResult;
+
+        /**
+         * @brief Add json.encode and json.decode to this state
+         */
+        auto add_json_library() -> void;
+
+    private:
+        lua_State* m_state{nullptr};
+
+        auto setup_safe_environment() -> void;
+        auto remove_unsafe_functions() -> void;
+    };
 
     /**
      * @brief Result of an async computation
