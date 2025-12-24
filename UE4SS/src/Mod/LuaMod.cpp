@@ -26,6 +26,8 @@
 #include <LuaType/LuaUObject.hpp>
 #include <LuaType/LuaFURL.hpp>
 #include <LuaType/LuaThreadId.hpp>
+#include <LuaType/LuaValue.hpp>
+#include <AsyncCompute.hpp>
 #include <Mod/CppMod.hpp>
 #include <Mod/LuaMod.hpp>
 #pragma warning(disable : 4005)
@@ -5698,6 +5700,9 @@ Overloads:
 
     auto LuaMod::on_program_start() -> void
     {
+        // Register built-in async task handlers
+        register_builtin_async_tasks();
+
         Unreal::UObjectArray::AddUObjectDeleteListener(&LuaType::FLuaObjectDeleteListener::s_lua_object_delete_listener);
 
         Unreal::Hook::RegisterLoadMapPreCallback(
