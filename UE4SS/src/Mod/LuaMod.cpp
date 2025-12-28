@@ -5920,13 +5920,7 @@ Overloads:
                 auto attempt_to_call_callback = [constructed_object](const Unreal::UStruct* comparison_class) {
                     std::erase_if(m_static_construct_object_lua_callbacks, [&](const LuaCancellableCallbackData& callback_data) -> bool {
                         bool cancel = false;
-                        bool match = false;
                         if (comparison_class->GetNamePrivate().Equals(callback_data.instance_class_name) && comparison_class->GetOuterPrivate()->GetNamePrivate().Equals(callback_data.instance_class_outer_name))
-                        {
-                            match = true;
-                        }
-
-                        if (match)
                         {
                             callback_data.lua->registry().get_function_ref(callback_data.lua_callback_function_ref);
                             LuaType::auto_construct_object(*callback_data.lua, constructed_object);
