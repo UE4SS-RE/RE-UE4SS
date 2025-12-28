@@ -167,19 +167,9 @@ namespace RC::GUI::Profilers
         if (ImGui::Button("Test: Slow Instances"))
         {
             TRY([] {
-                size_t count = 0;
-                // Use AnyInstance sentinel to trigger slow path through ObjectSearcherSlowInternal
-                ObjectSearcherSlowInternal(AnyInstance::StaticClass(),
-                                           reinterpret_cast<UStruct*>(AnyInstance::StaticClass()),
-                                           [&](UObject* Object) {
-                                               if (UObjectGlobals::IsValidObjectForFindXOf(Object))
-                                               {
-                                                   ++count;
-                                               }
-                                               return LoopAction::Continue;
-                                           },
-                                           nullptr);
-                Output::send(STR("Slow search found {} instances\n"), count);
+                std::vector<UObject*> Instances{};
+                UObjectGlobals::FindAllOf(STR("Actor"), Instances, false);
+                Output::send(STR("Slow search found {} instances (Actor)\n"), Instances.size());
             });
         }
 
