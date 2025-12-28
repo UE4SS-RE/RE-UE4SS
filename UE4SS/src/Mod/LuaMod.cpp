@@ -2290,9 +2290,32 @@ Overloads:
 
             const auto func_ref = hook_lua->registry().make_ref();
 
-            Unreal::UClass* instance_of_class = Unreal::UObjectGlobals::StaticFindObject<Unreal::UClass*>(nullptr, nullptr, class_name);
+            if (class_name.contains(STR(' ')))
+            {
+                lua.throw_error(fmt::format("Param #1 for NotifyOnNewObject cannot contain spaces; Param value: '{}'", to_utf8_string(class_name)));
+            }
 
-            LuaMod::m_static_construct_object_lua_callbacks.emplace_back(LuaMod::LuaCancellableCallbackData{hook_lua, instance_of_class, func_ref, thread_ref});
+            const auto name_parts = explode_by_occurrence(class_name, STR('.'));
+            if (name_parts.size() < 2)
+            {
+                lua.throw_error(fmt::format("Param #1 for NotifyOnNewObject must contain at least two parts; Param value: '{}'", to_utf8_string(class_name)));
+            }
+
+            auto class_fname = Unreal::FName(name_parts.back(), Unreal::FNAME_Find);
+            if (class_fname == Unreal::NAME_None)
+            {
+                class_fname = Unreal::FName(name_parts.back(), Unreal::FNAME_Add);
+            }
+
+            auto class_outer_fname = Unreal::FName(name_parts.front(), Unreal::FNAME_Find);
+            if (class_outer_fname == Unreal::NAME_None)
+            {
+                class_outer_fname = Unreal::FName(name_parts.front(), Unreal::FNAME_Add);
+            }
+
+            LuaMod::m_static_construct_object_lua_callbacks.emplace_back(hook_lua, class_fname, class_outer_fname, func_ref, thread_ref);
+
+            Output::send<LogLevel::Verbose>(STR("[NotifyOnNewObject] Registered notification for {}\n"), class_name);
 
             return 0;
         });
@@ -5894,19 +5917,21 @@ Overloads:
 
         Unreal::Hook::RegisterStaticConstructObjectPostCallback([](const Unreal::FStaticConstructObjectParameters&, Unreal::UObject* constructed_object) {
             return TRY([&] {
-                Unreal::UStruct* object_class = constructed_object->GetClassPrivate();
-                while (object_class)
-                {
-                    std::erase_if(m_static_construct_object_lua_callbacks, [&](auto& callback_data) -> bool {
+                auto attempt_to_call_callback = [constructed_object](const Unreal::UStruct* comparison_class) {
+                    std::erase_if(m_static_construct_object_lua_callbacks, [&](const LuaCancellableCallbackData& callback_data) -> bool {
                         bool cancel = false;
-                        if (callback_data.instance_of_class == object_class)
+                        bool match = false;
+                        if (comparison_class->GetNamePrivate().Equals(callback_data.instance_class_name) && comparison_class->GetOuterPrivate()->GetNamePrivate().Equals(callback_data.instance_class_outer_name))
+                        {
+                            match = true;
+                        }
+
+                        if (match)
                         {
                             callback_data.lua->registry().get_function_ref(callback_data.lua_callback_function_ref);
                             LuaType::auto_construct_object(*callback_data.lua, constructed_object);
                             callback_data.lua->call_function(1, 1);
-
                             cancel = callback_data.lua->is_bool(-1) && callback_data.lua->get_bool(-1);
-
                             if (cancel)
                             {
                                 // Release the thread_ref to GC.
@@ -5916,10 +5941,13 @@ Overloads:
 
                         return cancel;
                     });
-
-                    object_class = object_class->GetSuperStruct();
+                };
+                Unreal::UStruct* object_class = constructed_object->GetClassPrivate();
+                attempt_to_call_callback(object_class);
+                for (const auto comparison_class : Unreal::TSuperStructRange(object_class))
+                {
+                    attempt_to_call_callback(comparison_class);
                 }
-
                 return constructed_object;
             });
         });
