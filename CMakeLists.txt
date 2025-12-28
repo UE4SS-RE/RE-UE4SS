@@ -24,6 +24,12 @@ include(ProjectConfig)      # For centralized project configuration
 include(VersionChecks)      # For compiler and tool version checking
 include(ArchitectureDetection) # For CPU architecture and feature detection
 
+# Profilers option
+option(UE4SS_PROFILERS "Enable UE4SS profiling features" OFF)
+if(UE4SS_PROFILERS)
+    add_compile_definitions(UE4SS_PROFILERS)
+endif()
+
 # Check IPO/LTO support
 check_ipo_supported(RESULT IPO_SUPPORTED OUTPUT IPO_ERROR)
 message("IPO/LTO support: ${IPO_SUPPORTED}; ${IPO_ERROR}")
