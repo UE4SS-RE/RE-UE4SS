@@ -64,12 +64,16 @@ namespace RC::GUI::Profilers
             ObjectSearcherProfiler::FastStats.LastPoolSizeActorClasses.store(
                     ObjectSearcherPool<UClass, AActor>::Pool.size(),
                     std::memory_order_relaxed);
+            ObjectSearcherProfiler::FastStats.LastPoolSizeInstances.store(
+                    ObjectSearcherPool<AnyInstance, AnyInstance>::Pool.size(),
+                    std::memory_order_relaxed);
         }
 
-        ImGui::Text("Pool Sizes: Actors=%llu, Classes=%llu, ActorClasses=%llu",
+        ImGui::Text("Pool Sizes: Actors=%llu, Classes=%llu, ActorClasses=%llu, Instances=%llu",
                     ObjectSearcherProfiler::FastStats.LastPoolSizeActors.load(std::memory_order_relaxed),
                     ObjectSearcherProfiler::FastStats.LastPoolSizeClasses.load(std::memory_order_relaxed),
-                    ObjectSearcherProfiler::FastStats.LastPoolSizeActorClasses.load(std::memory_order_relaxed));
+                    ObjectSearcherProfiler::FastStats.LastPoolSizeActorClasses.load(std::memory_order_relaxed),
+                    ObjectSearcherProfiler::FastStats.LastPoolSizeInstances.load(std::memory_order_relaxed));
 
         // Fast path stats
         ImGui::Spacing();
@@ -111,6 +115,15 @@ namespace RC::GUI::Profilers
                 Output::send(STR("Fast search found {} classes\n"), count);
             });
         }
+        ImGui::SameLine();
+        if (ImGui::Button("Test: Fast Instances"))
+        {
+            TRY([] {
+                std::vector<UObject*> Instances{};
+                UObjectGlobals::FindAllOf(STR("Actor"), Instances, true);
+                Output::send(STR("Fast search found {} instances (Actor)\n"), Instances.size());
+            });
+        }
 
         // Slow path stats
         ImGui::Spacing();
@@ -148,6 +161,25 @@ namespace RC::GUI::Profilers
                                            },
                                            nullptr);
                 Output::send(STR("Slow search found {} classes\n"), count);
+            });
+        }
+        ImGui::SameLine();
+        if (ImGui::Button("Test: Slow Instances"))
+        {
+            TRY([] {
+                size_t count = 0;
+                // Use AnyInstance sentinel to trigger slow path through ObjectSearcherSlowInternal
+                ObjectSearcherSlowInternal(AnyInstance::StaticClass(),
+                                           reinterpret_cast<UStruct*>(AnyInstance::StaticClass()),
+                                           [&](UObject* Object) {
+                                               if (UObjectGlobals::IsValidObjectForFindXOf(Object))
+                                               {
+                                                   ++count;
+                                               }
+                                               return LoopAction::Continue;
+                                           },
+                                           nullptr);
+                Output::send(STR("Slow search found {} instances\n"), count);
             });
         }
 
