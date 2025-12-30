@@ -538,10 +538,8 @@ namespace RC::LuaType
             return;
         }
 
-        for (Unreal::FProperty* field : Unreal::TFieldRange<Unreal::FProperty>(script_struct, Unreal::EFieldIterationFlags::IncludeSuper | Unreal::EFieldIterationFlags::IncludeDeprecated))
-        {
+        auto handle_property = [&](Unreal::FProperty* field, std::string field_name) {
             Unreal::FName field_type_fname = field->GetClass().GetFName();
-            const std::string field_name = to_utf8_string(field->GetName());
 
             // Push the field name (key for the table)
             lua_pushstring(lua.get_lua_state(), field_name.c_str());
@@ -564,7 +562,7 @@ namespace RC::LuaType
             if (table_value_type == LUA_TNIL || table_value_type == LUA_TNONE)
             {
                 lua.discard_value(-1);
-                continue;
+                return;
             }
 
             int32_t name_comparison_index = field_type_fname.GetComparisonIndex();
@@ -595,6 +593,15 @@ namespace RC::LuaType
                         );
 
             }
+        };
+
+        LuaCustomProperty::StaticStorage::property_list.for_each(script_struct, [&](LuaCustomProperty const& lua_property) {
+            handle_property((Unreal::FProperty*)lua_property.m_property.get(), to_utf8_string(lua_property.m_name));
+            return true;
+        });
+
+        for (Unreal::FProperty* field : Unreal::TFieldRange<Unreal::FProperty>(script_struct, Unreal::EFieldIterationFlags::IncludeSuper | Unreal::EFieldIterationFlags::IncludeDeprecated)) {
+            handle_property(field, to_utf8_string(field->GetName()));
         }
     }
 
@@ -624,9 +631,8 @@ namespace RC::LuaType
                                                   ? lua.prepare_new_table()
                                                   : lua.get_table();
 
-        for (Unreal::FProperty* field : Unreal::TFieldRange<Unreal::FProperty>(script_struct, Unreal::EFieldIterationFlags::IncludeSuper | Unreal::EFieldIterationFlags::IncludeDeprecated))
+        auto handle_property = [&](Unreal::FProperty* field, std::string field_name)
         {
-            std::string field_name = to_utf8_string(field->GetName());
             Unreal::FName field_type_fname = field->GetClass().GetFName();
             int32_t name_comparison_index = field_type_fname.GetComparisonIndex();
 
@@ -684,6 +690,16 @@ namespace RC::LuaType
                         field_type_fname.ToString()
                         );
             }
+        };
+
+        LuaCustomProperty::StaticStorage::property_list.for_each(script_struct, [&](LuaCustomProperty const& lua_property) {
+            handle_property((Unreal::FProperty*)lua_property.m_property.get(), to_utf8_string(lua_property.m_name));
+            return true;
+        });
+
+        for (Unreal::FProperty* field : Unreal::TFieldRange<Unreal::FProperty>(script_struct, Unreal::EFieldIterationFlags::IncludeSuper | Unreal::EFieldIterationFlags::IncludeDeprecated))
+        {
+            handle_property(field, to_utf8_string(field->GetName()));
         }
 
         lua_table.make_local();

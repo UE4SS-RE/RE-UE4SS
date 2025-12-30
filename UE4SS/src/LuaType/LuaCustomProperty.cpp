@@ -26,7 +26,7 @@ namespace RC::LuaType
         properties.clear();
     }
 
-    auto LuaCustomProperty::PropertyList::find_or_nullptr(Unreal::UObject* base, StringType property_name) -> Unreal::FProperty*
+    auto LuaCustomProperty::PropertyList::for_each(Unreal::UObject* base, ForEachCallable callable) -> bool
     {
         Unreal::FProperty* custom_property_found{};
 
@@ -66,13 +66,29 @@ namespace RC::LuaType
                 }
             }
 
-            if (class_matches && property_name == property_item.m_name)
+            if (class_matches && !callable(property_item))
             {
-                // Compare name here
-                custom_property_found = property_item.m_property.get();
-                break;
+              return false;
             }
         }
+
+        return true;
+    }
+
+    auto LuaCustomProperty::PropertyList::find_or_nullptr(Unreal::UObject* base, StringType property_name) -> Unreal::FProperty*
+    {
+        Unreal::FProperty* custom_property_found{};
+
+        for_each(base, [&](LuaCustomProperty const& property)
+          {
+              bool match = property.m_name == property_name;
+              if (match)
+              {
+                  custom_property_found = property.m_property.get();
+              }
+              return !match;
+          }
+        );
 
         return custom_property_found;
     }

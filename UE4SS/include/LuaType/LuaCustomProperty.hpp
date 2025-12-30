@@ -3,6 +3,7 @@
 #include <memory>
 #include <string>
 #include <vector>
+#include <functional>
 
 #include <String/StringType.hpp>
 
@@ -34,6 +35,10 @@ namespace RC::LuaType
           public:
             auto add(StringType property_name, std::unique_ptr<Unreal::CustomProperty>) -> void;
             auto clear() -> void;
+
+            using ForEachCallable = std::function<bool(LuaCustomProperty const&)>;
+            auto for_each(Unreal::UObject* base, ForEachCallable callable) -> bool;
+
             auto find_or_nullptr(Unreal::UObject* base, StringType property_name) -> Unreal::FProperty*;
         };
 
