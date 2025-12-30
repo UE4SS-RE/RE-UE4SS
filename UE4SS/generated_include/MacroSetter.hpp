@@ -1730,3 +1730,25 @@ if (auto val = parser.get_int64(STR("UDataTable"), STR("ImportKeyField"), -1); v
     Unreal::UDataTable::MemberOffsets.emplace(STR("ImportKeyField"), static_cast<int32_t>(val));
 if (auto val = parser.get_int64(STR("UDataTable"), STR("bPreserveExistingValues"), -1); val != -1)
     Unreal::UDataTable::MemberOffsets.emplace(STR("bPreserveExistingValues"), static_cast<int32_t>(val));
+if (auto val = parser.get_int64(STR("FUObjectHashTables"), STR("Hash"), -1); val != -1)
+    Unreal::FUObjectHashTables::MemberOffsets.emplace(STR("Hash"), static_cast<int32_t>(val));
+if (auto val = parser.get_int64(STR("FUObjectHashTables"), STR("HashOuter"), -1); val != -1)
+    Unreal::FUObjectHashTables::MemberOffsets.emplace(STR("HashOuter"), static_cast<int32_t>(val));
+if (auto val = parser.get_int64(STR("FUObjectHashTables"), STR("ObjectOuterMap"), -1); val != -1)
+    Unreal::FUObjectHashTables::MemberOffsets.emplace(STR("ObjectOuterMap"), static_cast<int32_t>(val));
+if (auto val = parser.get_int64(STR("FUObjectHashTables"), STR("ClassToObjectListMap"), -1); val != -1)
+    Unreal::FUObjectHashTables::MemberOffsets.emplace(STR("ClassToObjectListMap"), static_cast<int32_t>(val));
+if (auto val = parser.get_int64(STR("FUObjectHashTables"), STR("ClassToChildListMap"), -1); val != -1)
+    Unreal::FUObjectHashTables::MemberOffsets.emplace(STR("ClassToChildListMap"), static_cast<int32_t>(val));
+if (auto val = parser.get_int64(STR("FUObjectHashTables"), STR("ClassToChildListMapVersion"), -1); val != -1)
+    Unreal::FUObjectHashTables::MemberOffsets.emplace(STR("ClassToChildListMapVersion"), static_cast<int32_t>(val));
+if (auto val = parser.get_int64(STR("FUObjectHashTables"), STR("PackageToObjectListMap"), -1); val != -1)
+    Unreal::FUObjectHashTables::MemberOffsets.emplace(STR("PackageToObjectListMap"), static_cast<int32_t>(val));
+if (auto val = parser.get_int64(STR("FUObjectHashTables"), STR("ObjectToPackageMap"), -1); val != -1)
+    Unreal::FUObjectHashTables::MemberOffsets.emplace(STR("ObjectToPackageMap"), static_cast<int32_t>(val));
+if (auto val = parser.get_int64(STR("FUObjectHashTables"), STR("AllClassesVersion"), -1); val != -1)
+    Unreal::FUObjectHashTables::MemberOffsets.emplace(STR("AllClassesVersion"), static_cast<int32_t>(val));
+if (auto val = parser.get_int64(STR("FUObjectHashTables"), STR("NativeClassesVersion"), -1); val != -1)
+    Unreal::FUObjectHashTables::MemberOffsets.emplace(STR("NativeClassesVersion"), static_cast<int32_t>(val));
+if (auto val = parser.get_int64(STR("FUObjectHashTables"), STR("CriticalSection"), -1); val != -1)
+    Unreal::FUObjectHashTables::MemberOffsets.emplace(STR("CriticalSection"), static_cast<int32_t>(val));

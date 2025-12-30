@@ -57,6 +57,8 @@
 #include <Unreal/World.hpp>
 #include <Unreal/FWorldContext.hpp>
 #include <Unreal/Engine/UDataTable.hpp>
+#include <Unreal/FOutputDevice.hpp>
+#include <Unreal/UObjectHashTables.hpp>
 #include <UnrealDef.hpp>
 
 #include <polyhook2/PE/IatHook.hpp>

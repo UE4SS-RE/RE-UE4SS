@@ -86,6 +86,7 @@ namespace RC
         REGISTER_BOOL_SETTING(General.EnableDebugKeyBindings, section_general, EnableDebugKeyBindings)
         REGISTER_INT64_SETTING(General.SecondsToScanBeforeGivingUp, section_general, SecondsToScanBeforeGivingUp)
         REGISTER_BOOL_SETTING(General.UseUObjectArrayCache, section_general, bUseUObjectArrayCache)
+        REGISTER_BOOL_SETTING(General.ForceGUObjectArrayForIteration, section_general, bForceGUObjectArrayForIteration)
         REGISTER_BOOL_SETTING(General.DoEarlyScan, section_general, DoEarlyScan)
         REGISTER_BOOL_SETTING(General.SearchByAddress, section_general, bEnableSeachByMemoryAddress)
         StringType default_exec_method_string{};
