@@ -549,7 +549,7 @@ namespace RC::LuaType
             // For lua_rawget, we need the actual stack position of the table
             // If table_index is positive, it stays the same even after pushing the key
             // If it's negative, we need to adjust for the key we just pushed
-            
+
             // Adjust index for negative values after pushing key
             int adjusted_index = table_index;
             if (table_index < 0)
@@ -601,7 +601,8 @@ namespace RC::LuaType
             return true;
         });
 
-        for (Unreal::FProperty* field : Unreal::TFieldRange<Unreal::FProperty>(script_struct, Unreal::EFieldIterationFlags::IncludeSuper | Unreal::EFieldIterationFlags::IncludeDeprecated)) {
+        for (Unreal::FProperty* field : Unreal::TFieldRange<Unreal::FProperty>(script_struct, Unreal::EFieldIterationFlags::IncludeSuper | Unreal::EFieldIterationFlags::IncludeDeprecated))
+        {
             handle_property(field, to_utf8_string(field->GetName()));
         }
     }
@@ -628,12 +629,9 @@ namespace RC::LuaType
             return;
         }
 
-        LuaMadeSimple::Lua::Table lua_table = create_new_table
-                                                  ? lua.prepare_new_table()
-                                                  : lua.get_table();
+        LuaMadeSimple::Lua::Table lua_table = create_new_table ? lua.prepare_new_table() : lua.get_table();
 
-        auto handle_property = [&](Unreal::FProperty* field, const std::string& field_name)
-        {
+        auto handle_property = [&](Unreal::FProperty* field, const std::string& field_name) {
             Unreal::FName field_type_fname = field->GetClass().GetFName();
             int32_t name_comparison_index = field_type_fname.GetComparisonIndex();
 

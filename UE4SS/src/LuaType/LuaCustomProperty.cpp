@@ -68,7 +68,7 @@ namespace RC::LuaType
 
             if (class_matches && !callable(property_item))
             {
-              return false;
+                return false;
             }
         }
 
@@ -79,16 +79,14 @@ namespace RC::LuaType
     {
         Unreal::FProperty* custom_property_found{};
 
-        for_each(base, [&](LuaCustomProperty const& property)
-          {
-              bool match = property.m_name == property_name;
-              if (match)
-              {
-                  custom_property_found = property.m_property.get();
-              }
-              return !match;
-          }
-        );
+        for_each(base, [&](LuaCustomProperty const& property) {
+            bool match = property.m_name == property_name;
+            if (match)
+            {
+                custom_property_found = property.m_property.get();
+            }
+            return !match;
+        });
 
         return custom_property_found;
     }
