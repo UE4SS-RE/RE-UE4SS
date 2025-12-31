@@ -26,7 +26,7 @@ namespace RC::LuaType
         properties.clear();
     }
 
-    auto LuaCustomProperty::PropertyList::for_each(Unreal::UObject* base, ForEachCallable callable) -> bool
+    auto LuaCustomProperty::PropertyList::for_each(Unreal::UObject* base, const ForEachCallable& callable) -> bool
     {
         Unreal::FProperty* custom_property_found{};
 

@@ -32,6 +32,7 @@
 #include <Unreal/UInterface.hpp>
 #include <Unreal/World.hpp>
 #include <Unreal/Engine/UDataTable.hpp>
+#include <UnrealCustom/CustomProperty.hpp>
 
 #pragma warning(default : 4005)
 #include <DynamicOutput/DynamicOutput.hpp>
@@ -538,7 +539,7 @@ namespace RC::LuaType
             return;
         }
 
-        auto handle_property = [&](Unreal::FProperty* field, std::string field_name) {
+        auto handle_property = [&](Unreal::FProperty* field, const std::string& field_name) {
             Unreal::FName field_type_fname = field->GetClass().GetFName();
 
             // Push the field name (key for the table)
@@ -596,7 +597,7 @@ namespace RC::LuaType
         };
 
         LuaCustomProperty::StaticStorage::property_list.for_each(script_struct, [&](LuaCustomProperty const& lua_property) {
-            handle_property((Unreal::FProperty*)lua_property.m_property.get(), to_utf8_string(lua_property.m_name));
+            handle_property(lua_property.m_property.get(), to_utf8_string(lua_property.m_name));
             return true;
         });
 
@@ -631,7 +632,7 @@ namespace RC::LuaType
                                                   ? lua.prepare_new_table()
                                                   : lua.get_table();
 
-        auto handle_property = [&](Unreal::FProperty* field, std::string field_name)
+        auto handle_property = [&](Unreal::FProperty* field, const std::string& field_name)
         {
             Unreal::FName field_type_fname = field->GetClass().GetFName();
             int32_t name_comparison_index = field_type_fname.GetComparisonIndex();
@@ -693,7 +694,7 @@ namespace RC::LuaType
         };
 
         LuaCustomProperty::StaticStorage::property_list.for_each(script_struct, [&](LuaCustomProperty const& lua_property) {
-            handle_property((Unreal::FProperty*)lua_property.m_property.get(), to_utf8_string(lua_property.m_name));
+            handle_property(lua_property.m_property.get(), to_utf8_string(lua_property.m_name));
             return true;
         });
 

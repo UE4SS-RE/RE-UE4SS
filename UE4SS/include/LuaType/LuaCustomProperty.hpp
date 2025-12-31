@@ -37,7 +37,7 @@ namespace RC::LuaType
             auto clear() -> void;
 
             using ForEachCallable = std::function<bool(LuaCustomProperty const&)>;
-            auto for_each(Unreal::UObject* base, ForEachCallable callable) -> bool;
+            auto for_each(Unreal::UObject* base, const ForEachCallable& callable) -> bool;
 
             auto find_or_nullptr(Unreal::UObject* base, StringType property_name) -> Unreal::FProperty*;
         };
