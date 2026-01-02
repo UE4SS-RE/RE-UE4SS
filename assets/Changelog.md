@@ -311,6 +311,8 @@ Removed some development mods, `README.md` & `Changelog.md` from non-zDev releas
 
 The execution of the game is now paused durin the first AOB scan, and then resumed to complete potential further scans and initialization. ([UE4SS #985](https://github.com/UE4SS-RE/RE-UE4SS/pull/985))
 
+Removed the FText constructor AOB, replaced it with more consistent non-AOB method of constructing FText instances ([UE4SS #1139](https://github.com/UE4SS-RE/RE-UE4SS/pull/1139))
+
 ### Live View 
 Fixed the majority of the lag ([UE4SS #512](https://github.com/UE4SS-RE/RE-UE4SS/pull/512)) 
 
