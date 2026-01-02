@@ -122,7 +122,8 @@ namespace RC
         struct LuaCancellableCallbackData
         {
             const LuaMadeSimple::Lua* lua;
-            Unreal::UClass* instance_of_class;
+            Unreal::FName instance_class_name{};
+            Unreal::FName instance_class_outer_name{};
             int32_t lua_callback_function_ref{};
             int32_t lua_callback_thread_ref{};
         };
