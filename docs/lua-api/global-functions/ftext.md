@@ -6,7 +6,7 @@ Useful when you have to interact with `UserWidget`-related classes for the UI of
 
 ## Parameters (overload #1)
 
-This overload uses [FText::FText( FString&& InSourceString )](https://docs.unrealengine.com/4.27/en-US/API/Runtime/Core/Internationalization/FText/__ctor/6/) to create a new `FText` object.
+This creates a new `FText` object based on the supplied string.
 
  # | Type     | Information 
 ---|----------|-------------

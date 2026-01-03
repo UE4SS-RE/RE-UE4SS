@@ -26,7 +26,7 @@ These AOBs are used to find functions and variables that are critical for UE4SS 
 
 ## High-Level Overview
 
-1. **Identify Which Signatures Are Missing:** Determine which functions or variables UE4SS cannot find (e.g., GUObjectArray, GMalloc, FName or FText constructors).
+1. **Identify Which Signatures Are Missing:** Determine which functions or variables UE4SS cannot find (e.g., GUObjectArray, GMalloc, FName).
 2. **Set Up a Reference Environment:** Create a blank Unreal Engine game (using the Shipping target) with debug files (PDBs) that uses the same Unreal Engine version as your game. This environment helps you identify function signatures cleanly.
 3. **Reverse Engineer and Extract AOBs:** Using x64dbg (and optional plugins), open the blank game and locate the desired function in memory. Copy out the unique bytes that form a reliable signature. This signature should be properly wildcarded, if it's not, it won't be found in your game.
 4. **Apply Your Signatures to the Actual Game:** Attach x64dbg to the target game, find the matching bytes, and confirm that the signature you extracted matches code in the game you want to mod.
