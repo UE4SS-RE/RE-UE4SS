@@ -70,7 +70,7 @@ end
 -- ENTRY POINT
 --########################
 
---- In case when ClientRestart runs earlier than ExecuteInGameThread
+--- In cases where ClientRestart runs earlier than ExecuteInGameThread
 if (not WasConsoleCreated or IsDynamicViewport) then
     ExecuteInGameThread(CreateConsole)
 end
