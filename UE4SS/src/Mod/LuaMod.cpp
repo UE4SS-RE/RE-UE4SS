@@ -5704,10 +5704,9 @@ Overloads:
                 [](Unreal::UEngine* Engine, Unreal::FWorldContext& WorldContext, Unreal::FURL URL, Unreal::UPendingNetGame* PendingGame, Unreal::FString& Error)
                         -> std::pair<bool, bool> {
                     return TRY([&] {
+                        std::pair<bool, bool> return_value{};
                         for (const auto& callback_data : m_load_map_pre_callbacks)
                         {
-                            std::pair<bool, bool> return_value{};
-
                             for (const auto& [lua_ptr, registry_index] : callback_data.registry_indexes)
                             {
                                 const auto& lua = *lua_ptr;
@@ -5736,10 +5735,8 @@ Overloads:
                                     return_value.second = callback_data.lua->get_bool();
                                 }
                             }
-
-                            return return_value;
                         }
-                        return std::pair<bool, bool>{false, false};
+                        return return_value;
                     });
                 });
 
@@ -5747,10 +5744,9 @@ Overloads:
                 [](Unreal::UEngine* Engine, Unreal::FWorldContext& WorldContext, Unreal::FURL URL, Unreal::UPendingNetGame* PendingGame, Unreal::FString& Error)
                         -> std::pair<bool, bool> {
                     return TRY([&] {
+                        std::pair<bool, bool> return_value{};
                         for (const auto& callback_data : m_load_map_post_callbacks)
                         {
-                            std::pair<bool, bool> return_value{};
-
                             for (const auto& [lua_ptr, registry_index] : callback_data.registry_indexes)
                             {
                                 const auto& lua = *lua_ptr;
@@ -5779,10 +5775,8 @@ Overloads:
                                     return_value.second = callback_data.lua->get_bool();
                                 }
                             }
-
-                            return return_value;
                         }
-                        return std::pair<bool, bool>{false, false};
+                        return return_value;
                     });
                 });
 
@@ -6040,9 +6034,9 @@ Overloads:
                 [](Unreal::UObject* context, const TCHAR* str, Unreal::FOutputDevice& ar, Unreal::UObject* executor, bool b_force_call_with_non_exec)
                         -> std::pair<bool, bool> {
                     return TRY([&] {
+                        std::pair<bool, bool> return_value{};
                         for (const auto& callback_data : m_call_function_by_name_with_arguments_pre_callbacks)
                         {
-                            std::pair<bool, bool> return_value{};
 
                             for (const auto& [lua, registry_index] : callback_data.registry_indexes)
                             {
@@ -6072,11 +6066,9 @@ Overloads:
                                     return_value.second = callback_data.lua->get_bool();
                                 }
                             }
-
-                            return return_value;
                         }
 
-                        return std::pair{false, false};
+                        return return_value;
                     });
                 });
 
@@ -6084,9 +6076,9 @@ Overloads:
                 [](Unreal::UObject* context, const TCHAR* str, Unreal::FOutputDevice& ar, Unreal::UObject* executor, bool b_force_call_with_non_exec)
                         -> std::pair<bool, bool> {
                     return TRY([&] {
+                        std::pair<bool, bool> return_value{};
                         for (const auto& callback_data : m_call_function_by_name_with_arguments_post_callbacks)
                         {
-                            std::pair<bool, bool> return_value{};
 
                             for (const auto& [lua, registry_index] : callback_data.registry_indexes)
                             {
@@ -6116,11 +6108,9 @@ Overloads:
                                     return_value.second = callback_data.lua->get_bool();
                                 }
                             }
-
-                            return return_value;
                         }
 
-                        return std::pair{false, false};
+                        return return_value;
                     });
                 });
 
@@ -6221,9 +6211,9 @@ Overloads:
                         auto command = File::StringType{ToCharTypePtr(cmd)};
                         auto command_parts = explode_by_occurrence_with_quotes(command, STR(' '));
 
+                        std::pair<bool, bool> return_value{};
                         for (const auto& callback_data : m_process_console_exec_pre_callbacks)
                         {
-                            std::pair<bool, bool> return_value{};
 
                             for (const auto& [lua, registry_index] : callback_data.registry_indexes)
                             {
@@ -6258,11 +6248,9 @@ Overloads:
                                     throw std::runtime_error{"A callback for 'RegisterProcessConsoleExecHook' must return bool or nil"};
                                 }
                             }
-
-                            return return_value;
                         }
 
-                        return std::pair{false, false};
+                        return return_value;
                     });
                 });
 
@@ -6273,10 +6261,9 @@ Overloads:
                         auto command = File::StringType{ToCharTypePtr(cmd)};
                         auto command_parts = explode_by_occurrence_with_quotes(command, STR(' '));
 
+                        std::pair<bool, bool> return_value{};
                         for (const auto& callback_data : m_process_console_exec_post_callbacks)
                         {
-                            std::pair<bool, bool> return_value{};
-
                             for (const auto& [lua, registry_index] : callback_data.registry_indexes)
                             {
                                 callback_data.lua->registry().get_function_ref(registry_index.lua_index);
@@ -6310,11 +6297,9 @@ Overloads:
                                     throw std::runtime_error{"A callback for 'RegisterProcessConsoleExecHook' must return bool or nil"};
                                 }
                             }
-
-                            return return_value;
                         }
 
-                        return std::pair{false, false};
+                        return return_value;
                     });
                 });
 
