@@ -217,7 +217,7 @@ namespace RC
             LuaType::LuaValue input,
             int32_t callback_ref,
             int32_t callback_thread_ref,
-            const LuaWorkerOptions& options = {}
+            const LuaWorkerOptions& options
         ) -> uint64_t;
 
         /**
