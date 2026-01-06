@@ -3,6 +3,7 @@ set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
 # Add C++ mods
 add_subdirectory("KismetDebuggerMod")
+add_subdirectory("EventViewerMod")
 
 # Organize targets in the "mods" folder
 get_property(TARGETS DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY BUILDSYSTEM_TARGETS)
