@@ -309,7 +309,7 @@ namespace RC::GUI::Dumpers
 
     auto generate_object_as_json(UObject* object) -> StringType
     {
-        glz::json_t json{};
+        glz::generic json{};
         auto& meta = json["Meta"];
         auto& values = json["Values"];
         if (!object)
@@ -319,7 +319,7 @@ namespace RC::GUI::Dumpers
         }
         // Non-instance data.
         {
-            auto& name_json = meta["NamePrivate"] = {};
+            auto& name_json = meta["NamePrivate"] = glz::generic::object_t{};
             const auto name = object->GetNamePrivate();
             name_json["String"] = to_string(name.ToString());
             auto& name_components = name_json["Components"];
@@ -333,7 +333,7 @@ namespace RC::GUI::Dumpers
         }
         meta["Address"] = fmt::format("{:016X}", std::bit_cast<uintptr_t>(object));
         {
-            auto& class_private = meta["ClassPrivate"] = {};
+            auto& class_private = meta["ClassPrivate"] = glz::generic::object_t{};
             class_private["Address"] = fmt::format("{:016X}", std::bit_cast<uintptr_t>(object->GetClassPrivate()));
             class_private["Name"] = fmt::format("{}", to_string(object->GetClassPrivate()->GetName()));
         }
@@ -343,7 +343,7 @@ namespace RC::GUI::Dumpers
             const auto raw_unsafe_object_flags = ObjectFlagsStringifier::get_raw_flags(object);
             object_flags["Raw"] = raw_unsafe_object_flags;
             auto& object_flags_array = object_flags["Flags"];
-            auto& array = object_flags_array.data.emplace<glz::json_t::array_t>();
+            auto& array = object_flags_array.data.emplace<glz::generic::array_t>();
             const ObjectFlagsStringifier flags_stringifier{object};
             for (int32_t i = 0; i < flags_stringifier.flag_parts.size(); ++i)
             {
@@ -352,9 +352,9 @@ namespace RC::GUI::Dumpers
         }
         meta["PlayerControlled"] = is_player_controlled(object);
         {
-            auto& size = meta["Size"] = {};
-            auto& size_excl = size["Exclusive"] = {};
-            auto& size_incl = size["Inclusive"] = {};
+            auto& size = meta["Size"] = glz::generic::object_t{};
+            auto& size_excl = size["Exclusive"] = glz::generic::object_t{};
+            auto& size_incl = size["Inclusive"] = glz::generic::object_t{};
             std::vector<UClass*> all_super_structs{};
             auto uclass = object->IsA<UStruct>() ? static_cast<UClass*>(object) : object->GetClassPrivate();
             size["Total"] = uclass->GetPropertiesSize();
