@@ -16,7 +16,8 @@ add_library(${TARGET} SHARED
         src/EventViewer.cpp
         src/Middleware.cpp
         include/Middleware.hpp
-        include/Structs.h)
+        include/Structs.h
+)
 
 target_include_directories(${TARGET} PRIVATE "include")
 target_link_libraries(${TARGET} PRIVATE ImGui)
