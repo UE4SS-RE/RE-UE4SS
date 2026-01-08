@@ -15,7 +15,7 @@ namespace RC::EventViewerMod
     using RC::Unreal::FFrame;
     using RC::Unreal::Hook::GlobalCallbackId;
     using RC::Unreal::Hook::ERROR_ID;
-    using RC::Unreal::Hook::UnregisterHook;
+    using RC::Unreal::Hook::UnregisterCallback;
     using RC::Unreal::Hook::RegisterProcessEventPreCallback;
     using RC::Unreal::Hook::RegisterProcessEventPostCallback;
     using RC::Unreal::Hook::RegisterProcessInternalPreCallback;
@@ -36,10 +36,10 @@ namespace RC::EventViewerMod
             if (m_hook_target == target) return;
 
             const bool should_resume = m_paused;
-            pause();
+            stop();
             m_hook_target = target;
 
-            if (should_resume) resume();
+            if (should_resume) start();
         }
 
         [[nodiscard]] auto get_hook_target() const -> EMiddlewareHookTarget final
@@ -48,12 +48,12 @@ namespace RC::EventViewerMod
             return m_hook_target;
         }
 
-        auto pause() -> bool override
+        auto stop() -> bool override
         {
             assert_on_imgui_thread();
             if (m_paused) return true;
-            if (m_prehook_id && !UnregisterHook(m_prehook_id)) return false;
-            if (m_posthook_id && !UnregisterHook(m_posthook_id)) return false;
+            if (m_prehook_id && !UnregisterCallback(m_prehook_id)) return false;
+            if (m_posthook_id && !UnregisterCallback(m_posthook_id)) return false;
             m_prehook_id = m_posthook_id = ERROR_ID;
             m_depth_reset_counter.fetch_add(1, std::memory_order_release);
             m_paused = true;
@@ -66,19 +66,19 @@ namespace RC::EventViewerMod
             return m_paused;
         }
 
-        auto resume() -> bool override
+        auto start() -> bool override
         {
             assert_on_imgui_thread();
             if (!m_paused) return true;
             switch (m_hook_target)
             {
-                case EMiddlewareHookTarget::process_event:
+                case EMiddlewareHookTarget::ProcessEvent:
                 {
                     m_prehook_id = RegisterProcessEventPreCallback(m_pe_pre, m_options);
                     m_posthook_id = RegisterProcessEventPostCallback(m_pe_post, m_options);
                     break;
                 }
-                case EMiddlewareHookTarget::process_internal:
+                case EMiddlewareHookTarget::ProcessInternal:
                 {
                     m_prehook_id = RegisterProcessInternalPreCallback(m_pi_pre, m_options);
                     m_posthook_id = RegisterProcessInternalPostCallback(m_pi_post, m_options);
@@ -109,13 +109,13 @@ namespace RC::EventViewerMod
         MiddlewareHooks() = default;
         ~MiddlewareHooks() override
         {
-            MiddlewareHooks::pause();
+            MiddlewareHooks::stop();
         }
 
     private:
         GlobalCallbackId m_prehook_id = ERROR_ID;
         GlobalCallbackId m_posthook_id = ERROR_ID;
-        EMiddlewareHookTarget m_hook_target = EMiddlewareHookTarget::process_event;
+        EMiddlewareHookTarget m_hook_target = EMiddlewareHookTarget::ProcessEvent;
         bool m_paused = true;
         std::thread::id m_imgui_id;
 
@@ -193,9 +193,9 @@ namespace RC::EventViewerMod
             } while (((std::chrono::steady_clock::now() - start) < max_ms) && m_queue.size_approx());
         }
 
-        auto pause() -> bool override
+        auto stop() -> bool override
         {
-            if (!MiddlewareHooks::pause()) return false;
+            if (!MiddlewareHooks::stop()) return false;
 
             std::vector<CallStackEntry*> entries{ 100 };
 
@@ -253,9 +253,9 @@ namespace RC::EventViewerMod
             } while ((std::chrono::steady_clock::now() - start) < max_ms);
         }
 
-        auto pause() -> bool override
+        auto stop() -> bool override
         {
-            if (!MiddlewareHooks::pause()) return false;
+            if (!MiddlewareHooks::stop()) return false;
             std::lock_guard lock(m_mutex);
             while (!m_queue.empty())
             {
@@ -275,8 +275,8 @@ namespace RC::EventViewerMod
     {
         switch (type)
         {
-            case EMiddlewareThreadScheme::cqueue: return std::make_unique<ConcurrentQueueMiddleware>();
-            case EMiddlewareThreadScheme::mutex: return std::make_unique<MutexMiddleware>();
+            case EMiddlewareThreadScheme::ConcurrentQueue: return std::make_unique<ConcurrentQueueMiddleware>();
+            case EMiddlewareThreadScheme::Mutex: return std::make_unique<MutexMiddleware>();
             default: throw std::runtime_error("Unknown middleware type");
         }
     }

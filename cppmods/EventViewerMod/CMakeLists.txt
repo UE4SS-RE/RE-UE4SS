@@ -17,6 +17,10 @@ add_library(${TARGET} SHARED
         src/Middleware.cpp
         include/Middleware.hpp
         include/Structs.h
+        src/Renderer.cpp
+        include/Renderer.h
+        include/Enums.h
+        src/Structs.cpp
 )
 
 target_include_directories(${TARGET} PRIVATE "include")
