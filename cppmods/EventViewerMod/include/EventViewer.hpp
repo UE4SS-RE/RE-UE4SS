@@ -3,10 +3,14 @@
 #include <Mod/CppUserModBase.hpp>
 #include <UE4SSProgram.hpp>
 
-// this goes in dllmain, renderer/helper structs go here in RC::GUI::EventViewerMod
-class EventViewerMod : RC::CppUserModBase
+namespace RC::EventViewerMod
 {
-private:
-
-
-};
+    // this goes in dllmain, renderer/helper structs go here in RC::GUI::EventViewerMod
+    class EventViewerMod : RC::CppUserModBase
+    {
+    public:
+        EventViewerMod();
+        auto on_unreal_init() -> void override;
+        auto on_ui_init() -> void override;
+    };
+}
