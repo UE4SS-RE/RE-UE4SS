@@ -1,35 +1,51 @@
 #include <Structs.h>
 #include <Helpers/String.hpp>
-#include <cstring>
+
+#include <Unreal/UnrealInitializer.hpp>
+
+#include "LuaType/LuaThreadId.hpp"
 
 namespace RC::EventViewerMod {
-    auto CallStackEntry::context_name_as_string() -> const char*
+    CallStackEntry::CallStackEntry(StringType context_name, StringType function_name, const uint32_t depth, const std::thread::id thread_id, const bool is_tick) :
+        context_name(std::move(context_name)),
+        function_name(std::move(function_name)),
+        depth(depth),
+        thread_id(thread_id),
+        is_tick(is_tick),
+        visual_depth(depth)
     {
-        if (!m_context_name)
-        {
-            auto utf8 = to_string(context_name);
-            m_context_name = new char[utf8.length() + 1];
-            m_context_name[utf8.length()] = '\0';
-            strncpy_s(m_context_name, utf8.length() + 1, utf8.c_str(), utf8.length());
-        }
-        return m_context_name;
     }
 
-    auto CallStackEntry::function_name_as_string() -> const char*
+    auto CallStackEntry::entry_as_string() -> const char*
     {
-        if (!m_function_name)
+        if (m_print_name.empty())
         {
-            auto utf8 = to_string(function_name);
-            m_function_name = new char[utf8.length() + 1];
-            m_function_name[utf8.length()] = '\0';
-            strncpy_s(m_function_name, utf8.length() + 1, utf8.c_str(), utf8.length());
+            m_print_name = RC::to_string(context_name) + "." + RC::to_string(function_name);
         }
-        return m_function_name;
+        return m_print_name.c_str();
     }
 
-    CallStackEntry::~CallStackEntry()
+    auto CallStackEntry::entry_as_std_string() -> const std::string&
     {
-        delete[] m_context_name;
-        delete[] m_function_name;
+        if (m_print_name.empty())
+        {
+            m_print_name = RC::to_string(context_name) + "." + RC::to_string(function_name);
+        }
+        return m_print_name;
+    }
+
+    ThreadInfo::ThreadInfo(const std::thread::id thread_id):    thread_id(thread_id),
+                                                                is_game_thread(RC::Unreal::GetGameThreadId() == thread_id)
+    {
+    }
+
+    auto ThreadInfo::id_string() -> const char*
+    {
+        if (m_id_string.empty())
+        {
+            m_id_string = std::to_string(thread_id._Get_underlying_id()); //TODO use stringstream for cross platform
+            if (is_game_thread) m_id_string += " (Game)";
+        }
+        return m_id_string.c_str();
     }
 }

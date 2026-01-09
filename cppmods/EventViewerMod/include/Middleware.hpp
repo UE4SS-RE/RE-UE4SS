@@ -20,15 +20,15 @@ namespace RC::EventViewerMod
         [[nodiscard]] virtual auto get_hook_target() const -> EMiddlewareHookTarget = 0;
 
         // [Thread-Any] Enqueues info on a call
-        virtual auto enqueue(Unreal::UObject* context, Unreal::UFunction* function, uint32_t depth, std::thread::id thread_id) -> void = 0;
+        virtual auto enqueue(Unreal::UObject* context, Unreal::UFunction* function, uint32_t depth, std::thread::id thread_id, bool is_tick) -> void = 0;
 
         // [Thread-ImGui] Dequeues the info on the call stack
-        //      max_ms - the maximum amount of time, in ms, this function will run. Use to avoid holding the ImGui thread for too long
-        //      max_count_per_iteration -   for EMiddlewareThreadScheme::ConcurrentQueue, the amount of CallStackEntries pulled at a time
+        //      max_ms - the maximum amount of time, in ms, this function will run. Use to avoid holding the ImGui thread for too long TODO change to uint16_t
+        //      max_count_per_iteration -   for EMiddlewareThreadScheme::ConcurrentQueue, the amount of CallStackEntries pulled at a time TODO change to uint16_t
         //                                  for EMiddlewareThreadScheme::Mutex, the amount of CallStackEntries pulled between Mutex locking/unlocking
         //                                      (to avoid locking the game thread for too long)
         //      on_dequeue - takes ownership the dequeued CallStackEntry*; it's responsible for cleaning it up/wrapping it in unique_ptr
-        virtual auto dequeue(const std::chrono::milliseconds& max_ms, size_t max_count_per_iteration, const std::function<void(CallStackEntry*)>&
+        virtual auto dequeue(uint16_t max_ms, uint16_t max_count_per_iteration, const std::function<void(CallStackEntry*)>&
                              on_dequeue) -> void = 0;
 
         // [Thread-ImGui] Pauses the call stack stream and removes hooks and clears the queue
@@ -42,6 +42,11 @@ namespace RC::EventViewerMod
 
         // [Thread-ImGui] Sets the ImGui thread id, used for precondition assertions
         virtual auto set_imgui_thread_id(std::thread::id id) -> void = 0;
+
+        // [Thread-ImGui] Gets the ImGui thread id
+        [[nodiscard]] virtual auto get_imgui_thread_id() const -> std::thread::id = 0;
+
+        [[nodiscard]] virtual auto get_type() const -> EMiddlewareThreadScheme = 0;
 
         virtual ~IMiddleware() = default;
     };

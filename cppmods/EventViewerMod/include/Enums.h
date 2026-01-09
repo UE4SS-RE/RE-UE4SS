@@ -25,22 +25,23 @@ X(EnumName, Frequency)
 #define EVM_ENUM_COUNT(EnumName, v) +1
 
 #define EVM_DECLARE_REFLECTED_ENUM(Name, LIST2)                              \
-enum class E##Name : uint8_t \
+enum class E##Name : int \
 {                                           \
     LIST2(EVM_ENUM_ELEM, Name)                                           \
 };                                                                       \
 \
-inline static constexpr std::size_t E##Name##_Size =                     \
+inline static constexpr int E##Name##_Size =                     \
 0 LIST2(EVM_ENUM_COUNT, Name);                                       \
 \
-inline static constexpr const char* E##Name##_Array[E##Name##_Size] = \
+inline static constexpr const char* E##Name##_NameArray[E##Name##_Size] = \
 {  \
     LIST2(EVM_ENUM_STR, Name)                                            \
 };                                                                       \
 \
 inline constexpr const char* to_string(E##Name e) noexcept \
 {             \
-    switch (e) {                                                         \
+    switch (e) \
+    {                                                         \
         LIST2(EVM_ENUM_CASE, Name)                                       \
         default: return "<unknown " #Name ">";                               \
     }                                                                    \
