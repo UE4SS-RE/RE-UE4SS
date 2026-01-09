@@ -6,11 +6,10 @@
 namespace RC::EventViewerMod
 {
     // this goes in dllmain, renderer/helper structs go here in RC::GUI::EventViewerMod
-    class EventViewerMod : RC::CppUserModBase
+    class EventViewerMod : public RC::CppUserModBase
     {
     public:
         EventViewerMod();
         auto on_unreal_init() -> void override;
-        auto on_ui_init() -> void override;
     };
 }

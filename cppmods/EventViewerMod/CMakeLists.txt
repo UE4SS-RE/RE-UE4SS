@@ -17,8 +17,8 @@ add_library(${TARGET} SHARED
         src/Middleware.cpp
         include/Middleware.hpp
         include/Structs.h
-        src/Renderer.cpp
-        include/Renderer.h
+        src/Client.cpp
+        include/Client.h
         include/Enums.h
         src/Structs.cpp
 )
