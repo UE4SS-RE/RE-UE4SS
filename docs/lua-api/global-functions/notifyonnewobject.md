@@ -6,7 +6,7 @@ Inheritance is taken into account, so if you provide `"/Script/Engine.Actor"` as
 
 The callback can return `true` to remove (unregister) that specific `NotifyOnNewObject` callback.
 
-> The provided class must exist before this calling this function.
+> The provided class does NOT need to exist before this calling this function.
 
 ## Parameters
 
