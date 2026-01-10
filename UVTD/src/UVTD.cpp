@@ -13,6 +13,7 @@
 #include <UVTD/ConfigUtil.hpp>
 #include <UVTD/ExceptionHandling.hpp>
 #include <UVTD/Helpers.hpp>
+#include <UVTD/PDBNameInfo.hpp>
 #include <UVTD/MemberVarsDumper.hpp>
 #include <UVTD/MemberVarsWrapperGenerator.hpp>
 #include <UVTD/SolBindingsGenerator.hpp>
@@ -86,9 +87,18 @@ namespace RC::UVTD
                         generator.generate_files();
                     }
 
-                    File::StringType pdb_name = pdb.filename().stem();
-                    UnrealVirtualGenerator virtual_generator(pdb_name, run_container);
-                    virtual_generator.generate_files();
+                    // Parse PDB name using standardized format
+                    File::StringType pdb_stem = pdb.filename().stem().wstring();
+                    auto pdb_info = PDBNameInfo::parse(pdb_stem);
+                    if (pdb_info.has_value())
+                    {
+                        UnrealVirtualGenerator virtual_generator(*pdb_info, run_container);
+                        virtual_generator.generate_files();
+                    }
+                    else
+                    {
+                        Output::send(STR("Warning: Could not parse PDB name '{}' - skipping virtual generator\n"), pdb_stem);
+                    }
 
                     shared_container.join(run_container);
 

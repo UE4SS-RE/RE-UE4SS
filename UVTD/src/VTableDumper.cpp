@@ -291,13 +291,17 @@ namespace RC::UVTD
 
     auto VTableDumper::generate_files() -> void
     {
-        File::StringType pdb_name = symbols.pdb_file_path.filename().stem();
+        const auto& pdb_info = symbols.get_pdb_name_info();
+        // Use base_version for file naming (e.g., "4_27" from "4_27-CasePreserving")
+        const auto& pdb_name = pdb_info.base_version;
+        // Include suffix in template filename if present
+        auto pdb_full_name = pdb_info.full_name;
 
         auto default_template_file = std::filesystem::path{STR("VTableLayout.ini")};
 
         Output::send(STR("Generating file '{}'\n"), default_template_file.wstring());
 
-        auto template_file = std::format(STR("VTableLayout_{}_Template.ini"), pdb_name);
+        auto template_file = std::format(STR("VTableLayout_{}_Template.ini"), pdb_full_name);
 
         Output::send(STR("Generating file '{}'\n"), template_file);
 

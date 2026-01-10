@@ -133,9 +133,15 @@ namespace RC::UVTD
 
     auto MemberVarsDumper::generate_files() -> void
     {
-        File::StringType pdb_name = symbols.pdb_file_path.filename().stem();
+        const auto& pdb_info = symbols.get_pdb_name_info();
+        // Use full name for templates (includes suffixes like CasePreserving)
+        const auto& pdb_full_name = pdb_info.full_name;
+        // Use base version for function body files (these match the base version)
+        const auto& pdb_base_version = pdb_info.base_version;
+        // Use version_no_separator for class names (e.g., "427")
+        const auto& pdb_name_no_underscore = pdb_info.version_no_separator;
 
-        auto template_file = std::format(STR("MemberVariableLayout_{}_Template.ini"), pdb_name);
+        auto template_file = std::format(STR("MemberVariableLayout_{}_Template.ini"), pdb_full_name);
 
         Output::send(STR("Generating file '{}'\n"), template_file);
 
@@ -145,9 +151,6 @@ namespace RC::UVTD
         ini_file_device.set_formatter([](File::StringViewType string) {
             return File::StringType{string};
         });
-
-        auto pdb_name_no_underscore = pdb_name;
-        pdb_name_no_underscore.replace(pdb_name_no_underscore.find(STR('_')), 1, STR(""));
 
         // Iterate through object_items first to preserve order
         for (const auto& object_item : ConfigUtil::GetObjectItems())
@@ -177,8 +180,9 @@ namespace RC::UVTD
                 continue;
             }
 
+            // Use full name for file (includes suffix like CasePreserving)
             auto default_setter_src_file = member_variable_layouts_gen_function_bodies_path /
-                                           std::format(STR("{}_MemberVariableLayout_DefaultSetter_{}.cpp"), pdb_name, class_entry.class_name_clean);
+                                           std::format(STR("{}_MemberVariableLayout_DefaultSetter_{}.cpp"), pdb_full_name, class_entry.class_name_clean);
 
             Output::send(STR("Generating file '{}'\n"), default_setter_src_file.wstring());
 

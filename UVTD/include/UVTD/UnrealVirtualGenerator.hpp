@@ -1,5 +1,6 @@
 #pragma once
 
+#include <UVTD/PDBNameInfo.hpp>
 #include <UVTD/TypeContainer.hpp>
 
 namespace RC::UVTD
@@ -7,14 +8,14 @@ namespace RC::UVTD
     class UnrealVirtualGenerator
     {
       private:
-        File::StringType pdb_name;
+        PDBNameInfo pdb_info;
         TypeContainer type_container;
 
       public:
         UnrealVirtualGenerator() = delete;
 
-        explicit UnrealVirtualGenerator(File::StringType pdb_name, TypeContainer container)
-            : pdb_name(std::move(pdb_name)), type_container(std::move(container))
+        explicit UnrealVirtualGenerator(const PDBNameInfo& pdb_info, TypeContainer container)
+            : pdb_info(pdb_info), type_container(std::move(container))
         {
         }
 
