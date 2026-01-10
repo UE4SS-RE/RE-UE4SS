@@ -7,6 +7,54 @@
 
 namespace RC::UVTD
 {
+    // Generate version suffix for getter names (e.g., "425" for version 4.25, "500" for 5.0)
+    static auto generate_version_suffix(int32_t major, int32_t minor) -> File::StringType
+    {
+        return std::format(STR("{}{:02d}"), major, minor);
+    }
+
+    // Helper to generate a simple getter body (non-const version)
+    static auto generate_simple_getter_body(
+        Output::Targets<Output::NewFileDevice>& dumper,
+        const File::StringType& type_name,
+        const File::StringType& class_name,
+        const File::StringType& variable_name) -> void
+    {
+        dumper.send(STR("{\n"));
+        dumper.send(STR("    static const int32_t offset = []() -> int32_t {\n"));
+        dumper.send(STR("        auto offset_it = MemberOffsets.find(STR(\"{}\"));\n"), variable_name);
+        dumper.send(STR(
+                "        if (offset_it == MemberOffsets.end()) {{ throw std::runtime_error{{\"Tried getting member variable '{}::{}' "
+                "that doesn't exist in this engine version.\"}}; }}\n"),
+                        class_name,
+                        variable_name);
+        dumper.send(STR("        return offset_it->second;\n"));
+        dumper.send(STR("    }();\n"));
+        dumper.send(STR("    return *Helper::Casting::ptr_cast<{}*>(this, offset);\n"), type_name);
+        dumper.send(STR("}\n"));
+    }
+
+    // Helper to generate a simple const getter body
+    static auto generate_simple_const_getter_body(
+        Output::Targets<Output::NewFileDevice>& dumper,
+        const File::StringType& type_name,
+        const File::StringType& class_name,
+        const File::StringType& variable_name) -> void
+    {
+        dumper.send(STR("{\n"));
+        dumper.send(STR("    static const int32_t offset = []() -> int32_t {\n"));
+        dumper.send(STR("        auto offset_it = MemberOffsets.find(STR(\"{}\"));\n"), variable_name);
+        dumper.send(STR(
+                "        if (offset_it == MemberOffsets.end()) {{ throw std::runtime_error{{\"Tried getting member variable '{}::{}' "
+                "that doesn't exist in this engine version.\"}}; }}\n"),
+                        class_name,
+                        variable_name);
+        dumper.send(STR("        return offset_it->second;\n"));
+        dumper.send(STR("    }();\n"));
+        dumper.send(STR("    return *Helper::Casting::ptr_cast<const {}*>(this, offset);\n"), type_name);
+        dumper.send(STR("}\n\n"));
+    }
+
     auto MemberVarsWrapperGenerator::generate_files() -> void
     {
         auto macro_setter_file = macro_setter_output_path / std::filesystem::path{STR("MacroSetter.hpp")};
@@ -133,12 +181,64 @@ namespace RC::UVTD
                     header_wrapper_dumper.send(STR("public:\n"));
                 }
 
-                header_wrapper_dumper.send(STR("    {}& Get{}();\n"), final_type_name, final_variable_name);
-                header_wrapper_dumper.send(STR("    const {}& Get{}() const;\n\n"), final_type_name, final_variable_name);
-                wrapper_src_dumper.send(STR("{}& {}::Get{}()\n"), final_type_name, final_class_name, final_variable_name);
+                // Check if this variable has version-specific type changes
+                // If so, we generate versioned getters instead of a single getter
+                if (variable.has_type_changes() && !inheritance_info.has_value())
+                {
+                    // Generate version-specific getters
+                    // The types_by_version map is sorted by version key (e.g., "4_25", "5_00")
+                    // We generate:
+                    // - GetVarBase() - for the earliest version
+                    // - GetVar425() - for >= 4.25 (or whatever version introduced the change)
+                    // - etc.
 
-                // Handle classes with inheritance relationship
-                if (inheritance_info.has_value())
+                    Output::send(STR("  Generating version-specific getters for {}::{}\n"),
+                                 final_class_name, final_variable_name);
+
+                    bool is_first = true;
+                    for (const auto& [version_key, versioned_type] : variable.types_by_version)
+                    {
+                        File::StringType version_type_name = versioned_type.type;
+                        unify_uobject_array_if_needed(version_type_name);
+
+                        File::StringType getter_suffix;
+                        if (is_first)
+                        {
+                            getter_suffix = STR("Base");
+                            is_first = false;
+                        }
+                        else
+                        {
+                            getter_suffix = generate_version_suffix(versioned_type.major_version, versioned_type.minor_version);
+                        }
+
+                        File::StringType versioned_getter_name = final_variable_name + getter_suffix;
+
+                        // Header declarations
+                        header_wrapper_dumper.send(STR("    {}& Get{}();\n"), version_type_name, versioned_getter_name);
+                        header_wrapper_dumper.send(STR("    const {}& Get{}() const;\n"), version_type_name, versioned_getter_name);
+
+                        // Source implementations
+                        wrapper_src_dumper.send(STR("{}& {}::Get{}()\n"), version_type_name, final_class_name, versioned_getter_name);
+                        generate_simple_getter_body(wrapper_src_dumper, version_type_name, final_class_name, final_variable_name);
+
+                        wrapper_src_dumper.send(STR("const {}& {}::Get{}() const\n"), version_type_name, final_class_name, versioned_getter_name);
+                        generate_simple_const_getter_body(wrapper_src_dumper, version_type_name, final_class_name, final_variable_name);
+                    }
+
+                    // Add a newline after the versioned getters in header
+                    header_wrapper_dumper.send(STR("\n"));
+                }
+                else
+                {
+                    // Standard getter - single type for all versions
+                    header_wrapper_dumper.send(STR("    {}& Get{}();\n"), final_type_name, final_variable_name);
+                    header_wrapper_dumper.send(STR("    const {}& Get{}() const;\n\n"), final_type_name, final_variable_name);
+                    wrapper_src_dumper.send(STR("{}& {}::Get{}()\n"), final_type_name, final_class_name, final_variable_name);
+                }
+
+                // Handle classes with inheritance relationship (only for non-versioned getters)
+                if (inheritance_info.has_value() && !variable.has_type_changes())
                 {
                     wrapper_src_dumper.send(STR("{\n"));
                     wrapper_src_dumper.send(STR("    static const int32_t offset = []() -> int32_t {\n"));
@@ -236,9 +336,9 @@ namespace RC::UVTD
                     wrapper_src_dumper.send(STR("    return *Helper::Casting::ptr_cast<const {}*>(this, offset);\n"), final_type_name);
                     wrapper_src_dumper.send(STR("}\n\n"));
                 }
-                else
+                else if (!variable.has_type_changes())
                 {
-                    // Standard handling for classes without special inheritance
+                    // Standard handling for classes without special inheritance or type changes
                     wrapper_src_dumper.send(STR("{\n"));
                     wrapper_src_dumper.send(STR("    static const int32_t offset = []() -> int32_t {\n"));
                     wrapper_src_dumper.send(STR("        auto offset_it = MemberOffsets.find(STR(\"{}\"));\n"), final_variable_name);
@@ -266,6 +366,7 @@ namespace RC::UVTD
                     wrapper_src_dumper.send(STR("    return *Helper::Casting::ptr_cast<const {}*>(this, offset);\n"), final_type_name);
                     wrapper_src_dumper.send(STR("}\n\n"));
                 }
+                // Note: if variable.has_type_changes() is true, getters were already generated above
 
                 // Generate macro setter only for the final variable name
                 macro_setter_dumper.send(STR("if (auto val = parser.get_int64(STR(\"{}\"), STR(\"{}\"), -1); val != -1)\n"),
