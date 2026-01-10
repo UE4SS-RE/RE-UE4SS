@@ -19,30 +19,27 @@ namespace RC::EventViewerMod
 {
     static_assert(std::is_same_v<StringType, std::wstring>, "EventViewerMod expects StringType to be std::wstring for ImGui encoding, needs refactor!");
 
-    struct CallStackEntry
+    struct EntryBase
     {
-        CallStackEntry(StringType context_name, StringType function_name, uint32_t depth, std::thread::id thread_id, bool is_tick);
+        EntryBase(std::string text, bool is_tick);
 
-        const StringType context_name;
-        const StringType function_name;
-        const uint32_t depth;
-        const std::thread::id thread_id;
+        const std::string text;
         const bool is_tick;
         bool is_disabled = false;
-
-        uint32_t visual_depth;
-
-        auto entry_as_string() -> const char*;
-        auto entry_as_std_string() -> const std::string&;
-    private:
-        std::string m_print_name;
     };
 
-    struct CallFrequencyEntry
+    struct CallStackEntry : EntryBase
     {
-        const std::string function_name;
+        CallStackEntry(const StringType& context_name, const StringType& function_name, uint32_t depth, std::thread::id thread_id, bool is_tick);
+
+        const uint32_t depth;
+        const std::thread::id thread_id;
+    };
+
+    struct CallFrequencyEntry : EntryBase
+    {
+        CallFrequencyEntry(std::string text, bool is_tick);
         uint64_t frequency = 1;
-        bool is_disabled = false;
     };
 
     struct ThreadInfo
@@ -55,17 +52,10 @@ namespace RC::EventViewerMod
         std::list<std::unique_ptr<CallStackEntry>> call_stack;
         std::list<std::unique_ptr<CallFrequencyEntry>> call_frequencies;
 
-        auto operator<=>(const ThreadInfo& other) const noexcept
-        {
-            return other.thread_id <=> thread_id;
-        }
-
-        auto operator<=>(const std::thread::id& other) const noexcept
-        {
-            return other <=> thread_id;
-        }
-
+        auto operator<=>(const ThreadInfo& other) const noexcept;
+        auto operator<=>(const std::thread::id& other) const noexcept;
         auto id_string() -> const char*;
+        auto clear() -> void;
     private:
         std::string m_id_string;
     };
@@ -74,6 +64,8 @@ namespace RC::EventViewerMod
     {
         std::vector<ThreadInfo> threads;
         int current_thread = 0;
+
+        auto clear() -> void;
     };
 
     struct UIState
@@ -89,8 +81,7 @@ namespace RC::EventViewerMod
         std::string blacklist; // [Savable] [Thread-ImGui]
         std::vector<std::string_view> blacklist_tokens; // [Thread-ImGui]
         std::string whitelist; // [Savable] [Thread-ImGui]
-        std::vector<std::string_view> whitelist_tokens; // [Thread-ImGui
-        std::thread::id current_thread; // [Thread-ImGui]
+        std::vector<std::string_view> whitelist_tokens; // [Thread-ImGui]
         std::array<TargetInfo, EMiddlewareHookTarget_Size> targets {}; // [Thread-ImGui]
         std::atomic_flag needs_save; // [Thread-Any]
     };

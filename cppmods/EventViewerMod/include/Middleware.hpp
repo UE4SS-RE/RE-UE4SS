@@ -23,8 +23,8 @@ namespace RC::EventViewerMod
         virtual auto enqueue(Unreal::UObject* context, Unreal::UFunction* function, uint32_t depth, std::thread::id thread_id, bool is_tick) -> void = 0;
 
         // [Thread-ImGui] Dequeues the info on the call stack
-        //      max_ms - the maximum amount of time, in ms, this function will run. Use to avoid holding the ImGui thread for too long TODO change to uint16_t
-        //      max_count_per_iteration -   for EMiddlewareThreadScheme::ConcurrentQueue, the amount of CallStackEntries pulled at a time TODO change to uint16_t
+        //      max_ms - the maximum amount of time, in ms, this function will run. Use to avoid holding the ImGui thread for too long
+        //      max_count_per_iteration -   for EMiddlewareThreadScheme::ConcurrentQueue, the amount of CallStackEntries pulled at a time
         //                                  for EMiddlewareThreadScheme::Mutex, the amount of CallStackEntries pulled between Mutex locking/unlocking
         //                                      (to avoid locking the game thread for too long)
         //      on_dequeue - takes ownership the dequeued CallStackEntry*; it's responsible for cleaning it up/wrapping it in unique_ptr

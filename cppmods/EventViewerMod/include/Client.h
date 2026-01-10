@@ -1,6 +1,10 @@
 #pragma once
+#include <fstream>
+#include <filesystem>
 #include <Middleware.hpp>
 #include <Structs.h>
+
+#include "UE4SSProgram.hpp"
 
 namespace RC::EventViewerMod
 {
@@ -16,7 +20,7 @@ namespace RC::EventViewerMod
         // [Thread-Any]
         static auto GetInstance() -> Client&;
     private:
-        Client() = default;
+        Client();
 
         auto render_cfg() -> void;
         auto render_perf_opts() -> void;
@@ -31,7 +35,15 @@ namespace RC::EventViewerMod
 
         auto passes_filters(const std::string& test_str) const -> bool;
 
+        enum class ESaveMode { none, current, all };
+        auto save(ESaveMode mode) -> void;
+        auto serialize_view(ThreadInfo& info, EMode mode, std::ofstream& out) const -> void;
+        auto serialize_all_views(std::ofstream& out) -> void;
+
         UIState m_state;
         std::unique_ptr<IMiddleware> m_middleware = GetNewMiddleware(EMiddlewareThreadScheme::ConcurrentQueue);
+
+        const std::filesystem::path m_cfg_path = StringType{UE4SSProgram::get_program().get_working_directory()} + fmt::format(STR("\\Mods\\EventViewerMod\\config\\settings.json"));
+        const std::filesystem::path m_dump_path = StringType{UE4SSProgram::get_program().get_working_directory()};
     };
 }
