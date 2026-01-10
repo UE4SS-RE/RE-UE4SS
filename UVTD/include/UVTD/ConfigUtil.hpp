@@ -1,6 +1,7 @@
 #pragma once
 
 #include <UVTD/Config.hpp>
+#include <UVTD/PDBNameInfo.hpp>
 
 namespace RC::UVTD
 {
@@ -154,6 +155,34 @@ namespace RC::UVTD
                 return it->second;
             }
             return std::nullopt;
+        }
+
+        // Suffix definitions access
+        inline const std::unordered_map<File::StringType, SuffixDefinition>& GetSuffixDefinitions()
+        {
+            return UVTDConfig::Get().suffix_definitions;
+        }
+
+        // Get suffix definition for a specific suffix name
+        inline std::optional<SuffixDefinition> GetSuffixDefinition(const File::StringType& suffix)
+        {
+            const auto& map = UVTDConfig::Get().suffix_definitions;
+            auto it = map.find(suffix);
+            if (it != map.end()) {
+                return it->second;
+            }
+            return std::nullopt;
+        }
+
+        // Get the ifdef macro for a suffix (returns auto-generated macro if not in config)
+        inline File::StringType GetSuffixIfdefMacro(const File::StringType& suffix)
+        {
+            auto def = GetSuffixDefinition(suffix);
+            if (def.has_value()) {
+                return def->ifdef_macro;
+            }
+            // Fall back to auto-generated macro from PDBNameInfo
+            return PDBNameInfo::suffix_to_macro(suffix);
         }
     }
 }
