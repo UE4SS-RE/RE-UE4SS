@@ -56,6 +56,10 @@ namespace RC::UVTD
                 {
                     TypeContainer run_container{};
 
+                    // Parse PDB name early so we can use it for version tracking
+                    File::StringType pdb_stem = pdb.filename().stem().wstring();
+                    auto pdb_info = PDBNameInfo::parse(pdb_stem);
+
                     if (dump_settings.should_dump_vtable)
                     {
                         Symbols symbols{pdb};
@@ -87,20 +91,24 @@ namespace RC::UVTD
                         generator.generate_files();
                     }
 
-                    // Parse PDB name using standardized format
-                    File::StringType pdb_stem = pdb.filename().stem().wstring();
-                    auto pdb_info = PDBNameInfo::parse(pdb_stem);
+                    // Generate virtual files if PDB name was parsed
                     if (pdb_info.has_value())
                     {
                         UnrealVirtualGenerator virtual_generator(*pdb_info, run_container);
                         virtual_generator.generate_files();
+
+                        // Set the source PDB info on run_container before joining
+                        run_container.set_source_pdb_info(*pdb_info);
+
+                        // Use version-aware join to detect type changes
+                        shared_container.join(run_container, *pdb_info);
                     }
                     else
                     {
                         Output::send(STR("Warning: Could not parse PDB name '{}' - skipping virtual generator\n"), pdb_stem);
+                        // Fall back to non-version-aware join
+                        shared_container.join(run_container);
                     }
-
-                    shared_container.join(run_container);
 
                     Output::send(STR("Code generated.\n"));
                 }
