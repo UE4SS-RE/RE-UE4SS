@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <format>
 
+#include <DynamicOutput/DynamicOutput.hpp>
 #include <File/File.hpp>
 #include <UVTD/ConfigUtil.hpp>
 #include <UVTD/Helpers.hpp>
@@ -181,10 +182,20 @@ inline NumericValue read_numeric_safe(const uint8_t* data, const uint8_t* data_e
         : pdb_file_path(pdb_file_path), pdb_file_handle(std::move(File::open(pdb_file_path))), pdb_file_map(std::move(pdb_file_handle.memory_map())),
           pdb_file(pdb_file_map.data())
     {
-        auto version_string = this->pdb_file_path.filename().stem().string();
-        auto major_version = std::atoi(version_string.substr(0, 1).c_str());
-        auto minor_version = std::atoi(version_string.substr(2).c_str());
-        is_425_plus = (major_version > 4) || (major_version == 4 && minor_version >= 25);
+        // Parse PDB name using standardized format: Major_Minor[-Suffix1][-Suffix2]
+        auto pdb_stem = this->pdb_file_path.filename().stem().wstring();
+        auto name_info = PDBNameInfo::parse(pdb_stem);
+
+        if (name_info.has_value())
+        {
+            m_pdb_name_info = *name_info;
+            is_425_plus = m_pdb_name_info.is_at_least(4, 25);
+        }
+        else
+        {
+            Output::send(STR("Warning: PDB name '{}' does not match expected format Major_Minor[-Suffix]. Using defaults.\n"), pdb_stem);
+            is_425_plus = false;
+        }
 
         if (!std::filesystem::exists(pdb_file_path))
         {
@@ -223,7 +234,7 @@ inline NumericValue read_numeric_safe(const uint8_t* data, const uint8_t* data_e
 
     Symbols::Symbols(const Symbols& other)
         : pdb_file_path(other.pdb_file_path), pdb_file_handle(std::move(File::open(pdb_file_path))), pdb_file_map(std::move(pdb_file_handle.memory_map())),
-          pdb_file(pdb_file_map.data()), is_425_plus(other.is_425_plus), m_machine_type(other.m_machine_type)
+          pdb_file(pdb_file_map.data()), is_425_plus(other.is_425_plus), m_machine_type(other.m_machine_type), m_pdb_name_info(other.m_pdb_name_info)
     {
         dbi_stream = PDB::CreateDBIStream(pdb_file);
     }
@@ -236,6 +247,7 @@ inline NumericValue read_numeric_safe(const uint8_t* data, const uint8_t* data_e
         pdb_file = PDB::RawFile(pdb_file_map.data());
         is_425_plus = other.is_425_plus;
         m_machine_type = other.m_machine_type;
+        m_pdb_name_info = other.m_pdb_name_info;
         dbi_stream = PDB::CreateDBIStream(pdb_file);
 
         return *this;

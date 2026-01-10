@@ -6,6 +6,7 @@
 #include <vector>
 
 #include <File/File.hpp>
+#include <UVTD/PDBNameInfo.hpp>
 
 #include <PDB_DBIStream.h>
 #include <PDB_RawFile.h>
@@ -13,6 +14,7 @@
 
 namespace RC::UVTD
 {
+
     struct DumpSettings
     {
         bool should_dump_vtable{};
@@ -177,6 +179,7 @@ namespace RC::UVTD
 
     private:
         PDB::CodeView::DBI::CPUType m_machine_type{PDB::CodeView::DBI::CPUType::X64};
+        PDBNameInfo m_pdb_name_info{};
 
     public:
         std::unordered_map<File::StringType, EnumEntry> enum_entries;
@@ -218,6 +221,9 @@ namespace RC::UVTD
         auto static is_virtual(PDB::CodeView::TPI::MemberAttributes attributes) -> bool;
         auto is_x64() const -> bool;
         auto is_x86() const -> bool;
+
+        // PDB name info accessor
+        auto get_pdb_name_info() const -> const PDBNameInfo& { return m_pdb_name_info; }
 
       private:
         auto setup_symbol_loader() -> void;
