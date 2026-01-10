@@ -62,6 +62,10 @@ namespace RC::UVTD
         bool generates_variant{true};
     };
 
+    struct SuffixDefinitionsFile {
+        std::vector<SuffixDefinitionJson> suffixes;
+    };
+
     // New type for type filtering
     using TypeFilterMapJson = std::unordered_map<std::string, std::vector<std::string>>;
 }
@@ -103,6 +107,13 @@ namespace glz {
             "ifdef_macro", &RC::UVTD::SuffixDefinitionJson::ifdef_macro,
             "description", &RC::UVTD::SuffixDefinitionJson::description,
             "generates_variant", &RC::UVTD::SuffixDefinitionJson::generates_variant
+        );
+    };
+
+    template <>
+    struct meta<RC::UVTD::SuffixDefinitionsFile> {
+        static constexpr auto value = glz::object(
+            "suffixes", &RC::UVTD::SuffixDefinitionsFile::suffixes
         );
     };
 }
@@ -495,10 +506,6 @@ namespace RC::UVTD
             {
                 std::ifstream file(suffix_path);
                 std::string json_str((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
-
-                struct SuffixDefinitionsFile {
-                    std::vector<SuffixDefinitionJson> suffixes;
-                };
 
                 auto result = glz::read_json<SuffixDefinitionsFile>(json_str);
                 if (result.has_value())
