@@ -54,7 +54,14 @@ namespace RC::UVTD
         int32_t version_minor;
         bool inherit_members{true};
     };
-    
+
+    struct SuffixDefinitionJson {
+        std::string suffix;
+        std::string ifdef_macro;
+        std::string description;
+        bool generates_variant{true};
+    };
+
     // New type for type filtering
     using TypeFilterMapJson = std::unordered_map<std::string, std::vector<std::string>>;
 }
@@ -86,6 +93,16 @@ namespace glz {
             "version_major", &RC::UVTD::ClassInheritanceInfoJson::version_major,
             "version_minor", &RC::UVTD::ClassInheritanceInfoJson::version_minor,
             "inherit_members", &RC::UVTD::ClassInheritanceInfoJson::inherit_members
+        );
+    };
+
+    template <>
+    struct meta<RC::UVTD::SuffixDefinitionJson> {
+        static constexpr auto value = glz::object(
+            "suffix", &RC::UVTD::SuffixDefinitionJson::suffix,
+            "ifdef_macro", &RC::UVTD::SuffixDefinitionJson::ifdef_macro,
+            "description", &RC::UVTD::SuffixDefinitionJson::description,
+            "generates_variant", &RC::UVTD::SuffixDefinitionJson::generates_variant
         );
     };
 }
@@ -443,11 +460,11 @@ namespace RC::UVTD
             {
                 std::ifstream file(inheritance_path);
                 std::string json_str((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
-    
+
                 // Parse the hierarchical structure
                 using InheritanceMap = std::unordered_map<std::string, ClassInheritanceInfoJson>;
                 auto result = glz::read_json<InheritanceMap>(json_str);
-    
+
                 if (result.has_value())
                 {
                     class_inheritance_map.clear();
@@ -471,7 +488,44 @@ namespace RC::UVTD
             {
                 Output::send(STR("class_inheritance.json not found\n"));
             }
-            
+
+            // Load suffix definitions
+            std::filesystem::path suffix_path = config_dir / "suffix_definitions.json";
+            if (std::filesystem::exists(suffix_path))
+            {
+                std::ifstream file(suffix_path);
+                std::string json_str((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+
+                struct SuffixDefinitionsFile {
+                    std::vector<SuffixDefinitionJson> suffixes;
+                };
+
+                auto result = glz::read_json<SuffixDefinitionsFile>(json_str);
+                if (result.has_value())
+                {
+                    suffix_definitions.clear();
+                    for (const auto& def : result.value().suffixes)
+                    {
+                        auto suffix_wide = to_wstring(def.suffix);
+                        suffix_definitions[suffix_wide] = {
+                            suffix_wide,
+                            to_wstring(def.ifdef_macro),
+                            to_wstring(def.description),
+                            def.generates_variant
+                        };
+                    }
+                    Output::send(STR("Loaded {} suffix definitions\n"), suffix_definitions.size());
+                }
+                else
+                {
+                    Output::send(STR("Failed to parse suffix_definitions.json\n"));
+                }
+            }
+            else
+            {
+                Output::send(STR("suffix_definitions.json not found\n"));
+            }
+
             return true;
         }
         catch (const std::exception& e)

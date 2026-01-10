@@ -42,6 +42,15 @@ namespace RC::UVTD
         ExcludeFromSolBindings // Exclude from Sol bindings
     };
 
+    // Suffix definition for PDB naming - maps suffix to ifdef macro and description
+    struct SuffixDefinition
+    {
+        File::StringType suffix{};           // e.g., "CasePreserving"
+        File::StringType ifdef_macro{};      // e.g., "WITH_CASE_PRESERVING_NAME"
+        File::StringType description{};      // Human-readable description
+        bool generates_variant{true};        // Whether this suffix creates a variant build
+    };
+
     class UVTDConfig
     {
     private:
@@ -74,6 +83,9 @@ namespace RC::UVTD
 
         // Class inheritance relationships
         std::unordered_map<File::StringType, ClassInheritanceInfo> class_inheritance_map;
+
+        // Suffix definitions - maps suffix name to its configuration
+        std::unordered_map<File::StringType, SuffixDefinition> suffix_definitions;
 
     private:
         UVTDConfig() = default;
