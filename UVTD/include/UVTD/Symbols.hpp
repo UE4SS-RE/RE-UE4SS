@@ -44,6 +44,15 @@ namespace RC::UVTD
         }
     };
 
+    // Stores type information for a specific UE version
+    struct VersionedType
+    {
+        File::StringType type;
+        uint32_t size{};
+        int32_t major_version{};
+        int32_t minor_version{};
+    };
+
     struct MemberVariable
     {
         File::StringType type;
@@ -51,6 +60,14 @@ namespace RC::UVTD
         int32_t offset;
         uint32_t type_index{};
         uint32_t size{};
+
+        // Track types that differ across versions
+        // Key is "Major_Minor" (e.g., "4_27", "5_01")
+        // Only populated when type changes are detected during join
+        std::map<File::StringType, VersionedType> types_by_version{};
+
+        // Check if this member has version-specific type changes
+        bool has_type_changes() const { return !types_by_version.empty(); }
     };
 
     struct FunctionParam
