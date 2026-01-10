@@ -108,13 +108,15 @@ namespace RC::EventViewerMod
 
     protected:
         MiddlewareHooks()
-        { //TODO move to static map
-            Unreal::UObjectGlobals::ForEachUObject([this](UObject* object, ...) -> LoopAction {
-                if (object && Unreal::Cast<UFunction>(object) && object->GetName().contains(STR("Tick")))
-                {
-                    m_tick_fns.insert(object);
-                }
-                return LoopAction::Continue;
+        {
+            std::call_once(m_get_tick_fns_flag, [] {
+                    Unreal::UObjectGlobals::ForEachUObject([](UObject* object, ...) -> LoopAction {
+                    if (object && Unreal::Cast<UFunction>(object) && object->GetName().contains(STR("Tick")))
+                    {
+                        m_tick_fns.insert(object);
+                    }
+                    return LoopAction::Continue;
+                });
             });
         }
 
@@ -129,7 +131,6 @@ namespace RC::EventViewerMod
         EMiddlewareHookTarget m_hook_target = EMiddlewareHookTarget::ProcessEvent;
         bool m_paused = true;
         std::thread::id m_imgui_id;
-        std::unordered_set<UObject*> m_tick_fns;
 
         const FCallbackOptions m_options = {false, true, STR("EventViewer"), STR("CallStackMonitor")};
 
@@ -168,9 +169,11 @@ namespace RC::EventViewerMod
             m_pi_depth = m_pi_depth == 0 ? 0 : m_pi_depth - 1;
         };
 
+        inline static std::once_flag m_get_tick_fns_flag;
+        inline static std::unordered_set<UObject*> m_tick_fns;
         inline static thread_local uint32_t m_pe_depth = 0;
         inline static thread_local uint32_t m_pi_depth = 0;
-        inline static std::atomic_uint64_t m_depth_reset_counter = 0; //TODO use flag?
+        inline static std::atomic_uint64_t m_depth_reset_counter = 0;
     };
 
     class ConcurrentQueueMiddleware : public MiddlewareHooks
@@ -182,8 +185,8 @@ namespace RC::EventViewerMod
         {
             thread_local ProducerToken producer_token { m_queue };
             m_queue.enqueue(producer_token, new CallStackEntry {
-                context ? std::move(context->GetName()) : STR("UnknownContext"),
-                function ? std::move(function->GetName()) : STR("UnknownFunction"),
+                context ? context->GetName() : STR("UnknownContext"),
+                function ? function->GetName() : STR("UnknownFunction"),
                 depth,
                 thread_id,
                 is_tick
@@ -195,14 +198,14 @@ namespace RC::EventViewerMod
         {
             assert_on_imgui_thread();
             const auto start = std::chrono::steady_clock::now();
-            std::vector<CallStackEntry*> entries{ max_count_per_iteration }; // TODO can probably make it a member to reduce allocations
+            if (m_buffer.size() < max_count_per_iteration) m_buffer.resize(max_count_per_iteration);
             do
             {
-                auto amount_dequeued = m_queue.try_dequeue_bulk(m_imgui_consumer_token, entries.begin(), max_count_per_iteration);
+                auto amount_dequeued = m_queue.try_dequeue_bulk(m_imgui_consumer_token, m_buffer.begin(), max_count_per_iteration);
                 if (!amount_dequeued) break;
-                for (size_t i = 0; i < amount_dequeued; ++i)
+                for (size_t i = 0; i < amount_dequeued; ++i) // might run a little over time, but that's ok, the pointers need to be transferred to the imgui thread
                 {
-                    on_dequeue(entries[i]); // transfers ownership
+                    on_dequeue(m_buffer[i]); // transfers ownership
                 }
             } while ((std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - start).count() < max_ms) && m_queue.size_approx());
         }
@@ -211,14 +214,12 @@ namespace RC::EventViewerMod
         {
             if (!MiddlewareHooks::stop()) return false;
 
-            std::vector<CallStackEntry*> entries{ 100 }; // TODO can probably make it a member to reduce allocations
-
             while (m_queue.size_approx())
             {
-                const auto count = m_queue.try_dequeue_bulk(m_imgui_consumer_token, entries.begin(), 100);
+                const auto count = m_queue.try_dequeue_bulk(m_imgui_consumer_token, m_buffer.begin(), m_buffer.size());
                 for (size_t i = 0; i < count; ++i)
                 {
-                    delete entries[i];
+                    delete m_buffer[i];
                 }
             }
 
@@ -235,6 +236,7 @@ namespace RC::EventViewerMod
     private:
         ConcurrentQueue<CallStackEntry*> m_queue;
         ConsumerToken m_imgui_consumer_token { m_queue };
+        std::vector<CallStackEntry*> m_buffer {100};
     };
 
     class MutexMiddleware : public MiddlewareHooks
@@ -242,16 +244,16 @@ namespace RC::EventViewerMod
     public:
         MutexMiddleware() = default;
 
-        auto enqueue(Unreal::UObject* context, Unreal::UFunction* function, uint32_t depth, std::thread::id thread_id, bool is_tick) -> void override
+        auto enqueue(Unreal::UObject* context, Unreal::UFunction* function, uint32_t depth, std::thread::id thread_id, const bool is_tick) -> void override
         {
             std::lock_guard lock(m_mutex);
-            m_queue.push(new CallStackEntry {
-                context ? std::move(context->GetName()) : STR("UnknownContext"),
-                function ? std::move(function->GetName()) : STR("UnknownFunction"),
+            m_queue.push(new CallStackEntry(
+                context ? context->GetName() : STR("UnknownContext"),
+                function ? function->GetName() : STR("UnknownFunction"),
                 depth,
                 thread_id,
                 is_tick
-            });
+            ));
         }
 
         auto dequeue(uint16_t max_ms,
