@@ -834,15 +834,6 @@ Overloads:
       private:
         auto static setup_metamethods(LuaMadeSimple::Type::BaseObject& base_object) -> void
         {
-            base_object.get_metamethods().create(LuaMadeSimple::Lua::MetaMethod::Index, [](const LuaMadeSimple::Lua& lua) -> int {
-                prepare_to_handle(Operation::Get, lua);
-                return 1;
-            });
-
-            base_object.get_metamethods().create(LuaMadeSimple::Lua::MetaMethod::NewIndex, [](const LuaMadeSimple::Lua& lua) -> int {
-                prepare_to_handle(Operation::Set, lua);
-                return 0;
-            });
         }
 
         auto static setup_member_functions(LuaMadeSimple::Lua::Table& table) -> void
