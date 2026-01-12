@@ -38,7 +38,7 @@ namespace RC::EventViewerMod
         auto apply_filters_to_history(bool whitelist_changed, bool blacklist_changed, bool tick_changed) -> void;
         auto dequeue() -> void;
 
-        auto passes_filters(const std::string& test_str) const -> bool;
+        auto passes_filters(std::string_view test_str) const -> bool;
 
         enum class ESaveMode { none, current, all };
         auto save(ESaveMode mode) -> void;

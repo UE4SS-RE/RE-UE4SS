@@ -24,21 +24,22 @@ inline constexpr static std::array COLORS = {
 
 namespace RC::EventViewerMod
 {
-    EntryBase::EntryBase(std::string text, const bool is_tick)
-        : text(std::move(text)), is_tick(is_tick)
+    EntryBase::EntryBase(const std::string_view text, const bool is_tick)
+        : text(text), is_tick(is_tick)
     {
     }
 
     CallStackEntry::CallStackEntry(const EMiddlewareHookTarget hook_target,
-                                   const StringType& context_name,
-                                   const StringType& function_name,
-                                   const uint32_t depth,
-                                   const std::thread::id thread_id,
-                                   const bool is_tick)
-        : EntryBase(std::move(RC::to_string(context_name + STR(".") + function_name)), is_tick),
+                                    const std::string_view full_name,
+                                    const std::string_view function_name,
+                                    const uint32_t depth,
+                                    const std::thread::id thread_id,
+                                    const bool is_tick)
+        : EntryBase(full_name, is_tick),
           hook_target(hook_target),
           depth(depth),
-          thread_id(thread_id)
+          thread_id(thread_id),
+          function_name(function_name)
     {
     }
 
@@ -51,13 +52,13 @@ namespace RC::EventViewerMod
         min.x -= indent_width;
         max.y += ImGui::GetTextLineHeight();
         ImGui::GetWindowDrawList()->AddRectFilled(min, max, COLORS[depth % COLORS.size()]);
-        ImGui::TextUnformatted(text.c_str());
+        ImGui::TextUnformatted(text.data());
     }
 
     auto CallStackEntry::render(const int indent_delta) const -> void
     {
         render_indents(indent_delta);
-        ImGui::TextUnformatted(text.c_str());
+        ImGui::TextUnformatted(text.data());
     }
 
     auto CallStackEntry::render_indents(const int indent_delta) const -> void
@@ -78,8 +79,8 @@ namespace RC::EventViewerMod
         }
     }
 
-    CallFrequencyEntry::CallFrequencyEntry(std::string text, const bool is_tick)
-        : EntryBase(std::move(text), is_tick)
+    CallFrequencyEntry::CallFrequencyEntry(const std::string_view text, const bool is_tick)
+        : EntryBase(text, is_tick)
     {
     }
 

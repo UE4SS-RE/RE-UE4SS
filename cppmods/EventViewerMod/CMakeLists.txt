@@ -21,6 +21,8 @@ add_library(${TARGET} SHARED
         include/Client.h
         include/Enums.h
         src/Structs.cpp
+        include/StringPool.hpp
+        src/StringPool.cpp
 )
 
 target_include_directories(${TARGET} PRIVATE "include")
