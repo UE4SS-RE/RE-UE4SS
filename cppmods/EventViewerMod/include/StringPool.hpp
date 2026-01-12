@@ -24,8 +24,14 @@ namespace RC::EventViewerMod
     private:
         StringPool() = default;
 
+        struct StringInfo
+        {
+            size_t function_begin;
+            std::string full_name;
+        };
+
         // TODO replace with better concurrent hash map solution, though not too important for now
-        std::unordered_map<uint64_t, std::string> m_pool;
+        std::unordered_map<uint64_t, StringInfo> m_pool;
         std::shared_mutex m_mutex;
     };
 }
