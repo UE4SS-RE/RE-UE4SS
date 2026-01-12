@@ -34,15 +34,15 @@ namespace RC::EventViewerMod
 
     Middleware::Middleware()
     {
-        std::call_once(m_get_tick_fns_flag, [] {
-            Unreal::UObjectGlobals::ForEachUObject([](UObject* object, ...) -> LoopAction {
-                if (object && Unreal::Cast<UFunction>(object) && object->GetName().contains(STR("Tick")))
-                {
-                    m_tick_fns.insert(object);
-                }
-                return LoopAction::Continue;
-            });
+        Unreal::UObjectGlobals::ForEachUObject([](UObject* object, ...) -> LoopAction {
+            if (object && Unreal::Cast<UFunction>(object) && object->GetName().contains(STR("Tick")))
+            {
+                m_tick_fns.insert(object);
+            }
+            return LoopAction::Continue;
         });
+
+        Output::send<LogLevel::Verbose>(L"Found {} engine tick functions!", m_tick_fns.size());
 
         // Hook callbacks
         m_pe_pre = [this](auto&, UObject* context, UFunction* function, void*)
@@ -102,6 +102,11 @@ namespace RC::EventViewerMod
         };
 
         QueueProfiler::Reset();
+    }
+
+    Middleware::~Middleware()
+    {
+        stop_impl(false);
     }
 
     auto Middleware::assert_on_imgui_thread() const -> void
