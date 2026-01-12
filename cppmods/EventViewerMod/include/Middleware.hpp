@@ -54,6 +54,9 @@ namespace RC::EventViewerMod
 
         [[nodiscard]] virtual auto get_type() const -> EMiddlewareThreadScheme = 0;
 
+        [[nodiscard]] virtual auto get_average_enqueue_time() const -> double = 0;
+        [[nodiscard]] virtual auto get_average_dequeue_time() const -> double = 0;
+
         virtual ~IMiddleware() = default;
     };
 
