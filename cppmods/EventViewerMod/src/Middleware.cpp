@@ -13,7 +13,7 @@
 #include <concurrentqueue.h>
 
 // if using fname index as a hash, games that implement name recycling can be problematic/inaccurate for context objects
-// BUG layout issues, using wide strings in imgui
+// BUG layout issues
 // FEATURES right click menus for adding to lists, copying, etc, lowercase filters, clear all should clear thread list, further cut down on memory usage by using text unformatted's end pointer
 
 namespace RC::EventViewerMod
