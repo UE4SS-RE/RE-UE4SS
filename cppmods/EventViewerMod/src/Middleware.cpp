@@ -1,4 +1,5 @@
 #include <Middleware.hpp>
+#include <StringPool.hpp>
 
 #include <atomic>
 #include <mutex>
@@ -11,8 +12,8 @@
 #include <concurrentqueue.h>
 
 // if using fname index as a hash, games that implement name recycling can be problematic/inaccurate for context objects
-// BUG not saving target, shows some tick functions (because its best effort), layout issues, not respecting PI when initially loaded
-// FEATURES right click menus for adding to lists, copying, etc, lowercase filters, string interning
+// BUG layout issues, using wide strings in imgui
+// FEATURES right click menus for adding to lists, copying, etc, lowercase filters, string interning, clear all should clear thread list
 
 namespace RC::EventViewerMod
 {
@@ -298,11 +299,11 @@ namespace RC::EventViewerMod
                 tls.queue = &m_queue;
                 tls.token = new ProducerToken(m_queue);
             }
-
+            auto strings = StringPool::GetInstance().get_strings(context, function);
             m_queue.enqueue(*tls.token, CallStackEntry{
                 hook_target,
-                context ? context->GetName() : STR("UnknownContext"),
-                function ? function->GetName() : STR("UnknownFunction"),
+                strings.first,
+                strings.second,
                 depth,
                 thread_id,
                 is_tick
@@ -393,10 +394,11 @@ namespace RC::EventViewerMod
                      const bool is_tick) -> void override
         {
             std::lock_guard lock(m_mutex);
+            auto strings = StringPool::GetInstance().get_strings(context, function);
             m_queue.emplace(
                 hook_target,
-                context ? context->GetName() : STR("UnknownContext"),
-                function ? function->GetName() : STR("UnknownFunction"),
+                strings.first,
+                strings.second,
                 depth,
                 thread_id,
                 is_tick);

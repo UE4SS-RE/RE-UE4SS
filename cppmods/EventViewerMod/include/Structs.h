@@ -24,9 +24,9 @@ namespace RC::EventViewerMod
     struct EntryBase
     {
         EntryBase() = default;
-        EntryBase(std::string text, bool is_tick);
+        EntryBase(std::string_view text, bool is_tick);
 
-        std::string text{};
+        std::string_view text{};
         bool is_tick = false;
         bool is_disabled = false;
     };
@@ -35,8 +35,8 @@ namespace RC::EventViewerMod
     {
         CallStackEntry() = default;
         CallStackEntry(EMiddlewareHookTarget hook_target,
-                       const StringType& context_name,
-                       const StringType& function_name,
+                       std::string_view full_name,
+                       std::string_view function_name,
                        uint32_t depth,
                        std::thread::id thread_id,
                        bool is_tick);
@@ -47,6 +47,7 @@ namespace RC::EventViewerMod
         EMiddlewareHookTarget hook_target = EMiddlewareHookTarget::ProcessEvent;
         uint32_t depth = 0;
         std::thread::id thread_id{};
+        std::string_view function_name{};
 
     private:
         auto render_indents(int indent_delta) const -> void;
@@ -55,7 +56,7 @@ namespace RC::EventViewerMod
     struct CallFrequencyEntry : EntryBase
     {
         CallFrequencyEntry() = default;
-        CallFrequencyEntry(std::string text, bool is_tick);
+        CallFrequencyEntry(std::string_view text, bool is_tick);
 
         uint64_t frequency = 1;
     };

@@ -412,7 +412,7 @@ namespace RC::EventViewerMod
 
                     ImGui::TableNextRow();
                     ImGui::TableSetColumnIndex(0);
-                    ImGui::TextUnformatted(entry.text.c_str());
+                    ImGui::TextUnformatted(entry.text.data());
                     ImGui::TableSetColumnIndex(1);
                     ImGui::Text("%llu", static_cast<unsigned long long>(entry.frequency));
                 }
@@ -591,7 +591,7 @@ namespace RC::EventViewerMod
 
             // Frequency tracking: bump existing, or add.
             auto freq_it = std::ranges::find_if(thread.call_frequencies, [&entry](const CallFrequencyEntry& freq_entry) -> bool {
-                return entry.text == freq_entry.text;
+                return entry.function_name == freq_entry.text;
             });
 
             if (freq_it != thread.call_frequencies.end()) [[likely]]
@@ -618,7 +618,7 @@ namespace RC::EventViewerMod
             }
             else
             {
-                thread.call_frequencies.emplace_back(entry.text, entry.is_tick);
+                thread.call_frequencies.emplace_back(entry.function_name, entry.is_tick);
                 auto& freq = thread.call_frequencies.back();
                 freq.is_disabled = disabled;
             }
@@ -629,7 +629,7 @@ namespace RC::EventViewerMod
         });
     }
 
-    auto Client::passes_filters(const std::string& test_str) const -> bool
+    auto Client::passes_filters(const std::string_view test_str) const -> bool
     {
         bool passes_whitelist = m_state.whitelist_tokens.empty();
         for (const auto& token : m_state.whitelist_tokens) // any whitelist token present => pass
