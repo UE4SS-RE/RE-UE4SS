@@ -1,65 +1,106 @@
 #pragma once
-#include <chrono>
+
+#include <atomic>
+#include <cstdint>
 #include <functional>
-#include <memory>
+#include <mutex>
+#include <thread>
+#include <unordered_set>
+#include <vector>
 
 #include <Enums.h>
 #include <Structs.h>
 
-#include <Unreal/CoreUObject/UObject/Class.hpp>
+#include <Unreal/Hooks/Hooks.hpp>
+#include <concurrentqueue.h>
 
 namespace RC::EventViewerMod
 {
-    class IMiddleware
+    // Non-virtual, single-scheme middleware (ConcurrentQueue).
+    // Lives for the lifetime of the mod.
+    class Middleware
     {
     public:
-        // [Thread-ImGui] Sets the EMiddlewareHookTarget to use. Does not automatically start the stream (call start()).
-        virtual auto set_hook_target(EMiddlewareHookTarget target) -> void = 0;
+        // By-reference singleton.
+        static auto GetInstance() -> Middleware&;
 
-        // [Thread-ImGui] Gets the current EMiddlewareHookTarget.
-        [[nodiscard]] virtual auto get_hook_target() const -> EMiddlewareHookTarget = 0;
+        // [Thread-ImGui] Sets the EMiddlewareHookTarget to use. Does not automatically start the stream.
+        auto set_hook_target(EMiddlewareHookTarget target) -> void;
 
-        // [Thread-Any] Enqueues info on a call. The hook_target is captured at enqueue-time to avoid misrouting
-        // when targets are switched while the queue still has pending items.
-        virtual auto enqueue(EMiddlewareHookTarget hook_target,
-                             Unreal::UObject* context,
-                             Unreal::UFunction* function,
-                             uint32_t depth,
-                             std::thread::id thread_id,
-                             bool is_tick) -> void = 0;
+        // [Thread-ImGui]
+        [[nodiscard]] auto get_hook_target() const -> EMiddlewareHookTarget;
+
+        // [Thread-Any] Enqueues info on a call. The hook_target is captured at enqueue-time.
+        auto enqueue(EMiddlewareHookTarget hook_target,
+                     RC::Unreal::UObject* context,
+                     RC::Unreal::UFunction* function,
+                     uint32_t depth,
+                     std::thread::id thread_id,
+                     bool is_tick) -> void;
 
         // [Thread-ImGui] Dequeues call info.
         //  max_ms - maximum wall time (ms) to spend dequeuing.
-        //  max_count_per_iteration - for ConcurrentQueue: max items pulled per bulk-dequeue
-        //                           for Mutex: max items pulled per lock hold (we release between batches).
+        //  max_count_per_iteration - max items pulled per bulk-dequeue.
         //  on_dequeue - receives the dequeued entry by rvalue-ref (move).
-        virtual auto dequeue(uint16_t max_ms,
-                             uint16_t max_count_per_iteration,
-                             const std::function<void(CallStackEntry&&)>& on_dequeue) -> void = 0;
+        auto dequeue(uint16_t max_ms,
+                     uint16_t max_count_per_iteration,
+                     const std::function<void(CallStackEntry&&)>& on_dequeue) -> void;
 
-        // [Thread-ImGui] Pauses stream, removes hooks. Derived classes should also drain their queues.
-        virtual auto stop() -> bool = 0;
+        // [Thread-ImGui] Pauses stream, removes hooks. Also drains queue.
+        auto stop() -> bool;
 
-        // [Thread-ImGui] Returns true if paused.
-        [[nodiscard]] virtual auto is_paused() const -> bool = 0;
+        // [Thread-ImGui]
+        [[nodiscard]] auto is_paused() const -> bool;
 
-        // [Thread-ImGui] Resumes stream by reinstalling hooks.
-        virtual auto start() -> bool = 0;
+        // [Thread-ImGui] Resumes stream by installing hooks.
+        auto start() -> bool;
 
-        // [Thread-ImGui] Sets the ImGui thread id, used for precondition assertions.
-        virtual auto set_imgui_thread_id(std::thread::id id) -> void = 0;
+        // [Thread-ImGui]
+        auto set_imgui_thread_id(std::thread::id id) -> void;
 
-        // [Thread-ImGui] Gets the ImGui thread id.
-        [[nodiscard]] virtual auto get_imgui_thread_id() const -> std::thread::id = 0;
+        // [Thread-ImGui]
+        [[nodiscard]] auto get_imgui_thread_id() const -> std::thread::id;
 
-        [[nodiscard]] virtual auto get_type() const -> EMiddlewareThreadScheme = 0;
+        [[nodiscard]] auto get_average_enqueue_time() const -> double;
+        [[nodiscard]] auto get_average_dequeue_time() const -> double;
 
-        [[nodiscard]] virtual auto get_average_enqueue_time() const -> double = 0;
-        [[nodiscard]] virtual auto get_average_dequeue_time() const -> double = 0;
+    private:
+        Middleware();
 
-        virtual ~IMiddleware() = default;
+        auto assert_on_imgui_thread() const -> void;
+        [[nodiscard]] auto is_tick_fn(const RC::Unreal::UFunction* fn) const -> bool;
+        auto stop_impl(bool do_assert) -> bool;
+
+    private:
+        // Hook state
+        RC::Unreal::Hook::GlobalCallbackId m_prehook_id = RC::Unreal::Hook::ERROR_ID;
+        RC::Unreal::Hook::GlobalCallbackId m_posthook_id = RC::Unreal::Hook::ERROR_ID;
+
+        EMiddlewareHookTarget m_hook_target = EMiddlewareHookTarget::ProcessEvent;
+        bool m_paused = true;
+
+        std::thread::id m_imgui_id{};
+
+        RC::Unreal::Hook::FCallbackOptions m_options{false, true, STR("EventViewer"), STR("CallStackMonitor")};
+
+        // Hook callbacks (initialized in ctor)
+        RC::Unreal::Hook::ProcessEventCallbackWithData m_pe_pre{};
+        RC::Unreal::Hook::ProcessEventCallbackWithData m_pe_post{};
+        RC::Unreal::Hook::ProcessInternalCallbackWithData m_pi_pre{};
+        RC::Unreal::Hook::ProcessInternalCallbackWithData m_pi_post{};
+
+        // Queue
+        moodycamel::ConcurrentQueue<CallStackEntry> m_queue{};
+        moodycamel::ConsumerToken m_imgui_consumer_token{m_queue};
+        std::vector<CallStackEntry> m_buffer{};
+
+        // Tick function detection (shared across instance; singleton anyway)
+        inline static std::once_flag m_get_tick_fns_flag{};
+        inline static std::unordered_set<RC::Unreal::UObject*> m_tick_fns{};
+
+        // Depth tracking
+        inline static thread_local uint32_t m_pe_depth = 0;
+        inline static thread_local uint32_t m_pi_depth = 0;
+        inline static std::atomic_uint64_t m_depth_reset_counter = 0;
     };
-
-    // Gets a new instance of IMiddleware depending on the EMiddlewareThreadScheme.
-    auto GetNewMiddleware(EMiddlewareThreadScheme type) -> std::unique_ptr<IMiddleware>;
 } // namespace RC::EventViewerMod

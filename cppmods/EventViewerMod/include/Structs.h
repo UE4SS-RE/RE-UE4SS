@@ -96,7 +96,6 @@ namespace RC::EventViewerMod
         bool show_tick = false;                                                  // [Savable] [Thread-ImGui]
         EMiddlewareHookTarget hook_target = EMiddlewareHookTarget::ProcessEvent; // [Savable] [Thread-ImGui]
         EMode mode = EMode::Stack;                                               // [Savable] [Thread-ImGui]
-        EMiddlewareThreadScheme thread_scheme = EMiddlewareThreadScheme::ConcurrentQueue; // [Savable] [Thread-ImGui]
         uint16_t dequeue_max_ms = 10;                                            // [Savable] [Thread-ImGui]
         uint16_t dequeue_max_count = 50;                                         // [Savable] [Thread-ImGui]
 
