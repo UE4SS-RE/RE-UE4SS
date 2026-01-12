@@ -2,11 +2,6 @@
 
 namespace RC::EventViewerMod
 {
-
-#define EVM_THREAD_SCHEME(X, EnumName) \
-    X(EnumName, ConcurrentQueue)       \
-    X(EnumName, Mutex)
-
 #define EVM_MIDDLEWARE_HOOK_TARGET(X, EnumName) \
     X(EnumName, ProcessEvent)                   \
     X(EnumName, ProcessInternal)
@@ -47,7 +42,6 @@ namespace RC::EventViewerMod
         }                                                                \
     }
 
-EVM_DECLARE_REFLECTED_ENUM(MiddlewareThreadScheme, EVM_THREAD_SCHEME);
 EVM_DECLARE_REFLECTED_ENUM(MiddlewareHookTarget, EVM_MIDDLEWARE_HOOK_TARGET);
 EVM_DECLARE_REFLECTED_ENUM(Mode, EVM_MODE);
 
@@ -60,6 +54,6 @@ EVM_DECLARE_REFLECTED_ENUM(Mode, EVM_MODE);
 #undef EVM_STRINGIZE_1
 #undef EVM_MODE
 #undef EVM_MIDDLEWARE_HOOK_TARGET
-#undef EVM_THREAD_SCHEME
+
 
 } // namespace RC::EventViewerMod

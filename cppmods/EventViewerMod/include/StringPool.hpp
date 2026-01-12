@@ -12,7 +12,6 @@ namespace RC::EventViewerMod
     class StringPool
     {
     public:
-        // have to store/retrieve 2 separate strings since string_view.data() isn't null terminated, which won't work well with imgui
         auto get_strings(RC::Unreal::UObject* caller, RC::Unreal::UFunction* function) -> std::pair<std::string_view, std::string_view>; // <caller + function, function>
 
         static auto GetInstance() -> StringPool&;

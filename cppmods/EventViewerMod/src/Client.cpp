@@ -80,7 +80,7 @@ namespace RC::EventViewerMod
 {
     using namespace std::literals::string_literals;
 
-    Client::Client()
+    Client::Client() : m_middleware(Middleware::GetInstance())
     {
         const auto wd = std::filesystem::path{StringType{UE4SSProgram::get_program().get_working_directory()}};
         const auto mod_root = wd / "Mods" / "EventViewerMod";
@@ -100,7 +100,7 @@ namespace RC::EventViewerMod
         // Ensure middleware knows the correct ImGui thread, including after scheme swaps.
         if (!m_imgui_thread_id_set)
         {
-            m_middleware->set_imgui_thread_id(std::this_thread::get_id());
+            m_middleware.set_imgui_thread_id(std::this_thread::get_id());
             m_imgui_thread_id_set = true;
         }
 
@@ -113,14 +113,14 @@ namespace RC::EventViewerMod
             if (m_state.enabled)
             {
                 // enabling
-                m_middleware->set_imgui_thread_id(std::this_thread::get_id());
+                m_middleware.set_imgui_thread_id(std::this_thread::get_id());
                 m_imgui_thread_id_set = true;
                 QueueProfiler::Reset();
             }
             else
             {
                 // disabling
-                m_middleware->stop();
+                m_middleware.stop();
                 m_state.started = false;
                 m_state.needs_save.clear(std::memory_order_release);
                 for (auto& target : m_state.targets)
@@ -157,7 +157,7 @@ namespace RC::EventViewerMod
         if (combo_with_flags("Target", reinterpret_cast<int*>(&m_state.hook_target), EMiddlewareHookTarget_NameArray, EMiddlewareHookTarget_Size, ImGuiComboFlags_WidthFitPreview))
         {
             request_save_state();
-            m_middleware->set_hook_target(m_state.hook_target);
+            m_middleware.set_hook_target(m_state.hook_target);
         }
 
         ImGui::SameLine();
@@ -247,14 +247,14 @@ namespace RC::EventViewerMod
         if (ImGui::Button(m_state.started ? "Stop" : "Start"))
         {
             m_state.started = !m_state.started;
-            m_state.started ? m_middleware->start() : m_middleware->stop();
+            m_state.started ? m_middleware.start() : m_middleware.stop();
             QueueProfiler::Reset();
         }
 
         // bug fix: if ProcessInternal was initially loaded, hook target doesn't get set in middleware
         if (!m_state.started)
         {
-            m_middleware->set_hook_target(m_state.hook_target);
+            m_middleware.set_hook_target(m_state.hook_target);
         }
         ImGui::SameLine();
         if (ImGui::Button("Clear##CurrentThread") && !threads.empty())
@@ -295,35 +295,6 @@ namespace RC::EventViewerMod
 
     auto Client::render_perf_opts() -> void
     {
-        if (combo_with_flags("Thread Scheme", reinterpret_cast<int*>(&m_state.thread_scheme), EMiddlewareThreadScheme_NameArray, EMiddlewareThreadScheme_Size, ImGuiComboFlags_WidthFitPreview))
-        {
-            request_save_state();
-
-            if (m_middleware->get_type() != m_state.thread_scheme)
-            {
-                const bool should_restart = !m_middleware->is_paused();
-
-                m_middleware->stop();
-                m_middleware = GetNewMiddleware(m_state.thread_scheme);
-
-                // new middleware must know its ImGui thread
-                m_middleware->set_imgui_thread_id(std::this_thread::get_id());
-                m_imgui_thread_id_set = true;
-
-                m_middleware->set_hook_target(m_state.hook_target);
-                if (should_restart)
-                {
-                    m_middleware->start();
-                    m_state.started = true;
-                }
-                else
-                {
-                    m_state.started = false;
-                }
-            }
-            QueueProfiler::Reset();
-        }
-
         //ImGui::SameLine();
         static uint16_t step = 1;
         if (ImGui::InputScalar("Max MS Read Time", ImGuiDataType_U16, &m_state.dequeue_max_ms, &step, 0, 0))
@@ -465,7 +436,6 @@ namespace RC::EventViewerMod
         state_map.emplace("Enabled", std::to_string(m_state.enabled));
         state_map.emplace("ShowTick", std::to_string(m_state.show_tick));
         state_map.emplace("HookTarget", std::to_string(static_cast<int>(m_state.hook_target)));
-        state_map.emplace("ThreadScheme", std::to_string(static_cast<int>(m_state.thread_scheme)));
         state_map.emplace("Mode", std::to_string(static_cast<int>(m_state.mode)));
         state_map.emplace("DequeueMaxMs", std::to_string(m_state.dequeue_max_ms));
         state_map.emplace("DequeueMaxCount", std::to_string(m_state.dequeue_max_count));
@@ -494,7 +464,6 @@ namespace RC::EventViewerMod
             m_state.enabled = state_map.at("Enabled") != "0";
             m_state.show_tick = state_map.at("ShowTick") != "0";
             m_state.hook_target = static_cast<EMiddlewareHookTarget>(std::stoi(state_map.at("HookTarget")));
-            m_state.thread_scheme = static_cast<EMiddlewareThreadScheme>(std::stoi(state_map.at("ThreadScheme")));
             m_state.mode = static_cast<EMode>(std::stoi(state_map.at("Mode")));
             m_state.dequeue_max_ms = static_cast<uint16_t>(std::stoi(state_map.at("DequeueMaxMs")));
             m_state.dequeue_max_count = static_cast<uint16_t>(std::stoi(state_map.at("DequeueMaxCount")));
@@ -567,7 +536,7 @@ namespace RC::EventViewerMod
             return;
         }
 
-        m_middleware->dequeue(m_state.dequeue_max_ms, m_state.dequeue_max_count, [this](CallStackEntry&& entry) {
+        m_middleware.dequeue(m_state.dequeue_max_ms, m_state.dequeue_max_count, [this](CallStackEntry&& entry) {
             // Route based on enqueue-time target (prevents misrouting when targets change mid-stream).
             const auto enum_target = entry.hook_target;
             auto& target = m_state.targets[static_cast<int>(enum_target)];

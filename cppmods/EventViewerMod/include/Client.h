@@ -1,7 +1,6 @@
 #pragma once
 #include <filesystem>
 #include <fstream>
-#include <memory>
 
 #include <Middleware.hpp>
 #include <Structs.h>
@@ -47,7 +46,7 @@ namespace RC::EventViewerMod
 
         UIState m_state{};
 
-        std::unique_ptr<IMiddleware> m_middleware = GetNewMiddleware(EMiddlewareThreadScheme::ConcurrentQueue);
+        Middleware& m_middleware;
 
         std::filesystem::path m_cfg_path{};
         std::filesystem::path m_dump_dir{};
