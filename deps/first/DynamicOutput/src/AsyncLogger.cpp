@@ -157,11 +157,8 @@ namespace RC::Output
         m_flush_requested.store(true, std::memory_order_release);
         m_nudge.store(true, std::memory_order_release);
 
-        // Spin-wait for worker to complete the flush
-        while (!m_flush_completed.load(std::memory_order_acquire))
-        {
-            std::this_thread::yield();
-        }
+        // Wait for worker to complete the flush using atomic wait
+        m_flush_completed.wait(false, std::memory_order_acquire);
     }
 
     auto AsyncLogger::notify_thread_exit(std::thread::id tid, uint64_t generation) -> void
@@ -171,9 +168,14 @@ namespace RC::Output
             return;
         }
 
-        // Queue the exit request for the worker to process
-        // This maintains single-consumer invariant on the SPSC queues
-        m_exit_requests.try_enqueue(tid);
+        // Queue the exit request for the worker to process.
+        // This maintains single-consumer invariant on the SPSC queues.
+        // Retry to guarantee delivery - we must not drop exit requests.
+        while (!m_exit_requests.try_enqueue(tid))
+        {
+            std::this_thread::yield();
+        }
+
         m_nudge.store(true, std::memory_order_release);
     }
 
@@ -289,6 +291,7 @@ namespace RC::Output
                 m_last_flush_loop = current_loop;
                 last_flush_time = now;
                 m_flush_completed.store(true, std::memory_order_release);
+                m_flush_completed.notify_one();
                 continue;
             }
 
