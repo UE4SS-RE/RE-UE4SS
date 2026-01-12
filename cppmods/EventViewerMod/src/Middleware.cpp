@@ -1,5 +1,6 @@
 #include <Middleware.hpp>
 #include <StringPool.hpp>
+#include <QueueProfiler.hpp>
 
 #include <atomic>
 #include <mutex>
@@ -13,7 +14,7 @@
 
 // if using fname index as a hash, games that implement name recycling can be problematic/inaccurate for context objects
 // BUG layout issues, using wide strings in imgui
-// FEATURES right click menus for adding to lists, copying, etc, lowercase filters, string interning, clear all should clear thread list
+// FEATURES right click menus for adding to lists, copying, etc, lowercase filters, clear all should clear thread list, further cut down on memory usage by using text unformatted's end pointer
 
 namespace RC::EventViewerMod
 {
@@ -125,7 +126,15 @@ namespace RC::EventViewerMod
             return m_imgui_id;
         }
 
-        [[nodiscard]] auto get_type() const -> EMiddlewareThreadScheme override = 0;
+        [[nodiscard]] auto get_average_enqueue_time() const -> double final
+        {
+            return QueueProfiler::GetEnqueueAverage();
+        }
+
+        [[nodiscard]] auto get_average_dequeue_time() const -> double final
+        {
+            return QueueProfiler::GetDequeueAverage();
+        }
 
         ~MiddlewareHooks() override
         {
@@ -151,6 +160,8 @@ namespace RC::EventViewerMod
                     return LoopAction::Continue;
                 });
             });
+
+            QueueProfiler::Reset();
         }
 
         auto assert_on_imgui_thread() const -> void
@@ -294,6 +305,8 @@ namespace RC::EventViewerMod
             };
             thread_local TLSToken tls{};
 
+            QueueProfiler::BeginEnqueue();
+
             if (tls.queue != &m_queue)
             {
                 tls.queue = &m_queue;
@@ -308,6 +321,8 @@ namespace RC::EventViewerMod
                 thread_id,
                 is_tick
             });
+
+            QueueProfiler::EndEnqueue();
         }
 
         auto dequeue(const uint16_t max_ms,
@@ -324,12 +339,13 @@ namespace RC::EventViewerMod
 
             while (std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - start).count() < max_ms)
             {
+                QueueProfiler::BeginDequeue();
                 const auto amount = m_queue.try_dequeue_bulk(m_imgui_consumer_token, m_buffer.data(), max_count_per_iteration);
+                QueueProfiler::EndDequeue();
                 if (amount == 0)
                 {
                     break;
                 }
-
                 for (size_t i = 0; i < amount; ++i)
                 {
                     on_dequeue(std::move(m_buffer[i]));
@@ -341,6 +357,7 @@ namespace RC::EventViewerMod
                     break;
                 }
             }
+            QueueProfiler::AddPendingCount(m_queue.size_approx());
         }
 
         auto stop() -> bool override
@@ -393,6 +410,7 @@ namespace RC::EventViewerMod
                      const std::thread::id thread_id,
                      const bool is_tick) -> void override
         {
+            QueueProfiler::BeginEnqueue();
             std::lock_guard lock(m_mutex);
             auto strings = StringPool::GetInstance().get_strings(context, function);
             m_queue.emplace(
@@ -402,6 +420,7 @@ namespace RC::EventViewerMod
                 depth,
                 thread_id,
                 is_tick);
+            QueueProfiler::EndEnqueue();
         }
 
         auto dequeue(const uint16_t max_ms,
@@ -419,6 +438,7 @@ namespace RC::EventViewerMod
                 local.clear();
 
                 {
+                    QueueProfiler::BeginDequeue();
                     std::lock_guard lock(m_mutex);
                     if (m_queue.empty())
                     {
@@ -429,6 +449,7 @@ namespace RC::EventViewerMod
                         local.emplace_back(std::move(m_queue.front()));
                         m_queue.pop();
                     }
+                    QueueProfiler::EndDequeue();
                 }
 
                 for (auto& entry : local)
@@ -441,6 +462,7 @@ namespace RC::EventViewerMod
                     break; // likely empty; avoid relocking immediately
                 }
             }
+            QueueProfiler::AddPendingCount(m_queue.size());
         }
 
         auto stop() -> bool override
@@ -458,7 +480,7 @@ namespace RC::EventViewerMod
             return true;
         }
 
-        [[nodiscard]] auto get_type() const -> EMiddlewareThreadScheme final
+        [[nodiscard]] auto get_type() const -> EMiddlewareThreadScheme  final
         {
             return EMiddlewareThreadScheme::Mutex;
         }

@@ -21,6 +21,8 @@
 
 #include <glaze/glaze.hpp>
 
+#include "QueueProfiler.hpp"
+
 // Returns string_views into `string`.
 static std::vector<std::string_view> split_string_by_comma(const std::string& string)
 {
@@ -113,6 +115,7 @@ namespace RC::EventViewerMod
                 // enabling
                 m_middleware->set_imgui_thread_id(std::this_thread::get_id());
                 m_imgui_thread_id_set = true;
+                QueueProfiler::Reset();
             }
             else
             {
@@ -129,6 +132,7 @@ namespace RC::EventViewerMod
                 {
                     save_state();
                 }
+                QueueProfiler::Reset();
                 return;
             }
         }
@@ -244,6 +248,7 @@ namespace RC::EventViewerMod
         {
             m_state.started = !m_state.started;
             m_state.started ? m_middleware->start() : m_middleware->stop();
+            QueueProfiler::Reset();
         }
 
         // bug fix: if ProcessInternal was initially loaded, hook target doesn't get set in middleware
@@ -316,6 +321,7 @@ namespace RC::EventViewerMod
                     m_state.started = false;
                 }
             }
+            QueueProfiler::Reset();
         }
 
         //ImGui::SameLine();
@@ -338,6 +344,8 @@ namespace RC::EventViewerMod
                 m_state.dequeue_max_count = 1;
             }
         }
+
+        ImGui::Text("Enqueue Avg: %f Dequeue Avg: %f Pending Avg: %f", QueueProfiler::GetEnqueueAverage(), QueueProfiler::GetDequeueAverage(), QueueProfiler::GetPendingAverage());
     }
 
     auto Client::render_view() -> void

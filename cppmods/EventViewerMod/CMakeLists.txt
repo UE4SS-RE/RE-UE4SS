@@ -23,6 +23,7 @@ add_library(${TARGET} SHARED
         src/Structs.cpp
         include/StringPool.hpp
         src/StringPool.cpp
+        include/QueueProfiler.hpp
 )
 
 target_include_directories(${TARGET} PRIVATE "include")
