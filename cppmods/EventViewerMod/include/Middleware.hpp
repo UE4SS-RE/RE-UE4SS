@@ -66,7 +66,7 @@ namespace RC::EventViewerMod
 
     private:
         Middleware();
-
+        ~Middleware();
         auto assert_on_imgui_thread() const -> void;
         [[nodiscard]] auto is_tick_fn(const RC::Unreal::UFunction* fn) const -> bool;
         auto stop_impl(bool do_assert) -> bool;
@@ -94,8 +94,7 @@ namespace RC::EventViewerMod
         moodycamel::ConsumerToken m_imgui_consumer_token{m_queue};
         std::vector<CallStackEntry> m_buffer{};
 
-        // Tick function detection (shared across instance; singleton anyway)
-        inline static std::once_flag m_get_tick_fns_flag{};
+        // Detected tick functions
         inline static std::unordered_set<RC::Unreal::UObject*> m_tick_fns{};
 
         // Depth tracking
