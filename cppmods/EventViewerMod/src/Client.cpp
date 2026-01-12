@@ -245,6 +245,12 @@ namespace RC::EventViewerMod
             m_state.started = !m_state.started;
             m_state.started ? m_middleware->start() : m_middleware->stop();
         }
+
+        // bug fix: if ProcessInternal was initially loaded, hook target doesn't get set in middleware
+        if (!m_state.started)
+        {
+            m_middleware->set_hook_target(m_state.hook_target);
+        }
         ImGui::SameLine();
         if (ImGui::Button("Clear##CurrentThread") && !threads.empty())
         {
