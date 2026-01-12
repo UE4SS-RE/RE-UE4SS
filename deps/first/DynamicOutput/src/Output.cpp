@@ -1,7 +1,11 @@
 #include <DynamicOutput/Output.hpp>
+#include <DynamicOutput/AsyncLogger.hpp>
 
 namespace RC::Output
 {
+    std::shared_ptr<AsyncLogger> g_async_logger;
+    AsyncConfig g_async_config;
+
     auto has_internal_error() -> bool
     {
         return File::Internal::StaticStorage::internal_error;
@@ -17,32 +21,30 @@ namespace RC::Output
         return default_log_level;
     }
 
-    auto DefaultTargets::get_default_devices_ref() -> OutputDevicesContainerType&
-    {
-        return default_devices;
-    }
-
     auto DefaultTargets::close_all_default_devices() -> void
     {
-        // clear() will empty the container and will also call all the destructors
-        default_devices.clear();
+        with_devices_write([](auto& devices) {
+            devices.clear();
+        });
     }
 
     auto send(File::StringViewType content) -> void
     {
-        for (const auto& device : DefaultTargets::get_default_devices_ref())
-        {
-            ASSERT_DEFAULT_OUTPUT_DEVICE_IS_VALID(device)
+        DefaultTargets::with_devices_read([&](const auto& devices) {
+            for (const auto& device : devices)
+            {
+                ASSERT_DEFAULT_OUTPUT_DEVICE_IS_VALID(device)
 
-            if (device->has_optional_arg())
-            {
-                device->receive_with_optional_arg(content, 0);
+                if (device->has_optional_arg())
+                {
+                    device->receive_with_optional_arg(content, 0);
+                }
+                else
+                {
+                    device->receive(content);
+                }
             }
-            else
-            {
-                device->receive(content);
-            }
-        }
+        });
     }
 
     auto close_all_default_devices() -> void

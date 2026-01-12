@@ -254,6 +254,29 @@ namespace RC
             Output::send(STR("\n\nFound string '{}' at {}\n\n"), std::wstring_view{str_to_find}, string_address);
             //*/
 
+            if (settings_manager.Logging.AsyncLogging)
+            {
+                Output::g_async_logger = std::make_shared<Output::AsyncLogger>();
+                Output::g_async_config.enabled = true;
+                Output::g_async_config.immediate_error = settings_manager.Logging.ImmediateError;
+                Output::g_async_config.immediate_warning = settings_manager.Logging.ImmediateWarning;
+                Output::g_async_config.immediate_normal = settings_manager.Logging.ImmediateNormal;
+                Output::g_async_config.immediate_verbose = settings_manager.Logging.ImmediateVerbose;
+
+                Output::g_async_logger->start(
+                    static_cast<uint64_t>(settings_manager.Logging.FlushEveryNLoops),
+                    static_cast<size_t>(settings_manager.Logging.BatchSize),
+                    static_cast<size_t>(settings_manager.Logging.BatchWakeThreshold),
+                    std::chrono::milliseconds(settings_manager.Logging.FlushIntervalMs),
+                    static_cast<size_t>(settings_manager.Logging.PerThreadQueueSize)
+                );
+
+                Output::send(STR("[AsyncLogger] Started (queue: {}, batch: {}, flush: {}ms)\n"),
+                             settings_manager.Logging.PerThreadQueueSize,
+                             settings_manager.Logging.BatchSize,
+                             settings_manager.Logging.FlushIntervalMs);
+            }
+
             Output::send(STR("Console created\n"));
             Output::send(STR("UE4SS - v{}.{}.{}{}{} - Git SHA #{}\n"),
                          UE4SS_LIB_VERSION_MAJOR,
@@ -372,6 +395,12 @@ namespace RC
     {
         // Shut down the event loop
         m_processing_events = false;
+
+        if (Output::g_async_logger)
+        {
+            Output::g_async_logger->stop();
+            Output::g_async_logger.reset();
+        }
 
         // It's possible that main() will destroy the default devices (they are static)
         // However it's also possible that this program object is constructed in a context where main() is not gonna immediately exit
@@ -1129,6 +1158,11 @@ namespace RC
                         mod->fire_update();
                     }
                 }
+            }
+
+            if (Output::g_async_logger)
+            {
+                Output::g_async_logger->on_loop_tick();
             }
 
             std::this_thread::sleep_for(std::chrono::milliseconds(5));

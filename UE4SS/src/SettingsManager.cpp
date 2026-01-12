@@ -190,5 +190,17 @@ namespace RC
         REGISTER_INT64_SETTING(Hooks.FExecVTableOffsetInLocalPlayer, section_hooks, FExecVTableOffsetInLocalPlayer)
 
         constexpr static File::CharType section_experimental_features[] = STR("ExperimentalFeatures");
+
+        constexpr static File::CharType section_logging[] = STR("Logging");
+        REGISTER_BOOL_SETTING(Logging.AsyncLogging, section_logging, AsyncLogging)
+        REGISTER_INT64_SETTING(Logging.FlushEveryNLoops, section_logging, FlushEveryNLoops)
+        REGISTER_INT64_SETTING(Logging.BatchSize, section_logging, BatchSize)
+        REGISTER_INT64_SETTING(Logging.BatchWakeThreshold, section_logging, BatchWakeThreshold)
+        REGISTER_INT64_SETTING(Logging.FlushIntervalMs, section_logging, FlushIntervalMs)
+        REGISTER_INT64_SETTING(Logging.PerThreadQueueSize, section_logging, PerThreadQueueSize)
+        REGISTER_BOOL_SETTING(Logging.ImmediateError, section_logging, ImmediateError)
+        REGISTER_BOOL_SETTING(Logging.ImmediateWarning, section_logging, ImmediateWarning)
+        REGISTER_BOOL_SETTING(Logging.ImmediateNormal, section_logging, ImmediateNormal)
+        REGISTER_BOOL_SETTING(Logging.ImmediateVerbose, section_logging, ImmediateVerbose)
     }
 } // namespace RC

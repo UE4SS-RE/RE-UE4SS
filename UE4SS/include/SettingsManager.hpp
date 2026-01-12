@@ -123,6 +123,20 @@ namespace RC
         {
         } Experimental;
 
+        struct SectionLogging
+        {
+            bool AsyncLogging{false};
+            int64_t FlushEveryNLoops{10};
+            int64_t BatchSize{1024};
+            int64_t BatchWakeThreshold{512};
+            int64_t FlushIntervalMs{100};
+            int64_t PerThreadQueueSize{2048};
+            bool ImmediateError{true};
+            bool ImmediateWarning{false};
+            bool ImmediateNormal{false};
+            bool ImmediateVerbose{false};
+        } Logging;
+
       public:
         SettingsManager() = default;
 

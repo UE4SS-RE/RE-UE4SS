@@ -4,6 +4,7 @@
 #include <array>
 #include <format>
 #include <memory>
+#include <shared_mutex>
 #include <source_location>
 #include <stdexcept>
 #include <string>
@@ -16,6 +17,7 @@
 #include <DynamicOutput/Common.hpp>
 #include <DynamicOutput/Macros.hpp>
 #include <DynamicOutput/OutputDevice.hpp>
+#include <DynamicOutput/AsyncLogger.hpp>
 #include <File/InternalFile.hpp>
 
 #if RC_IS_ANSI == 1
@@ -30,6 +32,31 @@ namespace RC::Output
     concept EnumType = std::is_enum_v<SupposedEnum>;
 
     using OutputDevicesContainerType = std::vector<std::unique_ptr<OutputDevice>>;
+
+    class AsyncLogger;
+
+    extern RC_DYNOUT_API std::shared_ptr<AsyncLogger> g_async_logger;
+
+    struct AsyncConfig {
+        bool enabled{false};
+        bool immediate_error{true};
+        bool immediate_warning{false};
+        bool immediate_normal{false};
+        bool immediate_verbose{false};
+        bool bypass_for_system_logs{false};
+    };
+
+    extern RC_DYNOUT_API AsyncConfig g_async_config;
+
+    inline auto should_flush_immediately(int32_t log_level) -> bool
+    {
+        switch (log_level) {
+            case LogLevel::Error:   return g_async_config.immediate_error;
+            case LogLevel::Warning: return g_async_config.immediate_warning;
+            case LogLevel::Verbose: return g_async_config.immediate_verbose;
+            default:                return g_async_config.immediate_normal;
+        }
+    }
 
     auto RC_DYNOUT_API has_internal_error() -> bool;
 
@@ -69,12 +96,26 @@ namespace RC::Output
         // Keep in mind that this is static so these will stay alive until main() ends or until you manually call the close_devices() function
         static inline OutputDevicesContainerType default_devices{};
         static inline int32_t default_log_level{LogLevel::Normal};
+        static inline std::shared_mutex default_devices_mutex{};
 
       public:
         RC_DYNOUT_API auto static set_default_log_level(int32_t log_level) -> void;
         RC_DYNOUT_API auto static get_default_log_level() -> int32_t;
-        RC_DYNOUT_API auto static get_default_devices_ref() -> OutputDevicesContainerType&;
         RC_DYNOUT_API auto static close_all_default_devices() -> void;
+
+        template<typename Func>
+        auto static with_devices_read(Func&& func) -> decltype(auto)
+        {
+            std::shared_lock lock{default_devices_mutex};
+            return func(default_devices);
+        }
+
+        template<typename Func>
+        auto static with_devices_write(Func&& func) -> decltype(auto)
+        {
+            std::unique_lock lock{default_devices_mutex};
+            return func(default_devices);
+        }
     };
 
     // RAII class for making output devices not immediately close after calling send()
@@ -257,20 +298,28 @@ namespace RC::Output
     template <typename DeviceType>
     auto set_default_devices() -> DeviceType&
     {
-        return *static_cast<DeviceType*>(DefaultTargets::get_default_devices_ref().emplace_back(std::make_unique<DeviceType>()).get());
+        DeviceType* result = nullptr;
+        DefaultTargets::with_devices_write([&](auto& devices) {
+            result = static_cast<DeviceType*>(devices.emplace_back(std::make_unique<DeviceType>()).get());
+        });
+        return *result;
     }
 
     // Version of set_default_devices() that can take multiple devices
     template <typename DeviceType, typename DeviceTypeWorkaround, typename... DeviceTypes>
     auto set_default_devices() -> void
     {
-        DefaultTargets::get_default_devices_ref().emplace_back(std::make_unique<DeviceType>());
+        DefaultTargets::with_devices_write([](auto& devices) {
+            devices.emplace_back(std::make_unique<DeviceType>());
+        });
         set_default_devices<DeviceTypeWorkaround, DeviceTypes...>();
     }
 
     auto inline clear_all_default_devices() -> void
     {
-        DefaultTargets::get_default_devices_ref().clear();
+        DefaultTargets::with_devices_write([](auto& devices) {
+            devices.clear();
+        });
     }
 
     // Sets the log level that will be used if one isn't explicitly provided with the 'send' function
@@ -283,37 +332,41 @@ namespace RC::Output
     template <typename... FmtArgs>
     auto send(File::StringViewType content, FmtArgs... fmt_args) -> void
     {
-        for (const auto& device : DefaultTargets::get_default_devices_ref())
-        {
-            ASSERT_DEFAULT_OUTPUT_DEVICE_IS_VALID(device)
+        DefaultTargets::with_devices_read([&](const auto& devices) {
+            for (const auto& device : devices)
+            {
+                ASSERT_DEFAULT_OUTPUT_DEVICE_IS_VALID(device)
 
-            if (device->has_optional_arg())
-            {
-                device->receive_with_optional_arg(fmt::vformat(fmt::detail::to_string_view(content), RC_STD_MAKE_FORMAT_ARGS(fmt_args...)), 0);
+                if (device->has_optional_arg())
+                {
+                    device->receive_with_optional_arg(fmt::vformat(fmt::detail::to_string_view(content), RC_STD_MAKE_FORMAT_ARGS(fmt_args...)), 0);
+                }
+                else
+                {
+                    device->receive(fmt::vformat(fmt::detail::to_string_view(content), RC_STD_MAKE_FORMAT_ARGS(fmt_args...)));
+                }
             }
-            else
-            {
-                device->receive(fmt::vformat(fmt::detail::to_string_view(content), RC_STD_MAKE_FORMAT_ARGS(fmt_args...)));
-            }
-        }
+        });
     }
 
     template <EnumType OptionalArg, typename... FmtArgs>
     auto send(File::StringViewType content, OptionalArg optional_arg, FmtArgs... fmt_args) -> void
     {
-        for (const auto& device : DefaultTargets::get_default_devices_ref())
-        {
-            ASSERT_DEFAULT_OUTPUT_DEVICE_IS_VALID(device)
+        DefaultTargets::with_devices_read([&](const auto& devices) {
+            for (const auto& device : devices)
+            {
+                ASSERT_DEFAULT_OUTPUT_DEVICE_IS_VALID(device)
 
-            if (device->has_optional_arg())
-            {
-                device->receive_with_optional_arg(fmt::vformat(content, RC_STD_MAKE_FORMAT_ARGS(fmt_args...)), static_cast<int32_t>(optional_arg));
+                if (device->has_optional_arg())
+                {
+                    device->receive_with_optional_arg(fmt::vformat(content, RC_STD_MAKE_FORMAT_ARGS(fmt_args...)), static_cast<int32_t>(optional_arg));
+                }
+                else
+                {
+                    device->receive(fmt::vformat(content, RC_STD_MAKE_FORMAT_ARGS(fmt_args...)));
+                }
             }
-            else
-            {
-                device->receive(fmt::vformat(content, RC_STD_MAKE_FORMAT_ARGS(fmt_args...)));
-            }
-        }
+        });
     }
 
     auto RC_DYNOUT_API send(File::StringViewType content) -> void;
@@ -321,61 +374,115 @@ namespace RC::Output
     template <EnumType OptionalArg>
     auto send(File::StringViewType content, OptionalArg optional_arg) -> void
     {
-        for (const auto& device : DefaultTargets::get_default_devices_ref())
-        {
-            ASSERT_DEFAULT_OUTPUT_DEVICE_IS_VALID(device)
+        DefaultTargets::with_devices_read([&](const auto& devices) {
+            for (const auto& device : devices)
+            {
+                ASSERT_DEFAULT_OUTPUT_DEVICE_IS_VALID(device)
 
-            if (device->has_optional_arg())
-            {
-                device->receive_with_optional_arg(content, optional_arg);
+                if (device->has_optional_arg())
+                {
+                    device->receive_with_optional_arg(content, optional_arg);
+                }
+                else
+                {
+                    device->receive(content);
+                }
             }
-            else
-            {
-                device->receive(content);
-            }
-        }
+        });
     }
 
     template <int32_t optional_arg, typename... FmtArgs>
     auto send(File::StringViewType content, FmtArgs... fmt_args) -> void
     {
-        for (const auto& device : DefaultTargets::get_default_devices_ref())
-        {
-            ASSERT_DEFAULT_OUTPUT_DEVICE_IS_VALID(device)
+        const bool use_async = g_async_config.enabled &&
+                               !g_async_config.bypass_for_system_logs &&
+                               !should_flush_immediately(optional_arg) &&
+                               g_async_logger;
 
-            if (device->has_optional_arg())
-            {
-                device->receive_with_optional_arg(fmt::vformat(fmt::detail::to_string_view(content), RC_STD_MAKE_FORMAT_ARGS(fmt_args...)), optional_arg);
-            }
-            else
-            {
-                device->receive(fmt::vformat(fmt::detail::to_string_view(content), RC_STD_MAKE_FORMAT_ARGS(fmt_args...)));
+        if (use_async) {
+            LogEntry entry;
+            entry.timestamp = std::chrono::system_clock::now();
+            entry.log_level = optional_arg;
+            entry.thread_id = std::this_thread::get_id();
+
+            auto formatted = fmt::vformat(fmt::detail::to_string_view(content), RC_STD_MAKE_FORMAT_ARGS(fmt_args...));
+            entry.set_message(formatted);
+
+            if (g_async_logger->try_enqueue(std::move(entry))) {
+                return;
             }
         }
+        else if (g_async_logger && g_async_config.enabled && !g_async_config.bypass_for_system_logs)
+        {
+            g_async_logger->flush();
+        }
+
+        DefaultTargets::with_devices_read([&](const auto& devices) {
+            for (const auto& device : devices)
+            {
+                ASSERT_DEFAULT_OUTPUT_DEVICE_IS_VALID(device)
+
+                if (device->has_optional_arg())
+                {
+                    device->receive_with_optional_arg(fmt::vformat(fmt::detail::to_string_view(content), RC_STD_MAKE_FORMAT_ARGS(fmt_args...)), optional_arg);
+                }
+                else
+                {
+                    device->receive(fmt::vformat(fmt::detail::to_string_view(content), RC_STD_MAKE_FORMAT_ARGS(fmt_args...)));
+                }
+            }
+        });
     }
 
     template <int32_t optional_arg>
     auto send(File::StringViewType content) -> void
     {
-        for (const auto& device : DefaultTargets::get_default_devices_ref())
-        {
-            ASSERT_DEFAULT_OUTPUT_DEVICE_IS_VALID(device)
+        const bool use_async = g_async_config.enabled &&
+                               !g_async_config.bypass_for_system_logs &&
+                               !should_flush_immediately(optional_arg) &&
+                               g_async_logger;
 
-            if (device->has_optional_arg())
-            {
-                device->receive_with_optional_arg(content, optional_arg);
-            }
-            else
-            {
-                device->receive(content);
+        if (use_async) {
+            LogEntry entry;
+            entry.timestamp = std::chrono::system_clock::now();
+            entry.log_level = optional_arg;
+            entry.thread_id = std::this_thread::get_id();
+            entry.set_message(content);
+
+            if (g_async_logger->try_enqueue(std::move(entry))) {
+                return;
             }
         }
+        else if (g_async_logger && g_async_config.enabled && !g_async_config.bypass_for_system_logs)
+        {
+            g_async_logger->flush();
+        }
+
+        DefaultTargets::with_devices_read([&](const auto& devices) {
+            for (const auto& device : devices)
+            {
+                ASSERT_DEFAULT_OUTPUT_DEVICE_IS_VALID(device)
+
+                if (device->has_optional_arg())
+                {
+                    device->receive_with_optional_arg(content, optional_arg);
+                }
+                else
+                {
+                    device->receive(content);
+                }
+            }
+        });
     }
 
     template <typename DeviceType>
     auto get_device() -> DeviceType&
     {
-        return get_device_internal<DeviceType>(DefaultTargets::get_default_devices_ref());
+        DeviceType* result = nullptr;
+        DefaultTargets::with_devices_read([&](const auto& devices) {
+            result = &get_device_internal<DeviceType>(const_cast<OutputDevicesContainerType&>(devices));
+        });
+        return *result;
     }
 
     auto RC_DYNOUT_API close_all_default_devices() -> void;
@@ -391,10 +498,12 @@ namespace RC::Output
         // Locks/Unlocks all default devices.
         Lock()
         {
-            for (const auto& device : DefaultTargets::get_default_devices_ref())
-            {
-                device->lock();
-            }
+            DefaultTargets::with_devices_read([](const auto& devices) {
+                for (const auto& device : devices)
+                {
+                    device->lock();
+                }
+            });
         }
 
         Lock(OutputDevice* output_device) : m_output_device(output_device)
@@ -415,10 +524,12 @@ namespace RC::Output
             }
             else
             {
-                for (const auto& device : DefaultTargets::get_default_devices_ref())
-                {
-                    device->unlock();
-                }
+                DefaultTargets::with_devices_read([](const auto& devices) {
+                    for (const auto& device : devices)
+                    {
+                        device->unlock();
+                    }
+                });
             }
         }
     };

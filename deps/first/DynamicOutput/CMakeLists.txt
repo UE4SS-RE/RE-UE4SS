@@ -6,6 +6,7 @@ project(${TARGET})
 option(UE4SS_${TARGET}_BUILD_SHARED "Build as a shared lib" OFF)
 
 set(${TARGET}_Sources
+        "${CMAKE_CURRENT_SOURCE_DIR}/src/AsyncLogger.cpp"
         "${CMAKE_CURRENT_SOURCE_DIR}/src/DebugConsoleDevice.cpp"
         "${CMAKE_CURRENT_SOURCE_DIR}/src/Output.cpp"
         "${CMAKE_CURRENT_SOURCE_DIR}/src/OutputDevice.cpp"
@@ -32,7 +33,7 @@ target_compile_definitions(${TARGET} PRIVATE
 
 target_include_directories(${TARGET} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
 
-target_link_libraries(${TARGET} PUBLIC File)
+target_link_libraries(${TARGET} PUBLIC Concurrency File)
 
 # Make headers visible in the IDE
 # Uses make_headers_visible() from cmake/modules/IDEVisibility.cmake
