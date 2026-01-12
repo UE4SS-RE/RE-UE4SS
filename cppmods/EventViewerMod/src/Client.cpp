@@ -1,43 +1,74 @@
 #include "../include/Client.h"
 
-#include <execution>
-#include <ranges>
 #include <algorithm>
-#include <sstream>
+#include <chrono>
+#include <execution>
 #include <ctime>
 #include <iomanip>
+#include <ranges>
+#include <sstream>
 #include <string_view>
+#include <system_error>
 #include <unordered_map>
 
 #include <UE4SSProgram.hpp>
+
+#include <fmt/core.h>
+
 #include <imgui.h>
 #include <imgui_internal.h>
 #include <misc/cpp/imgui_stdlib.h>
+
 #include <glaze/glaze.hpp>
 
-std::vector<std::string_view> split_string_by_comma(const std::string& string)
+// Returns string_views into `string`.
+static std::vector<std::string_view> split_string_by_comma(const std::string& string)
 {
     std::vector<std::string_view> result;
-
-    if (string.empty()) return result;
-
-    auto split = std::views::split(string, ',');
-
-    for (auto substring : split)
+    if (string.empty())
     {
-        auto view = std::string_view(substring);
+        return result;
+    }
 
-        // trim leading whitespace
-        const auto leading = view.find_first_not_of(" \t\n\r\f\v");
-        if (leading == std::string_view::npos) continue; // blank string
-        view = view.substr(leading);
+    const std::string_view sv{string};
+    size_t start = 0;
 
-        //trim trailing whitespace
-        const auto trailing = view.find_last_not_of(" \t\n\r\f\v");
-        if (trailing == std::string_view::npos) continue; //blank string
-        view = view.substr(0, trailing + 1);
+    auto trim = [](std::string_view v) -> std::string_view {
+        const auto leading = v.find_first_not_of(" \t\n\r\f\v");
+        if (leading == std::string_view::npos)
+        {
+            return {};
+        }
+        v.remove_prefix(leading);
 
-        result.emplace_back(view);
+        const auto trailing = v.find_last_not_of(" \t\n\r\f\v");
+        if (trailing == std::string_view::npos)
+        {
+            return {};
+        }
+        v = v.substr(0, trailing + 1);
+        return v;
+    };
+
+    while (start <= sv.size())
+    {
+        size_t end = sv.find(',', start);
+        if (end == std::string_view::npos)
+        {
+            end = sv.size();
+        }
+
+        auto token = trim(sv.substr(start, end - start));
+        if (!token.empty())
+        {
+            result.emplace_back(token);
+        }
+
+        if (end == sv.size())
+        {
+            break;
+        }
+        start = end + 1;
     }
 
     return result;
@@ -49,39 +80,68 @@ namespace RC::EventViewerMod
 
     Client::Client()
     {
+        const auto wd = std::filesystem::path{StringType{UE4SSProgram::get_program().get_working_directory()}};
+        const auto mod_root = wd / "Mods" / "EventViewerMod";
+
+        m_cfg_path = mod_root / "config" / "settings.json";
+        m_dump_dir = mod_root / "captures";
+
+        std::error_code ec;
+        std::filesystem::create_directories(m_cfg_path.parent_path(), ec);
+        std::filesystem::create_directories(m_dump_dir, ec);
+
         load_state();
     }
 
     auto Client::render() -> void
     {
-        UE4SS_ENABLE_IMGUI();
+        // Ensure middleware knows the correct ImGui thread, including after scheme swaps.
+        if (!m_imgui_thread_id_set)
+        {
+            m_middleware->set_imgui_thread_id(std::this_thread::get_id());
+            m_imgui_thread_id_set = true;
+        }
 
         const auto saved = check_save_request();
 
         if (ImGui::Checkbox("Enable", &m_state.enabled))
         {
-            // disabled -> enabled
+            request_save_state();
+
             if (m_state.enabled)
             {
-                load_state();
+                // enabling
                 m_middleware->set_imgui_thread_id(std::this_thread::get_id());
+                m_imgui_thread_id_set = true;
             }
-
-            // enabled -> disabled, any non-savables that need to reset should be reset
             else
             {
+                // disabling
                 m_middleware->stop();
                 m_state.started = false;
-                m_state.needs_save.clear();
-                for (auto & target : m_state.targets) target.clear();
-                if (!saved) save_state();
+                m_state.needs_save.clear(std::memory_order_release);
+                for (auto& target : m_state.targets)
+                {
+                    target.clear();
+                }
+
+                if (!saved)
+                {
+                    save_state();
+                }
                 return;
             }
         }
 
+        if (!m_state.enabled) return;
+
         render_cfg();
 
-        if (ImGui::TreeNode("Performance Options")) render_perf_opts();
+        if (ImGui::TreeNode("Performance Options"))
+        {
+            render_perf_opts();
+            ImGui::TreePop();
+        }
 
         dequeue();
 
@@ -90,63 +150,88 @@ namespace RC::EventViewerMod
 
     auto Client::render_cfg() -> void
     {
-        if (ImGui::Combo("Target", reinterpret_cast<int*>(&m_state.hook_target), EMiddlewareHookTarget_NameArray, EMiddlewareHookTarget_Size))
+        if (combo_with_flags("Target", reinterpret_cast<int*>(&m_state.hook_target), EMiddlewareHookTarget_NameArray, EMiddlewareHookTarget_Size, ImGuiComboFlags_WidthFitPreview))
         {
+            request_save_state();
             m_middleware->set_hook_target(m_state.hook_target);
         }
 
         ImGui::SameLine();
 
-        ImGui::Combo("Mode", reinterpret_cast<int*>(&m_state.mode), EMode_NameArray, EMode_Size);
+        if (combo_with_flags("Mode", reinterpret_cast<int*>(&m_state.mode), EMode_NameArray, EMode_Size, ImGuiComboFlags_WidthFitPreview))
+        {
+            request_save_state();
+        }
 
         bool whitelist_changed = false;
         bool blacklist_changed = false;
         bool tick_changed = false;
 
         // whitelist
-        const auto _wl_input_changed = ImGui::InputText("Whitelist", &m_state.whitelist, ImGuiInputTextFlags_ElideLeft | ImGuiInputTextFlags_EnterReturnsTrue);
+        const auto wl_input_changed = ImGui::InputText("Whitelist", &m_state.whitelist, ImGuiInputTextFlags_ElideLeft | ImGuiInputTextFlags_EnterReturnsTrue);
         ImGui::SameLine();
-        if (_wl_input_changed || ImGui::Button("Apply"))
+        if (wl_input_changed || ImGui::Button("Apply##Whitelist"))
         {
             whitelist_changed = true;
+            request_save_state();
         }
         ImGui::SameLine();
-        if (ImGui::Button("Clear"))
+        if (ImGui::Button("Clear##Whitelist"))
         {
-            m_state.whitelist.clear();
-            whitelist_changed = true;
+            if (!m_state.whitelist.empty())
+            {
+                m_state.whitelist.clear();
+                whitelist_changed = true;
+                request_save_state();
+            }
         }
 
         // blacklist
-        const auto _bl_input_changed = ImGui::InputText("Blacklist", &m_state.blacklist, ImGuiInputTextFlags_ElideLeft | ImGuiInputTextFlags_EnterReturnsTrue);
+        const auto bl_input_changed = ImGui::InputText("Blacklist", &m_state.blacklist, ImGuiInputTextFlags_ElideLeft | ImGuiInputTextFlags_EnterReturnsTrue);
         ImGui::SameLine();
-        if (_bl_input_changed || ImGui::Button("Apply"))
+        if (bl_input_changed || ImGui::Button("Apply##Blacklist"))
         {
             blacklist_changed = true;
+            request_save_state();
         }
         ImGui::SameLine();
-        if (ImGui::Button("Clear"))
+        if (ImGui::Button("Clear##Blacklist"))
         {
-            m_state.blacklist.clear();
-            blacklist_changed = true;
+            if (!m_state.blacklist.empty())
+            {
+                m_state.blacklist.clear();
+                blacklist_changed = true;
+                request_save_state();
+            }
         }
 
-        //thread selector
         auto& target = m_state.targets[static_cast<int>(m_state.hook_target)];
         auto& threads = target.threads;
-        const bool has_threads = !threads.empty();
-        if (has_threads)
+
+        if (!threads.empty())
         {
+            if (target.current_thread < 0)
+            {
+                target.current_thread = 0;
+            }
+            if (static_cast<size_t>(target.current_thread) >= threads.size())
+            {
+                target.current_thread = static_cast<int>(threads.size() - 1);
+            }
+
             if (ImGui::BeginCombo("Thread", threads[target.current_thread].id_string(), ImGuiComboFlags_WidthFitPreview))
             {
                 for (size_t idx = 0; idx < threads.size(); ++idx)
                 {
-                    const bool selected = idx == target.current_thread;
+                    const bool selected = static_cast<int>(idx) == target.current_thread;
                     if (ImGui::Selectable(threads[idx].id_string(), selected))
                     {
-                        target.current_thread = idx;
+                        target.current_thread = static_cast<int>(idx);
                     }
-                    if (selected) ImGui::SetItemDefaultFocus();
+                    if (selected)
+                    {
+                        ImGui::SetItemDefaultFocus();
+                    }
                 }
                 ImGui::EndCombo();
             }
@@ -161,14 +246,14 @@ namespace RC::EventViewerMod
             m_state.started ? m_middleware->start() : m_middleware->stop();
         }
         ImGui::SameLine();
-        if (ImGui::Button("Clear") && has_threads)
+        if (ImGui::Button("Clear##CurrentThread") && !threads.empty())
         {
             auto& thread = threads[target.current_thread];
             thread.call_frequencies.clear();
             thread.call_stack.clear();
         }
         ImGui::SameLine();
-        if (ImGui::Button("Clear All") && has_threads)
+        if (ImGui::Button("Clear All##AllThreads") && !threads.empty())
         {
             for (auto& thread : threads)
             {
@@ -177,12 +262,12 @@ namespace RC::EventViewerMod
             }
         }
         ImGui::SameLine();
-        if (ImGui::Button("Save"))
+        if (ImGui::Button("Save##Current"))
         {
             save_mode = ESaveMode::current;
         }
         ImGui::SameLine();
-        if (ImGui::Button("Save All"))
+        if (ImGui::Button("Save All##All"))
         {
             save_mode = ESaveMode::all;
         }
@@ -190,6 +275,7 @@ namespace RC::EventViewerMod
         if (ImGui::Checkbox("Show Tick Functions", &m_state.show_tick))
         {
             tick_changed = true;
+            request_save_state();
         }
 
         apply_filters_to_history(whitelist_changed, blacklist_changed, tick_changed);
@@ -198,58 +284,131 @@ namespace RC::EventViewerMod
 
     auto Client::render_perf_opts() -> void
     {
-        if (ImGui::Combo("Thread Scheme", reinterpret_cast<int*>(&m_state.thread_scheme), EMiddlewareThreadScheme_NameArray, EMiddlewareThreadScheme_Size))
+        if (combo_with_flags("Thread Scheme", reinterpret_cast<int*>(&m_state.thread_scheme), EMiddlewareThreadScheme_NameArray, EMiddlewareThreadScheme_Size, ImGuiComboFlags_WidthFitPreview))
         {
+            request_save_state();
+
             if (m_middleware->get_type() != m_state.thread_scheme)
             {
                 const bool should_restart = !m_middleware->is_paused();
+
                 m_middleware->stop();
                 m_middleware = GetNewMiddleware(m_state.thread_scheme);
+
+                // new middleware must know its ImGui thread
+                m_middleware->set_imgui_thread_id(std::this_thread::get_id());
+                m_imgui_thread_id_set = true;
+
                 m_middleware->set_hook_target(m_state.hook_target);
-                if (should_restart) m_middleware->start();
+                if (should_restart)
+                {
+                    m_middleware->start();
+                    m_state.started = true;
+                }
+                else
+                {
+                    m_state.started = false;
+                }
             }
         }
 
-        ImGui::SameLine();
+        //ImGui::SameLine();
         static uint16_t step = 1;
-        if (ImGui::InputScalar("Max MS Read Time", ImGuiDataType_U16, &m_state.dequeue_max_ms, &step))
+        if (ImGui::InputScalar("Max MS Read Time", ImGuiDataType_U16, &m_state.dequeue_max_ms, &step, 0, 0))
         {
-            if (!m_state.dequeue_max_ms) m_state.dequeue_max_ms = 1;
+            request_save_state();
+            if (!m_state.dequeue_max_ms)
+            {
+                m_state.dequeue_max_ms = 1;
+            }
         }
 
-        ImGui::SameLine();
+        //ImGui::SameLine();
         if (ImGui::InputScalar("Max Count Per Iteration", ImGuiDataType_U16, &m_state.dequeue_max_count, &step))
         {
-            if (!m_state.dequeue_max_count) m_state.dequeue_max_count = 1;
+            request_save_state();
+            if (!m_state.dequeue_max_count)
+            {
+                m_state.dequeue_max_count = 1;
+            }
         }
     }
 
     auto Client::render_view() -> void
     {
         auto& target = m_state.targets[static_cast<int>(m_state.hook_target)];
-        if (target.threads.empty()) return;
+        if (target.threads.empty())
+        {
+            return;
+        }
+
+        if (target.current_thread < 0)
+        {
+            target.current_thread = 0;
+        }
+        if (static_cast<size_t>(target.current_thread) >= target.threads.size())
+        {
+            target.current_thread = static_cast<int>(target.threads.size() - 1);
+        }
+
         auto& thread = target.threads[target.current_thread];
 
-        ImGui::BeginChild("##view");
+        ImGui::BeginChild("##view", {0,0}, ImGuiChildFlags_Borders);
 
         if (m_state.mode == EMode::Stack)
         {
-            for (const auto& entry : thread.call_stack)
+            if (thread.call_stack.empty())
             {
-                ImGui::Text(entry->text.c_str());
+                ImGui::EndChild();
+                return;
             }
+
+            int prev_depth = 0;
+            bool have_prev = false;
+            int current_indent = 0;
+
+            for (auto& entry : thread.call_stack)
+            {
+                if (entry.is_disabled)
+                {
+                    continue;
+                }
+
+                const int depth = static_cast<int>(entry.depth);
+                const int delta = have_prev ? (depth - prev_depth) : depth;
+
+                entry.render_with_colored_indent_space(delta);
+
+                current_indent += delta;
+                prev_depth = depth;
+                have_prev = true;
+            }
+
+            // Reset indent state for safety.
+            while (current_indent > 0)
+            {
+                ImGui::Unindent();
+                --current_indent;
+            }
+
+            if (m_state.started) ImGui::SetScrollHereY(1.0f);
         }
         else
         {
-            if (ImGui::BeginTable("Frequency", 2, ImGuiTableFlags_ScrollY | ImGuiTableFlags_Resizable | ImGuiTableFlags_BordersV))
+            if (ImGui::BeginTable("##frequency", 2, ImGuiTableFlags_ScrollY | ImGuiTableFlags_Resizable | ImGuiTableFlags_BordersV))
             {
                 for (const auto& entry : thread.call_frequencies)
                 {
+                    if (entry.is_disabled)
+                    {
+                        continue;
+                    }
+
                     ImGui::TableNextRow();
                     ImGui::TableSetColumnIndex(0);
-                    ImGui::Text(entry->text.c_str());
+                    ImGui::TextUnformatted(entry.text.c_str());
                     ImGui::TableSetColumnIndex(1);
-                    ImGui::Text(std::to_string(entry->frequency).c_str());
+                    ImGui::Text("%llu", static_cast<unsigned long long>(entry.frequency));
                 }
 
                 ImGui::EndTable();
@@ -259,8 +418,35 @@ namespace RC::EventViewerMod
         ImGui::EndChild();
     }
 
+    auto Client::combo_with_flags(const char* label,
+            int* current_item,
+            const char* const items[],
+            const int items_count,
+            const ImGuiComboFlags_ flags) -> bool
+    {
+        bool changed = false;
+        if (ImGui::BeginCombo(label, items[*current_item], flags))
+        {
+            for (int i = 0; i < items_count; ++i)
+            {
+                const auto is_selected = i == *current_item;
+                if (ImGui::Selectable(items[i], is_selected))
+                {
+                    *current_item = i;
+                    changed = true;
+                }
+                if (is_selected) ImGui::SetItemDefaultFocus();
+            }
+            ImGui::EndCombo();
+        }
+        return changed;
+    }
+
     auto Client::save_state() -> void
     {
+        std::error_code ec;
+        std::filesystem::create_directories(m_cfg_path.parent_path(), ec);
+
         std::unordered_map<std::string, std::string> state_map;
         state_map.emplace("Enabled", std::to_string(m_state.enabled));
         state_map.emplace("ShowTick", std::to_string(m_state.show_tick));
@@ -271,15 +457,24 @@ namespace RC::EventViewerMod
         state_map.emplace("DequeueMaxCount", std::to_string(m_state.dequeue_max_count));
         state_map.emplace("Whitelist", m_state.whitelist);
         state_map.emplace("Blacklist", m_state.blacklist);
-        auto ec = glz::write_file_json(state_map, m_cfg_path.string(), std::string{});
+
+        (void)glz::write_file_json(state_map, m_cfg_path.string(), std::string{});
     }
 
     auto Client::load_state() -> void
     {
-        if (!std::filesystem::exists(m_cfg_path) || !std::filesystem::is_regular_file(m_cfg_path)) return;
+        if (!std::filesystem::exists(m_cfg_path) || !std::filesystem::is_regular_file(m_cfg_path))
+        {
+            return;
+        }
+
         std::unordered_map<std::string, std::string> state_map{};
         auto ec = glz::read_file_json(state_map, m_cfg_path.string(), std::string{});
-        if (ec.ec != glz::error_code::none) return;
+        if (ec.ec != glz::error_code::none)
+        {
+            return;
+        }
+
         try
         {
             m_state.enabled = state_map.at("Enabled") != "0";
@@ -287,14 +482,17 @@ namespace RC::EventViewerMod
             m_state.hook_target = static_cast<EMiddlewareHookTarget>(std::stoi(state_map.at("HookTarget")));
             m_state.thread_scheme = static_cast<EMiddlewareThreadScheme>(std::stoi(state_map.at("ThreadScheme")));
             m_state.mode = static_cast<EMode>(std::stoi(state_map.at("Mode")));
-            m_state.dequeue_max_ms = std::stoi(state_map.at("DequeueMaxMs"));
-            m_state.dequeue_max_count = std::stoi(state_map.at("DequeueMaxCount"));
+            m_state.dequeue_max_ms = static_cast<uint16_t>(std::stoi(state_map.at("DequeueMaxMs")));
+            m_state.dequeue_max_count = static_cast<uint16_t>(std::stoi(state_map.at("DequeueMaxCount")));
             m_state.whitelist = state_map.at("Whitelist");
             m_state.blacklist = state_map.at("Blacklist");
+
             m_state.whitelist_tokens = split_string_by_comma(m_state.whitelist);
             m_state.blacklist_tokens = split_string_by_comma(m_state.blacklist);
         }
-        catch (...) {}
+        catch (...)
+        {
+        }
     }
 
     auto Client::check_save_request() -> bool
@@ -302,17 +500,19 @@ namespace RC::EventViewerMod
         if (m_state.needs_save.test(std::memory_order_acquire))
         {
             save_state();
-            m_state.needs_save.clear();
+            m_state.needs_save.clear(std::memory_order_release);
             return true;
         }
         return false;
     }
 
-    // if there's only a whitelist and no blacklist, only entries that have a whitelist token as a substring are allowed
-    // if there's only a blacklist and no whitelist, only entries that don't have a blacklist token as a substring are allowed
-    // if there's both, then the whitelist applies before the blacklist
-    auto Client::apply_filters_to_history(bool whitelist_changed, bool blacklist_changed, bool tick_changed) -> void
+    auto Client::apply_filters_to_history(const bool whitelist_changed, const bool blacklist_changed, const bool tick_changed) -> void
     {
+        if (!(whitelist_changed || blacklist_changed || tick_changed))
+        {
+            return;
+        }
+
         if (whitelist_changed)
         {
             m_state.whitelist_tokens = split_string_by_comma(m_state.whitelist);
@@ -322,98 +522,111 @@ namespace RC::EventViewerMod
             m_state.blacklist_tokens = split_string_by_comma(m_state.blacklist);
         }
 
-        auto filter_fn = [this, whitelist_changed, blacklist_changed, tick_changed](const auto& entry) {
-            if (tick_changed)
-            {
-                if (entry->is_tick)
-                {
-                    entry->is_disabled = m_state.show_tick;
-                    if (!m_state.show_tick) return;
-                }
-            }
-            if (!whitelist_changed && !blacklist_changed) return; // neither list changed, just tick, so early out
-            if (whitelist_changed && !blacklist_changed) // if only the whitelist changed, we only need to look at disabled entries to potentially enable them
-            {
-                if (!entry->is_disabled) return;
-                entry->is_disabled = passes_filters(entry->text);
-            }
-            else if (!whitelist_changed && blacklist_changed) // if only the blacklist changed, we only need to look at the enabled entries to potentially disable them
-            {
-                if (entry->is_disabled) return;
-                entry->is_disabled = passes_filters(entry->text);
-            }
-            else // both somehow changed, reapply to all filters
-            {
-                entry->is_disabled = passes_filters(entry->text);
-            }
-        };
+        // Recompute disabled state for all history. This only runs when the user changes filters/tick setting.
+        const bool show_tick = m_state.show_tick;
 
-        for (auto& [threads, current_thread]: m_state.targets)
+        for (auto& target : m_state.targets)
         {
-            for (auto& thread : threads)
+            for (auto& thread : target.threads)
             {
-                std::for_each(std::execution::par_unseq, thread.call_stack.begin(), thread.call_stack.end(), filter_fn);
-                std::for_each(std::execution::par_unseq, thread.call_frequencies.begin(), thread.call_frequencies.end(), filter_fn);
+                // Stack history can get very large; leverage parallel execution on random-access iterators.
+                std::for_each(std::execution::par_unseq,
+                              thread.call_stack.begin(),
+                              thread.call_stack.end(),
+                              [this, show_tick](CallStackEntry& entry) {
+                                  entry.is_disabled = (entry.is_tick && !show_tick) || !passes_filters(entry.text);
+                              });
+
+                // Frequency view is smaller and is a list (non-random-access).
+                for (auto& entry : thread.call_frequencies)
+                {
+                    entry.is_disabled = (entry.is_tick && !show_tick) || !passes_filters(entry.text);
+                }
             }
         }
     }
 
-    // must be called after render_cfg so whitelist/blacklist tokens are populated
     auto Client::dequeue() -> void
     {
-        m_middleware->dequeue(m_state.dequeue_max_ms, m_state.dequeue_max_count, [this](CallStackEntry* entry) {
-            // resolve which lists the entry should go in
-            const auto& entry_thread = entry->thread_id;
-            const auto enum_target = m_middleware->get_hook_target();
+        if (!m_state.enabled || !m_state.started)
+        {
+            return;
+        }
+
+        m_middleware->dequeue(m_state.dequeue_max_ms, m_state.dequeue_max_count, [this](CallStackEntry&& entry) {
+            // Route based on enqueue-time target (prevents misrouting when targets change mid-stream).
+            const auto enum_target = entry.hook_target;
             auto& target = m_state.targets[static_cast<int>(enum_target)];
             auto& target_threads = target.threads;
-            auto thread_it = std::ranges::find_if(target_threads, [&entry_thread](const auto& info){ return info.thread_id == entry_thread; });
-            auto& thread = thread_it != target_threads.end() ? *thread_it : target_threads.emplace_back(entry_thread);
 
-            // set whether it should be disabled given the current filters
-            const auto disabled = (entry->is_tick && !m_state.show_tick) || !passes_filters(entry->text);
+            const auto entry_thread = entry.thread_id;
+            auto thread_it = std::ranges::find_if(target_threads, [&entry_thread](const ThreadInfo& info) {
+                return info.thread_id == entry_thread;
+            });
 
-            // add to frequency tracking
-            auto freq_it = std::ranges::find_if(thread.call_frequencies, [entry](const auto& freq_entry) -> bool { return entry->text == freq_entry->text; });
+            ThreadInfo* thread_ptr = nullptr;
+            if (thread_it != target_threads.end())
+            {
+                thread_ptr = &(*thread_it);
+            }
+            else
+            {
+                thread_ptr = &target_threads.emplace_back(entry_thread);
+                if (target.current_thread < 0)
+                {
+                    target.current_thread = 0;
+                }
+            }
+
+            auto& thread = *thread_ptr;
+
+            // Determine disabled state under current filters.
+            const bool disabled = (entry.is_tick && !m_state.show_tick) || !passes_filters(entry.text);
+
+            // Frequency tracking: bump existing, or add.
+            auto freq_it = std::ranges::find_if(thread.call_frequencies, [&entry](const CallFrequencyEntry& freq_entry) -> bool {
+                return entry.text == freq_entry.text;
+            });
+
             if (freq_it != thread.call_frequencies.end()) [[likely]]
             {
                 auto& freq = *freq_it;
-                ++freq->frequency;
-                freq->is_disabled = disabled; // might as well update its disabled field since we know it
+                ++freq.frequency;
+                freq.is_disabled = disabled;
 
-                //move up as needed, searching from before the freq entry to beginning of list for first entry that's greater than freq's frequency (very fast)
-                if (freq_it != thread.call_frequencies.begin())
+                // Maintain descending order by frequency using list::splice (fast, no alloc).
+                auto new_pos = freq_it;
+                while (new_pos != thread.call_frequencies.begin())
                 {
-                    auto before_freq_it = freq_it;
-                    --before_freq_it;
-                    const auto current_before_freq_it = before_freq_it;
-                    auto limit = --thread.call_frequencies.begin(); //work around ranges iterator not being compatible with rbegin
-                    for (; before_freq_it != limit; --before_freq_it)
+                    auto prev = std::prev(new_pos);
+                    if (prev->frequency > freq.frequency)
                     {
-                        if ((*before_freq_it)->frequency > freq->frequency) break;
+                        break;
                     }
-                    if (current_before_freq_it != before_freq_it)
-                    {
-                        auto freq_holder = std::move(freq);
-                        thread.call_frequencies.erase(freq_it);
-                        thread.call_frequencies.insert(before_freq_it, std::move(freq_holder));
-                    }
+                    new_pos = prev;
+                }
+                if (new_pos != freq_it)
+                {
+                    thread.call_frequencies.splice(new_pos, thread.call_frequencies, freq_it);
                 }
             }
             else
             {
-                thread.call_frequencies.emplace_back(std::make_unique<CallFrequencyEntry>(entry->text, entry->is_tick))->is_disabled = disabled;
+                thread.call_frequencies.emplace_back(entry.text, entry.is_tick);
+                auto& freq = thread.call_frequencies.back();
+                freq.is_disabled = disabled;
             }
 
-            // add to call stack trace
-            thread.call_stack.emplace_back(entry)->is_disabled = disabled;
+            // Call stack history.
+            entry.is_disabled = disabled;
+            thread.call_stack.emplace_back(std::move(entry));
         });
     }
 
     auto Client::passes_filters(const std::string& test_str) const -> bool
     {
-        auto passes_whitelist = m_state.whitelist_tokens.empty();
-        for (const auto& token : m_state.whitelist_tokens) //only one whitelist token needs to be present in the test_str to pass
+        bool passes_whitelist = m_state.whitelist_tokens.empty();
+        for (const auto& token : m_state.whitelist_tokens) // any whitelist token present => pass
         {
             if (test_str.contains(token))
             {
@@ -421,78 +634,148 @@ namespace RC::EventViewerMod
                 break;
             }
         }
-        if (!passes_whitelist) return false;
-
-        for (const auto& token : m_state.blacklist_tokens) //only one blacklist token needs to be present in the test_str to fail
+        if (!passes_whitelist)
         {
-            if (test_str.contains(token)) return false;
+            return false;
+        }
+
+        for (const auto& token : m_state.blacklist_tokens) // any blacklist token present => fail
+        {
+            if (test_str.contains(token))
+            {
+                return false;
+            }
         }
         return true;
     }
 
     auto Client::save(ESaveMode mode) -> void
     {
-        if (mode == ESaveMode::none) return;
+        if (mode == ESaveMode::none)
+        {
+            return;
+        }
+
+        std::error_code ec;
+        std::filesystem::create_directories(m_dump_dir, ec);
 
         const auto now = std::chrono::system_clock::now();
         const std::time_t now_t = std::chrono::system_clock::to_time_t(now);
         std::tm local_tm{};
         localtime_s(&local_tm, &now_t);
+
         std::ostringstream oss;
-        oss << std::put_time(&local_tm, "%Y-%m-%d %H:%M:%S");
-        std::ofstream file{};
+        // Windows filenames cannot contain ':'.
+        oss << std::put_time(&local_tm, "%Y-%m-%d %H-%M-%S");
 
         if (mode == ESaveMode::current)
         {
             auto& target = m_state.targets[static_cast<int>(m_state.hook_target)];
-            if (target.threads.empty()) return;
-            file.open(m_dump_path / ("EventViewerMod Capture-"s
-                + EMiddlewareHookTarget_NameArray[static_cast<int>(m_state.hook_target)]
-                + "-" + EMode_NameArray[static_cast<int>(m_state.mode)] + " "
-                + oss.str()));
+            if (target.threads.empty())
+            {
+                return;
+            }
+
+            const auto filename =
+                "EventViewerMod Capture-"s +
+                EMiddlewareHookTarget_NameArray[static_cast<int>(m_state.hook_target)] +
+                "-" + EMode_NameArray[static_cast<int>(m_state.mode)] + " " +
+                oss.str() + ".txt";
+
+            std::ofstream file{m_dump_dir / filename};
+            if (!file.is_open())
+            {
+                return;
+            }
+
             file << EMiddlewareHookTarget_NameArray[static_cast<int>(m_state.hook_target)] << " ";
             serialize_view(target.threads[target.current_thread], m_state.mode, file);
-            return file.close();
+            file.close();
+            return;
         }
 
         if (mode == ESaveMode::all)
         {
+            bool any = false;
             for (const auto& target : m_state.targets)
             {
-                if (target.threads.empty()) return;
+                if (!target.threads.empty())
+                {
+                    any = true;
+                    break;
+                }
             }
-
-            file.open(m_dump_path / ("EventViewerMod Capture-All "s + oss.str()));
-            serialize_all_views(file);
-            return file.close();
-        }
-    }
-
-    auto Client::serialize_view(ThreadInfo& info, EMode mode, std::ofstream& out) const -> void
-    {
-        auto serialize_fn = [&out](auto& vector) {
-            if (vector.empty())
+            if (!any)
             {
-                out << "No captures.\n\n\n" << std::endl;
                 return;
             }
 
-            for (auto& entry : vector)
+            const auto filename = "EventViewerMod Capture-All "s + oss.str() + ".txt";
+            std::ofstream file{m_dump_dir / filename};
+            if (!file.is_open())
             {
-                out << entry->text << std::endl;
+                return;
+            }
+
+            serialize_all_views(file);
+            file.close();
+        }
+    }
+
+    auto Client::serialize_view(ThreadInfo& info, const EMode mode, std::ofstream& out) const -> void
+    {
+        out << fmt::format("Thread {} {}\n\n", info.id_string(), EMode_NameArray[static_cast<int>(mode)]);
+
+        if (mode == EMode::Stack)
+        {
+            if (info.call_stack.empty())
+            {
+                out << "No captures.\n\n\n";
+                return;
+            }
+
+            for (const auto& entry : info.call_stack)
+            {
+                if (entry.is_disabled)
+                {
+                    continue;
+                }
+                for (auto i = 0u; i < entry.depth; ++i) out << "\t";
+                out << entry.text << '\n';
             }
 
             out << "\n\n\n";
-        };
-        out << fmt::format("Thread {} {}\n\n", info.id_string(), EMode_NameArray[static_cast<int>(mode)]);
-        mode == EMode::Stack ? serialize_fn(info.call_stack) : serialize_fn(info.call_frequencies);
+            return;
+        }
+
+        if (info.call_frequencies.empty())
+        {
+            out << "No captures.\n\n\n";
+            return;
+        }
+
+        for (const auto& entry : info.call_frequencies)
+        {
+            if (entry.is_disabled)
+            {
+                continue;
+            }
+            out << entry.text << '\n';
+        }
+
+        out << "\n\n\n";
     }
 
     auto Client::serialize_all_views(std::ofstream& out) -> void
     {
-        for (int target_idx = 0; target_idx < m_state.targets.size(); ++target_idx)
+        for (int target_idx = 0; target_idx < static_cast<int>(m_state.targets.size()); ++target_idx)
         {
             auto& target = m_state.targets[target_idx];
+            if (target.threads.empty())
+            {
+                continue;
+            }
+
             for (auto& thread : target.threads)
             {
                 out << EMiddlewareHookTarget_NameArray[target_idx] << " ";
@@ -507,4 +790,10 @@ namespace RC::EventViewerMod
     {
         m_state.needs_save.test_and_set(std::memory_order_release);
     }
-}
+
+    auto Client::GetInstance() -> Client&
+    {
+        static Client client{};
+        return client;
+    }
+} // namespace RC::EventViewerMod

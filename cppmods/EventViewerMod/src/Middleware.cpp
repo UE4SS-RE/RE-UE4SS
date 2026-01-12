@@ -1,13 +1,18 @@
 #include <Middleware.hpp>
 
-#include <stdexcept>
+#include <atomic>
 #include <mutex>
 #include <queue>
-#include <atomic>
+#include <stdexcept>
 #include <unordered_set>
+#include <vector>
 
 #include <Unreal/Hooks/Hooks.hpp>
 #include <concurrentqueue.h>
+
+// if using fname index as a hash, games that implement name recycling can be problematic/inaccurate for context objects
+// BUG not saving target, shows some tick functions (because its best effort), layout issues, not respecting PI when initially loaded
+// FEATURES right click menus for adding to lists, copying, etc, lowercase filters, string interning
 
 namespace RC::EventViewerMod
 {
@@ -24,9 +29,10 @@ namespace RC::EventViewerMod
     using RC::Unreal::Hook::ProcessEventCallbackWithData;
     using RC::Unreal::Hook::ProcessInternalCallbackWithData;
     using RC::Unreal::Hook::FCallbackOptions;
+
     using moodycamel::ConcurrentQueue;
-    using moodycamel::ProducerToken;
     using moodycamel::ConsumerToken;
+    using moodycamel::ProducerToken;
 
     class MiddlewareHooks : public IMiddleware
     {
@@ -34,13 +40,18 @@ namespace RC::EventViewerMod
         auto set_hook_target(const EMiddlewareHookTarget target) -> void final
         {
             assert_on_imgui_thread();
-            if (m_hook_target == target) return;
+            if (m_hook_target == target)
+            {
+                return;
+            }
 
-            const bool should_resume = m_paused;
+            const bool should_resume = !m_paused;
             stop();
             m_hook_target = target;
-
-            if (should_resume) start();
+            if (should_resume)
+            {
+                start();
+            }
         }
 
         [[nodiscard]] auto get_hook_target() const -> EMiddlewareHookTarget final
@@ -51,14 +62,7 @@ namespace RC::EventViewerMod
 
         auto stop() -> bool override
         {
-            assert_on_imgui_thread();
-            if (m_paused) return true;
-            if (m_prehook_id && !UnregisterCallback(m_prehook_id)) return false;
-            if (m_posthook_id && !UnregisterCallback(m_posthook_id)) return false;
-            m_prehook_id = m_posthook_id = ERROR_ID;
-            m_depth_reset_counter.fetch_add(1, std::memory_order_release);
-            m_paused = true;
-            return true;
+            return stop_impl(true);
         }
 
         [[nodiscard]] auto is_paused() const -> bool final
@@ -70,23 +74,42 @@ namespace RC::EventViewerMod
         auto start() -> bool override
         {
             assert_on_imgui_thread();
-            if (!m_paused) return true;
+            if (!m_paused)
+            {
+                return true;
+            }
+
             switch (m_hook_target)
             {
-                case EMiddlewareHookTarget::ProcessEvent:
-                {
-                    m_prehook_id = RegisterProcessEventPreCallback(m_pe_pre, m_options);
-                    m_posthook_id = RegisterProcessEventPostCallback(m_pe_post, m_options);
-                    break;
-                }
-                case EMiddlewareHookTarget::ProcessInternal:
-                {
-                    m_prehook_id = RegisterProcessInternalPreCallback(m_pi_pre, m_options);
-                    m_posthook_id = RegisterProcessInternalPostCallback(m_pi_post, m_options);
-                    break;
-                }
-                default: throw std::runtime_error("Unknown hook target");
+            case EMiddlewareHookTarget::ProcessEvent:
+                // Install post first; UE4SS historically had edge cases where pre wouldn't run unless post exists.
+                m_posthook_id = RegisterProcessEventPostCallback(m_pe_post, m_options);
+                m_prehook_id = RegisterProcessEventPreCallback(m_pe_pre, m_options);
+                break;
+            case EMiddlewareHookTarget::ProcessInternal:
+                m_posthook_id = RegisterProcessInternalPostCallback(m_pi_post, m_options);
+                m_prehook_id = RegisterProcessInternalPreCallback(m_pi_pre, m_options);
+                break;
+            default:
+                throw std::runtime_error("Unknown hook target");
             }
+
+            if (m_prehook_id == ERROR_ID || m_posthook_id == ERROR_ID)
+            {
+                // Best-effort cleanup
+                if (m_prehook_id != ERROR_ID)
+                {
+                    UnregisterCallback(m_prehook_id);
+                }
+                if (m_posthook_id != ERROR_ID)
+                {
+                    UnregisterCallback(m_posthook_id);
+                }
+                m_prehook_id = m_posthook_id = ERROR_ID;
+                m_paused = true;
+                return false;
+            }
+
             m_paused = false;
             return true;
         }
@@ -101,16 +124,25 @@ namespace RC::EventViewerMod
             return m_imgui_id;
         }
 
-        auto assert_on_imgui_thread() const -> void
+        [[nodiscard]] auto get_type() const -> EMiddlewareThreadScheme override = 0;
+
+        ~MiddlewareHooks() override
         {
-            if (std::this_thread::get_id() != m_imgui_id) throw std::runtime_error("assert_on_imgui_thread failed!");
+            // Don't throw from destructor.
+            try
+            {
+                stop_impl(false);
+            }
+            catch (...)
+            {
+            }
         }
 
     protected:
         MiddlewareHooks()
         {
             std::call_once(m_get_tick_fns_flag, [] {
-                    Unreal::UObjectGlobals::ForEachUObject([](UObject* object, ...) -> LoopAction {
+                Unreal::UObjectGlobals::ForEachUObject([](UObject* object, ...) -> LoopAction {
                     if (object && Unreal::Cast<UFunction>(object) && object->GetName().contains(STR("Tick")))
                     {
                         m_tick_fns.insert(object);
@@ -120,71 +152,155 @@ namespace RC::EventViewerMod
             });
         }
 
-        ~MiddlewareHooks() override
+        auto assert_on_imgui_thread() const -> void
         {
-            MiddlewareHooks::stop();
+            if (std::this_thread::get_id() != m_imgui_id)
+            {
+                throw std::runtime_error("EventViewerMod middleware: must be called from ImGui thread");
+            }
+        }
+
+        [[nodiscard]] auto is_tick_fn(const UFunction* fn) const -> bool
+        {
+            return fn && m_tick_fns.contains(const_cast<UFunction*>(fn));
         }
 
     private:
+        auto stop_impl(const bool do_assert) -> bool
+        {
+            if (do_assert)
+            {
+                assert_on_imgui_thread();
+            }
+            if (m_paused)
+            {
+                return true;
+            }
+
+            if (m_prehook_id != ERROR_ID && !UnregisterCallback(m_prehook_id))
+            {
+                return false;
+            }
+            if (m_posthook_id != ERROR_ID && !UnregisterCallback(m_posthook_id))
+            {
+                return false;
+            }
+
+            m_prehook_id = m_posthook_id = ERROR_ID;
+
+            // Causes all thread_local depths to be reset the next time the prehook runs.
+            m_depth_reset_counter.fetch_add(1, std::memory_order_release);
+
+            m_paused = true;
+            return true;
+        }
+
         GlobalCallbackId m_prehook_id = ERROR_ID;
         GlobalCallbackId m_posthook_id = ERROR_ID;
+
         EMiddlewareHookTarget m_hook_target = EMiddlewareHookTarget::ProcessEvent;
         bool m_paused = true;
-        std::thread::id m_imgui_id;
+
+        std::thread::id m_imgui_id{};
 
         const FCallbackOptions m_options = {false, true, STR("EventViewer"), STR("CallStackMonitor")};
 
-        const ProcessEventCallbackWithData m_pe_pre = [this](auto&, UObject* context, UFunction* function, ...)
+        const ProcessEventCallbackWithData m_pe_pre = [this](auto&, UObject* context, UFunction* function, void*)
         {
             thread_local std::thread::id thread_id = std::this_thread::get_id();
             thread_local uint64_t local_reset_counter = m_depth_reset_counter.load(std::memory_order_acquire);
-            if (const auto current_counter = m_depth_reset_counter.load(std::memory_order_acquire); current_counter != local_reset_counter)
+
+            const auto current_counter = m_depth_reset_counter.load(std::memory_order_acquire);
+            if (current_counter != local_reset_counter)
             {
                 m_pe_depth = 0;
                 local_reset_counter = current_counter;
             }
-            return enqueue(context, function, m_pe_depth++, thread_id, m_tick_fns.contains(function));
+
+            enqueue(m_hook_target,
+                    context,
+                    function,
+                    m_pe_depth++,
+                    thread_id,
+                    is_tick_fn(function));
         };
 
-        const ProcessEventCallbackWithData m_pe_post = [](...)
+        const ProcessEventCallbackWithData m_pe_post = [](auto&, UObject*, UFunction*, void*)
         {
-            m_pe_depth = m_pe_depth == 0 ? 0 : m_pe_depth - 1;
+            m_pe_depth = (m_pe_depth == 0) ? 0 : (m_pe_depth - 1);
         };
-// todo install post hook in prehook and return
-        const ProcessInternalCallbackWithData m_pi_pre = [this](auto&, UObject* context, FFrame& stack, ...)
+
+        const ProcessInternalCallbackWithData m_pi_pre = [this](auto&, UObject* context, FFrame& stack, void*)
         {
             thread_local std::thread::id thread_id = std::this_thread::get_id();
             thread_local uint64_t local_reset_counter = m_depth_reset_counter.load(std::memory_order_acquire);
-            if (const auto current_counter = m_depth_reset_counter.load(std::memory_order_acquire); current_counter != local_reset_counter)
+
+            const auto current_counter = m_depth_reset_counter.load(std::memory_order_acquire);
+            if (current_counter != local_reset_counter)
             {
-                m_pe_depth = 0;
+                m_pi_depth = 0;
                 local_reset_counter = current_counter;
             }
-            const auto fn = stack.Node(); //TODO figure out if it should be stack.Node() or stack.CurrentNativeFunction()
-            return enqueue(context, fn, m_pi_depth++, thread_id, m_tick_fns.contains(fn));
+
+            auto fn = stack.Node(); // May be null for native frames.
+            if (!fn)
+            {
+                fn = stack.CurrentNativeFunction();
+            }
+
+            enqueue(m_hook_target,
+                    context,
+                    fn,
+                    m_pi_depth++,
+                    thread_id,
+                    is_tick_fn(fn));
         };
 
-        const ProcessInternalCallbackWithData m_pi_post = [](...)
+        const ProcessInternalCallbackWithData m_pi_post = [](auto&, UObject*, FFrame&, void*)
         {
-            m_pi_depth = m_pi_depth == 0 ? 0 : m_pi_depth - 1;
+            m_pi_depth = (m_pi_depth == 0) ? 0 : (m_pi_depth - 1);
         };
 
         inline static std::once_flag m_get_tick_fns_flag;
         inline static std::unordered_set<UObject*> m_tick_fns;
+
         inline static thread_local uint32_t m_pe_depth = 0;
         inline static thread_local uint32_t m_pi_depth = 0;
         inline static std::atomic_uint64_t m_depth_reset_counter = 0;
     };
 
-    class ConcurrentQueueMiddleware : public MiddlewareHooks
+    class ConcurrentQueueMiddleware final : public MiddlewareHooks
     {
     public:
         ConcurrentQueueMiddleware() = default;
 
-        auto enqueue(Unreal::UObject* context, Unreal::UFunction* function, uint32_t depth, std::thread::id thread_id, bool is_tick) -> void override
+        auto enqueue(const EMiddlewareHookTarget hook_target,
+                     UObject* context,
+                     UFunction* function,
+                     const uint32_t depth,
+                     const std::thread::id thread_id,
+                     const bool is_tick) -> void override
         {
-            thread_local ProducerToken producer_token { m_queue };
-            m_queue.enqueue(producer_token, new CallStackEntry {
+            // ProducerToken is a measurable win at high rates, but thread_local tokens become unsafe
+            // if we swap middleware instances (queue address changes). We keep a per-thread token
+            // per-queue address and rebuild it when the queue changes. Old tokens are intentionally
+            // leaked to avoid destructor-order hazards with dead queues. This whole idea can be scrapped
+            // if/when ConcurrentQueueMiddleware is the only schema
+            struct TLSToken
+            {
+                ConcurrentQueue<CallStackEntry>* queue = nullptr;
+                ProducerToken* token = nullptr;
+            };
+            thread_local TLSToken tls{};
+
+            if (tls.queue != &m_queue)
+            {
+                tls.queue = &m_queue;
+                tls.token = new ProducerToken(m_queue);
+            }
+
+            m_queue.enqueue(*tls.token, CallStackEntry{
+                hook_target,
                 context ? context->GetName() : STR("UnknownContext"),
                 function ? function->GetName() : STR("UnknownFunction"),
                 depth,
@@ -193,33 +309,58 @@ namespace RC::EventViewerMod
             });
         }
 
-        auto dequeue(uint16_t max_ms,
-                     uint16_t max_count_per_iteration, const std::function<void(CallStackEntry*)>& on_dequeue) -> void override
+        auto dequeue(const uint16_t max_ms,
+                     const uint16_t max_count_per_iteration,
+                     const std::function<void(CallStackEntry&&)>& on_dequeue) -> void override
         {
             assert_on_imgui_thread();
+
             const auto start = std::chrono::steady_clock::now();
-            if (m_buffer.size() < max_count_per_iteration) m_buffer.resize(max_count_per_iteration);
-            do
+            if (m_buffer.size() < max_count_per_iteration)
             {
-                auto amount_dequeued = m_queue.try_dequeue_bulk(m_imgui_consumer_token, m_buffer.begin(), max_count_per_iteration);
-                if (!amount_dequeued) break;
-                for (size_t i = 0; i < amount_dequeued; ++i) // might run a little over time, but that's ok, the pointers need to be transferred to the imgui thread
+                m_buffer.resize(max_count_per_iteration);
+            }
+
+            while (std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - start).count() < max_ms)
+            {
+                const auto amount = m_queue.try_dequeue_bulk(m_imgui_consumer_token, m_buffer.data(), max_count_per_iteration);
+                if (amount == 0)
                 {
-                    on_dequeue(m_buffer[i]); // transfers ownership
+                    break;
                 }
-            } while ((std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - start).count() < max_ms) && m_queue.size_approx());
+
+                for (size_t i = 0; i < amount; ++i)
+                {
+                    on_dequeue(std::move(m_buffer[i]));
+                }
+
+                // Avoid spinning if approx size says empty.
+                if (m_queue.size_approx() == 0)
+                {
+                    break;
+                }
+            }
         }
 
         auto stop() -> bool override
         {
-            if (!MiddlewareHooks::stop()) return false;
-
-            while (m_queue.size_approx())
+            if (!MiddlewareHooks::stop())
             {
-                const auto count = m_queue.try_dequeue_bulk(m_imgui_consumer_token, m_buffer.begin(), m_buffer.size());
-                for (size_t i = 0; i < count; ++i)
+                return false;
+            }
+
+            // Drain remaining items (discard).
+            if (m_buffer.empty())
+            {
+                m_buffer.resize(256);
+            }
+
+            for (;;)
+            {
+                const auto count = m_queue.try_dequeue_bulk(m_imgui_consumer_token, m_buffer.data(), m_buffer.size());
+                if (count == 0)
                 {
-                    delete m_buffer[i];
+                    break;
                 }
             }
 
@@ -234,54 +375,82 @@ namespace RC::EventViewerMod
         ~ConcurrentQueueMiddleware() override = default;
 
     private:
-        ConcurrentQueue<CallStackEntry*> m_queue;
-        ConsumerToken m_imgui_consumer_token { m_queue };
-        std::vector<CallStackEntry*> m_buffer {100};
+        ConcurrentQueue<CallStackEntry> m_queue;
+        ConsumerToken m_imgui_consumer_token{m_queue};
+        std::vector<CallStackEntry> m_buffer{};
     };
 
-    class MutexMiddleware : public MiddlewareHooks
+    class MutexMiddleware final : public MiddlewareHooks
     {
     public:
         MutexMiddleware() = default;
 
-        auto enqueue(Unreal::UObject* context, Unreal::UFunction* function, uint32_t depth, std::thread::id thread_id, const bool is_tick) -> void override
+        auto enqueue(const EMiddlewareHookTarget hook_target,
+                     UObject* context,
+                     UFunction* function,
+                     const uint32_t depth,
+                     const std::thread::id thread_id,
+                     const bool is_tick) -> void override
         {
             std::lock_guard lock(m_mutex);
-            m_queue.push(new CallStackEntry(
+            m_queue.emplace(
+                hook_target,
                 context ? context->GetName() : STR("UnknownContext"),
                 function ? function->GetName() : STR("UnknownFunction"),
                 depth,
                 thread_id,
-                is_tick
-            ));
+                is_tick);
         }
 
-        auto dequeue(uint16_t max_ms,
-                     uint16_t max_count_per_iteration, const std::function<void(CallStackEntry*)>& on_dequeue) -> void override
+        auto dequeue(const uint16_t max_ms,
+                     const uint16_t max_count_per_iteration,
+                     const std::function<void(CallStackEntry&&)>& on_dequeue) -> void override
         {
             assert_on_imgui_thread();
-            const auto start = std::chrono::steady_clock::now();
 
-            do
+            const auto start = std::chrono::steady_clock::now();
+            std::vector<CallStackEntry> local;
+            local.reserve(max_count_per_iteration);
+
+            while (std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - start).count() < max_ms)
             {
-                std::lock_guard lock(m_mutex);
-                if (m_queue.empty()) return;
-                for (size_t i = 0; i < max_count_per_iteration; ++i)
+                local.clear();
+
                 {
-                    on_dequeue(m_queue.front()); // transfers ownership of pointer
-                    m_queue.pop();
-                    if (m_queue.empty()) return;
+                    std::lock_guard lock(m_mutex);
+                    if (m_queue.empty())
+                    {
+                        break;
+                    }
+                    for (size_t i = 0; i < max_count_per_iteration && !m_queue.empty(); ++i)
+                    {
+                        local.emplace_back(std::move(m_queue.front()));
+                        m_queue.pop();
+                    }
                 }
-            } while (std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - start).count() < max_ms);
+
+                for (auto& entry : local)
+                {
+                    on_dequeue(std::move(entry));
+                }
+
+                if (local.size() < max_count_per_iteration)
+                {
+                    break; // likely empty; avoid relocking immediately
+                }
+            }
         }
 
         auto stop() -> bool override
         {
-            if (!MiddlewareHooks::stop()) return false;
+            if (!MiddlewareHooks::stop())
+            {
+                return false;
+            }
+
             std::lock_guard lock(m_mutex);
             while (!m_queue.empty())
             {
-                delete m_queue.front();
                 m_queue.pop();
             }
             return true;
@@ -293,8 +462,9 @@ namespace RC::EventViewerMod
         }
 
         ~MutexMiddleware() override = default;
+
     private:
-        std::queue<CallStackEntry*> m_queue;
+        std::queue<CallStackEntry> m_queue;
         std::mutex m_mutex;
     };
 
@@ -302,9 +472,12 @@ namespace RC::EventViewerMod
     {
         switch (type)
         {
-            case EMiddlewareThreadScheme::ConcurrentQueue: return std::make_unique<ConcurrentQueueMiddleware>();
-            case EMiddlewareThreadScheme::Mutex: return std::make_unique<MutexMiddleware>();
-            default: throw std::runtime_error("Unknown middleware type");
+        case EMiddlewareThreadScheme::ConcurrentQueue:
+            return std::make_unique<ConcurrentQueueMiddleware>();
+        case EMiddlewareThreadScheme::Mutex:
+            return std::make_unique<MutexMiddleware>();
+        default:
+            throw std::runtime_error("Unknown middleware type");
         }
     }
-}
+} // namespace RC::EventViewerMod
