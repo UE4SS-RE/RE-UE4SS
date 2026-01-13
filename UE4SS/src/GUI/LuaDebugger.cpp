@@ -1670,7 +1670,14 @@ namespace RC::GUI
 
         if (ImGui::BeginTabBar("LuaDebuggerTabs"))
         {
-            if (ImGui::BeginTabItem(ICON_FA_BUG " Debug"))
+            ImGuiTabItemFlags debug_flags = 0;
+            if (m_pending_debug_tab_switch)
+            {
+                debug_flags = ImGuiTabItemFlags_SetSelected;
+                m_pending_debug_tab_switch = false;
+            }
+
+            if (ImGui::BeginTabItem(ICON_FA_BUG " Debug", nullptr, debug_flags))
             {
                 render_debug_view();
                 ImGui::EndTabItem();
@@ -1797,9 +1804,15 @@ namespace RC::GUI
             bool is_selected = (m_selected_state == L);
 
             // Don't call lua_gettop from GUI thread - it's not thread safe
-            if (ImGui::Selectable(name.c_str(), is_selected))
+            if (ImGui::Selectable(name.c_str(), is_selected, ImGuiSelectableFlags_AllowDoubleClick))
             {
                 m_selected_state = L;
+
+                if (ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left))
+                {
+                    m_pending_debug_tab_switch = true;
+                }
+
                 // Clear cached globals when selecting a new state
                 {
                     std::lock_guard<std::mutex> lock(m_globals_mutex);

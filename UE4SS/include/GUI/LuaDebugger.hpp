@@ -342,6 +342,7 @@ namespace RC::GUI
         bool m_add_require_to_main{true};
         std::filesystem::path m_create_file_mod_path;
         int m_pending_editor_tab_switch{-1};
+        bool m_pending_debug_tab_switch{false};
 
         auto refresh_mods_list() -> void;
         auto create_new_mod(const std::string& name) -> bool;
