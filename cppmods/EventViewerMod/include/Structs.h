@@ -14,29 +14,43 @@
 #include <Enums.h>
 #include <String/StringType.hpp>
 
+#include <Unreal/UObject.hpp>
+
 namespace RC::EventViewerMod
 {
     static_assert(std::is_same_v<StringType, std::wstring>,
                   "EventViewerMod expects StringType to be std::wstring for ImGui encoding; needs refactor if that changes.");
+
+    struct FunctionNameStringViews
+    {
+        uint32_t function_hash;
+        std::string_view function_name;
+        std::string_view lower_cased_function_name;
+    };
+
+    struct AllNameStringViews : FunctionNameStringViews
+    {
+        std::string_view full_name;
+        std::string_view lower_cased_full_name;
+    };
 
     // Note: these types are intentionally cheap-to-move so they can be passed through
     // moodycamel::ConcurrentQueue by value (high throughput, minimal allocator churn).
     struct EntryBase
     {
         EntryBase() = default;
-        EntryBase(std::string_view text, bool is_tick);
+        explicit EntryBase(bool is_tick);
 
-        std::string_view text{};
         bool is_tick = false;
         bool is_disabled = false;
     };
 
-    struct CallStackEntry : EntryBase
+    // Stores both original-case and lower-cased string views (for case-insensitive filtering).
+    struct CallStackEntry : EntryBase, AllNameStringViews
     {
         CallStackEntry() = default;
         CallStackEntry(EMiddlewareHookTarget hook_target,
-                       std::string_view full_name,
-                       std::string_view function_name,
+                       AllNameStringViews strings,
                        uint32_t depth,
                        std::thread::id thread_id,
                        bool is_tick);
@@ -47,16 +61,16 @@ namespace RC::EventViewerMod
         EMiddlewareHookTarget hook_target = EMiddlewareHookTarget::ProcessEvent;
         uint32_t depth = 0;
         std::thread::id thread_id{};
-        std::string_view function_name{};
 
     private:
         auto render_indents(int indent_delta) const -> void;
     };
 
-    struct CallFrequencyEntry : EntryBase
+    // Stores both original-case and lower-cased function name views (for case-insensitive filtering).
+    struct CallFrequencyEntry : EntryBase, FunctionNameStringViews
     {
         CallFrequencyEntry() = default;
-        CallFrequencyEntry(std::string_view text, bool is_tick);
+        CallFrequencyEntry(const FunctionNameStringViews& strings, bool is_tick);
 
         uint64_t frequency = 1;
     };
@@ -100,10 +114,10 @@ namespace RC::EventViewerMod
         uint16_t dequeue_max_count = 50;                                         // [Savable] [Thread-ImGui]
 
         std::string blacklist;                                                   // [Savable] [Thread-ImGui]
-        std::vector<std::string_view> blacklist_tokens;                          // [Thread-ImGui] (views into blacklist)
+        std::vector<std::string> blacklist_tokens;                               // [Thread-ImGui] (lower-cased tokens)
 
         std::string whitelist;                                                   // [Savable] [Thread-ImGui]
-        std::vector<std::string_view> whitelist_tokens;                          // [Thread-ImGui] (views into whitelist)
+        std::vector<std::string> whitelist_tokens;                               // [Thread-ImGui] (lower-cased tokens)
 
         std::array<TargetInfo, EMiddlewareHookTarget_Size> targets{};            // [Thread-ImGui]
 

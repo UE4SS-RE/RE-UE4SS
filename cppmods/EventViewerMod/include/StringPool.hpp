@@ -5,6 +5,8 @@
 #include <unordered_map>
 #include <utility>
 
+#include <Structs.h>
+
 #include <Unreal/CoreUObject/UObject/Class.hpp>
 
 namespace RC::EventViewerMod
@@ -12,7 +14,11 @@ namespace RC::EventViewerMod
     class StringPool
     {
     public:
-        auto get_strings(RC::Unreal::UObject* caller, RC::Unreal::UFunction* function) -> std::pair<std::string_view, std::string_view>; // <caller + function, function>
+        // Returns string_views owned by the pool:
+        //  - full_name / function_name for display
+        //  - lower_cased_* for case-insensitive filtering
+        //  - function_hash for fast equality on function identity
+        auto get_strings(RC::Unreal::UObject* caller, RC::Unreal::UFunction* function) -> AllNameStringViews;
 
         static auto GetInstance() -> StringPool&;
 
@@ -27,6 +33,7 @@ namespace RC::EventViewerMod
         {
             size_t function_begin;
             std::string full_name;
+            std::string lower_cased_full_name;
         };
 
         // TODO replace with better concurrent hash map solution, though not too important for now

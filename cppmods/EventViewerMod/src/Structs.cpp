@@ -24,23 +24,28 @@ inline constexpr static std::array COLORS = {
 
 namespace RC::EventViewerMod
 {
-    EntryBase::EntryBase(const std::string_view text, const bool is_tick)
-        : text(text), is_tick(is_tick)
+    EntryBase::EntryBase(const bool is_tick)
+        : is_tick(is_tick)
     {
     }
 
     CallStackEntry::CallStackEntry(const EMiddlewareHookTarget hook_target,
-                                    const std::string_view full_name,
-                                    const std::string_view function_name,
-                                    const uint32_t depth,
-                                    const std::thread::id thread_id,
-                                    const bool is_tick)
-        : EntryBase(full_name, is_tick),
+                                   const AllNameStringViews strings,
+                                   const uint32_t depth,
+                                   const std::thread::id thread_id,
+                                   const bool is_tick)
+        : EntryBase(is_tick),
           hook_target(hook_target),
           depth(depth),
-          thread_id(thread_id),
-          function_name(function_name)
+          thread_id(thread_id)
     {
+        // Inheritance is used to avoid extra indirection/caches misses.
+        // (StringPool owns the backing storage for these views.)
+        function_hash = strings.function_hash;
+        function_name = strings.function_name;
+        lower_cased_function_name = strings.lower_cased_function_name;
+        full_name = strings.full_name;
+        lower_cased_full_name = strings.lower_cased_full_name;
     }
 
     auto CallStackEntry::render_with_colored_indent_space(const int indent_delta) const -> void
@@ -52,13 +57,13 @@ namespace RC::EventViewerMod
         min.x -= indent_width;
         max.y += ImGui::GetTextLineHeight();
         ImGui::GetWindowDrawList()->AddRectFilled(min, max, COLORS[depth % COLORS.size()]);
-        ImGui::TextUnformatted(text.data());
+        ImGui::TextUnformatted(full_name.data());
     }
 
     auto CallStackEntry::render(const int indent_delta) const -> void
     {
         render_indents(indent_delta);
-        ImGui::TextUnformatted(text.data());
+        ImGui::TextUnformatted(full_name.data());
     }
 
     auto CallStackEntry::render_indents(const int indent_delta) const -> void
@@ -79,9 +84,12 @@ namespace RC::EventViewerMod
         }
     }
 
-    CallFrequencyEntry::CallFrequencyEntry(const std::string_view text, const bool is_tick)
-        : EntryBase(text, is_tick)
+    CallFrequencyEntry::CallFrequencyEntry(const FunctionNameStringViews& strings, const bool is_tick)
+        : EntryBase(is_tick)
     {
+        function_hash = strings.function_hash;
+        function_name = strings.function_name;
+        lower_cased_function_name = strings.lower_cased_function_name;
     }
 
     ThreadInfo::ThreadInfo(const std::thread::id thread_id)
