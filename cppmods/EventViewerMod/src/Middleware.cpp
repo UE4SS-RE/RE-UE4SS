@@ -30,9 +30,8 @@ namespace RC::EventViewerMod
 
     auto Middleware::GetInstance() -> Middleware&
     {
-        // Intentionally leaked to avoid destruction-order hazards at shutdown.
-        static Middleware* s_instance = new Middleware();
-        return *s_instance;
+        static Middleware s_instance;
+        return s_instance;
     }
 
     Middleware::Middleware()
