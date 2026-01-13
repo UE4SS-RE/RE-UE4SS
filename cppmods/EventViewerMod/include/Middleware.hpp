@@ -33,10 +33,7 @@ namespace RC::EventViewerMod
         // [Thread-Any] Enqueues info on a call. The hook_target is captured at enqueue-time.
         auto enqueue(EMiddlewareHookTarget hook_target,
                      RC::Unreal::UObject* context,
-                     RC::Unreal::UFunction* function,
-                     uint32_t depth,
-                     std::thread::id thread_id,
-                     bool is_tick) -> void;
+                     RC::Unreal::UFunction* function) -> void;
 
         // [Thread-ImGui] Dequeues call info.
         //  max_ms - maximum wall time (ms) to spend dequeuing.
@@ -64,30 +61,40 @@ namespace RC::EventViewerMod
         [[nodiscard]] auto get_average_enqueue_time() const -> double;
         [[nodiscard]] auto get_average_dequeue_time() const -> double;
 
+         ~Middleware();
     private:
         Middleware();
-        ~Middleware();
+
         auto assert_on_imgui_thread() const -> void;
         [[nodiscard]] auto is_tick_fn(const RC::Unreal::UFunction* fn) const -> bool;
         auto stop_impl(bool do_assert) -> bool;
 
+        template<typename CallbackType>
+        struct HookController
+        {
+            Unreal::Hook::GlobalCallbackId(*register_prehook_fn)(CallbackType, Unreal::Hook::FCallbackOptions){};
+            Unreal::Hook::GlobalCallbackId(*register_posthook_fn)(CallbackType, Unreal::Hook::FCallbackOptions){};
+            CallbackType m_pre_callback{};
+            CallbackType m_post_callback{};
+            Unreal::Hook::GlobalCallbackId m_prehook_id = Unreal::Hook::ERROR_ID;
+            Unreal::Hook::GlobalCallbackId m_posthook_id = Unreal::Hook::ERROR_ID;
+
+            auto install_prehook() -> bool;
+            auto install_posthook() -> bool;
+            auto unhook() -> void;
+            auto is_hooked() const -> bool;
+
+            inline static Unreal::Hook::FCallbackOptions m_cb_options{false, true, STR("EventViewer"), STR("CallStackMonitor")};
+        };
     private:
-        // Hook state
-        RC::Unreal::Hook::GlobalCallbackId m_prehook_id = RC::Unreal::Hook::ERROR_ID;
-        RC::Unreal::Hook::GlobalCallbackId m_posthook_id = RC::Unreal::Hook::ERROR_ID;
+        HookController<Unreal::Hook::ProcessEventCallbackWithData> m_pe_controller{};
+        HookController<Unreal::Hook::ProcessInternalCallbackWithData> m_pi_controller{};
+        HookController<Unreal::Hook::ProcessLocalScriptFunctionCallbackWithData> m_plsf_controller{};
 
         EMiddlewareHookTarget m_hook_target = EMiddlewareHookTarget::ProcessEvent;
         bool m_paused = true;
 
         std::thread::id m_imgui_id{};
-
-        RC::Unreal::Hook::FCallbackOptions m_options{false, true, STR("EventViewer"), STR("CallStackMonitor")};
-
-        // Hook callbacks (initialized in ctor)
-        RC::Unreal::Hook::ProcessEventCallbackWithData m_pe_pre{};
-        RC::Unreal::Hook::ProcessEventCallbackWithData m_pe_post{};
-        RC::Unreal::Hook::ProcessInternalCallbackWithData m_pi_pre{};
-        RC::Unreal::Hook::ProcessInternalCallbackWithData m_pi_post{};
 
         // Queue
         moodycamel::ConcurrentQueue<CallStackEntry> m_queue{};
@@ -95,11 +102,44 @@ namespace RC::EventViewerMod
         std::vector<CallStackEntry> m_buffer{};
 
         // Detected tick functions
-        inline static std::unordered_set<RC::Unreal::UObject*> m_tick_fns{};
+        std::unordered_set<RC::Unreal::UObject*> m_tick_fns{};
 
-        // Depth tracking
-        inline static thread_local uint32_t m_pe_depth = 0;
-        inline static thread_local uint32_t m_pi_depth = 0;
-        inline static std::atomic_uint64_t m_depth_reset_counter = 0;
+        inline static thread_local uint32_t m_depth = 0;
+        std::atomic_uint64_t m_depth_reset_counter = 0;
+
+        std::atomic_flag m_allow_queue;
     };
+
+    template <typename CallbackType>
+    auto Middleware::HookController<CallbackType>::install_prehook() -> bool
+    {
+        if (m_prehook_id != RC::Unreal::Hook::ERROR_ID) return false; //todo log
+        m_prehook_id = register_prehook_fn(m_pre_callback, m_cb_options);
+        if (m_prehook_id == RC::Unreal::Hook::ERROR_ID) return false; //todo log
+        return true;
+    }
+
+    template <typename CallbackType>
+    auto Middleware::HookController<CallbackType>::install_posthook() -> bool
+    {
+        if (m_posthook_id != RC::Unreal::Hook::ERROR_ID) return false; //todo log
+        m_posthook_id = register_posthook_fn(m_post_callback, m_cb_options);
+        if (m_posthook_id == RC::Unreal::Hook::ERROR_ID) return false; //todo log
+        return true;
+    }
+
+    template <typename CallbackType>
+    auto Middleware::HookController<CallbackType>::unhook() -> void
+    {
+        if (m_prehook_id == RC::Unreal::Hook::ERROR_ID && m_posthook_id == RC::Unreal::Hook::ERROR_ID) return; //todo log
+        RC::Unreal::Hook::UnregisterCallback(m_prehook_id); //todo log if false
+        RC::Unreal::Hook::UnregisterCallback(m_posthook_id); //todo log if false
+        m_prehook_id = m_posthook_id = RC::Unreal::Hook::ERROR_ID;
+    }
+
+    template <typename CallbackType>
+    auto Middleware::HookController<CallbackType>::is_hooked() const -> bool
+    {
+        return (m_prehook_id != RC::Unreal::Hook::ERROR_ID && m_posthook_id != RC::Unreal::Hook::ERROR_ID);
+    }
 } // namespace RC::EventViewerMod

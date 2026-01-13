@@ -4,7 +4,8 @@ namespace RC::EventViewerMod
 {
 #define EVM_MIDDLEWARE_HOOK_TARGET(X, EnumName) \
     X(EnumName, ProcessEvent)                   \
-    X(EnumName, ProcessInternal)
+    X(EnumName, ProcessInternal)                \
+    X(EnumName, ProcessLocalScriptFunction)
 
 #define EVM_MODE(X, EnumName) \
     X(EnumName, Stack)        \

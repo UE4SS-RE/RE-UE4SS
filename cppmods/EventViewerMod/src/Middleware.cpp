@@ -10,7 +10,8 @@
 
 // if using fname index as a hash, games that implement name recycling can be problematic/inaccurate for context objects
 // BUG layout issues
-// FEATURES right click menus for adding to lists, copying, etc, lowercase filters, clear all should clear thread list, further cut down on memory usage by using text unformatted's end pointer
+// FEATURES right click menus for adding to lists, copying, etc, clear all should clear thread list, further cut down on memory usage by using text unformatted's end pointer
+// TODO finish rendering entries on stop rather than discarding them (make sure theres a message when doing so), implement entry limits or virtualized list, use BeginGroup instead of BeginChild? block enqueue until a flag is set?
 namespace RC::EventViewerMod
 {
     using RC::Unreal::UFunction;
@@ -36,7 +37,7 @@ namespace RC::EventViewerMod
 
     Middleware::Middleware()
     {
-        Unreal::UObjectGlobals::ForEachUObject([](UObject* object, ...) -> LoopAction {
+        Unreal::UObjectGlobals::ForEachUObject([this](UObject* object, ...) -> LoopAction {
             if (object && Unreal::Cast<UFunction>(object) && object->GetName().contains(STR("Tick")))
             {
                 m_tick_fns.insert(object);
@@ -46,61 +47,41 @@ namespace RC::EventViewerMod
 
         Output::send<LogLevel::Verbose>(L"Found {} engine tick functions!", m_tick_fns.size());
 
-        // Hook callbacks
-        m_pe_pre = [this](auto&, UObject* context, UFunction* function, void*)
-        {
-            thread_local std::thread::id thread_id = std::this_thread::get_id();
-            thread_local uint64_t local_reset_counter = m_depth_reset_counter.load(std::memory_order_acquire);
-
-            const auto current_counter = m_depth_reset_counter.load(std::memory_order_acquire);
-            if (current_counter != local_reset_counter)
-            {
-                m_pe_depth = 0;
-                local_reset_counter = current_counter;
+        m_pe_controller = {
+            .register_prehook_fn = &RC::Unreal::Hook::RegisterProcessEventPreCallback,
+            .register_posthook_fn = &RC::Unreal::Hook::RegisterProcessEventPostCallback,
+            .m_pre_callback = [this](auto&, UObject* context, UFunction* function, void*) {
+                return enqueue(EMiddlewareHookTarget::ProcessEvent, context, function);
+            },
+            .m_post_callback = [](auto&, UObject*, UFunction*, void*) {
+                m_depth = (m_depth == 0) ? 0 : (m_depth - 1);
             }
-
-            return enqueue(m_hook_target,
-                    context,
-                    function,
-                    m_pe_depth++,
-                    thread_id,
-                    is_tick_fn(function));
         };
 
-        m_pe_post = [](auto&, UObject*, UFunction*, void*)
-        {
-            m_pe_depth = (m_pe_depth == 0) ? 0 : (m_pe_depth - 1);
+        m_pi_controller = {
+            .register_prehook_fn = &RC::Unreal::Hook::RegisterProcessInternalPreCallback,
+            .register_posthook_fn = &RC::Unreal::Hook::RegisterProcessInternalPostCallback,
+            .m_pre_callback = [this](auto&, UObject* context, FFrame& stack, void*) {
+                auto fn = stack.Node();
+                if (!fn) fn = stack.CurrentNativeFunction();
+                return enqueue(EMiddlewareHookTarget::ProcessInternal, context, fn);
+            },
+            .m_post_callback = [](auto&, UObject*, FFrame&, void*) {
+                m_depth = (m_depth == 0) ? 0 : (m_depth - 1);
+            }
         };
 
-        m_pi_pre = [this](auto&, UObject* context, FFrame& stack, void*)
-        {
-            thread_local std::thread::id thread_id = std::this_thread::get_id();
-            thread_local uint64_t local_reset_counter = m_depth_reset_counter.load(std::memory_order_acquire);
-
-            const auto current_counter = m_depth_reset_counter.load(std::memory_order_acquire);
-            if (current_counter != local_reset_counter)
-            {
-                m_pi_depth = 0;
-                local_reset_counter = current_counter;
+        m_plsf_controller = {
+            .register_prehook_fn = &RC::Unreal::Hook::RegisterProcessLocalScriptFunctionPreCallback,
+            .register_posthook_fn = &RC::Unreal::Hook::RegisterProcessLocalScriptFunctionPostCallback,
+            .m_pre_callback = [this](auto&, UObject* context, FFrame& stack, void*) {
+                auto fn = stack.Node();
+                if (!fn) fn = stack.CurrentNativeFunction();
+                return enqueue(EMiddlewareHookTarget::ProcessLocalScriptFunction, context, fn);
+            },
+            .m_post_callback = [](auto&, UObject*, FFrame&, void*) {
+                m_depth = (m_depth == 0) ? 0 : (m_depth - 1);
             }
-
-            auto fn = stack.Node();
-            if (!fn)
-            {
-                fn = stack.CurrentNativeFunction();
-            }
-
-            return enqueue(m_hook_target,
-                    context,
-                    fn,
-                    m_pi_depth++,
-                    thread_id,
-                    is_tick_fn(fn));
-        };
-
-        m_pi_post = [](auto&, UObject*, FFrame&, void*)
-        {
-            m_pi_depth = (m_pi_depth == 0) ? 0 : (m_pi_depth - 1);
         };
 
         QueueProfiler::Reset();
@@ -178,20 +159,13 @@ namespace RC::EventViewerMod
             return true;
         }
 
-        if (m_prehook_id != ERROR_ID && !UnregisterCallback(m_prehook_id))
-        {
-            return false;
-        }
-        if (m_posthook_id != ERROR_ID && !UnregisterCallback(m_posthook_id))
-        {
-            return false;
-        }
-
-        m_prehook_id = m_posthook_id = ERROR_ID;
+        m_pe_controller.unhook(); //TODO use separate pre/post unhook?
+        m_pi_controller.unhook();
+        m_plsf_controller.unhook();
 
         // Causes all thread_local depths to be reset the next time the prehook runs.
         m_depth_reset_counter.fetch_add(1, std::memory_order_release);
-
+        m_allow_queue.clear(std::memory_order_release);
         m_paused = true;
         return true;
     }
@@ -235,54 +209,47 @@ namespace RC::EventViewerMod
             return true;
         }
 
-        switch (m_hook_target)
-        {
-        case EMiddlewareHookTarget::ProcessEvent:
-            // Install post first; UE4SS historically had edge cases where pre wouldn't run unless post exists.
-            m_posthook_id = RegisterProcessEventPostCallback(m_pe_post, m_options);
-            m_prehook_id = RegisterProcessEventPreCallback(m_pe_pre, m_options);
-            break;
-        case EMiddlewareHookTarget::ProcessInternal:
-            m_posthook_id = RegisterProcessInternalPostCallback(m_pi_post, m_options);
-            m_prehook_id = RegisterProcessInternalPreCallback(m_pi_pre, m_options);
-            break;
-        default:
-            throw std::runtime_error("Unknown hook target");
-        }
-
-        if (m_prehook_id == ERROR_ID || m_posthook_id == ERROR_ID)
-        {
-            if (m_prehook_id != ERROR_ID)
-            {
-                UnregisterCallback(m_prehook_id);
-            }
-            if (m_posthook_id != ERROR_ID)
-            {
-                UnregisterCallback(m_posthook_id);
-            }
-            m_prehook_id = m_posthook_id = ERROR_ID;
-            m_paused = true;
+        if (!(m_plsf_controller.install_posthook() &&
+        m_pi_controller.install_posthook() &&
+        m_pe_controller.install_posthook() &&
+        m_plsf_controller.install_prehook() &&
+        m_pi_controller.install_prehook() &&
+        m_pe_controller.install_prehook())) {
+            m_pe_controller.unhook();
+            m_pi_controller.unhook();
+            m_plsf_controller.unhook();
+            //TODO log
             return false;
         }
 
         m_paused = false;
+        m_allow_queue.test_and_set(std::memory_order_acq_rel);
         return true;
     }
 
     auto Middleware::enqueue(const EMiddlewareHookTarget hook_target,
                              UObject* context,
-                             UFunction* function,
-                             const uint32_t depth,
-                             const std::thread::id thread_id,
-                             const bool is_tick) -> void
+                             UFunction* function) -> void
     {
+        thread_local std::thread::id thread_id = std::this_thread::get_id();
+        thread_local uint64_t local_reset_counter = m_depth_reset_counter.load(std::memory_order_acquire);
+        if (!m_allow_queue.test(std::memory_order_acquire)) return;
+        const auto current_counter = m_depth_reset_counter.load(std::memory_order_acquire);
+        if (current_counter != local_reset_counter)
+        {
+            m_depth = 0;
+            local_reset_counter = current_counter;
+        }
+
+        const auto is_tick = is_tick_fn(function);
+
         QueueProfiler::BeginEnqueue();
 
         // Middleware is a singleton and lives for the mod lifetime, so a simple thread_local token is safe here.
         thread_local ProducerToken tls_token{m_queue};
 
         auto strings = StringPool::GetInstance().get_strings(context, function);
-        m_queue.enqueue(tls_token, CallStackEntry{hook_target, strings, depth, thread_id, is_tick});
+        m_queue.enqueue(tls_token, CallStackEntry{hook_target, strings, m_depth++, thread_id, is_tick});
 
         QueueProfiler::EndEnqueue();
     }
@@ -304,6 +271,7 @@ namespace RC::EventViewerMod
             QueueProfiler::BeginDequeue();
             const auto amount = m_queue.try_dequeue_bulk(m_imgui_consumer_token, m_buffer.data(), max_count_per_iteration);
             QueueProfiler::EndDequeue();
+            std::atomic_uint64_t a;
 
             if (amount == 0)
             {
