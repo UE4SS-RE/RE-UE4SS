@@ -1,12 +1,34 @@
 #include <StringPool.hpp>
-#include <stdexcept>
+
 #include <Helpers/String.hpp>
 
-auto RC::EventViewerMod::StringPool::get_strings(RC::Unreal::UObject* caller, RC::Unreal::UFunction* function) -> std::pair<std::string_view, std::string_view>
+#include <cctype>
+
+namespace
 {
+    // ASCII-only lowercasing; Unreal function/object names are typically ASCII.
+    // If this ever needs full Unicode casefolding, we'll revisit.
+    auto to_lower_ascii_copy(std::string_view s) -> std::string
+    {
+        std::string out;
+        out.reserve(s.size());
+        for (const unsigned char ch : s)
+        {
+            out.push_back(static_cast<char>(std::tolower(ch)));
+        }
+        return out;
+    }
+}
+
+auto RC::EventViewerMod::StringPool::get_strings(RC::Unreal::UObject* caller, RC::Unreal::UFunction* function) -> AllNameStringViews
+{
+    // StringPool combines the caller's ComparisonIndex and the function's ComparisonIndex
+    // to generate a unique hash for the full name string.
     uint64_t hash = function->GetNamePrivate().GetComparisonIndex();
     hash = hash << 32;
     hash |= caller->GetNamePrivate().GetComparisonIndex();
+
+    const uint32_t function_hash = static_cast<uint32_t>(function->GetNamePrivate().GetComparisonIndex());
 
     {
         std::shared_lock lock(m_mutex);
@@ -15,22 +37,47 @@ auto RC::EventViewerMod::StringPool::get_strings(RC::Unreal::UObject* caller, RC
         {
             auto& string_info = string_info_it->second;
             std::string_view full_name = string_info.full_name;
+            std::string_view lower_full = string_info.lower_cased_full_name;
+
             std::string_view func_name = full_name;
             func_name.remove_prefix(string_info.function_begin);
-            return std::make_pair<std::string_view, std::string_view>(std::move(full_name), std::move(func_name));
+
+            std::string_view lower_func_name = lower_full;
+            lower_func_name.remove_prefix(string_info.function_begin);
+
+            return AllNameStringViews{
+                FunctionNameStringViews{function_hash, func_name, lower_func_name},
+                full_name,
+                lower_full,
+            };
         }
     }
+
+    const auto caller_str = RC::to_string(caller->GetName());
+    const auto func_str = RC::to_string(function->GetName());
+
+    // Build once, store both original-case and lower-cased versions.
+    const auto full = caller_str + "." + func_str;
+    const auto lower_full = to_lower_ascii_copy(full);
+
     {
-        const auto caller_str = to_string(caller->GetName());
-        const auto func_str = to_string(function->GetName());
-        {
-            std::unique_lock lock(m_mutex);
-            auto& string_info = m_pool.emplace(hash, std::move(StringInfo{ caller_str.size() + 1, caller_str + "." + func_str })).first->second;
-            std::string_view full_name = string_info.full_name;
-            std::string_view func_name = full_name;
-            func_name.remove_prefix(string_info.function_begin);
-            return std::make_pair<std::string_view, std::string_view>(std::move(full_name), std::move(func_name));
-        }
+        std::unique_lock lock(m_mutex);
+        auto& string_info = m_pool.emplace(hash, StringInfo{caller_str.size() + 1, full, lower_full}).first->second;
+
+        std::string_view full_name = string_info.full_name;
+        std::string_view lower_full_name = string_info.lower_cased_full_name;
+
+        std::string_view func_name = full_name;
+        func_name.remove_prefix(string_info.function_begin);
+
+        std::string_view lower_func_name = lower_full_name;
+        lower_func_name.remove_prefix(string_info.function_begin);
+
+        return AllNameStringViews{
+            FunctionNameStringViews{function_hash, func_name, lower_func_name},
+            full_name,
+            lower_full_name,
+        };
     }
 }
 

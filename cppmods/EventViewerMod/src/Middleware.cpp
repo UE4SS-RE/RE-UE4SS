@@ -8,6 +8,9 @@
 
 #include <Unreal/CoreUObject/UObject/Class.hpp>
 
+// if using fname index as a hash, games that implement name recycling can be problematic/inaccurate for context objects
+// BUG layout issues
+// FEATURES right click menus for adding to lists, copying, etc, lowercase filters, clear all should clear thread list, further cut down on memory usage by using text unformatted's end pointer
 namespace RC::EventViewerMod
 {
     using RC::Unreal::UFunction;
@@ -280,14 +283,7 @@ namespace RC::EventViewerMod
         thread_local ProducerToken tls_token{m_queue};
 
         auto strings = StringPool::GetInstance().get_strings(context, function);
-        m_queue.enqueue(tls_token, CallStackEntry{
-            hook_target,
-            strings.first,
-            strings.second,
-            depth,
-            thread_id,
-            is_tick
-        });
+        m_queue.enqueue(tls_token, CallStackEntry{hook_target, strings, depth, thread_id, is_tick});
 
         QueueProfiler::EndEnqueue();
     }

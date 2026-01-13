@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <chrono>
+#include <cctype>
 #include <execution>
 #include <ctime>
 #include <iomanip>
@@ -23,10 +24,26 @@
 
 #include "QueueProfiler.hpp"
 
-// Returns string_views into `string`.
-static std::vector<std::string_view> split_string_by_comma(const std::string& string)
+namespace
 {
-    std::vector<std::string_view> result;
+    // ASCII-only lowercasing for case-insensitive filtering.
+    // (Unreal names are typically ASCII; if this becomes a problem we'll revisit.)
+    auto to_lower_ascii_copy(std::string_view s) -> std::string
+    {
+        std::string out;
+        out.reserve(s.size());
+        for (const unsigned char ch : s)
+        {
+            out.push_back(static_cast<char>(std::tolower(ch)));
+        }
+        return out;
+    }
+}
+
+// Returns lower-cased tokens (copied strings).
+static std::vector<std::string> split_string_by_comma(const std::string& string)
+{
+    std::vector<std::string> result;
     if (string.empty())
     {
         return result;
@@ -63,7 +80,7 @@ static std::vector<std::string_view> split_string_by_comma(const std::string& st
         auto token = trim(sv.substr(start, end - start));
         if (!token.empty())
         {
-            result.emplace_back(token);
+            result.emplace_back(to_lower_ascii_copy(token));
         }
 
         if (end == sv.size())
@@ -391,7 +408,7 @@ namespace RC::EventViewerMod
 
                     ImGui::TableNextRow();
                     ImGui::TableSetColumnIndex(0);
-                    ImGui::TextUnformatted(entry.text.data());
+                    ImGui::TextUnformatted(entry.function_name.data());
                     ImGui::TableSetColumnIndex(1);
                     ImGui::Text("%llu", static_cast<unsigned long long>(entry.frequency));
                 }
@@ -517,13 +534,13 @@ namespace RC::EventViewerMod
                               thread.call_stack.begin(),
                               thread.call_stack.end(),
                               [this, show_tick](CallStackEntry& entry) {
-                                  entry.is_disabled = (entry.is_tick && !show_tick) || !passes_filters(entry.text);
+                                  entry.is_disabled = (entry.is_tick && !show_tick) || !passes_filters(entry.lower_cased_full_name);
                               });
 
                 // Frequency view is smaller and is a list (non-random-access).
                 for (auto& entry : thread.call_frequencies)
                 {
-                    entry.is_disabled = (entry.is_tick && !show_tick) || !passes_filters(entry.text);
+                    entry.is_disabled = (entry.is_tick && !show_tick) || !passes_filters(entry.lower_cased_function_name);
                 }
             }
         }
@@ -564,18 +581,19 @@ namespace RC::EventViewerMod
             auto& thread = *thread_ptr;
 
             // Determine disabled state under current filters.
-            const bool disabled = (entry.is_tick && !m_state.show_tick) || !passes_filters(entry.text);
+            const bool stack_disabled = (entry.is_tick && !m_state.show_tick) || !passes_filters(entry.lower_cased_full_name);
+            const bool freq_disabled = (entry.is_tick && !m_state.show_tick) || !passes_filters(entry.lower_cased_function_name);
 
             // Frequency tracking: bump existing, or add.
             auto freq_it = std::ranges::find_if(thread.call_frequencies, [&entry](const CallFrequencyEntry& freq_entry) -> bool {
-                return entry.function_name == freq_entry.text;
+                return entry.function_hash == freq_entry.function_hash;
             });
 
             if (freq_it != thread.call_frequencies.end()) [[likely]]
             {
                 auto& freq = *freq_it;
                 ++freq.frequency;
-                freq.is_disabled = disabled;
+                freq.is_disabled = freq_disabled;
 
                 // Maintain descending order by frequency using list::splice (fast, no alloc).
                 auto new_pos = freq_it;
@@ -595,13 +613,13 @@ namespace RC::EventViewerMod
             }
             else
             {
-                thread.call_frequencies.emplace_back(entry.function_name, entry.is_tick);
+                thread.call_frequencies.emplace_back(static_cast<const FunctionNameStringViews&>(entry), entry.is_tick);
                 auto& freq = thread.call_frequencies.back();
-                freq.is_disabled = disabled;
+                freq.is_disabled = freq_disabled;
             }
 
             // Call stack history.
-            entry.is_disabled = disabled;
+            entry.is_disabled = stack_disabled;
             thread.call_stack.emplace_back(std::move(entry));
         });
     }
@@ -724,7 +742,7 @@ namespace RC::EventViewerMod
                     continue;
                 }
                 for (auto i = 0u; i < entry.depth; ++i) out << "\t";
-                out << entry.text << '\n';
+                out << entry.full_name << '\n';
             }
 
             out << "\n\n\n";
@@ -743,7 +761,7 @@ namespace RC::EventViewerMod
             {
                 continue;
             }
-            out << entry.text << '\n';
+            out << entry.function_name << '\t' << entry.frequency << '\n';
         }
 
         out << "\n\n\n";
