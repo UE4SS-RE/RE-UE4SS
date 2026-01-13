@@ -18,6 +18,7 @@ namespace RC::EventViewerMod
         //  - full_name / function_name for display
         //  - lower_cased_* for case-insensitive filtering
         //  - function_hash for fast equality on function identity
+        // TODO null check caller/function
         auto get_strings(RC::Unreal::UObject* caller, RC::Unreal::UFunction* function) -> AllNameStringViews;
 
         static auto GetInstance() -> StringPool&;
