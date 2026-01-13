@@ -104,6 +104,8 @@ Added individual mod restart/uninstall/start functionality to Lua Debugger ([UE4
 - Restart/Start button in Script Editor tab for quick mod iteration
 - New file creation dialog with optional auto-require in main.lua
 
+- Added double-click navigation to Lua States list to switch to Debug tab
+
 ### UHT Dumper
 
 Added support for generating `FUtf8String` and `FAnsiString` properties in UHT-compatible headers ([UE4SS #1015](https://github.com/UE4SS-RE/RE-UE4SS/pull/1015))
