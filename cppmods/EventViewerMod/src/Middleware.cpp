@@ -9,9 +9,8 @@
 #include <Unreal/CoreUObject/UObject/Class.hpp>
 
 // if using fname index as a hash, games that implement name recycling can be problematic/inaccurate for context objects
-// BUG layout issues
 // FEATURES right click menus for adding to lists, copying, etc, clear all should clear thread list, further cut down on memory usage by using text unformatted's end pointer
-// TODO finish rendering entries on stop rather than discarding them (make sure theres a message when doing so), implement entry limits or virtualized list, use BeginGroup instead of BeginChild? block enqueue until a flag is set?
+// TODO finish rendering entries on stop rather than discarding them (make sure theres a message when doing so), implement entry limits or virtualized list,
 namespace RC::EventViewerMod
 {
     using RC::Unreal::UFunction;
@@ -218,7 +217,6 @@ namespace RC::EventViewerMod
             m_pe_controller.unhook();
             m_pi_controller.unhook();
             m_plsf_controller.unhook();
-            //TODO log
             return false;
         }
 
