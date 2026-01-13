@@ -355,8 +355,12 @@ namespace RC::EventViewerMod
 
         auto& thread = target.threads[target.current_thread];
 
-        ImGui::BeginChild("##view", {0,0}, ImGuiChildFlags_Borders);
-
+        auto area = ImGui::GetContentRegionAvail();
+        auto& padding = ImGui::GetStyle().WindowPadding;
+        auto& scroll_size = ImGui::GetStyle().ScrollbarSize;
+        area.y -= ((padding.y + scroll_size) * 2);
+        area.x -= (padding.x + scroll_size);
+        ImGui::BeginChild("##view", area, ImGuiChildFlags_Borders);
         if (m_state.mode == EMode::Stack)
         {
             if (thread.call_stack.empty())
