@@ -862,6 +862,10 @@ auto Client::add_to_black_list(std::string_view item) -> void
     apply_filters_to_history(false, true, false);
 }
 
+auto Client::render_entry_stack_modal(const CallStackEntry* entry) -> void
+{
+}
+
 auto Client::GetInstance() -> Client&
     {
         static Client client{};
