@@ -41,7 +41,7 @@ namespace RC::EventViewerMod
 
         enum class ESaveMode { none, current, all };
         auto save(ESaveMode mode) -> void;
-        auto serialize_view(ThreadInfo& info, EMode mode, std::ofstream& out) const -> void;
+        auto serialize_view(ThreadInfo& info, EMode mode, EMiddlewareHookTarget hook_target, std::ofstream& out) const -> void;
         auto serialize_all_views(std::ofstream& out) -> void;
 
         UIState m_state{};

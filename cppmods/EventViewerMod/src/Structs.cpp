@@ -118,10 +118,4 @@ namespace RC::EventViewerMod
         call_frequencies.clear();
         call_stack.clear();
     }
-
-    auto TargetInfo::clear() -> void
-    {
-        threads.clear();
-        current_thread = 0;
-    }
 } // namespace RC::EventViewerMod

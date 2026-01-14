@@ -58,7 +58,7 @@ namespace RC::EventViewerMod
         auto render_with_colored_indent_space(int indent_delta) const -> void;
         auto render(int indent_delta) const -> void;
 
-        EMiddlewareHookTarget hook_target = EMiddlewareHookTarget::ProcessEvent;
+        EMiddlewareHookTarget hook_target = EMiddlewareHookTarget::All;
         uint32_t depth = 0;
         std::thread::id thread_id{};
 
@@ -73,6 +73,9 @@ namespace RC::EventViewerMod
         CallFrequencyEntry(const FunctionNameStringViews& strings, bool is_tick);
 
         uint64_t frequency = 1;
+
+        // OR'd EMiddlewareHookTarget values that have invoked this function so far.
+        uint32_t source_flags = 0;
     };
 
     struct ThreadInfo
@@ -95,19 +98,12 @@ namespace RC::EventViewerMod
         std::string m_id_string;
     };
 
-    struct TargetInfo
-    {
-        std::vector<ThreadInfo> threads;
-        int current_thread = 0;
-
-        auto clear() -> void;
-    };
-
     struct UIState
     {
         bool enabled = false;                                                    // [Savable] [Thread-ImGui]
         bool started = false;                                                    // [Thread-ImGui]
         bool show_tick = false;                                                  // [Savable] [Thread-ImGui]
+        bool disable_indent_colors = false;                                      // [Savable] [Thread-ImGui]
         EMiddlewareHookTarget hook_target = EMiddlewareHookTarget::ProcessEvent; // [Savable] [Thread-ImGui]
         EMode mode = EMode::Stack;                                               // [Savable] [Thread-ImGui]
         uint16_t dequeue_max_ms = 10;                                            // [Savable] [Thread-ImGui]
@@ -119,7 +115,8 @@ namespace RC::EventViewerMod
         std::string whitelist;                                                   // [Savable] [Thread-ImGui]
         std::vector<std::string> whitelist_tokens;                               // [Thread-ImGui] (lower-cased tokens)
 
-        std::array<TargetInfo, EMiddlewareHookTarget_Size> targets{};            // [Thread-ImGui]
+        std::vector<ThreadInfo> threads{};                                      // [Thread-ImGui]
+        int current_thread = 0;                                                // [Thread-ImGui]
 
         std::atomic_flag needs_save = ATOMIC_FLAG_INIT;                          // [Thread-Any]
     };
