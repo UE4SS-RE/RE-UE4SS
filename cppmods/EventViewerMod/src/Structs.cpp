@@ -1,12 +1,9 @@
 #include <Structs.h>
-
-#include <Helpers/String.hpp>
-
+#include <Client.h>
 #include <Unreal/UnrealInitializer.hpp>
 
 #include <array>
 #include <sstream>
-#include <utility>
 
 #include <imgui.h>
 #include <imgui_internal.h>
@@ -24,6 +21,14 @@ inline constexpr static std::array COLORS = {
 
 namespace RC::EventViewerMod
 {
+    auto copy_to_clipboard(const std::string_view& string) -> void
+    {
+        ImGui::LogToClipboard();
+        ImVec2 dummy {0,0};
+        ImGui::LogRenderedText(&dummy, string.data(), string.data() + string.size());
+        ImGui::LogFinish();
+    };
+
     EntryBase::EntryBase(const bool is_tick)
         : is_tick(is_tick)
     {
@@ -48,7 +53,7 @@ namespace RC::EventViewerMod
         lower_cased_full_name = strings.lower_cased_full_name;
     }
 
-    auto CallStackEntry::render_with_colored_indent_space(const int indent_delta) const -> void
+    auto CallStackEntry::render_with_colored_indent_space(const int indent_delta, bool with_support_menus) const -> void
     {
         render_indents(indent_delta);
         const auto indent_width = ImGui::GetStyle().IndentSpacing * static_cast<float>(depth);
@@ -58,9 +63,10 @@ namespace RC::EventViewerMod
         max.y += ImGui::GetTextLineHeight();
         ImGui::GetWindowDrawList()->AddRectFilled(min, max, COLORS[depth % COLORS.size()]);
         ImGui::TextUnformatted(full_name.data());
+        if (with_support_menus) render_support_menus();
     }
 
-    auto CallStackEntry::render(const int indent_delta) const -> void
+    auto CallStackEntry::render(const int indent_delta, bool with_support_menus) const -> void
     {
         render_indents(indent_delta);
         ImGui::TextUnformatted(full_name.data());
@@ -84,12 +90,63 @@ namespace RC::EventViewerMod
         }
     }
 
+    auto CallStackEntry::render_support_menus() const -> void
+    {
+        ImGui::SetItemTooltip("Right click for options");
+
+        static const CallStackEntry* current_support_menu_attachment = nullptr;
+
+        if (current_support_menu_attachment == nullptr || current_support_menu_attachment == this)
+        {
+            if (ImGui::BeginPopupContextItem("EntryPopup##ep", ImGuiPopupFlags_MouseButtonRight)) // currently getting rendered for every entry since each entry shares this id, use static bool with else statement workaround
+            {
+                //if (ImGui::MenuItem("Show Call Stack"))
+                //ImGui::Separator();
+                current_support_menu_attachment = this;
+                if (ImGui::MenuItem("Copy Caller Name##ccn")) copy_to_clipboard({full_name.begin(), function_name.begin() - 1});
+                if (ImGui::MenuItem("Copy Function Name##cfn")) copy_to_clipboard(function_name);
+                if (ImGui::MenuItem("Copy Full Name##cfln")) copy_to_clipboard(full_name);
+                ImGui::Separator();
+                if (ImGui::MenuItem("Add Caller to Whitelist##cwl")) Client::GetInstance().add_to_white_list({full_name.begin(), function_name.begin() - 1});
+                if (ImGui::MenuItem("Add Function to Whitelist##fwl")) Client::GetInstance().add_to_white_list(function_name);
+                if (ImGui::MenuItem("Add Full Name to Whitelist##fnwl")) Client::GetInstance().add_to_white_list(full_name);
+                ImGui::Separator();
+                if (ImGui::MenuItem("Add Caller to Blacklist##cbl"))
+                {
+                    Client::GetInstance().add_to_black_list({full_name.begin(), function_name.begin() - 1});
+                    current_support_menu_attachment = nullptr;
+                }
+                if (ImGui::MenuItem("Add Function to Blacklist##fbl"))
+                {
+                    Client::GetInstance().add_to_black_list(function_name);
+                    current_support_menu_attachment = nullptr;
+                }
+                if (ImGui::MenuItem("Add Full Name to Blacklist##fnb"))
+                {
+                    Client::GetInstance().add_to_black_list(full_name);
+                    current_support_menu_attachment = nullptr;
+                }
+                ImGui::EndPopup();
+            }
+            else current_support_menu_attachment = nullptr;
+        }
+    }
+
     CallFrequencyEntry::CallFrequencyEntry(const FunctionNameStringViews& strings, const bool is_tick)
         : EntryBase(is_tick)
     {
         function_hash = strings.function_hash;
         function_name = strings.function_name;
         lower_cased_function_name = strings.lower_cased_function_name;
+    }
+
+    auto CallFrequencyEntry::render(bool with_support_menus) const -> void
+    {
+        ImGui::TableNextRow();
+        ImGui::TableSetColumnIndex(0);
+        ImGui::TextUnformatted(function_name.data());
+        ImGui::TableSetColumnIndex(1);
+        ImGui::Text("%llu", static_cast<unsigned long long>(frequency));
     }
 
     ThreadInfo::ThreadInfo(const std::thread::id thread_id)

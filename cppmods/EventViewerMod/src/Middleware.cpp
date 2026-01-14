@@ -9,8 +9,11 @@
 #include <Unreal/CoreUObject/UObject/Class.hpp>
 
 // if using fname index as a hash, games that implement name recycling can be problematic/inaccurate for context objects
-// FEATURES right click menus for adding to lists, copying, etc, clear all should clear thread list, further cut down on memory usage by using text unformatted's end pointer
-// TODO finish rendering entries on stop rather than discarding them (make sure theres a message when doing so), implement entry limits or virtualized list
+// FEATURES clear all should clear thread list, further cut down on memory usage by using text unformatted's end pointer
+// TODO finish rendering entries on stop rather than discarding them (make sure theres a message when doing so)
+// TODO implement entry limits or virtualized list
+// TODO add caller with imgui sameline text
+// TODO outline/color contrast hover menu
 namespace RC::EventViewerMod
 {
     using RC::Unreal::UFunction;
@@ -218,14 +221,13 @@ namespace RC::EventViewerMod
 
         const auto is_tick = is_tick_fn(function);
 
-        QueueProfiler::BeginEnqueue();
-
         // Middleware is a singleton and lives for the mod lifetime, so a simple thread_local token is safe here.
         thread_local ProducerToken tls_token{m_queue};
 
         auto strings = StringPool::GetInstance().get_strings(context, function);
-        m_queue.enqueue(tls_token, CallStackEntry{hook_target, strings, m_depth++, thread_id, is_tick});
 
+        QueueProfiler::BeginEnqueue();
+        m_queue.enqueue(tls_token, CallStackEntry{hook_target, strings, m_depth++, thread_id, is_tick});
         QueueProfiler::EndEnqueue();
     }
 
