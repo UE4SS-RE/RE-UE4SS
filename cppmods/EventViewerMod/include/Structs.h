@@ -77,6 +77,9 @@ namespace RC::EventViewerMod
 
         // OR'd EMiddlewareHookTarget values that have invoked this function so far.
         uint32_t source_flags = 0;
+
+    private:
+        auto render_support_menus() const -> void;
     };
 
     struct ThreadInfo

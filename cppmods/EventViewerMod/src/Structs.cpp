@@ -150,8 +150,33 @@ namespace RC::EventViewerMod
         ImGui::TableNextRow();
         ImGui::TableSetColumnIndex(0);
         ImGui::TextUnformatted(function_name.data());
+        if (with_support_menus) render_support_menus();
         ImGui::TableSetColumnIndex(1);
         ImGui::Text("%llu", static_cast<unsigned long long>(frequency));
+    }
+
+    auto CallFrequencyEntry::render_support_menus() const -> void
+    {
+        ImGui::SetItemTooltip("Right click for options");
+
+        static const CallFrequencyEntry* current_support_menu_attachment = nullptr;
+
+        if (current_support_menu_attachment == nullptr || current_support_menu_attachment == this)
+        {
+            if (ImGui::BeginPopupContextItem("EntryPopup##fep", ImGuiPopupFlags_MouseButtonRight))
+            {
+                current_support_menu_attachment = this;
+                if (ImGui::MenuItem("Copy Function Name##cfn")) copy_to_clipboard(function_name);
+                if (ImGui::MenuItem("Add Function to Whitelist##fwl")) Client::GetInstance().add_to_white_list(function_name);
+                if (ImGui::MenuItem("Add Function to Blacklist##fbl"))
+                {
+                    Client::GetInstance().add_to_black_list(function_name);
+                    current_support_menu_attachment = nullptr;
+                }
+                ImGui::EndPopup();
+            }
+            else current_support_menu_attachment = nullptr;
+        }
     }
 
     ThreadInfo::ThreadInfo(const std::thread::id thread_id)
