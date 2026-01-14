@@ -396,7 +396,7 @@ namespace RC::EventViewerMod
                 const int depth = static_cast<int>(entry.depth);
                 const int delta = have_prev ? (depth - prev_depth) : depth;
 
-                m_state.disable_indent_colors ? entry.render(delta) : entry.render_with_colored_indent_space(delta);
+                m_state.disable_indent_colors ? entry.render(delta, !m_state.started) : entry.render_with_colored_indent_space(delta, !m_state.started);
 
                 current_indent += delta;
                 prev_depth = depth;
@@ -428,11 +428,7 @@ namespace RC::EventViewerMod
                         continue;
                     }
 
-                    ImGui::TableNextRow();
-                    ImGui::TableSetColumnIndex(0);
-                    ImGui::TextUnformatted(entry.function_name.data());
-                    ImGui::TableSetColumnIndex(1);
-                    ImGui::Text("%llu", static_cast<unsigned long long>(entry.frequency));
+                    entry.render(!m_state.started);
                 }
 
                 ImGui::EndTable();
@@ -836,7 +832,37 @@ auto Client::request_save_state() -> void
         m_state.needs_save.test_and_set(std::memory_order_release);
     }
 
-    auto Client::GetInstance() -> Client&
+auto Client::add_to_white_list(const std::string_view item) -> void
+{
+    if (m_state.whitelist.empty())
+    {
+        m_state.whitelist += item;
+    }
+    else
+    {
+        m_state.whitelist += ", ";
+        m_state.whitelist += item;
+    }
+    request_save_state();
+    apply_filters_to_history(true, false, false);
+}
+
+auto Client::add_to_black_list(std::string_view item) -> void
+{
+    if (m_state.blacklist.empty())
+    {
+        m_state.blacklist += item;
+    }
+    else
+    {
+        m_state.blacklist += ", ";
+        m_state.blacklist += item;
+    }
+    request_save_state();
+    apply_filters_to_history(false, true, false);
+}
+
+auto Client::GetInstance() -> Client&
     {
         static Client client{};
         return client;

@@ -25,10 +25,9 @@ auto RC::EventViewerMod::StringPool::get_strings(RC::Unreal::UObject* caller, RC
     // StringPool combines the caller's ComparisonIndex and the function's ComparisonIndex
     // to generate a unique hash for the full name string.
     uint64_t hash = function->GetNamePrivate().GetComparisonIndex();
+    const uint32_t function_hash = hash;
     hash = hash << 32;
     hash |= caller->GetNamePrivate().GetComparisonIndex();
-
-    const uint32_t function_hash = static_cast<uint32_t>(function->GetNamePrivate().GetComparisonIndex());
 
     {
         std::shared_lock lock(m_mutex);

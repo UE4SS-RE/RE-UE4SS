@@ -18,6 +18,12 @@ namespace RC::EventViewerMod
         // [Thread-Any] Saves state on the next frame.
         auto request_save_state() -> void;
 
+        // [Thread-ImGui]
+        auto add_to_white_list(std::string_view item) -> void;
+
+        // [Thread-ImGui]
+        auto add_to_black_list(std::string_view item) -> void;
+
         // [Thread-Any]
         static auto GetInstance() -> Client&;
 

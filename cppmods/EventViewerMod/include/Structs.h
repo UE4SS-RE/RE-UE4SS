@@ -55,8 +55,8 @@ namespace RC::EventViewerMod
                        std::thread::id thread_id,
                        bool is_tick);
 
-        auto render_with_colored_indent_space(int indent_delta) const -> void;
-        auto render(int indent_delta) const -> void;
+        auto render_with_colored_indent_space(int indent_delta, bool with_support_menus) const -> void;
+        auto render(int indent_delta, bool with_support_menus) const -> void;
 
         EMiddlewareHookTarget hook_target = EMiddlewareHookTarget::All;
         uint32_t depth = 0;
@@ -64,6 +64,7 @@ namespace RC::EventViewerMod
 
     private:
         auto render_indents(int indent_delta) const -> void;
+        auto render_support_menus() const -> void;
     };
 
     // Stores both original-case and lower-cased function name views (for case-insensitive filtering).
@@ -71,7 +72,7 @@ namespace RC::EventViewerMod
     {
         CallFrequencyEntry() = default;
         CallFrequencyEntry(const FunctionNameStringViews& strings, bool is_tick);
-
+        auto render(bool with_support_menus) const -> void;
         uint64_t frequency = 1;
 
         // OR'd EMiddlewareHookTarget values that have invoked this function so far.
@@ -107,7 +108,7 @@ namespace RC::EventViewerMod
         EMiddlewareHookTarget hook_target = EMiddlewareHookTarget::ProcessEvent; // [Savable] [Thread-ImGui]
         EMode mode = EMode::Stack;                                               // [Savable] [Thread-ImGui]
         uint16_t dequeue_max_ms = 10;                                            // [Savable] [Thread-ImGui]
-        uint16_t dequeue_max_count = 50;                                         // [Savable] [Thread-ImGui]
+        uint16_t dequeue_max_count = 5000;                                       // [Savable] [Thread-ImGui] TODO raise this to uint64
 
         std::string blacklist;                                                   // [Savable] [Thread-ImGui]
         std::vector<std::string> blacklist_tokens;                               // [Thread-ImGui] (lower-cased tokens)
