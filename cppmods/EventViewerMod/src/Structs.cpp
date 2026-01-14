@@ -53,7 +53,7 @@ namespace RC::EventViewerMod
         lower_cased_full_name = strings.lower_cased_full_name;
     }
 
-    auto CallStackEntry::render_with_colored_indent_space(const int indent_delta, bool with_support_menus) const -> void
+    auto CallStackEntry::render_with_colored_indent_space(const int indent_delta, const bool with_support_menus) const -> void
     {
         render_indents(indent_delta);
         const auto indent_width = ImGui::GetStyle().IndentSpacing * static_cast<float>(depth);
@@ -62,14 +62,19 @@ namespace RC::EventViewerMod
         min.x -= indent_width;
         max.y += ImGui::GetTextLineHeight();
         ImGui::GetWindowDrawList()->AddRectFilled(min, max, COLORS[depth % COLORS.size()]);
+        ImGui::TextUnformatted(to_prefix_string(hook_target));
+        ImGui::SameLine();
         ImGui::TextUnformatted(full_name.data());
         if (with_support_menus) render_support_menus();
     }
 
-    auto CallStackEntry::render(const int indent_delta, bool with_support_menus) const -> void
+    auto CallStackEntry::render(const int indent_delta, const bool with_support_menus) const -> void
     {
         render_indents(indent_delta);
+        ImGui::TextUnformatted(to_prefix_string(hook_target));
+        ImGui::SameLine();
         ImGui::TextUnformatted(full_name.data());
+        if (with_support_menus) render_support_menus();
     }
 
     auto CallStackEntry::render_indents(const int indent_delta) const -> void
@@ -100,8 +105,8 @@ namespace RC::EventViewerMod
         {
             if (ImGui::BeginPopupContextItem("EntryPopup##ep", ImGuiPopupFlags_MouseButtonRight)) // currently getting rendered for every entry since each entry shares this id, use static bool with else statement workaround
             {
-                //if (ImGui::MenuItem("Show Call Stack"))
-                //ImGui::Separator();
+                if (ImGui::MenuItem("Show Call Stack")) Client::GetInstance().render_entry_stack_modal(this);
+                ImGui::Separator();
                 current_support_menu_attachment = this;
                 if (ImGui::MenuItem("Copy Caller Name##ccn")) copy_to_clipboard({full_name.begin(), function_name.begin() - 1});
                 if (ImGui::MenuItem("Copy Function Name##cfn")) copy_to_clipboard(function_name);
@@ -114,7 +119,7 @@ namespace RC::EventViewerMod
                 if (ImGui::MenuItem("Add Caller to Blacklist##cbl"))
                 {
                     Client::GetInstance().add_to_black_list({full_name.begin(), function_name.begin() - 1});
-                    current_support_menu_attachment = nullptr;
+                    current_support_menu_attachment = nullptr; // adding it to the blacklist disables this entry, which prevents render_view() from doing a function call with this instance that resets it
                 }
                 if (ImGui::MenuItem("Add Function to Blacklist##fbl"))
                 {

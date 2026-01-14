@@ -9,11 +9,10 @@
 #include <Unreal/CoreUObject/UObject/Class.hpp>
 
 // if using fname index as a hash, games that implement name recycling can be problematic/inaccurate for context objects
-// FEATURES clear all should clear thread list, further cut down on memory usage by using text unformatted's end pointer
-// TODO finish rendering entries on stop rather than discarding them (make sure theres a message when doing so)
-// TODO implement entry limits or virtualized list
-// TODO add caller with imgui sameline text
+// FEATURES clear all should clear thread list, per entry stack view
+// TODO horizontal scroll bar
 // TODO outline/color contrast hover menu
+// TODO refresh tick list on game end/begin
 namespace RC::EventViewerMod
 {
     using RC::Unreal::UFunction;
@@ -138,7 +137,7 @@ namespace RC::EventViewerMod
             return true;
         }
 
-        m_pe_controller.unhook(); //TODO use separate pre/post unhook?
+        m_pe_controller.unhook();
         m_pi_controller.unhook();
         m_plsf_controller.unhook();
 

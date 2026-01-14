@@ -24,6 +24,9 @@ namespace RC::EventViewerMod
         // [Thread-ImGui]
         auto add_to_black_list(std::string_view item) -> void;
 
+        // [Thread-ImGui]
+        auto render_entry_stack_modal(const CallStackEntry* entry) -> void;
+
         // [Thread-Any]
         static auto GetInstance() -> Client&;
 
