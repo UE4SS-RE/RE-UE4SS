@@ -24,12 +24,6 @@ namespace RC::EventViewerMod
         // By-reference singleton.
         static auto GetInstance() -> Middleware&;
 
-        // [Thread-ImGui] Sets the EMiddlewareHookTarget to use. Does not automatically start the stream.
-        auto set_hook_target(EMiddlewareHookTarget target) -> void;
-
-        // [Thread-ImGui]
-        [[nodiscard]] auto get_hook_target() const -> EMiddlewareHookTarget;
-
         // [Thread-Any] Enqueues info on a call. The hook_target is captured at enqueue-time.
         auto enqueue(EMiddlewareHookTarget hook_target,
                      RC::Unreal::UObject* context,
@@ -91,8 +85,7 @@ namespace RC::EventViewerMod
         HookController<Unreal::Hook::ProcessInternalCallbackWithData> m_pi_controller{};
         HookController<Unreal::Hook::ProcessLocalScriptFunctionCallbackWithData> m_plsf_controller{};
 
-        EMiddlewareHookTarget m_hook_target = EMiddlewareHookTarget::ProcessEvent;
-        bool m_paused = true;
+                bool m_paused = true;
 
         std::thread::id m_imgui_id{};
 

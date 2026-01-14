@@ -10,7 +10,7 @@
 
 // if using fname index as a hash, games that implement name recycling can be problematic/inaccurate for context objects
 // FEATURES right click menus for adding to lists, copying, etc, clear all should clear thread list, further cut down on memory usage by using text unformatted's end pointer
-// TODO finish rendering entries on stop rather than discarding them (make sure theres a message when doing so), implement entry limits or virtualized list,
+// TODO finish rendering entries on stop rather than discarding them (make sure theres a message when doing so), implement entry limits or virtualized list
 namespace RC::EventViewerMod
 {
     using RC::Unreal::UFunction;
@@ -122,29 +122,6 @@ namespace RC::EventViewerMod
     auto Middleware::get_average_dequeue_time() const -> double
     {
         return QueueProfiler::GetDequeueAverage();
-    }
-
-    auto Middleware::set_hook_target(const EMiddlewareHookTarget target) -> void
-    {
-        assert_on_imgui_thread();
-        if (m_hook_target == target)
-        {
-            return;
-        }
-
-        const bool should_resume = !m_paused;
-        stop();
-        m_hook_target = target;
-        if (should_resume)
-        {
-            start();
-        }
-    }
-
-    auto Middleware::get_hook_target() const -> EMiddlewareHookTarget
-    {
-        assert_on_imgui_thread();
-        return m_hook_target;
     }
 
     auto Middleware::stop_impl(const bool do_assert) -> bool
