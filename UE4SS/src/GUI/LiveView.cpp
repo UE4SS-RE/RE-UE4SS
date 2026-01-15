@@ -28,8 +28,7 @@
 #include <GUI/Dumpers.hpp>
 #include <FlagsStringifier.hpp>
 #include <Helpers/String.hpp>
-#include <JSON/JSON.hpp>
-#include <JSON/Parser/Parser.hpp>
+#include <glaze/glaze.hpp>
 #include <UE4SSProgram.hpp>
 #include <Unreal/AActor.hpp>
 #include <Unreal/FOutputDevice.hpp>
@@ -338,61 +337,68 @@ namespace RC::GUI
     };
     FLiveViewDeleteListener FLiveViewDeleteListener::LiveViewDeleteListener{};
 
-    static auto add_bool_filter_to_json(JSON::Array& json_filters, const StringType& filter_name, bool is_enabled) -> void
+    static auto add_bool_filter_to_json(glz::generic::array_t& json_filters, const StringType& filter_name, bool is_enabled) -> void
     {
-        auto& json_object = json_filters.new_object();
-        json_object.new_string(STR("FilterName"), filter_name);
-        auto& filter_data = json_object.new_object(STR("FilterData"));
-        filter_data.new_bool(STR("Enabled"), is_enabled);
+        glz::generic json_object = glz::generic::object_t{};
+        json_object["FilterName"] = to_string(filter_name);
+        glz::generic filter_data = glz::generic::object_t{};
+        filter_data["Enabled"] = is_enabled;
+        json_object["FilterData"] = std::move(filter_data);
+        json_filters.emplace_back(std::move(json_object));
     }
 
-    static auto add_int32_filter_to_json(JSON::Array& json_filters, const StringType& filter_name, int32_t value) -> void
+    static auto add_int32_filter_to_json(glz::generic::array_t& json_filters, const StringType& filter_name, int32_t value) -> void
     {
-        auto& json_object = json_filters.new_object();
-        json_object.new_string(STR("FilterName"), filter_name);
-        auto& filter_data = json_object.new_object(STR("FilterData"));
-        filter_data.new_number(STR("Value"), value);
+        glz::generic json_object = glz::generic::object_t{};
+        json_object["FilterName"] = to_string(filter_name);
+        glz::generic filter_data = glz::generic::object_t{};
+        filter_data["Value"] = static_cast<double>(value);
+        json_object["FilterData"] = std::move(filter_data);
+        json_filters.emplace_back(std::move(json_object));
     }
 
     template <typename ContainerType>
-    static auto add_array_filter_to_json(JSON::Array& json_filters, const StringType& filter_name, const ContainerType& container, const StringType& array_name)
+    static auto add_array_filter_to_json(glz::generic::array_t& json_filters, const StringType& filter_name, const ContainerType& container, const StringType& array_name)
             -> void
     {
-        auto& json_object = json_filters.new_object();
-        json_object.new_string(STR("FilterName"), filter_name);
-        auto& filter_data = json_object.new_object(STR("FilterData"));
+        glz::generic json_object = glz::generic::object_t{};
+        json_object["FilterName"] = to_string(filter_name);
+        glz::generic filter_data = glz::generic::object_t{};
 
         if (array_name == STR("ClassNames"))
         {
-            filter_data.new_bool(STR("IsExclude"), Filter::ClassNamesFilter::b_is_exclude);
+            filter_data["IsExclude"] = Filter::ClassNamesFilter::b_is_exclude;
         }
         else if (array_name == STR("FunctionParamFlags"))
         {
-            filter_data.new_bool(STR("IncludeReturnProperty"), Filter::FunctionParamFlags::s_include_return_property);
+            filter_data["IncludeReturnProperty"] = Filter::FunctionParamFlags::s_include_return_property;
         }
 
-        auto& values_array = filter_data.new_array(array_name);
+        glz::generic::array_t values_array{};
         for (const auto& value : container)
         {
             if constexpr (std::is_same_v<typename ContainerType::value_type, FName>)
             {
-                values_array.new_string(value.ToString());
+                values_array.emplace_back(to_string(value.ToString()));
             }
             else if constexpr (std::is_same_v<typename ContainerType::value_type, bool>)
             {
-                values_array.new_bool(value);
+                values_array.emplace_back(value);
             }
             else
             {
-                values_array.new_string(value);
+                values_array.emplace_back(to_string(value));
             }
         }
+        filter_data[to_string(array_name)] = std::move(values_array);
+        json_object["FilterData"] = std::move(filter_data);
+        json_filters.emplace_back(std::move(json_object));
     }
 
     static auto internal_save_filters_to_disk() -> void
     {
-        auto json = JSON::Object{};
-        auto& json_filters = json.new_array(STR("Filters"));
+        glz::generic json = glz::generic::object_t{};
+        glz::generic::array_t json_filters{};
         {
             add_bool_filter_to_json(json_filters, STR("IncludeInheritance"), LiveView::s_include_inheritance);
             add_bool_filter_to_json(json_filters, STR("UseRegexForSearch"), LiveView::s_use_regex_for_search);
@@ -412,13 +418,16 @@ namespace RC::GUI
         {
             add_int32_filter_to_json(json_filters, Filter::MaxValueSize::s_debug_name, Filter::MaxValueSize::s_value);
         }
+        json["Filters"] = std::move(json_filters);
 
         auto json_file = File::open(StringType{UE4SSProgram::get_program().get_working_directory()} + fmt::format(STR("\\liveview\\filters.meta.json")),
                                     File::OpenFor::Writing,
                                     File::OverwriteExistingFile::Yes,
                                     File::CreateIfNonExistent::Yes);
-        int32_t json_indent_level{};
-        json_file.write_string_to_file(json.serialize(JSON::ShouldFormat::Yes, &json_indent_level));
+        if (auto result = glz::write<glz::opts{.prettify = true}>(json); result.has_value())
+        {
+            json_file.write_string_to_file(to_wstring(result.value()));
+        }
     }
 
     static auto save_filters_to_disk() -> void
@@ -429,18 +438,18 @@ namespace RC::GUI
     }
 
     template <typename T>
-    static auto json_array_to_filters_list(JSON::Array& json_array, std::vector<T>& list, StringType type, std::string& internal_value) -> void
+    static auto json_array_to_filters_list(const glz::generic::array_t& json_array, std::vector<T>& list, StringType type, std::string& internal_value) -> void
     {
         list.clear();
         internal_value.clear();
-        json_array.for_each([&](JSON::Value& item) {
-            if (!item.is<JSON::String>())
+        for (const auto& item : json_array)
+        {
+            if (!item.is_string())
             {
                 throw std::runtime_error{fmt::format("Invalid {} in 'filters.meta.json'", to_string(type))};
             }
-            list.emplace_back(item.as<JSON::String>()->get_view());
-            return LoopAction::Continue;
-        });
+            list.emplace_back(to_wstring(item.get<std::string>()));
+        }
         for (const auto& class_name : list)
         {
             if constexpr (std::is_same_v<T, FName>)
@@ -471,89 +480,97 @@ namespace RC::GUI
             return;
         }
 
-        const auto json_global_object = JSON::Parser::parse(json_file_contents);
-        const auto& json_filters = json_global_object->get<JSON::Array>(STR("Filters"));
-        json_filters.for_each([&](const JSON::Value& filter) {
-            if (!filter.is<JSON::Object>())
+        glz::generic json_root{};
+        auto parse_result = glz::read_json(json_root, to_string(json_file_contents));
+        if (parse_result)
+        {
+            throw std::runtime_error{"Failed to parse 'filters.meta.json'"};
+        }
+
+        const auto& json_filters = json_root["Filters"].get<glz::generic::array_t>();
+        for (const auto& filter : json_filters)
+        {
+            if (!filter.is_object())
             {
                 throw std::runtime_error{"Invalid filter in 'filters.meta.json'"};
             }
-            auto& json_object = *filter.as<JSON::Object>();
-            auto filter_name = json_object.get<JSON::String>(STR("FilterName")).get_view();
-            auto& filter_data = json_object.get<JSON::Object>(STR("FilterData"));
+            const auto& json_object = filter.get<glz::generic::object_t>();
+            auto filter_name = json_object.at("FilterName").get<std::string>();
+            const auto& filter_data = json_object.at("FilterData").get<glz::generic::object_t>();
 
-            if (filter_name == STR("IncludeInheritance"))
+            if (filter_name == "IncludeInheritance")
             {
-                LiveView::s_include_inheritance = filter_data.get<JSON::Bool>(STR("Enabled")).get();
+                LiveView::s_include_inheritance = filter_data.at("Enabled").get<bool>();
             }
-            else if (filter_name == STR("UseRegexForSearch"))
+            else if (filter_name == "UseRegexForSearch")
             {
-                LiveView::s_use_regex_for_search = filter_data.get<JSON::Bool>(STR("Enabled")).get();
+                LiveView::s_use_regex_for_search = filter_data.at("Enabled").get<bool>();
             }
-            else if (filter_name == STR("ApplySearchFiltersWhenNotSearching"))
+            else if (filter_name == "ApplySearchFiltersWhenNotSearching")
             {
-                LiveView::s_apply_search_filters_when_not_searching = filter_data.get<JSON::Bool>(STR("Enabled")).get();
+                LiveView::s_apply_search_filters_when_not_searching = filter_data.at("Enabled").get<bool>();
             }
-            else if (filter_name == STR("SearchByAddress"))
+            else if (filter_name == "SearchByAddress")
             {
-                LiveView::s_search_by_address = filter_data.get<JSON::Bool>(STR("Enabled")).get();
+                LiveView::s_search_by_address = filter_data.at("Enabled").get<bool>();
             }
-            else if (filter_name == Filter::DefaultObjectsOnly::s_debug_name)
+            else if (filter_name == to_string(Filter::DefaultObjectsOnly::s_debug_name))
             {
-                Filter::DefaultObjectsOnly::s_enabled = filter_data.get<JSON::Bool>(STR("Enabled")).get();
+                Filter::DefaultObjectsOnly::s_enabled = filter_data.at("Enabled").get<bool>();
             }
-            else if (filter_name == Filter::IncludeDefaultObjects::s_debug_name)
+            else if (filter_name == to_string(Filter::IncludeDefaultObjects::s_debug_name))
             {
-                Filter::IncludeDefaultObjects::s_enabled = filter_data.get<JSON::Bool>(STR("Enabled")).get();
+                Filter::IncludeDefaultObjects::s_enabled = filter_data.at("Enabled").get<bool>();
             }
-            else if (filter_name == Filter::InstancesOnly::s_debug_name)
+            else if (filter_name == to_string(Filter::InstancesOnly::s_debug_name))
             {
-                Filter::InstancesOnly::s_enabled = filter_data.get<JSON::Bool>(STR("Enabled")).get();
+                Filter::InstancesOnly::s_enabled = filter_data.at("Enabled").get<bool>();
             }
-            else if (filter_name == Filter::NonInstancesOnly::s_debug_name)
+            else if (filter_name == to_string(Filter::NonInstancesOnly::s_debug_name))
             {
-                Filter::NonInstancesOnly::s_enabled = filter_data.get<JSON::Bool>(STR("Enabled")).get();
+                Filter::NonInstancesOnly::s_enabled = filter_data.at("Enabled").get<bool>();
             }
-            else if (filter_name == Filter::ClassNamesFilter::s_debug_name)
+            else if (filter_name == to_string(Filter::ClassNamesFilter::s_debug_name))
             {
-                Filter::ClassNamesFilter::b_is_exclude = filter_data.get<JSON::Bool>(STR("IsExclude")).get();
-                auto& class_names = filter_data.get<JSON::Array>(STR("ClassNames"));
+                Filter::ClassNamesFilter::b_is_exclude = filter_data.at("IsExclude").get<bool>();
+                const auto& class_names = filter_data.at("ClassNames").get<glz::generic::array_t>();
                 json_array_to_filters_list(class_names, Filter::ClassNamesFilter::list_class_names, STR("class name"), Filter::ClassNamesFilter::s_internal_class_names);
             }
-            else if (filter_name == Filter::HasProperty::s_debug_name)
+            else if (filter_name == to_string(Filter::HasProperty::s_debug_name))
             {
-                auto& properties = filter_data.get<JSON::Array>(STR("Properties"));
+                const auto& properties = filter_data.at("Properties").get<glz::generic::array_t>();
                 json_array_to_filters_list(properties, Filter::HasProperty::list_properties, STR("property"), Filter::HasProperty::s_internal_properties);
             }
-            else if (filter_name == Filter::HasPropertyType::s_debug_name)
+            else if (filter_name == to_string(Filter::HasPropertyType::s_debug_name))
             {
-                auto& property_types = filter_data.get<JSON::Array>(STR("PropertyTypes"));
+                const auto& property_types = filter_data.at("PropertyTypes").get<glz::generic::array_t>();
                 json_array_to_filters_list(property_types,
                                            Filter::HasPropertyType::list_property_types,
                                            STR("property type"),
                                            Filter::HasPropertyType::s_internal_property_types);
             }
-            else if (filter_name == Filter::FunctionParamFlags::s_debug_name)
+            else if (filter_name == to_string(Filter::FunctionParamFlags::s_debug_name))
             {
-                Filter::FunctionParamFlags::s_include_return_property = filter_data.get<JSON::Bool>(STR("IncludeReturnProperty")).get();
+                Filter::FunctionParamFlags::s_include_return_property = filter_data.at("IncludeReturnProperty").get<bool>();
                 Filter::FunctionParamFlags::s_checkboxes.fill(false);
-                auto& function_param_flags = filter_data.get<JSON::Array>(STR("FunctionParamFlags"));
-                if (function_param_flags.get().size() != Filter::FunctionParamFlags::s_checkboxes.size())
+                const auto& function_param_flags = filter_data.at("FunctionParamFlags").get<glz::generic::array_t>();
+                if (function_param_flags.size() != Filter::FunctionParamFlags::s_checkboxes.size())
                 {
                     throw std::runtime_error{"Invalid number of function param flag entires in 'filters.meta.json'"};
                 }
-                function_param_flags.for_each([](auto index, JSON::Value& flag) {
-                    if (!flag.is<JSON::Bool>())
+                for (size_t index = 0; index < function_param_flags.size(); ++index)
+                {
+                    const auto& flag = function_param_flags[index];
+                    if (!flag.is_boolean())
                     {
                         throw std::runtime_error{"Invalid flag in 'filters.meta.json'"};
                     }
-                    Filter::FunctionParamFlags::s_checkboxes[index] = flag.as<JSON::Bool>()->get();
-                    return LoopAction::Continue;
-                });
+                    Filter::FunctionParamFlags::s_checkboxes[index] = flag.get<bool>();
+                }
             }
-            else if (filter_name == Filter::MaxValueSize::s_debug_name)
+            else if (filter_name == to_string(Filter::MaxValueSize::s_debug_name))
             {
-                auto number = filter_data.get<JSON::Number>(STR("Value")).get<int64_t>();
+                auto number = filter_data.at("Value").as<int64_t>();
                 if (number > std::numeric_limits<int32_t>::max())
                 {
                     number = std::numeric_limits<int32_t>::max();
@@ -561,9 +578,7 @@ namespace RC::GUI
                 Filter::MaxValueSize::s_value = static_cast<int32_t>(number);
                 Filter::MaxValueSize::s_value_buffer = fmt::format("{}", Filter::MaxValueSize::s_value);
             }
-
-            return LoopAction::Continue;
-        });
+        }
     }
 
     static auto load_filters_from_disk() -> void
@@ -637,26 +652,25 @@ namespace RC::GUI
         return add_watch(LiveView::WatchIdentifier{function, nullptr}, function);
     }
 
-    static auto serialize_watch_to_json_object(const LiveView::Watch& watch) -> std::unique_ptr<JSON::Object>
+    static auto serialize_watch_to_json_object(const LiveView::Watch& watch) -> glz::generic
     {
-        auto json_object = std::make_unique<JSON::Object>();
+        glz::generic json_object = glz::generic::object_t{};
         switch (watch.acquisition_method)
         {
         case LiveView::Watch::AcquisitionMethod::StaticFindObject: {
             auto object_full_name = watch.container->GetFullName();
             auto object_type_space_location = object_full_name.find(STR(" "));
             auto object_typeless_name = StringType{object_full_name.begin() + object_type_space_location + 1, object_full_name.end()};
-            json_object->new_string(STR("AcquisitionID"), object_typeless_name);
+            json_object["AcquisitionID"] = to_string(object_typeless_name);
             break;
         }
         case LiveView::Watch::AcquisitionMethod::FindFirstOf:
-            json_object->new_string(STR("AcquisitionID"), watch.container->GetClassPrivate()->GetName());
+            json_object["AcquisitionID"] = to_string(watch.container->GetClassPrivate()->GetName());
             break;
         }
-        json_object->new_string(STR("PropertyName"), watch.property_name);
-        json_object->new_number(STR("AcquisitionMethod"), static_cast<int32_t>(watch.acquisition_method));
-        json_object->new_number(STR("WatchType"),
-                                watch.container->IsA<UFunction>() ? static_cast<int32_t>(LiveView::Watch::Type::Function)
+        json_object["PropertyName"] = to_string(watch.property_name);
+        json_object["AcquisitionMethod"] = static_cast<double>(static_cast<int32_t>(watch.acquisition_method));
+        json_object["WatchType"] = static_cast<double>(watch.container->IsA<UFunction>() ? static_cast<int32_t>(LiveView::Watch::Type::Function)
                                                                   : static_cast<int32_t>(LiveView::Watch::Type::Property));
         return json_object;
     }
@@ -667,31 +681,38 @@ namespace RC::GUI
         auto legacy_root_directory_path =
                 StringType{UE4SSProgram::get_program().get_legacy_root_directory()} + fmt::format(STR("\\watches\\watches.meta.json"));
 
-        StringType json_file_contents;
         bool is_legacy = !std::filesystem::exists(working_directory_path) && std::filesystem::exists(legacy_root_directory_path);
         auto json_file = File::open(is_legacy ? legacy_root_directory_path : working_directory_path,
                                     File::OpenFor::Reading,
                                     File::OverwriteExistingFile::No,
                                     File::CreateIfNonExistent::Yes);
+        auto json_file_contents = json_file.read_all();
 
         if (json_file_contents.empty())
         {
             return;
         }
 
-        auto json_global_object = JSON::Parser::parse(json_file_contents);
-        const auto& elements = json_global_object->get<JSON::Array>(STR("Watches"));
-        elements.for_each([](JSON::Value& element) {
-            if (!element.is<JSON::Object>())
+        glz::generic json_root{};
+        auto parse_result = glz::read_json(json_root, to_string(json_file_contents));
+        if (parse_result)
+        {
+            throw std::runtime_error{"Failed to parse 'watches.meta.json'"};
+        }
+
+        const auto& elements = json_root["Watches"].get<glz::generic::array_t>();
+        for (const auto& element : elements)
+        {
+            if (!element.is_object())
             {
                 throw std::runtime_error{"Invalid watch in 'watches.meta.json'"};
             }
-            auto& json_watch_object = *element.as<JSON::Object>();
-            auto acquisition_id = json_watch_object.get<JSON::String>(STR("AcquisitionID")).get_view();
-            auto property_name = json_watch_object.get<JSON::String>(STR("PropertyName")).get_view();
+            const auto& json_watch_object = element.get<glz::generic::object_t>();
+            auto acquisition_id = to_wstring(json_watch_object.at("AcquisitionID").get<std::string>());
+            auto property_name = to_wstring(json_watch_object.at("PropertyName").get<std::string>());
             auto acquisition_method =
-                    static_cast<LiveView::Watch::AcquisitionMethod>(json_watch_object.get<JSON::Number>(STR("AcquisitionMethod")).get<int64_t>());
-            auto watch_type = static_cast<LiveView::Watch::Type>(json_watch_object.get<JSON::Number>(STR("WatchType")).get<int64_t>());
+                    static_cast<LiveView::Watch::AcquisitionMethod>(json_watch_object.at("AcquisitionMethod").as<int64_t>());
+            auto watch_type = static_cast<LiveView::Watch::Type>(json_watch_object.at("WatchType").as<int64_t>());
 
             UObject* object{};
             switch (acquisition_method)
@@ -707,7 +728,7 @@ namespace RC::GUI
             }
             if (!object)
             {
-                return LoopAction::Continue;
+                continue;
             }
 
             LiveView::Watch* watch = [&]() -> LiveView::Watch* {
@@ -728,14 +749,12 @@ namespace RC::GUI
 
             if (!watch)
             {
-                return LoopAction::Continue;
+                continue;
             }
 
             watch->load_on_startup = true;
             watch->acquisition_method = acquisition_method;
-
-            return LoopAction::Continue;
-        });
+        }
     }
 
     static auto load_watches_from_disk() -> void
@@ -747,8 +766,8 @@ namespace RC::GUI
 
     static auto internal_save_watches_to_disk() -> void
     {
-        auto json = JSON::Object{};
-        auto& json_uobjects = json.new_array(STR("Watches"));
+        glz::generic json = glz::generic::object_t{};
+        glz::generic::array_t json_watches{};
 
         {
             std::lock_guard<decltype(LiveView::Watch::s_watch_lock)> lock{LiveView::Watch::s_watch_lock};
@@ -758,16 +777,19 @@ namespace RC::GUI
                 {
                     continue;
                 }
-                json_uobjects.add_object(serialize_watch_to_json_object(*watch));
+                json_watches.emplace_back(serialize_watch_to_json_object(*watch));
             }
         }
+        json["Watches"] = std::move(json_watches);
 
         auto json_file = File::open(StringType{UE4SSProgram::get_program().get_working_directory()} + fmt::format(STR("\\watches\\watches.meta.json")),
                                     File::OpenFor::Writing,
                                     File::OverwriteExistingFile::Yes,
                                     File::CreateIfNonExistent::Yes);
-        int32_t json_indent_level{};
-        json_file.write_string_to_file(json.serialize(JSON::ShouldFormat::Yes, &json_indent_level));
+        if (auto result = glz::write<glz::opts{.prettify = true}>(json); result.has_value())
+        {
+            json_file.write_string_to_file(to_wstring(result.value()));
+        }
     }
 
     static auto save_watches_to_disk() -> void

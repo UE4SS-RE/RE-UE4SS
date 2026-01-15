@@ -59,6 +59,8 @@ Added custom game configurations for Project Silverfish ([UE4SS #1066](https://g
 
 Added custom game configurations for Whiskerwood ([UE4SS #1079](https://github.com/UE4SS-RE/RE-UE4SS/pull/1079))
 
+Added custom game configurations for StarRupture ([UE4SS #1150](https://github.com/UE4SS-RE/RE-UE4SS/pull/1150))
+
 The GUI can now be rendered in the game thread if `RenderMode` in UE4SS-settings.ini is set to
 `EngineTick` or `GameViewportClientTick` ([UE4SS #768](https://github.com/UE4SS-RE/RE-UE4SS/pull/768), [UE4SS #794](https://github.com/UE4SS-RE/RE-UE4SS/pull/794)).
 
@@ -343,6 +345,8 @@ Improved performance of script hooks created with `RegisterHook`, and
 **BREAKING:** `AActor:GetWorld()` and `AActor:GetLevel()` functions are now returning an invalid `UObject` instead of `nil`. ([UE4SS #810](https://github.com/UE4SS-RE/RE-UE4SS/pull/810))
 
 Types with `get` or `Get` functions now have both variants. ([UE4SS #877](https://github.com/UE4SS-RE/RE-UE4SS/pull/877))
+
+Improved error messages when improperly indexing into `LocalUnrealParam`, and `RemoteUnrealParam` without first calling `Get`. ([UE4SS #1154](https://github.com/UE4SS-RE/RE-UE4SS/pull/1154))
 
 #### UEHelpers [UE4SS #650](https://github.com/UE4SS-RE/RE-UE4SS/pull/650) 
 - Increased version to 3

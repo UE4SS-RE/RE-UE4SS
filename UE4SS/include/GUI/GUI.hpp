@@ -299,7 +299,7 @@ namespace RC::GUI
     template <typename CodeToTry>
     auto TRY(CodeToTry code_to_try)
     {
-        DebuggingGUI::execute_at_end_of_frame([&] {
+        DebuggingGUI::execute_at_end_of_frame([code_to_try = std::move(code_to_try)]() mutable {
             code_to_try();
         });
     }
