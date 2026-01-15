@@ -98,42 +98,22 @@ namespace RC::EventViewerMod
     auto CallStackEntry::render_support_menus() const -> void
     {
         ImGui::SetItemTooltip("Right click for options");
-
-        static const CallStackEntry* current_support_menu_attachment = nullptr;
-
-        if (current_support_menu_attachment == nullptr || current_support_menu_attachment == this)
+        if (ImGui::BeginPopupContextItem("EntryPopup##ep", ImGuiPopupFlags_MouseButtonRight))
         {
-            if (ImGui::BeginPopupContextItem("EntryPopup##ep", ImGuiPopupFlags_MouseButtonRight)) // currently getting rendered for every entry since each entry shares this id, use static bool with else statement workaround
-            {
-                if (ImGui::MenuItem("Show Call Stack")) Client::GetInstance().render_entry_stack_modal(this);
-                ImGui::Separator();
-                current_support_menu_attachment = this;
-                if (ImGui::MenuItem("Copy Caller Name##ccn")) copy_to_clipboard({full_name.begin(), function_name.begin() - 1});
-                if (ImGui::MenuItem("Copy Function Name##cfn")) copy_to_clipboard(function_name);
-                if (ImGui::MenuItem("Copy Full Name##cfln")) copy_to_clipboard(full_name);
-                ImGui::Separator();
-                if (ImGui::MenuItem("Add Caller to Whitelist##cwl")) Client::GetInstance().add_to_white_list({full_name.begin(), function_name.begin() - 1});
-                if (ImGui::MenuItem("Add Function to Whitelist##fwl")) Client::GetInstance().add_to_white_list(function_name);
-                if (ImGui::MenuItem("Add Full Name to Whitelist##fnwl")) Client::GetInstance().add_to_white_list(full_name);
-                ImGui::Separator();
-                if (ImGui::MenuItem("Add Caller to Blacklist##cbl"))
-                {
-                    Client::GetInstance().add_to_black_list({full_name.begin(), function_name.begin() - 1});
-                    current_support_menu_attachment = nullptr; // adding it to the blacklist disables this entry, which prevents render_view() from doing a function call with this instance that resets it
-                }
-                if (ImGui::MenuItem("Add Function to Blacklist##fbl"))
-                {
-                    Client::GetInstance().add_to_black_list(function_name);
-                    current_support_menu_attachment = nullptr;
-                }
-                if (ImGui::MenuItem("Add Full Name to Blacklist##fnb"))
-                {
-                    Client::GetInstance().add_to_black_list(full_name);
-                    current_support_menu_attachment = nullptr;
-                }
-                ImGui::EndPopup();
-            }
-            else current_support_menu_attachment = nullptr;
+            if (ImGui::MenuItem("Show Call Stack")) Client::GetInstance().render_entry_stack_modal(this); // need to do this outside
+            ImGui::Separator();
+            if (ImGui::MenuItem("Copy Caller Name##ccn")) copy_to_clipboard({full_name.begin(), function_name.begin() - 1});
+            if (ImGui::MenuItem("Copy Function Name##cfn")) copy_to_clipboard(function_name);
+            if (ImGui::MenuItem("Copy Full Name##cfln")) copy_to_clipboard(full_name);
+            ImGui::Separator();
+            if (ImGui::MenuItem("Add Caller to Whitelist##cwl")) Client::GetInstance().add_to_white_list({full_name.begin(), function_name.begin() - 1});
+            if (ImGui::MenuItem("Add Function to Whitelist##fwl")) Client::GetInstance().add_to_white_list(function_name);
+            if (ImGui::MenuItem("Add Full Name to Whitelist##fnwl")) Client::GetInstance().add_to_white_list(full_name);
+            ImGui::Separator();
+            if (ImGui::MenuItem("Add Caller to Blacklist##cbl")) Client::GetInstance().add_to_black_list({full_name.begin(), function_name.begin() - 1});
+            if (ImGui::MenuItem("Add Function to Blacklist##fbl")) Client::GetInstance().add_to_black_list(function_name);
+            if (ImGui::MenuItem("Add Full Name to Blacklist##fnb")) Client::GetInstance().add_to_black_list(full_name);
+            ImGui::EndPopup();
         }
     }
 
@@ -158,24 +138,12 @@ namespace RC::EventViewerMod
     auto CallFrequencyEntry::render_support_menus() const -> void
     {
         ImGui::SetItemTooltip("Right click for options");
-
-        static const CallFrequencyEntry* current_support_menu_attachment = nullptr;
-
-        if (current_support_menu_attachment == nullptr || current_support_menu_attachment == this)
+        if (ImGui::BeginPopupContextItem("EntryPopup##fep", ImGuiPopupFlags_MouseButtonRight))
         {
-            if (ImGui::BeginPopupContextItem("EntryPopup##fep", ImGuiPopupFlags_MouseButtonRight))
-            {
-                current_support_menu_attachment = this;
-                if (ImGui::MenuItem("Copy Function Name##cfn")) copy_to_clipboard(function_name);
-                if (ImGui::MenuItem("Add Function to Whitelist##fwl")) Client::GetInstance().add_to_white_list(function_name);
-                if (ImGui::MenuItem("Add Function to Blacklist##fbl"))
-                {
-                    Client::GetInstance().add_to_black_list(function_name);
-                    current_support_menu_attachment = nullptr;
-                }
-                ImGui::EndPopup();
-            }
-            else current_support_menu_attachment = nullptr;
+            if (ImGui::MenuItem("Copy Function Name##cfn")) copy_to_clipboard(function_name);
+            if (ImGui::MenuItem("Add Function to Whitelist##fwl")) Client::GetInstance().add_to_white_list(function_name);
+            if (ImGui::MenuItem("Add Function to Blacklist##fbl"))Client::GetInstance().add_to_black_list(function_name);
+            ImGui::EndPopup();
         }
     }
 
