@@ -77,6 +77,14 @@ namespace RC::EventViewerMod
         if (with_support_menus) render_support_menus();
     }
 
+    auto CallStackEntry::to_string() const -> std::wstring
+    {
+        std::wstring out;
+        for (auto i = 0; i < depth; ++i) out += L"\t";
+        out += ensure_str(full_name);
+        return out;
+    }
+
     auto CallStackEntry::render_indents(const int indent_delta) const -> void
     {
         if (indent_delta > 0)

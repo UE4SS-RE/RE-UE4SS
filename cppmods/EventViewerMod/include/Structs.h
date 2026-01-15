@@ -58,6 +58,8 @@ namespace RC::EventViewerMod
         auto render_with_colored_indent_space(int indent_delta, bool with_support_menus) const -> void;
         auto render(int indent_delta, bool with_support_menus) const -> void;
 
+        auto to_string() const -> std::wstring;
+
         EMiddlewareHookTarget hook_target = EMiddlewareHookTarget::All;
         uint32_t depth = 0;
         std::thread::id thread_id{};
@@ -111,7 +113,7 @@ namespace RC::EventViewerMod
         EMiddlewareHookTarget hook_target = EMiddlewareHookTarget::ProcessEvent; // [Savable] [Thread-ImGui]
         EMode mode = EMode::Stack;                                               // [Savable] [Thread-ImGui]
         uint16_t dequeue_max_ms = 10;                                            // [Savable] [Thread-ImGui]
-        uint16_t dequeue_max_count = 5000;                                       // [Savable] [Thread-ImGui] TODO raise this to uint64
+        uint16_t dequeue_max_count = 50000;                                      // [Savable] [Thread-ImGui] TODO raise this to uint64
 
         std::string blacklist;                                                   // [Savable] [Thread-ImGui]
         std::vector<std::string> blacklist_tokens;                               // [Thread-ImGui] (lower-cased tokens)
