@@ -11,6 +11,7 @@
 // if using fname index as a hash, games that implement name recycling can be problematic/inaccurate for context objects
 // FEATURES clear all should clear thread list, per entry stack view
 // TODO horizontal scroll bar
+// TODO Make caller labels shorter
 // TODO refresh tick list on game end/begin
 // TODO per entry stack view
 namespace RC::EventViewerMod

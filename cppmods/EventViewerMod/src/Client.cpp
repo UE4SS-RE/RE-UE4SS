@@ -380,7 +380,7 @@ namespace RC::EventViewerMod
             int prev_depth = 0;
             bool have_prev = false;
             int current_indent = 0;
-
+            int id = 0;
             for (auto& entry : thread.call_stack)
             {
                 if ((static_cast<uint32_t>(entry.hook_target) & selected_flags) == 0)
@@ -395,9 +395,9 @@ namespace RC::EventViewerMod
 
                 const int depth = static_cast<int>(entry.depth);
                 const int delta = have_prev ? (depth - prev_depth) : depth;
-
+                ImGui::PushID(id++);
                 m_state.disable_indent_colors ? entry.render(delta, !m_state.started) : entry.render_with_colored_indent_space(delta, !m_state.started);
-
+                ImGui::PopID();
                 current_indent += delta;
                 prev_depth = depth;
                 have_prev = true;
@@ -416,6 +416,7 @@ namespace RC::EventViewerMod
         {
             if (ImGui::BeginTable("##frequency", 2, ImGuiTableFlags_ScrollY | ImGuiTableFlags_Resizable | ImGuiTableFlags_BordersV))
             {
+                int id = 0;
                 for (const auto& entry : thread.call_frequencies)
                 {
                     if ((entry.source_flags & selected_flags) == 0)
@@ -427,8 +428,9 @@ namespace RC::EventViewerMod
                     {
                         continue;
                     }
-
+                    ImGui::PushID(id++);
                     entry.render(!m_state.started);
+                    ImGui::PopID();
                 }
 
                 ImGui::EndTable();
