@@ -24,6 +24,8 @@ add_library(${TARGET} SHARED
         include/StringPool.hpp
         src/StringPool.cpp
         include/QueueProfiler.hpp
+        src/EntryCallStackRenderer.cpp
+        include/EntryCallStackRenderer.hpp
 )
 
 target_include_directories(${TARGET} PRIVATE "include")

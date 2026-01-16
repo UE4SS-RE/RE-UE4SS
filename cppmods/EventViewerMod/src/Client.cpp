@@ -19,7 +19,7 @@
 #include <imgui.h>
 #include <imgui_internal.h>
 #include <misc/cpp/imgui_stdlib.h>
-
+#include <EntryCallStackRenderer.hpp>
 #include <glaze/glaze.hpp>
 
 #include "QueueProfiler.hpp"
@@ -438,6 +438,15 @@ namespace RC::EventViewerMod
         }
 
         ImGui::EndChild();
+
+        if (m_entry_call_stack_renderer)
+        {
+            if (!m_entry_call_stack_renderer->render())
+            {
+                m_entry_call_stack_renderer = nullptr;
+                Output::send(L"Freed modal");
+            }
+        }
     }
 
     auto Client::combo_with_flags(const char* label,
@@ -864,8 +873,82 @@ auto Client::add_to_black_list(std::string_view item) -> void
     apply_filters_to_history(false, true, false);
 }
 
-auto Client::render_entry_stack_modal(const CallStackEntry* entry) -> void
+auto Client::render_entry_stack_modal(const CallStackEntry* entry) -> void //TODO fix unsigned/signed conversions
 {
+    if (m_entry_call_stack_renderer) return;
+    // find root entry and next root entry
+    // finding the root entry also reveals all callers, so go ahead and bookkeep it
+    const auto& stack = m_state.threads[m_state.current_thread].call_stack;
+    const auto target_abs_idx = entry - stack.data();
+    int64_t root_abs_idx = target_abs_idx;
+    std::vector<int64_t> idxs_relevant_to_target{}; // added in reverse-view order
+    if (entry->depth)
+    {
+        uint32_t last_lowest_depth = entry->depth;
+        for (auto idx = target_abs_idx - 1; idx >= 0; --idx)
+        {
+            auto this_depth = stack[idx].depth;
+            if (this_depth < last_lowest_depth)
+            {
+                idxs_relevant_to_target.push_back(idx);
+                last_lowest_depth = this_depth;
+                if (this_depth == 0)
+                {
+                    root_abs_idx = idx;
+                    break;
+                }
+            }
+        }
+    }
+
+    size_t next_root_abs_idx = target_abs_idx + 1;
+    bool out_of_target_scope = false;
+    for (; next_root_abs_idx < stack.size(); ++next_root_abs_idx) //TODO find target callees and add to callers_idxs
+    {
+        const auto this_entry_depth = stack[next_root_abs_idx].depth;
+        if (this_entry_depth == 0) break;
+
+        if (this_entry_depth <= entry->depth) out_of_target_scope = true;
+        if (!out_of_target_scope) idxs_relevant_to_target.push_back(next_root_abs_idx);
+    }
+
+    std::vector<CallStackEntry> context{ stack.begin() + root_abs_idx, stack.begin() + next_root_abs_idx }; // copy entries
+    for (auto& abs_idx : idxs_relevant_to_target) // make idxs_relevant_to_target relative to context
+    {
+        abs_idx -= root_abs_idx;
+    }
+    const auto target_rel_idx = target_abs_idx - root_abs_idx; // find context index for target
+    idxs_relevant_to_target.push_back(target_rel_idx);
+
+    // invert idxs_relevant_to_target to get what should be disabled when show full context isn't checked
+    for (size_t context_idx = 0; context_idx < context.size(); ++context_idx)
+    {
+        if (std::ranges::find(idxs_relevant_to_target, static_cast<int64_t>(context_idx)) != idxs_relevant_to_target.end())
+        {
+            context[context_idx].is_disabled = false;
+            continue;
+        }
+        context[context_idx].is_disabled = true;
+    }
+
+    m_entry_call_stack_renderer = std::make_unique<EntryCallStackRenderer>(target_rel_idx, std::move(context));
+
+    // Output::send(L"Caller trace:\n");
+    // for (auto caller_idx : callers_abs_idx)
+    // {
+    //     Output::send(context[caller_idx].to_string() + L"\n");
+    // }
+    //
+    // Output::send(L"\nContext:\n");
+    // for (size_t idx = root_abs_idx; idx < next_root_abs_idx; ++idx)
+    // {
+    //     Output::send(stack[idx].to_string() + L"\n");
+    // }
+    // Output::send(L"\nContext Vector\n");
+    // for (auto& ctx_entry : context)
+    // {
+    //     Output::send(ctx_entry.to_string() + L"\n");
+    // }
 }
 
 auto Client::GetInstance() -> Client&
