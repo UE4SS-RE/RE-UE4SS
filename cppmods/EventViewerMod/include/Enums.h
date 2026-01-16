@@ -92,15 +92,6 @@ namespace RC::EventViewerMod
             LIST3(EVM_ENUM_CASE_V, Name)                                      \
             default: return "<unknown " #Name ">";                            \
         }                                                                     \
-    }                                                                         \
-                                                                              \
-    inline constexpr const char* to_prefix_string(E##Name e) noexcept         \
-    {                                                                         \
-        switch (e)                                                            \
-        {                                                                     \
-            LIST3(EVM_ENUM_PREFIX_CASE_V, Name)                               \
-            default: return "(<unknown " #Name ">) ";                         \
-        }                                                                     \
     }
 
 EVM_DECLARE_REFLECTED_ENUM_VALUES(MiddlewareHookTarget, EVM_MIDDLEWARE_HOOK_TARGET_FLAGS);
@@ -139,4 +130,15 @@ EVM_DECLARE_REFLECTED_ENUM(Mode, EVM_MODE);
         ECallFrequencyEntryRenderFlags_WithSupportMenus = 1
     };
 
+    inline constexpr const char* to_prefix_string(const EMiddlewareHookTarget e) noexcept
+    {
+        switch (e)
+        {
+        case EMiddlewareHookTarget::ProcessEvent: return "(PE) ";
+        case EMiddlewareHookTarget::ProcessInternal: return "(PI) ";
+        case EMiddlewareHookTarget::ProcessLocalScriptFunction: return "(PLSF) ";
+        case EMiddlewareHookTarget::All: return "(ALL) ";
+        default: return "(UnknownTarget) ";
+        }
+    }
 } // namespace RC::EventViewerMod
