@@ -110,15 +110,16 @@ namespace RC::EventViewerMod
         oss << std::put_time(&local_tm, "%Y-%m-%d %H-%M-%S");
 
         const auto filename =
-                "EventViewerMod Capture-Entry "s + std::string(m_context[m_target_idx].full_name) + " " +
+                "EventViewerMod Capture-Entry "s + std::string(m_context[m_target_idx].function_name) + " " +
                 oss.str() + ".txt";
-        std::ofstream out{captures_root / filename};
+        std::wofstream out{captures_root / filename};
 
         for (const auto& entry : m_context)
         {
             if (entry.is_disabled && !m_show_full_context) continue;
-            for (auto i = 0u; i < entry.depth; ++i) out << "\t";
-            out << entry.full_name << '\n';
+            auto str = entry.to_string_with_prefix();
+            out << str;
+            Output::send(str);
         }
 
         out.close();

@@ -58,7 +58,9 @@ namespace RC::EventViewerMod
         auto render_with_colored_indent_space(int indent_delta, bool with_support_menus) const -> void;
         auto render(int indent_delta, bool with_support_menus) const -> void;
 
-        auto to_string() const -> std::wstring;
+        // Provides a copy of the entry's key string fields. Don't use with ImGui, only use for logging/saving.
+        // Use the string_views for ImGui since they utilize the string pool.
+        auto to_string_with_prefix() const -> std::wstring;
 
         EMiddlewareHookTarget hook_target = EMiddlewareHookTarget::All;
         uint32_t depth = 0;
