@@ -25,18 +25,15 @@ auto RC::EventViewerMod::StringPool::get_strings(RC::Unreal::UObject* caller, RC
     if (!caller || !function) return AllNameStringViews{};
     // StringPool combines the caller's ComparisonIndex and the function's ComparisonIndex
     // to generate a unique hash for the full name string.
-    uint64_t hash = function->GetNamePrivate().GetComparisonIndex();
-#pragma warning( push )
-#pragma warning( disable : 4244 )
-    const uint32_t function_hash = hash;
-#pragma warning( pop )
+    const uint32_t function_hash = function->GetNamePrivate().GetComparisonIndex();
+    uint64_t hash = function_hash;
     hash = hash << 32;
     hash |= caller->GetNamePrivate().GetComparisonIndex();
 
     {
         std::shared_lock lock(m_mutex);
-        auto string_info_it = m_pool.find(hash);
-        if (string_info_it != m_pool.end())
+        auto string_info_it = m_main_pool.find(hash);
+        if (string_info_it != m_main_pool.end())
         {
             auto& string_info = string_info_it->second;
             std::string_view full_name = string_info.full_name;
@@ -60,12 +57,14 @@ auto RC::EventViewerMod::StringPool::get_strings(RC::Unreal::UObject* caller, RC
     const auto func_str = RC::to_string(function->GetName());
 
     // Build once, store both original-case and lower-cased versions.
-    const auto full = caller_str + "." + func_str;
-    const auto lower_full = to_lower_ascii_copy(full);
+    auto full = caller_str + "." + func_str;
+    auto lower_full = to_lower_ascii_copy(full);
+    auto path_str = RC::to_string(function->GetPathName());
 
     {
         std::unique_lock lock(m_mutex);
-        auto& string_info = m_pool.emplace(hash, StringInfo{caller_str.size() + 1, full, lower_full}).first->second;
+        auto& string_info = m_main_pool.emplace(hash, StringInfo{caller_str.size() + 1, std::move(full), std::move(lower_full)}).first->second;
+        m_path_pool.emplace(function_hash, std::move(path_str));
 
         std::string_view full_name = string_info.full_name;
         std::string_view lower_full_name = string_info.lower_cased_full_name;
@@ -82,6 +81,14 @@ auto RC::EventViewerMod::StringPool::get_strings(RC::Unreal::UObject* caller, RC
             lower_full_name,
         };
     }
+}
+
+auto RC::EventViewerMod::StringPool::get_path_name(const uint32_t function_hash) -> std::string_view
+{
+    std::shared_lock lock(m_mutex);
+    auto path_it = m_path_pool.find(function_hash);
+    if (path_it == m_path_pool.end()) return "";
+    return path_it->second;
 }
 
 auto RC::EventViewerMod::StringPool::GetInstance() -> StringPool&
