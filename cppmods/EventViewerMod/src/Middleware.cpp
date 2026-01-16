@@ -9,9 +9,9 @@
 #include <Unreal/CoreUObject/UObject/Class.hpp>
 
 // if using fname index as a hash, games that implement name recycling can be problematic/inaccurate for context objects
-// TODO additional metrics
 // TODO still have some layout issues
 // TODO help indicators/readme
+// TODO performance improvements such as text virtualization and passes_filter improvements (see passes_filter in Client.cpp)
 namespace RC::EventViewerMod
 {
     using RC::Unreal::UFunction;
@@ -240,13 +240,12 @@ namespace RC::EventViewerMod
         {
             m_buffer.resize(max_count_per_iteration);
         }
-
-        while (std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - start_time).count() < max_ms)
+        auto now = std::chrono::steady_clock::now();
+        for (; std::chrono::duration_cast<std::chrono::milliseconds>(now - start_time).count() < max_ms; now = std::chrono::steady_clock::now())
         {
             QueueProfiler::BeginDequeue();
             const auto amount = m_queue.try_dequeue_bulk(m_imgui_consumer_token, m_buffer.data(), max_count_per_iteration);
             QueueProfiler::EndDequeue();
-            std::atomic_uint64_t a;
 
             if (amount == 0)
             {
@@ -265,6 +264,10 @@ namespace RC::EventViewerMod
         }
 
         QueueProfiler::AddPendingCount(m_queue.size_approx());
+        if (std::chrono::duration_cast<std::chrono::milliseconds>(now - start_time).count() >= max_ms)
+        {
+            QueueProfiler::AddTimeExceededCount();
+        }
     }
 
 } // namespace RC::EventViewerMod
