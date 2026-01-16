@@ -18,6 +18,7 @@ inline constexpr static std::array COLORS = {
     IM_COL32(0, 255, 255, ALPHA),   // cyan
     IM_COL32(255, 255, 0, ALPHA),   // yellow
 };
+inline constexpr static auto SELECTED_COLOR = ImVec4{1.0f, 1.0f, 0.0f, 1.0f};
 
 namespace RC::EventViewerMod
 {
@@ -53,28 +54,35 @@ namespace RC::EventViewerMod
         lower_cased_full_name = strings.lower_cased_full_name;
     }
 
-    auto CallStackEntry::render_with_colored_indent_space(const int indent_delta, const bool with_support_menus) const -> void
+    auto CallStackEntry::render(const int indent_delta, const ECallStackEntryRenderFlags_ flags) const -> void
     {
         render_indents(indent_delta);
-        const auto indent_width = ImGui::GetStyle().IndentSpacing * static_cast<float>(depth);
-        auto min = ImGui::GetCursorScreenPos();
-        auto max = min;
-        min.x -= indent_width;
-        max.y += ImGui::GetTextLineHeight();
-        ImGui::GetWindowDrawList()->AddRectFilled(min, max, COLORS[depth % COLORS.size()]);
-        ImGui::TextUnformatted(to_prefix_string(hook_target));
-        ImGui::SameLine();
-        ImGui::TextUnformatted(full_name.data());
-        if (with_support_menus) render_support_menus();
-    }
+        if (flags & ECallStackEntryRenderFlags_IndentColors)
+        {
+            const auto indent_width = ImGui::GetStyle().IndentSpacing * static_cast<float>(depth);
+            auto min = ImGui::GetCursorScreenPos();
+            auto max = min;
+            min.x -= indent_width;
+            max.y += ImGui::GetTextLineHeight();
+            ImGui::GetWindowDrawList()->AddRectFilled(min, max, COLORS[depth % COLORS.size()]);
+        }
+        if (flags & ECallStackEntryRenderFlags_Highlight) [[unlikely]]
+        {
+            ImGui::TextColored(SELECTED_COLOR, to_prefix_string(hook_target));
+            ImGui::SameLine();
+            ImGui::TextColored(SELECTED_COLOR, full_name.data());
+        }
+        else [[likely]]
+        {
+            ImGui::TextUnformatted(to_prefix_string(hook_target));
+            ImGui::SameLine();
+            ImGui::TextUnformatted(full_name.data());
+        }
 
-    auto CallStackEntry::render(const int indent_delta, const bool with_support_menus) const -> void
-    {
-        render_indents(indent_delta);
-        ImGui::TextUnformatted(to_prefix_string(hook_target));
-        ImGui::SameLine();
-        ImGui::TextUnformatted(full_name.data());
-        if (with_support_menus) render_support_menus();
+        if (flags & ECallStackEntryRenderFlags_WithSupportMenus)
+        {
+            render_support_menus(flags);
+        }
     }
 
     auto CallStackEntry::to_string_with_prefix() const -> std::wstring
@@ -103,13 +111,16 @@ namespace RC::EventViewerMod
         }
     }
 
-    auto CallStackEntry::render_support_menus() const -> void
+    auto CallStackEntry::render_support_menus(const ECallStackEntryRenderFlags_ flags) const -> void
     {
         ImGui::SetItemTooltip("Right click for options");
         if (ImGui::BeginPopupContextItem("EntryPopup##ep", ImGuiPopupFlags_MouseButtonRight))
         {
-            if (ImGui::MenuItem("Show Call Stack")) Client::GetInstance().render_entry_stack_modal(this); // need to do this outside
-            ImGui::Separator();
+            if (static_cast<uint8_t>(flags) & static_cast<uint8_t>(ECallStackEntryRenderFlags_WithSupportMenusCallStackModal))
+            {
+                if (ImGui::MenuItem("Show Call Stack")) Client::GetInstance().render_entry_stack_modal(this); // need to do this outside
+                ImGui::Separator();
+            }
             if (ImGui::MenuItem("Copy Caller Name##ccn")) copy_to_clipboard({full_name.begin(), function_name.begin() - 1});
             if (ImGui::MenuItem("Copy Function Name##cfn")) copy_to_clipboard(function_name);
             if (ImGui::MenuItem("Copy Full Name##cfln")) copy_to_clipboard(full_name);
@@ -133,12 +144,12 @@ namespace RC::EventViewerMod
         lower_cased_function_name = strings.lower_cased_function_name;
     }
 
-    auto CallFrequencyEntry::render(bool with_support_menus) const -> void
+    auto CallFrequencyEntry::render(const ECallFrequencyEntryRenderFlags_ flags) const -> void
     {
         ImGui::TableNextRow();
         ImGui::TableSetColumnIndex(0);
         ImGui::TextUnformatted(function_name.data());
-        if (with_support_menus) render_support_menus();
+        if (flags & ECallFrequencyEntryRenderFlags_WithSupportMenus) render_support_menus();
         ImGui::TableSetColumnIndex(1);
         ImGui::Text("%llu", static_cast<unsigned long long>(frequency));
     }

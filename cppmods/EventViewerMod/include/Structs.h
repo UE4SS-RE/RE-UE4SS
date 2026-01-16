@@ -55,8 +55,7 @@ namespace RC::EventViewerMod
                        std::thread::id thread_id,
                        bool is_tick);
 
-        auto render_with_colored_indent_space(int indent_delta, bool with_support_menus) const -> void;
-        auto render(int indent_delta, bool with_support_menus) const -> void;
+        auto render(int indent_delta, ECallStackEntryRenderFlags_ flags = ECallStackEntryRenderFlags_None) const -> void;
 
         // Provides a copy of the entry's key string fields. Don't use with ImGui, only use for logging/saving.
         // Use the string_views for ImGui since they utilize the string pool.
@@ -68,7 +67,7 @@ namespace RC::EventViewerMod
 
     private:
         auto render_indents(int indent_delta) const -> void;
-        auto render_support_menus() const -> void;
+        auto render_support_menus(ECallStackEntryRenderFlags_ flags) const -> void;
     };
 
     // Stores both original-case and lower-cased function name views (for case-insensitive filtering).
@@ -76,7 +75,7 @@ namespace RC::EventViewerMod
     {
         CallFrequencyEntry() = default;
         CallFrequencyEntry(const FunctionNameStringViews& strings, bool is_tick);
-        auto render(bool with_support_menus) const -> void;
+        auto render(ECallFrequencyEntryRenderFlags_ flags) const -> void;
         uint64_t frequency = 1;
 
         // OR'd EMiddlewareHookTarget values that have invoked this function so far.

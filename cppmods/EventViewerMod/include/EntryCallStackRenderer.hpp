@@ -18,6 +18,7 @@ namespace RC::EventViewerMod
         auto render() -> bool;
     private:
         size_t m_target_idx;
+        const CallStackEntry* m_target_ptr;
         std::vector<CallStackEntry> m_context;
         bool m_disable_indent_colors = false;
         bool m_show_full_context = false;
