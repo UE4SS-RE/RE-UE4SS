@@ -251,13 +251,21 @@ namespace RC::EventViewerMod
                 for (size_t idx = 0; idx < threads.size(); ++idx)
                 {
                     const bool selected = static_cast<int>(idx) == m_state.current_thread;
-                    if (ImGui::Selectable(threads[idx].id_string(), selected))
+                    auto& thread = threads[idx];
+                    if (ImGui::Selectable(thread.id_string(), selected))
                     {
+                        m_state.thread_explicitly_chosen = true;
                         m_state.current_thread = static_cast<int>(idx);
                     }
                     if (selected)
                     {
                         ImGui::SetItemDefaultFocus();
+                    }
+                    else if (!m_state.thread_implicitly_set && !m_state.thread_explicitly_chosen && thread.is_game_thread)
+                    {
+                        m_state.current_thread = static_cast<int>(idx);
+                        ImGui::SetItemDefaultFocus();
+                        m_state.thread_implicitly_set = true;
                     }
                 }
                 ImGui::EndCombo();

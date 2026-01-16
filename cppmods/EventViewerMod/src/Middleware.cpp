@@ -12,10 +12,10 @@
 // FEATURES clear all should clear thread list
 // TODO horizontal scroll bar
 // TODO refresh tick list on game end/begin
-// TODO default to 'All' target, game thread
 // TODO additional metrics
 // TODO explore usefulness of 'full path'
 // TODO still have some layout issues
+// TODO make dequeue_max_count u32
 namespace RC::EventViewerMod
 {
     using RC::Unreal::UFunction;
