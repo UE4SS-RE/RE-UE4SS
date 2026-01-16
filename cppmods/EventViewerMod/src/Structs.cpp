@@ -116,7 +116,7 @@ namespace RC::EventViewerMod
         ImGui::SetItemTooltip("Right click for options");
         if (ImGui::BeginPopupContextItem("EntryPopup##ep", ImGuiPopupFlags_MouseButtonRight))
         {
-            if (static_cast<uint8_t>(flags) & static_cast<uint8_t>(ECallStackEntryRenderFlags_WithSupportMenusCallStackModal))
+            if (flags & ECallStackEntryRenderFlags_WithSupportMenusCallStackModal & ~ECallStackEntryRenderFlags_WithSupportMenus)
             {
                 if (ImGui::MenuItem("Show Call Stack")) Client::GetInstance().render_entry_stack_modal(this); // need to do this outside
                 ImGui::Separator();

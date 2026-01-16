@@ -9,14 +9,13 @@
 #include <Unreal/CoreUObject/UObject/Class.hpp>
 
 // if using fname index as a hash, games that implement name recycling can be problematic/inaccurate for context objects
-// FEATURES clear all should clear thread list, add blank line after child
+// FEATURES clear all should clear thread list
 // TODO horizontal scroll bar
-// TODO Make caller labels shorter
 // TODO refresh tick list on game end/begin
 // TODO default to 'All' target, game thread
-// TODO render target special color in popup
 // TODO additional metrics
 // TODO explore usefulness of 'full path'
+// TODO still have some layout issues
 namespace RC::EventViewerMod
 {
     using RC::Unreal::UFunction;
