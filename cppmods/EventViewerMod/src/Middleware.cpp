@@ -10,12 +10,11 @@
 
 // if using fname index as a hash, games that implement name recycling can be problematic/inaccurate for context objects
 // FEATURES clear all should clear thread list
-// TODO horizontal scroll bar
+// TODO dpi causing vertical clipping
 // TODO refresh tick list on game end/begin
 // TODO additional metrics
 // TODO explore usefulness of 'full path'
 // TODO still have some layout issues
-// TODO make dequeue_max_count u32
 namespace RC::EventViewerMod
 {
     using RC::Unreal::UFunction;

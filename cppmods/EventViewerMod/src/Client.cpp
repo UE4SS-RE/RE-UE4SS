@@ -246,6 +246,7 @@ namespace RC::EventViewerMod
                 m_state.current_thread = static_cast<int>(threads.size() - 1);
             }
 
+            ThreadInfo* game_thread = nullptr;
             if (ImGui::BeginCombo("Thread", threads[m_state.current_thread].id_string(), ImGuiComboFlags_WidthFitPreview))
             {
                 for (size_t idx = 0; idx < threads.size(); ++idx)
@@ -261,14 +262,26 @@ namespace RC::EventViewerMod
                     {
                         ImGui::SetItemDefaultFocus();
                     }
-                    else if (!m_state.thread_implicitly_set && !m_state.thread_explicitly_chosen && thread.is_game_thread)
+                    if (thread.is_game_thread)
                     {
-                        m_state.current_thread = static_cast<int>(idx);
-                        ImGui::SetItemDefaultFocus();
-                        m_state.thread_implicitly_set = true;
+                        game_thread = &thread;
                     }
                 }
                 ImGui::EndCombo();
+            }
+            else if (!m_state.thread_implicitly_set)
+            {
+                for (auto& thread : threads)
+                {
+                    if (thread.is_game_thread) game_thread = &thread;
+                }
+
+                if (game_thread && !m_state.thread_explicitly_chosen)
+                {
+                    m_state.current_thread = static_cast<int>(game_thread - threads.data());
+                    ImGui::SetItemDefaultFocus();
+                    m_state.thread_implicitly_set = true;
+                }
             }
         }
 
@@ -338,7 +351,7 @@ namespace RC::EventViewerMod
         }
 
         //ImGui::SameLine();
-        if (ImGui::InputScalar("Max Count Per Iteration", ImGuiDataType_U16, &m_state.dequeue_max_count, &step))
+        if (ImGui::InputScalar("Max Count Per Iteration", ImGuiDataType_U32, &m_state.dequeue_max_count, &step))
         {
             request_save_state();
             if (!m_state.dequeue_max_count)
@@ -542,7 +555,7 @@ namespace RC::EventViewerMod
             }
             m_state.mode = static_cast<EMode>(std::stoi(state_map.at("Mode")));
             m_state.dequeue_max_ms = static_cast<uint16_t>(std::stoi(state_map.at("DequeueMaxMs")));
-            m_state.dequeue_max_count = static_cast<uint16_t>(std::stoi(state_map.at("DequeueMaxCount")));
+            m_state.dequeue_max_count = static_cast<uint32_t>(std::stoul(state_map.at("DequeueMaxCount")));
             m_state.whitelist = state_map.at("Whitelist");
             m_state.blacklist = state_map.at("Blacklist");
 
