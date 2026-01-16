@@ -1,14 +1,16 @@
 #pragma once
 #include <filesystem>
-#include <fstream>
+#include <memory>
 
 #include <Middleware.hpp>
 #include <Structs.h>
 
-#include "UE4SSProgram.hpp"
+#include <UE4SSProgram.hpp>
 
 namespace RC::EventViewerMod
 {
+    class EntryCallStackRenderer;
+
     class Client
     {
     public:
@@ -59,6 +61,8 @@ namespace RC::EventViewerMod
 
         std::filesystem::path m_cfg_path{};
         std::filesystem::path m_dump_dir{};
+
+        std::unique_ptr<EntryCallStackRenderer> m_entry_call_stack_renderer{};
 
         bool m_imgui_thread_id_set = false;
     };

@@ -80,7 +80,7 @@ namespace RC::EventViewerMod
     auto CallStackEntry::to_string() const -> std::wstring
     {
         std::wstring out;
-        for (auto i = 0; i < depth; ++i) out += L"\t";
+        for (uint32_t i = 0; i < depth; ++i) out += L"\t";
         out += ensure_str(full_name);
         return out;
     }
