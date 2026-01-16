@@ -77,11 +77,11 @@ namespace RC::EventViewerMod
         if (with_support_menus) render_support_menus();
     }
 
-    auto CallStackEntry::to_string() const -> std::wstring
+    auto CallStackEntry::to_string_with_prefix() const -> std::wstring
     {
         std::wstring out;
         for (uint32_t i = 0; i < depth; ++i) out += L"\t";
-        out += ensure_str(full_name);
+        out += ensure_str(to_prefix_string(hook_target)) + ensure_str(full_name) + L"\n";
         return out;
     }
 

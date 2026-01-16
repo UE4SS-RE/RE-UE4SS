@@ -15,7 +15,6 @@
 // TODO refresh tick list on game end/begin
 // TODO default to 'All' target, game thread
 // TODO render target special color in popup
-// TODO fix saving in popup
 // TODO additional metrics
 namespace RC::EventViewerMod
 {
