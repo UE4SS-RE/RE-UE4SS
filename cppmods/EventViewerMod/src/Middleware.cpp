@@ -16,6 +16,7 @@
 // TODO default to 'All' target, game thread
 // TODO render target special color in popup
 // TODO additional metrics
+// TODO explore usefulness of 'full path'
 namespace RC::EventViewerMod
 {
     using RC::Unreal::UFunction;

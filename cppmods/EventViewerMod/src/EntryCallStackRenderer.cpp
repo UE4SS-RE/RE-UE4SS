@@ -1,6 +1,7 @@
 #include "../include/EntryCallStackRenderer.hpp"
 
 #include <imgui.h>
+#include <Enums.h>
 
 #include "UE4SSProgram.hpp"
 
@@ -12,6 +13,7 @@ namespace RC::EventViewerMod
             : m_target_idx(target_idx),
             m_context(std::move(context))
     {
+        m_target_ptr = &m_context[m_target_idx];
     }
 
     auto EntryCallStackRenderer::render() -> bool
@@ -44,13 +46,16 @@ namespace RC::EventViewerMod
             bool have_prev = false;
             int current_indent = 0;
             int id = 0;
-            for (auto entry: m_context)
+            uint8_t flags = m_disable_indent_colors ? ECallStackEntryRenderFlags_None : ECallStackEntryRenderFlags_IndentColors;
+            flags |= ECallStackEntryRenderFlags_WithSupportMenus;
+            for (const auto& entry: m_context)
             {
                 if (entry.is_disabled && !m_show_full_context) continue;
                 const int depth = static_cast<int>(entry.depth);
                 const int delta = have_prev ? (depth - prev_depth) : depth;
                 ImGui::PushID(id++);
-                m_disable_indent_colors ? entry.render(delta, false) : entry.render_with_colored_indent_space(delta, false); //TODO add render() bool arg to skip call stack renderer
+                &entry != m_target_ptr ? entry.render(delta, static_cast<ECallStackEntryRenderFlags_>(flags))
+                                        : entry.render(delta, static_cast<ECallStackEntryRenderFlags_>(flags | ECallStackEntryRenderFlags_Highlight));
                 ImGui::PopID();
                 current_indent += delta;
                 prev_depth = depth;

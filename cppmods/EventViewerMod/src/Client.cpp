@@ -381,6 +381,9 @@ namespace RC::EventViewerMod
             bool have_prev = false;
             int current_indent = 0;
             int id = 0;
+            uint8_t entry_flags = 0;
+            if (!m_state.disable_indent_colors) entry_flags |= ECallStackEntryRenderFlags_IndentColors;
+            if (!m_state.started) entry_flags |= ECallStackEntryRenderFlags_WithSupportMenusCallStackModal;
             for (auto& entry : thread.call_stack)
             {
                 if ((static_cast<uint32_t>(entry.hook_target) & selected_flags) == 0)
@@ -396,7 +399,8 @@ namespace RC::EventViewerMod
                 const int depth = static_cast<int>(entry.depth);
                 const int delta = have_prev ? (depth - prev_depth) : depth;
                 ImGui::PushID(id++);
-                m_state.disable_indent_colors ? entry.render(delta, !m_state.started) : entry.render_with_colored_indent_space(delta, !m_state.started);
+                //m_state.disable_indent_colors ? entry.render(delta, !m_state.started) : entry.render_with_colored_indent_space(delta, !m_state.started);
+                entry.render(delta, static_cast<ECallStackEntryRenderFlags_>(entry_flags));
                 ImGui::PopID();
                 current_indent += delta;
                 prev_depth = depth;
@@ -429,7 +433,7 @@ namespace RC::EventViewerMod
                         continue;
                     }
                     ImGui::PushID(id++);
-                    entry.render(!m_state.started);
+                    entry.render(m_state.started ? ECallFrequencyEntryRenderFlags_None : ECallFrequencyEntryRenderFlags_WithSupportMenus);
                     ImGui::PopID();
                 }
 

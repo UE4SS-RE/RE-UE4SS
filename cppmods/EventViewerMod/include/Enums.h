@@ -124,4 +124,19 @@ EVM_DECLARE_REFLECTED_ENUM(Mode, EVM_MODE);
 #undef EVM_MODE
 #undef EVM_MIDDLEWARE_HOOK_TARGET_FLAGS
 
+    enum ECallStackEntryRenderFlags_ : uint8_t
+    {
+        ECallStackEntryRenderFlags_None = 0,
+        ECallStackEntryRenderFlags_WithSupportMenus = 1,
+        ECallStackEntryRenderFlags_WithSupportMenusCallStackModal = 3,
+        ECallStackEntryRenderFlags_IndentColors = 4,
+        ECallStackEntryRenderFlags_Highlight = 8
+    };
+
+    enum ECallFrequencyEntryRenderFlags_ : uint8_t
+    {
+        ECallFrequencyEntryRenderFlags_None = 0,
+        ECallFrequencyEntryRenderFlags_WithSupportMenus = 1
+    };
+
 } // namespace RC::EventViewerMod
