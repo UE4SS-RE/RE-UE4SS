@@ -140,9 +140,7 @@ namespace RC::EventViewerMod
                 m_middleware.stop();
                 m_state.started = false;
                 m_state.needs_save.clear(std::memory_order_release);
-                m_state.threads.clear();
-                m_state.current_thread = 0;
-
+                clear_threads();
                 if (!saved)
                 {
                     save_state();
@@ -305,11 +303,7 @@ namespace RC::EventViewerMod
         ImGui::SameLine();
         if (ImGui::Button("Clear All##AllThreads") && !threads.empty())
         {
-            for (auto& thread : threads)
-            {
-                thread.call_stack.clear();
-                thread.call_frequencies.clear();
-            }
+            clear_threads();
         }
         ImGui::SameLine();
         if (ImGui::Button("Save##Current"))
@@ -862,7 +856,15 @@ if (mode == ESaveMode::all)
         }
     }
 
-auto Client::request_save_state() -> void
+    auto Client::clear_threads() -> void
+    {
+        m_state.current_thread = 0;
+        m_state.threads.clear();
+        m_state.thread_explicitly_chosen = false;
+        m_state.thread_implicitly_set = false;
+    }
+
+    auto Client::request_save_state() -> void
     {
         m_state.needs_save.test_and_set(std::memory_order_release);
     }

@@ -55,6 +55,8 @@ namespace RC::EventViewerMod
         auto serialize_view(ThreadInfo& info, EMode mode, EMiddlewareHookTarget hook_target, std::ofstream& out) const -> void;
         auto serialize_all_views(std::ofstream& out) -> void;
 
+        auto clear_threads() -> void;
+
         UIState m_state{};
 
         Middleware& m_middleware;

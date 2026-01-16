@@ -9,10 +9,9 @@
 #include <Unreal/CoreUObject/UObject/Class.hpp>
 
 // if using fname index as a hash, games that implement name recycling can be problematic/inaccurate for context objects
-// FEATURES clear all should clear thread list
 // TODO additional metrics
-// TODO explore usefulness of 'full path'
 // TODO still have some layout issues
+// TODO help indicators/readme
 namespace RC::EventViewerMod
 {
     using RC::Unreal::UFunction;
