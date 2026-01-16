@@ -1,4 +1,4 @@
-local MINIMUM_MSVC_TOOLSET_VERSION = "14.39"
+local MINIMUM_MSVC_TOOLSET_VERSION = "14.43"
 local MINIMUM_RUST_VERSION = "1.73.0"
 
 local function compare_versions(ver1, ver2)
