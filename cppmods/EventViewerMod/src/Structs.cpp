@@ -8,6 +8,8 @@
 #include <imgui.h>
 #include <imgui_internal.h>
 
+#include <StringPool.hpp>
+
 inline constexpr static unsigned ALPHA = 200;
 inline constexpr static std::array COLORS = {
     IM_COL32(255, 0, 0, ALPHA),     // red
@@ -121,17 +123,18 @@ namespace RC::EventViewerMod
                 if (ImGui::MenuItem("Show Call Stack")) Client::GetInstance().render_entry_stack_modal(this); // need to do this outside
                 ImGui::Separator();
             }
-            if (ImGui::MenuItem("Copy Caller Name##ccn")) copy_to_clipboard({full_name.begin(), function_name.begin() - 1});
+            if (ImGui::MenuItem("Copy Function Full Name")) copy_to_clipboard(StringPool::GetInstance().get_path_name(function_hash));
             if (ImGui::MenuItem("Copy Function Name##cfn")) copy_to_clipboard(function_name);
-            if (ImGui::MenuItem("Copy Full Name##cfln")) copy_to_clipboard(full_name);
-            ImGui::Separator();
-            if (ImGui::MenuItem("Add Caller to Whitelist##cwl")) Client::GetInstance().add_to_white_list({full_name.begin(), function_name.begin() - 1});
             if (ImGui::MenuItem("Add Function to Whitelist##fwl")) Client::GetInstance().add_to_white_list(function_name);
-            if (ImGui::MenuItem("Add Full Name to Whitelist##fnwl")) Client::GetInstance().add_to_white_list(full_name);
-            ImGui::Separator();
-            if (ImGui::MenuItem("Add Caller to Blacklist##cbl")) Client::GetInstance().add_to_black_list({full_name.begin(), function_name.begin() - 1});
             if (ImGui::MenuItem("Add Function to Blacklist##fbl")) Client::GetInstance().add_to_black_list(function_name);
-            if (ImGui::MenuItem("Add Full Name to Blacklist##fnb")) Client::GetInstance().add_to_black_list(full_name);
+            ImGui::Separator();
+            if (ImGui::MenuItem("Copy Caller Name##ccn")) copy_to_clipboard({full_name.begin(), function_name.begin() - 1});
+            if (ImGui::MenuItem("Add Caller to Whitelist##cwl")) Client::GetInstance().add_to_white_list({full_name.begin(), function_name.begin() - 1});
+            if (ImGui::MenuItem("Add Caller to Blacklist##cbl")) Client::GetInstance().add_to_black_list({full_name.begin(), function_name.begin() - 1});
+            ImGui::Separator();
+            if (ImGui::MenuItem("Copy Caller + Function Name##cfln")) copy_to_clipboard(full_name);
+            if (ImGui::MenuItem("Add Caller + Function to Whitelist##fnwl")) Client::GetInstance().add_to_white_list(full_name);
+            if (ImGui::MenuItem("Add Caller + Function to Blacklist##fnb")) Client::GetInstance().add_to_black_list(full_name);
             ImGui::EndPopup();
         }
     }
@@ -159,6 +162,7 @@ namespace RC::EventViewerMod
         ImGui::SetItemTooltip("Right click for options");
         if (ImGui::BeginPopupContextItem("EntryPopup##fep", ImGuiPopupFlags_MouseButtonRight))
         {
+            if (ImGui::MenuItem("Copy Function Full Name")) copy_to_clipboard(StringPool::GetInstance().get_path_name(function_hash));
             if (ImGui::MenuItem("Copy Function Name##cfn")) copy_to_clipboard(function_name);
             if (ImGui::MenuItem("Add Function to Whitelist##fwl")) Client::GetInstance().add_to_white_list(function_name);
             if (ImGui::MenuItem("Add Function to Blacklist##fbl"))Client::GetInstance().add_to_black_list(function_name);

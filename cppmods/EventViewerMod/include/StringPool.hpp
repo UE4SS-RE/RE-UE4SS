@@ -20,6 +20,9 @@ namespace RC::EventViewerMod
         //  - function_hash for fast equality on function identity
         auto get_strings(RC::Unreal::UObject* caller, RC::Unreal::UFunction* function) -> AllNameStringViews;
 
+        // Returns path name of a function, same as calling GetPathName but with a string view instead.
+        auto get_path_name(uint32_t function_hash) -> std::string_view;
+
         static auto GetInstance() -> StringPool&;
 
         StringPool(const StringPool& Other) = delete;
@@ -37,7 +40,8 @@ namespace RC::EventViewerMod
         };
 
         // TODO replace with better concurrent hash map solution, though not too important for now
-        std::unordered_map<uint64_t, StringInfo> m_pool;
+        std::unordered_map<uint64_t, StringInfo> m_main_pool; // hashed by function->GetComparisonIndex and caller->GetComparisonIndex
+        std::unordered_map<uint32_t, std::string> m_path_pool; // hashed by function->GetComparisonIndex
         std::shared_mutex m_mutex;
     };
 }
