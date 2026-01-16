@@ -13,11 +13,11 @@ namespace RC::EventViewerMod
         EntryCallStackRenderer& operator=(const EntryCallStackRenderer& Other) = delete;
         EntryCallStackRenderer& operator=(EntryCallStackRenderer&& Other) noexcept = delete;
 
-        EntryCallStackRenderer(int64_t target_idx, std::vector<CallStackEntry> context);
+        EntryCallStackRenderer(size_t target_idx, std::vector<CallStackEntry> context);
 
         auto render() -> bool;
     private:
-        int64_t m_target_idx;
+        size_t m_target_idx;
         std::vector<CallStackEntry> m_context;
         bool m_disable_indent_colors = false;
         bool m_show_full_context = false;
