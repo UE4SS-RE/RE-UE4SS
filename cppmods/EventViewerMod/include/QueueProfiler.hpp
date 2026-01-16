@@ -43,6 +43,16 @@ public:
         pending_total.fetch_add(pending, std::memory_order_relaxed);
     }
 
+    static void AddTimeExceededCount()
+    {
+        time_exceeded_total.fetch_add(1, std::memory_order_relaxed);
+    }
+
+    static uint64_t GetTimeExceededCount()
+    {
+        return time_exceeded_total.load(std::memory_order_relaxed);
+    }
+
     static double GetPendingAverage()
     {
         return (pending_total.load(std::memory_order_relaxed) / static_cast<double>(pending_count.load(std::memory_order_relaxed)));
@@ -56,11 +66,13 @@ public:
         dequeue_total.store(0, std::memory_order_release);
         pending_total.store(0, std::memory_order_release);
         pending_count.store(0, std::memory_order_release);
+        time_exceeded_total.store(0, std::memory_order_release);
     }
 private:
     inline static std::atomic_int64_t enqueue_total = 0;
     inline static std::atomic_int64_t dequeue_total = 0;
     inline static std::atomic_int64_t pending_total = 0;
+    inline static std::atomic_int64_t time_exceeded_total = 0;
 
     inline static std::atomic_int64_t enqueue_count = 0;
     inline static std::atomic_int64_t dequeue_count = 0;
