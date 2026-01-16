@@ -8,7 +8,7 @@ namespace RC::EventViewerMod
 {
     using namespace std::literals::string_literals;
 
-    EntryCallStackRenderer::EntryCallStackRenderer(int64_t target_idx, std::vector<CallStackEntry> context)
+    EntryCallStackRenderer::EntryCallStackRenderer(const size_t target_idx, std::vector<CallStackEntry> context)
             : m_target_idx(target_idx),
             m_context(std::move(context))
     {
@@ -28,17 +28,17 @@ namespace RC::EventViewerMod
             m_requested_open = true;
         }
 
-        if (ImGui::BeginPopupModal("Entry Call Stack##entrycallstackmodal", nullptr, ImGuiWindowFlags_AlwaysAutoResize))
+        if (ImGui::BeginPopupModal("Entry Call Stack##entrycallstackmodal", nullptr, ImGuiWindowFlags_HorizontalScrollbar))
         {
             ImGui::Checkbox("Show Full Context", &m_show_full_context);
             ImGui::Checkbox("Disable Indent Colors", &m_disable_indent_colors);
 
-            auto area = ImGui::GetContentRegionAvail();
-            auto& padding = ImGui::GetStyle().WindowPadding;
-            auto& scroll_size = ImGui::GetStyle().ScrollbarSize;
-            area.y -= ((padding.y + scroll_size) * 2);
-            area.x -= (padding.x + scroll_size);
-            ImGui::BeginChild("##entrycallstackview", area, ImGuiChildFlags_Borders);
+            // auto area = ImGui::GetContentRegionAvail();
+            // auto& padding = ImGui::GetStyle().WindowPadding;
+            // auto& scroll_size = ImGui::GetStyle().ScrollbarSize;
+            // area.y -= ((padding.y + scroll_size) * 2);
+            // area.x -= (padding.x + scroll_size);
+            ImGui::BeginChild("##entrycallstackview", {0,0}, ImGuiChildFlags_Borders | ImGuiChildFlags_AutoResizeY, ImGuiWindowFlags_HorizontalScrollbar);
 
             int prev_depth = 0;
             bool have_prev = false;
@@ -70,20 +70,24 @@ namespace RC::EventViewerMod
             {
                 save();
             }
-
+            ImGui::SameLine();
+            // NOTE:
+            // Do *not* early-return before EndPopup().
+            // ImGui maintains multiple internal stacks (window stack, ID stack, etc.).
+            // Skipping EndPopup() will eventually trip assertions like "Calling PopId() too many times".
+            bool keep_open = true;
             if (ImGui::Button("Close##entrycallstackclose"))
             {
                 ImGui::CloseCurrentPopup();
-                return false;
+                keep_open = false;
             }
 
             ImGui::EndPopup();
-            Output::send((L"Opened modal"));
-        }
-        else
-        {
-            Output::send((L"Failed to open modal"));
-            //return false;
+
+            if (!keep_open)
+            {
+                return false;
+            }
         }
 
         return true;
@@ -118,5 +122,7 @@ namespace RC::EventViewerMod
         }
 
         out.close();
+
+        Output::send<LogLevel::Verbose>(STR("[EventViewerMod] Saved capture to {}"), (captures_root / filename).c_str());
     }
 }

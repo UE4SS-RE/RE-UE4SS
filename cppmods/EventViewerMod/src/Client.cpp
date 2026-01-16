@@ -368,7 +368,7 @@ namespace RC::EventViewerMod
         auto& scroll_size = ImGui::GetStyle().ScrollbarSize;
         area.y -= ((padding.y + scroll_size) * 2);
         area.x -= (padding.x + scroll_size);
-        ImGui::BeginChild("##view", area, ImGuiChildFlags_Borders);
+        ImGui::BeginChild("##view", area, ImGuiChildFlags_Borders | ImGuiChildFlags_AutoResizeY, ImGuiWindowFlags_HorizontalScrollbar);
         if (m_state.mode == EMode::Stack)
         {
             if (thread.call_stack.empty())
@@ -444,7 +444,6 @@ namespace RC::EventViewerMod
             if (!m_entry_call_stack_renderer->render())
             {
                 m_entry_call_stack_renderer = nullptr;
-                Output::send(L"Freed modal");
             }
         }
     }
@@ -873,15 +872,15 @@ auto Client::add_to_black_list(std::string_view item) -> void
     apply_filters_to_history(false, true, false);
 }
 
-auto Client::render_entry_stack_modal(const CallStackEntry* entry) -> void //TODO fix unsigned/signed conversions
+auto Client::render_entry_stack_modal(const CallStackEntry* entry) -> void
 {
     if (m_entry_call_stack_renderer) return;
     // find root entry and next root entry
     // finding the root entry also reveals all callers, so go ahead and bookkeep it
     const auto& stack = m_state.threads[m_state.current_thread].call_stack;
-    const auto target_abs_idx = entry - stack.data();
-    int64_t root_abs_idx = target_abs_idx;
-    std::vector<int64_t> idxs_relevant_to_target{}; // added in reverse-view order
+    const size_t target_abs_idx = entry - stack.data();
+    size_t root_abs_idx = target_abs_idx;
+    std::vector<size_t> idxs_relevant_to_target{}; // added in reverse-view order
     if (entry->depth)
     {
         uint32_t last_lowest_depth = entry->depth;
@@ -903,7 +902,7 @@ auto Client::render_entry_stack_modal(const CallStackEntry* entry) -> void //TOD
 
     size_t next_root_abs_idx = target_abs_idx + 1;
     bool out_of_target_scope = false;
-    for (; next_root_abs_idx < stack.size(); ++next_root_abs_idx) //TODO find target callees and add to callers_idxs
+    for (; next_root_abs_idx < stack.size(); ++next_root_abs_idx) // find callers and callees of target
     {
         const auto this_entry_depth = stack[next_root_abs_idx].depth;
         if (this_entry_depth == 0) break;
@@ -920,7 +919,8 @@ auto Client::render_entry_stack_modal(const CallStackEntry* entry) -> void //TOD
     const auto target_rel_idx = target_abs_idx - root_abs_idx; // find context index for target
     idxs_relevant_to_target.push_back(target_rel_idx);
 
-    // invert idxs_relevant_to_target to get what should be disabled when show full context isn't checked
+    // make any irrelevant entry disabled by default, and assert that any relevant entry is enabled. the modal won't change them, but
+    // will use is_disabled as a flag to indicate its relevance for the checkbox.
     for (size_t context_idx = 0; context_idx < context.size(); ++context_idx)
     {
         if (std::ranges::find(idxs_relevant_to_target, static_cast<int64_t>(context_idx)) != idxs_relevant_to_target.end())

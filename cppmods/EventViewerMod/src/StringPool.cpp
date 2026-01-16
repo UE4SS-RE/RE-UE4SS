@@ -22,6 +22,7 @@ namespace
 
 auto RC::EventViewerMod::StringPool::get_strings(RC::Unreal::UObject* caller, RC::Unreal::UFunction* function) -> AllNameStringViews
 {
+    if (!caller || !function) return AllNameStringViews{};
     // StringPool combines the caller's ComparisonIndex and the function's ComparisonIndex
     // to generate a unique hash for the full name string.
     uint64_t hash = function->GetNamePrivate().GetComparisonIndex();
