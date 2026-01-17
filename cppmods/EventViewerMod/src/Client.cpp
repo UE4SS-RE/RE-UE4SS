@@ -700,11 +700,11 @@ namespace RC::EventViewerMod
             auto& thread = *thread_ptr;
 
             // Determine disabled state under current filters.
-            // TODO if it doesn't pass freq, it won't pass stack
-            const auto stack_disabled = (entry.is_tick && !m_state.show_tick) || !passes_filters(entry.lower_cased_full_name);
+            // If it doesn't pass freq, it won't pass stack
             const auto freq_disabled = (entry.is_tick && !m_state.show_tick) || !passes_filters(entry.lower_cased_function_name);
+            const auto stack_disabled = freq_disabled || ((entry.is_tick && !m_state.show_tick) || !passes_filters(entry.lower_cased_full_name));
 
-            // Frequency tracking: bump existing, or add. TODO combine into 1 loop iteration?
+            // Frequency tracking: bump existing, or add.
             auto freq_it = std::ranges::find_if(thread.call_frequencies, [&entry](const CallFrequencyEntry& freq_entry) -> bool {
                 return entry.function_hash == freq_entry.function_hash;
             });

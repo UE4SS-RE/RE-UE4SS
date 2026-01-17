@@ -38,7 +38,7 @@ namespace RC::EventViewerMod
     }
 
     CallStackEntry::CallStackEntry(const EMiddlewareHookTarget hook_target,
-                                   const AllNameStringViews strings,
+                                   const AllNameStringViews& strings,
                                    const uint32_t depth,
                                    const std::thread::id thread_id,
                                    const bool is_tick)
@@ -54,6 +54,7 @@ namespace RC::EventViewerMod
         lower_cased_function_name = strings.lower_cased_function_name;
         full_name = strings.full_name;
         lower_cased_full_name = strings.lower_cased_full_name;
+        full_hash = strings.full_hash;
     }
 
     auto CallStackEntry::render(const int indent_delta, const ECallStackEntryRenderFlags_ flags) const -> void

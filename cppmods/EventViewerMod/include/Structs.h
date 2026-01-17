@@ -23,7 +23,7 @@ namespace RC::EventViewerMod
 
     struct FunctionNameStringViews
     {
-        uint32_t function_hash;
+        uint32_t function_hash; // FName.ComparisonIndex of UFunction
         std::string_view function_name;
         std::string_view lower_cased_function_name;
     };
@@ -32,6 +32,7 @@ namespace RC::EventViewerMod
     {
         std::string_view full_name;
         std::string_view lower_cased_full_name;
+        uint64_t full_hash; // FName.ComparisonIndex of UFunction in upper bits, FName.ComparisonIndex of UObject caller in lower bits
     };
 
     // Note: these types are intentionally cheap-to-move so they can be passed through
@@ -50,7 +51,7 @@ namespace RC::EventViewerMod
     {
         CallStackEntry() = default;
         CallStackEntry(EMiddlewareHookTarget hook_target,
-                       AllNameStringViews strings,
+                       const AllNameStringViews& strings,
                        uint32_t depth,
                        std::thread::id thread_id,
                        bool is_tick);
@@ -73,7 +74,7 @@ namespace RC::EventViewerMod
     // Stores both original-case and lower-cased function name views (for case-insensitive filtering).
     struct CallFrequencyEntry : EntryBase, FunctionNameStringViews
     {
-        CallFrequencyEntry() = default;
+        CallFrequencyEntry() = default; //TODO = delete?
         CallFrequencyEntry(const FunctionNameStringViews& strings, bool is_tick);
         auto render(ECallFrequencyEntryRenderFlags_ flags) const -> void;
         uint64_t frequency = 1;
