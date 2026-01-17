@@ -3,7 +3,7 @@
 #include <memory>
 
 #include <Middleware.hpp>
-#include <Structs.h>
+#include <Structs.hpp>
 
 #include <UE4SSProgram.hpp>
 

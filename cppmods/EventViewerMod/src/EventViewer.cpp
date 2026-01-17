@@ -1,6 +1,6 @@
 #include <EventViewer.hpp>
 #include <Unreal/Hooks/Hooks.hpp>
-#include <Client.h>
+#include <Client.hpp>
 #include <DynamicOutput/Output.hpp>
 
 #include "UEngine.hpp"

@@ -5,7 +5,7 @@
 #include <unordered_map>
 #include <utility>
 
-#include <Structs.h>
+#include <Structs.hpp>
 
 #include <Unreal/CoreUObject/UObject/Class.hpp>
 

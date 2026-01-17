@@ -15,18 +15,10 @@ add_library(${TARGET} SHARED
         src/dllmain.cpp
         src/EventViewer.cpp
         src/Middleware.cpp
-        include/Middleware.hpp
-        include/Structs.h
         src/Client.cpp
-        include/Client.h
-        include/Enums.h
         src/Structs.cpp
-        include/StringPool.hpp
         src/StringPool.cpp
-        include/QueueProfiler.hpp
         src/EntryCallStackRenderer.cpp
-        include/EntryCallStackRenderer.hpp
-        include/HelpStrings.hpp
 )
 
 target_include_directories(${TARGET} PRIVATE "include")

@@ -1,5 +1,5 @@
-#include <Structs.h>
-#include <Client.h>
+#include <Structs.hpp>
+#include <Client.hpp>
 #include <Unreal/UnrealInitializer.hpp>
 
 #include <array>

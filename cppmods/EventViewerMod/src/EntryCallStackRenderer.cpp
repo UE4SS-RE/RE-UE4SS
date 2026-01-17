@@ -1,7 +1,7 @@
 #include <EntryCallStackRenderer.hpp>
 
 #include <imgui.h>
-#include <Enums.h>
+#include <Enums.hpp>
 #include <HelpStrings.hpp>
 #include <UE4SSProgram.hpp>
 
