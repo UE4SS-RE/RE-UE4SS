@@ -74,7 +74,7 @@ namespace RC::EventViewerMod
     // Stores both original-case and lower-cased function name views (for case-insensitive filtering).
     struct CallFrequencyEntry : EntryBase, FunctionNameStringViews
     {
-        CallFrequencyEntry() = default; //TODO = delete?
+        CallFrequencyEntry() = default;
         CallFrequencyEntry(const FunctionNameStringViews& strings, bool is_tick);
         auto render(ECallFrequencyEntryRenderFlags_ flags) const -> void;
         uint64_t frequency = 1;

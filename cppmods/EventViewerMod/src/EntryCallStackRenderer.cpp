@@ -36,11 +36,6 @@ namespace RC::EventViewerMod
             HelpMarker(HelpStrings::HELP_CEMODAL_SHOW_FULL_CONTEXT);
             ImGui::Checkbox("Disable Indent Colors", &m_disable_indent_colors);
 
-            // auto area = ImGui::GetContentRegionAvail();
-            // auto& padding = ImGui::GetStyle().WindowPadding;
-            // auto& scroll_size = ImGui::GetStyle().ScrollbarSize;
-            // area.y -= ((padding.y + scroll_size) * 2);
-            // area.x -= (padding.x + scroll_size);
             ImGui::BeginChild("##entrycallstackview", {0,0}, ImGuiChildFlags_Borders | ImGuiChildFlags_AutoResizeY | ImGuiChildFlags_FrameStyle, ImGuiWindowFlags_HorizontalScrollbar);
 
             int prev_depth = 0;
