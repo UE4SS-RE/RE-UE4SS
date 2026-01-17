@@ -11,7 +11,7 @@
 // note if using fname index as a hash, games that implement name recycling can be problematic/inaccurate for context objects, and right clicking entries
 // TODO gray bg on view
 // TODO clear string pool on load
-// TODO performance improvements such as text virtualization and passes_filter improvements (see passes_filter in Client.cpp)
+// TODO saved modal
 namespace RC::EventViewerMod
 {
     using RC::Unreal::UFunction;

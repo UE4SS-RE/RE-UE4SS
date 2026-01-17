@@ -116,7 +116,8 @@ namespace RC::EventViewerMod
         EMiddlewareHookTarget hook_target = EMiddlewareHookTarget::All;          // [Savable] [Thread-ImGui]
         EMode mode = EMode::Stack;                                               // [Savable] [Thread-ImGui]
         uint16_t dequeue_max_ms = 10;                                            // [Savable] [Thread-ImGui]
-        uint16_t text_virtualization_count = 100;
+        uint16_t text_virtualization_count = 100;                                // [Savable] [Thread-ImGui]
+        uint64_t text_temp_virtualization_count = text_virtualization_count;
         uint32_t dequeue_max_count = 100000;                                     // [Savable] [Thread-ImGui]
 
         std::string blacklist;                                                   // [Savable] [Thread-ImGui]

@@ -38,8 +38,7 @@ namespace RC::EventViewerMod
         inline static constexpr auto HELP_LIST_FILTER = "Whitelist/Blacklist filters both accept comma-separate lists of strings with case-insensitive matching.\n\n"
                                                         "Note that you can press enter to apply them when focused as well as press the button.\n\n"
                                                         "If you don't have any filters, then all calls that match your Target and \"Show Builtin Tick Functions\" settings "
-                                                        "will be shown. This is not recommended since ImGui can only show some amount strings at a time before slowing down, "
-                                                        "and as a design decision, this mod won't automatically clean up old calls.\n\n"
+                                                        "will be shown.\n\n"
                                                         "The caller's name and the function's name make up a call's name, in the form of \"Caller.Function\".\n\n"
                                                         "For a call to pass the whitelist filter, the call must have at least one of the comma-separated strings as a substring of its name. "
                                                         "Only having a whitelist filter is effectively the same as a normal search.\n\n"
@@ -86,6 +85,15 @@ namespace RC::EventViewerMod
                                                                  "dequeuing. Should be 0 or very close to it.\n\n"
                                                                  "Time Slot Exceeded Count: Amount of times the ImGui thread exceeded the time set in \"Max MS Read Time\"."
                                                                  "Should be 0, or at least rarely moving.";
+
+        inline static constexpr auto HELP_TEXT_VIRTUALIZATION_COUNT = "The total amount of calls that can be streamed into ImGui while running.\n\n"
+                                                                      "Changing this value will clear all threads.\n\n"
+                                                                      "When scrolling up while paused, you'll eventually run into a \"Load More\" button, "
+                                                                      "where the number of calls loaded doubles every time from this number.\n\n"
+                                                                      "This doesn't affect filtering, nor does it erase calls, it just controls how much is in "
+                                                                      "ImGui at a time (apart from clearing the threads when changing this value).\n\n"
+                                                                      "Higher values means making the \"Load More\" button appear later, but can"
+                                                                      "come in at a hefty performance cost.";
     };
 }
 
