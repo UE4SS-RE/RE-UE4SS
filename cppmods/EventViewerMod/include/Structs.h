@@ -109,14 +109,14 @@ namespace RC::EventViewerMod
     {
         bool enabled = false;                                                    // [Savable] [Thread-ImGui]
         bool started = false;                                                    // [Thread-ImGui]
-        bool show_tick = false;                                                  // [Savable] [Thread-ImGui]
+        bool show_tick = true;                                                   // [Savable] [Thread-ImGui]
         bool disable_indent_colors = false;                                      // [Savable] [Thread-ImGui]
         bool thread_explicitly_chosen = false;                                   // [Thread-ImGui] User selected a thread
         bool thread_implicitly_set = false;                                      // [Thread-ImGui] System set thread to game thread if not explicit
         EMiddlewareHookTarget hook_target = EMiddlewareHookTarget::All;          // [Savable] [Thread-ImGui]
         EMode mode = EMode::Stack;                                               // [Savable] [Thread-ImGui]
         uint16_t dequeue_max_ms = 10;                                            // [Savable] [Thread-ImGui]
-        uint32_t dequeue_max_count = 50000;                                      // [Savable] [Thread-ImGui]
+        uint32_t dequeue_max_count = 100000;                                     // [Savable] [Thread-ImGui]
 
         std::string blacklist;                                                   // [Savable] [Thread-ImGui]
         std::vector<std::string> blacklist_tokens;                               // [Thread-ImGui] (lower-cased tokens)

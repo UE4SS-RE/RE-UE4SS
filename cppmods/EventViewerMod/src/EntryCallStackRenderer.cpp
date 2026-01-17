@@ -2,8 +2,8 @@
 
 #include <imgui.h>
 #include <Enums.h>
-
-#include "UE4SSProgram.hpp"
+#include <HelpStrings.hpp>
+#include <UE4SSProgram.hpp>
 
 namespace RC::EventViewerMod
 {
@@ -33,6 +33,7 @@ namespace RC::EventViewerMod
         if (ImGui::BeginPopupModal("Entry Call Stack##entrycallstackmodal", nullptr, ImGuiWindowFlags_HorizontalScrollbar))
         {
             ImGui::Checkbox("Show Full Context", &m_show_full_context);
+            HelpMarker(HelpStrings::HELP_CEMODAL_SHOW_FULL_CONTEXT);
             ImGui::Checkbox("Disable Indent Colors", &m_disable_indent_colors);
 
             // auto area = ImGui::GetContentRegionAvail();
@@ -75,6 +76,7 @@ namespace RC::EventViewerMod
             {
                 save();
             }
+            HelpMarker(HelpStrings::HELP_CEMODAL_SAVE);
             ImGui::SameLine();
             // NOTE:
             // Do *not* early-return before EndPopup().

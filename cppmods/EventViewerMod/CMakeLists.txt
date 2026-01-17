@@ -26,6 +26,7 @@ add_library(${TARGET} SHARED
         include/QueueProfiler.hpp
         src/EntryCallStackRenderer.cpp
         include/EntryCallStackRenderer.hpp
+        include/HelpStrings.hpp
 )
 
 target_include_directories(${TARGET} PRIVATE "include")
