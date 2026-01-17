@@ -163,6 +163,15 @@ namespace RC::EventViewerMod
         dequeue();
 
         render_view();
+
+        if (ImGui::BeginPopupModal("Saved File", nullptr, ImGuiWindowFlags_AlwaysAutoResize))
+        {
+            ImGui::PushTextWrapPos(ImGui::GetFontSize() * 35.0f);
+            ImGui::Text("Saved file to %s", m_state.last_save_path.c_str());
+            ImGui::PopTextWrapPos();
+            if (ImGui::Button("OK")) ImGui::CloseCurrentPopup();
+            ImGui::EndPopup();
+        }
     }
 
     auto Client::render_cfg() -> void
@@ -808,8 +817,8 @@ namespace RC::EventViewerMod
                 to_string(m_state.hook_target) +
                 "-" + EMode_NameArray[static_cast<int>(m_state.mode)] + " " +
                 oss.str() + ".txt";
-
-            std::ofstream file{m_dump_dir / filename};
+            const auto path = m_dump_dir / filename;
+            std::ofstream file{path};
             if (!file.is_open())
             {
                 return;
@@ -818,10 +827,12 @@ namespace RC::EventViewerMod
             file << to_string(m_state.hook_target) << " ";
             serialize_view(threads[m_state.current_thread], m_state.mode, m_state.hook_target, file);
             file.close();
+            m_state.last_save_path = path.string();
+            ImGui::OpenPopup("Saved File");
             return;
         }
 
-if (mode == ESaveMode::all)
+        if (mode == ESaveMode::all)
         {
             if (m_state.threads.empty())
             {
@@ -830,7 +841,8 @@ if (mode == ESaveMode::all)
 
 
             const auto filename = "EventViewerMod Capture-All "s + oss.str() + ".txt";
-            std::ofstream file{m_dump_dir / filename};
+            const auto path = m_dump_dir / filename;
+            std::ofstream file{path};
             if (!file.is_open())
             {
                 return;
@@ -838,6 +850,8 @@ if (mode == ESaveMode::all)
 
             serialize_all_views(file);
             file.close();
+            m_state.last_save_path = path.string();
+            ImGui::OpenPopup("Saved File");
         }
     }
 

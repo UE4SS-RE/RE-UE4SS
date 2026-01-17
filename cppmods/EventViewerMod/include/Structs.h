@@ -130,5 +130,6 @@ namespace RC::EventViewerMod
         int current_thread = 0;                                                // [Thread-ImGui]
 
         std::atomic_flag needs_save = ATOMIC_FLAG_INIT;                          // [Thread-Any]
+        std::string last_save_path; //[Thread-ImGui]
     };
 } // namespace RC::EventViewerMod
