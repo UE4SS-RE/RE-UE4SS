@@ -20,11 +20,12 @@ namespace RC::EventViewerMod
         size_t m_target_idx;
         const CallStackEntry* m_target_ptr;
         std::vector<CallStackEntry> m_context;
+        std::string m_last_save_path;
         bool m_disable_indent_colors = false;
         bool m_show_full_context = false;
         // ImGui popups need an explicit OpenPopup() call. We request it once so the modal can appear.
         bool m_requested_open = false;
 
-        auto save() const -> void;
+        auto save() -> void;
     };
 }

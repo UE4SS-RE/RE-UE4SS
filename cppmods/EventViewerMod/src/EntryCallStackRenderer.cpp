@@ -1,4 +1,4 @@
-#include "../include/EntryCallStackRenderer.hpp"
+#include <EntryCallStackRenderer.hpp>
 
 #include <imgui.h>
 #include <Enums.h>
@@ -89,6 +89,15 @@ namespace RC::EventViewerMod
                 keep_open = false;
             }
 
+            if (ImGui::BeginPopupModal("Saved Entry File", nullptr, ImGuiWindowFlags_AlwaysAutoResize))
+            {
+                ImGui::PushTextWrapPos(ImGui::GetFontSize() * 35.0f);
+                ImGui::Text("Saved file to %s", m_last_save_path.c_str());
+                ImGui::PopTextWrapPos();
+                if (ImGui::Button("OK")) ImGui::CloseCurrentPopup();
+                ImGui::EndPopup();
+            }
+
             ImGui::EndPopup();
 
             if (!keep_open)
@@ -100,7 +109,7 @@ namespace RC::EventViewerMod
         return true;
     }
 
-    auto EntryCallStackRenderer::save() const -> void
+    auto EntryCallStackRenderer::save() -> void
     {
         static const auto wd = std::filesystem::path{StringType{UE4SSProgram::get_program().get_working_directory()}};
         static const auto captures_root = wd / "Mods" / "EventViewerMod" / "captures";
@@ -119,18 +128,18 @@ namespace RC::EventViewerMod
         const auto filename =
                 "EventViewerMod Capture-Entry "s + std::string(m_context[m_target_idx].function_name) + " " +
                 oss.str() + ".txt";
-        std::wofstream out{captures_root / filename};
+        const auto path = captures_root / filename;
+        std::wofstream out{path};
 
         for (const auto& entry : m_context)
         {
             if (entry.is_disabled && !m_show_full_context) continue;
             auto str = entry.to_string_with_prefix();
             out << str;
-            Output::send(str);
         }
 
         out.close();
-
-        Output::send<LogLevel::Verbose>(STR("[EventViewerMod] Saved capture to {}"), (captures_root / filename).c_str());
+        m_last_save_path = path.string();
+        ImGui::OpenPopup("Saved Entry File");
     }
 }
