@@ -106,27 +106,53 @@ namespace RC::EventViewerMod
     template <typename CallbackType>
     auto Middleware::HookController<CallbackType>::install_prehook() -> bool
     {
-        if (m_prehook_id != RC::Unreal::Hook::ERROR_ID) return false; //todo log
+        if (m_prehook_id != RC::Unreal::Hook::ERROR_ID)
+        {
+            Output::send<LogLevel::Error>(STR("[EventViewerMod] Failed to install prehook because it's already installed!"));
+            return false;
+        }
         m_prehook_id = register_prehook_fn(m_pre_callback, m_cb_options);
-        if (m_prehook_id == RC::Unreal::Hook::ERROR_ID) return false; //todo log
+        if (m_prehook_id == RC::Unreal::Hook::ERROR_ID)
+        {
+            Output::send<LogLevel::Error>(STR("[EventViewerMod] Failed to install prehook!"));
+            return false;
+        }
         return true;
     }
 
     template <typename CallbackType>
     auto Middleware::HookController<CallbackType>::install_posthook() -> bool
     {
-        if (m_posthook_id != RC::Unreal::Hook::ERROR_ID) return false; //todo log
+        if (m_posthook_id != RC::Unreal::Hook::ERROR_ID)
+        {
+            Output::send<LogLevel::Error>(STR("[EventViewerMod] Failed to install posthook because it's already installed!"));
+            return false;
+        }
         m_posthook_id = register_posthook_fn(m_post_callback, m_cb_options);
-        if (m_posthook_id == RC::Unreal::Hook::ERROR_ID) return false; //todo log
+        if (m_posthook_id == RC::Unreal::Hook::ERROR_ID)
+        {
+            Output::send<LogLevel::Error>(STR("[EventViewerMod] Failed to install posthook!"));
+            return false;
+        }
         return true;
     }
 
     template <typename CallbackType>
     auto Middleware::HookController<CallbackType>::unhook() -> void
     {
-        if (m_prehook_id == RC::Unreal::Hook::ERROR_ID && m_posthook_id == RC::Unreal::Hook::ERROR_ID) return; //todo log
-        RC::Unreal::Hook::UnregisterCallback(m_prehook_id); //todo log if false
-        RC::Unreal::Hook::UnregisterCallback(m_posthook_id); //todo log if false
+        if (m_prehook_id == RC::Unreal::Hook::ERROR_ID && m_posthook_id == RC::Unreal::Hook::ERROR_ID)
+        {
+            Output::send<LogLevel::Error>(STR("[EventViewerMod] Failed to remove hooks because it's not active!"));
+            return;
+        }
+        if (!RC::Unreal::Hook::UnregisterCallback(m_prehook_id))
+        {
+            Output::send<LogLevel::Error>(STR("[EventViewerMod] Failed to unregister prehook!"));
+        }
+        if (!RC::Unreal::Hook::UnregisterCallback(m_posthook_id))
+        {
+            Output::send<LogLevel::Error>(STR("[EventViewerMod] Failed to unregister posthook!"));
+        }
         m_prehook_id = m_posthook_id = RC::Unreal::Hook::ERROR_ID;
     }
 
