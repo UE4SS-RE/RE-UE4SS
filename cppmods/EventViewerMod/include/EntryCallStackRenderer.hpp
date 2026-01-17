@@ -1,5 +1,5 @@
 #pragma once
-#include <Structs.h>
+#include <Structs.hpp>
 #include <vector>
 
 namespace RC::EventViewerMod

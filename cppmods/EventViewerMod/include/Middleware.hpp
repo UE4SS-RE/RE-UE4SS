@@ -8,8 +8,8 @@
 #include <unordered_set>
 #include <vector>
 
-#include <Enums.h>
-#include <Structs.h>
+#include <Enums.hpp>
+#include <Structs.hpp>
 
 #include <Unreal/Hooks/Hooks.hpp>
 #include <concurrentqueue.h>
@@ -52,7 +52,10 @@ namespace RC::EventViewerMod
         // [Thread-ImGui]
         [[nodiscard]] auto get_imgui_thread_id() const -> std::thread::id;
 
+        // [Thread-ImGui]
         [[nodiscard]] auto get_average_enqueue_time() const -> double;
+
+        // [Thread-ImGui]
         [[nodiscard]] auto get_average_dequeue_time() const -> double;
 
          ~Middleware();

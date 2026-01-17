@@ -11,7 +11,7 @@
 #include <type_traits>
 #include <vector>
 
-#include <Enums.h>
+#include <Enums.hpp>
 #include <String/StringType.hpp>
 
 #include <Unreal/UObject.hpp>
