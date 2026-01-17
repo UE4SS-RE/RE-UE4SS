@@ -49,6 +49,7 @@ auto RC::EventViewerMod::StringPool::get_strings(RC::Unreal::UObject* caller, RC
                 FunctionNameStringViews{function_hash, func_name, lower_func_name},
                 full_name,
                 lower_full,
+                hash
             };
         }
     }
@@ -79,6 +80,7 @@ auto RC::EventViewerMod::StringPool::get_strings(RC::Unreal::UObject* caller, RC
             FunctionNameStringViews{function_hash, func_name, lower_func_name},
             full_name,
             lower_full_name,
+            hash
         };
     }
 }

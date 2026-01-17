@@ -12,6 +12,7 @@
 // TODO better filtering
 // TODO freq bug
 // TODO consider taking out adding caller+function to filters
+// TODO add check FName setup
 namespace RC::EventViewerMod
 {
     using RC::Unreal::UFunction;
