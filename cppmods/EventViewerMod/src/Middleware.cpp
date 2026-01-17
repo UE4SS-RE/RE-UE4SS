@@ -9,8 +9,9 @@
 #include <Unreal/CoreUObject/UObject/Class.hpp>
 
 // note if using fname index as a hash, games that implement name recycling can be problematic/inaccurate for context objects, and right clicking entries
-// TODO clear string pool on load or do string hashes
 // TODO better filtering
+// TODO freq bug
+// TODO consider taking out adding caller+function to filters
 namespace RC::EventViewerMod
 {
     using RC::Unreal::UFunction;

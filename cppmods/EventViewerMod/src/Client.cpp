@@ -700,10 +700,11 @@ namespace RC::EventViewerMod
             auto& thread = *thread_ptr;
 
             // Determine disabled state under current filters.
-            const auto _passes_filters = passes_filters(entry.lower_cased_full_name);
-            const bool disabled = (entry.is_tick && !m_state.show_tick) || !_passes_filters;
+            // TODO if it doesn't pass freq, it won't pass stack
+            const auto stack_disabled = (entry.is_tick && !m_state.show_tick) || !passes_filters(entry.lower_cased_full_name);
+            const auto freq_disabled = (entry.is_tick && !m_state.show_tick) || !passes_filters(entry.lower_cased_function_name);
 
-            // Frequency tracking: bump existing, or add.
+            // Frequency tracking: bump existing, or add. TODO combine into 1 loop iteration?
             auto freq_it = std::ranges::find_if(thread.call_frequencies, [&entry](const CallFrequencyEntry& freq_entry) -> bool {
                 return entry.function_hash == freq_entry.function_hash;
             });
@@ -714,7 +715,7 @@ namespace RC::EventViewerMod
             {
                 auto& freq = *freq_it;
                 ++freq.frequency;
-                freq.is_disabled = disabled;
+                freq.is_disabled = freq_disabled;
                 freq.source_flags |= entry_source_flags;
 
                 // Maintain descending order by frequency using list::splice (fast, no alloc).
@@ -737,12 +738,12 @@ namespace RC::EventViewerMod
             {
                 thread.call_frequencies.emplace_back(static_cast<const FunctionNameStringViews&>(entry), entry.is_tick);
                 auto& freq = thread.call_frequencies.back();
-                freq.is_disabled = disabled;
+                freq.is_disabled = freq_disabled;
                 freq.source_flags = entry_source_flags;
             }
 
             // Call stack history.
-            entry.is_disabled = disabled;
+            entry.is_disabled = stack_disabled;
             thread.call_stack.emplace_back(std::move(entry));
         });
     }
