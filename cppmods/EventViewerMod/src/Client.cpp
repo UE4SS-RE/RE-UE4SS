@@ -1,4 +1,4 @@
-#include "../include/Client.h"
+#include <Client.h>
 
 #include <algorithm>
 #include <chrono>
@@ -22,23 +22,23 @@
 #include <EntryCallStackRenderer.hpp>
 #include <glaze/glaze.hpp>
 
-#include "QueueProfiler.hpp"
+#include <QueueProfiler.hpp>
+#include <HelpStrings.hpp>
 
-namespace
+
+// ASCII-only lowercasing for case-insensitive filtering.
+// (Unreal names are typically ASCII; if this becomes a problem we'll revisit.)
+static auto to_lower_ascii_copy(std::string_view s) -> std::string
 {
-    // ASCII-only lowercasing for case-insensitive filtering.
-    // (Unreal names are typically ASCII; if this becomes a problem we'll revisit.)
-    auto to_lower_ascii_copy(std::string_view s) -> std::string
+    std::string out;
+    out.reserve(s.size());
+    for (const unsigned char ch : s)
     {
-        std::string out;
-        out.reserve(s.size());
-        for (const unsigned char ch : s)
-        {
-            out.push_back(static_cast<char>(std::tolower(ch)));
-        }
-        return out;
+        out.push_back(static_cast<char>(std::tolower(ch)));
     }
+    return out;
 }
+
 
 // Returns lower-cased tokens (copied strings).
 static std::vector<std::string> split_string_by_comma(const std::string& string)
@@ -182,13 +182,14 @@ namespace RC::EventViewerMod
             request_save_state();
             m_state.hook_target = EMiddlewareHookTarget_ValueArray[hook_target_idx];
         }
-
+        HelpMarker(HelpStrings::HELP_TARGET);
         ImGui::SameLine();
 
         if (combo_with_flags("Mode", reinterpret_cast<int*>(&m_state.mode), EMode_NameArray, EMode_Size, ImGuiComboFlags_WidthFitPreview))
         {
             request_save_state();
         }
+        HelpMarker(HelpStrings::HELP_MODE);
 
         bool whitelist_changed = false;
         bool blacklist_changed = false;
@@ -212,6 +213,7 @@ namespace RC::EventViewerMod
                 request_save_state();
             }
         }
+        HelpMarker(HelpStrings::HELP_LIST_FILTER);
 
         // blacklist
         const auto bl_input_changed = ImGui::InputText("Blacklist", &m_state.blacklist, ImGuiInputTextFlags_ElideLeft | ImGuiInputTextFlags_EnterReturnsTrue);
@@ -281,6 +283,7 @@ namespace RC::EventViewerMod
                     m_state.thread_implicitly_set = true;
                 }
             }
+            HelpMarker(HelpStrings::HELP_THREAD);
         }
 
         auto save_mode = ESaveMode::none;
@@ -300,27 +303,32 @@ namespace RC::EventViewerMod
             thread.call_frequencies.clear();
             thread.call_stack.clear();
         }
+        HelpMarker(HelpStrings::HELP_CLEAR);
         ImGui::SameLine();
         if (ImGui::Button("Clear All##AllThreads") && !threads.empty())
         {
             clear_threads();
         }
+        HelpMarker(HelpStrings::HELP_CLEAR_ALL);
         ImGui::SameLine();
         if (ImGui::Button("Save##Current"))
         {
             save_mode = ESaveMode::current;
         }
+        HelpMarker(HelpStrings::HELP_SAVE);
         ImGui::SameLine();
         if (ImGui::Button("Save All##All"))
         {
             save_mode = ESaveMode::all;
         }
+        HelpMarker(HelpStrings::HELP_SAVE_ALL);
         ImGui::SameLine();
         if (ImGui::Checkbox("Show Builtin Tick Functions", &m_state.show_tick))
         {
             tick_changed = true;
             request_save_state();
         }
+        HelpMarker(HelpStrings::HELP_SHOW_BUILTIN_TICK);
         ImGui::SameLine();
         if (ImGui::Checkbox("Disable Indent Colors", &m_state.disable_indent_colors))
         {
@@ -333,7 +341,6 @@ namespace RC::EventViewerMod
 
     auto Client::render_perf_opts() -> void
     {
-        //ImGui::SameLine();
         static uint16_t step = 1;
         if (ImGui::InputScalar("Max MS Read Time", ImGuiDataType_U16, &m_state.dequeue_max_ms, &step, 0, 0))
         {
@@ -343,8 +350,8 @@ namespace RC::EventViewerMod
                 m_state.dequeue_max_ms = 1;
             }
         }
+        HelpMarker(HelpStrings::HELP_MAX_MS_READ_TIME);
 
-        //ImGui::SameLine();
         if (ImGui::InputScalar("Max Count Per Iteration", ImGuiDataType_U32, &m_state.dequeue_max_count, &step))
         {
             request_save_state();
@@ -353,8 +360,10 @@ namespace RC::EventViewerMod
                 m_state.dequeue_max_count = 1;
             }
         }
+        HelpMarker(HelpStrings::HELP_MAX_COUNT_PER_ITERATION);
 
         ImGui::Text("Enqueue Avg: %f Dequeue Avg: %f Pending Avg: %f Time Slot Exceeded Count: %llu", QueueProfiler::GetEnqueueAverage(), QueueProfiler::GetDequeueAverage(), QueueProfiler::GetPendingAverage(), QueueProfiler::GetTimeExceededCount());
+        HelpMarker(HelpStrings::HELP_QUEUE_PROFILE_VALUES);
     }
 
     auto Client::render_view() -> void
@@ -578,7 +587,6 @@ namespace RC::EventViewerMod
         {
             return;
         }
-
         if (whitelist_changed)
         {
             m_state.whitelist_tokens = split_string_by_comma(m_state.whitelist);
@@ -642,21 +650,21 @@ namespace RC::EventViewerMod
             auto& thread = *thread_ptr;
 
             // Determine disabled state under current filters.
-            const bool stack_disabled = (entry.is_tick && !m_state.show_tick) || !passes_filters(entry.lower_cased_full_name);
-            const bool frequency_disabled = (entry.is_tick && !m_state.show_tick) || !passes_filters(entry.lower_cased_function_name);
+            const auto _passes_filters = passes_filters(entry.lower_cased_full_name);
+            const bool disabled = (entry.is_tick && !m_state.show_tick) || !_passes_filters;
 
             // Frequency tracking: bump existing, or add.
             auto freq_it = std::ranges::find_if(thread.call_frequencies, [&entry](const CallFrequencyEntry& freq_entry) -> bool {
                 return entry.function_hash == freq_entry.function_hash;
             });
 
-            const uint32_t entry_source_flags = static_cast<uint32_t>(entry.hook_target);
+            const auto entry_source_flags = static_cast<uint32_t>(entry.hook_target);
 
             if (freq_it != thread.call_frequencies.end()) [[likely]]
             {
                 auto& freq = *freq_it;
                 ++freq.frequency;
-                freq.is_disabled = frequency_disabled;
+                freq.is_disabled = disabled;
                 freq.source_flags |= entry_source_flags;
 
                 // Maintain descending order by frequency using list::splice (fast, no alloc).
@@ -679,12 +687,12 @@ namespace RC::EventViewerMod
             {
                 thread.call_frequencies.emplace_back(static_cast<const FunctionNameStringViews&>(entry), entry.is_tick);
                 auto& freq = thread.call_frequencies.back();
-                freq.is_disabled = frequency_disabled;
+                freq.is_disabled = disabled;
                 freq.source_flags = entry_source_flags;
             }
 
             // Call stack history.
-            entry.is_disabled = stack_disabled;
+            entry.is_disabled = disabled;
             thread.call_stack.emplace_back(std::move(entry));
         });
     }
@@ -962,23 +970,6 @@ auto Client::render_entry_stack_modal(const CallStackEntry* entry) -> void
     }
 
     m_entry_call_stack_renderer = std::make_unique<EntryCallStackRenderer>(target_rel_idx, std::move(context));
-
-    // Output::send(L"Caller trace:\n");
-    // for (auto caller_idx : callers_abs_idx)
-    // {
-    //     Output::send(context[caller_idx].to_string() + L"\n");
-    // }
-    //
-    // Output::send(L"\nContext:\n");
-    // for (size_t idx = root_abs_idx; idx < next_root_abs_idx; ++idx)
-    // {
-    //     Output::send(stack[idx].to_string() + L"\n");
-    // }
-    // Output::send(L"\nContext Vector\n");
-    // for (auto& ctx_entry : context)
-    // {
-    //     Output::send(ctx_entry.to_string() + L"\n");
-    // }
 }
 
 auto Client::GetInstance() -> Client&
