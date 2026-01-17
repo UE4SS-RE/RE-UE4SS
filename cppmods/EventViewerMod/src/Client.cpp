@@ -412,7 +412,7 @@ namespace RC::EventViewerMod
         auto& scroll_size = ImGui::GetStyle().ScrollbarSize;
         area.y -= ((padding.y + scroll_size) * 2);
         area.x -= (padding.x + scroll_size);
-        ImGui::BeginChild("##view", area, ImGuiChildFlags_Borders | ImGuiChildFlags_AutoResizeY, ImGuiWindowFlags_HorizontalScrollbar);
+        ImGui::BeginChild("##view", area, ImGuiChildFlags_Borders | ImGuiChildFlags_FrameStyle | ImGuiChildFlags_AutoResizeY, ImGuiWindowFlags_HorizontalScrollbar);
         if (m_state.mode == EMode::Stack)
         {
             if (thread.call_stack.empty())
