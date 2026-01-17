@@ -91,6 +91,12 @@ auto RC::EventViewerMod::StringPool::get_path_name(const uint32_t function_hash)
     return path_it->second;
 }
 
+auto RC::EventViewerMod::StringPool::clear() -> void
+{
+    std::unique_lock lock(m_mutex);
+    m_path_pool.clear();
+}
+
 auto RC::EventViewerMod::StringPool::GetInstance() -> StringPool&
 {
     static StringPool string_pool;
