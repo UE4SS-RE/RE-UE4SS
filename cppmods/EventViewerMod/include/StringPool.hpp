@@ -23,6 +23,11 @@ namespace RC::EventViewerMod
         // Returns path name of a function, same as calling GetPathName but with a string view instead.
         auto get_path_name(uint32_t function_hash) -> std::string_view;
 
+        // Clears the string pool. It should be done when new maps/games are loaded since FName comparison indices might change in some games.
+        // Note that this will invalidate any string_views acquired through the getters, so the ImGui views should be cleared before doing this
+        // in the same frame.
+        auto clear() -> void;
+
         static auto GetInstance() -> StringPool&;
 
         StringPool(const StringPool& Other) = delete;

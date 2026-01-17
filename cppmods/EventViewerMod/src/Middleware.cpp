@@ -9,11 +9,8 @@
 #include <Unreal/CoreUObject/UObject/Class.hpp>
 
 // note if using fname index as a hash, games that implement name recycling can be problematic/inaccurate for context objects, and right clicking entries
-// TODO still have some layout issues
-// TODO help indicators/readme
 // TODO gray bg on view
 // TODO clear string pool on load
-// TODO consider auto enabling show tick functions
 // TODO performance improvements such as text virtualization and passes_filter improvements (see passes_filter in Client.cpp)
 namespace RC::EventViewerMod
 {
