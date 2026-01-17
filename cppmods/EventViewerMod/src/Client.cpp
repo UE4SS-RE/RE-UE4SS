@@ -292,7 +292,15 @@ namespace RC::EventViewerMod
         if (ImGui::Button(m_state.started ? "Stop" : "Start"))
         {
             m_state.started = !m_state.started;
-            m_state.started ? m_middleware.start() : m_middleware.stop();
+            if (m_state.started)
+            {
+                m_middleware.start();
+                m_state.text_temp_virtualization_count = m_state.text_virtualization_count;
+            }
+            else
+            {
+                m_middleware.stop();
+            }
             QueueProfiler::Reset();
         }
 
@@ -362,6 +370,18 @@ namespace RC::EventViewerMod
         }
         HelpMarker(HelpStrings::HELP_MAX_COUNT_PER_ITERATION);
 
+        if (ImGui::InputScalar("Text Virtualization Count", ImGuiDataType_U16, &m_state.text_virtualization_count, &step))
+        {
+            request_save_state();
+            if (!m_state.text_virtualization_count)
+            {
+                m_state.text_virtualization_count = 1;
+            }
+            m_state.text_temp_virtualization_count = m_state.text_virtualization_count;
+            clear_threads();
+        }
+        HelpMarker(HelpStrings::HELP_TEXT_VIRTUALIZATION_COUNT);
+
         ImGui::Text("Enqueue Avg: %f Dequeue Avg: %f Pending Avg: %f Time Slot Exceeded Count: %llu", QueueProfiler::GetEnqueueAverage(), QueueProfiler::GetDequeueAverage(), QueueProfiler::GetPendingAverage(), QueueProfiler::GetTimeExceededCount());
         HelpMarker(HelpStrings::HELP_QUEUE_PROFILE_VALUES);
     }
@@ -408,8 +428,26 @@ namespace RC::EventViewerMod
             uint8_t entry_flags = 0;
             if (!m_state.disable_indent_colors) entry_flags |= ECallStackEntryRenderFlags_IndentColors;
             if (!m_state.started) entry_flags |= ECallStackEntryRenderFlags_WithSupportMenusCallStackModal;
-            for (auto& entry : thread.call_stack)
+
+            auto r_start = thread.call_stack.rbegin();
+            size_t count = 0;
+            for (; r_start != thread.call_stack.rend() && count < m_state.text_temp_virtualization_count; ++r_start)
             {
+                if (r_start->is_disabled) continue;
+                ++count;
+            }
+            bool needs_scroll_here = false;
+            if (!m_state.started && count == m_state.text_temp_virtualization_count)
+            {
+                if (ImGui::Button("Load More..."))
+                {
+                    m_state.text_temp_virtualization_count *= 2;
+                    needs_scroll_here = true;
+                }
+            }
+            for (auto start = r_start.base(); start != thread.call_stack.end(); ++start)
+            {
+                auto& entry = *start;
                 if ((static_cast<uint32_t>(entry.hook_target) & selected_flags) == 0)
                 {
                     continue;
@@ -423,7 +461,6 @@ namespace RC::EventViewerMod
                 const int depth = static_cast<int>(entry.depth);
                 const int delta = have_prev ? (depth - prev_depth) : depth;
                 ImGui::PushID(id++);
-                //m_state.disable_indent_colors ? entry.render(delta, !m_state.started) : entry.render_with_colored_indent_space(delta, !m_state.started);
                 entry.render(delta, static_cast<ECallStackEntryRenderFlags_>(entry_flags));
                 ImGui::PopID();
                 current_indent += delta;
@@ -438,7 +475,7 @@ namespace RC::EventViewerMod
                 --current_indent;
             }
 
-            if (m_state.started) ImGui::SetScrollHereY(1.0f);
+            if (m_state.started || needs_scroll_here) ImGui::SetScrollHereY(1.0f);
         }
         else
         {
@@ -524,6 +561,7 @@ namespace RC::EventViewerMod
         state_map.emplace("Whitelist", m_state.whitelist);
         state_map.emplace("Blacklist", m_state.blacklist);
         state_map.emplace("DisableIndentColors", std::to_string(m_state.disable_indent_colors));
+        state_map.emplace("TextVirtualizationCount", std::to_string(m_state.text_virtualization_count));
 
         (void)glz::write_file_json(state_map, m_cfg_path.string(), std::string{});
     }
@@ -561,12 +599,15 @@ namespace RC::EventViewerMod
             m_state.dequeue_max_count = static_cast<uint32_t>(std::stoul(state_map.at("DequeueMaxCount")));
             m_state.whitelist = state_map.at("Whitelist");
             m_state.blacklist = state_map.at("Blacklist");
-
             m_state.whitelist_tokens = split_string_by_comma(m_state.whitelist);
             m_state.blacklist_tokens = split_string_by_comma(m_state.blacklist);
+            m_state.text_virtualization_count = static_cast<uint16_t>(std::stoi(state_map.at("TextVirtualizationCount")));
+            m_state.text_temp_virtualization_count = m_state.text_virtualization_count;
+            clear_threads(); // just to be safe, since if text_virtualization_count changes while scrolling it could cause problems
         }
         catch (...)
         {
+            Output::send<LogLevel::Verbose>(STR("[EventViewerMod] Failed to load state from file due to exception!"));
         }
     }
 
