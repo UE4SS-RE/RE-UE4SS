@@ -9,6 +9,7 @@
 #include <imgui_internal.h>
 
 #include <StringPool.hpp>
+#include <HelpStrings.hpp>
 
 inline constexpr static unsigned ALPHA = 200;
 inline constexpr static std::array COLORS = {
@@ -131,11 +132,15 @@ namespace RC::EventViewerMod
             ImGui::Separator();
             if (ImGui::MenuItem("Copy Caller Name##ccn")) copy_to_clipboard({full_name.begin(), function_name.begin() - 1});
             if (ImGui::MenuItem("Add Caller to Whitelist##cwl")) Client::GetInstance().add_to_white_list({full_name.begin(), function_name.begin() - 1});
+            HelpMarker(HelpStrings::HELP_ADD_CALLER_AND_FUNC_NAME_WARNING);
             if (ImGui::MenuItem("Add Caller to Blacklist##cbl")) Client::GetInstance().add_to_black_list({full_name.begin(), function_name.begin() - 1});
+            HelpMarker(HelpStrings::HELP_ADD_CALLER_AND_FUNC_NAME_WARNING);
             ImGui::Separator();
             if (ImGui::MenuItem("Copy Caller + Function Name##cfln")) copy_to_clipboard(full_name);
             if (ImGui::MenuItem("Add Caller + Function to Whitelist##fnwl")) Client::GetInstance().add_to_white_list(full_name);
+            HelpMarker(HelpStrings::HELP_ADD_CALLER_AND_FUNC_NAME_WARNING);
             if (ImGui::MenuItem("Add Caller + Function to Blacklist##fnb")) Client::GetInstance().add_to_black_list(full_name);
+            HelpMarker(HelpStrings::HELP_ADD_CALLER_AND_FUNC_NAME_WARNING);
             ImGui::EndPopup();
         }
     }

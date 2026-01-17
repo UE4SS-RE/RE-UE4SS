@@ -94,6 +94,9 @@ namespace RC::EventViewerMod
                                                                       "ImGui at a time (apart from clearing the threads when changing this value).\n\n"
                                                                       "Higher values means making the \"Load More\" button appear later, but can"
                                                                       "come in at a hefty performance cost.";
+
+        inline static constexpr auto HELP_ADD_CALLER_AND_FUNC_NAME_WARNING = "WARNING: Adding Caller or Caller + Function name to a filter may block output completely in "
+                                                                             "Frequency Mode, since the Frequency Mode is only aware of the function name!";
     };
 }
 

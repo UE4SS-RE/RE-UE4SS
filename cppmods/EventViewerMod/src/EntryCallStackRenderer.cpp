@@ -41,7 +41,7 @@ namespace RC::EventViewerMod
             // auto& scroll_size = ImGui::GetStyle().ScrollbarSize;
             // area.y -= ((padding.y + scroll_size) * 2);
             // area.x -= (padding.x + scroll_size);
-            ImGui::BeginChild("##entrycallstackview", {0,0}, ImGuiChildFlags_Borders | ImGuiChildFlags_AutoResizeY, ImGuiWindowFlags_HorizontalScrollbar);
+            ImGui::BeginChild("##entrycallstackview", {0,0}, ImGuiChildFlags_Borders | ImGuiChildFlags_AutoResizeY | ImGuiChildFlags_FrameStyle, ImGuiWindowFlags_HorizontalScrollbar);
 
             int prev_depth = 0;
             bool have_prev = false;

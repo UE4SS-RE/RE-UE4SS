@@ -749,7 +749,7 @@ namespace RC::EventViewerMod
     }
 
     // todo there's definitely room for improvement, like diffing white/blacklists to tell if test_str needs to be checked
-    // (would be done by callers probably) or keeping track of an 'enabled' and 'disabled' unordered_map of
+    // (would be done by callers probably) or keeping track of an 'enabled' and 'disabled' unordered_set of
     // hashes (that the StringPool could be altered to provide) to skip string parsing, but this is good enough for now.
     auto Client::passes_filters(const std::string_view test_str) const -> bool
     {
