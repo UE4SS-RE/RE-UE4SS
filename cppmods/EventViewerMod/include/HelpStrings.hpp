@@ -1,4 +1,12 @@
 #pragma once
+
+// EventViewerMod: Centralized UI help strings.
+//
+// Keeping these in one place makes it easier to tweak copy without touching the main UI code.
+
+
+// EventViewerMod: Small user-facing help strings shown in the UI.
+
 #include <imgui.h>
 
 #define FILTER_NOTE    "Note that filters don't affect the stack depth; they will always be shown as-is to indicate "\

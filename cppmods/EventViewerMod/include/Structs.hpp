@@ -1,5 +1,17 @@
 #pragma once
 
+
+// EventViewerMod: Data model + UI state.
+//
+// This header defines:
+// - String-view “bundles” (FunctionNameStringViews / AllNameStringViews) returned by StringPool.
+// - Capture entries (CallStackEntry, CallFrequencyEntry).
+// - Per-thread buffers and persistent UI state.
+//
+// Many fields are intentionally plain and public: these objects are moved through the queue and
+// stored in large vectors/lists, so keeping them trivially movable matters.
+
+
 #include <array>
 #include <atomic>
 #include <cstdint>
@@ -23,6 +35,8 @@ namespace RC::EventViewerMod
 
     struct FunctionNameStringViews
     {
+        // Stable identifier for the UFunction across frames.
+        // Used for fast frequency aggregation (no string compares in the hot path).
         uint32_t function_hash; // FName.ComparisonIndex of UFunction
         std::string_view function_name;
         std::string_view lower_cased_function_name;
@@ -32,7 +46,9 @@ namespace RC::EventViewerMod
     {
         std::string_view full_name;
         std::string_view lower_cased_full_name;
-        uint64_t full_hash; // FName.ComparisonIndex of UFunction in upper bits, FName.ComparisonIndex of UObject caller in lower bits
+        // Composite key for (caller, function). This avoids per-frame string concatenation.
+        // Layout: UFunction ComparisonIndex in upper 32 bits, caller UObject ComparisonIndex in lower 32 bits.
+        uint64_t full_hash;
     };
 
     // Note: these types are intentionally cheap-to-move so they can be passed through
@@ -43,6 +59,10 @@ namespace RC::EventViewerMod
         explicit EntryBase(bool is_tick);
 
         bool is_tick = false;
+
+        // Cached visibility bit (filters + tick toggle).
+        // Important: depth/indent is NOT recomputed when entries are hidden; callers may be hidden while
+        // deeper frames remain visible, to preserve the true call depth.
         bool is_disabled = false;
     };
 
@@ -62,7 +82,11 @@ namespace RC::EventViewerMod
         // Use the string_views for ImGui since they utilize the string pool.
         auto to_string_with_prefix() const -> std::wstring;
 
+        // Which hook produced this entry. This is captured at enqueue-time and later used as a *view filter*
+        // ("All" shows everything; other targets show only matching entries).
         EMiddlewareHookTarget hook_target = EMiddlewareHookTarget::All;
+
+        // Unified depth counter shared by all hooks; PE can call PI which can call PLSF, etc.
         uint32_t depth = 0;
         std::thread::id thread_id{};
 
@@ -80,6 +104,7 @@ namespace RC::EventViewerMod
         uint64_t frequency = 1;
 
         // OR'd EMiddlewareHookTarget values that have invoked this function so far.
+        // This is used for filtering when a specific hook target is selected.
         uint32_t source_flags = 0;
 
     private:

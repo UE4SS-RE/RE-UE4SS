@@ -1,4 +1,15 @@
 #pragma once
+
+// EventViewerMod: ImGui-facing front-end.
+//
+// Owns persistent UI state (filters, selected view, per-thread buffers) and pulls capture entries
+// from the Middleware each frame. The hot path (hooking + enqueue) lives in Middleware; Client
+// is deliberately written as a consumer that can be throttled (max ms / max count per frame).
+//
+// Threading notes:
+// - render() is expected to be called only on the ImGui thread.
+// - request_save_state() may be called from any thread (it uses an atomic flag).
+
 #include <filesystem>
 #include <memory>
 

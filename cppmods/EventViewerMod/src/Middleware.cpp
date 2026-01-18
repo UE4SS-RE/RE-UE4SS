@@ -9,6 +9,18 @@
 #include <Unreal/CoreUObject/UObject/Class.hpp>
 
 // note if using fname index as a hash, games that implement name recycling can be problematic/inaccurate for context objects, and right clicking entries
+// EventViewerMod: hook interception + enqueue backend.
+//
+// Middleware installs the UE hooks and turns each callback into a lightweight CallStackEntry
+// that can be consumed by the UI thread later.
+//
+// Key design points:
+// - All supported hooks are installed and intercepted concurrently.
+// - Depth is computed with a single counter so nested PE/PI/PLSF chains share indentation.
+// - Enqueue is guarded by m_allow_queue to avoid capturing half-installed state.
+// - The queue is moodycamel::ConcurrentQueue with per-thread ProducerTokens.
+//
+
 namespace RC::EventViewerMod
 {
     using RC::Unreal::UFunction;

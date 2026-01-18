@@ -1,4 +1,16 @@
 #pragma once
+
+
+// EventViewerMod: String interning + hashing.
+//
+// Unreal provides stable numeric identifiers for names (ComparisonIndex). StringPool uses those to:
+// - Deduplicate storage for function/caller strings.
+// - Provide fast comparisons via hashes (avoid expensive string comparisons in hot paths).
+// - Cache both original and lowercased strings for case-insensitive filtering.
+//
+// The pool is designed for “grow-only” lifetime during a session; string_views returned from the pool
+// stay valid as long as the underlying storage isn't cleared.
+
 #include <string>
 #include <string_view>
 #include <shared_mutex>
@@ -23,7 +35,7 @@ namespace RC::EventViewerMod
         // Returns path name of a function, same as calling GetPathName but with a string view instead.
         auto get_path_name(uint32_t function_hash) -> std::string_view;
 
-        // Clears the string pool. It should be done when new maps/games are loaded since FName comparison indices might change in some games.
+        // Clears the string pool. Currently unused, but may be useful if games ever start recycling FName indices.
         // Note that this will invalidate any string_views acquired through the getters, so the ImGui views should be cleared before doing this
         // in the same frame.
         auto clear() -> void;

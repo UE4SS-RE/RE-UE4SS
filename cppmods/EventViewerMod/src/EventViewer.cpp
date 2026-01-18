@@ -1,4 +1,10 @@
 #include <EventViewer.hpp>
+
+// EventViewerMod: UE4SS mod entry point and ImGui tab wiring.
+//
+// This is the glue between UE4SS' mod lifecycle (start_mod/on_unreal_init) and our
+// ImGui renderer + middleware.
+
 #include <Unreal/Hooks/Hooks.hpp>
 #include <Client.hpp>
 #include <DynamicOutput/Output.hpp>

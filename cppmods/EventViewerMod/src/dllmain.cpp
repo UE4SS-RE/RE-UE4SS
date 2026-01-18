@@ -1,3 +1,8 @@
+// EventViewerMod: Windows DLL entry point (UE4SS loads this module).
+//
+// The actual mod logic lives in EventViewerMod (see EventViewer.cpp). This file exists to
+// satisfy the DLL entry requirements on Windows.
+
 #include <EventViewer.hpp>
 
 extern "C"

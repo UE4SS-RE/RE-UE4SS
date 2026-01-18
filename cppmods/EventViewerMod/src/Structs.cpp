@@ -23,6 +23,12 @@ inline constexpr static std::array COLORS = {
 };
 inline constexpr static auto SELECTED_COLOR = ImVec4{1.0f, 1.0f, 0.0f, 1.0f};
 
+// EventViewerMod: small UI-facing helpers for entries and context menus.
+//
+// The heavy lifting (hooks, queueing, string pooling) happens elsewhere. This file is mostly
+// convenience methods used by the ImGui layer: context menu attachment management, clipboard
+// helpers, and per-entry "support menu" behavior.
+//
 namespace RC::EventViewerMod
 {
     auto copy_to_clipboard(const std::string_view& string) -> void

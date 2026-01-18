@@ -1,5 +1,17 @@
 #pragma once
 
+// EventViewerMod: UI enums and small reflection helpers.
+//
+// We use X-macros to define enums once and auto-generate:
+// - E<Name>_Size
+// - E<Name>_NameArray (for ImGui combo boxes)
+// - to_string(...) and to_prefix_string(...)
+//
+// MiddlewareHookTarget is a *bitmask* enum (powers of two). In the UI it is used as a view filter:
+// selecting a target hides entries not produced by that hook, but DOES NOT change indentation depth.
+
+
+
 namespace RC::EventViewerMod
 {
 #define EVM_MIDDLEWARE_HOOK_TARGET_FLAGS(X, EnumName) \
