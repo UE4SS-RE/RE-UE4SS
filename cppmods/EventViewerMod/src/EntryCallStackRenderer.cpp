@@ -40,7 +40,7 @@ namespace RC::EventViewerMod
             HelpMarker(HelpStrings::HELP_CEMODAL_SHOW_FULL_CONTEXT);
             ImGui::Checkbox("Disable Indent Colors", &m_disable_indent_colors);
 
-            auto btn_height = ImGui::GetFrameHeightWithSpacing();
+            const auto btn_height = ImGui::GetFrameHeightWithSpacing();
             auto view_area = ImGui::GetContentRegionAvail();
             view_area.y -= btn_height;
             ImGui::BeginChild("##entrycallstackview", view_area, ImGuiChildFlags_Borders | ImGuiChildFlags_FrameStyle, ImGuiWindowFlags_HorizontalScrollbar);

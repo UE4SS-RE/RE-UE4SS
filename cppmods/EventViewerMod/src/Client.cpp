@@ -364,6 +364,11 @@ namespace RC::EventViewerMod
         {
             request_save_state();
         }
+        ImGui::SameLine();
+        if (ImGui::Checkbox("Show Filter Counts", &m_state.show_filter_counts))
+        {
+            request_save_state();
+        }
 
         apply_filters_to_history(whitelist_changed, blacklist_changed, tick_changed);
         save(save_mode);
@@ -455,9 +460,10 @@ namespace RC::EventViewerMod
             size_t count = 0;
             for (; r_start != thread.call_stack.rend() && count < m_state.text_temp_virtualization_count; ++r_start)
             {
-                if (r_start->is_disabled) continue;
+                if (r_start->is_disabled || ((static_cast<uint32_t>(r_start->hook_target) & selected_flags) == 0)) continue;
                 ++count;
             }
+
             bool needs_scroll_here = false;
             if (!m_state.started && count == m_state.text_temp_virtualization_count)
             {
@@ -467,18 +473,18 @@ namespace RC::EventViewerMod
                     needs_scroll_here = true;
                 }
             }
+
+            const bool show_filter_counts = m_state.show_filter_counts;
             for (auto start = r_start.base(); start != thread.call_stack.end(); ++start)
             {
                 auto& entry = *start;
-                if ((static_cast<uint32_t>(entry.hook_target) & selected_flags) == 0)
+                if (entry.is_disabled || ((static_cast<uint32_t>(entry.hook_target) & selected_flags) == 0))
                 {
+                    if (show_filter_counts) m_filter_count_renderer.add();
                     continue;
                 }
 
-                if (entry.is_disabled)
-                {
-                    continue;
-                }
+                if (show_filter_counts) m_filter_count_renderer.render_and_reset(!m_state.started);
 
                 const int depth = static_cast<int>(entry.depth);
                 const int delta = have_prev ? (depth - prev_depth) : depth;
@@ -497,8 +503,11 @@ namespace RC::EventViewerMod
                 --current_indent;
             }
 
+            if (show_filter_counts) m_filter_count_renderer.render_and_reset(!m_state.show_filter_counts);
+
             if (m_state.started || needs_scroll_here) ImGui::SetScrollHereY(1.0f);
         }
+
         else
         {
             if (ImGui::BeginTable("##frequency", 2, ImGuiTableFlags_ScrollY | ImGuiTableFlags_Resizable | ImGuiTableFlags_BordersV))
@@ -584,7 +593,7 @@ namespace RC::EventViewerMod
         state_map.emplace("Blacklist", m_state.blacklist);
         state_map.emplace("DisableIndentColors", std::to_string(m_state.disable_indent_colors));
         state_map.emplace("TextVirtualizationCount", std::to_string(m_state.text_virtualization_count));
-
+        state_map.emplace("ShowFilterCounts", std::to_string(m_state.show_filter_counts));
         (void)glz::write_file_json(state_map, m_cfg_path.string(), std::string{});
     }
 
@@ -625,6 +634,7 @@ namespace RC::EventViewerMod
             m_state.blacklist_tokens = split_string_by_comma(m_state.blacklist);
             m_state.text_virtualization_count = static_cast<uint16_t>(std::stoi(state_map.at("TextVirtualizationCount")));
             m_state.text_temp_virtualization_count = m_state.text_virtualization_count;
+            m_state.show_filter_counts = state_map.at("ShowFilterCounts") != "0";
             clear_threads(); // just to be safe, since if text_virtualization_count changes while scrolling it could cause problems
         }
         catch (...)
