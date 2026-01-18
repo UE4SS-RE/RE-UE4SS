@@ -139,11 +139,12 @@ namespace RC::EventViewerMod
         bool disable_indent_colors = false;                                      // [Savable] [Thread-ImGui]
         bool thread_explicitly_chosen = false;                                   // [Thread-ImGui] User selected a thread
         bool thread_implicitly_set = false;                                      // [Thread-ImGui] System set thread to game thread if not explicit
+        bool show_filter_counts = true;                                          // [Savable] [Thread-ImGui]
         EMiddlewareHookTarget hook_target = EMiddlewareHookTarget::All;          // [Savable] [Thread-ImGui]
         EMode mode = EMode::Stack;                                               // [Savable] [Thread-ImGui]
         uint16_t dequeue_max_ms = 10;                                            // [Savable] [Thread-ImGui]
         uint16_t text_virtualization_count = 100;                                // [Savable] [Thread-ImGui]
-        uint64_t text_temp_virtualization_count = text_virtualization_count;
+        uint64_t text_temp_virtualization_count = text_virtualization_count;     // [Thread-Imgui]
         uint32_t dequeue_max_count = 100000;                                     // [Savable] [Thread-ImGui]
 
         std::string blacklist;                                                   // [Savable] [Thread-ImGui]
@@ -153,7 +154,7 @@ namespace RC::EventViewerMod
         std::vector<std::string> whitelist_tokens;                               // [Thread-ImGui] (lower-cased tokens)
 
         std::vector<ThreadInfo> threads{};                                      // [Thread-ImGui]
-        int current_thread = 0;                                                // [Thread-ImGui]
+        int current_thread = 0;                                                 // [Thread-ImGui]
 
         std::atomic_flag needs_save = ATOMIC_FLAG_INIT;                          // [Thread-Any]
         std::string last_save_path; //[Thread-ImGui]

@@ -15,6 +15,7 @@
 
 #include <Middleware.hpp>
 #include <Structs.hpp>
+#include <FilterCountRenderer.hpp>
 
 #include <UE4SSProgram.hpp>
 
@@ -76,6 +77,7 @@ namespace RC::EventViewerMod
         std::filesystem::path m_dump_dir{};
 
         std::unique_ptr<EntryCallStackRenderer> m_entry_call_stack_renderer{};
+        FilterCountRenderer m_filter_count_renderer{};
 
         bool m_imgui_thread_id_set = false;
     };
