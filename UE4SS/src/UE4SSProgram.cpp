@@ -900,7 +900,7 @@ namespace RC
 
     static bool s_gui_initialized_for_game_thread{};
     static bool s_gui_initializing_for_game_thread{};
-    auto gui_render_thread_tick(Unreal::UObject*, float) -> void
+    auto gui_render_thread_tick() -> void
     {
         if (UE4SSProgram::settings_manager.Debug.RenderMode == GUI::RenderMode::ExternalThread)
         {
@@ -941,11 +941,11 @@ namespace RC
 
         if (settings_manager.Debug.RenderMode == GUI::RenderMode::EngineTick)
         {
-            Hook::RegisterEngineTickPostCallback(gui_render_thread_tick);
+            Hook::RegisterEngineTickPostCallback([](auto&,...){gui_render_thread_tick(); }, {false, false, STR("UE4SS"), STR("ImGuiRenderHook")});
         }
         else if (settings_manager.Debug.RenderMode == GUI::RenderMode::GameViewportClientTick)
         {
-            Hook::RegisterGameViewportClientTickPostCallback(gui_render_thread_tick);
+            Hook::RegisterGameViewportClientTickPostCallback([](auto&,...){gui_render_thread_tick(); }, {false, false, STR("UE4SS"), STR("ImGuiRenderHook")});
         }
 
         if (settings_manager.Debug.DebugConsoleEnabled)
