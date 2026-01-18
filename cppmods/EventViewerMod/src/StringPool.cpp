@@ -4,21 +4,25 @@
 
 #include <cctype>
 
-namespace
+// EventViewerMod: string interning and cached lowercase views.
+//
+// Hooks run on game threads and must be cheap. Instead of allocating/formatting strings for
+// every callback, we intern names and cache their lowercase forms once.
+//
+// The returned std::string_views remain valid until StringPool::clear() is called.
+
+
+auto to_lower_ascii_copy(std::string_view s) -> std::string
 {
-    // ASCII-only lowercasing; Unreal function/object names are typically ASCII.
-    // If this ever needs full Unicode casefolding, we'll revisit.
-    auto to_lower_ascii_copy(std::string_view s) -> std::string
+    std::string out;
+    out.reserve(s.size());
+    for (const unsigned char ch : s)
     {
-        std::string out;
-        out.reserve(s.size());
-        for (const unsigned char ch : s)
-        {
-            out.push_back(static_cast<char>(std::tolower(ch)));
-        }
-        return out;
+        out.push_back(static_cast<char>(std::tolower(ch)));
     }
+    return out;
 }
+
 
 auto RC::EventViewerMod::StringPool::get_strings(RC::Unreal::UObject* caller, RC::Unreal::UFunction* function) -> AllNameStringViews
 {

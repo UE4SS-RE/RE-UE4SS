@@ -26,6 +26,19 @@
 #include <HelpStrings.hpp>
 
 
+// EventViewerMod: UI renderer and history consumer.
+//
+// This file drives the ImGui tab. High-level flow:
+// 1) Draw config + view controls.
+// 2) Dequeue a bounded amount of entries from Middleware each frame.
+// 3) Merge new entries into per-thread histories (stack + frequency).
+// 4) Apply view filters (hook target selection, whitelist/blacklist, tick toggle).
+//
+// Important:
+// - The hook target combo is a *display filter only*. Depth is always computed by Middleware and
+//   remains unchanged even if callers are hidden.
+// - Filtering is case-insensitive by comparing lower-cased strings (see to_lower_ascii_copy()).
+//
 // ASCII-only lowercasing for case-insensitive filtering.
 // (Unreal names are typically ASCII; if this becomes a problem we'll revisit.)
 static auto to_lower_ascii_copy(std::string_view s) -> std::string
@@ -114,7 +127,7 @@ namespace RC::EventViewerMod
 
     auto Client::render() -> void
     {
-        // Ensure middleware knows the correct ImGui thread, including after scheme swaps.
+        // Ensure middleware knows the correct ImGui thread
         if (!m_imgui_thread_id_set)
         {
             m_middleware.set_imgui_thread_id(std::this_thread::get_id());

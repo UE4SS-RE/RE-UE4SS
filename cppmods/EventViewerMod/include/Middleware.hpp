@@ -1,5 +1,17 @@
 #pragma once
 
+// EventViewerMod: Capture backend (UE hook installation + queueing).
+//
+// Hooks multiple Unreal call sites and enqueues CallStackEntry objects into a lock-free
+// moodycamel::ConcurrentQueue. The queue is drained on the ImGui thread by Client.
+//
+// Design constraints:
+// - Hooks are extremely hot (ProcessEvent/ProcessInternal/ProcessLocalScriptFunction), so this code
+//   avoids allocations where possible and uses thread_local producer tokens.
+// - Depth is unified across the hooked functions so nested / recursive call flows keep consistent
+//   indentation regardless of which hook produced a given entry.
+
+
 #include <atomic>
 #include <cstdint>
 #include <functional>
@@ -16,8 +28,6 @@
 
 namespace RC::EventViewerMod
 {
-    // Non-virtual, single-scheme middleware (ConcurrentQueue).
-    // Lives for the lifetime of the mod.
     class Middleware
     {
     public:

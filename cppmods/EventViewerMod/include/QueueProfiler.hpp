@@ -1,4 +1,11 @@
 #pragma once
+
+
+// EventViewerMod: Lightweight queue timing instrumentation.
+//
+// This is not a general-purpose profiler; it's a small helper to measure enqueue/dequeue costs
+// and queue backlog under real game load. Numbers are aggregated and displayed in the UI.
+
 #include <atomic>
 #include <chrono>
 class QueueProfiler

@@ -5,6 +5,10 @@
 #include <HelpStrings.hpp>
 #include <UE4SSProgram.hpp>
 
+// EventViewerMod: rendering for the call stack/context modal.
+//
+// The context vector is prepared by Client (based on the selected history entry). This renderer
+// is intentionally simple: it only worries about ImGui state management and printing rows.
 namespace RC::EventViewerMod
 {
     using namespace std::literals::string_literals;
