@@ -124,12 +124,21 @@ namespace RC::EventViewerMod
             Output::send<LogLevel::Error>(STR("[EventViewerMod] Failed to install prehook because it's already installed!"));
             return false;
         }
+
+        if (!register_prehook_fn)
+        {
+            Output::send<LogLevel::Error>(STR("[EventViewerMod] Failed to install prehook because register function is unknown! Is FName.toString known?"));
+            return false;
+        }
+
         m_prehook_id = register_prehook_fn(m_pre_callback, m_cb_options);
+
         if (m_prehook_id == RC::Unreal::Hook::ERROR_ID)
         {
             Output::send<LogLevel::Error>(STR("[EventViewerMod] Failed to install prehook!"));
             return false;
         }
+
         return true;
     }
 
@@ -141,12 +150,21 @@ namespace RC::EventViewerMod
             Output::send<LogLevel::Error>(STR("[EventViewerMod] Failed to install posthook because it's already installed!"));
             return false;
         }
+
+        if (!register_posthook_fn)
+        {
+            Output::send<LogLevel::Error>(STR("[EventViewerMod] Failed to install posthook because register function is unknown! Is FName.toString known?"));
+            return false;
+        }
+
         m_posthook_id = register_posthook_fn(m_post_callback, m_cb_options);
+
         if (m_posthook_id == RC::Unreal::Hook::ERROR_ID)
         {
             Output::send<LogLevel::Error>(STR("[EventViewerMod] Failed to install posthook!"));
             return false;
         }
+
         return true;
     }
 
@@ -158,14 +176,17 @@ namespace RC::EventViewerMod
             Output::send<LogLevel::Error>(STR("[EventViewerMod] Failed to remove hooks because it's not active!"));
             return;
         }
+
         if (!RC::Unreal::Hook::UnregisterCallback(m_prehook_id))
         {
             Output::send<LogLevel::Error>(STR("[EventViewerMod] Failed to unregister prehook!"));
         }
+
         if (!RC::Unreal::Hook::UnregisterCallback(m_posthook_id))
         {
             Output::send<LogLevel::Error>(STR("[EventViewerMod] Failed to unregister posthook!"));
         }
+
         m_prehook_id = m_posthook_id = RC::Unreal::Hook::ERROR_ID;
     }
 
