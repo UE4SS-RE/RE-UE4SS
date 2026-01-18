@@ -46,54 +46,60 @@ namespace RC::EventViewerMod
 
     Middleware::Middleware()
     {
-        Unreal::UObjectGlobals::ForEachUObject([this](UObject* object, ...) -> LoopAction {
-            if (object && Unreal::Cast<UFunction>(object) && object->GetName().contains(STR("Tick")))
-            {
-                m_tick_fns.insert(object);
-            }
-            return LoopAction::Continue;
-        });
+        if (Unreal::FName::ToStringInternal.is_ready())
+        {
+            Unreal::UObjectGlobals::ForEachUObject([this](UObject* object, ...) -> LoopAction {
+                if (object && Unreal::Cast<UFunction>(object) && object->GetName().contains(STR("Tick")))
+                {
+                    m_tick_fns.insert(object);
+                }
+                return LoopAction::Continue;
+            });
 
-        Output::send<LogLevel::Verbose>(L"Found {} engine tick functions!", m_tick_fns.size());
+            Output::send<LogLevel::Verbose>(L"[EventViewerMod] Found {} engine tick functions!", m_tick_fns.size());
 
-        m_pe_controller = {
-            .register_prehook_fn = &RC::Unreal::Hook::RegisterProcessEventPreCallback,
-            .register_posthook_fn = &RC::Unreal::Hook::RegisterProcessEventPostCallback,
-            .m_pre_callback = [this](auto&, UObject* context, UFunction* function, void*) {
-                return enqueue(EMiddlewareHookTarget::ProcessEvent, context, function);
-            },
-            .m_post_callback = [](auto&, UObject*, UFunction*, void*) {
-                m_depth = (m_depth == 0) ? 0 : (m_depth - 1);
-            }
-        };
+            m_pe_controller = {
+                .register_prehook_fn = &RC::Unreal::Hook::RegisterProcessEventPreCallback,
+                .register_posthook_fn = &RC::Unreal::Hook::RegisterProcessEventPostCallback,
+                .m_pre_callback = [this](auto&, UObject* context, UFunction* function, void*) {
+                    return enqueue(EMiddlewareHookTarget::ProcessEvent, context, function);
+                },
+                .m_post_callback = [](auto&, UObject*, UFunction*, void*) {
+                    m_depth = (m_depth == 0) ? 0 : (m_depth - 1);
+                }
+            };
 
-        m_pi_controller = {
-            .register_prehook_fn = &RC::Unreal::Hook::RegisterProcessInternalPreCallback,
-            .register_posthook_fn = &RC::Unreal::Hook::RegisterProcessInternalPostCallback,
-            .m_pre_callback = [this](auto&, UObject* context, FFrame& stack, void*) {
-                auto fn = stack.Node();
-                if (!fn) fn = stack.CurrentNativeFunction();
-                return enqueue(EMiddlewareHookTarget::ProcessInternal, context, fn);
-            },
-            .m_post_callback = [](auto&, UObject*, FFrame&, void*) {
-                m_depth = (m_depth == 0) ? 0 : (m_depth - 1);
-            }
-        };
+            m_pi_controller = {
+                .register_prehook_fn = &RC::Unreal::Hook::RegisterProcessInternalPreCallback,
+                .register_posthook_fn = &RC::Unreal::Hook::RegisterProcessInternalPostCallback,
+                .m_pre_callback = [this](auto&, UObject* context, FFrame& stack, void*) {
+                    auto fn = stack.Node();
+                    if (!fn) fn = stack.CurrentNativeFunction();
+                    return enqueue(EMiddlewareHookTarget::ProcessInternal, context, fn);
+                },
+                .m_post_callback = [](auto&, UObject*, FFrame&, void*) {
+                    m_depth = (m_depth == 0) ? 0 : (m_depth - 1);
+                }
+            };
 
-        m_plsf_controller = {
-            .register_prehook_fn = &RC::Unreal::Hook::RegisterProcessLocalScriptFunctionPreCallback,
-            .register_posthook_fn = &RC::Unreal::Hook::RegisterProcessLocalScriptFunctionPostCallback,
-            .m_pre_callback = [this](auto&, UObject* context, FFrame& stack, void*) {
-                auto fn = stack.Node();
-                if (!fn) fn = stack.CurrentNativeFunction();
-                return enqueue(EMiddlewareHookTarget::ProcessLocalScriptFunction, context, fn);
-            },
-            .m_post_callback = [](auto&, UObject*, FFrame&, void*) {
-                m_depth = (m_depth == 0) ? 0 : (m_depth - 1);
-            }
-        };
-
-        QueueProfiler::Reset();
+            m_plsf_controller = {
+                .register_prehook_fn = &RC::Unreal::Hook::RegisterProcessLocalScriptFunctionPreCallback,
+                .register_posthook_fn = &RC::Unreal::Hook::RegisterProcessLocalScriptFunctionPostCallback,
+                .m_pre_callback = [this](auto&, UObject* context, FFrame& stack, void*) {
+                    auto fn = stack.Node();
+                    if (!fn) fn = stack.CurrentNativeFunction();
+                    return enqueue(EMiddlewareHookTarget::ProcessLocalScriptFunction, context, fn);
+                },
+                .m_post_callback = [](auto&, UObject*, FFrame&, void*) {
+                    m_depth = (m_depth == 0) ? 0 : (m_depth - 1);
+                }
+            };
+            QueueProfiler::Reset();
+        }
+        else
+        {
+            Output::send<LogLevel::Verbose>(L"[EventViewerMod] Mod requires FName.toString to be known!");
+        }
     }
 
     Middleware::~Middleware()
