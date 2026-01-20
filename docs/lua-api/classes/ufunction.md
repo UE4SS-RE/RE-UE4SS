@@ -1,7 +1,7 @@
 # UFunction
 
 ## Inheritance
-[UObject](./uobject.md)
+[UStruct](./ustruct.md)
 
 ## Metamethods
 
