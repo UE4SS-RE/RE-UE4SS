@@ -4,6 +4,7 @@
 
 #include <LuaMadeSimple/LuaMadeSimple.hpp>
 #include <LuaType/LuaUObject.hpp>
+#include <LuaType/LuaUStruct.hpp>
 
 namespace RC::Unreal
 {

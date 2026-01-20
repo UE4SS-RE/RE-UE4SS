@@ -20,9 +20,6 @@ namespace RC::LuaType
     };
     class UClass : public UObjectBase<Unreal::UClass, UClassName>
     {
-      public:
-        using Super = LuaType::UStruct;
-
       private:
         explicit UClass(Unreal::UClass* object);
 

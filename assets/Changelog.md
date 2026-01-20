@@ -348,6 +348,9 @@ Types with `get` or `Get` functions now have both variants. ([UE4SS #877](https:
 
 Improved error messages when improperly indexing into `LocalUnrealParam`, and `RemoteUnrealParam` without first calling `Get`. ([UE4SS #1154](https://github.com/UE4SS-RE/RE-UE4SS/pull/1154))
 
+Fixed UFunction and UClass properly inheriting from UStruct in Lua. ([UE4SS #1154](https://github.com/UE4SS-RE/RE-UE4SS/pull/1158))
+Corporalwill123
+
 #### UEHelpers [UE4SS #650](https://github.com/UE4SS-RE/RE-UE4SS/pull/650) 
 - Increased version to 3
   
