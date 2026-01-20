@@ -9,7 +9,7 @@
 #include <Unreal/CoreUObject/UObject/Class.hpp>
 
 // note if using fname index as a hash, games that implement name recycling can be problematic/inaccurate for context objects, and right clicking entries
-
+// FIXME trailing spaces on copy?
 // EventViewerMod: hook interception + enqueue backend.
 //
 // Middleware installs the UE hooks and turns each callback into a lightweight CallStackEntry

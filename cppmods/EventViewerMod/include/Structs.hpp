@@ -22,6 +22,7 @@
 #include <thread>
 #include <type_traits>
 #include <vector>
+#include <set>
 
 #include <Enums.hpp>
 #include <String/StringType.hpp>
@@ -121,6 +122,9 @@ namespace RC::EventViewerMod
         // High-throughput capture history (fast filtering/search due to contiguous storage).
         std::vector<CallStackEntry> call_stack;
 
+        // Set of entries that should be rendered, respecting the client's text_temp_virtualization_count
+        std::set<size_t> call_stack_render_set{};
+
         // Aggregated frequency view; list allows O(1) reordering via splice without shifting elements.
         std::list<CallFrequencyEntry> call_frequencies;
 
@@ -153,10 +157,10 @@ namespace RC::EventViewerMod
         std::string whitelist;                                                   // [Savable] [Thread-ImGui]
         std::vector<std::string> whitelist_tokens;                               // [Thread-ImGui] (lower-cased tokens)
 
-        std::vector<ThreadInfo> threads{};                                      // [Thread-ImGui]
-        int current_thread = 0;                                                 // [Thread-ImGui]
+        std::vector<ThreadInfo> threads{};                                       // [Thread-ImGui]
+        int current_thread = 0;                                                  // [Thread-ImGui]
 
         std::atomic_flag needs_save = ATOMIC_FLAG_INIT;                          // [Thread-Any]
-        std::string last_save_path; //[Thread-ImGui]
+        std::string last_save_path;                                              // [Thread-ImGui]
     };
 } // namespace RC::EventViewerMod
