@@ -203,6 +203,15 @@ namespace RC::EventViewerMod
         {
             request_save_state();
             m_state.hook_target = EMiddlewareHookTarget_ValueArray[hook_target_idx];
+
+            // Hook target is an implicit filter for the stack view.
+            // Rebuild per-thread render sets immediately so the UI reflects the new selection.
+            // (Disabled state is controlled by whitelist/blacklist/tick and is handled elsewhere.)
+            for (auto& thread : m_state.threads)
+            {
+                thread.call_stack_render_set.clear();
+                resize_render_set(thread, m_state.text_temp_virtualization_count);
+            }
         }
         HelpMarker(HelpStrings::HELP_TARGET);
         ImGui::SameLine();
@@ -318,6 +327,11 @@ namespace RC::EventViewerMod
             {
                 m_middleware.start();
                 m_state.text_temp_virtualization_count = m_state.text_virtualization_count;
+                //shrink render sets
+                for (auto& thread : threads)
+                {
+                    resize_render_set(thread, m_state.text_temp_virtualization_count);
+                }
             }
             else
             {
@@ -330,8 +344,7 @@ namespace RC::EventViewerMod
         if (ImGui::Button("Clear##CurrentThread") && !threads.empty())
         {
             auto& thread = threads[m_state.current_thread];
-            thread.call_frequencies.clear();
-            thread.call_stack.clear();
+            thread.clear();
         }
         HelpMarker(HelpStrings::HELP_CLEAR);
         ImGui::SameLine();
@@ -456,35 +469,33 @@ namespace RC::EventViewerMod
             if (!m_state.disable_indent_colors) entry_flags |= ECallStackEntryRenderFlags_IndentColors;
             if (!m_state.started) entry_flags |= ECallStackEntryRenderFlags_WithSupportMenusCallStackModal;
 
-            auto r_start = thread.call_stack.rbegin();
-            size_t count = 0;
-            for (; r_start != thread.call_stack.rend() && count < m_state.text_temp_virtualization_count; ++r_start)
-            {
-                if (r_start->is_disabled || ((static_cast<uint32_t>(r_start->hook_target) & selected_flags) == 0)) continue;
-                ++count;
-            }
-
             bool needs_scroll_here = false;
-            if (!m_state.started && count == m_state.text_temp_virtualization_count)
+            if (!m_state.started && thread.call_stack_render_set.size() == m_state.text_temp_virtualization_count)
             {
                 if (ImGui::Button("Load More..."))
                 {
                     m_state.text_temp_virtualization_count *= 2;
+                    //expand set
+                    resize_render_set(thread, m_state.text_temp_virtualization_count);
                     needs_scroll_here = true;
                 }
             }
 
             const bool show_filter_counts = m_state.show_filter_counts;
-            for (auto start = r_start.base(); start != thread.call_stack.end(); ++start)
+            const auto set_begin = thread.call_stack_render_set.begin();
+            for (auto entry_it = set_begin; entry_it != thread.call_stack_render_set.end(); ++entry_it)
             {
-                auto& entry = *start;
-                if (entry.is_disabled || ((static_cast<uint32_t>(entry.hook_target) & selected_flags) == 0))
+                auto& entry = thread.call_stack[*entry_it];
+                if (show_filter_counts && entry_it != set_begin) [[likely]]
                 {
-                    if (show_filter_counts) m_filter_count_renderer.add();
-                    continue;
+                    auto before_entry_it = entry_it;
+                    --before_entry_it;
+                    const auto gap = (*entry_it) - (*before_entry_it);
+                    if (gap > 1)
+                    {
+                        FilterCountRenderer::render(gap - 1, !m_state.started);
+                    }
                 }
-
-                if (show_filter_counts) m_filter_count_renderer.render_and_reset(!m_state.started);
 
                 const int depth = static_cast<int>(entry.depth);
                 const int delta = have_prev ? (depth - prev_depth) : depth;
@@ -503,7 +514,7 @@ namespace RC::EventViewerMod
                 --current_indent;
             }
 
-            if (show_filter_counts) m_filter_count_renderer.render_and_reset(!m_state.show_filter_counts);
+            //if (show_filter_counts) m_filter_count_renderer.render_and_reset(!m_state.show_filter_counts);
 
             if (m_state.started || needs_scroll_here) ImGui::SetScrollHereY(1.0f);
         }
@@ -674,19 +685,23 @@ namespace RC::EventViewerMod
 
         for (auto& thread : m_state.threads)
         {
-                // Stack history can get very large; leverage parallel execution on random-access iterators.
-                std::for_each(std::execution::par_unseq,
-                              thread.call_stack.begin(),
-                              thread.call_stack.end(),
-                              [this, show_tick](CallStackEntry& entry) {
-                                  entry.is_disabled = (entry.is_tick && !show_tick) || !passes_filters(entry.lower_cased_full_name);
-                              });
+            // Stack history can get very large; leverage parallel execution on random-access iterators.
+            std::for_each(std::execution::par_unseq,
+                          thread.call_stack.begin(),
+                          thread.call_stack.end(),
+                          [this, show_tick](CallStackEntry& entry) {
+                              entry.is_disabled = (entry.is_tick && !show_tick) || !passes_filters(entry.lower_cased_full_name);
+                          });
 
-                // Frequency view is smaller and is a list (non-random-access).
-                for (auto& entry : thread.call_frequencies)
-                {
-                    entry.is_disabled = (entry.is_tick && !show_tick) || !passes_filters(entry.lower_cased_function_name);
-                }
+            // Frequency view is smaller and is a list (non-random-access).
+            for (auto& entry : thread.call_frequencies)
+            {
+                entry.is_disabled = (entry.is_tick && !show_tick) || !passes_filters(entry.lower_cased_function_name);
+            }
+
+            // Recalculate render set
+            thread.call_stack_render_set.clear();
+            resize_render_set(thread, m_state.text_temp_virtualization_count);
         }
     }
 
@@ -767,7 +782,19 @@ namespace RC::EventViewerMod
 
             // Call stack history.
             entry.is_disabled = stack_disabled;
-            thread.call_stack.emplace_back(std::move(entry));
+            if (can_render_entry(thread.call_stack.emplace_back(std::move(entry))))
+            {
+                if (thread.call_stack_render_set.size() == m_state.text_temp_virtualization_count) [[likely]]
+                {
+                    auto extracted = thread.call_stack_render_set.extract(thread.call_stack_render_set.begin());
+                    extracted.value() = thread.call_stack.size() - 1;
+                    thread.call_stack_render_set.insert(thread.call_stack_render_set.end(), std::move(extracted));
+                }
+                else [[unlikely]]
+                {
+                    thread.call_stack_render_set.insert(thread.call_stack_render_set.end(), thread.call_stack.size() - 1);
+                }
+            }
         });
     }
 
@@ -952,6 +979,38 @@ namespace RC::EventViewerMod
         m_state.threads.clear();
         m_state.thread_explicitly_chosen = false;
         m_state.thread_implicitly_set = false;
+    }
+
+    auto Client::can_render_entry(const CallStackEntry& entry) const -> bool
+    {
+        return !(entry.is_disabled || ((static_cast<uint32_t>(entry.hook_target) & static_cast<uint32_t>(m_state.hook_target)) == 0));
+    }
+
+    auto Client::resize_render_set(ThreadInfo& thread, const size_t max_size) const -> void
+    {
+        auto& stack = thread.call_stack;
+        auto& set = thread.call_stack_render_set;
+
+        if (!max_size) return set.clear();
+        if (set.size() == max_size) return;
+
+        if (set.size() < max_size)
+        {
+            const auto cs_begin = stack.begin();
+            for (auto entry_it = set.empty() ? stack.rbegin() : std::make_reverse_iterator(stack.begin() + *set.begin()); entry_it != stack.rend(); ++entry_it)
+            {
+                if (can_render_entry(*entry_it))
+                {
+                    set.insert(set.begin(), static_cast<size_t>((entry_it.base() - cs_begin) - 1));
+                    if (set.size() == max_size) break;
+                }
+            }
+
+            return;
+        }
+
+        //set.size() > max_size
+        while (set.size() != max_size) set.erase(set.begin());
     }
 
     auto Client::request_save_state() -> void

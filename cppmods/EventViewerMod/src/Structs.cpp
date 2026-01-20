@@ -207,5 +207,6 @@ namespace RC::EventViewerMod
     {
         call_frequencies.clear();
         call_stack.clear();
+        call_stack_render_set.clear();
     }
 } // namespace RC::EventViewerMod

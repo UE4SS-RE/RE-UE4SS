@@ -69,6 +69,9 @@ namespace RC::EventViewerMod
 
         auto clear_threads() -> void;
 
+        auto can_render_entry(const CallStackEntry& entry) const -> bool;
+        auto resize_render_set(ThreadInfo& thread, size_t max_size) const -> void;
+
         UIState m_state{};
 
         Middleware& m_middleware;
