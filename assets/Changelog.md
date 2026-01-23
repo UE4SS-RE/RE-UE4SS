@@ -397,6 +397,10 @@ Fixed `attempt to index a nil value (global 'NewController')` error in `SplitScr
 Fixed the GUI not closing properly with CTRL + O when OpenGL is enabled in
 `UE4SS-settings.ini`. ([UE4SS #780](https://github.com/UE4SS-RE/RE-UE4SS/pull/780))
 
+Fixed PalServer crashing when debug console is enabled in `UE4SS-settings.ini` ([UE4SS #1160](https://github.com/UE4SS-RE/RE-UE4SS/pull/1160)) - Okaetsu
+
+Fixed PalServer console having broken text when running under Proton/Wine ([UE4SS #1160](https://github.com/UE4SS-RE/RE-UE4SS/pull/1160)) - Okaetsu
+
 ### Live View 
 Fixed the "Write to file" checkbox not working for functions in the `Watches` tab ([UE4SS #419](https://github.com/UE4SS-RE/RE-UE4SS/pull/419)) 
 
