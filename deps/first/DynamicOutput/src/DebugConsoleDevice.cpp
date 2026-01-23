@@ -67,9 +67,9 @@ namespace RC::Output
         set_windows_console_out_mode_if_needed();
 
 #if ENABLE_OUTPUT_DEVICE_DEBUG_MODE
-        printf_s("DebugConsoleDevice received: %S", m_formatter(fmt).c_str());
+        wprintf_s(STR("DebugConsoleDevice received: %ls"), m_formatter(fmt).c_str());
 #else
-        printf_s("%s%S\033[0m", log_level_to_color(static_cast<Color::Color>(optional_arg)).c_str(), m_formatter(fmt).c_str());
+        wprintf_s(STR("%hs%ls\033[0m"), log_level_to_color(static_cast<Color::Color>(optional_arg)).c_str(), m_formatter(fmt).c_str());
 #endif
     }
 } // namespace RC::Output
