@@ -737,7 +737,18 @@ namespace RC::LuaType
             if (params.lua.is_userdata(params.stored_at_index))
             {
                 // StructData as userdata
-                params.throw_error("push_structproperty::lua_to_memory", "StructData as userdata is not yet implemented but there's userdata on the stack");
+                auto& lua_scriptstruct = params.lua.get_userdata<UScriptStruct>().get_local_cpp_object();
+                if (lua_scriptstruct.script_struct == script_struct)
+                {
+                    struct_property->CopyCompleteValue(params.data, lua_scriptstruct.get_data_ptr());
+                }
+                else
+                {
+                    params.throw_error("push_structproperty::lua_to_memory",
+                                       fmt::format("Can't copy struct of type {} into {}",
+                                                   to_string(lua_scriptstruct.script_struct->GetName()),
+                                                   to_string(script_struct->GetName())));
+                }
             }
             else if (params.lua.is_table(params.stored_at_index))
             {
