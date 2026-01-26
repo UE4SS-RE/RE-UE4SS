@@ -481,6 +481,8 @@ Fixed UEHelpers sometimes causing a runtime error. ([UE4SS #987](https://github.
 
 Fixed callbacks only working for the first registrant of several hooks. ([UE4SS #1143](https://github.com/UE4SS-RE/RE-UE4SS/pull/1143)
 
+Fixed callbacks being executed in the wrong thread. ([UE4SS #1170](https://github.com/UE4SS-RE/RE-UE4SS/pull/1170)
+
 ### C++ API 
 Fixed a crash caused by a race condition enabled by C++ mods using `UE4SS_ENABLE_IMGUI` in their constructor ([UE4SS #481](https://github.com/UE4SS-RE/RE-UE4SS/pull/481)) 
 
