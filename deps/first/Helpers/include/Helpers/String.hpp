@@ -518,6 +518,25 @@ namespace RC
         return ensure_str_as<char>(std::forward<T>(arg));
     }
 
+    template<typename CharT>
+    auto inline to_lower_case(std::basic_string_view<CharT> input) -> std::basic_string<CharT>
+    {
+        static auto locale = std::locale();
+        std::basic_string<CharT> out;
+        out.reserve(input.size());
+        for (const auto& c : input)
+        {
+            out.push_back(std::tolower(c, locale));
+        }
+        return out;
+    }
+
+    template<typename CharT>
+    auto inline to_lower_case(const std::basic_string<CharT>& input) -> std::basic_string<CharT>
+    {
+        return to_lower_case(std::basic_string_view<CharT>(input));
+    }
+
     // You can add more to_* function if needed
 
     // Auto Type Conversion Done

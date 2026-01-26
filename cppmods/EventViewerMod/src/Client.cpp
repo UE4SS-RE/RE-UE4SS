@@ -38,18 +38,6 @@
 //   remains unchanged even if callers are hidden.
 // - Filtering is case-insensitive by comparing lower-cased strings (see to_lower_ascii_copy()).
 //
-// ASCII-only lowercasing for case-insensitive filtering.
-// (Unreal names are typically ASCII; if this becomes a problem we'll revisit.)
-static auto to_lower_ascii_copy(std::string_view s) -> std::string
-{
-    std::string out;
-    out.reserve(s.size());
-    for (const unsigned char ch : s)
-    {
-        out.push_back(static_cast<char>(std::tolower(ch)));
-    }
-    return out;
-}
 
 // Returns lower-cased tokens (copied strings).
 static std::vector<std::string> split_string_by_comma(const std::string& string)
@@ -91,7 +79,7 @@ static std::vector<std::string> split_string_by_comma(const std::string& string)
         auto token = trim(sv.substr(start, end - start));
         if (!token.empty())
         {
-            result.emplace_back(to_lower_ascii_copy(token));
+            result.emplace_back(to_lower_case(token));
         }
 
         if (end == sv.size())
