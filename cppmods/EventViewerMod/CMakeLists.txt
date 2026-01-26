@@ -6,7 +6,7 @@ include(FetchContent)
 
 FetchContent_Declare(
         concurrentqueue
-        GIT_REPOSITORY git@github.com:cameron314/concurrentqueue.git
+        GIT_REPOSITORY https://github.com/cameron314/concurrentqueue.git
         GIT_TAG c68072129c8a5b4025122ca5a0c82ab14b30cb03
 )
 FetchContent_MakeAvailable(concurrentqueue)
