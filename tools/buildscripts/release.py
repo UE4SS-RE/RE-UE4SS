@@ -21,6 +21,7 @@ class ReleaseHandler:
         # List of CPP Mods with flags indicating if they need a config folder and if they should be included in release builds
         self.cpp_mods = {
             'KismetDebuggerMod': {'create_config': True, 'include_in_release': False},
+            'EventViewerMod': {'create_config': False, 'include_in_release': False},
         }
 
         # Lua mods to exclude from the non-dev/release version of the zip

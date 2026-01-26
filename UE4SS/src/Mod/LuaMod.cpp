@@ -3773,7 +3773,8 @@ Overloads:
         });
     }
 
-    auto static process_event_hook([[maybe_unused]] Unreal::UObject* Context,
+    auto static process_event_hook([[maybe_unused]] Unreal::Hook::TCallbackIterationData<void>& CallbackIterationData,
+                                   [[maybe_unused]] Unreal::UObject* Context,
                                    [[maybe_unused]] Unreal::UFunction* Function,
                                    [[maybe_unused]] void* Parms) -> void
     {
@@ -3783,7 +3784,10 @@ Overloads:
         process_delayed_actions<GameThreadExecutionMethod::ProcessEvent>(LuaMod::m_delayed_game_thread_actions);
     }
 
-    auto static engine_tick_hook([[maybe_unused]] Unreal::UEngine* Context, [[maybe_unused]] float DeltaSeconds) -> void
+    auto static engine_tick_hook([[maybe_unused]] Unreal::Hook::TCallbackIterationData<void>& CallbackIterationData,
+                                 [[maybe_unused]] Unreal::UEngine* Context,
+                                 [[maybe_unused]] float DeltaSeconds,
+                                 [[maybe_unused]] bool bIdle) -> void
     {
         std::lock_guard<std::recursive_mutex> guard{LuaMod::m_thread_actions_mutex};
 
@@ -3807,7 +3811,7 @@ Overloads:
     {
         if (!m_is_engine_tick_hooked)
         {
-            Unreal::Hook::RegisterEngineTickPreCallback(&engine_tick_hook);
+            Unreal::Hook::RegisterEngineTickPreCallback(engine_tick_hook, {false, false, STR("UE4SS"), STR("LuaModImpl")});
             m_is_engine_tick_hooked = true;
         }
     }
@@ -3817,7 +3821,7 @@ Overloads:
     {
         if (!mod->m_is_process_event_hooked)
         {
-            Unreal::Hook::RegisterProcessEventPreCallback(&process_event_hook);
+            Unreal::Hook::RegisterProcessEventPreCallback(process_event_hook, {false, false, STR("UE4SS"), STR("LuaModImpl")});
             mod->m_is_process_event_hooked = true;
         }
     }
@@ -5562,7 +5566,7 @@ Overloads:
         LuaStatics::console_executor_enabled = false;
     }
 
-    static auto script_hook([[maybe_unused]] Unreal::UObject* Context, Unreal::FFrame& Stack, [[maybe_unused]] void* RESULT_DECL) -> void
+    static auto script_hook([[maybe_unused]] Unreal::Hook::TCallbackIterationData<void>& CallbackIterationData, [[maybe_unused]] Unreal::UObject* Context, Unreal::FFrame& Stack, [[maybe_unused]] void* RESULT_DECL) -> void
     {
         std::lock_guard<std::recursive_mutex> guard{LuaMod::m_thread_actions_mutex};
 
@@ -5699,12 +5703,10 @@ Overloads:
     auto LuaMod::on_program_start() -> void
     {
         Unreal::UObjectArray::AddUObjectDeleteListener(&LuaType::FLuaObjectDeleteListener::s_lua_object_delete_listener);
-
+        const Unreal::Hook::FCallbackOptions common_opts {false, false, STR("UE4SS"), STR("LuaModImpl")};
         Unreal::Hook::RegisterLoadMapPreCallback(
-                [](Unreal::UEngine* Engine, Unreal::FWorldContext& WorldContext, Unreal::FURL URL, Unreal::UPendingNetGame* PendingGame, Unreal::FString& Error)
-                        -> std::pair<bool, bool> {
-                    return TRY([&] {
-                        std::pair<bool, bool> return_value{};
+                [](Unreal::Hook::TCallbackIterationData<bool>& CallbackIterationData, Unreal::UEngine* Engine, Unreal::FWorldContext& WorldContext, Unreal::FURL URL, Unreal::UPendingNetGame* PendingGame, Unreal::FString& Error) {
+                    TRY([&] {
                         for (const auto& callback_data : m_load_map_pre_callbacks)
                         {
                             for (const auto& [lua_ptr, registry_index] : callback_data.registry_indexes)
@@ -5722,7 +5724,6 @@ Overloads:
 
                                 if (callback_data.lua->is_nil())
                                 {
-                                    return_value.first = false;
                                     callback_data.lua->discard_value();
                                 }
                                 else if (!callback_data.lua->is_bool())
@@ -5731,20 +5732,16 @@ Overloads:
                                 }
                                 else
                                 {
-                                    return_value.first = true;
-                                    return_value.second = callback_data.lua->get_bool();
+                                    CallbackIterationData.TrySetReturnValue(callback_data.lua->get_bool());
                                 }
                             }
                         }
-                        return return_value;
                     });
-                });
+                }, common_opts);
 
         Unreal::Hook::RegisterLoadMapPostCallback(
-                [](Unreal::UEngine* Engine, Unreal::FWorldContext& WorldContext, Unreal::FURL URL, Unreal::UPendingNetGame* PendingGame, Unreal::FString& Error)
-                        -> std::pair<bool, bool> {
-                    return TRY([&] {
-                        std::pair<bool, bool> return_value{};
+                [](Unreal::Hook::TCallbackIterationData<bool>& CallbackIterationData, Unreal::UEngine* Engine, Unreal::FWorldContext& WorldContext, Unreal::FURL URL, Unreal::UPendingNetGame* PendingGame, Unreal::FString& Error) {
+                    TRY([&] {
                         for (const auto& callback_data : m_load_map_post_callbacks)
                         {
                             for (const auto& [lua_ptr, registry_index] : callback_data.registry_indexes)
@@ -5762,7 +5759,6 @@ Overloads:
 
                                 if (callback_data.lua->is_nil())
                                 {
-                                    return_value.first = false;
                                     callback_data.lua->discard_value();
                                 }
                                 else if (!callback_data.lua->is_bool())
@@ -5771,16 +5767,14 @@ Overloads:
                                 }
                                 else
                                 {
-                                    return_value.first = true;
-                                    return_value.second = callback_data.lua->get_bool();
+                                    CallbackIterationData.TrySetReturnValue(callback_data.lua->get_bool());
                                 }
                             }
                         }
-                        return return_value;
                     });
-                });
+                }, common_opts);
 
-        Unreal::Hook::RegisterInitGameStatePreCallback([]([[maybe_unused]] Unreal::AGameModeBase* Context) {
+        Unreal::Hook::RegisterInitGameStatePreCallback([]([[maybe_unused]] Unreal::Hook::TCallbackIterationData<void>& CallbackIterationData, [[maybe_unused]] Unreal::AGameModeBase* Context) {
             TRY([&] {
                 for (const auto& callback_data : m_init_game_state_pre_callbacks)
                 {
@@ -5795,9 +5789,9 @@ Overloads:
                     }
                 }
             });
-        });
+        }, common_opts);
 
-        Unreal::Hook::RegisterInitGameStatePostCallback([]([[maybe_unused]] Unreal::AGameModeBase* Context) {
+        Unreal::Hook::RegisterInitGameStatePostCallback([]([[maybe_unused]] Unreal::Hook::TCallbackIterationData<void>& CallbackIterationData, [[maybe_unused]] Unreal::AGameModeBase* Context) {
             TRY([&] {
                 for (const auto& callback_data : m_init_game_state_post_callbacks)
                 {
@@ -5812,9 +5806,9 @@ Overloads:
                     }
                 }
             });
-        });
+        }, common_opts);
 
-        Unreal::Hook::RegisterBeginPlayPreCallback([]([[maybe_unused]] Unreal::AActor* Context) {
+        Unreal::Hook::RegisterBeginPlayPreCallback([]([[maybe_unused]] Unreal::Hook::TCallbackIterationData<void>& CallbackIterationData, [[maybe_unused]] Unreal::AActor* Context) {
             TRY([&] {
                 for (const auto& callback_data : m_begin_play_pre_callbacks)
                 {
@@ -5829,9 +5823,9 @@ Overloads:
                     }
                 }
             });
-        });
+        }, common_opts);
 
-        Unreal::Hook::RegisterBeginPlayPostCallback([]([[maybe_unused]] Unreal::AActor* Context) {
+        Unreal::Hook::RegisterBeginPlayPostCallback([]([[maybe_unused]] Unreal::Hook::TCallbackIterationData<void>& CallbackIterationData, [[maybe_unused]] Unreal::AActor* Context) {
             TRY([&] {
                 for (const auto& callback_data : m_begin_play_post_callbacks)
                 {
@@ -5846,9 +5840,9 @@ Overloads:
                     }
                 }
             });
-        });
+        }, common_opts);
 
-        Unreal::Hook::RegisterEndPlayPreCallback([]([[maybe_unused]] Unreal::AActor* Context, Unreal::EEndPlayReason EndPlayReason) {
+        Unreal::Hook::RegisterEndPlayPreCallback([]([[maybe_unused]] Unreal::Hook::TCallbackIterationData<void>& CallbackIterationData, [[maybe_unused]] Unreal::AActor* Context, Unreal::EEndPlayReason EndPlayReason) {
             TRY([&] {
                 for (const auto& callback_data : m_end_play_pre_callbacks)
                 {
@@ -5865,9 +5859,9 @@ Overloads:
                     }
                 }
             });
-        });
+        }, common_opts);
 
-        Unreal::Hook::RegisterEndPlayPostCallback([]([[maybe_unused]] Unreal::AActor* Context, Unreal::EEndPlayReason EndPlayReason) {
+        Unreal::Hook::RegisterEndPlayPostCallback([]([[maybe_unused]] Unreal::Hook::TCallbackIterationData<void>& CallbackIterationData, [[maybe_unused]] Unreal::AActor* Context, Unreal::EEndPlayReason EndPlayReason) {
             TRY([&] {
                 for (const auto& callback_data : m_end_play_post_callbacks)
                 {
@@ -5884,7 +5878,7 @@ Overloads:
                     }
                 }
             });
-        });
+        }, common_opts);
 
         Unreal::Hook::RegisterStaticConstructObjectPostCallback([](const Unreal::FStaticConstructObjectParameters&, Unreal::UObject* constructed_object) {
             return TRY([&] {
@@ -6412,12 +6406,12 @@ Overloads:
         if (Unreal::UObject::ProcessLocalScriptFunctionInternal.is_ready() && Unreal::Version::IsAtLeast(4, 22))
         {
             Output::send(STR("Enabling custom events\n"));
-            Unreal::Hook::RegisterProcessLocalScriptFunctionPostCallback(script_hook);
+            Unreal::Hook::RegisterProcessLocalScriptFunctionPostCallback(script_hook, {false, false, STR("UE4SS"), STR("LuaModImplScriptHook")});
         }
         else if (Unreal::UObject::ProcessInternalInternal.is_ready() && Unreal::Version::IsBelow(4, 22))
         {
             Output::send(STR("Enabling custom events\n"));
-            Unreal::Hook::RegisterProcessInternalPostCallback(script_hook);
+            Unreal::Hook::RegisterProcessInternalPostCallback(script_hook, {false, false, STR("UE4SS"), STR("LuaModImplScriptHook")});
         }
     }
 

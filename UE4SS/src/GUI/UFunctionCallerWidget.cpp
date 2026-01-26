@@ -136,7 +136,7 @@ namespace RC::GUI
     static FOutputDevice s_ar{};
     static UFunction* s_function{};
     static UObject* s_executor{};
-    auto call_process_console_exec(UObject*, UFunction*, void*) -> void
+    auto call_process_console_exec(Hook::TCallbackIterationData<void>&, UObject*, UFunction*, void*) -> void
     {
         if (s_do_call)
         {
@@ -173,7 +173,7 @@ namespace RC::GUI
         if (!s_is_hooked)
         {
             s_is_hooked = true;
-            Hook::RegisterProcessEventPostCallback(call_process_console_exec);
+            Hook::RegisterProcessEventPostCallback(call_process_console_exec, {false, false, STR("UE4SS"), STR("FunctionCallerWidgetHook")});
         }
         s_do_call = true;
     }
