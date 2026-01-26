@@ -22,7 +22,7 @@ namespace RC::EventViewerMod
     // The context vector is prepared by the caller (Client) and passed in by value.
     class EntryCallStackRenderer
     {
-    public:
+      public:
         EntryCallStackRenderer() = delete;
         EntryCallStackRenderer(const EntryCallStackRenderer& Other) = delete;
         EntryCallStackRenderer(EntryCallStackRenderer&& Other) noexcept = delete;
@@ -34,7 +34,7 @@ namespace RC::EventViewerMod
         // Returns false when the modal is finished and can be destroyed.
         auto render() -> bool;
 
-    private:
+      private:
         size_t m_target_idx;
         const CallStackEntry* m_target_ptr;
         std::vector<CallStackEntry> m_context;

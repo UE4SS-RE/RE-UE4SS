@@ -11,9 +11,7 @@
 //
 // The returned std::string_views remain valid until StringPool::clear() is called.
 
-
-auto RC::EventViewerMod::StringPool::get_strings(RC::Unreal::UObject* caller,
-                                                 RC::Unreal::UFunction* function) -> AllNameStringViews
+auto RC::EventViewerMod::StringPool::get_strings(RC::Unreal::UObject* caller, RC::Unreal::UFunction* function) -> AllNameStringViews
 {
     if (!caller || !function) return AllNameStringViews{};
     // StringPool combines the caller's ComparisonIndex and the function's ComparisonIndex
@@ -38,9 +36,7 @@ auto RC::EventViewerMod::StringPool::get_strings(RC::Unreal::UObject* caller,
             std::string_view lower_func_name = lower_full;
             lower_func_name.remove_prefix(string_info.function_begin);
 
-            return AllNameStringViews{
-                FunctionNameStringViews{function_hash, func_name, lower_func_name}, full_name, lower_full, hash
-            };
+            return AllNameStringViews{FunctionNameStringViews{function_hash, func_name, lower_func_name}, full_name, lower_full, hash};
         }
     }
 
@@ -54,9 +50,7 @@ auto RC::EventViewerMod::StringPool::get_strings(RC::Unreal::UObject* caller,
 
     {
         std::unique_lock lock(m_mutex);
-        auto& string_info = m_main_pool.emplace(hash, StringInfo{
-                                                    caller_str.size() + 1, std::move(full), std::move(lower_full)
-                                                }).first->second;
+        auto& string_info = m_main_pool.emplace(hash, StringInfo{caller_str.size() + 1, std::move(full), std::move(lower_full)}).first->second;
         m_path_pool.emplace(function_hash, std::move(path_str));
 
         std::string_view full_name = string_info.full_name;
@@ -68,9 +62,7 @@ auto RC::EventViewerMod::StringPool::get_strings(RC::Unreal::UObject* caller,
         std::string_view lower_func_name = lower_full_name;
         lower_func_name.remove_prefix(string_info.function_begin);
 
-        return AllNameStringViews{
-            FunctionNameStringViews{function_hash, func_name, lower_func_name}, full_name, lower_full_name, hash
-        };
+        return AllNameStringViews{FunctionNameStringViews{function_hash, func_name, lower_func_name}, full_name, lower_full_name, hash};
     }
 }
 

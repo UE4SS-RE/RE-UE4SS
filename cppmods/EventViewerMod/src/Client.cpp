@@ -51,8 +51,7 @@ static std::vector<std::string> split_string_by_comma(const std::string& string)
     const std::string_view sv{string};
     size_t start = 0;
 
-    auto trim = [](std::string_view v) -> std::string_view
-    {
+    auto trim = [](std::string_view v) -> std::string_view {
         const auto leading = v.find_first_not_of(" \t\n\r\f\v");
         if (leading == std::string_view::npos)
         {
@@ -443,9 +442,7 @@ namespace RC::EventViewerMod
         auto& scroll_size = ImGui::GetStyle().ScrollbarSize;
         area.y -= ((padding.y + scroll_size) * 2);
         area.x -= (padding.x + scroll_size);
-        ImGui::BeginChild("##view", area,
-                          ImGuiChildFlags_Borders | ImGuiChildFlags_FrameStyle | ImGuiChildFlags_AutoResizeY,
-                          ImGuiWindowFlags_HorizontalScrollbar);
+        ImGui::BeginChild("##view", area, ImGuiChildFlags_Borders | ImGuiChildFlags_FrameStyle | ImGuiChildFlags_AutoResizeY, ImGuiWindowFlags_HorizontalScrollbar);
         if (m_state.mode == EMode::Stack)
         {
             if (thread.call_stack.empty())
@@ -514,8 +511,7 @@ namespace RC::EventViewerMod
 
         else
         {
-            if (ImGui::BeginTable("##frequency", 2,
-                                  ImGuiTableFlags_ScrollY | ImGuiTableFlags_Resizable | ImGuiTableFlags_BordersV))
+            if (ImGui::BeginTable("##frequency", 2, ImGuiTableFlags_ScrollY | ImGuiTableFlags_Resizable | ImGuiTableFlags_BordersV))
             {
                 int id = 0;
                 for (const auto& entry : thread.call_frequencies)
@@ -530,9 +526,7 @@ namespace RC::EventViewerMod
                         continue;
                     }
                     ImGui::PushID(id++);
-                    entry.render(m_state.started
-                                     ? ECallFrequencyEntryRenderFlags_None
-                                     : ECallFrequencyEntryRenderFlags_WithSupportMenus);
+                    entry.render(m_state.started ? ECallFrequencyEntryRenderFlags_None : ECallFrequencyEntryRenderFlags_WithSupportMenus);
                     ImGui::PopID();
                 }
 
@@ -551,8 +545,7 @@ namespace RC::EventViewerMod
         }
     }
 
-    auto Client::combo_with_flags(const char* label, int* current_item, const char* const items[],
-                                  const int items_count, const ImGuiComboFlags_ flags) -> bool
+    auto Client::combo_with_flags(const char* label, int* current_item, const char* const items[], const int items_count, const ImGuiComboFlags_ flags) -> bool
     {
         bool changed = false;
         if (ImGui::BeginCombo(label, items[*current_item], flags))
@@ -658,8 +651,7 @@ namespace RC::EventViewerMod
         return false;
     }
 
-    auto Client::apply_filters_to_history(const bool whitelist_changed, const bool blacklist_changed,
-                                          const bool tick_changed) -> void
+    auto Client::apply_filters_to_history(const bool whitelist_changed, const bool blacklist_changed, const bool tick_changed) -> void
     {
         if (!(whitelist_changed || blacklist_changed || tick_changed))
         {
@@ -680,12 +672,9 @@ namespace RC::EventViewerMod
         for (auto& thread : m_state.threads)
         {
             // Stack history can get very large; leverage parallel execution on random-access iterators.
-            std::for_each(std::execution::par_unseq, thread.call_stack.begin(), thread.call_stack.end(),
-                          [this, show_tick](CallStackEntry& entry)
-                          {
-                              entry.is_disabled = (entry.is_tick && !show_tick) || !passes_filters(
-                                  entry.lower_cased_full_name);
-                          });
+            std::for_each(std::execution::par_unseq, thread.call_stack.begin(), thread.call_stack.end(), [this, show_tick](CallStackEntry& entry) {
+                entry.is_disabled = (entry.is_tick && !show_tick) || !passes_filters(entry.lower_cased_full_name);
+            });
 
             // Frequency view is smaller and is a list (non-random-access).
             for (auto& entry : thread.call_frequencies)
@@ -706,14 +695,12 @@ namespace RC::EventViewerMod
             return;
         }
 
-        m_middleware.dequeue(m_state.dequeue_max_ms, m_state.dequeue_max_count, [this](CallStackEntry&& entry)
-        {
+        m_middleware.dequeue(m_state.dequeue_max_ms, m_state.dequeue_max_count, [this](CallStackEntry&& entry) {
             // Thread lookup/creation (unified across hook targets).
             auto& threads = m_state.threads;
 
             const auto entry_thread = entry.thread_id;
-            auto thread_it = std::ranges::find_if(threads, [&entry_thread](const ThreadInfo& info)
-            {
+            auto thread_it = std::ranges::find_if(threads, [&entry_thread](const ThreadInfo& info) {
                 return info.thread_id == entry_thread;
             });
 
@@ -735,17 +722,13 @@ namespace RC::EventViewerMod
 
             // Determine disabled state under current filters.
             // If it doesn't pass freq, it won't pass stack
-            const auto freq_disabled = (entry.is_tick && !m_state.show_tick) || !passes_filters(
-                entry.lower_cased_function_name);
-            const auto stack_disabled = freq_disabled || ((entry.is_tick && !m_state.show_tick) || !passes_filters(
-                entry.lower_cased_full_name));
+            const auto freq_disabled = (entry.is_tick && !m_state.show_tick) || !passes_filters(entry.lower_cased_function_name);
+            const auto stack_disabled = freq_disabled || ((entry.is_tick && !m_state.show_tick) || !passes_filters(entry.lower_cased_full_name));
 
             // Frequency tracking: bump existing, or add.
-            auto freq_it = std::ranges::find_if(thread.call_frequencies,
-                                                [&entry](const CallFrequencyEntry& freq_entry) -> bool
-                                                {
-                                                    return entry.function_hash == freq_entry.function_hash;
-                                                });
+            auto freq_it = std::ranges::find_if(thread.call_frequencies, [&entry](const CallFrequencyEntry& freq_entry) -> bool {
+                return entry.function_hash == freq_entry.function_hash;
+            });
 
             const auto entry_source_flags = static_cast<uint32_t>(entry.hook_target);
 
@@ -863,9 +846,8 @@ namespace RC::EventViewerMod
                 m_state.current_thread = static_cast<int>(threads.size() - 1);
             }
 
-            const auto filename = "EventViewerMod Capture-"s + to_string(m_state.hook_target) + "-" + EMode_NameArray[
-                    static_cast<int>(m_state.mode)] + " " +
-                oss.str() + ".txt";
+            const auto filename = "EventViewerMod Capture-"s + to_string(m_state.hook_target) + "-" + EMode_NameArray[static_cast<int>(m_state.mode)] + " " +
+                                  oss.str() + ".txt";
             const auto path = m_dump_dir / filename;
             std::ofstream file{path};
             if (!file.is_open())
@@ -903,8 +885,7 @@ namespace RC::EventViewerMod
         }
     }
 
-    auto Client::serialize_view(ThreadInfo& info, const EMode mode, const EMiddlewareHookTarget hook_target,
-                                std::ofstream& out) const -> void
+    auto Client::serialize_view(ThreadInfo& info, const EMode mode, const EMiddlewareHookTarget hook_target, std::ofstream& out) const -> void
     {
         out << fmt::format("Thread {} {}\n\n", info.id_string(), EMode_NameArray[static_cast<int>(mode)]);
 
@@ -982,8 +963,7 @@ namespace RC::EventViewerMod
 
     auto Client::can_render_entry(const CallStackEntry& entry) const -> bool
     {
-        return !(entry.is_disabled || ((static_cast<uint32_t>(entry.hook_target) & static_cast<uint32_t>(m_state.
-            hook_target)) == 0));
+        return !(entry.is_disabled || ((static_cast<uint32_t>(entry.hook_target) & static_cast<uint32_t>(m_state.hook_target)) == 0));
     }
 
     auto Client::resize_render_set(ThreadInfo& thread, const size_t max_size) const -> void

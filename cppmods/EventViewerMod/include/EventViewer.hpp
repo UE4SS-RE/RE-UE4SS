@@ -12,11 +12,11 @@ namespace RC::EventViewerMod
 {
     class EventViewerMod : public CppUserModBase
     {
-    public:
+      public:
         EventViewerMod();
         auto on_unreal_init() -> void override;
 
-    private:
+      private:
         std::atomic_flag m_unreal_loaded{};
     };
 } // namespace RC::EventViewerMod

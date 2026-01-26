@@ -33,8 +33,7 @@ namespace RC::EventViewerMod
             m_requested_open = true;
         }
 
-        if (ImGui::BeginPopupModal("Entry Call Stack##entrycallstackmodal", nullptr,
-                                   ImGuiWindowFlags_HorizontalScrollbar))
+        if (ImGui::BeginPopupModal("Entry Call Stack##entrycallstackmodal", nullptr, ImGuiWindowFlags_HorizontalScrollbar))
         {
             ImGui::Checkbox("Show Full Context", &m_show_full_context);
             HelpMarker(HelpStrings::HELP_CEMODAL_SHOW_FULL_CONTEXT);
@@ -43,16 +42,13 @@ namespace RC::EventViewerMod
             const auto btn_height = ImGui::GetFrameHeightWithSpacing();
             auto view_area = ImGui::GetContentRegionAvail();
             view_area.y -= btn_height;
-            ImGui::BeginChild("##entrycallstackview", view_area, ImGuiChildFlags_Borders | ImGuiChildFlags_FrameStyle,
-                              ImGuiWindowFlags_HorizontalScrollbar);
+            ImGui::BeginChild("##entrycallstackview", view_area, ImGuiChildFlags_Borders | ImGuiChildFlags_FrameStyle, ImGuiWindowFlags_HorizontalScrollbar);
 
             int prev_depth = 0;
             bool have_prev = false;
             int current_indent = 0;
             int id = 0;
-            uint8_t flags = m_disable_indent_colors
-                                ? ECallStackEntryRenderFlags_None
-                                : ECallStackEntryRenderFlags_IndentColors;
+            uint8_t flags = m_disable_indent_colors ? ECallStackEntryRenderFlags_None : ECallStackEntryRenderFlags_IndentColors;
             flags |= ECallStackEntryRenderFlags_WithSupportMenus;
             for (const auto& entry : m_context)
             {
@@ -60,10 +56,8 @@ namespace RC::EventViewerMod
                 const int depth = static_cast<int>(entry.depth);
                 const int delta = have_prev ? (depth - prev_depth) : depth;
                 ImGui::PushID(id++);
-                &entry != m_target_ptr
-                    ? entry.render(delta, static_cast<ECallStackEntryRenderFlags_>(flags))
-                    : entry.render(
-                        delta, static_cast<ECallStackEntryRenderFlags_>(flags | ECallStackEntryRenderFlags_Highlight));
+                &entry != m_target_ptr ? entry.render(delta, static_cast<ECallStackEntryRenderFlags_>(flags))
+                                       : entry.render(delta, static_cast<ECallStackEntryRenderFlags_>(flags | ECallStackEntryRenderFlags_Highlight));
                 ImGui::PopID();
                 current_indent += delta;
                 prev_depth = depth;
@@ -132,8 +126,7 @@ namespace RC::EventViewerMod
         // Windows filenames cannot contain ':'.
         oss << std::put_time(&local_tm, "%Y-%m-%d %H-%M-%S");
 
-        const auto filename = "EventViewerMod Capture-Entry "s + std::string(m_context[m_target_idx].function_name) +
-            " " + oss.str() + ".txt";
+        const auto filename = "EventViewerMod Capture-Entry "s + std::string(m_context[m_target_idx].function_name) + " " + oss.str() + ".txt";
         const auto path = captures_root / filename;
         std::wofstream out{path};
 

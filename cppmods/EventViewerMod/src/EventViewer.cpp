@@ -16,12 +16,10 @@ namespace RC::EventViewerMod
     {
         ModName = STR("EventViewerMod");
         ModAuthors = STR("wildcherry");
-        ModDescription = STR(
-            "Lets you view a live call stack of ProcessEvent and ProcessInternal, with additional call frequency tracking.");
+        ModDescription = STR("Lets you view a live call stack of ProcessEvent and ProcessInternal, with additional call frequency tracking.");
         ModVersion = STR("1.0.0");
 
-        register_tab(STR("EventViewer"), [](CppUserModBase* mod)
-        {
+        register_tab(STR("EventViewer"), [](CppUserModBase* mod) {
             UE4SS_ENABLE_IMGUI();
 
             // Avoid unnecessary expensive dynamic_cast
@@ -38,10 +36,9 @@ namespace RC::EventViewerMod
     void EventViewerMod::on_unreal_init()
     {
         Unreal::Hook::RegisterEngineTickPreCallback(
-            [this](auto&, Unreal::UEngine*, float, bool)
-            {
-                m_unreal_loaded.test_and_set();
-            },
-            {true, true, STR("EventViewerMod"), STR("InstallHook")});
+                [this](auto&, Unreal::UEngine*, float, bool) {
+                    m_unreal_loaded.test_and_set();
+                },
+                {true, true, STR("EventViewerMod"), STR("InstallHook")});
     }
 } // namespace RC::EventViewerMod

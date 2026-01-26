@@ -24,7 +24,7 @@ namespace RC::EventViewerMod
 {
     class StringPool
     {
-    public:
+      public:
         // Returns string_views owned by the pool:
         //  - full_name / function_name for display
         //  - lower_cased_* for case-insensitive filtering
@@ -46,7 +46,7 @@ namespace RC::EventViewerMod
         StringPool& operator=(const StringPool& Other) = delete;
         StringPool& operator=(StringPool&& Other) noexcept = delete;
 
-    private:
+      private:
         StringPool() = default;
 
         struct StringInfo
