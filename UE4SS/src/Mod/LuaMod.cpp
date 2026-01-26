@@ -2328,9 +2328,9 @@ Overloads:
                 LuaMod::m_custom_event_callbacks.emplace_back(LuaMod::FunctionHookData{
                         {Unreal::FName(event_name, Unreal::FNAME_Add)},
                         LuaMod::LuaCallbackData{
-                                .lua = &lua,
+                                .lua = hook_lua,
                                 .instance_of_class = nullptr,
-                                .registry_indexes = {std::pair<const LuaMadeSimple::Lua*, LuaMod::LuaCallbackData::RegistryIndex>{&lua, {lua_callback_registry_index}}},
+                                .registry_indexes = {std::pair<const LuaMadeSimple::Lua*, LuaMod::LuaCallbackData::RegistryIndex>{hook_lua, {lua_callback_registry_index}}},
                         }});
             }
 
@@ -2375,9 +2375,9 @@ Overloads:
             const int32_t lua_callback_registry_index = hook_lua->registry().make_ref();
 
             LuaMod::m_load_map_pre_callbacks.emplace_back(LuaMod::LuaCallbackData{
-                    .lua = &lua,
+                    .lua = hook_lua,
                     .instance_of_class = nullptr,
-                    .registry_indexes = {std::pair<const LuaMadeSimple::Lua*, LuaMod::LuaCallbackData::RegistryIndex>{&lua, lua_callback_registry_index}}});
+                    .registry_indexes = {std::pair<const LuaMadeSimple::Lua*, LuaMod::LuaCallbackData::RegistryIndex>{hook_lua, lua_callback_registry_index}}});
 
             return 0;
         });
@@ -2402,9 +2402,9 @@ Overloads:
             const int32_t lua_callback_registry_index = hook_lua->registry().make_ref();
 
             LuaMod::m_load_map_post_callbacks.emplace_back(LuaMod::LuaCallbackData{
-                    .lua = &lua,
+                    .lua = hook_lua,
                     .instance_of_class = nullptr,
-                    .registry_indexes = {std::pair<const LuaMadeSimple::Lua*, LuaMod::LuaCallbackData::RegistryIndex>{&lua, lua_callback_registry_index}}});
+                    .registry_indexes = {std::pair<const LuaMadeSimple::Lua*, LuaMod::LuaCallbackData::RegistryIndex>{hook_lua, lua_callback_registry_index}}});
 
             return 0;
         });
@@ -2429,9 +2429,9 @@ Overloads:
             const int32_t lua_callback_registry_index = hook_lua->registry().make_ref();
 
             LuaMod::m_init_game_state_pre_callbacks.emplace_back(LuaMod::LuaCallbackData{
-                    .lua = &lua,
+                    .lua = hook_lua,
                     .instance_of_class = nullptr,
-                    .registry_indexes = {std::pair<const LuaMadeSimple::Lua*, LuaMod::LuaCallbackData::RegistryIndex>{&lua, lua_callback_registry_index}},
+                    .registry_indexes = {std::pair<const LuaMadeSimple::Lua*, LuaMod::LuaCallbackData::RegistryIndex>{hook_lua, lua_callback_registry_index}},
             });
 
             return 0;
@@ -2457,9 +2457,9 @@ Overloads:
             const int32_t lua_callback_registry_index = hook_lua->registry().make_ref();
 
             LuaMod::m_init_game_state_post_callbacks.emplace_back(LuaMod::LuaCallbackData{
-                    .lua = &lua,
+                    .lua = hook_lua,
                     .instance_of_class = nullptr,
-                    .registry_indexes = {std::pair<const LuaMadeSimple::Lua*, LuaMod::LuaCallbackData::RegistryIndex>{&lua, lua_callback_registry_index}},
+                    .registry_indexes = {std::pair<const LuaMadeSimple::Lua*, LuaMod::LuaCallbackData::RegistryIndex>{hook_lua, lua_callback_registry_index}},
             });
 
             return 0;
@@ -2485,9 +2485,9 @@ Overloads:
             const int32_t lua_callback_registry_index = hook_lua->registry().make_ref();
 
             LuaMod::m_begin_play_pre_callbacks.emplace_back(LuaMod::LuaCallbackData{
-                    .lua = &lua,
+                    .lua = hook_lua,
                     .instance_of_class = nullptr,
-                    .registry_indexes = {std::pair<const LuaMadeSimple::Lua*, LuaMod::LuaCallbackData::RegistryIndex>{&lua, lua_callback_registry_index}},
+                    .registry_indexes = {std::pair<const LuaMadeSimple::Lua*, LuaMod::LuaCallbackData::RegistryIndex>{hook_lua, lua_callback_registry_index}},
             });
 
             return 0;
@@ -2513,9 +2513,9 @@ Overloads:
             const int32_t lua_callback_registry_index = hook_lua->registry().make_ref();
 
             LuaMod::m_begin_play_post_callbacks.emplace_back(LuaMod::LuaCallbackData{
-                    .lua = &lua,
+                    .lua = hook_lua,
                     .instance_of_class = nullptr,
-                    .registry_indexes = {std::pair<const LuaMadeSimple::Lua*, LuaMod::LuaCallbackData::RegistryIndex>{&lua, lua_callback_registry_index}},
+                    .registry_indexes = {std::pair<const LuaMadeSimple::Lua*, LuaMod::LuaCallbackData::RegistryIndex>{hook_lua, lua_callback_registry_index}},
             });
 
             return 0;
@@ -2541,9 +2541,9 @@ Overloads:
             const int32_t lua_callback_registry_index = hook_lua->registry().make_ref();
 
             LuaMod::m_end_play_pre_callbacks.emplace_back(LuaMod::LuaCallbackData{
-                    .lua = &lua,
+                    .lua = hook_lua,
                     .instance_of_class = nullptr,
-                    .registry_indexes = {std::pair<const LuaMadeSimple::Lua*, LuaMod::LuaCallbackData::RegistryIndex>{&lua, lua_callback_registry_index}},
+                    .registry_indexes = {std::pair<const LuaMadeSimple::Lua*, LuaMod::LuaCallbackData::RegistryIndex>{hook_lua, lua_callback_registry_index}},
             });
 
             return 0;
@@ -2569,9 +2569,9 @@ Overloads:
             const int32_t lua_callback_registry_index = hook_lua->registry().make_ref();
 
             LuaMod::m_end_play_post_callbacks.emplace_back(LuaMod::LuaCallbackData{
-                    .lua = &lua,
+                    .lua = hook_lua,
                     .instance_of_class = nullptr,
-                    .registry_indexes = {std::pair<const LuaMadeSimple::Lua*, LuaMod::LuaCallbackData::RegistryIndex>{&lua, lua_callback_registry_index}},
+                    .registry_indexes = {std::pair<const LuaMadeSimple::Lua*, LuaMod::LuaCallbackData::RegistryIndex>{hook_lua, lua_callback_registry_index}},
             });
 
             return 0;
