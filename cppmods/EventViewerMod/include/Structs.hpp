@@ -69,9 +69,11 @@ namespace RC::EventViewerMod
     struct CallStackEntry : EntryBase, AllNameStringViews
     {
         CallStackEntry() = default;
-        CallStackEntry(EMiddlewareHookTarget hook_target, const AllNameStringViews& strings, uint32_t depth, std::thread::id thread_id, bool is_tick);
+        CallStackEntry(EMiddlewareHookTarget hook_target, const AllNameStringViews& strings, uint32_t depth,
+                       std::thread::id thread_id, bool is_tick);
 
-        auto render(int indent_delta, ECallStackEntryRenderFlags_ flags = ECallStackEntryRenderFlags_None) const -> void;
+        auto render(int indent_delta,
+                    ECallStackEntryRenderFlags_ flags = ECallStackEntryRenderFlags_None) const -> void;
 
         // Provides a copy of the entry's key string fields. Don't use with ImGui, only use for logging/saving.
         // Use the string_views for ImGui since they utilize the string pool.
@@ -85,7 +87,7 @@ namespace RC::EventViewerMod
         uint32_t depth = 0;
         std::thread::id thread_id{};
 
-      private:
+    private:
         auto render_indents(int indent_delta) const -> void;
         auto render_support_menus(ECallStackEntryRenderFlags_ flags) const -> void;
     };
@@ -102,7 +104,7 @@ namespace RC::EventViewerMod
         // This is used for filtering when a specific hook target is selected.
         uint32_t source_flags = 0;
 
-      private:
+    private:
         auto render_support_menus() const -> void;
     };
 
@@ -125,7 +127,7 @@ namespace RC::EventViewerMod
         auto id_string() -> const char*;
         auto clear() -> void;
 
-      private:
+    private:
         std::string m_id_string;
     };
 

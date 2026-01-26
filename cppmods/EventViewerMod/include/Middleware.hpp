@@ -29,18 +29,20 @@ namespace RC::EventViewerMod
 {
     class Middleware
     {
-      public:
+    public:
         // By-reference singleton.
         static auto GetInstance() -> Middleware&;
 
         // [Thread-Any] Enqueues info on a call. The hook_target is captured at enqueue-time.
-        auto enqueue(EMiddlewareHookTarget hook_target, RC::Unreal::UObject* context, RC::Unreal::UFunction* function) -> void;
+        auto enqueue(EMiddlewareHookTarget hook_target, RC::Unreal::UObject* context,
+                     RC::Unreal::UFunction* function) -> void;
 
         // [Thread-ImGui] Dequeues call info.
         //  max_ms - maximum wall time (ms) to spend dequeuing.
         //  max_count_per_iteration - max items pulled per bulk-dequeue.
         //  on_dequeue - receives the dequeued entry by rvalue-ref (move).
-        auto dequeue(uint16_t max_ms, uint16_t max_count_per_iteration, const std::function<void(CallStackEntry&&)>& on_dequeue) -> void;
+        auto dequeue(uint16_t max_ms, uint16_t max_count_per_iteration,
+                     const std::function<void(CallStackEntry&&)>& on_dequeue) -> void;
 
         // [Thread-ImGui] Pauses stream, removes hooks. Also drains queue.
         auto stop() -> bool;
@@ -65,7 +67,7 @@ namespace RC::EventViewerMod
 
         ~Middleware();
 
-      private:
+    private:
         Middleware();
 
         auto assert_on_imgui_thread() const -> void;
@@ -90,7 +92,7 @@ namespace RC::EventViewerMod
             inline static Unreal::Hook::FCallbackOptions m_cb_options{false, true, STR("EventViewer"), STR("CallStackMonitor")};
         };
 
-      private:
+    private:
         HookController<Unreal::Hook::ProcessEventCallbackWithData> m_pe_controller{};
         HookController<Unreal::Hook::ProcessInternalCallbackWithData> m_pi_controller{};
         HookController<Unreal::Hook::ProcessLocalScriptFunctionCallbackWithData> m_plsf_controller{};

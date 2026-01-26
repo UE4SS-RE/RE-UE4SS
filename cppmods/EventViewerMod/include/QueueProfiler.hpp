@@ -7,9 +7,10 @@
 
 #include <atomic>
 #include <chrono>
+
 class QueueProfiler
 {
-  public:
+public:
     static void BeginEnqueue()
     {
         enqueue_count.fetch_add(1, std::memory_order_relaxed);
@@ -18,13 +19,16 @@ class QueueProfiler
 
     static void EndEnqueue()
     {
-        enqueue_total.fetch_add(std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::high_resolution_clock::now() - enqueue_start).count(),
-                                std::memory_order_relaxed);
+        enqueue_total.fetch_add(
+            std::chrono::duration_cast<std::chrono::microseconds>(
+                std::chrono::high_resolution_clock::now() - enqueue_start).count(),
+            std::memory_order_relaxed);
     }
 
     static double GetEnqueueAverage()
     {
-        return (enqueue_total.load(std::memory_order_relaxed) / static_cast<double>(enqueue_count.load(std::memory_order_relaxed)));
+        return (enqueue_total.load(std::memory_order_relaxed) / static_cast<double>(enqueue_count.load(
+            std::memory_order_relaxed)));
     }
 
     static void BeginDequeue()
@@ -36,12 +40,14 @@ class QueueProfiler
     static void EndDequeue()
     {
         const auto now = std::chrono::high_resolution_clock::now();
-        dequeue_total.fetch_add(std::chrono::duration_cast<std::chrono::microseconds>(now - dequeue_start).count(), std::memory_order_relaxed);
+        dequeue_total.fetch_add(std::chrono::duration_cast<std::chrono::microseconds>(now - dequeue_start).count(),
+                                std::memory_order_relaxed);
     }
 
     static double GetDequeueAverage()
     {
-        return (dequeue_total.load(std::memory_order_relaxed) / static_cast<double>(dequeue_count.load(std::memory_order_relaxed)));
+        return (dequeue_total.load(std::memory_order_relaxed) / static_cast<double>(dequeue_count.load(
+            std::memory_order_relaxed)));
     }
 
     static void AddPendingCount(const int64_t pending)
@@ -62,7 +68,8 @@ class QueueProfiler
 
     static double GetPendingAverage()
     {
-        return (pending_total.load(std::memory_order_relaxed) / static_cast<double>(pending_count.load(std::memory_order_relaxed)));
+        return (pending_total.load(std::memory_order_relaxed) / static_cast<double>(pending_count.load(
+            std::memory_order_relaxed)));
     }
 
     static void Reset()
@@ -76,7 +83,7 @@ class QueueProfiler
         time_exceeded_total.store(0, std::memory_order_release);
     }
 
-  private:
+private:
     inline static std::atomic_int64_t enqueue_total = 0;
     inline static std::atomic_int64_t dequeue_total = 0;
     inline static std::atomic_int64_t pending_total = 0;

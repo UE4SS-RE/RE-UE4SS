@@ -13,13 +13,13 @@
 
 inline constexpr static unsigned ALPHA = 200;
 inline constexpr static std::array COLORS = {
-        IM_COL32(255, 0, 0, ALPHA),   // red
-        IM_COL32(0, 0, 255, ALPHA),   // blue
-        IM_COL32(0, 255, 0, ALPHA),   // green
-        IM_COL32(255, 176, 0, ALPHA), // orange
-        IM_COL32(176, 255, 0, ALPHA), // lime
-        IM_COL32(0, 255, 255, ALPHA), // cyan
-        IM_COL32(255, 255, 0, ALPHA), // yellow
+    IM_COL32(255, 0, 0, ALPHA), // red
+    IM_COL32(0, 0, 255, ALPHA), // blue
+    IM_COL32(0, 255, 0, ALPHA), // green
+    IM_COL32(255, 176, 0, ALPHA), // orange
+    IM_COL32(176, 255, 0, ALPHA), // lime
+    IM_COL32(0, 255, 255, ALPHA), // cyan
+    IM_COL32(255, 255, 0, ALPHA), // yellow
 };
 inline constexpr static auto SELECTED_COLOR = ImVec4{1.0f, 1.0f, 0.0f, 1.0f};
 
@@ -44,7 +44,8 @@ namespace RC::EventViewerMod
     }
 
     CallStackEntry::CallStackEntry(
-            const EMiddlewareHookTarget hook_target, const AllNameStringViews& strings, const uint32_t depth, const std::thread::id thread_id, const bool is_tick)
+        const EMiddlewareHookTarget hook_target, const AllNameStringViews& strings, const uint32_t depth,
+        const std::thread::id thread_id, const bool is_tick)
         : EntryBase(is_tick), hook_target(hook_target), depth(depth), thread_id(thread_id)
     {
         // Inheritance is used to avoid extra indirection/caches misses.
