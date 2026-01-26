@@ -25,7 +25,6 @@
 #include <QueueProfiler.hpp>
 #include <HelpStrings.hpp>
 
-
 // EventViewerMod: UI renderer and history consumer.
 //
 // This file drives the ImGui tab. High-level flow:
@@ -51,7 +50,6 @@ static auto to_lower_ascii_copy(std::string_view s) -> std::string
     }
     return out;
 }
-
 
 // Returns lower-cased tokens (copied strings).
 static std::vector<std::string> split_string_by_comma(const std::string& string)
@@ -327,7 +325,7 @@ namespace RC::EventViewerMod
             {
                 m_middleware.start();
                 m_state.text_temp_virtualization_count = m_state.text_virtualization_count;
-                //shrink render sets
+                // shrink render sets
                 for (auto& thread : threads)
                 {
                     resize_render_set(thread, m_state.text_temp_virtualization_count);
@@ -422,7 +420,11 @@ namespace RC::EventViewerMod
         }
         HelpMarker(HelpStrings::HELP_TEXT_VIRTUALIZATION_COUNT);
 
-        ImGui::Text("Enqueue Avg: %f Dequeue Avg: %f Pending Avg: %f Time Slot Exceeded Count: %llu", QueueProfiler::GetEnqueueAverage(), QueueProfiler::GetDequeueAverage(), QueueProfiler::GetPendingAverage(), QueueProfiler::GetTimeExceededCount());
+        ImGui::Text("Enqueue Avg: %f Dequeue Avg: %f Pending Avg: %f Time Slot Exceeded Count: %llu",
+                    QueueProfiler::GetEnqueueAverage(),
+                    QueueProfiler::GetDequeueAverage(),
+                    QueueProfiler::GetPendingAverage(),
+                    QueueProfiler::GetTimeExceededCount());
         HelpMarker(HelpStrings::HELP_QUEUE_PROFILE_VALUES);
     }
 
@@ -475,7 +477,7 @@ namespace RC::EventViewerMod
                 if (ImGui::Button("Load More..."))
                 {
                     m_state.text_temp_virtualization_count *= 2;
-                    //expand set
+                    // expand set
                     resize_render_set(thread, m_state.text_temp_virtualization_count);
                     needs_scroll_here = true;
                 }
@@ -514,7 +516,7 @@ namespace RC::EventViewerMod
                 --current_indent;
             }
 
-            //if (show_filter_counts) m_filter_count_renderer.render_and_reset(!m_state.show_filter_counts);
+            // if (show_filter_counts) m_filter_count_renderer.render_and_reset(!m_state.show_filter_counts);
 
             if (m_state.started || needs_scroll_here) ImGui::SetScrollHereY(1.0f);
         }
@@ -555,11 +557,7 @@ namespace RC::EventViewerMod
         }
     }
 
-    auto Client::combo_with_flags(const char* label,
-            int* current_item,
-            const char* const items[],
-            const int items_count,
-            const ImGuiComboFlags_ flags) -> bool
+    auto Client::combo_with_flags(const char* label, int* current_item, const char* const items[], const int items_count, const ImGuiComboFlags_ flags) -> bool
     {
         bool changed = false;
         if (ImGui::BeginCombo(label, items[*current_item], flags))
@@ -686,12 +684,9 @@ namespace RC::EventViewerMod
         for (auto& thread : m_state.threads)
         {
             // Stack history can get very large; leverage parallel execution on random-access iterators.
-            std::for_each(std::execution::par_unseq,
-                          thread.call_stack.begin(),
-                          thread.call_stack.end(),
-                          [this, show_tick](CallStackEntry& entry) {
-                              entry.is_disabled = (entry.is_tick && !show_tick) || !passes_filters(entry.lower_cased_full_name);
-                          });
+            std::for_each(std::execution::par_unseq, thread.call_stack.begin(), thread.call_stack.end(), [this, show_tick](CallStackEntry& entry) {
+                entry.is_disabled = (entry.is_tick && !show_tick) || !passes_filters(entry.lower_cased_full_name);
+            });
 
             // Frequency view is smaller and is a list (non-random-access).
             for (auto& entry : thread.call_frequencies)
@@ -863,11 +858,8 @@ namespace RC::EventViewerMod
                 m_state.current_thread = static_cast<int>(threads.size() - 1);
             }
 
-            const auto filename =
-                "EventViewerMod Capture-"s +
-                to_string(m_state.hook_target) +
-                "-" + EMode_NameArray[static_cast<int>(m_state.mode)] + " " +
-                oss.str() + ".txt";
+            const auto filename = "EventViewerMod Capture-"s + to_string(m_state.hook_target) + "-" + EMode_NameArray[static_cast<int>(m_state.mode)] + " " +
+                                  oss.str() + ".txt";
             const auto path = m_dump_dir / filename;
             std::ofstream file{path};
             if (!file.is_open())
@@ -889,7 +881,6 @@ namespace RC::EventViewerMod
             {
                 return;
             }
-
 
             const auto filename = "EventViewerMod Capture-All "s + oss.str() + ".txt";
             const auto path = m_dump_dir / filename;
@@ -931,7 +922,8 @@ namespace RC::EventViewerMod
                 {
                     continue;
                 }
-                for (auto i = 0u; i < entry.depth; ++i) out << "\t";
+                for (auto i = 0u; i < entry.depth; ++i)
+                    out << "\t";
                 out << entry.full_name << '\n';
             }
 
@@ -1009,8 +1001,9 @@ namespace RC::EventViewerMod
             return;
         }
 
-        //set.size() > max_size
-        while (set.size() != max_size) set.erase(set.begin());
+        // set.size() > max_size
+        while (set.size() != max_size)
+            set.erase(set.begin());
     }
 
     auto Client::request_save_state() -> void
@@ -1018,99 +1011,99 @@ namespace RC::EventViewerMod
         m_state.needs_save.test_and_set(std::memory_order_release);
     }
 
-auto Client::add_to_white_list(const std::string_view item) -> void
-{
-    if (m_state.whitelist.empty())
+    auto Client::add_to_white_list(const std::string_view item) -> void
     {
-        m_state.whitelist += item;
-    }
-    else
-    {
-        m_state.whitelist += ", ";
-        m_state.whitelist += item;
-    }
-    request_save_state();
-    apply_filters_to_history(true, false, false);
-}
-
-auto Client::add_to_black_list(std::string_view item) -> void
-{
-    if (m_state.blacklist.empty())
-    {
-        m_state.blacklist += item;
-    }
-    else
-    {
-        m_state.blacklist += ", ";
-        m_state.blacklist += item;
-    }
-    request_save_state();
-    apply_filters_to_history(false, true, false);
-}
-
-auto Client::render_entry_stack_modal(const CallStackEntry* entry) -> void
-{
-    if (m_entry_call_stack_renderer) return;
-    // find root entry and next root entry
-    // finding the root entry also reveals all callers, so go ahead and bookkeep it
-    const auto& stack = m_state.threads[m_state.current_thread].call_stack;
-    const size_t target_abs_idx = entry - stack.data();
-    size_t root_abs_idx = target_abs_idx;
-    std::vector<size_t> idxs_relevant_to_target{}; // added in reverse-view order
-    if (entry->depth)
-    {
-        uint32_t last_lowest_depth = entry->depth;
-        for (auto idx = target_abs_idx - 1; idx >= 0; --idx)
+        if (m_state.whitelist.empty())
         {
-            auto this_depth = stack[idx].depth;
-            if (this_depth < last_lowest_depth)
+            m_state.whitelist += item;
+        }
+        else
+        {
+            m_state.whitelist += ", ";
+            m_state.whitelist += item;
+        }
+        request_save_state();
+        apply_filters_to_history(true, false, false);
+    }
+
+    auto Client::add_to_black_list(std::string_view item) -> void
+    {
+        if (m_state.blacklist.empty())
+        {
+            m_state.blacklist += item;
+        }
+        else
+        {
+            m_state.blacklist += ", ";
+            m_state.blacklist += item;
+        }
+        request_save_state();
+        apply_filters_to_history(false, true, false);
+    }
+
+    auto Client::render_entry_stack_modal(const CallStackEntry* entry) -> void
+    {
+        if (m_entry_call_stack_renderer) return;
+        // find root entry and next root entry
+        // finding the root entry also reveals all callers, so go ahead and bookkeep it
+        const auto& stack = m_state.threads[m_state.current_thread].call_stack;
+        const size_t target_abs_idx = entry - stack.data();
+        size_t root_abs_idx = target_abs_idx;
+        std::vector<size_t> idxs_relevant_to_target{}; // added in reverse-view order
+        if (entry->depth)
+        {
+            uint32_t last_lowest_depth = entry->depth;
+            for (auto idx = target_abs_idx - 1; idx >= 0; --idx)
             {
-                idxs_relevant_to_target.push_back(idx);
-                last_lowest_depth = this_depth;
-                if (this_depth == 0)
+                auto this_depth = stack[idx].depth;
+                if (this_depth < last_lowest_depth)
                 {
-                    root_abs_idx = idx;
-                    break;
+                    idxs_relevant_to_target.push_back(idx);
+                    last_lowest_depth = this_depth;
+                    if (this_depth == 0)
+                    {
+                        root_abs_idx = idx;
+                        break;
+                    }
                 }
             }
         }
-    }
 
-    size_t next_root_abs_idx = target_abs_idx + 1;
-    bool out_of_target_scope = false;
-    for (; next_root_abs_idx < stack.size(); ++next_root_abs_idx) // find callers and callees of target
-    {
-        const auto this_entry_depth = stack[next_root_abs_idx].depth;
-        if (this_entry_depth == 0) break;
-
-        if (this_entry_depth <= entry->depth) out_of_target_scope = true;
-        if (!out_of_target_scope) idxs_relevant_to_target.push_back(next_root_abs_idx);
-    }
-
-    std::vector<CallStackEntry> context{ stack.begin() + root_abs_idx, stack.begin() + next_root_abs_idx }; // copy entries
-    for (auto& abs_idx : idxs_relevant_to_target) // make idxs_relevant_to_target relative to context
-    {
-        abs_idx -= root_abs_idx;
-    }
-    const auto target_rel_idx = target_abs_idx - root_abs_idx; // find context index for target
-    idxs_relevant_to_target.push_back(target_rel_idx);
-
-    // make any irrelevant entry disabled by default, and assert that any relevant entry is enabled. the modal won't change them, but
-    // will use is_disabled as a flag to indicate its relevance for the checkbox.
-    for (size_t context_idx = 0; context_idx < context.size(); ++context_idx)
-    {
-        if (std::ranges::find(idxs_relevant_to_target, static_cast<int64_t>(context_idx)) != idxs_relevant_to_target.end())
+        size_t next_root_abs_idx = target_abs_idx + 1;
+        bool out_of_target_scope = false;
+        for (; next_root_abs_idx < stack.size(); ++next_root_abs_idx) // find callers and callees of target
         {
-            context[context_idx].is_disabled = false;
-            continue;
+            const auto this_entry_depth = stack[next_root_abs_idx].depth;
+            if (this_entry_depth == 0) break;
+
+            if (this_entry_depth <= entry->depth) out_of_target_scope = true;
+            if (!out_of_target_scope) idxs_relevant_to_target.push_back(next_root_abs_idx);
         }
-        context[context_idx].is_disabled = true;
+
+        std::vector<CallStackEntry> context{stack.begin() + root_abs_idx, stack.begin() + next_root_abs_idx}; // copy entries
+        for (auto& abs_idx : idxs_relevant_to_target) // make idxs_relevant_to_target relative to context
+        {
+            abs_idx -= root_abs_idx;
+        }
+        const auto target_rel_idx = target_abs_idx - root_abs_idx; // find context index for target
+        idxs_relevant_to_target.push_back(target_rel_idx);
+
+        // make any irrelevant entry disabled by default, and assert that any relevant entry is enabled. the modal won't change them, but
+        // will use is_disabled as a flag to indicate its relevance for the checkbox.
+        for (size_t context_idx = 0; context_idx < context.size(); ++context_idx)
+        {
+            if (std::ranges::find(idxs_relevant_to_target, static_cast<int64_t>(context_idx)) != idxs_relevant_to_target.end())
+            {
+                context[context_idx].is_disabled = false;
+                continue;
+            }
+            context[context_idx].is_disabled = true;
+        }
+
+        m_entry_call_stack_renderer = std::make_unique<EntryCallStackRenderer>(target_rel_idx, std::move(context));
     }
 
-    m_entry_call_stack_renderer = std::make_unique<EntryCallStackRenderer>(target_rel_idx, std::move(context));
-}
-
-auto Client::GetInstance() -> Client&
+    auto Client::GetInstance() -> Client&
     {
         static Client client{};
         return client;

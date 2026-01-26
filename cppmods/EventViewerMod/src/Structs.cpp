@@ -13,13 +13,13 @@
 
 inline constexpr static unsigned ALPHA = 200;
 inline constexpr static std::array COLORS = {
-    IM_COL32(255, 0, 0, ALPHA),     // red
-    IM_COL32(0, 0, 255, ALPHA),     // blue
-    IM_COL32(0, 255, 0, ALPHA),     // green
-    IM_COL32(255, 176, 0, ALPHA),   // orange
-    IM_COL32(176, 255, 0, ALPHA),   // lime
-    IM_COL32(0, 255, 255, ALPHA),   // cyan
-    IM_COL32(255, 255, 0, ALPHA),   // yellow
+        IM_COL32(255, 0, 0, ALPHA),   // red
+        IM_COL32(0, 0, 255, ALPHA),   // blue
+        IM_COL32(0, 255, 0, ALPHA),   // green
+        IM_COL32(255, 176, 0, ALPHA), // orange
+        IM_COL32(176, 255, 0, ALPHA), // lime
+        IM_COL32(0, 255, 255, ALPHA), // cyan
+        IM_COL32(255, 255, 0, ALPHA), // yellow
 };
 inline constexpr static auto SELECTED_COLOR = ImVec4{1.0f, 1.0f, 0.0f, 1.0f};
 
@@ -34,25 +34,18 @@ namespace RC::EventViewerMod
     auto copy_to_clipboard(const std::string_view& string) -> void
     {
         ImGui::LogToClipboard();
-        ImVec2 dummy {0,0};
+        ImVec2 dummy{0, 0};
         ImGui::LogRenderedText(&dummy, string.data(), string.data() + string.size());
         ImGui::LogFinish();
     };
 
-    EntryBase::EntryBase(const bool is_tick)
-        : is_tick(is_tick)
+    EntryBase::EntryBase(const bool is_tick) : is_tick(is_tick)
     {
     }
 
-    CallStackEntry::CallStackEntry(const EMiddlewareHookTarget hook_target,
-                                   const AllNameStringViews& strings,
-                                   const uint32_t depth,
-                                   const std::thread::id thread_id,
-                                   const bool is_tick)
-        : EntryBase(is_tick),
-          hook_target(hook_target),
-          depth(depth),
-          thread_id(thread_id)
+    CallStackEntry::CallStackEntry(
+            const EMiddlewareHookTarget hook_target, const AllNameStringViews& strings, const uint32_t depth, const std::thread::id thread_id, const bool is_tick)
+        : EntryBase(is_tick), hook_target(hook_target), depth(depth), thread_id(thread_id)
     {
         // Inheritance is used to avoid extra indirection/caches misses.
         // (StringPool owns the backing storage for these views.)
@@ -98,7 +91,8 @@ namespace RC::EventViewerMod
     auto CallStackEntry::to_string_with_prefix() const -> std::wstring
     {
         std::wstring out;
-        for (uint32_t i = 0; i < depth; ++i) out += L"\t";
+        for (uint32_t i = 0; i < depth; ++i)
+            out += L"\t";
         out += ensure_str(to_prefix_string(hook_target)) + ensure_str(full_name) + L"\n";
         return out;
     }
@@ -151,8 +145,7 @@ namespace RC::EventViewerMod
         }
     }
 
-    CallFrequencyEntry::CallFrequencyEntry(const FunctionNameStringViews& strings, const bool is_tick)
-        : EntryBase(is_tick)
+    CallFrequencyEntry::CallFrequencyEntry(const FunctionNameStringViews& strings, const bool is_tick) : EntryBase(is_tick)
     {
         function_hash = strings.function_hash;
         function_name = strings.function_name;
@@ -177,14 +170,12 @@ namespace RC::EventViewerMod
             if (ImGui::MenuItem("Copy Function Full Name")) copy_to_clipboard(StringPool::GetInstance().get_path_name(function_hash));
             if (ImGui::MenuItem("Copy Function Name##cfn")) copy_to_clipboard(function_name);
             if (ImGui::MenuItem("Add Function to Whitelist##fwl")) Client::GetInstance().add_to_white_list(function_name);
-            if (ImGui::MenuItem("Add Function to Blacklist##fbl"))Client::GetInstance().add_to_black_list(function_name);
+            if (ImGui::MenuItem("Add Function to Blacklist##fbl")) Client::GetInstance().add_to_black_list(function_name);
             ImGui::EndPopup();
         }
     }
 
-    ThreadInfo::ThreadInfo(const std::thread::id thread_id)
-        : thread_id(thread_id),
-          is_game_thread(RC::Unreal::GetGameThreadId() == thread_id)
+    ThreadInfo::ThreadInfo(const std::thread::id thread_id) : thread_id(thread_id), is_game_thread(RC::Unreal::GetGameThreadId() == thread_id)
     {
     }
 

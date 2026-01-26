@@ -25,7 +25,7 @@ namespace RC::EventViewerMod
 
     class Client
     {
-    public:
+      public:
         // [Thread-ImGui]
         auto render() -> void;
 
@@ -44,14 +44,15 @@ namespace RC::EventViewerMod
         // [Thread-Any]
         static auto GetInstance() -> Client&;
 
-    private:
+      private:
         Client();
 
         auto render_cfg() -> void;
         auto render_perf_opts() -> void;
         auto render_view() -> void;
 
-        static auto combo_with_flags(const char* label, int* current_item, const char* const items[], int items_count, ImGuiComboFlags_ flags = ImGuiComboFlags_None) -> bool;
+        static auto combo_with_flags(const char* label, int* current_item, const char* const items[], int items_count, ImGuiComboFlags_ flags = ImGuiComboFlags_None)
+                -> bool;
 
         auto save_state() -> void;
         auto load_state() -> void;
@@ -62,7 +63,12 @@ namespace RC::EventViewerMod
 
         auto passes_filters(std::string_view test_str) const -> bool;
 
-        enum class ESaveMode { none, current, all };
+        enum class ESaveMode
+        {
+            none,
+            current,
+            all
+        };
         auto save(ESaveMode mode) -> void;
         auto serialize_view(ThreadInfo& info, EMode mode, EMiddlewareHookTarget hook_target, std::ofstream& out) const -> void;
         auto serialize_all_views(std::ofstream& out) -> void;

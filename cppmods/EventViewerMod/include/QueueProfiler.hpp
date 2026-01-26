@@ -1,6 +1,5 @@
 #pragma once
 
-
 // EventViewerMod: Lightweight queue timing instrumentation.
 //
 // This is not a general-purpose profiler; it's a small helper to measure enqueue/dequeue costs
@@ -10,7 +9,7 @@
 #include <chrono>
 class QueueProfiler
 {
-public:
+  public:
     static void BeginEnqueue()
     {
         enqueue_count.fetch_add(1, std::memory_order_relaxed);
@@ -19,7 +18,8 @@ public:
 
     static void EndEnqueue()
     {
-        enqueue_total.fetch_add(std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::high_resolution_clock::now() - enqueue_start).count(), std::memory_order_relaxed);
+        enqueue_total.fetch_add(std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::high_resolution_clock::now() - enqueue_start).count(),
+                                std::memory_order_relaxed);
     }
 
     static double GetEnqueueAverage()
@@ -75,7 +75,8 @@ public:
         pending_count.store(0, std::memory_order_release);
         time_exceeded_total.store(0, std::memory_order_release);
     }
-private:
+
+  private:
     inline static std::atomic_int64_t enqueue_total = 0;
     inline static std::atomic_int64_t dequeue_total = 0;
     inline static std::atomic_int64_t pending_total = 0;

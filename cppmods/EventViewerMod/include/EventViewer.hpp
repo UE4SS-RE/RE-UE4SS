@@ -1,6 +1,5 @@
 #pragma once
 
-
 // EventViewerMod: UE4SS mod entry + ImGui tab registration.
 //
 // UE4SS calls start_mod() (see dllmain.cpp) to create this mod instance. On Unreal init we register
@@ -14,8 +13,8 @@ namespace RC::EventViewerMod
 {
     class EventViewerMod : public RC::CppUserModBase
     {
-    public:
+      public:
         EventViewerMod();
         auto on_unreal_init() -> void override;
     };
-}
+} // namespace RC::EventViewerMod

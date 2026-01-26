@@ -2,7 +2,8 @@
 
 A UE4SS C++ mod that captures Unreal Engine call flow and renders it live in ImGui.
 
-It hooks **ProcessEvent**, **ProcessInternal**, and **ProcessLocalScriptFunction** concurrently and uses a **single unified depth counter** so nested and recursive call chains keep a consistent indentation story (PE → PI → PLSF → …).
+It hooks **ProcessEvent**, **ProcessInternal**, and **ProcessLocalScriptFunction** concurrently and uses a **single
+unified depth counter** so nested and recursive call chains keep a consistent indentation story (PE → PI → PLSF → …).
 
 ## What you can do
 
@@ -27,7 +28,8 @@ The **Target** combo is a *view filter*, not a capture filter:
 - **All** shows the call stack exactly as the middleware reports it.
 - **ProcessEvent / ProcessInternal / ProcessLocalScriptFunction** show only entries that originated from that hook.
 
-Important: depth is **not** recomputed when you filter. If you hide callers, the remaining entries keep their original depth so you can still read the true nesting structure.
+Important: depth is **not** recomputed when you filter. If you hide callers, the remaining entries keep their original
+depth so you can still read the true nesting structure.
 
 ### Modes
 
@@ -36,7 +38,8 @@ Important: depth is **not** recomputed when you filter. If you hide callers, the
 
 ### Thread picker
 
-Captures are grouped by the originating `std::thread::id`. The combo lets you switch which thread you’re viewing. The game thread is labeled with `(Game)` when detected.
+Captures are grouped by the originating `std::thread::id`. The combo lets you switch which thread you’re viewing. The
+game thread is labeled with `(Game)` when detected.
 
 ### Performance knobs
 
@@ -57,13 +60,15 @@ Whitelist and blacklist entries are **comma-separated tokens**.
 
 Rules:
 
-- **Whitelist**: if empty, everything passes. If non-empty, an entry passes if **any** whitelist token is a substring match.
+- **Whitelist**: if empty, everything passes. If non-empty, an entry passes if **any** whitelist token is a substring
+  match.
 - **Blacklist**: if any blacklist token is a substring match, the entry fails.
 - **Show Tick Functions** is an additional filter gate applied on top.
 
 ## Right-click menus
 
-Both stack entries and frequency entries have a right-click menu (when enabled by the current render flags) with helpers such as:
+Both stack entries and frequency entries have a right-click menu (when enabled by the current render flags) with helpers
+such as:
 
 - Copy function/caller names to clipboard
 - Add function/caller to whitelist/blacklist
@@ -75,41 +80,42 @@ When the stream is paused, the context menu can open a modal window that shows a
 
 Definitions:
 
-- The **root caller** of an entry is the depth `0` entry that began the call chain that ultimately led to the selected entry.
+- The **root caller** of an entry is the depth `0` entry that began the call chain that ultimately led to the selected
+  entry.
 
 The modal provides:
 
 - **Show full context**
-  - Enabled: shows all calls produced by the root caller (the entire subtree under that root).
-  - Disabled: shows the path from the root → selected entry, plus the calls triggered by the selected entry.
+    - Enabled: shows all calls produced by the root caller (the entire subtree under that root).
+    - Disabled: shows the path from the root → selected entry, plus the calls triggered by the selected entry.
 - **Disable Indent Colors**
-  - Mirrors the main window’s behavior.
+    - Mirrors the main window’s behavior.
 
 ## Architecture (high-level)
 
 - **Middleware** (`include/Middleware.hpp`, `src/Middleware.cpp`)
-  - Owns the UE hooks and pushes lightweight capture entries into a `moodycamel::ConcurrentQueue`.
-  - Uses thread-local producer tokens for low overhead under high call volume.
-  - Uses a one-time barrier/flag to prevent enqueuing until all hooks are installed (to keep depth sane).
+    - Owns the UE hooks and pushes lightweight capture entries into a `moodycamel::ConcurrentQueue`.
+    - Uses thread-local producer tokens for low overhead under high call volume.
+    - Uses a one-time barrier/flag to prevent enqueuing until all hooks are installed (to keep depth sane).
 
 - **Client** (`include/Client.hpp`, `src/Client.cpp`)
-  - ImGui renderer + persistent UI state.
-  - Dequeues entries, groups by thread, maintains stack/frequency views, and applies filters.
+    - ImGui renderer + persistent UI state.
+    - Dequeues entries, groups by thread, maintains stack/frequency views, and applies filters.
 
 - **StringPool** (`include/StringPool.hpp`, `src/StringPool.cpp`)
-  - Interns function and caller strings and returns stable `std::string_view` pairs.
-  - Caches both original and lowercased variants.
-  - Produces a function hash (from Unreal’s `ComparisonIndex`) to avoid expensive string comparisons in hot paths.
+    - Interns function and caller strings and returns stable `std::string_view` pairs.
+    - Caches both original and lowercased variants.
+    - Produces a function hash (from Unreal’s `ComparisonIndex`) to avoid expensive string comparisons in hot paths.
 
 - **EntryCallStackRenderer** (`include/EntryCallStackRenderer.hpp`, `src/EntryCallStackRenderer.cpp`)
-  - Manages the call-stack modal’s state and rendering.
+    - Manages the call-stack modal’s state and rendering.
 
 ## Files and persistence
 
 - UI state is stored as JSON at:
-  - `Mods/EventViewerMod/config/settings.json`
+    - `Mods/EventViewerMod/config/settings.json`
 - Capture dumps are written to:
-  - `Mods/EventViewerMod/captures/`
+    - `Mods/EventViewerMod/captures/`
 
 ## Building
 
@@ -117,4 +123,6 @@ This mod is intended to be compiled as a UE4SS C++ mod (MSVC, `/std:c++latest`).
 
 ## Notes and gotchas
 
-- String views returned from `StringPool` are stable until the pool is cleared. The current implementation is designed for “grow-only” usage during a session and never clears, but if later implementation does want to support clearing it, they should also clear all threads.
+- String views returned from `StringPool` are stable until the pool is cleared. The current implementation is designed
+  for “grow-only” usage during a session and never clears, but if later implementation does want to support clearing it,
+  they should also clear all threads.

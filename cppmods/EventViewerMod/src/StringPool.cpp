@@ -11,7 +11,6 @@
 //
 // The returned std::string_views remain valid until StringPool::clear() is called.
 
-
 auto to_lower_ascii_copy(std::string_view s) -> std::string
 {
     std::string out;
@@ -22,7 +21,6 @@ auto to_lower_ascii_copy(std::string_view s) -> std::string
     }
     return out;
 }
-
 
 auto RC::EventViewerMod::StringPool::get_strings(RC::Unreal::UObject* caller, RC::Unreal::UFunction* function) -> AllNameStringViews
 {
@@ -49,12 +47,7 @@ auto RC::EventViewerMod::StringPool::get_strings(RC::Unreal::UObject* caller, RC
             std::string_view lower_func_name = lower_full;
             lower_func_name.remove_prefix(string_info.function_begin);
 
-            return AllNameStringViews{
-                FunctionNameStringViews{function_hash, func_name, lower_func_name},
-                full_name,
-                lower_full,
-                hash
-            };
+            return AllNameStringViews{FunctionNameStringViews{function_hash, func_name, lower_func_name}, full_name, lower_full, hash};
         }
     }
 
@@ -80,12 +73,7 @@ auto RC::EventViewerMod::StringPool::get_strings(RC::Unreal::UObject* caller, RC
         std::string_view lower_func_name = lower_full_name;
         lower_func_name.remove_prefix(string_info.function_begin);
 
-        return AllNameStringViews{
-            FunctionNameStringViews{function_hash, func_name, lower_func_name},
-            full_name,
-            lower_full_name,
-            hash
-        };
+        return AllNameStringViews{FunctionNameStringViews{function_hash, func_name, lower_func_name}, full_name, lower_full_name, hash};
     }
 }
 

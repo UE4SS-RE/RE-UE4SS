@@ -14,8 +14,7 @@ namespace RC::EventViewerMod
     using namespace std::literals::string_literals;
 
     EntryCallStackRenderer::EntryCallStackRenderer(const size_t target_idx, std::vector<CallStackEntry> context)
-            : m_target_idx(target_idx),
-            m_context(std::move(context))
+        : m_target_idx(target_idx), m_context(std::move(context))
     {
         m_target_ptr = &m_context[m_target_idx];
     }
@@ -51,14 +50,14 @@ namespace RC::EventViewerMod
             int id = 0;
             uint8_t flags = m_disable_indent_colors ? ECallStackEntryRenderFlags_None : ECallStackEntryRenderFlags_IndentColors;
             flags |= ECallStackEntryRenderFlags_WithSupportMenus;
-            for (const auto& entry: m_context)
+            for (const auto& entry : m_context)
             {
                 if (entry.is_disabled && !m_show_full_context) continue;
                 const int depth = static_cast<int>(entry.depth);
                 const int delta = have_prev ? (depth - prev_depth) : depth;
                 ImGui::PushID(id++);
                 &entry != m_target_ptr ? entry.render(delta, static_cast<ECallStackEntryRenderFlags_>(flags))
-                                        : entry.render(delta, static_cast<ECallStackEntryRenderFlags_>(flags | ECallStackEntryRenderFlags_Highlight));
+                                       : entry.render(delta, static_cast<ECallStackEntryRenderFlags_>(flags | ECallStackEntryRenderFlags_Highlight));
                 ImGui::PopID();
                 current_indent += delta;
                 prev_depth = depth;
@@ -127,9 +126,7 @@ namespace RC::EventViewerMod
         // Windows filenames cannot contain ':'.
         oss << std::put_time(&local_tm, "%Y-%m-%d %H-%M-%S");
 
-        const auto filename =
-                "EventViewerMod Capture-Entry "s + std::string(m_context[m_target_idx].function_name) + " " +
-                oss.str() + ".txt";
+        const auto filename = "EventViewerMod Capture-Entry "s + std::string(m_context[m_target_idx].function_name) + " " + oss.str() + ".txt";
         const auto path = captures_root / filename;
         std::wofstream out{path};
 
@@ -144,4 +141,4 @@ namespace RC::EventViewerMod
         m_last_save_path = path.string();
         ImGui::OpenPopup("Saved Entry File");
     }
-}
+} // namespace RC::EventViewerMod

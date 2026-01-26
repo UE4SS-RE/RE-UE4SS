@@ -1,6 +1,5 @@
 #pragma once
 
-
 // EventViewerMod: String interning + hashing.
 //
 // Unreal provides stable numeric identifiers for names (ComparisonIndex). StringPool uses those to:
@@ -25,7 +24,7 @@ namespace RC::EventViewerMod
 {
     class StringPool
     {
-    public:
+      public:
         // Returns string_views owned by the pool:
         //  - full_name / function_name for display
         //  - lower_cased_* for case-insensitive filtering
@@ -46,7 +45,8 @@ namespace RC::EventViewerMod
         StringPool(StringPool&& Other) noexcept = delete;
         StringPool& operator=(const StringPool& Other) = delete;
         StringPool& operator=(StringPool&& Other) noexcept = delete;
-    private:
+
+      private:
         StringPool() = default;
 
         struct StringInfo
@@ -57,8 +57,8 @@ namespace RC::EventViewerMod
         };
 
         // TODO replace with better concurrent hash map solution, though not too important for now
-        std::unordered_map<uint64_t, StringInfo> m_main_pool; // hashed by function->GetComparisonIndex and caller->GetComparisonIndex
+        std::unordered_map<uint64_t, StringInfo> m_main_pool;  // hashed by function->GetComparisonIndex and caller->GetComparisonIndex
         std::unordered_map<uint32_t, std::string> m_path_pool; // hashed by function->GetComparisonIndex
         std::shared_mutex m_mutex;
     };
-}
+} // namespace RC::EventViewerMod

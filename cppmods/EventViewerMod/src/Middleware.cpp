@@ -24,17 +24,17 @@
 
 namespace RC::EventViewerMod
 {
+    using RC::Unreal::FFrame;
     using RC::Unreal::UFunction;
     using RC::Unreal::UObject;
-    using RC::Unreal::FFrame;
 
-    using RC::Unreal::Hook::GlobalCallbackId;
     using RC::Unreal::Hook::ERROR_ID;
-    using RC::Unreal::Hook::UnregisterCallback;
-    using RC::Unreal::Hook::RegisterProcessEventPreCallback;
+    using RC::Unreal::Hook::GlobalCallbackId;
     using RC::Unreal::Hook::RegisterProcessEventPostCallback;
-    using RC::Unreal::Hook::RegisterProcessInternalPreCallback;
+    using RC::Unreal::Hook::RegisterProcessEventPreCallback;
     using RC::Unreal::Hook::RegisterProcessInternalPostCallback;
+    using RC::Unreal::Hook::RegisterProcessInternalPreCallback;
+    using RC::Unreal::Hook::UnregisterCallback;
 
     using moodycamel::ConsumerToken;
     using moodycamel::ProducerToken;
@@ -57,42 +57,42 @@ namespace RC::EventViewerMod
 
         Output::send<LogLevel::Verbose>(L"[EventViewerMod] Found {} engine tick functions!", m_tick_fns.size());
 
-        m_pe_controller = {
-            .register_prehook_fn = &RC::Unreal::Hook::RegisterProcessEventPreCallback,
-            .register_posthook_fn = &RC::Unreal::Hook::RegisterProcessEventPostCallback,
-            .m_pre_callback = [this](auto&, UObject* context, UFunction* function, void*) {
-                return enqueue(EMiddlewareHookTarget::ProcessEvent, context, function);
-            },
-            .m_post_callback = [](auto&, UObject*, UFunction*, void*) {
-                m_depth = (m_depth == 0) ? 0 : (m_depth - 1);
-            }
-        };
+        m_pe_controller = {.register_prehook_fn = &RC::Unreal::Hook::RegisterProcessEventPreCallback,
+                           .register_posthook_fn = &RC::Unreal::Hook::RegisterProcessEventPostCallback,
+                           .m_pre_callback =
+                                   [this](auto&, UObject* context, UFunction* function, void*) {
+                                       return enqueue(EMiddlewareHookTarget::ProcessEvent, context, function);
+                                   },
+                           .m_post_callback =
+                                   [](auto&, UObject*, UFunction*, void*) {
+                                       m_depth = (m_depth == 0) ? 0 : (m_depth - 1);
+                                   }};
 
-        m_pi_controller = {
-            .register_prehook_fn = &RC::Unreal::Hook::RegisterProcessInternalPreCallback,
-            .register_posthook_fn = &RC::Unreal::Hook::RegisterProcessInternalPostCallback,
-            .m_pre_callback = [this](auto&, UObject* context, FFrame& stack, void*) {
-                auto fn = stack.Node();
-                if (!fn) fn = stack.CurrentNativeFunction();
-                return enqueue(EMiddlewareHookTarget::ProcessInternal, context, fn);
-            },
-            .m_post_callback = [](auto&, UObject*, FFrame&, void*) {
-                m_depth = (m_depth == 0) ? 0 : (m_depth - 1);
-            }
-        };
+        m_pi_controller = {.register_prehook_fn = &RC::Unreal::Hook::RegisterProcessInternalPreCallback,
+                           .register_posthook_fn = &RC::Unreal::Hook::RegisterProcessInternalPostCallback,
+                           .m_pre_callback =
+                                   [this](auto&, UObject* context, FFrame& stack, void*) {
+                                       auto fn = stack.Node();
+                                       if (!fn) fn = stack.CurrentNativeFunction();
+                                       return enqueue(EMiddlewareHookTarget::ProcessInternal, context, fn);
+                                   },
+                           .m_post_callback =
+                                   [](auto&, UObject*, FFrame&, void*) {
+                                       m_depth = (m_depth == 0) ? 0 : (m_depth - 1);
+                                   }};
 
-        m_plsf_controller = {
-            .register_prehook_fn = &RC::Unreal::Hook::RegisterProcessLocalScriptFunctionPreCallback,
-            .register_posthook_fn = &RC::Unreal::Hook::RegisterProcessLocalScriptFunctionPostCallback,
-            .m_pre_callback = [this](auto&, UObject* context, FFrame& stack, void*) {
-                auto fn = stack.Node();
-                if (!fn) fn = stack.CurrentNativeFunction();
-                return enqueue(EMiddlewareHookTarget::ProcessLocalScriptFunction, context, fn);
-            },
-            .m_post_callback = [](auto&, UObject*, FFrame&, void*) {
-                m_depth = (m_depth == 0) ? 0 : (m_depth - 1);
-            }
-        };
+        m_plsf_controller = {.register_prehook_fn = &RC::Unreal::Hook::RegisterProcessLocalScriptFunctionPreCallback,
+                             .register_posthook_fn = &RC::Unreal::Hook::RegisterProcessLocalScriptFunctionPostCallback,
+                             .m_pre_callback =
+                                     [this](auto&, UObject* context, FFrame& stack, void*) {
+                                         auto fn = stack.Node();
+                                         if (!fn) fn = stack.CurrentNativeFunction();
+                                         return enqueue(EMiddlewareHookTarget::ProcessLocalScriptFunction, context, fn);
+                                     },
+                             .m_post_callback =
+                                     [](auto&, UObject*, FFrame&, void*) {
+                                         m_depth = (m_depth == 0) ? 0 : (m_depth - 1);
+                                     }};
         QueueProfiler::Reset();
     }
 
@@ -200,12 +200,9 @@ namespace RC::EventViewerMod
             Output::send<LogLevel::Verbose>(L"[EventViewerMod] Mod requires FName.toString to be known!");
         }
 
-        if (!(m_plsf_controller.install_posthook() &&
-        m_pi_controller.install_posthook() &&
-        m_pe_controller.install_posthook() &&
-        m_plsf_controller.install_prehook() &&
-        m_pi_controller.install_prehook() &&
-        m_pe_controller.install_prehook())) {
+        if (!(m_plsf_controller.install_posthook() && m_pi_controller.install_posthook() && m_pe_controller.install_posthook() &&
+              m_plsf_controller.install_prehook() && m_pi_controller.install_prehook() && m_pe_controller.install_prehook()))
+        {
             m_pe_controller.unhook();
             m_pi_controller.unhook();
             m_plsf_controller.unhook();
@@ -217,9 +214,7 @@ namespace RC::EventViewerMod
         return true;
     }
 
-    auto Middleware::enqueue(const EMiddlewareHookTarget hook_target,
-                             UObject* context,
-                             UFunction* function) -> void
+    auto Middleware::enqueue(const EMiddlewareHookTarget hook_target, UObject* context, UFunction* function) -> void
     {
         thread_local std::thread::id thread_id = std::this_thread::get_id();
         thread_local uint64_t local_reset_counter = m_depth_reset_counter.load(std::memory_order_acquire);
@@ -243,9 +238,7 @@ namespace RC::EventViewerMod
         QueueProfiler::EndEnqueue();
     }
 
-    auto Middleware::dequeue(const uint16_t max_ms,
-                             const uint16_t max_count_per_iteration,
-                             const std::function<void(CallStackEntry&&)>& on_dequeue) -> void
+    auto Middleware::dequeue(const uint16_t max_ms, const uint16_t max_count_per_iteration, const std::function<void(CallStackEntry&&)>& on_dequeue) -> void
     {
         assert_on_imgui_thread();
 

@@ -11,7 +11,6 @@
 // - Depth is unified across the hooked functions so nested / recursive call flows keep consistent
 //   indentation regardless of which hook produced a given entry.
 
-
 #include <atomic>
 #include <cstdint>
 #include <functional>
@@ -30,22 +29,18 @@ namespace RC::EventViewerMod
 {
     class Middleware
     {
-    public:
+      public:
         // By-reference singleton.
         static auto GetInstance() -> Middleware&;
 
         // [Thread-Any] Enqueues info on a call. The hook_target is captured at enqueue-time.
-        auto enqueue(EMiddlewareHookTarget hook_target,
-                     RC::Unreal::UObject* context,
-                     RC::Unreal::UFunction* function) -> void;
+        auto enqueue(EMiddlewareHookTarget hook_target, RC::Unreal::UObject* context, RC::Unreal::UFunction* function) -> void;
 
         // [Thread-ImGui] Dequeues call info.
         //  max_ms - maximum wall time (ms) to spend dequeuing.
         //  max_count_per_iteration - max items pulled per bulk-dequeue.
         //  on_dequeue - receives the dequeued entry by rvalue-ref (move).
-        auto dequeue(uint16_t max_ms,
-                     uint16_t max_count_per_iteration,
-                     const std::function<void(CallStackEntry&&)>& on_dequeue) -> void;
+        auto dequeue(uint16_t max_ms, uint16_t max_count_per_iteration, const std::function<void(CallStackEntry&&)>& on_dequeue) -> void;
 
         // [Thread-ImGui] Pauses stream, removes hooks. Also drains queue.
         auto stop() -> bool;
@@ -68,19 +63,20 @@ namespace RC::EventViewerMod
         // [Thread-ImGui]
         [[nodiscard]] auto get_average_dequeue_time() const -> double;
 
-         ~Middleware();
-    private:
+        ~Middleware();
+
+      private:
         Middleware();
 
         auto assert_on_imgui_thread() const -> void;
         [[nodiscard]] auto is_tick_fn(const RC::Unreal::UFunction* fn) const -> bool;
         auto stop_impl(bool do_assert) -> bool;
 
-        template<typename CallbackType>
+        template <typename CallbackType>
         struct HookController
         {
-            Unreal::Hook::GlobalCallbackId(*register_prehook_fn)(CallbackType, Unreal::Hook::FCallbackOptions){};
-            Unreal::Hook::GlobalCallbackId(*register_posthook_fn)(CallbackType, Unreal::Hook::FCallbackOptions){};
+            Unreal::Hook::GlobalCallbackId (*register_prehook_fn)(CallbackType, Unreal::Hook::FCallbackOptions){};
+            Unreal::Hook::GlobalCallbackId (*register_posthook_fn)(CallbackType, Unreal::Hook::FCallbackOptions){};
             CallbackType m_pre_callback{};
             CallbackType m_post_callback{};
             Unreal::Hook::GlobalCallbackId m_prehook_id = Unreal::Hook::ERROR_ID;
@@ -93,12 +89,13 @@ namespace RC::EventViewerMod
 
             inline static Unreal::Hook::FCallbackOptions m_cb_options{false, true, STR("EventViewer"), STR("CallStackMonitor")};
         };
-    private:
+
+      private:
         HookController<Unreal::Hook::ProcessEventCallbackWithData> m_pe_controller{};
         HookController<Unreal::Hook::ProcessInternalCallbackWithData> m_pi_controller{};
         HookController<Unreal::Hook::ProcessLocalScriptFunctionCallbackWithData> m_plsf_controller{};
 
-                bool m_paused = true;
+        bool m_paused = true;
 
         std::thread::id m_imgui_id{};
 
