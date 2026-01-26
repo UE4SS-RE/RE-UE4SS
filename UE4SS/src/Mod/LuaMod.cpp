@@ -5705,10 +5705,8 @@ Overloads:
         Unreal::UObjectArray::AddUObjectDeleteListener(&LuaType::FLuaObjectDeleteListener::s_lua_object_delete_listener);
         const Unreal::Hook::FCallbackOptions common_opts {false, false, STR("UE4SS"), STR("LuaModImpl")};
         Unreal::Hook::RegisterLoadMapPreCallback(
-                [](Unreal::UEngine* Engine, Unreal::FWorldContext& WorldContext, Unreal::FURL URL, Unreal::UPendingNetGame* PendingGame, Unreal::FString& Error)
-                        -> std::pair<bool, bool> {
-                    return TRY([&] {
-                        std::pair<bool, bool> return_value{};
+                [](Unreal::Hook::TCallbackIterationData<bool>& CallbackIterationData, Unreal::UEngine* Engine, Unreal::FWorldContext& WorldContext, Unreal::FURL URL, Unreal::UPendingNetGame* PendingGame, Unreal::FString& Error) {
+                    TRY([&] {
                         for (const auto& callback_data : m_load_map_pre_callbacks)
                         {
                             for (const auto& [lua_ptr, registry_index] : callback_data.registry_indexes)
@@ -5726,7 +5724,6 @@ Overloads:
 
                                 if (callback_data.lua->is_nil())
                                 {
-                                    return_value.first = false;
                                     callback_data.lua->discard_value();
                                 }
                                 else if (!callback_data.lua->is_bool())
@@ -5735,20 +5732,16 @@ Overloads:
                                 }
                                 else
                                 {
-                                    return_value.first = true;
-                                    return_value.second = callback_data.lua->get_bool();
+                                    CallbackIterationData.TrySetReturnValue(callback_data.lua->get_bool());
                                 }
                             }
                         }
-                        return return_value;
                     });
-                });
+                }, common_opts);
 
         Unreal::Hook::RegisterLoadMapPostCallback(
-                [](Unreal::UEngine* Engine, Unreal::FWorldContext& WorldContext, Unreal::FURL URL, Unreal::UPendingNetGame* PendingGame, Unreal::FString& Error)
-                        -> std::pair<bool, bool> {
-                    return TRY([&] {
-                        std::pair<bool, bool> return_value{};
+                [](Unreal::Hook::TCallbackIterationData<bool>& CallbackIterationData, Unreal::UEngine* Engine, Unreal::FWorldContext& WorldContext, Unreal::FURL URL, Unreal::UPendingNetGame* PendingGame, Unreal::FString& Error) {
+                    TRY([&] {
                         for (const auto& callback_data : m_load_map_post_callbacks)
                         {
                             for (const auto& [lua_ptr, registry_index] : callback_data.registry_indexes)
@@ -5766,7 +5759,6 @@ Overloads:
 
                                 if (callback_data.lua->is_nil())
                                 {
-                                    return_value.first = false;
                                     callback_data.lua->discard_value();
                                 }
                                 else if (!callback_data.lua->is_bool())
@@ -5775,14 +5767,12 @@ Overloads:
                                 }
                                 else
                                 {
-                                    return_value.first = true;
-                                    return_value.second = callback_data.lua->get_bool();
+                                    CallbackIterationData.TrySetReturnValue(callback_data.lua->get_bool());
                                 }
                             }
                         }
-                        return return_value;
                     });
-                });
+                }, common_opts);
 
         Unreal::Hook::RegisterInitGameStatePreCallback([]([[maybe_unused]] Unreal::Hook::TCallbackIterationData<void>& CallbackIterationData, [[maybe_unused]] Unreal::AGameModeBase* Context) {
             TRY([&] {
