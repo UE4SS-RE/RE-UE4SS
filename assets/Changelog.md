@@ -202,6 +202,8 @@ Added custom module searcher with UTF-8 path support for Lua `require()` ([UE4SS
 
 Added support for `UScriptStruct` when using `RegisterCustomProprety` ([UE4SS #1036](https://github.com/UE4SS-RE/RE-UE4SS/pull/1036))
 
+Added support for handling structs as userdata (Fixed `StructData as userdata is not yet implemented`). ([UE4SS #1169](https://github.com/UE4SS-RE/RE-UE4SS/pull/1169)) - Corporalwill123
+
 #### Types.lua [PR #650](https://github.com/UE4SS-RE/RE-UE4SS/pull/650) 
 - Added `NAME_None` definition 
 - Added `EFindName` enum definition 
@@ -348,9 +350,6 @@ Types with `get` or `Get` functions now have both variants. ([UE4SS #877](https:
 
 Improved error messages when improperly indexing into `LocalUnrealParam`, and `RemoteUnrealParam` without first calling `Get`. ([UE4SS #1154](https://github.com/UE4SS-RE/RE-UE4SS/pull/1154))
 
-Fixed UFunction and UClass properly inheriting from UStruct in Lua. ([UE4SS #1154](https://github.com/UE4SS-RE/RE-UE4SS/pull/1158))
-Corporalwill123
-
 #### UEHelpers [UE4SS #650](https://github.com/UE4SS-RE/RE-UE4SS/pull/650) 
 - Increased version to 3
   
@@ -482,6 +481,8 @@ Fixed UEHelpers sometimes causing a runtime error. ([UE4SS #987](https://github.
 Fixed callbacks only working for the first registrant of several hooks. ([UE4SS #1143](https://github.com/UE4SS-RE/RE-UE4SS/pull/1143)
 
 Fixed callbacks being executed in the wrong thread. ([UE4SS #1170](https://github.com/UE4SS-RE/RE-UE4SS/pull/1170)
+
+Fixed UFunction and UClass properly inheriting from UStruct in Lua. ([UE4SS #1158](https://github.com/UE4SS-RE/RE-UE4SS/pull/1158)) - Corporalwill123
 
 ### C++ API 
 Fixed a crash caused by a race condition enabled by C++ mods using `UE4SS_ENABLE_IMGUI` in their constructor ([UE4SS #481](https://github.com/UE4SS-RE/RE-UE4SS/pull/481)) 
