@@ -65,9 +65,9 @@ RE-UE4SS supports the following environment variables:
 - A computer running Windows.
   - Linux support might happen at some point but not soon.
 - A version of MSVC that supports C++23:
-  - MSVC toolset version >= 14.39.0
-  - MSVC version >= 19.39.0
-  - Visual Studio version >= 17.9
+  - MSVC toolset version >= 14.43.0
+  - MSVC version >= 19.43
+  - Visual Studio version >= 17.13
   - More compilers will hopefully be supported in the future.
 - [Rust toolchain >= 1.73.0](https://www.rust-lang.org/tools/install)
 - [CMake >= 3.22](https://cmake.org/download/)

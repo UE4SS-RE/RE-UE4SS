@@ -2,7 +2,7 @@
 # This module provides functions to check compiler and tool versions
 
 # Minimum version requirements
-set(UE4SS_MINIMUM_MSVC_VERSION "1939")  # Corresponds to toolset 14.39
+set(UE4SS_MINIMUM_MSVC_VERSION "1943")  # Corresponds to toolset 14.43
 set(UE4SS_MINIMUM_RUST_VERSION "1.73.0")
 
 # Maximum version requirements (optional - empty means no maximum)
