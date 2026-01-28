@@ -6,6 +6,7 @@
 #include <format>
 
 #include <File/File.hpp>
+#include <Helpers/String.hpp>
 
 #ifdef TEXT
 #undef TEXT
@@ -67,7 +68,7 @@ namespace RC::UVTD
 
             try
             {
-                info.major_version = std::stoi(std::string(major_str.begin(), major_str.end()));
+                info.major_version = std::stoi(to_string(major_str));
             }
             catch (...)
             {
@@ -80,7 +81,7 @@ namespace RC::UVTD
 
             try
             {
-                info.minor_version = std::stoi(std::string(minor_str.begin(), minor_str.end()));
+                info.minor_version = std::stoi(to_string(minor_str));
             }
             catch (...)
             {

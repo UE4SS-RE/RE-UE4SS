@@ -320,7 +320,7 @@ namespace RC::UVTD
                 Output::send(STR("uprefix_to_fprefix.json not found\n"));
             }
             
-            // Load enhanced member_rename_map.json
+            // Load member_rename_map.json
             std::filesystem::path rename_path = config_dir / "member_rename_map.json";
             if (std::filesystem::exists(rename_path))
             {
@@ -359,56 +359,13 @@ namespace RC::UVTD
                 }
                 else
                 {
-                    Output::send(STR("Failed to parse member_rename_map.json\n"));
+                    Output::send(STR("Failed to parse member_rename_map.json: {}\n"),
+                                to_wstring(glz::format_error(result.error(), json_str)));
                 }
             }
             else
             {
                 Output::send(STR("member_rename_map.json not found\n"));
-            }
-            
-            // Load case_preserving_variants.json
-            std::filesystem::path variants_path = config_dir / "case_preserving_variants.json";
-            if (std::filesystem::exists(variants_path))
-            {
-                std::ifstream file(variants_path);
-                std::string json_str((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
-                
-                auto result = glz::read_json<std::unordered_map<std::string, std::vector<std::string>>>(json_str);
-                if (result.has_value())
-                {
-                    non_case_preserving_variants.clear();
-                    case_preserving_variants.clear();
-                    
-                    auto it_non = result.value().find("non_case_preserving");
-                    if (it_non != result.value().end())
-                    {
-                        for (const auto& variant : it_non->second)
-                        {
-                            non_case_preserving_variants.insert(to_wstring(variant));
-                        }
-                    }
-                    
-                    auto it_case = result.value().find("case_preserving");
-                    if (it_case != result.value().end())
-                    {
-                        for (const auto& variant : it_case->second)
-                        {
-                            case_preserving_variants.insert(to_wstring(variant));
-                        }
-                    }
-                    
-                    Output::send(STR("Loaded case preserving variants: {} non-preserving, {} preserving\n"), 
-                        non_case_preserving_variants.size(), case_preserving_variants.size());
-                }
-                else
-                {
-                    Output::send(STR("Failed to parse case_preserving_variants.json\n"));
-                }
-            }
-            else
-            {
-                Output::send(STR("case_preserving_variants.json not found\n"));
             }
             
             // Load pdbs_to_dump.json

@@ -105,18 +105,6 @@ namespace RC::UVTD
             return original_name;
         }
 
-        // Case preserving variants access
-        inline const std::unordered_set<File::StringType>& GetNonCasePreservingVariants() 
-        {
-            return UVTDConfig::Get().non_case_preserving_variants;
-        }
-
-        // Case preserving variants access
-        inline const std::unordered_set<File::StringType>& GetCasePreservingVariants() 
-        {
-            return UVTDConfig::Get().case_preserving_variants;
-        }
-        
         // PDBs to dump access
         inline const std::vector<std::filesystem::path>& GetPDBsToDump() 
         {
@@ -127,17 +115,6 @@ namespace RC::UVTD
         inline const std::vector<File::StringType>& GetVirtualGeneratorIncludes() 
         {
             return UVTDConfig::Get().virtual_generator_includes;
-        }
-
-        // Helper methods
-        inline bool IsNonCasePreservingVariant(const File::StringType& pdb_name) 
-        {
-            return GetNonCasePreservingVariants().find(pdb_name) != GetNonCasePreservingVariants().end();
-        }
-
-        inline bool IsCasePreservingVariant(const File::StringType& pdb_name) 
-        {
-            return GetCasePreservingVariants().find(pdb_name) != GetCasePreservingVariants().end();
         }
 
         // Class inheritance relationships access

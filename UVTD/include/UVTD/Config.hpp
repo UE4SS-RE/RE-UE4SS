@@ -76,8 +76,6 @@ namespace RC::UVTD
         // Enhanced member rename map - outer key is class name, inner key is member name
         std::unordered_map<File::StringType, std::unordered_map<File::StringType, MemberRenameInfo>> member_rename_map;
         
-        std::unordered_set<File::StringType> non_case_preserving_variants;
-        std::unordered_set<File::StringType> case_preserving_variants;
         std::vector<std::filesystem::path> pdbs_to_dump;
         std::vector<File::StringType> virtual_generator_includes;
 
