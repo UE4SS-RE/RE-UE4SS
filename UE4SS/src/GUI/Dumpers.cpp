@@ -332,7 +332,7 @@ namespace RC::GUI::Dumpers
             const auto name = object->GetNamePrivate();
             name_json["String"] = to_string(name.ToString());
             auto& name_components = name_json["Components"];
-            name_components["ComparisonIndex"] = name.GetComparisonIndex();
+            name_components["ComparisonIndex"] = name.GetComparisonIndex().ToUnstableInt();
 #ifdef WITH_CASE_PRESERVING_NAME
             name_components["DisplayIndex"] = name.GetDisplayIndex();
 #else
