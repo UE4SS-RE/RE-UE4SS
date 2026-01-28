@@ -91,6 +91,9 @@ namespace RC::UVTD
                             original_type.size = existing->size;
                             original_type.major_version = m_source_pdb_info->major_version;
                             original_type.minor_version = m_source_pdb_info->minor_version;
+                            original_type.is_bitfield = existing->is_bitfield;
+                            original_type.bit_position = existing->bit_position;
+                            original_type.bit_length = existing->bit_length;
                             existing->types_by_version[m_source_pdb_info->base_version] = original_type;
                         }
 
@@ -100,16 +103,25 @@ namespace RC::UVTD
                         new_type.size = variable.size;
                         new_type.major_version = other_pdb_info.major_version;
                         new_type.minor_version = other_pdb_info.minor_version;
+                        new_type.is_bitfield = variable.is_bitfield;
+                        new_type.bit_position = variable.bit_position;
+                        new_type.bit_length = variable.bit_length;
                         existing->types_by_version[other_version_key] = new_type;
 
                         // Update the "current" type to the newer one
                         existing->type = variable.type;
                         existing->size = variable.size;
+                        existing->is_bitfield = variable.is_bitfield;
+                        existing->bit_position = variable.bit_position;
+                        existing->bit_length = variable.bit_length;
                     }
                     else
                     {
-                        // Same type - just update offset if needed
+                        // Same type - just update offset and bitfield info if needed
                         existing->offset = variable.offset;
+                        existing->is_bitfield = variable.is_bitfield;
+                        existing->bit_position = variable.bit_position;
+                        existing->bit_length = variable.bit_length;
                     }
                 }
                 else
