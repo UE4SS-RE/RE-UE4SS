@@ -20,8 +20,7 @@ namespace RC::UVTD
         File::StringType class_name_clean = Symbols::clean_name(class_name);
         auto& class_entry = type_container.get_or_create_class_entry(class_name, class_name_clean, name_info);
 
-        // Get the class size directly from the PDB
-        // The size is stored in the numeric leaf at the beginning of class_record->data.LF_CLASS.data
+        // Get the class size directly from the PDB numeric leaf
         const uint8_t* data = reinterpret_cast<const uint8_t*>(class_record->data.LF_CLASS.data);
         const uint8_t* data_copy = data;
         class_entry.total_size = static_cast<uint32_t>(Symbols::read_numeric(data_copy));
@@ -63,11 +62,17 @@ namespace RC::UVTD
                                          return var.name == member_name;
                                      });
 
+        // Extract bitfield information if applicable
+        auto bitfield_info = Symbols::get_bitfield_info(tpi_stream, field_record->data.LF_MEMBER.index);
+
         if (existing != class_entry.variables.end())
         {
             // Update existing variable
             existing->type = type_name;
             existing->offset = *(uint16_t*)field_record->data.LF_MEMBER.offset;
+            existing->is_bitfield = bitfield_info.is_bitfield;
+            existing->bit_position = bitfield_info.bit_position;
+            existing->bit_length = bitfield_info.bit_length;
         }
         else
         {
@@ -80,15 +85,11 @@ namespace RC::UVTD
             variable.offset = *(uint16_t*)field_record->data.LF_MEMBER.offset;
             variable.type_index = field_record->data.LF_MEMBER.index;
             variable.size = member_size;
+            variable.is_bitfield = bitfield_info.is_bitfield;
+            variable.bit_position = bitfield_info.bit_position;
+            variable.bit_length = bitfield_info.bit_length;
 
             class_entry.variables.push_back(variable);
-
-            // Track the highest offset + size to determine total class size
-            uint32_t end_offset = variable.offset + variable.size;
-            if (end_offset > class_entry.total_size)
-            {
-                class_entry.total_size = end_offset;
-            }
         }
     }
 
@@ -194,7 +195,7 @@ namespace RC::UVTD
             });
 
             ini_dumper.send(STR("[{}]\n"), class_entry.class_name);
-            // Output total size on its own line below the section header
+            // Output total size as a comment at the top
             ini_dumper.send(STR("; Total Size: 0x{:X}\n"), class_entry.total_size);
 
             // Track variables we've already processed to avoid duplicates
@@ -234,7 +235,15 @@ namespace RC::UVTD
                 }
 
                 // Output the actual member assignment
-                ini_dumper.send(fmt::format(STR("{} = 0x{:X}\n"), variable.name, variable.offset));
+                // For bitfields, include bit position, length, and storage size: offset:bit_pos:bit_len:storage_size
+                if (variable.is_bitfield)
+                {
+                    ini_dumper.send(fmt::format(STR("{} = 0x{:X}:{}:{}:{}\n"), variable.name, variable.offset, variable.bit_position, variable.bit_length, variable.size));
+                }
+                else
+                {
+                    ini_dumper.send(fmt::format(STR("{} = 0x{:X}\n"), variable.name, variable.offset));
+                }
 
                 // Check if this is a name that should be renamed for code generation
                 auto rename_info = ConfigUtil::GetMemberRenameInfo(class_entry.class_name, variable.name);
@@ -266,8 +275,22 @@ namespace RC::UVTD
                         final_class_name,
                         final_variable_name,
                         variable.offset);
+                // For bitfields, also populate BitfieldInfos with bit position, length, and storage size
+                if (variable.is_bitfield)
+                {
+                    default_setter_src_dumper.send(
+                            STR("    {}::BitfieldInfos.emplace(STR(\"{}\"), BitfieldInfo{{{}, {}, {}}});\n"),
+                            final_class_name,
+                            final_variable_name,
+                            variable.bit_position,
+                            variable.bit_length,
+                            variable.size);
+                }
                 default_setter_src_dumper.send(STR("}\n\n"));
             }
+
+            // Output UEP_TotalSize at the end of the class section
+            ini_dumper.send(STR("UEP_TotalSize = 0x{:X}\n"), class_entry.total_size);
 
             ini_dumper.send(STR("\n"));
         }
@@ -292,4 +315,5 @@ namespace RC::UVTD
             }
         }
     }
+
 } // namespace RC::UVTD
