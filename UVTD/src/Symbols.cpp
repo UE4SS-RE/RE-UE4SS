@@ -1274,4 +1274,30 @@ auto Symbols::get_type_size_impl(const PDB::TPIStream& tpi_stream, uint32_t reco
         return attributes.mprop == (uint16_t)PDB::CodeView::TPI::MethodProperty::Intro ||
                attributes.mprop == (uint16_t)PDB::CodeView::TPI::MethodProperty::PureIntro;
     }
+
+    auto Symbols::get_bitfield_info(const PDB::TPIStream& tpi_stream, uint32_t record_index) -> BitfieldInfo
+    {
+        BitfieldInfo info{};
+
+        // Built-in types are never bitfields
+        if (record_index < tpi_stream.GetFirstTypeIndex())
+        {
+            return info;
+        }
+
+        const auto* record = tpi_stream.GetTypeRecord(record_index);
+        if (!record)
+        {
+            return info;
+        }
+
+        if (record->header.kind == PDB::CodeView::TPI::TypeRecordKind::LF_BITFIELD)
+        {
+            info.is_bitfield = true;
+            info.bit_length = record->data.LF_BITFIELD.length;
+            info.bit_position = record->data.LF_BITFIELD.position;
+        }
+
+        return info;
+    }
 } // namespace RC::UVTD

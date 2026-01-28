@@ -51,6 +51,11 @@ namespace RC::UVTD
         uint32_t size{};
         int32_t major_version{};
         int32_t minor_version{};
+
+        // Bitfield info for this version
+        bool is_bitfield{false};
+        uint8_t bit_position{0};
+        uint8_t bit_length{0};
     };
 
     struct MemberVariable
@@ -60,6 +65,11 @@ namespace RC::UVTD
         int32_t offset;
         uint32_t type_index{};
         uint32_t size{};
+
+        // Bitfield information (only valid when is_bitfield is true)
+        bool is_bitfield{false};
+        uint8_t bit_position{0};  // Bit offset within the storage unit
+        uint8_t bit_length{0};    // Number of bits in this bitfield
 
         // Track types that differ across versions
         // Key is "Major_Minor" (e.g., "4_27", "5_01")
@@ -220,6 +230,15 @@ namespace RC::UVTD
 
       public:
         auto static get_type_name(const PDB::TPIStream& tpi_stream, uint32_t record_index, bool check_valid = false, bool is_64bit = true) -> File::StringType;
+
+        // Bitfield info extraction
+        struct BitfieldInfo
+        {
+            bool is_bitfield{false};
+            uint8_t bit_position{0};
+            uint8_t bit_length{0};
+        };
+        auto static get_bitfield_info(const PDB::TPIStream& tpi_stream, uint32_t record_index) -> BitfieldInfo;
         auto static read_numeric(const uint8_t*& data) -> uint64_t;
         auto static get_numeric_leaf_size(const uint8_t* data) -> uint32_t;
         auto static get_field_record_size(const PDB::CodeView::TPI::FieldList* field) -> uint32_t;
