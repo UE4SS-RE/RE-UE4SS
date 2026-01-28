@@ -158,180 +158,6 @@ namespace RC::UVTD
     }
 
 
-    // Information about a versioned bitfield for adaptive getter generation
-    struct VersionedBitfieldInfo
-    {
-        File::StringType storage_type;
-        uint8_t bit_position;
-        uint8_t bit_length;
-        int32_t major_version;
-        int32_t minor_version;
-    };
-
-    // Helper to format mask as hex string
-    static auto format_hex_mask(uint64_t mask) -> File::StringType
-    {
-        return std::format(STR("0x{:X}"), mask);
-    }
-
-    // Helper to generate a version-adaptive bitfield getter body
-    // This handles cases where bit position or storage type changes between versions
-    static auto generate_versioned_bitfield_getter_body(
-        Output::Targets<Output::NewFileDevice>& dumper,
-        const File::StringType& class_name,
-        const File::StringType& variable_name,
-        const std::vector<VersionedBitfieldInfo>& versions) -> void
-    {
-        dumper.send(STR("{{\n"));
-        dumper.send(STR("    static const int32_t offset = []() -> int32_t {{\n"));
-        dumper.send(STR("        auto offset_it = MemberOffsets.find(STR(\"{}\"));\n"), variable_name);
-        dumper.send(STR(
-                "        if (offset_it == MemberOffsets.end()) {{ throw std::runtime_error{{\"Tried getting member variable '{}::{}' "
-                "that doesn't exist in this engine version.\"}}; }}\n"),
-                        class_name,
-                        variable_name);
-        dumper.send(STR("        return offset_it->second;\n"));
-        dumper.send(STR("    }}();\n\n"));
-
-        // Generate version checks from newest to oldest
-        bool first = true;
-        for (auto it = versions.rbegin(); it != versions.rend(); ++it)
-        {
-            const auto& ver = *it;
-            uint64_t mask = (1ULL << ver.bit_length) - 1;
-            File::StringType mask_hex = format_hex_mask(mask);
-
-            if (first)
-            {
-                // For the newest version (checked first at runtime)
-                auto next_it = it;
-                ++next_it;
-                if (next_it != versions.rend())
-                {
-                    dumper.send(STR("    if (Version::IsAtLeast({}, {})) {{\n"), ver.major_version, ver.minor_version);
-                    dumper.send(STR("        {} storage = *Helper::Casting::ptr_cast<{}*>(this, offset);\n"), ver.storage_type, ver.storage_type);
-                    if (ver.bit_length == 1)
-                    {
-                        dumper.send(STR("        return (storage >> {}) & 1;\n"), ver.bit_position);
-                    }
-                    else
-                    {
-                        dumper.send(STR("        return (storage >> {}) & {};\n"), ver.bit_position, mask_hex);
-                    }
-                    dumper.send(STR("    }}\n"));
-                }
-                else
-                {
-                    // Only one version - no need for version check
-                    dumper.send(STR("    {} storage = *Helper::Casting::ptr_cast<{}*>(this, offset);\n"), ver.storage_type, ver.storage_type);
-                    if (ver.bit_length == 1)
-                    {
-                        dumper.send(STR("    return (storage >> {}) & 1;\n"), ver.bit_position);
-                    }
-                    else
-                    {
-                        dumper.send(STR("    return (storage >> {}) & {};\n"), ver.bit_position, mask_hex);
-                    }
-                }
-                first = false;
-            }
-            else
-            {
-                // Check if this is the last (oldest) version
-                auto next_it = it;
-                ++next_it;
-                if (next_it == versions.rend())
-                {
-                    // Last version - use else
-                    dumper.send(STR("    else {{\n"));
-                }
-                else
-                {
-                    dumper.send(STR("    else if (Version::IsAtLeast({}, {})) {{\n"), ver.major_version, ver.minor_version);
-                }
-                dumper.send(STR("        {} storage = *Helper::Casting::ptr_cast<{}*>(this, offset);\n"), ver.storage_type, ver.storage_type);
-                if (ver.bit_length == 1)
-                {
-                    dumper.send(STR("        return (storage >> {}) & 1;\n"), ver.bit_position);
-                }
-                else
-                {
-                    dumper.send(STR("        return (storage >> {}) & {};\n"), ver.bit_position, mask_hex);
-                }
-                dumper.send(STR("    }}\n"));
-            }
-        }
-        dumper.send(STR("}}\n"));
-    }
-
-    // Helper to generate a version-adaptive bitfield setter body
-    static auto generate_versioned_bitfield_setter_body(
-        Output::Targets<Output::NewFileDevice>& dumper,
-        const File::StringType& class_name,
-        const File::StringType& variable_name,
-        const std::vector<VersionedBitfieldInfo>& versions) -> void
-    {
-        dumper.send(STR("{{\n"));
-        dumper.send(STR("    static const int32_t offset = []() -> int32_t {{\n"));
-        dumper.send(STR("        auto offset_it = MemberOffsets.find(STR(\"{}\"));\n"), variable_name);
-        dumper.send(STR(
-                "        if (offset_it == MemberOffsets.end()) {{ throw std::runtime_error{{\"Tried setting member variable '{}::{}' "
-                "that doesn't exist in this engine version.\"}}; }}\n"),
-                        class_name,
-                        variable_name);
-        dumper.send(STR("        return offset_it->second;\n"));
-        dumper.send(STR("    }}();\n\n"));
-
-        // Generate version checks from newest to oldest
-        bool first = true;
-        for (auto it = versions.rbegin(); it != versions.rend(); ++it)
-        {
-            const auto& ver = *it;
-            uint64_t mask = (1ULL << ver.bit_length) - 1;
-            File::StringType mask_hex = format_hex_mask(mask);
-
-            if (first)
-            {
-                auto next_it = it;
-                ++next_it;
-                if (next_it != versions.rend())
-                {
-                    dumper.send(STR("    if (Version::IsAtLeast({}, {})) {{\n"), ver.major_version, ver.minor_version);
-                    dumper.send(STR("        {}& storage = *Helper::Casting::ptr_cast<{}*>(this, offset);\n"), ver.storage_type, ver.storage_type);
-                    dumper.send(STR("        storage = (storage & ~(static_cast<{}>({}) << {})) | ((static_cast<{}>(value) & {}) << {});\n"),
-                                ver.storage_type, mask_hex, ver.bit_position, ver.storage_type, mask_hex, ver.bit_position);
-                    dumper.send(STR("    }}\n"));
-                }
-                else
-                {
-                    // Only one version
-                    dumper.send(STR("    {}& storage = *Helper::Casting::ptr_cast<{}*>(this, offset);\n"), ver.storage_type, ver.storage_type);
-                    dumper.send(STR("    storage = (storage & ~(static_cast<{}>({}) << {})) | ((static_cast<{}>(value) & {}) << {});\n"),
-                                ver.storage_type, mask_hex, ver.bit_position, ver.storage_type, mask_hex, ver.bit_position);
-                }
-                first = false;
-            }
-            else
-            {
-                auto next_it = it;
-                ++next_it;
-                if (next_it == versions.rend())
-                {
-                    dumper.send(STR("    else {{\n"));
-                }
-                else
-                {
-                    dumper.send(STR("    else if (Version::IsAtLeast({}, {})) {{\n"), ver.major_version, ver.minor_version);
-                }
-                dumper.send(STR("        {}& storage = *Helper::Casting::ptr_cast<{}*>(this, offset);\n"), ver.storage_type, ver.storage_type);
-                dumper.send(STR("        storage = (storage & ~(static_cast<{}>({}) << {})) | ((static_cast<{}>(value) & {}) << {});\n"),
-                            ver.storage_type, mask_hex, ver.bit_position, ver.storage_type, mask_hex, ver.bit_position);
-                dumper.send(STR("    }}\n"));
-            }
-        }
-        dumper.send(STR("}}\n\n"));
-    }
-
     // Information about a versioned getter that needs a public wrapper
     struct VersionedGetterInfo
     {
@@ -501,7 +327,9 @@ namespace RC::UVTD
                 // Check if this variable has version-specific type changes
                 // If so, we generate versioned getters instead of a single getter
                 // Versioned getters are always private - public wrappers will be added later
-                bool has_versioned_getters = variable.has_type_changes() && !inheritance_info.has_value();
+                // Versioned bitfields are handled by BitfieldProxy at runtime (storage_size, bit_pos, bit_len from INI),
+                // so they don't need versioned getters
+                bool has_versioned_getters = variable.has_type_changes() && !inheritance_info.has_value() && !variable.is_bitfield;
 
                 // Count how many unique getters we'll actually generate after normalization
                 // Types that normalize to the same thing (e.g., FDefaultAllocator vs TSizedDefaultAllocator<32>,
@@ -510,30 +338,8 @@ namespace RC::UVTD
                 std::set<File::StringType> seen_normalized_types;
                 File::StringType best_type_for_single_getter; // The "best" type to use if we only need one getter
 
-                // Check if all versioned types are bitfields - if so, we can generate an adaptive getter
-                bool all_versions_are_bitfields = false;
-                std::vector<VersionedBitfieldInfo> versioned_bitfield_infos;
-
                 if (has_versioned_getters)
                 {
-                    all_versions_are_bitfields = true;
-                    for (const auto& [version_key, versioned_type] : variable.types_by_version)
-                    {
-                        if (!versioned_type.is_bitfield)
-                        {
-                            all_versions_are_bitfields = false;
-                            break;
-                        }
-
-                        VersionedBitfieldInfo bf_info;
-                        bf_info.storage_type = versioned_type.type;
-                        bf_info.bit_position = versioned_type.bit_position;
-                        bf_info.bit_length = versioned_type.bit_length;
-                        bf_info.major_version = versioned_type.major_version;
-                        bf_info.minor_version = versioned_type.minor_version;
-                        versioned_bitfield_infos.push_back(bf_info);
-                    }
-
                     for (const auto& [version_key, versioned_type] : variable.types_by_version)
                     {
                         File::StringType version_type_name = versioned_type.type;
@@ -564,8 +370,7 @@ namespace RC::UVTD
 
                 // Only treat as versioned if we have multiple unique types after normalization
                 // If only one unique type remains, treat as a normal getter with the best type
-                // EXCEPT: if all versions are bitfields, we can generate a single adaptive getter
-                bool effectively_has_versioned_getters = has_versioned_getters && valid_getter_count > 1 && !all_versions_are_bitfields;
+                bool effectively_has_versioned_getters = has_versioned_getters && valid_getter_count > 1;
 
                 if (is_private || effectively_has_versioned_getters)
                 {
@@ -578,34 +383,9 @@ namespace RC::UVTD
 
                 if (has_versioned_getters)
                 {
-                    // If all versions are bitfields, generate a single adaptive getter that handles
-                    // the different storage types and bit positions at runtime
-                    if (all_versions_are_bitfields && versioned_bitfield_infos.size() > 1)
-                    {
-                        Output::send(STR("  Generating adaptive bitfield getter for {}::{} ({} versions)\n"),
-                                     final_class_name, final_variable_name, versioned_bitfield_infos.size());
-
-                        // For bitfields, return bool for single-bit fields, otherwise use the largest storage type
-                        // to ensure we can hold any version's value
-                        bool all_single_bit = std::all_of(versioned_bitfield_infos.begin(), versioned_bitfield_infos.end(),
-                            [](const VersionedBitfieldInfo& info) { return info.bit_length == 1; });
-
-                        File::StringType return_type = all_single_bit ? STR("bool") : STR("uint32_t");
-
-                        // For versioned bitfields, we can't provide a reference getter since storage type may change
-                        // So we only provide the Value getter/setter methods
-                        header_wrapper_dumper.send(STR("    {} Get{}Value() const;\n"), return_type, final_variable_name);
-                        header_wrapper_dumper.send(STR("    void Set{}Value({} value);\n\n"), final_variable_name, return_type);
-
-                        wrapper_src_dumper.send(STR("{} {}::Get{}Value() const\n"), return_type, final_class_name, final_variable_name);
-                        generate_versioned_bitfield_getter_body(wrapper_src_dumper, final_class_name, final_variable_name, versioned_bitfield_infos);
-
-                        wrapper_src_dumper.send(STR("void {}::Set{}Value({} value)\n"), final_class_name, final_variable_name, return_type);
-                        generate_versioned_bitfield_setter_body(wrapper_src_dumper, final_class_name, final_variable_name, versioned_bitfield_infos);
-                    }
                     // If after normalization we only have one unique type, generate a single getter
                     // using the "best" type (the most recent version, which has TObjectPtr/TSizedDefaultAllocator)
-                    else if (valid_getter_count == 1)
+                    if (valid_getter_count == 1)
                     {
                         Output::send(STR("  Unified versioned getters for {}::{} to single type: {}\n"),
                                      final_class_name, final_variable_name, best_type_for_single_getter);
