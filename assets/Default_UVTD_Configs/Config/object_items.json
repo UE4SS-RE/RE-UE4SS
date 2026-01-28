@@ -15,9 +15,14 @@
     "valid_for_member_vars": 0
   },
   {
-    "name": "FMalloc",
+    "name": "UScriptStruct::ICppStructOps",
     "valid_for_vtable": 1,
-    "valid_for_member_vars": 0
+    "valid_for_member_vars": 1
+  },
+  {
+    "name": "FOutputDevice",
+    "valid_for_vtable": 1,
+    "valid_for_member_vars": 1
   },
   {
     "name": "UStruct",
@@ -25,37 +30,62 @@
     "valid_for_member_vars": 1
   },
   {
-    "name": "UScriptStruct",
-    "valid_for_vtable": 0,
-    "valid_for_member_vars": 1
-  },
-  {
-    "name": "UScriptStruct::ICppStructOps",
+    "name": "UGameViewportClient",
     "valid_for_vtable": 1,
     "valid_for_member_vars": 1
   },
   {
-    "name": "UClass",
-    "valid_for_vtable": 0,
+    "name": "FMalloc",
+    "valid_for_vtable": 1,
     "valid_for_member_vars": 1
   },
   {
-    "name": "UFunction",
-    "valid_for_vtable": 0,
+    "name": "FArchive",
+    "valid_for_vtable": 1,
     "valid_for_member_vars": 1
   },
   {
-    "name": "UEnum",
-    "valid_for_vtable": 0,
+    "name": "FArchiveState",
+    "valid_for_vtable": 1,
     "valid_for_member_vars": 1
   },
   {
-    "name": "UField",
+    "name": "AGameModeBase",
+    "valid_for_vtable": 1,
+    "valid_for_member_vars": 1
+  },
+  {
+    "name": "AGameMode",
+    "valid_for_vtable": 1,
+    "valid_for_member_vars": 1
+  },
+  {
+    "name": "AActor",
+    "valid_for_vtable": 1,
+    "valid_for_member_vars": 1
+  },
+  {
+    "name": "UPlayer",
+    "valid_for_vtable": 1,
+    "valid_for_member_vars": 1
+  },
+  {
+    "name": "UEngine",
+    "valid_for_vtable": 1,
+    "valid_for_member_vars": 0
+  },
+  {
+    "name": "ULocalPlayer",
     "valid_for_vtable": 1,
     "valid_for_member_vars": 1
   },
   {
     "name": "FField",
+    "valid_for_vtable": 1,
+    "valid_for_member_vars": 1
+  },
+  {
+    "name": "UField",
     "valid_for_vtable": 1,
     "valid_for_member_vars": 1
   },
@@ -72,31 +102,11 @@
   {
     "name": "FNumericProperty",
     "valid_for_vtable": 1,
-    "valid_for_member_vars": 0
+    "valid_for_member_vars": 1
   },
   {
     "name": "UNumericProperty",
     "valid_for_vtable": 1,
-    "valid_for_member_vars": 1
-  },
-  {
-    "name": "FBoolProperty",
-    "valid_for_vtable": 0,
-    "valid_for_member_vars": 1
-  },
-  {
-    "name": "UBoolProperty",
-    "valid_for_vtable": 0,
-    "valid_for_member_vars": 1
-  },
-  {
-    "name": "FByteProperty",
-    "valid_for_vtable": 0,
-    "valid_for_member_vars": 1
-  },
-  {
-    "name": "UByteProperty",
-    "valid_for_vtable": 0,
     "valid_for_member_vars": 1
   },
   {
@@ -120,22 +130,32 @@
     "valid_for_member_vars": 1
   },
   {
-    "name": "FClassProperty",
+    "name": "FWorldContext",
     "valid_for_vtable": 0,
     "valid_for_member_vars": 1
   },
   {
-    "name": "UClassProperty",
+    "name": "UScriptStruct",
     "valid_for_vtable": 0,
     "valid_for_member_vars": 1
   },
   {
-    "name": "FSoftClassProperty",
+    "name": "UWorld",
     "valid_for_vtable": 0,
     "valid_for_member_vars": 1
   },
   {
-    "name": "USoftClassProperty",
+    "name": "UFunction",
+    "valid_for_vtable": 0,
+    "valid_for_member_vars": 1
+  },
+  {
+    "name": "UClass",
+    "valid_for_vtable": 0,
+    "valid_for_member_vars": 1
+  },
+  {
+    "name": "UEnum",
     "valid_for_vtable": 0,
     "valid_for_member_vars": 1
   },
@@ -146,26 +166,6 @@
   },
   {
     "name": "UStructProperty",
-    "valid_for_vtable": 0,
-    "valid_for_member_vars": 1
-  },
-  {
-    "name": "FDelegateProperty",
-    "valid_for_vtable": 0,
-    "valid_for_member_vars": 1
-  },
-  {
-    "name": "UDelegateProperty",
-    "valid_for_vtable": 0,
-    "valid_for_member_vars": 1
-  },
-  {
-    "name": "FInterfaceProperty",
-    "valid_for_vtable": 0,
-    "valid_for_member_vars": 1
-  },
-  {
-    "name": "UInterfaceProperty",
     "valid_for_vtable": 0,
     "valid_for_member_vars": 1
   },
@@ -190,12 +190,22 @@
     "valid_for_member_vars": 1
   },
   {
-    "name": "FSetProperty",
+    "name": "FBoolProperty",
     "valid_for_vtable": 0,
     "valid_for_member_vars": 1
   },
   {
-    "name": "USetProperty",
+    "name": "UBoolProperty",
+    "valid_for_vtable": 0,
+    "valid_for_member_vars": 1
+  },
+  {
+    "name": "FByteProperty",
+    "valid_for_vtable": 0,
+    "valid_for_member_vars": 1
+  },
+  {
+    "name": "UByteProperty",
     "valid_for_vtable": 0,
     "valid_for_member_vars": 1
   },
@@ -210,7 +220,57 @@
     "valid_for_member_vars": 1
   },
   {
+    "name": "FClassProperty",
+    "valid_for_vtable": 0,
+    "valid_for_member_vars": 1
+  },
+  {
+    "name": "UClassProperty",
+    "valid_for_vtable": 0,
+    "valid_for_member_vars": 1
+  },
+  {
+    "name": "FSoftClassProperty",
+    "valid_for_vtable": 0,
+    "valid_for_member_vars": 1
+  },
+  {
+    "name": "USoftClassProperty",
+    "valid_for_vtable": 0,
+    "valid_for_member_vars": 1
+  },
+  {
+    "name": "FDelegateProperty",
+    "valid_for_vtable": 0,
+    "valid_for_member_vars": 1
+  },
+  {
+    "name": "UDelegateProperty",
+    "valid_for_vtable": 0,
+    "valid_for_member_vars": 1
+  },
+  {
+    "name": "FInterfaceProperty",
+    "valid_for_vtable": 0,
+    "valid_for_member_vars": 1
+  },
+  {
+    "name": "UInterfaceProperty",
+    "valid_for_vtable": 0,
+    "valid_for_member_vars": 1
+  },
+  {
     "name": "FFieldPathProperty",
+    "valid_for_vtable": 0,
+    "valid_for_member_vars": 1
+  },
+  {
+    "name": "FSetProperty",
+    "valid_for_vtable": 0,
+    "valid_for_member_vars": 1
+  },
+  {
+    "name": "USetProperty",
     "valid_for_vtable": 0,
     "valid_for_member_vars": 1
   },
@@ -220,63 +280,8 @@
     "valid_for_member_vars": 0
   },
   {
-    "name": "AActor",
+    "name": "UDataTable",
     "valid_for_vtable": 1,
-    "valid_for_member_vars": 1
-  },
-  {
-    "name": "AGameModeBase",
-    "valid_for_vtable": 1,
-    "valid_for_member_vars": 1
-  },
-  {
-    "name": "AGameMode",
-    "valid_for_vtable": 1,
-    "valid_for_member_vars": 1
-  },
-  {
-    "name": "UWorld",
-    "valid_for_vtable": 0,
-    "valid_for_member_vars": 1
-  },
-  {
-    "name": "UEngine",
-    "valid_for_vtable": 1,
-    "valid_for_member_vars": 0
-  },
-  {
-    "name": "UPlayer",
-    "valid_for_vtable": 1,
-    "valid_for_member_vars": 1
-  },
-  {
-    "name": "ULocalPlayer",
-    "valid_for_vtable": 1,
-    "valid_for_member_vars": 1
-  },
-  {
-    "name": "UGameViewportClient",
-    "valid_for_vtable": 1,
-    "valid_for_member_vars": 1
-  },
-  {
-    "name": "FOutputDevice",
-    "valid_for_vtable": 1,
-    "valid_for_member_vars": 1
-  },
-  {
-    "name": "FArchiveState",
-    "valid_for_vtable": 1,
-    "valid_for_member_vars": 1
-  },
-  {
-    "name": "FArchive",
-    "valid_for_vtable": 1,
-    "valid_for_member_vars": 1
-  },
-  {
-    "name": "FWorldContext",
-    "valid_for_vtable": 0,
     "valid_for_member_vars": 1
   }
 ]

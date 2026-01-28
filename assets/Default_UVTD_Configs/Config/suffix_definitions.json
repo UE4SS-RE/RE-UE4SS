@@ -3,13 +3,7 @@
     {
       "suffix": "CasePreserving",
       "ifdef_macro": "WITH_CASE_PRESERVING_NAME",
-      "description": "UE 4.25+ builds with WITH_CASE_PRESERVING_NAME enabled",
-      "generates_variant": true
-    },
-    {
-      "suffix": "Editor",
-      "ifdef_macro": "WITH_EDITOR",
-      "description": "Editor build",
+      "description": "UE builds with case-preserving FName (WITH_CASE_PRESERVING_NAME defined)",
       "generates_variant": true
     }
   ]
