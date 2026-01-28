@@ -181,9 +181,12 @@ namespace RC::UVTD
                 continue;
             }
 
+            File::StringType final_class_name_clean = class_entry.class_name_clean;
+            unify_uobject_array_if_needed(final_class_name_clean);
+
             // Use full name for file (includes suffix like CasePreserving)
             auto default_setter_src_file = member_variable_layouts_gen_function_bodies_path /
-                                           std::format(STR("{}_MemberVariableLayout_DefaultSetter_{}.cpp"), pdb_full_name, class_entry.class_name_clean);
+                                           std::format(STR("{}_MemberVariableLayout_DefaultSetter_{}.cpp"), pdb_full_name, final_class_name_clean);
 
             Output::send(STR("Generating file '{}'\n"), default_setter_src_file.wstring());
 

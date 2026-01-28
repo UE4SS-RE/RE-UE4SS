@@ -43,6 +43,10 @@ namespace RC::UVTD
 
     auto unify_uobject_array_if_needed(StringType& out_variable_type) -> bool
     {
+        // TODO: This is broken.
+        //       Both types still get dumped, but the members are split between the two, and no TUObjectArray is generated.
+        //       Update 1: Only TUObjectArray now generates, but still missing members like before for some reason, but only for Header/SrcWrapper, not for DefaultSetter.
+        //       Update 2: No more missing members, but MacroSetter.hpp has duplicates, which might not really matter.
         static constexpr StringViewType fixed_uobject_array_string = STR("FFixedUObjectArray");
         static constexpr StringViewType chunked_fixed_uobject_array_string = STR("FChunkedFixedUObjectArray");
         if (auto fixed_uobject_array_pos = out_variable_type.find(fixed_uobject_array_string); fixed_uobject_array_pos != out_variable_type.npos)

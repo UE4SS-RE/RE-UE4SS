@@ -92,7 +92,8 @@
     "FEndClothSimulationFunction",
     "UWorld::FOnBeginPlay",
     "FStartClothSimulationFunction",
-    "ULocalPlayer::FOnPlayerControllerChanged"
+    "ULocalPlayer::FOnPlayerControllerChanged",
+    "FWindowsRecursiveMutex"
   ],
   "exclude_from_getters": [
     "TBaseDelegate",
