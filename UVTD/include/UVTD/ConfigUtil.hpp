@@ -1,6 +1,7 @@
 #pragma once
 
 #include <UVTD/Config.hpp>
+#include <UVTD/PDBNameInfo.hpp>
 
 namespace RC::UVTD
 {
@@ -22,10 +23,28 @@ namespace RC::UVTD
             return UVTDConfig::Get().private_variables;
         }
 
-        // Types not to dump access
-        inline const std::vector<File::StringType>& GetTypesNotToDump() 
+        // Get types to filter by category
+        inline const std::vector<File::StringType>& GetTypesToFilterByCategory(TypeFilterCategory category) 
         {
-            return UVTDConfig::Get().types_to_not_dump;
+            static const std::vector<File::StringType> empty_vector;
+            const auto& filter_map = UVTDConfig::Get().types_to_filter;
+            auto it = filter_map.find(category);
+            if (it != filter_map.end()) {
+                return it->second;
+            }
+            return empty_vector;
+        }
+
+        // Check if type should be filtered out based on category
+        inline bool ShouldFilterType(const File::StringType& type_name, TypeFilterCategory category)
+        {
+            const auto& types_to_filter = GetTypesToFilterByCategory(category);
+            for (const auto& filter : types_to_filter) {
+                if (type_name.find(filter) != type_name.npos) {
+                    return true;
+                }
+            }
+            return false;
         }
 
         // Valid UDT names access
@@ -40,24 +59,52 @@ namespace RC::UVTD
             return UVTDConfig::Get().uprefix_to_fprefix;
         }
 
-        // Member rename map access
-        inline const std::unordered_map<File::StringType, File::StringType>& GetMemberRenameMap() 
+        // Enhanced member rename map access
+        inline const std::unordered_map<File::StringType, std::unordered_map<File::StringType, MemberRenameInfo>>& GetMemberRenameMap() 
         {
             return UVTDConfig::Get().member_rename_map;
         }
-
-        // Case preserving variants access
-        inline const std::unordered_set<File::StringType>& GetNonCasePreservingVariants() 
+        
+        // Helper to get member renamed info for a variable in a specific class
+        inline std::optional<MemberRenameInfo> GetMemberRenameInfo(
+            const File::StringType& class_name, 
+            const File::StringType& member_name)
         {
-            return UVTDConfig::Get().non_case_preserving_variants;
-        }
-
-        // Case preserving variants access
-        inline const std::unordered_set<File::StringType>& GetCasePreservingVariants() 
-        {
-            return UVTDConfig::Get().case_preserving_variants;
+            const auto& map = UVTDConfig::Get().member_rename_map;
+            
+            // First check class-specific mapping
+            auto class_it = map.find(class_name);
+            if (class_it != map.end()) {
+                auto member_it = class_it->second.find(member_name);
+                if (member_it != class_it->second.end()) {
+                    return member_it->second;
+                }
+            }
+            
+            // Then check global mapping (using "Global" as the class name)
+            auto global_it = map.find(STR("Global"));
+            if (global_it != map.end()) {
+                auto member_it = global_it->second.find(member_name);
+                if (member_it != global_it->second.end()) {
+                    return member_it->second;
+                }
+            }
+            
+            return std::nullopt;
         }
         
+        // Helper to get mapped name for a variable
+        inline File::StringType GetMappedName(
+            const File::StringType& class_name,
+            const File::StringType& original_name)
+        {
+            auto info = GetMemberRenameInfo(class_name, original_name);
+            if (info.has_value()) {
+                return info->mapped_name;
+            }
+            return original_name;
+        }
+
         // PDBs to dump access
         inline const std::vector<std::filesystem::path>& GetPDBsToDump() 
         {
@@ -70,15 +117,49 @@ namespace RC::UVTD
             return UVTDConfig::Get().virtual_generator_includes;
         }
 
-        // Helper methods
-        inline bool IsNonCasePreservingVariant(const File::StringType& pdb_name) 
+        // Class inheritance relationships access
+        inline const std::unordered_map<File::StringType, ClassInheritanceInfo>& GetClassInheritanceMap() 
         {
-            return GetNonCasePreservingVariants().find(pdb_name) != GetNonCasePreservingVariants().end();
+            return UVTDConfig::Get().class_inheritance_map;
         }
 
-        inline bool IsCasePreservingVariant(const File::StringType& pdb_name) 
+        // Helper to get class inheritance info
+        inline std::optional<ClassInheritanceInfo> GetClassInheritance(const File::StringType& class_name)
         {
-            return GetCasePreservingVariants().find(pdb_name) != GetCasePreservingVariants().end();
+            const auto& map = UVTDConfig::Get().class_inheritance_map;
+            auto it = map.find(class_name);
+            if (it != map.end()) {
+                return it->second;
+            }
+            return std::nullopt;
+        }
+
+        // Suffix definitions access
+        inline const std::unordered_map<File::StringType, SuffixDefinition>& GetSuffixDefinitions()
+        {
+            return UVTDConfig::Get().suffix_definitions;
+        }
+
+        // Get suffix definition for a specific suffix name
+        inline std::optional<SuffixDefinition> GetSuffixDefinition(const File::StringType& suffix)
+        {
+            const auto& map = UVTDConfig::Get().suffix_definitions;
+            auto it = map.find(suffix);
+            if (it != map.end()) {
+                return it->second;
+            }
+            return std::nullopt;
+        }
+
+        // Get the ifdef macro for a suffix (returns auto-generated macro if not in config)
+        inline File::StringType GetSuffixIfdefMacro(const File::StringType& suffix)
+        {
+            auto def = GetSuffixDefinition(suffix);
+            if (def.has_value()) {
+                return def->ifdef_macro;
+            }
+            // Fall back to auto-generated macro from PDBNameInfo
+            return PDBNameInfo::suffix_to_macro(suffix);
         }
     }
 }

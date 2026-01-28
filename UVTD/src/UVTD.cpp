@@ -13,6 +13,7 @@
 #include <UVTD/ConfigUtil.hpp>
 #include <UVTD/ExceptionHandling.hpp>
 #include <UVTD/Helpers.hpp>
+#include <UVTD/PDBNameInfo.hpp>
 #include <UVTD/MemberVarsDumper.hpp>
 #include <UVTD/MemberVarsWrapperGenerator.hpp>
 #include <UVTD/SolBindingsGenerator.hpp>
@@ -37,6 +38,7 @@ namespace RC::UVTD
         if (dump_settings.should_dump_vtable) VTableDumper::output_cleanup();
         if (dump_settings.should_dump_member_vars) MemberVarsDumper::output_cleanup();
         if (dump_settings.should_dump_sol_bindings) SolBindingsGenerator::output_cleanup();
+        if (dump_settings.should_dump_member_vars) MemberVarsWrapperGenerator::output_cleanup();
 
         TypeContainer shared_container{};
 
@@ -53,6 +55,10 @@ namespace RC::UVTD
             TRY([&] {
                 {
                     TypeContainer run_container{};
+
+                    // Parse PDB name early so we can use it for version tracking
+                    File::StringType pdb_stem = pdb.filename().stem().wstring();
+                    auto pdb_info = PDBNameInfo::parse(pdb_stem);
 
                     if (dump_settings.should_dump_vtable)
                     {
@@ -85,11 +91,24 @@ namespace RC::UVTD
                         generator.generate_files();
                     }
 
-                    File::StringType pdb_name = pdb.filename().stem();
-                    UnrealVirtualGenerator virtual_generator(pdb_name, run_container);
-                    virtual_generator.generate_files();
+                    // Generate virtual files if PDB name was parsed
+                    if (pdb_info.has_value())
+                    {
+                        UnrealVirtualGenerator virtual_generator(*pdb_info, run_container);
+                        virtual_generator.generate_files();
 
-                    shared_container.join(run_container);
+                        // Set the source PDB info on run_container before joining
+                        run_container.set_source_pdb_info(*pdb_info);
+
+                        // Use version-aware join to detect type changes
+                        shared_container.join(run_container, *pdb_info);
+                    }
+                    else
+                    {
+                        Output::send(STR("Warning: Could not parse PDB name '{}' - skipping virtual generator\n"), pdb_stem);
+                        // Fall back to non-version-aware join
+                        shared_container.join(run_container);
+                    }
 
                     Output::send(STR("Code generated.\n"));
                 }
@@ -98,7 +117,6 @@ namespace RC::UVTD
 
         if (dump_settings.should_dump_member_vars)
         {
-            MemberVarsWrapperGenerator::output_cleanup();
             MemberVarsWrapperGenerator wrapper_generator{std::move(shared_container)};
             wrapper_generator.generate_files();
 

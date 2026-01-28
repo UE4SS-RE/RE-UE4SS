@@ -1,0 +1,10 @@
+{
+  "suffixes": [
+    {
+      "suffix": "CasePreserving",
+      "ifdef_macro": "WITH_CASE_PRESERVING_NAME",
+      "description": "UE builds with case-preserving FName (WITH_CASE_PRESERVING_NAME defined)",
+      "generates_variant": true
+    }
+  ]
+}
