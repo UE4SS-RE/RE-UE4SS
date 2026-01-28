@@ -292,6 +292,18 @@ namespace RC::UVTD
             // Output UEP_TotalSize at the end of the class section
             ini_dumper.send(STR("UEP_TotalSize = 0x{:X}\n"), class_entry.total_size);
 
+            // Add UEP_TotalSize to the default setter
+            {
+                File::StringType total_size_class_name = class_entry.class_name;
+                unify_uobject_array_if_needed(total_size_class_name);
+                default_setter_src_dumper.send(STR("if (auto it = {}::MemberOffsets.find(STR(\"UEP_TotalSize\")); it == {}::MemberOffsets.end())\n"),
+                                               total_size_class_name, total_size_class_name);
+                default_setter_src_dumper.send(STR("{\n"));
+                default_setter_src_dumper.send(STR("    {}::MemberOffsets.emplace(STR(\"UEP_TotalSize\"), 0x{:X});\n"),
+                                               total_size_class_name, class_entry.total_size);
+                default_setter_src_dumper.send(STR("}\n"));
+            }
+
             ini_dumper.send(STR("\n"));
         }
     }
