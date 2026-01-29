@@ -22,6 +22,7 @@ namespace RC::UVTD
     struct MemberRenameInfo
     {
         File::StringType mapped_name{};
+        File::StringType mapped_type_name{};
         bool generate_alias_setter{false};
         File::StringType description{};
     };

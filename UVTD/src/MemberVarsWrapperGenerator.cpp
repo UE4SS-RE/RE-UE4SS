@@ -313,8 +313,16 @@ namespace RC::UVTD
                 auto rename_info = ConfigUtil::GetMemberRenameInfo(class_entry.class_name, variable.name);
                 if (rename_info.has_value())
                 {
-                    Output::send(STR("Renaming member {}.{} to {}\n"), class_entry.class_name, variable.name, rename_info->mapped_name);
-                    final_variable_name = rename_info->mapped_name;
+                    if (!rename_info->mapped_name.empty())
+                    {
+                        Output::send(STR("Renaming member {}.{} to {}\n"), class_entry.class_name, variable.name, rename_info->mapped_name);
+                        final_variable_name = rename_info->mapped_name;
+                    }
+                    if (!rename_info->mapped_type_name.empty())
+                    {
+                        Output::send(STR("Renaming type {} for {}.{} to {}\n"), final_type_name, class_entry.class_name, variable.name, rename_info->mapped_type_name);
+                        final_type_name = rename_info->mapped_type_name;
+                    }
                 }
 
                 unify_uobject_array_if_needed(final_type_name);
