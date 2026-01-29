@@ -161,5 +161,23 @@ namespace RC::UVTD
             // Fall back to auto-generated macro from PDBNameInfo
             return PDBNameInfo::suffix_to_macro(suffix);
         }
+
+        // Check if a specific suffix variant exists for a base version
+        // Scans pdbs_to_dump looking for base_version_suffix pattern
+        inline bool HasSuffixVariant(const File::StringType& base_version, const File::StringType& suffix)
+        {
+            // Look for a PDB named base_version_suffix (e.g., "4_27_CasePreserving")
+            File::StringType target = base_version + STR("_") + suffix;
+
+            for (const auto& pdb_path : GetPDBsToDump())
+            {
+                File::StringType pdb_stem = pdb_path.filename().stem().wstring();
+                if (pdb_stem == target)
+                {
+                    return true;
+                }
+            }
+            return false;
+        }
     }
 }

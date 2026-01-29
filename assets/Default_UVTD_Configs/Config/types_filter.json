@@ -62,6 +62,7 @@
     "ACameraActor",
     "ICppClassTypeInfo",
     "FWindowsCriticalSection",
+    "UE::FWindowsRecursiveMutex",
     "FWindowsRWLock",
     "FRepRecord",
     "FAudioDeviceHandle",
@@ -92,7 +93,9 @@
     "FEndClothSimulationFunction",
     "UWorld::FOnBeginPlay",
     "FStartClothSimulationFunction",
-    "ULocalPlayer::FOnPlayerControllerChanged"
+    "ULocalPlayer::FOnPlayerControllerChanged",
+    "TLockFreePointerListUnordered",
+    "std::function<FField*(const void&, const void&, EObjectFlags)>"
   ],
   "exclude_from_getters": [
     "TBaseDelegate",

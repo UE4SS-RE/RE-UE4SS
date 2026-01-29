@@ -44,6 +44,7 @@ namespace RC::UVTD
     
     struct MemberRenameInfoJson {
         std::string mapped_name;
+        std::string mapped_type_name;
         bool generate_alias_setter{false};
         std::string description;
     };
@@ -85,6 +86,7 @@ namespace glz {
     struct meta<RC::UVTD::MemberRenameInfoJson> {
         static constexpr auto value = glz::object(
             "mapped_name", &RC::UVTD::MemberRenameInfoJson::mapped_name,
+            "mapped_type_name", &RC::UVTD::MemberRenameInfoJson::mapped_type_name,
             "generate_alias_setter", &RC::UVTD::MemberRenameInfoJson::generate_alias_setter,
             "description", &RC::UVTD::MemberRenameInfoJson::description
         );
@@ -151,8 +153,12 @@ namespace RC::UVTD
         
                     std::unordered_set<std::string> seen_names;
 
-                    for (const auto& item : result.value())
+                    for (auto& item : result.value())
                     {
+                        if (item.name == "FFixedUObjectArray" || item.name == "FChunkedFixedUObjectArray")
+                        {
+                            item.name = "TUObjectArray";
+                        }
                         if (seen_names.insert(item.name).second)
                         {
                             // First time seeing this name, add it
@@ -345,6 +351,7 @@ namespace RC::UVTD
                         {
                             class_members[to_wstring(member_name)] = {
                                 to_wstring(info.mapped_name),
+                                to_wstring(info.mapped_type_name),
                                 info.generate_alias_setter,
                                 to_wstring(info.description)
                             };

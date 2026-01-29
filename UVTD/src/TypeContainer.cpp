@@ -1,5 +1,6 @@
 #include <DynamicOutput/DynamicOutput.hpp>
 #include <UVTD/TypeContainer.hpp>
+#include <UVTD/Helpers.hpp>
 
 namespace RC::UVTD
 {
@@ -150,13 +151,16 @@ namespace RC::UVTD
     {
         auto& class_entry = [&]() -> auto&
         {
-            if (auto it = class_entries.find(symbol_name); it != class_entries.end())
+            auto symbol_name_final = symbol_name;
+            auto symbol_name_clean_final = symbol_name_clean;
+            unify_uobject_array_if_needed(symbol_name_final);
+            if (auto it = class_entries.find(symbol_name_final); it != class_entries.end())
             {
                 return it->second;
             }
             else
             {
-                return class_entries.emplace(symbol_name_clean, Class{.class_name = File::StringType{symbol_name}, .class_name_clean = symbol_name_clean})
+                return class_entries.emplace(symbol_name_clean_final, Class{.class_name = File::StringType{symbol_name_final}, .class_name_clean = symbol_name_clean_final})
                         .first->second;
             }
         }

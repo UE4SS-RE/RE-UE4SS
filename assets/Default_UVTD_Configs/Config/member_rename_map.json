@@ -22,5 +22,26 @@
       "generate_alias_setter": true,
       "description": "Special handling for enum flags to avoid conflicts"
     }
+  },
+  "FUObjectArray": {
+    "ObjObjectsCritical": {
+      "mapped_name": "ObjObjectsCritical",
+      "mapped_type_name": "Windows::CRITICAL_SECTION",
+      "generate_alias_setter": true,
+      "description": "We used Windows::CRITICAL_SECTION before switching to UVTD, but UVTD generates UE::FWindowsRecursiveMutex instead for some reason"
+    },
+    "UObjectDeleteListenersCritical": {
+      "mapped_name": "UObjectDeleteListenersCritical",
+      "mapped_type_name": "Windows::CRITICAL_SECTION",
+      "generate_alias_setter": true,
+      "description": "We used Windows::CRITICAL_SECTION before switching to UVTD, but UVTD generates UE::FWindowsRecursiveMutex instead for some reason"
+    }
+  },
+  "FFieldClass": {
+    "Name": {
+      "mapped_name": "FName",
+      "generate_alias_setter": true,
+      "description": "Special handling for GetName to avoid conflicts"
+    }
   }
 }

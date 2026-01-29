@@ -15,6 +15,17 @@ namespace RC::UVTD
         return std::format(STR("{}{:02d}"), major, minor);
     }
 
+    // Add const prefix to type if it doesn't already start with const
+    // Prevents "const const T*" when the type is already "const T*"
+    static auto add_const_if_needed(const File::StringType& type) -> File::StringType
+    {
+        if (type.starts_with(STR("const ")))
+        {
+            return type;
+        }
+        return STR("const ") + type;
+    }
+
     // Normalize a type for comparison purposes
     // This handles equivalent types that should be considered the same:
     // - FDefaultAllocator == TSizedDefaultAllocator<32>
@@ -153,7 +164,7 @@ namespace RC::UVTD
                         variable_name);
         dumper.send(STR("        return offset_it->second;\n"));
         dumper.send(STR("    }();\n"));
-        dumper.send(STR("    return *Helper::Casting::ptr_cast<const {}*>(this, offset);\n"), type_name);
+        dumper.send(STR("    return *Helper::Casting::ptr_cast<{}*>(this, offset);\n"), add_const_if_needed(type_name));
         dumper.send(STR("}\n\n"));
     }
 
@@ -249,8 +260,10 @@ namespace RC::UVTD
                 continue;
             }
 
+            auto final_class_name_clean = class_entry.class_name_clean;
+            unify_uobject_array_if_needed(final_class_name_clean);
             auto wrapper_header_file = member_variable_layouts_wrappers_output_path /
-                                       std::format(STR("MemberVariableLayout_HeaderWrapper_{}.hpp"), class_entry.class_name_clean);
+                                       std::format(STR("MemberVariableLayout_HeaderWrapper_{}.hpp"), final_class_name_clean);
 
             Output::send(STR("Generating file '{}'\n"), wrapper_header_file.wstring());
 
@@ -262,7 +275,7 @@ namespace RC::UVTD
             });
 
             auto wrapper_src_file = member_variable_layouts_wrappers_output_path / 
-                                    std::format(STR("MemberVariableLayout_SrcWrapper_{}.hpp"), class_entry.class_name_clean);
+                                    std::format(STR("MemberVariableLayout_SrcWrapper_{}.hpp"), final_class_name_clean);
 
             Output::send(STR("Generating file '{}'\n"), wrapper_src_file.wstring());
 
@@ -311,8 +324,16 @@ namespace RC::UVTD
                 auto rename_info = ConfigUtil::GetMemberRenameInfo(class_entry.class_name, variable.name);
                 if (rename_info.has_value())
                 {
-                    Output::send(STR("Renaming member {}.{} to {}\n"), class_entry.class_name, variable.name, rename_info->mapped_name);
-                    final_variable_name = rename_info->mapped_name;
+                    if (!rename_info->mapped_name.empty())
+                    {
+                        Output::send(STR("Renaming member {}.{} to {}\n"), class_entry.class_name, variable.name, rename_info->mapped_name);
+                        final_variable_name = rename_info->mapped_name;
+                    }
+                    if (!rename_info->mapped_type_name.empty())
+                    {
+                        Output::send(STR("Renaming type {} for {}.{} to {}\n"), final_type_name, class_entry.class_name, variable.name, rename_info->mapped_type_name);
+                        final_type_name = rename_info->mapped_type_name;
+                    }
                 }
 
                 unify_uobject_array_if_needed(final_type_name);
@@ -320,7 +341,7 @@ namespace RC::UVTD
                 // Check if we've already processed this variable name
                 if (processed_variables[final_class_name].find(final_variable_name) != processed_variables[final_class_name].end())
                 {
-                    continue; // Skip duplicate
+                    continue;
                 }
                 processed_variables[final_class_name].insert(final_variable_name);
 
@@ -392,12 +413,12 @@ namespace RC::UVTD
 
                         // Generate single getter with the best type (no suffix)
                         header_wrapper_dumper.send(STR("    {}& Get{}();\n"), best_type_for_single_getter, final_variable_name);
-                        header_wrapper_dumper.send(STR("    const {}& Get{}() const;\n\n"), best_type_for_single_getter, final_variable_name);
+                        header_wrapper_dumper.send(STR("    {}& Get{}() const;\n\n"), add_const_if_needed(best_type_for_single_getter), final_variable_name);
 
                         wrapper_src_dumper.send(STR("{}& {}::Get{}()\n"), best_type_for_single_getter, final_class_name, final_variable_name);
                         generate_simple_getter_body(wrapper_src_dumper, best_type_for_single_getter, final_class_name, final_variable_name);
 
-                        wrapper_src_dumper.send(STR("const {}& {}::Get{}() const\n"), best_type_for_single_getter, final_class_name, final_variable_name);
+                        wrapper_src_dumper.send(STR("{}& {}::Get{}() const\n"), add_const_if_needed(best_type_for_single_getter), final_class_name, final_variable_name);
                         generate_simple_const_getter_body(wrapper_src_dumper, best_type_for_single_getter, final_class_name, final_variable_name);
                     }
                     else
@@ -469,13 +490,13 @@ namespace RC::UVTD
 
                             // Header declarations
                             header_wrapper_dumper.send(STR("    {}& Get{}();\n"), version_type_name, versioned_getter_name);
-                            header_wrapper_dumper.send(STR("    const {}& Get{}() const;\n"), version_type_name, versioned_getter_name);
+                            header_wrapper_dumper.send(STR("    {}& Get{}() const;\n"), add_const_if_needed(version_type_name), versioned_getter_name);
 
                             // Source implementations
                             wrapper_src_dumper.send(STR("{}& {}::Get{}()\n"), version_type_name, final_class_name, versioned_getter_name);
                             generate_simple_getter_body(wrapper_src_dumper, version_type_name, final_class_name, final_variable_name);
 
-                            wrapper_src_dumper.send(STR("const {}& {}::Get{}() const\n"), version_type_name, final_class_name, versioned_getter_name);
+                            wrapper_src_dumper.send(STR("{}& {}::Get{}() const\n"), add_const_if_needed(version_type_name), final_class_name, versioned_getter_name);
                             generate_simple_const_getter_body(wrapper_src_dumper, version_type_name, final_class_name, final_variable_name);
                         }
 
@@ -505,7 +526,7 @@ namespace RC::UVTD
                     else
                     {
                         header_wrapper_dumper.send(STR("    {}& Get{}();\n"), final_type_name, final_variable_name);
-                        header_wrapper_dumper.send(STR("    const {}& Get{}() const;\n\n"), final_type_name, final_variable_name);
+                        header_wrapper_dumper.send(STR("    {}& Get{}() const;\n\n"), add_const_if_needed(final_type_name), final_variable_name);
                         wrapper_src_dumper.send(STR("{}& {}::Get{}()\n"), final_type_name, final_class_name, final_variable_name);
                     }
                 }
@@ -561,7 +582,7 @@ namespace RC::UVTD
                     wrapper_src_dumper.send(STR("}\n"));
 
                     // Now do the same for the const version
-                    wrapper_src_dumper.send(STR("const {}& {}::Get{}() const\n"), final_type_name, final_class_name, final_variable_name);
+                    wrapper_src_dumper.send(STR("{}& {}::Get{}() const\n"), add_const_if_needed(final_type_name), final_class_name, final_variable_name);
                     wrapper_src_dumper.send(STR("{\n"));
                     wrapper_src_dumper.send(STR("    static const int32_t offset = []() -> int32_t {\n"));
                     wrapper_src_dumper.send(STR("        static auto& primary_offsets = Version::IsBelow({}, {}) ? {}::MemberOffsets : {}::MemberOffsets;\n"),
@@ -606,7 +627,7 @@ namespace RC::UVTD
                     wrapper_src_dumper.send(STR("        }\n"));
                     wrapper_src_dumper.send(STR("        return offset_it->second;\n"));
                     wrapper_src_dumper.send(STR("    }();\n"));
-                    wrapper_src_dumper.send(STR("    return *Helper::Casting::ptr_cast<const {}*>(this, offset);\n"), final_type_name);
+                    wrapper_src_dumper.send(STR("    return *Helper::Casting::ptr_cast<{}*>(this, offset);\n"), add_const_if_needed(final_type_name));
                     wrapper_src_dumper.send(STR("}\n\n"));
                 }
                 else if (!variable.has_type_changes())
@@ -666,7 +687,7 @@ namespace RC::UVTD
                         wrapper_src_dumper.send(STR("    return *Helper::Casting::ptr_cast<{}*>(this, offset);\n"), final_type_name);
                         wrapper_src_dumper.send(STR("}\n"));
 
-                        wrapper_src_dumper.send(STR("const {}& {}::Get{}() const\n"), final_type_name, final_class_name, final_variable_name);
+                        wrapper_src_dumper.send(STR("{}& {}::Get{}() const\n"), add_const_if_needed(final_type_name), final_class_name, final_variable_name);
                         wrapper_src_dumper.send(STR("{\n"));
                         wrapper_src_dumper.send(STR("    static const int32_t offset = []() -> int32_t {\n"));
                         wrapper_src_dumper.send(STR("        auto offset_it = MemberOffsets.find(STR(\"{}\"));\n"), final_variable_name);
@@ -677,7 +698,7 @@ namespace RC::UVTD
                                                 final_variable_name);
                         wrapper_src_dumper.send(STR("        return offset_it->second;\n"));
                         wrapper_src_dumper.send(STR("    }();\n"));
-                        wrapper_src_dumper.send(STR("    return *Helper::Casting::ptr_cast<const {}*>(this, offset);\n"), final_type_name);
+                        wrapper_src_dumper.send(STR("    return *Helper::Casting::ptr_cast<{}*>(this, offset);\n"), add_const_if_needed(final_type_name));
                         wrapper_src_dumper.send(STR("}\n\n"));
                     }
                 }

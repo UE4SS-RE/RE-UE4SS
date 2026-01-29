@@ -283,5 +283,30 @@
     "name": "UDataTable",
     "valid_for_vtable": 1,
     "valid_for_member_vars": 1
+  },
+  {
+    "name": "FUObjectItem",
+    "valid_for_vtable": 0,
+    "valid_for_member_vars": 1
+  },
+  {
+    "name": "FUObjectArray",
+    "valid_for_vtable": 0,
+    "valid_for_member_vars": 1
+  },
+  {
+    "name": "FFixedUObjectArray",
+    "valid_for_vtable": 0,
+    "valid_for_member_vars": 1
+  },
+  {
+    "name": "FChunkedFixedUObjectArray",
+    "valid_for_vtable": 0,
+    "valid_for_member_vars": 1
+  },
+  {
+    "name": "TUObjectArray",
+    "valid_for_vtable": 0,
+    "valid_for_member_vars": 1
   }
 ]

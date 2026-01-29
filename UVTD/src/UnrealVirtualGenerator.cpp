@@ -109,10 +109,16 @@ namespace RC::UVTD
         // Collect known suffixes from config to generate #ifdef blocks
         const auto& suffix_defs = ConfigUtil::GetSuffixDefinitions();
 
-        // Generate #ifdef blocks for each known suffix that generates variants
+        // Track suffixes for which we actually generate blocks (only those that have variant PDBs)
+        std::vector<std::pair<File::StringType, SuffixDefinition>> active_suffix_defs;
+
+        // Generate #ifdef blocks only for suffixes that have a variant PDB for this version
         for (const auto& [suffix_name, suffix_def] : suffix_defs)
         {
             if (!suffix_def.generates_variant) continue;
+            if (!ConfigUtil::HasSuffixVariant(base_version, suffix_name)) continue;
+
+            active_suffix_defs.emplace_back(suffix_name, suffix_def);
 
             virtual_src_dumper.send(STR("#ifdef {}\n"), suffix_def.ifdef_macro);
 
@@ -177,10 +183,9 @@ namespace RC::UVTD
             }
         }
 
-        // Close all #ifdef blocks
-        for (const auto& [suffix_name, suffix_def] : suffix_defs)
+        // Close only the #ifdef blocks we actually generated
+        for (const auto& [suffix_name, suffix_def] : active_suffix_defs)
         {
-            if (!suffix_def.generates_variant) continue;
             virtual_src_dumper.send(STR("#endif // {}\n"), suffix_def.ifdef_macro);
         }
 

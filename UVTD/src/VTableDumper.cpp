@@ -292,10 +292,12 @@ namespace RC::UVTD
     auto VTableDumper::generate_files() -> void
     {
         const auto& pdb_info = symbols.get_pdb_name_info();
-        // Use base_version for file naming (e.g., "4_27" from "4_27-CasePreserving")
+        // Use base_version for file naming (e.g., "4_27" from "4_27_CasePreserving")
         const auto& pdb_name = pdb_info.base_version;
         // Include suffix in template filename if present
         auto pdb_full_name = pdb_info.full_name;
+        // Construct filename prefix: base_version + suffix_string (e.g., "4_27" or "4_27_CasePreserving")
+        auto pdb_filename_prefix = pdb_name + pdb_info.get_suffix_string();
 
         auto default_template_file = std::filesystem::path{STR("VTableLayout.ini")};
 
@@ -341,9 +343,9 @@ namespace RC::UVTD
                 continue;
             }
 
-            // Create function body file
+            // Create function body file (uses filename prefix for proper suffix handling)
             auto function_body_file = vtable_gen_function_bodies_path /
-                                      std::format(STR("{}_VTableOffsets_{}_FunctionBody.cpp"), pdb_name, class_entry.class_name_clean);
+                                      std::format(STR("{}_VTableOffsets_{}_FunctionBody.cpp"), pdb_filename_prefix, class_entry.class_name_clean);
 
             Output::send(STR("Generating file '{}'\n"), function_body_file.wstring());
 
