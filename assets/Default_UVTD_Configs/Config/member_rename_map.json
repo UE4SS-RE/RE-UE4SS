@@ -36,5 +36,12 @@
       "generate_alias_setter": true,
       "description": "We used Windows::CRITICAL_SECTION before switching to UVTD, but UVTD generates UE::FWindowsRecursiveMutex instead for some reason"
     }
+  },
+  "FFieldClass": {
+    "Name": {
+      "mapped_name": "FName",
+      "generate_alias_setter": true,
+      "description": "Special handling for GetName to avoid conflicts"
+    }
   }
 }
