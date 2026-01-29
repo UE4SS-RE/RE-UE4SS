@@ -153,8 +153,12 @@ namespace RC::UVTD
         
                     std::unordered_set<std::string> seen_names;
 
-                    for (const auto& item : result.value())
+                    for (auto& item : result.value())
                     {
+                        if (item.name == "FFixedUObjectArray" || item.name == "FChunkedFixedUObjectArray")
+                        {
+                            item.name = "TUObjectArray";
+                        }
                         if (seen_names.insert(item.name).second)
                         {
                             // First time seeing this name, add it

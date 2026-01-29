@@ -107,9 +107,11 @@ namespace RC::UVTD
                 if (type_record->data.LF_CLASS.property.fwdref) continue;
 
                 const File::StringType class_name = Symbols::get_leaf_name(type_record->data.LF_CLASS.data, type_record->data.LF_CLASS.lfEasy.kind);
-                if (!names.contains(class_name)) continue;
+                auto class_name_final = class_name;
+                unify_uobject_array_if_needed(class_name_final);
+                if (!names.contains(class_name_final)) continue;
 
-                const auto name_info = names.find(class_name);
+                const auto name_info = names.find(class_name_final);
                 if (name_info == names.end()) continue;
 
                 process_class(tpi_stream, type_record, class_name, name_info->second);
@@ -197,7 +199,10 @@ namespace RC::UVTD
                 return File::StringType{string};
             });
 
-            ini_dumper.send(STR("[{}]\n"), class_entry.class_name);
+            File::StringType final_class_name = class_entry.class_name;
+            unify_uobject_array_if_needed(final_class_name);
+
+            ini_dumper.send(STR("[{}]\n"), final_class_name);
             // Output total size as a comment at the top
             ini_dumper.send(STR("; Total Size: 0x{:X}\n"), class_entry.total_size);
 
@@ -256,10 +261,6 @@ namespace RC::UVTD
                     final_variable_name = rename_info->mapped_name;
                 }
 
-                // But for code generation, use the internal variable name
-                File::StringType final_class_name = class_entry.class_name;
-                unify_uobject_array_if_needed(final_class_name);
-
                 // Skip if we've already processed this variable to avoid duplicates
                 if (processed_variables.find(final_variable_name) != processed_variables.end())
                 {
@@ -297,7 +298,7 @@ namespace RC::UVTD
 
             // Add UEP_TotalSize to the default setter
             {
-                File::StringType total_size_class_name = class_entry.class_name;
+                File::StringType total_size_class_name = final_class_name;
                 unify_uobject_array_if_needed(total_size_class_name);
                 default_setter_src_dumper.send(STR("if (auto it = {}::MemberOffsets.find(STR(\"UEP_TotalSize\")); it == {}::MemberOffsets.end())\n"),
                                                total_size_class_name, total_size_class_name);
