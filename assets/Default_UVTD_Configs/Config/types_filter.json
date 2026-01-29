@@ -93,7 +93,7 @@
     "UWorld::FOnBeginPlay",
     "FStartClothSimulationFunction",
     "ULocalPlayer::FOnPlayerControllerChanged",
-    "FWindowsRecursiveMutex"
+    "TLockFreePointerListUnordered"
   ],
   "exclude_from_getters": [
     "TBaseDelegate",
