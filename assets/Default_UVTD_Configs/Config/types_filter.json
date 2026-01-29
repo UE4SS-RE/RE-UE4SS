@@ -62,6 +62,7 @@
     "ACameraActor",
     "ICppClassTypeInfo",
     "FWindowsCriticalSection",
+    "UE::FWindowsRecursiveMutex",
     "FWindowsRWLock",
     "FRepRecord",
     "FAudioDeviceHandle",
