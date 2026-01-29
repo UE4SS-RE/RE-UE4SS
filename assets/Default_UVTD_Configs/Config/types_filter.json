@@ -93,7 +93,8 @@
     "UWorld::FOnBeginPlay",
     "FStartClothSimulationFunction",
     "ULocalPlayer::FOnPlayerControllerChanged",
-    "TLockFreePointerListUnordered"
+    "TLockFreePointerListUnordered",
+    "std::function<FField*(const void&, const void&, EObjectFlags)>"
   ],
   "exclude_from_getters": [
     "TBaseDelegate",
