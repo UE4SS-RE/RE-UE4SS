@@ -330,7 +330,7 @@ namespace RC::UVTD
                 // Check if we've already processed this variable name
                 if (processed_variables[final_class_name].find(final_variable_name) != processed_variables[final_class_name].end())
                 {
-                    Output::send<LogLevel::Warning>(STR("Possible duplicate variable '{}' in '{}' (final: '{}')\n"), final_variable_name, class_entry.class_name, final_class_name);
+                    continue;
                 }
                 processed_variables[final_class_name].insert(final_variable_name);
 
