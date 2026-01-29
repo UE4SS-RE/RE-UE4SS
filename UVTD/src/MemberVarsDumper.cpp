@@ -143,6 +143,8 @@ namespace RC::UVTD
         const auto& pdb_base_version = pdb_info.base_version;
         // Use version_no_separator for class names (e.g., "427")
         const auto& pdb_name_no_underscore = pdb_info.version_no_separator;
+        // Construct filename prefix: base_version + suffix_string (e.g., "4_27" or "4_27_CasePreserving")
+        auto pdb_filename_prefix = pdb_base_version + pdb_info.get_suffix_string();
 
         auto template_file = std::format(STR("MemberVariableLayout_{}_Template.ini"), pdb_full_name);
 
@@ -186,9 +188,9 @@ namespace RC::UVTD
             File::StringType final_class_name_clean = class_entry.class_name_clean;
             unify_uobject_array_if_needed(final_class_name_clean);
 
-            // Use full name for file (includes suffix like CasePreserving)
+            // Use filename prefix for function body files (base_version + suffix with underscore)
             auto default_setter_src_file = member_variable_layouts_gen_function_bodies_path /
-                                           std::format(STR("{}_MemberVariableLayout_DefaultSetter_{}.cpp"), pdb_full_name, final_class_name_clean);
+                                           std::format(STR("{}_MemberVariableLayout_DefaultSetter_{}.cpp"), pdb_filename_prefix, final_class_name_clean);
 
             Output::send(STR("Generating file '{}'\n"), default_setter_src_file.wstring());
 

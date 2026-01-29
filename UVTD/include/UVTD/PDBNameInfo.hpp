@@ -15,9 +15,9 @@
 
 namespace RC::UVTD
 {
-    // PDB naming format: Major_Minor[-Suffix1][-Suffix2]
+    // PDB naming format: Major_Minor[_Suffix1][_Suffix2]
     // Minor version is always 2 digits (e.g., 5_01, 4_27)
-    // Examples: 4_27, 5_01-CasePreserving, 4_27-MyGame-Debug
+    // Examples: 4_27, 5_01_CasePreserving, 4_27_MyGame_Debug
     struct PDBNameInfo
     {
         int32_t major_version{};
@@ -25,7 +25,7 @@ namespace RC::UVTD
         std::array<File::StringType, 2> suffixes{};
         size_t suffix_count{};
 
-        // The full original name (e.g., "4_27-CasePreserving")
+        // The full original name (e.g., "4_27_CasePreserving")
         File::StringType full_name{};
 
         // Base version string without suffixes (e.g., "4_27")
@@ -40,62 +40,54 @@ namespace RC::UVTD
             PDBNameInfo info;
             info.full_name = pdb_name;
 
-            // Split by '-' to separate version from suffixes
+            // Split by '_' - format is Major_Minor[_Suffix1][_Suffix2]
             std::vector<File::StringType> parts;
             size_t start = 0;
             size_t pos = 0;
 
-            while ((pos = pdb_name.find(STR('-'), start)) != File::StringType::npos)
+            while ((pos = pdb_name.find(STR('_'), start)) != File::StringType::npos)
             {
                 parts.push_back(pdb_name.substr(start, pos - start));
                 start = pos + 1;
             }
             parts.push_back(pdb_name.substr(start));
 
-            if (parts.empty()) return std::nullopt;
+            // Need at least Major_Minor (2 parts)
+            if (parts.size() < 2) return std::nullopt;
 
-            // First part should be Major_Minor
-            const auto& version_part = parts[0];
-            info.base_version = version_part;
-
-            // Find the underscore separating major and minor
-            auto underscore_pos = version_part.find(STR('_'));
-            if (underscore_pos == File::StringType::npos) return std::nullopt;
-
-            // Parse major version
-            auto major_str = version_part.substr(0, underscore_pos);
-            if (major_str.empty()) return std::nullopt;
-
+            // Parse major version (first part)
+            if (parts[0].empty()) return std::nullopt;
             try
             {
-                info.major_version = std::stoi(to_string(major_str));
+                info.major_version = std::stoi(to_string(parts[0]));
             }
             catch (...)
             {
                 return std::nullopt;
             }
 
-            // Parse minor version
-            auto minor_str = version_part.substr(underscore_pos + 1);
-            if (minor_str.empty()) return std::nullopt;
-
+            // Parse minor version (second part)
+            if (parts[1].empty()) return std::nullopt;
             try
             {
-                info.minor_version = std::stoi(to_string(minor_str));
+                info.minor_version = std::stoi(to_string(parts[1]));
             }
             catch (...)
             {
                 return std::nullopt;
             }
+
+            // Base version is Major_Minor
+            info.base_version = std::format(STR("{}_{}"), parts[0], parts[1]);
 
             // Generate version_no_separator (for class names like UnrealVirtual427)
             info.version_no_separator = std::format(STR("{}{}"),
                 info.major_version,
                 info.minor_version < 10 ? std::format(STR("0{}"), info.minor_version) : std::format(STR("{}"), info.minor_version));
 
-            // Collect suffixes (max 2)
+            // Collect suffixes (parts 2+ are suffixes, max 2)
             info.suffix_count = 0;
-            for (size_t i = 1; i < parts.size() && info.suffix_count < 2; ++i)
+            for (size_t i = 2; i < parts.size() && info.suffix_count < 2; ++i)
             {
                 if (!parts[i].empty())
                 {
