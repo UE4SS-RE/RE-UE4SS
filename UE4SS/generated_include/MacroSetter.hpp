@@ -19,12 +19,15 @@ auto ParseMemberOffset = [](const File::StringType& val_str, auto& offsets, auto
             bitfields.emplace(member_name, Unreal::BitfieldInfo{bit_pos, bit_len, storage_size});
         }
     } catch (const std::exception&) {}
-}
+};
 
 if (auto val = parser.get_int64(STR("UObjectBase"), STR("ObjectFlags"), -1); val != -1)
     Unreal::UObjectBase::MemberOffsets.emplace(STR("ObjectFlags"), static_cast<int32_t>(val));
 if (auto val = parser.get_int64(STR("UObjectBase"), STR("InternalIndex"), -1); val != -1)
-    Unreal::UObjectBase::MemberOffsets.emplace(STR("InternalIndex"), static_cast<int32_t>(val));
+    Unreal::UObjectBase::MemberOffsets.emplace(STR("InternalIndex_Private"), static_cast<int32_t>(val));
+// Also support using the renamed version in the INI file
+if (auto val = parser.get_int64(STR("UObjectBase"), STR("InternalIndex_Private"), -1); val != -1)
+    Unreal::UObjectBase::MemberOffsets.emplace(STR("InternalIndex_Private"), static_cast<int32_t>(val));
 if (auto val = parser.get_int64(STR("UObjectBase"), STR("Class"), -1); val != -1)
     Unreal::UObjectBase::MemberOffsets.emplace(STR("ClassPrivate"), static_cast<int32_t>(val));
 // Also support using the renamed version in the INI file
