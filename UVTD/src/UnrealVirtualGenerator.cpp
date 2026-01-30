@@ -141,13 +141,15 @@ namespace RC::UVTD
                 }
 
                 const auto& class_entry = class_it->second;
+                auto class_name_clean_final = class_entry.class_name_clean;
+                unify_uobject_array_if_needed(class_name_clean_final);
 
                 if (!class_entry.variables.empty())
                 {
                     virtual_src_dumper.send(STR("#include <FunctionBodies/{}_{}_MemberVariableLayout_DefaultSetter_{}.cpp>\n"),
                                             base_version,
                                             suffix_name,
-                                            class_entry.class_name_clean);
+                                            class_name_clean_final);
                 }
             }
 
@@ -174,12 +176,14 @@ namespace RC::UVTD
             }
 
             const auto& class_entry = class_it->second;
+            auto class_name_clean_final = class_entry.class_name_clean;
+            unify_uobject_array_if_needed(class_name_clean_final);
 
             if (!class_entry.variables.empty())
             {
                 virtual_src_dumper.send(STR("#include <FunctionBodies/{}_MemberVariableLayout_DefaultSetter_{}.cpp>\n"),
                                         base_version,
-                                        class_entry.class_name_clean);
+                                        class_name_clean_final);
             }
         }
 

@@ -14,6 +14,11 @@
       "mapped_name": "OuterPrivate",
       "generate_alias_setter": true,
       "description": "Private member for UObject's Outer field. Renamed from 'Outer' in UE4.12"
+    },
+    "InternalIndex": {
+      "mapped_name": "InternalIndex_Private",
+      "generate_alias_setter": true,
+      "description": "Private member for UObject's InternalIndex field. We have our own wrapper for it"
     }
   },
   "UEnum": {

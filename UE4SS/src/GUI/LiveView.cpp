@@ -3361,7 +3361,7 @@ namespace RC::GUI
             for (size_t i = 0; i < UObjectArray::GetNumElements(); i++)
             {
 
-                if (FUObjectItem* obj = static_cast<FUObjectItem*>(Container::UnrealVC->UObjectArray_index_to_object(i)))
+                if (FUObjectItem* obj = FUObjectArray::IndexToObject(i))
                 {
                     // Skip destroyed/invalid objects here
                     if (!obj->IsUnreachable())

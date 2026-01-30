@@ -57,6 +57,7 @@
 #include <Unreal/World.hpp>
 #include <Unreal/FWorldContext.hpp>
 #include <Unreal/Engine/UDataTable.hpp>
+#include <Unreal/BitfieldProxy.hpp>
 #include <UnrealDef.hpp>
 
 #include <polyhook2/PE/IatHook.hpp>
@@ -195,6 +196,14 @@ namespace RC
             {
                 create_emergency_console_for_early_error(fmt::format(STR("The IniParser failed to parse: {}"), ensure_str(e.what())));
                 return;
+            }
+
+            if (settings_manager.EngineVersionOverride.DebugBuild)
+            {
+                if (Unreal::Version::IsAtLeast(4, 25))
+                {
+                    Unreal::FUObjectItem::UEP_TotalSize() += sizeof(void*);
+                }
             }
 
             if (settings_manager.CrashDump.EnableDumping)

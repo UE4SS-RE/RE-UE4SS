@@ -894,7 +894,8 @@ auto Symbols::get_type_size_impl(const PDB::TPIStream& tpi_stream, uint32_t reco
             return get_type_size(tpi_stream, record->data.LF_MODIFIER.type);
 
         case PDB::CodeView::TPI::TypeRecordKind::LF_BITFIELD:
-            return (record->data.LF_BITFIELD.length + 7) / 8;
+            // Return the size of the underlying storage type
+            return get_type_size(tpi_stream, record->data.LF_BITFIELD.type, is_64bit);
 
         case PDB::CodeView::TPI::TypeRecordKind::LF_PROCEDURE:
             // Function pointers
@@ -1106,25 +1107,64 @@ auto Symbols::get_type_size_impl(const PDB::TPIStream& tpi_stream, uint32_t reco
     
         // Check ptrmode first (this is what works in your PDB files)
         if (ptr_mode == 0x01) {  // CV_PTR_MODE_REF / CV_PTR_MODE_LVREF
+            // Can't have reference to void - convert to pointer
+            if (underlying_type == STR("void") || underlying_type == STR("const void")) {
+                return underlying_type + STR("*");
+            }
             return underlying_type + STR("&");
         }
         else if (ptr_mode == 0x04) {  // CV_PTR_MODE_RVREF
+            // Can't have rvalue reference to void - convert to pointer
+            if (underlying_type == STR("void") || underlying_type == STR("const void")) {
+                return underlying_type + STR("*");
+            }
             return underlying_type + STR("&&");
         }
-        else if (ptr_mode == 0x02) {  // CV_PTR_MODE_PMEM
-            return underlying_type + STR("::*");
+        else if (ptr_mode == 0x02) {  // CV_PTR_MODE_PMEM - pointer to data member
+            // Pointer-to-data-member types require special syntax: Type ClassName::*
+            // Get the underlying record to extract the class
+            const auto* underlying_record = tpi_stream.GetTypeRecord(record->data.LF_POINTER.utype);
+            if (underlying_record &&
+                (underlying_record->header.kind == PDB::CodeView::TPI::TypeRecordKind::LF_CLASS ||
+                 underlying_record->header.kind == PDB::CodeView::TPI::TypeRecordKind::LF_STRUCTURE)) {
+                File::StringType class_name = get_leaf_name(underlying_record->data.LF_CLASS.data, underlying_record->data.LF_CLASS.lfEasy.kind);
+                // For data member pointers, we'd need more context - use void* as fallback
+                return STR("void*");
+            }
+            return STR("void*");  // Fallback
         }
-        else if (ptr_mode == 0x03) {  // CV_PTR_MODE_PMFUNC
-            return underlying_type + STR("::*");
+        else if (ptr_mode == 0x03) {  // CV_PTR_MODE_PMFUNC - pointer to member function
+            // Member function pointers require: ReturnType (ClassName::*)(Args...)
+            // Get the underlying LF_MFUNCTION record to extract class, return type, and args
+            const auto* mfunc_record = tpi_stream.GetTypeRecord(record->data.LF_POINTER.utype);
+            if (mfunc_record && mfunc_record->header.kind == PDB::CodeView::TPI::TypeRecordKind::LF_MFUNCTION) {
+                // Get class name from classtype
+                File::StringType class_name = get_type_name(tpi_stream, mfunc_record->data.LF_MFUNCTION.classtype, false, is_64bit);
+                // Get return type
+                File::StringType return_type = get_type_name(tpi_stream, mfunc_record->data.LF_MFUNCTION.rvtype, true, is_64bit);
+                // Get arguments
+                File::StringType args = get_type_name(tpi_stream, mfunc_record->data.LF_MFUNCTION.arglist, check_valid, is_64bit);
+                // Format as proper C++ pointer-to-member-function: ReturnType (ClassName::*)(Args...)
+                return std::format(STR("{} ({}::*)({})"), return_type, class_name, args);
+            }
+            return STR("void*");  // Fallback if not LF_MFUNCTION
         }
     
         // Fallback: Check islref/isrref flags (for compatibility with other PDB versions)
         // Only check these if ptrmode is 0 (CV_PTR_MODE_PTR)
         if (ptr_mode == 0x00) {
             if (record->data.LF_POINTER.attr.islref) {
+                // Can't have reference to void - convert to pointer
+                if (underlying_type == STR("void") || underlying_type == STR("const void")) {
+                    return underlying_type + STR("*");
+                }
                 return underlying_type + STR("&");
             }
             else if (record->data.LF_POINTER.attr.isrref) {
+                // Can't have rvalue reference to void - convert to pointer
+                if (underlying_type == STR("void") || underlying_type == STR("const void")) {
+                    return underlying_type + STR("*");
+                }
                 return underlying_type + STR("&&");
             }
         }

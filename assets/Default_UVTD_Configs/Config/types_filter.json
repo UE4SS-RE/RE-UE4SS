@@ -95,7 +95,14 @@
     "FStartClothSimulationFunction",
     "ULocalPlayer::FOnPlayerControllerChanged",
     "TLockFreePointerListUnordered",
-    "std::function<FField*(const void&, const void&, EObjectFlags)>"
+    "std::function<FField*(const void&, const void&, EObjectFlags)>",
+    "ULineBatchComponent",
+    "FDeferredComponentMoveData",
+    "UPhysicsQueryHandler",
+    "UWorld::FAddLevelToWorldExtensionEvent",
+    "UWorld::FRemoveLevelFromWorldExtensionEvent",
+    "UWorld::FEndOfFrameUpdateContext",
+    "UE::Tasks::Private::FTaskHandle"
   ],
   "exclude_from_getters": [
     "TBaseDelegate",

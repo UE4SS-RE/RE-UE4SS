@@ -74,6 +74,12 @@ Added `[f: <address_or_module_offset>` section to UE4SS_ObjectDump.txt [UE4SS #8
 
 Added line in the [docs](https://docs.ue4ss.com/dev/guides/fixing-compatibility-problems.html) to add `FText::FromString(FString&)` as an alternative to `FText::FText(FString&)` for UE5 games - ([UE4SS #1078](https://github.com/UE4SS-RE/RE-UE4SS/pull/1078))
 
+Added `FUObjectItem`, `FUObjectArray`, and `TUObjectArray` to MemberVariableLayout.ini ([UE4SS #????](https://github.com/UE4SS-RE/RE-UE4SS/pull/????))
+- This means we can now support games with a customized GUObjectArray.
+- There are now also sizes, padding, and type name comments to help understand.
+- We've also added a special `UEP_TotalSize` entry to every section.
+- It's currently only crucial for `FUObjectItem`, but in the future, we may use this entry for more types.
+
 ### Live View 
 Added search filter: `IncludeClassNames`. ([UE4SS #472](https://github.com/UE4SS-RE/RE-UE4SS/pull/472)) - Buckminsterfullerene
 
