@@ -894,7 +894,8 @@ auto Symbols::get_type_size_impl(const PDB::TPIStream& tpi_stream, uint32_t reco
             return get_type_size(tpi_stream, record->data.LF_MODIFIER.type);
 
         case PDB::CodeView::TPI::TypeRecordKind::LF_BITFIELD:
-            return (record->data.LF_BITFIELD.length + 7) / 8;
+            // Return the size of the underlying storage type
+            return get_type_size(tpi_stream, record->data.LF_BITFIELD.type, is_64bit);
 
         case PDB::CodeView::TPI::TypeRecordKind::LF_PROCEDURE:
             // Function pointers
