@@ -211,8 +211,7 @@ namespace RC::UVTD
 
         // Generate helper function for parsing member offset values (supports bitfield format: offset:bit_pos:bit_len:storage_size)
         // INI is processed first, then defaults - emplace ensures INI values aren't overwritten
-        macro_setter_dumper.send(STR("template<typename OffsetsMap, typename BitfieldMap>\n"));
-        macro_setter_dumper.send(STR("inline void ParseMemberOffset(const File::StringType& val_str, OffsetsMap& offsets, BitfieldMap& bitfields, const File::StringType& member_name)\n"));
+        macro_setter_dumper.send(STR("auto ParseMemberOffset = [](const File::StringType& val_str, auto& offsets, auto& bitfields, const File::StringType& member_name)\n"));
         macro_setter_dumper.send(STR("{\n"));
         macro_setter_dumper.send(STR("    try {\n"));
         macro_setter_dumper.send(STR("        int32_t offset = std::stoi(val_str, nullptr, 0);\n"));
@@ -230,7 +229,7 @@ namespace RC::UVTD
         macro_setter_dumper.send(STR("                    storage_size = static_cast<uint8_t>(std::stoi(val_str.substr(colon3 + 1)));\n"));
         macro_setter_dumper.send(STR("                }\n"));
         macro_setter_dumper.send(STR("            }\n"));
-        macro_setter_dumper.send(STR("            bitfields.emplace(member_name, BitfieldInfo{bit_pos, bit_len, storage_size});\n"));
+        macro_setter_dumper.send(STR("            bitfields.emplace(member_name, Unreal::BitfieldInfo{bit_pos, bit_len, storage_size});\n"));
         macro_setter_dumper.send(STR("        }\n"));
         macro_setter_dumper.send(STR("    } catch (const std::exception&) {}\n"));
         macro_setter_dumper.send(STR("}\n\n"));
