@@ -198,6 +198,14 @@ namespace RC
                 return;
             }
 
+            if (settings_manager.EngineVersionOverride.DebugBuild)
+            {
+                if (Unreal::Version::IsAtLeast(4, 25))
+                {
+                    Unreal::FUObjectItem::UEP_TotalSize() += sizeof(void*);
+                }
+            }
+
             if (settings_manager.CrashDump.EnableDumping)
             {
                 m_crash_dumper.enable();
