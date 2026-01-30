@@ -173,6 +173,68 @@ if (auto val = parser.get_int64(STR("UGameViewportClient"), STR("CurrentSubstrat
     Unreal::UGameViewportClient::MemberOffsets.emplace(STR("CurrentSubstrateVisualizationMode"), static_cast<int32_t>(val));
 if (auto val = parser.get_int64(STR("UGameViewportClient"), STR("UEP_TotalSize"), -1); val != -1)
     Unreal::UGameViewportClient::MemberOffsets.emplace(STR("UEP_TotalSize"), static_cast<int32_t>(val));
+if (auto val = parser.get_int64(STR("FUObjectItem"), STR("Object"), -1); val != -1)
+    Unreal::FUObjectItem::MemberOffsets.emplace(STR("Object"), static_cast<int32_t>(val));
+if (auto val = parser.get_int64(STR("FUObjectItem"), STR("ClusterAndFlags"), -1); val != -1)
+    Unreal::FUObjectItem::MemberOffsets.emplace(STR("ClusterAndFlags"), static_cast<int32_t>(val));
+if (auto val = parser.get_int64(STR("FUObjectItem"), STR("SerialNumber"), -1); val != -1)
+    Unreal::FUObjectItem::MemberOffsets.emplace(STR("SerialNumber"), static_cast<int32_t>(val));
+if (auto val = parser.get_int64(STR("FUObjectItem"), STR("Flags"), -1); val != -1)
+    Unreal::FUObjectItem::MemberOffsets.emplace(STR("Flags"), static_cast<int32_t>(val));
+if (auto val = parser.get_int64(STR("FUObjectItem"), STR("ClusterIndex"), -1); val != -1)
+    Unreal::FUObjectItem::MemberOffsets.emplace(STR("ClusterIndex"), static_cast<int32_t>(val));
+if (auto val = parser.get_int64(STR("FUObjectItem"), STR("ClusterRootIndex"), -1); val != -1)
+    Unreal::FUObjectItem::MemberOffsets.emplace(STR("ClusterRootIndex"), static_cast<int32_t>(val));
+if (auto val = parser.get_int64(STR("FUObjectItem"), STR("RefCount"), -1); val != -1)
+    Unreal::FUObjectItem::MemberOffsets.emplace(STR("RefCount"), static_cast<int32_t>(val));
+if (auto val = parser.get_int64(STR("FUObjectItem"), STR("FlagsAndRefCount"), -1); val != -1)
+    Unreal::FUObjectItem::MemberOffsets.emplace(STR("FlagsAndRefCount"), static_cast<int32_t>(val));
+if (auto val = parser.get_int64(STR("FUObjectItem"), STR("RemoteId"), -1); val != -1)
+    Unreal::FUObjectItem::MemberOffsets.emplace(STR("RemoteId"), static_cast<int32_t>(val));
+if (auto val = parser.get_int64(STR("FUObjectItem"), STR("ObjectPtrLow"), -1); val != -1)
+    Unreal::FUObjectItem::MemberOffsets.emplace(STR("ObjectPtrLow"), static_cast<int32_t>(val));
+if (auto val = parser.get_int64(STR("FUObjectItem"), STR("UEP_TotalSize"), -1); val != -1)
+    Unreal::FUObjectItem::MemberOffsets.emplace(STR("UEP_TotalSize"), static_cast<int32_t>(val));
+if (auto val = parser.get_int64(STR("FUObjectArray"), STR("ObjFirstGCIndex"), -1); val != -1)
+    Unreal::FUObjectArray::MemberOffsets.emplace(STR("ObjFirstGCIndex"), static_cast<int32_t>(val));
+if (auto val = parser.get_int64(STR("FUObjectArray"), STR("ObjLastNonGCIndex"), -1); val != -1)
+    Unreal::FUObjectArray::MemberOffsets.emplace(STR("ObjLastNonGCIndex"), static_cast<int32_t>(val));
+if (auto val = parser.get_int64(STR("FUObjectArray"), STR("OpenForDisregardForGC"), -1); val != -1)
+    Unreal::FUObjectArray::MemberOffsets.emplace(STR("OpenForDisregardForGC"), static_cast<int32_t>(val));
+if (auto val = parser.get_int64(STR("FUObjectArray"), STR("ObjObjects"), -1); val != -1)
+    Unreal::FUObjectArray::MemberOffsets.emplace(STR("ObjObjects"), static_cast<int32_t>(val));
+if (auto val = parser.get_int64(STR("FUObjectArray"), STR("ObjAvailableList"), -1); val != -1)
+    Unreal::FUObjectArray::MemberOffsets.emplace(STR("ObjAvailableList"), static_cast<int32_t>(val));
+if (auto val = parser.get_int64(STR("FUObjectArray"), STR("UObjectCreateListeners"), -1); val != -1)
+    Unreal::FUObjectArray::MemberOffsets.emplace(STR("UObjectCreateListeners"), static_cast<int32_t>(val));
+if (auto val = parser.get_int64(STR("FUObjectArray"), STR("UObjectDeleteListeners"), -1); val != -1)
+    Unreal::FUObjectArray::MemberOffsets.emplace(STR("UObjectDeleteListeners"), static_cast<int32_t>(val));
+if (auto val = parser.get_int64(STR("FUObjectArray"), STR("MaxObjectsNotConsideredByGC"), -1); val != -1)
+    Unreal::FUObjectArray::MemberOffsets.emplace(STR("MaxObjectsNotConsideredByGC"), static_cast<int32_t>(val));
+if (auto val = parser.get_int64(STR("FUObjectArray"), STR("MasterSerialNumber"), -1); val != -1)
+    Unreal::FUObjectArray::MemberOffsets.emplace(STR("MasterSerialNumber"), static_cast<int32_t>(val));
+if (auto val = parser.get_int64(STR("FUObjectArray"), STR("PrimarySerialNumber"), -1); val != -1)
+    Unreal::FUObjectArray::MemberOffsets.emplace(STR("PrimarySerialNumber"), static_cast<int32_t>(val));
+if (auto val = parser.get_int64(STR("FUObjectArray"), STR("bShouldRecycleObjectIndices"), -1); val != -1)
+    Unreal::FUObjectArray::MemberOffsets.emplace(STR("bShouldRecycleObjectIndices"), static_cast<int32_t>(val));
+if (auto val = parser.get_int64(STR("FUObjectArray"), STR("ObjAvailableListEstimateCount"), -1); val != -1)
+    Unreal::FUObjectArray::MemberOffsets.emplace(STR("ObjAvailableListEstimateCount"), static_cast<int32_t>(val));
+if (auto val = parser.get_int64(STR("FUObjectArray"), STR("UEP_TotalSize"), -1); val != -1)
+    Unreal::FUObjectArray::MemberOffsets.emplace(STR("UEP_TotalSize"), static_cast<int32_t>(val));
+if (auto val = parser.get_int64(STR("TUObjectArray"), STR("Objects"), -1); val != -1)
+    Unreal::TUObjectArray::MemberOffsets.emplace(STR("Objects"), static_cast<int32_t>(val));
+if (auto val = parser.get_int64(STR("TUObjectArray"), STR("PreAllocatedObjects"), -1); val != -1)
+    Unreal::TUObjectArray::MemberOffsets.emplace(STR("PreAllocatedObjects"), static_cast<int32_t>(val));
+if (auto val = parser.get_int64(STR("TUObjectArray"), STR("MaxElements"), -1); val != -1)
+    Unreal::TUObjectArray::MemberOffsets.emplace(STR("MaxElements"), static_cast<int32_t>(val));
+if (auto val = parser.get_int64(STR("TUObjectArray"), STR("NumElements"), -1); val != -1)
+    Unreal::TUObjectArray::MemberOffsets.emplace(STR("NumElements"), static_cast<int32_t>(val));
+if (auto val = parser.get_int64(STR("TUObjectArray"), STR("MaxChunks"), -1); val != -1)
+    Unreal::TUObjectArray::MemberOffsets.emplace(STR("MaxChunks"), static_cast<int32_t>(val));
+if (auto val = parser.get_int64(STR("TUObjectArray"), STR("NumChunks"), -1); val != -1)
+    Unreal::TUObjectArray::MemberOffsets.emplace(STR("NumChunks"), static_cast<int32_t>(val));
+if (auto val = parser.get_int64(STR("TUObjectArray"), STR("UEP_TotalSize"), -1); val != -1)
+    Unreal::TUObjectArray::MemberOffsets.emplace(STR("UEP_TotalSize"), static_cast<int32_t>(val));
 if (auto val = parser.get_int64(STR("FArchive"), STR("ArNetVer"), -1); val != -1)
     Unreal::FArchive::MemberOffsets.emplace(STR("ArNetVer"), static_cast<int32_t>(val));
 if (auto val = parser.get_int64(STR("FArchive"), STR("ArUE4Ver"), -1); val != -1)
@@ -685,6 +747,29 @@ if (auto val = parser.get_int64(STR("ULocalPlayer"), STR("ConnectionIdentifier")
     Unreal::ULocalPlayer::MemberOffsets.emplace(STR("ConnectionIdentifier"), static_cast<int32_t>(val));
 if (auto val = parser.get_int64(STR("ULocalPlayer"), STR("UEP_TotalSize"), -1); val != -1)
     Unreal::ULocalPlayer::MemberOffsets.emplace(STR("UEP_TotalSize"), static_cast<int32_t>(val));
+if (auto val = parser.get_int64(STR("FFieldClass"), STR("Name"), -1); val != -1)
+    Unreal::FFieldClass::MemberOffsets.emplace(STR("FName"), static_cast<int32_t>(val));
+// Also support using the renamed version in the INI file
+if (auto val = parser.get_int64(STR("FFieldClass"), STR("FName"), -1); val != -1)
+    Unreal::FFieldClass::MemberOffsets.emplace(STR("FName"), static_cast<int32_t>(val));
+if (auto val = parser.get_int64(STR("FFieldClass"), STR("Id"), -1); val != -1)
+    Unreal::FFieldClass::MemberOffsets.emplace(STR("Id"), static_cast<int32_t>(val));
+if (auto val = parser.get_int64(STR("FFieldClass"), STR("CastFlags"), -1); val != -1)
+    Unreal::FFieldClass::MemberOffsets.emplace(STR("CastFlags"), static_cast<int32_t>(val));
+if (auto val = parser.get_int64(STR("FFieldClass"), STR("ClassFlags"), -1); val != -1)
+    Unreal::FFieldClass::MemberOffsets.emplace(STR("ClassFlags"), static_cast<int32_t>(val));
+if (auto val = parser.get_int64(STR("FFieldClass"), STR("SuperClass"), -1); val != -1)
+    Unreal::FFieldClass::MemberOffsets.emplace(STR("SuperClass"), static_cast<int32_t>(val));
+if (auto val = parser.get_int64(STR("FFieldClass"), STR("DefaultObject"), -1); val != -1)
+    Unreal::FFieldClass::MemberOffsets.emplace(STR("DefaultObject"), static_cast<int32_t>(val));
+if (auto val = parser.get_int64(STR("FFieldClass"), STR("ConstructFn"), -1); val != -1)
+    Unreal::FFieldClass::MemberOffsets.emplace(STR("ConstructFn"), static_cast<int32_t>(val));
+if (auto val = parser.get_int64(STR("FFieldClass"), STR("UnqiueNameIndexCounter"), -1); val != -1)
+    Unreal::FFieldClass::MemberOffsets.emplace(STR("UnqiueNameIndexCounter"), static_cast<int32_t>(val));
+if (auto val = parser.get_int64(STR("FFieldClass"), STR("UniqueNameIndexCounter"), -1); val != -1)
+    Unreal::FFieldClass::MemberOffsets.emplace(STR("UniqueNameIndexCounter"), static_cast<int32_t>(val));
+if (auto val = parser.get_int64(STR("FFieldClass"), STR("UEP_TotalSize"), -1); val != -1)
+    Unreal::FFieldClass::MemberOffsets.emplace(STR("UEP_TotalSize"), static_cast<int32_t>(val));
 if (auto val = parser.get_int64(STR("FField"), STR("ClassPrivate"), -1); val != -1)
     Unreal::FField::MemberOffsets.emplace(STR("ClassPrivate"), static_cast<int32_t>(val));
 if (auto val = parser.get_int64(STR("FField"), STR("Owner"), -1); val != -1)
@@ -1154,88 +1239,3 @@ if (auto val_str = parser.get_string(STR("UDataTable"), STR("bPreserveExistingVa
     ParseMemberOffset(val_str, Unreal::UDataTable::MemberOffsets, Unreal::UDataTable::BitfieldInfos, STR("bPreserveExistingValues"));
 if (auto val = parser.get_int64(STR("UDataTable"), STR("UEP_TotalSize"), -1); val != -1)
     Unreal::UDataTable::MemberOffsets.emplace(STR("UEP_TotalSize"), static_cast<int32_t>(val));
-if (auto val = parser.get_int64(STR("FUObjectItem"), STR("Object"), -1); val != -1)
-    Unreal::FUObjectItem::MemberOffsets.emplace(STR("Object"), static_cast<int32_t>(val));
-if (auto val = parser.get_int64(STR("FUObjectItem"), STR("ClusterAndFlags"), -1); val != -1)
-    Unreal::FUObjectItem::MemberOffsets.emplace(STR("ClusterAndFlags"), static_cast<int32_t>(val));
-if (auto val = parser.get_int64(STR("FUObjectItem"), STR("SerialNumber"), -1); val != -1)
-    Unreal::FUObjectItem::MemberOffsets.emplace(STR("SerialNumber"), static_cast<int32_t>(val));
-if (auto val = parser.get_int64(STR("FUObjectItem"), STR("Flags"), -1); val != -1)
-    Unreal::FUObjectItem::MemberOffsets.emplace(STR("Flags"), static_cast<int32_t>(val));
-if (auto val = parser.get_int64(STR("FUObjectItem"), STR("ClusterIndex"), -1); val != -1)
-    Unreal::FUObjectItem::MemberOffsets.emplace(STR("ClusterIndex"), static_cast<int32_t>(val));
-if (auto val = parser.get_int64(STR("FUObjectItem"), STR("ClusterRootIndex"), -1); val != -1)
-    Unreal::FUObjectItem::MemberOffsets.emplace(STR("ClusterRootIndex"), static_cast<int32_t>(val));
-if (auto val = parser.get_int64(STR("FUObjectItem"), STR("RefCount"), -1); val != -1)
-    Unreal::FUObjectItem::MemberOffsets.emplace(STR("RefCount"), static_cast<int32_t>(val));
-if (auto val = parser.get_int64(STR("FUObjectItem"), STR("FlagsAndRefCount"), -1); val != -1)
-    Unreal::FUObjectItem::MemberOffsets.emplace(STR("FlagsAndRefCount"), static_cast<int32_t>(val));
-if (auto val = parser.get_int64(STR("FUObjectItem"), STR("RemoteId"), -1); val != -1)
-    Unreal::FUObjectItem::MemberOffsets.emplace(STR("RemoteId"), static_cast<int32_t>(val));
-if (auto val = parser.get_int64(STR("FUObjectItem"), STR("ObjectPtrLow"), -1); val != -1)
-    Unreal::FUObjectItem::MemberOffsets.emplace(STR("ObjectPtrLow"), static_cast<int32_t>(val));
-if (auto val = parser.get_int64(STR("FUObjectItem"), STR("UEP_TotalSize"), -1); val != -1)
-    Unreal::FUObjectItem::MemberOffsets.emplace(STR("UEP_TotalSize"), static_cast<int32_t>(val));
-if (auto val = parser.get_int64(STR("FUObjectArray"), STR("ObjFirstGCIndex"), -1); val != -1)
-    Unreal::FUObjectArray::MemberOffsets.emplace(STR("ObjFirstGCIndex"), static_cast<int32_t>(val));
-if (auto val = parser.get_int64(STR("FUObjectArray"), STR("ObjLastNonGCIndex"), -1); val != -1)
-    Unreal::FUObjectArray::MemberOffsets.emplace(STR("ObjLastNonGCIndex"), static_cast<int32_t>(val));
-if (auto val = parser.get_int64(STR("FUObjectArray"), STR("OpenForDisregardForGC"), -1); val != -1)
-    Unreal::FUObjectArray::MemberOffsets.emplace(STR("OpenForDisregardForGC"), static_cast<int32_t>(val));
-if (auto val = parser.get_int64(STR("FUObjectArray"), STR("ObjObjects"), -1); val != -1)
-    Unreal::FUObjectArray::MemberOffsets.emplace(STR("ObjObjects"), static_cast<int32_t>(val));
-if (auto val = parser.get_int64(STR("FUObjectArray"), STR("ObjAvailableList"), -1); val != -1)
-    Unreal::FUObjectArray::MemberOffsets.emplace(STR("ObjAvailableList"), static_cast<int32_t>(val));
-if (auto val = parser.get_int64(STR("FUObjectArray"), STR("UObjectCreateListeners"), -1); val != -1)
-    Unreal::FUObjectArray::MemberOffsets.emplace(STR("UObjectCreateListeners"), static_cast<int32_t>(val));
-if (auto val = parser.get_int64(STR("FUObjectArray"), STR("UObjectDeleteListeners"), -1); val != -1)
-    Unreal::FUObjectArray::MemberOffsets.emplace(STR("UObjectDeleteListeners"), static_cast<int32_t>(val));
-if (auto val = parser.get_int64(STR("FUObjectArray"), STR("MaxObjectsNotConsideredByGC"), -1); val != -1)
-    Unreal::FUObjectArray::MemberOffsets.emplace(STR("MaxObjectsNotConsideredByGC"), static_cast<int32_t>(val));
-if (auto val = parser.get_int64(STR("FUObjectArray"), STR("MasterSerialNumber"), -1); val != -1)
-    Unreal::FUObjectArray::MemberOffsets.emplace(STR("MasterSerialNumber"), static_cast<int32_t>(val));
-if (auto val = parser.get_int64(STR("FUObjectArray"), STR("PrimarySerialNumber"), -1); val != -1)
-    Unreal::FUObjectArray::MemberOffsets.emplace(STR("PrimarySerialNumber"), static_cast<int32_t>(val));
-if (auto val = parser.get_int64(STR("FUObjectArray"), STR("bShouldRecycleObjectIndices"), -1); val != -1)
-    Unreal::FUObjectArray::MemberOffsets.emplace(STR("bShouldRecycleObjectIndices"), static_cast<int32_t>(val));
-if (auto val = parser.get_int64(STR("FUObjectArray"), STR("ObjAvailableListEstimateCount"), -1); val != -1)
-    Unreal::FUObjectArray::MemberOffsets.emplace(STR("ObjAvailableListEstimateCount"), static_cast<int32_t>(val));
-if (auto val = parser.get_int64(STR("FUObjectArray"), STR("UEP_TotalSize"), -1); val != -1)
-    Unreal::FUObjectArray::MemberOffsets.emplace(STR("UEP_TotalSize"), static_cast<int32_t>(val));
-if (auto val = parser.get_int64(STR("TUObjectArray"), STR("Objects"), -1); val != -1)
-    Unreal::TUObjectArray::MemberOffsets.emplace(STR("Objects"), static_cast<int32_t>(val));
-if (auto val = parser.get_int64(STR("TUObjectArray"), STR("PreAllocatedObjects"), -1); val != -1)
-    Unreal::TUObjectArray::MemberOffsets.emplace(STR("PreAllocatedObjects"), static_cast<int32_t>(val));
-if (auto val = parser.get_int64(STR("TUObjectArray"), STR("MaxElements"), -1); val != -1)
-    Unreal::TUObjectArray::MemberOffsets.emplace(STR("MaxElements"), static_cast<int32_t>(val));
-if (auto val = parser.get_int64(STR("TUObjectArray"), STR("NumElements"), -1); val != -1)
-    Unreal::TUObjectArray::MemberOffsets.emplace(STR("NumElements"), static_cast<int32_t>(val));
-if (auto val = parser.get_int64(STR("TUObjectArray"), STR("MaxChunks"), -1); val != -1)
-    Unreal::TUObjectArray::MemberOffsets.emplace(STR("MaxChunks"), static_cast<int32_t>(val));
-if (auto val = parser.get_int64(STR("TUObjectArray"), STR("NumChunks"), -1); val != -1)
-    Unreal::TUObjectArray::MemberOffsets.emplace(STR("NumChunks"), static_cast<int32_t>(val));
-if (auto val = parser.get_int64(STR("TUObjectArray"), STR("UEP_TotalSize"), -1); val != -1)
-    Unreal::TUObjectArray::MemberOffsets.emplace(STR("UEP_TotalSize"), static_cast<int32_t>(val));
-if (auto val = parser.get_int64(STR("FFieldClass"), STR("Name"), -1); val != -1)
-    Unreal::FFieldClass::MemberOffsets.emplace(STR("FName"), static_cast<int32_t>(val));
-// Also support using the renamed version in the INI file
-if (auto val = parser.get_int64(STR("FFieldClass"), STR("FName"), -1); val != -1)
-    Unreal::FFieldClass::MemberOffsets.emplace(STR("FName"), static_cast<int32_t>(val));
-if (auto val = parser.get_int64(STR("FFieldClass"), STR("Id"), -1); val != -1)
-    Unreal::FFieldClass::MemberOffsets.emplace(STR("Id"), static_cast<int32_t>(val));
-if (auto val = parser.get_int64(STR("FFieldClass"), STR("CastFlags"), -1); val != -1)
-    Unreal::FFieldClass::MemberOffsets.emplace(STR("CastFlags"), static_cast<int32_t>(val));
-if (auto val = parser.get_int64(STR("FFieldClass"), STR("ClassFlags"), -1); val != -1)
-    Unreal::FFieldClass::MemberOffsets.emplace(STR("ClassFlags"), static_cast<int32_t>(val));
-if (auto val = parser.get_int64(STR("FFieldClass"), STR("SuperClass"), -1); val != -1)
-    Unreal::FFieldClass::MemberOffsets.emplace(STR("SuperClass"), static_cast<int32_t>(val));
-if (auto val = parser.get_int64(STR("FFieldClass"), STR("DefaultObject"), -1); val != -1)
-    Unreal::FFieldClass::MemberOffsets.emplace(STR("DefaultObject"), static_cast<int32_t>(val));
-if (auto val = parser.get_int64(STR("FFieldClass"), STR("ConstructFn"), -1); val != -1)
-    Unreal::FFieldClass::MemberOffsets.emplace(STR("ConstructFn"), static_cast<int32_t>(val));
-if (auto val = parser.get_int64(STR("FFieldClass"), STR("UnqiueNameIndexCounter"), -1); val != -1)
-    Unreal::FFieldClass::MemberOffsets.emplace(STR("UnqiueNameIndexCounter"), static_cast<int32_t>(val));
-if (auto val = parser.get_int64(STR("FFieldClass"), STR("UniqueNameIndexCounter"), -1); val != -1)
-    Unreal::FFieldClass::MemberOffsets.emplace(STR("UniqueNameIndexCounter"), static_cast<int32_t>(val));
-if (auto val = parser.get_int64(STR("FFieldClass"), STR("UEP_TotalSize"), -1); val != -1)
-    Unreal::FFieldClass::MemberOffsets.emplace(STR("UEP_TotalSize"), static_cast<int32_t>(val));
