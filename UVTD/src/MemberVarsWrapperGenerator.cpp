@@ -766,7 +766,7 @@ namespace RC::UVTD
 
                 if (needs_bitfield_parsing)
                 {
-                    macro_setter_dumper.send(STR("if (auto val_str = parser.get_string(STR(\"{}\"), STR(\"{}\")); !val_str.empty())\n"),
+                    macro_setter_dumper.send(STR("if (auto val_str = parser.get_string(STR(\"{}\"), STR(\"{}\"), {{}}); !val_str.empty())\n"),
                                              final_class_name,
                                              rename_info.has_value() ? variable.name : final_variable_name);
                     macro_setter_dumper.send(STR("    ParseMemberOffset(val_str, Unreal::{}::MemberOffsets, Unreal::{}::BitfieldInfos, STR(\"{}\"));\n"),
@@ -790,7 +790,7 @@ namespace RC::UVTD
                     macro_setter_dumper.send(STR("// Also support using the renamed version in the INI file\n"));
                     if (needs_bitfield_parsing)
                     {
-                        macro_setter_dumper.send(STR("if (auto val_str = parser.get_string(STR(\"{}\"), STR(\"{}\")); !val_str.empty())\n"),
+                        macro_setter_dumper.send(STR("if (auto val_str = parser.get_string(STR(\"{}\"), STR(\"{}\"), {{}}); !val_str.empty())\n"),
                                                  final_class_name,
                                                  final_variable_name);
                         macro_setter_dumper.send(STR("    ParseMemberOffset(val_str, Unreal::{}::MemberOffsets, Unreal::{}::BitfieldInfos, STR(\"{}\"));\n"),
