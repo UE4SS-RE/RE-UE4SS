@@ -26,6 +26,15 @@ namespace RC::UVTD
         return STR("const ") + type;
     }
 
+    // Check if a type is a pointer-to-member-function
+    // These have the format: ReturnType (ClassName::*)(Args...)
+    // They need special handling because the syntax for reference return types is complex
+    static auto is_pointer_to_member_function(const File::StringType& type) -> bool
+    {
+        // Look for the pattern "::*)(" which is unique to pointer-to-member-function types
+        return type.find(STR("::*)(")) != File::StringType::npos;
+    }
+
     // Normalize a type for comparison purposes
     // This handles equivalent types that should be considered the same:
     // - FDefaultAllocator == TSizedDefaultAllocator<32>
@@ -488,16 +497,35 @@ namespace RC::UVTD
 
                             File::StringType versioned_getter_name = final_variable_name + getter_suffix;
 
-                            // Header declarations
-                            header_wrapper_dumper.send(STR("    {}& Get{}();\n"), version_type_name, versioned_getter_name);
-                            header_wrapper_dumper.send(STR("    {}& Get{}() const;\n"), add_const_if_needed(version_type_name), versioned_getter_name);
+                            // Check if this is a pointer-to-member-function type which needs special handling
+                            if (is_pointer_to_member_function(version_type_name))
+                            {
+                                // Generate typedef with unique name for this versioned getter
+                                File::StringType typedef_name = versioned_getter_name + STR("_Type");
+                                header_wrapper_dumper.send(STR("    using {} = {};\n"), typedef_name, version_type_name);
+                                header_wrapper_dumper.send(STR("    {}& Get{}();\n"), typedef_name, versioned_getter_name);
+                                header_wrapper_dumper.send(STR("    const {}& Get{}() const;\n"), typedef_name, versioned_getter_name);
 
-                            // Source implementations
-                            wrapper_src_dumper.send(STR("{}& {}::Get{}()\n"), version_type_name, final_class_name, versioned_getter_name);
-                            generate_simple_getter_body(wrapper_src_dumper, version_type_name, final_class_name, final_variable_name);
+                                // Source implementations with qualified typedef
+                                wrapper_src_dumper.send(STR("{}::{}& {}::Get{}()\n"), final_class_name, typedef_name, final_class_name, versioned_getter_name);
+                                generate_simple_getter_body(wrapper_src_dumper, typedef_name, final_class_name, final_variable_name);
 
-                            wrapper_src_dumper.send(STR("{}& {}::Get{}() const\n"), add_const_if_needed(version_type_name), final_class_name, versioned_getter_name);
-                            generate_simple_const_getter_body(wrapper_src_dumper, version_type_name, final_class_name, final_variable_name);
+                                wrapper_src_dumper.send(STR("const {}::{}& {}::Get{}() const\n"), final_class_name, typedef_name, final_class_name, versioned_getter_name);
+                                generate_simple_const_getter_body(wrapper_src_dumper, typedef_name, final_class_name, final_variable_name);
+                            }
+                            else
+                            {
+                                // Header declarations
+                                header_wrapper_dumper.send(STR("    {}& Get{}();\n"), version_type_name, versioned_getter_name);
+                                header_wrapper_dumper.send(STR("    {}& Get{}() const;\n"), add_const_if_needed(version_type_name), versioned_getter_name);
+
+                                // Source implementations
+                                wrapper_src_dumper.send(STR("{}& {}::Get{}()\n"), version_type_name, final_class_name, versioned_getter_name);
+                                generate_simple_getter_body(wrapper_src_dumper, version_type_name, final_class_name, final_variable_name);
+
+                                wrapper_src_dumper.send(STR("{}& {}::Get{}() const\n"), add_const_if_needed(version_type_name), final_class_name, versioned_getter_name);
+                                generate_simple_const_getter_body(wrapper_src_dumper, version_type_name, final_class_name, final_variable_name);
+                            }
                         }
 
                         // Add a newline after the versioned getters in header
@@ -517,23 +545,75 @@ namespace RC::UVTD
                     {
                         // For bitfields, use BitfieldProxy for read/write access via single getter
                         // Bit position, length, and storage size come from BitfieldInfos at runtime (supports INI overrides)
+                        // Bitfields don't care about type changes - they always use BitfieldProxy
                         header_wrapper_dumper.send(STR("    BitfieldProxy Get{}();\n"), final_variable_name);
                         header_wrapper_dumper.send(STR("    ConstBitfieldProxy Get{}() const;\n\n"), final_variable_name);
 
-                        // Generate non-const BitfieldProxy getter implementation
+                        // Generate non-const BitfieldProxy getter implementation (with body)
                         wrapper_src_dumper.send(STR("BitfieldProxy {}::Get{}()\n"), final_class_name, final_variable_name);
+                        wrapper_src_dumper.send(STR("{\n"));
+                        wrapper_src_dumper.send(STR("    static auto offset_it = MemberOffsets.find(STR(\"{}\"));\n"), final_variable_name);
+                        wrapper_src_dumper.send(STR(
+                                "    if (offset_it == MemberOffsets.end()) {{ throw std::runtime_error{{\"Tried getting member variable '{}::{}' "
+                                "that doesn't exist in this engine version.\"}}; }}\n"),
+                                                final_class_name,
+                                                final_variable_name);
+                        wrapper_src_dumper.send(STR("    static auto bitfield_it = BitfieldInfos.find(STR(\"{}\"));\n"), final_variable_name);
+                        wrapper_src_dumper.send(STR(
+                                "    if (bitfield_it == BitfieldInfos.end()) {{ throw std::runtime_error{{\"Bitfield info not found for '{}::{}'.\"}}; }}\n"),
+                                                final_class_name,
+                                                final_variable_name);
+                        wrapper_src_dumper.send(STR("    auto& info = bitfield_it->second;\n"));
+                        wrapper_src_dumper.send(STR("    return BitfieldProxy(Helper::Casting::ptr_cast<void*>(this, offset_it->second), info.bit_pos, info.bit_len, info.storage_size);\n"));
+                        wrapper_src_dumper.send(STR("}\n"));
+
+                        // Generate const ConstBitfieldProxy getter implementation
+                        wrapper_src_dumper.send(STR("ConstBitfieldProxy {}::Get{}() const\n"), final_class_name, final_variable_name);
+                        wrapper_src_dumper.send(STR("{\n"));
+                        wrapper_src_dumper.send(STR("    static auto offset_it = MemberOffsets.find(STR(\"{}\"));\n"), final_variable_name);
+                        wrapper_src_dumper.send(STR(
+                                "    if (offset_it == MemberOffsets.end()) {{ throw std::runtime_error{{\"Tried getting member variable '{}::{}' "
+                                "that doesn't exist in this engine version.\"}}; }}\n"),
+                                                final_class_name,
+                                                final_variable_name);
+                        wrapper_src_dumper.send(STR("    static auto bitfield_it = BitfieldInfos.find(STR(\"{}\"));\n"), final_variable_name);
+                        wrapper_src_dumper.send(STR(
+                                "    if (bitfield_it == BitfieldInfos.end()) {{ throw std::runtime_error{{\"Bitfield info not found for '{}::{}'.\"}}; }}\n"),
+                                                final_class_name,
+                                                final_variable_name);
+                        wrapper_src_dumper.send(STR("    auto& info = bitfield_it->second;\n"));
+                        wrapper_src_dumper.send(STR("    return ConstBitfieldProxy(Helper::Casting::ptr_cast<const void*>(this, offset_it->second), info.bit_pos, info.bit_len, info.storage_size);\n"));
+                        wrapper_src_dumper.send(STR("}\n\n"));
+                        // Bitfield body generation complete - fall through to MacroSetter generation
                     }
                     else
                     {
-                        header_wrapper_dumper.send(STR("    {}& Get{}();\n"), final_type_name, final_variable_name);
-                        header_wrapper_dumper.send(STR("    {}& Get{}() const;\n\n"), add_const_if_needed(final_type_name), final_variable_name);
-                        wrapper_src_dumper.send(STR("{}& {}::Get{}()\n"), final_type_name, final_class_name, final_variable_name);
+                        // Check if this is a pointer-to-member-function type which needs special handling
+                        // These types have complex syntax for reference return types: ReturnType (ClassName::*&)(Args...)
+                        // We handle this by generating a typedef
+                        if (is_pointer_to_member_function(final_type_name))
+                        {
+                            File::StringType typedef_name = final_variable_name + STR("_Type");
+                            header_wrapper_dumper.send(STR("    using {} = {};\n"), typedef_name, final_type_name);
+                            header_wrapper_dumper.send(STR("    {}& Get{}();\n"), typedef_name, final_variable_name);
+                            header_wrapper_dumper.send(STR("    const {}& Get{}() const;\n\n"), typedef_name, final_variable_name);
+                            wrapper_src_dumper.send(STR("{}::{}& {}::Get{}()\n"), final_class_name, typedef_name, final_class_name, final_variable_name);
+                        }
+                        else
+                        {
+                            header_wrapper_dumper.send(STR("    {}& Get{}();\n"), final_type_name, final_variable_name);
+                            header_wrapper_dumper.send(STR("    {}& Get{}() const;\n\n"), add_const_if_needed(final_type_name), final_variable_name);
+                            wrapper_src_dumper.send(STR("{}& {}::Get{}()\n"), final_type_name, final_class_name, final_variable_name);
+                        }
                     }
                 }
 
-                // Handle classes with inheritance relationship (only for non-versioned getters)
-                if (inheritance_info.has_value() && !variable.has_type_changes())
+                // Handle classes with inheritance relationship (only for non-versioned, non-bitfield getters)
+                if (inheritance_info.has_value() && !variable.has_type_changes() && !variable.is_bitfield)
                 {
+                    bool is_pmf_inherit = is_pointer_to_member_function(final_type_name);
+                    File::StringType typedef_name_inherit = final_variable_name + STR("_Type");
+
                     wrapper_src_dumper.send(STR("{\n"));
                     wrapper_src_dumper.send(STR("    static const int32_t offset = []() -> int32_t {\n"));
                     wrapper_src_dumper.send(STR("        static auto& primary_offsets = Version::IsBelow({}, {}) ? {}::MemberOffsets : {}::MemberOffsets;\n"),
@@ -581,8 +661,15 @@ namespace RC::UVTD
                     wrapper_src_dumper.send(STR("    return *Helper::Casting::ptr_cast<{}*>(this, offset);\n"), final_type_name);
                     wrapper_src_dumper.send(STR("}\n"));
 
-                    // Now do the same for the const version
-                    wrapper_src_dumper.send(STR("{}& {}::Get{}() const\n"), add_const_if_needed(final_type_name), final_class_name, final_variable_name);
+                    // Now do the same for the const version - use typedef for pointer-to-member-function types
+                    if (is_pmf_inherit)
+                    {
+                        wrapper_src_dumper.send(STR("const {}::{}& {}::Get{}() const\n"), final_class_name, typedef_name_inherit, final_class_name, final_variable_name);
+                    }
+                    else
+                    {
+                        wrapper_src_dumper.send(STR("{}& {}::Get{}() const\n"), add_const_if_needed(final_type_name), final_class_name, final_variable_name);
+                    }
                     wrapper_src_dumper.send(STR("{\n"));
                     wrapper_src_dumper.send(STR("    static const int32_t offset = []() -> int32_t {\n"));
                     wrapper_src_dumper.send(STR("        static auto& primary_offsets = Version::IsBelow({}, {}) ? {}::MemberOffsets : {}::MemberOffsets;\n"),
@@ -630,77 +717,46 @@ namespace RC::UVTD
                     wrapper_src_dumper.send(STR("    return *Helper::Casting::ptr_cast<{}*>(this, offset);\n"), add_const_if_needed(final_type_name));
                     wrapper_src_dumper.send(STR("}\n\n"));
                 }
-                else if (!variable.has_type_changes())
+                else if (!variable.has_type_changes() && !variable.is_bitfield)
                 {
-                    // Standard handling for classes without special inheritance or type changes
-                    if (variable.is_bitfield)
-                    {
-                        // Non-const BitfieldProxy getter - allows read and write
-                        // Bit position, length, and storage size come from BitfieldInfos at runtime (supports INI overrides)
-                        wrapper_src_dumper.send(STR("{\n"));
-                        wrapper_src_dumper.send(STR("    static auto offset_it = MemberOffsets.find(STR(\"{}\"));\n"), final_variable_name);
-                        wrapper_src_dumper.send(STR(
-                                "    if (offset_it == MemberOffsets.end()) {{ throw std::runtime_error{{\"Tried getting member variable '{}::{}' "
-                                "that doesn't exist in this engine version.\"}}; }}\n"),
-                                                final_class_name,
-                                                final_variable_name);
-                        wrapper_src_dumper.send(STR("    static auto bitfield_it = BitfieldInfos.find(STR(\"{}\"));\n"), final_variable_name);
-                        wrapper_src_dumper.send(STR(
-                                "    if (bitfield_it == BitfieldInfos.end()) {{ throw std::runtime_error{{\"Bitfield info not found for '{}::{}'.\"}}; }}\n"),
-                                                final_class_name,
-                                                final_variable_name);
-                        wrapper_src_dumper.send(STR("    auto& info = bitfield_it->second;\n"));
-                        wrapper_src_dumper.send(STR("    return BitfieldProxy(Helper::Casting::ptr_cast<void*>(this, offset_it->second), info.bit_pos, info.bit_len, info.storage_size);\n"));
-                        wrapper_src_dumper.send(STR("}\n"));
+                    // Standard handling for classes without special inheritance, type changes, or bitfields
+                    bool is_pmf = is_pointer_to_member_function(final_type_name);
+                    File::StringType typedef_name = final_variable_name + STR("_Type");
 
-                        // Const ConstBitfieldProxy getter - read only
-                        wrapper_src_dumper.send(STR("ConstBitfieldProxy {}::Get{}() const\n"),
-                                               final_class_name, final_variable_name);
-                        wrapper_src_dumper.send(STR("{\n"));
-                        wrapper_src_dumper.send(STR("    static auto offset_it = MemberOffsets.find(STR(\"{}\"));\n"), final_variable_name);
-                        wrapper_src_dumper.send(STR(
-                                "    if (offset_it == MemberOffsets.end()) {{ throw std::runtime_error{{\"Tried getting member variable '{}::{}' "
-                                "that doesn't exist in this engine version.\"}}; }}\n"),
-                                                final_class_name,
-                                                final_variable_name);
-                        wrapper_src_dumper.send(STR("    static auto bitfield_it = BitfieldInfos.find(STR(\"{}\"));\n"), final_variable_name);
-                        wrapper_src_dumper.send(STR(
-                                "    if (bitfield_it == BitfieldInfos.end()) {{ throw std::runtime_error{{\"Bitfield info not found for '{}::{}'.\"}}; }}\n"),
-                                                final_class_name,
-                                                final_variable_name);
-                        wrapper_src_dumper.send(STR("    auto& info = bitfield_it->second;\n"));
-                        wrapper_src_dumper.send(STR("    return ConstBitfieldProxy(Helper::Casting::ptr_cast<const void*>(this, offset_it->second), info.bit_pos, info.bit_len, info.storage_size);\n"));
-                        wrapper_src_dumper.send(STR("}\n\n"));
+                    wrapper_src_dumper.send(STR("{\n"));
+                    wrapper_src_dumper.send(STR("    static const int32_t offset = []() -> int32_t {\n"));
+                    wrapper_src_dumper.send(STR("        auto offset_it = MemberOffsets.find(STR(\"{}\"));\n"), final_variable_name);
+                    wrapper_src_dumper.send(STR(
+                            "        if (offset_it == MemberOffsets.end()) {{ throw std::runtime_error{{\"Tried getting member variable '{}::{}' "
+                            "that doesn't exist in this engine version.\"}}; }}\n"),
+                                            final_class_name,
+                                            final_variable_name);
+                    wrapper_src_dumper.send(STR("        return offset_it->second;\n"));
+                    wrapper_src_dumper.send(STR("    }();\n"));
+                    wrapper_src_dumper.send(STR("    return *Helper::Casting::ptr_cast<{}*>(this, offset);\n"), final_type_name);
+                    wrapper_src_dumper.send(STR("}\n"));
+
+                    // Const getter - use typedef for pointer-to-member-function types
+                    if (is_pmf)
+                    {
+                        wrapper_src_dumper.send(STR("const {}::{}& {}::Get{}() const\n"), final_class_name, typedef_name, final_class_name, final_variable_name);
                     }
                     else
                     {
-                        wrapper_src_dumper.send(STR("{\n"));
-                        wrapper_src_dumper.send(STR("    static const int32_t offset = []() -> int32_t {\n"));
-                        wrapper_src_dumper.send(STR("        auto offset_it = MemberOffsets.find(STR(\"{}\"));\n"), final_variable_name);
-                        wrapper_src_dumper.send(STR(
-                                "        if (offset_it == MemberOffsets.end()) {{ throw std::runtime_error{{\"Tried getting member variable '{}::{}' "
-                                "that doesn't exist in this engine version.\"}}; }}\n"),
-                                                final_class_name,
-                                                final_variable_name);
-                        wrapper_src_dumper.send(STR("        return offset_it->second;\n"));
-                        wrapper_src_dumper.send(STR("    }();\n"));
-                        wrapper_src_dumper.send(STR("    return *Helper::Casting::ptr_cast<{}*>(this, offset);\n"), final_type_name);
-                        wrapper_src_dumper.send(STR("}\n"));
-
                         wrapper_src_dumper.send(STR("{}& {}::Get{}() const\n"), add_const_if_needed(final_type_name), final_class_name, final_variable_name);
-                        wrapper_src_dumper.send(STR("{\n"));
-                        wrapper_src_dumper.send(STR("    static const int32_t offset = []() -> int32_t {\n"));
-                        wrapper_src_dumper.send(STR("        auto offset_it = MemberOffsets.find(STR(\"{}\"));\n"), final_variable_name);
-                        wrapper_src_dumper.send(STR(
-                                "        if (offset_it == MemberOffsets.end()) {{ throw std::runtime_error{{\"Tried getting member variable '{}::{}' "
-                                "that doesn't exist in this engine version.\"}}; }}\n"),
-                                                final_class_name,
-                                                final_variable_name);
-                        wrapper_src_dumper.send(STR("        return offset_it->second;\n"));
-                        wrapper_src_dumper.send(STR("    }();\n"));
-                        wrapper_src_dumper.send(STR("    return *Helper::Casting::ptr_cast<{}*>(this, offset);\n"), add_const_if_needed(final_type_name));
-                        wrapper_src_dumper.send(STR("}\n\n"));
                     }
+                    wrapper_src_dumper.send(STR("{\n"));
+                    wrapper_src_dumper.send(STR("    static const int32_t offset = []() -> int32_t {\n"));
+                    wrapper_src_dumper.send(STR("        auto offset_it = MemberOffsets.find(STR(\"{}\"));\n"), final_variable_name);
+                    wrapper_src_dumper.send(STR(
+                            "        if (offset_it == MemberOffsets.end()) {{ throw std::runtime_error{{\"Tried getting member variable '{}::{}' "
+                            "that doesn't exist in this engine version.\"}}; }}\n"),
+                                            final_class_name,
+                                            final_variable_name);
+                    wrapper_src_dumper.send(STR("        return offset_it->second;\n"));
+                    wrapper_src_dumper.send(STR("    }();\n"));
+                    wrapper_src_dumper.send(STR("    return *Helper::Casting::ptr_cast<{}*>(this, offset);\n"), add_const_if_needed(final_type_name));
+                    wrapper_src_dumper.send(STR("}\n\n"));
                 }
                 // Note: if variable.has_type_changes() is true, getters were already generated above
 
