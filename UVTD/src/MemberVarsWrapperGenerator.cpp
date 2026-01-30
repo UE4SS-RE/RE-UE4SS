@@ -232,7 +232,7 @@ namespace RC::UVTD
         macro_setter_dumper.send(STR("            bitfields.emplace(member_name, Unreal::BitfieldInfo{bit_pos, bit_len, storage_size});\n"));
         macro_setter_dumper.send(STR("        }\n"));
         macro_setter_dumper.send(STR("    } catch (const std::exception&) {}\n"));
-        macro_setter_dumper.send(STR("}\n\n"));
+        macro_setter_dumper.send(STR("};\n\n"));
 
         // Collect variables that need versioned wrappers (for separate file generation)
         std::vector<VariableWrapperInfo> variables_needing_wrappers;
