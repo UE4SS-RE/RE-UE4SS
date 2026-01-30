@@ -787,12 +787,6 @@ if (auto val = parser.get_int64(STR("UScriptStruct"), STR("CppStructOps"), -1); 
     Unreal::UScriptStruct::MemberOffsets.emplace(STR("CppStructOps"), static_cast<int32_t>(val));
 if (auto val = parser.get_int64(STR("UScriptStruct"), STR("UEP_TotalSize"), -1); val != -1)
     Unreal::UScriptStruct::MemberOffsets.emplace(STR("UEP_TotalSize"), static_cast<int32_t>(val));
-if (auto val = parser.get_int64(STR("UWorld"), STR("LineBatcher"), -1); val != -1)
-    Unreal::UWorld::MemberOffsets.emplace(STR("LineBatcher"), static_cast<int32_t>(val));
-if (auto val = parser.get_int64(STR("UWorld"), STR("PersistentLineBatcher"), -1); val != -1)
-    Unreal::UWorld::MemberOffsets.emplace(STR("PersistentLineBatcher"), static_cast<int32_t>(val));
-if (auto val = parser.get_int64(STR("UWorld"), STR("ForegroundLineBatcher"), -1); val != -1)
-    Unreal::UWorld::MemberOffsets.emplace(STR("ForegroundLineBatcher"), static_cast<int32_t>(val));
 if (auto val = parser.get_int64(STR("UWorld"), STR("ExtraReferencedObjects"), -1); val != -1)
     Unreal::UWorld::MemberOffsets.emplace(STR("ExtraReferencedObjects"), static_cast<int32_t>(val));
 if (auto val = parser.get_int64(STR("UWorld"), STR("PerModuleDataObjects"), -1); val != -1)
@@ -969,30 +963,8 @@ if (auto val_str = parser.get_string(STR("UWorld"), STR("bHasEverBeenInitialized
     ParseMemberOffset(val_str, Unreal::UWorld::MemberOffsets, Unreal::UWorld::BitfieldInfos, STR("bHasEverBeenInitialized"));
 if (auto val = parser.get_int64(STR("UWorld"), STR("bIsBeingCleanedUp"), -1); val != -1)
     Unreal::UWorld::MemberOffsets.emplace(STR("bIsBeingCleanedUp"), static_cast<int32_t>(val));
-if (auto val = parser.get_int64(STR("UWorld"), STR("LineBatcher_DEPRECATED"), -1); val != -1)
-    Unreal::UWorld::MemberOffsets.emplace(STR("LineBatcher_DEPRECATED"), static_cast<int32_t>(val));
-if (auto val = parser.get_int64(STR("UWorld"), STR("PersistentLineBatcher_DEPRECATED"), -1); val != -1)
-    Unreal::UWorld::MemberOffsets.emplace(STR("PersistentLineBatcher_DEPRECATED"), static_cast<int32_t>(val));
-if (auto val = parser.get_int64(STR("UWorld"), STR("ForegroundLineBatcher_DEPRECATED"), -1); val != -1)
-    Unreal::UWorld::MemberOffsets.emplace(STR("ForegroundLineBatcher_DEPRECATED"), static_cast<int32_t>(val));
-if (auto val = parser.get_int64(STR("UWorld"), STR("PhysicsQueryHandler"), -1); val != -1)
-    Unreal::UWorld::MemberOffsets.emplace(STR("PhysicsQueryHandler"), static_cast<int32_t>(val));
-if (auto val = parser.get_int64(STR("UWorld"), STR("DeferredComponentMoves"), -1); val != -1)
-    Unreal::UWorld::MemberOffsets.emplace(STR("DeferredComponentMoves"), static_cast<int32_t>(val));
-if (auto val = parser.get_int64(STR("UWorld"), STR("LineBatchers"), -1); val != -1)
-    Unreal::UWorld::MemberOffsets.emplace(STR("LineBatchers"), static_cast<int32_t>(val));
 if (auto val = parser.get_int64(STR("UWorld"), STR("PendingVisibilityLock"), -1); val != -1)
     Unreal::UWorld::MemberOffsets.emplace(STR("PendingVisibilityLock"), static_cast<int32_t>(val));
-if (auto val = parser.get_int64(STR("UWorld"), STR("AddLevelToWorldExtensionEvent"), -1); val != -1)
-    Unreal::UWorld::MemberOffsets.emplace(STR("AddLevelToWorldExtensionEvent"), static_cast<int32_t>(val));
-if (auto val = parser.get_int64(STR("UWorld"), STR("RemoveLevelFromWorldExtensionEvent"), -1); val != -1)
-    Unreal::UWorld::MemberOffsets.emplace(STR("RemoveLevelFromWorldExtensionEvent"), static_cast<int32_t>(val));
-if (auto val = parser.get_int64(STR("UWorld"), STR("EndOfFrameUpdateContexts"), -1); val != -1)
-    Unreal::UWorld::MemberOffsets.emplace(STR("EndOfFrameUpdateContexts"), static_cast<int32_t>(val));
-if (auto val = parser.get_int64(STR("UWorld"), STR("EndOfFrameUpdateTasks"), -1); val != -1)
-    Unreal::UWorld::MemberOffsets.emplace(STR("EndOfFrameUpdateTasks"), static_cast<int32_t>(val));
-if (auto val = parser.get_int64(STR("UWorld"), STR("EndOfFrameUpdatePrerequisiteTask"), -1); val != -1)
-    Unreal::UWorld::MemberOffsets.emplace(STR("EndOfFrameUpdatePrerequisiteTask"), static_cast<int32_t>(val));
 if (auto val = parser.get_int64(STR("UWorld"), STR("PostProcessVolumeCachedSizes"), -1); val != -1)
     Unreal::UWorld::MemberOffsets.emplace(STR("PostProcessVolumeCachedSizes"), static_cast<int32_t>(val));
 if (auto val = parser.get_int64(STR("UWorld"), STR("UEP_TotalSize"), -1); val != -1)
@@ -1242,3 +1214,26 @@ if (auto val = parser.get_int64(STR("TUObjectArray"), STR("NumChunks"), -1); val
     Unreal::TUObjectArray::MemberOffsets.emplace(STR("NumChunks"), static_cast<int32_t>(val));
 if (auto val = parser.get_int64(STR("TUObjectArray"), STR("UEP_TotalSize"), -1); val != -1)
     Unreal::TUObjectArray::MemberOffsets.emplace(STR("UEP_TotalSize"), static_cast<int32_t>(val));
+if (auto val = parser.get_int64(STR("FFieldClass"), STR("Name"), -1); val != -1)
+    Unreal::FFieldClass::MemberOffsets.emplace(STR("FName"), static_cast<int32_t>(val));
+// Also support using the renamed version in the INI file
+if (auto val = parser.get_int64(STR("FFieldClass"), STR("FName"), -1); val != -1)
+    Unreal::FFieldClass::MemberOffsets.emplace(STR("FName"), static_cast<int32_t>(val));
+if (auto val = parser.get_int64(STR("FFieldClass"), STR("Id"), -1); val != -1)
+    Unreal::FFieldClass::MemberOffsets.emplace(STR("Id"), static_cast<int32_t>(val));
+if (auto val = parser.get_int64(STR("FFieldClass"), STR("CastFlags"), -1); val != -1)
+    Unreal::FFieldClass::MemberOffsets.emplace(STR("CastFlags"), static_cast<int32_t>(val));
+if (auto val = parser.get_int64(STR("FFieldClass"), STR("ClassFlags"), -1); val != -1)
+    Unreal::FFieldClass::MemberOffsets.emplace(STR("ClassFlags"), static_cast<int32_t>(val));
+if (auto val = parser.get_int64(STR("FFieldClass"), STR("SuperClass"), -1); val != -1)
+    Unreal::FFieldClass::MemberOffsets.emplace(STR("SuperClass"), static_cast<int32_t>(val));
+if (auto val = parser.get_int64(STR("FFieldClass"), STR("DefaultObject"), -1); val != -1)
+    Unreal::FFieldClass::MemberOffsets.emplace(STR("DefaultObject"), static_cast<int32_t>(val));
+if (auto val = parser.get_int64(STR("FFieldClass"), STR("ConstructFn"), -1); val != -1)
+    Unreal::FFieldClass::MemberOffsets.emplace(STR("ConstructFn"), static_cast<int32_t>(val));
+if (auto val = parser.get_int64(STR("FFieldClass"), STR("UnqiueNameIndexCounter"), -1); val != -1)
+    Unreal::FFieldClass::MemberOffsets.emplace(STR("UnqiueNameIndexCounter"), static_cast<int32_t>(val));
+if (auto val = parser.get_int64(STR("FFieldClass"), STR("UniqueNameIndexCounter"), -1); val != -1)
+    Unreal::FFieldClass::MemberOffsets.emplace(STR("UniqueNameIndexCounter"), static_cast<int32_t>(val));
+if (auto val = parser.get_int64(STR("FFieldClass"), STR("UEP_TotalSize"), -1); val != -1)
+    Unreal::FFieldClass::MemberOffsets.emplace(STR("UEP_TotalSize"), static_cast<int32_t>(val));
