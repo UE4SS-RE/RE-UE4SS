@@ -77,6 +77,8 @@ if (auto val = parser.get_int64(STR("UStruct"), STR("DestructorLink"), -1); val 
     Unreal::UStruct::MemberOffsets.emplace(STR("DestructorLink"), static_cast<int32_t>(val));
 if (auto val = parser.get_int64(STR("UStruct"), STR("PostConstructLink"), -1); val != -1)
     Unreal::UStruct::MemberOffsets.emplace(STR("PostConstructLink"), static_cast<int32_t>(val));
+if (auto val = parser.get_int64(STR("UStruct"), STR("RollbackLink"), -1); val != -1)
+    Unreal::UStruct::MemberOffsets.emplace(STR("RollbackLink"), static_cast<int32_t>(val));
 if (auto val = parser.get_int64(STR("UStruct"), STR("ScriptObjectReferences"), -1); val != -1)
     Unreal::UStruct::MemberOffsets.emplace(STR("ScriptObjectReferences"), static_cast<int32_t>(val));
 if (auto val = parser.get_int64(STR("UStruct"), STR("ChildProperties"), -1); val != -1)
@@ -221,18 +223,20 @@ if (auto val = parser.get_int64(STR("FUObjectArray"), STR("ObjAvailableListEstim
     Unreal::FUObjectArray::MemberOffsets.emplace(STR("ObjAvailableListEstimateCount"), static_cast<int32_t>(val));
 if (auto val = parser.get_int64(STR("FUObjectArray"), STR("UEP_TotalSize"), -1); val != -1)
     Unreal::FUObjectArray::MemberOffsets.emplace(STR("UEP_TotalSize"), static_cast<int32_t>(val));
-if (auto val = parser.get_int64(STR("TUObjectArray"), STR("Objects"), -1); val != -1)
-    Unreal::TUObjectArray::MemberOffsets.emplace(STR("Objects"), static_cast<int32_t>(val));
-if (auto val = parser.get_int64(STR("TUObjectArray"), STR("PreAllocatedObjects"), -1); val != -1)
-    Unreal::TUObjectArray::MemberOffsets.emplace(STR("PreAllocatedObjects"), static_cast<int32_t>(val));
-if (auto val = parser.get_int64(STR("TUObjectArray"), STR("MaxElements"), -1); val != -1)
-    Unreal::TUObjectArray::MemberOffsets.emplace(STR("MaxElements"), static_cast<int32_t>(val));
+if (auto val = parser.get_int64(STR("TUObjectArray"), STR("Chunks"), -1); val != -1)
+    Unreal::TUObjectArray::MemberOffsets.emplace(STR("Chunks"), static_cast<int32_t>(val));
 if (auto val = parser.get_int64(STR("TUObjectArray"), STR("NumElements"), -1); val != -1)
     Unreal::TUObjectArray::MemberOffsets.emplace(STR("NumElements"), static_cast<int32_t>(val));
-if (auto val = parser.get_int64(STR("TUObjectArray"), STR("MaxChunks"), -1); val != -1)
-    Unreal::TUObjectArray::MemberOffsets.emplace(STR("MaxChunks"), static_cast<int32_t>(val));
 if (auto val = parser.get_int64(STR("TUObjectArray"), STR("NumChunks"), -1); val != -1)
     Unreal::TUObjectArray::MemberOffsets.emplace(STR("NumChunks"), static_cast<int32_t>(val));
+if (auto val = parser.get_int64(STR("TUObjectArray"), STR("Objects"), -1); val != -1)
+    Unreal::TUObjectArray::MemberOffsets.emplace(STR("Objects"), static_cast<int32_t>(val));
+if (auto val = parser.get_int64(STR("TUObjectArray"), STR("MaxElements"), -1); val != -1)
+    Unreal::TUObjectArray::MemberOffsets.emplace(STR("MaxElements"), static_cast<int32_t>(val));
+if (auto val = parser.get_int64(STR("TUObjectArray"), STR("PreAllocatedObjects"), -1); val != -1)
+    Unreal::TUObjectArray::MemberOffsets.emplace(STR("PreAllocatedObjects"), static_cast<int32_t>(val));
+if (auto val = parser.get_int64(STR("TUObjectArray"), STR("MaxChunks"), -1); val != -1)
+    Unreal::TUObjectArray::MemberOffsets.emplace(STR("MaxChunks"), static_cast<int32_t>(val));
 if (auto val = parser.get_int64(STR("TUObjectArray"), STR("UEP_TotalSize"), -1); val != -1)
     Unreal::TUObjectArray::MemberOffsets.emplace(STR("UEP_TotalSize"), static_cast<int32_t>(val));
 if (auto val = parser.get_int64(STR("FArchive"), STR("ArNetVer"), -1); val != -1)
@@ -275,8 +279,6 @@ if (auto val_str = parser.get_string(STR("FArchive"), STR("ArNoDelta"), {}); !va
     ParseMemberOffset(val_str, Unreal::FArchive::MemberOffsets, Unreal::FArchive::BitfieldInfos, STR("ArNoDelta"));
 if (auto val_str = parser.get_string(STR("FArchive"), STR("ArIgnoreOuterRef"), {}); !val_str.empty())
     ParseMemberOffset(val_str, Unreal::FArchive::MemberOffsets, Unreal::FArchive::BitfieldInfos, STR("ArIgnoreOuterRef"));
-if (auto val_str = parser.get_string(STR("FArchive"), STR("ArIgnoreClassGeneratedByRef"), {}); !val_str.empty())
-    ParseMemberOffset(val_str, Unreal::FArchive::MemberOffsets, Unreal::FArchive::BitfieldInfos, STR("ArIgnoreClassGeneratedByRef"));
 if (auto val_str = parser.get_string(STR("FArchive"), STR("ArIgnoreClassRef"), {}); !val_str.empty())
     ParseMemberOffset(val_str, Unreal::FArchive::MemberOffsets, Unreal::FArchive::BitfieldInfos, STR("ArIgnoreClassRef"));
 if (auto val_str = parser.get_string(STR("FArchive"), STR("ArAllowLazyLoading"), {}); !val_str.empty())
@@ -293,6 +295,8 @@ if (auto val_str = parser.get_string(STR("FArchive"), STR("ArIsFilterEditorOnly"
     ParseMemberOffset(val_str, Unreal::FArchive::MemberOffsets, Unreal::FArchive::BitfieldInfos, STR("ArIsFilterEditorOnly"));
 if (auto val_str = parser.get_string(STR("FArchive"), STR("ArIsSaveGame"), {}); !val_str.empty())
     ParseMemberOffset(val_str, Unreal::FArchive::MemberOffsets, Unreal::FArchive::BitfieldInfos, STR("ArIsSaveGame"));
+if (auto val = parser.get_int64(STR("FArchive"), STR("ArIsRollback"), -1); val != -1)
+    Unreal::FArchive::MemberOffsets.emplace(STR("ArIsRollback"), static_cast<int32_t>(val));
 if (auto val = parser.get_int64(STR("FArchive"), STR("ArSerializingDefaults"), -1); val != -1)
     Unreal::FArchive::MemberOffsets.emplace(STR("ArSerializingDefaults"), static_cast<int32_t>(val));
 if (auto val = parser.get_int64(STR("FArchive"), STR("ArPortFlags"), -1); val != -1)
@@ -305,6 +309,8 @@ if (auto val = parser.get_int64(STR("FArchive"), STR("SerializedProperty"), -1);
     Unreal::FArchive::MemberOffsets.emplace(STR("SerializedProperty"), static_cast<int32_t>(val));
 if (auto val = parser.get_int64(STR("FArchive"), STR("bCustomVersionsAreReset"), -1); val != -1)
     Unreal::FArchive::MemberOffsets.emplace(STR("bCustomVersionsAreReset"), static_cast<int32_t>(val));
+if (auto val_str = parser.get_string(STR("FArchive"), STR("ArIgnoreClassGeneratedByRef"), {}); !val_str.empty())
+    ParseMemberOffset(val_str, Unreal::FArchive::MemberOffsets, Unreal::FArchive::BitfieldInfos, STR("ArIgnoreClassGeneratedByRef"));
 if (auto val = parser.get_int64(STR("FArchive"), STR("ArCustomPropertyList"), -1); val != -1)
     Unreal::FArchive::MemberOffsets.emplace(STR("ArCustomPropertyList"), static_cast<int32_t>(val));
 if (auto val_str = parser.get_string(STR("FArchive"), STR("ArUseCustomPropertyList"), {}); !val_str.empty())
@@ -806,6 +812,8 @@ if (auto val = parser.get_int64(STR("FProperty"), STR("DestructorLinkNext"), -1)
     Unreal::FProperty::MemberOffsets.emplace(STR("DestructorLinkNext"), static_cast<int32_t>(val));
 if (auto val = parser.get_int64(STR("FProperty"), STR("PostConstructLinkNext"), -1); val != -1)
     Unreal::FProperty::MemberOffsets.emplace(STR("PostConstructLinkNext"), static_cast<int32_t>(val));
+if (auto val = parser.get_int64(STR("FProperty"), STR("RollbackLinkNext"), -1); val != -1)
+    Unreal::FProperty::MemberOffsets.emplace(STR("RollbackLinkNext"), static_cast<int32_t>(val));
 if (auto val = parser.get_int64(STR("FProperty"), STR("UEP_TotalSize"), -1); val != -1)
     Unreal::FProperty::MemberOffsets.emplace(STR("UEP_TotalSize"), static_cast<int32_t>(val));
 if (auto val = parser.get_int64(STR("FMulticastDelegateProperty"), STR("SignatureFunction"), -1); val != -1)
