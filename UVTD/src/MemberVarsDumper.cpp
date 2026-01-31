@@ -114,7 +114,7 @@ namespace RC::UVTD
                 const auto name_info = names.find(class_name_final);
                 if (name_info == names.end()) continue;
 
-                process_class(tpi_stream, type_record, class_name, name_info->second);
+                process_class(tpi_stream, type_record, class_name_final, name_info->second);
             }
         }
         return;
