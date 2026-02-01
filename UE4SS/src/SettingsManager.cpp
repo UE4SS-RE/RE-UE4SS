@@ -98,6 +98,16 @@ namespace RC
         {
             General.DefaultExecuteInGameThreadMethod = GameThreadExecutionMethod::EngineTick;
         }
+        StringType default_fname_to_string_method{};
+        REGISTER_STRING_SETTING(default_fname_to_string_method, section_general, DefaultFNameToStringMethod)
+        if (String::iequal(default_fname_to_string_method, STR("Scan")))
+        {
+            General.DefaultFNameToStringMethod = Unreal::UnrealInitializer::FNameToStringMethod::Scan;
+        }
+        else if (String::iequal(default_fname_to_string_method, STR("Conv_NameToString")))
+        {
+            General.DefaultFNameToStringMethod = Unreal::UnrealInitializer::FNameToStringMethod::Conv_NameToString;
+        }
 
         constexpr static File::CharType section_engine_version_override[] = STR("EngineVersionOverride");
         REGISTER_INT64_SETTING(EngineVersionOverride.MajorVersion, section_engine_version_override, MajorVersion)
