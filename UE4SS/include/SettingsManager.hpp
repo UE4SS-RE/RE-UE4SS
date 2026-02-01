@@ -40,6 +40,7 @@ namespace RC
             bool DoEarlyScan{false};
             bool SearchByAddress{false};
             GameThreadExecutionMethod DefaultExecuteInGameThreadMethod{GameThreadExecutionMethod::EngineTick};
+            Unreal::UnrealInitializer::FNameToStringMethod DefaultFNameToStringMethod{Unreal::UnrealInitializer::FNameToStringMethod::Scan};
         } General;
 
         struct SectionEngineVersionOverride
