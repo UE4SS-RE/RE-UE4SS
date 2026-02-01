@@ -43,7 +43,7 @@ Added new build definition "LessEqual421".  Using this definition for games on U
 Added optional scans for GUObjectHashTables, GNatives and ConsoleManagerSingleton; made FText an optional scan; externed the found GNatives for use by mods([UE4SS #744](https://github.com/UE4SS-RE/RE-UE4SS/pull/744)) 
 - GUObjectHashTables and ConsoleManagerSingleton are currently unused and a WIP.
 
-UE Platform support, which allows for much easier internal implementation of new Unreal classes ([UEPseudo #80](https://github.com/Re-UE4SS/UEPseudo/pull/80)) - narknon, localcc 
+UE Platform support, which allows for much easier internal implementation of new Unreal classes ([UEPseudo #80](https://github.com/Re-UE4SS/UEPseudo/pull/80)) - narknon, localcc
 
 Added new installation method by allowing overriding of the location of the `UE4SS.dll`, [documentation](https://docs.ue4ss.com/installation-guide.html#overriding-install-location). - ([UE4SS #506](https://github.com/UE4SS-RE/RE-UE4SS/pull/506)) - Buckminsterfullerene 
 
@@ -323,6 +323,8 @@ The execution of the game is now paused durin the first AOB scan, and then resum
 
 Removed the FText constructor AOB, replaced it with more consistent non-AOB method of constructing FText instances ([UE4SS #1139](https://github.com/UE4SS-RE/RE-UE4SS/pull/1139))
 
+Made the scan for FName::ToString optional. ([UE4SS #1175](https://github.com/UE4SS-RE/RE-UE4SS/pull/1175) - [UEPseudo 169](https://github.com/Re-UE4SS/UEPseudo/pull/169))
+
 ### Live View 
 Fixed the majority of the lag ([UE4SS #512](https://github.com/UE4SS-RE/RE-UE4SS/pull/512)) 
 
@@ -539,6 +541,11 @@ ControllingModsTxt =
 ; Valid values (case-insensitive): Anything from Mods/Keybinds/Scripts/main.lua
 ; Default: R
 HotReloadKey = R
+
+; The default method for converting FName to string.
+; Valid values (case-insensitive): Scan, Conv_NameToString
+; Default: Scan
+DefaultFNameToStringMethod = Scan
 
 [EngineVersionOverride]
 ; True if the game is built as Debug, Development, or Test.
