@@ -856,6 +856,7 @@ namespace RC
         config.bHookProcessConsoleExec = settings_manager.Hooks.HookProcessConsoleExec;
         config.bHookUStructLink = settings_manager.Hooks.HookUStructLink;
         config.FExecVTableOffsetInLocalPlayer = settings_manager.Hooks.FExecVTableOffsetInLocalPlayer;
+        config.FNameToStringMethod = settings_manager.General.DefaultFNameToStringMethod;
         // Apply Debug Build setting from settings file only for now.
         Unreal::Version::DebugBuild = settings_manager.EngineVersionOverride.DebugBuild;
         Output::send<LogLevel::Warning>(STR("DebugGame Setting Enabled? {}\n"), Unreal::Version::DebugBuild);

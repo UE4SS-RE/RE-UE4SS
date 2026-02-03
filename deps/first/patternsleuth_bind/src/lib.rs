@@ -170,7 +170,7 @@ pub fn ps_scan_internal(ctx: &PsCtx, results: &mut PsScanResults) -> Result<(), 
     }
     handle!(guobject_array, "GUObjectArray", "GUObjectArray.lua");
     handle!(gmalloc, "GMalloc", "GMalloc.lua");
-    handle!(fname_tostring, "FName::ToString", "FName_ToString.lua");
+    handle!(fname_tostring, "FName::ToString", "FName_ToString.lua", true);
     handle!(
         fname_ctor_wchar,
         "FName::FName(wchar_t*)",
