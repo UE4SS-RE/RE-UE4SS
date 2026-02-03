@@ -294,6 +294,7 @@ Added improved string and path conversion utilities with proper UTF-8 support ([
 - **BREAKING:** `to_charT_string_path()` now returns UTF-8 encoded strings for char type instead of locale-dependent encoding
 
 ### BPModLoader 
+BREAKING: default INSERT keybind to manually reload the ModActors was changed to les obtrusive ALT+INSERT
 
 ### Experimental 
 
