@@ -5607,19 +5607,32 @@ Overloads:
         // Otherwise process_event_hook may try to execute actions with an invalid Lua state
         // Note: action.lua points to m_hook_lua (a thread), so compare against that
         // Must be done BEFORE m_hook_lua is set to nullptr
-        std::erase_if(m_game_thread_actions, [&](const SimpleLuaAction& action) {
-            return action.lua == m_hook_lua;
-        });
+        // Must hold mutex to synchronize with hook functions that process these vectors
+        {
+            std::lock_guard<std::recursive_mutex> guard{m_thread_actions_mutex};
+            std::erase_if(m_game_thread_actions, [&](const SimpleLuaAction& action) {
+                return action.lua == m_hook_lua;
+            });
+            std::erase_if(m_pending_game_thread_actions, [&](const SimpleLuaAction& action) {
+                return action.lua == m_hook_lua;
+            });
 
-        // Remove any pending engine tick actions for this mod
-        std::erase_if(m_engine_tick_actions, [&](const SimpleLuaAction& action) {
-            return action.lua == m_hook_lua;
-        });
+            // Remove any pending engine tick actions for this mod
+            std::erase_if(m_engine_tick_actions, [&](const SimpleLuaAction& action) {
+                return action.lua == m_hook_lua;
+            });
+            std::erase_if(m_pending_engine_tick_actions, [&](const SimpleLuaAction& action) {
+                return action.lua == m_hook_lua;
+            });
 
-        // Remove any delayed game thread actions for this mod
-        std::erase_if(m_delayed_game_thread_actions, [&](const DelayedGameThreadAction& action) {
-            return action.lua == m_hook_lua;
-        });
+            // Remove any delayed game thread actions for this mod
+            std::erase_if(m_delayed_game_thread_actions, [&](const DelayedGameThreadAction& action) {
+                return action.lua == m_hook_lua;
+            });
+            std::erase_if(m_pending_delayed_game_thread_actions, [&](const DelayedGameThreadAction& action) {
+                return action.lua == m_hook_lua;
+            });
+        }
 
         if (m_hook_lua != nullptr)
         {
