@@ -4,6 +4,7 @@
 
 #include <format>
 #include <functional>
+#include <type_traits>
 
 #include <Constructs/Generator.hpp>
 #include <DynamicOutput/DynamicOutput.hpp>
@@ -797,12 +798,16 @@ Overloads:
             }
 
             Unreal::FName property_name = Unreal::FName(member_name, Unreal::FNAME_Find);
-            Unreal::FField* field = LuaCustomProperty::StaticStorage::property_list.find_or_nullptr(lua_object.get_remote_cpp_object(), member_name);
+            Unreal::FField* field = LuaCustomProperty::StaticStorage::property_list.find_or_nullptr(object, member_name);
 
             if (!field)
             {
-                auto* object = lua_object.get_remote_cpp_object();
-                auto* obj_as_struct = Unreal::Cast<Unreal::UStruct>(object);
+                Unreal::UStruct* obj_as_struct = nullptr;
+                if constexpr (std::is_base_of_v<Unreal::UStruct, DerivedType>)
+                {
+                    // Avoid runtime Cast/IsA here; this path is hit in __index for hot code paths.
+                    obj_as_struct = static_cast<Unreal::UStruct*>(object);
+                }
                 if (!obj_as_struct)
                 {
                     obj_as_struct = object->GetClassPrivate();
