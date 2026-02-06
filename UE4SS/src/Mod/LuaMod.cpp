@@ -5536,18 +5536,20 @@ Overloads:
 
     auto LuaMod::uninstall() -> void
     {
-        // ProcessEvent hook may try to run, and the lua state will not be valid
-        std::lock_guard<std::recursive_mutex> guard{LuaMod::m_thread_actions_mutex};
-
         Output::send(STR("Stopping mod '{}' for uninstall\n"), m_mod_name);
 
-        fire_on_lua_stop_for_cpp_mods();
-
+        // Stop the async thread BEFORE acquiring the mutex to avoid deadlock
+        // (async thread's callbacks may need the mutex when calling ExecuteInGameThread)
         if (m_async_thread.joinable())
         {
             m_async_thread.request_stop();
             m_async_thread.join();
         }
+
+        // Now acquire mutex to safely modify shared data structures
+        std::lock_guard<std::recursive_mutex> guard{LuaMod::m_thread_actions_mutex};
+
+        fire_on_lua_stop_for_cpp_mods();
 
         erase_from_container(this, m_static_construct_object_lua_callbacks);
         erase_from_container(this, m_process_console_exec_pre_callbacks);
