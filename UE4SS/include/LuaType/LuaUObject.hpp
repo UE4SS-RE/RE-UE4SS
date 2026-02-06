@@ -769,12 +769,13 @@ Overloads:
         auto static prepare_to_handle(const Operation operation, const LuaMadeSimple::Lua& lua) -> void
         {
             auto& lua_object = lua.get_userdata<SelfType>();
+            auto* object = lua_object.get_remote_cpp_object();
 
             const StringType& member_name = ensure_str_const(lua.get_string());
 
             // If nullptr then we assume the UObject wasn't found so lets return an invalid UObject to Lua
             // This allows the safe chaining of "__index" as long as the Lua script checks ":IsValid()" before using the object
-            if (!lua_object.get_remote_cpp_object())
+            if (!object)
             {
                 // If the operation is not "Get" then this isn't "__index" and we want to do nothing in this case
                 switch (operation)
@@ -809,7 +810,7 @@ Overloads:
                 field = obj_as_struct->FindProperty(property_name);
             }
 
-            handle_unreal_property_value(operation, lua, lua_object.get_remote_cpp_object(), property_name, field);
+            handle_unreal_property_value(operation, lua, object, property_name, field);
         }
     };
 
