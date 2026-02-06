@@ -6043,6 +6043,9 @@ Overloads:
 
         Unreal::Hook::RegisterStaticConstructObjectPostCallback([](const Unreal::FStaticConstructObjectParameters&, Unreal::UObject* constructed_object) {
             return TRY([&] {
+                // We must protect all Lua state access with the mutex to prevent corruption.
+                std::lock_guard<std::recursive_mutex> guard{LuaMod::m_thread_actions_mutex};
+
                 Unreal::UStruct* object_class = constructed_object->GetClassPrivate();
                 while (object_class)
                 {
