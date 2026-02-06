@@ -4039,6 +4039,10 @@ Overloads:
                 LuaMod::ensure_process_event_hooked(mod);
             }
 
+            // Acquire mutex before ANY Lua state operations to prevent race conditions
+            // when async thread and game thread both access the same hook_lua state
+            std::lock_guard<std::recursive_mutex> guard{LuaMod::m_thread_actions_mutex};
+
             auto [hook_lua, lua_thread_registry_index] = make_hook_state(mod);
 
             lua_pushvalue(L, callback_idx);
@@ -4133,16 +4137,24 @@ Overloads:
                 auto handle = lua_tointeger(L, 1);
                 auto delay_ms = lua_tointeger(L, 2);
 
-                // Check if handle already exists
+                // Acquire mutex before ANY Lua state operations to prevent race conditions
+                std::lock_guard<std::recursive_mutex> guard{LuaMod::m_thread_actions_mutex};
+
+                // Check if handle already exists (check both main and pending queues)
+                for (const auto& action : LuaMod::m_delayed_game_thread_actions)
                 {
-                    std::lock_guard<std::recursive_mutex> guard{LuaMod::m_thread_actions_mutex};
-                    for (const auto& action : LuaMod::m_delayed_game_thread_actions)
+                    if (action.handle == handle && action.status != LuaMod::DelayedActionStatus::PendingRemoval)
                     {
-                        if (action.handle == handle && action.status != LuaMod::DelayedActionStatus::PendingRemoval)
-                        {
-                            // Handle exists, do nothing (like UE's Delay node)
-                            return 0;
-                        }
+                        // Handle exists, do nothing (like UE's Delay node)
+                        return 0;
+                    }
+                }
+                for (const auto& action : LuaMod::m_pending_delayed_game_thread_actions)
+                {
+                    if (action.handle == handle && action.status != LuaMod::DelayedActionStatus::PendingRemoval)
+                    {
+                        // Handle exists in pending queue, do nothing
+                        return 0;
                     }
                 }
 
@@ -4178,6 +4190,10 @@ Overloads:
             {
                 // Overload #1: ExecuteInGameThreadWithDelay(delayMs, callback) -> handle
                 auto delay_ms = lua_tointeger(L, 1);
+
+                // Acquire mutex before ANY Lua state operations to prevent race conditions
+                std::lock_guard<std::recursive_mutex> guard{LuaMod::m_thread_actions_mutex};
+
                 auto [hook_lua, lua_thread_registry_index] = make_hook_state(mod);
 
                 lua_pushvalue(L, 2);
@@ -4256,20 +4272,32 @@ Overloads:
             auto handle = lua_tointeger(L, 1);
             auto delay_ms = lua_tointeger(L, 2);
 
-            // Check if an action with this handle already exists
+            // Acquire mutex before ANY Lua state operations to prevent race conditions
+            std::lock_guard<std::recursive_mutex> guard{LuaMod::m_thread_actions_mutex};
+
+            // Check if an action with this handle already exists (check both main and pending queues)
+            for (auto& action : LuaMod::m_delayed_game_thread_actions)
             {
-                std::lock_guard<std::recursive_mutex> guard{LuaMod::m_thread_actions_mutex};
-                for (auto& action : LuaMod::m_delayed_game_thread_actions)
+                if (action.handle == handle && action.status != LuaMod::DelayedActionStatus::PendingRemoval)
                 {
-                    if (action.handle == handle && action.status != LuaMod::DelayedActionStatus::PendingRemoval)
-                    {
-                        // Reset the timer for the existing action
-                        action.delay_ms = delay_ms;
-                        action.execute_at = std::chrono::steady_clock::now() + std::chrono::milliseconds(delay_ms);
-                        action.status = LuaMod::DelayedActionStatus::Active;  // Unpause if paused
-                        lua.set_integer(handle);
-                        return 1;
-                    }
+                    // Reset the timer for the existing action
+                    action.delay_ms = delay_ms;
+                    action.execute_at = std::chrono::steady_clock::now() + std::chrono::milliseconds(delay_ms);
+                    action.status = LuaMod::DelayedActionStatus::Active;  // Unpause if paused
+                    lua.set_integer(handle);
+                    return 1;
+                }
+            }
+            for (auto& action : LuaMod::m_pending_delayed_game_thread_actions)
+            {
+                if (action.handle == handle && action.status != LuaMod::DelayedActionStatus::PendingRemoval)
+                {
+                    // Reset the timer for the existing action in pending queue
+                    action.delay_ms = delay_ms;
+                    action.execute_at = std::chrono::steady_clock::now() + std::chrono::milliseconds(delay_ms);
+                    action.status = LuaMod::DelayedActionStatus::Active;  // Unpause if paused
+                    lua.set_integer(handle);
+                    return 1;
                 }
             }
 
@@ -4325,6 +4353,10 @@ Overloads:
 
             auto frames = lua.get_integer();
             auto mod = get_mod_ref(lua);
+
+            // Acquire mutex before ANY Lua state operations to prevent race conditions
+            std::lock_guard<std::recursive_mutex> guard{LuaMod::m_thread_actions_mutex};
+
             auto [hook_lua, lua_thread_registry_index] = make_hook_state(mod);
 
             lua_pushvalue(L, 1);
@@ -4400,6 +4432,10 @@ Overloads:
             }
 
             auto delay_ms = lua.get_integer();
+
+            // Acquire mutex before ANY Lua state operations to prevent race conditions
+            std::lock_guard<std::recursive_mutex> guard{LuaMod::m_thread_actions_mutex};
+
             auto [hook_lua, lua_thread_registry_index] = make_hook_state(mod);
 
             lua_pushvalue(L, 1);
@@ -4452,6 +4488,10 @@ Overloads:
 
             auto frames = lua.get_integer();
             auto mod = get_mod_ref(lua);
+
+            // Acquire mutex before ANY Lua state operations to prevent race conditions
+            std::lock_guard<std::recursive_mutex> guard{LuaMod::m_thread_actions_mutex};
+
             auto [hook_lua, lua_thread_registry_index] = make_hook_state(mod);
 
             // After get_integer() pops the first arg, the function is now at index 1
