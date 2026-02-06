@@ -637,6 +637,7 @@ Overloads:
 #1: HasAllFlags(EObjectFlags ObjectFlags))"};
 
                 const auto& lua_object = lua.get_userdata<SelfType>();
+                auto* object = lua_object.get_remote_cpp_object();
 
                 if (!lua.is_integer())
                 {
@@ -644,7 +645,12 @@ Overloads:
                 }
 
                 Unreal::EObjectFlags object_flags = static_cast<Unreal::EObjectFlags>(lua.get_integer());
-                lua.set_bool(lua_object.get_remote_cpp_object()->HasAllFlags(object_flags));
+                if (!object)
+                {
+                    lua.set_bool(false);
+                    return 1;
+                }
+                lua.set_bool(object->HasAllFlags(object_flags));
                 return 1;
             });
 
@@ -655,6 +661,7 @@ Overloads:
 #1: HasAnyFlags(EObjectFlags ObjectFlags))"};
 
                 const auto& lua_object = lua.get_userdata<SelfType>();
+                auto* object = lua_object.get_remote_cpp_object();
 
                 if (!lua.is_integer())
                 {
@@ -662,7 +669,12 @@ Overloads:
                 }
 
                 Unreal::EObjectFlags object_flags = static_cast<Unreal::EObjectFlags>(lua.get_integer());
-                lua.set_bool(lua_object.get_remote_cpp_object()->HasAnyFlags(object_flags));
+                if (!object)
+                {
+                    lua.set_bool(false);
+                    return 1;
+                }
+                lua.set_bool(object->HasAnyFlags(object_flags));
                 return 1;
             });
 
@@ -673,6 +685,7 @@ Overloads:
 #1: HasAnyInternalFlags(EInternalObjectFlags InternalObjectFlags))"};
 
                 const auto& lua_object = lua.get_userdata<SelfType>();
+                auto* object = lua_object.get_remote_cpp_object();
 
                 if (!lua.is_integer())
                 {
@@ -680,7 +693,12 @@ Overloads:
                 }
 
                 Unreal::EInternalObjectFlags object_internal_flags = static_cast<Unreal::EInternalObjectFlags>(lua.get_integer());
-                lua.set_bool(lua_object.get_remote_cpp_object()->HasAnyInternalFlags(object_internal_flags));
+                if (!object)
+                {
+                    lua.set_bool(false);
+                    return 1;
+                }
+                lua.set_bool(object->HasAnyInternalFlags(object_internal_flags));
                 return 1;
             });
 
