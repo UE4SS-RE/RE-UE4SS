@@ -3780,8 +3780,30 @@ Overloads:
     {
         std::lock_guard<std::recursive_mutex> guard{LuaMod::m_thread_actions_mutex};
 
+        // Set flag to redirect new registrations to pending queues during iteration
+        LuaMod::m_is_processing_actions = true;
+
         process_simple_actions(LuaMod::m_game_thread_actions);
         process_delayed_actions<GameThreadExecutionMethod::ProcessEvent>(LuaMod::m_delayed_game_thread_actions);
+
+        // Merge any actions that were registered during processing
+        LuaMod::m_is_processing_actions = false;
+        if (!LuaMod::m_pending_game_thread_actions.empty())
+        {
+            LuaMod::m_game_thread_actions.insert(
+                LuaMod::m_game_thread_actions.end(),
+                std::make_move_iterator(LuaMod::m_pending_game_thread_actions.begin()),
+                std::make_move_iterator(LuaMod::m_pending_game_thread_actions.end()));
+            LuaMod::m_pending_game_thread_actions.clear();
+        }
+        if (!LuaMod::m_pending_delayed_game_thread_actions.empty())
+        {
+            LuaMod::m_delayed_game_thread_actions.insert(
+                LuaMod::m_delayed_game_thread_actions.end(),
+                std::make_move_iterator(LuaMod::m_pending_delayed_game_thread_actions.begin()),
+                std::make_move_iterator(LuaMod::m_pending_delayed_game_thread_actions.end()));
+            LuaMod::m_pending_delayed_game_thread_actions.clear();
+        }
     }
 
     auto static engine_tick_hook([[maybe_unused]] Unreal::Hook::TCallbackIterationData<void>& CallbackIterationData,
@@ -3791,8 +3813,30 @@ Overloads:
     {
         std::lock_guard<std::recursive_mutex> guard{LuaMod::m_thread_actions_mutex};
 
+        // Set flag to redirect new registrations to pending queues during iteration
+        LuaMod::m_is_processing_actions = true;
+
         process_simple_actions(LuaMod::m_engine_tick_actions);
         process_delayed_actions<GameThreadExecutionMethod::EngineTick>(LuaMod::m_delayed_game_thread_actions);
+
+        // Merge any actions that were registered during processing
+        LuaMod::m_is_processing_actions = false;
+        if (!LuaMod::m_pending_engine_tick_actions.empty())
+        {
+            LuaMod::m_engine_tick_actions.insert(
+                LuaMod::m_engine_tick_actions.end(),
+                std::make_move_iterator(LuaMod::m_pending_engine_tick_actions.begin()),
+                std::make_move_iterator(LuaMod::m_pending_engine_tick_actions.end()));
+            LuaMod::m_pending_engine_tick_actions.clear();
+        }
+        if (!LuaMod::m_pending_delayed_game_thread_actions.empty())
+        {
+            LuaMod::m_delayed_game_thread_actions.insert(
+                LuaMod::m_delayed_game_thread_actions.end(),
+                std::make_move_iterator(LuaMod::m_pending_delayed_game_thread_actions.begin()),
+                std::make_move_iterator(LuaMod::m_pending_delayed_game_thread_actions.end()));
+            LuaMod::m_pending_delayed_game_thread_actions.clear();
+        }
     }
 
     // Local convenience wrappers for Capabilities functions
