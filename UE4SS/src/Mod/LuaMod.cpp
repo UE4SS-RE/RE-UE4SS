@@ -4046,15 +4046,28 @@ Overloads:
             const auto func_ref = luaL_ref(hook_lua->get_lua_state(), LUA_REGISTRYINDEX);
 
             SimpleLuaAction simpleAction{hook_lua, func_ref, lua_thread_registry_index};
+            if (method == GameThreadExecutionMethod::EngineTick)
             {
-                std::lock_guard<std::recursive_mutex> guard{LuaMod::m_thread_actions_mutex};
-                if (method == GameThreadExecutionMethod::EngineTick)
+                // Use pending queue if we're currently iterating to prevent iterator invalidation
+                if (LuaMod::m_is_processing_actions)
                 {
-                    LuaMod::m_engine_tick_actions.emplace_back(simpleAction);
+                    LuaMod::m_pending_engine_tick_actions.emplace_back(simpleAction);
                 }
                 else
                 {
-                    mod->m_game_thread_actions.emplace_back(simpleAction);
+                    LuaMod::m_engine_tick_actions.emplace_back(simpleAction);
+                }
+            }
+            else
+            {
+                // Use pending queue if we're currently iterating to prevent iterator invalidation
+                if (LuaMod::m_is_processing_actions)
+                {
+                    LuaMod::m_pending_game_thread_actions.emplace_back(simpleAction);
+                }
+                else
+                {
+                    LuaMod::m_game_thread_actions.emplace_back(simpleAction);
                 }
             }
 
@@ -4149,8 +4162,13 @@ Overloads:
                 action.execute_at = std::chrono::steady_clock::now() + std::chrono::milliseconds(delay_ms);
                 action.handle = handle;
 
+                // Use pending queue if we're currently iterating to prevent iterator invalidation
+                if (LuaMod::m_is_processing_actions)
                 {
-                    std::lock_guard<std::recursive_mutex> guard{LuaMod::m_thread_actions_mutex};
+                    LuaMod::m_pending_delayed_game_thread_actions.emplace_back(action);
+                }
+                else
+                {
                     LuaMod::m_delayed_game_thread_actions.emplace_back(action);
                 }
 
@@ -4175,8 +4193,13 @@ Overloads:
                 action.execute_at = std::chrono::steady_clock::now() + std::chrono::milliseconds(delay_ms);
                 action.handle = LuaMod::m_next_delayed_action_handle++;
 
+                // Use pending queue if we're currently iterating to prevent iterator invalidation
+                if (LuaMod::m_is_processing_actions)
                 {
-                    std::lock_guard<std::recursive_mutex> guard{LuaMod::m_thread_actions_mutex};
+                    LuaMod::m_pending_delayed_game_thread_actions.emplace_back(action);
+                }
+                else
+                {
                     LuaMod::m_delayed_game_thread_actions.emplace_back(action);
                 }
 
@@ -4267,8 +4290,13 @@ Overloads:
             action.is_retriggerable = true;
             action.handle = handle;
 
+            // Use pending queue if we're currently iterating to prevent iterator invalidation
+            if (LuaMod::m_is_processing_actions)
             {
-                std::lock_guard<std::recursive_mutex> guard{LuaMod::m_thread_actions_mutex};
+                LuaMod::m_pending_delayed_game_thread_actions.emplace_back(action);
+            }
+            else
+            {
                 LuaMod::m_delayed_game_thread_actions.emplace_back(action);
             }
 
@@ -4311,11 +4339,16 @@ Overloads:
             action.frames_remaining = frames;
             action.handle = LuaMod::m_next_delayed_action_handle++;
 
+            // Use pending queue if we're currently iterating to prevent iterator invalidation
+            if (LuaMod::m_is_processing_actions)
             {
-                std::lock_guard<std::recursive_mutex> guard{LuaMod::m_thread_actions_mutex};
-                LuaMod::m_delayed_game_thread_actions.emplace_back(action);
-                LuaMod::ensure_engine_tick_hooked();
+                LuaMod::m_pending_delayed_game_thread_actions.emplace_back(action);
             }
+            else
+            {
+                LuaMod::m_delayed_game_thread_actions.emplace_back(action);
+            }
+            LuaMod::ensure_engine_tick_hooked();
 
             lua.set_integer(action.handle);
             return 1;
@@ -4383,8 +4416,13 @@ Overloads:
             action.is_looping = true;
             action.handle = LuaMod::m_next_delayed_action_handle++;
 
+            // Use pending queue if we're currently iterating to prevent iterator invalidation
+            if (LuaMod::m_is_processing_actions)
             {
-                std::lock_guard<std::recursive_mutex> guard{LuaMod::m_thread_actions_mutex};
+                LuaMod::m_pending_delayed_game_thread_actions.emplace_back(action);
+            }
+            else
+            {
                 LuaMod::m_delayed_game_thread_actions.emplace_back(action);
             }
 
@@ -4430,11 +4468,16 @@ Overloads:
             action.is_looping = true;
             action.handle = LuaMod::m_next_delayed_action_handle++;
 
+            // Use pending queue if we're currently iterating to prevent iterator invalidation
+            if (LuaMod::m_is_processing_actions)
             {
-                std::lock_guard<std::recursive_mutex> guard{LuaMod::m_thread_actions_mutex};
-                LuaMod::m_delayed_game_thread_actions.emplace_back(action);
-                LuaMod::ensure_engine_tick_hooked();
+                LuaMod::m_pending_delayed_game_thread_actions.emplace_back(action);
             }
+            else
+            {
+                LuaMod::m_delayed_game_thread_actions.emplace_back(action);
+            }
+            LuaMod::ensure_engine_tick_hooked();
 
             lua.set_integer(action.handle);
             return 1;
