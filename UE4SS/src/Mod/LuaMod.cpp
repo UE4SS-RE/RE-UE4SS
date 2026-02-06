@@ -5592,14 +5592,38 @@ Overloads:
         });
 
 
-        // Mark all hooks for this mod as scheduled_for_removal BEFORE closing Lua state
-        // This prevents hooks from firing with an invalid Lua state during the window between
-        // lua_close and the actual hook unregistration
+        // Mark all hooks for this mod as scheduled_for_removal FIRST
+        // This prevents hooks from firing Lua code with a potentially invalid Lua state
+        // The pre-hook checks this flag and returns early if true
         for (auto& item : g_hooked_script_function_data)
         {
             if (item->mod == this)
             {
                 item->scheduled_for_removal = true;
+            }
+        }
+
+        // Unhook all UFunctions for this mod BEFORE closing Lua state
+        // This must happen BEFORE lua_close because:
+        // 1. The remove_if_scheduled lambda in lua_unreal_script_function_hook_post calls luaL_unref
+        //    on the Lua state, which would cause use-after-free if called after lua_close
+        // 2. The hook callbacks access Lua state data that becomes invalid after lua_close
+        //
+        // By unregistering hooks first:
+        // - If not mid-execution: callbacks are removed immediately from UFunction's callback maps
+        // - If mid-execution: UnregistrationRequested is set, and FirePostCallbacks will skip the callback
+        //   without calling it (it checks UnregistrationRequested before accessing CustomData)
+        //
+        // Note: We do NOT erase from g_hooked_script_function_data here yet, because the data
+        // must remain valid in case a post-hook is still pending (the erase happens later).
+        for (auto& item : g_hooked_script_function_data)
+        {
+            if (item->mod == this)
+            {
+                Output::send(STR("\tUnregistering hook by id '{}#{}' for mod {}\n"), item->unreal_function->GetName(), item->pre_callback_id, item->mod->get_name());
+                Output::send(STR("\tUnregistering hook by id '{}#{}' for mod {}\n"), item->unreal_function->GetName(), item->post_callback_id, item->mod->get_name());
+                item->unreal_function->UnregisterHook(item->pre_callback_id);
+                item->unreal_function->UnregisterHook(item->post_callback_id);
             }
         }
 
@@ -5651,18 +5675,13 @@ Overloads:
 
         lua_close(lua().get_lua_state());
 
-        // Unhook all UFunctions for this mod & remove from the map that keeps track of which UFunctions have been hooked
-        std::erase_if(g_hooked_script_function_data, [&](std::unique_ptr<LuaUnrealScriptFunctionData>& item) -> bool {
-            if (item->mod == this)
-            {
-                Output::send(STR("\tUnregistering hook by id '{}#{}' for mod {}\n"), item->unreal_function->GetName(), item->pre_callback_id, item->mod->get_name());
-                Output::send(STR("\tUnregistering hook by id '{}#{}' for mod {}\n"), item->unreal_function->GetName(), item->post_callback_id, item->mod->get_name());
-                item->unreal_function->UnregisterHook(item->pre_callback_id);
-                item->unreal_function->UnregisterHook(item->post_callback_id);
-                return true;
-            }
-
-            return false;
+        // Now erase the hook data from g_hooked_script_function_data
+        // This is safe because:
+        // 1. We already unregistered the hooks (callbacks won't fire)
+        // 2. If any post-hooks were pending, FirePostCallbacks skips them due to UnregistrationRequested
+        // 3. The Lua state is closed, so we don't need to call luaL_unref
+        std::erase_if(g_hooked_script_function_data, [&](const std::unique_ptr<LuaUnrealScriptFunctionData>& item) {
+            return item->mod == this;
         });
 
         clear_delayed_actions();
