@@ -3656,67 +3656,87 @@ Overloads:
 
     static auto process_simple_actions(std::vector<LuaMod::SimpleLuaAction>& actions) -> void
     {
-        std::erase_if(actions, [&](const LuaMod::SimpleLuaAction& lua_data) -> bool {
+        std::vector<LuaMod::SimpleLuaAction> to_run{};
+        {
+            std::lock_guard<std::recursive_mutex> guard{LuaMod::m_thread_actions_mutex};
+            if (actions.empty())
+            {
+                return;
+            }
+            to_run = std::move(actions);
+            actions.clear();
+        }
+
+        std::vector<LuaMod::SimpleLuaAction> deferred{};
+        for (auto& lua_data : to_run)
+        {
             if (LuaMod::m_is_currently_executing_game_action)
             {
-                return false;
+                deferred.emplace_back(std::move(lua_data));
+                continue;
             }
 
             LuaMod::m_is_currently_executing_game_action = true;
-
             lua_data.lua->registry().get_function_ref(lua_data.lua_action_function_ref);
-
             TRY([&]() {
                 lua_data.lua->call_function(0, 0);
             });
-
             luaL_unref(lua_data.lua->get_lua_state(), LUA_REGISTRYINDEX, lua_data.lua_action_function_ref);
-
             LuaMod::m_is_currently_executing_game_action = false;
-            return true;
-        });
+        }
+
+        if (!deferred.empty())
+        {
+            std::lock_guard<std::recursive_mutex> guard{LuaMod::m_thread_actions_mutex};
+            actions.insert(
+                actions.end(),
+                std::make_move_iterator(deferred.begin()),
+                std::make_move_iterator(deferred.end()));
+        }
     }
 
     // Process pending NotifyOnNewObject callbacks that were queued from StaticConstructObject
     // This MUST run on the game thread because Lua is NOT thread-safe
     static auto process_pending_notify_on_new_object_callbacks() -> void
     {
-        if (LuaMod::m_pending_notify_on_new_object_callbacks.empty())
+        struct PendingNotifyExec
         {
-            return;
-        }
-        static constexpr uint8_t s_max_notify_validation_retries = 5;
+            uint64_t callback_id{};
+            const LuaMadeSimple::Lua* lua{};
+            int32_t lua_callback_function_ref{};
+            int32_t lua_callback_thread_ref{};
+            Unreal::UObject* constructed_object{};
+        };
 
-        // Take ownership of the pending callbacks and clear the queue
-        // This allows new callbacks to be queued while we're processing
-        auto pending_callbacks = std::move(LuaMod::m_pending_notify_on_new_object_callbacks);
-        LuaMod::m_pending_notify_on_new_object_callbacks.clear();
-
-        // Track which callbacks should be removed (those that return true)
-        std::unordered_set<uint64_t> callbacks_to_remove;
-
-        for (auto& pending : pending_callbacks)
+        std::vector<PendingNotifyExec> to_execute{};
         {
-            // Resolve the UObject from the object array and validate serial number
-            Unreal::FUObjectItem* object_item = Unreal::FUObjectArray::IndexToObject(pending.object_index);
-            if (!object_item)
+            std::lock_guard<std::recursive_mutex> guard{LuaMod::m_thread_actions_mutex};
+            if (LuaMod::m_pending_notify_on_new_object_callbacks.empty())
             {
-                continue;
-            }
-            // Only enforce serial matching when we have a nonzero serial recorded.
-            if (pending.object_serial != 0 && object_item->GetSerialNumber() != pending.object_serial)
-            {
-                continue;
+                return;
             }
 
-            Unreal::UObject* constructed_object = object_item->GetUObject();
-            if (!constructed_object)
-            {
-                continue;
-            }
+            auto pending_callbacks = std::move(LuaMod::m_pending_notify_on_new_object_callbacks);
+            LuaMod::m_pending_notify_on_new_object_callbacks.clear();
 
-            TRY([&]() {
-                // Find callback by stable ID so vector modifications don't break matching.
+            for (auto& pending : pending_callbacks)
+            {
+                Unreal::FUObjectItem* object_item = Unreal::FUObjectArray::IndexToObject(pending.object_index);
+                if (!object_item)
+                {
+                    continue;
+                }
+                if (pending.object_serial != 0 && object_item->GetSerialNumber() != pending.object_serial)
+                {
+                    continue;
+                }
+
+                Unreal::UObject* constructed_object = object_item->GetUObject();
+                if (!constructed_object)
+                {
+                    continue;
+                }
+
                 auto callback_it = std::find_if(
                     LuaMod::m_static_construct_object_lua_callbacks.begin(),
                     LuaMod::m_static_construct_object_lua_callbacks.end(),
@@ -3724,35 +3744,48 @@ Overloads:
                 );
                 if (callback_it == LuaMod::m_static_construct_object_lua_callbacks.end())
                 {
-                    return;
+                    continue;
                 }
+
                 auto& callback_data = *callback_it;
+                to_execute.push_back(PendingNotifyExec{
+                    pending.callback_id,
+                    callback_data.lua,
+                    callback_data.lua_callback_function_ref,
+                    callback_data.lua_callback_thread_ref,
+                    constructed_object});
+            }
+        }
 
-                // Skip if already marked for removal
-                if (callbacks_to_remove.contains(pending.callback_id))
-                {
-                    return;
-                }
+        std::unordered_set<uint64_t> callbacks_to_remove{};
+        std::vector<std::pair<lua_State*, int32_t>> thread_refs_to_unref{};
+        for (auto& exec : to_execute)
+        {
+            TRY([&]() {
+                exec.lua->registry().get_function_ref(exec.lua_callback_function_ref);
+                LuaType::auto_construct_object(*exec.lua, exec.constructed_object);
+                exec.lua->call_function(1, 1);
 
-                callback_data.lua->registry().get_function_ref(callback_data.lua_callback_function_ref);
-                LuaType::auto_construct_object(*callback_data.lua, constructed_object);
-                callback_data.lua->call_function(1, 1);
-
-                bool cancel = callback_data.lua->is_bool(-1) && callback_data.lua->get_bool(-1);
-
+                bool cancel = exec.lua->is_bool(-1) && exec.lua->get_bool(-1);
                 if (cancel)
                 {
-                    // Release the thread_ref to GC.
-                    luaL_unref(callback_data.lua->get_lua_state(), LUA_REGISTRYINDEX, callback_data.lua_callback_thread_ref);
-                    callbacks_to_remove.insert(pending.callback_id);
+                    thread_refs_to_unref.emplace_back(exec.lua->get_lua_state(), exec.lua_callback_thread_ref);
+                    callbacks_to_remove.insert(exec.callback_id);
                 }
-
             });
         }
 
-        // Remove callbacks that returned true (cancel).
+        if (!thread_refs_to_unref.empty())
+        {
+            for (auto& [lua_state, ref] : thread_refs_to_unref)
+            {
+                luaL_unref(lua_state, LUA_REGISTRYINDEX, ref);
+            }
+        }
+
         if (!callbacks_to_remove.empty())
         {
+            std::lock_guard<std::recursive_mutex> guard{LuaMod::m_thread_actions_mutex};
             std::erase_if(LuaMod::m_static_construct_object_lua_callbacks, [&](const LuaMod::LuaCancellableCallbackData& callback) {
                 return callbacks_to_remove.contains(callback.callback_id);
             });
@@ -3867,33 +3900,35 @@ Overloads:
                                    [[maybe_unused]] Unreal::UFunction* Function,
                                    [[maybe_unused]] void* Parms) -> void
     {
-        std::lock_guard<std::recursive_mutex> guard{LuaMod::m_thread_actions_mutex};
-
-        // Set flag to redirect new registrations to pending queues during iteration
-        LuaMod::m_is_processing_actions = true;
+        {
+            std::lock_guard<std::recursive_mutex> guard{LuaMod::m_thread_actions_mutex};
+            LuaMod::m_is_processing_actions = true;
+        }
 
         process_simple_actions(LuaMod::m_game_thread_actions);
         process_delayed_actions<GameThreadExecutionMethod::ProcessEvent>(LuaMod::m_delayed_game_thread_actions);
         
         process_pending_notify_on_new_object_callbacks();
 
-        // Merge any actions that were registered during processing
-        LuaMod::m_is_processing_actions = false;
-        if (!LuaMod::m_pending_game_thread_actions.empty())
         {
-            LuaMod::m_game_thread_actions.insert(
-                LuaMod::m_game_thread_actions.end(),
-                std::make_move_iterator(LuaMod::m_pending_game_thread_actions.begin()),
-                std::make_move_iterator(LuaMod::m_pending_game_thread_actions.end()));
-            LuaMod::m_pending_game_thread_actions.clear();
-        }
-        if (!LuaMod::m_pending_delayed_game_thread_actions.empty())
-        {
-            LuaMod::m_delayed_game_thread_actions.insert(
-                LuaMod::m_delayed_game_thread_actions.end(),
-                std::make_move_iterator(LuaMod::m_pending_delayed_game_thread_actions.begin()),
-                std::make_move_iterator(LuaMod::m_pending_delayed_game_thread_actions.end()));
-            LuaMod::m_pending_delayed_game_thread_actions.clear();
+            std::lock_guard<std::recursive_mutex> guard{LuaMod::m_thread_actions_mutex};
+            LuaMod::m_is_processing_actions = false;
+            if (!LuaMod::m_pending_game_thread_actions.empty())
+            {
+                LuaMod::m_game_thread_actions.insert(
+                    LuaMod::m_game_thread_actions.end(),
+                    std::make_move_iterator(LuaMod::m_pending_game_thread_actions.begin()),
+                    std::make_move_iterator(LuaMod::m_pending_game_thread_actions.end()));
+                LuaMod::m_pending_game_thread_actions.clear();
+            }
+            if (!LuaMod::m_pending_delayed_game_thread_actions.empty())
+            {
+                LuaMod::m_delayed_game_thread_actions.insert(
+                    LuaMod::m_delayed_game_thread_actions.end(),
+                    std::make_move_iterator(LuaMod::m_pending_delayed_game_thread_actions.begin()),
+                    std::make_move_iterator(LuaMod::m_pending_delayed_game_thread_actions.end()));
+                LuaMod::m_pending_delayed_game_thread_actions.clear();
+            }
         }
     }
 
@@ -3902,33 +3937,35 @@ Overloads:
                                  [[maybe_unused]] float DeltaSeconds,
                                  [[maybe_unused]] bool bIdle) -> void
     {
-        std::lock_guard<std::recursive_mutex> guard{LuaMod::m_thread_actions_mutex};
-
-        // Set flag to redirect new registrations to pending queues during iteration
-        LuaMod::m_is_processing_actions = true;
+        {
+            std::lock_guard<std::recursive_mutex> guard{LuaMod::m_thread_actions_mutex};
+            LuaMod::m_is_processing_actions = true;
+        }
 
         process_simple_actions(LuaMod::m_engine_tick_actions);
         process_delayed_actions<GameThreadExecutionMethod::EngineTick>(LuaMod::m_delayed_game_thread_actions);
         
         process_pending_notify_on_new_object_callbacks();
 
-        // Merge any actions that were registered during processing
-        LuaMod::m_is_processing_actions = false;
-        if (!LuaMod::m_pending_engine_tick_actions.empty())
         {
-            LuaMod::m_engine_tick_actions.insert(
-                LuaMod::m_engine_tick_actions.end(),
-                std::make_move_iterator(LuaMod::m_pending_engine_tick_actions.begin()),
-                std::make_move_iterator(LuaMod::m_pending_engine_tick_actions.end()));
-            LuaMod::m_pending_engine_tick_actions.clear();
-        }
-        if (!LuaMod::m_pending_delayed_game_thread_actions.empty())
-        {
-            LuaMod::m_delayed_game_thread_actions.insert(
-                LuaMod::m_delayed_game_thread_actions.end(),
-                std::make_move_iterator(LuaMod::m_pending_delayed_game_thread_actions.begin()),
-                std::make_move_iterator(LuaMod::m_pending_delayed_game_thread_actions.end()));
-            LuaMod::m_pending_delayed_game_thread_actions.clear();
+            std::lock_guard<std::recursive_mutex> guard{LuaMod::m_thread_actions_mutex};
+            LuaMod::m_is_processing_actions = false;
+            if (!LuaMod::m_pending_engine_tick_actions.empty())
+            {
+                LuaMod::m_engine_tick_actions.insert(
+                    LuaMod::m_engine_tick_actions.end(),
+                    std::make_move_iterator(LuaMod::m_pending_engine_tick_actions.begin()),
+                    std::make_move_iterator(LuaMod::m_pending_engine_tick_actions.end()));
+                LuaMod::m_pending_engine_tick_actions.clear();
+            }
+            if (!LuaMod::m_pending_delayed_game_thread_actions.empty())
+            {
+                LuaMod::m_delayed_game_thread_actions.insert(
+                    LuaMod::m_delayed_game_thread_actions.end(),
+                    std::make_move_iterator(LuaMod::m_pending_delayed_game_thread_actions.begin()),
+                    std::make_move_iterator(LuaMod::m_pending_delayed_game_thread_actions.end()));
+                LuaMod::m_pending_delayed_game_thread_actions.clear();
+            }
         }
     }
 
