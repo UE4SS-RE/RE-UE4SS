@@ -7,6 +7,7 @@
 #include <memory>
 #include <stdexcept>
 #include <string>
+#include <unordered_set>
 
 #include <DynamicOutput/DynamicOutput.hpp>
 #include <ExceptionHandling.hpp>
@@ -2292,7 +2293,13 @@ Overloads:
 
             Unreal::UClass* instance_of_class = Unreal::UObjectGlobals::StaticFindObject<Unreal::UClass*>(nullptr, nullptr, class_name);
 
-            LuaMod::m_static_construct_object_lua_callbacks.emplace_back(LuaMod::LuaCancellableCallbackData{hook_lua, instance_of_class, func_ref, thread_ref});
+            LuaMod::m_static_construct_object_lua_callbacks.emplace_back(LuaMod::LuaCancellableCallbackData{
+                LuaMod::m_next_static_construct_callback_id++,
+                hook_lua,
+                instance_of_class,
+                func_ref,
+                thread_ref
+            });
 
             return 0;
         });
@@ -3670,6 +3677,88 @@ Overloads:
         });
     }
 
+    // Process pending NotifyOnNewObject callbacks that were queued from StaticConstructObject
+    // This MUST run on the game thread because Lua is NOT thread-safe
+    static auto process_pending_notify_on_new_object_callbacks() -> void
+    {
+        if (LuaMod::m_pending_notify_on_new_object_callbacks.empty())
+        {
+            return;
+        }
+        static constexpr uint8_t s_max_notify_validation_retries = 5;
+
+        // Take ownership of the pending callbacks and clear the queue
+        // This allows new callbacks to be queued while we're processing
+        auto pending_callbacks = std::move(LuaMod::m_pending_notify_on_new_object_callbacks);
+        LuaMod::m_pending_notify_on_new_object_callbacks.clear();
+
+        // Track which callbacks should be removed (those that return true)
+        std::unordered_set<uint64_t> callbacks_to_remove;
+
+        for (auto& pending : pending_callbacks)
+        {
+            // Resolve the UObject from the object array and validate serial number
+            Unreal::FUObjectItem* object_item = Unreal::FUObjectArray::IndexToObject(pending.object_index);
+            if (!object_item)
+            {
+                continue;
+            }
+            // Only enforce serial matching when we have a nonzero serial recorded.
+            if (pending.object_serial != 0 && object_item->GetSerialNumber() != pending.object_serial)
+            {
+                continue;
+            }
+
+            Unreal::UObject* constructed_object = object_item->GetUObject();
+            if (!constructed_object)
+            {
+                continue;
+            }
+
+            TRY([&]() {
+                // Find callback by stable ID so vector modifications don't break matching.
+                auto callback_it = std::find_if(
+                    LuaMod::m_static_construct_object_lua_callbacks.begin(),
+                    LuaMod::m_static_construct_object_lua_callbacks.end(),
+                    [&](const LuaMod::LuaCancellableCallbackData& callback) { return callback.callback_id == pending.callback_id; }
+                );
+                if (callback_it == LuaMod::m_static_construct_object_lua_callbacks.end())
+                {
+                    return;
+                }
+                auto& callback_data = *callback_it;
+
+                // Skip if already marked for removal
+                if (callbacks_to_remove.contains(pending.callback_id))
+                {
+                    return;
+                }
+
+                callback_data.lua->registry().get_function_ref(callback_data.lua_callback_function_ref);
+                LuaType::auto_construct_object(*callback_data.lua, constructed_object);
+                callback_data.lua->call_function(1, 1);
+
+                bool cancel = callback_data.lua->is_bool(-1) && callback_data.lua->get_bool(-1);
+
+                if (cancel)
+                {
+                    // Release the thread_ref to GC.
+                    luaL_unref(callback_data.lua->get_lua_state(), LUA_REGISTRYINDEX, callback_data.lua_callback_thread_ref);
+                    callbacks_to_remove.insert(pending.callback_id);
+                }
+
+            });
+        }
+
+        // Remove callbacks that returned true (cancel).
+        if (!callbacks_to_remove.empty())
+        {
+            std::erase_if(LuaMod::m_static_construct_object_lua_callbacks, [&](const LuaMod::LuaCancellableCallbackData& callback) {
+                return callbacks_to_remove.contains(callback.callback_id);
+            });
+        }
+    }
+
     template <GameThreadExecutionMethod Executor>
     static auto process_delayed_actions(std::vector<LuaMod::DelayedGameThreadAction>& actions) -> void
     {
@@ -3785,6 +3874,8 @@ Overloads:
 
         process_simple_actions(LuaMod::m_game_thread_actions);
         process_delayed_actions<GameThreadExecutionMethod::ProcessEvent>(LuaMod::m_delayed_game_thread_actions);
+        
+        process_pending_notify_on_new_object_callbacks();
 
         // Merge any actions that were registered during processing
         LuaMod::m_is_processing_actions = false;
@@ -3818,6 +3909,8 @@ Overloads:
 
         process_simple_actions(LuaMod::m_engine_tick_actions);
         process_delayed_actions<GameThreadExecutionMethod::EngineTick>(LuaMod::m_delayed_game_thread_actions);
+        
+        process_pending_notify_on_new_object_callbacks();
 
         // Merge any actions that were registered during processing
         LuaMod::m_is_processing_actions = false;
@@ -5552,6 +5645,7 @@ Overloads:
         fire_on_lua_stop_for_cpp_mods();
 
         erase_from_container(this, m_static_construct_object_lua_callbacks);
+        m_pending_notify_on_new_object_callbacks.clear();
         erase_from_container(this, m_process_console_exec_pre_callbacks);
         erase_from_container(this, m_process_console_exec_post_callbacks);
         erase_from_container(this, m_global_command_lua_callbacks);
@@ -6043,31 +6137,101 @@ Overloads:
 
         Unreal::Hook::RegisterStaticConstructObjectPostCallback([](const Unreal::FStaticConstructObjectParameters&, Unreal::UObject* constructed_object) {
             return TRY([&] {
-                // We must protect all Lua state access with the mutex to prevent corruption.
+                // IMPORTANT: StaticConstructObject can be called from outside of the game thread (loading threads, etc.)
+                // Lua is NOT thread-safe. If we're on the game thread, we can call Lua directly.
+                // If we're on another thread, we must queue the callback for later processing.
                 std::lock_guard<std::recursive_mutex> guard{LuaMod::m_thread_actions_mutex};
+
+                // Check if we're on the game thread (safely - returns false if not yet initialized)
+                bool on_game_thread = false;
+                try
+                {
+                    on_game_thread = Unreal::IsInGameThread();
+                }
+                catch (...)
+                {
+                    // Game thread ID not yet initialized - treat as not on game thread
+                    on_game_thread = false;
+                }
 
                 Unreal::UStruct* object_class = constructed_object->GetClassPrivate();
                 while (object_class)
                 {
-                    std::erase_if(m_static_construct_object_lua_callbacks, [&](auto& callback_data) -> bool {
-                        bool cancel = false;
-                        if (callback_data.instance_of_class == object_class)
+                    if (on_game_thread)
+                    {
+                        // On game thread call Lua directly, but avoid iterator invalidation:
+                        // collect IDs first, then resolve each callback by ID when executing.
+                        std::vector<uint64_t> callbacks_to_execute{};
+                        callbacks_to_execute.reserve(m_static_construct_object_lua_callbacks.size());
+                        for (const auto& callback_data : m_static_construct_object_lua_callbacks)
                         {
+                            if (callback_data.instance_of_class == object_class)
+                            {
+                                callbacks_to_execute.push_back(callback_data.callback_id);
+                            }
+                        }
+
+                        std::unordered_set<uint64_t> callbacks_to_remove{};
+                        for (uint64_t callback_id : callbacks_to_execute)
+                        {
+                            auto callback_it = std::find_if(
+                                m_static_construct_object_lua_callbacks.begin(),
+                                m_static_construct_object_lua_callbacks.end(),
+                                [&](const LuaMod::LuaCancellableCallbackData& callback) { return callback.callback_id == callback_id; }
+                            );
+                            if (callback_it == m_static_construct_object_lua_callbacks.end())
+                            {
+                                continue;
+                            }
+
+                            auto& callback_data = *callback_it;
                             callback_data.lua->registry().get_function_ref(callback_data.lua_callback_function_ref);
                             LuaType::auto_construct_object(*callback_data.lua, constructed_object);
                             callback_data.lua->call_function(1, 1);
 
-                            cancel = callback_data.lua->is_bool(-1) && callback_data.lua->get_bool(-1);
-
+                            bool cancel = callback_data.lua->is_bool(-1) && callback_data.lua->get_bool(-1);
                             if (cancel)
                             {
                                 // Release the thread_ref to GC.
                                 luaL_unref(callback_data.lua->get_lua_state(), LUA_REGISTRYINDEX, callback_data.lua_callback_thread_ref);
+                                callbacks_to_remove.insert(callback_id);
                             }
                         }
 
-                        return cancel;
-                    });
+                        if (!callbacks_to_remove.empty())
+                        {
+                            std::erase_if(m_static_construct_object_lua_callbacks, [&](const LuaMod::LuaCancellableCallbackData& callback) {
+                                return callbacks_to_remove.contains(callback.callback_id);
+                            });
+                        }
+                    }
+                    else
+                    {
+                        // NOT on game thread - queue callbacks for later processing
+                        for (const auto& callback_data : m_static_construct_object_lua_callbacks)
+                        {
+                            if (callback_data.instance_of_class == object_class)
+                            {
+                                int32_t object_index = constructed_object->GetInternalIndex();
+                                Unreal::FUObjectItem* object_item = Unreal::FUObjectArray::IndexToObject(object_index);
+                                if (!object_item)
+                                {
+                                    continue;
+                                }
+
+                                // Queue this callback to be executed on the game thread
+                                // Include validation fields to detect if callback was removed/modified
+                                const auto serial = object_item->GetSerialNumber();
+                                m_pending_notify_on_new_object_callbacks.push_back(
+                                    LuaMod::PendingNotifyOnNewObjectCallback{
+                                        callback_data.callback_id,
+                                        object_index,
+                                        serial
+                                    }
+                                );
+                            }
+                        }
+                    }
 
                     object_class = object_class->GetSuperStruct();
                 }
