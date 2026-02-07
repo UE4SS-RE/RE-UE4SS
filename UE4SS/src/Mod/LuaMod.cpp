@@ -4756,6 +4756,26 @@ Overloads:
                         break;
                     }
                 }
+                if (!found)
+                {
+                    for (auto& action : LuaMod::m_pending_delayed_game_thread_actions)
+                    {
+                        if (action.handle == handle && action.lua == mod_hook_lua && action.status != LuaMod::DelayedActionStatus::PendingRemoval)
+                        {
+                            if (action.delay_frames > 0)
+                            {
+                                action.frames_remaining = action.delay_frames;
+                            }
+                            else
+                            {
+                                action.execute_at = std::chrono::steady_clock::now() + std::chrono::milliseconds(action.delay_ms);
+                            }
+                            action.status = LuaMod::DelayedActionStatus::Active;
+                            found = true;
+                            break;
+                        }
+                    }
+                }
             }
 
             lua.set_bool(found);
@@ -4804,6 +4824,28 @@ Overloads:
                         break;
                     }
                 }
+                if (!found)
+                {
+                    for (auto& action : LuaMod::m_pending_delayed_game_thread_actions)
+                    {
+                        if (action.handle == handle && action.lua == mod_hook_lua && action.status != LuaMod::DelayedActionStatus::PendingRemoval)
+                        {
+                            if (action.delay_frames > 0)
+                            {
+                                action.delay_frames = new_delay;
+                                action.frames_remaining = new_delay;
+                            }
+                            else
+                            {
+                                action.delay_ms = new_delay;
+                                action.execute_at = std::chrono::steady_clock::now() + std::chrono::milliseconds(new_delay);
+                            }
+                            action.status = LuaMod::DelayedActionStatus::Active;
+                            found = true;
+                            break;
+                        }
+                    }
+                }
             }
 
             lua.set_bool(found);
@@ -4848,6 +4890,40 @@ Overloads:
                         found = true;
                         break;
                     }
+                    if (action.handle == handle && action.lua == mod_hook_lua && action.status == LuaMod::DelayedActionStatus::Executing && action.is_looping)
+                    {
+                        // Defer pause until callback unwinds to avoid re-entrancy issues.
+                        action.pause_after_execution = true;
+                        found = true;
+                        break;
+                    }
+                }
+                if (!found)
+                {
+                    for (auto& action : LuaMod::m_pending_delayed_game_thread_actions)
+                    {
+                        if (action.handle == handle && action.lua == mod_hook_lua && action.status == LuaMod::DelayedActionStatus::Active)
+                        {
+                            auto now = std::chrono::steady_clock::now();
+                            if (action.execute_at > now)
+                            {
+                                action.time_remaining_ms = std::chrono::duration_cast<std::chrono::milliseconds>(action.execute_at - now).count();
+                            }
+                            else
+                            {
+                                action.time_remaining_ms = 0;
+                            }
+                            action.status = LuaMod::DelayedActionStatus::Paused;
+                            found = true;
+                            break;
+                        }
+                        if (action.handle == handle && action.lua == mod_hook_lua && action.status == LuaMod::DelayedActionStatus::Executing && action.is_looping)
+                        {
+                            action.pause_after_execution = true;
+                            found = true;
+                            break;
+                        }
+                    }
                 }
             }
 
@@ -4886,6 +4962,19 @@ Overloads:
                         break;
                     }
                 }
+                if (!found)
+                {
+                    for (auto& action : LuaMod::m_pending_delayed_game_thread_actions)
+                    {
+                        if (action.handle == handle && action.lua == mod_hook_lua && action.status == LuaMod::DelayedActionStatus::Paused)
+                        {
+                            action.execute_at = std::chrono::steady_clock::now() + std::chrono::milliseconds(action.time_remaining_ms);
+                            action.status = LuaMod::DelayedActionStatus::Active;
+                            found = true;
+                            break;
+                        }
+                    }
+                }
             }
 
             lua.set_bool(found);
@@ -4921,6 +5010,18 @@ Overloads:
                         break;
                     }
                 }
+                if (!found)
+                {
+                    for (auto& action : LuaMod::m_pending_delayed_game_thread_actions)
+                    {
+                        if (action.handle == handle && action.lua == mod_hook_lua && action.status != LuaMod::DelayedActionStatus::PendingRemoval)
+                        {
+                            action.status = LuaMod::DelayedActionStatus::PendingRemoval;
+                            found = true;
+                            break;
+                        }
+                    }
+                }
             }
 
             lua.set_bool(found);
@@ -4950,6 +5051,17 @@ Overloads:
                     {
                         valid = true;
                         break;
+                    }
+                }
+                if (!valid)
+                {
+                    for (const auto& action : LuaMod::m_pending_delayed_game_thread_actions)
+                    {
+                        if (action.handle == handle && action.status != LuaMod::DelayedActionStatus::PendingRemoval)
+                        {
+                            valid = true;
+                            break;
+                        }
                     }
                 }
             }
@@ -4983,6 +5095,17 @@ Overloads:
                         break;
                     }
                 }
+                if (!active)
+                {
+                    for (const auto& action : LuaMod::m_pending_delayed_game_thread_actions)
+                    {
+                        if (action.handle == handle && action.status == LuaMod::DelayedActionStatus::Active)
+                        {
+                            active = true;
+                            break;
+                        }
+                    }
+                }
             }
 
             lua.set_bool(active);
@@ -5012,6 +5135,17 @@ Overloads:
                     {
                         paused = true;
                         break;
+                    }
+                }
+                if (!paused)
+                {
+                    for (const auto& action : LuaMod::m_pending_delayed_game_thread_actions)
+                    {
+                        if (action.handle == handle && action.status == LuaMod::DelayedActionStatus::Paused)
+                        {
+                            paused = true;
+                            break;
+                        }
                     }
                 }
             }
@@ -5065,6 +5199,36 @@ Overloads:
                             }
                         }
                         break;
+                    }
+                }
+                if (remaining == -1)
+                {
+                    for (const auto& action : LuaMod::m_pending_delayed_game_thread_actions)
+                    {
+                        if (action.handle == handle && action.status != LuaMod::DelayedActionStatus::PendingRemoval)
+                        {
+                            if (action.delay_frames > 0)
+                            {
+                                remaining = action.frames_remaining;
+                            }
+                            else if (action.status == LuaMod::DelayedActionStatus::Paused)
+                            {
+                                remaining = action.time_remaining_ms;
+                            }
+                            else
+                            {
+                                auto now = std::chrono::steady_clock::now();
+                                if (action.execute_at > now)
+                                {
+                                    remaining = std::chrono::duration_cast<std::chrono::milliseconds>(action.execute_at - now).count();
+                                }
+                                else
+                                {
+                                    remaining = 0;
+                                }
+                            }
+                            break;
+                        }
                     }
                 }
             }
@@ -5121,6 +5285,37 @@ Overloads:
                         break;
                     }
                 }
+                if (elapsed == -1)
+                {
+                    for (const auto& action : LuaMod::m_pending_delayed_game_thread_actions)
+                    {
+                        if (action.handle == handle && action.status != LuaMod::DelayedActionStatus::PendingRemoval)
+                        {
+                            if (action.delay_frames > 0)
+                            {
+                                elapsed = action.delay_frames - action.frames_remaining;
+                            }
+                            else if (action.status == LuaMod::DelayedActionStatus::Paused)
+                            {
+                                elapsed = action.delay_ms - action.time_remaining_ms;
+                            }
+                            else
+                            {
+                                auto now = std::chrono::steady_clock::now();
+                                if (action.execute_at > now)
+                                {
+                                    auto remaining = std::chrono::duration_cast<std::chrono::milliseconds>(action.execute_at - now).count();
+                                    elapsed = action.delay_ms - remaining;
+                                }
+                                else
+                                {
+                                    elapsed = action.delay_ms;
+                                }
+                            }
+                            break;
+                        }
+                    }
+                }
             }
 
             lua.set_integer(elapsed);
@@ -5161,6 +5356,24 @@ Overloads:
                         break;
                     }
                 }
+                if (rate == -1)
+                {
+                    for (const auto& action : LuaMod::m_pending_delayed_game_thread_actions)
+                    {
+                        if (action.handle == handle && action.status != LuaMod::DelayedActionStatus::PendingRemoval)
+                        {
+                            if (action.delay_frames > 0)
+                            {
+                                rate = action.delay_frames;
+                            }
+                            else
+                            {
+                                rate = action.delay_ms;
+                            }
+                            break;
+                        }
+                    }
+                }
             }
 
             lua.set_integer(rate);
@@ -5186,6 +5399,14 @@ Overloads:
                     if (action.lua == mod_hook_lua && action.status != LuaMod::DelayedActionStatus::PendingRemoval)
                     {
                         // Mark for removal
+                        action.status = LuaMod::DelayedActionStatus::PendingRemoval;
+                        count++;
+                    }
+                }
+                for (auto& action : LuaMod::m_pending_delayed_game_thread_actions)
+                {
+                    if (action.lua == mod_hook_lua && action.status != LuaMod::DelayedActionStatus::PendingRemoval)
+                    {
                         action.status = LuaMod::DelayedActionStatus::PendingRemoval;
                         count++;
                     }
