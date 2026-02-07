@@ -80,6 +80,7 @@ namespace RC
             int64_t handle{0};  // Unique handle for this action
             bool is_retriggerable{false};  // If true, can be reset by calling with same handle
             bool is_looping{false};  // If true, re-schedule after each execution
+            bool pause_after_execution{false};  // Pause immediately after current callback returns
         };
 
         static inline int64_t m_next_delayed_action_handle{1};
