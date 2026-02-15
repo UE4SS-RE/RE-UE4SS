@@ -1,5 +1,10 @@
 #pragma once
 
+#include <cstring>
+
+#include <DynamicOutput/DynamicOutput.hpp>
+#include <Helpers/String.hpp>
+
 #pragma warning(disable: 4068)
 
 #pragma clang diagnostic push
@@ -78,36 +83,63 @@ public:
     FileWriter(const char* FileName)
     {
         auto fopen_r = fopen_s(&m_File, FileName, "wb");
+        if (fopen_r != 0)
+        {
+            RC::Output::send<RC::LogLevel::Error>(STR("Unable to open file for writing: '{}': {}\n"), RC::ensure_str(FileName), RC::ensure_str(std::strerror(fopen_r)));
+        }
         printf("");
     }
 
     virtual ~FileWriter()
     {
-        std::fclose(m_File);
+        if (m_File)
+        {
+            std::fclose(m_File);
+        }
     }
 
     FORCEINLINE void WriteString(std::string String) override
     {
+        if (!m_File)
+        {
+            return;
+        }
         std::fwrite(String.c_str(), String.length(), 1, m_File);
     }
 
     FORCEINLINE void WriteString(std::string_view String) override
     {
+        if (!m_File)
+        {
+            return;
+        }
         std::fwrite(String.data(), String.size(), 1, m_File);
     }
 
     FORCEINLINE void Write(void* Input, size_t Size) override
     {
+        if (!m_File)
+        {
+            return;
+        }
         std::fwrite(Input, Size, 1, m_File);
     }
 
     FORCEINLINE void Seek(int Pos, int Origin = SEEK_CUR) override
     {
+        if (!m_File)
+        {
+            return;
+        }
         std::fseek(m_File, Pos, Origin);
     }
 
     uint32_t Size() override
     {
+        if (!m_File)
+        {
+            return 0;
+        }
         auto pos = std::ftell(m_File);
         std::fseek(m_File, 0, SEEK_END);
         auto ret = std::ftell(m_File);
