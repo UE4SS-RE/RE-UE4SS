@@ -2041,20 +2041,11 @@ Overloads:
 
                 auto set_is_array_property() -> void
                 {
-                    // Check here if any incompatible booleans have been set, and throw error if so
-                    if (is_struct_property)
-                    {
-                        // TODO: throw error, can't be both array and struct
-                    }
                     is_array_property = true;
                 }
 
                 auto set_is_struct_property() -> void
                 {
-                    if (is_array_property)
-                    {
-                        // TODO: throw error, can't be both array and struct
-                    }
                     is_struct_property = true;
                 }
 
