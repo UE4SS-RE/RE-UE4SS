@@ -2029,15 +2029,33 @@ Overloads:
                 // ArrayProperty
                 PropertyTypeInfo array_inner{};
 
+                // StructProperty
+                std::string struct_name{};
+                Unreal::UScriptStruct* struct_type{nullptr};
+
                 bool offset_internal_is_table{};
 
                 // Only one of these booleans can be true
                 bool is_array_property{};
+                bool is_struct_property{};
 
                 auto set_is_array_property() -> void
                 {
                     // Check here if any incompatible booleans have been set, and throw error if so
+                    if (is_struct_property)
+                    {
+                        // TODO: throw error, can't be both array and struct
+                    }
                     is_array_property = true;
+                }
+
+                auto set_is_struct_property() -> void
+                {
+                    if (is_array_property)
+                    {
+                        // TODO: throw error, can't be both array and struct
+                    }
+                    is_struct_property = true;
                 }
 
                 auto is_missing_values() -> bool
@@ -2061,6 +2079,11 @@ Overloads:
                     // if (element_size < 0) { return true; }
 
                     if (is_array_property && !array_inner.is_valid())
+                    {
+                        return true;
+                    }
+
+                    if (is_struct_property && !struct_type)
                     {
                         return true;
                     }
@@ -2164,6 +2187,34 @@ Overloads:
                 }
             }
 
+            if (property_info.type.name == "StructProperty")
+            {
+                if (!lua_table.does_field_exist("StructProperty"))
+                {
+                    lua.throw_error("Parameter #1 for function 'RegisterCustomProperty'. The table entry 'StructProperty' is missing.");
+                }
+                else
+                {
+                    property_info.set_is_struct_property();
+
+                    // Get the struct name/path from Lua
+                    property_info.struct_name = lua_table.get_table_field("StructProperty").get_string_field("Name");
+
+                    // Find the UScriptStruct at runtime
+                    auto* script_struct =
+                            Unreal::UObjectGlobals::StaticFindObject<Unreal::UScriptStruct*>(nullptr, nullptr, ensure_str(property_info.struct_name));
+
+                    if (!script_struct)
+                    {
+                        lua.throw_error(fmt::format("Parameter #1 for function 'RegisterCustomProperty'. Could not find UScriptStruct '{}'",
+                                                    property_info.struct_name));
+                    }
+
+                    property_info.struct_type = script_struct;
+                    property_info.type.size = property_info.struct_type->GetStructureSize();
+                }
+            }
+
             if (property_info.is_missing_values())
             {
                 lua.throw_error("Parameter #1 for function 'RegisterCustomProperty'. The table is missing required fields.");
@@ -2202,15 +2253,26 @@ Overloads:
                                     property_info.array_inner.name));
             }
 
-            LuaType::LuaCustomProperty::StaticStorage::property_list.add(
-                    property_info.name,
-                    Unreal::CustomArrayProperty::construct(property_info.offset_internal,
-                                                           belongs_to_class,
-                                                           static_cast<Unreal::UClass*>(property_info.type.ffieldclass_pointer),
-                                                           static_cast<Unreal::FProperty*>(property_info.array_inner.ffieldclass_pointer),
-                                                           property_info.is_array_property ? property_info.array_inner.size : property_info.type.size
-
-                                                           ));
+            if (property_info.is_struct_property)
+            {
+                LuaType::LuaCustomProperty::StaticStorage::property_list.add(
+                        property_info.name,
+                        Unreal::CustomStructProperty::construct(property_info.offset_internal,
+                                                                belongs_to_class,
+                                                                static_cast<Unreal::UClass*>(property_info.type.ffieldclass_pointer),
+                                                                static_cast<Unreal::UScriptStruct*>(property_info.struct_type),
+                                                                property_info.type.size));
+            }
+            else
+            {
+                LuaType::LuaCustomProperty::StaticStorage::property_list.add(
+                        property_info.name,
+                        Unreal::CustomArrayProperty::construct(property_info.offset_internal,
+                                                               belongs_to_class,
+                                                               static_cast<Unreal::UClass*>(property_info.type.ffieldclass_pointer),
+                                                               static_cast<Unreal::FProperty*>(property_info.array_inner.ffieldclass_pointer),
+                                                               property_info.is_array_property ? property_info.array_inner.size : property_info.type.size));
+            }
 
             printf_s("Registered Custom Property\n");
             printf_s("PropertyInfo {\n");
@@ -2233,6 +2295,13 @@ Overloads:
                 printf_s("\t\t\tFFieldClassPointer: %p\n", property_info.array_inner.ffieldclass_pointer);
                 printf_s("\t\t\tStaticPointer: %p\n", property_info.array_inner.static_pointer);
                 printf_s("\t\t}\n");
+                printf_s("\t}\n");
+            }
+
+            if (property_info.is_struct_property)
+            {
+                printf_s("\tStructProperty {\n");
+                printf_s("\t\tName: %s\n", property_info.struct_name.data());
                 printf_s("\t}\n");
             }
 
