@@ -8,7 +8,7 @@ This is an advanced function that's used to add support for non-reflected proper
 
 | # | Type    | Sub Type           | Information |
 |---|---------|--------------------|-------------|
-| 1 | table   | [CustomPropertyInfo](https://github.com/UE4SS/UE4SS/wiki/Table%3A-CustomPropertyInfo) | A table containing all of the required information for registering a custom property |
+| 1 | table   | [CustomPropertyInfo](../table-definitions/custompropertyinfo.md) | A table containing all of the required information for registering a custom property |
 
 ## Example
 

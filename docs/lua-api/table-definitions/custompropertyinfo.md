@@ -12,6 +12,7 @@ The `CustomPropertyInfo` table contains information about a custom property.
 | BelongsToClass | string           |                    | Full class name without type, that this property belongs to
 | OffsetInternal | integer or table | [OffsetInternalInfo](./offsetinternalinfo.md)| Sub Type only valid if Type is table
 | ArrayProperty  | table            | [ArrayPropertyInfo](./arraypropertyinfo.md)| Only use when 'Type' is PropertyTypes.ArrayProperty
+| StructProperty | table            | [StructPropertyInfo](./structpropertyinfo.md)| Only use when 'Type' is PropertyTypes.StructProperty
 
 ## Simple Example
 Creates a custom property with the name `MySimpleCustomProperty` that accesses whatever data is at offset `0xF40` in any instance of class `Character` as if it was an `IntProperty`.
