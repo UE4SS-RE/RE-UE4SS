@@ -354,6 +354,8 @@ Improved performance of script hooks created with `RegisterHook`, and
 
 Types with `get` or `Get` functions now have both variants. ([UE4SS #877](https://github.com/UE4SS-RE/RE-UE4SS/pull/877))
 
+The `NotifyOnNewObject` function now works even if the supplied class hasn't yet been loaded. ([UE4SS #1134](https://github.com/UE4SS-RE/RE-UE4SS/pull/1134))
+
 Improved error messages when improperly indexing into `LocalUnrealParam`, and `RemoteUnrealParam` without first calling `Get`. ([UE4SS #1154](https://github.com/UE4SS-RE/RE-UE4SS/pull/1154))
 
 #### UEHelpers [UE4SS #650](https://github.com/UE4SS-RE/RE-UE4SS/pull/650) 
