@@ -57,6 +57,7 @@
 #include <Unreal/World.hpp>
 #include <Unreal/FWorldContext.hpp>
 #include <Unreal/Engine/UDataTable.hpp>
+#include <Unreal/BitfieldProxy.hpp>
 #include <UnrealDef.hpp>
 
 #include <polyhook2/PE/IatHook.hpp>
@@ -195,6 +196,14 @@ namespace RC
             {
                 create_emergency_console_for_early_error(fmt::format(STR("The IniParser failed to parse: {}"), ensure_str(e.what())));
                 return;
+            }
+
+            if (settings_manager.EngineVersionOverride.DebugBuild)
+            {
+                if (Unreal::Version::IsAtLeast(4, 25))
+                {
+                    Unreal::FUObjectItem::UEP_TotalSize() += sizeof(void*);
+                }
             }
 
             if (settings_manager.CrashDump.EnableDumping)
@@ -900,7 +909,7 @@ namespace RC
 
     static bool s_gui_initialized_for_game_thread{};
     static bool s_gui_initializing_for_game_thread{};
-    auto gui_render_thread_tick(Unreal::UObject*, float) -> void
+    auto gui_render_thread_tick() -> void
     {
         if (UE4SSProgram::settings_manager.Debug.RenderMode == GUI::RenderMode::ExternalThread)
         {
@@ -941,11 +950,11 @@ namespace RC
 
         if (settings_manager.Debug.RenderMode == GUI::RenderMode::EngineTick)
         {
-            Hook::RegisterEngineTickPostCallback(gui_render_thread_tick);
+            Hook::RegisterEngineTickPostCallback([](auto&,...){gui_render_thread_tick(); }, {false, false, STR("UE4SS"), STR("ImGuiRenderHook")});
         }
         else if (settings_manager.Debug.RenderMode == GUI::RenderMode::GameViewportClientTick)
         {
-            Hook::RegisterGameViewportClientTickPostCallback(gui_render_thread_tick);
+            Hook::RegisterGameViewportClientTickPostCallback([](auto&,...){gui_render_thread_tick(); }, {false, false, STR("UE4SS"), STR("ImGuiRenderHook")});
         }
 
         if (settings_manager.Debug.DebugConsoleEnabled)

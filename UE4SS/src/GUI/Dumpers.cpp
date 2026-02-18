@@ -8,7 +8,6 @@
 #include <File/File.hpp>
 #include <File/Macros.hpp>
 #include <GUI/Dumpers.hpp>
-#include <JSON/JSON.hpp>
 #include <USMapGenerator/Generator.hpp>
 #include <FlagsStringifier.hpp>
 #ifdef TEXT
@@ -248,7 +247,7 @@ namespace RC::GUI::Dumpers
 
     static auto generate_actors_json_file(UClass* class_to_dump) -> StringType
     {
-        auto global_json_array = JSON::Array{};
+        glz::generic::array_t global_json_array{};
 
         size_t actor_count{};
         FindObjectSearcher(class_to_dump, AnySuperStruct::StaticClass()).ForEach([&](UObject* object) {
@@ -265,65 +264,75 @@ namespace RC::GUI::Dumpers
                 return LoopAction::Continue;
             }
 
-            auto& actor_json_object = global_json_array.new_object();
+            glz::generic actor_json_object = glz::generic::object_t{};
 
-            actor_json_object.new_string(STR("Name"), fmt::format(STR("Row_{}"), actor_count));
+            actor_json_object["Name"] = to_string(fmt::format(STR("Row_{}"), actor_count));
 
             static auto game_mode_base = UObjectGlobals::FindFirstOf(STR("GameModeBase"));
             static auto class_property = game_mode_base->GetPropertyByNameInChain(FromCharTypePtr<TCHAR>(STR("GameStateClass")));
             FString actor_class_string{};
             class_property->ExportTextItem(actor_class_string, &actor->GetClassPrivate(), nullptr, nullptr, 0);
-            actor_json_object.new_string(STR("Actor"), fmt::format(STR("{}"), StringViewType{*actor_class_string}));
+            actor_json_object["Actor"] = to_string(fmt::format(STR("{}"), StringViewType{*actor_class_string}));
 
-            auto& root_component_json_object = actor_json_object.new_object(STR("RootComponent"));
+            glz::generic root_component_json_object = glz::generic::object_t{};
 
             FString root_component_class_string{};
             class_property->ExportTextItem(root_component_class_string, &(*root_component)->GetClassPrivate(), nullptr, nullptr, 0);
-            root_component_json_object.new_string(STR("SceneComponentClass"), fmt::format(STR("{}"), StringViewType{*root_component_class_string}));
+            root_component_json_object["SceneComponentClass"] = to_string(fmt::format(STR("{}"), StringViewType{*root_component_class_string}));
 
-            auto& location_json_object = root_component_json_object.new_object(STR("Location"));
+            glz::generic location_json_object = glz::generic::object_t{};
             auto location = (*root_component)->GetValuePtrByPropertyNameInChain<FVector>(FromCharTypePtr<TCHAR>(STR("RelativeLocation")));
-            location_json_object.new_number(STR("X"), location->X());
-            location_json_object.new_number(STR("Y"), location->Y());
-            location_json_object.new_number(STR("Z"), location->Z());
+            location_json_object["X"] = location->X();
+            location_json_object["Y"] = location->Y();
+            location_json_object["Z"] = location->Z();
+            root_component_json_object["Location"] = std::move(location_json_object);
 
-            auto& rotation_json_object = root_component_json_object.new_object(STR("Rotation"));
+            glz::generic rotation_json_object = glz::generic::object_t{};
             auto rotation = (*root_component)->GetValuePtrByPropertyNameInChain<FRotator>(FromCharTypePtr<TCHAR>(STR("RelativeRotation")));
-            rotation_json_object.new_number(STR("Pitch"), rotation->GetPitch());
-            rotation_json_object.new_number(STR("Yaw"), rotation->GetYaw());
-            rotation_json_object.new_number(STR("Roll"), rotation->GetRoll());
+            rotation_json_object["Pitch"] = rotation->GetPitch();
+            rotation_json_object["Yaw"] = rotation->GetYaw();
+            rotation_json_object["Roll"] = rotation->GetRoll();
+            root_component_json_object["Rotation"] = std::move(rotation_json_object);
 
-            auto& scale_json_object = root_component_json_object.new_object(STR("Scale"));
+            glz::generic scale_json_object = glz::generic::object_t{};
             auto scale = (*root_component)->GetValuePtrByPropertyNameInChain<FVector>(FromCharTypePtr<TCHAR>(STR("RelativeScale3D")));
-            scale_json_object.new_number(STR("X"), scale->X());
-            scale_json_object.new_number(STR("Y"), scale->Y());
-            scale_json_object.new_number(STR("Z"), scale->Z());
+            scale_json_object["X"] = scale->X();
+            scale_json_object["Y"] = scale->Y();
+            scale_json_object["Z"] = scale->Z();
+            root_component_json_object["Scale"] = std::move(scale_json_object);
+
+            actor_json_object["RootComponent"] = std::move(root_component_json_object);
+            global_json_array.emplace_back(std::move(actor_json_object));
 
             ++actor_count;
             return LoopAction::Continue;
         });
 
-        int32_t indent_level{};
-        return global_json_array.serialize(JSON::ShouldFormat::Yes, &indent_level);
+        glz::generic json_root{std::move(global_json_array)};
+        if (auto result = glz::write<glz::opts{.prettify = true}>(json_root); result.has_value())
+        {
+            return ensure_str(result.value());
+        }
+        return {};
     }
 
     auto generate_object_as_json(UObject* object) -> StringType
     {
-        glz::json_t json{};
-        auto& meta = json["Meta"];
-        auto& values = json["Values"];
         if (!object)
         {
             Output::send<LogLevel::Error>(STR("Unable to dump object as JSON, object was invalid\n"));
             return {};
         }
+        glz::generic json{};
+        auto& meta = json["Meta"];
+        auto& values = json["Values"];
         // Non-instance data.
         {
-            auto& name_json = meta["NamePrivate"] = {};
+            auto& name_json = meta["NamePrivate"] = glz::generic::object_t{};
             const auto name = object->GetNamePrivate();
             name_json["String"] = to_string(name.ToString());
             auto& name_components = name_json["Components"];
-            name_components["ComparisonIndex"] = name.GetComparisonIndex();
+            name_components["ComparisonIndex"] = name.GetComparisonIndex().ToUnstableInt();
 #ifdef WITH_CASE_PRESERVING_NAME
             name_components["DisplayIndex"] = name.GetDisplayIndex();
 #else
@@ -333,7 +342,7 @@ namespace RC::GUI::Dumpers
         }
         meta["Address"] = fmt::format("{:016X}", std::bit_cast<uintptr_t>(object));
         {
-            auto& class_private = meta["ClassPrivate"] = {};
+            auto& class_private = meta["ClassPrivate"] = glz::generic::object_t{};
             class_private["Address"] = fmt::format("{:016X}", std::bit_cast<uintptr_t>(object->GetClassPrivate()));
             class_private["Name"] = fmt::format("{}", to_string(object->GetClassPrivate()->GetName()));
         }
@@ -343,7 +352,7 @@ namespace RC::GUI::Dumpers
             const auto raw_unsafe_object_flags = ObjectFlagsStringifier::get_raw_flags(object);
             object_flags["Raw"] = raw_unsafe_object_flags;
             auto& object_flags_array = object_flags["Flags"];
-            auto& array = object_flags_array.data.emplace<glz::json_t::array_t>();
+            auto& array = object_flags_array.data.emplace<glz::generic::array_t>();
             const ObjectFlagsStringifier flags_stringifier{object};
             for (int32_t i = 0; i < flags_stringifier.flag_parts.size(); ++i)
             {
@@ -352,9 +361,9 @@ namespace RC::GUI::Dumpers
         }
         meta["PlayerControlled"] = is_player_controlled(object);
         {
-            auto& size = meta["Size"] = {};
-            auto& size_excl = size["Exclusive"] = {};
-            auto& size_incl = size["Inclusive"] = {};
+            auto& size = meta["Size"] = glz::generic::object_t{};
+            auto& size_excl = size["Exclusive"] = glz::generic::object_t{};
+            auto& size_incl = size["Inclusive"] = glz::generic::object_t{};
             std::vector<UClass*> all_super_structs{};
             auto uclass = object->IsA<UStruct>() ? static_cast<UClass*>(object) : object->GetClassPrivate();
             size["Total"] = uclass->GetPropertiesSize();

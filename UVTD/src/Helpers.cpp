@@ -45,6 +45,7 @@ namespace RC::UVTD
     {
         static constexpr StringViewType fixed_uobject_array_string = STR("FFixedUObjectArray");
         static constexpr StringViewType chunked_fixed_uobject_array_string = STR("FChunkedFixedUObjectArray");
+        static constexpr StringViewType non_chunked_410_and_earlier = STR("TStaticIndirectArrayThreadSafeRead<UObjectBase,8388608,16384>");
         if (auto fixed_uobject_array_pos = out_variable_type.find(fixed_uobject_array_string); fixed_uobject_array_pos != out_variable_type.npos)
         {
             out_variable_type.replace(fixed_uobject_array_pos, fixed_uobject_array_string.length(), STR("TUObjectArray"));
@@ -53,6 +54,11 @@ namespace RC::UVTD
         else if (auto chunked_fixed_uobject_array_pos = out_variable_type.find(chunked_fixed_uobject_array_string); chunked_fixed_uobject_array_pos != out_variable_type.npos)
         {
             out_variable_type.replace(chunked_fixed_uobject_array_pos, chunked_fixed_uobject_array_string.length(), STR("TUObjectArray"));
+            return true;
+        }
+        else if (auto non_chunked_410_and_earlier_array_pos = out_variable_type.find(non_chunked_410_and_earlier); non_chunked_410_and_earlier_array_pos != out_variable_type.npos)
+        {
+            out_variable_type.replace(non_chunked_410_and_earlier_array_pos, non_chunked_410_and_earlier.length(), STR("TUObjectArray"));
             return true;
         }
         else

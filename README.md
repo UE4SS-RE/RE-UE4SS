@@ -15,7 +15,7 @@ Lua scripting system platform, C++ Modding API, SDK generator, blueprint mod loa
 - [UMAP Recreation Dumper](https://docs.ue4ss.com/dev/feature-overview/dumpers.html#umap-recreation-dumper): Dump all loaded actors to file to generate `.umaps` in-editor
 - Other Features, including [Experimental](https://docs.ue4ss.com/dev/feature-overview/experimental.html) features at times
 
-## Targeting UE Versions: From 4.12 To 5.5
+## Targeting UE Versions: From 4.12 To 5.7
 
 The goal of UE4SS is not to be a plug-n-play solution that always works with every game.
 The goal is to have an underlying system that works for most games.
@@ -65,9 +65,9 @@ RE-UE4SS supports the following environment variables:
 - A computer running Windows.
   - Linux support might happen at some point but not soon.
 - A version of MSVC that supports C++23:
-  - MSVC toolset version >= 14.39.0
-  - MSVC version >= 19.39.0
-  - Visual Studio version >= 17.9
+  - MSVC toolset version >= 14.43.0
+  - MSVC version >= 19.43
+  - Visual Studio version >= 17.13
   - More compilers will hopefully be supported in the future.
 - [Rust toolchain >= 1.73.0](https://www.rust-lang.org/tools/install)
 - [CMake >= 3.22](https://cmake.org/download/)

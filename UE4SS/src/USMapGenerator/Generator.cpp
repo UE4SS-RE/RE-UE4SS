@@ -16,6 +16,7 @@
 #include <Unreal/UObject.hpp>
 #include <Unreal/UObjectGlobals.hpp>
 #include <Unreal/UnrealVersion.hpp>
+#include <Unreal/UKismetSystemLibrary.hpp>
 
 #include "UE4SSProgram.hpp"
 
@@ -510,7 +511,30 @@ namespace RC::OutTheShade
         UsmapData.resize(UncompressedStream.size());
         memcpy(UsmapData.data(), UncompressedStream.data(), UsmapData.size());
 
-        auto filename = to_string(UE4SSProgram::get_program().get_working_directory()) + "//Mappings.usmap";
+        // Build filename: GameName-EngineVersion-UE4SSCommitSHA.usmap
+        FString game_name_fstr = UKismetSystemLibrary::GetGameName();
+        FString engine_version_fstr = UKismetSystemLibrary::GetEngineVersion();
+
+
+        std::string engine_version = to_utf8_string(*engine_version_fstr);
+        std::string game_name = to_utf8_string(*game_name_fstr);
+        std::string commit_sha = UE4SS_LIB_BUILD_GITSHA;
+
+        // Sanitize strings for filename (replace spaces and invalid chars with underscores)
+        auto sanitize_for_filename = [](std::string& str) {
+            for (char& c : str)
+            {
+                if (c == ' ' || c == '/' || c == '\\' || c == ':' || c == '*' || c == '?' || c == '"' || c == '<' || c == '>' || c == '|')
+                {
+                    c = '_';
+                }
+            }
+        };
+        sanitize_for_filename(engine_version);
+        sanitize_for_filename(game_name);
+
+        std::string usmap_filename = game_name + "-" + engine_version + "-" + commit_sha + ".usmap";
+        auto filename = to_string(UE4SSProgram::get_program().get_working_directory()) + "//" + usmap_filename;
         auto FileOutput = FileWriter(filename.c_str());
 
         FileOutput.Write<uint16_t>(0x30C4); // magic
@@ -524,5 +548,6 @@ namespace RC::OutTheShade
         FileOutput.Write(UsmapData.data(), UsmapData.size());
 
         Output::send(STR("Mappings Generation Completed Successfully!\n"));
+        Output::send(STR("Output file: {}\n"), to_wstring(usmap_filename));
     }
 } // namespace RC::OutTheShade

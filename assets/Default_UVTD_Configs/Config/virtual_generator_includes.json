@@ -15,5 +15,6 @@
   "UPlayer",
   "ULocalPlayer",
   "ITextData",
-  "UGameViewportClient"
+  "UGameViewportClient",
+  "Engine/UDataTable"
 ]

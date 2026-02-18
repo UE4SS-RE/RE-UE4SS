@@ -10,7 +10,7 @@
 #include <Unreal/CoreUObject/UObject/UnrealType.hpp>
 #include <Unreal/Property/FEnumProperty.hpp>
 #include <Unreal/Property/FFieldPathProperty.hpp>
-#include <Unreal/Property/FStrProperty.hpp>
+#include <Unreal/CoreUObject/UObject/FStrProperty.hpp>
 #include <Unreal/Property/FTextProperty.hpp>
 #include <Unreal/CoreUObject/UObject/Class.hpp>
 #include <Unreal/UObject.hpp>
@@ -65,7 +65,7 @@ namespace RC::ObjectDumper
         out_line.append(fmt::format(STR("[{:016X}] "), reinterpret_cast<uintptr_t>(p_this)));
         out_line.append(p_typed_this->GetFullName());
         out_line.append(fmt::format(STR(" [n: {:X}] [c: {:016X}] [or: {:016X}]"),
-                                    p_typed_this->GetNamePrivate().GetComparisonIndex(),
+                                    p_typed_this->GetNamePrivate().GetComparisonIndex().ToUnstableInt(),
                                     reinterpret_cast<uintptr_t>(p_typed_this->GetClassPrivate()),
                                     reinterpret_cast<uintptr_t>(p_typed_this->GetOuterPrivate())));
     }
@@ -84,7 +84,7 @@ namespace RC::ObjectDumper
         out_line.append(fmt::format(STR(" [o: {:X}] "), p_typed_this->GetOffset_Internal()));
 
         auto property_class = p_typed_this->GetClass();
-        out_line.append(fmt::format(STR("[n: {:X}] [c: {:016X}]"), p_typed_this->GetFName().GetComparisonIndex(), property_class.HashObject()));
+        out_line.append(fmt::format(STR("[n: {:X}] [c: {:016X}]"), p_typed_this->GetFName().GetComparisonIndex().ToUnstableInt(), property_class.HashObject()));
 
         if (Version::IsAtLeast(4, 25))
         {
@@ -269,7 +269,7 @@ namespace RC::ObjectDumper
 
         for (auto& Elem : typed_this->ForEachName())
         {
-            out_line.append(fmt::format(STR("\n[{:016X}] {} [n: {:X}] [v: {}]"), 0, Elem.Key.ToString(), Elem.Key.GetComparisonIndex(), Elem.Value));
+            out_line.append(fmt::format(STR("\n[{:016X}] {} [n: {:X}] [v: {}]"), 0, Elem.Key.ToString(), Elem.Key.GetComparisonIndex().ToUnstableInt(), Elem.Value));
         }
     }
 

@@ -10,7 +10,7 @@ set(FETCHCONTENT_QUIET OFF)
 FetchContent_Declare(
     glaze
     GIT_REPOSITORY https://github.com/stephenberry/glaze.git
-    GIT_TAG v2.9.5
+    GIT_TAG v6.4.0
     GIT_SHALLOW TRUE
 )
 FetchContent_MakeAvailable(glaze)

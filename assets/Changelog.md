@@ -13,6 +13,8 @@ Added CMake build system alongside Xmake - ([UE4SS #1067](https://github.com/UE4
 - Documentation updated to reference CMake build instructions
 - xmake may be deprecated in the future. Meanwhile, we cannot guarantee ABI compatability
 
+Added support for UE Version 5.7
+
 Added support for UE Version 5.6 - ([UE4SS #977](https://github.com/UE4SS-RE/RE-UE4SS/pull/977)) 
 
 Added support for UE Version 5.5 - ([UE4SS #708](https://github.com/UE4SS-RE/RE-UE4SS/pull/708)) 
@@ -57,6 +59,8 @@ Added custom game configurations for Project Silverfish ([UE4SS #1066](https://g
 
 Added custom game configurations for Whiskerwood ([UE4SS #1079](https://github.com/UE4SS-RE/RE-UE4SS/pull/1079))
 
+Added custom game configurations for StarRupture ([UE4SS #1150](https://github.com/UE4SS-RE/RE-UE4SS/pull/1150))
+
 The GUI can now be rendered in the game thread if `RenderMode` in UE4SS-settings.ini is set to
 `EngineTick` or `GameViewportClientTick` ([UE4SS #768](https://github.com/UE4SS-RE/RE-UE4SS/pull/768), [UE4SS #794](https://github.com/UE4SS-RE/RE-UE4SS/pull/794)).
 
@@ -69,6 +73,12 @@ Add error messages in places where only error codes were previously logged (e.g.
 Added `[f: <address_or_module_offset>` section to UE4SS_ObjectDump.txt [UE4SS #866](https://github.com/UE4SS-RE/RE-UE4SS/pull/866) 
 
 Added line in the [docs](https://docs.ue4ss.com/dev/guides/fixing-compatibility-problems.html) to add `FText::FromString(FString&)` as an alternative to `FText::FText(FString&)` for UE5 games - ([UE4SS #1078](https://github.com/UE4SS-RE/RE-UE4SS/pull/1078))
+
+Added `FUObjectItem`, `FUObjectArray`, and `TUObjectArray` to MemberVariableLayout.ini ([UE4SS #????](https://github.com/UE4SS-RE/RE-UE4SS/pull/????))
+- This means we can now support games with a customized GUObjectArray.
+- There are now also sizes, padding, and type name comments to help understand.
+- We've also added a special `UEP_TotalSize` entry to every section.
+- It's currently only crucial for `FUObjectItem`, but in the future, we may use this entry for more types.
 
 ### Live View 
 Added search filter: `IncludeClassNames`. ([UE4SS #472](https://github.com/UE4SS-RE/RE-UE4SS/pull/472)) - Buckminsterfullerene
@@ -198,6 +208,8 @@ Added custom module searcher with UTF-8 path support for Lua `require()` ([UE4SS
 
 Added support for `UScriptStruct` when using `RegisterCustomProprety` ([UE4SS #1036](https://github.com/UE4SS-RE/RE-UE4SS/pull/1036))
 
+Added support for handling structs as userdata (Fixed `StructData as userdata is not yet implemented`). ([UE4SS #1169](https://github.com/UE4SS-RE/RE-UE4SS/pull/1169)) - Corporalwill123
+
 #### Types.lua [PR #650](https://github.com/UE4SS-RE/RE-UE4SS/pull/650) 
 - Added `NAME_None` definition 
 - Added `EFindName` enum definition 
@@ -309,6 +321,8 @@ Removed some development mods, `README.md` & `Changelog.md` from non-zDev releas
 
 The execution of the game is now paused durin the first AOB scan, and then resumed to complete potential further scans and initialization. ([UE4SS #985](https://github.com/UE4SS-RE/RE-UE4SS/pull/985))
 
+Removed the FText constructor AOB, replaced it with more consistent non-AOB method of constructing FText instances ([UE4SS #1139](https://github.com/UE4SS-RE/RE-UE4SS/pull/1139))
+
 ### Live View 
 Fixed the majority of the lag ([UE4SS #512](https://github.com/UE4SS-RE/RE-UE4SS/pull/512)) 
 
@@ -341,6 +355,8 @@ Improved performance of script hooks created with `RegisterHook`, and
 Types with `get` or `Get` functions now have both variants. ([UE4SS #877](https://github.com/UE4SS-RE/RE-UE4SS/pull/877))
 
 The `NotifyOnNewObject` function now works even if the supplied class hasn't yet been loaded. ([UE4SS #1134](https://github.com/UE4SS-RE/RE-UE4SS/pull/1134))
+
+Improved error messages when improperly indexing into `LocalUnrealParam`, and `RemoteUnrealParam` without first calling `Get`. ([UE4SS #1154](https://github.com/UE4SS-RE/RE-UE4SS/pull/1154))
 
 #### UEHelpers [UE4SS #650](https://github.com/UE4SS-RE/RE-UE4SS/pull/650) 
 - Increased version to 3
@@ -390,6 +406,10 @@ Fixed `attempt to index a nil value (global 'NewController')` error in `SplitScr
 
 Fixed the GUI not closing properly with CTRL + O when OpenGL is enabled in
 `UE4SS-settings.ini`. ([UE4SS #780](https://github.com/UE4SS-RE/RE-UE4SS/pull/780))
+
+Fixed PalServer crashing when debug console is enabled in `UE4SS-settings.ini` ([UE4SS #1160](https://github.com/UE4SS-RE/RE-UE4SS/pull/1160)) - Okaetsu
+
+Fixed PalServer console having broken text when running under Proton/Wine ([UE4SS #1160](https://github.com/UE4SS-RE/RE-UE4SS/pull/1160)) - Okaetsu
 
 ### Live View 
 Fixed the "Write to file" checkbox not working for functions in the `Watches` tab ([UE4SS #419](https://github.com/UE4SS-RE/RE-UE4SS/pull/419)) 
@@ -465,6 +485,12 @@ names. ([UE4SS #827](https://github.com/UE4SS-RE/RE-UE4SS/pull/827)
 Fixed an error with Object properties causing stack corruption. ([UE4SS #939](https://github.com/UE4SS-RE/RE-UE4SS/pull/939)
 
 Fixed UEHelpers sometimes causing a runtime error. ([UE4SS #987](https://github.com/UE4SS-RE/RE-UE4SS/pull/987)
+
+Fixed callbacks only working for the first registrant of several hooks. ([UE4SS #1143](https://github.com/UE4SS-RE/RE-UE4SS/pull/1143)
+
+Fixed callbacks being executed in the wrong thread. ([UE4SS #1170](https://github.com/UE4SS-RE/RE-UE4SS/pull/1170)
+
+Fixed UFunction and UClass properly inheriting from UStruct in Lua. ([UE4SS #1158](https://github.com/UE4SS-RE/RE-UE4SS/pull/1158)) - Corporalwill123
 
 ### C++ API 
 Fixed a crash caused by a race condition enabled by C++ mods using `UE4SS_ENABLE_IMGUI` in their constructor ([UE4SS #481](https://github.com/UE4SS-RE/RE-UE4SS/pull/481)) 

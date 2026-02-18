@@ -70,7 +70,10 @@ end
 -- ENTRY POINT
 --########################
 
-ExecuteInGameThread(CreateConsole)
+--- In cases where ClientRestart runs earlier than ExecuteInGameThread
+if (not WasConsoleCreated or IsDynamicViewport) then
+    ExecuteInGameThread(CreateConsole)
+end
 
 --- We only need to create console once since it is a VP singleton
 Pre, Post = RegisterHook("/Script/Engine.PlayerController:ClientRestart",

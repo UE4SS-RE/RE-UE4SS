@@ -1,7 +1,8 @@
 #include <DynamicOutput/DynamicOutput.hpp>
-#include <UVTD/MemberVarsDumper.hpp>
+#include <UVTD/ConfigUtil.hpp>
+#include <UVTD/Helpers.hpp>
 #include <UVTD/SolBindingsGenerator.hpp>
-#include <UVTD/VTableDumper.hpp>
+#include <UVTD/MemberVarsDumper.hpp>
 
 namespace RC::UVTD
 {
@@ -12,8 +13,6 @@ namespace RC::UVTD
         type_container = member_vars_dumper.get_type_container();
     }
 
-    static std::filesystem::path sol_bindings_output_path = "SolBindings";
-
     auto SolBindingsGenerator::generate_files() -> void
     {
         for (const auto& [class_name, class_entry] : type_container.get_class_entries())
@@ -21,12 +20,14 @@ namespace RC::UVTD
             if (class_entry.variables.empty()) continue;
 
             auto final_class_name_clean = class_entry.class_name_clean;
+            
             // Skipping UObject/UObjectBase because it needs to be manually implemented.
             if (final_class_name_clean == STR("UObjectBase")) continue;
 
             auto final_class_name = class_name;
 
-            auto wrapper_header_file = sol_bindings_output_path / std::format(STR("SolBindings_{}.hpp"), final_class_name_clean);
+            auto wrapper_header_file = sol_bindings_output_path / 
+                                       std::format(STR("SolBindings_{}.hpp"), final_class_name_clean);
 
             Output::send(STR("Generating file '{}'\n"), wrapper_header_file.wstring());
 
@@ -40,38 +41,22 @@ namespace RC::UVTD
 
             header_wrapper_dumper.send(STR("auto sol_class_{} = sol().new_usertype<{}>(\"{}\""), final_class_name, final_class_name, final_class_name);
 
-            for (const auto& [variable_name, variable] : class_entry.variables)
+            for (const auto& variable : class_entry.variables)
             {
-                if (variable.type.find(STR("TBaseDelegate")) != variable.type.npos)
-                {
-                    continue;
-                }
-                if (variable.type.find(STR("FUniqueNetIdRepl")) != variable.type.npos)
-                {
-                    continue;
-                }
-                if (variable.type.find(STR("FPlatformUserId")) != variable.type.npos)
-                {
-                    continue;
-                }
-                if (variable.type.find(STR("FVector2D")) != variable.type.npos)
-                {
-                    continue;
-                }
-                if (variable.type.find(STR("FReply")) != variable.type.npos)
-                {
-                    continue;
-                }
-                if (variable.type.find(STR("FUObjectCppClassStaticFunctions")) != variable.type.npos)
+                // Check if this type should be excluded from sol bindings based on configuration
+                if (ConfigUtil::ShouldFilterType(variable.type, TypeFilterCategory::ExcludeFromSolBindings))
                 {
                     continue;
                 }
 
                 File::StringType final_variable_name = variable.name;
-
-                if (variable.name == STR("EnumFlags"))
+                
+                // Apply class-specific member renaming
+                auto rename_info = ConfigUtil::GetMemberRenameInfo(class_entry.class_name, variable.name);
+                if (rename_info.has_value())
                 {
-                    final_variable_name = STR("EnumFlags_Internal");
+                    Output::send(STR("Sol bindings: Renaming member {}.{} to {}\n"), class_entry.class_name, variable.name, rename_info->mapped_name);
+                    final_variable_name = rename_info->mapped_name;
                 }
 
                 header_wrapper_dumper.send(STR(",\n    \"Get{}\", static_cast<{}&({}::*)()>(&{}::Get{})"),
@@ -84,9 +69,10 @@ namespace RC::UVTD
             header_wrapper_dumper.send(STR("\n);\n"));
         }
     }
-
+    
     auto SolBindingsGenerator::output_cleanup() -> void
     {
+        // Use the sol_bindings_output_path from Helpers.hpp
         if (std::filesystem::exists(sol_bindings_output_path))
         {
             for (const auto& item : std::filesystem::directory_iterator(sol_bindings_output_path))
@@ -95,7 +81,7 @@ namespace RC::UVTD
                 {
                     continue;
                 }
-                if (item.path().extension() != STR(".hpp") && item.path().extension() != STR(".cpp"))
+                if (item.path().extension() != STR(".hpp"))
                 {
                     continue;
                 }

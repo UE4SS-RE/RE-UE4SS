@@ -4,5 +4,11 @@
     "NamePrivate",
     "Next",
     "Owner"
+  ],
+  "FUObjectItem": [
+    "Object",
+    "Flags",
+    "GetRefCount",
+    "GetFlagsAndRefCount"
   ]
 }

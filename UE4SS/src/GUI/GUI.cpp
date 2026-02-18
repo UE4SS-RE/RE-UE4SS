@@ -10,6 +10,7 @@
 #include <GUI/Dumpers.hpp>
 #include <GUI/GLFW3_OpenGL3.hpp>
 #include <GUI/LuaDebugger.hpp>
+#include <GUI/Profilers.hpp>
 #include <GUI/Windows.hpp>
 #include <fonts/droidsansfallback.cpp>
 
@@ -180,6 +181,14 @@ namespace RC::GUI
                     LuaDebugger::get().render();
                     ImGui::EndTabItem();
                 }
+
+#ifdef UE4SS_PROFILER_TAB
+                if (ImGui::BeginTabItem(ICON_FA_TACHOMETER_ALT " Profilers"))
+                {
+                    Profilers::render();
+                    ImGui::EndTabItem();
+                }
+#endif
 
                 {
                     std::lock_guard<std::mutex> guard(m_tabs_mutex);
