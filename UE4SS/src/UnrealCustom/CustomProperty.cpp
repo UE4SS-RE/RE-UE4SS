@@ -75,4 +75,15 @@ namespace RC::Unreal
 
         return custom_struct_property;
     }
+
+    auto CustomStructProperty::construct(int32_t offset_internal, UClass* belongs_to_class, UClass* inner_class, UScriptStruct* script_struct, int32_t element_size)
+            -> std::unique_ptr<CustomProperty>
+    {
+        std::unique_ptr<CustomProperty> custom_struct_property = CustomProperty::construct(offset_internal, belongs_to_class, inner_class, element_size);
+
+        // Set the struct type
+        std::bit_cast<FStructProperty*>(custom_struct_property.get())->GetStruct() = script_struct;
+
+        return custom_struct_property;
+    }
 } // namespace RC::Unreal
