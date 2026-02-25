@@ -2318,6 +2318,7 @@ Overloads:
                 LuaMod::m_next_static_construct_callback_id++,
                 hook_lua,
                 class_fname,
+                class_outer_fname,
                 func_ref,
                 thread_ref
             });
@@ -6488,7 +6489,7 @@ Overloads:
                         callbacks_to_execute.reserve(m_static_construct_object_lua_callbacks.size());
                         for (const auto& callback_data : m_static_construct_object_lua_callbacks)
                         {
-                            if (callback_data.instance_of_class == object_class)
+                            if (object_class->GetNamePrivate().Equals(callback_data.instance_class_name) && object_class->GetOuterPrivate()->GetNamePrivate().Equals(callback_data.instance_class_outer_name))
                             {
                                 callbacks_to_execute.push_back(callback_data.callback_id);
                             }
@@ -6533,7 +6534,7 @@ Overloads:
                         // NOT on game thread - queue callbacks for later processing
                         for (const auto& callback_data : m_static_construct_object_lua_callbacks)
                         {
-                            if (callback_data.instance_of_class == object_class)
+                            if (object_class->GetNamePrivate().Equals(callback_data.instance_class_name) && object_class->GetOuterPrivate()->GetNamePrivate().Equals(callback_data.instance_class_outer_name))
                             {
                                 int32_t object_index = constructed_object->GetInternalIndex();
                                 Unreal::FUObjectItem* object_item = Unreal::FUObjectArray::IndexToObject(object_index);
