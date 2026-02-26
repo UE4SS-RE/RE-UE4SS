@@ -1771,18 +1771,7 @@ namespace RC
         mod->uninstall();
 
         // Remove key binds registered by this specific mod
-#ifdef HAS_INPUT
-        m_input_handler.get_events_safe([&](auto& key_set) {
-            std::erase_if(key_set.key_data, [&](auto& item) -> bool {
-                auto& [_, key_data] = item;
-                std::erase_if(key_data, [&](Input::KeyData& kd) -> bool {
-                    // custom_data == 1: Bind came from Lua, custom_data2 is pointer to LuaMod
-                    return kd.custom_data == 1 && kd.custom_data2 == mod;
-                });
-                return key_data.empty();
-            });
-        });
-#endif
+        unregister_keydown_events_for_lua_mod(mod, AllMods::No);
 
         // Remove the old mod from the list
         delete_mod(mod);
@@ -1823,18 +1812,7 @@ namespace RC
         mod->uninstall();
 
         // Remove key binds registered by this specific mod
-#ifdef HAS_INPUT
-        m_input_handler.get_events_safe([&](auto& key_set) {
-            std::erase_if(key_set.key_data, [&](auto& item) -> bool {
-                auto& [_, key_data] = item;
-                std::erase_if(key_data, [&](Input::KeyData& kd) -> bool {
-                    // custom_data == 1: Bind came from Lua, custom_data2 is pointer to LuaMod
-                    return kd.custom_data == 1 && kd.custom_data2 == mod;
-                });
-                return key_data.empty();
-            });
-        });
-#endif
+        unregister_keydown_events_for_lua_mod(mod, AllMods::No);
 
         delete_mod(mod);
 
