@@ -154,6 +154,24 @@ Added comprehensive Delayed Action System for game-thread timer management ([UE4
 - Per-mod action ownership ensures mods can only control their own timers
 - **Deprecates:** `ExecuteAsync` and `LoopAsync` (still work but lack control features)
 
+Added AsyncCompute system for thread-safe async computation with callback support ([UE4SS #1130](https://github.com/UE4SS-RE/RE-UE4SS/pull/1130))
+- `AsyncCompute(taskName, input, callback)` - Run registered C++ task handlers asynchronously
+- `AsyncComputeLua(sourceCode, input, callback, options)` - Run pure Lua code in isolated worker threads
+  - Worker code runs in a completely isolated Lua state (no UE4SS bindings or game access)
+  - Safe standard library: math, string, table, utf8, io, os, coroutine
+  - Excluded for isolation: debug, load, loadfile, dofile, require, package
+  - Optional JSON support via `{ json = true }` options table
+- `CancelAsyncCompute(handle)` - Cancel a pending async task
+- Built-in task handlers: `sleep`, `compute`
+- Results delivered via callbacks on the main thread with `{ success, result, error }` table
+- Ideal for CPU-intensive operations without blocking the game thread
+
+Added JSON serialization functions for Lua values ([UE4SS #1130](https://github.com/UE4SS-RE/RE-UE4SS/pull/1130))
+- `json.encode(value, pretty)` - Convert Lua value to JSON string
+- `json.decode(jsonString)` - Parse JSON string to Lua value
+- Supports tables (arrays and objects), strings, numbers, booleans, and nil
+- Nested structures and Unicode supported
+
 **Updated Lua version to 5.4.7** ([UE4SS #887](https://github.com/UE4SS-RE/RE-UE4SS/pull/887))
 - This is necessary to compile with Clang.
 
