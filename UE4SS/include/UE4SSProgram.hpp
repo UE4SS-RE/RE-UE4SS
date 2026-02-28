@@ -165,6 +165,7 @@ namespace RC
         bool m_has_game_specific_config{};
         bool m_processing_events{};
         bool m_pause_events_processing{};
+        bool m_custom_member_variable_layout_loaded{};
 
       public:
         enum class IsInstalled
