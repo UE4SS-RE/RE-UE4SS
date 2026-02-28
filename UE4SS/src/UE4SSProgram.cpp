@@ -102,9 +102,14 @@ namespace RC
         Output::send(STR(#StructName "::{} = 0x{:X}\n"), name, offset);                                                                                        \
     }
 
-    auto output_all_member_offsets() -> void
+    enum class IsCoalesced
     {
-        Output::send(STR("\n##### MEMBER OFFSETS START #####\n\n"));
+        Yes,
+        No,
+    };
+    auto output_all_member_offsets(IsCoalesced is_coalesced) -> void
+    {
+        Output::send(STR("\n##### MEMBER OFFSETS START ({}) #####\n\n"), is_coalesced == IsCoalesced::No ? STR("MemberVariableLayout") : STR("Coalesced"));
         OUTPUT_MEMBER_OFFSETS_FOR_STRUCT(UObjectBase);
         OUTPUT_MEMBER_OFFSETS_FOR_STRUCT(UScriptStruct::ICppStructOps);
         OUTPUT_MEMBER_OFFSETS_FOR_STRUCT(UStruct);
@@ -144,7 +149,10 @@ namespace RC
         OUTPUT_MEMBER_OFFSETS_FOR_STRUCT(ULocalPlayer);
         OUTPUT_MEMBER_OFFSETS_FOR_STRUCT(UWorld);
         OUTPUT_MEMBER_OFFSETS_FOR_STRUCT(UDataTable);
-        Output::send(STR("\n##### MEMBER OFFSETS END #####\n\n"));
+        OUTPUT_MEMBER_OFFSETS_FOR_STRUCT(FUObjectItem);
+        OUTPUT_MEMBER_OFFSETS_FOR_STRUCT(FUObjectArray);
+        OUTPUT_MEMBER_OFFSETS_FOR_STRUCT(TUObjectArray);
+        Output::send(STR("\n##### MEMBER OFFSETS END ({}) #####\n\n"), is_coalesced == IsCoalesced::No ? STR("MemberVariableLayout") : STR("Coalesced"));
     }
 
     void* HookedLoadLibraryA(const char* dll_name)
@@ -414,8 +422,6 @@ namespace RC
             setup_unreal_properties();
             UAssetRegistry::SetMaxMemoryUsageDuringAssetLoading(settings_manager.Memory.MaxMemoryUsageDuringAssetLoading);
 
-            output_all_member_offsets();
-
             share_lua_functions();
 
             // Only deal with the event loop thread here if the 'Test' constructor doesn't need to be called
@@ -567,6 +573,8 @@ namespace RC
 
                 // The following code is auto-generated.
 #include <MacroSetter.hpp>
+
+                m_custom_member_variable_layout_loaded = true;
             }
         }
     }
@@ -578,6 +586,12 @@ namespace RC
         const StringType offset_overrides_section{STR("OffsetOverrides")};
 
         load_unreal_offsets_from_file();
+
+        if (m_custom_member_variable_layout_loaded)
+        {
+            Output::send(STR("MemberVariableLayout.ini loaded\n"));
+            output_all_member_offsets(IsCoalesced::No);
+        }
 
         Unreal::UnrealInitializer::Config config;
         config.CachePath = m_root_directory / "cache";
@@ -877,6 +891,8 @@ namespace RC
         cpp_mods_done_loading.notify_one();
         // Continuous scanning, and finish initializing after the game thread is unlocked.
         Unreal::UnrealInitializer::Initialize(config);
+
+        output_all_member_offsets(IsCoalesced::Yes);
 
         bool can_create_custom_events{true};
         if (!UObject::ProcessLocalScriptFunctionInternal.is_ready() && Unreal::Version::IsAtLeast(4, 22))
