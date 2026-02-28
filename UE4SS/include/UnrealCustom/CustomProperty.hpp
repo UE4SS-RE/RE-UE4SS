@@ -71,7 +71,12 @@ namespace RC::Unreal
         CustomStructProperty(int32_t offset_internal, int32_t element_size);
 
       public:
+        // Used for the C++ API
         auto static construct(int32_t offset_internal, UScriptStruct* script_struct, int32_t element_size) -> std::unique_ptr<CustomProperty>;
+
+        // Used for the Lua API
+        auto static construct(int32_t offset_internal, UClass* belongs_to_class, UClass* inner_class, UScriptStruct* script_struct, int32_t element_size)
+                -> std::unique_ptr<CustomProperty>;
     };
 } // namespace RC::Unreal
 
