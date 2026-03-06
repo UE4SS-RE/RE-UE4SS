@@ -6466,22 +6466,10 @@ Overloads:
                 // If we're on another thread, we must queue the callback for later processing.
                 std::lock_guard<std::recursive_mutex> guard{LuaMod::m_thread_actions_mutex};
 
-                // Check if we're on the game thread (safely - returns false if not yet initialized)
-                bool on_game_thread = false;
-                try
-                {
-                    on_game_thread = Unreal::IsInGameThread();
-                }
-                catch (...)
-                {
-                    // Game thread ID not yet initialized - treat as not on game thread
-                    on_game_thread = false;
-                }
-
                 Unreal::UStruct* object_class = constructed_object->GetClassPrivate();
                 while (object_class)
                 {
-                    if (on_game_thread)
+                    if (Unreal::IsInGameThreadRaw())
                     {
                         // On game thread call Lua directly, but avoid iterator invalidation:
                         // collect IDs first, then resolve each callback by ID when executing.
