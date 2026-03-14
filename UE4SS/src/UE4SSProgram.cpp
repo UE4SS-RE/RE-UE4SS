@@ -38,6 +38,7 @@
 #include <Signatures.hpp>
 #include <Timer/ScopedTimer.hpp>
 #include <UE4SSProgram.hpp>
+#include <AsyncCompute.hpp>
 #include <Unreal/AGameMode.hpp>
 #include <Unreal/AGameModeBase.hpp>
 #include <Unreal/GameplayStatics.hpp>
@@ -1120,6 +1121,9 @@ namespace RC
                                                      }),
                                       m_queued_events.end());
             }
+
+            // Process any completed async compute callbacks
+            AsyncComputeManager::get().process_completed_tasks();
 
             // Commented out because this system (turn off hotkeys when in-game console is open) it doesn't work properly.
             /*
