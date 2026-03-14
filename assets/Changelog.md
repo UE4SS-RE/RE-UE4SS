@@ -210,6 +210,8 @@ Added support for `UScriptStruct` when using `RegisterCustomProprety` ([UE4SS #1
 
 Added support for handling structs as userdata (Fixed `StructData as userdata is not yet implemented`). ([UE4SS #1169](https://github.com/UE4SS-RE/RE-UE4SS/pull/1169)) - Corporalwill123
 
+Added support for `StructProperty` to `RegisterCustomProperty`, by specifying a `UScriptStruct` name in the `StructProperty` table. ([UE4SS #1190](https://github.com/UE4SS-RE/RE-UE4SS/pull/1190)) - emoose
+
 #### Types.lua [PR #650](https://github.com/UE4SS-RE/RE-UE4SS/pull/650) 
 - Added `NAME_None` definition 
 - Added `EFindName` enum definition 
