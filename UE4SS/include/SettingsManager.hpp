@@ -31,6 +31,7 @@ namespace RC
         {
             bool EnableHotReloadSystem{};
             Input::Key HotReloadKey{Input::Key::R};
+            bool EnableAutoReloadingLuaMods{};
             bool UseCache{true};
             bool InvalidateCacheIfDLLDiffers{true};
             bool EnableDebugKeyBindings{false};
