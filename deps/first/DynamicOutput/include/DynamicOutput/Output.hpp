@@ -33,6 +33,30 @@ namespace RC::Output
 
     auto RC_DYNOUT_API has_internal_error() -> bool;
 
+    inline auto log_level_to_color(Color::Color color) -> std::string
+    {
+        switch (color)
+        {
+        case Color::Default:
+        case Color::NoColor:
+            return "\033[0;0m";
+        case Color::Cyan:
+            return "\033[1;36m";
+        case Color::Yellow:
+            return "\033[1;33m";
+        case Color::Red:
+            return "\033[1;31m";
+        case Color::Green:
+            return "\033[1;32m";
+        case Color::Blue:
+            return "\033[1;94m";
+        case Color::Purple:
+            return "\033[1;35m";
+        }
+
+        return "\033[0;0m";
+    }
+
     template <typename DeviceType>
     auto get_device_internal(OutputDevicesContainerType& device_container) -> DeviceType&
     {
@@ -169,7 +193,7 @@ namespace RC::Output
                 ASSERT_OUTPUT_DEVICE_IS_VALID(device)
                 if (device->has_optional_arg())
                 {
-                    device->receive_with_optional_arg(fmt::vformat(content, fmt_args...), RC_STD_MAKE_FORMAT_ARGS(static_cast<int32_t>(optional_arg)));
+                    device->receive_with_optional_arg(fmt::vformat(content, fmt_args...), static_cast<int32_t>(optional_arg));
                 }
                 else
                 {

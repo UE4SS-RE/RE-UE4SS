@@ -9,7 +9,9 @@
 // This is a debug flag to force the use of u16string for testing purposes
 // char16_t and wchar_t are two different types, so we need to force the use of one of them
 // to ensure we have covered all the cases.
-// #define FORCE_U16
+#ifdef __linux__
+#define FORCE_U16
+#endif
 
 namespace RC
 {
