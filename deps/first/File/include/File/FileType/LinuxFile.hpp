@@ -1,6 +1,6 @@
 #pragma once
 
-#ifdef _WIN32
+#ifdef __linux__
 
 #include <filesystem>
 #include <format>
@@ -9,9 +9,13 @@
 #include <File/FileType/FileBase.hpp>
 #include <File/Macros.hpp>
 
+// NOTE: This file is effectively a stub.
+//       The LinuxFile class has not been implemented!
+//       File operations through the Output::* system doesn't work, for example FileDevice and NewFileDevice.
+
 namespace RC::File
 {
-    class WinFile : public FileInterface<WinFile>
+    class LinuxFile : public FileInterface<LinuxFile>
     {
       private:
         using HANDLE = void*;
@@ -45,7 +49,7 @@ namespace RC::File
         bool m_is_file_open{};
 
       public:
-        ~WinFile() override = default;
+        ~LinuxFile() override = default;
 
       private:
         auto static create_all_directories(const std::filesystem::path& file_name_and_path) -> void;
@@ -78,10 +82,10 @@ namespace RC::File
         RC_FILE_API auto get_serialized_item(size_t data_size, bool is_internal_item = false) -> void* override;
         RC_FILE_API auto close_current_file() -> void override;
         RC_FILE_API auto write_string_to_file(StringViewType string_to_write) -> void override;
-        RC_FILE_API auto is_same_as(WinFile& other_file) -> bool override;
+        RC_FILE_API auto is_same_as(LinuxFile& other_file) -> bool override;
         [[nodiscard]] RC_FILE_API auto read_all() const -> StringType override;
         [[nodiscard]] RC_FILE_API auto memory_map() -> std::span<uint8_t> override;
-        [[nodiscard]] RC_FILE_API auto static open_file(const std::filesystem::path& file_name_and_path, const OpenProperties& open_properties) -> WinFile;
+        [[nodiscard]] RC_FILE_API auto static open_file(const std::filesystem::path& file_name_and_path, const OpenProperties& open_properties) -> LinuxFile;
         // File Interface -> END
     };
 
@@ -89,7 +93,7 @@ namespace RC::File
     // Therefore, it's not necessary to do any checks here
     template <ImplementsFileInterface UnderlyingAbstraction>
     class HandleTemplate;
-    using Handle = HandleTemplate<WinFile>;
+    using Handle = HandleTemplate<LinuxFile>;
 } // namespace RC::File
 
-#endif // ifdef _WIN32
+#endif // ifdef __linux__

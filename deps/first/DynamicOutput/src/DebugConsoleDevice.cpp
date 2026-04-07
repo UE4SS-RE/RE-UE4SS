@@ -4,44 +4,23 @@
 #include <DynamicOutput/DebugConsoleDevice.hpp>
 #include <DynamicOutput/Output.hpp>
 
+#ifdef _WIN32
 #define NOMINMAX
 #include <Windows.h>
 #ifdef TEXT
 #undef TEXT
 #endif
+#endif
 
 namespace RC::Output
 {
-    static auto log_level_to_color(Color::Color color) -> std::string
-    {
-        switch (color)
-        {
-        case Color::Default:
-        case Color::NoColor:
-            return "\033[0;0m";
-        case Color::Cyan:
-            return "\033[1;36m";
-        case Color::Yellow:
-            return "\033[1;33m";
-        case Color::Red:
-            return "\033[1;31m";
-        case Color::Green:
-            return "\033[1;32m";
-        case Color::Blue:
-            return "\033[1;94m";
-        case Color::Purple:
-            return "\033[1;35m";
-        }
-
-        return "\033[0;0m";
-    }
-
     auto DebugConsoleDevice::set_windows_console_out_mode_if_needed() const -> void
     {
         if (m_windows_console_mode_set)
         {
             return;
         }
+#ifdef _WIN32
         HANDLE current_console_out_handle = GetStdHandle(STD_OUTPUT_HANDLE);
         if (current_console_out_handle != INVALID_HANDLE_VALUE)
         {
@@ -49,6 +28,7 @@ namespace RC::Output
             GetConsoleMode(current_console_out_handle, &current_console_out_mode);
             SetConsoleMode(current_console_out_handle, current_console_out_mode | ENABLE_VIRTUAL_TERMINAL_PROCESSING);
         }
+#endif
         m_windows_console_mode_set = true;
     }
 
@@ -67,9 +47,9 @@ namespace RC::Output
         set_windows_console_out_mode_if_needed();
 
 #if ENABLE_OUTPUT_DEVICE_DEBUG_MODE
-        wprintf_s(STR("DebugConsoleDevice received: %ls"), m_formatter(fmt).c_str());
+        RC_DEVICE_PRINT_FUNC(fmt, optional_arg, "DebugConsoleDevice received: ")
 #else
-        wprintf_s(STR("%hs%ls\033[0m"), log_level_to_color(static_cast<Color::Color>(optional_arg)).c_str(), m_formatter(fmt).c_str());
+        RC_DEVICE_PRINT_FUNC(fmt, optional_arg, "")
 #endif
     }
 } // namespace RC::Output

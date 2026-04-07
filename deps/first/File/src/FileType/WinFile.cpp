@@ -1,3 +1,4 @@
+#ifdef _WIN32
 #include <fstream>
 
 #include <File/File.hpp>
@@ -623,3 +624,5 @@ namespace RC::File
         return file;
     }
 } // namespace RC::File
+
+#endif // ifdef _WIN32

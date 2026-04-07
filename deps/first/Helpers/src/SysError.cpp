@@ -12,6 +12,9 @@
 #include "Helpers/SysError.hpp"
 #include "Helpers/String.hpp"
 
+#include <fmt/core.h>
+#include <fmt/xchar.h>
+
 namespace RC
 {
     SysError::SysError(const int error_code, const std::error_category &category)
@@ -28,7 +31,7 @@ namespace RC
 
     auto SysError::assign(unsigned long error_code) -> void
     {
-        m_error_text.assign(std::format(L"[0x{:x}] {}", error_code, format_error(static_cast<int>(error_code))));
+        m_error_text.assign(fmt::format(STR("[0x{:x}] {}"), error_code, format_error(static_cast<int>(error_code))));
     }
 
 #ifdef _WIN32
@@ -53,7 +56,7 @@ namespace RC
 
     auto SysError::category() const -> StringType
     {
-        return to_wstring(m_error_category->name());
+        return ensure_str(m_error_category->name());
     }
 
     auto SysError::format_error(const int error_code) const -> StringType
@@ -61,12 +64,12 @@ namespace RC
         const std::error_category& error_category = *m_error_category;
         const std::error_code ec(error_code, error_category);
         // remove new line(s) and tabs
-        auto result = std::regex_replace(to_wstring(std::system_error(ec).what()), std::wregex(STR("(\t|\r?\n)")), STR(" "));
+        auto result = std::regex_replace(to_wstring(std::system_error(ec).what()), std::wregex(L"(\t|\r?\n)"), L" ");
         // right trim
         result.erase(std::ranges::find_if(std::ranges::reverse_view(result), [](const CharType c) -> bool {
             return !std::isspace<CharType>(c, std::locale::classic());
         }).base(), result.end());
 
-        return result;
+        return ensure_str(result);
     }
 }

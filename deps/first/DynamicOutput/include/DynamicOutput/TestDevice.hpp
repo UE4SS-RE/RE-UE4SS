@@ -4,6 +4,12 @@
 #include <DynamicOutput/Macros.hpp>
 #include <DynamicOutput/OutputDevice.hpp>
 
+#if _WIN32
+#define RC_TEST_DEVICE_PRINT printf_s
+#elif __linux__
+#define RC_TEST_DEVICE_PRINT printf
+#endif
+
 namespace RC::Output
 {
     class TestDevice : public OutputDevice
@@ -49,23 +55,23 @@ namespace RC::Output
             switch (typed_optional_arg)
             {
             case OptionalArgTest::ValueDefault:
-                printf_s("Optional Arg: ValueDefault - ");
+                RC_TEST_DEVICE_PRINT("Optional Arg: ValueDefault - ");
                 break;
             case OptionalArgTest::ValueOne:
-                printf_s("Optional Arg: ValueOne - ");
+                RC_TEST_DEVICE_PRINT("Optional Arg: ValueOne - ");
                 break;
             case OptionalArgTest::ValueTwo:
-                printf_s("Optional Arg: ValueTwo - ");
+                RC_TEST_DEVICE_PRINT("Optional Arg: ValueTwo - ");
                 break;
             case OptionalArgTest::ValueThree:
-                printf_s("Optional Arg: ValueThree - ");
+                RC_TEST_DEVICE_PRINT("Optional Arg: ValueThree - ");
                 break;
             }
 
 #if ENABLE_OUTPUT_DEVICE_DEBUG_MODE
-            printf_s("TestDevice received: %S", fmt.c_str());
+            RC_DEVICE_PRINT_FUNC(fmt, optional_arg, "TestDevice received: ");
 #else
-            printf_s("%S", FromCharTypePtr<wchar_t>(fmt.data()));
+            RC_DEVICE_PRINT_FUNC(fmt, optional_arg, "");
 #endif
         }
     };
