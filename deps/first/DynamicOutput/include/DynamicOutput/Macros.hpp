@@ -20,7 +20,7 @@
 
 #ifdef _WIN32
 #define RC_DEVICE_PRINT_FUNC(fmt_var, optional_arg, optional_prefix) \
-wprintf_s(STR("%s%hs%ls\033[0m"), optional_prefix, log_level_to_color(static_cast<Color::Color>(optional_arg)).c_str(), m_formatter(fmt_var).c_str());
+wprintf_s(STR("%hs%hs%ls\033[0m"), optional_prefix, log_level_to_color(static_cast<Color::Color>(optional_arg)).c_str(), m_formatter(fmt_var).c_str());
 #elif __linux__
 #define RC_DEVICE_PRINT_FUNC(fmt_var, optional_arg, optional_prefix) \
 const auto as_utf8 = to_utf8_string(m_formatter(fmt_var)); \
