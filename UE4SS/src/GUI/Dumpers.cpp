@@ -184,48 +184,42 @@ namespace RC::GUI::Dumpers
                         }
                     };
 
-                    if (Version::IsAtMost(4, 19))
+                    TArray<UObject*> material_interfaces;
+                    if (auto static_materials_property = CastField<FArrayProperty>(mesh->GetPropertyByName((STR("StaticMaterials")))))
                     {
-                        const auto materials =
-                                *mesh->GetValuePtrByPropertyName<TArray<FStaticMaterial_419AndBelow>>(FromCharTypePtr<TCHAR>(STR("StaticMaterials")));
-                        if (materials.GetData())
+                        auto static_materials_inner_property = static_materials_property->GetInner();
+
+                        if (auto static_material_property = CastField<FStructProperty>(static_materials_inner_property))
                         {
-                            actor_buffer.append(STR("Materials=("));
-                        }
-                        for (auto [material, material_index] : materials | views::enumerate)
-                        {
-                            materials_for_each_body(material.MaterialInterface);
-                            if (material_index + 1 < materials.Num())
+                            auto& static_material_struct = static_material_property->GetStruct();
+                            auto material_interface_property = static_material_struct->GetPropertyByNameInChain((STR("MaterialInterface")));
+
+                            FScriptArrayHelper_InContainer array_helper(static_materials_property, mesh);
+                            for (int32 i = 0; i < array_helper.Num(); i++)
                             {
-                                actor_buffer.append(STR(","));
-                            }
-                            else
-                            {
-                                actor_buffer.append(STR(")"));
+                                auto material = *material_interface_property->ContainerPtrToValuePtr<UObject*>(array_helper.GetRawPtr(i));
+                                material_interfaces.Add(material);
                             }
                         }
                     }
-                    else
+
+                    if (material_interfaces.GetData())
                     {
-                        const auto& materials =
-                                *mesh->GetValuePtrByPropertyName<TArray<FStaticMaterial_420AndAbove>>(FromCharTypePtr<TCHAR>(STR("StaticMaterials")));
-                        if (materials.GetData())
+                        actor_buffer.append(STR("Materials=("));
+                    }
+                    for (auto [material, material_index] : material_interfaces | views::enumerate)
+                    {
+                        materials_for_each_body(material);
+                        if (material_index + 1 < material_interfaces.Num())
                         {
-                            actor_buffer.append(STR("Materials=("));
+                            actor_buffer.append(STR(","));
                         }
-                        for (auto [material, material_index] : materials | views::enumerate)
+                        else
                         {
-                            materials_for_each_body(material.MaterialInterface);
-                            if (material_index + 1 < materials.Num())
-                            {
-                                actor_buffer.append(STR(","));
-                            }
-                            else
-                            {
-                                actor_buffer.append(STR(")"));
-                            }
+                            actor_buffer.append(STR(")"));
                         }
                     }
+
                     actor_buffer.append(STR(")"));
 
                     if (static_mesh_component_index + 1 < static_mesh_components.Num())
