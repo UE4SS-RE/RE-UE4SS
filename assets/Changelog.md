@@ -114,6 +114,10 @@ Added individual mod restart/uninstall/start functionality to Lua Debugger ([UE4
 
 Added support for generating `FUtf8String` and `FAnsiString` properties in UHT-compatible headers ([UE4SS #1015](https://github.com/UE4SS-RE/RE-UE4SS/pull/1015))
 
+### Static Mesh Dumper
+
+Fixed Static Mesh Dumper crashing on material interfaces in UE 5.6 and above due to FStaticMaterial layout changes. - Okaetsu
+
 ### Lua API
 
 Added support for `FUtf8String` and `FAnsiString` Unreal string types with string manipulation API ([UE4SS #1015](https://github.com/UE4SS-RE/RE-UE4SS/pull/1015))
