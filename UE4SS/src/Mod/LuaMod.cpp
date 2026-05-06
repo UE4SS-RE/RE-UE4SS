@@ -2620,8 +2620,9 @@ Overloads:
             auto game_root_directory = game_executable_directory.parent_path().parent_path().parent_path();
             auto directories_table = lua.prepare_new_table();
 
-            std::function<void(const std::filesystem::path&, LuaMadeSimple::Lua::Table&)> iterate_directory =
-                    [&](const std::filesystem::path& directory, LuaMadeSimple::Lua::Table& current_directory_table) {
+            std::function<void(const std::filesystem::path&, LuaMadeSimple::Lua::Table&, int)> iterate_directory =
+                    [&](const std::filesystem::path& directory, LuaMadeSimple::Lua::Table& current_directory_table, int depth) {
+                        if (depth > 7) return;
                         try
                         {
                             std::error_code ec;
@@ -2629,12 +2630,25 @@ Overloads:
                             {
                                 try
                                 {
+                                    if (item.is_symlink())
+                                    {
+                                        continue;
+                                    }
+
                                     if (!item.is_directory())
                                     {
                                         continue;
                                     }
 
+                                    
                                     auto path = item.path().filename();
+                                    
+                                    auto path_str = path.string();
+                                    if (path_str == "dosdevices" || path_str == "drive_c" || path_str == "proc" || path_str == "sys")
+                                    {
+                                        continue;
+                                    }
+
 
                                     // Set key to "Game" if this is the game directory, otherwise use the actual name
                                     std::string table_key;
@@ -2652,7 +2666,7 @@ Overloads:
                                     auto next_directory_table = lua.prepare_new_table();
 
                                     // Recursively iterate the subdirectory
-                                    iterate_directory(item.path(), next_directory_table);
+                                    iterate_directory(item.path(), next_directory_table, depth + 1);
                                     current_directory_table.fuse_pair();
                                 }
                                 catch (const std::exception& e)
@@ -2848,7 +2862,7 @@ Overloads:
 
             try
             {
-                iterate_directory(game_root_directory, directories_table);
+                iterate_directory(game_root_directory, directories_table, 0);
             }
             catch (const std::exception& e)
             {
