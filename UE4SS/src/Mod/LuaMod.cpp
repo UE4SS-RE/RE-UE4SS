@@ -1953,16 +1953,34 @@ Overloads:
 
             // Change this to userdata if support for 'FObjectInstancingGraph' is ever added
             void* param_instance_graph{};
-            if (lua.is_integer())
+            if (lua.is_nil())
             {
-                param_instance_graph = reinterpret_cast<void*>(static_cast<uintptr_t>(lua.get_integer()));
+                lua.discard_value();
+            }
+            else if (lua.is_userdata())
+            {
+                param_instance_graph = lua_touserdata(lua.get_lua_state(), 1);
+                lua.discard_value();
+            }
+            else if (lua.get_stack_size() > 0)
+            {
+                lua.throw_error("StaticConstructObject: InstanceGraph must be lightuserdata or nil");
             }
 
             // Change this to userdata if support for 'UPackage' is ever added
             void* param_external_package{};
-            if (lua.is_integer())
+            if (lua.is_nil())
             {
-                param_external_package = reinterpret_cast<void*>(static_cast<uintptr_t>(lua.get_integer()));
+                lua.discard_value();
+            }
+            else if (lua.is_userdata())
+            {
+                param_external_package = lua_touserdata(lua.get_lua_state(), 1);
+                lua.discard_value();
+            }
+            else if (lua.get_stack_size() > 0)
+            {
+                lua.throw_error("StaticConstructObject: ExternalPackage must be lightuserdata or nil");
             }
 
             // void* param_subobject_overrides{};
