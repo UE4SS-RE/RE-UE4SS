@@ -80,6 +80,8 @@ Added `FUObjectItem`, `FUObjectArray`, and `TUObjectArray` to MemberVariableLayo
 - We've also added a special `UEP_TotalSize` entry to every section.
 - It's currently only crucial for `FUObjectItem`, but in the future, we may use this entry for more types.
 
+Fixed the ingame console (Tilde, or F10 key) not working for some games - ([UE4SS #1252](https://github.com/UE4SS-RE/RE-UE4SS/pull/1252))
+
 ### Live View 
 Added search filter: `IncludeClassNames`. ([UE4SS #472](https://github.com/UE4SS-RE/RE-UE4SS/pull/472)) - Buckminsterfullerene
 
