@@ -47,7 +47,7 @@ local function CreateConsole()
     local Engine = UEHelpers.GetEngine()
     if not Engine:IsValid() then print("[ConsoleEnabler] Was unable to find an instance of UEngine\n") return end
 
-    local ConsoleClass = Engine.ConsoleClass ---@type UClass
+    local ConsoleClass = StaticFindObject("/Script/Engine.Console") ---@type UClass
     local GameViewport = Engine.GameViewport
     if (GameViewport:IsValid() and GameViewport.ViewportConsole:IsValid()) then
         -- Console already exists, let's just remap the keys
