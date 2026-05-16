@@ -2620,8 +2620,9 @@ Overloads:
             auto game_root_directory = game_executable_directory.parent_path().parent_path().parent_path();
             auto directories_table = lua.prepare_new_table();
 
-            std::function<void(const std::filesystem::path&, LuaMadeSimple::Lua::Table&)> iterate_directory =
-                    [&](const std::filesystem::path& directory, LuaMadeSimple::Lua::Table& current_directory_table) {
+            std::function<void(const std::filesystem::path&, LuaMadeSimple::Lua::Table&, int)> iterate_directory =
+                    [&](const std::filesystem::path& directory, LuaMadeSimple::Lua::Table& current_directory_table, int depth) {
+                        if (depth > 7) return;
                         try
                         {
                             std::error_code ec;
@@ -2629,12 +2630,25 @@ Overloads:
                             {
                                 try
                                 {
+                                    if (item.is_symlink())
+                                    {
+                                        continue;
+                                    }
+
                                     if (!item.is_directory())
                                     {
                                         continue;
                                     }
 
+                                    
                                     auto path = item.path().filename();
+                                    
+                                    auto path_str = path.string();
+                                    if (path_str == "dosdevices" || path_str == "drive_c" || path_str == "proc" || path_str == "sys")
+                                    {
+                                        continue;
+                                    }
+
 
                                     // Set key to "Game" if this is the game directory, otherwise use the actual name
                                     std::string table_key;
@@ -2652,7 +2666,7 @@ Overloads:
                                     auto next_directory_table = lua.prepare_new_table();
 
                                     // Recursively iterate the subdirectory
-                                    iterate_directory(item.path(), next_directory_table);
+                                    iterate_directory(item.path(), next_directory_table, depth + 1);
                                     current_directory_table.fuse_pair();
                                 }
                                 catch (const std::exception& e)
@@ -2717,60 +2731,16 @@ Overloads:
                                         }
 
                                         const auto path_str = lua.get_string();
-                                        std::wstring path_wstr;
+                                        std::wstring path_wstr = RC::to_wstring(path_str);
 
-                                        // Try to convert the path string to wstring for filesystem operations
-                                        try
+                                        // Check if the path exists first
+                                        std::error_code path_ec;
+                                        if (!std::filesystem::exists(path_wstr, path_ec))
                                         {
-                                            path_wstr = RC::to_wstring(path_str);
-                                        }
-                                        catch (const std::exception&)
-                                        {
-                                            // If conversion fails, reconstruct path as basic conversion
-                                            path_wstr.reserve(path_str.size());
-                                            for (char c : path_str)
+                                            // Path doesn't exist, try to reconstruct it
+                                            if (path_str.find("LogicMods") != std::string::npos)
                                             {
-                                                path_wstr.push_back(static_cast<wchar_t>(c));
-                                            }
-
-                                            // Check if the path exists first
-                                            std::error_code path_ec;
-                                            if (!std::filesystem::exists(path_wstr, path_ec))
-                                            {
-                                                // Path doesn't exist, try to reconstruct it
-                                                if (path_str.find("LogicMods") != std::string::npos)
-                                                {
-                                                    // Get the game executable directory
-                                                    std::filesystem::path game_exec_dir = UE4SSProgram::get_program().get_game_executable_directory();
-
-                                                    // Navigate to content directory
-                                                    std::filesystem::path content_dir = game_exec_dir;
-                                                    content_dir = content_dir.parent_path(); // Up to Binaries
-                                                    content_dir = content_dir.parent_path(); // Up to Game
-                                                    content_dir /= "Content";
-
-                                                    if (std::filesystem::exists(content_dir))
-                                                    {
-                                                        auto logic_mods_dir = content_dir / "Paks/LogicMods";
-
-                                                        // Check if it exists or try to create it
-                                                        if (!std::filesystem::exists(logic_mods_dir))
-                                                        {
-                                                            std::error_code dir_ec;
-                                                            auto paks_dir = content_dir / "Paks";
-                                                            if (!std::filesystem::exists(paks_dir))
-                                                            {
-                                                                std::filesystem::create_directory(paks_dir, dir_ec);
-                                                            }
-                                                            std::filesystem::create_directory(logic_mods_dir, dir_ec);
-                                                        }
-
-                                                        if (std::filesystem::exists(logic_mods_dir))
-                                                        {
-                                                            path_wstr = logic_mods_dir.wstring();
-                                                        }
-                                                    }
-                                                }
+                                                path_wstr = UE4SSProgram::get_program().get_logic_mods_directory().wstring();
                                             }
                                         }
 
@@ -2848,7 +2818,7 @@ Overloads:
 
             try
             {
-                iterate_directory(game_root_directory, directories_table);
+                iterate_directory(game_root_directory, directories_table, 0);
             }
             catch (const std::exception& e)
             {
@@ -2867,58 +2837,12 @@ Overloads:
 #1: CreateLogicModsDirectory())"};
             try
             {
-                std::filesystem::path game_executable_directory = UE4SSProgram::get_program().get_game_executable_directory();
-                auto game_content_dir = game_executable_directory.parent_path().parent_path() / "Content";
-                if (!std::filesystem::exists(game_content_dir))
+                auto logic_mods_dir = UE4SSProgram::get_program().get_logic_mods_directory();
+
+                if (!std::filesystem::exists(logic_mods_dir))
                 {
-                    lua.throw_error("CreateLogicModsDirectory: Could not locate the \"Content\" directory because the directory structure is unknown (not "
-                                    "<RootGamePath>/Game/Content)\n");
-                }
-
-                auto logic_mods_dir = game_content_dir / "Paks/LogicMods";
-
-                std::error_code ec;
-                if (std::filesystem::exists(logic_mods_dir, ec))
-                {
-                    Output::send<LogLevel::Warning>(
-                            STR("CreateLogicModsDirectory: \"LogicMods\" directory already exists. Cancelling creation of new directory.\n"));
-                    lua.set_bool(true);
-                    return 1;
-                }
-
-                // Try to create the Paks directory first if it doesn't exist
-                auto paks_dir = game_content_dir / "Paks";
-                if (!std::filesystem::exists(paks_dir, ec))
-                {
-                    ec.clear();
-                    bool paks_created = std::filesystem::create_directory(paks_dir, ec);
-                    if (!paks_created || ec)
-                    {
-                        Output::send<LogLevel::Error>(STR("CreateLogicModsDirectory: Failed to create Paks directory: {}\n"), to_wstring(ec.message()));
-                        // Try to continue anyway
-                    }
-                }
-
-                // Now create the LogicMods directory
-                ec.clear();
-                bool created = std::filesystem::create_directory(logic_mods_dir, ec);
-
-                if (!created || ec)
-                {
-                    Output::send<LogLevel::Error>(STR("CreateLogicModsDirectory: Error creating directory: {}\n"), to_wstring(ec.message()));
-
-                    // Check if the directory exists despite the error (might happen with Unicode paths)
-                    ec.clear();
-                    if (std::filesystem::exists(logic_mods_dir, ec))
-                    {
-                        lua.set_bool(true);
-                        return 1;
-                    }
-
                     lua.throw_error("CreateLogicModsDirectory: Unable to create \"LogicMods\" directory. Try creating manually.\n");
                 }
-
-                Output::send<LogLevel::Warning>(STR("CreateLogicModsDirectory: LogicMods directory created.\n"));
 
                 lua.set_bool(true);
                 return 1;
