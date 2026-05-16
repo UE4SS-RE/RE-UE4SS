@@ -1893,76 +1893,96 @@ Overloads:
 
 ))"};
 
-            // For now, we're assuming that if there's userdata, that userdata is of the correct underlying type
-            if (!lua.is_userdata())
-            {
-                lua.throw_error(error_overload_not_found);
-            }
-            Unreal::UClass* param_class = lua.get_userdata<LuaType::UClass>().get_remote_cpp_object();
+            lua_State* L = lua.get_lua_state();
+            int num_args = lua_gettop(L);
 
-            if (!lua.is_userdata())
+            // For now, we're assuming that if there's userdata, that userdata is of the correct underlying type
+            if (num_args < 1 || !lua.is_userdata(1))
             {
                 lua.throw_error(error_overload_not_found);
             }
-            Unreal::UObject* param_outer = lua.get_userdata<LuaType::UObject>().get_remote_cpp_object();
+            Unreal::UClass* param_class = lua.get_userdata<LuaType::UClass>(1, true).get_remote_cpp_object();
+
+            if (num_args < 2 || !lua.is_userdata(2))
+            {
+                lua.throw_error(error_overload_not_found);
+            }
+            Unreal::UObject* param_outer = lua.get_userdata<LuaType::UObject>(2, true).get_remote_cpp_object();
 
             Unreal::FName param_name;
-            if (lua.is_userdata())
+            if (num_args >= 3)
             {
-                param_name = lua.get_userdata<LuaType::FName>().get_local_cpp_object();
-            }
-            else if (lua.is_integer())
-            {
-                param_name = Unreal::FName(lua.get_integer());
-            }
-            else
-            {
-                param_name = Unreal::FName(static_cast<int64_t>(0));
+                if (lua.is_userdata(3))
+                {
+                    param_name = lua.get_userdata<LuaType::FName>(3, true).get_local_cpp_object();
+                }
+                else if (lua.is_integer(3))
+                {
+                    param_name = Unreal::FName(lua_tointeger(L, 3));
+                }
+                else
+                {
+                    param_name = Unreal::FName(static_cast<int64_t>(0));
+                }
             }
 
             Unreal::EObjectFlags param_set_flags{};
-            if (lua.is_integer())
+            if (num_args >= 4 && lua.is_integer(4))
             {
-                param_set_flags = static_cast<Unreal::EObjectFlags>(lua.get_integer());
+                param_set_flags = static_cast<Unreal::EObjectFlags>(lua_tointeger(L, 4));
             }
 
             Unreal::EInternalObjectFlags param_internal_set_flags{};
-            if (lua.is_integer())
+            if (num_args >= 5 && lua.is_integer(5))
             {
-                param_internal_set_flags = static_cast<Unreal::EInternalObjectFlags>(lua.get_integer());
+                param_internal_set_flags = static_cast<Unreal::EInternalObjectFlags>(lua_tointeger(L, 5));
             }
 
             // The rest are all optional parameters
             bool param_copy_transients_from_class_defaults{};
-            if (lua.is_bool())
+            if (num_args >= 6 && lua.is_bool(6))
             {
-                param_copy_transients_from_class_defaults = lua.get_bool();
+                param_copy_transients_from_class_defaults = lua_toboolean(L, 6);
             }
 
             bool param_assume_template_is_archetype{};
-            if (lua.is_bool())
+            if (num_args >= 7 && lua.is_bool(7))
             {
-                param_assume_template_is_archetype = lua.get_bool();
+                param_assume_template_is_archetype = lua_toboolean(L, 7);
             }
 
             Unreal::UObject* param_template{};
-            if (lua.is_userdata())
+            if (num_args >= 8 && lua.is_userdata(8))
             {
-                param_template = lua.get_userdata<LuaType::UObject>().get_remote_cpp_object();
+                param_template = lua.get_userdata<LuaType::UObject>(8, true).get_remote_cpp_object();
             }
 
             // Change this to userdata if support for 'FObjectInstancingGraph' is ever added
             void* param_instance_graph{};
-            if (lua.is_integer())
+            if (num_args >= 9)
             {
-                param_instance_graph = reinterpret_cast<void*>(static_cast<uintptr_t>(lua.get_integer()));
+                if (lua_islightuserdata(L, 9))
+                {
+                    param_instance_graph = lua_touserdata(L, 9);
+                }
+                else if (!lua_isnil(L, 9))
+                {
+                    lua.throw_error("StaticConstructObject: InstanceGraph must be lightuserdata or nil");
+                }
             }
 
             // Change this to userdata if support for 'UPackage' is ever added
             void* param_external_package{};
-            if (lua.is_integer())
+            if (num_args >= 10)
             {
-                param_external_package = reinterpret_cast<void*>(static_cast<uintptr_t>(lua.get_integer()));
+                if (lua_islightuserdata(L, 10))
+                {
+                    param_external_package = lua_touserdata(L, 10);
+                }
+                else if (!lua_isnil(L, 10))
+                {
+                    lua.throw_error("StaticConstructObject: ExternalPackage must be lightuserdata or nil");
+                }
             }
 
             // void* param_subobject_overrides{};
