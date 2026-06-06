@@ -59,13 +59,6 @@ namespace RC::LuaType
     template <LuaMadeSimple::Type::IsFinal is_final>
     auto UDataTable::setup_member_functions(const LuaMadeSimple::Lua::Table& table) -> void
     {
-        table.add_pair("IsValid",
-                       [](const LuaMadeSimple::Lua& lua) -> int {
-                           auto& lua_object = lua.get_userdata<UDataTable>();
-                           lua.set_bool(lua_object.get_remote_cpp_object() != nullptr);
-                           return 1;
-                       });
-
         table.add_pair("GetRowStruct",
                        [](const LuaMadeSimple::Lua& lua) -> int {
                            auto& lua_object = lua.get_userdata<UDataTable>();
