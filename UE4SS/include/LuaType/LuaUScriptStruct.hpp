@@ -12,6 +12,9 @@ namespace RC::Unreal
 namespace RC::LuaType
 {
     // Simple wrapper that contains the UScriptStruct* and the FStructProperty*
+    // IMPORTANT: DO NOT move the 'script_struct' member, or add any new ones above it, or add a vtable to this struct.
+    //            We are relying on 'script_struct' being at offset 0x0 so that it can correctly be treated as a UStruct and UObject.
+    //            This allows calling UObject and UStruct members (i.e. GetFullName, etc.) without further adjustments.
     struct ScriptStructWrapper
     {
         Unreal::UScriptStruct* script_struct{};
