@@ -62,6 +62,9 @@ namespace RC::LuaMadeSimple::Type
     template <typename ObjectType>
     class LocalObject : public BaseObject
     {
+    public:
+        static constexpr bool IsLocal = true;
+
       private:
         ObjectType m_local_storage;
 
@@ -71,7 +74,17 @@ namespace RC::LuaMadeSimple::Type
         }
 
       public:
+        auto static construct(const LuaMadeSimple::Lua& lua, [[maybe_unused]] BaseObject& construct_to) -> const LuaMadeSimple::Lua::Table
+        {
+            return lua.prepare_new_table();
+        }
+
         auto get_local_cpp_object() -> ObjectType&
+        {
+            return m_local_storage;
+        }
+
+        auto get_local_cpp_object() const -> const ObjectType&
         {
             return m_local_storage;
         }
@@ -81,6 +94,9 @@ namespace RC::LuaMadeSimple::Type
     template <typename ObjectType>
     class RemoteObject : public BaseObject
     {
+    public:
+        static constexpr bool IsLocal = false;
+
       private:
         ObjectType* m_cpp_object;
 

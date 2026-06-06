@@ -130,7 +130,7 @@ namespace RC::LuaType
         }
 
       public:
-        // Constructor for RemoteObjectBase
+        // Constructor for ObjectBase
         auto static construct(const LuaMadeSimple::Lua& lua, Unreal::UObject* unreal_object) -> const LuaMadeSimple::Lua::Table
         {
             SelfType lua_object{unreal_object};
@@ -141,7 +141,7 @@ namespace RC::LuaType
             if (lua.is_nil(-1))
             {
                 lua.discard_value(-1);
-                LuaMadeSimple::Type::RemoteObject<ObjectType>::construct(lua, lua_object);
+                LuaObjectBase<ObjectType>::construct(lua, lua_object);
                 setup_member_functions<LuaMadeSimple::Type::IsFinal::Yes>(table);
                 lua.new_metatable<SelfType>(metatable_name, lua_object.get_metamethods());
             }
@@ -152,10 +152,10 @@ namespace RC::LuaType
             return table;
         }
 
-        // Constructor for objects that inherit from RemoteObjectBase
+        // Constructor for objects that inherit from ObjectBase
         auto static construct(const LuaMadeSimple::Lua& lua, LuaMadeSimple::Type::BaseObject& construct_to) -> const LuaMadeSimple::Lua::Table
         {
-            const LuaMadeSimple::Lua::Table table = LuaMadeSimple::Type::RemoteObject<ObjectType>::construct(lua, construct_to);
+            const LuaMadeSimple::Lua::Table table = LuaObjectBase<ObjectType>::construct(lua, construct_to);
 
             // Setup functions that can be called on this object
             setup_member_functions<LuaMadeSimple::Type::IsFinal::No>(table);
@@ -168,22 +168,36 @@ namespace RC::LuaType
         template <LuaMadeSimple::Type::IsFinal is_final>
         auto static setup_member_functions(const LuaMadeSimple::Lua::Table& table) -> void
         {
-            // Overridden functions from 'Lua::RemoteObject'.
+            // Overridden functions from 'Lua::RemoteObject'/'Lua::LocalObject'.
             table.add_pair("GetAddress", [](const LuaMadeSimple::Lua& lua) -> int {
                 const auto& lua_object = lua.get_userdata<SelfType>();
-                lua.set_integer(reinterpret_cast<uintptr_t>(lua_object.get_remote_cpp_object()));
+                if constexpr (!LuaObjectBase<ObjectType>::IsLocal)
+                {
+                    lua.set_integer(reinterpret_cast<uintptr_t>(lua_object.get_remote_cpp_object()));
+                }
+                else
+                {
+                    lua.set_integer(reinterpret_cast<uintptr_t>(&lua_object.get_local_cpp_object()));
+                }
                 return 1;
             });
 
             table.add_pair("IsValid", [](const LuaMadeSimple::Lua& lua) -> int {
                 const auto& lua_object = lua.get_userdata<SelfType>();
-                if (lua_object.get_remote_cpp_object())
+                if constexpr (!LuaObjectBase<ObjectType>::IsLocal)
                 {
-                    lua.set_bool(true);
+                    if (lua_object.get_remote_cpp_object())
+                    {
+                        lua.set_bool(true);
+                    }
+                    else
+                    {
+                        lua.set_bool(false);
+                    }
                 }
                 else
                 {
-                    lua.set_bool(false);
+                    lua.set_bool(true);
                 }
                 return 1;
             });
