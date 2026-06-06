@@ -27,6 +27,7 @@ namespace RC::LuaType
             return start_of_struct;
         }
     };
+    static_assert(offsetof(ScriptStructWrapper, script_struct) == 0x0);
 
     struct UScriptStructName
     {
