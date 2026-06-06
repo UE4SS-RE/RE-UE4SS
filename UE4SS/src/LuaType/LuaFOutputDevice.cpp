@@ -34,7 +34,7 @@ namespace RC::LuaType
 
     auto FOutputDevice::construct(const LuaMadeSimple::Lua& lua, BaseObject& construct_to) -> const LuaMadeSimple::Lua::Table
     {
-        LuaMadeSimple::Lua::Table table = LuaMadeSimple::Type::RemoteObject<Unreal::FOutputDevice>::construct(lua, construct_to);
+        LuaMadeSimple::Lua::Table table = SelfType::construct(lua, construct_to);
 
         setup_member_functions<LuaMadeSimple::Type::IsFinal::No>(table);
 
