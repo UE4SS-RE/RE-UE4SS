@@ -19,7 +19,7 @@ namespace RC::LuaType
         if (lua.is_nil(-1))
         {
             lua.discard_value(-1);
-            LuaType::UObject::construct(lua, lua_object);
+            SelfType::construct(lua, lua_object);
             setup_metamethods(lua_object);
             setup_member_functions<LuaMadeSimple::Type::IsFinal::Yes>(table);
             lua.new_metatable<LuaType::FText>(metatable_name, lua_object.get_metamethods());
@@ -33,7 +33,7 @@ namespace RC::LuaType
 
     auto FText::construct(const LuaMadeSimple::Lua& lua, BaseObject& construct_to) -> const LuaMadeSimple::Lua::Table
     {
-        LuaMadeSimple::Lua::Table table = UObject::construct(lua, construct_to);
+        LuaMadeSimple::Lua::Table table = SelfType::construct(lua, construct_to);
 
         setup_member_functions<LuaMadeSimple::Type::IsFinal::No>(table);
 
