@@ -97,7 +97,8 @@ namespace RC::LuaType
         table.add_pair("IsValid", [](const LuaMadeSimple::Lua& lua) -> int {
             auto& lua_object = lua.get_userdata<UScriptStruct>();
 
-            if (lua_object.get_local_cpp_object().script_struct)
+            const auto& script_wrapper = lua_object.get_local_cpp_object();
+            if (script_wrapper.script_struct && is_object_in_global_unreal_object_map(script_wrapper.script_struct) && !script_wrapper.script_struct->IsUnreachable())
             {
                 lua.set_bool(true);
             }
