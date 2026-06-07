@@ -3729,6 +3729,7 @@ Overloads:
             const LuaMadeSimple::Lua* lua{};
             int32_t lua_callback_function_ref{};
             int32_t lua_callback_thread_ref{};
+            int32_t object_index{};
             Unreal::UObject* constructed_object{};
         };
 
@@ -3772,47 +3773,55 @@ Overloads:
                 }
 
                 auto& callback_data = *callback_it;
-                to_execute.push_back(PendingNotifyExec{
-                    pending.callback_id,
-                    callback_data.lua,
-                    callback_data.lua_callback_function_ref,
-                    callback_data.lua_callback_thread_ref,
-                    constructed_object});
+                to_execute.push_back(PendingNotifyExec{pending.callback_id,
+                                                       callback_data.lua,
+                                                       callback_data.lua_callback_function_ref,
+                                                       callback_data.lua_callback_thread_ref,
+                                                       pending.object_index,
+                                                       constructed_object});
             }
-        }
 
-        std::unordered_set<uint64_t> callbacks_to_remove{};
-        std::vector<std::pair<lua_State*, int32_t>> thread_refs_to_unref{};
-        for (auto& exec : to_execute)
-        {
-            TRY([&]() {
-                exec.lua->registry().get_function_ref(exec.lua_callback_function_ref);
-                LuaType::auto_construct_object(*exec.lua, exec.constructed_object);
-                exec.lua->call_function(1, 1);
-
-                bool cancel = exec.lua->is_bool(-1) && exec.lua->get_bool(-1);
-                if (cancel)
-                {
-                    thread_refs_to_unref.emplace_back(exec.lua->get_lua_state(), exec.lua_callback_thread_ref);
-                    callbacks_to_remove.insert(exec.callback_id);
-                }
-            });
-        }
-
-        if (!thread_refs_to_unref.empty())
-        {
-            for (auto& [lua_state, ref] : thread_refs_to_unref)
+            std::unordered_set<uint64_t> callbacks_to_remove{};
+            std::vector<std::pair<lua_State*, int32_t>> thread_refs_to_unref{};
+            for (auto& exec : to_execute)
             {
-                luaL_unref(lua_state, LUA_REGISTRYINDEX, ref);
-            }
-        }
+                // Re-validate the object is still alive before calling into Lua.
+                // Use the cached index to avoid dereferencing a potentially stale pointer.
+                Unreal::FUObjectItem* recheck_item = Unreal::FUObjectArray::IndexToObject(exec.object_index);
+                if (!recheck_item || recheck_item->GetUObject() != exec.constructed_object)
+                {
+                    continue;
+                }
 
-        if (!callbacks_to_remove.empty())
-        {
-            std::lock_guard<std::recursive_mutex> guard{LuaMod::m_thread_actions_mutex};
-            std::erase_if(LuaMod::m_static_construct_object_lua_callbacks, [&](const LuaMod::LuaCancellableCallbackData& callback) {
-                return callbacks_to_remove.contains(callback.callback_id);
-            });
+                TRY([&]() {
+                    exec.lua->registry().get_function_ref(exec.lua_callback_function_ref);
+                    LuaType::auto_construct_object(*exec.lua, exec.constructed_object);
+                    exec.lua->call_function(1, 1);
+
+                    bool cancel = exec.lua->is_bool(-1) && exec.lua->get_bool(-1);
+                    lua_pop(exec.lua->get_lua_state(), 1); // Pop the return value
+                    if (cancel)
+                    {
+                        thread_refs_to_unref.emplace_back(exec.lua->get_lua_state(), exec.lua_callback_thread_ref);
+                        callbacks_to_remove.insert(exec.callback_id);
+                    }
+                });
+            }
+
+            if (!thread_refs_to_unref.empty())
+            {
+                for (auto& [lua_state, ref] : thread_refs_to_unref)
+                {
+                    luaL_unref(lua_state, LUA_REGISTRYINDEX, ref);
+                }
+            }
+
+            if (!callbacks_to_remove.empty())
+            {
+                std::erase_if(LuaMod::m_static_construct_object_lua_callbacks, [&](const LuaMod::LuaCancellableCallbackData& callback) {
+                    return callbacks_to_remove.contains(callback.callback_id);
+                });
+            }
         }
     }
 
