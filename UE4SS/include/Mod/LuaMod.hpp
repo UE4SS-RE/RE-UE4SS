@@ -80,6 +80,7 @@ namespace RC
             int64_t handle{0};  // Unique handle for this action
             bool is_retriggerable{false};  // If true, can be reset by calling with same handle
             bool is_looping{false};  // If true, re-schedule after each execution
+            bool pause_after_execution{false};  // Pause immediately after current callback returns
         };
 
         static inline int64_t m_next_delayed_action_handle{1};
@@ -121,11 +122,21 @@ namespace RC
         };
         struct LuaCancellableCallbackData
         {
+            uint64_t callback_id{};
             const LuaMadeSimple::Lua* lua;
             Unreal::FName instance_class_name{};
             Unreal::FName instance_class_outer_name{};
             int32_t lua_callback_function_ref{};
             int32_t lua_callback_thread_ref{};
+        };
+        // Pending NotifyOnNewObject callback to be executed on game thread
+        // StaticConstructObject can be called from any thread (loading threads, etc.)
+        // but Lua is NOT thread-safe, so we must defer Lua calls to the game thread
+        struct PendingNotifyOnNewObjectCallback
+        {
+            uint64_t callback_id{}; // Stable ID for matching callback safely
+            int32_t object_index{}; // UObject internal index
+            int32_t object_serial{}; // Serial number for validity checks
         };
         struct FunctionHookData
         {
@@ -133,6 +144,7 @@ namespace RC
             LuaCallbackData callback_data{};
         };
         static inline std::vector<LuaCancellableCallbackData> m_static_construct_object_lua_callbacks;
+        static inline uint64_t m_next_static_construct_callback_id{1};
         static inline std::vector<LuaCallbackData> m_process_console_exec_pre_callbacks;
         static inline std::vector<LuaCallbackData> m_process_console_exec_post_callbacks;
         static inline std::vector<LuaCallbackData> m_call_function_by_name_with_arguments_pre_callbacks;
@@ -144,6 +156,14 @@ namespace RC
         static inline std::vector<SimpleLuaAction> m_game_thread_actions{};
         static inline std::vector<SimpleLuaAction> m_engine_tick_actions{};
         static inline std::vector<DelayedGameThreadAction> m_delayed_game_thread_actions{};
+        // Pending queues for actions registered during iteration (prevents iterator invalidation)
+        static inline std::vector<SimpleLuaAction> m_pending_game_thread_actions{};
+        static inline std::vector<SimpleLuaAction> m_pending_engine_tick_actions{};
+        static inline std::vector<DelayedGameThreadAction> m_pending_delayed_game_thread_actions{};
+        // Pending NotifyOnNewObject callbacks to be processed on game thread
+        static inline std::vector<PendingNotifyOnNewObjectCallback> m_pending_notify_on_new_object_callbacks{};
+        // Flag to track if we're currently iterating over action vectors
+        static inline bool m_is_processing_actions{};
         static inline GameThreadExecutionMethod m_default_game_thread_method{GameThreadExecutionMethod::EngineTick};
         // This is storage that persists through hot-reloads.
         static inline std::unordered_map<std::string, SharedLuaVariable> m_shared_lua_variables{};

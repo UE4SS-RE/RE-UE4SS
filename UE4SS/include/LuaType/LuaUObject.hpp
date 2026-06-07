@@ -4,6 +4,7 @@
 
 #include <format>
 #include <functional>
+#include <type_traits>
 
 #include <Constructs/Generator.hpp>
 #include <DynamicOutput/DynamicOutput.hpp>
@@ -637,6 +638,7 @@ Overloads:
 #1: HasAllFlags(EObjectFlags ObjectFlags))"};
 
                 const auto& lua_object = lua.get_userdata<SelfType>();
+                auto* object = lua_object.get_remote_cpp_object();
 
                 if (!lua.is_integer())
                 {
@@ -644,7 +646,12 @@ Overloads:
                 }
 
                 Unreal::EObjectFlags object_flags = static_cast<Unreal::EObjectFlags>(lua.get_integer());
-                lua.set_bool(lua_object.get_remote_cpp_object()->HasAllFlags(object_flags));
+                if (!object)
+                {
+                    lua.set_bool(false);
+                    return 1;
+                }
+                lua.set_bool(object->HasAllFlags(object_flags));
                 return 1;
             });
 
@@ -655,6 +662,7 @@ Overloads:
 #1: HasAnyFlags(EObjectFlags ObjectFlags))"};
 
                 const auto& lua_object = lua.get_userdata<SelfType>();
+                auto* object = lua_object.get_remote_cpp_object();
 
                 if (!lua.is_integer())
                 {
@@ -662,7 +670,12 @@ Overloads:
                 }
 
                 Unreal::EObjectFlags object_flags = static_cast<Unreal::EObjectFlags>(lua.get_integer());
-                lua.set_bool(lua_object.get_remote_cpp_object()->HasAnyFlags(object_flags));
+                if (!object)
+                {
+                    lua.set_bool(false);
+                    return 1;
+                }
+                lua.set_bool(object->HasAnyFlags(object_flags));
                 return 1;
             });
 
@@ -673,6 +686,7 @@ Overloads:
 #1: HasAnyInternalFlags(EInternalObjectFlags InternalObjectFlags))"};
 
                 const auto& lua_object = lua.get_userdata<SelfType>();
+                auto* object = lua_object.get_remote_cpp_object();
 
                 if (!lua.is_integer())
                 {
@@ -680,7 +694,12 @@ Overloads:
                 }
 
                 Unreal::EInternalObjectFlags object_internal_flags = static_cast<Unreal::EInternalObjectFlags>(lua.get_integer());
-                lua.set_bool(lua_object.get_remote_cpp_object()->HasAnyInternalFlags(object_internal_flags));
+                if (!object)
+                {
+                    lua.set_bool(false);
+                    return 1;
+                }
+                lua.set_bool(object->HasAnyInternalFlags(object_internal_flags));
                 return 1;
             });
 
@@ -751,12 +770,13 @@ Overloads:
         auto static prepare_to_handle(const Operation operation, const LuaMadeSimple::Lua& lua) -> void
         {
             auto& lua_object = lua.get_userdata<SelfType>();
+            auto* object = lua_object.get_remote_cpp_object();
 
             const StringType& member_name = ensure_str_const(lua.get_string());
 
             // If nullptr then we assume the UObject wasn't found so lets return an invalid UObject to Lua
             // This allows the safe chaining of "__index" as long as the Lua script checks ":IsValid()" before using the object
-            if (!lua_object.get_remote_cpp_object())
+            if (!object)
             {
                 // If the operation is not "Get" then this isn't "__index" and we want to do nothing in this case
                 switch (operation)
@@ -778,12 +798,16 @@ Overloads:
             }
 
             Unreal::FName property_name = Unreal::FName(member_name, Unreal::FNAME_Find);
-            Unreal::FField* field = LuaCustomProperty::StaticStorage::property_list.find_or_nullptr(lua_object.get_remote_cpp_object(), member_name);
+            Unreal::FField* field = LuaCustomProperty::StaticStorage::property_list.find_or_nullptr(object, member_name);
 
             if (!field)
             {
-                auto* object = lua_object.get_remote_cpp_object();
-                auto* obj_as_struct = Unreal::Cast<Unreal::UStruct>(object);
+                Unreal::UStruct* obj_as_struct = nullptr;
+                if constexpr (std::is_base_of_v<Unreal::UStruct, DerivedType>)
+                {
+                    // Avoid runtime Cast/IsA here; this path is hit in __index for hot code paths.
+                    obj_as_struct = static_cast<Unreal::UStruct*>(object);
+                }
                 if (!obj_as_struct)
                 {
                     obj_as_struct = object->GetClassPrivate();
@@ -791,7 +815,7 @@ Overloads:
                 field = obj_as_struct->FindProperty(property_name);
             }
 
-            handle_unreal_property_value(operation, lua, lua_object.get_remote_cpp_object(), property_name, field);
+            handle_unreal_property_value(operation, lua, object, property_name, field);
         }
     };
 
