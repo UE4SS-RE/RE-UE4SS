@@ -69,7 +69,13 @@ namespace RC::LuaType
     template <LuaMadeSimple::Type::IsFinal is_final>
     auto UScriptStruct::setup_member_functions(const LuaMadeSimple::Lua::Table& table) -> void
     {
-        Super::setup_member_functions<LuaMadeSimple::Type::IsFinal::No>(table);
+        // UScriptStruct is special due to the fact that it sometimes represents both data and metadata, and other times just metadata.
+        // The 'setup_member_functions' functions are internal, and shouldn't be called via 'Super'.
+        // This is because this function is called via the 'construct' function, so if we call via 'Super', we will often end up with two calls to this function.
+        // We can't construct the inheritance because this object is a local object, while UObject and UStruct are remote objects.
+        // The solution is to maintain the inheritance manually here.
+        UStruct::setup_member_functions<LuaMadeSimple::Type::IsFinal::No>(table);
+        UObject::setup_member_functions<LuaMadeSimple::Type::IsFinal::No>(table);
 
         table.add_pair("GetBaseAddress", [](const LuaMadeSimple::Lua& lua) -> int {
             // Update: We are no longer storing the base so this function has no use anymore
@@ -97,7 +103,8 @@ namespace RC::LuaType
         table.add_pair("IsValid", [](const LuaMadeSimple::Lua& lua) -> int {
             auto& lua_object = lua.get_userdata<UScriptStruct>();
 
-            if (lua_object.get_local_cpp_object().script_struct)
+            const auto& script_wrapper = lua_object.get_local_cpp_object();
+            if (script_wrapper.script_struct && is_object_in_global_unreal_object_map(script_wrapper.script_struct) && !script_wrapper.script_struct->IsUnreachable())
             {
                 lua.set_bool(true);
             }

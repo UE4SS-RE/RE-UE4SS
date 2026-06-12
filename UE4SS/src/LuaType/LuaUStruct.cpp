@@ -54,8 +54,6 @@ namespace RC::LuaType
     template <LuaMadeSimple::Type::IsFinal is_final>
     auto UStruct::setup_member_functions(const LuaMadeSimple::Lua::Table& table) -> void
     {
-        Super::setup_member_functions<LuaMadeSimple::Type::IsFinal::No>(table);
-
         table.add_pair("GetSuperStruct", [](const LuaMadeSimple::Lua& lua) -> int {
             const auto& lua_object = lua.get_userdata<UStruct>();
 

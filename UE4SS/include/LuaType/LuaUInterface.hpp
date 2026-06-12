@@ -2,7 +2,7 @@
 
 #include <LuaMadeSimple/LuaObject.hpp>
 #include <LuaType/LuaUObject.hpp>
-#include <LuaType/LuaUStruct.hpp>
+#include <LuaType/LuaUClass.hpp>
 
 namespace RC::Unreal
 {
@@ -21,7 +21,7 @@ namespace RC::LuaType
     class UInterface : public UObjectBase<Unreal::UInterface, UInterfaceName>
     {
       public:
-        using Super = LuaType::UStruct;
+        using Super = LuaType::UClass;
 
       private:
         explicit UInterface(Unreal::UInterface* object);

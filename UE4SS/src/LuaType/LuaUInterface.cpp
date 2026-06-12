@@ -23,7 +23,7 @@ namespace RC::LuaType
         if (lua.is_nil(-1))
         {
             lua.discard_value(-1);
-            LuaType::UObject::construct(lua, lua_object);
+            LuaType::UClass::construct(lua, lua_object);
             setup_metamethods(lua_object);
             setup_member_functions<LuaMadeSimple::Type::IsFinal::Yes>(table);
             lua.new_metatable<LuaType::UInterface>(metatable_name, lua_object.get_metamethods());
@@ -37,7 +37,7 @@ namespace RC::LuaType
 
     auto UInterface::construct(const LuaMadeSimple::Lua& lua, BaseObject& construct_to) -> const LuaMadeSimple::Lua::Table
     {
-        LuaMadeSimple::Lua::Table table = UObject::construct(lua, construct_to);
+        LuaMadeSimple::Lua::Table table = UClass::construct(lua, construct_to);
 
         setup_member_functions<LuaMadeSimple::Type::IsFinal::No>(table);
 
@@ -54,8 +54,6 @@ namespace RC::LuaType
     template <LuaMadeSimple::Type::IsFinal is_final>
     auto UInterface::setup_member_functions(const LuaMadeSimple::Lua::Table& table) -> void
     {
-        Super::setup_member_functions<LuaMadeSimple::Type::IsFinal::No>(table);
-
         if constexpr (is_final == LuaMadeSimple::Type::IsFinal::Yes)
         {
             table.add_pair("type", [](const LuaMadeSimple::Lua& lua) -> int {
