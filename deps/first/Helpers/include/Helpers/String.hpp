@@ -597,13 +597,25 @@ namespace RC
     }
     auto inline ensure_str_const(std::string_view input) -> const StringType&
     {
-        static std::unordered_map<std::string_view, StringType> uestringpool;
+        // The pool key must OWN its characters: callers pass string_views into
+        // caller-managed memory (e.g. Lua GC'd strings via lua_tostring), so a
+        // string_view key dangles after the caller's buffer dies and every later
+        // bucket compare reads freed memory (EXCEPTION_ACCESS_VIOLATION).
+        struct TransparentStringHash
+        {
+            using is_transparent = void;
+            auto operator()(std::string_view value) const -> size_t
+            {
+                return std::hash<std::string_view>{}(value);
+            }
+        };
+        static std::unordered_map<std::string, StringType, TransparentStringHash, std::equal_to<>> uestringpool;
         static std::shared_mutex uestringpool_lock;
 
         // Allow multiple readers that are stalled when any thread is writing.
         {
             std::shared_lock<std::shared_mutex> read_guard(uestringpool_lock);
-            if (uestringpool.contains(input)) return uestringpool[input];
+            if (auto existing_entry = uestringpool.find(input); existing_entry != uestringpool.end()) return existing_entry->second;
         }
 
         auto temp_input = std::string{input};
@@ -612,7 +624,7 @@ namespace RC
         // Stall the readers to insert a new string.
         {
             std::lock_guard<std::shared_mutex> write_guard(uestringpool_lock);
-            const auto& [emplaced_iter, unused] = uestringpool.emplace(input, std::move(new_str));
+            const auto& [emplaced_iter, unused] = uestringpool.try_emplace(std::move(temp_input), std::move(new_str));
             return emplaced_iter->second;
         }
     }
