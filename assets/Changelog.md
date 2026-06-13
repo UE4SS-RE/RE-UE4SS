@@ -1260,3 +1260,4 @@ Changelog from 1.3.4
 New
 
 	* Fixed a bug in the UHT generator that caused some properties to have the "Export" parameter for the UPROPERTY macro instead of "Instanced".
+	* Fixed a typo in bEnableSearchByMemoryAddress variable name and INI configuration keys.
