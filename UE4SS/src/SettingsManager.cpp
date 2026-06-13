@@ -87,7 +87,7 @@ namespace RC
         REGISTER_INT64_SETTING(General.SecondsToScanBeforeGivingUp, section_general, SecondsToScanBeforeGivingUp)
         REGISTER_BOOL_SETTING(General.UseUObjectArrayCache, section_general, bUseUObjectArrayCache)
         REGISTER_BOOL_SETTING(General.DoEarlyScan, section_general, DoEarlyScan)
-        REGISTER_BOOL_SETTING(General.SearchByAddress, section_general, bEnableSeachByMemoryAddress)
+        REGISTER_BOOL_SETTING(General.SearchByAddress, section_general, bEnableSearchByMemoryAddress)
         StringType default_exec_method_string{};
         REGISTER_STRING_SETTING(default_exec_method_string, section_general, DefaultExecuteInGameThreadMethod)
         if (String::iequal(default_exec_method_string, STR("ProcessEvent")))
