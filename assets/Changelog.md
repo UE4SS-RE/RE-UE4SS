@@ -82,6 +82,8 @@ Added `FUObjectItem`, `FUObjectArray`, and `TUObjectArray` to MemberVariableLayo
 
 Fixed the ingame console (Tilde, or F10 key) not working for some games - ([UE4SS #1252](https://github.com/UE4SS-RE/RE-UE4SS/pull/1252))
 
+Fixed random crashes (use-after-free) caused by the string intern pool storing dangling pointers to caller-owned strings, most commonly Lua GC'd strings from UObject member access ([UE4SS #1271](https://github.com/UE4SS-RE/RE-UE4SS/pull/1271))
+
 ### Live View 
 Added search filter: `IncludeClassNames`. ([UE4SS #472](https://github.com/UE4SS-RE/RE-UE4SS/pull/472)) - Buckminsterfullerene
 
