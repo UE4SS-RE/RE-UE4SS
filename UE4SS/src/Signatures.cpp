@@ -176,6 +176,13 @@ namespace RC
                         lua_fnc_scan_script,
                         signature_containers,
                         [&scan_result](void* address) {
+                            if (!Unreal::UEngine::TickInternal.is_ready())
+                            {
+                                scan_result.Errors.emplace_back("UGameEngine::Tick is a requirement when FName_Constructor.lua is present!\n"
+                                                                "Please supply 'UE4SS_Signatures/GameEngineTick.lua'");
+                                return DidLuaScanSucceed::No;
+                            }
+                            Unreal::UnrealInitializer::VerifyFNameConstructor(address);
                             Unreal::FName name{};
                             SEH_TRY({ name = Unreal::FName(STR("bCanBeDamaged"), Unreal::FNAME_Find, address); })
                             SEH_EXCEPT({ Output::send<LogLevel::Error>(STR("Error: Crashed calling FName constructor.\n")); });
