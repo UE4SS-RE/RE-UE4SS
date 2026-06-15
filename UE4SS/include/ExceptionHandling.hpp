@@ -15,10 +15,16 @@
         printf_s("Internal Error: %s\n", e.what());                                                                                                            \
     }
 
+#ifndef SEH_DISABLE
+#define SEH_DISABLE 1
+#endif
+
+#if SEH_DISABLE
 // Defining empty TRY/EXCEPT to disable the system.
 // This is because people have reported instability with it enabled.
 #define SEH_TRY(Code) Code
 #define SEH_EXCEPT(...)
+#endif
 
 // These macros should never be used in header files because you are required to include Windows.h.
 #ifdef _WIN32

@@ -20,6 +20,13 @@ option(UE4SS_INPUT_ENABLED "Enable the input system" ON)
 option(ENABLE_IDE_SOURCE_VISIBILITY "Enable IDE visibility for source files" ON)
 option(UE4SS_SUPPRESS_THIRD_PARTY_WARNINGS "Suppress warnings from third-party libraries" ON)
 option(UE4SS_VERSION_CHECK "Enable compiler version checking" ON)
+option(RC_ENABLE_SEH_MACRO_WRAPPERS "Enable the SEH_TRY/SEH_EXCEPT macros, used for logging exceptions" OFF)
+
+if (RC_ENABLE_SEH_MACRO_WRAPPERS)
+    set(RC_ENABLE_SEH_MACROS_DEFINITION "SEH_DISABLE=0")
+else ()
+    set(RC_ENABLE_SEH_MACROS_DEFINITION "")
+endif ()
 
 # Profiler configuration
 # Default to None - users can opt-in to Tracy or Superluminal if needed
@@ -30,9 +37,9 @@ set_property(CACHE RC_PROFILER_FLAVOR PROPERTY STRINGS Tracy Superluminal None)
 set(UE4SS_PROXY_PATH "" CACHE FILEPATH "Path to DLL for proxy generation (empty = use default dwmapi.dll)")
 
 # Target type definitions (UE4-style)
-set(UE4SS_Game_DEFINITIONS UE_GAME)
-set(UE4SS_CasePreserving_DEFINITIONS ${UE4SS_Game_DEFINITIONS} WITH_CASE_PRESERVING_NAME)
-set(UE4SS_LessEqual421_DEFINITIONS ${UE4SS_Game_DEFINITIONS} FNAME_ALIGN8 LESSEQUAL421)
+set(UE4SS_Game_DEFINITIONS ${RC_ENABLE_SEH_MACROS_DEFINITION} UE_GAME)
+set(UE4SS_CasePreserving_DEFINITIONS ${UE4SS_Game_DEFINITIONS} ${RC_ENABLE_SEH_MACROS_DEFINITION} WITH_CASE_PRESERVING_NAME)
+set(UE4SS_LessEqual421_DEFINITIONS ${UE4SS_Game_DEFINITIONS} ${RC_ENABLE_SEH_MACROS_DEFINITION} FNAME_ALIGN8 LESSEQUAL421)
 
 # Target type flags (can be customized per target)
 set(UE4SS_Game_FLAGS "")
