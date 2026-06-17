@@ -3798,12 +3798,20 @@ Overloads:
                     LuaType::auto_construct_object(*exec.lua, exec.constructed_object);
                     exec.lua->call_function(1, 1);
 
-                    bool cancel = exec.lua->is_bool(-1) && exec.lua->get_bool(-1);
-                    lua_pop(exec.lua->get_lua_state(), 1); // Pop the return value
-                    if (cancel)
+                    if (exec.lua->is_bool(-1))
                     {
-                        thread_refs_to_unref.emplace_back(exec.lua->get_lua_state(), exec.lua_callback_thread_ref);
-                        callbacks_to_remove.insert(exec.callback_id);
+                        // get_bool pops the value from the stack, so we shouldn't call lua_pop explicitly.
+                        bool cancel = exec.lua->get_bool(-1);
+                        if (cancel)
+                        {
+                            thread_refs_to_unref.emplace_back(exec.lua->get_lua_state(), exec.lua_callback_thread_ref);
+                            callbacks_to_remove.insert(exec.callback_id);
+                        }
+                    }
+                    else
+                    {
+                        // No bool means we didn't call get_bool, which means the value wasn't popped from the stack, therefore we must explicitly call lua_pop.
+                        lua_pop(exec.lua->get_lua_state(), 1);
                     }
                 });
             }
