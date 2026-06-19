@@ -136,6 +136,7 @@ namespace RC
         REGISTER_BOOL_SETTING(Debug.DebugConsoleEnabled, section_debug, GuiConsoleEnabled)
         REGISTER_BOOL_SETTING(Debug.DebugConsoleVisible, section_debug, GuiConsoleVisible)
         REGISTER_FLOAT_SETTING(Debug.DebugGUIFontScaling, section_debug, GuiConsoleFontScaling)
+        REGISTER_FLOAT_SETTING(Debug.DebugGUIUseMonospace, section_debug, GuiConsoleMonospaceTextEditors)
         StringType graphics_api_string{};
         REGISTER_STRING_SETTING(graphics_api_string, section_debug, GraphicsAPI)
         if (String::iequal(graphics_api_string, STR("DX11")) || String::iequal(graphics_api_string, STR("D3D11")))

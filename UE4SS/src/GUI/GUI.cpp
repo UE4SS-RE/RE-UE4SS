@@ -21,6 +21,7 @@
 #endif
 
 #include "Roboto.hpp"
+#include "RobotoMono.hpp"
 #include "FaSolid900.hpp"
 #include <imgui.h>
 #include <IconsFontAwesome5.h>
@@ -123,7 +124,9 @@ namespace RC::GUI
                         ImGui::EndDisabled();
                     }
 
+                    ImGui::PushFont(m_texteditor_font);
                     get_console().render();
+                    ImGui::PopFont();
 
                     ImGui::EndTabItem();
                 }
@@ -517,7 +520,7 @@ namespace RC::GUI
         // Load base font (Latin characters)
         ImFontConfig font_cfg;
         font_cfg.FontDataOwnedByAtlas = false; // if true it will try to free memory and fail
-        io.Fonts->AddFontFromMemoryTTF(Roboto, sizeof(Roboto), base_font_size, &font_cfg, io.Fonts->GetGlyphRangesDefault());
+        m_texteditor_font = io.Fonts->AddFontFromMemoryTTF(Roboto, sizeof(Roboto), base_font_size, &font_cfg, io.Fonts->GetGlyphRangesDefault());
         font_cfg.FontDataOwnedByAtlas = false;
 
         // Load a comprehensive font for CJK characters
@@ -539,6 +542,32 @@ namespace RC::GUI
         icons_cfg.GlyphMinAdvanceX = icon_font_size;
         io.Fonts->AddFontFromMemoryTTF(FaSolid900, sizeof(FaSolid900), icon_font_size, &icons_cfg, icons_ranges);
 
+        if (UE4SSProgram::settings_manager.Debug.DebugGUIUseMonospace)
+        {
+            ImFontConfig mono_cfg;
+            mono_cfg.MergeMode = false;
+            mono_cfg.FontDataOwnedByAtlas = false;
+            m_texteditor_font = io.Fonts->AddFontFromMemoryTTF(RobotoMono_Regular_ttf, RobotoMono_Regular_ttf_len, base_font_size, &mono_cfg, io.Fonts->GetGlyphRangesDefault());
+            mono_cfg.FontDataOwnedByAtlas = false;
+            
+            // Load a comprehensive font for CJK characters
+            ImFontConfig fallback_mono_cfg;
+            fallback_mono_cfg.MergeMode = true;
+            fallback_mono_cfg.FontDataOwnedByAtlas = true;
+            io.Fonts->AddFontFromMemoryCompressedTTF(DroidSansFallback_compressed_data, DroidSansFallback_compressed_size, base_font_size, &fallback_mono_cfg, custom_ranges);
+            
+            // Make icon size 2 characters wide for monospace
+            float icon_mono_width = m_texteditor_font->CalcTextSizeA(base_font_size, base_font_size * 4, -1.0f, "AA").x;
+            
+            // Load icons
+            ImFontConfig icons_mono_cfg;
+            icons_mono_cfg.FontDataOwnedByAtlas = false;
+            icons_mono_cfg.MergeMode = true;
+            icons_mono_cfg.GlyphMinAdvanceX = icon_mono_width; 
+            icons_mono_cfg.GlyphMaxAdvanceX = icon_mono_width;
+            io.Fonts->AddFontFromMemoryTTF(FaSolid900, sizeof(FaSolid900), icon_font_size, &icons_mono_cfg, icons_ranges);
+        }
+        
         m_os_backend->init();
         m_gfx_backend->init();
 
