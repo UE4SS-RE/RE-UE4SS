@@ -536,6 +536,7 @@ namespace RC::LuaMadeSimple
 
         // Create the '__index' metamethod
         // This one will always exist but the user supplied callable might not
+        // This is necessary otherwise attached variables and functions won't be found
         metatable.add_pair("__index", [](const LuaMadeSimple::Lua& lua) -> int {
             if (lua.is_userdata(-2))
             {
@@ -569,7 +570,14 @@ namespace RC::LuaMadeSimple
 
                     if (user_callables.index.has_value())
                     {
+                        // Let user callback push the final value.
                         user_callables.index.value()(lua);
+                    }
+                    else
+                    {
+                        // No user callback means value wasn't found.
+                        // Let's return nil to stay consistent with how Lua normally works.
+                        lua.set_nil();
                     }
                 }
             }
