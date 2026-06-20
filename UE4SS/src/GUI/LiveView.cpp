@@ -1377,7 +1377,8 @@ namespace RC::GUI
                 {
                     FString snapshotted_value{};
                     property->ExportTextItem(snapshotted_value, container_ptr, container_ptr, static_cast<UObject*>(container), NULL);
-                    ImGui::SetClipboardText(to_string(*snapshotted_value).c_str());
+                    const auto string = to_string(*snapshotted_value);
+                    ImGui::SetClipboardText(string.c_str());
                 }
                 if (container_type == ContainerType::Object || container_type == ContainerType::Struct)
                 {
