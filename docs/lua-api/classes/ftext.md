@@ -9,3 +9,8 @@
 
 - **Return type:** `string`
 - **Returns:** the string representation of this `FText`.
+
+## type()
+
+- **Return type:** `string`
+- **Returns:** "FText".
