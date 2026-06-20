@@ -22,3 +22,12 @@ This is a dynamic wrapper for any and all types & classes.
 
 - **Return type:** `string`
 - **Returns:** "LocalUnrealParam".
+
+## Deleted Methods from inherited classes
+
+### IsValid(), GetAddress()
+
+- **From**: [LocalObject](./localobject.md)
+- **Reason**: A param can never be invalid, so this function is nonsensical.
+- **Technical**: The lack of this function is due to a bug where LocalUnrealObject doesn't correctly inherit from LocalObject.  
+  Theoretically it wouldn't cause any problems to correct this, however, making a fundamental change to an important base class can cause headaches and maintenance burdens, so we should avoid it unless there's a good reason.
