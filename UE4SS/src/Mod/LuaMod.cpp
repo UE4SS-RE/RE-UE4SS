@@ -6518,12 +6518,21 @@ Overloads:
                             LuaType::auto_construct_object(*callback_data.lua, constructed_object);
                             callback_data.lua->call_function(1, 1);
 
-                            bool cancel = callback_data.lua->is_bool(-1) && callback_data.lua->get_bool(-1);
-                            if (cancel)
+                            if (callback_data.lua->is_bool(-1))
                             {
-                                // Release the thread_ref to GC.
-                                luaL_unref(callback_data.lua->get_lua_state(), LUA_REGISTRYINDEX, callback_data.lua_callback_thread_ref);
-                                callbacks_to_remove.insert(callback_id);
+                                // get_bool pops the value from the stack, so we shouldn't call lua_pop explicitly.
+                                bool cancel = callback_data.lua->get_bool(-1);
+                                if (cancel)
+                                {
+                                    // Release the thread_ref to GC.
+                                    luaL_unref(callback_data.lua->get_lua_state(), LUA_REGISTRYINDEX, callback_data.lua_callback_thread_ref);
+                                    callbacks_to_remove.insert(callback_id);
+                                }
+                            }
+                            else
+                            {
+                                // No bool means we didn't call get_bool, which means the value wasn't popped from the stack, therefore we must explicitly call lua_pop.
+                                lua_pop(callback_data.lua->get_lua_state(), 1);
                             }
                         }
 
