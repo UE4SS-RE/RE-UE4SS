@@ -1327,7 +1327,8 @@ namespace RC::GUI
         auto property_name = to_string(property->GetName());
         auto container_ptr = property->ContainerPtrToValuePtr<void*>(container);
         auto as_struct_property = CastField<FStructProperty>(property);
-        static constexpr auto s_error_too_large = STR("Too large to display on one line! Click to view individual members.");
+        static constexpr auto s_error_too_large = STR("Too large to display on one line! Click to view individual members or right-click and select 'Copy value' to extract the value.");
+        static constexpr auto s_error_too_large_only_copy = STR("Too large to display on one line! Right-click and select 'Copy value' to extract the value.");
         bool editable = true;
         if (auto as_map_property = CastField<FMapProperty>(property))
         {
@@ -1336,7 +1337,7 @@ namespace RC::GUI
                 value_as_struct_property && value_as_struct_property->GetStruct()->GetStructureSize() * map->Num() > Filter::MaxValueSize::s_value)
             {
                 editable = false;
-                property_text = FString{s_error_too_large};
+                property_text = FString{s_error_too_large_only_copy};
             }
             else
             {
@@ -1376,7 +1377,8 @@ namespace RC::GUI
                 {
                     FString snapshotted_value{};
                     property->ExportTextItem(snapshotted_value, container_ptr, container_ptr, static_cast<UObject*>(container), NULL);
-                    ImGui::SetClipboardText(to_string(*snapshotted_value).c_str());
+                    const auto string = to_string(*snapshotted_value);
+                    ImGui::SetClipboardText(string.c_str());
                 }
                 if (container_type == ContainerType::Object || container_type == ContainerType::Struct)
                 {
