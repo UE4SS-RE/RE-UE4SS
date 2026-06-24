@@ -502,6 +502,8 @@ Fixed callbacks being executed in the wrong thread. ([UE4SS #1170](https://githu
 
 Fixed UFunction and UClass properly inheriting from UStruct in Lua. ([UE4SS #1158](https://github.com/UE4SS-RE/RE-UE4SS/pull/1158)) - Corporalwill123
 
+Fixed crash when calling certain functions that take callbacks. ([UE4SS #1299](https://github.com/UE4SS-RE/RE-UE4SS/pull/1299))
+
 ### C++ API 
 Fixed a crash caused by a race condition enabled by C++ mods using `UE4SS_ENABLE_IMGUI` in their constructor ([UE4SS #481](https://github.com/UE4SS-RE/RE-UE4SS/pull/481)) 
 
