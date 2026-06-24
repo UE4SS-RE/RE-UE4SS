@@ -1,1 +1,0 @@
-return LoadExport("??0FText@@AEAA@$$QEAVFString@@@Z")
