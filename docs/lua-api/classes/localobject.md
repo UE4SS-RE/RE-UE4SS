@@ -8,4 +8,19 @@ It contains an inlined C++ object that is owned by Lua.
 None
 
 ## Methods
-None
+
+### IsValid()
+
+- **Return type:** `bool`
+- **Returns:** always `true` for historic compatibility reasons
+
+**Example**
+```lua
+-- 'FText' inherits from LocalObject.
+local Text = FText("SomeText")
+if Text:IsValid() then
+    print("This should always happen\n")
+else
+    print("This should never happen\n")
+end
+```
