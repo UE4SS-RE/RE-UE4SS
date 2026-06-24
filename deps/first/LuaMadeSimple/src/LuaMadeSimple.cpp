@@ -5,6 +5,7 @@
 
 #include <LuaMadeSimple/LuaMadeSimple.hpp>
 #include <LuaMadeSimple/LuaObject.hpp>
+#include <lstate.h>
 
 #include <Helpers/String.hpp>
 
@@ -1063,7 +1064,16 @@ namespace RC::LuaMadeSimple
         auto final_message = handle_error(lua_state, error_message);
 
         lua_state_errors.emplace(lua_state, final_message);
-        luaL_error(lua_state, final_message.c_str());
+        // Do C++ throw if there aren't any Lua handlers, it means this function may have been called outside a protected Lua function.
+        // This normally happens while setting up a callback into Lua, often via get_function_ref.
+        if (!lua_state->errorJmp && !lua_state->l_G->mainthread->errorJmp)
+        {
+            throw std::runtime_error{final_message};
+        }
+        else
+        {
+            luaL_error(lua_state, final_message.c_str());
+        }
     }
 
     auto new_state() -> Lua&
