@@ -12,7 +12,6 @@
 #include <GUI/LuaDebugger.hpp>
 #include <GUI/Profilers.hpp>
 #include <GUI/Windows.hpp>
-#include <fonts/droidsansfallback.cpp>
 
 #include <UE4SSProgram.hpp>
 #include <Unreal/UnrealInitializer.hpp>
@@ -20,9 +19,10 @@
 #undef TEXT
 #endif
 
-#include "Roboto.hpp"
-#include "RobotoMono.hpp"
-#include "FaSolid900.hpp"
+#include "fonts/Roboto.hpp"
+#include "fonts/RobotoMono.hpp"
+#include "fonts/FaSolid900.hpp"
+#include "fonts/droidsansfallback.hpp"
 #include <imgui.h>
 #include <IconsFontAwesome5.h>
 #include <imgui_internal.h>
