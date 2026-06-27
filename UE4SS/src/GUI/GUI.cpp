@@ -520,7 +520,7 @@ namespace RC::GUI
         // Load base font (Latin characters)
         ImFontConfig font_cfg;
         font_cfg.FontDataOwnedByAtlas = false; // if true it will try to free memory and fail
-        m_texteditor_font = io.Fonts->AddFontFromMemoryTTF(Roboto, sizeof(Roboto), base_font_size, &font_cfg, io.Fonts->GetGlyphRangesDefault());
+        m_texteditor_font = io.Fonts->AddFontFromMemoryTTF(Roboto, Roboto_len, base_font_size, &font_cfg, io.Fonts->GetGlyphRangesDefault());
         font_cfg.FontDataOwnedByAtlas = false;
 
         // Load a comprehensive font for CJK characters
@@ -540,14 +540,14 @@ namespace RC::GUI
         icons_cfg.MergeMode = true;
         icons_cfg.PixelSnapH = true;
         icons_cfg.GlyphMinAdvanceX = icon_font_size;
-        io.Fonts->AddFontFromMemoryTTF(FaSolid900, sizeof(FaSolid900), icon_font_size, &icons_cfg, icons_ranges);
+        io.Fonts->AddFontFromMemoryTTF(FaSolid900, FaSolid900_len, icon_font_size, &icons_cfg, icons_ranges);
 
         if (UE4SSProgram::settings_manager.Debug.DebugGUIUseMonospace)
         {
             ImFontConfig mono_cfg;
             mono_cfg.MergeMode = false;
             mono_cfg.FontDataOwnedByAtlas = false;
-            m_texteditor_font = io.Fonts->AddFontFromMemoryTTF(RobotoMono_Regular_ttf, RobotoMono_Regular_ttf_len, base_font_size, &mono_cfg, io.Fonts->GetGlyphRangesDefault());
+            m_texteditor_font = io.Fonts->AddFontFromMemoryTTF(RobotoMono_Regular, RobotoMono_Regular_len, base_font_size, &mono_cfg, io.Fonts->GetGlyphRangesDefault());
             mono_cfg.FontDataOwnedByAtlas = false;
             
             // Load a comprehensive font for CJK characters
@@ -565,7 +565,7 @@ namespace RC::GUI
             icons_mono_cfg.MergeMode = true;
             icons_mono_cfg.GlyphMinAdvanceX = icon_mono_width; 
             icons_mono_cfg.GlyphMaxAdvanceX = icon_mono_width;
-            io.Fonts->AddFontFromMemoryTTF(FaSolid900, sizeof(FaSolid900), icon_font_size, &icons_mono_cfg, icons_ranges);
+            io.Fonts->AddFontFromMemoryTTF(FaSolid900, FaSolid900_len, icon_font_size, &icons_mono_cfg, icons_ranges);
         }
         
         m_os_backend->init();
