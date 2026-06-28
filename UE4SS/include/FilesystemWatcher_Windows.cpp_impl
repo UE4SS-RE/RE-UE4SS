@@ -107,7 +107,12 @@ namespace RC
                     bool match_all = watch.name == "*";
                     if (match_all/* || watch.name == name_no_extension*/)
                     {
-                        // Minimum duration between notifications is enforced by a thread sleep after this loop.
+                        auto now = std::chrono::high_resolution_clock::now();
+                        if (now - m_last_notification < m_min_duration_between_notifications)
+                        {
+                            continue;
+                        }
+                        m_last_notification = now;
                         // TODO: If 'match_all' is true, we don't have any file information besides what was registered for the watch.
                         //       It would be useful for the user to have this information.
                         //       We never actully have this information right now because the FindFirst/NextChangeNotification APIs don't allow you to know what changed.
