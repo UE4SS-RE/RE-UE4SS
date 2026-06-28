@@ -22,6 +22,21 @@ namespace RC
         }
 
         auto dll_path = m_dlls_path / STR("main.dll");
+        if (!std::filesystem::exists(dll_path))
+        {
+            dll_path = m_dlls_path / fmt::format(STR("{}.dll"), mod_name);
+
+            if (!std::filesystem::exists(dll_path))
+            {
+                Output::send<LogLevel::Warning>(STR("Failed to load C++ mod {}, dlls folder must contain either main.dll or {}\n"),
+                                                m_mod_name, ensure_str(dll_path.filename()));
+                set_installable(false);
+                return;
+            }
+        }
+
+        m_dll_filename = ensure_str(dll_path.filename());
+
         // Add mods dlls directory to search path for dynamic/shared linked libraries in mods
         m_dlls_path_cookie = AddDllDirectory(m_dlls_path.c_str());
         m_main_dll_module = LoadLibraryExW(dll_path.c_str(), NULL, LOAD_LIBRARY_SEARCH_DLL_LOAD_DIR | LOAD_LIBRARY_SEARCH_DEFAULT_DIRS);
@@ -61,7 +76,7 @@ namespace RC
             if (!Output::has_internal_error())
             {
                 Output::send<LogLevel::Warning>(STR("Failed to load dll <{}> for mod {}, because: {}\n"),
-                                                ensure_str((m_dlls_path / STR("main.dll"))),
+                                                ensure_str((m_dlls_path / m_dll_filename)),
                                                 m_mod_name,
                                                 ensure_str(e.what()));
             }
