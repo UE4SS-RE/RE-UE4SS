@@ -23,7 +23,7 @@ namespace RC
         typedef void (*uninstall_type)(CppUserModBase*);
 
       private:
-        StringType m_dll_filename;
+        StringType m_dll_filename{};
         std::filesystem::path m_dlls_path;
 
         Unreal::Windows::HMODULE m_main_dll_module = NULL;
