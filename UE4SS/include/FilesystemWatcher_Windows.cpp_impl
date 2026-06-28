@@ -1,0 +1,133 @@
+#include <chrono>
+#include <ranges>
+
+#define WIN32_LEAN_AND_MEAN
+#include <Windows.h>
+
+#include <DynamicOutput/DynamicOutput.hpp>
+#include <Helpers/String.hpp>
+
+namespace RC
+{
+    struct Data
+    {
+        HANDLE handle{};
+        std::vector<uint8_t> buffer{};
+        std::filesystem::path path{};
+        Data()
+        {
+            buffer.resize(1000);
+        }
+        ~Data()
+        {
+            if (handle)
+            {
+                FindCloseChangeNotification(handle);
+                CloseHandle(handle);
+                handle = nullptr;
+            }
+        }
+    };
+
+    auto init_filesystem_watcher(FilesystemWatcher& watcher, const std::filesystem::path& path) -> void
+    {
+        auto data = new Data{};
+        watcher.m_handle = data;
+        watcher.m_handles.emplace_back(static_cast<void*>(data));
+        data->handle = CreateFileW(path.native().c_str(),
+                                   FILE_LIST_DIRECTORY,
+                                   FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+                                   nullptr,
+                                   OPEN_EXISTING,
+                                   FILE_FLAG_BACKUP_SEMANTICS | FILE_FLAG_OVERLAPPED,
+                                   nullptr);
+        data->path = path;
+    }
+
+    FilesystemWatcher::~FilesystemWatcher()
+    {
+        if (m_stop_source.stop_possible())
+        {
+            m_stop_source.request_stop();
+        }
+        if (m_polling_thread.joinable())
+        {
+            m_polling_thread.join();
+        }
+        for (auto& handle : m_handles)
+        {
+            auto data = static_cast<Data*>(handle);
+            if (data)
+            {
+                delete data;
+            }
+        }
+    }
+
+    auto FilesystemWatcher::poll(std::stop_token stop_token) -> void
+    {
+        std::vector<HANDLE> handles{};
+        for (const auto& handle_data_raw : m_handles)
+        {
+            auto handle_data = static_cast<Data*>(handle_data_raw);
+            // logging here would crash
+            handles.emplace_back(FindFirstChangeNotificationW(handle_data->path.wstring().c_str(), false, FILE_NOTIFY_CHANGE_LAST_WRITE));
+            if (handles.back() == INVALID_HANDLE_VALUE)
+            {
+                Output::send<LogLevel::Error>(STR("ERROR: FindFirstChangeNotification function failed.\n"));
+                return;
+            }
+        }
+
+        while (!stop_token.stop_requested())
+        {
+            for (size_t index = 0; index < handles.size(); ++index)
+            {
+                if (stop_token.stop_requested())
+                {
+                    return;
+                }
+                const auto& handle = handles[index];
+                auto status = WaitForSingleObject(handle, s_polling_timeout_ms);
+                if (status == WAIT_TIMEOUT || status == WAIT_ABANDONED_0 || status == WAIT_FAILED)
+                {
+                    continue;
+                }
+                for (const auto& watch : m_watches)
+                {
+                    if (stop_token.stop_requested())
+                    {
+                        return;
+                    }
+                    // The intent here is to allow notifiers based on the file that was changed.
+                    // But because the FindFirst/NextChangeNotification APIs don't allow you to retrieve any information about what has changed, we can't do that.
+                    // Instead, we allow everything through via the "*" option.
+                    // When/if this code is revamped to use ReadDirectoryChangesW, we can retrieve the file name and stop bypassing with "*".
+                    // For now, if the name of the watcher notifier isn't "*", the watch will never get notified.
+                    bool match_all = watch.name == "*";
+                    if (match_all/* || watch.name == name_no_extension*/)
+                    {
+                        if (std::chrono::high_resolution_clock::now() - m_last_notification < m_min_duration_between_notifications)
+                        {
+                            continue;
+                        }
+                        const auto handle_data = static_cast<Data*>(m_handles[index]);
+
+                        // TODO: If 'match_all' is true, we don't have any file information besides what was registered for the watch.
+                        //       It would be useful for the user to have this information.
+                        //       We never actully have this information right now because the FindFirst/NextChangeNotification APIs don't allow you to know what changed.
+                        //       The ReadDirectoryChangesW API does, but it's a more complicated API.
+                        watch.notify(handle_data->path, match_all);
+                        m_last_notification = std::chrono::high_resolution_clock::now();
+                    }
+                }
+                if (!FindNextChangeNotification((handles)[index]))
+                {
+                    Output::send<LogLevel::Error>(STR("ERROR: FindNextChangeNotification function failed. Code: {}\n"), GetLastError());
+                }
+            }
+            // To prevent taxing the CPU.
+            std::this_thread::sleep_for(std::chrono::milliseconds{std::chrono::milliseconds{20}});
+        }
+    }
+} // namespace RC
