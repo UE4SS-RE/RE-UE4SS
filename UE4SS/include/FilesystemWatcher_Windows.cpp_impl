@@ -70,6 +70,7 @@ namespace RC
         for (const auto& handle_data_raw : m_handles)
         {
             auto handle_data = static_cast<Data*>(handle_data_raw);
+            // logging here would crash
             handles.emplace_back(FindFirstChangeNotificationW(handle_data->path.wstring().c_str(), false, FILE_NOTIFY_CHANGE_LAST_WRITE));
             if (handles.back() == INVALID_HANDLE_VALUE)
             {
@@ -92,7 +93,6 @@ namespace RC
                 {
                     continue;
                 }
-                const auto handle_data = static_cast<Data*>(m_handles[index]);
                 for (const auto& watch : m_watches)
                 {
                     if (stop_token.stop_requested())
@@ -107,17 +107,18 @@ namespace RC
                     bool match_all = watch.name == "*";
                     if (match_all/* || watch.name == name_no_extension*/)
                     {
-                        auto now = std::chrono::high_resolution_clock::now();
-                        if (now - m_last_notification < m_min_duration_between_notifications)
+                        if (std::chrono::high_resolution_clock::now() - m_last_notification < m_min_duration_between_notifications)
                         {
                             continue;
                         }
-                        m_last_notification = now;
+                        const auto handle_data = static_cast<Data*>(m_handles[index]);
+
                         // TODO: If 'match_all' is true, we don't have any file information besides what was registered for the watch.
                         //       It would be useful for the user to have this information.
                         //       We never actully have this information right now because the FindFirst/NextChangeNotification APIs don't allow you to know what changed.
                         //       The ReadDirectoryChangesW API does, but it's a more complicated API.
                         watch.notify(handle_data->path, match_all);
+                        m_last_notification = std::chrono::high_resolution_clock::now();
                     }
                 }
                 if (!FindNextChangeNotification((handles)[index]))
@@ -126,7 +127,7 @@ namespace RC
                 }
             }
             // To prevent taxing the CPU.
-            std::this_thread::sleep_for(std::chrono::milliseconds{m_min_duration_between_notifications});
+            std::this_thread::sleep_for(std::chrono::milliseconds{std::chrono::milliseconds{20}});
         }
     }
 } // namespace RC

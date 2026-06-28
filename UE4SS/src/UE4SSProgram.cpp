@@ -1097,7 +1097,6 @@ namespace RC
         FilesystemWatcher filesystem_watcher{};
         if (settings_manager.General.EnableAutoReloadingLuaMods)
         {
-            filesystem_watcher.m_min_duration_between_notifications = std::chrono::milliseconds{100};
             for (const auto& mod : m_mods)
             {
                 if (dynamic_cast<CppMod*>(mod.get()))
