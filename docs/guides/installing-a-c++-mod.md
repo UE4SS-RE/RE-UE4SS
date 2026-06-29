@@ -9,6 +9,8 @@
     - Create a folder structure in `Mods` that looks like `MyAwesomeMod\dlls`. 
     - Move `MyAwesomeMod.dll` inside the `dlls` folder and rename it to `main.dll`.
 
+> NOTE: `MyAwesomeMod.dll` will also work and UE4SS will use `MyAwesomeMod.dll` if `main.dll` isn't present.
+
 The result should look like:
 ```
 Mods\
