@@ -8,6 +8,7 @@ set(${TARGET}_Sources
         "${CMAKE_CURRENT_SOURCE_DIR}/src/Casting.cpp"
         "${CMAKE_CURRENT_SOURCE_DIR}/src/SysError.cpp"
         "${CMAKE_CURRENT_SOURCE_DIR}/src/Time.cpp"
+        "${CMAKE_CURRENT_SOURCE_DIR}/src/Debug.cpp"
         )
 
 string(REGEX REPLACE "(.)([A-Z])" "\\1_\\2" MODULE_NAME ${TARGET})
