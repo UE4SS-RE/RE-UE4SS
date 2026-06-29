@@ -303,6 +303,8 @@ Added improved string and path conversion utilities with proper UTF-8 support ([
 - Added `utf8_to_wpath()` to convert UTF-8 paths to Windows wide strings
 - **BREAKING:** `to_charT_string_path()` now returns UTF-8 encoded strings for char type instead of locale-dependent encoding
 
+Added `RC::await_debugger` in `Helpers/Debug.hpp`. ([UE4SS #1314](https://github.com/UE4SS-RE/RE-UE4SS/pull/1314))
+
 ### BPModLoader 
 
 ### Experimental 
