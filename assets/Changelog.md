@@ -254,7 +254,7 @@ Added support for handling structs as userdata (Fixed `StructData as userdata is
 
 ### C++ API 
 
-Added support for using mod name as the dll name for C++ mods. - Okaetsu
+Added support for using mod name as the main dll name for C++ mods. ([UE4SS #1313](https://github.com/UE4SS-RE/RE-UE4SS/pull/1313)) - Okaetsu
 
 Added `UDataTable` class to C++ API. ([UE4SS #997](https://github.com/UE4SS-RE/RE-UE4SS/pull/997))
 - Full DataTable row access with `FindRow<T>()`, `GetAllRows<T>()`, and `ForEachRow<T>()`
