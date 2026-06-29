@@ -121,6 +121,7 @@
   - [Installing a C++ Mod](./guides/installing-a-c++-mod.md)
   - [GUI tabs with a C++ Mod](./guides/creating-gui-tabs-with-c++-mod.md)
   - [Accessing UE properties with a C++ mod](./guides/accessing-ue-properties-c++.md)
+  - [Debugging a C++ Mod](./guides/debugging-a-c++-mod.md)
 
 ## Guides
 
