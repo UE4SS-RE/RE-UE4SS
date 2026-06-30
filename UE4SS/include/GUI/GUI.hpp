@@ -7,6 +7,7 @@
 #include <GUI/Console.hpp>
 #include <GUI/GUITab.hpp>
 #include <GUI/LiveView.hpp>
+#include <GUI/Mods.hpp>
 #include <Helpers/String.hpp>
 #include <imgui.h>
 
@@ -232,6 +233,7 @@ namespace RC::GUI
         std::unique_ptr<OSBackendBase> m_os_backend{};
         Console m_console{};
         LiveView m_live_view{};
+        ModsWidget m_mods_widget{};
         std::stop_token* m_thread_stop_token{};
         bool m_is_open{};
         bool m_exit_requested{};

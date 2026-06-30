@@ -6,6 +6,7 @@
 #include <DynamicOutput/DynamicOutput.hpp>
 #include <ExceptionHandling.hpp>
 #include <GUI/BPMods.hpp>
+#include <GUI/Mods.hpp>
 #include <GUI/DX11.hpp>
 #include <GUI/Dumpers.hpp>
 #include <GUI/GLFW3_OpenGL3.hpp>
@@ -173,6 +174,12 @@ namespace RC::GUI
                 if (ImGui::BeginTabItem(ICON_FA_PUZZLE_PIECE " BP Mods"))
                 {
                     BPMods::render();
+                    ImGui::EndTabItem();
+                }
+
+                if (ImGui::BeginTabItem(ICON_FA_PUZZLE_PIECE " Mods"))
+                {
+                    m_mods_widget.render();
                     ImGui::EndTabItem();
                 }
 
