@@ -321,6 +321,14 @@ namespace RC::GUI
         // Helper to get table entries at a given path
         static auto get_table_entries_at_path(lua_State* L, const std::string& path) -> std::vector<std::pair<std::string, LuaStackSlot>>;
 
+        // TODO: Move to Mod.hpp
+        enum class ModType
+        {
+            Invalid,
+            LuaMod,
+            CppMod,
+        };
+
         // Mod management
         struct ModInfo
         {
@@ -329,6 +337,7 @@ namespace RC::GUI
             bool enabled_via_txt{false};
             bool enabled_via_mods_txt{false};
             bool is_running{false};
+            ModType mod_type{ModType::Invalid};
 
             bool is_enabled() const { return enabled_via_txt || enabled_via_mods_txt; }
         };
@@ -347,9 +356,9 @@ namespace RC::GUI
         auto create_new_mod(const std::string& name) -> bool;
         auto create_new_file(const std::string& mod_path, const std::string& filename, bool add_require_to_main) -> bool;
         auto set_mod_enabled(const std::filesystem::path& mod_path, bool enabled) -> void;
-        auto restart_mod_by_name(const std::string& mod_name) -> void;
-        auto uninstall_mod_by_name(const std::string& mod_name) -> void;
-        auto start_mod_by_path(const std::filesystem::path& mod_path) -> void;
+        auto restart_mod_by_name(const std::string& mod_name, ModType mod_type) -> void;
+        auto uninstall_mod_by_name(const std::string& mod_name, ModType mod_type) -> void;
+        auto start_mod_by_path(const std::filesystem::path& mod_path, ModType mod_type) -> void;
     };
 
 } // namespace RC::GUI

@@ -3372,7 +3372,7 @@ namespace RC::GUI
             {
                 if (ImGui::Button(ICON_FA_SYNC " Restart"))
                 {
-                    restart_mod_by_name(mod_name);
+                    restart_mod_by_name(mod_name, ModType::LuaMod);
                 }
                 if (ImGui::IsItemHovered())
                 {
@@ -3383,7 +3383,7 @@ namespace RC::GUI
             {
                 if (ImGui::Button(ICON_FA_PLAY " Start"))
                 {
-                    start_mod_by_path(mod_path);
+                    start_mod_by_path(mod_path, ModType::LuaMod);
                 }
                 if (ImGui::IsItemHovered())
                 {
@@ -3621,12 +3621,18 @@ namespace RC::GUI
         std::set<std::string> running_mod_names;
         for (const auto& mod : program.m_mods)
         {
-            if (auto* lua_mod = dynamic_cast<LuaMod*>(mod.get()))
+            if (mod->is_started())
             {
-                if (lua_mod->is_started())
+                auto running_identifier = to_string(mod->get_name());
+                if (dynamic_cast<LuaMod*>(mod.get()))
                 {
-                    running_mod_names.insert(to_string(lua_mod->get_name()));
+                    running_identifier += "_LuaMod";
                 }
+                else
+                {
+                    running_identifier += "_CppMod";
+                }
+                running_mod_names.insert(running_identifier);
             }
         }
 
@@ -3655,25 +3661,37 @@ namespace RC::GUI
                 }
                 seen_mods.insert(mod_name);
 
-                bool has_main_lua = std::filesystem::exists(entry.path() / "Scripts" / "main.lua", ec);
-                if (!has_main_lua)
-                {
-                    continue;
-                }
-
                 ModInfo info;
                 info.name = mod_name;
                 info.path = entry.path();
                 info.enabled_via_txt = std::filesystem::exists(entry.path() / "enabled.txt", ec);
-                info.is_running = running_mod_names.count(mod_name) > 0;
 
-                auto it = mods_txt_entries.find(mod_name);
-                if (it != mods_txt_entries.end())
+                const bool has_main_lua = std::filesystem::exists(entry.path() / "Scripts" / "main.lua", ec);
+                const bool has_main_dll = std::filesystem::exists(entry.path() / "dlls" / "main.dll", ec) ||
+                    std::filesystem::exists(entry.path() / "dlls" / fmt::format("{}.dll", mod_name), ec);
+
+                if (has_main_lua || has_main_dll)
                 {
-                    info.enabled_via_mods_txt = it->second;
+                    auto it = mods_txt_entries.find(mod_name);
+                    if (it != mods_txt_entries.end())
+                    {
+                        info.enabled_via_mods_txt = it->second;
+                    }
                 }
 
-                m_discovered_mods.push_back(std::move(info));
+                if (has_main_lua)
+                {
+                    info.mod_type = ModType::LuaMod;
+                    info.is_running = running_mod_names.contains(mod_name + "_LuaMod") > 0;
+                    m_discovered_mods.push_back(info);
+                }
+
+                if (has_main_dll)
+                {
+                    info.mod_type = ModType::CppMod;
+                    info.is_running = running_mod_names.contains(mod_name + "_CppMod") > 0;
+                    m_discovered_mods.push_back(info);
+                }
             }
         }
 
@@ -3704,37 +3722,52 @@ namespace RC::GUI
         m_mods_list_dirty = true;
     }
 
-    auto LuaDebugger::restart_mod_by_name(const std::string& mod_name) -> void
+    auto LuaDebugger::restart_mod_by_name(const std::string& mod_name, ModType mod_type) -> void
     {
-        UE4SSProgram::get_program().queue_event([mod_name]() {
-            UE4SSProgram::get_program().queue_reinstall_mod_by_name(mod_name);
-            if (LuaDebugger::has_instance())
-            {
-                LuaDebugger::get().m_mods_list_dirty = true;
-            }
-        });
+        if (mod_type == ModType::LuaMod)
+        {
+            UE4SSProgram::get_program().queue_reinstall_lua_mod_by_name(mod_name);
+        }
+        else
+        {
+            UE4SSProgram::get_program().queue_reinstall_cpp_mod_by_name(mod_name);
+        }
+        if (LuaDebugger::has_instance())
+        {
+            LuaDebugger::get().m_mods_list_dirty = true;
+        }
     }
 
-    auto LuaDebugger::uninstall_mod_by_name(const std::string& mod_name) -> void
+    auto LuaDebugger::uninstall_mod_by_name(const std::string& mod_name, ModType mod_type) -> void
     {
-        UE4SSProgram::get_program().queue_event([mod_name]() {
-            UE4SSProgram::get_program().queue_uninstall_mod_by_name(mod_name);
-            if (LuaDebugger::has_instance())
-            {
-                LuaDebugger::get().m_mods_list_dirty = true;
-            }
-        });
+        if (mod_type == ModType::LuaMod)
+        {
+            UE4SSProgram::get_program().queue_uninstall_lua_mod_by_name(mod_name);
+        }
+        else
+        {
+            UE4SSProgram::get_program().queue_uninstall_cpp_mod_by_name(mod_name);
+        }
+        if (LuaDebugger::has_instance())
+        {
+            LuaDebugger::get().m_mods_list_dirty = true;
+        }
     }
 
-    auto LuaDebugger::start_mod_by_path(const std::filesystem::path& mod_path) -> void
+    auto LuaDebugger::start_mod_by_path(const std::filesystem::path& mod_path, ModType mod_type) -> void
     {
-        UE4SSProgram::get_program().queue_event([mod_path]() {
+        if (mod_type == ModType::LuaMod)
+        {
             UE4SSProgram::get_program().queue_start_lua_mod_by_path(mod_path);
-            if (LuaDebugger::has_instance())
-            {
-                LuaDebugger::get().m_mods_list_dirty = true;
-            }
-        });
+        }
+        else
+        {
+            UE4SSProgram::get_program().queue_start_cpp_mod_by_path(mod_path);
+        }
+        if (LuaDebugger::has_instance())
+        {
+            LuaDebugger::get().m_mods_list_dirty = true;
+        }
     }
 
     auto LuaDebugger::create_new_mod(const std::string& name) -> bool
@@ -4029,19 +4062,24 @@ namespace RC::GUI
                 ImGui::SameLine();
             }
 
+            const auto mod_name = fmt::format("{} ({})", mod.name, mod.mod_type == ModType::LuaMod ? "Lua" : "Cpp");
             if (mod.enabled_via_mods_txt && !mod.enabled_via_txt)
             {
-                ImGui::TextColored(ImVec4(0.7f, 0.7f, 1.0f, 1.0f), "%s", mod.name.c_str());
+                ImGui::TextColored(ImVec4(0.7f, 0.7f, 1.0f, 1.0f), "%s", mod_name.c_str());
             }
             else
             {
-                ImGui::Text("%s", mod.name.c_str());
+                ImGui::Text("%s", mod_name.c_str());
             }
 
             // Use consistent button width for alignment (widest case: Open + New + Restart + Uninstall)
             float button_width = scaled(320.0f);
             ImGui::SameLine(ImGui::GetContentRegionAvail().x - button_width);
 
+            if (mod.mod_type != ModType::LuaMod)
+            {
+                ImGui::BeginDisabled();
+            }
             if (ImGui::SmallButton(ICON_FA_FOLDER_OPEN " Open"))
             {
                 std::filesystem::path scripts_path = mod.path / "Scripts";
@@ -4064,15 +4102,27 @@ namespace RC::GUI
                     }
                 }
             }
+            if (mod.mod_type != ModType::LuaMod)
+            {
+                ImGui::EndDisabled();
+            }
 
             ImGui::SameLine();
 
+            if (mod.mod_type != ModType::LuaMod)
+            {
+                ImGui::BeginDisabled();
+            }
             if (ImGui::SmallButton(ICON_FA_FILE_ALT " New"))
             {
                 m_show_create_file_popup = true;
                 m_new_file_name.clear();
                 m_add_require_to_main = true;
                 m_create_file_mod_path = mod.path;
+            }
+            if (mod.mod_type != ModType::LuaMod)
+            {
+                ImGui::EndDisabled();
             }
 
             // Show different buttons based on whether mod is running
@@ -4087,7 +4137,7 @@ namespace RC::GUI
 
                 if (ImGui::SmallButton(ICON_FA_SYNC " Restart"))
                 {
-                    restart_mod_by_name(mod.name);
+                    restart_mod_by_name(mod.name, mod.mod_type);
                 }
                 if (ImGui::IsItemHovered())
                 {
@@ -4098,7 +4148,7 @@ namespace RC::GUI
 
                 if (ImGui::SmallButton(ICON_FA_STOP " Uninstall"))
                 {
-                    uninstall_mod_by_name(mod.name);
+                    uninstall_mod_by_name(mod.name, mod.mod_type);
                 }
                 if (ImGui::IsItemHovered())
                 {
@@ -4122,7 +4172,7 @@ namespace RC::GUI
 
                 if (ImGui::SmallButton(ICON_FA_PLAY " Start"))
                 {
-                    start_mod_by_path(mod.path);
+                    start_mod_by_path(mod.path, mod.mod_type);
                 }
                 if (ImGui::IsItemHovered())
                 {
