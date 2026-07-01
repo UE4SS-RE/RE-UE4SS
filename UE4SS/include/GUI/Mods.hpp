@@ -11,9 +11,18 @@ namespace RC::GUI
         Invalid,
         LuaMod,
         CppMod,
+        BPMod,
     };
 
     // Mod management
+    struct BPModInfo
+    {
+        class ModActor* actor{};
+        std::string author{};
+        std::string description{};
+        std::string version{};
+        std::vector<std::string> buttons{};
+    };
     struct ModInfo
     {
         std::string name{};
@@ -22,14 +31,16 @@ namespace RC::GUI
         bool enabled_via_mods_txt{false};
         bool is_running{false};
         ModType mod_type{ModType::Invalid};
+        // Invalid unless mod_type == ModType::BPMod.
+        BPModInfo bp_info{};
 
-        bool is_enabled() const { return enabled_via_txt || enabled_via_mods_txt; }
+        bool is_enabled() const { return enabled_via_txt || enabled_via_mods_txt || mod_type == ModType::BPMod; }
     };
 
     class ModsWidget
     {
     public:
-        bool m_mods_list_dirty{true};
+        std::atomic_bool m_mods_list_dirty{true};
         std::vector<ModInfo> m_discovered_mods{};
         bool m_show_create_mod_popup{false};
         std::string m_new_mod_name{};
@@ -37,6 +48,10 @@ namespace RC::GUI
         std::string m_new_file_name{};
         bool m_add_require_to_main{true};
         std::filesystem::path m_create_file_mod_path{};
+        size_t m_expanded_mod{s_invalid_mod_id};
+
+    public:
+        static constexpr auto s_invalid_mod_id = std::numeric_limits<decltype(m_expanded_mod)>::max();
 
     public:
         auto render() -> void;
