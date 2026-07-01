@@ -42,6 +42,22 @@ namespace RC::GUI
         }
     };
 
+    static auto mod_type_to_string(ModType mod_type)
+    {
+        switch (mod_type)
+        {
+        case ModType::Invalid:
+            return "Invalid";
+        case ModType::LuaMod:
+            return "LuaMod";
+        case ModType::CppMod:
+            return "CppMod";
+        case ModType::BPMod:
+            return "BPMod";
+        }
+        Output::send<LogLevel::Error>(STR("Invalid value for ModType\n"));
+    }
+
     auto ModsWidget::render() -> void
     {
         const auto can_process = UnrealInitializer::StaticStorage::bIsInitialized || UE4SSProgram::get_program().can_process_events();
@@ -131,7 +147,7 @@ namespace RC::GUI
 
             // TODO: Consider making the mod types a different color to make them stand out.
             //       Maybe put them at the left-most part of the right side of the window, so right before all the buttons.
-            const auto mod_name = fmt::format("{} ({})", mod.name, mod.mod_type == ModType::LuaMod ? "Lua" : "C++");
+            const auto mod_name = fmt::format("{} ({})", mod.name, mod_type_to_string(mod.mod_type));
             if (mod.enabled_via_mods_txt && !mod.enabled_via_txt)
             {
                 ImGui::TextColored(ImVec4(0.7f, 0.7f, 1.0f, 1.0f), "%s", mod_name.c_str());
