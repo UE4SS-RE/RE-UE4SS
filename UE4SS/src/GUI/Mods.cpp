@@ -252,9 +252,17 @@ namespace RC::GUI
                     ImGui::BeginDisabled(true);
                 }
 
+                if (mod.mod_type == ModType::BPMod)
+                {
+                    ImGui::BeginDisabled();
+                }
                 if (ImGui::SmallButton(ICON_FA_SYNC " Restart"))
                 {
                     restart_mod_by_name(mod.name, mod.mod_type);
+                }
+                if (mod.mod_type == ModType::BPMod)
+                {
+                    ImGui::EndDisabled();
                 }
                 if (ImGui::IsItemHovered())
                 {
@@ -263,9 +271,17 @@ namespace RC::GUI
 
                 ImGui::SameLine();
 
+                if (mod.mod_type == ModType::BPMod)
+                {
+                    ImGui::BeginDisabled();
+                }
                 if (ImGui::SmallButton(ICON_FA_STOP " Uninstall"))
                 {
                     uninstall_mod_by_name(mod.name, mod.mod_type);
+                }
+                if (mod.mod_type == ModType::BPMod)
+                {
+                    ImGui::EndDisabled();
                 }
                 if (ImGui::IsItemHovered())
                 {
@@ -287,9 +303,17 @@ namespace RC::GUI
                     ImGui::BeginDisabled(true);
                 }
 
+                if (mod.mod_type == ModType::BPMod)
+                {
+                    ImGui::BeginDisabled();
+                }
                 if (ImGui::SmallButton(ICON_FA_PLAY " Start"))
                 {
                     start_mod_by_path(mod.path, mod.mod_type);
+                }
+                if (mod.mod_type == ModType::BPMod)
+                {
+                    ImGui::EndDisabled();
                 }
                 if (ImGui::IsItemHovered())
                 {
