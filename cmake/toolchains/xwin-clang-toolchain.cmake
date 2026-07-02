@@ -79,6 +79,13 @@ set(CMAKE_LINKER ${LLD_LINK_EXECUTABLE})
 if(LLVM_RC_EXECUTABLE)
     set(CMAKE_RC_COMPILER ${LLVM_RC_EXECUTABLE})
 endif()
+
+# Set MASM assembler if found
+find_llvm_tool(LLVM_ML_EXECUTABLE "llvm-ml" "LLVM ML assembler" FALSE)
+if(LLVM_ML_EXECUTABLE)
+    set(CMAKE_ASM_MASM_COMPILER ${LLVM_ML_EXECUTABLE})
+endif()
+
 # Set RC flags to use Windows SDK includes
 set(CMAKE_RC_FLAGS "-I ${XWIN_SDK_INCLUDE}/um -I ${XWIN_SDK_INCLUDE}/shared")
 
