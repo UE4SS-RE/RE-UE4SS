@@ -3147,6 +3147,7 @@ namespace RC::GUI
                 {
                     ImGui::Separator();
 
+                    ImGui::PushFont(UE4SSProgram::get_program().get_debugging_ui().get_texteditor_font());
                     ImGui::BeginChild("ScriptContent", ImVec2(-1.0f, -1.0f), false, ImGuiWindowFlags_HorizontalScrollbar);
 
                     float line_height = ImGui::GetTextLineHeight();
@@ -3222,6 +3223,7 @@ namespace RC::GUI
                     }
 
                     ImGui::EndChild();
+                    ImGui::PopFont();
                 }
             }
         }
@@ -3410,7 +3412,9 @@ namespace RC::GUI
                 }
             }
 
+            ImGui::PushFont(UE4SSProgram::get_program().get_debugging_ui().get_texteditor_font());
             m_script_editor.Render("ScriptEditorMain", {-1.0f, scaled(-4.0f)});
+            ImGui::PopFont();
         }
     }
 
@@ -3440,11 +3444,15 @@ namespace RC::GUI
         float input_width = ImGui::GetContentRegionAvail().x - 80;
         ImGui::SetNextItemWidth(input_width);
 
+        ImGui::PushFont(UE4SSProgram::get_program().get_debugging_ui().get_texteditor_font());
+
         bool execute = false;
         if (ImGui::InputText("##ReplInput", repl_input_buffer, sizeof(repl_input_buffer), ImGuiInputTextFlags_EnterReturnsTrue))
         {
             execute = true;
         }
+
+        ImGui::PopFont();
 
         // Sync buffer back to string
         m_repl_input = repl_input_buffer;
@@ -3486,6 +3494,7 @@ namespace RC::GUI
         ImGui::Separator();
         ImGui::Text("History:");
 
+        ImGui::PushFont(UE4SSProgram::get_program().get_debugging_ui().get_texteditor_font());
         ImGui::BeginChild("ReplHistory", ImVec2(0, 0), true, ImGuiWindowFlags_HorizontalScrollbar);
 
         {
@@ -3543,6 +3552,7 @@ namespace RC::GUI
         }
 
         ImGui::EndChild();
+        ImGui::PopFont();
     }
 
     auto LuaDebugger::render_value_tree(std::vector<LuaValueNode>& nodes) -> void

@@ -80,6 +80,7 @@ namespace RC
             bool DebugConsoleEnabled{true};
             bool DebugConsoleVisible{true};
             float DebugGUIFontScaling{1.0};
+            bool DebugGUIUseMonospace{false};
             GUI::GfxBackend GraphicsAPI{GUI::GfxBackend::GLFW3_OpenGL3};
             GUI::RenderMode RenderMode{GUI::RenderMode::ExternalThread};
         } Debug;
