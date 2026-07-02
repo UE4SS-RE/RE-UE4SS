@@ -56,6 +56,7 @@ namespace RC::GUI
             return "BPMod";
         }
         Output::send<LogLevel::Error>(STR("Invalid value for ModType\n"));
+        return "Corrupted";
     }
 
     auto ModsWidget::render() -> void
