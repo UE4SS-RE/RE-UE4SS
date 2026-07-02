@@ -509,7 +509,14 @@ namespace RC::GUI
         gui_setup_style();
         io.Fonts->Clear();
 
-        float base_font_size = 14 * UE4SSProgram::settings_manager.Debug.DebugGUIFontScaling;
+        // Custom font size
+        float font_scaling = UE4SSProgram::settings_manager.Debug.DebugGUIFontScaling;
+        int custom_font_size = UE4SSProgram::settings_manager.Debug.GuiCustomFontSize;
+        float base_font_size = 14 * font_scaling;
+        if(custom_font_size > 0)
+        {
+            base_font_size = custom_font_size * font_scaling;
+        }
 
         // Increase font atlas size (if needed for many characters)
         io.Fonts->TexMinWidth = 2048; // Increase the atlas size to allow more glyphs to fit
@@ -517,7 +524,18 @@ namespace RC::GUI
         // Load base font (Latin characters)
         ImFontConfig font_cfg;
         font_cfg.FontDataOwnedByAtlas = false; // if true it will try to free memory and fail
-        io.Fonts->AddFontFromMemoryTTF(Roboto, sizeof(Roboto), base_font_size, &font_cfg, io.Fonts->GetGlyphRangesDefault());
+        // Custom font file
+        char* custom_font_file = UE4SSProgram::settings_manager.Debug.GuiCustomFontFile;
+        bool has_custom_font = (custom_font_file && custom_font_file[0] != '\0');
+
+        if (has_custom_file)
+        {
+            io.Fonts->AddFontFromFileTTF(custom_font_file, base_font_size, &font_cfg, io.Fonts->GetGlyphRangesDefault());
+        }
+        else
+        {
+            io.Fonts->AddFontFromMemoryTTF(Roboto, sizeof(Roboto), base_font_size, &font_cfg, io.Fonts->GetGlyphRangesDefault());
+        }
         font_cfg.FontDataOwnedByAtlas = false;
 
         // Load a comprehensive font for CJK characters
