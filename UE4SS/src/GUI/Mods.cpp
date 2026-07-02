@@ -531,14 +531,14 @@ namespace RC::GUI
                 if (has_main_lua)
                 {
                     info.mod_type = ModType::LuaMod;
-                    info.is_running = running_mod_names.contains(mod_name + "_LuaMod") > 0;
+                    info.is_running = running_mod_names.contains(mod_name + "_LuaMod");
                     m_discovered_mods.push_back(info);
                 }
 
                 if (has_main_dll)
                 {
                     info.mod_type = ModType::CppMod;
-                    info.is_running = running_mod_names.contains(mod_name + "_CppMod") > 0;
+                    info.is_running = running_mod_names.contains(mod_name + "_CppMod");
                     m_discovered_mods.push_back(info);
                 }
             }
