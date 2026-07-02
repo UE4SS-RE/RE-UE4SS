@@ -3,6 +3,7 @@
 #include <vector>
 #include <string>
 #include <filesystem>
+#include <functional>
 
 namespace RC::GUI
 {
@@ -50,6 +51,12 @@ namespace RC::GUI
         std::filesystem::path m_create_file_mod_path{};
         size_t m_expanded_mod{s_invalid_mod_id};
 
+        // Handlers.
+        void* m_handler_context{};
+        std::function<bool(void* context, const std::string& name)> m_create_new_mod_button_handler{};
+        std::function<bool(void* context, const std::string& mod_path, const std::string& filename, bool add_require_to_main)> m_create_file_button_handler{};
+        std::function<void(void* context, ModInfo& mod)> m_open_button_handler{};
+
     public:
         static constexpr auto s_invalid_mod_id = std::numeric_limits<decltype(m_expanded_mod)>::max();
 
@@ -62,7 +69,5 @@ namespace RC::GUI
         auto uninstall_mod_by_name(const std::string& mod_name, ModType mod_type) -> void;
         auto restart_mod_by_name(const std::string& mod_name, ModType mod_type) -> void;
         auto start_mod_by_path(const std::filesystem::path& mod_path, ModType mod_type) -> void;
-        auto create_new_mod(const std::string& name) -> bool;
-        //auto create_new_file(const std::string& mod_path, const std::string& filename, bool add_require_to_main) -> bool;
     };
 }
