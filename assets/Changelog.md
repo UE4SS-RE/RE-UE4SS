@@ -355,9 +355,6 @@ Large performance increase when `Apply filters when not searching` is enabled ([
 ### UHT Dumper 
 
 ### Lua API 
-
-`nil` is now returned if a field or function doesn't exist in an object ([UE4SS #1292](https://github.com/UE4SS-RE/RE-UE4SS/pull/1292))
-
 `print` now behaves like vanilla Lua (can now accept zero, one, or multiple arguments of any type) ([UE4SS #423](https://github.com/UE4SS-RE/RE-UE4SS/pull/423)) - Lyrth 
 
 The callback of `NotifyOnNewObject` can now optionally return `true` to unregister itself ([UE4SS #432](https://github.com/UE4SS-RE/RE-UE4SS/pull/432)) - Lyrth 

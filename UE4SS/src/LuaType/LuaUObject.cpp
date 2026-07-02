@@ -2168,7 +2168,7 @@ Overloads:
             else
             {
                 // Construct an empty object to allow for safe chaining with a validity check at the end
-                lua.set_nil();
+                LuaType::UObject::construct(lua, nullptr);
             }
 
             return;
