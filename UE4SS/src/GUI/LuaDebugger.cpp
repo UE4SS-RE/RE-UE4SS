@@ -1706,6 +1706,12 @@ namespace RC::GUI
                 ImGui::EndTabItem();
             }
 
+            if (ImGui::BeginTabItem(ICON_FA_CUBES " Mods"))
+            {
+                m_mods_widget.render();
+                ImGui::EndTabItem();
+            }
+
             ImGui::EndTabBar();
         }
 
@@ -3600,6 +3606,247 @@ namespace RC::GUI
                 }
 
                 ImGui::TreePop();
+            }
+        }
+    }
+
+    auto LuaDebugger::create_new_mod(void* context, const std::string& name) -> bool
+    {
+        auto self = static_cast<LuaDebugger*>(context);
+
+        if (name.empty())
+        {
+            return false;
+        }
+
+        auto& program = UE4SSProgram::get_program();
+        auto& mods_dirs = program.get_mods_directories();
+
+        if (mods_dirs.empty())
+        {
+            return false;
+        }
+
+        std::filesystem::path mod_path = mods_dirs[0] / name;
+        std::filesystem::path scripts_path = mod_path / "Scripts";
+        std::filesystem::path main_lua_path = scripts_path / "main.lua";
+
+        std::error_code ec;
+
+        if (std::filesystem::exists(mod_path, ec))
+        {
+            Output::send<LogLevel::Warning>(STR("Mod '{}' already exists\n"), to_generic_string(name));
+            return false;
+        }
+
+        std::filesystem::create_directories(scripts_path, ec);
+        if (ec)
+        {
+            Output::send<LogLevel::Error>(STR("Failed to create mod directory: {}\n"), to_generic_string(ec.message()));
+            return false;
+        }
+
+        std::ofstream main_file(main_lua_path);
+        if (!main_file.is_open())
+        {
+            Output::send<LogLevel::Error>(STR("Failed to create main.lua\n"));
+            return false;
+        }
+
+        main_file << "-- " << name << " mod\n";
+        main_file << "-- Created by UE4SS Lua Debugger\n\n";
+        main_file << "print(\"[" << name << "] Mod loaded!\")\n";
+        main_file.close();
+
+        std::ofstream enabled_file(mod_path / "enabled.txt");
+        enabled_file.close();
+
+        self->m_mods_widget.m_mods_list_dirty = true;
+
+        // New mod is not running, clear selected state so dropdown uses filesystem scan
+        self->m_selected_state = nullptr;
+
+        self->m_script_edit_path = main_lua_path.string();
+        const LuaScriptFile* script = self->load_script(self->m_script_edit_path);
+        if (script && script->loaded)
+        {
+            self->m_script_editor.SetText(script->content);
+            self->m_script_original_content = self->m_script_editor.GetText();
+            self->m_script_is_dirty = false;
+        }
+
+        self->m_pending_editor_tab_switch = 1;
+
+        Output::send(STR("Created new mod '{}'\n"), to_generic_string(name));
+        return true;
+    }
+
+    auto LuaDebugger::create_new_file(void* context, const std::string& mod_path, const std::string& filename, bool add_require_to_main) -> bool
+    {
+        auto self = static_cast<LuaDebugger*>(context);
+
+        if (filename.empty() || mod_path.empty())
+        {
+            return false;
+        }
+
+        std::filesystem::path scripts_path = std::filesystem::path(mod_path) / "Scripts";
+        std::filesystem::path file_path = scripts_path / filename;
+
+        if (!file_path.has_extension())
+        {
+            file_path += ".lua";
+        }
+
+        std::error_code ec;
+        if (std::filesystem::exists(file_path, ec))
+        {
+            Output::send<LogLevel::Warning>(STR("File '{}' already exists\n"), to_generic_string(filename));
+            return false;
+        }
+
+        std::ofstream file(file_path);
+        if (!file.is_open())
+        {
+            Output::send<LogLevel::Error>(STR("Failed to create file '{}'\n"), to_generic_string(filename));
+            return false;
+        }
+
+        std::string module_name = file_path.stem().string();
+        file << "-- " << module_name << " module\n\n";
+        file << "local M = {}\n\n";
+        file << "return M\n";
+        file.close();
+
+        // Add require() to main.lua if requested
+        if (add_require_to_main)
+        {
+            std::filesystem::path main_lua_path = scripts_path / "main.lua";
+            if (std::filesystem::exists(main_lua_path))
+            {
+                std::ifstream main_file_read(main_lua_path);
+                std::string main_content((std::istreambuf_iterator<char>(main_file_read)), std::istreambuf_iterator<char>());
+                main_file_read.close();
+
+                std::string require_line = "local " + module_name + " = require(\"" + module_name + "\")\n";
+
+                // Check if require already exists
+                if (main_content.find("require(\"" + module_name + "\")") == std::string::npos)
+                {
+                    // Find the best place to insert - after existing requires or at the top
+                    size_t insert_pos = 0;
+                    size_t last_require_pos = main_content.rfind("require(");
+                    if (last_require_pos != std::string::npos)
+                    {
+                        // Find end of line after last require
+                        size_t newline_pos = main_content.find('\n', last_require_pos);
+                        if (newline_pos != std::string::npos)
+                        {
+                            insert_pos = newline_pos + 1;
+                        }
+                    }
+                    else
+                    {
+                        // No existing requires, find end of any initial comments
+                        size_t pos = 0;
+                        while (pos < main_content.size())
+                        {
+                            // Skip whitespace
+                            while (pos < main_content.size() && (main_content[pos] == ' ' || main_content[pos] == '\t' || main_content[pos] == '\n' || main_content[pos] == '\r'))
+                                pos++;
+
+                            if (pos < main_content.size() && main_content[pos] == '-' && pos + 1 < main_content.size() && main_content[pos + 1] == '-')
+                            {
+                                // Skip comment line
+                                size_t newline = main_content.find('\n', pos);
+                                if (newline != std::string::npos)
+                                    pos = newline + 1;
+                                else
+                                    break;
+                            }
+                            else
+                            {
+                                break;
+                            }
+                        }
+                        insert_pos = pos;
+                    }
+
+                    main_content.insert(insert_pos, require_line);
+
+                    std::ofstream main_file_write(main_lua_path);
+                    main_file_write << main_content;
+                    main_file_write.close();
+
+                    // Clear cache for main.lua so it reloads
+                    {
+                        std::lock_guard<std::mutex> lock(self->m_scripts_mutex);
+                        self->m_script_cache.erase(main_lua_path.string());
+                    }
+
+                    Output::send(STR("Added require() for '{}' to main.lua\n"), to_generic_string(module_name));
+                }
+            }
+        }
+
+        {
+            std::lock_guard<std::mutex> lock(self->m_scripts_mutex);
+            self->m_script_cache.erase(file_path.string());
+        }
+
+        // Check if mod is running; if not, clear selected state so dropdown uses filesystem scan
+        bool mod_is_running = false;
+        std::string mod_name = std::filesystem::path(mod_path).stem().string();
+        for (const auto& mod : UE4SSProgram::get_program().m_mods)
+        {
+            auto* lua_mod = dynamic_cast<LuaMod*>(mod.get());
+            if (lua_mod && to_string(lua_mod->get_name()) == mod_name && lua_mod->is_started())
+            {
+                mod_is_running = true;
+                break;
+            }
+        }
+        if (!mod_is_running)
+        {
+            self->m_selected_state = nullptr;
+        }
+
+        self->m_script_edit_path = file_path.string();
+        const LuaScriptFile* script = self->load_script(self->m_script_edit_path);
+        if (script && script->loaded)
+        {
+            self->m_script_editor.SetText(script->content);
+            self->m_script_original_content = self->m_script_editor.GetText();
+            self->m_script_is_dirty = false;
+        }
+
+        self->m_pending_editor_tab_switch = 1;
+
+        Output::send(STR("Created new file '{}'\n"), to_generic_string(file_path.string()));
+        return true;
+    }
+
+    auto LuaDebugger::open_mod(void* context, ModInfo& mod) -> void
+    {
+        auto self = static_cast<LuaDebugger*>(context);
+
+        std::filesystem::path scripts_path = mod.path / "Scripts";
+        std::filesystem::path main_lua = scripts_path / "main.lua";
+        if (std::filesystem::exists(main_lua))
+        {
+            // Clear selected state if mod isn't running so dropdown uses filesystem scan
+            if (!mod.is_running)
+            {
+                self->m_selected_state = nullptr;
+            }
+            self->m_script_edit_path = main_lua.string();
+            const LuaScriptFile* script = self->load_script(self->m_script_edit_path);
+            if (script && script->loaded)
+            {
+                self->m_script_editor.SetText(script->content);
+                self->m_script_original_content = self->m_script_editor.GetText();
+                self->m_script_is_dirty = false;
+                self->m_pending_editor_tab_switch = 1;
             }
         }
     }
