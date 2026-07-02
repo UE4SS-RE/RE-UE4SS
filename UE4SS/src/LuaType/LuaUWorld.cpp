@@ -65,7 +65,8 @@ namespace RC::LuaType
             std::string error_overload_not_found{R"(
 No overload found for function 'SpawnActor'.
 Overloads:
-#1: SpawnActor(UClass Class, table Location, table Rotation))"};
+#1: SpawnActor(UClass Class, table Location, table Rotation)
+#2: SpawnActor(UClass Class, table Location, table Rotation, table Scale))"};
 
             if (!lua.is_userdata())
             {
@@ -136,10 +137,41 @@ Overloads:
                 lua.throw_error(error_overload_not_found);
             }
 
-            auto* actor = lua_object.get_remote_cpp_object()->SpawnActor(actor_class.get_remote_cpp_object(), &location, &rotation);
-            LuaType::AActor::construct(lua, actor);
+            // Check if we have a scale parameter
+            if (lua.is_table())
+            {
+                // Handle scale parameter
+                Unreal::FVector scale{1.0f, 1.0f, 1.0f};
+                lua.for_each_in_table([&](const LuaMadeSimple::LuaTableReference& table) {
+                    if (table.key.is_string() && table.key.get_string() == "X" && table.value.is_number())
+                    {
+                        scale.SetX(table.value.get_number());
+                    }
 
-            return 1;
+                    if (table.key.is_string() && table.key.get_string() == "Y" && table.value.is_number())
+                    {
+                        scale.SetY(table.value.get_number());
+                    }
+
+                    if (table.key.is_string() && table.key.get_string() == "Z" && table.value.is_number())
+                    {
+                        scale.SetZ(table.value.get_number());
+                    }
+                    return false;
+                });
+
+                Unreal::FTransform transform{rotation, location, scale};
+                auto* actor = lua_object.get_remote_cpp_object()->SpawnActor(actor_class.get_remote_cpp_object(), &transform);
+                LuaType::AActor::construct(lua, actor);
+                return 1;
+            }
+            else
+            {
+                // Original behavior without scale
+                auto* actor = lua_object.get_remote_cpp_object()->SpawnActor(actor_class.get_remote_cpp_object(), &location, &rotation);
+                LuaType::AActor::construct(lua, actor);
+                return 1;
+            }
         });
 
         if constexpr (is_final == LuaMadeSimple::Type::IsFinal::Yes)
