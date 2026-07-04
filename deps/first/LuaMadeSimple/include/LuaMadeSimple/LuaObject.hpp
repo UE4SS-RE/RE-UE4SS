@@ -26,6 +26,14 @@ namespace RC::LuaMadeSimple::Type
         LuaMadeSimple::Lua::MetaMethods metamethods;
     };
 
+    // Can be used to track special states within the pointer value if you know the pointer is otherwise nullptr.
+    // 'IsValid' for RemoteObject will return false even when the internal pointer is set to this value.
+    // It's used to enable 'IsValidField' to return true even when 'IsValid' returns false, which can be useful for reflection systems.
+    static constexpr auto special_invalid_ptr()
+    {
+        return reinterpret_cast<void*>(std::numeric_limits<uintptr_t>::max() - 0x1000);
+    }
+
     class RC_LMS_API BaseObject
     {
       private:
@@ -112,9 +120,9 @@ namespace RC::LuaMadeSimple::Type
         // This function cannot be used if you want to inherit from RemoteObject
         auto static construct(const LuaMadeSimple::Lua& lua, ObjectType* object_ptr) -> const LuaMadeSimple::Lua::Table
         {
-            RemoteObject<ObjectType> lua_object{object_ptr};
-
             auto metatable_name = "TrivialObject";
+
+            RemoteObject<ObjectType> lua_object{metatable_name, object_ptr};
 
             LuaMadeSimple::Lua::Table table = lua.get_metatable(metatable_name);
             if (lua.is_nil(-1))
@@ -168,14 +176,13 @@ namespace RC::LuaMadeSimple::Type
                 }
 
                 const RemoteObject& lua_object = lua.get_userdata<RemoteObject>();
-                if (lua_object.get_remote_cpp_object())
-                {
-                    lua.set_bool(true);
-                }
-                else
-                {
-                    lua.set_bool(false);
-                }
+                lua.set_bool(lua_object.m_cpp_object && lua_object.m_cpp_object != special_invalid_ptr());
+                return 1;
+            });
+
+            table.add_pair("IsValidField", [](const LuaMadeSimple::Lua& lua) -> int {
+                auto& lua_object = lua.get_userdata<RemoteObject>();
+                lua.set_bool(lua_object.m_cpp_object != special_invalid_ptr());
                 return 1;
             });
 

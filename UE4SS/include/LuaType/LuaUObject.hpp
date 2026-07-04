@@ -454,7 +454,10 @@ namespace RC::LuaType
         // Constructor for UObject
         auto static construct(const LuaMadeSimple::Lua& lua, DerivedType* unreal_object) -> const LuaMadeSimple::Lua::Table
         {
-            add_to_global_unreal_objects_map(unreal_object);
+            if (unreal_object != LuaMadeSimple::Type::special_invalid_ptr())
+            {
+                add_to_global_unreal_objects_map(unreal_object);
+            }
 
             SelfType lua_object{unreal_object};
 
@@ -753,8 +756,8 @@ Overloads:
 
             table.add_pair("IsValid", [](const LuaMadeSimple::Lua& lua) -> int {
                 const auto& lua_object = lua.get_userdata<SelfType>();
-                if (lua_object.get_remote_cpp_object() && is_object_in_global_unreal_object_map(lua_object.get_remote_cpp_object()) &&
-                    !lua_object.get_remote_cpp_object()->IsUnreachable())
+                if (lua_object.get_remote_cpp_object() && lua_object.get_remote_cpp_object() != LuaMadeSimple::Type::special_invalid_ptr() &&
+                    is_object_in_global_unreal_object_map(lua_object.get_remote_cpp_object()) && !lua_object.get_remote_cpp_object()->IsUnreachable())
                 {
                     lua.set_bool(true);
                 }

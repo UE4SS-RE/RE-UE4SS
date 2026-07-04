@@ -2167,8 +2167,9 @@ Overloads:
             }
             else
             {
-                // Construct an empty object to allow for safe chaining with a validity check at the end
-                LuaType::UObject::construct(lua, nullptr);
+                // Construct an empty object, this is for compatibility reasons because people may have written code that takes for granted that
+                // all objects are userdata even invalid fields and functions being accessed from a valid UObject.
+                LuaMadeSimple::Type::RemoteObject<Unreal::UObject>::construct(lua, static_cast<Unreal::UObject*>(LuaMadeSimple::Type::special_invalid_ptr()));
             }
 
             return;
