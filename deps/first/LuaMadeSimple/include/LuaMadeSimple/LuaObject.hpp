@@ -29,7 +29,7 @@ namespace RC::LuaMadeSimple::Type
     // Can be used to track special states within the pointer value if you know the pointer is otherwise nullptr.
     // 'IsValid' for RemoteObject will return false even when the internal pointer is set to this value.
     // It's used to enable 'IsValidField' to return true even when 'IsValid' returns false, which can be useful for reflection systems.
-    static constexpr auto special_invalid_ptr()
+    static inline auto special_invalid_ptr()
     {
         return reinterpret_cast<void*>(std::numeric_limits<uintptr_t>::max() - 0x1000);
     }
