@@ -14,13 +14,13 @@ typedef _MODULEINFO MODULEINFO;
 namespace RC
 {
     // Windows structs, to prevent the need to include Windows.h in this header
-    struct WIN_MODULEINFO
+    struct RC_HELPERS_API WIN_MODULEINFO
     {
         void* lpBaseOfDll;
         unsigned long SizeOfImage;
         void* EntryPoint;
 
-        RC_HELPERS_API auto operator=(MODULEINFO) -> WIN_MODULEINFO&;
+        auto operator=(MODULEINFO) -> WIN_MODULEINFO&;
     };
 
     enum class ScanTarget
@@ -164,15 +164,15 @@ namespace RC
         Max,
     };
 
-    auto ScanTargetToString(ScanTarget scan_target) -> std::string;
-    auto ScanTargetToString(size_t scan_target) -> std::string;
+    RC_HELPERS_API auto ScanTargetToString(ScanTarget scan_target) -> std::string;
+    RC_HELPERS_API auto ScanTargetToString(size_t scan_target) -> std::string;
 
     class ScanTargetArray
     {
     public:
         std::array<WIN_MODULEINFO, static_cast<size_t>(ScanTarget::Max)> array{};
 
-        auto operator[](ScanTarget index) -> MODULEINFO&;
-        auto operator[](ScanTarget index) const -> MODULEINFO&;
+        RC_HELPERS_API auto operator[](ScanTarget index) -> MODULEINFO&;
+        RC_HELPERS_API auto operator[](ScanTarget index) const -> MODULEINFO&;
     };
 }
