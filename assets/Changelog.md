@@ -404,6 +404,8 @@ Switch to xmake from cmake which makes building much more streamlined ([UE4SS #3
 ## Fixes 
 
 ### General 
+Fixed proxy injection incorrectly running UE4SS initialization inside the loader lock when the main thread was the first thread snapshot entry.
+
 Fixed BPModLoaderMod not working in games made in UE 5.2+ - ([UE4SS #503](https://github.com/UE4SS-RE/RE-UE4SS/pull/503)) 
 
 Fixed adding elements to TArray in Lua incorrectly resizing and zeroing out previous values ([UE4SS #436](https://github.com/UE4SS-RE/RE-UE4SS/pull/436)) - dnchattan 
