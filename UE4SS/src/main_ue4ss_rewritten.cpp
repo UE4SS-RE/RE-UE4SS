@@ -75,7 +75,13 @@ auto get_main_thread_id() -> DWORD
     uint64_t earliestCreationTime = std::numeric_limits<uint64_t>::max();
     DWORD mainThreadId = 0;
 
-    for (Thread32First(snapshot, &th32); Thread32Next(snapshot, &th32);)
+    if (!Thread32First(snapshot, &th32))
+    {
+        CloseHandle(snapshot);
+        return 0;
+    }
+
+    do
     {
         if (th32.th32OwnerProcessID != currentPid)
         {
@@ -103,8 +109,9 @@ auto get_main_thread_id() -> DWORD
         }
 
         CloseHandle(thread);
-    }
+    } while (Thread32Next(snapshot, &th32));
 
+    CloseHandle(snapshot);
     return mainThreadId;
 }
 
