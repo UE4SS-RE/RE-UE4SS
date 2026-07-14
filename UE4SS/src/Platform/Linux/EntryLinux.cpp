@@ -7,12 +7,14 @@
 #include <exception>
 #include <filesystem>
 #include <thread>
+#include <utility>
 
 #include <dlfcn.h>
 
 #include "UE4SSProgram.hpp"
 #include <DynamicOutput/DynamicOutput.hpp>
 #include <Helpers/String.hpp>
+#include <Platform/Linux/Diagnostics.hpp>
 
 using namespace RC;
 
@@ -53,6 +55,7 @@ namespace
 
             if (auto e = program->get_error_object(); e->has_error())
             {
+                LinuxDiagnostics::output_inactive_reason(e->get_message());
                 // If the output system errored out then use printf as a fallback
                 if (!Output::has_internal_error())
                 {
@@ -66,6 +69,10 @@ namespace
         }
         catch (const std::exception& exception)
         {
+            if (LinuxDiagnostics::is_enabled())
+            {
+                std::fprintf(stderr, "DIAG: inactive_reason=%s\n", exception.what());
+            }
             std::fprintf(stderr, "UE4SS: initialization failed: %s\n", exception.what());
         }
         catch (...)
@@ -148,15 +155,24 @@ __attribute__((constructor(101))) static void ue4ss_so_attached()
     try
     {
         // Locate our own .so path; UE4SSProgram derives all directories from it.
-        Dl_info dl_info{};
-        if (dladdr(reinterpret_cast<void*>(&ue4ss_so_attached), &dl_info) == 0 || !dl_info.dli_fname)
+        std::filesystem::path module_path;
+        if (const auto* configured_module_path = std::getenv("UE4SS_MODULE_PATH"); configured_module_path && configured_module_path[0] != '\0')
         {
-            std::fputs("UE4SS: failed to determine libUE4SS.so path; startup disabled\n", stderr);
-            s_ue4ss_started = false;
-            return;
+            module_path = configured_module_path;
+        }
+        else
+        {
+            Dl_info dl_info{};
+            if (dladdr(reinterpret_cast<void*>(&ue4ss_so_attached), &dl_info) == 0 || !dl_info.dli_fname)
+            {
+                std::fputs("UE4SS: failed to determine libUE4SS.so path; startup disabled\n", stderr);
+                s_ue4ss_started = false;
+                return;
+            }
+            module_path = dl_info.dli_fname;
         }
 
-        std::thread init_thread{&thread_so_start, std::filesystem::path{dl_info.dli_fname}};
+        std::thread init_thread{&thread_so_start, std::move(module_path)};
         init_thread.detach();
     }
     catch (const std::exception& exception)

@@ -16,6 +16,7 @@
 #include <limits>
 #include <unordered_set>
 #ifdef __linux__
+#include <Platform/Linux/Diagnostics.hpp>
 #include <unistd.h>
 #endif
 #include <fmt/chrono.h>
@@ -398,6 +399,9 @@ namespace RC
 #endif
 
             Unreal::UnrealInitializer::SetupUnrealModules();
+#ifdef __linux__
+            LinuxDiagnostics::output_environment(m_game_path_and_exe_name);
+#endif
 
             setup_mod_directory_path();
 

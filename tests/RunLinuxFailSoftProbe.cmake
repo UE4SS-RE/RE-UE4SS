@@ -32,6 +32,7 @@ end
 execute_process(
     COMMAND "${CMAKE_COMMAND}" -E env
         "LD_PRELOAD=${STAGE_DIRECTORY}/${ue4ss_library_name}"
+        "UE4SS_DIAGNOSE=1"
         "${PROBE_EXECUTABLE}"
     RESULT_VARIABLE probe_result
     OUTPUT_VARIABLE probe_stdout
@@ -55,6 +56,21 @@ file(READ "${ue4ss_log}" ue4ss_log_contents)
 if(NOT ue4ss_log_contents MATCHES "PS scan timed out")
     message(FATAL_ERROR "UE4SS.log did not record the expected signature failure")
 endif()
+file(SHA256 "${PROBE_EXECUTABLE}" probe_sha256)
+foreach(expected_diagnostic
+    "DIAG: executable_sha256=${probe_sha256}"
+    "DIAG: glibc_version="
+    "DIAG: glibcxx_ceiling=GLIBCXX_"
+    "DIAG: module=MainExe range=0x"
+    "DIAG: engine_version=unresolved"
+    "DIAG: signature=GUObjectArray status=skipped address=0x0"
+    "DIAG: inactive_reason=PS scan timed out"
+)
+    string(FIND "${ue4ss_log_contents}" "${expected_diagnostic}" diagnostic_position)
+    if(diagnostic_position EQUAL -1)
+        message(FATAL_ERROR "UE4SS.log did not contain '${expected_diagnostic}'")
+    endif()
+endforeach()
 file(SIZE "${ue4ss_log}" ue4ss_log_size)
 if(ue4ss_log_size GREATER 1048576)
     message(FATAL_ERROR "Fail-soft signature scanning produced an excessive ${ue4ss_log_size}-byte log")

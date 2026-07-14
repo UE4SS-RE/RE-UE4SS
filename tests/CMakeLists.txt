@@ -140,4 +140,15 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
             "$<TARGET_FILE:PalworldSignatureTests>"
     )
     set_tests_properties(PalworldSignatureTests PROPERTIES SKIP_RETURN_CODE 77)
+
+    add_executable(LinuxLauncherProbe LinuxLauncherProbe.cpp)
+    target_link_libraries(LinuxLauncherProbe PRIVATE dl)
+    add_test(NAME LinuxLauncherTests
+        COMMAND "${CMAKE_CURRENT_SOURCE_DIR}/RunLinuxLauncherTests.sh"
+            "${CMAKE_SOURCE_DIR}/tools/linux/run_ue4ss.sh"
+            "$<TARGET_FILE:UE4SS>"
+            "$<TARGET_FILE:LinuxLauncherProbe>"
+            "$<TARGET_FILE:SharedLibraryFixture>"
+            "${CMAKE_CURRENT_BINARY_DIR}/linux launcher stage"
+    )
 endif()
