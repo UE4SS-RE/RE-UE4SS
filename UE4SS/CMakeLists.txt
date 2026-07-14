@@ -55,6 +55,15 @@ message("UE4SS Version: ${UE4SS_LIB_VERSION_MAJOR}.${UE4SS_LIB_VERSION_MINOR}.${
 file(GLOB_RECURSE UE4SS_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/**.cpp")
 file(GLOB_RECURSE UE4SS_HEADERS "${CMAKE_CURRENT_SOURCE_DIR}/include/**.hpp")
 
+# Platform-specific entry/bootstrap sources: compile only the current platform's directory.
+list(FILTER UE4SS_SOURCES EXCLUDE REGEX "/src/Platform/")
+if(WIN32)
+    file(GLOB_RECURSE UE4SS_PLATFORM_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/Platform/Win32/**.cpp")
+else()
+    file(GLOB_RECURSE UE4SS_PLATFORM_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/Platform/Linux/**.cpp")
+endif()
+list(APPEND UE4SS_SOURCES ${UE4SS_PLATFORM_SOURCES})
+
 # Create the main library
 add_library(UE4SS SHARED ${UE4SS_SOURCES})
 
