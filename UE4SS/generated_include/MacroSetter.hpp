@@ -1,19 +1,19 @@
 auto ParseMemberOffset = [](const File::StringType& val_str, auto& offsets, auto& bitfields, const File::StringType& member_name)
 {
     try {
-        int32_t offset = std::stoi(val_str, nullptr, 0);
+        int32_t offset = static_cast<int32_t>(std::stoll(to_utf8_string(val_str), nullptr, 0));
         offsets.emplace(member_name, offset);
         size_t colon1 = val_str.find(':');
         if (colon1 != File::StringType::npos && colon1 + 1 < val_str.size()) {
-            uint8_t bit_pos = static_cast<uint8_t>(std::stoi(val_str.substr(colon1 + 1)));
+            uint8_t bit_pos = static_cast<uint8_t>(std::stoll(to_utf8_string(val_str.substr(colon1 + 1))));
             uint8_t bit_len = 1;
             uint8_t storage_size = 1;
             size_t colon2 = val_str.find(':', colon1 + 1);
             if (colon2 != File::StringType::npos && colon2 + 1 < val_str.size()) {
-                bit_len = static_cast<uint8_t>(std::stoi(val_str.substr(colon2 + 1)));
+                bit_len = static_cast<uint8_t>(std::stoll(to_utf8_string(val_str.substr(colon2 + 1))));
                 size_t colon3 = val_str.find(':', colon2 + 1);
                 if (colon3 != File::StringType::npos && colon3 + 1 < val_str.size()) {
-                    storage_size = static_cast<uint8_t>(std::stoi(val_str.substr(colon3 + 1)));
+                    storage_size = static_cast<uint8_t>(std::stoll(to_utf8_string(val_str.substr(colon3 + 1))));
                 }
             }
             bitfields.emplace(member_name, Unreal::BitfieldInfo{bit_pos, bit_len, storage_size});
