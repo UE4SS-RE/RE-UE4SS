@@ -151,4 +151,11 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
             "$<TARGET_FILE:SharedLibraryFixture>"
             "${CMAKE_CURRENT_BINARY_DIR}/linux launcher stage"
     )
+
+    add_executable(LinuxStartupPolicyTests
+        LinuxStartupPolicyTests.cpp
+        "${CMAKE_SOURCE_DIR}/UE4SS/src/Platform/Linux/StartupPolicy.cpp"
+    )
+    target_include_directories(LinuxStartupPolicyTests PRIVATE "${CMAKE_SOURCE_DIR}/UE4SS/include")
+    add_test(NAME LinuxStartupPolicyTests COMMAND LinuxStartupPolicyTests)
 endif()
