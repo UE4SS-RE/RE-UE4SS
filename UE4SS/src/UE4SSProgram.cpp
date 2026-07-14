@@ -1386,7 +1386,7 @@ namespace RC
                     if (!find_mod_by_name<LuaMod>(mod_name) && std::filesystem::exists(sub_directory.path() / "scripts"))
                         m_mods.emplace_back(std::make_unique<LuaMod>(*this, std::move(mod_name), sub_directory.path()));
                     if (!find_mod_by_name<CppMod>(mod_name) && std::filesystem::exists(sub_directory.path() / "dlls"))
-                        m_mods.emplace_back(std::make_unique<CppMod>(*this, std::move(mod_name), ensure_str(sub_directory.path())));
+                        m_mods.emplace_back(std::make_unique<CppMod>(*this, std::move(mod_name), sub_directory.path()));
                 }
             }
         }

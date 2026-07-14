@@ -2,23 +2,14 @@
 
 #include <vector>
 
-#ifdef _WIN32
-#include <Unreal/Core/Windows/MinimalWindowsApi.hpp>
-#endif
-
 #include <Mod/CppUserModBase.hpp>
 #include <Mod/Mod.hpp>
+#include <Platform/SharedLibrary.hpp>
 
 #include <String/StringType.hpp>
 
 namespace RC
 {
-#ifdef _WIN32
-    using DynamicLibraryHandle = Unreal::Windows::HMODULE;
-#else
-    using DynamicLibraryHandle = void*;
-#endif
-
     namespace LuaMadeSimple
     {
         class Lua;
@@ -34,15 +25,14 @@ namespace RC
         StringType m_dll_filename{};
         std::filesystem::path m_dlls_path;
 
-        DynamicLibraryHandle m_main_dll_module = nullptr;
-        void* m_dlls_path_cookie = NULL;
+        Platform::SharedLibrary m_main_dll{};
         start_type m_start_mod_func = nullptr;
         uninstall_type m_uninstall_mod_func = nullptr;
 
         CppUserModBase* m_mod = nullptr;
 
       public:
-        CppMod(UE4SSProgram&, StringType&& mod_name, StringType&& mod_path);
+        CppMod(UE4SSProgram&, StringType&& mod_name, std::filesystem::path mod_path);
         CppMod(CppMod&) = delete;
         CppMod(CppMod&&) = delete;
         ~CppMod() override;

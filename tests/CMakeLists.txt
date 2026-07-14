@@ -44,6 +44,15 @@ target_compile_definitions(HeadlessHeadersTests PRIVATE
 )
 add_test(NAME HeadlessHeadersTests COMMAND HeadlessHeadersTests)
 
+add_executable(UnrealStringFormatTests UnrealStringFormatTests.cpp)
+target_link_libraries(UnrealStringFormatTests PRIVATE Unreal Helpers DynamicOutput patternsleuth_bind fmt)
+target_compile_definitions(UnrealStringFormatTests PRIVATE
+    RC_UNREAL_BUILD_STATIC
+    RC_DYNAMIC_OUTPUT_BUILD_STATIC
+    RC_FILE_BUILD_STATIC
+)
+add_test(NAME UnrealStringFormatTests COMMAND UnrealStringFormatTests)
+
 add_executable(FilesystemWatcherTests
     FilesystemWatcherTests.cpp
     "${CMAKE_SOURCE_DIR}/UE4SS/src/FilesystemWatcher.cpp"
@@ -71,4 +80,13 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
     set_tests_properties(CrashDumperProbe PROPERTIES WILL_FAIL TRUE)
     add_test(NAME CrashDumperVerifier COMMAND CrashDumperVerifier "${CRASH_DUMPER_TEST_DIR}")
     set_tests_properties(CrashDumperVerifier PROPERTIES DEPENDS CrashDumperProbe)
+
+    add_library(SharedLibraryFixture SHARED fixtures/SharedLibraryFixture.cpp)
+    add_executable(SharedLibraryTests
+        SharedLibraryTests.cpp
+        "${CMAKE_SOURCE_DIR}/UE4SS/src/Platform/Linux/SharedLibrary.cpp"
+    )
+    target_include_directories(SharedLibraryTests PRIVATE "${CMAKE_SOURCE_DIR}/UE4SS/include")
+    target_link_libraries(SharedLibraryTests PRIVATE dl)
+    add_test(NAME SharedLibraryTests COMMAND SharedLibraryTests "$<TARGET_FILE:SharedLibraryFixture>")
 endif()
