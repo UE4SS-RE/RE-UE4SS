@@ -1,6 +1,10 @@
 #ifdef __linux__
 
+#include <atomic>
 #include <cstdio>
+#include <cstdlib>
+#include <cstring>
+#include <exception>
 #include <filesystem>
 #include <thread>
 
@@ -14,58 +18,168 @@ using namespace RC;
 
 namespace
 {
-    bool s_ue4ss_started = false;
+    using DlopenFunction = void* (*)(const char*, int);
+
+    std::atomic_bool s_ue4ss_started{false};
+    std::atomic<DlopenFunction> s_real_dlopen{};
+    thread_local bool s_inside_dlopen{};
+
+    class DlopenRecursionGuard
+    {
+      public:
+        DlopenRecursionGuard()
+        {
+            s_inside_dlopen = true;
+        }
+
+        ~DlopenRecursionGuard()
+        {
+            s_inside_dlopen = false;
+        }
+    };
 
     auto thread_so_start(UE4SSProgram* program) -> void
     {
-        // Wrapper for entire program
-        // Everything must be channeled through MProgram
-        // Mirrors thread_dll_start() in Platform/Win32/EntryWin32.cpp
-        program->init();
-
-        if (auto e = program->get_error_object(); e->has_error())
+        try
         {
-            // If the output system errored out then use printf as a fallback
-            if (!Output::has_internal_error())
+            // Wrapper for entire program
+            // Everything must be channeled through MProgram
+            // Mirrors thread_dll_start() in Platform/Win32/EntryWin32.cpp
+            program->init();
+
+            if (auto e = program->get_error_object(); e->has_error())
             {
-                Output::send<LogLevel::Error>(STR("Fatal Error: {}\n"), ensure_str(e->get_message()));
+                // If the output system errored out then use printf as a fallback
+                if (!Output::has_internal_error())
+                {
+                    Output::send<LogLevel::Error>(STR("Fatal Error: {}\n"), ensure_str(e->get_message()));
+                }
+                else
+                {
+                    std::fprintf(stderr, "UE4SS: %s\n", e->get_message());
+                }
             }
-            else
-            {
-                printf("Error: %s\n", e->get_message());
-            }
+        }
+        catch (const std::exception& exception)
+        {
+            std::fprintf(stderr, "UE4SS: initialization failed: %s\n", exception.what());
+        }
+        catch (...)
+        {
+            std::fputs("UE4SS: initialization failed with an unknown exception\n", stderr);
         }
     }
 } // namespace
+
+namespace RC
+{
+    void notify_dlopen(const char* filename)
+    {
+        if (UE4SSProgram::s_program)
+        {
+            UE4SSProgram::s_program->fire_dll_load_for_cpp_mods(ensure_str(filename));
+        }
+    }
+} // namespace RC
+
+extern "C" __attribute__((visibility("default"))) void* dlopen(const char* filename, int flags)
+{
+    if (s_inside_dlopen)
+    {
+        if (const auto real_dlopen = s_real_dlopen.load(std::memory_order_acquire))
+        {
+            return real_dlopen(filename, flags);
+        }
+        return nullptr;
+    }
+
+    DlopenRecursionGuard recursion_guard{};
+    auto real_dlopen = s_real_dlopen.load(std::memory_order_acquire);
+    if (!real_dlopen)
+    {
+        real_dlopen = reinterpret_cast<DlopenFunction>(dlsym(RTLD_NEXT, "dlopen"));
+        if (!real_dlopen)
+        {
+            std::fputs("UE4SS: failed to resolve the real dlopen\n", stderr);
+            return nullptr;
+        }
+        s_real_dlopen.store(real_dlopen, std::memory_order_release);
+    }
+
+    auto* library = real_dlopen(filename, flags);
+    if (library && filename)
+    {
+        try
+        {
+            RC::notify_dlopen(filename);
+        }
+        catch (const std::exception& exception)
+        {
+            std::fprintf(stderr, "UE4SS: C++ mod dlopen notification failed: %s\n", exception.what());
+        }
+        catch (...)
+        {
+            std::fputs("UE4SS: C++ mod dlopen notification failed with an unknown exception\n", stderr);
+        }
+    }
+    return library;
+}
 
 // Called when the .so is loaded (LD_PRELOAD or dlopen). We must not block here:
 // spawn the init thread and return so the dynamic linker can finish.
 __attribute__((constructor)) static void ue4ss_so_attached()
 {
-    if (s_ue4ss_started)
+    if (const auto* disable_auto_start = std::getenv("UE4SS_DISABLE_AUTO_START");
+        disable_auto_start && std::strcmp(disable_auto_start, "1") == 0)
     {
         return;
     }
-    s_ue4ss_started = true;
 
-    // Locate our own .so path; UE4SSProgram derives all directories from it.
-    Dl_info dl_info{};
-    if (dladdr(reinterpret_cast<void*>(&ue4ss_so_attached), &dl_info) == 0 || !dl_info.dli_fname)
+    bool expected = false;
+    if (!s_ue4ss_started.compare_exchange_strong(expected, true))
     {
-        fprintf(stderr, "UE4SS: failed to determine libUE4SS.so path; aborting startup\n");
         return;
     }
 
-    auto program = new UE4SSProgram(std::filesystem::path{dl_info.dli_fname}, {});
-    std::thread{&thread_so_start, program}.detach();
+    try
+    {
+        // Locate our own .so path; UE4SSProgram derives all directories from it.
+        Dl_info dl_info{};
+        if (dladdr(reinterpret_cast<void*>(&ue4ss_so_attached), &dl_info) == 0 || !dl_info.dli_fname)
+        {
+            std::fputs("UE4SS: failed to determine libUE4SS.so path; startup disabled\n", stderr);
+            s_ue4ss_started = false;
+            return;
+        }
+
+        auto* program = new UE4SSProgram(std::filesystem::path{dl_info.dli_fname}, {});
+        std::thread init_thread{&thread_so_start, program};
+        init_thread.detach();
+    }
+    catch (const std::exception& exception)
+    {
+        std::fprintf(stderr, "UE4SS: failed to start initialization: %s\n", exception.what());
+        s_ue4ss_started = false;
+    }
+    catch (...)
+    {
+        std::fputs("UE4SS: failed to start initialization with an unknown exception\n", stderr);
+        s_ue4ss_started = false;
+    }
 }
 
 __attribute__((destructor)) static void ue4ss_so_detached()
 {
-    if (s_ue4ss_started)
+    if (s_ue4ss_started.exchange(false))
     {
-        UE4SSProgram::static_cleanup();
-        s_ue4ss_started = false;
+        try
+        {
+            UE4SSProgram::static_cleanup();
+        }
+        catch (...)
+        {
+            std::fputs("UE4SS: cleanup failed during shared-object unload\n", stderr);
+        }
     }
 }
 

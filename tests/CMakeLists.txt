@@ -66,6 +66,10 @@ target_compile_definitions(FilesystemWatcherTests PRIVATE
 add_test(NAME FilesystemWatcherTests COMMAND FilesystemWatcherTests)
 
 if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+    add_executable(LinuxHookTests LinuxHookTests.cpp)
+    target_link_libraries(LinuxHookTests PRIVATE PolyHook_2)
+    add_test(NAME LinuxHookTests COMMAND LinuxHookTests)
+
     add_executable(CrashDumperProbe
         CrashDumperProbe.cpp
         "${CMAKE_SOURCE_DIR}/UE4SS/src/Platform/Linux/CrashDumper.cpp"
@@ -89,4 +93,15 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
     target_include_directories(SharedLibraryTests PRIVATE "${CMAKE_SOURCE_DIR}/UE4SS/include")
     target_link_libraries(SharedLibraryTests PRIVATE dl)
     add_test(NAME SharedLibraryTests COMMAND SharedLibraryTests "$<TARGET_FILE:SharedLibraryFixture>")
+
+    add_executable(LinuxPreloadProbe LinuxPreloadProbe.cpp)
+    target_link_libraries(LinuxPreloadProbe PRIVATE dl)
+    add_test(NAME LinuxPreloadProbe
+        COMMAND "${CMAKE_COMMAND}" -E env
+            "LD_PRELOAD=$<TARGET_FILE:UE4SS>"
+            "UE4SS_DISABLE_AUTO_START=1"
+            "$<TARGET_FILE:LinuxPreloadProbe>"
+            "$<TARGET_FILE:SharedLibraryFixture>"
+    )
+    set_tests_properties(LinuxPreloadProbe PROPERTIES PASS_REGULAR_EXPRESSION "UE4SS_PRELOAD_PROBE_READY")
 endif()
