@@ -1,10 +1,15 @@
 #define NOMINMAX
+#ifdef _WIN32
 #include <Windows.h>
+#else
+#include <unistd.h>
+#endif
 #ifdef TEXT
 #undef TEXT
 #endif
 
 #include <algorithm>
+#include <array>
 #include <format>
 #include <fstream>
 #include <set>
@@ -805,8 +810,8 @@ namespace RC::UEGenerator
         m_class_subobjects.clear();
 
         // Sort the attachments alphabetically by the property name
-        std::vector<std::pair<FProperty*, std::tuple<std::wstring, std::wstring, bool>>> sorted_attachments(implementation_file.attachments.begin(),
-                                                                                                            implementation_file.attachments.end());
+        std::vector<std::pair<FProperty*, std::tuple<StringType, StringType, bool>>> sorted_attachments(implementation_file.attachments.begin(),
+                                                                                                        implementation_file.attachments.end());
         std::sort(sorted_attachments.begin(), sorted_attachments.end(), [](const auto& a, const auto& b) {
             return a.first->GetName() < b.first->GetName();
         });
@@ -4168,6 +4173,7 @@ namespace RC::UEGenerator
 
     auto UEHeaderGenerator::determine_primary_game_module_name() -> StringType
     {
+#ifdef _WIN32
         HMODULE primary_executable_module = GetModuleHandleW(NULL);
         CharType module_name_buffer[1024]{'\0'};
         GetModuleFileNameW(primary_executable_module, FromCharTypePtr<wchar_t>(module_name_buffer), ARRAYSIZE(module_name_buffer));
@@ -4178,6 +4184,18 @@ namespace RC::UEGenerator
 
         // Remove the shipping file postfix
         StringType shipping_postfix = STR("-Win64-Shipping");
+#else
+        std::array<char, 4096> module_name_buffer{};
+        const auto module_name_length = readlink("/proc/self/exe", module_name_buffer.data(), module_name_buffer.size() - 1);
+        if (module_name_length <= 0)
+        {
+            return {};
+        }
+        module_name_buffer[static_cast<size_t>(module_name_length)] = '\0';
+        auto root_executable_path = std::filesystem::path{module_name_buffer.data()};
+        StringType filename = ensure_str(root_executable_path.filename().replace_extension());
+        StringType shipping_postfix = STR("-Linux-Shipping");
+#endif
         if (filename.ends_with(shipping_postfix))
         {
             filename.erase(filename.length() - shipping_postfix.length());
