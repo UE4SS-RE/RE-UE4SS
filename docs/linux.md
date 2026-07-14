@@ -83,15 +83,35 @@ Run the server through the supplied launcher instead of setting `LD_PRELOAD` by 
 ```bash
 export PALWORLD_SERVER_ROOT=/srv/palworld
 stage="$PALWORLD_SERVER_ROOT/Pal/Binaries/Linux"
+server="$stage/PalServer-Linux-Shipping"
+wrapper="$PALWORLD_SERVER_ROOT/PalServer.sh"
 mkdir -p "$stage/UE4SS-crashes"
 
 cd "$PALWORLD_SERVER_ROOT"
 UE4SS_CRASH_LOG_DIR="$stage/UE4SS-crashes" \
-  "$stage/run_ue4ss.sh" ./PalServer.sh \
+  "$stage/run_ue4ss.sh" \
+  --host-executable "$server" \
+  "$wrapper" \
   -useperfthreads -NoAsyncLoadingThread -UseMultithreadForDS
 ```
 
-`run_ue4ss.sh` validates both paths, preserves every server argument, prepends UE4SS to an existing `LD_PRELOAD`, and then replaces itself with the server process. It also supports installation paths containing spaces.
+When no wrapper is needed, launch the ELF directly. The command itself becomes the intended host:
+
+```bash
+UE4SS_CRASH_LOG_DIR="$stage/UE4SS-crashes" \
+  "$stage/run_ue4ss.sh" "$server" Pal \
+  -useperfthreads -NoAsyncLoadingThread -UseMultithreadForDS
+```
+
+`run_ue4ss.sh` validates the command and host, preserves every server argument, prepends UE4SS to an existing `LD_PRELOAD`, and supports installation paths containing spaces. A script command requires `--host-executable` followed by the actual ELF; otherwise the launcher exits with `script commands require --host-executable` instead of silently starting an unmodded server.
+
+### Process-scoped preload behavior
+
+Linux passes `LD_PRELOAD` through the process environment, so an ordinary preload is inherited by programs that a wrapper or game starts. The launcher records the intended host executable. Wrapper interpreters receive the preload but skip UE4SS initialization; when the intended host loads, UE4SS restores the exact original `LD_PRELOAD` state and removes its private launcher variables before starting. Helpers created later therefore do not inherit the launcher-added `libUE4SS.so` entry.
+
+Windows does not need this policy: proxy DLL and manual DLL injection load UE4SS into one selected process, and loaded modules are not inherited by child processes.
+
+Setting `LD_PRELOAD` manually remains compatible, but it retains normal Linux child inheritance and is not process-scoped. Use `run_ue4ss.sh` for the supported scoped workflow. If the user's original `LD_PRELOAD` already contains UE4SS, exact preservation takes precedence and descendants may still load that user-supplied entry.
 
 ## Diagnostics and logs
 
@@ -101,10 +121,14 @@ Set `UE4SS_DIAGNOSE=1` for a support-oriented startup report:
 cd "$PALWORLD_SERVER_ROOT"
 UE4SS_DIAGNOSE=1 \
 UE4SS_CRASH_LOG_DIR="$stage/UE4SS-crashes" \
-  "$stage/run_ue4ss.sh" ./PalServer.sh
+  "$stage/run_ue4ss.sh" \
+  --host-executable "$server" \
+  "$wrapper"
 ```
 
-The diagnostic report includes the executable path and SHA-256, loaded ELF ranges, glibc version, highest detected GLIBCXX version, engine detection, per-signature status/address, and the reason UE4SS deactivated if startup failed. Share the diagnostic block together with:
+The diagnostic report includes the executable path and SHA-256, loaded ELF ranges, glibc version, highest detected GLIBCXX version, engine detection, per-signature status/address, and the reason UE4SS deactivated if startup failed. A wrapper interpreter may print `DIAG: startup_skipped executable=<path> expected=<path> reason=target_mismatch` to stderr. That message is normal and deliberately does not use `inactive_reason`; verify that `expected` names the game ELF. If only skip messages appear, the wrapper never reached the selected host or `--host-executable` points to the wrong file.
+
+Share the diagnostic block together with:
 
 - `$stage/UE4SS.log`
 - the Palworld Steam build ID from `steamapps/appmanifest_2394010.acf`

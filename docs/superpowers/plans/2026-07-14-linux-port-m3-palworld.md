@@ -48,7 +48,9 @@
 - [ ] **Step 3.1:** Add `UE4SS_DIAGNOSE=1` output for executable hash, ELF module ranges, glibc version, libstdc++ GLIBCXX ceiling, engine version, signature result/address, and inactive reason.
 - [ ] **Step 3.2:** Implement `run_ue4ss.sh` with `set -euo pipefail`; resolve its directory, validate `libUE4SS.so` and target executable, prepend rather than overwrite `LD_PRELOAD`, preserve arguments, and `exec` the server command.
 - [ ] **Step 3.3:** Add shell tests for paths containing spaces, an existing `LD_PRELOAD`, missing library, and argument preservation.
-- [ ] **Step 3.4:** Commit with `git commit -m "feat(linux): add diagnostic launcher workflow"`.
+- [x] **Step 3.4:** Make launcher activation process-scoped: direct ELF commands select themselves, wrappers require `--host-executable`, non-target processes skip before initialization, and the accepted host restores the exact original `LD_PRELOAD` before helpers spawn.
+- [x] **Step 3.5:** Prove wrapper, host, helper, unset/empty/non-empty preload restoration, filesystem equivalence, and marker-free raw-preload compatibility with launcher, unit, and process-tree tests.
+- [ ] **Step 3.6:** Commit the remaining diagnostic launcher workflow changes.
 
 ## Task 4: Add Linux build parity and documentation
 
@@ -77,6 +79,7 @@
 - [ ] **Step 5.2:** C++ probe builds as `.so`, logs `on_program_start`, `on_unreal_init`, and at least ten `on_update` callbacks.
 - [ ] **Step 5.3:** Harness stages both mods, starts the server through `run_ue4ss.sh`, waits for the game-server-ready marker with a bounded timeout, and fails on crash, missing signature, or missing lifecycle marker.
 - [ ] **Step 5.4:** Harness invokes object dump and USMAP generation and verifies non-empty output containing `PalPlayerCharacter`.
+- [ ] **Step 5.5:** Process-scope acceptance records exactly one `PalServer-Linux-Shipping` executable diagnostic and rejects every UE4SS diagnostic, signature scan, mod marker, timeout, or fatal error from `crashpad_handler`.
 
 ## Task 6: Run the binding Palworld acceptance suite
 

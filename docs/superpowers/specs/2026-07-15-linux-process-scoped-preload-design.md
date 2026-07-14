@@ -1,6 +1,6 @@
 # Linux Process-Scoped Preload Design
 
-**Status:** Approved in conversation on 2026-07-15; written specification pending final review.
+**Status:** Approved and reviewed on 2026-07-15; implemented on the `linux-port` branch.
 
 ## Context
 

@@ -136,7 +136,19 @@ cmake --build build_linux --parallel
 ctest --test-dir build_linux --output-on-failure
 ```
 
-The native Linux M1 target is intended for UE 5.1+ dedicated servers and other headless processes. Deployment uses `libUE4SS.so` with the provided `tools/linux/run_ue4ss.sh` launcher; see [docs/linux.md](docs/linux.md) for complete instructions.
+The native Linux M1 target is intended for UE 5.1+ dedicated servers and other headless processes. Deployment uses `libUE4SS.so` with the provided `tools/linux/run_ue4ss.sh` launcher:
+
+```bash
+# Direct ELF
+run_ue4ss.sh /path/to/PalServer-Linux-Shipping Pal -port=8211
+
+# Shell wrapper: identify the ELF that should initialize UE4SS
+run_ue4ss.sh \
+  --host-executable /path/to/PalServer-Linux-Shipping \
+  /path/to/PalServer.sh -port=8211
+```
+
+The Linux launcher restores the user's original `LD_PRELOAD` before the selected host starts helpers, preventing the launcher-added UE4SS preload from spreading through the process tree. Raw manual `LD_PRELOAD` remains compatible but keeps normal Linux child inheritance. Windows proxy/manual DLL injection is already process-scoped. See [docs/linux.md](docs/linux.md) for staging, diagnostics, and troubleshooting.
 
 ### Configuration Options
 
