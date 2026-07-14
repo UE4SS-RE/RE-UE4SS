@@ -79,7 +79,7 @@
 - [ ] **Step 5.2:** C++ probe builds as `.so`, logs `on_program_start`, `on_unreal_init`, and at least ten `on_update` callbacks.
 - [ ] **Step 5.3:** Harness stages both mods, starts the server through `run_ue4ss.sh`, waits for the game-server-ready marker with a bounded timeout, and fails on crash, missing signature, or missing lifecycle marker.
 - [ ] **Step 5.4:** Harness invokes object dump and USMAP generation and verifies non-empty output containing `PalPlayerCharacter`.
-- [ ] **Step 5.5:** Process-scope acceptance records exactly one `PalServer-Linux-Shipping` executable diagnostic and rejects every UE4SS diagnostic, signature scan, mod marker, timeout, or fatal error from `crashpad_handler`.
+- [x] **Step 5.5:** Process-scope acceptance records exactly one `PalServer-Linux-Shipping` executable diagnostic and rejects every UE4SS diagnostic, signature scan, mod marker, timeout, or fatal error from `crashpad_handler`.
 
 ## Task 6: Run the binding Palworld acceptance suite
 
