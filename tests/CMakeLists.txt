@@ -104,4 +104,27 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
             "$<TARGET_FILE:SharedLibraryFixture>"
     )
     set_tests_properties(LinuxPreloadProbe PROPERTIES PASS_REGULAR_EXPRESSION "UE4SS_PRELOAD_PROBE_READY")
+
+    add_library(CppModProbe SHARED fixtures/CppModProbe.cpp)
+    target_link_libraries(CppModProbe PRIVATE UE4SS)
+
+    add_executable(CppModLoaderTests CppModLoaderTests.cpp)
+    target_link_libraries(CppModLoaderTests PRIVATE UE4SS)
+    add_test(NAME CppModLoaderTests
+        COMMAND "${CMAKE_COMMAND}" -E env
+            "UE4SS_DISABLE_AUTO_START=1"
+            "$<TARGET_FILE:CppModLoaderTests>"
+            "$<TARGET_FILE:CppModProbe>"
+            "$<TARGET_FILE:UE4SS>"
+    )
+
+    add_executable(LinuxFailSoftProbe LinuxFailSoftProbe.cpp)
+    add_test(NAME LinuxFailSoftProbe
+        COMMAND "${CMAKE_COMMAND}"
+            "-DUE4SS_LIBRARY=$<TARGET_FILE:UE4SS>"
+            "-DPROBE_EXECUTABLE=$<TARGET_FILE:LinuxFailSoftProbe>"
+            "-DSETTINGS_TEMPLATE=${CMAKE_SOURCE_DIR}/assets/UE4SS-settings.ini"
+            "-DSTAGE_DIRECTORY=${CMAKE_CURRENT_BINARY_DIR}/linux-fail-soft-stage"
+            -P "${CMAKE_CURRENT_SOURCE_DIR}/RunLinuxFailSoftProbe.cmake"
+    )
 endif()
