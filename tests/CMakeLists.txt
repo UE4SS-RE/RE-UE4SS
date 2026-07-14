@@ -158,4 +158,17 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
     )
     target_include_directories(LinuxStartupPolicyTests PRIVATE "${CMAKE_SOURCE_DIR}/UE4SS/include")
     add_test(NAME LinuxStartupPolicyTests COMMAND LinuxStartupPolicyTests)
+
+    add_executable(LinuxPreloadScopeProbe LinuxPreloadScopeProbe.cpp)
+    target_link_libraries(LinuxPreloadScopeProbe PRIVATE dl)
+    add_test(NAME LinuxPreloadScopeTests
+        COMMAND "${CMAKE_COMMAND}"
+            "-DUE4SS_LIBRARY=$<TARGET_FILE:UE4SS>"
+            "-DLAUNCHER_SOURCE=${CMAKE_SOURCE_DIR}/tools/linux/run_ue4ss.sh"
+            "-DPROBE_EXECUTABLE=$<TARGET_FILE:LinuxPreloadScopeProbe>"
+            "-DEXISTING_PRELOAD=$<TARGET_FILE:SharedLibraryFixture>"
+            "-DSETTINGS_TEMPLATE=${CMAKE_SOURCE_DIR}/assets/UE4SS-settings.ini"
+            "-DSTAGE_DIRECTORY=${CMAKE_CURRENT_BINARY_DIR}/linux-preload-scope-stage"
+            -P "${CMAKE_CURRENT_SOURCE_DIR}/RunLinuxPreloadScopeTests.cmake"
+    )
 endif()

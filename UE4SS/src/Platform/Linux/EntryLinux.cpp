@@ -15,6 +15,7 @@
 #include <DynamicOutput/DynamicOutput.hpp>
 #include <Helpers/String.hpp>
 #include <Platform/Linux/Diagnostics.hpp>
+#include <Platform/Linux/StartupPolicy.hpp>
 
 using namespace RC;
 
@@ -146,16 +147,28 @@ __attribute__((constructor(101))) static void ue4ss_so_attached()
         return;
     }
 
-    bool expected = false;
-    if (!s_ue4ss_started.compare_exchange_strong(expected, true))
+    const auto startup_decision = LinuxStartup::evaluate();
+    if (startup_decision.kind == LinuxStartup::DecisionKind::TargetMismatch)
     {
+        if (LinuxDiagnostics::is_enabled())
+        {
+            std::fprintf(stderr,
+                         "DIAG: startup_skipped executable=%s expected=%s reason=target_mismatch\n",
+                         startup_decision.current_executable.c_str(),
+                         startup_decision.expected_executable.c_str());
+        }
+        return;
+    }
+    if (startup_decision.kind == LinuxStartup::DecisionKind::InvalidLauncherState)
+    {
+        std::fprintf(stderr, "UE4SS: launcher startup disabled: %s\n", startup_decision.reason.c_str());
         return;
     }
 
+    std::filesystem::path module_path;
     try
     {
         // Locate our own .so path; UE4SSProgram derives all directories from it.
-        std::filesystem::path module_path;
         if (const auto* configured_module_path = std::getenv("UE4SS_MODULE_PATH"); configured_module_path && configured_module_path[0] != '\0')
         {
             module_path = configured_module_path;
@@ -166,12 +179,39 @@ __attribute__((constructor(101))) static void ue4ss_so_attached()
             if (dladdr(reinterpret_cast<void*>(&ue4ss_so_attached), &dl_info) == 0 || !dl_info.dli_fname)
             {
                 std::fputs("UE4SS: failed to determine libUE4SS.so path; startup disabled\n", stderr);
-                s_ue4ss_started = false;
                 return;
             }
             module_path = dl_info.dli_fname;
         }
+    }
+    catch (const std::exception& exception)
+    {
+        std::fprintf(stderr, "UE4SS: failed to determine initialization path: %s\n", exception.what());
+        return;
+    }
+    catch (...)
+    {
+        std::fputs("UE4SS: failed to determine initialization path with an unknown exception\n", stderr);
+        return;
+    }
 
+    if (startup_decision.kind == LinuxStartup::DecisionKind::LauncherStart)
+    {
+        if (const auto restore_error = LinuxStartup::restore_original_environment())
+        {
+            std::fprintf(stderr, "UE4SS: launcher environment restoration failed: %s\n", restore_error->c_str());
+            return;
+        }
+    }
+
+    bool expected = false;
+    if (!s_ue4ss_started.compare_exchange_strong(expected, true))
+    {
+        return;
+    }
+
+    try
+    {
         std::thread init_thread{&thread_so_start, std::move(module_path)};
         init_thread.detach();
     }
