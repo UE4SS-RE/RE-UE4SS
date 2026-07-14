@@ -132,4 +132,12 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
             "-DSTAGE_DIRECTORY=${CMAKE_CURRENT_BINARY_DIR}/linux-fail-soft-stage"
             -P "${CMAKE_CURRENT_SOURCE_DIR}/RunLinuxFailSoftProbe.cmake"
     )
+
+    add_executable(PalworldSignatureTests PalworldSignatureTests.cpp)
+    target_link_libraries(PalworldSignatureTests PRIVATE patternsleuth_bind)
+    add_test(NAME PalworldSignatureTests
+        COMMAND "${CMAKE_CURRENT_SOURCE_DIR}/RunPalworldSignatureTests.sh"
+            "$<TARGET_FILE:PalworldSignatureTests>"
+    )
+    set_tests_properties(PalworldSignatureTests PROPERTIES SKIP_RETURN_CODE 77)
 endif()

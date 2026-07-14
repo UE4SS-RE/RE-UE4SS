@@ -16,13 +16,14 @@ extern "C" bool ps_scan_file(const char* path, const char* pattern, PsFileScanRe
 
 int main(int argc, char** argv)
 {
-    if (argc != 2)
+    if (argc < 2 || argc > 3)
     {
         return 2;
     }
 
     PsFileScanResults results{};
-    if (!ps_scan_file(argv[1], "DE C0 AD 0B 5E A1 77 13 37 42 AB CD EF 01 23 45", &results))
+    const auto* pattern = argc == 3 ? argv[2] : "DE C0 AD 0B 5E A1 77 13 37 42 AB CD EF 01 23 45";
+    if (!ps_scan_file(argv[1], pattern, &results))
     {
         return 3;
     }
