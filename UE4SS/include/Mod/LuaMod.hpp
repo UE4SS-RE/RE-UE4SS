@@ -190,7 +190,7 @@ namespace RC
         std::mutex m_actions_lock{};
 
       public:
-        LuaMod(UE4SSProgram&, StringType&& mod_name, StringType&& mod_path);
+        LuaMod(UE4SSProgram&, StringType&& mod_name, std::filesystem::path mod_path);
         ~LuaMod() override = default;
 
       private:

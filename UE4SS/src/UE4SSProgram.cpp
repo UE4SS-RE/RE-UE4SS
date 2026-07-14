@@ -9,11 +9,15 @@
 #endif
 
 #include <algorithm>
+#include <array>
 #include <cwctype>
 #include <format>
 #include <fstream>
 #include <limits>
 #include <unordered_set>
+#ifdef __linux__
+#include <unistd.h>
+#endif
 #include <fmt/chrono.h>
 #include <Profiler/Profiler.hpp>
 #include <DynamicOutput/DynamicOutput.hpp>
@@ -103,6 +107,42 @@ namespace RC
     //*/
 
     SettingsManager UE4SSProgram::settings_manager{};
+
+    static auto read_mods_txt_lines(const std::filesystem::path& path) -> std::vector<StringType>
+    {
+        std::vector<StringType> lines{};
+#ifdef _WIN32
+        std::ifstream bom_check(path, std::ios::binary);
+        char bom[3]{};
+        bom_check.read(bom, 3);
+        const bool has_bom = bom[0] == '\xEF' && bom[1] == '\xBB' && bom[2] == '\xBF';
+        bom_check.close();
+
+        StreamIType stream{path};
+        if (has_bom)
+        {
+            wchar_t discard{};
+            stream.get(discard);
+        }
+        for (StringType line; std::getline(stream, line);)
+        {
+            lines.emplace_back(std::move(line));
+        }
+#else
+        std::ifstream stream{path, std::ios::binary};
+        bool first_line = true;
+        for (std::string line; std::getline(stream, line);)
+        {
+            if (first_line && line.starts_with("\xEF\xBB\xBF"))
+            {
+                line.erase(0, 3);
+            }
+            first_line = false;
+            lines.emplace_back(ensure_str(line));
+        }
+#endif
+        return lines;
+    }
 
 #define OUTPUT_MEMBER_OFFSETS_FOR_STRUCT(StructName)                                                                                                           \
     for (const auto& [name, offset] : Unreal::StructName::MemberOffsets)                                                                                       \
@@ -476,9 +516,20 @@ namespace RC
         // At that point, the working directory will be "root/<GameName>"
         m_working_directory = m_root_directory;
 
+#ifdef _WIN32
         wchar_t exe_path_buffer[1024];
         GetModuleFileNameW(GetModuleHandle(nullptr), exe_path_buffer, 1023);
         std::filesystem::path game_exe_path = exe_path_buffer;
+#else
+        std::array<char, 4096> exe_path_buffer{};
+        const auto exe_path_length = readlink("/proc/self/exe", exe_path_buffer.data(), exe_path_buffer.size() - 1);
+        if (exe_path_length <= 0)
+        {
+            throw std::runtime_error{"Unable to resolve /proc/self/exe"};
+        }
+        exe_path_buffer[static_cast<size_t>(exe_path_length)] = '\0';
+        std::filesystem::path game_exe_path = exe_path_buffer.data();
+#endif
         std::filesystem::path game_directory_path = game_exe_path.parent_path();
         m_legacy_root_directory = game_directory_path;
 
@@ -489,7 +540,9 @@ namespace RC
         m_object_dumper_output_directory = m_working_directory;
 
         // Allow loading of DLLs from the game directory
+#ifdef _WIN32
         AddDllDirectory(game_exe_path.c_str());
+#endif
 
         for (const auto& item : std::filesystem::directory_iterator(m_root_directory))
         {
@@ -567,6 +620,7 @@ namespace RC
                 return fmt::format(STR("[{}] {}"), get_now_as_string(STR("{:%X}")), string);
             });
 
+#ifdef _WIN32
             if (AllocConsole())
             {
                 FILE* stdin_filename;
@@ -576,6 +630,7 @@ namespace RC
                 freopen_s(&stdout_filename, "CONOUT$", "w", stdout);
                 freopen_s(&stderr_filename, "CONOUT$", "w", stderr);
             }
+#endif
         }
     }
 
@@ -1329,7 +1384,7 @@ namespace RC
                     auto mod_name = ensure_str(sub_directory.path().stem());
                     // Create the mod but don't install it yet
                     if (!find_mod_by_name<LuaMod>(mod_name) && std::filesystem::exists(sub_directory.path() / "scripts"))
-                        m_mods.emplace_back(std::make_unique<LuaMod>(*this, std::move(mod_name), ensure_str(sub_directory.path())));
+                        m_mods.emplace_back(std::make_unique<LuaMod>(*this, std::move(mod_name), sub_directory.path()));
                     if (!find_mod_by_name<CppMod>(mod_name) && std::filesystem::exists(sub_directory.path() / "dlls"))
                         m_mods.emplace_back(std::make_unique<CppMod>(*this, std::move(mod_name), ensure_str(sub_directory.path())));
                 }
@@ -1517,25 +1572,7 @@ namespace RC
                 // 'mods.txt' exists, lets parse it
                 Output::send(STR("Starting mods (from mods.txt ({}) load order)...\n"), ensure_str(enabled_mods_file));
 
-                // First, check for BOM using a byte stream
-                std::ifstream bom_check(enabled_mods_file, std::ios::binary);
-                char bom[3] = {0};
-                bom_check.read(bom, 3);
-                bool has_bom = (bom[0] == '\xEF' && bom[1] == '\xBB' && bom[2] == '\xBF');
-                bom_check.close();
-
-                // Now open the actual stream
-                StreamIType mods_stream{enabled_mods_file};
-
-                // If BOM was detected, skip the first "character" (which will be the BOM interpreted as a wide char)
-                if (has_bom)
-                {
-                    wchar_t discard;
-                    mods_stream.get(discard);
-                }
-
-                StringType current_line;
-                while (std::getline(mods_stream, current_line))
+                for (auto current_line : read_mods_txt_lines(enabled_mods_file))
                 {
                     // Don't parse any lines with ';'
                     if (current_line.find(STR(";")) != current_line.npos)
@@ -2073,22 +2110,7 @@ namespace RC
 
         for (const auto& mods_txt_path : mods_txt_files)
         {
-            std::ifstream bom_check(mods_txt_path, std::ios::binary);
-            char bom[3] = {0};
-            bom_check.read(bom, 3);
-            bool has_bom = (bom[0] == '\xEF' && bom[1] == '\xBB' && bom[2] == '\xBF');
-            bom_check.close();
-
-            StreamIType mods_stream{mods_txt_path};
-
-            if (has_bom)
-            {
-                wchar_t discard;
-                mods_stream.get(discard);
-            }
-
-            StringType current_line;
-            while (std::getline(mods_stream, current_line))
+            for (auto current_line : read_mods_txt_lines(mods_txt_path))
             {
                 if (current_line.find(STR(";")) != current_line.npos)
                 {

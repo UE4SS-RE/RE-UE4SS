@@ -688,7 +688,7 @@ namespace RC
         efindname_table.make_global("EFindName");
     }
 
-    LuaMod::LuaMod(UE4SSProgram& program, StringType&& mod_name, StringType&& mod_path)
+    LuaMod::LuaMod(UE4SSProgram& program, StringType&& mod_name, std::filesystem::path mod_path)
         : Mod(program, std::move(mod_name), std::move(mod_path)), m_lua(LuaMadeSimple::new_state())
     {
         // First check for "Scripts" (capital S)
