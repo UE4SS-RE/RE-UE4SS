@@ -96,6 +96,12 @@ if(WIN32)
     add_subdirectory("cppmods")
 endif()
 
+option(UE4SS_BUILD_TESTS "Build native unit tests" OFF)
+if(UE4SS_BUILD_TESTS)
+    enable_testing()
+    add_subdirectory("tests")
+endif()
+
 foreach(project ${PROJECTS})
     add_subdirectory(${project})
 endforeach()
