@@ -43,3 +43,15 @@ target_compile_definitions(HeadlessHeadersTests PRIVATE
     RC_LUA_WRAPPER_GENERATOR_BUILD_STATIC
 )
 add_test(NAME HeadlessHeadersTests COMMAND HeadlessHeadersTests)
+
+add_executable(FilesystemWatcherTests
+    FilesystemWatcherTests.cpp
+    "${CMAKE_SOURCE_DIR}/UE4SS/src/FilesystemWatcher.cpp"
+)
+target_include_directories(FilesystemWatcherTests PRIVATE "${CMAKE_SOURCE_DIR}/UE4SS/include")
+target_link_libraries(FilesystemWatcherTests PRIVATE DynamicOutput File Helpers fmt)
+target_compile_definitions(FilesystemWatcherTests PRIVATE
+    RC_DYNAMIC_OUTPUT_BUILD_STATIC
+    RC_FILE_BUILD_STATIC
+)
+add_test(NAME FilesystemWatcherTests COMMAND FilesystemWatcherTests)
