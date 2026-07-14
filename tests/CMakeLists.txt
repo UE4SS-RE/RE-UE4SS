@@ -53,6 +53,11 @@ target_compile_definitions(UnrealStringFormatTests PRIVATE
 )
 add_test(NAME UnrealStringFormatTests COMMAND UnrealStringFormatTests)
 
+add_executable(PatternSleuthElfFixture fixtures/PatternSleuthElfFixture.cpp)
+add_executable(PatternSleuthElfTests PatternSleuthElfTests.cpp)
+target_link_libraries(PatternSleuthElfTests PRIVATE patternsleuth_bind)
+add_test(NAME PatternSleuthElfTests COMMAND PatternSleuthElfTests "$<TARGET_FILE:PatternSleuthElfFixture>")
+
 add_executable(FilesystemWatcherTests
     FilesystemWatcherTests.cpp
     "${CMAKE_SOURCE_DIR}/UE4SS/src/FilesystemWatcher.cpp"

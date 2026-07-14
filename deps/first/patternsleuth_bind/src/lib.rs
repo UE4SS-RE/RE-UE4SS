@@ -1,7 +1,13 @@
 #![allow(unused)]
 
-use std::{error::Error, sync::Arc, time::Instant};
+use std::{
+    error::Error,
+    ffi::{c_char, CStr},
+    sync::Arc,
+    time::Instant,
+};
 
+use patternsleuth::{image::Image, scanner::Pattern, PatternConfig};
 use patternsleuth::resolvers::{
     futures::join,
     impl_collector,
@@ -70,6 +76,12 @@ macro_rules! error { ($ctx:ident $($arg:tt)*) => { _log_level!(error, $ctx $($ar
 pub struct PsEngineVersion {
     major: u16,
     minor: u16,
+}
+
+#[repr(C)]
+pub struct PsFileScanResults {
+    engine_version: PsEngineVersion,
+    pattern_address: u64,
 }
 
 #[repr(C)]
@@ -230,5 +242,54 @@ pub extern "C" fn ps_scan(ctx: &PsCtx, results: &mut PsScanResults) -> bool {
         false
     } else {
         true
+    }
+}
+
+fn ps_scan_file_internal(path: &str, pattern: &str) -> Result<PsFileScanResults, Box<dyn Error>> {
+    let data = std::fs::read(path)?;
+    let image = Image::read(None, &data, Some(path), false)?;
+    let engine_version = image.resolve(EngineVersion::resolver())?;
+    let pattern_config = [PatternConfig::new(
+        (),
+        "offline fixture pattern".to_string(),
+        None,
+        Pattern::new(pattern)?,
+    )];
+    let pattern_address = image.scan(&pattern_config)?.get_unique_sig_address(())?;
+
+    Ok(PsFileScanResults {
+        engine_version: PsEngineVersion {
+            major: engine_version.major,
+            minor: engine_version.minor,
+        },
+        pattern_address,
+    })
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn ps_scan_file(
+    path: *const c_char,
+    pattern: *const c_char,
+    results: *mut PsFileScanResults,
+) -> bool {
+    if path.is_null() || pattern.is_null() || results.is_null() {
+        return false;
+    }
+
+    let path = match unsafe { CStr::from_ptr(path) }.to_str() {
+        Ok(path) => path,
+        Err(_) => return false,
+    };
+    let pattern = match unsafe { CStr::from_ptr(pattern) }.to_str() {
+        Ok(pattern) => pattern,
+        Err(_) => return false,
+    };
+
+    match ps_scan_file_internal(path, pattern) {
+        Ok(file_results) => {
+            unsafe { results.write(file_results) };
+            true
+        }
+        Err(_) => false,
     }
 }
