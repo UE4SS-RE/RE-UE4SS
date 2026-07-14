@@ -1387,7 +1387,9 @@ namespace RC
                 {
                     auto mod_name = ensure_str(sub_directory.path().stem());
                     // Create the mod but don't install it yet
-                    if (!find_mod_by_name<LuaMod>(mod_name) && std::filesystem::exists(sub_directory.path() / "scripts"))
+                    const auto has_lua_scripts = std::filesystem::exists(sub_directory.path() / "Scripts") ||
+                                                 std::filesystem::exists(sub_directory.path() / "scripts");
+                    if (!find_mod_by_name<LuaMod>(mod_name) && has_lua_scripts)
                         m_mods.emplace_back(std::make_unique<LuaMod>(*this, std::move(mod_name), sub_directory.path()));
                     if (!find_mod_by_name<CppMod>(mod_name) && std::filesystem::exists(sub_directory.path() / "dlls"))
                         m_mods.emplace_back(std::make_unique<CppMod>(*this, std::move(mod_name), sub_directory.path()));

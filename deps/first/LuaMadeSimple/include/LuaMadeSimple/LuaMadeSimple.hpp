@@ -273,9 +273,10 @@ namespace RC::LuaMadeSimple
                 {
                     lua_pushboolean(get_lua_instance().get_lua_state(), value);
                 }
-                else if constexpr (std::is_same_v<ValueType, int> || std::is_same_v<ValueType, long long>)
+                else if constexpr (std::is_integral_v<ValueType> && std::is_signed_v<ValueType>)
                 {
-                    lua_pushinteger(get_lua_instance().get_lua_state(), value);
+                    static_assert(sizeof(ValueType) <= sizeof(lua_Integer));
+                    lua_pushinteger(get_lua_instance().get_lua_state(), static_cast<lua_Integer>(value));
                 }
                 else if constexpr (std::is_same_v<ValueType, unsigned int>)
                 {

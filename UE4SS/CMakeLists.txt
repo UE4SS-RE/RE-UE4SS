@@ -156,6 +156,11 @@ if(WIN32)
     )
 else()
     target_link_libraries(UE4SS PUBLIC dl pthread)
+    target_link_options(UE4SS PRIVATE
+        -static-libstdc++
+        -Wl,-Bsymbolic
+        -Wl,-Bgroup
+    )
 endif()
 if(UE4SS_GUI)
     target_link_libraries(UE4SS PUBLIC ImGui glfw glad)

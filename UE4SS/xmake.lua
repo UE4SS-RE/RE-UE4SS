@@ -98,6 +98,12 @@ target(projectName)
     else
         add_linkorders("PolyHook_2", "asmtk", "asmjit")
         add_syslinks("dl", "pthread", { public = true })
+        add_shflags(
+            "-static-libstdc++",
+            "-Wl,-Bsymbolic",
+            "-Wl,-Bgroup",
+            { force = true }
+        )
     end
 
     after_load(function (target)

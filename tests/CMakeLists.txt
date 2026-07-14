@@ -44,6 +44,11 @@ target_compile_definitions(HeadlessHeadersTests PRIVATE
 )
 add_test(NAME HeadlessHeadersTests COMMAND HeadlessHeadersTests)
 
+add_executable(LuaMadeSimpleIntegralTests LuaMadeSimpleIntegralTests.cpp)
+target_link_libraries(LuaMadeSimpleIntegralTests PRIVATE LuaMadeSimple)
+target_compile_definitions(LuaMadeSimpleIntegralTests PRIVATE RC_LUA_MADE_SIMPLE_BUILD_STATIC)
+add_test(NAME LuaMadeSimpleIntegralTests COMMAND LuaMadeSimpleIntegralTests)
+
 add_executable(UnrealStringFormatTests UnrealStringFormatTests.cpp)
 target_link_libraries(UnrealStringFormatTests PRIVATE Unreal Helpers DynamicOutput patternsleuth_bind fmt)
 target_compile_definitions(UnrealStringFormatTests PRIVATE
@@ -74,6 +79,52 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
     add_executable(LinuxHookTests LinuxHookTests.cpp)
     target_link_libraries(LinuxHookTests PRIVATE PolyHook_2)
     add_test(NAME LinuxHookTests COMMAND LinuxHookTests)
+
+    add_executable(LinuxFNameHookTests LinuxFNameHookTests.cpp)
+    target_link_libraries(LinuxFNameHookTests PRIVATE Unreal patternsleuth_bind)
+    add_test(NAME LinuxFNameHookTests COMMAND LinuxFNameHookTests)
+
+    add_executable(LinuxFMallocVTableTests LinuxFMallocVTableTests.cpp)
+    target_link_libraries(LinuxFMallocVTableTests PRIVATE Unreal patternsleuth_bind)
+    add_test(NAME LinuxFMallocVTableTests COMMAND LinuxFMallocVTableTests)
+
+    add_executable(LinuxFPropertyLayoutTests LinuxFPropertyLayoutTests.cpp)
+    target_link_libraries(LinuxFPropertyLayoutTests PRIVATE Unreal patternsleuth_bind)
+    add_test(NAME LinuxFPropertyLayoutTests COMMAND LinuxFPropertyLayoutTests)
+
+    add_executable(LinuxUEnumLayoutTests LinuxUEnumLayoutTests.cpp)
+    target_link_libraries(LinuxUEnumLayoutTests PRIVATE Unreal patternsleuth_bind)
+    add_test(NAME LinuxUEnumLayoutTests COMMAND LinuxUEnumLayoutTests)
+
+    add_executable(LinuxRequiredScanFailSoftTests LinuxRequiredScanFailSoftTests.cpp)
+    target_link_libraries(LinuxRequiredScanFailSoftTests PRIVATE Unreal patternsleuth_bind)
+    target_link_options(LinuxRequiredScanFailSoftTests PRIVATE "-Wl,--wrap=ps_scan")
+    add_test(NAME LinuxRequiredScanFailSoftTests COMMAND LinuxRequiredScanFailSoftTests)
+
+    add_executable(LinuxSDKOutputPathTests LinuxSDKOutputPathTests.cpp)
+    target_include_directories(LinuxSDKOutputPathTests PRIVATE "${CMAKE_SOURCE_DIR}/UE4SS/include")
+    target_link_libraries(LinuxSDKOutputPathTests PRIVATE Unreal patternsleuth_bind)
+    add_test(NAME LinuxSDKOutputPathTests COMMAND LinuxSDKOutputPathTests)
+
+    add_executable(LinuxVirtualFunctionLayoutTests LinuxVirtualFunctionLayoutTests.cpp)
+    target_link_libraries(LinuxVirtualFunctionLayoutTests PRIVATE Unreal patternsleuth_bind)
+    add_test(NAME LinuxVirtualFunctionLayoutTests COMMAND LinuxVirtualFunctionLayoutTests)
+
+    add_executable(LinuxUEngineVTableTests LinuxUEngineVTableTests.cpp)
+    target_link_libraries(LinuxUEngineVTableTests PRIVATE Unreal patternsleuth_bind)
+    add_test(NAME LinuxUEngineVTableTests COMMAND LinuxUEngineVTableTests)
+
+    add_executable(LinuxLoadMapOptimizedABIHookTests LinuxLoadMapOptimizedABIHookTests.cpp)
+    target_link_libraries(LinuxLoadMapOptimizedABIHookTests PRIVATE Unreal patternsleuth_bind)
+    add_test(NAME LinuxLoadMapOptimizedABIHookTests COMMAND LinuxLoadMapOptimizedABIHookTests)
+
+    add_executable(LinuxLoadMapStandardABIHookTests LinuxLoadMapStandardABIHookTests.cpp)
+    target_link_libraries(LinuxLoadMapStandardABIHookTests PRIVATE Unreal patternsleuth_bind)
+    add_test(NAME LinuxLoadMapStandardABIHookTests COMMAND LinuxLoadMapStandardABIHookTests)
+
+    add_executable(LinuxProcessLocalScriptFunctionResolverTests LinuxProcessLocalScriptFunctionResolverTests.cpp)
+    target_link_libraries(LinuxProcessLocalScriptFunctionResolverTests PRIVATE Unreal patternsleuth_bind)
+    add_test(NAME LinuxProcessLocalScriptFunctionResolverTests COMMAND LinuxProcessLocalScriptFunctionResolverTests)
 
     add_executable(CrashDumperProbe
         CrashDumperProbe.cpp
@@ -123,6 +174,15 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
             "$<TARGET_FILE:UE4SS>"
     )
 
+    add_executable(LinuxLuaModDiscoveryTests LinuxLuaModDiscoveryTests.cpp)
+    target_link_libraries(LinuxLuaModDiscoveryTests PRIVATE UE4SS)
+    add_test(NAME LinuxLuaModDiscoveryTests
+        COMMAND "${CMAKE_COMMAND}" -E env
+            "UE4SS_DISABLE_AUTO_START=1"
+            "$<TARGET_FILE:LinuxLuaModDiscoveryTests>"
+            "${CMAKE_SOURCE_DIR}/assets/UE4SS-settings.ini"
+    )
+
     add_executable(LinuxFailSoftProbe LinuxFailSoftProbe.cpp)
     add_test(NAME LinuxFailSoftProbe
         COMMAND "${CMAKE_COMMAND}"
@@ -133,6 +193,18 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
             -P "${CMAKE_CURRENT_SOURCE_DIR}/RunLinuxFailSoftProbe.cmake"
     )
 
+    add_library(HostilePersonalityFixture SHARED fixtures/HostilePersonalityFixture.cpp)
+    add_executable(LinuxPersonalityConflictProbe LinuxPersonalityConflictProbe.cpp)
+    target_link_libraries(LinuxPersonalityConflictProbe PRIVATE HostilePersonalityFixture)
+    add_test(NAME LinuxPersonalityConflictProbe
+        COMMAND "${CMAKE_COMMAND}"
+            "-DUE4SS_LIBRARY=$<TARGET_FILE:UE4SS>"
+            "-DPROBE_EXECUTABLE=$<TARGET_FILE:LinuxPersonalityConflictProbe>"
+            "-DSETTINGS_TEMPLATE=${CMAKE_SOURCE_DIR}/assets/UE4SS-settings.ini"
+            "-DSTAGE_DIRECTORY=${CMAKE_CURRENT_BINARY_DIR}/linux-personality-conflict-stage"
+            -P "${CMAKE_CURRENT_SOURCE_DIR}/RunLinuxFailSoftProbe.cmake"
+    )
+
     add_executable(PalworldSignatureTests PalworldSignatureTests.cpp)
     target_link_libraries(PalworldSignatureTests PRIVATE patternsleuth_bind)
     add_test(NAME PalworldSignatureTests
@@ -140,6 +212,10 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
             "$<TARGET_FILE:PalworldSignatureTests>"
     )
     set_tests_properties(PalworldSignatureTests PROPERTIES SKIP_RETURN_CODE 77)
+
+    add_test(NAME PalworldAcceptanceHarnessTests
+        COMMAND "${CMAKE_CURRENT_SOURCE_DIR}/palworld/test_run_acceptance.sh"
+    )
 
     add_executable(LinuxLauncherProbe LinuxLauncherProbe.cpp)
     target_link_libraries(LinuxLauncherProbe PRIVATE dl)
