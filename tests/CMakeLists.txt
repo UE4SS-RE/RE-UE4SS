@@ -55,3 +55,20 @@ target_compile_definitions(FilesystemWatcherTests PRIVATE
     RC_FILE_BUILD_STATIC
 )
 add_test(NAME FilesystemWatcherTests COMMAND FilesystemWatcherTests)
+
+if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+    add_executable(CrashDumperProbe
+        CrashDumperProbe.cpp
+        "${CMAKE_SOURCE_DIR}/UE4SS/src/Platform/Linux/CrashDumper.cpp"
+    )
+    target_include_directories(CrashDumperProbe PRIVATE "${CMAKE_SOURCE_DIR}/UE4SS/include")
+    target_link_libraries(CrashDumperProbe PRIVATE dl)
+
+    add_executable(CrashDumperVerifier CrashDumperVerifier.cpp)
+
+    set(CRASH_DUMPER_TEST_DIR "${CMAKE_CURRENT_BINARY_DIR}/crash-dumper-output")
+    add_test(NAME CrashDumperProbe COMMAND CrashDumperProbe "${CRASH_DUMPER_TEST_DIR}")
+    set_tests_properties(CrashDumperProbe PROPERTIES WILL_FAIL TRUE)
+    add_test(NAME CrashDumperVerifier COMMAND CrashDumperVerifier "${CRASH_DUMPER_TEST_DIR}")
+    set_tests_properties(CrashDumperVerifier PROPERTIES DEPENDS CrashDumperProbe)
+endif()
