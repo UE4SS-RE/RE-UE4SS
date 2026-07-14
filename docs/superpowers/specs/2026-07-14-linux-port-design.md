@@ -3,6 +3,7 @@
 **Date:** 2026-07-14
 **Status:** Approved design, pre-implementation
 **Target:** Upstream contribution to [UE4SS-RE/RE-UE4SS](https://github.com/UE4SS-RE/RE-UE4SS) and [Re-UE4SS/UEPseudo](https://github.com/Re-UE4SS/UEPseudo)
+**Primary use case:** UE4SS running inside the **native Palworld Linux dedicated server** (`PalServer-Linux-Shipping`, UE 5.1). Palworld is the driving demand behind Linux support (issues #807, #364) and is this port's definition of success: M1 is done when UE4SS loads, hooks, and runs mods in a production Palworld Linux server.
 
 ## Prior and existing work this design builds on
 
@@ -19,7 +20,7 @@
 
 ## 1. Goals and non-goals
 
-**Goal.** Native Linux (x86-64, ELF, glibc) support for UE4SS, delivered as a series of small upstreamable PRs. Milestone 1 is **headless**: dedicated servers and `-nullrhi` games, with Lua mods, C++ mods, object dumper, CXX header generator, USMAP generator, and console/file logging working. **UE 5.1+ only** — 5.1 is the first version Epic ships prebuilt Linux binaries for (rationale from PR #384).
+**Goal.** Native Linux (x86-64, ELF, glibc) support for UE4SS, delivered as a series of small upstreamable PRs, **with the Palworld Linux dedicated server as the binding target**. Milestone 1 is **headless**: dedicated servers and `-nullrhi` games, with Lua mods, C++ mods, object dumper, CXX header generator, USMAP generator, and console/file logging working. **UE 5.1+ only** — 5.1 is the first version Epic ships prebuilt Linux binaries for (rationale from PR #384), and it is Palworld's engine version. Every slice's acceptance ultimately rolls up to the Palworld acceptance suite in §6.3.
 
 **Non-goals for M1** (deferred, not precluded): ImGui GUI, keyboard/mouse input hooks, minidump-style crash dumps, UVTD on Linux, ptrace/attach injection, ARM64, UE < 5.1. The GLFW+OpenGL GUI backend and PR #384's TUI prototype are M2 follow-ups.
 
@@ -98,10 +99,26 @@ Everything from `UE4SSProgram` initialization onward is already OS-agnostic or w
 
 ## 6. Testing and CI
 
-- **Unit:** existing test targets built and run natively on Linux (File, String, Input, sig-scanner against synthetic ELF fixtures). Runs in GitHub Actions (harvest #384's `linux-test.yml`).
-- **Integration ground truth:** from-source UE 5.1/5.3 `LinuxServer` demo-project build, driven by a documented contributor-side script (UE EULA prevents public-CI redistribution).
-- **Real-world smoke:** Palworld dedicated server manual checklist per release (the demand driver in #807/#364).
-- **Invariant:** Windows CI green on every slice; slices 1–2 must produce byte-identical Windows behavior.
+### 6.1 Unit (GitHub Actions)
+Existing test targets built and run natively on Linux (File, String, Input, sig-scanner against synthetic ELF fixtures). Harvest #384's `linux-test.yml`.
+
+### 6.2 Integration ground truth (contributor-side)
+From-source UE 5.1 `LinuxServer` demo-project build, driven by a documented contributor-side script (UE EULA prevents public-CI redistribution). Used to debug with full symbols/source truth when Palworld (a stripped shipping binary) misbehaves — not as the acceptance gate.
+
+### 6.3 Palworld acceptance suite (the M1 gate)
+Environment: a pinned Palworld dedicated-server build installed via `steamcmd` (app 2394010) on a glibc ≥ 2.35 distro; UE4SS loaded via `LD_PRELOAD` through the `run_ue4ss.sh` launcher wrapping `PalServer.sh` (replacing the hand-rolled pastebin scripts circulating on #364). The suite is a scripted checklist, re-run on every slice that touches runtime behavior and on every Palworld server update:
+
+1. **Load:** server boots to "game server started" with UE4SS preloaded; no crash, no startup-time regression > 10%.
+2. **Detect:** `UE4SS.log` created via `LinuxFile`; engine version detected as 5.1; all required AOBs resolve (diagnose mode reports zero missing signatures).
+3. **Hooks:** core detours fire — `StaticConstructObject`, `ProcessEvent`, `FName` ctor — verified by a probe Lua mod logging object construction during world load.
+4. **Lua mods:** a test mod registers a console command, hooks a BP function, iterates `FindAllOf`, and reads/writes a UProperty on a live actor; a representative popular Palworld Lua mod from Nexus runs unmodified (mod-API compatibility check).
+5. **C++ mods:** a test `.so` C++ mod loads via `dlopen`, receives lifecycle callbacks (`on_update`, `on_unreal_init`).
+6. **Dumpers:** object dump and USMAP generation complete on the live server and produce plausible output (spot-checked against known Palworld classes, e.g. `PalPlayerCharacter`).
+7. **Gameplay soak:** a client joins the server, plays ≥ 30 minutes (spawns pals, saves world); no crash, no save corruption, memory growth bounded.
+8. **Fail-soft:** with signatures deliberately broken, the server still boots and serves players; UE4SS logs the failure and deactivates (§5 requirement, critical for production servers).
+
+### 6.4 Invariants
+Windows CI green on every slice; slices 1–2 produce byte-identical Windows behavior. Palworld server updates can shift AOBs — the suite pins a server build ID per release and re-validates on updates.
 
 ## 7. Upstreaming strategy
 
@@ -113,12 +130,12 @@ Everything from `UE4SSProgram` initialization onward is already OS-agnostic or w
    4. Sig-scanner port (`dl_iterate_phdr`) + patternsleuth ELF work
    5. funchook + `PlatformHook` in UEPseudo; harvest #79 layouts (supersedes #79)
    6. Linux entry/loader + `dlopen` interposer
-   7. Linux signatures + engine-version detection for UE 5.1+
-   8. CI workflow, docs (build + server setup + glibc requirements), `run_ue4ss.sh`
+   7. Linux signatures + engine-version detection for UE 5.1+ (Palworld's binary is the first signature target)
+   8. CI workflow, docs (build + Palworld server setup + glibc requirements), `run_ue4ss.sh`
 3. Close #384/#79 with credit once superseded — Yangff explicitly framed them as insight-providers for future attempts.
 
 ## 8. Milestones
 
-- **M1 (this design):** headless native Linux, UE 5.1+, Lua + C++ mods, dumpers, logging. Validated on a from-source UE demo server and Palworld.
+- **M1 (this design):** headless native Linux, UE 5.1+, Lua + C++ mods, dumpers, logging. **Acceptance gate: the Palworld suite in §6.3 passes end-to-end**; the from-source UE demo server (§6.2) is the debugging aid, not the gate.
 - **M2 (enabled, not planned here):** TUI console (from #384), GLFW+OpenGL GUI + GLFW input, DWARF layout-dumper productionized.
 - **M3:** wider UE version coverage, ARM64, attach-style injection if ever needed.
