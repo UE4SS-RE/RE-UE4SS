@@ -524,7 +524,11 @@ namespace RC
     {
         settings_manager.Debug.SimpleConsoleEnabled = true;
         create_simple_console();
+#ifdef _WIN32
         printf_s("%S\n", FromCharTypePtr<wchar_t>(error_message.data()));
+#else
+        fprintf(stderr, "%s\n", to_utf8_string(error_message).c_str());
+#endif
     }
 
     auto UE4SSProgram::setup_mod_directory_path() -> void

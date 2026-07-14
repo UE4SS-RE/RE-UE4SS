@@ -165,7 +165,7 @@ namespace RC::LuaType
                            Unreal::FName fname;
                            if (lua.is_string(1))
                            {
-                               fname = Unreal::FName(to_wstring(lua.get_string(1)), Unreal::FNAME_Add);
+                               fname = Unreal::FName(ensure_str(lua.get_string(1)), Unreal::FNAME_Add);
                            }
                            else
                            {
@@ -196,7 +196,7 @@ namespace RC::LuaType
                            Unreal::FName fname;
                            if (lua.is_string(1))
                            {
-                               fname = Unreal::FName(to_wstring(lua.get_string(1)), Unreal::FNAME_Add);
+                               fname = Unreal::FName(ensure_str(lua.get_string(1)), Unreal::FNAME_Add);
                            }
                            else
                            {
@@ -440,7 +440,7 @@ namespace RC::LuaType
                            Unreal::FName fname;
                            if (lua.is_string(1))
                            {
-                               fname = Unreal::FName(to_wstring(lua.get_string(1)), Unreal::FNAME_Add);
+                               fname = Unreal::FName(ensure_str(lua.get_string(1)), Unreal::FNAME_Add);
                            }
                            else
                            {
@@ -471,7 +471,7 @@ namespace RC::LuaType
                            Unreal::FName fname;
                            if (lua.is_string(1))
                            {
-                               fname = Unreal::FName(to_wstring(lua.get_string(1)), Unreal::FNAME_Add);
+                               fname = Unreal::FName(ensure_str(lua.get_string(1)), Unreal::FNAME_Add);
                            }
                            else
                            {

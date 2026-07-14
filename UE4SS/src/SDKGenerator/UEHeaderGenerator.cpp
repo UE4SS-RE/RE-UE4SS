@@ -1125,7 +1125,7 @@ namespace RC::UEGenerator
             super_object = Cast<UClass>(super)->GetClassDefaultObject();
             if (super_object != nullptr)
             {
-                super_property = super->GetPropertyByNameInChain(FromCharTypePtr<TCHAR>(property_name.data()));
+                super_property = super->GetPropertyByNameInChain(FromCharTypePtr<Unreal::TCHAR>(property_name.data()));
             }
         }
         else
@@ -1135,7 +1135,7 @@ namespace RC::UEGenerator
             {
                 super_object = malloc(super->GetPropertiesSize());
                 memset(super_object, 0, super->GetPropertiesSize());
-                super_property = super->GetPropertyByNameInChain(FromCharTypePtr<TCHAR>(property_name.data()));
+                super_property = super->GetPropertyByNameInChain(FromCharTypePtr<Unreal::TCHAR>(property_name.data()));
             }
         }
 
@@ -1593,7 +1593,7 @@ namespace RC::UEGenerator
                 {
                     // Set property to equal previous property referencing the same object
                     initializer = it->second;
-                    FProperty* prior_property = ustruct->GetPropertyByNameInChain(FromCharTypePtr<TCHAR>(initializer.c_str()));
+                    FProperty* prior_property = ustruct->GetPropertyByNameInChain(FromCharTypePtr<Unreal::TCHAR>(initializer.c_str()));
                     bool prior_private = get_property_access_modifier(prior_property) == AccessModifier::Private;
                     if (prior_private)
                     {
@@ -1644,7 +1644,7 @@ namespace RC::UEGenerator
                 }
 
                 FObjectProperty* attach_parent_property =
-                        static_cast<FObjectProperty*>(sub_object_value->GetPropertyByNameInChain(FromCharTypePtr<TCHAR>(STR("AttachParent"))));
+                        static_cast<FObjectProperty*>(sub_object_value->GetPropertyByNameInChain(FromCharTypePtr<Unreal::TCHAR>(STR("AttachParent"))));
                 UObject* attach_parent_object_value{};
                 if (attach_parent_property)
                 {

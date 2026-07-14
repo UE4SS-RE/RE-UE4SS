@@ -9,7 +9,9 @@
 #include <Unreal/FOutputDevice.hpp>
 #include <Unreal/UnrealInitializer.hpp>
 
+#ifdef _WIN32
 #include <Windows.h>
+#endif
 
 namespace RC::LuaLibrary
 {
@@ -102,7 +104,7 @@ namespace RC::LuaLibrary
 
         if (output_device)
         {
-            output_device->Log(FromCharTypePtr<TCHAR>(outdevice_string.c_str()));
+            output_device->Log(FromCharTypePtr<Unreal::TCHAR>(outdevice_string.c_str()));
         }
 
         return 0;
@@ -118,7 +120,11 @@ namespace RC::LuaLibrary
         }
 
         int32_t* int32_ptr = reinterpret_cast<int32_t*>(lua.get_integer());
+#ifdef _WIN32
         int32_t int32_val = Helper::Casting::offset_deref_safe<int32_t>(int32_ptr, 0, GetCurrentProcess());
+#else
+        int32_t int32_val = Helper::Casting::offset_deref_safe<int32_t>(int32_ptr, 0, nullptr);
+#endif
 
         if (int32_val == 0)
         {

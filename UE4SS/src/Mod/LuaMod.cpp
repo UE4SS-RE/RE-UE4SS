@@ -973,11 +973,10 @@ namespace RC
         std::string attempted_paths_str;
         for (const auto& path : paths_to_try)
         {
-            // Convert to wide string for Windows filesystem operations
-            std::wstring wide_path;
+            std::filesystem::path module_path;
             try
             {
-                wide_path = utf8_to_wpath(path);
+                module_path = std::filesystem::u8path(path);
             }
             catch (const std::exception&)
             {
@@ -985,7 +984,7 @@ namespace RC
                 continue;
             }
             
-            if (!std::filesystem::exists(wide_path))
+            if (!std::filesystem::exists(module_path))
             {
                 attempted_paths_str += "\n\t" + path;
                 continue;
@@ -1006,7 +1005,7 @@ namespace RC
             lua_pop(L, 2); // Pop nil and ue4ss_loaded_modules
             
             // Try to load the file
-            std::ifstream file(wide_path, std::ios::binary);
+            std::ifstream file(module_path, std::ios::binary);
             if (!file.is_open())
             {
                 attempted_paths_str += "\n\t" + path + " (cannot open)";
@@ -2219,14 +2218,14 @@ Overloads:
 
             printf_s("Registered Custom Property\n");
             printf_s("PropertyInfo {\n");
-            printf_s("\tName: %S\n", FromCharTypePtr<wchar_t>(property_info.name.c_str()));
+            printf_s("\tName: %s\n", to_utf8_string(property_info.name).c_str());
             printf_s("\tType {\n");
             printf_s("\t\tName: %s\n", property_info.type.name.data());
             printf_s("\t\tSize: 0x%X\n", property_info.type.size);
             printf_s("\t\tFFieldClassPointer: 0x%p\n", property_info.type.ffieldclass_pointer);
             printf_s("\t\tStaticPointer: 0x%p\n", property_info.type.static_pointer);
             printf_s("\t}\n");
-            printf_s("\tBelongsToClass: %S\n", FromCharTypePtr<wchar_t>(property_info.belongs_to_class.c_str()));
+            printf_s("\tBelongsToClass: %s\n", to_utf8_string(property_info.belongs_to_class).c_str());
             printf_s("\tOffsetInternal: 0x%X\n", property_info.offset_internal);
 
             if (property_info.is_array_property)
@@ -2669,13 +2668,13 @@ Overloads:
                                 }
                                 catch (const std::exception& e)
                                 {
-                                    Output::send<LogLevel::Error>(STR("Error processing directory entry: {}\n"), to_wstring(e.what()));
+                                    Output::send<LogLevel::Error>(STR("Error processing directory entry: {}\n"), ensure_str(e.what()));
                                 }
                             }
 
                             if (ec)
                             {
-                                Output::send<LogLevel::Error>(STR("Error iterating directory {}: {}\n"), directory.wstring(), to_wstring(ec.message()));
+                                Output::send<LogLevel::Error>(STR("Error iterating directory {}: {}\n"), ensure_str(directory), ensure_str(ec.message()));
                             }
 
                             auto meta_table = lua.prepare_new_table();
@@ -2816,19 +2815,19 @@ Overloads:
                                                     }
                                                     catch (const std::exception& e)
                                                     {
-                                                        Output::send<LogLevel::Error>(STR("Error processing file: {}\n"), to_wstring(e.what()));
+                                                        Output::send<LogLevel::Error>(STR("Error processing file: {}\n"), ensure_str(e.what()));
                                                     }
                                                 }
                                             }
 
                                             if (ec)
                                             {
-                                                Output::send<LogLevel::Error>(STR("Error iterating files in {}: {}\n"), path_wstr, to_wstring(ec.message()));
+                                                Output::send<LogLevel::Error>(STR("Error iterating files in {}: {}\n"), ensure_str(path_wstr), ensure_str(ec.message()));
                                             }
                                         }
                                         catch (const std::exception& e)
                                         {
-                                            Output::send<LogLevel::Error>(STR("Error iterating files: {}\n"), to_wstring(e.what()));
+                                            Output::send<LogLevel::Error>(STR("Error iterating files: {}\n"), ensure_str(e.what()));
                                         }
 
                                         return 1;
@@ -2854,7 +2853,7 @@ Overloads:
                         }
                         catch (const std::exception& e)
                         {
-                            Output::send<LogLevel::Error>(STR("Exception in iterate_directory: {}\n"), to_wstring(e.what()));
+                            Output::send<LogLevel::Error>(STR("Exception in iterate_directory: {}\n"), ensure_str(e.what()));
                         }
                     };
 
@@ -2864,7 +2863,7 @@ Overloads:
             }
             catch (const std::exception& e)
             {
-                Output::send<LogLevel::Error>(STR("Exception in IterateGameDirectories: {}\n"), to_wstring(e.what()));
+                Output::send<LogLevel::Error>(STR("Exception in IterateGameDirectories: {}\n"), ensure_str(e.what()));
                 lua.set_nil();
                 return 1;
             }
@@ -2906,7 +2905,7 @@ Overloads:
                     bool paks_created = std::filesystem::create_directory(paks_dir, ec);
                     if (!paks_created || ec)
                     {
-                        Output::send<LogLevel::Error>(STR("CreateLogicModsDirectory: Failed to create Paks directory: {}\n"), to_wstring(ec.message()));
+                        Output::send<LogLevel::Error>(STR("CreateLogicModsDirectory: Failed to create Paks directory: {}\n"), ensure_str(ec.message()));
                         // Try to continue anyway
                     }
                 }
@@ -2917,7 +2916,7 @@ Overloads:
 
                 if (!created || ec)
                 {
-                    Output::send<LogLevel::Error>(STR("CreateLogicModsDirectory: Error creating directory: {}\n"), to_wstring(ec.message()));
+                    Output::send<LogLevel::Error>(STR("CreateLogicModsDirectory: Error creating directory: {}\n"), ensure_str(ec.message()));
 
                     // Check if the directory exists despite the error (might happen with Unicode paths)
                     ec.clear();
@@ -2937,7 +2936,7 @@ Overloads:
             }
             catch (const std::exception& e)
             {
-                Output::send<LogLevel::Error>(STR("Exception in CreateLogicModsDirectory: {}\n"), to_wstring(e.what()));
+                Output::send<LogLevel::Error>(STR("Exception in CreateLogicModsDirectory: {}\n"), ensure_str(e.what()));
                 lua.throw_error(e.what());
                 return 0;
             }
@@ -6582,7 +6581,7 @@ Overloads:
             });
         });
 
-        Unreal::Hook::RegisterULocalPlayerExecPreCallback([](Unreal::ULocalPlayer* context, Unreal::UWorld* in_world, const TCHAR* cmd, Unreal::FOutputDevice& ar)
+        Unreal::Hook::RegisterULocalPlayerExecPreCallback([](Unreal::ULocalPlayer* context, Unreal::UWorld* in_world, const Unreal::TCHAR* cmd, Unreal::FOutputDevice& ar)
                                                                   -> Unreal::Hook::ULocalPlayerExecCallbackReturnValue {
             return TRY([&] {
                 for (const auto& callback_data : m_local_player_exec_pre_callbacks)
@@ -6638,7 +6637,7 @@ Overloads:
             });
         });
 
-        Unreal::Hook::RegisterULocalPlayerExecPostCallback([](Unreal::ULocalPlayer* context, Unreal::UWorld* in_world, const TCHAR* cmd, Unreal::FOutputDevice& ar)
+        Unreal::Hook::RegisterULocalPlayerExecPostCallback([](Unreal::ULocalPlayer* context, Unreal::UWorld* in_world, const Unreal::TCHAR* cmd, Unreal::FOutputDevice& ar)
                                                                    -> Unreal::Hook::ULocalPlayerExecCallbackReturnValue {
             return TRY([&] {
                 for (const auto& callback_data : m_local_player_exec_post_callbacks)
@@ -6695,7 +6694,7 @@ Overloads:
         });
 
         Unreal::Hook::RegisterCallFunctionByNameWithArgumentsPreCallback(
-                [](Unreal::UObject* context, const TCHAR* str, Unreal::FOutputDevice& ar, Unreal::UObject* executor, bool b_force_call_with_non_exec)
+                [](Unreal::UObject* context, const Unreal::TCHAR* str, Unreal::FOutputDevice& ar, Unreal::UObject* executor, bool b_force_call_with_non_exec)
                         -> std::pair<bool, bool> {
                     return TRY([&] {
                         std::pair<bool, bool> return_value{};
@@ -6737,7 +6736,7 @@ Overloads:
                 });
 
         Unreal::Hook::RegisterCallFunctionByNameWithArgumentsPostCallback(
-                [](Unreal::UObject* context, const TCHAR* str, Unreal::FOutputDevice& ar, Unreal::UObject* executor, bool b_force_call_with_non_exec)
+                [](Unreal::UObject* context, const Unreal::TCHAR* str, Unreal::FOutputDevice& ar, Unreal::UObject* executor, bool b_force_call_with_non_exec)
                         -> std::pair<bool, bool> {
                     return TRY([&] {
                         std::pair<bool, bool> return_value{};
@@ -6779,10 +6778,10 @@ Overloads:
                 });
 
         // Lua from the in-game console.
-        Unreal::Hook::RegisterProcessConsoleExecCallback([](Unreal::UObject* context, const TCHAR* cmd, Unreal::FOutputDevice& ar, Unreal::UObject* executor) -> bool {
+        Unreal::Hook::RegisterProcessConsoleExecCallback([](Unreal::UObject* context, const Unreal::TCHAR* cmd, Unreal::FOutputDevice& ar, Unreal::UObject* executor) -> bool {
             auto logln = [&ar](const File::StringType& log_message) {
                 Output::send(fmt::format(STR("{}\n"), log_message));
-                ar.Log(FromCharTypePtr<TCHAR>(log_message.c_str()));
+                ar.Log(FromCharTypePtr<Unreal::TCHAR>(log_message.c_str()));
             };
 
             if (!LuaStatics::console_executor_enabled && String::iequal(File::StringViewType{ToCharTypePtr(cmd)}, File::StringViewType{STR("luastart")}))
@@ -6809,9 +6808,9 @@ Overloads:
                 // TODO: Replace with proper implementation when we have UGameViewportClient and UConsole.
                 //       This should be fairly cross-game & cross-engine-version compatible even without the proper implementation.
                 //       This is because I don't think they've changed the layout here and we have a reflected property right before the unreflected one that we're looking for.
-                Unreal::UObject** console = static_cast<Unreal::UObject**>(context->GetValuePtrByPropertyName(FromCharTypePtr<TCHAR>(STR("ViewportConsole"))));
+                Unreal::UObject** console = static_cast<Unreal::UObject**>(context->GetValuePtrByPropertyName(FromCharTypePtr<Unreal::TCHAR>(STR("ViewportConsole"))));
                 auto* default_texture_white = std::bit_cast<Unreal::TArray<Unreal::FString>*>(
-                        static_cast<uint8_t*>((*console)->GetValuePtrByPropertyNameInChain(FromCharTypePtr<TCHAR>(STR("DefaultTexture_White")))) + 0x8);
+                        static_cast<uint8_t*>((*console)->GetValuePtrByPropertyNameInChain(FromCharTypePtr<Unreal::TCHAR>(STR("DefaultTexture_White")))) + 0x8);
                 auto* scrollback = std::bit_cast<int32_t*>(std::bit_cast<uint8_t*>(default_texture_white) + 0x10);
                 default_texture_white->SetNum(0);
                 default_texture_white->SetMax(0);
@@ -6870,7 +6869,7 @@ Overloads:
 
         // RegisterProcessConsoleExecPreHook
         Unreal::Hook::RegisterProcessConsoleExecGlobalPreCallback(
-                [](Unreal::UObject* context, const TCHAR* cmd, Unreal::FOutputDevice& ar, Unreal::UObject* executor) -> std::pair<bool, bool> {
+                [](Unreal::UObject* context, const Unreal::TCHAR* cmd, Unreal::FOutputDevice& ar, Unreal::UObject* executor) -> std::pair<bool, bool> {
                     return TRY([&] {
                         auto command = File::StringType{ToCharTypePtr(cmd)};
                         auto command_parts = explode_by_occurrence_with_quotes(command, STR(' '));
@@ -6920,7 +6919,7 @@ Overloads:
 
         // RegisterProcessConsoleExecPostHook
         Unreal::Hook::RegisterProcessConsoleExecGlobalPostCallback(
-                [](Unreal::UObject* context, const TCHAR* cmd, Unreal::FOutputDevice& ar, Unreal::UObject* executor) -> std::pair<bool, bool> {
+                [](Unreal::UObject* context, const Unreal::TCHAR* cmd, Unreal::FOutputDevice& ar, Unreal::UObject* executor) -> std::pair<bool, bool> {
                     return TRY([&] {
                         auto command = File::StringType{ToCharTypePtr(cmd)};
                         auto command_parts = explode_by_occurrence_with_quotes(command, STR(' '));
@@ -6968,7 +6967,7 @@ Overloads:
                 });
 
         // RegisterConsoleCommandHandler
-        Unreal::Hook::RegisterProcessConsoleExecCallback([](Unreal::UObject* context, const TCHAR* cmd, Unreal::FOutputDevice& ar, Unreal::UObject* executor) -> bool {
+        Unreal::Hook::RegisterProcessConsoleExecCallback([](Unreal::UObject* context, const Unreal::TCHAR* cmd, Unreal::FOutputDevice& ar, Unreal::UObject* executor) -> bool {
             (void)executor;
 
             if (!Unreal::Cast<Unreal::UGameViewportClient>(context))
@@ -7023,7 +7022,7 @@ Overloads:
         });
 
         // RegisterConsoleCommandGlobalHandler
-        Unreal::Hook::RegisterProcessConsoleExecCallback([](Unreal::UObject* context, const TCHAR* cmd, Unreal::FOutputDevice& ar, Unreal::UObject* executor) -> bool {
+        Unreal::Hook::RegisterProcessConsoleExecCallback([](Unreal::UObject* context, const Unreal::TCHAR* cmd, Unreal::FOutputDevice& ar, Unreal::UObject* executor) -> bool {
             (void)context;
             (void)executor;
 
