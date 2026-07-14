@@ -5,7 +5,9 @@
 
 #include <Common.hpp>
 #include <File/Macros.hpp>
+#ifdef UE4SS_HAS_GUI
 #include <GUI/GUITab.hpp>
+#endif
 #include <Input/Handler.hpp>
 
 #include <String/StringType.hpp>
@@ -31,7 +33,9 @@ namespace RC
     class CppUserModBase
     {
       protected:
+#ifdef UE4SS_HAS_GUI
         std::vector<std::shared_ptr<GUI::GUITab>> GUITabs{};
+#endif
 
       public:
         StringType ModName{};
@@ -137,7 +141,9 @@ namespace RC
         {
         }
 
+#ifdef UE4SS_HAS_GUI
         RC_UE4SS_API virtual auto render_tab() -> void {};
+#endif
 
         /**
          * Executes after a Lua mod is started.
@@ -209,7 +215,9 @@ namespace RC
         }
 
       protected:
+#ifdef UE4SS_HAS_GUI
         RC_UE4SS_API auto register_tab(StringViewType tab_name, GUI::GUITab::RenderFunctionType) -> void;
+#endif
         RC_UE4SS_API auto register_keydown_event(Input::Key, const Input::EventCallbackCallable&, uint8_t custom_data = 0) -> void;
         RC_UE4SS_API auto register_keydown_event(Input::Key,
                                                  const Input::Handler::ModifierKeyArray&,

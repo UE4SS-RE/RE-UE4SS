@@ -66,6 +66,10 @@ else()
 endif()
 list(APPEND UE4SS_SOURCES ${UE4SS_PLATFORM_SOURCES})
 
+if(NOT UE4SS_GUI)
+    list(FILTER UE4SS_SOURCES EXCLUDE REGEX "/src/GUI/")
+endif()
+
 # Create the main library
 add_library(UE4SS SHARED ${UE4SS_SOURCES})
 
@@ -155,7 +159,7 @@ else()
 endif()
 if(UE4SS_GUI)
     target_link_libraries(UE4SS PUBLIC ImGui glfw glad)
-    target_compile_definitions(UE4SS PRIVATE UE4SS_HAS_GUI)
+    target_compile_definitions(UE4SS PUBLIC UE4SS_HAS_GUI)
 endif()
 
 # ---------------------------------------------------------------------------

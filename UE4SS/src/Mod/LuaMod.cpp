@@ -30,7 +30,9 @@
 #include <Mod/CppMod.hpp>
 #include <Mod/LuaMod.hpp>
 #pragma warning(disable : 4005)
+#ifdef UE4SS_HAS_GUI
 #include <GUI/Dumpers.hpp>
+#endif
 #include <UE4SSProgram.hpp>
 #include <USMapGenerator/Generator.hpp>
 #include <Unreal/Core/HAL/Platform.hpp>
@@ -1859,6 +1861,7 @@ Overloads:
                 return 0;
             });
 
+#ifdef UE4SS_HAS_GUI
             lua.register_function("DumpStaticMeshes", []([[maybe_unused]] const LuaMadeSimple::Lua& lua) -> int {
                 GUI::Dumpers::call_generate_static_mesh_file();
                 return 0;
@@ -1868,6 +1871,7 @@ Overloads:
                 GUI::Dumpers::call_generate_all_actor_file();
                 return 0;
             });
+#endif
 
             lua.register_function("DumpUSMAP", []([[maybe_unused]] const LuaMadeSimple::Lua& lua) -> int {
                 OutTheShade::generate_usmap();

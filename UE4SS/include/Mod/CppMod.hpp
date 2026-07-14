@@ -2,7 +2,9 @@
 
 #include <vector>
 
+#ifdef _WIN32
 #include <Unreal/Core/Windows/MinimalWindowsApi.hpp>
+#endif
 
 #include <Mod/CppUserModBase.hpp>
 #include <Mod/Mod.hpp>
@@ -11,6 +13,12 @@
 
 namespace RC
 {
+#ifdef _WIN32
+    using DynamicLibraryHandle = Unreal::Windows::HMODULE;
+#else
+    using DynamicLibraryHandle = void*;
+#endif
+
     namespace LuaMadeSimple
     {
         class Lua;
@@ -26,7 +34,7 @@ namespace RC
         StringType m_dll_filename{};
         std::filesystem::path m_dlls_path;
 
-        Unreal::Windows::HMODULE m_main_dll_module = NULL;
+        DynamicLibraryHandle m_main_dll_module = nullptr;
         void* m_dlls_path_cookie = NULL;
         start_type m_start_mod_func = nullptr;
         uninstall_type m_uninstall_mod_func = nullptr;
