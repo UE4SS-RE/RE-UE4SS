@@ -1,13 +1,15 @@
-if get_config("ue4ssCross") ~= "msvc-wine" then
+if is_plat("windows") and get_config("ue4ssCross") ~= "msvc-wine" then
     includes("proxy_generator")
 end
 
-add_requires("imgui v1.92.1", { debug = is_mode_debug(), configs = { win32 = true, dx11 = true, opengl3 = true, glfw_opengl3 = true , runtimes = get_mode_runtimes()} } )
-add_requires("ImGuiTextEdit v1.2.0", { debug = is_mode_debug(), configs = {runtimes = get_mode_runtimes()} })
-add_requires("IconFontCppHeaders v1.0", { debug = is_mode_debug(), configs = {runtimes = get_mode_runtimes()}})
-add_requires("glfw 3.3.9", { debug = is_mode_debug() , configs = {runtimes = get_mode_runtimes()}})
-add_requires("opengl", { debug = is_mode_debug(), configs = {runtimes = get_mode_runtimes()} })
-add_requires("glaze v2.9.5", { debug = is_mode_debug(), configs = {runtimes = get_mode_runtimes()} })
+if is_plat("windows") then
+    add_requires("imgui v1.92.1", { debug = is_mode_debug(), configs = { win32 = true, dx11 = true, opengl3 = true, glfw_opengl3 = true , runtimes = get_mode_runtimes()} } )
+    add_requires("ImGuiTextEdit v1.2.0", { debug = is_mode_debug(), configs = {runtimes = get_mode_runtimes()} })
+    add_requires("IconFontCppHeaders v1.0", { debug = is_mode_debug(), configs = {runtimes = get_mode_runtimes()}})
+    add_requires("glfw 3.3.9", { debug = is_mode_debug() , configs = {runtimes = get_mode_runtimes()}})
+    add_requires("opengl", { debug = is_mode_debug(), configs = {runtimes = get_mode_runtimes()} })
+end
+add_requires("glaze v6.4.0", { debug = is_mode_debug(), configs = {runtimes = get_mode_runtimes()} })
 add_requires("fmt 11.2.0", { debug = is_mode_debug(), configs = {runtimes = get_mode_runtimes()} })
 
 option("ue4ssBetaIsStarted")
@@ -65,6 +67,11 @@ target(projectName)
     add_headerfiles("generated_include/*.hpp")
 
     add_files("src/**.cpp")
+    if is_plat("windows") then
+        remove_files("src/Platform/Linux/**.cpp")
+    else
+        remove_files("src/GUI/**.cpp", "src/Platform/Win32/**.cpp")
+    end
 
     add_deps(
         "File", "DynamicOutput", "Unreal",
@@ -72,16 +79,26 @@ target(projectName)
         "IniParser", "JSON", "Input",
         "Constructs", "Helpers", "MProgram",
         "ScopedTimer", "Profiler", "patternsleuth_bind",
-        "glad", { public = true }
+        { public = true }
     )
+    if is_plat("windows") then
+        add_deps("glad", { public = true })
+    end
 
     add_packages("fmt", { public = true })
 
-    add_packages("imgui", "ImGuiTextEdit", "IconFontCppHeaders", "glfw", "opengl", { public = true })
+    if is_plat("windows") then
+        add_packages("imgui", "ImGuiTextEdit", "IconFontCppHeaders", "glfw", "opengl", { public = true })
+    end
 
     add_packages("glaze", "polyhook_2", { public = true })
 
-    add_links("dbghelp", "psapi", "d3d11", { public = true })
+    if is_plat("windows") then
+        add_links("dbghelp", "psapi", "d3d11", { public = true })
+    else
+        add_linkorders("PolyHook_2", "asmtk", "asmjit")
+        add_syslinks("dl", "pthread", { public = true })
+    end
 
     after_load(function (target)
         local projectRoot = get_config("ue4ssRoot")

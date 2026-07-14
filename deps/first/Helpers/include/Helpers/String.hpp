@@ -1,5 +1,6 @@
 #pragma once
 
+#include <algorithm>
 #include <codecvt>
 #include <cwctype>
 #include <locale>
