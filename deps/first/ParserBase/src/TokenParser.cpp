@@ -1,3 +1,6 @@
+#include <algorithm>
+#include <stdexcept>
+
 #include <ParserBase/Token.hpp>
 #include <ParserBase/TokenParser.hpp>
 #include <ParserBase/Tokenizer.hpp>

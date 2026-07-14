@@ -2,6 +2,7 @@
 
 #include <format>
 #include <functional>
+#include <memory>
 #include <optional>
 
 #include <LuaMadeSimple/Common.hpp>
