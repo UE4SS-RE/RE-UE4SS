@@ -3,8 +3,10 @@ project(UE4SS)
 
 message("Configuring UE4SS")
 
-# Add proxy generator subproject
-add_subdirectory("proxy_generator")
+# Add proxy generator subproject (generates Windows proxy DLLs; PE-format specific)
+if(WIN32)
+    add_subdirectory("proxy_generator")
+endif()
 
 # Release settings
 option(UE4SS_LIB_BETA_IS_STARTED "Have beta releases started for the current major version" ON)
@@ -141,10 +143,20 @@ target_link_libraries(UE4SS PUBLIC
 
 # Link third-party dependencies
 target_link_libraries(UE4SS PUBLIC
-    fmt ImGui PolyHook_2 
-    d3d11 glfw glad opengl32 
-    dbghelp psapi ws2_32 ntdll userenv
+    fmt PolyHook_2
 )
+if(WIN32)
+    target_link_libraries(UE4SS PUBLIC
+        d3d11 opengl32
+        dbghelp psapi ws2_32 ntdll userenv
+    )
+else()
+    target_link_libraries(UE4SS PUBLIC dl pthread)
+endif()
+if(UE4SS_GUI)
+    target_link_libraries(UE4SS PUBLIC ImGui glfw glad)
+    target_compile_definitions(UE4SS PRIVATE UE4SS_HAS_GUI)
+endif()
 
 # ---------------------------------------------------------------------------
 # Output Configuration
