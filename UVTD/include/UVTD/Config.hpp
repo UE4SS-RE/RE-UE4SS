@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstdint>
 #include <filesystem>
 #include <string>
 #include <unordered_map>
@@ -52,6 +53,14 @@ namespace RC::UVTD
         bool generates_variant{true};        // Whether this suffix creates a variant build
     };
 
+    struct PlatformMemberLayout
+    {
+        File::StringType platform{};
+        File::StringType ifdef_macro{};
+        File::StringType version{};
+        std::unordered_map<File::StringType, std::unordered_map<File::StringType, uint32_t>> classes{};
+    };
+
     class UVTDConfig
     {
     private:
@@ -85,6 +94,8 @@ namespace RC::UVTD
 
         // Suffix definitions - maps suffix name to its configuration
         std::unordered_map<File::StringType, SuffixDefinition> suffix_definitions;
+
+        std::vector<PlatformMemberLayout> platform_member_layouts;
 
     private:
         UVTDConfig() = default;

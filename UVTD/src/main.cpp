@@ -60,7 +60,8 @@ auto thread_dll_start([[maybe_unused]] LPVOID thread_param) -> unsigned long
         std::filesystem::path config_dir = module_path / "Config";
         if (!UVTD::UVTDConfig::Get().Initialize(config_dir))
         {
-            Output::send(STR("Warning: Configuration could not be initialized. Please check your config files.\n"));
+            Output::send(STR("Configuration could not be initialized. Please check your config files.\n"));
+            return 1;
         }
 
         for (int32_t selection = get_user_selection(); selection != 1337; selection = get_user_selection())
@@ -128,8 +129,7 @@ auto dll_process_attached(HMODULE moduleHandle) -> void
 
 auto main() -> int
 {
-    thread_dll_start(nullptr);
-    return 0;
+    return static_cast<int>(thread_dll_start(nullptr));
 }
 
 auto DllMain(HMODULE hModule, DWORD ul_reason_for_call, [[maybe_unused]] LPVOID lpReserved) -> BOOL

@@ -117,6 +117,27 @@ namespace RC::UVTD
             return UVTDConfig::Get().virtual_generator_includes;
         }
 
+        inline const std::vector<PlatformMemberLayout>& GetPlatformMemberLayouts()
+        {
+            return UVTDConfig::Get().platform_member_layouts;
+        }
+
+        // Returned pointers remain valid only until configuration is successfully reinitialized or otherwise mutated.
+        inline std::vector<const PlatformMemberLayout*> GetPlatformMemberLayoutsForClass(
+            const File::StringType& version,
+            const File::StringType& class_name)
+        {
+            std::vector<const PlatformMemberLayout*> matches;
+            for (const auto& layout : GetPlatformMemberLayouts())
+            {
+                if (layout.version == version && layout.classes.contains(class_name))
+                {
+                    matches.emplace_back(&layout);
+                }
+            }
+            return matches;
+        }
+
         // Class inheritance relationships access
         inline const std::unordered_map<File::StringType, ClassInheritanceInfo>& GetClassInheritanceMap() 
         {

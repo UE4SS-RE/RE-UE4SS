@@ -1,0 +1,33 @@
+{
+  "layouts": [
+    {
+      "platform": "Linux",
+      "ifdef_macro": "PLATFORM_LINUX",
+      "version": "5_01",
+      "classes": {
+        "FProperty": {
+          "ArrayDim": 52,
+          "ElementSize": 56,
+          "PropertyFlags": 64,
+          "RepIndex": 72,
+          "Offset_Internal": 76,
+          "RepNotifyFunc": 80,
+          "PropertyLinkNext": 88,
+          "NextRef": 96,
+          "DestructorLinkNext": 104,
+          "PostConstructLinkNext": 112,
+          "UEP_TotalSize": 120
+        },
+        "UEnum": {
+          "CppType": 48,
+          "CppForm": 64,
+          "Names": 72,
+          "EnumFlags_Internal": 88,
+          "EnumDisplayNameFn": 96,
+          "EnumPackage": 104,
+          "UEP_TotalSize": 112
+        }
+      }
+    }
+  ]
+}

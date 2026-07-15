@@ -1,6 +1,7 @@
 #include <fstream>
 #include <format>
 #include <iostream>
+#include <string_view>
 
 #include <DynamicOutput/DynamicOutput.hpp>
 #include <Helpers/String.hpp>
@@ -67,6 +68,19 @@ namespace RC::UVTD
         std::vector<SuffixDefinitionJson> suffixes;
     };
 
+    struct PlatformMemberLayoutJson
+    {
+        std::string platform;
+        std::string ifdef_macro;
+        std::string version;
+        std::unordered_map<std::string, std::unordered_map<std::string, uint32_t>> classes;
+    };
+
+    struct PlatformMemberLayoutsFile
+    {
+        std::vector<PlatformMemberLayoutJson> layouts;
+    };
+
     // New type for type filtering
     using TypeFilterMapJson = std::unordered_map<std::string, std::vector<std::string>>;
 }
@@ -118,10 +132,201 @@ namespace glz {
             "suffixes", &RC::UVTD::SuffixDefinitionsFile::suffixes
         );
     };
+
+    template <>
+    struct meta<RC::UVTD::PlatformMemberLayoutJson> {
+        static constexpr auto value = glz::object(
+            "platform", &RC::UVTD::PlatformMemberLayoutJson::platform,
+            "ifdef_macro", &RC::UVTD::PlatformMemberLayoutJson::ifdef_macro,
+            "version", &RC::UVTD::PlatformMemberLayoutJson::version,
+            "classes", &RC::UVTD::PlatformMemberLayoutJson::classes
+        );
+    };
+
+    template <>
+    struct meta<RC::UVTD::PlatformMemberLayoutsFile> {
+        static constexpr auto value = glz::object(
+            "layouts", &RC::UVTD::PlatformMemberLayoutsFile::layouts
+        );
+    };
 }
 
 namespace RC::UVTD
 {
+    namespace
+    {
+        bool IsAsciiLetter(char character)
+        {
+            return (character >= 'A' && character <= 'Z') || (character >= 'a' && character <= 'z');
+        }
+
+        bool IsAsciiDigit(char character)
+        {
+            return character >= '0' && character <= '9';
+        }
+
+        bool IsSafePathToken(std::string_view token)
+        {
+            if (token.empty())
+            {
+                return false;
+            }
+
+            for (const char character : token)
+            {
+                if (!IsAsciiLetter(character) && !IsAsciiDigit(character) && character != '_')
+                {
+                    return false;
+                }
+            }
+            return true;
+        }
+
+        bool IsCppIdentifier(std::string_view identifier)
+        {
+            if (identifier.empty() || (!IsAsciiLetter(identifier.front()) && identifier.front() != '_'))
+            {
+                return false;
+            }
+
+            for (const char character : identifier.substr(1))
+            {
+                if (!IsAsciiLetter(character) && !IsAsciiDigit(character) && character != '_')
+                {
+                    return false;
+                }
+            }
+            return true;
+        }
+
+        bool LoadPlatformMemberLayouts(const std::filesystem::path& config_dir,
+                                       std::vector<PlatformMemberLayout>& loaded_platform_layouts)
+        {
+            const std::filesystem::path platform_layouts_path = config_dir / "platform_member_layouts.json";
+            if (!std::filesystem::exists(platform_layouts_path))
+            {
+                Output::send(STR("platform_member_layouts.json not found\n"));
+                return false;
+            }
+
+            std::ifstream platform_layouts_file(platform_layouts_path);
+            if (!platform_layouts_file.is_open())
+            {
+                Output::send(STR("Failed to open platform_member_layouts.json\n"));
+                return false;
+            }
+
+            std::string platform_layouts_json((std::istreambuf_iterator<char>(platform_layouts_file)),
+                                              std::istreambuf_iterator<char>());
+            if (platform_layouts_file.bad())
+            {
+                Output::send(STR("Failed to read platform_member_layouts.json\n"));
+                return false;
+            }
+
+            auto platform_layouts_result = glz::read_json<PlatformMemberLayoutsFile>(platform_layouts_json);
+            if (!platform_layouts_result.has_value())
+            {
+                Output::send(STR("Failed to parse platform_member_layouts.json: {}\n"),
+                             to_wstring(glz::format_error(platform_layouts_result.error(), platform_layouts_json)));
+                return false;
+            }
+            if (platform_layouts_result.value().layouts.empty())
+            {
+                Output::send(STR("platform_member_layouts.json must contain at least one layout\n"));
+                return false;
+            }
+
+            loaded_platform_layouts.clear();
+            loaded_platform_layouts.reserve(platform_layouts_result.value().layouts.size());
+            std::unordered_map<File::StringType, std::unordered_set<File::StringType>> seen_platform_versions;
+
+            for (const auto& layout : platform_layouts_result.value().layouts)
+            {
+                PlatformMemberLayout converted_layout{
+                    to_wstring(layout.platform),
+                    to_wstring(layout.ifdef_macro),
+                    to_wstring(layout.version),
+                    {}
+                };
+
+                if (!IsSafePathToken(layout.platform) || !IsSafePathToken(layout.version) || layout.classes.empty())
+                {
+                    Output::send(STR("Invalid or duplicate platform member layout '{}:{}'\n"),
+                                 converted_layout.platform,
+                                 converted_layout.version);
+                    return false;
+                }
+                if (!IsCppIdentifier(layout.ifdef_macro))
+                {
+                    Output::send(STR("Invalid ifdef macro '{}' in platform member layout '{}:{}'\n"),
+                                 converted_layout.ifdef_macro,
+                                 converted_layout.platform,
+                                 converted_layout.version);
+                    return false;
+                }
+                if (!seen_platform_versions[converted_layout.platform].insert(converted_layout.version).second)
+                {
+                    Output::send(STR("Invalid or duplicate platform member layout '{}:{}'\n"),
+                                 converted_layout.platform,
+                                 converted_layout.version);
+                    return false;
+                }
+
+                for (const auto& [class_name, members] : layout.classes)
+                {
+                    auto converted_class_name = to_wstring(class_name);
+                    if (!IsCppIdentifier(class_name))
+                    {
+                        Output::send(STR("Invalid class name '{}' in platform member layout '{}:{}'\n"),
+                                     converted_class_name,
+                                     converted_layout.platform,
+                                     converted_layout.version);
+                        return false;
+                    }
+                    if (members.empty())
+                    {
+                        Output::send(STR("Class '{}' has no members in platform member layout '{}:{}'\n"),
+                                     converted_class_name,
+                                     converted_layout.platform,
+                                     converted_layout.version);
+                        return false;
+                    }
+                    if (!members.contains("UEP_TotalSize"))
+                    {
+                        Output::send(STR("Class '{}' has no UEP_TotalSize in platform member layout '{}:{}'\n"),
+                                     converted_class_name,
+                                     converted_layout.platform,
+                                     converted_layout.version);
+                        return false;
+                    }
+
+                    std::unordered_map<File::StringType, uint32_t> converted_members;
+                    for (const auto& [member_name, offset] : members)
+                    {
+                        auto converted_member_name = to_wstring(member_name);
+                        if (!IsCppIdentifier(member_name))
+                        {
+                            Output::send(STR("Invalid member name '{}' in class '{}' for platform member layout '{}:{}'\n"),
+                                         converted_member_name,
+                                         converted_class_name,
+                                         converted_layout.platform,
+                                         converted_layout.version);
+                            return false;
+                        }
+                        converted_members.emplace(std::move(converted_member_name), offset);
+                    }
+
+                    converted_layout.classes.emplace(std::move(converted_class_name), std::move(converted_members));
+                }
+
+                loaded_platform_layouts.emplace_back(std::move(converted_layout));
+            }
+
+            return true;
+        }
+    }
+
     UVTDConfig& UVTDConfig::Get()
     {
         static UVTDConfig instance;
@@ -139,6 +344,12 @@ namespace RC::UVTD
         Output::send(STR("Loading configuration from: {}\n"), config_dir.wstring());
         
         try {
+            std::vector<PlatformMemberLayout> loaded_platform_layouts;
+            if (!LoadPlatformMemberLayouts(config_dir, loaded_platform_layouts))
+            {
+                return false;
+            }
+
             // Load object_items.json
             std::filesystem::path object_items_path = config_dir / "object_items.json";
             if (std::filesystem::exists(object_items_path))
@@ -496,6 +707,9 @@ namespace RC::UVTD
             {
                 Output::send(STR("suffix_definitions.json not found\n"));
             }
+
+            platform_member_layouts = std::move(loaded_platform_layouts);
+            Output::send(STR("Loaded {} platform member layouts\n"), platform_member_layouts.size());
 
             return true;
         }
