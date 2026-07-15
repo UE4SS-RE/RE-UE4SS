@@ -162,6 +162,17 @@ int main()
             tests.expect(!config.Initialize(directory.path()), "duplicate platform and version should fail");
         }
 
+        {
+            TemporaryConfigDirectory directory{"duplicate_condition"};
+            const auto linux_entry = make_layout_entry();
+            const auto steam_deck_entry = make_layout_entry("SteamDeck", "PLATFORM_LINUX");
+            directory.write(
+                "platform_member_layouts.json",
+                "{\"layouts\":[" + linux_entry + "," + steam_deck_entry + "]}");
+            tests.expect(!config.Initialize(directory.path()),
+                         "duplicate version, class, and ifdef macro selection should fail");
+        }
+
         for (const auto& [name, json] : {
                  std::pair{"unsafe_platform_parent", make_layout_file("../Linux")},
                  std::pair{"unsafe_platform_whitespace", make_layout_file("Linux x")},
@@ -180,6 +191,8 @@ int main()
                  std::pair{"invalid_class", make_layout_file("Linux", "PLATFORM_LINUX", "5_01", "F::Property")},
                  std::pair{"invalid_class_leading_digit",
                            make_layout_file("Linux", "PLATFORM_LINUX", "5_01", "1Property")},
+                 std::pair{"reserved_class_keyword",
+                           make_layout_file("Linux", "PLATFORM_LINUX", "5_01", "class")},
                  std::pair{"invalid_member",
                            make_layout_file("Linux", "PLATFORM_LINUX", "5_01", "FProperty", "Offset-Internal")},
                  std::pair{"invalid_member_leading_digit",

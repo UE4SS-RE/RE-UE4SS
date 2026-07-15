@@ -79,4 +79,40 @@ if (UE4SS_BUILD_TESTS)
     add_test(NAME ${TEST_TARGET} COMMAND ${TEST_TARGET})
     set_tests_properties(${TEST_TARGET} PROPERTIES TIMEOUT 60)
     set_target_properties(${TEST_TARGET} PROPERTIES FOLDER "Tests")
+
+    set(TEST_TARGET PlatformMemberLayoutGeneratorTests)
+    add_executable(${TEST_TARGET}
+        tests/PlatformMemberLayoutGeneratorTests.cpp
+        src/PlatformMemberLayoutGenerator.cpp
+        src/UnrealVirtualGenerator.cpp
+        src/TypeContainer.cpp
+        src/Helpers.cpp
+        src/Config.cpp
+    )
+
+    if (NOT UE4SS_NO_CUSTOM_FLAGS)
+        target_compile_options(${TEST_TARGET} PRIVATE "${PRIVATE_COMPILE_OPTIONS}")
+        target_link_options(${TEST_TARGET} PRIVATE "${PRIVATE_LINK_OPTIONS}")
+    endif ()
+
+    target_compile_features(${TEST_TARGET} PRIVATE cxx_std_23)
+    target_compile_definitions(${TEST_TARGET} PRIVATE
+        RC_FILE_BUILD_STATIC
+        RC_DYNAMIC_OUTPUT_BUILD_STATIC
+    )
+    target_include_directories(${TEST_TARGET} PRIVATE
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+    )
+    target_link_libraries(${TEST_TARGET} PRIVATE
+        File
+        DynamicOutput
+        Helpers
+        fmt
+        glaze::glaze
+        raw_pdb
+    )
+
+    add_test(NAME ${TEST_TARGET} COMMAND ${TEST_TARGET})
+    set_tests_properties(${TEST_TARGET} PROPERTIES TIMEOUT 60)
+    set_target_properties(${TEST_TARGET} PROPERTIES FOLDER "Tests")
 endif ()

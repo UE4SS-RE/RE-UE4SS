@@ -36,6 +36,8 @@ namespace RC::UVTD
 
     // --- Member Variable Layout Generator Paths ---
     static std::filesystem::path member_variable_layouts_gen_function_bodies_path = unreal_deps_base_path / "generated_include" / "FunctionBodies";
+    static std::filesystem::path platform_member_layouts_output_path =
+        member_variable_layouts_gen_function_bodies_path / "Platform";
     static std::filesystem::path member_variable_layouts_wrappers_output_path = unreal_deps_base_path / "generated_include"; // Header & Src wrappers
     static std::filesystem::path member_variable_layouts_templates_output_path = assets_base_path / "MemberVarLayoutTemplates";
 

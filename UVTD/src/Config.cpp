@@ -199,6 +199,32 @@ namespace RC::UVTD
             return true;
         }
 
+        bool IsCppKeyword(std::string_view identifier)
+        {
+            static constexpr std::string_view keywords[]{
+                "alignas", "alignof", "and", "and_eq", "asm", "auto", "bitand", "bitor", "bool", "break",
+                "case", "catch", "char", "char8_t", "char16_t", "char32_t", "class", "compl", "concept",
+                "const", "consteval", "constexpr", "constinit", "const_cast", "continue", "co_await", "co_return",
+                "co_yield", "decltype", "default", "delete", "do", "double", "dynamic_cast", "else", "enum",
+                "explicit", "export", "extern", "false", "float", "for", "friend", "goto", "if", "import",
+                "inline", "int", "long", "module", "mutable", "namespace", "new", "noexcept", "not", "not_eq",
+                "nullptr", "operator", "or", "or_eq", "private", "protected", "public", "register",
+                "reinterpret_cast", "requires", "return", "short", "signed", "sizeof", "static", "static_assert",
+                "static_cast", "struct", "switch", "template", "this", "thread_local", "throw", "true", "try",
+                "typedef", "typeid", "typename", "union", "unsigned", "using", "virtual", "void", "volatile",
+                "wchar_t", "while", "xor", "xor_eq",
+            };
+
+            for (const auto keyword : keywords)
+            {
+                if (identifier == keyword)
+                {
+                    return true;
+                }
+            }
+            return false;
+        }
+
         bool LoadPlatformMemberLayouts(const std::filesystem::path& config_dir,
                                        std::vector<PlatformMemberLayout>& loaded_platform_layouts)
         {
@@ -240,6 +266,10 @@ namespace RC::UVTD
             loaded_platform_layouts.clear();
             loaded_platform_layouts.reserve(platform_layouts_result.value().layouts.size());
             std::unordered_map<File::StringType, std::unordered_set<File::StringType>> seen_platform_versions;
+            std::unordered_map<
+                File::StringType,
+                std::unordered_map<File::StringType, std::unordered_set<File::StringType>>>
+                seen_version_class_macros;
 
             for (const auto& layout : platform_layouts_result.value().layouts)
             {
@@ -276,12 +306,23 @@ namespace RC::UVTD
                 for (const auto& [class_name, members] : layout.classes)
                 {
                     auto converted_class_name = to_wstring(class_name);
-                    if (!IsCppIdentifier(class_name))
+                    if (!IsCppIdentifier(class_name) || IsCppKeyword(class_name))
                     {
                         Output::send(STR("Invalid class name '{}' in platform member layout '{}:{}'\n"),
                                      converted_class_name,
                                      converted_layout.platform,
                                      converted_layout.version);
+                        return false;
+                    }
+                    if (!seen_version_class_macros[converted_layout.version][converted_class_name]
+                             .insert(converted_layout.ifdef_macro)
+                             .second)
+                    {
+                        Output::send(
+                            STR("Duplicate platform member layout macro '{}' for version '{}' and class '{}'\n"),
+                            converted_layout.ifdef_macro,
+                            converted_layout.version,
+                            converted_class_name);
                         return false;
                     }
                     if (members.empty())

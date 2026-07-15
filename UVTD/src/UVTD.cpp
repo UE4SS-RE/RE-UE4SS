@@ -16,6 +16,7 @@
 #include <UVTD/PDBNameInfo.hpp>
 #include <UVTD/MemberVarsDumper.hpp>
 #include <UVTD/MemberVarsWrapperGenerator.hpp>
+#include <UVTD/PlatformMemberLayoutGenerator.hpp>
 #include <UVTD/SolBindingsGenerator.hpp>
 #include <UVTD/UVTD.hpp>
 #include <UVTD/UnrealVirtualGenerator.hpp>
@@ -33,6 +34,13 @@ namespace RC::UVTD
 
     auto main(DumpSettings dump_settings) -> void
     {
+        if (dump_settings.should_dump_member_vars)
+        {
+            PlatformMemberLayoutGenerator platform_member_layout_generator{
+                ConfigUtil::GetPlatformMemberLayouts(), platform_member_layouts_output_path};
+            platform_member_layout_generator.generate_files();
+        }
+
         UnrealVirtualGenerator::output_cleanup();
 
         if (dump_settings.should_dump_vtable) VTableDumper::output_cleanup();
