@@ -562,7 +562,7 @@ namespace RC::LuaMadeSimple
         // If you don't then it will be improperly copied and things, including nested for_each calls, will break
         RC_LMS_API auto for_each_in_table(const ForEachInTableCallable& callable) const -> void;
 
-        [[nodiscard]] RC_LMS_API auto is_function() const -> bool;
+        [[nodiscard]] RC_LMS_API auto is_function(int32_t force_index = 1) const -> bool;
         [[nodiscard]] RC_LMS_API auto is_global_function(std::string_view global_function_name) const -> bool;
         // Use the get_<type>() functions to retrieve return values
         RC_LMS_API auto prepare_function_call(std::string_view global_function_name) const -> void;

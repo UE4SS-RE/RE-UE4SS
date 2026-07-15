@@ -915,9 +915,9 @@ namespace RC::LuaMadeSimple
         --m_num_tables_being_iterated;
     }
 
-    auto Lua::is_function() const -> bool
+    auto Lua::is_function(int32_t force_index) const -> bool
     {
-        return lua_isfunction(get_lua_state(), 1);
+        return lua_isfunction(get_lua_state(), force_index);
     }
 
     auto Lua::is_global_function(std::string_view global_function_name) const -> bool
