@@ -1708,7 +1708,7 @@ namespace RC::GUI
 
             if (ImGui::BeginTabItem(ICON_FA_CUBES " Mods"))
             {
-                render_mods_tab();
+                m_mods_widget.render();
                 ImGui::EndTabItem();
             }
 
@@ -3372,7 +3372,7 @@ namespace RC::GUI
             {
                 if (ImGui::Button(ICON_FA_SYNC " Restart"))
                 {
-                    restart_mod_by_name(mod_name);
+                    UE4SSProgram::get_program().queue_reinstall_lua_mod_by_name(mod_name);
                 }
                 if (ImGui::IsItemHovered())
                 {
@@ -3383,7 +3383,7 @@ namespace RC::GUI
             {
                 if (ImGui::Button(ICON_FA_PLAY " Start"))
                 {
-                    start_mod_by_path(mod_path);
+                    UE4SSProgram::get_program().queue_start_lua_mod_by_path(mod_path);
                 }
                 if (ImGui::IsItemHovered())
                 {
@@ -3610,135 +3610,10 @@ namespace RC::GUI
         }
     }
 
-    auto LuaDebugger::refresh_mods_list() -> void
+    auto LuaDebugger::create_new_mod(void* context, const std::string& name) -> bool
     {
-        m_discovered_mods.clear();
+        auto self = static_cast<LuaDebugger*>(context);
 
-        auto& program = UE4SSProgram::get_program();
-        auto& mods_dirs = program.get_mods_directories();
-        auto mods_txt_entries = program.get_mods_txt_entries();
-
-        std::set<std::string> running_mod_names;
-        for (const auto& mod : program.m_mods)
-        {
-            if (auto* lua_mod = dynamic_cast<LuaMod*>(mod.get()))
-            {
-                if (lua_mod->is_started())
-                {
-                    running_mod_names.insert(to_string(lua_mod->get_name()));
-                }
-            }
-        }
-
-        std::set<std::string> seen_mods;
-
-        for (const auto& mods_dir : mods_dirs)
-        {
-            if (!std::filesystem::exists(mods_dir))
-            {
-                continue;
-            }
-
-            std::error_code ec;
-            for (const auto& entry : std::filesystem::directory_iterator(mods_dir, ec))
-            {
-                if (!entry.is_directory(ec) || ec)
-                {
-                    continue;
-                }
-
-                std::string mod_name = entry.path().stem().string();
-
-                if (seen_mods.count(mod_name))
-                {
-                    continue;
-                }
-                seen_mods.insert(mod_name);
-
-                bool has_main_lua = std::filesystem::exists(entry.path() / "Scripts" / "main.lua", ec);
-                if (!has_main_lua)
-                {
-                    continue;
-                }
-
-                ModInfo info;
-                info.name = mod_name;
-                info.path = entry.path();
-                info.enabled_via_txt = std::filesystem::exists(entry.path() / "enabled.txt", ec);
-                info.is_running = running_mod_names.count(mod_name) > 0;
-
-                auto it = mods_txt_entries.find(mod_name);
-                if (it != mods_txt_entries.end())
-                {
-                    info.enabled_via_mods_txt = it->second;
-                }
-
-                m_discovered_mods.push_back(std::move(info));
-            }
-        }
-
-        std::sort(m_discovered_mods.begin(),
-                  m_discovered_mods.end(),
-                  [](const auto& a, const auto& b) {
-                      return a.name < b.name;
-                  });
-
-        m_mods_list_dirty = false;
-    }
-
-    auto LuaDebugger::set_mod_enabled(const std::filesystem::path& mod_path, bool enabled) -> void
-    {
-        std::filesystem::path enabled_file = mod_path / "enabled.txt";
-        std::error_code ec;
-
-        if (enabled)
-        {
-            std::ofstream file(enabled_file);
-            file.close();
-        }
-        else
-        {
-            std::filesystem::remove(enabled_file, ec);
-        }
-
-        m_mods_list_dirty = true;
-    }
-
-    auto LuaDebugger::restart_mod_by_name(const std::string& mod_name) -> void
-    {
-        UE4SSProgram::get_program().queue_event([mod_name]() {
-            UE4SSProgram::get_program().queue_reinstall_mod_by_name(mod_name);
-            if (LuaDebugger::has_instance())
-            {
-                LuaDebugger::get().m_mods_list_dirty = true;
-            }
-        });
-    }
-
-    auto LuaDebugger::uninstall_mod_by_name(const std::string& mod_name) -> void
-    {
-        UE4SSProgram::get_program().queue_event([mod_name]() {
-            UE4SSProgram::get_program().queue_uninstall_mod_by_name(mod_name);
-            if (LuaDebugger::has_instance())
-            {
-                LuaDebugger::get().m_mods_list_dirty = true;
-            }
-        });
-    }
-
-    auto LuaDebugger::start_mod_by_path(const std::filesystem::path& mod_path) -> void
-    {
-        UE4SSProgram::get_program().queue_event([mod_path]() {
-            UE4SSProgram::get_program().queue_start_lua_mod_by_path(mod_path);
-            if (LuaDebugger::has_instance())
-            {
-                LuaDebugger::get().m_mods_list_dirty = true;
-            }
-        });
-    }
-
-    auto LuaDebugger::create_new_mod(const std::string& name) -> bool
-    {
         if (name.empty())
         {
             return false;
@@ -3786,28 +3661,30 @@ namespace RC::GUI
         std::ofstream enabled_file(mod_path / "enabled.txt");
         enabled_file.close();
 
-        m_mods_list_dirty = true;
+        self->m_mods_widget.m_mods_list_dirty = true;
 
         // New mod is not running, clear selected state so dropdown uses filesystem scan
-        m_selected_state = nullptr;
+        self->m_selected_state = nullptr;
 
-        m_script_edit_path = main_lua_path.string();
-        const LuaScriptFile* script = load_script(m_script_edit_path);
+        self->m_script_edit_path = main_lua_path.string();
+        const LuaScriptFile* script = self->load_script(self->m_script_edit_path);
         if (script && script->loaded)
         {
-            m_script_editor.SetText(script->content);
-            m_script_original_content = m_script_editor.GetText();
-            m_script_is_dirty = false;
+            self->m_script_editor.SetText(script->content);
+            self->m_script_original_content = self->m_script_editor.GetText();
+            self->m_script_is_dirty = false;
         }
 
-        m_pending_editor_tab_switch = 1;
+        self->m_pending_editor_tab_switch = 1;
 
         Output::send(STR("Created new mod '{}'\n"), to_generic_string(name));
         return true;
     }
 
-    auto LuaDebugger::create_new_file(const std::string& mod_path, const std::string& filename, bool add_require_to_main) -> bool
+    auto LuaDebugger::create_new_file(void* context, const std::string& mod_path, const std::string& filename, bool add_require_to_main) -> bool
     {
+        auto self = static_cast<LuaDebugger*>(context);
+
         if (filename.empty() || mod_path.empty())
         {
             return false;
@@ -3903,8 +3780,8 @@ namespace RC::GUI
 
                     // Clear cache for main.lua so it reloads
                     {
-                        std::lock_guard<std::mutex> lock(m_scripts_mutex);
-                        m_script_cache.erase(main_lua_path.string());
+                        std::lock_guard<std::mutex> lock(self->m_scripts_mutex);
+                        self->m_script_cache.erase(main_lua_path.string());
                     }
 
                     Output::send(STR("Added require() for '{}' to main.lua\n"), to_generic_string(module_name));
@@ -3913,8 +3790,8 @@ namespace RC::GUI
         }
 
         {
-            std::lock_guard<std::mutex> lock(m_scripts_mutex);
-            m_script_cache.erase(file_path.string());
+            std::lock_guard<std::mutex> lock(self->m_scripts_mutex);
+            self->m_script_cache.erase(file_path.string());
         }
 
         // Check if mod is running; if not, clear selected state so dropdown uses filesystem scan
@@ -3931,294 +3808,46 @@ namespace RC::GUI
         }
         if (!mod_is_running)
         {
-            m_selected_state = nullptr;
+            self->m_selected_state = nullptr;
         }
 
-        m_script_edit_path = file_path.string();
-        const LuaScriptFile* script = load_script(m_script_edit_path);
+        self->m_script_edit_path = file_path.string();
+        const LuaScriptFile* script = self->load_script(self->m_script_edit_path);
         if (script && script->loaded)
         {
-            m_script_editor.SetText(script->content);
-            m_script_original_content = m_script_editor.GetText();
-            m_script_is_dirty = false;
+            self->m_script_editor.SetText(script->content);
+            self->m_script_original_content = self->m_script_editor.GetText();
+            self->m_script_is_dirty = false;
         }
 
-        m_pending_editor_tab_switch = 1;
+        self->m_pending_editor_tab_switch = 1;
 
         Output::send(STR("Created new file '{}'\n"), to_generic_string(file_path.string()));
         return true;
     }
 
-    auto LuaDebugger::render_mods_tab() -> void
+    auto LuaDebugger::open_mod(void* context, ModInfo& mod) -> void
     {
-        if (m_mods_list_dirty)
+        auto self = static_cast<LuaDebugger*>(context);
+
+        std::filesystem::path scripts_path = mod.path / "Scripts";
+        std::filesystem::path main_lua = scripts_path / "main.lua";
+        if (std::filesystem::exists(main_lua))
         {
-            refresh_mods_list();
-        }
-
-        if (ImGui::Button(ICON_FA_SYNC " Refresh"))
-        {
-            m_mods_list_dirty = true;
-        }
-
-        ImGui::SameLine();
-
-        if (ImGui::Button(ICON_FA_PLUS " New Mod"))
-        {
-            m_show_create_mod_popup = true;
-            m_new_mod_name.clear();
-        }
-
-        ImGui::SameLine();
-
-        auto& gui = UE4SSProgram::get_program().get_debugging_ui();
-        bool event_busy = gui.m_event_thread_busy || !UE4SSProgram::get_program().can_process_events();
-        if (event_busy)
-        {
-            ImGui::BeginDisabled(true);
-        }
-        if (ImGui::Button(ICON_FA_REDO " Restart All Mods"))
-        {
-            gui.m_event_thread_busy = true;
-            UE4SSProgram::get_program().queue_event([&gui, this]() {
-                UE4SSProgram::get_program().queue_reinstall_mods();
-                gui.m_event_thread_busy = false;
-                m_mods_list_dirty = true;
-            });
-        }
-        if (event_busy)
-        {
-            ImGui::EndDisabled();
-        }
-
-        ImGui::SameLine();
-        ImGui::TextDisabled("(%zu mods)", m_discovered_mods.size());
-
-        ImGui::Separator();
-
-        ImGui::BeginChild("ModsList", ImVec2(0, 0), true, ImGuiWindowFlags_HorizontalScrollbar);
-
-        for (size_t i = 0; i < m_discovered_mods.size(); ++i)
-        {
-            auto& mod = m_discovered_mods[i];
-
-            ImGui::PushID(static_cast<int>(i));
-
-            bool enabled = mod.is_enabled();
-            if (ImGui::Checkbox("##enabled", &enabled))
+            // Clear selected state if mod isn't running so dropdown uses filesystem scan
+            if (!mod.is_running)
             {
-                set_mod_enabled(mod.path, enabled);
-                mod.enabled_via_txt = enabled;
+                self->m_selected_state = nullptr;
             }
-
-            if (ImGui::IsItemHovered())
+            self->m_script_edit_path = main_lua.string();
+            const LuaScriptFile* script = self->load_script(self->m_script_edit_path);
+            if (script && script->loaded)
             {
-                std::string tooltip = "Enable/disable on next reload";
-                if (mod.enabled_via_mods_txt && !mod.enabled_via_txt)
-                {
-                    tooltip += "\n(Currently enabled via mods.txt)";
-                }
-                ImGui::SetTooltip("%s", tooltip.c_str());
+                self->m_script_editor.SetText(script->content);
+                self->m_script_original_content = self->m_script_editor.GetText();
+                self->m_script_is_dirty = false;
+                self->m_pending_editor_tab_switch = 1;
             }
-
-            ImGui::SameLine();
-
-            if (mod.is_running)
-            {
-                ImGui::TextColored(ImVec4(0.4f, 1.0f, 0.4f, 1.0f), ICON_FA_PLAY);
-                ImGui::SameLine();
-            }
-
-            if (mod.enabled_via_mods_txt && !mod.enabled_via_txt)
-            {
-                ImGui::TextColored(ImVec4(0.7f, 0.7f, 1.0f, 1.0f), "%s", mod.name.c_str());
-            }
-            else
-            {
-                ImGui::Text("%s", mod.name.c_str());
-            }
-
-            // Use consistent button width for alignment (widest case: Open + New + Restart + Uninstall)
-            float button_width = scaled(320.0f);
-            ImGui::SameLine(ImGui::GetContentRegionAvail().x - button_width);
-
-            if (ImGui::SmallButton(ICON_FA_FOLDER_OPEN " Open"))
-            {
-                std::filesystem::path scripts_path = mod.path / "Scripts";
-                std::filesystem::path main_lua = scripts_path / "main.lua";
-                if (std::filesystem::exists(main_lua))
-                {
-                    // Clear selected state if mod isn't running so dropdown uses filesystem scan
-                    if (!mod.is_running)
-                    {
-                        m_selected_state = nullptr;
-                    }
-                    m_script_edit_path = main_lua.string();
-                    const LuaScriptFile* script = load_script(m_script_edit_path);
-                    if (script && script->loaded)
-                    {
-                        m_script_editor.SetText(script->content);
-                        m_script_original_content = m_script_editor.GetText();
-                        m_script_is_dirty = false;
-                        m_pending_editor_tab_switch = 1;
-                    }
-                }
-            }
-
-            ImGui::SameLine();
-
-            if (ImGui::SmallButton(ICON_FA_FILE_ALT " New"))
-            {
-                m_show_create_file_popup = true;
-                m_new_file_name.clear();
-                m_add_require_to_main = true;
-                m_create_file_mod_path = mod.path;
-            }
-
-            // Show different buttons based on whether mod is running
-            if (mod.is_running)
-            {
-                ImGui::SameLine();
-
-                if (event_busy)
-                {
-                    ImGui::BeginDisabled(true);
-                }
-
-                if (ImGui::SmallButton(ICON_FA_SYNC " Restart"))
-                {
-                    restart_mod_by_name(mod.name);
-                }
-                if (ImGui::IsItemHovered())
-                {
-                    ImGui::SetTooltip("Uninstall and reinstall this mod");
-                }
-
-                ImGui::SameLine();
-
-                if (ImGui::SmallButton(ICON_FA_STOP " Uninstall"))
-                {
-                    uninstall_mod_by_name(mod.name);
-                }
-                if (ImGui::IsItemHovered())
-                {
-                    ImGui::SetTooltip("Uninstall this mod (will not run until next full reload)");
-                }
-
-                if (event_busy)
-                {
-                    ImGui::EndDisabled();
-                }
-            }
-            else
-            {
-                // Show Start button for mods that are not running
-                ImGui::SameLine();
-
-                if (event_busy)
-                {
-                    ImGui::BeginDisabled(true);
-                }
-
-                if (ImGui::SmallButton(ICON_FA_PLAY " Start"))
-                {
-                    start_mod_by_path(mod.path);
-                }
-                if (ImGui::IsItemHovered())
-                {
-                    ImGui::SetTooltip("Start this mod without reloading all mods");
-                }
-
-                if (event_busy)
-                {
-                    ImGui::EndDisabled();
-                }
-            }
-
-            if (ImGui::IsItemHovered())
-            {
-                ImGui::BeginTooltip();
-                ImGui::Text("Path: %s", mod.path.string().c_str());
-                ImGui::EndTooltip();
-            }
-
-            ImGui::PopID();
-        }
-
-        ImGui::EndChild();
-
-        if (m_show_create_mod_popup)
-        {
-            ImGui::OpenPopup("Create New Mod");
-            m_show_create_mod_popup = false;
-        }
-
-        if (m_show_create_file_popup)
-        {
-            ImGui::OpenPopup("Create New File");
-            m_show_create_file_popup = false;
-        }
-
-        if (ImGui::BeginPopupModal("Create New Mod", nullptr, ImGuiWindowFlags_AlwaysAutoResize))
-        {
-            ImGui::Text("Enter name for new mod:");
-            ImGui::Separator();
-
-            ImGui::SetNextItemWidth(scaled(300.0f));
-            bool enter_pressed = ImGui::InputText("##newmodname", &m_new_mod_name, ImGuiInputTextFlags_EnterReturnsTrue);
-
-            if ((ImGui::Button("Create", ImVec2(scaled(120.0f), 0)) || enter_pressed) && !m_new_mod_name.empty())
-            {
-                if (create_new_mod(m_new_mod_name))
-                {
-                    ImGui::CloseCurrentPopup();
-                }
-            }
-
-            ImGui::SameLine();
-
-            if (ImGui::Button("Cancel", ImVec2(scaled(120.0f), 0)))
-            {
-                ImGui::CloseCurrentPopup();
-            }
-
-            ImGui::EndPopup();
-        }
-
-        if (ImGui::BeginPopupModal("Create New File", nullptr, ImGuiWindowFlags_AlwaysAutoResize))
-        {
-            std::string mod_name = m_create_file_mod_path.stem().string();
-            ImGui::Text("Create new file in %s:", mod_name.c_str());
-            ImGui::Separator();
-
-            ImGui::SetNextItemWidth(scaled(300.0f));
-            bool enter_pressed = ImGui::InputText("##newfilename", &m_new_file_name, ImGuiInputTextFlags_EnterReturnsTrue);
-
-            if (!m_new_file_name.empty() && m_new_file_name.find(".lua") == std::string::npos)
-            {
-                ImGui::SameLine();
-                ImGui::TextDisabled(".lua");
-            }
-
-            ImGui::Checkbox("Add require() to main.lua", &m_add_require_to_main);
-
-            if ((ImGui::Button("Create", ImVec2(scaled(120.0f), 0)) || enter_pressed) && !m_new_file_name.empty())
-            {
-                if (create_new_file(m_create_file_mod_path.string(), m_new_file_name, m_add_require_to_main))
-                {
-                    ImGui::CloseCurrentPopup();
-                }
-            }
-
-            ImGui::SameLine();
-
-            if (ImGui::Button("Cancel", ImVec2(scaled(120.0f), 0)))
-            {
-                ImGui::CloseCurrentPopup();
-            }
-
-            ImGui::EndPopup();
         }
     }
-
 } // namespace RC::GUI
