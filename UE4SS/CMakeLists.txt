@@ -114,6 +114,7 @@ target_compile_definitions(UE4SS PRIVATE
     RC_JSON_BUILD_STATIC
     RC_JSON_PARSER_BUILD_STATIC
     RC_LUA_WRAPPER_GENERATOR_BUILD_STATIC
+    RC_HELPERS_BUILD_STATIC
 )
 
 # ---------------------------------------------------------------------------
