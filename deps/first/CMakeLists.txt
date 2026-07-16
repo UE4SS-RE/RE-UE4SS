@@ -1,6 +1,7 @@
 # First party dependencies -> START
 add_subdirectory("ArgsParser")
 add_subdirectory("ASMHelper")
+add_subdirectory("PDBHelper")
 add_subdirectory("Constructs")
 add_subdirectory("String")
 add_subdirectory("DynamicOutput")
