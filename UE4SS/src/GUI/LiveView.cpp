@@ -3498,6 +3498,7 @@ namespace RC::GUI
                     ImGui::Text("%S.%S", watch.object_name.c_str(), watch.property_name.c_str());
                     if (watch.show_history)
                     {
+                        ImGui::PushFont(UE4SSProgram::get_program().get_debugging_ui().get_texteditor_font());
                         ImGui::PushID(fmt::format("history_{}", watch.hash).c_str());
                         ImGui::InputTextMultiline("##history",
                                                   &watch.history,
@@ -3505,6 +3506,7 @@ namespace RC::GUI
                                                   ImGuiInputTextFlags_ReadOnly);
                         ImGui_AutoScroll("##history", &watch.history_previous_max_scroll_y);
                         ImGui::PopID();
+                        ImGui::PopFont();
                     }
                     ImGui::TableNextColumn();
                     if (ImGui::Checkbox(to_string(fmt::format(STR("##watch-from-disk-{}"), watch.hash)).c_str(), &watch.load_on_startup))
