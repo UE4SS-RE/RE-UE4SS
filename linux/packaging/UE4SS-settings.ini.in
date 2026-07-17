@@ -1,0 +1,16 @@
+[General]
+Headless = true
+Platform = Linux-x86_64
+FailClosedOnUnknownBuild = true
+
+[Features]
+GUI = false
+Input = false
+CrashDumper = false
+CppMods = false
+SDKGenerator = false
+UVTD = false
+
+[Linux]
+BuildGitSha = @UE4SS_LINUX_GIT_SHA@
+StatusFile = ue4ss.status.json
