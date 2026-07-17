@@ -7,6 +7,7 @@
 #include <cstring>
 #include <exception>
 #include <limits>
+#include <memory>
 #include <optional>
 
 namespace
@@ -160,6 +161,134 @@ namespace ue4ss::linux::core
         }
         catch (...)
         {
+            return false;
+        }
+    }
+
+    bool GameThreadScheduler::execute_sync(SynchronousCallback callback,
+                                           std::chrono::milliseconds timeout,
+                                           std::string& error) noexcept
+    {
+        error.clear();
+        try
+        {
+            if (!callback || timeout.count() <= 0)
+            {
+                error = "a synchronous callback and positive timeout are required";
+                return false;
+            }
+            if (!is_ready())
+            {
+                error = "the game-thread scheduler is not ready";
+                return false;
+            }
+            if (is_game_thread())
+            {
+                return callback(error);
+            }
+
+            struct SynchronousState
+            {
+                std::mutex mutex;
+                std::condition_variable wakeup;
+                SynchronousCallback callback;
+                bool running{};
+                bool completed{};
+                bool result{};
+                std::string error;
+            };
+            auto state = std::make_shared<SynchronousState>();
+            state->callback = std::move(callback);
+
+            const auto task = [state] {
+                SynchronousCallback operation;
+                {
+                    std::lock_guard lock{state->mutex};
+                    if (state->completed)
+                    {
+                        return true;
+                    }
+                    state->running = true;
+                    operation = std::move(state->callback);
+                }
+
+                bool result{};
+                std::string operation_error;
+                try
+                {
+                    result = operation(operation_error);
+                }
+                catch (const std::exception& exception)
+                {
+                    operation_error = exception.what();
+                }
+                catch (...)
+                {
+                    operation_error = "unknown exception in a synchronous game-thread operation";
+                }
+                {
+                    std::lock_guard lock{state->mutex};
+                    state->result = result;
+                    state->error = std::move(operation_error);
+                    state->running = false;
+                    state->completed = true;
+                }
+                state->wakeup.notify_all();
+                return true;
+            };
+            const auto cleanup = [state] {
+                {
+                    std::lock_guard lock{state->mutex};
+                    if (state->completed || state->running)
+                    {
+                        return;
+                    }
+                    state->error = "synchronous game-thread operation was cancelled";
+                    state->completed = true;
+                }
+                state->wakeup.notify_all();
+            };
+
+            const std::uint64_t handle = enqueue_owned(
+                    0u, task, std::chrono::milliseconds{}, {}, cleanup);
+            if (handle == 0u)
+            {
+                error = "synchronous game-thread operation could not be queued";
+                return false;
+            }
+
+            std::unique_lock lock{state->mutex};
+            if (!state->wakeup.wait_for(
+                        lock, timeout, [&state] { return state->completed; }))
+            {
+                const bool running = state->running;
+                lock.unlock();
+                if (!running)
+                {
+                    static_cast<void>(cancel_owned(0u, handle));
+                }
+                lock.lock();
+                if (!state->completed && !state->running)
+                {
+                    state->error = "synchronous game-thread operation timed out";
+                    state->completed = true;
+                }
+                while (state->running)
+                {
+                    state->wakeup.wait(lock);
+                }
+            }
+            error = state->error;
+            return state->completed && state->result;
+        }
+        catch (const std::exception& exception)
+        {
+            error = exception.what();
+            return false;
+        }
+        catch (...)
+        {
+            error = "unknown exception while synchronizing with the game thread";
             return false;
         }
     }
@@ -716,10 +845,22 @@ namespace ue4ss::linux::core
                     {
                         continue;
                     }
-                    if (!iterator->repeating || stop || !m_accepting.load(std::memory_order_acquire))
+                    if (stop || !m_accepting.load(std::memory_order_acquire))
                     {
                         cleanup = std::move(iterator->cleanup);
                         m_tasks.erase(iterator);
+                    }
+                    else if (!iterator->repeating)
+                    {
+                        iterator->state = ActionState::active;
+                        if (iterator->kind == DelayKind::frames)
+                        {
+                            iterator->frames_remaining = 0;
+                        }
+                        else
+                        {
+                            iterator->due = std::chrono::steady_clock::now();
+                        }
                     }
                     else if (iterator->pause_after_execution)
                     {

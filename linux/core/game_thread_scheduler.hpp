@@ -24,8 +24,11 @@ namespace ue4ss::linux::core
     {
       public:
         using TickFunction = void (*)(void*, float, bool);
-        using Callback = std::function<bool()>; // true stops a repeating task
+        // true completes the task; false retries it on a future tick. Repeating
+        // tasks additionally use false to continue at their configured rate.
+        using Callback = std::function<bool()>;
         using Cleanup = std::function<void()>;
+        using SynchronousCallback = std::function<bool(std::string&)>;
         using OwnerId = std::uintptr_t;
 
         enum class ActionState
@@ -65,6 +68,9 @@ namespace ue4ss::linux::core
 
         [[nodiscard]] bool is_ready() const noexcept;
         [[nodiscard]] bool wait_for_first_tick(std::chrono::milliseconds timeout) noexcept;
+        [[nodiscard]] bool execute_sync(SynchronousCallback callback,
+                                        std::chrono::milliseconds timeout,
+                                        std::string& error) noexcept;
         [[nodiscard]] std::uint64_t enqueue(Callback callback,
                                             std::chrono::milliseconds delay = {},
                                             std::chrono::milliseconds repeat = {}) noexcept;

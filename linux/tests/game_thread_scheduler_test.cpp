@@ -55,6 +55,66 @@ int main()
     assert(loop == 2);
     assert(g_original_calls == 3);
 
+    std::atomic<int> retried_one_shot{};
+    const auto retried_handle = scheduler.enqueue([&] {
+        return ++retried_one_shot >= 2;
+    });
+    assert(retried_handle != 0u);
+    hooked_tick(nullptr, 0.016f, false);
+    assert(retried_one_shot == 1 && scheduler.is_valid_handle(retried_handle));
+    hooked_tick(nullptr, 0.016f, false);
+    assert(retried_one_shot == 2 && !scheduler.is_valid_handle(retried_handle));
+
+    bool synchronous_result{};
+    std::atomic<bool> synchronous_done{};
+    std::string synchronous_error;
+    std::thread synchronous_worker{[&] {
+        synchronous_result = scheduler.execute_sync(
+                [&](std::string&) {
+                    assert(scheduler.is_game_thread());
+                    return true;
+                },
+                100ms,
+                synchronous_error);
+        synchronous_done = true;
+    }};
+    for (int attempt = 0; attempt < 100 && !synchronous_done.load(); ++attempt)
+    {
+        hooked_tick(nullptr, 0.016f, false);
+        std::this_thread::sleep_for(1ms);
+    }
+    synchronous_worker.join();
+    assert(synchronous_result && synchronous_error.empty());
+
+    bool direct_sync_called{};
+    assert(scheduler.execute_sync(
+            [&](std::string&) {
+                direct_sync_called = scheduler.is_game_thread();
+                return true;
+            },
+            100ms,
+            synchronous_error));
+    assert(direct_sync_called);
+
+    std::atomic<bool> timed_operation_called{};
+    bool timed_result{true};
+    std::string timed_error;
+    std::thread timed_worker{[&] {
+        timed_result = scheduler.execute_sync(
+                [&](std::string&) {
+                    timed_operation_called = true;
+                    return true;
+                },
+                2ms,
+                timed_error);
+    }};
+    timed_worker.join();
+    assert(!timed_result);
+    assert(timed_error.find("cancelled") != std::string::npos ||
+           timed_error.find("timed out") != std::string::npos);
+    hooked_tick(nullptr, 0.016f, false);
+    assert(!timed_operation_called);
+
     constexpr GameThreadScheduler::OwnerId owner_one = 0x101u;
     constexpr GameThreadScheduler::OwnerId owner_two = 0x202u;
     std::atomic<int> cleanup_calls{};

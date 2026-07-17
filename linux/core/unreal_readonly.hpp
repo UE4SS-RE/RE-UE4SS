@@ -488,7 +488,7 @@ namespace ue4ss::linux::core
         [[nodiscard]] bool write_property(const ReadOnlyUObjectHandle& handle,
                                           std::string_view property_name,
                                           const UnrealPropertyValue& value,
-                                          const GameThreadScheduler& scheduler,
+                                          GameThreadScheduler& scheduler,
                                           std::string& error) const noexcept;
         [[nodiscard]] bool register_custom_property(
                 CustomPropertyDescription property,
@@ -547,7 +547,7 @@ namespace ue4ss::linux::core
                 const ReadOnlyUObjectHandle& owner,
                 std::string_view property_name,
                 const std::vector<UnrealFunctionArgument>& arguments,
-                const GameThreadScheduler& scheduler,
+                GameThreadScheduler& scheduler,
                 std::string& error) const noexcept;
         [[nodiscard]] std::string process_event_vtable_probe() const noexcept;
         [[nodiscard]] bool find_function(const ReadOnlyUObjectHandle& context,
@@ -574,7 +574,7 @@ namespace ue4ss::linux::core
                                            const std::vector<UnrealFunctionArgument>& arguments,
                                            std::optional<UnrealPropertyValue>& return_value,
                                            std::vector<UnrealFunctionOutValue>& out_values,
-                                           const GameThreadScheduler& scheduler,
+                                           GameThreadScheduler& scheduler,
                                            std::string& error) const noexcept;
 
         // Internal container bridge. Allocation and release always use the

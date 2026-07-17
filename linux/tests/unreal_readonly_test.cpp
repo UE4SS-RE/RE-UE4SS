@@ -2670,11 +2670,12 @@ int main()
     runtime.set_process_event_for_testing(reinterpret_cast<void*>(&fake_process_event));
     ue4ss::linux::core::HeadlessLuaState scheduled_lua;
     assert(scheduled_lua.install_readonly_unreal_bindings(runtime, &scheduler).success);
-    assert(scheduled_lua.execute_string(R"lua(
+    const auto scheduled_result = scheduled_lua.execute_string(R"lua(
         scheduled_immediate = false
         scheduled_delayed = false
         scheduled_execute_async = false
         async_thread_identity_ok = false
+        async_unreal_access = false
         scheduled_loop_count = 0
         controlled_delay_count = 0
         explicit_delay_count = 0
@@ -2848,6 +2849,15 @@ int main()
                                   #object.Targets == 1 and object.Targets[1] == object and
                                   #object.Messages == 2 and object.Messages[1]:ToString() == "Alpha" and
                                   object.Messages[2]:ToString() == "Grüße ✓"
+            ExecuteWithDelay(0, function()
+                object.Health = 75
+                local result = object:GetHealth(40)
+                local succeeded = IsInAsyncThread() and result == 42
+                ExecuteInGameThread(function()
+                    async_unreal_access = succeeded
+                    object.Health = 76
+                end)
+            end)
         end)
         ExecuteAsync(function()
             scheduled_execute_async = true
@@ -2920,19 +2930,36 @@ int main()
                 assert(CancelDelayedAction(time_loop_handle))
             end
         end)
-    )lua").success);
+    )lua");
+    if (!scheduled_result.success)
+    {
+        std::fprintf(stderr, "scheduled Lua conformance failed: %s\n", scheduled_result.detail.c_str());
+    }
+    assert(scheduled_result.success);
     const auto tick = reinterpret_cast<ue4ss::linux::core::GameThreadScheduler::TickFunction>(tick_slot);
-    tick(nullptr, 0.016f, false);
-    std::this_thread::sleep_for(std::chrono::milliseconds{2});
-    tick(nullptr, 0.016f, false);
-    std::this_thread::sleep_for(std::chrono::milliseconds{2});
-    tick(nullptr, 0.016f, false);
-    std::this_thread::sleep_for(std::chrono::milliseconds{20});
-    assert(scheduled_lua.execute_string(R"lua(
+    // Async Lua needs two native game-thread round trips and schedules a final
+    // Lua callback. Its marker property is only written by this thread, making
+    // the completion check race-free and independent of CI scheduling speed.
+    std::uint64_t scheduled_tick_count{};
+    while (objects[5].health != 76 && scheduled_tick_count < 2000u)
+    {
+        tick(nullptr, 0.016f, false);
+        ++scheduled_tick_count;
+        std::this_thread::sleep_for(std::chrono::milliseconds{2});
+    }
+    assert(objects[5].health == 76);
+    for (std::uint64_t index = 0; index < 64u; ++index)
+    {
+        tick(nullptr, 0.016f, false);
+        ++scheduled_tick_count;
+        std::this_thread::sleep_for(std::chrono::milliseconds{2});
+    }
+    const auto scheduled_assertions = scheduled_lua.execute_string(R"lua(
         assert(scheduled_immediate)
         assert(scheduled_delayed)
         assert(scheduled_execute_async)
         assert(async_thread_identity_ok)
+        assert(async_unreal_access)
         assert(scheduled_loop_count == 2)
         assert(GetCurrentThreadId() == GetMainModThreadId())
         assert(GetGameThreadId() == GetCurrentThreadId())
@@ -2951,9 +2978,16 @@ int main()
         assert(ClearAllDelayedActions() == 2)
         assert(not IsValidDelayedActionHandle(clear_one) and
                not IsValidDelayedActionHandle(clear_two))
-    )lua").success);
-    assert(g_tick_calls == 3u);
-    assert(objects[5].health == 73);
+    )lua");
+    if (!scheduled_assertions.success)
+    {
+        std::fprintf(stderr,
+                     "scheduled Lua result assertions failed: %s\n",
+                     scheduled_assertions.detail.c_str());
+    }
+    assert(scheduled_assertions.success);
+    assert(g_tick_calls == scheduled_tick_count);
+    assert(objects[5].health == 76);
     assert(objects[5].alive == 0u);
     data_table_rows.clear();
     assert(runtime.enumerate_data_table_rows(
@@ -2982,7 +3016,7 @@ int main()
     assert(runtime.write_hook_parameter(messages_parameter, empty_messages, detail));
     assert(objects[5].messages.data == 0u && objects[5].messages.num == 0 && objects[5].messages.max == 0);
     assert(g_realloc_calls > 0u);
-    assert(g_process_event_calls == 15u);
+    assert(g_process_event_calls == 16u);
     scheduler.stop();
 
     const auto function_query = runtime.find_by_path("/Script/Test.Derived:GetHealth");

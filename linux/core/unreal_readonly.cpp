@@ -8,6 +8,7 @@
 #include <algorithm>
 #include <array>
 #include <bit>
+#include <chrono>
 #include <cstdio>
 #include <cstring>
 #include <fstream>
@@ -8162,16 +8163,35 @@ namespace ue4ss::linux::core
     bool ReadOnlyUnrealRuntime::write_property(const ReadOnlyUObjectHandle& handle,
                                                std::string_view property_name,
                                                const UnrealPropertyValue& value,
-                                               const GameThreadScheduler& scheduler,
+                                               GameThreadScheduler& scheduler,
                                                std::string& error) const noexcept
     {
         error.clear();
         try
         {
-            if (!scheduler.is_ready() || !scheduler.is_game_thread())
+            if (!scheduler.is_ready())
             {
-                error = "reflected property writes are permitted only inside a validated game-thread callback";
+                error = "reflected property writes require the validated game-thread scheduler";
                 return false;
+            }
+            if (!scheduler.is_game_thread())
+            {
+                auto* scheduler_pointer = &scheduler;
+                return scheduler.execute_sync(
+                        [this,
+                         handle,
+                         property_name = std::string{property_name},
+                         value,
+                         scheduler_pointer](std::string& operation_error) {
+                            return write_property(
+                                    handle,
+                                    property_name,
+                                    value,
+                                    *scheduler_pointer,
+                                    operation_error);
+                        },
+                        std::chrono::seconds{2},
+                        error);
             }
             if (!is_valid(handle))
             {
@@ -8863,7 +8883,7 @@ namespace ue4ss::linux::core
             const ReadOnlyUObjectHandle& owner,
             std::string_view property_name,
             const std::vector<UnrealFunctionArgument>& arguments,
-            const GameThreadScheduler& scheduler,
+            GameThreadScheduler& scheduler,
             std::string& error) const noexcept
     {
         error.clear();
@@ -9735,7 +9755,7 @@ namespace ue4ss::linux::core
                                                 const std::vector<UnrealFunctionArgument>& arguments,
                                                 std::optional<UnrealPropertyValue>& return_value,
                                                 std::vector<UnrealFunctionOutValue>& out_values,
-                                                const GameThreadScheduler& scheduler,
+                                                GameThreadScheduler& scheduler,
                                                 std::string& error) const noexcept
     {
         return_value.reset();
@@ -9743,10 +9763,44 @@ namespace ue4ss::linux::core
         error.clear();
         try
         {
-            if (m_process_event == nullptr || !scheduler.is_ready() || !scheduler.is_game_thread())
+            if (m_process_event == nullptr || !scheduler.is_ready())
             {
-                error = "ProcessEvent calls are permitted only inside a validated game-thread callback";
+                error = "ProcessEvent calls require the validated game-thread scheduler";
                 return false;
+            }
+            if (!scheduler.is_game_thread())
+            {
+                struct DeferredInvocationResult
+                {
+                    std::optional<UnrealPropertyValue> return_value;
+                    std::vector<UnrealFunctionOutValue> out_values;
+                };
+                auto deferred_result = std::make_shared<DeferredInvocationResult>();
+                auto* scheduler_pointer = &scheduler;
+                const bool invoked = scheduler.execute_sync(
+                        [this,
+                         context,
+                         function,
+                         arguments,
+                         deferred_result,
+                         scheduler_pointer](std::string& operation_error) {
+                            return invoke_function(
+                                    context,
+                                    function,
+                                    arguments,
+                                    deferred_result->return_value,
+                                    deferred_result->out_values,
+                                    *scheduler_pointer,
+                                    operation_error);
+                        },
+                        std::chrono::seconds{2},
+                        error);
+                if (invoked)
+                {
+                    return_value = std::move(deferred_result->return_value);
+                    out_values = std::move(deferred_result->out_values);
+                }
+                return invoked;
             }
             if (!is_valid(context) || !is_valid(function))
             {

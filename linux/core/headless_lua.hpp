@@ -191,6 +191,7 @@ namespace ue4ss::linux::core
                                                          std::uint64_t requested_handle = 0u) noexcept;
         [[nodiscard]] bool invoke_lua_callback(int reference, bool repeating) noexcept;
         void release_lua_callback(int reference) noexcept;
+        void drain_deferred_lua_callbacks_locked() noexcept;
         [[nodiscard]] bool start_async_worker(std::string& error) noexcept;
         void stop_async_worker() noexcept;
         void run_async_worker() noexcept;
@@ -203,6 +204,8 @@ namespace ue4ss::linux::core
         lua_State* m_async_state{};
         int m_async_state_reference{-1};
         mutable std::recursive_mutex m_mutex;
+        std::mutex m_deferred_callback_mutex;
+        std::vector<int> m_deferred_callback_references;
         std::thread::id m_main_thread_id;
         struct AsyncAction
         {

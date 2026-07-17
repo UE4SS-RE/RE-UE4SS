@@ -9429,6 +9429,7 @@ namespace ue4ss::linux::core
                     reinterpret_cast<GameThreadScheduler::OwnerId>(this)));
             m_scheduler = nullptr;
         }
+        drain_deferred_lua_callbacks_locked();
         if (m_blueprint_hook_manager != nullptr)
         {
             for (const auto& references : m_custom_event_references)
@@ -11404,6 +11405,7 @@ namespace ue4ss::linux::core
     bool HeadlessLuaState::invoke_async_callback(int reference, bool repeating) noexcept
     {
         std::lock_guard lock{m_mutex};
+        drain_deferred_lua_callbacks_locked();
         if (m_async_state == nullptr)
         {
             return true;
@@ -11554,7 +11556,12 @@ namespace ue4ss::linux::core
 
     bool HeadlessLuaState::invoke_lua_callback(int reference, bool repeating) noexcept
     {
-        std::lock_guard lock{m_mutex};
+        std::unique_lock lock{m_mutex, std::try_to_lock};
+        if (!lock.owns_lock())
+        {
+            return false;
+        }
+        drain_deferred_lua_callbacks_locked();
         if (m_state == nullptr)
         {
             return true;
@@ -11590,10 +11597,47 @@ namespace ue4ss::linux::core
     {
         try
         {
-            std::lock_guard lock{m_mutex};
+            if (reference == LUA_NOREF || reference == LUA_REFNIL)
+            {
+                return;
+            }
+            std::unique_lock lock{m_mutex, std::try_to_lock};
+            if (!lock.owns_lock())
+            {
+                std::lock_guard deferred_lock{m_deferred_callback_mutex};
+                m_deferred_callback_references.push_back(reference);
+                return;
+            }
+            drain_deferred_lua_callbacks_locked();
             if (m_state != nullptr && reference != LUA_NOREF && reference != LUA_REFNIL)
             {
                 luaL_unref(m_state, LUA_REGISTRYINDEX, reference);
+            }
+        }
+        catch (...)
+        {
+        }
+    }
+
+    void HeadlessLuaState::drain_deferred_lua_callbacks_locked() noexcept
+    {
+        try
+        {
+            std::vector<int> references;
+            {
+                std::lock_guard lock{m_deferred_callback_mutex};
+                references.swap(m_deferred_callback_references);
+            }
+            if (m_state == nullptr)
+            {
+                return;
+            }
+            for (const int reference : references)
+            {
+                if (reference != LUA_NOREF && reference != LUA_REFNIL)
+                {
+                    luaL_unref(m_state, LUA_REGISTRYINDEX, reference);
+                }
             }
         }
         catch (...)
